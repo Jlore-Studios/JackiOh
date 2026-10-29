@@ -193,12 +193,6 @@ def correction(net: dict, dense: list[int], sparse: list[list]) -> float:
     return total / (top * 2.0**shift)
 
 
-def points(weights: dict, net: dict, hand: float, dense: list[int], sparse: list[list]) -> float:
-    if weights["handA"] == 0.0:
-        return hand
-    return hand + (weights["handB"] + correction(net, dense, sparse)) * weights["handUnit"] / weights["handA"]
-
-
 #: A logit past this is a probability `log_loss` clips anyway (1e-7 from 0 or 1), and well short of the
 #: 709 past which `math.exp` overflows.
 LOGIT_BOUND = 40.0

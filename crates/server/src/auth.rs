@@ -1272,13 +1272,6 @@ impl E2eAuth {
         token
     }
 
-    pub fn set_email_verified(&self, user_id: &str, verified: bool) {
-        let mut state = self.lock();
-        if let Some(entry) = state.users.get_mut(user_id) {
-            entry.user.email_verified = verified;
-        }
-    }
-
     /// Chooses what `delete_user` does (see `E2eDeletion`).
     pub fn set_deletion(&self, deletion: E2eDeletion) {
         self.lock().deletion = deletion;

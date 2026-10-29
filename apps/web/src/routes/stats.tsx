@@ -21,6 +21,8 @@
 //    (stats/GamesPanel.tsx).
 //  - Created cards (R2089000): below the Cards tab's table, the cards made during games, apart from the deck
 //    cards and answering the same search box (stats/CreatedPanel.tsx).
+//  - Tokens (R2370000): behind the Cards tab's Show tokens toggle, off by default, the tokens alone with each
+//    one's win rate, above the Created cards (stats/TokensPanel.tsx).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -55,6 +57,7 @@ import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/se
 import { usePlayerStats } from "../stats/store.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
+import { TokensPanel } from "../stats/TokensPanel.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -218,6 +221,8 @@ export default function StatsRoute(): ReactElement {
   const [keywordFilter, setKeywordFilter] = useState<string>(initialParams.get("keyword") ?? "");
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
+  // R2370000: the Tokens section, off unless the address asks for it.
+  const [showTokens, setShowTokens] = useState(initialParams.get("tokens") === "1");
   const [mode, setMode] = useState<string>(
     ["bo1", "bo3", "random"].includes(initialParams.get("mode") ?? "")
       ? (initialParams.get("mode") as string)
@@ -298,11 +303,12 @@ export default function StatsRoute(): ReactElement {
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
     if (mode) params.set("mode", mode);
+    if (showTokens) params.set("tokens", "1");
 
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode]);
+  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, showTokens]);
 
   useEffect(() => {
     updateUrl();
@@ -602,6 +608,8 @@ export default function StatsRoute(): ReactElement {
 
   // R2089000: the Created cards in the server's order, those the search box asks for as the deck rows are.
   const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
+  // R2370000: of those, the catalog's tokens.
+  const tokenCards = createdCards.filter((card) => CATALOG[card.id]?.token === true);
 
   const summary = cardStatsData?.summary;
 
@@ -869,6 +877,19 @@ export default function StatsRoute(): ReactElement {
                 >
                   {t("Grid")}
                 </button>
+              </div>
+
+              {/* R2370000: the Tokens section, off by default */}
+              <div className="stats-col-toggles">
+                <label className="stats-col-toggle">
+                  <input
+                    type="checkbox"
+                    data-testid={statsTestid.tokensToggle}
+                    checked={showTokens}
+                    onChange={(e) => setShowTokens(e.target.checked)}
+                  />
+                  {t("Show tokens")}
+                </label>
               </div>
 
               {/* Column visibility toggles */}
@@ -1321,6 +1342,11 @@ export default function StatsRoute(): ReactElement {
                   </tbody>
                 </table>
               </TableScroll>
+            )}
+
+            {/* R2370000: the tokens alone, each with its win rate */}
+            {showTokens && !cardStatsLoading && !cardStatsError && (
+              <TokensPanel tokens={tokenCards} minSample={minSample} nameOf={shownName} />
             )}
 
             {/* R2089000: the Created cards, apart from the deck cards above */}

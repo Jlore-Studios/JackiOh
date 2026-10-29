@@ -40,12 +40,14 @@ jobs:
   event:
     name: event
     # Wakes only for something Squishy answers. Its own comments and labels are skipped by actor;
-    # a CI run on its branch and a closed Squishy pull request are handled whoever caused them.
+    # a CI run on its branch or of the merge queue's build of a Squishy pull request, and a closed
+    # Squishy pull request, are handled whoever caused them.
     if: >-
       github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'workflow_run'
         && contains(fromJSON('["failure", "timed_out", "cancelled", "startup_failure"]'), github.event.workflow_run.conclusion)
-        && startsWith(github.event.workflow_run.head_branch, 'squishy/'))
+        && (startsWith(github.event.workflow_run.head_branch, 'squishy/')
+          || startsWith(github.event.workflow_run.head_branch, 'gh-readonly-queue/')))
       || (github.event_name == 'pull_request_target' && github.event.action == 'closed'
         && contains(github.event.pull_request.labels.*.name, 'squishy:pr'))
       || (github.actor != 'squishy-squooby' && github.actor != 'github-actions[bot]' && (

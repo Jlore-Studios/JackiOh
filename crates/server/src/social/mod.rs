@@ -29,7 +29,6 @@ use indexmap::IndexMap;
 use serde::Serialize;
 use serde_json::{Value, json};
 use time::OffsetDateTime;
-use time::format_description::well_known::Rfc3339;
 
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, RateLimiter, Req, create_rate_limiter, json as json_response,
@@ -114,12 +113,6 @@ pub fn iso(ms: i64) -> String {
         .unwrap_or_else(|| ms.to_string())
 }
 
-/// An ISO-8601 instant (RFC 3339, the form `iso` writes) as epoch ms, or `None` for anything else.
-pub fn parse_iso(text: &str) -> Option<i64> {
-    let at = OffsetDateTime::parse(text.trim(), &Rfc3339).ok()?;
-    i64::try_from(at.unix_timestamp_nanos().div_euclid(NANOS_PER_MS)).ok()
-}
-
 /// A refusal with a code of S7's own, in the API's one error shape (`{ "error": { code, message }
 /// }`, what the client's `ApiRequestError` reads): `409 {code: "self"}` and the like. Not an
 /// `ApiError`, whose codes are `ApiErrorCode`'s; a refusal is an answer, not a failure, so nothing
@@ -162,16 +155,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn iso_writes_what_to_iso_string_writes_and_reads_it_back() {
+    fn iso_writes_what_to_iso_string_writes() {
         assert_eq!(iso(0), "1970-01-01T00:00:00.000Z");
         assert_eq!(iso(1_760_445_296_789), "2025-10-14T12:34:56.789Z");
-        assert_eq!(parse_iso("2025-10-14T12:34:56.789Z"), Some(1_760_445_296_789));
-        assert_eq!(parse_iso(&iso(1_760_445_296_789)), Some(1_760_445_296_789));
-        assert_eq!(
-            parse_iso("2025-10-14T14:34:56.789+02:00"),
-            Some(1_760_445_296_789)
-        );
-        assert_eq!(parse_iso("yesterday"), None);
-        assert_eq!(parse_iso("1760445296789"), None);
     }
 }

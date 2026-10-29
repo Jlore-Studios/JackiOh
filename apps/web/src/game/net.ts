@@ -49,7 +49,7 @@ export type ClockReading = { now: number; clocks: MatchClocks; receivedAt: numbe
  */
 export function remainingMs(
   deadline: number | null | undefined,
-  clock: ClockReading | null,
+  clock: Pick<ClockReading, "now" | "receivedAt"> | null,
   monotonic: () => number = defaultMonotonic,
 ): number | null {
   if (deadline === null || deadline === undefined) return null;
@@ -58,7 +58,8 @@ export function remainingMs(
   return Math.max(0, deadline - clock.now - elapsed);
 }
 
-function defaultMonotonic(): number {
+/** The tab's monotonic clock in ms: `performance.now()`, or `Date.now()` where there is none. */
+export function defaultMonotonic(): number {
   if (typeof performance !== "undefined" && typeof performance.now === "function") {
     return performance.now();
   }
@@ -85,7 +86,8 @@ export type SocketFactory = (url: string, protocols: string[]) => SocketLike;
 /** `WebSocket.OPEN`, spelled out so this module needs no DOM constant at runtime. */
 const OPEN = 1;
 
-function browserSocket(url: string, protocols: string[]): SocketLike {
+/** A real browser `WebSocket`, the default `SocketFactory`. */
+export function browserSocket(url: string, protocols: string[]): SocketLike {
   return new WebSocket(url, protocols) as unknown as SocketLike;
 }
 

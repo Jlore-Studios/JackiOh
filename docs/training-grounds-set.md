@@ -293,10 +293,10 @@ in TG4 (D1–D11) differs from an entry, the decision wins.
 
 - **Text:** Rush
 - **Radiant:** Rush
-- **Engine:** Keywords only ([[§6.1]]): an empty script; the catalog prints `keywords: [{ "kind": "Rush" }]` on both faces, as Core T-rush Rush Token (`core-t-rush`) and S #68 Startos (`stinkyscape-068`, "Keywords only: its script is empty"). Rush lifts sickness for Unit targets only (`combat.rs:487–493`: "Rush cannot hit the hero on its summon turn").
+- **Engine:** Keywords only ([[§6.1]]): an empty script; the catalog prints `keywords: [{ "kind": "Rush" }]` on both faces, as Core T-rush Rush Token (`core-t-rush`) and S #68 Stratos (`stinkyscape-068`, "Keywords only: its script is empty"). Rush lifts sickness for Unit targets only (`combat.rs:487–493`: "Rush cannot hit the hero on its summon turn").
 - **Rulings:** none new.
 - **Numbers:** none (keywords and stats).
-- **Check:** (1) base: 6/7 with Rush; (2) it may attack an enemy Unit the turn it is played; (3) it may not attack the enemy hero that turn; (4) it may attack the hero from its next turn. Radiant: (5) 18/21 with Rush, same (2)–(4). R275: stat half met (3×); effect half: **Designer's word (effect half)**: a keyword-only Unit whose Radiant face adds no keyword, where R275 asks one more or a stronger one ("Rush to Charge"), recorded as `docs/radiant-audit.md` records S #68 Startos and S #128 Jlockeed's Yamato Cannon; the tripled body stands in for it as it does for #8 Mr. Vanilla. The foundation's radiant-audit row judges it so (#2194). ⚠ designer: R275's own example would make the Radiant face Charge (as Core #11 Tempo Timmy, C #73 Nurse Cleaver); default: Rush as printed. Name: "Boulder Fist Ogre" no clash in the catalog.
+- **Check:** (1) base: 6/7 with Rush; (2) it may attack an enemy Unit the turn it is played; (3) it may not attack the enemy hero that turn; (4) it may attack the hero from its next turn. Radiant: (5) 18/21 with Rush, same (2)–(4). R275: stat half met (3×); effect half: **Designer's word (effect half)**: a keyword-only Unit whose Radiant face adds no keyword, where R275 asks one more or a stronger one ("Rush to Charge"), recorded as `docs/radiant-audit.md` records S #68 Stratos and S #128 Jlockeed's Yamato Cannon; the tripled body stands in for it as it does for #8 Mr. Vanilla. The foundation's radiant-audit row judges it so (#2194). ⚠ designer: R275's own example would make the Radiant face Charge (as Core #11 Tempo Timmy, C #73 Nurse Cleaver); default: Rush as printed. Name: "Boulder Fist Ogre" no clash in the catalog.
 - **Class:** A.
 
 #### Training Grounds #5 · Midlane Menace
@@ -322,7 +322,7 @@ in TG4 (D1–D11) differs from an entry, the decision wins.
 - **Engine:** Keywords only ([[§6.1]]): an empty script; `keywords: [{ "kind": "Divine Shield" }]` on both faces. Divine Shield negates the first damage instance and is lost ([[§4.4]] step 1). As M #70.1 Ready… I'm's base face, Core #3 Right-house defender.
 - **Rulings:** none new.
 - **Numbers:** none (keywords and stats).
-- **Check:** (1) base: 3/3 with Divine Shield; (2) the first hit deals nothing and removes the shield; (3) the next hit damages it; (4) summoning-sick (no Rush). Radiant: (5) 9/9 with Divine Shield, same (2)–(3). R275: stat half met (3×); effect half: **Designer's word (effect half)**, as #4 (a keyword-only Unit with no keyword more; S #68 Startos, S #128 Yamato Cannon's record). The foundation's radiant-audit row judges it so (#2194). ⚠ designer: one keyword more on the Radiant (e.g. Reborn, as C+ #6 Wrong-House Attacker's patch did); default: as printed. Name: the pair with #7 Chosen by the Moon; no clash in the catalog.
+- **Check:** (1) base: 3/3 with Divine Shield; (2) the first hit deals nothing and removes the shield; (3) the next hit damages it; (4) summoning-sick (no Rush). Radiant: (5) 9/9 with Divine Shield, same (2)–(3). R275: stat half met (3×); effect half: **Designer's word (effect half)**, as #4 (a keyword-only Unit with no keyword more; S #68 Stratos, S #128 Yamato Cannon's record). The foundation's radiant-audit row judges it so (#2194). ⚠ designer: one keyword more on the Radiant (e.g. Reborn, as C+ #6 Wrong-House Attacker's patch did); default: as printed. Name: the pair with #7 Chosen by the Moon; no clash in the catalog.
 - **Class:** A.
 
 #### Training Grounds #7 · Chosen by the Moon
@@ -1127,7 +1127,7 @@ correction to the rows, and after it ships a patch of its own.
 | --- | --- | --- | --- |
 | 1 | #2 Personal Trainer | Radiant "a friendly Human" | One of your other Humans, as the base face: targets are picked in hand ([[R81]]), so it can never pick itself (TG-P3-1) |
 | 2 | #3 Group leader, #15 In a hurry, #34 Dino-size | lower-case names | As printed, as Core's "Right-house defender" |
-| 3 | #4 Boulder Fist Ogre, #6 Chosen by the Sun | Radiant adds no keyword ([[R275]] asks one more or a stronger one) | As printed, the designer's word (the radiant-audit rows say so, as S #68 Startos's); Charge for #4, one more keyword for #6 would meet it |
+| 3 | #4 Boulder Fist Ogre, #6 Chosen by the Sun | Radiant adds no keyword ([[R275]] asks one more or a stronger one) | As printed, the designer's word (the radiant-audit rows say so, as S #68 Stratos's); Charge for #4, one more keyword for #6 would meet it |
 | 4 | #8 Clobberer | Radiant 42/14 triples only the attack | As printed; 42/21 would triple both, as C #86 Genn |
 | 5 | #5 Midlane Menace | "the Middle lane"; the name one word from Core #19 Midrange Menace | Midlane, lane 3 of 5 ([[R685]]); both names stay |
 | 6 | #9 Ravager | "On kill"; Radiant 17 health | Whenever this destroys a Unit, on any turn, a defending kill included (C+ #19.5 Bot Loser); 14/17 as printed |
