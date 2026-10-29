@@ -7199,26 +7199,19 @@
       "verdict_rounds": 3,
       "votes": {
         "approvals": [
-          "muse",
-          "claude"
+          "muse"
         ],
         "builder": "muse",
         "rejections": [],
         "reviews": [
           {
             "family": "muse",
-            "run": "40821958997",
+            "run": "40861038420",
             "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40851030156",
-            "tier": "strong"
           }
         ],
-        "sha": "10b5494c4d9fa54337a2f6b1fa609ddec5b244cd",
+        "sha": "db143b0cea3b3ef4ae8e922f6eb2d751559fb206",
         "tiers": {
-          "claude": "strong",
           "muse": "medium"
         }
       }
