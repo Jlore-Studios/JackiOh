@@ -9006,20 +9006,30 @@
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
-          "claude"
+          "muse"
         ],
-        "builder": "claude",
+        "builder": "muse",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/cards/src/scripts/stinkyscape/c158_stratos_swarm.rs",
+            "crates/cards/src/scripts/stinkyscape/t_dormant_starship.rs",
+            "crates/engine/tests/golden/games.jsonl"
+          ],
+          "from": "a62aaecbf2c455840e559a60d86006a06dd34fac",
+          "main": "23a91c99c29c10f9c2331433ba1f84c22cb5a19b"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "40822098915",
-            "tier": "strong"
+            "family": "muse",
+            "run": "40833694913",
+            "tier": "medium"
           }
         ],
-        "sha": "a62aaecbf2c455840e559a60d86006a06dd34fac",
+        "sha": "0e5e25fc72a4d013eb1de007cbbd88213b3c661c",
         "tiers": {
-          "claude": "strong"
+          "muse": "medium"
         }
       }
     },
