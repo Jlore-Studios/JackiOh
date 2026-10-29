@@ -1,8 +1,8 @@
 //! "After this attacks" (`Script.afterAttack`): the attacker's hook, run once the state check that closes
-//! each of its combats has run — a declared attack's (§4.2 step 5) and a forced one's (R53) — also when
-//! it died there, then on the snapshot it fought with (R78, R89); never for an attack called off before
-//! it fought (R44). Classic #13 Boots on the Ground, Classic+ #73.1 Classic Golem and Core #32 Prem
-//! Panther (R426) are its users.
+//! each of its combats has run — a declared attack's (§4.2 step 5) and a forced one's (R53) — and only
+//! for an attacker still on the field on the stay it attacked from: one that died there runs nothing
+//! (R2285001); never for an attack called off before it fought (R44). Classic #13 Boots on the Ground,
+//! Classic+ #73.1 Classic Golem and Core #32 Prem Panther (R426) are its users.
 //!
 //! Port of `packages/engine/test/after-attack.test.ts`.
 
@@ -66,7 +66,7 @@ mod script_after_attack {
     }
 
     #[test]
-    fn an_attacker_that_died_in_its_combat_runs_the_hook_on_the_snapshot_it_fought_with() {
+    fn r2285001_an_attacker_that_died_in_its_combat_runs_no_hook() {
         let mut state = playing("dc-after-died");
         let striker = put(
             &mut state,
@@ -80,10 +80,7 @@ mod script_after_attack {
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
         })));
-        assert_eq!(
-            notes(game.state()),
-            vec![format!("after:{}::false:false:field", blocker.id)]
-        );
+        assert!(notes(game.state()).is_empty());
         let graveyard: Vec<&str> = game
             .state()
             .players
@@ -239,7 +236,7 @@ mod script_after_attack {
     }
 
     #[test]
-    fn r426_a_reborn_body_is_a_new_arrival_the_attacker_that_died_in_the_combat_did_not_survive_it() {
+    fn r2285001_r426_a_reborn_body_is_a_new_arrival_the_attacker_that_died_in_the_combat_runs_no_hook() {
         let mut state = playing("dc-after-reborn");
         let striker = put(
             &mut state,
@@ -257,7 +254,7 @@ mod script_after_attack {
             .and_then(|pile| pile.first())
             .map(|card| card.def_id.clone());
         assert_eq!(top, Some(reborn_veteran.id.clone()));
-        assert_eq!(notes(game.state()), vec![format!("after:{}:false:p1", victim.id)]);
+        assert!(notes(game.state()).is_empty());
     }
 
     #[test]
