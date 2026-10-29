@@ -15177,9 +15177,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-29T10:40:00Z",
-          "utilization": 0.04
+          "utilization": 0.06
         },
-        "observed_at": "2026-10-29T06:10:27Z",
+        "observed_at": "2026-10-29T06:32:44Z",
         "status": "allowed"
       }
     },
