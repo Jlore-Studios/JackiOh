@@ -7594,6 +7594,7 @@
         "by": "`claude` (strong)",
         "sha": "47ad2bffcb8cf51d56911c0bf11730be588d579c"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-28T23:38:45Z",
