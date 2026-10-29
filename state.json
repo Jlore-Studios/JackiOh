@@ -8051,25 +8051,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/README.md",
-            "apps/web/src/cards/icons.tsx",
-            "apps/web/src/game/HandHints.test.tsx",
-            "apps/web/src/game/handHints.ts",
-            "crates/engine/src/view_for.rs",
             "crates/engine/tests/golden/games.jsonl"
           ],
-          "from": "bb161f7c241e18ae4afb8197da01f88500bf20a8",
-          "main": "6df2db20bd4e6e017e76ea88bcca9f24a6aa51d2"
+          "from": "ad28104201d502da798df056f73ac4023b9f2ce6",
+          "main": "59cec786eb678d49cfcd57c5897fe93ebb372369"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40939936654",
+            "run": "40956670571",
             "tier": "strong"
           }
         ],
-        "sha": "ad28104201d502da798df056f73ac4023b9f2ce6",
+        "sha": "6002a10efc822910a74e17f62bd2db4201a69fdc",
         "tiers": {
           "claude": "strong"
         }
