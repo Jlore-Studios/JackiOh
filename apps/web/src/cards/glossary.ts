@@ -70,13 +70,13 @@
 // with "freeze" and "freezes" as its aliases. No card prints either yet (M+ #24 Bob, #1185, will).
 //
 // Issue #1839 (R1839000–R1839002) adds §6.1's Dormant, a status that is no keyword kind, §6.2's "When
-// this awakens" and §6.3's Awaken. No card prints them yet (Stinkyscape's cards will); a card under a
+// this awakens" and §6.3's Awaken. Stinkyscape's cards print them; a card under a
 // Stack pile's top is "buried" to a player, never Dormant (§3.2).
 //
 // Issue #1852 (R1852000–R1852007) adds §6.1's Starship Piece and Starship, keyword kinds, §6.2's "When
-// launched" and §6.3's Launch. No card prints them yet (Stinkyscape's cards will).
+// launched" and §6.3's Launch, which Stinkyscape's cards print.
 //
-// R1857000, R910000: the held Stinkyscape set's faces print these terms mid-sentence, so their spellings
+// R1857000, R910000: the Stinkyscape set's faces print these terms mid-sentence, so their spellings
 // bold too: "launch" and "launches" (Launch), "fuses" (Fuse), "Floated" (Float), "Allured" (Allure) and
 // "end the turn" (End the turn).
 
@@ -250,7 +250,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "Tradable",
     "In your main phase, put it from your hand into your deck at a random position and draw a card, at no mana. One Trade per turn",
   ),
-  // Issue #1852 (R1852000–R1852003): Stinkyscape's two, which no card prints yet.
+  // Issue #1852 (R1852000–R1852003): Stinkyscape's two.
   "Starship Piece": keyword(
     "Starship Piece",
     "When it dies, a copy of it fuses into your Dormant Starship, which is summoned first if you have none",

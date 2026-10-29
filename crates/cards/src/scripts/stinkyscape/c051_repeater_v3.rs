@@ -1,4 +1,4 @@
-//! Stinkyscape #51 Repeater v3 (SPEC §8.10 row 51). Unit 0/4 → 0/8, Weapon, cost 2, Rare; held (R1420).
+//! Stinkyscape #51 Repeater v3 (SPEC §8.10 row 51). Unit 0/4 → 0/8, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate 4: Deal {damage} damage to an enemy, with Pierce. Deals half damage to heroes."
 //!            — damage 1

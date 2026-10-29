@@ -1,5 +1,4 @@
-//! Stinkyscape #140 Rush Token Launcher (SPEC §8.10 row 140). Unit 0/4 → 0/8, Weapon, cost 2, Rare;
-//! held (R1420).
+//! Stinkyscape #140 Rush Token Launcher (SPEC §8.10 row 140). Unit 0/4 → 0/8, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Summon a Rush Token that attacks an enemy Unit, Taunt Units first."
 //!   Radiant: "Starship Piece, Equip

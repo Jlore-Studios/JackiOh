@@ -1,5 +1,4 @@
-//! S #31 Drone Core V (SPEC §8.10 row 31): (3) Spell, Drone Core, Rare, a card of the held Stinkyscape
-//! set (R1420).
+//! S #31 Drone Core V (SPEC §8.10 row 31): (3) Spell, Drone Core, Rare, a card of the Stinkyscape set.
 //!   Base:    "Summon a Drone Corvette."
 //!   Radiant: "Summon a Radiant Drone Corvette."
 //! Engine: a summon of the Drone Corvette into the caster's leftmost open unit zone (R64), no Cry (R1),

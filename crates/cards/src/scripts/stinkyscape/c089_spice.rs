@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 89 Spice, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 89 Spice, a card of the Stinkyscape set.
 //!   Base:    "Can be sold from your hand at the Marketplace, like a Resource.\nDiscover a Stinkyscape
 //!            card."
 //!   Radiant: "Can be sold from your hand at the Marketplace, like a Resource.\nDiscover a Radiant
@@ -8,8 +8,8 @@
 //! Marketplace is open (R1853000), its owner may sell it from their hand in their main phase, as a tray
 //! Resource sells (R1853003), at a quote drawn each turn after the Resources' (`HAND_SALE_PRICE`, 3–10,
 //! Radiant 6–20); the public `marketSold` names it, it ceases to exist and its Credits are gained
-//! (R1840005). Played, it Discovers (§6.3) a non-token Stinkyscape card: the pool names the set, so the
-//! held gate does not empty it (R380, R1420), and the Discover never offers the card that made it
+//! (R1840005). Played, it Discovers (§6.3) a non-token Stinkyscape card: the pool names the set, so R1420's
+//! gate would not empty it were the set held (R380), and the Discover never offers the card that made it
 //! (R387), so never Spice. The pick goes to the hand (§2.4's cap burning it), Radiant on the Radiant
 //! face, M #88 The True Sheep's shape.
 
