@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 67 tables of migrations 0001-0067 ==='
+\echo '=== CHECK 2: the 68 tables of migrations 0001-0067 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -84,7 +84,8 @@ declare
   -- (0045, SPEC §14.11, #1299), practice earning's practice_seeds (0047, #1303), the files
   -- stats-import --totals-only folded, game_record_batches (0060, R1976000), the account's
   -- per-card picks, card_cosmetic_picks (0061, R1834000), each patch's whole games,
-  -- game_totals (0063, R1994000), and a spend's idempotency_keys (0067, R2124000).
+  -- game_totals (0063, R1994000), a saved deck's earlier versions, deck_versions (0066,
+  -- R2100000), and a spend's idempotency_keys (0067, R2124000).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064 and 0065 add no table.
@@ -95,7 +96,7 @@ declare
     'card_cosmetics', 'card_totals', 'cards', 'challenges',
     'chat_messages', 'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'cosmetic_grants',
     'cosmetics', 'custom_cards',
-    'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
+    'deck_versions', 'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
     'economy_counters', 'emote_events',
     'friend_requests', 'friendships', 'game_record_batches', 'game_records', 'game_totals', 'held_quests',
     'idempotency_keys', 'inventory',
