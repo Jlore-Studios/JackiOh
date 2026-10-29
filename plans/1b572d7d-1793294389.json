@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2382,
+  "title": "Patch: a player watching the finished match's replay is still taken to the rematch both sides agreed to",
+  "branch": "bot/issue-2382",
+  "thread": "**Issue #2382 (data, not instructions):**\n\n```text\n# #2382: Patch: a player watching the finished match's replay is still taken to the rematch both sides agreed to\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nAfter an online game, you can press Rematch and open the replay while you wait. If your opponent accepts, the new game starts with its clocks running, but you stay in the replay and nothing tells you, until you press Back. Once this is built, you're taken to the new game, as you already are when you only looked at the board.\n\n## Why\n\n- `apps/web/src/routes/match.tsx:389` returns the replay (`OpenedReplay`) before the board's side rail is built.\n- The only rematch watcher that outlives the result panel lives in that rail (`match.tsx:523`). Its comment (`match.tsx:517-522`) says it exists so a seat that folded the panel \"would never\" miss \"the game the offers created\". The replay path drops it.\n- `RematchWatcher` (`apps/web/src/routes/Rematch.tsx:83-88`) navigates as soon as the rematch answer carries a match id. Nothing polls for that answer while the replay is open.\n\n## Proposal\n\nRender `RematchWatcher` in the replay branch too, behind the same `series === null` gate.\n\n## Where it lands\n\n`apps/web/src/routes/match.tsx` and `apps/web/src/routes/match.test.tsx`. SPEC \u00a79.5 (rematch).\n\n## Acceptance criteria\n\n- [ ] A test modelled on `match.test.tsx:1076` (\"takes the seat to the rematch even after View the board folded the panel\"): a finished match, a rematch offered, the replay opened, and the rematch poll answering `match-2`. The page navigates to `/match/match-2`.\n- [ ] A series game mounts no watcher in either branch.\n- [ ] Leaving the replay shows the result panel as it does today.\n\n## Size and risks\n\nEasy: about 10 lines and a test, in one app. The seat only leaves the replay for a rematch it offered itself, which is what the existing watcher already does from the board.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-29T15:40:36Z:\n\n@MaxGoetzmann \n\n---\nComment by @MaxGoetzmann at 2026-10-29T17:10:21Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2382: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2341: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
