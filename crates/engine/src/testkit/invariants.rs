@@ -12,7 +12,8 @@
 //!     An entry event is `cardPlayed`, `summoned`, `controlChanged`, `animated` (an Animated card
 //!     stepping from its backrow zone into a unit zone enters it on that turn, R383, except an
 //!     "Animated on your turn" card animating at its controller's start of turn that has been on
-//!     that side since the turn began: that enters nothing, R1062; one animating on the other
+//!     that side since the turn began, the keyword read as the animation had it (a later event in the
+//!     action may change it): that enters nothing, R1062; one animating on the other
 //!     player's turn, as Pareto Optimality's attack animates The Cane, R1126, enters, and so does one
 //!     that fired as a trap this turn, animating as its firing's last step), or a
 //!     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77),
@@ -282,8 +283,6 @@ fn cards_of(state: &GameState) -> Vec<&CardInstance> {
         out.extend(side.backrow_piles.iter().flatten().flatten());
         out.extend(side.carried.iter().flatten().flatten());
         out.extend(side.resolving.iter());
-        // R1840000: a Resource in a Resource tray.
-        out.extend(side.resource_tray.iter().flatten());
     }
     // R1850003: a card held beneath another, face-up when it was taken (`effects::hold`).
     out.extend(state.held.iter().flatten().map(|entry| &entry.card));
@@ -650,16 +649,6 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
     if state.result.is_none() {
         for card in &state.players[rival].hand {
             hide(&mut ids, &card.id, &card.def_id, format!("{rival}'s hand"), true);
-        }
-        // R1840000: the rival's Resource tray is as hidden as their hand.
-        for card in state.players[rival].resource_tray.iter().flatten() {
-            hide(
-                &mut ids,
-                &card.id,
-                &card.def_id,
-                format!("{rival}'s Resource tray"),
-                true,
-            );
         }
     }
     for player in PLAYER_IDS {
@@ -1550,6 +1539,9 @@ pub struct InvariantMonitor {
     /// the autopilot plays a whole turn in one action (R1183002; fuzz seeds 5325, 6431, 9388, and 6732
     /// and 7295 of the handicapped wave, #1216).
     carried_windfury: IndexSet<String>,
+    /// R636, R781004: the units `note_drawn_windfury` read as maybe Windfury, whose drawn keywords a
+    /// change of control keeps (the card stays on the field).
+    drawn_windfury: IndexSet<String>,
     /// The cards that fired as traps this turn: one animates as its firing's last step, not at the
     /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
     fired: IndexSet<String>,
@@ -1561,6 +1553,9 @@ pub struct InvariantMonitor {
     unsettled_credits: IndexSet<String>,
     /// R424: the latest attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
+    /// R424, R1869002: whether the last action left a prompt or work owed, so a combat it declared may
+    /// still be resolving (an ambush's Discovers, S #22) and its attack is kept for the next action.
+    attack_open: bool,
     /// I9: `state.resets` as the last state `after` read left it; a move is a Glitch's reset (R676).
     resets: Option<i32>,
     /// I9: each seat's fatigue draws as the stream counted them (§2.4, R3, R315): the start state's
@@ -1588,11 +1583,13 @@ impl InvariantMonitor {
             last_attack: IndexMap::new(),
             windfury: IndexMap::new(),
             carried_windfury: IndexSet::new(),
+            drawn_windfury: IndexSet::new(),
             fired: IndexSet::new(),
             readied: IndexSet::new(),
             kill_credits: IndexMap::new(),
             unsettled_credits: IndexSet::new(),
             attack: None,
+            attack_open: false,
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
             dormant: dormant_cards(start),
@@ -1609,6 +1606,30 @@ impl InvariantMonitor {
                 let stint = self.stint_of(&card.id);
                 self.windfury.insert(card.id.clone(), stint);
             }
+        }
+    }
+
+    /// R636, R781004: a unit whose text draws its keywords as it arrives or fuses (M #65 Keymaster
+    /// Keenus' Aura, the Stinkyscape Drones', a `conditionalKeywords` text) keeps them in its memory,
+    /// which leaving the field resets (R78) and ceasing to exist takes with it. One gone from the field
+    /// by the action's end leaves no state to say whether it drew Windfury, so its attacks in this stint
+    /// count as Windfury's (Keenus equipped onto C+ #26 and exiled: Duos fuzz seed 679; a Drone
+    /// Corvette summoned and killed inside one autopilot action: fuzz seed 8567).
+    fn note_drawn_windfury(&mut self, id: &str, def_id: &str, state: &GameState) {
+        let draws = match find_instance(state, id) {
+            Some(card) if card.zone.z() == ZoneName::Field => false,
+            Some(card) => crate::scripts::script_of(state, card)
+                .conditional_keywords
+                .is_some(),
+            None => crate::scripts::script_of(state, def_id)
+                .base
+                .conditional_keywords
+                .is_some(),
+        };
+        if draws {
+            let stint = self.stint_of(id);
+            self.windfury.insert(id.to_string(), stint);
+            self.drawn_windfury.insert(id.to_string());
         }
     }
 
@@ -1632,7 +1653,12 @@ impl InvariantMonitor {
     /// R424: a readied stint whose body carries no `summonedTurn`, as the readying transform leaves it;
     /// R1869002: or `mayAttackAgain` does, for a stint holding a kill credit no state has settled yet.
     fn is_readied(&self, card: &CardInstance) -> bool {
-        (self.readied.contains(&card.id) || self.credited_at(&card.id).is_some())
+        // R1869002: a kill credit still unsettled (a prompt the action left open, a steal that gave the
+        // attacker a new stint before its `afterAttack` freed it: handicapped fuzz seed 4737) may have
+        // readied it; `settle_kill_credits` takes it back once nothing is owed if its attack stayed spent.
+        (self.readied.contains(&card.id)
+            || self.credited_at(&card.id).is_some()
+            || self.unsettled_credits.contains(&card.id))
             && card.summoned_turn.is_none()
     }
 
@@ -1693,14 +1719,51 @@ impl InvariantMonitor {
     /// R1062: an "Animated on your turn" card whose latest entry was on an earlier turn enters nothing as it
     /// animates at its controller's start of turn. Read off the shadow and the card's keywords, never `summonedTurn`.
     /// `side` is the side it animated on: on the other player's turn (R1126's Cane) it is an entry, R383's.
-    fn on_its_side_before_this_turn(&self, id: &str, side: PlayerId, state: &GameState) -> bool {
+    /// The keyword is read as the animation had it: `later`, the action's events after it, may change it
+    /// before the state is read (a Knowledge Breaker the autopilot plays on that turn Nerfs it off the
+    /// Cane, fuzz seed 2443), and the first such change says what it was.
+    fn on_its_side_before_this_turn(
+        &self,
+        id: &str,
+        side: PlayerId,
+        state: &GameState,
+        later: &[GameEvent],
+    ) -> bool {
         if side != self.active {
             return false;
         }
         let (Some(at), Some(card)) = (self.entered.get(id).copied(), find_instance(state, id)) else {
             return false;
         };
-        at < self.turn && has_keyword(&keywords_now(state, card), KeywordKind::AnimatedOnYourTurn)
+        let changed = later.iter().find_map(|event| match event {
+            GameEvent::Degraded {
+                instance_id,
+                change: TuningChange::Keyword { keyword, added, also },
+                ..
+            }
+            | GameEvent::Upgraded {
+                instance_id,
+                change: TuningChange::Keyword { keyword, added, also },
+                ..
+            } if instance_id == id
+                && std::iter::once(keyword)
+                    .chain(also.iter().flatten())
+                    .any(|keyword| keyword.kind() == KeywordKind::AnimatedOnYourTurn) =>
+            {
+                Some(!*added)
+            }
+            GameEvent::KeywordGranted {
+                instance_id,
+                keyword,
+                lost,
+            } if instance_id == id && keyword.kind() == KeywordKind::AnimatedOnYourTurn => {
+                Some(lost.is_some())
+            }
+            _ => None,
+        });
+        let had = changed
+            .unwrap_or_else(|| has_keyword(&keywords_now(state, card), KeywordKind::AnimatedOnYourTurn));
+        at < self.turn && had
     }
 
     /// R1829000: the entries one action made by uncovering cards in their Stack piles, which no event
@@ -2012,7 +2075,11 @@ impl InvariantMonitor {
         let began_on = self.turn;
         // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
         // record holds from an earlier action readies nothing (a later Transmogulate of that unit is not it).
-        self.attack = None;
+        // An action that left a prompt or work owed is the attack's own still resolving (R1869002: a kill
+        // an ambush's Discovers delayed credits its attacker when it lands), so the attack is kept then.
+        if !self.attack_open {
+            self.attack = None;
+        }
 
         // I5: the check that ends the game is the last thing that happens (§2.5, R216).
         if let Some(over) = events
@@ -2031,7 +2098,7 @@ impl InvariantMonitor {
             ));
         }
 
-        for event in events {
+        for (index, event) in events.iter().enumerate() {
             match event {
                 GameEvent::TurnStarted { player, turn, .. } => {
                     self.turn = *turn;
@@ -2081,9 +2148,33 @@ impl InvariantMonitor {
                 | GameEvent::ControlChanged { instance_id, .. } => {
                     self.enter(instance_id);
                     self.note_entry_windfury(instance_id, state);
+                    if let GameEvent::Summoned { def_id, .. } = event {
+                        self.note_drawn_windfury(instance_id, def_id, state);
+                    }
+                    // R12, R781004: a steal keeps the card on the field, its drawn keywords with it
+                    // (a Drone Corvette summoned, stolen and bounced inside one AI turn: handicapped
+                    // fuzz seed 1358).
+                    if matches!(event, GameEvent::ControlChanged { .. })
+                        && self.drawn_windfury.contains(instance_id)
+                    {
+                        let stint = self.stint_of(instance_id);
+                        self.windfury.insert(instance_id.clone(), stint);
+                    }
                 }
                 GameEvent::TrapFired { instance_id, .. } => {
                     self.fired.insert(instance_id.clone());
+                }
+                // R678: a Glitch's boards outcome deals both fields again, its cards placed with no
+                // `summoned` (`glitch::place_glitch_boards`), so each card the field holds once the
+                // action is over entered on this turn (a Glitch played from the graveyard mid-game:
+                // handicapped fuzz seed 7613 of the Stinkyscape release).
+                GameEvent::Glitched {
+                    outcome: crate::wire::GlitchOutcome::Boards,
+                    ..
+                } => {
+                    for card in field_cards(state) {
+                        self.enter(&card.id);
+                    }
                 }
                 GameEvent::Awakened { instance_id, .. } => {
                     // R2259000: a card that awakens is summoning sick for the rest of the turn, as one
@@ -2107,7 +2198,12 @@ impl InvariantMonitor {
                     // fused with Fiery Waraxe, set on an earlier turn, fired on its controller's turn).
                     if *carried != Some(true)
                         && (self.fired.contains(instance_id)
-                            || !self.on_its_side_before_this_turn(instance_id, *player, state))
+                            || !self.on_its_side_before_this_turn(
+                                instance_id,
+                                *player,
+                                state,
+                                &events[index + 1..],
+                            ))
                     {
                         let is_unit_def = find_instance(state, instance_id).is_some_and(|card| {
                             crate::catalog::def_of(Some(state), &card.def_id).type_
@@ -2127,6 +2223,14 @@ impl InvariantMonitor {
                     if new_instance_id != instance_id {
                         self.enter(new_instance_id);
                         self.note_entry_windfury(new_instance_id, state);
+                    }
+                    // R2285002: an attack whose target its attacker's "when this attacks" transformed is
+                    // fought at the Unit that took its place, so that Unit is the one its kill names.
+                    if let Some(attack) = self.attack.as_mut()
+                        && attack.target_id == *instance_id
+                        && !attack.killed
+                    {
+                        attack.target_id = new_instance_id.clone();
                     }
                     if self.attack.as_ref().is_some_and(|attack| {
                         attack.killed && !attack.forced && attack.attacker_id == *instance_id
@@ -2168,6 +2272,19 @@ impl InvariantMonitor {
                     {
                         attack.target_id = to_id.clone();
                     }
+                }
+                // R636, R1086: a Fuse (an Equip among them) brings its ingredients' text, and with it a
+                // Windfury an aura of theirs gives, which no `keywordGranted` reports; a unit that holds
+                // it as the action leaves it has it from the fuse on (M #65 Keymaster Keenus' random
+                // keywords, equipped onto S #113: handicapped fuzz seed 7566), and one gone by the action's
+                // end may have drawn it (`note_drawn_windfury`).
+                GameEvent::Fused {
+                    result_instance_id,
+                    def_id,
+                    ..
+                } => {
+                    self.note_entry_windfury(result_instance_id, state);
+                    self.note_drawn_windfury(result_instance_id, def_id, state);
                 }
                 GameEvent::KeywordGranted {
                     instance_id,
@@ -2284,6 +2401,7 @@ impl InvariantMonitor {
             self.note_uncoverings(events, state, began_on);
         }
         self.dormant = dormant_cards(state);
+        self.attack_open = state.pending.is_some() || !state.work.is_empty();
 
         // I4: the engine's bookkeeping agrees with the shadow.
         for card in field_cards(state) {
@@ -2457,10 +2575,6 @@ impl DuosInvariantMonitor {
             ],
             view_tamper: None,
         }
-    }
-
-    pub fn duel_monitor(&self, duel: usize) -> &InvariantMonitor {
-        &self.monitors[duel]
     }
 
     pub fn duel_monitor_mut(&mut self, duel: usize) -> &mut InvariantMonitor {

@@ -38,6 +38,8 @@ The text is one type scale (#2107): `src/typescale.css`, imported by `index.css`
 
 The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index.css` after the type scale, names seven corner radii, four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. A board stylesheet gives every `border-radius` a radius, every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline.
 
+The motion is one vocabulary (#2110): `src/motion.css`, imported by `index.css` after the surfaces, names four durations (`--motion-instant` 80ms, `--motion-fast` 150ms, `--motion-base` 250ms, `--motion-slow` 400ms) and five curves (`--ease-standard`, `--ease-out`, `--ease-in`, `--ease-in-out`, `--ease-overshoot`). A board stylesheet gives every transition and animation a curve (or `linear`, or `steps()`; a `@keyframes` stop spells a curve's value out) and every duration a token, keeping its `* var(--anim-scale)`. These keep their own times: BUILD's (the event table in `game/animations.css`, the `activated` and `turnEnded` rows), R701's wobbles, the table's tap marks, loops, staggers, holds, the clock's 200ms repaint, and any time a `var()` feeds in. `src/motion.test.ts` checks this and lists each sheet's own times in `KEEP`.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
@@ -101,6 +103,20 @@ shelf's cards, each a `navigate` move) and `routes/command-menu.css` (no animati
 mounted on a board route, nor over a board sharing a menu's path, which `game/boardShown.ts`
 marks; New deck goes through `newDeckPath` (`net/navigate.ts`), which the workshop makes and
 opens, and a card opens its inspect detail at `/almanac?card=<id>`. Presentation only (rule 7).
+
+**Shortcut hints** (R2126000): the shortcuts the client has, shown and never added.
+`shortcuts/shortcuts.ts` (no React) names each once in `SHORTCUTS` and writes it: `shortcutText`
+(⌘⇧Z on an Apple device, Ctrl+Shift+Z elsewhere, by user agent), `ariaKeyshortcuts`
+("Control+Z Meta+Z") and `shortcutTitle` (a tooltip's "Undo (Ctrl+Z)"), with `touchOnly` and
+`subscribeTouchOnly` for `TOUCH_ONLY_QUERY`. `shortcuts/Kbd.tsx` draws them: `useShortcutHints`,
+`Kbd` (one keycap) and `ShortcutHint` (a sentence around some, `t("Focus the card, then press {keys} to inspect")`).
+They show in the hover preview of a card (`keyHint` on `useInspectTrigger`, "Focus the card, then press I to inspect"),
+in the Undo, Redo and replay step and turn buttons' tooltips, in the command menu (Enter on the
+selected entry, a legend of its keys) and in the site footer (Ctrl/⌘+K). A touch-only device
+(`(hover: none) and (pointer: coarse)`) shows no hint, though `aria-keyshortcuts` stays. A widget's
+own keys (Enter, Space, Escape in a dialog) are unhinted, and no hint adds a key:
+`shortcuts/shortcuts.test.tsx`'s `BOARD_KEY_HANDLERS` freezes the key handlers of the board's sources,
+so a new one fails it (there is no End-turn key). Presentation only (rule 7).
 
 ## Three flows at the table
 
@@ -520,7 +536,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
 The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — with a quiet quests bookmark under them for an active account on a live economy (R2035000), and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
-snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short. Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
+snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321) and whose second tap, a tap elsewhere or focus leaving it closes it, with no key handler (R2126000). Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
 
 - the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
   only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §13.5);

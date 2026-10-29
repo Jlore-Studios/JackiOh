@@ -101,6 +101,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Chance to reveal",
     // R2199000: Training Grounds', rules only: TG #31 Level Up! prints no such term.
     "After one of your Units attacks",
+    // R2285000, R2285001: the two attack timings, rules only; the cards print them in their own words.
+    "When this attacks",
+    "After this attacks",
   ],
   "§6.3": [
     "Summon",
@@ -358,7 +361,10 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
     expect([GLOSSARY.Windfury, GLOSSARY.Temporary].map((entry) => [entry.section, entry.rule])).toEqual([
       ["§6.1", "Can attack twice each turn"],
-      ["§6.1", "Discarded from its owner's hand at the end of their turn"],
+      [
+        "§6.1",
+        "At the end of its owner's turn the count drops by 1; at 0 the card is discarded from their hand. Temporary alone is Temporary 1",
+      ],
     ]);
   });
 

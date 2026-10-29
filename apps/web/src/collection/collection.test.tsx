@@ -96,6 +96,8 @@ describe("#1307 setCompletions", () => {
       [0, 0],
       [0, 0],
       [0, 0],
+      // Re-pinned for the Training Grounds release (#2204): the set ships, so it has a row.
+      [0, 0],
     ]);
     expect(sets[0]?.cards.map((card) => [card.def.id, card.owned])).toEqual([
       ["core-001", true],

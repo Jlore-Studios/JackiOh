@@ -6,7 +6,7 @@
 //!            Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones,
 //!            on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then
 //!            launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the
-//!            game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle; cast a random
+//!            game, the Marketplace offers you a Call to Chaos for 20 Credits each turn; cast a random
 //!            Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
@@ -75,7 +75,7 @@ pub const CHAOS_SCAPE_EFFECTS: &[subsystems::ChaosEffectDef] = &[
     },
     subsystems::ChaosEffectDef {
         name: "market",
-        label: "For the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle",
+        label: "For the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each turn",
         build: subsystems::scape_market,
     },
     // 10. Core's recursion, the chain counting casts of every edition (R28, R87, R452).
@@ -122,9 +122,16 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// The Call to Chaos pool of the sets that ship (R380, R1420).
-    const SHIPPED_EDITIONS: [&str; 5] =
-        ["core-095", "classicplus-073", "meditative-095", "stinkyscape-150", "stinkyscape-151"];
+    /// The Call to Chaos pool of the sets that ship (R380, R1420). Re-pinned for the Training Grounds
+    /// release (#2204): its #39 joins it (R2200004).
+    const SHIPPED_EDITIONS: [&str; 6] = [
+        "core-095",
+        "classicplus-073",
+        "meditative-095",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "traininggrounds-039",
+    ];
     const CORVETTE: &str = "stinkyscape-t-drone-corvette";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
     /// The Drone Battleship's layers, bottom first.
@@ -451,15 +458,7 @@ mod tests {
             );
             // The ship is summoned first and launched for nothing: no mana beyond this card's (4).
             assert_eq!(events_of(&s, "summoned")[0]["defId"], json!(DORMANT_STARSHIP));
-            let ship = s
-                .state()
-                .players
-                .p1
-                .units
-                .iter()
-                .flatten()
-                .flatten()
-                .find(|card| card.starship.is_some())
+            let ship = launched_starship_of(s.state(), PlayerId::P1)
                 .cloned()
                 .expect("a Starship");
             assert!(ship.starship.as_ref().is_some_and(|memory| memory.launched.is_some()));
@@ -508,7 +507,12 @@ mod tests {
         fn r1882009_entry_market_offers_its_caster_alone_a_call_to_chaos_at_twenty() {
             let s = chaos("market", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let market = s.state().marketplace.as_ref().expect("the Marketplace opened");
-            let lots: Vec<_> = market.offers.iter().filter(|offer| offer.owner.is_some()).collect();
+            // R2250002: the rolled offers are each player's too; the lot it adds is the fixed one.
+            let lots: Vec<_> = market
+                .offers
+                .iter()
+                .filter(|offer| offer.fixed == Some(true))
+                .collect();
             assert_eq!(lots.len(), 1);
             let lot = lots[0];
             assert_eq!(lot.owner, Some(P1));
@@ -524,7 +528,7 @@ mod tests {
                     .as_array()
                     .into_iter()
                     .flatten()
-                    .any(|offer| offer["defId"] == json!(lot.def_id))
+                    .any(|offer| offer["fixed"] == json!(true))
             );
         }
 

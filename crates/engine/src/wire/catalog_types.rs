@@ -265,9 +265,9 @@ string_union! {
 
 string_union! {
     /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
-    /// issue #1173, R1178000) and Stinkyscape (issue #1836, R1857000; released by #1884) ship;
-    /// Training Grounds (issue #2193) is held until its release (#2204, R2194000); Boss and Boss-X
-    /// are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
+    /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
+    /// Training Grounds (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are
+    /// reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
     /// shipped, so no pool or random deck finds one.
     pub enum SetName {
         Core = "Core",
@@ -286,20 +286,21 @@ string_union! {
 /// The sets that ship, in catalog order. A pool that names no set draws from all of them (R380),
 /// and only from them: a set the catalog holds that is not listed here is in no such pool, in no
 /// deck and on no list a player reads until it is (R1420).
-pub const SHIPPED_SETS: [SetName; 6] = [
+pub const SHIPPED_SETS: [SetName; 7] = [
     SetName::Core,
     SetName::Classic,
     SetName::ClassicPlus,
     SetName::Meditative,
     SetName::MeditativePlus,
     SetName::Stinkyscape,
+    SetName::TrainingGrounds,
 ];
 
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
 /// Meditative+ follows Meditative (issue #1173, R1178000), and the Stinkyscape set follows
 /// Meditative+ (issue #1857, R1857000; shipped by issue #1884), and the Training Grounds set
-/// follows Stinkyscape (issue #2194, R2194000), held until its release (#2204).
+/// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204).
 pub const CATALOG_SETS: [SetName; 7] = [
     SetName::Core,
     SetName::Classic,
@@ -521,7 +522,14 @@ pub enum Keyword {
     /// R636: a Unit may attack twice each turn.
     Windfury,
     /// R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3).
-    Temporary,
+    /// R2179001: Temporary X counts down by 1 at each end of its owner's turn it spends in their hand,
+    /// and the card is discarded at 0. A plain Temporary (no number) is Temporary 1, written without
+    /// one, so the catalogs and logs from before the number read and hash as they did.
+    Temporary {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        n: Option<i32>,
+    },
     /// A Unit may attack and switch position in the same turn (R49).
     Deft,
     /// R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing.
@@ -642,7 +650,7 @@ impl Keyword {
             Keyword::ImmuneToSpells => KeywordKind::ImmuneToSpells,
             Keyword::ImmuneToTribalHate => KeywordKind::ImmuneToTribalHate,
             Keyword::Windfury => KeywordKind::Windfury,
-            Keyword::Temporary => KeywordKind::Temporary,
+            Keyword::Temporary { .. } => KeywordKind::Temporary,
             Keyword::Deft => KeywordKind::Deft,
             Keyword::Untributable => KeywordKind::Untributable,
             Keyword::Equip => KeywordKind::Equip,
@@ -657,13 +665,18 @@ impl Keyword {
         }
     }
 
-    /// `"n" in keyword ? keyword.n : undefined`: the number a numbered keyword carries.
+    /// R2179001: a plain Temporary, Temporary 1 with no number written.
+    pub const TEMPORARY: Keyword = Keyword::Temporary { n: None };
+
+    /// `"n" in keyword ? keyword.n : undefined`: the number a numbered keyword carries. A Temporary
+    /// carries one only where it prints or is given one (R2179001).
     pub fn n(&self) -> Option<i32> {
         match *self {
             Keyword::Armor { n }
             | Keyword::Lucky { n }
             | Keyword::Brittle { n }
             | Keyword::SpellDamage { n } => Some(n),
+            Keyword::Temporary { n } => n,
             _ => None,
         }
     }
@@ -696,7 +709,7 @@ impl Keyword {
             KeywordKind::ImmuneToSpells => Keyword::ImmuneToSpells,
             KeywordKind::ImmuneToTribalHate => Keyword::ImmuneToTribalHate,
             KeywordKind::Windfury => Keyword::Windfury,
-            KeywordKind::Temporary => Keyword::Temporary,
+            KeywordKind::Temporary => Keyword::TEMPORARY,
             KeywordKind::Deft => Keyword::Deft,
             KeywordKind::Untributable => Keyword::Untributable,
             KeywordKind::Equip => Keyword::Equip,
@@ -1121,8 +1134,8 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub uses_plague: Option<bool>,
-    /// R1840000: this card is a Resource, a (0) Spell token gained into its player's Resource tray
-    /// and never a hand, with its rarity and its prices. The roll (R1840002) reads `resource.rarity`;
+    /// R1840000, R2250000: this card is a Resource, a (0) Spell token gained into its player's hand,
+    /// with its rarity and its prices. The roll (R1840002) reads `resource.rarity`;
     /// `printedRarity` stays the card frame's alone. Absent on every other card, a fused or crafted
     /// definition included, so a catalog without Resources serialises as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1377,8 +1390,6 @@ string_union! {
         Field = "field",
         Resolving = "resolving",
         Gone = "gone",
-        /// R1840000: a player's Resource tray, beside the hand.
-        Tray = "tray",
     }
 }
 
@@ -1415,11 +1426,6 @@ pub enum Zone {
     Gone {
         player: PlayerId,
     },
-    /// R1840000: a Resource in its player's Resource tray (`PlayerState.resource_tray`), read as a
-    /// hand is (§9.1): its player reads it, the other player only its count.
-    Tray {
-        player: PlayerId,
-    },
 }
 
 impl Zone {
@@ -1433,7 +1439,6 @@ impl Zone {
             Zone::Field { .. } => ZoneName::Field,
             Zone::Resolving { .. } => ZoneName::Resolving,
             Zone::Gone { .. } => ZoneName::Gone,
-            Zone::Tray { .. } => ZoneName::Tray,
         }
     }
 
@@ -1446,8 +1451,7 @@ impl Zone {
             | Zone::Exile { player }
             | Zone::Field { player, .. }
             | Zone::Resolving { player }
-            | Zone::Gone { player }
-            | Zone::Tray { player } => player,
+            | Zone::Gone { player } => player,
         }
     }
 
@@ -1461,7 +1465,6 @@ impl Zone {
             ZoneName::Exile => Some(Zone::Exile { player }),
             ZoneName::Resolving => Some(Zone::Resolving { player }),
             ZoneName::Gone => Some(Zone::Gone { player }),
-            ZoneName::Tray => Some(Zone::Tray { player }),
             ZoneName::Field => None,
         }
     }

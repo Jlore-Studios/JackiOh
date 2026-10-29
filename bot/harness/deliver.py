@@ -46,8 +46,8 @@ from harness.config import (COMMIT_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABE
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, Identity, matches
-from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, is_human,
-                           label_names, set_mode,
+from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, hold_merge,
+                           is_human, label_names, merge_title, set_mode,
                            labelled_difficulty, open_pull_for_branch, rating_source,
                            set_state_label, wip_branch)
 from harness.state import item as state_item
@@ -300,12 +300,13 @@ class Deliverer:
         return open_pull_for_branch(self.ctx, branch) if branch else None
 
     def _hold_auto_merge(self, number: int | None = None) -> None:
-        """Turn auto-merge off on the branch's open PR (or on PR `number`) before unapproved
-        work lands on it."""
+        """Turn auto-merge off on the branch's open PR (or on PR `number`), and take it out of the
+        merge queue, before unapproved work lands on it."""
         pull = self.gh.get_pull(number) if number else self._open_pull()
-        if pull is not None and pull.get("auto_merge") and pull.get("node_id"):
-            self._try(lambda: self.gh.disable_auto_merge(pull["node_id"]))
-            self.log.append(f"auto-merge off on #{pull.get('number')}")
+        if pull is not None and pull.get("node_id"):
+            hold_merge(self.ctx, pull)
+            if pull.get("auto_merge"):
+                self.log.append(f"auto-merge off on #{pull.get('number')}")
 
     def _publish(self, *, approved: bool) -> tuple[bool, str]:
         """Push the bundle's branch. `(pushed, problem)`; no bundle is `(False, "")`. A bundle
@@ -1074,9 +1075,7 @@ class Deliverer:
                                   f"asks #{number} to #{pr}")
         is_pr = "pull_request" in self.gh.get_issue(target)
         if is_pr:
-            pull = self.gh.get_pull(target)
-            if pull.get("auto_merge") and pull.get("node_id"):
-                self._try(lambda: self.gh.disable_auto_merge(pull["node_id"]))
+            hold_merge(self.ctx, self.gh.get_pull(target))
         set_state_label(self.ctx, target, self._labels(target),
                         LABEL_REVISE if is_pr else LABEL_BUILD)
         self._remember(target, kind="revise" if is_pr else "build", queued_at=iso(self.ctx.now()),
@@ -2007,13 +2006,7 @@ class Deliverer:
         return self._hand_to_a_person(pull, f"GitHub refused it ({error})")
 
     def _merge_title(self, pull: dict[str, Any]) -> str:
-        """The squash commit's title: the pull request's, as GitHub writes it for a pull request of
-        several commits. Without it a one-commit pull request lands on `main` under the bot's own
-        commit message ("bot: build pass 1 for #85")."""
-        title = str(pull.get("title") or "").strip()
-        if self.cfg.merge_method != "squash" or not title:
-            return ""
-        return f"{title} (#{pull.get('number')})"
+        return merge_title(pull, self.cfg.merge_method)
 
     def _rerun_ci(self, number: int) -> None:
         run_id = self._record(number).get("ci_run_id")

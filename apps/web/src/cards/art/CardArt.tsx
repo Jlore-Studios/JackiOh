@@ -12,7 +12,7 @@ import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
-import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
 
@@ -32,6 +32,11 @@ export type CardArtProps = {
   className?: string;
   /** Avoid parsing art for grid cards scrolled past (near.ts); use the theme sky until near. */
   lazy?: boolean;
+  /**
+   * R2249000: the card is a Starship in play (`FaceModel.starship`): it wears the Starship's own art,
+   * drawn from its pieces and its launch, whatever definition its fusions gave it.
+   */
+  starship?: { pieces: number; launched: boolean } | null;
 };
 
 function classes(shape: ArtShape, className: string | undefined): string {
@@ -49,6 +54,7 @@ export function CardArt({
   manifest = ART_MANIFEST,
   className,
   lazy = false,
+  starship = null,
 }: CardArtProps): ReactElement {
   // Keep failures per source so cards and faces retry independently.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -71,7 +77,8 @@ export function CardArt({
   const yard = isTrainingGroundsArt(defId);
   const motif = stinky || yard ? null : motifFor(cardName, theme);
   const variant = radiant ? "radiant" : "base";
-  const real = artUrl(artId, radiant, manifest);
+  // R2249000: a Starship draws its own art, never a real one its fused definition might name.
+  const real = starship === null ? artUrl(artId, radiant, manifest) : null;
 
   if (real !== null && real.src !== failedSrc) {
     const src = real.src;
@@ -99,11 +106,21 @@ export function CardArt({
 
   const uri = !near
     ? null
-    : stinky
-      ? stinkyscapeArtUri(defId, cardName, tags, type, radiant)
-      : yard
-        ? trainingGroundsArtUri(defId, cardName, tags, type, radiant)
-        : proceduralArtUri(artId, theme, compositionFor(type), radiant, motif);
+    : starship !== null
+      ? starshipArtUri(starship.pieces, starship.launched, radiant)
+      : stinky
+        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant)
+        : yard
+          ? trainingGroundsArtUri(defId, cardName, tags, type, radiant)
+          : proceduralArtUri(artId, theme, compositionFor(type), radiant, motif);
+  const family =
+    starship !== null
+      ? "starship"
+      : stinky
+        ? stinkySubject(defId, cardName, tags, type).family
+        : yard
+          ? yardSubject(defId, cardName, tags, type).family
+          : undefined;
   const [skyTop, skyBottom] = THEME_PALETTES[theme].sky;
   return (
     <span
@@ -113,9 +130,7 @@ export function CardArt({
       data-art-theme={theme}
       data-art-variant={variant}
       data-art-motif={motif ?? undefined}
-      data-art-family={
-        stinky ? stinkySubject(defId, cardName, tags, type).family : yard ? yardSubject(defId, cardName, tags, type).family : undefined
-      }
+      data-art-family={family}
       data-art-pending={uri === null ? "true" : undefined}
       aria-hidden="true"
       style={

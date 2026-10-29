@@ -5,7 +5,7 @@
 //!
 //! "It" is the card the Discover adds, not this spell (§8 Conventions; JackiOh_Core_Cards.md #82).
 //! Patch v0.3.10 (#831, R831004): the first Discover is a `mode` prompt of three of the sets that ship
-//! (`SHIPPED_SETS`, six since Stinkyscape shipped with #1884), drawn from the match rng; the second
+//! (`SHIPPED_SETS`, seven since Training Grounds shipped with #2204), drawn from the match rng; the second
 //! offers three numbers of the chosen set (the Core set alone before). The pool is the engine's (§5.1,
 //! R54): `query` drops tokens and, by R387, never offers #82. Three options are drawn without
 //! replacement (§6.3, R60). The options are the numbers (R247): `offer: "index"` labels each with its
@@ -110,8 +110,17 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TRIAL: &str = "core-082";
-    /// The six sets that ship, which the first Discover draws from (R831004).
-    const SETS: [&str; 6] = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"];
+    /// The seven sets that ship, which the first Discover draws from (R831004). Re-pinned for the
+    /// Training Grounds release (#2204): that set joins them.
+    const SETS: [&str; 7] = [
+        "Core",
+        "Classic",
+        "Classic+",
+        "Meditative",
+        "Meditative+",
+        "Stinkyscape",
+        "Training Grounds",
+    ];
 
     use crate::js;
 

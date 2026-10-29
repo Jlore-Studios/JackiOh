@@ -76,6 +76,7 @@ import { GlitchBlob } from "./GlitchBlob.tsx";
 import { showsFullArt, useFullArt } from "./fullArt.ts";
 import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
+import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts";
@@ -390,6 +391,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               name={face.englishName ?? face.name}
               shape={fullArt ? "full" : ART_SHAPE[face.type]}
               lazy={lazyArt}
+              starship={face.inPlay ? face.starship : null}
             />
           )}
         </span>
@@ -420,16 +422,21 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
             data-short={short !== null ? "true" : undefined}
             data-less={less ? "true" : undefined}
           >
-            <span className="cf-text-base">
-              <RulesText
-                text={shown}
-                marks={face.text.marks}
-                refs={face.refs}
-                values={face.values}
-                {...(face.text.tuned === undefined ? {} : { tuned: face.text.tuned })}
-                chinese={face.chinese === true}
-              />
-            </span>
+            {face.inPlay && face.starship != null ? (
+              // R2249000: a Starship lists its pieces in place of its text.
+              <StarshipPieces list={face.starship.list} />
+            ) : (
+              <span className="cf-text-base">
+                <RulesText
+                  text={shown}
+                  marks={face.text.marks}
+                  refs={face.refs}
+                  values={face.values}
+                  {...(face.text.tuned === undefined ? {} : { tuned: face.text.tuned })}
+                  chinese={face.chinese === true}
+                />
+              </span>
+            )}
             {face.gained.length > 0 && (
               <span className="cf-text-gained" data-gained={face.gained.map(keywordKey).join("|")}>
                 <RulesText text={gainedLine(face)} />

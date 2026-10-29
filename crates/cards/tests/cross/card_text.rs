@@ -908,7 +908,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 .iter()
                 .any(|why| why == inside)
         );
-        // The faces that quote a label are the two that grant a Death (R1107), on both faces.
+        // The faces that quote a label are the two that grant a Death (R1107), and Meditative+ #9's
+        // Embiggened Cry (#2179), on both faces.
         let quoting: Vec<String> = swept()
             .iter()
             .filter(|face| {
@@ -928,6 +929,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 "meditative-058 radiant",
                 "meditative-059 base",
                 "meditative-059 radiant",
+                "meditativeplus-009 base",
+                "meditativeplus-009 radiant",
             ])
         );
     }
@@ -1686,10 +1689,10 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
             }
         }
         assert_eq!(wrong, Vec::<String>::new());
-        // The eight embiggen cards of issue #1175, and Meditative+ #3, #4, #5, #19 and #23
-        // (#1179, #1181). Every face above is held to the label, a held set's too; the list pinned
-        // is the shipped sets' (R1857000: the Stinkyscape set's #79, #127, #128, #129 and #154 joined
-        // at its release, #1884).
+        // The eight embiggen cards of issue #1175, Meditative+ #3, #4, #5, #19 and #23 (#1179, #1181),
+        // and Core #83, Classic #35 and Meditative+ #9 (#2179). Every face above is held to the label, a
+        // held set's too; the list pinned is the shipped sets' (R1857000: the Stinkyscape set's #79,
+        // #127, #128, #129 and #154 joined at its release, #1884).
         let shipped: Vec<String> = cards
             .into_iter()
             .filter(|id| {
@@ -1702,10 +1705,12 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
         assert_eq!(
             sorted(shipped),
             strings(&[
+                "classic-035",
                 "classicplus-036",
                 "core-046",
                 "core-056",
                 "core-059",
+                "core-083",
                 "core-084",
                 "meditative-021",
                 "meditative-046",
@@ -1713,6 +1718,7 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
                 "meditativeplus-003",
                 "meditativeplus-004",
                 "meditativeplus-005",
+                "meditativeplus-009",
                 "meditativeplus-019",
                 "meditativeplus-023",
                 "stinkyscape-079",

@@ -80,11 +80,11 @@
    every frame. An animated box-shadow outranks every plain declaration, so each colour has its own
    keyframes and the green ones never run on a card whose condition is met. */
 .card[data-glow="ready"]:not([data-selected="true"]):not([data-condition-active="true"]) {
-  animation: glow-breathe-ready calc(1.8s * var(--anim-scale, 1)) ease-in-out infinite alternate;
+  animation: glow-breathe-ready calc(1.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite alternate;
 }
 
 .card[data-glow="ready"][data-condition-active="true"]:not([data-selected="true"]) {
-  animation: glow-breathe-condition calc(1.4s * var(--anim-scale, 1)) ease-in-out infinite alternate;
+  animation: glow-breathe-condition calc(1.4s * var(--anim-scale, 1)) var(--ease-in-out) infinite alternate;
 }
 
 @keyframes glow-breathe-ready {

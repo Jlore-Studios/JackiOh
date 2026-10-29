@@ -1,4 +1,4 @@
-/* Face-down backrow cards (SPEC §10.10, R370, R371). Card.tsx draws the elements; this file is
+/* Face-down backrow cards (SPEC §10.10, R370, R371, R2111000). Card.tsx draws the elements; this file is
    their look. None of it is a rule: the view says what is face-down and what it costs.
 
    R370: a back in the backrow wears its cost as a gem in the top-left corner, where a face wears
@@ -132,4 +132,40 @@
     overflow: hidden;
     clip-path: inset(50%);
   }
+}
+
+/* ---- #2111, R2111000: a face-down card breathes while it waits ---------------------------- */
+
+/* One slow breath for every face-down card on the board, a back on either seat's and your own trap
+   under its veil, from one rule keyed on nothing but being face-down, so it says nothing of the card
+   (every back looks alike, R1297000). `scale`, never `transform`, and only below 1, so it composes
+   and never leaves its zone; a card mid-animation or glowing ready plays that instead. */
+@keyframes jk-facedown-breathe {
+  0%,
+  100% {
+    scale: 1;
+    filter: brightness(1);
+  }
+
+  50% {
+    scale: 0.985;
+    filter: brightness(1.08);
+  }
+}
+
+.card.card-facedown,
+.card[data-unrevealed="true"]:not([data-animating]):not([data-glow]) {
+  animation: jk-facedown-breathe calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card.card-facedown,
+  .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]) {
+    animation: none;
+  }
+}
+
+:root[data-reduce-motion="true"] .card.card-facedown,
+:root[data-reduce-motion="true"] .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]) {
+  animation: none;
 }

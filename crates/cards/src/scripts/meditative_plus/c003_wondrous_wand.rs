@@ -1,6 +1,6 @@
 //! M+ #3 Wondrous Wand (SPEC §8.9 row 3, BUILD M11 row M+ 3): (2, Embiggened 4) Spell, Epic.
-//!   Base and Radiant: "Draw {draw|card|cards}. They cost (0). Embiggened (4): Draw
-//!   {embiggenedDraw} instead." (1/2; 2/5)
+//!   Base and Radiant: "Draw {draw|card|cards}. They cost ({setCost}). Embiggened (4): Draw
+//!   {embiggenedDraw} instead." (1/2, (1); 2/4, (0) since issue #2179: (0) and 2/5 before)
 //!
 //! C #79 Risky Die's pattern: the caster's library is noted on the resolving card as the Spell
 //! begins (`remember`, so a pause cannot lose it), the draws run (the count read off
@@ -8,7 +8,8 @@
 //! (C #79's "they": a card cast on draw never gets there, R58; a burned one isn't there,
 //! §2.4; a card created meanwhile was never in the library; cards already in the hand are
 //! untouched). The override is the card's cost in every zone until it reaches a graveyard or an
-//! exile pile (R766).
+//! exile pile (R766). Issue #2179 moved only declared numbers (`setCost` 1 on the base face,
+//! `embiggenedDraw` 4 on the Radiant), so no script is kept for it.
 //! Both counts are declared and read through `param` (R386), and so is the drawn cards' price,
 //! `setCost` (R1748003). Tunes: draw 1 ↑ (Radiant 2); embiggenedDraw 2 ↑ (Radiant 5); setCost 0 ↓.
 //! Through v0.4.4b that (0) was printed, not declared; `script_v0_4_4b` keeps that (R767000).
@@ -97,9 +98,9 @@ pub fn script_v0_4_4b() -> CardScripts {
 }
 
 // M+ #3 Wondrous Wand — SPEC §8.9 row 3, BUILD M11 row M+ 3: "at (2) draws 1 and the drawn card
-// costs (0); played Embiggened at (4) draws 2, both (0); a card cast on draw is not discounted and
+// costs (1); played Embiggened at (4) draws 2, both (1); a card cast on draw is not discounted and
 // the draw repeats (R58); a card burned at a full hand is not either; a card already in the hand
-// keeps its cost; both counts read through `param()`; radiant 2 cards, Embiggened 5".
+// keeps its cost; both counts read through `param()`; radiant 2 cards costing (0), Embiggened 4".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -127,27 +128,28 @@ mod tests {
     }
 
     #[test]
-    fn draws_1_and_the_drawn_card_costs_0() {
+    fn draws_1_and_the_drawn_card_costs_1() {
         crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
         s.play(WAND, json!({}));
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 1);
         s.expect_in_zone(FILLER, "hand");
         let drawn = s.card(FILLER);
-        assert_eq!(drawn.cost_override, Some(0));
-        assert_eq!(effective_cost(s.state(), drawn, Default::default()), 0);
+        assert_eq!(drawn.cost_override, Some(1));
+        assert_eq!(effective_cost(s.state(), drawn, Default::default()), 1);
     }
 
     #[test]
-    fn played_embiggened_at_4_draws_2_both_cost_0() {
+    fn played_embiggened_at_4_draws_2_both_cost_1() {
         crate::register_all();
-        let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
+        // Mana to spare, so the (1) cards do not leave a turn with nothing to do, which ends itself (R82).
+        let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER], "mana": 10 } }));
         s.play(WAND, json!({ "embiggen": true }));
-        s.expect_mana(P1, 0);
+        s.expect_mana(P1, 6);
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 2);
         for card in s.hand(P1) {
             if card.def_id == FILLER {
-                assert_eq!(card.cost_override, Some(0));
+                assert_eq!(card.cost_override, Some(1));
             }
         }
         assert_eq!(s.hand(P1).into_iter().filter(|card| card.def_id == FILLER).count(), 2);
@@ -162,7 +164,7 @@ mod tests {
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 2);
         s.expect_in_zone(CN_VIRUS, "graveyard").expect_in_zone(MENACE, "hand");
         assert_eq!(s.card(CN_VIRUS).cost_override, None);
-        assert_eq!(s.card(MENACE).cost_override, Some(0));
+        assert_eq!(s.card(MENACE).cost_override, Some(1));
     }
 
     #[test]
@@ -176,7 +178,7 @@ mod tests {
         s.play(WAND, json!({ "embiggen": true }));
         s.expect_in_zone(FILLER, "hand");
         s.expect_in_zone(MENACE, "graveyard");
-        assert_eq!(s.card(FILLER).cost_override, Some(0));
+        assert_eq!(s.card(FILLER).cost_override, Some(1));
         assert_eq!(s.card(MENACE).cost_override, None);
     }
 
@@ -199,7 +201,7 @@ mod tests {
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 2);
 
         crate::register_all();
-        let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER, FILLER] } }));
+        let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER, FILLER], "mana": 10 } }));
         step_param(s.card_mut(WAND), "embiggenedDraw", 1);
         s.play(WAND, json!({ "embiggen": true }));
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 3);
@@ -209,11 +211,16 @@ mod tests {
     fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
         crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
-        // A Buff finds it at its floor of (0); a Nerf makes the drawn card cost (1).
-        assert!(!crate::can_upgrade_number(&s, WAND, "setCost"));
-        assert_eq!(crate::degrade_number(&mut s, WAND, "setCost"), 1);
+        // A Nerf makes the drawn card cost (2) on the base face; a Buff (0), its floor (#2179's (1)).
+        assert_eq!(crate::degrade_number(&mut s, WAND, "setCost"), 2);
         s.play(WAND, json!({}));
-        assert_eq!(s.card(FILLER).cost_override, Some(1));
+        assert_eq!(s.card(FILLER).cost_override, Some(2));
+
+        let mut buffed = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
+        assert_eq!(crate::upgrade_number(&mut buffed, WAND, "setCost"), 0);
+        assert!(!crate::can_upgrade_number(&buffed, WAND, "setCost"));
+        buffed.play(WAND, json!({}));
+        assert_eq!(buffed.card(FILLER).cost_override, Some(0));
     }
 
     #[test]
@@ -241,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn radiant_embiggened_draws_5_each_costing_0() {
+    fn radiant_embiggened_draws_4_each_costing_0() {
         crate::register_all();
         let mut s = scenario(json!({
             "p1": {
@@ -250,8 +257,8 @@ mod tests {
             },
         }));
         s.play(WAND, json!({ "embiggen": true }));
-        assert_eq!(drawn_ids(s.last_events(), P1).len(), 5);
-        assert_eq!(s.hand(P1).into_iter().filter(|card| card.def_id == FILLER).count(), 5);
+        assert_eq!(drawn_ids(s.last_events(), P1).len(), 4);
+        assert_eq!(s.hand(P1).into_iter().filter(|card| card.def_id == FILLER).count(), 4);
         for card in s.hand(P1) {
             if card.def_id == FILLER {
                 assert_eq!(card.cost_override, Some(0));

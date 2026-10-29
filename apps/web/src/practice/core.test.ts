@@ -631,13 +631,16 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
       expect(begun.aiToAct, "turn 1 is p1's").toBe(ai === "p1");
     });
 
+    // Re-pinned for the Training Grounds release (#2204): the AI's random deck draws from the set now,
+    // and seed `-d` dealt the AI (p1) a hand with nothing to play on turn 1, so its turn auto-ended
+    // (turnAutoEnded) before the snapshot read turn 1.
     it(`R265 seated ${human}: the human answers first and waits with its answer sealed, and the AI's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);
       const d = driver();
       const started = snapshotOf(
         d.send({
           type: "start",
-          config: config({ seed: `r265-human-first-${human}-d`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
+          config: config({ seed: `r265-human-first-${human}-e`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
         }),
       );
       const hand = handOf(started);

@@ -693,8 +693,6 @@ export const STATS_TAB_CARDS = "stats-tab-cards";
 export const STATS_TAB_PLAYERS = "stats-tab-players";
 export const STATS_SUMMARY_TILES = "stats-summary-tiles";
 export const STATS_SUMMARY_TOTAL_GAMES = "stats-summary-total-games";
-export const STATS_PROVISIONAL_BANNER = "stats-provisional-banner";
-export const STATS_FALLBACK_TOGGLE = "stats-fallback-toggle";
 export const STATS_SEARCH_INPUT = "stats-search-input";
 export const STATS_CARDS_TABLE = "stats-cards-table";
 export const STATS_PLAYERS_TABLE = "stats-players-table";
@@ -937,6 +935,13 @@ export function tokenCardPickId(cardId: string): string {
 
 /** Every card token Pick, whatever its card; the card is the testid's suffix. */
 export const TOKEN_CARD_PICKS = '[data-testid^="token-card-pick-"]';
+
+/** §14.5 (#2251): the card-token picker's Unlock confirm and Cancel, mirroring `shopTestid`. */
+export const TOKEN_CARD_CONFIRM = "token-card-confirm";
+export const TOKEN_CARD_CANCEL = "token-card-cancel";
+
+/** Every card face in the card-token picker's pool, whatever its card; the card is the testid's suffix. */
+export const TOKEN_POOL_CARDS = '[data-testid^="card-pool-"]';
 
 /** §14.3: the packs held, and the scene that opens one (`data-grant` on a slot is `card`, `cosmetic` or `bars`). */
 export function packsOpenId(pack: string): string {

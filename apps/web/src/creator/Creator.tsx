@@ -32,6 +32,7 @@ import {
   type CustomCardsResponse,
 } from "../net/customCards.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { messageOf } from "../together/session.ts";
 import { useUndoHold, type UndoTimer } from "../undo/hold.ts";
 import { UndoToast } from "../undo/UndoToast.tsx";
 import { checkCustomCard, type ScriptProblem } from "../wasm/index.ts";
@@ -104,10 +105,6 @@ type SaveState =
 function inputOf(draft: Draft): CustomCardInput {
   const card = cardOf(draft);
   return { frame: card.frame, source: card.source, ...(card.builder === undefined ? {} : { builder: card.builder }) };
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
 }
 
 /** A new card nobody has touched: nothing a leave would lose. */
