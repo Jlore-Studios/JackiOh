@@ -83,6 +83,12 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub power: Option<String>,
+    /// R2247000: the word a card in its owner's hand shows in place of its text, which it holds in its
+    /// memory (`effects::CARD_LABEL_KEY`): Anomaly Found!'s board code, "FO". Set on the viewer's own
+    /// hand cards only. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub label: Option<String>,
     /// R195, §10.8: Hearthstone's yellow glow. Present, and `true`, only on the viewer's own card
     /// whose printed condition holds now. Absent otherwise: never `false`, never on the opponent's
     /// cards. `UnitView` and the public `BackrowView` inherit it.
@@ -547,7 +553,8 @@ pub struct UnitView {
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub berserk: Option<bool>,
     /// R1174000: the unit is Frozen (a status, public on the field on both seats): it can neither
-    /// attack nor switch its own position until it thaws. Absent otherwise. Only ever `Some(true)`.
+    /// attack nor switch its own position, nor (R2246000) use an Activate, until it thaws. Absent
+    /// otherwise. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub frozen: Option<bool>,
