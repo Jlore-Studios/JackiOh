@@ -294,15 +294,13 @@ mod r2201001_a_held_game_draws_no_legendary_or_mythic_card {
                 "ph-unit-mythic",
             ]),
             count: 3,
-            stock_min: 1,
-            stock_max: 1,
         }];
         let mut unheld_rolled = 0;
         for n in 0..SEEDS {
             let mut rng = Rng::new(&format!("r2201001-roll-{n}"), 0);
             let rolled = with_pool_hold(&held, || roll_weighted(&mut rng, TABLE, 0));
             assert_eq!(rolled, "ph-unit-common", "held roll {n}");
-            let offers = with_pool_hold(&held, || roll_offers(&held, &mut rng, LOTS));
+            let offers = with_pool_hold(&held, || roll_offers(&held, &mut rng, LOTS, PlayerId::P1));
             let ids: Vec<&str> = offers.iter().map(|offer| offer.def_id.as_str()).collect();
             assert_eq!(ids.len(), 2, "held offer {n}: {ids:?}");
             assert!(
@@ -312,7 +310,7 @@ mod r2201001_a_held_game_draws_no_legendary_or_mythic_card {
             );
 
             let rolled = with_pool_hold(&unheld, || roll_weighted(&mut rng, TABLE, 0));
-            let offers = with_pool_hold(&unheld, || roll_offers(&unheld, &mut rng, LOTS));
+            let offers = with_pool_hold(&unheld, || roll_offers(&unheld, &mut rng, LOTS, PlayerId::P1));
             if rolled != "ph-unit-common" || offers.iter().any(|offer| offer.def_id.contains("legendary")) {
                 unheld_rolled += 1;
             }

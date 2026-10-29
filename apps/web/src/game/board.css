@@ -288,8 +288,13 @@
   font-size: var(--type-2xs-em);
 }
 
-/* #2321: a modifier badge is a button (game/ModifierBadge.tsx), whose press opens its whole label. */
-button.modifier-badge {
+/* #2321: a modifier badge is a button (game/ModifierBadge.tsx), whose press opens its whole label.
+   `.hero` outranks src/index.css's `.app-shell button`, whose 9px 16px padding made the hero row
+   taller and the board 3px too tall for a 1024x768 tablet (B46): the badge keeps its own size. */
+.hero button.modifier-badge {
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  font-weight: inherit;
   text-align: left;
 }
 
@@ -1035,18 +1040,13 @@ button.modifier-badge[data-open="true"] {
   height: calc(var(--card-h) * 0.62);
 }
 
-/* R1840000, R1840005: the Resource tray and the Credits count, drawn as the resolving strip is. */
-.resource-tray,
+/* R1840005: the Credits count, drawn as the resolving strip is. */
 .market-credits {
   display: inline-flex;
   gap: var(--gap);
   padding: 2px;
   border: 1px dashed var(--selected);
   border-radius: var(--radius-sm);
-}
-
-.card-tray {
-  height: calc(var(--card-h) * 0.62);
 }
 
 /* ---------------------------------------------------------------------------------- cards --- */

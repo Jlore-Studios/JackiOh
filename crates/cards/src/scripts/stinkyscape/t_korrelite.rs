@@ -2,7 +2,7 @@
 //!   Base:    "Deal {damage} damage to a random enemy." (1)
 //!   Radiant: "Echo 1\nDeal {damage} damage to a random enemy." (1)
 //!
-//! A Resource (R1840000), played from its owner's tray at (0) (R1840003) or sold (R1853003). "A random
+//! A Resource (R1840000), played from its owner's hand at (0) for its Credits (R2250001). "A random
 //! enemy" is B5 E37's `damage_split` of one hit of `damage` among the enemies: the enemy hero and
 //! every enemy Unit still standing, drawn from the match rng (R60), raised by Spell Damage as any
 //! Spell's hit. The Radiant face prints Echo 1 (`StaticFlags.echo`, §6.3): it resolves a second time,
@@ -41,7 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-korrelite — SPEC §7, BUILD M12 row S T-korrelite: "played from the tray, 1 damage to a random
+// S T-korrelite — SPEC §7, BUILD M12 row S T-korrelite: "played from the hand, 1 damage to a random
 // enemy (the hero or a Unit, each seen over the seeds); damage reads through `param()`; radiant it
 // resolves twice (Echo 1)".
 #[cfg(test)]
@@ -49,7 +49,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{play_from_tray, scenario};
+    use crate::{play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -59,7 +59,7 @@ mod tests {
     fn board(seed: &str, radiant: bool) -> Scenario {
         scenario(json!({
             "seed": seed,
-            "p1": { "tray": [{ "def": ID, "radiant": radiant }], "hand": [FILLER] },
+            "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER] },
             "p2": { "field": [BODY] },
         }))
     }
@@ -67,7 +67,7 @@ mod tests {
     /// The damage the enemy hero and the enemy Unit took from one play on `seed`.
     fn hits(seed: &str, radiant: bool) -> (i32, i32) {
         let mut s = board(seed, radiant);
-        play_from_tray(&mut s, P1, ID, Value::Null);
+        play_resource(&mut s, P1, ID, Value::Null);
         let body = s.unit_at(P2, 1);
         (30 - s.state().players[P2].hero.health, 9 - s.stats(&body).health)
     }
@@ -86,10 +86,10 @@ mod tests {
     #[test]
     fn damage_reads_through_param() {
         let mut s = board("korrelite-param", false);
-        let id = s.pile(P1, "tray")[0].id.clone();
+        let id = crate::resources_in_hand(&s, P1)[0].id.clone();
         set_param(s.card_mut(id.as_str()), "damage", 3);
         let body = s.unit_at(P2, 1);
-        play_from_tray(&mut s, P1, ID, Value::Null);
+        play_resource(&mut s, P1, ID, Value::Null);
         let (hero, unit) = (30 - s.state().players[P2].hero.health, 9 - s.stats(&body).health);
         assert!((hero, unit) == (3, 0) || (hero, unit) == (0, 3), "one hit of 3");
     }
