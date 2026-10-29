@@ -233,11 +233,13 @@ sale the view lists, tray Resources then hand cards such as Spice (R1861000). Ea
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
 (`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
-in `game/handHints.ts`. Each is `{ id, icon, applies(card, view) }`, reads only the `CardView`
-and the `PlayerView`, and returns null or `{ n?, dimmed?, label }`, its label through `t()`.
+in `game/handHints.ts`. Each is `{ id, icon, applies(card, view, face) }`, reads only the
+`CardView`, the `PlayerView` and the card's face the way `Card.tsx` reads it, and returns null
+or `{ n?, dimmed?, label }`, its label through `t()`.
 No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
 hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
-The list ships empty.
+The list ships the Tradable hint (#2269): a small swap-mark pip on each of the viewer's own
+hand cards with the Tradable keyword, dimmed once the turn's Trade is spent.
 
 ## Commands
 
