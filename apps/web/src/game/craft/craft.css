@@ -309,7 +309,7 @@
   background: Canvas;
   padding: 4px 8px;
   pointer-events: none;
-  transition: left 60ms linear, top 60ms linear;
+  transition: left var(--motion-instant) linear, top var(--motion-instant) linear;
 }
 
 @media (prefers-reduced-motion: reduce) {
