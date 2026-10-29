@@ -504,9 +504,10 @@ export default function Card(props: CardProps): ReactElement {
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
       data-spent={spent ? "true" : undefined}
       // DEF is a sideways card: the rotation is inline so a test can read `rotate(90deg)` off the
-      // style attribute (BUILD M5-T4 `positionSwitched`), and the scale keeps it inside its lane.
-      // It is the root's only inline style; the faces put theirs on inner elements.
-      style={position === "DEF" ? { transform: "rotate(90deg) scale(0.72)" } : undefined}
+      // style attribute (BUILD M5-T4 `positionSwitched`), and the scale is the lane's `--def-scale`
+      // (board.css): 1 where a lane is wider than a row is tall, less on a phone, so the turned card
+      // stays inside its lane. It is the root's only inline style; the faces put theirs on inner elements.
+      style={position === "DEF" ? { transform: "rotate(90deg) scale(var(--def-scale, 1))" } : undefined}
       // The hover preview replaces the native tooltip; with previews off, the name comes back, and
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
