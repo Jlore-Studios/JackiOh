@@ -1549,6 +1549,9 @@ pub struct InvariantMonitor {
     unsettled_credits: IndexSet<String>,
     /// R424: the latest attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
+    /// R424: whether the last state `after` read waits on a prompt, so the attack it holds may still be
+    /// under way: a trap that fires on the declaration can pause it on a Discover (fuzz seed 88, #2250).
+    attack_paused: bool,
     /// I9: `state.resets` as the last state `after` read left it; a move is a Glitch's reset (R676).
     resets: Option<i32>,
     /// I9: each seat's fatigue draws as the stream counted them (§2.4, R3, R315): the start state's
@@ -1581,6 +1584,7 @@ impl InvariantMonitor {
             kill_credits: IndexMap::new(),
             unsettled_credits: IndexSet::new(),
             attack: None,
+            attack_paused: start.pending.is_some(),
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
             dormant: dormant_cards(start),
@@ -1999,8 +2003,11 @@ impl InvariantMonitor {
         // R1829000: the turn the action began on; an uncovering inside it happened on a turn from here on.
         let began_on = self.turn;
         // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
-        // record holds from an earlier action readies nothing (a later Transmogulate of that unit is not it).
-        self.attack = None;
+        // record holds from an earlier action readies nothing (a later Transmogulate of that unit is not it),
+        // unless that action left the attack paused on a prompt the answers to which resume it.
+        if !self.attack_paused {
+            self.attack = None;
+        }
 
         // I5: the check that ends the game is the last thing that happens (§2.5, R216).
         if let Some(over) = events
@@ -2272,6 +2279,7 @@ impl InvariantMonitor {
             self.note_uncoverings(events, state, began_on);
         }
         self.dormant = dormant_cards(state);
+        self.attack_paused = state.pending.is_some();
 
         // I4: the engine's bookkeeping agrees with the shadow.
         for card in field_cards(state) {
