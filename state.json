@@ -8304,11 +8304,8 @@
     "what": "revise #2341 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T14:05:04Z",
-    "notes": [
-      "delivered review #2309 on claude-6 (run 40884765595): reviewed",
-      "delivered build #2334 on claude-4 (run 40866278677): blocked"
-    ],
+    "at": "2026-10-29T14:13:01Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -9013,7 +9010,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T14:05:04Z",
+  "loop_tick": "2026-10-29T14:13:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
