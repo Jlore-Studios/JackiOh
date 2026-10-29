@@ -7870,6 +7870,7 @@
         "by": "`claude` (strong)",
         "sha": "039ddf9a2876a01b2265dd6a0e015fbb30440e67"
       },
+      "closed_at": "2026-10-29T07:31:00Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -7887,6 +7888,7 @@
       "interruptions": 0,
       "issue": 2266,
       "kind": "revise",
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "Pass 3 verdict on PR #2301 (#2266): the code change is complete and all web/rust checks I can run are green, but two things need a person. (1) Waive or order: absolute whole-grid DOM (378-453ms vs 259-260ms baseline) and scroll p95 (49-52ms vs 46ms) cannot reach parity at 709 vs 481 cards with any change confined to PoolGrid.tsx - per-card cost is at parity, staged rendering trades background-total time for first-paint time, and virtualization (the only fix) breaks deckbuilder-layout.cy specs that require the full .db-item count and was deferred to a follow-up by the plan's open question #1. Either waive these two diagnostics to that follow-up, or order virtualization/cheaper faces in this PR. (2) Fuzz: CI's 200-seed gate failed seed 128 with an engine entry-mismatch invariant; this branch touches only apps/web files so the engine failure is independent of this change by construction, and seed 128 in isolation passes on this HEAD - please confirm it fails the same way on main (pre-existing) or fix it engine-side, and let CI re-run the full gate.",
