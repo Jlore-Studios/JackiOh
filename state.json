@@ -8500,7 +8500,7 @@
       "provider": "claude-7",
       "queued_at": "2026-10-29T15:40:51Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:03617dd1-1793290645",
+      "run_id": "40910177704",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T16:17:52Z",
       "stop_requested": false,
