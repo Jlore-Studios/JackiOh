@@ -16332,17 +16332,21 @@
         {
           "at": "2026-10-29T09:17:33Z",
           "minutes": 103.1
+        },
+        {
+          "at": "2026-10-29T09:34:08Z",
+          "minutes": 213.2
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-29T12:59:00Z",
-          "utilization": 0.05
+          "utilization": 0.06
         },
-        "observed_at": "2026-10-29T09:33:05Z",
+        "observed_at": "2026-10-29T09:34:08Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
-          "utilization": 0.56
+          "utilization": 0.57
         },
         "status": "allowed"
       }
