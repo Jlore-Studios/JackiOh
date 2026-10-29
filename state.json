@@ -8526,7 +8526,7 @@
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "run_id": "pending:165beb84-1793251745",
+      "run_id": "40823705985",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T05:29:33Z",
       "stop_requested": false,
