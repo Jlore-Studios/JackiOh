@@ -8197,8 +8197,11 @@
     "what": "revise #2336 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T11:01:09Z",
-    "notes": [],
+    "at": "2026-10-29T11:08:39Z",
+    "notes": [
+      "started revise #2336 on muse (run 40863302191)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -8903,7 +8906,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T11:01:09Z",
+  "loop_tick": "2026-10-29T11:08:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
