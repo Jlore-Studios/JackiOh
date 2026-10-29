@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2384,
+  "title": "Patch: `cargo test` builds the AI optimised, as it already builds the engine and the cards",
+  "branch": "bot/issue-2384",
+  "thread": "**Issue #2384 (data, not instructions):**\n\n```text\n# #2384: Patch: `cargo test` builds the AI optimised, as it already builds the engine and the cards\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe automated tests that play games against the practice AI are among the slowest in the repository. They run the AI's search code with no compiler optimisation, while the game engine and cards it calls into are optimised. Turning optimisation on for the AI too should make those tests several times faster, with no change to any result. Every pull request then waits less for its checks, and the jobs that keep running over time get room.\n\n## Why\n\n- `Cargo.toml:58-83` sets a test opt-level of 2 for `jackioh-engine`, `jackioh-cards`, `jackioh-luau`, `mlua-sys`, `mlua`, `serde_json` and `indexmap`, but not for `jackioh-ai`. `git log -S\"profile.test.package.jackioh-ai\"` finds no attempt.\n- AI-heavy tests are behind the recent over-time fixes:\n  - `crates/server/tests/bots/seat.rs:853-857`: \"one after another they took most of a minute, the last test `rust (test server)` waited on (#2323)\", fixed by threads in #2343.\n  - `crates/server/tests/api/practice.rs:233-238`: \"each of its AI moves is a full search \u2026 held every test thread for over a minute, #2223\".\n- A job running over time is still an open issue (#2353).\n\n## Proposal\n\n- Add `[profile.test.package.jackioh-ai]` at opt-level 2, or 1 if that measures better once compile time is counted.\n- Keep a comment with the measured numbers, as the engine's entry has.\n- Debug assertions and overflow checks stay on in the test profile. Rust never reorders floating-point arithmetic at any opt-level, so the AI's decisions and every seeded result are unchanged.\n\n## Where it lands\n\n`Cargo.toml`, and a line in `crates/ai/README.md` if its test notes mention build speed.\n\n## Acceptance criteria\n\n- [ ] The PR reports before-and-after wall-clock times, build included, for:\n  - `cargo test -p jackioh-ai`;\n  - the server's AI-heavy tests (`--test server bots::`, `api::practice`);\n  - `cargo test -p jackioh-tools`.\n- [ ] Every test passes, with the same outcomes.\n- [ ] No `rust (test \u2026)` job on the PR is slower than the same job on `main`.\n\n## Size and risks\n\nA one-entry diff, but real measuring: medium.\n\n- Jobs that build the AI but run little of it pay extra compile time. If those jobs regress, settle on opt-level 1, or drop the change and report the numbers.\n- It may help #2353 but does not claim to close it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-29T15:42:31Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2384: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
