@@ -8593,6 +8593,13 @@
     "2386": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T16:50:46Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails easy on a new ruling (R2386000), catalog-data work (win_rates.json, a pending fragment) and three crates plus spec; not hard: no crates/engine/src or crates/ai/src change"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
