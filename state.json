@@ -8420,7 +8420,7 @@
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "muse",
-      "run_id": "pending:438f1f32-1793248906",
+      "run_id": "40819236649",
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-29T04:42:15Z",
       "stop_requested": false,
