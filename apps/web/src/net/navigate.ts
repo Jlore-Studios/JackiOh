@@ -3,11 +3,13 @@
 // `pushState` and `replaceState` do not fire `popstate`, so `navigate` dispatches an event for `usePathname`.
 // A page holding work a move would lose registers a leave guard (`guardLeaving`, R1754000): `navigate` and the browser's Back wait for it.
 // A move between two menu screens cross-fades in the browser's view transition (`showMove`, R2117000).
+// An open sheet or dialog takes the browser's Back first, and a move off its entry takes that entry's place (`backLayers.ts`, R2127000).
 
 import { useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 
 import { reducedMotionNow } from "../settings/motion.ts";
+import { moveOverBackEntry, popBackLayer } from "./backLayers.ts";
 
 const NAVIGATED = "jackioh:navigated";
 
@@ -101,8 +103,10 @@ function showMove(from: string, update: () => void): void {
 
 function go(path: string, replace: boolean): void {
   const from = currentPath();
-  if (replace) window.history.replaceState(null, "", path);
-  else window.history.pushState(null, "", path);
+  if (!moveOverBackEntry(path, replace)) {
+    if (replace) window.history.replaceState(null, "", path);
+    else window.history.pushState(null, "", path);
+  }
   const moved = currentPath() !== from;
   showMove(from, () => {
     if (moved) window.scrollTo(0, 0);
@@ -179,8 +183,12 @@ function tellReaders(): void {
   for (const onChange of [...readers]) onChange();
 }
 
-/** One `popstate` listener for every reader: a held one tells none (R1754000), any other is one move (R2117000). */
-function onPop(): void {
+/**
+ * One `popstate` listener for every reader: an overlay's Back tells none (R2127000), nor does a held
+ * one (R1754000), and any other is one move (R2117000).
+ */
+function onPop(event: PopStateEvent): void {
+  if (popBackLayer(event)) return;
   if (!heldPop()) showMove(shown, tellReaders);
 }
 

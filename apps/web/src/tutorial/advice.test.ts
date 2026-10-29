@@ -9,8 +9,8 @@ import { describe, expect, it } from "vitest";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
 import { baseView, card, emptySide, unit } from "../test/fixtures.ts";
-import { COACH_START, activeStep, coachObserve, type CoachCtx, type LessonScript } from "./coach.ts";
-import { moveAnchor, moveText, nextMove, yourMove } from "./advice.ts";
+import type { CoachCtx } from "./coach.ts";
+import { nextMove } from "./advice.ts";
 
 function ctx(view: PlayerView, legal: ActionBody[]): CoachCtx {
   return { view, legal, fresh: [], aiToAct: false, nameOf: (defId) => ({ "core-008": "Mr. Vanilla", "core-013": "Shredder" })[defId] };
@@ -32,8 +32,6 @@ describe("R292 the coach's advice", () => {
     const dear: ActionBody = { type: "play", instanceId: "h2", zone: { row: "units", lane: 2 }, targets: [{ pick: "hero", player: "p2" }] };
     const move = nextMove(ctx(view, [cheap, dearAtOwn, dear, END]));
     expect(move?.action).toEqual(dear);
-    expect(moveAnchor(ctx(view, []), move)).toEqual({ kind: "handCard", defId: "core-013" });
-    expect(moveText(ctx(view, []), move)).toContain("Shredder");
     expect(nextMove(ctx(view, [cheap, dearAtOwn, END]))?.action).toEqual(cheap);
   });
 
@@ -48,7 +46,6 @@ describe("R292 the coach's advice", () => {
     const face: ActionBody = { type: "attack", attackerId: "a1", targetId: "hero-p2" };
     const both = view([small, null, null, null, null]);
     expect(nextMove(ctx(both, [trade, face, END]))?.kind).toBe("trade");
-    expect(moveAnchor(ctx(both, []), nextMove(ctx(both, [trade, face, END])))).toEqual({ kind: "zone", side: "opponent", row: "units", lane: 1 });
     expect(nextMove(ctx(both, [face, END]))?.kind).toBe("hero");
 
     const walled = view([wall, null, null, null, null]);
@@ -69,7 +66,6 @@ describe("R292 the coach's advice", () => {
     });
     const lethal = nextMove(ctx(low, [play, face, END]));
     expect(lethal?.kind).toBe("hero");
-    expect(moveText(ctx(low, []), lethal)).toContain("finish");
     // Not lethal: the card comes first.
     const high = { ...low, opponent: { ...low.opponent, hero: { ...low.opponent.hero, health: 9 } } };
     expect(nextMove(ctx(high, [play, face, END]))?.kind).toBe("play");
@@ -82,7 +78,6 @@ describe("R292 the coach's advice", () => {
     const clear: ActionBody = { type: "attack", attackerId: "a1", targetId: "e1" };
     const move = nextMove(ctx(walled, [clear, END]));
     expect(move?.kind).toBe("clear");
-    expect(moveText(ctx(walled, []), move)).toContain("Both fall");
   });
 
   it("R292 breaks a Divine Shield on a Taunt when nothing better is on offer", () => {
@@ -95,23 +90,5 @@ describe("R292 the coach's advice", () => {
     const pop: ActionBody = { type: "attack", attackerId: "a1", targetId: "e1" };
     const move = nextMove(ctx(view, [pop, END]));
     expect(move?.kind).toBe("chip");
-    expect(moveText(ctx(view, []), move)).toContain("Divine Shield");
-  });
-
-  it("R292 makes a step that names its move, is done when the turn passes, or with the game when final", () => {
-    const view = baseView({ you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: "core-008", cost: 1 })] }) });
-    const play: ActionBody = { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } };
-    const script: LessonScript = { lessonId: "t", steps: [yourMove({ id: "move", title: "Your move" }), yourMove({ id: "win", title: "Win", final: true })], tips: [] };
-    let state = coachObserve(script, COACH_START, ctx(view, [play, END]));
-    const step = activeStep(script, state);
-    expect(step?.id).toBe("move");
-    expect(step?.expect?.(play, ctx(view, [play, END]))).toBe(true);
-    expect(step?.expect?.(END, ctx(view, [play, END]))).toBe(false);
-
-    state = coachObserve(script, state, ctx(baseView({ turn: 4, active: "p2" }), []));
-    expect(state.outcomes["move"]).toBe("done");
-    expect(script.steps[1]?.final).toBe(true);
-    state = coachObserve(script, state, ctx(baseView({ turn: 5 }), [END]));
-    expect(activeStep(script, state)?.id).toBe("win");
   });
 });

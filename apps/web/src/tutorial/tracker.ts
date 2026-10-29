@@ -8,11 +8,13 @@ import { subscribeLocale } from "../i18n/i18n.ts";
 import type { PracticeController } from "../practice/controller.ts";
 import type { PracticeSnapshot } from "../practice/protocol.ts";
 import {
-  COACH_START,
   activeStep,
   coachAck,
   coachDisplay,
+  coachHint,
   coachObserve,
+  coachStart,
+  isBubble,
   type CoachCtx,
   type CoachDisplay,
   type CoachState,
@@ -40,19 +42,21 @@ export type CoachTracker = {
   subscribe(fn: () => void): () => void;
   /** An expected display key prevents an unseen bubble from acknowledging its successor. */
   ack(expected?: string): void;
+  /** R2205000: the shown moment's next hint; an expected display key as for `ack`. */
+  hint(expected?: string): void;
   dispose(): void;
 };
 
 const FINISHED: CoachDisplay = { mode: "finished" };
 
 export function displayKey(display: CoachDisplay): string {
-  return display.mode === "tip" || display.mode === "step" ? `${display.mode}:${display.id}` : display.mode;
+  return isBubble(display) ? `${display.mode}:${display.id}` : display.mode;
 }
 
 function viewOf(coach: CoachState, ctx: CoachCtx | null, script: LessonScript): CoachView {
   if (ctx === null) return { coach, ctx, display: FINISHED, targets: [], aiBusy: false, yourMove: false };
   const display = coachDisplay(script, coach, ctx);
-  const anchor = display.mode === "tip" || display.mode === "step" ? display.anchor : null;
+  const anchor = isBubble(display) ? display.anchor : null;
   const view = ctx.view;
   return {
     coach,
@@ -65,11 +69,18 @@ function viewOf(coach: CoachState, ctx: CoachCtx | null, script: LessonScript): 
 }
 
 function holdsAi(display: CoachDisplay): boolean {
-  return (display.mode === "tip" || display.mode === "step") && display.holdAi;
+  return isBubble(display) && display.holdAi;
 }
 
-export function createCoachTracker(source: CoachSource, script: LessonScript): CoachTracker {
-  let coach: CoachState = COACH_START;
+export type CoachOptions = {
+  /** The entries the player's Field Guide holds as the lesson starts (R2205002). */
+  known?: readonly string[];
+  /** Each entry as the game first shows it found, for the device's Field Guide (R2205002). */
+  onFound?: (ids: readonly string[]) => void;
+};
+
+export function createCoachTracker(source: CoachSource, script: LessonScript, options: CoachOptions = {}): CoachTracker {
+  let coach: CoachState = coachStart(options.known ?? []);
   let ctx: CoachCtx | null = null;
   let lastSnapshot: PracticeSnapshot | null = null;
   let state: CoachView = viewOf(coach, ctx, script);
@@ -103,8 +114,11 @@ export function createCoachTracker(source: CoachSource, script: LessonScript): C
       aiToAct: snapshot.aiToAct,
       // §5.1: the catalog is public and arrives with `started`.
       nameOf: (defId) => snapshot.view.defs?.[defId]?.name ?? defs?.[defId]?.name,
+      defOf: (defId) => snapshot.view.defs?.[defId] ?? defs?.[defId],
     };
+    const before = coach.found.length;
     coach = coachObserve(script, coach, ctx);
+    if (coach.found.length > before) options.onFound?.(coach.found.slice(before));
     publish();
   }
 
@@ -128,6 +142,14 @@ export function createCoachTracker(source: CoachSource, script: LessonScript): C
       if (disposed || ctx === null) return;
       if (expected !== undefined && expected !== displayKey(state.display)) return;
       const next = coachAck(script, coach, ctx);
+      if (next === coach) return;
+      coach = next;
+      publish();
+    },
+    hint(expected) {
+      if (disposed || ctx === null) return;
+      if (expected !== undefined && expected !== displayKey(state.display)) return;
+      const next = coachHint(script, coach);
       if (next === coach) return;
       coach = next;
       publish();

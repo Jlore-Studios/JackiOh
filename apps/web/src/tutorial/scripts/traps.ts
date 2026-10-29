@@ -1,316 +1,116 @@
-// Lesson "traps" script (SPEC §9.10): it reads only the view and legal actions (CLAUDE.md rule 7).
-// Scheduled cards wait for their draw and missed moments retire; an automatic turn can end (R82).
-// The Tokens tip waits for the player's turn so no more than two "Got it" bubbles stack.
+// Lesson 3's coach (SPEC §9.10, R2205000): where a unit stands and what waits in the backrow. The
+// player finds that the middle lane matters to Midlane Menace, that some cards care about their
+// neighbours, that an Aura lasts, that a Trap springs by itself, that the AI's face-down card is a
+// Trap too, that a Field Spell and a Field Trap keep working, and that a card can make tokens. Picks
+// read the view and the legal actions only (CLAUDE.md rule 7).
 
-import { COIN_DEF_ID } from "@jackioh/engine/config";
-import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
+import type { ActionBody } from "@jackioh/shared";
 
-import { t } from "../../i18n/i18n.ts";
-import { readerCardName, yourMove } from "../advice.ts";
-import type { CoachCtx, CoachStep, LessonScript } from "../coach.ts";
-import {
-  freshOf,
-  heroTargetId,
-  info,
-  inHand,
-  keepHand,
-  legalPlays,
-  myHand,
-  myMain,
-  playCard,
-  tip,
-  unitOf,
-} from "../steps.ts";
+import type { CoachCtx, LessonScript } from "../coach.ts";
+import { inHand, unitsOf } from "../steps.ts";
+import { either, finishOf, momentOf, playOf, type Pick } from "./kit.ts";
 
-const GOING_LONG = "core-084";
-const HONEYPOT = "core-060";
-const SHEEPISH = "core-041";
-const FARM = "core-058";
-const RUSH_TOKEN = "core-t-rush";
-const SHEEP = "core-t-sheep";
+const MIDLANE_MENACE = "traininggrounds-005";
+const EXPLOSIVE_TRAP = "traininggrounds-014";
+const EXPLOSIVE_RUNES = "traininggrounds-013";
+const RIGHT_HAND_FELINOR = "traininggrounds-022";
+const FLAME_TONGUE_TOTEM = "traininggrounds-021";
+const CELESTIAL_CALLER = "traininggrounds-016";
+const GROUP_LEADER = "traininggrounds-003";
+const EXTRA_RATIONS = "traininggrounds-019";
+const RECRUITMENT_POSTERS = "traininggrounds-020";
+const RUSH_TOKEN_FARM = "traininggrounds-060";
+const CORPSE_RECYCLER = "traininggrounds-035";
+const GOLIATH_SITUATION = "traininggrounds-024";
+/** §3, R685: the middle of five lanes. */
+const MIDLANE = 3;
 
-const CHEAP_UNITS: Readonly<Record<string, string>> = {
-  "core-011": "Tempo Timmy",
-  "core-015": "Me and Mr Token",
-  "core-003": "Right-house defender",
+/** Right-Hand Felinor into the lane just right of one of the player's units. */
+const besideAFriend: Pick = (ctx) => {
+  const card = inHand(ctx.view, RIGHT_HAND_FELINOR);
+  if (card === undefined) return undefined;
+  const lanes = ctx.view.you.units;
+  return ctx.legal.find(
+    (action): action is Extract<ActionBody, { type: "play" }> =>
+      action.type === "play" &&
+      action.instanceId === card.instanceId &&
+      action.zone?.row === "units" &&
+      lanes[action.zone.lane - 2] != null,
+  );
 };
 
-/** A cheap unit's name as the reader reads it, or undefined for a card that is not one of them. */
-function cheapName(defId: string | undefined): string | undefined {
-  const english = defId === undefined ? undefined : CHEAP_UNITS[defId];
-  return defId === undefined || english === undefined ? undefined : readerCardName(defId, english);
-}
-
-const honeypot = (): string => readerCardName(HONEYPOT, "Bear Honeypot");
-const goingLong = (): string => readerCardName(GOING_LONG, "Going Long");
-const farm = (): string => readerCardName(FARM, "Rush Token Farm");
-const rushToken = (): string => readerCardName(RUSH_TOKEN, "Rush Token");
-
-function enemyFaceDown(ctx: CoachCtx): boolean {
-  return ctx.view.opponent.backrow.some((card) => card !== null && card.faceDown);
-}
-
-function myBackrowLane(ctx: CoachCtx, defId: string): number | undefined {
-  const index = ctx.view.you.backrow.findIndex((card) => card !== null && !card.faceDown && card.defId === defId);
-  return index < 0 ? undefined : index + 1;
-}
-
-function played(ctx: CoachCtx, defId: string): boolean {
-  const you = ctx.view.you;
-  return (
-    myBackrowLane(ctx, defId) !== undefined ||
-    unitOf(ctx.view, "you", defId) !== undefined ||
-    you.graveyard.some((card) => card.defId === defId) ||
-    you.exile.some((card) => card.defId === defId)
-  );
-}
-
-function trapFiredBy(ctx: CoachCtx, mine: boolean, defId?: string): boolean {
-  return freshOf(ctx, "trapFired").some(
-    (event) => (event.controller === ctx.view.viewer) === mine && (defId === undefined || event.defId === defId),
-  );
-}
-
-/** Wait for a scheduled draw; retire only after the card has been played without the coach. */
-function playWhenDrawn(options: Parameters<typeof playCard>[0]): CoachStep {
-  const step = playCard(options);
-  return {
-    ...step,
-    moot: (ctx, since) => since === null && inHand(ctx.view, options.defId) === undefined && played(ctx, options.defId),
-  };
-}
-
-function baitIn(ctx: CoachCtx): CardView | undefined {
-  const hand = myHand(ctx.view);
-  for (const defId of Object.keys(CHEAP_UNITS)) {
-    const card = hand.find((candidate) => candidate.defId === defId);
-    if (card !== undefined && ctx.legal.some((action) => action.type === "play" && action.instanceId === card.instanceId)) return card;
-  }
-  return undefined;
-}
-
-function baitPlayed(ctx: CoachCtx): boolean {
-  return (
-    trapFiredBy(ctx, false) ||
-    freshOf(ctx, "summoned").some((event) => event.player === ctx.view.viewer && event.row === "units" && CHEAP_UNITS[event.defId] !== undefined)
-  );
-}
-
-function baitMoment(ctx: CoachCtx): boolean {
-  return enemyFaceDown(ctx) && baitIn(ctx) !== undefined;
-}
-
-/** Retire a missed bait moment so the turn's next advice is never hidden. */
-const bait: CoachStep = {
-  id: "bait",
-  kind: "act",
-  title: "Test the trap",
-  text: (ctx) => {
-    const card = baitIn(ctx);
-    const name = cheapName(card?.defId) ?? t("a cheap unit");
-    return t("That face-down card could be a trap. Test it with a cheap unit before you risk a good one: play {name}.", { name });
-  },
-  anchor: (ctx) => {
-    const card = baitIn(ctx);
-    return card === undefined ? { kind: "backrow", side: "opponent" } : { kind: "handCard", defId: card.defId };
-  },
-  when: (ctx) => myMain(ctx) && baitMoment(ctx),
-  done: (ctx) => baitPlayed(ctx),
-  moot: (ctx, since) => (since === null ? myMain(ctx) && !baitMoment(ctx) : ctx.view.turn !== since.turn && !baitPlayed(ctx)),
-  expect: (action: ActionBody, ctx) => {
-    const card = baitIn(ctx);
-    return card !== undefined && action.type === "play" && action.instanceId === card.instanceId;
-  },
-};
-
-function farmWorked(ctx: CoachCtx): boolean {
-  return (
-    myBackrowLane(ctx, FARM) !== undefined &&
-    freshOf(ctx, "summoned").some((event) => event.player === ctx.view.viewer && event.defId === RUSH_TOKEN)
-  );
-}
-
-function myTokenIds(view: PlayerView): Set<string> {
-  return new Set(view.you.units.filter((unit) => unit !== null && unit.defId === RUSH_TOKEN).map((unit) => unit?.instanceId ?? ""));
-}
-
-function tokenCanAttack(ctx: CoachCtx): boolean {
-  const tokens = myTokenIds(ctx.view);
-  return ctx.legal.some((action) => action.type === "attack" && tokens.has(action.attackerId));
-}
-
-function tokenAttacked(ctx: CoachCtx, since: PlayerView): boolean {
-  const tokens = myTokenIds(since);
-  return freshOf(ctx, "attackDeclared").some((event) => !event.forced && tokens.has(event.attackerId));
-}
-
-/** Remember the shown instances: either token can complete this step, even after an automatic turn end (R82). */
-const tokenAttack: CoachStep = {
-  id: "token-attack",
-  kind: "act",
-  title: "Tokens fight too",
-  text: () => t("A token fights like any other unit. Attack with a {token}.", { token: rushToken() }),
-  anchor: { kind: "unit", side: "you", defId: RUSH_TOKEN },
-  when: (ctx) => myMain(ctx) && tokenCanAttack(ctx),
-  done: (ctx, since) => tokenAttacked(ctx, since),
-  moot: (ctx, since) => {
-    if (since === null) return myMain(ctx) && !tokenCanAttack(ctx);
-    return ctx.view.turn !== since.turn && !tokenAttacked(ctx, since);
-  },
-  expect: (action: ActionBody, ctx) => {
-    const tokens = myTokenIds(ctx.view);
-    return action.type === "attack" && tokens.has(action.attackerId);
-  },
-};
-
-// Tips re-read each view, so their text derives from state that persists beyond the triggering event.
-
-/** Names The Coin when the AI played it into the trap (§7: it costs 0). */
-function honeypotText(ctx: CoachCtx): string {
-  const coin = ctx.view.opponent.graveyard.some((card) => card.defId === COIN_DEF_ID);
-  const names = { trap: honeypot(), token: rushToken() };
-  return coin
-    ? t("The AI played {coin}, which costs (0), so your {trap} sprang on its turn and made two {token}s. A trap that has fired goes to the graveyard.", {
-        ...names,
-        coin: readerCardName(COIN_DEF_ID, "The Coin"),
-      })
-    : t("The AI played a (1) Cost or less card, so your {trap} sprang on its turn and made two {token}s. A trap that has fired goes to the graveyard.", names);
-}
-
-function enemyTrapText(ctx: CoachCtx): string {
-  const sheepish = ctx.view.opponent.graveyard.some((card) => card.defId === SHEEPISH) || unitOf(ctx.view, "you", SHEEP) !== undefined;
-  if (!sheepish) return t("The AI's face-down card was a trap, and your play set it off. Its zone is empty again.");
-  const sheeped = [...ctx.view.events].reverse().find((event) => event.type === "transformed" && event.toDefId === SHEEP);
-  const name = sheeped?.type === "transformed" ? cheapName(sheeped.fromDefId) : undefined;
-  return t("It was {trap}, a trap: it turned {name} into a 1/1 {sheep}. Better to lose your cheapest unit than your best one.", {
-    trap: readerCardName(SHEEPISH, "Sheepish"),
-    name: name ?? t("your unit"),
-    sheep: readerCardName(SHEEP, "Sheep"),
-  });
+function hasUnit(ctx: CoachCtx): boolean {
+  return unitsOf(ctx.view, "you").length > 0;
 }
 
 export const script: LessonScript = {
   lessonId: "traps",
+  teaches: ["lanes", "adjacency", "aura", "trap", "enemy-backrow", "field-spell", "field-trap", "token"],
+  tips: [],
   steps: [
-    keepHand({ id: "keep", title: "Keep your hand", text: "Press Ready to keep all of these cards." }),
-    info({
-      id: "welcome",
-      title: "The backrow",
-      text: "Behind your units is a second row of five zones: the backrow. Traps and Field Spells go there, never units.",
-      anchor: { kind: "backrow", side: "you" },
-      when: (ctx) => myMain(ctx),
+    momentOf({
+      id: "midlane",
+      title: "Where to stand",
+      text: "Midlane Menace looks ordinary. Does it matter where you put it?",
+      discovers: ["lanes"],
+      hints: ["Read its text: it cares about one lane in particular.", "Play Midlane Menace into the middle lane, the third of five."],
+      pick: playOf([MIDLANE_MENACE], { lane: MIDLANE }),
     }),
-    info({
-      id: "quickdraw",
-      title: "Quickdraw",
-      text: () => t("{name} has Quickdraw: a Quickdraw card always starts in your opening hand, so you can plan on it.", { name: goingLong() }),
-      anchor: { kind: "handCard", defId: GOING_LONG },
-      when: (ctx) => myMain(ctx),
-      moot: (ctx, since) => since === null && inHand(ctx.view, GOING_LONG) === undefined,
+    momentOf({
+      id: "trap",
+      title: "A card face-down",
+      text: "A Trap goes face-down in your backrow. When do you think it goes off?",
+      discovers: ["trap"],
+      hints: ["Read what it reacts to, then set it and wait.", "Play Explosive Trap into your backrow, and keep playing: it springs by itself when its moment comes."],
+      pick: playOf([EXPLOSIVE_TRAP, EXPLOSIVE_RUNES]),
     }),
-    playCard({
-      id: "set-trap",
-      title: "Set a trap",
-      text: () =>
-        t("{name} is a Trap. Pay 1 mana and drag it into your backrow. It goes in face-down, so the AI can't see what it is.", { name: honeypot() }),
-      defId: HONEYPOT,
+    momentOf({
+      id: "goliath",
+      title: "A trap that stays",
+      text: "Goliath Situation is a Field Trap. What sets it off, and what does it leave behind?",
+      discovers: ["field-trap"],
+      hints: ["It reacts to the AI playing a unit.", "Set Goliath Situation in your backrow and end your turn."],
+      pick: playOf([GOLIATH_SITUATION]),
     }),
-    info({
-      id: "trap-waits",
-      title: "A hidden trap",
-      text: () =>
-        t("The AI sees only the back of your card. {name} springs by itself when the AI plays a (1) Cost or less card, even on its turn.", {
-          name: honeypot(),
-        }),
-      anchor: (ctx) => {
-        const lane = myBackrowLane(ctx, HONEYPOT);
-        return lane === undefined ? { kind: "backrow", side: "you" } : { kind: "backrow", side: "you", lane };
-      },
-      when: (ctx) => myBackrowLane(ctx, HONEYPOT) !== undefined,
-      // A missed or sprung trap expires; the turn may already have ended automatically (R82).
-      moot: (ctx, since) =>
-        since === null && myBackrowLane(ctx, HONEYPOT) === undefined && (myMain(ctx) || played(ctx, HONEYPOT)),
-      holdAi: true,
+    momentOf({
+      id: "neighbours",
+      title: "Good neighbours",
+      text: "Right-Hand Felinor wants company. Where should it stand?",
+      discovers: ["adjacency"],
+      hints: ["Read its text: it cares about a unit on one side of it.", "Play it in the lane just to the right of one of your units."],
+      pick: either(besideAFriend, playOf([CELESTIAL_CALLER, FLAME_TONGUE_TOTEM])),
     }),
-    playWhenDrawn({
-      id: "field-spell",
-      title: "A Field Spell",
-      text: () =>
-        t("{name} is a Field Spell. It stays face-up in your backrow and makes a {token} at the start of each of your turns.", {
-          name: farm(),
-          token: rushToken(),
-        }),
-      defId: FARM,
+    momentOf({
+      id: "aura",
+      title: "Stronger together",
+      text: "Group leader makes the others better. For how long?",
+      discovers: ["aura"],
+      hints: ["An Aura works while its card is on the field.", "Play Group leader beside your other units, and watch their Attack."],
+      pick: playOf([GROUP_LEADER]),
+      when: hasUnit,
     }),
-    tokenAttack,
-    yourMove({ id: "move-2", title: "Your move" }),
-    info({
-      id: "farm-works",
-      title: "The farm at work",
-      text: () =>
-        t("At the start of turn, {name} made a new {token}. A Field Spell keeps working, turn after turn.", { name: farm(), token: rushToken() }),
-      anchor: (ctx) =>
-        unitOf(ctx.view, "you", RUSH_TOKEN) === undefined ? { kind: "backrow", side: "you" } : { kind: "unit", side: "you", defId: RUSH_TOKEN },
-      when: (ctx) => myMain(ctx) && farmWorked(ctx),
-      // Without the next-turn token, retire it so the turn's own steps follow.
-      moot: (ctx, since) => since === null && myMain(ctx) && !farmWorked(ctx),
+    momentOf({
+      id: "field",
+      title: "A card that stays",
+      text: "A Field Spell goes in your backrow and stays there. What does it do each turn?",
+      discovers: ["field-spell"],
+      hints: ["Read the words Start of turn on it.", "Play Rush Token Farm or Extra Rations into your backrow."],
+      pick: playOf([RUSH_TOKEN_FARM, EXTRA_RATIONS, RECRUITMENT_POSTERS, CORPSE_RECYCLER]),
     }),
-    playCard({
-      id: "going-long",
-      title: "Armor for your hero",
-      text: () =>
-        t("{name} is a Field Spell too. While it stays in your backrow, your hero has Armor 2: every hit on it is 2 smaller.", { name: goingLong() }),
-      defId: GOING_LONG,
+    momentOf({
+      id: "token",
+      title: "Made, not drawn",
+      text: "Some cards make units of their own. Where do they come from?",
+      discovers: ["token"],
+      hints: ["A Field Spell like Rush Token Farm works at the start of each of your turns.", "Play Rush Token Farm, then end the turn and see what arrives."],
+      pick: either(playOf([RUSH_TOKEN_FARM, CELESTIAL_CALLER]), (ctx) => ctx.legal.find((action) => action.type === "endTurn")),
+      when: (ctx) => inHand(ctx.view, RUSH_TOKEN_FARM) !== undefined || ctx.view.you.backrow.some((card) => card !== null && "defId" in card && card.defId === RUSH_TOKEN_FARM),
     }),
-    yourMove({ id: "move-3", title: "Your move" }),
-    bait,
-    yourMove({ id: "move-4", title: "Your move" }),
-    yourMove({ id: "win", title: "Win the game", final: true }),
-  ],
-  tips: [
-    tip({
-      id: "honeypot-fired",
-      title: "Your trap sprang",
-      text: honeypotText,
-      anchor: { kind: "units", side: "you" },
-      when: (ctx) => trapFiredBy(ctx, true, HONEYPOT),
-      holdAi: true,
-    }),
-    tip({
-      id: "tokens",
-      title: "Tokens",
-      text: () =>
-        t("A {token} is a token: a unit another card makes. It is 3/3 with Rush. A token vanishes for good when it leaves the field.", {
-          token: rushToken(),
-        }),
-      anchor: { kind: "unit", side: "you", defId: RUSH_TOKEN },
-      // Show before the token prompt, not behind the trap bubbles on the AI's turn.
-      when: (ctx) => myMain(ctx) && tokenCanAttack(ctx) && legalPlays(ctx, FARM).length === 0,
-    }),
-    tip({
-      id: "enemy-facedown",
-      title: "A face-down card",
-      text: "The AI set a face-down card in its backrow. It could be a trap, and only the AI knows what it is.",
-      anchor: { kind: "backrow", side: "opponent" },
-      when: (ctx) => enemyFaceDown(ctx),
-      holdAi: true,
-    }),
-    tip({
-      id: "armor",
-      title: "Armor at work",
-      text: () =>
-        t("{name}'s Armor 2 made that hit on your hero 2 smaller. It works on every hit, for as long as {name} stays.", { name: goingLong() }),
-      anchor: { kind: "hero", side: "you" },
-      when: (ctx) =>
-        myBackrowLane(ctx, GOING_LONG) !== undefined &&
-        freshOf(ctx, "damage").some((event) => event.targetId === heroTargetId(ctx.view, "you")),
-    }),
-    tip({
-      id: "enemy-trap",
-      title: "The AI's trap",
-      text: enemyTrapText,
-      anchor: { kind: "units", side: "you" },
-      when: (ctx) => trapFiredBy(ctx, false),
+    finishOf({
+      id: "finish",
+      title: "Finish it",
+      text: "Your backrow is working for you. Can you finish the enemy hero?",
+      hints: ["Mind the AI's face-down card: it may be a Trap.", "Send every ready unit at the hero."],
     }),
   ],
 };
