@@ -46,6 +46,7 @@ import type { SeatLoadouts } from "../cards/loadouts.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
 import Board from "./Board.tsx";
+import { useMarkBoardShown } from "./boardShown.ts";
 import ConfirmConcede from "./ConfirmConcede.tsx";
 import ScriptFailedNotice from "./ScriptFailedNotice.tsx";
 import { TradeBar } from "./TradeControl.tsx";
@@ -188,7 +189,7 @@ export type GameProps = {
    */
   lesson?: boolean;
   /**
-   * R2102000: the human has a sure win this turn by what they can see, the Easy practice tier's
+   * R2102000: the human has a sure win this turn by what they can see, the practice AI's
    * lethal hint: it outlines the opponent's hero and End turn and says "You have lethal", never how.
    * Only the practice route sets it, and the board shows it once it shows the newest view, never on
    * a replay or once the game is over. Absent, off.
@@ -256,6 +257,8 @@ export default function Game({
   silent = false,
 }: GameProps): ReactElement {
   useLocale();
+  // R2118000: no command menu over a board.
+  useMarkBoardShown();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
   // The same element as state, for the Trade bar, which measures inside it (TradeControl.tsx).

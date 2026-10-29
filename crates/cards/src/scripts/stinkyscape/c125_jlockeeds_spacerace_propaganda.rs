@@ -1,5 +1,4 @@
-//! Stinkyscape #125 Jlockeed's Spacerace Propaganda (SPEC §8.10 row 125). (2) Field Spell, Jlockeed, Rare;
-//! held (R1420).
+//! Stinkyscape #125 Jlockeed's Spacerace Propaganda (SPEC §8.10 row 125). (2) Field Spell, Jlockeed, Rare.
 //!   Base:    "Activate: Add a random Starship Piece to your hand."
 //!   Radiant: "Activate: Add a random Radiant Starship Piece to your hand."
 //!

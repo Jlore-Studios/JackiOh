@@ -1,4 +1,4 @@
-//! Stinkyscape #64 Miner v3 (SPEC §8.10 row 64). Unit 0/4 → 0/8, cost 2, Rare; held (R1420).
+//! Stinkyscape #64 Miner v3 (SPEC §8.10 row 64). Unit 0/4 → 0/8, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate 2: Gain a random Stinkyscape Resource."
 //!   Radiant: "Starship Piece, Equip

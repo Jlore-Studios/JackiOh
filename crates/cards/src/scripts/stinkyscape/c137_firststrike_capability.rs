@@ -1,6 +1,6 @@
 //! S #137 Firststrike Capability (SPEC §8.10 row 137; R1, R70, R113, R1839002, R1852003, R1852005,
-//! R1852006, R1857002, R1859006): (4) Unit, Common, 9/9 → 18/18, First Strike, a card of the held
-//! Stinkyscape set (R1420).
+//! R1852006, R1857002, R1859006): (4) Unit, Common, 9/9 → 18/18, First Strike, a card of the
+//! Stinkyscape set.
 //!
 //! Base:    "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a War Doctrine and
 //!          cast it."

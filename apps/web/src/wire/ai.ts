@@ -168,7 +168,7 @@ export function aiToAct(state: GameState, seat: PlayerId): boolean {
 }
 
 /**
- * R2102000: whether `seat` has a sure win this turn by what it can see, for the Easy practice tier's
+ * R2102000: whether `seat` has a sure win this turn by what it can see, for the practice AI's
  * lethal hint. Like `decide` it reads the true state only through `redact` (R185), on the Rust side,
  * so the AI's hidden cards never change its answer. False outside `seat`'s own main phase, and when
  * the check is still running at `deadlineMs`, a `Date.now()` time as `decide`'s is; absent, no clock.

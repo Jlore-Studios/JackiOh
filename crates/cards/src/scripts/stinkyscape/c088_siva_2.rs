@@ -1,5 +1,5 @@
-//! S #88 Siva 2 (SPEC §8.10 row 88): (3) Unit, Human, Acclaimed, Legendary, 4/4 → 8/8, of the held
-//! Stinkyscape set (R1420).
+//! S #88 Siva 2 (SPEC §8.10 row 88): (3) Unit, Human, Acclaimed, Legendary, 4/4 → 8/8, of the
+//! Stinkyscape set.
 //!   Base:    "Aura: Your Humans have Poisonous."
 //!   Radiant: "Aura: Your Humans have Poisonous. / Cry: Fill your hand with Bigots."
 //! Engine: Aura (§10.4): every Human Unit its controller has on the field (granted tags read, R923; one

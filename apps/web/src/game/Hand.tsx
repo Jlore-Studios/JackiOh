@@ -33,12 +33,18 @@
 // R1297000, R1834004: the opponent's backs wear their seat's card back (`seat`), and a card in a hand
 // its seat's loadout where the board carries one and the card is not the viewer's own (game/wearer.ts):
 // a revealed one, or the lower hand of a watched or replayed game.
+//
+// #2267: each of the viewer's own hand cards wears the hand hints that apply to it
+// (HandHints.tsx, the list in handHints.ts), read off the card and the view alone. The
+// opponent's backs and a revealed card (R434) wear none.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
-import type { CardView, PlayerId } from "@jackioh/shared";
+import type { CardView, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Card, { isSelected } from "./Card.tsx";
+import HandHints from "./HandHints.tsx";
+import type { HandHint } from "./handHints.ts";
 import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
 import { useLanding } from "./drag/landing.ts";
 import { revealTestid } from "./reveal.ts";
@@ -63,6 +69,10 @@ export type HandProps = {
   onHover?: (instanceId: string | null) => void;
   /** R318: the card a full hand burned, drawn over the hand (OverflowNotices.tsx `BurnNotice`). */
   notice?: ReactNode;
+  /** #2267: the view the viewer's own hand cards' hints read; Board.tsx gives it to `side="you"` only. Without it, no hint is drawn. */
+  view?: PlayerView | undefined;
+  /** #2267: the hints to draw, handHints.ts `HAND_HINTS` when absent; a test passes its own. */
+  hints?: readonly HandHint[] | undefined;
 };
 
 export function handCount(hand: CardView[] | { count: number }): number {
@@ -119,7 +129,7 @@ function RevealedSlot({
 }
 
 export default function Hand(props: HandProps): ReactElement {
-  const { hand, side, cap, marked } = props;
+  const { hand, side, cap, marked, view } = props;
   const count = handCount(hand);
   const yours = side === "you";
   // R434: the opponent's hand is cards only once the game is over; it is read, never played.
@@ -191,6 +201,7 @@ export default function Hand(props: HandProps): ReactElement {
             highlight={props.highlight}
             animating={props.animating}
             onClick={props.onClick}
+            hintRow={yours && view !== undefined ? <HandHints card={card} view={view} hints={props.hints} /> : undefined}
           />
         </div>
       );

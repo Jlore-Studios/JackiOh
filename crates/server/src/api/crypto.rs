@@ -89,7 +89,7 @@ impl std::fmt::Debug for Hashes {
 }
 
 /// HMAC-SHA256 of `value` under `key`, as lower-case hex.
-fn digest(key: &str, value: &str) -> String {
+pub(crate) fn digest(key: &str, value: &str) -> String {
     let mut mac =
         <Hmac<Sha256> as KeyInit>::new_from_slice(key.as_bytes()).expect("HMAC takes a key of any length");
     mac.update(value.as_bytes());

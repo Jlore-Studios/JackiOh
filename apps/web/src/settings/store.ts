@@ -13,7 +13,7 @@ export type Settings = {
   /** R82/R345: default true auto-ends only when ending is left. */
   autoEndTurn: boolean;
   hoverPreviews: boolean;
-  /** R2102000: the Easy practice tier's lethal hint; default on. */
+  /** R2102000: the lethal hint of every game against the practice AI (R2291000); default on. */
   lethalHint: boolean;
   reduceMotion: boolean;
   /** R644 (§5): mute opponents' emotes, default off per device. */

@@ -337,10 +337,6 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
     }
 }
 
-fn must<T>(value: Option<T>, what: &str) -> T {
-    value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
 /// A fixture card's definition (`face` is the printed face of both sides).
 fn fixture_def(id: &str, type_: &str, face: Value) -> CardDef {
     json_as(json!({

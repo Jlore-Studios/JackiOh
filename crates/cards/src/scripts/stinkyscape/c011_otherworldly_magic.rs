@@ -1,7 +1,6 @@
 //! S #11 Otherworldly Magic (SPEC §8.10 row S 11; §2.4, R1837000): (1) Spell, Otherworldly, Epic.
 //!   Base:    "Add a Frostbolt, an Arcane Missiles and a Flame Strike to your hand."
-//!   Radiant: "Add a Radiant Frostbolt, a Radiant Arcane Missiles and a Radiant Flame Strike to your
-//!            hand."
+//!   Radiant: "Add a Radiant Frostbolt, a Radiant Arcane Missiles and a Radiant Flame Strike to your hand."
 //!
 //! Engine: three `add_to_hand`, S #11.1 Frostbolt, S #11.2 Arcane Missiles and S #11.3 Flame Strike,
 //! in that order (C+ #32 Otherworldly Removal's pattern), a full hand burning what does not fit

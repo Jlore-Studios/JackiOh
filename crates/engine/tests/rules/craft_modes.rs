@@ -14,7 +14,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::craft::register_craft_fixtures;
 use crate::rules::fixtures::harness::act;
-use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, must, open_as, round_trip};
+use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, open_as, round_trip};
 
 /// An `Action` from its JSON, as the socket sends it.
 fn action(literal: Value) -> Action {
