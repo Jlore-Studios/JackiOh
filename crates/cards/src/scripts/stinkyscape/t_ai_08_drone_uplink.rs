@@ -1,11 +1,12 @@
 //! S T-AI-8 Drone Uplink (SPEC §7, §8.10 row T-AI-8; R62, R64, R78, R482, R1852000, R1881005): (2) Field
-//! Spell, AI, Token (no printed rarity), an AI generated token of the held Stinkyscape set (R1420), built
+//! Spell, AI, Token (no printed rarity), an AI generated token of the Stinkyscape set, built
 //! by S21.
 //!   Base:    "End of turn: Summon a Drone Interceptor. It gains Starship Piece."
 //!   Radiant: "End of turn: Summon a Radiant Drone Interceptor. It gains Starship Piece."
 //! Engine: End of turn (R62), its controller's: a summon of the Drone Interceptor into their leftmost open
 //!   unit zone (R64), its `keywords` rider granting it Starship Piece as it lands (kept until it leaves the
-//!   field, R78); with no open zone nothing. When it dies a copy fuses into its owner's Dormant Starship
+//!   field, R78), with a full unit row their leftmost open backrow zone (R2248000); with no open zone
+//!   nothing. When it dies a copy fuses into its owner's Dormant Starship
 //!   as a printed piece's does (R1852000), a plain Drone Interceptor, the granted keyword not carried
 //!   (R1881005). Radiant: a Radiant Interceptor. Declares no numbers (R482).
 
@@ -38,8 +39,8 @@ pub fn script() -> CardScripts {
 
 // S T-AI-8 Drone Uplink — SPEC §8.10 row T-AI-8, BUILD M12 row S T-AI-8: "at its controller's end of turn
 // summons a Drone Interceptor that has Starship Piece, none at the opponent's; when it dies a plain copy
-// fuses into its owner's Dormant Starship (R1881005); a full unit row summons nothing; radiant a Radiant
-// one".
+// fuses into its owner's Dormant Starship (R1881005); a full unit row puts it in the backrow (R2248000);
+// radiant a Radiant one".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -104,10 +105,13 @@ mod tests {
     }
 
     #[test]
-    fn a_full_unit_row_summons_nothing() {
+    fn r2248000_a_full_unit_row_puts_the_drone_in_the_backrow() {
         let mut s = fielded(false, json!(vec![VANILLA; 5]));
         s.end_turn();
         assert!(drones(&s, P1).is_empty());
+        let drone = s.backrow(P1, 2).expect("the Interceptor beside the Uplink");
+        assert_eq!(drone.def_id, INTERCEPTOR);
+        assert!(is_starship_piece(s.state(), s.card(drone.id.as_str())));
     }
 
     #[test]

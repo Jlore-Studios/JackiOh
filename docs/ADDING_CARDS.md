@@ -66,7 +66,7 @@ Also grep the Markdown for the stated totals (`572 cards`, `138 tokens`, `710`) 
 
 **Catalog entry** (C+ #6). `loc` is the script's lines of code, from `cargo jackioh catalog loc <script path>` once the script is written
 ([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`, marked `"cry": true` when only the card's Cry
-writes it (R1748000). A Spell or a Field Spell declares every number it prints unless `tests/cross/params.rs` names why it is fixed
+writes it (R1748000), or `"cry": "base"` (`"radiant"`) when only that face's Cry does and the other face's lasting text writes it too (R2261001). A Spell or a Field Spell declares every number it prints unless `tests/cross/params.rs` names why it is fixed
 (R1748003); one that deals damage carries `"dealsDamage": true` (R1748001), and a Field Spell that uses its own Plague Counters
 `"usesPlague": true` (R1748002). A token has
 `"token": true`, `"rarity": "Token"` and the `Token` tag. A new entry, a token's too, carries a `flavor` (§1 row 2).
@@ -150,8 +150,8 @@ side's setup over its defaults), `matches_object` (TS `toMatchObject`), `filler(
 for a library), `def_ids` (the cards' def ids), `events_json` (the events so far, as JSON), `unit_or_blank`,
 `stand_in_backrow`, `give_flying`, `give_lucky`, `built_starship` (p1's Dormant Starship built from the pieces
 given, #1859), `launch_starship`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
-`can_degrade_number`. Take the engine testkit's `Scenario::unit_at` and `pick::…` the same way;
-`crates/tools/tests/acceptance.rs` refuses a copy (#1826). Keep a local helper only when its body differs.
+`can_degrade_number`. Take the engine testkit's `Scenario::unit_at`, `pick::…` and `must` the same way;
+`crates/tools/tests/acceptance.rs` refuses a copy (#1826, #2023). Keep a local helper only when its body differs.
 
 ## 3. The patch, and its order
 

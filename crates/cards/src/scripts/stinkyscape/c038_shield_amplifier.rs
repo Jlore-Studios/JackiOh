@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 38 Shield Amplifier, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 38 Shield Amplifier, a card of the Stinkyscape set.
 //! (1) Unit, Common, 1/1 → 2/2: Starship Piece, Equip, Divine Shield.
 //! "Whenever this survives an attack, it gains +{buff}/+{buff}." — buff 3, Radiant 6 (R1860000).
 //!

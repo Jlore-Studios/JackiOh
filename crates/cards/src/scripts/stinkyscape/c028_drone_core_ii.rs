@@ -1,9 +1,8 @@
-//! S #28 Drone Core II (SPEC §8.10 row 28): (1) Spell, Drone Core, Common, a card of the held Stinkyscape
-//! set (R1420).
+//! S #28 Drone Core II (SPEC §8.10 row 28): (1) Spell, Drone Core, Common, a card of the Stinkyscape set.
 //!   Base:    "Summon a Drone Interceptor."
 //!   Radiant: "Summon a Radiant Drone Interceptor."
-//! Engine: a summon of the Drone Interceptor into the caster's leftmost open unit zone (R64), no Cry (R1);
-//!   with no open zone nothing. The Interceptor draws its own combat keyword as it arrives (R781004).
+//! Engine: a summon of the Drone Interceptor into the caster's leftmost open unit zone (R64), no Cry (R1),
+//!   with a full unit row the leftmost open backrow zone (R2248000); with no open zone nothing. The Interceptor draws its own combat keyword as it arrives (R781004).
 //!   Radiant: summoned Radiant.
 
 use jackioh_engine::prelude::*;
@@ -31,7 +30,7 @@ pub fn script() -> CardScripts {
 
 // S #28 Drone Core II — SPEC §8.10 row 28, BUILD M12 row S 28: "summons a Drone Interceptor into the
 // leftmost open unit zone, which then has one random combat keyword besides Ranged and Flying; a full
-// unit row summons nothing; radiant a Radiant Interceptor".
+// unit row puts it in the backrow (R2248000); radiant a Radiant Interceptor".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::drawn_combat_keywords;
@@ -72,12 +71,13 @@ mod tests {
     }
 
     #[test]
-    fn a_full_unit_row_summons_nothing() {
+    fn r2248000_a_full_unit_row_puts_the_interceptor_in_the_backrow() {
         let mut s = cast(false, json!(vec![VANILLA; 5]));
         for lane in 1..=5 {
             assert_eq!(s.unit(P1, lane).expect("a Vanilla").def_id, VANILLA);
         }
-        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Summoned { .. })));
+        let drone = s.backrow(P1, 1).expect("the Interceptor in backrow lane 1");
+        assert_eq!(drone.def_id, INTERCEPTOR);
         s.expect_in_zone(CORE, "graveyard");
     }
 

@@ -190,11 +190,15 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
   `{key}` in the text. A script reads `param(ctx, key)`, never a literal. Players read Nerf and Buff
   for the engine's Degrade and Upgrade, whose verbs keep their names (`degrade`, `upgrade`, R1320).
   `cry: true` marks a number only the card's Cry reads, which no Nerf or Buff draws on the field
-  (R1748000); `catalog check` holds it to the text. A number a Spell or a Field Spell prints is
+  (R1748000), and `cry: "base"` or `"radiant"` one only that face's Cry reads while the other face's
+  lasting text reads it too (R2261001); `catalog check` holds both to the text. A number a Spell or a Field Spell prints is
   declared, or `tests/cross/params.rs` names why it stays fixed (R1748003).
 - `dealsDamage: true`: a Spell or a Field Spell that deals damage, which a Buff may give Pierce or
   Lifesteal (R1748001). `usesPlague: true`: a Field Spell that uses the Plague Counters on itself, on
   which a Buff places one and from which a Nerf removes one on the field (R1748002).
+- `snapshotOf`: on a Training Grounds snapshot (#41–#60) only, the Core card it copies. The two
+  share a name (R2195001) and a deck holds one of them (R2195000); the snapshot's script is a copy of
+  the Core card's code, not a re-export (R2195003).
 - `loc`: the lines of code of the card's script. Frozen data since v0.3.0: nothing recomputes it, C
   #48 and C+ #44, #45 read it, and a card added since takes its number from
   `cargo jackioh catalog loc <script path>`.

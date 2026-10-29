@@ -36,6 +36,8 @@ The colours are one palette (#2105): `src/palette.css`, imported by `index.css` 
 
 The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s three families: `--font-display`, `--font-text` and `--font-mono`. A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
+The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index.css` after the type scale, names seven corner radii, four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. A board stylesheet gives every `border-radius` a radius, every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
@@ -292,7 +294,9 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
                         autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
                         one POST /api/trios/import, never the autosave (R341);
-                        Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099)
+                        Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
+                        a deck holding a card the newest patch changed wears a badge listing them until saved
+                        under it (DeckPatchBadge.tsx, R2097000)
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
                         largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online

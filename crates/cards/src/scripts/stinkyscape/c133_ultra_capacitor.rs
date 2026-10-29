@@ -1,5 +1,5 @@
 //! S #133 Ultra Capacitor (SPEC §8.10 row 133; R1852000, R1852003, R1852005, R1859001, R1859004): (2)
-//! Unit, Common, 2/2 → 4/4, Starship Piece, a card of the held Stinkyscape set (R1420).
+//! Unit, Common, 2/2 → 4/4, Starship Piece, a card of the Stinkyscape set.
 //!
 //! Base:    "Starship Piece\nWhen launched, your Starship gains +{per}/+{per} for each other Starship
 //!          Piece fused into it."

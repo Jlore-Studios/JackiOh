@@ -88,6 +88,8 @@ export const accountTestid = {
   username: "account-username",
   usernameCooldown: "account-username-cooldown",
   rank: "account-rank",
+  /** R2255000: this season's ranked win–loss–draw record, under the rank line; absent at 0 games. */
+  seasonRecord: "account-season-record",
   badges: "account-badges",
   leaderboard: "account-leaderboard",
   manage: "account-manage",
@@ -335,6 +337,16 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                     {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
                     <StreakFlame streak={rank.streak} size="large" />
                   </p>
+                  {/* R2255000: the season's ranked record, labelled apart from the all-time Record below; none at 0 games. */}
+                  {rank.record.games > 0 ? (
+                    <p data-testid={accountTestid.seasonRecord}>
+                      {t("This season (ranked): {wins}–{losses}–{draws}", {
+                        wins: rank.record.wins,
+                        losses: rank.record.losses,
+                        draws: rank.record.draws,
+                      })}
+                    </p>
+                  ) : null}
                   <p data-testid={accountTestid.badges}>
                     {rank.badges.length === 0 ? (
                       t("No season best yet — finish placements to earn one.")

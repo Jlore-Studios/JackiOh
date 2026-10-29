@@ -1,4 +1,4 @@
-//! SPEC §8.10 Stinkyscape 76 Honey Badger, a card of the held Stinkyscape set (R1420).
+//! SPEC §8.10 Stinkyscape 76 Honey Badger, a card of the Stinkyscape set.
 //!   Base:    "Starship Piece, Rush\nWhenever this attacks, gain a random Stinkyscape Resource." (4/6)
 //!   Radiant: "Starship Piece, Rush\nWhenever this attacks, gain a random Radiant Stinkyscape
 //!            Resource." (8/12)

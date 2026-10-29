@@ -259,7 +259,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // base text less the discard penalty (R862), and #48 Tranquility's less "End the turn." (R1021),
     // as is Classic #29 Book of Vital Kill's since patch v0.3.10, and Meditative+ #11 Living Mana
     // Potion's less its Tribute, with #12 Living Armor Potion's and #13 Living Health Potion's
-    // The held Stinkyscape set's #9 Ticketed drops its Brittle 3, and #149 Wildar the Call to Chaos it
+    // The Stinkyscape set's #9 Ticketed drops its Brittle 3, and #149 Wildar the Call to Chaos it
     // gives the opponent (radiantDiff.test.ts names all fourteen).
     const pureDeletions = new Set([
       "core-055",
@@ -520,6 +520,15 @@ describe("a face in play is the card as the view says it stands; the collection'
     // R277: the rolled power is marked against the same power's base words.
     expect(markedText(f.text.full, f.text.marks).length).toBeGreaterThan(0);
     expect(f.printed?.full).toBe(fillParams(def("core-098"), "radiant"));
+  });
+
+  it("R2247000 an Anomaly Found! that holds a board prints its code in play, and its catalog text in the collection", () => {
+    for (const [code, radiant] of [["FO", true], ["WH", false]] as const) {
+      const f = face("stinkyscape-t-anomaly-found", radiant, { inPlay: { label: code } });
+      expect(f.text).toEqual({ full: code, marks: [] });
+    }
+    expect(face("stinkyscape-t-anomaly-found", false).text.full).toContain("Replace your side of the field");
+    expect(face("stinkyscape-t-anomaly-found", false, { inPlay: {} }).text.full).toContain("Replace your side of the field");
   });
 
   it("R754 Steady Shot's {shot} prints the card's number as the view gives it", () => {

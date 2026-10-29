@@ -1,9 +1,0 @@
-{
-  "seed": 128,
-  "catalogVersion": "v0.5.0",
-  "decks": [
-    ["meditativeplus-005", "stinkyscape-064", "classicplus-077", "classic-036", "stinkyscape-140", "traininggrounds-014", "classicplus-001", "core-018", "classicplus-051", "meditative-058", "meditativeplus-020", "core-030", "classicplus-063", "stinkyscape-126", "stinkyscape-106", "meditative-089", "core-039", "classicplus-056", "stinkyscape-120", "classic-073", "classic-011", "classic-017", "meditative-002", "traininggrounds-032", "stinkyscape-130"],
-    ["meditativeplus-022", "classicplus-030", "stinkyscape-116", "meditative-074", "core-059", "stinkyscape-114", "classicplus-059", "stinkyscape-113", "meditative-102", "meditative-097", "stinkyscape-026", "traininggrounds-002", "classic-048", "core-052", "traininggrounds-012", "meditative-101", "meditative-037", "classic-006", "meditative-065", "meditativeplus-001", "stinkyscape-004", "traininggrounds-031", "meditative-063", "stinkyscape-137", "classicplus-024"]
-  ],
-  "found": "The plain fuzz gate (seeds 1-200) at ea22cbb, found while building #2285: I4 fired 108 actions in: c39 (stinkyscape-026, p2's) has summonedTurn 24 on turn 24, but its latest entry event was on turn 20. p2 played Core #52 Silly Silas into the zone ZolarKeth held, covering it in a Stack pile, the Cry rotated that pile one zone along its ring, and a trap destroyed Silas, so ZolarKeth was uncovered (R1829000) in a zone no event of the action named; the monitor read only those zones as ones a card may have been uncovered in. Fixed by treating every zone as one after a rotation. The decks are decks_for_seed(128) over the 611-card fuzz pool at ea22cbb (v0.5.0)."
-}

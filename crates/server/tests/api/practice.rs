@@ -232,16 +232,36 @@ fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, Claime
 type Won = (String, PracticeSetup, Vec<Action>, GameState);
 
 /// The first `practice-win-{n}` Easy game the human, playing as the AI does, wins; played once for
-/// every test that needs it, since each of its AI moves is a full search.
+/// every test that needs it, since each of its AI moves is a full search. The seeds are played a
+/// core's worth at a time, side by side (one after another, the tests waiting on this held every
+/// test thread for over a minute, #2223), and the first in seed order that wins is the one kept,
+/// whatever the number of cores.
 fn honest_win() -> &'static Won {
     static WON: OnceLock<Won> = OnceLock::new();
     WON.get_or_init(|| {
         let setup = setup(Difficulty::Easy, Vec::new());
-        for n in 0..WIN_SEEDS {
-            let seed = format!("practice-win-{n}");
-            let (log, result, state) = play(&seed, &setup, Human::Ai);
-            if result == ClaimedResult::Win {
-                return (seed, setup, log, state);
+        let seeds: Vec<String> = (0..WIN_SEEDS).map(|n| format!("practice-win-{n}")).collect();
+        let cores = std::thread::available_parallelism().map_or(1, |cores| cores.get());
+        for batch in seeds.chunks(cores) {
+            let played: Vec<_> = std::thread::scope(|scope| {
+                let games: Vec<_> = batch
+                    .iter()
+                    .map(|seed| scope.spawn(|| play(seed, &setup, Human::Ai)))
+                    .collect();
+                games
+                    .into_iter()
+                    .map(|game| {
+                        game.join()
+                            .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+                    })
+                    .collect()
+            });
+            let won = batch
+                .iter()
+                .zip(played)
+                .find(|(_, (_, result, _))| *result == ClaimedResult::Win);
+            if let Some((seed, (log, _, state))) = won {
+                return (seed.clone(), setup, log, state);
             }
         }
         panic!("the human wins none of {WIN_SEEDS} Easy games");

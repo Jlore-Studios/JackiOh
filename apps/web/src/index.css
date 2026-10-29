@@ -1,6 +1,7 @@
 @import "./fonts.css";
 @import "./palette.css";
 @import "./typescale.css";
+@import "./surfaces.css";
 
 /* Base reset and the design tokens the board and the prompts share.
    Layout rules live next to their components: game/board.css, game/prompt.css. */
@@ -38,10 +39,16 @@
   --primary-face-hover: linear-gradient(180deg, color-mix(in srgb, var(--pal-parchment) 93%, var(--pal-white)) 0%, color-mix(in srgb, var(--pal-gold-400) 93%, var(--pal-white)) 42%, color-mix(in srgb, var(--pal-brass-500) 93%, var(--pal-white)) 58%, color-mix(in srgb, var(--pal-brass-600) 93%, var(--pal-white)) 100%);
   --primary-ink: var(--pal-brass-950);
   --primary-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-wood-600), 0 4px 12px color-mix(in srgb, var(--pal-black) 45%, transparent);
+  /* The same button in green once nothing else is left (B15, highlights.css). */
+  --primary-face-ready: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-500) 55%, var(--pal-green-700));
+  --primary-face-ready-hover: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-400) 55%, var(--pal-green-500));
+  --primary-shadow-ready: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-green-900);
 
   --card-w: 82px;
   --card-h: 112px;
   --gap: 6px;
+  /* Frozen for non-board sheets (duos/, the deck builder): board sheets name surfaces.css.
+     Nothing in board scope uses it. */
   --radius: 7px;
 
   /* R2122000: the least a control's hit area spans on a phone, either way (WCAG 2.5.5); e2e
@@ -127,7 +134,7 @@ button {
   color: inherit;
   background: var(--bg-raised);
   border: 1px solid var(--line-bright);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 5px 10px;
   cursor: var(--cursor-glove-point, pointer);
 }
@@ -173,7 +180,7 @@ button:disabled {
 .notice {
   border: 1px solid var(--opponent);
   background: var(--bg-raised);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   max-width: 60ch;
 }
@@ -272,18 +279,15 @@ h3,
 }
 
 .brand h1 {
-  background: linear-gradient(95deg, var(--text) 30%, var(--radiant));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--text);
 }
 
 /* --- surfaces ------------------------------------------------------------------------------ */
 
 .panel {
   border: 1px solid var(--line);
-  background: linear-gradient(180deg, var(--bg-raised), color-mix(in srgb, var(--bg-raised) 70%, var(--bg)));
-  border-radius: 12px;
+  background: var(--bg-raised);
+  border-radius: var(--radius-md);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -301,7 +305,7 @@ h3,
 .notice {
   border: 1px solid var(--line-bright);
   background: var(--bg-raised);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 11px 14px;
   max-width: 64ch;
   color: var(--text-dim);
@@ -323,7 +327,7 @@ h3,
 .notice code {
   color: var(--text);
   background: var(--bg-sunken);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 1px 5px;
   font-size: var(--type-sm-em);
 }
@@ -332,7 +336,7 @@ h3,
 
 .app-shell button,
 .form-card button {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 9px 16px;
   font-weight: 550;
   transition: background-color 120ms, border-color 120ms, transform 60ms;
@@ -370,7 +374,7 @@ h3,
 .app-shell a.button-secondary {
   display: inline-block;
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 9px 16px;
   font-weight: 550;
   text-decoration: none;
@@ -487,7 +491,7 @@ h3,
   color: inherit;
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   min-width: 0;
   transition: border-color 120ms;
@@ -540,7 +544,7 @@ h3,
 .affix-button {
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0 12px;
   color: var(--text-dim);
   font-weight: 500;
@@ -568,7 +572,7 @@ h3,
   gap: 2px;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
 }
 
@@ -606,7 +610,7 @@ h3,
   gap: 8px;
   border: 1px solid var(--line);
   background: var(--bg-raised);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 8px 12px;
   color: var(--text-dim);
 }

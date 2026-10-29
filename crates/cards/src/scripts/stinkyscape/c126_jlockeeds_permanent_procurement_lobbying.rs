@@ -1,5 +1,5 @@
 //! Stinkyscape #126 Jlockeed's Permanent Procurement Lobbying (SPEC §8.10 row 126). (2) Spell, Jlockeed,
-//! Epic; held (R1420).
+//! Epic.
 //!   Base:    "For the rest of the game. / Start of turn: Add {cards|random Starship Piece|…} to your
 //!            hand." — cards 1
 //!   Radiant: "… Add {cards|random Radiant Starship Piece|…} to your hand. Each costs ({discount}) less."

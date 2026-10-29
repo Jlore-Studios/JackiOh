@@ -268,6 +268,12 @@ pub(crate) mod tests {
             scripts.readers,
             BTreeSet::from(["stinkyscape-109".to_string(), "stinkyscape-111".to_string()])
         );
+        // The build finds the same readers (the golden replay's list test reads them, R1846003).
+        let built: BTreeSet<String> = jackioh_cards::LIST_READERS
+            .iter()
+            .map(|id| id.to_string())
+            .collect();
+        assert_eq!(scripts.readers, built);
         // The tools count as the build does, and the lists they make are the build's.
         let counted: Vec<(&str, usize)> = scripts.counts.iter().map(|(id, n)| (id.as_str(), *n)).collect();
         assert_eq!(counted, jackioh_cards::CODE_LINES);
