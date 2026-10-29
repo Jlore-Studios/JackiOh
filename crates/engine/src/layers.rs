@@ -413,6 +413,13 @@ pub fn unit_view(state: &GameState, instance: &CardInstance) -> UnitView {
     layered_view(instance, compute_layers(state, instance, None))
 }
 
+/// R89, R1884004: a dead card's view as it stood when it died — its snapshot (a Death hook's `self_`),
+/// the board's auras still on it as they were on its last stay. A Death that brings the card back reads
+/// it to tell whether it died for want of health, which the same board would kill again.
+pub fn unit_view_as_it_died(state: &GameState, instance: &CardInstance) -> UnitView {
+    layered_view(instance, compute_layers_on(state, instance, None, true))
+}
+
 /// `unit_view`'s answer from the layers computed.
 fn layered_view(instance: &CardInstance, layered: Layered) -> UnitView {
     // Attack floors at 0; max health may fall to 0, which the state check turns into a death (§10.4).
@@ -453,6 +460,17 @@ const _: () = assert!(
 /// §10.4's five layers, attack unfloored: `unit_view` floors it, `unclamped_attack` reads it raw.
 /// Layer 5 reads a sweep's aura entries (`AuraTable`) when given them, else asks every source.
 fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[AuraEntry<'_>]>) -> Layered {
+    compute_layers_on(state, instance, table, false)
+}
+
+/// `compute_layers`, with `as_it_died` for a card's snapshot as it died (R89): it no longer tops its
+/// pile, so the dormancy test, which is for a card on the field, does not hold layer 5 off it.
+fn compute_layers_on(
+    state: &GameState,
+    instance: &CardInstance,
+    table: Option<&[AuraEntry<'_>]>,
+    as_it_died: bool,
+) -> Layered {
     let printed = face_of(state, instance);
     let position = instance.position.unwrap_or(Position::Atk);
 
@@ -491,14 +509,15 @@ fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[Au
     // board's auras apply again the moment it resumes on top. Without this an aura that shrinks max
     // health (#46) killed buried cards the top of the pile shielded.
     // R1839000: no aura reaches a Dormant card either, an effect like any other.
-    let auras: Vec<StatMod> = if is_dormant(state, instance) || crate::slumber::is_slumbering(instance) {
-        Vec::new()
-    } else {
-        match table {
-            Some(entries) => mods_of(entries, instance),
-            None => aura_mods(state, instance),
-        }
-    };
+    let auras: Vec<StatMod> =
+        if (!as_it_died && is_dormant(state, instance)) || crate::slumber::is_slumbering(instance) {
+            Vec::new()
+        } else {
+            match table {
+                Some(entries) => mods_of(entries, instance),
+                None => aura_mods(state, instance),
+            }
+        };
     for modifier in &auras {
         attack += modifier.attack.unwrap_or(0);
         max_health += modifier.max_health.unwrap_or(0);

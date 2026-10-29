@@ -2,6 +2,9 @@
 // Presentation only (CLAUDE.md rule 7): every entry is a `navigate` move (`commandEntries.ts`),
 // and the menu reads only the public catalog. It needs a keyboard, so there is no touch entry
 // point, and it carries no animation. Modelled on `together/ChallengeDialog.tsx`.
+//
+// R2126000: on a keyboard device the selected entry shows Enter, and the menu's foot names its keys
+// (the arrows, Enter, Esc); the keys are R2118000's, none is added.
 
 import {
   useCallback,
@@ -17,6 +20,7 @@ import {
 import { useBoardShown } from "../game/boardShown.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate } from "../net/navigate.ts";
+import { Kbd, ShortcutHint, useShortcutHints } from "../shortcuts/Kbd.tsx";
 import { useModalKeys } from "../together/modalKeys.ts";
 import { commandEntries, commandMenuOn, type CommandEntry } from "./commandEntries.ts";
 import "./command-menu.css";
@@ -28,7 +32,11 @@ export const commandMenuTestid = {
   close: "command-menu-close",
   list: "command-menu-list",
   empty: "command-menu-empty",
+  keys: "command-menu-keys",
 } as const;
+
+/** R2126000: the keys the menu answers to (R2118000), named at its foot; hints only. */
+export const COMMAND_MENU_KEYS = { move: [["ArrowUp"], ["ArrowDown"]], open: ["Enter"], close: ["Escape"] } as const;
 
 /** The list entry's testid for entry `id`. */
 export function commandEntryTestid(id: string): string {
@@ -90,6 +98,7 @@ function kindLabel(kind: CommandEntry["kind"]): string {
 
 function CommandMenuDialog({ onClose }: { onClose: () => void }): ReactElement {
   useLocale();
+  const hints = useShortcutHints();
   const listId = useId();
   const dialog = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -193,11 +202,25 @@ function CommandMenuDialog({ onClose }: { onClose: () => void }): ReactElement {
                 }}
               >
                 <span className="command-menu__label">{entry.label}</span>
-                <span className="command-menu__kind">{kindLabel(entry.kind)}</span>
+                <span className="command-menu__kind">
+                  {index === current ? (
+                    <span className="command-menu__enter" aria-hidden="true">
+                      <Kbd keys={COMMAND_MENU_KEYS.open} />
+                    </span>
+                  ) : null}
+                  {kindLabel(entry.kind)}
+                </span>
               </li>
             ))}
           </ul>
         )}
+        {hints.shown ? (
+          <p className="command-menu__keys" data-testid={commandMenuTestid.keys}>
+            <ShortcutHint keys={COMMAND_MENU_KEYS.move} words={t("{keys} to move")} />
+            <ShortcutHint keys={[COMMAND_MENU_KEYS.open]} words={t("{keys} to open")} />
+            <ShortcutHint keys={[COMMAND_MENU_KEYS.close]} words={t("{keys} to close")} />
+          </p>
+        ) : null}
       </div>
     </div>
   );

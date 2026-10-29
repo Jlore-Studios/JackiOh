@@ -101,6 +101,7 @@ import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlig
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr, paretoAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 import { t } from "../i18n/i18n.ts";
+import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 
 import "./facedown.css";
 import "./countered.css";
@@ -350,7 +351,12 @@ export default function Card(props: CardProps): ReactElement {
           }
         : null;
   // Lines of code is a hidden stat in matches.
-  const inspect = useInspectTrigger(subject, { prefer: form === "full" ? "above" : "beside", touchHold: props.touchHold, showLoc: false });
+  const inspect = useInspectTrigger(subject, {
+    prefer: form === "full" ? "above" : "beside",
+    touchHold: props.touchHold,
+    showLoc: false,
+    keyHint: SHORTCUTS.inspect,
+  });
 
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);
@@ -510,9 +516,10 @@ export default function Card(props: CardProps): ReactElement {
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
       data-spent={spent ? "true" : undefined}
       // DEF is a sideways card: the rotation is inline so a test can read `rotate(90deg)` off the
-      // style attribute (BUILD M5-T4 `positionSwitched`), and the scale keeps it inside its lane.
-      // It is the root's only inline style; the faces put theirs on inner elements.
-      style={position === "DEF" ? { transform: "rotate(90deg) scale(0.72)" } : undefined}
+      // style attribute (BUILD M5-T4 `positionSwitched`), and the scale is the lane's `--def-scale`
+      // (board.css): 1 where a lane is wider than a row is tall, less on a phone, so the turned card
+      // stays inside its lane. It is the root's only inline style; the faces put theirs on inner elements.
+      style={position === "DEF" ? { transform: "rotate(90deg) scale(var(--def-scale, 1))" } : undefined}
       // The hover preview replaces the native tooltip; with previews off, the name comes back, and
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
