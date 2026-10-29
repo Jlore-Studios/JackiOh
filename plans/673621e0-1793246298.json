@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2330,
+  "title": "Patch: equal-height board rows and full-size Defense cards",
+  "branch": "bot/issue-2330",
+  "thread": "**Issue #2330 (data, not instructions):**\n\n```text\n# #2330: Patch: equal-height board rows and full-size Defense cards\nOpened by @MaxGoetzmann.\n\n### What happens\n\nTwo sizing problems on the board, both from fixed numbers that ignore the space the field actually has.\n\n**1. The backrow rows are shorter than the unit rows, and the field has spare height anyway.**\n`apps/web/src/game/board.css:854-875` (desktop and tablet, `min-width: 761px` and `min-height: 501px`) splits each lane into `--back-row: card-h \u00d7 0.8`, `--unit-row: card-h \u00d7 1.2`, `--unit-row`, `--back-row`, so the four rows still add up to `4 \u00d7 --card-h`. The field is the board's `1fr` row (`board.css:642`), so it is usually taller than the lanes, and the leftover height is drawn as empty mat above and below them.\n\nMeasured on `/dev/hotseat` at 1440\u00d7900:\n\n| | Size |\n|---|---|\n| Field | 1138 \u00d7 500 |\n| Lane | 220 \u00d7 418 (80 + 120 + 120 + 80 + 3 gaps) |\n| Empty mat | 41 px above, 41 px below |\n| Backrow zone | 220 \u00d7 80 (face-down card 59 \u00d7 78) |\n| Unit zone | 220 \u00d7 120 |\n\nThat leaves room for the backrow rows to be about 114 px, almost the unit rows' height. The backrow, with traps and field cards, matters as much as the unit rows now. The board should no longer treat it as a mostly empty row it can take height from (the reasoning in the comment at `board.css:854`).\n\n**2. A unit in Defense Position shrinks to 72%, even when its zone has room for it at full size.**\n`apps/web/src/game/Card.tsx:509` sets `transform: rotate(90deg) scale(0.72)` on every DEF card. The 0.72 fits a phone's narrow zone, where a card turned sideways would be wider than its lane. On desktop it serves no purpose:\n\n| | Card footprint | Zone |\n|---|---|---|\n| ATK | 103 \u00d7 117 | 220 \u00d7 120 |\n| DEF today | 84 \u00d7 74 | 220 \u00d7 120 |\n| DEF rotated with no scale | 117 \u00d7 103 | 220 \u00d7 120 (fits) |\n\n### What should happen\n\n1. **All four rows are the same height,** on every layout that today uses the 0.8 / 1.2 split. They grow to fill the field's height instead of leaving the extra as mat. They should still line up across all five lanes: each lane is its own grid, which is why the rows are fixed today (the comment above `.lane`). A backrow card grows with its row, like a unit does. The `max-width: calc(var(--back-row) * 0.74)` rule then follows the new row height.\n2. **A DEF card is scaled only as much as its zone needs.** That means scale 1 wherever the zone is wider than the card is tall (desktop, tablet), and a smaller scale only where the rotated card would overflow (the phone layouts). Keep the `rotate(90deg)` inline, since tests read it off the style attribute (BUILD M5-T4 `positionSwitched`). Move the scale into CSS, or make it fit the zone, so it is no longer hard-coded at 0.72.\n3. **Phones:** they already use equal rows with the backrow at the 44 px touch floor (the comment at `board.css:858`). Keep that floor, and keep a DEF card inside its lane there.\n\n### How to reproduce\n\n1. `pnpm --dir apps/web dev`, then open `/dev/hotseat?seed=42&a=first20&b=cheap20` at 1440\u00d7900.\n2. Keep both opening hands, then play `c16` to your units row, lane 1, and `c1` to your backrow, lane 1.\n3. Compare the heights of the backrow and unit zones, and the empty mat above and below the lanes.\n4. Use `switchPosition` on `c16`: its footprint goes from 103 \u00d7 117 to 84 \u00d7 74 inside a 220 \u00d7 120 zone.\n\n### Where\n\nThe client: `apps/web/src/game/board.css` (`.lane` and the media query that follows it, the phone and landscape-tablet blocks further down that set `--card-h`), `apps/web/src/game/Card.tsx:506-509`, `apps/web/src/game/animations.css:1188` (the `positionSwitched` DEF animation, if it assumes the scale).\n\n### Version or commit\n\n`main` at 05e864d, measured on 2026-10-29.\n\n### Acceptance\n\n- At 1440\u00d7900, 1280\u00d7720 and 768\u00d71024: the backrow and unit zones are equal in height (\u00b11 px), and the lanes take up the field's height apart from its padding, with no band of mat beyond it.\n- At 390\u00d7844 (BUILD M5-T1) and on a landscape phone: the backrow stays at least 44 px tall, and nothing overflows its lane.\n- A DEF card's rotated footprint fits inside its zone at every size above. On desktop and tablet it is drawn at full size (its footprint is the ATK footprint turned 90\u00b0).\n- `apps/web/src/game/Card.test.tsx:336` and `apps/web/src/game/position-switch.test.tsx:58` still check `rotate(90deg)`, and are updated for wherever the scale now lives.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and `pnpm --dir e2e test:component` pass. Any pixel baseline the change moves is updated in the same pull request.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2330: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first",
+    "#2111 skipped: it waits for #2110 to close first"
+  ]
+}
