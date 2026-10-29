@@ -14,6 +14,7 @@ import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, ty
 import { baseView } from "../test/fixtures.ts";
 import { forgetRoomLink } from "../net/roomLink.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { pressBack } from "../test/history.ts";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { stopFollowingChallenge } from "./follow.ts";
@@ -516,6 +517,27 @@ describe("#1831 the panel is a modal for the keyboard", () => {
   );
 
   it(
+    "R2127000 Back closes the panel, the focus returns to the button and the address stays",
+    async () => {
+      signIn("tok-back");
+      serve(world());
+      window.history.pushState(null, "", "/play");
+      shell();
+      const opener = await button();
+      await openPanel();
+
+      await pressBack();
+      await waitFor(() => {
+        expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+      }, SLOW);
+      expect(opener).toHaveFocus();
+      expect(opener).toHaveAttribute("aria-expanded", "false");
+      expect(window.location.pathname).toBe("/play");
+    },
+    TEST_MS,
+  );
+
+  it(
     "#1831 Tab and Shift+Tab stay inside the panel, wrapping, and a click on the scrim closes it, one inside it does not",
     async () => {
       signIn("tok-tab");
@@ -581,6 +603,39 @@ describe("#1831 challenging from the panel", () => {
       expect(window.location.pathname).toBe("/replays");
       expect(opener).toHaveFocus();
       stopFollowingChallenge();
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R2127000 Back closes the challenge dialog the panel opened, sending nothing",
+    async () => {
+      signIn("tok-challenge-back");
+      window.history.pushState(null, "", "/replays");
+      const server = serve(world(), (call) =>
+        call.method === "POST" && call.path === "/api/challenges" ? { status: 201, body: { challengeId: "ch-9", roomCode: "ROOM01" } } : undefined,
+      );
+      shell();
+      const opener = await button();
+      const panel = await openPanel();
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+      const annRow = within(panel)
+        .getAllByTestId(togetherTestid.friendRow)
+        .find((row) => row.getAttribute("data-profile-id") === "f-ann");
+      fireEvent.click(within(must(annRow, "Ann's row")).getByTestId(togetherTestid.challenge));
+      await screen.findByTestId(togetherTestid.challengeForm, undefined, SLOW);
+      await waitFor(() => {
+        expect(screen.getByTestId(togetherTestid.challengeSend)).toHaveFocus();
+      }, SLOW);
+
+      await pressBack();
+      await waitFor(() => {
+        expect(screen.queryByTestId(togetherTestid.challengeForm)).toBeNull();
+      }, SLOW);
+      expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+      expect(server.to("POST", "/api/challenges")).toHaveLength(0);
+      expect(window.location.pathname).toBe("/replays");
+      expect(opener).toHaveFocus();
     },
     TEST_MS,
   );

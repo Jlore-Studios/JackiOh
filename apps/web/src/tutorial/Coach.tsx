@@ -25,6 +25,7 @@ import {
   COACH_TRACK_INTERVAL_MS,
   COACH_VIEWPORT_MARGIN_PX,
 } from "./config.ts";
+import { isBubble } from "./coach.ts";
 import { padRect, placeBubble, unionRect, type BubblePlacement, type Rect } from "./layout.ts";
 import { tutorialTestid } from "./testids.ts";
 import { displayKey, type CoachTracker, type CoachView } from "./tracker.ts";
@@ -282,7 +283,7 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
   // Never move focus out of an open prompt or dialog.
   useEffect(() => {
     if (!visible || display === null) return;
-    const wantsAck = (display.mode === "tip" || display.mode === "step") && display.ack;
+    const wantsAck = isBubble(display) && display.ack;
     const active = document.activeElement;
     const kept = active instanceof Element && active.closest(FOCUS_KEEPERS) !== null;
     if (wantsAck && !kept) {
@@ -299,6 +300,10 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
     tracker.ack(key);
   }, [tracker, key]);
 
+  const askHint = useCallback(() => {
+    tracker.hint(key);
+  }, [tracker, key]);
+
   if (!visible || display === null || shown === null) return null;
 
   const place = panel ? null : geometry.place;
@@ -311,7 +316,7 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
       };
   const count = `${String(display.stepNumber)} / ${String(display.stepCount)}`;
   const countLabel = t("Step {n} of {total}", { n: display.stepNumber, total: display.stepCount });
-  const full = display.mode === "tip" || display.mode === "step";
+  const full = isBubble(display);
   const yourMove = !full && !shown.aiBusy && shown.yourMove;
   const waitingLine = shown.aiBusy ? t(AI_MOVE) : yourMove ? t(YOUR_MOVE) : "";
   const className = ["coach", panel ? "coach--panel" : "coach--float", ...(full ? [] : ["coach--slim"])].join(" ");
@@ -353,7 +358,9 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
       >
         <div key="heading" className="coach__heading">
           <header className="coach__head">
-            <span className="coach__eyebrow">{display.mode === "tip" ? t("Tip") : t("Coach")}</span>
+            <span className="coach__eyebrow">
+              {display.mode === "tip" ? t("Tip") : display.mode === "discovery" ? t("Discovery") : t("Coach")}
+            </span>
             <span className="coach__count" aria-label={countLabel}>
               {count}
             </span>
@@ -368,6 +375,11 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
           <p ref={text} id={textId} className="coach__text" aria-live="polite">
             {full ? display.text : waitingLine}
           </p>
+          {full && display.hint !== null ? (
+            <p className="coach__hint-text" aria-live="polite">
+              {display.hint}
+            </p>
+          ) : null}
           {more ? (
             <button
               type="button"
@@ -383,6 +395,11 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
           ) : null}
         </div>
         <div key="actions" className="coach__actions">
+          {full && display.canHint ? (
+            <button type="button" className="coach__hint" data-testid={tutorialTestid.coachHint} onClick={askHint}>
+              {t("Hint")}
+            </button>
+          ) : null}
           {full && display.ack ? (
             <button
               ref={ackButton}

@@ -27,6 +27,7 @@ import {
 import Game from "../../game/Game.tsx";
 import { BackLink } from "../../routes/nav.tsx";
 import { baseView } from "../fixtures.ts";
+import { pressBack } from "../history.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SETTINGS_CSS = join(here, "../../settings/settings.css");
@@ -521,6 +522,21 @@ describe("B23 the settings gears open and close the dialog", () => {
     expectClosed();
     expect(gear).toHaveAttribute("aria-expanded", "false");
     await waitFor(() => expect(document.activeElement).toBe(gear));
+  });
+
+  it("R2127000 Back closes the panel over the board and gives the focus back", async () => {
+    renderGame();
+    const pathname = window.location.pathname;
+    const gear = screen.getByTestId("settings-open-game");
+    fireEvent.click(gear);
+    expect(panel()).toBeInTheDocument();
+
+    await pressBack();
+
+    expectClosed();
+    await waitFor(() => expect(document.activeElement).toBe(gear));
+    expect(screen.getByTestId("board")).toBeInTheDocument();
+    expect(window.location.pathname).toBe(pathname);
   });
 
   it("B23 Escape inside the panel closes it, gives focus back, and stops there", async () => {

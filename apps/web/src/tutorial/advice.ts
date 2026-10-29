@@ -1,13 +1,10 @@
-// Coach advice for unscripted tutorial moments (SPEC §9.10, R292, R293). It recommends one legal
-// action from the human view—lethal, play, trade, hero, Taunt, then End turn—never a rule
-// (CLAUDE.md rule 7).
+// Coach advice for the coach's own line (SPEC §9.10, R292, R293): one legal action from the human
+// view—lethal, play, trade, hero, Taunt, then End turn—never a rule (CLAUDE.md rule 7).
 
-import type { ActionBody, PlayerView, UnitView } from "@jackioh/shared";
+import type { ActionBody, UnitView } from "@jackioh/shared";
 
-import { chineseName, drawnInChinese } from "../cards/chinese.ts";
-import { t } from "../i18n/i18n.ts";
-import type { CoachAnchor, CoachCtx, CoachStep } from "./coach.ts";
-import { heroTargetId, myMain, unitsOf } from "./steps.ts";
+import type { CoachAnchor, CoachCtx } from "./coach.ts";
+import { heroTargetId, unitsOf } from "./steps.ts";
 
 export type Attack = Extract<ActionBody, { type: "attack" }>;
 export type Play = Extract<ActionBody, { type: "play" }>;
@@ -172,88 +169,4 @@ export function zoneOf(ctx: CoachCtx, side: "you" | "opponent", instanceId: stri
   const units = side === "you" ? ctx.view.you.units : ctx.view.opponent.units;
   const index = units.findIndex((unit) => unit?.instanceId === instanceId);
   return index < 0 ? null : { kind: "zone", side, row: "units", lane: index + 1 };
-}
-
-export function moveAnchor(ctx: CoachCtx, move: Move | undefined): CoachAnchor | null {
-  if (move === undefined) return null;
-  switch (move.kind) {
-    case "play":
-      return { kind: "handCard", defId: move.defId };
-    case "trade":
-    case "clear":
-    case "chip":
-      return zoneOf(ctx, "opponent", move.trade.target.instanceId);
-    case "hero":
-      return { kind: "hero", side: "opponent" };
-    case "end":
-      return { kind: "endTurn" };
-  }
-}
-
-/** A card's name as the reader reads it: the Chinese table's for a reader of Chinese, else `english`. */
-export function readerCardName(defId: string, english: string): string {
-  return drawnInChinese(false) ? chineseName(defId, english) : english;
-}
-
-/** Fall back to the definition id when the page has no catalog. */
-export function cardName(ctx: CoachCtx, defId: string): string {
-  return readerCardName(defId, ctx.nameOf?.(defId) ?? defId);
-}
-
-export function moveText(ctx: CoachCtx, move: Move | undefined): string {
-  if (move === undefined) return t("Watch the board: nothing to do right now.");
-  switch (move.kind) {
-    case "play":
-      return t("Play {card}: spend your mana every turn you can.", { card: cardName(ctx, move.defId) });
-    case "trade":
-      return t("Attack the enemy's {target} with your {attacker}: it destroys that unit and survives.", {
-        target: cardName(ctx, move.trade.target.defId),
-        attacker: cardName(ctx, move.trade.attacker.defId),
-      });
-    case "hero":
-      return move.lethal
-        ? t("Your attacks can finish the enemy hero this turn: attack it with your {attacker}.", { attacker: cardName(ctx, move.attacker.defId) })
-        : t("Attack the enemy hero with your {attacker}: every point counts.", { attacker: cardName(ctx, move.attacker.defId) });
-    case "clear": {
-      const names = { target: cardName(ctx, move.trade.target.defId), attacker: cardName(ctx, move.trade.attacker.defId) };
-      return move.trade.survives
-        ? t("A Taunt unit guards the hero: attack the enemy's {target} with your {attacker} to clear the way.", names)
-        : t("A Taunt unit guards the hero: attack the enemy's {target} with your {attacker}. Both fall, but the way is clear.", names);
-    }
-    case "chip":
-      return move.trade.pops
-        ? t("A Taunt unit guards the hero, behind a Divine Shield. Break the shield: attack it with your {attacker}.", {
-            attacker: cardName(ctx, move.trade.attacker.defId),
-          })
-        : t("A Taunt unit guards the hero. Wear it down: attack it with your {attacker}. Damage stays.", {
-            attacker: cardName(ctx, move.trade.attacker.defId),
-          });
-    case "end":
-      return t("Nothing useful left this turn: press End turn.");
-  }
-}
-
-/** `final` waits for game end; other moves end when their turn passes or `until` holds. */
-export function yourMove(options: {
-  id: string;
-  title: string;
-  final?: boolean;
-  when?: (ctx: CoachCtx) => boolean;
-  until?: (ctx: CoachCtx, since: PlayerView) => boolean;
-}): CoachStep {
-  const { id, title, final, when, until } = options;
-  return {
-    id,
-    title,
-    kind: "act",
-    text: (ctx) => moveText(ctx, nextMove(ctx)),
-    anchor: (ctx) => moveAnchor(ctx, nextMove(ctx)),
-    when: (ctx) => myMain(ctx) && nextMove(ctx) !== undefined && (when === undefined || when(ctx)),
-    done: (ctx, since) => {
-      if (until !== undefined && until(ctx, since)) return true;
-      return final === true ? ctx.view.result !== null : ctx.view.turn !== since.turn;
-    },
-    expect: (action, ctx) => sameMove(action, nextMove(ctx)?.action),
-    ...(final === true ? { final: true } : { turnBound: true }),
-  };
 }

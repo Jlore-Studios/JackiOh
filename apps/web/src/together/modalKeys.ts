@@ -1,7 +1,10 @@
 // The keys of a modal like the client's others (`game/ConfirmConcede.tsx`, #1569), shared by the
-// challenge dialog and the friends panel (#1831): Escape closes it and Tab stays inside it.
+// challenge dialog and the friends panel (#1831): Escape and Back (R2127000) close it and Tab stays
+// inside it.
 
 import { useEffect, type RefObject } from "react";
+
+import { useBackLayer } from "../net/backLayers.ts";
 
 /** What Tab may land on in a modal. */
 const TAB_STOPS = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])";
@@ -19,6 +22,7 @@ export function tabStops(modal: HTMLElement): HTMLElement[] {
  * and Shift+Tab step through the modal's stops, wrapping, never onto the page behind the scrim.
  */
 export function useModalKeys(root: RefObject<HTMLElement | null>, onClose: () => void): void {
+  useBackLayer(onClose);
   useEffect(() => {
     function onKey(event: globalThis.KeyboardEvent): void {
       if (event.key === "Escape") {

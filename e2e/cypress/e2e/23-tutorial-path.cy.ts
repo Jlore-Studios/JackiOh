@@ -120,8 +120,8 @@ function expectLessonGame(data: TutorialData, lesson: TutorialLessonData): void 
     expect(debug.handicaps[aiSeat], "the AI seat's handicap is the tutorial's (R290)").to.deep.eq(TUTORIAL_HANDICAP);
     expect(
       debug.handicaps[lesson.humanSeat],
-      "the human plays a human's resources with the lesson's smaller deck (R1705005)",
-    ).to.deep.eq(TUTORIAL_HUMAN);
+      "the human plays a human's resources with the lesson's smaller deck (R1705005), and its pool hold (R2201001)",
+    ).to.deep.eq(lesson.poolHold ? { ...TUTORIAL_HUMAN, poolHold: true } : TUTORIAL_HUMAN);
     expect(data.aiTutorial, "AI_TUTORIAL in the engine still says the same").to.deep.eq(TUTORIAL_HANDICAP);
     expect(lesson.aiDeck, "the AI's deck is exactly the handicap's deck size (R184)").to.have.length(TUTORIAL_HANDICAP.deckSize);
   });

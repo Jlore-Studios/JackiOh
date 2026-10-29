@@ -119,6 +119,8 @@ export default function AlmanacRoute(): ReactElement {
             tags={ALMANAC_CHIP_TAGS}
             onInspect={openDetail}
             own={own ?? undefined}
+            // #2334: about 700 cards, of which a screen shows a dozen.
+            virtual
             detail={
               detailCardId === null || detailDef === undefined
                 ? null

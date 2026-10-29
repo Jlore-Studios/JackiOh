@@ -122,10 +122,10 @@ import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { useSetting } from "../settings/store.ts";
 import { useTutorialAccountSync, type TutorialAccountApi } from "../tutorial/accountSync.ts";
 import { Coach } from "../tutorial/Coach.tsx";
-import type { LessonScript } from "../tutorial/coach.ts";
+import { missedOf, type LessonScript } from "../tutorial/coach.ts";
 import { useTutorialDevHandle } from "../tutorial/devHandle.ts";
 import { lessonById, nextLessonOf, type TutorialLesson } from "../tutorial/lessons.ts";
-import { lessonStatus, markLessonComplete, readTutorialProgress } from "../tutorial/progress.ts";
+import { fieldGuideOf, lessonStatus, markFound, markLessonComplete, readTutorialProgress } from "../tutorial/progress.ts";
 import { scriptFor } from "../tutorial/scripts/index.ts";
 import { lessonStartConfig } from "../tutorial/start.ts";
 import { createCoachTracker, silentScript, type CoachTracker } from "../tutorial/tracker.ts";
@@ -708,7 +708,12 @@ function PracticeScreen({
     // Subscribed before `start` is sent, so the coach reads every snapshot (tutorial/tracker.ts).
     const lessonId = game.lesson;
     const coach =
-      lessonId === undefined ? null : createCoachTracker(next, scripts.current(lessonId) ?? silentScript(lessonId));
+      lessonId === undefined
+        ? null
+        : createCoachTracker(next, scripts.current(lessonId) ?? silentScript(lessonId), {
+            known: fieldGuideOf(readTutorialProgress()),
+            onFound: markFound,
+          });
     setController(next);
     setTracker(coach);
     if (resumeFrom.current === game) void next.resume(game);
@@ -1427,6 +1432,7 @@ function PracticeScreen({
           unlockedNow={
             nextLesson !== undefined && progressAtStart !== null && lessonStatus(progressAtStart, nextLesson) === "locked"
           }
+          missed={missedOf(coached.tracker.script, coached.tracker.getState().coach)}
           onNext={() => {
             if (nextLesson !== undefined) onStartLesson(nextLesson);
           }}

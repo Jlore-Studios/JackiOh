@@ -1,4 +1,4 @@
-# `e2e/` — the forty-seven specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, the custom cards' `40`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46` and the phone's tap areas' `47`, plus twenty-one component specs
+# `e2e/` — the forty-eight specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, the custom cards' `40`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46`, the phone's tap areas' `47` and the tutorial's final exam's `48`, plus twenty-one component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -177,6 +177,7 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | Spec | Needs |
 | --- | --- |
 | 23 | SPEC §9.10 on `/practice`, against `build:e2e` with no server: the lesson path and its progress in `localStorage["jackioh.tutorial.v1"]` (R294), no Skip step (R314) and Exit, a lesson's seed, decks and handicap (R290, R291) compared with `apps/web/src/tutorial/lessons.ts` through `cy.task("tutorialLessons")`, and a 390x844 smoke. Rebuild the client after a lesson changes, or the task and the bundle disagree. |
+| 48 | SPEC §9.10's last lesson on `/practice`, against `build:e2e` with no server: lesson 5 opens once the four before it are won, its human deck and its handicap (no pool hold, R2205003) compared with `lessons.ts` through `cy.task("tutorialLessons")`, the coach's line through the UI to a win that ends the tutorial, a discovery shown and kept in the Field Guide (R2205000, R2205002), and the log folded in Node to the page's hash. Rebuild the client after a lesson changes. |
 
 Spec 14 (`14-landing-and-sign-in.cy.ts`) never submits to the auth provider, because a `build:e2e`
 bundle has no `VITE_SUPABASE_URL`. So it runs against a static preview with nothing else started:
