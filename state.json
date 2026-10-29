@@ -9228,11 +9228,10 @@
     "what": "revise #2310 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-29T21:59:32Z",
+    "at": "2026-10-29T22:08:59Z",
     "notes": [
-      "delivered revise #2310 on muse (run 40959410462): built",
-      "started revise #2310 on muse (run 40962645882)",
-      "nothing more to start: nothing is queued"
+      "delivered revise #2341 on claude-3 (run 40956670571): approved",
+      "delivered build #2367 on claude-8 (run 40944406714): blocked"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -9938,7 +9937,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-29T21:59:32Z",
+  "loop_tick": "2026-10-29T22:08:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
