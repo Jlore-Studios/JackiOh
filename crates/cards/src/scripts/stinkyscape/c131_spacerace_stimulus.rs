@@ -1,6 +1,6 @@
 //! S #131 Spacerace Stimulus (SPEC §8.10 row 131; R17, R64, R383, R831007, R1852000, R1852003,
 //! R1859003): (1) Field Trap, Common, 6/6 → 12/12 (its unit face), Animated, Starship Piece, a card of
-//! the held Stinkyscape set (R1420).
+//! the Stinkyscape set.
 //!
 //! Base:    "Animated, Starship Piece\nReveals when either player launches a Starship."
 //! Radiant: "Animated, Starship Piece\nReveals when either player launches a Starship or plays a

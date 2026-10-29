@@ -99,6 +99,8 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1849008, R1849009: Stinkyscape's, rules only until the set's cards print them as terms.
     "When one of your Units is attacked",
     "Chance to reveal",
+    // R2199000: Training Grounds', rules only: TG #31 Level Up! prints no such term.
+    "After one of your Units attacks",
   ],
   "§6.3": [
     "Summon",
@@ -730,7 +732,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Freeze: ["freeze", "freezes"],
       // R1563000: Bread and Butter prints "Reveals when any player Floats".
       Float: ["Floats", "Floated"],
-      // R1857000: the held Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated"
+      // R1857000: the Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated"
       // above.
       "End the turn": ["end the turn"],
       Allure: ["Allured"],

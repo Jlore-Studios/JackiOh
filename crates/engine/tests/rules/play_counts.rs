@@ -20,7 +20,7 @@ fn game(seed: &str) -> GameState {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        ready = must(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
+        ready = reduce_ok(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
     }
     for player in PLAYER_IDS {
         ready.players[player].mana.current = 9;
@@ -30,7 +30,7 @@ fn game(seed: &str) -> GameState {
 }
 
 /// TS `must`: `body` is the TS `ActionBody` literal; the player and a fresh nonce are added.
-fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
+fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let mut body = body;
     body["playerId"] = json!(player_id);
     body["nonce"] = json!(next_nonce());
@@ -63,7 +63,7 @@ fn play(state: &GameState, player: PlayerId, def_id: &str, radiant: bool) -> Gam
     if def_id == PA.bolt.id {
         body["targets"] = json!([{ "pick": "hero", "player": opponent_of(player) }]);
     }
-    must(&state, player, body).state
+    reduce_ok(&state, player, body).state
 }
 
 const NON_UNIT: [CardType; 3] = [CardType::Spell, CardType::FieldSpell, CardType::Trap];
@@ -101,7 +101,7 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
     fn r451_clears_at_every_start_of_turn_for_both_players() {
         let mut state = play(&game("r451-reset"), PlayerId::P1, &PA.ping.id, false);
         assert_eq!(of_type(&state, PlayerId::P1, &[CardType::Spell]), 1);
-        state = must(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
+        state = reduce_ok(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
         assert_eq!(state.active, PlayerId::P2);
         assert_eq!(of_type(&state, PlayerId::P1, &[CardType::Spell]), 0);
         assert_eq!(state.players.p1.turn_log.played_by_type, None);
@@ -180,8 +180,8 @@ mod r451_plays_by_tag_this_game_classic_plus_c64_ai_scaling_law {
             query::played_this_game_with_tag(&state, PlayerId::P1, Tag::Token),
             1
         );
-        state = must(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
-        state = must(&state, PlayerId::P2, json!({ "type": "endTurn" })).state;
+        state = reduce_ok(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
+        state = reduce_ok(&state, PlayerId::P2, json!({ "type": "endTurn" })).state;
         assert_eq!(state.active, PlayerId::P1);
         assert_eq!(
             query::played_this_game_with_tag(&state, PlayerId::P1, Tag::Fruit),
@@ -211,7 +211,7 @@ mod r451_the_last_spell_played_game_wide_classic_c57 {
         state = play(&state, PlayerId::P1, &PA.crier.id, false);
         state = play(&state, PlayerId::P1, &PA.field.id, false);
         assert_eq!(query::last_spell_played(&state), bolt);
-        state = must(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
+        state = reduce_ok(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
         state = play(&state, PlayerId::P2, &PA.ping.id, false);
         assert_eq!(
             query::last_spell_played(&state),

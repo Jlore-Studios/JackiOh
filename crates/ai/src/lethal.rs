@@ -465,7 +465,7 @@ pub fn trim_lethal(
     Some(line)
 }
 
-/// R2102000: whether `seat` has a sure win this turn by what it can see, for the Easy practice tier's
+/// R2102000: whether `seat` has a sure win this turn by what it can see, for the practice AI's
 /// lethal hint (SPEC §9.9). Like `decide` (R185) it reads only `redact(state, seat)`: it fills that in
 /// as LETHAL_HINT_DETERMINIZATIONS worlds drawn from LETHAL_HINT_SEED's stream, its own, and asks
 /// `find_lethal` for a line that wins on every one of them within LETHAL_HINT_NODES nodes. So two

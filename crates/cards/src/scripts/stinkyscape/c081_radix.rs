@@ -1,11 +1,11 @@
-//! Stinkyscape #81 Radix (SPEC §8.10 row 81). Unit 2/2 → 4/4, cost 3, Rare; held (R1420).
+//! Stinkyscape #81 Radix (SPEC §8.10 row 81). Unit 2/2 → 4/4, cost 3, Rare.
 //!   Base:    "Starship Piece
 //!            Cry: Discover 2 Rare Weapons and Equip them into this."
 //!   Radiant: "Starship Piece
 //!            Cry: Discover 2 Epic Weapons and Equip them into this."
 //!
 //! R1862002: the Cry is `equip_picks` (R1841002), 2 Discovers of three in turn from the Weapon-tagged
-//! cards of the rarity, the pool naming its set so that it reaches them while the set is held (R1420,
+//! cards of the rarity, the pool naming its set so that it reaches them whether or not the set ships (R1420,
 //! R1857000). Each pick is a fresh copy, not made Radiant, fused into this with its Activate
 //! (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the face its kept host
 //! wears (R77), so a Radiant Radix wields its Weapons' Radiant faces. Starship Piece is a catalog

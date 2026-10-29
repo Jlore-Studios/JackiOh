@@ -1,9 +1,10 @@
 //! S T-AI-1 Escort Protocol (SPEC §7, §8.10 row T-AI-1; R1, R64, R482): (1) Unit, AI, Token (no printed
-//! rarity), 1/3 → 2/6, Flying, an AI generated token of the held Stinkyscape set (R1420), built by S21.
+//! rarity), 1/3 → 2/6, Flying, an AI generated token of the Stinkyscape set, built by S21.
 //!   Base:    "Flying\nCry: Summon a Drone Interceptor."
 //!   Radiant: "Flying\nCry: Summon a Radiant Drone Interceptor."
 //! Engine: Flying is catalog data. Cry (R1): a summon of the Drone Interceptor into its controller's
-//!   leftmost open unit zone (R64), no Cry; with no open zone nothing. The Interceptor draws its own
+//!   leftmost open unit zone (R64), no Cry, with a full unit row the leftmost open backrow zone
+//!   (R2248000); with no open zone nothing. The Interceptor draws its own
 //!   combat keyword as it arrives (R781004). Radiant: a Radiant Interceptor. Declares no numbers (R482).
 
 use jackioh_engine::prelude::*;
@@ -30,8 +31,8 @@ pub fn script() -> CardScripts {
 }
 
 // S T-AI-1 Escort Protocol — SPEC §8.10 row T-AI-1, BUILD M12 row S T-AI-1: "a 1/3 Flying whose Cry summons
-// a Drone Interceptor into the leftmost open unit zone; a full unit row summons nothing; radiant 2/6 and a
-// Radiant Interceptor".
+// a Drone Interceptor into the leftmost open unit zone; a full unit row puts it in the backrow (R2248000);
+// radiant 2/6 and a Radiant Interceptor".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -69,9 +70,10 @@ mod tests {
     }
 
     #[test]
-    fn r64_with_no_open_zone_after_it_lands_nothing_is_summoned() {
+    fn r64_r2248000_with_no_open_unit_zone_after_it_lands_the_interceptor_flies_into_the_backrow() {
         let s = played(false, json!(vec![VANILLA; 4]), 5);
-        assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::Summoned { def_id, .. } if def_id == INTERCEPTOR)));
+        let drone = s.backrow(P1, 1).expect("the Interceptor in backrow lane 1");
+        assert_eq!(drone.def_id, INTERCEPTOR);
     }
 
     #[test]

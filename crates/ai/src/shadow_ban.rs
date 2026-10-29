@@ -100,6 +100,8 @@
 // Sweep of record: 2026-10-25 (UTC), `cargo jackioh sweep`, pass 1 over 1 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 1 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // Report of record: training/history/sweep-2026-10-25-2.md
 // Sweep of record: 2026-10-25 (UTC), `cargo jackioh sweep`, pass 1 over 27 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 27 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
+// Report of record: training/history/sweep-2026-10-28.md
+// Sweep of record: 2026-10-28 (UTC), `cargo jackioh sweep`, pass 1 over 175 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 86 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // END `cargo jackioh sweep --write`
 
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
@@ -301,7 +303,48 @@
 /// (R600) and meeting no flag in full. It is dealt at stock weight and not
 /// in `UNBANNED_PREFER`, on the generations 4–7 precedent, and the table is
 /// empty.
-pub const SHADOW_BAN: &[(&str, &str)] = &[];
+pub const SHADOW_BAN: &[(&str, &str)] = &[
+    (
+        "stinkyscape-004",
+        "neverPlayed: hard: affordable in hand on 25 turns over 24 pass-2 games, never played",
+    ),
+    (
+        "stinkyscape-010",
+        "timeout: easy: 2 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "stinkyscape-025",
+        "neverPlayed: hard: affordable in hand on 42 turns over 24 pass-2 games, never played",
+    ),
+    (
+        "stinkyscape-080",
+        "error: easy: 1 engine or search error(s) over 8 games",
+    ),
+    (
+        "stinkyscape-087",
+        "neverPlayed: hard: affordable in hand on 27 turns over 24 pass-2 games, never played",
+    ),
+    (
+        "stinkyscape-096",
+        "neverPlayed: hard: affordable in hand on 39 turns over 24 pass-2 games, never played",
+    ),
+    (
+        "stinkyscape-118",
+        "neverPlayed: hard: affordable in hand on 46 turns over 24 pass-2 games, never played",
+    ),
+    (
+        "stinkyscape-149",
+        "neverPlayed: hard: affordable in hand on 35 turns over 24 pass-2 games, never played",
+    ),
+    (
+        "stinkyscape-167",
+        "neverPlayed: hard: affordable in hand on 31 turns over 24 pass-2 games, never played",
+    ),
+    (
+        "stinkyscape-174",
+        "neverPlayed: easy: affordable in hand on 20 turns over 24 pass-2 games, never played",
+    ),
+];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -710,6 +753,314 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     (
         "meditativeplus-023",
         "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-002",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 148.4",
+    ),
+    (
+        "stinkyscape-007",
+        "at risk: easy: pass 1 affordable on 14 turns over 8 games, played 1 time(s), mean evaluate change 2.0",
+    ),
+    (
+        "stinkyscape-008",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-009",
+        "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 10.8",
+    ),
+    (
+        "stinkyscape-011",
+        "at risk: easy: pass 1 affordable on 3 turns over 8 games, played 2 time(s), mean evaluate change -71.6",
+    ),
+    (
+        "stinkyscape-017",
+        "at risk: easy: pass 1 affordable on 5 turns over 8 games, never played; hard: pass 1 affordable on 12 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-019",
+        "at risk: easy: pass 1 affordable on 24 turns over 8 games, played 1 time(s), mean evaluate change -2.6; hard: pass 1 affordable on 7 turns over 8 games, never played; pass 2 affordable on 38 turns over 24 games, played 1 time(s), mean evaluate change 0.8",
+    ),
+    (
+        "stinkyscape-021",
+        "at risk: hard: pass 1 affordable on 17 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-022",
+        "at risk: hard: pass 1 affordable on 4 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-024",
+        "at risk: easy: pass 1 affordable on 18 turns over 8 games, played 4 time(s), mean evaluate change -61.8",
+    ),
+    (
+        "stinkyscape-032",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 100.3",
+    ),
+    (
+        "stinkyscape-036",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-039",
+        "at risk: hard: pass 1 affordable on 4 turns over 8 games, never played; pass 2 affordable on 28 turns over 24 games, played 1 time(s), mean evaluate change 3.9",
+    ),
+    (
+        "stinkyscape-040",
+        "at risk: hard: pass 1 affordable on 24 turns over 8 games, played 1 time(s), mean evaluate change 2.5; pass 2 affordable on 29 turns over 24 games, played 1 time(s), mean evaluate change 3.5",
+    ),
+    (
+        "stinkyscape-046",
+        "at risk: hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change 7.3",
+    ),
+    (
+        "stinkyscape-047",
+        "at risk: easy: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 24.2; hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 0.2",
+    ),
+    (
+        "stinkyscape-049",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 17.8",
+    ),
+    (
+        "stinkyscape-052",
+        "at risk: hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change 2.4",
+    ),
+    (
+        "stinkyscape-055",
+        "at risk: easy: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change 4.1; hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 4.1",
+    ),
+    (
+        "stinkyscape-058",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 7.4",
+    ),
+    (
+        "stinkyscape-059",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 5.8",
+    ),
+    (
+        "stinkyscape-061",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 5.8",
+    ),
+    (
+        "stinkyscape-063",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 0.7",
+    ),
+    (
+        "stinkyscape-064",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 2.4",
+    ),
+    (
+        "stinkyscape-065",
+        "at risk: easy: pass 1 affordable on 21 turns over 8 games, played 1 time(s), mean evaluate change 10.1; hard: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 4.1",
+    ),
+    (
+        "stinkyscape-066",
+        "at risk: easy: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 13.3; hard: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 5.8",
+    ),
+    (
+        "stinkyscape-071",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 21.3",
+    ),
+    (
+        "stinkyscape-074",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 0.8",
+    ),
+    (
+        "stinkyscape-076",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 11.5",
+    ),
+    (
+        "stinkyscape-082",
+        "at risk: hard: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change 29.0",
+    ),
+    (
+        "stinkyscape-083",
+        "at risk: hard: pass 1 affordable on 5 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-084",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-085",
+        "at risk: easy: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 5.5",
+    ),
+    (
+        "stinkyscape-086",
+        "at risk: easy: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 3.7; hard: pass 1 affordable on 8 turns over 8 games, played 2 time(s), mean evaluate change -41.9",
+    ),
+    (
+        "stinkyscape-088",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 17.4",
+    ),
+    (
+        "stinkyscape-089",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change -1.3",
+    ),
+    (
+        "stinkyscape-093",
+        "at risk: hard: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change 19.9",
+    ),
+    (
+        "stinkyscape-095",
+        "at risk: hard: pass 1 affordable on 16 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-104",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 4.4",
+    ),
+    (
+        "stinkyscape-109",
+        "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 26.7",
+    ),
+    (
+        "stinkyscape-114",
+        "at risk: hard: pass 1 affordable on 11 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-115",
+        "at risk: easy: pass 1 affordable on 12 turns over 8 games, never played; hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 21.9",
+    ),
+    (
+        "stinkyscape-117",
+        "at risk: easy: pass 1 affordable on 9 turns over 8 games, never played; hard: pass 1 affordable on 12 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-119",
+        "at risk: easy: pass 1 affordable on 21 turns over 8 games, played 3 time(s), mean evaluate change -33.1; hard: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 28.2",
+    ),
+    (
+        "stinkyscape-120",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, never played; pass 2 affordable on 42 turns over 24 games, played 1 time(s), mean evaluate change 10.0",
+    ),
+    (
+        "stinkyscape-121",
+        "at risk: easy: pass 1 affordable on 19 turns over 8 games, played 1 time(s), mean evaluate change 0.6",
+    ),
+    (
+        "stinkyscape-124",
+        "at risk: easy: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 2.9",
+    ),
+    (
+        "stinkyscape-125",
+        "at risk: hard: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
+    ),
+    (
+        "stinkyscape-126",
+        "at risk: easy: pass 1 affordable on 15 turns over 8 games, played 1 time(s), mean evaluate change 1.4; hard: pass 1 affordable on 20 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-127",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 16.7",
+    ),
+    (
+        "stinkyscape-128",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 14.1",
+    ),
+    (
+        "stinkyscape-130",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-131",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 7.6",
+    ),
+    (
+        "stinkyscape-132",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-133",
+        "at risk: hard: pass 1 affordable on 15 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-134",
+        "at risk: hard: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 3.1",
+    ),
+    (
+        "stinkyscape-141",
+        "at risk: easy: pass 1 affordable on 20 turns over 8 games, played 1 time(s), mean evaluate change 2.4",
+    ),
+    (
+        "stinkyscape-144",
+        "at risk: easy: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 1.0",
+    ),
+    (
+        "stinkyscape-145",
+        "at risk: easy: pass 1 affordable on 19 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-150",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-151",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 44.7; hard: pass 1 affordable on 7 turns over 8 games, played 2 time(s), mean evaluate change -24.7",
+    ),
+    (
+        "stinkyscape-152",
+        "at risk: easy: pass 1 affordable on 14 turns over 8 games, played 1 time(s), mean evaluate change 2.5; hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change -2.9",
+    ),
+    (
+        "stinkyscape-155",
+        "at risk: hard: pass 1 affordable on 17 turns over 8 games, played 1 time(s), mean evaluate change -0.1; pass 2 affordable on 23 turns over 24 games, played 1 time(s), mean evaluate change -1.1",
+    ),
+    (
+        "stinkyscape-156",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 0.3",
+    ),
+    (
+        "stinkyscape-157",
+        "at risk: easy: pass 1 affordable on 13 turns over 8 games, played 1 time(s), mean evaluate change 2.1",
+    ),
+    (
+        "stinkyscape-158",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 23.4",
+    ),
+    (
+        "stinkyscape-159",
+        "at risk: easy: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 5.7; hard: pass 1 affordable on 4 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-161",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-162",
+        "at risk: hard: pass 1 affordable on 10 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-163",
+        "at risk: easy: pass 2 affordable on 46 turns over 24 games, played 7 time(s), mean evaluate change -21.1; hard: pass 1 affordable on 15 turns over 8 games, played 1 time(s), mean evaluate change 0.6",
+    ),
+    (
+        "stinkyscape-164",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-165",
+        "at risk: easy: pass 1 affordable on 6 turns over 8 games, never played; hard: pass 1 affordable on 3 turns over 8 games, never played; pass 2 affordable on 21 turns over 24 games, played 1 time(s), mean evaluate change 1.0",
+    ),
+    (
+        "stinkyscape-166",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, never played; hard: pass 1 affordable on 20 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-171",
+        "at risk: hard: pass 1 affordable on 29 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-172",
+        "at risk: hard: pass 1 affordable on 13 turns over 8 games, played 1 time(s), mean evaluate change 7.8; pass 2 affordable on 37 turns over 24 games, played 1 time(s), mean evaluate change 7.8",
+    ),
+    (
+        "stinkyscape-173",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+    ),
+    (
+        "stinkyscape-175",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 3.1",
     ),
 ];
 

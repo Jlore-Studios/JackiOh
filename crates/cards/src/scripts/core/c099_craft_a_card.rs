@@ -127,10 +127,6 @@ mod tests {
 
     use crate::js;
 
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        value.unwrap_or_else(|| panic!("expected {what}"))
-    }
-
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.events()
             .iter()

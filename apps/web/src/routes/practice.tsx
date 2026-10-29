@@ -1305,9 +1305,9 @@ function PracticeScreen({
         // R1297000: the saved deck being played brings its own playmat, backdrop and card back.
         deckCosmetics={config.deck.kind === "saved" ? (config.deck.cosmetics ?? null) : null}
         {...(config.lesson === undefined ? {} : { autoEndTurn: true, lesson: true })}
-        // R2102000: the lethal hint, a teaching aid of the Easy tier's free games alone, which the
-        // Lethal hint setting turns off.
-        lethalHint={lethalHintOn && config.difficulty === "easy" && config.lesson === undefined && snapshot.lethal === true}
+        // R2291000: the lethal hint, in every game against the AI (R2102000), which the Lethal hint
+        // setting turns off.
+        lethalHint={lethalHintOn && snapshot.lethal === true}
       />
     </FullArtAllowed>
   );

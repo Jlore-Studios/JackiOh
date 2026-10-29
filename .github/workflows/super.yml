@@ -318,8 +318,9 @@ jobs:
           path: e2e/artifacts/component/screenshots
           if-no-files-found: warn
 
-  # The unit tests ci.yml's `web (unit k/3)` leaves out: the audio and fx layers, the asset tests and
-  # promote-production.test.ts; and, with JACKIOH_DAILY=1 (apps/web/src/test/daily.ts), the whole of
+  # The unit tests ci.yml's `web (unit k/4)` leave out: the audio and fx layers, the asset tests and
+  # promote-production.test.ts (which ci.yml's `web (promote-production)` runs only when what it
+  # tests changed); and, with JACKIOH_DAILY=1 (apps/web/src/test/daily.ts), the whole of
   # each sweep a pull request plays only the first game of: the tutorial lessons'.
   web-extra:
     name: web (audio, fx, asset and daily tests)

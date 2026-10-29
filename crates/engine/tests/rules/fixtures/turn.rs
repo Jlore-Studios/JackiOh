@@ -494,7 +494,7 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
     table.insert(
         taxman().id,
         faces(Script {
-            // A Field Spell's trigger reads its condition in `run` (`when` is a trap's, R99).
+            // A Field Spell's trigger reads its condition in `run` here (a `when` would hold too, R2271000).
             triggers: vec![TriggerDef::new("tax", &[GameEventType::Drawn], |ctx, event| {
                 if second_draw(ctx, event) {
                     vec![note("taxed")]

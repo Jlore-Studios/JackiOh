@@ -106,6 +106,7 @@ armorOverride: number?,
 tuning: Tuning?,
 lucky: number?,
 copyOf: string?,
+exact: boolean?,
 memory: {[string]: JsonValue}?,
 fixedX: number?,
 }

@@ -36,6 +36,8 @@ The colours are one palette (#2105): `src/palette.css`, imported by `index.css` 
 
 The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s three families: `--font-display`, `--font-text` and `--font-mono`. A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
+The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index.css` after the type scale, names seven corner radii, four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. A board stylesheet gives every `border-radius` a radius, every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline.
+
 Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
 window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
@@ -87,6 +89,16 @@ first answer kept for another account does too; a reload starts empty. Never kep
 a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`getFriends({ keep: false })`
 for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
 `key`, when the decks that land differ, since its store is made once.
+
+A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
+
+**The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
+`routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
+`commandEntryTestid`), `routes/commandEntries.ts` (the actions, the pages and the Almanac
+shelf's cards, each a `navigate` move) and `routes/command-menu.css` (no animation). It is never
+mounted on a board route, nor over a board sharing a menu's path, which `game/boardShown.ts`
+marks; New deck goes through `newDeckPath` (`net/navigate.ts`), which the workshop makes and
+opens, and a card opens its inspect detail at `/almanac?card=<id>`. Presentation only (rule 7).
 
 ## Three flows at the table
 
@@ -202,6 +214,15 @@ the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-
 sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
 
+**Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
+under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
+(`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
+in `game/handHints.ts`. Each is `{ id, icon, applies(card, view) }`, reads only the `CardView`
+and the `PlayerView`, and returns null or `{ n?, dimmed?, label }`, its label through `t()`.
+No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
+hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
+The list ships empty.
+
 ## Commands
 
 ```
@@ -290,7 +311,9 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
                         autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
                         one POST /api/trios/import, never the autosave (R341);
-                        Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099)
+                        Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
+                        a deck holding a card the newest patch changed wears a badge listing them until saved
+                        under it (DeckPatchBadge.tsx, R2097000)
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
                         largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online
@@ -564,14 +587,14 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
-- Against the Easy AI a free game's snapshot adds `lethal: true` while the human has a sure win this
-  turn by what they can see (R2102000): the core asks `lethalHint(state, human, deadlineMs)`, which the
-  Rust AI answers from the human's own redaction, so the AI's hidden cards never change it, under a
-  wall-clock cap of its own (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). Medium, Hard and a
-  lesson never ask. The route passes it to `Game`'s `lethalHint` while the Lethal hint setting is
-  on, and the board shows it (`data-lethal-hint` on the game, which outlines the enemy hero and End
-  turn, and the `lethal-hint` line "You have lethal") once it shows the newest view, never on a
-  replay. Online and hotseat boards never set it.
+- In every game against the AI (each tier, a sandbox game, custom cards, a lesson) the snapshot adds
+  `lethal: true` while the human has a sure win this turn by what they can see (R2102000, R2291000):
+  the core asks `lethalHint(state, human, deadlineMs)`, which the Rust AI answers from the human's own
+  redaction, so the AI's hidden cards never change it, under a wall-clock cap of its own
+  (`PRACTICE_LETHAL_HINT_CLOCK_MS`; past it, no hint). The route passes it to `Game`'s `lethalHint`
+  while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
+  outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
+  the newest view, never on a replay. Online and hotseat boards never set it.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A game on a server seed gives each AI decision `PRACTICE_EARNING_AI_CLOCK_MS`, not `PRACTICE_AI_CLOCK_MS` (R2208000), since the server re-runs its moves with no clock (R1303002). A decision that cap still cuts marks the game (`clockCut`, kept in the worker's save). The worker's `claim` answer carries the mark beside the claim, never in it. The dialog words a marked `ai_mismatch` as "this device ran out of time on one of the AI's moves".
 - A free game in progress survives a reload (R668). After every answer the core writes its save
