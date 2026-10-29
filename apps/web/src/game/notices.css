@@ -88,7 +88,7 @@
 .draw-toast[data-draw="declined"]:not([data-animating]),
 .draw-toast[data-draw="accepted"]:not([data-animating]),
 .draw-toast[data-draw="expired"]:not([data-animating]) {
-  animation: draw-toast-fade 400ms ease-in 5s forwards;
+  animation: draw-toast-fade var(--motion-slow) var(--ease-in) 5s forwards;
 }
 
 @keyframes draw-toast-fade {
@@ -148,7 +148,7 @@
     max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   overflow-y: auto;
   background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
-  animation: concede-fade-in calc(160ms * var(--anim-scale, 1)) ease-out both;
+  animation: concede-fade-in calc(var(--motion-fast) * var(--anim-scale, 1)) var(--ease-out) both;
 }
 
 .concede-dialog {
