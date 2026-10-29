@@ -5,8 +5,8 @@
 //! Engine: `after_attack` (R1849001): once the state check closing each of its combats has run, declared
 //! or forced, `summon_copy` of it (R57, into R64's zone, no Cry, R1), made from it before it evolves,
 //! then `evolve` on it, which runs its `Script.evolve` hook: Gain Flying (`grant_keyword`). The copy has
-//! no Flying and the original has it; one that died attacking leaves its copy, made from the snapshot
-//! it fought with (R89), and evolves into nothing; a full unit row summons no copy. Radiant: the same
+//! no Flying and the original has it; one that died attacking does nothing, neither copy nor evolve
+//! (R2285001); a full unit row summons no copy. Radiant: the same
 //! text, the copy of a Radiant Wasp a Radiant 6/6.
 
 use jackioh_engine::prelude::*;
@@ -105,15 +105,12 @@ mod tests {
         }
 
         #[test]
-        fn one_that_died_attacking_leaves_the_copy_only() {
+        fn r2285001_one_that_died_attacking_leaves_no_copy() {
             let mut s = board(false, json!([]), json!([MENACE]));
             let wasp = s.unit_at(P1, 1);
             s.attack(&wasp, s.unit_at(P2, 1));
             s.expect_in_zone(&wasp, "graveyard");
-            let copies = copies(&s);
-            assert_eq!(copies.len(), 1);
-            s.expect_in_zone(&copies[0], "field");
-            assert!(!flies(&s, &copies[0]));
+            assert!(copies(&s).is_empty());
         }
 
         #[test]

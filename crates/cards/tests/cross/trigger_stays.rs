@@ -157,16 +157,14 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
     }
 
     #[test]
-    fn r212_r42_r174_r426_a_prem_panther_that_trades_and_comes_back_through_reborn_draws_what_a_panther_that_trades_without_reborn_draws_the_hook_is_owed_on_the_snapshot_not_answered_by_the_stay()
+    fn r212_r42_r174_r2285001_a_prem_panther_that_trades_draws_nothing_and_neither_does_its_reborn_body_a_new_stay()
      {
-        // Without Reborn the Panther is in its graveyard when the `destroyed` event is dispatched, and a
-        // graveyard registers none of its field triggers (R153) — but the Panther's draw is no trigger
-        // answering the event: its `afterAttack` hook is owed on the snapshot it fought with (R426), so
-        // the trade still draws 2.
+        // Without Reborn the Panther is in its graveyard when its combat closes, and "After this attacks"
+        // runs only for an attacker still on the field (R2285001), so the trade draws nothing.
         let plain = trade(false);
-        assert_eq!(plain.hand(PlayerId::P1).len(), 3);
+        assert_eq!(plain.hand(PlayerId::P1).len(), 1);
         // With Reborn the same trade happens, and the body back in lane 1 is a new arrival (R83) that
-        // destroyed nothing — which draws the same 2 through the dead stay's owed hook.
+        // attacked nothing, so it draws nothing either.
         let mut back = trade(true);
         let body = back.unit_at(PlayerId::P1, 1);
         back.expect_in_zone(&body.id, "field");

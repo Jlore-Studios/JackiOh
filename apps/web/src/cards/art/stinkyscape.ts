@@ -15,7 +15,7 @@ import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
 
 export const STINKYSCAPE_PREFIX = "stinkyscape-";
 
-/** Whether an id draws the set's own art: the held set's entries and tokens, nothing else. */
+/** Whether an id draws the set's own art: the set's entries and tokens, nothing else. */
 export function isStinkyscapeArt(defId: string): boolean {
   return defId.startsWith(STINKYSCAPE_PREFIX);
 }
