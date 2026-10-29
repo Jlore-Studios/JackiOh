@@ -69,10 +69,8 @@ import {
 } from "@jackioh/engine";
 import {
   AI_DIFFICULTY,
-  AI_TUTORIAL,
   DECK_SIZE,
   type Handicap,
-  TUTORIAL_HUMAN,
   VERSIONS_SCHEME,
 } from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, lethalHint, type SearchBudget } from "@jackioh/ai";
@@ -86,7 +84,7 @@ import {
   PRACTICE_REPLAYS_KEPT,
 } from "./config.ts";
 import { seatOutcome } from "../game/outcome.ts";
-import { lessonById } from "../tutorial/lessons.ts";
+import { lessonById, lessonHandicaps } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
 import type { PracticeReplay, PracticeReplaySetup, PracticeSave, PracticeSaveStore } from "./saveStore.ts";
 import { randomDeckLean } from "./protocol.ts";
@@ -210,7 +208,8 @@ function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
 
 /**
  * §9.10, R291: a lesson's two fixed decks, the tutorial handicap on the AI (R290) and `TUTORIAL_HUMAN` on the
- * human, whose fixed deck is smaller than `DECK_SIZE` (R1705005); or the free game's: the difficulty's
+ * human, whose fixed deck is smaller than `DECK_SIZE` (R1705005), with the lesson's pool hold (R2201001); or the
+ * free game's: the difficulty's
  * handicap, the chosen deck and a dealt AI deck (§9.9), with no handicap on the human.
  */
 function decksAndHandicap(config: PracticeStartConfig): {
@@ -222,11 +221,13 @@ function decksAndHandicap(config: PracticeStartConfig): {
   if (config.lesson !== undefined) {
     const lesson = lessonById(config.lesson);
     if (lesson === undefined) throw new Error(`unknown tutorial lesson "${config.lesson}"`);
+    // R2201001: the lesson's pool hold rides on the human's handicap (lessons 1–4).
+    const handicaps = lessonHandicaps(lesson);
     return {
       humanDeck: [...lesson.humanDeck],
       aiDeck: [...lesson.aiDeck],
-      handicap: AI_TUTORIAL,
-      humanHandicap: TUTORIAL_HUMAN,
+      handicap: handicaps.ai,
+      humanHandicap: handicaps.human,
     };
   }
   const handicap = AI_DIFFICULTY[config.difficulty];

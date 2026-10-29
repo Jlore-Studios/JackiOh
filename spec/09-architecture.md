@@ -99,8 +99,8 @@ crates/
   engine/      reduce, state, events, rng, combat, triggers, zones, view_for; wire/ (action, event and
                catalog types); validator.rs (deck, trio and queue rules D1–D5, T1–T3, L1–L6, shared by
                client and server)
-  cards/       catalog.json (572 cards + 138 tokens across Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape,
-               and the held Training Grounds set's entries, R2194000), patches/ (one snapshot per card patch),
+  cards/       catalog.json (632 cards + 139 tokens across Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape,
+               Training Grounds), patches/ (one snapshot per card patch),
                src/scripts/core/, classic/, classic_plus/, meditative/, meditative_plus/, stinkyscape/,
                training_grounds/: one file per card, its tests inside it
   ai/          the practice opponent
@@ -168,20 +168,60 @@ The human's deck is one of their saved decks (an active account's, complete ones
 
 ### 9.10 The tutorial
 
-The practice page opens with a tutorial: a path of four lessons, each a practice game ([[§9.9]]) against a computer opponent weaker than Easy, with two fixed decks, a fixed seed and a coach that walks the player through it. Like any practice game it needs no account and no server, runs in the practice worker, and records no result ([[R187]]).
+The practice page opens with a tutorial: a path of five lessons, each a practice game ([[§9.9]]) against a computer opponent weaker than Easy, with two fixed decks of Training Grounds cards ([[§8.11]]), a fixed seed and a coach that lets the player discover each mechanic. Like any practice game it needs no account and no server, runs in the practice worker, and records no result ([[R187]]).
 
-| # | Lesson | What it teaches | The human |
+| # | Lesson | What the player finds | The human |
 | --- | --- | --- | --- |
-| 1 | First steps | Heroes and their health, mana, playing units into lanes, summoning sickness, attacking the hero, trading with units, winning | goes first |
-| 2 | Spells and keywords | Spells and their targets, removal, a Cry with a target, Taunt, Divine Shield, Reborn, Rush, Charge, First Strike, Armor, Defense Position | goes first |
-| 3 | The backrow | Traps set face-down and springing on either turn, the opponent's face-down cards, Field Spells, a hero's Armor, tokens, Quickdraw | goes first |
-| 4 | Tricks of the trade | The mulligan, going second and The Coin, Radiant cards, a tribe and its payoff, tokens, Tribute, the yellow glow | goes second |
+| 1 | First steps (`basics`) | Mana, playing units into lanes, summoning sickness, attacking the hero, trading, hero health, winning | goes first |
+| 2 | Spells and keywords (`spells`) | Spells and their targets, removal, Cry, Taunt, Armor, Divine Shield, Rush, Pierce, Defense Position | goes first |
+| 3 | Lanes and the backrow (`traps`) | Lanes, neighbours, Auras, Traps on either turn, the opponent's face-down cards, Field Spells, Field Traps, tokens | goes first |
+| 4 | Tricks of the trade (`advanced`) | The mulligan, going second and The Coin, Radiant cards, a tribe and its payoff, Tribute, Death, tokens that last one turn | goes second |
+| 5 | The final exam (`finale`) | Quickdraw, Legendary and Mythic cards, random effects, copying | goes first |
 
-- **The tutorial opponent.** The AI seat plays with the tutorial handicap, `AI_TUTORIAL`, the one below Easy ([[R290]]): a 12-card deck, at most 3 mana crystals, and a hero that starts at 20 health instead of 30. Its search, evaluation and budget are every tier's, so it plays sensibly with less: against a human who cannot lose (below) it finds no lethal, and a hit on a hero at its floor is worth nothing to it ([[R2201000]]). Its deck is the lesson's own fixed list, not a dealt one, and holds nothing the lessons before it have not taught: no Spell in lesson 1, no Trap or Field Spell before lesson 3 ([[R291]]).
-- **Fixed deals.** Each lesson has a fixed seed, a fixed seat and two fixed decks; the human's is a twenty-card deck of mostly Common, Rare and Epic cards, legal but for its size, which the human's seat plays under `TUTORIAL_HUMAN`, a human's resources with a deck of `EARLIER_DECK_SIZE` (20) cards, so no lesson changed when `DECK_SIZE` became 25 ([[R291]], [[R1705005]]). `TUTORIAL_HUMAN` also sets the hero floor, `TUTORIAL_HERO_FLOOR` (1): the human's hero never falls below 1, nothing the opponent does ends the game as the human's loss, and a human who does nothing at all still wins once the opponent's 12 cards run out and fatigue takes its 20 health, before the turn cap ([[§2.5]], [[R2201000]]). A lesson may also set `poolHold` on the human's seat, which keeps Legendary and Mythic cards out of every random pool the game draws from ([[§5.1]], [[R2201001]]); like the floor it travels in the lesson's handicaps, and no other game sets either. So a lesson deals the same opening hands and the same draws every time, and the coach can name the cards it points at. A lesson replays from `(seed, decks, handicaps, log)` like any practice game ([[R187]]), and The Coin goes to the seat going second as always ([[R244]]), which is why only the lesson that teaches it seats the human second.
-- **The coach.** Each lesson has a script: steps in order, and tips for moments the AI brings about (it plays The Coin, it springs a trap). A step points at the board element it is about — a card in hand, a unit, a lane, the mana, the backrow, a hero, End turn, the open prompt — with a short line of plain language, and advances when the view shows it done, however the player did it. The coach reads the human's view, the human's legal actions and whether the AI owes a move, and nothing else, so it shows nothing the board does not and decides nothing ([[R292]]). There is no Skip step ([[R314]]), and nothing strands the player: only a tip or an info step holds the AI, and each shows Got it; a step whose moment has passed, or that is still current after a few of the player's own turns, retires by itself; and the player can always exit the tutorial. It works with drag-to-play and with click-click, at desktop and phone sizes, honours reduced motion, and its buttons take keyboard focus.
-- **Winnable.** Every lesson is won by doing what the coach asks, every step of it shows and completes on that line, and each mechanic the lesson lists actually comes up on it; a sensible player who ignores the coach wins too, and one who ignores it with random moves neither breaks it nor stalls it ([[R293]]).
-- **Progress.** Lessons open in order: the first is always open, and winning one opens the next. A win says what it opened and offers the next lesson. A lesson cannot be lost ([[R2201000]]); one the player leaves, or that ends without the human's win (a draw by the turn cap or a flight), offers a retry with a tip for that lesson. Progress is kept on the device and, for a player signed in with an active account, on the account too, the two merged so a won lesson stays won on both ([[R294]], [[R320]], [[R321]]). A player can hide the lesson path while a lesson is still to do and show it again; the choice travels the same way, the newest one winning ([[R322]]).
+The Core tutorial's lessons taught some mechanics that moved:
+
+- Reborn and Charge are on no Training Grounds card, and First Strike comes only from TG #45 Jlockeed's Weapons (in lesson 5's deck); none of the three is a lesson's moment now.
+- Quickdraw moved from lesson 3 to lesson 5.
+- A hero's Armor is lesson 2's Armor.
+- The yellow glow is in the Field Guide but on no lesson's list.
+
+- **The tutorial opponent.** The AI seat plays with the tutorial handicap, `AI_TUTORIAL`, the one below Easy ([[R290]]): a 12-card deck, at most 3 mana crystals, and a hero that starts at 20 health instead of 30. Its search, evaluation and budget are every tier's, so it plays sensibly with less: against a human who cannot lose (below) it finds no lethal, and a hit on a hero at its floor is worth nothing to it ([[R2201000]]). Its deck is the lesson's own fixed list, not a dealt one, and holds nothing the lessons before it have not taught: units with no keyword in lesson 1, no Trap, Field Trap or Field Spell before lesson 3, and no Legendary or Mythic card ([[R291]], [[R2205003]]).
+- **Fixed deals.** Each lesson has a fixed seed, a fixed seat and two fixed decks, every card of both a Training Grounds card ([[R2205003]]). The human's is twenty distinct cards played under `TUTORIAL_HUMAN`, a human's resources with a deck of `EARLIER_DECK_SIZE` (20) cards ([[R1705005]]). `TUTORIAL_HUMAN` also sets the hero floor, `TUTORIAL_HERO_FLOOR` (1): the human's hero never falls below 1, nothing the opponent does ends the game as the human's loss, and a human who does nothing at all still wins once the opponent's 12 cards run out and fatigue takes its 20 health, before the turn cap ([[§2.5]], [[R2201000]]). Lessons 1 to 4 hold no Legendary or Mythic card in either deck and set `poolHold` on the human's seat, which keeps Legendary and Mythic cards out of every random pool the game draws from ([[§5.1]], [[R2201001]]). Lesson 5 sets no hold, and its human deck holds the set's four: TG #37 Seance, #38 Tutorial Master, #39 Call to Chaos (Training-Grounds Edition) and #40 Goetzmann Game Design ([[R2205003]]). Like the floor, the hold travels in the lesson's handicaps, and no other game sets either. So a lesson deals the same opening hands and the same draws every time, and a lesson replays from `(seed, decks, handicaps, log)` like any practice game ([[R187]]). The Coin goes to the seat going second as always ([[R244]]), which is why only the lesson that teaches it seats the human second.
+- **The coach** ([[R2205000]]). Each lesson's script is a short welcome or none, then **moments**, then a last moment that ends with the game.
+  - **What a moment is.** It shows once its board is set, on the player's own main phase or their own open prompt. It poses a goal or a question ("That wall of Taunt is in your way. Is there a way around it?"), never the click, and it points at nothing.
+  - **When a moment is done.** It names the Field Guide entries it sets up, and it is done once the view shows each of them found, however the player found them.
+  - **Order.** A moment waiting for its board lets a later moment whose board has come show first.
+  - **Discoveries.** Each Field Guide entry is a mechanic, its one-line rule and a predicate.
+    - The predicate reads the human's view, their legal actions and the public catalog (§5.1).
+    - The first time an entry is found, the coach shows a discovery bubble that names the rule ("You found Cry: it happens when you play the unit from your hand"), with Got it.
+    - The bubble shows if the entry is on this lesson's list or the player has not met it before. At most `TUTORIAL_BUBBLES_PER_MOVE_MAX` (2) "Got it"s show between two of the player's moves; any further entry is found without a bubble.
+  - **Hints.** A moment carries a nudge and a pointed hint that rings the card, the lane or the hero. The level rises with each of the player's own turns the moment stays unfound, or with each Hint press; the bubble offers Hint while a hint is left.
+  - **What the coach reads.** The human's view, the human's legal actions, whether the AI owes a move and the public catalog, and nothing else. So it shows nothing the board does not, and it decides nothing ([[R292]]).
+  - **Nothing strands the player** ([[R314]]).
+    - There is no Skip step.
+    - A moment never holds the AI; only a tip or an `info` step does, and each shows Got it.
+    - A moment still unfound after `TUTORIAL_MOMENT_TURNS_MAX` (3) of the player's own turns since it showed retires by itself.
+    - The win names every mechanic of the lesson the game did not show found, with its rule.
+    - The player can always exit the tutorial.
+  - **Access.** The coach works with drag-to-play and with click-click, at desktop and phone sizes, honours reduced motion, and its buttons take keyboard focus.
+- **Winnable, and never lost** ([[R293]], [[R2205001]]).
+  - On the coach's line, every lesson is won, every moment shows and is done, and every mechanic the lesson lists is found.
+  - Each of these players also ends every lesson in the human's win before the turn cap, never a loss, a draw or a stall:
+    - a beginner who plays only what the coach names;
+    - a sensible player who ignores it;
+    - a player who makes random moves;
+    - a reckless one who attacks into everything and guards nothing.
+  - Before the last lesson, no Legendary or Mythic card shows up, drawn or generated.
+- **The Field Guide** ([[R2205002]]). It lists every mechanic the lessons set up, in lesson order: a met one with its rule, one not met as "?" with the lesson that sets it up.
+  - **Where it opens:** from the lesson HUD and from the lesson path's header, as a modal dialog that takes focus and closes on Escape.
+  - **The path:** each lesson's chips are its mechanics, each marked found once met.
+  - **Storage:** the entries found are kept on the device only, beside the lessons won. Every mechanic of a lesson won counts as met, since a win names whatever its game did not show found.
+- **Progress.** Lessons open in order: the first is always open, and winning one opens the next.
+  - The four ids of the Core tutorial stay, so a player who won those lessons sees them won and the fifth open.
+  - A win says what it opened and offers the next lesson.
+  - A lesson cannot be lost ([[R2201000]]). One the player leaves, or that ends without the human's win (a draw by the turn cap or a flight), offers a retry with a tip for that lesson.
+  - Progress is kept on the device and, for a player signed in with an active account, on the account too, the two merged so a won lesson stays won on both ([[R294]], [[R320]], [[R321]]).
+  - A player can hide the lesson path while a lesson is still to do and show it again; the choice travels the same way, the newest one winning ([[R322]]).
 - **Every card prints its words.** A lesson teaches the cards by what they say, so on a lesson's board no card prints full art, the heroes' cards included, whatever the Full-art cards setting says ([[R1108000]], [[R1017001]]).
 
 ### 9.11 Card statistics

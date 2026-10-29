@@ -140,7 +140,16 @@ export type FxZoneCue = {
 };
 
 /** B46–B48 stage cues come from `stage.ts`, not the S7 recipe table. `hold` waits for board catch-up (BUILD M5-T4); `durationMs` is a safety cap (R200). */
-export type FxHoldCue = { kind: "hold"; from: FxAnchor | null; to: FxAnchor; delayMs: number; landMs: number; durationMs: number };
+export type FxHoldCue = {
+  kind: "hold";
+  from: FxAnchor | null;
+  to: FxAnchor;
+  delayMs: number;
+  landMs: number;
+  durationMs: number;
+  /** #2111, R2111000: it lands in a backrow zone, so it is laid down as a set, not slammed. */
+  set?: true;
+};
 export type FxConcealCue = { kind: "conceal"; testid: string; mode: "now" | "after"; delayMs: number; durationMs: number };
 export type FxLungeCue = {
   kind: "lunge";

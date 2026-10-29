@@ -10,7 +10,7 @@ import type { CardDef } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { nameTier, textTier } from "../cards/fit.ts";
-import { FULL_ART_NAMES, isFullArt } from "../cards/fullArt.ts";
+import { FULL_ART_NAMES, isFullArt, isFullArtCard } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { faceLines, overLimit, shortFormOf } from "../cards/shortText.ts";
 import { FEATURE_WEIGHT_DENSE, FEATURE_WEIGHT_PLAIN, FULL_ART_WEIGHT_FACTOR } from "../stats/config.ts";
@@ -87,8 +87,9 @@ describe("R374 the landing fan is dealt at random", () => {
 });
 
 describe("R639 the rotation's pool", () => {
-  it("R639 is every non-token card of the shipped sets, Meditative included since v0.3.0, Meditative+ since v0.4.0 and Stinkyscape since its release, as the catalog holds it", () => {
-    const SETS: readonly string[] = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"];
+  it("R639 is every non-token card of the shipped sets, Meditative included since v0.3.0, Meditative+ since v0.4.0, Stinkyscape and Training Grounds since their releases, as the catalog holds it", () => {
+    // Re-pinned for the Training Grounds release (#2204): the set ships, so its 60 cards join the pool.
+    const SETS: readonly string[] = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"];
     const expected = Object.values(CATALOG).filter((def) => !def.token && SETS.includes(def.set));
     expect(ROTATION_POOL).toEqual(expected);
     expect(ROTATION_POOL.length).toBeGreaterThan(FAN_POOL.length);
@@ -105,8 +106,9 @@ describe("R639 favouring the cards that print at full size", () => {
     for (const def of ROTATION_POOL) {
       const face = faceModel({ defId: def.id, def, radiant: false });
       const fits = ["s", "m"].includes(nameTier(face.name)) && ["s", "m"].includes(textTier(face.text.full));
-      // R1017002: a hero's card prints its art and no words in the fan, so it counts as plain.
-      const plain = fits || isFullArt(def.name);
+      // R1017002: a hero's card prints its art and no words in the fan, so it counts as plain; a
+      // Training Grounds snapshot of one prints its words (R2195001), so it is held to them.
+      const plain = fits || isFullArtCard(def.id, def.name);
       expect(featureWeight(def), def.id).toBe(plain ? FEATURE_WEIGHT_PLAIN : FEATURE_WEIGHT_DENSE);
     }
   });
@@ -199,7 +201,8 @@ describe("R639 one rotation step", () => {
       hand = rotateFan(hand, step, random);
       for (const { def } of hand) sets.add(def.set);
     }
-    expect(sets).toEqual(new Set(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape"]));
+    // Re-pinned for the Training Grounds release (#2204): the set ships, so the steps reach it too.
+    expect(sets).toEqual(new Set(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]));
   });
 });
 
@@ -237,7 +240,14 @@ describe("R704 swaps below the threshold", () => {
   });
 });
 
-const HEROES = ROTATION_POOL.filter((def) => FULL_ART_NAMES.has(def.name));
+/**
+ * The heroes' full-art cards. Re-pinned for the Training Grounds release (#2204): the set's snapshots
+ * of Mr. Vanilla (#43), Duplicating Felinors (#44) and Jlockeed Shredder-10 (#48) share their Core
+ * cards' names but not their full art (R2195001), so they are no hero's card.
+ */
+const HEROES = ROTATION_POOL.filter((def) => isFullArtCard(def.id, def.name));
+/** The shipped cards that share a hero's name and print no full art: the Training Grounds snapshots. */
+const HERO_SNAPSHOTS = ROTATION_POOL.filter((def) => FULL_ART_NAMES.has(def.name) && !isFullArtCard(def.id, def.name));
 const RARITIES = ["Common", "Rare", "Epic", "Legendary", "Mythic"] as const;
 
 describe("R1017002 the fan deals only cards that print whole on it", () => {
@@ -246,7 +256,7 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
     for (const fullArt of [true, false]) {
       for (const def of ROTATION_POOL) {
         const expected = [false, true].every((radiant) => {
-          if (fullArt && isFullArt(def.name)) return true;
+          if (fullArt && isFullArtCard(def.id, def.name)) return true;
           const text = faceModel({ defId: def.id, def, radiant }).text.full;
           return shortFormOf(def.id, radiant) === null && faceLines(text, FAN_TEXT_LIMIT.charsPerLine) <= FAN_TEXT_LIMIT.lines;
         });
@@ -281,6 +291,12 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
       expect(fitsTheFan(def, false), def.name).toBe(words);
     }
     expect(fitsTheFan(card("core-004"), false)).toBe(false);
+    // R2195001: a snapshot of a hero's card is held to its text, full art on or off.
+    expect(HERO_SNAPSHOTS.map((def) => def.id).sort()).toEqual(["traininggrounds-043", "traininggrounds-044", "traininggrounds-048"]);
+    for (const def of HERO_SNAPSHOTS) {
+      const words = [false, true].every((radiant) => shortFormOf(def.id, radiant) === null && !overLimit(text(def.id, radiant), FAN_TEXT_LIMIT));
+      for (const fullArt of [true, false]) expect(fitsTheFan(def, fullArt), `${def.id}, full art ${fullArt ? "on" : "off"}`).toBe(words);
+    }
   });
 
   it("R1017002 the limit is measured at landing.css's widest fan card", () => {
@@ -315,16 +331,18 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
       expect(favouringFullArt(featureWeight, true)(def), def.name).toBe(FEATURE_WEIGHT_PLAIN * FULL_ART_WEIGHT_FACTOR);
     }
     expect(favouringFullArt(EVEN, true)(other)).toBe(1);
+    // R2195001: a snapshot of a hero's card prints no full art, so it weighs as any card.
+    for (const def of HERO_SNAPSHOTS) expect(favouringFullArt(EVEN, true)(def), def.id).toBe(1);
     expect(favouringFullArt(featureWeight, true)(other)).toBe(featureWeight(other));
     // Drawn among the Core Commons that fit, the heroes' share grows by about the factor.
     const commons = fanPool(true).filter((def) => def.rarity === "Common");
-    const heroes = commons.filter((def) => isFullArt(def.name)).length;
+    const heroes = commons.filter((def) => isFullArtCard(def.id, def.name)).length;
     const random = seeded(9);
     let drawn = 0;
     const DRAWS = 20_000;
     for (let i = 0; i < DRAWS; i += 1) {
       const def = pickWeighted(commons, random, favouringFullArt(EVEN, true));
-      if (def !== undefined && isFullArt(def.name)) drawn += 1;
+      if (def !== undefined && isFullArtCard(def.id, def.name)) drawn += 1;
     }
     const share = (heroes * FULL_ART_WEIGHT_FACTOR) / (commons.length - heroes + heroes * FULL_ART_WEIGHT_FACTOR);
     expect(drawn / DRAWS).toBeCloseTo(share, 1);

@@ -13,10 +13,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { beginGame, createGame, registeredCatalog, type GameState } from "@jackioh/engine";
-import { AI_TUTORIAL } from "@jackioh/engine/config";
 import { opponentOf, type PlayerId } from "@jackioh/shared";
 
-import { lessonById, type TutorialLesson } from "../src/tutorial/lessons.ts";
+import { lessonById, lessonHandicaps, type TutorialLesson } from "../src/tutorial/lessons.ts";
 import { loadWasmSync } from "../src/wasm/index.ts";
 
 const wasmPath = join(dirname(fileURLToPath(import.meta.url)), "../src/wasm/pkg/jackioh_wasm_bg.wasm");
@@ -36,7 +35,8 @@ function deal(lesson: TutorialLesson, seed: string): GameState {
   const aiSeat = opponentOf(lesson.humanSeat);
   const decks: [string[], string[]] =
     lesson.humanSeat === "p1" ? [[...lesson.humanDeck], [...lesson.aiDeck]] : [[...lesson.aiDeck], [...lesson.humanDeck]];
-  const created = createGame({ seed, decks, handicaps: { [aiSeat]: AI_TUTORIAL } });
+  const { human, ai } = lessonHandicaps(lesson);
+  const created = createGame({ seed, decks, handicaps: { [aiSeat]: ai, [lesson.humanSeat]: human } });
   return beginGame(created).state;
 }
 
