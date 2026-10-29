@@ -8641,6 +8641,13 @@
     "2384": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T19:22:53Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "line 6 fails: the one file is the root Cargo.toml, a review-only path; not hard, since nothing in crates/ai/src or crates/engine/src changes"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
