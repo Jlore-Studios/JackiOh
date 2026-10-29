@@ -435,6 +435,23 @@ pub struct PreviewValue {
     pub ids: Option<Vec<String>>,
 }
 
+/// R2321000, §10.8: a count a card on the field keeps on this Unit (`Script.tallies`), `value` of
+/// `goal`, and the card keeping it by its catalog id (TG #31 Level Up!: the Unit's attacks toward its
+/// Radiant). Only from a card the viewer may read where it lies, so a face-down card's count never
+/// reaches the other seat.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TallyView {
+    pub def_id: String,
+    pub value: i32,
+    pub goal: i32,
+}
+
 /// `{ plague?: number; grade?: number }`: a unit's counters (`UnitView.counters`,
 /// `CardInstance.counters`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
@@ -623,6 +640,11 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub attack_reason: Option<String>,
+    /// R2321000: the counts cards on the field the viewer may read keep on this Unit, in R68's order
+    /// of the cards keeping them. Absent when none does, never `[]`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tallies: Option<Vec<TallyView>>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the

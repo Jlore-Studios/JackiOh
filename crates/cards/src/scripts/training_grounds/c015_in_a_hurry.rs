@@ -10,7 +10,8 @@
 //! it resolves on, whoever's (R350), under the engine's destroy hook and watching the token, so one that
 //! left the field is forgotten (R174; a token ceases to exist off it, R11) and one the opponent stole
 //! is still destroyed (a change of control is no leaving). The tokens print no Brittle: Brittle 1 would
-//! keep them through the opponent's turn (TG6 row 10).
+//! keep them through the opponent's turn (TG6 row 10). Each delay marks its token in both views while it
+//! waits (`END_OF_TURN_MARK`, R437, R2321001), so a player sees which tokens go at the end of the turn.
 
 use jackioh_engine::prelude::*;
 
@@ -58,6 +59,8 @@ fn hurry() -> Script {
                         "hook": DELAYED_DESTROY_HOOK,
                         "data": { "instanceId": id },
                         "watch": id,
+                        // R2321001: the token wears it while the destroy waits.
+                        "mark": { "mark": END_OF_TURN_MARK, "color": END_OF_TURN_MARK_COLOR },
                     })))
                 }),
             }));
@@ -77,6 +80,7 @@ pub fn script() -> CardScripts {
 // TG #15 In a hurry — SPEC §8.11 row TG 15, BUILD M13 row TG 15.
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::effects::{END_OF_TURN_MARK, END_OF_TURN_MARK_COLOR};
     use jackioh_engine::testkit::*;
 
     use crate::{filler, scenario, upgrade_number};
@@ -215,6 +219,65 @@ mod tests {
             s.end_turn();
             assert_eq!(s.state().active, P1);
             assert!(tokens(&s, P2).is_empty());
+        }
+
+        /// What `viewer` reads on `id`'s view: the marks it carries, by name.
+        fn marks_seen(s: &Scenario, viewer: PlayerId, id: &str) -> Vec<String> {
+            let view = s.view(viewer);
+            view.you
+                .units
+                .iter()
+                .chain(view.opponent.units.iter())
+                .flatten()
+                .find(|unit| unit.instance_id == id)
+                .and_then(|unit| unit.marks.clone())
+                .unwrap_or_default()
+                .into_iter()
+                .map(|mark| mark.mark)
+                .collect()
+        }
+
+        #[test]
+        fn r2321001_each_token_wears_the_end_of_turn_mark_in_both_views_until_it_goes() {
+            let mut s = board(false, json!([{ "def": VANILLA, "lane": 4 }]), json!([]));
+            let vanilla = s.unit_at(P1, 4);
+            s.play(HURRY, json!({}));
+            let made: Vec<CardInstance> = tokens(&s, P1).into_iter().map(|(_, card)| card).collect();
+            for token in &made {
+                assert_eq!(marks_seen(&s, P1, &token.id), vec![END_OF_TURN_MARK.to_string()]);
+                assert_eq!(marks_seen(&s, P2, &token.id), vec![END_OF_TURN_MARK.to_string()]);
+            }
+            assert!(
+                s.last_events().iter().any(|event| matches!(
+                    event,
+                    GameEvent::Marked { instance_id, mark, color, added: true }
+                        if *instance_id == made[0].id && mark == END_OF_TURN_MARK && color == END_OF_TURN_MARK_COLOR
+                )),
+                "the mark is announced as it lands"
+            );
+            assert!(marks_seen(&s, P1, &vanilla.id).is_empty(), "nothing else is marked");
+            s.end_turn();
+            assert!(tokens(&s, P1).is_empty());
+            assert!(s.state().marks.clone().unwrap_or_default().is_empty(), "the marks went with the tokens");
+        }
+
+        #[test]
+        fn r2321001_a_token_that_died_first_takes_its_mark_with_it() {
+            let mut s = board(false, json!([]), json!([GREASER]));
+            let greaser = s.unit_at(P2, 1);
+            s.play(HURRY, json!({}));
+            let first = tokens(&s, P1)[0].1.clone();
+            s.attack(&first, &greaser);
+            s.expect_in_zone(&first, "gone");
+            assert!(
+                !marks_on(s.state(), &first.id).iter().any(|mark| mark.mark == END_OF_TURN_MARK),
+                "R174: its watch is forgotten, and its mark with it"
+            );
+            assert_eq!(
+                s.state().marks.clone().unwrap_or_default().len(),
+                2,
+                "the two left standing still wear theirs"
+            );
         }
 
         #[test]

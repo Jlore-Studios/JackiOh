@@ -944,6 +944,8 @@ fn unit_view_of(
             None
         },
         attack_reason: attack_reason_of(state, auras, top, viewer),
+        // R2321000: the counts cards on the field the viewer may read keep on it.
+        tallies: crate::preview::tallies_on(state, top, viewer),
     })
 }
 
