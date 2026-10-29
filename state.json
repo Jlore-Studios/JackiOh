@@ -8481,6 +8481,13 @@
     "2379": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T17:00:30Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "fails the easy rule on several lines: it adds ruling R2379000 and edits spec \u00a714.8, spans crates/server and apps/web, and touches about 17 files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
