@@ -324,7 +324,12 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         (TrioImportPanel.tsx, R340), Duplicate on each deck's row and in its editor (a
                         new deck with its cards, portrait and picks, named "<name> (copy)", #2096), and
                         autosave with a local mirror of unsaved edits (sync.ts, R256); a trio import is
-                        one POST /api/trios/import, never the autosave (R341);
+                        one POST /api/trios/import, never the autosave (R341); the open deck's History
+                        popover in the editor's head (DeckHistory.tsx, R2100000): the versions the server
+                        kept, newest first, each with its date and the cards in and out since the one
+                        before (deckHistory.ts), and Restore on all but the newest, one POST that the
+                        server keeps as a new version, never the autosave; unsaved edits go first, and a
+                        deck whose edit has not landed restores nothing;
                         Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
                         a deck holding a card the newest patch changed wears a badge listing them until saved
                         under it (DeckPatchBadge.tsx, R2097000)
