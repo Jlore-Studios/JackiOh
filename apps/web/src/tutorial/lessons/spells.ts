@@ -1,20 +1,7 @@
-// Lesson data (SPEC §9.10, R291); ../lessons.ts defines its fields and ../scripts/spells.ts is the coach.
-// Deck order determines this seed's deal (`lesson-deal.ts spells`); reordering it changes the game
-// and requires rerunning this lesson's tests. It draws the cards the coach teaches when needed.
-// The player has spells, keyword units, and finishers; the AI is deliberately weak and plain, with
-// no backrow or material beyond lesson 3. GIGA Glowy Jelly Bean is deliberately uncast: the tutorial
-// AI reaches at most 4 mana (cap 3 and The Coin).
-// Prem Panther draws only after attacking and surviving (R426), so it stays below the scripted deal.
-// Patch v0.3.10 gave Jilliax a (3) price at which it is Equip, and the AI paid it to equip a token on
-// its 3 mana: Jilliax now sits where Mr. Vanilla did, past the turns the coach teaches Taunt on.
-// Gary the Gambler holds Me and Mr Token's place (#898): once the AI judged Taunts by their Armor per
-// hit, it raced the Rush Token at the hero of a beginner who ignores the coach and won, and tokens are
-// lesson 3's anyway.
-// Pointmaster holds the AI's Big D-fender's place (#1797): once the AI's search kept apart positions
-// that differ only in their units' lanes, it played Mr. Vanilla and Big D-fender on its third turn and
-// put both in Defense Position, where the aura's Armor left the player's fourth turn no attack that
-// clears a Taunt, so Deft Duelist's Charge never reached the hero. With Pointmaster the coach's line
-// plays as before through that turn, and wins on the fifth, once Hit Job takes out the AI's Jilliax.
+// Lesson 2 data (SPEC §9.10, R291, R2205003); ../scripts/spells.ts is the coach. Training Grounds
+// cards only, none Legendary or Mythic, the pool hold on. Deck order fixes this seed's deal
+// (`scripts/lesson-deal.ts spells`). The player's spells and keyword units each meet a moment; the
+// AI brings Taunt, Armor and Divine Shield to meet, and spells but no backrow (R291).
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -22,45 +9,46 @@ export const lesson: TutorialLesson = {
   id: "spells",
   number: 2,
   title: "Spells and keywords",
-  summary: "Cast spells at targets, and learn what Taunt, Rush, Charge and friends do.",
-  mechanics: ["Spells and targets", "Cry", "Taunt", "Divine Shield", "Reborn", "Rush and Charge", "First Strike", "Defense Position"],
-  seed: "tutorial-spells-367887",
+  summary: "Cast spells at targets, and find out what Taunt, Rush, Divine Shield and friends do.",
+  discoveries: ["spell", "removal", "cry", "taunt", "armor", "divine-shield", "rush", "pierce", "defense-position"],
+  seed: "tg-spells-20",
   humanSeat: "p1",
+  poolHold: true,
   humanDeck: [
-    "core-008", // Mr. Vanilla
-    "core-011", // Tempo Timmy
-    "core-035", // Lunar Eclipse
-    "core-044", // True Strike
-    "core-016", // Hit Job
-    "core-068", // Twisted Sorcerer
-    "core-001", // Big D-fender
-    "core-012", // Duplicating Felinors
-    "core-003", // Right-house defender
-    "core-045", // Deft Duelist
-    "core-019", // Midrange Menace
-    "core-013", // Jlockeed Shredder-10
-    "core-020", // Pointmaster
-    "core-037", // Gravedigger
-    "core-056", // Jilliax
-    "core-032", // Prem Panther
-    "core-025", // 4-mana 7/7
-    "core-053", // Reno
-    "core-005", // Stockpile
-    "core-077", // Professor Curvature
+    "traininggrounds-011", // Thwomp, Common
+    "traininggrounds-058", // True Strike, Common
+    "traininggrounds-017", // Flaming Felinor, Rare
+    "traininggrounds-004", // Boulder Fist Ogre, Common
+    "traininggrounds-006", // Chosen by the Sun, Common
+    "traininggrounds-046", // Hit Job, Common
+    "traininggrounds-010", // Fan of Knives, Common
+    "traininggrounds-012", // Fortify, Common
+    "traininggrounds-026", // Path of Exile, Rare
+    "traininggrounds-018", // Knife Juggler, Rare
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-002", // Personal Trainer, Common
+    "traininggrounds-008", // Clobberer, Common
+    "traininggrounds-009", // Ravager, Common
+    "traininggrounds-007", // Chosen by the Moon, Common
+    "traininggrounds-016", // Celestial Caller, Rare
+    "traininggrounds-041", // Bigot, Common
+    "traininggrounds-042", // Stockpile, Common
+    "traininggrounds-059", // Fig of Life, Common
   ],
   aiDeck: [
-    "core-003", // Right-house defender
-    "core-037", // Gravedigger
-    "core-029", // GIGA Glowy Jelly Bean: costs (6), above the AI's 3 (+ The Coin), so it is never cast
-    "core-004", // Gary the Gambler
-    "core-056", // Jilliax
-    "core-035", // Lunar Eclipse
-    "core-030", // Archivist
-    "core-077", // Professor Curvature
-    "core-045", // Deft Duelist
-    "core-005", // Stockpile
-    "core-020", // Pointmaster
-    "core-008", // Mr. Vanilla
+    "traininggrounds-007", // Chosen by the Moon, Common
+    "traininggrounds-006", // Chosen by the Sun, Common
+    "traininggrounds-047", // Midrange Menace, Common
+    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-002", // Personal Trainer, Common
+    "traininggrounds-022", // Right-Hand Felinor, Rare
+    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-053", // Prejudiced Postdoc, Rare
+    "traininggrounds-012", // Fortify, Common
+    "traininggrounds-011", // Thwomp, Common
+    "traininggrounds-003", // Group leader, Common
   ],
   retryTip: "Break a Divine Shield with a small hit before a big one, and clear Taunts with spells, so your units can reach the hero.",
 };

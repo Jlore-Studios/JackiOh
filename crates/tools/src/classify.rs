@@ -8,8 +8,9 @@
 //! Stage 1 reads the diff. `catalog.json` card by card: the wording fields (`WORDING_FIELDS`) a
 //! player reads and no game does, every other field plays. Each card script's code, the lines
 //! `catalog loc` counts, so its tests, comments, `use` lines and layout are not code. The sets
-//! `SHIPPED_SETS` names on each side: a set that ships is a major, and a card of a set that has not
-//! shipped is no change (R1420). And the paths of everything else (`area`), whose code is the same
+//! `SHIPPED_SETS` names on each side: a set that ships is a major, unless the owner wraps it into an
+//! earlier set's line (`WRAPPED_SETS`, R2204000), when it earns the tier its cards do; every card of a
+//! set that ships plays differently, and a card of a set that has not shipped is no change (R1420). And the paths of everything else (`area`), whose code is the same
 //! lines with their `use` declarations kept, since an import can change which code runs (R2050000).
 //! R2173001: while a card that reads the BUSTED or complicated lists (R1846000) ships on both sides, a
 //! change that moves a card that can join a pool across `BUSTED_CODE_LINES` or `COMPLICATED_CODE_LINES`
@@ -71,6 +72,17 @@ const UNFORCED_GAMES: u32 = 200;
 /// Stage 2: the self-play games a change to the AI plays on both builds, and their seed base.
 const SELFPLAY_GAMES: u32 = 8;
 const SELFPLAY_SEED: &str = "classify";
+
+/// R2204000: the sets the owner wraps into an earlier set's release line, each with the set whose
+/// line it joins. Such a set's arrival is no major: it earns the tier its cards do (a patch for any
+/// set of `PATCH_MIN_CARDS` families or more), so `patches ship` names it within the line. Training
+/// Grounds joins Stinkyscape's v0.5 (issue #2204, the owner's decision of 2026-10-28).
+pub(crate) const WRAPPED_SETS: &[(SetName, SetName)] = &[(SetName::TrainingGrounds, SetName::Stinkyscape)];
+
+/// R2204000: whether `set`, as its name is written, is wrapped into an earlier set's line.
+pub(crate) fn wrapped(set: &str) -> bool {
+    WRAPPED_SETS.iter().any(|(wrapped, _)| wrapped.as_str() == set)
+}
 
 const CATALOG_PATH: &str = "crates/cards/catalog.json";
 pub(crate) const SETS_PATH: &str = "crates/engine/src/wire/catalog_types.rs";
@@ -348,6 +360,14 @@ pub(crate) fn read_diff(before: &Side, after: &Side, files: &[FileChange]) -> Di
             .collect(),
         ..Diff::default()
     };
+    // R2204000: a set that ships brings every card of it into play, whether or not its entries moved
+    // while it was held (R1420), so a wrapped set's arrival earns the tier its cards do.
+    for (id, entry) in &after.catalog {
+        let set = entry.get("set").and_then(|set| set.as_str());
+        if set.is_some_and(|set| diff.sets.iter().any(|shipped| shipped == set)) {
+            diff.play.insert(family(id));
+        }
+    }
     for change in diff_catalogs(Some(&before.catalog), &after.catalog) {
         let side = if change.kind == ChangeKind::Removed {
             before
@@ -468,7 +488,7 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
         }
     }
     let rule = checked.is_some_and(|checked| checked.rule);
-    let tier = if !diff.sets.is_empty() {
+    let tier = if diff.sets.iter().any(|set| !wrapped(set)) {
         Some(Tier::Major)
     } else if rule || cards.len() >= PATCH_MIN_CARDS {
         Some(Tier::Patch)
@@ -1082,6 +1102,61 @@ mod tests {
         assert_eq!(classify(&many, None).tier, Some(Tier::Patch));
     }
 
+    // R2204000: a set the owner wraps into an earlier line earns the tier its cards do, every card of
+    // it playing differently once it ships though no entry moved; an unwrapped set is still a major.
+    #[test]
+    fn r2204000_a_wrapped_set_earns_its_cards_tier_and_an_unwrapped_one_is_a_major() {
+        let set_cards = |set: &str, prefix: &str, n: usize| -> Vec<(String, crate::patches::js::Object)> {
+            let mut all = cards(1, 1, "T.");
+            all.extend((1..=n).map(|k| card(&format!("{prefix}-{k:03}"), set, 1, "T.")));
+            all
+        };
+        let ships = |extra: SetName| -> Vec<SetName> { [SHIPPED, &[extra]].concat() };
+        let tg = "Training Grounds";
+        let wrapped_many = read_diff(
+            &side(set_cards(tg, "traininggrounds", PATCH_MIN_CARDS), SHIPPED),
+            &side(
+                set_cards(tg, "traininggrounds", PATCH_MIN_CARDS),
+                &ships(SetName::TrainingGrounds),
+            ),
+            &[],
+        );
+        let classified = classify(&wrapped_many, None);
+        assert_eq!(
+            (classified.kind, classified.tier),
+            (Kind::Cards, Some(Tier::Patch))
+        );
+        assert_eq!(classified.sets, vec![tg.to_string()]);
+        assert_eq!(classified.cards.len(), PATCH_MIN_CARDS);
+        assert!(
+            classified
+                .cards
+                .iter()
+                .all(|family| family.starts_with("traininggrounds-"))
+        );
+        let wrapped_few = read_diff(
+            &side(set_cards(tg, "traininggrounds", 2), SHIPPED),
+            &side(
+                set_cards(tg, "traininggrounds", 2),
+                &ships(SetName::TrainingGrounds),
+            ),
+            &[],
+        );
+        assert_eq!(classify(&wrapped_few, None).tier, Some(Tier::Micro));
+        let unwrapped = read_diff(
+            &side(set_cards("Classic", "classic", PATCH_MIN_CARDS), SHIPPED),
+            &side(
+                set_cards("Classic", "classic", PATCH_MIN_CARDS),
+                &ships(SetName::Classic),
+            ),
+            &[],
+        );
+        let classified = classify(&unwrapped, None);
+        assert_eq!(classified.tier, Some(Tier::Major));
+        assert_eq!(classified.cards.len(), PATCH_MIN_CARDS);
+        assert!(!wrapped("Classic") && wrapped(tg));
+    }
+
     // R1437000: a flavor is display only, so a change to it alone is no card change.
     #[test]
     fn r1437000_a_flavor_alone_is_no_card_change() {
@@ -1207,11 +1282,13 @@ mod tests {
         assert!(read_diff(&held, &held_long, &[]).play.is_empty());
         let diff = edit(&with(60, 10, &core_only), &with(61, 10, &core_only));
         assert!(diff.play.is_empty(), "no reader ships: {diff:?}");
+        // The reader's own set shipping is the release, not a threshold move: every card of the set
+        // plays differently for that alone (R2204000), and the threshold adds nothing to it.
         let diff = edit(&with(60, 10, &core_only), &with(61, 10, &shipping));
-        assert!(
-            !diff.play.contains("stinkyscape-109"),
-            "the reader's own set shipping is the release's major, not a threshold move"
-        );
+        assert_eq!(diff.sets, vec!["Stinkyscape".to_string()]);
+        assert!(diff.play.contains("stinkyscape-109"));
+        let level = edit(&with(60, 10, &core_only), &with(60, 10, &shipping));
+        assert_eq!(diff.play, level.play);
         // The classification names the reader, so `--claims` asks a fragment for it (R1370000).
         let classification = classify(&edit(&with(60, 10, &shipping), &with(61, 10, &shipping)), None);
         assert!(classification.cards.contains(&"stinkyscape-109".to_string()));
