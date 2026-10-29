@@ -7720,7 +7720,7 @@
       "queued_at": "2026-10-29T01:26:16Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:df61d648-1793237448",
+      "run_id": "40800926912",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
