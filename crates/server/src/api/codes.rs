@@ -12,6 +12,9 @@
 //! they are decided here from the router's profile). Every constant comes from `crate::config`.
 //! R1310000: a redemption that makes the account active also pays its tracks' first rewards
 //! (`economy::rewards::pay_starting_rewards`) in its transaction, while the economy is live.
+//! R2124000: a redemption sent with an `Idempotency-Key` that came before with the same code
+//! answers what it committed, before the breaker and R145's checks, and one that makes the account
+//! active keeps its answer in its transaction (`economy::idempotency`); every outcome is padded.
 
 use std::sync::{Arc, Mutex};
 
@@ -28,7 +31,8 @@ use crate::config::{
     REDEMPTION_CIRCUIT_FAILURE_THRESHOLD, REDEMPTION_CIRCUIT_WINDOW_SECONDS, REDEMPTION_IDENTICAL_ERROR,
     REDEMPTION_RESPONSE_FLOOR_MS,
 };
-use crate::db::store::{Db, InviteCode, Profile, ProfileStatus, RedeemInviteCodeInput, RedeemResult};
+use crate::db::store::{Db, InviteCode, Profile, ProfileStatus, RedeemInviteCodeInput, RedeemResult, Tx};
+use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::rewards::pay_starting_rewards;
 
 // Wording and defaults SPEC does not pin down
@@ -195,11 +199,18 @@ pub fn create_breaker_state() -> BreakerState {
 // Redemption
 
 /// Success, or a refusal as a value so it can be padded; only a store fault is raised (the outer
-/// `Err` of `redeem_code`).
+/// `Err` of `redeem_code`). `Replayed` is a keyed redemption that came before with the same code
+/// and committed: the answer it kept (R2124000).
 #[derive(Debug)]
 pub enum RedeemOutcome {
     Ok,
     Refused(ApiError),
+    Replayed { status: u16, body: Value },
+}
+
+/// What a redemption answers when it makes the account active.
+fn redeemed_body() -> Value {
+    json!({ "status": "active", "needsInviteCode": false })
 }
 
 /// Input to `redeem_code`.
@@ -220,6 +231,28 @@ pub struct RedeemInput<'a> {
     pub email_verified: bool,
     /// Omitted by a direct caller, in which case this redemption gets a breaker of its own.
     pub breaker: Option<&'a Mutex<BreakerState>>,
+    /// The request's `Idempotency-Key` (R2124000), or `None` for a redemption sent without one,
+    /// which runs as every redemption did before keys.
+    pub key: Option<&'a RequestKey>,
+}
+
+/// R2124000: a keyed redemption's kept answer, under the account's economy lock in `tx`: the
+/// answer when the key came before with the same code, a refusal (422 `idempotency_key_reused`,
+/// padded as every refusal is) when it came with another, and `None` when it never committed.
+async fn replay_of(
+    tx: &mut Tx<'_>,
+    profile_id: &str,
+    key: &RequestKey,
+) -> Result<Option<RedeemOutcome>, ApiError> {
+    tx.economy_lock_account(profile_id).await?;
+    match replayed::<Value>(tx, profile_id, Some(key)).await {
+        Ok(Some(Spent::Before { status, body })) => Ok(Some(RedeemOutcome::Replayed { status, body })),
+        Ok(_) => Ok(None),
+        Err(error) if error.code == ApiErrorCode::IdempotencyKeyReused => {
+            Ok(Some(RedeemOutcome::Refused(error)))
+        }
+        Err(error) => Err(error),
+    }
 }
 
 pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutcome, ApiError> {
@@ -227,6 +260,18 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
     let breaker = input.breaker.unwrap_or(&own_breaker);
     let limits = limits();
     let now = crate::app::now_ms();
+
+    // R2124000: a key that came before answers first, ahead of the breaker and R145's account
+    // checks, since the redemption it replays made the account active. A redemption with no key
+    // reads nothing here.
+    if let Some(key) = input.key {
+        let mut tx = app.db.begin(Some(&input.profile.id)).await?;
+        let outcome = replay_of(&mut tx, &input.profile.id, key).await?;
+        tx.commit().await?;
+        if let Some(outcome) = outcome {
+            return Ok(outcome);
+        }
+    }
 
     // R106's breaker, checked before step 1: while it is open nothing touches the profile, the
     // attempt log or the code table.
@@ -294,10 +339,23 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
             ip_hash: input.ip_hash.to_string(),
         })
         .await?;
+    // R2124000: a retry that raced its first try past the read above waited on the profile's row
+    // lock and found it active, writing nothing; the first try's kept answer is its answer. Read
+    // after the store's locks, in the order `pay_starting_rewards` takes them.
+    if let Some(key) = input.key
+        && matches!(result, RedeemResult::NotPending)
+        && let Some(outcome) = replay_of(&mut tx, &profile.id, key).await?
+    {
+        return Ok(outcome);
+    }
     // R1310000: the account now active, its tracks' first rewards, in the same transaction, while
     // the economy is live (§14.12). The starter cards are the activation's own grant (R111).
     if matches!(result, RedeemResult::Ok) && app.economy_live {
         pay_starting_rewards(&mut tx, &profile.id, now).await?;
+    }
+    // R2124000: the activation's answer, kept with it; a refusal keeps nothing.
+    if matches!(result, RedeemResult::Ok) {
+        keep(&mut tx, &profile.id, input.key, &redeemed_body()).await?;
     }
     tx.commit().await?;
     let failed = !matches!(result, RedeemResult::Ok);
@@ -417,6 +475,10 @@ async fn redeem_for_request(
         Ok(plain_code) => plain_code,
         Err(error) => return Ok(RedeemOutcome::Refused(error)),
     };
+    let key = match RequestKey::of(app, req, "/api/codes/redeem") {
+        Ok(key) => key,
+        Err(error) => return Ok(RedeemOutcome::Refused(error)),
+    };
     // A store fault is not a code oracle (it does not depend on which code was sent), so it is
     // left to the router: 500, logged, unpadded.
     redeem_code(
@@ -427,6 +489,7 @@ async fn redeem_for_request(
             ip_hash: &req.address,
             email_verified: caller.user.email_verified,
             breaker: Some(breaker),
+            key: key.as_ref(),
         },
     )
     .await
@@ -445,8 +508,9 @@ pub async fn redeem(app: &Arc<App>, req: Req) -> ApiResult {
     // so no timing difference survives to distinguish missing from expired from exhausted.
     pad_to(started_at, limits().redeem_constant_ms).await;
     match outcome {
-        RedeemOutcome::Ok => Ok(json(200, json!({ "status": "active", "needsInviteCode": false }))),
+        RedeemOutcome::Ok => Ok(json(200, redeemed_body())),
         RedeemOutcome::Refused(error) => Err(error),
+        RedeemOutcome::Replayed { status, body } => Ok(json(status, body)),
     }
 }
 

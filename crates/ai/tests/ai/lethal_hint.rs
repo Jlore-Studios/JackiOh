@@ -1,4 +1,4 @@
-//! R2102000: the Easy practice tier's lethal hint (`lethal_hint`, SPEC §9.9): whether the human has a
+//! R2102000: the practice AI's lethal hint (`lethal_hint`, SPEC §9.9): whether the human has a
 //! sure win this turn by what they can see, and the same answer whatever the AI's hidden cards are.
 //!
 //! The human sits in p2 with Tempo Timmy 3/3 and Mr. Vanilla 4/4 ready on the field, 7 to the face;

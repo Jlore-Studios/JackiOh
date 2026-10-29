@@ -44,7 +44,7 @@ export const PRACTICE_AI_CLOCK_MS = 1500;
 export const PRACTICE_EARNING_AI_CLOCK_MS = 30_000;
 
 /**
- * R2102000: wall-clock cap for the lethal hint's check, which every Easy snapshot of the human's turn
+ * R2102000: wall-clock cap for the lethal hint's check, which every snapshot of the human's turn
  * waits for: a check still running past it gives no hint, so a board whose lines are slow to play
  * out never holds a click's answer back for long.
  */
