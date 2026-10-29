@@ -2666,6 +2666,18 @@ pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
 /// retention loop sweeps them. A day outlasts any retry a player makes after a slow answer
 /// (`API_REQUEST_TIMEOUT_SECONDS`) while keeping the table to a day of spends.
 pub const IDEMPOTENCY_KEY_TTL_HOURS: i64 = 24;
+/// SPEC §14.11, R2378000: how many spends (a pack bought or opened, a token redeemed, a cosmetic
+/// pack opened, a chase bought) one account runs at once. A spend sent while they run waits its
+/// turn in this process, holding no database connection, so a burst of presses cannot hold the
+/// pool's connections waiting on the account's economy lock (issue #2378).
+pub const ECONOMY_SPENDS_RUNNING_MAX: usize = 1;
+/// SPEC §14.11, R2378000: how many spends of one account may wait their turn behind the ones
+/// running. One sent past it is refused at once with 429 and spends nothing. Four cover a person's
+/// tabs and devices pressing together; a script's burst is refused past them.
+pub const ECONOMY_SPENDS_WAITING_MAX: usize = 4;
+/// SPEC §14.11, R2378000: the wait the refusal of a spend sent past `ECONOMY_SPENDS_WAITING_MAX`
+/// states (`retryAfterMs`, R192).
+pub const SPEND_BUSY_RETRY_AFTER_MS: i64 = 1_000;
 /// SPEC §14.8, R1483000: how many unclaimed, unexpired practice seeds an account holds at once; a
 /// request past it is refused and issues nothing. Bounds one account's place in the claim queue
 /// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).
