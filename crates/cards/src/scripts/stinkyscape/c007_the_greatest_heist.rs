@@ -182,8 +182,10 @@ mod tests {
     const MANA: i32 = 20;
 
     /// The shipped pool: the Acclaimed Units and the Jelly Beans of the sets that ship, the Stinkyscape
-    /// set's nine Acclaimed Units among them since its release (#1884).
-    const POOL: [&str; 16] = [
+    /// set's nine Acclaimed Units among them since its release (#1884). Re-pinned for the Training
+    /// Grounds release (#2204): its Jelly Beans #27 Hopeful Jelly Bean and #50 Glowy Jelly Bean (the
+    /// snapshot of Core #26) join it.
+    const POOL: [&str; 18] = [
         "core-026",
         "core-027",
         "core-028",
@@ -200,6 +202,8 @@ mod tests {
         "stinkyscape-110",
         "stinkyscape-111",
         "stinkyscape-115",
+        "traininggrounds-027",
+        "traininggrounds-050",
     ];
 
     /// p1 holds the Heist (Radiant on `radiant`) and `hand`; p2 has a Vanilla. Each turn ends when the
@@ -428,7 +432,9 @@ mod tests {
         s.play(ID, json!({ "zone": 1 }));
         let pick = offered(&s)[0].clone();
         s.answer(json!(pick));
-        let card = s.hand(P1).into_iter().find(|card| card.def_id == pick).expect("the pick");
+        // Re-pinned for the Training Grounds release (#2204): the seed's first option is now S #6
+        // Tylannt, which the hand already holds two of, so the pick is the one added last.
+        let card = s.hand(P1).into_iter().rev().find(|card| card.def_id == pick).expect("the pick");
         assert!(card.radiant);
         tylannt(&mut s, 1);
         let summoned = s

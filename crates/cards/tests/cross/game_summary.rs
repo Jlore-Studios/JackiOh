@@ -17,7 +17,7 @@
 //!    card drawn from the first turn on, less those burned on a full hand (R4) or cast on their draw.
 
 use jackioh_cards::{CATALOG, register_all};
-use jackioh_engine::catalog::deckable;
+use jackioh_engine::catalog::{deckable, pair_key};
 use jackioh_engine::testkit::*;
 
 /// Re-pinned for the Stinkyscape release (#1884): the decks are dealt from every set that ships, so
@@ -36,6 +36,34 @@ fn pool() -> Vec<String> {
         .collect();
     ids.sort();
     ids
+}
+
+/// The two decks a game deals, `size` each, off a shuffle of `pool()`: each takes the cards of the
+/// shuffle in order, the first deck first, passing over a card whose Core-or-snapshot pair it already
+/// holds (§2.6 L3, R2195000), so a shuffle with no pair in it deals its first and second `size` as it
+/// always did. Re-pinned for the Training Grounds release (#2204): its snapshots #41–#60 ship beside
+/// the Core cards they copy, and `create_game` refuses a deck holding both.
+fn deal(shuffled: &[String], size: usize) -> (Vec<String>, Vec<String>) {
+    fn take(rest: &mut Vec<String>, size: usize) -> Vec<String> {
+        let mut deck: Vec<String> = Vec::new();
+        let mut keys: Vec<String> = Vec::new();
+        rest.retain(|id| {
+            if deck.len() == size {
+                return true;
+            }
+            let key = CATALOG.get(id).map_or(id.as_str(), pair_key).to_string();
+            if keys.contains(&key) {
+                return true;
+            }
+            keys.push(key);
+            deck.push(id.clone());
+            false
+        });
+        deck
+    }
+    let mut rest = shuffled.to_vec();
+    let first = take(&mut rest, size);
+    (first, take(&mut rest, size))
 }
 
 /// The dealt cards of a hand: R2089000 leaves a Created card (R943) out of every opening hand.
@@ -186,8 +214,7 @@ mod summarize_game_over_real_cards_s9_11 {
         for n in 1..=GAMES {
             let seed = format!("summary-cards-{n}");
             let shuffled = create_rng(&format!("summary-cards-decks-{n}"), 0).shuffle(&pool);
-            let decks: (Vec<String>, Vec<String>) =
-                (shuffled[..size].to_vec(), shuffled[size..size * 2].to_vec());
+            let decks: (Vec<String>, Vec<String>) = deal(&shuffled, size);
             let mut policy = create_rng(&format!("summary-cards-policy-{n}"), 0);
 
             let mut state = begin_game(&create_game(&CreateGameOptions {

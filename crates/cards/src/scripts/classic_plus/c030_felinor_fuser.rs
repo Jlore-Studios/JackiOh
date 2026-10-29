@@ -102,8 +102,10 @@ mod tests {
     /// R405: the non-token Felinor-tagged Units of every set, Felinor Fuser aside: Meditative's are §8.8
     /// #25, #30, #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet).
     /// Re-pinned for v0.3.5: the Meditative set joins the pool, and for the Stinkyscape release
-    /// (#1884) its #87 Siva 1.
-    const FELINOR_UNITS: [&str; 13] = [
+    /// (#1884) its #87 Siva 1. Re-pinned for the Training Grounds release (#2204): the set's Felinor
+    /// Units join the pool, #17, #22, #23 and #33 and the snapshots #44 (of Core #12) and #51 (of Core
+    /// #43), which a Discover never offers beside their Core card (R2204001).
+    const FELINOR_UNITS: [&str; 19] = [
         "core-012",
         "core-043",
         "core-086",
@@ -117,6 +119,12 @@ mod tests {
         "meditative-094",
         "meditative-102",
         "stinkyscape-087",
+        "traininggrounds-017",
+        "traininggrounds-022",
+        "traininggrounds-023",
+        "traininggrounds-033",
+        "traininggrounds-044",
+        "traininggrounds-051",
     ];
     /// #11 Tempo Timmy: a non-Felinor on the enemy side, which #43 Big Felinor's Cry would destroy.
     const TIMMY: &str = "core-011";
