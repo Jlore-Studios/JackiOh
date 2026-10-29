@@ -8,9 +8,9 @@ use jackioh_engine::effects::{discard, heal};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
-    anime_armor, answer, argus, blood_moon, cancel_gambit, echo_gambit, event_types, gambit, gambit_asker,
-    grunt, in_pile, joro, leech, mend, notes, phoenix, pile_on, playing, rattle, recorder, replays_to,
-    round_trip, second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
+    anime_armor, answer, argus, blood_moon, cancel_gambit, echo_gambit, echo_shadowstep, event_types, gambit,
+    gambit_asker, grunt, husk, in_pile, joro, leech, mend, notes, phoenix, pile_on, playing, rattle,
+    recorder, replays_to, round_trip, second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
 };
 use crate::rules::fixtures::harness::{Bench, events_json, in_hand, live, live_mut, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
@@ -747,6 +747,36 @@ mod e5_would_die {
         sacrifice_now(&mut b.sink(&mut state), &victim);
         assert!(in_pile(&state, P1, ZoneName::Graveyard, &unit.id));
         assert_eq!(notes(&state), strings(&["rattle:death:p1"]));
+        assert_eq!(
+            backrow_at(&state, P1, 1).map(|c| c.id.clone()),
+            Some(trap.id.clone())
+        );
+    }
+
+    #[test]
+    fn r460_r1884001_a_card_no_firing_spends_flickers_once_a_check_and_a_unit_that_returns_dying_dies() {
+        // A Field Trap stays after it fires, as a fused Unit holding Classic #14's text does (Twice
+        // Forward's copy of it, R831011): asked again on every pass, it flickered a unit that came back
+        // dying without end. Like a `resolveFirst` follow-up, it answers once a check (R1884001).
+        let mut state = playing("dc-shadowstep-stays");
+        let unit = put(&mut state, &husk.id, slot(P1, Row::Units, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &echo_shadowstep.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let mut b = Bench::new(&state);
+        state_check(&mut b.sink(&mut state));
+        assert_eq!(
+            field_of(&b.events, GameEventType::Flickered, "instanceId"),
+            vec![json!(unit.id)]
+        );
+        assert_eq!(
+            field_of(&b.events, GameEventType::Destroyed, "instanceId"),
+            vec![json!(unit.id)]
+        );
+        assert!(in_pile(&state, P1, ZoneName::Graveyard, &unit.id));
         assert_eq!(
             backrow_at(&state, P1, 1).map(|c| c.id.clone()),
             Some(trap.id.clone())
