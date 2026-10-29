@@ -8793,7 +8793,7 @@
       "provider": "claude-6",
       "queued_at": "2026-10-29T17:07:12Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:c09241eb-1793296589",
+      "run_id": "40926160496",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-29T17:56:55Z",
       "stop_requested": false,
