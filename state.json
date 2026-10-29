@@ -15949,12 +15949,12 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-29T18:02:00Z",
-          "utilization": 0.01
+          "utilization": 0.05
         },
-        "observed_at": "2026-10-29T15:03:01Z",
+        "observed_at": "2026-10-29T16:15:03Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
-          "utilization": 0.61
+          "utilization": 0.62
         },
         "status": "allowed"
       }
