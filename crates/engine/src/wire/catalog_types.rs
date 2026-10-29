@@ -1133,8 +1133,8 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub uses_plague: Option<bool>,
-    /// R1840000: this card is a Resource, a (0) Spell token gained into its player's Resource tray
-    /// and never a hand, with its rarity and its prices. The roll (R1840002) reads `resource.rarity`;
+    /// R1840000, R2250000: this card is a Resource, a (0) Spell token gained into its player's hand,
+    /// with its rarity and its prices. The roll (R1840002) reads `resource.rarity`;
     /// `printedRarity` stays the card frame's alone. Absent on every other card, a fused or crafted
     /// definition included, so a catalog without Resources serialises as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1389,8 +1389,6 @@ string_union! {
         Field = "field",
         Resolving = "resolving",
         Gone = "gone",
-        /// R1840000: a player's Resource tray, beside the hand.
-        Tray = "tray",
     }
 }
 
@@ -1427,11 +1425,6 @@ pub enum Zone {
     Gone {
         player: PlayerId,
     },
-    /// R1840000: a Resource in its player's Resource tray (`PlayerState.resource_tray`), read as a
-    /// hand is (§9.1): its player reads it, the other player only its count.
-    Tray {
-        player: PlayerId,
-    },
 }
 
 impl Zone {
@@ -1445,7 +1438,6 @@ impl Zone {
             Zone::Field { .. } => ZoneName::Field,
             Zone::Resolving { .. } => ZoneName::Resolving,
             Zone::Gone { .. } => ZoneName::Gone,
-            Zone::Tray { .. } => ZoneName::Tray,
         }
     }
 
@@ -1458,8 +1450,7 @@ impl Zone {
             | Zone::Exile { player }
             | Zone::Field { player, .. }
             | Zone::Resolving { player }
-            | Zone::Gone { player }
-            | Zone::Tray { player } => player,
+            | Zone::Gone { player } => player,
         }
     }
 
@@ -1473,7 +1464,6 @@ impl Zone {
             ZoneName::Exile => Some(Zone::Exile { player }),
             ZoneName::Resolving => Some(Zone::Resolving { player }),
             ZoneName::Gone => Some(Zone::Gone { player }),
-            ZoneName::Tray => Some(Zone::Tray { player }),
             ZoneName::Field => None,
         }
     }

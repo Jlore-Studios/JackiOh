@@ -268,13 +268,14 @@ pub enum ActionBody {
     Trade {
         instance_id: String,
     },
-    /// R1853003: buy one copy of the Marketplace lot at index `offer` of its offering, for Credits and
-    /// no mana, in the sender's own main phase (`marketplace.rs`).
+    /// R1853003: buy one copy of the Marketplace lot at index `offer` of the lots offered to the sender
+    /// (R2250002, `marketplace::offered_to`), for Credits and no mana, in their own main phase
+    /// (`marketplace.rs`).
     MarketBuy {
         offer: i32,
     },
-    /// R1853003: sell a Resource from the sender's Resource tray at the Marketplace, for its quote this
-    /// turn (`marketplace.rs`).
+    /// R1853003, R1861000: sell a card that sells from the sender's hand at the Marketplace, for its
+    /// quote this turn (`marketplace.rs`).
     MarketSell {
         instance_id: String,
     },
