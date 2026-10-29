@@ -3502,5 +3502,10 @@
   "Search pages, actions and cards": "搜索页面、操作和卡牌",
   "No matches": "没有匹配项",
   "Action": "操作",
-  "Page": "页面"
+  "Page": "页面",
+  "Focus the card, then press {keys} to inspect": "先聚焦卡牌，再按 {keys} 查看详情",
+  "Press {keys} for the command menu": "按 {keys} 打开命令菜单",
+  "{keys} to move": "{keys} 移动",
+  "{keys} to open": "{keys} 打开",
+  "{keys} to close": "{keys} 关闭"
 }
