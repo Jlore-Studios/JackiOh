@@ -36,25 +36,23 @@ export const lesson: TutorialLesson = {
     "core-035", // Lunar Eclipse (Rare)
   ],
   // The AI applies cheap board pressure without racing the player during setup. Its 4+ mana cards are
-  // uncast at AI_TUTORIAL.manaCap (3); none can copy, steal, or remove The Rock. Since both seats open
-  // on four cards (R1156000), the order deals the AI Rapid Replenish as its fourth card: the deal is the
-  // one it had on three cards, with Rapid Replenish moved up from late in its library to the top.
+  // uncast at AI_TUTORIAL.manaCap (3); none can copy, steal, or remove The Rock.
   // Right-house defender, lesson 2's Taunt, holds Me and Mr Token's place (#1728): once the AI switched
   // a spent attacker to Defense Position (#1713), a beginner who ignores the coach won 5 of the 10 other
   // deals R293's sweep plays, and with the defender wins 8 of them (31 of the first 40). The lesson's
   // tokens are the player's own.
   aiDeck: [
     "core-008", // Mr. Vanilla
-    "core-029", // GIGA Glowy Jelly Bean: costs 6, never cast
-    "core-072", // Reminisce
-    "core-003", // Right-house defender
+    "core-004", // Gary the Gambler
     "core-001", // Big D-fender
     "core-030", // Archivist
+    "core-003", // Right-house defender
     "core-005", // Stockpile
-    "core-054", // Straaza: costs 4, never cast
-    "core-004", // Gary the Gambler
     "core-010", // Rapid Replenish
+    "core-072", // Reminisce
+    "core-054", // Straaza: costs 4, never cast
     "core-025", // 4-mana 7/7: costs 4, never cast
+    "core-029", // GIGA Glowy Jelly Bean: costs 6, never cast
     "core-014", // Jlockeed's Weapons: costs 4, never cast
   ],
   retryTip: "Send expensive cards back in the mulligan, play The Coin on your first turn, and let big units like The Rock do the fighting.",

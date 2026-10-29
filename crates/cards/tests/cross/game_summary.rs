@@ -872,15 +872,16 @@ mod r1256000_per_seat_counts {
             state = end_turn(state, &mut log, player);
         }
         let end = state.result.expect("an endTurn-only game fatigues out");
-        // p1 draws first, so p1 takes the eighth hit (1+…+8 = 36 at 30 HP) first.
-        assert_eq!(end.winner, Winner::P2);
+        // p1 opens on three cards and p2 on four (R2368000), so p1's library holds one card more and p2
+        // takes the eighth hit (1+…+8 = 36 at 30 HP) first, on its 29th turn, before p1's 30th.
+        assert_eq!(end.winner, Winner::P1);
         assert_eq!(end.reason, GameOverReason::HeroDeath);
 
         let summary = summarize(seed, decks, log);
-        assert_eq!(summary.seats.p1.fatigue_draws, Some(8));
-        assert_eq!(summary.seats.p1.fatigue_damage, Some(36));
-        assert_eq!(summary.seats.p2.fatigue_draws, Some(7));
-        assert_eq!(summary.seats.p2.fatigue_damage, Some(28));
+        assert_eq!(summary.seats.p1.fatigue_draws, Some(7));
+        assert_eq!(summary.seats.p1.fatigue_damage, Some(28));
+        assert_eq!(summary.seats.p2.fatigue_draws, Some(8));
+        assert_eq!(summary.seats.p2.fatigue_damage, Some(36));
         for seat in [&summary.seats.p1, &summary.seats.p2] {
             assert_eq!(seat.traps_set, Some(0));
             assert_eq!(seat.traps_fired, Some(0));

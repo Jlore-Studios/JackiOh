@@ -1,0 +1,17 @@
+{
+  "title": "The first player's opening hand draws 3",
+  "sources": "#2368",
+  "notes": "The owner's ask (#2368): Player 1, who goes first, opens on three cards again and Player 2 on four, OPENING_DRAW [3, 4], Hearthstone's split, superseding #1156's four for both (R2368000, superseding R1156000). A rule every game meets: every game's opening deal moves.",
+  "player": {
+    "title": "The first player opens on three cards",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "The player who goes first now starts with three cards in their opening hand, down from four. The player who goes second still starts with four and The Coin."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "rule": true
+}
