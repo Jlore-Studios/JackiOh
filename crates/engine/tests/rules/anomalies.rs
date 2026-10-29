@@ -522,12 +522,17 @@ mod r1855002_a_preset_cards_rider_is_memory_its_own_text_reads {
         assert_eq!(s.unit(P1, 1).expect("the asteroid").def_id, ASTEROID);
         s.play(wipe.id.as_str(), json!({}));
 
-        let tray = s.pile(P1, "tray");
-        assert_eq!(tray.len() as i32, ASTEROID_YIELD, "its Death gains its Resources");
+        // R2250000: its Resources join the hand.
+        let gained = resources_in_hand_of(s.state(), P1);
+        assert_eq!(
+            gained.len() as i32,
+            ASTEROID_YIELD,
+            "its Death gains its Resources"
+        );
         assert!(
-            tray.iter().all(|card| card.def_id == MYTHIC),
+            gained.iter().all(|card| card.def_id == MYTHIC),
             "every one from the rider's pool: {:?}",
-            tray.iter().map(|card| card.def_id.clone()).collect::<Vec<_>>()
+            gained.iter().map(|card| card.def_id.clone()).collect::<Vec<_>>()
         );
     }
 }

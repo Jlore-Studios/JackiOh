@@ -41,8 +41,8 @@ use jackioh_server::economy::store::{
 use jackioh_server::economy::tiers::{card_odds, cosmetic_odds};
 use jackioh_server::economy::tokens::card_bar_points;
 
-use crate::support::deps::{add_user, call, empty_test_app};
-use crate::support::store::fake;
+use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
+use crate::support::store::{fake, uuid};
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
@@ -71,9 +71,14 @@ async fn setup() -> (Arc<App>, String) {
 
 /// `jlore` more Jlore in `p1`'s wallet, as a game pays it (§14.8).
 async fn fund(app: &App, jlore: i64) {
-    let mut tx = app.db.begin(Some(PROFILE)).await.expect("a transaction");
+    fund_of(app, PROFILE, jlore).await;
+}
+
+/// `jlore` more Jlore in `profile_id`'s wallet, as a game pays it (§14.8).
+async fn fund_of(app: &App, profile_id: &str, jlore: i64) {
+    let mut tx = app.db.begin(Some(profile_id)).await.expect("a transaction");
     tx.economy_jlore_grant(&JloreGrant {
-        profile_id: PROFILE.to_string(),
+        profile_id: profile_id.to_string(),
         delta: jlore,
         reason: JloreReason::Game,
         reference: None,
@@ -1478,4 +1483,214 @@ async fn get_lists_the_unopened_packs_held() {
             { "pack": "Classic", "count": 2 },
         ])
     );
+}
+
+// ---------------------------------------------------------------------------------------------
+// R2124000: a buy or an opening sent again under its Idempotency-Key runs once
+// ---------------------------------------------------------------------------------------------
+
+/// `profile_id`'s wallet and the packs it holds, each kind with its count.
+async fn wallet_and_packs(app: &App, profile_id: &str) -> (i64, Value) {
+    let mut tx = app.db.begin(Some(profile_id)).await.expect("a transaction");
+    let jlore = tx.economy_jlore_get(profile_id).await.expect("the wallet");
+    let inventory = to(&tx.economy_inventory_get(profile_id).await.expect("the inventory"));
+    tx.commit().await.expect("the commit");
+    (jlore, inventory)
+}
+
+/// How many idempotency keys the store holds, every account's.
+async fn keys_held(app: &App) -> usize {
+    fake(app).lock().await.tables.economy.idempotency_keys.len()
+}
+
+/// The ledger's `pack_purchase` Jlore rows of `p1`.
+fn purchases(everything: &Value) -> usize {
+    everything["state"]["ledger"]["jlore"]
+        .as_array()
+        .expect("the Jlore rows")
+        .iter()
+        .filter(|row| row["reason"] == json!("pack_purchase"))
+        .count()
+}
+
+#[tokio::test]
+async fn r2124000_the_same_key_twice_buys_one_pack_and_answers_the_same() {
+    let (app, token) = setup().await;
+    fund(&app, price() * 2).await;
+    let key = uuid(2124001);
+    let buy = || {
+        call_with_key(
+            &app,
+            "POST",
+            "/api/packs/buy",
+            Some(&token),
+            json!({ "pack": "Core" }),
+            &key,
+        )
+    };
+
+    let (first_status, _, first) = buy().await;
+    assert_eq!(first_status, 200, "{first}");
+    assert_eq!(first, json!({ "pack": "Core", "jlore": price(), "unopened": 1 }));
+    let (again_status, _, again) = buy().await;
+    assert_eq!(again_status, 200, "{again}");
+    assert_eq!(again, first, "the retry answers what the first try answered");
+
+    let after = everything(&app).await;
+    assert_eq!(after["state"]["jlore"], json!(price()), "one price spent");
+    assert_eq!(
+        after["state"]["inventory"],
+        json!([{ "item": "set_pack", "key": "Core", "count": 1 }])
+    );
+    assert_eq!(purchases(&after), 1);
+    assert_eq!(keys_held(&app).await, 1);
+}
+
+#[tokio::test]
+async fn r2124000_the_same_key_with_another_body_or_route_is_refused_and_writes_nothing() {
+    let (app, token) = setup().await;
+    fund(&app, price() * 3).await;
+    let key = uuid(2124002);
+    let (status, _, body) = call_with_key(
+        &app,
+        "POST",
+        "/api/packs/buy",
+        Some(&token),
+        json!({ "pack": "Core" }),
+        &key,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let before = everything(&app).await;
+
+    for (path, pack) in [("/api/packs/buy", GLOBAL_PACK_NAME), ("/api/packs/open", "Core")] {
+        let (status, _, body) =
+            call_with_key(&app, "POST", path, Some(&token), json!({ "pack": pack }), &key).await;
+        assert_eq!(
+            (status, body["error"]["code"].clone()),
+            (422, json!("idempotency_key_reused")),
+            "{path} {pack}: {body}"
+        );
+        assert_eq!(everything(&app).await, before, "{path} {pack}");
+        assert_eq!(keys_held(&app).await, 1, "{path} {pack}");
+    }
+}
+
+#[tokio::test]
+async fn r2124000_a_buy_with_no_key_buys_again_as_today() {
+    let (app, token) = setup().await;
+    fund(&app, price() * 2).await;
+    for unopened in [1, 2] {
+        let (status, _, body) = call(
+            &app,
+            "POST",
+            "/api/packs/buy",
+            Some(&token),
+            json!({ "pack": "Core" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["unopened"], json!(unopened));
+    }
+    let after = everything(&app).await;
+    assert_eq!(after["state"]["jlore"], json!(0));
+    assert_eq!(purchases(&after), 2);
+    assert_eq!(keys_held(&app).await, 0, "a keyless spend keeps nothing");
+}
+
+#[tokio::test]
+async fn r2124000_the_same_key_under_two_accounts_makes_two_purchases() {
+    let (app, token) = setup().await;
+    fake(&app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": "p2", "userId": "u2", "status": "active" }));
+    let other = add_user(&app, "u2", "p2@example.test", true);
+    let key = uuid(2124003);
+    for (profile_id, bearer) in [(PROFILE, &token), ("p2", &other)] {
+        fund_of(&app, profile_id, price() * 2).await;
+        let (status, _, body) = call_with_key(
+            &app,
+            "POST",
+            "/api/packs/buy",
+            Some(bearer),
+            json!({ "pack": "Core" }),
+            &key,
+        )
+        .await;
+        assert_eq!(status, 200, "{profile_id}: {body}");
+        assert_eq!(
+            body,
+            json!({ "pack": "Core", "jlore": price(), "unopened": 1 }),
+            "{profile_id}"
+        );
+    }
+    for profile_id in [PROFILE, "p2"] {
+        assert_eq!(
+            wallet_and_packs(&app, profile_id).await,
+            (
+                price(),
+                json!([{ "item": "set_pack", "key": "Core", "count": 1 }])
+            ),
+            "{profile_id} is debited once and holds one pack"
+        );
+    }
+    assert_eq!(keys_held(&app).await, 2);
+}
+
+#[tokio::test]
+async fn r2124000_a_key_that_is_not_a_uuid_is_refused_and_buys_nothing() {
+    let (app, token) = setup().await;
+    fund(&app, price()).await;
+    let before = everything(&app).await;
+    for key in ["", "not-a-uuid", "2124", "00000000-0000-4000-8000-00000000000g"] {
+        let (status, _, body) = call_with_key(
+            &app,
+            "POST",
+            "/api/packs/buy",
+            Some(&token),
+            json!({ "pack": "Core" }),
+            key,
+        )
+        .await;
+        assert_eq!(
+            (status, body["error"]["code"].clone()),
+            (400, json!("bad_request")),
+            "{key:?}: {body}"
+        );
+    }
+    assert_eq!(everything(&app).await, before);
+    assert_eq!(keys_held(&app).await, 0);
+}
+
+#[tokio::test]
+async fn r2124000_the_same_key_twice_opens_one_pack_and_answers_the_same_slots() {
+    let (app, token) = setup().await;
+    buy(&app, &token, "Core").await;
+    buy(&app, &token, "Core").await;
+    let key = uuid(2124004);
+    let open = || {
+        call_with_key(
+            &app,
+            "POST",
+            "/api/packs/open",
+            Some(&token),
+            json!({ "pack": "Core" }),
+            &key,
+        )
+    };
+
+    let (first_status, _, first) = open().await;
+    assert_eq!(first_status, 200, "{first}");
+    assert_eq!(first["unopened"], json!(1));
+    let after_first = everything(&app).await;
+    let (again_status, _, again) = open().await;
+    assert_eq!(again_status, 200, "{again}");
+    assert_eq!(again, first, "the retry answers the first try's slots");
+    assert_eq!(
+        everything(&app).await,
+        after_first,
+        "the retry rolls and grants nothing"
+    );
+    assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 1);
 }

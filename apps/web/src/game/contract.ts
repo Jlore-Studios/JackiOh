@@ -74,7 +74,7 @@ export const testid = {
   seatSwitch: "seat-switch",
   result: "result-overlay",
   banner: "turn-banner",
-  /** R2102000: "You have lethal", in the board's notices, while the Easy practice tier's lethal hint is lit. */
+  /** R2102000: "You have lethal", in the board's notices, while the practice AI's lethal hint is lit. */
   lethalHint: "lethal-hint",
   /** "Concede this game?" (ConfirmConcede.tsx): the dialog the `concede` control opens. */
   concedeDialog: "concede-dialog",
@@ -124,8 +124,6 @@ export const testid = {
    */
   trade: (instanceId: string): string => `trade-${instanceId}`,
   tradeBar: "trade-bar",
-  /** R1840000: a Resource in the viewer's own Resource tray (ResourceTray.tsx), played from there (R1840003). */
-  trayCard: (instanceId: string): string => `tray-card-${instanceId}`,
   /** R1853003: the Marketplace's toggle (Marketplace.tsx), and the panel it opens. */
   marketplace: "marketplace-button",
   marketplacePanel: "marketplace-panel",
@@ -171,8 +169,7 @@ export function touchHoldMode(view: PlayerView): "sheet" | "preview" {
  *
  * `activate` is an Activate control (R384): a card's own, or a Heroic Power's on the hero panel.
  * `ability` is set only when the card lists several abilities. `graveyard` is "Play" on a card in
- * the viewer's graveyard pile (B5 E11). `tray` is a Resource in the viewer's own Resource tray
- * (R1840003).
+ * the viewer's graveyard pile (B5 E11). A Resource is a hand card (R2250000).
  */
 export type ClickTarget =
   | { on: "hand"; instanceId: string }
@@ -182,8 +179,7 @@ export type ClickTarget =
   | { on: "zone"; side: Side; row: Row; lane: number }
   | { on: "switch"; instanceId: string }
   | { on: "activate"; instanceId: string; ability?: string }
-  | { on: "graveyard"; instanceId: string }
-  | { on: "tray"; instanceId: string };
+  | { on: "graveyard"; instanceId: string };
 
 export type BoardControl = "end-turn" | "offer-draw" | "power" | "concede";
 

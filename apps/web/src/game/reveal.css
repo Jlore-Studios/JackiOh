@@ -46,7 +46,7 @@
 }
 
 .their-hand__item {
-  animation: their-hand-deal calc(320ms * var(--anim-scale)) ease-out calc(var(--i, 0) * 70ms * var(--anim-scale)) both;
+  animation: their-hand-deal calc(var(--motion-base) * var(--anim-scale)) var(--ease-out) calc(var(--i, 0) * 70ms * var(--anim-scale)) both;
 }
 
 .their-hand__card {
@@ -57,7 +57,7 @@
   padding: 0;
   overflow: hidden;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
   color: inherit;
   font: inherit;
@@ -89,7 +89,7 @@
 .result-overlay__their-hand {
   min-height: 44px;
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-weight: 700;
 }
 

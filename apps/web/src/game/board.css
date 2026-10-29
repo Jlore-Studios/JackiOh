@@ -22,7 +22,8 @@
    height from that (`cqh`): `(100cqh - the layout's fixed parts) / the card heights it stacks`,
    so a match bar, a turn banner or a phone's browser toolbar shrinks the cards instead of pushing
    End turn or your hand off the screen. Whatever height is spare goes to the field, the one row
-   that is `1fr`, whose lanes stay centred in it.
+   that is `1fr`: on a desktop or a tablet its four rows grow into it (`.lane`), and on a phone
+   its lanes stay centred in it.
 
    Green is not painted here. `data-legal="true"` only means "clickable" (a pointer and full
    opacity); the green glow is `data-glow="ready"`, styled by highlights.css, which Board.tsx
@@ -43,7 +44,7 @@
   --hand-card-h: calc(var(--card-h) * 1.3);
   --hand-card-w: calc(var(--hand-card-h) * 0.72);
   --selected: var(--pal-sky-300);
-  --seat-radius: 12px;
+  --seat-radius: var(--radius-md);
 
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -53,7 +54,7 @@
   max-width: 100%;
   min-width: 0;
   padding: 8px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   /* Named so table.css can repaint it under a worn backdrop (R1297000). */
   --board-surface:
     radial-gradient(120% 70% at 50% 45%, color-mix(in srgb, var(--pal-brass-800) 28%, transparent), transparent 70%),
@@ -79,22 +80,22 @@
   min-width: 0;
   padding: 5px 8px;
   border: 1px solid var(--line);
-  border-radius: var(--seat-radius);
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--pal-black) 30%, transparent);
+  box-shadow: var(--shadow-2);
   transition:
-    border-color calc(200ms * var(--anim-scale)) ease,
-    box-shadow calc(200ms * var(--anim-scale)) ease;
+    border-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard),
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 .seat-you {
   border-color: color-mix(in srgb, var(--you) 40%, var(--line));
-  background: linear-gradient(90deg, color-mix(in srgb, var(--you) 16%, var(--bg-raised)), var(--bg-raised) 55%);
+  background: var(--bg-raised);
 }
 
 .seat-opponent {
   border-color: color-mix(in srgb, var(--opponent) 40%, var(--line));
-  background: linear-gradient(90deg, color-mix(in srgb, var(--opponent) 16%, var(--bg-raised)), var(--bg-raised) 55%);
+  background: var(--bg-raised);
 }
 
 /* Whose turn it is, at a glance: the active seat's plate lights up in its colour. */
@@ -127,9 +128,9 @@
   border: 1px solid var(--line-bright);
   /* Round at a pill's height, but a hero whose power and badges wrap to a second line stays a
      rounded plate instead of swelling into a capsule. */
-  border-radius: 22px;
+  border-radius: var(--radius-xl);
   background: var(--bg-sunken);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 6%, transparent), 0 1px 4px color-mix(in srgb, var(--pal-black) 40%, transparent);
+  box-shadow: var(--shadow-inset-top), var(--shadow-2);
 }
 
 /* Clickable, not green: the glow is highlights.css's `data-glow`. */
@@ -148,11 +149,11 @@
 }
 
 .hero-you {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--you) 30%, var(--bg-raised)), var(--bg-sunken));
+  background: var(--bg-sunken);
 }
 
 .hero-opponent {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--opponent) 30%, var(--bg-raised)), var(--bg-sunken));
+  background: var(--bg-sunken);
 }
 
 /* The health gem sits first, the way a portrait's health does. */
@@ -178,28 +179,28 @@
   min-width: 28px;
   height: 28px;
   padding: 0 5px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--pal-white);
   font-size: var(--type-lg-em);
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   text-shadow: 0 1px 2px color-mix(in srgb, var(--pal-black) 70%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 25%, transparent), 0 1px 3px color-mix(in srgb, var(--pal-black) 60%, transparent);
+  box-shadow: var(--shadow-inset-top), var(--shadow-2);
 }
 
 .hero-health {
   border: 1px solid color-mix(in srgb, var(--pal-parchment) 55%, transparent);
-  background: radial-gradient(circle at 35% 30%, var(--pal-red-400), var(--pal-red-600) 55%, var(--pal-red-900));
+  background: var(--pal-red-600);
 }
 
 .hero-armor {
   border: 1px solid color-mix(in srgb, var(--pal-blue-200) 50%, transparent);
-  background: radial-gradient(circle at 35% 30%, var(--pal-slate-400), var(--pal-slate-700) 60%, var(--pal-slate-700));
+  background: var(--pal-slate-700);
 }
 
 .hero-jade {
   border: 1px solid color-mix(in srgb, var(--pal-jade-400) 55%, transparent);
-  background: radial-gradient(circle at 35% 30%, var(--pal-jade-400), var(--pal-green-700) 55%, var(--pal-green-900));
+  background: var(--pal-green-700);
 }
 
 .power-button,
@@ -213,7 +214,7 @@
   white-space: nowrap;
   font-size: var(--type-xs-em);
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .power-tag {
@@ -245,7 +246,7 @@
   flex: none;
   padding: 0 5px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--text);
   font-size: var(--type-xs-em);
   font-weight: 700;
@@ -281,10 +282,41 @@
   white-space: nowrap;
   padding: 2px 6px;
   border: 1px solid color-mix(in srgb, var(--mana) 55%, var(--line-bright));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--mana) 14%, var(--bg-sunken));
   color: var(--text-dim);
   font-size: var(--type-2xs-em);
+}
+
+/* #2321: a modifier badge is a button (game/ModifierBadge.tsx), whose press opens its whole label.
+   `.hero` outranks src/index.css's `.app-shell button`, whose 9px 16px padding made the hero row
+   taller and the board 3px too tall for a 1024x768 tablet (B46): the badge keeps its own size. */
+.hero button.modifier-badge {
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  font-weight: inherit;
+  text-align: left;
+}
+
+button.modifier-badge[data-open="true"] {
+  border-color: var(--mana);
+  color: var(--text);
+}
+
+/* The whole label, laid on the page beside its badge (ModifierBadge.tsx places it, inside a 16px
+   gutter), so a long one is read on touch without pushing the hero row apart. */
+.modifier-full {
+  position: fixed;
+  z-index: var(--z-drag);
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--mana) 55%, var(--line-bright));
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  font-size: var(--type-sm);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 /* ------------------------------------------------------------------------- mana and piles --- */
@@ -306,17 +338,17 @@
 .mana-crystal {
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   border: 1px solid color-mix(in srgb, var(--mana) 80%, var(--pal-white));
   background: var(--pal-slate-900);
   transform: rotate(45deg);
   transition:
-    background calc(150ms * var(--anim-scale)) linear,
-    box-shadow calc(150ms * var(--anim-scale)) linear;
+    background calc(var(--motion-fast) * var(--anim-scale)) linear,
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) linear;
 }
 
 .mana-crystal[data-filled="true"] {
-  background: radial-gradient(circle at 40% 35%, var(--pal-blue-200), var(--pal-blue-600) 55%, var(--pal-blue-700));
+  background: var(--pal-blue-600);
   box-shadow: 0 0 6px color-mix(in srgb, var(--pal-sky-400) 70%, transparent);
 }
 
@@ -355,7 +387,7 @@
   gap: 4px;
   padding: 2px 7px 2px 5px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-black) 30%, transparent);
 }
 
@@ -410,11 +442,11 @@
   gap: 8px;
   min-width: 0;
   padding: 4px 6px;
-  border-radius: var(--seat-radius);
+  border-radius: var(--radius-md);
 }
 
 .hand-opponent {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 22%, transparent), transparent);
+  background: transparent;
 }
 
 /* Room above your fan for a lifted card (translateY(-8px) on desktop), so a lift stays inside
@@ -422,7 +454,7 @@
 .hand-you {
   position: relative;
   padding-top: 10px;
-  background: linear-gradient(0deg, color-mix(in srgb, var(--you) 12%, transparent), transparent 80%);
+  background: transparent;
 }
 
 /* Your hand count is a badge riding the hand's top edge at the right, not a column of its own: as a
@@ -432,7 +464,7 @@
   position: absolute;
   top: -7px;
   right: 6px;
-  z-index: 3;
+  z-index: var(--z-overlay);
   padding: 0 6px 0 4px;
   background: var(--bg-sunken);
   pointer-events: none;
@@ -484,7 +516,7 @@
   flex: 0 0 var(--slot-w);
   width: var(--slot-w);
   transform-origin: 50% 100%;
-  transition: transform calc(160ms * var(--anim-scale)) ease;
+  transition: transform calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 .hand-slot + .hand-slot {
@@ -498,7 +530,7 @@
    fan would take the focus ring under its neighbour. The layouts below say how far each lifts. */
 .hand-you .hand-slot[data-lifted="true"],
 .hand-you .hand-slot:has(> .card:focus-visible) {
-  z-index: 4;
+  z-index: var(--z-hover);
   transform: translateY(-8px);
 }
 
@@ -515,7 +547,7 @@
 /* Your hero glowing as a target sits above a lifted card, so the lift can never hide it. Only the
    hero: raising its whole seat hid the name of a card lifted over the seat's empty lower half. */
 .board .hero[data-glow="ready"] {
-  z-index: 5;
+  z-index: var(--z-popover);
 }
 
 .hand-you .card-hand {
@@ -545,7 +577,7 @@
   place-items: center;
   width: var(--slot-w);
   border: 1px dashed color-mix(in srgb, var(--text-dim) 40%, transparent);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--pal-white) 2%, transparent);
   color: var(--text-dim);
   font-size: var(--type-3xs-em);
@@ -581,7 +613,7 @@
 .hand-flip {
   position: relative;
   transform-style: preserve-3d;
-  animation: hand-reveal calc(560ms * var(--anim-scale)) cubic-bezier(0.3, 0.7, 0.4, 1)
+  animation: hand-reveal calc(var(--motion-slow) * var(--anim-scale)) var(--ease-out)
     calc(var(--i, 0) * 90ms * var(--anim-scale)) both;
 }
 
@@ -639,14 +671,15 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  /* The field's row is the board's `1fr`, so it may be taller than its lanes: they stay centred,
-     with the spare height as mat above and below them. */
+  /* The field's row is the board's `1fr`, so it may be taller than its lanes: on a phone they stay
+     centred, with the spare height as mat above and below them; on a desktop or a tablet they fill
+     it (the media query after `.lane`). */
   align-content: center;
   gap: var(--gap);
   min-width: 0;
   padding: 6px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(circle at 12% 23%, color-mix(in srgb, var(--pal-gold-200) 9%, transparent) 0 1px, transparent 2px),
     radial-gradient(circle at 71% 61%, color-mix(in srgb, var(--pal-wood-800) 18%, transparent) 0 1px, transparent 2px),
@@ -667,8 +700,10 @@
   right: 12px;
   height: 2px;
   translate: 0 -50%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--pal-brass-500) 45%, transparent) 20%, color-mix(in srgb, var(--pal-parchment) 50%, transparent) 50%, color-mix(in srgb, var(--pal-brass-500) 45%, transparent) 80%, transparent);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
+  mask-image: linear-gradient(90deg, transparent, var(--pal-black) 20%, var(--pal-black) 80%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, var(--pal-black) 20%, var(--pal-black) 80%, transparent);
   pointer-events: none;
 }
 
@@ -677,10 +712,10 @@
    disabled: cards and every HUD control always keep their own gesture. */
 .sand-surface {
   position: absolute;
-  z-index: 0;
+  z-index: var(--z-base);
   inset: 7px;
   overflow: hidden;
-  border-radius: 11px;
+  border-radius: var(--radius-md);
   pointer-events: none;
 }
 
@@ -702,7 +737,7 @@
   opacity: 0.88;
   rotate: calc(var(--sand-variation) * 47deg);
   translate: -50% -50%;
-  animation: sand-settle var(--sand-fade) ease-out forwards;
+  animation: sand-settle var(--sand-fade) var(--ease-out) forwards;
 }
 
 .sand-mark--grain {
@@ -721,7 +756,7 @@
   height: auto;
   aspect-ratio: 1;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   box-shadow: none;
   rotate: calc(var(--sand-variation) * 90deg);
 }
@@ -751,14 +786,14 @@
   top: var(--sand-y);
   width: calc(10px + var(--sand-build) * 1.5px);
   aspect-ratio: 1;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   translate: -50% -50%;
 }
 
 .tap-mark--wood {
   border: 2px solid color-mix(in srgb, var(--pal-parchment) 55%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-brass-950) 35%, transparent);
-  animation: tap-ripple 420ms ease-out forwards;
+  animation: tap-ripple 420ms var(--ease-out) forwards;
 }
 
 @keyframes tap-ripple {
@@ -768,7 +803,7 @@
 
 .tap-mark--felt {
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-black) 34%, transparent), color-mix(in srgb, var(--pal-black) 12%, transparent) 55%, transparent 72%);
-  animation: tap-press 1600ms ease-out forwards;
+  animation: tap-press 1600ms var(--ease-out) forwards;
 }
 
 @keyframes tap-press {
@@ -780,7 +815,7 @@
 .tap-mark--stone {
   width: calc(6px + var(--sand-build) * 0.8px);
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-white) 95%, transparent), color-mix(in srgb, var(--pal-slate-100) 55%, transparent) 35%, transparent 70%);
-  animation: tap-spark 260ms ease-out forwards;
+  animation: tap-spark 260ms var(--ease-out) forwards;
 }
 
 @keyframes tap-spark {
@@ -792,7 +827,7 @@
 .tap-mark--neon {
   border: 2px solid var(--tap-tint);
   box-shadow: 0 0 6px var(--tap-tint), inset 0 0 4px var(--tap-tint);
-  animation: tap-burst 520ms ease-out forwards;
+  animation: tap-burst 520ms var(--ease-out) forwards;
 }
 
 @keyframes tap-burst {
@@ -804,7 +839,7 @@
   border-radius: 52% 46% 55% 44%;
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-brass-800) 62%, transparent), color-mix(in srgb, var(--pal-wood-600) 38%, transparent) 55%, transparent 75%);
   rotate: calc(var(--sand-variation) * 90deg);
-  animation: tap-bleed 2400ms ease-out forwards;
+  animation: tap-bleed 2400ms var(--ease-out) forwards;
 }
 
 @keyframes tap-bleed {
@@ -817,7 +852,7 @@
   width: 6px;
   background: var(--tap-tint);
   clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
-  animation: tap-scatter 700ms ease-out forwards;
+  animation: tap-scatter 700ms var(--ease-out) forwards;
 }
 
 @keyframes tap-scatter {
@@ -839,36 +874,54 @@
 }
 
 /* Fixed rows, not `minmax(0, …)`: each lane is its own grid, so an empty zone must still hold
-   its row open or the four bands would stop lining up across the five lanes. */
+   its row open or the four bands would stop lining up across the five lanes. `--def-scale` is how
+   far a DEF card shrinks (Card.tsx turns it with `rotate(90deg) scale(var(--def-scale, 1))`): on a
+   phone a card turned sideways is wider than its lane, so it is drawn at 72%. */
 .lane {
+  --def-scale: 0.72;
+
   position: relative;
-  z-index: 1;
+  z-index: var(--z-content);
   display: grid;
   grid-template-rows: repeat(4, var(--card-h));
   gap: var(--gap);
   min-width: 0;
 }
 
-/* Wherever the board has the room (a desktop, a tablet held upright), the unit rows take height
-   from the backrow rows, which hold a trap's back or a field card and are mostly empty: minions
-   were a third of their lane, 57 px wide in a 188 px zone. The four rows still sum to four card
-   heights, so nothing else on the board moves, and a unit fills its taller row as a broad oval,
-   the way Hearthstone's minions sit on its board. A phone keeps equal rows: its backrow is already
-   at the 44 px touch floor. */
+/* Wherever the board has the room (a desktop, a tablet held upright), the four rows are one height
+   and share the field's height: the backrow's traps and field cards matter as much as the units.
+   They line up across the five lanes because every lane fills the field's one row
+   (`align-content: stretch`, then `height: 100%`, which keeps the field asking the board for no
+   more than four card heights) and splits it into four equal rows, none under a card height, so
+   an empty zone still holds its row open. A row grows to at most `--row-max`, so a DEF card at
+   full size (`--def-scale: 1`) still fits across the narrowest lane (136 px at 761 px wide);
+   past that the lanes stay centred. A card's width follows its row through `aspect-ratio`. A
+   phone keeps fixed equal rows: its backrow is already at the 44 px touch floor. */
 @media (min-width: 761px) and (min-height: 501px) {
-  .lane {
-    --unit-row: calc(var(--card-h) * 1.2);
-    --back-row: calc(var(--card-h) * 0.8);
+  .field {
+    align-content: stretch;
+  }
 
-    grid-template-rows: var(--back-row) var(--unit-row) var(--unit-row) var(--back-row);
+  .lane {
+    --def-scale: 1;
+    --row-max: calc(var(--card-h) * 1.2);
+
+    align-self: center;
+    height: 100%;
+    max-height: calc(var(--row-max) * 4 + var(--gap) * 3);
+    grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));
   }
 
   .zone[data-row="units"] > .card.cf-host--minion {
-    max-width: min(100%, calc(var(--unit-row) * 0.86));
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 0.86;
   }
 
   .zone[data-row="backrow"] > .card {
-    max-width: calc(var(--back-row) * 0.74);
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 0.74;
   }
 }
 
@@ -879,11 +932,11 @@
   justify-content: center;
   min-width: 0;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 13%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-brass-800) 30%, transparent);
   transition:
-    background-color calc(150ms * var(--anim-scale)) ease,
-    box-shadow calc(150ms * var(--anim-scale)) ease;
+    background-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard),
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 /* The backrow is the trap row: darker and dashed, so it never reads as a place for units. */
@@ -912,16 +965,16 @@
   height: calc(100% - 10px);
   translate: -50% -50%;
   border: 1px dashed color-mix(in srgb, var(--pal-brass-500) 16%, transparent);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   pointer-events: none;
-  transition: border-color calc(150ms * var(--anim-scale)) ease;
+  transition: border-color calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 .zone[data-row="units"]::before {
   border-style: solid;
   border-color: color-mix(in srgb, var(--pal-brass-500) 10%, transparent);
-  border-radius: 50% / 46%;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--pal-brass-500) 9%, transparent), transparent);
+  border-radius: var(--radius-round);
+  background: transparent;
 }
 
 .zone:has(> .card)::before {
@@ -960,7 +1013,7 @@
   width: 9px;
   height: 9px;
   border: 2px solid var(--locked);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 /* R64: held for a Reborn unit. Same "takes no summon" meaning, a different cause, so a different
@@ -972,7 +1025,7 @@
 
 .reserved-icon {
   border-color: var(--radiant);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 .resolving {
@@ -980,25 +1033,20 @@
   gap: var(--gap);
   padding: 2px;
   border: 1px dashed var(--selected);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
 }
 
 .card-resolving {
   height: calc(var(--card-h) * 0.62);
 }
 
-/* R1840000, R1840005: the Resource tray and the Credits count, drawn as the resolving strip is. */
-.resource-tray,
+/* R1840005: the Credits count, drawn as the resolving strip is. */
 .market-credits {
   display: inline-flex;
   gap: var(--gap);
   padding: 2px;
   border: 1px dashed var(--selected);
-  border-radius: var(--radius);
-}
-
-.card-tray {
-  height: calc(var(--card-h) * 0.62);
+  border-radius: var(--radius-sm);
 }
 
 /* ---------------------------------------------------------------------------------- cards --- */
@@ -1013,22 +1061,20 @@
   height: var(--card-h);
   padding: 4px 5px;
   border: 1px solid var(--pal-slate-700);
-  border-radius: 8px;
-  background: linear-gradient(165deg, var(--pal-slate-800) 0%, var(--pal-slate-900) 55%, var(--pal-slate-900) 100%);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 7%, transparent),
-    0 2px 6px color-mix(in srgb, var(--pal-black) 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--pal-slate-900);
+  box-shadow: var(--shadow-inset-top), var(--shadow-2);
   overflow: hidden;
   font-size: var(--type-xs-em);
   transition:
-    transform calc(250ms * var(--anim-scale)) ease,
-    box-shadow calc(150ms * var(--anim-scale)) ease;
+    transform calc(var(--motion-base) * var(--anim-scale)) var(--ease-standard),
+    box-shadow calc(var(--motion-fast) * var(--anim-scale)) var(--ease-standard);
 }
 
 /* Spells, traps and field cards are violet, units steel blue: the type reads before the text. */
 .card-spell {
   border-color: var(--pal-slate-700);
-  background: linear-gradient(165deg, var(--pal-slate-800) 0%, var(--pal-slate-900) 55%, var(--pal-slate-900) 100%);
+  background: var(--pal-slate-900);
 }
 
 /* In a zone the card fills the row it was given (`box-sizing: border-box` from index.css keeps
@@ -1058,13 +1104,8 @@
    must not wear one of its own. */
 .card.radiant {
   border-color: var(--pal-parchment);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--pal-parchment) 28%, transparent),
-    inset 0 0 12px color-mix(in srgb, var(--pal-gold-300) 22%, transparent),
-    0 2px 6px color-mix(in srgb, var(--pal-black) 45%, transparent);
-  background:
-    linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--pal-white) 10%, transparent) 45%, transparent 60%),
-    linear-gradient(160deg, var(--pal-brass-800), var(--pal-brass-950) 55%, var(--pal-wood-800));
+  box-shadow: var(--shadow-inset-top), var(--shadow-2);
+  background: var(--pal-brass-950);
 }
 
 /* The selection ring wins over the foil (it was the other way round, by source order). */
@@ -1078,9 +1119,7 @@
 /* A back: deep blue with a gold diamond, never anything a player could read as a number. */
 .card-back {
   border-color: var(--pal-slate-700);
-  background:
-    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--pal-violet-500) 28%, transparent), transparent 60%),
-    repeating-linear-gradient(135deg, var(--pal-slate-900), var(--pal-slate-900) 5px, var(--pal-slate-800) 5px, var(--pal-slate-800) 10px);
+  background: var(--pal-slate-900);
 }
 
 .card-back-mark {
@@ -1088,8 +1127,8 @@
   width: 34%;
   aspect-ratio: 1;
   border: 2px solid color-mix(in srgb, var(--pal-yellow-400) 55%, transparent);
-  border-radius: 3px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--pal-yellow-400) 25%, transparent), transparent 70%);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--pal-yellow-400) 25%, transparent);
   transform: rotate(45deg);
 }
 
@@ -1100,22 +1139,22 @@
   position: absolute;
   top: 4px;
   left: 4px;
-  z-index: 1;
+  z-index: var(--z-content);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 1.44em;
   height: 1.44em;
   border: 1px solid color-mix(in srgb, var(--pal-slate-100) 80%, transparent);
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--pal-sky-400), var(--pal-blue-700) 60%, var(--pal-blue-900));
+  border-radius: var(--radius-round);
+  background: var(--pal-blue-700);
   color: var(--pal-white);
   font-size: var(--type-2xs-em);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 1px color-mix(in srgb, var(--pal-black) 60%, transparent);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--pal-black) 55%, transparent);
+  box-shadow: var(--shadow-2);
 }
 
 /* Two lines at most. A block, not a line-clamped box, so the float below can shape the first
@@ -1219,26 +1258,26 @@
 .stat {
   min-width: 18px;
   padding: 0 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--pal-white);
   font-size: inherit;
   line-height: 1.4;
   text-align: center;
   text-shadow: 0 1px 1px color-mix(in srgb, var(--pal-black) 75%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 25%, transparent), 0 1px 2px color-mix(in srgb, var(--pal-black) 60%, transparent);
+  box-shadow: var(--shadow-inset-top), var(--shadow-2);
 }
 
 .stat-attack {
-  background: radial-gradient(circle at 35% 30%, var(--pal-gold-300), var(--pal-brass-500) 60%, var(--pal-wood-600));
+  background: var(--pal-brass-500);
 }
 
 .stat-health {
   margin-left: auto;
-  background: radial-gradient(circle at 35% 30%, var(--pal-red-300), var(--pal-red-600) 60%, var(--pal-red-900));
+  background: var(--pal-red-600);
 }
 
 .stat-armor {
-  background: radial-gradient(circle at 35% 30%, var(--pal-blue-200), var(--pal-grey-500) 60%, var(--pal-slate-700));
+  background: var(--pal-grey-500);
 }
 
 /* ATK is the default and says nothing; DEF is already a sideways card, and keeps its tag. */
@@ -1268,7 +1307,7 @@
 .keyword {
   padding: 0 3px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 35%, transparent);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--pal-black) 28%, transparent);
   color: var(--text);
   font-weight: 700;
@@ -1278,7 +1317,7 @@
   position: absolute;
   inset: 0;
   border: 2px solid var(--pal-blue-200);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   box-shadow: inset 0 0 10px color-mix(in srgb, var(--pal-blue-200) 45%, transparent);
   pointer-events: none;
 }
@@ -1290,7 +1329,7 @@
   position: absolute;
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   color: var(--pal-white);
   font-size: var(--type-3xs-em);
   font-weight: 700;
@@ -1313,13 +1352,13 @@
    are its tooltip, its inspect note and the hidden text. */
 .choices-truncated-badge {
   position: absolute;
-  z-index: 4;
+  z-index: var(--z-hover);
   top: 3%;
   left: 50%;
   translate: -50% 0;
   padding: 0 6px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-raised);
   color: var(--text);
   font-size: var(--type-xs-em);
@@ -1341,7 +1380,7 @@
   top: 2px;
   left: 2px;
   padding: 0 3px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--bg-raised);
   font-size: var(--type-3xs-em);
   font-weight: 700;
@@ -1354,7 +1393,7 @@
 .board button.buried-badge {
   padding: 0 3px;
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   font-family: inherit;
   font-weight: 700;
   cursor: var(--cursor-glove-point, pointer);
@@ -1390,14 +1429,14 @@
   position: absolute;
   top: 0;
   right: 0;
-  z-index: 5;
+  z-index: var(--z-popover);
   width: min(var(--switch-target), calc(50% - var(--switch-clear)));
   height: min(var(--switch-target), calc(50% - var(--switch-clear)));
   min-width: 0;
   min-height: 0;
   padding: 0;
   border: 0;
-  border-radius: 0 10px 0 0;
+  border-radius: 0 var(--radius-sm) 0 0;
   background: transparent;
   box-shadow: none;
   cursor: var(--cursor-glove-point, pointer);
@@ -1412,9 +1451,9 @@
   width: var(--switch-glyph);
   height: var(--switch-glyph);
   border: 1px solid color-mix(in srgb, var(--pal-white) 40%, transparent);
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, var(--pal-slate-700), var(--pal-slate-900));
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--pal-black) 70%, transparent);
+  border-radius: var(--radius-round);
+  background: var(--pal-slate-700);
+  box-shadow: var(--shadow-2);
   color: var(--pal-slate-100);
   font-size: var(--type-2xs);
   font-weight: 700;
@@ -1425,14 +1464,14 @@
 .board .zone > .switch-button:hover:not(:disabled) > .switch-glyph,
 .board .zone > .switch-button:focus-visible > .switch-glyph {
   border-color: var(--pal-white);
-  background: radial-gradient(circle at 40% 35%, var(--pal-blue-800), var(--pal-slate-900));
+  background: var(--pal-blue-800);
 }
 
 .board .zone > .switch-button[data-legal="true"] > .switch-glyph {
   border-color: var(--legal);
   box-shadow:
     0 0 0 1px var(--legal),
-    0 1px 3px color-mix(in srgb, var(--pal-black) 70%, transparent);
+    var(--shadow-2);
 }
 
 /* The switch's box is its whole target, short of the tile's middle (the card's), so index.css's
@@ -1509,18 +1548,20 @@
 
 .game:not([data-reduced-motion="true"])[data-impact-tier="big"] .board [data-testid^="card-"],
 .game:not([data-reduced-motion="true"])[data-impact-tier="giga"] .board [data-testid^="card-"] {
-  animation: impact-card-wobble 250ms ease-in-out both;
+  animation: impact-card-wobble 250ms var(--ease-in-out) both;
 }
 
 /* The board itself shakes in the effects layer (fx/shake.ts, B35), sized by DAMAGE_FEEL's shakePx. */
 .game:not([data-reduced-motion="true"])[data-impact-tier="giga"]::after {
   content: "";
   position: fixed;
-  z-index: 37;
+  z-index: var(--z-clock);
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 48%, color-mix(in srgb, var(--pal-red-900) 38%, transparent));
-  animation: giga-vignette-flash 400ms ease-out both;
+  background: color-mix(in srgb, var(--pal-red-900) 38%, transparent);
+  mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
+  animation: giga-vignette-flash 400ms var(--ease-out) both;
 }
 
 /* #185 Unit Slam. The landing Unit hangs for its anticipation before its landing motion
@@ -1534,28 +1575,30 @@
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="you"] .board [data-testid^="zone-you-"] .card:not([data-animating]),
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="opponent"] .board [data-testid^="zone-opponent-"] .card:not([data-animating]) {
-  animation: slam-wobble-slight 220ms ease-in-out both;
+  animation: slam-wobble-slight 220ms var(--ease-in-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="huge"] .board .zone .card:not([data-animating]) {
-  animation: impact-card-wobble 250ms ease-in-out both;
+  animation: impact-card-wobble 250ms var(--ease-in-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"] .board .card:not([data-animating]) {
-  animation: slam-wobble-hard 320ms ease-in-out both;
+  animation: slam-wobble-hard 320ms var(--ease-in-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"]::after {
   content: "";
   position: fixed;
-  z-index: 37;
+  z-index: var(--z-clock);
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 52%, color-mix(in srgb, var(--pal-wood-800) 42%, transparent));
-  animation: giga-vignette-flash 400ms ease-out both;
+  background: color-mix(in srgb, var(--pal-wood-800) 42%, transparent);
+  mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
+  animation: giga-vignette-flash 400ms var(--ease-out) both;
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
 }
 
@@ -1615,11 +1658,9 @@
   min-width: 0;
   padding: 5px 7px;
   border: 1px solid var(--pal-brass-800);
-  border-radius: 9px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--pal-gold-200) 10%, transparent), transparent 48%),
-    linear-gradient(180deg, var(--pal-brass-800), var(--pal-wood-800));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-parchment) 12%, transparent), inset 0 -2px 3px color-mix(in srgb, var(--pal-black) 42%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-inset-top);
 }
 
 .board-rail {
@@ -1657,7 +1698,7 @@
   margin: 0;
   padding: 5px 8px;
   border: 1px solid color-mix(in srgb, var(--opponent) 70%, var(--line-bright));
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--opponent) 16%, var(--pal-wood-800));
   color: var(--text);
   font-size: var(--type-xs-em);
@@ -1673,7 +1714,7 @@
   margin: 0;
   padding: 5px 8px;
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text);
   font-size: var(--type-xs-em);
@@ -1695,8 +1736,8 @@
   overflow: hidden;
   padding: 4px 7px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-white) 5%, transparent), transparent), var(--bg-sunken);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
   color: var(--text-dim);
   font-size: var(--type-3xs-em);
   text-overflow: ellipsis;
@@ -1709,7 +1750,7 @@
   overflow: hidden;
   padding: 4px 7px;
   border: 1px dashed var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text-dim);
   font-size: var(--type-3xs-em);
@@ -1727,11 +1768,9 @@
   min-width: 0;
   padding: 5px;
   border: 2px solid var(--pal-wood-800);
-  border-radius: 14px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--pal-gold-200) 22%, transparent), transparent 42%),
-    linear-gradient(180deg, var(--pal-wood-600), var(--pal-wood-800));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-parchment) 22%, transparent), inset 0 -2px 4px color-mix(in srgb, var(--pal-black) 50%, transparent), 0 2px 4px color-mix(in srgb, var(--pal-black) 45%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-inset-top), var(--shadow-2);
 }
 
 /* The log's own place on the board is enough everywhere but a phone (below). */
@@ -1748,7 +1787,7 @@
   min-height: 38px;
   font-weight: 800;
   letter-spacing: 0.03em;
-  transition: translate 80ms ease, box-shadow 120ms ease, filter 120ms ease;
+  transition: translate var(--motion-instant) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard), filter var(--motion-fast) var(--ease-standard);
 }
 
 .board .control.control-end-turn:not(:disabled) {
@@ -1768,30 +1807,30 @@
 }
 
 .board .control.control-end-turn[data-turn-state="waiting"] {
-  animation: end-turn-ready-pulse 1.2s ease-in-out infinite;
+  animation: end-turn-ready-pulse 1.2s var(--ease-in-out) infinite;
 }
 
 .board .control.control-end-turn[data-turn-state="enemy"] {
   border-color: var(--pal-wood-800);
-  background: linear-gradient(180deg, var(--pal-wood-800), var(--pal-wood-900));
+  background: var(--bg-sunken);
   color: color-mix(in srgb, var(--text) 52%, var(--pal-grey-500));
-  box-shadow: inset 0 3px 5px color-mix(in srgb, var(--pal-black) 62%, transparent);
+  box-shadow: var(--shadow-inset-top);
   cursor: not-allowed;
   filter: saturate(0.54);
 }
 
 .board .control.control-end-turn:not(:disabled):active {
   translate: 0 4px;
-  box-shadow: inset 0 4px 6px color-mix(in srgb, var(--pal-black) 48%, transparent);
+  box-shadow: var(--shadow-inset-top);
 }
 
 .board .control.control-end-turn[data-pressed="true"] {
   translate: 0 4px;
-  box-shadow: inset 0 4px 6px color-mix(in srgb, var(--pal-black) 48%, transparent);
+  box-shadow: var(--shadow-inset-top);
 }
 
 .board .control.control-end-turn[data-animating="turnEnded"] {
-  animation: end-turn-turnover 150ms ease-in-out both;
+  animation: end-turn-turnover 150ms var(--ease-in-out) both;
   transform-style: preserve-3d;
 }
 
@@ -1823,7 +1862,7 @@
   bottom: 5px;
   padding: 1px 4px;
   border: 1px solid color-mix(in srgb, var(--pal-gold-200) 28%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-900) 65%, transparent);
   color: var(--pal-gold-200);
   font-size: var(--type-3xs-em);
@@ -1862,8 +1901,8 @@
     margin-bottom: 4px;
     padding: 8px 10px;
     border: 1px solid var(--line);
-    border-radius: 12px;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--pal-white) 4%, transparent), transparent), var(--bg-sunken);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
   }
 
   .turn-plate-number {
@@ -1909,7 +1948,7 @@
   margin: 0 auto 6px;
   padding: 3px 14px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken);
   color: var(--text);
   font-size: var(--type-2xs-em);
@@ -1949,7 +1988,7 @@
   max-height: clamp(56px, 12vh, 160px);
   overflow-y: auto;
   border: 1px solid var(--line);
-  border-radius: var(--seat-radius);
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-black) 28%, transparent);
   color: var(--text-dim);
   font-size: var(--type-xs-em);
@@ -2071,7 +2110,7 @@
     flex: 1 1 100%;
     min-height: 58px;
     font-size: var(--type-xl-em);
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
   }
 
   /* Offer draw and Concede share a row, and the mute and the gear the one below (integration):
@@ -2114,6 +2153,13 @@
 @media (min-width: 1025px) {
   .board {
     --card-h: clamp(56px, min(calc((100cqh - 215px) / 5.48), calc((100cqw - 334px) / 10.66)), 112px);
+  }
+
+  /* The same width bound keeps a lane over 2.1 card heights wide here, so the rows may grow to
+     twice a card's height and a DEF card still fits across its lane at full size: 1.2 card
+     heights left a 1920x1080 screen's field with mat above and below. */
+  .lane {
+    --row-max: calc(var(--card-h) * 2);
   }
 }
 
@@ -2158,7 +2204,7 @@
     position: absolute;
     bottom: 2px;
     left: 2px;
-    z-index: 3;
+    z-index: var(--z-overlay);
     padding: 0 5px 0 3px;
   }
 
@@ -2246,7 +2292,7 @@
    card under the pointer the way a tap does. */
 @media (hover: hover) and (pointer: fine) {
   .hand-you[data-hover-preview="on"] .hand-slot:hover {
-    z-index: 4;
+    z-index: var(--z-hover);
     transform: translateY(-8px);
   }
 }
@@ -2314,7 +2360,7 @@
     padding: 6px max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom))
       max(6px, env(safe-area-inset-left));
     font-size: var(--type-sm-em);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
   }
 
   .board {
@@ -2332,7 +2378,7 @@
     top: 6px;
     right: max(6px, env(safe-area-inset-right));
     left: max(6px, env(safe-area-inset-left));
-    z-index: 20;
+    z-index: var(--z-strip);
     display: block;
     max-height: min(46%, 340px);
     padding: 10px 10px 10px 30px;
@@ -2340,7 +2386,7 @@
     background: var(--bg-raised);
     color: var(--text);
     font-size: var(--type-sm-em);
-    box-shadow: 0 14px 40px color-mix(in srgb, var(--pal-black) 60%, transparent);
+    box-shadow: var(--shadow-3);
     /* It opens at its newest line (Log.tsx), so the older ones fade under the top edge rather than
        being cut in half by it. */
     -webkit-mask-image: linear-gradient(to bottom, transparent, var(--pal-black) 18px);
@@ -2438,7 +2484,7 @@
 
   .field {
     padding: 4px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
   }
 
   .hand {
@@ -2533,7 +2579,7 @@
     position: absolute;
     bottom: 2px;
     left: 2px;
-    z-index: 3;
+    z-index: var(--z-overlay);
     padding: 0 5px 0 3px;
   }
 

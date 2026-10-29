@@ -1590,9 +1590,12 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
             assert!(
                 matches!(
                     def_of(None, def_id).set,
-                    SetName::Meditative | SetName::MeditativePlus | SetName::Stinkyscape
+                    SetName::Meditative
+                        | SetName::MeditativePlus
+                        | SetName::Stinkyscape
+                        | SetName::TrainingGrounds
                 ),
-                "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000, R1885000)"
+                "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000, R1885000, R2203000)"
             );
         }
         for (set, cards) in [
@@ -1624,6 +1627,25 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
     }
 
     #[test]
+    fn r2203000_the_shadow_ban_holds_at_most_half_the_training_grounds_set() {
+        jackioh_cards::register_all();
+        let _preview = preview_sets(&[SetName::TrainingGrounds]);
+        let cards = ai_pool()
+            .iter()
+            .filter(|id| def_of(None, id).set == SetName::TrainingGrounds)
+            .count();
+        assert!(cards > 0, "the previewed set deals its cards");
+        let banned = SHADOW_BAN
+            .iter()
+            .filter(|(def_id, _)| def_of(None, def_id).set == SetName::TrainingGrounds)
+            .count();
+        assert!(
+            banned <= cards / 2,
+            "{banned} of the {cards} Training Grounds cards banned, more than half (R2203000)"
+        );
+    }
+
+    #[test]
     fn r732000_the_unbanned_ids_are_sorted_meditative_cards_out_of_the_ban() {
         jackioh_cards::register_all();
         assert!(
@@ -1646,13 +1668,9 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
     #[test]
     fn r732000_the_gate_is_lifted_and_generation_json_counts_the_table() {
         // Generation 9 lifted R1390's gate on that table; every promotion since records its own count.
-        // The gate holds the Stinkyscape set alone since its release (#1884), until a sweep of record
-        // measures the AI on it.
-        assert!(
-            !AI_DECK_GATED_SETS.contains(&SetName::Meditative),
-            "{AI_DECK_GATED_SETS:?}"
-        );
-        assert_eq!(AI_DECK_GATED_SETS, &[SetName::Stinkyscape]);
+        // It held the Stinkyscape set from its release (#1884) until #1885's sweep of record measured
+        // the AI on it.
+        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
         let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
         assert_eq!(record["shadowBan"].as_u64(), Some(SHADOW_BAN.len() as u64));
         assert!(record["generation"].as_i64().unwrap_or_default() >= 9, "{record}");

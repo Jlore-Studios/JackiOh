@@ -169,7 +169,7 @@ function expectRule7(d: Driver, response: PracticeResponse, human: PlayerId, ai:
   const state = stateOf(debugOf(d));
   // R508: a finished free game adds the human's last board, which is what the human saw (R417).
   const over = state.result !== null;
-  // R2102000: an Easy free game adds the lethal hint, only while the human's own check says yes.
+  // R2291000: every game against the AI adds the lethal hint, only while the human's own check says yes.
   const lethal = snapshot.lethal === true;
   expect(Object.keys(snapshot).sort()).toEqual([
     "aiToAct",
@@ -637,7 +637,7 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
       const started = snapshotOf(
         d.send({
           type: "start",
-          config: config({ seed: `r265-human-first-${human}-d`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
+          config: config({ seed: `r265-human-first-${human}-e`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
         }),
       );
       const hand = handOf(started);

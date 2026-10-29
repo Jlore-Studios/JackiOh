@@ -15,6 +15,7 @@ import type { QuestView } from "./QuestView";
 import type { Slumber } from "./Slumber";
 import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
+import type { TallyView } from "./TallyView";
 import type { Tuning } from "./Tuning";
 
 /**
@@ -111,4 +112,9 @@ sick?: true,
  * as `ActivationView.reason` (R384). Only while `canAct`, or while the unit is Frozen in its
  * controller's main phase (R1174000); never on the opponent's units.
  */
-attackReason?: string, };
+attackReason?: string, 
+/**
+ * R2321000: the counts cards on the field the viewer may read keep on this Unit, in R68's order
+ * of the cards keeping them. Absent when none does, never `[]`.
+ */
+tallies?: Array<TallyView>, };

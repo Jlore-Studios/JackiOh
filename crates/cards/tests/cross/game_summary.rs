@@ -22,8 +22,9 @@ use jackioh_engine::testkit::*;
 
 /// Re-pinned for the Stinkyscape release (#1884): the decks are dealt from every set that ships, so
 /// the bigger pool moved what the forty games held, and none of them replaced a play any more; sixty
-/// games hold every kind of play the test counts.
-const GAMES: i32 = 60;
+/// games held every kind of play the test counts. Re-pinned again for #2250 (Resources in the hand):
+/// the first eighty games replace no play, and a hundred hold every kind.
+const GAMES: i32 = 100;
 const MAX_ACTIONS: usize = 3000;
 const MY_PAWN: &str = "core-096";
 
@@ -307,6 +308,13 @@ mod summarize_game_over_real_cards_s9_11 {
                                     open: false,
                                     announced: true,
                                 });
+                            }
+                        }
+                        // A play whose own cost ends the game (a hero paying with health it does not have)
+                        // is announced and never played: the game is over before its `cardPlayed`.
+                        GameEvent::GameOver { .. } => {
+                            for seat in PLAYER_IDS {
+                                plays[seat].retain(|play| !(play.open && !play.placed));
                             }
                         }
                         // A Death the play's own Tribute set off can discard the hand the card still stands in

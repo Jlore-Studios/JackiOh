@@ -1,0 +1,66 @@
+/* #2267: the hand hints' row on the viewer's own hand cards (HandHints.tsx).
+ *
+ * The row sits top-left, under the cost gem and above the name ribbon. The fan lays each
+ * card over the right part of the one before (board.css `.hand-slot + .hand-slot`), and
+ * the phone's peek shows only the top half of a card, so the top-left stays in sight.
+ *
+ * Sizes are in em of the hand card's own font-size (board.css `.card`,
+ * `.hand-you .card-hand`), so the pips scale with the card.
+ *
+ * The look is quiet: the theme's tokens, a thin line and a soft backing, no glow, no
+ * motion. The row takes no pointer event, so every click, tap, lift and drag reaches the
+ * card exactly as now.
+ *
+ * The cosmetics are on `.cf`, and the row sits outside `.cf`, so the card's cosmetics do
+ * not change it.
+ */
+
+.hand-hints {
+  position: absolute;
+  z-index: var(--z-hover);
+  top: 19%;
+  left: 4%;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.2em;
+  font-size: var(--type-2xs-em);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.hand-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1em;
+  box-sizing: border-box;
+  height: 1.4em;
+  min-width: 1.4em;
+  padding: 0 0.2em;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-sunken) 70%, transparent);
+  color: var(--text-dim);
+}
+
+.hand-hint > img {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+.hand-hint-n {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hand-hint[data-dimmed="true"] {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+/* The effects layer's stand-in copy of a card (fx/dom.ts `standInCopy`) is on the board,
+ * which wears no hints. */
+.fx-hold-card .hand-hints {
+  display: none;
+}

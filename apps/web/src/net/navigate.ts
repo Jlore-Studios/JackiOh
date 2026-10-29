@@ -70,21 +70,33 @@ function crossFades(from: string, to: string): boolean {
   return !reducedMotionNow() && typeof document.startViewTransition === "function";
 }
 
+/** R2117000: true while a view transition's update is being flushed. */
+let flushing = false;
+
 /**
  * R2117000: `update` tells the screens of a move from `from` to the address now. A move that
  * cross-fades runs it inside the browser's view transition, flushed at once so the browser
- * captures the new screen; any other runs it at once, as before.
+ * captures the new screen; any other runs it at once, as before. A move made while that flush runs
+ * (a gate's redirect, from an effect of the screen being drawn) joins it: a second transition there
+ * would skip the first and flush inside React's own commit (React #177, spec 14 B37). A transition
+ * skipped by a later one rejects its `ready`, which is no error.
  */
 function showMove(from: string, update: () => void): void {
   const to = currentPath();
   shown = to;
-  if (!crossFades(from, to)) {
+  if (flushing || !crossFades(from, to)) {
     update();
     return;
   }
-  document.startViewTransition(() => {
-    flushSync(update);
+  const transition = document.startViewTransition(() => {
+    flushing = true;
+    try {
+      flushSync(update);
+    } finally {
+      flushing = false;
+    }
   });
+  transition.ready.catch(() => undefined);
 }
 
 function go(path: string, replace: boolean): void {
@@ -343,6 +355,19 @@ export function tryPath(customId: string): string {
  */
 export function practiceDeckPath(place: number): string {
   return `${paths.practice}?deck=saved:${String(place)}`;
+}
+
+/**
+ * R2118000: the command menu's New deck action: `/decks` asking for one new deck, which the
+ * workshop makes and opens, then drops from the address.
+ */
+export function newDeckPath(): string {
+  return `${paths.decks}?new=deck`;
+}
+
+/** R2118000: whether `search` (`window.location.search`) asks the workshop for one new deck. */
+export function wantsNewDeck(search: string): boolean {
+  return queryValue(search, "new") === "deck";
 }
 
 function queryValue(search: string, key: string): string | null {

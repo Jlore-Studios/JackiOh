@@ -311,6 +311,11 @@ pub const DELAYED_RADIANT_HOOK: &str = "@delayedRadiant";
 pub const DUO_MARK: &str = "duo";
 /// R1850001: that mark's colour.
 pub const DUO_MARK_COLOR: &str = "gold";
+/// R2321001: the mark a card carries in both views while a destroy at the end of this turn watches it
+/// (R437; TG #15 In a hurry's Rush Tokens, R2198002).
+pub const END_OF_TURN_MARK: &str = "endOfTurn";
+/// R2321001: that mark's colour, the client's ember of a burning fuse.
+pub const END_OF_TURN_MARK_COLOR: &str = "orange";
 
 /// A card's def id for the record an engine delayed effect keeps: the text that made it, if any — the
 /// running `ctx.defId` first, as `prompts.resumeSelf` names it (B5 E14, R546). `(defId, radiant)`.

@@ -51,7 +51,7 @@ import {
 import Hand from "./Hand.tsx";
 import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
-import ResourceTray from "./ResourceTray.tsx";
+import Credits from "./Credits.tsx";
 import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
 import StarscapeMap from "./StarscapeMap.tsx";
@@ -536,17 +536,9 @@ function Seat({
           ))}
         </span>
       )}
-      {/* R1840000, R1840005: the Resource tray beside the hand and the Credits, each absent until
-          the view carries it. */}
-      <ResourceTray
-        side={side}
-        tray={seat.resourceTray}
-        credits={seat.marketCredits}
-        touchHold={touchHold}
-        highlight={highlight}
-        animating={animating}
-        onClick={onClick}
-      />
+      {/* R1840005: the Credits beside the hand, absent until the view carries them. A Resource is a
+          hand card (R2250000). */}
+      <Credits side={side} credits={seat.marketCredits} />
     </div>
   );
 }
@@ -743,7 +735,7 @@ export default function Board({
         </div>
 
         <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
-        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
+        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}

@@ -1,13 +1,11 @@
-//! Stinkyscape's Resources and Credits (#1840, R1840000–R1840006): each player's Resource tray beside
-//! the hand, holding at most `RESOURCE_TRAY_CAP`, with a Resource gained past it sold at once; the
-//! public Credits; "Gain a random Resource" by `RESOURCE_RARITY_ODDS`, a restricted pool and a Radiant
-//! gain; a tray Resource played with `play`; "discard a Resource" and "fill the tray"; and the
-//! asteroid's mining node. Proved on the fixtures of `fixtures/resources.rs`; the effect harness is
-//! `effects_jade.rs`'s.
+//! Stinkyscape's Resources and Credits (#1840, R1840000–R1840006; #2250, R2250000, R2250001): a
+//! Resource is a card of its holder's hand, gained into it and burned by a full one; it pays its player
+//! Credits as it is played or discarded from there; the public Credits; "Gain a random Resource" by
+//! `RESOURCE_RARITY_ODDS`, a restricted pool and a Radiant gain; "discard a Resource" and "fill your
+//! hand"; and the asteroid's mining node. Proved on the fixtures of `fixtures/resources.rs`; the effect
+//! harness is `effects_jade.rs`'s.
 
-use jackioh_engine::effects::{
-    discard_hand, discard_random, discard_resource, gain_market_credits, gain_resources, give_from_hand,
-};
+use jackioh_engine::effects::{cast, discard_random, discard_resource, gain_market_credits, gain_resources};
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::{HIDDEN_ID, view_for};
 
@@ -43,19 +41,21 @@ fn gain(state: &mut GameState, player: PlayerId, args: Value) -> Vec<GameEvent> 
     run_effect(state, gain_resources(json_as(args)), player)
 }
 
-fn tray(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    resource_tray_of(state, player)
+/// The Resources in `player`'s hand, oldest first (R2250000).
+fn held(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    resources_in_hand_of(state, player)
 }
 
-fn tray_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    tray(state, player).into_iter().map(|card| card.id).collect()
+fn held_ids(state: &GameState, player: PlayerId) -> Vec<String> {
+    held(state, player).into_iter().map(|card| card.id).collect()
 }
 
-fn sold(events: &[GameEvent]) -> Vec<i32> {
+/// The Credits each `marketCreditsChanged` of `events` reports, in order.
+fn credit_counts(events: &[GameEvent]) -> Vec<i32> {
     events
         .iter()
         .filter_map(|event| match event {
-            GameEvent::ResourceSold { credits, .. } => Some(*credits),
+            GameEvent::MarketCreditsChanged { value, .. } => Some(*value),
             _ => None,
         })
         .collect()
@@ -92,224 +92,183 @@ fn rarity_of(def_id: &str) -> &'static str {
         .unwrap_or_else(|| panic!("{def_id} is no fixture Resource"))
 }
 
+/// `player`'s hand filled to its cap with plain cards.
+fn fill_hand(state: &mut GameState, player: PlayerId) {
+    while (state.players[player].hand.len() as i32) < HAND_CAP {
+        let card = new_instance(state, "fx-5", player, Zone::Hand { player });
+        state.players[player].hand.push(card);
+    }
+}
+
 #[test]
-fn r1840000_a_gained_resource_reaches_the_tray_not_the_hand() {
+fn r1840000_r2250000_a_gained_resource_joins_the_hand_and_a_full_hand_burns_it() {
     let s = board("r1840000-gain", "p1", json!({}), json!({}));
     let mut state = s.state().clone();
-    let hand = state.players[P1].hand.clone();
-    assert_eq!(
-        state.players[P1].resource_tray, None,
-        "no tray before the first Resource"
-    );
+    let hand = state.players[P1].hand.len();
     let events = gain(&mut state, P1, json!({ "count": 1, "pool": [COMMON_A] }));
-    let held = tray(&state, P1);
-    assert_eq!(held.len(), 1);
-    assert_eq!(held[0].def_id, COMMON_A);
-    assert_eq!(held[0].zone, Zone::Tray { player: P1 });
-    assert_eq!(state.players[P1].hand, hand, "the hand is untouched");
-    assert_eq!(
-        events,
-        vec![GameEvent::ResourceGained {
-            player: P1,
-            instance_id: held[0].id.clone(),
-            def_id: COMMON_A.to_string(),
-            radiant: None,
-        }]
-    );
-    assert!(tray_holds(&state, P1, &[COMMON_A]));
-    assert!(!tray_holds(&state, P2, &[COMMON_A]));
+    let gained = held(&state, P1);
+    assert_eq!(gained.len(), 1);
+    assert_eq!(gained[0].def_id, COMMON_A);
+    assert_eq!(gained[0].zone, Zone::Hand { player: P1 });
+    assert_eq!(state.players[P1].hand.len(), hand + 1, "it takes a hand slot");
+    assert!(events.iter().any(|event| matches!(
+        event,
+        GameEvent::AddedToHand { player: P1, instance_id, def_id, .. }
+            if *instance_id == gained[0].id && def_id == COMMON_A
+    )));
+    assert!(hand_holds_any(&state, P1, &[COMMON_A]));
+    assert!(!hand_holds_any(&state, P2, &[COMMON_A]));
 
-    // A full hand takes no Resource away: it is gained all the same, and nothing burns.
-    while (state.players[P1].hand.len() as i32) < HAND_CAP {
-        let card = new_instance(&mut state, "fx-5", P1, Zone::Hand { player: P1 });
-        state.players[P1].hand.push(card);
-    }
+    // R4: a full hand burns it, and it pays nothing as it burns (R2250001).
+    fill_hand(&mut state, P1);
+    let credits = state.players[P1].market_credits;
     let events = gain(&mut state, P1, json!({ "count": 1, "pool": [RARE] }));
-    assert_eq!(types_of(&events), vec![GameEventType::ResourceGained]);
-    assert_eq!(tray(&state, P1).len(), 2);
+    assert!(
+        events
+            .iter()
+            .any(|event| matches!(event, GameEvent::Burned { def_id, owner: P1, .. } if def_id == RARE))
+    );
     assert_eq!(state.players[P1].hand.len() as i32, HAND_CAP);
-}
-
-#[test]
-fn r1840000_hand_verbs_never_reach_the_tray() {
-    let s = board(
-        "r1840000-hand-verbs",
-        "p1",
-        json!({ "hand": ["fx-1", "fx-2", "fx-3"], "tray": [COMMON_A, RARE] }),
-        json!({}),
-    );
-    let base = s.state().clone();
-    let held = tray_ids(&base, P1);
-    assert_eq!(held.len(), 2);
-    let verbs: Vec<(&str, Effect)> = vec![
-        ("discardHand", discard_hand(json_as(json!({})))),
-        ("discardRandom", discard_random(json_as(json!({ "count": 3 })))),
-        (
-            "giveFromHand",
-            give_from_hand(json_as(json!({ "from": "self", "cards": "all" }))),
-        ),
-    ];
-    for (name, verb) in verbs {
-        let mut state = base.clone();
-        run_effect(&mut state, verb, P1);
-        assert!(state.players[P1].hand.is_empty(), "{name} empties the hand");
-        assert_eq!(tray_ids(&state, P1), held, "{name} leaves the tray as it was");
-        assert!(
-            tray(&state, P2).is_empty(),
-            "{name} gives the other player no Resource"
-        );
-    }
-}
-
-#[test]
-fn r1840000_the_opponent_sees_the_tray_count_only() {
-    let s = board(
-        "r1840000-view",
-        "p1",
-        json!({ "tray": [COMMON_A, { "def": RARE, "radiant": true }] }),
-        json!({}),
-    );
-    let mut state = s.state().clone();
-    let ids = tray_ids(&state, P1);
-    match view_for(&state, P1).you.resource_tray {
-        Some(HandView::Cards(cards)) => {
-            assert_eq!(
-                cards
-                    .iter()
-                    .map(|card| card.instance_id.clone())
-                    .collect::<Vec<_>>(),
-                ids
-            );
-            assert_eq!(cards[1].def_id, RARE);
-            assert!(cards[1].radiant);
-        }
-        other => panic!("the owner reads their tray: {other:?}"),
-    }
+    assert!(!hand_holds_any(&state, P1, &[RARE]));
     assert_eq!(
-        view_for(&state, P2).opponent.resource_tray,
-        Some(HandView::Count { count: 2 })
+        state.players[P1].market_credits, credits,
+        "a burned Resource pays nothing"
     );
+}
 
-    // The gain's own event, as each seat's view carries it.
+#[test]
+fn r2250000_the_other_player_sees_a_hand_card_gained_not_which() {
+    let s = board("r2250000-view", "p1", json!({}), json!({}));
+    let mut state = s.state().clone();
     let events = gain(
         &mut state,
         P1,
         json!({ "count": 1, "radiant": true, "pool": [EPIC] }),
     );
-    let gained = tray(&state, P1).last().cloned().expect("the Epic gained");
+    let gained = held(&state, P1).last().cloned().expect("the Epic gained");
+    assert!(gained.radiant);
     state.applied.push(AppliedAction {
         nonce: "gain".to_string(),
         events,
     });
-    let gained_in = |viewer: PlayerId| -> GameEvent {
+    let added_in = |viewer: PlayerId| -> GameEvent {
         view_for(&state, viewer)
             .events
             .into_iter()
-            .find(|event| event.event_type() == GameEventType::ResourceGained)
+            .find(|event| event.event_type() == GameEventType::AddedToHand)
             .expect("the view carries the gain")
     };
-    assert_eq!(
-        gained_in(P1),
-        GameEvent::ResourceGained {
-            player: P1,
-            instance_id: gained.id.clone(),
-            def_id: EPIC.to_string(),
-            radiant: Some(true),
-        }
+    assert!(matches!(
+        added_in(P1),
+        GameEvent::AddedToHand { instance_id, def_id, .. } if instance_id == gained.id && def_id == EPIC
+    ));
+    assert!(
+        matches!(
+            added_in(P2),
+            GameEvent::AddedToHand { instance_id, def_id, .. } if instance_id == HIDDEN_ID && def_id == HIDDEN_ID
+        ),
+        "the other player learns a card was gained, not which (R97)"
     );
-    assert_eq!(
-        gained_in(P2),
-        GameEvent::ResourceGained {
-            player: P1,
-            instance_id: HIDDEN_ID.to_string(),
-            def_id: HIDDEN_ID.to_string(),
-            radiant: None,
-        },
-        "the other player learns a Resource was gained, not which"
-    );
+    match view_for(&state, P1).you.hand {
+        HandView::Cards(cards) => assert!(cards.iter().any(|card| card.instance_id == gained.id)),
+        other => panic!("the owner reads their hand: {other:?}"),
+    }
+    let count = state.players[P1].hand.len() as i32;
+    assert_eq!(view_for(&state, P2).opponent.hand, HandView::Count { count });
 
-    // A game without a Resource or a Credit carries neither key anywhere.
-    let fresh = board("r1840000-fresh", "p1", json!({}), json!({}));
+    // A game without a Credit carries the key nowhere.
+    let fresh = board("r2250000-fresh", "p1", json!({}), json!({}));
     let state_json = serde_json::to_value(fresh.state()).expect("a state serialises");
     for player in ["p1", "p2"] {
-        let side = &state_json["players"][player];
-        assert!(side.get("resourceTray").is_none(), "{player}'s state");
-        assert!(side.get("marketCredits").is_none(), "{player}'s state");
+        assert!(
+            state_json["players"][player].get("marketCredits").is_none(),
+            "{player}'s state"
+        );
     }
     for viewer in [P1, P2] {
         let view = serde_json::to_value(view_for(fresh.state(), viewer)).expect("a view serialises");
         for seat in ["you", "opponent"] {
-            assert!(view[seat].get("resourceTray").is_none(), "{viewer:?}'s {seat}");
             assert!(view[seat].get("marketCredits").is_none(), "{viewer:?}'s {seat}");
         }
     }
 }
 
 #[test]
-fn r1840000_both_trays_read_once_the_game_is_over() {
-    let s = board("r1840000-over", "p1", json!({ "tray": [COMMON_A] }), json!({}));
-    let mut state = s.state().clone();
-    let out = reduce(&state, &Action::new(ActionBody::Concede, P1, "concede"));
-    assert_eq!(out.error, None);
-    state = out.state;
-    assert!(
-        matches!(view_for(&state, P2).opponent.resource_tray, Some(HandView::Cards(ref cards)) if cards.len() == 1),
-        "R434: the game's end reveals the tray as it reveals the hand"
-    );
+fn r1840001_r2250001_a_resource_played_pays_credits_within_its_faces_range() {
+    for radiant in [false, true] {
+        let mut s = board(
+            &format!("r2250001-play-{radiant}"),
+            "p1",
+            json!({ "hand": ["fx-1", { "def": COMMON_A, "radiant": radiant }] }),
+            json!({}),
+        );
+        let id = held_ids(s.state(), P1).remove(0);
+        let health = s.state().players[P2].hero.health;
+        s.act(play_of(&id), P1, "play the Resource");
+        let events = s.last_events().to_vec();
+        let paid = credit_counts(&events);
+        assert_eq!(paid.len(), 1, "radiant {radiant}: one payment");
+        let (low, high) = if radiant { RADIANT_SELL } else { BASE_SELL };
+        assert!(
+            (low..=high).contains(&paid[0]),
+            "radiant {radiant}: {} pays in {low}..={high}",
+            paid[0]
+        );
+        assert_eq!(market_credits_of(s.state(), P1), paid[0]);
+        // Right after its `cardPlayed`, before its Cry (§10.5 step 4).
+        let kinds = types_of(&events);
+        let at = |kind: GameEventType| {
+            kinds
+                .iter()
+                .position(|each| *each == kind)
+                .unwrap_or_else(|| panic!("no {kind:?} in {kinds:?}"))
+        };
+        assert!(at(GameEventType::CardPlayed) < at(GameEventType::MarketCreditsChanged));
+        assert!(at(GameEventType::MarketCreditsChanged) < at(GameEventType::Damage));
+        assert_eq!(
+            s.state().players[P2].hero.health,
+            health - COMMON_A_DAMAGE,
+            "its Cry ran"
+        );
+    }
 }
 
 #[test]
-fn r1840001_a_resource_gained_past_the_cap_is_sold_within_its_range() {
-    let full: Vec<&str> = (0..RESOURCE_TRAY_CAP).map(|_| COMMON_A).collect();
-    let s = board("r1840001-sale", "p1", json!({ "tray": full }), json!({}));
+fn r2250001_a_discarded_resource_pays_and_a_cast_by_an_effect_pays_nothing() {
+    let s = board("r2250001-discard", "p1", json!({ "hand": [COMMON_A] }), json!({}));
     let mut state = s.state().clone();
-    let held = tray_ids(&state, P1);
-    assert_eq!(held.len() as i32, RESOURCE_TRAY_CAP);
+    state.players[P1].hand.retain(|card| card.def_id == COMMON_A);
+    let id = held_ids(&state, P1).remove(0);
+    let events = run_effect(&mut state, discard_random(json_as(json!({ "count": 1 }))), P1);
+    assert!(events.iter().any(|event| matches!(
+        event,
+        GameEvent::Discarded { instance_id, owner: P1, .. } if *instance_id == id
+    )));
+    let paid = credit_counts(&events);
+    assert_eq!(paid.len(), 1);
+    assert!((BASE_SELL.0..=BASE_SELL.1).contains(&paid[0]));
+    assert!(state.players[P1].graveyard.iter().any(|card| card.id == id));
 
-    let events = gain(&mut state, P1, json!({ "count": 1, "pool": [RARE] }));
-    assert_eq!(
-        tray_ids(&state, P1),
-        held,
-        "a ninth Resource leaves the tray at 8"
-    );
-    assert_eq!(
-        types_of(&events),
-        vec![GameEventType::ResourceSold, GameEventType::MarketCreditsChanged]
-    );
-    let credits = sold(&events)[0];
-    assert!(
-        (BASE_SELL.0..=BASE_SELL.1).contains(&credits),
-        "the base face sells for {BASE_SELL:?}, got {credits}"
-    );
-    assert_eq!(state.players[P1].market_credits, Some(credits));
-    assert_eq!(market_credits_of(&state, P1), credits);
-    let GameEvent::ResourceSold {
-        instance_id, radiant, ..
-    } = &events[0]
-    else {
-        panic!("a sale first");
-    };
-    assert_eq!(*radiant, None);
-    assert!(
-        find_instance(&state, instance_id).is_none(),
-        "the sold Resource ceased to exist"
-    );
-
-    let events = gain(
+    // Cast by an effect, it is no play of its player's: no Credits.
+    let s = board("r2250001-cast", "p1", json!({ "hand": [COMMON_A] }), json!({}));
+    let mut state = s.state().clone();
+    let id = held_ids(&state, P1).remove(0);
+    let events = run_effect(
         &mut state,
+        cast(json_as(
+            json!({ "target": { "of": "instance", "instanceId": id } }),
+        )),
         P1,
-        json!({ "count": 1, "radiant": true, "pool": [RARE] }),
     );
-    let radiant_credits = sold(&events)[0];
     assert!(
-        (RADIANT_SELL.0..=RADIANT_SELL.1).contains(&radiant_credits),
-        "the Radiant face sells for {RADIANT_SELL:?}, got {radiant_credits}"
+        events
+            .iter()
+            .any(|event| event.event_type() == GameEventType::CardPlayed),
+        "{:?}",
+        types_of(&events)
     );
-    assert_eq!(state.players[P1].market_credits, Some(credits + radiant_credits));
-    assert!(matches!(
-        events.last(),
-        Some(GameEvent::MarketCreditsChanged { player: P1, value }) if *value == credits + radiant_credits
-    ));
+    assert!(credit_counts(&events).is_empty(), "a cast pays nothing");
+    assert_eq!(state.players[P1].market_credits, None);
 }
 
 #[test]
@@ -372,7 +331,7 @@ fn r1840002_a_restricted_pool_rolls_only_its_own_rarities() {
         let events = gain(&mut state, P1, json!({ "count": 3, "pool": pool }));
         assert!(events.is_empty(), "{pool:?} gains nothing");
         assert_eq!(state.rng_cursor, cursor);
-        assert_eq!(state.players[P1].resource_tray, None);
+        assert!(held(&state, P1).is_empty());
     }
 }
 
@@ -380,100 +339,67 @@ fn r1840002_a_restricted_pool_rolls_only_its_own_rarities() {
 fn r1840002_a_radiant_gain_makes_the_resource_radiant() {
     let s = board("r1840002-radiant", "p1", json!({}), json!({}));
     let mut state = s.state().clone();
-    let events = gain(&mut state, P1, json!({ "count": 2, "radiant": true }));
-    assert_eq!(events.len(), 2);
-    for event in &events {
-        assert!(
-            matches!(
-                event,
-                GameEvent::ResourceGained {
-                    radiant: Some(true),
-                    ..
-                }
-            ),
-            "{event:?}"
-        );
-    }
-    assert!(tray(&state, P1).iter().all(|card| card.radiant));
-    let events = gain(&mut state, P1, json!({ "count": 1 }));
-    assert!(matches!(
-        events.as_slice(),
-        [GameEvent::ResourceGained { radiant: None, .. }]
-    ));
+    gain(&mut state, P1, json!({ "count": 2, "radiant": true }));
+    let gained = held(&state, P1);
+    assert_eq!(gained.len(), 2);
+    assert!(gained.iter().all(|card| card.radiant));
+    gain(&mut state, P1, json!({ "count": 1 }));
     assert!(
-        !tray(&state, P1)[2].radiant,
+        !held(&state, P1)[2].radiant,
         "a plain gain gives a plain Resource"
     );
 }
 
 #[test]
-fn r1840003_a_resource_is_played_from_the_tray() {
-    let mut s = board("r1840003-play", "p1", json!({ "tray": [COMMON_A] }), json!({}));
-    let id = tray_ids(s.state(), P1).remove(0);
-    let health = s.state().players[P2].hero.health;
+fn r1840003_r2250000_a_resource_is_played_from_the_hand_like_any_card() {
+    let mut s = board("r1840003-play", "p1", json!({ "hand": [COMMON_A] }), json!({}));
+    let id = held_ids(s.state(), P1).remove(0);
     assert_eq!(plays_naming(s.state(), P1, &id), 1, "legal_actions lists it");
-    s.act(play_of(&id), P1, "play the tray Resource");
-    assert_eq!(
-        s.state().players[P1].resource_tray,
-        None,
-        "the tray is empty again"
-    );
-    assert_eq!(
-        s.state().players[P2].hero.health,
-        health - COMMON_A_DAMAGE,
-        "its Cry ran"
-    );
+    s.act(play_of(&id), P1, "play the Resource");
+    assert!(held(s.state(), P1).is_empty(), "it left the hand");
     assert!(s.last_events().iter().any(|event| matches!(
         event,
-        GameEvent::CardPlayed { instance_id, from: Some(PlayedFrom::Tray), .. } if *instance_id == id
+        GameEvent::CardPlayed { instance_id, from: None, .. } if *instance_id == id
     )));
     s.expect_in_zone(id.as_str(), "graveyard");
-    assert!(s.pile(P1, "graveyard").iter().any(|card| card.id == id));
-}
 
-#[test]
-fn r1840003_the_listing_and_the_refusal_agree() {
-    // On p2's turn: p2 naming p1's tray card, and p1 playing its own.
-    let s = board("r1840003-refuse", "p2", json!({ "tray": [COMMON_A] }), json!({}));
-    let id = tray_ids(s.state(), P1).remove(0);
+    // On p2's turn: p2 naming p1's card, and p1 playing its own, are neither listed nor allowed.
+    let s = board("r1840003-refuse", "p2", json!({ "hand": [COMMON_A] }), json!({}));
+    let id = held_ids(s.state(), P1).remove(0);
     for (player, nonce) in [(P2, "theirs"), (P1, "off-turn")] {
         assert_eq!(plays_naming(s.state(), player, &id), 0, "{nonce}: not listed");
         let out = reduce(s.state(), &Action::new(play_of(&id), player, nonce));
         assert!(out.error.is_some(), "{nonce}: refused");
-        assert_eq!(
-            tray_ids(&out.state, P1),
-            vec![id.clone()],
-            "{nonce}: the tray is as it was"
-        );
+        assert_eq!(held_ids(&out.state, P1), vec![id.clone()], "{nonce}: still held");
     }
 }
 
 #[test]
-fn r1840004_discard_resource_takes_the_oldest_match_and_it_ceases_to_exist() {
+fn r1840004_r2250000_discard_resource_takes_the_oldest_match_from_the_hand() {
     let s = board(
         "r1840004-discard",
         "p1",
-        json!({ "tray": [COMMON_A, RARE, COMMON_A] }),
+        json!({ "hand": ["fx-1", COMMON_A, RARE, COMMON_A] }),
         json!({}),
     );
     let mut state = s.state().clone();
-    let ids = tray_ids(&state, P1);
+    let ids = held_ids(&state, P1);
     let discard = |state: &mut GameState, def_ids: Value| {
         run_effect(state, discard_resource(json_as(json!({ "defIds": def_ids }))), P1)
     };
 
     let events = discard(&mut state, json!([COMMON_A]));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        GameEvent::Discarded { instance_id, owner: P1, .. } if *instance_id == ids[0]
+    )));
     assert_eq!(
-        events,
-        vec![GameEvent::ResourceDiscarded {
-            player: P1,
-            instance_id: ids[0].clone(),
-            def_id: COMMON_A.to_string(),
-        }]
+        credit_counts(&events).len(),
+        1,
+        "it pays as any discard of it does (R2250001)"
     );
-    assert_eq!(tray_ids(&state, P1), vec![ids[1].clone(), ids[2].clone()]);
-    assert!(find_instance(&state, &ids[0]).is_none(), "it ceased to exist");
-    assert!(state.players[P1].graveyard.iter().all(|card| card.id != ids[0]));
+    assert_eq!(held_ids(&state, P1), vec![ids[1].clone(), ids[2].clone()]);
+    assert!(state.players[P1].graveyard.iter().any(|card| card.id == ids[0]));
 
     assert!(
         discard(&mut state, json!([EPIC])).is_empty(),
@@ -481,34 +407,45 @@ fn r1840004_discard_resource_takes_the_oldest_match_and_it_ceases_to_exist() {
     );
     let events = discard(&mut state, json!([]));
     assert!(
-        matches!(events.as_slice(), [GameEvent::ResourceDiscarded { instance_id, .. }] if *instance_id == ids[1]),
+        events.iter().any(|event| matches!(
+            event,
+            GameEvent::Discarded { instance_id, .. } if *instance_id == ids[1]
+        )),
         "any Resource, the oldest first"
     );
     discard(&mut state, json!([]));
-    assert_eq!(state.players[P1].resource_tray, None, "an emptied tray is absent");
+    assert!(held(&state, P1).is_empty());
     assert!(discard(&mut state, json!([])).is_empty());
+    assert!(
+        state.players[P1].hand.iter().any(|card| card.def_id == "fx-1"),
+        "a card that is no Resource stays"
+    );
 }
 
 #[test]
-fn r1840004_fill_tray_gains_up_to_the_cap() {
+fn r1840004_r2250000_fill_gains_up_to_the_hand_cap() {
     let s = board(
         "r1840004-fill",
         "p1",
-        json!({ "tray": [COMMON_A, COMMON_A, COMMON_A, COMMON_A, COMMON_A] }),
+        json!({ "hand": ["fx-1", "fx-2"] }),
         json!({}),
     );
     let mut state = s.state().clone();
+    let room = HAND_CAP - state.players[P1].hand.len() as i32;
     let events = gain(&mut state, P1, json!({ "fill": true }));
     assert_eq!(
-        types_of(&events),
-        vec![GameEventType::ResourceGained; 3],
-        "3 fill the tray to 8, and none is sold"
+        types_of(&events)
+            .iter()
+            .filter(|kind| **kind == GameEventType::AddedToHand)
+            .count() as i32,
+        room,
+        "the hand fills to its cap, and none burns"
     );
-    assert_eq!(tray(&state, P1).len() as i32, RESOURCE_TRAY_CAP);
+    assert_eq!(state.players[P1].hand.len() as i32, HAND_CAP);
     let cursor = state.rng_cursor;
     assert!(
         gain(&mut state, P1, json!({ "fill": true })).is_empty(),
-        "a full tray gains nothing"
+        "a full hand gains nothing"
     );
     assert_eq!(state.rng_cursor, cursor);
 }
@@ -562,18 +499,18 @@ fn r1840006_a_mining_node_pays_its_resources_on_death() {
             "radiant {radiant}: the hero takes the mine's damage"
         );
         s.expect_in_zone(asteroid.id.as_str(), "graveyard");
-        let held = tray(s.state(), P1);
+        let gained = held(s.state(), P1);
         assert_eq!(
-            held.len() as i32,
+            gained.len() as i32,
             ASTEROID_YIELD,
             "radiant {radiant}: its Death paid"
         );
         assert!(
-            held.iter().all(|card| card.radiant == radiant),
+            gained.iter().all(|card| card.radiant == radiant),
             "radiant {radiant}"
         );
         assert!(
-            tray(s.state(), P2).is_empty(),
+            held(s.state(), P2).is_empty(),
             "the Resources are its controller's"
         );
     }
