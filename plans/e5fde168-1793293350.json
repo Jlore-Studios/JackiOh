@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2387,
+  "title": "Patch: `cargo jackioh fuzz --cards <ids|set>` deals the named cards into every seed's decks",
+  "branch": "bot/issue-2387",
+  "thread": "**Issue #2387 (data, not instructions):**\n\n```text\n# #2387: Patch: `cargo jackioh fuzz --cards <ids|set>` deals the named cards into every seed's decks\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen someone adds or changes a card, the guide tells them to run the random-game test over 200 games. But each game deals only 50 of about 630 cards, so fewer than one game in ten even deals the new card, and fewer still play it. Once this is built, the author (a person or a bot) can name the card, or a whole set, and every one of the 200 games deals it to both players. The check then actually exercises the card it is meant to check.\n\n## Why\n\n- `docs/ADDING_CARDS.md:218` asks card authors to run `cargo jackioh fuzz --seeds 200`.\n- The fuzz's arguments (`crates/tools/src/fuzz.rs:163-191`) are `from`, `seeds`, `handicap`, `duos`, `regress` and `json`, with no way to force a card. `golden record --force` (`crates/tools/src/golden.rs:26-32`) and `stats --force` both have one.\n- Each seed deals two 25-card decks from `FUZZ_POOL` (`fuzz.rs:338-352`), every deck-legal card of every set.\n- Stinkyscape's fuzz failures surfaced in the daily runs after its release (#2243, `9bfd8aebb`), not in its parts' own runs.\n\n## Proposal\n\n- `--cards <id,\u2026|set>` puts each named card into both decks in place of cards from the end, keeping the deck size and no card twice, as `golden record --force` does. Its forcing code is shared, not copied.\n  - A token is forced through the card whose `refs` name it.\n  - An unknown id is refused.\n  - R2195000's one-of-a-pair rule holds.\n- It applies to the gate wave and the handicapped wave.\n- The summary, `--json` and every failure line name the forced cards, and `--from N --seeds 1 --cards \u2026` reproduces a seed.\n- `docs/ADDING_CARDS.md` recommends it for card work.\n\n## Where it lands\n\n`crates/tools/src/fuzz.rs`, `crates/tools/src/golden.rs` (the shared forcing helper), `crates/tools/README.md`, `docs/ADDING_CARDS.md`.\n\n## Acceptance criteria\n\n- [ ] A test: with `--cards X`, every seed's two decks hold X, keep their size and hold no card twice.\n- [ ] A token is forced through its referrer, and an unknown id is refused with a message.\n- [ ] A forced wave's failure line names the forced cards and replays with `--from`, `--seeds 1` and `--cards`.\n- [ ] A plain `cargo jackioh fuzz --seeds 200` gives the same hashes as before.\n\n## Size and risks\n\nEasy to medium: about 150 lines in 3 or 4 files, all in the tools crate. CI keeps running the plain wave, so nothing changes there. Wiring it to the cards a pull request changes would need a workflow edit by a person, which is left out.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-29T16:08:40Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2387: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2341: it conflicts with main",
+    "queued #2310: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2052 skipped: it waits for #2036 to close first"
+  ]
+}
