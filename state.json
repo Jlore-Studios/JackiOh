@@ -7810,11 +7810,9 @@
       "ci_run_id": 40784645284,
       "ci_sha": "dc7b45a312504d95b570fba37ab881e2b79d3ead",
       "cleared": {
-        "at": "2026-10-28T23:04:02Z",
+        "at": "2026-10-29T03:56:37Z",
         "by": "`claude` (strong)",
-        "carried_from": "14d03b1a2c81f4be3ba8647fe47a9a5128e3018f",
-        "resolved_by": "`claude` (strong)",
-        "sha": "dc7b45a312504d95b570fba37ab881e2b79d3ead"
+        "sha": "9f851edbce96da054776cb6d72ca81be74052488"
       },
       "died": 0,
       "difficulty": "hard",
