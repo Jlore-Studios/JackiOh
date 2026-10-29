@@ -282,12 +282,6 @@ pub const RANDOM_KEYWORD_POOL: &[&str] = &[
 /// its attack and health multiplied by this — a summon's X/X included (§7).
 pub const RADIANT_FALLBACK_FACTOR: i32 = 2;
 
-/// R657: an Animated card with no printed stats fights with this attack.
-pub const ANIMATED_FALLBACK_ATTACK: i32 = 0;
-
-/// R657: an Animated card with no printed stats fights with this health.
-pub const ANIMATED_FALLBACK_HEALTH: i32 = 1;
-
 /// R348: the least X a player may choose for an X-cost card whose X is theirs to choose (#24, #74).
 /// Heroic Power's X is its power's and never chosen (R43), so this does not reach it.
 pub const MIN_CHOSEN_X: i32 = 1;

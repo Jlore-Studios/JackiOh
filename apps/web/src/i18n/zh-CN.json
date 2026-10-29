@@ -2704,6 +2704,7 @@
   "method not allowed for this path": "此路径不支持该请求方式",
   "no such endpoint": "没有这个接口",
   "too many requests; slow down": "请求过于频繁；请慢一点",
+  "your last purchase or opening is still going through; try again in a moment": "你上一次的购买或开包仍在处理中；请稍后再试",
   "This series is over.": "这场系列赛已经结束。",
   "A game cannot start before both players have picked.": "双方玩家都选好卡组之前，对局无法开始。",
   "That deck has already won a game in this series, so it is locked.": "该卡组已在这场系列赛中赢下一局，因此被锁定。",
