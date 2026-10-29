@@ -8531,6 +8531,13 @@
     "2381": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-29T20:19:44Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "the planner gave no rating line"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
