@@ -6,6 +6,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent, RefObject, SyntheticEvent } from "react";
+import { useBackLayer } from "../../net/backLayers.ts";
 import { CLICK_SUPPRESS_MS } from "./constants.ts";
 import type { Rect } from "./placement.ts";
 
@@ -145,11 +146,11 @@ function trapTab(event: KeyboardEvent, dialog: Element): void {
 
 /**
  * What the sheet and the detail share: focus moves to `focusRef` and back, Tab stays inside, Escape,
- * the scrim and Close dismiss. A pointer click that began before the overlay opened is ignored (after
- * a long-press the lifting finger's click lands on the new scrim) unless it is a keyboard click, a
- * press that began on the element, or CLICK_SUPPRESS_MS has passed. While `closable` is false (the pack
- * scene while its open request is out, #1757), Escape and `close` do nothing, as that dialog's disabled
- * Close does.
+ * the scrim, Close and the browser's Back (R2127000) dismiss. A pointer click that began before the
+ * overlay opened is ignored (after a long-press the lifting finger's click lands on the new scrim)
+ * unless it is a keyboard click, a press that began on the element, or CLICK_SUPPRESS_MS has passed.
+ * While `closable` is false (the pack scene while its open request is out, #1757), Escape, Back and
+ * `close` do nothing, as that dialog's disabled Close does.
  */
 export function useModalOverlay(
   onClose: () => void,
@@ -202,6 +203,8 @@ export function useModalOverlay(
     restoreFocus(restoreRef.current);
     onCloseRef.current();
   };
+  // R2127000: Back closes it as Close does, and nothing while it cannot close.
+  useBackLayer(close, closable);
 
   return {
     close,
