@@ -391,7 +391,7 @@ describe("R654 public statistics route", () => {
     expect(documentTitleFor(paths.stats)).toBe("Statistics · JackiOh");
   });
 
-  it("R654 renders summary tiles and provisional banner when below 1000 live games", async () => {
+  it("R2325000 R654 shows no provisional banner and no reading notes while the source is provisional", async () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.screen, undefined, SLOW)).toBeInTheDocument();
@@ -403,8 +403,11 @@ describe("R654 public statistics route", () => {
     expect(games).toHaveTextContent("1,200");
     expect(games).not.toHaveTextContent("412");
 
-    const banner = screen.getByTestId(statsTestid.provisionalBanner);
-    expect(banner).toHaveTextContent("Provisional statistics");
+    // R2325000: no banner and no reading notes even while the source is provisional.
+    expect(screen.queryByTestId("stats-provisional-banner")).toBeNull();
+    expect(screen.queryByText("Provisional statistics")).toBeNull();
+    expect(screen.queryByText("How to read these statistics")).toBeNull();
+    expect(document.body.textContent).not.toContain("AI games + live games (provisional)");
   });
 
   it("R1646000 the fixed top keeps one summary tile, the patch's games, and no top or lowest card", async () => {
@@ -661,22 +664,6 @@ describe("R654 public statistics route", () => {
     expect(asked()).not.toContainEqual({ search: "alp", page: "2" });
   });
 
-  it("R654 fallback button switches to previous patch live data when available", async () => {
-    const user = userEvent.setup();
-    render(<StatsRoute />);
-
-    const fallbackBtn = await screen.findByTestId(statsTestid.fallbackToggle, undefined, SLOW);
-    expect(fallbackBtn).toHaveTextContent("View previous patch (0.1.0) →");
-
-    await user.click(fallbackBtn);
-
-    await waitFor(() => {
-      expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.1.0");
-    });
-    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("1,050");
-    expect(screen.getByTestId(statsTestid.summaryTotalGames)).not.toHaveTextContent("live");
-  });
-
   it("R654 shows player's personal stats when signed in and local stats exist", async () => {
     // Set mock active session
     window.localStorage.setItem(
@@ -702,18 +689,17 @@ describe("R654 public statistics route", () => {
     expect(footerLink).toHaveTextContent("Stats");
   });
 
-  it("R661 shows no data source, no count towards the gate and no word of AI padding or a gate, in the banner, the notes and the drill-down", async () => {
+  it("R2325000 R661 shows no banner, no reading notes, no source and no live-game count", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
     const page = await screen.findByTestId(statsTestid.screen, undefined, SLOW);
-    const banner = await screen.findByTestId(statsTestid.provisionalBanner, undefined, SLOW);
+    await screen.findByTestId(statsTestid.summaryTiles, undefined, SLOW);
 
-    // The banner says only that the figures are provisional (R661).
-    expect(banner).toHaveTextContent("Provisional statistics");
-    expect(banner.textContent).not.toContain("1000");
-    expect(banner.textContent).not.toMatch(/live games|AI/);
-    expect(banner.querySelector(".stats-provisional-progress")).toBeNull();
+    // R2325000: no banner and no reading notes even while the source is provisional.
+    expect(screen.queryByTestId("stats-provisional-banner")).toBeNull();
+    expect(screen.queryByText("Provisional statistics")).toBeNull();
+    expect(screen.queryByText("How to read these statistics")).toBeNull();
 
     // No tile, badge or note names a source or the gate anywhere on the page (R661).
     expect(page.querySelector(".stats-summary-badge")).toBeNull();
@@ -773,11 +759,6 @@ describe("R654 public statistics route", () => {
     expect(within(houndRow).getByText("not enough data")).toBeInTheDocument();
     expect(within(houndRow).queryByText("+27%")).not.toBeInTheDocument();
     expect(within(houndRow).queryByText("(5 / 3)")).not.toBeInTheDocument();
-
-    // The explainer says what the delta's floor is.
-    expect(
-      screen.getByText(/Played vs held needs 20 games on each side, played and drawn but not played/),
-    ).toBeInTheDocument();
   });
 
   it("R377 sorts cards by Played vs held descending and ascending", async () => {
@@ -1061,24 +1042,6 @@ describe("R377 public statistics match type", () => {
     await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "bo3")).toBe(true));
   });
 
-  it("R377 previous-patch fallback keeps the selected mode", async () => {
-    const user = userEvent.setup();
-    render(<StatsRoute />);
-
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-    await user.selectOptions(screen.getByTestId(statsTestid.modeSelect), "bo1");
-    await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "bo1")).toBe(true));
-
-    await user.click(await screen.findByTestId(statsTestid.fallbackToggle, undefined, SLOW));
-    await waitFor(() =>
-      expect(
-        cardsCalls().some(
-          (url) => url.searchParams.get("patch") === "0.1.0" && url.searchParams.get("mode") === "bo1",
-        ),
-      ).toBe(true),
-    );
-  });
-
   it("R377 drill-down carries the selected mode", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
@@ -1218,16 +1181,6 @@ describe("card statistics requests", () => {
     expect(asked).toBe(2);
   });
 
-  it("View previous patch asks the server once", async () => {
-    render(<StatsRoute />);
-
-    fireEvent.click(await screen.findByTestId(statsTestid.fallbackToggle, undefined, SLOW));
-    await waitFor(
-      () => expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.1.0"),
-      SLOW,
-    );
-    expect(requested("/api/stats/cards").filter((url) => url.searchParams.get("patch") === "0.1.0")).toHaveLength(1);
-  });
 });
 
 describe("the card drill-down dialog", () => {
@@ -1614,15 +1567,6 @@ describe("R1973002 the patch bar", () => {
     await user.selectOptions(screen.getByTestId(statsTestid.patchSelect), "0.4.0b");
     await waitFor(() => expect(window.location.search).toBe("?patch=0.4.0b"), SLOW);
     expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.4.0");
-  });
-
-  it("R1973002 the provisional banner's previous patch is the patch before, not a micro of the same one", async () => {
-    servePatches();
-    render(<StatsRoute />);
-    const fallback = await screen.findByTestId(statsTestid.fallbackToggle, undefined, SLOW);
-    expect(fallback).toHaveTextContent("View previous patch (0.6.0) →");
-    fireEvent.click(fallback);
-    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
   });
 
   it("R1973002 a server with no patch list shows no patch bar", async () => {
