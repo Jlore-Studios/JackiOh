@@ -8575,6 +8575,8 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-29T17:57:33Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
