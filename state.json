@@ -7190,6 +7190,12 @@
         "tiers": {
           "claude": "medium"
         }
+      },
+      "wip": {
+        "at": "2026-10-29T16:28:53Z",
+        "provider": "claude-3",
+        "sha": "170b157e8900b083cc9cdb4c3efcc8c4f429ea3f",
+        "start": "27e9a6057c7850cca12e40cca6ed26d6e3b00fc4"
       }
     },
     "2306": {
