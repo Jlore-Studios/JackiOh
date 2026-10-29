@@ -105,14 +105,20 @@ const TABLE_CLOSE: &str = "];";
 /// The line that closes a table of one row, whose tuple rustfmt opens on the table's own line.
 const LONE_ROW_CLOSE: &str = ")];";
 
-/// R732000, R1186000, R1885000: the sets whose cards the shadow ban holds.
-const BAN_SETS: [SetName; 3] = [SetName::Meditative, SetName::MeditativePlus, SetName::Stinkyscape];
+/// R732000, R1186000, R1885000, R2203000: the sets whose cards the shadow ban holds.
+const BAN_SETS: [SetName; 4] = [
+    SetName::Meditative,
+    SetName::MeditativePlus,
+    SetName::Stinkyscape,
+    SetName::TrainingGrounds,
+];
 
-/// R732000, R1186000: the shadow ban holds at most each of the Meditative sets' non-token cards
-/// divided by this: half. Stinkyscape's ceiling is `STINKYSCAPE_BAN_CEILING` (R1885000).
+/// R732000, R1186000, R2203000: the shadow ban holds at most each of the Meditative sets' and the
+/// Training Grounds set's non-token cards divided by this: half. Stinkyscape's ceiling is
+/// `STINKYSCAPE_BAN_CEILING` (R1885000).
 const BAN_DIVISOR: usize = 2;
 
-/// R732000, R1186000, R1885000: the most cards of `set`, which has `cards` non-token cards, the
+/// R732000, R1186000, R1885000, R2203000: the most cards of `set`, which has `cards` non-token cards, the
 /// shadow ban may hold.
 fn ban_ceiling(set: SetName, cards: usize) -> usize {
     match set {
@@ -143,7 +149,7 @@ pub struct Args {
     #[arg(long, num_args = 0.., value_name = "REPORT")]
     pub check: Option<Vec<String>>,
     /// R1678000: print, as one JSON line, the ids a sweep is due over since the commit REV: the AI's
-    /// bans and its watched Meditative, Meditative+ and Stinkyscape cards when its generation moved, and every
+    /// bans and its watched cards of the sets that may hold bans when its generation moved, and every
     /// non-token card of a set that ships now and did not. No REV: those of the AI as it is.
     #[arg(long, num_args = 0..=1, default_missing_value = "", value_name = "REV")]
     pub due: Option<String>,
@@ -825,12 +831,12 @@ fn ascending<'a>(ids: impl IntoIterator<Item = &'a str>, what: &str) -> Result<(
     }
 }
 
-/// R732000, R1186000, R1885000: a card `path` bans is one of `BAN_SETS`'.
+/// R732000, R1186000, R1885000, R2203000: a card `path` bans is one of `BAN_SETS`'.
 fn in_ban_sets(id: &str, path: &str) -> Result<()> {
     match jackioh_cards::CATALOG.get(id) {
         Some(def) if BAN_SETS.contains(&def.set) => Ok(()),
         other => bail!(
-            "{path} bans {id}, {}: the shadow ban holds Meditative, Meditative+ and Stinkyscape cards only (R732000, R1186000, R1885000)",
+            "{path} bans {id}, {}: the shadow ban holds Meditative, Meditative+, Stinkyscape and Training Grounds cards only (R732000, R1186000, R1885000, R2203000)",
             other.map_or_else(
                 || "no catalog card".to_string(),
                 |def| format!("a {:?} card", def.set)
@@ -839,7 +845,7 @@ fn in_ban_sets(id: &str, path: &str) -> Result<()> {
     }
 }
 
-/// R732000, R1186000, R1885000: `ban` holds no more of each of `BAN_SETS`' cards than its ceiling.
+/// R732000, R1186000, R1885000, R2203000: `ban` holds no more of each of `BAN_SETS`' cards than its ceiling.
 fn within_ceilings(ban: &BTreeMap<String, String>) -> Result<()> {
     for set in BAN_SETS {
         let cards = jackioh_cards::CATALOG
@@ -857,7 +863,7 @@ fn within_ceilings(ban: &BTreeMap<String, String>) -> Result<()> {
         let most = ban_ceiling(set, cards);
         if banned > most {
             bail!(
-                "the reports of record ban {banned} {set:?} cards of its {cards}, more than its ceiling (R732000, R1186000, R1885000: at most {most})"
+                "the reports of record ban {banned} {set:?} cards of its {cards}, more than its ceiling (R732000, R1186000, R1885000, R2203000: at most {most})"
             );
         }
     }
@@ -1716,6 +1722,26 @@ mod tests {
         assert_eq!(
             compose(&both, &[]).unwrap().ban.len(),
             51 + STINKYSCAPE_BAN_CEILING
+        );
+    }
+
+    #[test]
+    fn r2203000_write_admits_training_grounds_bans_up_to_half_the_set() {
+        jackioh_cards::register_all();
+        let mut ids: Vec<String> = jackioh_cards::CATALOG
+            .values()
+            .filter(|def| def.set == SetName::TrainingGrounds && !def.token)
+            .map(|def| def.id.clone())
+            .collect();
+        ids.sort();
+        let half = ids.len() / BAN_DIVISOR;
+        assert!(half > 0, "{} cards", ids.len());
+        let error = compose_one(block_of(&ids[..=half], &[]), &[]).unwrap_err();
+        assert!(error.to_string().contains("more than its ceiling"), "{error}");
+        assert!(error.to_string().contains("R2203000"), "{error}");
+        assert_eq!(
+            compose_one(block_of(&ids[..half], &[]), &[]).unwrap().ban.len(),
+            half
         );
     }
 

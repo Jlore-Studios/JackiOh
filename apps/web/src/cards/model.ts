@@ -77,6 +77,7 @@ import { CHINESE_COMMA, chineseDef, chineseKeyword, chinesePreviewLabel, drawnIn
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
 import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
+import type { NamedTally } from "./tallies.ts";
 
 export type StatTone = "base" | "buffed" | "reduced" | "damaged";
 export type FaceCost = {
@@ -244,6 +245,8 @@ export type FaceModel = {
   englishText?: string;
   /** R849000: in play, why the viewer's own unit cannot attack now (`UnitView.attackReason`), which the inspect notes spell out. */
   attackReason?: string;
+  /** R2321000: in play, the counts cards on the field keep on the unit (`UnitView.tallies`), which the inspect notes spell out. */
+  tallies?: readonly NamedTally[];
   /** R979000: in play, why a card in the viewer's own hand (or, R1571000, graveyard) cannot be played now (`CardView.playReason`), which the inspect notes spell out. */
   playReason?: string;
 };
@@ -313,6 +316,8 @@ export type InPlay = {
   grants?: readonly string[];
   /** R849000: why the viewer's own unit cannot attack now (`UnitView.attackReason`). */
   attackReason?: string;
+  /** R2321000: the counts cards on the field keep on the unit (`UnitView.tallies`), each by its keeper's name. */
+  tallies?: readonly NamedTally[];
   /** R979000: why a card in the viewer's own hand (or, R1571000, graveyard) cannot be played now (`CardView.playReason`). */
   playReason?: string;
 };
@@ -447,6 +452,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
     ...(inPlay?.createdBy === undefined ? {} : { createdBy: inPlay.createdBy }),
     ...(inPlay?.attackReason === undefined ? {} : { attackReason: inPlay.attackReason }),
+    ...(inPlay?.tallies === undefined ? {} : { tallies: inPlay.tallies }),
     ...(inPlay?.playReason === undefined ? {} : { playReason: inPlay.playReason }),
     ...(english === null ? {} : { chinese: true, englishName: english.name, englishText: english.text.full }),
     ...(source.chinese === true ? { flagged: true } : {}),

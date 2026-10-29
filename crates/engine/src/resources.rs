@@ -1,13 +1,11 @@
-//! Stinkyscape's Resources and Credits (#1840, R1840000–R1840006; docs/stinkyscape-set.md ST3, ST5).
+//! Stinkyscape's Resources and Credits (#1840, R1840000–R1840006; #2250, R2250000, R2250001;
+//! docs/stinkyscape-set.md ST3, ST5).
 //!
 //! A Resource is a (0) Spell token whose definition carries `resource` (`CardDef.resource`): its
-//! rarity and its prices. It never takes a hand slot: each player has a Resource tray beside the hand
-//! (`PlayerState.resource_tray`, the zone `Zone::Tray`), holding at most `RESOURCE_TRAY_CAP`, which
-//! no hand rule reaches — not the hand cap, a discard, a steal, a "fill your hand", a draw, the
-//! mulligan or a pass (R1840000). A Resource gained into a full tray is sold at once for a price drawn
-//! in its face's sell range, and ceases to exist (R1840001). A tray Resource is played with the `play`
-//! action, as from a hand (R1840003, `play_steps.rs`); its owner reads the tray and the other player
-//! its count (`view_for.rs`).
+//! rarity and its prices. Since #2250 it is a hand card like any other (R2250000): a gain adds it to its
+//! gainer's hand, taking a slot, and a full hand burns it (R4); it is played from the hand, and played
+//! or discarded from there it pays its player Credits, its quote (R2250001). The Resource tray it once
+//! went to is gone.
 //!
 //! "Gain a random Resource" rolls `RESOURCE_RARITY_ODDS` over the rarities its pool holds, then picks
 //! uniformly among the Resources of the rarity rolled (R1840002). The pool is every Resource in the
@@ -16,24 +14,15 @@
 //! Credits (`PlayerState.market_credits`) are a public count per player, absent until first gained
 //! (R1840005), and named apart from Jlarna's credit line (R1223), and spent at the Marketplace
 //! (`marketplace.rs`, #1853), which the first Resource or Credits either player gains opens
-//! (R1853000); while it is open a sale fetches its quote (R1853002). The verbs a card script composes
-//! are `effects::tray`'s; this module is the rule they share.
+//! (R1853000); while it is open a Resource's Credits are its quote (R1853002). The verbs a card script
+//! composes are `effects::tray`'s; this module is the rule they share.
 
 use crate::catalog::{find_def, registered_catalog};
-use crate::config::{RESOURCE_RARITY_ODDS, RESOURCE_TRAY_CAP};
+use crate::config::RESOURCE_RARITY_ODDS;
 use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, new_instance};
 use crate::wire::{GameEvent, PlayerId, PrintedRarity, ResourcePrice, Zone};
-
-/// R1840000: put `card` in its owner's Resource tray, last, as the newest Resource there.
-pub fn put_in_tray(state: &mut GameState, card: &mut CardInstance) {
-    card.zone = Zone::Tray { player: card.owner };
-    state.players[card.owner]
-        .resource_tray
-        .get_or_insert_with(Vec::new)
-        .push(card.clone());
-}
 
 /// R1840002: the ids of every Resource the catalog holds, shipped or not (R1420's set gate does not
 /// reach it), sorted.
@@ -95,8 +84,8 @@ pub fn draw_sell_price(rng: &mut Rng, price: ResourcePrice) -> i32 {
     price.sell_min + rng.int(price.sell_max.max(price.sell_min) - price.sell_min + 1)
 }
 
-/// R1840001: what a sale of this Resource fetches now: while the Marketplace is open, its quote this
-/// turn with no draw (R1853002); otherwise a whole number drawn uniformly in its face's sell range, the
+/// R1840001, R2250001: what a Resource fetches now: while the Marketplace is open, its quote this turn
+/// with no draw (R1853002); otherwise a whole number drawn uniformly in its face's sell range, the
 /// Radiant face's for a Radiant Resource. 0 for a card that is no Resource, with no draw.
 pub fn sell_price(state: &GameState, rng: &mut Rng, card: &CardInstance) -> i32 {
     if let Some(quote) = crate::marketplace::sell_quote(state, card) {
@@ -136,44 +125,31 @@ pub fn spend_market_credits(sink: &mut EngineSink<'_>, player: PlayerId, amount:
         .push(GameEvent::MarketCreditsChanged { player, value });
 }
 
-/// R1840000, R1840001: `player` gains a fresh Resource of `def_id`, Radiant when `radiant` says so,
-/// opening the Marketplace first if it is closed (R1853000), and receives it (`receive_resource`).
+/// R1840000, R2250000: `player` gains a fresh Resource of `def_id`, Radiant when `radiant` says so,
+/// opening the Marketplace first if it is closed (R1853000): it is added to their hand as any card is
+/// (`draw::add_to_hand`: `addedToHand`, hidden from the other player as a gain is, R97), and a full
+/// hand burns it (R4).
 pub fn gain_resource(sink: &mut EngineSink<'_>, player: PlayerId, def_id: &str, radiant: bool) {
     crate::marketplace::open_marketplace(sink);
-    let mut card = new_instance(&mut *sink.state, def_id, player, Zone::Tray { player });
+    let mut card = new_instance(&mut *sink.state, def_id, player, Zone::Hand { player });
     card.radiant = radiant;
-    receive_resource(sink, player, card);
+    let _ = crate::draw::add_to_hand(sink, &mut card);
 }
 
-/// R1840000, R1840001, R1853003: a fresh Resource `card` reaches `player`: into their tray with
-/// `resourceGained`; into a full one it is sold at once instead, ceasing to exist, with `resourceSold`
-/// and the Credits it fetched.
-pub fn receive_resource(sink: &mut EngineSink<'_>, player: PlayerId, mut card: CardInstance) {
-    let held = sink.state.players[player]
-        .resource_tray
-        .as_ref()
-        .map_or(0, Vec::len) as i32;
-    let flag = card.radiant.then_some(true);
-    if held >= RESOURCE_TRAY_CAP {
-        let credits = sell_price(sink.state, sink.rng, &card);
-        card.zone = Zone::Gone { player };
-        sink.events.push(GameEvent::ResourceSold {
-            player,
-            instance_id: card.id.clone(),
-            def_id: card.def_id.clone(),
-            radiant: flag,
-            credits,
-        });
-        add_market_credits(sink, player, credits);
+/// R2250000, R2250001: whether a card is a Resource (its definition carries `resource`).
+pub fn is_resource_card(state: &GameState, card: &CardInstance) -> bool {
+    find_def(Some(state), &card.def_id).is_some_and(|def| def.resource.is_some())
+}
+
+/// R2250001: a Resource `player` played or discarded from their hand pays them its Credits
+/// (`sell_price`, its quote while the Marketplace is open), reported by `marketCreditsChanged`. A card
+/// that is no Resource pays nothing and draws nothing.
+pub fn pay_resource_credits(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInstance) {
+    if !is_resource_card(sink.state, card) {
         return;
     }
-    put_in_tray(sink.state, &mut card);
-    sink.events.push(GameEvent::ResourceGained {
-        player,
-        instance_id: card.id.clone(),
-        def_id: card.def_id.clone(),
-        radiant: flag,
-    });
+    let credits = sell_price(sink.state, sink.rng, card);
+    add_market_credits(sink, player, credits);
 }
 
 #[cfg(test)]

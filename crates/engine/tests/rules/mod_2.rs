@@ -65,6 +65,7 @@ pub mod state;
 pub mod statecheck;
 pub mod stays;
 pub mod stinkyscape_verbs;
+pub mod tallies;
 pub mod targeting;
 pub mod temporary;
 pub mod terminus;

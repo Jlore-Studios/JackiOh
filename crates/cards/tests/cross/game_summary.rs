@@ -22,8 +22,9 @@ use jackioh_engine::testkit::*;
 
 /// Re-pinned for the Stinkyscape release (#1884): the decks are dealt from every set that ships, so
 /// the bigger pool moved what the forty games held, and none of them replaced a play any more; sixty
-/// games hold every kind of play the test counts.
-const GAMES: i32 = 60;
+/// games held every kind of play the test counts. Re-pinned again for #2250 (Resources in the hand):
+/// the first eighty games replace no play, and a hundred hold every kind.
+const GAMES: i32 = 100;
 const MAX_ACTIONS: usize = 3000;
 const MY_PAWN: &str = "core-096";
 
@@ -284,16 +285,21 @@ mod summarize_game_over_real_cards_s9_11 {
                             instance_id,
                             def_id,
                             former_id,
+                            on_draw,
                             ..
                         } => {
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 .or_else(|| former_id.as_deref().and_then(|id| open_play(&plays, id)))
                             {
                                 plays[seat][at].placed = true;
-                            } else if let Some(card) = state.players[*caster]
-                                .hand
-                                .iter()
-                                .find(|card| card.id == *instance_id)
+                            // R2179002: a card cast on its draw is no play, though it stood in the hand as the
+                            // step began: a Trade shuffles it in and draws it straight back (summary-cards-28's
+                            // p1 CN in a Bottle, since issue #2280's rules change took that game down a new path).
+                            } else if *on_draw != Some(true)
+                                && let Some(card) = state.players[*caster]
+                                    .hand
+                                    .iter()
+                                    .find(|card| card.id == *instance_id)
                             {
                                 // Re-pinned for #1705 (25-card decks): M+ #17 Dogpile's hand trigger casts
                                 // it from the hand it stood in as the step began, counted as a play

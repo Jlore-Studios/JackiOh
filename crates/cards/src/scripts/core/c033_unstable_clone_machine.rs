@@ -7,7 +7,7 @@
 //! R80 a library never takes a copy past `LIBRARY_CAP` (60), so no cap check here; R316 reports the
 //!     refusal as `libraryOverflow`, `copyOf` naming the played card for a view to judge it by: a Trap
 //!     set face-down stays unnamed.
-//! R70 a cast is a play too. R17 it answers `cardResolved` (§10.5 step 7), never `cardPlayed`, or a
+//! R70 a cast is a play too, but not a cast on draw (R2179002). R17 it answers `cardResolved` (§10.5 step 7), never `cardPlayed`, or a
 //!     Stockpile could draw its own copies; the event carries the resolved face (R34, R57), since #41
 //!     Sheepish transforms a played Unit at step 4. R119: a permanent is on the field before its own
 //!     `cardResolved` (the play places it at step 4), so it would copy itself; it starts counting from
@@ -79,6 +79,10 @@ fn after_play(all_radiant: bool) -> TriggerDef {
         },
         &[GameEventType::CardResolved],
         move |ctx, event| {
+            // R2179002: a card cast on draw is no play.
+            if cast_on_draw_event(event) {
+                return vec![];
+            }
             let Some(event) = resolved_of(event) else {
                 return vec![];
             };

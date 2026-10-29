@@ -104,9 +104,9 @@ pub const DUOS_PASS_MIN_GAIN: f64 = 0.5;
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiSearch {
-    /// Plays identical but for `zone` keep the lowest lane of each placement (candidates.rs
-    /// `placement_key`: what stands beside the lane or the board's edge, and in the lane's four
-    /// zones), at most this many (#1014), everywhere but the search's root: the beam's deeper levels,
+    /// Plays identical but for `zone` keep the lowest lane of each placement, or its midlane lane when
+    /// it has one (R2203001) (candidates.rs `placement_key`: what stands beside the lane or the
+    /// board's edge, and in the lane's four zones), at most this many (#1014), everywhere but the search's root: the beam's deeper levels,
     /// the lethal solver, the opponent's reply, decide's probe and the baselines. The root keeps every
     /// placement (#1635, `root_candidate_actions`), so a card that reads its own lane or its neighbours
     /// is tried in each; its screen, 400 games of improve-dev against the parent (`82d7eb4b8`), read
@@ -374,6 +374,13 @@ pub struct EvalWeights {
     pub marked_share: f64,
     /// R846: per extra turn owed.
     pub extra_turn: f64,
+    /// R846: the share of `extra_turn` an own hand card of `AI_EXTRA_TURN_CARDS` counts on top of its
+    /// hand value: a turn it owes once cast, which the beam sees only on the turn it can pay for it
+    /// (#1886: Olivian Expanse's Discover offers Event Horizon and Last Word at the cost of the rest).
+    pub extra_turn_in_hand: f64,
+    /// R1855003: per miss a side's Scanning Probes have banked (`PlayerState.anomaly_misses`), each
+    /// adding its steps to every later scan's chances. Own side only: a miss is silent (#1886).
+    pub anomaly_miss: f64,
     /// R458: per rest-of-game start-of-turn effect a side holds (`ModifierKind::StartOfTurnEffect`:
     /// Classic+ #52's card each turn, Call to Chaos's eternal cast, R1241), an annuity paid at each of
     /// its holder's turn starts. Every shipped one pays its holder.
@@ -504,6 +511,12 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     jade_step: 1.5,
     marked_share: 0.5,
     extra_turn: 5.0,
+    // #1886: untuned starts for the training lanes. An extra-turn card in hand at half the turn it
+    // owes once cast; a banked miss at about the 5 points of find chance it adds to each later scan
+    // (ANOMALY_RADIANT_STEP + ANOMALY_PLAIN_STEP) times a find's worth, a 4-cost card in hand (2.2),
+    // over a couple of scans.
+    extra_turn_in_hand: 0.5,
+    anomaly_miss: 0.2,
     // #1722: untuned starts for the training lanes, as #1086's are. A start-of-turn effect as about
     // the two cards it adds over its holder's next two turns (2 × (hand_card + hand_per_cost ×
     // opponent_hand_cost)), an alternative win at its threshold as three lethal pressures, a doomed
@@ -682,6 +695,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     jade_step: 0.0,
     marked_share: 0.0,
     extra_turn: 0.0,
+    extra_turn_in_hand: 0.0,
+    anomaly_miss: 0.0,
     // #1722's modifier terms and doomed hand came after the gates were fixed too: nothing, as it gave
     // them.
     start_of_turn_effect: 0.0,
@@ -838,6 +853,11 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// `STINKYSCAPE_BAN_CEILING` (R1885000), and emptied it again. Gating a set that ships before the AI
 /// is trained on it is listing it here.
 pub const AI_DECK_GATED_SETS: &[SetName] = &[];
+
+/// R846, #1886: the cards that owe their caster an extra turn when cast (`take_extra_turn`), priced in
+/// hand by `AI_EVAL.extra_turn_in_hand`: M #19.1 Temporal Rift, S #4.3 Event Horizon (twice on its
+/// Radiant face, counted once) and S #4.4 Last Word. A test casts each and checks the turn is owed.
+pub const AI_EXTRA_TURN_CARDS: &[&str] = &["meditative-019-1", "stinkyscape-004-3", "stinkyscape-004-4"];
 
 /// The most times the AI plays one card (one instance) in a turn. Past it the card is no candidate
 /// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell under a

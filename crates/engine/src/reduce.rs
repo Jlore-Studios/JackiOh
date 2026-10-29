@@ -12,8 +12,7 @@
 //!   play             → `playSteps.runPlaySteps` (§10.5's eight steps), listed by
 //!                      `playChoices.playActionsFor` (R81, R90) for a hand card and by
 //!                      `playChoices.graveyardPlayActionsFor` for a graveyard card a permission
-//!                      lets its player play (E11, R454), and by `playActionsFor` again for a
-//!                      Resource in its player's tray (R1840003). Step 1's validation is
+//!                      lets its player play (E11, R454). Step 1's validation is
 //!                      `playSteps.validatePlay`, which asks `playChoices.whyChoicesRefused` for
 //!                      the zone, X, embiggen, Tribute, target and mode refusals (R90) before it
 //!                      reads the cost, so the refusal a client's greyed-out button comes from and
@@ -965,13 +964,6 @@ pub(crate) fn each_legal_action(
             visit(ActionBody::from(play))?;
         }
     }
-    // R1840003: a Resource in the player's tray, played as from hand — the same `play` action, naming
-    // a tray card.
-    for card in side.resource_tray.iter().flatten() {
-        for play in play_actions_for(state, player, card) {
-            visit(ActionBody::from(play))?;
-        }
-    }
 
     // R1200: while a Mayor acts each attack is listed once per attacker with no target — the
     // reducer draws it — so the client asks for none.
@@ -1042,12 +1034,13 @@ pub(crate) fn each_legal_action(
             })?;
         }
     }
-    // R1853003: a buy of each Marketplace lot, in offer order, then a sale of each tray Resource, in
-    // tray order, then of each hand card that sells from there (R1861000), in hand order, while
+    // R1853003: a buy of each Marketplace lot offered to the player, in offer order (R2250002), then a
+    // sale of each hand card that sells from there (R1861000), in hand order, while
     // `marketplace.rs`'s refusals pass them — the refusals the reducer gives and the view's `reason`
     // reads. A closed Marketplace lists neither.
     if let Some(market) = &state.marketplace {
-        for offer in 0..market.offers.len() as i32 {
+        let offered = crate::marketplace::offered_to(market, player).count() as i32;
+        for offer in 0..offered {
             if crate::marketplace::why_market_buy_refused(state, player, offer).is_ok() {
                 visit(ActionBody::MarketBuy { offer })?;
             }
@@ -1056,7 +1049,7 @@ pub(crate) fn each_legal_action(
             .hand
             .iter()
             .filter(|card| crate::marketplace::sells_from_hand(state, card));
-        for card in side.resource_tray.iter().flatten().chain(hand_sales) {
+        for card in hand_sales {
             if crate::marketplace::why_market_sell_refused(state, player, &card.id).is_ok() {
                 visit(ActionBody::MarketSell {
                     instance_id: card.id.clone(),

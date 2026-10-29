@@ -677,6 +677,12 @@ pub struct IntRange {
 pub const KY_TEST_EASY_ADDENDS: IntRange = IntRange { min: 10, max: 99 };
 /// R420: an Easy problem's three wrong sums are a + b moved by three different ones of these.
 pub const KY_TEST_EASY_MISSES: &[i32] = &[1, -1, 2, -2, 10, -10];
+/// R2179003: since issue #2179 an Easy problem is a + b or a − b with each operand four digits, in
+/// this range, inclusive (`KY_TEST_EASY_ADDENDS` and `KY_TEST_EASY_MISSES` stay v0.5.2's).
+pub const KY_TEST_FOUR_DIGIT_OPERANDS: IntRange = IntRange { min: 1000, max: 9999 };
+/// R2179003: its three wrong answers are the answer moved by three different ones of these, a slip in
+/// one column of a four-digit sum or difference.
+pub const KY_TEST_FOUR_DIGIT_MISSES: &[i32] = &[1, -1, 10, -10, 100, -100];
 
 // Meditative+ #20 KY's Competition's question sequence (SPEC §8.9 row 20, R1184000).
 
@@ -1213,9 +1219,6 @@ pub const NIGHT_MARKET_AI_LOTS: i32 = 1;
 // Stinkyscape's Resources and Credits (#1840, `resources`).
 // ---------------------------------------------------------------------------------------------
 
-/// R1840000: the most Resources a player's Resource tray holds. A Resource gained past it is sold at
-/// once (R1840001).
-pub const RESOURCE_TRAY_CAP: i32 = 8;
 /// R1840002: "Gain a random Resource" rolls a rarity by these weights (Common 55, Rare 25, Epic 14,
 /// Legendary 5, Mythic 1, out of 100), over the rarities the pool holds, then a Resource of that
 /// rarity uniformly.
@@ -1234,8 +1237,6 @@ pub const RESOURCE_RARITY_ODDS: &[(PrintedRarity, i32)] = &[
 /// R1853001: what one lot of `MarketLot` draws its cards from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MarketPool {
-    /// Every Resource in the catalog (`resources::resource_def_ids`).
-    Resources,
     /// The ids named, those the catalog holds.
     Ids(&'static [&'static str]),
     /// Every card of the set that is no token, in catalog order.
@@ -1245,14 +1246,12 @@ pub enum MarketPool {
     SetKeyword(SetName, KeywordKind),
 }
 
-/// R1853001: one lot of the Marketplace's table: `count` different cards of `pool`, each stocked
-/// `stock_min` to `stock_max` for each player.
+/// R1853001, R2250002: one lot of the Marketplace's table: a pool and its `count`, the share of a
+/// player's offers its cards take (its weight in each draw).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MarketLot {
     pub pool: MarketPool,
     pub count: i32,
-    pub stock_min: i32,
-    pub stock_max: i32,
 }
 
 /// R1881006: the twelve v3–v5 Weapons (Stinkyscape #50 to #61), one lot of S21's table.
@@ -1309,50 +1308,20 @@ pub const MARKETPLACE_AI_CARDS: &[&str] = &[
     "stinkyscape-t-ai-09",
     "stinkyscape-t-ai-10",
 ];
-/// R1881006: the stock range of the Resources' lot.
-pub const MARKETPLACE_RESOURCE_STOCK_MIN: i32 = 4;
-pub const MARKETPLACE_RESOURCE_STOCK_MAX: i32 = 8;
-/// R1881006: the stock of each Scanning Probe's lot, Mk1 and Mk2.
-pub const MARKETPLACE_PROBE_MK1_STOCK: i32 = 6;
-pub const MARKETPLACE_PROBE_MK2_STOCK: i32 = 3;
-/// R1881006: the stock range of every other lot.
-pub const MARKETPLACE_CARD_STOCK_MIN: i32 = 1;
-pub const MARKETPLACE_CARD_STOCK_MAX: i32 = 3;
-
-/// R1881006: one of S21's lots of `count` cards of `pool` at the card lots' stock range.
+/// R1881006: one of S21's lots of `count` cards of `pool`.
 const fn card_lot(pool: MarketPool, count: i32) -> MarketLot {
-    MarketLot {
-        pool,
-        count,
-        stock_min: MARKETPLACE_CARD_STOCK_MIN,
-        stock_max: MARKETPLACE_CARD_STOCK_MAX,
-    }
+    MarketLot { pool, count }
 }
 
-/// R1853001, R1881006: the Marketplace's table of lots, rolled as it opens and every
-/// `MARKETPLACE_CYCLE_TURNS`: the set's own (S21), in the order ST3 lists them. A test registers a
-/// fixture table in its place (`testkit::register_marketplace_table`).
+/// R1853001, R1881006, R2250002: the Marketplace's table of lots, the set's own (S21) in the order ST3
+/// lists them, less its Resources' lot, which #2250 took out: a player's offers draw from it at the
+/// start of their turn, each lot weighted by its count. A test registers a fixture table in its place
+/// (`testkit::register_marketplace_table`).
 pub const MARKETPLACE_TABLE: &[MarketLot] = &[
-    MarketLot {
-        pool: MarketPool::Resources,
-        count: 4,
-        stock_min: MARKETPLACE_RESOURCE_STOCK_MIN,
-        stock_max: MARKETPLACE_RESOURCE_STOCK_MAX,
-    },
     card_lot(MarketPool::Ids(MARKETPLACE_WEAPONS), 3),
     card_lot(MarketPool::Ids(MARKETPLACE_WARP_DISRUPTORS), 2),
-    MarketLot {
-        pool: MarketPool::Ids(MARKETPLACE_PROBE_MK1),
-        count: 1,
-        stock_min: MARKETPLACE_PROBE_MK1_STOCK,
-        stock_max: MARKETPLACE_PROBE_MK1_STOCK,
-    },
-    MarketLot {
-        pool: MarketPool::Ids(MARKETPLACE_PROBE_MK2),
-        count: 1,
-        stock_min: MARKETPLACE_PROBE_MK2_STOCK,
-        stock_max: MARKETPLACE_PROBE_MK2_STOCK,
-    },
+    card_lot(MarketPool::Ids(MARKETPLACE_PROBE_MK1), 1),
+    card_lot(MarketPool::Ids(MARKETPLACE_PROBE_MK2), 1),
     card_lot(MarketPool::Ids(MARKETPLACE_DRONE_CORES), 2),
     card_lot(MarketPool::Ids(MARKETPLACE_LAUNCHERS), 1),
     card_lot(
@@ -1362,9 +1331,10 @@ pub const MARKETPLACE_TABLE: &[MarketLot] = &[
     card_lot(MarketPool::Set(SetName::Stinkyscape), 2),
     card_lot(MarketPool::Ids(MARKETPLACE_AI_CARDS), 1),
 ];
-/// R1853001: the turns between two rolls of the offering, counted on `GameState.turn` from the turn
-/// it was last rolled.
-pub const MARKETPLACE_CYCLE_TURNS: i32 = 6;
+/// R2250002: the offers the Marketplace rolls a player at the start of each of their turns.
+pub const MARKETPLACE_OFFERS_PER_TURN: i32 = 3;
+/// R2250002: the copies of each rolled offer, its owner's to buy.
+pub const MARKETPLACE_OFFER_STOCK: i32 = 1;
 /// R1853002: the Credits a lot asks for each mana of its cost up to `MARKETPLACE_FULL_PRICE_MANA`.
 pub const MARKETPLACE_CREDITS_PER_MANA: i32 = 10;
 /// R1853002: the cost up to which each mana is priced at `MARKETPLACE_CREDITS_PER_MANA`.
@@ -1379,7 +1349,8 @@ pub const MARKETPLACE_RADIANT_CHANCE: f64 = 0.2;
 pub const MARKETPLACE_RADIANT_PRICE_MULTIPLIER: i32 = 2;
 /// R1853002: a price moves each turn within a tenth of its base: the base divided by this, rounded down.
 pub const MARKETPLACE_PRICE_SPREAD_DIVISOR: i32 = 10;
-/// R1853005: the stock each cycle renews for a lot an effect added for the rest of the game.
+/// R1853005, R2250002: the copies a lot an effect added for the rest of the game holds, renewed at its
+/// owner's turn start.
 pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
 /// R1861000: the quote range a card that sells from the hand (`handSale`, Stinkyscape #89 Spice) draws
 /// each turn, its base face's: "its price is determined like all other Resources", so a Rare Resource's,

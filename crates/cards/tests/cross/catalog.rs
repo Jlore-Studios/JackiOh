@@ -920,7 +920,7 @@ const CORE: &[SpecRow] = &[
     row(
         "81",
         "Radiant Saintess",
-        c(1),
+        c(2),
         T::Unit,
         &[G::Human],
         R::Epic,
@@ -940,7 +940,7 @@ const CORE: &[SpecRow] = &[
     row(
         "83",
         "Transmogulate",
-        c(2),
+        emb(2, 4),
         T::Spell,
         &[],
         R::Legendary,
@@ -1367,7 +1367,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "20",
         "The Power to Punish",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -1496,7 +1496,16 @@ const CLASSIC: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("35", "Prep", c(0), T::Spell, &[], R::Common, NO_STATS, NO_STATS),
+    row(
+        "35",
+        "Prep",
+        emb(0, 2),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
     row("36", "Burn", c(0), T::Spell, &[], R::Common, NO_STATS, NO_STATS),
     row(
         "37",
@@ -2123,8 +2132,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(4, 4),
-        st(8, 8),
+        st(3, 3),
+        st(6, 6),
     ),
     row(
         "12",
@@ -2350,7 +2359,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "22",
         "Blood Moon",
-        c(1),
+        c(2),
         T::Trap,
         &[],
         R::Rare,
@@ -2434,8 +2443,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Felinor],
         R::Epic,
-        st(1, 1),
-        st(2, 2),
+        st(3, 3),
+        st(6, 6),
     ),
     row(
         "31",
@@ -2450,7 +2459,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "32",
         "Otherworldly Removal",
-        c(2),
+        c(3),
         T::Spell,
         &[G::Otherworldly],
         R::Epic,
@@ -3331,8 +3340,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(1, 5),
-        st(2, 10),
+        st(1, 4),
+        st(2, 8),
     ),
     row(
         "17",
@@ -3527,7 +3536,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "32",
         "Spiritually 中国",
-        c(3),
+        c(4),
         T::Spell,
         &[G::Cn],
         R::Epic,
@@ -4598,7 +4607,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "9",
         "Magic Amplifier",
-        c(1),
+        emb(1, 2),
         T::FieldSpell,
         &[],
         R::Common,
@@ -4612,8 +4621,8 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Common,
-        st(4, 1),
-        st(8, 2),
+        st(3, 1),
+        st(6, 2),
     ),
     row(
         "11",
