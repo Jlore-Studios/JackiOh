@@ -8944,7 +8944,7 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-29T19:53:03Z",
-      "run_id": "pending:b493322e-1793303655",
+      "run_id": "40944312282",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "started_at": "2026-10-29T19:54:41Z",
