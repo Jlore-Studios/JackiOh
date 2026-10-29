@@ -1,0 +1,168 @@
+// #2267: the hand hints and their row (HandHints.tsx, handHints.ts). The shipped list is
+// empty, so the hints below are this file's own: nothing a player sees changes yet.
+
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { resetLocaleForTests, setLocale, t } from "../i18n/i18n.ts";
+import { baseView, card } from "../test/fixtures.ts";
+import Hand from "./Hand.tsx";
+import HandHints, { handHintsTestid } from "./HandHints.tsx";
+import { HAND_HINTS, hintsFor, type HandHint } from "./handHints.ts";
+import { testid } from "./contract.ts";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+/** handHints.css without its comments, as the row's rules. */
+function hintCss(): string {
+  return readFileSync(join(HERE, "handHints.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
+/** A hint that prints the card's cost. */
+const COST: HandHint = {
+  id: "test-cost",
+  icon: "target",
+  applies: (c) => ({ n: c.cost, label: t("Cost") }),
+};
+
+/** A hint with no number, dimmed. */
+const DIMMED: HandHint = {
+  id: "test-dimmed",
+  icon: "cog",
+  applies: () => ({ dimmed: true, label: t("Target") }),
+};
+
+/** A hint that never applies. */
+const NEVER: HandHint = {
+  id: "test-never",
+  icon: "cog",
+  applies: () => null,
+};
+
+const VIEW = baseView();
+
+afterEach(() => {
+  cleanup();
+  resetLocaleForTests();
+});
+
+describe("#2267 the hand hints and their row", () => {
+  it("#2267 the shipped list starts empty, so no hand card wears a hint yet", () => {
+    expect(HAND_HINTS).toEqual([]);
+    const { container } = render(<HandHints card={card()} view={VIEW} />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("#2267 a hint that returns null draws nothing, and a card with no hints has no row element", () => {
+    const c = card();
+    expect(hintsFor(c, VIEW, [NEVER])).toEqual([]);
+    const { container } = render(<HandHints card={c} view={VIEW} hints={[NEVER]} />);
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByTestId(handHintsTestid(c.instanceId))).toBeNull();
+  });
+
+  it("#2267 two hints draw two pips in the list's order", () => {
+    const c = card();
+    const { container } = render(<HandHints card={c} view={VIEW} hints={[COST, NEVER, DIMMED]} />);
+    const pips = container.querySelectorAll(".hand-hint");
+    expect(pips).toHaveLength(2);
+    expect([...pips].map((pip) => pip.getAttribute("data-hint"))).toEqual(["test-cost", "test-dimmed"]);
+
+    cleanup();
+    const rerendered = render(<HandHints card={c} view={VIEW} hints={[DIMMED, COST]} />);
+    const swapped = rerendered.container.querySelectorAll(".hand-hint");
+    expect([...swapped].map((pip) => pip.getAttribute("data-hint"))).toEqual(["test-dimmed", "test-cost"]);
+  });
+
+  it("#2267 n is printed when given, and a hint without one prints no number", () => {
+    const c = card({ cost: 3 });
+    const { container } = render(<HandHints card={c} view={VIEW} hints={[COST, DIMMED]} />);
+    expect(container.querySelector('[data-hint="test-cost"] .hand-hint-n')).toHaveTextContent("3");
+    expect(container.querySelector('[data-hint="test-dimmed"] .hand-hint-n')).toBeNull();
+  });
+
+  it("#2267 dimmed: true sets data-dimmed, and a plain pip has none", () => {
+    const { container } = render(<HandHints card={card()} view={VIEW} hints={[COST, DIMMED]} />);
+    expect(container.querySelector('[data-hint="test-dimmed"]')).toHaveAttribute("data-dimmed", "true");
+    expect(container.querySelector('[data-hint="test-cost"]')).not.toHaveAttribute("data-dimmed");
+  });
+
+  it("#2267 each pip's accessible label goes through t() in the reader's language", async () => {
+    render(<HandHints card={card()} view={VIEW} hints={[COST, DIMMED]} />);
+    expect(screen.getByRole("img", { name: "Cost" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Target" })).toBeInTheDocument();
+
+    cleanup();
+    await setLocale("zh-CN");
+    render(<HandHints card={card()} view={VIEW} hints={[COST, DIMMED]} />);
+    expect(screen.getByRole("img", { name: "费用" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "目标" })).toBeInTheDocument();
+  });
+
+  it("#2267 handHints.css: the row takes no pointer event, sits top-left, and has no glow or motion", () => {
+    const css = hintCss();
+    expect(css).toMatch(/\.hand-hints \{[^}]*pointer-events: none;/);
+    expect(css).toMatch(/\.hand-hints \{[^}]*top: 19%;/);
+    expect(css).toMatch(/\.hand-hints \{[^}]*left: 4%;/);
+    expect(css).toMatch(/\.hand-hint\[data-dimmed="true"\] \{[^}]*opacity: 0\.5;[^}]*filter: grayscale\(1\);/);
+    expect(css).toMatch(/\.fx-hold-card \.hand-hints \{[^}]*display: none;/);
+    expect(css).not.toMatch(/box-shadow|animation|transition/);
+  });
+});
+
+describe("#2267 Hand.tsx draws the row on the viewer's own hand cards only", () => {
+  it("#2267 each of the viewer's own hand cards wears the row inside its card", () => {
+    const a = card({ instanceId: "hint-a" });
+    const b = card({ instanceId: "hint-b" });
+    render(<Hand side="you" view={VIEW} hand={[a, b]} hints={[COST]} />);
+    for (const id of ["hint-a", "hint-b"] as const) {
+      expect(within(screen.getByTestId(testid.handCard(id))).getByTestId(handHintsTestid(id))).toBeInTheDocument();
+    }
+  });
+
+  it("#2267 the viewer's hand draws no row without a view, with the shipped list, or when no hint applies", () => {
+    const first = render(<Hand side="you" hand={[card({ instanceId: "nv" })]} hints={[COST]} />);
+    expect(first.container.querySelector(".hand-hints")).toBeNull();
+
+    cleanup();
+    const second = render(<Hand side="you" view={VIEW} hand={[card({ instanceId: "sl" })]} />);
+    expect(second.container.querySelector(".hand-hints")).toBeNull();
+
+    cleanup();
+    const third = render(<Hand side="you" view={VIEW} hand={[card({ instanceId: "na" })]} hints={[NEVER]} />);
+    expect(third.container.querySelector(".hand-hints")).toBeNull();
+  });
+
+  it("R434 #2267 neither the opponent's backs nor their hand revealed at the game's end wear a row", () => {
+    const backs = render(<Hand side="opponent" view={VIEW} hand={{ count: 3 }} hints={[COST]} />);
+    expect(backs.container.querySelector(".hand-hints")).toBeNull();
+
+    cleanup();
+    const revealed = render(
+      <Hand side="opponent" view={VIEW} hand={[card({ instanceId: "r0" }), card({ instanceId: "r1" })]} hints={[COST]} />,
+    );
+    expect(screen.getByTestId("hand-opponent")).toHaveAttribute("data-revealed", "true");
+    expect(revealed.container.querySelector(".hand-hints")).toBeNull();
+  });
+
+  it("#2267 a click on a hint row still lifts the card and reports its hand click", () => {
+    const onClick = vi.fn();
+    render(
+      <Hand
+        side="you"
+        view={VIEW}
+        hand={[card({ instanceId: "h1" })]}
+        hints={[COST]}
+        highlight={{ legal: new Set([testid.handCard("h1")]), selected: new Set() }}
+        onClick={onClick}
+      />,
+    );
+    fireEvent.click(screen.getByTestId(handHintsTestid("h1")).querySelector(".hand-hint") as Element);
+    expect(screen.getByTestId(testid.handCard("h1")).closest(".hand-slot")).toHaveAttribute("data-lifted", "true");
+    expect(onClick).toHaveBeenCalledWith({ on: "hand", instanceId: "h1" });
+  });
+});
