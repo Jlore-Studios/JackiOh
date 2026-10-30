@@ -10002,7 +10002,7 @@
       "provider": "claude-4",
       "queued_at": "2026-10-30T04:26:17Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:94e041d3-1793334624",
+      "run_id": "41003314109",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-30T04:30:46Z",
       "stop_requested": false,
