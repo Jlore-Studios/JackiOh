@@ -21,8 +21,7 @@ use serde_json::{Map, Value};
 use crate::scripts::classic::{
     c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish,
     c023_devils_pact, c027_pestilent_slime, c032_felinor_feelings, c035_prep, c039_outbreak,
-    c052_final_gambit,
-    c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
+    c052_final_gambit, c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c023_dropshipping, c030_felinor_fuser, c033_ivory_tower,
