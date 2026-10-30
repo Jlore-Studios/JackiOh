@@ -1,0 +1,23 @@
+{
+  "title": "Every summon of a Flying Unit may land in the backrow",
+  "sources": "#2453",
+  "notes": "R2248000 made every summon's: \"fill your board\" with a Flying Unit fills the backrow after the unit row, each standing there (Drone Core VIII, stinkyscape-034; Stratos Swarm, stinkyscape-158, R1860008), and the Recruit of every permanent, the random summon from hand (R1083) and the attack summons (R1202, R1203), which looked only at the unit row before they drew or moved, read a Flying Unit's backrow too. The classifier's stage 2 against main shows those two, the Drone Interceptor token (stinkyscape-t-drone-interceptor) the fill summons, and Jogg's Box (classicplus-047), whose random Spells include them, playing differently.",
+  "player": {
+    "title": "Flying Units fill your backrow",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Filling your board with a Flying Unit fills your backrow too, after your unit row: Drone Core VIII and Stratos Swarm now fill both rows.",
+      "Pile On, Skull of J'Nari, Windfast and Windfurious Prime put a Flying Unit in your backrow when your unit row is full."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "classicplus-047",
+    "stinkyscape-034",
+    "stinkyscape-158",
+    "stinkyscape-t-drone-interceptor"
+  ]
+}

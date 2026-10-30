@@ -30,7 +30,7 @@ use crate::prelude::json_as;
 use crate::prompts::run_start_of_game;
 use crate::resolve::lazy_part;
 use crate::script::{Effect, EffectContext, EffectPart};
-use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
+use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::stays::exit_mark;
 use crate::wire::{
     AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
@@ -217,13 +217,7 @@ fn zone_and_stance_for(
     flies: bool,
 ) -> Option<(ZoneSlot, bool)> {
     let Some(lane) = at.lane else {
-        if let Some(slot) = first_entry_zone(ctx.state, player, row) {
-            return Some((slot, false));
-        }
-        if row == Row::Units && flies {
-            return first_entry_zone(ctx.state, player, Row::Backrow).map(|slot| (slot, true));
-        }
-        return None;
+        return entry_zone(ctx.state, player, row, flies);
     };
     if lane < 1 || lane > row_size(row) {
         return None;
@@ -236,11 +230,30 @@ fn zone_and_stance_for(
     }
 }
 
+/// R64, R688, R2248000: the zone a summon that names no lane enters, the leftmost entry zone of its
+/// row, else, for a Unit that `flies`, the backrow's, where it stands (R1081000).
+fn entry_zone(state: &GameState, player: PlayerId, row: Row, flies: bool) -> Option<(ZoneSlot, bool)> {
+    if let Some(slot) = first_entry_zone(state, player, row) {
+        return Some((slot, false));
+    }
+    if row == Row::Units && flies {
+        return first_entry_zone(state, player, Row::Backrow).map(|slot| (slot, true));
+    }
+    None
+}
+
 /// R2248000: whether this Unit's face, as it stands where it is (§10.4), has Flying, so a summon into a
 /// full unit row may stand it in the backrow. Read off the probe of a fresh card, or the card itself.
-fn summon_flies(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
-    card_type_of(ctx.state, card) == CardType::Unit
-        && crate::layers::unit_has(ctx.state, card, crate::wire::KeywordKind::Flying)
+fn summon_flies(state: &GameState, card: &CardInstance) -> bool {
+    card_type_of(state, card) == CardType::Unit
+        && crate::layers::unit_has(state, card, crate::wire::KeywordKind::Flying)
+}
+
+/// R2248000: whether a summon of `card` that names no lane finds a zone on `player`'s side, a Flying
+/// Unit's in the backrow included, for a caller that must know before it draws or moves anything (R129).
+pub(crate) fn summon_lands(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    row_of(card_type_of(state, card))
+        .is_some_and(|row| entry_zone(state, player, row, summon_flies(state, card)).is_some())
 }
 
 /// The body every summon shares: put the card in the zone, apply the §7 stat override, leave a Trap
@@ -331,7 +344,7 @@ pub(crate) fn summon_fresh(
 ) -> Option<CardInstance> {
     let probe = face_probe(def_id, player, at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
-    let flies = summon_flies(ctx, &probe);
+    let flies = summon_flies(ctx.state, &probe);
     let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies)?;
     summon_fresh_into(ctx, def_id, player, &slot, at, stands)
 }
@@ -412,10 +425,17 @@ fn summon_existing(
     if card.zone.z() == ZoneName::Field {
         return None;
     }
+    // R2433000: a card in the hand of a seat that plays only Core cards, and of another set, is put
+    // onto the field by no effect: a summon out of a hand is that hand's play.
+    if let Zone::Hand { player: holder } = card.zone
+        && crate::state::barred_from_play(ctx.state, holder, card)
+    {
+        return None;
+    }
     let probe = face_probe(&card.def_id, player, card.radiant || at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
     // R2248000: the card's Flying as it stands where it is (a hand's, a graveyard's printed one).
-    let flies = summon_flies(ctx, card);
+    let flies = summon_flies(ctx.state, card);
     let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies)?;
 
     let mut moving = card.clone();
@@ -718,7 +738,7 @@ pub fn summon_copy(args: SummonCopyArgs) -> Effect {
         // The zone is found before the clone exists, so a fizzle creates nothing and takes no id.
         // R2248000: a Flying copy stands in the backrow when the unit row is full.
         let at = args.placement();
-        let flies = summon_flies(ctx, &source);
+        let flies = summon_flies(ctx.state, &source);
         let Some((slot, stands)) = zone_and_stance_for(ctx, player, row, &at, flies) else {
             return;
         };
@@ -1038,7 +1058,8 @@ pub struct RecruitAllArgs {
 /// B5 E25, Classic #60 Pile On: "Recruit every permanent in your deck". The pile is read once, top
 /// down (a library) or newest first (an exile), as the effect reaches it, and each matching permanent
 /// is summoned in turn while its row has an open zone — a Unit to the unit row, the rest to the backrow,
-/// a Trap face-down (§3.2) — and passed over, staying where it is, once that row is full; a Spell or a
+/// a Trap face-down (§3.2), a Flying Unit to the backrow once the unit row is full (R2248000) — and
+/// passed over, staying where it is, once there is none; a Spell or a
 /// unit-token card stays (§6.3, R218). (X)-cost cards stay too unless they are the only valid targets
 /// (R690). Each summon is its own step of a part (`resolve::lazy_part`) whose
 /// card list is kept as its memo, so a question a summoned card asks as it arrives (R151) pauses the
@@ -1073,12 +1094,6 @@ pub fn recruit_all(args: RecruitAllArgs) -> Effect {
                     else {
                         return;
                     };
-                    let Some(row) = row_of(card_type_of(at.state, &card)) else {
-                        return;
-                    };
-                    if first_entry_zone(at.state, player, row).is_none() {
-                        return;
-                    }
                     summon_existing(at, &card, player, &SummonPlacement::default());
                 })
             })
@@ -1123,7 +1138,8 @@ pub struct FillBoardArgs {
 
 /// §7 and R64: "fill your board" summons the named token into every empty, unreserved unit zone,
 /// left to right, a Locked one included (`fill_board_zones`, R1136000), each in Chinese with the
-/// `chinese` rider (R1185002). With `row: backrow` and
+/// `chinese` rider (R1185002), and then, for a token whose face has Flying, every empty, unreserved
+/// backrow zone too, where each stands (R2248000). With `row: backrow` and
 /// `side: any` it fills each side's empty, unlocked backrow zones for that side's player, a Locked
 /// one still skipped (MD-B3, R942).
 pub fn fill_board(args: FillBoardArgs) -> Effect {
@@ -1146,16 +1162,23 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
                 Row::Units => fill_board_zones(ctx.state, player),
                 Row::Backrow => open_zones(ctx.state, player, row),
             };
+            let at = |lane: i32| SummonPlacement {
+                lane: Some(lane),
+                radiant: if radiant { Some(true) } else { None },
+                stats_override: args.stats_override,
+                armor_override: args.armor_override,
+                chinese: args.chinese,
+                ..SummonPlacement::default()
+            };
             for slot in slots {
-                let at = SummonPlacement {
-                    lane: Some(slot.lane),
-                    radiant: if radiant { Some(true) } else { None },
-                    stats_override: args.stats_override,
-                    armor_override: args.armor_override,
-                    chinese: args.chinese,
-                    ..SummonPlacement::default()
-                };
-                summon_fresh(ctx, &args.def_id, player, &at);
+                summon_fresh(ctx, &args.def_id, player, &at(slot.lane));
+            }
+            // R2248000: a Flying Unit fills its side's backrow too, after the unit row, every empty,
+            // unreserved zone left to right, a Locked one included, standing there.
+            if row == Row::Units && summon_flies(ctx.state, &probe) {
+                for lane in 1..=row_size(Row::Backrow) {
+                    summon_fresh_standing(ctx, &args.def_id, player, &at(lane));
+                }
             }
         }
     })
@@ -1226,22 +1249,30 @@ pub struct SummonRandomFromHandArgs {
 }
 
 /// R1083 (M #63): summon one random Unit card from your hand, with no Cry (R1) and summoning sick,
-/// into the leftmost open unit zone (R64). The pick is drawn only when a zone is open and a Unit is
-/// in hand (R129), and the opponent sees nothing until it lands (R177). On the Radiant face the Unit
-/// is made Radiant once it is on the field.
+/// into the leftmost open unit zone (R64), a Flying one into the backrow when the unit row is full
+/// (R2248000). The pick is drawn only when a zone is open and a Unit is in hand (R129), and the
+/// opponent sees nothing until it lands (R177). On the Radiant face the Unit is made Radiant once it is
+/// on the field.
 pub fn summon_random_from_hand(args: SummonRandomFromHandArgs) -> Effect {
     Effect::new("summonRandomFromHand", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        // R129: no open zone draws nothing — not even the pick.
-        if open_zones(ctx.state, player, Row::Units).is_empty() {
-            return;
-        }
         let units: Vec<_> = ctx.state.players[player]
             .hand
             .iter()
             .filter(|card| card_type_of(ctx.state, card) == CardType::Unit)
+            // R2433000: the pick is among the Units the hand may play.
+            .filter(|card| !crate::state::barred_from_play(ctx.state, player, card))
             .cloned()
             .collect();
+        // R129: no open zone draws nothing — not even the pick; R2248000: with a Flying Unit in hand an
+        // open backrow zone is one, since that Unit may land there.
+        let a_flier_lands = || {
+            first_entry_zone(ctx.state, player, Row::Backrow).is_some()
+                && units.iter().any(|card| summon_flies(ctx.state, card))
+        };
+        if open_zones(ctx.state, player, Row::Units).is_empty() && !a_flier_lands() {
+            return;
+        }
         let Some(picked) = ctx.sink.rng.pick(&units).cloned() else {
             return;
         };

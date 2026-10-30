@@ -34,7 +34,7 @@
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command as Process;
+use std::process::{Child, Command as Process, Stdio};
 
 use anyhow::{Context, Result, bail};
 use jackioh_cards::register_all;
@@ -765,15 +765,27 @@ fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
     Ok(diverged)
 }
 
-/// A self-play run's games as the comparison reads them: seed, log, final hash and result (not the
-/// catalog version or the commit, which name the build).
-fn selfplay_games(bin: &Path, out: &Path) -> Result<Vec<Value>> {
+/// Starts `bin`'s self-play run into `out`. The head's and the base's run side by side (#2353): each
+/// plays its games on every core but then waits on its slowest, and one after the other they took
+/// `rust (classify)` past seven minutes. On four cores one run took 162 s, nearly all of it one game
+/// of 159 s; the two took 324 s in turn and 226 s side by side, their lines the same.
+fn start_selfplay(bin: &Path, out: &Path) -> Result<Child> {
     fs::create_dir_all(out).with_context(|| format!("creating {}", out.display()))?;
     let games = SELFPLAY_GAMES.to_string();
-    let output = Process::new(bin)
+    Process::new(bin)
         .args(["selfplay", "--games", &games, "--seed", SELFPLAY_SEED, "--out"])
         .arg(out)
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .with_context(|| format!("running {} selfplay", bin.display()))
+}
+
+/// A self-play run's games, once it has finished, as the comparison reads them: seed, log, final hash
+/// and result (not the catalog version or the commit, which name the build).
+fn selfplay_games(bin: &Path, out: &Path, run: Child) -> Result<Vec<Value>> {
+    let output = run
+        .wait_with_output()
         .with_context(|| format!("running {} selfplay", bin.display()))?;
     if !output.status.success() {
         bail!(
@@ -891,10 +903,13 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
     if diff.ai && !cards_changed {
         let dir = temp_traces().with_extension("selfplay");
         let current = std::env::current_exe().context("this binary's path")?;
-        let ours = selfplay_games(&current, &dir.join("head"))?;
-        let theirs = selfplay_games(parent, &dir.join("base"))?;
+        let (head_out, base_out) = (dir.join("head"), dir.join("base"));
+        let ours = start_selfplay(&current, &head_out);
+        let theirs = start_selfplay(parent, &base_out);
+        let ours = ours.and_then(|run| selfplay_games(&current, &head_out, run));
+        let theirs = theirs.and_then(|run| selfplay_games(parent, &base_out, run));
         let _ = fs::remove_dir_all(&dir);
-        checked.ai = Some(ours != theirs);
+        checked.ai = Some(ours? != theirs?);
     }
     Ok(checked)
 }
