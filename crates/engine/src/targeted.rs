@@ -36,7 +36,8 @@ pub fn listens_for_targeted_spells(state: &GameState, player: PlayerId) -> bool 
         .any(|card| answers(state, card))
 }
 
-/// R1180005: whether `pick` names an enemy of `player` now: the opponent's hero or an active Unit.
+/// R1180005: whether `pick` names an enemy of `player` now: the opponent's hero, or a Unit acting on
+/// the opponent's side of the field.
 pub fn is_enemy_target(state: &GameState, player: PlayerId, pick: &Selection) -> bool {
     match pick {
         Selection::Hero { player: hero } => *hero != player,
@@ -100,7 +101,8 @@ pub fn take_spell_targets(state: &mut GameState, card_id: &str) -> Vec<Selection
 }
 
 /// R1180005: the card that answers `player`'s resolution of `resolved_id` (the leftmost in the hand, else
-/// the topmost in the deck) and the first of `targeted` still an enemy, which it is cast at.
+/// the topmost in the deck) and the first of `targeted` still an enemy, which it is cast at. `None` with
+/// no enemy left or no card to answer.
 pub fn spell_answer_for(
     state: &GameState,
     player: PlayerId,

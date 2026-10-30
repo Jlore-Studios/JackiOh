@@ -1739,7 +1739,6 @@ pub fn staged_book(stages: &[QuestStage]) -> QuestBook {
     }
 }
 
-
 /// A card's two scripts (SURFACE §7.1): the base face's and the radiant face's.
 #[derive(Clone, Default)]
 pub struct CardScripts {

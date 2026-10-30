@@ -155,9 +155,9 @@ fn piece_copy(state: &mut GameState, snapshot: &CardInstance) -> CardInstance {
     copy
 }
 
-/// R2249000: where `player`'s new Dormant Starship goes, and whether it stacks: an open zone before an
-/// empty Locked one (a summon enters a Locked zone, R688); with every zone of both rows taken, on top of
-/// their lane-3 unit zone, Locked or not (R1852000).
+/// R2249000: where `player`'s new Dormant Starship goes, and whether it stacks: the middle first, the
+/// backrow before the unit row, an open zone before an empty Locked one (a summon enters a Locked zone,
+/// R688); with every zone of both rows taken, on top of their lane-3 unit zone, Locked or not (R1852000).
 fn starship_zone(state: &GameState, player: PlayerId) -> (ZoneSlot, bool) {
     let in_order = |row: Row| {
         STARSHIP_LANE_ORDER
@@ -233,7 +233,8 @@ fn summon_dormant_starship(sink: &mut EngineSink<'_>, player: PlayerId) -> Optio
 /// R1852000–R1852002: a Starship Piece died (`snapshot`, as it stood, R89): a copy fuses into its
 /// owner's Dormant Starship, whoever controlled it (R1852002). The fusion is R77's with the Starship kept
 /// (its zone, Dormant status and memory), the copy on its face (R469), and never makes the Starship a
-/// piece (R1852001). Nothing happens when the fusion would pass `FUSED_CARDS_CAP` (R874000).
+/// piece (R1852001). Nothing happens when the Starship cannot be had, or when the fusion would pass
+/// `FUSED_CARDS_CAP` (R874000).
 pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
     let owner = snapshot.owner;
     let ship_id = match dormant_starship_of(sink.state, owner) {

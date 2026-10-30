@@ -2,7 +2,8 @@
 //!
 //! A cast (R70) is §10.5's pipeline entered at step 3. A random cast (Classic+ #47 Jogg's Box, #38.1
 //! Solarius Prime) makes every choice its caster would make at random, every prompt opened for the
-//! caster while it resolves included, and so does a cast made while it resolves (the chain is capped).
+//! caster while it resolves included, and so does a cast made while it resolves (the chain is capped,
+//! RANDOM_CAST_CHAIN_CAP); the other player's prompts are asked as usual.
 //! A cast that targets enemies when it can (`targetEnemies`, Classic+ #40 Appropriations, E39) aims
 //! each target pick by its declaration (R656).
 //!

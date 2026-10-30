@@ -6,10 +6,11 @@
 //! check `s` (`hash_state`, §5.2), `v` (both seats' `view_for`) and `e` (the events), each an FNV-1a 32
 //! of the canonical JSON over its UTF-16 code units; last, the ending and length must be `end`.
 //!
-//! The games are split over GOLDEN_SHARDS tests to run on many threads (the engine's `clippy.toml` bans
-//! spawning one). Never edit a trace by hand; `cargo jackioh golden bless` rewrites the file from the
-//! Rust engine. The replay is `testkit::golden::replay_game`, which `cargo jackioh golden check` runs
-//! too (#1641).
+//! A mismatch writes the Rust side's canonical text to `target/golden-diff/`; every game is replayed,
+//! so fix the earliest divergent seed and step first. The games are split over GOLDEN_SHARDS tests to
+//! run on many threads (the engine's `clippy.toml` bans spawning one). Never edit a trace by hand;
+//! `cargo jackioh golden bless` rewrites the file from the Rust engine. The replay is
+//! `testkit::golden::replay_game`, which `cargo jackioh golden check` runs too (#1641).
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
