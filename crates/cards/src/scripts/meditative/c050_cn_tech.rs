@@ -375,21 +375,19 @@ mod tests {
                 crate::sets_without_win_rates(&rows(&firsts[1..], 10, CN_TECH_MIN_GAMES)),
                 vec![SHIPPED_SETS[0]]
             );
-            // A thin row, a token's row and an unknown id still leave the first set missing.
+            // A row under the floor, and a token's row and an unknown id at it, leave the first set missing.
             let token = crate::CATALOG
                 .values()
                 .find(|def| def.set == SHIPPED_SETS[0] && def.is_token())
                 .map(|def| def.id.clone())
                 .expect("a Core token");
-            let mut thin = firsts[1..].to_vec();
-            thin.push(firsts[0].clone());
-            thin.push(token.clone());
-            thin.push("core-999".to_string());
-            let mut table = rows(&thin, 10, CN_TECH_MIN_GAMES);
-            for row in table.cards.iter_mut().filter(|row| {
-                row.id == firsts[0] || row.id == token || row.id == "core-999"
-            }) {
-                row.games = CN_TECH_MIN_GAMES - 1;
+            let mut table = rows(&firsts[1..], 10, CN_TECH_MIN_GAMES);
+            for (id, games) in [
+                (firsts[0].clone(), CN_TECH_MIN_GAMES - 1),
+                (token, CN_TECH_MIN_GAMES),
+                ("core-999".to_string(), CN_TECH_MIN_GAMES),
+            ] {
+                table.cards.push(WinRateRow { id, wins: 10, games });
             }
             assert_eq!(
                 crate::sets_without_win_rates(&table),
