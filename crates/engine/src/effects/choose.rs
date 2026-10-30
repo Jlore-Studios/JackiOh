@@ -110,8 +110,7 @@ pub fn targets_in_scope(ctx: &EffectContext<'_>, scope: Option<&TargetScope>) ->
                 if excludes_self && Some(card.id.as_str()) == self_id {
                     continue;
                 }
-                // R1081000: a Unit standing in the backrow is no backrow card (§6.1 Animated): it is
-                // one of the units.
+                // R1081000: a Unit standing in the backrow is one of the units (§6.1 Animated).
                 if crate::zones::is_standing_unit(ctx.state, card) {
                     continue;
                 }
@@ -128,9 +127,8 @@ pub fn targets_in_scope(ctx: &EffectContext<'_>, scope: Option<&TargetScope>) ->
     out
 }
 
-/// §10.6: an answered prompt's selection arrives in `ctx.targets`, so a Discover's pick — a `mode`
-/// option carrying a def id — is read from there. Play-time modes (R81) arrive in `ctx.modes`, and a
-/// resume step may be reached either way, so both are offered in order.
+/// §10.6: an answered prompt's `mode` picks (`ctx.targets`), then the play-time modes (R81,
+/// `ctx.modes`), since a resume step may be reached either way.
 pub fn chosen_options(ctx: &EffectContext<'_>) -> Vec<String> {
     let mut picked: Vec<String> = ctx
         .targets
@@ -196,10 +194,9 @@ pub struct ChooseModeArgs {
     pub labels: Option<IndexMap<String, String>>,
 }
 
-/// §6.3 Choose one: a mode prompt whose answer resumes the script at `step`. B5 E18: `by: "enemy"`
-/// hands it to the other player (Classic #8 Pickle), but the answered step still runs as this card's
-/// controller (`prompts::PROMPT_OWNER_KEY`), so "you draw" is yours. `labels` gives an option a caption
-/// other than its own string (a quest reward's text, a difficulty's rolled reward).
+/// §6.3 Choose one, resuming at `step`. B5 E18: `by: "enemy"` hands it to the other player
+/// (Classic #8 Pickle), but the step still runs as this card's controller
+/// (`prompts::PROMPT_OWNER_KEY`). `labels` captions an option other than by its own string.
 pub fn choose_mode(args: ChooseModeArgs) -> Effect {
     Effect::new("chooseMode", move |ctx| {
         let player = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
@@ -339,10 +336,9 @@ impl std::fmt::Debug for ChooseFromHandArgs {
     }
 }
 
-/// A pick from a hand: your own by default (#26, #80). B5 E16, E17, E18: `of` names whose hand and
-/// `by` who picks; the answer continues as this card's controller. Only the chooser is shown the
-/// options (§10.8, R81, Classic #11 Mind Melt): the hand's owner sees only that a prompt is open.
-/// `min` and `max` default to `count` picks, fewer when the hand is shorter.
+/// A pick from a hand (#26, #80). B5 E16, E17, E18: `of` names whose hand and `by` who picks; the
+/// answer continues as this card's controller. Only the chooser sees the options (§10.8, R81,
+/// Classic #11 Mind Melt). `min` and `max` default to `count`, fewer when the hand is shorter.
 pub fn choose_from_hand(args: ChooseFromHandArgs) -> Effect {
     Effect::new("chooseFromHand", move |ctx| {
         let whose = player_of(ctx, args.of.unwrap_or(PlayerSpec::SelfSide));
@@ -389,7 +385,7 @@ pub fn choose_from_hand(args: ChooseFromHandArgs) -> Effect {
     })
 }
 
-// B5 E17, E18: the new prompt kinds (docs/classic-sets.md B5)
+// B5 E17, E18 prompt kinds (docs/classic-sets.md B5)
 
 /// `choose_cost_in_hand`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -407,10 +403,8 @@ pub struct ChooseCostInHandArgs {
     pub data: StepData,
 }
 
-/// B5 E17: the costs present in a hand, each an option of a `mode` prompt (Classic #11 Mind Melt's
-/// Radiant). A cost is the one the card would be played for now (R65, `effective_cost`), as
-/// `exile_matching`'s `cost` reads it, so the group chosen is the group exiled. Captions name the cards,
-/// shown only to the chooser; `chosen_number` reads the answer. An empty hand asks nothing.
+/// B5 E17: a `mode` prompt of a hand's costs (Classic #11 Mind Melt's Radiant), each as R65 reads it
+/// now, as `exile_matching` does, so the group chosen is the group exiled.
 pub fn choose_cost_in_hand(args: ChooseCostInHandArgs) -> Effect {
     Effect::new("chooseCostInHand", move |ctx| {
         let whose = player_of(ctx, args.of.unwrap_or(PlayerSpec::Enemy));
@@ -463,9 +457,8 @@ pub struct ChooseNumberArgs {
     pub data: StepData,
 }
 
-/// B5 E18: a number from a fixed range, `from` to `to` inclusive (Classic #18 Glitch in the System
-/// declares its 0 to 10 with the play instead, as a `ModeDecl` of kind `number`, R81). The options are
-/// the numbers, so they reveal nothing. `chosen_number` reads the answer.
+/// B5 E18: a number from `from` to `to` inclusive (Classic #18 Glitch in the System declares its with
+/// the play instead, a `number` `ModeDecl`, R81). `chosen_number` reads the answer.
 pub fn choose_number(args: ChooseNumberArgs) -> Effect {
     Effect::new("chooseNumber", move |ctx| {
         let low = args.from.min(args.to);
@@ -493,8 +486,7 @@ pub fn choose_number(args: ChooseNumberArgs) -> Effect {
     })
 }
 
-/// B5 E18: the number an answered `number` prompt (or a play's `number` mode) carries, if any: the
-/// first non-blank option that, trimmed and read as a decimal number, is an integer.
+/// B5 E18: the first chosen option that, trimmed, reads as an integer (a `number` prompt or mode).
 pub fn chosen_number(ctx: &EffectContext<'_>) -> Option<i32> {
     for option in chosen_options(ctx) {
         let trimmed = option.trim();
@@ -533,15 +525,13 @@ pub struct ChooseCraftArgs {
     pub data: StepData,
 }
 
-/// ME-CRAFT (Meditative #17, R880): the block editor's prompt. Its options are the seeded presets
-/// within the budget, and its answer one `Selection::Craft`: a preset, or the player's own recipe,
-/// which the reducer validates (R90). `legal_actions` enumerates the presets, so the AI, the random
-/// policy and a timeout all answer with one (R881, R79).
+/// ME-CRAFT (Meditative #17, R880): the block editor's prompt, offering the seeded presets within
+/// the budget and answered by one `Selection::Craft`, a preset or the player's own recipe, which the
+/// reducer validates (R90); `legal_actions` offers the presets (R881, R79).
 ///
-/// `mode` (Meditative+, #1182): a potion mode fixes the cost and the frame and rolls Potions as its
-/// presets (R1182000, R1182001); `scratch` rolls Meditative #17's (R1182002). The open prompt carries
-/// the mode (`PendingChoice.craft_mode`), which the answer check and the client read. R1563007: every
-/// prompt but Scratch Pad's first draws its offer, the only blocks its presets and answer use.
+/// `mode` (#1182): a potion mode fixes the cost and frame and rolls Potions (R1182000, R1182001);
+/// `scratch` rolls Meditative #17's (R1182002). R1563007: every prompt but Scratch Pad's first draws
+/// its offer, the only blocks its presets and answer use. Both ride `PendingChoice`.
 pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
     Effect::new("chooseCraft", move |ctx| {
         let cost = match args.mode.and_then(crate::wire::CraftMode::frame) {
@@ -574,8 +564,7 @@ pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
         );
         asked.owner = Some(owner);
         asked.budget = Some(cost);
-        // The mode rides on the prompt that opened (a random cast answers it at once, from the
-        // mode's own presets, and opens none).
+        // A random cast answers at once from the mode's presets and opens no prompt.
         if open_prompt(ctx, asked).is_some()
             && let Some(pending) = ctx.sink.state.pending.as_mut()
         {
@@ -619,14 +608,12 @@ pub struct ChooseAnswerArgs {
     pub data: StepData,
 }
 
-/// B5 E18, R465: a multiple-choice problem (Classic+ #42 KY's Test), `correct` indexing `options`.
-/// The options are shuffled by the match rng (unless `shuffle` is false) under letters
-/// (`ANSWER_OPTION_IDS`), and the right letter rides the resume data under `prompts::ANSWER_KEY`,
-/// which `view_for` never sends and the AI's redaction strips (R185). The answered step reads the
-/// verdict with `answered_correctly`. At most `ANSWER_OPTION_IDS.len()` options; fewer than two asks nothing.
+/// B5 E18, R465: a multiple-choice problem (Classic+ #42 KY's Test), shuffled by the match rng
+/// under letters. The right letter rides the resume data under `prompts::ANSWER_KEY`, which
+/// `view_for` never sends and the AI's redaction strips (R185); `answered_correctly` reads it.
 ///
-/// R1184000: a `streak` adds Stop last, a `none` pick under no letter (`prompts::ANSWER_STOP_KEY`) that
-/// `answered_correctly` never judges right, and the prompt carries the streak (`PendingChoice.streak`).
+/// R1184000: a `streak` adds Stop last (`prompts::ANSWER_STOP_KEY`, never judged right) and rides
+/// the prompt (`PendingChoice.streak`).
 pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
     Effect::new("chooseAnswer", move |ctx| {
         let given: Vec<(String, usize)> = args
@@ -692,9 +679,8 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
     })
 }
 
-/// R465: whether the answer to the step's `answer` prompt was the right one. False with no key in the
-/// data: a state whose key was stripped (the AI's redacted copy) judges no answer right, so what the
-/// AI simulates never tells one option from another and it answers from what the prompt shows.
+/// R465: whether the step's `answer` prompt was answered right. False with no key in the data, so
+/// the AI's redacted copy never tells one option from another.
 pub fn answered_correctly(ctx: &EffectContext<'_>) -> bool {
     let Some(key) = answer_key_of(&ctx.data) else {
         return false;
@@ -751,10 +737,9 @@ pub struct ChooseCellArgs {
     pub data: StepData,
 }
 
-/// B5 E18: a board cell, empty or not, as a `zone` selection (Classic+ #62 KY's Papaya's points). The
-/// options run as the rows lie from the chooser's hero outward: its own backrow then units, lane 1
-/// upward, then the other side's units then backrow. `done` adds an option that picks no cell
-/// (`{ pick: "none" }`), for a question a player may stop answering. `chosen_cells` reads it.
+/// B5 E18: a board cell, empty or not, as a `zone` selection (Classic+ #62 KY's Papaya's points),
+/// offered as the rows lie from the chooser's hero outward. `done` adds a pick of no cell, for a
+/// question a player may stop answering. `chosen_cells` reads it.
 pub fn choose_cell(args: ChooseCellArgs) -> Effect {
     Effect::new("chooseCell", move |ctx| {
         let chooser = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
@@ -860,9 +845,8 @@ pub struct ChooseRewardArgs {
     pub data: StepData,
 }
 
-/// B5 E18: a completed quest's reward (Classic #90 In Too Deep): one of `rewards`, each an id the
-/// answer carries back (`chosen_options`) under its caption. Asked of the card's controller whoever's
-/// turn it is — a non-active player's prompt on the opponent's turn (R79's prompt clock).
+/// B5 E18: a completed quest's reward (Classic #90 In Too Deep), read with `chosen_options`. Asked of
+/// the card's controller whoever's turn it is (R79's prompt clock).
 pub fn choose_reward(args: ChooseRewardArgs) -> Effect {
     Effect::new("chooseReward", move |ctx| {
         let options: Vec<PromptOption> = args
@@ -924,10 +908,9 @@ fn creation_number(id: &str) -> f64 {
     }
 }
 
-/// The cards of one pile, in the order a `pick` prompt offers them. A library's are in the order the
-/// instances were created, never library order, which the options would otherwise show the chooser
-/// (§9.1: a library's order is hidden from both players). The field's are the side's unit piles' tops,
-/// lane 1 upward, then its backrow (R13: a dormant card is not on the field).
+/// A pile's cards in `pick` order. A library's are in creation order, since its own order is hidden
+/// from both players (§9.1). The field's are the unit piles' tops, then the backrow (R13: a dormant
+/// card is not on the field).
 fn pile_cards(state: &GameState, player: PlayerId, zone: PileZone) -> Vec<&CardInstance> {
     let side = &state.players[player];
     let pile = match zone {
@@ -1016,15 +999,11 @@ pub struct ChoosePickArgs {
     pub data: StepData,
 }
 
-/// B5 E18: a pick of one card or several from piles, budgeted by count (`max`) or by cost (`budget`):
-/// Classic #11 Mind Melt, #44 Back from the GY, #56, #78's Radiant. Every matching card is an option,
-/// with no Discover limit of three, carrying its cost as R65 reads it where it lies (`effective_cost`);
-/// with `budget` the picks may cost no more than it together (`prompts::why_answer_refused`;
-/// `prompt_answers` lists only sets that fit). `min` (default 0, "up to") and `max` are clamped to what
-/// the piles hold; the picks arrive in `ctx.targets` in offered order. The options go to the chooser
-/// alone (R81, §10.8), which makes the other hand or a library safe to offer, and a library's order
-/// never shows (`pile_cards`). A face-down card of the other player's is offered as its zone only
-/// (R177, `view_for`). No matching card asks nothing.
+/// B5 E18: a pick of cards from piles (Classic #11 Mind Melt, #44 Back from the GY, #56, #78's
+/// Radiant), budgeted by count (`max`) or total cost (`budget`, `prompts::why_answer_refused`). Every
+/// matching card is an option, at its cost where it lies (R65). The options go to the chooser alone
+/// (R81, §10.8), so another hand or a library is safe to offer; a face-down card of the other
+/// player's is offered as its zone only (R177, `view_for`).
 pub fn choose_pick(args: ChoosePickArgs) -> Effect {
     Effect::new("choosePick", move |ctx| {
         let filter = args.filter.clone().unwrap_or_default();
@@ -1096,8 +1075,7 @@ pub const CODE_OPTION_PREFIX: &str = "code-";
 /// R1183005: the resume data key holding the cards behind a code Discover's places, in order.
 pub const CODE_OFFERS_KEY: &str = "codeOffers";
 
-/// R1183005: in a code Discover's resume step, the catalog id of the card whose code was picked, or
-/// `None` when the answer named no place the offer made.
+/// R1183005: the catalog id behind a code Discover's pick; `None` when it named no place offered.
 pub fn discovered_code_card(ctx: &EffectContext<'_>) -> Option<String> {
     let picked = chosen_options(ctx).into_iter().next()?;
     let at: usize = picked.strip_prefix(CODE_OPTION_PREFIX)?.parse().ok()?;
@@ -1149,13 +1127,10 @@ impl std::fmt::Debug for DiscoverFromCatalogArgs {
     }
 }
 
-/// §6.3 Discover: choose 1 of 3, drawn without replacement from the stated pool and shown only to
-/// the chooser, never both cards of a Core-or-snapshot pair (R2204001). The options are definitions
-/// (or, with `offer: "index"`, their numbers, R247), so the resume step decides what to do with the pick.
-///
-/// `query_fn` is read when the effect applies, not when the hook builds its list: a hook is rebuilt
-/// each time a paused list resumes (`prompts::run_resume`), so a costly pool (#97 Zephyrs' scorer
-/// plays every candidate, §10.7) is built once, for the Discover that uses it.
+/// §6.3 Discover: choose 1 of 3 definitions (or their numbers, R247), drawn without replacement and
+/// shown only to the chooser, never both cards of a Core-or-snapshot pair (R2204001). `query_fn` is
+/// read when the effect applies, since a hook is rebuilt each time a paused list resumes
+/// (`prompts::run_resume`): a costly pool (#97 Zephyrs' scorer, §10.7) is built once.
 pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
     Effect::new("discoverFromCatalog", move |ctx| {
         let asked: CatalogQueryArgs = match &args.query_fn {
@@ -1173,7 +1148,6 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             &asked,
             generating.as_deref(),
         ));
-        // R1183005: a code Discover offers only cards with a code block.
         let by_code = args.offer == Some(DiscoverOffer::Code);
         if by_code {
             pool.retain(|def| crate::catalog::code_block_of(&def.id).is_some());
@@ -1182,8 +1156,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             return;
         }
 
-        // R2204001: one offer never shows both cards of a Core-or-snapshot pair; the shuffle draws as
-        // it always did, and the other of a pair already offered is passed over.
+        // R2204001: after the shuffle, the other of a pair already offered is passed over.
         let mut shown_pairs: Vec<&'static str> = Vec::new();
         let shuffled: Vec<_> = ctx
             .rng
@@ -1212,7 +1185,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             .iter()
             .enumerate()
             .map(|(at, def)| {
-                // R1183005: the place in the offer, labeled with the card's code and nothing else.
+                // R1183005: the place in the offer, labeled with the card's code alone.
                 if by_code {
                     let option = format!("{CODE_OPTION_PREFIX}{at}");
                     return PromptOption {
@@ -1225,7 +1198,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
                         radiant: None,
                     };
                 }
-                // R247: a number is offered as itself, so nothing in the option names the card it stands for.
+                // R247: the number alone, so the option names no card.
                 let option = if by_index {
                     def.index.clone()
                 } else {
@@ -1275,9 +1248,8 @@ pub struct LibraryFilter {
     pub cost_range: Option<CostRange>,
 }
 
-/// #51's engine cell: "Field Trap counts as Trap". A `type` filter matches the field exactly, so
-/// asking for "Trap" has to name both fields or #18 Bread and Butter and #71 Intern Stimmy silently
-/// vanish from the pool. The reverse does not hold: asking for "Field Trap" means Field Traps only.
+/// #51's engine cell: "Field Trap counts as Trap", or #18 Bread and Butter and #71 Intern Stimmy
+/// vanish from a "Trap" pool. Asking for "Field Trap" means Field Traps only.
 const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 
 fn filter_types(filter: &LibraryFilter) -> Option<Vec<CardType>> {
@@ -1302,13 +1274,11 @@ fn filter_types(filter: &LibraryFilter) -> Option<Vec<CardType>> {
     )
 }
 
-/// R65: a library card's cost is R65's one calculation for that instance (`effective_cost`), which is
-/// what #30 Archivist and #94 Genn's Greed read (R24, R66): a card never played has no X (so an X-cost
-/// card reads 0) and no embiggen price (its base), and its `costMod` and `costOverride` travel with
-/// it into a hand and a library (R78, R766), so #95's "every card in your library costs 2 less" moves its bracket.
+/// R65: a library card's cost is `effective_cost`, as #30 Archivist and #94 Genn's Greed read it
+/// (R24, R66): no X (an X-cost card reads 0), no embiggen price, and the `costMod` and `costOverride`
+/// that travel with it (R78, R766), so #95's discount moves its bracket.
 pub fn matches_library_filter(state: &GameState, card: &CardInstance, filter: &LibraryFilter) -> bool {
-    // R218: a unit-token card leaves a library only by being drawn or played (R11), so a reveal that
-    // puts the pick in a hand passes over it, as a Recruit does.
+    // R218: a unit-token card leaves a library only drawn or played (R11), so a reveal passes over it.
     if is_unit_token(state, card) {
         return false;
     }
@@ -1333,9 +1303,8 @@ pub fn matches_library_filter(state: &GameState, card: &CardInstance, filter: &L
     true
 }
 
-/// The Discovers over real instances (`discover_from_library`, `discover_from_graveyard`): `count`
-/// (`DISCOVER_OPTIONS` when absent) of `pool`, drawn without replacement with `ctx.rng.shuffle`, are the
-/// options of a prompt that `ctx.controller` answers, and `step` resumes it (R50, R60, §10.8).
+/// The Discovers over real instances: `count` of `pool`, drawn without replacement, for
+/// `ctx.controller` to pick (R50, R60, §10.8).
 fn offer_instances(
     ctx: &mut EffectContext<'_>,
     pool: &[CardInstance],
@@ -1392,14 +1361,9 @@ pub struct DiscoverFromLibraryArgs {
 }
 
 /// §6.3: "Reveal N matching cards, then choose one" (KY's Private Tutor) is Discover with the library
-/// as the pool: `count` options drawn without replacement with `ctx.rng.shuffle`, so the revealed
-/// cards always differ (R60). The options are real library instances, not definitions, so the resume
-/// step moves the pick (`add_to_hand({ instance: { of: "chosen" } })`) rather than copying it.
-///
-/// §10.8: a library card is revealed only as an option of the prompt: nothing is copied out of
-/// `state.pending.options`, so `view_for` has one place to hide, and the prompt goes to
-/// `ctx.controller`, the chooser, even when `player` names the other side's library. No match opens
-/// no prompt: the effect fizzles and the card still resolves (§6.3; #51's Empty Notebook branch).
+/// as the pool (R60). The options are real instances, so the resume step moves the pick rather than
+/// copying it. §10.8: a revealed card is only an option of the prompt, which goes to `ctx.controller`
+/// even from the other side's library. No match fizzles (#51's Empty Notebook branch).
 pub fn discover_from_library(args: DiscoverFromLibraryArgs) -> Effect {
     Effect::new("discoverFromLibrary", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));

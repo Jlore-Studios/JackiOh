@@ -5,7 +5,7 @@
 //! §10.7's priorities, in order: lethal available → max; can clear the enemy board → high; hero
 //! below 10 and the card heals → high; otherwise stats per mana plus draw value. Each is read from the
 //! printed data (§5) and from §10.7's dry run on a copy of the state, the only way to see what a card's
-//! *text* does (#44's 4 damage, #17's bounce of every unit, #53's heal to 30).
+//! *text* does (#44's damage, #17's bounce, #53's heal).
 //!
 //! Pure in (state, viewer), as R29's Discover and §9.3's replay need: the dry run draws from a seed of
 //! its own, and plays on a copy where every card §9.1 hides from the viewer is a stand-in that does
@@ -72,7 +72,6 @@ pub struct Scored {
     pub def: CardDef,
     pub score: f64,
     pub priority: ScorePriority,
-    /// Each priority's contribution, for tuning and for the client's tooltip.
     pub parts: ScoredParts,
 }
 
@@ -98,7 +97,7 @@ fn face_for(def: &CardDef, radiant: bool) -> &CardFace {
 /// §4.4 steps 2 and 3: what one hit of `amount` takes off that hero (R44), by the pipeline's own Armor
 /// (stored plus every backrow grant, #84, summed per R124), so the score and the hit never disagree.
 fn hero_hit(state: &GameState, player: PlayerId, amount: i32, pierce: bool) -> i32 {
-    // R346: a Pierce unit's hit skips step 2; B5 E6: the pipeline's own reading, divisors included.
+    // R346: Pierce skips step 2; B5 E6: divisors included.
     crate::damage::hero_hit_amount(state, player, amount, pierce)
 }
 
@@ -127,9 +126,8 @@ pub fn projected_board_damage_in(auras: &AuraTable<'_>, viewer: PlayerId) -> i32
     sum
 }
 
-/// §10.7 priority 1. The printed signal for "this card enables lethal" is a Unit with Charge, the only
-/// printed data that says a card can hit the hero on the turn it arrives (§6.1; Rush may not). It must
-/// also be affordable, have a zone to land in and a clear path (no enemy Taunt), and deal damage of its
+/// §10.7 priority 1: a Unit with Charge, the only printed sign a card can hit the hero the turn it
+/// arrives (§6.1; Rush may not), affordable, with a zone to land in, a clear path and damage of its
 /// own. A damage spell, a Taunt-remover or a buff that makes the swing lethal is text, out of reach.
 fn lethal_contribution(auras: &AuraTable<'_>, viewer: PlayerId, def: &CardDef, face: &CardFace) -> i32 {
     let state = auras.state();
@@ -143,8 +141,7 @@ fn lethal_contribution(auras: &AuraTable<'_>, viewer: PlayerId, def: &CardDef, f
     if crate::catalog::query_cost(def) > crate::credit::spendable_mana(state, viewer) {
         return 0;
     }
-    // It must reach the field this turn: §3.2 plays a Unit into an empty, unlocked zone, or a Stack
-    // card onto an occupied one (#92), so a full row keeps anything else off the board.
+    // It must reach the field this turn (§3.2; Stack onto an occupied zone, #92).
     if !has_room_to_play(state, viewer, face) {
         return 0;
     }
@@ -264,10 +261,8 @@ const NOTHING: DryRun = DryRun {
 /// autopilot's trials draw from it too (R1183003).
 pub(crate) const DRY_RUN_SEED: &str = "zephyrs-dry-run";
 
-/// Whether `state` is a dry run's copy, so a candidate whose play would ask the scorer again scores on
-/// printed data rather than running a dry run inside a dry run: those copies, and nothing else, carry
-/// the stand-ins `conceal_from` wrote. The sink the play runs on says so too
-/// (`EngineSink::dry_running`, SURFACE §3, §6.5), for the engine code that holds it.
+/// Whether `state` is a dry run's copy (only those carry `conceal_from`'s stand-ins), so no dry run
+/// runs inside one. The sink says so too (`EngineSink::dry_running`, SURFACE §3, §6.5).
 fn dry_running(state: &GameState) -> bool {
     state.transient_defs.contains_key(HIDDEN_CARD_DEF_ID)
 }
@@ -293,9 +288,8 @@ fn play_fields(action: &PlayAction) -> PlayFields<'_> {
     }
 }
 
-/// The plays a dry run tries: `play_actions_for`'s at one price (the largest X, embiggened when
-/// affordable: the strongest the card can do now) and one zone per paying set, as where a card lands
-/// is not what §10.7 asks. Plays aimed at a hero or an enemy card, or paying with the enemy's units
+/// The plays a dry run tries: `play_actions_for`'s at its strongest price (largest X, embiggened) and
+/// one zone per paying set. Plays aimed at a hero or an enemy card, or paying with the enemy's units
 /// (#55, R101), come first, so the viewer's own permanents cannot crowd an enemy unit out of the tries.
 pub(crate) fn dry_run_plays(state: &GameState, viewer: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
     // MD-D28, R1125: a card in the graveyard a permission lets its player play is played from there
@@ -324,8 +318,7 @@ pub(crate) fn dry_run_plays(state: &GameState, viewer: PlayerId, card: &CardInst
             if fields.x != x || fields.embiggen != embiggen {
                 return false;
             }
-            // Keyed by serde JSON (SURFACE §4.4.3). R1086: an Equip play pays the fusion too, so it
-            // keys apart from the plain play.
+            // Keyed by serde JSON (SURFACE §4.4.3); R1086: an Equip play keys apart.
             let paying = format!(
                 "{}|{}",
                 serde_json::to_string(fields.tributes).unwrap_or_default(),
@@ -339,7 +332,7 @@ pub(crate) fn dry_run_plays(state: &GameState, viewer: PlayerId, card: &CardInst
             kept.unwrap_or_else(|| zone.clone()) == zone
         })
         .collect();
-    // A stable sort, so plays that aim alike keep the order `playActionsFor` gave them.
+    // Ties keep `play_actions_for`'s order.
     let mut ranked: Vec<(PlayAction, usize, i32, i32)> = priced
         .into_iter()
         .enumerate()
@@ -387,10 +380,9 @@ fn enemy_tributes(state: &GameState, viewer: PlayerId, action: &PlayAction) -> i
         .count() as i32
 }
 
-/// Whether playing a card can do anything this turn that §10.7's three questions ask about: a Cry
-/// (a Spell's script is its Cry, §10.9), an aura or stat hook, a trigger, an on-play hook, a Charge
-/// body's swing, or a Tribute paid with the enemy's units. Anything else (a Trap, which only answers
-/// later, §5.1; a Death, a turn hook, a flag) does nothing now its printed data does not say.
+/// Whether playing a card can do anything this turn that §10.7's three questions ask about (a
+/// Spell's script is its Cry, §10.9). A Trap only answers later (§5.1), and a Death, a turn hook or a
+/// flag does nothing now its printed data does not say.
 fn may_act_now(state: &GameState, def: &CardDef, radiant: bool) -> bool {
     if matches!(def.type_, CardType::Trap | CardType::FieldTrap) {
         return false;
@@ -419,13 +411,12 @@ fn may_act_now(state: &GameState, def: &CardDef, radiant: bool) -> bool {
 /// §10.7's dry run of one candidate's plays, each made on a copy of `base` with the viewer's own mana.
 /// Lethal: the enemy hero is dead, or the viewer's board can then finish it this turn; clear: the enemy
 /// had units and has none; heal: the viewer's hero ends higher. A play that asks something is read at
-/// the question. The copy draws from its own seed, so the match is untouched (R29, §9.3).
+/// the question.
 fn trial_plays(base: &GameState, viewer: PlayerId, card: &CardInstance) -> DryRun {
     let enemy = opponent_of(viewer);
     let enemy_units_before = crate::zones::active_units_of(base, enemy).len();
     let health_before = base.players[viewer].hero.health;
-    // A play aimed at the viewer's own hero can only answer the heal question, which asks nothing
-    // of a hero at SCORER_LOW_HEALTH or more, so it is not played then.
+    // A play aimed at the viewer's own hero only answers the heal question, moot at SCORER_LOW_HEALTH+.
     let heal_matters = health_before < SCORER_LOW_HEALTH;
     let mut outcome = NOTHING;
     for action in dry_run_plays(base, viewer, card) {
@@ -444,8 +435,8 @@ fn trial_plays(base: &GameState, viewer: PlayerId, card: &CardInstance) -> DryRu
             crate::triggers::settle(&mut sink, crate::triggers::SettleOptions::default());
         }
 
-        // R1168003: in a Duos duel the enemy hero stands until its own HP and its team's pool are both
-        // gone, so lethal is judged against both (§13.4's lethal judge).
+        // R1168003: in a Duos duel lethal is judged against the enemy's own HP and its team's pool
+        // both (§13.4's lethal judge).
         let enemy_health = crate::duos_life::effective_life(&trial, enemy);
         let won = trial
             .result
@@ -498,9 +489,8 @@ pub fn dry_run(
     outcome
 }
 
-/// MD-D28, R1125: §10.7's dry run of a card already on the copy — the viewer's own card, at its own
-/// price, tuning and face, where it stands (hand or graveyard). No `new_instance`, and it is not
-/// removed afterwards: the copy is the judge's to keep.
+/// MD-D28, R1125: §10.7's dry run of the viewer's own card where it stands on the copy (hand or
+/// graveyard), at its own price, tuning and face; nothing is removed after: the copy is the judge's.
 fn dry_run_card(state: &GameState, viewer: PlayerId, card: &CardInstance, base: &mut GameState) -> DryRun {
     if dry_running(state) {
         return NOTHING;
@@ -516,8 +506,8 @@ fn dry_run_card(state: &GameState, viewer: PlayerId, card: &CardInstance, base: 
 }
 
 /// The copy every dry run of one ranking plays on, or `None` unless the viewer is the active player in
-/// the main phase with nothing open (the printed signals alone score the rest). It leaves the history
-/// of actions behind (§9.3's nonce dedupe, §10.8's event window), which nothing a play reads is in.
+/// the main phase with nothing open. It leaves the history of actions behind (§9.3's nonce dedupe,
+/// §10.8's event window), which nothing a play reads is in.
 pub fn dry_run_base(state: &GameState, viewer: PlayerId) -> Option<GameState> {
     if state.result.is_some()
         || state.pending.is_some()
@@ -529,9 +519,8 @@ pub fn dry_run_base(state: &GameState, viewer: PlayerId) -> Option<GameState> {
     Some(concealed_copy(state, viewer))
 }
 
-/// R222, R1714000: a copy of the state as `viewer` may read it, without the history of actions:
-/// `dry_run_base`'s copy, and the autopilot's at any moment of its turn, a prompt of its player's open
-/// included (R1183003).
+/// R222, R1714000: a copy of the state as `viewer` may read it, without the history of actions: the
+/// dry run's copy, and the autopilot's at any moment of its turn, prompt open or not (R1183003).
 pub fn concealed_copy(state: &GameState, viewer: PlayerId) -> GameState {
     let mut base = state.clone();
     base.applied = Vec::new();
@@ -630,10 +619,8 @@ fn hide(card: &mut CardInstance, def_id: &str) {
     card.enchantments = None;
 }
 
-/// R222, §9.1, §10.8: the dry run plays on what the viewer may read. The opponent's hand, both
-/// libraries (the viewer's own too, §3) and a face-down trap the viewer does not control (R33) become
-/// stand-ins with no text, in the same place: on the real cards (a Sheepish, a cast on draw) the offer
-/// would reveal them.
+/// R222, §9.1, §10.8: the opponent's hand, both libraries (§3) and a face-down trap the viewer does
+/// not control (R33) become text-less stand-ins in place, or the offer would reveal them.
 fn conceal_from(base: &mut GameState, viewer: PlayerId) {
     base.transient_defs.insert(
         HIDDEN_CARD_DEF_ID.to_string(),
@@ -652,7 +639,7 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
             hide(card, HIDDEN_CARD_DEF_ID);
         }
         // B5 E21: a face-down card dormant under a backrow pile is as hidden as one on top (R447).
-        // Which cards are traps is read first (`cardTypeOf` reads the state), then they are hidden.
+        // The traps are found first, as `card_type_of` reads the state.
         let traps: Vec<String> = {
             let state: &GameState = base;
             let side = &state.players[player];
@@ -702,11 +689,10 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
     crate::state::forget_hidden_nerfs(base);
 }
 
-/// R1714000: the records the viewer may not read either, as the AI's `redact` drops them (R185): the
-/// opening decks (R676), the Glitch boards (R678), the other seat's last board (R417) and unrevealed
-/// secret choices (R865), and in every continuation a problem's key (R465), so no answer tried here is
-/// judged right, and the modes of the other seat's in-flight `secret_modes` play. Each continuation
-/// keeps its shape, so a try still resumes it.
+/// R1714000: the records the viewer may not read go too, as the AI's `redact` drops them (R185): the
+/// opening decks (R676), Glitch boards (R678), the other seat's last board (R417), unrevealed secret
+/// choices (R865), and in every continuation a problem's key (R465) and the other seat's in-flight
+/// `secret_modes`. Each continuation keeps its shape, so a try still resumes it.
 fn forget_hidden_records(state: &GameState, base: &mut GameState, viewer: PlayerId) {
     let opponent = opponent_of(viewer);
     base.opening = None;
@@ -735,8 +721,7 @@ fn forget_hidden_records(state: &GameState, base: &mut GameState, viewer: Player
     }
 }
 
-/// One candidate's score for this state; pure. `base` is `dry_run_base`'s copy the dry run plays on,
-/// shared by every candidate of one ranking, or `None` when the viewer cannot play now.
+/// One candidate's score; `base` is `dry_run_base`'s shared copy, `None` when the viewer cannot play.
 pub fn score_def(
     state: &GameState,
     viewer: PlayerId,
@@ -758,14 +743,12 @@ pub fn score_def_in(
     let radiant = options.radiant == Some(true);
     let face = face_for(def, radiant);
     let has_base = base.is_some();
-    // What the card's text does, which its printed data cannot say (§10.7's dry run).
     let played = dry_run(auras.state(), viewer, def, radiant, base);
     score_parts(auras, viewer, def, face, played, has_base)
 }
 
-/// MD-D28, R1125: one of the viewer's own cards' score for this state — the judge's reading of a
-/// play. The card is dry-run where it stands, at its own price, tuning and face, on the shared copy
-/// `base` the caller computed (`dry_run_base`); `None` for a card that is not the viewer's to play.
+/// MD-D28, R1125: the judge's score of one of the viewer's own cards, dry-run where it stands on the
+/// shared copy `base` (`dry_run_base`); `None` for a card that is not the viewer's to play.
 pub fn score_instance(
     state: &GameState,
     viewer: PlayerId,
@@ -800,8 +783,8 @@ fn score_parts(
     let enemy = opponent_of(viewer);
     let enemy_units = crate::zones::active_units_of(state, enemy);
 
-    // With a dry run to read, a Charge body's swing is the one it plays (`mayActNow`), through the
-    // viewer's auras; the printed attack stands in for it only when the viewer cannot play now.
+    // With a dry run, a Charge body's swing is the one it plays (`may_act_now`); the printed attack
+    // stands in only when the viewer cannot play now.
     let contribution = if has_base {
         0
     } else {
@@ -848,7 +831,7 @@ fn score_parts(
 }
 
 /// Higher score first, then the §5 index, then the catalog id: ids are unique, so the order is strict
-/// and total whatever the weights, and never depends on the order the catalog handed them over.
+/// and total whatever the weights and the catalog's order.
 pub fn compare_scored(a: &Scored, b: &Scored) -> Ordering {
     if a.score != b.score {
         return b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal);
@@ -881,7 +864,7 @@ pub fn compare_scored(a: &Scored, b: &Scored) -> Ordering {
 
 /// R29, R1446: the perfect pool less #97 (`candidate_defs`), best first, as a total order.
 pub fn rank(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec<Scored> {
-    // One copy for every candidate's dry run: each plays on a copy of it and puts it back as it was.
+    // One copy for every candidate's dry run, each put back as it was.
     let mut base = dry_run_base(state, viewer);
     // #892: one aura table for every candidate.
     let auras = AuraTable::new(state);
@@ -894,8 +877,7 @@ pub fn rank(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec
 }
 
 /// R29, §8 #97: the Discover offers the top `DISCOVER_OPTIONS`. R2204001: one offer never holds both
-/// cards of a Core-or-snapshot pair, so a card whose pair a better-ranked card holds is passed over for
-/// the next; a ranking with no pair in it offers what it always did.
+/// cards of a Core-or-snapshot pair; a card whose pair a better-ranked card holds is passed over.
 pub fn top_three(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec<Scored> {
     let mut pairs: Vec<String> = Vec::new();
     rank(state, viewer, options)

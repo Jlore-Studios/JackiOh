@@ -1,8 +1,6 @@
 //! Draw: takes the top card, with cast-on-draw, fatigue, the hand cap and R58's chain cap (§2.4),
-//! and the named-card form a script computes for itself (#30 Archivist, #94 Genn's Greed).
-//!
-//! Port of `packages/engine/src/effects/draw.ts`. The engine's draw is `crate::draw::draw` (TS
-//! `draw as drawCards`); this module's `draw` is the effect verb.
+//! and the named-card form a script computes for itself (#30 Archivist, #94 Genn's Greed). The
+//! engine's draw is `crate::draw::draw`; this module's `draw` is the effect verb.
 
 use serde::{Deserialize, Serialize};
 
@@ -43,20 +41,11 @@ pub struct DrawFromLibraryArgs {
     pub radiant: Option<bool>,
 }
 
-/// §6.3 Draw of a card a script has NAMED, rather than of the top of the library: #30 Archivist's
-/// "draw the highest-cost card in your library", #94 Genn's Greed's "draw every 2-cost card from your
-/// library". Neither of the neighbouring verbs is this one — `draw({ count })` takes the top and
-/// `addToHand({ defId })` creates a fresh card of a definition and leaves the original where it is,
-/// which is a second copy and not a draw — so a card that names its own card out of a library needs
-/// this, and the two halves of "it is a DRAW" fall out of sharing `../draw`'s pipeline: the card
-/// really leaves the library, `state.counters.drawn` moves (R55), a `drawn` event fires for anything
-/// watching, the hand cap burns the overflow (§2.4, R4) and a cast-on-draw card casts (R58).
-///
-/// `instanceId` names one card; `defId` takes the first card of that definition from the top of the
-/// library, which is the form a card that knows only what it wants can write. A spec that matches
-/// nothing — an empty library, a card already drawn by an earlier effect in the same list — fizzles
-/// and the card still resolves (§6.3). A script that wants several cards returns several of these,
-/// one per card, so each is its own draw in its own order (R135's per-card rule for the exile half).
+/// §6.3 Draw of a card a script has NAMED rather than the top of the library. Not `addToHand`, which
+/// makes a second copy: it shares `crate::draw`'s pipeline, so the card leaves the library,
+/// `state.counters.drawn` moves (R55), `drawn` fires, the hand cap burns (§2.4, R4) and a cast-on-draw
+/// card casts (R58). `defId` takes the first of that definition from the top; a spec matching nothing
+/// fizzles; several cards are several of these, each its own draw (R135).
 pub fn draw_from_library(args: DrawFromLibraryArgs) -> Effect {
     Effect::new("drawFromLibrary", move |ctx| {
         if args.instance_id.is_none() && args.def_id.is_none() {
@@ -79,8 +68,7 @@ pub fn draw_from_library(args: DrawFromLibraryArgs) -> Effect {
             return;
         }
 
-        // Out of the pile first, exactly as `drawOne` does it, so a cast-on-draw card resolves against
-        // a library that no longer holds it (§2.4, R58).
+        // Out of the pile first, so a cast-on-draw card resolves against a library without it.
         let card = ctx.sink.state.players[player].library.remove(at);
         let drawn_id = card.id.clone();
         if complete_draw(ctx, player, card, None) == DrawOutcome::Drawn

@@ -1,7 +1,5 @@
 //! Set health, heals turned into damage (docs/classic-sets.md B5 E7, E8), and a Unit's Attack and
 //! Health set outright (R1185002, M+ #21 Harmony Spirit).
-//!
-//! Port of `packages/engine/src/effects/health.ts`.
 
 use serde::{Deserialize, Serialize};
 
@@ -24,9 +22,8 @@ pub struct SetHealthArgs {
     pub value: i32,
 }
 
-/// B5 E7: "Set a hero's health to N" (Classic #29 Book of Vital Kill, either hero, a declared target).
-/// No pipeline, not damage and not a heal: no Armor, no cap, no replacement, nothing that answers a hit
-/// or a heal (R18's lose health is the nearest rule). A target that is not a hero fizzles. `healthSet`.
+/// B5 E7: "Set a hero's health to N" (Classic #29 Book of Vital Kill). Neither damage nor a heal, so no
+/// Armor, cap, replacement or answer to either (R18's lose health is the nearest rule).
 pub fn set_health(args: SetHealthArgs) -> Effect {
     Effect::new("setHealth", move |ctx| {
         let Some(DamageTarget::Hero { player }) = resolve_target(ctx, &args.to) else {
@@ -46,11 +43,9 @@ pub struct ConvertHealingArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// B5 E8: "for the rest of this turn, healing on enemies deals that much Pierce damage to them
-/// instead" — a this-turn player modifier on `player` (default "self"), converting every heal on that
-/// player's enemies from then on, the damage from this card. Classic+ #22 Blood Moon's base face does
-/// the same through its replacement's `lasting: "thisTurn"`, which also converts the heal that set it
-/// off; this verb is the plain effect for a card that says it outright.
+/// B5 E8: this turn, heals on `player`'s enemies deal that much Pierce damage instead, from this card
+/// (a this-turn player modifier). Classic+ #22 Blood Moon does it through a replacement instead, which
+/// also converts the heal that set it off.
 pub fn convert_healing(args: ConvertHealingArgs) -> Effect {
     Effect::new("convertHealing", move |ctx| {
         let Some(converter_id) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
@@ -79,12 +74,9 @@ pub struct SetStatsAllArgs {
     pub health: i32,
 }
 
-/// R1185002: Hearthstone's "set": the Unit's §10.4 layer 1 becomes `stats` (`statsOverride`, which
-/// wins over its printed and X stats, R41), its buffs and the stat half of its `tuning` go
-/// (`to_printed_stats`, R781003) and its damage is healed, so it stands at exactly `stats` before the
-/// auras of layer 5 apply on top. A face that wears its X/X doubled (the Radiant Ghoul Token, R349)
-/// keeps the difference as tuning, so it too wears `stats`. R78's reset takes the override off with
-/// the card leaving the field, so a set Unit bounced is its printed card again.
+/// R1185002: Hearthstone's "set": §10.4 layer 1 becomes `stats` (`statsOverride`, R41), its buffs and
+/// stat tuning go (R781003) and its damage is healed, so it stands at `stats` under layer 5's auras. A
+/// face wearing its X/X doubled (R349) keeps the difference as tuning; R78's reset takes it all off.
 fn set_stats_on(ctx: &mut crate::script::EffectContext<'_>, id: &str, stats: AttackHealth) {
     let Some(mut set) = find_instance(ctx.state, id).cloned() else {
         return;
@@ -108,9 +100,8 @@ fn set_stats_on(ctx: &mut crate::script::EffectContext<'_>, id: &str, stats: Att
     }
 }
 
-/// R1185002: set one Unit standing on the field (or carried) to `stats`, unless it is Immutable
-/// (R23), and report its two numbers as it now wears them, auras included, with `numberChanged`
-/// ("attack", "health"): public, since a Unit on the field is. `set_stats_all` and `set_stats` share it.
+/// R1185002: set one Unit on the field (or carried) to `stats`, unless Immutable (R23), and report the
+/// numbers it now wears, auras included, with a public `numberChanged`.
 fn set_one(
     ctx: &mut crate::script::EffectContext<'_>,
     unit: &crate::state::CardInstance,
@@ -139,10 +130,8 @@ fn set_one(
     }
 }
 
-/// §6.3 Set stats (R1185002): every Unit the scope names (`cards_in_scope` order, the tops of piles,
-/// carried and standing Units included, R13, R446, R1081000) is set to `attack`/`health`
-/// (`set_one`). An Immutable Unit is untouched (R23), and a Spell's set passes a Unit Immune to
-/// Spells by, as every scope does.
+/// §6.3 Set stats (R1185002) on every Unit the scope names (pile tops, carried and standing Units: R13,
+/// R446, R1081000); a Spell's set passes a Unit Immune to Spells by, as every scope does.
 pub fn set_stats_all(args: SetStatsAllArgs) -> Effect {
     Effect::new("setStatsAll", move |ctx| {
         let stats = AttackHealth {
@@ -165,10 +154,8 @@ pub struct SetStatsArgs {
     pub health: i32,
 }
 
-/// §6.3 Set stats on one Unit (R2198000, Training Grounds #34 Dino-size): `set_stats_all`'s set
-/// (R1185002) on the Unit `target` names, with the same guards: an Immutable Unit is untouched (R23),
-/// and a target that is no Unit on the field, or has left it, fizzles. Who may be targeted is the
-/// card's declared target's business (R81), so a Unit Immune to Spells is never offered to a Spell.
+/// §6.3 Set stats on one Unit (R2198000, Training Grounds #34 Dino-size), with `set_one`'s guards; who
+/// may be targeted is the declared target's business (R81), so Immune to Spells needs no check here.
 pub fn set_stats(args: SetStatsArgs) -> Effect {
     Effect::new("setStats", move |ctx| {
         let Some(DamageTarget::Unit { instance: unit }) = resolve_target(ctx, &args.target) else {

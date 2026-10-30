@@ -1,11 +1,7 @@
-//! The effects library (SPEC §10.9): every verb a card script composes, one module per
-//! `packages/engine/src/effects/<x>.ts`, re-exported whole as the TS barrel (`effects/index.ts`)
-//! did with `export *`. A card file reaches them as `jackioh_engine::effects::<verb>` or through
-//! `jackioh_engine::prelude` (SURFACE §7.1). Written once by part 1 (SURFACE §1); the verbs are
-//! parts 6 and 7's.
-//!
-//! Collisions: TS kept every exported name distinct across this directory, so the globs below are
-//! unambiguous as long as the ports keep the TS names (SURFACE §4.2).
+//! The effects library (SPEC §10.9): every verb a card script composes, each module re-exported
+//! whole. A card file reaches them as `jackioh_engine::effects::<verb>` or through
+//! `jackioh_engine::prelude` (SURFACE §7.1); the layout is SURFACE §1's. Every exported name is
+//! distinct across this directory, so the globs below are unambiguous (SURFACE §4.2).
 
 pub mod activations;
 pub mod add_to_hand;
@@ -169,11 +165,9 @@ pub use turn_hooks::*;
 pub use turns::*;
 pub use win::*;
 
-// §6.3 Discover's offer count and C+ #29's card cost, which TS's `effects/lastBoard.ts` stated and this
-// barrel exported; they live in `crate::config` now (CLAUDE.md rule 9, SURFACE §6.4).
+// §6.3 Discover's offer count and C+ #29's card cost, from `crate::config` (CLAUDE.md rule 9, SURFACE §6.4).
 pub use crate::config::{DISCOVER_OPTIONS, LAST_BOARD_CARD_COST};
 
-// Verbs TS's barrel re-exported from `subsystems/` (`effects/index.ts`, its last lines).
 // B5 E34, R416: R29's scorer choosing a whole hand (C+ #27 Zephrys Zealotism).
 pub use crate::subsystems::perfect_hand::{ReplaceHandWithPerfectArgs, replace_hand_with_perfect};
 // B5 E29, R419: return the board, or one side of it, to a snapshot of the last few turns (C+ #35 Rollback).

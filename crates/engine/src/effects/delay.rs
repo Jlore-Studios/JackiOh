@@ -1,10 +1,8 @@
 //! Delayed effects (SPEC §2.2's turn loop, §10.1, §10.6, R62, R68, R76).
 //!
-//! "At the start of your next turn …" and "End of turn: …" are not triggers. §2.2 gives them their
-//! own two points in the turn — after the mana refresh and before the start-of-turn triggers, and
-//! after the end-of-turn trap window and before cleanup — and R62 fixes that order. `modifiers` stores
-//! and picks them (R68's creation order), `turn` re-enters them; this file is the verb in front of
-//! it, because a card script may not write state itself (CLAUDE.md rule 5).
+//! "At the start of your next turn …" and "End of turn: …" are not triggers but §2.2's own two points
+//! in the turn, in R62's order; `modifiers` stores and picks them (R68's creation order) and `turn`
+//! re-enters them. This file is the verb, as a card script may not write state (CLAUDE.md rule 5).
 //!
 //! WHAT IS STORED IS A `Resume`, NEVER A CLOSURE (§9.3, §10.6; its face, §5.2), so it survives a JSON
 //! round-trip and a replay. Its instance is optional: R76 has #50 K-Pop Fanatic's steal fire "even if
@@ -33,9 +31,8 @@ use crate::wire::{CardMark, GameEvent, Phase, PlayerId, Row, ZoneName, opponent_
 use crate::work::RUN_MARKS_KEY;
 use crate::zones::{card_at, slots_of, standing_units_of};
 
-/// The `Script` key a delayed continuation lands on unless the card names another: "a delayed effect
-/// this card scheduled, resolved at its R62 point". A card whose continuation is an entry in its
-/// `resume` step table passes `hook: RESUME_HOOK`.
+/// The `Script` key a delayed continuation lands on at its R62 point unless the card names another,
+/// such as `RESUME_HOOK` for an entry in its `resume` step table.
 pub const DELAYED_HOOK: &str = "delayed";
 
 /// R350: `DelayAt.player` for the turn that is running, whoever's it is.
@@ -58,7 +55,6 @@ pub enum DelayPlayer {
 }
 
 impl DelayPlayer {
-    /// The `PlayerSpec` this names, or `None` for `"turn"`.
     fn spec(self) -> Option<PlayerSpec> {
         match self {
             DelayPlayer::SelfSide => Some(PlayerSpec::SelfSide),
@@ -143,21 +139,18 @@ pub struct DelayArgs {
 /// card may exile or sacrifice itself in the same list (#39), and the entry stays (R76, R86).
 pub fn delay(args: DelayArgs) -> Effect {
     Effect::new("delay", move |ctx| {
-        // R174, R76: an effect aimed at a card on the field is aimed at that stay. A target an earlier
-        // effect of the same list took off the field (#52 bounced, #22 sacrificed) fizzles it now, not
-        // whatever later stands under the same id (R78, R83).
+        // R174, R76: aimed at the target's stay. One an earlier effect of the list took off the field
+        // (#52 bounced, #22 sacrificed) fizzles it now, not what later stands under its id (R78, R83).
         if let Some(watch) = &args.watch
             && !stands_since_script_began(ctx, watch)
         {
             return;
         }
-        // R241: "End of turn" is the controller's turn end (§6.2), of the turn it was made on (#39, #78).
-        // One made on the other player's turn (a cast on draw, R70; R155) is not scheduled at all: the
-        // next one would be a turn the card was never played on.
+        // R241: "End of turn" is the controller's end of the turn it was made on (§6.2, #39, #78), so one
+        // made on the other player's turn (a cast on draw, R70; R155) is not scheduled at all.
         if args.next != Some(true) && args.turns.is_none() && ends_other_players_turn(ctx, &args.at) {
             return;
         }
-        // R1140: a hand watch is aimed at cards in a hand now; with none of them there, nothing waits.
         let hand_watch: Option<Vec<String>> = args.hand_watch.as_ref().map(|ids| {
             ids.iter()
                 .filter(|id| find_instance(ctx.state, id).is_some_and(|card| card.zone.z() == ZoneName::Hand))
@@ -167,7 +160,6 @@ pub fn delay(args: DelayArgs) -> Effect {
         if hand_watch.as_ref().is_some_and(Vec::is_empty) {
             return;
         }
-        // One builder (`resume_self`) for a delay and a prompt, so both store the same shape.
         let resume = delayed_resume(
             ctx,
             &args.step,
@@ -229,9 +221,8 @@ pub fn due_resume(entry: &DelayedEffect) -> Resume {
 }
 
 /// The continuation a delayed effect stores: this script's step as a run of its own. R127: it re-enters
-/// as whatever is left of its card then, so it drops a Death hook's snapshot (R89), the run it was made
-/// in (`RUN_MARKS_KEY`: it resolves at its own R62 point, a watched card through `watch`, R174) and that
-/// run's random choices (R1855001).
+/// as whatever is left of its card then, dropping a Death hook's snapshot (R89), its run's marks
+/// (`RUN_MARKS_KEY`; a watched card goes through `watch`, R174) and random choices (R1855001).
 pub(crate) fn delayed_resume(
     ctx: &EffectContext<'_>,
     step: &str,
@@ -267,22 +258,19 @@ fn ends_other_players_turn(ctx: &EffectContext<'_>, at: &DelayAt) -> bool {
 
 // Verbs: activate and turn (B5 E27 delayed kinds, E28 rest of the game).
 
-/// B5 E27: the delayed effects the engine itself resolves, by the `Resume.hook` they are stored under —
-/// a verb, so any card can say "destroyed at the start of your next turn" without a `delayed` hook of
-/// its own (`run_engine_delayed`); every other entry re-enters its card's step (R126).
+/// B5 E27: the `Resume.hook`s of delayed effects the engine resolves itself (`run_engine_delayed`), so
+/// no card needs a `delayed` hook of its own; every other entry re-enters its card's step (R126).
 pub const DELAYED_DESTROY_HOOK: &str = "@delayedDestroy";
 pub const DELAYED_DISCARD_HAND_HOOK: &str = "@delayedDiscardHand";
 /// R963, MD-C4 (Meditative #39.5 Jade Beauty's Allure): the hook an Allured Unit's steal waits under.
 pub const DELAYED_ALLURE_HOOK: &str = "@delayedAllure";
 /// R963: the mark an Allured enemy Unit carries in both views while the steal waits (R437).
 pub const ALLURE_MARK: &str = "allure";
-/// R963: that mark's color.
 pub const ALLURE_MARK_COLOR: &str = "pink";
 /// R1850001 (Stinkyscape #110 iKwzki's Duo and Squad): the hook a delayed Make Radiant waits under.
 pub const DELAYED_RADIANT_HOOK: &str = "@delayedRadiant";
 /// R1850001: the mark a Duo'd or Squad'd permanent carries in both views while it waits (R437).
 pub const DUO_MARK: &str = "duo";
-/// R1850001: that mark's color.
 pub const DUO_MARK_COLOR: &str = "gold";
 /// R2321001: the mark a card carries in both views while a destroy at the end of this turn watches it
 /// (R437; TG #15 In a hurry's Rush Tokens, R2198002).
@@ -381,9 +369,9 @@ pub fn destroy_at_next_turn_start(args: DestroyAtNextTurnStartArgs) -> Effect {
 }
 
 /// R963, MD-C4 (Meditative #39.5 Jade Beauty): "Allure every enemy Unit" — each enemy Unit on the field
-/// now (a pile's top, so never a carried Unit, R446, or one dormant under a Stack, R13) is stolen at the
+/// now (a pile's top: never a carried Unit, R446, or one dormant under a Stack, R13) is stolen at the
 /// start of the Allurer's next turn, or destroyed with no open unit zone. One entry per Unit, watching
-/// its stay (R174) with the public `allure` mark (R437); the entries outlive the Allurer (R76).
+/// its stay (R174) with the `allure` mark (R437); the entries outlive the Allurer (R76).
 pub fn allure_enemy_units() -> Effect {
     Effect::new("allureEnemyUnits", move |ctx| {
         let (def_id, radiant) = maker_of(ctx);
@@ -489,10 +477,9 @@ fn schedule_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     mark_delayed(ctx, &entry, &mark);
 }
 
-/// R1850001 (Stinkyscape #110 iKwzki): "Duo with a permanent and make it Radiant next turn" — the
-/// permanent `target` names, either side, face-down or not, is made Radiant at the start of the Duo's
-/// controller's next turn, aimed at that stay (R174) and landing after its maker has left (R76). A card
-/// off the field is not Duo'd.
+/// R1850001 (Stinkyscape #110 iKwzki): "Duo with a permanent and make it Radiant next turn" —
+/// `schedule_radiant` for the permanent `target` names on the field, either side, landing even after
+/// its maker has left (R76).
 pub fn duo_radiant(args: DuoRadiantArgs) -> Effect {
     Effect::new("duoRadiant", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, None, args.target.as_ref()) else {
@@ -505,9 +492,8 @@ pub fn duo_radiant(args: DuoRadiantArgs) -> Effect {
     })
 }
 
-/// R1850001 (Stinkyscape #110 iKwzki's Radiant face): "Squad with all your permanents and make them
-/// Radiant next turn" — `duo_radiant` for each permanent its controller has on the field now, unit
-/// piles' tops then backrow cards, each in lane order. A Dormant card is marked by nothing (R1839000).
+/// R1850001 (#110's Radiant face): "Squad with all your permanents and make them Radiant next turn" —
+/// `schedule_radiant` for each of the controller's permanents on the field now, but a Dormant one.
 pub fn squad_radiant() -> Effect {
     Effect::new("squadRadiant", move |ctx| {
         let owner = ctx.controller;
@@ -604,8 +590,8 @@ fn mark_in(data: &IndexMap<String, Value>) -> Option<CardMark> {
 }
 
 /// R750, R437: every waiting delayed destroy of a scope made with a mark marks the Units its scope names
-/// now, as `run_engine_delayed` will read it. Called where the resolution loop collects events
-/// (`triggers::collect_events`), before `marks::sweep_marks` drops the marks of an effect that is gone.
+/// now, as `run_engine_delayed` will read it. Called from `triggers::collect_events`, before
+/// `marks::sweep_marks` drops the marks of an effect that is gone.
 pub fn refresh_scope_marks(sink: &mut EngineSink<'_>) {
     // Read off the list first: neither the context nor `sync_marks` touches `state.delayed`.
     let waiting: Vec<(String, PlayerId, BoardScope, CardMark)> = sink
@@ -713,10 +699,10 @@ pub struct ForRestOfGameArgs {
     pub at_end: Option<bool>,
 }
 
-/// B5 E28, R458 (Classic+ #52): "For the rest of the game: at the start of your turn, …". The card's
-/// `step` is re-entered at the start of each of `player`'s turns from the next one on, in R62's delayed
-/// stage in creation order, once per turn each; with `atEnd` (R1861002) at each end, this one's too if
-/// made before its end-of-turn stage. The player's effect, no `self` (R127); `label` is its badge (R169).
+/// B5 E28, R458 (Classic+ #52): "For the rest of the game: at the start of your turn, …" — the card's
+/// `step`, re-entered at each of `player`'s turn starts from the next on, in R62's delayed stage in
+/// creation order; with `atEnd` (R1861002) at each end, this one's too if made before its end-of-turn
+/// stage. The player's effect, no `self` (R127); `label` is its badge (R169).
 pub fn for_rest_of_game(args: ForRestOfGameArgs) -> Effect {
     Effect::new("forRestOfGame", move |ctx| {
         let mut resume = delayed_resume(
@@ -746,9 +732,8 @@ pub struct WatchLaneArgs {
 }
 
 /// MD-B22, R946 (Meditative #98, Radiant face): "after you put a card into that lane, …" — a
-/// `thisTurn` watcher on the controller that re-enters the card's `step` (under `hook`, `RESUME_HOOK`
-/// by default) after one of their cards enters one of their zones in `lane`, by a resolved play or a
-/// summon. The player's effect, with no `self` (R127); `label` is its badge (R169).
+/// `thisTurn` watcher re-entering the card's `step` (under `hook`, `RESUME_HOOK` by default) after a
+/// resolved play or a summon puts one of the controller's cards into one of their zones in `lane`.
 pub fn watch_lane_this_turn(args: WatchLaneArgs) -> Effect {
     Effect::new("watchLaneThisTurn", move |ctx| {
         let mut resume = delayed_resume(
@@ -778,9 +763,8 @@ pub struct WatchFirstPlaysArgs {
 }
 
 /// R1863000 (Stinkyscape #44 Great Replacement Theory): "for the rest of the game, the first time you
-/// play each …" — a `never` watcher that re-enters the card's `step` (under `hook`, `RESUME_HOOK` by
-/// default) after the controller's first resolved play, a cast included (R70), of each of `def_ids`,
-/// with its `defId` in the data. The player's effect, with no `self` (R127); `label` is its badge (R169).
+/// play each …" — a `never` watcher as `watch_lane_this_turn`'s, after the controller's first resolved
+/// play (a cast too, R70) of each of `def_ids`, with its `defId` in the data.
 pub fn watch_first_plays(args: WatchFirstPlaysArgs) -> Effect {
     Effect::new("watchFirstPlays", move |ctx| {
         let mut resume = delayed_resume(

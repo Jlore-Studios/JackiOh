@@ -1,12 +1,7 @@
 //! Win effects: winning outright and holding an alternative win (SPEC §2.5, ME-WIN, R848–R850), and
-//! issue #1843's two endings, a vote to remove a player and a flight from the game (R1843000–R1843002).
-//!
-//! Port of nothing shipped: Meditative #8 and #20 are the first cards that win the game another
-//! way, and Stinkyscape's Brains (#18.1–#18.3) and Edge of the Universe (#148.1) the first that vote
-//! a player out and flee. A card file reaches these as
-//! `jackioh_engine::effects::{win_game, alt_win, vote_out, flee}` or through `jackioh_engine::prelude`.
-//! Each only records what it did; the state check's game-end point ends the game
-//! (`win_conditions::win_check`).
+//! issue #1843's two endings, a vote to remove a player and a flight from the game (R1843000–R1843002;
+//! Meditative #8, #20, Stinkyscape #18.1–#18.3, #148.1). Each only records what it did; the state
+//! check's game-end point ends the game (`win_conditions::win_check`).
 
 use serde::{Deserialize, Serialize};
 
@@ -24,16 +19,12 @@ pub struct WinGameArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// R1870000 (Stinkyscape #4 Olivian Expanse's Radiant face, "you win the game when you play it"): a card
-/// whose `memory` holds `true` under this key wins its player the game as it is played, a cast too
-/// (R70): §10.5 step 4 takes the key off it and sets the won flag (`play_steps::place_card`), which the
-/// state check that closes that play holds, a hero at 0 losing first (R850). The key rides that one
-/// instance (an `add_to_hand` memory rider puts it there), never a copy or a Transform of it, and goes
-/// with the rest of its memory once it reaches a graveyard or an exile pile from a hand (R215).
+/// R1870000 (Stinkyscape #4 Olivian Expanse): a card whose `memory` holds `true` under this key wins
+/// its player the game as it is played, a cast too (R70), at §10.5 step 4 (`play_steps::place_card`).
+/// The key rides that one instance, never a copy or Transform, and goes with its memory (R215).
 pub const WIN_ON_PLAY_KEY: &str = "winOnPlay";
 
-/// R850: win the game outright for the player. The flag takes hold at the state check that closes
-/// this effect list (R59), where a hero at 0 still loses first.
+/// R850: win the game outright, at the state check closing this list (R59); a hero at 0 still loses first.
 pub fn win_game(args: WinGameArgs) -> Effect {
     Effect::new("winGame", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -79,12 +70,9 @@ pub struct VoteOutArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// R1843000: this card votes to remove the player from the game. The tally is the engine's, per player
-/// and per turn: each card definition counts once a turn, and once `VOTE_TALLY_SIZE` have voted the
-/// state check that closes this effect list removes the player, a loss for them (R1843001). A card
-/// writes its condition as its hook's own `if` ("votes to remove you if the enemy has more Units than
-/// you") and returns this verb when it holds. A vote with no card behind it, or once the game is over,
-/// counts nothing.
+/// R1843000: this card votes to remove the player from the game. Each card definition counts once a
+/// turn per player, and once `VOTE_TALLY_SIZE` have voted the closing state check removes the player,
+/// a loss for them (R1843001). The card's hook holds the condition as its own `if`.
 pub fn vote_out(args: VoteOutArgs) -> Effect {
     Effect::new("voteOut", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -114,8 +102,7 @@ pub struct FleeArgs {
 }
 
 /// R1843002: the player escapes the universe and wins the game, leaving the other player a draw, or a
-/// loss when `opponent` says so. Like `win_game` it takes hold at the state check that closes this
-/// effect list (R59), where a hero at 0 still loses first (R850). Once the game is over it does nothing.
+/// loss when `opponent` says so; like `win_game`, it takes hold at the closing state check (R59, R850).
 pub fn flee(args: FleeArgs) -> Effect {
     Effect::new("flee", move |ctx| {
         if ctx.sink.state.result.is_some() {

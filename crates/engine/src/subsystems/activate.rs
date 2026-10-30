@@ -1,12 +1,11 @@
 //! Activate (docs/classic-sets.md B3.2, R384): a card's "Activate:", "Activate N:" and "Activate ♾️:"
 //! abilities, used by the `activate` action while the card acts on its controller's side of the field.
-//! Rule by rule: uses per turn, "Activate N" moved by Degrade and Upgrade, both capped (1, 7, 9,
-//! R884000, `uses_allowed`); the controller in their main phase, no sickness or exertion, a Frozen card
-//! none (2, R2246000); uses counted per ability in `memory.activations` (3, R1751000, SPEC §6.2) and
-//! cleared by R78's reset; an unpayable cost refuses (4); declared targets and modes travel in the
-//! action (5, R81, R90), the discards they cost random at pay time (B5 E5, R450, Classic #89, R682);
-//! not a play, though what the effect plays counts (6, R70); `legal_actions` lists from the refusal
-//! (8, §10.2). Heroic Power (Core #98, R752) is abilities here; `activatePower` aliases `activate`.
+//! B3.2's rules: uses per turn, N moved by Degrade and Upgrade, capped (1, 7, 9, R884000); the
+//! controller in their main phase, sickness and exertion aside (2, R2246000); uses per ability (3,
+//! R1751000, SPEC §6.2); an unpayable cost refuses (4); declared choices travel in the action (5, R81,
+//! R90; B5 E5's discards random at pay time, R450, Classic #89, R682); not a play, though what the
+//! effect plays counts (6, R70); `legal_actions` lists from the refusal (8, §10.2). Heroic Power
+//! (Core #98, R752) is abilities here; `activatePower` aliases `activate`.
 //!
 //! Resumable (§9.3, R113): a Tribute's Death hooks can ask, so the effect is then owed on `state.work`
 //! (`ACTIVATION_WORK`); its list runs under the hook `activation:<id>`, so a parked tail comes back to
@@ -122,9 +121,8 @@ pub fn mana_price(state: &GameState, card: &CardInstance, cost: ActivationCost) 
 
 // The card and its abilities
 
-/// B3.2 rule 2, §3.2, R13, R446, R447: the card acts on the field — the top of a pile of either row or a
-/// Unit a carrier holds, never a card dormant beneath (`zones::acts_on_field`) — and a backrow card is
-/// face-up: a face-down card has no text anyone can use.
+/// B3.2 rule 2, §3.2, R13, R446, R447: the card acts on the field (`zones::acts_on_field`) and, in the
+/// backrow, is face-up: a face-down card has no text anyone can use.
 pub fn is_acting_on_field(state: &GameState, card: &CardInstance) -> bool {
     let Some(at) = slot_of(state, card) else {
         return false;
@@ -145,9 +143,8 @@ fn reveals_cloaked(state: &GameState, card: &CardInstance) -> bool {
     crate::alt_play::is_cloaked_set(card) && slot_of(state, card).is_some() && acts_on_field(state, card)
 }
 
-/// R783006: the Reveal a card set by its Cloaked has, and nothing else while it is set: no cost and
-/// no choices, usable while the card can come out whole (`alt_play::reveal_can_complete`). Its effect is
-/// the card's own reveal (`activate_ability`), so its list is empty.
+/// R783006: a Cloaked-set card's Reveal: no cost or choices, usable while the card can come out whole;
+/// its effect is the card's own reveal (`activate_ability`), so its list is empty.
 fn cloaked_reveal_decl() -> ActivationDecl {
     ActivationDecl {
         id: crate::alt_play::CLOAKED_REVEAL.to_string(),
@@ -164,10 +161,9 @@ fn cloaked_reveal_decl() -> ActivationDecl {
     }
 }
 
-/// The abilities the card has now: its running face's (`script_of`, so a Vanilla card has none, §6.3),
-/// ids made unique for a fused card (`script::activation_decls`, R102), less any it does not have on this
-/// instance (`ActivationDecl.has`). A card set by its Cloaked has its Reveal alone (R783006), and a
-/// Dormant card the ability it keeps while it sleeps alone (R1839002).
+/// The abilities the card has now: its running face's (a Vanilla card has none, §6.3), ids unique for a
+/// fused card (R102), less any `ActivationDecl.has` refuses. A card set by its Cloaked has its Reveal
+/// alone (R783006), a Dormant card its `wakesBy` ability alone, or none (R1839002).
 pub fn abilities_of(state: &GameState, card: &CardInstance) -> Vec<ActivationDecl> {
     if crate::alt_play::is_cloaked_set(card) {
         return vec![cloaked_reveal_decl()];
@@ -176,7 +172,6 @@ pub fn abilities_of(state: &GameState, card: &CardInstance) -> Vec<ActivationDec
     if crate::starship::is_dormant_starship(card) {
         return vec![crate::starship::launch_decl(state, card)];
     }
-    // R1839002: a Dormant card has its `wakesBy` ability alone, and none if it keeps none.
     let wakes_by = if crate::slumber::is_slumbering(card) {
         match crate::slumber::wakes_by_of(state, card) {
             Some(id) => Some(id),
@@ -260,9 +255,8 @@ fn hand_picks(targets: &[Selection]) -> Vec<String> {
 /// R384, SPEC §6.2: where an instance counts its uses — `{ turn, count }` for the turn it names.
 pub const ACTIVATIONS_MEMORY_KEY: &str = "activations";
 
-/// R1841000, SPEC §6.2: where an instance keeps the cooldowns of its abilities that have an extra
-/// turn cooldown — `{ <ability>: { player, turn } }`, `turn` being the user's `turns_started` at the
-/// use. R78's reset clears it with the rest of `memory` when the card leaves the field.
+/// R1841000, SPEC §6.2: where an instance keeps its extra turn cooldowns — `{ <ability>: { player,
+/// turn } }`, `turn` the user's `turns_started` at the use; R78's reset clears it with `memory`.
 pub const COOLDOWNS_MEMORY_KEY: &str = "cooldowns";
 
 /// `{ turn, count }`, as numbers came back through JSON.
@@ -317,7 +311,6 @@ pub fn ability_uses_this_turn(state: &GameState, card: &CardInstance, ability: &
 pub fn uses_allowed(card: &CardInstance, decl: &ActivationDecl) -> i32 {
     match decl.uses {
         ActivationUses::Unlimited => ACTIVATE_UNLIMITED_CAP,
-        // R884000: a Buff or KY's Constant never takes N past ♾️'s own bound.
         ActivationUses::Count(n) => {
             tuned_count(card, ACTIVATE_TUNING_KEY, n.max(1)).min(ACTIVATE_UNLIMITED_CAP)
         }
@@ -337,7 +330,6 @@ fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
         .and_then(Value::as_object)
         .cloned()
         .unwrap_or_default();
-    // A record an older engine wrote (`{ turn, count }`) counts for the card's only ability.
     let prev = ability_uses_this_turn(state, card, ability);
     abilities_map.insert(ability.to_string(), json!(prev + 1));
     let record = json!({
@@ -435,9 +427,8 @@ fn tribute_units_for(
     decl: &ActivationDecl,
 ) -> Vec<CardInstance> {
     let units: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
-    // "Tribute this" pays with the card itself, so it is not also one of the units a Tribute counts.
-    // R683: a cost that excludes itself (Classic #21) never lists the card either.
-    // R1220: no Tribute cost may take an Untributable card.
+    // "Tribute this" pays with the card itself, and a cost that excludes itself (R683, Classic #21)
+    // never lists it either; no Tribute cost may take an Untributable card (R1220).
     let cost = decl.cost.unwrap_or_default();
     if cost.tribute_self == Some(true) || cost.tribute_excludes_self == Some(true) {
         return units
@@ -487,9 +478,8 @@ fn why_ability_unusable(
     {
         return Err("that card can't use its own Activate".into());
     }
-    // R2246000: a Frozen card uses no Activate until it thaws, forever-Frozen ones never; its uses are
-    // untouched, and an effect that runs its ability (S #26 ZolarKeth's) still does, as R20 lets an
-    // effect's attack happen to a Frozen Unit.
+    // R2246000: a Frozen card uses no Activate until it thaws; an effect that runs its ability (S #26
+    // ZolarKeth's) still does, as R20 lets an effect's attack happen to a Frozen Unit.
     if card.frozen.is_some() {
         return Err(FROZEN_REFUSAL.into());
     }
@@ -561,7 +551,7 @@ fn opponent_may_activate(state: &GameState, card: &CardInstance, ability: Option
 
 /// R384: why `player` cannot activate that ability of that card right now, or `Ok` when they can.
 /// `ability` names one of several (B3.2 rule 5); none named is the card's only one. `legal_actions`
-/// lists an `activate` for exactly the abilities this answers `Ok` for, so the two agree (§10.2).
+/// lists an `activate` for exactly the abilities this answers `Ok` for (§10.2).
 pub fn why_cannot_activate_ability(
     state: &GameState,
     player: PlayerId,
@@ -571,7 +561,6 @@ pub fn why_cannot_activate_ability(
     let Some(card) = find_instance(state, instance_id) else {
         return Err(EngineError::new(format!("no card {instance_id}")));
     };
-    // MD-D9: the other seat may use an ability open to either player; every other refusal stands.
     if card.controller != player && !opponent_may_activate(state, card, ability) {
         return Err("that card is not yours".into());
     }
@@ -633,8 +622,7 @@ fn refuse_tributes(
 }
 
 /// §9.3 "reduce refuses illegal actions itself", for everything an `activate` carries: the card and
-/// the ability (`why_cannot_activate_ability`), the targets and modes it declares (R81, R90, through the
-/// same `play_choices` rules a play is read by), and the units a Tribute cost takes.
+/// the ability, the targets and modes it declares (R81, R90, as a play's), and the Tribute's units.
 pub fn why_activate_refused(
     state: &GameState,
     player: PlayerId,
@@ -655,8 +643,7 @@ pub fn why_activate_refused(
         &decl,
         action.tributes.as_deref().unwrap_or(&[]),
     )?;
-    // B5 E5, R450, R682: a declared target that costs discards needs that many other cards held —
-    // the discards are random at pay time, so the action carries none.
+    // B5 E5, R450, R682: the discards are random at pay time, so the action carries none.
     why_targeting_discards_unpayable(
         state,
         player,
@@ -787,9 +774,8 @@ fn tributed_from(raw: Option<&Value>) -> Vec<TributedUnit> {
     }
 }
 
-/// R384: what the activation running this effect paid — the ability's id and the units its Tribute
-/// cost took, as they stood (`TributedUnit`). Carried in the run's data, so a step a prompt re-enters
-/// reads it too. Empty outside an activation.
+/// R384: what the activation running this effect paid, carried in the run's data so a step a prompt
+/// re-enters reads it too. Empty outside an activation.
 pub fn activation_paid(ctx: &EffectContext<'_>) -> ActivationPaid {
     let Some(raw) = ctx.data.get(ACTIVATION_DATA_KEY) else {
         return ActivationPaid::default();
@@ -898,10 +884,9 @@ fn pay_costs(
     }
 }
 
-/// The ability's effect, run as the card's own list under `activation:<id>` so a prompt inside it
-/// pauses the rest (R113) and its answer comes back to the same ability. The card is its `self`
-/// wherever it is now (one that tributed itself resolves from its graveyard), with the face it was
-/// activated with. R59: the state check follows the whole ability, once its list stops asking.
+/// The ability's effect, run as the card's own list (R113). The card is its `self` wherever it is now
+/// (one that tributed itself resolves from its graveyard), with the face it was activated with. R59:
+/// the state check follows the whole ability, once its list stops asking.
 fn run_effect(sink: &mut EngineSink<'_>, run: &ActivationRun) {
     let paid = ActivationPaid {
         ability: run.ability.clone(),
@@ -1001,16 +986,14 @@ pub fn run_owed_activation(sink: &mut EngineSink<'_>, item: &WorkItem) {
 
 /// The `activate` action (B3.2, R384): validate, count the use, announce it (`activated`), pay the
 /// costs, run the effect. The use is counted before anything can pause, so an ability that asks has
-/// spent its use and the answer cannot buy another (as R43's power does). Not a play (rule 6): no turn
-/// log, no play counter, no `cardPlayed`.
+/// spent its use and the answer cannot buy another (as R43's power does). Not a play (rule 6).
 pub fn activate_ability(
     sink: &mut EngineSink<'_>,
     player: PlayerId,
     action: &ActivateAction,
 ) -> Result<(), EngineError> {
-    // R1200: while a Mayor acts the action carries no declared targets — `legal_actions` offered
-    // it stripped — so draw each one at random before anything is checked or paid. A card or an
-    // ability this does not find is the validation's refusal to give, not this draw's.
+    // R1200: while a Mayor acts the action carries no declared targets, so draw each at random before
+    // anything is checked or paid; a card or ability not found is the validation's refusal to give.
     let mut owned = action.clone();
     if crate::random_targets::targets_random(sink.state)
         && let Some(card) = find_instance(sink.state, &owned.instance_id).cloned()
@@ -1111,10 +1094,9 @@ pub fn activate_ability(
 
 // The view (§10.8)
 
-/// R384: the card's abilities as a client needs them — on the controller's own view of a card
-/// acting on the field, and nowhere else (the other player reads the card's text; whether it could
-/// be used is its controller's business). MD-D9: a viewer who is not the controller sees only the
-/// abilities either player may use. `usable` is exactly whether `legal_actions` lists it.
+/// R384: the card's abilities as a client needs them, on the controller's own view of a card acting on
+/// the field and nowhere else; MD-D9: another viewer sees only those either player may use. `usable` is
+/// exactly whether `legal_actions` lists it.
 pub fn activation_views_for(
     state: &GameState,
     viewer: PlayerId,

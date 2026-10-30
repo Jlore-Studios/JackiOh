@@ -1,16 +1,9 @@
 //! A target prompt narrowed by a condition no `TargetScope` field can say (§10.6): Classic #32 Felinor
-//! Feelings' Radiant face, "steal an enemy permanent in a lane where you control a (1) Cost Unit",
-//! asked after its Felinor Token lands, so the token's lane counts. A card-specific verb of the Classic
-//! #1–#45 workstream, the prompt half of what `TargetFilter.check` / `Script.target_checks` do for a
-//! play's declared targets.
+//! Feelings' Radiant face, asked after its Felinor Token lands so the token's lane counts (the Classic
+//! #1–#45 workstream), the prompt half of `TargetFilter.check` / `Script.target_checks`.
 //!
-//! `where` is read once, as the effect applies, to build the options; the prompt that opens holds only
-//! data (the options and the continuation), so a pause survives a JSON round trip of the state as
-//! every prompt does (§9.3). Options are built exactly as `choose_target`'s — the scope's cards in its
-//! deterministic order, keyed by their selection, never by a name — and `view_for` redacts an option
-//! that offers a card the chooser may not read, a face-down card of the other player's (R177).
-//!
-//! Port of `packages/engine/src/effects/chooseWhere.ts`.
+//! `where` is read once, as the effect applies; the open prompt holds only data, so a pause survives a
+//! JSON round trip (§9.3). `view_for` redacts an option the chooser may not read (R177).
 
 use std::sync::Arc;
 
@@ -65,9 +58,8 @@ impl std::fmt::Debug for ChooseTargetWhereArgs {
     }
 }
 
-/// A target prompt for `ctx.controller` over the scope's cards that `where` admits (a hero, which is no
-/// card, only when `where` admits null). With no card admitted the effect fizzles and asks nothing, as
-/// `choose_target` does; the answer re-enters the card's script at `step` with the pick in `ctx.targets`.
+/// A target prompt for `ctx.controller` over the scope's cards `where` admits (a hero only when it
+/// admits `None`). None admitted fizzles, as in `choose_target`.
 pub fn choose_target_where(args: ChooseTargetWhereArgs) -> Effect {
     Effect::new("chooseTargetWhere", move |ctx| {
         let reader: &EffectContext<'_> = &*ctx;

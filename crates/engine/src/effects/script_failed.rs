@@ -1,7 +1,5 @@
-//! Custom cards' effects (#915, SPEC §12.5, R915004).
-//!
-//! A custom card's hook that fails does nothing but say so: the Luau host resolves this verb in
-//! place of the effects the hook would have made. A card file never calls it.
+//! Custom cards' effects (#915, SPEC §12.5, R915004): a custom card's hook that fails does nothing but
+//! say so, the Luau host resolving this verb in place of its effects. A card file never calls it.
 
 use crate::script::Effect;
 use crate::wire::GameEvent;

@@ -1,8 +1,5 @@
-//! Turn effects: lost refreshes and owed extra turns (SPEC §2.2, §2.3, ME-TURN, R844–R847).
-//!
-//! Port of nothing shipped: Meditative #18, #19 and #19.1 are the first cards that lose a refresh
-//! or owe a turn. A card file reaches these as `jackioh_engine::effects::{lose_refreshes,
-//! take_extra_turn}` or through `jackioh_engine::prelude`.
+//! Turn effects: lost refreshes and owed extra turns (SPEC §2.2, §2.3, ME-TURN, R844–R847), for
+//! Meditative #18, #19 and #19.1.
 
 use serde::{Deserialize, Serialize};
 
@@ -21,10 +18,9 @@ pub struct LoseRefreshesArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// R844: "lose all mana next N turns" — the caster's next N refreshes give 0 (and spend their
-/// riders with them, `mana::refreshed_mana`). The loss is a `turns_started` index through which
-/// the refresh is lost, so overlapping losses keep the latest end. A change of 0 changes nothing,
-/// and announces nothing.
+/// R844: "lose all mana next N turns" — the caster's next N refreshes give 0 (spending their riders,
+/// `mana::refreshed_mana`). The loss is a `turns_started` index through which the refresh is lost, so
+/// overlapping losses keep the latest end; a change of 0 announces nothing.
 pub fn lose_refreshes(args: LoseRefreshesArgs) -> Effect {
     Effect::new("loseRefreshes", move |ctx| {
         if args.turns <= 0 {

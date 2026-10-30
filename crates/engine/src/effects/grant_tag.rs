@@ -1,8 +1,6 @@
-//! Granted tags (docs/meditative-set.md, group B's Systems; MD-B15, R923): Meditative #35 gives a
-//! permanent the CN tag. The tag joins the instance's `granted_tags`, so every instance-level tag
-//! read (`query::tags_of`) sees it from then on, while catalog pools — which read definitions — do
-//! not. A card that already carries the tag, or one that has ceased to exist (R11, R86), is left
-//! alone. No event: the view lists the card's tags where they differ from its definition's.
+//! Granted tags (docs/meditative-set.md; MD-B15, R923): Meditative #35 gives a permanent the CN tag. It
+//! joins the instance's `granted_tags`, which every instance-level tag read (`query::tags_of`) sees and
+//! catalog pools, reading definitions, do not. No event: the view lists the tags a card gained.
 
 use serde::{Deserialize, Serialize};
 
@@ -23,8 +21,8 @@ pub struct GrantTagArgs {
     pub tag: Tag,
 }
 
-/// MD-B15, R923: give the named card `tag`, once — a second grant of a tag it carries changes
-/// nothing and reports nothing.
+/// MD-B15, R923: give the named card `tag`, once: a card that carries it, or has ceased to exist (R11,
+/// R86), is left alone.
 pub fn grant_tag(args: GrantTagArgs) -> Effect {
     Effect::new("grantTag", move |ctx| {
         // R174: a card named by id is aimed at the stay it had when the run began.

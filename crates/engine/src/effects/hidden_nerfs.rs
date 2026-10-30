@@ -1,17 +1,14 @@
 //! Hidden Nerfs (issue #1845, Stinkyscape #123 Gokugains; R1845000, R1845001): Nerfs put on a card in
 //! a hand or a deck that no seat reads, the card's own owner included, until the card is played.
 //!
-//! `degrade_secretly` reaches its cards as `degrade` does (`TuneArgs`: one named card, a scope's cards
-//! or `random` of them) and adds `times` to each one's `hiddenNerfs`, a count on the instance. Nothing
-//! is drawn from the Nerf menu and nothing is reported: no event, and no view field (`view_for` builds a
-//! card's view field by field), while the AI's `redact` and the dry run's `concealed_copy` drop the
-//! count from every card (`state::forget_hidden_nerfs`), so no seat's decision hangs on it (R1845000).
-//! Only a card in a hand or a deck that is not Immutable takes one (R23, R386).
+//! `degrade_secretly` adds to a card's `hiddenNerfs` count and reports nothing: no event, no view
+//! field, and the AI's `redact` and the dry run's `concealed_copy` drop it (`state::forget_hidden_nerfs`),
+//! so no seat's decision hangs on it (R1845000).
 //!
-//! `land_hidden_nerfs` is §10.5 step 3's: as the card is played or cast, after a replacement, Feng Shui,
-//! Gifted Program and the Garden, its count is spent as that many Nerfs, each one §6.3 Nerf drawn from
-//! every row but the cost's (`tune::degrade_sparing_cost`) and reported as every Nerf is (R177, R440).
-//! So the card's price is never touched, and its Nerfs are seen as it is played (R1845001).
+//! `land_hidden_nerfs` is §10.5 step 3's: as the card is played or cast, after a replacement, Feng
+//! Shui, Gifted Program and the Garden, its count is spent as that many §6.3 Nerfs from every row but
+//! the cost's (`tune::degrade_sparing_cost`), reported as every Nerf is (R177, R440), so the card's
+//! price is never touched and its Nerfs are seen as it is played (R1845001).
 
 use indexmap::IndexSet;
 
@@ -48,10 +45,8 @@ fn picked(ctx: &mut EffectContext<'_>, pool: Vec<String>, random: Option<i32>) -
     pool.into_iter().filter(|id| chosen.contains(id)).collect()
 }
 
-/// R1845000: `times` hidden Nerfs (default 1) on each card `args` reaches that can take them, said to
-/// nobody. #123 Gokugains' "a random Unit in your opponent's hand is Nerfed 3 times secretly" is
-/// `{ scope: { side: "enemy", zones: ["hand"], types: ["Unit"] }, random: 1, times: 3 }`. A random pick
-/// draws among the cards that can take them, so it never lands on nothing while another card could.
+/// R1845000: `times` hidden Nerfs (default 1) on each card `args` reaches that can take them. A random
+/// pick draws among the cards that can take them, so it never lands on nothing while another could.
 pub fn degrade_secretly(args: TuneArgs) -> Effect {
     Effect::new("degradeSecretly", move |ctx| {
         let times = args.times.unwrap_or(1).max(0);
@@ -85,8 +80,7 @@ pub fn degrade_secretly(args: TuneArgs) -> Effect {
     })
 }
 
-/// R1845001: §10.5 step 3's landing of the played card's hidden Nerfs, each a Nerf that spares its
-/// cost, run as its controller's. A card with none is left alone and nothing is drawn.
+/// R1845001: the played card's hidden Nerfs landed, run as its controller's; none draws nothing.
 pub fn land_hidden_nerfs(sink: &mut EngineSink<'_>, instance_id: &str) {
     let Some(live) = find_instance_mut(sink.state, instance_id) else {
         return;

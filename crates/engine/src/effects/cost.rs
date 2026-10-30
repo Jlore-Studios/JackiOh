@@ -1,10 +1,7 @@
-//! Cost changes on one card instance: the two inputs R65 reads before any player discount. Both
-//! persist through a hand, a library and leaving the field (R78), and both go as the card reaches a
-//! graveyard or an exile pile (R766), so a card discounted in hand costs its printed cost there.
-//! The order the two combine is `effectiveCost`'s (§6.3 Cost, R65); nothing here recomputes it.
-//!
-//! R1848006 adds Inflation (Stinkyscape #153 Stimmycheck): a chance roll per card in a hand and a deck
-//! that raises a card's `costMod` (`inflate`), the chance carried on the copy a Stimmycheck makes.
+//! Cost changes on one card instance: the two inputs R65 reads before any player discount, combined
+//! by `effectiveCost` alone (§6.3 Cost). Both persist through a hand, a library and leaving the field
+//! (R78) and go as the card reaches a graveyard or an exile pile (R766). R1848006 adds Inflation
+//! (Stinkyscape #153 Stimmycheck), a chance roll per card that raises its `costMod` (`inflate`).
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -17,7 +14,7 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance, find_instance_mut};
 use crate::wire::{GameEvent, PLAYER_IDS, ZoneName};
 
-/// A cost change names a card instance in any zone, so a hero selection is not one of them.
+/// A cost change names a card instance in any zone, never a hero.
 fn card_of(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<CardInstance> {
     match resolve_target(ctx, spec) {
         Some(DamageTarget::Unit { instance }) => Some(instance),
@@ -25,19 +22,16 @@ fn card_of(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<CardInstance> {
     }
 }
 
-/// R4: a price a card is given as it returns to a hand (#31's +1, #37r's and #72's "1 less", #72r's
-/// "0") is its price in that hand. A full hand burns the card (§2.4) and R78 would carry the change
-/// into every later zone, so with `inHandOnly` the change lands only on a card that is in a hand when
-/// it applies; written after the move, it is skipped for a burned card.
+/// R4: a price a card is given as it returns to a hand (#31, #37r, #72, #72r) is its price in that
+/// hand. A full hand burns the card (§2.4) and R78 would carry the change on, so `inHandOnly` prices
+/// only a card in a hand when it applies.
 fn priced(card: &CardInstance, in_hand_only: Option<bool>) -> bool {
     in_hand_only != Some(true) || card.zone.z() == ZoneName::Hand
 }
 
-/// R65: the event reports what the card costs now, which is `effectiveCost` and nothing else. R177: a
-/// change made to a card in a library is one nobody could read where it happened (§3), so the event
-/// says it was made there (`hiddenFrom`) and a view keeps it unread for good: a library-wide change (#95)
-/// emits one event per card in library order, so once a card reads openly its event would give away its
-/// place in the batch.
+/// R65: the event reports `effectiveCost` now. R177: a change to a library card is one nobody could
+/// read (§3), so the event is `hiddenFrom` both for good, or a library-wide change's (#95) events, in
+/// library order, would give away a card's place once it reads openly.
 fn emit_cost(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     let cost = effective_cost(ctx.sink.state, card, Default::default());
     let hidden_from = if card.zone.z() == ZoneName::Library {
@@ -74,8 +68,8 @@ pub struct SetCostModArgs {
     pub return_price: Option<bool>,
 }
 
-/// Add to this instance's `costMod` (#7 Jewelosco Scarab's −1, #31 KY's Math Equation's +1 per
-/// return, #37r Gravedigger). The change is permanent and travels with the card between zones (R78).
+/// Add to this instance's `costMod` (#7 Jewelosco Scarab, #31 KY's Math Equation, #37r Gravedigger),
+/// for good and between zones (R78).
 pub fn set_cost_mod(args: SetCostModArgs) -> Effect {
     Effect::new("setCostMod", move |ctx| {
         let spec = args.target.clone().unwrap_or(TargetSpec::SelfCard);
@@ -115,9 +109,8 @@ pub struct SetCostOverrideArgs {
     pub in_hand_only: Option<bool>,
 }
 
-/// Set this instance's `costOverride`: #54 Straaza's "they cost 1", #41r Sheepish's 0-cost Lava
-/// Golem, Craft a Card's 0 (R77). R65 starts the calculation from the override in place of the
-/// printed cost, then still adds `costMod` and the player's discounts.
+/// Set this instance's `costOverride` (#54 Straaza, #41r Sheepish, Craft a Card, R77): R65 starts
+/// from it in place of the printed cost, then still adds `costMod` and the player's discounts.
 pub fn set_cost_override(args: SetCostOverrideArgs) -> Effect {
     Effect::new("setCostOverride", move |ctx| {
         let spec = args.target.clone().unwrap_or(TargetSpec::SelfCard);
@@ -137,12 +130,10 @@ pub fn set_cost_override(args: SetCostOverrideArgs) -> Effect {
     })
 }
 
-/// R1848006: where a card carries the Inflation chance it rolls at (its `memory`), in percent — the
-/// copy a Stimmycheck adds to its hand carries its grown chance there (`add_to_hand`'s `memory`).
+/// R1848006: the `memory` key of a card's own Inflation chance, in percent (a Stimmycheck's copy).
 pub const INFLATION_CHANCE_KEY: &str = "inflationChance";
 
-/// R1848006: the chance, in percent, a card's Inflation rolls at — the one it carries
-/// (`INFLATION_CHANCE_KEY`), else `printed` — held to 0..=`INFLATION_ROLL_SIDES`.
+/// R1848006: a card's Inflation chance: the one it carries, else `printed`.
 pub fn inflation_chance_of(card: Option<&CardInstance>, printed: i32) -> i32 {
     card.and_then(|card| card.memory.get(INFLATION_CHANCE_KEY))
         .and_then(Value::as_i64)
@@ -150,8 +141,7 @@ pub fn inflation_chance_of(card: Option<&CardInstance>, printed: i32) -> i32 {
         .clamp(0, INFLATION_ROLL_SIDES)
 }
 
-/// R1848006: the chance the copy a Stimmycheck makes carries ("+10% chance at Inflation"), never past
-/// a certain hit.
+/// R1848006: the chance a Stimmycheck's copy carries, never past a certain hit.
 pub fn next_inflation_chance(chance: i32) -> i32 {
     chance
         .saturating_add(INFLATION_CHANCE_STEP)
@@ -172,16 +162,10 @@ pub struct InflateArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// R1848006 (Stinkyscape #153 Stimmycheck): "cards in your hand and deck have a 15% chance for
-/// Inflation to hit, which causes them to cost (1) more". One roll per card, from the match rng, in
-/// the hand's order and then the deck's from the top; a card it hits gains `INFLATION_COST` on its
-/// `costMod`, which rides it through the hand and the deck as any price change does and R766 takes
-/// off in a graveyard or an exile pile. An X-cost card, whose price no change reaches (R65), is passed
-/// by without a roll. The roll is luck-based (§6.1): Lucky X on the running card and its controller's
-/// Luck roll it again and keep the better, which is a miss on the controller's own cards and a hit on
-/// the opponent's. A chance of 0 rolls nothing and one of 100 hits every card with no roll. The cards
-/// are ones no two players both read, so, as R440 has a change over a hidden scope, nothing announces
-/// them: their owner reads the new prices off the view.
+/// R1848006 (Stinkyscape #153 Stimmycheck): one roll per card, hand then deck, from the match rng; a
+/// hit adds `INFLATION_COST` to its `costMod` (R766). An X-cost card, which no price change reaches
+/// (R65), takes no roll. Luck-based (§6.1): Lucky X and Luck reroll and keep a miss on the
+/// controller's own cards, a hit on the opponent's. A hidden scope, so nothing is announced (R440).
 pub fn inflate(args: InflateArgs) -> Effect {
     Effect::new("inflate", move |ctx| {
         let chance = inflation_chance_of(ctx.self_.as_ref(), args.chance.unwrap_or(INFLATION_CHANCE));

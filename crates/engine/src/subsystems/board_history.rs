@@ -1,17 +1,11 @@
 //! Board snapshots (docs/classic-sets.md B5 E29; SPEC §2.2, §10.1, §8.7 C+ #35; R419, R562, R563, R566):
-//! the history C+ #35 Rollback returns the field to.
-//!   - `record_board_snapshot` starts every turn, before the mana refresh (R62): both sides' zones as
-//!     whole instances, their Locks and the homes held then (R383), the last BOARD_HISTORY_DEPTH kept
-//!     in `state.board_history`. Plain data (§9.3), never in `view_for` (§10.8), renamed in it when a
-//!     card takes a fresh id (`state::rename_in_board_history`, R227).
-//!   - `restore_board` is R419's three steps, each on every restored side before the next: 1. a card there the
-//!     restored part of the snapshot does not hold goes to its controller's hand (R78, §2.4, R11, R747); 2. each card it holds
-//!     goes back to its zone and place (a fresh id going face-down, R227); 3. the Locks become the snapshot's.
-//!     R562 picks the snapshot, R563 the held zones, R566 what a card keeps of the present.
+//! the history C+ #35 Rollback returns the field to, as plain data (§9.3, R383's homes included) never
+//! in `view_for` (§10.8), renamed as a card takes a fresh id (`state::rename_in_board_history`, R227).
 //!
-//! Not plays, summons or deaths: `rolledBack`, `bounced`/`burned` (step 1), `controlChanged` for a card
-//! that entered the side (step 2, as a board swap's do, R73) and `locked`/`unlocked` (step 3). A card
-//! that only moved along its own side entered nothing (R171): `rolledBack` covers it.
+//! `restore_board` is R419's three steps, each on every restored side before the next: unheld cards
+//! to hand (R78, §2.4, R11, R747), held ones back to their places, the Locks to the snapshot's. Its
+//! only events are `rolledBack`, `bounced`/`burned`, `controlChanged` for a card that entered the side
+//! (R73) and `locked`/`unlocked`; a card that moved along its own side entered nothing (R171).
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -33,7 +27,7 @@ use crate::zones::{
 
 const ROWS: [Row; 2] = [Row::Units, Row::Backrow];
 
-/// R419, §2.2: the field as the turn that has just begun finds it; the last BOARD_HISTORY_DEPTH are kept, oldest first.
+/// R419, §2.2: the field as the turn just begun finds it, before the mana refresh (R62).
 pub fn record_board_snapshot(state: &mut GameState) {
     let side = |player: PlayerId| -> SideSnapshot {
         let held = &state.players[player];
@@ -69,8 +63,7 @@ pub fn record_board_snapshot(state: &mut GameState) {
     state.board_history = Some(history);
 }
 
-/// R419, R562: the snapshot of the start of player-turn (this turn − N), or the oldest the history holds
-/// when it holds none that old — at most the game's first turn's. `None` with no history (before turn 1).
+/// R419, R562: the snapshot of the start of player-turn (this turn − N), or the oldest held.
 pub fn snapshot_for(state: &GameState, turns_ago: i32) -> Option<&BoardSnapshot> {
     state
         .board_history
@@ -79,7 +72,7 @@ pub fn snapshot_for(state: &GameState, turns_ago: i32) -> Option<&BoardSnapshot>
         .find(|snapshot| snapshot.turn >= state.turn - turns_ago)
 }
 
-/// One zone as a snapshot holds it, in `zones::zone_contents`'s order: a pile top first; a carried Unit, top, dormant cards.
+/// One zone as a snapshot holds it, in `zones::zone_contents`'s order.
 fn snapshot_zone(side: &SideSnapshot, slot: &ZoneSlot) -> Vec<CardInstance> {
     let Ok(i) = usize::try_from(slot.lane - 1) else {
         return Vec::new();
@@ -106,9 +99,8 @@ fn snapshot_zone(side: &SideSnapshot, slot: &ZoneSlot) -> Vec<CardInstance> {
     out
 }
 
-/// The Unit a snapshot holds on a carrier in a backrow zone (R446). It goes back on its carrier; every
-/// other card of the zone lands where it lay, a Unit standing there or dormant beneath its top included
-/// (R1081000).
+/// The Unit a snapshot holds on a backrow carrier (R446), which goes back on it; the zone's other
+/// cards land where they lay (R1081000).
 fn snapshot_carried<'a>(side: &'a SideSnapshot, slot: &ZoneSlot) -> Option<&'a CardInstance> {
     let i = usize::try_from(slot.lane - 1).ok()?;
     side.carried.as_ref()?.get(i)?.as_ref()
@@ -137,7 +129,7 @@ fn locked_at(locks: &RowFlags, slot: &ZoneSlot) -> bool {
         == Some(true)
 }
 
-/// A card the snapshot holds (`card`, a copy, becomes the card on the field) and where it stood just before.
+/// A held card (`card`, a copy, goes onto the field) and where it stood just before.
 #[derive(Clone, Debug)]
 struct Placement {
     card: CardInstance,
@@ -145,15 +137,12 @@ struct Placement {
     live: Option<CardInstance>,
     from: Option<PlayerId>,
     was_face_down: bool,
-    /// R1081000: the card lay in its backrow zone itself (not on a carrier), so it is set down so — a Unit
-    /// standing there or dormant beneath its top as well as any other card.
+    /// R1081000: the card lay in its backrow zone itself, not on a carrier.
     stands: bool,
 }
 
-/// R566: a card that stood on the same side of the field just before, under the same id, entered nothing
-/// (R171) and keeps its sickness and exertion (and its freeze, R1174000); any other — a fresh id included — entered the field on
-/// this turn (R83), crossing sides with what it installed (`combat::enter_new_side`). Returns whether it
-/// entered. `card_id` names the placed card in the state (its fresh id when it took one).
+/// R566: a card that stood on the same side just before, under the same id, entered nothing (R171) and
+/// keeps its sickness, exertion and freeze (R1174000); any other entered this turn (R83). Whether it entered.
 fn stamp_turn_state(sink: &mut EngineSink<'_>, placement: &Placement, card_id: &str, renamed: bool) -> bool {
     let Some(card) = find_instance_mut(sink.state, card_id) else {
         return false;
@@ -165,7 +154,7 @@ fn stamp_turn_state(sink: &mut EngineSink<'_>, placement: &Placement, card_id: &
         && !renamed
     {
         card.exertion = live.exertion;
-        // R1174000: Frozen is the turn's exertion lost, so it is kept with the exertion.
+        // R1174000: Frozen is the turn's exertion lost, so it is kept with it.
         card.frozen = live.frozen;
         if live.summoned_turn.is_some() {
             card.summoned_turn = live.summoned_turn;
@@ -180,8 +169,8 @@ fn stamp_turn_state(sink: &mut EngineSink<'_>, placement: &Placement, card_id: &
     true
 }
 
-/// R419: return `only`'s sides of the field to the snapshot `turns_ago` names (R562). Returns how many
-/// turns it went back, or `None` with no history, when nothing happens.
+/// R419: return `only`'s sides of the field to the snapshot `turns_ago` names (R562); how many turns it
+/// went back, `None` with no history.
 pub fn restore_board(
     sink: &mut EngineSink<'_>,
     by: PlayerId,
@@ -192,7 +181,7 @@ pub fn restore_board(
         .into_iter()
         .filter(|player| only.contains(player))
         .collect();
-    // A copy (SURFACE §4.4.8): the fresh ids handed out below rename the stored history's cards (R227), not these.
+    // A copy (SURFACE §4.4.8): fresh ids below rename the stored history's cards (R227), not these.
     let snapshot: BoardSnapshot = snapshot_for(sink.state, turns_ago)?.clone();
     if sides.is_empty() {
         return None;
@@ -230,13 +219,13 @@ pub fn restore_board(
         }
     }
 
-    // Step 2: read where every held card stands, lift them all out, then rebuild each zone bottom first.
+    // Step 2: lift every held card out, then rebuild each zone bottom first.
     let mut placements: Vec<Placement> = Vec::new();
     for player in &sides {
         for slot in zones_of(*player) {
             for card in snapshot_zone(&snapshot.sides[*player], &slot) {
                 let live = find_instance(sink.state, &card.id).cloned();
-                // R566: a card mid-play stays its play's (§10.5); its place in the snapshot is left empty.
+                // R566: a card mid-play stays its play's (§10.5); its snapshot place stays empty.
                 if live
                     .as_ref()
                     .is_some_and(|live| live.zone.z() == ZoneName::Resolving)
@@ -269,8 +258,7 @@ pub fn restore_board(
             }
         }
     }
-    // R1850003: a card held beneath another is moved from there as from anywhere else (R419), so it is
-    // held no longer, and its holder's leaving later summons nothing.
+    // R1850003: a held card moves from beneath its holder too (R419); its leaving then summons nothing.
     if let Some(held) = sink.state.held.as_mut() {
         held.retain(|entry| {
             !placements
@@ -289,8 +277,8 @@ pub fn restore_board(
             remove_from_any_zone(sink.state, &mut live.clone());
             continue;
         };
-        // A restored side's piles are rebuilt whole, so nothing there resumes; on the other side the card
-        // beneath does (§3.2). A move along the field is no departure (R174); a moved card's own home goes (R563).
+        // A restored side's piles are rebuilt whole; elsewhere the card beneath resumes (§3.2). A move
+        // along the field is no departure (R174); a moved card's own home goes (R563).
         remove_from_field(
             sink.state,
             live,
@@ -331,7 +319,7 @@ pub fn restore_board(
             for (at, placement) in zone.into_iter().enumerate() {
                 let mut card = placement.card.clone();
                 let brittle = card.brittle;
-                // R227: going face-down from anywhere but a face-down zone, it takes a fresh id as it goes.
+                // R227: going face-down from anywhere but a face-down zone takes a fresh id.
                 let former_id = if slot.row == Row::Backrow
                     && is_face_down(sink.state, &card)
                     && !placement.was_face_down
@@ -340,8 +328,7 @@ pub fn restore_board(
                 } else {
                     None
                 };
-                // Every restored zone is empty and open now; only a carried Unit whose carrier is mid-play
-                // (left out above) can find no place, and it goes to its controller's hand as step 1's cards do.
+                // Only a carried Unit whose carrier is mid-play (left out above) finds no place: to hand.
                 let options = PlaceOnFieldOptions { stack: Some(at > 0) };
                 let landed = if placement.stands {
                     place_standing_on_field(sink.state, &mut card, slot, options)
@@ -352,7 +339,7 @@ pub fn restore_board(
                     bounce_card(sink, &card);
                     continue;
                 }
-                // The snapshot's Brittle count exactly: placement starts a printed one on a card with none (R385).
+                // The snapshot's Brittle count: placement starts a printed one on a card with none (R385).
                 if brittle.is_none()
                     && let Some(placed) = find_instance_mut(sink.state, &card.id)
                 {
@@ -376,8 +363,8 @@ pub fn restore_board(
             sink.events.extend(entered);
         }
     }
-    // R563: the snapshot's own holds come back for the cards standing there again. Read `state.homes`
-    // afresh: the hand bounce above releases homes, which deletes the field when none is left.
+    // R563: the snapshot's holds come back for the cards standing there again. Read `state.homes`
+    // afresh: the bounce above releases homes, clearing it when none is left.
     let regained: Vec<HomeZone> = sides
         .iter()
         .flat_map(|player| snapshot.sides[*player].homes.clone().unwrap_or_default())
@@ -440,8 +427,7 @@ pub struct RollBackArgs {
     pub sides: RollBackSides,
 }
 
-/// The verb C+ #35 casts (R419): return the board to the snapshot `turns_ago` names, on the side of the
-/// card's controller ("self"), the other ("enemy") or both.
+/// The verb C+ #35 casts (R419): roll the chosen sides back to the snapshot `turns_ago` names.
 pub fn roll_back(args: RollBackArgs) -> Effect {
     Effect::new("rollBack", move |ctx| {
         let controller = ctx.controller;

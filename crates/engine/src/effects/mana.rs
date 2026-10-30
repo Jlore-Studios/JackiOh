@@ -1,7 +1,6 @@
 //! Mana effects: temporary mana now, and a change to a player's next refresh (§2.3).
 //!
-//! Port of `packages/engine/src/effects/mana.ts`. The engine's own mana functions of the same names
-//! (`crate::mana::gain_mana`, TS's `addMana`) are reached by their full path; `prelude.rs` resolves a
+//! The engine's own `crate::mana::gain_mana` is reached by its full path; `prelude.rs` resolves a
 //! card's bare `gain_mana`/`refresh_mana` to these verbs.
 
 use serde::{Deserialize, Serialize};
@@ -42,8 +41,8 @@ pub struct RefreshManaArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// §6.3 Refresh, R364: give back up to `amount` spent mana, never past max (#78 /fullsend's "Refresh 3
-/// mana"). A refresh that gives nothing — current already at or above max — announces nothing.
+/// §6.3 Refresh, R364 (#78 /fullsend): give back up to `amount` spent mana, never past max; a refresh
+/// that gives nothing announces nothing.
 pub fn refresh_mana(args: RefreshManaArgs) -> Effect {
     Effect::new("refreshMana", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -69,11 +68,9 @@ pub struct NextTurnManaArgs {
 
 /// Hinder and Efficiency Dividend: change a player's next refresh, which floors at 0 (§2.3).
 ///
-/// §6.3 Mana stores "next turn" mana as a modifier for the next refresh, so the rider is one of the
-/// player's badges (R169): the view lists it under `NEXT_REFRESH_MODIFIER_ID` while it is not 0, and
-/// `modifierChanged` names that id as it appears or changes, and as it goes — here, when a second
-/// rider cancels the first, or at the refresh that spends it (`turn::start_turn`). A change of 0 (#24
-/// with X of 1 or less) changes nothing, and announces nothing.
+/// §6.3 Mana stores it as a modifier, so it is a badge (R169) under `NEXT_REFRESH_MODIFIER_ID` while
+/// not 0, which `modifierChanged` names as it appears, changes or goes (here, or at the refresh that
+/// spends it, `turn::start_turn`). A change of 0 (#24 with X of 1 or less) announces nothing.
 pub fn next_turn_mana(args: NextTurnManaArgs) -> Effect {
     Effect::new("nextTurnMana", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -92,11 +89,9 @@ pub fn next_turn_mana(args: NextTurnManaArgs) -> Effect {
     })
 }
 
-/// R1854003: "Steal your enemy's mana crystals" (Stinkyscape #7 The Greatest Heist's last reward).
-/// The running card's controller takes their opponent's mana crystals (`mana::move_mana_crystals`):
-/// the opponent loses their maximum mana and as much current mana, and the thief gains the crystals,
-/// full, up to their cap. Each side whose mana changed is announced (`manaChanged`); a steal from a
-/// player with no maximum mana does nothing and announces nothing.
+/// R1854003: "Steal your enemy's mana crystals" (Stinkyscape #7 The Greatest Heist's last reward),
+/// by `mana::move_mana_crystals`. Each side whose mana changed is announced; a steal from a player
+/// with no maximum mana announces nothing.
 pub fn steal_mana_crystals() -> Effect {
     Effect::new("stealManaCrystals", move |ctx| {
         let thief = ctx.controller;

@@ -32,9 +32,8 @@ pub struct ActivationOfArgs {
 }
 
 /// R1876000: "It can't use its own Activate" — the card named, on the field, is refused every use of
-/// its abilities for as long as it stays there (`subsystems::activate`'s refusal reads the mark). No
-/// zone is Locked, and another card may still run its ability (`run_activation`). A card off the
-/// field is not marked.
+/// its abilities while it stays there (`subsystems::activate` reads the mark). No zone is Locked, and
+/// another card may still run its ability (`run_activation`).
 pub fn refuse_own_activate(args: ActivationOfArgs) -> Effect {
     Effect::new("refuseOwnActivate", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
@@ -52,12 +51,10 @@ pub fn refuse_own_activate(args: ActivationOfArgs) -> Effect {
 }
 
 /// R1876001: "Activate your Universities" — the named card's ability (`ability`, else its first that
-/// declares no target or mode) runs its effect as an ability of the running card, for the running
-/// card's controller: the card is its `self`, on the face it wears, so the ability reads its own
-/// numbers and "your other permanents" are the card's others. No cost is paid and no use is spent, its
-/// once-a-turn and a refusal of its own use (R1876000) are not read, and it is no play (R384). An
-/// ability that declares a target or a mode is never run, having no choice to run with; nor a card
-/// that does not act on the field (R13).
+/// declares no target or mode) runs as an ability of the running card, for its controller, with the
+/// card as `self` on the face it wears. No cost is paid and no use is spent, its once-a-turn and
+/// R1876000's refusal are not read, and it is no play (R384). An ability with a target or mode is never
+/// run, having no choice to run with; nor a card that does not act on the field (R13).
 pub fn run_activation(args: ActivationOfArgs) -> Effect {
     Effect::new("runActivation", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())

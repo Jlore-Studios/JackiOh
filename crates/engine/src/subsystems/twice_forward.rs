@@ -1,20 +1,12 @@
 //! C+ #74 Twice Forward One Step Backwards (SPEC §8.7 row 74, R425): an Animated Field Trap that counts
 //! the opponent's plays from the moment it is set and, on every `plays`-th one, once that card has
-//! resolved, fuses a copy of it (on the Radiant face a Radiant copy) into itself and gains Brittle. The
-//! played card is never consumed, so there is always a copy to fuse (patch v0.3.10, R831011).
+//! resolved, fuses a copy of it into itself (R831011, in place of R589's card itself) and gains Brittle.
 //!
-//! The count is the card's own (`memory.plays`, §10.1), so it survives JSON, a replay and the Fuse that
-//! keeps this instance (R77; nothing here is a `remember` note, so a Fuse never re-roots it,
-//! `work::reroot_remembered`). The trap trigger's own predicate keeps it: §10.3 offers a trap each event
-//! once (`traps::fire_trap`; a predicate that declined is never owed it again, R99), and the predicate
-//! is the only part of a trap that runs without firing it: a fired Field Trap is face-up from then on
-//! (R33), while this one must stay face-down until it first activates. So the predicate counts each
-//! play (`cardPlayed`, §10.5 step 4), notes the card an even count names (`memory.fuseOn`), and admits
-//! that card's `cardResolved` (R831011: a copy is fused, so wherever the card went there is one to
-//! fuse; before patch v0.3.10 the base face fused the card itself, R589). Counting plays, not
-//! resolutions, keeps "every second card" right when a
-//! play casts a card that resolves before it (R70): the cast is the later play. The predicate writes
-//! the card, so its `when` takes `&mut EffectContext`.
+//! The count is the card's own (`memory.plays`, §10.1), surviving the Fuse that keeps this instance
+//! (R77; not a `remember` note, so `work::reroot_remembered` never re-roots it). The trap's predicate
+//! keeps it, with `&mut`: §10.3 offers a trap each event once (`traps::fire_trap`, R99), and only the
+//! predicate runs without firing the card face-up (R33). It counts plays (`cardPlayed`, §10.5 step 4),
+//! not resolutions, as a cast resolves before the play that cast it (R70).
 //! maxi-tail: a trap predicate that writes its card's own counter; a watch-without-firing trigger kind in
 //! traps.rs is the upgrade path if a second card ever needs one.
 
@@ -68,8 +60,7 @@ fn owed(card: &CardInstance) -> Vec<String> {
     }
 }
 
-/// §10.5 step 7: a play or cast of the opponent's that an even count named has resolved (R70: a cast
-/// counts; a countered card is never played, R448, so it never counts).
+/// §10.5 step 7: an opponent's play or cast (R70) has resolved; a countered card never is (R448).
 fn opponents_play(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<Resolved> {
     match event {
         GameEvent::CardResolved {
@@ -92,22 +83,21 @@ fn still_there<'s>(state: &'s GameState, play: &Resolved) -> Option<&'s CardInst
     matches!(card.zone.z(), ZoneName::Field | ZoneName::Graveyard).then_some(card)
 }
 
-/// R687: turn the card face-up, public to both players, and start the printed Brittle its face-down
-/// arrival never started, so no Brittle ever sits on an unrevealed card.
+/// R687: turn the card face-up and start the printed Brittle its face-down arrival never started, so no
+/// Brittle ever sits on an unrevealed card.
 fn reveal_self(state: &mut GameState, self_id: &str) {
     let Some(live) = find_instance_mut(state, self_id) else {
         return;
     };
     live.face_up = Some(true);
     let mut card = live.clone();
-    // The card as it stands, face-up now; the count `brittle_count` starts on it is written back by id.
+    // Started on a copy of the face-up card, the count is written back by id.
     start_brittle_on_field(state, &mut card, false);
     if let Some(live) = find_instance_mut(state, self_id) {
         live.brittle = card.brittle;
     }
 }
 
-/// Writes one memory key on the card as it stands in the state.
 fn remember(state: &mut GameState, self_id: &str, key: &str, value: Value) {
     if let Some(card) = find_instance_mut(state, self_id) {
         card.memory.insert(key.to_string(), value);
@@ -115,7 +105,7 @@ fn remember(state: &mut GameState, self_id: &str, key: &str, value: Value) {
 }
 
 /// The trigger's `when`: count the opponent's play, or admit the resolution of a play an even count
-/// named (R425, R99). Such a resolution always fires: a copy is fused, never the card (R831011).
+/// named (R425, R99), which always fires as a copy is fused (R831011).
 fn watch(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let Some(self_) = ctx.live_self().cloned() else {
         return false;
@@ -148,8 +138,7 @@ fn watch(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     true
 }
 
-/// The trigger's `run`: the first fuse reveals the card, then the fuse of a copy and the gain. As an
-/// Animated card it then animates, the last step of its firing (§6 Animated).
+/// The trigger's `run`: reveal the card, then fuse a copy, gain Brittle and animate.
 fn fire(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> Vec<Effect> {
     let Some(self_) = ctx.live_self().cloned() else {
         return Vec::new();
@@ -157,12 +146,10 @@ fn fire(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> V
     let Some(play) = opponents_play(ctx, event) else {
         return Vec::new();
     };
-    // R781001: a Field Trap can't target an Immutable card in play, so neither the card nor a copy
-    // of it is fused in; the trap still fires and gains its Brittle.
+    // R781001: no copy of an Immutable card in play is fused in; the trap still fires and gains Brittle.
     let shielded = still_there(ctx.sink.state, &play)
         .is_some_and(|card| crate::restrictions::immutable_bars(ctx.sink.state, Some(&self_), card));
-    // The first fuse reveals the card (R687): firing turned it face-up, and its printed Brittle
-    // starts now, before the gain lands on it.
+    // R687: firing turned it face-up; its printed Brittle starts now, before the gain lands on it.
     reveal_self(ctx.sink.state, &self_.id);
     let gain = gain_brittle(json_as(json!({ "instanceId": self_.id, "n": param(ctx, GAIN) })));
     // §6 Animated, R831011: the last step of its firing; a card already a Unit stays where it is.
@@ -170,8 +157,7 @@ fn fire(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> V
     if shielded {
         return vec![gain, animated];
     }
-    // R831011: a copy of the played card's definition, Radiant on the Radiant face; the card itself
-    // stays where it is.
+    // R831011: a copy of the played card's definition; the card itself stays where it is.
     let fused = fuse_cards(json_as(json!({
         "defIds": [play.def_id],
         "targetInstanceId": self_.id,
@@ -180,8 +166,7 @@ fn fire(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> V
     vec![fused, gain, animated]
 }
 
-/// `twice_forward_trigger`'s argument (data, so a card may write the literal:
-/// `json_as(json!({ "radiantCopy": true }))`).
+/// `twice_forward_trigger`'s argument, data a card may write as a JSON literal.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TwiceForwardArgs {

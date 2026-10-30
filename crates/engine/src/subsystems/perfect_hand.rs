@@ -1,11 +1,9 @@
 //! B5 E34, the perfect-hand scorer (SPEC §8.7 C+ #27 Zephrys Zealotism, §10.7, R29, R387, R416, R1446).
 //!
-//! "Replace your hand with the perfect hand." The scoring is the Zephyrs scorer's own (`./scorer`,
-//! R29, untouched): `scoreDef` and its dry run on one copy of the state as the card resolves, which
-//! draws from a seed of its own, never the match rng, so the same state gives the same hand. Its pool
-//! is the scorer's `perfect_pool` (every non-token card of every set that ships but the asking card's
-//! own ids, R387, R1446). This adds only the face (Radiant on the Radiant face), the order (score,
-//! then card id, since an index repeats across sets) and the hand.
+//! "Replace your hand with the perfect hand." The scoring is the Zephyrs scorer's own (R29): a dry run
+//! on one copy of the state from a seed of its own, never the match rng, so the same state gives the
+//! same hand, over `perfect_pool`. This adds only the face, the order (score, then card id, since an
+//! index repeats across sets) and the hand.
 
 use std::cmp::Ordering;
 
@@ -46,7 +44,6 @@ pub fn rank_perfect_hand(
     options: RankPerfectHandOptions,
 ) -> Vec<Scored> {
     let mut base = dry_run_base(state, viewer);
-    // The running card's ids are the pool's exclusions; none when there is no running card.
     let pool = perfect_pool(Some(state), options.self_def_id.as_deref());
     let radiant = options.radiant == Some(true);
     let scorer_options = ScorerOptions {
@@ -58,7 +55,7 @@ pub fn rank_perfect_hand(
         .into_iter()
         .map(|def| score_def_in(&auras, viewer, def, &scorer_options, base.as_mut()))
         .collect();
-    // Best score first; a NaN difference ties, and ties go by card id.
+    // A NaN difference ties, and ties go by card id.
     ranked.sort_by(|a, b| match b.score.partial_cmp(&a.score) {
         Some(Ordering::Equal) | None => a.def.id.cmp(&b.def.id),
         Some(order) => order,

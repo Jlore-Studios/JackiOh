@@ -1,16 +1,11 @@
 //! Rotation: Silly Silas (#52) turns both rings one step (SPEC §3.1's rotation-topology ruling, R14).
+//! The ten unit zones form one ring and the ten backrow zones a second: the rotating player's lanes 1
+//! to 5, then the opponent's 5 down to 1 (§3.1), turned together in the declared direction (R81).
 //!
-//! The ten unit zones form one ring and the ten backrow zones a second, independent one: the
-//! rotating player's lanes 1 to 5, then the opponent's lanes 5 down to 1, and back (§3.1). Both
-//! rings turn together, one step, in the direction the play declared (R81).
-//!
-//! A rotation never takes a card off the field, so R78's reset never runs: its instance, damage, buffs,
-//! counters and position come along (R14). Only `controller` changes, and only across the center line;
-//! that crossing is an entry (R171), so the card takes this turn as its `summoned_turn` and a fresh
-//! exertion and is summoning sick on its new side. A card that moves along its own side has entered
-//! nothing and keeps both. The owner never changes on a crossing (R12); a later leave goes to the
-//! owner's library, graveyard or exile, and a bounce to the controller's hand as theirs (R747). A
-//! face-down trap that crosses is read by its new controller alone, so `face_up` is left untouched (R33).
+//! A rotation never takes a card off the field, so R78's reset never runs (R14). Only `controller`
+//! changes, across the center line, and that crossing is an entry (R171): the card is summoning sick on
+//! its new side; one moving along its own side is not. The owner never changes (R12; a later bounce
+//! goes to the controller's hand as theirs, R747), and a crossing face-down trap keeps `face_up` (R33).
 
 use std::borrow::Borrow;
 
@@ -27,8 +22,7 @@ pub use crate::wire::RotationDirection;
 /// R14: two rings, rotated together.
 pub const ROTATION_ROWS: &[Row] = &[Row::Units, Row::Backrow];
 
-// R14 (`ROTATION_RING`): `ROTATION_ROWS` turns the units and the backrow as two rings, the one
-// topology this file plays.
+// R14: `ROTATION_RING` must name the one topology this file plays, two rings.
 const _: () = assert!(
     matches!(ROTATION_RING.as_bytes(), b"two-rings"),
     "R14: subsystems/rotation.rs turns two independent rings, the units and the backrow"
@@ -50,8 +44,7 @@ pub struct RotationArgs {
 pub struct RotationResult {
     /// Cards that reached a new zone, in ring order: the unit ring first, then the backrow ring.
     pub moved: Vec<String>,
-    /// Cards whose controller changed because their new zone is on the other side (R12). Each one has
-    /// entered its new side on this turn (R171).
+    /// Cards whose new zone is on the other side (R12), each entering it this turn (R171).
     pub crossed: Vec<String>,
     /// Cards sent to their controller's hand: a reserved destination, or the radiant bounce (R14).
     pub bounced: Vec<String>,
@@ -62,14 +55,12 @@ struct RingEntry {
     from: ZoneSlot,
     to: ZoneSlot,
     cards: Vec<CardInstance>,
-    /// R446: the Unit a carrier holds in this backrow zone, if one does — it goes back on its carrier.
-    /// Every other card lands where it lay, a Unit standing in the zone or dormant beneath its top
-    /// included (R1081000).
+    /// R446: the Unit a carrier holds in this backrow zone, which goes back on its carrier; every other
+    /// card lands as it lay, standing or dormant (R1081000).
     carried: Option<String>,
 }
 
-/// Everything in a zone, top card first. A unit zone may hold a Stack pile, and the dormant cards
-/// under the top are in the zone too, so they rotate with it (§3.2).
+/// Everything in a zone, top card first: the dormant cards of a Stack pile rotate with it (§3.2).
 fn contents_of(state: &GameState, slot: &ZoneSlot) -> Vec<CardInstance> {
     // B5 E21, R446: a backrow zone's pile and a carrier's Unit travel whole too (`zones::zone_contents`).
     crate::zones::zone_contents(state, slot)
@@ -78,20 +69,17 @@ fn contents_of(state: &GameState, slot: &ZoneSlot) -> Vec<CardInstance> {
         .collect()
 }
 
-/// Whether a destination can take a rotating card. A Locked zone accepts one (R831000, patch v0.3.10:
-/// a rotation moves what is on the field, which R688's Lock does not stop, as it evicts nothing; it
-/// refused one before, #52's card-specific override of R688), while a zone reserved for a dying
-/// Reborn unit counts as occupied for every other card (§3.2, R64).
+/// Whether a destination can take a rotating card: a Locked zone does (R831000: a rotation evicts
+/// nothing, so R688's Lock does not stop it), while one reserved for a dying Reborn unit counts as
+/// occupied for every other card (§3.2, R64).
 fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
     !crate::zones::is_reserved(state, slot)
 }
 
-/// Put a zone's cards down in their new zone. A pile is rebuilt from the bottom up so the card that
-/// was on top is on top again, which keeps the same card acting for the zone (§3.2).
+/// A pile is rebuilt from the bottom up, so the same card stays on top acting for the zone (§3.2).
 fn place_contents(state: &mut GameState, cards: &[CardInstance], carried: Option<&str>, to: &ZoneSlot) {
     for (placed, card) in cards.iter().rev().enumerate() {
-        // Every ring zone was emptied before anything was placed and the destination accepts cards,
-        // so a refusal here is a broken invariant, not a game rule; `zones.rs` says so the same way.
+        // Every ring zone was emptied first and the destination accepts: a refusal is a broken invariant.
         let options = crate::zones::PlaceOnFieldOptions {
             stack: Some(placed > 0),
         };
@@ -109,15 +97,11 @@ fn place_contents(state: &mut GameState, cards: &[CardInstance], carried: Option
     }
 }
 
-/// R14: the card goes to its controller's hand (R747, shared with §6.3 Bounce). The hand cap
-/// applies, so a full hand burns it (§2.4, R4), and a unit token ceases to exist on the way and
-/// never reaches a hand (R11).
-/// `cost_override` is the radiant variant's "costing 0"; R78 keeps it while the card waits in hand.
+/// R14: the card goes to its controller's hand (R747, as §6.3 Bounce): a full hand burns it (§2.4, R4)
+/// and a unit token ceases to exist on the way (R11). `cost_override` is the radiant "costing 0".
 fn bounce_home(sink: &mut EngineSink<'_>, card: &CardInstance, cost_override: Option<i32>) {
     crate::effects::move_::bounce_card(sink, card);
-    // §8 #52 radiant: "bounced to their controller's hand costing 0" is a rider on a card that reaches
-    // the hand. A full hand burns it instead (§2.4, R4), and a burned card is an ordinary graveyard card
-    // that R78 would otherwise have carry the 0 into every later zone.
+    // §8 #52 radiant: the 0 rides only a card that reached the hand; R78 would carry it on from a burn.
     let Some(cost_override) = cost_override else {
         return;
     };
@@ -129,8 +113,8 @@ fn bounce_home(sink: &mut EngineSink<'_>, card: &CardInstance, cost_override: Op
     }
     landed.cost_override = Some(cost_override);
     let landed = landed.clone();
-    // §10.3: the new price is a visible change, announced as #31's +1 and #72r's 0 are once the card has
-    // landed (R215), with what the card costs now (R65). A view redacts it for the other seat (R177).
+    // §10.3: like #31's +1, the new price is announced once the card has landed (R215), as what it
+    // costs now (R65); a view redacts it for the other seat (R177).
     let cost = crate::mana::effective_cost(sink.state, &landed, Default::default());
     sink.events.push(GameEvent::CostChanged {
         instance_id: landed.id.clone(),
@@ -139,10 +123,9 @@ fn bounce_home(sink: &mut EngineSink<'_>, card: &CardInstance, cost_override: Op
     });
 }
 
-/// Rotate both rings one step (§3.1, R14, §8 #52). Silas is on the field when his Cry resolves, so he
-/// rotates too. The whole board is read before anything is placed: one atomic step, so no card lands
-/// on a zone whose occupant has not moved yet. Events (§10.3): `rotated` once, then `controlChanged`
-/// per card that crossed and `bounced` per card that was bounced, in ring order.
+/// Rotate both rings one step (§3.1, R14, §8 #52), Silas included. Every card comes off the field
+/// before any lands, so none lands on a zone whose occupant has not moved yet. Events (§10.3):
+/// `rotated` once, then `controlChanged` per crossing and `bounced` per bounce, in ring order.
 pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationResult {
     let radiant = args.radiant == Some(true);
 
@@ -169,7 +152,6 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
         direction: args.direction,
     });
 
-    // Read first, then place: every card comes off the field before any card lands.
     for entry in &entries {
         for card in &entry.cards {
             let options = crate::zones::RemoveFromFieldOptions {
@@ -184,10 +166,8 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
     for entry in &entries {
         let crosses = entry.to.player != entry.from.player;
 
-        // #52 radiant: cards that would move to the opponent bounce to their controller's hand costing 0
-        // instead (R747) — the ones the rotating player would lose, those leaving their side ("your" is the
-        // controller, §8 Conventions). A card crossing onto the rotating player's side crosses and changes
-        // control like any other (R14, R171).
+        // #52 radiant: a card leaving the rotating player's side bounces home costing 0 instead (R747);
+        // one crossing onto it crosses like any other (R14, R171).
         if radiant && crosses && entry.from.player == args.perspective {
             for card in &entry.cards {
                 bounce_home(sink, card, Some(0));
@@ -214,7 +194,6 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
             let Some(previous) = before.get(at).copied() else {
                 continue;
             };
-            // The live instance, which the placement has moved to its new side.
             let Some(placed) = find_instance(sink.state, &card.id).cloned() else {
                 continue;
             };

@@ -1,16 +1,10 @@
 //! Anomalies and the Scanning Probes (Stinkyscape, issue #1855; the set plan's "Anomalies (M08)";
 //! R1855000–R1855003): two verbs, proved on fixture scripts until the set's cards use them (S20).
 //!
-//! - `replace_board` — "exile your board and replace it with a precreated one": what an effect of the
-//!   card can reach on its caster's side is exiled (a Dormant card and one the card cannot reach stay,
-//!   and the preset lays nothing in their zones), the preset is summoned into its named zones, each
-//!   entry Radiant or in Defense Position as it says and carrying its riders in its memory (R1855000,
-//!   R1855002), and once the whole board is laid each laid Unit's Cry fires, its caster's choices drawn
-//!   at random (R1855001, the designer's answer). Not `swap_board`, the name #87's exchange of the
-//!   two sides' boards already has (`effects::swap`, R88, R171). A Flying Unit named in the backrow
-//!   stands there (R1879001), and an entry may be laid on top of one laid before it in its zone, a
-//!   layered pile such as the Drone Battleship (R1879002).
-//! - `scan_for_anomaly` — the Scanning Probes' roll: a Radiant find, a plain one or a miss, each miss
+//! - `replace_board`: "exile your board and replace it with a precreated one"; once the whole board
+//!   is laid each laid Unit's Cry fires, its choices drawn at random (R1855001, the designer's answer).
+//!   Not `swap_board`, #87's exchange of the two sides' boards (`effects::swap`, R88, R171).
+//! - `scan_for_anomaly`: the Scanning Probes' roll: a Radiant find, a plain one or a miss, each miss
 //!   raising that player's later chances (R1855003).
 
 use indexmap::{IndexMap, IndexSet};
@@ -71,13 +65,12 @@ pub struct ReplaceBoardArgs {
     pub board: Vec<PresetCard>,
 }
 
-/// R1855001: the memory key on a laid Unit whose Cry has not fired yet, holding its entry's place in
-/// the preset and taken off as it fires, so the card that fires is the one the preset laid wherever it
-/// stands by then.
+/// R1855001: the mark on a laid Unit whose Cry is owed, its entry's place in the preset, taken off as
+/// it fires, so the Cry finds the card the preset laid wherever it stands by then.
 pub const PRESET_CRY_OWED_KEY: &str = "presetCryOwed";
 
-/// R1855001: take every owed-Cry mark off the field, so one an earlier replacement left on a card it
-/// laid (buried by a Stack before its Cry, say) is never read as this replacement's.
+/// R1855001: take every owed-Cry mark off the field, so one an earlier replacement left (on a card a
+/// Stack buried) is never read as this replacement's.
 fn clear_owed_cries(state: &mut GameState) {
     for player in PLAYER_IDS {
         let side = &mut state.players[player];
@@ -95,9 +88,8 @@ fn clear_owed_cries(state: &mut GameState) {
     }
 }
 
-/// R1855000–R1855002: replace the caster's board with `args.board`. The part's list is built from
-/// `args` alone, so a rebuild after a pause is the same list and resumes where it stopped (R113): the
-/// exile, one lay per entry, then one Cry per unit-row entry, each finding its card by its mark.
+/// R1855000–R1855002: the part's list (the exile, one lay per entry, one Cry per entry) is built from
+/// `args` alone, so a rebuild after a pause resumes where it stopped (R113).
 pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
     lazy_part("replaceBoard", move |ctx, _memo| {
         let player = ctx.controller;
@@ -105,9 +97,8 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
         let mut effects = vec![Effect::new("replaceBoardExile", move |at| {
             at.events.push(GameEvent::BoardReplaced { player });
             clear_owed_cries(at.state);
-            // R1855000: what an effect of the card reaches on its side, Dormant cards (R1839000) and
-            // the ones immune to it (E35) passed by. A card beneath a Stack is reached on a later pass
-            // once the card above it has gone; `seen` ends the walk on a card that does not leave.
+            // R1855000: Dormant cards (R1839000) and ones immune to the card (E35) stay. A card beneath
+            // a Stack is reached on a later pass; `seen` ends the walk on a card that does not leave.
             let scope = BoardScope {
                 side: Some(ScopeSide::SelfSide),
                 rows: Some(vec![Row::Units, Row::Backrow]),
@@ -189,8 +180,7 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
         // One per entry: only an entry that laid a Unit left a mark to find (R1879001).
         effects.extend(args.board.iter().enumerate().map(|(index, _)| {
             Effect::new("replaceBoardCry", move |at| {
-                // R1855001: the card this entry laid, wherever it acts now; one that has left
-                // the field lost its mark with the rest of its memory (R78, R174).
+                // R1855001: a card that has left the field lost its mark with its memory (R78, R174).
                 let mark = json!(index);
                 let Some(id) = permanents_on_field(at.state, player)
                     .into_iter()
@@ -205,8 +195,7 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
                 }) else {
                     return;
                 };
-                // R1855001: a triggered Cry (R467) whose caster's every choice is random
-                // (R452's), before a pause and after one.
+                // R1855001: a triggered Cry (R467), every choice random (R452's), across a pause.
                 trigger_random_cry_of(&mut at.sink, &card, player);
             })
         }));
@@ -214,7 +203,7 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
     })
 }
 
-/// R1879001: whether a face of `def_id` prints Flying, the keyword a Unit stands in the backrow by.
+/// R1879001: whether a face of `def_id` prints Flying.
 fn prints_flying(state: &GameState, def_id: &str, radiant: bool) -> bool {
     running_face_of(state, def_id, radiant)
         .keywords
@@ -243,8 +232,7 @@ pub fn anomaly_chances(misses: i32) -> (i32, i32) {
     (radiant, plain)
 }
 
-/// R1855003: what a roll of `roll` (0 to `ANOMALY_ROLL_SIDES` − 1) finds after `misses` misses: the
-/// lowest rolls the Radiant one, the next the plain one.
+/// R1855003: what `roll` finds after `misses` misses: the lowest rolls Radiant, the next plain.
 pub fn anomaly_scan_of(roll: i32, misses: i32) -> AnomalyScan {
     let (radiant, plain) = anomaly_chances(misses);
     if roll < radiant {
@@ -264,11 +252,9 @@ pub struct ScanForAnomalyArgs {
     pub def_id: String,
 }
 
-/// R1855003: the Scanning Probes' "5% chance to add a Radiant Anomaly Found! to your hand, 20% chance
-/// to add an Anomaly Found!, else future Scanning Probes have +1% and +4%": one roll, a luck-based one
-/// (R1438), so the card's Lucky and its controller's Luck roll again and keep the best. A miss counts
-/// for the controller (`PlayerState.anomaly_misses`), silently; a find adds the card and keeps the
-/// count.
+/// R1855003: the Scanning Probes' one roll, a luck-based one (R1438): the card's Lucky and its
+/// controller's Luck roll again and keep the best. A miss counts for the controller
+/// (`PlayerState.anomaly_misses`), silently; a find adds the card and keeps the count.
 pub fn scan_for_anomaly(args: ScanForAnomalyArgs) -> Effect {
     Effect::new("scanForAnomaly", move |ctx| {
         let player = ctx.controller;

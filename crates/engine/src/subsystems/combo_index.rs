@@ -1,15 +1,10 @@
 //! Combo-Index (SPEC §8 #93, R27): the grade counter, its end-of-turn threshold and the E→S cascade.
 //!
 //! The grade is state, not script: `instance.counters.grade`, 1..6 for E..S (§10.1), so a paused game, a
-//! replay and `view_for` read the same number; the letter comes from `GRADES`. At the end of its
-//! controller's turn (an ordinary end-of-turn trigger, §10.3, R62) the card compares the cards that player
-//! played this turn with the grade: at `cardsPlayed >= grade` the grade rises by one and every step from E
-//! up to the new grade runs, in order (R27). S is terminal, so at S the check does nothing, and the S step
-//! is "run E–A again", the one extra round the cascade ever does.
-//!
-//! Every step is an effect from `crate::effects`; the only direct state change here is the counter itself.
-//! The radiant text (§8) is one `add_to_hand` on the card's own `start_of_turn` hook, so it lives in the card file.
-//! The numbers live in `crate::config` (CLAUDE.md rule 9); `LAST_GRADE` is derived from `GRADES`.
+//! replay and `view_for` read the same number. At the end of its controller's turn (§10.3, R62), at
+//! `cardsPlayed >= grade` the grade rises by one and every step from E up to the new grade runs, in
+//! order (R27); S is terminal, and its step is "run E–A again". Every step is an effect from
+//! `crate::effects`; the numbers live in `crate::config` (CLAUDE.md rule 9).
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -26,8 +21,8 @@ use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::wire::{CounterKind, GameEvent, PlayerId, Selection, opponent_of};
 
-/// §8 #93: a grade's letter. Written by hand rather than with `wire::string_union!`, which would export a
-/// client type the wire does not have (the view carries the letter as a string).
+/// §8 #93: a grade's letter, by hand: `wire::string_union!` would export a client type the wire does
+/// not have (the view carries the letter as a string).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Grade {
     E,
@@ -75,7 +70,7 @@ pub fn grade_name(grade: i32) -> Grade {
         .unwrap_or(Grade::E)
 }
 
-/// The number a letter stands for, so a test or a tooltip can say "A" and mean 5.
+/// The number a letter stands for.
 pub fn grade_value(name: Grade) -> i32 {
     match GRADES.iter().position(|grade| *grade == name) {
         Some(at) => at as i32 + 1,
@@ -97,11 +92,10 @@ pub fn is_terminal_grade(grade: i32) -> bool {
     clamp_grade(grade) >= LAST_GRADE
 }
 
-/// The cards this player played this turn that a copy can still be made from. `turnLog.playedIds` holds
-/// instance ids (§10.1), so a card that has ceased to exist (a unit token that left the field, R11) is
-/// dropped from the pool rather than making the E step fizzle at random (R86, in R60's shape).
-/// R133: the log has one entry per play, so the pool is the *set* of cards played, deduped by id before
-/// the lookup and kept in first-play order, so a replayed card is one candidate and the pick replays.
+/// The cards this player played this turn that a copy can still be made from: a card that has ceased
+/// to exist (a unit token that left the field, R11) is dropped rather than making the E step fizzle at
+/// random (R86, in R60's shape). R133: deduped by id in first-play order, so a replayed card is one
+/// candidate and the pick replays.
 pub fn played_cards_this_turn(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let mut seen: Vec<&str> = Vec::new();
     let mut out: Vec<&CardInstance> = Vec::new();
@@ -118,8 +112,8 @@ pub fn played_cards_this_turn(state: &GameState, player: PlayerId) -> Vec<&CardI
 }
 
 /// Whether this end of turn raises the grade: not at S (R27), and only at or above the threshold.
-/// "Cards played this turn" is the controller's own `turnLog` (§10.1) — the only per-turn record
-/// there is — so a card the opponent cast during this turn counts on their log, not on this one.
+/// "Cards played this turn" is the controller's own `turnLog`, so a card the opponent cast during this
+/// turn counts on their log, not on this one.
 pub fn grade_rises(state: &GameState, instance: &CardInstance) -> bool {
     let grade = grade_of(instance);
     if is_terminal_grade(grade) {
@@ -161,8 +155,7 @@ pub struct StartGradeArgs {
 }
 
 /// "Grade counter, starts at E" (§8 #93): write the counter as the card arrives, so the client has
-/// a grade to show before the first end of turn. Reading a Combo-Index that never ran this still
-/// gives E, because `grade_of` defaults to it.
+/// a grade to show before the first end of turn.
 pub fn start_grade(args: StartGradeArgs) -> Effect {
     Effect::new("comboIndexStartGrade", move |ctx| {
         let Some(card) = card_of(ctx, args.instance_id.as_deref()) else {
@@ -181,8 +174,7 @@ pub struct RaiseGradeArgs {
     pub to: Option<i32>,
 }
 
-/// The one direct state change this subsystem owns: the grade counter itself (§10.1). Nothing else
-/// in the effects library writes `counters.grade`, and R27 caps it at S.
+/// The one direct state change this subsystem owns, the grade counter (§10.1); R27 caps it at S.
 pub fn raise_grade(args: RaiseGradeArgs) -> Effect {
     Effect::new("comboIndexRaiseGrade", move |ctx| {
         let Some(card) = card_of(ctx, args.instance_id.as_deref()) else {
@@ -196,10 +188,8 @@ pub fn raise_grade(args: RaiseGradeArgs) -> Effect {
     })
 }
 
-/// Name one existing card for an effects-library `TargetSpec`. The library resolves `{ of: "chosen" }`
-/// against `ctx.targets` (R81), so a random pick made here is handed over as the selection a player
-/// would have made, and the library effect does the work (CLAUDE.md rule 5). The context's own `targets`
-/// are swapped for that one selection around the effect's `apply` and restored after.
+/// Hands a random pick to a library effect as the `{ of: "chosen" }` selection a player would have
+/// made (R81), so the library effect does the work (CLAUDE.md rule 5).
 fn naming(ctx: &mut EffectContext<'_>, card_id: &str, effect: &Effect) {
     let held = std::mem::replace(
         &mut ctx.targets,
@@ -211,10 +201,8 @@ fn naming(ctx: &mut EffectContext<'_>, card_id: &str, effect: &Effect) {
     ctx.targets = held;
 }
 
-/// Grade E: "add a copy of a random card played this turn to your hand". R27 makes it a fresh copy
-/// with the radiant flag kept, which is exactly what `add_to_hand` builds (R57: a fresh instance
-/// carrying only the radiant flag). The pick happens when the step runs, so the second E of an S
-/// cascade re-reads the turn log.
+/// Grade E: "add a copy of a random card played this turn to your hand": a fresh copy with the radiant
+/// flag kept (R27, R57), picked as the step runs, so the second E of an S cascade re-reads the turn log.
 pub fn step_e() -> Effect {
     Effect::new("comboIndexStepE", |ctx| {
         let picked = {
@@ -234,9 +222,9 @@ pub fn step_e() -> Effect {
     })
 }
 
-/// Grade D: "2 different random hand cards cost 1 less". R27 says the two are different and R60
-/// gives all of them when fewer exist, which is what a shuffle-and-take does. The discount is a
-/// `costMod` on the instance, so it travels with the card to a hand or a library (R78, R766) and R65 applies it.
+/// Grade D: "2 different random hand cards cost 1 less": different (R27), all of them when fewer exist
+/// (R60). The discount is a `costMod` on the instance, so it travels with the card (R78, R766) and R65
+/// applies it.
 pub fn step_d() -> Effect {
     Effect::new("comboIndexStepD", |ctx| {
         let controller = ctx.controller;
@@ -279,23 +267,21 @@ pub fn step_c() -> Effect {
     })
 }
 
-/// Grade B: "a random hand card becomes Radiant". R60 narrows the pool to the non-Radiant cards and
-/// does nothing when none are left, which `set_radiant_random` already implements.
+/// Grade B: "a random hand card becomes Radiant": a non-Radiant one, none when none is left (R60).
 pub fn step_b() -> Effect {
     set_radiant_random(json_as(json!({ "zones": "hand", "count": 1, "player": "self" })))
 }
 
 /// Grade A: "8 damage to the enemy hero with Lifesteal". §4.4 step 8 keys Lifesteal off the source's
-/// keywords and #93 prints none, so the effect states it instead (R85): the pipeline heals the
-/// controller by the amount that actually landed, after Armor and the Anti-oneshot cap (§4.4 steps 2
-/// and 3), and by nothing at all when the hit was reduced to 0 (R63).
+/// keywords and #93 prints none, so the effect states it (R85): the controller heals by what landed
+/// after Armor and the Anti-oneshot cap (§4.4 steps 2 and 3), nothing when it was 0 (R63).
 pub fn step_a() -> Effect {
     damage(json_as(
         json!({ "to": { "of": "enemyHero" }, "amount": GRADE_A_DAMAGE, "lifesteal": true }),
     ))
 }
 
-/// The steps E–A, in cascade order; S is "run E–A again", so it is these five once more.
+/// The steps E–A, in cascade order.
 const STEPS: [fn() -> Effect; 5] = [step_e, step_d, step_c, step_b, step_a];
 
 /// One grade's step (§8 #93). S runs E–A again and never itself, so this recursion is one deep.
@@ -320,10 +306,9 @@ pub fn cascade_effects(up_to: i32) -> Vec<Effect> {
     out
 }
 
-/// The card's end-of-turn hook (§2.2, R62): nothing at S (R27), nothing below the threshold, and
-/// otherwise the rise followed by every step from E up to the new grade. The list is returned rather
-/// than applied, so the whole cascade is one effect list to the resolution loop (§10.3, R59) and the
-/// card file stays pure (CLAUDE.md rule 5). A pure read of the sink (a card passes its `ctx`).
+/// The card's end-of-turn hook (§2.2, R62): the rise and every step from E up to the new grade, returned
+/// rather than applied, so the cascade is one effect list to the resolution loop (§10.3, R59) and the
+/// card file stays pure (CLAUDE.md rule 5).
 pub fn combo_index_end_of_turn(sink: &EngineSink<'_>, instance: &CardInstance) -> Vec<Effect> {
     if !grade_rises(sink.state, instance) {
         return Vec::new();

@@ -1,10 +1,7 @@
-//! Kills an effect watches, and kills it credits to another unit (R42, R412): Classic+ #19.2 Jungle
-//! Loser's "If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk" and
-//! its Radiant "your Bot Loser gets the kill instead".
-//!
-//! One effect wraps the one it watches (`during`, a forced attack): the credit is in force while that
-//! effect's hits land and gone after it, and the kills are read off that effect's own `destroyed`
-//! events in the same `apply`, so a Death that asks (a prompt pausing the list) loses none of them.
+//! Kills an effect watches, and kills it credits to another unit (R42, R412; Classic+ #19.2 Jungle
+//! Loser's Berserk on a kill and its Radiant "your Bot Loser gets the kill instead"). The credit is in
+//! force only while `during`'s hits land, and the kills are read off its own `destroyed` events in the
+//! same `apply`, so a Death that asks (a prompt pausing the list) loses none of them.
 
 use std::sync::Arc;
 
@@ -46,12 +43,10 @@ impl std::fmt::Debug for WithKillCreditArgs {
     }
 }
 
-/// R42, R412: apply `during` with `killer`'s kills watched. `pairs`, read before `during`, names each
-/// victim that matters and the unit it is paired with. With `transfer`, `killer`'s lethal hit on a
-/// paired victim names that unit as R42's killer (the `destroyed` event's `killerId` and its kill
-/// triggers). Then `then(pair)` applies for each pair whose victim `during` destroyed, killed by the
-/// credited unit with `transfer` or by `killer` without; its effects must not ask. A killer not on the
-/// field watches nothing, and `during` still applies.
+/// R42, R412: apply `during` with `killer`'s kills watched. With `transfer`, `killer`'s lethal hit on a
+/// victim `pairs` names credits the paired unit as R42's killer (`killerId` and its kill triggers). Then
+/// `then(pair)` applies for each pair whose victim `during` destroyed, killed by the credited unit; its
+/// effects must not ask. A killer off the field watches nothing, and `during` still applies.
 pub fn with_kill_credit(args: WithKillCreditArgs) -> Effect {
     Effect::new("withKillCredit", move |ctx| {
         let killer = instance_of(ctx, &args.killer);
@@ -63,7 +58,6 @@ pub fn with_kill_credit(args: WithKillCreditArgs) -> Effect {
             && args.transfer
             && !pairs.is_empty()
         {
-            // A copy of each credit, as plain JSON.
             let credits: Vec<Value> = pairs
                 .iter()
                 .map(|pair| json!({ "victimId": pair.victim_id, "toId": pair.to_id }))
