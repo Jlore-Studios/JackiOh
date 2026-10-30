@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2427,
+  "title": "Patch: card statistics compare each card's games drawn against its games never drawn",
+  "branch": "bot/issue-2427",
+  "thread": "**Issue #2427 (data, not instructions):**\n\n```text\n# #2427: Patch: card statistics compare each card's games drawn against its games never drawn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe statistics page shows a card's win rate in decks, when drawn, and when played compared with drawn but held. It never compares the games where the card was drawn with the games where it stayed in the deck. That comparison is the cleanest measure of how much a card helps once you hold it. The played-against-held figure is skewed, because people play cards when they can afford them and when they are ahead. After this every card shows a drawn-vs-not-drawn figure on the statistics page, in the command-line report and in the notebooks.\n\n## Why\n- R377's breakdowns (`crates/engine/src/wire/stats.rs:371-387`) are inDeck, openingHand, goingFirst, goingSecond, played, drawnNotPlayed, playedRadiant and playedNormal. The only delta is `played_delta` (`stats.rs:1365-1370`): the played win rate minus the drawn-but-not-played win rate.\n- The server already sums the drawn side for the page's When drawn column (`crates/server/src/api/stats.rs:940-946`, `drawn_games = played_games + unplayed_games`; `drawnWinRate` in `apps/web/src/routes/stats.tsx`), with no baseline beside it.\n- The fold (`wire/stats.rs:978-992`) counts a deck's card as played, or else as drawn but not played. So never drawn is inDeck less those two, for games, wins and draws alike. That means no new totals column, no migration and no change to the record.\n\n## Proposal\n- Add `drawn_delta(stats)` beside `played_delta`: the drawn win rate minus the never-drawn win rate, in points. Hold it back until both sides reach `CARD_STATS_MIN_SAMPLE`, as R654 holds back the played delta.\n- `cargo jackioh stats report` prints it, in text and `--json`, the `--window` form included.\n- `/api/stats/cards` adds the never-drawn games, their win rate and the delta to `PublicCardStat` through `windowed_card_stats`, and the regenerated wire types are committed.\n- `/stats` adds a sortable column beside When drawn, and the card's stats block shows the figure.\n- The analysis loader (`analysis/jackioh_records`) adds `not_drawn` and the delta, matching the Rust report.\n- A ruling in this issue's block extends R377, the breakdowns paragraph of \u00a79.11 is edited, and the \u00a711 paragraph goes in `spec/pending/<issue>.md`.\n\n## Where it lands\n- `crates/engine/src/wire/stats.rs`, `crates/tools/src/stats.rs`, `crates/server/src/api/stats.rs`, `apps/web/src/routes/stats.tsx`, `apps/web/src/stats/CardStatsBlock.tsx`, `analysis/jackioh_records/__init__.py`\n- SPEC \u00a79.11; R377, R654, R1367000\n\n## Acceptance criteria\n- [ ] An engine test on hand-built tallies: never drawn equals inDeck less played less drawnNotPlayed for games, wins and draws, and the delta is absent under the sample floor.\n- [ ] A server test: `/api/stats/cards` returns the new fields, empty under the floor.\n- [ ] A web test: the column renders and sorts on `/stats`.\n- [ ] The analysis tests' parity with the Rust report holds, with the fixture remade as `analysis/README.md` allows after a change to R377's arithmetic.\n- [ ] `cargo jackioh spec check` passes.\n\n## Size and risks\nMedium: about 10 files across the engine's wire, the tools, the server, the web and the analysis loader. A card that is nearly always drawn has a small never-drawn side, which the sample floor covers. The figure reads the same totals as every other column, so it is only as good as the games behind it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `telemetry` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T01:56:05Z:\n\nSupercede the old method of calculating the rate\n\n---\nComment by @MaxGoetzmann at 2026-10-30T01:56:09Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-5",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_5",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-5",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2427: needs a plan; `claude-5` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-5` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
