@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2426,
+  "title": "Patch: the fuzz names the pool cards its games never played",
+  "branch": "bot/issue-2426",
+  "thread": "**Issue #2426 (data, not instructions):**\n\n```text\n# #2426: Patch: the fuzz names the pool cards its games never played\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe random-game test deals every card into decks and passes when nothing breaks, but it never says whether each card was actually played. A hard-to-play card, one needing three sacrifices or a rare trigger, can sit in many decks without its rules ever running, and nobody would know. After this each run lists the cards its games never played. The maintainer and the bot can then see what the random games miss and aim the new option that forces named cards into decks at them.\n\n## Why\n- `crates/tools/src/fuzz.rs:239-242`: 'the coverage of the CARD POOL is never narrowed, only the number of seeds'. Coverage here means dealt.\n- The summary line (`fuzz.rs:2417`) prints `pool: {} deck-legal cards, {} excluded` and nothing about play.\n- With 632 cards and two 25-card decks a game, CI's 200 seeds deal each card into about 16 decks, and the random policy plays only some of them.\n- The AI's sweep counts never-played cards (`crates/ai/src/sweep.rs:850`); the fuzz has nothing like it.\n- #2387 (open as PR #2420) adds `fuzz --cards <ids|set>` to deal named cards into every seed's decks. A never-played list is exactly the input it needs.\n\n## Proposal\n- In each seed, gather the ids of the cards dealt and the ids of those either seat played, set, fired or announced (`GameEvent::CardPlayed`, `TrapFired`, `CardAnnounced`). Merge them in seed order so the result does not depend on threads.\n- The text summary adds one line, `N of M pool cards never played`, with the first ids. `--json` adds a `coverage` object holding dealt, played and the sorted never-played ids.\n- The handicapped wave reports the same, and the co-op wave too if it is cheap.\n- It is a report only and never fails a wave. Update the fuzz row of `crates/tools/README.md`.\n\n## Where it lands\n- `crates/tools/src/fuzz.rs` (perhaps `duos_fuzz.rs`), `crates/tools/README.md`\n- SPEC \u00a710.7\n\n## Acceptance criteria\n- [ ] A test with a pool card that can never be cast: it is in the never-played list, and a card the smoke wave plays is not.\n- [ ] The `coverage` object is the same on one thread and on many, over the same seeds.\n- [ ] Every existing field, the pass or fail and the replay hashes are unchanged.\n- [ ] `cargo jackioh fuzz --seeds 200` prints the line, and the pull request quotes it.\n\n## Size and risks\nSmall to medium: about 100\u2013150 lines in one or two files. Played does not mean every hook ran: a card can be played without its Death or trigger ever firing, so the list understates what is missed. No flag is added, so the README table's acceptance test needs no change.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T01:55:25Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2426: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
