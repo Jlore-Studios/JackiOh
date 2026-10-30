@@ -47,7 +47,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::subsystems::starscape::{starscape_amount, starscape_travelled_this_turn};
+    use jackioh_engine::subsystems::starscape::{starscape_amount, starscape_traveled_this_turn};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -156,9 +156,9 @@ mod tests {
         #[test]
         fn r2521008_its_travels_spend_a_radiant_alteran_reachs_free_travel_this_turn() {
             let mut s = charting("star-chart-free", false, Some(0));
-            assert!(!starscape_travelled_this_turn(s.state(), P1));
+            assert!(!starscape_traveled_this_turn(s.state(), P1));
             s.play(ID, json!({}));
-            assert!(starscape_travelled_this_turn(s.state(), P1));
+            assert!(starscape_traveled_this_turn(s.state(), P1));
         }
 
         #[test]
