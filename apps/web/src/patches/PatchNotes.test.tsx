@@ -423,7 +423,7 @@ describe("R724000 the Patch notes page by release line", () => {
     }));
     shipped.push({
       ...base,
-      version: "v0.5.1",
+      version: "v0.5.0b",
       tier: "patch",
       changes: [{ id: "traininggrounds-001", name: "Spikey Steven", kind: "added" }],
     });
@@ -431,7 +431,7 @@ describe("R724000 the Patch notes page by release line", () => {
     expect(groups.map(({ release }) => release.id)).toEqual([...sets].reverse());
     const newest = groups[0];
     expect(newest?.release.name).toBe("Stinkyscape & Training Grounds");
-    expect(newest?.patches.map((patch) => patch.version)).toEqual(["v0.5.1", "v0.5.0"]);
+    expect(newest?.patches.map((patch) => patch.version)).toEqual(["v0.5.0b", "v0.5.0"]);
     expect(newest?.release.summary).toContain("Training Grounds");
   });
 

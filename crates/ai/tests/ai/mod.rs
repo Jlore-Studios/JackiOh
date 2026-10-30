@@ -65,5 +65,6 @@ pub mod support;
 pub mod surface;
 pub mod tradable;
 pub mod training_grounds;
-pub mod tutorial_core_only;
+pub mod turn_hooks;
+pub mod tutorial_cards;
 pub mod tutorial_floor;

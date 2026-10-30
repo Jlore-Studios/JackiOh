@@ -33,7 +33,7 @@ const FIGURES = {
 
 function gamesResponse(figures: Record<string, unknown> | null, totalGames = 400, minSample = 20) {
   return {
-    patch: "v0.5.1",
+    patch: "v0.5.0b",
     source: "live" as const,
     sourceLabel: "Live games",
     mode: "bo1" as const,
@@ -61,7 +61,7 @@ describe("R1994000 the Games panel", () => {
     const fetchMock = vi.fn((_input: RequestInfo | URL) => Promise.resolve(answer(gamesResponse(FIGURES))));
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<GamesPanel patch="v0.5.1" mode="bo1" />);
+    render(<GamesPanel patch="v0.5.0b" mode="bo1" />);
 
     expect(await screen.findByText("First player wins 51% (±5)", undefined, SLOW)).toBeInTheDocument();
     expect(screen.getByText("Median 17 turns")).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe("R1994000 the Games panel", () => {
     expect(screen.queryByTestId(statsTestid.gamesFew)).toBeNull();
 
     const url = new URL(String(fetchMock.mock.calls[0]?.[0]), window.location.origin);
-    expect(`${url.pathname}${url.search}`).toBe("/api/stats/games?patch=v0.5.1&mode=bo1");
+    expect(`${url.pathname}${url.search}`).toBe("/api/stats/games?patch=v0.5.0b&mode=bo1");
 
     // No data source, no gate and no word of AI games (R661); every game counted, so no note.
     const panel = screen.getByTestId(statsTestid.gamesPanel);
@@ -80,7 +80,7 @@ describe("R1994000 the Games panel", () => {
   it("R2446000 the panel shows no set traps line, whatever traps the response counts", async () => {
     vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL) => Promise.resolve(answer(gamesResponse(FIGURES)))));
 
-    render(<GamesPanel patch="v0.5.1" mode="bo1" />);
+    render(<GamesPanel patch="v0.5.0b" mode="bo1" />);
 
     expect(await screen.findByText("First player wins 51% (±5)", undefined, SLOW)).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
@@ -90,7 +90,7 @@ describe("R1994000 the Games panel", () => {
   it("#2115 a rows skeleton stands in for the figures while the read is pending", async () => {
     vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL) => Promise.resolve(answer(gamesResponse(FIGURES)))));
 
-    render(<GamesPanel patch="v0.5.1" mode="bo1" />);
+    render(<GamesPanel patch="v0.5.0b" mode="bo1" />);
 
     // Right after render the read has not answered.
     expectSkeleton(screen.getByText("Loading game figures…"), "rows");

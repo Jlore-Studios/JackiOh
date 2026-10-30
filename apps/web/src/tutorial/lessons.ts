@@ -1,6 +1,6 @@
 // R291 lesson data (SPEC §9.10): fixed decks, seed and seat make R290 practice games repeatable.
-// R2205003, R2434001: five lessons, one subject each. The human's decks are Training Grounds cards, the
-// AI's Core cards. Lessons 1–4 hold no Legendary or Mythic card and set `poolHold` (R2201001) on both
+// R2205003, R2434001: five lessons, one subject each. The human's decks are Training Grounds cards, and
+// the AI's are too, none Legendary or Mythic (R2533001). Lessons 1–4 hold no Legendary or Mythic card and set `poolHold` (R2201001) on both
 // seats, so none is generated either; lesson 5 deals them to the human alone. Decks meet R184's sizes,
 // respect R186 and bring nothing a later lesson teaches. `lessons.test.ts` holds them to it.
 // R2434000: the ids of the lessons before #2434 read as the lesson in their place on the path.
@@ -54,7 +54,7 @@ export function nextLessonOf(id: string): TutorialLesson | undefined {
   return lesson === undefined ? undefined : TUTORIAL_LESSONS.find((candidate) => candidate.number === lesson.number + 1);
 }
 
-/** R290, R1705005, R2201000, R2201001, R2433000, R2434001: the tutorial opponent's handicap, Core-only bar and all, and the human's, the pool hold on both when the lesson sets it. */
+/** R290, R1705005, R2201000, R2201001, R2434001, R2533000: the tutorial opponent's handicap, its bar and all, and the human's, the pool hold on both when the lesson sets it. */
 export function lessonHandicaps(lesson: TutorialLesson): { human: Handicap; ai: Handicap } {
   const hold = lesson.poolHold ? { poolHold: true } : {};
   return { human: { ...TUTORIAL_HUMAN, ...hold }, ai: { ...AI_TUTORIAL, ...hold } };

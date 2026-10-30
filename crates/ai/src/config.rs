@@ -419,6 +419,10 @@ pub struct EvalWeights {
     /// `unit_worth` adds; `kill_worth` takes the whole price off a kill, as Reborn's body. Below 1, so
     /// killing a unit whose Death pays its owner is worth less than its body.
     pub death: f64,
+    /// R2477000: the share of what one firing of an own readable backrow card's start-of-turn and
+    /// end-of-turn hooks gives its controller (`evaluate::turn_hook_price`) that `material` adds; the
+    /// enemy's backrow is priced as before.
+    pub turn_hook: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -565,6 +569,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     slumber_waiting_share: 0.5,
     // R2424000: an untuned start for the training lanes, as R2380000's shares are.
     death: 0.5,
+    // R2477000: an untuned start for the training lanes, as R2424000's is. At 0.5 the smoke gate read
+    // 20, 16 and 17 of 20; at 1.0, 19, 16 and 16, Hard against Easy on its floor of 16.
+    turn_hook: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -601,6 +608,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
 /// R2424000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two per field
 /// unit with a Death, three or four per own hand Unit with one.
 pub const AI_DEATH_PROBE_NODES: usize = 24;
+
+/// R2477000: the most nodes a decision's turn-hook probes (`evaluate::turn_hook_prices`) spend: one per
+/// turn hook of each own backrow card with one, and a spawn more per own hand Field Spell with one.
+pub const AI_TURN_HOOK_PROBE_NODES: usize = 12;
 
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -756,6 +767,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     slumber_waiting_share: 0.0,
     // R2424000 came after the gates were fixed: nothing, as it gave a Death.
     death: 0.0,
+    // R2477000 came after the gates were fixed: nothing, as it gave a turn hook.
+    turn_hook: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,

@@ -1558,7 +1558,9 @@
       death: { voice: "alien" },
     },
     "meditative-049-3": { // AI Girlfriend
-      cast: { voice: "diva" },
+      play: { voice: "diva" },
+      attack: { voice: "diva" },
+      death: { voice: "diva" },
     },
     "meditative-050": { // CN Tech
       cast: { voice: "robot" },
@@ -2530,7 +2532,9 @@
       death: { voice: "snob" },
     },
     "stinkyscape-116": { // Megabase
-      cast: { voice: "sapi-announcer" },
+      play: { voice: "sapi-announcer" },
+      attack: { voice: "sapi-announcer" },
+      death: { voice: "sapi-announcer" },
     },
     "stinkyscape-117": { // Core System
       cast: { voice: "robot" },

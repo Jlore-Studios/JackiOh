@@ -672,7 +672,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-t-ai-05", AI_PRINTED),
         ("stinkyscape-t-ai-06", AI_PRINTED),
         ("meditative-080", IMMUTABLE),
-        ("stinkyscape-116", IMMUTABLE),
         ("stinkyscape-095", CARD_NAME),
         ("stinkyscape-159", CARD_NAME),
         ("stinkyscape-160", CARD_NAME),
