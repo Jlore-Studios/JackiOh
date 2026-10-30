@@ -33,23 +33,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 )
 
-// The config values this module reads that config's stub still types `any`: nil until config is
-// ported, then each its own type (a value of another type stops here rather than read as empty).
-
-func cfgStr(v any) string {
-	if v == nil {
-		return ""
-	}
-	return v.(string)
-}
-
-func cfgStrs(v any) []string {
-	if v == nil {
-		return nil
-	}
-	return v.([]string)
-}
-
 func cfgOthers(v any) []*identity.Other {
 	if v == nil {
 		return nil
@@ -63,8 +46,8 @@ type modeLabel struct{ label, mode string }
 
 func modeLabels() []modeLabel {
 	var out []modeLabel
-	for _, mode := range cfgStrs(config.Modes) {
-		out = append(out, modeLabel{cfgStr(config.LabelPrefix) + mode, mode})
+	for _, mode := range config.Modes {
+		out = append(out, modeLabel{config.LabelPrefix + mode, mode})
 	}
 	return out
 }
@@ -106,8 +89,8 @@ func lowered(names map[string]bool) map[string]bool {
 }
 
 // STATE_LABELS
-var StateLabels = []string{cfgStr(config.LabelBuild), cfgStr(config.LabelRevise),
-	cfgStr(config.LabelCross), cfgStr(config.LabelWorking), cfgStr(config.LabelBlocked)}
+var StateLabels = []string{config.LabelBuild, config.LabelRevise,
+	config.LabelCross, config.LabelWorking, config.LabelBlocked}
 
 // LabelNames is queue.label_names.
 func LabelNames(thread *pyjson.Object) map[string]bool {
@@ -138,13 +121,13 @@ func SetStateLabel(ctx *hctx.Context, number int, current map[string]bool, wante
 
 // BranchForIssue is queue.branch_for_issue.
 func BranchForIssue(number int) string {
-	return fmt.Sprintf("%sissue-%d", cfgStr(config.BranchPrefix), number)
+	return fmt.Sprintf("%sissue-%d", config.BranchPrefix, number)
 }
 
 // Where a revision of pull request `number` that was cut off keeps its unfinished work
 // (#317 part 3): never the pull request's own branch, which would start CI on it.
 func WipBranch(number int) string {
-	return fmt.Sprintf("%swip/%d", cfgStr(config.BranchPrefix), number)
+	return fmt.Sprintf("%swip/%d", config.BranchPrefix, number)
 }
 
 // OpenPullForBranch is queue.open_pull_for_branch.
@@ -162,7 +145,7 @@ func when(ctx *hctx.Context, s *pyjson.Object) string {
 
 func haltNote(ctx *hctx.Context, s *pyjson.Object) string {
 	if s.Truthy("halted") {
-		return fmt.Sprintf(" The bot is halted, though: `%s start` resumes it.", cfgStr(config.Slash))
+		return fmt.Sprintf(" The bot is halted, though: `%s start` resumes it.", config.Slash)
 	}
 	return ""
 }
@@ -423,14 +406,14 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 	if IsHuman(names) {
 		return HumanReply(number, names)
 	}
-	labelBuild := cfgStr(config.LabelBuild)
+	labelBuild := config.LabelBuild
 	if other := Owner(issue); other != nil {
 		if labelPresent && names[labelBuild] {
 			ctx.GH.RemoveLabel(number, labelBuild)
 		}
 		return OwnerReply(number, other)
 	}
-	modes := cfgStrs(config.Modes)
+	modes := config.Modes
 	if mode != nil && *mode != "" && !slices.Contains(modes, *mode) {
 		mine := ""
 		if len(modes) > 0 {
@@ -442,11 +425,11 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 		}
 		return fmt.Sprintf("I have no `%s` mode.", *mode) + mine
 	}
-	if mode != nil && *mode != "" && names[cfgStr(config.LabelPROpen)] &&
+	if mode != nil && *mode != "" && names[config.LabelPROpen] &&
 		OpenPullForBranch(ctx, BranchForIssue(number)) != nil {
 		return fmt.Sprintf("#%d has a pull request of mine open already, so I will not %s"+
 			" over it: `%s rebuild` closes it and builds again, or comment on the pull "+
-			"request to change it.", number, ModeWords[*mode], cfgStr(config.Slash))
+			"request to change it.", number, ModeWords[*mode], config.Slash)
 	}
 	asked := ModeOf(names)
 	if mode != nil {
@@ -454,7 +437,7 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 	}
 	// Only a fullsend issue or a tree can have parts still landing (#505).
 	record := pyjson.New()
-	if asked == "fullsend" || names[cfgStr(config.LabelTree)] {
+	if asked == "fullsend" || names[config.LabelTree] {
 		record = recordOf(ctx.Store.Load(), number)
 	}
 	if IsFullsend(asked, record) {
@@ -491,7 +474,7 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 	if ModeOf(names) == "fullsend" && IsFullsend("", record) {
 		words = "reconcile its parts into one pull request" // split already (#505)
 	}
-	if labelSuggestion := cfgStr(config.LabelSuggestion); names[labelSuggestion] {
+	if labelSuggestion := config.LabelSuggestion; names[labelSuggestion] {
 		// A person queued one of my suggestions, which is their yes to it (#664). Its record
 		// remembers it was one, so if it comes to nothing it is logged as such (#797).
 		ctx.GH.RemoveLabel(number, labelSuggestion)
@@ -500,12 +483,12 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 			return nil
 		}, fmt.Sprintf("suggestion #%d approved", number))
 	}
-	if names[cfgStr(config.LabelWorking)] {
+	if names[config.LabelWorking] {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am working on #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
 	}
-	if names[cfgStr(config.LabelPROpen)] {
+	if names[config.LabelPROpen] {
 		if pull := OpenPullForBranch(ctx, BranchForIssue(number)); pull != nil {
 			SetStateLabel(ctx, number, names, "")
 			return QueueRevise(ctx, numberOf(pull), by, force, "request", false, nil, ask)
@@ -551,7 +534,7 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 	if unread != "" {
 		return unread
 	}
-	labelWorking, labelPROpen := cfgStr(config.LabelWorking), cfgStr(config.LabelPROpen)
+	labelWorking, labelPROpen := config.LabelWorking, config.LabelPROpen
 	var adopted []*pyjson.Object
 	var kept []string
 	for _, child := range children {
@@ -602,7 +585,7 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 	}
 	names = SetMode(ctx, number, names, "")
 	SetStateLabel(ctx, number, names, "")
-	if labelTree := cfgStr(config.LabelTree); !names[labelTree] {
+	if labelTree := config.LabelTree; !names[labelTree] {
 		ctx.GH.AddLabels(number, []string{labelTree})
 	}
 	var listedParts []string
@@ -711,13 +694,13 @@ func QueueRevise(ctx *hctx.Context, number int, by string, force bool /* = False
 			ctx.Cfg.Repo)
 	}
 	names := LabelNames(pull)
-	if names[cfgStr(config.LabelWorking)] {
+	if names[config.LabelWorking] {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am revising #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
 	}
-	SetStateLabel(ctx, number, names, cfgStr(config.LabelRevise))
-	botPR := names[cfgStr(config.LabelPR)]
+	SetStateLabel(ctx, number, names, config.LabelRevise)
+	botPR := names[config.LabelPR]
 	if botPR {
 		HoldMerge(ctx, pull)
 	}
@@ -755,15 +738,15 @@ func QueueReview(ctx *hctx.Context, number int, by string, floor string /* = "" 
 	if IsHuman(names) {
 		return HumanReply(number, names)
 	}
-	if !names[cfgStr(config.LabelPR)] {
+	if !names[config.LabelPR] {
 		return fmt.Sprintf("#%d is not a pull request I opened; review runs are for mine only.", number)
 	}
-	if names[cfgStr(config.LabelWorking)] {
+	if names[config.LabelWorking] {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am working on #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
 	}
-	SetStateLabel(ctx, number, names, cfgStr(config.LabelCross))
+	SetStateLabel(ctx, number, names, config.LabelCross)
 
 	change := func(s *pyjson.Object) any {
 		record := stateItem(s, number)
@@ -817,14 +800,14 @@ func pending(ctx *hctx.Context, number int, by string, ask *asks.Ask /* = None *
 func Stop(ctx *hctx.Context, number int, by string) string {
 	thread := ctx.GH.GetIssue(number)
 	names := LabelNames(thread)
-	labelWorking := cfgStr(config.LabelWorking)
+	labelWorking := config.LabelWorking
 	working := names[labelWorking]
 	if working {
 		SetStateLabel(ctx, number, names, labelWorking)
 	} else {
 		SetStateLabel(ctx, number, names, "")
 	}
-	if thread.Has("pull_request") && names[cfgStr(config.LabelPR)] {
+	if thread.Has("pull_request") && names[config.LabelPR] {
 		herr.Catch[*herr.GitHubError](func() { HoldMerge(ctx, ctx.GH.GetPull(number)) })
 	}
 	var dropped []string

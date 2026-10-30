@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -180,7 +181,7 @@ func Parse(raw any, suggestions bool /* = True */) (*Identity, error) {
 	}
 	var unknown []string
 	for _, k := range section.Keys() {
-		if !contains(Keys, k) {
+		if !slices.Contains(Keys, k) {
 			unknown = append(unknown, k)
 		}
 	}
@@ -194,7 +195,7 @@ func Parse(raw any, suggestions bool /* = True */) (*Identity, error) {
 	}
 	var bad []string
 	for _, m := range modes {
-		if !contains(Modes, m) {
+		if !slices.Contains(Modes, m) {
 			bad = append(bad, m)
 		}
 	}
@@ -297,13 +298,4 @@ func loadCurrent() *Identity {
 		os.Exit(1)
 	}
 	return found
-}
-
-func contains(list []string, s string) bool {
-	for _, e := range list {
-		if e == s {
-			return true
-		}
-	}
-	return false
 }

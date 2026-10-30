@@ -32,6 +32,14 @@ var MaxLevel int = 3
 // LevelNames = {0: "nobody", 1: "asker", 2: "maintainer", 3: "operator"}
 var LevelNames = map[int]string{0: "nobody", 1: "asker", 2: "maintainer", 3: "operator"}
 
+// LevelName is `LEVEL_NAMES.get(level, level)` as an f-string writes it.
+func LevelName(level int) string {
+	if name, ok := LevelNames[level]; ok {
+		return name
+	}
+	return strconv.Itoa(level)
+}
+
 var (
 	loginPattern = regexp.MustCompile(`^[A-Za-z0-9-]{1,39}$`)
 	// re.IGNORECASE: Python's `i` also matches `ı` and `İ`.

@@ -1,9 +1,8 @@
 package cli
 
-// Private helpers the command line needs from Python itself: `int()`, `str.isdigit()`, the
-// exceptions its except clauses name (OSError, ValueError), the last line of a traceback,
-// `str(timedelta)`, subprocess.run, and the running bot's constants from `config`, read through
-// `any` so this package compiles whether `config` declares them as `any` or as their own types.
+// Private helpers the command line needs from Python itself that py and herr do not hold: the
+// exceptions its except clauses name (ValueError), the last line of a traceback, `str(timedelta)`,
+// subprocess.run, and pathlib's and json's reads and writes.
 
 import (
 	"bytes"
@@ -20,10 +19,7 @@ import (
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
@@ -246,95 +242,4 @@ func hhmm(v any) string {
 		return fmt.Sprintf("%02d:%02d", t.Hour, t.Minute)
 	}
 	panic(fmt.Sprintf("cli: a time of type %T", v))
-}
-
-// duration is a timedelta constant of another module.
-func duration(v any) time.Duration {
-	if d, ok := v.(time.Duration); ok {
-		return d
-	}
-	panic(fmt.Sprintf("cli: a timedelta of type %T", v))
-}
-
-func cfgStr(v any) string {
-	switch x := v.(type) {
-	case nil:
-		return ""
-	case string:
-		return x
-	case fmt.Stringer:
-		return x.String()
-	}
-	panic(fmt.Sprintf("cli: constant of type %T, not a string", v))
-}
-
-// asPath is `path.as_posix()` (or a str) of another module's constant.
-func asPath(v any) string { return cfgStr(v) }
-
-// others is config.OTHERS.
-func others() []*identity.Other {
-	switch x := any(config.Others).(type) {
-	case nil:
-		return nil
-	case []*identity.Other:
-		return x
-	case []identity.Other:
-		out := make([]*identity.Other, len(x))
-		for i := range x {
-			out[i] = &x[i]
-		}
-		return out
-	}
-	panic(fmt.Sprintf("cli: config.OTHERS of type %T", config.Others))
-}
-
-// labelSpec is one of config.LABELS: name: (color, description).
-type labelSpec struct{ name, color, description string }
-
-// labels is `LABELS.items()`, in order.
-func labels() []labelSpec {
-	var out []labelSpec
-	var o *pyjson.Object
-	switch x := any(config.Labels).(type) {
-	case nil:
-		return nil
-	case *pyjson.Object:
-		o = x
-	default:
-		panic(fmt.Sprintf("cli: config.LABELS of type %T", config.Labels))
-	}
-	o.Items(func(name string, v any) bool {
-		var pair []string
-		switch t := v.(type) {
-		case []any:
-			pair = pyjson.Strings(t)
-		case []string:
-			pair = t
-		case [2]string:
-			pair = t[:]
-		}
-		if len(pair) != 2 {
-			panic(fmt.Sprintf("cli: config.LABELS[%q] of type %T", name, v))
-		}
-		out = append(out, labelSpec{name, pair[0], pair[1]})
-		return true
-	})
-	return out
-}
-
-// tierEntries is `cfg.pool.tiers.get(tier, ())`.
-func tierEntries(pool *providers.Pool, tier string) []*providers.TierEntry {
-	switch x := pool.Tiers.Get(tier).(type) {
-	case nil:
-		return nil
-	case []*providers.TierEntry:
-		return x
-	case []any:
-		var out []*providers.TierEntry
-		for _, e := range x {
-			out = append(out, e.(*providers.TierEntry))
-		}
-		return out
-	}
-	panic(fmt.Sprintf("cli: a pool tier of type %T", pool.Tiers.Get(tier)))
 }

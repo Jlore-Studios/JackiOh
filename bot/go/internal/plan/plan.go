@@ -90,7 +90,7 @@ var QuietStep = "Wait until the subscription is quiet"
 
 // OTHERS is config.OTHERS, imported by name in the Python and patched there by the tests: a
 // variable so the Go tests can replace it.
-var Others = othersOf(config.Others)
+var Others = config.Others
 
 // RunLink is ` ([run](url))` for a run in Actions, and nothing for one started by hand.
 func RunLink(cfg *config.Config) string {
@@ -126,13 +126,13 @@ func PendingRun(ctx *hctx.Context, runID string) string {
 	ref := py.SliceFrom(runID, py.Len(Pending))
 	var runs []*pyjson.Object
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
-		runs = ctx.GH.ListRuns(cs(config.NightWorkflow), "", 50, false)
+		runs = ctx.GH.ListRuns(config.NightWorkflow, "", 50, false)
 	}); failed {
 		return "unknown"
 	}
 	for _, run := range runs {
 		if strings.HasPrefix(py.OrStr(run.Get("display_title"), ""), "bot-night "+ref+" ") {
-			if inStrs(run.Get("status"), Live...) || AwaitingDelivery(ctx, run) {
+			if py.In(run.Get("status"), Live...) || AwaitingDelivery(ctx, run) {
 				return "alive"
 			}
 			return "dead"
@@ -162,7 +162,7 @@ func RunStatus(ctx *hctx.Context, runID any) string {
 	status := ""
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		run := ctx.GH.GetRun(runID)
-		if inStrs(run.Get("status"), Live...) || AwaitingDelivery(ctx, run) {
+		if py.In(run.Get("status"), Live...) || AwaitingDelivery(ctx, run) {
 			status = "alive"
 		} else {
 			status = "dead"
@@ -206,7 +206,7 @@ func LoopRef(run *pyjson.Object) string {
 // deliver it: the loop started it, it ended less than `DELIVER_WITHIN` ago, and the loop has
 // neither delivered it nor given up on it (`DELIVERIES`).
 func AwaitingDelivery(ctx *hctx.Context, run *pyjson.Object) bool {
-	if inStrs(run.Get("status"), Live...) || LoopRef(run) == "" {
+	if py.In(run.Get("status"), Live...) || LoopRef(run) == "" {
 		return false
 	}
 	ended := clock.ParseISOValue(run.Get("updated_at"))
@@ -314,10 +314,10 @@ func VaultPath(providerID string) string {
 func Stops(ctx *hctx.Context, state *pyjson.Object, force bool) string {
 	cfg := ctx.Cfg
 	if ctx.RepoHalted() {
-		return fmt.Sprintf("halted by %s on main", cs(config.HaltPath))
+		return fmt.Sprintf("halted by %s on main", config.HaltPath)
 	}
 	if state.Truthy("halted") {
-		return fmt.Sprintf("halted by %s halt", cs(config.Slash))
+		return fmt.Sprintf("halted by %s halt", config.Slash)
 	}
 	if cfg.Secrets.Known && !slices.ContainsFunc(cfg.Pool.Ordered(), func(p *providers.Provider) bool {
 		if !p.Enabled {

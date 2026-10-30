@@ -134,7 +134,7 @@ var ModeKind = map[string]string{"oneshot": "one-shot (fullsend)", "split": "spl
 // WaitingForPeople is waiting_for_people: the items waiting for a person (`bot:blocked`), in a
 // line, or "".
 func WaitingForPeople(issues []*pyjson.Object) string {
-	blocked := py.Str(config.LabelBlocked)
+	blocked := config.LabelBlocked
 	var numbers []string
 	for _, i := range issues {
 		if queue.LabelNames(i)[blocked] {

@@ -52,13 +52,3 @@ func TestMarkedReadsLinesAsText(t *testing.T) {
 		t.Error("no file holds no marker")
 	}
 }
-
-func TestReturnCodeReadsTheResult(t *testing.T) {
-	type completed struct {
-		Args       []string
-		Returncode int
-	}
-	if returnCode(&completed{Returncode: 3}) != 3 || returnCode(struct{ ReturnCode int }{1}) != 1 {
-		t.Error("returnCode")
-	}
-}

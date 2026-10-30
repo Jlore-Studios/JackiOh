@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -58,6 +59,12 @@ func Number(v any) (float64, bool) {
 		return 0, true
 	}
 	return pyjson.AsFloat(v)
+}
+
+// In is `v in (a, b, …)` for a JSON value v and strings: v is a str equal to one of them.
+func In(v any, options ...string) bool {
+	s, ok := v.(string)
+	return ok && slices.Contains(options, s)
 }
 
 // Item is d[key]: the value, raising KeyError when the key is absent.

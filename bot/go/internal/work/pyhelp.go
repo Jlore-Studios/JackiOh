@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"reflect"
 	"regexp"
 	"strings"
 
@@ -166,43 +165,12 @@ func invalidPlaceholder(src string, at int) error {
 
 // ------------------------------------------------------------------ git
 
-// procOf reads what git.Run returned, Python's subprocess.CompletedProcess: its returncode and
-// its stdout.
-func procOf(proc any) (returncode int, stdout string) {
-	v := reflect.ValueOf(proc)
-	for v.IsValid() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) {
-		if v.IsNil() {
-			return 0, ""
-		}
-		v = v.Elem()
-	}
-	if !v.IsValid() || v.Kind() != reflect.Struct {
-		return 0, ""
-	}
-	for _, name := range []string{"Returncode", "ReturnCode", "Code", "ExitCode"} {
-		if f := v.FieldByName(name); f.IsValid() && f.CanInt() {
-			returncode = int(f.Int())
-			break
-		}
-	}
-	if f := v.FieldByName("Stdout"); f.IsValid() {
-		switch {
-		case f.Kind() == reflect.String:
-			stdout = f.String()
-		case f.Kind() == reflect.Slice && f.Type().Elem().Kind() == reflect.Uint8:
-			stdout = string(f.Bytes())
-		}
-	}
-	return returncode, stdout
-}
-
-// run is `git.run(*args, check=check)` (its default timeout, no extra environment).
+// run is `git.run(*args, check=check)` (its default timeout, no extra environment): its
+// returncode and stdout.
 func run(g *git.Git, check bool, args ...string) (int, string) {
-	return procOf(g.Run(check, 600, nil, args...))
+	proc := g.Run(check, 600, nil, args...)
+	return proc.Returncode, proc.Stdout
 }
-
-// cwdOf is `git.cwd`, the worktree's directory.
-func cwdOf(g *git.Git) string { return fmt.Sprint(g.Cwd) }
 
 // ------------------------------------------------------------------ pathlib
 

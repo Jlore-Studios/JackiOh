@@ -43,7 +43,7 @@ var Deliver = deliverRuns
 func deliverRuns(ctx *hctx.Context, workspace string /* = None */) []string {
 	var runs []*pyjson.Object
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
-		runs = ctx.GH.ListRuns(py.Str(config.NightWorkflow), "", 50, false)
+		runs = ctx.GH.ListRuns(config.NightWorkflow, "", 50, false)
 	}); failed {
 		return []string{"could not list the night runs to deliver: " + exc.Error()}
 	}

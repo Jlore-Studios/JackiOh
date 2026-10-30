@@ -106,7 +106,7 @@ func (e *ValueError) Error() string { return e.Msg }
 // WithMarker is `body`, redacted, with the marker once at the end.
 func WithMarker(body string) string {
 	text := redact.Redact(body, nil)
-	marker := py.Str(config.Marker)
+	marker := config.Marker
 	if strings.Contains(text, marker) {
 		return text
 	}

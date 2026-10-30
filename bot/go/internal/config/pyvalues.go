@@ -98,13 +98,3 @@ func subscript(v any, key string) (any, error) {
 	}
 	return nil, typeError("'%s' object is not subscriptable", py.TypeName(v))
 }
-
-// contains is `s in xs` for a tuple of strings.
-func contains(xs []string, s string) bool {
-	for _, x := range xs {
-		if x == s {
-			return true
-		}
-	}
-	return false
-}

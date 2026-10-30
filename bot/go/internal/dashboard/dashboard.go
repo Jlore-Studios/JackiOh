@@ -476,7 +476,7 @@ func miniUsage(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.Ob
 		}
 	}
 	provider.Limits.Budgets().Items(func(window string, budget any) bool {
-		spent := providers.MinutesSpent(entry, ctx.Now().Add(-windowSpan(window)))
+		spent := providers.MinutesSpent(entry, ctx.Now().Add(-lookup(providers.Windows, window)))
 		lines = append(lines, lookup(providers.WindowNames, window)+" "+fmt.Sprintf("%.0f", spent)+"/"+
 			py.Str(budget)+" min")
 		return true
@@ -659,7 +659,7 @@ func LanesBoxes(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 		hostedTitle = "Claude accounts, on GitHub's runners"
 	}
 	if claude && len(hosted) == 1 && pool.MachineParallel == 0 {
-		hostedTitle = py.Str(config.Title) + "'s Claude account, on GitHub's runners"
+		hostedTitle = config.Title + "'s Claude account, on GitHub's runners"
 	}
 	lines := []string{"```mermaid", "flowchart TB"}
 	if len(hosted) > 0 {

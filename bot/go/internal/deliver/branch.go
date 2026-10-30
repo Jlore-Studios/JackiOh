@@ -46,7 +46,7 @@ func (x *Deliverer) fetch(ref string, check bool) {
 
 // isAncestor is `self.repo.run("merge-base", "--is-ancestor", a, b, check=False).returncode`.
 func (x *Deliverer) isAncestor(a, b string) int {
-	return completed(x.Repo.Run(false, 600, nil, "merge-base", "--is-ancestor", a, b)).returncode
+	return x.Repo.Run(false, 600, nil, "merge-base", "--is-ancestor", a, b).Returncode
 }
 
 func (x *Deliverer) remoteURL() string {

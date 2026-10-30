@@ -207,9 +207,7 @@ func ctxFor(cfg *config.Config, write bool /* = True */) *hctx.Context {
 // build is `context_mod.build(cfg[, token=token])`, where a nil `token` is Python's None (the
 // config's write token, with the Actions token as its fallback and for Actions calls).
 //
-// NOTE(#467): the generated stub of hctx.Build takes `token string`, which cannot say None. Until
-// hctx's port gives the None its own value, None goes as "": this is the one line to change when
-// it does.
+// hctx.Build takes the token as a string, "" for None.
 func build(cfg *config.Config, token *string) *hctx.Context {
 	t := ""
 	if token != nil {
@@ -461,7 +459,7 @@ func CmdWake(cfg *config.Config, args *Args) int {
 	}
 	ctx := Ctx(cfg, false)
 	now := ctx.Now()
-	home := cfgStr(any(identity.Home_))
+	home := identity.Home_
 	if args.List {
 		found, notes := wake.ToWake(ctx, home)
 		say(pyjson.Dumps(found))
@@ -478,7 +476,7 @@ func CmdWake(cfg *config.Config, args *Args) int {
 	reason := ""
 	if !args.Now && at.IsZero() {
 		reason = fmt.Sprintf("outside the hours around the wake times (%s ", hhmm(wake.WakeAt)) +
-			fmt.Sprintf("%s and every %s around it)", wake.Zone, timedelta(duration(wake.Every)))
+			fmt.Sprintf("%s and every %s around it)", wake.Zone, timedelta(wake.Every))
 	} else if !at.IsZero() && wake.AlreadyWoken(ctx.GH.ListRuns(wake.Workflow, "success", 10, false), now) {
 		reason = fmt.Sprintf("an earlier run already woke the sessions of %s %s", hhmm(at), wake.Zone)
 	}
@@ -518,11 +516,11 @@ func MakeProbe(ctx *hctx.Context, number *int, provider *providers.Provider /* =
 
 	probe := func(lastUsage *pyjson.Object) *[2]string {
 		if ctx.RepoHalted() {
-			return &[2]string{fmt.Sprintf("halted by %s on main", cfgStr(any(config.HaltPath))), "halt"}
+			return &[2]string{fmt.Sprintf("halted by %s on main", config.HaltPath), "halt"}
 		}
 		st := ctx.Store.Load()
 		if st.Truthy("halted") {
-			return &[2]string{fmt.Sprintf("halted by %s halt", cfgStr(any(config.Slash))), "halt"}
+			return &[2]string{fmt.Sprintf("halted by %s halt", config.Slash), "halt"}
 		}
 		held := providers.Suspension(st, provider.ID)
 		if held != nil {
@@ -791,7 +789,7 @@ func current(cfg *config.Config, since time.Time) *config.Config {
 	refused := false
 	if err := herr.Try(func() {
 		ctx := Ctx(cfg, true)
-		text, _ := ctx.GH.GetFile(asPath(any(providers.ProvidersPath)), cfg.DefaultBranch)
+		text, _ := ctx.GH.GetFile(providers.ProvidersPath, cfg.DefaultBranch)
 		if text != "" {
 			raw := loads(text)
 			if exc, ok := herr.Catch[*herr.ConfigError](func() { pool = providers.Parse(raw) }); ok {
@@ -824,7 +822,7 @@ func Companion(other *identity.Other, argv ...string) (*Completed, error) {
 		return nil, err
 	}
 	dir := ""
-	if root := cfgStr(any(config.RepoRoot)); root != "" {
+	if root := config.RepoRoot; root != "" {
 		dir = filepath.Join(root, "bot")
 	}
 	return SubprocessRun(append([]string{exe}, argv...), RunOptions{
@@ -843,7 +841,7 @@ var CompanionTimeout = 300
 // bot that cannot be run is a warning, and the issue goes on without its section.
 func companions(cfg *config.Config, doSweep bool, argv []string /* = ("dashboard", "--section-only") */, what string /* = "section" */) []string {
 	var sections []string
-	for _, other := range others() {
+	for _, other := range config.Others {
 		if other.Home == "" {
 			continue
 		}
@@ -1031,7 +1029,7 @@ func CmdDispatch(cfg *config.Config, args *Args) int {
 		item, shown = &n, strconv.Itoa(n)
 	}
 	ctx.Dispatch(item, args.Force, args.Mode)
-	say(fmt.Sprintf("dispatched %s (item=%s, force=%s, mode=%s)", cfgStr(any(config.NightWorkflow)), shown,
+	say(fmt.Sprintf("dispatched %s (item=%s, force=%s, mode=%s)", config.NightWorkflow, shown,
 		pyBool(args.Force), args.Mode))
 	return 0
 }
@@ -1091,7 +1089,7 @@ func CmdProviders(cfg *config.Config, args *Args) int {
 	}
 	for _, tier := range providers.Tiers {
 		var order []string
-		for _, e := range tierEntries(cfg.Pool, tier) {
+		for _, e := range cfg.Pool.TierEntries(tier) {
 			s := e.Model
 			if checking[e.Model] {
 				s += " (self-check)"
@@ -1205,9 +1203,9 @@ func CmdDoctor(cfg *config.Config, args *Args) int {
 			names[py.Str(label.Get("name"))] = true
 		}
 		missingLabels := []string{}
-		for _, l := range labels() {
-			if !names[l.name] {
-				missingLabels = append(missingLabels, l.name)
+		for _, l := range config.LabelSpecs() {
+			if !names[l.Name] {
+				missingLabels = append(missingLabels, l.Name)
 			}
 		}
 		if len(missingLabels) > 0 {
@@ -1215,7 +1213,7 @@ func CmdDoctor(cfg *config.Config, args *Args) int {
 		} else {
 			ok = append(ok, "labels: all present")
 		}
-		stateBranch := cfgStr(any(config.StateBranch))
+		stateBranch := config.StateBranch
 		if ctx.GH.BranchSHA(stateBranch) == "" {
 			warnings = append(warnings, fmt.Sprintf("no `%s` branch yet (setup creates it)", stateBranch))
 		}
@@ -1256,13 +1254,13 @@ func CmdSetup(cfg *config.Config, args *Args) int {
 	ctx := Ctx(cfg, true)
 	// `LABELS` is the one list (#187): a missing label is created, and one whose colour or
 	// description someone changed by hand is brought back to it.
-	for _, l := range labels() {
-		if done := ctx.GH.SyncLabel(l.name, l.color, l.description); done != "" {
-			say(fmt.Sprintf("%s label %s", done, l.name))
+	for _, l := range config.LabelSpecs() {
+		if done := ctx.GH.SyncLabel(l.Name, l.Color, l.Description); done != "" {
+			say(fmt.Sprintf("%s label %s", done, l.Name))
 		}
 	}
 	if ctx.Store.Ensure() {
-		say("created branch " + cfgStr(any(config.StateBranch)))
+		say("created branch " + config.StateBranch)
 	}
 	if args.RepoSettings {
 		ctx.GH.UpdateRepo(pyjson.New("allow_auto_merge", true, "delete_branch_on_merge", true))
@@ -1288,7 +1286,7 @@ func CmdTriage(cfg *config.Config, args *Args) int {
 		if asked != "" { // `workflow_dispatch`: a person called triage on this thread
 			payload = pyjson.New("issue", ctx.GH.GetIssue(py.MustInt(asked)))
 		}
-		step, why := triage.Gate(payload, trust.TrustLoad(filepath.Join(cfg.Root, asPath(any(config.TrustPath)))),
+		step, why := triage.Gate(payload, trust.TrustLoad(filepath.Join(cfg.Root, config.TrustPath)),
 			cfg.BotLogin, asked != "")
 		shown := step
 		if shown == "" {

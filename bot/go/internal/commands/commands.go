@@ -25,7 +25,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/trust"
@@ -81,42 +80,6 @@ var ForceLevel int = 3
 // MAX_COMMANDS
 var MaxCommands int = 10
 
-// The config values this module reads that config's stub still types `any`: nil until config is
-// ported, then each its own type (a value of another type stops here rather than read as empty).
-
-func cfgStr(v any) string {
-	if v == nil {
-		return ""
-	}
-	return v.(string)
-}
-
-func cfgStrs(v any) []string {
-	if v == nil {
-		return nil
-	}
-	return v.([]string)
-}
-
-// suggestions is config.IDENTITY.suggestions.
-func suggestions() bool {
-	v := any(config.Identity)
-	if v == nil {
-		return false
-	}
-	return v.(*identity.Identity).Suggestions
-}
-
-// levelName is trust.LEVEL_NAMES.get(level, level), as an f-string prints it.
-func levelName(level int) string {
-	if v := any(trust.LevelNames); v != nil {
-		if name, ok := v.(map[int]string)[level]; ok {
-			return name
-		}
-	}
-	return fmt.Sprint(level)
-}
-
 // _FENCE = ^\s*(```|~~~)
 func isFence(line string) bool {
 	text := py.Lstrip(line)
@@ -151,7 +114,7 @@ func matchSlash(line string) (string, bool) {
 		i = k
 		starts = append(starts, i)
 	}
-	slash := cfgStr(config.Slash)
+	slash := config.Slash
 	for n := len(starts) - 1; n >= 0; n-- {
 		end, ok := py.FoldAt(rs, starts[n], slash)
 		if !ok {
@@ -472,7 +435,7 @@ func Parse(body string, botLogin string) []*Command {
 			continue
 		}
 		rest = py.Strip(rest)
-		if strings.HasPrefix(py.Lower(rest), cfgStr(config.Slash)) {
+		if strings.HasPrefix(py.Lower(rest), config.Slash) {
 			continue // `@bot /harness verb` is matched by _SLASH above
 		}
 		found = append(found, Read(rest, line, true))
@@ -540,7 +503,7 @@ func namesHandle(line string, login string) bool {
 // namesSlash is `(?<![\w/])` + SLASH + `\b` searched in `line`, case-insensitive.
 func namesSlash(line string) bool {
 	rs := []rune(line)
-	slash := cfgStr(config.Slash)
+	slash := config.Slash
 	for i := range rs {
 		if i > 0 && (py.IsWord(rs[i-1]) || rs[i-1] == '/') {
 			continue
@@ -589,7 +552,7 @@ var HelpRows = [][2]string{
 // Whether this bot has the verb: the modes only where they are, suggestions only where
 // they are made.
 func Offered(verb string) bool {
-	modes := cfgStrs(config.Modes)
+	modes := config.Modes
 	switch verb {
 	case "oneshot":
 		return slices.Contains(modes, "oneshot")
@@ -598,7 +561,7 @@ func Offered(verb string) bool {
 	case "fullsend":
 		return slices.Contains(modes, "fullsend")
 	case "suggest":
-		return suggestions()
+		return config.Identity.Suggestions
 	}
 	return true
 }
@@ -740,7 +703,7 @@ func format(template string, values map[string]string) string {
 
 // The line that says where the commands are listed.
 func Pointer_(bot string) string {
-	return format(Pointer, map[string]string{"bot": bot, "slash": cfgStr(config.Slash)})
+	return format(Pointer, map[string]string{"bot": bot, "slash": config.Slash})
 }
 
 // The reply to `help`, or to `help <verb>`.
@@ -750,8 +713,8 @@ func HelpText(bot string, topic string /* = "" */) string {
 	if len(words) > 0 {
 		word = words[0]
 	}
-	said := map[string]string{"bot": bot, "slash": cfgStr(config.Slash),
-		"prefix": cfgStr(config.LabelPrefix), "forced": Forced}
+	said := map[string]string{"bot": bot, "slash": config.Slash,
+		"prefix": config.LabelPrefix, "forced": Forced}
 	if word == "" {
 		return format(Help, said)
 	}
@@ -776,5 +739,5 @@ func HelpText(bot string, topic string /* = "" */) string {
 		also = "; also written " + strings.Join(aliases, ", ")
 	}
 	return fmt.Sprintf("**`%s`** (level %d, %s%s)\n\n%s\n\nFor example: `%s`. ", usage, level,
-		levelName(level), also, format(what, said), format(example, said)) + format(Pointer, said)
+		trust.LevelName(level), also, format(what, said), format(example, said)) + format(Pointer, said)
 }

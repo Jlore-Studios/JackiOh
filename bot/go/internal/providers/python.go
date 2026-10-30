@@ -4,6 +4,7 @@ package providers
 // on JSON values, a datetime in a zone with fold=0, date.fromisoformat and pathlib's joining.
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -40,7 +41,7 @@ func noneOrEmpty(raw any) bool {
 func unknownKeys(obj *pyjson.Object, allowed []string) []string {
 	var unknown []string
 	for _, k := range obj.Keys() {
-		if !contains(allowed, k) {
+		if !slices.Contains(allowed, k) {
 			unknown = append(unknown, k)
 		}
 	}
@@ -62,17 +63,6 @@ func repeated(xs []string) []string {
 	}
 	sort.Strings(twice)
 	return twice
-}
-
-func contains(xs []string, x string) bool { return index(xs, x) >= 0 }
-
-func index(xs []string, x string) int {
-	for i, y := range xs {
-		if y == x {
-			return i
-		}
-	}
-	return -1
 }
 
 // sortedNames is sorted(a set of names).

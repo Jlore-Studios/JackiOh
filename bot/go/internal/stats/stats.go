@@ -39,6 +39,7 @@ package stats
 
 import (
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -121,7 +122,7 @@ var Closes = regexp.MustCompile(`(?i)\b(?:closes|fixes|resolves) #(\d+)`)
 
 // BranchIssue is `^<prefix>issue-(\d+)$`; Python's `$` also matches before a final newline, hence
 // the `\n?`.
-var BranchIssue = regexp.MustCompile(`^` + regexp.QuoteMeta(py.Str(config.BranchPrefix)) + `issue-(\d+)\n?$`)
+var BranchIssue = regexp.MustCompile(`^` + regexp.QuoteMeta(config.BranchPrefix) + `issue-(\d+)\n?$`)
 
 // OutcomeWords is one of OUTCOMES: a kind of comment and the words that mark it.
 type OutcomeWords struct {
@@ -165,15 +166,6 @@ var (
 
 // outcomeKinds is DONE + NOT_DONE.
 func outcomeKinds() []string { return append(append([]string{}, Done...), NotDone...) }
-
-func contains(xs []string, x string) bool {
-	for _, y := range xs {
-		if y == x {
-			return true
-		}
-	}
-	return false
-}
 
 // Event is stats.Event.
 type Event struct {
@@ -264,7 +256,7 @@ func Parse(comment *pyjson.Object) *Event {
 	}
 	approvers := []string{}
 	for _, m := range ApprovedBy.FindAllStringSubmatch(body, -1) {
-		if !contains(approvers, m[1]) {
+		if !slices.Contains(approvers, m[1]) {
 			approvers = append(approvers, m[1])
 		}
 	}
@@ -342,7 +334,7 @@ func collect(ctx *hctx.Context) *Facts {
 	}); failed {
 		facts.CommitsOnMain = 0
 	}
-	for _, run := range gh.ListRuns(py.Str(config.NightWorkflow), "", LimitRuns, false) {
+	for _, run := range gh.ListRuns(config.NightWorkflow, "", LimitRuns, false) {
 		ended := run.Get("conclusion")
 		if !pyjson.Truthy(ended) {
 			ended = run.Get("status")
@@ -424,7 +416,7 @@ func Credits_(events []*Event, pulls []*pyjson.Object) *Credits {
 		if _, ok := table[number]; !ok {
 			table[number] = []string{}
 		}
-		if !contains(table[number], provider) {
+		if !slices.Contains(table[number], provider) {
 			table[number] = append(table[number], provider)
 		}
 	}
@@ -494,7 +486,7 @@ func (x *Window) Outcomes() *py.Counter {
 	c := py.NewCounter()
 	kinds := outcomeKinds()
 	for _, e := range x.Events {
-		if contains(kinds, e.Kind) {
+		if slices.Contains(kinds, e.Kind) {
 			c.Add(e.Kind, 1)
 		}
 	}

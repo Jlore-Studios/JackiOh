@@ -20,7 +20,7 @@ import (
 // OpenSuggestionCount is plan.open_suggestion_count.
 func OpenSuggestionCount(ctx *hctx.Context) int {
 	count := 0
-	for _, issue := range ctx.GH.ListIssues(cs(config.LabelSuggestion), "open", 300, "") {
+	for _, issue := range ctx.GH.ListIssues(config.LabelSuggestion, "open", 300, "") {
 		if !issue.Has("pull_request") {
 			count++
 		}
@@ -106,7 +106,7 @@ func SuggestionPlan(ctx *hctx.Context, lanes *Lanes, force bool, quietOK string 
 	wasRequested := previous.Truthy("requested")
 	// The suggestions people closed unbuilt join the log of those that came to nothing (#797),
 	// however long ago: the list above is only the latest issues.
-	closed := filter(ctx.GH.ListIssues(cs(config.LabelSuggestion), "closed", 300, ""),
+	closed := filter(ctx.GH.ListIssues(config.LabelSuggestion, "closed", 300, ""),
 		func(i *pyjson.Object) bool { return !i.Has("pull_request") })
 
 	var taken []string

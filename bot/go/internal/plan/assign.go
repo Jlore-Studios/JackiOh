@@ -277,7 +277,11 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 				"order puts `%s` before %s", seat.Tier, difficulty, floor, provider.ID,
 				strings.Join(later, ", "))
 		}
-		models := strings.Join(tierModels(pool, floor), ", ")
+		var names []string
+		for _, entry := range pool.TierEntries(floor) {
+			names = append(names, entry.Model)
+		}
+		models := strings.Join(names, ", ")
 		if models == "" {
 			models = "none listed"
 		}
@@ -484,7 +488,7 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	// A review run unblocks a merge and is short, so it goes before every build or revision,
 	// whatever their priority (#317 part 9); then the priority tier and the usual order.
 	order := sortedBy(q, func(c *queue.Candidate) []any {
-		return []any{!(force || c.Forced), c.Kind != "review", c.Priority, kindOrder(c.Kind),
+		return []any{!(force || c.Forced), c.Kind != "review", c.Priority, queue.KindOrder[c.Kind],
 			-difficultyIndex(c.Difficulty), c.QueuedAt, c.Number}
 	})
 	// The Needs plan stage first: a planner on the planning lane, which takes no build lane,
@@ -591,7 +595,7 @@ func WhyNone(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes) string {
 // queueOf is plan._queue. `skipped` is extended with the items the queue passes over, when not
 // nil.
 func queueOf(ctx *hctx.Context, state *pyjson.Object, item *int, mode string, skipped *[]string) []*queue.Candidate {
-	q := candidates(ctx, state, skipped)
+	q := queue.Candidates(ctx, state, skipped, nil)
 	if item != nil {
 		number := *item
 		q = filter(q, func(c *queue.Candidate) bool { return c.Number == number })
@@ -608,7 +612,7 @@ func queueOf(ctx *hctx.Context, state *pyjson.Object, item *int, mode string, sk
 func QuietWaiting(ctx *hctx.Context) bool {
 	waiting := false
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
-		for _, run := range ctx.GH.ListRuns(cs(config.NightWorkflow), "in_progress", 10, false) {
+		for _, run := range ctx.GH.ListRuns(config.NightWorkflow, "in_progress", 10, false) {
 			if py.Str(run.Get("id")) == ctx.Cfg.RunID {
 				continue
 			}

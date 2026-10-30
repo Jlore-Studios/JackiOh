@@ -26,16 +26,6 @@ import (
 // MAX_CHARS
 var MaxChars int = 60000
 
-// marker is config.MARKER, which config's stub still types `any`: nil until config is ported,
-// then a string (a value of another type stops here rather than read as empty).
-func marker() string {
-	v := any(config.Marker)
-	if v == nil {
-		return ""
-	}
-	return v.(string)
-}
-
 // key is `entry[k]`: a KeyError when the entry is no object holding it.
 func key(entry any, k string) any { return py.Item(pyjson.Obj(entry), k) }
 
@@ -113,7 +103,7 @@ func closes(text string) (int, bool) {
 func isBot(entry *pyjson.Object, botLogin string) bool {
 	login := py.Lower(py.Str(entry.Obj("user").GetOr("login", "")))
 	return login == py.Lower(botLogin) || login == "github-actions[bot]" ||
-		strings.Contains(py.OrStr(entry.Get("body"), ""), marker())
+		strings.Contains(py.OrStr(entry.Get("body"), ""), config.Marker)
 }
 
 func trusted(entry *pyjson.Object, tr *trust.Trust) bool {
@@ -178,7 +168,7 @@ func PullText(pull *pyjson.Object) string {
 	if body == "" {
 		body = "(no description)"
 	}
-	body = strings.ReplaceAll(body, marker(), "")
+	body = strings.ReplaceAll(body, config.Marker, "")
 	text := fmt.Sprintf("# PR #%s: %s\n\n%s", py.Str(pull.Get("number")), py.Str(pull.GetOr("title", "")), body)
 	return prompts.Data(clip(text), fmt.Sprintf("Pull request #%s", py.Str(pull.Get("number"))))
 }

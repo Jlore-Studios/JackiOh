@@ -430,7 +430,7 @@ func NewWorker(cfg *config.Config, plan *pyjson.Object, runner any, repoDir stri
 		herr.Must(err)
 		x.Templates[name] = template.Template
 	}
-	name := py.Str(config.Name)
+	name := config.Name
 	who := name + ", a bot"
 	if strings.HasPrefix(name, "the ") {
 		who = name
@@ -516,7 +516,7 @@ func NewWorker(cfg *config.Config, plan *pyjson.Object, runner any, repoDir stri
 }
 
 // promptsDir is prompts.PROMPTS_DIR, the default every `prompts.load` reads from.
-func promptsDir() string { return py.Str(config.PromptsDir) }
+func promptsDir() string { return config.PromptsDir }
 
 // seatDict is `seat.to_dict() if seat else None`.
 func seatDict(seat *providers.Seat) any {

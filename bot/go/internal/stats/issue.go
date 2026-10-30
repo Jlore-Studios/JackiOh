@@ -2,6 +2,7 @@ package stats
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -239,7 +240,7 @@ func Summary(windows []*Window) []string {
 		{"Model hours", func(w *Window) string { return fmt.Sprintf("%.1f", py.Sum(floatsOf(w.Minutes))/60) }},
 		{"Model tokens (in / out / cached)", tokensText},
 		{"Model cost (USD)", func(w *Window) string { return fmt.Sprintf("$%.2f", py.Sum(floatsOf(w.Cost))) }},
-		{fmt.Sprintf("`%s` workflow runs", py.Str(config.NightWorkflow)), func(w *Window) string {
+		{fmt.Sprintf("`%s` workflow runs", config.NightWorkflow), func(w *Window) string {
 			return itoa(len(w.Runs))
 		}},
 		{"Requests answered (`Queued …`)", func(w *Window) string {
@@ -277,7 +278,7 @@ func BySubscription(w *Window, who *Credits) *pyjson.Object {
 		if event.Kind == "start" {
 			c.Add("start", 1)
 			c.Add("start:"+event.Action, 1)
-		} else if contains(kinds, event.Kind) {
+		} else if slices.Contains(kinds, event.Kind) {
 			c.Add(event.Kind, 1)
 		}
 	}
@@ -613,10 +614,10 @@ func BotSection(ctx *hctx.Context) string {
 	who := Credits_(facts.Events, facts.Pulls)
 	windows := windowsOf(now, facts)
 	lines := []string{SectionStart, fmt.Sprintf("<details><summary>🫧 <b>%s's record</b>: "+
-		"%d pull requests merged</summary>", py.Str(config.Title), len(windows[len(windows)-1].Merged)), "",
+		"%d pull requests merged</summary>", config.Title, len(windows[len(windows)-1].Merged)), "",
 		fmt.Sprintf("_What @%s has done, read the same way as the night bot's record "+
 			"above. What it is doing now is in its section above, and `%s status`._", ctx.Cfg.BotLogin,
-			py.Str(config.Slash)), ""}
+			config.Slash), ""}
 	lines = append(append(lines, Summary(windows)...), "")
 	if pyjson.Truthy(config.Modes) {
 		lines = append(append(append(lines, "**Its modes**", ""), Modes(windows)...), "")
@@ -698,7 +699,7 @@ func Block(ctx *hctx.Context, facts *Facts, shown int /* = MERGES_SHOWN */, extr
 			"%d commits on `main` by the bot itself. "+
 			"`%s` runs ended: "+
 			"%s._", counted, int(StatsEvery/time.Minute), since, openNow, closedUnmerged,
-			facts.CommitsOnMain, py.Str(config.NightWorkflow), endingsText), ""}
+			facts.CommitsOnMain, config.NightWorkflow, endingsText), ""}
 	lines = append(append(append(lines, "### The four windows", ""), Summary(windows)...), "")
 	lines = append(append(lines, "### The last two weeks", ""), OverTime(ctx, windows[len(windows)-1])...)
 	if cards != "" {

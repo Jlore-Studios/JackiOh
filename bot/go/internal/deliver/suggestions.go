@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/asks"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/declined"
 	planmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -50,7 +51,7 @@ func (x *Deliverer) Suggestions() {
 	}
 	found := objList(x.Result.Get("suggestions"))
 	openNow := 0
-	for _, i := range x.GH.ListIssues(labelSuggestion(), "open", 300, "") {
+	for _, i := range x.GH.ListIssues(config.LabelSuggestion, "open", 300, "") {
 		if !i.Has("pull_request") {
 			openNow++
 		}
@@ -76,8 +77,8 @@ func (x *Deliverer) Suggestions() {
 		footer := fmt.Sprintf("\n\n---\nSuggested by @%s while the queue was empty. "+
 			"Comment `approve` to have it built (the "+
 			"`%s` label works too), and the bot rates its difficulty when "+
-			"it plans it. Comment `reject` to close it without building it.", x.Cfg.BotLogin, labelBuild())
-		labels := []string{labelSuggestion()}
+			"it plans it. Comment `reject` to close it without building it.", x.Cfg.BotLogin, config.LabelBuild)
+		labels := []string{config.LabelSuggestion}
 		// Its class sets its priority (#1409); a class with none, or no class, sets nothing.
 		kind := py.OrStr(entry.Get("class"), "")
 		if level := x.Cfg.SuggestionPriorities[kind]; level != "" {

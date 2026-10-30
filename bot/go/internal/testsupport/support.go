@@ -29,7 +29,7 @@ import (
 )
 
 // Root = config_mod.REPO_ROOT
-var Root = str(config.RepoRoot)
+var Root = config.RepoRoot
 
 // 2026-09-30 03:00 UTC is 22:00 CDT on the 29th: inside the night window.
 var Night = time.Date(2026, 9, 30, 3, 0, 0, 0, time.UTC)
@@ -44,12 +44,12 @@ var TestEnv = map[string]string{"GITHUB_RUN_ID": "777", "GITHUB_REPOSITORY": "jg
 
 // RawConfig is `.harness/config.json`'s JSON.
 func RawConfig() *pyjson.Object {
-	return loadObject(filepath.Join(Root, path(config.ConfigPath, "config.ConfigPath")))
+	return loadObject(filepath.Join(Root, config.ConfigPath))
 }
 
 // RawProviders is `.harness/providers.json`'s JSON.
 func RawProviders() *pyjson.Object {
-	return loadObject(filepath.Join(Root, path(providers.ProvidersPath, "providers.ProvidersPath")))
+	return loadObject(filepath.Join(Root, providers.ProvidersPath))
 }
 
 // A weak subscription for the tests alone (#2129): no committed one is weak any more, so the weak
@@ -245,13 +245,13 @@ func MakeCtx(gh *fakes.FakeGitHub, opts ...Ctx) *hctx.Context {
 	if o.TrustText != nil {
 		trusted = trust.TrustParse(*o.TrustText)
 	} else {
-		trusted = trust.TrustLoad(filepath.Join(Root, path(config.TrustPath, "config.TrustPath")))
+		trusted = trust.TrustLoad(filepath.Join(Root, config.TrustPath))
 	}
 	c := NewClock(at)
 	ctx := &hctx.Context{
 		Cfg:     cfg,
 		GH:      gh,
-		Store:   state.NewStateStore(gh, str(config.StateBranch), config.StateFile, sleep),
+		Store:   state.NewStateStore(gh, config.StateBranch, config.StateFile, sleep),
 		Trust:   trusted,
 		ClockFn: c.Call,
 	}
@@ -273,22 +273,6 @@ func IdleFor(ctx *hctx.Context, minutes ...int) {
 
 // sleep is time.sleep, StateStore's default.
 func sleep(seconds float64) { time.Sleep(time.Duration(seconds * float64(time.Second))) }
-
-// str is a string the stubs still type `any` (config.RepoRoot, config.StateBranch): it compiles
-// against the stub and against the string the port makes of it.
-func str(v any) string {
-	s, _ := v.(string)
-	return s
-}
-
-// path is a path constant of another package (str's case), which must be set.
-func path(v any, name string) string {
-	s, ok := v.(string)
-	if !ok || s == "" {
-		panic(fmt.Sprintf("testsupport: %s is %v, not a path (is its package ported?)", name, v))
-	}
-	return s
-}
 
 // loadObject is json.loads(path.read_text(encoding="utf-8")), a JSON object.
 func loadObject(file string) *pyjson.Object {

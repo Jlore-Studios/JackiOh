@@ -68,12 +68,12 @@ var NoResult = "the model job left no result: it failed before the model started
 // the harness or a person sets (`human`, a difficulty, a priority, a method).
 func reservedLabel(name string) bool {
 	lowered := strings.ToLower(name)
-	build := labelBuild()
+	build := config.LabelBuild
 	if i := strings.LastIndex(build, ":"); i >= 0 {
 		build = build[:i]
 	}
 	prefixes := []string{build + ":"}
-	for _, o := range others() {
+	for _, o := range config.Others {
 		prefixes = append(prefixes, o.LabelPrefix)
 	}
 	prefixes = append(prefixes, "difficulty:", "priority:", "method:")
@@ -234,8 +234,8 @@ func (x *Deliverer) storeVault() {
 	for range VaultAttempts {
 		kept := false
 		exc, raised := herr.Catch[*herr.GitHubError](func() {
-			_, sha := x.GH.GetFile(where, stateBranch())
-			x.GH.PutFile(where, text+"\n", stateBranch(), sha, fmt.Sprintf("vault: %s [skip ci]", x.Provider.ID))
+			_, sha := x.GH.GetFile(where, config.StateBranch)
+			x.GH.PutFile(where, text+"\n", config.StateBranch, sha, fmt.Sprintf("vault: %s [skip ci]", x.Provider.ID))
 			x.log("kept the refreshed login of " + x.Provider.ID)
 			kept = true
 		})
@@ -343,7 +343,7 @@ func (x *Deliverer) askAboutInfra(streak int, reason string) {
 	if record.Obj("infra").Truthy("issue") {
 		return
 	}
-	backoff := lastBackoff()
+	backoff := providers.InfraBackoffs[len(providers.InfraBackoffs)-1]
 	hours := int(math.Floor(backoff.Seconds() / 3600))
 	login := x.Provider.Secret
 	if login == "" {
@@ -401,5 +401,5 @@ func (x *Deliverer) rederive() {
 		herr.Raise(&herr.GitHubError{Msg: fmt.Sprintf("#%d is not a branch of %s", number, x.Cfg.Repo), Status: 0})
 	}
 	x.Plan.Set("branch", head.GetOr("ref", ""))
-	x.Plan.Set("bot_pr", queue.LabelNames(pull)[labelPR()])
+	x.Plan.Set("bot_pr", queue.LabelNames(pull)[config.LabelPR])
 }

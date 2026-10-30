@@ -208,11 +208,8 @@ func Wake(cfg *config.Config, providerID string) (bool, string) {
 	return true, fmt.Sprintf("`%s`: the 5-hour session is running, resetting at %s", providerID, py.Str(resets))
 }
 
-// rateLimited is RATE_LIMIT_WORDS.search(text). The interface reads runner's pattern whether it
-// is the stub's `any` or a *regexp.Regexp.
-func rateLimited(text string) bool {
-	return any(runner.RateLimitWords).(interface{ MatchString(string) bool }).MatchString(text)
-}
+// rateLimited is RATE_LIMIT_WORDS.search(text).
+func rateLimited(text string) bool { return runner.RateLimitWords.MatchString(text) }
 
 // localTime is a wall-clock time (held in UTC) read in `zone` as Python's aware datetimes are,
 // with fold=0: a wall time a transition skips or repeats takes the offset from before the

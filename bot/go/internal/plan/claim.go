@@ -25,7 +25,7 @@ import (
 // providerFields is what the model job needs to know about the subscription it runs on. The
 // secret's value is never here: the workflow hands the model job only the secret named.
 func providerFields(ctx *hctx.Context, provider *providers.Provider) *pyjson.Object {
-	vault, _ := ctx.GH.GetFile(VaultPath(provider.ID), cs(config.StateBranch))
+	vault, _ := ctx.GH.GetFile(VaultPath(provider.ID), config.StateBranch)
 	// `shared` names the run's model step "Build, check and review", which the partner bot
 	// reads as this bot spending the shared subscription, so it excuses the rise. claude-1 is
 	// that subscription whether or not this bot waits for it to be quiet (`quiet_check`).
@@ -69,7 +69,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	cfg := ctx.Cfg
 	provider := assignment.Provider
 	number, kind := candidate.Number, candidate.Kind
-	labelPR, labelNeedsPlan := cs(config.LabelPR), cs(config.LabelNeedsPlan)
+	labelPR, labelNeedsPlan := config.LabelPR, config.LabelNeedsPlan
 	thread := ctx.GH.GetIssue(number)
 	names := queue.LabelNames(thread)
 	if !eqStr(thread.Get("state"), "open") {
@@ -279,7 +279,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	}
 	if planned.Truthy("plan_in_issue") {
 		handoff := planned.Obj("handoff")
-		if handoff.Len() == 0 || inStrs(handoff.Get("kind"), "plan", "draft") {
+		if handoff.Len() == 0 || py.In(handoff.Get("kind"), "plan", "draft") {
 			if eqStr(handoff.Get("kind"), "draft") {
 				handoff = nil // the plan in the description is the plan: a draft gives way
 			}
@@ -291,7 +291,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			planned.Set("handoff", merged)
 		}
 	}
-	queue.SetStateLabel(ctx, number, names, cs(config.LabelWorking))
+	queue.SetStateLabel(ctx, number, names, config.LabelWorking)
 	if names[labelNeedsPlan] && assignment.Action != "plan" {
 		ctx.GH.RemoveLabel(number, labelNeedsPlan) // this run plans it first, in the run
 	}
@@ -346,7 +346,7 @@ func CILogs(ctx *hctx.Context, runID any) string {
 	var jobs []*pyjson.Object
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		jobs = filter(ctx.GH.ListJobs(runID, false), func(j *pyjson.Object) bool {
-			return inStrs(j.Get("conclusion"), "failure", "timed_out", "cancelled")
+			return py.In(j.Get("conclusion"), "failure", "timed_out", "cancelled")
 		})
 		// The failed first: a merge-queue build cancels the rest of its run once a required check
 		// failed (ci.yml's `queue-cancel-*`), and those cancelled jobs say nothing.

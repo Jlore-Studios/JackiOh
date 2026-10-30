@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -148,7 +149,7 @@ func tier(value any, where string) string {
 	if pyjson.Truthy(value) {
 		found = py.Str(value)
 	}
-	if !contains(Tiers, found) {
+	if !slices.Contains(Tiers, found) {
 		configError("%s: %s is not one of %s", where, py.Repr(found), strings.Join(Tiers, ", "))
 	}
 	return found
@@ -230,7 +231,7 @@ func lateWeek(raw any, where string) *LateWeek {
 		configError("%s: unknown keys %s", where, strings.Join(unknown, ", "))
 	}
 	found := lateWeekFrom.FindStringSubmatch(py.Str(obj.Get("from")))
-	if found == nil || !contains(Weekdays, strings.ToLower(found[1])) {
+	if found == nil || !slices.Contains(Weekdays, strings.ToLower(found[1])) {
 		configError(`%s.from: %s is not a weekday and a time ("Sun 17:00")`, where, py.Repr(obj.Get("from")))
 	}
 	var start clock.TimeOfDay
@@ -242,7 +243,7 @@ func lateWeek(raw any, where string) *LateWeek {
 		configError("%s.from: %s: %s", where, py.Repr(obj.Get("from")), err.Error())
 	}
 	return &LateWeek{
-		Weekday:  index(Weekdays, strings.ToLower(found[1])),
+		Weekday:  slices.Index(Weekdays, strings.ToLower(found[1])),
 		Start:    start,
 		SevenDay: *fraction(obj.Get("seven_day"), where+".seven_day"),
 		FiveHour: fraction(obj.Get("five_hour"), where+".five_hour"),
@@ -306,19 +307,19 @@ func provider(name string, raw any) *Provider {
 		}
 	}
 	cli := py.Str(obj.Get("cli"))
-	if !contains(Clis, cli) {
+	if !slices.Contains(Clis, cli) {
 		configError("%s.cli: %s is not one of %s", where, py.Repr(cli), strings.Join(Clis, ", "))
 	}
 	login := py.Str(obj.GetOr("login", "secret"))
-	if !contains(Logins, login) {
+	if !slices.Contains(Logins, login) {
 		configError("%s.login: %s is not one of %s", where, py.Repr(login), strings.Join(Logins, ", "))
 	}
 	secret := py.OrStr(obj.Get("secret"), "")
 	if login == "secret" {
-		if !contains(SecretClis, cli) {
+		if !slices.Contains(SecretClis, cli) {
 			configError(`%s: the %s CLI logs in on the machine only ("login": "machine")`, where, cli)
 		}
-		if !contains(SecretNames, secret) {
+		if !slices.Contains(SecretNames, secret) {
 			configError("%s.secret: %s is not one the workflows hand over (%s)", where,
 				py.Repr(secret), strings.Join(SecretNames, ", "))
 		}
@@ -343,7 +344,7 @@ func provider(name string, raw any) *Provider {
 	}
 	var bad []string
 	for _, r := range roles {
-		if !contains(Roles, r) {
+		if !slices.Contains(Roles, r) {
 			bad = append(bad, r)
 		}
 	}
@@ -500,7 +501,7 @@ func Parse(raw any) *Pool {
 		if Hosted(p.RunsOn) {
 			configError("%s: only a subscription on the machine fills in lanes there", where)
 		}
-		if contains(labels, p.FillIn.RunsOn) {
+		if slices.Contains(labels, p.FillIn.RunsOn) {
 			configError("%s: %s is a subscription's own runner; a fill-in has runners of its own",
 				where, p.FillIn.RunsOn)
 		}
@@ -509,7 +510,7 @@ func Parse(raw any) *Pool {
 			if !providers.Has(other) || other == p.ID {
 				configError("%s: %s is not another subscription", where, py.Repr(other))
 			}
-			if contains(filled, other) {
+			if slices.Contains(filled, other) {
 				configError("%s: another subscription fills %s's lanes already", where, other)
 			}
 			filled = append(filled, other)
@@ -525,7 +526,7 @@ func Parse(raw any) *Pool {
 	}
 	missing, extra := []string{}, []string{}
 	for _, p := range providers.Keys() {
-		if !contains(priority, p) {
+		if !slices.Contains(priority, p) {
 			missing = append(missing, p)
 		}
 	}

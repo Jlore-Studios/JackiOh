@@ -1,22 +1,17 @@
 package plan
 
-// Private helpers for the Python idioms plan.py leans on: tuple sort keys, `x or default`,
-// `int()`, and the constants of other modules whose stubs still give them as `any`.
+// Private helpers for the Python idioms plan.py leans on that py does not hold.
 
 import (
 	"cmp"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 )
 
 // cmpKey compares two sort keys as Python compares tuples: element by element, the first
@@ -117,12 +112,6 @@ func eqStr(v any, s string) bool {
 	return ok && x == s
 }
 
-// inStrs is `v in (s, ...)` for a JSON value v.
-func inStrs(v any, options ...string) bool {
-	x, ok := v.(string)
-	return ok && slices.Contains(options, x)
-}
-
 // intPtr is an `int | None` read from JSON: nil for None, else int(v).
 func intPtr(v any) *int {
 	if v == nil {
@@ -153,16 +142,6 @@ func joinNonEmpty(sep string, parts ...string) string {
 	return strings.Join(filter(parts, func(p string) bool { return p != "" }), sep)
 }
 
-// cs is a config.py constant as a string (LABEL_WORKING, SLASH, …): str in the Python, `any`
-// in config's stub until it is ported.
-func cs(v any) string { return pyjson.Str(v) }
-
-// othersOf is config.OTHERS as the tuple of `identity.Other` it is.
-func othersOf(v any) []*identity.Other {
-	others, _ := v.([]*identity.Other)
-	return others
-}
-
 // tierRank is providers.TIER_RANK, `{name: rank for rank, name in enumerate(TIERS)}`.
 var tierRank = func() map[string]int {
 	ranks := map[string]int{}
@@ -180,59 +159,5 @@ func rankOr(tier string, def int) int {
 	return def
 }
 
-// tierModels is `[e.model for e in pool.tiers.get(tier, ())]`, whichever shape providers' port
-// gives `Pool.tiers` (its stub's *pyjson.Object, or a map of `TierEntry` lists).
-func tierModels(pool *providers.Pool, tier string) []string {
-	var entries any
-	switch tiers := any(pool.Tiers).(type) {
-	case *pyjson.Object:
-		entries = tiers.Get(tier)
-	case map[string][]*providers.TierEntry:
-		entries = tiers[tier]
-	}
-	var models []string
-	switch list := entries.(type) {
-	case []*providers.TierEntry:
-		for _, entry := range list {
-			models = append(models, entry.Model)
-		}
-	case []any:
-		for _, e := range list {
-			if entry, ok := e.(*providers.TierEntry); ok {
-				models = append(models, entry.Model)
-			}
-		}
-	}
-	return models
-}
-
-// kindOrder is queue.KIND_ORDER[kind].
-func kindOrder(kind string) int {
-	switch order := any(queue.KindOrder).(type) {
-	case map[string]int:
-		return order[kind]
-	case *pyjson.Object:
-		return order.Int(kind)
-	}
-	panic("plan: queue.KIND_ORDER is not ported")
-}
-
-// priorityName is queue.PRIORITY_NAMES[priority].
-func priorityName(priority int) string {
-	switch names := any(queue.PriorityNames).(type) {
-	case map[int]string:
-		return names[priority]
-	case *pyjson.Object:
-		return names.Str(strconv.Itoa(priority))
-	}
-	panic("plan: queue.PRIORITY_NAMES is not ported")
-}
-
 // difficultyIndex is DIFFICULTIES.index(difficulty).
 func difficultyIndex(difficulty string) int { return slices.Index(config.Difficulties, difficulty) }
-
-// candidates is queue.candidates(ctx, state, skipped): queue extends `skipped` in place with a
-// line for each item it passes over, as the Python does.
-func candidates(ctx *hctx.Context, state *pyjson.Object, skipped *[]string) []*queue.Candidate {
-	return queue.Candidates(ctx, state, skipped, nil)
-}

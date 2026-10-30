@@ -11,6 +11,7 @@ package verdicts
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -78,7 +79,7 @@ func Rating(text string) (map[string]string, string) {
 		return nil, source
 	}
 	difficulty := py.Lower(py.Strip(py.OrStr(found.Get("difficulty"), "")))
-	if !contains(Ratings, difficulty) {
+	if !slices.Contains(Ratings, difficulty) {
 		return nil, rest
 	}
 	return map[string]string{"difficulty": difficulty,
@@ -271,13 +272,4 @@ func orNil(v any) any {
 		return []any{}
 	}
 	return v
-}
-
-func contains(list []string, s string) bool {
-	for _, e := range list {
-		if e == s {
-			return true
-		}
-	}
-	return false
 }

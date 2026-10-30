@@ -39,15 +39,6 @@ import (
 // STRIKE_LOG: how many strike reasons an item keeps, for the comment that says why it stepped up.
 var StrikeLog int = 10
 
-// cfgStr reads a config value that config's stub still types `any`: nil until config is ported,
-// then a string (a value of another type stops here rather than read as empty).
-func cfgStr(v any) string {
-	if v == nil {
-		return ""
-	}
-	return v.(string)
-}
-
 // stateItem is state.item.
 func stateItem(s *pyjson.Object, number int) *pyjson.Object { return state.Item(s, number) }
 
@@ -245,12 +236,12 @@ func StepUp(ctx *hctx.Context, target int, pr *int, reasons []string, link strin
 	}
 	difficulties := config.Difficulties
 	hardest := difficulties[len(difficulties)-1]
-	slash := cfgStr(config.Slash)
+	slash := config.Slash
 	if current == hardest || queue.RatingSource(names, record) == "person" {
 		for _, number := range threadsOf(target, pr) {
 			Try(func() {
 				queue.SetStateLabel(ctx, number, queue.LabelNames(ctx.GH.GetIssue(number)),
-					cfgStr(config.LabelBlocked))
+					config.LabelBlocked)
 			})
 		}
 		var ask string
@@ -314,12 +305,12 @@ func StepUp(ctx *hctx.Context, target int, pr *int, reasons []string, link strin
 		// A pull request that closes no issue: revise it again, at the new difficulty.
 		Try(func() {
 			queue.SetStateLabel(ctx, target, queue.LabelNames(ctx.GH.GetIssue(target)),
-				cfgStr(config.LabelRevise))
+				config.LabelRevise)
 		})
 	} else {
 		Try(func() {
 			queue.SetStateLabel(ctx, target, queue.LabelNames(ctx.GH.GetIssue(target)),
-				cfgStr(config.LabelBuild))
+				config.LabelBuild)
 		})
 		ctx.Store.Update(func(s *pyjson.Object) any {
 			stateItem(s, target).Set("kind", "build").Set("queued_at", now).Set("failures", 0).
@@ -351,7 +342,7 @@ func Rebuild(ctx *hctx.Context, issue int, pr int, why string, said string /* = 
 	}
 	old := ""
 	if branch == queue.BranchForIssue(issue) && sha != "" {
-		old = fmt.Sprintf("%sold/issue-%d-%s", cfgStr(config.BranchPrefix), issue,
+		old = fmt.Sprintf("%sold/issue-%d-%s", config.BranchPrefix, issue,
 			ctx.Now().Format("20060102-1504"))
 		if _, ok := herr.Catch[*herr.GitHubError](func() {
 			ctx.GH.CreateBranch(old, sha)
@@ -383,11 +374,11 @@ func Rebuild(ctx *hctx.Context, issue int, pr int, why string, said string /* = 
 	}
 	ctx.Store.Update(change, fmt.Sprintf("rebuild #%d", issue))
 	labels := queue.LabelNames(ctx.GH.GetIssue(issue))
-	if labelPROpen := cfgStr(config.LabelPROpen); labels[labelPROpen] {
+	if labelPROpen := config.LabelPROpen; labels[labelPROpen] {
 		Try(func() { ctx.GH.RemoveLabel(issue, labelPROpen) })
 	}
 	Try(func() {
-		queue.SetStateLabel(ctx, issue, queue.LabelNames(ctx.GH.GetIssue(issue)), cfgStr(config.LabelBuild))
+		queue.SetStateLabel(ctx, issue, queue.LabelNames(ctx.GH.GetIssue(issue)), config.LabelBuild)
 	})
 	kept := ""
 	if old != "" {
@@ -413,10 +404,10 @@ func RebuildRequest(ctx *hctx.Context, number int, by string) string {
 	if queue.IsHuman(queue.LabelNames(thread)) {
 		return queue.HumanReply(number, queue.LabelNames(thread))
 	}
-	slash := cfgStr(config.Slash)
+	slash := config.Slash
 	var issue, pr int
 	if thread.Has("pull_request") {
-		if !queue.LabelNames(thread)[cfgStr(config.LabelPR)] {
+		if !queue.LabelNames(thread)[config.LabelPR] {
 			return fmt.Sprintf("#%d is not a pull request I opened, so I will not close it.", number)
 		}
 		issue, _ = Pair(ctx, number)

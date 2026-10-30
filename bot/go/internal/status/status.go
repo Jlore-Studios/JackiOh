@@ -115,17 +115,11 @@ func CapText(ctx *hctx.Context, provider *providers.Provider, window string, usa
 
 // windowSpan is providers.WINDOWS[window].
 func windowSpan(window string) time.Duration {
-	switch spans := any(providers.Windows).(type) {
-	case map[string]time.Duration:
-		if span, ok := spans[window]; ok {
-			return span
-		}
-	case *pyjson.Object:
-		if span, ok := spans.Get(window).(time.Duration); ok {
-			return span
-		}
+	span, ok := providers.Windows[window]
+	if !ok {
+		panic(py.KeyError(window))
 	}
-	panic(fmt.Errorf("KeyError: %s", py.Repr(window)))
+	return span
 }
 
 // WindowNotes is what a reader needs beside a usage window's reading: its cap now (`cap_text`),
@@ -413,7 +407,7 @@ func ProviderLines(ctx *hctx.Context, state *pyjson.Object, held *pyjson.Object)
 func Report(ctx *hctx.Context) string {
 	cfg := ctx.Cfg
 	state := ctx.Store.Load()
-	lines := []string{fmt.Sprintf("**%s status**", py.Str(config.Title)), ""}
+	lines := []string{fmt.Sprintf("**%s status**", config.Title), ""}
 	halt := state.Obj("halt")
 	if state.Truthy("halted") {
 		by, why := "", ""
@@ -423,7 +417,7 @@ func Report(ctx *hctx.Context) string {
 		if halt.Truthy("reason") {
 			why = ": " + py.Str(halt.Get("reason"))
 		}
-		lines = append(lines, fmt.Sprintf("- **Halted**%s%s. `%s start` resumes it.", by, why, py.Str(config.Slash)))
+		lines = append(lines, fmt.Sprintf("- **Halted**%s%s. `%s start` resumes it.", by, why, config.Slash))
 	} else {
 		lines = append(lines, "- Not halted.")
 	}
@@ -468,25 +462,25 @@ func Report(ctx *hctx.Context) string {
 		endedShown[i] = fmt.Sprintf("#%d", n)
 	}
 	ended := strings.Join(endedShown, ", ")
-	working := fmt.Sprintf("- Working on: %s", numbers(labelled(py.Str(config.LabelWorking), nil)))
+	working := fmt.Sprintf("- Working on: %s", numbers(labelled(config.LabelWorking, nil)))
 	if ended != "" {
 		working += fmt.Sprintf(" (no run is going for %s any more; the next plan requeues it)", ended)
 	}
 	lines = append(lines, working+".")
 	lines = append(lines, fmt.Sprintf("- **Needs plan** (rated and planned first, into the description: an easy or "+
 		"unrated item by a medium or strong model, the rest by a strong one): "+
-		"%s.", numbers(labelled(py.Str(config.LabelNeedsPlan), &no))))
+		"%s.", numbers(labelled(config.LabelNeedsPlan, &no))))
 	lines = append(lines, fmt.Sprintf("- Queued to build: %s; "+
 		"to revise: %s; "+
-		"for a review run: %s.", numbers(labelled(py.Str(config.LabelBuild), &no)),
-		numbers(labelled(py.Str(config.LabelRevise), &yes)), numbers(labelled(py.Str(config.LabelCross), &yes))))
-	lines = append(lines, fmt.Sprintf("- Waiting for a person: %s.", numbers(labelled(py.Str(config.LabelBlocked), nil))))
+		"for a review run: %s.", numbers(labelled(config.LabelBuild, &no)),
+		numbers(labelled(config.LabelRevise, &yes)), numbers(labelled(config.LabelCross, &yes))))
+	lines = append(lines, fmt.Sprintf("- Waiting for a person: %s.", numbers(labelled(config.LabelBlocked, nil))))
 	lines = append(lines, fmt.Sprintf("- Handed to people as only a person can do it (`%s`, "+
 		"never touched): %s.", config.LabelHumanRequired, numbers(labelled(config.LabelHumanRequired, nil))))
 	lines = append(lines, fmt.Sprintf("- People's work (`%s`, never touched): "+
 		"%s.", config.LabelHuman, numbers(labelled(config.LabelHuman, nil))))
-	lines = append(lines, fmt.Sprintf("- Open bot pull requests: %s.", numbers(labelled(py.Str(config.LabelPR), &yes))))
-	suggestions := labelled(py.Str(config.LabelSuggestion), &no)
+	lines = append(lines, fmt.Sprintf("- Open bot pull requests: %s.", numbers(labelled(config.LabelPR, &yes))))
+	suggestions := labelled(config.LabelSuggestion, &no)
 	idle := state.Obj("suggest").Get("idle_since")
 	asked := ""
 	if state.Obj("suggest").Truthy("requested") {

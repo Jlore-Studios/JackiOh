@@ -306,7 +306,7 @@ func indexOf(xs []string, s string) int {
 func (x *Deliverer) setDifficulty(number int, difficulty string, labels map[string]bool) {
 	wanted := "difficulty:" + difficulty
 	for _, name := range sortedKeys(labels) {
-		if isDifficultyLabel(strings.ToLower(name)) && name != wanted {
+		if config.DifficultyLabels.Has(strings.ToLower(name)) && name != wanted {
 			x.try(func() { x.GH.RemoveLabel(number, name) })
 		}
 	}
@@ -348,15 +348,15 @@ func (x *Deliverer) planIntoIssue(number int, who string) bool {
 		providers.TierAtLeast(tier, config.PlanFloor[x.Difficulty(number)])
 	herr.Catch[*herr.GitHubError](func() {
 		if meets {
-			if labels[labelNeedsPlan()] {
-				x.GH.RemoveLabel(number, labelNeedsPlan())
+			if labels[config.LabelNeedsPlan] {
+				x.GH.RemoveLabel(number, config.LabelNeedsPlan)
 			}
-			if !labels[labelPlanned()] {
-				x.GH.AddLabels(number, []string{labelPlanned()})
+			if !labels[config.LabelPlanned] {
+				x.GH.AddLabels(number, []string{config.LabelPlanned})
 			}
-		} else if !labels[labelNeedsPlan()] {
+		} else if !labels[config.LabelNeedsPlan] {
 			// A medium plan of a hard item (#317 part 6, #695): a strong one comes next.
-			x.GH.AddLabels(number, []string{labelNeedsPlan()})
+			x.GH.AddLabels(number, []string{config.LabelNeedsPlan})
 		}
 	}) // a GitHubError passes: the next plan job's sync puts the labels right
 	return true
@@ -375,7 +375,7 @@ func (x *Deliverer) closed(number int, thread *pyjson.Object) {
 	}
 	x.GH.CreateComment(number, fmt.Sprintf("This %s was closed while a run was working on it "+
 		"(%s), so that run's work was not delivered. Reopen it and ask again (`%s build`) to have "+
-		"it done.", where, x.link(), slash()))
+		"it done.", where, x.link(), config.Slash))
 	x.log(fmt.Sprintf("#%d was closed during the run: nothing delivered", number))
 }
 
@@ -386,7 +386,7 @@ func (x *Deliverer) closeAsks(number int) {
 		return
 	}
 	status := py.Str(x.Result.Get("status"))
-	blocked := x.Labels(number)[labelBlocked()]
+	blocked := x.Labels(number)[config.LabelBlocked]
 	again := !blocked && (status == "interrupted" || status == "infra" || status == "failed" || status == "planned")
 	var settled []string
 
@@ -550,9 +550,9 @@ func (x *Deliverer) builtOn() string {
 }
 
 func (x *Deliverer) requeueLabel(number int, kind string) {
-	label := labelBuild()
+	label := config.LabelBuild
 	if kind == "revise" {
-		label = labelRevise()
+		label = config.LabelRevise
 	}
 	queue.SetStateLabel(x.Ctx, number, x.Labels(number), label)
 }
@@ -568,9 +568,9 @@ func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) 
 	now := clock.ISO(x.Ctx.Now())
 	label := requeue
 	if label == "" {
-		label = labelBuild()
+		label = config.LabelBuild
 		if kind == "revise" {
-			label = labelRevise()
+			label = config.LabelRevise
 		}
 	}
 	// A failure that was not the subscription's (an install red on untouched main, a push
@@ -602,11 +602,11 @@ func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) 
 	}, fmt.Sprintf("died #%d", number))
 	died := py.MustInt(statemod.Item(state, number).GetOr("died", 0))
 	if died >= DiedLimit {
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.remember(number, pyjson.New("forced", false))
 		x.GH.CreateComment(number, fmt.Sprintf("The run working on this died %d times in a row "+
 			"(%s), so I stopped trying: %s. It may be too big or too heavy for one run; `%s build` "+
-			"tries again.", died, x.link(), reason, slash()))
+			"tries again.", died, x.link(), reason, config.Slash))
 		return
 	}
 	queue.SetStateLabel(x.Ctx, number, x.Labels(number), label)
@@ -717,13 +717,13 @@ func (x *Deliverer) progressed(number int, kind string, before string) bool {
 		if x.Repo.Rev(main) != "" {
 			args = append(args, "^"+main)
 		}
-		found := completed(x.Repo.Run(false, 600, nil, args...))
-		out := found.stdout
+		found := x.Repo.Run(false, 600, nil, args...)
+		out := found.Stdout
 		if out == "" {
 			out = "0"
 		}
 		out = strings.TrimSpace(out)
-		return found.returncode == 0 && out != "" && out != "0"
+		return found.Returncode == 0 && out != "" && out != "0"
 	}
 	return false
 }
@@ -760,7 +760,7 @@ func (x *Deliverer) Interrupted(number int, kind string) {
 		state := x.Ctx.Store.Update(count, fmt.Sprintf("interrupted #%d", number))
 		countNow := py.MustInt(statemod.Item(state, number).GetOr("interruptions", 0))
 		if countNow >= x.Cfg.MaxFailures {
-			queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+			queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 			x.remember(number, pyjson.New("forced", false))
 			x.GH.CreateComment(number, fmt.Sprintf("This was cut off %d runs in a row "+
 				"without its work moving on (%s; last: %s), so I stopped. It may be too big for one "+
@@ -915,13 +915,13 @@ func (x *Deliverer) Fail(number int, kind string) {
 	fails := py.MustInt(statemod.Item(state, number).GetOr("failures", 0))
 	reason := py.OrStr(x.Result.Get("reason"), "unknown")
 	if fails >= x.Cfg.MaxFailures {
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.remember(number, pyjson.New("forced", false))
 		x.cameToNothing(number, fmt.Sprintf("it failed %d times in a row: %s", fails, reason))
 		x.GH.CreateComment(number, fmt.Sprintf("This failed %d times in a row "+
 			"(%s), so I stopped trying. Last error: %s"+
 			"\n\nFix the cause, then `%s build` (or `revise`) "+
-			"queues it again.", fails, x.link(), reason, slash()))
+			"queues it again.", fails, x.link(), reason, config.Slash))
 	} else {
 		x.requeueLabel(number, kind)
 		rounds, roundTier := x.rounds()
@@ -944,7 +944,7 @@ func (x *Deliverer) NeedsPerson(number int, question string, what string /* = "b
 	triage.HandToPeople(handover, thread, x.Cfg.BotLogin)
 	remove := []string{}
 	for _, name := range sortedKeys(queue.LabelNames(thread)) {
-		if letsGo(name) {
+		if human.LetsGo[name] {
 			remove = append(remove, name)
 		}
 	}
@@ -955,7 +955,8 @@ func (x *Deliverer) NeedsPerson(number int, question string, what string /* = "b
 	// Its colour and description first: a label GitHub makes as it is put on is grey and
 	// bare (#796's was), and the sweep only creates missing ones (`sweep._labels`).
 	x.try(func() {
-		color, description := labelSpec(config.LabelHumanRequired)
+		spec := pyjson.List(py.Item(config.Labels, config.LabelHumanRequired))
+		color, description := py.Str(spec[0]), py.Str(spec[1])
 		x.GH.SyncLabel(config.LabelHumanRequired, color, description)
 	})
 	if !queue.LabelNames(thread)[config.LabelHumanRequired] {
@@ -1023,9 +1024,9 @@ func (x *Deliverer) settle(number int) {
 	if isPR {
 		queue.HoldMerge(x.Ctx, x.GH.GetPull(target))
 	}
-	label, kind := labelBuild(), "build"
+	label, kind := config.LabelBuild, "build"
 	if isPR {
-		label, kind = labelRevise(), "revise"
+		label, kind = config.LabelRevise, "revise"
 	}
 	queue.SetStateLabel(x.Ctx, target, x.Labels(target), label)
 	x.remember(target, pyjson.New("kind", kind, "queued_at", clock.ISO(x.Ctx.Now()),
@@ -1077,7 +1078,7 @@ func (x *Deliverer) build(number int, status string) {
 		return
 	}
 	if problem != "" {
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.GH.CreateComment(number, fmt.Sprintf("I could not publish this run's work (%s): "+
 			"%s. It needs a person to look.", x.link(), problem))
 		return
@@ -1094,10 +1095,10 @@ func (x *Deliverer) build(number int, status string) {
 			x.remember(number, pyjson.New("last_findings", []any{}))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.GH.CreateComment(number, fmt.Sprintf("I need a decision before I can build this.%s\n\n"+
 			"%s\n\nAnswer here, then `%s build` (or "+
-			"`@%s <your answer>`) queues it again.", kept, question, slash(), x.Cfg.BotLogin))
+			"`@%s <your answer>`) queues it again.", kept, question, config.Slash, x.Cfg.BotLogin))
 		x.remember(number, pyjson.New("last_findings", []any{}, "question", question))
 		return
 	}
@@ -1122,7 +1123,7 @@ func (x *Deliverer) build(number int, status string) {
 	}
 	pr := py.MustInt(py.Or(pull.Get("number"), 0))
 	if pr != 0 {
-		x.GH.AddLabels(pr, append([]string{labelPR()}, x.Carried(number)...))
+		x.GH.AddLabels(pr, append([]string{config.LabelPR}, x.Carried(number)...))
 		x.remember(pr, pyjson.New("issue", number, "feedback_since", started, "failures", 0, "kind", "revise",
 			"difficulty", x.Difficulty(number),
 			"self_check_findings", py.Or(x.Result.Get("self_check_findings"), []any{})))
@@ -1130,10 +1131,10 @@ func (x *Deliverer) build(number int, status string) {
 	issueLabels := x.Labels(number)
 	if approved || built {
 		queue.SetStateLabel(x.Ctx, number, issueLabels, "")
-		if !issueLabels[labelPROpen()] {
-			x.GH.AddLabels(number, []string{labelPROpen()})
+		if !issueLabels[config.LabelPROpen] {
+			x.GH.AddLabels(number, []string{config.LabelPROpen})
 		}
-		asked := pr != 0 && x.Labels(pr)[labelRevise()]
+		asked := pr != 0 && x.Labels(pr)[config.LabelRevise]
 		if pr != 0 && !asked {
 			queue.SetStateLabel(x.Ctx, pr, x.Labels(pr), "")
 		}
@@ -1180,9 +1181,9 @@ func (x *Deliverer) build(number int, status string) {
 		if x.strike(number, "its reviewer did not approve it: "+first) {
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, issueLabels, labelBlocked())
-		if pr != 0 && !x.Labels(pr)[labelRevise()] {
-			queue.SetStateLabel(x.Ctx, pr, x.Labels(pr), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, issueLabels, config.LabelBlocked)
+		if pr != 0 && !x.Labels(pr)[config.LabelRevise] {
+			queue.SetStateLabel(x.Ctx, pr, x.Labels(pr), config.LabelBlocked)
 		}
 		stuck := x.markStuck(number, pr)
 		x.GH.CreateComment(number, fmt.Sprintf("%s, so #%d stays a draft "+

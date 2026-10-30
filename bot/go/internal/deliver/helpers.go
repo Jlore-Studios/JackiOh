@@ -122,18 +122,10 @@ func (x *Deliverer) mergeTitle(pull *pyjson.Object) string {
 	return queue.MergeTitle(pull, x.Cfg.MergeMethod)
 }
 
-// actions is `ctx.act`: the client for Actions calls. The hctx stub leaves its Go type open.
-func (x *Deliverer) actions() interface{ RerunFailedJobs(runID any) } {
-	if client, ok := any(x.Ctx.Act()).(interface{ RerunFailedJobs(runID any) }); ok {
-		return client
-	}
-	return x.Ctx.GH
-}
-
 func (x *Deliverer) rerunCI(number int) {
 	runID := x.Record(number).Get("ci_run_id")
 	if pyjson.Truthy(runID) {
-		x.try(func() { x.actions().RerunFailedJobs(runID) })
+		x.try(func() { x.Ctx.Act().RerunFailedJobs(runID) })
 	}
 }
 
@@ -247,6 +239,6 @@ func (x *Deliverer) pullBody(number int, approved bool) string {
 		"step by step, is in its %s. Comment "+
 		"`@%s <what to change>` or `%s revise <notes>` to ask "+
 		"for a revision, or `%s stop` to stop it.", x.Cfg.BotLogin, run, x.journalLink(number),
-		x.Cfg.BotLogin, slash(), slash()))
+		x.Cfg.BotLogin, config.Slash, config.Slash))
 	return strings.Join(parts, "\n")
 }

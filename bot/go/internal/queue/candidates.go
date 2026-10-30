@@ -497,9 +497,9 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 	others := map[int]string{} // number -> the other bot's name
 	parted := map[int][]int{}  // number -> its open parts
 	var builds []*pyjson.Object
-	labelWorking, labelPR := cfgStr(config.LabelWorking), cfgStr(config.LabelPR)
-	labelCross := cfgStr(config.LabelCross)
-	for _, label := range []string{cfgStr(config.LabelBuild), cfgStr(config.LabelRevise), labelCross} {
+	labelWorking, labelPR := config.LabelWorking, config.LabelPR
+	labelCross := config.LabelCross
+	for _, label := range []string{config.LabelBuild, config.LabelRevise, labelCross} {
 		for _, thread := range ctx.GH.ListIssues(label, "open", 300, "") {
 			number := numberOf(thread)
 			names := LabelNames(thread)

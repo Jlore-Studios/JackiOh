@@ -210,10 +210,10 @@ func HousekeepingDue(ctx *hctx.Context, state *pyjson.Object) string {
 			return fmt.Sprintf("#%s was left working by a run that ended", py.Str(thread.Get("number")))
 		}
 	}
-	for _, thread := range ctx.GH.ListIssues(cs(config.LabelPR), "open", 300, "") {
+	for _, thread := range ctx.GH.ListIssues(config.LabelPR, "open", 300, "") {
 		names := queue.LabelNames(thread)
-		if !thread.Has("pull_request") || names[cs(config.LabelRevise)] || names[cs(config.LabelWorking)] ||
-			names[cs(config.LabelBlocked)] || queue.IsHuman(names) {
+		if !thread.Has("pull_request") || names[config.LabelRevise] || names[config.LabelWorking] ||
+			names[config.LabelBlocked] || queue.IsHuman(names) {
 			continue
 		}
 		record := recordOf(state, py.Str(thread.Get("number")))

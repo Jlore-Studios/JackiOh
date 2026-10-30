@@ -49,15 +49,15 @@ var Humans = []string{"MaxGoetzmann", "jgoetzmann"}
 var TypeLabels = config.TypeLabels
 
 // HumanLabel is `human`.
-var HumanLabel = py.Str(config.LabelHuman)
+var HumanLabel = config.LabelHuman
 
 // HumanLabels is the labels that hand an issue to people: a person's `human`, and `human
 // required` (#793), the bot's own hand-over, which a person may put on too.
-var HumanLabels = map[string]bool{py.Str(config.LabelHuman): true, py.Str(config.LabelHumanRequired): true}
+var HumanLabels = map[string]bool{config.LabelHuman: true, config.LabelHumanRequired: true}
 
 // Queued is the bot's queue labels `human` takes off: people do the issue now. A run that holds
 // it (`bot:working`) or a pull request it opened keep theirs.
-var Queued = map[string]bool{py.Str(config.LabelBuild): true, py.Str(config.LabelNeedsPlan): true}
+var Queued = map[string]bool{config.LabelBuild: true, config.LabelNeedsPlan: true}
 
 // PrefixType is one of PrefixTypes: a title prefix and the type label it names.
 type PrefixType struct {
@@ -191,7 +191,7 @@ func TypeLabel(title string) string {
 var priorities = []string{config.LabelPriorityHigh, config.LabelPriorityMedium, config.LabelPriorityLow}
 
 // who is who does it, as each form's dropdown spells it: the label in its brackets.
-var who = []string{py.Str(config.LabelBuild), HumanLabel}
+var who = []string{config.LabelBuild, HumanLabel}
 
 // FormLabels is the labels an issue form's dropdowns ask for (`.github/ISSUE_TEMPLATE/`), which
 // triage puts on when a trusted person opens the issue, as if they had set them by hand:

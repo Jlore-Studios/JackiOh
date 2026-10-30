@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 
@@ -61,7 +62,7 @@ func unknownKeys(raw *pyjson.Object, known ...[]string) []string {
 	for _, k := range raw.Keys() {
 		found := false
 		for _, list := range known {
-			found = found || contains(list, k)
+			found = found || slices.Contains(list, k)
 		}
 		if !found {
 			out = append(out, k)
@@ -178,7 +179,7 @@ func resolvers(raw any) []*Resolver {
 		if (take != "") == (run != "") {
 			raiseConfig("%s: give exactly one of `take` and `run`", where)
 		}
-		if take != "" && !contains(ResolverTakes, take) {
+		if take != "" && !slices.Contains(ResolverTakes, take) {
 			raiseConfig("%s: `take` is one of %s", where, strings.Join(ResolverTakes, ", "))
 		}
 		if take != "" && entry.Has("timeout_minutes") {
@@ -216,10 +217,10 @@ func priorities(raw any) map[string]string {
 	bad := []string{}
 	out := map[string]string{}
 	o.Items(func(k string, v any) bool {
-		if !contains(SuggestionClasses, k) {
+		if !slices.Contains(SuggestionClasses, k) {
 			unknown = append(unknown, k)
 		}
-		if s, isStr := v.(string); !isStr || !contains(PriorityLevels, s) {
+		if s, isStr := v.(string); !isStr || !slices.Contains(PriorityLevels, s) {
 			bad = append(bad, k+": "+py.Repr(v))
 		}
 		out[k] = py.Str(v)
@@ -374,7 +375,7 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	if len(absent) > 0 {
 		raiseConfig("max_turns: missing %s", strings.Join(absent, ", "))
 	}
-	if m, ok := raw.Get("merge_method").(string); !ok || !contains([]string{"squash", "merge", "rebase"}, m) {
+	if m, ok := raw.Get("merge_method").(string); !ok || !slices.Contains([]string{"squash", "merge", "rebase"}, m) {
 		raiseConfig("merge_method: %s is not squash, merge or rebase", py.Repr(raw.Get("merge_method")))
 	}
 	suggestions := mustDict(raw.Get("suggestions"))
@@ -538,7 +539,7 @@ func ChildEnv(env map[string]string /* = None */, keep []string /* = () */) map[
 	}
 	out := map[string]string{}
 	for k, v := range source {
-		if !contains(SecretKeys, k) || contains(keep, k) {
+		if !slices.Contains(SecretKeys, k) || slices.Contains(keep, k) {
 			out[k] = v
 		}
 	}

@@ -57,8 +57,8 @@ func (x *Deliverer) SplitOut(number int) {
 	queue.SetStateLabel(x.Ctx, number, names, "")
 	queue.SetMode(x.Ctx, number, names, "")
 	if tree.Done {
-		if names[labelTree()] {
-			x.try(func() { x.GH.RemoveLabel(number, labelTree()) })
+		if names[config.LabelTree] {
+			x.try(func() { x.GH.RemoveLabel(number, config.LabelTree) })
 		}
 		x.GH.CreateComment(number, fmt.Sprintf("Every sub-issue of this has closed, and its end state "+
 			"holds on `main` (%s), so I am closing it.\n\n"+
@@ -70,13 +70,13 @@ func (x *Deliverer) SplitOut(number int) {
 		x.log(fmt.Sprintf("#%d: its tree is done; closed it", number))
 		return
 	}
-	queueLabel, builder := labelBuild(), "me"
-	if all := others(); mode == "split-bot" && len(all) > 0 {
+	queueLabel, builder := config.LabelBuild, "me"
+	if all := config.Others; mode == "split-bot" && len(all) > 0 {
 		other := all[0]
 		queueLabel = other.LabelPrefix + "build"
 		builder = fmt.Sprintf("%s (@%s)", other.Name, other.Login)
 	}
-	who := fmt.Sprintf("%s (`%s`, %s)", botTitle(), x.BuildSeat.Model, x.link())
+	who := fmt.Sprintf("%s (`%s`, %s)", config.Title, x.BuildSeat.Model, x.link())
 	repoLabels := map[string]bool{}
 	for _, label := range x.GH.ListLabels() {
 		repoLabels[py.Str(label.Get("name"))] = true
@@ -149,8 +149,8 @@ func (x *Deliverer) SplitOut(number int) {
 		x.Fail(number, "build")
 		return
 	}
-	if !x.Labels(number)[labelTree()] {
-		x.GH.AddLabels(number, []string{labelTree()})
+	if !x.Labels(number)[config.LabelTree] {
+		x.GH.AddLabels(number, []string{config.LabelTree})
 	}
 	pairs := make([]splitmod.Made, len(made))
 	children := make([]int, len(made))
@@ -314,7 +314,7 @@ func (x *Deliverer) land(onto string, number int) (string, string) {
 		if x.isAncestor(tip, local) == 0 {
 			target = head // nothing landed since it started: a fast-forward
 		} else {
-			target = x.mergeCommit(tip, local, fmt.Sprintf("%s: land #%d on %s", commitPrefix(), number, onto))
+			target = x.mergeCommit(tip, local, fmt.Sprintf("%s: land #%d on %s", config.CommitPrefix, number, onto))
 			if target == "" {
 				return "", "" // it conflicts with the parts that landed meanwhile
 			}
@@ -333,10 +333,10 @@ func (x *Deliverer) land(onto string, number int) (string, string) {
 // A merge commit of `local` onto `tip`, made without a worktree, or "" when the two
 // conflict.
 func (x *Deliverer) mergeCommit(tip string, local string, message string) string {
-	probe := completed(x.Repo.Run(false, 600, nil, "merge-tree", "--write-tree", "--no-messages", tip, local))
+	probe := x.Repo.Run(false, 600, nil, "merge-tree", "--write-tree", "--no-messages", tip, local)
 	tree := ""
-	if probe.returncode == 0 && strings.TrimSpace(probe.stdout) != "" {
-		tree = strings.Fields(probe.stdout)[0]
+	if probe.Returncode == 0 && strings.TrimSpace(probe.Stdout) != "" {
+		tree = strings.Fields(probe.Stdout)[0]
 	}
 	if tree == "" {
 		return ""
@@ -344,8 +344,8 @@ func (x *Deliverer) mergeCommit(tip string, local string, message string) string
 	who := git.IdentityBot(x.Cfg.BotLogin, x.Cfg.BotUserID)
 	env := map[string]string{"GIT_AUTHOR_NAME": who.Name, "GIT_AUTHOR_EMAIL": who.Email,
 		"GIT_COMMITTER_NAME": who.Name, "GIT_COMMITTER_EMAIL": who.Email}
-	return strings.TrimSpace(completed(x.Repo.Run(true, 600, env, "commit-tree", tree, "-p", tip, "-p", local,
-		"-m", message)).stdout)
+	return strings.TrimSpace(x.Repo.Run(true, 600, env, "commit-tree", tree, "-p", tip, "-p", local,
+		"-m", message).Stdout)
 }
 
 // Keep a part that could not land on its own branch, for the reconcile: "" when it is
@@ -415,18 +415,18 @@ func (x *Deliverer) markStuck(numbers ...int) string {
 	}
 	for _, number := range numbers {
 		if number != 0 {
-			x.try(func() { x.GH.AddLabels(number, []string{labelStuck()}) })
+			x.try(func() { x.GH.AddLabels(number, []string{config.LabelStuck}) })
 		}
 	}
 	return fmt.Sprintf("Labelled `%s`: it failed every round, so a person should read the "+
-		"above before anyone tries again. ", labelStuck())
+		"above before anyone tries again. ", config.LabelStuck)
 }
 
 // An approval clears `bot:stuck`.
 func (x *Deliverer) unstick(numbers ...int) {
 	for _, number := range numbers {
-		if number != 0 && x.Labels(number)[labelStuck()] {
-			x.try(func() { x.GH.RemoveLabel(number, labelStuck()) })
+		if number != 0 && x.Labels(number)[config.LabelStuck] {
+			x.try(func() { x.GH.RemoveLabel(number, config.LabelStuck) })
 		}
 	}
 }
@@ -501,10 +501,10 @@ func (x *Deliverer) Revise(number int, status string) {
 			x.holdAutoMerge(0)
 			x.NeedsPerson(number, py.OrStr(question, ""), "revise this", "", fmt.Sprintf(
 				"`%s revise <notes>` (or `@%s <notes>`) queues the "+
-					"rest", slash(), x.Cfg.BotLogin))
+					"rest", config.Slash, x.Cfg.BotLogin))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.holdAutoMerge(0)
 		x.GH.CreateComment(number, "I need a decision before I can revise this.\n\n"+py.Str(question))
 		x.remember(number, pyjson.New("question", py.OrStr(question, "")))
@@ -529,7 +529,7 @@ func (x *Deliverer) Revise(number int, status string) {
 		if x.strike(number, "a revision was not approved: "+first) {
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.holdAutoMerge(0)
 		stuck := x.markStuck(number)
 		tail := ""
@@ -547,7 +547,7 @@ func (x *Deliverer) Revise(number int, status string) {
 	approved := status == "approved"
 	pushed, problem := x.publish(approved)
 	if problem != "" {
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.holdAutoMerge(0)
 		x.GH.CreateComment(number, fmt.Sprintf("I could not push the revision (%s): %s.", x.link(), problem))
 		return

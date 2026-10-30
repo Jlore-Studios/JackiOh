@@ -148,7 +148,7 @@ func LanesMark_(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 	halted string /* = "" */) string {
 	var rows []any
 	for _, row := range LaneRows(ctx, state, live, halted) {
-		rows = append(rows, row.Copy().Set("bot", py.Str(config.Title)))
+		rows = append(rows, row.Copy().Set("bot", config.Title))
 	}
 	if rows == nil {
 		rows = []any{}
@@ -354,7 +354,7 @@ func LanesTable(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 func LaneLimits(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 	rows []*pyjson.Object) []string {
 	pool := ctx.Cfg.Pool
-	botName := py.Str(config.Name)
+	botName := config.Name
 	var claude, github []*pyjson.Object
 	for _, r := range rows {
 		if r.Truthy("claude") {

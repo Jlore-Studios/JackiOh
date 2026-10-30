@@ -112,6 +112,9 @@ func TestValueHelpers(t *testing.T) {
 		err.Error() != "'b'" {
 		t.Errorf("d['b']: %v", err)
 	}
+	if !In("a", "b", "a") || In(1, "1") || In(nil) {
+		t.Error("In is `v in (…)` for strings")
+	}
 	if f, ok := Number(true); !ok || f != 1 {
 		t.Error("a bool is a number")
 	}

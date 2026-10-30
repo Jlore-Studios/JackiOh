@@ -74,7 +74,7 @@ func Make(ctx *hctx.Context, force bool /* = False */, item *int /* = None */, m
 			if planned != nil {
 				planned.Set("housekeeping", pyjson.ListOf(notes))
 				planned.Set("forced", force || candidate.Forced)
-				planned.Set("priority", priorityName(candidate.Priority))
+				planned.Set("priority", queue.PriorityNames[candidate.Priority])
 				planned.Set("skipped", pyjson.ListOf(skipped))
 				FillLanes(ctx, lanes, candidate, assignment, planned)
 				return taken(planned)
@@ -110,7 +110,7 @@ func FillLanes(ctx *hctx.Context, lanes *Lanes, taken *queue.Candidate, assignme
 		return
 	}
 	state := ctx.Store.Load()
-	rest := filter(candidates(ctx, state, nil), func(c *queue.Candidate) bool { return c.Number != taken.Number })
+	rest := filter(queue.Candidates(ctx, state, nil, nil), func(c *queue.Candidate) bool { return c.Number != taken.Number })
 	if len(Pairs(ctx, state, rest, after, false, AnyQuiet, nil)) == 0 {
 		return
 	}
@@ -126,14 +126,14 @@ func FillLanes(ctx *hctx.Context, lanes *Lanes, taken *queue.Candidate, assignme
 // on the ones being planned now; and `bot:planned` on the queued ones a strong model has planned
 // (it stays after they leave the queue, and comes off only if the item needs a plan again).
 func SyncNeedsPlan(ctx *hctx.Context, state *pyjson.Object) []string {
-	needsPlan, plannedLabel := cs(config.LabelNeedsPlan), cs(config.LabelPlanned)
+	needsPlan, plannedLabel := config.LabelNeedsPlan, config.LabelPlanned
 	notes := []string{}
 	wanted := map[int]bool{}
 	planned := map[int]bool{}
 	hasPlanned := map[int]bool{}
 	var labelled []*pyjson.Object
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
-		queued := filter(candidates(ctx, state, nil), func(c *queue.Candidate) bool { return c.Kind == "build" })
+		queued := filter(queue.Candidates(ctx, state, nil, nil), func(c *queue.Candidate) bool { return c.Kind == "build" })
 		for _, c := range queued {
 			if queue.NeedsPlan(c) {
 				wanted[c.Number] = true
@@ -167,7 +167,7 @@ func SyncNeedsPlan(ctx *hctx.Context, state *pyjson.Object) []string {
 		number := py.MustInt(thread.Get("number"))
 		have[number] = true
 		record := recordOf(state, strconv.Itoa(number))
-		planning := queue.LabelNames(thread)[cs(config.LabelWorking)] && eqStr(record.Get("action"), "plan")
+		planning := queue.LabelNames(thread)[config.LabelWorking] && eqStr(record.Get("action"), "plan")
 		if !wanted[number] && !planning {
 			ctx.GH.RemoveLabel(number, needsPlan)
 			notes = append(notes, fmt.Sprintf("#%d left the Needs plan stage", number))
@@ -271,8 +271,8 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 // PRs; puts back in the merge queue a cleared one it took out with no failed build
 // (`queue.requeue_cleared`).
 func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
-	labelRevise, labelWorking := cs(config.LabelRevise), cs(config.LabelWorking)
-	labelBlocked := cs(config.LabelBlocked)
+	labelRevise, labelWorking := config.LabelRevise, config.LabelWorking
+	labelBlocked := config.LabelBlocked
 	notes := Prune(ctx, state)
 	for _, thread := range WorkingThreads(ctx) {
 		number := py.MustInt(thread.Get("number"))
@@ -291,11 +291,11 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 		}
 		var wanted string
 		if eqStr(record.Get("kind"), "review") {
-			wanted = cs(config.LabelCross)
+			wanted = config.LabelCross
 		} else if thread.Has("pull_request") {
 			wanted = labelRevise
 		} else {
-			wanted = cs(config.LabelBuild)
+			wanted = config.LabelBuild
 		}
 		queue.SetStateLabel(ctx, number, queue.LabelNames(thread), wanted)
 		ctx.Store.Update(func(s *pyjson.Object) any {
@@ -313,7 +313,7 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 			return nil
 		}, "survey ended")
 	}
-	for _, thread := range ctx.GH.ListIssues(cs(config.LabelPR), "open", 300, "") {
+	for _, thread := range ctx.GH.ListIssues(config.LabelPR, "open", 300, "") {
 		if !thread.Has("pull_request") {
 			continue
 		}
@@ -348,7 +348,7 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 			notes = append(notes, requeued)
 		}
 	}
-	labelPROpen := cs(config.LabelPROpen)
+	labelPROpen := config.LabelPROpen
 	for _, thread := range ctx.GH.ListIssues(labelPROpen, "open", 300, "") {
 		number := py.MustInt(thread.Get("number"))
 		if queue.OpenPullForBranch(ctx, queue.BranchForIssue(number)) == nil {

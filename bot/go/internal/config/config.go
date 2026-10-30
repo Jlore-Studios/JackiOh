@@ -10,6 +10,7 @@ package config
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
@@ -18,43 +19,14 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-// current is identity.CURRENT, fixed when the process starts. Until identity's port is in the
-// build (its stub leaves CURRENT unset) it reads as the night bot's, as identity.load does when
-// there is no config to read.
-func current() *identity.Identity {
-	switch id := any(identity.Current).(type) {
-	case *identity.Identity:
-		if id != nil {
-			return id
-		}
-	case identity.Identity:
-		return &id
-	}
-	return &identity.Identity{
-		Name: "the night bot", Title: "Night bot", Command: "harness", LabelPrefix: "bot:",
-		BranchPrefix: "bot/", StateBranch: "bot-state", JournalBranch: "bot-journal",
-		Workflow: "bot-night.yml", Marker: "<!-- jackioh-bot -->", Trust: ".harness/trust.txt",
-		Modes: []string{}, Others: []*identity.Other{}, Suggestions: true,
-	}
-}
-
-// fromIdentity is identity's string constant v (REPO_ROOT, HOME), or def while identity's stub
-// leaves it unset.
-func fromIdentity(v any, def string) string {
-	if s, ok := v.(string); ok && s != "" {
-		return s
-	}
-	return def
-}
-
 // RepoRoot is the repository root: `bot/harness/config.py` sits two directories below it.
-var RepoRoot = fromIdentity(any(identity.RepoRoot), "")
+var RepoRoot = identity.RepoRoot
 
 // Home is which bot this process is (`identity.py`): the night bot's, or Squishy's.
-var Home = fromIdentity(any(identity.Home_), ".harness")
+var Home = identity.Home_
 
 // Identity is IDENTITY = identity_mod.CURRENT.
-var Identity = current()
+var Identity = identity.Current
 
 // Name is how the bot names itself: "the night bot" in a sentence, "Night bot" at the head of a
 // title.
@@ -268,17 +240,31 @@ func defNames(defs []labelDef) []string {
 // reads as the Python's.
 var Labels = labels(Identity, LabelPrefix, Modes)
 
+// LabelSpec is one of LABELS' items: a label, its colour and its description.
+type LabelSpec struct{ Name, Color, Description string }
+
+// LabelSpecs is `LABELS.items()`, in order.
+func LabelSpecs() []LabelSpec {
+	var out []LabelSpec
+	Labels.Items(func(name string, v any) bool {
+		spec := pyjson.Strings(v)
+		out = append(out, LabelSpec{name, spec[0], spec[1]})
+		return true
+	})
+	return out
+}
+
 func labels(id *identity.Identity, prefix string, modes []string) *pyjson.Object {
 	out := pyjson.New()
 	for _, d := range own {
-		if id.Suggestions || !contains(noSuggestions, d.name) {
+		if id.Suggestions || !slices.Contains(noSuggestions, d.name) {
 			out.Set(prefix+d.name, []any{d.color, said(id.Name, d.text)})
 		}
 	}
 	for _, d := range modeLabelDefs {
-		if d.name == "tree" && len(modes) > 0 || contains(modes, d.name) {
+		if d.name == "tree" && len(modes) > 0 || slices.Contains(modes, d.name) {
 			text := d.text
-			if contains(saidModeLabels, d.name) {
+			if slices.Contains(saidModeLabels, d.name) {
 				text = said(id.Name, text)
 			}
 			out.Set(prefix+d.name, []any{d.color, text})

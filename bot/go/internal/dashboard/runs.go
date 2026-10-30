@@ -20,7 +20,7 @@ import (
 // sub-issues have closed, and who builds them.
 func TreesTable(ctx *hctx.Context, state *pyjson.Object) []string {
 	var rows []string
-	for _, issue := range ctx.GH.ListIssues(py.Str(config.LabelTree), "open", 300, "") {
+	for _, issue := range ctx.GH.ListIssues(config.LabelTree, "open", 300, "") {
 		if issue.Has("pull_request") {
 			continue
 		}
@@ -35,7 +35,7 @@ func TreesTable(ctx *hctx.Context, state *pyjson.Object) []string {
 		}
 		record := status.Record(state, number)
 		tree, _ := record.Get("tree").(*pyjson.Object)
-		who := py.Str(config.Title)
+		who := config.Title
 		if pyjson.Equal(tree.Get("mode"), "split-bot") {
 			who = "the night bot"
 		}
@@ -84,7 +84,7 @@ func runRow(ctx *hctx.Context, run *pyjson.Object, result string) string {
 func RunsTable(ctx *hctx.Context) []string {
 	var runs []*pyjson.Object
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
-		runs = ctx.GH.ListRuns(py.Str(config.NightWorkflow), "", RunRows, false)
+		runs = ctx.GH.ListRuns(config.NightWorkflow, "", RunRows, false)
 	}); failed {
 		return []string{"The last runs could not be read."}
 	}
@@ -185,14 +185,14 @@ func LearnOutcome(run *pyjson.Object, jobs []*pyjson.Object) string {
 	}
 	untaken := func(job *pyjson.Object) bool {
 		return job != nil && !job.Truthy("runner_name") &&
-			strIn(job.Get("conclusion"), "failure", "cancelled")
+			py.In(job.Get("conclusion"), "failure", "cancelled")
 	}
 	conclusion := func(item *pyjson.Object) any { return item.Get("conclusion") }
 	retrain, planJob := named(jobs, "retrain"), named(jobs, "plan")
 	var lost []*pyjson.Object
 	for _, j := range jobs {
 		if strings.HasPrefix(py.OrStr(j.Get("name"), ""), "export") &&
-			!strIn(j.Get("conclusion"), "success", "skipped") {
+			!py.In(j.Get("conclusion"), "success", "skipped") {
 			lost = append(lost, j)
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/cardsets"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
@@ -57,7 +58,7 @@ func Section(ctx *hctx.Context) string {
 	view := Look(ctx)
 	state, issues, live, halted, explained := view.State, view.Issues, view.Live, view.Halted,
 		view.Explained
-	title, slash := py.Str(config.Title), py.Str(config.Slash)
+	title, slash := config.Title, config.Slash
 	halt := ""
 	if halted != "" {
 		halt = "🛑 **Halted.** "
@@ -127,7 +128,7 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 			"are counted every "+
 			"%d. Times are Central; hover one "+
 			"to see how long it ran. `%s status` gives the same facts on demand.</sub>",
-			EveryMinutes, RunnersMinutes, statsEveryMinutes(), py.Str(config.Slash)), "",
+			EveryMinutes, RunnersMinutes, int(stats.StatsEvery/time.Minute), config.Slash), "",
 		"## ⚡ Running now", "")
 	var running []string
 	if table := RunningTable(ctx, state, live, issues); len(table) > 0 {
@@ -197,7 +198,7 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 // FullLeftOut is FULL_LEFT_OUT: what stands at the foot of the issue when the full status is left
 // out for room (`fit`).
 var FullLeftOut = "The full status is left out to keep this issue under GitHub's limit: " +
-	"`" + py.Str(config.Slash) + " status` gives it."
+	"`" + config.Slash + " status` gives it."
 
 // Fit is fit: the body, while it would pass GitHub's limit on an issue's body: without the full
 // status (the same facts as the sections above, and `/harness status` gives it), then listing fewer

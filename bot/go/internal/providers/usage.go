@@ -3,11 +3,13 @@ package providers
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
@@ -627,7 +629,7 @@ func Availability(provider *Provider, state *pyjson.Object, at time.Time, zoneNa
 		if held.Truthy("reason") {
 			why = " (" + py.Str(held.Get("reason")) + ")"
 		}
-		return fmt.Sprintf("suspended%s%s; `%s resume %s` lifts it", by, why, slash(), provider.ID)
+		return fmt.Sprintf("suspended%s%s; `%s resume %s` lifts it", by, why, identity.Current.Slash(), provider.ID)
 	}
 	if has := secrets.Has(provider.Secret); provider.Login == "secret" && has != nil && !*has {
 		return fmt.Sprintf("its secret `%s` is not set", provider.Secret)
@@ -682,7 +684,7 @@ func StartReason(provider *Provider, state *pyjson.Object, at time.Time, zoneNam
 	if reason == "" || reason != Refusal(provider, entry, at, zoneName, true, time.Time{}) {
 		return reason // free, or held by something no reset lifts
 	}
-	if contains(provider.Roles, "review") && Availability(provider, state, at, zoneName, secrets, false, false) == "" {
+	if slices.Contains(provider.Roles, "review") && Availability(provider, state, at, zoneName, secrets, false, false) == "" {
 		reason += "; it takes reviews only"
 	}
 	frees := FreesAt(provider, entry, at, zoneName)
@@ -732,5 +734,5 @@ func WhenFree(pool *Pool, state *pyjson.Object, at time.Time, zoneName string, s
 	if found {
 		return soonestText
 	}
-	return fmt.Sprintf("when a subscription is free again (`%s status` says why none is now)", slash())
+	return fmt.Sprintf("when a subscription is free again (`%s status` says why none is now)", identity.Current.Slash())
 }

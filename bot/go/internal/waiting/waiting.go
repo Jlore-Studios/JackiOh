@@ -50,25 +50,6 @@ func rank(tier string) int {
 	return r
 }
 
-// windows is providers.WINDOWS, which providers' stub still types `any`: nil until providers is
-// ported, then its map (a value of another type stops here rather than read as empty).
-func windows() map[string]time.Duration {
-	v := any(providers.Windows)
-	if v == nil {
-		return nil
-	}
-	return v.(map[string]time.Duration)
-}
-
-// tierEntries is `pool.tiers.get(tier, ())`.
-func tierEntries(pool *providers.Pool, tier string) []*providers.TierEntry {
-	v := pool.Tiers.Get(tier)
-	if v == nil {
-		return nil
-	}
-	return v.([]*providers.TierEntry)
-}
-
 // recordOf is `state["items"].get(str(number)) or {}`.
 func recordOf(s *pyjson.Object, number int) *pyjson.Object {
 	if record := s.Obj("items").Obj(strconv.Itoa(number)); record != nil {
@@ -149,7 +130,7 @@ type Explained struct {
 // The models of `tier`, short: "Opus", or "Muse, agy (Gemini), Sonnet".
 func TierNames(pool *providers.Pool, tier string) string {
 	var names []string
-	for _, entry := range tierEntries(pool, tier) {
+	for _, entry := range pool.TierEntries(tier) {
 		var owners []*providers.Provider
 		for _, p := range pool.Ordered() {
 			if slices.ContainsFunc(pool.OwnSeats(p), func(s *providers.Seat) bool { return s.Model == entry.Model }) {
@@ -369,7 +350,7 @@ func CappedText(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.O
 	budgets := provider.Limits.Budgets()
 	for _, window := range budgets.Keys() {
 		budget := budgets.Get(window)
-		spent := providers.MinutesSpent(entry, now.Add(-windows()[window]))
+		spent := providers.MinutesSpent(entry, now.Add(-providers.Windows[window]))
 		if limit, _ := pyjson.AsFloat(budget); spent >= limit {
 			return fmt.Sprintf("%.0f of its %s min", spent, py.Str(budget)) + again
 		}

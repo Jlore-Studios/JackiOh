@@ -262,7 +262,7 @@ func OthersOnGithub(ctx *hctx.Context) int {
 // WorkingThreads is every thread labelled `bot:working`, closed ones too: a run goes on after
 // someone closes its issue, and holds its lane until it ends (deliver then drops its work).
 func WorkingThreads(ctx *hctx.Context) []*pyjson.Object {
-	return ctx.GH.ListIssues(cs(config.LabelWorking), "all", 300, "")
+	return ctx.GH.ListIssues(config.LabelWorking, "all", 300, "")
 }
 
 // ReadLanes is the lanes held by runs that are still going. A run that ended without

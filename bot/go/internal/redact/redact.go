@@ -5,6 +5,7 @@ package redact
 
 import (
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -59,7 +60,7 @@ func Remember(values []string) {
 	rememberedMu.Lock()
 	defer rememberedMu.Unlock()
 	for _, value := range values {
-		if py.Len(value) >= MinRemembered && !contains(remembered, value) {
+		if py.Len(value) >= MinRemembered && !slices.Contains(remembered, value) {
 			remembered = append(remembered, value)
 		}
 	}
@@ -129,13 +130,4 @@ func RedactJSON(obj any) any {
 		return found
 	}
 	return obj
-}
-
-func contains(list []string, s string) bool {
-	for _, e := range list {
-		if e == s {
-			return true
-		}
-	}
-	return false
 }

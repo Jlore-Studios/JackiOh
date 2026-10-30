@@ -49,7 +49,6 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
@@ -167,8 +166,8 @@ func startOne(ctx *hctx.Context, sleep func(float64)) (string, bool) {
 		"secret": py.OrStr(planned.Get("secret"), ""), "shared": shared, "dry_run": dryRun}
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		ctx.GH.PutFile(fmt.Sprintf("%s/%s.json", Plans, ref), pyjson.DumpsIndent(planned, 2)+"\n",
-			py.Str(config.StateBranch), "", fmt.Sprintf("plan %s [skip ci]", ref))
-		ctx.Act().(gh.Client).DispatchWorkflow(py.Str(config.NightWorkflow), ctx.Cfg.DefaultBranch, inputs)
+			config.StateBranch, "", fmt.Sprintf("plan %s [skip ci]", ref))
+		ctx.Act().DispatchWorkflow(config.NightWorkflow, ctx.Cfg.DefaultBranch, inputs)
 	}); failed {
 		setRun(ctx, planned, pending, "") // dead: the next housekeeping requeues it
 		return fmt.Sprintf("could not start %s: %s", what, exc.Error()), false
@@ -197,7 +196,7 @@ func Find(ctx *hctx.Context, ref string, sleep func(float64)) string {
 	for attempt := range FindTries {
 		found, listed := "", false
 		herr.Catch[*herr.GitHubError](func() {
-			for _, run := range ctx.GH.ListRuns(py.Str(config.NightWorkflow), "", 20, false) {
+			for _, run := range ctx.GH.ListRuns(config.NightWorkflow, "", 20, false) {
 				if strings.HasPrefix(py.OrStr(run.Get("display_title"), ""), TitlePrefix(ref)) {
 					found, listed = py.OrStr(run.Get("id"), ""), true
 					return
@@ -252,7 +251,7 @@ func Resolve(ctx *hctx.Context) []string {
 	}
 	var runs []*pyjson.Object
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
-		runs = ctx.GH.ListRuns(py.Str(config.NightWorkflow), "", 50, false)
+		runs = ctx.GH.ListRuns(config.NightWorkflow, "", 50, false)
 	}); failed {
 		return []string{}
 	}
@@ -303,7 +302,7 @@ func Resolve(ctx *hctx.Context) []string {
 func Prune(ctx *hctx.Context) []string {
 	var names [][2]string
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
-		names = ctx.GH.ListDir(Plans, py.Str(config.StateBranch))
+		names = ctx.GH.ListDir(Plans, config.StateBranch)
 	}); failed {
 		return []string{}
 	}
@@ -323,7 +322,7 @@ func Prune(ctx *hctx.Context) []string {
 			continue
 		}
 		herr.Catch[*herr.GitHubError](func() {
-			ctx.GH.DeleteFile(fmt.Sprintf("%s/%s", Plans, name), py.Str(config.StateBranch), sha,
+			ctx.GH.DeleteFile(fmt.Sprintf("%s/%s", Plans, name), config.StateBranch, sha,
 				fmt.Sprintf("plan %s pruned [skip ci]", ref))
 			gone++
 		})
@@ -341,9 +340,9 @@ func Fetch(ctx *hctx.Context, ref string) (*pyjson.Object, error) {
 	if !Ref.MatchString(ref) {
 		return nil, valueError("%s is not a plan reference", py.Repr(ref))
 	}
-	text, _ := ctx.GH.GetFile(fmt.Sprintf("%s/%s.json", Plans, ref), py.Str(config.StateBranch))
+	text, _ := ctx.GH.GetFile(fmt.Sprintf("%s/%s.json", Plans, ref), config.StateBranch)
 	if text == "" {
-		return nil, valueError("no plan %s on %s", ref, py.Str(config.StateBranch))
+		return nil, valueError("no plan %s on %s", ref, config.StateBranch)
 	}
 	value, err := pyjson.LoadsString(text)
 	if err != nil {

@@ -24,6 +24,7 @@ package split
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -204,12 +205,12 @@ func FromDict(raw any, difficulties []string /* = ("easy", "medium", "hard") */)
 			continue
 		}
 		difficulty := py.Lower(py.Strip(py.OrStr(entry.Get("difficulty"), "")))
-		if difficulty != "" && !contains(difficulties, difficulty) {
+		if difficulty != "" && !slices.Contains(difficulties, difficulty) {
 			difficulty = ""
 		}
 		labels := []string{}
 		for _, label := range py.Each(entry.Get("labels")) {
-			if l := py.Strip(py.Str(label)); l != "" && !contains(labels, l) {
+			if l := py.Strip(py.Str(label)); l != "" && !slices.Contains(labels, l) {
 				labels = append(labels, l)
 			}
 		}
@@ -391,15 +392,6 @@ func Checklist(parent int, made []Made, builder string, summary string, link str
 		lines = append(lines, "", summary)
 	}
 	return strings.Join(lines, "\n")
-}
-
-func contains(list []string, s string) bool {
-	for _, e := range list {
-		if e == s {
-			return true
-		}
-	}
-	return false
 }
 
 // decimal is int() of a run of Unicode decimal digits.

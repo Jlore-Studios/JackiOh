@@ -20,6 +20,7 @@ package easy
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
@@ -155,20 +156,11 @@ func PlanPaths(plan string) []string {
 		if !strings.Contains(path, "/") && !strings.Contains(path, ".") {
 			continue // the header row ("Path", "File"), or a cell that names no file
 		}
-		if !contains(found, path) {
+		if !slices.Contains(found, path) {
 			found = append(found, path)
 		}
 	}
 	return found
-}
-
-func contains(xs []string, s string) bool {
-	for _, x := range xs {
-		if x == s {
-			return true
-		}
-	}
-	return false
 }
 
 func offLimits(paths []string, patterns []string) []string {

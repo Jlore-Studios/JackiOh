@@ -42,28 +42,13 @@ var LetsGo = letsGo()
 
 func letsGo() map[string]bool {
 	out := map[string]bool{config.LabelNeedsPlan: true}
-	for _, label := range labelList(any(queue.StateLabels)) {
+	for _, label := range queue.StateLabels {
 		out[label] = true
 	}
 	for _, label := range config.ModeLabels.Keys() {
 		out[label] = true
 	}
 	return out
-}
-
-// labelList is a tuple of labels, whichever slice holds it.
-func labelList(v any) []string {
-	switch x := v.(type) {
-	case []string:
-		return x
-	case []any:
-		out := []string{}
-		for _, e := range x {
-			out = append(out, py.Str(e))
-		}
-		return out
-	}
-	return nil
 }
 
 // said is _SAID, `(?im)^[\s>*_]*human required[*_]*\s*:[*_]*\s*(.*)$`: a planner's own word that
