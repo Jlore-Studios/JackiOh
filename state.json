@@ -8793,7 +8793,7 @@
       "started_at": "2026-10-30T12:03:37Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 4,
       "votes": {
         "approvals": [
           "claude"
