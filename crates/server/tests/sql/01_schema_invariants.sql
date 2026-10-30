@@ -941,7 +941,7 @@ end $$;
 -- mechanics patch's Plague, 0026 with patch v0.2.Y's Catalyst, Prime and Acclaimed, 0030 with
 -- the Meditative set's Wincon (R1411), 0043 with the Meditative+ set's Potion (R1178000), 0058
 -- with #1837's Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean (R1837000), and 0065
--- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000), and 0068 with
+-- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000), and 0069 with
 -- the Training Grounds Legacy cards' Legacy (R2511000). Each probe
 -- row is removed before the next, and each probe runs in a block of its own, so later checks see
 -- only the cards CHECK 10 seeded.

@@ -13,18 +13,18 @@ declare
   n bigint;
 begin
   insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
-  values ('v0.5.1', 'live', 'bo1', 'human', 'ai', '{"games": 1, "firstWins": 1}');
+  values ('v0.5.0b', 'live', 'bo1', 'human', 'ai', '{"games": 1, "firstWins": 1}');
   -- The store's write-back: the key's total, read and added to in Rust, replaces the one held.
   insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
-  values ('v0.5.1', 'live', 'bo1', 'human', 'ai', '{"games": 3, "firstWins": 2}')
+  values ('v0.5.0b', 'live', 'bo1', 'human', 'ai', '{"games": 3, "firstWins": 2}')
   on conflict (patch, source, mode, p1_pilot, p2_pilot) do update set total = excluded.total;
   select (total ->> 'games')::bigint into n
     from public.game_totals
-   where patch = 'v0.5.1' and source = 'live' and mode = 'bo1' and p1_pilot = 'human' and p2_pilot = 'ai';
+   where patch = 'v0.5.0b' and source = 'live' and mode = 'bo1' and p1_pilot = 'human' and p2_pilot = 'ai';
   if n is distinct from 3 then
     raise exception 'FAIL (R1994000): the write-back left % games, expected the 3 written', n;
   end if;
-  select count(*) into n from public.game_totals where patch = 'v0.5.1';
+  select count(*) into n from public.game_totals where patch = 'v0.5.0b';
   if n <> 1 then
     raise exception 'FAIL (R1994000): one key holds % rows, expected 1', n;
   end if;
@@ -33,35 +33,35 @@ begin
   -- games or with no count of them.
   begin
     insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
-    values ('v0.5.1', 'practice', 'bo1', 'human', 'human', '{"games": 1}');
+    values ('v0.5.0b', 'practice', 'bo1', 'human', 'human', '{"games": 1}');
     raise exception 'FAIL (R1994000): a total of source practice was kept';
   exception
     when check_violation then null;
   end;
   begin
     insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
-    values ('v0.5.1', 'live', 'tutorial', 'human', 'human', '{"games": 1}');
+    values ('v0.5.0b', 'live', 'tutorial', 'human', 'human', '{"games": 1}');
     raise exception 'FAIL (R1994000): a total of mode tutorial was kept';
   exception
     when check_violation then null;
   end;
   begin
     insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
-    values ('v0.5.1', 'live', 'bo1', 'human', 'bot', '{"games": 1}');
+    values ('v0.5.0b', 'live', 'bo1', 'human', 'bot', '{"games": 1}');
     raise exception 'FAIL (R1994000): a total with pilot bot was kept';
   exception
     when check_violation then null;
   end;
   begin
     insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
-    values ('v0.5.1', 'live', 'bo3', 'human', 'human', '{"games": 0}');
+    values ('v0.5.0b', 'live', 'bo3', 'human', 'human', '{"games": 0}');
     raise exception 'FAIL (R1994000): a total of no games was kept';
   exception
     when check_violation then null;
   end;
   begin
     insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
-    values ('v0.5.1', 'live', 'random', 'human', 'human', '{}');
+    values ('v0.5.0b', 'live', 'random', 'human', 'human', '{}');
     raise exception 'FAIL (R1994000): a total with no count of games was kept';
   exception
     when check_violation then null;
@@ -80,7 +80,7 @@ rollback;
 \echo '### R1994000: 0063 re-applies over rows of its own and changes none ###'
 begin;
 insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
-values ('v0.5.1', 'dev', 'random', 'ai', 'ai', '{"games": 2}');
+values ('v0.5.0b', 'dev', 'random', 'ai', 'ai', '{"games": 2}');
 create temp table r1994000_rows (n bigint not null) on commit drop;
 insert into r1994000_rows select count(*) from public.game_totals;
 -- What run.sh's apply_migration filters, a re-run's "already exists, skipping", is quieted here.

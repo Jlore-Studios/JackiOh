@@ -1210,7 +1210,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
         }
 
         // R2204001, R2511001: an offer passes over a card whose pair key an earlier option holds, the
-        // shuffle drawn as it always was. Only a carried catalog of v0.5.7 to v0.5.11 pairs two cards
+        // shuffle drawn as it always was. Only a carried catalog of v0.5.5 to v0.5.7 pairs two cards
         // (`pair_key`), so a replay of those games offers what it did; the build's pairs none.
         let mut shown_pairs: Vec<&'static str> = Vec::new();
         let shuffled: Vec<_> = ctx

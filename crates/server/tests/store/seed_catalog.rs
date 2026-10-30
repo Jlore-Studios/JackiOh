@@ -11,7 +11,7 @@
 //! the Meditative+ set's Potion (R1178000) from 0043, #1837's Terminus, Quest, Otherworldly,
 //! Other-Origins and Jelly Bean (R1837000) from 0058, and the Stinkyscape set's Drone Core, Weapon,
 //! War Doctrine and Swarm (R1857000) from 0065, and the Training Grounds Legacy cards' Legacy
-//! (R2511000) from 0068. The seed runs in one transaction, so one
+//! (R2511000) from 0069. The seed runs in one transaction, so one
 //! such row fails the whole catalog. The first half compares the tags with the migrations' text; the
 //! second checks that the database really accepts them. Both count the catalog of the sets that ship
 //! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set, the
@@ -294,8 +294,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0068_legacy_tag.sql",
-            "0068 re-adds the check with the Legacy tag (R2511000)"
+            file, "0069_legacy_tag.sql",
+            "0069 re-adds the check with the Legacy tag (R2511000)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -344,7 +344,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
 
     /// R1411: the migration that ships the Meditative set, 0043 after it, which ships the
     /// Meditative+ set (R1178000), 0058, which admits #1837's five tags (R1837000), 0065, which
-    /// ships the Stinkyscape set (R1857000), and 0068, which admits Legacy (R2511000). The check admits
+    /// ships the Stinkyscape set (R1857000), and 0069, which admits Legacy (R2511000). The check admits
     /// exactly the tags the engine names, in its order, Wincon, Potion, the five, the four and Legacy
     /// among them, so every entry of every set the
     /// catalog holds seeds the day its set ships, the Meditative, Meditative+ and Stinkyscape sets'
@@ -353,7 +353,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0068_legacy_tag.sql");
+        assert_eq!(file, "0069_legacy_tag.sql");
         for tag in [
             "Wincon",
             "Potion",
@@ -652,7 +652,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(tagged(tag), stinkyscape(count), "{tag}");
         }
-        // R2511000: Legacy, the tag 0068 admits, is on the Training Grounds set's twenty Legacy
+        // R2511000: Legacy, the tag 0069 admits, is on the Training Grounds set's twenty Legacy
         // cards, #41 to #60, alone.
         assert_eq!(rows_tagged("Legacy"), tagged("Legacy"));
         assert_eq!(tagged("Legacy"), training_grounds(20));

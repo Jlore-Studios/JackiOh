@@ -803,8 +803,8 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
         );
     }
 
-    /// `fruit_a`'s Legacy card, naming it (`snapshotOf`) as the catalogs shipped from v0.5.7 to
-    /// v0.5.11 named their snapshots (`marked`), or not, as the build's catalog names none.
+    /// `fruit_a`'s Legacy card, naming it (`snapshotOf`) as the catalogs shipped from v0.5.5 to
+    /// v0.5.7 named their snapshots (`marked`), or not, as the build's catalog names none.
     fn legacy_of_fruit_a(marked: bool) -> CardDef {
         let mut legacy = def(
             "fruit-a-legacy",
@@ -863,7 +863,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
     }
 
     /// R2204001, kept for replays by R2511001: under a catalog that names the Core card a snapshot
-    /// copied (`snapshotOf`, those shipped from v0.5.7 to v0.5.11, which a replay of their games
+    /// copied (`snapshotOf`, those shipped from v0.5.5 to v0.5.7, which a replay of their games
     /// folds under, R767000), the pool keeps both but one offer shows at most one of the pair: the
     /// shuffle draws as before and the other of a pair is passed over.
     #[test]

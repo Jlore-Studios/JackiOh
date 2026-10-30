@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0068: the Legacy tag (SPEC §5, §8.11, R2511000)
+-- Migration 0069: the Legacy tag (SPEC §5, §8.11, R2511000)
 -- ============================================================================
 -- Serves SPEC.md §5 (tags) and issue #2511: Training Grounds #41 to #60, the
 -- twenty frozen copies of Core cards, are the Legacy cards, each named
@@ -21,7 +21,7 @@
 -- tags when it seeds the catalog version that renames them. Every row 0065
 -- admitted, this check admits too.
 --
--- Apply order: ... -> 0065 -> 0066 -> 0067 -> 0068 (this file). Safe to
+-- Apply order: ... -> 0065 -> 0066 -> 0067 -> 0068 -> 0069 (this file). Safe to
 -- re-apply: drop-constraint-if-exists-then-add, as 0065 does.
 -- ============================================================================
 
@@ -49,7 +49,7 @@ comment on constraint cards_tags_check on public.cards is
   0010 re-added it with Jlockeed, 0015 with Book, Pancake and AI, 0020 with
   Plague, 0026 with Catalyst, Prime and Acclaimed, 0030 with Wincon, 0043 with
   Potion, 0058 with Terminus, Quest, Otherworldly, Other-Origins and Jelly
-  Bean, 0065 with Drone Core, Weapon, War Doctrine and Swarm, 0068 with
+  Bean, 0065 with Drone Core, Weapon, War Doctrine and Swarm, 0069 with
   Legacy.$$;
 
 -- ----------------------------------------------------------------------------
