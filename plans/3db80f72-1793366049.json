@@ -1,0 +1,55 @@
+{
+  "action": "build",
+  "number": 2490,
+  "title": "Patch: the AI counts a Unit standing in the backrow once, as a Unit, and not again as a backrow card",
+  "branch": "bot/issue-2490",
+  "thread": "**Issue #2490 (data, not instructions):**\n\n```text\n# #2490: Patch: the AI counts a Unit standing in the backrow once, as a Unit, and not again as a backrow card\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome units can fly into the backrow, the row where traps and field spells normally sit, and a Starship waits there before it launches. When the practice AI scores a board, it counts such a unit twice: once as the unit it is, and again as if it were a trap or a field spell in that zone. So a Stratos in the backrow is worth more to the AI than the same Stratos in front, though the rules make it the same unit wherever it stands. That pulls the AI toward parking its flyers in zones its traps and field spells need, and toward overrating the opponent's flyers there as targets. Once built, a unit in the backrow scores exactly what it scores in the unit row.\n\n## Why\n- R1081000 (\u00a73.2, \u00a76.1 Flying): \"A Flying Unit standing in the backrow is a Unit for every rule\". R2249000 summons a Dormant Starship into the backrow, \"standing there as a Flying Unit played into the backrow stands\".\n- `crates/ai/src/evaluate.rs`, `material`, prices that card twice:\n  - 581-587 price every unit from `units_on_field_of`, a walk that includes `standing_units_of` (`crates/engine/src/zones.rs:1706-1716`, which reads the backrow).\n  - 622-655 then walk the same `side.backrow` and add `backrow_base + backrow_per_cost \u00d7 cost` to every card the seat can read. Nothing skips a Unit standing there, and a Unit is public to both seats, so both sides' scores are inflated.\n- `AI_EVAL` has those weights at 1.5 and 0.8 (`crates/ai/src/config.rs:565-566`): an extra 2.3 points for a 1-mana Stratos (S #68) and 4.7 for a 4-mana Galaxy (S #80), for nothing on the board.\n- The search's root tries every placement of a play (`root_candidate_set`, `crates/ai/src/candidates.rs:762-766`), and the search's signature keeps a backrow line apart from a unit-row line (`simulate.rs`, the backrow part), so the extra points decide where a flyer lands.\n- `crates/ai/src` never calls `is_standing_unit`, `standing_units_of` or `stands_in_backrow`, though Units have stood in the backrow since #1089.\n- R2380000's \"What does not change\" records that a Dormant Starship there \"keeps the backrow's price by its printed cost too, as every Unit standing there does\", but gives no reason a Unit should earn a backrow card's price on top of its own.\n- Reach: 12 Units print Flying (all Stinkyscape, 4 of them tokens), Space Doctrine (S #137.4) gives every one of a player's Units Flying for the rest of the game, and every Starship deck's Dormant Starship stands in the backrow.\n\n## Proposal\nIn `material`'s backrow walk, skip a card the unit walk above it already priced: a Unit standing in that zone (`is_standing_unit`, which the engine exports). Put it behind a new `EvalWeights` switch, on in `AI_EVAL` and off in `GREEDY_EVAL`, as `defense_own_taunt_kept` is (`config.rs:318`, `476`, `678`), so the frozen baseline the quality gates measure against does not move (`config.rs:668-671`). A new ruling in the issue's block says a Unit standing in the backrow is priced once, as a Unit; R2380000's sentence about the Dormant Starship is edited to link it.\n\n## Where it lands\n- `crates/ai/src/evaluate.rs` (`material`), `crates/ai/src/config.rs` (`EvalWeights`, `AI_EVAL`, `GREEDY_EVAL`)\n- `crates/ai/tests/ai/ranged_flying.rs` or `crates/ai/tests/ai/evaluate.rs`\n- `spec/rulings/R<n>.md`, `spec/rulings/R2380000.md`, `spec/pending/<issue>.md`; SPEC \u00a79 (the practice AI), R1081000, R2249000\n\n## Acceptance criteria\n- [ ] On two copies of one board, Stratos (stinkyscape-068) in unit lane 1 on one and standing in backrow lane 1 on the other, `evaluate` under `AI_EVAL` gives the same score, with Stratos on the AI's side and again with it on the enemy's.\n- [ ] A Dormant Starship standing in the backrow is priced by its slumber price alone under `AI_EVAL`, with no backrow price on top.\n- [ ] A face-down Trap, a face-up Field Spell and a set card's grade counter in the backrow are priced as before.\n- [ ] Under `GREEDY_EVAL` every score is what it was.\n- [ ] The tests are named after the new ruling, which lists their file in `proven_in`; `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, `cargo fmt --check` and the smoke gate (`cargo jackioh gate`) pass.\n\n## Size and risks\nSmall in code, about 6 files and under 100 lines with the tests, but hard by CLAUDE.md rule 11, since it changes how the AI plays. Every board with a flyer or a Starship plays differently, so `cargo jackioh classify --base origin/main --claims` may ask for a pending fragment, and the change deserves the usual self-play check against the current AI. One case needs a decision in the ruling: an Animated backrow card that is standing as a Unit at the moment (R2280001; Rod of Ages, S #16, is an Animated Field Spell with Flying) is priced by the unit walk, by the backrow walk and by `animated_share`; the ruling should say which single price it takes, and a test should pin it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T13:12:48Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
