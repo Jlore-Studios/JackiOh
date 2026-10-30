@@ -1,14 +1,15 @@
-// State badges: Brittle (R385), tuned (R386), enchantments (B5 E39), and Animated (R383).
+// State badges: Brittle (R385), Temporary's count in a hand (#2437), tuned (R386), enchantments (B5 E39), and Animated (R383).
 // The board minion draws Brittle and Animated itself (keywordVisuals.ts, R438); `PileDepth` shows E21.
 // Shape plus accessible words, not color, lets faces fit inside buttons (B12).
 
-import { useState, type ReactElement } from "react";
+import { useState, type CSSProperties, type ReactElement } from "react";
 
 import { t, useLocale } from "../i18n/i18n.ts";
 import { PILE_WORDS, stateBadges, type StateBadge, type StateBadgeKind } from "./cardState.ts";
 import { listSeparator } from "./chinese.ts";
 import { STATE_BADGES_SMALL_MAX } from "./constants.ts";
 import { Icon } from "./icons.tsx";
+import { MARK_PALETTES, TEMPORARY_LAST_COLOR } from "./marks.ts";
 import type { FaceModel } from "./model.ts";
 import { STACK_TITLE, STACK_UNKNOWN_NAME, default as StackSheet } from "./wheel/StackSheet.tsx";
 
@@ -18,11 +19,18 @@ export type CardStatesProps = { face: FaceModel; omit?: readonly StateBadgeKind[
 
 const NONE: readonly StateBadgeKind[] = [];
 
+/** #2437: the Temporary badge's disc, the fuchsia of a last count's aura (marks.ts), for cardstate.css. */
+const TEMPORARY_DISC = {
+  "--cf-temporary-rim": MARK_PALETTES[TEMPORARY_LAST_COLOR].rim,
+  "--cf-temporary-glow": MARK_PALETTES[TEMPORARY_LAST_COLOR].glow,
+} as CSSProperties;
+
 function Badge({ badge }: { badge: StateBadge }): ReactElement {
   return (
     <span
       className="cf-state"
       data-state={badge.kind}
+      style={badge.kind === "temporary" ? TEMPORARY_DISC : undefined}
       role="img"
       aria-label={badge.words}
       title={badge.words}

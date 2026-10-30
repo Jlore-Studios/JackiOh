@@ -8,7 +8,7 @@
 // Features:
 //  - No provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661); the patch bar below is the way back to the previous patch.
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
-//    for a Played vs held the server withholds until both its sides reach the floor (R654).
+//    for a Drawn vs not drawn the server withholds until both its sides reach the floor (R654, R2427000).
 //  - URL search params for shareable views.
 //  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
 //    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
@@ -136,10 +136,10 @@ type SortColumn =
   | "games"
   | "winRate"
   | "drawnWinRate"
+  | "drawnDelta"
   | "radiantWinRate"
   | "normalWinRate"
-  | "playRate"
-  | "playedDelta";
+  | "playRate";
 type SortDirection = "asc" | "desc";
 
 const SORT_COLUMNS: readonly SortColumn[] = [
@@ -147,10 +147,10 @@ const SORT_COLUMNS: readonly SortColumn[] = [
   "games",
   "winRate",
   "drawnWinRate",
+  "drawnDelta",
   "radiantWinRate",
   "normalWinRate",
   "playRate",
-  "playedDelta",
 ] as const;
 
 const SORT_LABELS: Record<SortColumn, string> = {
@@ -158,10 +158,10 @@ const SORT_LABELS: Record<SortColumn, string> = {
   games: "Games",
   winRate: "Win rate",
   drawnWinRate: "When drawn",
+  drawnDelta: "Drawn vs not drawn",
   radiantWinRate: "Radiant",
   normalWinRate: "Normal",
   playRate: "Play rate",
-  playedDelta: "Played vs held",
 };
 
 function defaultDirection(col: SortColumn): SortDirection {
@@ -223,10 +223,10 @@ export default function StatsRoute(): ReactElement {
     games: true,
     winRate: true,
     drawnWinRate: true,
+    drawnDelta: true,
     radiantWinRate: true,
     normalWinRate: true,
     playRate: true,
-    playedDelta: true,
   });
 
   // Card stats response. R2125000: a revisit starts on the table these filters last read and reads it again behind it.
@@ -553,13 +553,15 @@ export default function StatsRoute(): ReactElement {
         if (a.games !== b.games) return (a.games - b.games) * flip;
       } else if (sortCol === "playRate") {
         if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
-      } else if (sortCol === "playedDelta") {
+      } else if (sortCol === "drawnDelta") {
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        if (a.playedDelta !== null && b.playedDelta === null) return -1;
-        if (a.playedDelta === null && b.playedDelta !== null) return 1;
-        if (a.playedDelta !== null && b.playedDelta !== null && a.playedDelta !== b.playedDelta) {
-          return (a.playedDelta - b.playedDelta) * flip;
+        const aDelta = a.drawnDelta ?? null;
+        const bDelta = b.drawnDelta ?? null;
+        if (aDelta !== null && bDelta === null) return -1;
+        if (aDelta === null && bDelta !== null) return 1;
+        if (aDelta !== null && bDelta !== null && aDelta !== bDelta) {
+          return (aDelta - bDelta) * flip;
         }
       } else if (sortCol === "name") {
         const diff = compareNames(a, b);
@@ -880,6 +882,14 @@ export default function StatsRoute(): ReactElement {
                   <label className="stats-col-toggle">
                     <input
                       type="checkbox"
+                      checked={visibleCols.drawnDelta}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, drawnDelta: e.target.checked }))}
+                    />
+                    {t("Drawn vs not drawn")}
+                  </label>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
                       checked={visibleCols.radiantWinRate}
                       onChange={(e) => setVisibleCols((c) => ({ ...c, radiantWinRate: e.target.checked }))}
                     />
@@ -900,14 +910,6 @@ export default function StatsRoute(): ReactElement {
                       onChange={(e) => setVisibleCols((c) => ({ ...c, playRate: e.target.checked }))}
                     />
                     {t("Play rate")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.playedDelta}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, playedDelta: e.target.checked }))}
-                    />
-                    {t("Played vs held")}
                   </label>
                 </div>
               )}
@@ -1035,6 +1037,23 @@ export default function StatsRoute(): ReactElement {
                           {t("When drawn")} {sortCol === "drawnWinRate" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
+                      {visibleCols.drawnDelta && (
+                        <th
+                          scope="col"
+                          className="stats-th stats-th--sortable"
+                          aria-sort={sortCol === "drawnDelta" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          onClick={() => handleSort("drawnDelta")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSort("drawnDelta");
+                            }
+                          }}
+                          tabIndex={0}
+                        >
+                          {t("Drawn vs not drawn")} {sortCol === "drawnDelta" && (sortDir === "asc" ? "↑" : "↓")}
+                        </th>
+                      )}
                       {visibleCols.radiantWinRate && (
                         <th
                           scope="col"
@@ -1084,23 +1103,6 @@ export default function StatsRoute(): ReactElement {
                           tabIndex={0}
                         >
                           {t("Play rate")} {sortCol === "playRate" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
-                      {visibleCols.playedDelta && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "playedDelta" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("playedDelta")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("playedDelta");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Played vs held")} {sortCol === "playedDelta" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                     </tr>
@@ -1158,6 +1160,20 @@ export default function StatsRoute(): ReactElement {
                                 : "—"}
                             </td>
                           )}
+                          {visibleCols.drawnDelta && (
+                            <td className="stats-td">
+                              {card.hasEnoughGames && typeof card.drawnDelta === "number" ? (
+                                <span>
+                                  {formatPlayedDelta(card.drawnDelta)}{" "}
+                                  <span className="stats-sample-hint">
+                                    ({card.drawnGames} / {card.notDrawnGames ?? 0})
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="stats-not-enough">{t("not enough data")}</span>
+                              )}
+                            </td>
+                          )}
                           {visibleCols.radiantWinRate && (
                             <td className="stats-td">
                               {radiantRate !== null ? `${Math.round(radiantRate * 100)}%` : "—"}
@@ -1170,20 +1186,6 @@ export default function StatsRoute(): ReactElement {
                           )}
                           {visibleCols.playRate && (
                             <td className="stats-td">{`${Math.round(card.playRate * 100)}%`}</td>
-                          )}
-                          {visibleCols.playedDelta && (
-                            <td className="stats-td">
-                              {card.hasEnoughGames && card.playedDelta !== null ? (
-                                <span>
-                                  {formatPlayedDelta(card.playedDelta)}{" "}
-                                  <span className="stats-sample-hint">
-                                    ({card.playedGames} / {card.drawnNotPlayedGames})
-                                  </span>
-                                </span>
-                              ) : (
-                                <span className="stats-not-enough">{t("not enough data")}</span>
-                              )}
-                            </td>
                           )}
                         </tr>
                       );

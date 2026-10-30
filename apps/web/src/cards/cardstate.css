@@ -90,6 +90,11 @@
   background: radial-gradient(circle, #8a7bd8 0%, #261b5c 100%);
 }
 
+/* #2437: Temporary, the hourglass and the count left on a fuchsia disc: marks.ts's palette, handed in by CardStates.tsx. */
+.cf .cf-state[data-state="temporary"] {
+  background: radial-gradient(circle, var(--cf-temporary-rim) 0%, var(--cf-temporary-glow) 100%);
+}
+
 /* R1852000: a Starship, the comet and its piece count on a deep-space disc, brighter once launched. */
 .cf .cf-state[data-state="starship"] {
   background: radial-gradient(circle, #5b8cff 0%, #10183d 100%);
