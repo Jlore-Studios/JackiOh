@@ -1,12 +1,14 @@
 //! S T-dormant-starship Dormant Starship (SPEC §8.10 row T-dormant-starship; R349, R1839000, R1852000,
-//! R1852003–R1852007, R1857001, R1859013): (3) Unit, Legendary, 0/0, the set's one entry that is
-//! neither a numbered card nor a token, of the Stinkyscape set.
+//! R1852003–R1852007, R1857001, R1859013, R2521000): (3) Unit, Legendary, 0/0, the set's one entry that
+//! is neither a numbered card nor a token, of the Stinkyscape set.
 //!
 //! Base and Radiant: "Dormant until it launches. Your Starship Pieces that die fuse into this.
 //! \nActivate: Pay (3) to launch this." (R2249000: the rest is the Starship and Launch terms'.)
 //! Engine: its text is the engine's rules written out (R1859013), so its script is the hull alone:
 //! `StaticFlags { slumber, starshipHull }` on both faces, Dormant with no countdown (R1839000), its
-//! stats only what fuses into it (R77). The engine summons it when a piece dies (R1852000), exiles a
+//! stats only what fuses into it (R77). A dead piece fuses its base version (R2521000): the piece it
+//! was printed as, never a card fused into it, on its Radiant face if it was Radiant, with its printed
+//! numbers and none of its Buffs, Nerfs or Upgrades. The engine summons it when a piece dies (R1852000), exiles a
 //! Stack card played onto it (R1852007) and gives it its one ability, the launch for
 //! `STARSHIP_LAUNCH_COST` (`starship::launch_decl`, R1852003, moved by R1852006): a name from
 //! `STARSHIP_NAMES` (R1852004), its fused Cries, then its fused When launched. No token, so it reaches

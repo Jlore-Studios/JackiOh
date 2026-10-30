@@ -7,7 +7,9 @@
 //! C+ #73.1 Classic Golem's): a fresh exertion this turn, the rest of §4.2's restrictions still applying.
 //! Each kill grants one more attack, with no cap; a forced attack counts as a declared one does
 //! (R1849001's `afterAttack` fires for both). A hit on the hero, a target that lives, and a kill while
-//! defending (no `afterAttack` of its own) give nothing.
+//! defending (no `afterAttack` of its own) give nothing. The fresh exertion keeps its summoning sickness
+//! (`keepSick`, R2521002), unlike the Golem's: on its summon turn Rush lets it attack again a Unit only,
+//! the hero neither offered nor allowed (§6.1); on a later turn the extra attack may hit the hero.
 
 use jackioh_engine::prelude::*;
 
@@ -28,7 +30,10 @@ pub fn script() -> CardScripts {
             if !killed {
                 return Vec::new();
             }
-            vec![may_attack_again(json_as(json!({ "target": { "of": "self" } })))]
+            // R2521002: it may attack again, still summoning sick if it entered this turn.
+            vec![may_attack_again(json_as(
+                json!({ "target": { "of": "self" }, "keepSick": true }),
+            ))]
         })),
         ..Script::default()
     };
@@ -64,6 +69,46 @@ mod tests {
         }))
     }
 
+    /// p1 holds Tmack Trav (`radiant` its face) to play this turn; p2 has two Vanillas, in lanes 1 and 2.
+    fn in_hand(radiant: bool) -> Scenario {
+        crate::scenario(json!({
+            "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": crate::filler(4) },
+            "p2": { "hand": [FILLER], "field": [VANILLA, VANILLA], "library": crate::filler(4) },
+        }))
+    }
+
+    /// Whether `legal_actions` offers `attacker` an attack on `target`.
+    fn offers(s: &Scenario, attacker: &CardInstance, target: &str) -> bool {
+        legal_actions(s.state(), P1).iter().any(|action| {
+            matches!(
+                action,
+                ActionBody::Attack { attacker_id, target_id, .. }
+                    if *attacker_id == attacker.id && target_id == target
+            )
+        })
+    }
+
+    /// R2521002: played this turn, its kill frees it to attack a Unit again, never the hero.
+    fn r2521002_summon_turn(radiant: bool) {
+        let mut s = in_hand(radiant);
+        s.play(ID, json!({ "zone": 1 }));
+        let tmack = s.unit_at(P1, 1);
+        s.attack(&tmack, s.unit_at(P2, 1));
+        assert!(s.unit(P2, 1).is_none(), "the Vanilla died");
+        assert!(!s.card(&tmack.id).exertion.attacked, "a fresh exertion");
+        assert_eq!(s.card(&tmack.id).summoned_turn, Some(s.state().turn), "still summoning sick");
+        // The hero is neither offered nor allowed (it was offered `hero-p2` before #2521)...
+        assert!(!offers(&s, &tmack, "hero-p2"));
+        s.expect_refused_with(|s| s.attack(&tmack, "hero"), "Rush cannot hit the hero");
+        // ...an enemy Unit is.
+        let next = s.unit_at(P2, 2);
+        assert!(offers(&s, &tmack, &next.id));
+        s.attack(&tmack, &next);
+        assert!(s.unit(P2, 2).is_none(), "the second Vanilla died");
+        s.expect_health(P2, HERO_HEALTH);
+        s.expect_refused(|s| s.attack(&tmack, "hero"));
+    }
+
     mod base {
         use super::*;
 
@@ -81,16 +126,33 @@ mod tests {
 
         #[test]
         fn has_rush() {
-            let mut s = crate::scenario(json!({
-                "p1": { "hand": [ID, FILLER], "library": crate::filler(4) },
-                "p2": { "hand": [FILLER], "field": [VANILLA], "library": crate::filler(4) },
-            }));
+            let mut s = in_hand(false);
             s.play(ID, json!({ "zone": 1 }));
             let tmack = s.unit_at(P1, 1);
             assert!(has_keyword(&s.stats(&tmack).keywords, KeywordKind::Rush));
-            // Rush: a Unit, not the hero, the turn it arrives (§6.1); the kill lifts its sickness too (B5 E35).
+            // Rush: a Unit, not the hero, the turn it arrives (§6.1).
             s.expect_refused(|s| s.attack(&tmack, "hero"));
             s.attack(&tmack, s.unit_at(P2, 1));
+            assert!(s.unit(P2, 1).is_none(), "the Vanilla died");
+        }
+
+        #[test]
+        fn r2521002_a_kill_on_its_summon_turn_frees_it_to_attack_a_unit_and_never_the_hero() {
+            r2521002_summon_turn(false);
+        }
+
+        #[test]
+        fn r2521002_on_a_later_turn_its_extra_attack_may_hit_the_hero() {
+            let mut s = in_hand(false);
+            s.play(ID, json!({ "zone": 1 }));
+            let tmack = s.unit_at(P1, 1);
+            s.attack(&tmack, s.unit_at(P2, 1));
+            s.end_turn();
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
+            s.attack(&tmack, s.unit_at(P2, 2));
+            assert!(s.unit(P2, 2).is_none(), "the second Vanilla died");
+            assert!(offers(&s, &tmack, "hero-p2"));
             s.attack(&tmack, "hero");
             s.expect_health(P2, HERO_HEALTH - 9);
         }
@@ -162,6 +224,11 @@ mod tests {
             s.attack(&tmack, s.unit_at(P2, 1));
             s.attack(&tmack, "hero");
             s.expect_health(P2, HERO_HEALTH - 18);
+        }
+
+        #[test]
+        fn r2521002_a_kill_on_its_summon_turn_frees_it_to_attack_a_unit_and_never_the_hero() {
+            r2521002_summon_turn(true);
         }
     }
 }
