@@ -47,7 +47,7 @@ use crate::state::{
 };
 use crate::wire::{
     AttackHealth, GameEvent, GameOverReason, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position, Row,
-    Winner, ZoneName, ZoneRef, has_keyword,
+    Winner, Zone, ZoneName, ZoneRef, has_keyword,
 };
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
@@ -785,6 +785,28 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
         })
         .collect();
 
+    // R2396000: the killers that answer "Whenever this destroys a Unit" even once gone, each as it stands
+    // now (one dying in this pass as its snapshot), kept for the dispatch of the kill it made.
+    let gone_killers: IndexMap<String, CardInstance> = if cause == DeathCause::Sacrificed {
+        IndexMap::new()
+    } else {
+        read.iter()
+            .filter_map(|card| card.snapshot.last_damaged_by.as_deref())
+            .filter_map(|killer_id| {
+                read.iter()
+                    .find(|other| other.unit.id == killer_id)
+                    .map(|other| other.snapshot.clone())
+                    .or_else(|| {
+                        find_instance(sink.state, killer_id)
+                            .filter(|killer| matches!(killer.zone, Zone::Field { .. }))
+                            .cloned()
+                    })
+            })
+            .filter(|killer| crate::triggers::answers_kills_when_gone(sink.state, killer))
+            .map(|killer| (killer.id.clone(), killer))
+            .collect()
+    };
+
     // R463: the cards collected together leave the field together — every one of them is off the field
     // before any lands — so a "would go to a graveyard" replacement (B5 E5) is read with all of them
     // gone: a Voidwalker dying in this pass has taken its aura with it for the cards beside it too.
@@ -859,6 +881,22 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             });
         }
         sink.state.counters.destroyed += 1;
+        // R42, R89: the unit whose damage instance was lethal. `damage.ts` credits a hit only as it
+        // takes the unit from above 0 health to 0 or less (or Poisonous marks it), and a destroy
+        // effect clears the credit as it marks (`effects/destroy.ts`), so a unit a spell destroyed or
+        // an aura starved after some unit damaged it has no killer. A sacrifice has none either.
+        let killer_id = if cause == DeathCause::Sacrificed {
+            None
+        } else {
+            card.snapshot.last_damaged_by.clone()
+        };
+        // R2396000: a killer that answers this kill even once gone waits for its dispatch.
+        if let Some(killer) = killer_id.as_ref().and_then(|id| gone_killers.get(id)) {
+            sink.state
+                .kill_snapshots
+                .get_or_insert_with(IndexMap::new)
+                .insert(card.unit.id.clone(), killer.clone());
+        }
         // R89: the event carries what the card was, since R78 resets the instance as it leaves.
         sink.events.push(GameEvent::Destroyed {
             instance_id: card.unit.id.clone(),
@@ -868,15 +906,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             controller: card.snapshot.controller,
             attack: card.attack,
             max_health: card.max_health,
-            // R42, R89: the unit whose damage instance was lethal. `damage.ts` credits a hit only as it
-            // takes the unit from above 0 health to 0 or less (or Poisonous marks it), and a destroy
-            // effect clears the credit as it marks (`effects/destroy.ts`), so a unit a spell destroyed or
-            // an aura starved after some unit damaged it has no killer. A sacrifice has none either.
-            killer_id: if cause == DeathCause::Sacrificed {
-                None
-            } else {
-                card.snapshot.last_damaged_by.clone()
-            },
+            killer_id,
             // R89: its face as it died, which a unit token that has ceased to exist can no longer tell
             // (C+ #12.8 Frostspatula remembers what it killed by definition and face, R409).
             radiant: if card.snapshot.radiant { Some(true) } else { None },
