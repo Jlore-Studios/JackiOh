@@ -7425,14 +7425,7 @@
       "interruptions": 0,
       "issue": 2279,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The replay keeper for AI Girlfriend's guarded script is filed under v0.5.8, but v0.5.9 is the newest shipped version and also ran the guarded script, so once this patch ships, v0.5.9 replays fold under the new unguarded script and diverge.",
-          "evidence": "crates/cards/patches/shipped.json ends at v0.5.9 (#2413, 55b2aaca6, part of the base 2d62a51 and merged into the branch at b85a5b820, after fix pass cd7dc1197 set the key to v0.5.8). docs/ADDING_CARDS.md \u00a73 says to add `(ID, the newest shipped version, fn)`. `covering()` (history.rs:483) picks the earliest kept version at or after the replay's version, so v0.5.9 gets None, which means the build's own script. The divergence is real: `acts_on_field` (zones.rs:1797) counts a backrow card as active, so the unguarded `forced_attacks_on` reaches `force_attack_instead`, which pushes AttackDeclared and fights the combat against a Girlfriend stuck in the backrow, where the guarded script returned no effects. The doc comment 'through v0.5.8' (c049_3_ai_girlfriend.rs:51) is wrong for the same reason. Fix: key it `v0.5.9` and rename the fn `script_v0_5_9`.",
-          "severity": "blocking",
-          "where": "crates/cards/src/history.rs:310"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
@@ -7440,7 +7433,7 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "strong",
       "run_id": "40991024140",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -7448,7 +7441,7 @@
       "started_at": "2026-10-30T02:19:34Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [],
         "builder": "muse",
