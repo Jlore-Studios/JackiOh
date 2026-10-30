@@ -763,8 +763,9 @@ keeps behind its opaque `EngineState` brand.
 wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarball into
 `.cache/bin/`; then `cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown` and
 `wasm-bindgen --target web --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`.
-`apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. On Vercel,
-`vercel.json`'s `installCommand` (`scripts/vercel-install.sh`) uses the build image's rustup (Vercel ships one under `/rust`), installs rustup (minimal profile) only where there is none, then the pinned toolchain, before `pnpm install`.
+`apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. The deploy jobs
+(`promote-production.yml`, `deploy-staging.yml`) install the pinned toolchain the way CI does before
+the web build.
 
 ### 10.3 The TS wrapper (`apps/web/src/wasm/index.ts`, part 21)
 
@@ -992,9 +993,10 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.
 - **Deploy**: `crates/server/Dockerfile` (multi-stage: `rust:1.97-slim` builds
   `cargo build --release -p jackioh-server`; `debian:bookworm-slim` with `ca-certificates` runs
-  `/app/jackioh-server release`), `render.yaml` `runtime: docker`, the same service name, region,
-  plan, health check (`/api/catalog` then, `/readyz` since #861) and env contract minus the Node-only keys (`NODE_VERSION`,
-  `CYPRESS_INSTALL_BINARY`). `NODE_ENV` is still read (E2E refusal).
+  `/app/jackioh-server release`), now run in a Cloudflare container behind the
+  site's Worker (`wrangler.jsonc`, `apps/edge`), with the same env contract minus the Node-only keys
+  (`NODE_VERSION`, `CYPRESS_INSTALL_BINARY`) and Render's `RENDER_GIT_COMMIT`, now `DEPLOYED_COMMIT`.
+  `NODE_ENV` is still read (E2E refusal).
 
 ## 12. The `jackioh` CLI
 

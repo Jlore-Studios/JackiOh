@@ -1,0 +1,10 @@
+{
+  // The Worker runs on Cloudflare's runtime, whose globals are @cloudflare/workers-types', not the
+  // DOM's or Node's. Its tests run under vitest (vitest.config.ts) on routing.ts alone, which needs
+  // only the fetch API both runtimes share.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src", "vitest.config.ts"]
+}

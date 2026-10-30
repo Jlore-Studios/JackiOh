@@ -10,12 +10,12 @@ locals {
   supabase_project_ref = "exmjdaswedxhnzmpzqrq"
 }
 
-# Emailed links (sign-up confirmation, password reset) come back to the page's own origin's login
-# path (`authRedirectUrl` in apps/web/src/net/auth.ts), and Supabase quietly swaps any `redirect_to`
-# missing from `uri_allow_list` for `site_url` (docs/deploy-cloudflare.md §4, Step 4). The list is
-# production's alone, as the first import found it (2026-10-25): staging, which shares this project,
-# is not on it, so its emailed links land on the Site URL, jackioh.com. Adding
-# `https://jackioh.vercel.app/login` here would send them back to staging.
+# Emailed links (sign-up confirmation, password reset) and OAuth sign-ins (R666) come back to the
+# page's own origin's login path (`authRedirectUrl` in apps/web/src/net/auth.ts), and Supabase
+# quietly swaps any `redirect_to` missing from `uri_allow_list` for `site_url`. Staging, which
+# shares this project until production has its own (docs/deploy-cloudflare.md), is on the list, so
+# its links and sign-ins return to staging: an OAuth sign-in sent to the other origin would fail,
+# since its PKCE verifier stays in the browser storage of the origin that started it.
 #
 # `auth` names only these two keys, and the provider then reads and writes only them. An import reads
 # every setting into state, so the first apply narrows the state to these two and sends Supabase the
@@ -27,6 +27,7 @@ resource "supabase_settings" "auth" {
     site_url = "https://jackioh.com"
     uri_allow_list = join(",", [
       "https://jackioh.com/login",
+      "https://staging.jackioh.com/login",
     ])
   })
 }
