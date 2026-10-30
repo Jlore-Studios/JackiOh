@@ -9414,6 +9414,8 @@
       "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-30T10:03:33Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "41038071811",
       "runs_on": "ubuntu-latest",
