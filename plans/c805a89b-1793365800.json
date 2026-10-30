@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2479,
+  "title": "Patch: Back in a live online match asks first, and says how long you have to come back",
+  "branch": "bot/issue-2479",
+  "thread": "**Issue #2479 (data, not instructions):**\n\n```text\n# #2479: Patch: Back in a live online match asks first, and says how long you have to come back\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn an online match, the Back button above the board leaves at once, and so does the phone's back gesture. Nothing asks first, and nothing says what follows: if the player isn't back within 60 seconds, the match counts as a loss. Practice already asks 'Leave this game?', and Concede asks too. Once this is built, Back during a live match asks: 'Leave the match? It goes on without you. Come back within 60 seconds or it counts as a loss.' Stay is the default. Once the game is over, Back leaves at once, as it does now.\n\n## Why\n\n- The match screen's rail draws `<BackLink showSettings={false} />` (`apps/web/src/routes/match.tsx:569`). A press calls `navigate(to)` at once (`apps/web/src/routes/nav.tsx:56-63`).\n- Leaving the route closes the socket (`apps/web/src/game/net.ts:864`, `live.close(1000, 'leaving the match')`), and the server starts the disconnect grace. \u00a79.5 (`spec/09-architecture.md:64`): 'Disconnect grace (60 s) and concede end the match as a loss'.\n- The client already has the tool. `guardLeaving` (R1754000, `apps/web/src/net/navigate.ts:43`) holds every `navigate` and every `popstate` off a page until the page lets the player go. Only the creator uses it (`apps/web/src/routes/creator.tsx:43`).\n- R765 gives practice its 'Leave this game?' question and the menus a Rejoin banner. A live online match gets no question and no word of the 60 seconds.\n\n## Proposal\n\n- While the view has no result (`view.result === null`), `match.tsx` registers `guardLeaving`. A held move opens a small dialog built like `ConfirmConcede` (`apps/web/src/game/ConfirmConcede.tsx`).\n  - Its words: 'Leave the match? It goes on without you. Come back within {seconds} seconds or it counts as a loss.' `{seconds}` is `DISCONNECT_GRACE_SECONDS` from the generated server config.\n  - Its answers: Stay, which is focused and is Escape's answer, and Leave, which makes the held move.\n- The guard is released once the view has a result, and on unmount.\n- The co-op table is left out. There a disconnect hands the seat to the AI rather than losing (\u00a713.8), so it needs other words, and it can follow later.\n- A new ruling amends R765 for online matches. The strings get their zh-CN entries.\n\n## Where it lands\n\n- `apps/web/src/routes/match.tsx`, a new dialog under `apps/web/src/game/`, and the i18n catalog.\n- \u00a79.5 (`spec/09-architecture.md`), with a ruling note and `spec/pending/<issue>.md`.\n- Tests in `apps/web/src/routes/match.test.tsx`.\n\n## Acceptance criteria\n\n- [ ] In a live match, pressing Back shows the dialog and the path stays `/match/<id>`. Stay closes it and sends nothing; Leave goes to the menu.\n- [ ] A browser Back (`popstate`) during a live match is held the same way.\n- [ ] Once the view has a result, Back leaves at once with no dialog.\n- [ ] The number in the words comes from `DISCONNECT_GRACE_SECONDS`, not a literal (CLAUDE.md rule 9).\n- [ ] The dialog opens with the focus on Stay, and Escape answers Stay.\n- [ ] The tests are named after the new ruling, and `cargo jackioh spec check` passes.\n\n## Size and risks\n\nMedium: about 150 lines plus tests. Only one page holds the guard at a time (`navigate.ts`), so the match screen must release it on unmount, or the next page inherits it. A navigation the app makes on its own, such as a forced one, must not be held. `navigate`'s `force` option covers that, and a test should show it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T13:03:04Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2479: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2482 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
