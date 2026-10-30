@@ -10058,7 +10058,7 @@
       "verdict_rounds": 1
     },
     "2500": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "difficulty_by": {
         "at": "2026-10-30T16:03:30Z",
@@ -10082,10 +10082,10 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
-      "provider": "muse",
-      "run_id": "41083432086",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-10-30T15:44:04Z",
+      "provider": "claude-8",
+      "run_id": "pending:b3853432-1793382396",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-30T17:47:04Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -10331,9 +10331,9 @@
   },
   "labels_synced": "10eb94bf70389cb1",
   "last_run": {
-    "at": "2026-10-30T17:26:59Z",
+    "at": "2026-10-30T17:47:04Z",
     "url": "",
-    "what": "revise #2493 on claude-4"
+    "what": "build #2500 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-30T17:28:25Z",
