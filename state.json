@@ -9943,6 +9943,7 @@
     "2497": {
       "action": "build",
       "asks": [],
+      "closeout": false,
       "died": 0,
       "failures": 1,
       "forced": false,
@@ -9962,6 +9963,32 @@
       ],
       "strikes": 1,
       "taken_asks": [],
+      "tree": {
+        "at": "2026-10-30T14:36:27Z",
+        "children": [
+          2501,
+          2502,
+          2503,
+          2504,
+          2505,
+          2506,
+          2507,
+          2508,
+          2509,
+          2510,
+          2512,
+          2513,
+          2514,
+          2515,
+          2516,
+          2517,
+          2518,
+          2519,
+          2520
+        ],
+        "mode": "fullsend",
+        "onto": "bot/issue-2497"
+      },
       "verdict_rounds": 0
     },
     "2498": {
