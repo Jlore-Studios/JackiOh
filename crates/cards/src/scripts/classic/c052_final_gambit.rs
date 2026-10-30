@@ -4,13 +4,13 @@
 //!            {heal} and draw {draw}." (10, 3)
 //!   Radiant: "… Then heal your hero {heal} and draw your deck." (20)
 //!   Engine:  a replacement at "would take lethal damage" (after Armor, multipliers and caps; this hit
-//!            alone, R44): the trap fires and the hit is cancelled, dealing nothing (R1704001); then the
+//!            alone, R44): the trap fires and the hit is canceled, dealing nothing (R1704001); then the
 //!            heal and the draws ("draw your deck" counts the deck as the step starts, R58). Fatigue
 //!            counts; losing health does not (R18). Either player's turn.
 //!
 //! The replacement is data (`Script.replacements`); its `then` step is owed on `state.work` and runs
 //! after the hit. A copy that stays on the field (fused into C+ #74's Field Trap) cancels one hit a
-//! turn (R1704001), so its follow-up's own fatigue cannot be cancelled for ever.
+//! turn (R1704001), so its follow-up's own fatigue cannot be canceled for ever.
 //!
 //! Through v0.4.0f it redirected the hit to the enemy hero as a new instance from the same source,
 //! through their Armor, multipliers and caps (§6.3 Redirect), and its step did nothing once that hit
@@ -71,7 +71,7 @@ fn deck_draws() -> DrawCount {
 }
 
 pub fn script() -> CardScripts {
-    // R1704001: the hit is cancelled.
+    // R1704001: the hit is canceled.
     let cancel = ReplacementInstead {
         cancel: Some(true),
         ..ReplacementInstead::default()
@@ -99,7 +99,7 @@ pub fn script_v0_4_0f() -> CardScripts {
 // C #52 Final Gambit — SPEC §8.6 row 52, BUILD M9 Classic row C 52: face-down (R33); fires at §4.4
 // step 4a when one hit alone would leave your hero at 0 or less, judged after Armor, multipliers and
 // caps (R44); fatigue counts, while losing health (R18) and set health (C #29) never open it; the hit
-// is cancelled and deals nothing (R1704001); then heal 10 and draw 3; a copy that stays on the field
+// is canceled and deals nothing (R1704001); then heal 10 and draw 3; a copy that stays on the field
 // cancels one hit a turn; radiant: heal 20 and draw your whole deck (R58), most of it burning (R317);
 // tuned numbers (heal, draw) read through `param()` (R386). `mod v0_4_0f` keeps the redirect to the
 // enemy hero, the kept script's (R767000).
@@ -207,13 +207,13 @@ mod tests {
             }
 
             #[test]
-            fn r1704001_cancelled_then_heal_10_draw_3() {
+            fn r1704001_canceled_then_heal_10_draw_3() {
                 crate::register_all();
                 let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4 }));
                 let gambit = s.card(GAMBIT).id.clone();
 
                 s.expect_events(json!(["attackDeclared", "trapFired", "healed"]));
-                // Cancelled: the hit deals nothing to either hero, and nothing is redirected.
+                // Canceled: the hit deals nothing to either hero, and nothing is redirected.
                 assert!(s.events().iter().map(js).all(|event| event["type"] != "redirected"));
                 assert!(s.events().iter().map(js).all(|event| event["type"] != "damage"));
                 s.expect_health(PlayerId::P2, 30);
@@ -288,7 +288,7 @@ mod tests {
                 }));
                 s.start_turn();
                 assert_eq!(fired(&s).len(), 1);
-                // The 1st fatigue (1) was cancelled; then heal 10 and draw 3 into the empty deck: fatigue 2, 3, 4.
+                // The 1st fatigue (1) was canceled; then heal 10 and draw 3 into the empty deck: fatigue 2, 3, 4.
                 assert!(hero_hits(&s, PlayerId::P2).is_empty());
                 assert_eq!(hero_hits(&s, PlayerId::P1), vec![2, 3, 4]);
                 s.expect_health(PlayerId::P2, 30);
@@ -349,7 +349,7 @@ mod tests {
             }
 
             #[test]
-            fn a_second_final_gambit_finds_no_lethal_hit_once_the_first_has_cancelled_it_and_stays_set() {
+            fn a_second_final_gambit_finds_no_lethal_hit_once_the_first_has_canceled_it_and_stays_set() {
                 crate::register_all();
                 let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4, "p1Backrow": [{ "def": GAMBIT }] }));
                 assert_eq!(fired(&s).len(), 1);
@@ -380,8 +380,8 @@ mod tests {
                 // Field Trap answers the hits below.
                 s.state_mut().players.p2.backrow[0] = None;
                 s.state_mut().players.p1.fatigue_count = 20;
-                // 4 at 4 health is lethal and cancelled; then heal 10 and draw 3 from an empty deck. The
-                // copy stays and has cancelled a hit this turn, so fatigue 21, lethal at 14, lands.
+                // 4 at 4 health is lethal and canceled; then heal 10 and draw 3 from an empty deck. The
+                // copy stays and has canceled a hit this turn, so fatigue 21, lethal at 14, lands.
                 s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
                 // C+ #74 fired as it fused the copy, and the copy, a trap in the backrow, fired once.
                 let copy_fired = fired(&s)
@@ -419,7 +419,7 @@ mod tests {
                 s.expect_health(PlayerId::P1, 14);
 
                 let thawed: GameState =
-                    serde_json::from_str(&serde_json::to_string(s.state()).expect("a state serialises")).expect("a state parses");
+                    serde_json::from_str(&serde_json::to_string(s.state()).expect("a state serializes")).expect("a state parses");
                 assert_eq!(&thawed, s.state());
                 // The whole follow-up ran: Hinder's draw-again and the two draws after it.
                 assert_eq!(s.state().players.p1.library.len(), 0);
@@ -473,7 +473,7 @@ mod tests {
             }
 
             #[test]
-            fn r1704001_cancelled_then_heal_20() {
+            fn r1704001_canceled_then_heal_20() {
                 crate::register_all();
                 let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4, "gambit": { "def": GAMBIT, "radiant": true } }));
                 assert_eq!(fired(&s).len(), 1);

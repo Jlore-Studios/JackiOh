@@ -304,13 +304,13 @@ mod r1843000_the_vote {
 
     #[test]
     fn r1843000_the_new_state_is_absent_until_used() {
-        // D3: a player who never voted nor fled serialises without either field, so no shipped game's
+        // D3: a player who never voted nor fled serializes without either field, so no shipped game's
         // state or hash moves.
-        let fresh = serde_json::to_value(create_player_state()).expect("a player serialises");
+        let fresh = serde_json::to_value(create_player_state()).expect("a player serializes");
         assert!(fresh.get("votes").is_none());
         assert!(fresh.get("fled").is_none());
         let s = table(json!({ "field": ["fx-1"] }), json!({ "field": ["fx-2"] }));
-        let state = serde_json::to_value(s.state()).expect("a state serialises");
+        let state = serde_json::to_value(s.state()).expect("a state serializes");
         for side in ["p1", "p2"] {
             assert!(state["players"][side].get("votes").is_none());
             assert!(state["players"][side].get("fled").is_none());

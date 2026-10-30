@@ -162,7 +162,7 @@ describe("the round trip", () => {
     expect(expectOk(decodeDeckCode(code, catalog, collection)).name).toBe(name);
   });
 
-  it("R255 a name is stored normalised and cut to DECK_NAME_MAX_LENGTH characters", () => {
+  it("R255 a name is stored normalized and cut to DECK_NAME_MAX_LENGTH characters", () => {
     const long = `  ${"x".repeat(DECK_NAME_MAX_LENGTH + 5)}  `;
     const decoded = expectOk(decodeDeckCode(encodeDeckCode(long, [], catalog), catalog, collection));
     expect(decoded.name).toBe("x".repeat(DECK_NAME_MAX_LENGTH));

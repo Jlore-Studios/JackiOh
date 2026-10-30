@@ -542,11 +542,11 @@ fn with_sink<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R)
 }
 
 /// TS's `deepValues` walk asserted that nothing reachable from a state fragment is a function. A
-/// Rust closure cannot be a field of a serialisable type, so the port asserts what that walk was
-/// for: the fragment is plain data, which serialises and reads back equal (§9.3).
+/// Rust closure cannot be a field of a serializable type, so the port asserts what that walk was
+/// for: the fragment is plain data, which serializes and reads back equal (§9.3).
 fn expect_plain_data<T: Serialize + DeserializeOwned + PartialEq + std::fmt::Debug>(value: &T) {
-    let json = serde_json::to_value(value).expect("serialisable");
-    let back: T = serde_json::from_value(json).expect("deserialisable");
+    let json = serde_json::to_value(value).expect("serializable");
+    let back: T = serde_json::from_value(json).expect("deserializable");
     assert_eq!(&back, value);
 }
 
@@ -1064,7 +1064,7 @@ mod prompts_s10_6_m3_t3 {
         // registers none — unlike `pauses.test.ts`, which supplies that wiring on the module's behalf
         // and so cannot notice it missing. R113 raises rather than dropping an item nobody can resume,
         // so a dropped registration turns every mid-list prompt into an error: assert the wiring, not
-        // just the behaviour.
+        // just the behavior.
         assert!(can_resume(&state, &owed.resume));
         let mut nobody = owed.resume.clone();
         nobody.hook = "__noSuchHook".to_string();

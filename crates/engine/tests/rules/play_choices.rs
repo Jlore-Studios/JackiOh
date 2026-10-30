@@ -93,7 +93,7 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// Records the selections and modes a play delivered, so "it travelled" is observable.
+/// Records the selections and modes a play delivered, so "it traveled" is observable.
 fn record_choices() -> Effect {
     Effect::new("pc:record", |ctx| {
         let Some(self_id) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
@@ -729,7 +729,7 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         assert_eq!(pending.player_id, PlayerId::P1);
         assert_eq!(pending.options.len(), 3);
         assert!(played.events.iter().any(|event| {
-            serde_json::to_value(event).expect("an event serialises")["type"] == "promptOpened"
+            serde_json::to_value(event).expect("an event serializes")["type"] == "promptOpened"
         }));
         // And a prompt is never something a `play` action could have answered up front.
         let key = only(pending.options.clone()).key;

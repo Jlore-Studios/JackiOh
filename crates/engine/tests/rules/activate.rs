@@ -2,7 +2,7 @@
 //! abilities, the `activate` action and its alias `activatePower`, the refusal that is also the list,
 //! the costs, the choices, the pauses, and the view.
 //!
-//! Every rule of B3.2 is pinned here by observable behaviour: what the action does to the board, what
+//! Every rule of B3.2 is pinned here by observable behavior: what the action does to the board, what
 //! `legalActions` offers, what `viewFor` shows, and what survives a prompt, a JSON round trip and a
 //! replay.
 

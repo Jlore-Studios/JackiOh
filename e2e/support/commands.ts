@@ -124,8 +124,8 @@ export type ActOptions = {
 
 export type PlayCardOptions = ActOptions & {
   /**
-   * Click the hand card where it can be seen rather than at its centre. On a phone a full hand fans
-   * out and overlaps (each card tilted, its right part under the next one), so the centre is often
+   * Click the hand card where it can be seen rather than at its center. On a phone a full hand fans
+   * out and overlaps (each card tilted, its right part under the next one), so the center is often
    * another card's, and a player taps the part that shows: `visiblePart` finds that part the way
    * the browser would hit-test a tap (`elementFromPoint`) and clicks there.
    */
@@ -372,7 +372,7 @@ Cypress.Commands.add("gameState", () => {
 /**
  * Setup shortcut only: `reduce` refuses illegal actions itself (SPEC §9.3), so dispatching is
  * never a way past the rules — but it is a way past the UI, so specs use it to reach a
- * pre-condition, never to exercise the behaviour under test.
+ * pre-condition, never to exercise the behavior under test.
  */
 Cypress.Commands.add("dispatchAction", (action: ActionInput) => {
   cy.jackioh().then((handle) => {

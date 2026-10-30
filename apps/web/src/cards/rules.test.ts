@@ -1,5 +1,5 @@
 // Polish 6, slice B: the rules-text tokenizer and the glossary, tested pure (docs/polish/6-cards.md,
-// Surface B `glossary.ts` / `rules.ts`, "Glossary terms", "Tokenizer", behaviours B10–B11).
+// Surface B `glossary.ts` / `rules.ts`, "Glossary terms", "Tokenizer", behaviors B10–B11).
 //
 // The rendered half of B10 (`RulesText` → `strong.cf-term[data-term]`) is in CardFace.test.tsx,
 // through the face that uses it.

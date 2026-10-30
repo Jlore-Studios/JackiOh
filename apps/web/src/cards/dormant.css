@@ -1,6 +1,6 @@
 /* A Dormant card's binding seal (#2435, R1839000; the drawings are DormantSeal.tsx). The numbers
    come from constants.ts (`DORMANT_GREY`, `DORMANT_DIM`, `DORMANT_PULSE_MS`, read through the
-   seal's custom properties, CLAUDE.md rule 9), and every colour from the palette (palette.css).
+   seal's custom properties, CLAUDE.md rule 9), and every color from the palette (palette.css).
    The seal sits at z 4 inside the minion's `.cf-scale`, before the state rail in the DOM, which
    paints over it; it never takes a pointer event.
 

@@ -44,7 +44,7 @@ export type KeywordVisual = {
   layer: KeywordLayer;
   /** 1 is drawn first and wins a capped slot over 2. Unique across the map. */
   priority: number;
-  /** The shape it reads by, in words (it never rests on colour alone). */
+  /** The shape it reads by, in words (it never rests on color alone). */
   shape: string;
   /** The loop, or `null` for a mark that holds still (Taunt's shield, the Divine Shield bubble, Armor's plate). */
   motion: KeywordMotion | null;
@@ -66,6 +66,9 @@ export const BRITTLE_CRACK_STAGES = 3;
 
 /** #2270: the Brittle count at which a card on the field crumbles at its next tick (R385); game/Card.tsx draws it a gray aura. */
 export const BRITTLE_LAST_COUNT = 1;
+
+/** #2437: the Temporary count at which a card in a hand is discarded at its owner's next end of turn (R637, R2179001); game/Card.tsx draws it a fuchsia aura. A plain Temporary is Temporary 1. */
+export const TEMPORARY_LAST_COUNT = 1;
 
 /** The effects layer (fx.css) draws Divine Shield's cocoon and its pulse (R200); the bubble here holds still. */
 export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
@@ -184,7 +187,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
   "Spell Damage": {
     layer: "veil",
     priority: 17,
-    shape: "an arcane rune circle with the bonus at its centre",
+    shape: "an arcane rune circle with the bonus at its center",
     motion: { keyframes: "kw-rune-turn", when: "always" },
     numbered: true,
   },
@@ -348,6 +351,21 @@ function numberOf(kind: KeywordKind, keywords: readonly Keyword[], source: Keywo
 /** R385's cracks: one at BRITTLE_CRACK_STAGES or more, the full web at 1. */
 export function brittleStage(count: number): number {
   return Math.min(BRITTLE_CRACK_STAGES, Math.max(1, BRITTLE_CRACK_STAGES + 1 - count));
+}
+
+/**
+ * #2437, R2179001: the count a card's keywords give its Temporary X: the largest of its Temporary entries,
+ * a plain one counting TEMPORARY_LAST_COUNT, as the engine's `temporary::temporary_number`; null with none.
+ * The engine writes the count left into the keyword (`layers::card_keywords`, `with_temporary_count`).
+ */
+export function temporaryLeft(keywords: readonly Keyword[]): number | null {
+  let most: number | null = null;
+  for (const keyword of keywords) {
+    if (keyword.kind !== "Temporary") continue;
+    const n = keyword.n ?? TEMPORARY_LAST_COUNT;
+    if (most === null || n > most) most = n;
+  }
+  return most;
 }
 
 /**

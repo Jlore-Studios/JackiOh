@@ -562,7 +562,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
     }
 
     #[test]
-    fn choose_target_offers_the_scope_it_names_labelled_and_fizzles_on_an_empty_scope_s6_3() {
+    fn choose_target_offers_the_scope_it_names_labeled_and_fizzles_on_an_empty_scope_s6_3() {
         // §10.6.
         let mut state = game("choose-target");
         let self_card = put(
@@ -593,7 +593,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             &state,
             json!({ "kind": "target", "prompt": "Choose a target", "min": 1, "max": 1 }),
         );
-        // Each option is labelled with the card's name, or, for a hero, whose it is to the chooser, and keyed by what
+        // Each option is labeled with the card's name, or, for a hero, whose it is to the chooser, and keyed by what
         // it selects, so two cards of one name are still two keys (§10.6: the key is what is sent back).
         assert_eq!(
             serde_json::to_value(&state.pending.as_ref().expect("a prompt").options).unwrap(),

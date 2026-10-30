@@ -254,7 +254,7 @@ mod r58_a_draw_that_casts_is_complete_once_its_cast_has_resolved {
         );
 
         let round: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("a state serialises"))
+            serde_json::from_value(serde_json::to_value(&state).expect("a state serializes"))
                 .expect("and parses");
         assert_eq!(hash_state(&round), hash_state(&state));
         let answer: Action = json_as(json!({

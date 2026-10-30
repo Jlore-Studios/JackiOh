@@ -257,17 +257,17 @@ export function DevDuosRoute(): ReactElement {
   const [status, setStatus] = useState<Status>({ kind: "loading" });
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     loadWasm().then(
       () => {
-        if (!cancelled) setStatus(start(params));
+        if (!canceled) setStatus(start(params));
       },
       (cause: unknown) => {
-        if (!cancelled) setStatus({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause) });
+        if (!canceled) setStatus({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause) });
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [params]);
 

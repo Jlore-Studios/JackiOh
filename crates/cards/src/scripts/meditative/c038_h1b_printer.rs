@@ -229,10 +229,10 @@ mod tests {
                 let (id, def_id) = printed[0].clone();
                 // p2 reads a count of p1's hand, and no event of its stream names the card.
                 let view = s.view(P2);
-                let text = serde_json::to_string(&view).expect("the view serialises");
+                let text = serde_json::to_string(&view).expect("the view serializes");
                 assert!(!text.contains(&id), "p2 never reads the printed card's id");
                 assert!(!text.contains(&def_id), "p2 never reads {def_id}");
-                let mine = serde_json::to_string(&s.view(P1)).expect("the view serialises");
+                let mine = serde_json::to_string(&s.view(P1)).expect("the view serializes");
                 assert!(mine.contains(&id), "p1 reads its own card");
             }
         }

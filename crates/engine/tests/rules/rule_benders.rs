@@ -458,9 +458,9 @@ mod r943 {
             .expect("drawn");
         assert_eq!(drawn.created, Some(true), "a move keeps the mark");
         // A JSON round trip keeps it.
-        let value = serde_json::to_value(&drawn).expect("serialises");
+        let value = serde_json::to_value(&drawn).expect("serializes");
         assert_eq!(value.get("created"), Some(&json!(true)));
-        let back: CardInstance = serde_json::from_value(value).expect("deserialises");
+        let back: CardInstance = serde_json::from_value(value).expect("deserializes");
         assert_eq!(back.created, Some(true));
     }
 
@@ -683,7 +683,7 @@ mod r1956001 {
     }
 
     fn json_text(view: &PlayerView) -> String {
-        serde_json::to_string(view).expect("a view serialises")
+        serde_json::to_string(view).expect("a view serializes")
     }
 
     #[test]
@@ -873,8 +873,8 @@ mod r1956001 {
         assert_eq!(texts, golden::view_texts(&bare));
         assert!(!texts[0].contains("createdBy"));
         let back: GameState =
-            serde_json::from_value(serde_json::to_value(s.state()).expect("a state serialises"))
-                .expect("and deserialises");
+            serde_json::from_value(serde_json::to_value(s.state()).expect("a state serializes"))
+                .expect("and deserializes");
         assert_eq!(back.generators, s.state().generators);
     }
 }

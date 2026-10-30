@@ -8,8 +8,8 @@
 //!    account exists, so neither endpoint becomes an account-enumeration oracle. No sign-up is
 //!    brokered at all (SURFACE §11.3) and sign-in by email is for the E2E fixtures only, so R160 is
 //!    held by those two doors and by R1443's sign-in by username.
-//!  - **R194**: a session the provider has ended is not honoured here either.
-//!  - **R665**: an account with an authenticator app is honoured only at `aal2`.
+//!  - **R194**: a session the provider has ended is not honored here either.
+//!  - **R665**: an account with an authenticator app is honored only at `aal2`.
 //!  - **R1443**: a username signs in through the server, which asks the provider with the account's
 //!    address and never sends that address back.
 //!
@@ -791,14 +791,14 @@ mod r159_how_long_a_verified_email_stays_verified {
         let alice = h.token_for(ALICE);
 
         // "The cache can only ever shorten the path to a yes the provider already gave" — a `missing`
-        // is not a yes, so it writes nothing and the token is simply not honoured.
+        // is not a yes, so it writes nothing and the token is simply not honored.
         assert!(h.auth.verify(&alice).await.is_err());
         assert!(h.auth.verify(&alice).await.is_err());
         assert_eq!(h.gotrue.total(), 2);
     }
 }
 
-// R194: a session the provider has ended is not honoured here either
+// R194: a session the provider has ended is not honored here either
 
 /// The provider with `/auth/v1/user` scripted (R194's session check) and the admin lookup counted.
 async fn with_sessions(user: impl Fn(&str) -> UserReply + Send + Sync + 'static) -> Harness {
@@ -902,7 +902,7 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
     }
 
     #[tokio::test]
-    async fn r194_never_honours_a_token_on_another_users_answer() {
+    async fn r194_never_honors_a_token_on_another_users_answer() {
         let h = with_sessions(|_| UserReply::Live(confirmed_user(BOB))).await;
         let token = h.session_token_for(ALICE, "session-a");
         assert!(h.auth.verify(&token).await.is_err());
@@ -1477,7 +1477,7 @@ mod api_profile_reports_identity_and_the_ladder_record {
     }
 }
 
-// R665: an account with an authenticator app is honoured only at `aal2`
+// R665: an account with an authenticator app is honored only at `aal2`
 
 /// R665 — two-step sign-in: an account with an authenticator app needs an aal2 token.
 mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_token {
@@ -1508,7 +1508,7 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
     }
 
     #[tokio::test]
-    async fn r665_an_account_without_a_factor_is_unchanged_aal1_or_no_aal_claim_at_all_is_honoured() {
+    async fn r665_an_account_without_a_factor_is_unchanged_aal1_or_no_aal_claim_at_all_is_honored() {
         let h = Harness::new().await;
         assert_eq!(
             h.auth

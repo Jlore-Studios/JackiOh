@@ -113,20 +113,20 @@ mod script_after_attack {
         );
         assert_eq!(notes(sink.state), vec!["after:hero-p2::true:true:field"]);
 
-        let mut cancelled = playing("dc-after-cancelled");
+        let mut canceled = playing("dc-after-cancelled");
         let idle = put(
-            &mut cancelled,
+            &mut canceled,
             &veteran.id,
             slot(P1, Row::Units, 1),
             Default::default(),
         );
         put(
-            &mut cancelled,
+            &mut canceled,
             &pawn.id,
             slot(P2, Row::Backrow, 1),
             Default::default(),
         );
-        let mut game = recorder(&cancelled);
+        let mut game = recorder(&canceled);
         game.play(input(json!({
             "type": "attack", "attackerId": idle.id, "targetId": "hero-p2", "playerId": "p1"
         })));

@@ -156,7 +156,7 @@ fn r747000_a_seats_skill_is_optional_on_the_wire() {
     );
     // A seat that sets none writes none, so a record written before the knob reads back unchanged.
     assert_eq!(
-        serde_json::to_value(bare).expect("serialises"),
+        serde_json::to_value(bare).expect("serializes"),
         json!({ "kind": "ai" })
     );
 
@@ -170,7 +170,7 @@ fn r747000_a_seats_skill_is_optional_on_the_wire() {
         }
     );
     assert_eq!(
-        serde_json::to_value(skilled).expect("serialises"),
+        serde_json::to_value(skilled).expect("serializes"),
         json!({ "kind": "ai", "skill": 0.25 })
     );
 }

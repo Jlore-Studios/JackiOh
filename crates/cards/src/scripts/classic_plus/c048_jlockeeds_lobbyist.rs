@@ -9,7 +9,7 @@
 //!            which the Radiant face drops. With 0 attack it never attacks. Tunes: none."
 //!
 //! The restriction is #65.1's `neverDefense` flag, which the switch action, `legalActions` and a switch
-//! made as an effect all honour (R20). The Death's pool is one tag (R278); `addRandomFromCatalog` leaves
+//! made as an effect all honor (R20). The Death's pool is one tag (R278); `addRandomFromCatalog` leaves
 //! out the card running the hook by its def id (R387), and puts the (0) price on a card only once it is
 //! in the hand, so a burned one keeps none (§2.4, R4).
 
@@ -247,7 +247,7 @@ mod tests {
             let mut s = board(Board::default());
             let id = kill_lobbyist(&mut s).unwrap_or_default();
             let theirs = s.view(P2);
-            assert!(!serde_json::to_string(&theirs).expect("serialises").contains(&format!("\"{id}\"")));
+            assert!(!serde_json::to_string(&theirs).expect("serializes").contains(&format!("\"{id}\"")));
             let added = theirs
                 .events
                 .iter()

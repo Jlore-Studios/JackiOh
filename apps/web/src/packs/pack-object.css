@@ -1,5 +1,5 @@
 /* The pack as a physical object (#1663, PackObject.tsx): a foil wrapper crimped at the top and the
-   bottom, the set's emblem and colours (custom properties per `data-pack`), a sheen that follows the
+   bottom, the set's emblem and colors (custom properties per `data-pack`), a sheen that follows the
    pointer, a slight tilt toward it, a press and a tear. Every @keyframes moves only transform and
    opacity (PackObject.test.tsx holds this sheet and packs.css to that); the pointer moves the sheen and
    the tilt by transform from `--pack-px` and `--pack-py` (0 to 1 across the face, 0.5 at rest), and the
@@ -31,7 +31,7 @@
   width: min(40vw, 12rem);
 }
 
-/* ---------------------------------------------------------------------------- colours per pack --- */
+/* ---------------------------------------------------------------------------- colors per pack --- */
 
 .pack-object[data-pack="Core"] {
   --pack-foil-a: #3b4a6e;

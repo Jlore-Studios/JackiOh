@@ -249,7 +249,7 @@ describe("the co-op replay screen", () => {
     expect(screen.getByTestId(duosTestid.board)).not.toBe(mounted);
     expect(screen.getByTestId(replayTestid.scrubber), "the controls outlive the board").toBe(scrubber);
 
-    // A cancelled pointer leaves the board where it is.
+    // A canceled pointer leaves the board where it is.
     fireEvent.pointerDown(scrubber);
     fireEvent.change(scrubber, { target: { value: "2" } });
     fireEvent.pointerCancel(scrubber);

@@ -535,7 +535,7 @@ fn gambit_script(amount: i32) -> Script {
     }
 }
 
-/// R1704001: `gambit_script`, cancelling the hit.
+/// R1704001: `gambit_script`, canceling the hit.
 fn cancel_gambit_script(amount: i32) -> Script {
     Script {
         replacements: vec![ReplacementDef {

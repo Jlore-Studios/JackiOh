@@ -90,10 +90,10 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// Dropshipping gave Brittle {brittle}; The Power to Punish's damage did not pierce; Spiritually 中国 did one
 /// of its three at random (R920); Radiant Saintess's Radiant Death radiated the hand; Book of Buff's base
 /// face could take a hand card; Claude's Datacenter added at its controller's end of turn; and KY's Test
-/// asked two-digit sums (R580) from v0.5.2's bank (R2179003). #2396's three ran theirs through v0.5.10c:
+/// asked two-digit sums (R580) from v0.5.2's bank (R2179003). #2396's three ran theirs through v0.5.11:
 /// Prem Panther drew and Boots on the Ground drew or Recruited only after an attack they survived, and CN
 /// Golem shuffled nothing when it died in the combat that killed (R2396000).
-/// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
+/// A card patch before them that changed a script's behavior kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -311,15 +311,15 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c042_kys_test::ID, "v0.5.2", c042_kys_test::script_v0_5_2),
     (
         c032_prem_panther::ID,
-        "v0.5.10c",
-        c032_prem_panther::script_v0_5_10c,
+        "v0.5.11",
+        c032_prem_panther::script_v0_5_11,
     ),
     (
         c013_boots_on_the_ground::ID,
-        "v0.5.10c",
-        c013_boots_on_the_ground::script_v0_5_10c,
+        "v0.5.11",
+        c013_boots_on_the_ground::script_v0_5_11,
     ),
-    (c095_1_cn_golem::ID, "v0.5.10c", c095_1_cn_golem::script_v0_5_10c),
+    (c095_1_cn_golem::ID, "v0.5.11", c095_1_cn_golem::script_v0_5_11),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -649,8 +649,8 @@ mod tests {
         let snapshot: CardDefs =
             serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
         assert_eq!(
-            serde_json::to_value(oldest.defs()).expect("serialises"),
-            serde_json::to_value(&snapshot).expect("serialises")
+            serde_json::to_value(oldest.defs()).expect("serializes"),
+            serde_json::to_value(&snapshot).expect("serializes")
         );
         assert!(
             std::ptr::eq(oldest, shipped_catalog("v0.1.0").expect("carried")),
@@ -787,8 +787,8 @@ mod tests {
         let snapshot_v0_1_0: CardDefs =
             serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
         assert_eq!(
-            serde_json::to_value(oldest).expect("serialises"),
-            serde_json::to_value(&snapshot_v0_1_0).expect("serialises")
+            serde_json::to_value(oldest).expect("serializes"),
+            serde_json::to_value(&snapshot_v0_1_0).expect("serializes")
         );
 
         // The newest is carried too, and v0.3.7b, the newest when this was written, is rebuilt as its
@@ -801,8 +801,8 @@ mod tests {
         let snapshot_v0_3_7b: CardDefs =
             serde_json::from_str(include_str!("../patches/v0.3.1.json")).expect("v0.3.1 reads as cards");
         assert_eq!(
-            serde_json::to_value(v0_3_7b).expect("serialises"),
-            serde_json::to_value(&snapshot_v0_3_7b).expect("serialises")
+            serde_json::to_value(v0_3_7b).expect("serializes"),
+            serde_json::to_value(&snapshot_v0_3_7b).expect("serializes")
         );
 
         assert!(catalog_defs_at("v0.0.0-unknown").is_none());

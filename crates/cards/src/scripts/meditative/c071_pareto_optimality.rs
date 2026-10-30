@@ -399,7 +399,7 @@ mod tests {
     #[test]
     fn the_judgement_survives_a_json_round_trip_and_replays_the_same() {
         let mut s = pareto_game(false);
-        let round: GameState = serde_json::from_value(js(s.state())).expect("deserialises");
+        let round: GameState = serde_json::from_value(js(s.state())).expect("deserializes");
         s.play(BAD, json!({}));
         let first = jackioh_engine::replay::hash_state(s.state());
         assert!(attacked(&s));

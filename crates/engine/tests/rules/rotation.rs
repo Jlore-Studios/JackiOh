@@ -292,7 +292,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(view.max_health, 6);
         assert_eq!(view.health, 5);
         assert_eq!(view.position, Position::Def);
-        // R171: only readiness does not travel across the centre line: the crossing is an entry this turn.
+        // R171: only readiness does not travel across the center line: the crossing is an entry this turn.
         assert_eq!(it.summoned_turn, Some(3));
         assert_eq!(
             serde_json::to_value(it.exertion).unwrap(),

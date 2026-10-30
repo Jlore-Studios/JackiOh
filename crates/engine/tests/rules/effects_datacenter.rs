@@ -383,9 +383,9 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
             radiant: false,
             controller: P1,
         };
-        let before = serde_json::to_string(&state).expect("serialises");
+        let before = serde_json::to_string(&state).expect("serializes");
         assert_eq!(field_spells_doomed(reader, FieldSpellSide::Any).len(), 2);
         assert_eq!(field_spells_doomed(reader, FieldSpellSide::Enemy).len(), 1);
-        assert_eq!(serde_json::to_string(&state).expect("serialises"), before);
+        assert_eq!(serde_json::to_string(&state).expect("serializes"), before);
     }
 }

@@ -662,7 +662,7 @@ mod tests {
 
     #[test]
     fn the_win_bonus_and_the_cap_shape_the_payout() {
-        // The shape #1333's table states, as behaviour: a win pays more than a loss even with no
+        // The shape #1333's table states, as behavior: a win pays more than a loss even with no
         // actions, and the cap binds.
         assert_eq!(game_xp(GameMode::Ladder, 0, true), i64::from(XP_WIN_BONUS));
         assert_eq!(game_xp(GameMode::Ladder, 0, false), 0);

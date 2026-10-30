@@ -215,7 +215,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r420_as_it_resolves_it_offers_easy_medium_and_hard_each_labelled_with_the_reward_rolled_from_its_list() {
+        fn r420_as_it_resolves_it_offers_easy_medium_and_hard_each_labeled_with_the_reward_rolled_from_its_list() {
             let s = cast("kys-test-offer", false, &[FILLER]);
             let pending = s.state().pending.clone().expect("the first prompt");
             assert_eq!(pending.kind, PromptKind::Mode);

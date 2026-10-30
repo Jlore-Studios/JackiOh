@@ -381,7 +381,7 @@ export function useAccount(): Account {
   useRenewalBeforeExpiry(account, reread);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const retry = (): void => {
       setAccount({ kind: "loading" });
       setAttempt((count) => count + 1);
@@ -389,10 +389,10 @@ export function useAccount(): Account {
 
     resolveAccount(retry)
       .then((next) => {
-        if (!cancelled) setAccount((previous) => settleAccount(previous, next, Date.now()));
+        if (!canceled) setAccount((previous) => settleAccount(previous, next, Date.now()));
       })
       .catch((cause: unknown) => {
-        if (!cancelled) setAccount((previous) => settleAccount(previous, errorAccount(cause, retry), Date.now()));
+        if (!canceled) setAccount((previous) => settleAccount(previous, errorAccount(cause, retry), Date.now()));
       });
 
     // Another tab signed out, signed in or renewed: read the account again. What is on screen
@@ -413,7 +413,7 @@ export function useAccount(): Account {
     window.addEventListener("pageshow", onPageShow);
 
     return () => {
-      cancelled = true;
+      canceled = true;
       window.removeEventListener("storage", onStorage);
       window.removeEventListener(ACCOUNT_CHANGED, onChanged);
       window.removeEventListener("pageshow", onPageShow);

@@ -111,7 +111,7 @@ describe("the offerer", () => {
 });
 
 describe("the seat that answers", () => {
-  it("R36 sees 'Your opponent offers a draw' as a labelled region beside the board, not a modal", () => {
+  it("R36 sees 'Your opponent offers a draw' as a labeled region beside the board, not a modal", () => {
     renderGame(view({ by: "p2", active: "p2", events: [OFFER_BY_P2] }), ANSWER);
     const offer = screen.getByTestId("draw-offer");
     expect(offer).toHaveAttribute("role", "region");

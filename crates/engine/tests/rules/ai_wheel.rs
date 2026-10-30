@@ -293,11 +293,11 @@ mod r1844000_the_autopilot_aura {
             "p2": { "hand": ["fx-8"], "library": filler(6) },
         }));
         s.play("fx-1", json!({ "zone": 1 })).end_turn();
-        let text = serde_json::to_string(s.state()).expect("serialises");
+        let text = serde_json::to_string(s.state()).expect("serializes");
         assert!(!text.contains("auraActions"), "no key, no hash change");
         assert!(!text.contains("paretoHint"), "no key, no hash change");
         for viewer in [P1, P2] {
-            let view = serde_json::to_string(&s.view(viewer)).expect("serialises");
+            let view = serde_json::to_string(&s.view(viewer)).expect("serializes");
             assert!(!view.contains("paretoOptimal"), "{viewer:?}");
         }
     }
@@ -358,8 +358,8 @@ mod r1844001_the_pareto_hint {
     fn r1844001_the_viewers_alone() {
         let mut s = hinting("aw-alone", json!(["fx-1", DEAR.id]), json!([]), json!(["fx-8"]));
         run(s.state_mut(), vec![pareto_hint()]);
-        let mine = serde_json::to_string(&s.view(P1)).expect("serialises");
-        let theirs = serde_json::to_string(&s.view(P2)).expect("serialises");
+        let mine = serde_json::to_string(&s.view(P1)).expect("serializes");
+        let theirs = serde_json::to_string(&s.view(P2)).expect("serializes");
         assert!(mine.contains("\"paretoOptimal\":true"));
         assert!(
             !theirs.contains("paretoOptimal"),

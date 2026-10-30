@@ -8,7 +8,7 @@
 //! these and do not redefine them.
 //!
 //! Field order follows TS's type declarations; JSON key order never matters to the engine, whose
-//! hash sorts keys (SURFACE §5.2). Presence matters: every `x?:` is an `Option` that serialises only
+//! hash sorts keys (SURFACE §5.2). Presence matters: every `x?:` is an `Option` that serializes only
 //! when set, and is `None` exactly where TS deletes the key (SURFACE §4.4.7).
 
 use indexmap::IndexMap;
@@ -1926,7 +1926,7 @@ pub struct UncoveredNote {
 
 /// B5 E1, R448: one play or cast between its announce and §10.5 step 4. `faceDown` is a card that
 /// will be set face-down (a Trap or Field Trap): while it waits in the resolving zone only `player`
-/// reads it (`view_for`). `countered` is set by the Counter that cancelled it (`effects::move_::counter_play`).
+/// reads it (`view_for`). `countered` is set by the Counter that canceled it (`effects::move_::counter_play`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",

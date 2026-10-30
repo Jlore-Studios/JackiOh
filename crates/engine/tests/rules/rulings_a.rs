@@ -1,6 +1,6 @@
 //! SPEC §11, rows R1 to R42 (R27 and R28 have their own subsystem test files): one test per row,
 //! named after the row, asserting what that row says against the engine. A "decide" row asserts the
-//! constant in `config.rs` and the behaviour it drives.
+//! constant in `config.rs` and the behavior it drives.
 //!
 //! Every fixture def and script is this file's own (BUILD §0, CLAUDE.md). A card a helper hands back
 //! is a copy: write through `edit` and re-read with `instance_in`.

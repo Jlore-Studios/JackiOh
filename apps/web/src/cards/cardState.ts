@@ -1,14 +1,15 @@
 // The per-card states a face draws beside its printed text (SPEC §10.8, patch v0.2.0): a Brittle count
-// (B3.3, R385), the enchantments riding the card (B5 E39), a card standing in a unit zone as a Unit
+// (B3.3, R385), a hand card's Temporary count (#2437, R637, R2179001), the enchantments riding the card (B5 E39), a card standing in a unit zone as a Unit
 // (B3.1, R383), a card Degrade or Upgrade changed (B3.4, R386, tuning.ts) and each open quest of a
 // quest line with its progress, "1/2" (Classic #90 In Too Deep, B5 E33, R404), with a staged quest's
 // stage, "2/3" (Stinkyscape's staged Quests, R1854000). Each is a badge on the
 // face — a glyph with the count where there is one, its words as the tooltip and the accessible name —
 // and a line in the inspect overlays, in the words below (R373, R432: "(N) Cost" the noun, "costs (N)"
-// the verb, so a floor is "can't cost less than (2)").
+// the verb, so a floor is "can't cost less than (2)"). A Quest card's rules box prints its stage and
+// its open quests in the same words (questFace.ts, R2450000).
 //
-// `stateBadges` lists a face's badges in the order the rail draws them: the Brittle count first (it is
-// the one that ends the card), then the open quests and the stage (what the card is doing), the tuned mark, the
+// `stateBadges` lists a face's badges in the order the rail draws them: the Brittle count first, then a
+// hand card's Temporary count (both end the card), then the open quests and the stage (what the card is doing), the tuned mark, the
 // enchantments and the animated mark. Everything
 // is read off the FaceModel, which read it off the view (CLAUDE.md rule 7); a face with none of them
 // has no badge at all.
@@ -17,12 +18,14 @@ import type { CardType, Enchantment, QuestView } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 import type { IconName } from "./icons.tsx";
+import { TEMPORARY_LAST_COUNT } from "./keywordVisuals.ts";
 import type { FaceModel } from "./model.ts";
 import { CHINESE_TERMS, readerTerms } from "./chinese.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, tuningSummary } from "./tuning.ts";
 
 export type StateBadgeKind =
   | "brittle"
+  | "temporary"
   | "quest"
   | "questStage"
   | "tuned"
@@ -54,6 +57,15 @@ export function brittleWords(count: number): string {
   return t("Brittle {n}: crumbles at 0", { n: count });
 }
 
+/** #2437: the Temporary badge's glyph, an hourglass in text presentation (U+FE0E), like DORMANT_GLYPH. */
+export const TEMPORARY_GLYPH = "\u231B\uFE0E";
+
+/** #2437, R637, R2179001: a Temporary card's badge words, with the count it has left in its owner's hand. */
+export function temporaryWords(count: number): string {
+  if (count > TEMPORARY_LAST_COUNT) return t("Temporary {n}: discarded after {n} of its owner's ends of turn", { n: count });
+  return t("Temporary 1: discarded at the end of its owner's turn");
+}
+
 /** R404: an open quest's progress against its goal, "1/2". */
 export function questProgress(quest: QuestView["open"][number]): string {
   return `${String(quest.progress)}/${String(quest.goal)}`;
@@ -81,19 +93,23 @@ export function currentStage(stages: readonly QuestStageView[]): { stage: QuestS
   return stage === undefined ? null : { stage, number: at + 1 };
 }
 
+/** R1854000, R1854004, R2450000: a stage named, "Stage 2 of 3, Comradery", with the turns left while the line waits to hear back with it. */
+export function stageTitle(number: number, of: number, name: string, wait?: number): string {
+  const words = { n: number, of, name };
+  if (wait === undefined) return t("Stage {n} of {of}, {name}", words);
+  if (wait <= 1) return t("Stage {n} of {of}, {name}, hearing back next turn", words);
+  return t("Stage {n} of {of}, {name}, hearing back in {turns} turns", { ...words, turns: wait });
+}
+
 /**
- * R1854000, R1854004: a staged line in words — "Stage 2 of 3: Comradery", "Stage 2 of 3: The Interview,
+ * R1854000, R1854004: a staged line in words — "Stage 2 of 3, Comradery", "Stage 2 of 3, The Interview,
  * hearing back in 2 turns", "Quest complete" — off the view's stages alone.
  */
 export function stageWords(stages: readonly QuestStageView[]): string {
   if (stages.length > 0 && stages.every((stage) => stage.state === "done")) return t("Quest complete");
   const found = currentStage(stages);
   if (found === null) return "";
-  const words = { n: found.number, of: stages.length, name: t(found.stage.name) };
-  const wait = found.stage.hearBack;
-  if (wait === undefined) return t("Stage {n} of {of}: {name}", words);
-  if (wait <= 1) return t("Stage {n} of {of}: {name}, hearing back next turn", words);
-  return t("Stage {n} of {of}: {name}, hearing back in {turns} turns", { ...words, turns: wait });
+  return stageTitle(found.number, stages.length, t(found.stage.name), found.stage.hearBack);
 }
 
 /**
@@ -122,7 +138,7 @@ export const FROZEN_WORDS = "Frozen: can't attack, switch position or use its Ac
 /** R1848000, R2246000, §6.1: what the badge of a unit Frozen forever says. */
 export const FROZEN_FOREVER_WORDS = "Frozen forever: can't attack, switch position or use its Activate, and never thaws";
 
-/** R1174000: the frost badge's glyph, drawn in text presentation (U+FE0E) so it takes the badge's colour. */
+/** R1174000: the frost badge's glyph, drawn in text presentation (U+FE0E) so it takes the badge's color. */
 export const FROZEN_GLYPH = "\u2744\uFE0E";
 
 /** R1839000, §6.1: what a Dormant card's badge says when no countdown will wake it. */
@@ -193,6 +209,17 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       icon: "brittle",
       words: brittleWords(brittle),
       data: { "data-brittle": String(brittle) },
+    });
+  }
+  // #2437: a hand card's Temporary count, beside the moon's pattern (R1839000); both it and Brittle end the card.
+  const temporary = face.temporary;
+  if (temporary !== undefined && temporary !== null) {
+    badges.push({
+      kind: "temporary",
+      text: `${TEMPORARY_GLYPH}${String(temporary)}`,
+      icon: null,
+      words: temporaryWords(temporary),
+      data: { "data-temporary": String(temporary) },
     });
   }
   for (const quest of face.quest?.open ?? []) {

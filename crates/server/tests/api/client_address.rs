@@ -171,7 +171,7 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
     rows.iter()
-        .map(|row| serde_json::to_value(row).expect("a row serialises"))
+        .map(|row| serde_json::to_value(row).expect("a row serializes"))
         .collect()
 }
 
@@ -933,7 +933,7 @@ mod r190_b12_the_api_forwarded_for_log {
         );
         assert!(log.forwarded().iter().all(|entry| entry.level == "info"));
 
-        let everything = serde_json::to_string(&log.entries()).expect("the log serialises");
+        let everything = serde_json::to_string(&log.entries()).expect("the log serializes");
         let mut addresses = chain.to_vec();
         addresses.extend(["198.51.100.64", "203.0.113.65", "203.0.113.66", PEER]);
         for address in addresses {

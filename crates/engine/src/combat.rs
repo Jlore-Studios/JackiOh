@@ -921,7 +921,7 @@ fn close_window(state: &mut GameState, id: &str) -> Option<DeclaredAttack> {
 /// (R83), which declared nothing. The attacker must still be the declarer's: p1 declared the attack,
 /// and a unit p2 now controls is not p1's to attack with. And the target must still be the
 /// attacker's enemy (R173 says the same of a forced attack). Otherwise the attack is over, like one
-/// My Pawn cancelled: no combat, and the exertion stays spent (R44). Hearthstone cancels an attack
+/// My Pawn canceled: no combat, and the exertion stays spent (R44). Hearthstone cancels an attack
 /// whose attacker or defender has left play.
 pub fn declared_attack_stands(state: &GameState, open: &DeclaredAttack) -> bool {
     if open.cancelled {
@@ -1046,7 +1046,7 @@ fn fight_declared(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, b
         return;
     }
     if !declared_attack_stands(sink.state, &open) {
-        // R1203, MD-E15: a Prime still on the field whose target left in the window is cancelled
+        // R1203, MD-E15: a Prime still on the field whose target left in the window is canceled
         // before any joiner musters, its exertion spent. Only a Prime takes this path.
         if let Some(prime) = find_instance(sink.state, &open.attacker_id)
             && is_active_on_field(sink.state, prime)
@@ -1116,7 +1116,7 @@ fn fight_declared(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, b
 /// R1202, R1203: the combat a replacement or rider parked (`attack_summon::run_owed`).
 ///
 /// A declared attack that still stands fights now; one whose target has left the field before its
-/// combat is cancelled (`attackCancelled`, MD-E15's shape — the exertion stays spent). A forced
+/// combat is canceled (`attackCancelled`, MD-E15's shape — the exertion stays spent). A forced
 /// attack fights when its attacker and its target still act since `since`. Then, when the
 /// substitute owes it, the bounce home — whether or not it fought.
 pub(crate) fn prime_combat(sink: &mut EngineSink<'_>, owed: &crate::attack_summon::OwedAttackSummon) {
@@ -1251,7 +1251,7 @@ pub fn declare_attack(
         Some(instance) => DamageTarget::Unit { instance },
     };
 
-    // Step 4's first sentence. R44 never gives this back, so a cancelled attack is gone either way.
+    // Step 4's first sentence. R44 never gives this back, so a canceled attack is gone either way.
     // R636: only a repeat attack writes `attacks`, so an ordinary exertion keeps its two-flag shape.
     // R1202: this is the declarer's exertion — Windfast's, whose substitute spends it without
     // emitting its own declaration.

@@ -53,6 +53,34 @@ where
     }
 }
 
+/// R2476000: the line each remembered mode is, as the base face prints it.
+const MODE_LINES: [(&str, &str); 2] = [
+    (END_OF_TURN, "End of turn: Lock a random enemy zone"),
+    (AFTER_PLAY, "After your opponent plays a Unit or Field Spell, Lock its zone"),
+];
+
+/// R2476000: the base face marks the line its play chose ("✓" after it), or, with none remembered (a
+/// Memory Leak that reached the field with no Cry), the dash after "Choose one", for it does nothing.
+/// On the field only, to both seats: the mode was chosen in a public play. R78 forgets it as it leaves.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let mode = ctx.self_.memory.get(MODE).and_then(Value::as_str);
+        let chosen = MODE_LINES.iter().find(|(name, _)| Some(*name) == mode);
+        vec![match chosen {
+            Some((_, line)) => PreviewValue { label: (*line).to_string(), value: 1, display: Some("✓".to_string()), ids: None },
+            None => PreviewValue {
+                label: "Choose one".to_string(),
+                value: 0,
+                display: Some(NOTHING_REMEMBERED.to_string()),
+                ids: None,
+            },
+        }]
+    })
+}
+
 pub fn script() -> CardScripts {
     let base = Script {
         modes: vec![ModeDecl {
@@ -68,6 +96,7 @@ pub fn script() -> CardScripts {
                 _ => vec![],
             }
         })),
+        preview: Some(preview()),
         ..memory_leak(|ctx, mode| recalled(ctx, MODE).is_some_and(|value| value.as_str() == Some(mode)))
     };
     let radiant = memory_leak(|_ctx, _mode| true);
@@ -369,6 +398,22 @@ mod tests {
                 assert_eq!(now.len(), 2);
                 assert!(now.contains(&json!({ "row": "units", "lane": free })));
             }
+        }
+    }
+
+    /// R2476000: the base face marks the line its play chose, to both seats; each mode marks its own.
+    #[test]
+    fn r2476000_the_base_face_marks_the_mode_it_remembers() {
+        for (mode, line) in [
+            ("endOfTurn", "End of turn: Lock a random enemy zone"),
+            ("afterPlay", "After your opponent plays a Unit or Field Spell, Lock its zone"),
+        ] {
+            crate::register_all();
+            let s = leak(Some(mode), json!({}));
+            let leak = s.card(LEAK).id.clone();
+            let marked = vec![(line.to_string(), 1, Some("✓".to_string()))];
+            assert_eq!(crate::preview_seen(&s, P1, &leak), marked, "{mode}");
+            assert_eq!(crate::preview_seen(&s, P2, &leak), marked, "{mode}");
         }
     }
 }

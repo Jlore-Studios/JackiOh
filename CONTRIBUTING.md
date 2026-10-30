@@ -12,7 +12,7 @@ For people and agents alike. This is a pointer page: the rules live in the files
 - `SPEC.md` and the notes in `spec/`: the only source of rules, cards and engine design.
 - `docs/ADDING_CARDS.md`, before any card work.
 - [`docs/issues-and-patches.md`](docs/issues-and-patches.md): how issues and pull requests are
-  titled and labelled, how patches are numbered, and how a patch split over several pull requests
+  titled and labeled, how patches are numbered, and how a patch split over several pull requests
   goes live.
 
 ## Issues
@@ -51,6 +51,9 @@ request. The `pr title` check fails a pull request whose title breaks these, the
   `--plays <ids>` for a card whose script or engine rule changed how it plays); CI's `rust
   (classify)` checks the claims and labels the pull request with its kind and tier. The version rules
   are in `docs/issues-and-patches.md`, Version numbers.
+- Write American English (color, behavior, center, canceled, serialize) in prose, comments, test
+  names and the client's words. A name on the wire or in storage keeps the spelling it shipped with;
+  rename one only in an issue of its own (#2445).
 
 ## Ruling numbers
 

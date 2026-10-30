@@ -605,7 +605,7 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
             .collect();
         assert!(added.len() >= 2);
         for event in &added {
-            let text = serde_json::to_string(event).expect("an event serialises");
+            let text = serde_json::to_string(event).expect("an event serializes");
             for name in ["ph-charger", "ph-big-body", "ph-tie", "ph-sleeper", "ph-quiet"] {
                 assert!(!text.contains(name));
             }

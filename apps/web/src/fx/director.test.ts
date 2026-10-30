@@ -94,7 +94,7 @@ function fakeVisibility() {
   };
 }
 
-/** Records canvas calls without assuming implementation details; `fills` and `stops` keep the colours painted (#1447). */
+/** Records canvas calls without assuming implementation details; `fills` and `stops` keep the colors painted (#1447). */
 function recordingContext(canvas: HTMLCanvasElement): {
   ctx: CanvasRenderingContext2D;
   calls: string[];
@@ -859,8 +859,8 @@ describe("B41 — bursts of a flash preset bloom at their origin", () => {
     const plain = play();
     const tinted = play(palette);
 
-    // The particles are drawn (jsdom gives them no sprites, so as arcs) only in the palette's colours,
-    // and the bloom's gradient takes its first colour as the core and its last as the glow.
+    // The particles are drawn (jsdom gives them no sprites, so as arcs) only in the palette's colors,
+    // and the bloom's gradient takes its first color as the core and its last as the glow.
     const particleFills = tinted.h.surface.fills.filter((fill): fill is string => typeof fill === "string");
     expect(particleFills.length).toBeGreaterThan(0);
     for (const fill of particleFills) expect(palette).toContain(fill);

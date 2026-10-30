@@ -257,7 +257,7 @@ fn owe_ai_turn(sink: &mut EngineSink<'_>, player: PlayerId, turn: i32) {
 /// what its action set off. The answer's own events are dispatched and the triggers they wake resolve
 /// first (§10.3: the interrupting response resolves to completion before the action it interrupted
 /// continues). What is owed after this item is the enclosing sequences' — My Pawn's own firing, the
-/// window, the combat it cancelled — and not the playout's to run, so the playout's `reduce`s, which
+/// window, the combat it canceled — and not the playout's to run, so the playout's `reduce`s, which
 /// settle, never see it (R117): it waits aside and comes back behind whatever the playout leaves owed.
 pub fn run_owed_ai_turn(sink: &mut EngineSink<'_>, item: &WorkItem) {
     let player = match item.resume.data.get("player").and_then(Value::as_str) {

@@ -276,9 +276,9 @@ resulting path, so nobody has to apply these by hand.
 | `T[]`, `readonly T[]` | `Vec<T>` | — |
 | `[A, B]` tuple | `(A, B)` | a 2-array, as TS |
 | `x?: T` (optional property) | `Option<T>` | `#[serde(default, skip_serializing_if = "Option::is_none")]` |
-| `x?: boolean` that TS writes as `false` on purpose (e.g. `faceUp`) | `Option<bool>` | as `x?:` — `Some(false)` serialises `false`, `None` is absent, exactly TS's three states |
+| `x?: boolean` that TS writes as `false` on purpose (e.g. `faceUp`) | `Option<bool>` | as `x?:` — `Some(false)` serializes `false`, `None` is absent, exactly TS's three states |
 | `x?: true` | `Option<bool>` holding only `Some(true)` | as `x?:` |
-| `x: T \| null` | `Option<T>` | **no** skip: serialises `null`, as TS |
+| `x: T \| null` | `Option<T>` | **no** skip: serializes `null`, as TS |
 | `Record<string, T>` / `{ [k: string]: T }` | `IndexMap<String, T>` (insertion order, as JS) | — |
 | `Record<PlayerId, T>` | `PerPlayer<T>` (§6.4) | `{ "p1": …, "p2": … }` |
 | `Partial<Record<PlayerId, T>>` | `PerPlayerOpt<T>` = `{ p1: Option<T>, p2: Option<T> }` with skip | — |
@@ -288,12 +288,12 @@ resulting path, so nobody has to apply these by hand.
 | `unknown` / `any` crossing JSON | `serde_json::Value` | — |
 | discriminated union `{ type: "x"; … } \| …` | `enum` | `#[serde(tag = "type", rename_all = "camelCase")]` |
 | union discriminated on another key (`kind`, `pick`, `z`) | `enum` | `#[serde(tag = "<that key>")]` |
-| `Effect` (TS: `{ kind, apply(ctx), expand?(ctx, memo) }`, a closure object) | `Effect` (§6.6) | never serialised |
-| a hook (TS: `(ctx) => Effect[]` and friends) | `Option<Hook>` / the typed hook aliases of §6.6 | never serialised |
+| `Effect` (TS: `{ kind, apply(ctx), expand?(ctx, memo) }`, a closure object) | `Effect` (§6.6) | never serialized |
+| a hook (TS: `(ctx) => Effect[]` and friends) | `Option<Hook>` / the typed hook aliases of §6.6 | never serialized |
 
 ### 4.4 Semantics that must survive the port exactly
 
-These are the places where a straightforward port silently changes behaviour. The golden traces
+These are the places where a straightforward port silently changes behavior. The golden traces
 (§13) catch every one, at the cost of a debugging session; follow the rule and there is none.
 
 1. **Sorting.** `Array.prototype.sort` is stable; so are `slice::sort` and `sort_by`. Never use
@@ -339,11 +339,11 @@ The client keeps its TypeScript. Whatever JSON the TS engine and server produced
 produce: the same keys, casing, discriminators, `null`s and absences. The golden traces (§13) prove it
 for state, views and events; the server's tests prove it for REST and WebSocket bodies.
 
-- Every serialised struct: `#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]` and
+- Every serialized struct: `#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]` and
   `#[serde(rename_all = "camelCase")]`.
-- Every serialised enum: as §4.3. Unit-variant string unions also derive
+- Every serialized enum: as §4.3. Unit-variant string unions also derive
   `Copy, Eq, Hash, PartialOrd, Ord`.
-- `PlayerId` is `enum PlayerId { P1, P2 }`, serialised `"p1"`/`"p2"`.
+- `PlayerId` is `enum PlayerId { P1, P2 }`, serialized `"p1"`/`"p2"`.
 - **The client's TS types are generated, not hand-written.** With `--features ts`, every type in
   `crates/engine/src/wire/` and every type reachable from `PlayerView`, `GameEvent`, `Action`,
   `CardDef`, `GameRecord` and `GameState` (the web's tests read the state's fields) derives `ts_rs::TS` with
@@ -366,7 +366,7 @@ because practice saves on players' devices store it (`apps/web/src/practice/core
 save that does not fold to its hash), `packages/cards/test/fixtures/01-hotseat-full-game.json` pins
 `"a798906b"`, and e2e specs 01, 13 and 22 compare browser and Node hashes:
 
-1. Serialise the state to `serde_json::Value`; remove the top-level keys `applied`, `opening` and
+1. Serialize the state to `serde_json::Value`; remove the top-level keys `applied`, `opening` and
    `generators` (the Created cards' generators, presentation only, R1956001).
 2. `canonical(v)`: a string, number, bool or null as `JSON.stringify` writes it (serde_json writes the
    same for integers and for the escapes `\" \\ \b \f \n \r \t \u00xx`, lower-case hex, non-ASCII
@@ -404,7 +404,7 @@ pub fn seats_swapped(state: &GameState) -> bool;
 pub fn summarize_game(args: &FoldArgs) -> Option<GameSummary>;
 pub fn registered_catalog() -> &'static CardDefs;                   // after jackioh_cards::register_all()
 
-pub struct ReduceResult {                                           // serialises as { state, events, error? }
+pub struct ReduceResult {                                           // serializes as { state, events, error? }
     pub state: GameState,
     pub events: Vec<GameEvent>,
     pub error: Option<String>,                                      // Some ⇔ refused; then `state` is the input, unchanged, and `events` is empty
@@ -1217,7 +1217,7 @@ map.ordered: IndexMap
 bag.data: IndexMap<String, serde_json::Value>
 error.style: Result<_, EngineError> with TS's message; panic only on invariants
 null.optional: Option + skip_serializing_if
-null.nullable: Option, serialised null
+null.nullable: Option, serialized null
 case.json: camelCase via serde rename_all
 case.rust: snake_case
 state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators

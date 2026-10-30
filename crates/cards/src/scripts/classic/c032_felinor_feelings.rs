@@ -552,14 +552,14 @@ mod tests {
                         false,
                     );
                     let bear = s.card(BEAR).clone();
-                    let before = serde_json::to_string(&s.view(P1).opponent.backrow).expect("views serialise");
+                    let before = serde_json::to_string(&s.view(P1).opponent.backrow).expect("views serialize");
                     assert!(!before.contains(BEAR));
 
                     s.play(FEELINGS, json!({ "targets": pick::instance(&bear) }));
 
-                    let mine = serde_json::to_string(&s.view(P1).you.backrow).expect("views serialise");
+                    let mine = serde_json::to_string(&s.view(P1).you.backrow).expect("views serialize");
                     assert!(mine.contains(BEAR));
-                    let theirs = serde_json::to_string(&s.view(P2).opponent.backrow).expect("views serialise");
+                    let theirs = serde_json::to_string(&s.view(P2).opponent.backrow).expect("views serialize");
                     assert!(!theirs.contains(BEAR));
                 });
             }
@@ -572,9 +572,9 @@ mod tests {
                     s.play(FEELINGS, json!({}));
 
                     assert!(s.state().pending.is_some());
-                    let pending = serde_json::to_string(&s.view(P1).pending).expect("views serialise");
+                    let pending = serde_json::to_string(&s.view(P1).pending).expect("views serialize");
                     assert!(pending.contains(&format!("\"{}\"", s.card(BEAR).id)));
-                    assert!(!serde_json::to_string(&s.view(P1)).expect("views serialise").contains(BEAR));
+                    assert!(!serde_json::to_string(&s.view(P1)).expect("views serialize").contains(BEAR));
                     let bear = s.card(BEAR).clone();
                     s.answer(pick::instance(&bear));
                     assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(BEAR.to_string()));

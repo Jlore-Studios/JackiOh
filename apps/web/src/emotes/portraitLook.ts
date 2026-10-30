@@ -1,6 +1,6 @@
-// The six portraits' colours and the places of their drifting motes (R1332). Every portrait is
+// The six portraits' colors and the places of their drifting motes (R1332). Every portrait is
 // drawn the same on the board, in its inspect view and in the deck builder's picker, so the look
-// is a table of colours and the motes a pure function of the portrait's id: no clock, no random.
+// is a table of colors and the motes a pure function of the portrait's id: no clock, no random.
 // The CSS that uses them is `portrait.css`; the component that sets them is `PortraitArt.tsx`.
 
 import type { PortraitId } from "@jackioh/shared";
@@ -15,7 +15,7 @@ import {
   PORTRAIT_MOTE_MIN_PCT,
 } from "./config.ts";
 
-/** One portrait's colours: the ground lit from its upper left, the light, the rim and the motes. */
+/** One portrait's colors: the ground lit from its upper left, the light, the rim and the motes. */
 export type PortraitLook = {
   /** The oval's own gradient background, light at the upper left to dark at the foot. */
   ground: readonly [string, string];

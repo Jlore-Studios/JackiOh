@@ -965,7 +965,7 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         assert_eq!(tags, vec!["Felinor", "Human"]);
         // R77's cap: 3 + 2 is 5, which is more than FUSE_COST_CAP, so the definition costs 4.
         assert_eq!(
-            serde_json::to_value(fused.cost).expect("a cost serialises"),
+            serde_json::to_value(fused.cost).expect("a cost serializes"),
             json!(FUSE_COST_CAP)
         );
 
@@ -1039,7 +1039,7 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
             .events
             .iter()
             .filter(|event| {
-                let kind = serde_json::to_value(event).expect("an event serialises")["type"].clone();
+                let kind = serde_json::to_value(event).expect("an event serializes")["type"].clone();
                 ZONE_EVENTS.iter().any(|zone_kind| kind == *zone_kind)
             })
             .cloned()
@@ -1049,7 +1049,7 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
             result_id.iter().cloned().collect::<Vec<_>>()
         );
         for event in &zone_events {
-            let named = serde_json::to_value(event).expect("an event serialises")["instanceId"].clone();
+            let named = serde_json::to_value(event).expect("an event serializes")["instanceId"].clone();
             assert!(!phantoms.iter().any(|id| named == id.as_str()));
         }
     }
@@ -1248,7 +1248,7 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
             json!({}),
         );
 
-        // The card's two faces share one hook and pass only the direction, so the radiant behaviour
+        // The card's two faces share one hook and pass only the direction, so the radiant behavior
         // has to come from `ctx.radiant`.
         let ran = run(
             &mut state,

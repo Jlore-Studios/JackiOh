@@ -28,7 +28,7 @@ pub fn script() -> CardScripts {
 
 // M #91.1 Windfurious Prime — SPEC §8.8 row 91.1, BUILD M10 row M 91-1: "its controller's
 // hand-or-deck pool is Uniform; the joiners attack first (in lane order); a declared attack whose
-// target has left the field before its combat is cancelled (exertion spent), attackCancelled is
+// target has left the field before its combat is canceled (exertion spent), attackCancelled is
 // emitted, and the others' window, too; a subset attacks if there are fewer zones, none if there
 // are no Units, and only those cast; they never return".
 //
@@ -179,9 +179,9 @@ mod tests {
             }
 
             #[test]
-            fn r1203_with_the_target_gone_the_remaining_attacks_are_cancelled_exertion_spent() {
+            fn r1203_with_the_target_gone_the_remaining_attacks_are_canceled_exertion_spent() {
                 // The first joiner kills the 1/1 Scarab: the second joiner and the Prime find no
-                // target and are cancelled, the Prime's exertion spent.
+                // target and are canceled, the Prime's exertion spent.
                 crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-gone",
@@ -192,7 +192,7 @@ mod tests {
                 let scarab = s.unit(P2, 1).unwrap().id;
                 s.attack(&prime, &scarab);
                 s.expect_in_zone(&scarab, "graveyard");
-                let cancelled: Vec<String> = s
+                let canceled: Vec<String> = s
                     .events()
                     .iter()
                     .filter_map(|event| match event {
@@ -200,7 +200,7 @@ mod tests {
                         _ => None,
                     })
                     .collect();
-                assert_eq!(cancelled, vec![prime.clone()], "the Prime's attack is cancelled");
+                assert_eq!(canceled, vec![prime.clone()], "the Prime's attack is canceled");
                 // Only the first joiner fought: the target was gone before the second's turn.
                 let fights = s
                     .events()

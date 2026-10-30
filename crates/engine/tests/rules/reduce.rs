@@ -355,7 +355,7 @@ mod reduce_m1_t3 {
     fn keeps_the_deck_lists_out_of_the_state_it_returns() {
         let state = playing("serializable");
         let round: GameState =
-            serde_json::from_str(&serde_json::to_string(&state).expect("serialises")).expect("parses");
+            serde_json::from_str(&serde_json::to_string(&state).expect("serializes")).expect("parses");
         assert_eq!(round, state);
         assert!(state.players.p1.library.len() + state.players.p1.hand.len() <= DECK_SIZE as usize);
         assert_eq!(vanilla_deck(DECK_SIZE, 1).len(), DECK_SIZE as usize);

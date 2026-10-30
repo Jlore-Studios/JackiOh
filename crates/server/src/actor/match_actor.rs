@@ -2993,7 +2993,7 @@ impl MatchActor {
     }
 
     /// The actor stops or the match is voided: every watcher's socket closes with `code` and
-    /// `reason`, the wait is cancelled, and nothing more is kept or taken.
+    /// `reason`, the wait is canceled, and nothing more is kept or taken.
     fn spectate_close(&self, code: u16, reason: &str) {
         let watchers = {
             let mut core = self.lock();

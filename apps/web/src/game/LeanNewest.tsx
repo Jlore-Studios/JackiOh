@@ -58,7 +58,7 @@ export type LeanSetPickerProps = {
   disabled?: boolean;
 };
 
-/** A labelled `<select>`: none, "newest", then every set that ships, with the note when one is picked. */
+/** A labeled `<select>`: none, "newest", then every set that ships, with the note when one is picked. */
 export function LeanSetPicker({ value, onChange, testid, disabled = false }: LeanSetPickerProps): ReactElement {
   const noteId = useId();
   return (

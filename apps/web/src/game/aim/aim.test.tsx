@@ -97,7 +97,7 @@ describe("R738 the aim this seat sends", () => {
     ).toEqual({ at: "hero", player: "p1" });
   });
 
-  it("R738 click-selecting an attacker sends its aim, hovering a target adds it, and cancelling sends null", () => {
+  it("R738 click-selecting an attacker sends its aim, hovering a target adds it, and canceling sends null", () => {
     const emit = vi.fn();
     render(<Game view={aimView()} legal={LEGAL} onAction={vi.fn()} aim={{ emit, opponent: null }} />);
     expect(emit).not.toHaveBeenCalled();
