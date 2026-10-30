@@ -48,9 +48,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9b the start-of-turn hook ran with the Animated backrow guard;
+/// R767000: through v0.5.10 the start-of-turn hook ran with the Animated backrow guard;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9b() -> CardScripts {
+pub fn script_v0_5_10() -> CardScripts {
     let guarded: Hook = hook(|ctx| {
         let animated = matches!(
             ctx.live_self().map(|me| &me.zone),
@@ -360,16 +360,16 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.9b and before, when it was an Animated
+        /// R767000: the script kept for the replays of v0.5.10 and before, when it was an Animated
         /// Field Spell whose forced attacks found no target from the backrow.
-        mod v0_5_9b {
+        mod v0_5_10 {
             use super::*;
 
             #[test]
-            fn r767000_a_game_on_v0_5_9b_folds_under_the_kept_script_a_girlfriend_left_in_the_backrow_draws_no_attack()
+            fn r767000_a_game_on_v0_5_10_folds_under_the_kept_script_a_girlfriend_left_in_the_backrow_draws_no_attack()
             {
                 crate::register_all();
-                jackioh_engine::with_shipped(crate::catalog_at("v0.5.9b"), || {
+                jackioh_engine::with_shipped(crate::catalog_at("v0.5.10"), || {
                     let mut s = scenario(json!({
                         "seed": "girlfriend-kept",
                         "p1": {
