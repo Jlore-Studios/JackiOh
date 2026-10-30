@@ -9330,6 +9330,7 @@
     "2474": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "ac895d5a931d9516fc506da68d505228487d985e",
       "ci_fixes": 1,
       "ci_reruns": {
         "45983656abbc3db245145dd844d0cc2b0d61f587": 1
@@ -9344,7 +9345,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-30T07:23:41Z",
+      "feedback_since": "2026-10-30T09:54:46Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2445,
@@ -9359,11 +9360,11 @@
       "run_id": "41036870893",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-30T09:54:46Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "claude"
