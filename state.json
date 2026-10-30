@@ -9912,7 +9912,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-30T21:45:49Z",
+      "feedback_since": "2026-10-30T22:14:14Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-30T22:02:28Z",
@@ -9935,11 +9935,11 @@
       "run_id": "41136767122",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-30T22:14:14Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [],
         "builder": "claude",
