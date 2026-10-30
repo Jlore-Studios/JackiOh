@@ -1145,6 +1145,7 @@ mod r1081000_flying_backrow {
             &mut state,
             may_attack_again(MayAttackAgainArgs {
                 target: json_as(json!({ "of": "instance", "instanceId": wing.id })),
+                keep_sick: None,
             }),
             P1,
         );

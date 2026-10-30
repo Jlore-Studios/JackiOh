@@ -65,9 +65,8 @@ pub fn refuse_own_activate(args: ActivationOfArgs) -> Effect {
 /// card's controller: the card is its `self`, on the face it wears, so the ability reads its own
 /// numbers and "your other permanents" are the card's others. No cost is paid and, without `spend_use`,
 /// no use is spent, its once-a-turn and a refusal of its own use (R1876000) are not read, and it is no
-/// play (R384). An
-/// ability that declares a target or a mode is never run, having no choice to run with; nor a card
-/// that does not act on the field (R13).
+/// play (R384). An ability that declares a target or a mode is never run, having no choice to run with;
+/// nor a card that does not act on the field (R13).
 ///
 /// R2521003: with `spend_use` the ability runs only while it has a use left this turn — its own
 /// count, as an `activate` reads it (`uses_allowed` against `ability_uses_this_turn`, B3.2 rules 1, 3
