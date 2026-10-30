@@ -9964,12 +9964,6 @@
         "tiers": {
           "muse": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-30T16:20:26Z",
-        "provider": "muse",
-        "sha": "8afd37751338c61df5d346ce92e4c121def58520",
-        "start": "aef4f41f504a190a5d707315aa9945f5b794fffb"
       }
     },
     "2497": {
