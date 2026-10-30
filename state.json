@@ -9465,7 +9465,7 @@
       }
     },
     "2420": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "died": 0,
       "difficulty": "medium",
@@ -9474,18 +9474,18 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2387,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-10-30T03:11:13Z",
       "round_tier": "medium",
-      "run_id": "40977252267",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:a7eb8035-1793329892",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-30T00:03:45Z",
+      "started_at": "2026-10-30T03:11:52Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -9735,9 +9735,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-30T02:58:25Z",
+    "at": "2026-10-30T03:11:52Z",
     "url": "",
-    "what": "revise #2407 on muse"
+    "what": "review #2420 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-30T02:56:33Z",
