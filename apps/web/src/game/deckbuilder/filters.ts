@@ -95,6 +95,8 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Drone Core",
   "Weapon",
   "Swarm",
+  // R2511000: Training Grounds #41 to #60, the Legacy cards.
+  "Legacy",
   // Issue #2521: the Stinkyscape set's five Faction cards, #95 and #159 to #162, which a deck may
   // hold. "Resource" is left out with "War Doctrine": only the six Resource tokens carry it.
   "Faction",

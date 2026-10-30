@@ -291,8 +291,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0068_v0_5_retcon.sql"),
     ),
     (
-        "0069_resource_and_faction_tags.sql",
-        include_str!("../../migrations/0069_resource_and_faction_tags.sql"),
+        "0069_legacy_tag.sql",
+        include_str!("../../migrations/0069_legacy_tag.sql"),
+    ),
+    (
+        "0070_resource_and_faction_tags.sql",
+        include_str!("../../migrations/0070_resource_and_faction_tags.sql"),
     ),
 ];
 

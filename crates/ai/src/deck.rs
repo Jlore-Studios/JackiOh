@@ -41,7 +41,6 @@ use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::catalog::pair_key;
 use jackioh_engine::config::MAX_MANA;
 use jackioh_engine::{
     CardDef, CardType, CatalogQueryArgs, Rng, SHIPPED_SETS, SetName, Tag, query, query_cost,
@@ -286,6 +285,10 @@ const TOKEN_TAG: Tag = Tag::Token;
 /// R817000: the tag a random deck holds at most `AI_DECK.maxQuickdraw` cards of, so never a theme.
 const QUICKDRAW_TAG: Tag = Tag::Quickdraw;
 
+/// R2511001: the Training Grounds Legacy cards' tag marks copies of Core cards, not a family that
+/// plays together, so it is never a theme.
+const LEGACY_TAG: Tag = Tag::Legacy;
+
 /// By queryCost (X → 0, embiggen → base).
 pub fn cost_bucket(def: &CardDef) -> CostBucket {
     let cost = query_cost(def);
@@ -354,12 +357,13 @@ pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
     targets
 }
 
-/// The tags with at least AI_DECK.minThemeSize cards among `defs`, sorted by name; never Token or Quickdraw (R817000).
+/// The tags with at least AI_DECK.minThemeSize cards among `defs`, sorted by name; never Token,
+/// Quickdraw (R817000) or Legacy (R2511001).
 fn theme_candidates(defs: &[&CardDef]) -> Vec<String> {
     let mut counts: IndexMap<String, i32> = IndexMap::new();
     for def in defs {
         for tag in &def.tags {
-            if *tag == TOKEN_TAG || *tag == QUICKDRAW_TAG {
+            if *tag == TOKEN_TAG || *tag == QUICKDRAW_TAG || *tag == LEGACY_TAG {
                 continue;
             }
             *counts.entry(tag.as_str().to_string()).or_insert(0) += 1;
@@ -573,16 +577,8 @@ fn narrow_leaning<'a>(
     lean: Option<SetName>,
 ) -> Vec<&'a CardDef> {
     let classes: Vec<usize> = remaining.iter().map(|def| class_of(def, theme, lean)).collect();
-    // R2195000: a Core card and its snapshot are one card to the floors, since dealing either takes the
-    // other out. A pair counts once, as the union of its classes (a snapshot shares its Core card's
-    // type and tags, so one class holds the other), and taking either card spends that entry.
-    let keys: Vec<&str> = remaining.iter().map(|def| pair_key(def)).collect();
-    let mut pair_class: IndexMap<&str, usize> = IndexMap::new();
-    for (key, class) in keys.iter().zip(&classes) {
-        *pair_class.entry(key).or_insert(0) |= class;
-    }
     let mut avail = [0; CLASSES];
-    for class in pair_class.values() {
+    for class in &classes {
         avail[*class] += 1;
     }
     // A floor short of cards owes only the cards it has left, so it takes every one of them.
@@ -605,25 +601,25 @@ fn narrow_leaning<'a>(
         if needed < slots_left {
             return remaining.to_vec();
         }
-        // Whether taking a card of `class` whose pair counts as `spent` keeps every floor in reach.
-        let mut takes: IndexMap<(usize, usize), bool> = IndexMap::new();
-        let mut keeps = |class: usize, spent: usize| {
-            *takes.entry((class, spent)).or_insert_with(|| {
-                let mut after = avail;
-                after[spent] -= 1;
-                let mut owed_after = owed;
-                for (at, bit) in FLOOR_BITS.into_iter().enumerate() {
-                    if class & bit != 0 {
-                        owed_after[at] = (owed_after[at] - 1).max(0);
-                    }
+        let mut takes = [false; CLASSES];
+        for (class, takes) in takes.iter_mut().enumerate() {
+            if avail[class] == 0 {
+                continue;
+            }
+            let mut after = avail;
+            after[class] -= 1;
+            let mut owed_after = owed;
+            for (at, bit) in FLOOR_BITS.into_iter().enumerate() {
+                if class & bit != 0 {
+                    owed_after[at] = (owed_after[at] - 1).max(0);
                 }
-                min_slots(owed_after, &after) == Some(needed - 1)
-            })
-        };
+            }
+            *takes = min_slots(owed_after, &after) == Some(needed - 1);
+        }
         return remaining
             .iter()
-            .zip(classes.iter().zip(&keys))
-            .filter(|(_, (class, key))| keeps(**class, pair_class[**key]))
+            .zip(&classes)
+            .filter(|(_, class)| takes[**class])
             .map(|(def, _)| *def)
             .collect();
     }
@@ -703,14 +699,11 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         );
     }
 
-    // R2195000: a deck holds a Core card or its Training Grounds snapshot, so an included card keeps
-    // the other of its pair out.
-    let included_pairs: IndexSet<&str> = include_defs.iter().map(|def| pair_key(def)).collect();
     let pool: Vec<&CardDef> = every
         .iter()
         .copied()
         .filter(|def| {
-            !banned.contains(&def.id) && !included_pairs.contains(pair_key(def)) && !gated.contains(&def.set)
+            !banned.contains(&def.id) && !include_ids.contains(&def.id) && !gated.contains(&def.set)
         })
         .collect();
     if ((include_defs.len() + pool.len()) as i32) < size {
@@ -853,8 +846,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         };
         deck.push(chosen);
         tally.count(chosen);
-        // R2195000: the card dealt, and the other of its pair if it has one.
-        remaining.retain(|def| pair_key(def) != pair_key(chosen));
+        remaining.retain(|def| def.id != chosen.id);
     }
 
     TracedAiDeck {

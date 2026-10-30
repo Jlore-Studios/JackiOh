@@ -3953,87 +3953,87 @@
     "radiant": "将一张随机光辉牌置入你的手牌。"
   },
   "traininggrounds-041": {
-    "name": "偏执者",
+    "name": "传统：偏执者",
     "base": "战吼：消灭一个敌方非人类单位。",
     "radiant": "战吼：消灭所有敌方非人类单位。"
   },
   "traininggrounds-042": {
-    "name": "囤积",
+    "name": "传统：囤积",
     "base": "抽{draw}张牌。为你的英雄恢复{heal}点生命值。",
     "radiant": "抽{draw}张牌。为你的英雄恢复{heal}点生命值。"
   },
   "traininggrounds-043": {
-    "name": "白板先生",
+    "name": "传统：白板先生",
     "base": "",
     "radiant": ""
   },
   "traininggrounds-044": {
-    "name": "复制猫族",
+    "name": "传统：复制猫族",
     "base": "战吼：召唤一个此单位的复制。",
     "radiant": "战吼：召唤一个此单位的复制。"
   },
   "traininggrounds-045": {
-    "name": "Jlockeed军火",
+    "name": "传统：Jlockeed军火",
     "base": "光环：你的单位拥有+{attack}攻击力、突袭和先攻。",
     "radiant": "光环：你的单位拥有+{attack}攻击力、突袭和先攻。"
   },
   "traininggrounds-046": {
-    "name": "雇凶刺杀",
+    "name": "传统：雇凶刺杀",
     "base": "消灭一个单位。",
     "radiant": "消灭一个单位及其相邻的单位。"
   },
   "traininggrounds-047": {
-    "name": "中速恶霸",
+    "name": "传统：中速恶霸",
     "base": "嘲讽\n回合结束时：为此单位恢复所有生命值。",
     "radiant": "嘲讽，不可变\n回合结束时：为此单位恢复所有生命值。"
   },
   "traininggrounds-048": {
-    "name": "Jlockeed收割机-10",
+    "name": "传统：Jlockeed收割机-10",
     "base": "回合结束时：对每个敌人造成{damage}点伤害。",
     "radiant": "回合结束时：对每个敌人造成{damage}点伤害。"
   },
   "traininggrounds-049": {
-    "name": "反复梦境",
+    "name": "传统：反复梦境",
     "base": "你手牌中的一张随机牌有{chance}%的几率变为光辉。\n回合结束时：将这张牌移回手牌。",
     "radiant": "幸运1\n你手牌中的一张随机牌有{chance}%的几率变为光辉。\n回合结束时：将这张牌移回手牌。"
   },
   "traininggrounds-050": {
-    "name": "发光软糖豆",
+    "name": "传统：发光软糖豆",
     "base": "使你手牌中的一张牌变为光辉。",
     "radiant": "使你手牌中的2张牌变为光辉。"
   },
   "traininggrounds-051": {
-    "name": "大猫族",
+    "name": "传统：大猫族",
     "base": "战吼：消灭所有非猫族单位。",
     "radiant": "战吼：消灭所有敌方非猫族单位。"
   },
   "traininggrounds-052": {
-    "name": "Snom兔精神控制",
+    "name": "传统：Snom兔精神控制",
     "base": "夺取一个敌方单位。",
     "radiant": "夺取一个敌方单位。使其变为光辉。"
   },
   "traininggrounds-053": {
-    "name": "偏见博士后",
+    "name": "传统：偏见博士后",
     "base": "战吼：选择场上的一个人类单位。召唤一个该单位的白板化复制。",
     "radiant": "战吼：选择场上的任意一个单位。召唤一个该单位的白板化复制。"
   },
   "traininggrounds-054": {
-    "name": "巨石强森",
+    "name": "传统：巨石强森",
     "base": "献祭1，不可摧毁",
     "radiant": "献祭1，不可摧毁，不可变"
   },
   "traininggrounds-055": {
-    "name": "追忆",
+    "name": "传统：追忆",
     "base": "从你的墓地中发现一张牌。其法力值消耗减少({discount})点。放逐这张牌。",
     "radiant": "从你的墓地中发现一张牌。其法力值消耗为({setCost})。放逐这张牌。"
   },
   "traininggrounds-056": {
-    "name": "噬尸者",
+    "name": "传统：噬尸者",
     "base": "突袭\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。",
     "radiant": "突袭，圣盾\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。"
   },
   "traininggrounds-057": {
-    "name": "回收计划",
+    "name": "传统：回收计划",
     "base": "放逐这张牌。\n回合结束时：将你在本回合中打出的其他每张牌的复制置入你的手牌。",
     "radiant": "放逐这张牌。\n回合结束时：将你在本回合中打出的其他每张牌的光辉复制置入你的手牌。它们的法力值消耗减少({discount})点。",
     "previews": {
@@ -4041,17 +4041,17 @@
     }
   },
   "traininggrounds-058": {
-    "name": "精准打击",
+    "name": "传统：精准打击",
     "base": "穿透\n造成{damage}点伤害。放逐这张牌。",
     "radiant": "穿透\n造成{damage}点伤害。放逐这张牌。"
   },
   "traininggrounds-059": {
-    "name": "生命无花果",
+    "name": "传统：生命无花果",
     "base": "为一个目标恢复{heal}点生命值。",
     "radiant": "为一个目标恢复{heal}点生命值。"
   },
   "traininggrounds-060": {
-    "name": "突袭衍生物农场",
+    "name": "传统：突袭衍生物农场",
     "base": "回合开始时：召唤一个突袭衍生物。",
     "radiant": "回合开始时：召唤一个突袭衍生物。\n光环：你的突袭衍生物拥有+{buff}/+{buff}。"
   }

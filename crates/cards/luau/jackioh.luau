@@ -20,7 +20,6 @@ export type ActivationOfArgs = {
 instanceId: string?,
 target: TargetSpec?,
 ability: string?,
-spendUse: boolean?,
 }
 
 export type ActivationUses = number | "unlimited"
@@ -543,8 +542,6 @@ export type CraftVerb = "damageTarget" | "damageEnemyHero" | "damageRandomEnemy"
 export type DamageAllArgs = {
 amount: number,
 heroes: boolean?,
-odds: {DamageOdds}?,
-lucky: number?,
 ignoreArmor: boolean?,
 combat: boolean?,
 lifesteal: boolean?,
@@ -572,11 +569,6 @@ halfToHeroes: boolean?,
 
 export type DamageEnemyOrHealFriendArgs = {
 amount: number,
-}
-
-export type DamageOdds = {
-amount: number,
-weight: number,
 }
 
 export type DamageSplitArgs = {
@@ -1793,7 +1785,6 @@ export type ManaSpentFor = "play" | "activate"
 
 export type MayAttackAgainArgs = {
 target: TargetSpec,
-keepSick: boolean?,
 }
 
 export type ModeDecl = {
@@ -2497,7 +2488,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Resource" | "Faction" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,

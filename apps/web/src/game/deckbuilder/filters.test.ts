@@ -216,6 +216,7 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Drone Core",
       "Weapon",
       "Swarm",
+      "Legacy",
       "Faction",
     ]);
     // Only the ten AI tokens carry "AI", the Prime tokens "Prime", Otherworldly Removal's three
@@ -732,7 +733,7 @@ describe("the set chips (R380: one format, every set)", () => {
     expect(new Set(pool(["Meditative+"]).map(setOf))).toEqual(new Set(["Meditative+"]));
     expect(pool(["Stinkyscape"])).toHaveLength(deckableIn(["Stinkyscape"]));
     expect(new Set(pool(["Stinkyscape"]).map(setOf))).toEqual(new Set(["Stinkyscape"]));
-    // Re-pinned for the Training Grounds release (#2204): its 60 cards, the twenty Core snapshots
+    // Re-pinned for the Training Grounds release (#2204): its 60 cards, the twenty Legacy cards
     // (#41 to #60) among them, join the pool; its token never does.
     expect(pool(["Training Grounds"])).toHaveLength(deckableIn(["Training Grounds"]));
     expect(new Set(pool(["Training Grounds"]).map(setOf))).toEqual(new Set(["Training Grounds"]));
@@ -760,8 +761,8 @@ describe("the Jlockeed tag (R278)", () => {
     const stinkyscape = setShips("Stinkyscape")
       ? ["124", "125", "126", "127", "128", "129", "130"].map((n) => `stinkyscape-${n}`)
       : [];
-    // Re-pinned for the Training Grounds release (#2204): its snapshots of Core #14 and #13, #45
-    // Jlockeed's Weapons and #48 Jlockeed Shredder-10, carry the tag as their Core cards do (R2195000).
+    // Re-pinned for the Training Grounds release (#2204): its Legacy cards of Core #14 and #13, #45
+    // and #48, carry the tag as their Core cards do (R2195003).
     const trainingGrounds = setShips("Training Grounds") ? ["traininggrounds-045", "traininggrounds-048"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
@@ -913,6 +914,17 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     // (War Doctrine is on tokens alone, which the deck builder never offers) and the Almanac's four.
     for (const tag of ["Drone Core", "Weapon", "Swarm"] as const) expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(true);
     for (const tag of four) expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(true);
+  });
+
+  it("R2511000 the Legacy chip keeps the twenty Training Grounds Legacy cards, each named after its Core card", () => {
+    expect(DECK_CHIP_TAGS.includes("Legacy")).toBe(true);
+    expect(ALMANAC_CHIP_TAGS.includes("Legacy")).toBe(true);
+    const real: CatalogSnapshot = { version: "core-test", cards: CORE_CATALOG };
+    const kept = visiblePool(real, null, { ...DEFAULT_FILTER, ownedOnly: false, tags: new Set<Tag>(["Legacy"]) }, DEFAULT_SORT);
+    const ids = Array.from({ length: 20 }, (_, n) => `traininggrounds-0${String(41 + n)}`);
+    expect([...kept].sort()).toEqual(ids);
+    for (const id of ids) expect(CORE_CATALOG[id]?.name.startsWith("Legacy: "), id).toBe(true);
+    expect(CORE_CATALOG["traininggrounds-041"]?.name).toBe(`Legacy: ${CORE_CATALOG["core-002"]?.name ?? ""}`);
   });
 
   it("issue #2521's Faction gets a chip in both lists and Resource, on tokens alone, in the almanac's only", () => {

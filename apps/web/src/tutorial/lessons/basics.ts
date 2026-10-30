@@ -20,16 +20,16 @@ export const lesson: TutorialLesson = {
   poolHold: true,
   humanDeck: [
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-044", // Duplicating Felinors, Rare
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-001", // Spikey Steven, Common
     "traininggrounds-008", // Clobberer, Common
     "traininggrounds-022", // Right-Hand Felinor, Rare
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-023", // Quadrupling Felinors, Rare
     "traininggrounds-005", // Midlane Menace, Common
     "traininggrounds-008", // Clobberer, Common
@@ -37,20 +37,20 @@ export const lesson: TutorialLesson = {
     "traininggrounds-002", // Personal Trainer, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
   ],
   aiDeck: [
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
     "traininggrounds-001", // Spikey Steven, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
-    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
     "traininggrounds-001", // Spikey Steven, Common
     "traininggrounds-008", // Clobberer, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-022", // Right-Hand Felinor, Rare
   ],

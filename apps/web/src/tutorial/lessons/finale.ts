@@ -26,32 +26,32 @@ export const lesson: TutorialLesson = {
     "traininggrounds-010", // Fan of Knives, Common
     "traininggrounds-034", // Dino-size, Epic
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-052", // Snom Bunny Mind Control, Rare
-    "traininggrounds-056", // Corpse Eater, Epic
-    "traininggrounds-048", // Jlockeed Shredder-10, Common
-    "traininggrounds-055", // Reminisce, Rare
+    "traininggrounds-052", // Legacy: Snom Bunny Mind Control, Rare
+    "traininggrounds-056", // Legacy: Corpse Eater, Epic
+    "traininggrounds-048", // Legacy: Jlockeed Shredder-10, Common
+    "traininggrounds-055", // Legacy: Reminisce, Rare
     "traininggrounds-039", // Call to Chaos (Training-Grounds Edition), Legendary
     "traininggrounds-006", // Chosen by the Sun, Common
     "traininggrounds-018", // Knife Juggler, Rare
-    "traininggrounds-045", // Jlockeed's Weapons, Common
+    "traininggrounds-045", // Legacy: Jlockeed's Weapons, Common
     "traininggrounds-038", // Tutorial Master, Legendary
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
     "traininggrounds-011", // Thwomp, Common
     "traininggrounds-009", // Ravager, Common
-    "traininggrounds-057", // Recycling Initiative, Epic
+    "traininggrounds-057", // Legacy: Recycling Initiative, Epic
   ],
   aiDeck: [
     "traininggrounds-003", // Group leader, Common
     "traininggrounds-021", // Flame Tongue Totem, Rare
     "traininggrounds-032", // Selfless Protector, Epic
-    "traininggrounds-041", // Bigot, Common
-    "traininggrounds-048", // Jlockeed Shredder-10, Common
-    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-041", // Legacy: Bigot, Common
+    "traininggrounds-048", // Legacy: Jlockeed Shredder-10, Common
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
     "traininggrounds-002", // Personal Trainer, Common
     "traininggrounds-006", // Chosen by the Sun, Common
     "traininggrounds-011", // Thwomp, Common
-    "traininggrounds-046", // Hit Job, Common
+    "traininggrounds-046", // Legacy: Hit Job, Common
     "traininggrounds-014", // Explosive Trap, Common
     "traininggrounds-024", // Goliath Situation, Rare
   ],

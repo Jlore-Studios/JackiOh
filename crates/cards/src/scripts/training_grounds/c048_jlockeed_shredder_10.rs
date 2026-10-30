@@ -1,9 +1,11 @@
-//! SPEC §8.11 Training Grounds #48 Jlockeed Shredder-10, the snapshot of Core #13 Jlockeed Shredder-10 (`core-013`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
+//! SPEC §8.11 Training Grounds #48 Legacy: Jlockeed Shredder-10,
+//! the Legacy card of Core #13 Jlockeed Shredder-10 (`core-013`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
 //!
 //! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
 //!
 //! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/10 → 12/20 Unit, cost 3. Base "End of turn: deal 2 damage
 //! to each enemy unit and the enemy hero", radiant "4 damage" — a radiant cell that changes only a
