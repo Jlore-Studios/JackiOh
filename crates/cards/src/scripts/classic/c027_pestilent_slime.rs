@@ -119,7 +119,8 @@ mod tests {
     /// from lane 2 and `backrow` behind; p2's Vanilla and Sheepish, which no placement may reach.
     fn dying(seed: &str, radiant: bool, held: i32, field: Value, backrow: Value) -> Scenario {
         crate::register_all();
-        let mut units = vec![json!({ "def": SLIME, "radiant": radiant, "counters": { "plague": held }, "lane": 1 })];
+        let slime = json!({ "def": SLIME, "radiant": radiant, "counters": { "plague": held }, "lane": 1 });
+        let mut units = vec![slime];
         units.extend(field.as_array().cloned().unwrap_or_default());
         scenario(json!({
             "seed": seed,
@@ -205,7 +206,8 @@ mod tests {
                 let mut s = board(&seed);
                 let (two, three) = (s.unit_at(P1, 2), s.unit_at(P1, 3));
                 kill_slime(&mut s);
-                assert_eq!((s.card(&two).counters.plague, s.card(&three).counters.plague), (Some(1), Some(1)));
+                assert_eq!(s.card(&two).counters.plague, Some(1));
+                assert_eq!(s.card(&three).counters.plague, Some(1));
                 // …and on others both on one, as the draws are each their own.
                 let seed = seed_where("slime-stack", |seed| {
                     let placements = kill_slime(&mut board(seed));
