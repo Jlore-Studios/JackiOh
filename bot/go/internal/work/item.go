@@ -789,6 +789,10 @@ func (x *Worker) anchors() []string {
 	return out
 }
 
+// Guard is Worker._guard as the run calls it; a variable so the tests can replace it
+// (`mock.patch.object(Worker, "_guard", ...)`).
+var Guard = (*Worker).guard
+
 // Put back forbidden paths the work changed, and report them, conflict markers left
 // behind, and an empty change.
 func (x *Worker) guard() []*verdicts.Finding {
@@ -1326,7 +1330,7 @@ func (x *Worker) selfCheckLoop(cycle int, entry *pyjson.Object, report *verdicts
 			return nil, results, guard, flagged
 		}
 		report = fixed
-		guard = x.guard()
+		guard = Guard(x)
 		x.Check()
 		results = x.checks()
 		round.Set("gates", gateDicts(results))
@@ -1413,7 +1417,7 @@ func (x *Worker) Item() {
 			return
 		}
 		report = built
-		guard := x.guard()
+		guard := Guard(x)
 		if x.OnlyForbidden() {
 			return
 		}
@@ -1474,7 +1478,7 @@ func (x *Worker) Item() {
 			results = x.checks()
 			entry.Set("gates", gateDicts(results))
 			entry.Set("caught_up", x.BaseSHA)
-			guard = x.guard()
+			guard = Guard(x)
 		}
 		review = x.review(cycle, report, results, findings, context, nil, "review")
 		entry.Set("review", review.ToDict())
@@ -1787,7 +1791,7 @@ func (x *Worker) Part() {
 	if built == nil {
 		return
 	}
-	guard := x.guard()
+	guard := Guard(x)
 	if x.OnlyForbidden() {
 		return
 	}
