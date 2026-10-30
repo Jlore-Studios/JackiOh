@@ -10161,15 +10161,18 @@
       "asks": [],
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "onto": "bot/issue-2497",
       "part_of": 2497,
       "pending_request": false,
       "provider": "muse",
+      "round_tier": "",
       "run_id": "41084741710",
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-30T15:52:38Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2502": {
       "onto": "bot/issue-2497",
