@@ -1,12 +1,9 @@
 //! Exile, Bounce, Discard and Counter: the moves that take a card off the field, out of a hand or off
 //! the stack (SPEC §6.3, §3.2, §2.4, R11, R12, R16, R78, R448). Every zone change goes through `zones.rs`.
 //!
-//! Each verb comes in a single-card form and a sweep — `exile`/`exile_all`/`exile_adjacent_to`,
-//! `bounce`/`bounce_all`, `discard`/`discard_hand`, plus `exile_hand` — and the sweeps are walks over
-//! `cards_in_scope` or `adjacent_to` (§3.1, §3.2) down the same private per-card helper the
-//! single-card form uses. One implementation per move, so "bounce" can only ever mean one thing.
-//!
-//! Port of `packages/engine/src/effects/move.ts` (`move` is a Rust keyword, hence `move_`).
+//! Each verb's sweeps walk `cards_in_scope` or `adjacent_to` (§3.1, §3.2) down the same private
+//! per-card helper its single-card form uses, so "bounce" can only ever mean one thing. (`move` is a
+//! Rust keyword, hence `move_`.)
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -27,10 +24,9 @@ use crate::wire::TargetAim;
 use crate::wire::{CounteredTo, GameEvent, PlayerId, Zone, ZoneName};
 use crate::zones::{OffFieldZone, exile_to_pile, is_unit_token, move_to_zone, report_graveyard_landing};
 
-/// One card to the exile pile: the whole of §6.3 Exile for a single card, so `exile`, `exile_all`,
-/// `exile_adjacent_to` and `exile_hand` are four ways of naming cards over ONE implementation. A card
-/// that reaches the pile feeds the game exile counter (R55); a unit token ceases to exist instead
-/// and never enters it (R11), so it is not counted, while the event still reports the card leaving.
+/// One card to the exile pile: the whole of §6.3 Exile for a single card, which every exile verb goes
+/// down. A card that reaches the pile feeds the game exile counter (R55); a unit token ceases to exist
+/// instead (R11), uncounted, while the event still reports the card leaving.
 fn exile_card(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     if card.zone.z() == ZoneName::Exile {
         return;
@@ -48,13 +44,10 @@ fn exile_card(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     exile_to_pile(ctx, card.clone());
 }
 
-/// One card back to its controller's hand: the whole of §6.3 Bounce for a single card, shared by
-/// `bounce` and `bounce_all`. A steal on the field changes control only (R15, R171), so for a card
-/// another player controls the hand it returns to is the controller's, not the owner's — and it
-/// lands there as the controller's own card, as a card taken off the field's reach by a steal does
-/// (R12, R747): ownership moves with it, so every pile it reaches afterwards, and every hand rule
-/// that reads the owner, is the holder's. A unit token vanishes (R11), the hand cap applies to the
-/// hand it enters so a full hand burns it (§2.4), and the instance resets on the way out (R78).
+/// One card back to its controller's hand: the whole of §6.3 Bounce for a single card. A steal changes
+/// control only (R15, R171), so a card another player controls returns to the controller's hand as
+/// their own card (R12, R747): ownership moves with it. A unit token vanishes (R11), a full hand burns
+/// it (§2.4), and the instance resets on the way out (R78).
 pub fn bounce_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
     if card.zone.z() == ZoneName::Hand {
         return;
@@ -167,9 +160,8 @@ pub fn exile_random_from(args: ExileRandomFromArgs) -> Effect {
 }
 
 /// §6.3 Exile over a scope: every card the scope names, in `cards_in_scope` order, down the same path
-/// a single exile takes (#100 Ceaseless Void, "Cry: exile all other permanents on both sides" —
-/// `{ side: "any", rows: ["units", "backrow"], excludeSelf: true }`). `excludeSelf` is what leaves
-/// the running card standing; without it the Void would exile itself mid-Cry.
+/// a single exile takes. `excludeSelf` leaves the running card standing (without it #100 Ceaseless
+/// Void would exile itself mid-Cry).
 pub fn exile_all(args: BoardScope) -> Effect {
     Effect::new("exileAll", move |ctx| {
         // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
@@ -216,9 +208,8 @@ pub struct ExileAdjacentToArgs {
 }
 
 /// §3.1 Adjacent exile: lanes N-1 and N+1 on the target's own side and row (#34 Collateral Damage
-/// radiant, "also the permanents adjacent to the target in its row"). Adjacency never crosses rows,
-/// so "in its row" needs no argument of its own — a backrow target has backrow neighbours and a
-/// unit has units. The card pairs this with a plain `exile` on the target itself.
+/// radiant). Adjacency never crosses rows, so "in its row" needs no argument of its own. The card pairs
+/// this with a plain `exile` on the target itself.
 pub fn exile_adjacent_to(args: ExileAdjacentToArgs) -> Effect {
     Effect::new("exileAdjacentTo", move |ctx| {
         let cards: Vec<CardInstance> = adjacent_to_aimed(ctx, &args.target, &args.scope, TargetAim::Harm)
@@ -325,16 +316,10 @@ pub struct ExileMatchingArgs {
     pub filter: CostFilter,
 }
 
-/// §6.3 Exile over a player's off-field zones, by cost: #94 Genn's Greed's "exile every odd-cost card
-/// in your library, hand and GY (X-cost cards exempt)".
-///
-/// R135 is the whole shape of it. The zones are walked in the order §8 names — library, then hand,
-/// then graveyard, which `EXILE_ZONE_ORDER` holds so the order is stated once — and EACH CARD IS ITS
-/// OWN EXILE, down the same `exile_card` a single `exile` uses: `state.counters.exiled` moves once per
-/// card (R55) and anything watching sees one `exiled` event per card rather than a batch. Each pile is
-/// snapshotted before it is walked (`zone_cards` copies), because exiling splices the pile underneath.
-///
-/// The scope is one player's zones, never both: §8 #94 says "YOUR library, hand and GY".
+/// §6.3 Exile over one player's off-field zones, never both, by cost (§8 #94 Genn's Greed, "YOUR
+/// library, hand and GY"). R135: the zones in `EXILE_ZONE_ORDER`, each card its own exile down
+/// `exile_card`, so `counters.exiled` moves once per card (R55) with one `exiled` event each. Each pile
+/// is snapshotted before it is walked (`zone_cards` copies), because exiling splices the pile underneath.
 pub fn exile_matching(args: ExileMatchingArgs) -> Effect {
     Effect::new("exileMatching", move |ctx| {
         let owner = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -375,10 +360,8 @@ pub fn bounce(args: BounceArgs) -> Effect {
     })
 }
 
-/// §6.3 Bounce over a scope: every card the scope names, in `cards_in_scope` order (#17 Flood,
-/// "Bounce all units on both sides", which is `{ side: "any" }` — `BoardScope`'s default row is
-/// `["units"]`). §3.2 spells out the token case for exactly this card: "Bounce all units" clears
-/// unit tokens because they cease to exist rather than reaching a hand (R11).
+/// §6.3 Bounce over a scope: every card the scope names, in `cards_in_scope` order (#17 Flood). Unit
+/// tokens cease to exist rather than reaching a hand (§3.2, R11).
 pub fn bounce_all(args: BoardScope) -> Effect {
     Effect::new("bounceAll", move |ctx| {
         // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
@@ -391,10 +374,9 @@ pub fn bounce_all(args: BoardScope) -> Effect {
     })
 }
 
-/// Hand to GY for one named card, with the events §10.3 gives a discard. Exported for the engine paths
-/// that discard as a price or a rule rather than as an effect: a targeting cost (R450,
-/// `targeting_point.rs`) and Temporary's own-turn discard (R637, `temporary.rs`). R800's discard guard
-/// never reads it.
+/// Hand to GY for one named card, with the events §10.3 gives a discard, for the engine paths that
+/// discard as a price or a rule: a targeting cost (R450, `targeting_point.rs`) and Temporary's own-turn
+/// discard (R637, `temporary.rs`). R800's discard guard never reads it.
 pub fn discard_from_hand(ctx: &mut EngineSink<'_>, card: &CardInstance) {
     discard_card(ctx, card);
 }
@@ -505,17 +487,10 @@ pub struct DiscardHandArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// §6.3 Discard of a whole hand: every card in the hand to the graveyard, in hand order (#76 Field
-/// of Dreams, "Replace your hand with the same number of Reminisce" — R31 sends the replaced cards
-/// to the graveyard, which is how a later Reminisce can find them there).
-///
-/// Deterministic, and drawing NOTHING from `ctx.rng`, for two reasons:
-///   - A whole-hand sweep involves no choice at all, so R16's "the player chooses unless random is
-///     stated" does not arise. There is nothing to prompt for: every card goes.
-///   - `discard_random({ count: hand.len() })` would reach the same end state while burning
-///     `hand.len()` rng draws. §10.7 makes `rngCursor` part of state, so those draws would advance
-///     it and change every downstream replay hash — a different shuffle, a different Discover, a
-///     different fuzz game — for no reason a rule asks for.
+/// §6.3 Discard of a whole hand: every card to the graveyard, in hand order (#76 Field of Dreams; R31
+/// sends replaced cards there). It draws NOTHING from `ctx.rng`: a whole hand is no choice, so R16 does
+/// not arise, and `discard_random` over the hand would burn `hand.len()` draws, moving `rngCursor`
+/// (§10.7) and every later replay hash for no reason a rule asks for.
 pub fn discard_hand(args: DiscardHandArgs) -> Effect {
     Effect::new("discardHand", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -533,10 +508,8 @@ pub fn discard_hand(args: DiscardHandArgs) -> Effect {
 /// `exileHand`'s arguments: `player` defaults to "self".
 pub type ExileHandArgs = DiscardHandArgs;
 
-/// §6.3 Exile of a whole hand: the same sweep, to the exile pile (#78 /fullsend, "at end of turn,
-/// exile your hand"). Each card that reaches the pile bumps `counters.exiled` (R55) and emits one
-/// `exiled` event; a unit-token card ceases to exist instead of reaching the pile and is not
-/// counted (R11, §3.2). No choice and no rng draw, for the reasons on `discard_hand`.
+/// §6.3 Exile of a whole hand: the same sweep, to the exile pile (#78 /fullsend), each card down
+/// `exile_card` (R55, R11, §3.2). No choice and no rng draw, for the reasons on `discard_hand`.
 pub fn exile_hand(args: ExileHandArgs) -> Effect {
     Effect::new("exileHand", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -574,17 +547,13 @@ pub struct CounterPlayArgs {
 }
 
 /// B5 E1, R448: §6.3 Counter — cancel the play an announce window is answering. The card never
-/// resolves or enters the field: no Cry, no Death, no `cardPlayed` or `cardResolved`, no Echo repeat,
-/// and it counts for nothing that counts plays, because §10.5 step 4, where every count is made, never
-/// runs for it. Its mana and Tributes stay spent. `target` names the announced card (a response reads
-/// it off its `cardAnnounced`); with none it is the innermost announce still live. The first Counter to
-/// resolve cancels the play, and a later one finds no card and does nothing (a trap on a canceled
-/// announce is not even offered it, and stays set).
+/// resolves or enters the field and counts for nothing that counts plays (§10.5 step 4 never runs for
+/// it); its mana and Tributes stay spent. With no `target`, the innermost announce still live. A later
+/// Counter finds no card and does nothing (a trap on a canceled announce is not offered it, and stays set).
 ///
-/// `to: "thief"` is E2: the card moves to the countering player's hand and its owner becomes that
-/// player (`ownership::take_into_hand`); a full hand burns it into their graveyard (§2.4). A unit-token
-/// card ceases to exist wherever it was going (R11). `countered` goes out first, naming where the card
-/// went, then the move's own events.
+/// `to: "thief"` is E2: the card goes to the countering player's hand as theirs
+/// (`ownership::take_into_hand`), a full hand burning it (§2.4); a unit-token card ceases to exist (R11).
+/// `countered` goes out first, naming where the card went, then the move's own events.
 pub fn counter_play(args: CounterPlayArgs) -> Effect {
     Effect::new("counterPlay", move |ctx| {
         let record: Option<String> = match &args.target {

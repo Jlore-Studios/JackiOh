@@ -1,24 +1,17 @@
 //! ME-CRAFT: the card crafter of Meditative #17 True Craft a Card (`docs/meditative-set.md`
-//! M6 #17, R880–R883). The block table over the engine's real pieces (type and stats; R21's
-//! keywords plus Armor and Echo; the `cry`, `death`, `start_of_turn`, `end_of_turn`, Spell-resolution
-//! and Trap-trigger hooks; and the effect verbs), each priced in points and in lines of code; the
-//! validator; the compiler from a recipe to a transient definition (R882) and its scripts; the
-//! seeded presets (R881); and the preview the editor shows (R880).
+//! M6 #17, R880–R883): the block table over the engine's real pieces (type and stats; R21's keywords
+//! plus Armor and Echo; the hooks; the effect verbs), each priced in points and in lines of code; the
+//! validator; the compiler from a recipe to a transient definition (R882) and its scripts; the seeded
+//! presets (R881); and the preview the editor shows (R880).
 //!
-//! Meditative+ (#1182) adds the potion frame (`CraftFrame`, R1182000, R1182001): since #1563 a Spell
-//! tagged Potion, of the Meditative+ set, with no stats, whose one hat is When cast (R1563008; a Unit
-//! whose one hat was "Activate: Tribute this." until then), at a fixed cost and budget, with presets
-//! of its own; and Scratch Pad's from-scratch mode (R1182002), which changes nothing here but the
-//! prompt's flag.
+//! Meditative+ (#1182): the potion frame (`CraftFrame`, R1182000, R1182001), a Potion-tagged Spell
+//! with no stats whose one hat is When cast (R1563008), at a fixed cost and budget; and Scratch Pad's
+//! from-scratch mode (R1182002), only a prompt flag here. The offer (#1563, R1563007): every `craft`
+//! prompt but Scratch Pad's draws its blocks from the match rng, Kazakus style, and its presets and
+//! answer use no other; "give your hero Armor" is retired (`CRAFT_RETIRED_VERBS`, R1563009).
 //!
-//! #1563 adds the offer (R1563007): every `craft` prompt but Scratch Pad's draws `CRAFT_OFFER_KEYWORDS`
-//! keywords, `CRAFT_OFFER_HATS` hats and `CRAFT_OFFER_VERBS` verbs from the match rng, Kazakus style,
-//! its presets are built from them, and its answer may use no other block; and it retires "give your
-//! hero Armor" (`CRAFT_RETIRED_VERBS`, R1563009).
-//!
-//! Pure (CLAUDE.md rule 4): the compiler is a total function of the recipe, the presets read only
-//! the match rng, and no `HashMap` orders anything — the id hashes JSON whose field order is
-//! fixed, so every process mints the same id for one recipe.
+//! Pure (CLAUDE.md rule 4): the compiler is a total function of the recipe, the presets read only the
+//! match rng, and no `HashMap` orders anything: the id hashes JSON of fixed field order.
 
 use std::sync::Arc;
 
@@ -283,7 +276,7 @@ pub fn validate_recipe(recipe: &CraftRecipe, cost: i32) -> Result<(), Vec<String
         } else {
             seen_hats.push(hat.hat);
         }
-        // R1563008: the Activate was the potion frame's own hat until #1563; no type takes it now.
+        // R1563008: no type takes the retired Activate hat.
         if !hat_price(hat.hat).types.contains(&recipe.type_) {
             reasons.push(format!(
                 "a {} takes no {}",
@@ -1289,10 +1282,9 @@ fn draw_some<T: Copy + PartialEq>(rng: &mut Rng, pool: &[T], count: usize) -> Ve
 }
 
 /// R1563007: a `craft` prompt's offer, drawn from the match rng as it opens, or `None` for Scratch
-/// Pad's, which codes from the whole palette. Every offer draws from the whole keyword table (a
-/// keyword serves the card or a Give a unit a keyword block); Meditative #17's from the hats a type
-/// takes and the verbs that fit its budget alone, a potion prompt's hat is its one When cast and its
-/// verbs those that fit its points. No retired verb is offered.
+/// Pad's, which codes from the whole palette. Keywords come from the whole table (a keyword serves the
+/// card or a Give a unit a keyword block), hats from those a type takes (a potion's one When cast),
+/// verbs from those that fit its budget alone; no retired verb is offered.
 pub fn roll_offer(rng: &mut Rng, mode: Option<CraftMode>, cost: i32) -> Option<CraftOffer> {
     if mode == Some(CraftMode::Scratch) {
         return None;

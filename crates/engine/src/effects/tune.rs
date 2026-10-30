@@ -1,11 +1,9 @@
 //! Degrade and Upgrade (docs/classic-sets.md B3.4, R386), and Classic+ #41 KY's Constant's "change a
-//! number to 3": the verbs that write a card's `tuning` (`tuning.rs` holds the readers, `numbers.rs`
-//! the numbers on a card). Players read Degrade as Nerf and Upgrade as Buff (patch v0.3.4, R1320); the
-//! engine keeps its names here, as `degrade`, `upgrade`, `tune_once`, `TuneDirection` and the events.
+//! number to 3": the verbs that write a card's `tuning`. Players read Degrade as Nerf and Upgrade as
+//! Buff (R1320); the engine keeps the old names.
 //!
-//! One application is one change, drawn from the menu rows that can change the card now (B3.4 rule 3).
-//! R1160 (Meditative #84 Volatility, ME-TUNEMULT): one application is still one draw and one event,
-//! with the change scaled by the card's tune multiplier (`tune_multiplier_of`):
+//! One application is one change, drawn from the menu rows that can change the card now (B3.4 rule 3),
+//! scaled by the card's tune multiplier (R1160, ME-TUNEMULT, Meditative #84 Volatility):
 //!
 //! ```text
 //!   | Row     | Degrade                          | Upgrade                         | Can apply to
@@ -17,32 +15,20 @@
 //!   | plague  | remove a Plague Counter          | place one                       | a `usesPlague` card on the field
 //! ```
 //!
-//! On the field neither the cost row nor a declared number only the card's Cry reads (`Param.cry`) is
-//! drawn, the price and the Cry being spent (R1748000), nor a Tribute, paid as the card was played
-//! (R2261000). An Upgrade's keyword comes from R21's pool for a Unit, is Indestructible or Immutable
-//! for a Field Spell (R2436000), and Pierce or Lifesteal for a Spell or a Field Spell that deals damage
-//! (`CardDef.deals_damage`, R1748001). The plague row is R1748002's.
+//! On the field neither the cost row nor a number only the Cry reads is drawn, both spent (R1748000),
+//! nor a Tribute (R2261000). An Upgrade's keyword is from R21's pool for a Unit, Indestructible or
+//! Immutable for a Field Spell (R2436000), Pierce or Lifesteal for a Spell or Field Spell that deals
+//! damage (R1748001).
 //!
-//! R442: the draw is the row first, uniformly among the rows that can change the card, then the item
-//! within the row (which keyword, which number), uniformly, and for a stats row the split k in 0–4. A
-//! row or an item with one choice draws nothing (R129), and a card no row can change is left alone
-//! with no draw at all (B3.4 rule 1) — an Immutable card first of all (rule 2).
+//! R442: the row is drawn first, uniformly, then the item within it; one choice draws nothing (R129),
+//! and a card no row can change, an Immutable one first (rule 2), is left alone with no draw.
 //!
-//! Events: `degraded` / `upgraded` for each application that changed the card, public on a public
-//! card. On a card someone may not read — a hand card, a deck card, a face-down trap — the event says
-//! who could not read it (`hiddenFrom`, R177), and every application is cued, a card nothing changed
-//! with the change `none` (R440), so the count of cues over a hidden pile numbers the applications,
-//! never the changes. For the same reason a scope over a hidden pile reaches every card in it: its
-//! filters decide which cards change, and a card they leave out is cued `none` (`card_scope.rs`).
-//! `numberChanged` reports KY's Constant's set the same way.
+//! Events: `degraded` / `upgraded`. On a card someone may not read, the event names them (`hiddenFrom`,
+//! R177) and every application is cued, an unchanged card as `none` (R440), so the cues count the
+//! applications, never the changes; so a scope reaches every card of a hidden pile (`card_scope.rs`).
 //!
-//! None of these opens a prompt but `discover_number`, which is one prompt and nothing after it in the
-//! same effect, so a pause never splits an application (R113): what a list does after a Degrade is the
-//! list's own business, parked by `prompts::apply_resumable` like any other effect's.
-//!
-//! Port of `packages/engine/src/effects/tune.ts`. TS's menu rows were closures over the live card;
-//! here a row is data (`MenuApply`) that `apply_row` writes onto the card found again by id, which is
-//! the same thing: a row is built and applied in one go, with only the row's own draw between.
+//! Only `discover_number` opens a prompt, with nothing after it in the effect, so a pause never splits
+//! an application (R113).
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
@@ -86,7 +72,6 @@ pub enum TuneDirection {
 }
 
 impl TuneDirection {
-    /// The literal, as TS writes it.
     pub fn as_str(self) -> &'static str {
         match self {
             TuneDirection::Degrade => "degrade",
@@ -95,9 +80,8 @@ impl TuneDirection {
     }
 }
 
-/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): how many times as effective one Buff or Nerf
-/// application is on this card — that direction's field of the running face's `tune_multiplier`,
-/// none on a Vanilla card, floored at plain.
+/// R1160: how many times as effective one Buff or Nerf application is on this card — that direction's
+/// field of the running face's `tune_multiplier`, none on a Vanilla card, floored at plain.
 pub fn tune_multiplier_of(state: &GameState, card: &CardInstance, direction: TuneDirection) -> i32 {
     let flags = crate::scripts::flags_of(state, card);
     let named = match direction {
@@ -179,7 +163,6 @@ pub enum TuneRow {
 }
 
 impl TuneRow {
-    /// The literal, as TS writes it.
     pub fn as_str(self) -> &'static str {
         match self {
             TuneRow::Cost => "cost",
@@ -214,9 +197,8 @@ fn pick_one<'a, T>(ctx: &mut EffectContext<'_>, items: &'a [T]) -> &'a T {
 }
 
 /// B3.4 rule 3, cost: `costMod` one step toward (4) or toward (0); never an X-cost card (R65), and
-/// never a card on the field (R1748000). R1160: the step is `times` steps, clamped as today.
+/// never a card on the field, which has paid its price (R1748000). R1160: `times` steps, clamped.
 fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Option<MenuRow> {
-    // R1748000: a permanent in play has paid its price.
     if card.zone.z() == ZoneName::Field {
         return None;
     }
@@ -236,10 +218,9 @@ fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection, ti
     })
 }
 
-/// B3.4 rule 3, stats: a split of `TUNE_STAT_TOTAL` rolled as k to attack and the rest to health. A
-/// Degrade's attack floors at 0 and its current health at 1, and what the floors refuse is lost; so a
-/// Degrade can apply only while the card has attack above 0 or health above 1. On the field the change
-/// moves max health, damage staying, so current health moves with it (B3.4 rule 6).
+/// B3.4 rule 3, stats: a split of `TUNE_STAT_TOTAL`, k to attack and the rest to health. A Degrade's
+/// floors (attack 0, current health 1) lose what they refuse, so it applies only while above one. On
+/// the field the change moves max health, damage staying (B3.4 rule 6).
 fn stats_row(
     state: &GameState,
     card: &CardInstance,
@@ -267,11 +248,8 @@ const HARMFUL: &[KeywordKind] = TUNE_HARMFUL_KEYWORDS;
 
 /// B3.4 rule 3, keyword. A Degrade removes one keyword the card has of its own — printed (as tuning
 /// leaves it) or granted, never one an aura or its position lends it, and never a harmful one (Can't
-/// attack, Brittle): every entry of the kind goes, a printed one by `tuning.removeKeywords`, an added
-/// one out of `tuning.addKeywords`, a granted one off the instance. An Upgrade adds one R21 keyword a
-/// Unit lacks (`tuning.addKeywords`), and R1748001 one a Spell or a Field Spell lacks of its own
-/// (`non_unit_candidates`); a Vanilla card's text is gone, and an added keyword would be text, so
-/// nothing is added to one.
+/// attack, Brittle): every entry of the kind goes. An Upgrade adds one R21 keyword a Unit lacks, and
+/// R1748001 one a Spell or a Field Spell lacks; nothing to a Vanilla card, whose text is gone.
 fn keyword_row(
     state: &GameState,
     card: &CardInstance,
@@ -323,10 +301,8 @@ fn keyword_row(
     })
 }
 
-/// R1748001: the keywords a Buff may add to a card that is no Unit, in this order: Indestructible and
-/// Immutable to a Field Spell (`TUNE_FIELD_SPELL_KEYWORDS`, R2436000), and Pierce and Lifesteal to a
-/// Spell or a Field Spell that deals damage (`CardDef.deals_damage`, `TUNE_DAMAGE_KEYWORDS`), each only
-/// while it lacks it. Nothing for a Trap, a Field Trap or any other card.
+/// R1748001: the keywords a Buff may add to a card that is no Unit, in this order: a Field Spell's
+/// (R2436000), then a damaging Spell's or Field Spell's, each only while it lacks it.
 fn non_unit_candidates(state: &GameState, card: &CardInstance, held: &[Keyword]) -> Vec<Keyword> {
     let card_type = card_type_of(state, card);
     let mut kinds: Vec<KeywordKind> = Vec::new();
@@ -383,7 +359,7 @@ struct XItem {
     write: XWrite,
 }
 
-/// What an X item writes (TS: a closure over the card).
+/// What an X item writes.
 enum XWrite {
     /// One more X step on `key` in `tuning.x`.
     Step { key: String, delta: i32 },
@@ -410,8 +386,7 @@ fn write_x(state: &mut GameState, card_id: &str, write: &XWrite) {
     }
 }
 
-/// A copy of the card's tuning with one more X step on `key`, to read the value the step would give.
-/// (TS built a bare `{ tuning }`; the readers take a card, so this is the card with that tuning.)
+/// The card with one more X step on `key` in its tuning, to read the value the step would give.
 fn with_x_step(card: &CardInstance, key: &str, delta: i32) -> CardInstance {
     let mut tuning = card.tuning.clone().unwrap_or_default();
     tuning.x = Some(add_step(
@@ -426,13 +401,10 @@ fn with_x_step(card: &CardInstance, key: &str, delta: i32) -> CardInstance {
 }
 
 /// B3.4 rule 3, X: one numbered keyword or an X-cost card's X, one step (`TUNE_X_STEP`) worse or
-/// better — more is better for all but Tribute, and nothing goes below 1 (`TUNED_FLOOR`). A Brittle
-/// count in force moves itself (B3.3 rule 5); a printed Brittle that has not started moves the number
-/// it will start at. An X-cost card with no chosen X (off the field) has its X still to come, so its
-/// step always applies ("its X counts 1 less or more when it resolves"). On the field its X has
-/// resolved, so it has no X to move (SPEC §8.7 row 69: Classic+ #69 Buff Billy's Cry Upgrades draw
-/// from the stats and keyword rows only); elsewhere one applies while the X it counts can move. Nor
-/// is a Tribute moved on the field, where it was paid (R2261000).
+/// better — more is better for all but Tribute, never below 1 (`TUNED_FLOOR`). A Brittle count in force
+/// moves itself (B3.3 rule 5), a printed one not started the number it will start at. An X-cost card
+/// with no X chosen yet always moves; on the field its X has resolved (SPEC §8.7 row 69: Classic+ #69
+/// Buff Billy), and a Tribute there was paid (R2261000), so neither moves.
 fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Vec<XItem> {
     let mut items: Vec<XItem> = Vec::new();
     let better = if direction == TuneDirection::Upgrade {
@@ -469,7 +441,6 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, tim
     }
 
     for entry in numbered_keywords_on(state, card) {
-        // R2261000: a card on the field paid its Tribute to get there.
         if entry.key == NumberedKey::Tribute && card.zone.z() == ZoneName::Field {
             continue;
         }
@@ -547,10 +518,9 @@ fn number_row(
     })
 }
 
-/// R1748002: on the field, a card that uses its own Plague Counters (`CardDef.uses_plague`) takes
-/// `TUNE_PLAGUE_STEP` more from an Upgrade, and gives one up to a Degrade while it carries any. A
-/// Vanilla card's text is gone, and so is its use for them; so is a face-down card's while it sleeps
-/// (R1487000). R1160: `times` counters at once.
+/// R1748002: on the field, a card that uses its own Plague Counters takes `TUNE_PLAGUE_STEP` more from
+/// an Upgrade, and gives one up to a Degrade while it carries any; never a Vanilla card, nor a face-down
+/// one while it sleeps (R1487000). R1160: `times` counters at once.
 fn plague_row(
     state: &GameState,
     card: &CardInstance,
@@ -596,8 +566,6 @@ fn apply_row(
         } => {
             let k = ctx.rng.int(total + 1);
             let rest = total - k;
-            // TS wrote `0 - n`, never `-n`, so a share the floors refuse whole is 0, not −0; integers
-            // have no −0.
             let attack = if direction == TuneDirection::Upgrade {
                 k
             } else {
@@ -707,10 +675,8 @@ fn apply_row(
     }
 }
 
-/// B3.4 rules 1–3: the rows that can change the card now, in the menu's order, R1748002's plague row
-/// last.
-/// R1160: `times` scales each row's change, still one row drawn per application. R1845001: without
-/// `with_cost` the cost row is never offered, as a hidden Nerf lands.
+/// B3.4 rules 1–3: the rows that can change the card now, in the menu's order, plague last. R1160:
+/// `times` scales each row's change. R1845001: no cost row without `with_cost`, as a hidden Nerf lands.
 fn menu_of(
     state: &GameState,
     card: &CardInstance,
@@ -752,10 +718,8 @@ pub fn applicable_changes(state: &GameState, card: &CardInstance, direction: Tun
 
 /// B3.4 rule 1: one Degrade or Upgrade of one card — a row drawn among those that can change it, then
 /// the change. `matches` is false for a card of a hidden pile the scope's filters left out, which is
-/// cued and never changed (R440); TS's default is `true`. Reported as this file's header says.
-///
-/// TS read the live card on every application; the card is read again by its id here, so a second
-/// application of the same card draws from the menu the first one left.
+/// cued and never changed (R440). The card is read again by its id, so a second application of it
+/// draws from the menu the first one left.
 pub fn tune_once(ctx: &mut EffectContext<'_>, card: &CardInstance, direction: TuneDirection, matches: bool) {
     tune_once_with(ctx, card, direction, matches, true);
 }
@@ -766,7 +730,6 @@ pub(crate) fn degrade_sparing_cost(ctx: &mut EffectContext<'_>, card: &CardInsta
     tune_once_with(ctx, card, TuneDirection::Degrade, true, false);
 }
 
-/// `tune_once`, with the cost row offered only `with_cost` (R1845001).
 fn tune_once_with(
     ctx: &mut EffectContext<'_>,
     card: &CardInstance,
@@ -779,7 +742,6 @@ fn tune_once_with(
         .unwrap_or_else(|| card.clone());
     // R177: who could not read the card where it changed, judged before the change moves anything.
     let hidden_from = unreadable_by(ctx.state, &card);
-    // R1160: the card's own multiplier scales this one application.
     let times = tune_multiplier_of(ctx.state, &card, direction);
     let menu = if matches {
         menu_of(ctx.state, &card, direction, times, with_cost)
@@ -841,13 +803,10 @@ pub struct ReachedCard {
     pub matches: bool,
 }
 
-/// The cards a verb over `args` reaches, each with whether it may change: the one named card, or a
-/// scope's cards — every card of the scope, or `random` different ones (R60), drawn uniformly over
-/// the scope with every card of a hidden pile in it whatever the filters say (R440), so the odds and
-/// the count of what is reached hang on the piles' sizes and the public cards alone. The picks are
-/// applied in the scope's order (R242), never in the order they were drawn. A pick of at least as many
-/// cards as there are takes them all and draws nothing (R129). (TS took `{ target?, instanceId?,
-/// scope?, random? }`; `times` is not read.)
+/// The cards a verb over `args` reaches, each with whether it may change: the one named card, or every
+/// card of a scope, or `random` different ones (R60) drawn uniformly over it with every card of a hidden
+/// pile in it whatever the filters say (R440), so the odds hang on the piles' sizes and public cards
+/// alone. The picks keep the scope's order (R242); a pick of all there are draws nothing (R129).
 pub fn reached_cards(
     ctx: &mut EffectContext<'_>,
     args: &TuneArgs,
@@ -858,8 +817,7 @@ pub fn reached_cards(
             .map(|card| vec![ReachedCard { card, matches: true }])
             .unwrap_or_default();
     };
-    // MD-B1, R940: a Degrade is harmful — an immune card in a tribal scope is passed by. An
-    // Upgrade (Buff) is helpful and still reaches it.
+    // MD-B1, R940: a Degrade is harmful, passing an immune card in a tribal scope by; a Buff reaches it.
     let aim = match direction {
         TuneDirection::Degrade => Some(crate::wire::TargetAim::Harm),
         TuneDirection::Upgrade => None,
@@ -909,28 +867,24 @@ fn tune_effect(kind: &'static str, direction: TuneDirection, args: TuneArgs) -> 
     })
 }
 
-/// B3.4, R386: Degrade, which players read as Nerf (R1320) — `times` applications to each card reached,
-/// each one change drawn from the menu (this file's header). Classic+ #8 Withering Storm ("Nerf 4 random
-/// cards in your opponent's deck": `{ scope: { side: "enemy", zones: ["library"] }, random: 4 }`), #72
-/// Book of Nerf, #70 Chaos Machine, #73's "Nerf every card on your opponent's field and in their hand
-/// three times".
+/// B3.4, R386: Degrade (Nerf, R1320) — `times` applications to each card reached, each one change
+/// drawn from the menu. Classic+ #8 Withering Storm, #72 Book of Nerf, #70 Chaos Machine, #73.
 pub fn degrade(args: TuneArgs) -> Effect {
     tune_effect("degrade", TuneDirection::Degrade, args)
 }
 
-/// B3.4, R386: Upgrade, which players read as Buff (R1320) — Degrade's mirror (B9 #7). Classic+ #69 Buff
-/// Billy ("Buff this X times": `{ target: { of: "self" }, times: ctx.x }`), #71 Book of Buff, #70, #73's
-/// "every card in your hand and deck twice", T-AI-10 Fine-Tuning.
+/// B3.4, R386: Upgrade (Buff, R1320) — Degrade's mirror (B9 #7). Classic+ #69 Buff Billy, #71 Book of
+/// Buff, #70, #73, T-AI-10 Fine-Tuning.
 pub fn upgrade(args: TuneArgs) -> Effect {
     tune_effect("upgrade", TuneDirection::Upgrade, args)
 }
 
 // KY's Constant: a number set outright (Classic+ #41)
 
-/// Classic+ #41: set one number on a card to `value`. It is `tuning` (B3.4 rule 4), so it stays with
-/// the card: the cost by `costMod`, attack and health by the stats delta that makes them read `value`
-/// now (current health on the field), a numbered keyword and a declared number by `tuning.set` (a
-/// Brittle count in force is set itself). The steps recorded on that number before are spent.
+/// Classic+ #41: set one number on a card to `value`, as `tuning` (B3.4 rule 4) so it stays with the
+/// card: attack and health by the delta that makes them read `value` now (current health on the field),
+/// a numbered keyword or declared number by `tuning.set`, spending its earlier steps (a Brittle count
+/// in force is set itself).
 fn write_number(ctx: &mut EffectContext<'_>, card_id: &str, number: &NumberRef, value: i32) {
     let Some(card) = find_instance(ctx.state, card_id).cloned() else {
         return;
@@ -1024,15 +978,11 @@ pub struct SetNumberArgs {
     pub value: i32,
 }
 
-/// Classic+ #41 KY's Constant: change a number on a card to `value`. `which` names the number
-/// (`numbers::NumberRef`, or its id as a prompt option carries it, `number_ref_id`), or is `"random"`: a
-/// uniform pick (R60) among the card's numbers that are not `value` already, which changes nothing
-/// and draws nothing when there is none (R129). The card is named as a Degrade's is. A number the
-/// card does not have, and an Immutable card (B3.4 rule 2), are left alone.
-///
-/// Reported by `numberChanged` with the number it came to (a declared number's bounds may hold it off
-/// `value`), hidden like a Degrade's event (R177, `hiddenFrom`) — the base face picks at random on a
-/// card in its caster's hand, so which number moved is the card's to keep.
+/// Classic+ #41 KY's Constant: change a number on a card to `value`. `which` names the number, or is
+/// `"random"`: a uniform pick (R60) among the card's numbers not `value` already, drawing nothing when
+/// there is none (R129). A number the card lacks, and an Immutable card (B3.4 rule 2), are left alone.
+/// `numberChanged` reports what it came to (bounds may hold it off `value`), hidden as a Degrade's is
+/// (R177): the base face picks at random on a card in its caster's hand.
 pub fn set_number(args: SetNumberArgs) -> Effect {
     Effect::new("setNumber", move |ctx| {
         let Some(card) = named_card(ctx, args.target.as_ref(), args.instance_id.as_deref()) else {
@@ -1044,7 +994,6 @@ pub fn set_number(args: SetNumberArgs) -> Effect {
         };
         let hidden_from = unreadable_by(ctx.state, &card);
         write_number(ctx, &card.id, &number, value);
-        // TS read the live card after the write.
         let card = find_instance(ctx.state, &card.id).cloned().unwrap_or(card);
         let came_to = number_on(ctx.state, &card, &number).unwrap_or(value);
         ctx.events.push(GameEvent::NumberChanged {
@@ -1110,13 +1059,10 @@ pub struct DiscoverNumberArgs {
 }
 
 /// Classic+ #41 KY's Constant's Radiant: "Discover a number on it" — up to `count` different numbers
-/// on the card that are not `value` already, drawn uniformly (R60; all of them, with no draw, when
-/// there are no more than `count`, R129), offered to the card's controller in a `discover` prompt whose
-/// options are the numbers' ids (`number_ref_id`) labeled with what each is now. The answer re-enters
-/// the card's own step `step`, whose data carries the card's id under `NUMBER_CARD_KEY`; the step
-/// reads the pick with `chosen_tuning_number` (not E18's `number` prompt reader: this answer names a
-/// number on a card) and sets it with `set_number`. The options name the caster's own card's numbers
-/// and go to the caster alone (R81). No number to offer: nothing opens, and the list goes on.
+/// on the card not `value` already, drawn uniformly (R60; all, with no draw, when no more, R129), in a
+/// `discover` prompt to the caster alone (R81). The answer re-enters `step` with the card's id under
+/// `NUMBER_CARD_KEY`, read by `chosen_tuning_number` (not E18's `number` reader: this names a number on
+/// a card). No number to offer: nothing opens, and the list goes on.
 pub fn discover_number(args: DiscoverNumberArgs) -> Effect {
     Effect::new("discoverNumber", move |ctx| {
         let Some(card) = named_card(ctx, args.target.as_ref(), args.instance_id.as_deref()) else {
@@ -1207,11 +1153,9 @@ pub struct GainKeywordForGoodArgs {
     pub keyword: Keyword,
 }
 
-/// R1870007 (Stinkyscape #154 Dice of Doom, "this also gains Lucky +1 for good"): the card running the
-/// script keeps `keyword` in every zone, written into its `tuning` as an Upgrade's keyword is (R386), so
-/// neither leaving the field (R78) nor reaching a graveyard (R215) takes it. A numbered Armor or Lucky
-/// adds to what it has, every gain stacking (`tuning::tuned_keywords`); any other kind it already has is
-/// not had twice. Reported as a grant (`keywordGranted`).
+/// R1870007 (Stinkyscape #154 Dice of Doom): the card running the script keeps `keyword` in every zone,
+/// in its `tuning` as an Upgrade's is (R386), so neither leaving the field (R78) nor a graveyard (R215)
+/// takes it. A numbered Armor or Lucky stacks (`tuning::tuned_keywords`); another kind is not had twice.
 pub fn gain_keyword_for_good(args: GainKeywordForGoodArgs) -> Effect {
     Effect::new("gainKeywordForGood", move |ctx| {
         let Some(card_id) = ctx.live_self().map(|card| card.id.clone()) else {

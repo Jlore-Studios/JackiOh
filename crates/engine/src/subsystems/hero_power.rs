@@ -1,28 +1,15 @@
 //! Heroic Power (SPEC §8 #98, R43, R103, R352, R752–R761): the thirteen powers, the roll that picks
-//! one, and each power as the Activate ability it is since the Heroic Power patch.
+//! one, and each power as the Activate ability it is.
 //!
-//! R43 puts everything about the card on its instance: `memory.power` is the power it rolled. Nothing
-//! here is a module variable, so two Heroic Powers in one game never share a roll or a use, and a
-//! serialized game resumes knowing both (§10.1). The roll goes through the match rng, so a replay rolls
-//! the same power (§9.3).
+//! R43 puts everything about the card on its instance (`memory.power`), so two Heroic Powers in one
+//! game never share a roll or a use and a serialized game resumes knowing both (§10.1). The roll goes
+//! through the match rng, so a replay rolls the same power (§9.3).
 //!
-//! R752: the card costs (0) and playing it uses nothing. Each power is an "Activate: Spend (X): …"
-//! ability (R384, `activate.ts`): once per turn, its X paid in mana as it is activated, its target —
-//! Ping's — declared with the activation (R81), so the client can drag the power onto it. The card
-//! declares all thirteen (`powerAbilities`) and has only the one it rolled (`ActivationDecl.has`), so
-//! `legalActions`, the refusal, the view and a resumed tail all read the one Activate subsystem, and
-//! `activatePower` is an alias that names the rolled power's ability (`reduce.ts`).
-//!
-//! Three powers pause on a Discover (§6.3): Witness Value, Stitching and Terminus Tricks. Each is one
-//! builder that reads the answer: with one it does the work, without one it opens the Discover and
-//! names `POWER_RESUME` as the step to come back to. The answer re-enters `heroPower` below with the
-//! pick in the context, which runs the same builder down its other branch — so a paused activation is a
-//! `PendingChoice` in state and never a callback (§9.3, §10.6).
-//!
-//! Port of `packages/engine/src/subsystems/heroPower.ts`. The numbers (`LIFE_TAP_DAMAGE` …
-//! `STITCHING_MAX_COST`) live in `crate::config` (CLAUDE.md rule 9, SURFACE §6.4). `HERO_POWERS` is a
-//! `const` table whose builders are `fn` items, and `hero_power` is a plain function a card wraps
-//! with `hook(subsystems::hero_power)` (TS `heroPower: Hook`).
+//! R752: the card costs (0). Each power is an "Activate: Spend (X): …" ability (R384), once per turn,
+//! Ping's target declared with it (R81). The card declares all thirteen and has only the one it rolled
+//! (`ActivationDecl.has`), so everything reads the one Activate subsystem. Witness Value, Stitching and
+//! Terminus Tricks pause on a Discover (§6.3) whose answer re-enters `hero_power` and the same builder:
+//! a `PendingChoice`, never a callback (§10.6). Numbers: `crate::config` (CLAUDE.md rule 9, SURFACE §6.4).
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -48,9 +35,7 @@ use crate::wire::{CardType, SetName, TargetDecl, opponent_of};
 /// R43: where the rolled power lives on the instance.
 pub const POWER_KEY: &str = "power";
 
-/// The resume step a power that opened a Discover comes back to (§10.6). `prompts.ts` stores it as
-/// the `step` of the `Resume` a prompt carries and looks the answer up in the card's own step table,
-/// so #98's script wires the pair together in one line:
+/// The resume step a power that opened a Discover comes back to (§10.6), wired in #98's script:
 ///
 /// ```ignore
 /// resume: IndexMap::from([(POWER_RESUME, hook(subsystems::hero_power))]),
@@ -71,13 +56,10 @@ const TOKEN_SET: SetName = SetName::Core;
 /// `STEADY_SHOT_RAISE` (`crate::config`). It is the Steady Shot power's own (`power: "burn"`, R1430).
 pub const STEADY_SHOT_PARAM: &str = "shot";
 
-/// B3.4 rule 5 (#493): the other numbers #98 declares, one per power's number. Each is printed in
-/// `crate::config` and moved by the card's tuning (`power_number`), so a Degrade, an Upgrade or KY's
-/// Constant changes the power the card has as its text says. R1430: the catalog names each number's
-/// power (`Param.power`, the power's stored name), so a Degrade, an Upgrade or KY's Constant reaches
-/// only the numbers of the power the card has now, and a number of another power keeps its tuning for
-/// when a reroll (Tank Up, R757) brings that power back. Life Tap's damage is the base face's alone
-/// (`tunedOn: "base"`, R1431).
+/// B3.4 rule 5 (#493): the other numbers #98 declares, one per power's number, printed in
+/// `crate::config` and moved by the card's tuning (`power_number`). R1430: each names its power
+/// (`Param.power`), so a Degrade, an Upgrade or KY's Constant reaches only the power the card has now;
+/// another keeps its tuning for a reroll (Tank Up, R757). Life Tap's damage is base-only (R1431).
 pub const LIFE_TAP_DRAW_PARAM: &str = "tapDraw";
 pub const LIFE_TAP_DAMAGE_PARAM: &str = "tapDamage";
 pub const PING_PARAM: &str = "ping";
@@ -111,8 +93,7 @@ fn ping_targets() -> Vec<TargetDecl> {
 /// R761: Terminus Tricks Discovers a Trap; a Field Trap is a Trap.
 const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 
-/// R103: the stored power names. They are state, so they stay stable across versions and a new power
-/// is added at the end: the eight of v0.1.1, then the five the Heroic Power patch added (R752).
+/// R103: the stored power names. They are state, so they stay stable and a new power is added at the end.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub enum HeroPowerName {
@@ -149,7 +130,7 @@ impl HeroPowerName {
         HeroPowerName::Tricks,
     ];
 
-    /// The stored name, as TS writes it (the Activate ability's id).
+    /// The stored name (the Activate ability's id).
     pub fn as_str(self) -> &'static str {
         match self {
             HeroPowerName::Recruit => "recruit",

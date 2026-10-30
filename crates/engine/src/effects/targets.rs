@@ -1,10 +1,7 @@
 //! How an effect names what it acts on. A card script writes a spec; the engine resolves it against
-//! the context, so a card file never reaches into state (CLAUDE.md rule 5).
-//!
-//! Port of `packages/engine/src/effects/targets.ts`. TS handed back the live `CardInstance` objects
-//! a caller then wrote through; here every function that names a card answers with a copy of it as
-//! it stands now (`CardInstance`, owned), and a caller that changes the card looks it up again by
-//! `id` (`state::find_instance_mut`).
+//! the context, so a card file never reaches into state (CLAUDE.md rule 5). A function that names a
+//! card answers with an owned copy of it as it stands now; a caller that changes the card looks it up
+//! again by `id` (`state::find_instance_mut`).
 
 use serde::{Deserialize, Serialize};
 
@@ -90,15 +87,11 @@ pub fn resolve_target(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<Dama
         Selection::Hero { player } => Some(DamageTarget::Hero { player: *player }),
         Selection::Instance { instance_id } => {
             let instance = find_instance(ctx.state, instance_id)?;
-            // R174: a card chosen on the field is chosen as that stay. One an earlier effect of this same
-            // list took off the field is gone for this one, wherever it is now: back already — a fused
-            // card's #22 half sacrificed it and Reborn returned it, a new arrival (R83) — or in a graveyard
-            // or a hand, reset (R78), where a buff or an exile aimed at the unit on the field has nothing to
-            // land on (§8 Conventions). The same holds when a prompt split the list across actions (R113),
-            // and for a play's declared target a trap answering the play took off the field at §10.5 step 4
-            // (the play's Cry runs with the mark step 1 checked the choices at). A pick an answer made is
-            // chosen as its prompt offered it (`ctx.chosenFrom`, §10.6): a Reborn body the list's own
-            // sacrifice put back before it asked is the stay that was picked.
+            // R174: a card chosen on the field is chosen as that stay. One an earlier effect of this list
+            // took off the field is gone for this one wherever it is now: back as a new arrival (R83), or
+            // reset in a graveyard or a hand (R78) with nothing to land on (§8 Conventions). So too across
+            // a prompt's split (R113), and for a play's target a trap took off at §10.5 step 4. A pick an
+            // answer made is chosen as its prompt offered it (`ctx.chosenFrom`, §10.6).
             if left_field_after(ctx.state, stay_mark_of(ctx, &instance.id), &instance.id) {
                 return None;
             }
@@ -121,14 +114,10 @@ pub fn resolve_target(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<Dama
     }
 }
 
-/// R174: a card a script names by its id — captured in a continuation's data, read off the event a
-/// trigger answers, or enumerated by the list itself — on the stay it had when the run began. An
-/// effect later in the list is aimed at the card the list named, and a card an earlier effect of the
-/// same list took off the field is gone for it wherever it is now, a Reborn body included (R83);
-/// naming it by id rather than as "the chosen one" changes nothing, and neither does a prompt that
-/// split the list (R113). A card the answer to this run's own prompt picked is named on the stay
-/// the prompt offered it on, by id as much as as the chosen card (`stay_mark_of`). `None` when there
-/// is no such card.
+/// R174: a card a script names by its id, on the stay it had when the run began: one an earlier effect
+/// of the same list took off the field is gone for it wherever it is now, a Reborn body included (R83),
+/// as when chosen, even across a prompt's split (R113). A card this run's own prompt picked is named on
+/// the stay the prompt offered it on (`stay_mark_of`). `None` when there is no such card.
 pub fn instance_on_its_stay(ctx: &EffectContext<'_>, instance_id: &str) -> Option<CardInstance> {
     let instance = find_instance(ctx.state, instance_id)?;
     // §3.2, R13: a card dormant under a Stack pile is not on the field for effects.
@@ -146,13 +135,11 @@ pub fn instance_on_its_stay(ctx: &EffectContext<'_>, instance_id: &str) -> Optio
     }
 }
 
-/// R174: the card running the script, while it is on the stay it had when the run began — a card an
-/// earlier effect of the same list took off the field (#22's sacrifice, radiant #52's bounce) is gone
-/// for "this", even once it is back, and a card R78 has reset in a hand is not what the effect was
-/// aimed at. A card that never stood on the field in the run (a Spell resolving, a hand card) has no
-/// stay to lose, and a Death hook's snapshot (R89) died before its hook began.
-///
-/// TS answered the live `ctx.self`: this is the card as it stands now (`EffectContext::live_self`).
+/// R174: the card running the script as it stands now (`EffectContext::live_self`), while it is on the
+/// stay it had when the run began: one an earlier effect of the list took off the field (#22's
+/// sacrifice, radiant #52's bounce) is gone for "this", even once back, as is one R78 reset in a hand.
+/// A card that never stood on the field in the run has no stay to lose, and a Death hook's snapshot
+/// (R89) died before its hook began.
 pub fn self_on_its_stay(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     let this = ctx.live_self()?;
     if left_field_since(ctx, &this.id) {
@@ -182,15 +169,10 @@ fn left_field_since(ctx: &EffectContext<'_>, instance_id: &str) -> bool {
     left_field_after(ctx.state, mark, instance_id)
 }
 
-/// R174, §10.6: the field's departures a card's stay is judged from. A card the answer to this run's
-/// own prompt picked (`ctx.targets` with `ctx.chosen_from`) is picked on the stay the prompt offered it
-/// on — a Reborn body the list's own sacrifice put back before it asked — and the answered step is
-/// aimed at that stay however it names the card: as the chosen one, or by the id it read off the
-/// selection, as a delayed effect that watches it (#50's shape), a steal, a Transform or a Make
-/// Radiant by id do. A card the event a queued trigger answers names is judged from when that event
-/// happened (`ctx.event_stay`, R212): the played unit a trigger reads off its `cardPlayed` is not the
-/// Reborn body an earlier trigger on the same play made. Any other card is judged from when the run
-/// began (`ctx.exits_from`) — a card a trigger reads off the board as it resolves included.
+/// R174, §10.6: the field's departures a card's stay is judged from. A card this run's answered prompt
+/// picked (`ctx.chosen_from`): the stay the prompt offered it on, however the step names it (#50's
+/// shape). A card the event of a queued trigger names: when that event happened (`ctx.event_stay`,
+/// R212), not a Reborn body an earlier trigger made. Any other: when the run began (`ctx.exits_from`).
 fn stay_mark_of(ctx: &EffectContext<'_>, instance_id: &str) -> u32 {
     let picked = ctx.chosen_from.is_some()
         && ctx.targets.iter().any(
@@ -282,7 +264,6 @@ pub fn sides_of(ctx: &EffectContext<'_>, side: Option<ScopeSide>) -> Vec<PlayerI
         Some(ScopeSide::SelfSide) => vec![ctx.controller],
         Some(ScopeSide::Enemy) => vec![opponent_of(ctx.controller)],
         _ => {
-            // TS checked `PLAYER_IDS.includes(active)`; a `PlayerId` always is one.
             let active = ctx.state.active;
             vec![active, opponent_of(active)]
         }
@@ -307,8 +288,7 @@ pub fn matches_scope_aimed(
             ))
 }
 
-/// Whether one card passes a scope's filters. Zone membership is the caller's business. (TS's
-/// default `scope = {}` is `&BoardScope::default()`.)
+/// Whether one card passes a scope's filters. Zone membership is the caller's business.
 pub fn matches_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &BoardScope) -> bool {
     if scope.exclude_self == Some(true)
         && let Some(this) = &ctx.self_
