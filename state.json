@@ -9704,6 +9704,13 @@
     "2482": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T15:34:53Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone): with no GitHub access I cannot tell whether an open pull request touches command-menu.test.tsx, so easy's 'cannot tell' clause fails"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
