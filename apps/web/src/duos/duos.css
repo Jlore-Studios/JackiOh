@@ -516,7 +516,8 @@
   font-weight: 650;
 }
 
-.coop-panel__status {
+.coop-panel__status,
+.coop-panel__note {
   margin: 0;
   color: var(--text-dim);
 }

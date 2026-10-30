@@ -69,6 +69,7 @@ fn answering(
                 Vec::new()
             }
         }),
+        even_if_gone: false,
     }
 }
 
