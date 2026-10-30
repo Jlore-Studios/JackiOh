@@ -137,7 +137,7 @@ func Ranked(pool *providers.Pool, seats []*providers.Seat, spread Balance /* = N
 	for i, name := range pool.Priority {
 		order[name] = i
 	}
-	return sortedBy(seats, func(seat *providers.Seat) []any {
+	return py.SortedBy(seats, func(seat *providers.Seat) []any {
 		place, ok := order[seat.Provider.ID]
 		if !ok {
 			place = len(order)
@@ -197,7 +197,7 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 		if len(seats) == 0 {
 			return []any{len(tierRank), 0}
 		}
-		return seatKey(minBy(seats, seatKey))
+		return seatKey(py.MinBy(seats, seatKey))
 	}
 
 	strongest := func(provider *providers.Provider) int {
@@ -221,7 +221,7 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 	if fallback || ownerFirst {
 		base = offered
 	}
-	order := sortedBy(base, func(provider *providers.Provider) []any {
+	order := py.SortedBy(base, func(provider *providers.Provider) []any {
 		strength := 0
 		if part {
 			strength = strongest(provider)
@@ -250,7 +250,7 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 		if len(seats) == 0 {
 			continue
 		}
-		seat := minBy(seats, seatKey)
+		seat := py.MinBy(seats, seatKey)
 		prefix := ""
 		if ownerFirst && provider.ID == avoid {
 			prefix = fmt.Sprintf("its planner `%s` keeps it: one lane, one owner. ", avoid)
@@ -335,7 +335,7 @@ func LanePlanners(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, forced 
 			seats = append(seats, seat)
 		}
 	}
-	return sortedBy(Ranked(cfg.Pool, seats, Balance_(ctx, state, lanes)), func(seat *providers.Seat) []any {
+	return py.SortedBy(Ranked(cfg.Pool, seats, Balance_(ctx, state, lanes)), func(seat *providers.Seat) []any {
 		return []any{-tierRank[seat.Tier], lanes.PlanningBy(seat.Provider.ID)}
 	})
 }
@@ -380,7 +380,7 @@ func ReviewSeat(pool *providers.Pool, offered []*providers.Provider, candidate *
 			continue // a person's explicit request reviews at any tier
 		}
 		found := Ranked(pool, filter(seats, func(seat *providers.Seat) bool { return seat.Tier == tier }), spread)
-		found = sortedBy(found, func(seat *providers.Seat) []any { // stable: keeps the order
+		found = py.SortedBy(found, func(seat *providers.Seat) []any { // stable: keeps the order
 			return []any{slices.Contains(candidate.Approved, seat.Family())}
 		})
 		if len(found) > 0 {
@@ -487,7 +487,7 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	// builds the harder first, since only the stronger models can take them.
 	// A review run unblocks a merge and is short, so it goes before every build or revision,
 	// whatever their priority (#317 part 9); then the priority tier and the usual order.
-	order := sortedBy(q, func(c *queue.Candidate) []any {
+	order := py.SortedBy(q, func(c *queue.Candidate) []any {
 		return []any{!(force || c.Forced), c.Kind != "review", c.Priority, queue.KindOrder[c.Kind],
 			-difficultyIndex(c.Difficulty), c.QueuedAt, c.Number}
 	})
@@ -498,13 +498,13 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	var planning []Pair
 	planners := LanePlanners(ctx, state, lanes, force, quietOK)
 	if len(planners) > 0 {
-		needing := sortedBy(filter(order, queue.NeedsPlan), func(c *queue.Candidate) []any {
+		needing := py.SortedBy(filter(order, queue.NeedsPlan), func(c *queue.Candidate) []any {
 			return []any{!(force || c.Forced), c.Difficulty != "easy", !c.Part}
 		})
 		for _, candidate := range needing {
 			// The lane's weakest planner that meets its floor (#695): a medium seat plans an
 			// easy or medium item, a strong one a hard item.
-			fitting := sortedBy(filter(planners, func(s *providers.Seat) bool {
+			fitting := py.SortedBy(filter(planners, func(s *providers.Seat) bool {
 				return providers.TierAtLeast(s.Tier, queue.PlanFloor(candidate))
 			}), func(s *providers.Seat) []any {
 				return []any{tierRank[s.Tier], s.Rank, lanes.PlanningBy(s.Provider.ID)}
@@ -531,7 +531,7 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 			}
 		}
 	}
-	planning = sortedBy(planning, func(pair Pair) []any { return []any{!(force || pair.Candidate.Forced)} })
+	planning = py.SortedBy(planning, func(pair Pair) []any { return []any{!(force || pair.Candidate.Forced)} })
 	return append(planning, found...)
 }
 

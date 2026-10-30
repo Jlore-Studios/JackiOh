@@ -350,7 +350,7 @@ func CILogs(ctx *hctx.Context, runID any) string {
 		})
 		// The failed first: a merge-queue build cancels the rest of its run once a required check
 		// failed (ci.yml's `queue-cancel-*`), and those cancelled jobs say nothing.
-		jobs = sortedBy(jobs, func(j *pyjson.Object) []any { return []any{eqStr(j.Get("conclusion"), "cancelled")} })
+		jobs = py.SortedBy(jobs, func(j *pyjson.Object) []any { return []any{eqStr(j.Get("conclusion"), "cancelled")} })
 	}); failed {
 		return prompts.Data(fmt.Sprintf("(could not read the CI run: %s)", exc.Error()), "CI failure")
 	}

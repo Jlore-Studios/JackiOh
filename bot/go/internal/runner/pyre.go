@@ -2,9 +2,8 @@ package runner
 
 // The Python behaviours this package's parsing and processes depend on where Go's own differ and
 // py does not hold them: `\b` at a byte offset, the extra letters re.IGNORECASE matches (ı and İ
-// for i), float() over Unicode digits, the universal newlines of a file read as text, pathlib's
-// with_suffix, and subprocess's way of finding, starting, timing out and reporting a program
-// (Popen, run, OSError, TimeoutExpired).
+// for i), a file read line by line in text mode, pathlib's with_suffix, and subprocess's way of
+// finding, starting, timing out and reporting a program (Popen, run, OSError, TimeoutExpired).
 
 import (
 	"bufio"

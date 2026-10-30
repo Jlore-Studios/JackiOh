@@ -1030,7 +1030,7 @@ func CmdDispatch(cfg *config.Config, args *Args) int {
 	}
 	ctx.Dispatch(item, args.Force, args.Mode)
 	say(fmt.Sprintf("dispatched %s (item=%s, force=%s, mode=%s)", config.NightWorkflow, shown,
-		pyBool(args.Force), args.Mode))
+		py.Str(args.Force), args.Mode))
 	return 0
 }
 

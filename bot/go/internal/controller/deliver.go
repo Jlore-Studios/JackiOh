@@ -143,7 +143,7 @@ func countTry(ctx *hctx.Context, runID string, ref string) int {
 		}
 		tries = py.MustInt(py.Or(entry.Get("tries"), 0)) + 1
 		book.Set(runID, entry.Copy().Set("ref", ref).Set("tries", tries).Set("at", iso(ctx.Now())))
-		byAge := sortedBy(book.Keys(), func(key string) string { return py.OrStr(book.Obj(key).Get("at"), "") })
+		byAge := py.SortedBy(book.Keys(), func(key string) []any { return []any{py.OrStr(book.Obj(key).Get("at"), "")} })
 		for _, old := range byAge[:max(0, len(byAge)-KeepDeliveries)] {
 			book.Delete(old)
 		}

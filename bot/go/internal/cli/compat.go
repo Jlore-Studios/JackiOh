@@ -32,14 +32,6 @@ func lower(b bool) string {
 	return "false"
 }
 
-// pyBool is `str(b)`.
-func pyBool(b bool) string {
-	if b {
-		return "True"
-	}
-	return "False"
-}
-
 // readJSON is `json.loads(Path(path).read_text(encoding="utf-8"))`: an OSError or a
 // JSONDecodeError goes up, uncaught, as in the Python.
 func readJSON(path string) any {

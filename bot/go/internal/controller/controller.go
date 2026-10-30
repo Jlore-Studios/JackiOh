@@ -43,7 +43,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -403,13 +402,6 @@ func Check(ctx *hctx.Context, planned *pyjson.Object, given map[string]string) [
 		}
 	}
 	return problems
-}
-
-// sortedBy is sorted(keys, key=key): a stable sort by a string key.
-func sortedBy(keys []string, key func(string) string) []string {
-	out := append([]string{}, keys...)
-	sort.SliceStable(out, func(i, j int) bool { return key(out[i]) < key(out[j]) })
-	return out
 }
 
 // iso is clock.iso.

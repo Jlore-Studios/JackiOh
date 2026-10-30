@@ -152,27 +152,6 @@ func Clock(at any) string {
 	return text
 }
 
-// isNumber is isinstance(v, (int, float)): a bool is an int in Python.
-func isNumber(v any) bool {
-	switch v.(type) {
-	case bool, int, int64, int32, float64, float32:
-		return true
-	}
-	return false
-}
-
-// asNumber is a value isNumber accepts, as a float (True is 1).
-func asNumber(v any) float64 {
-	if b, ok := v.(bool); ok {
-		if b {
-			return 1
-		}
-		return 0
-	}
-	f, _ := pyjson.AsFloat(v)
-	return f
-}
-
 // tokenTotal is sum(int(tokens.get(name) or 0) for name in ("input", "output")).
 func tokenTotal(tokens *pyjson.Object) int {
 	total := 0
@@ -200,7 +179,7 @@ func tokenCount(tokens *pyjson.Object, name string) int {
 func Took(step *pyjson.Object) string {
 	took := step.Get("minutes")
 	text := ""
-	if isNumber(took) {
+	if _, isNumber := py.Number(took); isNumber {
 		text = py.Str(took) + " min"
 	}
 	tokens, _ := step.Get("tokens").(*pyjson.Object)
@@ -211,12 +190,11 @@ func Took(step *pyjson.Object) string {
 			text = fmt.Sprintf("%d tok", total)
 		}
 	}
-	cost := step.Get("cost_usd")
-	if isNumber(cost) && asNumber(cost) > 0 {
+	if cost, isNumber := py.Number(step.Get("cost_usd")); isNumber && cost > 0 {
 		if text != "" {
-			text = fmt.Sprintf("%s, $%.2f", text, asNumber(cost))
+			text = fmt.Sprintf("%s, $%.2f", text, cost)
 		} else {
-			text = fmt.Sprintf("$%.2f", asNumber(cost))
+			text = fmt.Sprintf("$%.2f", cost)
 		}
 	}
 	return text
@@ -286,13 +264,13 @@ func Section(result *pyjson.Object, provider string, models string, action strin
 	}
 	tokens, _ := result.Get("tokens").(*pyjson.Object)
 	total := tokenTotal(tokens)
-	cost := result.Get("cost_usd")
-	if total > 0 || (isNumber(cost) && asNumber(cost) > 0) {
+	cost, isNumber := py.Number(result.Get("cost_usd"))
+	if total > 0 || (isNumber && cost > 0) {
 		cached := tokenCount(tokens, "cache_read") + tokenCount(tokens, "cache_write")
 		line := fmt.Sprintf("Tokens: %d in / %d out / %d cached", tokenCount(tokens, "input"),
 			tokenCount(tokens, "output"), cached)
-		if isNumber(cost) {
-			line += fmt.Sprintf(", $%.2f", asNumber(cost))
+		if isNumber {
+			line += fmt.Sprintf(", $%.2f", cost)
 		}
 		lines = append(lines, line+".")
 	}

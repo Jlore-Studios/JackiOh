@@ -50,19 +50,43 @@ what a run does. When a rule here and the Python disagree, the Python's behaviou
   byte for byte (`ensure_ascii`, separators, `sort_keys`, float repr). Never use `encoding/json`'s
   Marshal for anything the harness writes or hashes.
 - Python truthiness: `pyjson.Truthy(v)`, `o.Truthy("key")`. `d.get("k")` is `o.Get("k")`;
-  `d.get("k") or {}` is `o.Obj("k")` (a nil object reads as empty); `str(v)` is `py.Str(v)`.
+  `d.get("k") or {}` is `o.Obj("k")` (a nil object reads as empty); `d["k"]` is `py.Item(d, "k")`
+  (its KeyError); `str(v)` is `py.Str(v)`.
+- Python's built-ins over a JSON value are `py`'s, never a package's own copy: `v or default` is
+  `py.Or(v, default)` and `str(v or "")` is `py.OrStr(v, "")`; `int(v)` is `py.Int` (or
+  `py.MustInt` where the Python lets the exception go up), so `int(v or 0)` is
+  `py.MustInt(py.Or(v, 0))`; `float(v)` is `py.Float` / `py.MustFloat`; `for x in v or []` is
+  `py.Each(v)` (`py.Iter` and `py.MustIter` are `list(v)` without the `or`); `v in ("a", "b")` is
+  `py.In(v, "a", "b")`; `isinstance(v, (int, float))` is `py.Number(v)`; `type(v).__name__` is
+  `py.TypeName(v)`; `parse_iso(v)` of a record's value is `clock.ParseISOValue(v)`.
 - `dict[str, str]` (environments) is `map[string]string`; sets are `map[T]bool`. A Go map has no
   order: wherever the Python iterates a dict or set and the order shows (output, GitHub writes,
   "the first"), keep an order: a `*pyjson.Object`, a slice, or sort as the Python does.
 - Strings are indexed and measured by code point in Python: `py.Len`, `py.Slice`, `py.SliceTo`,
   `py.SliceFrom`, `py.Ljust`, `py.Rjust`, never `s[:n]` or `len(s)` on text that may hold
-  non-ASCII. `str.splitlines()` is `py.Splitlines`; `str.split()` is `strings.Fields`;
-  `str.strip()` is `strings.TrimSpace`.
+  non-ASCII. `str.splitlines()` is `py.Splitlines`. `str.split()` is `py.Split` and
+  `str.strip()`, `lstrip()` and `rstrip()` are `py.Strip`, `py.Lstrip` and `py.Rstrip`, not
+  `strings.Fields` and `strings.TrimSpace`: Python's whitespace takes \x1c-\x1f, Go's does not
+  (int() and float() strip Go's, as CPython does: `py.Int` knows). `str.lower()` is `py.Lower`
+  (İ, and a final Σ as ς) and `str.capitalize()` `py.Capitalize`. `s.isdigit()` guarding an
+  `int(s)` is `py.IsDecimal(s)`.
+- Patterns over str: RE2's `\s`, `\w` and `\d` are ASCII, so write Python's `\s`, `\S`, `\w`, `\W`
+  as `py.ReS`, `py.ReNotS`, `py.ReW`, `py.ReNotW` (`py.SpaceClass`, `py.WordClass` and
+  `py.DigitClass` inside a class of your own). What RE2 cannot say is written in code with `py`'s
+  runes: `\b` is `py.Boundary`, a literal under re.IGNORECASE `py.FoldAt` / `py.FoldEqual`,
+  `int()` of what `\d+` matched `py.Atoi`.
+- Bytes as text: `bytes.decode("utf-8", "replace")` is `py.DecodeReplace` (one U+FFFD for each
+  maximal invalid subpart, where Go writes one for each byte), text mode's newlines are
+  `py.Universal`, and `Path.read_text(encoding="utf-8", errors="replace")` is `py.ReadText`.
 - Numbers: `round()` is `py.Round` (half to even), `round(x, n)` is `py.RoundN`, `//` and `%` on
   ints are `py.FloorDiv` and `py.Mod`, `f"{n:,}"` is `py.Thousands`, `repr(float)` and a float in an
-  f-string is `pyjson.FloatRepr`. `f"{x:.1f}"` is `fmt.Sprintf("%.1f", x)` (both round correctly).
+  f-string is `pyjson.FloatRepr`. `f"{x:.1f}"` is `fmt.Sprintf("%.1f", x)` (both round correctly);
+  `f"{x:.0%}"` is `py.Percent(x, 0)`. `sum()` of floats is `py.Sum` (compensated, as since
+  Python 3.12), and `collections.Counter` over strings is `py.Counter`.
 - Sorting: Python's sort is stable: always `sort.SliceStable` / `slices.SortStableFunc`. `min` and
-  `max` with a key return the first of the equal ones.
+  `max` with a key return the first of the equal ones. A tuple key is a `[]any` compared as
+  Python compares tuples by `py.Compare`: `sorted(xs, key=…)` is `py.SortedBy`, `min(xs, key=…)`
+  `py.MinBy`.
 - `datetime` is `time.Time` (in UTC unless the Python localised it), `timedelta` is
   `time.Duration`, `datetime.time` is `clock.TimeOfDay`. `fnmatch.fnmatch` is `py.Fnmatch`.
   `html.escape` writes `&#x27;` for `'` (Go's `html.EscapeString` writes `&#39;`).
@@ -77,8 +101,12 @@ what a run does. When a rule here and the Python disagree, the Python's behaviou
   `if e, ok := herr.Catch[*herr.GitHubError](func() { … }); ok { … }`.
 - `except HarnessError` → `herr.CatchHarness`; `except Exception` → `err := herr.Try(func() {…})`.
 - `finally` → `defer` inside the closure.
-- Python's own exceptions (`ValueError` from `int()`, `OSError`, `json.JSONDecodeError`,
-  `KeyError` caught on purpose) become Go's error checks where they arise; nothing else changes.
+- Python's own exceptions (`ValueError` from `int()`, `KeyError`, `TypeError`, …) are a
+  `*py.Error{Type, Msg}` (`py.KeyError(k)` for a missing key), raised with herr.Raise or returned
+  where the Python caught them; Go's own errors (an `OSError`) are checked where they arise.
+- What an `except Exception as exc:` reads is herr's: `type(exc).__name__` is `herr.Name(err)`,
+  `str(exc)` is `herr.Str(err)` (an OSError's `[Errno 2] No such file or directory: 'x'`) and
+  `isinstance(exc, OSError)` is `herr.IsOSError(err)`.
 - A goroutine that stands for a Python thread recovers its own panics: an exception in a Python
   thread does not end the process.
 - The command line catches what is left exactly as `__main__.main` does (the same message, the

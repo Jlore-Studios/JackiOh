@@ -9,43 +9,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-func TestCmpKeyIsPythonTupleOrder(t *testing.T) {
-	cases := []struct {
-		a, b []any
-		want int
-	}{
-		{[]any{false, 1}, []any{true, 0}, -1}, // False before True
-		{[]any{true}, []any{1}, 0},            // True == 1
-		{[]any{1, "b"}, []any{1, "a"}, 1},
-		{[]any{[2]int{-2, 1}}, []any{[2]int{-9, 0}}, 1},
-		{[]any{[]any{0, 3}, 5}, []any{[]any{0, 3}, 6}, -1},
-		{[]any{1}, []any{1, 0}, -1}, // a prefix first
-		{[]any{"é"}, []any{"z"}, 1}, // by code point
-	}
-	for _, c := range cases {
-		if got := cmpKey(c.a, c.b); got != c.want {
-			t.Errorf("cmpKey(%v, %v) = %d, want %d", c.a, c.b, got, c.want)
-		}
-	}
-}
-
-func TestSortedByIsStableAndMinByTakesTheFirst(t *testing.T) {
-	words := []string{"bb", "a", "cc", "d", "ee"}
-	byLen := func(s string) []any { return []any{len(s)} }
-	if got := sortedBy(words, byLen); !slices.Equal(got, []string{"a", "d", "bb", "cc", "ee"}) {
-		t.Errorf("sortedBy = %v", got)
-	}
-	if words[0] != "bb" {
-		t.Errorf("sortedBy changed its input: %v", words)
-	}
-	if got := minBy([]string{"bb", "cc", "a", "d"}, byLen); got != "a" {
-		t.Errorf("minBy = %q", got)
-	}
-	if got := minBy([]string{"bb", "cc"}, byLen); got != "bb" {
-		t.Errorf("minBy of equals = %q, want the first", got)
-	}
-}
-
 func TestLanesCount(t *testing.T) {
 	lanes := &Lanes{Limit: 3, Held: map[int]string{4: "a", 5: "a", 6: "b", 0: "c"},
 		Planning: map[int]bool{5: true, 9: true}, PlanLimit: 2, MachineLimit: 2,
