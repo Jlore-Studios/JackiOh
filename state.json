@@ -7500,11 +7500,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "41002076874",
-      "runs_on": "night-vm-muse-fill",
+      "run_id": "pending:28e50fdb-1793339314",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-30T04:17:29Z",
+      "started_at": "2026-10-30T05:48:57Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -10151,9 +10151,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-30T05:34:09Z",
+    "at": "2026-10-30T05:48:57Z",
     "url": "",
-    "what": "build #2450 on claude-5"
+    "what": "revise #2310 on muse"
   },
   "last_sweep": {
     "at": "2026-10-30T05:32:41Z",
