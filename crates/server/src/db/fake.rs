@@ -112,7 +112,7 @@ use crate::config::{
 use crate::db::store::{
     ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult,
     CollectionEntry, CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome,
-    CustomCardWrite, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow, FavouriteCard, FoldedRecords,
+    CustomCardWrite, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow, FavoriteCard, FoldedRecords,
     FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode, LastBoardEntry, LastBoardKind,
     LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase, MatchRow, MatchSeats,
     MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
@@ -705,12 +705,12 @@ fn reject_redeem(
 /// the fake's own invariants (`codes_claim` is single-shot, `profiles_set_status` carries R111's
 /// launch grant) hold here exactly as they do for any other caller.
 ///
-/// CALLS RUN ONE AT A TIME. TS serialised redemptions through a promise chain, because without it
+/// CALLS RUN ONE AT A TIME. TS serialized redemptions through a promise chain, because without it
 /// two redemptions by one pending profile both passed step 1 across an `await` and one account used
 /// up two codes. Here a redemption runs inside a transaction, which holds the store's one lock, so
 /// two of them cannot interleave at all.
 ///
-/// That is STRICTER than Postgres, not the same. `app.redeem_invite_code` serialises two redemptions
+/// That is STRICTER than Postgres, not the same. `app.redeem_invite_code` serializes two redemptions
 /// only where they share something it locks: the profile row (step 1), the caller's IP hash (an
 /// advisory lock before step 3's count, migration 0006) and the code row (step 5). Two redemptions by
 /// different profiles from different addresses for different codes run side by side there. So a
@@ -2025,7 +2025,7 @@ pub fn tickets_cancel(f: &mut FakeTx<'_>, ticket_id: &str, _at: i64) -> Result<(
     if row.status != TicketStatus::Open {
         return Ok(());
     }
-    row.status = TicketStatus::Cancelled;
+    row.status = TicketStatus::Canceled;
     Ok(())
 }
 
@@ -3308,8 +3308,8 @@ pub fn to_public_player_summary(
         Some(wins as f64 / games as f64)
     };
 
-    let mut played_counts: Vec<FavouriteCard> = Vec::new();
-    let mut nemesis_counts: Vec<FavouriteCard> = Vec::new();
+    let mut played_counts: Vec<FavoriteCard> = Vec::new();
+    let mut nemesis_counts: Vec<FavoriteCard> = Vec::new();
     let mut total_destroyed = 0;
     let mut total_defeated = 0;
 
@@ -3323,13 +3323,13 @@ pub fn to_public_player_summary(
         let defeated = count_number(counters.get("defeated"));
 
         if played > 0 {
-            played_counts.push(FavouriteCard {
+            played_counts.push(FavoriteCard {
                 id: id.clone(),
                 count: played,
             });
         }
         if played_against > 0 {
-            nemesis_counts.push(FavouriteCard {
+            nemesis_counts.push(FavoriteCard {
                 id: id.clone(),
                 count: played_against,
             });

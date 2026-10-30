@@ -215,7 +215,7 @@ fn defs_of(defs: &[CardDef]) -> Vec<String> {
 }
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
-    match serde_json::to_value(events).expect("events serialise") {
+    match serde_json::to_value(events).expect("events serialize") {
         Value::Array(items) => items
             .into_iter()
             .map(|item| item.get(key).cloned().unwrap_or(Value::Null))
@@ -804,7 +804,7 @@ mod discover_from_library_51_ky_s_private_tutor {
             .iter()
             .map(|option| match &option.selection {
                 Selection::Instance { instance_id } => instance_id.clone(),
-                other => serde_json::to_value(other).expect("a selection serialises")["pick"]
+                other => serde_json::to_value(other).expect("a selection serializes")["pick"]
                     .as_str()
                     .unwrap_or_default()
                     .to_string(),
@@ -861,7 +861,7 @@ mod discover_from_library_51_ky_s_private_tutor {
     }
 
     #[test]
-    fn r65_the_cost_bracket_reads_an_x_cost_library_card_as_0_and_honours_an_open_ended_4_plus() {
+    fn r65_the_cost_bracket_reads_an_x_cost_library_card_as_0_and_honors_an_open_ended_4_plus() {
         let mut zero_bracket = game("discover-library-x");
         let library = tutor_library(&mut zero_bracket);
         let self_ = resolving_self(&mut zero_bracket, &generator().id, PlayerId::P1);

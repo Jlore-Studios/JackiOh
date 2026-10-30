@@ -156,7 +156,7 @@ fn markers(state: &GameState, def_id: &str) -> Vec<String> {
     };
     SEEN.with(|seen| seen.set(Vec::new()));
     let mut copy: GameState =
-        serde_json::from_value(serde_json::to_value(state).expect("a state serialises"))
+        serde_json::from_value(serde_json::to_value(state).expect("a state serializes"))
             .expect("a state survives JSON");
     let mut events = Vec::new();
     let mut rng = Rng::new(&copy.seed, copy.rng_cursor);
@@ -228,12 +228,12 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
         let [alpha, beta, _, _] = cards();
         let first = crafted_game("fuse-registry-json", &alpha, &beta);
         let mut copy: GameState =
-            serde_json::from_value(serde_json::to_value(&first).expect("a state serialises")).expect("JSON");
+            serde_json::from_value(serde_json::to_value(&first).expect("a state serializes")).expect("JSON");
         let id = only_fused(&copy);
         // The def carries a card's fields and, since R468, the ingredient list its id spells out. A
         // readable id is still enough on its own: with the list taken off the def, it rebuilds the same.
         let mut keys: Vec<String> = serde_json::to_value(&copy.transient_defs[&id])
-            .expect("a def serialises")
+            .expect("a def serializes")
             .as_object()
             .map(|def| def.keys().cloned().collect())
             .unwrap_or_default();
@@ -350,7 +350,7 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
 
         // A state that came through JSON holds none: each lookup composes its own, which runs the same.
         let copy: GameState =
-            serde_json::from_value(serde_json::to_value(&first).expect("a state serialises")).expect("JSON");
+            serde_json::from_value(serde_json::to_value(&first).expect("a state serializes")).expect("JSON");
         assert!(!Arc::ptr_eq(&composed(&copy), &composed(&copy)));
         assert_eq!(markers(&copy, &id), marker_list(&[&alpha, &beta]));
 

@@ -3,6 +3,6 @@
 /**
  * R1366: `controlChanged.how`, the verb that moved the card: §6.3 Steal (`steal`), or R1423's give
  * to the other player (`give`). Absent for a card a board move carried across (a board swap, a
- * rotation across the centre line, a rollback's restore).
+ * rotation across the center line, a rollback's restore).
  */
 export type ControlHow = "steal" | "give";

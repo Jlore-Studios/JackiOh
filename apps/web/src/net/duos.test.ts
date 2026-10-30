@@ -138,7 +138,7 @@ describe("B33 B34 co-op rooms", () => {
     expect(result).toBeFalsy();
   });
 
-  it("B34 cancelling a room once a guest has joined (or not the host) rejects with the server's status", async () => {
+  it("B34 canceling a room once a guest has joined (or not the host) rejects with the server's status", async () => {
     const error = await refused(() => cancelDuosRoom("HJK234"), refusal(409, "conflict", "The match has started."));
     expect(error.status).toBe(409);
   });

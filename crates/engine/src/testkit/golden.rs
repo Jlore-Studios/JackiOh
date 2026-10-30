@@ -110,7 +110,7 @@ pub fn seed_number(seed: &str) -> Option<u32> {
 /// §5.2 step 1: the state's canonical text as `hash_state` hashes it, without `applied`, `opening`
 /// and `generators`.
 pub fn hashed_state_text(state: &GameState) -> String {
-    let mut value = serde_json::to_value(state).expect("a GameState serialises");
+    let mut value = serde_json::to_value(state).expect("a GameState serializes");
     if let Some(object) = value.as_object_mut() {
         object.remove("applied");
         object.remove("opening");
@@ -124,7 +124,7 @@ pub fn hashed_state_text(state: &GameState) -> String {
 /// `generators` out, so a trace recorded before it was sent replays as it did.
 pub fn view_texts(state: &GameState) -> [String; 2] {
     [PlayerId::P1, PlayerId::P2].map(|player| {
-        let mut value = serde_json::to_value(view_for(state, player)).expect("a PlayerView serialises");
+        let mut value = serde_json::to_value(view_for(state, player)).expect("a PlayerView serializes");
         strip_key(&mut value, "createdBy");
         canonical(&value)
     })
@@ -152,7 +152,7 @@ fn strip_key(value: &mut Value, key: &str) {
 /// a `transformed` names (R2089000): the game record's bookkeeping, which no rule reads and no view
 /// forwards, as `view_texts` leaves out `createdBy`, so a trace recorded before it replays as it did.
 pub fn events_text(events: &[GameEvent]) -> String {
-    let mut value = serde_json::to_value(events).expect("GameEvents serialise");
+    let mut value = serde_json::to_value(events).expect("GameEvents serialize");
     if let Value::Array(items) = &mut value {
         for item in items {
             if let Value::Object(event) = item {
@@ -168,7 +168,7 @@ pub fn events_text(events: &[GameEvent]) -> String {
 pub fn legal_text(state: &GameState, actor: PlayerId) -> String {
     let mut lines: Vec<String> = legal_actions(state, actor)
         .iter()
-        .map(|action| canonical(&serde_json::to_value(action).expect("an ActionBody serialises")))
+        .map(|action| canonical(&serde_json::to_value(action).expect("an ActionBody serializes")))
         .collect();
     lines.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
     lines.dedup();

@@ -35,7 +35,7 @@ fn de<T: DeserializeOwned>(value: Value) -> T {
 }
 
 fn js<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a row serialises")
+    serde_json::to_value(value).expect("a row serializes")
 }
 
 fn args(values: &[&str]) -> Vec<String> {

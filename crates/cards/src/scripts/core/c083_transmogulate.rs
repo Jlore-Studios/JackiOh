@@ -406,7 +406,7 @@ mod tests {
             s.play(TRANSMOGULATE, json!({}));
 
             assert_eq!(js(&s.view(Some(P2)).opponent.hand), json!({ "count": 1 }));
-            let seen = serde_json::to_string(&s.view(Some(P2))).expect("serialises");
+            let seen = serde_json::to_string(&s.view(Some(P2))).expect("serializes");
             let held = s
                 .hand(Some(P1))
                 .first()
@@ -601,7 +601,7 @@ mod tests {
 
             // The same count, none of it named: the Legendaries it rolled stay unread, even by p1.
             assert_eq!(js(&s.view(Some(P1)).you.own_library), json!({ "cards": [], "unknown": 2 }));
-            let mine = serde_json::to_string(&s.view(Some(P1))).expect("serialises");
+            let mine = serde_json::to_string(&s.view(Some(P1))).expect("serializes");
             for card in s.pile(P1, "library") {
                 assert!(!mine.contains(&format!("\"{}\"", card.id)));
             }

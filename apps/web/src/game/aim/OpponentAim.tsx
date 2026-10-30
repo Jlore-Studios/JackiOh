@@ -1,5 +1,5 @@
 // R738: the opponent's aim, drawn on this board — Hearthstone's targeting arrow in the opponent's
-// colour, from the source the opponent is aiming with to the target it is over, gone when the aim
+// color, from the source the opponent is aiming with to the target it is over, gone when the aim
 // ends. It draws only what the relay names, and the relay names only public handles: a hand card is
 // the card back at that position, a field card its zone, a hero its portrait (`aim.ts`).
 //
@@ -23,7 +23,7 @@ const HEAD_PX = 24;
 const HEAD_HALF_WIDTH_PX = 14;
 const ORIGIN_RADIUS_PX = 9;
 
-function centreOf(element: Element | null): Point | null {
+function centerOf(element: Element | null): Point | null {
   if (element === null) return null;
   const rect = element.getBoundingClientRect();
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -34,9 +34,9 @@ function round(n: number): number {
 }
 
 function measure(view: PlayerView, aim: Aim): Geometry | null {
-  const from = centreOf(aimEndElement(document, view, aim.source));
+  const from = centerOf(aimEndElement(document, view, aim.source));
   if (from === null) return null;
-  return { from, to: aim.target === null ? null : centreOf(aimEndElement(document, view, aim.target)) };
+  return { from, to: aim.target === null ? null : centerOf(aimEndElement(document, view, aim.target)) };
 }
 
 export default function OpponentAim(props: { view: PlayerView; aim: Aim | null }): ReactElement | null {

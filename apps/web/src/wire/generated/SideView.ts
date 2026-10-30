@@ -77,7 +77,7 @@ jade?: number,
 marketCredits?: number, 
 /**
  * R846 (Meditative #19.1): extra turns owed to this player. Absent while none is owed, so a
- * game without one serialises as before.
+ * game without one serializes as before.
  */
 extraTurns?: number, 
 /**

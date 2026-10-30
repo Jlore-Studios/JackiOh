@@ -405,7 +405,7 @@ mod tests {
                 assert!(matches_object(&js(&s.view(P1))["you"]["backrow"][0], &json!({ "defId": SHEEPISH })));
                 assert_eq!(hits_on(&s, P2), vec![2]);
                 // Its owner's event stream names it nowhere once it is set (R97: judged where it is now).
-                let theirs = serde_json::to_string(&s.view(P2)).expect("a view serialises");
+                let theirs = serde_json::to_string(&s.view(P2)).expect("a view serializes");
                 let trap_id = trap.as_ref().map(|card| card.id.clone()).unwrap_or_else(|| "missing".to_string());
                 assert!(!theirs.contains(&format!("\"{trap_id}\"")));
                 assert!(!theirs.contains(SHEEPISH));

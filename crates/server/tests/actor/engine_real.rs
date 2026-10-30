@@ -91,7 +91,7 @@ fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (GameState, (Vec<Str
 /// The instance ids of a seat's hand, read through its own view (§10.8).
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     let view =
-        serde_json::to_value(view_for(Pinned::default(), state, player)).expect("PlayerView serialises");
+        serde_json::to_value(view_for(Pinned::default(), state, player)).expect("PlayerView serializes");
     view["you"]["hand"]
         .as_array()
         .map(|cards| {
@@ -190,7 +190,7 @@ mod the_real_engine_port_src_match_engine_real_ts {
         // The port's other two projections work on a state a real card has passed through.
         assert!(!hash_state(&state).is_empty());
         let view = serde_json::to_value(view_for(Pinned::default(), &state, PlayerId::P1))
-            .expect("PlayerView serialises");
+            .expect("PlayerView serializes");
         assert!(!view.is_null());
     }
 }
@@ -277,7 +277,7 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
 
         let summary = summarize_game(Pinned::default(), &fold_args("r376-real", &decks, &log))
             .expect("a finished game's summary");
-        let summary: Value = serde_json::to_value(&summary).expect("GameSummary serialises");
+        let summary: Value = serde_json::to_value(&summary).expect("GameSummary serializes");
         assert_eq!(summary["first"], json!("p1"));
         assert_eq!(summary["winner"], json!("p1"));
         assert_eq!(summary["reason"], json!("concede"));

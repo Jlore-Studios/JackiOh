@@ -1,4 +1,4 @@
-// R631 (SPEC §10.11 "Music"): the rendered music on disk, its manifest, its size cap, its licence
+// R631 (SPEC §10.11 "Music"): the rendered music on disk, its manifest, its size cap, its license
 // record, the cards that play it, and `gen-music.mjs --check`. R1352: every Legendary's and Mythic's
 // own intro, tokens printed so included, over the sets that ship.
 
@@ -102,7 +102,7 @@ describe("R631 the rendered music", () => {
     }
   });
 
-  it("R631 names its source and licence for every track", () => {
+  it("R631 names its source and license for every track", () => {
     const text = readFileSync(LICENSES, "utf8");
     for (const [id] of entries) expect(text, id).toContain(`\`${id}\``);
     expect(text).toContain("FluidR3");

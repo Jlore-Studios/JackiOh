@@ -23,7 +23,7 @@ export type ParticlePresetSpec = {
   /** max radians per second */
   spin: number;
   blend: "lighter" | "source-over";
-  /** CSS colours the sprites are drawn in */
+  /** CSS colors the sprites are drawn in */
   colors: readonly string[];
   /** size eases to 0 over life */
   shrink: boolean;
@@ -37,7 +37,7 @@ export type ParticlePresetSpec = {
 
 /**
  * `scale` sizes the bloom against the anchor box (its shorter side), and `ms` is how long it lives.
- * `core` is the hot centre, `color` the halo it cools to.
+ * `core` is the hot center, `color` the halo it cools to.
  */
 export type FlashSpec = { core: string; color: string; scale: number; ms: number };
 

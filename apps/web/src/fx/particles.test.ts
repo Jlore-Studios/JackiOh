@@ -1,4 +1,4 @@
-// docs/polish/1-animations.md, behaviours B23 to B26: the pooled particle system (S5).
+// docs/polish/1-animations.md, behaviors B23 to B26: the pooled particle system (S5).
 //
 // No canvas is needed: `inspect()`, `alive()`, `capacity()` and `stats()` are the observable surface,
 // and nothing here draws.
@@ -255,7 +255,7 @@ describe("B26 determinism", () => {
 
 /* ------------------------------------------------------------------------------------------- *
  * S5: drawing. `draw` paints every live particle; a null sprite falls back to a filled arc in the
- * preset colour (the jsdom and no-2D-context case, and any sprite the cache could not make).
+ * preset color (the jsdom and no-2D-context case, and any sprite the cache could not make).
  * ------------------------------------------------------------------------------------------- */
 
 type DrawCall = { name: string; args: unknown[]; fillStyle: unknown };
@@ -286,7 +286,7 @@ function spriteCache(get: SpriteCache["get"]): SpriteCache {
 }
 
 describe("S5 drawing live particles", () => {
-  it("S5 a null sprite falls back to one filled arc per live particle, in a colour of its preset", () => {
+  it("S5 a null sprite falls back to one filled arc per live particle, in a color of its preset", () => {
     const ps = createParticleSystem({ capacity: 50, rng: createRng(3), sprites: spriteCache(() => null) });
     ps.emit("fire", 100, 100, opts(6));
     ps.step(16);
@@ -332,7 +332,7 @@ describe("S5 drawing live particles", () => {
     expect(calls.some((c) => c.name === "arc")).toBe(false);
   });
 
-  it("S5 draw asks the sprite cache for each live particle's preset and colour at the dpr it is given", () => {
+  it("S5 draw asks the sprite cache for each live particle's preset and color at the dpr it is given", () => {
     const get = vi.fn<SpriteCache["get"]>(() => null);
     const ps = createParticleSystem({ capacity: 50, rng: createRng(5), sprites: spriteCache(get) });
     ps.emit("arcane", 100, 100, opts(4));
@@ -357,7 +357,7 @@ describe("S5 drawing live particles", () => {
     tinted.emit("spark", 100, 100, { ...opts(12, "ring"), colors: palette });
     plain.step(16);
     tinted.step(16);
-    // The same seed draws the same motion, size and life: only the colours differ.
+    // The same seed draws the same motion, size and life: only the colors differ.
     expect(tinted.inspect()).toEqual(plain.inspect());
 
     const plainDraw = recordingContext();

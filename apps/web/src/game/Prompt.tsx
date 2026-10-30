@@ -262,7 +262,7 @@ type Picker = {
 const CARD_CHROMES: ReadonlySet<PromptKind> = new Set(["discover", "hand", "mulligan", "pick"]);
 
 /**
- * #492: the card picker, front and centre: every option a card in the middle of the screen, the way
+ * #492: the card picker, front and center: every option a card in the middle of the screen, the way
  * a Discover and Appropriations' "Choose one" are laid out (`CardChoice`). A short "Choose one" is
  * one (its chrome is `discover`), and so are a play's embiggen price and an X from X_CARD_LIMIT
  * values or fewer, which keep their own chrome. It is `data-prompt-layout="cards"`, which prompt.css
@@ -591,7 +591,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       };
     }
     case "embiggen": {
-      // #492: the two prices are two cards, front and centre: the card being played at the price it
+      // #492: the two prices are two cards, front and center: the card being played at the price it
       // shows in hand, and the same card at its Embiggened cost, each named for the version it plays
       // (R1175000: an embiggen card's normal version and its Embiggened version). R1563004: a card of
       // one price has a dearer price only under Mountaintop Garden, which plays it Radiant, so its two
@@ -1609,7 +1609,7 @@ function MulliganWaiting(props: { view: PlayerView; mulligan: MulliganView }) {
         className="prompt prompt-mulligan-waiting"
         data-testid={testid.mulliganWaiting}
         data-returning={back}
-        // A labelled region, not a modal dialog: there is nothing in it to answer, and a modal
+        // A labeled region, not a modal dialog: there is nothing in it to answer, and a modal
         // would hold a screen reader inside static text while Concede stays live on the board.
         role="region"
         aria-labelledby={titleId}

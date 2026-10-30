@@ -1,5 +1,5 @@
 /* R1372, R1373, R924000: "More cards from" (LeanNewest.tsx). It sits inside the lobby's, the
-   rematch's and practice's own panels, so it takes their colours (currentColor) and only lays itself
+   rematch's and practice's own panels, so it takes their colors (currentColor) and only lays itself
    out: the label, the picker, then its note. */
 
 .lean-newest {

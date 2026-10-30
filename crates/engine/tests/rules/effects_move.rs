@@ -167,7 +167,7 @@ fn types(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
         .map(|event| {
-            serde_json::to_value(event).expect("an event serialises")["type"]
+            serde_json::to_value(event).expect("an event serializes")["type"]
                 .as_str()
                 .unwrap_or_default()
                 .to_string()
@@ -846,7 +846,7 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
         assert_eq!(
             events
                 .iter()
-                .map(|event| serde_json::to_value(event).expect("an event serialises"))
+                .map(|event| serde_json::to_value(event).expect("an event serializes"))
                 .collect::<Vec<_>>(),
             vec![json!({
                 "type": "countered", "player": "p1", "instanceId": token.id, "defId": hand_token().id,

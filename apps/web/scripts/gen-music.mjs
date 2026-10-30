@@ -8,7 +8,7 @@
 // THE MUSIC IS COMPOSED HERE. Each track is a score written as code (scripts/music/tracks.mjs, on
 // the toolkit in compose.mjs): a key, a tempo, chord progressions, parts and melodies built on one
 // shared motif. It becomes a MIDI file, FluidSynth renders that with the FluidR3 GM SoundFont (MIT
-// licence), and ffmpeg encodes it. The sources and licences are in assets/music/LICENSES.md.
+// license), and ffmpeg encodes it. The sources and licenses are in assets/music/LICENSES.md.
 //
 // SEAMLESS LOOPS. A looping track is an intro (maybe none) and a body. The MIDI plays the intro,
 // the body twice, then silence, and the file keeps the intro, one body and LOOP_LEAD_S + LOOP_TAIL_S

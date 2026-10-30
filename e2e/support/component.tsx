@@ -17,5 +17,5 @@ declare global {
 Cypress.Commands.add("mount", mount);
 
 // An uncaught error in the component is a spec failure; nothing here swallows it. (The default
-// behaviour — this line only makes the intent explicit, as support/e2e.ts does for the e2e run.)
+// behavior — this line only makes the intent explicit, as support/e2e.ts does for the e2e run.)
 Cypress.on("uncaught:exception", () => true);

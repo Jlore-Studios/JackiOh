@@ -763,7 +763,7 @@ mod r1081000_flying_backrow {
         assert!(stands(&state, P2, &wing.id), "it stands on the other side");
         assert!(active_units_of(&state, P2).iter().any(|unit| unit.id == wing.id));
 
-        // A rotation across the centre line likewise.
+        // A rotation across the center line likewise.
         let mut ring = board("r1081000-rotate");
         let wing = put(&mut ring, &flyer().id, slot(P1, Row::Backrow, 5), json!({}));
         vanilla(&mut ring, &wing.id);

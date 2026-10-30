@@ -165,7 +165,7 @@ mod play_pipeline_b_folds_exactly_s9_2_s9_3 {
             let mut state = begin_game(&create(&seed)).state;
             for (at, action) in live.log.iter().enumerate() {
                 let round: GameState =
-                    serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
+                    serde_json::from_value(serde_json::to_value(&state).expect("the state serializes"))
                         .expect("the state parses back");
                 state = reduce(&round, action).state;
                 assert_eq!(hash_state(&state), live.hashes[at], "{seed} step {at}");
@@ -215,10 +215,10 @@ mod play_pipeline_b_folds_exactly_s9_2_s9_3 {
         }
         assert_eq!(hash_state(&state), live.hashes[9]);
         let restored: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
+            serde_json::from_value(serde_json::to_value(&state).expect("the state serializes"))
                 .expect("the state parses back");
         assert_eq!(hash_state(&restored), live.hashes[9]);
-        let mut tampered_value = serde_json::to_value(&state).expect("the state serialises");
+        let mut tampered_value = serde_json::to_value(&state).expect("the state serializes");
         let health = tampered_value
             .get_mut("players")
             .and_then(|players| players.get_mut("p1"))
@@ -249,7 +249,7 @@ mod play_pipeline_b_folds_exactly_s9_2_s9_3 {
             state = reduce(&state, action).state;
         }
         let mut continued: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
+            serde_json::from_value(serde_json::to_value(&state).expect("the state serializes"))
                 .expect("the state parses back");
         assert_eq!(hash_state(&continued), live.hashes[9]);
         for (offset, action) in live.log.iter().skip(10).take(10).enumerate() {

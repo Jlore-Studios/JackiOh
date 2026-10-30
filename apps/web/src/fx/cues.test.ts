@@ -1,4 +1,4 @@
-// docs/polish/1-animations.md, behaviours B8 to B22: the cue planner (S6) and its recipe table (S7).
+// docs/polish/1-animations.md, behaviors B8 to B22: the cue planner (S6) and its recipe table (S7).
 //
 // R200 (the effects layer paces nothing) and R202 (effects draw from the redacted stream only) are
 // named here; the rulings index points at this file for both.
@@ -329,7 +329,7 @@ function samples(): Sample[] {
     { name: "the viewer's trap fires", events: [{ type: "trapFired", instanceId: MY_TRAP, defId: "core-084", controller: "p1", row: "backrow", lane: 5 }] },
     { name: "a hidden trap fires", events: [{ type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p2", row: "backrow", lane: 4 }] },
     { name: "an attack is declared", events: [{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }] },
-    { name: "an attack is cancelled", events: [{ type: "attackCancelled", attackerId: MINE, targetId: ENEMY, byInstanceId: "b5" }] },
+    { name: "an attack is canceled", events: [{ type: "attackCancelled", attackerId: MINE, targetId: ENEMY, byInstanceId: "b5" }] },
     { name: "the opponent's mana refills", events: [{ type: "manaChanged", player: "p2", current: 3, max: 3 }] },
     { name: "mana far past the spark cap", events: [{ type: "manaChanged", player: "p1", current: 30, max: 30 }] },
     { name: "the viewer's turn starts", events: [{ type: "turnStarted", player: "p1", turn: 5 }] },
@@ -1165,7 +1165,7 @@ describe("B16 the recipe table, row by row", () => {
     forDs("transformed", (D) => {
       expectCues(
         plan([{ type: "transformed", instanceId: MINE_3, fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" }], D),
-        // Centred on the unit (integration QA: an area of puffs drifted over the next lanes).
+        // Centered on the unit (integration QA: an area of puffs drifted over the next lanes).
         [burst("smoke", cardT(MINE_3), "point", 0), burst("arcane", cardT(MINE_3), "point", 0)],
       );
     });
@@ -1494,7 +1494,7 @@ describe("B17 card flights", () => {
     });
   });
 
-  it("B17 shuffledIn: a card back flies from the viewport centre into the library, with an arcane burst at D", () => {
+  it("B17 shuffledIn: a card back flies from the viewport center into the library, with an arcane burst at D", () => {
     forDs("shuffledIn", (D) => {
       expectCues(plan([{ type: "shuffledIn", player: "p1", instanceId: "cW", defId: "core-070", position: 3 }], D), [
         ghost(CENTER, tid("library-you"), D),

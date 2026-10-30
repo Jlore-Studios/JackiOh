@@ -49,7 +49,7 @@ export type TunedRange = TextRange & { key: string; printed: number; value: numb
 /** §6.3: a numbered keyword or X is better higher, except these, which are better lower. */
 export const LESS_IS_BETTER: readonly string[] = ["Tribute"];
 
-/** The glyph each way and each verdict is drawn with, so a mark never rests on colour alone. */
+/** The glyph each way and each verdict is drawn with, so a mark never rests on color alone. */
 export const WAY_GLYPH: Readonly<Record<TuneWay, string>> = { better: "▲", worse: "▼" };
 export const VERDICT_GLYPH: Readonly<Record<TuneVerdict, string>> = { upgraded: "▲", degraded: "▼", tuned: "◆" };
 

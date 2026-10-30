@@ -134,11 +134,11 @@ pub static shielded: LazyLock<CardDef> = LazyLock::new(|| {
 
 /// §8 #25 (the 4-mana 7/7), trimmed to its Armor 7 (§4.4 step 2). #25's radiant text swaps the Armor
 /// for Indestructible; the fixture keeps Armor on both faces so `indestructible` is the one that means that.
-pub static armoured: LazyLock<CardDef> = LazyLock::new(|| {
+pub static armored: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
-        "id": "cb-armoured",
+        "id": "cb-armored",
         "index": "918",
-        "name": "Armoured (combat fixture)",
+        "name": "Armored (combat fixture)",
         "cost": 4,
         "base": { "attack": 7, "health": 7, "keywords": [{ "kind": "Armor", "n": 7 }], "text": "7/7 Armor 7" },
         "radiant": { "attack": 7, "health": 7, "keywords": [{ "kind": "Armor", "n": 7 }], "text": "7/7 Armor 7" },
@@ -444,7 +444,7 @@ pub static COMBAT_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         charger.clone(),
         first_striker.clone(),
         shielded.clone(),
-        armoured.clone(),
+        armored.clone(),
         indestructible.clone(),
         poisonous.clone(),
         lifestealer.clone(),

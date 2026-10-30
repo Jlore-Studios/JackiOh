@@ -37,7 +37,7 @@
 //!    own transaction, with a trigger that records `current_user` and `auth.uid()` as the store's
 //!    statements see them.
 //!
-//! 3. `src/db/fake.rs` (TS's `src/api/e2e-store.ts` and `memory-stores.ts`) IS THE BEHAVIOURAL
+//! 3. `src/db/fake.rs` (TS's `src/api/e2e-store.ts` and `memory-stores.ts`) IS THE BEHAVIORAL
 //!    SPECIFICATION. It implements the same methods, the server suite runs against it, and its
 //!    header lists the invariants §9.4 and §9.5 lean on. `tests/store/contract.rs` is those
 //!    invariants as one suite, run against BOTH stores — the fake in `cargo test` and this one in
@@ -388,7 +388,7 @@ fn stringify<T: Serialize + ?Sized>(value: &T) -> String {
     serde_json::to_string(value).unwrap_or_else(|_| String::from("undefined"))
 }
 
-/// A string union's literal, as its serde form writes it (SURFACE §4.3: every union serialises as
+/// A string union's literal, as its serde form writes it (SURFACE §4.3: every union serializes as
 /// TS's literal), so the column holds exactly the text TS bound.
 fn literal<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
     match serde_json::to_value(value) {
@@ -423,7 +423,7 @@ fn from_json<T: DeserializeOwned>(value: Value) -> Result<T, StoreError> {
     serde_json::from_value(value).map_err(|error| StoreError::from(error.to_string()))
 }
 
-/// A numeric literal union (`0 | 1 | null`) as the integer it serialises as, whatever Rust type
+/// A numeric literal union (`0 | 1 | null`) as the integer it serializes as, whatever Rust type
 /// holds it.
 fn int_or_null<T: Serialize + ?Sized>(value: &T) -> Result<Option<i64>, StoreError> {
     match serde_json::to_value(value) {
@@ -2762,7 +2762,7 @@ pub async fn decks_upsert(
 
 /// Not an `app.*` function: a delete of the profile's own row is one statement with nothing to
 /// decide, and R252's "deleting a deck empties every slot that named it" is the database's own
-/// behaviour — the three `on delete set null (deckN_id)` foreign keys on `public.trios` empty the
+/// behavior — the three `on delete set null (deckN_id)` foreign keys on `public.trios` empty the
 /// slots in this same statement.
 pub async fn decks_remove(t: &mut PgTx<'_>, profile_id: &str, deck_id: &str) -> Result<bool, StoreError> {
     if !is_uuid(deck_id) {

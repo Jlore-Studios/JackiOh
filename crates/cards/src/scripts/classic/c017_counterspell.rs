@@ -10,7 +10,7 @@
 //! `cardResolved`, not counted by the turn's or the game's plays, Combo, Quickstriker or Ceaseless
 //! Void, no Echo repeats), and the mana and Tributes paid for it stay spent. With two Counters set, the
 //! first to resolve cancels the play and the other finds no live announce — the window never offers it
-//! the cancelled card, so it stays set (R448). A Trap is consumed when it fires (§5.1).
+//! the canceled card, so it stays set (R448). A Trap is consumed when it fires (§5.1).
 //!
 //! The condition lives in `when`, never in an early return from `run` (R99, R61): a Unit play must
 //! leave the trap armed and face-down.

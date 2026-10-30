@@ -22,12 +22,12 @@ const NAME_MAX: usize = 12;
 
 /// The catalog as the JSON the validator is handed.
 fn snapshot() -> Value {
-    serde_json::to_value(catalog()).expect("the fixture catalog serialises")
+    serde_json::to_value(catalog()).expect("the fixture catalog serializes")
 }
 
 /// The collection as JSON, so a test can set one id's count.
 fn owned() -> Value {
-    serde_json::to_value(collection()).expect("the fixture collection serialises")
+    serde_json::to_value(collection()).expect("the fixture collection serializes")
 }
 
 /// In the snapshot and not a Token, by the flag or the tag.
@@ -76,7 +76,7 @@ fn draft_issues(
 
 /// The deck draft's issues, as JSON.
 fn issues_of(input: &DeckDraftInput) -> Value {
-    serde_json::to_value(check_deck_draft(input)).expect("draft issues serialise")
+    serde_json::to_value(check_deck_draft(input)).expect("draft issues serialize")
 }
 
 fn draft(cards: &[String], name: &str) -> Value {
@@ -124,20 +124,20 @@ fn rules(result: &Value) -> Vec<String> {
 }
 
 fn deck_result(input: Value) -> Value {
-    serde_json::to_value(validate_deck(&json_as(input))).expect("a loadout result serialises")
+    serde_json::to_value(validate_deck(&json_as(input))).expect("a loadout result serializes")
 }
 
 fn trio_result(input: Value) -> Value {
-    serde_json::to_value(validate_trio(&json_as(input))).expect("a loadout result serialises")
+    serde_json::to_value(validate_trio(&json_as(input))).expect("a loadout result serializes")
 }
 
 fn conflicts(decks: Value) -> Value {
     serde_json::to_value(trio_conflicts(json_as::<Vec<_>>(decks).as_slice()))
-        .expect("trio conflicts serialise")
+        .expect("trio conflicts serialize")
 }
 
 fn import_room(input: Value) -> Value {
-    serde_json::to_value(check_import_room(&json_as(input))).expect("an import room serialises")
+    serde_json::to_value(check_import_room(&json_as(input))).expect("an import room serializes")
 }
 
 fn strings(ids: &[&str]) -> Vec<String> {
@@ -351,7 +351,7 @@ mod r252_a_saved_trio_is_three_slots_naming_three_different_decks_any_of_them_em
             "deckIds": deck_ids,
             "nameMaxLength": NAME_MAX,
         })));
-        rule_list(&serde_json::to_value(issues).expect("trio issues serialise"))
+        rule_list(&serde_json::to_value(issues).expect("trio issues serialize"))
     }
 
     #[test]
@@ -460,7 +460,7 @@ mod r253_what_may_be_queued_a_best_of_1_deck_passes_l2_l3_l5_and_l6 {
         let legal = json!({ "decks": all, "catalog": snapshot(), "collection": owned() });
         assert_eq!(
             trio_result(legal.clone()),
-            serde_json::to_value(validate_loadout(&json_as(legal))).expect("a loadout result serialises")
+            serde_json::to_value(validate_loadout(&json_as(legal))).expect("a loadout result serializes")
         );
         let two: Vec<Value> = legal_decks()
             .iter()
@@ -471,7 +471,7 @@ mod r253_what_may_be_queued_a_best_of_1_deck_passes_l2_l3_l5_and_l6 {
         assert_eq!(
             trio_result(short.clone()),
             serde_json::to_value(validate_loadout(&json_as(short.clone())))
-                .expect("a loadout result serialises")
+                .expect("a loadout result serializes")
         );
         assert_eq!(rules(&trio_result(short)), vec!["L1"]);
     }

@@ -292,7 +292,7 @@ describe("B48 B49 challenges", () => {
     expect(error.status).toBe(404);
   });
 
-  it("B49 cancelling a challenge that is gone rejects with 404", async () => {
+  it("B49 canceling a challenge that is gone rejects with 404", async () => {
     const error = await refused(() => cancelChallenge("ch-gone"), refusal(404, "not_found", "No such challenge."));
     expect(error.status).toBe(404);
     expect(error.code).toBe("not_found");

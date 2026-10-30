@@ -135,7 +135,7 @@ async fn harness() -> Arc<App> {
 }
 
 /// §9.4's code hash as the server takes it (TS `createHashes(...).code`, peppered as `index.ts`
-/// peppers it, `${CODE_PEPPER}:code`): HMAC-SHA256 of the normalised code (R191), in hex.
+/// peppers it, `${CODE_PEPPER}:code`): HMAC-SHA256 of the normalized code (R191), in hex.
 struct Hashes {
     pepper: String,
 }

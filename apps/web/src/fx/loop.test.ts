@@ -1,4 +1,4 @@
-// docs/polish/1-animations.md, behaviour B29: the frame loop (S5). It asks for frames only while
+// docs/polish/1-animations.md, behavior B29: the frame loop (S5). It asks for frames only while
 // there is work, clamps dt, requests nothing while the page is hidden and calls onResume when it
 // comes back. Frames and visibility are fakes driven by hand; `now` is a plain variable.
 

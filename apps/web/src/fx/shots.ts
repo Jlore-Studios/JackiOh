@@ -222,7 +222,7 @@ export function createShots(options: { particles: ParticleSystem; rng: FxRng }):
   const body = (fl: Flight): string => fl.colors[1] ?? hot(fl);
   const glow = (fl: Flight): string => fl.colors[2] ?? body(fl);
 
-  /** The sprite, centred on the origin and pointing along +x, in the flight's colours. */
+  /** The sprite, centered on the origin and pointing along +x, in the flight's colors. */
   const drawSprite = (ctx: CanvasRenderingContext2D, fl: Flight, sprite: FxShotSprite): void => {
     const px = SPRITE_PX[sprite];
     const r = px * HALF;
@@ -496,7 +496,7 @@ export function createShots(options: { particles: ParticleSystem; rng: FxRng }):
     if (head === undefined) return;
     ctx.globalCompositeOperation = "lighter";
     ctx.lineCap = "round";
-    // The crescents bulge ahead, their centres one radius behind the head along the heading.
+    // The crescents bulge ahead, their centers one radius behind the head along the heading.
     const ux = Math.cos(fl.heading);
     const uy = Math.sin(fl.heading);
     for (let k = -1; k <= 1; k++) {

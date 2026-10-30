@@ -238,19 +238,19 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   useEffect(() => {
     const made = hostFactory();
     host.current = made;
-    let cancelled = false;
+    let canceled = false;
     readDevice(made).then(
       (read) => {
-        if (cancelled) return;
+        if (canceled) return;
         setLookup(() => read.lookup);
         setPractice({ kind: "ready", rows: read.replays, next: null, loadingMore: false, moreFailed: null });
       },
       (cause: unknown) => {
-        if (!cancelled) setPractice({ kind: "failed", message: messageOf(cause) });
+        if (!canceled) setPractice({ kind: "failed", message: messageOf(cause) });
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
       host.current = null;
       made.dispose();
     };
@@ -258,17 +258,17 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
 
   useEffect(() => {
     if (token === null) return;
-    let cancelled = false;
+    let canceled = false;
     getReplays(token).then(
       (list) => {
-        if (!cancelled) setOnline({ kind: "ready", rows: list.replays, next: list.nextOffset, loadingMore: false, moreFailed: null });
+        if (!canceled) setOnline({ kind: "ready", rows: list.replays, next: list.nextOffset, loadingMore: false, moreFailed: null });
       },
       (cause: unknown) => {
-        if (!cancelled) setOnline({ kind: "failed", message: messageOf(cause) });
+        if (!canceled) setOnline({ kind: "failed", message: messageOf(cause) });
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, onlineRound]);
 

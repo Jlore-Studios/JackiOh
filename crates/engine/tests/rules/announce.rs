@@ -674,7 +674,7 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
         );
         assert_eq!(ids(&state.players.p1.resolving), vec![bolt.id.clone()]);
         assert_eq!(
-            serde_json::to_value(&state.announcing).expect("the announces serialise"),
+            serde_json::to_value(&state.announcing).expect("the announces serialize"),
             json!([{ "instanceId": bolt.id, "player": "p1" }])
         );
         assert!(
@@ -744,7 +744,7 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
     fn r448_the_paused_window_survives_json_parse_json_stringify_state_and_answers_the_same_way() {
         let (state, _, _) = paused("r448-json");
         let round: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("a state serialises"))
+            serde_json::from_value(serde_json::to_value(&state).expect("a state serializes"))
                 .expect("and parses");
         assert_eq!(round, state);
         assert_eq!(hash_state(&round), hash_state(&state));
@@ -917,10 +917,10 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
             })]
         );
         assert_eq!(
-            serde_json::to_value(&theirs.opponent.resolving).expect("a resolving view serialises"),
+            serde_json::to_value(&theirs.opponent.resolving).expect("a resolving view serializes"),
             json!([{ "instanceId": HIDDEN_ID, "defId": HIDDEN_ID, "radiant": false, "cost": -1 }])
         );
-        let shown = serde_json::to_string(&theirs).expect("a view serialises");
+        let shown = serde_json::to_string(&theirs).expect("a view serializes");
         assert!(!shown.contains(&trap.id));
         assert!(!shown.contains(&PA.hidden_field_trap.id));
 
@@ -969,7 +969,7 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
         );
         assert!(
             !serde_json::to_string(&theirs.events)
-                .expect("events serialise")
+                .expect("events serialize")
                 .contains(&PA.hidden_trap.id)
         );
         assert_eq!(theirs.opponent.resolving, Vec::<CardView>::new());

@@ -1098,13 +1098,13 @@ pub fn choose_pick(args: ChoosePickArgs) -> Effect {
 }
 
 /// What a Discover's options are (R247). `card`, the default, offers the definitions themselves: each
-/// option is a catalog id, labelled with the card's name, and the view names the card behind it
+/// option is a catalog id, labeled with the card's name, and the view names the card behind it
 /// (§10.8). `index` offers the definitions' §5 indices instead — #82 KY's Trial's "Discover among 3
-/// distinct random numbers" — so each option is the number, labelled with it and naming no
+/// distinct random numbers" — so each option is the number, labeled with it and naming no
 /// definition, and the resume step turns the number it gets back into its card (`def_by_index`, with
 /// the set its pool named, since a number is unique only within its set). `code` (R1183005,
 /// Meditative+ #25 KY's Intuition) offers each card as its code block alone (`code_block_of`): the
-/// option is its place in the offer (`code-0`, `code-1`, …), labelled with the code, and the cards
+/// option is its place in the offer (`code-0`, `code-1`, …), labeled with the code, and the cards
 /// behind the places ride the prompt's resume data, which no view sends, so the chooser reads no
 /// id, name or face until the pick; the resume step reads its card with `discovered_code_card`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -1239,7 +1239,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             .iter()
             .enumerate()
             .map(|(at, def)| {
-                // R1183005: the place in the offer, labelled with the card's code and nothing else.
+                // R1183005: the place in the offer, labeled with the card's code and nothing else.
                 if by_code {
                     let option = format!("{CODE_OPTION_PREFIX}{at}");
                     return PromptOption {

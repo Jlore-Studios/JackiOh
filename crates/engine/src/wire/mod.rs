@@ -33,7 +33,7 @@ pub use stats::*;
 pub use view::*;
 
 /// Declares a TypeScript string-literal union as a Rust enum (SURFACE §4.3, §5.1): one unit variant
-/// per literal, serialised as exactly that literal, with `as_str`, `Display`, `FromStr` and `ALL`
+/// per literal, serialized as exactly that literal, with `as_str`, `Display`, `FromStr` and `ALL`
 /// (the literals in declaration order). Unit-variant unions derive `Copy, Eq, Hash, PartialOrd,
 /// Ord` (§5.1), and the client's TS type is generated from it under `--features ts`.
 ///

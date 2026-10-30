@@ -362,7 +362,7 @@ describe("B14 every recipe keeps the recipe contract on the fake context", () =>
   });
 });
 
-// Integration (docs/polish/reference.md, audio x cards): a card the viewer can name colours its
+// Integration (docs/polish/reference.md, audio x cards): a card the viewer can name colors its
 // summon thud and its spell shimmer with its family (`timbre`), and a Legendary or Mythic unit enters
 // with its own sting. Every one of those renders keeps the same contract as the plain recipe.
 describe("B14 the card families and the entrance keep the recipe contract", () => {
@@ -394,8 +394,8 @@ describe("B14 the card families and the entrance keep the recipe contract", () =
   it("a family changes the sound: a summon with an accent builds more than the plain thud", () => {
     const plain = runRecipe("summon {}", SFX.summon.recipe, SFX.summon.durationMs, {});
     for (const timbre of SFX_TIMBRES.filter((t) => t !== "field")) {
-      const coloured = runs.find((run) => run.label === `summon {timbre: ${timbre}}`);
-      expect(coloured?.made.length ?? 0, timbre).toBeGreaterThan(plain.made.length);
+      const colored = runs.find((run) => run.label === `summon {timbre: ${timbre}}`);
+      expect(colored?.made.length ?? 0, timbre).toBeGreaterThan(plain.made.length);
     }
   });
 
@@ -477,8 +477,8 @@ describe("R506 the new families and moments keep the recipe contract", () => {
   it("a Book, Pancake or AI spell lays its family's texture under the chimes: more than the plain spell", () => {
     const plain = runRecipe("spell {}", SFX.spell.recipe, SFX.spell.durationMs, {});
     for (const timbre of ["book", "pancake", "ai"] as const) {
-      const coloured = runRecipe(`spell {timbre: ${timbre}}`, SFX.spell.recipe, SFX.spell.durationMs, { timbre });
-      expect(coloured.made.length, timbre).toBeGreaterThan(plain.made.length);
+      const colored = runRecipe(`spell {timbre: ${timbre}}`, SFX.spell.recipe, SFX.spell.durationMs, { timbre });
+      expect(colored.made.length, timbre).toBeGreaterThan(plain.made.length);
     }
   });
 

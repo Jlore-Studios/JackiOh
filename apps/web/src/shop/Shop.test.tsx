@@ -897,7 +897,7 @@ describe("#1667 the Chase Shard bar", () => {
     await flush();
   }
 
-  it("is a FillBar labelled Chase Shard, at rest on what the panel read", async () => {
+  it("is a FillBar labeled Chase Shard, at rest on what the panel read", async () => {
     cosmeticServer();
     render(<CosmeticPacks token={TOKEN} registry={[AURORA]} />);
     await flush();

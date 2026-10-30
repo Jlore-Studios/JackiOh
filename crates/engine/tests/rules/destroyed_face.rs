@@ -66,7 +66,7 @@ mod r89_a_destroyed_unit_s_face {
         );
         let carries_flag = match &event {
             Some(event) => serde_json::to_value(event)
-                .expect("event serialises")
+                .expect("event serializes")
                 .get("radiant")
                 .is_some(),
             None => false,
