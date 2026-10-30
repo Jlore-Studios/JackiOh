@@ -465,7 +465,8 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
 // rename spell it, its Sentient Cat Ears played onto a Unit at step 7), and it reads as `equip`: the old
 // log and the same log renamed fold to one state, the old-name play accepted. Since Player 1 opens on
 // three cards again (R2368000) the log holds its first nine actions, p1's mulligan keeping c20 alone, its
-// fourth card c10 now a replacement, so every action folds.
+// fourth card c10 now a replacement, so every action folds. Under #2521's catalog p2's opening hand is
+// another, so p2 sends all of it back: its Last Hurrah still draws its deck, the Cat Ears with it.
 const PRE_EQUIP_LOG: &str = include_str!("golden/pre-equip-log.json");
 
 mod r781000_a_log_recorded_before_the_equip_rename_still_folds {
