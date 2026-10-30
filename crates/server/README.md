@@ -162,6 +162,9 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R192) and is logged as
 `api.rate_limited`, and a key refused more than `API_REJECTION_ALERT_THRESHOLD` times inside
 `API_REJECTION_ALERT_WINDOW_MS` raises `api.rejections.unusual`, once a window (R1717000).
+Once this server has resolved an account's profile (`KnownProfiles`, at most `KNOWN_PROFILES_MAX` users),
+a request from it while its budget is spent is refused before the store is read, and every match, co-op
+and watch socket upgrade counts as one request against the same budget (R2478000).
 
 | Method | Path | Auth | What |
 | --- | --- | --- | --- |
@@ -289,6 +292,9 @@ the sender's hand as silently as a rate-limited one, and relays nothing between 
 A profile opens it onto the match it is in, or onto a finished match it held a seat in until
 `REMATCH_OFFER_TTL_MS` after that match ended; past that it is refused as a stranger is (4403), and a
 finished match whose log the retention purge took is not found (4404, R1285000).
+An upgrade whose token verifies counts as one request against its account's `API_REQUESTS_PER_MINUTE`;
+one past it gets the `forbidden` frame and close 4429, which the client retries on its backoff
+(R2478000), and `/ws/duos` and `/ws/watch` count the same way.
 The pump pings every `WS_PING_INTERVAL_SECONDS` and drops a socket that has sent no frame for
 `WS_IDLE_TIMEOUT_SECONDS`, which starts its seat's grace; a socket's outgoing queue holds
 `WS_OUTBOX_MAX_FRAMES` frames, and the one that overflows it is closed (R1441).
