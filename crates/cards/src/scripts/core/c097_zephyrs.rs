@@ -466,7 +466,7 @@ mod tests {
                 ranked
                     .iter()
                     .find(|scored| scored.def.id == id)
-                    .map(|scored| priority_of(scored))
+                    .map(priority_of)
             };
             assert_eq!(score("traininggrounds-051"), score("core-043"));
             assert_eq!(score("core-043"), Some(json!("clear")));

@@ -8654,8 +8654,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         assert_eq!(bigot.name, format!("Legacy: {}", core.name));
         assert_eq!(bigot.tags, [Tag::Human, Tag::Legacy]);
         assert_eq!(
-            (bigot.cost.clone(), bigot.rarity, &bigot.base, &bigot.radiant),
-            (core.cost.clone(), core.rarity, &core.base, &core.radiant)
+            (bigot.cost, bigot.rarity, &bigot.base, &bigot.radiant),
+            (core.cost, core.rarity, &core.base, &core.radiant)
         );
         assert_eq!(CATALOG["traininggrounds-060"].name, "Legacy: Rush Token Farm");
         // No name is shared, the Core card's and its Legacy card's included.
