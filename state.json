@@ -10147,6 +10147,13 @@
     "2500": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T16:03:30Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 8 is the closest call: the builder must choose the fix from the failing logs, so decisions remain and it cannot be easy"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
