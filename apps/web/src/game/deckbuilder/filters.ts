@@ -34,7 +34,9 @@ import {
 } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
+import { chineseDef, readerName, readerTerms } from "../../cards/chinese.ts";
 import { isGlitch } from "../../cards/glitch.ts";
+import { DEFAULT_LOCALE, getLocale } from "../../i18n/i18n.ts";
 import { poolFrom } from "./loadout.ts";
 import { almanacShelf } from "./shelf.ts";
 
@@ -182,13 +184,32 @@ export function costOrder(cost: CardCost): number {
   return price === "X" ? Number.POSITIVE_INFINITY : price;
 }
 
+/** R711000: a card's words as a reader with a card table reads them (none for English): its name, its
+ *  type, tags, rarity and keywords as the frame prints them, and each face's text with its numbers
+ *  filled in. Read at each call, never cached across a language switch. */
+function readerWords(def: CardDef): string[] {
+  const terms = readerTerms();
+  if (terms === undefined) return [];
+  const read = chineseDef(def);
+  return [
+    readerName(def),
+    terms.types[def.type],
+    ...def.tags.map((tag) => terms.tags[tag]),
+    terms.rarities[def.rarity],
+    fillParams(read, "base"),
+    fillParams(read, "radiant"),
+    ...keywordKindsOf(def).map((kind) => terms.keywords[kind]),
+  ];
+}
+
 /** Keyword kinds printed on either face, as searchable words. */
 function keywordKindsOf(def: CardDef): KeywordKind[] {
   return [...def.base.keywords, ...def.radiant.keywords].map((keyword) => keyword.kind);
 }
 
 /** Everything a search term may match, lower-cased. Fields are newline-separated, and a term never
- *  holds whitespace, so no term can match across two fields. */
+ *  holds whitespace, so no term can match across two fields. For a reader of Chinese it also holds
+ *  the card's words in Chinese (readerWords, R711000), and the English still matches. */
 function haystackOf(def: CardDef): string {
   return [
     def.name,
@@ -199,6 +220,7 @@ function haystackOf(def: CardDef): string {
     fillParams(def, "base"),
     fillParams(def, "radiant"),
     ...keywordKindsOf(def),
+    ...readerWords(def),
   ]
     .join("\n")
     .toLowerCase();
@@ -206,7 +228,8 @@ function haystackOf(def: CardDef): string {
 
 /**
  * The query is trimmed and split on whitespace; every term has to occur, case-insensitively, in the
- * card's name, type, tags, rarity, base or radiant text, or the keyword kinds printed on either face.
+ * card's name, type, tags, rarity, base or radiant text, or the keyword kinds printed on either face,
+ * or, for a reader of Chinese, any of these in the Chinese card tables (R711000).
  * An empty query keeps everything.
  */
 export function searchMatches(def: CardDef, query: string): boolean {
@@ -240,8 +263,16 @@ function compareNumbers(left: number, right: number): number {
   return 0;
 }
 
-function compareNames(left: string, right: string): number {
-  return left.localeCompare(right, undefined, { sensitivity: "base" });
+/** R711000: the language names are compared in: the reader's, or for English the browser's own, as
+ *  before (stats.tsx compares its names the same way). */
+function collationTag(): string | undefined {
+  const locale = getLocale();
+  return locale === DEFAULT_LOCALE ? undefined : locale;
+}
+
+/** R711000: two cards by their names as the reader reads them (`readerName`), in the reader's language. */
+function compareNames(left: CardDef, right: CardDef): number {
+  return readerName(left).localeCompare(readerName(right), collationTag(), { sensitivity: "base" });
 }
 
 /** The ascending comparison of one sort key. */
@@ -250,7 +281,7 @@ function comparePrimary(key: "cost" | "name" | "rarity" | "type", left: CardDef,
     case "cost":
       return compareNumbers(costOrder(left.cost), costOrder(right.cost));
     case "name":
-      return compareNames(left.name, right.name);
+      return compareNames(left, right);
     case "rarity":
       return compareNumbers(RARITY_ORDER.indexOf(left.rarity), RARITY_ORDER.indexOf(right.rarity));
     case "type":
@@ -262,7 +293,7 @@ function comparePrimary(key: "cost" | "name" | "rarity" | "type", left: CardDef,
 function compareTies(left: CardDef, right: CardDef): number {
   const byCost = compareNumbers(costOrder(left.cost), costOrder(right.cost));
   if (byCost !== 0) return byCost;
-  const byName = compareNames(left.name, right.name);
+  const byName = compareNames(left, right);
   if (byName !== 0) return byName;
   // §5: `index` is "43" or "51.1", so it compares as a number.
   return compareNumbers(Number.parseFloat(left.index), Number.parseFloat(right.index));
@@ -389,8 +420,9 @@ export function manaCurve(
 }
 
 /**
- * The order a deck's list tiles are drawn in: cost, then name, then id; unknown ids last. Display
- * only. What `save` sends is the draft in the order the player built it, never this.
+ * The order a deck's list tiles are drawn in: cost, then name as the reader reads it, then id;
+ * unknown ids last. Display only. What `save` sends is the draft in the order the player built it,
+ * never this.
  */
 export function deckListOrder(cardIds: readonly string[], catalog: CatalogSnapshot): string[] {
   return [...cardIds].sort((leftId, rightId) => {
@@ -403,7 +435,7 @@ export function deckListOrder(cardIds: readonly string[], catalog: CatalogSnapsh
     }
     const byCost = compareNumbers(costOrder(left.cost), costOrder(right.cost));
     if (byCost !== 0) return byCost;
-    const byName = compareNames(left.name, right.name);
+    const byName = compareNames(left, right);
     if (byName !== 0) return byName;
     return leftId < rightId ? -1 : leftId > rightId ? 1 : 0;
   });

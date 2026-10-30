@@ -136,11 +136,10 @@ mod tests {
         }
 
         #[test]
-        fn r1867010_under_preview_sets_s_147_joins_the_pool() {
+        fn r1867010_s_147_joins_the_pool() {
             let mut seen_s147 = 0;
             for seed in 0..200 {
                 crate::register_all();
-                let _open = preview_sets(&[SetName::Stinkyscape]);
                 let mut s = scenario(json!({
                     "seed": format!("comet-preview-{seed}"),
                     "p1": { "hand": [COMET, FILLER] },
@@ -161,7 +160,7 @@ mod tests {
                     seen_s147 += 1;
                 }
             }
-            assert!(seen_s147 > 0, "S #147 comes up under the preview");
+            assert!(seen_s147 > 0, "S #147 comes up over the seeds");
         }
     }
 

@@ -1033,7 +1033,7 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
 
 mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r1080 {
     use super::*;
-    use jackioh_engine::testkit::preview_sets;
+    use jackioh_engine::testkit::{preview_every_set, set_ships};
 
     // THE ARGUMENTS A CARD SCRIPT PASSES:
     //     catalog::query(&q(json!({ "type": "Unit", "stats": { "attack": 1, "health": 1 }, "withTokens": true })))
@@ -1096,22 +1096,22 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         );
     }
 
+    /// A preview of every set opens the held sets too (R1420) and leaves the shipped sets' 1/1 Units
+    /// as they are.
     #[test]
-    fn r1080_r1420_previewing_a_set_that_ships_changes_nothing_so_meditative_s_1_1_units_stay() {
+    fn r1080_r1420_a_preview_of_every_set_leaves_the_shipped_sets_1_1_units_as_they_are() {
         register();
-        let _guard = preview_sets(&[SetName::Meditative]);
+        let _guard = preview_every_set();
         let mut expected = strings(ONE_ONE_POOL);
         expected.extend(strings(MEDITATIVE_ONE_ONES));
         expected.extend(landed(&[CATBOY_MAID]));
         expected.extend(strings(STINKYSCAPE_ONE_ONES));
-        assert_eq!(
-            ids(catalog.query(&q(json!({
-                "type": "Unit",
-                "stats": { "attack": 1, "health": 1 },
-                "withTokens": true,
-            })))),
-            expected
-        );
+        let ones = catalog.query(&q(json!({
+            "type": "Unit",
+            "stats": { "attack": 1, "health": 1 },
+            "withTokens": true,
+        })));
+        assert_eq!(ids(ones.into_iter().filter(|def| set_ships(def.set))), expected);
     }
 }
 

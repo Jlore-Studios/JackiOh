@@ -219,7 +219,6 @@ mod tests {
 
     #[test]
     fn r944_radiant_shuffles_in_a_prime_card_and_draws_it() {
-        let _preview = preview_sets(&[SetName::Meditative]);
         let mut s = conducting("conductor-prime", true, json!([FILLER, FILLER]));
         let mark = s.events().len();
         s.play(CONDUCTOR, json!({}));
@@ -390,7 +389,6 @@ mod tests {
 
     #[test]
     fn r1421_the_radiant_prime_is_a_prime_token() {
-        let _preview = preview_sets(&[SetName::Meditative]);
         for n in 0..10 {
             let mut s = conducting(&format!("conductor-prime-{n}"), true, json!([FILLER, FILLER]));
             let mark = s.events().len();

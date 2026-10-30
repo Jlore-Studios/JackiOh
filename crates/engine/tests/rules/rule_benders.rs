@@ -350,7 +350,6 @@ mod r943 {
     #[test]
     fn r943_minted_cards_and_the_coin_are_created_and_dealt_cards_are_not() {
         jackioh_cards::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut cursor: u32 = 1;
         let minted = new_instance(&mut cursor, "core-001", P1, Zone::Hand { player: P1 });
         assert_eq!(minted.created, Some(true), "a minted instance is Created");
@@ -431,7 +430,6 @@ mod r943 {
     #[test]
     fn r943_the_flag_survives_a_reset_a_move_and_a_json_round_trip() {
         jackioh_cards::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "benders-keep",
             "p1": {
@@ -469,7 +467,6 @@ mod r943 {
     #[test]
     fn r943_views_show_it_only_where_the_viewer_reads_the_card_and_the_library_list_marks_it() {
         jackioh_cards::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "benders-views",
             "p1": {

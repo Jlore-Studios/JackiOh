@@ -123,12 +123,14 @@ describe("R291 the tutorial's lessons", () => {
         expect(def(id).token, `${lesson.id}: ${id} is no Token`).toBe(false);
         expect(def(id).set, `${lesson.id}: ${id} is a Training Grounds card`).toBe(HUMAN_SET);
       }
-      // R2434001: a card comes twice only when it is a vanilla unit, one with no text or only Rush.
-      const seen = new Set<string>();
+      // R2434001: a card comes twice only when it is a vanilla unit, one with no text or only Rush,
+      // and never more often than TUTORIAL_HUMAN's deckCopies (R2433001).
+      const seen = new Map<string, number>();
       for (const id of lesson.humanDeck) {
         if (seen.has(id)) expect(vanilla(def(id)), `${lesson.id}: ${id} ${def(id).name} comes twice`).toBe(true);
-        seen.add(id);
+        seen.set(id, (seen.get(id) ?? 0) + 1);
       }
+      for (const [id, copies] of seen) expect(copies, `${lesson.id}: ${id}`).toBeLessThanOrEqual(TUTORIAL_HUMAN.deckCopies ?? 1);
       const showpieces = lesson.humanDeck.filter((id) => SHOWPIECE_RARITIES.includes(def(id).rarity));
       const last = lesson.number === TUTORIAL_LESSONS.length;
       if (last) for (const id of FINALE_SHOWPIECES) expect(lesson.humanDeck, `${lesson.id} deals ${id}`).toContain(id);
@@ -253,6 +255,8 @@ describe("R291 the tutorial's lessons", () => {
       expect(debug.debug.decks).toEqual(decksOf(lesson));
       const handicaps = lessonHandicaps(lesson);
       expect(debug.debug.handicaps).toEqual({ [aiSeat]: handicaps.ai, [lesson.humanSeat]: handicaps.human });
+      // R2433000, R2434001: the opponent's decks are Core cards, so it plays AI_TUTORIAL whole, its Core-only bar on.
+      expect(handicaps.ai.coreOnly, lesson.id).toBe(true);
     }
   });
 

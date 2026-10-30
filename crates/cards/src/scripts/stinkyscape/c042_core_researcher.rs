@@ -74,7 +74,6 @@ mod tests {
 
     #[test]
     fn r1_played_adds_a_radiant_drone_core() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let s = played(false);
         let added = cores(&s);
         assert_eq!(added.len(), 1, "{added:?}");
@@ -83,7 +82,6 @@ mod tests {
 
     #[test]
     fn r1_recruited_it_adds_nothing() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = scenario(json!({
             "p1": {
                 "hand": [{ "def": CALL_TO_ARMS, "radiant": true }, FILLER],
@@ -98,7 +96,6 @@ mod tests {
 
     #[test]
     fn cards_reads_through_param() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = scenario(json!({
             "p1": { "hand": [RESEARCHER, FILLER], "library": filler(4) },
             "p2": { "hand": [FILLER], "library": filler(4) },
@@ -110,7 +107,6 @@ mod tests {
 
     #[test]
     fn radiant_8_10_adds_two_radiant_ones() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let s = played(true);
         let researcher = s.unit(P1, 1).expect("the Researcher");
         let stats = s.stats(researcher.id.as_str());

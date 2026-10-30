@@ -79,10 +79,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     fn kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)
             .keywords
@@ -97,7 +93,6 @@ mod tests {
         #[test]
         fn r1860007_death_summons_a_felinor_token_of_its_attack_and_max_health_buffs_included() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CHAMBER], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -121,7 +116,6 @@ mod tests {
         #[test]
         fn r1860007_a_full_board_summons_none() {
             crate::register_all();
-            let _preview = open();
             // The Chamber tops a pile on lane 1; when it dies the Vanilla under it resumes there
             // (§3.2), so no zone is open.
             let mut s = scenario(json!({
@@ -155,7 +149,6 @@ mod tests {
         #[test]
         fn r1860007_radiant_death_summons_a_doubled_token_with_divine_shield() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [HIT_JOB, ANCHOR],

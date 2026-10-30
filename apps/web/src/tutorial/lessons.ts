@@ -54,7 +54,7 @@ export function nextLessonOf(id: string): TutorialLesson | undefined {
   return lesson === undefined ? undefined : TUTORIAL_LESSONS.find((candidate) => candidate.number === lesson.number + 1);
 }
 
-/** R290, R1705005, R2201000, R2201001, R2434001: the tutorial opponent's handicap and the human's, the pool hold on both when the lesson sets it. */
+/** R290, R1705005, R2201000, R2201001, R2433000, R2434001: the tutorial opponent's handicap, Core-only bar and all, and the human's, the pool hold on both when the lesson sets it. */
 export function lessonHandicaps(lesson: TutorialLesson): { human: Handicap; ai: Handicap } {
   const hold = lesson.poolHold ? { poolHold: true } : {};
   return { human: { ...TUTORIAL_HUMAN, ...hold }, ai: { ...AI_TUTORIAL, ...hold } };
