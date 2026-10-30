@@ -8780,14 +8780,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-29T17:18:09Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
+      "pr": 2420,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-29T16:09:02Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "40948489243",
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-29T20:22:41Z",
@@ -8795,7 +8799,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:6501924897"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "2388": {
       "action": "build",
