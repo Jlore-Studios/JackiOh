@@ -43,7 +43,7 @@ jobs:
     # actor. A CI run and a closed bot pull request are handled whoever caused them: the bot's own
     # push starts the CI runs it answers, and GitHub credits an auto-merge to the bot. A CI run of
     # the merge queue's (`gh-readonly-queue/main/pr-<n>-<sha>`) is any pull request's; the handler
-    # answers only the bot's own (`events.on_queue_ci`).
+    # answers only the bot's own (`events.OnQueueCI`).
     if: >-
       github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'workflow_run'
@@ -114,7 +114,7 @@ jobs:
             harness event
           fi
 
-      # The pinned "Night bot status" issue (bot/harness/dashboard.py), rewritten after every
+      # The pinned "Night bot status" issue (bot/go/internal/dashboard), rewritten after every
       # sweep: what each lane runs, the subscriptions' usage, the queue and the last runs, and
       # Squishy's section apart from them (`--companions`, drawn by its own process). Editing
       # its body notifies nobody; a failure only warns.
