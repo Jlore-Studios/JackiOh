@@ -1,14 +1,16 @@
 //! SPEC §8.10 Stinkyscape 112 Job Application (§6.3 Quest stages, Hold beneath, Buff; §6.2 Death; §6.1
 //! Lucky; R81, R384, R1854000–R1854004, R1865000–R1865002). Field Spell, Quest, cost 1, Legendary, a card
 //! of the Stinkyscape set.
-//!   Base:    "Get employed! Its quest runs in three stages, one at a time. Death: Resummon this at
-//!            Stage 1. Stage 1, Upload Resume: Activate this to send a card from your hand in as your
-//!            resume; hear back in 2 to 6 turns. Stage 2, The Interview, one of three drawn at random:
-//!            play a card that costs the same as your resume, play 3 cards of different costs in one
-//!            turn, or take or deal 12 or more damage in one hit; add your resume to your hand, Buffed
-//!            {buffs} times, at (0). Stage 3, The Offer: Activate this to accept the offer, or to send in
-//!            another application, back to Stage 1, with every reward tripled; from your next turn on, a
-//!            Paycheck at the start of each of your turns." (buffs 5)
+//!   Base:    "Death: Resummon this at Stage 1.
+//!            Quest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your
+//!            resume. Reward: Hear back in 2 to 6 turns.
+//!            Quest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the
+//!            same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or
+//!            more damage in one hit. Reward: Add your resume to your hand and Buff it
+//!            {buffs|time|times}. It costs (0).
+//!            Quest: Stage 3, The Offer. Activate this to accept the offer, or to send in another
+//!            application, back to Stage 1, with every reward tripled. Reward: From your next turn on,
+//!            add a Paycheck to your hand at the start of each of your turns." (buffs 5)
 //!   Radiant: "Lucky 1", and the same text. (buffs 10)
 //!
 //! The quest is `Script.stages` (R1854000): Stage 1 opens as the card enters, and each stage's reward is
@@ -167,11 +169,36 @@ fn roll_wait(ctx: &mut EffectContext<'_>, weights: &[i32]) -> i32 {
 
 /// R1865002: the reward factor the card holds on its stay.
 fn factor_of(ctx: &EffectContext<'_>) -> i32 {
-    recalled(ctx, REWARD_FACTOR_KEY)
-        .and_then(|value| value.as_i64())
-        .map_or(BASE_FACTOR, |factor| {
-            factor.clamp(i64::from(BASE_FACTOR), i64::from(REWARD_FACTOR_CAP)) as i32
-        })
+    factor_in(recalled(ctx, REWARD_FACTOR_KEY).as_ref())
+}
+
+/// R1865002: the reward factor as `memory.rewardFactor` holds it, 1 before any re-application.
+fn factor_in(stored: Option<&Value>) -> i32 {
+    stored.and_then(Value::as_i64).map_or(BASE_FACTOR, |factor| {
+        factor.clamp(i64::from(BASE_FACTOR), i64::from(REWARD_FACTOR_CAP)) as i32
+    })
+}
+
+/// R2476000: on the field, to both seats, what its rewards come to now: after "Buff it 5 times" (its
+/// `buffs` as it stands, R386) the Buffs the resume would get, its `buffs` times the factor; after "add
+/// a Paycheck" the Paychecks a turn, the factor; and after "Add your resume" the resume held beneath
+/// it, by name, or the dash. Both seats read the resume while it waits (R1865000), and a re-application
+/// is a public Activate. Dying and coming back starts it over (R78).
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let factor = factor_in(ctx.self_.memory.get(REWARD_FACTOR_KEY));
+        let buffs = param(&ctx, "buffs");
+        let times = if buffs == 1 { "time" } else { "times" };
+        let resume = held_beneath(ctx.state, ctx.self_);
+        vec![
+            count_preview(&format!("Buff it {buffs} {times}"), buffs * factor),
+            count_preview("add a Paycheck", factor),
+            card_preview(ctx.state, "Add your resume", resume.first().map(|card| (card.def_id.as_str(), card.radiant))),
+        ]
+    })
 }
 
 /// R1865002: "with every reward tripled", never past `REWARD_FACTOR_CAP`.
@@ -323,6 +350,7 @@ fn resummon(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 
 fn job_application() -> Script {
     Script {
+        preview: Some(preview()),
         stages: stages(),
         triggers: vec![stage_completed()],
         start_of_turn: Some(hook(paychecks)),
@@ -544,6 +572,28 @@ mod tests {
         assert!(paychecks_given(s) == 0, "none on the opponent's turn");
         s.end_turn();
         paychecks_given(s)
+    }
+
+    /// R2476000: on the field, to both seats: Buff it 5 times {5}, add a Paycheck {1} and Add your resume
+    /// {—}; the resume sent in shows by name, and a tripled factor shows 15 Buffs and 3 Paychecks.
+    #[test]
+    fn r2476000_it_previews_its_rewards_and_the_resume_it_holds() {
+        let mut s = setup("job-preview", false, &[]);
+        let job = played(&mut s, Some(1));
+        let shown = |s: &Scenario, buffs: i32, paychecks: i32, resume: (i32, &str)| {
+            let want = vec![
+                ("Buff it 5 times".to_string(), buffs, None),
+                ("add a Paycheck".to_string(), paychecks, None),
+                ("Add your resume".to_string(), resume.0, Some(resume.1.to_string())),
+            ];
+            assert_eq!(crate::preview_seen(s, P1, &job), want);
+            assert_eq!(crate::preview_seen(s, P2, &job), want);
+        };
+        shown(&s, 5, 1, (0, "—"));
+        send(&mut s, VANILLA);
+        shown(&s, 5, 1, (1, "Mr. Vanilla"));
+        remember_on_it(&mut s, "rewardFactor", json!(3));
+        shown(&s, 15, 3, (1, "Mr. Vanilla"));
     }
 
     fn remember_on_it(s: &mut Scenario, key: &str, value: Value) {

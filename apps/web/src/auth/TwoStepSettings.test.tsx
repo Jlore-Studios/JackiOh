@@ -124,7 +124,7 @@ describe("R665 turning two-step sign-in on and off", () => {
     expect(readSession()?.accessToken).toBe(TOKEN);
   });
 
-  it("R665 cancelling an enrolment removes the unverified factor", async () => {
+  it("R665 canceling an enrolment removes the unverified factor", async () => {
     const calls = serve({
       "GET /auth/v1/user": factors([]),
       "POST /auth/v1/factors": ENROLLED,

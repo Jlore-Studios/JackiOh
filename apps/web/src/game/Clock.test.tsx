@@ -1,4 +1,4 @@
-// BUILD M7-T1's client half. R79 fixes the behaviour and the actor runs it; these tests assert that the
+// BUILD M7-T1's client half. R79 fixes the behavior and the actor runs it; these tests assert that the
 // component RENDERS it rather than deciding it: a paused turn clock is `turnDeadline: null` in the frame,
 // and remaining time is `deadline - now` against a monotonic delta (`protocol.rs`), never the wall clock.
 // Every duration comes from `crates/server/src/config.rs`; no test spells a number of seconds.
@@ -435,7 +435,7 @@ describe("R439 — the last 30 seconds of a turn clock", () => {
 
     const line = screen.getByTestId("clock-you");
     expect(line).toHaveAttribute("data-urgency", "final");
-    // Read by words and shape, not colour alone: a timer with a name, the words and the gauge.
+    // Read by words and shape, not color alone: a timer with a name, the words and the gauge.
     expect(line).toHaveAttribute("role", "timer");
     expect(line).toHaveAttribute("aria-label", `Your turn ends in ${String(left / 1000)} seconds`);
     expect(line).toHaveTextContent("Your turn");

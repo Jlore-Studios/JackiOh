@@ -26,27 +26,27 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   const signedIn = readSession() !== null;
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const controller = new AbortController();
     setLoading(true);
     setError(false);
 
     getCardStats({ card: cardId, signal: controller.signal })
       .then((res) => {
-        if (cancelled) return;
+        if (canceled) return;
         setMinSample(res.minSample);
         const match = res.cards.find((c) => c.id === cardId) ?? null;
         setStat(match);
         setLoading(false);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (canceled) return;
         setError(true);
         setLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      canceled = true;
       controller.abort();
     };
   }, [cardId, attempt]);
@@ -87,12 +87,12 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
       ? `${Math.round(stat.drawnWinRate * 100)}%`
       : "—";
 
-  const playedDeltaDisplay =
-    stat.hasEnoughGames && stat.playedDelta !== null ? (
+  const drawnDeltaDisplay =
+    stat.hasEnoughGames && typeof stat.drawnDelta === "number" ? (
       <>
-        {formatPlayedDelta(stat.playedDelta)}{" "}
+        {formatPlayedDelta(stat.drawnDelta)}{" "}
         <span className="inspect-stats-sample-hint">
-          ({stat.playedGames} / {stat.drawnNotPlayedGames})
+          ({stat.drawnGames} / {stat.notDrawnGames ?? 0})
         </span>
       </>
     ) : (
@@ -130,8 +130,8 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           <span className="inspect-stats-metric-value">{playRateDisplay}</span>
         </div>
         <div className="inspect-stats-metric">
-          <span className="inspect-stats-metric-label">{t("Played vs held")}</span>
-          <span className="inspect-stats-metric-value">{playedDeltaDisplay}</span>
+          <span className="inspect-stats-metric-label">{t("Drawn vs not drawn")}</span>
+          <span className="inspect-stats-metric-value">{drawnDeltaDisplay}</span>
         </div>
       </div>
 

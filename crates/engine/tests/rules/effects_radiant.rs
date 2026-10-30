@@ -174,7 +174,7 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
         assert_eq!(
             events
                 .iter()
-                .map(|event| serde_json::to_value(event).expect("an event serialises"))
+                .map(|event| serde_json::to_value(event).expect("an event serializes"))
                 .collect::<Vec<_>>(),
             vec![json!({
                 "type": "radiantSet",

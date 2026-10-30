@@ -483,13 +483,13 @@ export function HotseatRoute() {
   const [status, setStatus] = useState<Status>({ kind: "loading" });
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     loadEnginePort()
       .then((port) => {
-        if (!cancelled) setStatus(startSession(port, params));
+        if (!canceled) setStatus(startSession(port, params));
       })
       .catch((cause: unknown) => {
-        if (cancelled) return;
+        if (canceled) return;
         const error = cause instanceof EngineUnavailableError ? cause : null;
         setStatus({
           kind: "no-engine",
@@ -498,7 +498,7 @@ export function HotseatRoute() {
         });
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [params]);
 

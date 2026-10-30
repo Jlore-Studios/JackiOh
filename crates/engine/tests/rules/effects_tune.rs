@@ -1077,7 +1077,7 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
         assert_eq!(hand.first().map(|view| view["cost"].clone()), Some(json!(3)));
         assert!(
             !serde_json::to_string(&view_for(&state, PlayerId::P2))
-                .expect("serialises")
+                .expect("serializes")
                 .contains(&held.id)
         );
     }

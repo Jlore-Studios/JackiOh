@@ -7,11 +7,11 @@
 // `marksOf` for the view, `markEventOf` for the event.
 //
 // Two tables turn a mark into something a player can read and see, and both are open to any card:
-// - `MARK_PALETTES`: a colour key ("purple") → the colours of the corruption aura and the brand
-//   flourish, and the particle preset the effects layer throws in that colour. An unknown key falls
-//   back to DEFAULT_MARK_COLOR, so a new card's colour never draws nothing.
+// - `MARK_PALETTES`: a color key ("purple") → the colors of the corruption aura and the brand
+//   flourish, and the particle preset the effects layer throws in that color. An unknown key falls
+//   back to DEFAULT_MARK_COLOR, so a new card's color never draws nothing.
 // - `MARK_WORDS`: a mark ("steal") → its short name and the sentence the badge's tooltip and hidden
-//   text say, so the mark never rests on colour alone. An unknown mark gets the generic words.
+//   text say, so the mark never rests on color alone. An unknown mark gets the generic words.
 //
 // Nothing here decides a rule or reads anything but the view and the event (CLAUDE.md rule 7).
 
@@ -20,15 +20,15 @@ import type { CardMark, CardView, GameEvent } from "@jackioh/shared";
 import type { FxPreset } from "../fx/types.ts";
 import { BERSERK_WORDS, FROZEN_WORDS } from "./cardState.ts";
 
-/** The colours one mark is drawn in: a bright rim, a pale core, a deep glow; and its particles. */
+/** The colors one mark is drawn in: a bright rim, a pale core, a deep glow; and its particles. */
 export type MarkPalette = {
   /** The crackling edge, the badge's ring and the motes. */
   rim: string;
-  /** The hottest part of a mote and the sigil's centre. */
+  /** The hottest part of a mote and the sigil's center. */
   core: string;
   /** The vignette over the card and the halo around the badge. */
   glow: string;
-  /** The effects layer's particles for this colour (fx/presets.ts). */
+  /** The effects layer's particles for this color (fx/presets.ts). */
   preset: FxPreset;
 };
 
@@ -46,18 +46,20 @@ export const MARK_PALETTES = {
   pink: { rim: "#ff7ac8", core: "#ffe3f3", glow: "#c2187a", preset: "arcane" },
   // #2270: Brittle's last count (`BRITTLE_LAST_COLOR`), Allure's aura in gray; no mark is drawn in it.
   gray: { rim: "#b8bec8", core: "#f0f2f5", glow: "#5f6672", preset: "smoke" },
+  // #2437: Temporary's last count in a hand (`TEMPORARY_LAST_COLOR`), Allure's aura in fuchsia; no mark is drawn in it.
+  fuchsia: { rim: "#e879f9", core: "#fae8ff", glow: "#a21caf", preset: "arcane" },
 } as const satisfies Readonly<Record<string, MarkPalette>>;
 
 export type MarkColor = keyof typeof MARK_PALETTES;
 
-/** What an unknown colour key is drawn in: the corruption purple of the `steal` mark. */
+/** What an unknown color key is drawn in: the corruption purple of the `steal` mark. */
 export const DEFAULT_MARK_COLOR: MarkColor = "purple";
 
 function isMarkColor(color: string): color is MarkColor {
   return Object.prototype.hasOwnProperty.call(MARK_PALETTES, color);
 }
 
-/** The colour key a mark is actually drawn in: its own when the table has it, else the default. */
+/** The color key a mark is actually drawn in: its own when the table has it, else the default. */
 export function markColorOf(color: string): MarkColor {
   return isMarkColor(color) ? color : DEFAULT_MARK_COLOR;
 }
@@ -78,7 +80,7 @@ export const ALLURE_MARK_COLOR: MarkColor = "pink";
 /** The engine's `DUO_MARK` (`effects/delay.rs`): the mark Duo and Squad put on a card they will make Radiant (R1850001). */
 export const DUO_MARK = "duo";
 
-/** The engine's `DUO_MARK_COLOR` (`effects/delay.rs`): Allure's aura, recoloured for Radiance. */
+/** The engine's `DUO_MARK_COLOR` (`effects/delay.rs`): Allure's aura, recolored for Radiance. */
 export const DUO_MARK_COLOR: MarkColor = "gold";
 
 /** The engine's `END_OF_TURN_MARK` (`effects/delay.rs`): the mark a card a destroy at the end of this turn watches wears (R2321001). */
@@ -87,8 +89,11 @@ export const END_OF_TURN_MARK = "endOfTurn";
 /** The engine's `END_OF_TURN_MARK_COLOR` (`effects/delay.rs`). */
 export const END_OF_TURN_MARK_COLOR: MarkColor = "orange";
 
-/** #2270: what a card on the field at its last Brittle count wears, the aura alone (no badge, no mark): Allure's, recoloured gray. */
+/** #2270: what a card on the field at its last Brittle count wears, the aura alone (no badge, no mark): Allure's, recolored gray. */
 export const BRITTLE_LAST_COLOR: MarkColor = "gray";
+
+/** #2437: what a hand card at its last Temporary count wears (R637, R2179001), the aura alone (no badge, no mark): Allure's, recolored fuchsia. */
+export const TEMPORARY_LAST_COLOR: MarkColor = "fuchsia";
 
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   // Meditative #76 Do or Die: "At the start of your next turn, steal each marked card" (your: the caster's).
@@ -117,7 +122,7 @@ export function markWords(mark: string): MarkWords {
   return Object.prototype.hasOwnProperty.call(MARK_WORDS, mark) ? (MARK_WORDS[mark] ?? UNKNOWN_MARK_WORDS) : UNKNOWN_MARK_WORDS;
 }
 
-/** The sparkle the badge draws, so the mark is a shape as well as a colour. */
+/** The sparkle the badge draws, so the mark is a shape as well as a color. */
 export const MARK_GLYPH = "✦";
 
 /** The drifting motes of one aura (marks.css places them by index). */

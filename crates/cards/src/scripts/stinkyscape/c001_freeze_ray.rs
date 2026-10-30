@@ -97,7 +97,7 @@ mod tests {
             assert!(frozen(&s, &right));
             // Lane 4 is two lanes away: §3.1's adjacency is N-1 and N+1 and nothing wider.
             assert!(!frozen(&s, &far));
-            // Never across the centre line.
+            // Never across the center line.
             assert!(!frozen(&s, &mine));
         }
 

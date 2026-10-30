@@ -1591,7 +1591,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
   });
 
   it("R668 a reload or a closed tab asks first while a lesson is on, and not for a free game (it is saved), at setup or once it is over", async () => {
-    function unloadIsCancelled(): boolean {
+    function unloadIsCanceled(): boolean {
       const event = new Event("beforeunload", { cancelable: true });
       window.dispatchEvent(event);
       return event.defaultPrevented;
@@ -1600,26 +1600,26 @@ describe("B33 starting renders the game under the practice HUD", () => {
     renderRoute(routeHost());
     await settle({ ticks: 10 });
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
-    expect(unloadIsCancelled(), "the setup screen").toBe(false);
+    expect(unloadIsCanceled(), "the setup screen").toBe(false);
     cleanup();
 
     visit("?seed=unload1&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
     await screen.findByTestId(T.hud);
-    expect(unloadIsCancelled(), "a free game in progress comes back after a reload").toBe(false);
+    expect(unloadIsCanceled(), "a free game in progress comes back after a reload").toBe(false);
     cleanup();
 
     visit(`?lesson=${TUTORIAL_LESSONS[0]?.id ?? ""}`);
     renderRoute(routeHost());
     await screen.findByTestId("game");
-    expect(unloadIsCancelled(), "a lesson in progress").toBe(true);
+    expect(unloadIsCanceled(), "a lesson in progress").toBe(true);
 
     concedeOnBoard();
     await waitFor(() => {
-      expect(unloadIsCancelled(), "a finished lesson").toBe(false);
+      expect(unloadIsCanceled(), "a finished lesson").toBe(false);
     });
     cleanup();
-    expect(unloadIsCancelled(), "after the route unmounts").toBe(false);
+    expect(unloadIsCanceled(), "after the route unmounts").toBe(false);
   });
 });
 

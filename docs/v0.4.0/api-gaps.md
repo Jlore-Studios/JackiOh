@@ -304,7 +304,7 @@ forms — `PORTING.md` §5's first reason no longer holds for them.
 1. **The empty-table round trip** (`crates/luau/src/numbers.rs`, `api/each.rs`;
    `gap1_empty_tables_round_trip`). A Rust empty `Vec` crossing into Luau and
    back, or a script answering `{}` for a list, arrives as a list: the walk
-   honours mlua's array metatable, and a `cards` function answering `{}` names
+   honors mlua's array metatable, and a `cards` function answering `{}` names
    no cards instead of panicking. Example: `each_cards = function(ctx: J.EffectContext) if ctx:zone_count(me, "hand") > n then return {} end ... end`.
 2. **`for_each_card` with `data`** (`api/each.rs`; `gap2_for_each_card_data`).
    The verb field `data` reaches the named `cards` and `each` functions as

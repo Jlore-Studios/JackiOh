@@ -55,9 +55,9 @@ unicode-properties = { version = "0.1.4" }
 unicode-script = { version = "0.5.8" }
 unicode-segmentation = { version = "1.13.3" }
 
-# `cargo test` optimises the rules and the cards (and the JSON they hash), keeping debug assertions
+# `cargo test` optimizes the rules and the cards (and the JSON they hash), keeping debug assertions
 # and overflow checks: the golden traces (SURFACE §13, V4) replay 240 games through `reduce`,
-# `legal_actions`, `view_for` and `hash_state` at every step, which takes hours unoptimised.
+# `legal_actions`, `view_for` and `hash_state` at every step, which takes hours unoptimized.
 [profile.test.package.jackioh-engine]
 opt-level = 2
 
@@ -69,7 +69,7 @@ opt-level = 2
 
 # Luau's C++ VM, which `mlua-sys`'s build script compiles at this package's opt-level (`cc` reads
 # `OPT_LEVEL`), and mlua's bindings: at the test profile's 0, every card hook a test ran went
-# through an unoptimised interpreter.
+# through an unoptimized interpreter.
 [profile.test.package.mlua-sys]
 opt-level = 2
 
@@ -83,7 +83,7 @@ opt-level = 2
 opt-level = 2
 
 # The practice AI at opt-level 1 (#2384), its debug assertions and overflow checks kept, as the
-# engine's are: the AI's tests spend their time in its search, which ran unoptimised. On four cores,
+# engine's are: the AI's tests spend their time in its search, which ran unoptimized. On four cores,
 # with the AI and every crate built on it compiled afresh, ci.yml's `ai` group took 328 s at 0
 # (14 s compiling, 314 running), 130 s at 1 (52 and 78) and 146 s at 2 (80 and 66). No other group
 # that builds the AI took over 3 s longer at 1 than at 0, while at 2 `server api` took 8 s and

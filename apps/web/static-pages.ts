@@ -265,7 +265,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "<li>Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where " +
         "it goes does the same, by click or by Enter on each.</li>" +
         "<li>With a mouse, the card names in the game log are closer together than 24 pixels; on a touch screen each line is 44 pixels tall.</li>" +
-        "<li>Colour contrast is checked only where the tool can measure it, so text over card art and " +
+        "<li>Color contrast is checked only where the tool can measure it, so text over card art and " +
         "gradients has not been checked.</li>" +
         "<li>No one has tested JackiOh with a screen reader or other assistive technology yet.</li></ul>",
     ),

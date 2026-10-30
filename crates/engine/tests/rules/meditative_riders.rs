@@ -85,7 +85,7 @@ fn sent(state: &mut GameState, events: Vec<GameEvent>, viewer: PlayerId) -> Valu
         nonce: "t".to_string(),
         events,
     }];
-    serde_json::to_value(view_for(state, viewer).events).expect("serialises")
+    serde_json::to_value(view_for(state, viewer).events).expect("serializes")
 }
 
 fn table(cards: Vec<(&str, i32, i32)>) -> WinRateTable {
@@ -323,7 +323,7 @@ fn r1107_grants_survive_json_vanilla_copy_and_reset_off_field() {
     );
     // A JSON round trip keeps it.
     let round: GameState =
-        serde_json::from_value(serde_json::to_value(&state).expect("serialises")).expect("deserialises");
+        serde_json::from_value(serde_json::to_value(&state).expect("serializes")).expect("deserializes");
     assert_eq!(card(&round, &target.id).grants, card(&state, &target.id).grants);
     // A Vanilla keeps it (grants behave like granted keywords, §10.4).
     card_mut(&mut state, &target.id).vanilla = true;
@@ -404,7 +404,7 @@ fn r1109_reports_play_and_activate_prices_when_heard() {
             GameEvent::ManaSpent { amount, for_, .. } => Some((
                 *amount,
                 serde_json::to_value(for_)
-                    .expect("serialises")
+                    .expect("serializes")
                     .as_str()
                     .unwrap_or("?")
                     .to_string(),
@@ -429,7 +429,7 @@ fn r1109_reports_play_and_activate_prices_when_heard() {
             GameEvent::ManaSpent { amount, for_, .. } => Some((
                 *amount,
                 serde_json::to_value(for_)
-                    .expect("serialises")
+                    .expect("serializes")
                     .as_str()
                     .unwrap_or("?")
                     .to_string(),

@@ -55,7 +55,7 @@ fn contents_of(state: &GameState, slot: &ZoneSlot) -> Vec<CardInstance> {
     zone_contents(state, slot)
 }
 
-/// R73: "lane-preserving" — the same row and lane on the other side of the centre line.
+/// R73: "lane-preserving" — the same row and lane on the other side of the center line.
 fn mirror_of(slot: &ZoneSlot) -> ZoneSlot {
     ZoneSlot {
         player: opponent_of(slot.player),

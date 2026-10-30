@@ -23,7 +23,7 @@ condition implement through a new `Script.conditionMet` hook.
 
 What Hearthstone does, and what we borrow:
 
-- **Glow colours.** A green border means the card can be played now. A yellow border means a
+- **Glow colors.** A green border means the card can be played now. A yellow border means a
   special condition for the card is met. No glow means it can't be played now
   ([Blizzard how-to-play, board overview](https://hearthstone.blizzard.com/en-us/how-to-play?section=your-minions&topic=board-overview),
   [Hand, Hearthstone Wiki](https://hearthstone.fandom.com/wiki/Hand),
@@ -34,13 +34,13 @@ What Hearthstone does, and what we borrow:
   attack, a valid target while targeting). Yellow replaces green on a playable card whose
   condition is met. A hand card that can't be played shows no glow even when its condition holds.
   Combo, "if your hero is below N" and similar all use one yellow; there's no separate orange.
-- **End turn.** The End Turn button changes colour once the player has no moves left
+- **End turn.** The End Turn button changes color once the player has no moves left
   ([HearthPwn thread](https://www.hearthpwn.com/forums/hearthstone-general/general-discussion/19771-can-we-have-an-automatic-end-turn-option)).
   *Borrowed:* `end-turn` glows green when nothing else is playable. The optional "Confirm end
   turn" setting asks twice when something still is.
 - **Targeting.** A bold arrow runs from the action's source to the pointer and moves as the
   selection changes. Releasing over an empty area cancels the action. A minion drag that is
-  cancelled is "undone": its board position is forgotten and it returns to the hand
+  canceled is "undone": its board position is forgotten and it returns to the hand
   ([Target, wiki.gg](https://hearthstone.wiki.gg/wiki/Target)).
   *Borrowed:* the arrow for attacks and for target-only plays, a card ghost for placing a card, a
   reticle over a valid target, and a release anywhere invalid or back over the hand cancels and
@@ -259,18 +259,18 @@ as it is. `data-legal` stays the only click gate.
 ### S7. CSS files, tokens and import order
 
 - `apps/web/src/game/highlights.css` (slice 4) declares
-  `:root { --glow-ready: #4ade80; --glow-condition: #facc15; }`. The computed colours are
+  `:root { --glow-ready: #4ade80; --glow-condition: #facc15; }`. The computed colors are
   `rgb(74, 222, 128)` and `rgb(250, 204, 21)`. The rules:
   - A glowing element's **first** `box-shadow` layer is `0 0 0 2px var(--glow-ready)`, unmixed.
-    Any keyframes keep that first layer's colour in every frame.
+    Any keyframes keep that first layer's color in every frame.
   - A card with both `[data-glow="ready"][data-condition-active="true"]` uses `--glow-condition`
     in the first layer instead.
   - A field or backrow card with `[data-condition-active="true"]` and no glow gets a yellow first
     layer.
-  - A hand card (`.card-hand`) with the flag and no glow gets no glow colour.
+  - A hand card (`.card-hand`) with the flag and no glow gets no glow color.
   - `data-selected` keeps its own styling on top.
 - `board.css` (slice 5) stops painting `[data-legal="true"]` green. A legal element without glow
-  gets a pointer cursor and full opacity, and no `--legal`/glow colour.
+  gets a pointer cursor and full opacity, and no `--legal`/glow color.
 - `Board.tsx` imports `./board.css` **then** `./highlights.css`, in that order.
 - `settings.css` is imported by `SettingsPanel.tsx`/`SettingsButton.tsx`, and `drag.css` by
   `DragLayer.tsx`.
@@ -364,7 +364,7 @@ export { default as SettingsButton, type SettingsButtonProps } from "./SettingsB
 | `settings-panel` | `role="dialog" aria-modal="true" aria-label="Settings"`; focus moves to its first switch on open. Escape inside it closes it and calls `stopPropagation()`. Focus goes back to the gear on close |
 | `settings-close`, `settings-reset` | buttons |
 | `settings-section-gameplay` / `-visuals` / `-audio` | a `<section>` with an `<h2>`. A section with no controls (built-in or slot) is not rendered |
-| `setting-dragToPlay`, `setting-confirmEndTurn`, `setting-autoEndTurn`, `setting-hoverPreviews`, `setting-reduceMotion` | `<input type="checkbox" role="switch">` labelled "Drag to play", "Confirm end turn", "End turn automatically", "Hover previews", "Reduce motion" |
+| `setting-dragToPlay`, `setting-confirmEndTurn`, `setting-autoEndTurn`, `setting-hoverPreviews`, `setting-reduceMotion` | `<input type="checkbox" role="switch">` labeled "Drag to play", "Confirm end turn", "End turn automatically", "Hover previews", "Reduce motion" |
 
 Built-in controls: gameplay = `dragToPlay`, `confirmEndTurn`, `autoEndTurn` (added later, R345), `hoverPreviews`; visuals =
 `reduceMotion`. Slot controls render after them in their section.
@@ -527,7 +527,7 @@ nothing in it carries a `hand-card-*` or `card-*` testid:
   card as `clamp(min, (100cqh − its fixed parts) / the card heights it stacks, max)`, so the route's
   bar, the banner or a phone's browser toolbars shrink the cards instead of pushing End turn or
   your hand below the screen. The field is the board's one `1fr` row; spare height becomes mat
-  above and below its centred lanes. Off a route (no size container) `cqh` is the small viewport
+  above and below its centered lanes. Off a route (no size container) `cqh` is the small viewport
   height, the same budget. On phones the shell pads 6 px top and bottom (the top with the notch's
   inset), the chrome row is inset by the side notches, and the match bar is one line with an
   ellipsis. Before this, the match route overflowed at all four target sizes (the hand of a phone
@@ -571,7 +571,7 @@ nothing in it carries a `hand-card-*` or `card-*` testid:
   `.power-button` and `.hero` are at least 44×44 px, and each zone's smaller side is at least
   44 px. The switch (⟳) is out of the card (#258): a sibling of it in its zone, whose top-right
   corner holds a transparent target of up to 44×44 px with the small glyph drawn in its corner. The
-  target stops `--switch-clear` (6 px) short of the zone's centre lines, so it is a full 44×44
+  target stops `--switch-clear` (6 px) short of the zone's center lines, so it is a full 44×44
   wherever the zone has the room (a tablet's or a desktop's tile) and shrinks on a phone's small tile
   rather than take its middle, which stays the card's own tap (attack, or pick it as a target) and
   drag. A switch that is not legal takes no pointer at all, so a tap on it reaches the card or the
@@ -584,16 +584,16 @@ nothing in it carries a `hand-card-*` or `card-*` testid:
   `[role="button"]` elements are at least 44 px tall. `Prompt.tsx` itself is not edited.
 - **Small pickers stay off the field.** A zone, target or tribute pick is answered on the board,
   and a play in flight can ask for a direction, mode, X or price while its zone still glows. So
-  those seven kinds (by `data-prompt-kind`) never sit centred on the field: they dock to the right
+  those seven kinds (by `data-prompt-kind`) never sit centered on the field: they dock to the right
   sidebar on a desktop, low on a tablet, down the right edge of a phone held landscape, and are the
   usual sheet on a phone held upright, and their scrim does not dim the board. The card pickers
-  (mulligan, discover, hand) keep the centred modal (B32's desktop case) and the sheet.
+  (mulligan, discover, hand) keep the centered modal (B32's desktop case) and the sheet.
   On a phone held upright with drag to play on, a *play's* zone, target or tribute pick
   (`data-prompt-source="play"`) is a slim bar along the bottom edge over the control bar: its
   title, Confirm and Cancel, and no list, because the answers glow on the board and are picked
   there (B44). With drag to play off it is the full sheet, which is the brief's "selection UI";
   an engine prompt keeps its sheet either way.
-- **Colour language.** Green is "can act" and yellow is "condition met" (S7), so the board's own
+- **Color language.** Green is "can act" and yellow is "condition met" (S7), so the board's own
   selection ring is ice blue (`.board { --selected }`), never gold. End turn, once nothing else is
   left, turns green (its fill and its ring, B18), with a selector that outranks board.css's amber
   one. A Radiant card is foil inside its frame (a pale gold border and an inner sheen) with no
@@ -677,9 +677,9 @@ B17. A card root carries `data-condition-active="true"` exactly when its `CardVi
 B18. In a real browser:
 - a `data-glow="ready"` card's computed `box-shadow` contains `rgb(74, 222, 128)`;
 - with `data-condition-active="true"` added, it contains `rgb(250, 204, 21)` and not the green;
-- a hand card with the flag but no glow contains neither colour;
+- a hand card with the flag but no glow contains neither color;
 - a field card with the flag contains the yellow;
-- a `data-legal="true"` card without `data-glow` contains neither colour.
+- a `data-legal="true"` card without `data-glow` contains neither color.
 
 B19. With empty, corrupt or throwing `localStorage`, `readSettings()` returns `DEFAULT_SETTINGS`
 (`dragToPlay: true`, `confirmEndTurn: false`, `hoverPreviews: true`, `reduceMotion: false`), and
@@ -738,7 +738,7 @@ visible.
 
 B32. At 390×844 an open prompt is a bottom sheet: `prompt-modal` spans the viewport width and
 its bottom edge is the viewport's, and `prompt-submit` and each `prompt-option-*` are at least
-44 px tall. At 1280×720 it is a centred modal narrower than the viewport.
+44 px tall. At 1280×720 it is a centered modal narrower than the viewport.
 
 B33. `board.css` and `prompt.css` pad with `env(safe-area-inset-bottom)` (plus left and right in
 `board.css`), and `board.css` still declares no width over 390 px (Board.test's scan).
@@ -825,7 +825,7 @@ B47. Every card picker (`data-prompt-layout="cards"`) has "View the board", `pro
 
 ## Tests
 
-| Behaviours | Project | New test file | Harness |
+| Behaviors | Project | New test file | Harness |
 |---|---|---|---|
 | B1–B4, B10 (the `R195 …` titles) | vitest `engine` | `packages/engine/test/conditionActive.test.ts` | `test/fixtures/harness.ts` (`newGame`, `inHand`, `put`, `slot`); a test-only `CardDef` and `CardScripts` with a `vi.fn` `conditionMet`, registered in-file on top of `registeredCatalog()` / `registeredScripts()` and restored in `afterAll` (the pattern `viewFor.test.ts` uses for its own defs) |
 | B5–B9, B10 (the `R195 …` titles) | vitest `cards` | `packages/cards/test/condition-active.test.ts` | `test/_harness.ts` `scenario()`; `s.view("p1")`/`s.view("p2")` for the flag, and `s.play(...)` plus the scenario's assertions for the branch actually taken |
@@ -849,7 +849,7 @@ B47. Every card picker (`data-prompt-layout="cards"`) has "View the board", `pro
 Tester groups. Each group creates only the new files listed, and none of them belongs to a slice:
 
 - **Tester A, `rules-and-state`.**
-  - Behaviours: B1–B17 and B19–B24.
+  - Behaviors: B1–B17 and B19–B24.
   - Files:
     - `packages/engine/test/conditionActive.test.ts`
     - `packages/cards/test/condition-active.test.ts`
@@ -858,7 +858,7 @@ Tester groups. Each group creates only the new files listed, and none of them be
     - `apps/web/src/test/ux/settings.test.tsx`
   - Every R195 proof title starts `R195`.
 - **Tester B, `interaction-and-layout`.**
-  - Behaviours: B18 and B25–B40.
+  - Behaviors: B18 and B25–B40.
   - Files:
     - `apps/web/src/test/ux/board-ux.test.tsx`
     - `apps/web/src/test/ux/drag-model.test.ts`
@@ -918,7 +918,7 @@ zones and prompts at 1280×720.
   - `packages/cards/README.md`
   - `SPEC.md`
   - `packages/engine/test/rulings.test.ts`
-- Behaviours: B1–B10.
+- Behaviors: B1–B10.
 - Shared-file edits:
   - In `viewFor.ts`, only the three call sites in S2 plus one import. The file is shared with
     task 3 and task 4.
@@ -932,7 +932,7 @@ zones and prompts at 1280×720.
   - `apps/web/src/settings/store.ts`, `slots.ts`, `SettingsPanel.tsx`, `SettingsButton.tsx`,
     `settings.css`, `index.ts` (all new)
   - `apps/web/src/routes/nav.tsx`
-- Behaviours: B19–B24.
+- Behaviors: B19–B24.
 - Shared-file edits: `nav.tsx` gets one import and one mount line (S10). Task 5 may also touch
   it.
 
@@ -940,7 +940,7 @@ zones and prompts at 1280×720.
 - Owns:
   - `apps/web/src/game/drag/model.ts`, `targets.ts`, `DragLayer.tsx`, `drag.css` (all new)
   - `apps/web/src/game/Game.tsx`
-- Behaviours: B34–B40.
+- Behaviors: B34–B40.
 - Shared-file edits: `Game.tsx` gets exactly one import and one mount line (S10). Tasks 1, 2 and
   3 also edit `Game.tsx`.
 
@@ -952,7 +952,7 @@ zones and prompts at 1280×720.
   - `apps/web/src/game/contract.ts`
   - `apps/web/src/game/Card.tsx` (root attributes only)
   - `apps/web/src/game/Hero.tsx`
-- Behaviours: B11–B18.
+- Behaviors: B11–B18.
 - Shared-file edits:
   - `Card.tsx` belongs to task 6. Only the two root attributes in S10 and one import line are
     added.
@@ -965,7 +965,7 @@ zones and prompts at 1280×720.
   - `apps/web/src/game/Board.test.tsx` and `apps/web/src/game/__snapshots__/Board.test.tsx.snap`
   - `e2e/cypress/component/board-layout.cy.tsx`
   - `apps/web/README.md`
-- Behaviours: B25–B33.
+- Behaviors: B25–B33.
 - Shared-file edits: none outside its own files.
 - Existing-test updates:
   - In `Board.test.tsx`, delete the HTML5 test "reports a drag as the source click then the
@@ -988,7 +988,7 @@ Slice briefs (what a blind builder needs beyond Surface):
 2. **settings.**
    - Implement S8 exactly: testids, labels, storage key, defaults.
    - No React context is needed; the store is module-level with `useSyncExternalStore`.
-   - The panel is a centred dialog on desktop and a bottom sheet on phones, in `settings.css`.
+   - The panel is a centered dialog on desktop and a bottom sheet on phones, in `settings.css`.
      Its controls are at least 44 px tall.
    - Mount the nav gear (S10).
 3. **drag.**

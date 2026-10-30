@@ -103,7 +103,7 @@ fn r1125_concealed_pre_play_view() {
         })
     );
     // And it never reaches a view.
-    let view = serde_json::to_value(view_for(&out.state, P1)).expect("serialises");
+    let view = serde_json::to_value(view_for(&out.state, P1)).expect("serializes");
     assert!(view.get("playJudgement").is_none());
 }
 
@@ -175,7 +175,7 @@ fn r1125_replay_fold_matches_hash() {
     let first = play(&state, P2, &dear_card.id, "n1");
     // The second time from the state as a log's fold holds it: through JSON, under another nonce.
     let restored: GameState =
-        serde_json::from_value(serde_json::to_value(&state).expect("serialises")).expect("parses");
+        serde_json::from_value(serde_json::to_value(&state).expect("serializes")).expect("parses");
     let second = play(&restored, P2, &dear_card.id, "n2");
     assert!(first.error.is_none());
     assert!(second.error.is_none());
@@ -187,7 +187,7 @@ fn r1125_replay_fold_matches_hash() {
     // The nonce log is bookkeeping (`hash_state` leaves it out); everything else is the same game.
     assert_eq!(hash_state(&first.state), hash_state(&second.state));
     assert_eq!(
-        serde_json::to_value(&first.events).expect("serialises"),
-        serde_json::to_value(&second.events).expect("serialises")
+        serde_json::to_value(&first.events).expect("serializes"),
+        serde_json::to_value(&second.events).expect("serializes")
     );
 }

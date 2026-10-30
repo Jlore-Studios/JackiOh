@@ -307,10 +307,10 @@ pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&me)).await?;
     let removed = tx.friends_remove(&me, &friend_id).await?;
     let shares = tx.shares_remove_between(&me, &friend_id).await?;
-    // R1689000: an open challenge either way is cancelled and its room freed, as a block's is. One
+    // R1689000: an open challenge either way is canceled and its room freed, as a block's is. One
     // that lapsed already freed itself: its room expired with it (and its code may be another room's now).
     let closed = tx
-        .challenges_close_between(&me, &friend_id, ChallengeState::Cancelled)
+        .challenges_close_between(&me, &friend_id, ChallengeState::Canceled)
         .await?;
     for challenge in closed.iter().filter(|challenge| challenge.expires_at > now) {
         release_room(&mut tx, &challenge.room_code).await?;
@@ -352,10 +352,10 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     tx.friends_requests_delete_between(&me, &target).await?;
     // B46, B52: a share either way ends for good, so unblocking restores none.
     let shares = tx.shares_remove_between(&me, &target).await?;
-    // B46, B49: an open challenge either way is cancelled and its room freed. One that lapsed
+    // B46, B49: an open challenge either way is canceled and its room freed. One that lapsed
     // already freed itself: its room expired with it (and its code may be another room's now).
     let closed = tx
-        .challenges_close_between(&me, &target, ChallengeState::Cancelled)
+        .challenges_close_between(&me, &target, ChallengeState::Canceled)
         .await?;
     for challenge in closed.iter().filter(|challenge| challenge.expires_at > now) {
         release_room(&mut tx, &challenge.room_code).await?;

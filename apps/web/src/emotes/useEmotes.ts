@@ -70,7 +70,7 @@ export function useEmotes(opts: {
   const handOf = useCallback((player: PlayerId): readonly EmoteId[] => handFor(hands, player), [hands]);
 
   // Expiry: one timeout per player, keyed to its show. Replaced shows leave stale timers that
-  // expire checks the key on, so nothing needs cancelling except on unmount.
+  // expire checks the key on, so nothing needs canceling except on unmount.
   const armExpiry = useCallback(
     (player: PlayerId, show: EmoteShow): void => {
       const existing = timers.current.get(player);

@@ -66,7 +66,7 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #12.7 Legion of the Hungry — SPEC §8.7 row 12.7, R408, BUILD M9 Classic+ row C+ 12.7: "Spell
-// (patch v0.3.10; a Field Spell whose unlabelled text was its Cry before, R408): exiles 5 different random cards of your deck (all if fewer,
+// (patch v0.3.10; a Field Spell whose unlabeled text was its Cry before, R408): exiles 5 different random cards of your deck (all if fewer,
 // R60), then summons the Units among them out of exile into your leftmost open zones, no Cry (R1),
 // until your board is full, the rest staying exiled; an empty deck does nothing and draws nothing
 // (R129); the exiles are public and the deck's order stays hidden (R97); the card count reads through

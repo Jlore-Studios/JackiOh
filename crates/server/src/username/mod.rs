@@ -146,7 +146,7 @@ pub fn parse_username(shown: &str) -> Option<(&str, Option<i64>)> {
 /// unique key and tag): `Max#3`, `max#3` and fullwidth `ＭＡＸ＃３` all name `("max", Some(3))`. The
 /// text is trimmed and read in NFKC, split as [`parse_username`] splits a shown name, and its base
 /// keyed as a claim's is ([`username_key`]). None when nothing was typed, when the text is longer
-/// than `USERNAME_INPUT_MAX_CHARS` (refused before it is normalised, as a claim's is), or when the
+/// than `USERNAME_INPUT_MAX_CHARS` (refused before it is normalized, as a claim's is), or when the
 /// part after the last `#` is not a tag. The base is not checked against R1432 on purpose: it only
 /// has to match a name someone holds, and a name a later filter would refuse still names its holder.
 pub fn sign_in_name(typed: &str) -> Option<(String, Option<i64>)> {

@@ -1,0 +1,194 @@
+{
+"linked": [
+[
+"Closes #12",
+12
+],
+[
+"closes #12.",
+12
+],
+[
+"Fixes #3 and closes #4",
+3
+],
+[
+"fixed #5",
+5
+],
+[
+"FIXES   #6",
+6
+],
+[
+"fixe #7",
+null
+],
+[
+"resolve #8",
+8
+],
+[
+"Resolved\n#9",
+9
+],
+[
+"closes#10",
+null
+],
+[
+"xcloses #11",
+null
+],
+[
+"closes #12a",
+null
+],
+[
+"closes #12_",
+null
+],
+[
+"closes #12-",
+12
+],
+[
+"Close #13",
+13
+],
+[
+"closesd #14",
+null
+],
+[
+"fix #١٢",
+12
+],
+[
+"fıx #15",
+15
+],
+[
+"FİX #16",
+16
+],
+[
+"cloſes #17",
+17
+],
+[
+"closes  # 18",
+null
+],
+[
+"see #19, closes #20",
+20
+],
+[
+"Resolves:#21",
+null
+],
+[
+"",
+null
+],
+[
+null,
+null
+],
+[
+"fixes #22 fixes #23",
+22
+],
+[
+"closes #24é",
+null
+],
+[
+"Fixes #25",
+25
+],
+[
+"(fixes #26)",
+26
+],
+[
+"fix\t#27\n",
+27
+],
+[
+"closed #28",
+28
+],
+[
+"resolveds #29",
+null
+],
+[
+"fixed #30_x closes #31",
+31
+]
+],
+"is_bot": [
+[
+{
+"user": {
+"login": "jgoetzmann-bot"
+}
+},
+true
+],
+[
+{
+"user": {
+"login": "JGoetzmann-Bot"
+}
+},
+true
+],
+[
+{
+"user": {
+"login": "github-actions[bot]"
+}
+},
+true
+],
+[
+{
+"user": {
+"login": "someone"
+},
+"body": "hi"
+},
+false
+],
+[
+{
+"user": {
+"login": "someone"
+},
+"body": "x <!-- jackioh-bot -->"
+},
+true
+],
+[
+{
+"user": null
+},
+false
+],
+[
+{
+"user": {
+"login": null
+}
+},
+false
+],
+[
+{},
+false
+]
+]
+}

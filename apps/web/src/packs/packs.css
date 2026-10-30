@@ -150,7 +150,7 @@
   inset: 0;
 }
 
-/* R1833000: a dropped cosmetic's look fills the face in its card's place, centred, and its own
+/* R1833000: a dropped cosmetic's look fills the face in its card's place, centered, and its own
    rarity glows on it, never its card's (R1333000). */
 .pack-slot__face .cosmetic-look {
   position: absolute;
@@ -225,7 +225,7 @@
     min-width: 0;
   }
 
-  /* The last two sit centred under the first three. */
+  /* The last two sit centered under the first three. */
   .pack-scene .pack-slot:nth-child(4) {
     grid-column: 2 / span 2;
   }

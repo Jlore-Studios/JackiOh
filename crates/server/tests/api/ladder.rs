@@ -3,7 +3,7 @@
 //!
 //! Port of `apps/server/test/ranked/ladder.test.ts` (part 18). The ladder's answers that travel to
 //! the client (`VisibleRank`, `PeakBadge`, the Grape tier names) are compared as the JSON they
-//! serialise to, which is what TS's `toEqual` on those objects compared.
+//! serialize to, which is what TS's `toEqual` on those objects compared.
 
 use std::collections::BTreeMap;
 
@@ -21,9 +21,9 @@ use serde_json::{Value, json};
 
 const AT: i64 = 1_700_000_000_000;
 
-/// A value as the JSON it serialises to.
+/// A value as the JSON it serializes to.
 fn js<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("a ladder value serialises")
+    serde_json::to_value(value).expect("a ladder value serializes")
 }
 
 /// A config count as a `usize`, whichever integer type `config.rs` gives it.
@@ -66,7 +66,7 @@ fn place(ladder: i32) -> Value {
 fn tier_name(ladder: i32) -> String {
     js(place_of(ladder).tier)
         .as_str()
-        .expect("a tier serialises as its name")
+        .expect("a tier serializes as its name")
         .to_string()
 }
 

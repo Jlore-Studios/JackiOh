@@ -250,7 +250,7 @@ pub fn elo_of_score(points: f64, games: f64) -> f64 {
 /// from `reference` in Elo points (0 for the reference) and its standard error. Every pair's tally
 /// has `BOT_CALIBRATION_PRIOR_GAMES` drawn game added, a draw is half a win each, and unfinished
 /// games are not counted. The fit is the minorization-maximization iteration, `BOT_CALIBRATION_FIT_ITERATIONS`
-/// steps, each normalised so the reference's strength is 1.
+/// steps, each normalized so the reference's strength is 1.
 pub fn fit_offsets(tallies: &[PairTally], strengths: usize, reference: usize) -> Vec<StrengthOffset> {
     let mut games = vec![vec![0.0_f64; strengths]; strengths];
     let mut points = vec![0.0_f64; strengths];

@@ -186,8 +186,8 @@ mod r850_the_game_end_point {
     #[test]
     fn r850_no_condition_leaves_the_state_json_unchanged() {
         let mut state = new_game("alt-win-quiet", None);
-        let before = serde_json::to_value(&state).expect("a state serialises");
+        let before = serde_json::to_value(&state).expect("a state serializes");
         run_settled(&mut state, &[], PlayerId::P1);
-        assert_eq!(before, serde_json::to_value(&state).expect("a state serialises"));
+        assert_eq!(before, serde_json::to_value(&state).expect("a state serializes"));
     }
 }

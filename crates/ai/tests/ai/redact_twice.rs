@@ -15,7 +15,7 @@ use jackioh_engine::testkit::*;
 use super::support::{AI, HUMAN, ai_options, card_by_id, random_policy_states};
 
 fn text(state: &GameState) -> String {
-    serde_json::to_string(state).expect("a GameState serialises")
+    serde_json::to_string(state).expect("a GameState serializes")
 }
 
 /// p1 (the AI) faces p2's face-down Siphon Squad, whose aura sleeps until it is revealed (R1149000)

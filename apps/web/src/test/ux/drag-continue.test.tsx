@@ -259,7 +259,7 @@ describe("R658 a prompt's option is dragged out of the picker", () => {
     expect(document.documentElement).not.toHaveAttribute("data-dragging");
   });
 
-  it("R658 released back over the panel, or cancelled with Escape, it sends nothing", () => {
+  it("R658 released back over the panel, or canceled with Escape, it sends nothing", () => {
     const onAction = renderDiscover();
     panelBox();
     const option = el("prompt-option-mode:core-055");

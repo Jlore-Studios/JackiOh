@@ -45,10 +45,10 @@ export function divisionEmbellishment(division: number | null): { studs: number;
 
 /** The crest's drawing space: every coordinate below is in it, whatever size the crest is drawn at. */
 const VIEW_BOX = "0 0 64 64";
-const CENTRE = 32;
+const CENTER = 32;
 const SHIELD = "M32 6 L54 14 V32 C54 46 44 54 32 58 C20 54 10 46 10 32 V14 Z";
 
-/** Berry centres, rows from the point upward: 1, 2, 3 and 4 berries. */
+/** Berry centers, rows from the point upward: 1, 2, 3 and 4 berries. */
 const BERRY_ROWS: readonly (readonly (readonly [number, number])[])[] = [
   [[32, 42]],
   [
@@ -81,7 +81,7 @@ const WING_OPACITY = 0.9;
 const RAY_WIDTH = 1.5;
 const VINE_WIDTH = 1.5;
 const FRAME_LINE_WIDTH = 1;
-const HALO_COLOUR = "#f3e8ff";
+const HALO_COLOR = "#f3e8ff";
 const LEAF_GREEN = "#5f8f3a";
 const LEAVES = [
   { cx: 25, cy: 11, rx: 6, ry: 2.5, transform: "rotate(-25 25 11)" },
@@ -97,7 +97,7 @@ const CROWN = "M22 9 L24 1 L28 6 L32 0 L36 6 L40 1 L42 9 Z";
 const RAY_COUNT = 8;
 const RAY_LENGTH = 31;
 const RAYS = Array.from({ length: RAY_COUNT }, (_, i) => (i * 2 * Math.PI) / RAY_COUNT).map(
-  (angle) => [CENTRE + RAY_LENGTH * Math.cos(angle), CENTRE + RAY_LENGTH * Math.sin(angle)] as const,
+  (angle) => [CENTER + RAY_LENGTH * Math.cos(angle), CENTER + RAY_LENGTH * Math.sin(angle)] as const,
 );
 
 type TierArt = {
@@ -313,9 +313,9 @@ export default function RankCrest(props: RankCrestProps): ReactElement {
     >
       <svg className="rank-crest__art" viewBox={VIEW_BOX} width={edge} height={edge} aria-hidden="true" focusable="false">
         <g opacity={art.opacity}>
-          {art.glow !== null ? <circle cx={CENTRE} cy={CENTRE} r={GLOW_R} fill={art.glow} opacity={GLOW_OPACITY} /> : null}
+          {art.glow !== null ? <circle cx={CENTER} cy={CENTER} r={GLOW_R} fill={art.glow} opacity={GLOW_OPACITY} /> : null}
           {art.rays
-            ? RAYS.map(([x, y], i) => <line key={i} x1={CENTRE} y1={CENTRE} x2={x} y2={y} stroke={art.edge} strokeWidth={RAY_WIDTH} />)
+            ? RAYS.map(([x, y], i) => <line key={i} x1={CENTER} y1={CENTER} x2={x} y2={y} stroke={art.edge} strokeWidth={RAY_WIDTH} />)
             : null}
           {WINGS[art.wings].map((d, i) => (
             <path key={i} d={d} fill={art.edge} opacity={WING_OPACITY} />
@@ -329,7 +329,7 @@ export default function RankCrest(props: RankCrestProps): ReactElement {
               fill="none"
               stroke={art.edge}
               strokeWidth={FRAME_LINE_WIDTH}
-              transform={`translate(${String(CENTRE)} ${String(CENTRE)}) scale(${String(1 - FRAME_LINE_STEP * (i + 1))}) translate(-${String(CENTRE)} -${String(CENTRE)})`}
+              transform={`translate(${String(CENTER)} ${String(CENTER)}) scale(${String(1 - FRAME_LINE_STEP * (i + 1))}) translate(-${String(CENTER)} -${String(CENTER)})`}
             />
           ))}
           {art.vine
@@ -348,13 +348,13 @@ export default function RankCrest(props: RankCrestProps): ReactElement {
             <circle
               key={i}
               className="rank-crest__stud"
-              cx={CENTRE + (i - (studs - 1) / 2) * STUD_GAP}
+              cx={CENTER + (i - (studs - 1) / 2) * STUD_GAP}
               cy={STUD_Y}
               r={STUD_R}
               fill={art.edge}
             />
           ))}
-          {art.halo ? <ellipse cx={CENTRE} cy={3.5} rx={11} ry={2.5} fill="none" stroke={HALO_COLOUR} strokeWidth={1.5} /> : null}
+          {art.halo ? <ellipse cx={CENTER} cy={3.5} rx={11} ry={2.5} fill="none" stroke={HALO_COLOR} strokeWidth={1.5} /> : null}
           {art.crown ? <path d={CROWN} fill={art.edge} /> : null}
           {art.shimmer && !reduced ? <path className="rank-crest__shimmer" d={SHIELD} fill="#ffffff" /> : null}
         </g>

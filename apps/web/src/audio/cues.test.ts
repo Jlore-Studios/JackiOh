@@ -948,11 +948,11 @@ describe("B56 a summon is sized by the unit that lands", () => {
 });
 
 /* --------------------------------------------------------------------------------------------- *
- * Integration: the public catalog colours a card the viewer can name (docs/polish/reference.md,
+ * Integration: the public catalog colors a card the viewer can name (docs/polish/reference.md,
  * audio x cards), and R203 still bounds it.
  * --------------------------------------------------------------------------------------------- */
 
-describe("the catalog colours summons and spells, never what the viewer cannot name", () => {
+describe("the catalog colors summons and spells, never what the viewer cannot name", () => {
   const CATALOG: Record<string, CueCard> = {
     [UNIT]: { type: "Unit", tags: ["Felinor"], rarity: "Common" },
     [SPELL]: { type: "Spell", tags: ["Call to Chaos"], rarity: "Rare" },
@@ -1130,7 +1130,7 @@ describe("R506 a token's printed rarity gives its summon the rarity sting", () =
     expect(sfxOf(cues, "entrance")).toEqual({ kind: "sfx", id: "entrance", params: { mythic: true }, delayMs: 0 });
   });
 
-  it("R203 a printed rarity never colours the backrow or a card behind the sentinel", () => {
+  it("R203 a printed rarity never colors the backrow or a card behind the sentinel", () => {
     expect(sfxOf(cuesFor(landedAs(LEGENDARY_FIELD_TOKEN, "backrow"), withRealCatalog()), "entrance")).toBeUndefined();
     const asked: string[] = [];
     const context = ctx({
@@ -1242,8 +1242,8 @@ describe("R506 Call to Chaos's roll (R436) and a mark (R437)", () => {
     expect(onlySfx(mark(true))).toEqual({ kind: "sfx", id: "brand", delayMs: 0 });
     expect(onlySfx(mark(false))).toEqual({ kind: "sfx", id: "brand", params: { release: true }, delayMs: 0 });
     expect(cuesFor(mark(true, HIDDEN_DEF_ID), ctx())).toEqual(cuesFor(mark(true), ctx()));
-    const recoloured: GameEvent = { type: "marked", instanceId: "u6", mark: "curse", color: "green", added: true };
-    expect(cuesFor(recoloured, ctx())).toEqual(cuesFor(mark(true), ctx()));
+    const recolored: GameEvent = { type: "marked", instanceId: "u6", mark: "curse", color: "green", added: true };
+    expect(cuesFor(recolored, ctx())).toEqual(cuesFor(mark(true), ctx()));
   });
 });
 
@@ -1420,12 +1420,12 @@ describe("R669 every card the viewer can read stings as it is played, by its rar
 });
 
 describe("R669 an effect about a unit on the field comes from its lane", () => {
-  it("R669 lanePan centres the middle lane and puts the outer ones LANE_PAN_MAX either way", () => {
+  it("R669 lanePan centers the middle lane and puts the outer ones LANE_PAN_MAX either way", () => {
     expect([0, 1, 2, 3, 4].map((i) => lanePan(i, 5))).toEqual([-LANE_PAN_MAX, -LANE_PAN_MAX / 2, 0, LANE_PAN_MAX / 2, LANE_PAN_MAX]);
     expect(lanePan(0, 1)).toBe(0);
   });
 
-  it("R669 a hit on the opponent's lane-1 unit pans left, the viewer's lane-5 unit's death right, and a hero hit stays centred", () => {
+  it("R669 a hit on the opponent's lane-1 unit pans left, the viewer's lane-5 unit's death right, and a hero hit stays centered", () => {
     const enemy = unit("p2", { instanceId: "e1" });
     const mine = unit("p1", { instanceId: "m5" });
     const view = baseView({
@@ -1504,7 +1504,7 @@ describe("R1363 Armor clanks when it takes half or more of a hit, and rings when
     expect(ids(whole("u6", 2), ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) }))).toEqual(["armorRing"]);
   });
 
-  it("R1363 R669 both come from the unit's lane, and a hero's stay centred", () => {
+  it("R1363 R669 both come from the unit's lane, and a hero's stay centered", () => {
     const guard = unit("p2", { instanceId: "g1", health: 9, maxHealth: 9 });
     const view = baseView({ opponent: emptySide("p2", { units: [guard, null, null, null, null] }) });
     const clank = cuesFor(hitOn("g1", 1, 3), ctx({ view }));

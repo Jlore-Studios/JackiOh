@@ -88,7 +88,7 @@ mod tests {
     fn named_by_a_legal_action(s: &Scenario, player: PlayerId, id: &str) -> bool {
         legal_actions(s.state(), player)
             .iter()
-            .any(|action| serde_json::to_string(action).expect("serialises").contains(&format!("\"{id}\"")))
+            .any(|action| serde_json::to_string(action).expect("serializes").contains(&format!("\"{id}\"")))
     }
 
     /// Where in `events` `matches` first holds.

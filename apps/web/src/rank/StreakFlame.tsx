@@ -13,8 +13,8 @@ import "./streakFlame.css";
 const VIEW_BOX = "0 0 16 16";
 const FLAME = "M8 1 C9 4 13 6 13 10 C13 13 10.8 15 8 15 C5.2 15 3 13 3 10 C3 7.5 4.5 6 5.5 4.5 C5.7 6 6.3 7 7 7.5 C7 5 7.5 3 8 1 Z";
 const CORE = "M8 8 C9 9.5 10.5 10.5 10.5 12 C10.5 13.4 9.4 14.2 8 14.2 C6.6 14.2 5.5 13.4 5.5 12 C5.5 10.8 6.5 10 7 9.2 C7.3 9.8 7.6 10.1 8 10.3 C8 9.5 8 8.8 8 8 Z";
-const FLAME_COLOUR = "#ff7a1a";
-const CORE_COLOUR = "#ffd23f";
+const FLAME_COLOR = "#ff7a1a";
+const CORE_COLOR = "#ffd23f";
 
 /** The streak a flame shows, or null below `RANK_STREAK_FLAME_LENGTH` (a loss sets it to 0). */
 export function flameStreak(streak: number): number | null {
@@ -37,8 +37,8 @@ export default function StreakFlame({ streak, size }: { streak: number; size: Ra
       {" "}
       <span className="streak-flame" role="img" aria-label={words} title={words} data-size={size}>
         <svg className="streak-flame__art" viewBox={VIEW_BOX} width={edge} height={edge} aria-hidden="true" focusable="false">
-          <path d={FLAME} fill={FLAME_COLOUR} />
-          <path d={CORE} fill={CORE_COLOUR} />
+          <path d={FLAME} fill={FLAME_COLOR} />
+          <path d={CORE} fill={CORE_COLOR} />
         </svg>
         <span className="streak-flame__count" aria-hidden="true">
           {count}

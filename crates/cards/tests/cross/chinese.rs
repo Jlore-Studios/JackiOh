@@ -188,7 +188,7 @@ fn preview_labels(id: &str) -> Vec<(FaceKind, String)> {
             "p1": { "hand": [{ "def": id, "radiant": radiant }, "core-010"], "library": libraries },
             "p2": { "library": libraries, "field": ["core-019"] },
         }));
-        let view = serde_json::to_value(s.view(PlayerId::P1)).expect("a view serialises");
+        let view = serde_json::to_value(s.view(PlayerId::P1)).expect("a view serializes");
         views.extend(view["you"]["hand"].as_array().cloned().unwrap_or_default());
         if card.type_ != CardType::Spell {
             let row = if card.type_ == CardType::Unit {
@@ -200,7 +200,7 @@ fn preview_labels(id: &str) -> Vec<(FaceKind, String)> {
                 "p1": { row: [{ "def": id, "radiant": radiant, "faceUp": true }], "library": libraries },
                 "p2": { "library": libraries, "field": ["core-019"] },
             }));
-            let view = serde_json::to_value(s.view(PlayerId::P1)).expect("a view serialises");
+            let view = serde_json::to_value(s.view(PlayerId::P1)).expect("a view serializes");
             for pile in ["units", "backrow"] {
                 views.extend(view["you"][pile].as_array().cloned().unwrap_or_default());
             }
@@ -331,8 +331,18 @@ mod r1303_the_chinese_tables {
                     problems.push(format!("{id} {face}: \"{chinese}\" is not in the Chinese face"));
                 }
             }
+            // R2476000: a label shown only in a state the plain views above never reach (Classic+ #34's
+            // chosen line, an Asteroid's pool rider) is held to the same two texts on some face: its
+            // English in the English face, its Chinese in that face's Chinese.
             for key in unused {
-                problems.push(format!("{id}: no view carries the label \"{key}\""));
+                let chinese = previews[key.as_str()].as_str().unwrap_or("");
+                let faithful = FACES.iter().any(|&face| {
+                    card.face(face).text.contains(&filled(card, key, face))
+                        && chinese_face(card, entry, face).contains(&filled(card, chinese, face))
+                });
+                if !faithful {
+                    problems.push(format!("{id}: no view carries the label \"{key}\""));
+                }
             }
             // A Chinese label may print a number its English leaves out (C+ #74's "每打出{plays}张牌" for
             // "your opponent plays"), but only one the card declares, so the client can fill it.

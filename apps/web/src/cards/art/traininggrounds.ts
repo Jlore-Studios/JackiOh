@@ -165,7 +165,7 @@ export const FAMILY_PAINTS: Readonly<Record<YardFamily, Paint>> = {
   target: { sky: DAY_SKY, ground: SAND, wood: WOOD, light: "#f6ecc8", body: "#d2452f", dark: "#5a1a10", accent: "#2a5ab8", glow: "#fff6d8", line: OUTLINE },
 };
 
-/** A colour a kind gives its family's body or glow: a Felinor's fur, a sky's body. */
+/** A color a kind gives its family's body or glow: a Felinor's fur, a sky's body. */
 const KIND_BODIES: Readonly<Record<string, string>> = {
   flaming: "#e8582a",
   guerilla: "#7a7a3a",
@@ -310,13 +310,13 @@ function twinkle(x: number, y: number, r: number, fill: string, opacity: number)
   );
 }
 
-/** One of EMBLEMS' glyphs, centred at (x, y), `size` across. */
+/** One of EMBLEMS' glyphs, centered at (x, y), `size` across. */
 function glyph(name: EmblemGlyph, x: number, y: number, size: number, fill: string, stroke: string): string {
   const drawn = EMBLEMS[name];
   const scale = size / EMBLEM_BOX;
-  const centre = EMBLEM_BOX / 2;
+  const center = EMBLEM_BOX / 2;
   return group(
-    `translate(${fmt(x)} ${fmt(y)}) scale(${fmt(scale)}) translate(-${centre} -${centre})`,
+    `translate(${fmt(x)} ${fmt(y)}) scale(${fmt(scale)}) translate(-${center} -${center})`,
     path(drawn.d, fill, { stroke, "stroke-width": 1.1, "stroke-linejoin": "round", "fill-rule": drawn.rule }),
   );
 }

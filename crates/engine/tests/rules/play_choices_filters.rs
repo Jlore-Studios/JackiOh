@@ -1240,10 +1240,10 @@ mod r81_r90_play_choice_declarations_and_filters {
         let own = hand_card(&view_for(&state, PlayerId::P1), &card.id);
         assert_eq!(own.choices_truncated, Some(true));
         assert_eq!(
-            serde_json::to_value(&own).expect("serialises")["choicesTruncated"],
+            serde_json::to_value(&own).expect("serializes")["choicesTruncated"],
             json!(true)
         );
-        let theirs = serde_json::to_string(&view_for(&state, PlayerId::P2)).expect("serialises");
+        let theirs = serde_json::to_string(&view_for(&state, PlayerId::P2)).expect("serializes");
         assert!(!theirs.contains("choicesTruncated"));
     }
 
@@ -1308,7 +1308,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         assert_eq!(hand_card(&view, &card.id).choices_truncated, None);
         assert!(
             !serde_json::to_string(&view)
-                .expect("serialises")
+                .expect("serializes")
                 .contains("choicesTruncated")
         );
     }

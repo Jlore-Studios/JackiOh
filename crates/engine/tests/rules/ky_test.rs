@@ -221,7 +221,7 @@ mod c_42_kys_test_the_two_prompts_r420 {
     use super::*;
 
     #[test]
-    fn r420_as_it_resolves_it_rolls_a_reward_per_difficulty_and_offers_the_three_each_labelled_with_its_reward()
+    fn r420_as_it_resolves_it_rolls_a_reward_per_difficulty_and_offers_the_three_each_labeled_with_its_reward()
      {
         let mut before = board("kt-offer");
         register_ky_test_fixtures();
@@ -387,7 +387,7 @@ mod c_42_kys_test_the_two_prompts_r420 {
             );
             assert!(
                 !serde_json::to_string(&view_for(&state, viewer))
-                    .expect("a view serialises")
+                    .expect("a view serializes")
                     .contains(ANSWER_KEY)
             );
         }

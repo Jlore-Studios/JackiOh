@@ -87,7 +87,7 @@ export function fuseGeometry(fraction: number): FuseGeometry {
   return { edges, spark };
 }
 
-/** R439's readout says whose turn is running out in words, never by colour alone. */
+/** R439's readout says whose turn is running out in words, never by color alone. */
 export function urgencyLabel(side: ClockSide): string {
   return side === "you" ? "Your turn" : "Their turn";
 }

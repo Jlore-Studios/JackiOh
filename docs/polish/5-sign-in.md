@@ -50,7 +50,7 @@ adversarial panel follows the build; the findings below are what that panel star
 - **Client address behind proxies.** Take the entry your own proxy wrote, counted from the
   **right**. Everything to its left was written by the caller
   ([The perils of the "real" client IP][xff-adam], [MDN X-Forwarded-For][xff-mdn]). Render's
-  behaviour is disputed: staff say the first entry is the client, and a customer reports that Render
+  behavior is disputed: staff say the first entry is the client, and a customer reports that Render
   only appends to what the caller sent ([Render feedback][xff-render]). The rightmost trusted hop is
   safe under both readings.
 - **Account enumeration.** The forgot-password page must answer the same for known and unknown
@@ -71,7 +71,7 @@ adversarial panel follows the build; the findings below are what that panel star
 | F4 | `apps/server/src/api/crypto.ts` `normalizeCode` | It strips only `[\s-]`. En dashes, zero-width spaces and fullwidth forms pasted from mail or chat are treated as malformed, so a person with a real code gets R145's error. | UX |
 | F5 | `apps/server/src/api/e2e-store.ts` `createInMemoryRedeem` | Two concurrent redemptions by one profile both pass step 1 across an `await`, so one account uses up two codes. The in-memory `tx` depth counter also lets one concurrent transaction join another. (The adversarial panel found Postgres was not safe either: see "After the adversarial panel".) | race |
 | F6 | `apps/server/src/api/codes.ts` | A 429 gives no hint of how long to wait. The code screen doesn't know how many attempts are left. | UX |
-| F7 | `apps/server/src/api/http.ts` `readBody` | The body size is unbounded, and a huge `code` string is normalised before being refused. | robustness |
+| F7 | `apps/server/src/api/http.ts` `readBody` | The body size is unbounded, and a huge `code` string is normalized before being refused. | robustness |
 | F8 | `apps/web/src/net/auth.ts` | Every refusal, a 429 and a 5xx included, reads "That email and password do not match an account." A rate-limited or unconfirmed player is told their password is wrong. | UX |
 | F9 | `apps/web/src/routes/login.tsx` | No forgot password, no resend, no validation. The confirmation link comes back to `/login#access_token=…`, and the tokens are ignored and left in the address bar and in history. | UX, token handling |
 | F10 | `apps/web/src/net/gate.ts` | The refresh token is stored and never used, so an hour after sign-in every screen quietly sends the player back to `/login`. | UX |
@@ -129,7 +129,7 @@ export function formatCodeCharacters(characters: string, format: CodeFormat): st
 /** Caret index in `formatted` after `characterCount` characters:
  *  n + (n > 0 ? Math.floor((n - 1) / groupSize) : 0). */
 export function formattedCaret(characterCount: number, format: CodeFormat): number;
-/** If canonicalCode(text) is non-null, returns it. Otherwise it scans the normalised, upper-cased
+/** If canonicalCode(text) is non-null, returns it. Otherwise it scans the normalized, upper-cased
  *  text as chains of words (ASCII letter and digit runs joined only by separators, in one case) and
  *  returns the canonical code only if exactly one distinct code is found. A chain that reads as one
  *  code is that code; a code inside a longer chain counts only when the words beside it are joined
@@ -273,7 +273,7 @@ It sets `deps.trustedProxyHops = env.TRUSTED_PROXY_HOPS`.
 
 The `+ 1` is config.ts's reading of §9.4's strict "more than 5": attempt 7 is the first refused.
 
-`apps/server/src/api/e2e-store.ts`: `createInMemoryRedeem` runs its calls one at a time through a promise chain. That is stricter than Postgres, which serialises redemptions only per profile, per IP hash (migration 0006) and per code. The signature doesn't change.
+`apps/server/src/api/e2e-store.ts`: `createInMemoryRedeem` runs its calls one at a time through a promise chain. That is stricter than Postgres, which serializes redemptions only per profile, per IP hash (migration 0006) and per code. The signature doesn't change.
 
 ### Auth provider calls: `apps/web/src/net/auth.ts`
 
@@ -410,7 +410,7 @@ export type AuthRedirect =
  *  - error_description is never read.
  *  - An unknown type, or tokens without a type, gives none. */
 export function parseAuthRedirect(url: URL): AuthRedirect;
-/** Parses window.location. If any recognised auth parameter is present, it calls
+/** Parses window.location. If any recognized auth parameter is present, it calls
  *  history.replaceState(null, "", pathname), which drops the query and the hash (R193), before
  *  returning. The result is cached, so a second call (StrictMode) returns the same value until
  *  clearConsumedAuthRedirect(). */
@@ -421,7 +421,7 @@ export function recoverySession(): { session: Session; email: string | null } | 
 export function releaseRecoverySession(): void;
 ```
 
-The recognised auth parameters are `access_token`, `refresh_token`, `expires_at`, `expires_in`,
+The recognized auth parameters are `access_token`, `refresh_token`, `expires_at`, `expires_in`,
 `token_type`, `type`, `error`, `error_code` and `error_description`.
 
 ### Validation: `apps/web/src/auth/validation.ts` (new)
@@ -590,7 +590,7 @@ No `GameEvent`, no engine or view change, no settings module, and no new runtime
 
 1. **B1** `canonicalCode(row.input, INVITE_CODE_FORMAT)` equals `row.canonical` for every row of `CODE_INPUT_CASES`: case, spaces, ASCII and Unicode dashes, NBSP, zero-width characters, fullwidth forms and surrounding whitespace all read as the same code.
 2. **B2** `readCodeInput` stops at the first character outside the alphabet and reports it. After upper-casing, `0`, `1`, `I` and `O` (so `o` and `i` too) are `excluded`, `l` is read as `L`, and anything else is `foreign`. No character is ever dropped or mapped (the table's `problem`, `character` and `formatted` columns).
-3. **B3** Raw input longer than `CODE_INPUT_MAX_LENGTH` reads as `tooLong` without being normalised, and a 17th alphabet character reads as `tooLong`.
+3. **B3** Raw input longer than `CODE_INPUT_MAX_LENGTH` reads as `tooLong` without being normalized, and a 17th alphabet character reads as `tooLong`.
 4. **B4** `findCodeInText` returns the canonical code for a paste holding exactly one grouped code ("Your invite: abcd-efgh-jkmn-pqrs."), and null for a text holding none or two different ones.
 5. **B5** For every table row, `POST /api/codes/redeem` with `row.input` answers 200 when `row.canonical` is non-null (against a code minted as that canonical), and R145's byte-identical `invalid_code` body when it is null.
 6. **B6** A `code` longer than `CODE_INPUT_MAX_LENGTH` gets the identical error, logs one attempt with reason `malformed`, and is padded to the redemption floor like every other outcome.
@@ -631,10 +631,10 @@ No `GameEvent`, no engine or view change, no settings module, and no new runtime
 
 ## Tests
 
-The tests are all new files, written from the behaviours above by the two tester groups. Existing
-test files that a behaviour change breaks are fixed by the slice that owns the change (see Slices).
+The tests are all new files, written from the behaviors above by the two tester groups. Existing
+test files that a behavior change breaks are fixed by the slice that owns the change (see Slices).
 
-| Behaviours | Vitest project (directory) | File | Harness |
+| Behaviors | Vitest project (directory) | File | Harness |
 | --- | --- | --- | --- |
 | B1-B4, B16 (`formattedCaret`) | `shared` (`packages/shared/test`) | `codes.test.ts`, plus the table `fixtures/code-input-cases.ts` | Plain vitest, table-driven over `CODE_INPUT_CASES` with `INVITE_CODE_FORMAT` from `apps/server/src/config.ts`. Names `it("R191 …")`. |
 | B5, B6 | `server` (`apps/server/test/api`) | `code-input-parity.test.ts` | `createTestDeps` + `createRouter(createCodesRoutes(), deps)` + `jsonRequest` from `test/fakes/deps.ts`, on `systemTimers` with `testLimits()`' 20 ms floor (as `codes.test.ts` does). `Ids.code` returns the row's canonical code, with a fresh profile and IP per row so steps 2 and 3 never bite. Names `it("R191 …")`. |
@@ -688,7 +688,7 @@ named above through `provenIn`.
 ## Slices
 
 Each existing file belongs to exactly one slice. The test files listed under a slice are existing
-tests that the slice must keep green, or update where its behaviour change breaks them. New test
+tests that the slice must keep green, or update where its behavior change breaks them. New test
 files belong to the testers. `apps/web/src/index.css` belongs to nobody and is not edited.
 
 ### Slice A: code reading, redemption and client-address hardening (server and shared)
@@ -711,7 +711,7 @@ Owns:
 
 Keeps green: `apps/server/test/api/{codes,rate-limit,cors,auth,e2e,catalog,loadouts,queue,results,collection}.test.ts`, `apps/server/test/db/*`, `apps/server/test/match/*`.
 
-Behaviours: B1-B14.
+Behaviors: B1-B14.
 
 ### Slice B: code entry on the invite screen (web)
 
@@ -732,7 +732,7 @@ Imports without owning:
 - `signOut` from `routes/account.tsx` (slice C);
 - `BackLink` from `routes/nav.tsx` (slice D).
 
-Behaviours: B15-B23.
+Behaviors: B15-B23.
 
 ### Slice C: sign-in, sign-up, reset and session (web)
 
@@ -749,7 +749,7 @@ Owns:
 
 Keeps green: `apps/web/src/net/auth.test.ts`, `apps/web/src/routes/login.test.tsx`, `apps/web/src/routes/account.test.tsx`.
 
-Behaviours: B24-B36.
+Behaviors: B24-B36.
 
 ### Slice D: landing page and shell exits (web)
 
@@ -773,7 +773,7 @@ Imports without owning:
 
 Task 3 later adds its own `/practice` route line in `main.tsx`. Keep the route table as a flat list of `if` lines so that line merges.
 
-Behaviours: B37-B40.
+Behaviors: B37-B40.
 
 ## SPEC changes
 
@@ -795,10 +795,10 @@ Behaviours: B37-B40.
 | # | Topic | Recommended ruling | Cards affected |
 | --- | --- | --- | --- |
 | R190 | Which address a per-IP limit counts | §9.4 step 3 and R157 key on "the IP hash". Behind a proxy, a request arrives from the proxy's address, so the client's address is read from `X-Forwarded-For`, but only from the entry the deployment's own proxies wrote. The server trusts `TRUSTED_PROXY_HOPS` hops and takes that many entries from the **right**. Everything to the left of that entry was written by the caller and is ignored, and so are `CF-Connecting-IP` and `X-Real-IP`. A request carrying fewer entries is keyed on the socket's peer address. The default (`DEFAULT_TRUSTED_PROXY_HOPS`) is 0, which ignores the header: with no proxy in front, every entry is the caller's, so a deployment behind a proxy must say how many hops it has, counted from its own requests (docs/architecture.md says how; Render's blueprint starts at 1, which can only over-group). Reading the leftmost entry, as the server once did, let a caller choose a fresh bucket for every request by changing one header, which made both per-IP limits no limit at all. Too few trusted hops can only over-group callers behind a proxy; too many hands the key back to the caller. So the server logs the **fewest** entries any request has carried: a caller can add entries but never remove its proxies', so that minimum is the hop count, and one sample (which a caller may have written) is never the calibration. The address is then keyed as a network, not a host: an IPv4 address whole, an IPv6 address by its first `IPV6_RATE_LIMIT_PREFIX_BITS` bits (a /56: a line or a cloud host is handed at least a /64, so the full address would give one host 2^64 buckets, and many ISPs delegate a whole /56 to one home, so keying on the /64 would still give it 256; the price is that IPv6 neighbours sharing a /56 share a bucket), and an IPv4-mapped IPv6 address as its IPv4 address | §9.4, §9.8, R157 |
-| R191 | How a typed or pasted code is read (extends R104) | Client and server read a code the same way, through one shared function: Unicode compatibility normalisation (NFKC), upper case one character at a time, and every space, dash and invisible separator removed. What remains must be exactly the code's length in R104's alphabet. A character the alphabet leaves out (`0`, `1`, `I` or `O` after upper-casing) is never dropped, mapped or guessed at. The server treats the input as malformed (R145's identical error), and the client refuses the keystroke and names the character. Dropping it, as the code screen once did, shifts every later character and turns a typo into a different code. Mapping it the way Crockford's base32 does is impossible here, because both halves of each look-alike pair are excluded. Input longer than `CODE_INPUT_MAX_LENGTH` is malformed without being read, so config bounds the work a redemption does, not the caller | §9.4, §9.5, R104, R145 |
+| R191 | How a typed or pasted code is read (extends R104) | Client and server read a code the same way, through one shared function: Unicode compatibility normalization (NFKC), upper case one character at a time, and every space, dash and invisible separator removed. What remains must be exactly the code's length in R104's alphabet. A character the alphabet leaves out (`0`, `1`, `I` or `O` after upper-casing) is never dropped, mapped or guessed at. The server treats the input as malformed (R145's identical error), and the client refuses the keystroke and names the character. Dropping it, as the code screen once did, shifts every later character and turns a typo into a different code. Mapping it the way Crockford's base32 does is impossible here, because both halves of each look-alike pair are excluded. Input longer than `CODE_INPUT_MAX_LENGTH` is malformed without being read, so config bounds the work a redemption does, not the caller | §9.4, §9.5, R104, R145 |
 | R192 | A rate limit is reported as a rate limit | A refusal because the caller is going too fast is shown as exactly that, with how long to wait. That covers §9.4 steps 2 and 3, R109's API limit and the auth provider's own limits. It is never folded into R145's identical code error or R160's identical sign-in error. R145 is not weakened: a rate limit depends on the caller's own account or address, or on the service, never on whether a code exists. R160 has one carve-out, sign-up's own 429 for the mail interval, named at the end of this row. The API states the wait as `Retry-After` and `details.retryAfterMs`. For a redemption refused at step 2 or 3 the wait is the whole attempt window, an upper bound, because the exact time would depend on the IP window and so on other accounts' attempts. The code screen's status does say exactly when this account's own tries come back (its oldest counted attempt leaving the window), and when a paused breaker reopens, and the screen reads the status again then, so neither state waits for a reload. Every wait the screen states is a deadline on the clock: its sentence counts down, and a page shown again after it passed acts at once, since a sleeping tab's timers are frozen. A redemption refused because redemption is paused (a 503, which the database's own switch answers too) turns Redeem off at once, and the server keeps saying paused in its status from then on, so a player does not spend tries on a paused service. Two provider requests are an exception. Resending a confirmation and asking for a password reset answer the same neutral sentence for every provider answer except an unreachable provider and an invalid address, because the provider answers an unknown address without ever reaching its mailer: a rate limit (its per-address interval), a failed send or an allow-list refusal can only happen to an address that has an account. Instead, the client waits out the provider's per-address interval (`AUTH_EMAIL_RESEND_COOLDOWN_SECONDS`) for the address it mailed, a sign-up included, before it offers that address the button again. The interval is counted on the clock from the send this browser remembers, so a reload or a tab the browser put to sleep neither restarts nor stalls it; a send this browser does not remember (another device's) starts nothing here. The neutral sentence says, for every address alike, that a send asked for inside the interval (from any device) cannot go out yet, and the wait beside the button says only how long, never that a mail went out. Sign-up's own 429 for the mail interval is the one provider signal left visible, and so R160's one carve-out: the provider gives it to any direct caller whatever the client says, it only tells that an unconfirmed sign-up for the address was mailed in the last interval, and the same answer is the project's overall mail limit, which a new player must be told about rather than sent to an empty inbox | §9.4, §9.8, R109, R145, R160 |
 | R193 | What an emailed auth link may do | A confirmation or recovery link carries its tokens in the URL fragment. The client reads them once and removes them from the address bar and history before anything renders, on whatever path the link lands (the provider falls back to the project's Site URL), and the link is then handled on the sign-in screen. It then goes to a fixed route, never to a URL found in a query string or fragment. The provider's own error text is never shown: a known error code maps to the client's own sentence. A **confirmation** link never signs this browser in, not even for the sign-up this browser started: the email is confirmed (the provider did that when the link was opened), the session the browser already has is untouched, and the player is asked to sign in with their password. Accepting a token from a link would let an attacker sign a victim into the attacker's pending account, where the victim's own invite code would activate the attacker. Nor is a link proof of the password: the provider leaves an existing unconfirmed account unchanged when the same address signs up again, so an address someone else registered first keeps that person's password through the owner's own sign-up and confirmation, and a session taken from the link would hide it for as long as renewal lasts. Signing in by hand exposes it: the owner's password is refused, and the reset that follows replaces the other one. A **recovery** link is held (for the reset screen, never as the stored session) at once if its address matches a reset this browser asked for. Otherwise (a reset asked for on another device or in another browser, which is the common case) nothing is held until the player types their account's address, and the link is held only if that matches its checked address. Someone sent another person's link types their own address, which does not match, so they are not signed into that account, and the session this browser has is untouched; the owner on a second device gets through. Leaving that question revokes the link. The guard is only as good as the address it compares, so nothing from a link is ever shown or filled into a form, not even its checked address: a mailer form holding an address the player did not type would arm the guard with it at one click. Nor is anything filled in from storage: `/login?mode=forgot` is a public link, and the reset address a shared computer remembers may be another person's. A link's session is renewed once as soon as it is read, before the server is asked whose it is, because its tokens were in a URL that the browser's history keeps: the refresh token that URL carried is then spent whatever the tab does next (closing it while the link is being checked included), and everything after (the check, holding, revoking) uses the renewal. A renewal the provider refuses means the link was opened before, and nothing is held. A link's session that is not held (every confirmation, a reset whose address was not typed, a dashboard invite, a confirmation that could not be checked, one the player moved on from) is revoked, renewed first if its access token has run out (R194). A recovery link the game server could not check is kept on the sign-in screen, and only there, so it can be checked again (it works only once), and is revoked when the player moves on. The sign-in screen says when the browser already holds a session, and whose, because signing in replaces and revokes it. The recovery session lives in this tab only, in memory and mirrored to the tab's `sessionStorage` so a reload does not spend the reset, and never in `localStorage`. It becomes the stored session only once a new password is saved, and the reset screen says so when that will sign this browser out of another account. Leaving the reset screen unsaved abandons it (forgets and revokes it), but its own exits ask first, because the link works only once | §9.2, §9.4, §9.8, R160 |
-| R194 | When a session is renewed and when it ends | An access token within `AUTH_SESSION_REFRESH_MARGIN_SECONDS` of expiring is renewed with the session's refresh token before it is used, and while a screen is open the gate renews that far ahead of the expiry of the token it handed down and hands down the new one, so a screen's own requests (a queue wait, a deckbuilder save) never carry an expired token. A renewal of the same session in another tab does not replace a token that still has longer than the margin to live, so nothing keyed on it (a match socket) is reopened for nothing. A token the API refuses as unauthorised when the gate or the code screen made the call is renewed once, and the request is retried. A session's expiry is counted on this device's clock, from the lifetime the provider states (`expires_in`), never from its absolute `expires_at`, so a device whose clock is off does not read a fresh session as expired. Concurrent renewals share one provider call, because the provider rotates refresh tokens and treats a reused one as stolen. A renewal the provider refuses ends the session, and the sign-in screen says so rather than failing silently. Signing out revokes the session at the provider as well as clearing the device, so a copied token cannot outlive the sign-out. The API honours an access token only while the provider still has its session: a token that names its session is checked with the provider, and only a live answer is remembered, for `AUTH_SESSION_LIVE_CACHE_SECONDS`, so a session ended by a sign-out, a revoked link or a password reset stops working at the API within that time rather than when its access token expires. A provider that cannot be reached signs nobody out (sign-in is down with it), and the email then counts as R159 says. The provider refuses to revoke with an expired access token, so an expired session is renewed first and then revoked (a signed-out session, and an abandoned recovery session or link, alike), with sign-out waiting at most `AUTH_SIGN_OUT_WAIT_SECONDS` for the two, and saying so; a second press meanwhile joins the first rather than leaving before the revocation is sent. A live one is revoked without waiting. A sign-out in another tab is noticed, since tabs share the session's storage. A session with no refresh token (the end-to-end fixtures) is never renewed. A recovery session held for the reset screen (R193) is renewed the same way before the new password is sent, and once more if the provider refuses its access token, so a slow player is not told the link was spent; only a renewal the provider refuses means it was | §9.2, §9.4 |
+| R194 | When a session is renewed and when it ends | An access token within `AUTH_SESSION_REFRESH_MARGIN_SECONDS` of expiring is renewed with the session's refresh token before it is used, and while a screen is open the gate renews that far ahead of the expiry of the token it handed down and hands down the new one, so a screen's own requests (a queue wait, a deckbuilder save) never carry an expired token. A renewal of the same session in another tab does not replace a token that still has longer than the margin to live, so nothing keyed on it (a match socket) is reopened for nothing. A token the API refuses as unauthorised when the gate or the code screen made the call is renewed once, and the request is retried. A session's expiry is counted on this device's clock, from the lifetime the provider states (`expires_in`), never from its absolute `expires_at`, so a device whose clock is off does not read a fresh session as expired. Concurrent renewals share one provider call, because the provider rotates refresh tokens and treats a reused one as stolen. A renewal the provider refuses ends the session, and the sign-in screen says so rather than failing silently. Signing out revokes the session at the provider as well as clearing the device, so a copied token cannot outlive the sign-out. The API honors an access token only while the provider still has its session: a token that names its session is checked with the provider, and only a live answer is remembered, for `AUTH_SESSION_LIVE_CACHE_SECONDS`, so a session ended by a sign-out, a revoked link or a password reset stops working at the API within that time rather than when its access token expires. A provider that cannot be reached signs nobody out (sign-in is down with it), and the email then counts as R159 says. The provider refuses to revoke with an expired access token, so an expired session is renewed first and then revoked (a signed-out session, and an abandoned recovery session or link, alike), with sign-out waiting at most `AUTH_SIGN_OUT_WAIT_SECONDS` for the two, and saying so; a second press meanwhile joins the first rather than leaving before the revocation is sent. A live one is revoked without waiting. A sign-out in another tab is noticed, since tabs share the session's storage. A session with no refresh token (the end-to-end fixtures) is never renewed. A recovery session held for the reset screen (R193) is renewed the same way before the new password is sent, and once more if the provider refuses its access token, so a slow player is not told the link was spent; only a renewal the provider refuses means it was | §9.2, §9.4 |
 
 The proving test files for each row:
 
@@ -1002,7 +1002,7 @@ Security:
   the link's session, renewed for as long as the refresh token lived, never asked the player for
   theirs. Now the player signs in by hand, which exposes a password someone else set (the player's
   is refused, and the reset that follows replaces the other one). The link's session is revoked.
-- **The API refuses a token whose session has ended** (R194). It used to honour any well-signed,
+- **The API refuses a token whose session has ended** (R194). It used to honor any well-signed,
   unexpired token, so a sign-out, a revoked link or a reset that signed other devices out still left
   up to an hour of API access to whoever held the access token. A token that names its session is
   now checked with the provider (`GET /auth/v1/user`, which refuses an ended session), and only a
@@ -1047,7 +1047,7 @@ Client:
 
 Screenshots of every screen and state at 1280×720, 390×844, 844×390 and 768×1024 showed the way in
 as two different products: a warm tavern landing, then a cold blue developer form. These changes
-came out of that pass. None changes a behaviour, a test id or a message.
+came out of that pass. None changes a behavior, a test id or a message.
 
 - **One tavern for the way in.** The palette moved from `.landing` to `.tavern`
   (`apps/web/src/auth/tavern.css`). The landing, sign-in, reset, the code screen and the shell's
@@ -1071,7 +1071,7 @@ came out of that pass. None changes a behaviour, a test id or a message.
 
 The same four viewports again, with a browser window large enough that the phone and tablet
 captures are whole (the default headless window cut them off at 720 px). These changes came out of
-it. No behaviour or test id changed; two sentences on the code screen did (below).
+it. No behavior or test id changed; two sentences on the code screen did (below).
 
 - **A phone on its side** sets each board in two parts: the wordmark, the title and any notice on
   the left, the form on the right, with a brass seam between them. Sign-in and reset also move Back
@@ -1159,7 +1159,7 @@ The dashboard steps a person has to take are in `docs/architecture.md` §10, ste
   The server refuses an `aal1` token for such an account (`apps/server/src/api/auth.ts`).
 - **OAuth (R666).** One button per provider named in `VITE_AUTH_OAUTH_PROVIDERS`. A click stores an
   `oauth` verifier and navigates to `/auth/v1/authorize?provider=…&redirect_to=<origin>/login&code_challenge=…`.
-  The code that comes back is exchanged and kept like R664's link. An error coming back (cancelled,
+  The code that comes back is exchanged and kept like R664's link. An error coming back (canceled,
   refused) reads as "Signing in with that account didn't finish" when the newest verifier this
   browser holds is the OAuth one.
 
@@ -1168,7 +1168,7 @@ The dashboard steps a person has to take are in `docs/architecture.md` §10, ste
 **The token the server accepts** is unchanged except for one rule. It is still verified exactly as
 before: JWKS signature, issuer, `authenticated` audience, the session checked live at the provider
 (R194), the email's confirmation and now the account's factors read from the provider's user, never
-from the token. The new rule: an account with a verified TOTP factor is honoured only with
+from the token. The new rule: an account with a verified TOTP factor is honored only with
 `aal: "aal2"`. The last answer that an account has a factor is kept per user, so a provider outage
 cannot lower the bar back to `aal1`.
 
@@ -1196,6 +1196,6 @@ server's routes are unchanged, so no path can create an active account or skip t
 | Two-step | Reset the password by email, which yields an `aal1` session | The reset screen is reached only after the app's code (the link waits for it). The new password alone still signs in at `aal1`. |
 | Two-step | Data API with an `aal1` token | Reads of the player's own rows only (RLS, §3.2 of `docs/architecture.md`): nothing hidden, no writes. Not raised to `aal2`, which would mean RLS policies on `auth.mfa_factors`. Recorded in R665. |
 | OAuth | Login CSRF, as for the link | Blocked the same way: the authorize request carries a PKCE challenge, and the code exchanges only with this browser's `oauth` verifier. OAuth is never started without PKCE (`oauthUnavailable`). |
-| OAuth | Pre-account takeover through automatic linking | Supabase links an OAuth identity to an existing account only through a provider-verified address, and only providers that report verification are named. Whether an unconfirmed account's password survives that linking is Supabase's behaviour, not this code's, so it is checked once by hand before the first provider goes live (`docs/architecture.md` §10, step 2). |
+| OAuth | Pre-account takeover through automatic linking | Supabase links an OAuth identity to an existing account only through a provider-verified address, and only providers that report verification are named. Whether an unconfirmed account's password survives that linking is Supabase's behavior, not this code's, so it is checked once by hand before the first provider goes live (`docs/architecture.md` §10, step 2). |
 | OAuth | A provider name injected through configuration | Only names on a fixed list are offered, and the name is URL-encoded. The variable is public and holds no secret: client ids and secrets live in the Supabase dashboard. |
 | All | Secrets in the bundle | None: the only new client variable is `VITE_AUTH_OAUTH_PROVIDERS` (names), listed in `PUBLIC_ENV_VARS` and allowed by `env-production.test.ts`. |

@@ -1,4 +1,4 @@
-// BUILD M8: R14 and §3.1 rotate each row's ten zones as one ring; crossing its centre changes control (§3.2), not ownership (R12).
+// BUILD M8: R14 and §3.1 rotate each row's ten zones as one ring; crossing its center changes control (§3.2), not ownership (R12).
 // R33 and §10.8 require a face-down trap's controller alone to see its identity. R73 swaps each lane across the board with ownership intact.
 // R81 declared `direction` and `mode` choices travel in `play`; §10.6 supplies no prompt. BUILD M5-T4 observes the resulting zone testids.
 // #1 Big D-fender, #20, #32 Prem Panther, #45 Deft Duelist, #56, #91 Fed Fauci, and #96 My Pawn
@@ -59,7 +59,7 @@ function rotateRight(zone: ZoneRef): ZoneRef {
   return { side: next.side, row: zone.row, lane: next.lane };
 }
 
-/** R73: the board swap is lane-preserving, so a card only crosses the centre line. */
+/** R73: the board swap is lane-preserving, so a card only crosses the center line. */
 function acrossTheLine(zone: ZoneRef): ZoneRef {
   return { side: zone.side === "you" ? "opponent" : "you", row: zone.row, lane: zone.lane };
 }
@@ -271,7 +271,7 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
       silas?: string;
     } = {};
 
-    // R14's centre crossings make control changes visible in seat 1 lane 5 and seat 2 lane 1.
+    // R14's center crossings make control changes visible in seat 1 lane 5 and seat 2 lane 1.
     const built: Board = {
       yourLane1: { side: "you", row: "units", lane: 1 },
       silas: { side: "you", row: "units", lane: 3 },

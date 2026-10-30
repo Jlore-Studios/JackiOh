@@ -45,7 +45,7 @@ export function CreatedPanel({
           { minSample },
         )}
       </p>
-      <TableScroll labelledBy={titleId}>
+      <TableScroll labeledBy={titleId}>
         <table className="stats-table" data-testid={statsTestid.createdTable}>
           <thead>
             <tr>

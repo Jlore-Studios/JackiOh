@@ -81,7 +81,7 @@ fn play(state: &GameState, player: PlayerId, instance_id: &str) -> ReduceResult 
 fn values(events: &[GameEvent]) -> Vec<Value> {
     events
         .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
         .collect()
 }
 

@@ -91,7 +91,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// of its three at random (R920); Radiant Saintess's Radiant Death radiated the hand; Book of Buff's base
 /// face could take a hand card; Claude's Datacenter added at its controller's end of turn; and KY's Test
 /// asked two-digit sums (R580) from v0.5.2's bank (R2179003).
-/// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
+/// A card patch before them that changed a script's behavior kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -641,8 +641,8 @@ mod tests {
         let snapshot: CardDefs =
             serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
         assert_eq!(
-            serde_json::to_value(oldest.defs()).expect("serialises"),
-            serde_json::to_value(&snapshot).expect("serialises")
+            serde_json::to_value(oldest.defs()).expect("serializes"),
+            serde_json::to_value(&snapshot).expect("serializes")
         );
         assert!(
             std::ptr::eq(oldest, shipped_catalog("v0.1.0").expect("carried")),
@@ -779,8 +779,8 @@ mod tests {
         let snapshot_v0_1_0: CardDefs =
             serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
         assert_eq!(
-            serde_json::to_value(oldest).expect("serialises"),
-            serde_json::to_value(&snapshot_v0_1_0).expect("serialises")
+            serde_json::to_value(oldest).expect("serializes"),
+            serde_json::to_value(&snapshot_v0_1_0).expect("serializes")
         );
 
         // The newest is carried too, and v0.3.7b, the newest when this was written, is rebuilt as its
@@ -793,8 +793,8 @@ mod tests {
         let snapshot_v0_3_7b: CardDefs =
             serde_json::from_str(include_str!("../patches/v0.3.1.json")).expect("v0.3.1 reads as cards");
         assert_eq!(
-            serde_json::to_value(v0_3_7b).expect("serialises"),
-            serde_json::to_value(&snapshot_v0_3_7b).expect("serialises")
+            serde_json::to_value(v0_3_7b).expect("serializes"),
+            serde_json::to_value(&snapshot_v0_3_7b).expect("serializes")
         );
 
         assert!(catalog_defs_at("v0.0.0-unknown").is_none());

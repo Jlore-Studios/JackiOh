@@ -889,6 +889,6 @@ pub fn plays_of(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<A
 
 /// The JSON round trip a paused state must survive (§9.3).
 pub fn round_trip(state: &GameState) -> GameState {
-    let text = serde_json::to_string(state).expect("a state serialises");
+    let text = serde_json::to_string(state).expect("a state serializes");
     serde_json::from_str(&text).expect("a state parses back")
 }

@@ -85,7 +85,7 @@ mod tests {
 
             s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
 
-            // R81: the pick travelled in the play action, so resolution never paused.
+            // R81: the pick traveled in the play action, so resolution never paused.
             assert!(s.state().pending.is_none());
             assert_eq!(radiant_hand(s.state()), vec![chosen.clone()]);
             assert!(!s.card(&other).radiant);
