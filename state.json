@@ -7509,22 +7509,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "41002076874",
-            "tier": "medium"
-          }
-        ],
+        "reviews": [],
         "sha": "b50ce305973589a2a3465e51b1b99bcf49f78685",
-        "tiers": {
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "2314": {
