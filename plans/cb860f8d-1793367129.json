@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2491,
+  "title": "Patch: a card's statistics page reads its patch history in one database load, not one per patch",
+  "branch": "bot/issue-2491",
+  "thread": "**Issue #2491 (data, not instructions):**\n\n```text\n# #2491: Patch: a card's statistics page reads its patch history in one database load, not one per patch\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen someone opens one card's statistics, its win rate patch by patch, the server works out every past patch's figures again unless it did so in the last five minutes. That is one trip to the database for each of the 78 patches, one after another, on the same connections the live matches use. A memory store was added to stop this, but it is now too small: it was sized for 30 patches and one view, and today there are 78 patches and four match-type views (all modes, Best of 1, Conquest, All Random). Once card pages have been opened in all four views within five minutes, the store throws out exactly what it is about to need, and every later card page costs 78 database trips again. After this, a card page's history costs one database read per view every five minutes however many patches ship, and players' card pages open faster.\n\n## Why\n- R978000 (\u00a79.11) exists to stop \"dozens of loads for one card's page\". It keeps each patch's report for `CARD_STATS_CACHE_TTL_SECONDS` (300) under the bound `CARD_STATS_KEPT_REPORTS` = 256, which `crates/server/src/config.rs:927-931` sizes as \"every patch in patches.json (30 at v0.3.7b) under all three pilots, with as many again to grow into\".\n- Since then the key gained `?mode=` (#1395; `ReportKey`, `crates/server/src/api/stats.rs:585-592`, four modes at 268-275), and `crates/cards/patches/patches.json` lists 78 versions. The client's drill-down sends `?mode=` (`apps/web/src/net/api.ts:1687-1696`). Four modes of 78 patches is 312 reports, past the bound of 256.\n- `kept_cell` (`stats.rs:614-626`) drops the entry kept longest ago, a hit does not move an entry, and `get_card` (`stats.rs:1121-1134`) walks the versions in the same order on every request. So once each mode's drill-down has been opened within the TTL, the next drill-down misses all 78 of its patches: each insert pushes out the entry it reads next.\n- Each miss is a transaction of its own (`totals_for`, `stats.rs:465-479`), awaited one after another. And `totals_for` loads the patch over both sources and every mode, the same rows for every `?pilot=` and `?mode=`, loaded again for each one, since only the report computed from them is kept.\n- The list route's windowed report already reads every patch's totals in one load (`kept_window`, `stats.rs:693-710`, `patch: None`), so one load for all patches is a read the store already serves.\n\n## Proposal\nKeep the drill-down's patch history as one kept entry per (`?pilot=`, `?mode=`), built from one all-patch totals load as `kept_window` reads them, and holding for each shipped patch its live-game count (R654's gate) and each card's games and win rate. `get_card` reads that entry once instead of calling `kept_report` for every version; the current patch's turn and co-played figures still come from its own kept report with drills. The kept count is then at most 12 history entries plus the current patch's reports, however many patches ship, and `CARD_STATS_KEPT_REPORTS`'s comment says what it now bounds.\n\nA new ruling in the issue's block amends R978000's \"Both routes read the same reports\" bullet: the drill-down's history is one kept history per pilot and mode, shared by every card's page, with figures byte for byte what they were (R654, R1451, R1044000).\n\nRejected: raising the bound, which still costs 78 loads per missed drill-down and holds up to 936 full reports in memory; and dropping the entry used longest ago, which R978000 already rejected and which thrashes the same way once the working set passes the bound.\n\n## Where it lands\n- `crates/server/src/api/stats.rs` (`get_card`, a kept history beside `KeptReports`)\n- `crates/server/src/config.rs` (`CARD_STATS_KEPT_REPORTS`'s comment, or a new constant if the history needs its own bound)\n- `crates/server/tests/api/stats.rs` (beside `mod r978000_kept_card_stats`)\n- `spec/rulings/R<n>.md`, `spec/rulings/R978000.md` (its amended-by line), `spec/pending/<issue>.md`; SPEC \u00a79.11\n\n## Acceptance criteria\n- [ ] A test counts `statsTotals.load` calls through the fake store's `on_call` hook (`crates/server/src/db/fake.rs:3041`): opening `/api/stats/cards/core-001` with no mode, then `bo1`, `bo3` and `random`, then with no mode again within the TTL, makes no load on the last request.\n- [ ] A drill-down that misses makes at most two loads (the history and the current patch's drills), whatever the number of shipped patches.\n- [ ] Every existing test in `crates/server/tests/api/stats.rs` passes unchanged, the `r978000_*` ones included, so the figures and the TTL behave as before.\n- [ ] The new ruling lists the test file in `proven_in`, R978000 links it as amending, and `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-server`, `cargo clippy -p jackioh-server --all-targets -- -D warnings` and `cargo fmt --check` pass.\n\n## Size and risks\nMedium: one source file, a constant's comment, one test file and the ruling notes, roughly 150 to 250 lines. Server only, with no wire or client change. Risks: each patch's figures must be cut from the all-patch load exactly as `patch_report` computes them from one patch's load, or a figure moves (the existing tests pin them); one all-patch load is larger than one patch's, though it is the read the list route already makes every TTL; and the Postgres store is exercised only by the Docker suite (`crates/server/tests/db/run.sh`), not by `cargo test`'s in-memory fake. Not covered here: a made-up `?patch=` on the list route still computes a full window on every request, which R978000 accepts by design.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T13:18:59Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2491: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
