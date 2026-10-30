@@ -65,9 +65,6 @@ func triageOr[T comparable](v, def T) T {
 	return v
 }
 
-// triageStr is a *string, for the arguments the Python passes a string or None.
-func triageStr(s string) *string { return &s }
-
 // triageEvent is event().
 func triageEvent(f triageFields) *pyjson.Object {
 	labels := []any{}
@@ -139,19 +136,19 @@ func TestTriage_AStrangersThreadAndTheBotsOwnStop(t *testing.T) {
 func TestTriage_APersonsHumanLabelHandsAnyIssueToPeople(t *testing.T) {
 	mine := func(sender *string) triageFields {
 		return triageFields{Login: triageBot, Association: "MEMBER", Action: "labeled",
-			Label: triageStr("Human"), Sender: sender}
+			Label: ptr("Human"), Sender: sender}
 	}
-	assertEqual(t, triageGo(triageEvent(mine(triageStr("MaxGoetzmann"))), false),
+	assertEqual(t, triageGo(triageEvent(mine(ptr("MaxGoetzmann"))), false),
 		[2]string{"human", "#40: @MaxGoetzmann labelled it human"})
 	// The bot's own label, an app's, or one nobody is known to have put on, stops.
-	for _, sender := range []*string{triageStr(triageBot), triageStr("github-actions[bot]"), nil} {
+	for _, sender := range []*string{ptr(triageBot), ptr("github-actions[bot]"), nil} {
 		assertEqual(t, triageGo(triageEvent(mine(sender)), false)[0], "", sender)
 	}
 	// Any other label, or `human` on a pull request, asks nothing of triage.
-	assertEqual(t, triageGo(triageEvent(triageFields{Action: "labeled", Label: triageStr(triageBuild),
-		Sender: triageStr("MaxGoetzmann")}), false)[0], "")
-	assertEqual(t, triageGo(triageEvent(triageFields{Action: "labeled", Label: triageStr(triageHuman),
-		Sender: triageStr("MaxGoetzmann"), PR: true}), false)[0], "")
+	assertEqual(t, triageGo(triageEvent(triageFields{Action: "labeled", Label: ptr(triageBuild),
+		Sender: ptr("MaxGoetzmann")}), false)[0], "")
+	assertEqual(t, triageGo(triageEvent(triageFields{Action: "labeled", Label: ptr(triageHuman),
+		Sender: ptr("MaxGoetzmann"), PR: true}), false)[0], "")
 }
 
 func TestTriage_ADispatchGoesWhoeverOpenedIt(t *testing.T) {
@@ -200,7 +197,7 @@ func TestTriage_AnIssueGetsATypeAndAPersonsTypeStays(t *testing.T) {
 	assertEqual(t, triageDecide("open", true, triageFields{Title: "The board crashes on a trap"}).IssueType, "Bug")
 	assertEqual(t, triageDecide("open", true, triageFields{Title: "Night bot: a thing"}).IssueType, "Task")
 	assertEqual(t, triageDecide("open", true, triageFields{Title: "A new leaderboard page"}).IssueType, "Feature")
-	assertEqual(t, triageDecide("open", true, triageFields{Title: "It crashes", IssueType: triageStr("Task")}).IssueType, "")
+	assertEqual(t, triageDecide("open", true, triageFields{Title: "It crashes", IssueType: ptr("Task")}).IssueType, "")
 	assertEqual(t, triageDecide("open", true, triageFields{Title: "It crashes", PR: true}).IssueType, "")
 }
 
@@ -240,7 +237,7 @@ func TestTriage_ApplyMakesEachChangeAndOneRefusalLeavesTheRest(t *testing.T) {
 	plan := &triage.Plan{Labels: []string{"patch", triageHuman}, Assignees: []string{"MaxGoetzmann"},
 		Unassign: []string{triageBot}, IssueType: "Bug", Remove: []string{triageBuild}}
 	done := triage.Apply(gh, 50, plan)
-	assertEqual(t, gh.LabelNames(50), basicsSet("patch", triageHuman))
+	assertEqual(t, gh.LabelNames(50), setOf("patch", triageHuman))
 	logins := []string{}
 	for _, a := range pyjson.Objs(gh.Threads.Item(50).Get("assignees")) {
 		logins = append(logins, a.Str("login"))
@@ -286,7 +283,7 @@ func TestTriage_AFormIssueIsLabelledTypedAndHandedOnAsItOpens(t *testing.T) {
 		Body: triageForm("The night bot (bot:build)")})
 	gh.Threads.Item(126).Set("author_association", "MEMBER")
 	printed := triageRun(t, gh, pyjson.New("action", "opened", "issue", gh.GetIssue(126)))
-	assertEqual(t, gh.LabelNames(126), basicsSet("patch", "difficulty:hard", "priority:low", triageBuild))
+	assertEqual(t, gh.LabelNames(126), setOf("patch", "difficulty:hard", "priority:low", triageBuild))
 	assertEqual(t, gh.Threads.Item(126).Get("type"), "Bug")
 	assertEqual(t, gh.Comments.Get(126), []*pyjson.Object{}) // it says nothing on the thread
 	assertIn(t, "triage: open: #126 by @", printed)
@@ -299,12 +296,12 @@ func TestTriage_APersonsHumanLabelOnTheBotsIssueGoesToPeople(t *testing.T) {
 	gh.Threads.Item(650).Set("assignees", []any{pyjson.New("login", triageBot)})
 	triageRun(t, gh, pyjson.New("action", "labeled", "label", pyjson.New("name", triageHuman),
 		"sender", pyjson.New("login", "MaxGoetzmann"), "issue", gh.GetIssue(650)))
-	assertEqual(t, gh.LabelNames(650), basicsSet(triageHuman))
+	assertEqual(t, gh.LabelNames(650), setOf(triageHuman))
 	logins := []string{}
 	for _, a := range pyjson.Objs(gh.Threads.Item(650).Get("assignees")) {
 		logins = append(logins, a.Str("login"))
 	}
-	assertEqual(t, basicsSorted(logins), []string{"MaxGoetzmann", "jgoetzmann"})
+	assertEqual(t, sortedOf(logins), []string{"MaxGoetzmann", "jgoetzmann"})
 }
 
 func TestTriage_ADispatchTriagesTheThreadItNamesAndABadOneSkips(t *testing.T) {
@@ -312,7 +309,7 @@ func TestTriage_ADispatchTriagesTheThreadItNamesAndABadOneSkips(t *testing.T) {
 	gh.AddIssue(130, fakes.Issue{Title: "Night bot: a thing", User: pyjson.New("login", triageBot, "id", 1),
 		Body: triageForm("People (human)")})
 	triageRun(t, gh, pyjson.New("inputs", pyjson.New("number", "#130")))
-	assertEqual(t, gh.LabelNames(130), basicsSet("night bot")) // no form answers on a dispatch
+	assertEqual(t, gh.LabelNames(130), setOf("night bot")) // no form answers on a dispatch
 	printed := triageRun(t, gh, pyjson.New("inputs", pyjson.New("number", "9999")))
 	assertIn(t, "could not triage", printed)
 }

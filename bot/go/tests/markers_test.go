@@ -48,10 +48,10 @@ func TestMarkers_MarkersThatSurviveTheSelfChecksAndOneFixEndUnapproved(t *testin
 	assertEqual(t, planned.Get("provider"), "lite")
 	assertEqual(t, result.Get("status"), "not_approved")
 	assertIn(t, "conflict markers are still in src/game.txt", result.Str("reason"))
-	assertTrue(t, pyjson.Obj(flowPath(result, "cycles", 0)).Has("marker_fix"))
+	assertTrue(t, pyjson.Obj(dig(t, result, "cycles", 0)).Has("marker_fix"))
 	assertEqual(t, h.originSHA("bot/issue-12"), "")
 	assertEqual(t, len(h.gh.ListPulls("open", "", 200)), 0)
-	assertIn(t, "conflict markers are still in `src/game.txt`", flowLast(t, h.gh.BotComments(12)))
+	assertIn(t, "conflict markers are still in `src/game.txt`", lastOf(t, h.gh.BotComments(12)))
 }
 
 func TestMarkers_AFixThatClearsThemLetsItGoToReview(t *testing.T) {
@@ -80,15 +80,15 @@ func markersBundle(t *testing.T, h *flowHarness, files map[string]string) (*pyjs
 		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o777); err != nil {
 			t.Fatal(err)
 		}
-		flowWrite(filepath.Join(dir, name), files[name])
+		mustWriteText(filepath.Join(dir, name), files[name])
 	}
 	fakes.Git(dir, "add", "-A")
 	fakes.Git(dir, "commit", "-q", "-m", "a change")
-	flowMkdir(t, out)
+	mkdir(t, out)
 	base := fakes.Git(dir, "rev-parse", "origin/main")
 	fakes.Git(dir, "bundle", "create", filepath.Join(out, "branch.bundle"), "refs/heads/bot/issue-12",
 		"^"+base)
-	flowWrite(filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New(
+	mustWriteText(filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New(
 		"status", "approved", "head", fakes.Git(dir, "rev-parse", "HEAD"), "start", base,
 		"bundle", "branch.bundle", "cycles", []any{}, "title", "t")))
 	return planned, out
@@ -100,8 +100,8 @@ func TestMarkers_DeliverRefusesMarkersInAFileTheChangeTouched(t *testing.T) {
 	planned, out := markersBundle(t, h, map[string]string{"src/game.txt": markersMarked})
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	assertEqual(t, h.originSHA("bot/issue-12"), "")
-	assertEqual(t, h.gh.LabelNames(12), flowSet(config.LabelBlocked))
-	assertIn(t, "conflict markers are still in `src/game.txt`", flowLast(t, h.gh.BotComments(12)))
+	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelBlocked))
+	assertIn(t, "conflict markers are still in `src/game.txt`", lastOf(t, h.gh.BotComments(12)))
 }
 
 func TestMarkers_AMarkerLineInAFileTheChangeLeftAloneIsNotItsFault(t *testing.T) {

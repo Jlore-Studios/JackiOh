@@ -79,8 +79,8 @@ func newRebuildStrikes(t *testing.T) *rebuildStrikes {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(5, fakes.Issue{Labels: []string{config.LabelPROpen}})
 	gh.AddPull(9, "bot/issue-5", fakes.Pull{Body: "Closes #5", Labels: []string{config.LabelPR}, SHA: "s1"})
-	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: eventsStr(rebuildTrust)})
-	eventsUpdateItem(ctx, 9, "issue", 5)
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: ptr(rebuildTrust)})
+	flowUpdateItem(ctx, 9, pyjson.New("issue", 5))
 	return &rebuildStrikes{t: t, gh: gh, ctx: ctx, cid: 900}
 }
 
@@ -110,7 +110,7 @@ func (w *rebuildStrikes) ci(attempt int, sha string) []string {
 func (w *rebuildStrikes) newHead(sha string, record ...any) {
 	w.gh.Threads.Item(9).Obj("head").Set("sha", sha)
 	w.gh.Threads.Item(9).Set("labels", eventsLabels(config.LabelPR))
-	eventsUpdateItem(w.ctx, 9, record...)
+	flowUpdateItem(w.ctx, 9, pyjson.New(record...))
 }
 
 // rebuildPassing is `lambda sha: [{"name": n, "conclusion": "success"} for n in names]`.
@@ -142,7 +142,7 @@ func TestRebuild_StrikesSurviveAPersonsRequest(t *testing.T) {
 func TestRebuild_OnlyAnApprovedHeadThatIsGreenClearsThem(t *testing.T) {
 	w := newRebuildStrikes(t)
 	stepup.Strike(w.ctx, 9, "its reviewer did not approve it", "")
-	eventsUpdateItem(w.ctx, 9, "cleared", pyjson.New("sha", "s1", "at", clock.ISO(testsupport.Day), "by", "`opus` (strong)"))
+	flowUpdateItem(w.ctx, 9, pyjson.New("cleared", pyjson.New("sha", "s1", "at", clock.ISO(testsupport.Day), "by", "`opus` (strong)")))
 	required := slices.Clone(w.ctx.Cfg.RequiredChecks)
 	w.gh.Patch.CheckRuns = rebuildPassing(required[:len(required)-1])
 	sweep.GreenHeads(w.ctx, testsupport.Day)
@@ -187,7 +187,7 @@ func TestRebuild_EveryCIFixThatLeftItRedIsAStrike(t *testing.T) {
 // struck for the CI fixes before it.
 func TestRebuild_AHeadNoCIFixMadeIsNoStrike(t *testing.T) {
 	w := newRebuildStrikes(t)
-	eventsUpdateItem(w.ctx, 9, "ci_fixes", 1, "ci_fixed_head", "s1")
+	flowUpdateItem(w.ctx, 9, pyjson.New("ci_fixes", 1, "ci_fixed_head", "s1"))
 	w.newHead("s3")
 	w.ci(1, "s3")
 	w.ci(2, "s3")
@@ -207,17 +207,17 @@ func TestRebuild_TheRebuildKeepsTheLastFindingsAndNamesTheOldPullRequest(t *test
 	ctx := rebuildByDay(gh, "muse")
 	gh.AddIssue(5, fakes.Issue{Labels: []string{config.LabelPROpen}})
 	gh.AddPull(9, "bot/issue-5", fakes.Pull{Body: "Closes #5", Labels: []string{config.LabelPR}, SHA: "s1"})
-	eventsUpdateItem(ctx, 9, "issue", 5, "last_findings", []any{rebuildFinding()})
+	flowUpdateItem(ctx, 9, pyjson.New("issue", 5, "last_findings", []any{rebuildFinding()}))
 	stepup.Rebuild(ctx, 5, 9, "it failed 3 times at difficulty:medium", "")
-	assertEqual(t, eventsDig(t, gh.Threads.Item(9), "state"), "closed")
-	record := eventsDig(t, ctx.Store.Load(), "items", "5")
-	assertEqual(t, []any{eventsDig(t, record, "previous_pr"), eventsDig(t, record, "last_findings")},
+	assertEqual(t, dig(t, gh.Threads.Item(9), "state"), "closed")
+	record := dig(t, ctx.Store.Load(), "items", "5")
+	assertEqual(t, []any{dig(t, record, "previous_pr"), dig(t, record, "last_findings")},
 		[]any{9, []any{rebuildFinding()}})
 	assertIn(t, config.LabelBuild, gh.LabelNames(5))
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	assertEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, planned, "number")}, []any{"build", 5})
-	assertEqual(t, eventsDig(t, planned, "previous_pr"), 9)
-	assertEqual(t, eventsDig(t, planned, "previous_findings"), []any{rebuildFinding()})
+	assertEqual(t, []any{dig(t, planned, "action"), dig(t, planned, "number")}, []any{"build", 5})
+	assertEqual(t, dig(t, planned, "previous_pr"), 9)
+	assertEqual(t, dig(t, planned, "previous_findings"), []any{rebuildFinding()})
 }
 
 func TestRebuild_TheRebuildStartsCleanFromMainWithNoOldWork(t *testing.T) {
@@ -225,15 +225,15 @@ func TestRebuild_TheRebuildStartsCleanFromMainWithNoOldWork(t *testing.T) {
 	ctx := rebuildByDay(gh, "muse")
 	gh.AddIssue(5, fakes.Issue{Labels: []string{config.LabelPROpen}})
 	gh.AddPull(9, "bot/issue-5", fakes.Pull{Body: "Closes #5", Labels: []string{config.LabelPR}, SHA: "s1"})
-	eventsUpdateItem(ctx, 9, "issue", 5)
-	eventsUpdateItem(ctx, 5, "kind", "build", "pr", 9, "handoff", pyjson.New("pr", 9), "wip", pyjson.New("anything", true))
+	flowUpdateItem(ctx, 9, pyjson.New("issue", 5))
+	flowUpdateItem(ctx, 5, pyjson.New("kind", "build", "pr", 9, "handoff", pyjson.New("pr", 9), "wip", pyjson.New("anything", true)))
 	stepup.Rebuild(ctx, 5, 9, "it failed 3 times at difficulty:medium", "")
 	assertIn(t, "bot/issue-5", gh.DeletedBranches)
-	record := eventsDig(t, ctx.Store.Load(), "items", "5")
+	record := dig(t, ctx.Store.Load(), "items", "5")
 	for _, key := range []string{"pr", "handoff", "wip"} {
 		assertNotIn(t, key, record)
 	}
-	assertEqual(t, []any{eventsDig(t, record, "failures"), eventsDig(t, record, "strikes"), eventsDig(t, record, "strike_log")},
+	assertEqual(t, []any{dig(t, record, "failures"), dig(t, record, "strikes"), dig(t, record, "strike_log")},
 		[]any{0, 0, []any{}})
 }
 
@@ -243,9 +243,9 @@ func TestRebuild_AConflictRevisionWaitsForABuilderThatReviewsInItsOwnRun(t *test
 	gh := fakes.NewFakeGitHub()
 	ctx := rebuildByDay(gh, "lite")
 	gh.AddPull(9, "bot/issue-2", fakes.Pull{Labels: []string{config.LabelPR, config.LabelRevise, "difficulty:easy"}})
-	eventsUpdateItem(ctx, 9, "kind", "revise", "source", "conflict")
-	assertEqual(t, eventsDig(t, plan.Make(ctx, false, nil, "auto", nil), "action"), "none")
+	flowUpdateItem(ctx, 9, pyjson.New("kind", "revise", "source", "conflict"))
+	assertEqual(t, dig(t, plan.Make(ctx, false, nil, "auto", nil), "action"), "none")
 	ctx = rebuildByDay(gh, "lite", "muse")
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	assertEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, planned, "provider")}, []any{"revise", "muse"})
+	assertEqual(t, []any{dig(t, planned, "action"), dig(t, planned, "provider")}, []any{"revise", "muse"})
 }

@@ -5,11 +5,9 @@ package tests
 import (
 	"encoding/base64"
 	"fmt"
-	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -30,65 +28,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/verdicts"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
-
-// ------------------------------------------------------------------ Python's builtins
-//
-// The small helpers this file and its siblings of the same port (squishy, squishy_cases, journal,
-// titles, triage, wake, quiet) use, prefixed with this file's name so they never meet another
-// file's in package tests.
-
-// basicsSet is a set of strings, as Python's {…}.
-func basicsSet(names ...string) map[string]bool {
-	out := map[string]bool{}
-	for _, n := range names {
-		out[n] = true
-	}
-	return out
-}
-
-// basicsSorted is sorted(names).
-func basicsSorted(names []string) []string {
-	out := slices.Clone(names)
-	sort.Strings(out)
-	return out
-}
-
-// basicsKeys is sorted(set_or_dict).
-func basicsKeys[V any](m map[string]V) []string {
-	out := []string{}
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
-}
-
-// basicsReadFile is path.read_text(): the test fails when it cannot.
-func basicsReadFile(t *testing.T, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(data)
-}
-
-// basicsLoadObject is json.loads(text), a JSON object.
-func basicsLoadObject(t *testing.T, text string) *pyjson.Object {
-	t.Helper()
-	v, err := pyjson.LoadsString(text)
-	if err != nil {
-		t.Fatal(err)
-	}
-	o, ok := v.(*pyjson.Object)
-	if !ok {
-		t.Fatalf("not a JSON object: %s", text)
-	}
-	return o
-}
-
-// basicsIntp is an *int, for the arguments the Python passes an int or None.
-func basicsIntp(n int) *int { return &n }
 
 // ------------------------------------------------------------------ ConfigTests
 
@@ -382,7 +321,7 @@ func TestBasics_HelpForOneVerb(t *testing.T) {
 	assertIn(t, "For example: `@jgoetzmann-bot revise", text)
 	assertIn(t, "I do not know `dance`", commands.HelpText(basicsBot, "dance"))
 	assertIn(t, "| `help [verb]` |", commands.HelpText(basicsBot, ""))
-	assertEqual(t, basicsSorted(commands.VerbHelp.Keys()), basicsSorted(commands.Verbs))
+	assertEqual(t, sortedOf(commands.VerbHelp.Keys()), sortedOf(commands.Verbs))
 }
 
 // Every verb the bot has; the night bot's one mode is `fullsend` (#505), so `oneshot` and `split`
@@ -425,15 +364,15 @@ const basicsTrustText = "jgoetzmann 3 id:95732896\nhelper 2\nreader\nbad!login 2
 
 func TestBasics_Parse(t *testing.T) {
 	trusted := trust.TrustParse(basicsTrustText)
-	assertEqual(t, basicsKeys(trusted.Entries), []string{"helper", "jgoetzmann", "reader"})
+	assertEqual(t, sortedKeys(trusted.Entries), []string{"helper", "jgoetzmann", "reader"})
 	assertEqual(t, len(trusted.Problems), 2)
 }
 
 func TestBasics_IDPinsTheAccount(t *testing.T) {
 	trusted := trust.TrustParse(basicsTrustText)
-	assertEqual(t, trusted.Level("jgoetzmann", basicsIntp(95732896), ""), 3)
-	assertEqual(t, trusted.Level("jgoetzmann", basicsIntp(1), ""), 0)
-	assertEqual(t, trusted.Level("JGoetzmann", basicsIntp(95732896), "NONE"), 3)
+	assertEqual(t, trusted.Level("jgoetzmann", ptr(95732896), ""), 3)
+	assertEqual(t, trusted.Level("jgoetzmann", ptr(1), ""), 0)
+	assertEqual(t, trusted.Level("JGoetzmann", ptr(95732896), "NONE"), 3)
 }
 
 func TestBasics_APinnedLineNeedsTheID(t *testing.T) {
@@ -443,16 +382,16 @@ func TestBasics_APinnedLineNeedsTheID(t *testing.T) {
 
 func TestBasics_WithoutIDGithubMustVouch(t *testing.T) {
 	trusted := trust.TrustParse(basicsTrustText)
-	assertEqual(t, trusted.Level("helper", basicsIntp(42), "COLLABORATOR"), 2)
-	assertEqual(t, trusted.Level("helper", basicsIntp(42), "CONTRIBUTOR"), 0)
+	assertEqual(t, trusted.Level("helper", ptr(42), "COLLABORATOR"), 2)
+	assertEqual(t, trusted.Level("helper", ptr(42), "CONTRIBUTOR"), 0)
 	assertEqual(t, trusted.Level("reader", nil, "OWNER"), 1)
-	assertEqual(t, trusted.Level("nobody", basicsIntp(1), "OWNER"), 0)
+	assertEqual(t, trusted.Level("nobody", ptr(1), "OWNER"), 0)
 }
 
 func TestBasics_CommittedTrustFile(t *testing.T) {
 	trusted := trust.TrustLoad(filepath.Join(config.RepoRoot, config.TrustPath))
 	assertEqual(t, trusted.Problems, []string{})
-	assertEqual(t, trusted.Level("jgoetzmann", basicsIntp(95732896), ""), 3)
+	assertEqual(t, trusted.Level("jgoetzmann", ptr(95732896), ""), 3)
 }
 
 // ------------------------------------------------------------------ RedactTests
@@ -664,7 +603,7 @@ func TestBasics_AnExceptionTakesAPathBackOut(t *testing.T) {
 		home            string
 		skillsForbidden bool
 	}{{".harness", true}, {".squishy", false}} {
-		raw := basicsLoadObject(t, basicsReadFile(t, filepath.Join(config.RepoRoot, c.home, "config.json")))
+		raw := loadsObject(t, readText(t, filepath.Join(config.RepoRoot, c.home, "config.json")))
 		forbidden := pyjson.Strings(raw.Get("forbidden_paths"))
 		assertEqual(t, git.Matches(".claude/skills/maxi-tail/SKILL.md", forbidden), c.skillsForbidden, c.home)
 		for _, path := range []string{".claude/settings.json", ".claude/settings.local.json", ".claude/hooks/x.sh"} {

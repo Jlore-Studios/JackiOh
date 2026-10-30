@@ -31,7 +31,7 @@ var repoMetaForms = filepath.Join(repoMetaRoot, ".github", "ISSUE_TEMPLATE")
 // repoMetaRead is `(ROOT / path).read_text(encoding="utf-8")`.
 func repoMetaRead(t *testing.T, parts ...string) string {
 	t.Helper()
-	return workflowsFile(t, filepath.Join(append([]string{repoMetaRoot}, parts...)...))
+	return readText(t, filepath.Join(append([]string{repoMetaRoot}, parts...)...))
 }
 
 // repoMetaLabel is `config.LABELS[name]`: its (color, description).
@@ -210,7 +210,7 @@ func repoMetaFormsRead(t *testing.T) []repoMetaForm {
 	forms := []repoMetaForm{}
 	for _, path := range paths {
 		if filepath.Base(path) != "config.yml" {
-			forms = append(forms, repoMetaForm{filepath.Base(path), workflowsFile(t, path)})
+			forms = append(forms, repoMetaForm{filepath.Base(path), readText(t, path)})
 		}
 	}
 	return forms
@@ -251,13 +251,13 @@ func TestRepoMeta_EachFormTitlesAndLabelsItsIssueAndLeavesItsTypeToTriage(t *tes
 		typed := false
 		for _, label := range labels {
 			assertTrue(t, config.Labels.Has(label), form.name, label)
-			typed = typed || workflowsSet(config.TypeLabels...)[label]
+			typed = typed || setOf(config.TypeLabels...)[label]
 		}
 		assertTrue(t, typed, form.name)
 		// Triage types it (Task, Bug, Feature) and only types an untyped issue; who does it is the
 		// dropdown's answer, so no form puts `human` on by itself.
 		assertNotRegex(t, form.text, `(?m)^type:`, form.name)
-		assertTrue(t, !workflowsSet(labels...)[config.LabelHuman], form.name)
+		assertTrue(t, !setOf(labels...)[config.LabelHuman], form.name)
 		assertIn(t, "docs/issues-and-patches.md", form.text, form.name)
 	}
 }
@@ -337,10 +337,10 @@ func TestRepoMeta_EveryFormAsksWhoDoesItAndEachAnswerIsItsLabel(t *testing.T) {
 }
 
 func TestRepoMeta_NoBlankIssuesAndALinkToTheConventions(t *testing.T) {
-	text := workflowsFile(t, filepath.Join(repoMetaForms, "config.yml"))
+	text := readText(t, filepath.Join(repoMetaForms, "config.yml"))
 	assertIn(t, "blank_issues_enabled: false", text)
 	assertIn(t, "/blob/main/docs/issues-and-patches.md", text)
-	assertTrue(t, workflowsIsFile(filepath.Join(repoMetaRoot, "docs", "issues-and-patches.md")))
+	assertTrue(t, isFile(filepath.Join(repoMetaRoot, "docs", "issues-and-patches.md")))
 }
 
 // ---------------------------------------------------------------------------- FormLabelsTests
@@ -386,7 +386,7 @@ func TestRepoMeta_EveryLabelInUseIsOnTheList(t *testing.T) {
 		t.Fatalf("%q != the four type labels", named)
 	}
 	assertEqual(t, named[:4], []string{"patch", "major version", "architecture", "night bot"})
-	used := workflowsSet(named...)
+	used := setOf(named...)
 	for _, group := range [][]string{dashboard.Labels, disk.Labels, triage.TypeLabels,
 		{config.LabelHuman, config.LabelReady}, config.DifficultyLabels.Keys(),
 		{config.LabelPriorityHigh, config.LabelPriorityMedium, config.LabelPriorityLow}} {
@@ -404,7 +404,7 @@ func TestRepoMeta_EveryLabelInUseIsOnTheList(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, path := range append(workflowsPaths, scripts...) {
-		for _, name := range workflowsFindall(repoMetaPutsOn, workflowsFile(t, path)) {
+		for _, name := range workflowsFindall(repoMetaPutsOn, readText(t, path)) {
 			used[name] = true
 		}
 	}
@@ -437,9 +437,9 @@ func TestRepoMeta_NoRetiredLabelIsInUse(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, path := range append([]string{filepath.Join(repoMetaRoot, "docs", "issues-and-patches.md")}, forms...) {
-		text := strings.ToLower(workflowsFile(t, path))
+		text := strings.ToLower(readText(t, path))
 		found := []string{}
-		for _, name := range workflowsSorted(retired) {
+		for _, name := range sortedKeys(retired) {
 			if strings.Contains(text, "`"+name+"`") {
 				found = append(found, name)
 			}

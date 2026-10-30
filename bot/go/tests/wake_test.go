@@ -5,7 +5,6 @@ package tests
 import (
 	"fmt"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -64,7 +63,7 @@ func TestWake_EachRunIsForAtMostOneWakeTime(t *testing.T) {
 // `13 * * * *`: the firing in the hour before a wake time sleeps until it; the two after it still
 // wake the sessions, should GitHub drop the first.
 func TestWake_EveryWakeTimeHasAFiringThatSleepsUntilItAndTwoAfter(t *testing.T) {
-	text := basicsReadFile(t, filepath.Join(config.RepoRoot, ".github", "workflows", wake.Workflow))
+	text := readText(t, filepath.Join(config.RepoRoot, ".github", "workflows", wake.Workflow))
 	assertIn(t, `- cron: "13 * * * *"`, text)
 	for _, at := range wakeWakes {
 		for _, fired := range []time.Time{at.Add(-47 * time.Minute), at.Add(13 * time.Minute),
@@ -127,9 +126,9 @@ func TestWake_EveryClaudeSubscriptionWithItsSecretIsWoken(t *testing.T) {
 	for n := 1; n < 9; n++ {
 		ids = append(ids, fmt.Sprintf("claude-%d", n))
 	}
-	assertEqual(t, basicsSet(wakeField(found, "id")...), basicsSet(ids...))
-	assertEqual(t, basicsSet(wakeField(found, "secret")...), basicsSet(strings.Fields(wakeSet)...))
-	assertEqual(t, basicsSet(wakeField(found, "home")...), basicsSet(".harness"))
+	assertEqual(t, setOf(wakeField(found, "id")...), setOf(ids...))
+	assertEqual(t, setOf(wakeField(found, "secret")...), setOf(strings.Fields(wakeSet)...))
+	assertEqual(t, setOf(wakeField(found, "home")...), setOf(".harness"))
 	assertEqual(t, notes, []string{})
 }
 
@@ -215,11 +214,6 @@ func wakeEvent(status string, fiveHour float64, info ...any) string {
 	return pyjson.Dumps(pyjson.New("type", "rate_limit_event", "rate_limit_info", limit))
 }
 
-// wakeAfter is argv[argv.index(flag) + 1].
-func wakeAfter(argv []string, flag string) string {
-	return argv[slices.Index(argv, flag)+1]
-}
-
 // ------------------------------------------------------------------ PingTests
 
 func TestWake_TheWakeIsOneTurnOfHaikuAtLowEffortWithNothingLoaded(t *testing.T) {
@@ -227,11 +221,11 @@ func TestWake_TheWakeIsOneTurnOfHaikuAtLowEffortWithNothingLoaded(t *testing.T) 
 	found := runner.PingUsage("claude", wake.Model, wakeRan(wakeEvent("allowed", 0.01), seen), "", wake.Effort)
 	assertAlmostEqual(t, found.Obj("five_hour").Float("utilization"), 0.01)
 	argv := seen["argv"].([]string)
-	assertEqual(t, wakeAfter(argv, "--model"), "claude-haiku-5-5")
-	assertEqual(t, wakeAfter(argv, "--effort"), "low")
-	assertEqual(t, wakeAfter(argv, "--max-turns"), "1")
-	assertEqual(t, wakeAfter(argv, "--tools"), "")
-	assertEqual(t, wakeAfter(argv, "--system-prompt"), runner.PingSystem)
+	assertEqual(t, backendsAfter(argv, "--model"), "claude-haiku-5-5")
+	assertEqual(t, backendsAfter(argv, "--effort"), "low")
+	assertEqual(t, backendsAfter(argv, "--max-turns"), "1")
+	assertEqual(t, backendsAfter(argv, "--tools"), "")
+	assertEqual(t, backendsAfter(argv, "--system-prompt"), runner.PingSystem)
 	for _, flag := range []string{"--strict-mcp-config", "--disable-slash-commands", "--no-session-persistence"} {
 		assertIn(t, flag, argv)
 	}

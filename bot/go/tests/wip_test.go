@@ -8,7 +8,6 @@ package tests
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -56,14 +55,6 @@ func wipInterruptions(t *testing.T, record *pyjson.Object, present bool) int {
 	return n
 }
 
-func wipRead(path string) string {
-	text, err := os.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-	return string(text)
-}
-
 func TestWip_ACutOffRevisionKeepsItsWorkBesideThePullRequest(t *testing.T) {
 	h := newFlowHarness(t)
 	start := wipPull(h)
@@ -81,7 +72,7 @@ func TestWip_ACutOffRevisionKeepsItsWorkBesideThePullRequest(t *testing.T) {
 	// The next revision starts from it, is told so, and finishes the job.
 	seen := map[string]string{}
 	finishing := func(request *runner.RunRequest) *runner.RunResult {
-		seen["file"] = wipRead(filepath.Join(request.Cwd, "src", "game.txt"))
+		seen["file"] = mustReadText(filepath.Join(request.Cwd, "src", "game.txt"))
 		return workBuilder(map[string]string{"src/game.txt": "whole\n"})(request)
 	}
 	r := workFake(map[string]runner.Handler{"revise": finishing, "review": workReviewer(workApprove)})
@@ -106,7 +97,7 @@ func TestWip_ABranchThatMovedSinceStartsAfresh(t *testing.T) {
 	h.gh.Threads.Item(40).Obj("head").Set("sha", moved)
 	seen := map[string]string{}
 	looking := func(request *runner.RunRequest) *runner.RunResult {
-		seen["file"] = wipRead(filepath.Join(request.Cwd, "src", "game.txt"))
+		seen["file"] = mustReadText(filepath.Join(request.Cwd, "src", "game.txt"))
 		return workBuilder(map[string]string{"src/game.txt": "redone\n"})(request)
 	}
 	r := workFake(map[string]runner.Handler{"revise": looking, "review": workReviewer(workApprove)})

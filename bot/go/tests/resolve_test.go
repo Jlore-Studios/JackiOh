@@ -171,7 +171,7 @@ func TestResolve_TakeMainTakesMainsVersionAndStagesIt(t *testing.T) {
 	left, done := resolveRunResolve(repo, nil)
 	assertEqual(t, left, []string{})
 	assertEqual(t, resolvePathsOK(done), []any{[]any{resolveIndex, true}})
-	assertEqual(t, crossRead(t, filepath.Join(repo.Cwd, resolveIndex)), "| R1 |\n| R3 main |\n")
+	assertEqual(t, readText(t, filepath.Join(repo.Cwd, resolveIndex)), "| R1 |\n| R3 main |\n")
 	assertEqual(t, resolveUnmerged(repo), []string{})
 }
 
@@ -183,7 +183,7 @@ func TestResolve_TakeMainFollowsMainWhenItDeletedTheFile(t *testing.T) {
 	left, done := resolveRunResolve(repo, nil)
 	assertEqual(t, left, []string{})
 	assertIn(t, "deleted", done[0].How)
-	assertFalse(t, crossExists(filepath.Join(repo.Cwd, resolveIndex)))
+	assertFalse(t, exists(filepath.Join(repo.Cwd, resolveIndex)))
 	assertEqual(t, resolveUnmerged(repo), []string{})
 }
 
@@ -199,7 +199,7 @@ func TestResolve_ACommandRewritesTheFileOnceNothingElseIsConflicted(t *testing.T
 	for _, r := range done {
 		assertTrue(t, r.OK, fmt.Sprintf("%+v", done))
 	}
-	assertEqual(t, crossRead(t, filepath.Join(repo.Cwd, resolveGolden)), "blessed\n")
+	assertEqual(t, readText(t, filepath.Join(repo.Cwd, resolveGolden)), "blessed\n")
 	assertEqual(t, resolveUnmerged(repo), []string{})
 }
 
@@ -213,7 +213,7 @@ func TestResolve_ACommandNeverRunsWhileAFileNoResolverNamesIsConflicted(t *testi
 	left, done := resolveRunResolve(repo, []*config.Resolver{resolveTakeIndex(), resolveRun(resolveGolden, "touch ran")})
 	sort.Strings(left)
 	assertEqual(t, left, []string{resolveGolden, resolveGame})
-	assertFalse(t, crossExists(filepath.Join(repo.Cwd, "ran")))
+	assertFalse(t, exists(filepath.Join(repo.Cwd, "ran")))
 	assertEqual(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
 	assertEqual(t, len(done), 1)
 	assertFalse(t, done[0].OK)
@@ -227,7 +227,7 @@ func TestResolve_ATakeResolverStillTakesWhileCodeIsConflicted(t *testing.T) {
 	left, done := resolveRunResolve(repo, nil)
 	assertEqual(t, left, []string{resolveGame})
 	assertEqual(t, resolvePathsOK(done), []any{[]any{resolveIndex, true}})
-	assertIn(t, "<<<<<<<", crossRead(t, filepath.Join(repo.Cwd, resolveGame)))
+	assertIn(t, "<<<<<<<", readText(t, filepath.Join(repo.Cwd, resolveGame)))
 	assertEqual(t, resolveUnmerged(repo), []string{resolveGame})
 }
 
@@ -305,7 +305,7 @@ func TestResolve_ACommandNeverDecidesADeletion(t *testing.T) {
 			left, done := resolveRunResolve(repo, []*config.Resolver{resolveRun(resolveGolden, "touch ran")})
 			assertEqual(t, left, []string{resolveGolden})
 			assertIn(t, "deleted", done[0].WhyNot)
-			assertFalse(t, crossExists(filepath.Join(repo.Cwd, "ran")))
+			assertFalse(t, exists(filepath.Join(repo.Cwd, "ran")))
 		})
 	}
 }
@@ -318,7 +318,7 @@ func TestResolve_ACommandWaitsForTimeBeyondTheReserve(t *testing.T) {
 		resolveOpts{SecondsLeft: func() float64 { return 1000.0 }, ReserveSeconds: 900.0})
 	assertEqual(t, left, []string{resolveGolden})
 	assertIn(t, "too little", done[0].WhyNot)
-	assertFalse(t, crossExists(filepath.Join(repo.Cwd, "ran")))
+	assertFalse(t, exists(filepath.Join(repo.Cwd, "ran")))
 }
 
 func TestResolve_TakeNamesTheBranchItTookFrom(t *testing.T) {
@@ -353,7 +353,7 @@ func TestResolve_NoCommandRunsWithoutTheDependenciesOrTheTime(t *testing.T) {
 				map[string]string{resolveGolden: "game 1 main\n"})
 			left, done := resolveRunResolve(repo, []*config.Resolver{resolveRun(resolveGolden, "touch ran")}, c.opts)
 			assertEqual(t, left, []string{resolveGolden})
-			assertFalse(t, crossExists(filepath.Join(repo.Cwd, "ran")))
+			assertFalse(t, exists(filepath.Join(repo.Cwd, "ran")))
 			assertIn(t, c.why, done[0].WhyNot)
 		})
 	}
@@ -397,12 +397,12 @@ func TestResolve_TheCommittedResolvers(t *testing.T) {
 	for p := range resolvers {
 		paths[p] = true
 	}
-	assertEqual(t, paths, crossSet(resolveIndex, resolveGolden))
+	assertEqual(t, paths, setOf(resolveIndex, resolveGolden))
 	assertEqual(t, resolvers[resolveIndex].Take, "main")
 	assertEqual(t, resolvers[resolveGolden].Run, "cargo jackioh golden bless --file "+resolveGolden)
 	assertTrue(t, resolvers[resolveGolden].TimeoutMinutes >= 10)
 	squishy := filepath.Join(testsupport.Root, ".squishy", "config.json")
-	assertEqual(t, crossKey(t, crossLoad(t, squishy), "resolvers"), crossKey(t, testsupport.RawConfig(), "resolvers"))
+	assertEqual(t, dig(t, loadJSON(t, squishy), "resolvers"), dig(t, testsupport.RawConfig(), "resolvers"))
 }
 
 func TestResolve_NoneIsNone(t *testing.T) {
@@ -514,7 +514,7 @@ func (w *resolveWorld) runWorker(r *runner.FakeRunner, plan *pyjson.Object, cfg 
 
 func (w *resolveWorld) head() (string, string) {
 	check := filepath.Join(w.root, "check")
-	if !crossExists(check) {
+	if !exists(check) {
 		fakes.Git(w.root, "clone", "-q", w.origin, check)
 	}
 	fakes.Git(check, "fetch", "-q", filepath.Join(w.root, "out", "branch.bundle"), "+refs/heads/feature/x:refs/heads/got")
@@ -537,13 +537,13 @@ func TestResolve_AConflictOnlyInResolverFilesSpendsNoBuilderSession(t *testing.T
 	assertEqual(t, fakes.Git(check, "show", head+":"+resolveGame), "rules v2")
 	builder := crossObj(t, result, "cycles", 0, "builder")
 	assertEqual(t, []any{builder.Get("role"), builder.Get("model"), builder.Get("ok")}, []any{"merge", "the harness", true})
-	for _, g := range pyjson.Objs(crossKey(t, result, "cycles", 0, "gates")) {
-		assertTrue(t, pyjson.Truthy(crossKey(t, g, "ok")))
+	for _, g := range pyjson.Objs(dig(t, result, "cycles", 0, "gates")) {
+		assertTrue(t, pyjson.Truthy(dig(t, g, "ok")))
 	}
 	// The take resolvers go first, then the command once nothing else is conflicted.
 	got := []any{}
-	for _, r := range pyjson.Objs(crossKey(t, result, "resolved")) {
-		got = append(got, []any{crossKey(t, r, "path"), crossKey(t, r, "ok")})
+	for _, r := range pyjson.Objs(dig(t, result, "resolved")) {
+		got = append(got, []any{dig(t, r, "path"), dig(t, r, "ok")})
 	}
 	assertEqual(t, got, []any{[]any{resolveIndex, true}, []any{resolveGolden, true}})
 	assertIn(t, "no builder ran", crossStr(t, result, "report"))
@@ -570,8 +570,8 @@ func TestResolve_EveryReviewerHearsTheHarnessResolvedByARule(t *testing.T) {
 	assertIn(t, "a file it took from `main` keeps `main`'s version on purpose", review)
 	assertIn(t, "- `"+resolveIndex+"`: took `main`'s version", review)
 	var step *pyjson.Object
-	for _, s := range pyjson.Objs(crossKey(t, result, "steps")) {
-		if pyjson.Equal(crossKey(t, s, "step"), "resolve") {
+	for _, s := range pyjson.Objs(dig(t, result, "steps")) {
+		if pyjson.Equal(dig(t, s, "step"), "resolve") {
 			step = s
 			break
 		}
@@ -661,7 +661,7 @@ func TestResolve_NewFeedbackStillGoesToTheBuilderToldWhatTheHarnessDid(t *testin
 	seen := map[string]string{}
 
 	revise := func(request *runner.RunRequest) *runner.RunResult {
-		seen["index"] = crossMustRead(filepath.Join(request.Cwd, resolveIndex))
+		seen["index"] = mustReadText(filepath.Join(request.Cwd, resolveIndex))
 		return runner.NewRunResult(true, resolveDone)
 	}
 	r := workFake(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
@@ -685,8 +685,8 @@ func TestResolve_ACodeConflictReachesTheBuilderWithOnlyWhatIsLeft(t *testing.T) 
 	seen := map[string]string{}
 
 	revise := func(request *runner.RunRequest) *runner.RunResult {
-		seen["index"] = crossMustRead(filepath.Join(request.Cwd, resolveIndex))
-		seen["golden"] = crossMustRead(filepath.Join(request.Cwd, resolveGolden))
+		seen["index"] = mustReadText(filepath.Join(request.Cwd, resolveIndex))
+		seen["golden"] = mustReadText(filepath.Join(request.Cwd, resolveGolden))
 		crossPut(filepath.Join(request.Cwd, resolveGame), "rules main and branch\n")
 		crossPut(filepath.Join(request.Cwd, resolveGolden), "game main and branch\n")
 		return runner.NewRunResult(true, resolveDone)
@@ -708,9 +708,9 @@ func TestResolve_ACodeConflictReachesTheBuilderWithOnlyWhatIsLeft(t *testing.T) 
 	assertNotIn(t, resolveIndex, listed)
 	assertIn(t, "- `"+resolveIndex+"`: took `main`'s version", prompt)
 	unresolved := []any{}
-	for _, r := range pyjson.Objs(crossKey(t, result, "resolved")) {
-		if !pyjson.Truthy(crossKey(t, r, "ok")) {
-			unresolved = append(unresolved, crossKey(t, r, "path"))
+	for _, r := range pyjson.Objs(dig(t, result, "resolved")) {
+		if !pyjson.Truthy(dig(t, r, "ok")) {
+			unresolved = append(unresolved, dig(t, r, "path"))
 		}
 	}
 	assertEqual(t, unresolved, []any{resolveGolden})
@@ -743,7 +743,7 @@ func TestResolve_WithoutResolversTheBuilderGetsEveryConflictAsBefore(t *testing.
 	seen := map[string]string{}
 
 	revise := func(request *runner.RunRequest) *runner.RunResult {
-		seen["index"] = crossMustRead(filepath.Join(request.Cwd, resolveIndex))
+		seen["index"] = mustReadText(filepath.Join(request.Cwd, resolveIndex))
 		crossPut(filepath.Join(request.Cwd, resolveIndex), "| R2 |\n| R3 |\n")
 		return runner.NewRunResult(true, resolveDone)
 	}

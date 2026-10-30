@@ -423,7 +423,7 @@ func (w *backendsWorld) runFake(backend runner.Runner, mode string, readOnly boo
 
 // seen is Base.seen(): what the fake dumped.
 func (w *backendsWorld) seen() *pyjson.Object {
-	return loginsJSON(w.t, loginsReadText(w.t, w.dump))
+	return loadsObject(w.t, readText(w.t, w.dump))
 }
 
 // seenArgv is seen()["argv"].
@@ -484,7 +484,7 @@ func TestBackends_SuccessUsageAndArgv(t *testing.T) {
 	assertTrue(t, strings.HasSuffix(prompt, "THE TASK"))
 	w.assertOnlyItsOwnLogin()
 	assertTrue(t, strings.HasSuffix(seen.Obj("env").Str("CODEX_HOME"), "codex"))
-	transcript := loginsReadText(t, filepath.Join(w.tmp, "t", "01.jsonl"))
+	transcript := readText(t, filepath.Join(w.tmp, "t", "01.jsonl"))
 	assertIn(t, "thread.started", transcript)
 	assertIn(t, "ran `pnpm test`", w.backendsCodex().Trail(filepath.Join(w.tmp, "t", "01.jsonl")))
 }
@@ -687,7 +687,7 @@ func TestBackends_ThePromptGoesInAFileAndTheAnswerComesOnStdout(t *testing.T) {
 	assertIn(t, "THE TASK", seen.Str("prompt"))
 	w.assertOnlyItsOwnLogin()
 	assertIn(t, "muse", seen.Obj("env").Str("XDG_CONFIG_HOME"))
-	transcript := loginsReadText(t, filepath.Join(w.tmp, "t", "01.jsonl"))
+	transcript := readText(t, filepath.Join(w.tmp, "t", "01.jsonl"))
 	assertIn(t, "step 1: reading", transcript)
 }
 
@@ -726,7 +726,7 @@ func TestBackends_EachCallEndsWithAReadingOfItsUsagePanel(t *testing.T) {
 	assertEqual(t, backendsUtilization(result.Usage, "five_hour"), 0.05)
 	again := backend.ReadUsage("the-model")
 	assertEqual(t, backendsUtilization(again, "seven_day"), 0.35)
-	typed := strings.Fields(loginsReadText(t, filepath.Join(w.tmp, "usage", "typed.log")))
+	typed := strings.Fields(readText(t, filepath.Join(w.tmp, "usage", "typed.log")))
 	assertEqual(t, typed, []string{"1", "/usage", "/usage"}) // trusted once, then only /usage
 	assertTrue(t, strings.HasSuffix(w.seen().Str("prompt"), "THE TASK"))
 }

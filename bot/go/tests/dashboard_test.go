@@ -5,10 +5,8 @@
 package tests
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -60,29 +58,9 @@ func dashboardOffline(t *testing.T, gh *fakes.FakeGitHub) (restore func()) {
 	if gh == nil {
 		gh = fakes.NewFakeGitHub()
 	}
-	return dashboardSet(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context {
+	return patch(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context {
 		return testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, Cfg: cfg})
 	})
-}
-
-// dashboardSet is mock.patch.object: `*p` is `v` until `restore` (or the test's end).
-func dashboardSet[T any](t *testing.T, p *T, v T) (restore func()) {
-	old := *p
-	*p = v
-	done := false
-	restore = func() {
-		if !done {
-			*p, done = old, true
-		}
-	}
-	t.Cleanup(restore)
-	return restore
-}
-
-// dashboardStdout is contextlib.redirect_stdout: what the command line prints, until `restore`.
-func dashboardStdout(t *testing.T) (*bytes.Buffer, func()) {
-	out := &bytes.Buffer{}
-	return out, dashboardSet[io.Writer](t, &cli.Stdout, out)
 }
 
 // dashboardUpdateFunc is dashboard.update's signature, for a test's replacement of it.
@@ -107,11 +85,6 @@ func dashboardRender(ctx *hctx.Context, extra []string, statistics string) strin
 // dashboardAgo is `iso(NIGHT - timedelta(minutes=minutes))`.
 func dashboardAgo(minutes int) string {
 	return clock.ISO(testsupport.Night.Add(-time.Duration(minutes) * time.Minute))
-}
-
-// dashboardSeed is ctx.store.update(fn, message), fn mutating the state.
-func dashboardSeed(ctx *hctx.Context, message string, fn func(s *pyjson.Object)) {
-	ctx.Store.Update(func(s *pyjson.Object) any { fn(s); return nil }, message)
 }
 
 // dashboardGitHubError is side_effect=GitHubError(msg, status).
@@ -158,7 +131,7 @@ func dashboardBefore(text, sep string) string { return strings.SplitN(text, sep,
 // dashboardTrainingSetUp is TrainingBoxTests.setUp: the lanes' drafts as they were drawn until
 // #1677 stopped them, so a lane named again draws the same way.
 func dashboardTrainingSetUp(t *testing.T) {
-	dashboardSet(t, &dashboard.TrainingLanes, []string{"improve", "unban"})
+	patch(t, &dashboard.TrainingLanes, []string{"improve", "unban"})
 }
 
 // dashboardBoxes is TrainingBoxTests.boxes.
@@ -215,7 +188,7 @@ func TestDashboard_WithTheLanesStoppedNoTrainingBoxIsDrawn(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	dashboardLane(gh, 74, "improve", "AI gen 14 (improve): in training, nothing promoted yet",
 		true, 20*time.Minute)
-	restore := dashboardSet(t, &dashboard.TrainingLanes, []string{})
+	restore := patch(t, &dashboard.TrainingLanes, []string{})
 	assertEqual(t, dashboardBoxes(gh), "")
 	restore()
 }
@@ -578,7 +551,7 @@ func TestDashboard_AClosedIssueIsReplacedAndAFullPinListIsSaid(t *testing.T) {
 	gh, ctx := dashboardSetUp()
 	gh.AddIssue(41, fakes.Issue{Title: dashboard.Title, Body: dashboard.Marker, User: fakes.Operator,
 		State: "closed"})
-	dashboardSeed(ctx, "state", func(s *pyjson.Object) { s.Set("dashboard", pyjson.New("issue", 41)) })
+	flowUpdate(ctx, func(s *pyjson.Object) { s.Set("dashboard", pyjson.New("issue", 41)) }, "state")
 	gh.Pinned = []string{"a", "b", "c"}
 	note := dashboardUpdate(ctx)
 	var others []int
@@ -604,14 +577,14 @@ func TestDashboard_TheVisuals(t *testing.T) {
 	gh.Runs.Update(pyjson.New("101", pyjson.New("status", "in_progress"),
 		"102", pyjson.New("status", "in_progress")))
 	ago := dashboardAgo
-	dashboardSeed(ctx, "seed", func(s *pyjson.Object) {
+	flowUpdate(ctx, func(s *pyjson.Object) {
 		hstate.Item(s, 37).Update(pyjson.New("provider", "claude-1", "kind", "build", "run_id", "101",
 			"started_at", ago(47)))
 		hstate.Item(s, 49).Update(pyjson.New("provider", "muse", "kind", "revise", "run_id", "102",
 			"started_at", ago(123)))
 		s.Obj("providers").Set("claude-1", pyjson.New("usage", pyjson.New("five_hour",
 			pyjson.New("utilization", 0.3))))
-	})
+	}, "seed")
 	gh.AddPull(9, "bot/issue-3", fakes.Pull{Title: "Make it so", Labels: []string{config.LabelPR,
 		config.LabelRevise, "difficulty:hard"}})
 	gh.Runs.Set("200", pyjson.New("id", 200, "status", "completed", "conclusion", "success",
@@ -705,11 +678,11 @@ func TestDashboard_TheLoopRewritesItEveryTenMinutesAndOutlivesABadTick(t *testin
 		return "rewrote #148"
 	}
 
-	dashboardSet[dashboardUpdateFunc](t, &dashboard.Update, update)
+	patch[dashboardUpdateFunc](t, &dashboard.Update, update)
 	dashboardOffline(t, nil)
-	dashboardSet(t, &cli.Monotonic, func() float64 { return now })
-	dashboardSet(t, &cli.Sleep, func(seconds float64) { now += seconds })
-	out, _ := dashboardStdout(t)
+	patch(t, &cli.Monotonic, func() float64 { return now })
+	patch(t, &cli.Sleep, func(seconds float64) { now += seconds })
+	out, _ := capture(t, &cli.Stdout)
 	code := cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 600, ForSeconds: 1200})
 	assertEqual(t, code, 0)
 	assertEqual(t, ticks, []float64{1000.0, 1600.0, 2200.0})
@@ -741,12 +714,12 @@ func TestDashboard_TheLoopSweepsBeforeEachRewrite(t *testing.T) {
 		return "rewrote #148"
 	}
 
-	dashboardSet(t, &cli.Sweep, sweep)
+	patch(t, &cli.Sweep, sweep)
 	dashboardOffline(t, nil)
-	dashboardSet[dashboardUpdateFunc](t, &dashboard.Update, update)
-	dashboardSet(t, &cli.Monotonic, func() float64 { return now })
-	dashboardSet(t, &cli.Sleep, func(s float64) { now += s })
-	out, _ := dashboardStdout(t)
+	patch[dashboardUpdateFunc](t, &dashboard.Update, update)
+	patch(t, &cli.Monotonic, func() float64 { return now })
+	patch(t, &cli.Sleep, func(s float64) { now += s })
+	out, _ := capture(t, &cli.Stdout)
 	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 600, ForSeconds: 600, Sweep: true})
 	assertEqual(t, order, []step{{"sweep", 0.0}, {"rewrite", 0.0}, {"sweep", 600.0}, {"rewrite", 600.0}})
 	assertIn(t, "::warning::the sweep failed: rate limited", out.String())
@@ -768,9 +741,9 @@ func TestDashboard_TheLoopCarriesTheStatisticsAndHarnessStatsCountsThemNow(t *te
 		return "rewrote #148"
 	}
 
-	dashboardSet[dashboardUpdateFunc](t, &dashboard.Update, update)
+	patch[dashboardUpdateFunc](t, &dashboard.Update, update)
 	dashboardOffline(t, nil)
-	out, _ := dashboardStdout(t)
+	out, _ := capture(t, &cli.Stdout)
 	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Stats: true})
 	cli.CmdStats(testsupport.MakeConfig(), &cli.Args{Force: true})
 	var flags [][2]bool
@@ -796,12 +769,12 @@ func TestDashboard_EachIdleAccountSaysWhyInItsBox(t *testing.T) {
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night,
 		Cfg: testsupport.MakeConfig(testsupport.Config{Env: crossAll})}) // every secret set
 
-	dashboardSeed(ctx, "seed", func(s *pyjson.Object) {
+	flowUpdate(ctx, func(s *pyjson.Object) {
 		s.Obj("providers").Set("claude-2", pyjson.New("usage", pyjson.New("five_hour",
 			pyjson.New("utilization", 0.95, "resets_at", later))))
 		s.Obj("providers").Set("claude-3", pyjson.New("infra", pyjson.New(
 			"at", clock.ISO(testsupport.Night.Add(-10*time.Minute)), "reason", "401", "streak", 2)))
-	})
+	}, "seed")
 	st := ctx.Store.Load()
 	pool := ctx.Cfg.Pool
 	account := func(ctx *hctx.Context, st *pyjson.Object, provider *providers.Provider) [2]string {
@@ -830,9 +803,9 @@ func TestDashboard_AnAccountTooCloseToItsCapToStartIsPausedNotOpen(t *testing.T)
 	gh, _ := dashboardSetUp()
 	cfg := testsupport.MakeConfig(testsupport.Config{Env: crossAll, CommittedHours: true})
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: providersEarly, Cfg: cfg})
-	dashboardSeed(ctx, "seed", func(s *pyjson.Object) {
+	flowUpdate(ctx, func(s *pyjson.Object) {
 		s.Obj("providers").Update(providersTooCloseToStart().Obj("providers"))
-	})
+	}, "seed")
 	st := ctx.Store.Load()
 	pool := cfg.Pool
 	account := func(provider *providers.Provider) [2]string {
@@ -889,10 +862,10 @@ func TestDashboard_EverySubscriptionsLanesWithTheTotals(t *testing.T) {
 	for _, r := range runs {
 		gh.AddIssue(r.number, fakes.Issue{Labels: []string{config.LabelWorking}})
 		gh.Runs.Set(strconv.Itoa(r.number), pyjson.New("status", "in_progress"))
-		dashboardSeed(ctx, "state", func(s *pyjson.Object) {
+		flowUpdate(ctx, func(s *pyjson.Object) {
 			hstate.Item(s, r.number).Update(pyjson.New("provider", r.provider, "kind", "build",
 				"run_id", strconv.Itoa(r.number)).Update(r.extra))
-		})
+		}, "state")
 	}
 	squishy := pyjson.New("id", "claude-squishy", "bot", "Squishy", "claude", true, "github", true,
 		"where", "GitHub's runners", "lanes", 2, "used", 1, "runs", 1,
@@ -1010,9 +983,9 @@ func TestDashboard_AFailureNeverFailsTheSweep(t *testing.T) {
 		panic(dashboardGitHubError("server error", 502))
 	}
 	cfg := testsupport.MakeConfig()
-	dashboardSet[dashboardUpdateFunc](t, &dashboard.Update, broken)
+	patch[dashboardUpdateFunc](t, &dashboard.Update, broken)
 	dashboardOffline(t, nil)
-	out, _ := dashboardStdout(t)
+	out, _ := capture(t, &cli.Stdout)
 	assertEqual(t, cli.CmdDashboard(cfg, &cli.Args{}), 0)
 	assertIn(t, "::warning::the status issue was not updated", out.String())
 }
@@ -1026,7 +999,7 @@ func TestDashboard_AFailureNeverFailsTheSweep(t *testing.T) {
 // dashboardNoCount is mock.patch.object(stats, "collect", side_effect=AssertionError("counted")),
 // until `restore`.
 func dashboardNoCount(t *testing.T) (restore func()) {
-	return dashboardSet(t, &stats.Collect, func(*hctx.Context) *stats.Facts {
+	return patch(t, &stats.Collect, func(*hctx.Context) *stats.Facts {
 		panic(errors.New("counted"))
 	})
 }
@@ -1101,7 +1074,7 @@ func TestDashboard_MoreRunnersBusyAreCutToTheRoomBeforeACount(t *testing.T) {
 	soon := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(20 * time.Minute)})
 	kept := stats.Kept(gh.Threads.Get(number).Str("body"))
 	full := dashboard.Render(soon, nil, kept, nil, true)
-	restoreCount, restoreMax := dashboardNoCount(t), dashboardSet(t, &dashboard.MaxBody, py.Len(full)-1)
+	restoreCount, restoreMax := dashboardNoCount(t), patch(t, &dashboard.MaxBody, py.Len(full)-1)
 	assertEqual(t, dashboardUpdateStats(soon, false), fmt.Sprintf("rewrote #%d", number))
 	restoreCount()
 	restoreMax()
@@ -1110,7 +1083,7 @@ func TestDashboard_MoreRunnersBusyAreCutToTheRoomBeforeACount(t *testing.T) {
 	assertNotIn(t, "…and ", body)
 	assertEqual(t, stats.Kept(body), kept)
 	lean := dashboard.Render(soon, nil, kept, nil, false)
-	restoreCount, restoreMax = dashboardNoCount(t), dashboardSet(t, &dashboard.MaxBody, py.Len(lean)-500)
+	restoreCount, restoreMax = dashboardNoCount(t), patch(t, &dashboard.MaxBody, py.Len(lean)-500)
 	assertEqual(t, dashboardUpdateStats(soon, false), fmt.Sprintf("rewrote #%d", number))
 	restoreCount()
 	restoreMax()
@@ -1132,7 +1105,7 @@ func TestDashboard_ABodyTooLongForGithubListsFewerMergesThenNone(t *testing.T) {
 
 	draw := func(shown int) string { return stats.Block(ctx, facts, shown, nil, "") }
 	// The full status goes first, every merge still listed: it is the sections' facts again.
-	restore := dashboardSet(t, &dashboard.MaxBody, py.Len(full)-1)
+	restore := patch(t, &dashboard.MaxBody, py.Len(full)-1)
 	body := dashboard.Fit(ctx, view, nil, draw)
 	restore()
 	assertNotIn(t, "<summary>The full status</summary>", body)
@@ -1141,7 +1114,7 @@ func TestDashboard_ABodyTooLongForGithubListsFewerMergesThenNone(t *testing.T) {
 	assertIn(t, fmt.Sprintf("_… and %d older ones._", 64-stats.MergesShown), body)
 	// Then fewer merges.
 	lean := dashboard.Render(ctx, nil, statsBlock(ctx, facts), view, false)
-	restore = dashboardSet(t, &dashboard.MaxBody, py.Len(lean)-1)
+	restore = patch(t, &dashboard.MaxBody, py.Len(lean)-1)
 	body = dashboard.Fit(ctx, view, nil, draw)
 	restore()
 	assertIn(t, fmt.Sprintf("_… and %d older ones._", 64-py.FloorDiv(stats.MergesShown, 2)), body)
@@ -1157,7 +1130,7 @@ func TestDashboard_ABodyTooLongForGithubListsFewerMergesThenNone(t *testing.T) {
 	view.Found = dashboard.ReadRunners(ctx)
 	view.Runners = dashboard.RunnersSection(ctx, view.State, view.Found, dashboardRoom)
 	bare := dashboard.Render(ctx, nil, stats.Block(ctx, facts, 0, nil, ""), view, false)
-	restore = dashboardSet(t, &dashboard.MaxBody, py.Len(bare)-1)
+	restore = patch(t, &dashboard.MaxBody, py.Len(bare)-1)
 	body = dashboard.Fit(ctx, view, nil, draw)
 	restore()
 	assertTrue(t, regexp.MustCompile(`\n…and \d more\.\n`).MatchString(body), "no `…and N more.`")
@@ -1165,7 +1138,7 @@ func TestDashboard_ABodyTooLongForGithubListsFewerMergesThenNone(t *testing.T) {
 	assertTrue(t, stats.Kept(body) != "", "the statistics are left out")
 	view.Runners = dashboard.RunnersSection(ctx, view.State, view.Found, 0)
 	least := dashboard.Render(ctx, nil, stats.Block(ctx, facts, 0, nil, ""), view, false)
-	restore = dashboardSet(t, &dashboard.MaxBody, py.Len(least)-1)
+	restore = patch(t, &dashboard.MaxBody, py.Len(least)-1)
 	body = dashboard.Fit(ctx, view, nil, draw)
 	restore()
 	assertEqual(t, stats.Kept(body), "") // left out last of all
@@ -1193,11 +1166,11 @@ func dashboardLoop(t *testing.T, gh *fakes.FakeGitHub, cfg *config.Config, ticks
 		return "rewrote #148"
 	}
 
-	defer dashboardSet[dashboardUpdateFunc](t, &dashboard.Update, update)()
+	defer patch[dashboardUpdateFunc](t, &dashboard.Update, update)()
 	defer dashboardOffline(t, gh)()
-	defer dashboardSet(t, &cli.Monotonic, func() float64 { return now })()
-	defer dashboardSet(t, &cli.Sleep, func(s float64) { now += s })()
-	out, restore := dashboardStdout(t)
+	defer patch(t, &cli.Monotonic, func() float64 { return now })()
+	defer patch(t, &cli.Sleep, func(s float64) { now += s })()
+	out, restore := capture(t, &cli.Stdout)
 	defer restore()
 	cli.CmdDashboard(cfg, &cli.Args{Every: 600, ForSeconds: 600 * (ticks - 1)})
 	return seen, out.String()
@@ -1348,12 +1321,12 @@ func newDashboardRunners(t *testing.T) *dashboardRunners {
 		Cfg: testsupport.MakeConfig()})}
 	// The tests' weak subscription has runners on the night box that take no slot of their own,
 	// as the committed weak one's did until #2129, so the boxes' other runners stay tested.
-	dashboardSet(t, &dashboard.BoxSlots, []dashboard.BoxSlot{
+	patch(t, &dashboard.BoxSlots, []dashboard.BoxSlot{
 		{Place: "night box", Owners: []string{"gpt", "agy", "muse"}, Extras: []string{testsupport.Weak}},
 		{Place: "Muse box", Owners: []string{"muse", "muse", "muse"}, Extras: []string{}}})
 	ago := dashboardAgo
 
-	dashboardSeed(r.ctx, "seed", func(s *pyjson.Object) {
+	flowUpdate(r.ctx, func(s *pyjson.Object) {
 		hstate.Item(s, 37).Update(pyjson.New("provider", "claude-1", "kind", "build", "run_id", "101",
 			"started_at", ago(47)))
 		// A run the status loop started, before it found the run's id (#1455).
@@ -1510,7 +1483,7 @@ func TestDashboard_AFillInTakesAFreeSlotAndOtherRunnersFollowTheSlots(t *testing
 		`runners"]`, box)
 	assertIn(t, `nb3["<b>night-vm-lite-3</b><br/>🟢 ci · work<br/>`, box)
 	// A machine subscription no box's slots name has its labels drawn apart.
-	restore := dashboardSet(t, &dashboard.BoxSlots, []dashboard.BoxSlot{
+	restore := patch(t, &dashboard.BoxSlots, []dashboard.BoxSlot{
 		{Place: "night box", Owners: []string{"gpt", "muse"}, Extras: []string{}},
 		{Place: "Muse box", Owners: []string{"muse"}, Extras: []string{}}})
 	diagram := r.diagram()
@@ -1699,7 +1672,7 @@ func TestDashboard_TheTopOfTheIssueChartsHowFarThePcsTwoJobsHavePlayed(t *testin
 	assertTrue(t, strings.HasPrefix(text, dashboard.ProgressStart+"\n```mermaid\n"+
 		dashboard.ProgressChart+"\nxychart-beta horizontal\n"+
 		"    title \"The owner's PC: how far its two local jobs "+
-		"have played, %\"\n"), text)
+		"have played, %\"\n"), "seed")
 	assertIn(t, `    x-axis ["learn: game 67,304 of 100,000", "its shard: 2,304 of 5,000", `+
 		`"gather: game 1,320 of 2,000"]`+"\n"+`    y-axis "% played" 0 --> 100`+"\n"+
 		"    bar [100, 100, 100]\n    bar [67.3, 46.1, 66.0]\n```\n", text)
@@ -1776,7 +1749,7 @@ func TestDashboard_ARedrawKeepsTheTopLinesFresh(t *testing.T) {
 	r := newDashboardRunners(t)
 	r.bothPlaying(pyjson.New("kind", "selfplay", "games", 5000, "done", 2304, "from", 65001), nil)
 	r.gh.AddIssue(148, fakes.Issue{Title: dashboard.Title, Body: "x", User: fakes.Operator})
-	dashboardSeed(r.ctx, "state", func(s *pyjson.Object) { s.Set("dashboard", pyjson.New("issue", 148)) })
+	flowUpdate(r.ctx, func(s *pyjson.Object) { s.Set("dashboard", pyjson.New("issue", 148)) }, "state")
 	r.gh.Threads.Get(148).Set("body",
 		"date\n\n"+dashboard.ProgressStart+"\nold lines\n"+dashboard.ProgressEnd+"\n\ntop\n"+
 			dashboard.RunnersStart+"\nold runners\n"+dashboard.RunnersEnd+"\nbottom")
@@ -1936,7 +1909,7 @@ func TestDashboard_WhatEachRunnerIsForIsACommentKeptFromThePool(t *testing.T) {
 	r.gh.Patch.CreateComment = func(int, string) *pyjson.Object { panic(errors.New("posted")) }
 	dashboard.Explain(r.ctx, 148, r.ctx.Store.Load())
 	r.gh.Patch.UpdateComment, r.gh.Patch.CreateComment = nil, nil
-	restore := dashboardSet(t, &dashboard.BoxesNote, "Another note.")
+	restore := patch(t, &dashboard.BoxesNote, "Another note.")
 	dashboard.Explain(r.ctx, 148, r.ctx.Store.Load())
 	restore()
 	assertEqual(t, len(r.gh.Comments.Get(148)), 1)
@@ -1946,10 +1919,10 @@ func TestDashboard_WhatEachRunnerIsForIsACommentKeptFromThePool(t *testing.T) {
 	assertEqual(t, len(r.gh.Comments.Get(148)), 1)
 	assertNotIn(t, "Another note.", r.gh.Comments.Get(148)[0].Str("body"))
 	// A rewrite of the issue writes it, and links it in the same rewrite.
-	dashboardSeed(r.ctx, "state", func(s *pyjson.Object) {
+	flowUpdate(r.ctx, func(s *pyjson.Object) {
 		s.Set("dashboard", pyjson.New("issue", 148))
 		s.Set("runners_explained", nil)
-	})
+	}, "state")
 	r.gh.Comments.Set(148, []*pyjson.Object{}) // .clear()
 	dashboardUpdate(r.ctx)
 	comments = r.gh.Comments.Get(148)
@@ -2019,7 +1992,7 @@ func TestDashboard_TheIssueCarriesItLowAfterEverythingTheBotsDraw(t *testing.T) 
 func TestDashboard_ARedrawChangesTheRunnersSectionAlone(t *testing.T) {
 	r := newDashboardRunners(t)
 	r.gh.AddIssue(148, fakes.Issue{Title: dashboard.Title, Body: "x", User: fakes.Operator})
-	dashboardSeed(r.ctx, "state", func(s *pyjson.Object) { s.Set("dashboard", pyjson.New("issue", 148)) })
+	flowUpdate(r.ctx, func(s *pyjson.Object) { s.Set("dashboard", pyjson.New("issue", 148)) }, "state")
 	bodyOf := func() string { return r.gh.Threads.Get(148).Str("body") }
 	assertIn(t, "has no runners section", dashboard.RefreshRunners(r.ctx))
 	assertEqual(t, bodyOf(), "x") // the next rewrite draws it
@@ -2036,13 +2009,13 @@ func TestDashboard_ARedrawChangesTheRunnersSectionAlone(t *testing.T) {
 	r.gh.Threads.Get(148).Set("body", before)
 	full := py.Len(before) + py.Len(r.section()) - py.Len(dashboard.RunnersStart+"\nold runners\n"+
 		dashboard.RunnersEnd)
-	restore := dashboardSet(t, &dashboard.MaxBody, full-1)
+	restore := patch(t, &dashboard.MaxBody, full-1)
 	assertEqual(t, dashboard.RefreshRunners(r.ctx), "redrew #148's runners")
 	restore()
 	assertTrue(t, py.Len(bodyOf()) <= full-1, "the body is not shorter")
 	assertIn(t, "…and 2 more.", bodyOf())
 	r.gh.Threads.Get(148).Set("body", before)
-	restore = dashboardSet(t, &dashboard.MaxBody, py.Len(before))
+	restore = patch(t, &dashboard.MaxBody, py.Len(before))
 	assertIn(t, "would pass GitHub's limit", dashboard.RefreshRunners(r.ctx))
 	restore()
 	assertEqual(t, bodyOf(), before)
@@ -2071,12 +2044,12 @@ func TestDashboard_TheLoopRedrawsTheRunnersBetweenRewrites(t *testing.T) {
 		return "redrew #148's runners"
 	}
 
-	dashboardSet[dashboardUpdateFunc](t, &dashboard.Update, update)
-	dashboardSet(t, &dashboard.RefreshRunners, refresh)
+	patch[dashboardUpdateFunc](t, &dashboard.Update, update)
+	patch(t, &dashboard.RefreshRunners, refresh)
 	dashboardOffline(t, nil)
-	dashboardSet(t, &cli.Monotonic, func() float64 { return now })
-	dashboardSet(t, &cli.Sleep, func(s float64) { now += s })
-	out, _ := dashboardStdout(t)
+	patch(t, &cli.Monotonic, func() float64 { return now })
+	patch(t, &cli.Sleep, func(s float64) { now += s })
+	out, _ := capture(t, &cli.Stdout)
 	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 300, RunnersEvery: 120, ForSeconds: 600})
 	assertEqual(t, ticks, []tick{{"rewrite", 0.0}, {"runners", 120.0}, {"runners", 240.0},
 		{"rewrite", 300.0}, {"runners", 420.0}, {"runners", 540.0},

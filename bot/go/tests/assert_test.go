@@ -3,12 +3,18 @@
 // Python assertion raises. Python's ==, `in`, bool() and `is None` are pyEqual, pyIn, pyTruthy and
 // pyIsNone, over JSON values (internal/pyjson) and the Go values the ports hold Python's in (a set
 // is a map[T]bool, a tuple an array or a struct, None a nil or "").
+//
+// Below them, one copy each of the Python builtins and idioms the files share (setOf, sortedOf,
+// lastOf, dig, strIndex, readText, loadJSON, exists, …) and of unittest.mock's patch.
 package tests
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"maps"
 	"math"
+	"os"
 	"reflect"
 	"regexp"
 	"slices"
@@ -351,4 +357,180 @@ func strIndex(t *testing.T, s, sub string) int {
 		t.Fatalf("ValueError: substring not found: %q in:\n%s", sub, showContainer(sub, s))
 	}
 	return i
+}
+
+// setOf is a set of strings, Python's {…}, as label_names returns one.
+func setOf(names ...string) map[string]bool {
+	out := map[string]bool{}
+	for _, n := range names {
+		out[n] = true
+	}
+	return out
+}
+
+// sortedOf is sorted(xs).
+func sortedOf(xs []string) []string {
+	out := slices.Clone(xs)
+	slices.Sort(out)
+	return out
+}
+
+// sortedKeys is sorted(d): a dict's or a set's keys, in order.
+func sortedKeys[V any](m map[string]V) []string {
+	out := []string{}
+	for k := range m {
+		out = append(out, k)
+	}
+	slices.Sort(out)
+	return out
+}
+
+// lastOf is xs[-1]: an IndexError (the test stops) when there is none.
+func lastOf[T any](t *testing.T, xs []T) T {
+	t.Helper()
+	if len(xs) == 0 {
+		t.Fatal("IndexError: list index out of range")
+	}
+	return xs[len(xs)-1]
+}
+
+// dig is v[k1][k2]…: a string looks up a JSON object's key, an int a list's index (a negative one
+// from the end); a missing one fails the test, as Python's KeyError or IndexError ends it.
+func dig(t *testing.T, v any, keys ...any) any {
+	t.Helper()
+	for _, k := range keys {
+		switch key := k.(type) {
+		case string:
+			o, ok := v.(*pyjson.Object)
+			if !ok || o == nil {
+				t.Fatalf("TypeError: %s is not a dict (looking up %q)", show(v), key)
+			}
+			found, ok := o.Lookup(key)
+			if !ok {
+				t.Fatalf("KeyError: %q in %s", key, show(v))
+			}
+			v = found
+		case int:
+			l, ok := v.([]any)
+			if !ok {
+				t.Fatalf("TypeError: %s is not a list (looking up %d)", show(v), key)
+			}
+			if key < 0 {
+				key += len(l)
+			}
+			if key < 0 || key >= len(l) {
+				t.Fatalf("IndexError: %d in %s", k, show(v))
+			}
+			v = l[key]
+		default:
+			t.Fatalf("dig: a key is a string or an int, not %#v", k)
+		}
+	}
+	return v
+}
+
+// ptr is a pointer to v, for an argument the Python passes as a value or None.
+func ptr[T any](v T) *T { return &v }
+
+// readText is path.read_text(): the test fails when it cannot.
+func readText(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// mustReadText is path.read_text() where no test is at hand (a scripted model's handler): a
+// failure panics, as the Python's raises.
+func mustReadText(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
+}
+
+// writeText is path.write_text(text): the test fails when it cannot.
+func writeText(t *testing.T, path, text string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(text), 0o666); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// mustWriteText is path.write_text(text) where no test is at hand (a scripted model's handler): a
+// failure panics, as the Python's raises.
+func mustWriteText(path, text string) {
+	if err := os.WriteFile(path, []byte(text), 0o666); err != nil {
+		panic(err)
+	}
+}
+
+// mkdir is path.mkdir(): the test fails when it cannot, a FileExistsError among the reasons.
+func mkdir(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Mkdir(path, 0o777); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// loadsObject is json.loads(text), a JSON object.
+func loadsObject(t *testing.T, text string) *pyjson.Object {
+	t.Helper()
+	v, err := pyjson.LoadsString(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	o, ok := v.(*pyjson.Object)
+	if !ok {
+		t.Fatalf("not a JSON object: %s", text)
+	}
+	return o
+}
+
+// loadJSON is json.loads(path.read_text()), a JSON object.
+func loadJSON(t *testing.T, path string) *pyjson.Object {
+	t.Helper()
+	return loadsObject(t, readText(t, path))
+}
+
+// exists is path.exists().
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// isFile is path.is_file(): a regular file, through a symbolic link too.
+func isFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular()
+}
+
+// noSleep is `sleep=lambda _: None`.
+func noSleep(float64) {}
+
+// ---------------------------------------------------------------------------- unittest.mock's
+
+// patch is mock.patch.object(owner, name, value): *target is value until the test ends, or until
+// the restore it returns is called.
+func patch[T any](t *testing.T, target *T, value T) (restore func()) {
+	saved := *target
+	*target = value
+	done := false
+	restore = func() {
+		if !done {
+			*target, done = saved, true
+		}
+	}
+	t.Cleanup(restore)
+	return restore
+}
+
+// capture is contextlib.redirect_stdout: what is written to *stream goes to the buffer it returns
+// until the test ends, or until restore.
+func capture(t *testing.T, stream *io.Writer) (*bytes.Buffer, func()) {
+	out := &bytes.Buffer{}
+	return out, patch[io.Writer](t, stream, out)
 }

@@ -35,8 +35,8 @@ var planDraftPlan = "1. **Goal.** Rules v2.\n2. **Steps.** Edit src/game.txt; ru
 // planDraftCutOffPlanner is cut_off_planner: a planner that writes its draft, strays into a
 // tracked file, and is stopped at its cap.
 func planDraftCutOffPlanner(request *runner.RunRequest) *runner.RunResult {
-	crossWriteRaise(filepath.Join(request.Cwd, work.PlanDraftFile), planDraftDraft+"\n")
-	crossWriteRaise(filepath.Join(request.Cwd, "src", "game.txt"), "a planner's edit\n")
+	mustWriteText(filepath.Join(request.Cwd, work.PlanDraftFile), planDraftDraft+"\n")
+	mustWriteText(filepath.Join(request.Cwd, "src", "game.txt"), "a planner's edit\n")
 	r := runner.NewRunResult(false, "")
 	r.ExitCode, r.DurationS, r.Error = 1, 1200, "stopped mid-call"
 	r.Extra = pyjson.New("usage_stop", "5-hour usage is 70%, at or over its 70% cap")
@@ -57,7 +57,7 @@ func (x *planDraftTrailRunner) Run(request *runner.RunRequest) *runner.RunResult
 	if err := os.MkdirAll(filepath.Dir(request.Transcript), 0o777); err != nil {
 		panic(err)
 	}
-	crossWriteRaise(request.Transcript, "{}\n")
+	mustWriteText(request.Transcript, "{}\n")
 	return x.FakeRunner.Run(request)
 }
 
@@ -87,13 +87,13 @@ func TestPlanDraft_ACutOffPlanKeepsItsDraftAndTheNextPlannerGoesOnFromIt(t *test
 	assertIn(t, "Bash(git commit:*)", call.DisallowedTools)
 	assertIn(t, strings.TrimSpace(work.DraftAsk), call.Prompt)
 	assertIn(t, "The one file you write is your draft, `"+work.PlanDraftFile+"`", call.Prompt)
-	assertEqual(t, crossKey(t, first, "handoff", "draft"), planDraftDraft)
+	assertEqual(t, dig(t, first, "handoff", "draft"), planDraftDraft)
 	// The draft is kept for the next run, with the end of the planner's session.
 	record := crossObj(t, h.ctx.Store.Load(), "items", "12")
-	assertEqual(t, crossKey(t, record, "handoff", "kind"), "draft")
-	assertEqual(t, crossKey(t, record, "handoff", "draft"), planDraftDraft)
+	assertEqual(t, dig(t, record, "handoff", "kind"), "draft")
+	assertEqual(t, dig(t, record, "handoff", "draft"), planDraftDraft)
 	assertIn(t, "the change is in src/game.txt", crossStr(t, record, "handoff", "trail"))
-	assertIn(t, "Its draft so far is kept, and the next planning run goes on from it.", crossLast(t, h.gh.BotComments(12)))
+	assertIn(t, "Its draft so far is kept, and the next planning run goes on from it.", lastOf(t, h.gh.BotComments(12)))
 	journalText, _ := h.gh.GetFile("12.md", journal.Branch)
 	assertIn(t, "The planner's draft when it stopped", journalText)
 	assertIn(t, "Rules v2.", journalText)
@@ -105,13 +105,13 @@ func TestPlanDraft_ACutOffPlanKeepsItsDraftAndTheNextPlannerGoesOnFromIt(t *test
 	seen := map[string]string{}
 
 	finishing := func(request *runner.RunRequest) *runner.RunResult {
-		seen["draft"] = crossMustRead(filepath.Join(request.Cwd, work.PlanDraftFile))
+		seen["draft"] = mustReadText(filepath.Join(request.Cwd, work.PlanDraftFile))
 		seen["prompt"] = request.Prompt
 		return runner.NewRunResult(true, planDraftPlan)
 	}
 	planned, second := h.night(workFake(map[string]runner.Handler{"plan": finishing}))
 	assertEqual(t, []any{planned.Get("action"), second.Get("status")}, []any{"plan", "planned"})
-	assertEqual(t, crossKey(t, planned, "handoff", "kind"), "draft")
+	assertEqual(t, dig(t, planned, "handoff", "kind"), "draft")
 	assertEqual(t, strings.TrimSpace(seen["draft"]), planDraftDraft)
 	assertIn(t, "## An unfinished plan from an earlier run", seen["prompt"])
 	// The lane's weakest planner meeting the floor plans first (#695): Muse, not claude-2.
@@ -120,9 +120,9 @@ func TestPlanDraft_ACutOffPlanKeepsItsDraftAndTheNextPlannerGoesOnFromIt(t *test
 	assertIn(t, "the change is in src/game.txt", seen["prompt"])
 	// The finished plan supersedes the draft everywhere.
 	assertNotIn(t, "draft", crossObj(t, second, "handoff"))
-	assertFalse(t, crossExists(filepath.Join(h.root, "work", "item-12", work.PlanDraftFile)))
+	assertFalse(t, exists(filepath.Join(h.root, "work", "item-12", work.PlanDraftFile)))
 	record = crossObj(t, h.ctx.Store.Load(), "items", "12")
-	assertEqual(t, crossKey(t, record, "handoff", "kind"), "plan")
+	assertEqual(t, dig(t, record, "handoff", "kind"), "plan")
 	assertNotIn(t, "draft", crossObj(t, record, "handoff"))
 	assertIn(t, "Edit src/game.txt", issueplan.PlanOf(crossStr(t, h.gh.Threads.Item(12), "body")))
 }
@@ -143,8 +143,8 @@ func TestPlanDraft_ARunStoppedBeforeItStartsKeepsTheLastDraft(t *testing.T) {
 	assertEqual(t, []any{result.Get("status"), result.Get("model_calls")}, []any{"interrupted", 0})
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	handoff := crossObj(t, h.ctx.Store.Load(), "items", "12", "handoff")
-	assertEqual(t, []any{crossKey(t, handoff, "kind"), crossKey(t, handoff, "draft")}, []any{"draft", planDraftDraft})
-	assertNotIn(t, "draft so far is kept", crossLast(t, h.gh.BotComments(12)))
+	assertEqual(t, []any{dig(t, handoff, "kind"), dig(t, handoff, "draft")}, []any{"draft", planDraftDraft})
+	assertNotIn(t, "draft so far is kept", lastOf(t, h.gh.BotComments(12)))
 }
 
 // No draft yet, only the end of the session: still a planner's handoff, never one a builder is
@@ -157,10 +157,10 @@ func TestPlanDraft_APlannerCutOffBeforeAnyDraftStillHandsOnWhatItFound(t *testin
 	h.night(newPlanDraftTrailRunner(map[string]runner.Handler{
 		"plan": func(*runner.RunRequest) *runner.RunResult { return stopped }}))
 	handoff := crossObj(t, h.ctx.Store.Load(), "items", "12", "handoff")
-	assertEqual(t, crossKey(t, handoff, "kind"), "draft")
+	assertEqual(t, dig(t, handoff, "kind"), "draft")
 	assertNotIn(t, "draft", handoff)
 	assertIn(t, "the change is in src/game.txt", crossStr(t, handoff, "trail"))
-	assertIn(t, "The end of its session is kept for the next planning run.", crossLast(t, h.gh.BotComments(12)))
+	assertIn(t, "The end of its session is kept for the next planning run.", lastOf(t, h.gh.BotComments(12)))
 	seen := map[string]string{}
 
 	finishing := func(request *runner.RunRequest) *runner.RunResult {
@@ -179,7 +179,7 @@ func TestPlanDraft_AFinishedPlanHandsOnNoDraft(t *testing.T) {
 		"install", pyjson.New("run", "true", "timeout_minutes", 1))})
 
 	drafting := func(request *runner.RunRequest) *runner.RunResult {
-		crossWriteRaise(filepath.Join(request.Cwd, work.PlanDraftFile), planDraftDraft)
+		mustWriteText(filepath.Join(request.Cwd, work.PlanDraftFile), planDraftDraft)
 		return runner.NewRunResult(true, planDraftPlan)
 	}
 	p := pyjson.New("action", "plan", "number", 12, "title", "Rules v2", "branch", "bot/issue-12",
@@ -232,9 +232,9 @@ func TestPlanDraft_APlanInTheDescriptionReplacesADraft(t *testing.T) {
 	}, "state")
 	planned := plan.Make(ctx, true, nil, "auto", nil)
 	assertEqual(t, planned.Get("action"), "build")
-	assertEqual(t, crossKey(t, planned, "handoff", "kind"), "plan")
+	assertEqual(t, dig(t, planned, "handoff", "kind"), "plan")
 	assertNotIn(t, "draft", crossObj(t, planned, "handoff"))
 	assertNotIn(t, "trail", crossObj(t, planned, "handoff"))
 	assertIn(t, "Edit src/game.txt", crossStr(t, planned, "handoff", "notes"))
-	assertEqual(t, crossKey(t, planned, "handoff", "provider"), "the issue's description")
+	assertEqual(t, dig(t, planned, "handoff", "provider"), "the issue's description")
 }

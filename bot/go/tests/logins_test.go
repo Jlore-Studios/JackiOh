@@ -43,26 +43,6 @@ func loginsSeal(t *testing.T, payload *pyjson.Object, secret string) string {
 	return sealed
 }
 
-// loginsReadText is Path.read_text().
-func loginsReadText(t *testing.T, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(data)
-}
-
-// loginsJSON is json.loads(text), an object.
-func loginsJSON(t *testing.T, text string) *pyjson.Object {
-	t.Helper()
-	v, err := pyjson.LoadsString(text)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return v.(*pyjson.Object)
-}
-
 // ---------------------------------------------------------------------------- VaultTests
 
 func TestLogins_RoundTripAndRefusals(t *testing.T) {
@@ -121,7 +101,7 @@ func TestLogins_CodexTakesAuthJSONAsPastedOrBase64(t *testing.T) {
 	for _, secret := range []string{text, base64.StdEncoding.EncodeToString([]byte(text))} {
 		login := logins.Prepare(w.codex, secret, "", filepath.Join(w.home, py.SliceTo(secret, 4)))
 		auth := filepath.Join(login.Env["CODEX_HOME"], "auth.json")
-		assertEqual(t, loginsJSON(t, loginsReadText(t, auth)).Obj("tokens").Get("account_id"),
+		assertEqual(t, loadsObject(t, readText(t, auth)).Obj("tokens").Get("account_id"),
 			"acct-1234567890abcdef")
 		info, err := os.Stat(auth)
 		if err != nil {
@@ -129,7 +109,7 @@ func TestLogins_CodexTakesAuthJSONAsPastedOrBase64(t *testing.T) {
 		}
 		assertEqual(t, info.Mode().Perm(), os.FileMode(0o600))
 		assertIn(t, `cli_auth_credentials_store = "file"`,
-			loginsReadText(t, filepath.Join(filepath.Dir(auth), "config.toml")))
+			readText(t, filepath.Join(filepath.Dir(auth), "config.toml")))
 	}
 	assertRaises[*herr.LoginError](t, func() {
 		logins.Prepare(w.codex, "not json at all", "", filepath.Join(w.home, "bad"))
@@ -150,7 +130,7 @@ func TestLogins_ARotatedLoginIsSealedAndUsedNextTime(t *testing.T) {
 	assertTrue(t, vault.LooksSealed(sealed))
 	again := logins.Prepare(w.codex, secret, sealed, filepath.Join(w.home, "two"))
 	assertEqual(t, again.Source, "vault")
-	auth := loginsJSON(t, loginsReadText(t, filepath.Join(again.Env["CODEX_HOME"], "auth.json")))
+	auth := loadsObject(t, readText(t, filepath.Join(again.Env["CODEX_HOME"], "auth.json")))
 	assertEqual(t, auth.Obj("tokens").Get("refresh_token"), "ref-"+strings.Repeat("z", 40))
 	// A vault under another secret is ignored: a freshly pasted login wins.
 	other := logins.Prepare(w.codex, pyjson.Dumps(loginsCodexAuth().Set("x", 1)), sealed,

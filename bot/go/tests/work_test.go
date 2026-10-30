@@ -285,7 +285,7 @@ func TestWork_AFreshReadingWithoutHeadroomStopsABuildBeforeAnyModelWork(t *testi
 	assertIn(t, "too close to its 90% cap to start a long run (it starts under 85%)",
 		result.Str("reason"))
 	assertEqual(t, len(r.Calls), 0)
-	assertEqual(t, flowPath(result, "usage", "five_hour", "utilization"), 0.87)
+	assertEqual(t, dig(t, result, "usage", "five_hour", "utilization"), 0.87)
 }
 
 // `last_hour`: claude-8 at its 85% cap half an hour before its session resets starts its build
@@ -450,9 +450,9 @@ func TestWork_AReviewRunsAtTheSubscriptionSReviewEffort(t *testing.T) {
 	assertTrue(t, slices.Contains(r.Calls[0].AllowedTools, "Agent"), r.Calls[0].AllowedTools)
 	assertFalse(t, slices.Contains(r.Calls[1].AllowedTools, "Edit"), r.Calls[1].AllowedTools)
 	assertIn(t, "Please make the rules v2.", r.Calls[1].Prompt)
-	saved := flowLoadJSON(t, filepath.Join(w.out, "result.json"))
+	saved := loadJSON(t, filepath.Join(w.out, "result.json"))
 	assertEqual(t, saved.Get("status"), "approved")
-	assertEqual(t, flowPath(saved, "usage", "five_hour", "utilization"), 0.3)
+	assertEqual(t, dig(t, saved, "usage", "five_hour", "utilization"), 0.3)
 }
 
 func TestWork_FindingsGoToAFreshBuilderUntilApproved(t *testing.T) {
@@ -482,7 +482,7 @@ func TestWork_NeverApproved(t *testing.T) {
 	assertIn(t, "Strong final audit", result.Str("reason"))
 	assertEqual(t, len(result.List("cycles")), 3)
 	assertEqual(t, result.Get("verdict_rounds"), 3)
-	assertTrue(t, flowExists(filepath.Join(w.out, "branch.bundle")))
+	assertTrue(t, exists(filepath.Join(w.out, "branch.bundle")))
 }
 
 func TestWork_ForbiddenPathsArePutBackAndReported(t *testing.T) {
@@ -505,14 +505,14 @@ func TestWork_PlantedClaudeSettingsNeverReachTheNextCall(t *testing.T) {
 	seen := map[string]bool{}
 	planting := func(request *runner.RunRequest) *runner.RunResult {
 		os.Mkdir(filepath.Join(request.Cwd, ".claude"), 0o777)
-		flowWrite(filepath.Join(request.Cwd, ".claude", "settings.local.json"), `{"hooks": {}}`)
-		flowWrite(filepath.Join(request.Cwd, ".mcp.json"), "{}")
-		flowWrite(filepath.Join(request.Cwd, "src", "game.txt"), "v2\n")
+		mustWriteText(filepath.Join(request.Cwd, ".claude", "settings.local.json"), `{"hooks": {}}`)
+		mustWriteText(filepath.Join(request.Cwd, ".mcp.json"), "{}")
+		mustWriteText(filepath.Join(request.Cwd, "src", "game.txt"), "v2\n")
 		return runner.NewRunResult(true, workDone)
 	}
 	looking := func(request *runner.RunRequest) *runner.RunResult {
-		seen["claude"] = flowExists(filepath.Join(request.Cwd, ".claude", "settings.local.json"))
-		seen["mcp"] = flowExists(filepath.Join(request.Cwd, ".mcp.json"))
+		seen["claude"] = exists(filepath.Join(request.Cwd, ".claude", "settings.local.json"))
+		seen["mcp"] = exists(filepath.Join(request.Cwd, ".mcp.json"))
 		return runner.NewRunResult(true, workApprove)
 	}
 	r := workFake(map[string]any{"build": planting, "fix": workBuilder(map[string]any{"src/game.txt": "v3\n"}),
@@ -546,7 +546,7 @@ func TestWork_ACommitAfterTheReviewIsNotDelivered(t *testing.T) {
 	worker.ReviewFunc = func(cycle int, report *verdicts.BuildReport, results []*gates.GateResult,
 		previous []*verdicts.Finding, context string, maxCycles *int, role string) *verdicts.Review {
 		review := worker.Review(cycle, report, results, previous, context, maxCycles, role)
-		flowWrite(filepath.Join(worker.Wt.Cwd, "late.txt"), "written after the review\n")
+		mustWriteText(filepath.Join(worker.Wt.Cwd, "late.txt"), "written after the review\n")
 		fakes.Git(worker.Wt.Cwd, "add", "late.txt")
 		fakes.Git(worker.Wt.Cwd, "commit", "-q", "-m", "late")
 		return review
@@ -575,7 +575,7 @@ func TestWork_TheInstallRunsAgainWhenAManifestChanges(t *testing.T) {
 	w := newWorkWorld(t)
 	gateNames := func(result *pyjson.Object) []string {
 		names := []string{}
-		for _, g := range pyjson.Objs(flowPath(result, "cycles", 0, "gates")) {
+		for _, g := range pyjson.Objs(dig(t, result, "cycles", 0, "gates")) {
 			names = append(names, g.Str("name"))
 		}
 		return names
@@ -697,7 +697,7 @@ func TestWork_ARedCheckGoesBackToTheBuilder(t *testing.T) {
 	result := w.worker(r).Run()
 	assertEqual(t, result.Get("status"), "approved")
 	var gate *pyjson.Object
-	for _, g := range pyjson.Objs(flowPath(result, "cycles", 0, "gates")) {
+	for _, g := range pyjson.Objs(dig(t, result, "cycles", 0, "gates")) {
 		if g.Str("name") == "no broken file" {
 			gate = g
 			break
@@ -748,16 +748,16 @@ func TestWork_AnEmptyChangeIsNotApproved(t *testing.T) {
 func TestWork_TheReviewerCannotChangeTheTree(t *testing.T) {
 	w := newWorkWorld(t)
 	meddling := func(request *runner.RunRequest) *runner.RunResult {
-		flowWrite(filepath.Join(request.Cwd, "src", "game.txt"), "reviewer was here\n")
-		flowWrite(filepath.Join(request.Cwd, "new.txt"), "x\n")
+		mustWriteText(filepath.Join(request.Cwd, "src", "game.txt"), "reviewer was here\n")
+		mustWriteText(filepath.Join(request.Cwd, "new.txt"), "x\n")
 		return runner.NewRunResult(true, workApprove)
 	}
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}), "review": meddling})
 	result := w.worker(r).Run()
 	assertEqual(t, result.Get("status"), "approved")
 	dir := filepath.Join(w.root, "work", "item-12")
-	assertEqual(t, flowRead(t, filepath.Join(dir, "src", "game.txt")), "v2\n")
-	assertFalse(t, flowExists(filepath.Join(dir, "new.txt")))
+	assertEqual(t, readText(t, filepath.Join(dir, "src", "game.txt")), "v2\n")
+	assertFalse(t, exists(filepath.Join(dir, "new.txt")))
 }
 
 func TestWork_AnUnreadableReviewTwiceIsNotApproval(t *testing.T) {
@@ -775,11 +775,11 @@ func TestWork_ARevisionResolvesAConflictWithMain(t *testing.T) {
 	fakes.PushBranch(w.origin, w.root, "main", map[string]string{"src/game.txt": "rules from main\n"})
 	fakes.Git(w.clone, "fetch", "-q", "origin")
 	resolve := func(request *runner.RunRequest) *runner.RunResult {
-		text := flowRead(t, filepath.Join(request.Cwd, "src", "game.txt"))
+		text := readText(t, filepath.Join(request.Cwd, "src", "game.txt"))
 		if !strings.Contains(text, "<<<<<<<") {
 			panic(&fakes.PyError{Type: "AssertionError", Msg: text}) // the Python's assert
 		}
-		flowWrite(filepath.Join(request.Cwd, "src", "game.txt"), "rules from main and the PR\n")
+		mustWriteText(filepath.Join(request.Cwd, "src", "game.txt"), "rules from main and the PR\n")
 		return runner.NewRunResult(true, workDone)
 	}
 	r := workFake(map[string]any{"revise": resolve, "review": workReviewer(workApprove)})
@@ -802,6 +802,6 @@ func TestWork_Suggestions(t *testing.T) {
 	plan := workPlan("action", "suggest", "count", 2, "existing", "none")
 	result := w.worker(r, workWorkerOpts{Plan: plan}).Run()
 	assertEqual(t, result.Get("status"), "suggested")
-	assertEqual(t, flowPath(result, "suggestions", 0, "title"), "Add a draft mode")
+	assertEqual(t, dig(t, result, "suggestions", 0, "title"), "Add a draft mode")
 	assertFalse(t, slices.Contains(r.Calls[0].AllowedTools, "Edit"), r.Calls[0].AllowedTools)
 }

@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -34,26 +33,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
 
-// ---------------------------------------------------------------------------- small helpers
-
-// crossSet is a set of names, as label_names returns.
-func crossSet(names ...string) map[string]bool {
-	out := map[string]bool{}
-	for _, n := range names {
-		out[n] = true
-	}
-	return out
-}
-
-// crossSorted is sorted(set).
-func crossSorted(set map[string]bool) []string {
-	out := []string{}
-	for k := range set {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
-}
+// ---------------------------------------------------------------------------- the file's helpers
 
 // crossAnd is `a & b` of two sets.
 func crossAnd(a, b map[string]bool) map[string]bool {
@@ -66,45 +46,10 @@ func crossAnd(a, b map[string]bool) map[string]bool {
 	return out
 }
 
-// crossKey is v[k1][k2]...: a string indexes a JSON object, an int a list; a missing key fails
-// the test as Python's KeyError would.
-func crossKey(t *testing.T, v any, keys ...any) any {
-	t.Helper()
-	for _, k := range keys {
-		switch key := k.(type) {
-		case string:
-			o, ok := v.(*pyjson.Object)
-			if !ok {
-				t.Fatalf("crossKey: %s is not an object (looking up %q)", show(v), key)
-			}
-			found, ok := o.Lookup(key)
-			if !ok {
-				t.Fatalf("KeyError: %q in %s", key, show(v))
-			}
-			v = found
-		case int:
-			l, ok := v.([]any)
-			if !ok {
-				t.Fatalf("crossKey: %s is not a list (looking up %d)", show(v), key)
-			}
-			if key < 0 {
-				key += len(l)
-			}
-			if key < 0 || key >= len(l) {
-				t.Fatalf("IndexError: %d in %s", k, show(v))
-			}
-			v = l[key]
-		default:
-			t.Fatalf("crossKey: a key of type %T", k)
-		}
-	}
-	return v
-}
-
 // crossObj is crossKey's object.
 func crossObj(t *testing.T, v any, keys ...any) *pyjson.Object {
 	t.Helper()
-	found := crossKey(t, v, keys...)
+	found := dig(t, v, keys...)
 	o, ok := found.(*pyjson.Object)
 	if !ok {
 		t.Fatalf("crossObj: %s is not an object", show(found))
@@ -115,7 +60,7 @@ func crossObj(t *testing.T, v any, keys ...any) *pyjson.Object {
 // crossStr is crossKey's string.
 func crossStr(t *testing.T, v any, keys ...any) string {
 	t.Helper()
-	found := crossKey(t, v, keys...)
+	found := dig(t, v, keys...)
 	s, ok := found.(string)
 	if !ok {
 		t.Fatalf("crossStr: %s is not a string", show(found))
@@ -126,21 +71,12 @@ func crossStr(t *testing.T, v any, keys ...any) string {
 // crossInt is int(v[...]).
 func crossInt(t *testing.T, v any, keys ...any) int {
 	t.Helper()
-	found := crossKey(t, v, keys...)
+	found := dig(t, v, keys...)
 	n, ok := pyjson.AsInt(found)
 	if !ok {
 		t.Fatalf("crossInt: %s is not a number", show(found))
 	}
 	return n
-}
-
-// crossLast is xs[-1].
-func crossLast(t *testing.T, xs []string) string {
-	t.Helper()
-	if len(xs) == 0 {
-		t.Fatalf("IndexError: list index out of range")
-	}
-	return xs[len(xs)-1]
 }
 
 // crossMkdtemp is tempfile.mkdtemp().
@@ -152,74 +88,6 @@ func crossMkdtemp(t *testing.T) string {
 	}
 	t.Cleanup(func() { os.RemoveAll(dir) })
 	return dir
-}
-
-// crossRead is path.read_text().
-func crossRead(t *testing.T, path string) string {
-	t.Helper()
-	text, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(text)
-}
-
-// crossWrite is path.write_text(text).
-func crossWrite(t *testing.T, path, text string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte(text), 0o666); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// crossMkdir is path.mkdir().
-func crossMkdir(t *testing.T, path string) {
-	t.Helper()
-	if err := os.Mkdir(path, 0o777); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// crossMustRead is path.read_text() where a failure raises.
-func crossMustRead(path string) string {
-	text, err := os.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-	return string(text)
-}
-
-// crossWriteRaise is path.write_text(text), raising on a failure.
-func crossWriteRaise(path, text string) {
-	if err := os.WriteFile(path, []byte(text), 0o666); err != nil {
-		panic(err)
-	}
-}
-
-// crossExists is path.exists().
-func crossExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-// crossIsFile is path.is_file().
-func crossIsFile(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.Mode().IsRegular()
-}
-
-// crossLoad is json.loads(path.read_text()), a JSON object.
-func crossLoad(t *testing.T, path string) *pyjson.Object {
-	t.Helper()
-	v, err := pyjson.Loads([]byte(crossRead(t, path)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	o, ok := v.(*pyjson.Object)
-	if !ok {
-		t.Fatalf("%s holds no JSON object", path)
-	}
-	return o
 }
 
 // crossPut is `target.parent.mkdir(parents=True, exist_ok=True); target.write_text(text)`.
@@ -337,7 +205,7 @@ func crossBuildOnMedium(t *testing.T, h *flowHarness, provider string, edits map
 	for _, c := range r.Calls {
 		models[c.Model] = true
 	}
-	assertEqual(t, models, crossSet(crossMedium[provider][0]))
+	assertEqual(t, models, setOf(crossMedium[provider][0]))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
 	return pr, result
 }
@@ -347,26 +215,26 @@ func crossBuildOnMedium(t *testing.T, h *flowHarness, provider string, edits map
 func TestCross_AMediumItemWaitsForItsStrongFinal(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, result := crossBuildOnMedium(t, h, "", nil)
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	votes := crossKey(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes")
+	votes := dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes")
 	assertEqual(t, votes, pyjson.New("sha", result.Get("head"), "builder", "muse",
 		"approvals", []any{"muse"}, "rejections", []any{},
 		"tiers", pyjson.New("muse", "medium"),
 		"reviews", []any{pyjson.New("family", "muse", "tier", "medium", "run", "777")}))
 	assertIn(t, "`muse` (medium) approved it, so it waits for one strong model's final audit (Opus)",
-		crossLast(t, h.gh.BotComments(12)))
-	assertEqual(t, crossKey(t, h.ctx.Store.Load(), "providers", "muse", "spent", -1, "minutes"), 10.0)
+		lastOf(t, h.gh.BotComments(12)))
+	assertEqual(t, dig(t, h.ctx.Store.Load(), "providers", "muse", "spent", -1, "minutes"), 10.0)
 	// No strong model is free by day: no review run goes out at all.
 	planned, _ := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, planned.Get("action"), "none")
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	// With a strong seat free, Opus audits, and that ships it.
 	h.committedHours() // claude-3 works all day
 	crossNextRun(h, "778")
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), crossKey(t, planned, "seats", "review", "tier")},
+	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), dig(t, planned, "seats", "review", "tier")},
 		[]any{"review", "claude-3", "strong"})
 	assertEqual(t, []any{review.Get("status"), review.Get("verdict")}, []any{"reviewed", "approve"})
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
@@ -380,12 +248,12 @@ func TestCross_WithNoStrongSeatSetUpItWaitsForAPerson(t *testing.T) {
 		Machine: []string{"agy"}, At: testsupport.Day})
 	pr, _ := crossBuildOnMedium(t, h, "agy", nil)
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	assertIn(t, "No subscription that could give that review is set up", crossLast(t, h.gh.BotComments(12)))
+	assertIn(t, "No subscription that could give that review is set up", lastOf(t, h.gh.BotComments(12)))
 	crossNextRun(h, "778")
 	planned, _ := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, planned.Get("action"), "none")
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 }
 
 func TestCross_ADeliverJobRunAgainDoesNotCountItsReviewTwice(t *testing.T) {
@@ -396,7 +264,7 @@ func TestCross_ADeliverJobRunAgainDoesNotCountItsReviewTwice(t *testing.T) {
 		filepath.Join(h.root, "unused"), h.deliverRepo, "", nil, "")
 	d.ReviewSeat = h.cfg.Pool.Seat("agy", "")
 	votes := d.Vote(pr, crossStr(t, result, "head"), true, false, nil) // run 777 again
-	assertEqual(t, len(crossKey(t, votes, "reviews").([]any)), 1)
+	assertEqual(t, len(dig(t, votes, "reviews").([]any)), 1)
 	assertFalse(t, d.RuleMet(votes, "medium"))
 }
 
@@ -412,17 +280,17 @@ func TestCross_AnEasyItemShipsOnItsMediumAudit(t *testing.T) {
 		"self_check": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"lite", "built"})
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
-	assertIn(t, "a medium model's final audit", crossLast(t, h.gh.BotComments(12)))
+	assertIn(t, "a medium model's final audit", lastOf(t, h.gh.BotComments(12)))
 	// The Medium audit approves, and that ships the easy item.
 	crossNextRun(h, "778")
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{planned.Get("provider"), crossKey(t, planned, "seats", "review", "tier")}, []any{"agy", "medium"})
+	assertEqual(t, []any{planned.Get("provider"), dig(t, planned, "seats", "review", "tier")}, []any{"agy", "medium"})
 	assertEqual(t, review.Get("verdict"), "approve")
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
 	votes := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes")
 	got := []any{}
 	for _, r := range pyjson.Objs(votes.Get("reviews")) {
-		got = append(got, []any{crossKey(t, r, "family"), crossKey(t, r, "tier")})
+		got = append(got, []any{dig(t, r, "family"), dig(t, r, "tier")})
 	}
 	assertEqual(t, got, []any{[]any{"gemini", "medium"}})
 }
@@ -444,7 +312,7 @@ func TestCross_OneStrongReviewIsEnough(t *testing.T) {
 	assertEqual(t, got, [][2]string{{"plan", "opus"}, {"build", "sonnet"}, {"review", "opus"}})
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
-	assertEqual(t, crossKey(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes", "tiers"), pyjson.New("claude", "strong"))
+	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes", "tiers"), pyjson.New("claude", "strong"))
 }
 
 func TestCross_AReviewRunPrefersAStrongModel(t *testing.T) {
@@ -453,7 +321,7 @@ func TestCross_AReviewRunPrefersAStrongModel(t *testing.T) {
 	h.committedHours() // claude-3 works all day: a strong model is free
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"review", "claude-3"})
-	assertEqual(t, crossKey(t, planned, "seats", "review", "tier"), "strong")
+	assertEqual(t, dig(t, planned, "seats", "review", "tier"), "strong")
 	assertEqual(t, review.Get("verdict"), "approve")
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge) // one strong approval is enough
 }
@@ -477,7 +345,7 @@ func TestCross_APauseDoesNotSpendAVerdictRound(t *testing.T) {
 		"review": {workReviewer(workChanges("No.")), workReviewer(workChanges("No.")), limited}}))
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"muse", "interrupted"})
 	record := crossObj(t, h.ctx.Store.Load(), "items", "12")
-	assertEqual(t, []any{crossKey(t, record, "verdict_rounds"), crossKey(t, record, "round_tier")}, []any{2, "medium"})
+	assertEqual(t, []any{dig(t, record, "verdict_rounds"), dig(t, record, "round_tier")}, []any{2, "medium"})
 	// One round left in the lane: the pause parked Muse, so agy (same tier) picks it up
 	// and one more rejection ends the lane phase.
 	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
@@ -488,9 +356,9 @@ func TestCross_APauseDoesNotSpendAVerdictRound(t *testing.T) {
 	assertEqual(t, crossCount(workRoles(r), "review"), 1)
 	assertIn(t, "Strong final audit", crossStr(t, result, "reason"))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	record = crossObj(t, h.ctx.Store.Load(), "items", "12")
-	assertEqual(t, []any{crossKey(t, record, "verdict_rounds"), crossKey(t, record, "round_tier")}, []any{3, "medium"})
+	assertEqual(t, []any{dig(t, record, "verdict_rounds"), dig(t, record, "round_tier")}, []any{3, "medium"})
 }
 
 // A Strong audit's rejection is answered at its own tier (#725): Opus fixes the medium item in
@@ -501,7 +369,7 @@ func TestCross_AStrongReviseAfterRejectionShips(t *testing.T) {
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	h.night(workFake(map[string]runner.Handler{"review": workReviewer(workChanges("It skips the replay check."))}))
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
-	assertEqual(t, crossKey(t, record, "audit_tier"), "strong")
+	assertEqual(t, dig(t, record, "audit_tier"), "strong")
 	r := workFake(map[string]runner.Handler{"revise": workBuilder(map[string]string{"src/game.txt": "rules v2 + replay\n"}),
 		"review": workReviewer(workApprove)})
 	planned, result := h.night(r)
@@ -518,8 +386,8 @@ func TestCross_FindingsSendItBackAndItStopsAfterThree(t *testing.T) {
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	h.night(workFake(map[string]runner.Handler{"review": workReviewer(workChanges("It skips the replay check."))}))
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelRevise, "difficulty:medium"))
-	assertEqual(t, []any{crossKey(t, record, "source"), crossKey(t, record, "cross_rounds")}, []any{"cross-review", 1})
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelRevise, "difficulty:medium"))
+	assertEqual(t, []any{dig(t, record, "source"), dig(t, record, "cross_rounds")}, []any{"cross-review", 1})
 	// The revision answers the Strong audit, so it stays with a Strong seat (#725).
 	// Two failed revisions are strikes two and three (each failed for the item's own sake),
 	// so the third steps it up instead of blocking it for a person.
@@ -543,12 +411,12 @@ func TestCross_FindingsSendItBackAndItStopsAfterThree(t *testing.T) {
 	assertEqual(t, h.gh.Threads.Item(pr).Get("state"), "closed")
 	assertIn(t, "difficulty:hard", h.gh.LabelNames(12))
 	assertIn(t, config.LabelBuild, h.gh.LabelNames(12))
-	said := crossLast(t, h.gh.BotComments(12))
+	said := lastOf(t, h.gh.BotComments(12))
 	assertIn(t, "This failed 3 times at `difficulty:medium`", said)
 	assertIn(t, fmt.Sprintf("#%d is closed and #12 is queued to build again from `main`", pr), said)
-	assertIn(t, "Closed to build #12 again from `main`", crossLast(t, h.gh.BotComments(pr)))
+	assertIn(t, "Closed to build #12 again from `main`", lastOf(t, h.gh.BotComments(pr)))
 	record = crossObj(t, h.ctx.Store.Load(), "items", "12")
-	assertEqual(t, []any{crossKey(t, record, "previous_pr"), crossKey(t, record, "strikes")}, []any{pr, 0})
+	assertEqual(t, []any{dig(t, record, "previous_pr"), dig(t, record, "strikes")}, []any{pr, 0})
 	assertTrue(t, strings.HasPrefix(crossStr(t, record, "previous_branch"), "bot/old/issue-12-"))
 }
 
@@ -562,9 +430,9 @@ func TestCross_AReviewOfAHeadThatMovedDoesNotCount(t *testing.T) {
 		return workReviewer(workApprove)(request)
 	}
 	h.night(workFake(map[string]runner.Handler{"review": moved}))
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	assertIn(t, "does not count", crossLast(t, h.gh.BotComments(pr)))
+	assertIn(t, "does not count", lastOf(t, h.gh.BotComments(pr)))
 }
 
 func TestCross_AHardItemIsPlannedAndBuiltByOpus(t *testing.T) {
@@ -579,11 +447,11 @@ func TestCross_AHardItemIsPlannedAndBuiltByOpus(t *testing.T) {
 	for _, c := range r.Calls {
 		models[c.Model] = true
 	}
-	assertEqual(t, models, crossSet("opus"))
+	assertEqual(t, models, setOf("opus"))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, "difficulty:hard"))
-	assertEqual(t, crossKey(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "difficulty"), "hard")
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, "difficulty:hard"))
+	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "difficulty"), "hard")
 }
 
 // ---------------------------------------------------------------------------- HandoffTests
@@ -605,8 +473,8 @@ func TestCross_TheNextAgentGetsTheNotesAndTheBranch(t *testing.T) {
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"muse", "interrupted"})
 	record := crossObj(t, h.ctx.Store.Load(), "items", "12")
 	assertIn(t, "next: the Coin", crossStr(t, record, "handoff", "notes"))
-	assertEqual(t, crossKey(t, record, "handoff", "provider"), "muse")
-	assertTrue(t, pyjson.Truthy(crossKey(t, record, "planned_at"))) // planned in that run: not planned again
+	assertEqual(t, dig(t, record, "handoff", "provider"), "muse")
+	assertTrue(t, pyjson.Truthy(dig(t, record, "planned_at"))) // planned in that run: not planned again
 	// The notes never reach the branch.
 	assertNotIn(t, work.NotesFile, fakes.Git(h.origin, "ls-tree", "-r", "--name-only", crossStr(t, result, "head")))
 	// Muse is parked until its reset, so the lane's tier order picks agy (#725: the
@@ -630,21 +498,21 @@ func TestCross_DeliverKeepsASealedLoginAndRefusesAnythingElse(t *testing.T) {
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	assertEqual(t, planned.Get("provider"), "muse")
 	out := filepath.Join(h.root, "out-vault")
-	crossMkdir(t, out)
-	crossWrite(t, filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New("status", "failed", "reason", "boom")))
+	mkdir(t, out)
+	writeText(t, filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New("status", "failed", "reason", "boom")))
 	sealed, err := vault.Seal(pyjson.New("provider", "muse", "files", pyjson.New("auth.json", "{}")), "the-secret")
 	if err != nil {
 		t.Fatal(err)
 	}
-	crossWrite(t, filepath.Join(out, "vault.enc"), sealed)
+	writeText(t, filepath.Join(out, "vault.enc"), sealed)
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	text, _ := h.gh.GetFile("vault/muse.enc", "bot-state")
 	assertEqual(t, strings.TrimSpace(text), sealed)
 	// The next plan hands it to the model job, which alone can open it.
 	planned = plan.Make(h.ctx, false, nil, "auto", nil)
 	assertEqual(t, strings.TrimSpace(crossStr(t, planned, "vault")), sealed)
-	crossWrite(t, filepath.Join(out, "vault.enc"), "not a vault")
-	log := crossKey(t, deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run(), "log")
+	writeText(t, filepath.Join(out, "vault.enc"), "not a vault")
+	log := dig(t, deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run(), "log")
 	assertIn(t, "ignored a vault that is not sealed", log)
 }
 
@@ -655,7 +523,7 @@ func TestCross_DeliverKeepsASealedLoginAndRefusesAnythingElse(t *testing.T) {
 func crossResolve(extra map[string]string) runner.Handler {
 	return func(request *runner.RunRequest) *runner.RunResult {
 		target := filepath.Join(request.Cwd, "src", "game.txt")
-		text := crossMustRead(target)
+		text := mustReadText(target)
 		if !strings.Contains(text, "<<<<<<<") {
 			panic(&fakes.PyError{Type: "AssertionError", Msg: text})
 		}
@@ -685,12 +553,12 @@ func crossClearedPR(t *testing.T, h *flowHarness, edits, main map[string]string)
 	crossNextRun(h, "778")
 	testsupport.ClockOf(h.ctx).At = testsupport.Night
 	planned, _ := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{planned.Get("provider"), crossKey(t, planned, "seats", "review", "tier")},
+	assertEqual(t, []any{planned.Get("provider"), dig(t, planned, "seats", "review", "tier")},
 		[]any{"claude-3", "strong"})
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
-	assertEqual(t, crossKey(t, record, "cleared", "sha"), built.Get("head"))
-	assertEqual(t, crossKey(t, record, "cleared", "by"), "`muse` (medium), `claude` (strong)")
+	assertEqual(t, dig(t, record, "cleared", "sha"), built.Get("head"))
+	assertEqual(t, dig(t, record, "cleared", "by"), "`muse` (medium), `claude` (strong)")
 	crossConflicted(h, pr, main)
 	crossNextRun(h, "779")
 	return pr, crossStr(t, built, "head")
@@ -710,15 +578,15 @@ func TestCross_AConflictTheHarnessResolvesCarriesWithNoBuilder(t *testing.T) {
 	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
 	assertEqual(t, workRoles(r), []string{"review"})
 	assertIn(t, "the harness resolved `spec/INDEX.md` itself (took `main`'s version)", r.Calls[0].Prompt)
-	assertEqual(t, crossKey(t, result, "cycles", 0, "builder", "role"), "merge")
+	assertEqual(t, dig(t, result, "cycles", 0, "builder", "role"), "merge")
 	// Delivered: auto-merge back on at the merged head, the clearance carried over it.
 	assertEqual(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], result.Get("head"))
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	carried := crossObj(t, record, "votes", "carried")
-	assertEqual(t, []any{crossKey(t, carried, "from"), crossKey(t, carried, "conflicts")},
+	assertEqual(t, []any{dig(t, carried, "from"), dig(t, carried, "conflicts")},
 		[]any{clearedSHA, []any{"spec/INDEX.md"}})
 	assertIn(t, "This revision only merged `main` and resolved the conflicts in `spec/INDEX.md`, and its own "+
-		"reviewer approved that, so the clearance carries over", crossLast(t, h.gh.BotComments(pr)))
+		"reviewer approved that, so the clearance carries over", lastOf(t, h.gh.BotComments(pr)))
 	check := filepath.Join(h.root, "check-merge")
 	fakes.Git(h.root, "clone", "-q", h.origin, check)
 	assertEqual(t, fakes.Git(check, "show", "origin/bot/issue-12:spec/INDEX.md"), "| R13 |")
@@ -732,7 +600,7 @@ func TestCross_AConflictOnAClearedChangeShipsOnItsOwnReview(t *testing.T) {
 	planned, result := h.night(r)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("source"), planned.Get("provider")},
 		[]any{"revise", "conflict", "muse"})
-	assertEqual(t, []any{result.Get("status"), crossKey(t, planned, "cleared", "sha")}, []any{"approved", clearedSHA})
+	assertEqual(t, []any{result.Get("status"), dig(t, planned, "cleared", "sha")}, []any{"approved", clearedSHA})
 	comments := h.gh.BotComments(pr)
 	assertIn(t, "it merges without another review run", comments[len(comments)-2])
 	assertEqual(t, workRoles(r), []string{"revise", "review"})
@@ -740,23 +608,23 @@ func TestCross_AConflictOnAClearedChangeShipsOnItsOwnReview(t *testing.T) {
 	assertIn(t, "yours is the only review of the resolution", r.Calls[1].Prompt)
 	assertIn(t, "resolved the conflicts in `src/game.txt`", r.Calls[1].Prompt)
 	// No review run: auto-merge is back on, pinned to the resolved head.
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, "difficulty:medium"))
 	assertEqual(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], result.Get("head"))
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	families := []any{}
-	for _, r := range pyjson.Objs(crossKey(t, record, "votes", "reviews")) {
-		families = append(families, crossKey(t, r, "family"))
+	for _, r := range pyjson.Objs(dig(t, record, "votes", "reviews")) {
+		families = append(families, dig(t, r, "family"))
 	}
 	assertEqual(t, families, []any{"muse"})
 	carried := crossObj(t, record, "votes", "carried")
-	assertEqual(t, []any{crossKey(t, carried, "from"), crossKey(t, carried, "conflicts")},
+	assertEqual(t, []any{dig(t, carried, "from"), dig(t, carried, "conflicts")},
 		[]any{clearedSHA, []any{"src/game.txt"}})
 	// The resolved head is cleared in turn, so the next conflict carries again.
-	assertEqual(t, []any{crossKey(t, record, "cleared", "sha"), crossKey(t, record, "cleared", "carried_from")},
+	assertEqual(t, []any{dig(t, record, "cleared", "sha"), dig(t, record, "cleared", "carried_from")},
 		[]any{result.Get("head"), clearedSHA})
-	assertEqual(t, []any{crossKey(t, record, "cleared", "by"), crossKey(t, record, "cleared", "resolved_by")},
+	assertEqual(t, []any{dig(t, record, "cleared", "by"), dig(t, record, "cleared", "resolved_by")},
 		[]any{"`muse` (medium), `claude` (strong)", "`muse` (medium)"})
-	comment := crossLast(t, h.gh.BotComments(pr))
+	comment := lastOf(t, h.gh.BotComments(pr))
 	assertIn(t, "The reviews had cleared this change at `"+clearedSHA[:12]+"` (`muse` (medium), `claude` "+
 		"(strong)). This revision only merged `main` and resolved the conflicts in `src/game.txt`, and its own "+
 		"reviewer approved that, so the clearance carries over and no review run is needed. Auto-merge is on",
@@ -770,14 +638,14 @@ func TestCross_AResolutionThatChangesMoreGoesBackToReview(t *testing.T) {
 		"revise": crossResolve(map[string]string{"src/extra.txt": "more\n"}),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, result.Get("status"), "approved")
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	assertNotIn(t, "carried", crossObj(t, record, "votes"))
-	assertEqual(t, crossKey(t, record, "cleared", "sha"), clearedSHA)
+	assertEqual(t, dig(t, record, "cleared", "sha"), clearedSHA)
 	assertIn(t, "but that does not carry over: it changed more than the conflicts (`src/extra.txt`). `muse` "+
 		"(medium) approved it, so it waits for one strong model's final audit (Opus)",
-		crossLast(t, h.gh.BotComments(pr)))
+		lastOf(t, h.gh.BotComments(pr)))
 }
 
 func TestCross_ABranchThatMovedAfterTheReviewsDoesNotCarry(t *testing.T) {
@@ -789,9 +657,9 @@ func TestCross_ABranchThatMovedAfterTheReviewsDoesNotCarry(t *testing.T) {
 	h.night(r)
 	assertNotIn(t, "change nothing else", r.Calls[0].Prompt)
 	assertNotIn(t, "yours is the only review", r.Calls[1].Prompt)
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	assertIn(t, "but that does not carry over: the branch had moved on from the commit they cleared",
-		crossLast(t, h.gh.BotComments(pr)))
+		lastOf(t, h.gh.BotComments(pr)))
 }
 
 // One medium approval, short of the Strong one: the change was never cleared, so its resolution
@@ -807,9 +675,9 @@ func TestCross_AChangeShortOfTheRuleHasNothingToCarry(t *testing.T) {
 	assertEqual(t, []any{planned.Get("source"), result.Get("status")}, []any{"conflict", "approved"})
 	assertNotIn(t, "cleared", planned)
 	assertNotIn(t, "yours is the only review", r.Calls[1].Prompt)
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	assertNotIn(t, "cleared this change", crossLast(t, h.gh.BotComments(pr)))
+	assertNotIn(t, "cleared this change", lastOf(t, h.gh.BotComments(pr)))
 }
 
 // The weak one takes an easy revision first, but never a conflict (#317 part 2): nothing reviews
@@ -829,6 +697,6 @@ func TestCross_AConflictRevisionGoesToABuilderThatReviewsInItsOwnRun(t *testing.
 	assertEqual(t, plan.Peek_(ctx, false, nil, "auto").Provider, "agy")
 	update(pyjson.New("cleared", pyjson.New("sha", "abc", "by", "`claude` (strong)")))
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	assertEqual(t, []any{planned.Get("provider"), crossKey(t, planned, "cleared", "sha")}, []any{"agy", "abc"})
-	assertIn(t, "it merges without another review run", crossLast(t, gh.BotComments(9)))
+	assertEqual(t, []any{planned.Get("provider"), dig(t, planned, "cleared", "sha")}, []any{"agy", "abc"})
+	assertIn(t, "it merges without another review run", lastOf(t, gh.BotComments(9)))
 }

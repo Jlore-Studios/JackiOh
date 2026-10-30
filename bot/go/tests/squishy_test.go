@@ -102,7 +102,7 @@ func TestSquishy_SquishysConfigSaysWhoItIs(t *testing.T) {
 }
 
 func TestSquishy_SquishysSubscriptionIsItsOwnOnGithubsRunners(t *testing.T) {
-	raw := basicsLoadObject(t, basicsReadFile(t, filepath.Join(config.RepoRoot, ".squishy", "providers.json")))
+	raw := loadsObject(t, readText(t, filepath.Join(config.RepoRoot, ".squishy", "providers.json")))
 	pool := providers.Parse(raw)
 	assertEqual(t, pool.Providers.Keys(), []string{"claude-squishy"})
 	provider := pool.Get("claude-squishy")
@@ -121,7 +121,7 @@ func TestSquishy_SquishysSubscriptionIsItsOwnOnGithubsRunners(t *testing.T) {
 
 func TestSquishy_BothConfigsKeepEachOthersSwitchesOutOfReach(t *testing.T) {
 	for _, home := range []string{".harness", ".squishy"} {
-		raw := basicsLoadObject(t, basicsReadFile(t, filepath.Join(config.RepoRoot, home, "config.json")))
+		raw := loadsObject(t, readText(t, filepath.Join(config.RepoRoot, home, "config.json")))
 		for _, path := range []string{".github/", ".harness/", ".squishy/", "bot/", ".claude/"} {
 			assertIn(t, path, pyjson.Strings(raw.Get("forbidden_paths")), home)
 		}
@@ -465,7 +465,7 @@ func TestSquishy_ClaudeRunsOnGithubsRunnersWithOnlyItsOwnSecret(t *testing.T) {
 	for _, m := range regexp.MustCompile(`\$\{\{\s*(secrets[^}]*?)\s*\}\}`).FindAllStringSubmatch(work, -1) {
 		secrets[m[1]] = true
 	}
-	assertEqual(t, secrets, basicsSet("secrets[needs.plan.outputs.secret]"))
+	assertEqual(t, secrets, setOf("secrets[needs.plan.outputs.secret]"))
 	block := regexp.MustCompile(`permissions:\n((?:\s{6}.*\n)+)`).FindStringSubmatch(work)
 	if block == nil {
 		t.Fatal("no permissions block in the work job")
@@ -536,5 +536,5 @@ func TestSquishy_FullsendIsInTheRepository(t *testing.T) {
 		info, err := os.Stat(filepath.Join(skill, name))
 		assertTrue(t, err == nil && info.Mode().IsRegular(), name)
 	}
-	assertIn(t, "v2.2.0", basicsReadFile(t, filepath.Join(skill, "SOURCE.md")))
+	assertIn(t, "v2.2.0", readText(t, filepath.Join(skill, "SOURCE.md")))
 }

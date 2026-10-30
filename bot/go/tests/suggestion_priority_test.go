@@ -71,13 +71,13 @@ func TestSuggestionPriority_EachClassOpensWithItsPriority(t *testing.T) {
 		labels[title] = flowThreadLabels(thread)
 	}
 	assertEqual(t, labels, map[string]map[string]bool{
-		"Fuzz":     flowSet(config.LabelSuggestion, "priority:low"),
-		"Security": flowSet(config.LabelSuggestion, "priority:medium"),
-		"Data":     flowSet(config.LabelSuggestion, "priority:high"),
-		"Feature":  flowSet(config.LabelSuggestion),
-		"Unknown":  flowSet(config.LabelSuggestion),
-		"None":     flowSet(config.LabelSuggestion),
-		"Odd":      flowSet(config.LabelSuggestion),
+		"Fuzz":     setOf(config.LabelSuggestion, "priority:low"),
+		"Security": setOf(config.LabelSuggestion, "priority:medium"),
+		"Data":     setOf(config.LabelSuggestion, "priority:high"),
+		"Feature":  setOf(config.LabelSuggestion),
+		"Unknown":  setOf(config.LabelSuggestion),
+		"None":     setOf(config.LabelSuggestion),
+		"Odd":      setOf(config.LabelSuggestion),
 	})
 	if made["Fuzz"] == nil || made["Feature"] == nil {
 		t.Fatal("KeyError: the survey opened no Fuzz or Feature")
@@ -101,15 +101,15 @@ func TestSuggestionPriority_TheConfigAloneSetsThePriority(t *testing.T) {
 	if made["Fuzz"] == nil || made["Data"] == nil {
 		t.Fatal("KeyError: the survey opened no Fuzz or Data")
 	}
-	assertEqual(t, flowThreadLabels(made["Fuzz"]), flowSet(config.LabelSuggestion, "priority:high"))
-	assertEqual(t, flowThreadLabels(made["Data"]), flowSet(config.LabelSuggestion))
+	assertEqual(t, flowThreadLabels(made["Fuzz"]), setOf(config.LabelSuggestion, "priority:high"))
+	assertEqual(t, flowThreadLabels(made["Data"]), setOf(config.LabelSuggestion))
 }
 
 func TestSuggestionPriority_ApprovingKeepsThePriority(t *testing.T) {
 	h := newFlowHarness(t)
 	h.gh.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion, "priority:low")})
 	flowAsk(h, 20, "approve", 41)
-	assertEqual(t, h.gh.LabelNames(20), flowSet(config.LabelBuild, "priority:low"))
+	assertEqual(t, h.gh.LabelNames(20), setOf(config.LabelBuild, "priority:low"))
 }
 
 // ---------------------------------------------------------------------------- ConfigTests

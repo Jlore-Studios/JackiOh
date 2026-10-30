@@ -89,7 +89,7 @@ func switchResult(t *testing.T, out string) *pyjson.Object {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return difficultyLoads(t, text)
+	return loadsObject(t, string(text))
 }
 
 // ---------------------------------------------------------------------------- ReportTests

@@ -124,16 +124,16 @@ func humanHandedToPeople(t *testing.T, h *flowHarness, number int) string {
 			both[n] = true
 		}
 	}
-	assertEqual(t, both, eventsSet(), labels)
+	assertEqual(t, both, setOf(), labels)
 	assigned := map[string]bool{}
-	for _, a := range pyjson.List(eventsDig(t, h.gh.Threads.Item(number), "assignees")) {
-		assigned[pyjson.Str(eventsDig(t, a, "login"))] = true
+	for _, a := range pyjson.List(dig(t, h.gh.Threads.Item(number), "assignees")) {
+		assigned[pyjson.Str(dig(t, a, "login"))] = true
 	}
-	assertEqual(t, assigned, eventsSet("MaxGoetzmann", "jgoetzmann"))
-	said := eventsLast(t, h.gh.BotComments(number))
+	assertEqual(t, assigned, setOf("MaxGoetzmann", "jgoetzmann"))
+	said := lastOf(t, h.gh.BotComments(number))
 	assertTrue(t, strings.HasPrefix(said, humanPeople), said)
 	assertIn(t, "So it is yours now: I took my labels off, unassigned myself", said)
-	assertTrue(t, eventsDig(t, h.ctx.Store.Load(), "items", fmt.Sprint(number), "question"))
+	assertTrue(t, dig(t, h.ctx.Store.Load(), "items", fmt.Sprint(number), "question"))
 	return said
 }
 
@@ -143,12 +143,12 @@ func TestHuman_APlanThatTouchesOnlyBotFilesIsHandedToPeopleUnbuilt(t *testing.T)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Bring back suggestions."})
 	h.gh.AddAssignees(12, []string{"jgoetzmann-bot"}) // #760 was assigned to the bot
 	planned, result := h.night(ratingPlanner(ratingRatedPlan("medium", humanBotFiles, "")))
-	assertEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, result, "status")}, []any{"plan", "blocked"})
-	assertTrue(t, eventsDig(t, result, "human_required"))
+	assertEqual(t, []any{dig(t, planned, "action"), dig(t, result, "status")}, []any{"plan", "blocked"})
+	assertTrue(t, dig(t, result, "human_required"))
 	said := humanHandedToPeople(t, h, 12)
 	assertIn(t, "`bot/harness/events.py`", said)
 	assertIn(t, "the plan is in this issue's description", said)
-	assertIn(t, "Files to touch", issueplan.PlanOf(pyjson.Str(eventsDig(t, h.gh.Threads.Item(12), "body"))))
+	assertIn(t, "Files to touch", issueplan.PlanOf(pyjson.Str(dig(t, h.gh.Threads.Item(12), "body"))))
 	assertIn(t, "bot:planned", h.gh.LabelNames(12)) // what it has stays
 	assertNotEqual(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("number"), 12)
 }
@@ -160,7 +160,7 @@ func TestHuman_APlannerThatSaysOnlyAPersonCanDoItIsBelieved(t *testing.T) {
 		"## 1. Goal", "**Human required:** create `RENDER_DEPLOY_HOOK_URL` in GitHub's "+
 			"secrets.\n\n## 1. Goal")
 	_, result := h.night(ratingPlanner(text))
-	assertEqual(t, eventsDig(t, result, "status"), "blocked")
+	assertEqual(t, dig(t, result, "status"), "blocked")
 	assertIn(t, "create `RENDER_DEPLOY_HOOK_URL` in GitHub's secrets.",
 		humanHandedToPeople(t, h, 12))
 }
@@ -175,12 +175,12 @@ func TestHuman_ABuilderThatSaysOnlyAPersonCanDoItHandsItOn(t *testing.T) {
 		"build": workBuilder(map[string]string{}, humanBlocked("Set `VITE_SUPABASE_URL` in Vercel's project settings.",
 			true)),
 		"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "human_required")}, []any{"blocked", true})
+	assertEqual(t, []any{dig(t, result, "status"), dig(t, result, "human_required")}, []any{"blocked", true})
 	assertIn(t, "Set `VITE_SUPABASE_URL` in Vercel's project settings.",
 		humanHandedToPeople(t, h, 12))
 	entry := pyjson.List(config.Labels.Get(config.LabelHumanRequired))
 	color, description := entry[0], entry[1]
-	assertEqual(t, eventsDig(t, h.gh.Labels, config.LabelHumanRequired),
+	assertEqual(t, dig(t, h.gh.Labels, config.LabelHumanRequired),
 		pyjson.New("name", config.LabelHumanRequired, "color", color,
 			"description", description))
 }
@@ -191,7 +191,7 @@ func TestHuman_ABuildWhoseWholeChangeThePathGuardPutBackHandsItOn(t *testing.T) 
 	_, result := h.night(workFake(map[string]runner.Handler{
 		"build":  workBuilder(map[string]string{"bot/harness/new.py": "x = 1\n"}),
 		"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "human_required")}, []any{"blocked", true})
+	assertEqual(t, []any{dig(t, result, "status"), dig(t, result, "human_required")}, []any{"blocked", true})
 	assertIn(t, "is in paths the bot may not change", humanHandedToPeople(t, h, 12))
 }
 
@@ -204,7 +204,7 @@ func TestHuman_AQuestionAPersonCanAnswerIsStillOnlyAQuestion(t *testing.T) {
 	labels := h.gh.LabelNames(12)
 	assertIn(t, config.LabelBlocked, labels)
 	assertNotIn(t, config.LabelHumanRequired, labels)
-	said := eventsLast(t, h.gh.BotComments(12))
+	said := lastOf(t, h.gh.BotComments(12))
 	assertTrue(t, strings.HasPrefix(said, "I need a decision before I can build this."))
 	assertNotIn(t, humanPeople, said)
 }
@@ -222,9 +222,9 @@ func TestHuman_ARevisionOnlyAPersonCanMakeHandsThePullRequestOn(t *testing.T) {
 		"revise": workBuilder(map[string]string{}, humanBlocked("Add a job to `.github/workflows/ci.yml`.",
 			true)),
 		"review": workReviewer(workApprove)}))
-	assertEqual(t, eventsDig(t, result, "status"), "blocked")
-	assertEqual(t, h.gh.LabelNames(40), eventsSet(config.LabelPR, config.LabelHumanRequired)) // `bot:pr` stays
-	said := eventsLast(t, h.gh.BotComments(40))
+	assertEqual(t, dig(t, result, "status"), "blocked")
+	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelHumanRequired)) // `bot:pr` stays
+	said := lastOf(t, h.gh.BotComments(40))
 	assertTrue(t, strings.HasPrefix(said, humanPeople+" this needs a person: I cannot revise this"))
 	assertIn(t, "`/harness revise <notes>`", said)
 }
@@ -233,7 +233,7 @@ func TestHuman_TheBotLeavesItAloneUntilTheLabelComesOff(t *testing.T) {
 	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelHumanRequired}})
 	flowAsk(h, 12, "@jgoetzmann-bot exception for this issue", 51)
-	assertIn(t, "#12 is labelled `"+config.LabelHumanRequired+"`", eventsLast(t, h.gh.BotComments(12)))
+	assertIn(t, "#12 is labelled `"+config.LabelHumanRequired+"`", lastOf(t, h.gh.BotComments(12)))
 	assertNotIn(t, config.LabelBuild, h.gh.LabelNames(12))
 	// A queue label put on by hand is not picked up while it is on.
 	h.gh.AddLabels(12, []string{config.LabelBuild})
@@ -243,8 +243,8 @@ func TestHuman_TheBotLeavesItAloneUntilTheLabelComesOff(t *testing.T) {
 	// A person did their part and took it off: the next request queues it.
 	h.gh.RemoveLabel(12, config.LabelHumanRequired)
 	flowAsk(h, 12, "/harness build", 52)
-	assertIn(t, "Queued #12", eventsLast(t, h.gh.BotComments(12)))
-	assertEqual(t, eventsDig(t, plan.Make(h.ctx, false, nil, "auto", nil), "number"), 12)
+	assertIn(t, "Queued #12", lastOf(t, h.gh.BotComments(12)))
+	assertEqual(t, dig(t, plan.Make(h.ctx, false, nil, "auto", nil), "number"), 12)
 }
 
 func TestHuman_APersonsHumanRequiredHandsTheIssueToPeopleAsHumanDoes(t *testing.T) {

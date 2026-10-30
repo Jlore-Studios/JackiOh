@@ -1,8 +1,7 @@
 // Events: comment commands, labels, assignment, reviews, CI results, closed pull requests.
 //
 // bot/tests/test_events.py. It also holds the small helpers the seven files ported with it
-// (events, sweep, rating, rebuild, suspend, hardening, human) share, a KeyError-checked walk into
-// JSON among them.
+// (events, sweep, rating, rebuild, suspend, hardening, human) share.
 package tests
 
 import (
@@ -25,50 +24,6 @@ import (
 
 // ---------------------------------------------------------------------------- shared helpers
 
-// eventsDig is `v[k1][k2]…` on JSON objects: a missing key fails the test, as Python's KeyError
-// errors it.
-func eventsDig(t *testing.T, v any, keys ...string) any {
-	t.Helper()
-	for _, k := range keys {
-		o, ok := v.(*pyjson.Object)
-		if !ok || o == nil {
-			t.Fatalf("eventsDig: %s is not a dict (looking up %q)", show(v), k)
-		}
-		next, found := o.Lookup(k)
-		if !found {
-			t.Fatalf("KeyError: %q", k)
-		}
-		v = next
-	}
-	return v
-}
-
-// eventsLast is `xs[-1]`: an empty list fails the test, as Python's IndexError errors it.
-func eventsLast[T any](t *testing.T, xs []T) T {
-	t.Helper()
-	if len(xs) == 0 {
-		t.Fatalf("IndexError: list index out of range")
-	}
-	return xs[len(xs)-1]
-}
-
-// eventsSet is a Python set of strings, as FakeGitHub.LabelNames returns one.
-func eventsSet(names ...string) map[string]bool {
-	out := map[string]bool{}
-	for _, n := range names {
-		out[n] = true
-	}
-	return out
-}
-
-// eventsUpdate is `ctx.store.update(lambda s: state_item(s, number).update(**fields))`.
-func eventsUpdateItem(ctx *hctx.Context, number int, kv ...any) {
-	ctx.Store.Update(func(s *pyjson.Object) any {
-		state.Item(s, number).Update(pyjson.New(kv...))
-		return nil
-	}, "state")
-}
-
 // eventsUpdateState is `ctx.store.update(lambda s: s.update(**fields))`.
 func eventsUpdateState(ctx *hctx.Context, kv ...any) {
 	ctx.Store.Update(func(s *pyjson.Object) any {
@@ -85,9 +40,6 @@ func eventsLabels(names ...string) []any {
 	}
 	return out
 }
-
-// eventsStr is a pointer to a string, for testsupport.Ctx's TrustText.
-func eventsStr(s string) *string { return &s }
 
 // ---------------------------------------------------------------------------- test_events.py
 
@@ -136,7 +88,7 @@ type eventsComments struct {
 func newEventsComments(t *testing.T) *eventsComments {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(5, fakes.Issue{Title: "Make the Coin shiny"})
-	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: eventsStr(eventsTrust)})
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: ptr(eventsTrust)})
 	return &eventsComments{t: t, gh: gh, ctx: ctx}
 }
 
@@ -146,7 +98,7 @@ func (w *eventsComments) send(body string, opts ...eventsCommentOpts) []string {
 
 func (w *eventsComments) reply() string {
 	w.t.Helper()
-	return eventsLast(w.t, w.gh.BotComments(5))
+	return lastOf(w.t, w.gh.BotComments(5))
 }
 
 func (w *eventsComments) reactions(cid ...int) []string {
@@ -163,16 +115,16 @@ func (w *eventsComments) reactions(cid ...int) []string {
 	return out
 }
 
-func (w *eventsComments) items() any { return eventsDig(w.t, w.ctx.Store.Load(), "items") }
+func (w *eventsComments) items() any { return dig(w.t, w.ctx.Store.Load(), "items") }
 
 func TestEvents_BuildQueuesTheIssue(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("/harness build")
-	assertEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild))
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild))
 	assertIn(t, "Queued #5", w.reply())
 	assertIn(t, fakes.Reaction{ID: 501, Content: "eyes"}, w.gh.Reacted)
 	assertEqual(t, w.gh.Dispatches, []fakes.Dispatch{})
-	assertEqual(t, eventsDig(t, w.items(), "5", "requested_by"), "jgoetzmann")
+	assertEqual(t, dig(t, w.items(), "5", "requested_by"), "jgoetzmann")
 }
 
 func TestEvents_ForceStartsARunNow(t *testing.T) {
@@ -185,14 +137,14 @@ func TestEvents_ForceNeedsTheOperator(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("/harness build --force", eventsCommentOpts{User: eventsHelper, Association: "COLLABORATOR"})
 	assertEqual(t, w.gh.Dispatches, []fakes.Dispatch{})
-	assertEqual(t, w.gh.LabelNames(5), eventsSet())
+	assertEqual(t, w.gh.LabelNames(5), setOf())
 	assertIn(t, "operator level", w.reply())
 }
 
 func TestEvents_AMaintainerMayBuildWithoutForce(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("/harness build", eventsCommentOpts{User: eventsHelper, Association: "COLLABORATOR"})
-	assertEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild))
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild))
 }
 
 func TestEvents_AnAskerMayOnlyAsk(t *testing.T) {
@@ -200,7 +152,7 @@ func TestEvents_AnAskerMayOnlyAsk(t *testing.T) {
 	w.send("/harness status\n/harness build", eventsCommentOpts{User: eventsReader, Association: "COLLABORATOR"})
 	assertIn(t, "Night bot status", w.reply())
 	assertIn(t, "maintainer level", w.reply())
-	assertEqual(t, w.gh.LabelNames(5), eventsSet())
+	assertEqual(t, w.gh.LabelNames(5), setOf())
 }
 
 func TestEvents_StrangersAreIgnoredSilently(t *testing.T) {
@@ -208,10 +160,10 @@ func TestEvents_StrangersAreIgnoredSilently(t *testing.T) {
 	out := w.send("/harness halt", eventsCommentOpts{User: fakes.Stranger, Association: "NONE"})
 	assertIn(t, "not on the trust list", out[0])
 	assertEqual(t, w.gh.BotComments(5), []string{})
-	assertFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertFalse(t, dig(t, w.ctx.Store.Load(), "halted"))
 	// A listed name without an id needs GitHub's word too.
 	w.send("/harness build", eventsCommentOpts{User: eventsHelper, Association: "CONTRIBUTOR"})
-	assertEqual(t, w.gh.LabelNames(5), eventsSet())
+	assertEqual(t, w.gh.LabelNames(5), setOf())
 }
 
 func TestEvents_TheBotsOwnCommentsAreIgnored(t *testing.T) {
@@ -227,23 +179,23 @@ func TestEvents_TheBotsOwnCommentsAreIgnored(t *testing.T) {
 func TestEvents_QuotingTheBotStillLetsAPersonCommand(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("> earlier reply\n> " + config.Marker + "\n/harness build")
-	assertEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild))
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild))
 }
 
 func TestEvents_HaltAndStart(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("/harness halt going on holiday")
 	s := w.ctx.Store.Load()
-	assertTrue(t, eventsDig(t, s, "halted"))
-	assertEqual(t, eventsDig(t, s, "halt", "reason"), "going on holiday")
+	assertTrue(t, dig(t, s, "halted"))
+	assertEqual(t, dig(t, s, "halt", "reason"), "going on holiday")
 	w.send("/harness start")
-	assertFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertFalse(t, dig(t, w.ctx.Store.Load(), "halted"))
 }
 
 func TestEvents_HaltNeedsTheOperator(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("/harness halt", eventsCommentOpts{User: eventsHelper, Association: "COLLABORATOR"})
-	assertFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertFalse(t, dig(t, w.ctx.Store.Load(), "halted"))
 }
 
 func TestEvents_StatusReportsTheQueueAndWindow(t *testing.T) {
@@ -263,7 +215,7 @@ func TestEvents_StatusReportsTheQueueAndWindow(t *testing.T) {
 func TestEvents_FreeTextOnAnIssueAsksForABuild(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("@jgoetzmann-bot please also make it sparkle")
-	assertEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild))
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild))
 	assertIn(t, "read your notes", w.reply())
 }
 
@@ -274,7 +226,7 @@ func TestEvents_ABuildRequestOnAnIssueWithAPRRevisesThePR(t *testing.T) {
 	w.gh.Threads.Item(9).Set("auto_merge", pyjson.New("merge_method", "squash"))
 	w.gh.AutoMerge["PR_9"] = "squash"
 	w.send("@jgoetzmann-bot also make it sparkle")
-	assertEqual(t, w.gh.LabelNames(9), eventsSet(config.LabelPR, config.LabelRevise))
+	assertEqual(t, w.gh.LabelNames(9), setOf(config.LabelPR, config.LabelRevise))
 	assertNotIn(t, "PR_9", w.gh.AutoMerge)
 }
 
@@ -283,26 +235,26 @@ func TestEvents_StopTakesItOutAndTellsARunningJob(t *testing.T) {
 	w.gh.Threads.Item(5).Set("labels", eventsLabels(config.LabelWorking))
 	w.send("/harness stop")
 	// The run still holds it until it stops, so a new request waits for that run.
-	assertEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelWorking))
-	assertTrue(t, eventsDig(t, w.items(), "5", "stop_requested"))
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelWorking))
+	assertTrue(t, dig(t, w.items(), "5", "stop_requested"))
 	assertIn(t, "next checkpoint", w.reply())
 }
 
 func TestEvents_SuggestAndRun(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("/harness suggest")
-	assertTrue(t, eventsDig(t, w.ctx.Store.Load(), "suggest", "requested"))
+	assertTrue(t, dig(t, w.ctx.Store.Load(), "suggest", "requested"))
 	w.send("/harness suggest --force")
-	assertEqual(t, eventsLast(t, w.gh.Dispatches).Inputs["mode"], "suggest")
+	assertEqual(t, lastOf(t, w.gh.Dispatches).Inputs["mode"], "suggest")
 	w.send("/harness run #5")
-	assertEqual(t, eventsLast(t, w.gh.Dispatches).Inputs, map[string]string{"item": "5", "force": "true", "mode": "auto"})
+	assertEqual(t, lastOf(t, w.gh.Dispatches).Inputs, map[string]string{"item": "5", "force": "true", "mode": "auto"})
 }
 
 func TestEvents_AMisspeltVerbRunsNothingAndAsks(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("@jgoetzmann-bot stauts")
 	assertIn(t, "`stauts` is not a command; did you mean `status`?", w.reply())
-	assertEqual(t, w.gh.LabelNames(5), eventsSet())
+	assertEqual(t, w.gh.LabelNames(5), setOf())
 	assertEqual(t, w.gh.Reacted, []fakes.Reaction{{ID: 501, Content: "eyes"}, {ID: 501, Content: "rocket"}})
 	assertNotIn(t, "5", w.items())
 }
@@ -310,7 +262,7 @@ func TestEvents_AMisspeltVerbRunsNothingAndAsks(t *testing.T) {
 func TestEvents_FreeTextAfterTheSlashAsksForABuildToo(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("/harness please make it sparkle")
-	assertEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild))
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild))
 	assertIn(t, "read your notes", w.reply())
 }
 
@@ -330,7 +282,7 @@ func TestEvents_WorkForAModelGetsAThumbsUpAndIsKeptOnTheRecord(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("/harness build")
 	assertEqual(t, w.reactions(), []string{"eyes", "+1", "rocket"})
-	assertEqual(t, eventsDig(t, w.items(), "5", "asks"), []any{"c:501"})
+	assertEqual(t, dig(t, w.items(), "5", "asks"), []any{"c:501"})
 }
 
 func TestEvents_ACommandWithNoModelWorkGetsNoThumbsUp(t *testing.T) {
@@ -353,8 +305,8 @@ func TestEvents_ANoteDuringARunWaitsForTheNextPass(t *testing.T) {
 	w.gh.Threads.Item(5).Set("labels", eventsLabels(config.LabelWorking))
 	w.send("@jgoetzmann-bot also make it sparkle")
 	assertEqual(t, w.reactions(), []string{"eyes", "+1", "rocket"})
-	record := eventsDig(t, w.items(), "5")
-	assertEqual(t, []any{eventsDig(t, record, "pending_request"), eventsDig(t, record, "asks")},
+	record := dig(t, w.items(), "5")
+	assertEqual(t, []any{dig(t, record, "pending_request"), dig(t, record, "asks")},
 		[]any{true, []any{"c:501"}})
 }
 
@@ -367,7 +319,7 @@ func TestEvents_StopAnswersWhatWasWaiting(t *testing.T) {
 	events.Handle(w.ctx, "issue_comment", payload)
 	assertEqual(t, w.reactions(), []string{"eyes", "+1", "rocket", "confused"})
 	assertEqual(t, w.reactions(502), []string{"eyes", "rocket"})
-	assertEqual(t, eventsDig(t, w.items(), "5", "asks"), []any{})
+	assertEqual(t, dig(t, w.items(), "5", "asks"), []any{})
 }
 
 func TestEvents_ARequestRoutedToThePullRequestKeepsItsComment(t *testing.T) {
@@ -375,14 +327,14 @@ func TestEvents_ARequestRoutedToThePullRequestKeepsItsComment(t *testing.T) {
 	w.gh.Threads.Item(5).Set("labels", eventsLabels(config.LabelPROpen))
 	w.gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR}})
 	w.send("@jgoetzmann-bot also make it sparkle")
-	assertEqual(t, eventsDig(t, w.items(), "9", "asks"), []any{"c:501"})
+	assertEqual(t, dig(t, w.items(), "9", "asks"), []any{"c:501"})
 }
 
 func TestEvents_ASuggestRequestWaitsForTheSurvey(t *testing.T) {
 	w := newEventsComments(t)
 	w.send("/harness suggest")
 	assertEqual(t, w.reactions(), []string{"eyes", "+1", "rocket"})
-	assertEqual(t, eventsDig(t, w.ctx.Store.Load(), "suggest", "asks"), []any{"c:501"})
+	assertEqual(t, dig(t, w.ctx.Store.Load(), "suggest", "asks"), []any{"c:501"})
 }
 
 func TestEvents_ALineCommentOnADiffIsKeptByItsOwnKind(t *testing.T) {
@@ -392,7 +344,7 @@ func TestEvents_ALineCommentOnADiffIsKeptByItsOwnKind(t *testing.T) {
 		"action", "created", "sender", fakes.Operator, "pull_request", pyjson.New("number", 9),
 		"comment", pyjson.New("id", 77, "body", "@jgoetzmann-bot rename this", "user", fakes.Operator,
 			"author_association", "OWNER")))
-	assertEqual(t, eventsDig(t, w.items(), "9", "asks"), []any{"rc:77"})
+	assertEqual(t, dig(t, w.items(), "9", "asks"), []any{"rc:77"})
 	assertIn(t, fakes.Reaction{ID: 77, Content: "+1"}, w.gh.Reacted)
 }
 
@@ -400,8 +352,8 @@ func TestEvents_ReviseOnAPullRequestFromAForkIsRefused(t *testing.T) {
 	w := newEventsComments(t)
 	w.gh.AddPull(9, "their-branch", fakes.Pull{Fork: true})
 	events.Handle(w.ctx, "issue_comment", eventsCommentEvent(9, "/harness revise x", eventsCommentOpts{PR: true}))
-	assertIn(t, "comes from a fork", eventsLast(t, w.gh.BotComments(9)))
-	assertEqual(t, w.gh.LabelNames(9), eventsSet())
+	assertIn(t, "comes from a fork", lastOf(t, w.gh.BotComments(9)))
+	assertEqual(t, w.gh.LabelNames(9), setOf())
 }
 
 func TestEvents_APersonCanAskForChangesOnTheirOwnPullRequest(t *testing.T) {
@@ -409,14 +361,14 @@ func TestEvents_APersonCanAskForChangesOnTheirOwnPullRequest(t *testing.T) {
 	w.gh.AddPull(9, "feature/mine")
 	events.Handle(w.ctx, "issue_comment",
 		eventsCommentEvent(9, "@jgoetzmann-bot fix the failing test", eventsCommentOpts{PR: true}))
-	assertEqual(t, w.gh.LabelNames(9), eventsSet(config.LabelRevise))
+	assertEqual(t, w.gh.LabelNames(9), setOf(config.LabelRevise))
 }
 
 // eventsLabelWorld is LabelAndAssignTests' world.
 func eventsLabelWorld(t *testing.T) (*fakes.FakeGitHub, *hctx.Context) {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(5, fakes.Issue{Labels: []string{config.LabelBuild}})
-	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: eventsStr(eventsTrust)})
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: ptr(eventsTrust)})
 	return gh, ctx
 }
 
@@ -425,9 +377,9 @@ func TestEvents_TheBuildLabelFromATrustedPersonQueues(t *testing.T) {
 	payload := pyjson.New("action", "labeled", "sender", fakes.Operator, "label", pyjson.New("name", config.LabelBuild),
 		"issue", pyjson.New("number", 5))
 	events.Handle(ctx, "issues", payload)
-	assertEqual(t, gh.LabelNames(5), eventsSet(config.LabelBuild))
-	assertIn(t, "Queued #5", eventsLast(t, gh.BotComments(5)))
-	assertIn(t, "queued_at", eventsDig(t, ctx.Store.Load(), "items", "5"))
+	assertEqual(t, gh.LabelNames(5), setOf(config.LabelBuild))
+	assertIn(t, "Queued #5", lastOf(t, gh.BotComments(5)))
+	assertIn(t, "queued_at", dig(t, ctx.Store.Load(), "items", "5"))
 }
 
 func TestEvents_TheBuildLabelFromAnyoneElseIsRemoved(t *testing.T) {
@@ -435,7 +387,7 @@ func TestEvents_TheBuildLabelFromAnyoneElseIsRemoved(t *testing.T) {
 	payload := pyjson.New("action", "labeled", "sender", fakes.Stranger, "label", pyjson.New("name", config.LabelBuild),
 		"issue", pyjson.New("number", 5))
 	events.Handle(ctx, "issues", payload)
-	assertEqual(t, gh.LabelNames(5), eventsSet())
+	assertEqual(t, gh.LabelNames(5), setOf())
 }
 
 func TestEvents_AssigningTheBotQueues(t *testing.T) {
@@ -443,7 +395,7 @@ func TestEvents_AssigningTheBotQueues(t *testing.T) {
 	gh.Threads.Item(5).Set("labels", []any{})
 	payload := pyjson.New("action", "assigned", "sender", fakes.Operator, "assignee", fakes.Bot, "issue", pyjson.New("number", 5))
 	events.Handle(ctx, "issues", payload)
-	assertEqual(t, gh.LabelNames(5), eventsSet(config.LabelBuild))
+	assertEqual(t, gh.LabelNames(5), setOf(config.LabelBuild))
 }
 
 func TestEvents_AssigningSomeoneElseDoesNothing(t *testing.T) {
@@ -451,7 +403,7 @@ func TestEvents_AssigningSomeoneElseDoesNothing(t *testing.T) {
 	gh.Threads.Item(5).Set("labels", []any{})
 	payload := pyjson.New("action", "assigned", "sender", fakes.Operator, "assignee", fakes.Stranger, "issue", pyjson.New("number", 5))
 	events.Handle(ctx, "issues", payload)
-	assertEqual(t, gh.LabelNames(5), eventsSet())
+	assertEqual(t, gh.LabelNames(5), setOf())
 }
 
 func TestEvents_TheReviseLabelOnAPullRequest(t *testing.T) {
@@ -460,7 +412,7 @@ func TestEvents_TheReviseLabelOnAPullRequest(t *testing.T) {
 	payload := pyjson.New("action", "labeled", "sender", fakes.Operator, "label", pyjson.New("name", config.LabelRevise),
 		"pull_request", pyjson.New("number", 9))
 	events.Handle(ctx, "pull_request_target", payload)
-	assertEqual(t, eventsDig(t, ctx.Store.Load(), "items", "9", "source"), "request")
+	assertEqual(t, dig(t, ctx.Store.Load(), "items", "9", "source"), "request")
 }
 
 // eventsReviewWorld is ReviewAndCiTests' world.
@@ -474,7 +426,7 @@ func newEventsReviewWorld() *eventsReviewWorld {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(5, fakes.Issue{Labels: []string{config.LabelPROpen}})
 	pull := gh.AddPull(9, "bot/issue-5", fakes.Pull{Body: "Closes #5", Labels: []string{config.LabelPR}, SHA: "s1"})
-	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: eventsStr(eventsTrust)})
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: ptr(eventsTrust)})
 	return &eventsReviewWorld{gh: gh, pull: pull, ctx: ctx}
 }
 
@@ -503,8 +455,8 @@ func TestEvents_CIFailureIsRerunOnceThenFixed(t *testing.T) {
 	assertNotIn(t, config.LabelRevise, w.gh.LabelNames(9))
 	w.ci(2, "s1")
 	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
-	record := eventsDig(t, w.ctx.Store.Load(), "items", "9")
-	assertEqual(t, []any{eventsDig(t, record, "source"), eventsDig(t, record, "ci_run_id"), eventsDig(t, record, "ci_fixes")},
+	record := dig(t, w.ctx.Store.Load(), "items", "9")
+	assertEqual(t, []any{dig(t, record, "source"), dig(t, record, "ci_run_id"), dig(t, record, "ci_fixes")},
 		[]any{"ci", 99, 1})
 }
 
@@ -521,29 +473,29 @@ func TestEvents_ActionsCallsUseTheJobsOwnToken(t *testing.T) {
 
 func TestEvents_CIFixesAreCapped(t *testing.T) {
 	w := newEventsReviewWorld()
-	eventsUpdateItem(w.ctx, 9, "ci_fixes", 3, "ci_reruns", pyjson.New("s1", 1))
+	flowUpdateItem(w.ctx, 9, pyjson.New("ci_fixes", 3, "ci_reruns", pyjson.New("s1", 1)))
 	w.gh.Threads.Item(9).Set("auto_merge", pyjson.New("merge_method", "squash"))
 	w.gh.AutoMerge["PR_9"] = "squash"
 	w.ci(2, "s1")
-	assertEqual(t, w.gh.LabelNames(9), eventsSet(config.LabelPR, config.LabelBlocked))
+	assertEqual(t, w.gh.LabelNames(9), setOf(config.LabelPR, config.LabelBlocked))
 	assertNotIn(t, "PR_9", w.gh.AutoMerge)
-	assertIn(t, "It needs a person", eventsLast(t, w.gh.BotComments(9)))
+	assertIn(t, "It needs a person", lastOf(t, w.gh.BotComments(9)))
 }
 
 func TestEvents_APersonAskingAgainDoesNotResetTheCICap(t *testing.T) {
 	w := newEventsReviewWorld()
-	eventsUpdateItem(w.ctx, 9, "ci_fixes", 2)
+	flowUpdateItem(w.ctx, 9, pyjson.New("ci_fixes", 2))
 	events.Handle(w.ctx, "issue_comment",
 		eventsCommentEvent(9, "/harness revise try again", eventsCommentOpts{PR: true}))
-	assertEqual(t, eventsDig(t, w.ctx.Store.Load(), "items", "9", "ci_fixes"), 2)
+	assertEqual(t, dig(t, w.ctx.Store.Load(), "items", "9", "ci_fixes"), 2)
 }
 
 func TestEvents_CILeavesAStoppedOrBlockedPRAlone(t *testing.T) {
 	w := newEventsReviewWorld()
-	eventsUpdateItem(w.ctx, 9, "stop_requested", true)
+	flowUpdateItem(w.ctx, 9, pyjson.New("stop_requested", true))
 	w.ci(3, "s1")
 	assertEqual(t, w.gh.Reruns, []any{})
-	assertEqual(t, w.gh.LabelNames(9), eventsSet(config.LabelPR))
+	assertEqual(t, w.gh.LabelNames(9), setOf(config.LabelPR))
 }
 
 func TestEvents_CIOnAStaleCommitOrAHumanPRIsIgnored(t *testing.T) {
@@ -552,13 +504,13 @@ func TestEvents_CIOnAStaleCommitOrAHumanPRIsIgnored(t *testing.T) {
 		"id", 99, "run_attempt", 3, "pull_requests", []any{pyjson.New("number", 9)})
 	events.Handle(w.ctx, "workflow_run", pyjson.New("action", "completed", "sender", fakes.Operator,
 		"workflow_run", run))
-	assertEqual(t, w.gh.LabelNames(9), eventsSet(config.LabelPR))
+	assertEqual(t, w.gh.LabelNames(9), setOf(config.LabelPR))
 	w.gh.AddPull(10, "feature/human", fakes.Pull{SHA: "h1"})
 	run = pyjson.New("name", "CI", "conclusion", "failure", "head_branch", "feature/human", "head_sha", "h1",
 		"id", 98, "run_attempt", 3, "pull_requests", []any{pyjson.New("number", 10)})
 	events.Handle(w.ctx, "workflow_run", pyjson.New("action", "completed", "sender", fakes.Operator,
 		"workflow_run", run))
-	assertEqual(t, w.gh.LabelNames(10), eventsSet())
+	assertEqual(t, w.gh.LabelNames(10), setOf())
 }
 
 func TestEvents_AMergedBotPRClearsTheIssue(t *testing.T) {
@@ -568,10 +520,10 @@ func TestEvents_AMergedBotPRClearsTheIssue(t *testing.T) {
 	// Auto-merge is credited to whoever turned it on: the bot.
 	events.Handle(w.ctx, "pull_request_target", pyjson.New("action", "closed", "sender", fakes.Bot,
 		"pull_request", pull))
-	assertEqual(t, w.gh.LabelNames(5), eventsSet())
-	assertTrue(t, eventsDig(t, w.ctx.Store.Load(), "items", "9", "merged"))
-	assertEqual(t, eventsDig(t, w.gh.GetIssue(5), "state"), "closed")
-	assertEqual(t, eventsDig(t, w.gh.GetIssue(5), "state_reason"), "completed")
+	assertEqual(t, w.gh.LabelNames(5), setOf())
+	assertTrue(t, dig(t, w.ctx.Store.Load(), "items", "9", "merged"))
+	assertEqual(t, dig(t, w.gh.GetIssue(5), "state"), "closed")
+	assertEqual(t, dig(t, w.gh.GetIssue(5), "state_reason"), "completed")
 }
 
 func TestEvents_AMergedBotPRLeavesAnIssueGithubAlreadyClosed(t *testing.T) {
@@ -581,7 +533,7 @@ func TestEvents_AMergedBotPRLeavesAnIssueGithubAlreadyClosed(t *testing.T) {
 	pull.Set("merged", true)
 	events.Handle(w.ctx, "pull_request_target", pyjson.New("action", "closed", "sender", fakes.Operator,
 		"pull_request", pull))
-	assertEqual(t, eventsDig(t, w.gh.GetIssue(5), "state_reason"), "not_planned")
+	assertEqual(t, dig(t, w.gh.GetIssue(5), "state_reason"), "not_planned")
 }
 
 func TestEvents_ABotPRMergedOutsideTheDefaultBranchLeavesTheIssueOpen(t *testing.T) {
@@ -590,7 +542,7 @@ func TestEvents_ABotPRMergedOutsideTheDefaultBranchLeavesTheIssueOpen(t *testing
 	pull.Update(pyjson.New("merged", true, "base", pyjson.New("ref", "release")))
 	events.Handle(w.ctx, "pull_request_target", pyjson.New("action", "closed", "sender", fakes.Operator,
 		"pull_request", pull))
-	assertEqual(t, eventsDig(t, w.gh.GetIssue(5), "state"), "open")
+	assertEqual(t, dig(t, w.gh.GetIssue(5), "state"), "open")
 }
 
 func TestEvents_ABotPRClosedUnmergedSaysHowToRetry(t *testing.T) {
@@ -598,7 +550,7 @@ func TestEvents_ABotPRClosedUnmergedSaysHowToRetry(t *testing.T) {
 	pull := w.gh.GetPull(9)
 	events.Handle(w.ctx, "pull_request_target", pyjson.New("action", "closed", "sender", fakes.Operator,
 		"pull_request", pull))
-	assertIn(t, "closed without merging", eventsLast(t, w.gh.BotComments(5)))
+	assertIn(t, "closed without merging", lastOf(t, w.gh.BotComments(5)))
 }
 
 // eventsQueueWorld is MergeQueueTests' world: `main`'s merge queue (infra/github.tf): a cleared
@@ -617,8 +569,8 @@ func newEventsQueueWorld() *eventsQueueWorld {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(5, fakes.Issue{Labels: []string{config.LabelPROpen}})
 	gh.AddPull(9, "bot/issue-5", fakes.Pull{Body: "Closes #5", Labels: []string{config.LabelPR}, SHA: "s1"})
-	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: eventsStr(eventsTrust)})
-	eventsUpdateItem(ctx, 9, "cleared", pyjson.New("sha", "s1"))
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: ptr(eventsTrust)})
+	flowUpdateItem(ctx, 9, pyjson.New("cleared", pyjson.New("sha", "s1")))
 	return &eventsQueueWorld{gh: gh, ctx: ctx}
 }
 
@@ -651,10 +603,10 @@ func TestEvents_AClearedHeadItsBuildTookOutGetsACIFixAtOnce(t *testing.T) {
 	w.queueCI(eventsQueueBranch, "cancelled")
 	assertEqual(t, []any{w.gh.AutoMerge, w.gh.Reruns}, []any{map[string]string{}, []any{}})
 	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
-	record := eventsDig(t, w.ctx.Store.Load(), "items", "9")
-	assertEqual(t, []any{eventsDig(t, record, "source"), eventsDig(t, record, "ci_run_id"), eventsDig(t, record, "ci_fixes")},
+	record := dig(t, w.ctx.Store.Load(), "items", "9")
+	assertEqual(t, []any{dig(t, record, "source"), dig(t, record, "ci_run_id"), dig(t, record, "ci_fixes")},
 		[]any{"ci", 77, 1})
-	assertIn(t, "The merge queue took this out", eventsLast(t, w.gh.BotComments(9)))
+	assertIn(t, "The merge queue took this out", lastOf(t, w.gh.BotComments(9)))
 }
 
 func TestEvents_OneStillQueuedAHeldOneOrAnUnclearedHeadIsLeftAlone(t *testing.T) {
@@ -662,14 +614,14 @@ func TestEvents_OneStillQueuedAHeldOneOrAnUnclearedHeadIsLeftAlone(t *testing.T)
 	w.gh.MergeQueue = map[string]bool{"PR_9": true} // built again without a pull request ahead that failed
 	w.queueCI(eventsQueueBranch, "cancelled")
 	w.gh.MergeQueue = map[string]bool{}
-	eventsUpdateItem(w.ctx, 9, "stop_requested", true)
+	flowUpdateItem(w.ctx, 9, pyjson.New("stop_requested", true))
 	w.queueCI(eventsQueueBranch, "cancelled")
-	eventsUpdateItem(w.ctx, 9, "stop_requested", false, "cleared", pyjson.New("sha", "s0"))
+	flowUpdateItem(w.ctx, 9, pyjson.New("stop_requested", false, "cleared", pyjson.New("sha", "s0")))
 	w.queueCI(eventsQueueBranch, "failure")
 	w.gh.AddPull(10, "people/x", fakes.Pull{SHA: "p1"})
 	w.queueCI("gh-readonly-queue/main/pr-10-abc", "cancelled")
 	assertEqual(t, w.gh.AutoMerge, map[string]string{})
-	assertEqual(t, w.gh.LabelNames(9), eventsSet(config.LabelPR))
+	assertEqual(t, w.gh.LabelNames(9), setOf(config.LabelPR))
 	assertEqual(t, w.gh.BotComments(9), []string{})
 	assertEqual(t, w.gh.Reruns, []any{})
 }
@@ -691,7 +643,7 @@ func TestEvents_APersonWhoTookItOutOrAHeadNeverClearedKeepsItOut(t *testing.T) {
 	w.gh.QueueRemovals["PR_9"] = map[string]string{"actor": "jgoetzmann", "type": "User", "reason": "MANUAL"}
 	w.housekeeping()
 	w.gh.QueueRemovals["PR_9"] = eventsCopyMap(eventsQueue)
-	eventsUpdateItem(w.ctx, 9, "cleared", pyjson.New("sha", "s0"))
+	flowUpdateItem(w.ctx, 9, pyjson.New("cleared", pyjson.New("sha", "s0")))
 	w.housekeeping()
 	assertEqual(t, w.gh.AutoMerge, map[string]string{})
 }

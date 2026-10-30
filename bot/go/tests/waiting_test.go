@@ -84,20 +84,15 @@ func waitingNow(t *testing.T, explained *waiting.Explained, providerID string) *
 	return now
 }
 
-// waitingSeed is ctx.store.update(fn, message), fn mutating the state.
-func waitingSeed(ctx *hctx.Context, message string, fn func(s *pyjson.Object)) {
-	ctx.Store.Update(func(s *pyjson.Object) any { fn(s); return nil }, message)
-}
-
 func TestWaiting_AHardItemWaitsForAStrongModelAndSaysWhichFreesFirst(t *testing.T) {
 	w := newWaitingQueue()
 	w.gh.AddIssue(41, fakes.Issue{Title: "Hard work", Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	pool := w.ctx.Cfg.Pool
 
-	waitingSeed(w.ctx, "seed", func(s *pyjson.Object) {
+	flowUpdate(w.ctx, func(s *pyjson.Object) {
 		state.Item(s, 41).Update(pyjson.New("planned_at", clock.ISO(testsupport.Night), "planned_tier", "strong"))
 		waitingClaudeRefused(s, pool)
-	})
+	}, "seed")
 	explained := w.explain()
 	row := waitingRow(t, explained, 41)
 	assertEqual(t, []string{row.Step, row.Difficulty, row.Tier}, []string{"build", "hard", "strong"})
@@ -119,18 +114,18 @@ func TestWaiting_ARevisionThatAnswersAStrongAuditWaitsForStrong(t *testing.T) {
 	w.gh.AddPull(9, "bot/issue-3", fakes.Pull{Title: "Fix it", Labels: []string{config.LabelPR, config.LabelRevise}})
 	pool := w.ctx.Cfg.Pool
 
-	waitingSeed(w.ctx, "seed", func(s *pyjson.Object) {
+	flowUpdate(w.ctx, func(s *pyjson.Object) {
 		state.Item(s, 9).Update(pyjson.New("audit_tier", "strong"))
 		waitingClaudeRefused(s, pool)
-	})
+	}, "seed")
 	row := waitingRow(t, w.explain(), 9)
 	assertEqual(t, []string{row.Step, row.Difficulty, row.Tier}, []string{"revise", "medium", "strong"})
 	assertEqual(t, row.TierWhy, "it answers a strong reviewer's audit")
 	assertTrue(t, row.Starts == nil, "row.starts is not None")
 	// Without the audit, Muse (medium) takes it at the next run, and says so.
-	waitingSeed(w.ctx, "no audit", func(s *pyjson.Object) {
+	flowUpdate(w.ctx, func(s *pyjson.Object) {
 		state.Item(s, 9).Update(pyjson.New("audit_tier", ""))
-	})
+	}, "no audit")
 	explained := w.explain()
 	row = waitingRow(t, explained, 9)
 	if row.Starts == nil {
@@ -181,7 +176,7 @@ func TestWaiting_PartsWaitForTheirOwnParentsEarlierPartsNeverAnotherPatchs(t *te
 func TestWaiting_AnUnratedBuildNeedsAMediumPlannerFirst(t *testing.T) {
 	w := newWaitingQueue()
 	w.gh.AddIssue(5, fakes.Issue{Title: "New thing", Labels: []string{config.LabelBuild}})
-	waitingSeed(w.ctx, "seed", func(s *pyjson.Object) { waitingClaudeRefused(s, w.ctx.Cfg.Pool) })
+	flowUpdate(w.ctx, func(s *pyjson.Object) { waitingClaudeRefused(s, w.ctx.Cfg.Pool) }, "seed")
 	row := waitingRow(t, w.explain(), 5)
 	assertEqual(t, []string{row.Step, row.Difficulty, row.Tier, row.TierWhy},
 		[]string{"plan", "unrated", "medium", "rates and plans it first"})
@@ -198,9 +193,9 @@ func TestWaiting_ASubscriptionWithNoLaneWhereItRunsIsFullNotFree(t *testing.T) {
 	ctx := testsupport.MakeCtx(w.gh, testsupport.Ctx{At: testsupport.Night, Cfg: cfg})
 	w.gh.AddIssue(50, fakes.Issue{Labels: []string{config.LabelWorking}})
 	w.gh.Runs.Set("300", pyjson.New("status", "in_progress"))
-	waitingSeed(ctx, "seed", func(s *pyjson.Object) {
+	flowUpdate(ctx, func(s *pyjson.Object) {
 		state.Item(s, 50).Update(pyjson.New("provider", "muse", "kind", "build", "run_id", "300"))
-	})
+	}, "seed")
 	s := ctx.Store.Load()
 	explained := waiting.Explain(ctx, s, pyjson.New("50", "muse"), w.gh.ListIssues("", "open", 300, ""), "")
 	assertEqual(t, waitingNow(t, explained, "muse").Kind, "busy")
@@ -211,7 +206,7 @@ func TestWaiting_ASubscriptionWithNoLaneWhereItRunsIsFullNotFree(t *testing.T) {
 func TestWaiting_HaltedNothingStarts(t *testing.T) {
 	w := newWaitingQueue()
 	w.gh.AddIssue(7, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}})
-	waitingSeed(w.ctx, "halt", func(s *pyjson.Object) { s.Set("halted", true) })
+	flowUpdate(w.ctx, func(s *pyjson.Object) { s.Set("halted", true) }, "halt")
 	body := dashboard.Render(w.ctx, nil, "", nil, true)
 	assertIn(t, "> 🛑 **Halted**: halted by /harness halt.", body)
 	explained := waiting.Explain(w.ctx, w.ctx.Store.Load(), pyjson.New(),

@@ -157,7 +157,7 @@ func TestDisk_ItOpensOnceRewritesWithNewReadingsAndClosesWhenBackUnder(t *testin
 	a.keep(diskFound(97, 0.06, "2026-10-04T20:44:00Z"))
 	assertIn(t, "opened", disk.Alert(a.ctx))
 	issue := a.one(t)
-	assertEqual(t, a.gh.LabelNames(diskNumber(issue)), workflowsSet("night bot", config.LabelHuman))
+	assertEqual(t, a.gh.LabelNames(diskNumber(issue)), setOf("night bot", config.LabelHuman))
 	assertIn(t, "97% full, 0.1 GB free of 30.0 GB", wasteStr(issue, "body"))
 	assertIn(t, "bot/machine/on-machine.sh bot/machine/disk-report.sh", wasteStr(issue, "body"))
 	assertEqual(t, disk.Alert(a.ctx), "") // the same reading again: nothing to say
@@ -174,7 +174,7 @@ func TestDisk_ItOpensOnceRewritesWithNewReadingsAndClosesWhenBackUnder(t *testin
 	a.keep(diskFound(42, 17, "2026-10-04T21:15:00Z"))
 	assertIn(t, "closed", disk.Alert(a.ctx))
 	assertEqual(t, a.gh.GetIssue(diskNumber(issue)).Get("state"), "closed")
-	assertIn(t, "back to 42% full", wasteLast(t, a.gh.BotComments(diskNumber(issue))))
+	assertIn(t, "back to 42% full", lastOf(t, a.gh.BotComments(diskNumber(issue))))
 	machineDisk := a.ctx.Store.Load().Obj("machine_disk")
 	if v, ok := machineDisk.Lookup("issue"); !ok || v != nil {
 		t.Fatalf("%v is not None", v)
@@ -268,9 +268,9 @@ func TestDisk_UnderTheFloorAfterCleaningItDoesNoWorkAndBlamesTheMachine(t *testi
 	assertEqual(t, result.Get("infra_scope"), "machine")
 	assertIn(t, "97% full, 1.0 GB free", wasteStr(result, "reason"))
 	assertEqual(t, result.Obj("disk").Get("cleaned"), "cleaned")
-	keys := workflowsSet(result.Obj("disk").Keys()...)
+	keys := setOf(result.Obj("disk").Keys()...)
 	delete(keys, "runner")
-	assertEqual(t, keys, workflowsSet("start", "after_clean", "cleaned", "end"))
+	assertEqual(t, keys, setOf("start", "after_clean", "cleaned", "end"))
 }
 
 func TestDisk_RoomEnoughNeedsNoCleanAndTheWorkGoesOn(t *testing.T) {
@@ -334,8 +334,8 @@ func TestDisk_ARefusalKeepsTheItemQueuedUncountedAndOpensTheIssue(t *testing.T) 
 	twelve := 12
 	deliver.NewDeliverer(h.ctx, planned.Copy().Set("provider", "muse"), out, h.deliverRepo,
 		"build", &twelve, "muse").Run()
-	assertEqual(t, h.gh.LabelNames(12), workflowsSet(config.LabelBuild))
-	assertIn(t, "not this item's fault", wasteLast(t, h.gh.BotComments(12)))
+	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelBuild))
+	assertIn(t, "not this item's fault", lastOf(t, h.gh.BotComments(12)))
 	st := h.ctx.Store.Load()
 	assertEqual(t, st.Obj("items").Obj("12").GetOr("failures", 0), 0)
 	assertEqual(t, st.Obj("machine_disk").Get("runner"), "night-vm-muse-2")
@@ -403,7 +403,7 @@ func (c *diskClean) make(path string, hoursOld float64, content ...string) strin
 		if err := os.Mkdir(path, 0o777); err != nil && !errors.Is(err, os.ErrExist) {
 			c.t.Fatal(err)
 		}
-	} else if !diskExists(path) {
+	} else if !exists(path) {
 		herr.Must(os.WriteFile(path, []byte(text), 0o666))
 	}
 	when := time.Now().Add(-time.Duration(hoursOld * float64(time.Hour)))
@@ -475,12 +475,6 @@ func (c *diskClean) layOutARunner(runnerDir string) {
 	c.make(filepath.Join(runnerDir, "_work", "_temp", "left-by-a-dead-job"), 3, "dir")
 }
 
-// diskExists is Path.exists(): through a symbolic link.
-func diskExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
 // diskIsSymlink is Path.is_symlink().
 func diskIsSymlink(path string) bool {
 	info, err := os.Lstat(path)
@@ -496,18 +490,18 @@ func TestDisk_ItGivesBackOldRunnerVersionsLogsLeftoversAndIdleCaches(t *testing.
 	said := c.runScript("")
 	assertIn(t, "night-vm-clean:", said)
 	for _, kind := range []string{"bin", "externals"} {
-		assertTrue(t, diskExists(filepath.Join(c.runnerDir, kind+".2.337.0")), "the current version stays")
-		assertTrue(t, diskExists(filepath.Join(c.runnerDir, kind+".2.338.0")), "an update's stays")
-		assertFalse(t, diskExists(filepath.Join(c.runnerDir, kind+".2.336.0")), "the replaced one goes")
+		assertTrue(t, exists(filepath.Join(c.runnerDir, kind+".2.337.0")), "the current version stays")
+		assertTrue(t, exists(filepath.Join(c.runnerDir, kind+".2.338.0")), "an update's stays")
+		assertFalse(t, exists(filepath.Join(c.runnerDir, kind+".2.336.0")), "the replaced one goes")
 		assertTrue(t, diskIsSymlink(filepath.Join(c.runnerDir, kind)))
 	}
-	assertFalse(t, diskExists(filepath.Join(c.runnerDir, "_diag", "Worker_20261001.log")))
-	assertTrue(t, diskExists(filepath.Join(c.runnerDir, "_diag", "Worker_20261004.log")))
-	assertFalse(t, diskExists(filepath.Join(c.runnerDir, "_work", "_update")))
-	assertFalse(t, diskExists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
-	assertFalse(t, diskExists(store), "no job is running, so the package store goes")
-	assertFalse(t, diskExists(oldTmp))
-	assertTrue(t, diskExists(newTmp))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "_diag", "Worker_20261001.log")))
+	assertTrue(t, exists(filepath.Join(c.runnerDir, "_diag", "Worker_20261004.log")))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "_work", "_update")))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
+	assertFalse(t, exists(store), "no job is running, so the package store goes")
+	assertFalse(t, exists(oldTmp))
+	assertTrue(t, exists(newTmp))
 }
 
 func TestDisk_ARunningJobKeepsItsRunnerTempAndTheSharedStore(t *testing.T) {
@@ -518,9 +512,9 @@ func TestDisk_ARunningJobKeepsItsRunnerTempAndTheSharedStore(t *testing.T) {
 	// Lane 2 is running a job; this run is no job of its own (the disk timer).
 	c.workers = "4242 " + c.lane2 + "/bin.2.337.0/Runner.Worker spawnclient 1 2"
 	c.runScript("")
-	assertTrue(t, diskExists(store), "another job's install reads the store")
-	assertTrue(t, diskExists(filepath.Join(c.lane2, "_work", "_temp", "left-by-a-dead-job")))
-	assertFalse(t, diskExists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
+	assertTrue(t, exists(store), "another job's install reads the store")
+	assertTrue(t, exists(filepath.Join(c.lane2, "_work", "_temp", "left-by-a-dead-job")))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
 }
 
 func TestDisk_AfterAJobItsOwnFilesGoAndTheStoreGoesOnlyWithTheLastJob(t *testing.T) {
@@ -536,10 +530,10 @@ func TestDisk_AfterAJobItsOwnFilesGoAndTheStoreGoesOnlyWithTheLastJob(t *testing
 		t.Fatal(err)
 	}
 	assertEqual(t, len(entries), 0)
-	assertTrue(t, diskExists(store), "lane 2 still has a job going")
+	assertTrue(t, exists(store), "lane 2 still has a job going")
 	c.workers = "11 " + c.runnerDir + "/bin/Runner.Worker spawnclient 1 2"
 	c.runScript(temp, "--job")
-	assertFalse(t, diskExists(store), "the user's last job takes the store with it")
+	assertFalse(t, exists(store), "the user's last job takes the store with it")
 }
 
 func TestDisk_WhenItCannotTellWhichJobsRunItLeavesTheirFilesAlone(t *testing.T) {
@@ -549,18 +543,18 @@ func TestDisk_WhenItCannotTellWhichJobsRunItLeavesTheirFilesAlone(t *testing.T) 
 	two := 2
 	c.pgrepStatus = &two
 	c.runScript("")
-	assertTrue(t, diskExists(store))
-	assertTrue(t, diskExists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
-	assertFalse(t, diskExists(filepath.Join(c.runnerDir, "bin.2.336.0")), "no job uses a replaced version")
+	assertTrue(t, exists(store))
+	assertTrue(t, exists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "bin.2.336.0")), "no job uses a replaced version")
 }
 
 func TestDisk_SetupInstallsItAsTheHookAndTheTimer(t *testing.T) {
 	newDiskClean(t) // the class's skip
-	setup := workflowsFile(t, filepath.Join(testsupport.Root, "bot", "machine", "setup.sh"))
+	setup := readText(t, filepath.Join(testsupport.Root, "bot", "machine", "setup.sh"))
 	assertIn(t, `install -m 755 "$here/clean.sh" /usr/local/bin/night-vm-clean.sh`, setup)
 	assertIn(t, "/usr/local/bin/night-vm-clean.sh --job || true", setup)
 	assertIn(t, "night-vm-disk.timer", setup)
 	assertIn(t, "OnUnitActiveSec=10min", setup)
-	onMachine := workflowsFile(t, filepath.Join(testsupport.Root, "bot", "machine", "on-machine.sh"))
+	onMachine := readText(t, filepath.Join(testsupport.Root, "bot", "machine", "on-machine.sh"))
 	assertIn(t, `tar czf - -C "$(dirname "$script")"`, onMachine)
 }

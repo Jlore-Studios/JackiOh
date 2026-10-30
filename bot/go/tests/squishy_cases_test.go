@@ -102,7 +102,7 @@ func newSquishyCasesWorld(t *testing.T, at ...time.Time) *squishyCasesWorld {
 	w.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Overrides: pyjson.New("gates", squishyCasesGates(),
 		"install", pyjson.New("run", "true", "timeout_minutes", 1), "max_review_cycles", 2)})
 	w.ctx = testsupport.MakeCtx(w.gh, testsupport.Ctx{Cfg: w.cfg, At: when})
-	w.gh.BranchChecks = basicsSet(w.cfg.RequiredChecks...)
+	w.gh.BranchChecks = setOf(w.cfg.RequiredChecks...)
 	w.deliverRepo = filepath.Join(w.root, "deliver")
 	fakes.Git(w.root, "clone", "-q", w.origin, w.deliverRepo)
 	for _, name := range []string{"patch", "human", "priority:high"} {
@@ -126,19 +126,10 @@ func (w *squishyCasesWorld) run(r *runner.FakeRunner) (*pyjson.Object, *pyjson.O
 		deliver.NewDeliverer(w.ctx, planned, out, w.deliverRepo, "", nil, "").Run()
 	}
 	result := pyjson.New()
-	if journalExists(filepath.Join(out, "result.json")) {
-		result = journalLoad(w.t, filepath.Join(out, "result.json"))
+	if exists(filepath.Join(out, "result.json")) {
+		result = loadJSON(w.t, filepath.Join(out, "result.json"))
 	}
 	return planned, result
-}
-
-// squishyCasesLast is list[-1].
-func squishyCasesLast(t *testing.T, items []string) string {
-	t.Helper()
-	if len(items) == 0 {
-		t.Fatal("IndexError: list index out of range")
-	}
-	return items[len(items)-1]
 }
 
 // ------------------------------------------------------------------ IdentityCases
@@ -152,7 +143,7 @@ func TestSquishyCases_EverythingIsSquishys(t *testing.T) {
 	assertEqual(t, queue.BranchForIssue(5), "squishy/issue-5")
 	assertEqual(t, queue.WipBranch(5), "squishy/wip/5")
 	assertEqual(t, config.CommitPrefix, "squishy")
-	assertEqual(t, basicsSet(config.ModeLabels.Keys()...), basicsSet("squishy:oneshot", "squishy:split",
+	assertEqual(t, setOf(config.ModeLabels.Keys()...), setOf("squishy:oneshot", "squishy:split",
 		"squishy:split-bot", "squishy:fullsend"))
 }
 
@@ -208,11 +199,11 @@ func TestSquishyCases_OneshotAndSplitQueueInTheirMode(t *testing.T) {
 	gh.AddIssue(3)
 	reply := world.ask(3, "/squishy oneshot")[0]
 	assertIn(t, "build it in one run with fullsend", reply)
-	assertEqual(t, gh.LabelNames(3), basicsSet("squishy:build", "squishy:oneshot"))
+	assertEqual(t, gh.LabelNames(3), setOf("squishy:build", "squishy:oneshot"))
 	world.ask(3, "/squishy split bot")
-	assertEqual(t, gh.LabelNames(3), basicsSet("squishy:build", "squishy:split-bot"))
+	assertEqual(t, gh.LabelNames(3), setOf("squishy:build", "squishy:split-bot"))
 	world.ask(3, "/squishy build")
-	assertEqual(t, gh.LabelNames(3), basicsSet("squishy:build"))
+	assertEqual(t, gh.LabelNames(3), setOf("squishy:build"))
 }
 
 func TestSquishyCases_AModeLabelQueuesItInThatMode(t *testing.T) {
@@ -222,7 +213,7 @@ func TestSquishyCases_AModeLabelQueuesItInThatMode(t *testing.T) {
 	gh.AddIssue(4, fakes.Issue{Labels: []string{"squishy:split"}})
 	events.OnIssueChange(world.ctx, pyjson.New("action", "labeled", "issue", gh.GetIssue(4),
 		"label", pyjson.New("name", "squishy:split"), "sender", fakes.Operator), false)
-	assertEqual(t, gh.LabelNames(4), basicsSet("squishy:build", "squishy:split"))
+	assertEqual(t, gh.LabelNames(4), setOf("squishy:build", "squishy:split"))
 	found := queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil)
 	type row struct {
 		Number  int
@@ -243,7 +234,7 @@ func TestSquishyCases_TheNightBotsIssuesAreLeftAlone(t *testing.T) {
 	gh.AddIssue(5, fakes.Issue{Labels: []string{"bot:build"}})
 	reply := world.ask(5, "/squishy oneshot")[0]
 	assertIn(t, "is the night bot's (@jgoetzmann-bot)", reply)
-	assertEqual(t, gh.LabelNames(5), basicsSet("bot:build"))
+	assertEqual(t, gh.LabelNames(5), setOf("bot:build"))
 	gh.AddIssue(6)
 	gh.AddAssignees(6, []string{"jgoetzmann-bot"})
 	assertIn(t, "the night bot's", world.ask(6, "/squishy build")[0])
@@ -274,7 +265,7 @@ func TestSquishyCases_TheBuilderIsToldToRunFullsendAndItsChangeShipsLikeAnyBuild
 	prompts := []string{}
 	build := func(request *runner.RunRequest) *runner.RunResult {
 		prompts = append(prompts, request.Prompt)
-		journalWrite(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
+		writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
 		return runner.NewRunResult(true, squishyCasesDone)
 	}
 	planned, result := world.run(workFake(map[string]runner.Handler{"build": build,
@@ -296,7 +287,7 @@ func TestSquishyCases_TheBuilderIsToldToRunFullsendAndItsChangeShipsLikeAnyBuild
 	assertEqual(t, result.Get("status"), "approved")
 	exclude := filepath.Join(fakes.Git(world.clone, "rev-parse", "--path-format=absolute", "--git-common-dir"),
 		"info", "exclude")
-	assertIn(t, "/.fullsend/", basicsReadFile(t, exclude))
+	assertIn(t, "/.fullsend/", readText(t, exclude))
 	pulls := world.gh.ListPulls("open", "squishy/issue-12", 200)
 	assertEqual(t, len(pulls), 1)
 	if len(pulls) > 0 {
@@ -332,8 +323,8 @@ func TestSquishyCases_SplitOpensLinkedSubIssuesSquishyBuilds(t *testing.T) {
 	assertEqual(t, gh.GetIssue(engine).Get("title"), "Part 1: the engine")
 	// Its type labels as far as the repository has them, never a reserved one, then the parent's
 	// priority, its difficulty and Squishy's queue label.
-	assertEqual(t, gh.LabelNames(engine), basicsSet("patch", "difficulty:hard", "priority:high", "squishy:build"))
-	assertEqual(t, gh.LabelNames(client), basicsSet("patch", "difficulty:easy", "priority:high", "squishy:build"))
+	assertEqual(t, gh.LabelNames(engine), setOf("patch", "difficulty:hard", "priority:high", "squishy:build"))
+	assertEqual(t, gh.LabelNames(client), setOf("patch", "difficulty:easy", "priority:high", "squishy:build"))
 	body := gh.GetIssue(client).Str("body")
 	assertIn(t, fmt.Sprintf("Blocked by #%d.", engine), body)
 	assertIn(t, "Part of #40, split by Squishy", body)
@@ -344,8 +335,8 @@ func TestSquishyCases_SplitOpensLinkedSubIssuesSquishyBuilds(t *testing.T) {
 		children = append(children, c.Get("number"))
 	}
 	assertEqual(t, children, []any{engine, client})
-	assertEqual(t, gh.LabelNames(40), basicsSet("priority:high", config.LabelTree))
-	assertIn(t, fmt.Sprintf("- [ ] #%d (after #%d)", client, engine), squishyCasesLast(t, gh.BotComments(40)))
+	assertEqual(t, gh.LabelNames(40), setOf("priority:high", config.LabelTree))
+	assertIn(t, fmt.Sprintf("- [ ] #%d (after #%d)", client, engine), lastOf(t, gh.BotComments(40)))
 	record := world.ctx.Store.Load().Obj("items").Obj("40")
 	assertEqual(t, record.Obj("tree").Get("children"), []any{engine, client})
 	// Both are queued for Squishy, the engine first; each counts as planned.
@@ -360,8 +351,8 @@ func TestSquishyCases_SplitOpensLinkedSubIssuesSquishyBuilds(t *testing.T) {
 func TestSquishyCases_SplitBotQueuesThemForTheNightBot(t *testing.T) {
 	squishyCasesModule(t)
 	world, _ := squishyCasesSplit(t, "split-bot")
-	assertEqual(t, world.gh.LabelNames(41), basicsSet("patch", "difficulty:hard", "priority:high", "bot:build"))
-	assertIn(t, "queued for the night bot (@jgoetzmann-bot)", squishyCasesLast(t, world.gh.BotComments(40)))
+	assertEqual(t, world.gh.LabelNames(41), setOf("patch", "difficulty:hard", "priority:high", "bot:build"))
+	assertIn(t, "queued for the night bot (@jgoetzmann-bot)", lastOf(t, world.gh.BotComments(40)))
 	assertEqual(t, queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil), []*queue.Candidate{})
 }
 
@@ -372,7 +363,7 @@ func TestSquishyCases_AnAnswerItCannotUseOpensNothing(t *testing.T) {
 	numbers := world.gh.Threads.Keys()
 	sort.Ints(numbers)
 	assertEqual(t, numbers, []int{40})
-	assertIn(t, "could not be used", squishyCasesLast(t, world.gh.BotComments(40)))
+	assertIn(t, "could not be used", lastOf(t, world.gh.BotComments(40)))
 }
 
 func TestSquishyCases_TheCloseOutClosesATreeThatIsDone(t *testing.T) {
@@ -387,7 +378,7 @@ func TestSquishyCases_TheCloseOutClosesATreeThatIsDone(t *testing.T) {
 	}, "state")
 	notes := sweep.Trees(world.ctx, testsupport.Night)
 	assertEqual(t, notes, []string{"#40: its sub-issues have all closed; queued its close-out"})
-	assertEqual(t, world.gh.LabelNames(40), basicsSet("priority:high", config.LabelTree, "squishy:build",
+	assertEqual(t, world.gh.LabelNames(40), setOf("priority:high", config.LabelTree, "squishy:build",
 		"squishy:split"))
 	prompts := []string{}
 	closeOut := func(request *runner.RunRequest) *runner.RunResult {
@@ -416,11 +407,11 @@ func TestSquishyCases_FullsendLandsOnSquishysBranch(t *testing.T) {
 		record := world.ctx.Store.Load().Obj("items").Obj(fmt.Sprint(child))
 		assertEqual(t, []any{record.Get("onto"), record.Get("part_of")}, []any{onto, 40})
 	}
-	assertEqual(t, world.gh.LabelNames(40), basicsSet("priority:high", config.LabelTree))
-	assertIn(t, "This is a fullsend tree: each part lands on `"+onto+"`", squishyCasesLast(t, world.gh.BotComments(40)))
+	assertEqual(t, world.gh.LabelNames(40), setOf("priority:high", config.LabelTree))
+	assertIn(t, "This is a fullsend tree: each part lands on `"+onto+"`", lastOf(t, world.gh.BotComments(40)))
 
 	build := func(request *runner.RunRequest) *runner.RunResult {
-		journalWrite(t, filepath.Join(request.Cwd, "src", "engine.ts"), "rule\n")
+		writeText(t, filepath.Join(request.Cwd, "src", "engine.ts"), "rule\n")
 		return runner.NewRunResult(true, squishyCasesDone)
 	}
 	r := workFake(map[string]runner.Handler{"build": build})
@@ -441,7 +432,7 @@ func TestSquishyCases_TheNightBotsFullsendIsLeftAlone(t *testing.T) {
 	world := newSquishyCasesWorld(t)
 	world.gh.AddIssue(44, fakes.Issue{Labels: []string{"bot:fullsend"}})
 	assertIn(t, "is the night bot's (@jgoetzmann-bot)", world.ask(44, "/squishy fullsend")[0])
-	assertEqual(t, world.gh.LabelNames(44), basicsSet("bot:fullsend"))
+	assertEqual(t, world.gh.LabelNames(44), setOf("bot:fullsend"))
 }
 
 func TestSquishyCases_StopOnATreeStopsItsSubIssues(t *testing.T) {
@@ -452,7 +443,7 @@ func TestSquishyCases_StopOnATreeStopsItsSubIssues(t *testing.T) {
 	replies := world.ask(40, "/squishy stop")
 	assertIn(t, "Its open sub-issues leave the queue too: #41, #42, #43.", replies[0])
 	assertNotIn(t, "squishy:build", world.gh.LabelNames(41))
-	assertIn(t, "@jgoetzmann-bot stop", squishyCasesLast(t, world.gh.BotComments(43)))
+	assertIn(t, "@jgoetzmann-bot stop", lastOf(t, world.gh.BotComments(43)))
 }
 
 // ------------------------------------------------------------------ SectionCases

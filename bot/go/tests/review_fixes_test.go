@@ -33,20 +33,15 @@ func reviewFixesMediumPR(t *testing.T, h *flowHarness) int {
 	h.night(workFake(map[string]runner.Handler{"build": crossTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
 		"review": workReviewer(workApprove)}))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	return pr
 }
 
 // reviewFixesEmptyOut is empty_out.
 func reviewFixesEmptyOut(t *testing.T, h *flowHarness, name string) string {
 	out := filepath.Join(h.root, name)
-	crossMkdir(t, out)
+	mkdir(t, out)
 	return out
-}
-
-// reviewFixesUpdate is ctx.store.update(lambda s: state_item(s, number).update(**fields)).
-func reviewFixesUpdate(h *flowHarness, number int, fields *pyjson.Object) {
-	h.ctx.Store.Update(func(s *pyjson.Object) any { state.Item(s, number).Update(fields); return nil }, "state")
 }
 
 // ---------------------------------------------------------------------------- AutoMergeTests
@@ -58,7 +53,7 @@ func TestReviewFixes_ARevisionByAnotherModelTurnsStrongAutoMergeOff(t *testing.T
 	// approval of the old head is gone.
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: []string{"muse"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	reviewFixesUpdate(h, 12, pyjson.New("planned_at", clock.ISO(testsupport.Day), "planned_tier", "medium",
+	flowUpdateItem(h.ctx, 12, pyjson.New("planned_at", clock.ISO(testsupport.Day), "planned_tier", "medium",
 		"planned_by_id", "muse"))
 	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
@@ -77,7 +72,7 @@ func TestReviewFixes_ARevisionByAnotherModelTurnsStrongAutoMergeOff(t *testing.T
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"muse", "approved"})
 	assertNotIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross))
 }
 
 func TestReviewFixes_AutoMergeIsPinnedToTheApprovedCommit(t *testing.T) {
@@ -87,9 +82,9 @@ func TestReviewFixes_AutoMergeIsPinnedToTheApprovedCommit(t *testing.T) {
 	// approval pins auto-merge to the head (#695).
 	h.committedHours()
 	planned, _ := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{planned.Get("provider"), crossKey(t, planned, "seats", "review", "tier")}, []any{"claude-3", "strong"})
+	assertEqual(t, []any{planned.Get("provider"), dig(t, planned, "seats", "review", "tier")}, []any{"claude-3", "strong"})
 	votes := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes")
-	assertEqual(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], crossKey(t, votes, "sha"))
+	assertEqual(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], dig(t, votes, "sha"))
 }
 
 func TestReviewFixes_ARejectionStandsUntilItsModelApprovesOrTheHeadMoves(t *testing.T) {
@@ -122,7 +117,7 @@ func TestReviewFixes_WithOnlyItsBuilderSetUpItWaitsForAStrongReviewer(t *testing
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
-	comment := crossLast(t, h.gh.BotComments(12))
+	comment := lastOf(t, h.gh.BotComments(12))
 	// Only a Strong approval ships a medium item (#725): agy's in-run approval is recorded,
 	// and the head waits for a Strong seat no setup has.
 	assertIn(t, "`gemini` (medium) approved it, so it waits for one strong model's final audit (Opus)", comment)
@@ -137,14 +132,14 @@ func TestReviewFixes_ACommentDuringTheReviewGetsItsRevisionBeforeAnyMerge(t *tes
 	h.committedHours() // claude-3 works all day: the Strong final can audit
 
 	commented := func(request *runner.RunRequest) *runner.RunResult {
-		reviewFixesUpdate(h, pr, pyjson.New("pending_request", true))
+		flowUpdateItem(h.ctx, pr, pyjson.New("pending_request", true))
 		return workReviewer(workApprove)(request)
 	}
 
 	h.night(workFake(map[string]runner.Handler{"review": commented}))
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelRevise, "difficulty:medium"))
-	assertFalse(t, pyjson.Truthy(crossKey(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "pending_request")))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelRevise, "difficulty:medium"))
+	assertFalse(t, pyjson.Truthy(dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "pending_request")))
 }
 
 func TestReviewFixes_AReviewWhoseRunDiesBacksOffItsSubscriptionAndIsCounted(t *testing.T) {
@@ -160,8 +155,8 @@ func TestReviewFixes_AReviewWhoseRunDiesBacksOffItsSubscriptionAndIsCounted(t *t
 	}
 	// Each death backs its subscription off; the next strong seat takes it.
 	assertEqual(t, seen, []string{"claude-3", "claude-7"})
-	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelBlocked, "difficulty:medium"))
-	assertIn(t, "died 2 times", crossLast(t, h.gh.BotComments(pr)))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelBlocked, "difficulty:medium"))
+	assertIn(t, "died 2 times", lastOf(t, h.gh.BotComments(pr)))
 }
 
 func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
@@ -180,12 +175,12 @@ func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
 			"max_review_cycles", 2)})
 	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: testsupport.Day})
 	pr := reviewFixesMediumPR(t, h)
-	builds := strings.Count(crossRead(t, log), "\n")
+	builds := strings.Count(readText(t, log), "\n")
 	assertTrue(t, builds >= 1) // the build did install, so the log works
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("action"), review.Get("status")}, []any{"review", "reviewed"})
-	assertEqual(t, strings.Count(crossRead(t, log), "\n"), builds)
-	assertNotIn(t, fmt.Sprintf("item-%d", pr), crossRead(t, log))
+	assertEqual(t, strings.Count(readText(t, log), "\n"), builds)
+	assertNotIn(t, fmt.Sprintf("item-%d", pr), readText(t, log))
 }
 
 // ---------------------------------------------------------------------------- InfraTests
@@ -196,7 +191,7 @@ func TestReviewFixes_ABrokenSubscriptionBacksOffAlone(t *testing.T) {
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	assertEqual(t, planned.Get("provider"), "muse")
 	out := reviewFixesEmptyOut(t, h, "infra")
-	crossWrite(t, filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New("status", "infra",
+	writeText(t, filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New("status", "infra",
 		"reason", "agy's login is not a login")))
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	planned = plan.Make(h.ctx, false, nil, "auto", nil)
@@ -220,8 +215,8 @@ func TestReviewFixes_ARunGithubCannotReadKeepsItsLaneAndItsItem(t *testing.T) {
 		return nil
 	}, "state")
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	assertEqual(t, gh.LabelNames(3), crossSet(config.LabelWorking)) // not requeued
-	assertEqual(t, planned.Get("action"), "none")                   // gpt, its only subscription, is held
+	assertEqual(t, gh.LabelNames(3), setOf(config.LabelWorking)) // not requeued
+	assertEqual(t, planned.Get("action"), "none")                // gpt, its only subscription, is held
 }
 
 // reviewFixesHeld is a held run: (number, provider).
@@ -249,7 +244,7 @@ func TestReviewFixes_ARunRequestIsKeptWhenEveryLaneIsBusy(t *testing.T) {
 		return nil
 	}, "state")
 	assertIn(t, "every lane is busy", crossStr(t, plan.Make(ctx, false, nil, "auto", nil), "reason"))
-	assertNotEqual(t, crossKey(t, ctx.Store.Load(), "run_requested"), nil)
+	assertNotEqual(t, dig(t, ctx.Store.Load(), "run_requested"), nil)
 }
 
 // A full machine leaves GitHub's lanes to the Claude accounts, and Claude runs filling GitHub's
@@ -295,12 +290,12 @@ func TestReviewFixes_AVaultWriteThatRacesAnotherWriterIsTriedAgain(t *testing.T)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := reviewFixesEmptyOut(t, h, "vault")
-	crossWrite(t, filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New("status", "failed", "reason", "boom")))
+	writeText(t, filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New("status", "failed", "reason", "boom")))
 	sealed, err := vault.Seal(pyjson.New("provider", "muse", "files", pyjson.New("auth.json", "{}")), "the-secret")
 	if err != nil {
 		t.Fatal(err)
 	}
-	crossWrite(t, filepath.Join(out, "vault.enc"), sealed)
+	writeText(t, filepath.Join(out, "vault.enc"), sealed)
 	h.gh.Branches["bot-state"] = true
 	h.gh.ConflictsToInject = 1
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()

@@ -70,7 +70,7 @@ func TestClosed_ItsWorkIsNotDelivered(t *testing.T) {
 	assertEqual(t, h.originSHA("bot/issue-12"), "")
 	labels := h.gh.LabelNames(12)
 	assertFalse(t, labels[config.LabelWorking] || labels[config.LabelBuild], labels)
-	assertIn(t, "was closed while a run was working on it", flowLast(t, h.gh.BotComments(12)))
+	assertIn(t, "was closed while a run was working on it", lastOf(t, h.gh.BotComments(12)))
 }
 
 func TestClosed_ADeadRunsLabelIsClearedNotRequeued(t *testing.T) {
@@ -84,7 +84,7 @@ func TestClosed_ADeadRunsLabelIsClearedNotRequeued(t *testing.T) {
 	})
 	assertIn(t, "#5", plan.HousekeepingDue(ctx, ctx.Store.Load()))
 	notes := plan.Housekeeping(ctx, ctx.Store.Load())
-	assertEqual(t, gh.LabelNames(5), flowSet())
+	assertEqual(t, gh.LabelNames(5), setOf())
 	assertEqual(t, gh.BotComments(5), []string{}) // no "back in the queue"
 	found := false
 	for _, note := range notes {

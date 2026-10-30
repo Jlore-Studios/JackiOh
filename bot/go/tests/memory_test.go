@@ -34,12 +34,12 @@ func memoryProc(t *testing.T, root string, availableKiB, swapFreeKiB, swapped, s
 	if err := os.MkdirAll(filepath.Join(root, "pressure"), 0o777); err != nil {
 		t.Fatal(err)
 	}
-	flowWrite(filepath.Join(root, "meminfo"), fmt.Sprintf(
+	mustWriteText(filepath.Join(root, "meminfo"), fmt.Sprintf(
 		"MemTotal:        8000000 kB\nMemFree:          100000 kB\n"+
 			"MemAvailable:    %d kB\nSwapTotal:       8000000 kB\n"+
 			"SwapFree:        %d kB\n", availableKiB, swapFreeKiB))
-	flowWrite(filepath.Join(root, "vmstat"), fmt.Sprintf("nr_free_pages 1000\npswpin %d\npswpout 0\n", swapped))
-	flowWrite(filepath.Join(root, "pressure", "memory"), fmt.Sprintf(
+	mustWriteText(filepath.Join(root, "vmstat"), fmt.Sprintf("nr_free_pages 1000\npswpin %d\npswpout 0\n", swapped))
+	mustWriteText(filepath.Join(root, "pressure", "memory"), fmt.Sprintf(
 		"some avg10=0.00 avg60=0.00 avg300=0.00 total=%d\n"+
 			"full avg10=0.00 avg60=0.00 avg300=0.00 total=%d\n", someUS, fullUS))
 	return root
@@ -97,7 +97,7 @@ func memoryRunOn(t *testing.T, runsOn string, readings []*pyjson.Object) *pyjson
 	}
 	work.NewWorker(cfg, plan, r, clone, filepath.Join(root, "work"), filepath.Join(root, "out"), nil,
 		nil, nil, nil, nil, reader).Run()
-	return flowLoadJSON(t, filepath.Join(root, "out", "result.json"))
+	return loadJSON(t, filepath.Join(root, "out", "result.json"))
 }
 
 func TestMemory_AMachineJobRecordsItsMemory(t *testing.T) {
@@ -105,10 +105,10 @@ func TestMemory_AMachineJobRecordsItsMemory(t *testing.T) {
 		"stall_full", 0.0, "at", clock.ISO(testsupport.Day))
 	result := memoryRunOn(t, "night-vm-muse", []*pyjson.Object{base.Copy().Set("available", 6*memoryGib),
 		base.Copy().Set("available", 2*memoryGib).Set("stall_full", 7.0)})
-	readings, _ := pyjson.AsInt(flowPath(result, "memory", "readings"))
+	readings, _ := pyjson.AsInt(dig(t, result, "memory", "readings"))
 	assertTrue(t, readings >= 3, readings) // start, each call, checks, end
 	assertEqual(t, memory.Summary(result.Obj("memory")).Get("stall_full"), 7.0)
-	assertEqual(t, flowPath(result, "memory", "low_available"), 2*memoryGib)
+	assertEqual(t, dig(t, result, "memory", "low_available"), 2*memoryGib)
 }
 
 func TestMemory_AJobOnGithubsRunnersReadsNothing(t *testing.T) {
@@ -137,7 +137,7 @@ func TestMemory_DeliverKeepsAMachineRunsMemory(t *testing.T) {
 	assertEqual(t, planned.Get("provider"), "muse")
 	kept := pyjson.Objs(h.ctx.Store.Load().Get("machine_memory"))
 	assertEqual(t, len(kept), 1)
-	total, _ := pyjson.AsFloat(flowPath(kept[0], "total"))
+	total, _ := pyjson.AsFloat(dig(t, kept[0], "total"))
 	assertTrue(t, total > 0, kept[0].Get("total"))
 	assertEqual(t, kept[0].Get("runner"), "night-vm-muse")
 	assertFalse(t, kept[0].Has("box"))
@@ -221,7 +221,7 @@ func TestMemory_TheStateKeepsTheNewestRunsOnly(t *testing.T) {
 	}
 	kept := state.List("machine_memory")
 	assertEqual(t, len(kept), memory.Keep)
-	assertEqual(t, flowPath(state, "machine_memory", -1, "swapped"), memory.Keep+4)
+	assertEqual(t, dig(t, state, "machine_memory", -1, "swapped"), memory.Keep+4)
 }
 
 func TestMemory_TheStatusIssueCarriesTheLine(t *testing.T) {

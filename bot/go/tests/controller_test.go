@@ -8,7 +8,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
-	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -43,8 +42,6 @@ var controllerStatus = ".github/workflows/bot-status.yml"
 
 // controllerNightYML is the repository's .github/workflows/bot-night.yml.
 var controllerNightYML = filepath.Join(testsupport.Root, ".github", "workflows", "bot-night.yml")
-
-func controllerNoSleep(float64) {}
 
 // controllerLoopCtx is loop_ctx(gh, at=DAY, loop=True).
 func controllerLoopCtx(gh *fakes.FakeGitHub, loop bool, at ...time.Time) *hctx.Context {
@@ -94,24 +91,6 @@ func controllerAny(notes []string, prefix string) bool {
 	return slices.ContainsFunc(notes, func(n string) bool { return strings.HasPrefix(n, prefix) })
 }
 
-// controllerSwap sets *target to value until the test ends (mock.patch.object).
-func controllerSwap[T any](t *testing.T, target *T, value T) {
-	saved := *target
-	*target = value
-	t.Cleanup(func() { *target = saved })
-}
-
-// controllerCapture points *stream (cli.Stdout or cli.Stderr) at a buffer, as redirect_stdout
-// does, until restore is called or the test ends.
-func controllerCapture(t *testing.T, stream *io.Writer) (*bytes.Buffer, func()) {
-	saved := *stream
-	var buffer bytes.Buffer
-	*stream = &buffer
-	restore := func() { *stream = saved }
-	t.Cleanup(restore)
-	return &buffer, restore
-}
-
 func controllerFetch(t *testing.T, ctx *hctx.Context, ref string) *pyjson.Object {
 	t.Helper()
 	planned, err := controller.Fetch(ctx, ref)
@@ -128,7 +107,7 @@ func TestController_TheLoopClaimsWritesThePlanAndStartsTheRunWithIt(t *testing.T
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	controllerListing(c)
 	ctx := controllerLoopCtx(c, true)
-	notes := controller.Start(ctx, controllerNoSleep)
+	notes := controller.Start(ctx, noSleep)
 	assertIn(t, "started build #3 on muse (run 5002)", notes)
 	var planned []fakes.Dispatch
 	for _, d := range c.Dispatches {
@@ -142,7 +121,7 @@ func TestController_TheLoopClaimsWritesThePlanAndStartsTheRunWithIt(t *testing.T
 		[]string{"night-vm-muse", "muse", "", "false"})
 	assertTrue(t, controller.Ref.MatchString(inputs["plan_ref"]), inputs["plan_ref"])
 	text, _ := c.GetFile(fmt.Sprintf("plans/%s.json", inputs["plan_ref"]), config.StateBranch)
-	written := difficultyLoads(t, []byte(text))
+	written := loadsObject(t, string([]byte(text)))
 	assertEqual(t, []any{written.Get("number"), written.Get("provider")}, []any{3, "muse"})
 	record := ctx.Store.Load().Obj("items").Obj("3")
 	assertEqual(t, []any{record.Get("run_id"), record.Get("provider")}, []any{"5002", "muse"})
@@ -158,7 +137,7 @@ func TestController_ItPlansAgainUntilNothingMoreCanStart(t *testing.T) {
 	}
 	controllerListing(c)
 	ctx := controllerLoopCtx(c, true)
-	notes := controller.Start(ctx, controllerNoSleep)
+	notes := controller.Start(ctx, noSleep)
 	started := controllerStarted(notes)
 	// Muse has four lanes of its own (one runner on the night box, three on the Muse box), and
 	// fills gpt's and agy's on the night box while they are off (`fill_in`): six at most; the
@@ -179,7 +158,7 @@ func TestController_ARunNotListedYetKeepsItsClaimPendingUntilFound(t *testing.T)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	ctx := controllerLoopCtx(c, true)
-	notes := controller.Start(ctx, controllerNoSleep)
+	notes := controller.Start(ctx, noSleep)
 	assertIn(t, "started build #3 on muse (its run is not listed yet)", notes)
 	runID := pyjson.Str(ctx.Store.Load().Obj("items").Obj("3").Get("run_id"))
 	assertTrue(t, strings.HasPrefix(runID, plan.Pending), runID)
@@ -202,7 +181,7 @@ func TestController_ADispatchGithubRefusesLeavesTheClaimDeadForHousekeeping(t *t
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	ctx := controllerLoopCtx(c, true)
 	c.Patch.DispatchWorkflow = func(string, string, map[string]string) { controllerRefuse() }
-	notes := controller.Start(ctx, controllerNoSleep)
+	notes := controller.Start(ctx, noSleep)
 	assertTrue(t, controllerAny(notes, "could not start build #3"), notes)
 	assertEqual(t, ctx.Store.Load().Obj("items").Obj("3").Get("run_id"), "")
 	assertEqual(t, plan.RunStatus(ctx, ""), "dead")
@@ -216,7 +195,7 @@ func TestController_AnotherPlannerHoldingTheLockWaitsTheLoopATick(t *testing.T) 
 		s.Set("planning", pyjson.New("owner", "run 42", "at", clock.ISO(testsupport.Day)))
 		return nil
 	}, "state")
-	notes := controller.Start(ctx, controllerNoSleep)
+	notes := controller.Start(ctx, noSleep)
 	assertEqual(t, notes, []string{"another planner holds the planning lock: the next tick plans"})
 	assertEqual(t, c.Dispatches, []fakes.Dispatch{})
 	// A lock older than its TTL was left by a planner that died.
@@ -226,7 +205,7 @@ func TestController_AnotherPlannerHoldingTheLockWaitsTheLoopATick(t *testing.T) 
 		return nil
 	}, "state")
 	controllerListing(c)
-	assertTrue(t, controllerAny(controller.Start(ctx, controllerNoSleep), "started"))
+	assertTrue(t, controllerAny(controller.Start(ctx, noSleep), "started"))
 }
 
 // ---------------------------------------------------------------------------- LockTests
@@ -246,7 +225,7 @@ func TestController_TheLoopRenewsTheLockBeforeEachStart(t *testing.T) {
 			taken = append(taken, owner)
 			return real(c, owner)
 		}
-		controller.Start(ctx, controllerNoSleep)
+		controller.Start(ctx, noSleep)
 	}()
 	// Once to start, then again before every later start (two runs, then the last plan).
 	assertEqual(t, taken, []string{"loop 777", "loop 777", "loop 777"})
@@ -300,19 +279,19 @@ func TestController_PlanFetchStopsTheJobOnAMismatch(t *testing.T) {
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	controllerListing(c)
 	ctx := controllerLoopCtx(c, true)
-	controller.Start(ctx, controllerNoSleep)
+	controller.Start(ctx, noSleep)
 	ref := c.Dispatches[len(c.Dispatches)-1].Inputs["plan_ref"]
 	args, _, ok := cli.Parser().ParseArgs([]string{"plan-fetch", "--ref", ref, "--out", "/dev/null", "--check"})
 	assertTrue(t, ok)
 	env := map[string]string{"PLAN_RUNS_ON": "night-vm-muse", "PLAN_CLI": "muse", "PLAN_SECRET": "",
 		"PLAN_SHARED": "false"}
-	controllerSwap(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
-	controllerSwap(t, &cli.GithubEnv, func() map[string]string { return env })
-	_, restore := controllerCapture(t, &cli.Stdout)
+	patch(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
+	patch(t, &cli.GithubEnv, func() map[string]string { return env })
+	_, restore := capture(t, &cli.Stdout)
 	assertEqual(t, cli.CmdPlanFetch(ctx.Cfg, args), 0)
 	restore()
 	env["PLAN_SECRET"] = "CLAUDE_CODE_OAUTH_TOKEN_3"
-	_, restore = controllerCapture(t, &cli.Stderr)
+	_, restore = capture(t, &cli.Stderr)
 	assertEqual(t, cli.CmdPlanFetch(ctx.Cfg, args), 2)
 	restore()
 }
@@ -376,7 +355,7 @@ func TestController_TheLoopsSweepRecordsItsTick(t *testing.T) {
 		s.Set("last_sweep", pyjson.New("at", clock.ISO(testsupport.Day), "since", clock.ISO(testsupport.Day)))
 		return nil
 	}, "state")
-	controllerSwap(t, &controller.Sleep, controllerNoSleep)
+	patch(t, &controller.Sleep, noSleep)
 	sweep.Sweep(ctx)
 	assertEqual(t, ctx.Store.Load().Get("loop_tick"), clock.ISO(testsupport.Day))
 }
@@ -400,7 +379,7 @@ func TestController_TheLoopsSweepPlansAndStartsTheRun(t *testing.T) {
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	controllerListing(c)
 	ctx := controllerLoopCtx(c, true)
-	controllerSwap(t, &controller.Sleep, controllerNoSleep)
+	patch(t, &controller.Sleep, noSleep)
 	notes := sweep.NightRun(ctx, testsupport.Day)
 	assertIn(t, "started build #3 on muse (run 5002)", notes)
 }
@@ -411,10 +390,10 @@ func TestController_TheGateDefersUnlessAPersonAskedForAnItem(t *testing.T) {
 	ctx := controllerLoopCtx(c, false)
 	controllerAlive(c, ctx)
 	outputs := pyjson.New()
-	controllerSwap(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
-	controllerSwap(t, &cli.Output, func(pairs *pyjson.Object) { outputs.Update(pairs) })
-	controllerSwap(t, &cli.Summary, func(text string) {})
-	controllerCapture(t, &cli.Stdout)
+	patch(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
+	patch(t, &cli.Output, func(pairs *pyjson.Object) { outputs.Update(pairs) })
+	patch(t, &cli.Summary, func(text string) {})
+	capture(t, &cli.Stdout)
 	args, _, _ := cli.Parser().ParseArgs([]string{"peek"})
 	cli.CmdPeek(ctx.Cfg, args)
 	assertEqual(t, outputs.Get("work"), "false")
@@ -432,12 +411,12 @@ func TestController_APlanJobWaitsForTheLockThenPlansNothing(t *testing.T) {
 		return nil
 	}, "state")
 	args, _, _ := cli.Parser().ParseArgs([]string{"plan", "--out", "/dev/null"})
-	controllerSwap(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
-	controllerSwap(t, &cli.LockTries, 1)
-	controllerSwap(t, &cli.Output, func(pairs *pyjson.Object) {})
-	controllerSwap(t, &cli.Summary, func(text string) {})
+	patch(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
+	patch(t, &cli.LockTries, 1)
+	patch(t, &cli.Output, func(pairs *pyjson.Object) {})
+	patch(t, &cli.Summary, func(text string) {})
 	// (The Python also replaced Path.write_text, so the plan went nowhere: it goes to /dev/null.)
-	out, restore := controllerCapture(t, &cli.Stdout)
+	out, restore := capture(t, &cli.Stdout)
 	cli.CmdPlan(ctx.Cfg, args)
 	restore()
 	assertIn(t, "the status loop is planning", out.String())
@@ -527,7 +506,7 @@ func controllerStartedBuild(t *testing.T) (*flowHarness, *hctx.Context, string) 
 	ctx := testsupport.MakeCtx(h.gh, testsupport.Ctx{At: testsupport.Night, Cfg: &cfg})
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
 	controllerListing(h.gh)
-	notes := controller.Start(ctx, controllerNoSleep)
+	notes := controller.Start(ctx, noSleep)
 	started := controllerStarted(notes)
 	if len(started) != 1 {
 		t.Fatalf("not one start: %q", notes)
@@ -695,7 +674,7 @@ func TestController_TheLoopsSweepDeliversBeforeItPlans(t *testing.T) {
 	cfg := *ctx.Cfg
 	cfg.ControllerLoop = false
 	other := testsupport.MakeCtx(c, testsupport.Ctx{At: testsupport.Day, Cfg: &cfg})
-	controllerSwap(t, &controller.Deliver, func(c *hctx.Context, workspace string) []string {
+	patch(t, &controller.Deliver, func(c *hctx.Context, workspace string) []string {
 		t.Fatal("delivered")
 		return nil
 	})
@@ -723,7 +702,7 @@ func TestController_BotNightGivesARunTheLoopStartedNoDeliverJob(t *testing.T) {
 func TestController_AnArtifactIsFetchedFromItsRedirectWithoutTheToken(t *testing.T) {
 	client := gh.NewGitHub("jgoetzmann/JackiOh", "secret-token", false, nil, nil, "")
 	var asked []*gh.Request
-	controllerSwap(t, &gh.BuildOpener, func() gh.Opener {
+	patch(t, &gh.BuildOpener, func() gh.Opener {
 		return func(request *gh.Request, timeout time.Duration) (*gh.Response, error) {
 			asked = append(asked, request)
 			header := http.Header{}
@@ -731,7 +710,7 @@ func TestController_AnArtifactIsFetchedFromItsRedirectWithoutTheToken(t *testing
 			return nil, &gh.HTTPError{URL: request.URL, Code: 302, Msg: "Found", Header: header}
 		}
 	})
-	controllerSwap(t, &gh.Urlopen, gh.Opener(func(request *gh.Request, timeout time.Duration) (*gh.Response, error) {
+	patch(t, &gh.Urlopen, gh.Opener(func(request *gh.Request, timeout time.Duration) (*gh.Response, error) {
 		asked = append(asked, request)
 		return &gh.Response{Body: []byte("zip bytes")}, nil
 	}))

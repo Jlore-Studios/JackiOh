@@ -48,8 +48,6 @@ func mediumBiasCounts(count int) *pyjson.Object {
 	return out
 }
 
-func mediumBiasLast(comments []string) string { return comments[len(comments)-1] }
-
 // ---------------------------------------------------------------------------- BorderlineBreachTests
 
 func TestMediumBias_ASmallPlanAndChangeHold(t *testing.T) {
@@ -109,7 +107,7 @@ func TestMediumBias_AClearEasyItemStillRatesEasy(t *testing.T) {
 	r := ratingPlanner(ratingRatedPlan("easy", nil, ""))
 	h.night(r)
 	assertIn(t, ratingEasy, h.gh.LabelNames(12))
-	assertIn(t, "Rated `difficulty:easy`", mediumBiasLast(h.gh.BotComments(12)))
+	assertIn(t, "Rated `difficulty:easy`", lastOf(t, h.gh.BotComments(12)))
 }
 
 func TestMediumBias_APlanCloseToTheLimitRatesMedium(t *testing.T) {
@@ -117,7 +115,7 @@ func TestMediumBias_APlanCloseToTheLimitRatesMedium(t *testing.T) {
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
 	h.night(ratingPlanner(ratingRatedPlan("easy", mediumBiasFiles(9), "")))
 	assertIn(t, ratingMedium, h.gh.LabelNames(12))
-	assertIn(t, "borderline easy is medium", mediumBiasLast(h.gh.BotComments(12)))
+	assertIn(t, "borderline easy is medium", lastOf(t, h.gh.BotComments(12)))
 }
 
 func TestMediumBias_AnUnsureRatingRatesMedium(t *testing.T) {
@@ -125,7 +123,7 @@ func TestMediumBias_AnUnsureRatingRatesMedium(t *testing.T) {
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
 	h.night(ratingPlanner(ratingRatedPlan("easy", nil, "torn between easy and medium")))
 	assertIn(t, ratingMedium, h.gh.LabelNames(12))
-	assertIn(t, "was unsure", mediumBiasLast(h.gh.BotComments(12)))
+	assertIn(t, "was unsure", lastOf(t, h.gh.BotComments(12)))
 }
 
 func TestMediumBias_ThePlannerIsToldToPreferMediumWhenInDoubt(t *testing.T) {

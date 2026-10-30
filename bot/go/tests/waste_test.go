@@ -37,15 +37,6 @@ func wasteWorker(cfg *config.Config, planned *pyjson.Object, r any, repo, workDi
 	return work.NewWorker(cfg, planned, r, repo, workDir, out, nil, nil, nil, nil, nil, nil)
 }
 
-// wasteLast is `xs[-1]`.
-func wasteLast(t *testing.T, xs []string) string {
-	t.Helper()
-	if len(xs) == 0 {
-		t.Fatal("IndexError: list index out of range")
-	}
-	return xs[len(xs)-1]
-}
-
 // wasteStr is a string field of a result, `d[key]` as text.
 func wasteStr(o *pyjson.Object, key string) string { return py.Str(o.Get(key)) }
 
@@ -67,7 +58,7 @@ func wasteTimedOut(name string) *gates.GateResult {
 
 func TestWaste_ATimedOutGateIsInconclusiveAndDoesNotBlock(t *testing.T) {
 	results := []*gates.GateResult{wasteTimedOut("unit")}
-	gates.MarkInconclusive(results, workflowsSet("unit"))
+	gates.MarkInconclusive(results, setOf("unit"))
 	assertTrue(t, results[0].Inconclusive)
 	assertTrue(t, gates.Green(results))
 	assertEqual(t, gates.FailuresText(results), "")
@@ -76,7 +67,7 @@ func TestWaste_ATimedOutGateIsInconclusiveAndDoesNotBlock(t *testing.T) {
 
 func TestWaste_ATimedOutInstallStillFails(t *testing.T) {
 	results := []*gates.GateResult{wasteTimedOut("install")}
-	gates.MarkInconclusive(results, workflowsSet("unit"))
+	gates.MarkInconclusive(results, setOf("unit"))
 	assertFalse(t, results[0].Inconclusive)
 	assertFalse(t, gates.Green(results))
 }
@@ -183,7 +174,7 @@ func TestWaste_APlanTheDescriptionRefusedGoesWholeIntoItsComment(t *testing.T) {
 	asPlan := planned.Copy().Set("action", "plan")
 	wasteWorker(h.cfg, asPlan, r, h.clone, filepath.Join(h.root, "work"), out).Run()
 	deliver.NewDeliverer(h.ctx, planned.Copy().Set("action", "plan"), out, h.deliverRepo, "", nil, "").Run()
-	said := wasteLast(t, h.gh.BotComments(12))
+	said := lastOf(t, h.gh.BotComments(12))
 	assertIn(t, "could not take the plan", said)
 	assertIn(t, "The last step.", said)
 }
@@ -205,7 +196,7 @@ func TestWaste_ABuildThatOnlyChangesForbiddenPathsStopsAndAsksAPerson(t *testing
 	// Handed to people (#793): `human required` in place of the bot's own `bot:blocked`.
 	assertTrue(t, h.gh.LabelNames(12)[config.LabelHumanRequired])
 	assertTrue(t, !h.gh.LabelNames(12)[config.LabelBlocked])
-	said := wasteLast(t, h.gh.BotComments(12))
+	said := lastOf(t, h.gh.BotComments(12))
 	assertIn(t, "`bot/harness/tuned.py`", said)
 	assertIn(t, "A person has to make this change", said)
 }
@@ -304,7 +295,7 @@ func TestWaste_AStreakAsksAPersonOnceAndAWorkingRunEndsIt(t *testing.T) {
 	deliverResult(pyjson.New("status", "failed", "reason", "the harness failed", "model_calls", 2))
 	assertTrue(t, !h.ctx.Store.Load().Obj("providers").Obj(provider).Has("infra"))
 	assertEqual(t, h.gh.Threads.Item(issue).Get("state"), "closed")
-	assertIn(t, "works again", wasteLast(t, h.gh.BotComments(issue)))
+	assertIn(t, "works again", lastOf(t, h.gh.BotComments(issue)))
 }
 
 // ---------------------------------------------------------------------------- HonestReportTests

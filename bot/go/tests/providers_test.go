@@ -119,22 +119,9 @@ func providersCtxFor(gh *fakes.FakeGitHub, opts ...providersCtx) *hctx.Context {
 		CommittedHours: o.CommittedHours})})
 }
 
-// providersMake is plan_mod.make(ctx) with its defaults.
-func providersMake(ctx *hctx.Context) *pyjson.Object {
-	return plan.Make(ctx, false, nil, "auto", nil)
-}
-
 // providersForce is plan_mod.make(ctx, force=True).
 func providersForce(ctx *hctx.Context) *pyjson.Object {
 	return plan.Make(ctx, true, nil, "auto", nil)
-}
-
-// providersSetItem is ctx.store.update(lambda s: state_item(s, n).update(fields)).
-func providersSetItem(ctx *hctx.Context, n int, fields *pyjson.Object) {
-	ctx.Store.Update(func(s *pyjson.Object) any {
-		state.Item(s, n).Update(fields)
-		return nil
-	}, "state")
 }
 
 // providersRun is gh.runs[id] = {"status": status}.
@@ -155,15 +142,6 @@ func providersWithPool(cfg *config.Config, change func(*providers.Pool)) *config
 	replaced := *cfg
 	replaced.Pool = &pool
 	return &replaced
-}
-
-// providersSetOf is a set of strings.
-func providersSetOf(names ...string) map[string]bool {
-	set := map[string]bool{}
-	for _, n := range names {
-		set[n] = true
-	}
-	return set
 }
 
 // ---------------------------------------------------------------------------- ParseTests
@@ -205,7 +183,7 @@ func TestProviders_TheCommittedFile(t *testing.T) {
 			claude++
 		}
 	}
-	assertEqual(t, clis, providersSetOf(providers.Clis...))
+	assertEqual(t, clis, setOf(providers.Clis...))
 	assertEqual(t, claude, 8)
 	first := pool.Get("claude-1")
 	assertEqual(t, first.Secret, "CLAUDE_CODE_OAUTH_TOKEN")
@@ -566,13 +544,13 @@ func TestProviders_TheOldTopLevelReadingsBelongToTheFirstClaudeAccount(t *testin
 func TestProviders_ByDayTheFirstFreeSubscriptionWithItsSecretBuilds(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
-	planned := providersMake(providersCtxFor(gh, providersCtx{At: ts.Day}))
+	planned := flowMake(providersCtxFor(gh, providersCtx{At: ts.Day}))
 	assertEqual(t, []any{planned.Get("number"), planned.Get("provider"), planned.Get("cli"),
 		planned.Get("secret"), planned.Get("login"), planned.Get("runs_on")},
 		[]any{3, "muse", "muse", "", "machine", "night-vm-muse"})
 	gh2 := fakes.NewFakeGitHub()
 	gh2.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
-	planned = providersMake(providersCtxFor(gh2, providersCtx{At: ts.Day, Machine: []string{"agy"}}))
+	planned = flowMake(providersCtxFor(gh2, providersCtx{At: ts.Day, Machine: []string{"agy"}}))
 	assertEqual(t, []any{planned.Get("provider"), planned.Get("runs_on")}, []any{"agy", "night-vm-agy"})
 	assertEqual(t, providersCtxFor(gh2).Store.Load().Obj("items").Obj("3").Get("provider"), "agy")
 }
@@ -594,22 +572,22 @@ func TestProviders_AWeakSubscriptionTakesEasyItemsFirstAndNothingHarder(t *testi
 	// builds it.
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}})
-	planned := providersMake(providersCtxFor(gh, providersCtx{At: ts.Day, Machine: ts.AllMachine}))
+	planned := flowMake(providersCtxFor(gh, providersCtx{At: ts.Day, Machine: ts.AllMachine}))
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"build", "muse"})
 	assertIn(t, "#3 needs a plan", planned.Get("housekeeping"))
 	// A medium item passes the weak one by.
 	gh = fakes.NewFakeGitHub()
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
-	planned = providersMake(providersCtxFor(gh, providersCtx{At: ts.Day, Machine: ts.AllMachine}))
+	planned = flowMake(providersCtxFor(gh, providersCtx{At: ts.Day, Machine: ts.AllMachine}))
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"build", "muse"})
 	// With nothing else free, the weak one builds an easy item another model already planned.
 	gh = fakes.NewFakeGitHub()
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}})
 	ctx := providersCtxFor(gh, providersCtx{At: ts.Day, Machine: []string{ts.Weak}})
-	assertEqual(t, providersMake(ctx).Get("action"), "none") // no planner is free
+	assertEqual(t, flowMake(ctx).Get("action"), "none") // no planner is free
 	// A medium model's plan is enough for an easy item (#317 part 6), and the weak one builds it.
-	providersSetItem(ctx, 3, pyjson.New("planned_at", clock.ISO(ts.Day), "planned_tier", "medium"))
-	planned = providersMake(ctx)
+	flowUpdateItem(ctx, 3, pyjson.New("planned_at", clock.ISO(ts.Day), "planned_tier", "medium"))
+	planned = flowMake(ctx)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"build", ts.Weak})
 	assertEqual(t, planned.Obj("seats").Get("self_check"), true)
 	assertEqual(t, planned.Obj("seats").Get("review"), nil) // weak reviews only in a review run
@@ -637,7 +615,7 @@ func TestProviders_ASubscriptionIsSwitchedOffFromItsOffFromDay(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	ctx := ts.MakeCtx(gh, ts.Ctx{At: onThe2nd.Add(12 * time.Hour), Cfg: cfg})
-	planned := providersMake(ctx)
+	planned := flowMake(ctx)
 	assertNotEqual(t, planned.Get("provider"), ts.Weak)
 	switchedOff := func() []int {
 		opened := []int{}
@@ -653,8 +631,8 @@ func TestProviders_ASubscriptionIsSwitchedOffFromItsOffFromDay(t *testing.T) {
 	body := providersStr(gh.Threads.Item(opened[0]).Get("body"))
 	assertIn(t, "off_from: 2026-11-02", body)
 	assertIn(t, "Its plan runs out", body)
-	assertEqual(t, gh.LabelNames(opened[0]), providersSetOf("night bot"))
-	providersMake(ctx) // once only
+	assertEqual(t, gh.LabelNames(opened[0]), setOf("night bot"))
+	flowMake(ctx) // once only
 	assertEqual(t, len(switchedOff()), 1)
 	raw := ts.WithWeak(providersRaw())
 	providersOf(raw, ts.Weak).Set("off_from", "mid-October")
@@ -949,16 +927,16 @@ func TestProviders_Claude2And3WorkAnyHour(t *testing.T) {
 	ctx = ts.MakeCtx(gh, ts.Ctx{At: ts.Day, Cfg: providersWithPool(ctx.Cfg, func(p *providers.Pool) {
 		p.MaxParallel = 20
 	})})
-	planned := providersMake(ctx)
+	planned := flowMake(ctx)
 	assertEqual(t, providersPicked(planned), []any{4, "claude-3", "build"})
 	providersRun(gh, "1", "in_progress")
-	providersSetItem(ctx, 4, pyjson.New("run_id", "1"))
-	planned = providersMake(ctx)
+	flowUpdateItem(ctx, 4, pyjson.New("run_id", "1"))
+	planned = flowMake(ctx)
 	// The unrated one goes to the weakest seat that meets its floor (#695): Muse plans it first in
 	// its own build run.
 	assertEqual(t, providersPicked(planned), []any{3, "muse", "build"})
 	providersRun(gh, "2", "in_progress")
-	providersSetItem(ctx, 3, pyjson.New("run_id", "2"))
+	flowUpdateItem(ctx, 3, pyjson.New("run_id", "2"))
 	// The lanes fill in tier order (#695): Muse holds #3 on one of its four lanes (#1273), so it
 	// takes the next three too, then agy, then Codex, then the Sonnet seats in usage order.
 	for _, c := range []struct {
@@ -966,23 +944,23 @@ func TestProviders_Claude2And3WorkAnyHour(t *testing.T) {
 		run    string
 	}{{6, "3"}, {15, "15"}, {16, "16"}} {
 		gh.AddIssue(c.number, fakes.Issue{Labels: []string{config.LabelBuild}})
-		planned = providersMake(ctx)
+		planned = flowMake(ctx)
 		assertEqual(t, providersPicked(planned), []any{c.number, "muse", "build"})
 		providersRun(gh, c.run, "in_progress")
-		providersSetItem(ctx, c.number, pyjson.New("run_id", c.run))
+		flowUpdateItem(ctx, c.number, pyjson.New("run_id", c.run))
 	}
 	gh.AddIssue(5, fakes.Issue{Labels: []string{config.LabelBuild}})
-	planned = providersMake(ctx)
+	planned = flowMake(ctx)
 	// Muse's lanes are held: agy takes the next one.
 	assertEqual(t, providersPicked(planned), []any{5, "agy", "build"})
 	providersRun(gh, "4", "in_progress")
-	providersSetItem(ctx, 5, pyjson.New("run_id", "4"))
+	flowUpdateItem(ctx, 5, pyjson.New("run_id", "4"))
 	// Then Codex, after agy in the tier order and before Sonnet.
 	gh.AddIssue(13, fakes.Issue{Labels: []string{config.LabelBuild}})
-	planned = providersMake(ctx)
+	planned = flowMake(ctx)
 	assertEqual(t, providersPicked(planned), []any{13, "gpt", "build"})
 	providersRun(gh, "13", "in_progress")
-	providersSetItem(ctx, 13, pyjson.New("run_id", "13"))
+	flowUpdateItem(ctx, 13, pyjson.New("run_id", "13"))
 	// Then the Sonnet seats: claude-3 holds #4 on one of its two lanes, so the load balancer
 	// (`plan.balance`) gives each next one to an account holding none, in usage order (claude-1
 	// works by day too, after claude-7 and claude-8), and claude-3's second lane comes after all
@@ -994,10 +972,10 @@ func TestProviders_Claude2And3WorkAnyHour(t *testing.T) {
 		{12, "claude-5"}, {14, "claude-3"}} {
 		run := strconv.Itoa(i + 5)
 		gh.AddIssue(c.number, fakes.Issue{Labels: []string{config.LabelBuild}})
-		planned = providersMake(ctx)
+		planned = flowMake(ctx)
 		assertEqual(t, providersPicked(planned), []any{c.number, c.provider, "build"})
 		providersRun(gh, run, "in_progress")
-		providersSetItem(ctx, c.number, pyjson.New("run_id", run))
+		flowUpdateItem(ctx, c.number, pyjson.New("run_id", run))
 	}
 	// Past 90% claude-2 is held; claude-3's readings never stop it, only a refusal does.
 	later := clock.ISO(ts.Day.Add(2 * 24 * time.Hour))
@@ -1036,7 +1014,7 @@ func TestProviders_TheLoadBalancerSpreadsATierByRoom(t *testing.T) {
 			}
 			return nil
 		}, "state")
-		return providersMake(ctx).Get("provider")
+		return flowMake(ctx).Get("provider")
 	}
 
 	assertEqual(t, builder(0.8, 0.1, true), "claude-7") // 20% of its week left to 90%
@@ -1065,11 +1043,11 @@ func TestProviders_HardWorkWaitsForAStrongModelAndComesFirst(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	gh.AddIssue(4, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
-	planned := providersMake(providersCtxFor(gh))
+	planned := flowMake(providersCtxFor(gh))
 	assertEqual(t, []any{planned.Get("number"), planned.Get("provider")}, []any{4, "claude-3"})
 	gh = fakes.NewFakeGitHub()
 	gh.AddIssue(4, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
-	planned = providersMake(providersCtxFor(gh, providersCtx{At: ts.Day}))
+	planned = flowMake(providersCtxFor(gh, providersCtx{At: ts.Day}))
 	assertEqual(t, planned.Get("action"), "none")
 	assertIn(t, "outside its hours", planned.Get("reason"))
 	assertEqual(t, providersForce(providersCtxFor(gh, providersCtx{At: ts.Day})).Get("provider"), "claude-3")
@@ -1084,13 +1062,13 @@ func TestProviders_EachSubscriptionTakesAsManyItemsAsItsLanes(t *testing.T) {
 	taken := []any{}
 	var planned *pyjson.Object
 	for range 9 {
-		planned = providersMake(ctx)
+		planned = flowMake(ctx)
 		if pyjson.Equal(planned.Get("action"), "none") {
 			break
 		}
 		run := strconv.Itoa(len(taken))
 		providersRun(gh, run, "in_progress")
-		providersSetItem(ctx, planned.Int("number"), pyjson.New("run_id", run))
+		flowUpdateItem(ctx, planned.Int("number"), pyjson.New("run_id", run))
 		taken = append(taken, []any{planned.Get("number"), planned.Get("provider")})
 	}
 	// Muse, first of the medium models, takes four items on its four lanes (#1273) before agy,
@@ -1118,15 +1096,15 @@ func TestProviders_WithTheMachineSubscriptionsFullGithubTakesTheClaudeAccounts(t
 	}{{40, "gpt"}, {41, "agy"}, {42, "muse"}, {43, "muse"}, {44, "muse"}, {45, "muse"}} {
 		gh.AddIssue(c.n, fakes.Issue{Labels: []string{config.LabelWorking}})
 		providersRun(gh, strconv.Itoa(c.n), "in_progress")
-		providersSetItem(ctx, c.n, pyjson.New("run_id", strconv.Itoa(c.n), "provider", c.provider))
+		flowUpdateItem(ctx, c.n, pyjson.New("run_id", strconv.Itoa(c.n), "provider", c.provider))
 	}
-	planned := providersMake(ctx)
+	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("provider"), planned.Get("runs_on")}, []any{"claude-2", "ubuntu-latest"})
 	// With one lane (#695) the Claude account takes nothing more while it holds its run: the next
 	// item waits.
 	providersRun(gh, "1", "in_progress")
-	providersSetItem(ctx, planned.Int("number"), pyjson.New("run_id", "1"))
-	again := providersMake(ctx)
+	flowUpdateItem(ctx, planned.Int("number"), pyjson.New("run_id", "1"))
+	again := flowMake(ctx)
 	assertEqual(t, again.Get("action"), "none")
 	assertIn(t, "`claude-2` is busy", again.Get("reason"))
 }
@@ -1147,7 +1125,7 @@ func TestProviders_MuseWorksFourItemsAtOnce(t *testing.T) {
 	}{{40, "gpt"}, {41, "agy"}} {
 		gh.AddIssue(c.n, fakes.Issue{Labels: []string{config.LabelWorking}})
 		providersRun(gh, strconv.Itoa(c.n), "in_progress")
-		providersSetItem(ctx, c.n, pyjson.New("run_id", strconv.Itoa(c.n), "provider", c.provider))
+		flowUpdateItem(ctx, c.n, pyjson.New("run_id", strconv.Itoa(c.n), "provider", c.provider))
 	}
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		for _, n := range items {
@@ -1160,13 +1138,13 @@ func TestProviders_MuseWorksFourItemsAtOnce(t *testing.T) {
 	taken := []any{}
 	var planned *pyjson.Object
 	for range 5 {
-		planned = providersMake(ctx)
+		planned = flowMake(ctx)
 		if pyjson.Equal(planned.Get("action"), "none") {
 			break
 		}
 		n := planned.Int("number")
 		providersRun(gh, strconv.Itoa(n), "in_progress")
-		providersSetItem(ctx, n, pyjson.New("run_id", strconv.Itoa(n)))
+		flowUpdateItem(ctx, n, pyjson.New("run_id", strconv.Itoa(n)))
 		taken = append(taken, []any{planned.Get("number"), planned.Get("provider")})
 	}
 	want := []any{}
@@ -1175,7 +1153,7 @@ func TestProviders_MuseWorksFourItemsAtOnce(t *testing.T) {
 	}
 	assertEqual(t, taken, want)
 	assertIn(t, "`muse` is busy", planned.Get("reason"))
-	three := &plan.Lanes{Limit: 11, MachineLimit: 6, Machine: providersSetOf("muse")}
+	three := &plan.Lanes{Limit: 11, MachineLimit: 6, Machine: setOf("muse")}
 	for _, n := range []int{3, 4, 5} {
 		three = three.WithRun(n, "muse", "build", false)
 	}
@@ -1206,13 +1184,13 @@ func TestProviders_ASixLaneSubscriptionCanFillTheMachine(t *testing.T) {
 	taken := []any{}
 	var planned *pyjson.Object
 	for range 7 {
-		planned = providersMake(ctx)
+		planned = flowMake(ctx)
 		if pyjson.Equal(planned.Get("action"), "none") {
 			break
 		}
 		n := planned.Int("number")
 		providersRun(gh, strconv.Itoa(n), "in_progress")
-		providersSetItem(ctx, n, pyjson.New("run_id", strconv.Itoa(n)))
+		flowUpdateItem(ctx, n, pyjson.New("run_id", strconv.Itoa(n)))
 		taken = append(taken, []any{planned.Get("number"), planned.Get("provider")})
 	}
 	want := []any{}
@@ -1232,16 +1210,16 @@ func TestProviders_ASixLaneSubscriptionCanFillTheMachine(t *testing.T) {
 	planAll(ctx)
 	gh.AddIssue(40, fakes.Issue{Labels: []string{config.LabelWorking}})
 	providersRun(gh, "40", "in_progress")
-	providersSetItem(ctx, 40, pyjson.New("run_id", "40", "provider", "gpt"))
+	flowUpdateItem(ctx, 40, pyjson.New("run_id", "40", "provider", "gpt"))
 	lites := 0
 	for range 7 {
-		planned = providersMake(ctx)
+		planned = flowMake(ctx)
 		if pyjson.Equal(planned.Get("action"), "none") {
 			break
 		}
 		n := planned.Int("number")
 		providersRun(gh, strconv.Itoa(n), "in_progress")
-		providersSetItem(ctx, n, pyjson.New("run_id", strconv.Itoa(n)))
+		flowUpdateItem(ctx, n, pyjson.New("run_id", strconv.Itoa(n)))
 		if pyjson.Equal(planned.Get("provider"), "lite") {
 			lites++
 		}
@@ -1257,12 +1235,12 @@ func TestProviders_AnEasyAuditGoesToAMediumModel(t *testing.T) {
 	gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR, config.LabelCross,
 		"difficulty:easy"}, SHA: "h1"})
 	ctx := providersCtxFor(gh, providersCtx{At: ts.Day})
-	providersSetItem(ctx, 9, pyjson.New("votes", pyjson.New("sha", "h1", "builder", "gpt",
+	flowUpdateItem(ctx, 9, pyjson.New("votes", pyjson.New("sha", "h1", "builder", "gpt",
 		"approvals", []any{"gpt"})))
-	planned := providersMake(ctx)
+	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), planned.Get("head"),
 		planned.Get("builder")}, []any{"review", "muse", "h1", "gpt"})
-	assertEqual(t, gh.LabelNames(9), providersSetOf(config.LabelPR, config.LabelWorking, "difficulty:easy"))
+	assertEqual(t, gh.LabelNames(9), setOf(config.LabelPR, config.LabelWorking, "difficulty:easy"))
 }
 
 // claude-1 is spent like any other subscription now: no gate wait for quiet, so the gate's word
@@ -1383,7 +1361,7 @@ func TestProviders_AQueuedItemAndThePlannerSayTheSame(t *testing.T) {
 		s.Obj("providers").Update(st.Obj("providers"))
 		return nil
 	}, "seed")
-	planned := providersMake(ctx)
+	planned := flowMake(ctx)
 	assertEqual(t, planned.Get("action"), "none")
 	assertIn(t, "`claude-4` 5-hour usage is 49%, too close to its 50% cap", planned.Get("reason"))
 	assertIn(t, "it can start a build or a plan again in 2h 00m", planned.Get("reason"))
@@ -1421,7 +1399,7 @@ func TestProviders_SquishysLiveRunsHoldSlotsTheNightBotWaitsFor(t *testing.T) {
 		gh.Runs.Set(strconv.Itoa(n), pyjson.New("status", "in_progress", "path", squishy))
 	}
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
-	assertEqual(t, providersMake(ctx).Get("action"), "none")
+	assertEqual(t, flowMake(ctx).Get("action"), "none")
 }
 
 func TestProviders_TheNightBotsRunsOnTheMachineHoldNone(t *testing.T) {
@@ -1487,8 +1465,8 @@ func TestProviders_EveryCappedClaudeAccountHasOne(t *testing.T) {
 			takes[p.ID] = true
 		}
 	}
-	assertEqual(t, lastHour, providersSetOf("claude-1", "claude-4", "claude-6", "claude-7", "claude-8"))
-	assertEqual(t, takes, providersSetOf("claude-1", "claude-4", "claude-5", "claude-6", "claude-7", "claude-8"))
+	assertEqual(t, lastHour, setOf("claude-1", "claude-4", "claude-6", "claude-7", "claude-8"))
+	assertEqual(t, takes, setOf("claude-1", "claude-4", "claude-5", "claude-6", "claude-7", "claude-8"))
 	raw := providersRaw()
 	providersOf(raw, "claude-3").Set("last_hour", true) // no caps to lift
 	assertRaisesRegex[*herr.ConfigError](t, "it lifts a 5-hour cap, and claude-3 has none",
@@ -1588,9 +1566,6 @@ type providersLateReading struct {
 	Starting      *bool         // why's starting = True
 }
 
-func providersF(f float64) *float64 { return &f }
-func providersB(b bool) *bool       { return &b }
-
 // providersLateUsage is LateWeekTests.usage.
 func providersLateUsage(at time.Time, week float64, o providersLateReading) *pyjson.Object {
 	session := 0.1
@@ -1642,37 +1617,37 @@ func TestProviders_FromSunday1700UntilTheResetItsCapsGoUp(t *testing.T) {
 	assertIn(t, "7-day usage is 96%, too close to its 100% cap to start a long run (it "+
 		"starts under 95%)", why(sunday, 0.96))
 	// a review goes up to the cap
-	assertIsNone(t, why(sunday, 0.96, providersLateReading{Starting: providersB(false)}))
+	assertIsNone(t, why(sunday, 0.96, providersLateReading{Starting: ptr(false)}))
 	assertIn(t, "7-day usage is 100%, at or over its 100% cap",
-		why(sunday, 1.0, providersLateReading{Starting: providersB(false)}))
+		why(sunday, 1.0, providersLateReading{Starting: ptr(false)}))
 	// The session: 40% until 17:00, then 80% (a build starts under 75%).
 	assertIn(t, "5-hour usage is 50%, too close to its 40% cap",
-		why(sunday.Add(-time.Minute), 0.3, providersLateReading{Session: providersF(0.5)}))
-	assertIsNone(t, why(sunday, 0.3, providersLateReading{Session: providersF(0.5)}))
+		why(sunday.Add(-time.Minute), 0.3, providersLateReading{Session: ptr(0.5)}))
+	assertIsNone(t, why(sunday, 0.3, providersLateReading{Session: ptr(0.5)}))
 	assertIn(t, "5-hour usage is 78%, too close to its 80% cap",
-		why(sunday, 0.3, providersLateReading{Session: providersF(0.78)}))
+		why(sunday, 0.3, providersLateReading{Session: ptr(0.78)}))
 	assertIn(t, "5-hour usage is 81%, at or over its 80% cap",
-		why(sunday, 0.3, providersLateReading{Session: providersF(0.81), Starting: providersB(false)}))
+		why(sunday, 0.3, providersLateReading{Session: ptr(0.81), Starting: ptr(false)}))
 	// A session's last hour, at its 80% cap and nobody else's spending, lifts that cap; past it by
 	// more than a point, somebody else spent it, and it holds.
 	last := 30 * time.Minute
-	assertIsNone(t, why(sunday, 0.3, providersLateReading{Session: providersF(0.8), SessionResets: last}))
+	assertIsNone(t, why(sunday, 0.3, providersLateReading{Session: ptr(0.8), SessionResets: last}))
 	assertIn(t, "5-hour usage is 85%, too close to its 80% cap",
-		why(sunday, 0.3, providersLateReading{Session: providersF(0.85), SessionResets: last}))
+		why(sunday, 0.3, providersLateReading{Session: ptr(0.85), SessionResets: last}))
 	assertEqual(t, providers.LastHourOf(claude5, providersLateUsage(sunday, 0.3,
-		providersLateReading{Session: providersF(0.8), SessionResets: last}), sunday, providersZone), sunday.Add(last))
+		providersLateReading{Session: ptr(0.8), SessionResets: last}), sunday, providersZone), sunday.Add(last))
 	// Its week's cap still holds in that last hour.
 	assertIn(t, "7-day usage is 100%, too close to its 100% cap",
-		why(sunday, 1.0, providersLateReading{Session: providersF(0.8), SessionResets: last}))
+		why(sunday, 1.0, providersLateReading{Session: ptr(0.8), SessionResets: last}))
 	// The new week holds to 60% and 40% again, with no last hour.
 	monday := time.Date(2026, 11, 2, 9, 30, 0, 0, time.UTC)
 	week := "2026-11-09T09:00:00Z"
 	assertIn(t, "7-day usage is 65%, too close to its 60% cap",
 		why(monday, 0.65, providersLateReading{Resets: week}))
 	assertIn(t, "5-hour usage is 50%, too close to its 40% cap",
-		why(monday, 0.1, providersLateReading{Session: providersF(0.5), Resets: week}))
+		why(monday, 0.1, providersLateReading{Session: ptr(0.5), Resets: week}))
 	assertIn(t, "5-hour usage is 40%, too close to its 40% cap",
-		why(monday, 0.1, providersLateReading{Session: providersF(0.4), SessionResets: last, Resets: week}))
+		why(monday, 0.1, providersLateReading{Session: ptr(0.4), SessionResets: last, Resets: week}))
 	// A week whose reset moved days off (to Wednesday) raises nothing on Sunday.
 	assertIn(t, "too close to its 60% cap", why(sunday.Add(time.Hour), 0.7,
 		providersLateReading{Resets: "2026-11-04T09:00:00Z"}))
@@ -1698,9 +1673,9 @@ func TestProviders_ItSaysWhenItStartsAndCountsItsRoom(t *testing.T) {
 
 	assertEqual(t, capText("seven_day", providersLateReading{}),
 		"cap 100% now (its late week, from Sun 17:00), 60% after the reset")
-	assertEqual(t, capText("five_hour", providersLateReading{Session: providersF(0.5)}),
+	assertEqual(t, capText("five_hour", providersLateReading{Session: ptr(0.5)}),
 		"cap 80% now (its late week, from Sun 17:00), 40% after the reset")
-	assertEqual(t, capText("five_hour", providersLateReading{Session: providersF(0.8), SessionResets: 30 * time.Minute}),
+	assertEqual(t, capText("five_hour", providersLateReading{Session: ptr(0.8), SessionResets: 30 * time.Minute}),
 		"cap 100% now (its last hour), 80% after the reset")
 }
 

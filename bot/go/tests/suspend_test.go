@@ -95,7 +95,7 @@ type suspendCommands struct {
 func newSuspendCommands(t *testing.T) *suspendCommands {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(5)
-	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, TrustText: eventsStr(suspendTrust)})
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, TrustText: ptr(suspendTrust)})
 	return &suspendCommands{t: t, gh: gh, ctx: ctx, cid: 600}
 }
 
@@ -115,7 +115,7 @@ func (w *suspendCommands) send(body string, as ...any) {
 
 func (w *suspendCommands) reply() string {
 	w.t.Helper()
-	return eventsLast(w.t, w.gh.BotComments(5))
+	return lastOf(w.t, w.gh.BotComments(5))
 }
 
 // why is CommandTests.why(provider_id, forced=False): "" is None.
@@ -134,8 +134,8 @@ func TestSuspend_SuspendAndResumeOneSubscription(t *testing.T) {
 	assertEqual(t, w.why("claude-1"), "") // None
 	w.send("/harness suspend claude-1 using it myself")
 	assertIn(t, "Suspended `claude-1`", w.reply())
-	held := eventsDig(t, w.ctx.Store.Load(), "providers", "claude-1", "suspended")
-	assertEqual(t, []any{eventsDig(t, held, "by"), eventsDig(t, held, "reason")}, []any{"jgoetzmann", "using it myself"})
+	held := dig(t, w.ctx.Store.Load(), "providers", "claude-1", "suspended")
+	assertEqual(t, []any{dig(t, held, "by"), dig(t, held, "reason")}, []any{"jgoetzmann", "using it myself"})
 	assertEqual(t, w.why("claude-1"), "suspended by @jgoetzmann (using it myself); "+
 		"`/harness resume claude-1` lifts it")
 	assertIn(t, "suspended", w.why("claude-1", true))
@@ -143,14 +143,14 @@ func TestSuspend_SuspendAndResumeOneSubscription(t *testing.T) {
 	assertFalse(t, w.ctx.Store.Load().Get("halted"))
 	w.send("/harness resume claude-1")
 	assertIn(t, "Resumed `claude-1`", w.reply())
-	assertNotIn(t, "suspended", eventsDig(t, w.ctx.Store.Load(), "providers", "claude-1"))
+	assertNotIn(t, "suspended", dig(t, w.ctx.Store.Load(), "providers", "claude-1"))
 	assertEqual(t, w.why("claude-1"), "") // None
 }
 
 func TestSuspend_TheMentionFormSuspendsWithAReasonAfterAColon(t *testing.T) {
 	w := newSuspendCommands(t)
 	w.send("@jgoetzmann-bot suspend: claude-2 for the demo")
-	assertEqual(t, eventsDig(t, w.suspended("claude-2"), "reason"), "for the demo")
+	assertEqual(t, dig(t, w.suspended("claude-2"), "reason"), "for the demo")
 	w.send("@jgoetzmann-bot resume claude-2")
 	assertIsNone(t, w.suspended("claude-2"))
 }
@@ -169,7 +169,7 @@ func TestSuspend_AnUnknownOrMissingSubscriptionChangesNothing(t *testing.T) {
 	assertIn(t, "`claude-1`", w.reply())
 	w.send("/harness suspend")
 	assertIn(t, "needs a subscription", w.reply())
-	assertEqual(t, eventsDig(t, w.ctx.Store.Load(), "providers"), pyjson.New())
+	assertEqual(t, dig(t, w.ctx.Store.Load(), "providers"), pyjson.New())
 }
 
 func TestSuspend_ResumeOfASubscriptionLeavesAHaltAlone(t *testing.T) {
@@ -178,21 +178,21 @@ func TestSuspend_ResumeOfASubscriptionLeavesAHaltAlone(t *testing.T) {
 	w.send("/harness suspend claude-1")
 	w.send("/harness resume claude-1")
 	assertIn(t, "still halted", w.reply())
-	assertTrue(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertTrue(t, dig(t, w.ctx.Store.Load(), "halted"))
 	assertIsNone(t, w.suspended("claude-1"))
 	w.send("/harness resume over")
 	assertIn(t, "`over` is not a subscription", w.reply())
-	assertTrue(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertTrue(t, dig(t, w.ctx.Store.Load(), "halted"))
 	// A bare start, or one with a note that names no subscription, lifts the halt as it always
 	// did, and never a suspension.
 	w.send("/harness suspend gpt")
 	w.send("/harness start now, back from vacation")
 	assertIn(t, "Started.", w.reply())
-	assertFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertFalse(t, dig(t, w.ctx.Store.Load(), "halted"))
 	assertIsNotNone(t, w.suspended("gpt"))
 	w.send("/harness halt again")
 	w.send("/harness start")
-	assertFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertFalse(t, dig(t, w.ctx.Store.Load(), "halted"))
 	assertIsNotNone(t, w.suspended("gpt"))
 }
 
@@ -223,15 +223,15 @@ func TestSuspend_ASuspendedSubscriptionTakesNoWorkEvenForced(t *testing.T) {
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	suspendSuspend(ctx, "claude-1")
 	planned := plan.Make(ctx, true, nil, "auto", nil)
-	assertEqual(t, eventsDig(t, planned, "action"), "none")
-	assertIn(t, "`claude-1` suspended by @jgoetzmann", eventsDig(t, planned, "reason"))
+	assertEqual(t, dig(t, planned, "action"), "none")
+	assertIn(t, "`claude-1` suspended by @jgoetzmann", dig(t, planned, "reason"))
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		if _, ok := providers.Record(s, "claude-1").Pop("suspended"); !ok {
 			t.Fatal(`KeyError: 'suspended'`)
 		}
 		return nil
 	}, "state")
-	assertEqual(t, eventsDig(t, plan.Make(ctx, false, nil, "auto", nil), "action"), "build")
+	assertEqual(t, dig(t, plan.Make(ctx, false, nil, "auto", nil), "action"), "build")
 }
 
 func TestSuspend_TheProbeStopsARunOnASuspendedSubscription(t *testing.T) {
@@ -258,7 +258,7 @@ func TestSuspend_TheStatusIssueShowsASuspendedAccountAsOff(t *testing.T) {
 func suspendRunWithProbe(t *testing.T, h *flowHarness, fake *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
 	t.Helper()
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	assertEqual(t, eventsDig(t, planned, "provider"), "claude-1")
+	assertEqual(t, dig(t, planned, "provider"), "claude-1")
 	out := filepath.Join(h.root, "out-suspend")
 	number := 12
 	result := work.NewWorker(h.cfg, planned, fake, h.clone, filepath.Join(h.root, "work"), out,
@@ -289,14 +289,14 @@ func TestSuspend_ARunGoingWhenItsSubscriptionIsSuspendedPausesUncharged(t *testi
 	}
 	fake := workFake(map[string]runner.Handler{"build": building, "review": workReviewer(workApprove)})
 	_, result := suspendRunWithProbe(t, h, fake)
-	assertEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "interrupt")}, []any{"interrupted", "suspend"})
+	assertEqual(t, []any{dig(t, result, "status"), dig(t, result, "interrupt")}, []any{"interrupted", "suspend"})
 	roles := []string{}
 	for _, c := range fake.Calls {
 		roles = append(roles, c.Role)
 	}
 	assertEqual(t, roles, []string{"plan", "build"}) // no review
 	assertIn(t, config.LabelBuild, h.gh.LabelNames(12))
-	assertIn(t, "Paused: `claude-1` was suspended by @jgoetzmann", eventsLast(t, h.gh.BotComments(12)))
+	assertIn(t, "Paused: `claude-1` was suspended by @jgoetzmann", lastOf(t, h.gh.BotComments(12)))
 	record := state.Item(h.ctx.Store.Load(), 12)
 	assertEqual(t, suspendCount(t, record, "interruptions"), 0)
 	assertEqual(t, suspendCount(t, record, "failures"), 0)
@@ -313,6 +313,6 @@ func TestSuspend_AFinishedChangeIsStillHandedOn(t *testing.T) {
 	fake := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": reviewing})
 	_, result := suspendRunWithProbe(t, h, fake)
-	assertEqual(t, eventsDig(t, result, "status"), "approved")
+	assertEqual(t, dig(t, result, "status"), "approved")
 	assertEqual(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)), 1)
 }

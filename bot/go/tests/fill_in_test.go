@@ -80,14 +80,6 @@ func fillInSetUp() *fakes.FakeGitHub {
 	return gh
 }
 
-func fillInSet(names ...string) map[string]bool {
-	out := map[string]bool{}
-	for _, n := range names {
-		out[n] = true
-	}
-	return out
-}
-
 // ---------------------------------------------------------------------------- FillInTests
 
 func TestFillIn_WithGptAndAgyFreeEachKeepsItsLane(t *testing.T) {
@@ -160,7 +152,7 @@ func TestFillIn_APlanningRunOfGptOrAgyHoldsASharedLane(t *testing.T) {
 	gh := fillInSetUp()
 	ctx := fillInCtxFor(gh)
 	pool := ctx.Cfg.Pool
-	lanes := &plan.Lanes{Limit: 8, MachineLimit: 6, Machine: fillInSet(testsupport.Machine...)}
+	lanes := &plan.Lanes{Limit: 8, MachineLimit: 6, Machine: setOf(testsupport.Machine...)}
 	lanes = lanes.WithRun(40, "gpt", "plan", false).WithRun(41, "muse", "build", true)
 	assertTrue(t, plan.FillInFull(pool, pool.Get("agy"), lanes))
 	assertFalse(t, plan.FillInFull(pool, pool.Get("muse"), lanes))
@@ -173,7 +165,7 @@ func TestFillIn_TheSurveyNeverFillsALane(t *testing.T) {
 	gh := fillInSetUp()
 	ctx := fillInCtxFor(gh, "muse")
 	lanes := &plan.Lanes{Limit: 8, Held: map[int]string{40: "muse", 41: "muse", 42: "muse", 43: "muse"},
-		MachineLimit: 6, Machine: fillInSet(testsupport.Machine...)}
+		MachineLimit: 6, Machine: setOf(testsupport.Machine...)}
 	s := ctx.Store.Load()
 	muse := ctx.Cfg.Pool.Get("muse")
 	assertEqual(t, plan.RunnerFor(ctx, s, muse, lanes, "build"), fillInFill)

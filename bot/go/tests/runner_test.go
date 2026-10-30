@@ -188,7 +188,7 @@ func TestRunner_ACallPastItsCapIsStoppedWhileItRuns(t *testing.T) {
 	if len(seen) > 0 {
 		assertEqual(t, seen[len(seen)-1], 0.6)
 	}
-	assertEqual(t, flowPath(result.Usage, "five_hour", "utilization"), 0.6)
+	assertEqual(t, dig(t, result.Usage, "five_hour", "utilization"), 0.6)
 	assertFalse(t, result.RateLimited())
 }
 
@@ -211,9 +211,9 @@ func TestRunner_SuccessAndEnvironment(t *testing.T) {
 	assertTrue(t, result.OK, result.Error)
 	assertTrue(t, result.Turns != nil && *result.Turns == 7, result.Turns)
 	assertEqual(t, result.Text, "done: build the thing plea")
-	assertAlmostEqual(t, flowPath(result.Usage, "five_hour", "utilization"), 0.25)
+	assertAlmostEqual(t, dig(t, result.Usage, "five_hour", "utilization"), 0.25)
 	assertFalse(t, result.RateLimited())
-	dumped := flowLoadJSON(t, w.dump)
+	dumped := loadJSON(t, w.dump)
 	keys := dumped.List("keys")
 	assertIn(t, "CLAUDE_CODE_OAUTH_TOKEN", keys)
 	assertIn(t, "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", keys)
@@ -221,9 +221,9 @@ func TestRunner_SuccessAndEnvironment(t *testing.T) {
 		assertNotIn(t, secret, keys)
 	}
 	assertEqual(t, dumped.Get("prompt"), "build the thing please")
-	transcript := flowRead(t, filepath.Join(w.tmp, "t", "01-build.jsonl"))
+	transcript := readText(t, filepath.Join(w.tmp, "t", "01-build.jsonl"))
 	assertIn(t, `"type": "result"`, transcript)
-	assertFalse(t, flowExists(filepath.Join(w.tmp, "t", "01-build.raw")))
+	assertFalse(t, exists(filepath.Join(w.tmp, "t", "01-build.raw")))
 }
 
 func TestRunner_RefusalIsARateLimitWithItsReset(t *testing.T) {
@@ -253,7 +253,7 @@ func TestRunner_WhatTheCallLeavesRunningIsKilledAndNothingElse(t *testing.T) {
 	}()
 	result := w.runFake("daemon")
 	assertTrue(t, result.OK, result.Error)
-	pid, err := strconv.Atoi(strings.TrimSpace(flowRead(t, w.dump+".pid")))
+	pid, err := strconv.Atoi(strings.TrimSpace(readText(t, w.dump+".pid")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,7 +306,7 @@ func TestRunner_ParseStreamIgnoresNoise(t *testing.T) {
 	newRunnerWorld(t) // setUp
 	lines := []string{"not json", "", pyjson.Dumps(pyjson.New("type", "result", "result", "x")), "[1,2]"}
 	result, usage := runner.ParseStream(lines)
-	assertEqual(t, flowPath(result, "result"), "x")
+	assertEqual(t, dig(t, result, "result"), "x")
 	assertTrue(t, usage == nil, "usage is None")
 }
 
@@ -314,5 +314,5 @@ func TestRunner_OverageIsNotARefusal(t *testing.T) {
 	newRunnerWorld(t) // setUp
 	usage := runner.UsageFromEvent(pyjson.New("rate_limit_info", pyjson.New("status", "rejected",
 		"isUsingOverage", true, "unifiedWindows", pyjson.New())))
-	assertEqual(t, flowPath(usage, "status"), "allowed_overage")
+	assertEqual(t, dig(t, usage, "status"), "allowed_overage")
 }

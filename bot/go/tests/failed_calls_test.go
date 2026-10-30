@@ -49,7 +49,7 @@ func TestFailedCalls_ACallThatFailsInSecondsBacksTheSubscriptionOffAndSparesTheI
 	if h.gh.LabelNames(12)[config.LabelBuild] {
 		both[config.LabelBuild] = true
 	}
-	assertEqual(t, both, providersSetOf(config.LabelBuild))
+	assertEqual(t, both, setOf(config.LabelBuild))
 	comments := h.gh.BotComments(12)
 	assertIn(t, "That is not this item's fault", comments[len(comments)-1])
 	// The subscription is left alone: the next run goes elsewhere.
@@ -129,7 +129,7 @@ func TestFailedCalls_AReviewCallThatFailsNamesItsError(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, At: ts.Day, Machine: ts.Machine})
 	h.committedHours() // claude-3 works all day: the Strong final can audit
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
-	assertEqual(t, h.gh.LabelNames(pr), providersSetOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	_, review := h.night(workFake(map[string]runner.Handler{"review": failedCallsFailing(900, "overloaded")}))
 	assertEqual(t, review.Get("status"), "failed")
 	assertEqual(t, review.Get("reason"), "the reviewer's call failed: overloaded")

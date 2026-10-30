@@ -8,8 +8,6 @@
 package tests
 
 import (
-	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -31,17 +29,7 @@ var workflowsDir = filepath.Join(config.RepoRoot, ".github", "workflows")
 // workflowsRead is read(): a workflow's text.
 func workflowsRead(t *testing.T, name string) string {
 	t.Helper()
-	return workflowsFile(t, filepath.Join(workflowsDir, name))
-}
-
-// workflowsFile is `path.read_text(encoding="utf-8")`.
-func workflowsFile(t *testing.T, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(data)
+	return readText(t, filepath.Join(workflowsDir, name))
 }
 
 var workflowsNextJob = regexp.MustCompile(`(?m)^  [a-z][\w-]*:\n`)
@@ -84,13 +72,7 @@ func workflowsLinted(t *testing.T, name string) bool {
 	if !strings.Contains(workflowsSelftest(t), workflowsActionlintEveryWorkflow) {
 		return false
 	}
-	return workflowsIsFile(filepath.Join(workflowsDir, name))
-}
-
-// workflowsIsFile is Path.is_file(): a regular file, through a symbolic link too.
-func workflowsIsFile(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.Mode().IsRegular()
+	return isFile(filepath.Join(workflowsDir, name))
 }
 
 var workflowsNextStep = regexp.MustCompile(`(?m)^      - `)
@@ -191,20 +173,6 @@ func workflowsFindall(re *regexp.Regexp, text string) []string {
 	return found
 }
 
-// workflowsSet is set(xs).
-func workflowsSet(xs ...string) map[string]bool {
-	set := map[string]bool{}
-	for _, x := range xs {
-		set[x] = true
-	}
-	return set
-}
-
-// workflowsSorted is sorted(set), for a message.
-func workflowsSorted(set map[string]bool) []string {
-	return slices.Sorted(maps.Keys(set))
-}
-
 // workflowsInt is int(s), which allows the whitespace around the number.
 func workflowsInt(t *testing.T, s string) int {
 	t.Helper()
@@ -259,8 +227,8 @@ func TestWorkflows_TheModelJobHoldsNoGithubWriteToken(t *testing.T) {
 	// Exactly one model secret: the one plan named, picked by name. A run the status loop
 	// started names it in its inputs, which `plan-fetch --check` holds to the plan and to
 	// providers.json before any step reads it (#1455).
-	assertEqual(t, workflowsSet(workflowsFindall(workflowsSecretUse, work)...),
-		workflowsSet("secrets[env.PLAN_SECRET]"))
+	assertEqual(t, setOf(workflowsFindall(workflowsSecretUse, work)...),
+		setOf("secrets[env.PLAN_SECRET]"))
 	assertIn(t, "PLAN_SECRET: ${{ inputs.plan_ref && inputs.secret || "+
 		"needs.plan.outputs.secret }}", work)
 }
@@ -290,7 +258,7 @@ func TestWorkflows_ModelSecretsReachOnlyJobsThatCannotWrite(t *testing.T) {
 		for _, grant := range workflowsGrants(t, block) {
 			values[grant] = true
 		}
-		assertEqual(t, values, workflowsSet("read"), name)
+		assertEqual(t, values, setOf("read"), name)
 	}
 }
 
@@ -348,9 +316,9 @@ func TestWorkflows_OnlyTheChosenCLIIsInstalledAndOnlyOnGithubsRunners(t *testing
 // rust-toolchain.toml pins, with the components and target ci.yml's setup installs
 // (.github/actions/setup); the machine's users have their own (setup.sh).
 func TestWorkflows_TheModelJobsInstallTheRustCIInstalls(t *testing.T) {
-	toml := workflowsFile(t, filepath.Join(config.RepoRoot, "rust-toolchain.toml"))
+	toml := readText(t, filepath.Join(config.RepoRoot, "rust-toolchain.toml"))
 	channel := workflowsSearch(t, `(?m)^channel = "([^"]+)"`, toml, 1)
-	ci := workflowsFile(t, filepath.Join(config.RepoRoot, ".github", "actions", "setup", "action.yml"))
+	ci := readText(t, filepath.Join(config.RepoRoot, ".github", "actions", "setup", "action.yml"))
 	step := `- uses: dtolnay/rust-toolchain@` + regexp.QuoteMeta(channel) + `\n(?:\s+if: .*\n)?` +
 		`\s+with:\n\s+components: rustfmt, clippy\n` +
 		`\s+targets: wasm32-unknown-unknown\n`
@@ -595,7 +563,7 @@ func TestWorkflows_BothKeyTheEntryAlike(t *testing.T) {
 	workflowsInput1(t, theirs, "save-if")
 	delete(theirs, "save-if")
 	assertEqual(t, ours, theirs)
-	setup := workflowsFile(t, filepath.Join(config.RepoRoot, ".github", "actions", "setup", "action.yml"))
+	setup := readText(t, filepath.Join(config.RepoRoot, ".github", "actions", "setup", "action.yml"))
 	assertIn(t, "for toolchain in $(rustup toolchain list --quiet); do", setup)
 }
 
@@ -614,8 +582,8 @@ func TestWorkflows_ItBuildsWhatTheGatesCompile(t *testing.T) {
 			used[sub] = true
 		}
 	}
-	assertEqual(t, used, workflowsSet("fmt", "jackioh", "clippy", "test"))
-	aliases := workflowsFile(t, filepath.Join(config.RepoRoot, ".cargo", "config.toml"))
+	assertEqual(t, used, setOf("fmt", "jackioh", "clippy", "test"))
+	aliases := readText(t, filepath.Join(config.RepoRoot, ".cargo", "config.toml"))
 	assertIn(t, `jackioh = "run --release -p jackioh-tools --"`, aliases)
 	assertIn(t, "run: cargo build --release -p jackioh-tools\n", cache)
 	assertEqual(t, workflowsInput1(t, gates, "clippy"), "cargo clippy --workspace --all-targets -- -D warnings")
@@ -835,8 +803,8 @@ func workflowsWake(t *testing.T) string {
 func TestWorkflows_EachWakeHoldsOneSecretAndNoWriteToken(t *testing.T) {
 	ping := workflowsJob(t, workflowsWake(t), "ping")
 	assertIn(t, "permissions: {}", ping)
-	assertEqual(t, workflowsSet(workflowsFindall(workflowsSecretUse, ping)...),
-		workflowsSet("secrets[matrix.account.secret]"))
+	assertEqual(t, setOf(workflowsFindall(workflowsSecretUse, ping)...),
+		setOf("secrets[matrix.account.secret]"))
 }
 
 var workflowsSecretMention = regexp.MustCompile(`secrets\.(\w+)[^}]*`)
@@ -909,7 +877,7 @@ func TestWorkflows_EveryRequiredCheckIsAJobThatRunsOnEveryPullRequest(t *testing
 		t.Fatal(err)
 	}
 	for _, path := range paths {
-		text := workflowsFile(t, path)
+		text := readText(t, path)
 		// A `pull_request_target` workflow that runs again on every push counts too: the title
 		// check (`pr-title.yml`, #187), should it be made required.
 		if !workflowsOnPullRequest.MatchString(text) {
@@ -935,7 +903,7 @@ func TestWorkflows_EveryRequiredCheckIsAJobThatRunsOnEveryPullRequest(t *testing
 			missing = append(missing, check)
 		}
 	}
-	assertEqual(t, missing, []string{}, "required checks with no job", missing, "jobs", workflowsSorted(names))
+	assertEqual(t, missing, []string{}, "required checks with no job", missing, "jobs", sortedKeys(names))
 }
 
 // `main`'s merge queue (infra/github.tf) waits for the same checks on its own builds: a workflow
@@ -961,7 +929,7 @@ func TestWorkflows_AFailedQueueBuildIsCancelledOnlyAfterItsCheckReported(t *test
 	for _, j := range jobs {
 		values[j[1]] = true
 	}
-	assertEqual(t, values, workflowsSet(config.Load("", map[string]string{}).RequiredChecks...))
+	assertEqual(t, values, setOf(config.Load("", map[string]string{}).RequiredChecks...))
 	for _, j := range jobs {
 		summary := j[0]
 		cancel := workflowsJob(t, text, "queue-cancel-"+summary)

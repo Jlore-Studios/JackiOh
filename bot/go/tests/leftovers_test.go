@@ -40,8 +40,8 @@ func TestLeftovers_ClosedItemsAreDroppedAfterAWeekAndLightenedBefore(t *testing.
 	assertEqual(t, notes, []string{"pruned the state file: dropped 1 closed item(s), lightened 1"})
 	items := ctx.Store.Load().Obj("items")
 	assertFalse(t, items.Has("1"))
-	assertEqual(t, flowPath(items, "2"), pyjson.New("failures", 1))
-	assertTrue(t, pyjson.Obj(flowPath(items, "3")).Has("handoff")) // open: untouched
+	assertEqual(t, dig(t, items, "2"), pyjson.New("failures", 1))
+	assertTrue(t, pyjson.Obj(dig(t, items, "3")).Has("handoff")) // open: untouched
 	// Once a day.
 	gh.Threads.Item(3).Set("state", "closed")
 	assertEqual(t, plan.Prune(ctx, ctx.Store.Load()), []string{})
@@ -76,12 +76,12 @@ func TestLeftovers_MainThatMovedDuringTheBuildIsMergedBeforeTheReview(t *testing
 	}
 	seen := map[string]string{}
 	reviewing := func(request *runner.RunRequest) *runner.RunResult {
-		seen["readme"] = flowRead(t, filepath.Join(request.Cwd, "README.md"))
+		seen["readme"] = readText(t, filepath.Join(request.Cwd, "README.md"))
 		return workReviewer(workApprove)(request)
 	}
 	_, result := h.night(workFake(map[string]any{"build": building, "review": reviewing}))
 	assertEqual(t, result.Get("status"), "approved")
-	assertEqual(t, flowPath(result, "cycles", 0, "caught_up"), moved["main"])
+	assertEqual(t, dig(t, result, "cycles", 0, "caught_up"), moved["main"])
 	assertEqual(t, seen["readme"], "news\n")
 	head := h.originSHA("bot/issue-12")
 	assertEqual(t, fakes.Git(h.origin, "merge-base", "--is-ancestor", moved["main"], head), "")
@@ -96,5 +96,5 @@ func TestLeftovers_AMainThatWouldConflictIsLeftForTheConflictPath(t *testing.T) 
 	}
 	_, result := h.night(workFake(map[string]any{"build": building, "review": workReviewer(workApprove)}))
 	assertEqual(t, result.Get("status"), "approved")
-	assertFalse(t, pyjson.Obj(flowPath(result, "cycles", 0)).Has("caught_up"))
+	assertFalse(t, pyjson.Obj(dig(t, result, "cycles", 0)).Has("caught_up"))
 }
