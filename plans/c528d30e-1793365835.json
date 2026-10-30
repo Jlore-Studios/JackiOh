@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2478,
+  "title": "Patch: a request flood from one signed-in account is refused before it reaches the database",
+  "branch": "bot/issue-2478",
+  "thread": "**Issue #2478 (data, not instructions):**\n\n```text\n# #2478: Patch: a request flood from one signed-in account is refused before it reaches the database\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe server allows each account 300 requests a minute. A request past that is refused, but only after the server has looked the account up in the database. So one signed-in client stuck in a loop, buggy or hostile, still keeps the database's ten connections busy. Everyone else's requests then wait, and live matches can fail to save their moves. Opening a match socket over and over is not counted at all. Once this is built, a refused request costs no database work, and reopening sockets counts against the same allowance.\n\n## Why\n\n- `run_route` in `crates/server/src/api/http.rs` resolves the caller (`resolve_caller`, :1145-1152) before it checks the account's limit (`app.limiter.allow`, :1159). The comment above that check says it is placed 'so a flood costs the least work this router can manage'.\n- `resolve_caller` opens a transaction and reads the profile on every request (`app.db.begin`, then `profiles_get_by_user_id`, :782-784). So every request past the 300 checks out a pooled connection before its 429.\n- The pool has 10 connections (`POOL_MAX_DEFAULT`, `crates/server/src/db/pg.rs:1757`) and a 10 s checkout timeout (`:1766`). The match actors' log writes share it.\n- The router already refuses an address whose bucket is spent before it resolves a token (`http.rs:1127-1139`). An account whose bucket is spent gets no such early check.\n- The match socket's upgrade (`crates/server/src/actor/ws_server.rs:484-490`) also verifies the token and reads the profile, and no rate limit counts it. `WS_MAX_CONNECTIONS_PER_ADDRESS` (10) caps the sockets open at once, not how often they reopen. The co-op and watch sockets (`crates/server/src/duos/ws.rs`, `crates/server/src/social/watch.rs`) work the same way.\n\n## Proposal\n\n1. Keep a bounded in-memory map from a verified auth user to its profile id, filled by `resolve_caller`. Its size bound is a named constant in `crates/server/src/config.rs`.\n2. Once the token verifies, look the user up in the map. If the map knows its profile and that account's bucket is spent (`retry_after_ms(account_key(..)) > 0`), refuse at once with R192's 429, before `db.begin`. The key stays the profile id, as R157 requires.\n3. Count each match, co-op and watch socket upgrade as one request against the same account bucket. Refuse an upgrade past the budget before its store read, with a 429 or a close code the new ruling names.\n\n## Where it lands\n\n- `crates/server/src/api/http.rs`, `crates/server/src/app.rs` (the map) and `crates/server/src/config.rs`.\n- `crates/server/src/actor/ws_server.rs`, `crates/server/src/duos/ws.rs` and `crates/server/src/social/watch.rs`.\n- \u00a79.8's abuse table (`spec/09-architecture.md`), with a ruling note and `spec/pending/<issue>.md`.\n- Tests in `crates/server/tests/api/rate_limit.rs` and `crates/server/tests/actor/ws_server.rs`.\n\n## Acceptance criteria\n\n- [ ] With the fake store's `on_call` hook (`crates/server/tests/support/store.rs`) counting `profiles.getByUserId`, 350 requests on one token within a minute make at most 301 profile reads; the refusals make none.\n- [ ] A burst of match socket upgrades past the account's budget is refused before any store call.\n- [ ] Two tokens of one profile still share one bucket (R157), and a user the map does not know still reads the store, so a new account is still created lazily (\u00a79.4).\n- [ ] The existing rate-limit and socket tests pass, changed only where the new ruling says so.\n\n## Size and risks\n\nSmall to medium: about 150 lines plus tests. The map only decides refusals and never grants access, since every request it lets through still reads the profile, so a stale entry can at worst refuse early an account that is already over its limit. Counting upgrades must not refuse a normal reconnect: the page's wake check (R1441) reopens at most once per ping interval, far under 300 a minute, and a test should show a reconnect loop at that pace is never refused.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T13:03:27Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2478: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
