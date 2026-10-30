@@ -3,7 +3,7 @@
 //! R752: "Heroic Power costs (0) and playing it uses nothing. Each of its thirteen powers is an
 //! 'Activate: Spend (X)' ability (R384): once per turn, its X paid in mana as it is activated, and the
 //! card has only the one it rolled." This file is the engine's half: the table, the abilities, the
-//! roll, and the powers whose behaviour needs nothing from the real catalog. `packages/cards`'
+//! roll, and the powers whose behavior needs nothing from the real catalog. `packages/cards`'
 //! `098-heroic-power.test.ts` covers the real card again, with the powers that draw from the
 //! catalog's pools (Witness Value, Stitching, KY Brainstorm, Pluck, Terminus Tricks, Cat Cafe).
 //!

@@ -29,7 +29,7 @@ function press(key: string, options: { shiftKey?: boolean } = {}): void {
 }
 
 describe("ConfirmConcede on its own", () => {
-  it("is a labelled, described, modal alertdialog that asks the question and says what follows", () => {
+  it("is a labeled, described, modal alertdialog that asks the question and says what follows", () => {
     render(<ConfirmConcede onConfirm={vi.fn()} onCancel={vi.fn()} />);
     const dialog = screen.getByTestId("concede-dialog");
     expect(dialog).toHaveAttribute("role", "alertdialog");

@@ -24,7 +24,7 @@ use crate::vm;
 
 /// A hook's list answer from its walked JSON: `{}` (and no return at all)
 /// reads as no entries. An empty Luau table walks as an empty map, never an
-/// empty list (L7), so the typed deserialisation alone would refuse it; the
+/// empty list (L7), so the typed deserialization alone would refuse it; the
 /// type here says list, and an empty map is the empty list.
 fn vec_answer<T: serde::de::DeserializeOwned>(json: serde_json::Value) -> mlua::Result<Vec<T>> {
     match json {

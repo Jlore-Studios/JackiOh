@@ -2,7 +2,7 @@
 // fixture answer `POST /api/packs/open` gives (`packs/fixtures.ts`): a Mythic, an Epic, a cosmetic, a
 // bar and a card. Only a layout engine can say these (jsdom has none; PackOpening.test.tsx holds the
 // rest):
-//   - the sealed pack glows in the best rarity's colour the moment the server has answered, and once
+//   - the sealed pack glows in the best rarity's color the moment the server has answered, and once
 //     it has torn the five cards are laid out,
 //   - skip-all lays out five whole faces, 5:7 each, on the screen and apart, on a desktop and on a phone,
 //   - under Reduce motion the results show at once and nothing in the scene animates,
@@ -117,7 +117,7 @@ describe("#1308 the pack-opening scene", () => {
       const win = doc.defaultView!;
       const glow = win.getComputedStyle($pack[0]!).getPropertyValue("--pack-glow").trim();
       const mythic = win.getComputedStyle(doc.documentElement).getPropertyValue("--rarity-mythic").trim();
-      expect(mythic, "the mythic colour is defined").not.to.equal("");
+      expect(mythic, "the mythic color is defined").not.to.equal("");
       expect(glow).to.equal(mythic);
     });
     cy.get(ts(packTestid.slots)).should("not.exist");

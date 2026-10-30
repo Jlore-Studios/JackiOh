@@ -694,7 +694,7 @@ jobs:
             [kind:app]="It changes the client or the server, what players see and use; no version (#1360)"
             [kind:internal]="CI, bots, tooling, docs, tests or a refactor; no version (#1360)"
             [tier:major]="A set ships: the next v0.Z.0 (#1360)"
-            [tier:patch]="50 or more cards play differently, or a rule every game meets: the next v0.Z.X (#1360, #2455)"
+            [tier:patch]="15 reprinted, 50 that play differently, or a rule every game meets: the next v0.Z.X (#1360, #2499)"
             [tier:micro]="Fewer cards, or their words alone: the next letter (#1360)")
           wanted=$(jq -r '.[]' <<< "$LABELS")
           gh api "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels" --jq '.[].name' | while IFS= read -r old; do

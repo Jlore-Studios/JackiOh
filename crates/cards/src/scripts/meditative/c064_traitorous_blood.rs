@@ -232,7 +232,7 @@ mod tests {
     #[test]
     fn r33_it_is_face_down_until_it_fires() {
         let mut s = blood_game();
-        let seen = serde_json::to_string(&s.view(P2)).expect("the view serialises");
+        let seen = serde_json::to_string(&s.view(P2)).expect("the view serializes");
         assert!(!seen.contains(ID), "p2 reads the set trap");
         let foe = s.unit(P2, 1).unwrap().id;
         s.end_turn();

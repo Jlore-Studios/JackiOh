@@ -35,7 +35,7 @@ fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
 
 /// `events.map((event) => event.instanceId)`, read off the events' JSON.
 fn instance_ids(events: impl Serialize) -> Vec<String> {
-    let json = serde_json::to_value(events).expect("events serialise");
+    let json = serde_json::to_value(events).expect("events serialize");
     json.as_array()
         .map(|list| {
             list.iter()

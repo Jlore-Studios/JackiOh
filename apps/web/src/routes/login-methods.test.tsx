@@ -266,7 +266,7 @@ describe("R665 the second step for an account with an authenticator app", () => 
     expect(readSession()).toBeNull();
   });
 
-  it("R665 cancelling revokes the held session and stores nothing", async () => {
+  it("R665 canceling revokes the held session and stores nothing", async () => {
     const calls = serve({ "/auth/v1/token": tokens(AAL1, VERIFIED_APP), "/auth/v1/logout": { status: 204 } });
     render(<LoginRoute />);
     signInWithPassword();

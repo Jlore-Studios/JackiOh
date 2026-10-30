@@ -196,7 +196,7 @@ mod r1300_the_flag_and_its_verb {
     }
 
     #[test]
-    fn r1300_a_card_never_translated_serialises_without_the_key() {
+    fn r1300_a_card_never_translated_serializes_without_the_key() {
         let mut state = game("translate-hash");
         let held = first(in_hand(&mut state, &plain.id, P1, 1));
         assert!(json_of(&held).get("chinese").is_none());

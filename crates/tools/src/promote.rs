@@ -1370,7 +1370,7 @@ mod tests {
             pass.contains("after 6 deals its log-likelihood ratio is"),
             "{pass}"
         );
-        // One square per game, ten to a row, each row labelled with its games.
+        // One square per game, ten to a row, each row labeled with its games.
         assert!(
             pass.contains("```text\n 1–10  🟩🟩🟥🟥⬜⬛🟩🟩🟩🟥\n11–12  🟥🟩\n```\n"),
             "{pass}"
@@ -1571,7 +1571,7 @@ mod tests {
     }
 
     #[test]
-    fn the_record_serialises_in_surface_order() {
+    fn the_record_serializes_in_surface_order() {
         assert_eq!(
             serde_json::to_string(&sample_record()).unwrap(),
             r#"{"generation":8,"lane":"improve","parent":"0123abc","tree":"4b825dc","vsRandom":"93/100","vsParent":"87/100","shadowBan":11,"parentShadowBan":11,"date":"2026-11-02"}"#

@@ -40,7 +40,7 @@ fn unit(index: u32, name: &str, cost: i32, attack: i32, health: i32, keywords: V
         "radiant": { "attack": attack * 2, "health": health * 2, "keywords": keywords, "text": name },
     });
     json_as(spread(
-        serde_json::to_value(def(index, name, "Unit", cost, keywords)).expect("a def serialises"),
+        serde_json::to_value(def(index, name, "Unit", cost, keywords)).expect("a def serializes"),
         faces,
     ))
 }

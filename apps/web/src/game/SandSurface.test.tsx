@@ -206,7 +206,7 @@ describe("SandSurface taps", () => {
     expect(playedIds()).toEqual(["tapNeon"]);
   });
 
-  it("#2015 each half taps in its own playmat: yours below the centre line, sand above with no opponent's", () => {
+  it("#2015 each half taps in its own playmat: yours below the center line, sand above with no opponent's", () => {
     render(<Field table="table-marble" />);
     const field = screen.getByTestId("field");
     stubBounds(field);
@@ -274,13 +274,13 @@ describe("SandSurface taps", () => {
     expect(tapMarks("astral", 30, 40, 7, 1)).toEqual(astral);
 
     expect(neon).toHaveLength(1);
-    expect(TAP_FEEL.neonColours).toContain(neon[0]?.tint);
+    expect(TAP_FEEL.neonColors).toContain(neon[0]?.tint);
     const hues = new Set(Array.from({ length: 200 }, (_, index) => tapMarks("neon", 30, 40, index + 1, 1)[0]?.tint));
-    expect(hues.size).toBe(TAP_FEEL.neonColours.length);
+    expect(hues.size).toBe(TAP_FEEL.neonColors.length);
 
     expect(astral).toHaveLength(TAP_FEEL.astralStars);
     for (const star of astral) {
-      expect(TAP_FEEL.astralColours).toContain(star.tint);
+      expect(TAP_FEEL.astralColors).toContain(star.tint);
       expect(Math.hypot(star.dx ?? Number.NaN, star.dy ?? Number.NaN)).toBeLessThanOrEqual(TAP_FEEL.astralSpreadPx);
     }
     expect(new Set(astral.map((star) => star.dx)).size).toBeGreaterThan(1);

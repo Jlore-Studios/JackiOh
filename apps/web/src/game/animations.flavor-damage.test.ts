@@ -237,7 +237,7 @@ describe("#1443 a volley starts together and caps its shots", () => {
 });
 
 describe("#1443 a Chaos volley is uniform", () => {
-  it("#1443 three targets share one projectile, colours and particle", () => {
+  it("#1443 three targets share one projectile, colors and particle", () => {
     const view = resolvingView("core-052", "chaos-1");
     const events = [enemyUnit(view, 0), enemyUnit(view, 1), enemyUnit(view, 2)].map((target) =>
       dmg("chaos-1", target, 2, false),

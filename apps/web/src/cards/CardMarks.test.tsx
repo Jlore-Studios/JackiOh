@@ -131,7 +131,7 @@ describe("R437 the mark on the board", () => {
     expect(markWords("duo")).not.toEqual(UNKNOWN_MARK_WORDS);
   });
 
-  it("R437 the colour key maps through the palette table, one badge per mark, and an unknown key falls back to the default", () => {
+  it("R437 the color key maps through the palette table, one badge per mark, and an unknown key falls back to the default", () => {
     const { view, ids } = markedView([
       { mark: "steal", color: "green" },
       { mark: "curse", color: "ultraviolet" },
@@ -204,7 +204,7 @@ describe("#2270 a card on the field at its last Brittle count wears Allure's aur
     expect(root.querySelectorAll(".card-marks")).toHaveLength(FIELD.length);
   });
 
-  it("#2270 gray is in the palette table, in hex like every colour", () => {
+  it("#2270 gray is in the palette table, in hex like every color", () => {
     expect(markColorOf(BRITTLE_LAST_COLOR)).toBe("gray");
     for (const value of [MARK_PALETTES.gray.rim, MARK_PALETTES.gray.core, MARK_PALETTES.gray.glow]) {
       expect(value).toMatch(/^#[0-9a-f]{6}$/i);
@@ -322,7 +322,7 @@ describe("#2437 a hand card at its last Temporary count wears Allure's aura in f
 });
 
 describe("R437 the tables and the adapters", () => {
-  it("R437 at least purple, green, crimson, gold, cyan, blue and orange, each with its colours and particles", () => {
+  it("R437 at least purple, green, crimson, gold, cyan, blue and orange, each with its colors and particles", () => {
     for (const color of ["purple", "green", "crimson", "gold", "cyan", "blue", "orange"]) {
       expect(markColorOf(color)).toBe(color);
       const palette = paletteFor(color);

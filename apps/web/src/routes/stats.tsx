@@ -4,7 +4,7 @@
 // Provides three tabs:
 //  - Cards: sortable, filterable table of card win rates and play rates; the filters, not columns, cover cost, rarity and keyword (R2446000).
 //  - Sets: each set's cards on the patch (below).
-//  - Players: public player aggregates (games, win rate, favourite cards, fun stats from #125).
+//  - Players: public player aggregates (games, win rate, favorite cards, fun stats from #125).
 // Features:
 //  - No provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661); the patch bar below is the way back to the previous patch.
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
@@ -968,7 +968,7 @@ export default function StatsRoute(): ReactElement {
                 })}
               </ul>
             ) : (
-              <TableScroll labelledBy="stats-tab-cards">
+              <TableScroll labeledBy="stats-tab-cards">
                 <table className="stats-table" data-testid={statsTestid.cardsTable}>
                   <thead>
                     <tr>
@@ -1248,7 +1248,7 @@ export default function StatsRoute(): ReactElement {
                     <span className="stats-summary-value">{setLeaders.median ? t(setLeaders.median) : "—"}</span>
                   </div>
                 </section>
-                <TableScroll labelledBy="stats-tab-sets">
+                <TableScroll labeledBy="stats-tab-sets">
                   <table className="stats-table" data-testid={statsTestid.setsTable}>
                     <thead>
                       <tr>
@@ -1269,7 +1269,7 @@ export default function StatsRoute(): ReactElement {
                     </thead>
                     <tbody>
                       {sets.map((row) => {
-                        // Rounded first, so a change too small to show reads 0.0% and takes no colour.
+                        // Rounded first, so a change too small to show reads 0.0% and takes no color.
                         const changed = setChanges.get(row.set);
                         const change = changed === undefined ? undefined : Number(changed.toFixed(SET_STATS_DIGITS + PERCENT_PLACES));
                         const cardCell = (card: RatedCard | null): ReactNode =>
@@ -1416,14 +1416,14 @@ export default function StatsRoute(): ReactElement {
             ) : playersList.length === 0 ? (
               <EmptyState text={t("No players found.")} />
             ) : (
-              <TableScroll labelledBy="stats-tab-players">
+              <TableScroll labeledBy="stats-tab-players">
                 <table className="stats-table" data-testid={statsTestid.playersTable}>
                   <thead>
                     <tr>
                       <th scope="col" className="stats-th">{t("Player")}</th>
                       <th scope="col" className="stats-th">{t("Games")}</th>
                       <th scope="col" className="stats-th">{t("Win rate")}</th>
-                      <th scope="col" className="stats-th">{t("Favourite card")}</th>
+                      <th scope="col" className="stats-th">{t("Favorite card")}</th>
                       <th scope="col" className="stats-th">{t("Cards destroyed")}</th>
                       <th scope="col" className="stats-th">{t("Cards defeated")}</th>
                     </tr>

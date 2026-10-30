@@ -3,7 +3,7 @@
 // TS ran `fixtures/rng-child.ts` in a separate Node process to prove a resumed cursor reproduces the
 // sequence anywhere. The Rust port asks the fixture's port (`fixtures/rng_child.rs`) for the same JSON
 // it printed — `{ draws, cursor }` from `(seed, cursor, count)`, its argv — so the draws cross a
-// serialised boundary built from nothing but the seed and the cursor (see the spec-gaps note).
+// serialized boundary built from nothing but the seed and the cursor (see the spec-gaps note).
 
 use jackioh_engine::testkit::*;
 

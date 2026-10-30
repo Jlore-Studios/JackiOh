@@ -1,4 +1,4 @@
-// docs/polish/1-animations.md, behaviour B27: procedural sprites drawn once per (preset, colour, dpr),
+// docs/polish/1-animations.md, behavior B27: procedural sprites drawn once per (preset, color, dpr),
 // and no image asset anywhere in the effects layer.
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -65,7 +65,7 @@ function countingFactory() {
 }
 
 describe("B27 the sprite cache", () => {
-  it("B27 get calls the factory once per preset, colour and dpr, and returns the cached sprite afterwards", () => {
+  it("B27 get calls the factory once per preset, color and dpr, and returns the cached sprite afterwards", () => {
     const { factory, made } = countingFactory();
     const cache = createSpriteCache(factory);
 
@@ -79,11 +79,11 @@ describe("B27 the sprite cache", () => {
     expect(cache.size()).toBe(1);
   });
 
-  it("B27 a new preset, colour index or dpr is drawn once more, and only once", () => {
+  it("B27 a new preset, color index or dpr is drawn once more, and only once", () => {
     const { factory } = countingFactory();
     const cache = createSpriteCache(factory);
 
-    // A preset with more than one colour, so a second colour index is a real second sprite.
+    // A preset with more than one color, so a second color index is a real second sprite.
     const multi = (Object.keys(PARTICLE_PRESETS) as FxPreset[]).find((p) => PARTICLE_PRESETS[p].colors.length >= 2);
     const keys: (readonly [FxPreset, number, number])[] = [
       ["fire", 0, 1],
@@ -92,11 +92,11 @@ describe("B27 the sprite cache", () => {
       ["gold", 0, 1.5],
     ];
     if (multi !== undefined) keys.push([multi, 1, 1]);
-    const sprites = keys.map(([preset, colour, dpr]) => cache.get(preset, colour, dpr));
+    const sprites = keys.map(([preset, color, dpr]) => cache.get(preset, color, dpr));
     expect(factory).toHaveBeenCalledTimes(keys.length);
     expect(new Set(sprites).size).toBe(keys.length);
 
-    keys.forEach(([preset, colour, dpr], index) => expect(cache.get(preset, colour, dpr)).toBe(sprites[index]));
+    keys.forEach(([preset, color, dpr], index) => expect(cache.get(preset, color, dpr)).toBe(sprites[index]));
     expect(factory).toHaveBeenCalledTimes(keys.length);
     expect(cache.size()).toBe(keys.length);
   });
@@ -132,7 +132,7 @@ describe("B27 the sprite cache", () => {
     expect(new Set([own, inBlue, inPink, secondBlue]).size).toBe(4);
     expect(cache.size()).toBe(4);
 
-    // The glow disc's plain-colour stop (offset 0.45, no whitening) is the palette's colour, half transparent.
+    // The glow disc's plain-color stop (offset 0.45, no whitening) is the palette's color, half transparent.
     expect(stopsOf(inBlue)).toContain("rgba(16, 32, 48, 0.5)");
     expect(stopsOf(secondBlue)).toContain("rgba(17, 34, 51, 0.5)");
     expect(stopsOf(inPink)).toContain("rgba(255, 0, 170, 0.5)");

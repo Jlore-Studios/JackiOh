@@ -164,7 +164,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
   useEffect(() => {
     if (!hasToken || profileId === null || blocked) return;
     const readToken = sessionRef.current.token ?? "";
-    let cancelled = false;
+    let canceled = false;
     // R2125000: a revisit opens on the decks the last visit kept and reads again behind them.
     const kept = keptLoaded(readToken, portraitsGated);
     setScreen(kept === null ? { kind: "loading" } : { kind: "ready", profileId, data: kept, generation: 0 });
@@ -185,7 +185,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
         : Promise.resolve<PortraitOwnership>("every"),
     ])
       .then(([decks, collection, portraits]) => {
-        if (cancelled) return;
+        if (canceled) return;
         setScreen((previous) => ({
           kind: "ready",
           profileId,
@@ -206,7 +206,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
       })
       .catch((cause: unknown) => {
         // A read that fails behind kept decks leaves them and says nothing.
-        if (cancelled || kept !== null) return;
+        if (canceled || kept !== null) return;
         setScreen({
           kind: "error",
           message: cause instanceof Error ? cause.message : String(cause),
@@ -214,7 +214,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
       });
 
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [hasToken, profileId, blocked, attempt, portraitsGated]);
 

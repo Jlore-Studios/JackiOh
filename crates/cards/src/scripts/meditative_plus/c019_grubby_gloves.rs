@@ -196,7 +196,7 @@ mod tests {
         // p2's view of p1's hand is a count, and nothing in it names the taken cards.
         let theirs = js(&s.view(P2));
         assert_eq!(theirs["opponent"]["hand"], json!({ "count": 3 }));
-        let text = serde_json::to_string(&theirs).expect("serialisable");
+        let text = serde_json::to_string(&theirs).expect("serializable");
         assert!(!text.contains(MENACE));
         assert!(!text.contains(LUNAR));
         // Their own deck is two cards smaller.

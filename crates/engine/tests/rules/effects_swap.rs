@@ -410,7 +410,7 @@ mod swap_s6_3_r73_m3_t1 {
         );
         assert!(
             !serde_json::to_string(&view_for(&state, PlayerId::P1))
-                .expect("serialises")
+                .expect("serializes")
                 .contains(&trap().id)
         );
         assert_eq!(

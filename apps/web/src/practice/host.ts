@@ -42,7 +42,7 @@ export function createPracticeHost(options: PracticeHostOptions = {}): PracticeH
 // The worker host
 
 function createWorkerHost(): PracticeHost {
-  // Vite recognises this exact shape and bundles the worker as a separate chunk.
+  // Vite recognizes this exact shape and bundles the worker as a separate chunk.
   const worker = new Worker(new URL("./practice.worker.ts", import.meta.url), { type: "module" });
 
   let nextId = 1;

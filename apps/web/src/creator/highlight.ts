@@ -1,4 +1,4 @@
-// The code view's syntax highlighting (#920): a card-kit script cut into tokens the view colours.
+// The code view's syntax highlighting (#920): a card-kit script cut into tokens the view colors.
 // It reads Luau's lexical shape only (comments, strings, numbers, keywords, names) and the kit's own
 // marks (`c:verb`, `n.key`, `Card`), never what a script means: the Luau module's check judges it.
 

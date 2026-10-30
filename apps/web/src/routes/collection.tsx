@@ -103,13 +103,13 @@ function useRead<T>(
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     load(token)
       .then((value) => {
-        if (!cancelled) setHeld({ token, read: { kind: "ready", value } });
+        if (!canceled) setHeld({ token, read: { kind: "ready", value } });
       })
       .catch((cause: unknown) => {
-        if (cancelled) return;
+        if (canceled) return;
         setHeld((previous) => {
           const current = previous.token === token ? previous.read : startOf(kept, token);
           if (current.kind === "ready") return { token, read: current };
@@ -127,7 +127,7 @@ function useRead<T>(
         });
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, load, kept, attempt]);
 

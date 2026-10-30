@@ -2,7 +2,7 @@
 // with their crescent, drawn on a minion the view says is Dormant (`FaceModel.dormant`, from
 // `UnitView.slumber`, faces.ts). MinionFace mounts this right before the state rail, so the veil's
 // `backdrop-filter` greys only what is painted before it and the rail (the Dormant badge, its
-// countdown, the Starship piece count) stays in colour on top.
+// countdown, the Starship piece count) stays in color on top.
 //
 // The seal has three layers: the veil (the whole face greyed and dimmed), the two still ribbons
 // (the bound mark, crossing over the portrait's middle), and the two looping parts (the runes

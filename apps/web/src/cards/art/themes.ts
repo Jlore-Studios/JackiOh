@@ -184,7 +184,7 @@ export const THEME_PALETTES: Readonly<Record<ArtThemeId, ThemePalette>> = {
 };
 
 /**
- * Repeat each theme's signature glyph so it remains recognisable while a grid still varies.
+ * Repeat each theme's signature glyph so it remains recognizable while a grid still varies.
  */
 export const EMBLEM_POOLS: Readonly<Record<ArtThemeId, readonly EmblemGlyph[]>> = {
   human: ["shield", "shield", "sword", "tower", "crown", "star", "flame"],
@@ -295,7 +295,7 @@ export function driftPalette(palette: ThemePalette, degrees: number, glyph: Embl
 }
 
 /**
- * Radiant mixes base colours toward gold so the theme still shows through the foil.
+ * Radiant mixes base colors toward gold so the theme still shows through the foil.
  */
 export const RADIANT_MIX = 0.7;
 

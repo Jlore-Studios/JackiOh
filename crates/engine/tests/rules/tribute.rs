@@ -323,7 +323,7 @@ fn says(refusal: &Option<String>, text: &str) -> bool {
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .into_iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises")[field].clone())
+        .map(|event| serde_json::to_value(event).expect("an event serializes")[field].clone())
         .collect()
 }
 
@@ -331,7 +331,7 @@ fn of_type(events: &[GameEvent], kind: GameEventType) -> Value {
     Value::Array(
         events_of_type(events, kind)
             .into_iter()
-            .map(|event| serde_json::to_value(event).expect("an event serialises"))
+            .map(|event| serde_json::to_value(event).expect("an event serializes"))
             .collect(),
     )
 }
@@ -623,7 +623,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
                 continue;
             };
             assert_eq!(tributes.as_ref(), Some(&vec![a.id.clone(), b.id.clone()]));
-            let as_play: PlayAction = json_as(serde_json::to_value(play).expect("a play serialises"));
+            let as_play: PlayAction = json_as(serde_json::to_value(play).expect("a play serializes"));
             assert!(why_choices_refused(&state, PlayerId::P1, &card, &as_play).is_ok());
         }
 

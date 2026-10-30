@@ -199,7 +199,7 @@
   font-weight: 700;
 }
 
-/* Keep playing is the default and looks it; Concede wears the opponent's red, the colour of a loss. */
+/* Keep playing is the default and looks it; Concede wears the opponent's red, the color of a loss. */
 .concede-dialog__actions > .concede-dialog__stay {
   border-color: var(--primary-edge);
   background: var(--primary-face);

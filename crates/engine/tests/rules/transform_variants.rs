@@ -237,7 +237,7 @@ mod e24_a_card_becomes_a_random_card_of_a_pool_classic_plus_73_1 {
         assert!(now.radiant);
         assert!(!is_sick(&start.state, &now));
         assert_eq!(
-            serde_json::to_value(now.exertion).expect("serialises"),
+            serde_json::to_value(now.exertion).expect("serializes"),
             json!({ "attacked": false, "switched": false })
         );
     }

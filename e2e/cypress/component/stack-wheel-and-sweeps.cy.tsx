@@ -1,4 +1,4 @@
-// Issue #124: the visible behaviour. A Stack pile opens as a Marvel Snap-style wheel (the top
+// Issue #124: the visible behavior. A Stack pile opens as a Marvel Snap-style wheel (the top
 // card forward, the buried cards as backs beneath, shuffled by tap, buttons and keyboard); a
 // sweep rolls one fog over the swept side; a whole-pile impact washes one wave over the pile.
 //

@@ -136,7 +136,7 @@ pub(crate) fn matchups() -> Vec<Matchup> {
     Matchup::ALL.to_vec()
 }
 
-/// A serialised string union's literal; any other value as its JSON text.
+/// A serialized string union's literal; any other value as its JSON text.
 pub(crate) fn literal<T: Serialize>(value: &T) -> String {
     match serde_json::to_value(value) {
         Ok(Value::String(text)) => text,
@@ -1116,7 +1116,7 @@ pub(crate) fn time_decision(
 /// node budget and under AI_GATE.maxDecisionMs, and so does a decision on each wide board (timed in
 /// every shard); one on each pinned position (#1240, in every shard too) stays within the node budget
 /// and under AI_GATE.pinnedDecisionMs. `judge_time` false skips the clock (the unit tests'
-/// unoptimised build). Answers the problems found.
+/// unoptimized build). Answers the problems found.
 fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<String> {
     let games = if full {
         AI_GATE.perf_full_games
@@ -1433,7 +1433,7 @@ mod tests {
         );
     }
 
-    /// The clock is judged only in an optimised build: an unoptimised test binary slows the search and
+    /// The clock is judged only in an optimized build: an unoptimized test binary slows the search and
     /// the yardstick by different factors, so the ratio would not stand. The node budget and the wide
     /// boards' width are judged in every build.
     #[test]

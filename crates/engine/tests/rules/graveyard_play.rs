@@ -21,7 +21,7 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
 fn plays_json(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<Value> {
     plays_of(state, instance_id, player)
         .iter()
-        .map(|play| serde_json::to_value(play).expect("a play serialises"))
+        .map(|play| serde_json::to_value(play).expect("a play serializes"))
         .collect()
 }
 
@@ -470,7 +470,7 @@ mod r454_e11_play_from_the_graveyard {
         assert_ne!(placed.as_ref().map(|card| card.id.clone()), Some(trap.id.clone()));
 
         let theirs = view_for(&result.state, PlayerId::P2);
-        let zone = serde_json::to_value(&theirs.opponent.backrow[3]).expect("a backrow view serialises");
+        let zone = serde_json::to_value(&theirs.opponent.backrow[3]).expect("a backrow view serializes");
         assert!(matches_object(&zone, &json!({ "faceDown": true })));
         // The raw event names the card and the id it had; p2's copy is the face-down redaction (R97,
         // R227) — no identity, no former id — with the pile it came from, which the public graveyard
@@ -608,7 +608,7 @@ mod r454_e11_play_from_the_graveyard {
         // The other seat sees a prompt is open, never its options (§10.8).
         assert_eq!(
             serde_json::to_value(&view_for(&paused, PlayerId::P2).pending)
-                .expect("a pending view serialises"),
+                .expect("a pending view serializes"),
             json!({ "forYou": false, "pendingFor": "p1" })
         );
 
@@ -618,7 +618,7 @@ mod r454_e11_play_from_the_graveyard {
             .into_iter()
             .filter(|action| action.action_type() == ActionType::Answer)
             .collect();
-        let answer = serde_json::to_value(only(&answers)).expect("an answer serialises");
+        let answer = serde_json::to_value(only(&answers)).expect("an answer serializes");
         let live = act(&paused, with_player(answer.clone(), PlayerId::P1));
         let replayed = act(&round, with_player(answer, PlayerId::P1));
         assert_eq!(hash_state(&replayed), hash_state(&live));

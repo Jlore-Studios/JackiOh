@@ -1,5 +1,5 @@
 // The v0.2.0 controls against the REAL engine. The fixture tests (ActivateControl, activate,
-// PromptE18) pin each control's behaviour; here the view and the legal list are `viewFor` and
+// PromptE18) pin each control's behavior; here the view and the legal list are `viewFor` and
 // `legalActions` of real states built through the web's own engine seam (the WebAssembly module,
 // `../wasm`, docs/v0.3.0/SURFACE.md §10.3), so a field the engine renames or a body it shapes
 // differently fails here, not in production. Every action a control sends must be one the engine

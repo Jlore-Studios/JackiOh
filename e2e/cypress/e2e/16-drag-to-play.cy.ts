@@ -196,7 +196,7 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
     });
   });
 
-  it("B40 the whole drag in one call, dragTo, plays a card and a drag cancelled outside leaves it in hand", () => {
+  it("B40 the whole drag in one call, dragTo, plays a card and a drag canceled outside leaves it in hand", () => {
     startGame();
 
     cy.handCardByName(TIMMY).then((timmy) => {

@@ -1416,9 +1416,9 @@ pub fn wilson_interval(wins: i64, games: i64) -> (f64, f64) {
     let p = wins as f64 / n;
     let z2 = STATS_INTERVAL_Z * STATS_INTERVAL_Z;
     let denominator = 1.0 + z2 / n;
-    let centre = (p + z2 / (2.0 * n)) / denominator;
+    let center = (p + z2 / (2.0 * n)) / denominator;
     let half = STATS_INTERVAL_Z * (p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt() / denominator;
-    ((centre - half).max(0.0), (centre + half).min(1.0))
+    ((center - half).max(0.0), (center + half).min(1.0))
 }
 
 /// R1994000: a share to three places (`STATS_SHARE_PRECISION`).

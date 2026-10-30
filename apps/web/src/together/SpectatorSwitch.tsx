@@ -39,15 +39,15 @@ export function SpectatorSwitch(): ReactElement | null {
 
   useEffect(() => {
     if (readSession() === null) return;
-    let cancelled = false;
+    let canceled = false;
     withSession(getPlayerSettings).then(
       (settings) => {
-        if (!cancelled && typeof settings.allowSpectators === "boolean") setAllowed(settings.allowSpectators);
+        if (!canceled && typeof settings.allowSpectators === "boolean") setAllowed(settings.allowSpectators);
       },
       () => undefined,
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 

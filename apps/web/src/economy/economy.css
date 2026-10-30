@@ -139,11 +139,11 @@
   box-shadow: 0 0 14px 2px var(--tavern-flame, #ffb347);
 }
 
-/* One slot's points, from its slot's centre (`--flight-x`, `--flight-y`) to the HUD's
-   (`--flight-dx`, `--flight-dy` further on), in its rarity's colour; a bigger rarity lands in a
+/* One slot's points, from its slot's center (`--flight-x`, `--flight-y`) to the HUD's
+   (`--flight-dx`, `--flight-dy` further on), in its rarity's color; a bigger rarity lands in a
    bigger burst (`--flight-land`). It is drawn only while motion is on, and holds no pointer. */
 .bar-flight {
-  --flight-colour: var(--rarity-common, #d9dde6);
+  --flight-color: var(--rarity-common, #d9dde6);
   --flight-land: 1.2;
 
   position: fixed;
@@ -151,30 +151,30 @@
   left: var(--flight-x);
   font-size: 22px;
   font-weight: 700;
-  color: var(--flight-colour);
-  text-shadow: 0 0 10px var(--flight-colour), 0 1px 0 #000;
+  color: var(--flight-color);
+  text-shadow: 0 0 10px var(--flight-color), 0 1px 0 #000;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
 }
 
 .bar-flight[data-rarity="Rare"] {
-  --flight-colour: var(--rarity-rare, #3d8bfd);
+  --flight-color: var(--rarity-rare, #3d8bfd);
   --flight-land: 1.5;
 }
 
 .bar-flight[data-rarity="Epic"] {
-  --flight-colour: var(--rarity-epic, #a45cf0);
+  --flight-color: var(--rarity-epic, #a45cf0);
   --flight-land: 1.8;
 }
 
 .bar-flight[data-rarity="Legendary"] {
-  --flight-colour: var(--rarity-legendary, #ff9f1c);
+  --flight-color: var(--rarity-legendary, #ff9f1c);
   --flight-land: 2.1;
 }
 
 .bar-flight[data-rarity="Mythic"] {
-  --flight-colour: var(--rarity-mythic, #ff5fd2);
+  --flight-color: var(--rarity-mythic, #ff5fd2);
   --flight-land: 2.4;
 }
 
