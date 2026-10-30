@@ -352,6 +352,22 @@ fn r1012003_r2201000_the_tutorials_opponent_keeps_the_hand_eval_with_a_floor_or_
     });
 }
 
+/// R1012003 with R2433000's Core-only bar: a lesson's opponent with the bar, and one recorded before
+/// the bar existed (AI_TUTORIAL without it), are both the tutorial's opponent.
+#[test]
+fn r1012003_r2433000_the_tutorial_opponent_is_read_with_or_without_its_core_only_bar() {
+    assert_eq!(AI_TUTORIAL.core_only, Some(true));
+    assert!(is_tutorial_opponent(Some(AI_TUTORIAL)));
+    assert!(is_tutorial_opponent(Some(Handicap {
+        core_only: None,
+        ..AI_TUTORIAL
+    })));
+    assert!(!is_tutorial_opponent(Some(Handicap {
+        core_only: Some(true),
+        ..HUMAN_HANDICAP
+    })));
+}
+
 fn state() -> GameState {
     jackioh_cards::register_all();
     scenario(json!({

@@ -2185,6 +2185,7 @@ fn is_human_handicap(handicap: &Handicap, standard: i32) -> bool {
         && starting_hero_health(Some(handicap)) == HERO_HEALTH
         && handicap.hero_floor.is_none()
         && handicap.pool_hold != Some(true)
+        && handicap.core_only != Some(true)
 }
 
 /// R2201000: the least health `player`'s hero can fall to, when its handicap sets a floor.
@@ -2196,6 +2197,22 @@ pub fn hero_floor_of(state: &GameState, player: PlayerId) -> Option<i32> {
 /// never falls below it, and nothing the other player does ends the game as its loss.
 pub fn can_lose(state: &GameState, player: PlayerId) -> bool {
     hero_floor_of(state, player).is_none()
+}
+
+/// R2433000: whether `player` plays only Core cards (its handicap's `coreOnly`).
+pub fn plays_only_core(state: &GameState, player: PlayerId) -> bool {
+    state.players[player]
+        .handicap
+        .is_some_and(|h| h.core_only == Some(true))
+}
+
+/// R2433000: whether `player` may not play `card`: the seat plays only Core cards and the card's
+/// definition is of another set. Asked of a card in its hand or its graveyard, however it got
+/// there; a card that reaches the field another way (a summon, a steal) is not played.
+pub fn barred_from_play(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    plays_only_core(state, player)
+        && !crate::catalog::find_def(Some(state), &card.def_id)
+            .is_some_and(|def| def.set == crate::wire::SetName::Core)
 }
 
 /// R2201001: whether the game holds Legendary and Mythic cards out of its random pools: either
@@ -2643,6 +2660,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
                 // R2201000, R2201001: each joins only when set, so no other game stores either.
                 hero_floor: handicap.hero_floor,
                 pool_hold: handicap.pool_hold.filter(|hold| *hold),
+                core_only: handicap.core_only.filter(|only| *only),
             });
             side.hero.health = hero_health;
         }

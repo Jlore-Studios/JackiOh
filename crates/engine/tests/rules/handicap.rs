@@ -422,6 +422,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
                 hero_floor: None,
                 pool_hold: None,
+                core_only: None,
             }
         );
         assert_eq!(AI_DIFFICULTY.easy, HUMAN_HANDICAP);
@@ -436,6 +437,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
                 hero_floor: None,
                 pool_hold: None,
+                core_only: None,
             }
         );
         assert_eq!(
@@ -449,6 +451,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
                 hero_floor: None,
                 pool_hold: None,
+                core_only: None,
             }
         );
         assert_eq!(
@@ -1582,6 +1585,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 hero_health: Some(20),
                 hero_floor: None,
                 pool_hold: None,
+                core_only: Some(true),
             }
         );
         assert_eq!(tutorial_health(), 20);

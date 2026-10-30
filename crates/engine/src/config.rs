@@ -350,6 +350,12 @@ pub struct Handicap {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub pool_hold: Option<bool>,
+    /// R2433000: this seat plays only Core cards. It never plays, sets or casts a card whose set is
+    /// not Core, from its hand or its graveyard, however the card got there. Absent means no bar, so
+    /// every other game hashes as before the field existed. Only the tutorial opponent sets it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub core_only: Option<bool>,
 }
 
 /// R180: this spec's own resources. A seat with no handicap plays with these.
@@ -362,6 +368,7 @@ pub const HUMAN_HANDICAP: Handicap = Handicap {
     hero_health: None,
     hero_floor: None,
     pool_hold: None,
+    core_only: None,
 };
 
 string_union! {
@@ -410,6 +417,7 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         hero_health: None,
         hero_floor: None,
         pool_hold: None,
+        core_only: None,
     },
     hard: Handicap {
         deck_size: DECK_SIZE + HARD_EXTRA_DECK_CARDS,
@@ -420,15 +428,17 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         hero_health: None,
         hero_floor: None,
         pool_hold: None,
+        core_only: None,
     },
 };
 
 /// §9.10, R290: the tutorial opponent's handicap, the one below Easy. It is a handicap like the
 /// three tiers (R180) and lowers the AI seat's resources instead of raising them: a 12-card deck
 /// (each lesson's own list, R291, so it runs out and fatigues sooner), at most 3 mana crystals, and
-/// a hero that starts at 20 health. The AI's search, evaluation and budget are the ones every tier
-/// plays with, but with the learned evaluation on this seat keeps the hand eval (R1012003). It is not
-/// in `DIFFICULTIES`: nobody picks it, the tutorial deals it.
+/// a hero that starts at 20 health; and it plays only Core cards (R2433000). The AI's search,
+/// evaluation and budget are the ones every tier plays with, but with the learned evaluation on this
+/// seat keeps the hand eval (R1012003). It is not in `DIFFICULTIES`: nobody picks it, the tutorial
+/// deals it.
 pub const AI_TUTORIAL: Handicap = Handicap {
     deck_size: 12,
     mana_bonus: 0,
@@ -438,6 +448,8 @@ pub const AI_TUTORIAL: Handicap = Handicap {
     hero_health: Some(20),
     hero_floor: None,
     pool_hold: None,
+    // R2433000: the tutorial opponent plays only Core cards, whatever reaches its hand.
+    core_only: Some(true),
 };
 
 /// §9.10, R1705005: the human seat's handicap in a lesson, whose fixed deal (R291) holds

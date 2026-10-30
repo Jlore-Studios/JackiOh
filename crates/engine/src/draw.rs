@@ -710,7 +710,10 @@ pub fn complete_draw(
     });
 
     let at = link_for(sink.state, link);
+    // R2433000: a seat that plays only Core cards casts no other card on draw; it is drawn as any
+    // card is.
     if casts_on_draw(sink.state, &card)
+        && !crate::state::barred_from_play(sink.state, player, &card)
         && at.chain < CAST_ON_DRAW_CHAIN_CAP
         && sink.frontier.get().cast_on_draw_casts < CAST_ON_DRAW_ACTION_CAP
         && room_to_cast(sink.state, player, &card)
@@ -770,7 +773,11 @@ pub fn cast_dealt_card(sink: &mut EngineSink, card: &CardInstance) -> bool {
     let Zone::Hand { player } = card.zone else {
         return false;
     };
-    if !casts_on_draw(sink.state, card) || !room_to_cast(sink.state, player, card) {
+    if !casts_on_draw(sink.state, card)
+        || !room_to_cast(sink.state, player, card)
+        // R2433000: nor one dealt to it.
+        || crate::state::barred_from_play(sink.state, player, card)
+    {
         return false;
     }
     let hand = &mut sink.state.players[player].hand;
