@@ -1115,6 +1115,12 @@ fn play_game(
             ));
         }
 
+        if std::env::var_os("FUZZ_TRACE").is_some() {
+            eprintln!("TRACE step {} turn {} {} {}", log.len(), state.turn, player, serde_json::to_string(&chosen).unwrap_or_default());
+            if let Ok(dir) = std::env::var("FUZZ_TRACE_DIR") {
+                let _ = std::fs::write(format!("{dir}/state-{}.json", log.len()), serde_json::to_string(&state).unwrap_or_default());
+            }
+        }
         let action = Action::new(chosen, player, format!("fuzz-{}", log.len()));
         let result = reduce(&state, &action);
         if let Some(error) = &result.error {

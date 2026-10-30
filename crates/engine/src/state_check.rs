@@ -1046,6 +1046,7 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
                 .collect()
         };
         if !tributes.is_empty() {
+            if _pass >= 97 { eprintln!("DBG pass {_pass} tributes {:?}", tributes.iter().map(|c| c.id.clone()+":"+&c.def_id).collect::<Vec<_>>()); }
             sacrifice_together(sink, &tributes);
             if sink.state.result.is_some() || sink.state.pending.is_some() {
                 return;
@@ -1061,10 +1062,12 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         }
         // R1850003, R1850002, R1850005: the card-on-card verbs' standing rules, each a whole step that
         // the check starts over after when it changed something; then R2280001's owed animations.
-        if crate::card_on_card::release_held(sink)
-            || crate::card_on_card::standing_text(sink)
-            || crate::animated::animate_owed(sink)
+        let dbg_rh = crate::card_on_card::release_held(sink);
+        let dbg_st = if dbg_rh { false } else { crate::card_on_card::standing_text(sink) };
+        let dbg_an = if dbg_rh || dbg_st { false } else { crate::animated::animate_owed(sink) };
+        if dbg_rh || dbg_st || dbg_an
         {
+            if _pass >= 97 { eprintln!("DBG pass {_pass} release_held={dbg_rh} standing_text={dbg_st} animate_owed={dbg_an}"); }
             continue;
         }
 
@@ -1107,6 +1110,7 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             );
         }
 
+        if _pass >= 97 { eprintln!("DBG pass {_pass} dying {:?}", dying.iter().map(|c| c.id.clone()+":"+&c.def_id).collect::<Vec<_>>()); }
         if dying.is_empty() {
             // R850: the settled game-end point — a hero at 0 loses first, then a held win wins.
             if hero_check(sink) || crate::win_conditions::win_check(sink) {
