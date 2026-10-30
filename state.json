@@ -6851,9 +6851,10 @@
       "stop_requested": false,
       "strike_log": [
         "`claude-8` (claude, opus) rejected it: `crates/cards/src/history.rs:310`: The replay keeper for AI Girlfriend's guarded script is filed under v0.5.8, but v0.5.9 is the newest shipped version and also ",
-        "`claude-6` (claude, opus) rejected it: `crates/cards/src/history.rs:310`: The kept guarded script is filed under v0.5.10b, but v0.5.10c also shipped with the guarded script, so once this change ships,"
+        "`claude-6` (claude, opus) rejected it: `crates/cards/src/history.rs:310`: The kept guarded script is filed under v0.5.10b, but v0.5.10c also shipped with the guarded script, so once this change ships,",
+        "`claude-6` (claude, opus) rejected it: `crates/cards/src/history.rs:310`: The kept guarded script is registered under \"v0.5.10b\", but v0.5.10c shipped on main before this branch's base and also ran th"
       ],
-      "strikes": 2,
+      "strikes": 3,
       "taken_asks": [],
       "verdict_rounds": 1
     },
