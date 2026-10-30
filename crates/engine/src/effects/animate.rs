@@ -27,13 +27,17 @@ pub struct AnimateArgs {
 /// else the leftmost open one, as a Unit — face-up, summoning sick, without leaving the field. A card
 /// that is a Unit already stays where it is, in the position it has; with no open unit zone it stays in
 /// the backrow (and a Trap stays there face-up, `traps::consume_trap`). Not a summon (R445): it emits
-/// `animated`, never `summoned`.
+/// `animated`, never `summoned`. R2280000: a card becomes a Unit only with Animated and stats, so a
+/// card without Animated, or with no stats (`animated::step_into_units`), stays where it is.
 pub fn animate(args: AnimateArgs) -> Effect {
     Effect::new("animate", move |ctx| {
         let this = TargetSpec::SelfCard;
         let Some(card) = instance_of(ctx, args.target.as_ref().unwrap_or(&this)) else {
             return;
         };
+        if crate::animated::animated_kind_of(ctx.state, &card).is_none() {
+            return;
+        }
         // TS `args.position === undefined ? {} : { position: args.position }`: the options object's one
         // field, passed as it stands.
         let _ = crate::animated::animate_card(

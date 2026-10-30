@@ -25,7 +25,7 @@ use jackioh_server::db::store::{MatchActionRow, MatchCheckpointRow, MatchRow};
 
 use crate::support::deps::{RecordingLogger, add_user, call, empty_test_app, record_logs};
 use crate::support::engine::{begun_game, decks_the_engine_accepts, install_test_cards, real_pool};
-use crate::support::store::{fake_ref, to_json};
+use crate::support::store::{fake_ref, from, to_json};
 
 const MATCH_ID: &str = "match-checkpoints";
 /// The rows logged before the drain.
@@ -39,10 +39,6 @@ const WHOLE_GAMES: usize = 3;
 const WHOLE_GAME_CAP: usize = 400;
 
 type Decks = (Vec<String>, Vec<String>);
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
 
 /// A live match row, as the registry writes one.
 fn live_row(seed: &str, decks: &Decks) -> MatchRow {

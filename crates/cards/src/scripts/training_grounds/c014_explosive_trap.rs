@@ -70,6 +70,9 @@ mod tests {
     const TRUE_STRIKE: &str = "core-044"; // a Spell.
     const MANA_WELL: &str = "core-006"; // a Field Spell.
     const HIT_JOB: &str = "core-016"; // rides along so the turn does not auto-end (R82).
+    const PEA: &str = "meditative-013"; // (2) 2/6, Armor 2.
+    const BOOTS: &str = "classic-013"; // Radiant (1) 4/2 Charge: when this attacks, Recruit a card.
+    const RUSH_TOKEN: &str = "core-t-rush";
 
     fn trap_set(hand: Value, radiant_trap: bool) -> Scenario {
         crate::register_all();
@@ -139,6 +142,21 @@ mod tests {
         }
 
         #[test]
+        fn r1750000_a_3_health_armor_2_unit_takes_3_and_the_hero_1_armor_first() {
+            // A Gatling Pea at 2/3 keeps its printed Armor 2: of the 6, Armor takes 2, the Unit its 3
+            // Health and the 1 left over tramples to p1's hero. Without Armor first the hero would take 3.
+            let mut s = trap_set(json!([PEA]), false);
+            s.card_mut(PEA).stats_override = Some(AttackHealth { attack: 2, health: 3 });
+            s.play(PEA, json!({ "zone": 1 }));
+
+            assert!(fired(&s));
+            let pea = s.card(PEA).id.clone();
+            assert_eq!(damage_to(&s, &pea), 3);
+            s.expect_in_zone(PEA, "graveyard");
+            s.expect_health(P1, 9);
+        }
+
+        #[test]
         fn r1750000_a_divine_shield_unit_loses_the_shield_and_nothing_tramples() {
             let mut s = trap_set(json!([DEFENDER]), false);
             s.play(DEFENDER, json!({ "zone": 1 }));
@@ -149,14 +167,47 @@ mod tests {
         }
 
         #[test]
-        fn r2199003_a_summoned_token_is_no_play_only_the_played_unit_is_hit() {
+        fn r2199003_a_summoned_token_is_no_play_and_leaves_it_set_for_the_next_played_unit() {
+            // A Rush Token summoned by p1's effect, with no play around it: the trap stays set.
             let mut s = trap_set(json!([TOKEN_MAKER]), false);
-            s.play(TOKEN_MAKER, json!({ "zone": 1 }));
+            let events = crate::run_as(
+                &mut s,
+                jackioh_engine::effects::summon(json_as(json!({
+                    "defId": RUSH_TOKEN,
+                    "player": "self",
+                    "lane": 3,
+                }))),
+                P1,
+            );
+            assert_eq!(s.unit(P1, 3).map(|card| card.def_id).as_deref(), Some(RUSH_TOKEN));
+            assert!(!events.iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+            assert_eq!(s.backrow(P2, 1).map(|card| card.def_id).as_deref(), Some(TRAP));
 
-            // The trap fired once, on the played Unit, never on the Rush Token its Cry made.
+            // Still armed: the next played Unit is hit, never the token its Cry makes.
+            s.play(TOKEN_MAKER, json!({ "zone": 1 }));
             assert_eq!(s.events().iter().filter(|e| matches!(e, GameEvent::TrapFired { .. })).count(), 1);
             s.expect_in_zone(TOKEN_MAKER, "graveyard");
-            assert_eq!(s.unit(P1, 2).map(|card| card.def_id).as_deref(), Some("core-t-rush"));
+            s.expect_in_zone(TRAP, "graveyard");
+            assert_eq!(s.unit(P1, 2).map(|card| card.def_id).as_deref(), Some(RUSH_TOKEN));
+        }
+
+        #[test]
+        fn r2199003_a_recruit_is_no_play_and_leaves_it_set() {
+            // A Radiant Boots on the Ground attacks and Recruits Reno from the top of p1's deck (§6.3, R1).
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "explosive-trap",
+                "p1": { "hand": [HIT_JOB], "library": [RENO, HIT_JOB], "mana": 10,
+                        "field": [{ "def": BOOTS, "radiant": true, "lane": 1 }] },
+                "p2": { "backrow": [{ "def": TRAP, "faceUp": false, "lane": 1 }], "health": 30 },
+            }));
+            s.attack(BOOTS, "hero");
+
+            s.expect_health(P2, 26);
+            s.expect_in_zone(RENO, "field");
+            assert!(!fired(&s));
+            s.expect_stats(RENO, json!({ "health": 6 }));
+            assert_eq!(s.backrow(P2, 1).map(|card| card.def_id).as_deref(), Some(TRAP));
         }
 
         #[test]

@@ -32,12 +32,13 @@ use jackioh_server::config::{
     MATCH_CEILING_MINUTES, RATING_DEVIATION_START, RATING_VOLATILITY_START, SERIES_START_GIVE_UP_SECONDS,
     SERIES_START_GRACE_SECONDS,
 };
-use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
-use jackioh_server::db::store::{SeriesRow, StoreError};
+use jackioh_server::db::fake::{CallOutcome, FakeTables};
+use jackioh_server::db::store::SeriesRow;
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
-use crate::support::store::{advance_and_yield, fake, store, to_json};
+use crate::support::engine::playable;
+use crate::support::store::{advance_and_yield, fail_on, fake, from, stop_failing, store, table, to_json};
 
 const ALICE: &str = "profile-alice";
 const BOB: &str = "profile-bob";
@@ -50,34 +51,6 @@ fn grace_ms() -> i64 {
 
 fn give_up_ms() -> i64 {
     SERIES_START_GIVE_UP_SECONDS * 1000
-}
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
-    let data = fake(app);
-    let data = data.lock().await;
-    match pick(&data) {
-        Value::Array(rows) => rows,
-        other => panic!("not a table: {other}"),
-    }
-}
-
-/// Every store method named `method` fails with `message` until cleared.
-async fn fail_on(app: &App, method: &'static str, message: &'static str) {
-    fake(app).lock().await.on_call = Some(Arc::new(move |called: &str| {
-        if called == method {
-            Err(StoreError::Other(message.to_string()))
-        } else {
-            Ok(())
-        }
-    }));
-}
-
-async fn stop_failing(app: &App) {
-    fake(app).lock().await.on_call = None;
 }
 
 // Time and logs
@@ -153,20 +126,6 @@ fn event_of(entry: &Value) -> Option<&str> {
 }
 
 // Trios, processes and the series
-
-fn playable() -> Vec<String> {
-    jackioh_cards::register_all();
-    jackioh_cards::CATALOG
-        .iter()
-        .filter(|(_, def)| {
-            !def.token
-                && !to_json(&def.tags)
-                    .as_array()
-                    .is_some_and(|tags| tags.contains(&json!("Token")))
-        })
-        .map(|(id, _)| id.clone())
-        .collect()
-}
 
 /// The cards of `owner`'s deck in `slot`: a legal deck of real ids, disjoint from every other deck here.
 fn trio_deck(owner: &str, slot: usize) -> Vec<String> {

@@ -233,19 +233,16 @@ mod r1240_meditative_95s_table {
     }
 
     /// Until the release the third edition joined the pool only while its set was previewed; the set
-    /// shipped in v0.3.5, so the pool holds all three editions in every game, a preview adding none.
+    /// shipped in v0.3.5, so the pool holds all three editions in every game.
     #[test]
     fn r1240_the_call_to_chaos_pool_holds_all_three_editions_since_the_meditative_set_shipped() {
         game("pool", None, None);
         let three = sorted(vec![core95.id.clone(), plus.id.clone(), MED.id.clone()]);
         assert_eq!(chaos_pool(), three);
-        let _preview = preview_sets(&[SetName::Meditative]);
-        assert_eq!(chaos_pool(), three);
     }
 
     #[test]
     fn r1240_r28_the_chain_counts_casts_of_every_edition_against_the_cap() {
-        let _preview = preview_sets(&[SetName::Meditative]);
         let recast = || hook(|_ctx| vec![cast_random_call_to_chaos()]);
         let mut seen: Vec<String> = Vec::new();
         for i in 0..3 {

@@ -6,7 +6,7 @@
 //!
 //! The hash's text is fixed (`docs/v0.3.0/SURFACE.md` §5.2; §4.4.1 sort stability, §4.4.7 absent
 //! options; §6.1 `fold`'s signature): practice saves on players' devices store the hash, the hotseat
-//! fixture pins `"5b8b57a7"`, and the golden traces (§13) and the server's migration checksum use the
+//! fixture pins `"972f5b85"`, and the golden traces (§13) and the server's migration checksum use the
 //! same `canonical` and `fnv1a32_utf16`.
 
 use serde::{Deserialize, Serialize};

@@ -9,7 +9,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use serde::Serialize;
 use serde_json::{Value, json};
 
 use jackioh_engine::config::{
@@ -24,20 +23,12 @@ use jackioh_server::config::{API_MAX_BODY_BYTES, CUSTOM_CARDS_PER_ACCOUNT};
 use jackioh_server::db::store::CustomCardWrite;
 
 use crate::support::deps::{add_user, call, test_app};
-use crate::support::store::fake_lock;
+use crate::support::store::{fake_lock, from, to_json};
 
 const OWNER: &str = "owner";
 const OTHER: &str = "other";
 
 // Harness (a private copy per file, SURFACE rule 5)
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn json_of<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
 
 /// `{ ...base, ...extra }` on JSON objects.
 fn merged(mut base: Value, extra: Value) -> Value {
@@ -107,13 +98,13 @@ impl Ctx {
         body
     }
 
-    async fn table(&self) -> Vec<Value> {
+    async fn rows(&self) -> Vec<Value> {
         fake_lock(&self.app)
             .await
             .tables
             .custom_cards
             .iter()
-            .map(json_of)
+            .map(to_json)
             .collect()
     }
 }
@@ -155,7 +146,7 @@ fn issues_for(id: &str, version: i32, body: &Value) -> Value {
         source: body["source"].as_str().unwrap_or_default().to_string(),
         builder: body.get("builder").filter(|value| !value.is_null()).cloned(),
     };
-    json_of(&validate_custom_card(&card))
+    to_json(&validate_custom_card(&card))
 }
 
 /// Creates the body's card for `bearer`, answering it.
@@ -192,7 +183,7 @@ mod custom_cards_on_the_account_r915008 {
             json!({
                 "id": id,
                 "version": 1,
-                "frame": json_of(&from::<CustomFrame>(frame("Spark"))),
+                "frame": to_json(&from::<CustomFrame>(frame("Spark"))),
                 "source": SOURCE,
                 "builder": body["builder"],
             })
@@ -233,11 +224,11 @@ mod custom_cards_on_the_account_r915008 {
             json!({ "card": {
                 "id": id,
                 "version": 2,
-                "frame": json_of(&from::<CustomFrame>(frame("Big Spark"))),
+                "frame": to_json(&from::<CustomFrame>(frame("Big Spark"))),
                 "source": "return Card {}",
             } })
         );
-        let row = ctx.table().await.remove(0);
+        let row = ctx.rows().await.remove(0);
         assert_eq!(row["createdAt"], json!(made_at));
         assert_eq!(row["updatedAt"], json!(now_ms()));
 
@@ -284,7 +275,7 @@ mod custom_cards_on_the_account_r915008 {
         assert_eq!(refused["error"]["code"], "bad_request");
         assert_eq!(refused["error"]["message"], issues[0]["message"]);
         assert_eq!(refused["error"]["details"], json!({ "issues": issues }));
-        assert!(ctx.table().await.is_empty());
+        assert!(ctx.rows().await.is_empty());
 
         // An update is judged the same way, and the stored card stays as it was.
         let card = created(&ctx, card_body(json!({})), &ctx.token).await;
@@ -313,7 +304,7 @@ mod custom_cards_on_the_account_r915008 {
             assert_eq!(status, 400, "{body}");
             assert_eq!(refused["error"]["code"], "bad_request");
         }
-        assert!(ctx.table().await.is_empty());
+        assert!(ctx.rows().await.is_empty());
 
         let card = created(&ctx, card_body(json!({})), &ctx.token).await;
         let id = id_of(&card);
@@ -390,7 +381,7 @@ mod custom_cards_on_the_account_r915008 {
             refused["error"]["details"],
             json!({ "limit": CUSTOM_CARDS_PER_ACCOUNT })
         );
-        assert_eq!(ctx.table().await.len(), CUSTOM_CARDS_PER_ACCOUNT);
+        assert_eq!(ctx.rows().await.len(), CUSTOM_CARDS_PER_ACCOUNT);
 
         // A save at the cap is not a create; another account has a cap of its own.
         let (status, _) = ctx
@@ -414,7 +405,7 @@ mod custom_cards_on_the_account_r915008 {
             (200, json!({ "deleted": false }))
         );
         assert_eq!(ctx.get(&id, &ctx.token).await.0, 404);
-        assert!(ctx.table().await.is_empty());
+        assert!(ctx.rows().await.is_empty());
     }
 
     #[tokio::test(start_paused = true)]
@@ -502,7 +493,7 @@ mod the_routes_a_pending_account_sees_no_custom_cards {
         assert_eq!(refused["error"]["code"], "account_pending");
         let (status, _) = ctx.request("GET", "/api/custom-cards", None, &pending).await;
         assert_eq!(status, 403);
-        assert!(ctx.table().await.is_empty());
+        assert!(ctx.rows().await.is_empty());
     }
 
     #[test]

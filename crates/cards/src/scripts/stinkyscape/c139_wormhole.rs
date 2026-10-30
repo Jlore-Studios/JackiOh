@@ -12,6 +12,7 @@
 //! target pick of the cast, and every one its text asks for while it is cast, is its caster's own hero or
 //! a card they control on the field, a declaration with none passed (R90). Radiant: `set_radiant` on the
 //! countered card before the cast, so it resolves Radiant and lands Radiant in its new owner's graveyard.
+//! Fused into a card that stands in a unit zone and is no trap there, its text never fires (R2226000).
 //! Declares no numbers.
 
 use jackioh_engine::effects::{cast, counter_play, set_radiant};
@@ -145,10 +146,11 @@ mod tests {
         }
     }
 
-    /// R102, R1884003: Wormhole's text fused onto a Unit keeps its condition: its controller's own Spell
-    /// aimed at their own Unit resolves, and only the opponent's is countered and cast for them.
+    /// R102, R1884003, R2226000: Wormhole's text fused onto a Unit stands in a unit zone on a card that is
+    /// no trap, so it never fires there: its controller's own Spell aimed at their own Unit resolves, and
+    /// so does the opponent's, which R1884003's reading of its condition countered before.
     #[test]
-    fn r1884003_fused_onto_a_unit_it_still_answers_only_an_enemy_spell() {
+    fn r1884003_r2226000_fused_onto_a_unit_it_answers_no_spell_from_its_unit_zone() {
         use jackioh_engine::prelude::*;
         crate::register_all();
         let mut s = crate::scenario(json!({
@@ -201,9 +203,9 @@ mod tests {
         s.end_turn();
         let mine = s.unit_at(P1, 1);
         s.play(BOOK, json!({ "targets": pick::instance(&mine) }));
-        assert!(countered(&s), "the opponent's is countered");
-        let pending = s.state().pending.clone().expect("the cast's target prompt");
-        assert_eq!(pending.player_id, P2);
+        assert!(!countered(&s), "the opponent's resolves too");
+        assert!(s.state().pending.is_none());
+        s.expect_stats(&mine, json!({ "attack": 4 + BUFF, "health": 4 + BUFF }));
     }
 
     mod radiant {

@@ -152,6 +152,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         practice_verifications: tokio::sync::Semaphore::new(
             jackioh_server::config::PRACTICE_VERIFY_CONCURRENCY,
         ),
+        spends: jackioh_server::economy::spend_slots::SpendSlots::default(),
     });
     if options.e2e && !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)

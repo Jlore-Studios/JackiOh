@@ -1036,8 +1036,8 @@ fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
 }
 
 pub fn state_check(sink: &mut EngineSink<'_>) {
-    // R460, R1875006: the cards whose would-die follow-up resolved in this check, which answer no
-    // later pass of it, as each card replaces an event at most once.
+    // R460, R1875006: the cards whose would-die replacement flickered or resolved its follow-up in this
+    // check, which answer no later pass of it, as each card replaces an event at most once.
     let mut resolved_first: Vec<String> = Vec::new();
     for _pass in 0..STATE_CHECK_PASS_CAP {
         if sink.state.result.is_some() {
@@ -1090,8 +1090,11 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             return;
         }
         // R1850003, R1850002, R1850005: the card-on-card verbs' standing rules, each a whole step that
-        // the check starts over after when it changed something.
-        if crate::card_on_card::release_held(sink) || crate::card_on_card::standing_text(sink) {
+        // the check starts over after when it changed something; then R2280001's owed animations.
+        if crate::card_on_card::release_held(sink)
+            || crate::card_on_card::standing_text(sink)
+            || crate::animated::animate_owed(sink)
+        {
             continue;
         }
 

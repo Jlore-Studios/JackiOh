@@ -18,8 +18,6 @@ use std::sync::Arc;
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
 use hmac::{Hmac, KeyInit, Mac};
-use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use sha2::Sha256;
 use tower::ServiceExt;
@@ -35,7 +33,7 @@ use jackioh_server::config::{
 use jackioh_server::db::store::CodeAttempt;
 
 use crate::support::deps::{add_user, test_app};
-use crate::support::store::{advance, fake_lock};
+use crate::support::store::{advance, fake_lock, from, to_json};
 
 // Fixtures
 
@@ -84,14 +82,6 @@ fn retry_after_header_for(ms: i64) -> String {
 }
 
 // Harness (a private copy per file, SURFACE rule 5)
-
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn json_of<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
 
 /// One response, read whole.
 struct Reply {
@@ -865,7 +855,7 @@ mod b13_a_request_body_larger_than_api_max_body_bytes {
             .iter()
             .find(|row| row.id == caller.profile_id)
             .expect("the caller's row");
-        assert_eq!(json_of(&row.status), json!("pending"));
+        assert_eq!(to_json(&row.status), json!("pending"));
     }
 
     #[tokio::test(start_paused = true)]

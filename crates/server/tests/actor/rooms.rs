@@ -32,12 +32,13 @@ use jackioh_server::api::queue::seat_coin_p1_first;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use jackioh_server::cosmetics::portrait_cosmetic_id;
-use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
+use jackioh_server::db::fake::{CallOutcome, FakeTables};
 use jackioh_server::db::store::{ChallengeRow, CollectionEntry};
 use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 
 use crate::support::deps::{TestAppOptions, add_user, call, record_logs, test_app, test_app_with};
-use crate::support::store::{fake, store, to_json, uuid};
+use crate::support::engine::playable;
+use crate::support::store::{fake, from, store, table, to_json, uuid};
 
 const HOST: &str = "host";
 const GUEST: &str = "guest";
@@ -48,19 +49,6 @@ const AT: i64 = 1_700_000_000_000;
 /// R143's seeds sit in one process-wide map (`e2e_room_seed_count`); these tests take turns so one
 /// test's seed is never another's count.
 static ROOMS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
-    let data = fake(app);
-    let data = data.lock().await;
-    match pick(&data) {
-        Value::Array(rows) => rows,
-        other => panic!("not a table: {other}"),
-    }
-}
 
 /// The matches the registry started, oldest first — every match row past its `open` reservation
 /// (a room's claim reserves the row; the join's start completes it). Seat order is the row's: index 0
@@ -77,21 +65,6 @@ async fn in_match_of(app: &Arc<App>, profile: &str) -> Value {
     let row = store!(app, t => t.profiles_get_by_id(profile).await.expect("profiles.getById"))
         .expect("the profile");
     to_json(&row)["inMatchId"].clone()
-}
-
-/// Every playable catalog id, in `catalog.json` order.
-fn playable() -> Vec<String> {
-    jackioh_cards::register_all();
-    jackioh_cards::CATALOG
-        .iter()
-        .filter(|(_, def)| {
-            !def.token
-                && !to_json(&def.tags)
-                    .as_array()
-                    .is_some_and(|tags| tags.contains(&json!("Token")))
-        })
-        .map(|(id, _)| id.clone())
-        .collect()
 }
 
 fn deck_size() -> usize {

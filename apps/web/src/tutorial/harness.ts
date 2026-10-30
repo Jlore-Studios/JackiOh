@@ -1,7 +1,8 @@
 // Test-only full-lesson runner on the real practice core; its coach reads browser-equivalent
 // snapshots (R293). A frozen clock and fixed node budget make replays deterministic. Policies cover
 // coached, coached-passive (spec 22), autonomous, robust random play, and the reckless player who
-// attacks into everything and plays nothing protective (R2205001).
+// attacks into everything and plays nothing protective (R2205001), and the idle player who only ends
+// the turn (R2201000).
 
 import { AI_GATE_BUDGET, type SearchBudget } from "@jackioh/ai";
 import { createRng } from "@jackioh/engine";
@@ -47,10 +48,10 @@ export const LESSON_GAME_MS = 90_000;
 /** Per-game budget for multi-game random-policy tests. */
 export const RANDOM_GAME_MS = 45_000;
 
-export type LessonPolicy = "coach" | "coach-passive" | "autopilot" | "random" | "reckless";
+export type LessonPolicy = "coach" | "coach-passive" | "autopilot" | "random" | "reckless" | "idle";
 
-/** Every policy a lesson must be won under (R2205001). */
-export const LESSON_POLICIES: readonly LessonPolicy[] = ["coach", "coach-passive", "autopilot", "random", "reckless"];
+/** Every policy a lesson must be won under (R2205001; `idle`, R2201000). */
+export const LESSON_POLICIES: readonly LessonPolicy[] = ["coach", "coach-passive", "autopilot", "random", "reckless", "idle"];
 
 export type LessonRun = {
   lesson: TutorialLesson;
@@ -185,6 +186,18 @@ export function reckless(ctx: CoachCtx): ActionBody | null {
   return legal.find((action) => action.type === "endTurn") ?? null;
 }
 
+/**
+ * R2201000: the idle player keeps its hand, answers each prompt with its first option, and otherwise
+ * only ends its turn: it never plays a card, attacks or switches a position, so the lesson is won
+ * by the opponent's deck running out and fatigue.
+ */
+export function idle(ctx: CoachCtx): ActionBody | null {
+  const { view, legal } = ctx;
+  if (mulliganOpen(view) || (view.pending !== null && view.pending.forYou)) return autopilot(ctx);
+  if (!myMain(ctx)) return null;
+  return legal.find((action) => action.type === "endTurn") ?? null;
+}
+
 function randomPolicy(ctx: CoachCtx, pick: (n: number) => number): ActionBody | null {
   const choices = ctx.legal.filter((action) => action.type !== "concede" && action.type !== "offerDraw" && action.type !== "answerDraw");
   if (choices.length === 0) return null;
@@ -295,6 +308,8 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
       action = autopilot(ctx);
     } else if (policy === "reckless") {
       action = reckless(ctx);
+    } else if (policy === "idle") {
+      action = idle(ctx);
     } else {
       action = randomPolicy(ctx, (n) => rng.int(n));
     }

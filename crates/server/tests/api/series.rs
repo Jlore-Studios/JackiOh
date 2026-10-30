@@ -39,14 +39,13 @@ use jackioh_server::config::{
     RATING_DEVIATION_START, RATING_VOLATILITY_START, SERIES_MAX_GAMES, SERIES_PICK_SECONDS,
     SERIES_START_GRACE_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS,
 };
-use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
+use jackioh_server::db::fake::{CallOutcome, FakeTables};
 use jackioh_server::db::store::{MatchSeat, StoreError};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
-use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::support::deps::{call, test_app};
-use crate::support::store::{advance, fake_ref, store};
+use crate::support::store::{advance, fake_read, fake_ref, store, to_json};
 
 const ALICE: &str = "profile-alice";
 const BOB: &str = "profile-bob";
@@ -66,11 +65,6 @@ const STRANGER_ACCOUNT: (&str, &str) = ("e2e-pending", "e2e-token-pending");
 // ---------------------------------------------------------------------------
 // The harness's small reads (private copies, CLAUDE.md's fullsend rule 5)
 // ---------------------------------------------------------------------------
-
-/// The JSON a row, a view or any port value serialises to (TS's object).
-fn j<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("the value serialises")
-}
 
 /// TS's `toMatchObject`: every key `expected` names holds the same value in `actual` (objects
 /// partially, arrays element for element), and nothing else is compared.
@@ -99,18 +93,12 @@ fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
     )
 }
 
-/// One read of the fake's raw tables (TS's `store.tables`), as JSON.
-async fn table(app: &App, read: impl Fn(&FakeData) -> Value) -> Value {
-    let data = fake_ref(app).lock().await;
-    read(&data)
-}
-
 async fn profile(app: &App, id: &str) -> Value {
-    j(&store!(app, |t| t.profiles_get_by_id(id)))
+    to_json(&store!(app, |t| t.profiles_get_by_id(id)))
 }
 
 async fn match_row(app: &App, id: &str) -> Value {
-    j(&store!(app, |t| t.matches_get(id)))
+    to_json(&store!(app, |t| t.matches_get(id)))
 }
 
 /// The catalog version the series is made at (TS's `deps.catalog.version`).
@@ -226,7 +214,7 @@ struct Harness {
 
 impl Harness {
     /// TS's `h.deps.store.onCall = (method) => { … throw … }`.
-    fn fail_on(&self, fault: impl Fn(&str) -> Result<(), StoreError> + Send + 'static) {
+    fn set_fault(&self, fault: impl Fn(&str) -> Result<(), StoreError> + Send + 'static) {
         *self.fault.lock().expect("the fault slot") = Some(Box::new(fault));
     }
 
@@ -384,13 +372,13 @@ async fn row(h: &Harness) -> Value {
     if series.is_none() {
         panic!("the series is gone");
     }
-    j(&series)
+    to_json(&series)
 }
 
 /// TS's `h.deps.matches.started`: every match the directory started, in order, as the start was
 /// asked for (`StartMatchInput`). The registry writes each one's row as it starts it, so the rows say it.
 async fn started(h: &Harness) -> Vec<Value> {
-    let rows = table(&h.app, |data| j(&data.tables.matches)).await;
+    let rows = fake_read(&h.app, |data| to_json(&data.tables.matches)).await;
     rows.as_array()
         .map(|rows| rows.iter().map(start_input_of).collect())
         .unwrap_or_default()
@@ -439,7 +427,7 @@ async fn finish_game(h: &Harness, winner: &str, reason: Option<GameOverReason>) 
     let winner = if winner == "draw" {
         Winner::Draw
     } else {
-        let player = [j(&seats.0), j(&seats.1)]
+        let player = [to_json(&seats.0), to_json(&seats.1)]
             .into_iter()
             .find(|seat| seat["profileId"] == winner)
             .map(|seat| seat["player"].clone())
@@ -703,7 +691,7 @@ mod r259_the_series_through_the_api {
      {
         let h = harness_at_1000().await;
         // The store fails the write: the pick is refused, and nothing says it was made.
-        h.fail_on(|method| {
+        h.set_fault(|method| {
             if method == "series.update" {
                 Err(StoreError::Other("the database went away".to_owned()))
             } else {
@@ -735,9 +723,12 @@ mod r259_the_series_through_the_api {
         let game2_id = game2["currentMatchId"].as_str().unwrap_or_default().to_owned();
         assert_ne!(game2_id, FIRST_MATCH);
         // R376: a game of the series is filed as Conquest's, whatever made the series.
-        assert_eq!(j(&store!(h.app, |t| t.matches_mode_of(&game2_id))), json!("bo3"));
         assert_eq!(
-            j(&store!(h.app, |t| t.matches_mode_of(FIRST_MATCH))),
+            to_json(&store!(h.app, |t| t.matches_mode_of(&game2_id))),
+            json!("bo3")
+        );
+        assert_eq!(
+            to_json(&store!(h.app, |t| t.matches_mode_of(FIRST_MATCH))),
             json!("bo3")
         );
         assert_eq!(
@@ -990,7 +981,7 @@ mod r262_how_a_series_is_rated {
         pick_both(&h, [0, 0]).await;
         finish_game(&h, BOB, None).await;
         // Game 1's row: recorded, not rated.
-        let results = table(&h.app, |data| j(&data.tables.results)).await;
+        let results = fake_read(&h.app, |data| to_json(&data.tables.results)).await;
         assert_eq!(results.as_array().map(Vec::len), Some(1));
         assert_match(
             &results[0],
@@ -1007,7 +998,7 @@ mod r262_how_a_series_is_rated {
         pick_both(&h, [1, 1]).await;
         // Game 2: bob is the match's p1, so the row's seats are in his order.
         finish_game(&h, BOB, None).await;
-        let results = table(&h.app, |data| j(&data.tables.results)).await;
+        let results = fake_read(&h.app, |data| to_json(&data.tables.results)).await;
         assert_eq!(results.as_array().map(Vec::len), Some(2));
         assert_match(
             &results[1],
@@ -1024,7 +1015,7 @@ mod r262_how_a_series_is_rated {
         assert_eq!(pick(&h, h.tokens.alice, json!(2)).await.0, 200);
         finish_game(&h, BOB, None).await;
         assert_eq!(
-            table(&h.app, |data| json!(data.tables.results.len())).await,
+            fake_read(&h.app, |data| json!(data.tables.results.len())).await,
             json!(3)
         );
 
@@ -1149,7 +1140,7 @@ mod r333_the_pick_clock {
             json!({ "outcome": "abandoned", "endReason": "abandoned", "ranked": false })
         );
         // Not active any more: the sweeper leaves it alone from now on.
-        assert_eq!(j(&store!(h.app, |t| t.series_active())), json!([]));
+        assert_eq!(to_json(&store!(h.app, |t| t.series_active())), json!([]));
     }
 
     #[tokio::test(start_paused = true)]
@@ -1161,7 +1152,7 @@ mod r333_the_pick_clock {
         flush().await;
 
         let failures = Arc::new(AtomicI32::new(1));
-        h.fail_on(move |method| {
+        h.set_fault(move |method| {
             if method == "series.active" && failures.load(Ordering::SeqCst) > 0 {
                 failures.fetch_sub(1, Ordering::SeqCst);
                 return Err(StoreError::Other("the database went away".to_owned()));
@@ -1318,7 +1309,7 @@ mod a_failed_seat_flag_write {
     #[tokio::test(start_paused = true)]
     async fn a_failed_seat_flag_write_voids_the_game_and_the_sweeper_starts_it() {
         let h = harness_at_1000().await;
-        h.fail_on(|method| {
+        h.set_fault(|method| {
             if method == "profiles.setInMatch" {
                 return Err(StoreError::Other("the database hiccuped".to_owned()));
             }

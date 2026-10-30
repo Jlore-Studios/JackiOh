@@ -808,13 +808,15 @@ mod b1_two_ordinary_duels {
     }
 
     #[test]
-    fn r1156000_every_seat_of_both_teams_opens_on_four_cards() {
+    fn r1156000_r2368000_team_a_seats_open_on_three_cards_and_team_b_seats_on_four() {
         setup();
-        let state = duos_begin(&duos_create(&options("r1156000"))).state;
+        let state = duos_begin(&duos_create(&options("r2368000"))).state;
         for seat in DUOS_SEATS {
+            // Team A is each duel's Player 1, team B its Player 2 (§13.2).
+            let opening = if seat.team() == Team::A { 3 } else { 4 };
             let own = side(&state, seat);
-            assert_eq!(own.hand.len(), 4, "{seat}");
-            assert_eq!(own.library.len() as i32, DECK_SIZE - 4, "{seat}");
+            assert_eq!(own.hand.len(), opening, "{seat}");
+            assert_eq!(own.library.len(), DECK_SIZE as usize - opening, "{seat}");
         }
     }
 

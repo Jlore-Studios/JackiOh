@@ -11,7 +11,7 @@
 //! function and wrote through it; here a card travels as an owned copy while it is off the board,
 //! and once it is placed every write goes to the card in the state, found by its id.
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -94,6 +94,12 @@ pub struct SummonPlacement {
     /// `addToHand`'s `chinese` rider makes one in a hand (M+ #21 Harmony Spirit's Rush Tokens).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chinese: Option<bool>,
+    /// R2206000: what a fresh card's memory holds as it lands, so a later hook can tell a body this
+    /// summon made from one played or made otherwise (TG #25 Trigor's chain, R2197004). Fresh
+    /// summons only; leaving the field clears it as it clears all memory (R78).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>", optional))]
+    pub memory: Option<IndexMap<String, Value>>,
 }
 
 /// `summon`'s arguments (TS `SummonPlacement & { defId?; instance?; randomKeywords? }`, the
@@ -144,6 +150,10 @@ pub struct SummonArgs {
     /// comment). Fresh summons only; a card moved by `instance` keeps what it has.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keywords: Option<Vec<Keyword>>,
+    /// R2206000: the fresh card's memory as it lands (`SummonPlacement.memory`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>", optional))]
+    pub memory: Option<IndexMap<String, Value>>,
 }
 
 impl SummonArgs {
@@ -159,6 +169,7 @@ impl SummonArgs {
             x: self.x,
             source_id: None,
             chinese: None,
+            memory: self.memory.clone(),
         }
     }
 }
@@ -369,6 +380,9 @@ fn summon_fresh_into(
     // R1184003: its X before it lands, so it arrives at its X stats and with its X-read keywords.
     if let Some(x) = at.x {
         card.x = Some(x);
+    }
+    if let Some(memory) = &at.memory {
+        card.memory.extend(memory.clone());
     }
     crate::generators::record_generator(ctx, &card);
     if summon_onto(ctx, &mut card, slot, at, None, stands) {

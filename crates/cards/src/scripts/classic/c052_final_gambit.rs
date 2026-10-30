@@ -370,11 +370,12 @@ mod tests {
                 s.play(FORWARD, json!({ "zone": 2 }));
                 s.end_turn();
                 s.state_mut().players.p2.mana.current = 10;
-                // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text,
-                // stays and animates into its lane's unit zone (C+ #74, R831011).
+                // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text
+                // and stays (C+ #74, R831011); a Trap's copy gives it no stats, so it stays a face-up Field
+                // Trap in its zone (R2280000).
                 s.play(RAPID, json!({}));
                 s.play(GAMBIT, json!({}));
-                assert!(s.unit(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
+                assert!(s.backrow(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
                 // The Gambit p2 played stays set in their backrow; take it off, so only the copy in p1's
                 // Field Trap answers the hits below.
                 s.state_mut().players.p2.backrow[0] = None;
@@ -382,7 +383,12 @@ mod tests {
                 // 4 at 4 health is lethal and cancelled; then heal 10 and draw 3 from an empty deck. The
                 // copy stays and has cancelled a hit this turn, so fatigue 21, lethal at 14, lands.
                 s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
-                assert_eq!(fired(&s).len(), 1);
+                // C+ #74 fired as it fused the copy, and the copy, a trap in the backrow, fired once.
+                let copy_fired = fired(&s)
+                    .iter()
+                    .filter(|event| event["defId"].as_str().is_some_and(|def_id| def_id.contains(GAMBIT)))
+                    .count();
+                assert_eq!(copy_fired, 1);
                 assert!(s.events().iter().map(js).all(|event| event["type"] != "redirected"));
                 assert!(hero_hits(&s, PlayerId::P2).is_empty());
                 assert_eq!(hero_hits(&s, PlayerId::P1).first(), Some(&21));
@@ -678,11 +684,12 @@ mod tests {
                     s.play(FORWARD, json!({ "zone": 2 }));
                     s.end_turn();
                     s.state_mut().players.p2.mana.current = 10;
-                    // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text,
-                    // stays and animates into its lane's unit zone (C+ #74, R831011).
+                    // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text
+                    // and stays (C+ #74, R831011); a Trap's copy gives it no stats, so it stays a face-up
+                    // Field Trap in its zone (R2280000).
                     s.play(RAPID, json!({}));
                     s.play(GAMBIT, json!({}));
-                    assert!(s.unit(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
+                    assert!(s.backrow(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
                     // The Gambit p2 played stays set in their backrow; take it off, so only the copy in p1's
                     // Field Trap answers the hits below.
                     s.state_mut().players.p2.backrow[0] = None;

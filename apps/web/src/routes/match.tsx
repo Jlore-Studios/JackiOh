@@ -55,7 +55,8 @@ import { getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
-import { rankCaption, rankShortWords } from "../rank/rank.ts";
+import { rankCaption, rankShortWords, rankWords } from "../rank/rank.ts";
+import { MATCH_RANKS_READ_ATTEMPTS, MATCH_RANKS_RETRY_MS } from "../game/config.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import StreakFlame from "../rank/StreakFlame.tsx";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
@@ -90,6 +91,8 @@ export const matchTestid = {
   reconnect: "match-reconnect",
   /** Both seats' visible ranks and whether this game moves them (R604, R612). */
   ranks: "match-ranks",
+  /** R2388000: one seat's rank before → after in a ranked match's result panel (`data-seat`). */
+  rankMove: "match-rank-move",
   /** R768000: in a finished match's result panel, its replay from step 0. */
   watchReplay: "match-watch-replay",
   /** R768000: in a finished match's result panel, its last turn's GIF. */
@@ -172,34 +175,62 @@ function asMatchRanks(value: unknown): MatchRanksResponse | null {
   for (const side of ["p1", "p2"] as const) {
     const seat = (seats as Record<string, unknown>)[side];
     if (typeof seat !== "object" || seat === null) return null;
-    const { profileId, username, rank } = seat as { profileId?: unknown; username?: unknown; rank?: unknown };
+    const { profileId, username, rank, rankBefore, rankAfter } = seat as {
+      profileId?: unknown;
+      username?: unknown;
+      rank?: unknown;
+      rankBefore?: unknown;
+      rankAfter?: unknown;
+    };
     if (typeof profileId !== "string" || typeof username !== "string") return null;
     if (typeof rank !== "object" || rank === null) return null;
     if (typeof (rank as { tier?: unknown }).tier !== "string") return null;
+    for (const moved of [rankBefore, rankAfter]) {
+      if (moved === undefined) continue;
+      if (typeof moved !== "object" || moved === null || typeof (moved as { tier?: unknown }).tier !== "string") return null;
+    }
   }
   return value as MatchRanksResponse;
 }
 
+/** R2388000: whether the read carries the rated record's move (written for both seats at once). */
+function recorded(ranks: MatchRanksResponse): boolean {
+  return ranks.seats.p1.rankAfter !== undefined || ranks.seats.p2.rankAfter !== undefined;
+}
+
 /**
  * Both seats' ranks and win streaks for the match bar (R604, R612, R2101000): whether this game moves the rating, and each
- * seat's visible rank beside its username, never its profile id (R1436). Read once: a promotion
- * mid-match shows on the next one. An answer that is not a ranks body — or no answer — leaves no
- * banner rather than breaking the board.
+ * seat's visible rank beside its username, never its profile id (R1436). Read when the match opens, so a promotion
+ * mid-match shows on the next one, and again once its result has come (R2388000): `MATCH_RANKS_READ_ATTEMPTS` reads in all,
+ * `MATCH_RANKS_RETRY_MS` apart, while a ranked read carries no move. An answer that is not a ranks body — or no answer —
+ * leaves no banner rather than breaking the board.
  */
-function useMatchRanks(token: string, matchId: string): MatchRanksResponse | null {
+function useMatchRanks(token: string, matchId: string, gameOver: boolean): MatchRanksResponse | null {
   const [ranks, setRanks] = useState<MatchRanksResponse | null>(null);
   useEffect(() => {
     let cancelled = false;
-    getMatchRanks(token, matchId).then(
-      (answer) => {
-        if (!cancelled) setRanks(asMatchRanks(answer));
-      },
-      () => undefined,
-    );
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const read = (reads: number): void => {
+      getMatchRanks(token, matchId).then(
+        (answer) => {
+          if (cancelled) return;
+          const body = asMatchRanks(answer);
+          setRanks(body);
+          if (gameOver && body !== null && body.ranked && !recorded(body) && reads < MATCH_RANKS_READ_ATTEMPTS) {
+            retry = setTimeout(() => {
+              read(reads + 1);
+            }, MATCH_RANKS_RETRY_MS);
+          }
+        },
+        () => undefined,
+      );
+    };
+    read(1);
     return () => {
       cancelled = true;
+      if (retry !== undefined) clearTimeout(retry);
     };
-  }, [token, matchId]);
+  }, [token, matchId, gameOver]);
   return ranks;
 }
 
@@ -210,7 +241,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     token,
     ...(socketFactory === undefined ? {} : { socketFactory }),
   });
-  const ranks = useMatchRanks(token, matchId);
+  const ranks = useMatchRanks(token, matchId, match.view?.result != null);
   // R336: a Conquest game shows its series' score and won decks, and once it is over the way to the next game.
   const series = useMatchSeries(token, matchId, match.view?.result != null);
   const lookup = currentCatalogLookup();
@@ -400,6 +431,13 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             setWatching(null);
           }}
         />
+        {/*
+          The rematch navigation that survives the replay, as the board rail's survives "View the
+          board" (below): the result panel's buttons unmount with the board, so without this a seat
+          that offered and opened the replay would never be taken to the game the offers created.
+          Same series gate: series games offer no rematch.
+        */}
+        {series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
       </CatalogContext.Provider>
     );
   }
@@ -425,6 +463,17 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   const gone = match.connection === "closed";
   // R679: the server keeps no record of a voided match, so its result offers no replay to watch or share.
   const voided = view.result?.reason === "voided";
+
+  // R2388000: each seat's recorded move, both ends present, for the result panel.
+  const moves =
+    view.result === null || ranks === null
+      ? []
+      : (["p1", "p2"] as const).flatMap((side) => {
+          const seat = ranks.seats[side];
+          return seat.rankBefore === undefined || seat.rankAfter === undefined
+            ? []
+            : [{ side, seat, before: seat.rankBefore, after: seat.rankAfter }];
+        });
 
   const board = (
     <Game
@@ -477,6 +526,13 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               {t("Daily Jlore reached")}
             </p>
           ) : null}
+          {/* R2388000: each seat's rank before → after this ranked game, once its record is written. */}
+          {moves.map(({ side, seat, before, after }) => (
+            <p key={side} className="result-overlay__note" data-testid={matchTestid.rankMove} data-seat={side}>
+              <Username name={seat.username} />
+              {seat.you ? t(" (you)") : ""}: {rankWords(before)} → {rankWords(after)}
+            </p>
+          ))}
           {/* #1664: the tracks the game moved, level by level with their rewards, and the quests it completed,
               played once the panel has come in. */}
           {view.result !== null && match.economy !== null ? (

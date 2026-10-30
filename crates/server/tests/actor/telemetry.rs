@@ -17,30 +17,15 @@ use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::app::App;
 use jackioh_server::cli::timing_backfill::{BackfillOutcome, backfill};
 use jackioh_server::config::{MULLIGAN_CLOCK_MS, REMATCH_OFFER_TTL_MS, TURN_CLOCK_MS};
-use jackioh_server::db::store::{MatchStatus, PlayTelemetry, StoreError};
+use jackioh_server::db::store::{MatchStatus, PlayTelemetry};
 
 use crate::support::deps::test_app;
 use crate::support::socket::{FakeSocket, create_fake_socket, settle};
-use crate::support::store::{fake, store, to_json};
+use crate::support::store::{fail_on, fake, from, store, to_json};
 
 const P1: &str = "profile-1";
 const P2: &str = "profile-2";
 const SEED: &str = "telemetry-real";
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-/// Every store method named `method` fails until the test ends.
-async fn fail_on(app: &App, method: &'static str) {
-    fake(app).lock().await.on_call = Some(Arc::new(move |called: &str| {
-        if called == method {
-            Err(StoreError::Other("injected".to_string()))
-        } else {
-            Ok(())
-        }
-    }));
-}
 
 /// The test app with both profiles seeded.
 async fn world() -> Arc<App> {
@@ -306,7 +291,7 @@ mod r1442_play_telemetry_through_the_actor {
     #[tokio::test(start_paused = true)]
     async fn r1442_a_failed_telemetry_write_never_costs_the_result() {
         let app = world().await;
-        fail_on(&app, "playTelemetry.insert").await;
+        fail_on(&app, "playTelemetry.insert", "injected").await;
         play(&app, "m-tel-2").await;
 
         assert!(

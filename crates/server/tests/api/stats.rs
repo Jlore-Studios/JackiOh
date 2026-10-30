@@ -25,10 +25,10 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::store::{UsernameClaim, UsernameClaimOutcome};
 use jackioh_server::username::username_key;
-use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 
 use crate::support::deps::{call, test_app};
+use crate::support::store::from;
 
 /// The active account's bearer token (`e2e-p1`).
 const USER_TOKEN: &str = "e2e-token-p1";
@@ -38,11 +38,6 @@ const PENDING_TOKEN: &str = "e2e-token-pending";
 /// The patch the server counts as current (TS `PATCH`).
 fn current_patch() -> String {
     jackioh_cards::catalog_version().to_string()
-}
-
-/// A store value built from TS's own object literal.
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value).expect("a store value from its JSON")
 }
 
 /// A config count as a `usize`, whichever integer type `config.rs` gives it.

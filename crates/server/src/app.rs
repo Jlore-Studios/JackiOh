@@ -99,6 +99,9 @@ pub struct App {
     /// §14.8, #1303: the permits of the practice claims being verified at once,
     /// `PRACTICE_VERIFY_CONCURRENCY` of them (`api::practice`). One per app, for the limiter's reason.
     pub practice_verifications: tokio::sync::Semaphore,
+    /// SPEC §11 R2378000: each account's spends, one running and the rest waiting their turn
+    /// (`economy::spend_slots`). One per app, for the limiter's reason.
+    pub spends: crate::economy::spend_slots::SpendSlots,
 }
 
 // ---------------------------------------------------------------------------
@@ -414,6 +417,12 @@ pub static ROUTES: &[Route] = &[
         "/api/practice/seeds",
         AuthLevel::Active,
         h!(api::practice::post_seed),
+    ),
+    (
+        "DELETE",
+        "/api/practice/seeds/:seed",
+        AuthLevel::Active,
+        h!(api::practice::delete_seed),
     ),
     (
         "POST",
@@ -1016,6 +1025,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         ci_runs,
         economy_live: crate::config::ECONOMY_LIVE,
         practice_verifications: tokio::sync::Semaphore::new(crate::config::PRACTICE_VERIFY_CONCURRENCY),
+        spends: crate::economy::spend_slots::SpendSlots::default(),
     });
 
     if app.env.e2e {

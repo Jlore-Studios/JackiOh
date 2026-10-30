@@ -93,6 +93,8 @@ mod tests {
     const GREASER: &str = "meditative-100"; // (2) Unit 7/7.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ROCK: &str = "core-066"; // (4) Unit 10/10, Indestructible.
+    const SUPPORT_LOSER: &str = "classicplus-019-4"; // End of turn: heal your hero and each of your Units 3.
+    const ACE: &str = "classic-065"; // Trap; Radiant: at the end of your turn, Recruit 1 or 3.
 
     fn board(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({
@@ -208,17 +210,62 @@ mod tests {
         }
 
         #[test]
-        fn r2198002_cast_on_the_opponents_turn_they_go_at_that_turns_end() {
+        fn r2198002_they_are_destroyed_after_the_end_of_turn_triggers_and_traps() {
+            // p1's Support Loser (lane 5) heals each of p1's Units at the end of the turn, and p1's Radiant
+            // Ace in the Hole Recruits in the end-of-turn trap window whatever its coin (R62). Both must
+            // still find the tokens standing in lanes 1 to 3: the heal reaches the damaged one, and the
+            // recruited Vanilla lands in lane 4, the only open zone, not in lane 1.
             let mut s = scenario(json!({
-                "p1": { "hand": filler(1), "library": filler(4) },
-                "p2": { "hand": [HURRY], "mana": 10, "library": filler(4) },
+                "p1": {
+                    "hand": [HURRY],
+                    "field": [{ "def": SUPPORT_LOSER, "lane": 5 }],
+                    "backrow": [{ "def": ACE, "radiant": true, "faceUp": false }],
+                    "mana": 10,
+                    "library": [VANILLA, VANILLA, VANILLA, VANILLA],
+                },
+                "p2": { "hand": filler(2), "library": filler(4) },
             }));
-            s.end_turn();
             s.play(HURRY, json!({}));
-            assert_eq!(tokens(&s, P2).len(), 3);
+            assert_eq!(lanes(&s, P1), vec![1, 2, 3]);
+            let first = tokens(&s, P1)[0].1.clone();
+            s.card_mut(&first).damage = 1;
+            s.end_turn();
+
+            let events = s.last_events().to_vec();
+            let healed = events.iter().position(
+                |event| matches!(event, GameEvent::Healed { target_id, .. } if *target_id == first.id),
+            );
+            let recruited = events.iter().position(|event| {
+                matches!(event, GameEvent::Summoned { def_id, .. } if def_id == VANILLA)
+            });
+            let destroyed = events.iter().position(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == first.id),
+            );
+            let (Some(healed), Some(recruited), Some(destroyed)) = (healed, recruited, destroyed) else {
+                panic!("a heal, a recruit and a destroy: {healed:?} {recruited:?} {destroyed:?}");
+            };
+            assert!(healed < destroyed && recruited < destroyed);
+            assert!(tokens(&s, P1).is_empty());
+            assert_eq!(s.unit(P1, 4).map(|card| card.def_id).as_deref(), Some(VANILLA));
+            assert!((1..=3).all(|lane| s.unit(P1, lane).is_none()));
+            assert_eq!(s.unit(P1, 5).map(|card| card.def_id).as_deref(), Some(SUPPORT_LOSER));
+        }
+
+        #[test]
+        fn r2198002_cast_on_the_opponents_turn_they_go_at_that_turns_end() {
+            // p2 is active; p1 casts In a hurry (a free cast by p1's effect, R70), so the tokens are p1's
+            // and arrive on p2's turn. They go at the end of p2's turn, before p1's turn begins.
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": { "hand": filler(1), "library": filler(4) },
+                "p2": { "hand": filler(2), "library": filler(4) },
+            }));
+            crate::run_as(&mut s, jackioh_engine::effects::cast_new(json_as(json!({ "def": HURRY }))), P1);
+            assert_eq!(s.state().active, P2);
+            assert_eq!(tokens(&s, P1).len(), 3);
             s.end_turn();
             assert_eq!(s.state().active, P1);
-            assert!(tokens(&s, P2).is_empty());
+            assert!(tokens(&s, P1).is_empty());
         }
 
         /// What `viewer` reads on `id`'s view: the marks it carries, by name.

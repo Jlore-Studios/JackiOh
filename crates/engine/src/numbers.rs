@@ -1,6 +1,6 @@
 //! "A number on a card" (docs/classic-sets.md B3.4, R386): the numbers Degrade, Upgrade and Classic+
 //! #41 KY's Constant read and move — the card's own cost (never an X), its attack and health (a Unit,
-//! or an Animated card, which prints the stats of the Unit it becomes), a numbered keyword's value
+//! or a card with stats, R2280000), a numbered keyword's value
 //! (Armor, Lucky, Spell Damage, Brittle, Echo, Activate, Tribute) and a declared number (`params.rs`).
 //! This module reads them; `effects/tune.rs` moves them.
 //!
@@ -13,7 +13,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::brittle_count::active_brittle_count;
-use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unit_view};
+use crate::layers::{card_keywords, has_stat_line, printed_keywords_of, stats_with_buffs, unit_view};
 use crate::script::{ActivationUses, Script};
 use crate::state::{CardInstance, GameState};
 use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, has_keyword};
@@ -113,14 +113,10 @@ pub fn own_cost(state: &GameState, card: &CardInstance) -> Option<i32> {
     Some(base + card.cost_mod)
 }
 
-/// B3.4 rule 3: whether the card has stats a number may move — a Unit, or an Animated card, which
-/// prints the attack and health of the Unit it becomes (B3.1 rule 1).
+/// B3.4 rule 3: whether the card has stats a number may move — a Unit, or a card with stats
+/// (`layers::has_stat_line`, R2280000: its printed line, a fused one, a `statsOverride` or X stats).
 pub fn has_stats(state: &GameState, card: &CardInstance) -> bool {
-    if crate::faces::card_type_of(state, card) == CardType::Unit {
-        return true;
-    }
-    let keywords = card_keywords(state, card);
-    has_keyword(&keywords, KeywordKind::Animated) || has_keyword(&keywords, KeywordKind::AnimatedOnYourTurn)
+    crate::faces::card_type_of(state, card) == CardType::Unit || has_stat_line(state, card)
 }
 
 /// B3.4 rule 6: the card's attack and current health as they stand — through all five layers in the

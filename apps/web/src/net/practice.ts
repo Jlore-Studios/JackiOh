@@ -10,7 +10,7 @@ import type { LeanPick, PlayerId } from "@jackioh/shared";
 
 import type { QuestPaid, TrackGain } from "../economy/xp.ts";
 import type { LastBoardCard, PracticeClaim } from "../practice/protocol.ts";
-import { apiRequest } from "./api.ts";
+import { apiRequest, type SendOptions } from "./api.ts";
 
 /**
  * `POST /api/practice/seeds`' body: the setup the server keeps beside the seed. A preset or a saved
@@ -47,10 +47,24 @@ export function claimPracticeGame(token: string, claim: PracticeClaim): Promise<
   return apiRequest<PracticeClaimAnswer>("/api/practice/claims", { method: "POST", token, body: claim });
 }
 
-/** The two calls the practice route earns through, injectable for its tests. */
+/** R2379000: `DELETE /api/practice/seeds/:seed`'s answer, the caller's unclaimed seed given back. */
+export type PracticeSeedReleased = { released: true };
+
+/** R2379000: `DELETE /api/practice/seeds/:seed`, the caller's unclaimed seed given back; a 404 when it is not the caller's open seed. */
+export function releasePracticeSeed(token: string, seed: string, options: SendOptions = {}): Promise<PracticeSeedReleased> {
+  return apiRequest<PracticeSeedReleased>(`/api/practice/seeds/${encodeURIComponent(seed)}`, { method: "DELETE", token, ...options });
+}
+
+/** The three calls the practice route earns through, injectable for its tests. */
 export type PracticeEarningApi = {
   requestSeed(token: string, body: PracticeSeedRequest): Promise<PracticeSeedIssued>;
   claim(token: string, claim: PracticeClaim): Promise<PracticeClaimAnswer>;
+  release(token: string, seed: string): Promise<PracticeSeedReleased>;
 };
 
-export const PRACTICE_EARNING_API: PracticeEarningApi = { requestSeed: requestPracticeSeed, claim: claimPracticeGame };
+export const PRACTICE_EARNING_API: PracticeEarningApi = {
+  requestSeed: requestPracticeSeed,
+  claim: claimPracticeGame,
+  // R2379000: sent as the game is given up, so it outlives the page.
+  release: (token, seed) => releasePracticeSeed(token, seed, { keepalive: true }),
+};

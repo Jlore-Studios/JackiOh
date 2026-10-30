@@ -26,7 +26,6 @@ use indexmap::IndexMap;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 use tower::ServiceExt;
 use tracing_subscriber::layer::SubscriberExt;
@@ -42,6 +41,7 @@ use jackioh_server::db::store::Db;
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env};
 
 use crate::support::deps;
+use crate::support::store::hmac_sha256_hex;
 
 // Fixtures
 
@@ -179,32 +179,6 @@ fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
 /// wall clock, which tokio's test clock does not move.
 fn now_ms() -> i64 {
     jackioh_server::app::now_ms()
-}
-
-/// HMAC-SHA256 as lower-case hex (RFC 2104 over `sha2`, so this file needs no MAC crate's API).
-fn hmac_sha256_hex(key: &str, message: &str) -> String {
-    const BLOCK: usize = 64;
-    let mut block = [0u8; BLOCK];
-    if key.len() > BLOCK {
-        let digest = Sha256::digest(key.as_bytes());
-        block[..digest.len()].copy_from_slice(&digest);
-    } else {
-        block[..key.len()].copy_from_slice(key.as_bytes());
-    }
-    let inner_pad: Vec<u8> = block.iter().map(|byte| byte ^ 0x36).collect();
-    let outer_pad: Vec<u8> = block.iter().map(|byte| byte ^ 0x5c).collect();
-    let mut inner = Sha256::new();
-    inner.update(&inner_pad);
-    inner.update(message.as_bytes());
-    let inner = inner.finalize();
-    let mut outer = Sha256::new();
-    outer.update(&outer_pad);
-    outer.update(&inner[..]);
-    outer
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
 }
 
 /// The IP hash of `raw`, keyed as the server keys it.

@@ -62,7 +62,7 @@ pub fn script() -> CardScripts {
 // has resolved, 20 on the Radiant face); the last elements shown here; Luck 1."
 //
 // Every game is built with the testkit's `scenario()` after `crate::register_all()`, with the
-// Meditative set previewed (the record is written only while it is open, R982) and mana 10. The
+// Meditative set shipped (the record is written only while it is open, R982) and mana 10. The
 // elements ride the indices: core-003 is 木, core-032 火, core-020 土, core-011 水, core-019 金.
 #[cfg(test)]
 mod tests {
@@ -131,7 +131,6 @@ mod tests {
     #[test]
     fn r980_a_hand_card_shows_its_element_while_feng_shui_stands() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let s = scenario(json!({
             "seed": "meditative-040-r980-judge",
             "p1": { "mana": 10, "backrow": [ID], "hand": [WOOD] },
@@ -149,7 +148,6 @@ mod tests {
     #[test]
     fn r981_r983_a_generating_play_resolves_radiant() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "meditative-040-generating",
             "p1": { "mana": 10, "backrow": [ID], "hand": [WOOD, FIRE] },
@@ -167,7 +165,6 @@ mod tests {
     #[test]
     fn r981_r983_an_overcoming_play_gets_brittle_2_and_costs_10() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "meditative-040-overcoming",
             "p1": { "mana": 10, "backrow": [ID], "hand": [WOOD, EARTH] },
@@ -186,7 +183,6 @@ mod tests {
     #[test]
     fn r981_a_neutral_pair_does_nothing() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "meditative-040-neutral",
             "p1": { "mana": 10, "backrow": [ID], "hand": [WOOD, WATER] },
@@ -202,7 +198,6 @@ mod tests {
     #[test]
     fn r983_feng_shui_does_not_judge_its_own_play() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "meditative-040-own-play",
             "p1": { "mana": 10, "hand": [WOOD, ID] },
@@ -222,7 +217,6 @@ mod tests {
     #[test]
     fn r984_the_base_face_judges_the_opponent() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "meditative-040-base-opponent",
             "active": "p2",
@@ -242,7 +236,6 @@ mod tests {
     #[test]
     fn r984_the_radiant_face_rewards_you_and_punishes_the_opponent_for_20() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "meditative-040-radiant-reward",
             "p1": { "mana": 10, "backrow": [{ "def": ID, "radiant": true }], "hand": [WOOD, FIRE] },
@@ -271,7 +264,6 @@ mod tests {
     #[test]
     fn r280_r982_the_last_element_lines_show_a_dash_then_the_glyph() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         for radiant in [false, true] {
             let mut s = scenario(json!({
                 "seed": format!("meditative-040-lines-{radiant}"),
@@ -312,7 +304,6 @@ mod tests {
     #[test]
     fn r987_luck_1_for_its_controller_alone_tuned_by_its_param() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "meditative-040-luck",
             "p1": { "mana": 10, "backrow": [ID] },

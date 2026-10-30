@@ -77,8 +77,6 @@ mod tests {
 
             #[test]
             fn fills_to_ten_with_non_token_commons_never_itself() {
-                // The Meditative set previewed, so its Commons, this card among them, are in the pool.
-                let _preview = preview_sets(&[SetName::Meditative]);
                 for n in 0..6 {
                     let mut s = holding(&format!("bulk-booster-{n}"), false, 3);
                     s.play(ID, json!({}));
@@ -96,8 +94,8 @@ mod tests {
             }
 
             #[test]
-            fn r1420_unpreviewed_it_draws_only_the_shipped_sets() {
-                // The Meditative set ships, so its Commons are in the pool unpreviewed: search for a seed
+            fn r1420_it_draws_only_the_shipped_sets() {
+                // The Meditative set ships, so its Commons are in the pool: search for a seed
                 // that draws at least one, which a pool change would otherwise move.
                 let seed = seed_where("bulk-booster-shipped", |seed| {
                     let mut s = holding(seed, false, 0);

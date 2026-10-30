@@ -1,8 +1,9 @@
 // The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4), from fixture responses:
 // each slot's outcome, the packs held on the panel before and after an opening, skip-all, reduced
 // motion, the pack object, the token bars pinned at the top from the answer and played once every card
-// shows (#1663, R1953000, R1999000), batch opening, a refused open, and the page told of an opening and asking
-// for a fresh read (#1309). Nothing here rolls a pack: the fixtures are what `GET /api/packs` and
+// shows (#1663, R1953000, R1999000), batch opening, a refused open, the page told of an opening and asking
+// for a fresh read (#1309), and every press waiting while another spend of the tab is out (R2378000).
+// Nothing here rolls a pack: the fixtures are what `GET /api/packs` and
 // `POST /api/packs/open` answer, and the audio engine is the recording fake the audio suite's own
 // wiring test uses.
 
@@ -26,6 +27,7 @@ import { flightsMs } from "../economy/bars.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
+import { whileSpending } from "../net/spending.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
@@ -856,6 +858,114 @@ describe("#1308 the card packs panel", () => {
     await waitFor(() => {
       expect(server.to("GET", "/api/packs")).toHaveLength(2);
     });
+  });
+});
+
+describe("R2378000 one spend at a time", () => {
+  /** The server's words for a spend sent past the ones waiting their turn. */
+  const BUSY = "your last purchase or opening is still going through; try again in a moment";
+
+  let release: () => void = () => undefined;
+  let outside: Promise<void> = Promise.resolve();
+
+  /** Another spend of the tab's (a Shop buy, say), out until `settleOutside`. */
+  function spendOutside(): void {
+    act(() => {
+      outside = whileSpending(
+        () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+          }),
+      );
+    });
+  }
+
+  async function settleOutside(): Promise<void> {
+    await act(async () => {
+      release();
+      await outside;
+    });
+  }
+
+  afterEach(async () => {
+    await settleOutside();
+  });
+
+  it("R2378000 while another spend is out, Open and Open all wait, turning a wheel", async () => {
+    const server = packsServer();
+    await panel();
+    const buttons = [T.open("Core"), T.openAll("Core"), T.open(GLOBAL_PACK_NAME)];
+    for (const id of buttons) expect(screen.getByTestId(id), id).toHaveAttribute("aria-busy", "false");
+
+    spendOutside();
+    for (const id of buttons) {
+      expect(screen.getByTestId(id), id).toBeDisabled();
+      expect(screen.getByTestId(id), id).toHaveAttribute("aria-busy", "true");
+      expect(screen.getByTestId(id), id).toHaveClass("spend-wait");
+    }
+    fireEvent.click(screen.getByTestId(T.open("Core")));
+    expect(screen.queryByTestId(T.scene), "a waiting Open opens nothing").toBeNull();
+
+    await settleOutside();
+    for (const id of buttons) {
+      expect(screen.getByTestId(id), id).toBeEnabled();
+      expect(screen.getByTestId(id), id).toHaveAttribute("aria-busy", "false");
+    }
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(0);
+  });
+
+  it("R2378000 the sealed pack waits while another spend is out, then opens with one request", async () => {
+    const server = packsServer();
+    await panel();
+    fireEvent.click(screen.getByTestId(T.open("Core")));
+    spendOutside();
+
+    const pack = screen.getByTestId(T.pack);
+    expect(pack).toBeDisabled();
+    expect(screen.getByTestId(T.skipAll)).toBeDisabled();
+    fireEvent.click(pack);
+    // A disabled button still hears the pointer: the swipe asks to open, and the panel says no.
+    fireEvent.pointerDown(pack, { clientX: 0, pointerId: 1 });
+    fireEvent.pointerUp(pack, { clientX: PACK_SWIPE_PX, pointerId: 1 });
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(0);
+    expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
+
+    await settleOutside();
+    expect(screen.getByTestId(T.pack)).toBeEnabled();
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    expect(await screen.findByTestId(T.outcome(0))).toHaveTextContent("New card");
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(1);
+  });
+
+  it("R2378000 Next pack waits while another spend is out", async () => {
+    packsServer({
+      open: (call): Reply => ({ status: 200, body: { ...openedPack(), unopened: call === 1 ? 1 : 0 } satisfies OpenedPackResponse }),
+    });
+    await panel();
+    fireEvent.click(screen.getByTestId(T.openAll("Core")));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+
+    spendOutside();
+    expect(screen.getByTestId(T.next)).toBeDisabled();
+    fireEvent.click(screen.getByTestId(T.next));
+    expect(screen.getByTestId(T.outcome(0)), "the opened pack stays").toBeInTheDocument();
+
+    await settleOutside();
+    fireEvent.click(screen.getByTestId(T.next));
+    expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
+  });
+
+  it("R2378000 a refusal past the ones waiting their turn shows the server's words and leaves the pack sealed", async () => {
+    const server = packsServer({ open: () => refusal(429, "rate_limited", BUSY) });
+    await panel();
+    fireEvent.click(screen.getByTestId(T.open("Core")));
+    fireEvent.click(screen.getByTestId(T.pack));
+
+    expect(await screen.findByTestId(T.error)).toHaveTextContent(BUSY);
+    expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
+    expect(screen.getByTestId(T.pack), "nothing is out, so it can be torn again").toBeEnabled();
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(1);
   });
 });
 

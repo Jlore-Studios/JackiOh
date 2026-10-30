@@ -1,18 +1,22 @@
-//! The helpers every server test file carried its own copy of (#1491): the fake store behind the test
-//! app (`fake`, `fake_ref`, `fake_lock`), one store call in a transaction of its own (`q!`, `store!`,
-//! `try_store!`), a value as JSON (`to_json`), a client-minted id (`uuid`) and three steps of tokio's
-//! paused clock (`advance`, `advance_and_yield`, `sleep_settled`). A copy that behaved differently
-//! keeps a name of its own.
+//! The helpers every server test file carried its own copy of (#1491, #2385): the fake store behind the
+//! test app (`fake`, `fake_ref`, `fake_lock`), its tables (`table`, `fake_read`) and its injected faults
+//! (`fail_on`, `stop_failing`), one store call in a transaction of its own (`q!`, `store!`,
+//! `try_store!`), a value as JSON and back (`to_json`, `from`), a client-minted id (`uuid`), an
+//! HMAC-SHA256 as hex (`hmac_sha256_hex`) and three steps of tokio's paused clock (`advance`,
+//! `advance_and_yield`, `sleep_settled`). A copy that behaved differently keeps a name of its own;
+//! `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`) refuses a new copy.
 
 use std::sync::Arc;
 use std::time::Duration;
 
+use serde::de::DeserializeOwned;
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, MutexGuard};
 
 use jackioh_server::app::App;
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
+use jackioh_server::db::store::{Db, StoreError};
 
 /// How many times `sleep_settled` yields after its sleep: as many as the actor tests' own `settle`.
 const SLEEP_SETTLE_YIELDS: usize = 8;
@@ -38,6 +42,69 @@ pub async fn fake_lock(app: &App) -> MutexGuard<'_, FakeData> {
 /// A value as its JSON.
 pub fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a serialisable value")
+}
+
+/// A JSON answer as the type it holds, panicking with the error and the JSON when it is not one.
+pub fn from<T: DeserializeOwned>(value: Value) -> T {
+    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
+}
+
+/// One table of the fake store: rows as JSON.
+pub async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
+    let data = fake(app);
+    let data = data.lock().await;
+    match pick(&data) {
+        Value::Array(rows) => rows,
+        other => panic!("not a table: {other}"),
+    }
+}
+
+/// One read of the fake's raw tables, as JSON: a table, a row or a count.
+pub async fn fake_read(app: &App, read: impl Fn(&FakeData) -> Value) -> Value {
+    let data = fake_ref(app).lock().await;
+    read(&data)
+}
+
+/// Every store method named `method` fails with `message` until `stop_failing`.
+pub async fn fail_on(app: &App, method: &'static str, message: &'static str) {
+    fake(app).lock().await.on_call = Some(Arc::new(move |called: &str| {
+        if called == method {
+            Err(StoreError::Other(message.to_string()))
+        } else {
+            Ok(())
+        }
+    }));
+}
+
+/// Every store method answers again.
+pub async fn stop_failing(app: &App) {
+    fake(app).lock().await.on_call = None;
+}
+
+/// HMAC-SHA256 as lower-case hex (RFC 2104 over `sha2`, so a test needs no MAC crate's API).
+pub fn hmac_sha256_hex(key: &str, message: &str) -> String {
+    const BLOCK: usize = 64;
+    let mut block = [0u8; BLOCK];
+    if key.len() > BLOCK {
+        let digest = Sha256::digest(key.as_bytes());
+        block[..digest.len()].copy_from_slice(&digest);
+    } else {
+        block[..key.len()].copy_from_slice(key.as_bytes());
+    }
+    let inner_pad: Vec<u8> = block.iter().map(|byte| byte ^ 0x36).collect();
+    let outer_pad: Vec<u8> = block.iter().map(|byte| byte ^ 0x5c).collect();
+    let mut inner = Sha256::new();
+    inner.update(&inner_pad);
+    inner.update(message.as_bytes());
+    let inner = inner.finalize();
+    let mut outer = Sha256::new();
+    outer.update(&outer_pad);
+    outer.update(&inner[..]);
+    outer
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 /// A client-minted id: a UUID whose last twelve digits are `n`, whichever integer type `n` is.

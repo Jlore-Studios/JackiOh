@@ -154,11 +154,24 @@ mod tests {
         }
 
         #[test]
-        fn r220_an_attacker_with_3_health_dies_and_your_hero_takes_nothing_its_exertion_spent() {
+        fn r220_an_attacker_with_3_health_dies_on_its_declared_attack_and_your_hero_takes_nothing() {
             let mut s = setup(json!({}), json!({ "field": [TIMMY] }), false);
             let attacker = s.unit(P2, 1).unwrap();
             s.attack(&attacker, "hero");
 
+            // The attack was the player's declaration (§4.2 step 3, which spends the exertion, R44), and
+            // the trap fired after it. The dead attacker's own exertion cannot be read: R78 resets a card
+            // that leaves the field.
+            let types: Vec<GameEventType> = s.events().iter().map(GameEvent::event_type).collect();
+            let declared = s.events().iter().position(|event| {
+                matches!(
+                    event,
+                    GameEvent::AttackDeclared { attacker_id, forced: false, .. } if *attacker_id == attacker.id
+                )
+            });
+            let trap = types.iter().position(|kind| *kind == GameEventType::TrapFired);
+            assert!(matches!((declared, trap), (Some(declared), Some(trap)) if declared < trap));
+            assert!(!types.contains(&GameEventType::AttackCancelled));
             assert!(fired(&s));
             s.expect_in_zone(TIMMY, "graveyard");
             s.expect_health(P1, 30);
@@ -198,17 +211,43 @@ mod tests {
 
         #[test]
         fn r121_a_forced_attack_on_your_hero_leaves_it_set() {
-            let s = setup(json!({}), json!({ "field": [VANILLA] }), false);
+            // §6.3 Forced attack, run through the engine: p2's own effect makes its 4/4 attack p1's hero
+            // (C #9 Moths to the Flame's verb, aimed at the hero). The declaration is the effect's, not
+            // the opponent's, so the trap never arms, the hero takes the hit and the trap stays set.
+            let mut s = setup(json!({}), json!({ "field": [VANILLA] }), false);
             let attacker = s.unit(P2, 1).unwrap();
+            let events = crate::run_as(
+                &mut s,
+                jackioh_engine::effects::forced_attacks_on(json_as(json!({
+                    "target": { "of": "enemyHero" },
+                    "attackers": "self",
+                }))),
+                P2,
+            );
+            assert!(
+                events.iter().any(|event| matches!(
+                    event,
+                    GameEvent::AttackDeclared { attacker_id, target_id, forced: true, .. }
+                        if *attacker_id == attacker.id && target_id == "hero-p1"
+                )),
+                "the forced attack on p1's hero was made"
+            );
+            assert!(!events.iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+            s.expect_health(P1, 26);
+            s.expect_stats(VANILLA, json!({ "health": 4 }));
+            assert_eq!(s.backrow(P1, 2).map(|card| card.def_id).as_deref(), Some(RUNES));
+            assert_eq!(s.backrow(P1, 2).unwrap().face_up, Some(false));
+
+            // The `when` itself, which the engine's run above never reaches (a forced attack opens no
+            // trap window): the forced declaration does not arm it, the same one made by the player does.
             let declared_as = |forced: bool| GameEvent::AttackDeclared {
                 attacker_id: attacker.id.clone(),
                 target_id: "hero-p1".to_string(),
                 forced,
                 instead_of: None,
             };
-            let (forced, declared) = (declared_as(true), declared_as(false));
-            assert!(!arms(&s, &forced));
-            assert!(arms(&s, &declared));
+            assert!(!arms(&s, &declared_as(true)));
+            assert!(arms(&s, &declared_as(false)));
         }
 
         #[test]

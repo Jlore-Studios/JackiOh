@@ -240,7 +240,7 @@ function expectPlayed(testid: string): void {
 function fatigue(viewport: Viewport | null, shoot: Shoot): void {
   startGame({ seed: SEEDS.fatigue, a: "25-fatigue-a", b: BYSTANDER }, viewport);
 
-  // R184: the opening hand and first draw exhaust this five-card library.
+  // R184: the opening hand and first draw exhaust this four-card library.
   holdDevice("p1");
   expectCount(libraryCountId("you"), 0);
   expectCount(handCountId("you"), constants.OPENING_DRAW[0] + 1);
@@ -331,15 +331,15 @@ function libraryFull(viewport: Viewport | null, shoot: Shoot): void {
   startGame({ seed: SEEDS.libraryFull, a: "25-library-full-a", b: "25-library-full-b" }, viewport);
 
   holdDevice("p1");
-  expectCount(libraryCountId("you"), constants.LIBRARY_CAP - 5);
+  expectCount(libraryCountId("you"), constants.LIBRARY_CAP - 4);
   for (const name of [CLONE_MACHINE, GARY, VANILLA]) cy.handCardByName(name);
 
   cy.playByName(CLONE_MACHINE, { ...handClick(viewport), zone: { side: "you", row: "backrow", lane: 1 } });
-  // R119: Clone Machine does not copy itself; Gary leaves 58.
+  // R119: Clone Machine does not copy itself; Gary leaves 59.
   cy.playByName(GARY, { ...handClick(viewport), zone: { side: "you", row: "units", lane: 1 } });
-  expectCount(libraryCountId("you"), constants.LIBRARY_CAP - 2);
+  expectCount(libraryCountId("you"), constants.LIBRARY_CAP - 1);
 
-  // R80: Vanilla's first two copies fill the library and its third is refused.
+  // R80: only Vanilla's first copy fills the library.
   clearNotices();
   cy.playByName(VANILLA, {
     ...handClick(viewport),

@@ -29,13 +29,13 @@ use jackioh_engine::config::{
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
     AltWinCondition, AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword,
-    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, Tag, UnitView,
-    acting_with_flag, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
-    attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_keywords, card_type_of_face,
-    credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn, has_keyword,
-    heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left, modifier_is_live, outcome_for,
-    owed_mana_of, own_cost, pierces, query_cost, reset_instance, stats_with_buffs, subsystems,
-    takes_strike_back, unit_has, unit_view,
+    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, Slumber, Tag,
+    UnitView, acting_with_flag, active_brittle_count, active_units_of, animated_with_stats, armor_of,
+    attack_restriction, attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_keywords,
+    card_type_of_face, credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn,
+    has_keyword, heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left, modifier_is_live,
+    outcome_for, owed_mana_of, own_cost, pierces, query_cost, reset_instance, stats_with_buffs, subsystems,
+    takes_strike_back, unit_has, unit_view, units_on_field_of,
 };
 use serde::{Deserialize, Serialize};
 
@@ -450,6 +450,23 @@ fn dormant_worth(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWe
     units + buried as f64 * w.dormant_card
 }
 
+/// R2380000: what a Dormant card on the field (§6.1, R1839000) is worth: the `unit_worth` of the same
+/// card awake, `slumber_turn_share` for each turn left on its countdown, or `slumber_waiting_share`
+/// when it has none and waits for an effect (no call at a zero share). Its status and countdown are
+/// on both seats' views (R185), so the seat prices its enemy's alike.
+fn slumber_worth(state: &GameState, unit: &CardInstance, slumber: &Slumber, w: &EvalWeights) -> f64 {
+    let share = match slumber.turns {
+        Some(turns) => w.slumber_turn_share.powi(turns.max(0)),
+        None => w.slumber_waiting_share,
+    };
+    if share == 0.0 {
+        return 0.0;
+    }
+    let mut awake = unit.clone();
+    awake.slumber = None;
+    share * unit_worth(state, &awake, w)
+}
+
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
 fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
     hero_value(effective_life(state, player), starting_life(state, player), w)
@@ -464,8 +481,12 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
-    for unit in active_units_of(state, player) {
-        value += unit_worth(state, unit, w);
+    // R2380000: a Dormant card (R1839000) counts by the unit it wakes as, discounted by its wait.
+    for unit in units_on_field_of(state, player) {
+        value += match &unit.slumber {
+            None => unit_worth(state, unit, w),
+            Some(slumber) => slumber_worth(state, unit, slumber, w),
+        };
     }
     // §3.2, R13: the cards dormant under its Stack piles, each resuming when the cards above it leave.
     value += dormant_worth(state, player, seat, w);
@@ -510,8 +531,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
             Some(def) if readable_by(state, card, seat) => {
                 value += brittle_share(card, w)
                     * (w.backrow_base + w.backrow_per_cost * f64::from(query_cost(def)));
-                // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share).
-                if w.animated_share != 0.0 && animated_kind_of(state, card).is_some() {
+                // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share), with stats (R2280000).
+                if w.animated_share != 0.0 && animated_with_stats(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w);
                 }
                 // §10.1, R27/R62: a grade counter's banked steps are worth their own — a Combo-Index

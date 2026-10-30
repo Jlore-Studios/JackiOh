@@ -11,17 +11,22 @@
 use std::sync::Arc;
 
 use serde_json::{Value, json};
+use tokio::sync::watch;
 
 use jackioh_engine::SetName;
 use jackioh_server::api::collection::{GrantInput, grant_cards, grant_entire_catalog, owned_map};
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
-use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, PACK_PRICE_JLORE};
+use jackioh_server::config::{
+    CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX,
+    PACK_PRICE_JLORE, SPEND_BUSY_RETRY_AFTER_MS,
+};
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity};
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
 use jackioh_server::economy::packs::open_pack;
 use jackioh_server::economy::roll::PackKind;
+use jackioh_server::economy::spend_slots::SPEND_BUSY_MESSAGE;
 use jackioh_server::economy::store::{
     Counter, CounterGrant, EconomyLedger, EconomyReason, InventoryGrant, InventoryItem,
 };
@@ -940,4 +945,92 @@ async fn r2124000_the_same_key_twice_redeems_one_cosmetic_token() {
         .filter(|row| row.reason == EconomyReason::TokenRedeem)
         .count();
     assert_eq!(redeemed, 1);
+}
+
+// ---------------------------------------------------------------------------------------------
+// R2378000: an account runs one spend at a time, the rest waiting their turn
+// ---------------------------------------------------------------------------------------------
+
+/// How many times `until_claims` lets the spawned spends run before it gives up.
+const YIELDS: usize = 1_000;
+
+/// Lets the spawned spends run until `profile_id` has `claims` spends running or waiting.
+async fn until_claims(app: &App, profile_id: &str, claims: usize) {
+    for _ in 0..YIELDS {
+        if app.spends.claims(profile_id) == claims {
+            return;
+        }
+        tokio::task::yield_now().await;
+    }
+    panic!(
+        "{profile_id} has {} spends, not {claims}",
+        app.spends.claims(profile_id)
+    );
+}
+
+/// `count` spends of `profile_id`'s own, running or waiting their turn, each held until the
+/// sender this answers is dropped.
+async fn hold_turns(app: &Arc<App>, profile_id: &'static str, count: usize) -> watch::Sender<()> {
+    let (release, held) = watch::channel(());
+    for _ in 0..count {
+        let (app, mut held) = (Arc::clone(app), held.clone());
+        tokio::spawn(async move {
+            let _turn = app.spends.claim(profile_id).await;
+            // Errs once the sender is dropped.
+            held.changed().await.ok();
+        });
+    }
+    until_claims(app, profile_id, count).await;
+    release
+}
+
+/// As many spends as an account runs and keeps waiting at once.
+fn full() -> usize {
+    ECONOMY_SPENDS_RUNNING_MAX + ECONOMY_SPENDS_WAITING_MAX
+}
+
+/// The refusal of a spend sent past the waiting ones.
+fn assert_busy(status: u16, body: &Value) {
+    assert_eq!(status, 429, "{body}");
+    assert_eq!(body["error"]["code"], json!("rate_limited"), "{body}");
+    assert_eq!(body["error"]["message"], json!(SPEND_BUSY_MESSAGE), "{body}");
+    assert_eq!(
+        body["error"]["details"]["retryAfterMs"],
+        json!(SPEND_BUSY_RETRY_AFTER_MS),
+        "{body}"
+    );
+}
+
+#[tokio::test]
+async fn r2378000_a_redemption_sent_past_the_waiting_ones_is_refused_at_once_and_writes_nothing() {
+    let (app, token) = setup().await;
+    let cards = three_cards(&app);
+    grant_item(&app, InventoryItem::CardToken, "", 1).await;
+    let before = everything(&app).await;
+    let release = hold_turns(&app, PROFILE, full()).await;
+
+    for (path, body) in [
+        ("/api/tokens/redeem-card", json!({ "cardId": cards[0] })),
+        (
+            "/api/tokens/redeem-cosmetic",
+            json!({ "token": "Rare", "cosmeticId": "x" }),
+        ),
+    ] {
+        let (status, _, answer) = call(&app, "POST", path, Some(&token), body).await;
+        assert_busy(status, &answer);
+    }
+    assert_eq!(everything(&app).await, before, "a refused spend writes nothing");
+
+    drop(release);
+    until_claims(&app, PROFILE, 0).await;
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/tokens/redeem-card",
+        Some(&token),
+        json!({ "cardId": cards[0] }),
+    )
+    .await;
+    assert_eq!(status, 200, "its turn come, the token is redeemed: {body}");
+    assert_eq!(held(&app, InventoryItem::CardToken, "").await, 0);
 }

@@ -9,7 +9,8 @@
 //!      has lost it where it stands (R115) and a granted one counts;
 //!   2. to animate — `animate_card`: the same lane's unit zone when it is open, else the leftmost open,
 //!      unlocked, unreserved one (R64's placement), in Attack Position unless the text says otherwise;
-//!      with none open the card stays where it is;
+//!      with none open the card stays where it is, and a card with no stats never animates
+//!      (`layers::has_stat_line`, R2280000: a backrow card becomes a Unit only with Animated and stats);
 //!   3. while animated it is a Unit for every rule — it stands in its controller's `units` pile, so
 //!      every unit walk finds it, and `faces::card_type_of` answers "Unit" there — and it keeps its text:
 //!      an animated Field Trap still fires as a trap (`traps::traps_in_order`), which is why the trap
@@ -26,7 +27,10 @@
 //!      card dormant under a Stack does not return;
 //!   7. in the backrow it is not a Unit (it is not in a unit pile);
 //!   8. a face-down Animated Trap is hidden like any trap until it fires: nothing here animates a
-//!      face-down card except the trap's own firing, which has turned it face-up first (`traps::fire_trap`).
+//!      face-down card except the trap's own firing, which has turned it face-up first (`traps::fire_trap`);
+//!   9. the first time a face-up backrow card has both, plain Animated and stats (a Fuse that keeps it,
+//!      a granted Animated), it is owed its animation (`owe_animation`, `ANIMATE_OWED_KEY`), and the
+//!      state check animates it (`animate_owed`, R2280001); a Trap only once it has fired.
 //!
 //! R445: animating is not a summon — the card was on the field already (§6.3 Summon puts a card onto
 //! the field from anywhere else) — so it emits `animated`, never `summoned`, and nothing that answers
@@ -37,12 +41,15 @@
 //! instance of that id in the state.
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::catalog::def_of;
-use crate::layers::unit_view;
+use crate::layers::{has_stat_line, unit_view};
 use crate::preview::is_face_down;
 use crate::script::EngineSink;
-use crate::state::{CardInstance, Exertion, GameState, Position, find_instance_mut, is_turn_of};
+use crate::state::{
+    CardInstance, Exertion, GameState, Position, active_first, find_instance, find_instance_mut, is_turn_of,
+};
 use crate::wire::{CardType, GameEvent, KeywordKind, PlayerId, Row, Zone, has_keyword};
 use crate::zones::{
     ZoneSlot, acts_on_field, card_at, first_entry_zone, home_of, is_carried, is_open, live_or, release_home,
@@ -62,6 +69,11 @@ pub enum AnimatedKind {
 }
 
 const ON_YOUR_TURN: KeywordKind = KeywordKind::AnimatedOnYourTurn;
+
+/// R2280001: the mark of a backrow card owed its animation at the next state check (`owe_animation`,
+/// `animate_owed`). Engine memory, as `zones::STACKED_KEY` is: R78's reset clears it as the card leaves
+/// the field, and the card's own animation or the check that owes it clears it before.
+pub const ANIMATE_OWED_KEY: &str = "__animateOwed";
 
 /// `animate_card`'s options: the position it takes (Attack unless the text says otherwise).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -97,6 +109,82 @@ pub fn animated_kind_of(state: &GameState, card: &CardInstance) -> Option<Animat
     None
 }
 
+/// R2280000: the Animated the card has when it also has stats (`layers::has_stat_line`), or `None`: a
+/// Field Spell, Trap or Field Trap becomes a Unit only with both.
+pub fn animated_with_stats(state: &GameState, card: &CardInstance) -> Option<AnimatedKind> {
+    if !has_stat_line(state, card) {
+        return None;
+    }
+    animated_kind_of(state, card)
+}
+
+/// R2280001: whether the card would animate at a state check now — face-up on top of its controller's
+/// backrow zone and acting there, no Unit standing there already (R1728000), a Trap or Field Trap only
+/// once it has fired (face-up; a revealed one is still armed), with stats and plain Animated. An
+/// "Animated on your turn" card keeps its own moments (R1087).
+fn ready_in_backrow(state: &GameState, card: &CardInstance) -> bool {
+    let Some(at) = slot_of(state, card) else {
+        return false;
+    };
+    if at.row != Row::Backrow
+        || !acts_on_field(state, card)
+        || is_carried(state, card)
+        || stands_in_backrow(state, card)
+        || is_face_down(state, card)
+    {
+        return false;
+    }
+    if matches!(face_type_of(state, card), CardType::Trap | CardType::FieldTrap) && card.face_up != Some(true)
+    {
+        return false;
+    }
+    animated_with_stats(state, card) == Some(AnimatedKind::Animated)
+}
+
+/// R2280001: `ready_in_backrow` for the card of this id as it stands.
+pub(crate) fn ready_to_animate(state: &GameState, card_id: &str) -> bool {
+    find_instance(state, card_id).is_some_and(|card| ready_in_backrow(state, card))
+}
+
+/// R2280001: mark the card owed its animation when it is ready now and was not (`was`, read before the
+/// change): the first time it has both conditions. A card that had both already keeps its own moments.
+pub(crate) fn owe_animation(state: &mut GameState, card_id: &str, was: bool) {
+    if was || !ready_to_animate(state, card_id) {
+        return;
+    }
+    if let Some(card) = find_instance_mut(state, card_id) {
+        card.memory
+            .insert(ANIMATE_OWED_KEY.to_string(), Value::Bool(true));
+    }
+}
+
+/// R2280001: the state check's step that animates every backrow card owed its animation, the active
+/// player's side first, backrow lane 1 to 5, each as an entry by R383's and R64's placement. The mark
+/// goes first, so a card still ready but with no open unit zone stays and is owed nothing more. True
+/// when a card moved.
+pub(crate) fn animate_owed(sink: &mut FieldSink<'_>) -> bool {
+    let mut moved = false;
+    for player in active_first(sink.state) {
+        for slot in slots_of(player, Row::Backrow) {
+            let Some(id) = card_at(sink.state, slot)
+                .filter(|card| card.memory.contains_key(ANIMATE_OWED_KEY))
+                .map(|card| card.id.clone())
+            else {
+                continue;
+            };
+            let Some(owed) = find_instance_mut(sink.state, &id) else {
+                continue;
+            };
+            owed.memory.shift_remove(ANIMATE_OWED_KEY);
+            let owed = owed.clone();
+            if ready_in_backrow(sink.state, &owed) && animate_card(sink, &owed, AnimateOptions::default()) {
+                moved = true;
+            }
+        }
+    }
+    moved
+}
+
 /// B3.1 rule 3, R383: a card that is not a Unit by its face, standing in a unit zone as one.
 pub fn is_animated(state: &GameState, card: &CardInstance) -> bool {
     matches!(card.zone, Zone::Field { row: Row::Units, .. }) && face_type_of(state, card) != CardType::Unit
@@ -116,17 +204,17 @@ pub(crate) fn unit_zone_for(state: &GameState, player: PlayerId, lane: i32) -> O
     }
 }
 
-/// B3.1 rules 2, 4 and 5 (R383): animate a card acting in its controller's backrow — move it into a unit
-/// zone as a Unit, face-up, summoning sick (an entry; the start-of-turn animation of an "Animated on your turn"
-/// card is none, R1062), with a fresh exertion, in `position` (Attack unless the text
-/// says otherwise), without leaving the field. An "Animated on your turn" card's backrow zone is held for
-/// its return (rule 6). Emits `animated`, never `summoned` (R445).
+/// B3.1 rules 2, 4 and 5 (R383): animate a card with stats (R2280000) acting in its controller's
+/// backrow — move it into a unit zone as a Unit, face-up, summoning sick (an entry; the start-of-turn
+/// animation of an "Animated on your turn" card is none, R1062), with a fresh exertion, in `position`
+/// (Attack unless the text says otherwise), without leaving the field. An "Animated on your turn"
+/// card's backrow zone is held for its return (rule 6). Emits `animated`, never `summoned` (R445).
 ///
 /// True when the card now stands in a unit zone — including a card that already did, which "does not
 /// move or change position" (rule 4) — and when it is a Unit standing in its backrow zone, which stays
 /// there (R1728000). False, changing nothing, when it is not acting in a backrow zone (dormant under a
-/// pile, a carried Unit, off the field) or no unit zone of its side is open (rule 2: it stays where it
-/// is).
+/// pile, a carried Unit, off the field), has no stats (R2280000) or no unit zone of its side is open
+/// (rule 2: it stays where it is).
 pub fn animate_card(sink: &mut FieldSink<'_>, card: &CardInstance, options: AnimateOptions) -> bool {
     step_into_units(sink, card, options, true)
 }
@@ -145,6 +233,10 @@ fn step_into_units(
         && acts_on_field(sink.state, &card)
     {
         return true;
+    }
+    // R2280000: a card with no stats never becomes a Unit.
+    if !has_stat_line(sink.state, &card) {
+        return false;
     }
     let Some(from) = slot_of(sink.state, &card) else {
         return false;
@@ -173,6 +265,7 @@ fn step_into_units(
         attacks: None,
     };
     animated.face_up = Some(true);
+    animated.memory.shift_remove(ANIMATE_OWED_KEY);
     let animated = animated.clone();
     if animated_kind_of(sink.state, &animated) == Some(AnimatedKind::AnimatedOnYourTurn) {
         reserve_home(sink.state, from, &animated.id);
@@ -253,7 +346,8 @@ pub fn return_home(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
 }
 
 /// B3.1 rule 4: a card that entered a backrow zone just now animates as it enters when it is an
-/// Animated Field Spell, or an "Animated on your turn" card entering on its controller's turn. A
+/// Animated Field Spell, or an "Animated on your turn" card entering on its controller's turn, with
+/// stats (R2280000: one with none stays in the backrow). A
 /// face-down Trap never does (rule 8): an Animated Trap or Field Trap animates as its firing's last step
 /// instead. Called by the paths that put a card onto the field — §10.5 step 4 (`play_steps::place_card`,
 /// plays and casts) and every summon (`effects/summon::summon_onto`) — right after the event that placed it.
@@ -279,10 +373,11 @@ pub fn animate_on_entry(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
     }
 }
 
-/// B3.1 rule 4: `player`'s "Animated on your turn" cards step into their unit zones, backrow lane 1 to
-/// 5 (R68's order), each as far as an open unit zone lets it. Only the top of a backrow pile acts (B5
-/// E21), and a face-down card stays hidden (rule 8). The step is no entry (R1062, which revised R383
-/// with the Meditative set and holds in every game since it shipped in v0.3.5).
+/// B3.1 rule 4: `player`'s "Animated on your turn" cards with stats (R2280000) step into their unit
+/// zones, backrow lane 1 to 5 (R68's order), each as far as an open unit zone lets it. Only the top of
+/// a backrow pile acts (B5 E21), and a face-down card stays hidden (rule 8). The step is no entry
+/// (R1062, which revised R383 with the Meditative set and holds in every game since it shipped in
+/// v0.3.5).
 pub fn animate_at_turn_start(sink: &mut FieldSink<'_>, player: PlayerId) {
     for slot in slots_of(player, Row::Backrow) {
         let Some(card) = card_at(sink.state, slot).cloned() else {

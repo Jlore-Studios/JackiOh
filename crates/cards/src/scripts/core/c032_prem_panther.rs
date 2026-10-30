@@ -48,9 +48,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.5.6b and before ran: "After this attacks", only for a Panther that survived
+/// R767000: the scripts v0.5.10 and before ran: "After this attacks", only for a Panther that survived
 /// (R2285001).
-pub fn script_v0_5_6b() -> CardScripts {
+pub fn script_v0_5_10() -> CardScripts {
     let after_attack = after_attack();
     CardScripts {
         base: Script {
@@ -466,14 +466,14 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.6b and before, "After this attacks" for a
+    /// R767000: the script kept for the replays of v0.5.10 and before, "After this attacks" for a
     /// Panther that survived (R2285001).
-    mod v0_5_6b {
+    mod v0_5_10 {
         use super::*;
 
         #[test]
-        fn r767000_a_game_on_v0_5_6b_draws_nothing_for_a_trade() {
-            crate::under_kept(super::super::ID, super::super::script_v0_5_6b(), || {
+        fn r767000_a_game_on_v0_5_10_draws_nothing_for_a_trade() {
+            crate::under_kept(super::super::ID, super::super::script_v0_5_10(), || {
                 let mut s = scn(json!({
                     "seed": "panther-trade",
                     "p1": { "field": ["32", "15"], "library": ["15", "15", "15"] },

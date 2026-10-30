@@ -23,7 +23,6 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::testkit::*;
 
     use crate::scenario;
     use crate::filler;
@@ -31,10 +30,6 @@ mod tests {
     const TRILA: &str = "stinkyscape-108";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
-
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
 
     fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
         keywords
@@ -59,7 +54,6 @@ mod tests {
     #[test]
     fn windfury_attacks_twice_a_turn() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [ANCHOR], "field": [TRILA], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -74,7 +68,6 @@ mod tests {
     #[test]
     fn radiant_rush_may_attack_a_unit_the_turn_it_is_played() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": TRILA, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },

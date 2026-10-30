@@ -333,24 +333,28 @@ mod the_coin_r244 {
     }
 
     #[test]
-    fn r1156000_both_seats_open_on_four_cards_and_only_the_second_holds_the_coin_after_the_mulligan() {
+    fn r1156000_r2368000_player_1_opens_on_three_cards_player_2_on_four_and_only_the_second_holds_the_coin() {
         setup_catalog();
         let mut catalog = registered_catalog().clone();
         catalog.insert(coin().id, coin());
         register_catalog(catalog);
         let created = create_game(&CreateGameOptions {
-            seed: "r1156000".into(),
+            seed: "r2368000".into(),
             decks: (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21)),
             ..Default::default()
         });
         let dealt = begin_game(&created).state;
-        assert_eq!(OPENING_DRAW.to_vec(), vec![4, 4]);
+        assert_eq!(OPENING_DRAW.to_vec(), vec![3, 4]);
         assert_eq!(dealt.phase, Phase::Mulligan);
-        for player in [PlayerId::P1, PlayerId::P2] {
-            assert_eq!(dealt.players[player].hand.len(), 4);
-            assert_eq!(dealt.players[player].library.len() as i32, DECK_SIZE - 4);
+        for (player, opening) in [(PlayerId::P1, 3), (PlayerId::P2, 4)] {
+            assert_eq!(dealt.players[player].hand.len(), opening, "{player:?}");
+            assert_eq!(
+                dealt.players[player].library.len(),
+                DECK_SIZE as usize - opening,
+                "{player:?}"
+            );
             let prompt = mulligan_prompt_for(&dealt, player).expect("an open mulligan");
-            assert_eq!(prompt.options.len(), 4);
+            assert_eq!(prompt.options.len(), opening, "{player:?}");
         }
 
         let state = keep_all(&dealt);
@@ -364,9 +368,9 @@ mod the_coin_r244 {
         };
         assert_eq!(coins(PlayerId::P1), 0);
         assert_eq!(coins(PlayerId::P2), 1);
-        // P2's four and The Coin; P1's four and its turn-1 draw.
+        // P2's four and The Coin; P1's three and its turn-1 draw.
         assert_eq!(state.players.p2.hand.len(), 5);
-        assert_eq!(state.players.p1.hand.len(), 5);
+        assert_eq!(state.players.p1.hand.len(), 4);
         setup_catalog();
     }
 

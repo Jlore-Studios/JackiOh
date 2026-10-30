@@ -130,6 +130,17 @@
 //! 1` replays it, and a game that took it may end by `ENDINGS_TERMINAL_REASONS`. The summary and
 //! `--json` count the seeds that took it. The corpus replays without it, and the shipped §10.7
 //! policy (`AI_SKIPPED_ACTIONS`) is unchanged.
+//!
+//! # Pool coverage (#2426)
+//!
+//! A card dealt into many decks may never have its rules run, when the policy never plays it. Each
+//! wave therefore reports, over the games that passed (a failed seed adds nothing, as with growth),
+//! the ids dealt into either deck and the ids a `CardPlayed`, `TrapFired` or `CardAnnounced` event
+//! named, setup's included (`Coverage`). The summary's `coverage:` line counts the dealt cards no
+//! game played and names the first `COVERAGE_SHOWN` by id; `--json`'s `coverage` lists them all. It
+//! never fails a seed. Played is not every hook run: a card whose Death or trigger never fired still
+//! counts as played. The ids merge in seed order and the list is sorted, so any thread count gives
+//! the same report.
 
 use std::cell::RefCell;
 use std::fs;
@@ -146,7 +157,7 @@ use jackioh_engine::testkit::{
     preview_every_set, set_ships,
 };
 use jackioh_engine::{
-    AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardInstance, CardType,
+    AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardDef, CardInstance, CardType,
     CreateGameOptions, DECK_SIZE, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState,
     EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS,
     PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game,
@@ -486,19 +497,22 @@ static BOARD_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     pool
 });
 
+/// R23: an Immutable card, on either face, is never fused.
+pub(crate) fn is_immutable(def: &CardDef) -> bool {
+    [&def.base, &def.radiant].iter().any(|face| {
+        face.keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::Immutable)
+    })
+}
+
 /// The Units a manufactured board's fused card can be made of: no token, and no Immutable card, which
 /// R23 means is never fused. Sorted by catalog id.
-static FUSABLE_UNITS: LazyLock<Vec<String>> = LazyLock::new(|| {
+pub(crate) static FUSABLE_UNITS: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
         .filter(|(_, def)| def.type_ == CardType::Unit && !def.is_token())
-        .filter(|(_, def)| {
-            ![&def.base, &def.radiant].iter().any(|face| {
-                face.keywords
-                    .iter()
-                    .any(|keyword| keyword.kind() == KeywordKind::Immutable)
-            })
-        })
+        .filter(|(_, def)| !is_immutable(def))
         .map(|(id, _)| id.clone())
         .collect();
     pool.sort();
@@ -652,6 +666,8 @@ struct GameRun {
     /// The prefix lengths whose end state held paused work (#1387): step 0 is the setup state,
     /// otherwise the state after that many actions. The checkpoint is drawn from these.
     paused: Vec<usize>,
+    /// The def ids either seat played, set, fired or announced (#2426), setup's included.
+    played: IndexSet<String>,
 }
 
 /// `pending ${state.pending === null ? "none" : `"${state.pending.kind}"`}`.
@@ -845,6 +861,9 @@ fn play_game(
     let mut heaviest = Heaviest::default();
     // The events the last logged action returned, which a probe of its nonce is owed (#1386).
     let mut last_events: Vec<GameEvent> = Vec::new();
+    // #2426: the cards the game played, from setup's events on (a cast on draw among them).
+    let mut played: IndexSet<String> = IndexSet::new();
+    note_played(&mut played, &begun.events);
     // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
     let mut opening = monitor.after(&begun.events, &state);
     opening.extend(monitor.hidden(&state));
@@ -1017,6 +1036,7 @@ fn play_game(
                 },
             ));
         }
+        note_played(&mut played, &result.events);
         last_events = result.events;
     }
 
@@ -1026,6 +1046,7 @@ fn play_game(
         decks,
         heaviest,
         paused: paused_steps,
+        played,
     })
 }
 
@@ -1492,7 +1513,7 @@ pub(crate) fn largest_in_json(value: &Value) -> i64 {
 
 /// One action's weights, in `MEASURES`' order: the events `reduce` returned, the largest number on
 /// any instance of `state` (the state it produced) and the instances in it.
-fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
+pub(crate) fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
     let (largest, instances) = instances_of(state).fold((0_i64, 0_i64), |(largest, count), card| {
         (largest.max(largest_number(card)), count + 1)
     });
@@ -1549,7 +1570,7 @@ fn growth_message(
 }
 
 /// The failure message of the first measure past its bound, when one is: a value at the bound passes.
-fn growth_breach(
+pub(crate) fn growth_breach(
     weights: &[i64; 3],
     state: &GameState,
     step: usize,
@@ -2158,6 +2179,101 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Pool coverage (#2426)
+// ---------------------------------------------------------------------------------------------
+
+/// How many never-played ids the summary's `coverage:` line names before it counts the rest;
+/// `--json` lists them all (#2426).
+pub const COVERAGE_SHOWN: usize = 20;
+
+/// Adds to `played` the def id of every card `events` show played, set, fired or announced (#2426).
+fn note_played(played: &mut IndexSet<String>, events: &[GameEvent]) {
+    for event in events {
+        if let GameEvent::CardPlayed { def_id, .. }
+        | GameEvent::TrapFired { def_id, .. }
+        | GameEvent::CardAnnounced { def_id, .. } = event
+        {
+            played.insert(def_id.clone());
+        }
+    }
+}
+
+/// Which cards a wave's passing games dealt and which either seat played (#2426): a report, never
+/// a failure. Played means an event named the card, so a card whose Death or trigger never fired
+/// counts as played and the list understates what the games missed.
+#[derive(Debug, Default)]
+struct Coverage {
+    /// Every id dealt into either deck.
+    dealt: IndexSet<String>,
+    /// Every id `note_played` found, cards no deck held (a token, a copy an effect made) included.
+    played: IndexSet<String>,
+}
+
+impl Coverage {
+    /// One game's coverage: its two decks and the ids its events show played.
+    fn of_game(decks: &(Vec<String>, Vec<String>), played: IndexSet<String>) -> Coverage {
+        Coverage {
+            dealt: decks.0.iter().chain(&decks.1).cloned().collect(),
+            played,
+        }
+    }
+
+    /// Adds another game's coverage; the wave adds them in seed order.
+    fn merge(&mut self, other: Coverage) {
+        self.dealt.extend(other.dealt);
+        self.played.extend(other.played);
+    }
+
+    /// The dealt ids no game played, sorted by id.
+    fn never_played(&self) -> Vec<&str> {
+        let mut never: Vec<&str> = self
+            .dealt
+            .iter()
+            .filter(|id| !self.played.contains(*id))
+            .map(String::as_str)
+            .collect();
+        never.sort_unstable();
+        never
+    }
+
+    /// The summary's line: the dealt cards never played, of those dealt, of the pool, then the
+    /// first `COVERAGE_SHOWN` never-played ids.
+    fn line(&self) -> String {
+        let never = self.never_played();
+        let shown = if never.is_empty() {
+            "none".to_string()
+        } else if never.len() > COVERAGE_SHOWN {
+            format!(
+                "{}, … (+{} more)",
+                never[..COVERAGE_SHOWN].join(", "),
+                never.len() - COVERAGE_SHOWN
+            )
+        } else {
+            never.join(", ")
+        };
+        format!(
+            "  coverage: {} of {} dealt pool cards never played ({} of {} pool cards dealt): {shown}\n",
+            never.len(),
+            self.dealt.len(),
+            self.dealt.len(),
+            FUZZ_POOL.len(),
+        )
+    }
+
+    /// `--json`'s `coverage`: the pool's size, the ids dealt, the dealt ids played and every
+    /// never-played id, sorted.
+    fn json(&self) -> Value {
+        let never = self.never_played();
+        json!({
+            "pool": FUZZ_POOL.len(),
+            "dealt": self.dealt.len(),
+            "played": self.dealt.len() - never.len(),
+            "neverPlayed": never,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The gate
 // ---------------------------------------------------------------------------------------------
 
@@ -2176,6 +2292,8 @@ struct Passed {
     checkpoint_ms: u128,
     /// What the game started from (#1503).
     start: StartKind,
+    /// Which cards the game dealt and which it played (#2426).
+    coverage: Coverage,
 }
 
 /// One seed through the four assertions: never panic, always terminate by hero death or the R2 cap,
@@ -2242,6 +2360,7 @@ fn run_seed(setup: &GameSetup, decks: (Vec<String>, Vec<String>), probe: Reducer
             checkpoint_paused: checkpoint.paused,
             checkpoint_ms: checkpoint.ms,
             start: setup.start,
+            coverage: Coverage::of_game(&run.decks, run.played),
         })
     }));
     let (stage, message, turn, actions) = match caught {
@@ -2306,6 +2425,8 @@ struct Wave {
     starts: IndexMap<&'static str, usize>,
     /// How many seeds, passed or failed, took the endings channel (#1572).
     endings: usize,
+    /// Which cards the passing games dealt and played (#2426): a failed seed adds nothing.
+    coverage: Coverage,
 }
 
 /// Plays the gate's seeds `from..from + ran`, in parallel, and gathers them back in seed order.
@@ -2347,6 +2468,7 @@ fn play_seeds(handicapped: bool, from: u32, ran: u32, seed: fn(u32) -> Result<Pa
         checkpoint_max_ms: 0,
         starts: IndexMap::new(),
         endings: (from..from + ran).filter(|seed| setup_of(*seed).endings).count(),
+        coverage: Coverage::default(),
     };
     for result in results {
         let start = match &result {
@@ -2361,6 +2483,7 @@ fn play_seeds(handicapped: bool, from: u32, ran: u32, seed: fn(u32) -> Result<Pa
                 wave.actions_max = wave.actions_max.max(passed.actions);
                 wave.turn_max = wave.turn_max.max(passed.turn);
                 wave.heaviest.merge(&passed.heaviest);
+                wave.coverage.merge(passed.coverage);
                 if passed.checkpoint_paused {
                     wave.checkpoint_paused += 1;
                 } else {
@@ -2452,13 +2575,14 @@ impl Wave {
             .join(" ");
         text.push_str(&format!("  starts: {starts}\n"));
         text.push_str(&format!("  endings channel: {} seed(s)\n", self.endings));
+        text.push_str(&self.coverage.line());
         text.push_str(&heaviest_lines(&self.heaviest));
         text
     }
 
     /// `--json`: the wave's failures (the handicapped wave's with their tier and seat, `null` in the
-    /// gate's), each seed's start counted (#1503), each measure's heaviest actions and the growth
-    /// bounds (#1254).
+    /// gate's), each seed's start counted (#1503), the pool coverage (#2426), each measure's heaviest
+    /// actions and the growth bounds (#1254).
     fn json(&self) -> Value {
         json!({
             "from": self.from,
@@ -2477,6 +2601,7 @@ impl Wave {
             "heaviest": self.heaviest,
             "starts": self.start_counts().collect::<IndexMap<_, _>>(),
             "endingsChannel": self.endings,
+            "coverage": self.coverage.json(),
             "bounds": MEASURES
                 .into_iter()
                 .map(|measure| (measure.as_str(), measure.bound()))
@@ -2962,6 +3087,7 @@ pub(crate) mod tests {
                 checkpoint_max_ms: 0,
                 starts: IndexMap::new(),
                 endings: 0,
+                coverage: Coverage::default(),
             };
             assert!(wave(2500).summary().starts_with("[M4 fuzz] FULL GATE\n"));
             assert!(wave(WAVE_SEEDS).summary().starts_with("[M4 fuzz] FULL GATE\n"));
@@ -2986,6 +3112,7 @@ pub(crate) mod tests {
                 checkpoint_max_ms: 0,
                 starts: IndexMap::new(),
                 endings: 0,
+                coverage: Coverage::default(),
             };
             assert!(
                 wave(WAVE_SEEDS)
@@ -3074,6 +3201,7 @@ pub(crate) mod tests {
                 decks,
                 heaviest: Heaviest::default(),
                 paused: Vec::new(),
+                played: IndexSet::new(),
             };
             assert_eq!(
                 check_termination(&GameSetup::plain(1), &run)
@@ -3107,6 +3235,7 @@ pub(crate) mod tests {
                     decks: decks.clone(),
                     heaviest: Heaviest::default(),
                     paused: Vec::new(),
+                    played: IndexSet::new(),
                 };
                 assert_eq!(
                     check_termination(&GameSetup::plain(1), &run)
@@ -3472,6 +3601,7 @@ pub(crate) mod tests {
                 checkpoint_max_ms: 0,
                 starts: IndexMap::new(),
                 endings: 0,
+                coverage: Coverage::default(),
             };
             let summary = wave.summary();
             assert!(
@@ -4005,6 +4135,12 @@ pub(crate) mod tests {
             assert_eq!(json["bounds"]["events"], json!(GROWTH_EVENTS_BOUND));
             assert!(json["heaviest"]["events"].is_array(), "{json}");
             assert_eq!(json["failures"], json!([]), "{json}");
+            // #2426: the handicapped wave reports its coverage as the gate does.
+            assert!(
+                json["coverage"]["dealt"].as_u64().is_some_and(|dealt| dealt > 0),
+                "{json}"
+            );
+            assert!(json["coverage"]["neverPlayed"].is_array(), "{json}");
 
             let failure = Failure {
                 seed: 1,
@@ -4291,6 +4427,7 @@ pub(crate) mod tests {
                 checkpoint_max_ms: 0,
                 starts: IndexMap::from([("glitch-boards", 1)]),
                 endings: 0,
+                coverage: Coverage::default(),
             };
             let summary = wave.summary();
             assert!(
@@ -4504,6 +4641,7 @@ pub(crate) mod tests {
                     decks: decks.clone(),
                     heaviest: Heaviest::default(),
                     paused: Vec::new(),
+                    played: IndexSet::new(),
                 };
                 let failure = check_termination(&GameSetup::plain(1), &run)
                     .expect_err("a game without the channel cannot end by one of its endings");
@@ -4552,6 +4690,7 @@ pub(crate) mod tests {
                     decks: decks.clone(),
                     heaviest: Heaviest::default(),
                     paused: Vec::new(),
+                    played: IndexSet::new(),
                 };
                 assert_eq!(
                     check_termination(&GameSetup::plain(1), &run)
@@ -4591,6 +4730,134 @@ pub(crate) mod tests {
             let summary = wave.summary();
             assert!(summary.contains("\n  endings channel: 1 seed(s)\n"), "{summary}");
             assert_eq!(wave.json()["endingsChannel"], json!(1));
+        }
+    }
+
+    mod fuzz_coverage {
+        use super::*;
+
+        /// A fixture Unit no mana pays for, dealt into both decks of seed 1's game.
+        const UNCASTABLE_FIXTURE: &str = "fuzz-uncastable";
+        /// Ten times the catalog's dearest card, Core #100 Ceaseless Void's 100.
+        const UNCASTABLE_COST: i32 = 1_000;
+        /// The seeds the thread-count test plays on each pool.
+        const THREAD_TEST_SEEDS: u32 = 4;
+
+        /// #2426: a card dealt into the game that no mana can pay for is in the never-played list,
+        /// and a card the game did play is not.
+        #[test]
+        fn an_uncastable_dealt_card_is_never_played_and_a_card_its_game_played_is_not() {
+            register_all();
+            let face = json!({ "attack": 1, "health": 1, "keywords": [], "text": "" });
+            let def: jackioh_engine::CardDef = jackioh_engine::testkit::json_as(json!({
+                "id": UNCASTABLE_FIXTURE, "index": UNCASTABLE_FIXTURE, "name": "Uncastable (fuzz fixture)",
+                "set": "Core", "type": "Unit", "tags": [], "rarity": "Common", "token": false,
+                "cost": UNCASTABLE_COST, "base": face, "radiant": face,
+            }));
+            let mut catalog = (*CATALOG).clone();
+            catalog.insert(UNCASTABLE_FIXTURE.to_string(), def);
+            jackioh_engine::testkit::register_catalog_as(catalog, jackioh_cards::catalog_version());
+            let (mut p1, mut p2) = decks_for_seed(1);
+            p1[0] = UNCASTABLE_FIXTURE.to_string();
+            p2[0] = UNCASTABLE_FIXTURE.to_string();
+            let passed = fuzz_deal(1, (p1.clone(), p2.clone()));
+            jackioh_engine::testkit::clear_overrides();
+
+            let coverage = passed
+                .unwrap_or_else(|failure| panic!("{}", failure.message))
+                .coverage;
+            let never = coverage.never_played();
+            assert!(never.contains(&UNCASTABLE_FIXTURE), "{never:?}");
+            let played: Vec<&String> = p1
+                .iter()
+                .chain(&p2)
+                .filter(|id| coverage.played.contains(*id))
+                .collect();
+            assert!(!played.is_empty(), "the game played none of its dealt cards");
+            assert!(
+                played.iter().all(|id| !never.contains(&id.as_str())),
+                "{played:?} against {never:?}"
+            );
+        }
+
+        /// #2426: the report is the same whatever the thread count, over the same seeds.
+        #[test]
+        fn the_coverage_is_the_same_on_one_thread_and_on_four() {
+            let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
+            let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+            let serial = one.install(|| play_wave(1, THREAD_TEST_SEEDS));
+            let parallel = four.install(|| play_wave(1, THREAD_TEST_SEEDS));
+            assert!(
+                serial.failures.is_empty(),
+                "{}",
+                report(&serial.failures, THREAD_TEST_SEEDS, 0.0)
+            );
+            assert_eq!(serial.json()["coverage"], parallel.json()["coverage"]);
+            assert_eq!(serial.coverage.line(), parallel.coverage.line());
+
+            let never = serial.coverage.never_played();
+            assert!(never.iter().all(|id| serial.coverage.dealt.contains(*id)));
+            let played: Vec<&String> = serial
+                .coverage
+                .dealt
+                .iter()
+                .filter(|id| serial.coverage.played.contains(*id))
+                .collect();
+            assert!(!played.is_empty(), "no dealt card was played");
+            assert!(played.iter().all(|id| !never.contains(&id.as_str())));
+            assert!(
+                serial.summary().contains("\n  coverage: "),
+                "{}",
+                serial.summary()
+            );
+        }
+
+        /// #2426: the line and the object count the dealt cards no game played, sorted by id, and the
+        /// line names only the first `COVERAGE_SHOWN` of them.
+        #[test]
+        fn the_summary_line_and_the_json_count_the_dealt_cards_never_played_sorted_by_id() {
+            let ids = |ids: &[&str]| ids.iter().map(|id| id.to_string()).collect::<IndexSet<String>>();
+            let coverage = Coverage {
+                dealt: ids(&["core-003", "core-001", "core-002"]),
+                played: ids(&["core-002", "fuzz-token"]),
+            };
+            assert_eq!(coverage.never_played(), vec!["core-001", "core-003"]);
+            assert_eq!(
+                coverage.json(),
+                json!({
+                    "pool": FUZZ_POOL.len(),
+                    "dealt": 3,
+                    "played": 1,
+                    "neverPlayed": ["core-001", "core-003"],
+                })
+            );
+            assert_eq!(
+                coverage.line(),
+                format!(
+                    "  coverage: 2 of 3 dealt pool cards never played (3 of {} pool cards dealt): core-001, core-003\n",
+                    FUZZ_POOL.len()
+                )
+            );
+            assert!(
+                Coverage::default()
+                    .line()
+                    .ends_with(&format!("(0 of {} pool cards dealt): none\n", FUZZ_POOL.len()))
+            );
+
+            let many = Coverage {
+                dealt: (0..COVERAGE_SHOWN + 2)
+                    .rev()
+                    .map(|n| format!("core-{n:03}"))
+                    .collect(),
+                played: IndexSet::new(),
+            };
+            let line = many.line();
+            assert!(line.contains(": core-000, core-001, "), "{line}");
+            assert!(line.ends_with(", … (+2 more)\n"), "{line}");
+            assert_eq!(
+                many.json()["neverPlayed"].as_array().map(Vec::len),
+                Some(COVERAGE_SHOWN + 2)
+            );
         }
     }
 }

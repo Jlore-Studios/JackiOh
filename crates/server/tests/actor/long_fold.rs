@@ -23,15 +23,12 @@ use crate::support::engine::{
     FOLD_GATE_WAIT, FoldGate, TEST_FOLD_GATE, begun_game, fake_deck, hand_card, install_gated_test_cards,
     install_test_cards, keep_whole_hand, past_the_mulligans,
 };
+use crate::support::store::from;
 
 const MATCH_ID: &str = "match-long-fold";
 
 /// How many seeds `gate_seed` tries before it gives up.
 const SEED_SEARCH: usize = 5_000;
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
 
 /// A live match row, as the registry writes one.
 fn live_row(seed: &str, decks: &(Vec<String>, Vec<String>)) -> MatchRow {

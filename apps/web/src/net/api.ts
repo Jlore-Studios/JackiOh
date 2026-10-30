@@ -18,6 +18,7 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import { rememberRead, updateCachedRead } from "./readCache.ts";
+import { whileSpending } from "./spending.ts";
 
 const DEFAULT_HTTP_URL = "http://localhost:8787";
 
@@ -229,29 +230,41 @@ async function keptGet<T>(path: string, token: string | null, signal?: AbortSign
 // bought, an invite code redeemed) goes with an `Idempotency-Key`, a UUID minted when the player
 // presses and sent again by that press's retries, "Try again" after a timeout included, so a spend
 // the server finished after we gave up answers the same and spends nothing again. Any answer from
-// the server, a refusal included, ends the press: the next one is a new key. A press with no answer
-// (a timeout or a failed transport) or a server error keeps its key for the retry. A press is the
-// spend's path and body: pressing again before an answer is the retry of the press that got none.
+// the server, a refusal included but a 429, which ran nothing (R2378000), ends the press: the next
+// one is a new key. A press with no answer (a timeout or a failed transport), a 429 or a server error
+// keeps its key for the retry. A press is the spend's path and body: pressing again before an answer
+// is the retry of the press that got none. Each spend is out (`net/spending.ts`) until it settles.
 // ---------------------------------------------------------------------------------------------
 
 /** The first status that is the server's own failure, not its answer to the spend. */
 const FIRST_SERVER_ERROR_STATUS = 500;
 
+/** R2378000: a refusal that ran nothing (a spend past the ones waiting their turn, or R109's limit): it ends no press. */
+const RAN_NOTHING_STATUS = 429;
+
 /** Each unanswered press's key, by `${path} ${body}`, until the server answers it. */
 const unansweredKeys = new Map<string, string>();
 
-async function spendRequest<T>(path: string, token: string, body: unknown): Promise<T> {
+function spendRequest<T>(path: string, token: string, body: unknown): Promise<T> {
   const press = `${path} ${JSON.stringify(body)}`;
   const idempotencyKey = unansweredKeys.get(press) ?? globalThis.crypto.randomUUID();
   unansweredKeys.set(press, idempotencyKey);
-  try {
-    const answer = await apiRequest<T>(path, { method: "POST", token, body, idempotencyKey });
-    unansweredKeys.delete(press);
-    return answer;
-  } catch (cause) {
-    if (cause instanceof ApiRequestError && cause.status < FIRST_SERVER_ERROR_STATUS) unansweredKeys.delete(press);
-    throw cause;
-  }
+  return whileSpending(async () => {
+    try {
+      const answer = await apiRequest<T>(path, { method: "POST", token, body, idempotencyKey });
+      unansweredKeys.delete(press);
+      return answer;
+    } catch (cause) {
+      if (
+        cause instanceof ApiRequestError &&
+        cause.status < FIRST_SERVER_ERROR_STATUS &&
+        cause.status !== RAN_NOTHING_STATUS
+      ) {
+        unansweredKeys.delete(press);
+      }
+      throw cause;
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1385,10 +1398,16 @@ export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
   return keptGet<LeaderboardResponse>(keptPaths.leaderboard, token);
 }
 
-/** `GET /api/matches/:id/ranks`: both seats' ranks and win streaks for the match screen (R604, R612, R2101000). */
+/**
+ * `GET /api/matches/:id/ranks`: both seats' ranks and win streaks for the match screen (R604, R612, R2101000).
+ * R2388000: once a ranked match's rated record is written, each seat's rank before and after it; absent until then, on an unranked match and on a series' earlier game.
+ */
 export type MatchRanksResponse = {
   ranked: boolean;
-  seats: Record<"p1" | "p2", { profileId: string; username: string; rank: VisibleRank; streak: number; you: boolean }>;
+  seats: Record<
+    "p1" | "p2",
+    { profileId: string; username: string; rank: VisibleRank; streak: number; you: boolean; rankBefore?: VisibleRank; rankAfter?: VisibleRank }
+  >;
 };
 
 export function getMatchRanks(token: string, matchId: string): Promise<MatchRanksResponse> {

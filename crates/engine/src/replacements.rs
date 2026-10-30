@@ -670,7 +670,7 @@ pub enum WouldDie {
 /// §4.5 step 1, before any card moves: the units the check collected would die, and a `wouldDie`
 /// replacement takes its controller's among them — one firing for all of them — and flickers them
 /// instead (Classic #14's Radiant face), or resolves its follow-up at once (`resolveFirst`, Stinkyscape
-/// #138, R1875006), once a check: `resolved_first` holds the cards that did so earlier in it (R460).
+/// #138, R1875006), once a check: `resolved_first` holds the cards that did either earlier in it (R460).
 /// Returns the cards that still die, or that the check must start over. R462: the check's own
 /// collection only; a Sacrifice is an effect's (§6.3) and is not offered.
 pub fn would_die_window(
@@ -748,6 +748,9 @@ pub fn would_die_window(
         }
         // R460: the event has changed — these units no longer die — and the rest of the walk re-checks it.
         left.retain(|card| !theirs.iter().any(|theirs| theirs.id == card.id));
+        // R460, R1884001: once a check, so a card no firing spends (a Field Trap, a fused Unit holding
+        // Classic #14's text) does not flicker a unit that returns dying again on every later pass.
+        resolved_first.push(cand.card.id.clone());
         let record = ReplacementRecord {
             event,
             redirected_to: None,

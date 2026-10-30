@@ -44,7 +44,6 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_engine::{
@@ -72,17 +71,9 @@ use jackioh_server::db::store::{BotDeck, NewBot, ProfileStatus, SavedDeck, Store
 use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
-use crate::support::store::{fake_lock, q, to_json, uuid};
+use crate::support::store::{fake_lock, from, q, to_json, uuid};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
-
-/// A port value built from an object literal, so the test depends on the JSON shape only.
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    match serde_json::from_value(value.clone()) {
-        Ok(parsed) => parsed,
-        Err(error) => panic!("{error}: {value}"),
-    }
-}
 
 /// R143's seeds are held in `queue.rs`'s process-wide map, which every test of this binary shares.
 /// The tests that send a seed, or count the map, take this, so `e2e_seed_count()` sees only their own.

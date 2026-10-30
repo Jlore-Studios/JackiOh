@@ -17374,5 +17374,786 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.5.7",
+    "date": "2026-10-29",
+    "title": "Training Grounds, the release: the set ships to the normal game as the newest set",
+    "source": "Issue #2204, part 11 of the tracker #2193",
+    "notes": "The Training Grounds set ships (R1420, R2194000) as the newest set (R1371): its 40 cards, the token TG #39.1 and the 20 Core snapshots TG #41–#60 join every pool that names no set, the deck builder, the Almanac, packs, its set track, random decks and the AI's own decks (part 10, #2203, gates none of it). The owner wrapped the set into Stinkyscape's v0.5 line (R2204000), so the release is a patch of that line and not a major. Its mechanics are the rulings of parts 1–9 (#2194–#2202). A deck holds a Core card or its snapshot, never both (R2195000); a pool keeps both, and one offer, a catalog Discover or Core #97 Zephyrs' top three, shows at most one of a pair (R2204001). Core #95, Classic+ #73, Meditative #95, Stinkyscape #150 and #151, S #149 Wildar and S #4.6 The Big Crunch link TG #39, the edition their texts name (R279), and The Big Crunch casts it sixth (R2200004). Every card of an earlier set whose pool names no set (the random Calls to Chaos, Core #82 KY's Trial's Discover among seven sets, the random Legendaries, Tribute cards and the like, R380) can now offer the set's cards; their texts do not change, and the release claims them as Stinkyscape's did. S #109 xxFreshJack and S #111 Shockwave447 read the BUSTED and complicated lists, which take the set's cards now that they can join a pool (R2173001). The account statistics cap is 131,072 bytes (R1142000).",
+    "player": {
+      "title": "Training Grounds",
+      "new": [
+        "The Training Grounds set: 40 cards, a token and 20 Core cards made again as Training Grounds cards join the deck builder, the Almanac, packs, random decks and every card pool that names no set.",
+        "A deck holds a Core card or its Training Grounds copy, never both.",
+        "Training Grounds is the newest set: its track, its ribbon and \"More cards from the newest set\" lean on it."
+      ],
+      "balance": [],
+      "changes": [
+        "Call to Chaos, The Big Crunch, Wildar and every card that picks from a pool of every set can now offer or cast Training Grounds cards.",
+        "A Discover never offers a Core card and its Training Grounds copy together.",
+        "xxFreshJack and Shockwave447 read lists that now hold Training Grounds cards."
+      ],
+      "text": [
+        "Call to Chaos (Core Edition), (Classic+ Edition), (Meditative Edition), (Stinky Edition) and (Scape Edition), Wildar and The Big Crunch link the Training-Grounds Edition."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "8445f1fcc13a1a23b13e5a89ed2ef4b403a3201b"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "traininggrounds-001",
+      "traininggrounds-002",
+      "traininggrounds-003",
+      "traininggrounds-004",
+      "traininggrounds-005",
+      "traininggrounds-006",
+      "traininggrounds-007",
+      "traininggrounds-008",
+      "traininggrounds-009",
+      "traininggrounds-010",
+      "traininggrounds-011",
+      "traininggrounds-012",
+      "traininggrounds-013",
+      "traininggrounds-014",
+      "traininggrounds-015",
+      "traininggrounds-016",
+      "traininggrounds-017",
+      "traininggrounds-018",
+      "traininggrounds-019",
+      "traininggrounds-020",
+      "traininggrounds-021",
+      "traininggrounds-022",
+      "traininggrounds-023",
+      "traininggrounds-024",
+      "traininggrounds-025",
+      "traininggrounds-026",
+      "traininggrounds-027",
+      "traininggrounds-028",
+      "traininggrounds-029",
+      "traininggrounds-030",
+      "traininggrounds-031",
+      "traininggrounds-032",
+      "traininggrounds-033",
+      "traininggrounds-034",
+      "traininggrounds-035",
+      "traininggrounds-036",
+      "traininggrounds-037",
+      "traininggrounds-038",
+      "traininggrounds-039",
+      "traininggrounds-040",
+      "traininggrounds-041",
+      "traininggrounds-042",
+      "traininggrounds-043",
+      "traininggrounds-044",
+      "traininggrounds-045",
+      "traininggrounds-046",
+      "traininggrounds-047",
+      "traininggrounds-048",
+      "traininggrounds-049",
+      "traininggrounds-050",
+      "traininggrounds-051",
+      "traininggrounds-052",
+      "traininggrounds-053",
+      "traininggrounds-054",
+      "traininggrounds-055",
+      "traininggrounds-056",
+      "traininggrounds-057",
+      "traininggrounds-058",
+      "traininggrounds-059",
+      "traininggrounds-060"
+    ],
+    "changes": [
+      {
+        "id": "core-095",
+        "name": "Call to Chaos (Core Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "classicplus-073",
+        "name": "Call to Chaos (Classic+ Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "meditative-095",
+        "name": "Call to Chaos (Meditative Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "stinkyscape-004-6",
+        "name": "The Big Crunch",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "stinkyscape-149",
+        "name": "Wildar",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "stinkyscape-150",
+        "name": "Call to Chaos (Stinky Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "stinkyscape-151",
+        "name": "Call to Chaos (Scape Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "traininggrounds-001",
+        "name": "Spikey Steven",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-002",
+        "name": "Personal Trainer",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-003",
+        "name": "Group leader",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-004",
+        "name": "Boulder Fist Ogre",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-005",
+        "name": "Midlane Menace",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-006",
+        "name": "Chosen by the Sun",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-007",
+        "name": "Chosen by the Moon",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-008",
+        "name": "Clobberer",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-009",
+        "name": "Ravager",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-010",
+        "name": "Fan of Knives",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-011",
+        "name": "Thwomp",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-012",
+        "name": "Fortify",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-013",
+        "name": "Explosive Runes",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-014",
+        "name": "Explosive Trap",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-015",
+        "name": "In a hurry",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-016",
+        "name": "Celestial Caller",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-017",
+        "name": "Flaming Felinor",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-018",
+        "name": "Knife Juggler",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-019",
+        "name": "Extra Rations",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-020",
+        "name": "Recruitment Posters",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-021",
+        "name": "Flame Tongue Totem",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-022",
+        "name": "Right-Hand Felinor",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-023",
+        "name": "Quadrupling Felinors",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-024",
+        "name": "Goliath Situation",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-025",
+        "name": "Trigor",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-026",
+        "name": "Path of Exile",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-027",
+        "name": "Hopeful Jelly Bean",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-028",
+        "name": "Occidental",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-029",
+        "name": "Oriental",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-030",
+        "name": "Floodgates",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-031",
+        "name": "Level Up!",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-032",
+        "name": "Selfless Protector",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-033",
+        "name": "Guerilla Felinor",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-034",
+        "name": "Dino-size",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-035",
+        "name": "Corpse Recycler",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-036",
+        "name": "Training Dummy",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-037",
+        "name": "Seance",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-038",
+        "name": "Tutorial Master",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-039",
+        "name": "Call to Chaos (Training-Grounds Edition)",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-039-1",
+        "name": "Training-Grounds Golem",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-040",
+        "name": "Goetzmann Game Design",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-041",
+        "name": "Bigot",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-042",
+        "name": "Stockpile",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-043",
+        "name": "Mr. Vanilla",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-044",
+        "name": "Duplicating Felinors",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-045",
+        "name": "Jlockeed's Weapons",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-046",
+        "name": "Hit Job",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-047",
+        "name": "Midrange Menace",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-048",
+        "name": "Jlockeed Shredder-10",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-049",
+        "name": "Reoccurring Dream",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-050",
+        "name": "Glowy Jelly Bean",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-051",
+        "name": "Big Felinor",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-052",
+        "name": "Snom Bunny Mind Control",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-053",
+        "name": "Prejudiced Postdoc",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-054",
+        "name": "The Rock",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-055",
+        "name": "Reminisce",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-056",
+        "name": "Corpse Eater",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-057",
+        "name": "Recycling Initiative",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-058",
+        "name": "True Strike",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-059",
+        "name": "Fig of Life",
+        "kind": "added"
+      },
+      {
+        "id": "traininggrounds-060",
+        "name": "Rush Token Farm",
+        "kind": "added"
+      }
+    ]
+  },
+  {
+    "version": "v0.5.8",
+    "date": "2026-10-29",
+    "title": "A backrow card becomes a Unit only with Animated and stats",
+    "source": "#2280",
+    "notes": "R2280000: a Field Spell, Trap or Field Trap becomes a Unit only with Animated and stats (printed, fused, statsOverride or X stats); R657's 0/1 fallback and its two constants are gone, the animate verb needs Animated, and a Nerf's or Buff's stats change reaches a Unit or a card with stats. R2280001: a face-up backrow card that first has both animates at the state check. Rod of Ages and Twice Forward One Step Backwards lose their printed stats; Rod lends its Equip play in its backrow zone too (R1869000).",
+    "player": {
+      "title": "Animated cards need stats to become Units",
+      "new": [],
+      "balance": [
+        "Rod of Ages has no stats, down from 1/1 (Radiant 2/2).",
+        "Twice Forward One Step Backwards has no stats, down from 0/1 (Radiant 0/2)."
+      ],
+      "changes": [
+        "A Field Spell, Trap or Field Trap becomes a Unit only when it has both Animated and stats. One with no stats stays in your backrow.",
+        "A face-up card in your backrow that gains stats and Animated, for instance from a Fuse, becomes a Unit right away if a unit zone is open.",
+        "A Buff or a Nerf changes the stats of a card in the backrow only when it has stats.",
+        "Rod of Ages stays in your backrow. The first Unit you play onto it there fuses in, and Rod becomes a Flying Unit with that Unit's stats.",
+        "Twice Forward One Step Backwards becomes a Unit only once it fuses a copy of a Unit. Until then it stays face-up in your backrow and keeps counting."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "12e7d9f7949a5e0ab46c83c524507abed84083cb"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-071",
+      "classicplus-009",
+      "classicplus-074",
+      "core-023",
+      "meditative-006",
+      "meditative-057",
+      "stinkyscape-016",
+      "stinkyscape-074",
+      "stinkyscape-154"
+    ],
+    "changes": [
+      {
+        "id": "classicplus-074",
+        "name": "Twice Forward One Step Backwards",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-016",
+        "name": "Rod of Ages",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.9",
+    "date": "2026-10-29",
+    "title": "The first player's opening hand draws 3",
+    "source": "#2368",
+    "notes": "The owner's ask (#2368): Player 1, who goes first, opens on three cards again and Player 2 on four, OPENING_DRAW [3, 4], Hearthstone's split, superseding #1156's four for both (R2368000, superseding R1156000). The plays are the 176 families classify's second stage finds against main's build: every game's opening deal moves, and each divergence touches the cards it deals.",
+    "player": {
+      "title": "The first player opens on three cards",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "The player who goes first now starts with three cards in their opening hand, down from four. The player who goes second still starts with four and The Coin."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "b35166c8f7c092edcb88f6eb0fc89f52d627d575"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-003",
+      "classic-008",
+      "classic-011",
+      "classic-013",
+      "classic-017",
+      "classic-018",
+      "classic-019",
+      "classic-026",
+      "classic-031",
+      "classic-033",
+      "classic-036",
+      "classic-038",
+      "classic-039",
+      "classic-040",
+      "classic-044",
+      "classic-045",
+      "classic-046",
+      "classic-047",
+      "classic-049",
+      "classic-051",
+      "classic-063",
+      "classic-068",
+      "classic-071",
+      "classic-081",
+      "classic-082",
+      "classic-085",
+      "classic-088",
+      "classicplus-002",
+      "classicplus-004",
+      "classicplus-007",
+      "classicplus-011",
+      "classicplus-012",
+      "classicplus-014",
+      "classicplus-015",
+      "classicplus-017",
+      "classicplus-019",
+      "classicplus-030",
+      "classicplus-034",
+      "classicplus-036",
+      "classicplus-040",
+      "classicplus-047",
+      "classicplus-051",
+      "classicplus-052",
+      "classicplus-053",
+      "classicplus-063",
+      "classicplus-064",
+      "classicplus-065",
+      "classicplus-066",
+      "classicplus-071",
+      "classicplus-072",
+      "classicplus-074",
+      "classicplus-077",
+      "core-003",
+      "core-004",
+      "core-005",
+      "core-006",
+      "core-008",
+      "core-011",
+      "core-017",
+      "core-020",
+      "core-037",
+      "core-041",
+      "core-045",
+      "core-046",
+      "core-048",
+      "core-054",
+      "core-055",
+      "core-056",
+      "core-058",
+      "core-064",
+      "core-068",
+      "core-069",
+      "core-071",
+      "core-086",
+      "core-088",
+      "core-089",
+      "core-097",
+      "meditative-009",
+      "meditative-010",
+      "meditative-011",
+      "meditative-014",
+      "meditative-027",
+      "meditative-028",
+      "meditative-032",
+      "meditative-034",
+      "meditative-039",
+      "meditative-048",
+      "meditative-053",
+      "meditative-057",
+      "meditative-058",
+      "meditative-061",
+      "meditative-065",
+      "meditative-069",
+      "meditative-070",
+      "meditative-076",
+      "meditative-081",
+      "meditative-087",
+      "meditative-092",
+      "meditative-095",
+      "meditative-096",
+      "meditative-098",
+      "meditative-102",
+      "meditativeplus-003",
+      "meditativeplus-005",
+      "meditativeplus-006",
+      "meditativeplus-011",
+      "meditativeplus-016",
+      "meditativeplus-023",
+      "meditativeplus-025",
+      "meditativeplus-026",
+      "stinkyscape-002",
+      "stinkyscape-008",
+      "stinkyscape-011",
+      "stinkyscape-012",
+      "stinkyscape-018",
+      "stinkyscape-020",
+      "stinkyscape-021",
+      "stinkyscape-022",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-030",
+      "stinkyscape-031",
+      "stinkyscape-033",
+      "stinkyscape-036",
+      "stinkyscape-038",
+      "stinkyscape-040",
+      "stinkyscape-041",
+      "stinkyscape-049",
+      "stinkyscape-052",
+      "stinkyscape-056",
+      "stinkyscape-057",
+      "stinkyscape-059",
+      "stinkyscape-063",
+      "stinkyscape-065",
+      "stinkyscape-067",
+      "stinkyscape-070",
+      "stinkyscape-074",
+      "stinkyscape-078",
+      "stinkyscape-087",
+      "stinkyscape-094",
+      "stinkyscape-099",
+      "stinkyscape-111",
+      "stinkyscape-112",
+      "stinkyscape-117",
+      "stinkyscape-120",
+      "stinkyscape-121",
+      "stinkyscape-129",
+      "stinkyscape-131",
+      "stinkyscape-133",
+      "stinkyscape-137",
+      "stinkyscape-141",
+      "stinkyscape-142",
+      "stinkyscape-143",
+      "stinkyscape-144",
+      "stinkyscape-145",
+      "stinkyscape-153",
+      "stinkyscape-156",
+      "stinkyscape-161",
+      "stinkyscape-162",
+      "stinkyscape-163",
+      "stinkyscape-167",
+      "stinkyscape-169",
+      "stinkyscape-174",
+      "traininggrounds-001",
+      "traininggrounds-005",
+      "traininggrounds-006",
+      "traininggrounds-011",
+      "traininggrounds-022",
+      "traininggrounds-033",
+      "traininggrounds-037",
+      "traininggrounds-038",
+      "traininggrounds-039",
+      "traininggrounds-046",
+      "traininggrounds-049",
+      "traininggrounds-051",
+      "traininggrounds-058"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.9b",
+    "date": "2026-10-30",
+    "title": "Trigor's chain is marked by its summon, so a played Trigor set by Dino-size still summons",
+    "source": "Issue #2206, part 13 of the tracker #2193 (REVIEW B-1)",
+    "notes": "R2206000: TG #25 Trigor's Death marks the Trigor it summons in that Trigor's memory, and a Trigor so marked this turn summons nothing when it dies this turn (R2197004). The terminator read a stat override before, so a played Trigor that TG #34 Dino-size or a Set stats touched summoned nothing when it died that turn. A fresh summon may seed the card's memory (§6.3). The other two cards claimed are those classify's unforced games meet beside a Trigor chain whose games diverge: their own play is unchanged.",
+    "player": {
+      "title": "Trigor",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Trigor you played whose stats were set this turn, by Dino-size for instance, now summons its successor when it dies, as its text says."
+      ]
+    },
+    "commits": [
+      "ed91d94b8914f18aba868f0aa00862a172e1c3ea"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-020",
+      "classic-080",
+      "traininggrounds-025"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10",
+    "date": "2026-10-30",
+    "title": "A Trap fused into a Unit never fires from its unit zone, whatever fused it",
+    "source": "#2226",
+    "notes": "R2226000, R1020: a Trap's or Field Trap's text fused into a card that stands in a unit zone and is no trap never fires from there, whatever fused it (饕餮, an Equip, a Starship Piece's copy in its Dormant Starship). Queued as a unit's trigger it answered every event its condition admits since R2271000 (v0.5.2b), so 饕餮 holding Wormhole stole the opponent's Spells from its unit zone; before R2271000 read that condition, the same 饕餮 countered and recast its own controller's Spell for ever, which the daily fuzz waves of #2226 found. The classifier shows Clip-Farming Lawyer (meditative-027), 赌石 Addict (meditative-039), Tnack Trav (stinkyscape-020), Spacerace Stimulus (stinkyscape-131), the Dormant Starship (stinkyscape-t-dormant-starship), the token a Starship Piece's fused text stands in, and The Rock (traininggrounds-054) playing differently, and a divergence no card explains: a Trap fused into a card no deck held.",
+    "player": {
+      "title": "A Trap fused into a Unit stays quiet",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Trap fused into a Unit no longer springs from it, whatever fused it: Wormhole eaten by 饕餮 no longer steals your opponent's Spells."
+      ]
+    },
+    "commits": [
+      "9fd1a4185f53428513b46769f46d31bf928a3d0a"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "meditative-027",
+      "meditative-039",
+      "stinkyscape-020",
+      "stinkyscape-131",
+      "stinkyscape-t-dormant-starship",
+      "traininggrounds-054"
+    ],
+    "changes": []
   }
 ]

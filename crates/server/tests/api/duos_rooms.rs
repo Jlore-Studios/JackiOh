@@ -31,7 +31,8 @@ use jackioh_server::duos::store::{DuosActionRow, DuosMatch, DuosRoom};
 use jackioh_server::economy::store::JloreReason;
 
 use crate::support::deps::{TestAppOptions, add_user, call, empty_test_app, test_app_with};
-use crate::support::store::{advance, fake, store, uuid};
+use crate::support::engine::playable;
+use crate::support::store::{advance, fake, from, store, uuid};
 
 /// The epoch-ms stamp a saved deck carries; nothing reads it back.
 const AT: i64 = 1_700_000_000_000;
@@ -49,10 +50,6 @@ const BOT: &str = "bot-ladder";
 // ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
 
 fn millis<T>(value: T) -> u64
 where
@@ -106,22 +103,6 @@ fn code_is(body: &Value, code: &str) -> bool {
     ]
     .iter()
     .any(|value| value.as_str() == Some(code))
-}
-
-/// Every playable catalog id, in `catalog.json` order.
-fn playable() -> Vec<String> {
-    jackioh_cards::register_all();
-    jackioh_cards::CATALOG
-        .iter()
-        .filter(|(_, def)| {
-            !def.token
-                && !serde_json::to_value(&def.tags)
-                    .expect("tags")
-                    .as_array()
-                    .is_some_and(|tags| tags.contains(&json!("Token")))
-        })
-        .map(|(id, _)| id.clone())
-        .collect()
 }
 
 /// The first `DECK_SIZE` playable ids: a legal deck.

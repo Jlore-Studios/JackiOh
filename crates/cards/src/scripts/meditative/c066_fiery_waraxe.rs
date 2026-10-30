@@ -66,7 +66,6 @@ mod tests {
     #[test]
     fn r1062_at_your_next_start_of_turn_it_attacks_the_hero() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         // Libraries, so neither turn's draw costs a fatigue hit.
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": WARAXE }, FILLER], "library": [FILLER, FILLER], "health": 27 },
@@ -91,8 +90,7 @@ mod tests {
     #[test]
     fn radiant_6_4_pierce_ignores_hero_armor() {
         crate::register_all();
-        // It attacks from its next start of turn under R1062, live while the set is open (R1420).
-        let _open = preview_sets(&[SetName::Meditative]);
+        // It attacks from its next start of turn under R1062, live since the set shipped (R1420).
         // Libraries, so neither turn's draw costs a fatigue hit.
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": WARAXE, "radiant": true }, FILLER], "library": [FILLER, FILLER] },

@@ -339,8 +339,9 @@ pub struct EvalWeights {
     /// B3.3: a card with a Brittle count n is worth (1 − brittleDiscount / n) of itself — half at
     /// Brittle 1, the next tick away from crumbling — on the board, in the backrow and in the own hand.
     pub brittle_discount: f64,
-    /// B3.1: a readable backrow card with Animated is a Unit in waiting, worth this share of its unit
-    /// face's `unitWorth` on top of its backrow value. Animated, it stands in a unit zone and is a unit.
+    /// B3.1: a readable backrow card with Animated and stats (R2280000) is a Unit in waiting, worth this
+    /// share of its unit face's `unitWorth` on top of its backrow value. Animated, it stands in a unit
+    /// zone and is a unit.
     pub animated_share: f64,
     /// Own hand card: handCard + handPerCost × min(queryCost(def), handCostCap).
     pub hand_card: f64,
@@ -407,6 +408,13 @@ pub struct EvalWeights {
     /// §3.2, R447: per card dormant under a pile the seat counts but does not read card by card: the
     /// enemy's unit piles, and every backrow pile, its own and the enemy's.
     pub dormant_card: f64,
+    /// R2380000: the share of its awake `unit_worth` a Dormant card on the field (§6.1, R1839000)
+    /// keeps per turn left on its countdown, so one that wakes in n of its controller's turns counts
+    /// this to the power n of what it will be.
+    pub slumber_turn_share: f64,
+    /// R2380000: the share of its awake `unit_worth` a Dormant card with no countdown counts, one
+    /// that waits for an effect to wake it (the Dormant Starship's launch).
+    pub slumber_waiting_share: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -543,6 +551,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // the training lanes may move them.
     dormant_share: 0.0,
     dormant_card: 0.0,
+    // R2380000: untuned starts for the training lanes, as #1886's are. A turn's wait at half, so
+    // "Dormant for 2 turns" counts a quarter of the unit it wakes as; an effect's wake at half too.
+    slumber_turn_share: 0.5,
+    slumber_waiting_share: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -723,6 +735,9 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     // #1506's dormant cards came after the gates were fixed too: nothing, as it gave them.
     dormant_share: 0.0,
     dormant_card: 0.0,
+    // R2380000's Dormant cards came after the gates were fixed too: nothing, as it gave them.
+    slumber_turn_share: 0.0,
+    slumber_waiting_share: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,

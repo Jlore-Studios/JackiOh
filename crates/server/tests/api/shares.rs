@@ -9,7 +9,6 @@
 
 use std::sync::Arc;
 
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_engine::{Action, ActionBody, GameState, PlayerId, Winner, legal_actions, reduce, seat_to_act};
@@ -21,7 +20,7 @@ use jackioh_server::db::store::{MatchActionRow, MatchRow, ReplayShare, ResultRow
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{begun_game, decks_that_open_on_the_mulligans, install_test_cards, real_pool};
-use crate::support::store::{fake, q, to_json, uuid};
+use crate::support::store::{fake, from, q, to_json, uuid};
 
 /// How many log actions a game runs before its seat to act concedes: one page of steps.
 const PLAYED_ACTIONS: usize = 8;
@@ -31,10 +30,6 @@ const HOUR_MS: i64 = 3_600_000;
 // ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
-
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
 
 struct Account {
     id: String,

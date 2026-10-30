@@ -25,6 +25,8 @@
 //! - `idempotency`: a spend's `Idempotency-Key`, its answer kept in the spend's transaction so a
 //!   retry replays it and spends nothing again, and the sweep of keys past their time (§14.11,
 //!   #2124, R2124000).
+//! - `spend_slots`: one spend at a time per account, the rest waiting their turn and a burst past
+//!   them refused at once (§14.11, #2378, R2378000).
 
 pub mod cosmetic_packs;
 pub mod idempotency;
@@ -34,6 +36,7 @@ pub mod practice;
 pub mod quests;
 pub mod rewards;
 pub mod roll;
+pub mod spend_slots;
 pub mod store;
 pub mod tiers;
 pub mod tokens;

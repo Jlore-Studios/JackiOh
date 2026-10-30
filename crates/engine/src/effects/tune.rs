@@ -10,7 +10,7 @@
 //! ```text
 //!   | Row     | Degrade                          | Upgrade                         | Can apply to
 //!   | cost    | `costMod` +1, never above (4)    | −1, never below (0)             | off the field; never X-cost (R65)
-//!   | stats   | −4 split, k to attack            | +4 split                        | a Unit or an Animated card
+//!   | stats   | −4 split, k to attack            | +4 split                        | a Unit or a card with stats
 //!   | keyword | remove one it has                | add one it lacks                | add: see below
 //!   | x       | one numbered keyword or X worse  | one better                      | never below 1
 //!   | number  | one declared number a step worse | one step better                 | within its bounds

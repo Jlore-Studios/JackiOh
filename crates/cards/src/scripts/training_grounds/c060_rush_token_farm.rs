@@ -226,6 +226,29 @@ mod tests {
             g.expect_stats(&theirs, json!({ "attack": 3, "maxHealth": 3 }));
         }
 
+        /// BUILD M13 TG 60 radiant "gone with the Field Spell": once Core #34 Collateral Damage exiles the
+        /// Farm, its Rush Token is the plain 3/3 again (§10.4 layer 5 is recomputed on every read).
+        #[test]
+        fn s10_4_layer_5_the_aura_is_gone_with_the_field_spell() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": merged(busy(), json!({
+                    "hand": ["core-034", "core-005"],
+                    "mana": 10,
+                    "backrow": [{ "def": "traininggrounds-060", "radiant": true, "lane": 1 }],
+                    "field": [{ "def": "core-t-rush", "lane": 1 }],
+                })),
+                "p2": busy(),
+            }));
+            g.expect_stats("core-t-rush", json!({ "attack": 6, "maxHealth": 6, "health": 6 }));
+            let farm = g.card("traininggrounds-060").id.clone();
+
+            g.play("core-034", json!({ "targets": [{ "pick": "instance", "instanceId": farm }] }));
+
+            g.expect_in_zone(&farm, "exile");
+            g.expect_stats("core-t-rush", json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
+        }
+
         #[test]
         fn s10_4_layer_5_and_not_layer_4_the_aura_changes_no_buffs_on_the_instance() {
             crate::register_all();

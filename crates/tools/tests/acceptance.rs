@@ -50,6 +50,12 @@
 //!    `targets_of` and `tributes_of` under `crates/cards/tests/cross/` (its `mod.rs`); and `det`,
 //!    `ai_options` and `js` under `crates/ai/tests/` (`ai/support.rs`). A test file copied from an
 //!    old one brings no copy back (docs/ADDING_CARDS.md §2 asks the card tests the same).
+//!
+//! And one for R1420's preview (#2257):
+//!
+//!  - Preview: every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not list.
+//!    A preview opens a held set on one test's thread, and one of a set that ships opens nothing,
+//!    so the patch that ships a set takes its previews out with it.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -57,6 +63,7 @@ use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use jackioh_engine::wire::SHIPPED_SETS;
 use serde_json::Value;
 
 fn repo() -> PathBuf {
@@ -956,7 +963,7 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826, #1997, #2023).
+/// rather than copying (#1777, #1826, #1997, #2023, #2385).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
@@ -981,6 +988,16 @@ const KIT_READERS: &[&str] = &[
     "crates/cards",
     "crates/luau/tests",
     "crates/ai/tests",
+];
+
+/// The server test trees `tests/server.rs` compiles with `tests/support/`, where no file but a
+/// helper's home may define one (#2385). `tests/store/` builds into `server_store` without them.
+const SERVER_SUPPORT_READERS: &[&str] = &[
+    "crates/server/tests/actor",
+    "crates/server/tests/api",
+    "crates/server/tests/bots",
+    "crates/server/tests/loops",
+    "crates/server/tests/support",
 ];
 
 const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
@@ -1038,6 +1055,37 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
         structs: &[],
         dirs: &["crates/ai/tests"],
         more_than: 40,
+    },
+    SharedHelpers {
+        home: "crates/server/tests/support/store.rs",
+        names: &[
+            "fake",
+            "fake_ref",
+            "fake_lock",
+            "to_json",
+            "from",
+            "uuid",
+            "advance",
+            "advance_and_yield",
+            "sleep_settled",
+            "table",
+            "fake_read",
+            "fail_on",
+            "stop_failing",
+            "hmac_sha256_hex",
+        ],
+        statics: &[],
+        structs: &[],
+        dirs: SERVER_SUPPORT_READERS,
+        more_than: 80,
+    },
+    SharedHelpers {
+        home: "crates/server/tests/support/engine.rs",
+        names: &["playable"],
+        statics: &[],
+        structs: &[],
+        dirs: SERVER_SUPPORT_READERS,
+        more_than: 80,
     },
 ];
 
@@ -1251,7 +1299,7 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper, nonce counter or sink bench (#1777, #1826, #1997, #2023, #2024): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench (#1777, #1826, #1997, #2023, #2024, #2385): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
@@ -1353,6 +1401,40 @@ fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
     copies.sort();
     expected.sort();
     assert_eq!(copies, expected);
+}
+
+#[test]
+fn helpers_the_check_refuses_a_copy_in_the_server_tests() {
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-server-helpers-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let root = scratch.0.as_path();
+    let _ = fs::remove_dir_all(root);
+    let write = |path: &str, text: &str| {
+        let path = root.join(path);
+        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
+        fs::write(path, text).expect("the file");
+    };
+    let from = "fn from<T: DeserializeOwned>(value: Value) -> T {\n    serde_json::from_value(value).expect(\"a value\")\n}\n";
+    write("crates/server/tests/api/planted.rs", from);
+    // tests/store/ builds without tests/support/, so its own copy is not one.
+    write("crates/server/tests/store/planted.rs", from);
+    write(
+        "crates/server/tests/bots/planted.rs",
+        "use super::*;\nfn playable() -> Vec<String> {\n    Vec::new()\n}\n",
+    );
+    let mut copies = shared_helper_copies(root);
+    drop(scratch);
+    copies.sort();
+    assert_eq!(
+        copies,
+        [
+            "crates/server/tests/api/planted.rs:1",
+            "crates/server/tests/bots/planted.rs:2"
+        ]
+    );
 }
 
 /// The built `jackioh`, whose clap surface the README's command table is held to (#1720).
@@ -1680,4 +1762,59 @@ fn readme_the_drift_check_finds_each_disagreement() {
         drift(&row.replace("`patches retcon [--any]`", "`run`")),
         ["`jackioh patches` is in no row of the table"]
     );
+}
+
+/// The 1-based lines of `text` where a `preview_sets(&[…])` names only sets `SHIPPED_SETS` lists,
+/// read by their `SetName` variants: such a preview opens nothing (R1420).
+fn previews_of_shipped_sets_only(text: &str) -> Vec<usize> {
+    const CALL: &str = "preview_sets(&[";
+    let shipped: Vec<String> = SHIPPED_SETS.iter().map(|set| format!("{set:?}")).collect();
+    let mut lines = Vec::new();
+    let mut from = 0;
+    while let Some(found) = text[from..].find(CALL) {
+        let start = from + found + CALL.len();
+        from = start;
+        let list = text[start..].split(']').next().unwrap_or("");
+        let shipped_only = list
+            .split(',')
+            .map(|set| set.trim().rsplit("::").next().unwrap_or(""))
+            .filter(|name| !name.is_empty())
+            .all(|name| shipped.iter().any(|set| set == name));
+        if shipped_only {
+            lines.push(text[..start].matches('\n').count() + 1);
+        }
+    }
+    lines
+}
+
+#[test]
+fn preview_no_test_previews_only_sets_that_ship() {
+    let root = repo();
+    let mut files = Vec::new();
+    rust_sources(&root.join("crates"), &mut files);
+    let mut calls = 0;
+    let mut stale = Vec::new();
+    for file in files {
+        let relative = fold(file.strip_prefix(&root).unwrap_or(&file)).unwrap_or_default();
+        // This file plants previews of shipped sets, to show the scan finds them.
+        if relative == "crates/tools/tests/acceptance.rs" {
+            continue;
+        }
+        let text = fs::read_to_string(&file).unwrap_or_default();
+        calls += text.matches("preview_sets(&[").count();
+        for line in previews_of_shipped_sets_only(&text) {
+            stale.push(format!("{relative}:{line}"));
+        }
+    }
+    assert!(calls > 0, "the scan found no `preview_sets(&[…])` under crates/");
+    assert!(
+        stale.is_empty(),
+        "a preview of sets that all ship opens nothing (R1420): delete it, or keep only the sets `SHIPPED_SETS` does not list: {stale:?}"
+    );
+}
+
+#[test]
+fn preview_the_scan_finds_each_preview_of_shipped_sets_only() {
+    let text = "let _a = preview_sets(&[SetName::Core]);\nlet _b = preview_sets(&[SetName::Boss]);\nlet _c = preview_sets(&[\n    SetName::Meditative,\n    jackioh_engine::SetName::Stinkyscape,\n]);\nlet _d = preview_sets(&[SetName::MeditativePlus, SetName::Custom]);\nlet _e = preview_every_set();\n";
+    assert_eq!(previews_of_shipped_sets_only(text), [1, 3]);
 }

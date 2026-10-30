@@ -152,7 +152,6 @@ mod tests {
 
             #[test]
             fn quickdraw_deals_it_in_the_opening_hand() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 crate::register_all();
                 // R640: `setup` deals every library card carrying `quickdraw` into the opening hand,
                 // the base face and the Radiant one alike.

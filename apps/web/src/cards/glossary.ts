@@ -224,7 +224,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   // Patch v0.2.0's keywords (docs/classic-sets.md B3.1, B3.3, B5 E6 and E35; R383, R385).
   Animated: keyword(
     "Animated",
-    "A Field Spell or Trap that becomes a Unit in an open unit zone when it fires or enters the field",
+    "A Field Spell or Trap with stats that becomes a Unit in an open unit zone when it fires or enters the field, or as it gains stats",
   ),
   "Animated on your turn": keyword("Animated on your turn", "A Unit on your turn; back in its backrow on your opponent's"),
   Brittle: keyword(

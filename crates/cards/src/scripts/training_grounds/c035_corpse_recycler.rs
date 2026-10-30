@@ -150,6 +150,30 @@ mod tests {
             // Three non-Felinor Units died: one token for p1 (its Vanilla), two for p2.
             assert_eq!(tokens(&s, P1), 1);
             assert_eq!(tokens(&s, P2), 2);
+
+            // R68: the death triggers run in side then lane order, the active player's first: p1's
+            // lane-4 Vanilla, then p2's lane 1 and lane 2. Each token follows its own death's trigger.
+            let p1_vanilla = |e: &GameEvent| matches!(e, GameEvent::Destroyed { controller: P1, def_id, .. } if def_id == VANILLA);
+            let deaths: Vec<(PlayerId, String)> = s
+                .events()
+                .iter()
+                .filter_map(|e| match e {
+                    GameEvent::Destroyed { controller, def_id, .. } if def_id != BIG_FELINOR => Some((*controller, def_id.clone())),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(deaths, vec![(P1, VANILLA.to_string()), (P2, VANILLA.to_string()), (P2, TIMMY.to_string())]);
+            let summons: Vec<(PlayerId, i32)> = s
+                .events()
+                .iter()
+                .skip_while(|e| !p1_vanilla(e))
+                .filter_map(|e| match e {
+                    GameEvent::Summoned { player, def_id, lane, .. } if def_id == RUSH => Some((*player, *lane)),
+                    _ => None,
+                })
+                .collect();
+            // p1's token in its leftmost open zone (lane 2, the Felinor in 1), then p2's in lanes 1 and 2.
+            assert_eq!(summons, vec![(P1, 2), (P2, 1), (P2, 2)]);
         }
 
         #[test]

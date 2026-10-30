@@ -113,7 +113,6 @@ mod tests {
 
             #[test]
             fn r1225_played_and_nothing_borrowed_it_is_tributed() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = crate::scenario(json!({
                     "seed": "jlarna-lapses",
                     "p1": { "hand": [{ "def": ID }, VANILLA], "library": [FILLER, FILLER], "mana": 10 },
@@ -128,7 +127,6 @@ mod tests {
 
             #[test]
             fn r1225_borrowed_after_playing_it_stays() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = crate::scenario(json!({
                     "seed": "jlarna-stays",
                     "p1": { "hand": [{ "def": ID }, VANILLA], "library": [FILLER, FILLER], "mana": 4 },
@@ -144,7 +142,6 @@ mod tests {
 
             #[test]
             fn r1223_its_own_price_is_never_borrowed() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = crate::scenario(json!({
                     "seed": "jlarna-price",
                     "p1": { "hand": [{ "def": ID }, FILLER], "library": [FILLER, FILLER], "mana": 3 },
@@ -164,7 +161,6 @@ mod tests {
 
             #[test]
             fn r1224_a_shortfall_of_3_is_paid_1_1_1_0() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = fielded("jlarna-split", false);
                 // Borrow 3 of nothing: the schedule is 1, 1, 1.
                 s.play(VANILLA, json!({ "zone": 1 }));
@@ -175,7 +171,6 @@ mod tests {
 
             #[test]
             fn r1225_no_check_on_the_opponents_turn() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = fielded("jlarna-foe", false);
                 // Borrow on p1's turn, so its end of turn keeps Jlarna; p2's end of turn is no
                 // check either, and Jlarna is still standing on p1's next turn.
@@ -188,7 +183,6 @@ mod tests {
 
             #[test]
             fn r1225_a_line_at_its_limit_lapses() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = fielded("jlarna-full", false);
                 // Owe the full 4: the turn's borrowing keeps Jlarna this time...
                 s.play(VANILLA, json!({ "zone": 1 }));
@@ -211,7 +205,6 @@ mod tests {
             }
             #[test]
             fn r1223_spend_mana_you_dont_have_owing_up_to_4_at_once() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = fielded("jlarna-limit", false);
                 assert_eq!(credit_available(s.state(), P1), 4);
                 for lane in 1..=4 {
@@ -225,7 +218,6 @@ mod tests {
 
             #[test]
             fn r1224_a_shortfall_of_4_is_paid_1_1_1_1_one_per_refresh() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = fielded("jlarna-four", false);
                 for lane in 1..=4 {
                     s.play(VANILLA, json!({ "zone": lane }));
@@ -243,7 +235,6 @@ mod tests {
             fn r1224_a_missed_instalment_is_forgiven_never_carried() {
                 // Alternate Fate: "Players don't generate mana naturally" — p1's refresh gives
                 // nothing, so its instalment finds no mana and is forgiven.
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = crate::scenario(json!({
                     "seed": "jlarna-missed",
                     "p1": {
@@ -267,7 +258,6 @@ mod tests {
 
             #[test]
             fn r1224_the_debt_outlives_jlarna() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = fielded("jlarna-outlives", false);
                 for lane in 1..=4 {
                     s.play(VANILLA, json!({ "zone": lane }));
@@ -287,7 +277,6 @@ mod tests {
 
             #[test]
             fn r1223_two_jlarnas_share_one_line() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = crate::scenario(json!({
                     "seed": "jlarna-two",
                     "p1": {
@@ -309,7 +298,6 @@ mod tests {
 
             #[test]
             fn r1223_r1224_credit_and_instalments_read_through_param() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = fielded("jlarna-tuned", false);
                 assert_eq!(crate::upgrade_number(&mut s, ID, "credit"), 5);
                 assert_eq!(credit_available(s.state(), P1), 5);
@@ -332,7 +320,6 @@ mod tests {
 
             #[test]
             fn radiant_never_tributes_itself() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = fielded("jlarna-radiant", true);
                 // A turn with nothing borrowed: the Radiant face has no self-Tribute.
                 assert!(!credit_used_this_turn(s.state(), P1));

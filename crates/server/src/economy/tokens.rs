@@ -14,7 +14,8 @@
 //! - [`read_tokens`]: both bars' points and sizes, the cosmetic cycle's next step and the tokens
 //!   held (R1305004).
 //! - The routes, all `AuthLevel::Active`: `GET /api/tokens`, `POST /api/tokens/redeem-card`
-//!   (`{ cardId }`) and `POST /api/tokens/redeem-cosmetic` (`{ token, cosmeticId, cardId? }`).
+//!   (`{ cardId }`) and `POST /api/tokens/redeem-cosmetic` (`{ token, cosmeticId, cardId? }`), each
+//!   redemption in the account's spend turn (`economy::spend_slots`, R2378000).
 //!
 //! A pack opening pays its bars through [`settle_bar`] in its own transaction
 //! (`economy::packs::open_pack`, R1305000, R1305001); the cycle's stored position is the
@@ -423,11 +424,13 @@ pub async fn get_tokens(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// `POST /api/tokens/redeem-card` (`AuthLevel::Active`): `{ cardId }`, with an optional
-/// `Idempotency-Key` (R2124000); [`redeem_card_token_once`], answering the tokens after it.
+/// `Idempotency-Key` (R2124000); [`redeem_card_token_once`], in the account's spend turn
+/// (R2378000), answering the tokens after it.
 pub async fn post_redeem_card(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let card_id = str(&req.body, "cardId")?;
     let request = RequestKey::of(app, &req, "/api/tokens/redeem-card")?;
+    let _turn = app.spends.claim(&profile.id).await?;
     redeem_card_token_once(app, &profile.id, &card_id, request.as_ref())
         .await?
         .answer()
@@ -435,7 +438,8 @@ pub async fn post_redeem_card(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `POST /api/tokens/redeem-cosmetic` (`AuthLevel::Active`): `{ token, cosmeticId, cardId? }`
 /// over the shipped registry, with an optional `Idempotency-Key` (R2124000);
-/// [`redeem_cosmetic_token_once`], answering the tokens after it.
+/// [`redeem_cosmetic_token_once`], in the account's spend turn (R2378000), answering the tokens
+/// after it.
 pub async fn post_redeem_cosmetic(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let token = str(&req.body, "token")?;
@@ -446,6 +450,7 @@ pub async fn post_redeem_cosmetic(app: &Arc<App>, req: Req) -> ApiResult {
     let request = RequestKey::of(app, &req, "/api/tokens/redeem-cosmetic")?;
     let registry = crate::cosmetics::shipped()
         .map_err(|error| ApiError::internal(format!("cosmetics.json: {error}")))?;
+    let _turn = app.spends.claim(&profile.id).await?;
     redeem_cosmetic_token_once(
         app,
         &profile.id,

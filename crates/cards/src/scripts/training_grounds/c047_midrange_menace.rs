@@ -156,6 +156,34 @@ mod tests {
             }
         }
 
+        /// BUILD M13 TG 47 "radiant Immutable refuses Sheepish": Core #41 Sheepish fires on the played
+        /// Radiant snapshot, is consumed, and transforms nothing (R17, R23), as core-041's own test shows
+        /// against core-019. The base face, with no Immutable, is turned into a Sheep by the same trap.
+        #[test]
+        fn r23_sheepish_fires_on_the_radiant_face_and_transforms_nothing() {
+            crate::register_all();
+            for radiant in [true, false] {
+                let mut s = scenario(json!({
+                    "seed": "sheepish",
+                    "p1": { "hand": [{ "def": "traininggrounds-047", "radiant": radiant }, "core-016"], "mana": 10 },
+                    "p2": { "backrow": [{ "def": "core-041", "lane": 1 }] },
+                }));
+                s.play("traininggrounds-047", json!({ "zone": 1 }));
+
+                assert!(s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+                s.expect_in_zone("core-041", "graveyard");
+                let transformed = s.events().iter().any(|event| matches!(event, GameEvent::Transformed { .. }));
+                let lane_1 = s.unit(P1, 1).map(|unit| unit.def_id);
+                if radiant {
+                    assert!(!transformed);
+                    assert_eq!(lane_1.as_deref(), Some("traininggrounds-047"));
+                } else {
+                    assert!(transformed);
+                    assert_eq!(lane_1.as_deref(), Some("core-t-sheep"));
+                }
+            }
+        }
+
         #[test]
         fn s4_2_step_3_the_radiant_face_still_walls_the_hero_off() {
             crate::register_all();

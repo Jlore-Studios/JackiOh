@@ -62,9 +62,11 @@ export const practiceTestid = {
   result: "practice-result",
   /**
    * R1303000: in the result dialog of a game on a server seed, what its claim earned:
-   * data-earning="pending|paid|refused|unreachable", and data-reason when refused. role="status".
+   * data-earning="pending|paid|refused|unreachable|unearned", and data-reason when refused. role="status".
    */
   resultEarning: "practice-result-earning",
+  /** R2379000: on the game screen of a free game the server would not seed, that it earns nothing and why. role="status". */
+  unearned: "practice-unearned",
   /** In the result dialog: the same difficulty and deck again, with a fresh seed and seat. */
   playAgain: "practice-play-again",
   /** In the result dialog: back to the setup screen. */

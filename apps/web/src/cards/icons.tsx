@@ -21,7 +21,8 @@ export type IconName =
   | "castOnDraw"
   | "target"
   | "cog"
-  | "trade";
+  | "trade"
+  | "altar";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -127,6 +128,14 @@ const TRADE = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <path d='M28 33 L18 40 L28 47 Z' fill='#e8ecf8'/>
 </svg>`;
 
+// #2268, R2268000: a flame on an altar (Tribute, R373), the Tribute hand hint's pip.
+const ALTAR = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
+<circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
+<path d='M32 12 C36 18 40 22 40 28 A8 8 0 0 1 24 28 C24 22 28 18 32 12 Z' fill='#e8ecf8'/>
+<path d='M14 42 H50' stroke='#e8ecf8' stroke-width='5' stroke-linecap='round'/>
+<path d='M21 42 V52 M43 42 V52 M17 52 H47' fill='none' stroke='#e8ecf8' stroke-width='4' stroke-linecap='round'/>
+</svg>`;
+
 function dataUri(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg.replace(/\n/g, ""))}`;
 }
@@ -143,6 +152,7 @@ const ICON_URI: Readonly<Record<IconName, string>> = {
   target: dataUri(TARGET),
   cog: dataUri(COG),
   trade: dataUri(TRADE),
+  altar: dataUri(ALTAR),
 };
 
 export function Icon({ name }: { name: IconName }): ReactElement {

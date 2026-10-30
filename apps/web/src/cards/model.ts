@@ -27,8 +27,8 @@
 // that moved are marked where the text prints them (`text.tuned`). The collection shows none of
 // them. Every face carries its definition's lines of code (`loc`, E36) for the inspect overlays.
 //
-// An Animated Field Spell or Trap prints the attack and health of the Unit it becomes (B3.1 rule 1),
-// so its face carries them as a Unit's does, wherever it is.
+// An Animated Field Spell or Trap that prints attack and health prints those of the Unit it becomes
+// (B3.1 rule 1; R2280000: it may print none), so its face carries them as a Unit's does, wherever it is.
 //
 // A face in play carries a quest line as the view gives it (`quest`, B5 E33, R404: In Too Deep's open
 // quests, their progress and rewards, its auras), which cardState.ts draws as badges. A copier (Classic
@@ -697,8 +697,8 @@ function statsOf(
     };
   }
 
-  // B3.1 rule 1: an Animated Field Spell or Trap prints the stats of the Unit it becomes; no other
-  // card that is not a Unit prints any.
+  // B3.1 rule 1: an Animated Field Spell or Trap that prints stats prints those of the Unit it becomes
+  // (R2280000: it may print none); no other card that is not a Unit prints any.
   const attack = printed?.attack;
   const health = printed?.health;
   if (attack === undefined || health === undefined) return null;
@@ -706,7 +706,7 @@ function statsOf(
   return { attack, health, maxHealth: health, attackTone: "base", healthTone: "base", ...(grew === undefined ? {} : { grew }) };
 }
 
-/** B3.1: an Animated face (either kind) prints a Unit's attack and health. */
+/** B3.1: an Animated face (either kind) may print a Unit's attack and health (R2280000). */
 function printsUnitStats(printed: PrintedFace | undefined): boolean {
   return (printed?.keywords ?? []).some((keyword) => keyword.kind === "Animated" || keyword.kind === "Animated on your turn");
 }

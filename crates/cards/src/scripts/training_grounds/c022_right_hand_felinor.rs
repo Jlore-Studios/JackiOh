@@ -152,6 +152,30 @@ mod tests {
         }
 
         #[test]
+        fn r1_a_copy_of_it_beside_a_friendly_unit_buffs_nothing() {
+            // The source stands unbuffed in lane 5 (a copy keeps buffs, R57); its copy lands in lane 3,
+            // right of the 4/4 in lane 2, where a Cry would give both +3/+3.
+            let mine = json!([{ "def": BODY, "lane": 2 }, { "def": FELINOR, "lane": 5 }]);
+            let mut s = felinor(false, mine, json!([]));
+            let source = s.unit_at(P1, 5);
+            crate::run_as(
+                &mut s,
+                jackioh_engine::effects::summon_copy(json_as(json!({
+                    "of": { "of": "instance", "instanceId": source.id },
+                    "lane": 3,
+                }))),
+                P1,
+            );
+            let copy = s.unit_at(P1, 3);
+            assert_eq!(copy.def_id, FELINOR);
+            assert_ne!(copy.id, source.id);
+            unbuffed(&mut s, &copy);
+            s.expect_stats(&copy, json!({ "attack": 3, "health": 3 }));
+            let body = s.unit_at(P1, 2);
+            unbuffed(&mut s, &body);
+        }
+
+        #[test]
         fn r386_an_upgrade_gives_4_4_a_degrade_2_2() {
             for (step, gain) in [(1, 4), (-1, 2)] {
                 let mut s = felinor(false, json!([{ "def": BODY, "lane": 2 }]), json!([]));

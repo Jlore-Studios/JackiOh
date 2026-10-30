@@ -2441,6 +2441,7 @@ rememberAs: string?,
 instance: TargetSpec?,
 randomKeywords: number?,
 keywords: {Keyword}?,
+memory: {[string]: unknown}?,
 }
 
 export type SummonCopyArgs = {

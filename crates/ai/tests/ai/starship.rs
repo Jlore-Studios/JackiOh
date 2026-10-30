@@ -173,7 +173,7 @@ fn launch(ship: &str) -> ActionBody {
 #[test]
 fn r1852000_the_dense_features_keep_their_layout_with_a_starship_on_the_board() {
     let (state, ship) = built();
-    // The Dormant Starship is no Unit to the evaluation, and the launched one carries the Starship
+    // The Dormant Starship is no Unit (`active_units_of`), and the launched one carries the Starship
     // keyword, which no dense feature counts: the layout is the compiled network's either way.
     assert!(active_units_of(&state, AI).iter().all(|unit| unit.id != ship));
     assert_eq!(features_of(&state, AI).dense.len(), dense_len());

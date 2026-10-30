@@ -766,6 +766,12 @@ impl Tx<'_> {
         economy_dispatch!(self, practice_seed_claim(profile_id, seed, at))
     }
 
+    /// R2379000: deletes the profile's seed `seed` while it is unclaimed. False, writing nothing,
+    /// when the profile has no such seed (another profile's included) or it was claimed.
+    pub async fn economy_practice_seed_release(&mut self, profile_id: &str, seed: &str) -> StoreResult<bool> {
+        economy_dispatch!(self, practice_seed_release(profile_id, seed))
+    }
+
     /// R1483000: how many of the profile's seeds are unclaimed and issued at or after
     /// `issued_since`, the ones `economy_practice_seeds_prune` keeps.
     pub async fn economy_practice_seeds_open(
@@ -1781,6 +1787,23 @@ mod pg {
         Ok(done.rows_affected() == 1)
     }
 
+    /// One statement: the row goes only while it is unclaimed.
+    pub async fn practice_seed_release(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        seed: &str,
+    ) -> Result<bool, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let done = sqlx::query(
+            "delete from public.practice_seeds where seed = $1::text and profile_id = $2::uuid and claimed_at is null",
+        )
+        .bind(seed)
+        .bind(profile_id)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected() == 1)
+    }
+
     pub async fn practice_seeds_open(
         t: &mut PgTx<'_>,
         profile_id: &str,
@@ -2406,6 +2429,19 @@ mod fake {
             }
             None => Ok(false),
         }
+    }
+
+    pub fn practice_seed_release(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        seed: &str,
+    ) -> Result<bool, StoreError> {
+        let tables = call(f, "economy.practiceSeeds.release")?;
+        let before = tables.practice_seeds.len();
+        tables.practice_seeds.retain(|held| {
+            !(held.seed == seed && held.profile_id == profile_id && held.claimed_at.is_none())
+        });
+        Ok(tables.practice_seeds.len() < before)
     }
 
     pub fn practice_seeds_open(

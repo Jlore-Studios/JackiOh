@@ -31,10 +31,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
         keywords
             .iter()
@@ -55,7 +51,6 @@ mod tests {
     #[test]
     fn flying_a_unit_without_flying_or_ranged_cannot_attack_it() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [ANCHOR], "field": [STRATOS], "library": filler(4) },
@@ -69,7 +64,6 @@ mod tests {
     #[test]
     fn death_fuses_a_copy_into_the_dormant_starship() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [STRATOS], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -92,7 +86,6 @@ mod tests {
     #[test]
     fn radiant_is_a_6_6_with_the_same_keywords() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": STRATOS, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },

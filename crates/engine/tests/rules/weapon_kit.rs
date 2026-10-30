@@ -3,6 +3,7 @@
 // R1841000's Activate with an extra turn cooldown (`ActivationCost.extraTurnCooldown`), R1841001's
 // damage that deals half to heroes (`halfToHeroes`), R1841002's Equip straight into this Unit from a
 // pick (`equip_picks`) and R1841003's "Float reduces Tribute requirement by 1" (`float_lowers_tribute`).
+// R2268000's view of the proto's Tribute (`CardView.tribute`, issue #2268) reuses the proto.
 
 use jackioh_engine::effects::EQUIP_PICK_STEP;
 use jackioh_engine::play_choices::{legal_tribute_sets, tribute_cost_of};
@@ -416,5 +417,99 @@ mod r1841003_float_lowers_tribute {
         s.play(in_hand.as_str(), json!({ "zone": 4 }));
         s.expect_in_zone(in_hand.as_str(), "field");
         s.expect_in_zone(first.as_str(), "field");
+    }
+}
+
+mod r2268000_tribute_in_the_view {
+    use super::*;
+
+    /// The id of the first card of `def_id` in p1's hand.
+    fn held(s: &Scenario, def_id: &str) -> String {
+        s.pile(P1, "hand")
+            .iter()
+            .find(|card| card.def_id == def_id)
+            .expect("in p1's hand")
+            .id
+            .clone()
+    }
+
+    /// p1's hand card `id` as `viewer` sees it: a count for p2 until the game ends (R434), so `None`.
+    fn shown(s: &Scenario, viewer: PlayerId, id: &str) -> Option<CardView> {
+        let view = s.view(viewer);
+        let hand = if viewer == P1 {
+            view.you.hand
+        } else {
+            view.opponent.hand
+        };
+        match hand {
+            HandView::Cards(cards) => cards.into_iter().find(|card| card.instance_id == id),
+            HandView::Count { .. } => None,
+        }
+    }
+
+    #[test]
+    fn r2268000_the_owners_view_carries_the_tribute_its_play_asks_each_float_taking_one_off() {
+        let mut s = board(
+            "r2268000-float",
+            json!({ "hand": [PROTO, PLAIN], "field": [PLAIN, PLAIN, PLAIN] }),
+            json!({}),
+        );
+        let proto = held(&s, PROTO);
+        let plain = held(&s, PLAIN);
+
+        for left in (1..=PROTO_TRIBUTE).rev() {
+            assert_eq!(tribute_cost_of(s.state(), s.card(proto.as_str())), left);
+            let card = shown(&s, P1, &proto).expect("in its owner's hand");
+            assert_eq!(card.tribute, Some(left));
+            // p1 Floats, p2 ends: one off.
+            pass_to(&mut s, P1, 1);
+        }
+
+        assert_eq!(tribute_cost_of(s.state(), s.card(proto.as_str())), 0);
+        let card = shown(&s, P1, &proto).expect("in its owner's hand");
+        assert_eq!(card.tribute, None, "absent at 0, never 0");
+        let card = shown(&s, P1, &plain).expect("in its owner's hand");
+        assert_eq!(card.tribute, None, "a card that asks no Tribute shows none");
+    }
+
+    #[test]
+    fn r2268000_neither_the_opponent_nor_the_field_reads_a_tribute() {
+        let mut s = board(
+            "r2268000-hidden",
+            json!({ "hand": [PROTO, PROTO], "field": [PLAIN, PLAIN, PLAIN] }),
+            json!({}),
+        );
+        let hand = s.pile(P1, "hand");
+        let played = hand[0].id.clone();
+        let kept = hand[1].id.clone();
+        for id in [&played, &kept] {
+            let card = shown(&s, P1, id).expect("in its owner's hand");
+            assert_eq!(card.tribute, Some(PROTO_TRIBUTE));
+        }
+        assert!(matches!(s.view(P2).opponent.hand, HandView::Count { .. }));
+        assert_eq!(shown(&s, P2, &kept), None);
+
+        let tributes: Vec<String> = (1..=PROTO_TRIBUTE).map(|lane| id_at(&s, P1, lane)).collect();
+        s.play(played.as_str(), json!({ "zone": 4, "tributes": tributes }));
+        s.expect_in_zone(played.as_str(), "field");
+        for viewer in [P1, P2] {
+            let view = s.view(viewer);
+            let units =
+                serde_json::to_string(&[view.you.units, view.opponent.units]).expect("a view is JSON");
+            assert!(
+                units.contains(PROTO),
+                "the proto is on the field, seen by {viewer:?}"
+            );
+            assert!(
+                !units.contains("\"tribute\""),
+                "no unit carries a tribute: {units}"
+            );
+        }
+        let card = shown(&s, P1, &kept).expect("in its owner's hand");
+        assert_eq!(card.tribute, Some(PROTO_TRIBUTE));
+
+        s.act(ActionBody::Concede, P2, "p2 concedes");
+        let card = shown(&s, P2, &kept).expect("revealed at the end (R434)");
+        assert_eq!(card.tribute, None);
     }
 }

@@ -26,13 +26,12 @@ use jackioh_server::api::results::void_match;
 use jackioh_server::api::series::start_series;
 use jackioh_server::app::App;
 use jackioh_server::config::{GLITCH_BOARDS_SAMPLED, MATCH_VOIDED_CLOSE_CODE};
-use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{ProfileKind, QueueMode};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
-use crate::support::store::{fake, store, to_json};
+use crate::support::store::{fake, from, store, table, to_json};
 
 const MATCH_ID: &str = "match-glitch";
 const P1: &str = "profile-1";
@@ -51,20 +50,6 @@ const BOARD_AT: i64 = 1_700_000_000_000;
 const REPLY_WITHIN: Duration = Duration::from_secs(1);
 /// How long `frame` sleeps between two looks for the reply.
 const REPLY_STEP: Duration = Duration::from_millis(10);
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-/// One table of the fake store: rows as JSON.
-async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
-    let data = fake(app);
-    let data = data.lock().await;
-    match pick(&data) {
-        Value::Array(rows) => rows,
-        other => panic!("not a table: {other}"),
-    }
-}
 
 // The log recorder
 
@@ -630,6 +615,7 @@ mod glitchs_boards {
 mod glitchs_void {
     //! Glitch's void (R679).
     use super::*;
+    use crate::support::engine::playable;
 
     fn void_decks() -> WorldOptions {
         WorldOptions {
@@ -825,21 +811,6 @@ mod glitchs_void {
                 .collect::<Vec<_>>(),
             vec![json!(MATCH_ID), json!(MATCH_ID)]
         );
-    }
-
-    /// Every playable catalog id, in `catalog.json` order.
-    fn playable() -> Vec<String> {
-        jackioh_cards::register_all();
-        jackioh_cards::CATALOG
-            .iter()
-            .filter(|(_, def)| {
-                !def.token
-                    && !to_json(&def.tags)
-                        .as_array()
-                        .is_some_and(|tags| tags.contains(&json!("Token")))
-            })
-            .map(|(id, _)| id.clone())
-            .collect()
     }
 
     async fn series_row(app: &Arc<App>) -> Value {

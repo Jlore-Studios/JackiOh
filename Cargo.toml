@@ -82,6 +82,15 @@ opt-level = 2
 [profile.test.package.indexmap]
 opt-level = 2
 
+# The practice AI at opt-level 1 (#2384), its debug assertions and overflow checks kept, as the
+# engine's are: the AI's tests spend their time in its search, which ran unoptimised. On four cores,
+# with the AI and every crate built on it compiled afresh, ci.yml's `ai` group took 328 s at 0
+# (14 s compiling, 314 running), 130 s at 1 (52 and 78) and 146 s at 2 (80 and 66). No other group
+# that builds the AI took over 3 s longer at 1 than at 0, while at 2 `server api` took 8 s and
+# `tools fuzz` 12 s longer: compiling at 2 costs more than the little AI they run wins back.
+[profile.test.package.jackioh-ai]
+opt-level = 1
+
 # The server and the WASM module the web loads (SURFACE §10.2) both build at opt-level 3. The module
 # had `opt-level = "s"` for `jackioh-wasm`, which reached the bindings crate alone, where serde_json's
 # writer and the state cache are instantiated, and made them slower without making the module smaller

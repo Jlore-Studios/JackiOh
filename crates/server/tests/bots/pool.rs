@@ -51,6 +51,7 @@ use jackioh_server::ranked::season::season_id_of;
 use jackioh_server::username::normalize_username;
 
 use crate::support::deps::empty_test_app;
+use crate::support::engine::playable;
 use crate::support::store::{fake_lock, q};
 
 /// Unit conversion, not configuration: a day in milliseconds.
@@ -76,16 +77,6 @@ fn bot(id: &str, created_at: i64, retired_at: Option<i64>) -> BotRow {
         grind_wins: 0,
         cosmetics: None,
     }
-}
-
-/// The catalog's playable ids (no tokens), in catalog order.
-fn playable() -> Vec<String> {
-    jackioh_cards::register_all();
-    jackioh_cards::CATALOG
-        .values()
-        .filter(|def| !def.token)
-        .map(|def| def.id.clone())
-        .collect()
 }
 
 fn deck_size() -> usize {

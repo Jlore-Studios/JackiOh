@@ -541,6 +541,9 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/cards/catalog.json", [...RUST]],
     ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
+    // acceptance.rs holds the server tests' helpers to tests/support/ (#2385); tests/store/ is not scanned.
+    ["crates/server/tests/api/queue.rs", ["rust_server", "rust_tools_wasm"]],
+    ["crates/server/tests/store/contract.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
     ["crates/luau/src/lib.rs", ["rust_luau", "rust_tools_wasm"]],
@@ -593,6 +596,8 @@ describe("scripts/ci-scope.sh", () => {
     expect(tools({ "apps/web/src/x.test.ts": 'const t = readFileSync(join(ROOT, "x.json"), "utf8");\n' })).toBe(true);
     // acceptance.rs holds every ignore to the daily form (super.yml's daily tests).
     expect(tools({ "crates/server/src/x.rs": '#[test]\n#[ignore = "daily: a sweep"]\nfn x() {}\n' })).toBe(true);
+    // acceptance.rs holds every `preview_sets(&[…])` to a set that has not shipped (R1420, #2257).
+    expect(tools({ "crates/server/tests/x.rs": "let _preview = preview_sets(&[SetName::Boss]);\n" })).toBe(true);
     expect(tools({ "apps/web/src/x.test.ts": "export const x = 1;\n" })).toBe(false);
     expect(tools({ "crates/server/src/x.rs": "pub const X: u32 = 1;\n" })).toBe(false);
     expect(tools({ "docs/x.json": "readFileSync(\n" })).toBe(false);

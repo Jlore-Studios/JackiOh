@@ -10,7 +10,6 @@
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
@@ -29,7 +28,7 @@ use jackioh_server::db::store::{
 };
 
 use crate::support::deps::{TestAppOptions, record_logs, test_app, test_app_with};
-use crate::support::store::{fake_lock, q, to_json};
+use crate::support::store::{fake_lock, from, q, to_json};
 
 const MATCH_ID: &str = "match-records";
 const P1: &str = "profile-1";
@@ -38,14 +37,6 @@ const P2: &str = "profile-2";
 const STARTED_ON: &str = "v-started";
 
 // Plumbing (private copies: each test file of this binary keeps its own)
-
-/// A port value built from an object literal, so the test depends on the JSON shape only.
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    match serde_json::from_value(value.clone()) {
-        Ok(parsed) => parsed,
-        Err(error) => panic!("{error}: {value}"),
-    }
-}
 
 #[derive(Clone, Default)]
 struct LogLines(Arc<StdMutex<Vec<u8>>>);

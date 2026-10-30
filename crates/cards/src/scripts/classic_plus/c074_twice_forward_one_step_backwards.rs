@@ -1,4 +1,5 @@
-//! C+ #74 Twice Forward One Step Backwards (SPEC §8.7 row 74, B7). (2) Field Trap, Mythic, 0/1 → 0/2.
+//! C+ #74 Twice Forward One Step Backwards (SPEC §8.7 row 74, B7). (2) Field Trap, Mythic, no stats
+//! (R2280000; 0/1 → 0/2 before issue #2280).
 //!   Base:    "Animated, Brittle 2 / Every {plays|card|cards} your opponent plays, fuse a copy of the
 //!            last into this and gain +{brittleGain} Brittle." (balance patch 1; patch v0.3.10)
 //!   Radiant: "Animated, Brittle 4 / Every {plays|card|cards} your opponent plays, fuse a Radiant copy
@@ -13,7 +14,9 @@
 //!            instance and stays a Field Trap, and the opponent's card is never consumed, wherever it
 //!            went (R831011). The fused texts work for you where they can, a fused Cry never runs, this
 //!            gains +1 Brittle, and then, Animated (§6), it animates into its lane's unit zone as the
-//!            last step of its firing (a 0/1 plus what it fused, R77).
+//!            last step of its firing once what it fused gives it stats, a copy of a Unit (the stats of
+//!            what it fused, R77); with only stat-less copies (Spells, Traps) it stays a face-up Field
+//!            Trap in its zone (R2280000).
 //!
 //! All of it is `subsystems/twice_forward.rs`' trap trigger; Brittle tunes through B3.4's X change.
 
@@ -106,8 +109,8 @@ mod tests {
         set_then_their_turn(false, json!({}), json!({}), |_| {})
     }
 
-    /// The trap p1 set in backrow lane 2 — or, once it has fired, the Unit it animated into in that
-    /// lane's unit zone (R831011).
+    /// The trap p1 set in backrow lane 2 — or, once it has animated, the Unit it became in that lane's
+    /// unit zone (R831011, R2280000).
     fn trap_of(s: &Scenario) -> CardInstance {
         match s.backrow(P1, 2).or_else(|| s.unit(P1, 2)) {
             Some(card) => card,
@@ -151,7 +154,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r831011_is_a_2_mythic_animated_field_trap_0_1_brittle_2_radiant_0_2_brittle_4_declaring_every_2_min_2_and_brittle_gained_1() {
+        fn r831011_r2280000_is_a_2_mythic_animated_field_trap_with_no_stats_brittle_2_radiant_brittle_4_declaring_every_2_min_2_and_brittle_gained_1()
+         {
             crate::register_all();
             let def = crate::card_def(super::super::ID);
             assert_eq!(def.type_, CardType::FieldTrap);
@@ -159,8 +163,8 @@ mod tests {
             assert_eq!(def.rarity, Rarity::Mythic);
             assert_eq!(js(&def.base.keywords), json!([{ "kind": "Animated" }, { "kind": "Brittle", "n": 2 }]));
             assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Animated" }, { "kind": "Brittle", "n": 4 }]));
-            assert_eq!((js(&def.base)["attack"].clone(), js(&def.base)["health"].clone()), (json!(0), json!(1)));
-            assert_eq!((js(&def.radiant)["attack"].clone(), js(&def.radiant)["health"].clone()), (json!(0), json!(2)));
+            assert_eq!((js(&def.base)["attack"].clone(), js(&def.base)["health"].clone()), (Value::Null, Value::Null));
+            assert_eq!((js(&def.radiant)["attack"].clone(), js(&def.radiant)["health"].clone()), (Value::Null, Value::Null));
             assert_eq!(
                 js(&def.params),
                 json!([
@@ -303,8 +307,40 @@ mod tests {
                 let trap = trap_of(&s);
                 assert_eq!(trap.face_up, Some(true));
                 assert_eq!(active_brittle_count(&trap), Some(3));
-                // It still animates, the last step of its firing.
-                s.expect_events(json!(["cardResolved", "trapFired", "animated"]));
+                // Nothing fused gives it no stats, so the last step of its firing leaves it in its zone
+                // (R2280000).
+                s.expect_events(json!(["cardResolved", "trapFired"]));
+                assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Animated));
+                assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(trap.id.clone()));
+            }
+
+            #[test]
+            fn r2280000_a_fused_copy_of_a_unit_gives_it_that_units_stats_and_it_animates_with_them() {
+                let mut s = their_turn();
+                s.play(RAPID, json!({})).play(VANILLA, json!({ "zone": 1 }));
+                let trap = trap_of(&s);
+                assert!(s.backrow(P1, 2).is_none());
+                assert_eq!(s.unit(P1, 2).map(|card| card.id), Some(trap.id.clone()));
+                s.expect_stats(&trap, json!({ "attack": 4, "health": 4 }));
+            }
+
+            #[test]
+            fn r2280000_after_fusing_only_a_spells_copy_it_stays_a_face_up_field_trap_and_keeps_counting() {
+                let mut s = their_turn();
+                s.play(RAPID, json!({})).play(STOCKPILE, json!({}));
+                assert_eq!(fused_events(&s), 1);
+                let trap = s.backrow(P1, 2).expect("a Spell's copy gives it no stats: it stays in its zone");
+                assert_eq!(trap.face_up, Some(true));
+                assert!(s.unit(P1, 2).is_none());
+                // Face-up in its zone it keeps counting, and the next even count's Unit copy animates it.
+                s.play(VANILLA, json!({ "zone": 1 }));
+                assert_eq!(plays_of(&s), 3);
+                assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(trap.id.clone()));
+                s.play(VANILLA, json!({ "zone": 3 }));
+                assert_eq!(fused_events(&s), 2);
+                assert!(s.backrow(P1, 2).is_none());
+                assert_eq!(s.unit(P1, 2).map(|card| card.id), Some(trap.id.clone()));
+                s.expect_stats(&trap, json!({ "attack": 4, "health": 4 }));
             }
 
             #[test]
@@ -591,6 +627,15 @@ mod tests {
                 assert_eq!(part, Some(json!({ "defId": VANILLA, "radiant": true })));
                 assert_eq!(active_brittle_count(&trap), Some(5));
                 assert_eq!(trap.face_up, Some(true));
+            }
+
+            #[test]
+            fn r2280000_a_radiant_copy_of_a_unit_gives_it_the_radiant_stats() {
+                let mut s = set_then_their_turn(true, json!({}), json!({}), |_| {});
+                s.play(RAPID, json!({})).play(VANILLA, json!({ "zone": 1 }));
+                let trap = trap_of(&s);
+                assert_eq!(s.unit(P1, 2).map(|card| card.id), Some(trap.id.clone()));
+                s.expect_stats(&trap, json!({ "attack": 12, "health": 12 }));
             }
 
             #[test]

@@ -1,7 +1,8 @@
 // Lesson 1 data (SPEC §9.10, R291, R2205003); ../lessons.ts defines its fields and ../scripts/basics.ts
 // is the coach. Training Grounds cards only, none Legendary or Mythic, the pool hold on. Deck order
 // fixes this seed's deal (`scripts/lesson-deal.ts basics`): reordering it changes the game, so rerun
-// the lesson's tests. The player's deck is units; the AI's is twelve units with no keyword (R291).
+// the lesson's tests. The player's deck is units; the AI's is twelve units with no keyword (R291) and
+// no Aura or Death (R2205003): the set's three vanilla units and nine whose one ability is a Cry.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -40,14 +41,14 @@ export const lesson: TutorialLesson = {
     "traininggrounds-043", // Mr. Vanilla, Common
     "traininggrounds-001", // Spikey Steven, Common
     "traininggrounds-002", // Personal Trainer, Common
-    "traininggrounds-003", // Group leader, Common
+    "traininggrounds-028", // Occidental, Epic
     "traininggrounds-022", // Right-Hand Felinor, Rare
     "traininggrounds-044", // Duplicating Felinors, Rare
     "traininggrounds-053", // Prejudiced Postdoc, Rare
-    "traininggrounds-021", // Flame Tongue Totem, Rare
+    "traininggrounds-033", // Guerilla Felinor, Epic
     "traininggrounds-023", // Quadrupling Felinors, Rare
-    "traininggrounds-036", // Training Dummy, Epic
-    "traininggrounds-032", // Selfless Protector, Epic
+    "traininggrounds-041", // Bigot, Common
+    "traininggrounds-051", // Big Felinor, Rare
     "traininggrounds-008", // Clobberer, Common
   ],
   retryTip: "Play a unit every turn, trade only when your unit survives the hit, and send everything else at the enemy hero.",

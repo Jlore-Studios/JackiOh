@@ -128,6 +128,20 @@ fn lender() -> CardDef {
     def_of_kind("lender", 1907, json!({}))
 }
 
+/// Stinkyscape #16 Rod of Ages's own shape since issue #2280: an Animated Field Spell with no stats that
+/// lends Equip, so it stays in its backrow zone and hosts there (R1869000, R2280000).
+fn rod_shape() -> CardDef {
+    def_of_kind(
+        "rod",
+        1908,
+        json!({
+            "type": "Field Spell",
+            "base": { "keywords": [{ "kind": "Animated" }], "text": "rod" },
+            "radiant": { "keywords": [{ "kind": "Animated" }], "text": "rod radiant" },
+        }),
+    )
+}
+
 fn defs() -> Vec<CardDef> {
     vec![
         host(),
@@ -137,6 +151,7 @@ fn defs() -> Vec<CardDef> {
         sentry(),
         paid(),
         lender(),
+        rod_shape(),
     ]
 }
 
@@ -213,6 +228,13 @@ fn scripts() -> IndexMap<String, CardScripts> {
     };
     scripts.insert(
         lender().id,
+        CardScripts {
+            base: lends(),
+            radiant: lends(),
+        },
+    );
+    scripts.insert(
+        rod_shape().id,
         CardScripts {
             base: lends(),
             radiant: lends(),
@@ -677,6 +699,42 @@ mod r1869000_a_host_that_lends_equip {
 
         assert_eq!(lanes_of(&equip_actions(&state, &mag.id)), vec![1]);
         assert_eq!(lanes_of(&equip_actions(&state, &first)), vec![1]);
+    }
+
+    #[test]
+    fn r1869000_r2280001_a_lender_in_its_backrow_zone_takes_a_unit_that_fuses_in_and_it_animates() {
+        let mut state = playing("equip-rod-backrow");
+        let rod = put(
+            &mut state,
+            &rod_shape().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            json!({}),
+        );
+        let plain = in_hand(&mut state, &host().id, PlayerId::P1, 1).remove(0);
+        flush(&mut state, PlayerId::P1, 10);
+
+        // With no stats it is no Unit, yet it hosts in its backrow zone: the listing names that zone.
+        assert_eq!(
+            equip_host_at(&state, PlayerId::P1, &slot(PlayerId::P1, Row::Backrow, 2), &[]),
+            Some(rod.id.clone())
+        );
+        let actions = equip_actions(&state, &plain.id);
+        assert_eq!(actions.len(), 1, "{actions:?}");
+        assert_eq!(actions[0]["zone"], json!({ "row": "backrow", "lane": 2 }));
+
+        let mut input = play_input(&plain.id, 2, true, Value::Null);
+        input["zone"] = json!({ "row": "backrow", "lane": 2 });
+        let result = act_result(&state, input);
+        assert_eq!(result.error, None);
+        assert_eq!(fused_events(&result.events).len(), 1);
+        assert!(find_instance(&result.state, &plain.id).is_none());
+        // The fusion gave it the Unit's stats beside its Animated: it animated at the state check.
+        assert!(card_at(&result.state, slot(PlayerId::P1, Row::Backrow, 2)).is_none());
+        let animated = card_at(&result.state, slot(PlayerId::P1, Row::Units, 2)).expect("the Rod, animated");
+        assert_eq!(animated.id, rod.id);
+        let view = unit_view(&result.state, animated);
+        assert_eq!((view.attack, view.health), (2, 2));
+        assert_eq!(events_of_type(&result.events, GameEventType::Animated).len(), 1);
     }
 }
 

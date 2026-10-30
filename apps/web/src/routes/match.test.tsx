@@ -16,6 +16,8 @@ import type { ActionBody, PlayerView } from "@jackioh/shared";
 
 import { MULLIGAN_CLOCK_MS, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
+import { MATCH_RANKS_READ_ATTEMPTS, MATCH_RANKS_RETRY_MS } from "../game/config.ts";
+
 import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { baseView, card, emptySide, opponentModifiers, pendingFor, yourModifiers } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
@@ -806,6 +808,147 @@ describe("the match screen's ranks (R604, R612)", () => {
   });
 });
 
+describe("R2388000 a ranked match's result shows the rank it moved each seat to", () => {
+  const P1_ID = "c0ffee00-1234-4abc-9def-0123456789ab";
+  const P2_ID = "deadbeef-5678-4cde-8f01-23456789abcd";
+  const p1 = { profileId: P1_ID, username: "Max#3", streak: 0, you: true };
+  const p2 = { profileId: P2_ID, username: "Rowan", streak: 0, you: false };
+  const finished = baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } });
+
+  async function advance(ms: number): Promise<void> {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  }
+
+  /** Every `/ranks` URL answers the next body in turn (the last one repeats) and counts the read. */
+  function stubReads(bodies: unknown[]): () => number {
+    let reads = 0;
+    const fetchMock = vi.fn((url: string) => {
+      if (String(url).includes("/ranks")) {
+        const body = bodies[Math.min(reads, bodies.length - 1)];
+        reads += 1;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(JSON.stringify(body)),
+        } as unknown as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(JSON.stringify({ version: "v1", defs: {} })),
+      } as unknown as Response);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return () => reads;
+  }
+
+  const beforeP1 = { tier: "normal", division: 1, pips: 2, pipsPerDivision: 3, floor: "normal" };
+  const beforeP2 = { tier: "raisin", placementsPlayed: 2, placementGames: 5 };
+  const before = {
+    ranked: true,
+    seats: { p1: { ...p1, rank: beforeP1 }, p2: { ...p2, rank: beforeP2 } },
+  };
+  const afterP1 = { tier: "large", division: 3, pips: 0, pipsPerDivision: 3, floor: "normal" };
+  const afterP2 = { tier: "raisin", placementsPlayed: 3, placementGames: 5 };
+  const moved = {
+    ranked: true,
+    seats: {
+      p1: { ...p1, rank: afterP1, rankBefore: beforeP1, rankAfter: afterP1 },
+      p2: { ...p2, rank: afterP2, rankBefore: beforeP2, rankAfter: afterP2 },
+    },
+  };
+
+  it("R2388000 the result panel shows each seat's move once the record lands, and the bar the rank after", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const reads = stubReads([before, before, moved]);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    await advance(0);
+    expect(screen.getByTestId("match-ranks")).toHaveTextContent("Max#3 (you) Normal Grape I");
+
+    pushView(finished);
+    await advance(0);
+    expect(screen.queryByTestId("match-rank-move")).toBeNull();
+
+    await advance(MATCH_RANKS_RETRY_MS);
+    const moves = screen.getAllByTestId("match-rank-move");
+    expect(moves.map((move) => move.getAttribute("data-seat"))).toEqual(["p1", "p2"]);
+    expect(moves[0]).toHaveTextContent("Max#3 (you): Normal Grape I · 2/3 pips → Large Grape III · 0/3 pips");
+    expect(moves[1]).toHaveTextContent("Rowan: Raisin · 2/5 placements → Raisin · 3/5 placements");
+    const full = screen.getByTestId("match-ranks").querySelector(".match-ranks__full");
+    expect(full).toHaveTextContent("Max#3 (you) Large Grape III");
+    expect(full?.textContent).not.toContain("Normal Grape");
+    expect(reads()).toBe(3);
+    await advance(MATCH_RANKS_RETRY_MS * MATCH_RANKS_READ_ATTEMPTS);
+    expect(reads()).toBe(3);
+  });
+
+  it("R2388000 a Jlorious seat shows its position and a bot's seat its rank, as the bar does", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const jloriousBefore = { tier: "jlorious", position: 12 };
+    const jloriousAfter = { tier: "jlorious", position: 9 };
+    const mythicBefore = { tier: "mythic", division: 1, pips: 4, pipsPerDivision: 5, floor: "mythic" };
+    const mythicAfter = { tier: "mythic", division: 1, pips: 3, pipsPerDivision: 5, floor: "mythic" };
+    stubReads([
+      {
+        ranked: true,
+        seats: {
+          p1: { ...p1, rank: jloriousAfter, rankBefore: jloriousBefore, rankAfter: jloriousAfter },
+          p2: { ...p2, rank: mythicAfter, rankBefore: mythicBefore, rankAfter: mythicAfter },
+        },
+      },
+    ]);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ view: finished });
+    await advance(0);
+
+    const moves = screen.getAllByTestId("match-rank-move");
+    expect(moves.map((move) => move.getAttribute("data-seat"))).toEqual(["p1", "p2"]);
+    expect(moves[0]).toHaveTextContent("Max#3 (you): Jlorious #12 → Jlorious #9");
+    expect(moves[1]).toHaveTextContent("Rowan: Mythic Grape I · 4/5 pips → Mythic Grape I · 3/5 pips");
+    const full = screen.getByTestId("match-ranks").querySelector(".match-ranks__full");
+    expect(full).toHaveTextContent("Max#3 (you) #9 Jlorious");
+    expect(full).toHaveTextContent("Rowan Mythic Grape I");
+  });
+
+  it("R2388000 an unranked match's result shows no move and reads the ranks once more", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const reads = stubReads([{ ...before, ranked: false }]);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ view: finished });
+    await advance(MATCH_RANKS_RETRY_MS * MATCH_RANKS_READ_ATTEMPTS);
+
+    expect(screen.queryByTestId("match-rank-move")).toBeNull();
+    expect(reads()).toBe(2);
+  });
+
+  it("R2388000 a ranked read whose record never comes stops after MATCH_RANKS_READ_ATTEMPTS reads", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const reads = stubReads([before]);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ view: finished });
+    await advance(MATCH_RANKS_RETRY_MS * (MATCH_RANKS_READ_ATTEMPTS + 2));
+
+    expect(reads()).toBe(1 + MATCH_RANKS_READ_ATTEMPTS);
+    expect(screen.queryByTestId("match-rank-move")).toBeNull();
+    expect(screen.getByTestId("match-ranks")).toHaveTextContent("Max#3 (you) Normal Grape I");
+  });
+});
+
 describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
   const finished = baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } });
 
@@ -1117,6 +1260,96 @@ describe("the death screen's rematch offers (R672)", () => {
     await waitFor(() => {
       expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-2");
     });
+  });
+
+  /**
+   * The test above's held rematch answers, with the replay's pages served as `stubReplayFetch` below
+   * serves them and `/series` answering this series (or none). Returns the held answers' releases.
+   */
+  function stubHeldRematchFetch(series: Record<string, unknown> | null): Array<(body: string) => void> {
+    const steps = foldedReplaySteps();
+    const releaseRematch: Array<(body: string) => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        const address = new URL(String(url), "http://localhost");
+        if (address.pathname === "/api/matches/m-1/rematch") {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            text: () =>
+              new Promise<string>((resolve) => {
+                releaseRematch.push(resolve);
+              }),
+          } as unknown as Response);
+        }
+        const body = address.pathname === "/api/replays/m-1"
+          ? (() => {
+              const from = Number(address.searchParams.get("from") ?? "0");
+              const count = Number(address.searchParams.get("count") ?? "1");
+              return { matchId: "m-1", from, steps: steps.slice(from, from + count), total: steps.length };
+            })()
+          : address.pathname.endsWith("/series")
+            ? { series }
+            : { version: "v1", defs: {} };
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(body)) } as unknown as Response);
+      }),
+    );
+    return releaseRematch;
+  }
+
+  /** Both seats' matching offers, as the rematch poll answers once they have made `match-2`. */
+  const AGREED = JSON.stringify({ youOffered: 1, opponentOffer: 1, opponentHere: true, matchId: "match-2" });
+
+  it("takes the seat to the rematch even from the finished match's replay", async () => {
+    vi.mocked(navigate).mockClear();
+    // Held until the replay is open: the board's polls are then dropped by their unmount guard, so only
+    // a watcher mounted beside the replay can navigate.
+    const releaseRematch = stubHeldRematchFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    await act(async () => {
+      for (const release of releaseRematch) release(AGREED);
+    });
+    await waitFor(() => {
+      expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-2");
+    });
+  });
+
+  it("takes a series game's seat to no rematch from the board or from its replay, and Back shows the result again", async () => {
+    vi.mocked(navigate).mockClear();
+    const releaseRematch = stubHeldRematchFetch(seriesIn("playing"));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    // The board: once the series is in, nothing that navigates is still polling, so the agreed answer goes nowhere.
+    await screen.findByTestId("series-banner");
+    await act(async () => {
+      for (const release of releaseRematch) release(AGREED);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    // The replay: no watcher mounts beside it either.
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    await act(async () => {
+      for (const release of releaseRematch) release(AGREED);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    // Back: the result panel again, still with no rematch on it.
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    expect(screen.queryByTestId("rematch-offer")).toBeNull();
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
   });
 });
 

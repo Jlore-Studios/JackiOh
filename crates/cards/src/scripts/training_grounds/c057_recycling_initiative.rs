@@ -209,6 +209,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // Spell, 1 — the spare card that keeps a turn meaningful (§2.5)
     const MENACE: &str = "core-019"; // library filler
     const POSTDOC: &str = "core-061"; // library filler
+    const FLOOD: &str = "core-017"; // Spell, 4 — Bounce all Units
 
     /// Both sides keep a card in hand and cards in the library, so no turn auto-ends (§2.5, R82).
     fn spare() -> Value {
@@ -316,6 +317,31 @@ mod tests {
 
             assert_eq!(count_in(&s, "p1", "hand", RECYCLING), 0);
             assert_eq!(count_in(&s, "p1", "hand", TIMMY), 1);
+        }
+
+        /// BUILD M13 TG 57 "each id once" (R133, the `seen` dedupe): Timmy is played, bounced by Core #17
+        /// Flood and played again, two entries of one id in the log, and it is copied once.
+        #[test]
+        fn r133_a_card_played_twice_in_one_turn_is_copied_once() {
+            let mut s = scn(json!({
+                "p1": { "hand": [TIMMY, RECYCLING, FLOOD, STOCKPILE], "library": [MENACE, POSTDOC], "mana": 10 },
+                "p2": spare(),
+            }));
+
+            s.play(TIMMY, json!({ "zone": 1 }));
+            let timmy = s.unit("p1", 1).expect("Timmy in lane 1").id;
+            s.play(RECYCLING, json!({}));
+            s.play(FLOOD, json!({}));
+            s.expect_in_zone(timmy.as_str(), "hand");
+            s.play(timmy.as_str(), json!({ "zone": 1 }));
+            let played = &s.state().players.p1.turn_log.played_ids;
+            assert_eq!(played.iter().filter(|id| **id == timmy).count(), 2, "{played:?}");
+            s.end_turn();
+
+            // The original stands on the field, so the hand's one Timmy is the one copy.
+            s.expect_in_zone(timmy.as_str(), "field");
+            assert_eq!(count_in(&s, "p1", "hand", TIMMY), 1);
+            assert_eq!(count_in(&s, "p1", "hand", FLOOD), 1);
         }
 
         #[test]

@@ -119,7 +119,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
       expect(state.mulligan?.p1.prompt?.kind, "player 1's is a mulligan PendingChoice").to.eq("mulligan");
       expect(state.mulligan?.p2.prompt?.kind, "and so is player 2's").to.eq("mulligan");
       const hand = handOf(state, "p1");
-      expect(hand, "player 1's opening hand is OPENING_DRAW[0] cards (§2.1, R1156000)").to.have.length(
+      expect(hand, "player 1's opening hand is OPENING_DRAW[0] cards (§2.1, R2368000)").to.have.length(
         constants.OPENING_DRAW[0],
       );
       const kept = hand.slice(0, 1);

@@ -2959,5 +2959,216 @@
     "pr": 2336,
     "title": "drop the \"Provisional statistics\" banner and the \"How to read these statistics\" notes from /stats",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "2383d89363c56291ce540fa8beb483b68ecffa07",
+    "pr": 2364,
+    "title": "patches log: da5a454..0283f6d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "622a10b5bffdba2c1e5a35de7c2f68e8407bf8fd",
+    "pr": 2365,
+    "title": "I4 reads \"Animated on your turn\" as the animation had it, fuzz seed 2443",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "81e2bbb88be7a07829d8f660afbbd661424afdf2",
+    "pr": 2350,
+    "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-10-29",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "52bd29e11fb2cadaadebae69295d718b558d6cf8",
+    "pr": 2366,
+    "title": "main lands pull requests through a merge queue, so two green alone no longer land red together",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "82ab41de7ee91d4a15619ef70de703e2d009eb6d",
+    "pr": 2371,
+    "title": "a Tokens toggle on /stats with each token's win rate",
+    "kind": "app",
+    "player": "The statistics page can show each token's win rate: turn on Show tokens on the Cards tab."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "5f8bff82c0b301e62d7db658a9ab9f54d1f562f6",
+    "pr": 2377,
+    "title": "patches log: 0283f6d..18f7376",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "8e04d4897c388bf98ccda7f6196d8967ccf5af69",
+    "pr": 2372,
+    "title": "the shadow ban swept again over the Training Grounds set, with Stinkyscape ungated",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "ab43a743828a4823be40553126559157a8e8c884",
+    "pr": 2393,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "fe7a340778530f3ec3a73d32bcf027a34a028dcf",
+    "pr": 2293,
+    "title": "the tutorial remade from Training Grounds, five lessons that can't be lost and a coach that lets you discover the rules",
+    "kind": "app",
+    "player": "The tutorial is remade from the Training Grounds set: five lessons you can't lose, a coach that asks rather than tells, and a Field Guide of everything you discover."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "a7ab98d16fa27f5fcb57443af3f4eb95752c0700",
+    "pr": 2397,
+    "title": "the shadow ban swept again after the Training Grounds set shipping",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "681d21729645aabf288cc4d7fe2698e71cbc3298",
+    "pr": 2398,
+    "title": "the Almanac's whole grid and its scroll match the 481-card baseline",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "000f35fe655093a63516bab9f09ecce672d7d938",
+    "pr": 2399,
+    "title": "the store's seed test expects Training Grounds' Jlockeed and Jelly Bean cards",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "abf139aff6248ca8f0c037fa7cd95efd7a859382",
+    "pr": 2400,
+    "title": "WIP: the AI prices the Credits it holds at what they buy (#2389)",
+    "kind": "ai",
+    "player": "The AI now saves its Marketplace Credits rather than spending them on any offer at any price."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "d718820a387ed60f48bd66a6693f2318bf27c044",
+    "pr": 2348,
+    "title": "a Tradable hand hint, dimmed once the turn's Trade is spent",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "6df2db20bd4e6e017e76ea88bcca9f24a6aa51d2",
+    "pr": 2339,
+    "title": "Back closes the top sheet or dialog before it leaves the screen",
+    "kind": "app",
+    "player": "Back closes the open sheet or dialog first instead of leaving the screen."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "55c3e31746161a65b9a02f188d1a0da8d01f9922",
+    "pr": 2405,
+    "title": "a player watching the finished match's replay is still taken to the rematch both sides agreed to",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "edaa93ada13aa1862fdd51da93e2f42db9c238d7",
+    "pr": 2406,
+    "title": "patches ship: v0.5.7, v0.5.8",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "59cec786eb678d49cfcd57c5897fe93ebb372369",
+    "pr": 2408,
+    "title": "a patches promotion or log is stuck",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7807472b68d36f3b0cb0f180274dbf69ad62b990",
+    "title": "Merge pull request #2401 from Jlore-Studios/bot/issue-2378",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b35166c8f7c092edcb88f6eb0fc89f52d627d575",
+    "pr": 2404,
+    "title": "the first player's opening hand draws 3",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "549a9c157bdedc51aba484b7bbfbbea77d6cd33a",
+    "pr": 2411,
+    "title": "patches log: 25aa954..59cec78",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "ec376fd63aafc7865e42d4b70db2f70e36aa2f74",
+    "pr": 2414,
+    "title": "a daily sweep fuses each triggered card's text onto Units and plays it until the board settles",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "55b2aaca64a498964229d326a4bc8420e9354121",
+    "pr": 2413,
+    "title": "patches ship: v0.5.9",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "078997f550d27658cfb88f8a02daa529e5b087ab",
+    "pr": 2418,
+    "title": "patches log: 59cec78..55b2aac",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "c29cffd6b34b45841f308c1f4ae41d41302137a2",
+    "pr": 2409,
+    "title": "leaving a practice game without saving gives its earning slot back, and a game that can't earn says so",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b955a2ab758a5d54e81a5380e2a579bd7ba76f2a",
+    "pr": 2341,
+    "title": "a Tribute hand hint showing how many Tributes a card needs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "0edbe120418dca29bb69352c5e5fef5c1b85637b",
+    "title": "Merge pull request #2416 from Jlore-Studios/bot/issue-2384",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "ae9765cc270c7cf399a48999bcf3fa36c928694a",
+    "title": "Merge pull request #2421 from Jlore-Studios/bot/issue-2385",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "df0f4c86cab104a3a9d7845ee9b81a4a4255120f",
+    "pr": 2412,
+    "title": "the AI prices a Dormant unit by the unit it wakes as",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "2d62a51037bde7b7db664758b658e9249e1dac30",
+    "pr": 2428,
+    "title": "patches ship: v0.5.9b",
+    "kind": "app"
   }
 ]

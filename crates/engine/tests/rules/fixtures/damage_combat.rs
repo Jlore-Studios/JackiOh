@@ -168,6 +168,11 @@ pub static second_wind: LazyLock<CardDef> =
 pub static pile_on: LazyLock<CardDef> = LazyLock::new(|| def("pile-on", 4707, "Spell", json!({})));
 /// Classic #14's Radiant shape: its controller's dying units flicker instead; the follow-up notes them.
 pub static shadowstep: LazyLock<CardDef> = LazyLock::new(|| def("shadowstep", 4708, "Trap", json!({})));
+/// The same on a Field Trap, which no firing spends, as a fused Unit holding Classic #14's text is not.
+pub static echo_shadowstep: LazyLock<CardDef> =
+    LazyLock::new(|| def("echo-shadowstep", 4749, "Field Trap", json!({})));
+/// A 1/0 Unit: it dies at every state check, a flicker bringing it back dying again.
+pub static husk: LazyLock<CardDef> = LazyLock::new(|| plain_unit("husk", 4750, 1, 0));
 /// Classic+ #22's shape: an enemy's heal becomes Pierce damage, for the rest of the turn.
 pub static blood_moon: LazyLock<CardDef> = LazyLock::new(|| {
     def(
@@ -421,6 +426,8 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         second_wind.clone(),
         pile_on.clone(),
         shadowstep.clone(),
+        echo_shadowstep.clone(),
+        husk.clone(),
         blood_moon.clone(),
         joro.clone(),
         argus.clone(),
@@ -615,6 +622,29 @@ fn gone_kill_noter() -> Script {
     }
 }
 
+/// Classic #14's Radiant shape: its controller's dying units flicker instead; the follow-up notes them.
+fn shadowstep_script() -> CardScripts {
+    both(Script {
+        replacements: vec![ReplacementDef {
+            then: Some("copies".to_string()),
+            ..replacement("step", ReplacementMoment::WouldDie, json!({ "flicker": "yours" }))
+        }],
+        resume: IndexMap::from([(
+            "copies",
+            hook(|ctx| {
+                let flickered: Vec<String> = replacement_of(&*ctx)
+                    .and_then(|record| record.flickered.clone())
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|card| card.instance_id.clone())
+                    .collect();
+                vec![note(format!("shadowstep:{}", flickered.join(",")))]
+            }),
+        )]),
+        ..Script::default()
+    })
+}
+
 pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     IndexMap::from([
         (gambit.id.clone(), both_of(gambit_script(10), gambit_script(20))),
@@ -723,28 +753,8 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                 },
             ),
         ),
-        (
-            shadowstep.id.clone(),
-            both(Script {
-                replacements: vec![ReplacementDef {
-                    then: Some("copies".to_string()),
-                    ..replacement("step", ReplacementMoment::WouldDie, json!({ "flicker": "yours" }))
-                }],
-                resume: IndexMap::from([(
-                    "copies",
-                    hook(|ctx| {
-                        let flickered: Vec<String> = replacement_of(&*ctx)
-                            .and_then(|record| record.flickered.clone())
-                            .unwrap_or_default()
-                            .iter()
-                            .map(|card| card.instance_id.clone())
-                            .collect();
-                        vec![note(format!("shadowstep:{}", flickered.join(",")))]
-                    }),
-                )]),
-                ..Script::default()
-            }),
-        ),
+        (shadowstep.id.clone(), shadowstep_script()),
+        (echo_shadowstep.id.clone(), shadowstep_script()),
         (
             blood_moon.id.clone(),
             both_of(

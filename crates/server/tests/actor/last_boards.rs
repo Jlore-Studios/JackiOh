@@ -16,36 +16,16 @@ use jackioh_engine::wire::PlayerId;
 use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::api::results::{reap_stuck_matches, record_result};
 use jackioh_server::app::App;
-use jackioh_server::db::store::StoreError;
 
 use crate::support::deps::test_app;
 use crate::support::engine::fake_deck;
-use crate::support::store::{fake, store, to_json};
+use crate::support::store::{fail_on, fake, from, stop_failing, store, to_json};
 
 const P1: &str = "profile-1";
 const P2: &str = "profile-2";
 
 /// The epoch-ms stamp the rows below are written at; the results writer only stores it.
 const AT: i64 = 1_700_000_000_000;
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-/// Every store method named `method` fails with `message` until cleared.
-async fn fail_on(app: &App, method: &'static str, message: &'static str) {
-    fake(app).lock().await.on_call = Some(Arc::new(move |called: &str| {
-        if called == method {
-            Err(StoreError::Other(message.to_string()))
-        } else {
-            Ok(())
-        }
-    }));
-}
-
-async fn stop_failing(app: &App) {
-    fake(app).lock().await.on_call = None;
-}
 
 /// A seat's own hand, as its view lists it.
 fn hand_of(view: &Value) -> Vec<Value> {

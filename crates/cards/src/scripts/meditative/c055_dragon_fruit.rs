@@ -110,9 +110,8 @@ mod tests {
     }
 
     #[test]
-    fn r1420_under_preview_a_fruit_pool_holds_dragon_fruit() {
+    fn r1420_a_fruit_pool_holds_dragon_fruit_since_the_set_shipped() {
         crate::register_all();
-        let _guard = preview_sets(&[SetName::Meditative]);
         let ids: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["Fruit"] })))
             .iter()
             .map(|def| def.id.clone())

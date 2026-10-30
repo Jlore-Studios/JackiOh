@@ -1603,6 +1603,15 @@
   flex: 0 0 auto;
 }
 
+/* R2379000: a game the server would not seed says so between the HUD and the board, which takes the height left. */
+.practice--game > .practice-unearned {
+  flex: 0 0 auto;
+  max-width: none;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: var(--type-md);
+}
+
 .practice-table {
   position: relative;
   display: flex;

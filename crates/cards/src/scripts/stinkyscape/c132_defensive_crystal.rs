@@ -43,10 +43,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     fn armor_of(s: &Scenario, player: PlayerId) -> i32 {
         s.state().players[player].hero.armor
     }
@@ -57,7 +53,6 @@ mod tests {
         #[test]
         fn r1860006_death_gives_your_hero_1_armor_then_fuses() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CRYSTAL], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -75,7 +70,6 @@ mod tests {
         #[test]
         fn hero_armor_reads_through_param() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CRYSTAL], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -94,7 +88,6 @@ mod tests {
         #[test]
         fn r1860006_radiant_death_gives_your_hero_2_armor() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [HIT_JOB, ANCHOR],

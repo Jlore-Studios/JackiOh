@@ -10,12 +10,15 @@ use serde::Serialize;
 
 use jackioh_engine::effects::steal::steal;
 use jackioh_engine::effects::targets::cards_in_scope;
+use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes, grant_keyword};
+use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, stacker};
 use crate::rules::fixtures::field::{
-    asker, banner, ears, flush, golem, listener, notes_of, playing, spatula, springer, tesla, tower, wisp,
+    asker, banner, ears, flush, golem, listener, mote, notes_of, playing, spatula, springer, tesla, tower,
+    wisp,
 };
 use crate::rules::fixtures::harness::{
     act, act_result, events_of_type, in_hand, json_of, live, matches_object, put, sink_for, slot,
@@ -494,7 +497,6 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_r1062_its_end_of_turn_text_runs_while_it_is_a_unit_and_cleanup_sends_it_home_its_next_start_of_turn_animates_it_again_not_summoning_sick()
      {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = playing("animated-spatula-cycle");
         let card = put(
             &mut state,
@@ -729,10 +731,11 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     }
 
     #[test]
-    fn r657_an_animated_card_with_no_printed_stats_fights_as_a_0_1() {
+    fn r657_r2280000_an_animated_card_with_no_stats_no_longer_animates_or_fights_as_a_0_1() {
         let mut state = playing("animated-wisp");
         let mut sink = sink_for(&mut state);
-        // Printed Animated, no stats on either face: a 0/1, not a 0/0 dead at the state check.
+        // Printed Animated, no stats on either face: it does not animate, and no 0/1 is read for it
+        // (R657's fallback, gone since issue #2280).
         let base = put(
             sink.state,
             &wisp.id,
@@ -740,9 +743,9 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             Default::default(),
         );
         let now = live(sink.state, &base.id);
-        assert!(animate_card(&mut sink, &now, Default::default()));
+        assert!(!animate_card(&mut sink, &now, Default::default()));
         assert_eq!(unit_view(sink.state, by_id(sink.state, &base.id)).attack, 0);
-        assert_eq!(unit_view(sink.state, by_id(sink.state, &base.id)).max_health, 1);
+        assert_eq!(unit_view(sink.state, by_id(sink.state, &base.id)).max_health, 0);
         let radiant = put(
             sink.state,
             &wisp.id,
@@ -750,13 +753,12 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             json_as(json!({ "radiant": true })),
         );
         let now = live(sink.state, &radiant.id);
-        assert!(animate_card(&mut sink, &now, Default::default()));
-        assert_eq!(unit_view(sink.state, by_id(sink.state, &radiant.id)).attack, 0);
+        assert!(!animate_card(&mut sink, &now, Default::default()));
         assert_eq!(
             unit_view(sink.state, by_id(sink.state, &radiant.id)).max_health,
-            1
+            0
         );
-        // Granted Animated on a stat-less card reads the same fallback.
+        // Granted Animated on a stat-less card is the same.
         let granted = put(
             sink.state,
             &tower.id,
@@ -767,23 +769,20 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             .granted_keywords
             .push(Keyword::Animated);
         let now = live(sink.state, &granted.id);
-        assert!(animate_card(&mut sink, &now, Default::default()));
-        assert_eq!(unit_view(sink.state, by_id(sink.state, &granted.id)).attack, 0);
+        assert!(!animate_card(&mut sink, &now, Default::default()));
         assert_eq!(
             unit_view(sink.state, by_id(sink.state, &granted.id)).max_health,
-            1
+            0
         );
-        // All three survive the state check in their unit zones.
+        // All three stay in their backrow zones through the state check, no Unit to die.
         settle(&mut sink, SettleOptions::default());
-        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(base.id.clone()));
-        assert_eq!(
-            id_at(sink.state, slot(P1, Row::Units, 3)),
-            Some(radiant.id.clone())
-        );
-        assert_eq!(
-            id_at(sink.state, slot(P1, Row::Units, 4)),
-            Some(granted.id.clone())
-        );
+        for (lane, card) in [(2, &base), (3, &radiant), (4, &granted)] {
+            assert_eq!(
+                id_at(sink.state, slot(P1, Row::Backrow, lane)),
+                Some(card.id.clone())
+            );
+        }
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
     }
 }
 
@@ -793,7 +792,6 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
     #[test]
     fn r1062_animated_at_its_start_of_turn_after_an_earlier_entry_it_is_not_summoning_sick_and_its_rush_reaches_the_hero()
      {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = playing("r1062-not-sick");
         let card = put(
             &mut state,
@@ -971,5 +969,323 @@ mod r113_r383_b3_1_a_pause_inside_an_animated_traps_firing {
                 json!({ "instanceId": trap, "defId": asker.id, "animated": {} }),
             );
         }
+    }
+}
+
+/// Fuses `ingredient` into `target`, the card the fusion keeps (R77), as a Fuse effect's verb does.
+fn fuse_into(sink: &mut EngineSink<'_>, ingredient: &CardInstance, target: &CardInstance) -> CardInstance {
+    fuse(
+        sink,
+        FuseArgs {
+            ingredients: vec![live(sink.state, &ingredient.id)],
+            target: Some(live(sink.state, &target.id)),
+            ..FuseArgs::default()
+        },
+    )
+    .expect("the fusion")
+}
+
+fn owed(state: &GameState, id: &str) -> bool {
+    by_id(state, id).memory.contains_key(ANIMATE_OWED_KEY)
+}
+
+// R2280000 (issue #2280): a Field Spell, Trap or Field Trap becomes a Unit only with both the Animated
+// keyword and stats, a line its definition gives it.
+mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
+    use super::*;
+
+    #[test]
+    fn r2280000_a_statless_animated_field_spell_enters_and_stays_in_the_backrow() {
+        let mut state = playing("animated-statless-entry");
+        let card = in_hand(&mut state, &wisp.id, P1, 1).remove(0);
+        flush(&mut state, P1, 10);
+        let result = act_result(
+            &state,
+            input(json!({
+                "type": "play", "instanceId": card.id, "zone": { "row": "backrow", "lane": 2 }, "playerId": "p1"
+            })),
+        );
+        assert_eq!(result.error, None);
+        assert_eq!(
+            id_at(&result.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(card_at(&result.state, slot(P1, Row::Units, 2)).is_none());
+        assert!(events_of_type(&result.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r2280000_a_statless_animated_trap_fires_and_stays_face_up_in_its_zone() {
+        let mut state = playing("animated-statless-trap");
+        let trap = put(
+            &mut state,
+            &mote.id,
+            slot(P2, Row::Backrow, 3),
+            Default::default(),
+        );
+        let played = play_plain(&mut state, 1);
+        let state = played.state;
+        assert_eq!(notes_of(find_instance(&state, &trap.id)), vec!["moted"]);
+        assert_eq!(id_at(&state, slot(P2, Row::Backrow, 3)), Some(trap.id.clone()));
+        assert_eq!(by_id(&state, &trap.id).face_up, Some(true));
+        assert!(state.players.p2.graveyard.is_empty());
+        assert!(events_of_type(&played.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r2280000_a_statless_on_your_turn_card_stays_at_its_start_of_turn() {
+        let mut state = playing("animated-statless-turn");
+        let card = put(
+            &mut state,
+            &tower.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        by_id_mut(&mut state, &card.id)
+            .granted_keywords
+            .push(Keyword::AnimatedOnYourTurn);
+        let mut sink = sink_for(&mut state);
+        animate_at_turn_start(&mut sink, P1);
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 1)),
+            Some(card.id.clone())
+        );
+        assert!(home_of(sink.state, &card.id).is_none());
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r2280000_a_field_spell_holding_a_fused_unit_stays_a_backrow_card() {
+        let mut state = playing("animated-fused-banner");
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 3), Default::default());
+        let mut sink = sink_for(&mut state);
+        fuse_into(&mut sink, &unit, &flag);
+        state_check(&mut sink);
+        // Stats but no Animated: a backrow card, its fused stats doing nothing there.
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 1)),
+            Some(flag.id.clone())
+        );
+        assert!(has_stat_line(sink.state, by_id(sink.state, &flag.id)));
+        assert!(!unit_ids(sink.state, P1).contains(&flag.id));
+        assert!(!owed(sink.state, &flag.id));
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r2280000_buffs_and_auras_give_a_statless_card_no_stats() {
+        let mut state = playing("animated-buffed-wisp");
+        let card = put(
+            &mut state,
+            &wisp.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        // Banner's aura lends +2 attack to its controller's cards on the field.
+        put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 3),
+            Default::default(),
+        );
+        by_id_mut(&mut state, &card.id).buffs = AttackHealth { attack: 2, health: 2 };
+        let mut sink = sink_for(&mut state);
+        let now = live(sink.state, &card.id);
+        assert!(!has_stat_line(sink.state, &now));
+        assert!(!animate_card(&mut sink, &now, Default::default()));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+    }
+
+    #[test]
+    fn r2280000_a_buff_skips_a_statless_animated_card() {
+        let mut state = playing("animated-tune-reach");
+        let statless = put(
+            &mut state,
+            &wisp.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let stated = put(
+            &mut state,
+            &golem.id,
+            slot(P1, Row::Backrow, 3),
+            Default::default(),
+        );
+        let rows =
+            |state: &GameState, id: &str| applicable_changes(state, by_id(state, id), TuneDirection::Upgrade);
+        assert!(!rows(&state, &statless.id).contains(&TuneRow::Stats));
+        assert!(rows(&state, &stated.id).contains(&TuneRow::Stats));
+        assert!(
+            !applicable_changes(&state, by_id(&state, &statless.id), TuneDirection::Degrade)
+                .contains(&TuneRow::Stats)
+        );
+    }
+
+    #[test]
+    fn r2280000_a_card_that_loses_animated_or_its_stats_stays_a_unit_where_it_stands() {
+        let mut state = playing("animated-loses");
+        let card = put(
+            &mut state,
+            &wisp.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        by_id_mut(&mut state, &card.id).stats_override = Some(AttackHealth { attack: 2, health: 2 });
+        let stated = put(
+            &mut state,
+            &golem.id,
+            slot(P1, Row::Backrow, 3),
+            Default::default(),
+        );
+        let mut sink = sink_for(&mut state);
+        let now = live(sink.state, &card.id);
+        assert!(animate_card(&mut sink, &now, Default::default()));
+        let now = live(sink.state, &stated.id);
+        assert!(animate_card(&mut sink, &now, Default::default()));
+
+        // The wisp loses its stats (a buff keeps it alive), the golem its Animated (a Vanilla).
+        let wisp_now = by_id_mut(sink.state, &card.id);
+        wisp_now.stats_override = None;
+        wisp_now.buffs = AttackHealth { attack: 0, health: 2 };
+        by_id_mut(sink.state, &stated.id).vanilla = true;
+        state_check(&mut sink);
+        assert!(!has_stat_line(sink.state, by_id(sink.state, &card.id)));
+        assert!(animated_kind_of(sink.state, by_id(sink.state, &stated.id)).is_none());
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Units, 3)),
+            Some(stated.id.clone())
+        );
+        assert!(is_animated(sink.state, by_id(sink.state, &card.id)));
+        assert!(is_animated(sink.state, by_id(sink.state, &stated.id)));
+    }
+}
+
+// R2280001 (issue #2280): a face-up backrow card that first comes to have both Animated and stats
+// animates at that state check.
+mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check {
+    use super::*;
+
+    #[test]
+    fn r2280001_a_unit_fused_into_a_statless_animated_card_animates_it_at_the_state_check() {
+        let mut state = playing("animated-owed");
+        let card = put(
+            &mut state,
+            &wisp.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 4), Default::default());
+        let turn = state.turn;
+        let mut sink = sink_for(&mut state);
+        fuse_into(&mut sink, &unit, &card);
+        // Owed, not yet moved: the fusion itself animates nothing.
+        assert!(owed(sink.state, &card.id));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+
+        state_check(&mut sink);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
+        let view = unit_view(sink.state, by_id(sink.state, &card.id));
+        assert_eq!((view.attack, view.health), (3, 3));
+        assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
+        // An entry, as every animation from the backrow is (R83, R171).
+        assert_eq!(by_id(sink.state, &card.id).summoned_turn, Some(turn));
+        assert!(!owed(sink.state, &card.id));
+    }
+
+    #[test]
+    fn r2280001_with_no_open_unit_zone_it_stays_and_a_zone_opening_later_does_not_animate_it() {
+        let mut state = playing("animated-owed-no-room");
+        fill_units(&mut state, P1);
+        let card = put(
+            &mut state,
+            &wisp.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let unit = in_hand(&mut state, &plain.id, P1, 1).remove(0);
+        let mut sink = sink_for(&mut state);
+        fuse_into(&mut sink, &unit, &card);
+        state_check(&mut sink);
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(!owed(sink.state, &card.id));
+
+        // A unit zone opens: the card had both already, so nothing more is owed it.
+        let first = id_at(sink.state, slot(P1, Row::Units, 1)).expect("a unit in zone 1");
+        by_id_mut(sink.state, &first).damage = 99;
+        state_check(&mut sink);
+        assert!(card_at(sink.state, slot(P1, Row::Units, 1)).is_none());
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r2280001_a_face_down_trap_never_animates_before_it_fires() {
+        let mut state = playing("animated-owed-face-down");
+        let trap = put(
+            &mut state,
+            &mote.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 4), Default::default());
+        let mut sink = sink_for(&mut state);
+        fuse_into(&mut sink, &unit, &trap);
+        assert!(!owed(sink.state, &trap.id));
+        state_check(&mut sink);
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(trap.id.clone())
+        );
+        assert!(is_face_down(sink.state, by_id(sink.state, &trap.id)));
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r2280001_an_animated_keyword_granted_to_a_backrow_card_with_stats_animates_it() {
+        let mut state = playing("animated-owed-granted");
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 3), Default::default());
+        let mut sink = sink_for(&mut state);
+        fuse_into(&mut sink, &unit, &flag);
+        state_check(&mut sink);
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 1)),
+            Some(flag.id.clone())
+        );
+
+        (grant_keyword(json_as(json!({
+            "target": { "of": "instance", "instanceId": flag.id },
+            "keyword": { "kind": "Animated" },
+        })))
+        .apply)(&mut make_context(&mut sink, None, by(P1)));
+        assert!(owed(sink.state, &flag.id));
+        state_check(&mut sink);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 1)), Some(flag.id.clone()));
+        assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
     }
 }

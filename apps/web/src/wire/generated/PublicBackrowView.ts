@@ -17,8 +17,8 @@ import type { UnitView } from "./UnitView";
 
 /**
  * The public member of `BackrowView`: `CardView & { faceDown: false; type: CardType; … }`. Every
- * `CardView` field is repeated here, since this one makes `type` required — all but `embiggenCost`,
- * which only a card in its owner's hand carries (#492).
+ * `CardView` field is repeated here, since this one makes `type` required — all but `embiggenCost`
+ * and `tribute`, which only a card in its owner's hand carries (#492, #2268).
  */
 export type PublicBackrowView = { instanceId: string, defId: string, radiant: boolean, 
 /**

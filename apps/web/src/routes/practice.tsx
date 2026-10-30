@@ -74,7 +74,7 @@ import { reducedMotionNow } from "../game/animations.ts";
 import { getFxSettings } from "../fx/settings.ts";
 import { t } from "../i18n/i18n.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
-import { getDecks, getMe, type DecksResponse, type MeResponse } from "../net/api.ts";
+import { ApiRequestError, ApiUnreachableError, getDecks, getMe, type DecksResponse, type MeResponse } from "../net/api.ts";
 import { getCustomCards, type CustomCardsResponse } from "../net/customCards.ts";
 import { PRACTICE_EARNING_API, type PracticeEarningApi } from "../net/practice.ts";
 import { readFailureOf, useAccount, type Account } from "../net/gate.ts";
@@ -101,7 +101,7 @@ import {
   type PracticeControllerState,
 } from "../practice/controller.ts";
 import { deckChoiceFromValue, deckChoiceValue, isAutostartDeckValue, isDeckValue } from "../practice/decks.ts";
-import { seedRequestOf, type PracticeEarning } from "../practice/earning.ts";
+import { earningText, seedRequestOf, type PracticeEarning } from "../practice/earning.ts";
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
 import { usePracticeEmotes } from "../practice/emotes.ts";
 import type { PracticeDebug, PracticeDeckChoice, PracticeStartConfig } from "../practice/protocol.ts";
@@ -778,12 +778,26 @@ function PracticeScreen({
   // The tutorial's own handle for the e2e lesson spec (tutorial/devHandle.ts), under the same rule.
   useTutorialDevHandle(tracker, game?.lesson ?? null);
 
+  /** R2379000: the seed on its way back to the server, which the next seed request waits for. */
+  const releasing = useRef<Promise<unknown>>(Promise.resolve());
+  /**
+   * R2379000: an earning game given up unclaimed gives its seed back. One that fails leaves the
+   * seed to lapse after `PRACTICE_SEED_TTL_SECONDS`, as before.
+   */
+  const releaseSeedOf = useCallback((left: PracticeStartConfig | null) => {
+    const api = earningApi.current;
+    const token = earningToken.current;
+    if (left === null || left.earning !== true || api === null || token === null) return;
+    releasing.current = api.release(token, left.seed).catch(() => undefined);
+  }, []);
+
   /** R765: starting any game from here ends the one kept with Save and leave. */
   const dropSavedGame = useCallback(() => {
+    releaseSeedOf(savedGame);
     clearPracticeResume();
     setSavedGame(null);
     setResumeLost(false);
-  }, []);
+  }, [savedGame, releaseSeedOf]);
 
   /**
    * R1303000: the setup a game is asking the server to seed, shown as the loading screen; null when
@@ -809,7 +823,8 @@ function PracticeScreen({
       }
       const ask = seedAsks.current;
       setSeeding(config);
-      Promise.resolve()
+      // R2379000: after any seed on its way back, so the place it frees counts for this one.
+      releasing.current
         .then(() => api.requestSeed(token, request))
         .then(
           (issued) => {
@@ -823,10 +838,13 @@ function PracticeScreen({
               ...(issued.lastBoard.length === 0 ? {} : { lastBoard: issued.lastBoard }),
             });
           },
-          () => {
+          (error: unknown) => {
             if (seedAsks.current !== ask) return;
             setSeeding(null);
             setGame(config);
+            // R2379000: the game says from its start that it earns nothing, in the server's words.
+            const reason = error instanceof ApiRequestError || error instanceof ApiUnreachableError ? error.message : null;
+            setEarning({ game: config, earning: { kind: "unearned", reason } });
           },
         );
     },
@@ -935,6 +953,14 @@ function PracticeScreen({
     setSavedGame(left);
     setGame(null);
   }, [leaveAskedFor]);
+
+  /** R2379000: Leave without saving gives the game up, and with it the seed it would have claimed on. */
+  const onLeaveWithoutSaving = useCallback(() => {
+    if (leaveAskedFor === null) return;
+    releaseSeedOf(leaveAskedFor.game);
+    if (leaveAskedFor.to === "menu") onMenu();
+    else onNewGame();
+  }, [leaveAskedFor, releaseSeedOf, onMenu, onNewGame]);
 
   /**
    * The loading screen's way back. A start in flight is given up; a resume in flight is not the
@@ -1396,6 +1422,11 @@ function PracticeScreen({
           </button>
         </header>
       )}
+      {earning !== null && earning.game === game && earning.earning.kind === "unearned" ? (
+        <p className="notice practice-unearned" data-testid={practiceTestid.unearned} role="status">
+          {earningText(earning.earning)}
+        </p>
+      ) : null}
       {/* A lesson's coach comes between the HUD and the board: on a phone it is a panel in the page
           there, and the board takes the height that is left (tutorial/Coach.tsx); elsewhere it
           floats over the board, and this is only where the keyboard and a screen reader meet it. */}
@@ -1418,7 +1449,7 @@ function PracticeScreen({
         <PracticeLeave
           to={leaveAskedFor.to}
           onStay={onStay}
-          onLeave={leaveAskedFor.to === "menu" ? onMenu : onNewGame}
+          onLeave={onLeaveWithoutSaving}
           // R765: a free game may be kept; a lesson is never kept (R668), so it keeps its own flow.
           {...(leaveAskedFor.to === "lessons" ? {} : { onSaveAndLeave })}
         />

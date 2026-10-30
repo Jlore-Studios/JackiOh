@@ -1,0 +1,28 @@
+/* A spend button waiting (R2378000, `net/spending.ts`): while one of the tab's spends is out, the
+   Shop's Buy and the pack panel's Open and Open all are disabled and `aria-busy`, and turn a ring
+   after their label, so a press shows a wait, not an error. The ring holds still under reduced
+   motion, the system's or the panel's. Its one @keyframes moves only transform. */
+
+.spend-wait[aria-busy="true"]::after {
+  content: "";
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-inline-start: 0.4em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.1em;
+}
+
+@keyframes spend-wait-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .spend-wait[aria-busy="true"]::after {
+    animation: spend-wait-turn 900ms linear infinite;
+  }
+}

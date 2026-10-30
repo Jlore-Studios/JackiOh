@@ -278,6 +278,9 @@ mod summarize_game_over_real_cards_s9_11 {
                     })
                     .collect();
                 let mut added_here: Vec<&str> = Vec::new();
+                // The Radiant changes the step has made so far, for a card no play holds yet: one a hand
+                // trigger casts later in the step is played on the face it has by then (R1147000).
+                let mut radiant_here: IndexMap<String, bool> = IndexMap::new();
                 for event in events {
                     match event {
                         GameEvent::AddedToHand { instance_id, .. }
@@ -309,6 +312,7 @@ mod summarize_game_over_real_cards_s9_11 {
                             }
                         }
                         GameEvent::RadiantSet { instance_id, .. } => {
+                            radiant_here.insert(instance_id.clone(), true);
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 && !plays[seat][at].placed
                             {
@@ -316,6 +320,7 @@ mod summarize_game_over_real_cards_s9_11 {
                             }
                         }
                         GameEvent::Deradianted { instance_id, .. } => {
+                            radiant_here.insert(instance_id.clone(), false);
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 && !plays[seat][at].placed
                             {
@@ -327,33 +332,40 @@ mod summarize_game_over_real_cards_s9_11 {
                             instance_id,
                             def_id,
                             former_id,
+                            on_draw,
                             ..
                         } => {
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 .or_else(|| former_id.as_deref().and_then(|id| open_play(&plays, id)))
                             {
                                 plays[seat][at].placed = true;
-                            } else if let Some(card) = state.players[*caster]
-                                .hand
-                                .iter()
-                                .find(|card| card.id == *instance_id)
-                                .or_else(|| {
-                                    added_here
-                                        .contains(&instance_id.as_str())
-                                        .then(|| find_instance(&result.state, instance_id))
-                                        .flatten()
-                                })
+                            // R2179002: a card cast on its draw is no play, though it stood in the hand as the
+                            // step began: a Trade shuffles it in and draws it straight back (summary-cards-28's
+                            // p1 CN in a Bottle, since issue #2280's rules change took that game down a new path).
+                            } else if *on_draw != Some(true)
+                                && let Some(card) = state.players[*caster]
+                                    .hand
+                                    .iter()
+                                    .find(|card| card.id == *instance_id)
+                                    .or_else(|| {
+                                        added_here
+                                            .contains(&instance_id.as_str())
+                                            .then(|| find_instance(&result.state, instance_id))
+                                            .flatten()
+                                    })
                             {
                                 // Re-pinned for #1705 (25-card decks): M+ #17 Dogpile's hand trigger casts
                                 // it from the hand it stood in as the step began, counted as a play
                                 // (R1180005), with no `play` logged; summary-cards-35's p2 holds one.
                                 // Re-pinned for the Training Grounds release (#2204): summary-cards-45's
                                 // p2 draws its Dogpile in the very step that casts it, so a card the step
-                                // added to the hand counts the same way.
+                                // added to the hand counts the same way. Re-pinned for R2368000's
+                                // three-card opening hand: summary-cards-54's p1 casts a Created Dogpile
+                                // the same step made Radiant, so it is played Radiant.
                                 plays[*caster].push(Play {
                                     id: card.id.clone(),
                                     def_id: def_id.clone(),
-                                    radiant: card.radiant,
+                                    radiant: radiant_here.get(instance_id).copied().unwrap_or(card.radiant),
                                     created: card.created == Some(true),
                                     placed: true,
                                     open: false,
@@ -923,15 +935,16 @@ mod r1256000_per_seat_counts {
             state = end_turn(state, &mut log, player);
         }
         let end = state.result.expect("an endTurn-only game fatigues out");
-        // p1 draws first, so p1 takes the eighth hit (1+…+8 = 36 at 30 HP) first.
-        assert_eq!(end.winner, Winner::P2);
+        // p1 opens on three cards and p2 on four (R2368000), so p1's library holds one card more and p2
+        // takes the eighth hit (1+…+8 = 36 at 30 HP) first, on its 29th turn, before p1's 30th.
+        assert_eq!(end.winner, Winner::P1);
         assert_eq!(end.reason, GameOverReason::HeroDeath);
 
         let summary = summarize(seed, decks, log);
-        assert_eq!(summary.seats.p1.fatigue_draws, Some(8));
-        assert_eq!(summary.seats.p1.fatigue_damage, Some(36));
-        assert_eq!(summary.seats.p2.fatigue_draws, Some(7));
-        assert_eq!(summary.seats.p2.fatigue_damage, Some(28));
+        assert_eq!(summary.seats.p1.fatigue_draws, Some(7));
+        assert_eq!(summary.seats.p1.fatigue_damage, Some(28));
+        assert_eq!(summary.seats.p2.fatigue_draws, Some(8));
+        assert_eq!(summary.seats.p2.fatigue_damage, Some(36));
         for seat in [&summary.seats.p1, &summary.seats.p2] {
             assert_eq!(seat.traps_set, Some(0));
             assert_eq!(seat.traps_fired, Some(0));

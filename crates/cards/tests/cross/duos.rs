@@ -413,7 +413,13 @@ mod pass_links {
     fn r1168000_a_passed_journey_complete_returns_nothing_of_the_other_duel() {
         let mut state = begun_with("cross-duos-journey", free_passes());
         top_up(&mut state);
-        let journeyed = side(&state, A1).library[0].id.clone();
+        // An id both duels' libraries hold: each deals its own opening hands from its own shuffle.
+        let journeyed = side(&state, A1)
+            .library
+            .iter()
+            .map(|card| card.id.clone())
+            .find(|id| side(&state, A2).library.iter().any(|card| &card.id == id))
+            .expect("an id in both libraries");
         for seat in [A1, A2] {
             let side = side_mut(&mut state, seat);
             let at = side
@@ -521,7 +527,7 @@ mod pass_links {
         assert!(!ids.is_empty(), "A1's hand is watched");
         let mut state = close_round(state);
         top_up(&mut state);
-        // Room for every watched card: A1's five and A2's own six would pass the hand cap (R1156000).
+        // Room for every watched card: A1's hand passed to A2's own could pass the hand cap (R4).
         side_mut(&mut state, A2).hand.clear();
         for id in &ids {
             if side(&state, A1).hand.iter().any(|card| &card.id == id) {
