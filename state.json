@@ -3606,6 +3606,13 @@
     "2052": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T02:08:40Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule 7/8 (no judging by eye, no decisions): the wait renders as a small modal in the card detail's place, a visual/dialog choice with focus handling, so it is not easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
