@@ -21,3 +21,10 @@ export const BACKDROP_PARTICLE_Y_STEP_PCT = 61;
 
 /** R1297000: how long after the one before each particle's motion starts, in milliseconds, so nothing moves in step. */
 export const BACKDROP_PARTICLE_DELAY_STEP_MS = 430;
+
+/**
+ * R2388000: the result is written just after the view showing it, so once it has come a ranked
+ * match's ranks read carrying no move yet is asked again: this many reads in all, this far apart.
+ */
+export const MATCH_RANKS_READ_ATTEMPTS = 5;
+export const MATCH_RANKS_RETRY_MS = 1000;
