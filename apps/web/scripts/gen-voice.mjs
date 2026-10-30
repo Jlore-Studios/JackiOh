@@ -3,10 +3,12 @@
 // each file in src/audio/voice-manifest.json (docs/polish/2-sound.md, "gen-voice.mjs"; SPEC §10.11,
 // R501, R655).
 //
-// The file is JSON5 and only ever read. A voice line is a card hook's assignment that names a voice
-// from the voices bank (with its text); its key is `<defId>-<hook>`. An assignment that is only an
-// effect renders nothing. Which hooks a card may carry is voiceData.ts's to check (CARD_HOOKS); this
-// script holds every catalog card to SPEC §10.11's lines: a Unit's play and death, anything else's cast.
+// The file is JSON5 and only ever read. Its lines' words are crates/cards/card-text.yaml's (#2498),
+// read from src/audio/voice-text.json beside it, which crates/tools/tests/export_card_text.rs writes
+// from the YAML. A voice line is a card hook's assignment that names a voice from the voices bank
+// (with its text); its key is `<defId>-<hook>`. An assignment that is only an effect renders
+// nothing. Which hooks a card may carry is voiceData.ts's to check (CARD_HOOKS); this script holds
+// every catalog card to SPEC §10.11's lines: a Unit's play and death, anything else's cast.
 // A card of a set that has not shipped (R1420) is held to its lines too, but renders no file until its
 // set ships: no player meets it before then, and its files are owed with the patch that ships it.
 //
@@ -351,9 +353,33 @@ function dropUnshipped(catalog, expected) {
   }
 }
 
+/**
+ * #2498: the table with each voiced hook's text (a trigger's lines) and each portrait's five lines
+ * filled in from voice-text.json, where the table has none of its own. voiceData.ts's
+ * `withVoiceText` is the client's join, which also refuses a line the table writes itself.
+ */
+function withVoiceText(table, voiceText) {
+  const lines = isObject(voiceText?.cards) ? voiceText.cards : {};
+  for (const [defId, entry] of Object.entries(isObject(table.cards) ? table.cards : {})) {
+    const own = isObject(lines[defId]) ? lines[defId] : {};
+    for (const [hook, assignment] of Object.entries(isObject(entry) ? entry : {})) {
+      if (!isObject(assignment) || assignment.voice === undefined || !Object.hasOwn(own, hook)) continue;
+      if (hook === "trigger") assignment.lines ??= own[hook];
+      else assignment.text ??= own[hook];
+    }
+  }
+  const spoken = isObject(voiceText?.emotes) ? voiceText.emotes : {};
+  for (const [portrait, entry] of Object.entries(isObject(table.emotes) ? table.emotes : {})) {
+    if (!isObject(entry) || !isObject(spoken[portrait])) continue;
+    for (const line of EMOTE_LINES) entry[line] ??= spoken[portrait][line];
+  }
+  return table;
+}
+
 function load(root, catalogPath) {
   const files = {
     table: path.join(root, "src/audio/card-audio.json5"),
+    voiceText: path.join(root, "src/audio/voice-text.json"),
     manifest: path.join(root, "src/audio/voice-manifest.json"),
     voiceDir: path.join(root, "public/audio/voice"),
   };
@@ -367,6 +393,11 @@ function load(root, catalogPath) {
     }
   } catch (err) {
     dataProblems.push(`card-audio.json5: ${err.message}`);
+  }
+  try {
+    table = withVoiceText(table, readJson(files.voiceText));
+  } catch (err) {
+    dataProblems.push(`voice-text.json: ${err.message}`);
   }
   const expected = expectedKeys(table, dataProblems);
 

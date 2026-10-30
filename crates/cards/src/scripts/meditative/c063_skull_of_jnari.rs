@@ -4,9 +4,10 @@
 //! Radiant: "Start of turn: Summon {units|random Unit|random Units} from your hand. Make it Radiant."
 //! Engine: `start_of_turn` returns `param("units")` copies of `summon_random_from_hand` (R1083),
 //! Radiant with `radiant: true`.
-//! Voice: the `trigger` hook in `card-audio.json5` ("This one will prove very useful! ...Probably.",
-//! "There IS a method to my madness!", "Good units are hard to find."), picked by the client's own
-//! rng when the runner starts the `summoned` entry this card caused (`sourceId`, R1088).
+//! Voice: the `trigger` hook in `card-audio.json5`, its lines in `card-text.yaml` ("This one will
+//! prove very useful! ...Probably.", "There IS a method to my madness!", "Good units are hard to
+//! find."), picked by the client's own rng when the runner starts the `summoned` entry this card
+//! caused (`sourceId`, R1088).
 
 use jackioh_engine::prelude::*;
 

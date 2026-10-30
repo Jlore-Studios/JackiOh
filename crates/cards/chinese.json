@@ -1,4 +1,5 @@
 {
+  "//": "Generated from crates/cards/card-text.yaml by crates/tools/tests/export_card_text.rs. Do not edit: change the YAML, then run cargo test -p jackioh-tools --test export_card_text.",
   "core-001": {
     "name": "大D守卫",
     "base": "光环：你处于守备表示的单位拥有+{armor}点护甲。",

@@ -17,8 +17,10 @@ for adding, changing or removing a card (CLAUDE.md rule 10).
 ```
 crates/cards
 ├── catalog.json        the card data, proved against spec §8 by tests/cross/catalog.rs
-├── flavour.json        flavour lines and artist credits, not card data (R660)
-├── chinese.json        Simplified Chinese names and faces, not card data (R1303)
+├── card-text.yaml      every card's words but its rules, edited by hand: flavour, artist, voice lines,
+│                       Chinese, and the portraits' emote lines (#2498); not card data
+├── flavour.json        flavour lines and artist credits (R660), generated from card-text.yaml
+├── chinese.json        Simplified Chinese names and faces (R1303), generated from card-text.yaml
 ├── chinese-terms.json  the frame's Chinese words: types, tags, rarities, keywords, labels (R1303)
 ├── patches/            the catalog's history (R388, R646): patches.json, one snapshot per patch,
 │                       win_rates/ (each patch's win-rate table, R1329000), shipped.json, index.json,
@@ -363,6 +365,16 @@ Every change to card data is a patch, and every patch is kept.
 
 ## 7. Flavour (R660)
 
+A card's words other than its rules are written in one file, `card-text.yaml` (#2498): one entry per
+catalog card and token, in catalog order with the card's name in a comment beside its id, holding its
+`flavour` and `artist`, its `voice` lines (R655, spoken in the voices of
+`apps/web/src/audio/card-audio.json5`) and its `zh` (§8), and an `emotes` section with the six
+portraits' lines (R644). This crate parses no YAML (CLAUDE.md rule 4):
+`cargo test -p jackioh-tools --test export_card_text` writes `flavour.json`, `chinese.json` and
+`apps/web/src/audio/voice-text.json` from it, each headed by a `"//"` entry that says so, and fails
+while one is stale; commit what it writes. It also holds the YAML's ids to the catalog's, in its order,
+and each name comment to the card's name.
+
 `flavour.json` is keyed by catalog id, `{ "flavour"?, "artist"? }`. It is not card data: an edit to it
 is no patch and claims no fragment. `tests/cross/flavour.rs` holds every key to a catalog entry, every
 entry to a flavour line, and each line to one trimmed line under its cap (120 characters, 60 for an
@@ -371,8 +383,9 @@ artist); the client's test also refuses rules words. Real art is credited when i
 
 ## 8. Chinese text (R1303)
 
-`chinese.json` is keyed by catalog id, `{ name, base, radiant, previews? }`: the name and both faces
-in Simplified Chinese, one Chinese line per English line. It is not card data: an edit to it is no
+`chinese.json`, written from each entry's `zh` in `card-text.yaml` (§7), is keyed by catalog id,
+`{ name, base, radiant, previews? }`: the name and both faces in Simplified Chinese, one Chinese line
+per English line. It is not card data: an edit to it is no
 patch and claims no fragment. Each face keeps exactly its English face's `{key}`s (an English
 `{key|one|many}` becomes `{key}` plus a measure word), names every `refs` card by its Chinese name,
 and carries `previews` exactly where the script declares `preview`. `chinese-terms.json` holds the

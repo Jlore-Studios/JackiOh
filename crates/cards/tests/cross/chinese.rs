@@ -1,8 +1,9 @@
 //! ME-CN, R1303: the Chinese tables against the catalog. `chinese.json` holds every catalog card's and
 //! token's name and both faces in Simplified Chinese, and for a card whose script declares `preview`
-//! (R280) its preview labels; `chinese-terms.json` holds the frame's words. The client draws a Chinese
-//! card from them (`apps/web/src/cards/chinese.ts`, R1301). Like `flavour.json` (R660) they are
-//! presentation, not card data: no rule reads them, and an edit to them is no patch.
+//! (R280) its preview labels, as `crates/tools/tests/export_card_text.rs` writes them from each card's
+//! `zh` in `crates/cards/card-text.yaml`; `chinese-terms.json` holds the frame's words. The client
+//! draws a Chinese card from them (`apps/web/src/cards/chinese.ts`, R1301). Like `flavour.json` (R660)
+//! they are presentation, not card data: no rule reads them, and an edit to them is no patch.
 //!
 //! R1302: every face of the table meets the Chinese house style (`card_text::cjk_failures`), read with
 //! its params filled in, as a player reads it.
@@ -14,6 +15,7 @@ use jackioh_engine::{FaceKind, Rarity, Tag, fill_params, param_placeholders};
 use serde_json::{Map, Value};
 
 use super::card_text::{LABELS, chinese_keyword_label, chinese_terms, cjk_failures};
+use super::sidecar;
 
 /// The fields an entry may carry.
 const FIELDS: &[&str] = &["name", "base", "radiant", "previews"];
@@ -61,7 +63,7 @@ const SET_WORDS: &[(&str, &str)] = &[
 /// Every card's Chinese entry, by catalog id, each kept as raw JSON so an unknown field or a value
 /// that is not a string is seen, not refused by a typed parse.
 fn table() -> IndexMap<String, Map<String, Value>> {
-    serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is an object of objects")
+    sidecar(chinese_json(), "crates/cards/chinese.json")
 }
 
 fn text<'a>(entry: &'a Map<String, Value>, field: &str) -> &'a str {
