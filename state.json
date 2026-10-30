@@ -7375,9 +7375,7 @@
       "source": "",
       "started_at": "2026-10-30T00:57:09Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6512139246"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
