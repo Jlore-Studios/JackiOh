@@ -363,16 +363,17 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
     expect(screen.getByTestId(tutorialTestid.hud)).toHaveAttribute("data-lesson", lesson(2).id);
   });
 
-  it("a loss offers the lesson's tip and Retry, which plays the same lesson on the same seed", async () => {
+  it("R2434002 a concede is a loss: it says so, offers the lesson's tip and Retry, which plays the same lesson on the same seed", async () => {
     const host = await startLesson(1);
     // Concede asks first now (ConfirmConcede): the dialog's own Concede concedes.
     fireEvent.click(screen.getByTestId("concede"));
     fireEvent.click(screen.getByTestId("concede-confirm"));
     const dialog = await screen.findByTestId(tutorialTestid.result);
     expect(dialog).toHaveAttribute("data-outcome", "loss");
-    expect(dialog).toHaveTextContent("You conceded this one.");
+    expect(dialog).toHaveTextContent("You conceded. That counts as a loss.");
     expect(dialog).toHaveTextContent(`Tip: ${lesson(1).retryTip}`);
     expect(readTutorialProgress().completed).toEqual([]);
+    expect(readTutorialProgress().lost).toEqual([lesson(1).id]);
 
     fireEvent.click(screen.getByTestId(tutorialTestid.retry));
     await settle({ ticks: 10 });
