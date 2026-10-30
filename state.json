@@ -17780,14 +17780,18 @@
         {
           "at": "2026-10-30T02:41:12Z",
           "minutes": 68.8
+        },
+        {
+          "at": "2026-10-30T03:10:53Z",
+          "minutes": 116.1
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-30T04:04:00Z",
-          "utilization": 0.2
+          "utilization": 0.21
         },
-        "observed_at": "2026-10-30T02:41:12Z",
+        "observed_at": "2026-10-30T03:10:53Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
           "utilization": 0.82
