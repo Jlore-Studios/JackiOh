@@ -3,7 +3,7 @@
 #
 #   bot/machine/on-machine.sh bot/machine/disk-report.sh
 #
-# The issue "Night bot: the machine's disk is filling up" (bot/harness/disk.py) points here.
+# The issue "Night bot: the machine's disk is filling up" (bot/go/internal/disk) points here.
 set +e
 df -h /
 echo

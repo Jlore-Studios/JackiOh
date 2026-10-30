@@ -63,7 +63,7 @@ fn identical_body() -> String {
     serde_json::to_string(
         &json!({ "error": { "code": "invalid_code", "message": REDEMPTION_IDENTICAL_ERROR } }),
     )
-    .expect("the body serialises")
+    .expect("the body serializes")
 }
 
 /// The test environment: `E2E=1` (the fake store and fixture auth), the compiled-in catalog
@@ -149,7 +149,7 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
     rows.iter()
-        .map(|row| serde_json::to_value(row).expect("a row serialises"))
+        .map(|row| serde_json::to_value(row).expect("a row serializes"))
         .collect()
 }
 

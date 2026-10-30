@@ -67,7 +67,7 @@ thread_local! {
 fn failed<T>(message: String) -> *mut T {
     LAST_ERROR.with(|last| {
         *last.borrow_mut() = CString::new(message).unwrap_or_else(|_| {
-            CString::new("could not serialise the error message").expect("static message")
+            CString::new("could not serialize the error message").expect("static message")
         });
     });
     std::ptr::null_mut()
@@ -119,7 +119,7 @@ fn out(result: Result<String, String>) -> *mut c_char {
     match result {
         Ok(text) => CString::new(text)
             .map(|owned| owned.into_raw())
-            .unwrap_or_else(|_| failed("could not serialise the result: an interior NUL".to_owned())),
+            .unwrap_or_else(|_| failed("could not serialize the result: an interior NUL".to_owned())),
         Err(message) => failed(message),
     }
 }

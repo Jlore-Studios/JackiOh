@@ -65,7 +65,7 @@ describe("the contract (B28)", () => {
     expect(CARD_SETTINGS_DEFAULTS).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: true, opponentCosmetics: true });
   });
 
-  it("B28 CARD_SETTINGS_FIELDS puts hoverPreviews under gameplay, and animatedFoil, fullArt (R1017001) and opponentCosmetics (R1834004) under visuals, each labelled", () => {
+  it("B28 CARD_SETTINGS_FIELDS puts hoverPreviews under gameplay, and animatedFoil, fullArt (R1017001) and opponentCosmetics (R1834004) under visuals, each labeled", () => {
     const byKey = new Map(CARD_SETTINGS_FIELDS.map((field) => [field.key, field]));
     expect([...byKey.keys()].sort()).toEqual(["animatedFoil", "fullArt", "hoverPreviews", "opponentCosmetics"]);
     expect(CARD_SETTINGS_FIELDS).toHaveLength(4);

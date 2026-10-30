@@ -167,7 +167,7 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
     }
   }, 30_000);
 
-  it("R277 the mark is a non-colour cue too: bold and underlined, in the stylesheet every face loads", () => {
+  it("R277 the mark is a non-color cue too: bold and underlined, in the stylesheet every face loads", () => {
     const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "cards.css"), "utf8");
     const rule = /\.cf-mark\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
     expect(rule).toMatch(/font-weight:\s*800/);

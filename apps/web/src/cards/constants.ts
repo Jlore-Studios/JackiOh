@@ -81,16 +81,26 @@ export const ART_DWELL_MS = 150;
 export const COSMETIC_FOIL_ANIMATED_MAX = 6;
 
 /**
- * R1295000: the Radiant gold, as a window in HSL that holds every colour cards.css's Radiant face
- * declares. No border's colours may fall inside it (cosmetics.test.tsx), so no border passes for
+ * R1295000: the Radiant gold, as a window in HSL that holds every color cards.css's Radiant face
+ * declares. No border's colors may fall inside it (cosmetics.test.tsx), so no border passes for
  * a Radiant trim. The hue's two ends, in degrees.
  */
 export const RADIANT_GOLD_HUE_MIN_DEG = 38;
 /** R1295000: the Radiant gold window's upper hue (RADIANT_GOLD_HUE_MIN_DEG). */
 export const RADIANT_GOLD_HUE_MAX_DEG = 56;
-/** R1295000: the Radiant gold window's least saturation, 0 to 1: a greyer colour reads as no gold. */
+/** R1295000: the Radiant gold window's least saturation, 0 to 1: a greyer color reads as no gold. */
 export const RADIANT_GOLD_SATURATION_MIN = 0.5;
 /** R1295000: the Radiant gold window's darkest lightness, 0 to 1: below it a gold reads as brown. */
 export const RADIANT_GOLD_LIGHTNESS_MIN = 0.3;
 /** R1295000: the Radiant gold window's lightest lightness, 0 to 1: above it a gold reads as cream. */
 export const RADIANT_GOLD_LIGHTNESS_MAX = 0.9;
+
+/**
+ * #2435, R1839000: how far a Dormant card on the field is greyed and dimmed (the veil's grayscale() and
+ * brightness(), dormant.css), well past the "Can't attack" portrait's grayscale(0.75) brightness(0.82) (keywords.css).
+ */
+export const DORMANT_GREY = 0.92;
+export const DORMANT_DIM = 0.6;
+
+/** #2435: one beat of the Dormant seal's pulse, its runes and its crescent, in milliseconds (dormant.css). */
+export const DORMANT_PULSE_MS = 3200;

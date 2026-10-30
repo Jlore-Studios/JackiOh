@@ -129,7 +129,7 @@ pub fn hash_state(state: &GameState) -> String {
     }
     let mut value = match serde_json::to_value(state) {
         Ok(value) => value,
-        Err(error) => panic!("hash_state: a GameState did not serialise: {error}"),
+        Err(error) => panic!("hash_state: a GameState did not serialize: {error}"),
     };
     if let Value::Object(map) = &mut value {
         map.remove("applied");
@@ -1144,7 +1144,7 @@ mod tests {
                 },
             ],
         };
-        let value = serde_json::to_value(&top).expect("serialises");
+        let value = serde_json::to_value(&top).expect("serializes");
         assert_eq!(
             direct::canonical_text(&top, &[]).as_deref(),
             Some(canonical(&value).as_str())

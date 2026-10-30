@@ -286,7 +286,7 @@ fn r1200_r1044_a_face_down_play_under_a_mayor_draws_no_target() {
             ),
             "{set:?}"
         );
-        let mut body = serde_json::to_value(&set).expect("a play serialises");
+        let mut body = serde_json::to_value(&set).expect("a play serializes");
         body["playerId"] = json!("p1");
         let result = act_result(&state, body);
         assert!(result.error.is_none(), "{set:?}: {:?}", result.error);
@@ -587,6 +587,41 @@ fn r1202_a_substitute_barred_from_its_lane_spends_with_no_declaration_and_the_mo
     assert_eq!(monitor.after(&result.events, &result.state), Vec::<String>::new());
 }
 
+#[test]
+fn r1202_r2248000_a_flying_unit_in_hand_makes_the_attack_from_the_backrow_of_a_full_unit_row() {
+    let mut state = playing("mb22-flier");
+    let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
+    for lane in 2..=5 {
+        put(&mut state, &fx::ally.id, slot(P1, Row::Units, lane), json!({}));
+    }
+    clear_hands(&mut state);
+    let flier = in_hand(&mut state, &fx::flier.id, P1, 1).remove(0);
+
+    let result = act_result(&state, attack_action(P1, &windfast.id, "hero-p2"));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    let declared = declared_attacks(&result.events);
+    assert_eq!(declared.len(), 1);
+    assert_eq!(
+        declared[0].0, flier.id,
+        "the flier fought, summoned into the backrow"
+    );
+    let summoned: Vec<(Row, i32)> = result
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::Summoned {
+                instance_id,
+                row,
+                lane,
+                ..
+            } if *instance_id == flier.id => Some((*row, *lane)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(summoned, vec![(Row::Backrow, 1)]);
+    assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 1);
+}
+
 // ---------------------------------------------------------------------------
 // R1203: joiners attack first
 // ---------------------------------------------------------------------------
@@ -642,14 +677,14 @@ fn r1203_a_fallen_target_cancels_the_attack_exertion_spent() {
 
     let result = act_result(&state, attack_action(P1, &prime.id, &ally.id));
     assert!(result.error.is_none(), "{:?}", result.error);
-    // The target had left the field before its combat: cancelled, exertion spent.
-    let cancelled: Vec<&GameEvent> = result
+    // The target had left the field before its combat: canceled, exertion spent.
+    let canceled: Vec<&GameEvent> = result
         .events
         .iter()
         .filter(|event| matches!(event, GameEvent::AttackCancelled { .. }))
         .collect();
-    assert_eq!(cancelled.len(), 1, "attackCancelled is emitted");
-    match &cancelled[0] {
+    assert_eq!(canceled.len(), 1, "attackCancelled is emitted");
+    match &canceled[0] {
         GameEvent::AttackCancelled {
             attacker_id,
             by_instance_id,
@@ -709,6 +744,39 @@ fn r1203_fewer_zones_fewer_joiners_no_pool_no_draw() {
     assert_eq!(declared_attacks(&result.events).len(), 1);
     assert_eq!(result.state.rng_cursor, before, "no pool, no draw");
     assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 5);
+}
+
+#[test]
+fn r1203_r2248000_a_flying_joiner_musters_into_the_backrow_of_a_full_unit_row() {
+    let mut state = playing("mb22-flying-joiner");
+    let prime = put(&mut state, &fx::prime.id, slot(P1, Row::Units, 1), json!({}));
+    for lane in 2..=5 {
+        put(&mut state, &fx::ally.id, slot(P1, Row::Units, lane), json!({}));
+    }
+    clear_hands(&mut state);
+    let flier = in_hand(&mut state, &fx::flier.id, P1, 1).remove(0);
+    set_library(&mut state, P1, &[] as &[&str]);
+
+    let result = act_result(&state, attack_action(P1, &prime.id, "hero-p2"));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    let declared = declared_attacks(&result.events);
+    assert_eq!(
+        declared.len(),
+        2,
+        "the Prime, then its flying joiner: {declared:?}"
+    );
+    assert_eq!(declared[1].0, flier.id);
+    let joined = find_instance(&result.state, &flier.id).expect("the flier");
+    assert_eq!(
+        joined.zone,
+        Zone::Field {
+            player: P1,
+            row: Row::Backrow,
+            lane: 1
+        }
+    );
+    // 1 + 5.
+    assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 6);
 }
 
 // ---------------------------------------------------------------------------

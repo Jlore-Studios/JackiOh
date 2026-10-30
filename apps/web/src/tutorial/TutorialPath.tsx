@@ -11,6 +11,7 @@ import { TUTORIAL_LESSONS, type TutorialLesson } from "./lessons.ts";
 import {
   fieldGuideOf,
   isTutorialHidden,
+  lessonLost,
   lessonStatus,
   nextLessonToPlay,
   setTutorialHidden,
@@ -42,7 +43,9 @@ function LockIcon(): ReactElement {
   );
 }
 
-function statusText(status: LessonStatus, lesson: TutorialLesson, isNext: boolean): string {
+function statusText(status: LessonStatus, lesson: TutorialLesson, isNext: boolean, lost: boolean): string {
+  // R2434002: a conceded lesson stays open, and says it was lost.
+  if (lost && status === "unlocked") return t("Lost: you conceded");
   switch (status) {
     case "completed":
       return t("Completed");
@@ -85,12 +88,14 @@ function LessonNode({
   lesson,
   status,
   isNext,
+  lost,
   met,
   onStart,
 }: {
   lesson: TutorialLesson;
   status: LessonStatus;
   isNext: boolean;
+  lost: boolean;
   met: readonly string[];
   onStart(lesson: TutorialLesson): void;
 }): ReactElement {
@@ -103,6 +108,7 @@ function LessonNode({
       data-testid={tutorialTestid.lesson(lesson.id)}
       data-status={status}
       data-next={isNext ? "true" : undefined}
+      data-lost={lost ? "true" : undefined}
     >
       <span className="tutorial-lesson__node" aria-hidden="true">
         {status === "completed" ? <CheckIcon /> : status === "locked" ? <LockIcon /> : lesson.number}
@@ -118,11 +124,11 @@ function LessonNode({
         <div className="tutorial-lesson__foot">
           {/* An open lesson's kicker already says "Up next"; its status is there for a screen reader. */}
           <span
-            className={status === "unlocked" ? "tutorial-lesson__status tutorial-sr-only" : "tutorial-lesson__status"}
+            className={status === "unlocked" && !lost ? "tutorial-lesson__status tutorial-sr-only" : "tutorial-lesson__status"}
             id={statusId}
           >
             {status === "completed" ? <CheckIcon /> : null}
-            {statusText(status, lesson, isNext)}
+            {statusText(status, lesson, isNext, lost)}
           </span>
           <button
             type="button"
@@ -275,6 +281,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
             lesson={lesson}
             status={lessonStatus(progress, lesson)}
             isNext={next?.id === lesson.id}
+            lost={lessonLost(progress, lesson)}
             met={met}
             onStart={onStart}
           />

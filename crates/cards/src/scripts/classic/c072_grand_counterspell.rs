@@ -291,9 +291,9 @@ mod tests {
         fn e2_r12_steals_the_opponents_spell_countered_and_in_your_hand_as_yours() {
             let mut s = armed(true, &[STOCKPILE], None, &[]);
             s.play(STOCKPILE, json!({}));
-            let cancelled = countered(&s);
-            assert_eq!(cancelled.len(), 1);
-            assert!(matches_object(&js(&cancelled[0]), &json!({ "to": "hand", "defId": STOCKPILE })));
+            let canceled = countered(&s);
+            assert_eq!(canceled.len(), 1);
+            assert!(matches_object(&js(&canceled[0]), &json!({ "to": "hand", "defId": STOCKPILE })));
             let stolen = s.card(STOCKPILE).clone();
             s.expect_in_zone(&stolen, "hand");
             assert_eq!(stolen.owner, P1);

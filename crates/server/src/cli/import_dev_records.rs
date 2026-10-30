@@ -88,7 +88,7 @@ fn resolve(cwd: &str, base: &str, path: &str) -> PathBuf {
 
 /// The file a path names, read from the directory the command was started in, as `cargo jackioh
 /// stats --out` writes it. Under pnpm the TS script ran in apps/server and was passed the caller's
-/// directory as INIT_CWD; that variable is still honoured when set, and otherwise the binary's own
+/// directory as INIT_CWD; that variable is still honored when set, and otherwise the binary's own
 /// working directory is the caller's.
 pub fn run_file_path(path: &str, env: &IndexMap<String, String>, cwd: &str) -> PathBuf {
     let base = env.get("INIT_CWD").map(String::as_str).unwrap_or(cwd);

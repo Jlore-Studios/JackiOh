@@ -770,7 +770,7 @@ select indexname from pg_indexes
  order by 1;
 do $$
 declare
-  -- The three *_key indexes are load-bearing behaviour, not tuning: nonce dedupe (SPEC §9.3),
+  -- The three *_key indexes are load-bearing behavior, not tuning: nonce dedupe (SPEC §9.3),
   -- one open match per room code (R110) and one queued ticket per profile (§9.5) are all
   -- "unique index or it does not happen". Losing UNIQUE would leave the name in place and the
   -- rule gone, so uniqueness is asserted per index, not just existence.

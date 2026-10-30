@@ -1,0 +1,1019 @@
+[
+ {
+  "argv": [
+   "--help"
+  ],
+  "stdout": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\n\nThe command line: `harness <command>` from the `bot/` directory. The workflows\ncall `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An\noperator calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`,\n`setup` and `forget`, with a token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or\nGH_TOKEN, or a logged-in `gh`.\n\npositional arguments:\n  {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget}\n    plan                decide what this night run does, and claim it\n    peek                would a run find work? changes nothing\n    quiet               wait until nobody else is spending the subscription\n    wake                start the Claude sessions that are not running\n                        (wake.py)\n    work                the model job: build, review and fix one item\n    plan-fetch          read the plan the status loop made for this run\n                        (#1455)\n    deliver             check the model job's output and publish it\n    event               handle one GitHub event\n    sweep               answer any request an event handler never answered\n    status              print the status report\n    dashboard           rewrite the pinned status issue (bot-status runs it\n                        every five minutes, its runners every two)\n    stats               rewrite the pinned status issue now, with its\n                        statistics\n    halt                stop all model work\n    start               lift a halt\n    dispatch            start a night run now\n    providers           each subscription's hours, limits and readiness\n    window              each subscription's hours, limits and readiness\n    doctor              check the configuration and the repository\n    setup               create or update the labels, and create the state\n                        branch\n    triage              label, type and assign a new issue or pull request, an\n                        issue labelled human, or one a person called it on\n    forget              clear an item's failure count\n\noptions:\n  -h, --help            show this help message and exit\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "-h"
+  ],
+  "stdout": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\n\nThe command line: `harness <command>` from the `bot/` directory. The workflows\ncall `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An\noperator calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`,\n`setup` and `forget`, with a token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or\nGH_TOKEN, or a logged-in `gh`.\n\npositional arguments:\n  {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget}\n    plan                decide what this night run does, and claim it\n    peek                would a run find work? changes nothing\n    quiet               wait until nobody else is spending the subscription\n    wake                start the Claude sessions that are not running\n                        (wake.py)\n    work                the model job: build, review and fix one item\n    plan-fetch          read the plan the status loop made for this run\n                        (#1455)\n    deliver             check the model job's output and publish it\n    event               handle one GitHub event\n    sweep               answer any request an event handler never answered\n    status              print the status report\n    dashboard           rewrite the pinned status issue (bot-status runs it\n                        every five minutes, its runners every two)\n    stats               rewrite the pinned status issue now, with its\n                        statistics\n    halt                stop all model work\n    start               lift a halt\n    dispatch            start a night run now\n    providers           each subscription's hours, limits and readiness\n    window              each subscription's hours, limits and readiness\n    doctor              check the configuration and the repository\n    setup               create or update the labels, and create the state\n                        branch\n    triage              label, type and assign a new issue or pull request, an\n                        issue labelled human, or one a person called it on\n    forget              clear an item's failure count\n\noptions:\n  -h, --help            show this help message and exit\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: the following arguments are required: command\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--help"
+  ],
+  "stdout": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\n\noptions:\n  -h, --help            show this help message and exit\n  --out OUT\n  --force               ignore the subscriptions' hours\n  --quiet-ok QUIET_OK   the gate's verdict: the shared subscription it saw\n                        quiet, or empty\n  --item ITEM\n  --mode {auto,build,revise,review,suggest}\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "peek",
+   "--help"
+  ],
+  "stdout": "usage: harness peek [-h] [--force] [--item ITEM]\n                    [--mode {auto,build,revise,review,suggest}]\n\noptions:\n  -h, --help            show this help message and exit\n  --force               ignore the subscriptions' hours\n  --item ITEM\n  --mode {auto,build,revise,review,suggest}\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "quiet",
+   "--help"
+  ],
+  "stdout": "usage: harness quiet [-h]\n\noptions:\n  -h, --help  show this help message and exit\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "wake",
+   "--help"
+  ],
+  "stdout": "usage: harness wake [-h] [--wait] [--now] [--list] [--ping PING]\n\noptions:\n  -h, --help   show this help message and exit\n  --wait       sleep until the wake time, or say there is nothing to do (the\n               default)\n  --now        wake at once, at any hour\n  --list       print this bot's subscriptions to wake\n  --ping PING  wake this one subscription with the job's secret\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "work",
+   "--help"
+  ],
+  "stdout": "usage: harness work [-h] --plan PLAN --out OUT --work-dir WORK_DIR\n\noptions:\n  -h, --help           show this help message and exit\n  --plan PLAN\n  --out OUT\n  --work-dir WORK_DIR\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan-fetch",
+   "--help"
+  ],
+  "stdout": "usage: harness plan-fetch [-h] --ref REF --out OUT [--check]\n\noptions:\n  -h, --help  show this help message and exit\n  --ref REF   the run's `plan_ref` input\n  --out OUT\n  --check     hold the job's runner, CLI, secret and shared flag to the plan's\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "deliver",
+   "--help"
+  ],
+  "stdout": "usage: harness deliver [-h] --plan PLAN --out OUT [--action ACTION]\n                       [--number NUMBER] [--provider PROVIDER]\n\noptions:\n  -h, --help           show this help message and exit\n  --plan PLAN\n  --out OUT\n  --action ACTION      the plan job's action output, which wins\n  --number NUMBER      the plan job's number output, which wins\n  --provider PROVIDER  the plan job's provider output, which wins\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "event",
+   "--help"
+  ],
+  "stdout": "usage: harness event [-h] [--name NAME] [--payload PAYLOAD]\n\noptions:\n  -h, --help         show this help message and exit\n  --name NAME\n  --payload PAYLOAD\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "sweep",
+   "--help"
+  ],
+  "stdout": "usage: harness sweep [-h]\n\noptions:\n  -h, --help  show this help message and exit\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "status",
+   "--help"
+  ],
+  "stdout": "usage: harness status [-h]\n\noptions:\n  -h, --help  show this help message and exit\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "dashboard",
+   "--help"
+  ],
+  "stdout": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\n\noptions:\n  -h, --help            show this help message and exit\n  --every EVERY         seconds between rewrites; 0 rewrites it once\n  --runners-every RUNNERS_EVERY\n                        seconds between redraws of the runners section alone,\n                        between the rewrites; 0 draws it only with them\n  --for FOR_SECONDS     how long to keep rewriting it, in seconds\n  --sweep               sweep before each rewrite, as the ten-minute sweep\n                        does\n  --stats               carry the statistics in it, counted afresh every 30\n                        minutes\n  --companions          also sweep and draw each other bot (Squishy) in a\n                        process of its own, and put its section in the issue\n  --controller          with the config's `controller` on, plan the work and\n                        start each night run with its plan in the sweep\n                        (#1455)\n  --section-only        print this bot's section of the status issue and write\n                        nothing (the night bot's loop runs this as Squishy)\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "stats",
+   "--help"
+  ],
+  "stdout": "usage: harness stats [-h] [--force] [--companions] [--section-only]\n\noptions:\n  -h, --help      show this help message and exit\n  --force         count the statistics afresh even if they were counted under\n                  30 minutes ago\n  --companions    also put in each other bot's section and record (Squishy's),\n                  drawn by its own process\n  --section-only  print this bot's record for the statistics and write nothing\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "halt",
+   "--help"
+  ],
+  "stdout": "usage: harness halt [-h] [reason ...]\n\npositional arguments:\n  reason\n\noptions:\n  -h, --help  show this help message and exit\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "start",
+   "--help"
+  ],
+  "stdout": "usage: harness start [-h]\n\noptions:\n  -h, --help  show this help message and exit\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "dispatch",
+   "--help"
+  ],
+  "stdout": "usage: harness dispatch [-h] [--item ITEM] [--force]\n                        [--mode {auto,build,revise,review,suggest}]\n\noptions:\n  -h, --help            show this help message and exit\n  --item ITEM\n  --force\n  --mode {auto,build,revise,review,suggest}\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "providers",
+   "--help"
+  ],
+  "stdout": "usage: harness providers [-h] [--offline]\n\noptions:\n  -h, --help  show this help message and exit\n  --offline   do not read the state file\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "window",
+   "--help"
+  ],
+  "stdout": "usage: harness window [-h] [--offline]\n\noptions:\n  -h, --help  show this help message and exit\n  --offline   do not read the state file\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "doctor",
+   "--help"
+  ],
+  "stdout": "usage: harness doctor [-h] [--work] [--plan PLAN]\n\noptions:\n  -h, --help   show this help message and exit\n  --work       also check the model job's CLI and secret\n  --plan PLAN  the plan file, for the provider to check\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "setup",
+   "--help"
+  ],
+  "stdout": "usage: harness setup [-h] [--repo-settings]\n\noptions:\n  -h, --help       show this help message and exit\n  --repo-settings  also allow auto-merge and protect the default branch (needs\n                   admin)\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "triage",
+   "--help"
+  ],
+  "stdout": "usage: harness triage [-h] --payload PAYLOAD\n\noptions:\n  -h, --help         show this help message and exit\n  --payload PAYLOAD  the event's payload file\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "forget",
+   "--help"
+  ],
+  "stdout": "usage: harness forget [-h] number\n\npositional arguments:\n  number\n\noptions:\n  -h, --help  show this help message and exit\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "bogus"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: argument command: invalid choice: 'bogus' (choose from 'plan', 'peek', 'quiet', 'wake', 'work', 'plan-fetch', 'deliver', 'event', 'sweep', 'status', 'dashboard', 'stats', 'halt', 'start', 'dispatch', 'providers', 'window', 'doctor', 'setup', 'triage', 'forget')\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: the following arguments are required: --out\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--mode",
+   "x",
+   "--out",
+   "o"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: argument --mode: invalid choice: 'x' (choose from 'auto', 'build', 'revise', 'review', 'suggest')\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--out"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: argument --out: expected one argument\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "--force"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: argument --out: expected one argument\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "o",
+   "--bogus"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: --bogus\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--out=o",
+   "--force=1"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: argument --force: ignored explicit argument '1'\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "--force",
+   "plan",
+   "--out",
+   "o"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: --force\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "dashboard",
+   "--every",
+   "x"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\nharness dashboard: error: argument --every: invalid int value: 'x'\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "dashboard",
+   "--s"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\nharness dashboard: error: ambiguous option: --s could match --sweep, --stats, --section-only\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "work"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness work [-h] --plan PLAN --out OUT --work-dir WORK_DIR\nharness work: error: the following arguments are required: --plan, --out, --work-dir\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "work",
+   "--plan",
+   "p"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness work [-h] --plan PLAN --out OUT --work-dir WORK_DIR\nharness work: error: the following arguments are required: --out, --work-dir\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "forget"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness forget [-h] number\nharness forget: error: the following arguments are required: number\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "forget",
+   "1",
+   "2"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: 2\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "o",
+   "extra"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: extra\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "-x"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: the following arguments are required: --out\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "-h",
+   "--mode",
+   "x"
+  ],
+  "stdout": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\n\noptions:\n  -h, --help            show this help message and exit\n  --out OUT\n  --force               ignore the subscriptions' hours\n  --quiet-ok QUIET_OK   the gate's verdict: the shared subscription it saw\n                        quiet, or empty\n  --item ITEM\n  --mode {auto,build,revise,review,suggest}\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--mode",
+   "x",
+   "-h"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: argument --mode: invalid choice: 'x' (choose from 'auto', 'build', 'revise', 'review', 'suggest')\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--mo",
+   "x",
+   "--out",
+   "o"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: argument --mode: invalid choice: 'x' (choose from 'auto', 'build', 'revise', 'review', 'suggest')\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "dispatch",
+   "--mode=zzz"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness dispatch [-h] [--item ITEM] [--force]\n                        [--mode {auto,build,revise,review,suggest}]\nharness dispatch: error: argument --mode: invalid choice: 'zzz' (choose from 'auto', 'build', 'revise', 'review', 'suggest')\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "halt",
+   "--",
+   "--x"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "halt",
+   "reason": [
+    "--x"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "wake",
+   "--ping"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness wake [-h] [--wait] [--now] [--list] [--ping PING]\nharness wake: error: argument --ping: expected one argument\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "triage"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness triage [-h] --payload PAYLOAD\nharness triage: error: the following arguments are required: --payload\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan-fetch",
+   "--ref",
+   "r"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan-fetch [-h] --ref REF --out OUT [--check]\nharness plan-fetch: error: the following arguments are required: --out\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "-x"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: the following arguments are required: command\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "stats",
+   "--f",
+   "--c",
+   "--s",
+   "--x"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: --x\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "dashboard",
+   "--for",
+   "-5"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "dashboard",
+   "every": 0,
+   "runners_every": 0,
+   "for_seconds": -5,
+   "sweep": false,
+   "stats": false,
+   "companions": false,
+   "controller": false,
+   "section_only": false
+  }
+ },
+ {
+  "argv": [
+   "forget",
+   "-5"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "forget",
+   "number": "-5"
+  }
+ },
+ {
+  "argv": [
+   "forget",
+   "-x"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness forget [-h] number\nharness forget: error: the following arguments are required: number\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "-1"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "plan",
+   "out": "-1",
+   "force": false,
+   "quiet_ok": null,
+   "item": "",
+   "mode": "auto"
+  }
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "-x"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: argument --out: expected one argument\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "--"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: argument --out: expected one argument\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "dashboard",
+   "--every=-3",
+   "--for",
+   "1e3"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\nharness dashboard: error: argument --for: invalid int value: '1e3'\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "deliver",
+   "--plan",
+   "p"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness deliver [-h] --plan PLAN --out OUT [--action ACTION]\n                       [--number NUMBER] [--provider PROVIDER]\nharness deliver: error: the following arguments are required: --out\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "providers",
+   "--offline=1"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness providers [-h] [--offline]\nharness providers: error: argument --offline: ignored explicit argument '1'\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "setup",
+   "--repo",
+   "--repo-settings"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "setup",
+   "repo_settings": true
+  }
+ },
+ {
+  "argv": [
+   "doctor",
+   "--plan"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness doctor [-h] [--work] [--plan PLAN]\nharness doctor: error: argument --plan: expected one argument\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "event",
+   "--name",
+   "a",
+   "--name",
+   "b",
+   "--payload"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness event [-h] [--name NAME] [--payload PAYLOAD]\nharness event: error: argument --payload: expected one argument\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "halt",
+   "a",
+   "b",
+   "--x"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: --x\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "halt",
+   "a",
+   "--",
+   "-b"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "halt",
+   "reason": [
+    "a",
+    "-b"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "o",
+   "--item",
+   "#5",
+   "--quiet-ok",
+   ""
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "plan",
+   "out": "o",
+   "force": false,
+   "quiet_ok": "",
+   "item": "#5",
+   "mode": "auto"
+  }
+ },
+ {
+  "argv": [
+   "dashboard",
+   "--every",
+   " 7 ",
+   "--runners-every",
+   "+3",
+   "--for",
+   "1_0"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "dashboard",
+   "every": 7,
+   "runners_every": 3,
+   "for_seconds": 10,
+   "sweep": false,
+   "stats": false,
+   "companions": false,
+   "controller": false,
+   "section_only": false
+  }
+ },
+ {
+  "argv": [
+   "wake",
+   "--wait",
+   "--now",
+   "--list",
+   "--ping",
+   "c"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "wake",
+   "wait": true,
+   "now": true,
+   "list": true,
+   "ping": "c"
+  }
+ },
+ {
+  "argv": [
+   "work",
+   "--plan",
+   "p",
+   "--out",
+   "o",
+   "--work-dir",
+   "w"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "work",
+   "plan": "p",
+   "out": "o",
+   "work_dir": "w"
+  }
+ },
+ {
+  "argv": [
+   "stats",
+   "--force",
+   "--companions",
+   "--section-only"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "stats",
+   "force": true,
+   "companions": true,
+   "section_only": true
+  }
+ },
+ {
+  "argv": [
+   "forget",
+   "12"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "forget",
+   "number": "12"
+  }
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "o",
+   "--",
+   "x"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: -- x\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "dashboard",
+   "--every",
+   "1",
+   "--every",
+   "2"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "dashboard",
+   "every": 2,
+   "runners_every": 0,
+   "for_seconds": 0,
+   "sweep": false,
+   "stats": false,
+   "companions": false,
+   "controller": false,
+   "section_only": false
+  }
+ },
+ {
+  "argv": [
+   "peek",
+   "--item",
+   "-3"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "peek",
+   "force": false,
+   "item": "-3",
+   "mode": "auto"
+  }
+ },
+ {
+  "argv": [
+   "dispatch",
+   "--item",
+   "--force"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness dispatch [-h] [--item ITEM] [--force]\n                        [--mode {auto,build,revise,review,suggest}]\nharness dispatch: error: argument --item: expected one argument\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "event",
+   "--name=",
+   "--payload="
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "event",
+   "name": "",
+   "payload": ""
+  }
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "o",
+   "-"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: -\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "halt",
+   "-"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "halt",
+   "reason": [
+    "-"
+   ]
+  }
+ },
+ {
+  "argv": [
+   "plan",
+   "--out",
+   "o",
+   "--forc"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "plan",
+   "out": "o",
+   "force": true,
+   "quiet_ok": null,
+   "item": "",
+   "mode": "auto"
+  }
+ },
+ {
+  "argv": [
+   "plan",
+   "--",
+   "--out",
+   "o"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\nharness plan: error: the following arguments are required: --out\n",
+  "exit": 2,
+  "ns": null
+ },
+ {
+  "argv": [
+   "--he"
+  ],
+  "stdout": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\n\nThe command line: `harness <command>` from the `bot/` directory. The workflows\ncall `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An\noperator calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`,\n`setup` and `forget`, with a token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or\nGH_TOKEN, or a logged-in `gh`.\n\npositional arguments:\n  {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget}\n    plan                decide what this night run does, and claim it\n    peek                would a run find work? changes nothing\n    quiet               wait until nobody else is spending the subscription\n    wake                start the Claude sessions that are not running\n                        (wake.py)\n    work                the model job: build, review and fix one item\n    plan-fetch          read the plan the status loop made for this run\n                        (#1455)\n    deliver             check the model job's output and publish it\n    event               handle one GitHub event\n    sweep               answer any request an event handler never answered\n    status              print the status report\n    dashboard           rewrite the pinned status issue (bot-status runs it\n                        every five minutes, its runners every two)\n    stats               rewrite the pinned status issue now, with its\n                        statistics\n    halt                stop all model work\n    start               lift a halt\n    dispatch            start a night run now\n    providers           each subscription's hours, limits and readiness\n    window              each subscription's hours, limits and readiness\n    doctor              check the configuration and the repository\n    setup               create or update the labels, and create the state\n                        branch\n    triage              label, type and assign a new issue or pull request, an\n                        issue labelled human, or one a person called it on\n    forget              clear an item's failure count\n\noptions:\n  -h, --help            show this help message and exit\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--he"
+  ],
+  "stdout": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\n\noptions:\n  -h, --help            show this help message and exit\n  --out OUT\n  --force               ignore the subscriptions' hours\n  --quiet-ok QUIET_OK   the gate's verdict: the shared subscription it saw\n                        quiet, or empty\n  --item ITEM\n  --mode {auto,build,revise,review,suggest}\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "plan",
+   "--h"
+  ],
+  "stdout": "usage: harness plan [-h] --out OUT [--force] [--quiet-ok QUIET_OK]\n                    [--item ITEM] [--mode {auto,build,revise,review,suggest}]\n\noptions:\n  -h, --help            show this help message and exit\n  --out OUT\n  --force               ignore the subscriptions' hours\n  --quiet-ok QUIET_OK   the gate's verdict: the shared subscription it saw\n                        quiet, or empty\n  --item ITEM\n  --mode {auto,build,revise,review,suggest}\n",
+  "stderr": "",
+  "exit": 0,
+  "ns": null
+ },
+ {
+  "argv": [
+   "dashboard",
+   "--se"
+  ],
+  "stdout": "",
+  "stderr": "",
+  "exit": null,
+  "ns": {
+   "command": "dashboard",
+   "every": 0,
+   "runners_every": 0,
+   "for_seconds": 0,
+   "sweep": false,
+   "stats": false,
+   "companions": false,
+   "controller": false,
+   "section_only": true
+  }
+ },
+ {
+  "argv": [
+   "dashboard",
+   "--c"
+  ],
+  "stdout": "",
+  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\nharness dashboard: error: ambiguous option: --c could match --companions, --controller\n",
+  "exit": 2,
+  "ns": null
+ }
+]

@@ -697,12 +697,12 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
         let second_events = std::mem::take(&mut second_sink.events);
 
         assert_eq!(
-            serde_json::to_string(&second_events).expect("serialises"),
-            serde_json::to_string(&first_events).expect("serialises")
+            serde_json::to_string(&second_events).expect("serializes"),
+            serde_json::to_string(&first_events).expect("serializes")
         );
         assert_eq!(
-            serde_json::to_string(&second).expect("serialises"),
-            serde_json::to_string(&first).expect("serialises")
+            serde_json::to_string(&second).expect("serializes"),
+            serde_json::to_string(&first).expect("serializes")
         );
     }
 
@@ -796,8 +796,8 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
                 apply_as(sink.sink(&mut state), effect, P1);
                 let events = std::mem::take(&mut sink.events);
                 (
-                    serde_json::to_string(&state).expect("serialises"),
-                    serde_json::to_string(&events).expect("serialises"),
+                    serde_json::to_string(&state).expect("serializes"),
+                    serde_json::to_string(&events).expect("serializes"),
                 )
             })
             .collect();
@@ -853,7 +853,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
     use super::*;
 
     #[test]
-    fn r44_a_cancelled_attack_resolves_no_combat_and_emits_attack_cancelled() {
+    fn r44_a_canceled_attack_resolves_no_combat_and_emits_attack_canceled() {
         let (mut state, attacker, defender, backrow) = swing("cancel", &[canceller().id]);
         let trap = backrow[0].clone();
         let mut sink = Bench::new(&state);
@@ -923,7 +923,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         // R68 within a side is lane order, so the asker is offered the declaration first and the
         // canceller is still owed it when the prompt stops the window.
         let (state, attacker, defender, backrow) = swing("window-pause", &[asker().id, canceller().id]);
-        let cancelling = backrow[1].clone();
+        let canceling = backrow[1].clone();
 
         let paused = reduce(&state, &attack_action(&attacker.id, &defender.id, "n1"));
         assert_eq!(paused.error, None);
@@ -981,7 +981,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         // cancel still lands and no damage is ever dealt.
         assert_eq!(
             field_of(&answered.events, GameEventType::AttackCancelled, "byInstanceId"),
-            vec![json!(cancelling.id)]
+            vec![json!(canceling.id)]
         );
         assert!(events_of_type(&answered.events, GameEventType::Damage).is_empty());
         assert_eq!(
@@ -1121,7 +1121,7 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
     #[test]
     fn r1122_later_trap_skips_it() {
         // The redirector answers first (lane order); the canceller behind it is never offered the
-        // re-aimed attack, so no attack is cancelled, the canceller stays set and the allies still
+        // re-aimed attack, so no attack is canceled, the canceller stays set and the allies still
         // fight.
         let (mut state, attacker, defender, backrow) =
             swing("redirect-skip", &[redirector().id, canceller().id]);

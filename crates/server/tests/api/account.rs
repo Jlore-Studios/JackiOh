@@ -385,7 +385,7 @@ mod the_supabase_providers_delete_user {
     }
 
     #[tokio::test]
-    async fn deletes_through_the_admin_api_and_stops_honouring_the_users_token_at_once() {
+    async fn deletes_through_the_admin_api_and_stops_honoring_the_users_token_at_once() {
         let h = provider(DeletionReply::Deleted).await;
         let token = h.token_for(USER_A);
         // Verified once, so the confirmed email is remembered for a while.

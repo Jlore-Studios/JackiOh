@@ -18,9 +18,10 @@
 //!   them; otherwise they are diffed from the working catalog against the newest shipped snapshot).
 //!   `plays` (`--plays`) names the shipped cards whose play changed with no catalog change, through
 //!   their script or the engine, as `cargo jackioh classify` (R1365000) finds them; `rule` (`--rule`)
-//!   claims a divergence no card explains, a rule every game meets. Neither is set from the diff:
-//!   only the classifier's second stage tells a refactor from a change. `player` is the player note
-//!   the Patch notes page shows (R724001): `{ title, new, balance, changes, text, fixes }`, written
+//!   claims divergences no card explains in enough games to be a rule every game meets (R2455000).
+//!   Neither is set from the diff: only the classifier's second stage tells a refactor from a
+//!   change. `player` is the player note the Patch notes page shows (R724001): `{ title, new,
+//!   balance, changes, text, fixes }`, written
 //!   into the fragment by hand, since no flag sets it, and kept when the fragment is written again,
 //!   as `plays` and `rule` are when their flags are left out. An optional `winRates: true` claims the
 //!   win-rate table, `crates/cards/data/win_rates.json` (R1329000): the command sets it when the
@@ -300,7 +301,7 @@ pub(crate) mod js {
         serde_json::from_str(text)
     }
 
-    /// Compact JSON for anything serde writes in field order (fields serialise in declaration order).
+    /// Compact JSON for anything serde writes in field order (fields serialize in declaration order).
     pub fn stringify<T: serde::Serialize + ?Sized>(value: &T) -> String {
         serde_json::to_string(value).unwrap_or_else(|error| panic!("JSON.stringify: {error}"))
     }
@@ -979,7 +980,7 @@ pub mod patches_io {
     /// Fills a raw entry's face text from the entry's printed values: `{key|singular|plural}` takes the
     /// singular wording at 1 and the plural at any other value; unknown keys are left as written. A
     /// private copy (the engine's `fill_params` takes a typed `CardDef`, which a snapshot entry, or a
-    /// test's partial one, need not deserialise into).
+    /// test's partial one, need not deserialize into).
     fn fill_params(def: &Object, face: &str) -> String {
         let text = def
             .get(face)
@@ -1155,7 +1156,8 @@ pub mod patches_io {
         /// or the engine (`cargo jackioh classify`'s second stage, R1365000).
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub plays: Vec<String>,
-        /// R1366000: a divergence no card explains, a rule every game meets, which makes a patch.
+        /// R1366000: divergences no card explains, a rule every game meets, which makes a patch: in
+        /// `classify`'s stage 2, they hold a quarter of its unforced games (R2455000).
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         pub rule: bool,
         /// R1329000: the patch ships `crates/cards/data/win_rates.json` as it stands.
@@ -1527,8 +1529,9 @@ pub mod patches_io {
 /// - a **major** (a set reaches `SHIPPED_SETS`, unless the owner wraps it into the current line,
 ///   `classify::WRAPPED_SETS`, R2204000, when it earns its cards' tier) is `v0.(Z+1).0`: after
 ///   v0.3.17 it is v0.4.0;
-/// - a **patch** (`PATCH_MIN_CARDS` or more families play differently, or a rule every game meets) is
-///   `v0.Z.(X+1)`: after v0.3.17 or v0.3.17c it is v0.3.18;
+/// - a **patch** (`PATCH_MIN_REPRINTS` or more families reprinted, `PATCH_MIN_CARDS` or more that play
+///   differently, or a rule every game meets, R2455000, R2499000) is `v0.Z.(X+1)`: after v0.3.17 or
+///   v0.3.17c it is v0.3.18;
 /// - a **micro** (anything smaller) is the newest version with the next letter: after v0.3.17 it is
 ///   v0.3.17b, after v0.3.17b v0.3.17c.
 ///
@@ -2618,6 +2621,28 @@ mod tests {
                 let (tier, _) = crate::patches::tier_of(&previous, &with("Classic", "classic"), &fragment);
                 assert_eq!(tier, Tier::Major);
                 assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.6.0");
+            }
+
+            // R2499000: a fragment that reprints `PATCH_MIN_REPRINTS` cards ships as a patch, one
+            // fewer as a micro, read from the two snapshots alone.
+            #[test]
+            fn r2499000_a_balance_pass_of_the_reprint_bar_ships_as_a_patch() {
+                use crate::patches::patches_io::{Catalog, PendingFragment};
+                let entry = |id: String, cost: i64| {
+                    let json = serde_json::json!({ "id": id, "name": id, "set": "Core", "cost": cost });
+                    (id, serde_json::from_value(json).expect("an entry"))
+                };
+                let bar = crate::classify::PATCH_MIN_REPRINTS;
+                let costing = |changed: usize| -> Catalog {
+                    (1..=bar)
+                        .map(|k| entry(format!("core-{k:03}"), if k <= changed { 2 } else { 1 }))
+                        .collect()
+                };
+                let fragment = PendingFragment::default();
+                let (tier, plays) = crate::patches::tier_of(&costing(0), &costing(bar), &fragment);
+                assert_eq!((tier, plays.len()), (Tier::Patch, bar));
+                let (tier, _) = crate::patches::tier_of(&costing(0), &costing(bar - 1), &fragment);
+                assert_eq!(tier, Tier::Micro);
             }
 
             #[test]
@@ -3867,7 +3892,8 @@ mod tests {
             // three cards are a micro, the next letter; twelve a patch, the next X.
             #[test]
             fn r1366000_ships_each_pending_fragment_by_its_own_tier_in_merge_order() {
-                let base = cards(15);
+                let bar = crate::classify::PATCH_MIN_CARDS;
+                let base = cards(3 + bar);
                 let temp = shipped_repo("jackioh-ship-tiers-", &base);
                 let root = temp.path();
                 let dir = root.join("crates/cards/patches");
@@ -3881,27 +3907,30 @@ mod tests {
                     ("three-cards.json", ids(0, 3))
                 );
                 commit_at(root, "three cards", "2026-10-01T12:00:00+00:00");
-                let twelve = costing(&three, &ids(3, 15), 2);
-                write_files(root, &[("crates/cards/catalog.json", json(&twelve))]);
+                let many = costing(&three, &ids(3, 3 + bar), 2);
+                write_files(root, &[("crates/cards/catalog.json", json(&many))]);
                 let args = FragmentArgs {
-                    cards: Some(ids(3, 15)),
-                    ..fragment_args("Patch v0.3.Y: twelve cards", "s", "n", None)
+                    cards: Some(ids(3, 3 + bar)),
+                    ..fragment_args("Patch v0.3.Y: many cards", "s", "n", None)
                 };
                 write_fragment(root, &args).unwrap();
-                commit_at(root, "twelve cards", "2026-10-02T12:00:00+00:00");
+                commit_at(root, "many cards", "2026-10-02T12:00:00+00:00");
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
 
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b", "v0.1.2"]));
                 let micro = shipped_patch(&dir, "v0.1.1b");
                 assert_eq!((micro.tier, micro.plays), (Some(Tier::Micro), Some(ids(0, 3))));
                 let patch = shipped_patch(&dir, "v0.1.2");
-                assert_eq!((patch.tier, patch.plays), (Some(Tier::Patch), Some(ids(3, 15))));
-                assert_eq!(read_snapshot("v0.1.2", &dir).unwrap(), twelve);
+                assert_eq!(
+                    (patch.tier, patch.plays),
+                    (Some(Tier::Patch), Some(ids(3, 3 + bar)))
+                );
+                assert_eq!(read_snapshot("v0.1.2", &dir).unwrap(), many);
                 assert!(read(&root.join("render.yaml")).contains("value: v0.1.2"));
                 commit_at(root, "ship", "2026-10-02T13:00:00+00:00");
 
                 // A micro after a patch is named after the patch.
-                let again = costing(&twelve, &ids(0, 1), 5);
+                let again = costing(&many, &ids(0, 1), 5);
                 write_files(root, &[("crates/cards/catalog.json", json(&again))]);
                 write_fragment(root, &fragment_args("one more", "s", "n", None)).unwrap();
                 commit_at(root, "one more", "2026-10-03T12:00:00+00:00");
@@ -3962,31 +3991,32 @@ mod tests {
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.0b"]));
             }
 
-            // R1366000: a fragment whose `plays` names ten cards whose scripts changed, with no catalog
-            // change, ships as a patch; one claiming a rule every game meets does too; one claiming a
-            // single card's play is a micro.
+            // R1366000: a fragment whose `plays` names `PATCH_MIN_CARDS` cards whose scripts changed,
+            // with no catalog change, ships as a patch; one claiming a rule every game meets does too;
+            // one claiming a single card's play is a micro.
             #[test]
-            fn r1366000_ships_ten_cards_claimed_through_their_play_as_a_patch_with_no_catalog_change() {
-                let base = cards(12);
+            fn r1366000_ships_the_bar_of_cards_claimed_through_their_play_as_a_patch() {
+                let bar = crate::classify::PATCH_MIN_CARDS;
+                let base = cards(bar + 2);
                 let temp = shipped_repo("jackioh-ship-plays-", &base);
                 let root = temp.path();
                 let dir = root.join("crates/cards/patches");
                 let args = FragmentArgs {
-                    plays: Some(ids(0, 10)),
-                    ..fragment_args("ten scripts", "s", "n", None)
+                    plays: Some(ids(0, bar)),
+                    ..fragment_args("many scripts", "s", "n", None)
                 };
                 let written = write_fragment(root, &args).unwrap();
                 assert_eq!(
                     (written.fragment.cards.clone(), written.fragment.plays.clone()),
-                    (Vec::new(), ids(0, 10))
+                    (Vec::new(), ids(0, bar))
                 );
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
-                commit_at(root, "ten scripts", "2026-10-01T12:00:00+00:00");
+                commit_at(root, "many scripts", "2026-10-01T12:00:00+00:00");
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.2"]));
                 let patch = shipped_patch(&dir, "v0.1.2");
                 assert_eq!(
                     (patch.tier, patch.plays, patch.changes),
-                    (Some(Tier::Patch), Some(ids(0, 10)), Vec::new())
+                    (Some(Tier::Patch), Some(ids(0, bar)), Vec::new())
                 );
                 assert_eq!(read_snapshot("v0.1.2", &dir).unwrap(), base);
                 commit_at(root, "ship", "2026-10-01T13:00:00+00:00");
@@ -3997,14 +4027,14 @@ mod tests {
                 };
                 write_fragment(root, &rule).unwrap();
                 let one = FragmentArgs {
-                    plays: Some(strings(&["c11"])),
+                    plays: Some(ids(bar + 1, bar + 2)),
                     ..fragment_args("one script", "s", "n", None)
                 };
                 write_fragment(root, &one).unwrap();
                 commit_at(root, "a rule and one script", "2026-10-02T12:00:00+00:00");
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.3", "v0.1.3b"]));
                 assert_eq!(shipped_patch(&dir, "v0.1.3").tier, Some(Tier::Patch));
-                assert_eq!(shipped_patch(&dir, "v0.1.3b").plays, Some(strings(&["c11"])));
+                assert_eq!(shipped_patch(&dir, "v0.1.3b").plays, Some(ids(bar + 1, bar + 2)));
             }
 
             // R1366000: the old form, `patches <version> [date] "<title>"`, still writes a fragment, its

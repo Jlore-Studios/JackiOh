@@ -40,14 +40,26 @@ fn rate_limit(nth: i32) -> TriggerDef {
     })
 }
 
+/// R2476000: the opponent's plays this turn, the count its `when` holds to the nth, after "card in a
+/// turn", which both faces print: on their turn, and 0 on its controller's, which their plays never
+/// reach. Face-down, so its controller alone reads it (R33); plays are public.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        let played = if ctx.your_turn { 0 } else { cards_played_this_turn(ctx.state, opponent_of(ctx.controller)) };
+        vec![count_preview("card in a turn", played)]
+    })
+}
+
 pub fn script() -> CardScripts {
     CardScripts {
         base: Script {
             triggers: vec![rate_limit(NTH_PLAY.base)],
+            preview: Some(preview()),
             ..Script::default()
         },
         radiant: Script {
             triggers: vec![rate_limit(NTH_PLAY.radiant)],
+            preview: Some(preview()),
             ..Script::default()
         },
     }
@@ -105,7 +117,7 @@ mod tests {
     }
 
     fn view_text(s: &Scenario, player: PlayerId) -> String {
-        serde_json::to_string(&s.view(player)).expect("serialises")
+        serde_json::to_string(&s.view(player)).expect("serializes")
     }
 
     mod t_ai_8_rate_limit {
@@ -201,7 +213,7 @@ mod tests {
                 assert_eq!(s.state().pending.as_ref().map(|pending| js(&pending.kind)), Some(json!("discover")));
                 assert_eq!(s.state().active, P2);
                 let thawed: GameState =
-                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
+                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serializes")).expect("parses");
                 assert_eq!(hash_state(&thawed), hash_state(s.state()));
                 // The offered def ids come from the view (§10.8): the raw state options carry only the key
                 // and the selection to send back.
@@ -292,6 +304,20 @@ mod tests {
                 s.expect_health(P2, 32);
                 assert_eq!(s.state().active, P1);
             }
+        }
+    }
+
+    /// R2476000: face-down, its controller reads the opponent's plays this turn after "card in a turn":
+    /// 0, then 1 after their Replenish; the opponent reads nothing of it.
+    #[test]
+    fn r2476000_it_previews_the_opponents_plays_this_turn_to_its_controller_alone() {
+        for radiant in [false, true] {
+            let mut s = setup(json!({}), json!({}), radiant);
+            let trap = s.card(RATE_LIMIT).id.clone();
+            assert_eq!(crate::preview_seen(&s, P1, &trap), vec![("card in a turn".to_string(), 0, None)], "radiant {radiant}");
+            s.play(REPLENISH, json!({}));
+            assert_eq!(crate::preview_seen(&s, P1, &trap), vec![("card in a turn".to_string(), 1, None)], "radiant {radiant}");
+            assert!(crate::preview_seen(&s, P2, &trap).is_empty(), "radiant {radiant}");
         }
     }
 }

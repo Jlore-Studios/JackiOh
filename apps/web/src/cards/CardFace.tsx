@@ -51,6 +51,12 @@
 // the left of its hover preview (inspect/Extended.tsx). With hover previews off, the rules box's
 // tooltip carries it instead (#912).
 //
+// R2450000: a Quest card (the Quest tag, R1837000) prints only the stage it stands at (questFace.ts):
+// on the field the stage the view's line stands at, with its quest's progress and its reward, its wait
+// to hear back, or "Quest complete"; off the field Stage 1 of n; In Too Deep its text and then its open
+// quests, their rewards and its auras. A staged face prints less than its whole text, which stands
+// on the left of its hover preview, every stage in it, as a short form's does.
+//
 // R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole full face and no
 // words (`data-full-art`, the art's "full" shape): no rules box, tags or type line, its whole text in
 // the hover preview and the detail view. The Full-art cards setting turns it off, and so does a tutorial lesson's board (R1108000).
@@ -78,12 +84,13 @@ import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
 import { showsFullArt, useFullArt } from "./fullArt.ts";
-import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel } from "./model.ts";
+import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts";
+import { questFaceText } from "./questFace.ts";
 import { MINUS } from "./tuning.ts";
 
 import "./cards.css";
@@ -210,12 +217,18 @@ export type RulesBox = {
   short: string | null;
   /** The face prints less than its whole text: its rules box clamps, never shrinking the art. */
   less: boolean;
+  /**
+   * R2450000: a Quest card's `shown` with its own marks and tuned numbers, where they stand in it
+   * (questFace.ts). Absent wherever `shown` is the whole text or its start.
+   */
+  text?: FaceText;
 };
 
 /**
  * What the rules box prints. A Summit in play given its level prints its header and the next Ascent
- * line; a face printing its catalog text takes its short form (shortText.ts SHORT_FORMS); a face in
- * play past the hover preview's limit (a fused card, a heavily Buffed one) clamps. Each of these
+ * line; a Quest card the stage it stands at (questFace.ts, R2450000); a face printing its catalog
+ * text takes its short form (shortText.ts SHORT_FORMS); a face in play past the hover preview's
+ * limit (a fused card, a heavily Buffed one) clamps. Each of these
  * prints less than its whole text, which the hover preview prints on the face's left.
  * `fullArtOn` is the caller's `useFullArt(defId)` (R1108000, R1313000); without it, the setting decides.
  */
@@ -223,6 +236,13 @@ export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn
   const full = face.text.full;
   // R1017001: a full-art face prints none of its words.
   if (showsFullArt(face, fullArtOn)) return { shown: "", short: null, less: printedText(face, full) !== "" };
+  // R2450000: a staged Quest prints one stage, a short form of its own; In Too Deep in play adds its
+  // open quests, and clamps as any face in play does past the hover preview's limit.
+  const quest = questFaceText(face);
+  if (quest !== null) {
+    const less = quest.less || (face.inPlay && overLimit(printedText(face, quest.full), PREVIEW_TEXT_LIMIT));
+    return { shown: quest.full, short: quest.less ? quest.full : null, less, text: quest };
+  }
   const summit = summitShortText(face.defId, full, ascentLevel);
   // A face in play that prints something other than its catalog text (a #98 Heroic Power's rolled
   // power, a Vanilla unit's lost text, inPlay.ts) takes no short form; a Call to Chaos's "???" has
@@ -320,8 +340,10 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // Issues #814, #1017: what the rules box prints — a short form or the whole text. A short form
   // is the full text's prefix, so a value after its label ("Ascent level", R280) and a mark or tuned
   // number inside it keep their offsets; RulesText drops marks outside the printed words on its
-  // own, and a tuned number on a hidden line goes unmarked.
-  const { shown, short, less } = faceText(face, ascentLevel, fullArtOn);
+  // own, and a tuned number on a hidden line goes unmarked. A Quest card's stage (R2450000) is no
+  // prefix, so it brings its marks and tuned numbers with it (`text`).
+  const { shown, short, less, text } = faceText(face, ascentLevel, fullArtOn);
+  const words = text ?? face.text;
   // #912: the hover preview shows the whole card, so the native tooltip only stands in for it
   // while hover previews are off, as Card.tsx's root title does (B19).
   const tooltip = settings.hoverPreviews || face.text.full === "" ? undefined : face.text.full;
@@ -433,10 +455,10 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               <span className="cf-text-base">
                 <RulesText
                   text={shown}
-                  marks={face.text.marks}
+                  marks={words.marks}
                   refs={face.refs}
                   values={face.values}
-                  {...(face.text.tuned === undefined ? {} : { tuned: face.text.tuned })}
+                  {...(words.tuned === undefined ? {} : { tuned: words.tuned })}
                   chinese={face.chinese === true}
                 />
               </span>

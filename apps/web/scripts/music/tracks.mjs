@@ -663,7 +663,7 @@ const INTRO_TONICS = Object.keys(TONIC);
 const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"];
 /**
  * The set's glint into the cadence (a set not listed here takes Classic+'s). The Meditative set's is a
- * kalimba, a plucked run that rings like the set's East-Asian colours (compose.mjs's GM table names no
+ * kalimba, a plucked run that rings like the set's East-Asian colors (compose.mjs's GM table names no
  * koto or shamisen); the Meditative+ set's is a music box, the kalimba's plucked comb wound up; the
  * Stinkyscape set's is a crystal, a glassy synth bell like a star's glint (R1883000); the Training
  * Grounds set's is a xylophone, wood struck like the yard's practice swords (R2202001).
@@ -689,8 +689,8 @@ const INTRO_TYPE_FAMILIES = { Unit: "unit", Spell: "spell", "Field Spell": "fiel
 
 /**
  * Each family's forces: a lead (channel 0, the motif), a second (1, the harmony), a bass (2) and a
- * colour (3), the accompaniment `style`, the modes it may take (the set picks among them first),
- * its `feel` (how fast), the MIDI note its melody centres on, and alternates the id picks among.
+ * color (3), the accompaniment `style`, the modes it may take (the set picks among them first),
+ * its `feel` (how fast), the MIDI note its melody centers on, and alternates the id picks among.
  */
 const INTRO_PALETTES = {
   human: { lead: GM.horn, second: GM.strings, bass: GM.contrabass, color: GM.harp, style: "fanfare", modes: ["major", "mixolydian", "dorian"], feel: "mid", center: 64 },
@@ -870,7 +870,7 @@ const onLastBar = (sec) => onlyBar(sec.bars - 1);
 const beforeLastBar = (sec) => (bar) => bar === sec.bars - 1;
 
 /**
- * The accompaniment under the lead, one per style: channel 1 the second, 2 the bass, 3 the colour,
+ * The accompaniment under the lead, one per style: channel 1 the second, 2 the bass, 3 the color,
  * 4 timpani, and the drum kit each style names (`kit`). Every style ends on the cadence held.
  */
 const INTRO_STYLES = {
@@ -902,7 +902,7 @@ const INTRO_STYLES = {
       introDrums(sec, [[0.5, DR.claves, 26], [1.5, DR.claves, 22], [2.5, DR.claves, 26], [3.5, DR.claves, 22]], { skip: onlyBar(0) });
     },
   },
-  /** Chimes over a warm hold: slow broken chords on the second, the colour holding the cadence. */
+  /** Chimes over a warm hold: slow broken chords on the second, the color holding the cadence. */
   chime: {
     kit: null,
     build(sec, s) {
@@ -949,7 +949,7 @@ const INTRO_STYLES = {
       introDrums(sec, [[0, DR.kick, 88], [0, DR.open, 50]], { skip: onLastBar(sec) });
     },
   },
-  /** Bright brass: punchy section stabs, a tuba, the colour doubling the lead an octave up. */
+  /** Bright brass: punchy section stabs, a tuba, the color doubling the lead an octave up. */
   brass: {
     kit: KIT.orchestra,
     build(sec, s) {
@@ -1095,7 +1095,7 @@ function cardIntro(card) {
   song.reverb = s.mythic ? { room: 0.85, damp: 0.3, width: 1, level: 0.66 } : { room: 0.72, damp: 0.38, width: 1, level: 0.58 };
   song.post.fadeOutS = INTRO_FADE_S;
   song.post.loudnessOverFile = true;
-  // The lead sits where its instrument sings: the melody's middle near the palette's centre.
+  // The lead sits where its instrument sings: the melody's middle near the palette's center.
   const mean = s.melody.reduce((sum, [d]) => sum + pitch(song.key, d), 0) / s.melody.length;
   s.leadOctave = Math.round((s.palette.center - mean) / 12);
   instrument(song, 0, s.palette.lead, { volume: 100, pan: 62, reverb: 55 });
@@ -1148,7 +1148,7 @@ function slotMachine(sec, ch, dings) {
   for (let i = 0; i < dings; i += 1) note(sec, 7, last + i * 0.5, 1.5, pitch(sec.k, 7 + 2 * i, 1), 70, { exact: true });
 }
 
-/** The League of Losers' tune, which each Loser plays in their own lane's colours and lets fall flat. */
+/** The League of Losers' tune, which each Loser plays in their own lane's colors and lets fall flat. */
 const LEAGUE_MOTIF = [[0, 0.5], [4, 0.5], [7, 1.5], [6, 0.5], [4, 0.5], [3, 0.5]];
 const LOSER_MELODY = [...LEAGUE_MOTIF, [2, 0.5], [1, 0.5], [0, 1], [-3, 2]];
 const LOSER_PROG = [["i", "VI"], ["iv", "i"]];
@@ -1842,5 +1842,5 @@ export const TRACKS = [
   ...INTRO_CARDS.map((card) => ({ id: introTrack(card.card), loop: false, build: () => cardIntro(card) })),
 ];
 
-/** R1352: which card each intro is, for music-cards.json's `intro` and the licence record. */
+/** R1352: which card each intro is, for music-cards.json's `intro` and the license record. */
 export const INTRO_TRACKS = INTRO_CARDS.map((card) => ({ card: card.card, name: card.name, track: introTrack(card.card), family: introFamily(card) }));

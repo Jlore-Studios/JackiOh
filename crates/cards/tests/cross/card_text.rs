@@ -4,7 +4,7 @@
 //! The checks are the ruling's, one by one: the library is the deck and a tribute a Tribute; an
 //! embiggen card's Embiggened version is "Embiggened (N): …" (R1175000; "Paid (N): …" until issue
 //! #1175); the printed keywords lead the text as one
-//! comma-separated list on a line of their own; each labelled ability starts a line of its own; and
+//! comma-separated list on a line of their own; each labeled ability starts a line of its own; and
 //! every other line is sentences that end with a full stop. Patch v0.2.0 turned the cost words round
 //! (R432, issue #40): "(N) Cost" is the noun ("a (1) Cost or less card", "(4)+ Cost cards") and
 //! "costs (N)" the verb ("costs (1) less", "costs (0)"). Every face is read with its `params` filled
@@ -66,7 +66,7 @@ fn keyword_label(keyword: &Keyword) -> String {
 }
 
 /// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's). An
-/// embiggen card's Embiggened version is labelled with its Embiggened cost, one label per cost a card
+/// embiggen card's Embiggened version is labeled with its Embiggened cost, one label per cost a card
 /// prints (R1175000). The Stinkyscape set prints five more: "Embiggened (5):" (S #79 Orca) and
 /// "Activate 3:" to "Activate 6:" (R1857003).
 pub(super) const LABELS: &[&str] = &[
@@ -519,7 +519,7 @@ fn failures(face: &Face) -> Vec<String> {
             out.push(format!("does not lead with its keyword {label}"));
         }
     }
-    // Every other line is sentences, each ending with a full stop, and a labelled ability ("Death:",
+    // Every other line is sentences, each ending with a full stop, and a labeled ability ("Death:",
     // "Aura:", "Embiggened (4):") starts a line of its own.
     for (at, line) in lines.iter().enumerate() {
         if at == 0 && has_list {
@@ -547,7 +547,7 @@ fn failures(face: &Face) -> Vec<String> {
 // ---------------------------------------------------------------------------------------------
 // R1302 (MD-B13, ME-CN): a face printed in Chinese (Meditative #32's Radiant face, and every face of
 // the Chinese table, `chinese.rs`) is R366's shape in Chinese punctuation: the keyword list is joined
-// with "，" on a line of its own with no full stop, a labelled ability ("战吼：") starts a sentence of
+// with "，" on a line of its own with no full stop, a labeled ability ("战吼：") starts a sentence of
 // its own, every other line ends with "。", and a cost stays "(N)". No ASCII "." "," ";" or ":" is
 // written, and no full-width bracket.
 // ---------------------------------------------------------------------------------------------
@@ -733,7 +733,7 @@ fn current_catalog() -> Catalog {
 
 /// TS `JSON.stringify(x)`: the top level in its own order, every nested object canonical.
 fn stringify<T: serde::Serialize>(value: &T) -> String {
-    serde_json::to_string(value).expect("a catalog entry serialises")
+    serde_json::to_string(value).expect("a catalog entry serializes")
 }
 
 /// `entry[face]`, an object.
@@ -856,7 +856,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     }
 
     #[test]
-    fn r366_leads_with_the_face_s_printed_keywords_on_a_line_of_their_own_starts_each_labelled_ability_on_its_own_line_and_ends_every_other_line_with_a_full_stop()
+    fn r366_leads_with_the_face_s_printed_keywords_on_a_line_of_their_own_starts_each_labeled_ability_on_its_own_line_and_ends_every_other_line_with_a_full_stop()
      {
         let wrong: Vec<String> = swept()
             .iter()

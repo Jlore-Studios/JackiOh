@@ -52,7 +52,7 @@ fn hits_from(events: &[GameEvent], source: &str) -> Vec<GameEvent> {
 }
 
 fn events_json(events: &[GameEvent]) -> String {
-    serde_json::to_string(events).expect("events serialise")
+    serde_json::to_string(events).expect("events serialize")
 }
 
 /// A Core-set Common definition named after its id, with the same face on both sides.

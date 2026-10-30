@@ -161,7 +161,7 @@
 /* ------------------------------------------------------------------------------ the face --- */
 
 .cf {
-  /* The type's panel colour, and the panel actually drawn: the same, except on a Radiant face,
+  /* The type's panel color, and the panel actually drawn: the same, except on a Radiant face,
      which gilds it without losing the type (below). */
   --cf-type: var(--frame-unit);
   --cf-frame: var(--cf-type);
@@ -173,7 +173,7 @@
     color-mix(in srgb, var(--cf-rarity) 45%, #000)
   );
   --cf-ink: #fbf6ea;
-  /* The metal rim around the art window: bronze, warmed toward the rarity colour. */
+  /* The metal rim around the art window: bronze, warmed toward the rarity color. */
   --cf-bezel: color-mix(in srgb, var(--cf-rarity) 28%, #b8965a);
   --cf-outline: 0 0 0.35cqh #000, 0 0.2cqh 0.25cqh #000, 0 0 0.12cqh #000;
 
@@ -202,7 +202,7 @@
   box-sizing: border-box;
 }
 
-/* Type frames: the panel colour behind everything. */
+/* Type frames: the panel color behind everything. */
 .cf[data-card-type="Spell"] {
   --cf-type: var(--frame-spell);
 }
@@ -220,7 +220,7 @@
 }
 
 /* Rarity: the outer edge and the gem. */
-/* Common's edge is pewter rather than a mix of its near-white gem colour, which read as a bright
+/* Common's edge is pewter rather than a mix of its near-white gem color, which read as a bright
    silver ring: brighter than a Rare or an Epic beside it, and easy to take for a selection. The
    gem keeps --rarity-common's white, as Hearthstone's does. */
 .cf[data-rarity="Common"] {
@@ -260,9 +260,9 @@
 }
 
 /* The Radiant face: a gold-foil frame whatever the rarity, as Hearthstone's golden cards keep
-   their frame's shape and their rarity gem. The panel is the type's colour gilded rather than
+   their frame's shape and their rarity gem. The panel is the type's color gilded rather than
    replaced, so a radiant Trap still reads red and a radiant Field Trap violet, and the gold edge
-   carries a tint of the rarity colour. */
+   carries a tint of the rarity color. */
 .cf[data-radiant-face="true"] {
   --cf-frame: color-mix(in srgb, var(--foil-gold) 38%, var(--cf-type));
   --cf-bezel: #f6d77a;
@@ -598,7 +598,7 @@
 }
 
 /* In play, the keywords a card has gained since it was printed, under a green rule (the buffed
-   stat's colour): a Plastic Surgery's, an aura's, Defense Position's, a Vanilla unit's granted ones. */
+   stat's color): a Plastic Surgery's, an aura's, Defense Position's, a Vanilla unit's granted ones. */
 .cf .cf-text-gained {
   display: block;
   flex: 0 0 auto;
@@ -676,7 +676,7 @@
 }
 
 /* R277: what a Radiant face prints that its base face does not — gold, and bold and underlined so
-   the mark does not rest on colour alone. On the parchment the ink is a dark gold (at least 4.4:1
+   the mark does not rest on color alone. On the parchment the ink is a dark gold (at least 4.4:1
    on every stop of the Radiant rules box's gradient, 5:1 or more where the text sits) over a gold
    highlighter band; on a dark panel (the inspect overlays) it is the bright --radiant gold. */
 :root {
@@ -774,7 +774,7 @@
 }
 
 /* Its tooltip: above every inspect layer, as `.cf-ref-tooltip`, and never taking the pointer. Its
-   colours are the palette's (#2105). */
+   colors are the palette's (#2105). */
 .cf-term-tip {
   z-index: 80;
   max-width: min(260px, calc(100vw - 16px));
@@ -926,7 +926,7 @@
 }
 
 /* The banner sits between a Unit's attack and health (19cqw gems in the bottom corners, their
-   numbers centred about 92cqh down), level with the numbers: 7.6cqh high, its middle at 92cqh. */
+   numbers centered about 92cqh down), level with the numbers: 7.6cqh high, its middle at 92cqh. */
 .cf[data-full-art="true"] .card-name {
   top: 88.2cqh;
   left: 19cqw;
@@ -935,7 +935,7 @@
 }
 
 /* The rarity gem takes the top-right corner, opposite the cost gem, as a hand card's does; the set
-   mark hangs under it on the same centre line (the gem is 0.8cqh wider), clear of the turned gem's
+   mark hangs under it on the same center line (the gem is 0.8cqh wider), clear of the turned gem's
    lowest point at 10.3cqh. None of the heroes' cards has an element, whose chip shares the corner. */
 .cf[data-full-art="true"] .cf-gem {
   top: 3cqh;
@@ -1016,7 +1016,7 @@
    inside it, a dark plate like the tag chips with a token-grey ring, reads "Token" where the slot
    holds the word and its first letter where it does not (4.8em is the word's pill at the slot's own
    font size), so it never runs under a gem, an Armor plate or a wide "18/18". It is read by its
-   word, not its colour, and the hover preview spells the type line out. Sizes are the face's
+   word, not its color, and the hover preview spells the type line out. Sizes are the face's
    container units with a pixel floor, as the state rail's are. Nothing here moves, so reduced motion
    needs nothing. */
 .cf .cf-token {
@@ -1129,7 +1129,7 @@
   text-shadow: 0 0 0.6cqw #000, 0 0.4cqw 0.5cqw #000, 0 0 0.2cqw #000;
 }
 
-/* Tones, as Hearthstone colours them: green above the printed number, red below it or wounded.
+/* Tones, as Hearthstone colors them: green above the printed number, red below it or wounded.
    A red number cannot read on the red drop, so a wounded drop darkens behind it. */
 .cf [data-tone="buffed"] > .cf-num {
   color: #7dff9a;
@@ -1627,7 +1627,7 @@
   line-height: 1;
 }
 
-/* One chip per keyword, each in its own colour, so "RU" and "LS" read apart at a glance. */
+/* One chip per keyword, each in its own color, so "RU" and "LS" read apart at a glance. */
 .cf .keyword,
 .cf .cf-kw-more {
   --kw: #3a3f52;

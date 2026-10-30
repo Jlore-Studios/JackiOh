@@ -351,7 +351,7 @@ mod tests {
         }
 
         #[test]
-        fn r372_on_the_field_the_preview_is_grade_letter_and_n_labelled_with_words_both_faces_print() {
+        fn r372_on_the_field_the_preview_is_grade_letter_and_n_labeled_with_words_both_faces_print() {
             crate::register_all();
             for radiant in [false, true] {
                 let mut s = on_field(&format!("core-093-r372-labels-{radiant}"), radiant);

@@ -514,7 +514,7 @@ mod results_m7_t2 {
         assert_eq!(row["turns"], json!(1));
         assert_eq!(row["ratingBefore"], json!([1200.0, 1000.0]));
 
-        // The same move a draw gets anywhere else (R603): the favourite gives, the underdog takes.
+        // The same move a draw gets anywhere else (R603): the favorite gives, the underdog takes.
         let expected = rating_move(1200.0, 1000.0, 0.5);
         assert!(expected.0 < 1200.0);
         assert!(expected.1 > 1000.0);
@@ -566,7 +566,7 @@ mod results_m7_t2 {
         );
         let expected = rating_move(1200.0, 1000.0, 0.5);
         assert_eq!(row["ratingBefore"], json!([1200.0, 1000.0]));
-        // The favourite gives points away on a draw; the underdog takes them.
+        // The favorite gives points away on a draw; the underdog takes them.
         assert!(expected.0 < 1200.0);
         assert!(expected.1 > 1000.0);
         expect_one_ending(

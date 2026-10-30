@@ -5,7 +5,7 @@
  * them, so nothing here reaches it. This sheet loads after cards.css, whose `--cf-edge` and
  * `--cf-frame` it overrides at the same specificity.
  *
- * A border is three trim colours, none in the Radiant gold (cosmetics.test.tsx holds them out of
+ * A border is three trim colors, none in the Radiant gold (cosmetics.test.tsx holds them out of
  * it), drawn as the full face's edge and the art's bezel, and on the board minion, whose panel
  * covers its edge, as a ring over the panel painted with that same edge. The two chase borders
  * (#1833) add a ring of their own inside it. A finish is the print: a weave, fibres or fine lines
@@ -20,7 +20,7 @@
  *
  * R1297000: the card backs, after the foils. A back is one `data-card-back` look on the viewer's own
  * face-down cards and deck pile, the same for every card of the seat; the default adds no attribute.
- * No look has text, and the emblem and cost gem stay; the chase backs recolour the emblem and move it.
+ * No look has text, and the emblem and cost gem stay; the chase backs recolor the emblem and move it.
  */
 
 /* ---------------------------------------------------------------------------- borders --- */
@@ -256,7 +256,7 @@
   mix-blend-mode: soft-light;
 }
 
-/* Stained glass is the panel itself: jewel-coloured panes, lit from above and leaded, round the
+/* Stained glass is the panel itself: jewel-colored panes, lit from above and leaded, round the
    art and the rules text, which keeps its own plate and is never crossed. A face that prints no
    rules text (a minion, a full art) is leaded over its picture as well. */
 .cf[data-finish="finish-stained-glass"] {
@@ -405,7 +405,7 @@
 }
 
 /* Galaxy and void shimmer turn, so their layer is a square wider than the window's diagonal on any
-   face, centred on it, and its mask a circle, which turning leaves where it was. Galaxy is a core
+   face, centered on it, and its mask a circle, which turning leaves where it was. Galaxy is a core
    and three arms of nebula sown with stars, fading out from the middle. */
 .cf[data-cosmetic-foil="foil-galaxy"] .cf-art::after {
   top: 50%;
@@ -603,8 +603,8 @@
     var(--card-back-look);
 }
 
-/* The chase backs' emblems, recoloured (CSS outranks the SVG's own fill and stroke): the star, its
-   dark heart, the centre and the two rings, in order. */
+/* The chase backs' emblems, recolored (CSS outranks the SVG's own fill and stroke): the star, its
+   dark heart, the center and the two rings, in order. */
 .cf-back[data-card-back="card-back-dragon-scale"] .cf-back-emblem {
   filter: drop-shadow(0 0 0.35em #ff6a1a99);
 }

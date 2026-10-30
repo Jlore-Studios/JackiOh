@@ -8,7 +8,7 @@
 //!   `spec/rulings/R<nnnn>.md`, and `cargo jackioh spec check` holds what its completeness test held;
 //! - its 23 pins on other files' source text (SQL migrations, `actor.ts`, `codes.ts`, …) and its
 //!   reads of `apps/server/src/config.ts` constants are dropped (#133): the server's own tests prove
-//!   those rulings by behaviour, and the notes name them.
+//!   those rulings by behavior, and the notes name them.
 //!
 //! Every value is compared through its JSON form where its Rust type is a struct or an enum (the
 //! form `export_config` hands the web, SURFACE §5.1), so the assertion reads exactly as the TS one
@@ -207,7 +207,9 @@ fn r290_gives_the_tutorial_opponent_a_handicap_below_easy_12_cards_3_mana_a_hero
             "manaCap": 3,
             "extraOpeningCards": 0,
             "extraDrawsPerTurn": 0,
-            "heroHealth": 20
+            "heroHealth": 20,
+            // R2433000: it plays only Core cards.
+            "coreOnly": true
         })
     );
     let tiers = json_of(config::DIFFICULTIES);

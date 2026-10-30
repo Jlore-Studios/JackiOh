@@ -26,13 +26,13 @@ enforces rules and never sees hidden information.** In practice:
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
-variable over weight, Latin subset, self-hosted in `public/fonts` with their licences. Each is
+variable over weight, Latin subset, self-hosted in `public/fonts` with their licenses. Each is
 `font-display: swap` behind a metric-matched local fallback, so text measures the same before and
 after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
 (`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
 
-The colours are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette colour, or `color-mix()`es one, and never states a colour of its own. Meaning stays in tokens that name palette colours: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
 The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s three families: `--font-display`, `--font-text` and `--font-mono`. A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
@@ -53,7 +53,7 @@ sizes and fails when the page is taller or wider than its allowance.
 
 On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
 `(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
-`tabindex="0"` shorter than that a transparent `::before` centred on it; one as tall but narrower
+`tabindex="0"` shorter than that a transparent `::before` centered on it; one as tall but narrower
 takes its band in its own stylesheet, since a band over a tall control's box would take the taps of
 what it holds. The rule has zero specificity, so a control's own `::before` or `position` wins: the
 switch draws none, and a browsable pile's band is its `::after`. An input or a select draws no
@@ -219,12 +219,11 @@ graveyard, that pile glows and its sheet (`cards/inspect/CardList.tsx`) puts "Pl
 (`pile-play-<instanceId>`) under the card; it reports `{ on: "graveyard" }`, closes the sheet, and the
 play is built as a hand card's.
 
-**The Resource tray and Credits** (issue #1840, R1840000, R1840003, R1840005). `ResourceTray.tsx` draws
-each seat's `resourceTray` and `marketCredits` from the view alone, in `tray-<side>`, and nothing while
-the view carries neither: the viewer's own Resources as cards (`tray-card-<instanceId>`), the
-opponent's as a count (`tray-count-<side>`), and the Credits in `market-credits-<side>`, on both seats.
-A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is built as a hand card's. A Resource's face prints `Credits: <min>–<max>` under its text, its face's `resource` prices
-(`cards/model.ts`, R2521009).
+**Credits** (issue #1840, R1840005). `Hero.tsx` draws each seat's `marketCredits` from the view alone,
+as a pill in the hero's badge row beside the Jade Counter's (`market-credits-<side>`, on both seats),
+and nothing while the view carries none; a count of 0 still shows. A Resource is a hand card since
+#2250 (R2250000), so the hand draws it and there is no Resource tray. A Resource's face prints
+`Credits: <min>–<max>` under its text, its face's `resource` prices (`cards/model.ts`, R2521009).
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
@@ -442,7 +441,7 @@ routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlo
                         its account secret ID, hidden until asked for, with a copy button
 packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, §14.4; `PackOpening.tsx`, imported
                         by routes/shop.tsx): the packs held, each a physical pack (`PackObject.tsx`, #1663: a
-                        foil wrapper with crimped seals, its set's emblem and colours, a sheen and a tilt
+                        foil wrapper with crimped seals, its set's emblem and colors, a sheen and a tilt
                         that follow the pointer, a press and a tear, the shelf and the scene drawing the
                         same object), and the scene that opens one (`POST /api/packs/open`), its token bars
                         pinned at the top from the answer and played once every card shows
@@ -689,10 +688,12 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 
 ## The tutorial
 
-The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322, R2205000–R2205003): five
-lessons on a path, each a practice game with two fixed decks of Training Grounds cards, a fixed seed and
-seat, the tutorial handicap on the AI seat (`AI_TUTORIAL`, the tier below Easy), and `TUTORIAL_HUMAN` on
-the human's, with the pool hold in lessons 1–4 (`lessonHandicaps`). A lesson is a practice config whose `lesson` names it
+The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322, R2205000–R2205003,
+R2434000–R2434003): five lessons on a path, each about one thing and each a practice game with two fixed
+decks (the human's Training Grounds cards, the AI's Core cards), a fixed seed and seat, the tutorial
+handicap on the AI seat (`AI_TUTORIAL`, the tier below Easy), and `TUTORIAL_HUMAN` on the human's, with
+the pool hold on both in lessons 1–4 (`lessonHandicaps`). Lessons 2–4 had other ids before #2434:
+`EARLIER_LESSON_IDS` reads `spells`, `traps` and `advanced` as the lesson in their place (R2434000). A lesson is a practice config whose `lesson` names it
 (`tutorial/start.ts`), so the same worker, controller and board play it; the worker reads the
 decks from `tutorial/lessons/<id>.ts` and nothing else the page sends changes them (R291).
 
@@ -706,14 +707,16 @@ src/tutorial/
   discoveries.ts            the Field Guide's entries: each mechanic, its rule, and how the view shows it found
   steps.ts targets.ts       reads of the view and legal actions, step factories, anchors → board testids
   tracker.ts                feeds every controller snapshot to the coach and holds the AI for `holdAi`
-  Coach.tsx layout.ts       the ring, and the bubble placed clear of what it points at (a panel above the board on phones)
+  Coach.tsx layout.ts       the ring round what it points at, and the bubble docked to a corner, never the middle of the
+                            board (R2434003; a panel above the board on phones)
   TutorialPath.tsx          the lesson path at the top of the lobby (locked / open / done), with Hide / Show
                             tutorial (R322; its look in path-visibility.css)
   TutorialHud.tsx TutorialResult.tsx   the lesson's HUD (step counter, Field Guide, Exit tutorial) and its result
                             dialog, which names what the game did not show found (R314)
   FieldGuide.tsx            the Field Guide's button and dialog, from the HUD and the path's header (R2205002)
-  progress.ts               completed lessons, the Hide/Show choice and the Field Guide's found entries (the
-                            device's alone, R2205002) in localStorage `jackioh.tutorial.v1`, try/catch (R294),
+  progress.ts               completed lessons, the Hide/Show choice, and the Field Guide's found entries and the
+                            lessons lost by a concede (the device's alone, R2205002, R2434002) in localStorage
+                            `jackioh.tutorial.v1`, try/catch (R294),
                             and R321's merge with another copy (a union, the newest choice)
   accountSync.ts            an active account's copy (`GET`/`PUT /api/tutorial`, R320) kept level with the
                             device's (R321); the practice route mounts it
@@ -733,7 +736,10 @@ src/tutorial/
   and the public catalog). Its hint escalates a level per own turn it stays unfound, or per Hint
   press: the nudge, then the pointed hint with its ring; past `TUTORIAL_MOMENT_TURNS_MAX` it
   retires. It never holds the AI. Each entry found for the first time shows a discovery bubble with
-  Got it, and the tracker hands it to the device's Field Guide (`markFound`).
+  Got it, unless a later lesson holds it (R2434001), and the tracker hands it to the device's Field
+  Guide (`markFound`).
+- A concede is the one way to lose a lesson (R2434002): the result says "You conceded. That counts
+  as a loss.", and the path marks the lesson lost until it is won.
 - The bubble adopts a new step only once the board has caught up (no `data-animating`), so it never
   points at a card the board has not drawn; a step or tip with `holdAi` holds the AI through
   `setHold("coach", …)` until its "Got it".
@@ -783,7 +789,7 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   accompaniment and modes from the family; the set's glint; a Mythic's shimmer). It renders as a sting of a few bars
   with a one-second faded tail (`tail`, `post.fadeOutS`), its loudness measured over the file it keeps
   (`post.loudnessOverFile`); a track without those fields renders exactly as before. A Legendary or Mythic added to a
-  set that ships needs its `INTRO_CARDS` row, its `intro` in `music-cards.json`, a render and a licence row:
+  set that ships needs its `INTRO_CARDS` row, its `intro` in `music-cards.json`, a render and a license row:
   `music-assets.test.ts` refuses a shipped one without them.
 
 ## Regenerating the voice lines
@@ -799,7 +805,7 @@ at load and names the path of any mistake. The voice files are generated from it
 committed, so CI never runs a synthesizer. Each voice names its backend (R501): Core's voices are
 macOS `say` (the default), and the Classic and Classic+ voices are `backend: "sapi"`, Windows SAPI
 (`System.Speech`, the "Microsoft David Desktop" and "Microsoft Zira Desktop" voices) shaped by
-`ffmpeg`: trimmed, pitched by the voice's `semitones`, coloured by its `filter` chain, peak-normalised
+`ffmpeg`: trimmed, pitched by the voice's `semitones`, colored by its `filter` chain, peak-normalized
 and encoded to the same mono AAC at 22050 Hz and about 32 kbps. After editing a line or a voice, run
 `pnpm --filter @jackioh/web gen:voice` on a Mac for `say` voices, or on Windows or WSL (it finds
 `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`) with `ffmpeg` and `ffprobe` on the

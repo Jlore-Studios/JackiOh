@@ -60,7 +60,7 @@ Every code path where a card changes controller, lane or zone, or re-enters the 
 | A4 | #50 K-Pop Fanatic's delayed steal | `050-k-pop-fanatic.ts:72` `stealStep` → `steal({ instanceId })`, run by `turn.ts:164` `runDelayed`. This runs after `state.turn += 1` (:143), `resetExertion` (:91-95, called :151) and `turnStarted` (:153) | the chosen enemy permanent, at the start of the Fanatic controller's next turn | via A1. It is the new turn, so the unit attacks at once today: the headline bug | via A1 |
 | A5 | Steal all, #86 "Miss" Mrow's Death | `steal.ts:94-105` `stealAll` → `takeControl` per enemy unit in lane order, from `086-miss-mrow.ts:43`. The Death hook runs with `ctx.controller` = the snapshot's controller (`stateCheck.ts` Death firing, R78/R89), on whichever turn Mrow dies | every enemy top unit that finds a free zone | via A1 | via A1 |
 | A6 | Board swap, #87 Pocket Chaos | `effects/swap.ts:141-184` `swapBoardNow`: read all zones, remove all (:160-162), `placeContents` (:84-95, :170), `controlChanged` per card (:174-182). The header (:9-16) wrongly says "summoning sickness … come along" | every card in both rows on both sides, **dormant Stack cards included**, to the mirror zone | not updated (bug) | not updated (bug) |
-| A7 | Rotation across the centre line, #52 Silly Silas base | `subsystems/rotation.ts:128-190` `rotateRings` (crossing detected :172-186) via `effects/rotate.ts:34-52`. The header (:7-13) wrongly says sickness travels | cards whose ring step crosses sides (your lane 5 ↔ their lane 5, your lane 1 ↔ their lane 1), whole Stack piles | not updated (bug) | not updated (bug) |
+| A7 | Rotation across the center line, #52 Silly Silas base | `subsystems/rotation.ts:128-190` `rotateRings` (crossing detected :172-186) via `effects/rotate.ts:34-52`. The header (:7-13) wrongly says sickness travels | cards whose ring step crosses sides (your lane 5 ↔ their lane 5, your lane 1 ↔ their lane 1), whole Stack piles | not updated (bug) | not updated (bug) |
 
 ### B. Moves that are not control changes
 
@@ -143,7 +143,7 @@ After the change. The first four sentences are unchanged; two are appended:
 >   targets only; Charge lifts it for units and the hero. A sick unit may still switch to Defense. A
 >   unit that enters the field again, a Reborn body included, entered it on that turn like any other
 >   (R83). A unit whose controller changes (stolen, swapped with the board, or rotated across the
->   centre line) has entered its new controller's side on that turn: it is summoning sick in exactly
+>   center line) has entered its new controller's side on that turn: it is summoning sick in exactly
 >   the same way, and its exertion is fresh for its new controller. A unit that only moves between
 >   lanes on its own side has not entered anything (R171).
 
@@ -153,7 +153,7 @@ of them claims sickness travels, and R171 names every verb.
 ### §11: R171, inserted after R170 in numeric position
 
 ```
-| R171 | A change of control is an entry | A card whose controller changes on the field has entered its new controller's side on that turn, which is Hearthstone's rule for a minion that changes control. It takes that turn as its `summonedTurn`, so it is summoning sick exactly as a unit summoned that turn is (§4.1, R83): with neither Rush nor Charge it cannot attack that turn, Rush lets it attack units and Charge units or the hero, whether the keyword is printed, granted, or comes from an aura on its new side. Its exertion is reset for its new controller, so it may switch position that turn, and a Rush or Charge unit may attack even if it had already acted for the player it left. Every path applies it: Steal (#36 radiant, #49, #50's delayed steal, #86's Death), the board swap (#87) and a rotation across the centre line (#52). It applies to every card that changes sides, a card dormant under a Stack and a backrow card included, and to every change, so a unit handed back the same turn to the player who held it when the turn began is sick again, and a Charge unit that already attacked may attack once more. A card that moves between lanes on its own side (a rotation that does not cross) keeps both. A change on the opponent's turn leaves the unit free to attack on its new controller's next turn, as R83 says of a Reborn body. Forced attacks still ignore sickness and spend nothing (R53) | #36 radiant, #49, #50, #52, #86, #87 |
+| R171 | A change of control is an entry | A card whose controller changes on the field has entered its new controller's side on that turn, which is Hearthstone's rule for a minion that changes control. It takes that turn as its `summonedTurn`, so it is summoning sick exactly as a unit summoned that turn is (§4.1, R83): with neither Rush nor Charge it cannot attack that turn, Rush lets it attack units and Charge units or the hero, whether the keyword is printed, granted, or comes from an aura on its new side. Its exertion is reset for its new controller, so it may switch position that turn, and a Rush or Charge unit may attack even if it had already acted for the player it left. Every path applies it: Steal (#36 radiant, #49, #50's delayed steal, #86's Death), the board swap (#87) and a rotation across the center line (#52). It applies to every card that changes sides, a card dormant under a Stack and a backrow card included, and to every change, so a unit handed back the same turn to the player who held it when the turn began is sick again, and a Charge unit that already attacked may attack once more. A card that moves between lanes on its own side (a rotation that does not cross) keeps both. A change on the opponent's turn leaves the unit free to attack on its new controller's next turn, as R83 says of a Reborn body. Forced attacks still ignore sickness and spend nothing (R53) | #36 radiant, #49, #50, #52, #86, #87 |
 ```
 
 ### §11: R172, inserted after R171
@@ -408,7 +408,7 @@ true, easy to grep, and checkable by I4.
 - Cite R173 or above.
 - Re-record the hotseat fixture (§E: not needed).
 
-**Behaviours** (the builder writes each as a test titled with its row)
+**Behaviors** (the builder writes each as a test titled with its row)
 
 1. R171 steal (#49): a unit stolen on its thief's turn with neither Rush nor Charge cannot attack that
    turn ("that unit is summoning sick"), and legalActions offers no attack for it. It attacks normally
@@ -426,7 +426,7 @@ true, easy to grep, and checkable by I4.
 7. R171 board swap (#87): every card that changes sides takes the current turn as `summonedTurn` and
    fresh exertion, dormant Stack cards and backrow cards included. Units the caster receives are sick
    that turn. Units the opponent receives attack freely on the opponent's next turn.
-8. R171 rotation (#52): a card crossing the centre line takes the current turn and fresh exertion. A
+8. R171 rotation (#52): a card crossing the center line takes the current turn and fresh exertion. A
    card moving along its own side keeps both: a ready unit can still attack, and an exerted one still
    cannot. Radiant #52 bounces the cards that would cross to the opponent, and the opponent's cards
    crossing onto its side still cross and are marked (R14 as amended in round 2).
@@ -458,15 +458,15 @@ true, easy to grep, and checkable by I4.
 20. The hotseat replay is unchanged: `hotseat-replay.test.ts` passes with its committed
     `EXPECTED_HASH`, and the fixture is not re-recorded.
 
-**Where each behaviour is proved**
+**Where each behavior is proved**
 
 - `packages/engine/test/control-change.test.ts`, engine fixtures only (the engine never depends on
-  `packages/cards`): behaviours 7, 8, 10, 11, 12, 13 and 14 at the verb level, plus the backrow-card
+  `packages/cards`): behaviors 7, 8, 10, 11, 12, 13 and 14 at the verb level, plus the backrow-card
   and Stack-pile halves of 7.
-- `packages/cards/test/control-change.test.ts`, real cards through `scenario()`: behaviours 1–10, 14
+- `packages/cards/test/control-change.test.ts`, real cards through `scenario()`: behaviors 1–10, 14
   and 15.
-- `control-change.property.test.ts`: behaviour 18.
-- `fuzz.test.ts` and `_invariants.ts`: behaviour 19.
+- `control-change.property.test.ts`: behavior 18.
+- `fuzz.test.ts` and `_invariants.ts`: behavior 19.
 
 **Commands.** Targeted while working:
 
@@ -486,7 +486,7 @@ Then once, alone, the full `pnpm fuzz`, and time it (see the budget above).
 
 ## Testers
 
-None. The one slice writes its own tests, because every behaviour above needs the SPEC row to exist
+None. The one slice writes its own tests, because every behavior above needs the SPEC row to exist
 before a test can cite it. After the slice lands, the hunt below plays the independent adversarial
 role.
 
@@ -644,7 +644,7 @@ another task took the same numbers).
 | `lasting-effects.test.ts` | Twinspell's rider outlived the Twinspell (bounced by radiant #52, destroyed by #36) and a bounced-and-replayed Twinspell stacked two; a Twinspell radiant #49 stole and made Radiant still granted +1 | R209 (new) |
 | `deaths-and-reborn.test.ts` | §4.5's collection read each dying unit after the ones before it had moved, so an aura or a layer-2 Felinor was missing from its `destroyed` event; the killer was read at death, so an aura's death credited an earlier non-lethal hit; a trigger or turn hook queued for a unit's old stay (#91's Plague Token, #37's hook) acted on its Reborn body; a delayed steal dropped by an earlier one still ran | R89, R42, R174 (amended) |
 | `plays-and-casts.test.ts` | A cast skipped §10.5 steps 3 and 5's granted parts (#64, #38, #78) and owed its Echo tail past the draw that cast it, with no state check between cast-on-draw casts; #33 copied before the card resolved and lost the radiant flag of a card #41 replaced; an X-cost Spell kept its X in hand; a sacrificed Reborn unit never came back; a Tribute's Death could fill the zone the play named, leaving the played card in no zone | R70, R59, R17, R57, R65, R210 (new) |
-| `my-pawn.test.ts` | A second My Pawn fired on the attack the first had cancelled, and on the player's next turn; My Pawn's consumption pulled it back out of exile, and left it in the backrow through the next turn's start | §4.2, §6.3, R152 |
+| `my-pawn.test.ts` | A second My Pawn fired on the attack the first had canceled, and on the player's next turn; My Pawn's consumption pulled it back out of exile, and left it in the backrow through the next turn's start | §4.2, §6.3, R152 |
 | `play-choices.test.ts` | A Heroic Power summoned onto the field never rolled; a crafted card's Cry handed every ingredient the whole choice list; #24's damage and heal modes could name no target; `legalActions` did not offer the concede `reduce` accepts while a prompt is open | R151, R102, R90, R211 (new) |
 | `control-change.test.ts` | Radiant #52 bounced the opponent's cards crossing onto its side as well as its own; #85 could pick the played #52 that crossed onto its side as its own Fuse target | R14 (amended), R61 |
 | `hidden-information.test.ts` | `destroyed.killerId` named a killer back in its owner's hand; a card #83 replaced in a hidden zone read openly in its earlier events | R177 (amended) |
@@ -708,7 +708,7 @@ The engine changes that carry most of this:
   controller.
 - **Step 6 ends in the check.** An Echo repeat runs `RESOLVE_PARTS` whole, and step 6 runs §4.5's
   check after the last resolution, before step 7's `cardResolved`. `traps.ts` re-reads
-  `cardResolved.permanent` for each trap of a dispatch, and #60 honours it.
+  `cardResolved.permanent` for each trap of a dispatch, and #60 honors it.
 - **Gifted Program is the engine's.** #64 is a `giftedProgram` static flag; step 3 reads it against
   the turn log's new `costsPaid`, and step 1 and `legalActions` read the choices of the face step 5
   will resolve (`playChoices.resolvingFace`).
@@ -731,7 +731,7 @@ frontier ids it numbers, and nowhere else.
 ### Round 4: what the hunt found
 
 Round 4 ran past the three-round cap, with two new lenses beside L1, L2, L3, L7, L8 and L10: "card
-by card" (the Epic, Legendary and Mythic cards and every radiant face that changes behaviour, each
+by card" (the Epic, Legendary and Mythic cards and every radiant face that changes behavior, each
 driven into an interaction its own test file does not cover) and "engine invariants" (seeded random
 games checked after every action against properties that must hold in every reachable state). Its
 29 failing tests were 28 findings, all confirmed against SPEC and none rejected, and they are in
@@ -787,7 +787,7 @@ pairs of tests found the same bug (a Vanilla Sheep's Tribute worth, and the Call
 count), and #97 Zephyrs' scorer took three. Two tests were corrected rather than dropped. The
 Zephyrs "clear" test did not allow for #55 Lava Golem, whose Tribute 3 may take the three enemy
 7/7s (R101) and so does clear the board. And one Call to Chaos test read the chain count off a card
-in the graveyard, which R215 now resets, so it checks the replayed card's behaviour instead. Three
+in the graveyard, which R215 now resets, so it checks the replayed card's behavior instead. Three
 rows were needed, R217 to R219, and three were amended: R174, R177 and R215. Eight of the findings
 came from L7, and most of those need a card that asks from a delayed effect, a cast on draw, a
 trap's list or a Death hook. No Core card does, so those tests build the asking card as a fixture.
@@ -929,7 +929,7 @@ R102's own first sentence says is never dropped, so R102 was amended rather than
 One row was needed, R224, and ten were amended: R68, R102, R117, R135, R155, R158, R174, R177, R216
 and R223. As in rounds 5 and 6, most of the L7 and window findings need a card that asks from a
 trap's list, an `onPlayHook`, a cast or a mulligan's draw, or a trap that answers a play or a
-declaration without cancelling it, so those tests build the card as a fixture.
+declaration without canceling it, so those tests build the card as a fixture.
 
 | Topic file | Findings | Rule |
 |---|---|---|
@@ -1073,7 +1073,7 @@ existing test changed, and the recorded hotseat game's hash did not move.
 
 A review of the round-8 branch found no new engine bug. Its eleven findings (the Hunt status counts
 were reported twice, and R129 came up in two of them) were rows that no longer said what the code
-did, proofs that were missing, and comments that described the bug as the behaviour. All were
+did, proofs that were missing, and comments that described the bug as the behavior. All were
 confirmed and fixed, and none needed a new row:
 
 - **Rows amended to match the code.** R77: the kept instance's memory gains one entry, the
@@ -1337,13 +1337,13 @@ notes no resume.
    4 → 3 → …), so the others rebase onto R171/R172. `fuzz.test.ts` may also be touched by task 3
    (AI fuzz), so keep the edit to an import, one `createInvariantMonitor` call, two check calls and
    the new stage.
-2. **Tests pinned to the old behaviour.** `effects-steal.test.ts:62` fails after the fix, and
+2. **Tests pinned to the old behavior.** `effects-steal.test.ts:62` fails after the fix, and
    `effects-swap.test.ts:107` and `rotation.test.ts:194` pass only by coincidence. Rewrite all three
    to assert R171 rather than delete the lines, and keep each title leading with R15, R73 or R14 so
    the index still finds them.
 3. **The Charge double-dip looks like a bug.** R171 lets a Charge unit that attacked, crossed away
    and came back in one turn attack again, and a reviewer may flag that. It is deliberate Hearthstone
-   semantics, stated in the row and pinned by behaviour 10.
+   semantics, stated in the row and pinned by behavior 10.
 4. **R82 auto-end shifts.** A stolen unit now always has a fresh switch, so fewer turns auto-end and
    random games play differently. Nothing depends on that: fuzz hashes are computed live, and the
    only committed hash (the hotseat replay) plays no control-change card.
@@ -1596,7 +1596,7 @@ would keep the two from drifting apart.
   made while the card sat in a library stays redacted for both seats for good (R177), so the log and
   the glow play it as a card back even once the card reads openly. `viewFor.ts`'s `redactEvent` gained
   the two cases; task 7 owns only `conditionActive` there, so they merge apart. And a Discover or a
-  cast's own choices (R70) now open prompts labelled `Cast: <name>`, beside the Echo repeat's
+  cast's own choices (R70) now open prompts labeled `Cast: <name>`, beside the Echo repeat's
   `Echo: <name>`.
 - `script.ts`, round 7: `EffectContext` gained an optional `summoned` (R136's window across a
   pause), and `StaticFlags.quickstriker` may be a number (a fused card's count, R102). Additive.
@@ -1681,7 +1681,7 @@ would keep the two from drifting apart.
 | §10.1 `PlayerState` | The `mods` comment drops the Gifted flag, and `turnLog` gains `costsPaid` | Fix stage |
 | §10.5 step 3 | Gifted Program is a static flag read against `costsPaid`, and `onPlayHook` runs after it | Fix stage |
 | §10.7 AI policy | The policy's set, not `legalActions`, holds only a prompt's answers (R211) | Round 2 |
-| R14 (decide) | Radiant #52 bounces only the cards leaving its controller's side, and the opponent's crossing cards still cross. This changes behaviour. The source's "cards you would lose" (`JackiOh_Core_Cards.md`) backs it | Round 2 |
+| R14 (decide) | Radiant #52 bounces only the cards leaving its controller's side, and the opponent's crossing cards still cross. This changes behavior. The source's "cards you would lose" (`JackiOh_Core_Cards.md`) backs it | Round 2 |
 | R102 | The fused id is followed by the ingredients' ids (R179) | Round 1 |
 | R119 | #38 is a static flag excluded by id, not a trigger. #64 never meets its own arrival | Fix stage |
 | R153 | No Core card has an `onPlayHook`. #64 is read off the field | Fix stage |
@@ -1761,7 +1761,7 @@ R242 split and integration's closing of the face-down id channel.
 
 - **A face-down card's id in `legalActions`** (R177's last sentences), **closed at integration by
   R227.** The action protocol names a face-down card by its instance id, and a card kept its id
-  across zones, so a player who saw the id while the card was public could recognise the trap, for
+  across zones, so a player who saw the id while the card was public could recognize the trap, for
   example one returned from a graveyard to hand and set again. A card set face-down (played, cast or
   recruited) now takes a fresh id; the `cardPlayed` and `summoned` that set it carry the old one as
   `formerId`, which only a viewer who may read the card receives. The action protocol itself did

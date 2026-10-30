@@ -5,6 +5,11 @@
 //! or micro) and the card families that play differently. Nothing overrides it: no flag, title or
 //! label.
 //!
+//! A card change is a patch when `PATCH_MIN_REPRINTS` families are reprinted (their catalog entry
+//! changed and they play differently: a balance pass), when `PATCH_MIN_CARDS` families play
+//! differently by any route, or when a rule every game meets changed (R2455000, R2499000); anything
+//! smaller is a micro.
+//!
 //! Stage 1 reads the diff. `catalog.json` card by card: the wording fields (`WORDING_FIELDS`) a
 //! player reads and no game does, every other field plays. Each card script's code, the lines
 //! `catalog loc` counts, so its tests, comments, `use` lines and layout are not code. The sets
@@ -22,8 +27,9 @@
 //! - a card claimed only through its script keeps the claim only when its forced games diverge
 //!   between the builds (`luau diff`'s check), so a refactor claims nothing;
 //! - a change to code a card's play can rest on (`Area::PlayCode`) replays `UNFORCED_GAMES` unforced
-//!   games, and the cards each divergence touches play differently; a divergence that touches no
-//!   card is a rule every game meets, and makes a patch;
+//!   games, and the cards each divergence touches play differently; divergences that touch no card
+//!   are a rule every game meets, and make a patch, once they reach `RULE_MIN_GAMES` of the games
+//!   (R2455000), and fewer count as no card;
 //! - a change to the AI plays the same self-play games on both builds: identical logs mean the AI
 //!   decides as it did, and the change is Internal.
 //!
@@ -68,6 +74,17 @@ const FORCED_GAMES: u32 = 40;
 
 /// Stage 2: the unforced games a change to play code replays, `luau diff`'s count.
 const UNFORCED_GAMES: u32 = 200;
+
+/// R2455000: the unforced games that must hold a divergence touching no card for it to be a rule
+/// every game meets, a quarter of them. Fewer is a rule few games meet, which moves no card's
+/// statistics enough to restart them all, and counts as no card.
+const RULE_MIN_GAMES: usize = UNFORCED_GAMES as usize / 4;
+
+/// R2499000: the families a change must reprint for a patch, however few others it reaches. A
+/// reprinted family's catalog entry changed and it plays differently: a balance pass, which moves
+/// those cards' stats on purpose, as an engine change that only reaches cards does not
+/// (`PATCH_MIN_CARDS`).
+pub(crate) const PATCH_MIN_REPRINTS: usize = 15;
 
 /// Stage 2: the self-play games a change to the AI plays on both builds, and their seed base.
 const SELFPLAY_GAMES: u32 = 8;
@@ -443,7 +460,8 @@ pub(crate) struct Checked {
     pub scripts: BTreeSet<String>,
     /// Families an unforced divergence touched, after a change to play code.
     pub touched: BTreeSet<String>,
-    /// An unforced divergence touched no card: a rule every game meets.
+    /// Divergences that touch no card held `RULE_MIN_GAMES` of the unforced games, or the base
+    /// build refused the head's decks: a rule every game meets (R2455000).
     pub rule: bool,
     /// Whether the AI's self-play logs differ; `None` when the check did not run.
     pub ai: Option<bool>,
@@ -458,9 +476,12 @@ pub(crate) struct Classification {
     pub sets: Vec<String>,
     /// The families that play differently.
     pub cards: Vec<String>,
+    /// R2499000: the families of `cards` whose catalog entry changed, a field that plays or their
+    /// wording beside a change to their play.
+    pub reprinted: Vec<String>,
     /// The families whose wording alone changed.
     pub wording: Vec<String>,
-    /// A divergence no card explains made the tier a patch.
+    /// A rule every game meets (`Checked::rule`) made the tier a patch.
     pub rule: bool,
     pub stage2: &'static str,
     /// What stage 2 would have checked, when it did not run.
@@ -488,9 +509,14 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
         }
     }
     let rule = checked.is_some_and(|checked| checked.rule);
+    let reprinted: Vec<String> = cards
+        .iter()
+        .filter(|family| diff.play.contains(*family) || diff.wording.contains(*family))
+        .cloned()
+        .collect();
     let tier = if diff.sets.iter().any(|set| !wrapped(set)) {
         Some(Tier::Major)
-    } else if rule || cards.len() >= PATCH_MIN_CARDS {
+    } else if rule || cards.len() >= PATCH_MIN_CARDS || reprinted.len() >= PATCH_MIN_REPRINTS {
         Some(Tier::Patch)
     } else if !cards.is_empty() || !diff.wording.is_empty() {
         Some(Tier::Micro)
@@ -521,6 +547,7 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
             .cloned()
             .collect(),
         cards: cards.into_iter().collect(),
+        reprinted,
         rule,
         stage2: if checked.is_some() { "ran" } else { "skipped" },
         unchecked,
@@ -846,6 +873,12 @@ fn read_refusal(error: anyhow::Error, ships_a_set: bool) -> Result<bool> {
     }
 }
 
+/// R2455000: whether the unforced games holding a divergence that touches no card, by seed, are
+/// enough for a rule every game meets.
+fn every_game(cardless: &BTreeSet<String>) -> bool {
+    cardless.len() >= RULE_MIN_GAMES
+}
+
 /// R1365000's stage 2 against the parent build, this binary being the head's.
 fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
     let mut checked = Checked::default();
@@ -879,16 +912,24 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
         match parent_check(parent, &traces) {
             Ok((_, report)) => {
                 let games = games_in(&traces)?;
+                let mut cardless = BTreeSet::new();
                 for divergence in divergences(&report) {
                     let Some(game) = games.get(&divergence.seed) else {
                         continue;
                     };
                     let touched = touched_by(&divergence, game, head)?;
                     if touched.is_empty() {
-                        checked.rule = true;
+                        cardless.insert(divergence.seed.clone());
                     }
                     checked.touched.extend(touched);
                 }
+                if !cardless.is_empty() {
+                    eprintln!(
+                        "classify: a divergence no card explains in {} of {UNFORCED_GAMES} unforced games ({RULE_MIN_GAMES} make a rule every game meets)",
+                        cardless.len()
+                    );
+                }
+                checked.rule = every_game(&cardless);
             }
             Err(error) => checked.rule |= read_refusal(error, !diff.sets.is_empty())?,
         }
@@ -1015,6 +1056,7 @@ fn print_classification(classification: &Classification) {
     for (label, list) in [
         ("sets that ship", &classification.sets),
         ("cards that play differently", &classification.cards),
+        ("of them reprinted", &classification.reprinted),
         ("wording only", &classification.wording),
         ("not checked (no --parent-bin)", &classification.unchecked),
     ] {
@@ -1023,7 +1065,7 @@ fn print_classification(classification: &Classification) {
         }
     }
     if classification.rule {
-        println!("  a divergence no card explains: a rule every game meets");
+        println!("  divergences no card explains: a rule every game meets");
     }
 }
 
@@ -1065,16 +1107,71 @@ mod tests {
         assert!(classified.cards.is_empty());
     }
 
+    // R2499000: a balance pass is a patch from `PATCH_MIN_REPRINTS` reprinted families.
     #[test]
-    fn r1365000_nine_families_are_a_micro_and_ten_a_patch() {
-        for (n, tier) in [(9, Tier::Micro), (PATCH_MIN_CARDS, Tier::Patch)] {
+    fn r2499000_fourteen_reprinted_families_are_a_micro_and_fifteen_a_patch() {
+        for (n, tier) in [
+            (PATCH_MIN_REPRINTS - 1, Tier::Micro),
+            (PATCH_MIN_REPRINTS, Tier::Patch),
+        ] {
             let diff = read_diff(
                 &side(cards(n, 1, "T."), SHIPPED),
                 &side(cards(n, 2, "T."), SHIPPED),
                 &[],
             );
-            assert_eq!(classify(&diff, None).tier, Some(tier), "{n} cards");
+            let classified = classify(&diff, None);
+            assert_eq!(
+                (classified.tier, classified.reprinted.len()),
+                (Some(tier), n),
+                "{n} cards"
+            );
         }
+    }
+
+    // R2455000, R2499000: families an engine change only reaches reprint nothing, so they need the
+    // wider bar, `PATCH_MIN_CARDS`.
+    #[test]
+    fn r2455000_r2499000_families_the_engine_only_reaches_need_the_wider_bar() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let diff = Diff {
+            play_code: true,
+            ..read_diff(&both, &both, &[])
+        };
+        for (n, tier) in [
+            (PATCH_MIN_REPRINTS, Tier::Micro),
+            (PATCH_MIN_CARDS - 1, Tier::Micro),
+            (PATCH_MIN_CARDS, Tier::Patch),
+        ] {
+            let reached = Checked {
+                touched: (1..=n).map(|k| format!("core-{k:03}")).collect(),
+                ..Checked::default()
+            };
+            let classified = classify(&diff, Some(&reached));
+            assert_eq!(
+                (classified.tier, classified.reprinted.len()),
+                (Some(tier), 0),
+                "{n} cards"
+            );
+        }
+    }
+
+    // R2499000: a rework rewrites a card's text and its script, so its wording beside a script that
+    // plays reprints it; its wording alone does not.
+    #[test]
+    fn r2499000_a_rework_reprints_its_card_through_its_wording_and_its_script() {
+        let diff = read_diff(
+            &side(cards(PATCH_MIN_REPRINTS, 1, "Old."), SHIPPED),
+            &side(cards(PATCH_MIN_REPRINTS, 1, "New."), SHIPPED),
+            &[],
+        );
+        let reworked = Checked {
+            scripts: diff.wording.clone(),
+            ..Checked::default()
+        };
+        let classified = classify(&diff, Some(&reworked));
+        assert_eq!(classified.reprinted.len(), PATCH_MIN_REPRINTS);
+        assert_eq!(classified.tier, Some(Tier::Patch));
+        assert_eq!(classify(&diff, Some(&Checked::default())).tier, Some(Tier::Micro));
     }
 
     #[test]
@@ -1606,6 +1703,31 @@ mod tests {
         assert!(!refuses_decks(&other));
         let handicap = anyhow::anyhow!("p2: handicap.manaCap must be a non-negative integer (R180)");
         assert!(!refuses_decks(&handicap));
+    }
+
+    // R2455000: divergences that touch no card are a rule every game meets only once they hold a
+    // quarter of the unforced games; fewer leave the change to the families its divergences name, so
+    // a narrow engine fix (v0.5.10's six families) is a micro.
+    #[test]
+    fn r2455000_a_rule_needs_a_quarter_of_the_unforced_games() {
+        let seeds = |n: usize| -> BTreeSet<String> { (1..=n).map(|seed| seed.to_string()).collect() };
+        assert_eq!(RULE_MIN_GAMES, 50);
+        assert!(!every_game(&seeds(1)));
+        assert!(!every_game(&seeds(RULE_MIN_GAMES - 1)));
+        assert!(every_game(&seeds(RULE_MIN_GAMES)));
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let diff = Diff {
+            play_code: true,
+            ..read_diff(&both, &both, &[])
+        };
+        let narrow = Checked {
+            touched: (1..=6).map(|k| format!("core-{k:03}")).collect(),
+            ..Checked::default()
+        };
+        let classified = classify(&diff, Some(&narrow));
+        assert_eq!((classified.tier, classified.rule), (Some(Tier::Micro), false));
+        let wide = Checked { rule: true, ..narrow };
+        assert_eq!(classify(&diff, Some(&wide)).tier, Some(Tier::Patch));
     }
 
     #[test]

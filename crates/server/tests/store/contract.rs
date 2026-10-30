@@ -601,7 +601,7 @@ pub async fn seed_starter_cards(admin: &PgPool) {
         "insert into app.settings (key, value) values ('starter_cards', $1::jsonb)
          on conflict (key) do update set value = excluded.value",
     )
-    .bind(serde_json::to_string(STARTER_CARDS).expect("the starter cards serialise"))
+    .bind(serde_json::to_string(STARTER_CARDS).expect("the starter cards serialize"))
     .execute(admin)
     .await
     .expect("seed the starter cards");
@@ -638,7 +638,7 @@ fn from<T: DeserializeOwned>(value: Value) -> T {
 
 /// A port value's JSON, which is what the cases read fields off.
 fn j<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a port value serialises")
+    serde_json::to_value(value).expect("a port value serializes")
 }
 
 /// A string-union value's literal (`"ok"`, `"created"`, …).
@@ -4752,7 +4752,7 @@ mod tickets {
         assert_eq!(q!(harness, t => t.tickets_count_open()), 1);
     }
 
-    async fn cancels_an_open_ticket_and_cancelling_twice_is_harmless(harness: &StoreHarness) {
+    async fn cancels_an_open_ticket_and_canceling_twice_is_harmless(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
         let row = ticket(harness, &profile.id, json!({}));
         q!(harness, t => t.tickets_insert(&row));
@@ -4884,7 +4884,7 @@ mod tickets {
     }
 
     /// R640002: the waits the queue readout reads, enqueue to claim, of every ticket claimed at or
-    /// after the cut, oldest claim first and a pair's two by id; an open or cancelled ticket has none.
+    /// after the cut, oldest claim first and a pair's two by id; an open or canceled ticket has none.
     async fn r640002_lists_the_waits_of_tickets_claimed_since_and_no_others(harness: &StoreHarness) {
         let now = harness.now();
         let mut owners = Vec::new();
@@ -4958,7 +4958,7 @@ mod tickets {
         r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent,
         r1372_r924000_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
         refuses_a_second_open_ticket_for_one_profile,
-        cancels_an_open_ticket_and_cancelling_twice_is_harmless,
+        cancels_an_open_ticket_and_canceling_twice_is_harmless,
         claims_a_pair_exactly_once,
         refuses_to_pair_a_ticket_with_itself,
         becomes_a_live_match_once_the_pair_is_claimed_and_the_match_created,
@@ -8535,7 +8535,7 @@ mod social {
             "the declined challenge",
         );
         assert_eq!(declined.state, ChallengeState::Declined);
-        assert!(q!(harness, t => t.challenges_close(&ba.id, ChallengeState::Cancelled)).is_none());
+        assert!(q!(harness, t => t.challenges_close(&ba.id, ChallengeState::Canceled)).is_none());
 
         // A lapsed open challenge is expired by the next one of its pair.
         let lapsed = challenge(&a.id, &c.id, "DEF567", now - 10_000, now - 1);
@@ -8549,11 +8549,11 @@ mod social {
         );
 
         // A block's sweep, then the sweeper's.
-        let closed = q!(harness, t => t.challenges_close_between(&c.id, &a.id, ChallengeState::Cancelled));
+        let closed = q!(harness, t => t.challenges_close_between(&c.id, &a.id, ChallengeState::Canceled));
         assert_eq!(ids_of(&closed), vec![next.id.clone()]);
         assert_eq!(
             state_of(q!(harness, t => t.challenges_get(&next.id))),
-            ChallengeState::Cancelled
+            ChallengeState::Canceled
         );
         let late = challenge(&b.id, &c.id, "FGH789", now, now + 1_000);
         assert!(q!(harness, t => t.challenges_create(&late, now)));
@@ -8568,7 +8568,7 @@ mod social {
         );
     }
 
-    /// B49: a declined, cancelled or blocked challenge frees its room: an unjoined room goes, a
+    /// B49: a declined, canceled or blocked challenge frees its room: an unjoined room goes, a
     /// joined one is never touched.
     async fn s7_a_freed_room_goes_only_while_unjoined(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;

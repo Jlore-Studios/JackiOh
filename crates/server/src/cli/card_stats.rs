@@ -65,7 +65,7 @@ pub struct CardStatsOptions {
     pub window: Option<String>,
 }
 
-/// The literal a string-union value serialises as (`"live"`, `"bo1"`, …): what the flag's value is
+/// The literal a string-union value serializes as (`"live"`, `"bo1"`, …): what the flag's value is
 /// compared with and what the refusal lists.
 pub(crate) fn literal<T: Serialize>(value: &T) -> String {
     match serde_json::to_value(value) {
@@ -131,7 +131,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
             continue;
         }
         let Some((name, raw)) = flag(arg) else {
-            bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
+            bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
         };
         match name {
             "source" => {
@@ -149,7 +149,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
             "window" => window = Some(raw.to_owned()),
             "pilot" => pilot = Some(one_of::<PilotFilter>(name, raw, PILOT_FILTERS, USAGE)?),
             "card" => card = Some(raw.to_owned()),
-            _ => bail!("Unrecognised option --{name}.\n\n{USAGE}"),
+            _ => bail!("Unrecognized option --{name}.\n\n{USAGE}"),
         }
     }
 

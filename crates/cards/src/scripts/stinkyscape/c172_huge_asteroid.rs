@@ -64,6 +64,7 @@ fn face(radiant: bool) -> Script {
                 json!({ "count": param(&*ctx, "resources"), "radiant": radiant }),
             ))]
         })),
+        preview: Some(super::c169_tiny_asteroid::pool_preview()),
         ..Script::default()
     }
 }
@@ -169,5 +170,27 @@ mod tests {
         let in_hand = crate::resources_in_hand(&s, P1);
         assert_eq!(in_hand.len(), RESOURCES);
         assert!(in_hand.iter().all(|card| card.radiant));
+    }
+
+    /// R2476000, R1855002: with no rider it previews nothing; with an Anomaly board's rider it names the
+    /// pool after "random Stinkyscape Resource" (Radiant: "random Radiant Stinkyscape Resource"), to
+    /// both seats, and its Death's Resources come from that pool alone.
+    #[test]
+    fn r2476000_it_names_the_resource_pool_its_rider_holds() {
+        for radiant in [false, true] {
+            let mut s = node(radiant);
+            let rock = s.unit_at(P1, 1).id;
+            assert!(crate::preview_seen(&s, P1, &rock).is_empty(), "radiant {radiant}: no rider");
+            let pool = ["stinkyscape-t-narcor", "stinkyscape-t-red-narcor"];
+            s.card_mut(&rock).memory.insert(jackioh_engine::effects::RESOURCE_POOL_KEY.to_string(), json!(pool));
+            let label = if radiant { "random Radiant Stinkyscape Resource" } else { "random Stinkyscape Resource" };
+            let named = vec![(label.to_string(), 2, Some("Narcor or Red Narcor".to_string()))];
+            assert_eq!(crate::preview_seen(&s, P1, &rock), named, "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, P2, &rock), named, "radiant {radiant}");
+            mined(&mut s);
+            let gained = crate::resources_in_hand(&s, P1);
+            assert!(!gained.is_empty(), "radiant {radiant}");
+            assert!(gained.iter().all(|card| pool.contains(&card.def_id.as_str())), "radiant {radiant}");
+        }
     }
 }

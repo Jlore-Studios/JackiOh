@@ -5,7 +5,7 @@
 //!   Radiant: 20/20, the same keywords.
 //!
 //! No script: the keywords and stats of each face are printed on the catalog and §10.4 layer 1 reads
-//! them off the face the radiant flag picks. The behaviour is the engine's: Rush §4.1 (unit targets
+//! them off the face the radiant flag picks. The behavior is the engine's: Rush §4.1 (unit targets
 //! only), Flying and Ranged (R783000), and Starship Piece, whose death fuses a copy of it into its
 //! owner's Dormant Starship (R1852000).
 

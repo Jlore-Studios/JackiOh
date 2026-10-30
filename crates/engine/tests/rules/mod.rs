@@ -53,6 +53,7 @@ pub mod config;
 pub mod control_change;
 pub mod control_change_property;
 pub mod copied_text;
+pub mod core_only;
 pub mod core_patches;
 pub mod cost_rules;
 pub mod counter_warning;

@@ -347,7 +347,7 @@ export function getMe(token: string): Promise<MeResponse> {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Usernames (R1435, R1436). The server validates, normalises and tags a name; the client proposes
+// Usernames (R1435, R1436). The server validates, normalizes and tags a name; the client proposes
 // one, shows the server's verdict as it stands, and saves exactly the username that verdict named,
 // so a player never gets a tag they were not shown.
 // ---------------------------------------------------------------------------------------------
@@ -1556,6 +1556,10 @@ export type PublicCardStat = {
   drawnNotPlayedGames: number;
   drawnNotPlayedWinRate: number | null;
   playedDelta: number | null;
+  /** R2427000: the decks that held the card and never drew it, and the drawn delta; absent from a server deployed before them. */
+  notDrawnGames?: number;
+  notDrawnWinRate?: number | null;
+  drawnDelta?: number | null;
   playRate: number;
   hasEnoughGames: boolean;
   /** R1367000: the card's window, and the versions its figures count. */

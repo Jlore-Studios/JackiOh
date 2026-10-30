@@ -351,6 +351,18 @@ pub struct Handicap {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub pool_hold: Option<bool>,
+    /// R2433000: this seat plays only Core cards. It never plays, sets or casts a card whose set is
+    /// not Core, from its hand or its graveyard, however the card got there. Absent means no bar, so
+    /// every other game hashes as before the field existed. Only the tutorial opponent sets it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub core_only: Option<bool>,
+    /// R2433001: the most copies of one card id this seat's deck may hold, in place of MAX_COPIES.
+    /// Absent means MAX_COPIES, so every other game hashes as before the field existed. Only a
+    /// lesson's human sets it (`TUTORIAL_HUMAN`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deck_copies: Option<i32>,
 }
 
 /// R180: this spec's own resources. A seat with no handicap plays with these.
@@ -363,6 +375,8 @@ pub const HUMAN_HANDICAP: Handicap = Handicap {
     hero_health: None,
     hero_floor: None,
     pool_hold: None,
+    core_only: None,
+    deck_copies: None,
 };
 
 string_union! {
@@ -411,6 +425,8 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         hero_health: None,
         hero_floor: None,
         pool_hold: None,
+        core_only: None,
+        deck_copies: None,
     },
     hard: Handicap {
         deck_size: DECK_SIZE + HARD_EXTRA_DECK_CARDS,
@@ -421,15 +437,18 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         hero_health: None,
         hero_floor: None,
         pool_hold: None,
+        core_only: None,
+        deck_copies: None,
     },
 };
 
 /// §9.10, R290: the tutorial opponent's handicap, the one below Easy. It is a handicap like the
 /// three tiers (R180) and lowers the AI seat's resources instead of raising them: a 12-card deck
 /// (each lesson's own list, R291, so it runs out and fatigues sooner), at most 3 mana crystals, and
-/// a hero that starts at 20 health. The AI's search, evaluation and budget are the ones every tier
-/// plays with, but with the learned evaluation on this seat keeps the hand eval (R1012003). It is not
-/// in `DIFFICULTIES`: nobody picks it, the tutorial deals it.
+/// a hero that starts at 20 health; and it plays only Core cards (R2433000). The AI's search,
+/// evaluation and budget are the ones every tier plays with, but with the learned evaluation on this
+/// seat keeps the hand eval (R1012003). It is not in `DIFFICULTIES`: nobody picks it, the tutorial
+/// deals it.
 pub const AI_TUTORIAL: Handicap = Handicap {
     deck_size: 12,
     mana_bonus: 0,
@@ -439,18 +458,27 @@ pub const AI_TUTORIAL: Handicap = Handicap {
     hero_health: Some(20),
     hero_floor: None,
     pool_hold: None,
+    // R2433000: the tutorial opponent plays only Core cards, whatever reaches its hand.
+    core_only: Some(true),
+    deck_copies: None,
 };
 
 /// §9.10, R1705005: the human seat's handicap in a lesson, whose fixed deal (R291) holds
 /// EARLIER_DECK_SIZE cards. It is a human's resources but for the deck's size, so a lesson's deal
 /// stays the one each lesson was written for while every other seat with no handicap holds
 /// DECK_SIZE. A seat stores it (it is not a human's), so a lesson folds as it was played. R2201000:
-/// its hero never falls below TUTORIAL_HERO_FLOOR, so a lesson cannot be lost.
+/// its hero never falls below TUTORIAL_HERO_FLOOR, so a lesson cannot be lost. R2433001: its deck may
+/// hold TUTORIAL_DECK_COPIES copies of a card.
 pub const TUTORIAL_HUMAN: Handicap = Handicap {
     deck_size: EARLIER_DECK_SIZE,
     hero_floor: Some(TUTORIAL_HERO_FLOOR),
+    deck_copies: Some(TUTORIAL_DECK_COPIES),
     ..HUMAN_HANDICAP
 };
+
+/// §9.10, R2433001: the most copies of one card a lesson's human deck holds. Lesson 1 is mostly
+/// vanilla Units, and Training Grounds has only three with no text.
+pub const TUTORIAL_DECK_COPIES: i32 = 4;
 
 /// §9.10, R2201000: the least health a lesson's human hero can fall to.
 pub const TUTORIAL_HERO_FLOOR: i32 = 1;
@@ -491,8 +519,9 @@ pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Brittle,
     KeywordKind::Untributable,
 ];
-/// R1748001: the keywords a Buff's keyword row may add to a Field Spell.
-pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible];
+/// R1748001: the keywords a Buff's keyword row may add to a Field Spell, in this order; R2436000 added
+/// Immutable after Indestructible.
+pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible, KeywordKind::Immutable];
 /// R1748001: the keywords a Buff's keyword row may add to a Spell or a Field Spell that deals damage
 /// (`CardDef.deals_damage`).
 pub const TUNE_DAMAGE_KEYWORDS: &[KeywordKind] = &[KeywordKind::Pierce, KeywordKind::Lifesteal];
@@ -573,7 +602,7 @@ pub const ACTIVATE_UNLIMITED_CAP: i32 = 100;
 /// (`u32`, the type of the per-call `EngineSink::converting` counter it bounds.)
 pub const DAMAGE_REDIRECT_CAP: u32 = 2 * BACKROW_ZONES as u32;
 
-/// `BERSERK_MARK`'s shape: a mark and its colour key (R437).
+/// `BERSERK_MARK`'s shape: a mark and its color key (R437).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct MarkSpec {
@@ -581,14 +610,14 @@ pub struct MarkSpec {
     pub color: &'static str,
 }
 
-/// B5 E35: the mark a Berserk unit carries in both views (R437's reusable mark), and its colour key.
+/// B5 E35: the mark a Berserk unit carries in both views (R437's reusable mark), and its color key.
 pub const BERSERK_MARK: MarkSpec = MarkSpec {
     mark: "berserk",
     color: "red",
 };
 
 /// R1174000: the mark a Unit is announced Frozen with (`added: true`) and thawed with (`added:
-/// false`), public in both views (R437's reusable mark), and its colour key: the client's frost.
+/// false`), public in both views (R437's reusable mark), and its color key: the client's frost.
 pub const FROZEN_MARK: MarkSpec = MarkSpec {
     mark: "frozen",
     color: "cyan",
@@ -1950,7 +1979,7 @@ pub const HETU_ELEMENTS: [CardElement; 10] = [
     CardElement::Metal,
 ];
 /// R980: the element of an index with no digit (T-rush, T-coin and the other named tokens): 土, the
-/// centre.
+/// center.
 pub const ELEMENT_WITHOUT_DIGIT: CardElement = CardElement::Earth;
 /// R981: the generating cycle, each element generating the next (木→火→土→金→水→木).
 pub const GENERATING_CYCLE: [CardElement; 5] = [
@@ -2083,10 +2112,11 @@ pub const DUOS_SETTLE_CAP: usize = 4 * TURN_CAP_PLAYER_TURNS as usize;
 // Patch numbers and card statistics by window (#1360, R1365000, R1367000; SPEC §9.11, R654)
 // ---------------------------------------------------------------------------------------------
 
-/// R1365000: the card families that must play differently for a change to be a patch; fewer is a
-/// micro. `cargo jackioh classify` reads it, and so does a card's stats window (R1367000) for a
-/// shipped version that recorded no tier.
-pub const PATCH_MIN_CARDS: usize = 10;
+/// R1365000, raised from 10 by R2455000: the card families that must play differently for a change to
+/// be a patch; fewer is a micro. A patch restarts every card's statistics (R1367000), so it waits for
+/// a change broad enough to move them. `cargo jackioh classify` reads it, and so does a card's stats
+/// window for a shipped version that recorded no tier.
+pub const PATCH_MIN_CARDS: usize = 50;
 
 /// SPEC §11 R654, amended by R1367000: the live games (ranked and unranked, tutorial excluded) a
 /// card's stats window must log before its figures are live-only. Fewer, and the card shows its

@@ -3,7 +3,7 @@
 
      - the running side's line turns into a red pill: an hourglass in a gauge that empties with the
        stretch, "Your turn" / "Their turn", and digits that pop in each second (sharper and bigger
-       in the last 10). It reads by its words and its shape, not by colour alone;
+       in the last 10). It reads by its words and its shape, not by color alone;
      - on the viewer's own turn an ember fuse burns round the edge of the screen (fixed, in the
        page's margin, blind to the pointer, under the effects layer's 38) and a heartbeat glows up
        from under the viewer's hand, quicker in the last 10;
@@ -268,7 +268,7 @@
 }
 
 /* The burning head: a white-hot core in an orange halo, flickering, throwing sparks. `left`/`top`
-   are percentages of the screen from Clock.tsx; the margins centre it on the cord. */
+   are percentages of the screen from Clock.tsx; the margins center it on the cord. */
 .clock-fuse-spark {
   position: absolute;
   width: 12px;
@@ -407,7 +407,7 @@
 /* ----------------------------------------------------------------- reduced motion ------ */
 
 /* Nothing of the final stretch moves: no pulse, no pop, no shiver, no fuse, no heartbeat. The pill,
-   its words, its gauge and its colour stay. Clock.tsx also leaves the fuse out under either switch. */
+   its words, its gauge and its color stay. Clock.tsx also leaves the fuse out under either switch. */
 .clock[data-motion="reduced"] *,
 .clock[data-motion="reduced"] .clock-line {
   animation: none !important;

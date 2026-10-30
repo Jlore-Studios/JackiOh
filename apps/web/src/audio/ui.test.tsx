@@ -207,7 +207,7 @@ describe("B28 Game plays sound in step with its runner", () => {
  * --------------------------------------------------------------------------------------------- */
 
 describe("B29 AudioToggle", () => {
-  it("B29 renders an unpressed button labelled Mute sound while not muted", () => {
+  it("B29 renders an unpressed button labeled Mute sound while not muted", () => {
     render(<AudioToggle />);
     const button = screen.getByTestId("audio-toggle");
 
@@ -248,7 +248,7 @@ describe("B29 AudioToggle", () => {
     expect(screen.getByTestId("audio-toggle")).toHaveAttribute("aria-label", "Unmute sound");
   });
 
-  it("B29 stored muted settings render pressed, labelled Unmute sound", () => {
+  it("B29 stored muted settings render pressed, labeled Unmute sound", () => {
     localStorage.setItem(AUDIO_SETTINGS_KEY, JSON.stringify({ master: 0.8, sfx: 0.8, voice: 1, muted: true, voiceOn: true }));
     render(<AudioToggle />);
 

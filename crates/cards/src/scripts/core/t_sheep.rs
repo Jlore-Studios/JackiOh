@@ -39,7 +39,7 @@ pub fn script() -> CardScripts {
 
 // T-sheep Sheep Token (SPEC §7; §3.2, §6.3, R11, R41, R74). BUILD M4-T4's token row: "Vanish on
 // leaving the field; Sheep counts 2 toward Tribute; … none in random pools". The `mod`s below prove
-// the base and radiant behaviour, asserting the worth through `tribute_value_of` and `legal_tribute_units`.
+// the base and radiant behavior, asserting the worth through `tribute_value_of` and `legal_tribute_units`.
 // §6.3's second half is proved end to end with #22 Carnivorous Cube, the one card that tributes from its own text (R41).
 #[cfg(test)]
 mod tests {

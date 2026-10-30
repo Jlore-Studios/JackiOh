@@ -44,7 +44,7 @@ impl PlayerId {
     }
 }
 
-/// `Record<PlayerId, T>` (SURFACE §4.3, §6.4): one value per seat, serialised `{ "p1": …, "p2": … }`.
+/// `Record<PlayerId, T>` (SURFACE §4.3, §6.4): one value per seat, serialized `{ "p1": …, "p2": … }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(
     feature = "ts",
@@ -341,7 +341,7 @@ pub fn newest_shipped_set() -> SetName {
 /// set that ships, resolved when the deck is dealt (R1371), or one shipped set by name. No lean at all
 /// is the pick's absence (`Option<LeanPick>`'s `None`).
 ///
-/// Serialised as a string, `"newest"` or the set's name: TS's `LeanPick` (`apps/web/src/wire/
+/// Serialized as a string, `"newest"` or the set's name: TS's `LeanPick` (`apps/web/src/wire/
 /// catalog.ts`), which no wire struct carries, so it is written there beside `SHIPPED_SETS` rather
 /// than generated. Only a set that ships (R1420) reads: a client cannot lean a deck on a set no
 /// player may hold yet.
@@ -413,7 +413,7 @@ impl<'de> Deserialize<'de> for LeanPick {
 
 /// §5: 0 to 6, 100 (Ceaseless Void), X, or "A embiggen B".
 ///
-/// TS `number | "X" | { base: number; embiggen: number }`, serialised exactly so (a number, the
+/// TS `number | "X" | { base: number; embiggen: number }`, serialized exactly so (a number, the
 /// string `"X"`, or the object).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -1110,7 +1110,7 @@ pub struct CardDef {
     pub printed_rarity: Option<PrintedRarity>,
     /// R1437000: what kind of thing the card is, for its animations only: no rule, pool, query,
     /// validator or AI reads it. A transient or custom definition carries none, so a state that
-    /// holds one serialises as before.
+    /// holds one serializes as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub flavor: Option<Flavor>,
@@ -1142,7 +1142,7 @@ pub struct CardDef {
     /// R1840000, R2250000: this card is a Resource, a (0) Spell token gained into its player's hand,
     /// with its rarity and its prices. The roll (R1840002) reads `resource.rarity`;
     /// `printedRarity` stays the card frame's alone. Absent on every other card, a fused or crafted
-    /// definition included, so a catalog without Resources serialises as before.
+    /// definition included, so a catalog without Resources serializes as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub resource: Option<ResourceDef>,
@@ -1170,7 +1170,7 @@ pub struct CardDef {
     pub ingredients: Option<Vec<FusedIngredient>>,
     /// R882: a crafted definition's recipe (Meditative #17 True Craft a Card) — what its scripts
     /// rebuild from, as `ingredients` is for a fused one. Only the crafter writes it. Optional and
-    /// skipped when absent, so a game that never crafts one serialises, hashes and replays as
+    /// skipped when absent, so a game that never crafts one serializes, hashes and replays as
     /// before (D14: no golden trace moves).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -1178,7 +1178,7 @@ pub struct CardDef {
     /// R2195000: the Core card this Training Grounds snapshot copies (#41–#60, "core-002" for #41),
     /// so a deck holds one of the two, never both (§2.6 L3), and their shared name names one card
     /// (R2195001). Absent on every other card, a fused or crafted definition included, so a state
-    /// that never holds a snapshot serialises, hashes and replays as before (TG4 D11).
+    /// that never holds a snapshot serializes, hashes and replays as before (TG4 D11).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub snapshot_of: Option<String>,

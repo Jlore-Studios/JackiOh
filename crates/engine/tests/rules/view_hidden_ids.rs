@@ -149,7 +149,7 @@ mod r1447_a_view_names_no_card_its_viewer_may_not_read {
             other[0].ids.as_deref(),
             Some(&[count.id.clone(), theirs.id.clone(), open.id.clone()][..])
         );
-        let serialized = serde_json::to_string(&view_for(&state, PlayerId::P2)).expect("serialises");
+        let serialized = serde_json::to_string(&view_for(&state, PlayerId::P2)).expect("serializes");
         assert!(
             !serialized.contains(&format!("\"{}\"", mine.id)),
             "p2's view names p1's face-down trap"
@@ -176,7 +176,7 @@ mod r1447_a_view_names_no_card_its_viewer_may_not_read {
             };
             assert!(hero.power.is_none(), "{viewer} sees a face-down card's power");
             assert!(hero.powers.is_empty(), "{viewer} sees a face-down card's power");
-            let serialized = serde_json::to_string(&view).expect("serialises");
+            let serialized = serde_json::to_string(&view).expect("serializes");
             if viewer == PlayerId::P1 {
                 assert!(
                     !serialized.contains(&format!("\"{}\"", hidden.id)),

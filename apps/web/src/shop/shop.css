@@ -106,7 +106,7 @@
 }
 
 /* The Chase Shard bar: the burst of a bar that just filled rides on its right end. The track is the
-   bar's last row, 14px high, so the burst is centred 7px up from the bottom. */
+   bar's last row, 14px high, so the burst is centered 7px up from the bottom. */
 .shard-bar {
   position: relative;
   margin: 0;

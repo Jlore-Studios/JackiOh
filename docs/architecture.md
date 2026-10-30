@@ -240,7 +240,7 @@ cannot hold a comment, and three things in them are not obvious:
   `learned/**`, `night-bot/**`, `patch/**`, `patches/**`, `polish/**`, `production` and `promote/**`, which
   `promote-production.yml` moves and opens pull requests from, `squishy-state`, `squishy/**`, `wt/**`); main is never listed. `ignoreCommand` runs
   `scripts/vercel-ignore.sh` for everything else: a commit message containing `[vercel]` builds on
-  any branch (the flag for a preview); any other branch is cancelled; and main builds unless every
+  any branch (the flag for a preview); any other branch is canceled; and main builds unless every
   file changed since the last commit Vercel built (`VERCEL_GIT_PREVIOUS_SHA`, and only when that
   commit is an ancestor of HEAD) is one the web bundle never reads: `bot/`, `.harness/`, `.squishy/`, `.github/`, `docs/`, `reviews/`,
   `e2e/`, `spec/`, `training/`, `scripts/` (but `scripts/build-wasm.sh`), `crates/server/` and `crates/tools/`
@@ -249,13 +249,13 @@ cannot hold a comment, and three things in them are not obvious:
   bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/ai`
   and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
   the list never names a crate's `src/`. Diffing against the last build, not the previous
-  commit, means a commit whose build was cancelled or failed is never skipped past. main also waits
+  commit, means a commit whose build was canceled or failed is never skipped past. main also waits
   an hour (`MIN_GAP_SECONDS`) after the last build: a commit committed sooner is skipped, and the
   first push after the hour builds it with the rest, since each build stores a whole copy of the
   site (about 76 MB in October 2026) against the Hobby plan's 10 GB of Deployment Storage; the
   project's Deployment Retention Policy, a dashboard setting, keeps every kind of deployment 1 day.
   Any doubt builds: no previous sha, a shallow clone without it, an empty diff, a commit dated
-  before the last build, a path off the list. A cancelled build
+  before the last build, a path off the list. A canceled build
   still counts against the 100, which is why the machine branches are switched off outright rather
   than left to the script. Vercel reads the config from the commit that is pushed, so a branch cut
   before this landed deploys until it merges main, and `bot-state` is an orphan branch with no
@@ -479,7 +479,7 @@ match. Nothing on a match's own path reads or writes that table, so a server dep
 migration 0014 is applied loses records (each logged as `game.record.failed`), never a match.
 
 One snapshot, and only beside the log. ARCHITECTURE-CCG §2.2: "Append each action as it resolves;
-don't persist snapshots. Periodic snapshots are an optimisation for later if replay gets slow." A
+don't persist snapshots. Periodic snapshots are an optimization for later if replay gets slow." A
 30-player-turn cap (R2) bounds a log's length, so nothing is written as a match is played. The
 restart drain alone stores one checkpoint per live match (`match_checkpoints`, migration 0042,
 #1169), which the very next boot's rebuild resumes when every check passes, folding only the rows
@@ -512,7 +512,7 @@ at save and queue."
 truth for rules: the deck builder is fast because a collection read is a short list of
 `(card_id, quantity)` and the card data is already in the bundle.
 
-Version mismatch has one behaviour everywhere: `app.assert_catalog_version` raises `update required`,
+Version mismatch has one behavior everywhere: `app.assert_catalog_version` raises `update required`,
 the server maps that to a 409 with the same message, and the client prompts a reload. Checked when a
 deck is saved (SPEC §9.4); at enqueue the chosen deck or trio is checked against the current catalog
 by L6, whatever version it was saved under (R253).
@@ -654,7 +654,7 @@ step that is not yet implemented says which BUILD task delivers it.
    - **Site URL:** `https://jackioh.vercel.app`. Left at its default (`http://localhost:3000`), every
      confirmation and reset link pointed at the reader's own machine.
    - **Redirect URLs:** `https://jackioh.vercel.app/**` and `http://localhost:5173/**`. The client
-     asks for `<origin>/login` on every mailer (`authRedirectUrl`, B35), and the provider honours it
+     asks for `<origin>/login` on every mailer (`authRedirectUrl`, B35), and the provider honors it
      only when it matches this allow-list, falling back to the Site URL otherwise.
    The links are PKCE links (R323): the mailers send a `code_challenge`, the link comes back to
    `/login?code=…`, and the browser that asked exchanges the code for a session with the verifier

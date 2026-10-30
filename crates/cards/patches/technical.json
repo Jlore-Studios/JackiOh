@@ -3170,5 +3170,202 @@
     "pr": 2428,
     "title": "patches ship: v0.5.9b",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "f280ef8e0d074cd990db70a5f6c9b42a63f01d71",
+    "pr": 2431,
+    "title": "patches log: 55b2aac..2d62a51",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "cc1969069eb3c089eef6996833f1386e4582debb",
+    "pr": 2307,
+    "title": "daily quests for Stinkyscape, Radiant upgrades and position switches, and every set that ships keeps a set quest",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "d1b9471f05961c165c44ab01cf49b06537fbf660",
+    "pr": 2432,
+    "title": "a ranked match's result shows the rank and pips it moved you to",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "9fd1a4185f53428513b46769f46d31bf928a3d0a",
+    "pr": 2403,
+    "title": "a Trap fused into a Unit stays quiet, a gray outline on a card with 1 Brittle left, no previews of shipped sets, and the cards lib job under five minutes",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "90789d8706784a32c18b345d09ec3b293f8b4ee2",
+    "pr": 2438,
+    "title": "patches ship: v0.5.10",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "07fef3cf1f372ac863ff241f23c9b9815f101ca8",
+    "pr": 2440,
+    "title": "the fuzz names the pool cards its games never played",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "0c6ed4c84fd6ad73fc87e0114f12bad24cc1d4a6",
+    "pr": 2441,
+    "title": "the shadow-ban sweep counts only the turns a card could really be played",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "703cd36038d13b3b5b1d51f6cc42c6e0c91bbdc9",
+    "pr": 2443,
+    "title": "a card opened from the patch notes shows its loading and retry states instead of nothing",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "fc232fc01121a5a913a615694846b2bd1040fc4d",
+    "pr": 2407,
+    "title": "in Chinese, the deck builder's, Almanac's and Shop's search and name sort read the Chinese card names",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "04f53195f7aa6760d0e62ef45228bdc74a83a02c",
+    "pr": 2442,
+    "title": "the cards lib job and the classifier's AI check under five minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "2f46afc9e0020decffcb58283622f2dfda6471f4",
+    "pr": 2449,
+    "title": "patches log: 2d62a51..90789d8",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "bac632df40c6c0615a9aaa71a060071ec3ba522a",
+    "pr": 2451,
+    "title": "the AI prices a unit's Death by what it leaves behind, so it plays Trigor",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "5756e8e578e4e102b9c11e1c04ebb0f8d823ad5c",
+    "pr": 2454,
+    "title": "every summon of a Flying Unit may land in the backrow",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "6667f6a764e71a980c5341e2e387d56b1fe80347",
+    "pr": 2456,
+    "title": "the Credits count is a badge by the hero, as the Jade Counter is",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "7649399084475272cd9b5061dfe98c9a8d9b220d",
+    "pr": 2448,
+    "title": "a tutorial opponent plays only Core cards, whatever reaches its hand",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "20eb41ddf17d99426dccbfd958abb00d7c24b9c1",
+    "pr": 2466,
+    "title": "patches ship: v0.5.10b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "5915f0940b27dc63e4e1f53cf33a23c4ae3e4dbd",
+    "pr": 2467,
+    "title": "make a Dormant card on the field unmistakable (greyed out and bound)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "1cbfe316dcb45fd0c97e937923bc16ed6cf173c6",
+    "pr": 2468,
+    "title": "a patch only when the change moves the stats of the cards broadly; everything smaller is a micro (#2455)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "c663add22942fab1c935126129b474702a96a540",
+    "pr": 2444,
+    "title": "the tutorial made simpler, one thing a lesson, against a Core-only opponent, with a concede counted as a loss and the coach out of the middle",
+    "kind": "app",
+    "player": "The tutorial is simpler: each lesson teaches one thing, the opponent plays only Core cards, a concede counts as a loss, and the coach stays at the side of the screen."
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "096e45cd461d9a8302d576f8338b9e6513551312",
+    "pr": 2470,
+    "title": "drop the Cost, Rarity, Keywords and Your stats columns and the set-traps line from /stats",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "bc08e1c7bea3d576d571eea33e241555175fe3fa",
+    "pr": 2472,
+    "title": "patches log: 90789d8..1cbfe31",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "30465612a77323e1a86ea68d16ef7adb257c06e6",
+    "pr": 2469,
+    "title": "Immutable is a valid buff target for field spells",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "2e0bf7880d1f270f4ca53f14829161f94063995e",
+    "pr": 2420,
+    "title": "`cargo jackioh fuzz --cards <ids|set>` deals the named cards into every seed's decks",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "0a37003944297ef4d74347990a25c028f5c4a287",
+    "pr": 2485,
+    "title": "patches ship: v0.5.10c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "246366b2e62922829aa29f539819c87e1c80fc68",
+    "pr": 2488,
+    "title": "patches log: 1cbfe31..0a37003",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "0c0e1a9b214ffe50e0ca071504dc2cafa009edfb",
+    "pr": 2492,
+    "title": "card statistics compare each card's games drawn against its games never drawn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "360a768343ec48e294c4b66260be2c1160304f5f",
+    "pr": 2484,
+    "title": "a fuchsia outline on a Temporary 1 card in your hand, and a turns-left counter on every Temporary card there",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "c99a94281c37c6f12f315bdce23c9e4a4e0ceaca",
+    "pr": 2494,
+    "title": "patches ship: v0.5.10d",
+    "kind": "app"
   }
 ]

@@ -99,11 +99,11 @@ export default function CosmeticPacks({
   const [reading, setReading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     setReading(true);
     Promise.all([getCosmeticPacks(token), getCollection(token), getOwnedCosmetics(token)]).then(
       ([packs, collectionAnswer, ownedAnswer]) => {
-        if (!cancelled) {
+        if (!canceled) {
           setInfo(packs);
           setShardFrom(undefined);
           setCollection(collectionAnswer);
@@ -113,7 +113,7 @@ export default function CosmeticPacks({
         }
       },
       (cause: unknown) => {
-        if (!cancelled) {
+        if (!canceled) {
           setReading(false);
           // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
           const keptInfo = cachedRead<CosmeticPacksResponse>(token, keptPaths.cosmeticPacks);
@@ -131,7 +131,7 @@ export default function CosmeticPacks({
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, revision, attempt]);
 

@@ -1,7 +1,7 @@
 // R1295000: a border is one object on the full face and on the board minion. The full face draws it
 // as its edge, `--cf-edge` (cards.css paints the root with it, cosmetics.css sets it per border: a
 // gradient, Wood's grain, Circuit's traces). The minion's panel covers the root, so its border is a
-// ring layer over the panel painted with that same `--cf-edge`, not a flat rim in one trim colour.
+// ring layer over the panel painted with that same `--cf-edge`, not a flat rim in one trim color.
 // The test reads the sheets' text, since Vitest stubs CSS imports and jsdom paints nothing; the style
 // engine's side of it, the ring's computed background against the face's, is measured in
 // e2e/cypress/component/card-cosmetics.cy.tsx.
@@ -62,7 +62,7 @@ describe("R1295000 the board minion's border", () => {
     const painted = minionBorder.filter((rule) => (declared(rule.body, "background-image") ?? "") === "var(--cf-edge)");
     expect(painted.map((rule) => rule.selector), "a rule painting the edge").toHaveLength(1);
 
-    // The ring has the edge's colours and nothing else's: it names no trim colour and sets no edge.
+    // The ring has the edge's colors and nothing else's: it names no trim color and sets no edge.
     const ring = painted[0]?.body ?? "";
     expect(ring).not.toContain("--trim-");
     expect(ring).not.toContain("--cf-edge:");
@@ -72,7 +72,7 @@ describe("R1295000 the board minion's border", () => {
     expect(declared(ring, "pointer-events")).toBe("none");
   });
 
-  it("R1295000 no minion border rule draws a single-colour inset rim in a trim colour", () => {
+  it("R1295000 no minion border rule draws a single-color inset rim in a trim color", () => {
     for (const rule of minionBorder) {
       for (const property of ["box-shadow", "outline", "border-color"]) {
         const value = declared(rule.body, property) ?? "";

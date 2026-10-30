@@ -69,7 +69,7 @@ describe("R639 the device's totals", () => {
     expect(winPercent({ ...EMPTY_STATS, games: 3, wins: 2 })).toBe(67);
   });
 
-  it("R639 the favourites list is highest first, by id among equals, never lists a zero, and stops at the limit", () => {
+  it("R639 the favorites list is highest first, by id among equals, never lists a zero, and stops at the limit", () => {
     const stats = {
       ...EMPTY_STATS,
       cards: {

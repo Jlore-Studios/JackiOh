@@ -11,7 +11,7 @@
 //! A rider (R1203; MD-E15): on every attack the Prime makes, declared or forced, `joiners` Units
 //! drawn uniformly from its controller's hand and deck together are summoned (no Cry) and attack
 //! its target first as forced attacks, in lane order, before the Prime's own combat; joiners stay.
-//! A declared attack whose target is gone is cancelled, the exertion spent.
+//! A declared attack whose target is gone is canceled, the exertion spent.
 //!
 //! Everything parked is plain JSON (R113): the owed combat or bounce runs here. Every draw is the
 //! match rng's.
@@ -23,7 +23,7 @@ use serde_json::Value;
 use crate::combat::AttackTarget;
 use crate::script::EngineSink;
 use crate::state::{CardInstance, DeclaredAttack, GameState, Resume, find_instance};
-use crate::wire::{CardType, PlayerId, Row};
+use crate::wire::{CardType, PlayerId};
 
 /// R113: the `resume.hook` of the engine sequence this module parks — the rest of a Prime's combat or
 /// a substitute's bounce a question stopped.
@@ -143,18 +143,19 @@ fn owe_record(sink: &mut EngineSink<'_>, step: &str, owed: &OwedAttackSummon) {
 
 /// R1202, R831006: what attacks when `attacker` would — a random Unit of its controller's hand
 /// instead, or itself. `No` unless the attacker carries `attack_from_hand`, its controller holds a
-/// Unit, and a unit zone is open. The pick is the match rng's; one Unit draws no random number
-/// (R129).
+/// Unit with a zone to land in, a unit zone or, for a Flying one, a backrow zone (R2248000). The pick
+/// is the match rng's; one Unit draws no random number (R129).
 pub fn replace_attacker(sink: &mut EngineSink<'_>, attacker: &CardInstance) -> Replaced {
     if crate::scripts::flags_of(sink.state, attacker).attack_from_hand != Some(true) {
         return Replaced::No;
     }
     let controller = attacker.controller;
     let units = hand_units(sink.state, controller);
-    if units.is_empty() {
-        return Replaced::No;
-    }
-    if crate::zones::first_entry_zone(sink.state, controller, Row::Units).is_none() {
+    // R2248000: a Flying Unit in hand lands in the backrow when the unit row is full.
+    if !units
+        .iter()
+        .any(|unit| crate::effects::summon::summon_lands(sink.state, controller, unit))
+    {
         return Replaced::No;
     }
     let Some(unit) = sink
@@ -174,7 +175,8 @@ pub fn replace_attacker(sink: &mut EngineSink<'_>, attacker: &CardInstance) -> R
 
 /// R1203: the joiners' attack first. `Fight` at once unless the attacker carries `attack_joiners`.
 /// The pool is the Unit cards in the controller's hand, then library — unit tokens included,
-/// unlike `recruit`. An empty pool or no open zone fights at once and draws nothing. Otherwise
+/// unlike `recruit`. An empty pool or no zone for any of it (a Flying one's in the backrow included,
+/// R2248000) fights at once and draws nothing. Otherwise
 /// `joiners` cards from the shuffled pool are summoned, each while a zone is open, and attack the
 /// Prime's target first as forced attacks in lane order; then the Prime's own combat. `Paused`
 /// when a joiner's Death asked something mid-run.
@@ -196,10 +198,11 @@ pub fn joiners_first(
             .filter(|card| is_unit(sink.state, card))
             .cloned(),
     );
-    if pool.is_empty() {
-        return JoinOutcome::Fight;
-    }
-    if crate::zones::first_entry_zone(sink.state, controller, Row::Units).is_none() {
+    // R2248000: a Flying joiner lands in the backrow when the unit row is full.
+    if !pool
+        .iter()
+        .any(|unit| crate::effects::summon::summon_lands(sink.state, controller, unit))
+    {
         return JoinOutcome::Fight;
     }
     let count = crate::params::param_value(
@@ -246,7 +249,7 @@ pub fn joiners_first(
 // Afterwards (R1202)
 // ---------------------------------------------------------------------------
 
-/// R1202: bounce the substitute after its combat — even when its attack was cancelled — if it is
+/// R1202: bounce the substitute after its combat — even when its attack was canceled — if it is
 /// still on the field on the stay it attacked from. The game over ends everything; a prompt open
 /// owes the bounce behind it.
 pub fn bounce_after(sink: &mut EngineSink<'_>, id: &str, since: u32) {

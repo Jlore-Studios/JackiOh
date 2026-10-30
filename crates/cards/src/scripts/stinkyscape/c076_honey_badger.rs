@@ -3,7 +3,7 @@
 //!   Radiant: "Rush\nWhenever this attacks, gain a random Radiant Stinkyscape Resource." (8/12)
 //!
 //! S #75 Badger's line ("whenever this attacks" is the `whenAttacks` hook, before any damage: declared
-//! or forced attacks, R53, R2285000, never a defence or an attack called off, R44) with Rush (§6.1), a
+//! or forced attacks, R53, R2285000, never a defense or an attack called off, R44) with Rush (§6.1), a
 //! printed keyword, so it may attack an enemy Unit, never the hero, the turn it lands and gain then.
 //! Since #2521 it is no Starship Piece: its death fuses nothing (R1852000 reads the keyword). Radiant:
 //! a Radiant Resource.

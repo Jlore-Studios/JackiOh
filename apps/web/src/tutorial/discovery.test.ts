@@ -2,7 +2,7 @@
 // fixture scripts: R2205000. A moment poses a question with nothing pointed at, and is done once the
 // player finds what it sets up, however they found it; its hints escalate only while the player
 // stalls, or when they ask; it never holds the AI; past its turns it retires and the lesson's end
-// names what it set up (R314). Each Field Guide entry is recognised from the human's view alone
+// names what it set up (R314). Each Field Guide entry is recognized from the human's view alone
 // (R292): the fresh events, the view and the public catalog.
 
 import { describe, expect, it } from "vitest";
@@ -32,7 +32,7 @@ import { coachTargets } from "./targets.ts";
 
 const VANILLA = "core-008";
 /** The lesson ids of the remade tutorial (§9.10): the four kept and the fifth. */
-const LESSON_IDS: readonly string[] = ["basics", "spells", "traps", "advanced", "finale"];
+const LESSON_IDS: readonly string[] = ["basics", "keywords", "casting", "backrow", "finale"];
 
 function ctx(view: PlayerView, fresh: GameEvent[] = [], legal: ActionBody[] = [{ type: "endTurn" }], aiToAct = false): CoachCtx {
   return { view, legal, fresh, aiToAct };
@@ -52,7 +52,7 @@ const shieldPopped: GameEvent = { type: "divineShieldLost", instanceId: "u9" };
 /** Two fixture entries: X is found by a play of the player's, Y by a popped shield. */
 const GUIDE: readonly Discovery[] = [
   { id: "x", name: "Mana", rule: "each card costs mana, and you get one more crystal every turn.", lesson: "basics", found: (c) => c.fresh.some((event) => event.type === "cardPlayed" && event.player === c.view.viewer) },
-  { id: "y", name: "Divine Shield", rule: "the first hit on a shielded unit does nothing but pop the shield.", lesson: "spells", found: (c) => c.fresh.some((event) => event.type === "divineShieldLost") },
+  { id: "y", name: "Divine Shield", rule: "the first hit on a shielded unit does nothing but pop the shield.", lesson: "keywords", found: (c) => c.fresh.some((event) => event.type === "divineShieldLost") },
 ];
 
 function scriptOf(over: Partial<LessonScript> = {}): LessonScript {
@@ -189,6 +189,20 @@ describe("R2205000 the discovery coach", () => {
     expect(state.discoveryQueue, "each bubble shows once").toEqual([]);
   });
 
+  it("R2434001 an entry a later lesson holds is found without a bubble, even never met; one of this lesson or an earlier one bubbles", () => {
+    // Lesson 1 never names lesson 2's Divine Shield, though the AI's shield popped and the player never met it.
+    const first = scriptOf({ lessonId: "basics", steps: [], teaches: ["x"] });
+    let state = coachObserve(first, coachStart([]), ctx(aiTurn(2), [shieldPopped], [], true));
+    expect(state.found).toEqual(["y"]);
+    expect(state.discoveryQueue, "lesson 2's: recorded silently in lesson 1").toEqual([]);
+    // Lesson 2 itself, or a later one, names it the first time it is met.
+    for (const lessonId of ["keywords", "finale"]) {
+      const later = scriptOf({ lessonId, steps: [], teaches: [] });
+      state = coachObserve(later, coachStart([]), ctx(aiTurn(2), [shieldPopped], [], true));
+      expect(state.discoveryQueue, lessonId).toEqual(["y"]);
+    }
+  });
+
   it("R2205000 a revisit offers an earlier lesson's mechanic only while the Field Guide lacks it", () => {
     const revisit = moment({
       id: "again",
@@ -300,7 +314,7 @@ describe("R2205000 the Field Guide", () => {
     expect(missing).toEqual([]);
   });
 
-  it("R2205000 recognises each entry from the human's view and its fresh events alone", () => {
+  it("R2205000 recognizes each entry from the human's view and its fresh events alone", () => {
     resetIds();
     const mine = unit("p1", { instanceId: "u1", defId: "rusher", keywords: [{ kind: "Rush" }] });
     const enemy = unit("p2", { instanceId: "e1", defId: "wall", keywords: [{ kind: "Taunt" }], position: "DEF" });

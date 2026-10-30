@@ -18155,5 +18155,233 @@
       "traininggrounds-054"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.5.10b",
+    "date": "2026-10-30",
+    "title": "Every summon of a Flying Unit may land in the backrow",
+    "source": "#2453",
+    "notes": "R2248000 made every summon's: \"fill your board\" with a Flying Unit fills the backrow after the unit row, each standing there (Drone Core VIII, stinkyscape-034; Stratos Swarm, stinkyscape-158, R1860008), and the Recruit of every permanent, the random summon from hand (R1083) and the attack summons (R1202, R1203), which looked only at the unit row before they drew or moved, read a Flying Unit's backrow too. The classifier's stage 2 against main shows those two, the Drone Interceptor token (stinkyscape-t-drone-interceptor) the fill summons, and Jogg's Box (classicplus-047), whose random Spells include them, playing differently.",
+    "player": {
+      "title": "Flying Units fill your backrow",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Filling your board with a Flying Unit fills your backrow too, after your unit row: Drone Core VIII and Stratos Swarm now fill both rows.",
+        "Pile On, Skull of J'Nari, Windfast and Windfurious Prime put a Flying Unit in your backrow when your unit row is full."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "5756e8e578e4e102b9c11e1c04ebb0f8d823ad5c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-047",
+      "stinkyscape-034",
+      "stinkyscape-158",
+      "stinkyscape-t-drone-interceptor"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10c",
+    "date": "2026-10-30",
+    "title": "A Buff may give a Field Spell Immutable",
+    "source": "#2436",
+    "notes": "R2436000, R1748001: a Buff's keyword row offers a Field Spell Immutable after Indestructible, so a Field Spell that deals damage draws among four, and a Field Spell made Immutable takes no later Buff or Nerf. The classifier shows the 43 cards in `plays` playing differently.",
+    "player": {
+      "title": "Field Spells can be Buffed to Immutable",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Buff can now give a Field Spell Immutable as well as Indestructible."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "30465612a77323e1a86ea68d16ef7adb257c06e6"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-045",
+      "classic-087",
+      "classicplus-069",
+      "classicplus-070",
+      "classicplus-071",
+      "classicplus-073",
+      "core-033",
+      "core-058",
+      "core-t-rush",
+      "meditative-034",
+      "meditative-035",
+      "meditative-082",
+      "meditative-083",
+      "meditative-087",
+      "meditative-097",
+      "stinkyscape-009",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-026",
+      "stinkyscape-027",
+      "stinkyscape-035",
+      "stinkyscape-050",
+      "stinkyscape-056",
+      "stinkyscape-057",
+      "stinkyscape-059",
+      "stinkyscape-060",
+      "stinkyscape-065",
+      "stinkyscape-068",
+      "stinkyscape-089",
+      "stinkyscape-116",
+      "stinkyscape-151",
+      "stinkyscape-161",
+      "stinkyscape-166",
+      "stinkyscape-t-ai-07",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite",
+      "traininggrounds-024"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10d",
+    "date": "2026-10-30",
+    "title": "Job Application prints its quest one stage a line, as The Greatest Heist does",
+    "source": "#2450",
+    "notes": "Job Application's stage lines take The Greatest Heist's layout and its intro line goes. Wording only: no number, keyword, tag or behaviour changes. A fused card carries its ingredients' text in the state, so the two golden games that fuse Job Application (seeds 27 and 129) hash differently and are re-blessed; nothing in them plays differently.",
+    "player": {
+      "title": "Quest cards show the stage they are on",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Quest cards now print only the stage they are on, with its progress; their whole text is still in the card's preview. Job Application's text is laid out stage by stage. Nothing plays differently."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "550c2fe5860d9ff8bae88d4d8bb1b688180d1cf9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": [
+      {
+        "id": "stinkyscape-112",
+        "name": "Job Application",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.11",
+    "date": "2026-10-30",
+    "title": "Cards show what they remember",
+    "source": "#2476",
+    "notes": "Every card whose text turns on something it or the game remembers shows it in its text through its preview (R2476000, issue #2476's pass over the catalog: 33 cards). The previews change only the views, but the classifier counts a view change as play, so it names the previewed cards and the cards played on a step where a preview changed. Seven scripts grow past COMPLICATED_CODE_LINES and join Shockwave447's complicated cards (R1846000, R2173001).",
+    "player": {
+      "title": "Cards show what they remember",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Shockwave447's complicated cards now include Jackiestan Auctioneer, Memory Leak, Clip-Farming Critikal, Eschews, BALTHASAR, Tiny Asteroid and Trigor."
+      ],
+      "text": [
+        "Cards that remember something now show it in their text: the Unit Carnivorous Cube ate, the deaths Eschews has counted, the card held beneath Ticketed, and 30 more."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "4f48333d71c7d14def4143cb29dbe2b5a7266817"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-004",
+      "classic-007",
+      "classic-009",
+      "classic-016",
+      "classic-023",
+      "classic-024",
+      "classic-038",
+      "classic-045",
+      "classic-067",
+      "classic-082",
+      "classicplus-012",
+      "classicplus-023",
+      "classicplus-029",
+      "classicplus-034",
+      "classicplus-036",
+      "classicplus-037",
+      "classicplus-043",
+      "classicplus-077",
+      "classicplus-078",
+      "classicplus-t-ai-02",
+      "classicplus-t-ai-05",
+      "classicplus-t-ai-08",
+      "core-002",
+      "core-022",
+      "core-024",
+      "core-039",
+      "core-067",
+      "core-068",
+      "core-074",
+      "core-075",
+      "core-095",
+      "core-t-rush",
+      "meditative-008",
+      "meditative-020",
+      "meditative-035",
+      "meditative-053",
+      "meditative-057",
+      "meditative-059",
+      "meditative-060",
+      "meditative-077",
+      "meditative-087",
+      "meditative-094",
+      "meditative-101",
+      "meditativeplus-020",
+      "stinkyscape-005",
+      "stinkyscape-008",
+      "stinkyscape-009",
+      "stinkyscape-011",
+      "stinkyscape-018",
+      "stinkyscape-052",
+      "stinkyscape-067",
+      "stinkyscape-071",
+      "stinkyscape-087",
+      "stinkyscape-088",
+      "stinkyscape-093",
+      "stinkyscape-101",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-112",
+      "stinkyscape-135",
+      "stinkyscape-141",
+      "stinkyscape-153",
+      "stinkyscape-166",
+      "stinkyscape-167",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-gellium",
+      "traininggrounds-025",
+      "traininggrounds-043",
+      "traininggrounds-057"
+    ],
+    "changes": []
   }
 ]

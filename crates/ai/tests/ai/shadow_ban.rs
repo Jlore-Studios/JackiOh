@@ -1025,7 +1025,7 @@ mod the_two_pass_sweep_r390 {
         );
         // TS's `JSON.parse(JSON.stringify(fixture))`, through the Rust type the report reads it into.
         let typed: SweepPass2 = json_as(fixture.clone());
-        let text = serde_json::to_string(&typed).expect("serialisable");
+        let text = serde_json::to_string(&typed).expect("serializable");
         let back: Value = serde_json::from_str(&text).expect("parses");
         assert_eq!(normalized(back), normalized(fixture));
     }

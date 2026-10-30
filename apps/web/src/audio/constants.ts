@@ -176,7 +176,7 @@ export const MUSIC_BUDGET_BYTES = 28 * 1024 * 1024;
 // ---- Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb ----
 /** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */
 export const STING_DELAY_MS = 40;
-/** The pan of a sound about a unit in the outermost lane; the middle lane is centred. */
+/** The pan of a sound about a unit in the outermost lane; the middle lane is centered. */
 export const LANE_PAN_MAX = 0.6;
 /** The effects' gain under a voice line, and how fast they dip and recover (the music's duck, for the effects). */
 export const SFX_VOICE_DUCK_GAIN = 0.7;
@@ -185,7 +185,7 @@ export const SFX_DUCK_RELEASE_TC_S = 0.2;
 /** The shared reverb: a small room's impulse, this long, its noise falling off by this power. */
 export const REVERB_SECONDS = 1.1;
 export const REVERB_DECAY_POWER = 3;
-/** The impulse is stereo: each channel its own noise, so the room is wide around a centred sound. */
+/** The impulse is stereo: each channel its own noise, so the room is wide around a centered sound. */
 export const REVERB_CHANNELS = 2;
 /** How much of each bus the reverb hears: the effects a little, the voice lines less. */
 export const REVERB_SFX_SEND = 0.3;

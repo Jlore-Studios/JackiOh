@@ -802,7 +802,7 @@ mod r1180005_after_a_spell_targeting_an_enemy {
         let mut s = game("sp-pile-view", json!({ "hand": [BOLT, PILER] }), json!({}));
         s.play(BOLT, json!({ "targets": hero(P2) }));
         for player in [P1, P2] {
-            let events = serde_json::to_value(s.view(player).events).expect("events serialise");
+            let events = serde_json::to_value(s.view(player).events).expect("events serialize");
             assert!(!events.to_string().contains("\"answer\""), "{player:?}'s view");
         }
     }

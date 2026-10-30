@@ -19,8 +19,8 @@
 //!
 //! On the field neither the cost row nor a declared number only the card's Cry reads (`Param.cry`) is
 //! drawn, the price and the Cry being spent (R1748000), nor a Tribute, paid as the card was played
-//! (R2261000). An Upgrade's keyword comes from R21's pool for a Unit, is Indestructible for a Field
-//! Spell, and Pierce or Lifesteal for a Spell or a Field Spell that deals damage
+//! (R2261000). An Upgrade's keyword comes from R21's pool for a Unit, is Indestructible or Immutable
+//! for a Field Spell (R2436000), and Pierce or Lifesteal for a Spell or a Field Spell that deals damage
 //! (`CardDef.deals_damage`, R1748001). The plague row is R1748002's.
 //!
 //! R442: the draw is the row first, uniformly among the rows that can change the card, then the item
@@ -325,10 +325,10 @@ fn keyword_row(
     })
 }
 
-/// R1748001: the keywords a Buff may add to a card that is no Unit, in this order: Indestructible to a
-/// Field Spell (`TUNE_FIELD_SPELL_KEYWORDS`), and Pierce and Lifesteal to a Spell or a Field Spell
-/// that deals damage (`CardDef.deals_damage`, `TUNE_DAMAGE_KEYWORDS`), each only while it lacks it.
-/// Nothing for a Trap, a Field Trap or any other card.
+/// R1748001: the keywords a Buff may add to a card that is no Unit, in this order: Indestructible and
+/// Immutable to a Field Spell (`TUNE_FIELD_SPELL_KEYWORDS`, R2436000), and Pierce and Lifesteal to a
+/// Spell or a Field Spell that deals damage (`CardDef.deals_damage`, `TUNE_DAMAGE_KEYWORDS`), each only
+/// while it lacks it. Nothing for a Trap, a Field Trap or any other card.
 fn non_unit_candidates(state: &GameState, card: &CardInstance, held: &[Keyword]) -> Vec<Keyword> {
     let card_type = card_type_of(state, card);
     let mut kinds: Vec<KeywordKind> = Vec::new();
@@ -1118,7 +1118,7 @@ pub struct DiscoverNumberArgs {
 /// Classic+ #41 KY's Constant's Radiant: "Discover a number on it" — up to `count` different numbers
 /// on the card that are not `value` already, drawn uniformly (R60; all of them, with no draw, when
 /// there are no more than `count`, R129), offered to the card's controller in a `discover` prompt whose
-/// options are the numbers' ids (`number_ref_id`) labelled with what each is now. The answer re-enters
+/// options are the numbers' ids (`number_ref_id`) labeled with what each is now. The answer re-enters
 /// the card's own step `step`, whose data carries the card's id under `NUMBER_CARD_KEY`; the step
 /// reads the pick with `chosen_tuning_number` (not E18's `number` prompt reader: this answer names a
 /// number on a card) and sets it with `set_number`. The options name the caster's own card's numbers

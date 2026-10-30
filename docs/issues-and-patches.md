@@ -1,6 +1,6 @@
 # Issues and patches
 
-How an issue is titled and labelled, how a patch is numbered, and how a patch that takes several
+How an issue is titled and labeled, how a patch is numbered, and how a patch that takes several
 pull requests is split up. It binds people and agents alike. The night bot's own `bot:*` labels are
 in [`bot/README.md`](../bot/README.md#labels), its fullsend mode `bot:fullsend` and a fullsend
 parent, `bot:tree`, among them ([Fullsend](../bot/README.md#fullsend)), and Squishy's `squishy:*`
@@ -39,7 +39,7 @@ every push (#1370). Nothing else sets them, and no label overrides the classifie
 | `kind:app` | It changes the client or the server, what players see and use |
 | `kind:internal` | CI, the bots, tooling, docs, tests or a refactor |
 | `tier:major` | A set ships: the next `v0.Z.0` |
-| `tier:patch` | 10 or more cards play differently, or a rule every game meets: the next `v0.Z.X` |
+| `tier:patch` | 15 or more cards reprinted, 50 or more that play differently, or a rule every game meets: the next `v0.Z.X` |
 | `tier:micro` | Fewer cards, or their words alone: the next letter |
 
 The type labels stay for routing (the night bot's sweeps and the forms read them), though a `Patch:`
@@ -51,11 +51,11 @@ patch whose work is all tooling (the codebase pass) is `patch` and `architecture
 is Claude Opus's alone), `human` (people do it, such as a decision or any change to `bot/`,
 `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*`
 labels (the bot's pickup order) and the `bot:*` labels are separate. Never add `bot:build` while
-retitling or relabelling, because it queues a build.
+retitling or relabeling, because it queues a build.
 
-Every label, with its colour and description, is listed once, in `bot/harness/config.py`'s
-`LABELS`: the sweep creates one the repository lacks and deletes one it retired
-(`RETIRED_LABELS`), and `harness setup` also restores a changed one.
+Every label, with its color and description, is listed once, in `bot/go/internal/config`'s
+`Labels`: the sweep creates one the repository lacks and deletes one it retired
+(`RetiredLabels`), and `harness setup` also restores a changed one.
 
 **Who does an issue: one label each.** `bot:build` hands an issue to the night bot, which queues it;
 so does assigning the bot or commenting `/harness build`. `human` hands it to people: triage
@@ -68,7 +68,7 @@ Otherwise the night bot's planner rates the issue when it plans it, and it count
 then: **easy** only when it is small (at most 10 files and 400 lines), in one crate or app,
 touches none of `SPEC.md`, the notes in `spec/`, `BUILD.md` or the shared surfaces, does no engine,
 AI, catalog, card or migration work, is checked by a unit test, leaves the builder no decision, and
-is blocked by nothing (`bot/harness/easy.py`); **hard** for engine rules, the AI, design across
+is blocked by nothing (`bot/go/internal/easy`); **hard** for engine rules, the AI, design across
 crates, a migration, or about 40 files or more; **medium** for the rest. Triage
 gives no difficulty beyond the form's answer. Every ten minutes the sweep labels what is left bare
 (#735): a planned issue with no difficulty gets `difficulty:medium`, and a bot pull request its
@@ -78,7 +78,7 @@ strikes and the step up).
 
 ## Issue type
 
-Every issue also has one of the organisation's issue types, which are not labels:
+Every issue also has one of the organization's issue types, which are not labels:
 
 | Type | For |
 |---|---|
@@ -122,8 +122,13 @@ does to the cards through the classifier and names it:
   arrival opens no line and earns the tier its cards do, so Training Grounds ships as a patch of
   Stinkyscape's v0.5, whose line is "Stinkyscape & Training Grounds". Wrapping is the owner's call,
   never a builder's.
-- **Patch, `v0.Z.(X+1)`**: 10 or more card families play differently (`PATCH_MIN_CARDS`), or a rule
-  every game meets changed.
+- **Patch, `v0.Z.(X+1)`**: 15 or more card families are reprinted (`PATCH_MIN_REPRINTS`, R2499000:
+  their catalog entry changed and they play differently, as in a balance pass), 50 or more play
+  differently by any route, the engine's included (`PATCH_MIN_CARDS`), or a rule every game meets
+  changed: divergences that name no card in a quarter of the classifier's unforced
+  games (`RULE_MIN_GAMES`), or a base build that refuses the head's decks. A patch restarts every
+  card's statistics (R1367000), so it waits for a change broad enough to move them (#2455,
+  R2455000); the bar was 10 families, and any one divergence without a card, until then.
 - **Micro, the newest version with the next letter** (after v0.3.18, v0.3.18b, then v0.3.18c):
   anything smaller, and any change to wording alone however many cards it touches.
 
@@ -151,8 +156,9 @@ in `patches.json`, so readers never parse a version, and the order of patches is
 ## Version retcon
 
 #1371 (part 7 of #1360, R1371000) renamed every shipped version to what the classifier (R1365000)
-would have called it: a major where a set first ships, a patch where `PATCH_MIN_CARDS` or more card
-families play differently, a micro for anything smaller or for wording alone. `cargo jackioh patches
+would have called it: a major where a set first ships, a patch where 10 or more card families (then
+`PATCH_MIN_CARDS`) play differently, a micro for anything smaller or for wording alone. #2455 raised
+the bar to 50 for later patches and renamed none (R2455000). `cargo jackioh patches
 retcon` computed the map from the snapshots and, from the Rust scripts on, the scripts each patch's own
 commits changed, and renamed every name the repository and the database hold. Docs, commit messages,
 code comments and the older issue and pull request titles keep the old names; translate them with this
@@ -209,7 +215,7 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
 
 - **Tracker.** One issue, `Patch: <…>`, holds the scope and a checklist of the parts, one line per
   part issue.
-- **Parts.** Each part is its own issue, `Patch (part n of m): <…>`, labelled like its
+- **Parts.** Each part is its own issue, `Patch (part n of m): <…>`, labeled like its
   tracker: `patch`, or `major version` with `patch` if the part changes the game. Add
   `architecture` to a part that is all tooling. Link each part as a sub-issue of the tracker:
 
@@ -220,7 +226,7 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
 
   n is the order the parts are meant to merge in. When a part is added or moved, update m on the
   rest. The night bot holds a part until the parts before it, the same parent's sub-issues, have
-  closed (`bot/harness/queue.py`, `waits_for`), so a part that is not linked waits for nothing.
+  closed (`bot/go/internal/queue`, `WaitsFor`), so a part that is not linked waits for nothing.
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
 - **Going live.** A change to a card goes live through a pending fragment:
@@ -325,13 +331,13 @@ sample of All Random. The base build needs the flag, so the first such compariso
 - **Title.** A pull request's title becomes the subject of the squash commit it lands as, so it
   follows [Titles](#titles), usually as its issue's does. The `pr title` check
   (`.github/workflows/pr-title.yml`) fails one that doesn't and runs again when it is edited. Its
-  pattern is triage's (`bot/harness/triage.py`, `CONVENTION`), plus the titles tools give their own
-  pull requests (`AUTOMATED_PULL`): `patches ship: v0.3.1` (`patches-ship.yml`),
+  pattern is triage's (`bot/go/internal/triage`, `Convention`), plus the titles tools give their own
+  pull requests (`AutomatedPull`): `patches ship: v0.3.1` (`patches-ship.yml`),
   `Promote main to production: N commit(s) up to abc1234` (`scripts/promote-production.sh`), a
   training lane's `AI gen N (improve): …`, `AI gen N (unban): …` or `AI gen N (learn): …`, and GitHub's `Revert "…"` of
   a title that passes. The bots title theirs from the builder's answer when it follows the
   convention, else from the issue, else as `Patch: <what it does>` with the old prefix dropped,
-  as the fix of a workflow's `CI: …` alert is (`triage.pull_title`), and merge by squash, so
+  as the fix of a workflow's `CI: …` alert is (`triage.PullTitle`), and merge by squash, so
   their branch commits' subjects (`bot: build pass 1 for #85`) never become one on `main`.
 - **Body.** The template asks for `Closes #n` (a part says `Closes #<part>` and
   `Part of #<tracker>`), what changed, the tests run, the risks, the rulings added or changed and

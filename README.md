@@ -112,7 +112,7 @@ and the pinned **Night bot status** issue shows what it is doing.
 
 ```mermaid
 flowchart LR
-  A["Issue labelled bot:build<br/>or @jgoetzmann-bot ..."] --> P["plan<br/>(medium or strong;<br/>strong for hard)"]
+  A["Issue labeled bot:build<br/>or @jgoetzmann-bot ..."] --> P["plan<br/>(medium or strong;<br/>strong for hard)"]
   P --> C["lane owner builds<br/>(Opus / medium / weak)"]
   C --> D["repository checks"]
   D --> E{"fresh adversarial<br/>self-review session"}

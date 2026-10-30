@@ -154,7 +154,7 @@ fn refusal(status: u16, code: &str, message: &str) -> Response {
     json_response(status, json!({ "error": { "code": code, "message": message } }))
 }
 
-/// The code a path names, normalised, or none when it could never be a room code.
+/// The code a path names, normalized, or none when it could never be a room code.
 fn code_of(req: &Req) -> Option<String> {
     let code = normalize_code(req.params.get("code").map(String::as_str).unwrap_or(""));
     is_well_formed_code(&code, ROOM_CODE_LENGTH).then_some(code)

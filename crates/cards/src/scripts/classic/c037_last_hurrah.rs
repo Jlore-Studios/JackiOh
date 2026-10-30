@@ -144,7 +144,7 @@ mod tests {
                 };
                 assert_eq!(burned(PlayerId::P2), burned(PlayerId::P1));
                 assert!(contains_all(&burned(PlayerId::P2), &burnt_ones));
-                assert!(!serde_json::to_string(&s.view(PlayerId::P2)).expect("a view serialises").contains(VANILLA));
+                assert!(!serde_json::to_string(&s.view(PlayerId::P2)).expect("a view serializes").contains(VANILLA));
             }
 
             #[test]
@@ -184,7 +184,7 @@ mod tests {
 
                 s.play(HURRAH, json!({}));
 
-                let seen = serde_json::to_string(&s.view(PlayerId::P2)).expect("a view serialises");
+                let seen = serde_json::to_string(&s.view(PlayerId::P2)).expect("a view serializes");
                 for def_id in [TIMMY, MENACE, POINTMASTER, FELINORS] {
                     assert!(!seen.contains(def_id));
                 }

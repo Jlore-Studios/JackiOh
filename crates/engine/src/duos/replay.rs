@@ -33,7 +33,7 @@ pub struct DuosReplayResult {
 pub fn duos_hash(state: &DuosState) -> String {
     let value = match serde_json::to_value(state) {
         Ok(value) => value,
-        Err(error) => panic!("duos_hash: a DuosState did not serialise: {error}"),
+        Err(error) => panic!("duos_hash: a DuosState did not serialize: {error}"),
     };
     fnv1a32_utf16(&canonical(&value))
 }

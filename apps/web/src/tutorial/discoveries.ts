@@ -1,5 +1,5 @@
 // The Field Guide's entries (SPEC §9.10, R2205000): each mechanic a lesson lets the player find, its
-// one-line rule, and how the coach recognises it from the human's view alone (R292): the fresh events,
+// one-line rule, and how the coach recognizes it from the human's view alone (R292): the fresh events,
 // the view, the legal actions and the public catalog (§5.1). A predicate decides nothing; it reads what
 // the board already shows (CLAUDE.md rule 7).
 
@@ -165,35 +165,19 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     lesson: "basics",
     found: (ctx) => freshOf(ctx, "gameOver").some((event) => event.winner === ctx.view.viewer),
   },
-  // Lesson 2, Spells and keywords.
-  {
-    id: "spell",
-    name: "Spells",
-    rule: "a spell does what it says once and goes to your graveyard. Some ask you for a target.",
-    lesson: "spells",
-    found: (ctx) => myPlays(ctx).some(({ def }) => def?.type === "Spell"),
-  },
-  {
-    id: "removal",
-    name: "Removal",
-    rule: "a spell can deal with a unit that is too big to fight.",
-    lesson: "spells",
-    found: (ctx) =>
-      myPlays(ctx).some(({ def }) => def?.type === "Spell") &&
-      freshOf(ctx, "destroyed").some((event) => event.owner !== ctx.view.viewer),
-  },
+  // Lesson 2, Cries and keywords.
   {
     id: "cry",
     name: "Cry",
     rule: "it happens when you play the unit from your hand.",
-    lesson: "spells",
+    lesson: "keywords",
     found: (ctx) => myPlays(ctx).some(({ def }) => def?.type === "Unit" && says(def, "Cry:")) && anyEffect(ctx),
   },
   {
     id: "taunt",
     name: "Taunt",
     rule: "while an enemy has a Taunt unit, your attacks must go at a Taunt unit first.",
-    lesson: "spells",
+    lesson: "keywords",
     found: (ctx) =>
       myAttacks(ctx).some((event) => {
         const { unit, def } = attackedDef(ctx, event.targetId);
@@ -204,47 +188,93 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     id: "divine-shield",
     name: "Divine Shield",
     rule: "the first hit on a shielded unit does nothing but pop the shield.",
-    lesson: "spells",
+    lesson: "keywords",
     found: (ctx) => freshOf(ctx, "divineShieldLost").length > 0,
   },
   {
     id: "armor",
     name: "Armor",
     rule: "Armor soaks up damage before health does.",
-    lesson: "spells",
+    lesson: "keywords",
     found: (ctx) => freshOf(ctx, "damageAbsorbed").length > 0,
   },
   {
     id: "rush",
     name: "Rush",
     rule: "a unit with Rush can attack enemy units on the turn it arrives, though not the hero.",
-    lesson: "spells",
+    lesson: "keywords",
     found: (ctx) => myAttacks(ctx).some((event) => unitHas(mine(ctx.view, event.attackerId), "Rush")),
   },
   {
     id: "pierce",
     name: "Pierce",
     rule: "damage from a Pierce card ignores Armor.",
-    lesson: "spells",
+    lesson: "keywords",
     found: (ctx) =>
       myPlays(ctx).some(({ def }) => hasKeyword(def, "Pierce")) ||
       myAttacks(ctx).some((event) => unitHas(mine(ctx.view, event.attackerId), "Pierce")),
   },
+  // Lesson 3, Spells.
+  {
+    id: "spell",
+    name: "Spells",
+    rule: "a spell does what it says once and goes to your graveyard. Some ask you for a target.",
+    lesson: "casting",
+    found: (ctx) => myPlays(ctx).some(({ def }) => def?.type === "Spell"),
+  },
+  {
+    id: "removal",
+    name: "Removal",
+    rule: "a spell can deal with a unit that is too big to fight.",
+    lesson: "casting",
+    found: (ctx) =>
+      myPlays(ctx).some(({ def }) => def?.type === "Spell") &&
+      freshOf(ctx, "destroyed").some((event) => event.owner !== ctx.view.viewer),
+  },
+  // Lesson 4, Field Spells and Traps.
+  {
+    id: "trap",
+    name: "Traps",
+    rule: "you set a Trap face-down, and it springs by itself when its moment comes, on either turn.",
+    lesson: "backrow",
+    found: (ctx) => freshOf(ctx, "trapFired").some((event) => event.controller === ctx.view.viewer),
+  },
+  {
+    id: "enemy-backrow",
+    name: "Face-down cards",
+    rule: "the enemy's face-down cards are hidden until they spring.",
+    lesson: "backrow",
+    found: (ctx) => freshOf(ctx, "trapFired").some((event) => event.controller !== ctx.view.viewer),
+  },
+  {
+    id: "field-spell",
+    name: "Field Spells",
+    rule: "a Field Spell stays in your backrow and keeps working turn after turn.",
+    lesson: "backrow",
+    found: (ctx) => myPlays(ctx).some(({ def }) => def?.type === "Field Spell"),
+  },
+  {
+    id: "field-trap",
+    name: "Field Traps",
+    rule: "a Field Trap springs like a Trap, then stays to keep working.",
+    lesson: "backrow",
+    found: (ctx) => freshOf(ctx, "trapFired").some((event) => defOf(ctx, event.defId)?.type === "Field Trap"),
+  },
+  // Lesson 5, The final exam: everything else the game holds.
   {
     id: "defense-position",
     name: "Defense Position",
     rule: "a unit in Defense Position gains Taunt and 1 Armor.",
-    lesson: "spells",
+    lesson: "finale",
     found: (ctx) =>
       freshOf(ctx, "positionSwitched").some((event) => event.position === "DEF" && mine(ctx.view, event.instanceId) !== undefined) ||
       myAttacks(ctx).some((event) => attackedDef(ctx, event.targetId).unit?.position === "DEF"),
   },
-  // Lesson 3, Lanes and the backrow.
   {
     id: "lanes",
     name: "Lanes",
     rule: "where a unit stands can matter: some cards care which lane they are in.",
-    lesson: "traps",
+    lesson: "finale",
     // Midlane Menace's Cry buffs it only in the middle lane (R685), so its buff is the lane found.
     found: (ctx) =>
       freshOf(ctx, "summoned").some(
@@ -258,7 +288,7 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     id: "adjacency",
     name: "Neighbours",
     rule: "some cards care about the units beside them, to the left and the right.",
-    lesson: "traps",
+    lesson: "finale",
     found: (ctx) =>
       freshOf(ctx, "buffed").some((event) => mine(ctx.view, event.instanceId)?.defId === RIGHT_HAND_FELINOR) ||
       freshOf(ctx, "summoned").some(
@@ -270,7 +300,7 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     id: "aura",
     name: "Auras",
     rule: "an Aura works for as long as its card is on the field.",
-    lesson: "traps",
+    lesson: "finale",
     found: (ctx) => {
       const units = unitsOf(ctx.view, "you");
       const aura = units.some((unit) => says(defOf(ctx, unit.defId), "Aura:"));
@@ -278,46 +308,17 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     },
   },
   {
-    id: "trap",
-    name: "Traps",
-    rule: "you set a Trap face-down, and it springs by itself when its moment comes, on either turn.",
-    lesson: "traps",
-    found: (ctx) => freshOf(ctx, "trapFired").some((event) => event.controller === ctx.view.viewer),
-  },
-  {
-    id: "enemy-backrow",
-    name: "Face-down cards",
-    rule: "the enemy's face-down cards are hidden until they spring.",
-    lesson: "traps",
-    found: (ctx) => freshOf(ctx, "trapFired").some((event) => event.controller !== ctx.view.viewer),
-  },
-  {
-    id: "field-spell",
-    name: "Field Spells",
-    rule: "a Field Spell stays in your backrow and keeps working turn after turn.",
-    lesson: "traps",
-    found: (ctx) => myPlays(ctx).some(({ def }) => def?.type === "Field Spell"),
-  },
-  {
-    id: "field-trap",
-    name: "Field Traps",
-    rule: "a Field Trap springs like a Trap, then stays to keep working.",
-    lesson: "traps",
-    found: (ctx) => freshOf(ctx, "trapFired").some((event) => defOf(ctx, event.defId)?.type === "Field Trap"),
-  },
-  {
     id: "token",
     name: "Tokens",
     rule: "a token is a unit a card makes. It fights like any unit and vanishes when it leaves the field.",
-    lesson: "traps",
+    lesson: "finale",
     found: (ctx) => freshOf(ctx, "summoned").some((event) => event.player === ctx.view.viewer && defOf(ctx, event.defId)?.token === true),
   },
-  // Lesson 4, Tricks of the trade.
   {
     id: "mulligan",
     name: "The mulligan",
     rule: "before the first turn you may swap any of your opening cards for new ones.",
-    lesson: "advanced",
+    lesson: "finale",
     // Once both players have answered, the mulligan's view is gone with the phase: the player's own
     // answer at the game's start is the find too.
     found: (ctx) =>
@@ -328,14 +329,14 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     id: "the-coin",
     name: "The Coin",
     rule: "the player going second gets The Coin: one extra mana, once.",
-    lesson: "advanced",
+    lesson: "finale",
     found: (ctx) => myPlays(ctx).some(({ event }) => event.defId === COIN),
   },
   {
     id: "radiant",
     name: "Radiant",
     rule: "a Radiant card is the stronger face of the same card.",
-    lesson: "advanced",
+    lesson: "finale",
     found: (ctx) =>
       freshOf(ctx, "radiantSet").some(
         (event) => mine(ctx.view, event.instanceId) !== undefined || myHand(ctx.view).some((card) => card.instanceId === event.instanceId),
@@ -345,7 +346,7 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     id: "tribe",
     name: "Tribes",
     rule: "a tag such as Felinor or Human is a tribe, and some cards reward their own tribe.",
-    lesson: "advanced",
+    lesson: "finale",
     found: (ctx) =>
       myPlays(ctx).some(({ event }) => event.defId === BIG_FELINOR) &&
       freshOf(ctx, "destroyed").length > 0 &&
@@ -355,7 +356,7 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     id: "tribute",
     name: "Tribute",
     rule: "a big unit can ask you to give up units of your own to play it.",
-    lesson: "advanced",
+    lesson: "finale",
     found: (ctx) =>
       myPlays(ctx).some(({ def }) => says(def, "Tribute")) &&
       freshOf(ctx, "destroyed").some((event) => event.owner === ctx.view.viewer),
@@ -364,14 +365,14 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     id: "death",
     name: "Death",
     rule: "a Death ability happens when its unit dies.",
-    lesson: "advanced",
+    lesson: "finale",
     found: (ctx) => freshOf(ctx, "destroyed").some((event) => says(defOf(ctx, event.defId), "Death:")) && anyEffect(ctx),
   },
   {
     id: "temporary-tokens",
     name: "Tokens for one turn",
     rule: "some tokens only last this turn, so use them while they are here.",
-    lesson: "advanced",
+    lesson: "finale",
     found: (ctx) =>
       freshOf(ctx, "turnEnded").some((event) => event.player === ctx.view.viewer) &&
       freshOf(ctx, "destroyed").some((event) => event.owner === ctx.view.viewer && defOf(ctx, event.defId)?.token === true),
@@ -380,10 +381,9 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     id: "yellow-glow",
     name: "The yellow glow",
     rule: "a card in your hand glows yellow while its condition holds, so now is the time to play it.",
-    lesson: "advanced",
+    lesson: "finale",
     found: (ctx) => ctx.view.active === ctx.view.viewer && myHand(ctx.view).some((card) => card.conditionActive === true),
   },
-  // Lesson 5, The final exam.
   {
     id: "legendary",
     name: "Legendary cards",

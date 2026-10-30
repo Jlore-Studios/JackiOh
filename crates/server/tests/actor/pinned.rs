@@ -114,7 +114,7 @@ fn hand_defs(actor: &MatchActor, seat: PlayerId) -> Vec<String> {
 
 /// Each of `seat`'s hand costs, as its own view shows them (§10.8).
 fn hand_costs(actor: &MatchActor, seat: PlayerId) -> Vec<Value> {
-    serde_json::to_value(actor.view_for(seat)).expect("PlayerView serialises")["you"]["hand"]
+    serde_json::to_value(actor.view_for(seat)).expect("PlayerView serializes")["you"]["hand"]
         .as_array()
         .cloned()
         .unwrap_or_default()
@@ -130,7 +130,7 @@ async fn keep_both(actor: &MatchActor) {
             keep: hand_ids(&actor.engine_state(), seat),
         };
         let reply = actor.submit(seat, format!("keep-{seat}"), body).await;
-        let reply = serde_json::to_value(&reply).expect("ServerMessage serialises");
+        let reply = serde_json::to_value(&reply).expect("ServerMessage serializes");
         assert_eq!(reply["type"], json!("ack"), "the {seat} mulligan: {reply}");
     }
 }
@@ -190,7 +190,7 @@ async fn r388_a_live_match_plays_on_the_catalog_it_started_on() {
     // And `reduce` reads it: the shipped play is accepted.
     let body: ActionBody = serde_json::from_value(play).expect("an ActionBody");
     let reply = actor.submit(seat, "pinned-play".to_string(), body).await;
-    let reply = serde_json::to_value(&reply).expect("ServerMessage serialises");
+    let reply = serde_json::to_value(&reply).expect("ServerMessage serializes");
     assert_eq!(reply["type"], json!("ack"), "the pinned play: {reply}");
     clear_overrides();
 }
@@ -213,7 +213,7 @@ async fn r388_r767000_a_rebuilt_match_folds_under_the_catalog_it_started_on_as_i
         .expect("a play in legal");
     let reply = actor.submit(seat, "pinned-play".to_string(), body).await;
     assert_eq!(
-        serde_json::to_value(&reply).expect("ServerMessage serialises")["type"],
+        serde_json::to_value(&reply).expect("ServerMessage serializes")["type"],
         json!("ack"),
         "the pinned play: {reply:?}"
     );
@@ -278,7 +278,7 @@ async fn r1266000_r1329000_a_rebuilt_match_folds_against_the_win_rate_table_of_t
         .expect("its play in legal");
     let reply = actor.submit(seat, "tech-play".to_string(), body).await;
     assert_eq!(
-        serde_json::to_value(&reply).expect("ServerMessage serialises")["type"],
+        serde_json::to_value(&reply).expect("ServerMessage serializes")["type"],
         json!("ack"),
         "the play: {reply:?}"
     );

@@ -1,4 +1,4 @@
-# Music sources and licences
+# Music sources and licenses
 
 Every music track the client plays, where it came from, and what may be done with it (SPEC §10.11
 "Music", R631; issue #51). `apps/web/scripts/gen-music.mjs` renders them, and `gen:music --check`
@@ -6,9 +6,9 @@ holds the files to their scores and to the size cap.
 
 ## How the music was made
 
-#51 asked for free AI-generated music with a licence that permits use in the game, and failing
+#51 asked for free AI-generated music with a license that permits use in the game, and failing
 that, royalty-free music fetched from a source that permits it. The music here is the first kind,
-and needs no outside licence:
+and needs no outside license:
 
 - **Composition.** The implementing agent (Claude, Anthropic's model, working as this repository's
   builder) composed every track as code, in `apps/web/scripts/music/tracks.mjs`, on the toolkit in
@@ -16,7 +16,7 @@ and needs no outside licence:
   on one shared motif. No melody, recording or sample was taken from another work. A melody's
   ornaments and fills come from a seeded generator, so the same score always renders the same
   music.
-- **Instruments.** FluidSynth renders the scores with the FluidR3 General MIDI SoundFont (licence
+- **Instruments.** FluidSynth renders the scores with the FluidR3 General MIDI SoundFont (license
   below). The SoundFont supplies the instrument samples; the rendered audio holds no copy of the
   SoundFont itself.
 - **Encoding.** ffmpeg encodes each track to AAC-LC in an M4A file, at 44.1 kHz stereo and 80 kbps.
@@ -33,7 +33,7 @@ Rejected sources:
 - **Stock royalty-free tracks.** The issue asks for one recurring motif and instrument palette
   across all of them, which separate stock pieces cannot give.
 
-**Licence of the tracks:** they belong to the project, like the rest of this repository. No
+**License of the tracks:** they belong to the project, like the rest of this repository. No
 attribution is required when they play in the game.
 
 ## Tracks

@@ -159,7 +159,7 @@ function zoneOfCard(view: PlayerView, zone: Zone, instanceId: string): string {
  * forty-three literally so a drift in either direction fails.
  */
 export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
-  // Card lifts from hand and lands in the zone (unit) or flashes centre then to GY (spell).
+  // Card lifts from hand and lands in the zone (unit) or flashes center then to GY (spell).
   // Only the viewer's own hand renders cards, so an opponent's play animates the hand region.
   // A card set face-down took a fresh id (R227): the hand card still carries `formerId`.
   cardPlayed: {
@@ -411,9 +411,9 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "card-<instanceId>",
     target: (e, view) => locateInstance(view, e.instanceId),
   },
-  // Card slides across the centre line to the new zone, which the payload names outright.
+  // Card slides across the center line to the new zone, which the payload names outright.
   controlChanged: {
-    animation: "jk-cross-centre",
+    animation: "jk-cross-center",
     durationMs: 450,
     testid: "zone-<side>-<row>-<lane>",
     fx: { recipe: "mindControl" },
@@ -426,7 +426,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "board",
     target: () => testid.board,
   },
-  // Swapped health, boards or library counts cross the centre line together.
+  // Swapped health, boards or library counts cross the center line together.
   swapped: {
     animation: "jk-swap-cross",
     durationMs: 500,
@@ -463,7 +463,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "lunge" },
     target: (e, view) => locateInstance(view, e.attackerId),
   },
-  // Attacker snaps back with a "Cancelled" tag.
+  // Attacker snaps back with a "Canceled" tag.
   attackCancelled: {
     animation: "jk-snap-back",
     durationMs: 350,
@@ -583,9 +583,9 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
       return instanceOrPile(view, e.instanceId, pile);
     },
   },
-  // B5 E2, E16: the card slides across the centre line into the thief's hand.
+  // B5 E2, E16: the card slides across the center line into the thief's hand.
   stolen: {
-    animation: "jk-cross-centre",
+    animation: "jk-cross-center",
     durationMs: 450,
     testid: "hand-<side>",
     fx: { recipe: "mindControl" },
@@ -732,7 +732,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
-  // R437: the mark's sigil brands the card in the mark's colours (fx/brand.ts), and its aura stays
+  // R437: the mark's sigil brands the card in the mark's colors (fx/brand.ts), and its aura stays
   // on the card while the view lists the mark (cards/CardMarks.tsx).
   marked: {
     animation: "jk-radiant-pulse",
@@ -922,7 +922,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
-  // R1847001 (Stinkyscape #148): a player travelled one node of their starscape map; their hero ticks
+  // R1847001 (Stinkyscape #148): a player traveled one node of their starscape map; their hero ticks
   // as on `jadeChanged`, no fx, and the map redraws from the view.
   starscapeTravelled: {
     animation: "jk-badge-tick",

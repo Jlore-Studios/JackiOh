@@ -1,5 +1,5 @@
-// #2105: the board's colours come from one named palette, palette.css, and no stylesheet gains a
-// colour of its own unless this file says so.
+// #2105: the board's colors come from one named palette, palette.css, and no stylesheet gains a
+// color of its own unless this file says so.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -9,12 +9,12 @@ import { describe, expect, it } from "vitest";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 
-/** The palette's size limit: a new colour raises it in the same change, in plain sight. */
+/** The palette's size limit: a new color raises it in the same change, in plain sight. */
 const PALETTE_MAX = 48;
 /** WCAG 2.2 AA's contrast for text (1.4.3). */
 const AA_TEXT_CONTRAST = 4.5;
 
-/** The CSS named colours (CSS Color 4), which count as colours too. */
+/** The CSS named colors (CSS Color 4), which count as colors too. */
 const NAMED =
   "aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen";
 const LITERAL = new RegExp(
@@ -22,8 +22,8 @@ const LITERAL = new RegExp(
   "gi",
 );
 
-/** Every colour `css` states itself, outside its comments, strings and url()s. */
-function colourLiterals(css: string): string[] {
+/** Every color `css` states itself, outside its comments, strings and url()s. */
+function colorLiterals(css: string): string[] {
   const code = css
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .replace(/url\([^)]*\)/g, "url()")
@@ -47,7 +47,7 @@ const BOARD_SHEETS = SHEETS.filter(
   (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
 
-/** Every other sheet's own colours: one that loses some lowers its number, an art sheet that gains some raises it. */
+/** Every other sheet's own colors: one that loses some lowers its number, an art sheet that gains some raises it. */
 const UNMIGRATED: Record<string, number> = {
   "auth/auth.css": 1,
   "auth/code-field.css": 32,
@@ -87,7 +87,7 @@ const UNMIGRATED: Record<string, number> = {
   "routes/landing.css": 85,
   "routes/lobby.css": 53,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 88,
+  "routes/stats.css": 82,
   "settings/changeEmail.css": 2,
   "settings/settings.css": 19,
   "shop/shop.css": 2,
@@ -99,7 +99,7 @@ const PALETTE = new Map(
   [...read("palette.css").matchAll(/^\s*(--pal-[a-z0-9-]+):\s*(#[0-9a-f]{6});$/gm)].map((match) => [match[1] ?? "", match[2] ?? ""]),
 );
 
-/** The hex of the palette colour that `sheet` gives `token` (its first declaration). */
+/** The hex of the palette color that `sheet` gives `token` (its first declaration). */
 function resolved(sheet: string, token: string): string | undefined {
   const name = new RegExp(`${token}:\\s*var\\((--pal-[a-z0-9-]+)\\);`).exec(read(sheet))?.[1];
   return name === undefined ? undefined : PALETTE.get(name);
@@ -121,17 +121,17 @@ function contrast(a: number, b: number): number {
 }
 
 describe("#2105 the palette", () => {
-  it("#2105 palette.css names at most PALETTE_MAX colours, each once, as #rrggbb, and nothing else", () => {
+  it("#2105 palette.css names at most PALETTE_MAX colors, each once, as #rrggbb, and nothing else", () => {
     const text = read("palette.css").replace(/\/\*[\s\S]*?\*\//g, "");
     expect(PALETTE.size).toBe([...text.matchAll(/--pal-[a-z0-9-]+:/g)].length);
     expect(PALETTE.size).toBeGreaterThan(0);
     expect(PALETTE.size).toBeLessThanOrEqual(PALETTE_MAX);
-    expect(new Set(PALETTE.values()).size, "two names for one colour").toBe(PALETTE.size);
+    expect(new Set(PALETTE.values()).size, "two names for one color").toBe(PALETTE.size);
     expect(text.replace(/^\s*--pal-[a-z0-9-]+:\s*#[0-9a-f]{6};$/gm, "").replace(/\s+/g, "")).toBe(":root{}");
     expect(read("index.css")).toMatch(/^@import "\.\/fonts\.css";\n@import "\.\/palette\.css";\n/);
   });
 
-  it("#2105 every var(--pal-…) names a palette colour, and only palette.css declares one", () => {
+  it("#2105 every var(--pal-…) names a palette color, and only palette.css declares one", () => {
     for (const sheet of SHEETS) {
       const css = read(sheet);
       for (const match of css.matchAll(/var\((--pal-[a-z0-9-]+)\)/g)) expect(PALETTE.has(match[1] ?? ""), `${sheet}: ${match[0]}`).toBe(true);
@@ -139,7 +139,7 @@ describe("#2105 the palette", () => {
     }
   });
 
-  it("#2105 the colours that mean something keep their colours", () => {
+  it("#2105 the colors that mean something keep their colors", () => {
     const MEANING: [string, string, string][] = [
       ["index.css", "--you", "#3d7bd4"],
       ["index.css", "--opponent", "#c0453f"],
@@ -176,20 +176,20 @@ describe("#2105 the palette", () => {
   });
 });
 
-describe("#2105 no one-off colours", () => {
-  it("#2105 the board's stylesheets state no colour but the palette's", () => {
+describe("#2105 no one-off colors", () => {
+  it("#2105 the board's stylesheets state no color but the palette's", () => {
     expect(BOARD_SHEETS.length).toBeGreaterThan(20);
-    const found = BOARD_SHEETS.flatMap((sheet) => colourLiterals(read(sheet)).map((literal) => `${sheet}: ${literal}`));
-    expect(found, "name a palette colour (palette.css) instead").toEqual([]);
+    const found = BOARD_SHEETS.flatMap((sheet) => colorLiterals(read(sheet)).map((literal) => `${sheet}: ${literal}`));
+    expect(found, "name a palette color (palette.css) instead").toEqual([]);
   });
 
-  it("#2105 no other stylesheet gains a colour of its own", () => {
+  it("#2105 no other stylesheet gains a color of its own", () => {
     const counts: Record<string, number> = {};
     for (const sheet of SHEETS) {
       if (sheet === "palette.css" || BOARD_SHEETS.includes(sheet)) continue;
-      const own = colourLiterals(read(sheet)).length;
+      const own = colorLiterals(read(sheet)).length;
       if (own > 0) counts[sheet] = own;
     }
-    expect(counts, "take the colour from palette.css; an art sheet raises its number in UNMIGRATED").toEqual(UNMIGRATED);
+    expect(counts, "take the color from palette.css; an art sheet raises its number in UNMIGRATED").toEqual(UNMIGRATED);
   });
 });

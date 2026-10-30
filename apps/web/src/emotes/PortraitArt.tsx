@@ -3,7 +3,7 @@
 // light. The same element draws on the board's hero, in the hero's inspect view (R1330) and in the
 // deck builder's picker, so a portrait looks alike wherever it is. The picture stays the card's own
 // art and everything laid over it is a pure function of the portrait's id (`portraitLook.ts`);
-// `portrait.css` sets the colours, the idle and Reduce Motion's stillness.
+// `portrait.css` sets the colors, the idle and Reduce Motion's stillness.
 
 import type { CSSProperties, ReactElement } from "react";
 

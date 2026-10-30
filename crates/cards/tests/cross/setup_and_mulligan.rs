@@ -516,7 +516,7 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
             .events
             .iter()
             .map(|event| {
-                let value = serde_json::to_value(event).expect("an event serialises");
+                let value = serde_json::to_value(event).expect("an event serializes");
                 let kind = value["type"].as_str().unwrap_or_default().to_string();
                 match value.get("player") {
                     Some(player) => format!("{kind}:{}", player.as_str().unwrap_or_default()),

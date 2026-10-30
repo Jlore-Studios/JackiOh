@@ -1,10 +1,10 @@
 // The Games panel of /stats (SPEC §9.11, R1994000): how the patch's games went, for the match type
 // shown. The first player's win share with its margin (half its 95% interval), the median game's
-// length in turns, the share of games that reach fatigue and how many set traps fired, each on its
-// own line; a patch with fewer games than the sample floor says only that. When some of the patch's
-// games were recorded before these figures were kept, a note says how many of them it counts. It
-// names no data source and no gate (R661), and sits in the scrolling panel, never the fixed top
-// (R1646000).
+// length in turns and the share of games that reach fatigue, each on its own line, and nothing of the
+// set traps (R2446000); a patch with fewer games than the sample floor says only that. When some of
+// the patch's games were recorded before these figures were kept, a note says how many of them it
+// counts. It names no data source and no gate (R661), and sits in the scrolling panel, never the
+// fixed top (R1646000).
 
 import { useEffect, useState, type ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
@@ -25,25 +25,25 @@ export function GamesPanel({ patch, mode }: { patch: string; mode: string }): Re
   useLocale();
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const controller = new AbortController();
     setLoading(true);
     setError(false);
 
     getGameStats({ patch: patch || undefined, mode: mode || undefined, signal: controller.signal })
       .then((res) => {
-        if (cancelled) return;
+        if (canceled) return;
         setData(res);
         setLoading(false);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (canceled) return;
         setError(true);
         setLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      canceled = true;
       controller.abort();
     };
   }, [patch, mode, attempt]);
@@ -90,14 +90,6 @@ export function GamesPanel({ patch, mode }: { patch: string; mode: string }): Re
               <li>{t("Median {turns} turns", { turns: formatNumber(shown.turnQuartiles[1]) })}</li>
               {shown.fatigueShare !== null && (
                 <li>{t("{share}% of games reach fatigue", { share: Math.round(shown.fatigueShare * PERCENT) })}</li>
-              )}
-              {shown.trapsSet !== null && shown.trapsSet > 0 && (
-                <li>
-                  {t("{fired} of {set} set traps fired", {
-                    fired: formatNumber(shown.trapsFired ?? 0),
-                    set: formatNumber(shown.trapsSet),
-                  })}
-                </li>
               )}
             </ul>
           )}

@@ -2,7 +2,7 @@
 //! out, nothing else crosses: the state is the `GameState` JSON object, which the client keeps
 //! behind its opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
 //! `crates/wasm` wraps each body for wasm-bindgen, `crates/wasm/luau` for C; the exports stay
-//! identical, and behaviour does not change.
+//! identical, and behavior does not change.
 //!
 //! The state cache. Every call that takes a state parses its JSON, and the client hands the same
 //! state over and over: a step of the practice worker or the hotseat asks `view_for` for both seats,
@@ -46,7 +46,7 @@ pub fn parse<T: DeserializeOwned>(what: &str, text: &str) -> Result<T, String> {
 
 /// The JSON text of a result.
 pub fn to_json<T: Serialize + ?Sized>(value: &T) -> Result<String, String> {
-    serde_json::to_string(value).map_err(|error| format!("could not serialise the result: {error}"))
+    serde_json::to_string(value).map_err(|error| format!("could not serialize the result: {error}"))
 }
 
 /// `"p1"` or `"p2"`; anything else is refused with `PlayerId`'s own message.

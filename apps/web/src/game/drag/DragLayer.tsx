@@ -79,7 +79,7 @@ function round(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function centreOf(element: Element): Point | null {
+function centerOf(element: Element): Point | null {
   if (!element.isConnected) return null;
   const rect = element.getBoundingClientRect();
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -89,7 +89,7 @@ function byTestid(id: string): Element | null {
   return document.querySelector(`[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`);
 }
 
-/** Heroes are ringed at their health gem; other targets are ringed at centre. */
+/** Heroes are ringed at their health gem; other targets are ringed at center. */
 function reticleFor(spot: DropSpot): Box | null {
   if (spot.at !== "target") return null;
   const element = byTestid(spot.testid);
@@ -253,7 +253,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         flight = {
           ...flight,
           pointer,
-          from: centreOf(flight.element) ?? flight.from,
+          from: centerOf(flight.element) ?? flight.from,
           spot,
           reticle: reticleFor(spot),
         };
@@ -262,8 +262,8 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       }
 
       if (press === null || event.pointerId !== press.pointerId) return;
-      const travelled = Math.hypot(event.clientX - press.start.x, event.clientY - press.start.y);
-      if (travelled < DRAG_THRESHOLD_PX) return;
+      const traveled = Math.hypot(event.clientX - press.start.x, event.clientY - press.start.y);
+      if (traveled < DRAG_THRESHOLD_PX) return;
 
       const { view, legal, interaction, onInteraction, onLift } = latest.current;
       const plan = planDrag(view, legal, interaction, press.source, press.testid);
@@ -288,7 +288,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         plan,
         element,
         pointer,
-        from: centreOf(element) ?? start,
+        from: centerOf(element) ?? start,
         touch: event.pointerType === "touch",
         spot,
         reticle: reticleFor(spot),
@@ -325,7 +325,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
             // R658: a play lifted again from its zone lands in that zone, not on the Cry's target.
             const zone = plan.missed?.stage === "playing" ? plan.missed.picked.zone : undefined;
             const zoneBox = zone === undefined ? null : byTestid(testid.zone("you", zone.row, zone.lane));
-            const settled = zoneBox === null ? null : centreOf(zoneBox);
+            const settled = zoneBox === null ? null : centerOf(zoneBox);
             setLanded({ instanceId: card.instanceId, card, at: settled ?? at, view });
           }
           onAction(result.action);

@@ -335,7 +335,7 @@ describe("R2127000 Back closes the topmost sheet or dialog before it leaves the 
 
     vi.stubGlobal("CloseWatcher", FakeWatcher);
     render(<Overlay name="watched" onClose={vi.fn()} />);
-    expect(fireEvent.keyDown(window, { key: "Escape" }), "the watcher's close request is cancelled").toBe(false);
+    expect(fireEvent.keyDown(window, { key: "Escape" }), "the watcher's close request is canceled").toBe(false);
     expect(fireEvent.keyDown(window, { key: "Enter" })).toBe(true);
   });
 

@@ -4,7 +4,7 @@
 // end, and the HUD always offers exit.
 //
 // R2205000: a `moment` poses a question and is done once the player finds what it sets up. The coach
-// recognises each Field Guide entry (discoveries.ts) from the view alone and names the rule in a
+// recognizes each Field Guide entry (discoveries.ts) from the view alone and names the rule in a
 // discovery bubble; a moment's hint escalates only when the player stalls or asks for one, and a
 // moment never holds the AI.
 
@@ -14,6 +14,7 @@ import type { Side } from "../game/contract.ts";
 import { t } from "../i18n/i18n.ts";
 import { TUTORIAL_BUBBLES_PER_MOVE_MAX, TUTORIAL_MOMENT_TURNS_MAX, TUTORIAL_STEP_TURNS_MAX } from "./config.ts";
 import { FIELD_GUIDE, type Discovery } from "./discoveries.ts";
+import { lessonById } from "./lessons.ts";
 
 /** Everything the coach reads, all of it already the page's. */
 export type CoachCtx = {
@@ -321,13 +322,18 @@ function playerMoved(ctx: CoachCtx): boolean {
  * R2205000: every entry the view shows found for the first time; a bubble for each the lesson lists
  * or the player has not met, at most `TUTORIAL_BUBBLES_PER_MOVE_MAX` "Got it"s between two of the
  * player's moves, tips and a shown `info` step counted. The rest are found without a bubble.
+ * R2434001: an entry a later lesson holds never bubbles, so no lesson teaches what a later one does.
  */
 function discover(script: LessonScript, current: CoachState, ctx: CoachCtx): CoachState {
   const state = playerMoved(ctx) && current.bubblesSinceMove > 0 ? { ...current, bubblesSinceMove: 0 } : current;
   const fresh = guideOf(script).filter((entry) => !state.found.includes(entry.id) && safely(() => entry.found(ctx)));
   if (fresh.length === 0) return state;
   const teaches = script.teaches ?? [];
-  const wanted = fresh.filter((entry) => teaches.includes(entry.id) || !state.known.includes(entry.id)).map((entry) => entry.id);
+  const here = lessonById(script.lessonId)?.number ?? Infinity;
+  const due = (entry: Discovery): boolean => (lessonById(entry.lesson)?.number ?? Infinity) <= here;
+  const wanted = fresh
+    .filter((entry) => teaches.includes(entry.id) || (!state.known.includes(entry.id) && due(entry)))
+    .map((entry) => entry.id);
   const info = state.since !== null && stepAt(script, state)?.kind === "info" ? 1 : 0;
   const room = Math.max(0, TUTORIAL_BUBBLES_PER_MOVE_MAX - state.bubblesSinceMove - state.tipQueue.length - info);
   const bubbles = wanted.slice(0, room);

@@ -2,8 +2,8 @@
 //!
 //! `subsystems/rotation.rs` is that ruling in full: the two rings (the rotating player's lanes 1 to 5,
 //! then the opponent's 5 down to 1, and back) turning one step together, the whole board read first so
-//! a rotation is atomic; a Stack pile travelling whole (§3.2, R13); `controller` changing only across
-//! the centre line, `owner` never (R12); a Reborn-reserved destination bouncing the card to its OWNER's
+//! a rotation is atomic; a Stack pile traveling whole (§3.2, R13); `controller` changing only across
+//! the center line, `owner` never (R12); a Reborn-reserved destination bouncing the card to its OWNER's
 //! hand (R14, R88, R4's hand cap, R11's vanishing token), a Locked one taking it (R831000); and #52's radiant face replacing
 //! an outbound crossing (a card leaving the rotating player's side for the opponent's) with that bounce
 //! at `costOverride` 0, while a card crossing onto that side still crosses.
@@ -13,7 +13,7 @@
 //! (CLAUDE.md rule 5).
 //!
 //! THE TWO DEFAULTS: §3.1 reads "left" and "right" from the ROTATING player's seat, so `perspective`
-//! is the controller; and #52's two faces differ only in `ctx.radiant`, which `rotate_rings` honours
+//! is the controller; and #52's two faces differ only in `ctx.radiant`, which `rotate_rings` honors
 //! through its own `radiant` argument. So `rotate({ direction })` is the complete call.
 
 use serde::{Deserialize, Serialize};

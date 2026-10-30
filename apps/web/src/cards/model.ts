@@ -14,7 +14,7 @@
 //
 // Nothing here is a rule (CLAUDE.md rule 7). The tones compare two numbers the view and the catalog
 // already carry — the live cost against the printed price, the live stats against the printed
-// stats — so a buffed unit reads green and a damaged one red, the way Hearthstone colours them.
+// stats — so a buffed unit reads green and a damaged one red, the way Hearthstone colors them.
 //
 // Three marks ride on the text (SPEC §10.10). A Radiant face prints its whole catalog text with the
 // stretches its base face does not have marked (`text.marks`, radiantDiff.ts, R277); the names its
@@ -80,6 +80,7 @@ import { isZhCn, t } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, chineseDef, chineseKeyword, chinesePreviewLabel, drawnInChinese } from "./chinese.ts";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
+import { temporaryLeft } from "./keywordVisuals.ts";
 import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
 import type { NamedTally } from "./tallies.ts";
 
@@ -199,6 +200,8 @@ export type FaceModel = {
    * null elsewhere, and on a card with none. Optional, as every field below is, for a face built by hand.
    */
   brittle?: number | null;
+  /** #2437, R637, R2179001: in a hand, the count the card's Temporary X has left as its keywords give it (`temporaryLeft`); null elsewhere and on a card with none. */
+  temporary?: number | null;
   /** R980: the card's element, while a Feng Shui acts (`CardView.element`); null otherwise. */
   element?: string | null;
   /** B3.4, R386: in play, what Degrade, Upgrade and KY's Constant changed on the card; null when nothing did. */
@@ -292,6 +295,8 @@ export type InPlay = {
   params?: Readonly<Record<string, number>>;
   /** B3.3, R385: the card's Brittle count (`CardView.brittle`). */
   brittle?: number;
+  /** #2437: the card lies in a hand (game/Card.tsx's `inHandOf`), the one zone its Temporary counts in (R637). */
+  inHand?: true;
   /** R980: the card's element, while a Feng Shui acts (`CardView.element`). */
   element?: string;
   /** B3.4, R386: what Degrade and Upgrade changed on the card (`CardView.tuning`). */
@@ -445,6 +450,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     grants: inPlay?.grants ?? [],
     printed: inPlay === undefined || sameText(text, printedText) || concealed(def) ? null : printedText,
     brittle: inPlay?.brittle ?? null,
+    temporary: inPlay?.inHand === true ? temporaryLeft(keywords) : null,
     element: inPlay?.element ?? null,
     tuning,
     enchantments: inPlay?.enchantments ?? [],
@@ -716,7 +722,7 @@ function statsOf(
   grew: FaceStats["grew"],
 ): FaceStats | null {
   if (live !== undefined) {
-    // A unit nobody can name has no printed face to compare against, so nothing is coloured.
+    // A unit nobody can name has no printed face to compare against, so nothing is colored.
     if (!known) {
       return { attack: live.attack, health: live.health, maxHealth: live.maxHealth, attackTone: "base", healthTone: "base" };
     }

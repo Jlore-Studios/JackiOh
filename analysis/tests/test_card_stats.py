@@ -26,6 +26,7 @@ WIRE_NAMES = {
     "going_second": "goingSecond",
     "played": "played",
     "drawn_not_played": "drawnNotPlayed",
+    "not_drawn": "notDrawn",
 }
 
 
@@ -62,6 +63,20 @@ def assert_matches_report(stats, report):
         else:
             delta = 100 * (rates["played"] - rates["drawn_not_played"])
             assert row["played_delta"] == pytest.approx(delta, abs=RATE_TOLERANCE), row["card"]
+        # The drawn delta, in percentage points, shows nothing while the drawn or the never-drawn
+        # side has no games.
+        drawn_games = row["played_games"] + row["drawn_not_played_games"]
+        if drawn_games == 0 or row["not_drawn_games"] == 0:
+            assert math.isnan(row["drawn_delta"]), row["card"]
+            assert expected["drawnDelta"] is None, row["card"]
+        else:
+            drawn_rate = (row["played_wins"] + row["drawn_not_played_wins"]) / drawn_games
+            assert row["drawn_delta"] == pytest.approx(
+                100 * (drawn_rate - rates["not_drawn"]), abs=RATE_TOLERANCE
+            ), row["card"]
+            assert row["drawn_delta"] == pytest.approx(
+                100 * expected["drawnDelta"], abs=RATE_TOLERANCE
+            ), row["card"]
 
 
 def test_card_stats_equals_the_rust_report_on_the_fixture():
@@ -152,6 +167,11 @@ def test_counts_each_deck_once_per_game_a_mirror_once_per_deck_and_a_draw_as_a_g
     assert tally(stats, "c", "played") == (1, 0, 0)
     assert tally(stats, "c", "drawn_not_played") == (0, 0, 0)
 
+    # Never drawn is in deck less both drawn sides: a drew everywhere, b missed g2's p2, c g1's p1.
+    assert tally(stats, "a", "not_drawn") == (0, 0, 0)
+    assert tally(stats, "b", "not_drawn") == (1, 1, 0)
+    assert tally(stats, "c", "not_drawn") == (1, 1, 0)
+
     # The Coin was in an opening hand and is in no deck, so it has no entry.
     assert "core-t-coin" not in set(stats["card"])
 
@@ -161,6 +181,10 @@ def test_counts_each_deck_once_per_game_a_mirror_once_per_deck_and_a_draw_as_a_g
     assert math.isnan(row.loc["b", "played_rate"]) and math.isnan(row.loc["b", "played_delta"])
     assert math.isnan(row.loc["c", "drawn_not_played_rate"]) and math.isnan(row.loc["c", "played_delta"])
     assert row.loc["b", "in_deck_rate"] == pytest.approx(2 / 5)
+    # The drawn delta: b drew 1 of 4 and missed a win, c drew a loss and missed a win, a drew everywhere.
+    assert row.loc["b", "drawn_delta"] == pytest.approx(-75.0)
+    assert row.loc["c", "drawn_delta"] == pytest.approx(-100.0)
+    assert math.isnan(row.loc["a", "drawn_delta"])
 
 
 def test_filters_by_source_mode_patch_and_pilot_and_counts_only_games_with_a_seat_it_counts(tmp_path):
