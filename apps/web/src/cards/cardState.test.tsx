@@ -14,7 +14,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { CATALOG } from "@jackioh/cards";
-import { fillParams, type BackrowView, type CardDef, type PlayerView, type Tuning } from "@jackioh/shared";
+import { fillParams, type BackrowView, type CardDef, type Keyword, type PlayerView, type Tuning } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -42,11 +42,13 @@ import {
   distinctEnchantments,
   dormantWords,
   STARSHIP_GLYPH,
+  TEMPORARY_GLYPH,
   starshipWords,
   enchantmentWords,
   stateBadges,
+  temporaryWords,
 } from "./cardState.ts";
-import { markColorOf, markWords } from "./marks.ts";
+import { MARK_PALETTES, TEMPORARY_LAST_COLOR, markColorOf, markWords } from "./marks.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
 import {
@@ -658,6 +660,92 @@ describe("R1839000 Dormant: a moon badge and its countdown on a Dormant card, on
     expect(theirs?.getAttribute("aria-label")).toBe(DORMANT_NEXT_TURN_WORDS);
     const preview = hover(root);
     expect(within(preview).getByTestId(INSPECT_STATES).textContent).toBe(`${DORMANT_GLYPH}2${dormantWords(2)}`);
+  });
+});
+
+/* ----------------------------------------------------------------------------- #2437 Temporary */
+
+describe("#2437 Temporary: an hourglass badge with the count left, on a hand card alone", () => {
+  it("#2437 the words and the glyph", () => {
+    expect(temporaryWords(1)).toBe("Temporary 1: discarded at the end of its owner's turn");
+    expect(temporaryWords(3)).toBe("Temporary 3: discarded after 3 of its owner's ends of turn");
+    expect(TEMPORARY_GLYPH.startsWith("\u231B")).toBe(true);
+  });
+
+  it("#2437 a hand card with plain Temporary, Temporary 1 and Temporary 3 wears the hourglass with its count, its words as tooltip and name, on the fuchsia disc", () => {
+    const keywords = (n?: number): Keyword[] => [n === undefined ? { kind: "Temporary" } : { kind: "Temporary", n }];
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          hand: [
+            card({ instanceId: "h1", keywords: keywords() }),
+            card({ instanceId: "h2", keywords: keywords(1) }),
+            card({ instanceId: "h3", keywords: keywords(3) }),
+          ],
+        }),
+      }),
+    );
+    for (const [id, n] of [
+      ["h1", 1],
+      ["h2", 1],
+      ["h3", 3],
+    ] as const) {
+      const badge = must(
+        screen.getByTestId(testid.handCard(id)).querySelector<HTMLElement>('.cf-state[data-state="temporary"]'),
+        `${id}'s Temporary badge`,
+      );
+      expect(badge.textContent, id).toBe(`${TEMPORARY_GLYPH}${String(n)}`);
+      expect(badge.getAttribute("data-temporary"), id).toBe(String(n));
+      expect(badge.getAttribute("title"), id).toBe(temporaryWords(n));
+      expect(badge.getAttribute("aria-label"), id).toBe(temporaryWords(n));
+      expect(badge.getAttribute("role"), id).toBe("img");
+      expect(badge.style.getPropertyValue("--cf-temporary-rim"), id).toBe(MARK_PALETTES[TEMPORARY_LAST_COLOR].rim);
+      expect(badge.style.getPropertyValue("--cf-temporary-glow"), id).toBe(MARK_PALETTES[TEMPORARY_LAST_COLOR].glow);
+    }
+  });
+
+  it("#2437 a printed Temporary the view lists no keywords for reads its printed count", () => {
+    renderBoard(handView({ defId: "meditative-022-1", cost: 0 }));
+    const badge = must(handRoot().querySelector<HTMLElement>('.cf-state[data-state="temporary"]'), "Fortify Mind's Temporary badge");
+    expect(badge.getAttribute("data-temporary")).toBe("1");
+  });
+
+  it("#2437 the inspect overlays spell it out", () => {
+    vi.useFakeTimers();
+    renderBoard(handView({ keywords: [{ kind: "Temporary", n: 2 }] }));
+    const preview = hover(handRoot());
+    expect(within(preview).getByTestId(INSPECT_STATES).textContent).toContain(temporaryWords(2));
+  });
+
+  it("#2437 a card with no Temporary, and a Temporary card off the hand, get none", () => {
+    renderBoard(handView({}));
+    expect(handRoot().querySelector('[data-state="temporary"]')).toBeNull();
+    cleanup();
+    const keywords: Keyword[] = [{ kind: "Temporary", n: 1 }];
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          units: [unit("p1", { instanceId: "u1", keywords }), null, null, null, null],
+          backrow: [faceUpBackrow("p1", { instanceId: "b1", keywords }), null, null, null, null],
+          resolving: [card({ instanceId: "r1", keywords })],
+        }),
+      }),
+    );
+    for (const id of ["u1", "b1", "r1"]) {
+      const root = screen.getByTestId(testid.card(id));
+      expect(root.querySelector('[data-state="temporary"]'), id).toBeNull();
+      expect(root.querySelector("[data-temporary]"), id).toBeNull();
+    }
+    expect(stateBadges(inPlay("meditative-022-1")).map((badge) => badge.kind)).not.toContain("temporary");
+    const inHand = stateBadges(inPlay("meditative-022-1", { inHand: true })).find((badge) => badge.kind === "temporary");
+    expect(inHand?.data["data-temporary"]).toBe("1");
+  });
+
+  it("#2437 the badge sits right after the Brittle count", () => {
+    const kinds = stateBadges(inPlay("meditative-022-1", { inHand: true, brittle: 2, enchantments: [{ kind: "castOnDraw" }] })).map(
+      (badge) => badge.kind,
+    );
+    expect(kinds.slice(0, 3)).toEqual(["brittle", "temporary", "castOnDraw"]);
   });
 });
 

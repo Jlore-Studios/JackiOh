@@ -1,14 +1,16 @@
 //! SPEC §8.10 Stinkyscape 112 Job Application (§6.3 Quest stages, Hold beneath, Buff; §6.2 Death; §6.1
 //! Lucky; R81, R384, R1854000–R1854004, R1865000–R1865002). Field Spell, Quest, cost 1, Legendary, a card
 //! of the Stinkyscape set.
-//!   Base:    "Get employed! Its quest runs in three stages, one at a time. Death: Resummon this at
-//!            Stage 1. Stage 1, Upload Resume: Activate this to send a card from your hand in as your
-//!            resume; hear back in 2 to 6 turns. Stage 2, The Interview, one of three drawn at random:
-//!            play a card that costs the same as your resume, play 3 cards of different costs in one
-//!            turn, or take or deal 12 or more damage in one hit; add your resume to your hand, Buffed
-//!            {buffs} times, at (0). Stage 3, The Offer: Activate this to accept the offer, or to send in
-//!            another application, back to Stage 1, with every reward tripled; from your next turn on, a
-//!            Paycheck at the start of each of your turns." (buffs 5)
+//!   Base:    "Death: Resummon this at Stage 1.
+//!            Quest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your
+//!            resume. Reward: Hear back in 2 to 6 turns.
+//!            Quest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the
+//!            same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or
+//!            more damage in one hit. Reward: Add your resume to your hand and Buff it
+//!            {buffs|time|times}. It costs (0).
+//!            Quest: Stage 3, The Offer. Activate this to accept the offer, or to send in another
+//!            application, back to Stage 1, with every reward tripled. Reward: From your next turn on,
+//!            add a Paycheck to your hand at the start of each of your turns." (buffs 5)
 //!   Radiant: "Lucky 1", and the same text. (buffs 10)
 //!
 //! The quest is `Script.stages` (R1854000): Stage 1 opens as the card enters, and each stage's reward is

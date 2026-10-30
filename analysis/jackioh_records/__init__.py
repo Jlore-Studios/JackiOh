@@ -47,7 +47,7 @@ MODES = ("bo1", "bo3", "random")
 PILOT_FILTERS = ("human", "ai", "unified")
 
 # R377's breakdowns, in column order.
-BREAKDOWNS = ("in_deck", "opening_hand", "going_first", "going_second", "played", "drawn_not_played")
+BREAKDOWNS = ("in_deck", "opening_hand", "going_first", "going_second", "played", "drawn_not_played", "not_drawn")
 
 CATALOG_PATH = Path(__file__).resolve().parents[2] / "crates" / "cards" / "catalog.json"
 
@@ -414,8 +414,10 @@ def card_stats(
     decks held a card counts once for each, and a draw is a game not won. For each breakdown in
     `BREAKDOWNS` the frame has `<breakdown>_games`, `_wins`, `_draws` and `_rate` (wins over games, NaN
     with no games); `played_delta` is the played win rate minus the drawn-but-not-played win rate in
-    percentage points, NaN while either has no games. The frame's `attrs` hold `games` (records read with
-    at least one seat counted), `decks` (seats counted) and `filter` (the pilot it counted named).
+    percentage points, NaN while either has no games; `drawn_delta` is the drawn win rate (played and
+    drawn but not played together) minus the never-drawn win rate in percentage points, NaN while
+    either has no games. The frame's `attrs` hold `games` (records read with at least one seat counted),
+    `decks` (seats counted) and `filter` (the pilot it counted named).
     """
     _one_of("source", source, SOURCE_FILTERS)
     _one_of("mode", mode, MODES)
@@ -445,6 +447,7 @@ def card_stats(
         "going_second": ~counted["went_first"],
         "played": counted["played"],
         "drawn_not_played": in_hand & ~counted["played"],
+        "not_drawn": ~in_hand & ~counted["played"],
     }
 
     cards = pd.Index(sorted(counted["card"].unique()), name="card", dtype="str")
@@ -464,6 +467,10 @@ def card_stats(
         )
         stats = stats.join(tally)
     stats["played_delta"] = POINTS * (stats["played_rate"] - stats["drawn_not_played_rate"])
+    # R2427000: the drawn win rate (played and drawn but not played together) less the never-drawn one.
+    drawn_games = stats["played_games"] + stats["drawn_not_played_games"]
+    drawn_rate = (stats["played_wins"] + stats["drawn_not_played_wins"]) / drawn_games.where(drawn_games > 0)
+    stats["drawn_delta"] = POINTS * (drawn_rate - stats["not_drawn_rate"])
     stats = stats.reset_index()
     stats.attrs["games"] = int(seats["game"].nunique())
     stats.attrs["decks"] = len(seats)

@@ -2,12 +2,14 @@
 // §10.8): the view carries `quest` on every view of the card, and the client draws a badge, inspect
 // notes and log lines; the reward prompt takes the reward the engine offers. The fixtures follow
 // `QuestView` (`crates/engine/src/wire/view.rs`); the last block plays the real engine, so a renamed
-// field or a reworded event breaks it.
+// field or a reworded event breaks it. R2450000: a Quest card's face prints only the stage it stands
+// at, and In Too Deep's its open quests (questFace.ts).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { CATALOG } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
 import type { ActionBody, BackrowView, CardView, PlayerId, PlayerView, QuestView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -17,15 +19,20 @@ import { answerPrompts, devDeck, playOf, realGame, type RealGame } from "../audi
 import Board from "../game/Board.tsx";
 import { lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
+import { listedFace } from "../game/faces.ts";
 import Log from "../game/Log.tsx";
 import Prompt from "../game/Prompt.tsx";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { withCatalog } from "../test/board.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
+import { CardFace, faceText } from "./CardFace.tsx";
 import { questProgress, questWords, stageWords } from "./cardState.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
-import { INSPECT_HOVER, INSPECT_SHEET, INSPECT_STATES } from "./inspect/testids.ts";
+import { INSPECT_EXTENDED, INSPECT_FACE, INSPECT_HOVER, INSPECT_SHEET, INSPECT_STATES } from "./inspect/testids.ts";
+import { faceModel } from "./model.ts";
+import { questFaceText } from "./questFace.ts";
 
 afterEach(() => {
   act(() => {
@@ -278,7 +285,7 @@ function progressOf(game: RealGame): number | undefined {
 }
 
 describe("R404 In Too Deep through the real engine", () => {
-  it("R404 its view's quest line becomes the badge, the notes, the log and the reward picker, and the picked reward opens the next quest", () => {
+  it("R404 R2450000 its view's quest line becomes the badge, the face, the notes, the log and the reward picker, and the picked reward opens the next quest", () => {
     const deck = [ITD, ...devDeck("cheap20").filter((id) => id !== ITD)].slice(0, DECK_SIZE);
     const game = realGame("quest-panel", [deck, devDeck("first20")]);
     const catalog = lookupFromDefs(game.catalog);
@@ -296,6 +303,10 @@ describe("R404 In Too Deep through the real engine", () => {
       const [badge] = badges(screen.getByTestId(testid.card(entry.instanceId)));
       expect(must(badge, "the quest badge").textContent).toBe("0/2");
       expect(badge?.getAttribute("aria-label")).toBe("Quest: Draw 2 cards (0/2)");
+      // R2450000: the face prints the quest the view has open and the rewards it offers, on either seat.
+      expect(questFaceText(must(listedFace(catalog, view, entry), "the face"))?.full).toContain(
+        "\nQuest: Draw 2 cards (0/2). Rewards: Heal your hero 6; Deal 3 damage to a target.",
+      );
       cleanup();
     }
 
@@ -341,6 +352,9 @@ describe("R404 In Too Deep through the real engine", () => {
     expect(badges(screen.getByTestId(testid.card(entry.instanceId))).map((badge) => badge.getAttribute("aria-label"))).toEqual([
       "Quest: Destroy 2 enemy permanents (0/2)",
     ]);
+    const face = must(questFaceText(must(listedFace(catalog, after, entry), "the face after the reward")), "the quest face");
+    expect(face.full).toContain("\nQuest: Destroy 2 enemy permanents (0/2). Rewards: ");
+    expect(face.full).not.toContain("Draw 2 cards (");
   });
 });
 
@@ -396,7 +410,7 @@ describe("R1854000 a staged quest's stages, from the view alone", () => {
       expect(badges(root).map((badge) => badge.textContent)).toEqual(["1/2"]);
       const stage = must(stageBadge(root), "the stage badge");
       expect(stage.textContent).toBe("2/3");
-      expect(stage.getAttribute("aria-label")).toBe("Stage 2 of 3: Comradery");
+      expect(stage.getAttribute("aria-label")).toBe("Stage 2 of 3, Comradery");
       expect(stage.getAttribute("data-stage")).toBe("2");
       expect(stage.getAttribute("data-stage-state")).toBe("current");
       cleanup();
@@ -411,7 +425,7 @@ describe("R1854000 a staged quest's stages, from the view alone", () => {
       within(preview).getByTestId(INSPECT_STATES).querySelector<HTMLElement>('li[data-state="questStages"]'),
       "the stages",
     );
-    expect(list.textContent).toContain("Stage 2 of 3: Comradery");
+    expect(list.textContent).toContain("Stage 2 of 3, Comradery");
     const stages = Array.from(list.querySelectorAll<HTMLElement>("li[data-stage]"));
     expect(stages.map((stage) => stage.getAttribute("data-stage-state"))).toEqual(["done", "current", "upcoming"]);
     expect(stages[2]?.textContent).toContain("Empty the Vaults");
@@ -444,13 +458,196 @@ describe("R1854004 a staged quest waiting to hear back", () => {
     const root = screen.getByTestId(testid.card("itd"));
     const stage = must(stageBadge(root), "the stage badge");
     expect(stage.textContent).toBe("2/3");
-    expect(stage.getAttribute("aria-label")).toBe("Stage 2 of 3: The Interview, hearing back in 2 turns");
+    expect(stage.getAttribute("aria-label")).toBe("Stage 2 of 3, The Interview, hearing back in 2 turns");
     expect(stage.getAttribute("data-hear-back")).toBe("2");
     const preview = hover(root);
     const interview = must(preview.querySelector<HTMLElement>('li[data-stage="2"]'), "the Interview");
     expect(interview.getAttribute("data-hear-back")).toBe("2");
     expect(interview.querySelectorAll(".inspect-quest-stage-goals li")).toHaveLength(3);
     const next: QuestView = { ...HEARING, stages: (HEARING.stages ?? []).map((one) => (one.hearBack === undefined ? one : { ...one, hearBack: 1 })) };
-    expect(stageWords(next.stages ?? [])).toBe("Stage 2 of 3: The Interview, hearing back next turn");
+    expect(stageWords(next.stages ?? [])).toBe("Stage 2 of 3, The Interview, hearing back next turn");
+  });
+});
+
+const HEIST = "stinkyscape-007";
+const JOB = "stinkyscape-112";
+
+/** Each face's lines that are no stage, which every face of it prints as they are. */
+const HEIST_CRY = {
+  base: "Cry: Discover an Acclaimed Unit or a Jelly Bean.",
+  radiant: "Cry: Discover a Radiant Acclaimed Unit or a Radiant Jelly Bean.",
+} as const;
+const JOB_HEAD = { base: "Death: Resummon this at Stage 1.", radiant: "Lucky 1\nDeath: Resummon this at Stage 1." } as const;
+
+const FACES = [
+  { label: "base", radiant: false },
+  { label: "radiant", radiant: true },
+] as const;
+
+/** R1854000: The Greatest Heist's first stage open, as its line stands once it enters the field. */
+const HEIST_FIRST: QuestView = {
+  open: [{ id: "radiant", text: "Make an Acclaimed Unit Radiant", progress: 0, goal: 1, rewards: [] }],
+  auras: [],
+  stages: [
+    { name: "Initiation", state: "current", goals: ["Make an Acclaimed Unit Radiant"], reward: "Summon a random Acclaimed Unit" },
+    { name: "Comradery", state: "upcoming", goals: ["Have 2 Acclaimed Units you control die"], reward: "Gain 1 mana" },
+    { name: "Empty the Vaults", state: "upcoming", goals: ["Steal an enemy card"], reward: "Steal your enemy's mana crystals" },
+  ],
+};
+
+/** R1854002: Job Application's Interview open once it has heard back, the goal it drew in play. */
+const INTERVIEW: QuestView = {
+  open: [{ id: "behavioral", text: "Play 3 cards of different costs in one turn", progress: 1, goal: 3, rewards: [] }],
+  auras: [],
+  stages: (HEARING.stages ?? []).map((stage, at) => {
+    if (at === 0) return { ...stage, state: "done" as const };
+    if (at === 1) return { name: stage.name, state: "current" as const, goals: ["Play 3 cards of different costs in one turn"], reward: stage.reward };
+    return stage;
+  }),
+};
+
+/** Job Application's last stage open, after the Interview's reward. */
+const OFFER: QuestView = {
+  open: [{ id: "offer", text: "Activate this to accept the offer, or to send in another application", progress: 0, goal: 1, rewards: [] }],
+  auras: [],
+  stages: (INTERVIEW.stages ?? []).map((stage, at) => (at < 2 ? { ...stage, state: "done" as const } : { ...stage, state: "current" as const })),
+};
+
+/** A staged line with every stage done. */
+function done(quest: QuestView): QuestView {
+  return { open: [], auras: [], stages: (quest.stages ?? []).map((stage) => ({ ...stage, state: "done" as const })) };
+}
+
+/** A catalog face, in play holding `quest` when one is given. */
+function questFace(defId: string, radiant: boolean, quest?: QuestView) {
+  return faceModel({ defId, def: must(CATALOG[defId], defId), radiant, ...(quest === undefined ? {} : { inPlay: { quest } }) });
+}
+
+/** What a Quest card's rules box prints (questFace.ts). */
+function printed(defId: string, radiant: boolean, quest?: QuestView): string {
+  return must(questFaceText(questFace(defId, radiant, quest)), defId).full;
+}
+
+describe("R2450000 a Quest card's face prints only the stage it stands at", () => {
+  it("R2450000 off the field a staged Quest prints Stage 1 of 3, its other lines kept", () => {
+    expect(printed(HEIST, false)).toBe(
+      `${HEIST_CRY.base}\nStage 1 of 3, Initiation. Quest: Make an Acclaimed Unit Radiant. Reward: Summon a random Acclaimed Unit.`,
+    );
+    expect(printed(HEIST, true)).toBe(
+      `${HEIST_CRY.radiant}\nStage 1 of 3, Initiation. Quest: Make an Acclaimed Unit Radiant. Reward: Summon a random Radiant Acclaimed Unit.`,
+    );
+    const upload = "Stage 1 of 3, Upload Resume. Quest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.";
+    for (const face of FACES) {
+      expect(printed(JOB, face.radiant), face.label).toBe(`${JOB_HEAD[face.label]}\n${upload}`);
+      // A card in hand is in a game but off the field: its view carries no quest line.
+      for (const defId of [HEIST, JOB]) {
+        const inHand = must(questFaceText(faceModel({ defId, def: must(CATALOG[defId], defId), radiant: face.radiant, inPlay: {} })), defId);
+        expect(inHand.full, `${defId} ${face.label} in hand`).toBe(printed(defId, face.radiant));
+      }
+    }
+  });
+
+  it("R2450000 on the field it prints the current stage and its progress, and moves on after a reward", () => {
+    for (const face of FACES) {
+      const cry = HEIST_CRY[face.label];
+      const radiant = face.radiant ? "Radiant " : "";
+      expect(printed(HEIST, face.radiant, HEIST_FIRST), face.label).toBe(
+        `${cry}\nStage 1 of 3, Initiation. Quest: Make an Acclaimed Unit Radiant (0/1). Reward: Summon a random ${radiant}Acclaimed Unit.`,
+      );
+      const anomaly = face.radiant ? "a Radiant Anomaly Found!" : "an Anomaly Found!";
+      expect(printed(HEIST, face.radiant, STAGED), face.label).toBe(
+        `${cry}\nStage 2 of 3, Comradery. Quest: Have 2 Acclaimed Units you control die (1/2). Reward: Do this 3 times: at random, add ${anomaly} to your hand or gain a random ${radiant}Stinkyscape Resource.`,
+      );
+      const buffs = face.radiant ? 10 : 5;
+      expect(printed(JOB, face.radiant, INTERVIEW), face.label).toBe(
+        `${JOB_HEAD[face.label]}\nStage 2 of 3, The Interview. Quest: Play 3 cards of different costs in one turn (1/3). Reward: Add your resume to your hand and Buff it ${String(buffs)} times. It costs (0).`,
+      );
+      expect(printed(JOB, face.radiant, OFFER), face.label).toBe(
+        `${JOB_HEAD[face.label]}\nStage 3 of 3, The Offer. Quest: Activate this to accept the offer, or to send in another application (0/1). Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns.`,
+      );
+    }
+  });
+
+  it("R2450000 waiting to hear back it says the turns left, and a finished line says Quest complete", () => {
+    for (const face of FACES) {
+      const buffs = face.radiant ? 10 : 5;
+      const interview = `Quest: One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it ${String(buffs)} times. It costs (0).`;
+      expect(printed(JOB, face.radiant, HEARING), face.label).toBe(
+        `${JOB_HEAD[face.label]}\nStage 2 of 3, The Interview, hearing back in 2 turns. ${interview}`,
+      );
+      const next: QuestView = { ...HEARING, stages: (HEARING.stages ?? []).map((one) => (one.hearBack === undefined ? one : { ...one, hearBack: 1 })) };
+      expect(printed(JOB, face.radiant, next), face.label).toBe(`${JOB_HEAD[face.label]}\nStage 2 of 3, The Interview, hearing back next turn. ${interview}`);
+      expect(printed(HEIST, face.radiant, done(STAGED)), face.label).toBe(`${HEIST_CRY[face.label]}\nQuest complete`);
+      expect(printed(JOB, face.radiant, done(HEARING)), face.label).toBe(`${JOB_HEAD[face.label]}\nQuest complete`);
+    }
+  });
+
+  it("R2450000 In Too Deep keeps its text and adds its open quests, their rewards and its auras", () => {
+    for (const face of FACES) {
+      const full = questFace(ITD, face.radiant).text.full;
+      expect(printed(ITD, face.radiant, FIRST), face.label).toBe(`${full}\nQuest: Draw 2 cards (1/2). Rewards: Heal your hero 6; Deal 3 damage to a target.`);
+      expect(printed(ITD, face.radiant, DEEPER), face.label).toBe(
+        `${full}\nQuest: Destroy 2 enemy permanents (0/2). Rewards: Return 2 random cards from your graveyard to your hand; Place 3 Plague Counters.` +
+          "\nQuest: Your cards deal 12 damage to enemies (12/12). Rewards: Your opponent discards 2 cards of their choice; Draw 2 cards." +
+          "\nAura: your Units have Indestructible",
+      );
+      expect(printed(ITD, face.radiant, { open: [], auras: DEEPER.auras }), face.label).toBe(`${full}\nQuest complete\nAura: your Units have Indestructible`);
+      // Off the field its tree has no quest open, and it prints its text as it is.
+      const off = questFace(ITD, face.radiant);
+      expect(questFaceText(off), face.label).toBeNull();
+      expect(faceText(off).shown, face.label).toBe(full);
+    }
+  });
+
+  it("R2450000 a Radiant face keeps its gold marks where they now stand", () => {
+    const marked = (face: ReturnType<typeof questFace>): string[] => {
+      const text = must(questFaceText(face), face.defId);
+      return text.marks.map((mark) => text.full.slice(mark.start, mark.end));
+    };
+    expect(marked(questFace(HEIST, true))).toEqual(["a Radiant", "Radiant", "Radiant"]);
+    expect(marked(questFace(HEIST, true, STAGED))).toEqual(["a Radiant", "Radiant", "a Radiant", "Radiant"]);
+    expect(marked(questFace(JOB, true, INTERVIEW))).toEqual(["Lucky 1", "10"]);
+    expect(marked(questFace(HEIST, false, STAGED))).toEqual([]);
+
+    const { container } = render(withCatalog(<CardFace face={questFace(HEIST, true)} />));
+    expect(Array.from(container.querySelectorAll(".cf-text-base .cf-mark")).map((mark) => mark.textContent)).toEqual(["a Radiant", "Radiant", "Radiant"]);
+    const box = must(container.querySelector<HTMLElement>(".card-text"), "the rules box");
+    expect(box.getAttribute("data-short")).toBe("true");
+    expect(box.getAttribute("data-less")).toBe("true");
+  });
+
+  it("R2450000 a reader of Chinese reads the stage in the Chinese face's layout", async () => {
+    try {
+      await setLocale("zh-CN");
+      const death = "亡语：重新召唤这张牌，回到第1阶段。";
+      expect(printed(JOB, false)).toBe(`${death}\n第1/3阶段，上传简历。任务：激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：2到6个回合后收到回复。`);
+      expect(printed(JOB, true, INTERVIEW)).toBe(
+        `幸运1\n${death}\n第2/3阶段，面试。任务：Play 3 cards of different costs in one turn（1/3）。奖励：将你的简历置入你的手牌并将其强化10次。其法力值消耗为(0)。`,
+      );
+      expect(printed(JOB, false, HEARING)).toContain("\n第2/3阶段，面试，2个回合后收到回复。任务：从三个任务中随机抽取一个：");
+      expect(printed(HEIST, false, done(STAGED))).toBe("战吼：发现一个赞誉单位或一张软糖豆牌。\n任务完成");
+      expect(printed(ITD, false, FIRST)).toContain("\n任务：抽2张牌（1/2）。奖励：为你的英雄恢复6点生命值；对一个目标造成3点伤害。");
+    } finally {
+      resetLocaleForTests();
+    }
+  });
+
+  it("R2450000 the hover preview's face prints the stage on either seat, its whole text and every stage beside it", () => {
+    vi.useFakeTimers();
+    for (const side of ["you", "opponent"] as const) {
+      render(withCatalog(<Board view={boardWith(questCard(STAGED, { defId: HEIST }), side)} />));
+      const preview = hover(screen.getByTestId(testid.card("itd")));
+      const face = within(preview).getByTestId(INSPECT_FACE);
+      expect(face.querySelector(".cf-text-base")?.textContent, side).toBe(printed(HEIST, false, STAGED));
+      const whole = within(preview).getByTestId(INSPECT_EXTENDED).textContent;
+      for (const stage of ["Quest: Stage 1, Initiation.", "Quest: Stage 2, Comradery.", "Quest: Stage 3, Empty the Vaults."]) {
+        expect(whole, `${side}: ${stage}`).toContain(stage);
+      }
+      expect(within(preview).getByTestId(INSPECT_STATES).querySelectorAll("li[data-stage]"), side).toHaveLength(3);
+      act(() => {
+        closeInspect();
+      });
+      cleanup();
+    }
   });
 });
