@@ -360,7 +360,7 @@ pub struct Handicap {
     pub tutorial_cards_only: Option<bool>,
     /// R2433001: the most copies of one card id this seat's deck may hold, in place of MAX_COPIES.
     /// Absent means MAX_COPIES, so every other game hashes as before the field existed. Only a
-    /// lesson's human sets it (`TUTORIAL_HUMAN`).
+    /// lesson's two seats set it (`TUTORIAL_HUMAN`, and `AI_TUTORIAL` since R2533001).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub deck_copies: Option<i32>,
