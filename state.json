@@ -10033,6 +10033,14 @@
       "queued_at": "2026-10-30T04:49:28Z",
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
+    },
+    "2451": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-30T02:33:16Z",
+      "issue": 2424,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
