@@ -9746,6 +9746,13 @@
     "2491": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T13:44:47Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule line 3 fails: it adds ruling R2491000 and edits R978000 and \u00a79.11; otherwise one crate, ~7 files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
