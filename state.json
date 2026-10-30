@@ -9790,7 +9790,25 @@
       "feedback_since": "2026-10-30T02:20:37Z",
       "issue": 2426,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40991132068",
+            "tier": "strong"
+          }
+        ],
+        "sha": "5924da802e0641209def95b2e84831e3d05f4fb0",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
