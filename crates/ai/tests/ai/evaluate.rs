@@ -1828,3 +1828,270 @@ mod banked_modifiers_1722 {
         assert_eq!(scored(&armed), scored(&bare));
     }
 }
+
+mod r2490000_backrow_unit_priced_once {
+    use super::*;
+    use jackioh_ai::EvalWeights;
+    use jackioh_engine::testkit::{
+        FIRST_GRADE, PlaceOnFieldOptions, Row, ZoneSlot, animated_with_stats, find_instance,
+        find_instance_mut, is_standing_unit, place_standing_on_field, remove_from_any_zone,
+    };
+
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Flying, no Cry
+    const VANILLA: &str = "core-008"; // (1) 4/4, no keywords
+    const TIMMY: &str = "core-011"; // Tempo Timmy, the other side's board
+    const SHIP: &str = "stinkyscape-t-dormant-starship";
+
+    fn scored(state: &GameState, w: &EvalWeights) -> f64 {
+        evaluate(state, AI, NextSwing::Enemy, w)
+    }
+
+    /// Stratos played by `player` into lane 1, the unit row or, Flying, the backrow, where it
+    /// stands. The other side holds one Timmy, and the player keeps a Vanilla, so the turn never
+    /// auto-ends and the two boards differ only in the row.
+    fn stratos(player: PlayerId, backrow: bool) -> GameState {
+        register_cards();
+        let mut setup = json!({
+            "seed": "ai-r2490000-stratos",
+            "p1": { "hand": [VANILLA] },
+            "p2": { "hand": [VANILLA] },
+        });
+        if player == AI {
+            setup["active"] = json!("p1");
+            setup["p1"]["hand"] = json!([STRATOS, VANILLA]);
+            setup["p2"]["hand"] = json!([TIMMY]);
+        } else {
+            setup["active"] = json!("p2");
+            setup["p2"]["hand"] = json!([STRATOS, VANILLA]);
+            setup["p1"]["hand"] = json!([TIMMY]);
+        }
+        let mut s = scenario(setup);
+        let mut play = json!({ "zone": 1 });
+        if backrow {
+            play["row"] = json!("backrow");
+        }
+        s.play(STRATOS, play);
+        let state = s.state().clone();
+        if backrow {
+            let stood = state.players[player].backrow[0]
+                .as_ref()
+                .expect("Stratos stands in backrow lane 1");
+            assert!(
+                is_standing_unit(&state, stood),
+                "a backrow Stratos is a standing Unit"
+            );
+        }
+        state
+    }
+
+    /// The AI's Dormant Starship waiting on its launch, standing in backrow lane 1. The setup
+    /// cannot place a Unit in the backrow, so the ship is set in the unit row and moved: the
+    /// override stands in for fused stats, since a bare 0/0 would not survive the setup's state
+    /// check.
+    fn starship_in_backrow() -> GameState {
+        let mut state = board(json!({
+            "seed": "ai-r2490000-starship",
+            "p1": {
+                "hand": [VANILLA],
+                "field": [{ "def": SHIP, "slumber": {}, "statsOverride": { "attack": 2, "health": 3 } }],
+            },
+            "p2": { "hand": [VANILLA], "field": [TIMMY] },
+        }));
+        let id = state.players[AI].units[0]
+            .as_ref()
+            .expect("the ship starts in unit lane 1")[0]
+            .id
+            .clone();
+        let mut card = find_instance(&state, &id).expect("the ship").clone();
+        remove_from_any_zone(&mut state, &mut card);
+        assert!(
+            place_standing_on_field(
+                &mut state,
+                &mut card,
+                ZoneSlot {
+                    player: AI,
+                    row: Row::Backrow,
+                    lane: 1,
+                },
+                PlaceOnFieldOptions { stack: None },
+            ),
+            "the ship stands in backrow lane 1"
+        );
+        let stood = find_instance(&state, &id).expect("the ship after the move");
+        assert!(
+            is_standing_unit(&state, stood),
+            "a backrow Starship is a standing Unit"
+        );
+        assert!(
+            stood
+                .slumber
+                .as_ref()
+                .is_some_and(|slumber| slumber.turns.is_none()),
+            "it still waits on its launch"
+        );
+        state
+    }
+
+    /// A live backrow on each side on the enemy's turn, so no grade rise is armed: the enemy's
+    /// face-down Sheepish, our face-up Mana Well and our Combo-Index, raised to grade C (3).
+    fn graded_backrow() -> GameState {
+        let mut state = board(json!({
+            "seed": "ai-r2490000-backrow",
+            "active": "p2",
+            "p1": {
+                "hand": [VANILLA],
+                "field": [VANILLA],
+                "backrow": [{ "def": "core-006", "faceUp": true }, { "def": "core-093", "faceUp": true }],
+            },
+            "p2": {
+                "hand": [VANILLA],
+                "field": [TIMMY],
+                "backrow": [{ "def": "core-041", "faceUp": false }],
+            },
+        }));
+        let id = state.players[AI].backrow[1]
+            .as_ref()
+            .expect("Combo-Index in lane 2")
+            .id
+            .clone();
+        find_instance_mut(&mut state, &id)
+            .expect("Combo-Index")
+            .counters
+            .grade = Some(3);
+        state
+    }
+
+    /// `state` with `player`'s backrow `lane` emptied.
+    fn without_backrow(state: &GameState, player: PlayerId, lane: usize) -> GameState {
+        let mut out = clone(state);
+        out.players[player].backrow[lane - 1] = None;
+        out
+    }
+
+    #[test]
+    fn r2490000_a_backrow_stratos_scores_what_a_unit_row_stratos_scores() {
+        for player in [AI, HUMAN] {
+            let front = stratos(player, false);
+            let back = stratos(player, true);
+            assert_eq!(scored(&front, &AI_EVAL), scored(&back, &AI_EVAL));
+            assert_eq!(
+                evaluate(&front, HUMAN, NextSwing::Enemy, &AI_EVAL),
+                evaluate(&back, HUMAN, NextSwing::Enemy, &AI_EVAL),
+            );
+        }
+    }
+
+    #[test]
+    fn r2490000_a_dormant_starship_in_the_backrow_counts_its_slumber_price_alone() {
+        let state = starship_in_backrow();
+        let id = state.players[AI].backrow[0]
+            .as_ref()
+            .expect("the ship")
+            .id
+            .clone();
+        let ship = find_instance(&state, &id).expect("the ship");
+        let mut awake = ship.clone();
+        awake.slumber = None;
+        let worth = unit_worth(&state, &awake, &AI_EVAL);
+        let mut emptied = clone(&state);
+        emptied.players[AI].backrow[0] = None;
+        assert_close(
+            scored(&state, &AI_EVAL) - scored(&emptied, &AI_EVAL),
+            AI_EVAL.slumber_waiting_share * worth,
+            9,
+        );
+    }
+
+    #[test]
+    fn r2490000_traps_field_spells_and_grade_counters_keep_their_backrow_price() {
+        const OFF: EvalWeights = EvalWeights {
+            standing_unit_priced_once: false,
+            ..AI_EVAL
+        };
+        let full = graded_backrow();
+        assert_eq!(scored(&full, &AI_EVAL), scored(&full, &OFF));
+        // The enemy's face-down Trap counts its flat price against us.
+        assert_close(
+            scored(&without_backrow(&full, HUMAN, 1), &AI_EVAL) - scored(&full, &AI_EVAL),
+            AI_EVAL.enemy_face_down,
+            9,
+        );
+        // Our face-up Field Spell counts base plus per-cost of its (3).
+        assert_close(
+            scored(&full, &AI_EVAL) - scored(&without_backrow(&full, AI, 1), &AI_EVAL),
+            AI_EVAL.backrow_base + AI_EVAL.backrow_per_cost * 3.0,
+            9,
+        );
+        // Combo-Index at grade C counts its backrow price plus two grade steps past E.
+        assert_close(
+            scored(&full, &AI_EVAL) - scored(&without_backrow(&full, AI, 2), &AI_EVAL),
+            AI_EVAL.backrow_base
+                + AI_EVAL.backrow_per_cost * 3.0
+                + AI_EVAL.grade_counter * f64::from(3 - FIRST_GRADE),
+            9,
+        );
+    }
+
+    #[test]
+    fn r2490000_greedy_eval_and_a_closed_switch_keep_the_backrow_price() {
+        // No direct flag assert: the differential below pins the frozen behavior itself, reading
+        // the backrow price the switch would skip.
+        const OFF: EvalWeights = EvalWeights {
+            standing_unit_priced_once: false,
+            ..AI_EVAL
+        };
+        for w in [&GREEDY_EVAL, &OFF] {
+            let extra = w.backrow_base + w.backrow_per_cost * 1.0;
+            assert_close(
+                scored(&stratos(AI, true), w) - scored(&stratos(AI, false), w),
+                extra,
+                9,
+            );
+            assert_close(
+                scored(&stratos(HUMAN, false), w) - scored(&stratos(HUMAN, true), w),
+                extra,
+                9,
+            );
+        }
+    }
+
+    /// Our Stratos granted Animated, wherever it stands: lane 1 of the unit row or of the backrow.
+    fn animate_own_stratos(state: &mut GameState) {
+        let id = if state.players[AI].backrow[0].is_some() {
+            state.players[AI].backrow[0]
+                .as_ref()
+                .expect("the standing Stratos")
+                .id
+                .clone()
+        } else {
+            state.players[AI].units[0].as_ref().expect("the unit-row Stratos")[0]
+                .id
+                .clone()
+        };
+        find_instance_mut(state, &id)
+            .expect("our Stratos")
+            .granted_keywords
+            .push(Keyword::Animated);
+    }
+
+    #[test]
+    fn r2490000_an_animated_standing_unit_counts_its_unit_price_alone() {
+        let mut front = stratos(AI, false);
+        let mut back = stratos(AI, true);
+        animate_own_stratos(&mut front);
+        animate_own_stratos(&mut back);
+        let id = back.players[AI].backrow[0]
+            .as_ref()
+            .expect("the standing Stratos")
+            .id
+            .clone();
+        let card = find_instance(&back, &id).expect("the standing Stratos");
+        assert!(
+            animated_with_stats(&back, card).is_some(),
+            "Animated with stats: the triple-count premise"
+        );
+        // A diff against the emptied board would also move the face threat, so, as for the plain
+        // Stratos, the pin is equality with the same Animated Unit in the unit row.
+        assert_eq!(scored(&back, &AI_EVAL), scored(&front, &AI_EVAL));
+    }
+}

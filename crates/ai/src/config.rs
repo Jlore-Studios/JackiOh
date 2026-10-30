@@ -424,6 +424,10 @@ pub struct EvalWeights {
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
     pub backrow_base: f64,
     pub backrow_per_cost: f64,
+    /// R2490000: a Unit standing in the backrow is priced once, as the Unit the unit walk priced
+    /// — the backrow walk skips it. Off, it keeps the old backrow price on top, as the frozen
+    /// baseline did.
+    pub standing_unit_priced_once: bool,
     /// A backrow card the seat cannot read (on the enemy's side of the ledger).
     pub enemy_face_down: f64,
     /// R351: per crystal of the cost such a card shows both players (`shown_cost`), on top of
@@ -564,6 +568,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
+    // R2490000: a Unit standing in the backrow counts once, as the Unit it is.
+    standing_unit_priced_once: true,
     enemy_face_down: 2.0,
     // #1602: off. At 0.8 its screen, 400 games of improve-dev against the parent (fb41b6e01), read
     // 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing (training/improve.md, A screen); the
@@ -753,6 +759,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
+    // The baseline is frozen: it priced a standing Unit again as a backrow card, as it did.
+    standing_unit_priced_once: false,
     enemy_face_down: 2.0,
     // #1602's shown cost and fatigue came after the gates were fixed too: nothing, as it gave them.
     enemy_face_down_per_cost: 0.0,
