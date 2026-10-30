@@ -172,6 +172,7 @@
 .hero-health,
 .hero-armor,
 .hero-jade,
+.hero-credits,
 .hero-luck {
   display: inline-flex;
   align-items: center;
@@ -201,6 +202,12 @@
 .hero-jade {
   border: 1px solid color-mix(in srgb, var(--pal-jade-400) 55%, transparent);
   background: var(--pal-green-700);
+}
+
+/* R1840005: the Credits, gold beside the Jade Counter's green. */
+.hero-credits {
+  border: 1px solid color-mix(in srgb, var(--pal-gold-400) 55%, transparent);
+  background: var(--pal-brass-800);
 }
 
 .power-button,
@@ -1038,15 +1045,6 @@ button.modifier-badge[data-open="true"] {
 
 .card-resolving {
   height: calc(var(--card-h) * 0.62);
-}
-
-/* R1840005: the Credits count, drawn as the resolving strip is. */
-.market-credits {
-  display: inline-flex;
-  gap: var(--gap);
-  padding: 2px;
-  border: 1px dashed var(--selected);
-  border-radius: var(--radius-sm);
 }
 
 /* ---------------------------------------------------------------------------------- cards --- */

@@ -8,6 +8,8 @@
 // crates/engine/tests/rules/extra_turns.rs.
 //
 // R1639000: a Heroic Power used this turn wears "Used", on either seat.
+//
+// R1840005: a seat's Credits are a badge by the hero from their first gain, a count of 0 included.
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -100,5 +102,30 @@ describe("R1639000 a Heroic Power used this turn", () => {
     const fresh = screen.getByTestId("power");
     expect(fresh.querySelector(".power-used")).toBeNull();
     expect(fresh).toHaveAttribute("title", "Ranching: Activate, spend (2)");
+  });
+});
+
+describe("R1840005 the hero's Credits badge", () => {
+  it("R1840005 a count of 0 still shows on either seat, unlike the Jade Counter's, and a seat without Credits draws none", () => {
+    const view = baseView({
+      you: emptySide("p1", { marketCredits: 0, jade: 0 }),
+      opponent: emptySide("p2", { hand: { count: 4 }, marketCredits: 0 }),
+    });
+    for (const side of ["you", "opponent"] as const) {
+      const { unmount } = render(withCatalog(<Hero view={view} side={side} />));
+      const badge = screen.getByTestId(`market-credits-${side}`);
+      expect(badge.textContent).toBe("0");
+      expect(badge.getAttribute("data-credits")).toBe("0");
+      expect(badge.classList.contains("hero-credits")).toBe(true);
+      expect(badge.getAttribute("title")).toBe("Credits");
+      // R961: a Jade Counter of 0 draws nothing, which is the difference.
+      expect(document.querySelector(".hero-jade")).toBeNull();
+      unmount();
+    }
+    for (const side of ["you", "opponent"] as const) {
+      const { unmount } = render(withCatalog(<Hero view={baseView()} side={side} />));
+      expect(screen.queryByTestId(`market-credits-${side}`)).toBeNull();
+      unmount();
+    }
   });
 });

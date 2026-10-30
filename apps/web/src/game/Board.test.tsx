@@ -414,7 +414,7 @@ describe("Board", () => {
     for (const badge of badges) expect(badge.getAttribute("title")).toBe("Jade Counter");
   });
 
-  it("R1840000 R1840005 R2250000 both seats' Credits show beside the hand, and nothing without them; no Resource tray is drawn", () => {
+  it("R1840000 R1840005 R2250000 both seats' Credits show as a badge on their hero, and nothing without them; no Resource tray is drawn", () => {
     const plain = fullBoardView();
     render(<Board view={plain} />);
     for (const side of ["you", "opponent"]) {
@@ -432,6 +432,12 @@ describe("Board", () => {
     expect(screen.getByTestId("market-credits-you").getAttribute("data-credits")).toBe("7");
     expect(screen.getByTestId("market-credits-opponent").getAttribute("data-credits")).toBe("2");
     expect(screen.getByTestId("market-credits-you").getAttribute("title")).toBe("Credits");
+    // R1840005: the count is a badge in the hero's row, as the Jade Counter is, not a strip by the hand.
+    for (const side of ["you", "opponent"] as const) {
+      const badge = screen.getByTestId(`market-credits-${side}`);
+      expect(badge.classList.contains("hero-credits")).toBe(true);
+      expect(screen.getByTestId(testid.hero(side)).contains(badge)).toBe(true);
+    }
     expect(document.querySelector("[data-testid^='tray-']")).toBeNull();
   });
 
