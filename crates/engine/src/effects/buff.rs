@@ -198,13 +198,21 @@ fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
 /// when it is there (TS's live object), and the copy is brought up to date from it, so a caller that
 /// grants again reads what this grant left; a card in no pile is granted on the copy alone, as TS
 /// granted on the detached object.
+///
+/// R2280001: an Animated granted to a backrow card with stats that first gives it both owes it its
+/// animation at the next state check (`animated::owe_animation`).
 fn grant_to(ctx: &mut EffectContext<'_>, unit: &mut CardInstance, keyword: &Keyword, report: bool) {
+    let animated = keyword.kind() == KeywordKind::Animated;
+    let was = animated && crate::animated::ready_to_animate(ctx.sink.state, &unit.id);
     match find_instance_mut(ctx.sink.state, &unit.id) {
         Some(live) => {
             grant_onto(live, keyword);
             *unit = live.clone();
         }
         None => grant_onto(unit, keyword),
+    }
+    if animated {
+        crate::animated::owe_animation(ctx.sink.state, &unit.id, was);
     }
 
     if report {

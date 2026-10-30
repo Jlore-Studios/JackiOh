@@ -44,7 +44,7 @@ pub const HERO_HEALTH: i32 = 30;
 /// belongs to a turn of its controller's (R155, R241).
 pub const SETUP_TURN: i32 = 0;
 /// §2.5, R2, R389 (patch v0.2.0, docs/classic-sets.md B4.3): the cap counts player-turns, so 60 means
-/// 30 each. Two 25-card decks that do nothing fatigue out at player-turn 57 (§2.4, R3, R1156000), so the
+/// 30 each. Two 25-card decks that do nothing fatigue out at player-turn 58 (§2.4, R3, R2368000), so the
 /// cap is a backstop for games that heal, gain Armor or refill a deck, and fatigue is a long game's usual
 /// end.
 pub const TURN_CAP_PLAYER_TURNS: i32 = 60;
@@ -55,8 +55,9 @@ pub const HAND_CAP: i32 = 10;
 /// client lays out in one hand.
 pub const HAND_CAP_MAX: i32 = 14;
 
-/// §2.1, R1156000: indexed by seat, each seat's opening draw: four for both (issue #1156, seat balance).
-pub const OPENING_DRAW: &[i32] = &[4, 4];
+/// §2.1, R2368000: indexed by seat, each seat's opening draw: three for the first, four for the second
+/// (issue #2368, Hearthstone's split, as before issue #1156's four for both, R1156000).
+pub const OPENING_DRAW: &[i32] = &[3, 4];
 
 /// §2.1, R244: indexed by seat like `OPENING_DRAW`, the copies of The Coin each seat is dealt once both
 /// mulligans are answered. Hearthstone's rule: the player going second gets one, the first none.
@@ -281,12 +282,6 @@ pub const RANDOM_KEYWORD_POOL: &[&str] = &[
 /// R349: a Unit that prints no Radiant form (the Ghoul Token) is, made Radiant, its base face with
 /// its attack and health multiplied by this — a summon's X/X included (§7).
 pub const RADIANT_FALLBACK_FACTOR: i32 = 2;
-
-/// R657: an Animated card with no printed stats fights with this attack.
-pub const ANIMATED_FALLBACK_ATTACK: i32 = 0;
-
-/// R657: an Animated card with no printed stats fights with this health.
-pub const ANIMATED_FALLBACK_HEALTH: i32 = 1;
 
 /// R348: the least X a player may choose for an X-cost card whose X is theirs to choose (#24, #74).
 /// Heroic Power's X is its power's and never chosen (R43), so this does not reach it.

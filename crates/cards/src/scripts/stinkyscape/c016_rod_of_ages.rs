@@ -1,18 +1,21 @@
-//! S #16 Rod of Ages (SPEC §8.10 row 16): (1) Field Spell, Quickdraw, Mythic, 1/1 → 2/2, of the
-//! Stinkyscape set.
+//! S #16 Rod of Ages (SPEC §8.10 row 16): (1) Field Spell, Quickdraw, Mythic, no stats (R2280000; 1/1 →
+//! 2/2 before issue #2280), of the Stinkyscape set.
 //!   Base:    "Animated, Flying / The first Unit you play onto this is Equipped into it. / End of turn:
 //!            Gain {keywords|random combat keyword|random combat keywords}. / Upon reaching 10 keywords,
 //!            make this Radiant."
 //!   Radiant: "Animated, Flying, Indestructible / The first Unit you play onto this is Equipped into it.
 //!            / End of turn: Gain {keywords|random combat keyword|random combat keywords}."
-//! Engine: Animated and Flying are catalog keywords (§6.1): it animates as it enters the field, into its
-//! own lane's unit zone or R64's leftmost, a 1/1 Flying Unit. `StaticFlags.lends_equip` (R1869000): while
-//! it acts as a Unit and is no fusion, any Unit card its controller plays may be played onto it as an
-//! Equip play (R1086), beside the plain zones: the Unit resolves on top, its Cry included, then fuses
-//! into it, this card the kept host (R77, R102); once it holds a fusion it lends no more. End of turn:
-//! `grant_random_keywords` from R21's pool (R781005), {keywords} of them. Base: `radiant_at_keywords` 10
-//! (R1850005): at a state check where its keyword kinds through the layers reach 10, each kind once,
-//! Animated and Flying included, it is made Radiant. Radiant: Indestructible and two keywords a turn.
+//! Engine: Animated and Flying are catalog keywords (§6.1), but with no stats it is no Unit (R2280000): it
+//! enters the field and stays in its backrow zone. `StaticFlags.lends_equip` (R1869000): while it acts on
+//! its controller's field, in its backrow zone or a unit zone, and is no fusion, any Unit card its
+//! controller plays may be played onto it as an Equip play (R1086), beside the plain zones: the Unit
+//! resolves on top, its Cry included, then fuses into it, this card the kept host (R77, R102); once it
+//! holds a fusion it lends no more. The fusion gives it the Unit's stats beside its Animated, so it
+//! animates at that state check into its own lane's unit zone or R64's leftmost (R2280001), or stays
+//! with none open. End of turn, in the backrow or as a Unit: `grant_random_keywords` from R21's pool
+//! (R781005), {keywords} of them. Base: `radiant_at_keywords` 10 (R1850005): at a state check where its
+//! keyword kinds through the layers reach 10, each kind once, Animated and Flying included, it is made
+//! Radiant. Radiant: Indestructible and two keywords a turn.
 
 use jackioh_engine::prelude::*;
 
@@ -101,33 +104,36 @@ mod tests {
         use super::*;
 
         #[test]
-        fn animates_as_a_1_1_flyer() {
-            let mut s = played(false, json!([]));
-            let rod = s.unit_at(P1, 2);
+        fn r2280000_it_enters_and_stays_in_its_backrow_zone_no_unit() {
+            let s = played(false, json!([]));
+            let rod = s.backrow(P1, 2).expect("with no stats it stays in its backrow zone");
             assert_eq!(rod.def_id, ID);
-            assert!(s.backrow(P1, 2).is_none(), "it left its backrow zone as it animated");
-            s.expect_stats(&rod, json!({ "attack": 1, "health": 1 }));
+            assert!(s.unit(P1, 2).is_none());
+            assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Animated));
             let keywords = s.stats(&rod).keywords;
             assert!(has_keyword(&keywords, KeywordKind::Animated) && has_keyword(&keywords, KeywordKind::Flying));
         }
 
         #[test]
-        fn r1869000_the_first_unit_is_offered_onto_it_and_fuses_with_rod_kept() {
+        fn r1869000_r2280001_the_first_unit_resolves_on_it_in_its_backrow_zone_fuses_in_and_rod_animates_with_its_stats() {
             let mut s = played(false, json!([MR_TOKEN]));
-            let rod = s.unit_at(P1, 2);
+            let rod = s.backrow(P1, 2).expect("the Rod");
             let token = s.card(MR_TOKEN).clone();
             assert_eq!(equip_lanes(&s, &token), vec![2]);
-            s.play(&token, json!({ "zone": 2, "equip": true }));
-            let fused = s.unit_at(P1, 2);
-            assert_eq!(fused.id, rod.id, "the Rod is the kept host");
-            assert!(s.state().players.p1.units.iter().flatten().flatten().all(|card| card.id != token.id));
-            // It resolved on top first, its Cry included, then fused: 1/1 + 1/1.
+            s.play(&token, json!({ "zone": 2, "row": "backrow", "equip": true }));
+            assert!(find_instance(s.state(), &token.id).is_none());
+            // It resolved on top first, its Cry included, then fused: the Rod has its 1/1 and Animated,
+            // so it animated at that state check.
             assert!(s.events().iter().any(|event| matches!(
                 event,
                 GameEvent::Summoned { def_id, .. } if def_id == RUSH_TOKEN
             )));
             assert!(s.last_events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
-            s.expect_stats(&fused, json!({ "attack": 2, "health": 2 }));
+            assert!(s.last_events().iter().any(|event| matches!(event, GameEvent::Animated { .. })));
+            assert!(s.backrow(P1, 2).is_none());
+            let fused = s.unit_at(P1, 2);
+            assert_eq!(fused.id, rod.id, "the Rod is the kept host");
+            s.expect_stats(&fused, json!({ "attack": 1, "health": 1 }));
             assert!(has_keyword(&s.stats(&fused).keywords, KeywordKind::Flying));
         }
 
@@ -135,7 +141,7 @@ mod tests {
         fn r1869000_a_second_unit_plays_as_usual() {
             let mut s = played(false, json!([MR_TOKEN, VANILLA]));
             s.state_mut().players.p1.mana.current = 4;
-            s.play(MR_TOKEN, json!({ "zone": 2, "equip": true }));
+            s.play(MR_TOKEN, json!({ "zone": 2, "row": "backrow", "equip": true }));
             let vanilla = s.card(VANILLA).clone();
             assert!(equip_lanes(&s, &vanilla).is_empty(), "a fusion lends no more");
             s.expect_refused_with(|s| s.play(VANILLA, json!({ "zone": 2, "equip": true })), "is not Equip");
@@ -152,24 +158,30 @@ mod tests {
         }
 
         #[test]
-        fn r1869000_a_rod_left_in_the_backrow_hosts_nothing() {
+        fn r1869000_r2280001_with_every_unit_zone_full_it_hosts_in_its_backrow_zone_and_stays_fused() {
             let vanillas: Vec<Value> = (1..=5).map(|lane| json!({ "def": VANILLA, "lane": lane })).collect();
             let mut s = crate::scenario(json!({
                 "p1": { "hand": [ID, MR_TOKEN, FILLER], "field": vanillas, "library": crate::filler(6) },
                 "p2": { "hand": [FILLER], "library": crate::filler(6) },
             }));
+            s.state_mut().players.p1.mana.current = 4;
             s.play(ID, json!({ "zone": 2 }));
-            let rod = s.backrow(P1, 2).expect("no open unit zone, so it stays");
-            assert_eq!(rod.def_id, ID);
+            let rod = s.backrow(P1, 2).expect("no Unit, it stays");
             let token = s.card(MR_TOKEN).clone();
-            assert!(equip_lanes(&s, &token).is_empty());
-            s.expect_refused(|s| s.play(MR_TOKEN, json!({ "zone": 2, "row": "backrow", "equip": true })));
+            assert_eq!(equip_lanes(&s, &token), vec![2]);
+            s.play(MR_TOKEN, json!({ "zone": 2, "row": "backrow", "equip": true }));
+            assert!(s.last_events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
+            // No unit zone is open, so it stays in its backrow zone, a Field Spell holding the fusion.
+            let fused = s.backrow(P1, 2).expect("the fused Rod stays");
+            assert_eq!(fused.id, rod.id);
+            assert_ne!(fused.def_id, ID);
+            assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::Animated { .. })));
         }
 
         #[test]
         fn end_of_turn_grants_one_random_keyword() {
             let mut s = played(false, json!([]));
-            let rod = s.unit_at(P1, 2);
+            let rod = s.backrow(P1, 2).expect("the Rod");
             assert_eq!(kinds(&s, &rod), 2);
             s.end_turn();
             assert_eq!(s.card(&rod.id).granted_keywords.len(), 1);
@@ -178,9 +190,22 @@ mod tests {
         }
 
         #[test]
+        fn r2280000_as_a_unit_its_end_of_turn_still_grants_a_keyword() {
+            let mut s = played(false, json!([VANILLA]));
+            s.state_mut().players.p1.mana.current = 4;
+            s.play(VANILLA, json!({ "zone": 2, "row": "backrow", "equip": true }));
+            // Fused with the Vanilla's 4/4, it animated: a Unit now.
+            let rod = s.unit_at(P1, 2);
+            assert!(s.card(&rod.id).granted_keywords.is_empty());
+            s.end_turn();
+            assert_eq!(s.card(&rod.id).granted_keywords.len(), 1);
+            assert_eq!(s.unit_at(P1, 2).id, rod.id);
+        }
+
+        #[test]
         fn r1850005_its_end_of_turn_keyword_reaches_10_and_makes_it_radiant() {
             let mut s = played(false, json!([]));
-            let rod = s.unit_at(P1, 2);
+            let rod = s.backrow(P1, 2).expect("the Rod");
             let granted = [
                 Keyword::Taunt,
                 Keyword::Rush,
@@ -202,13 +227,14 @@ mod tests {
                 event,
                 GameEvent::RadiantSet { instance_id, .. } if *instance_id == rod.id
             )));
-            s.expect_stats(&rod, json!({ "attack": 2, "health": 2 }));
+            // Its Radiant face has no stats either: it stays in its backrow zone.
+            assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(rod.id.clone()));
         }
 
         #[test]
         fn keywords_reads_through_param() {
             let mut s = played(false, json!([]));
-            let rod = s.unit_at(P1, 2);
+            let rod = s.backrow(P1, 2).expect("the Rod");
             step_param(s.card_mut(&rod.id), "keywords", 1);
             s.end_turn();
             assert_eq!(s.card(&rod.id).granted_keywords.len(), 2);
@@ -219,10 +245,10 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_2_2_indestructible_and_gains_two() {
+        fn r2280000_it_stays_in_its_backrow_zone_indestructible_and_gains_two() {
             let mut s = played(true, json!([]));
-            let rod = s.unit_at(P1, 2);
-            s.expect_stats(&rod, json!({ "attack": 2, "health": 2 }));
+            let rod = s.backrow(P1, 2).expect("with no stats it stays in its backrow zone");
+            assert!(s.unit(P1, 2).is_none());
             assert!(has_keyword(&s.stats(&rod).keywords, KeywordKind::Indestructible));
             s.end_turn();
             assert_eq!(s.card(&rod.id).granted_keywords.len(), 2);
@@ -232,12 +258,14 @@ mod tests {
         #[test]
         fn r1869000_it_lends_equip_too() {
             let mut s = played(true, json!([VANILLA]));
-            let rod = s.unit_at(P1, 2);
-            s.play(VANILLA, json!({ "zone": 2, "equip": true }));
+            let rod = s.backrow(P1, 2).expect("the Rod");
+            s.play(VANILLA, json!({ "zone": 2, "row": "backrow", "equip": true }));
             assert_eq!(s.unit_at(P1, 2).id, rod.id);
-            // The kept Rod is Radiant, so the fusion runs its Radiant face: the Rod's 2/2 and the
-            // Vanilla's Radiant 12/12 (R77, R1086).
-            s.expect_stats(&rod, json!({ "attack": 14, "health": 14 }));
+            // The kept Rod is Radiant, so the fusion runs its Radiant face: no stats of its own and the
+            // Vanilla's Radiant 12/12 (R77, R1086); it animated with them, Indestructible.
+            s.expect_stats(&rod, json!({ "attack": 12, "health": 12 }));
+            assert!(has_keyword(&s.stats(&rod).keywords, KeywordKind::Indestructible));
+            assert!(has_keyword(&s.stats(&rod).keywords, KeywordKind::Flying));
         }
     }
 }

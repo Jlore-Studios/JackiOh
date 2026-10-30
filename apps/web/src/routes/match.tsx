@@ -431,6 +431,13 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             setWatching(null);
           }}
         />
+        {/*
+          The rematch navigation that survives the replay, as the board rail's survives "View the
+          board" (below): the result panel's buttons unmount with the board, so without this a seat
+          that offered and opened the replay would never be taken to the game the offers created.
+          Same series gate: series games offer no rematch.
+        */}
+        {series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
       </CatalogContext.Provider>
     );
   }

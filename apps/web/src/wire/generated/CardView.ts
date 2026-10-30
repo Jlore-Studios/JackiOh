@@ -41,6 +41,14 @@ cost: number,
  */
 embiggenCost?: number, 
 /**
+ * #2268, R2268000, §10.8: a card in the viewer's own hand whose play asks a Tribute (§6.3
+ * "Tribute X"), how many Tributes a play of it asks now (`play_choices::tribute_cost_of`): the
+ * printed X as a Nerf or a Buff left it (R386), less what its owner's Floats took (R1841003),
+ * never what the units that could pay it are worth. Absent at 0, on every other card, and never
+ * on the opponent's cards.
+ */
+tribute?: number, 
+/**
  * R243: a Unit card's stats in its owner's hand, as they stand: its printed face (the radiant one
  * when it is Radiant, a fused card's summed one) plus the permanent buffs it has gained there
  * (§10.4 layers 1, 3 and 4 — #89 Corpse Eater feeds in hand). Set on the viewer's own hand cards

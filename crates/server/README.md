@@ -193,6 +193,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `POST` | `/api/dev/quests` | active | a dev tool: a quest at once, drawn as an arrival is and marked `dev`, `{ quest }`; 409 at `QUEST_MAX_HELD`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
 | `POST` | `/api/dev/quests/:questId/complete` | active | a dev tool: completes a held quest and pays it, every row marked `dev`, `{ completed, jlore, xp }`; 404 for a quest not held. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
 | `POST` | `/api/practice/seeds` | active | `{ difficulty, humanSeat, deck, catalog }`: a practice game's seed, kept with that setup and the last board the server holds for the caller (R1303003), 201 `{ seed, lastBoard, expiresAt }`; prunes the caller's seeds older than `PRACTICE_SEED_TTL_SECONDS` (R1303001); 409 while the economy is off, for a catalog it cannot fold, or while the caller holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds, which it counts under the account's economy lock and issues nothing for (R1483000) |
+| `DELETE` | `/api/practice/seeds/:seed` | active | the caller's unclaimed seed given back, deleted under the account's economy lock so its place among `PRACTICE_SEEDS_OPEN_MAX` is free at once and a later claim of it is `unknown_seed`; 200 `{ released: true }`; 404, changing nothing, for another account's seed, a claimed one or one never issued (R2379000) |
 | `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded and its AI moves re-run (R1303002), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp, jloreCapped, tracks, quests }` (`jlore` what was paid, short of the game's rate when `jloreCapped` says the day's cap held some back, R1483000; `tracks` each set track the game moved, its level and XP `before` and `after` and every level it reached with its rewards, and `quests` each quest it completed, `economy::rewards::GameEconomy`), or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001); a pay the store fails is tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and one that never lands is a 500 that leaves the seed burned (R1688000) |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
 | `GET`, `PUT`, `POST` | `/api/card-picks`, `/api/card-picks/upload` | active | the caller's own per-card picks (`card_cosmetic_picks`, R1834000): `{ cards }`, each `{ cardId, foil?, finish?, border?, fullArt? }` as written; a `PUT` of one card's, `{ cardId, foil?, finish?, border?, fullArt? }`, a key left out kept and `null` cleared, 400 `bad_request` for a card not in the catalog or a pick not of its kind or not owned on that card (R1834001); the device's one-time upload, `{ cards }`, which never overwrites a card the account holds, keeps an id this build does not know and leaves out one it could never wear. Each answers `{ cards }` |
@@ -246,6 +247,13 @@ padded (R107). Keys are per account, kept `IDEMPOTENCY_KEY_TTL_HOURS` and swept 
 the body is kept as an HMAC under `<CODE_PEPPER>:body`. CORS allows the header (`api/cors.rs`), without
 which the browser's preflight refuses every spend; `apps/web/src/net/api.ts` mints a key per press and
 sends it again on that press's retries.
+
+**One spend at a time** (SPEC §14.11, R2378000). The six economy spends above (not the invite code's
+redemption) claim the account's turn before they read the store (`economy/spend_slots.rs`, `App::spends`)
+and hold it until they answer. `ECONOMY_SPENDS_RUNNING_MAX` run at once; the next ones wait their turn in
+the process, in the order sent, holding no database connection, so a burst never holds the pool's
+connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
+`rate_limited` with `SPEND_BUSY_RETRY_AFTER_MS`, and writes and keeps nothing.
 
 **Custom cards** (SPEC §12.9, R915008, migration 0037). An active account keeps up to
 `CUSTOM_CARDS_PER_ACCOUNT` (50) custom cards in `public.custom_cards`, whose row-level security lets
@@ -1009,9 +1017,12 @@ the lib and `server` hold tests whose path has `api::`, and only `server` ones w
 `tower`'s `oneshot`;
 `support/engine.rs` installs test cards (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`)
 through the engine testkit's override; `support/socket.rs` is an in-memory socket; `support/store.rs` holds
-the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`; one store call in its own
-transaction: `q!`, `store!`, `try_store!`; `to_json`, `uuid`); time is `tokio::time::pause()` and that
-module's steps (`advance`, `advance_and_yield`, `sleep_settled`).
+the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`, its tables `table` and
+`fake_read`, its faults `fail_on` and `stop_failing`; one store call in its own transaction: `q!`, `store!`,
+`try_store!`; `to_json`, `from`, `uuid`, `hmac_sha256_hex`); time is `tokio::time::pause()` and that
+module's steps (`advance`, `advance_and_yield`, `sleep_settled`). `support/engine.rs` also gives the
+catalog's playable ids (`playable`). `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`, #2385)
+fails a file under `actor/`, `api/`, `bots/`, `loops/` or `support/` that defines its own copy of one.
 The fake store is strict where Postgres is strict (a
 transaction restores every table when it fails, claims are single-shot). `tests/store/contract.rs`
 runs every case against `Db::Fake` always and against `Db::Pg` when `DATABASE_URL` is set, which is
