@@ -3,13 +3,10 @@
 //! §10.3 has every visible change emit an event, so the events after a moment say what happened since:
 //!   * R174: has a card left the field since this point? A Reborn body is back under the same id by
 //!     the time the state check returns (§4.5 step 4), so only the `destroyed` it went out with tells.
-//!   * R212: did a card arrive where it is now after an event, or change hands after it? The loop
-//!     hands an event to the triggers some time after it happened, so the board can hold a Reborn
-//!     body, a card drawn since or a unit a Death stole since; the events still owed say which.
+//!   * R212: did a card arrive where it is now after an event, or change hands after it?
 //!
 //! No instance field records a stay (docs/polish), and a sequence a prompt splits resumes in a later
-//! action whose events begin after the pause, so R174 is also kept in state: `exit_mark` when a
-//! sequence begins, `left_field_after` against `GameState.field_exits` whatever action it resumes in.
+//! action whose events begin after the pause, so R174 is also kept in state (`exit_mark`).
 
 use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
@@ -24,10 +21,9 @@ pub fn exit_mark(state: &GameState) -> u32 {
     state.field_exits.as_ref().map_or(0, |exits| exits.count)
 }
 
-/// R174, R212: the stay an event happened on, when it carries one: the play pipeline's `cardPlayed`,
-/// `summoned` and `cardResolved` name the played card, and the loop can hand them to a response well
-/// after they happened (a cast's `cardResolved` waits for the list that cast it, R70). A card that has left the field since, even one back through Reborn, is
-/// not the card the event is about (R83). `None` for an event with no mark, judged from its dispatch.
+/// R174, R212: the stay a play-pipeline event happened on, which the loop can hand to a response well
+/// after (a cast's `cardResolved` waits for the list that cast it, R70); a card that has left the field
+/// since is not the card it is about (R83).
 pub fn event_mark(event: &GameEvent) -> Option<u32> {
     match event {
         GameEvent::CardPlayed { exits_from, .. }
@@ -37,7 +33,7 @@ pub fn event_mark(event: &GameEvent) -> Option<u32> {
     }
 }
 
-/// The fields of an event that name a card: every one of these that holds a string.
+/// The fields of an event that name a card.
 const CARD_FIELDS: &[&str] = &[
     "instanceId",
     "newInstanceId",
@@ -49,7 +45,7 @@ const CARD_FIELDS: &[&str] = &[
     "byInstanceId",
 ];
 
-/// Every card id an event names: the card it is about, the source and target of a hit, and so on.
+/// Every card id an event names.
 pub fn cards_named_by(event: &GameEvent) -> Vec<String> {
     let fields = serde_json::to_value(event).unwrap_or(Value::Null);
     let mut named: Vec<String> = CARD_FIELDS
@@ -70,10 +66,8 @@ pub fn event_stay_of(state: &GameState, event: &GameEvent) -> EventStay {
     }
 }
 
-/// R174: a card has just left the field — died, bounced, exiled, returned to a library, or ceased to
-/// exist there (replaced by a Transform, fused away). Called from `zones::move_to_zone` and
-/// `zones::cease_to_exist`, the two funnels every such move goes through, so a reader that names the
-/// card by the id an event carried finds it gone.
+/// R174: a card has just left the field. Called from `zones::move_to_zone` and `zones::cease_to_exist`,
+/// the two funnels every such move goes through.
 pub fn note_field_exit(state: &mut GameState, instance_id: &str) {
     let exits = state.field_exits.get_or_insert_with(FieldExits::default);
     exits.count += 1;
@@ -81,9 +75,8 @@ pub fn note_field_exit(state: &mut GameState, instance_id: &str) {
     exits.last.insert(instance_id.to_string(), count);
 }
 
-/// R174: whether a card has left the field since `mark` — even if it is back on it now, bounced and
-/// replayed or returned by Reborn, since what came back is a new arrival (R78, R83). A change of
-/// control is not leaving (R171), and neither is a Vanilla (§6.3).
+/// R174: whether a card has left the field since `mark`, even if it is back now: what came back is a
+/// new arrival (R78, R83). A change of control is not leaving (R171), nor is a Vanilla (§6.3).
 pub fn left_field_after(state: &GameState, mark: u32, instance_id: &str) -> bool {
     state
         .field_exits
@@ -94,9 +87,7 @@ pub fn left_field_after(state: &GameState, mark: u32, instance_id: &str) -> bool
         > mark
 }
 
-/// R174: whether a card has left the field in the events since `from` — died, was bounced or exiled,
-/// or was replaced by a Transform. §10.3 has every visible change emit an event, so this list is the
-/// whole of what can take a card off the field.
+/// R174: whether a card has left the field in the events since `from` (§10.3: every way off emits one).
 pub fn left_field_since(events: &[GameEvent], from: usize, instance_id: &str) -> bool {
     for event in events.iter().skip(from) {
         match event {
@@ -109,8 +100,7 @@ pub fn left_field_since(events: &[GameEvent], from: usize, instance_id: &str) ->
                     return true;
                 }
             }
-            // A Replace puts a new card in the old one's place; a Vanilla (§6.3) names the same card on
-            // both sides of the event, and a card whose text went away has not left anything.
+            // A Vanilla (§6.3) names the same card on both sides: it has not left.
             GameEvent::Transformed {
                 instance_id: id,
                 new_instance_id,
@@ -124,15 +114,10 @@ pub fn left_field_since(events: &[GameEvent], from: usize, instance_id: &str) ->
     false
 }
 
-/// §3.2, R153, R212: a card has just been taken off the field, and `resumed` is the card beneath it in
-/// its Stack pile that is the pile's top now, if it was on top of one. A dormant card registers nothing
-/// (R153), so the resumed card did not see what happened before it resumed, and no event reports a
-/// resume: it is kept here against the card whose leaving caused it, for `uncovered_by` to read.
-///
-/// A note belongs to one removal. It lasts while that removal's report is still owed to the loop
-/// (`note_reported`) and while the card that left has not moved again (`note_moved`), and goes once
-/// both have happened: a later move of the same card is no removal from a pile's top, so a card that
-/// resumed long before is not taken for one that resumed after it. Every removal is such a move.
+/// §3.2, R153, R212: a card has just been taken off the field, and `resumed` tops its Stack pile now. A
+/// dormant card registers nothing (R153) and no event reports a resume, so it is noted against the card
+/// that left, for `uncovered_by`, until that removal is reported (`note_reported`) and the card moves
+/// again (`note_moved`), so a card that resumed long before is not taken for a later one.
 pub fn note_uncovered(state: &mut GameState, removed_id: &str, resumed: Option<&str>) {
     note_moved(state, removed_id);
     let Some(resumed) = resumed else {
@@ -149,9 +134,8 @@ pub fn note_uncovered(state: &mut GameState, removed_id: &str, resumed: Option<&
     );
 }
 
-/// R212: a card has moved zones again (`zones::remove_from_any_zone`), so the note of its last removal
-/// from a pile's top is done once the loop has dispatched that removal's report; until then the
-/// report still reads it, and the note goes with the report (`note_reported`).
+/// R212: a card has moved zones again: its last removal's note goes now if its report was dispatched,
+/// else with the report (`note_reported`).
 pub fn note_moved(state: &mut GameState, instance_id: &str) {
     let Some(uncovered) = state
         .field_exits
@@ -170,9 +154,8 @@ pub fn note_moved(state: &mut GameState, instance_id: &str) {
     }
 }
 
-/// R212: the loop has dispatched an event (`triggers::dispatch_event`). A removal it reports has been
-/// answered: its note stays for the rest of that removal's reports (a death's `enteredGraveyard`
-/// after its `destroyed`) until the card moves again, or goes now if it already has.
+/// R212: the loop has dispatched an event (`triggers::dispatch_event`). A removal it reports keeps its
+/// note for its other reports (a death's `enteredGraveyard` after its `destroyed`) until the card moves.
 pub fn note_reported(state: &mut GameState, event: &GameEvent) {
     let Some(uncovered) = state
         .field_exits
@@ -194,7 +177,7 @@ pub fn note_reported(state: &mut GameState, event: &GameEvent) {
 }
 
 /// The cards an event reports leaving the field, or changing hands (a steal takes only a pile's top,
-/// R13) — the removals a Stack note can hang on. Arrivals are not read: they name no removal.
+/// R13) — the removals a Stack note can hang on.
 fn removals_in(event: &GameEvent) -> Vec<String> {
     match event {
         GameEvent::Destroyed { instance_id, .. }
@@ -228,8 +211,7 @@ fn removals_in(event: &GameEvent) -> Vec<String> {
     }
 }
 
-/// R212, §3.2: the card the removal an event reports uncovered in its Stack pile — which resumed then,
-/// after the event and whatever came before it (`note_uncovered`).
+/// R212, §3.2: the cards the removals an event reports uncovered in their Stack piles (`note_uncovered`).
 pub fn uncovered_by(state: &GameState, event: &GameEvent) -> Vec<String> {
     let Some(uncovered) = state
         .field_exits
@@ -247,19 +229,17 @@ pub fn uncovered_by(state: &GameState, event: &GameEvent) -> Vec<String> {
 /// What a run of events did to the cards it names (R212).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LaterMoves {
-    /// Every card the events moved between zones, or brought into existence, or replaced — and, read
-    /// against a state, every dormant card a removal they report uncovered in its Stack pile (§3.2).
+    /// Every card the events moved, made or replaced, and, read against a state, every dormant card a
+    /// removal they report uncovered in its Stack pile (§3.2).
     pub moved: IndexSet<String>,
-    /// The controller each card had before the first change of control the events show. A change of
-    /// control always hands a card to the other player (a steal of your own card does nothing, R76),
-    /// so the controller before it is the opponent of the one it went to.
+    /// The controller each card had before the first change of control the events show: the opponent
+    /// of the one it went to, since a steal of your own card does nothing (R76).
     pub controller_before: IndexMap<String, PlayerId>,
 }
 
-/// The ids a zone-changing event moves. `transformed` moves both — the old card ceases to exist and
-/// its replacement arrives (§6.3 Replace) — while a Fuse keeps the instance of a target on the field
-/// (R77), so only the ingredients that ceased to exist are moved by it. A change of control, a
-/// rotation and a board swap are not moves: the card stays on the field (R171, R174).
+/// The ids a zone-changing event moves: both of a `transformed` (§6.3 Replace), and a Fuse's ingredients
+/// but not its target, whose instance stays (R77). A change of control, a rotation and a board swap are
+/// not moves: the card stays on the field (R171, R174).
 pub(crate) fn moved_by(event: &GameEvent) -> Vec<String> {
     match event {
         GameEvent::CardPlayed { instance_id, .. }
@@ -274,8 +254,7 @@ pub(crate) fn moved_by(event: &GameEvent) -> Vec<String> {
         | GameEvent::AddedToHand { instance_id, .. }
         | GameEvent::ShuffledIn { instance_id, .. }
         | GameEvent::Held { instance_id, .. } => vec![instance_id.clone()],
-        // R316: as in `removals_in`, an existing card a full library refused has moved; a copy never
-        // created has not.
+        // R316: as in `removals_in`.
         GameEvent::LibraryOverflow {
             instance_id, outcome, ..
         } => {
@@ -303,8 +282,7 @@ pub(crate) fn moved_by(event: &GameEvent) -> Vec<String> {
     }
 }
 
-/// B5 E5: whether `event` sends the card `id` toward a graveyard, a move whose landing
-/// `zones::report_graveyard_landing` reports in an event of its own after it.
+/// B5 E5: whether `event` sends the card `id` toward a graveyard (its landing is reported after it).
 fn sends_toward_graveyard(event: &GameEvent, id: &str) -> bool {
     matches!(
         event,
@@ -315,8 +293,8 @@ fn sends_toward_graveyard(event: &GameEvent, id: &str) -> bool {
     )
 }
 
-/// B5 E5: whether `event` reports where a move toward a graveyard landed the card `id` — its
-/// graveyard, or the exile or library bottom a replacement sent it to (`report_graveyard_landing`).
+/// B5 E5: whether `event` reports where such a move landed `id`: its graveyard, or the exile or
+/// library bottom a replacement sent it to.
 fn is_landing_report(event: &GameEvent, id: &str) -> bool {
     matches!(
         event,
@@ -327,12 +305,10 @@ fn is_landing_report(event: &GameEvent, id: &str) -> bool {
     )
 }
 
-/// R212, R862: whether the card `id`, which `event` itself sent toward a graveyard, still stands
-/// where that move landed it, read off `later`, the events after `event`. The report of where it
-/// landed (B5 E5) is that same move, not a later one, so the card is on the stay `event` began and
-/// answers `event` from there — Meditative #22.1's discard clause answers its own `discarded` from
-/// the graveyard (R862) — unless something moved it again after the landing. `false` whenever
-/// `event` did not move the card toward a graveyard: `moves_in`'s answer then stands as it is.
+/// R212, R862: whether the card `id`, which `event` itself sent toward a graveyard, still stands where
+/// that move landed it, read off `later`. The landing's report (B5 E5) is that same move, so the card
+/// answers `event` from there (Meditative #22.1's discard clause answers its own `discarded`) unless it
+/// moved again. `false` when `event` sent it nowhere toward a graveyard: `moves_in`'s answer stands.
 pub fn stands_where_it_landed(
     event: &GameEvent,
     later: &[GameEvent],
@@ -360,9 +336,7 @@ pub fn stands_where_it_landed(
 }
 
 /// R212: read the events that followed an event, oldest first. With `state`, a card that resumed as a
-/// Stack pile's top because a card the events report leaving it (`uncovered_by`) counts as moved too:
-/// it was dormant when the event happened, registering nothing (§3.2, R153), and it comes back into
-/// play the way a Reborn body does.
+/// Stack pile's top (`uncovered_by`) counts as moved too: it was dormant then (§3.2, R153).
 pub fn moves_in<'a>(
     events: impl IntoIterator<Item = &'a GameEvent>,
     state: Option<&GameState>,

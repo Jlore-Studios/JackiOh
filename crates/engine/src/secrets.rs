@@ -1,10 +1,7 @@
-//! ME-SECRET's record and its reads (Meditative MB05, R860–R865; docs/meditative-set.md, group
-//! A's Systems, ME-SECRET): Mind Games files its declared mode as a secret record on the caster
-//! (`state.secrets { id, owner, choice, revealed }`), and a Fortify Mind's guess is judged against
-//! it as rock, paper, scissors.
-//!
-//! The choice reaches only its owner's view (`secret_views`, R860); the AI's `redact` drops it and
-//! `determinize` samples it (R865). Nothing here mutates state: the verbs that write it live in
+//! ME-SECRET (Meditative MB05, R860–R865; docs/meditative-set.md): Mind Games files its
+//! declared mode as a secret record on the caster, and a Fortify Mind's guess is judged against
+//! it as rock, paper, scissors. The choice reaches only its owner's view (`secret_views`, R860);
+//! the AI's `redact` drops it and `determinize` samples it (R865). The verbs that write it live in
 //! `effects::secret`.
 
 use crate::play_steps;
@@ -45,7 +42,7 @@ pub fn plays_secretly(state: &GameState, def_id: &str) -> bool {
 }
 
 /// R865: blank the modes of an in-flight play of a `secret_modes` card the resume's seat may not
-/// read — the other seat's play, and its Echo repeat's fresh picks. Anything else is left alone.
+/// read — the other seat's play, and its Echo repeat's fresh picks.
 pub fn scrub_secret_modes(state: &GameState, resume: &mut Resume, seat: PlayerId) {
     let Some(mut run) = play_steps::run_of(resume) else {
         return;

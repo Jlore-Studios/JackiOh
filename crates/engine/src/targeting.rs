@@ -1,17 +1,12 @@
-//! Who may be targeted, and what targeting costs (docs/classic-sets.md B5 E5, E35; R450): the pure
-//! reads the declarations (`play_choices::legal_selections_for`), the target prompts
-//! (`targeting_point.rs`) and the attack's interception (§4.2 step 2) all ask, so a picker's greyed-out
-//! option and the reducer's refusal are one rule (§10.2).
+//! Who may be targeted, and what targeting costs (docs/classic-sets.md B5 E5, E35; R450): the pure reads
+//! the declarations, the target prompts and the attack's interception (§4.2 step 2) all ask, so a
+//! picker's greyed-out option and the reducer's refusal are one rule (§10.2).
 //!
-//! "Targeting" is choosing (R450): a play's, a cast's or an activation's declared target of kind
-//! `target`, and a `target` prompt's answer. Random picks and "all" effects target nothing, and neither
-//! does a Tribute, a hand pick or a zone pick. What it reaches is a card acting on the field — the
-//! text that makes a card harder to target (Classic #89) or answers its targeting (Classic #33, from a
-//! hand) is read from there.
+//! "Targeting" is choosing (R450): a declared target of kind `target`, and a `target` prompt's answer.
+//! Random picks, "all" effects, a Tribute, a hand pick and a zone pick target nothing.
 //!
 //! A card's script is looked up through the state (`scripts::script_of` composes a fused card's on
-//! lookup, SURFACE §6.6), so `interposes_from_hand` and the source check (R651) take the state too
-//! (SURFACE §4).
+//! lookup, SURFACE §6.6), so these reads take the state too (SURFACE §4).
 
 use crate::script::{HookArgs, ReplacementMoment, ReplacementWhere, Script, TargetedReplacement};
 use crate::state::{CardInstance, EngineError, GameState, find_instance};
@@ -43,11 +38,9 @@ fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str, radiant: bo
         .fold(0, i32::max)
 }
 
-/// B5 E5, Classic #89: how many cards a player must also discard to target this card now — its
-/// `targetingDiscards`, while it acts on the field. A Vanilla card has no text (§6.3, R115), and a
-/// face-down one's sleeps (R1487000).
+/// B5 E5, Classic #89: how many cards a player must also discard to target this card now, while it acts
+/// on the field. A Vanilla card has no text (§6.3, R115), and a face-down one's sleeps (R1487000).
 pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
-    // R1487000: a face-down card's text sleeps until it is revealed or face-up.
     if card.vanilla
         || !crate::zones::acts_on_field(state, card)
         || crate::preview::lasting_text_dormant(state, card)
@@ -55,8 +48,7 @@ pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
         return 0;
     }
     // R102, R1850000, R2271001: the text the card runs sets the cost: a copier's is the text it
-    // copied, so a copy of a fused card takes the stricter of its ingredients' costs, and a fused
-    // copier the cost of the text it copied.
+    // copied, so a copy of a fused card takes the stricter of its ingredients' costs.
     let (text_def_id, text_radiant) = crate::subsystems::unit_text::text_def_of(card);
     if crate::catalog::fused_id_parts(Some(state), text_def_id).is_some() {
         return fused_cost(state, card, text_def_id, text_radiant);
@@ -64,9 +56,8 @@ pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
     face_cost(&crate::scripts::script_of(state, card), state, card)
 }
 
-/// R450: whether `chooser` could pay to target `card`: at least its cost in OTHER cards in their hand —
-/// `leaving` is the card a play is taking out of that hand, which cannot pay for its own target. It
-/// binds both players, the card's own controller included.
+/// R450: whether `chooser` holds `card`'s targeting cost in cards other than `leaving` (the card a play
+/// is taking out of that hand). It binds both players, the card's own controller included.
 pub fn can_pay_to_target(
     state: &GameState,
     chooser: PlayerId,
@@ -85,8 +76,7 @@ pub fn can_pay_to_target(
     others >= cost
 }
 
-/// R450, E35: whether `source`'s targeting may pick `candidate` at all — a Spell never picks a card
-/// Immune to Spells, and nobody picks a card whose targeting cost they cannot pay.
+/// R450, E35: whether `source`'s targeting may pick `candidate` at all.
 pub fn may_target(
     state: &GameState,
     chooser: PlayerId,
@@ -100,7 +90,7 @@ pub fn may_target(
     can_pay_to_target(state, chooser, candidate, leaving)
 }
 
-/// The card's "targeted" replacements that answer from a hand (`{ on: "targeted", where: "hand" }`).
+/// The card's "targeted" replacements that answer from a hand.
 fn hand_interpositions(state: &GameState, card: &CardInstance) -> Vec<TargetedReplacement> {
     crate::scripts::script_of(state, card)
         .replacements
@@ -113,8 +103,7 @@ fn hand_interpositions(state: &GameState, card: &CardInstance) -> Vec<TargetedRe
 }
 
 /// Classic #33 Joro, R450: whether a card answers the targeting of a friendly unit from its owner's
-/// hand — its script declares the replacement `{ on: "targeted", where: "hand" }` (`Script.replacements`),
-/// the one declaration the attack half (§4.2 step 2) reads too. A Vanilla card has no text.
+/// hand, the one declaration the attack half (§4.2 step 2) reads too.
 pub fn interposes_from_hand(state: &GameState, card: &CardInstance) -> bool {
     !hand_interpositions(state, card).is_empty()
 }
@@ -127,10 +116,9 @@ fn answers_source(state: &GameState, card: &CardInstance, source: Option<CardTyp
         .any(|def| def.by.is_none() || source == Some(CardType::Spell))
 }
 
-/// Classic #33 Joro, R450: the card that answers `chooser` targeting `targeted` — the first card in
-/// the targeted unit's controller's hand that `interposes_from_hand` and answers this source (R651),
-/// when the targeted card is a unit of the chooser's opponent acting on the field and that player
-/// has an open unit zone to summon it into (with none, nothing happens). Null when nothing answers.
+/// Classic #33 Joro, R450: the card that answers `chooser` targeting `targeted`: the first in its
+/// controller's hand that interposes and answers this source (R651), when `targeted` is the opponent's
+/// unit acting on the field and they have an open unit zone to summon it into.
 pub fn interceptor_for<'a>(
     state: &'a GameState,
     chooser: PlayerId,
@@ -152,8 +140,7 @@ pub fn interceptor_for<'a>(
         .find(|card| interposes_from_hand(state, card) && answers_source(state, card, source))
 }
 
-/// R450: how many cards `picks` cost their chooser to target — each targeting pick naming a card with a
-/// targeting cost adds that card's count (a card named twice is targeted twice).
+/// R450: how many cards `picks` cost their chooser to target (a card named twice is targeted twice).
 pub fn targeting_discards_for(
     state: &GameState,
     picks: &[Selection],
@@ -177,9 +164,8 @@ pub fn targeting_discards_for(
 }
 
 /// R450, R682: whether the player can pay `required` targeting discards: that many cards held outside
-/// `keep` (the card a play is taking out of that hand, §10.5 step 1, and any hand card the same play
-/// picks); `Err` is the refusal text (SURFACE §4.4.9). The discards are random at pay time (R682: a discard is its
-/// player's choice only when the card says "of your choice"), so no paying sets are enumerated.
+/// `keep` (the card a play is taking out of that hand, §10.5 step 1, and any hand card it picks); `Err`
+/// is the refusal text (SURFACE §4.4.9). The discards are random at pay time, so no sets are enumerated.
 pub fn why_targeting_discards_unpayable(
     state: &GameState,
     player: PlayerId,
@@ -205,7 +191,6 @@ pub fn why_targeting_discards_unpayable(
 }
 
 /// R656: whether a target declaration aims to help ("help") or harm ("harm").
-/// Defaults to "harm".
 pub fn target_aim(decl: &TargetDecl) -> TargetAim {
     decl.aim.unwrap_or(TargetAim::Harm)
 }

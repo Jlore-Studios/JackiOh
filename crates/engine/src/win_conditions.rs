@@ -1,11 +1,9 @@
-//! Alternative win conditions (SPEC §2.5, ME-WIN, R848–R850): what a held win reads, whether one
-//! holds, the badge caption with its progress, and the game-end point of the state check. Since issue
-//! #1843 also the vote tally that removes a player (R1843000, R1843001) and fleeing (R1843002).
+//! Alternative win conditions (SPEC §2.5, ME-WIN, R848–R850) and the state check's game-end point; also
+//! the vote tally that removes a player (#1843, R1843000, R1843001) and fleeing (R1843002).
 //!
-//! Meditative #8's Ascent 10 and #20's chosen conditions are the first held wins. The check runs
-//! where `hero_check` does once the board has settled: a hero at 0 loses first, a player whose vote
-//! tally is full is then removed, a held win then wins, and two winners draw. Fleeing is a held win
-//! that ends the game only as the player's one claim: a fleer who also holds another win wins by it.
+//! The check runs where `hero_check` does once the board has settled (Meditative #8's Ascent 10, #20's
+//! chosen conditions): a hero at 0 loses first, a full vote tally then removes its player, a held win
+//! then wins, and two winners draw. A fleer who also holds another win wins by it.
 
 use crate::config::VOTE_TALLY_SIZE;
 use crate::game_over::end_game;
@@ -34,9 +32,8 @@ pub fn condition_met(
     }
 }
 
-/// R849: the board condition's two totals — attack and current health over acting Units
-/// (`active_units_of`: tops of piles and animated cards, dormant cards excluded, R13), read
-/// through the §10.4 layers.
+/// R849: the board condition's two totals, attack and current health over acting Units (dormant cards
+/// excluded, R13), read through the §10.4 layers.
 pub fn board_totals(state: &GameState, player: PlayerId) -> (i32, i32) {
     let mut attack = 0;
     let mut health = 0;
@@ -110,12 +107,10 @@ pub fn alt_win_label(
     }
 }
 
-/// R850: the state check's game-end point, after the hero check. R1843001: first the vote tallies
-/// (`vote_check`), since a removal is a loss and a loss is read before any held win. Then the held
-/// wins. No holder: nothing. Two holders: a draw, `Fled` when both fled and claim nothing else
-/// (R1843002), else `AltWin`. One holder: `WonByEffect` when their `win_game` flag is set, else
-/// `AltWin` when a kept condition is met, else their flight: `Fled`, or `FledDecisive` when they
-/// chose a loss for the other player, announced by `fled` before the `gameOver`.
+/// R850: the state check's game-end point, after the hero check. R1843001: the vote tallies first
+/// (`vote_check`), since a removal is a loss and a loss is read before any held win. Two holders draw,
+/// `Fled` when both fled and claim nothing else (R1843002), else `AltWin`; a flight is announced by
+/// `fled` before the `gameOver`.
 pub fn win_check(sink: &mut EngineSink<'_>) -> bool {
     if vote_check(sink) {
         return true;
@@ -176,9 +171,8 @@ pub fn voted_out(state: &GameState, player: PlayerId) -> bool {
 }
 
 /// R1843000: one vote to remove `player`, by `ballot`'s card (`effects::vote_out`). A tally kept for
-/// an earlier turn starts again; a card whose definition has voted against them this turn already adds
-/// nothing and announces nothing; a counted vote announces the tally (`voteCast`). Once the game is
-/// over a vote counts nothing.
+/// an earlier turn starts again, and a card whose definition already voted against them this turn adds
+/// and announces nothing.
 pub fn cast_vote(sink: &mut EngineSink<'_>, player: PlayerId, ballot: Ballot) {
     if sink.state.result.is_some() {
         return;
@@ -208,9 +202,8 @@ pub fn cast_vote(sink: &mut EngineSink<'_>, player: PlayerId, ballot: Ballot) {
     });
 }
 
-/// R1843000, R1843001: the vote tallies at the game-end point. A player whose tally is full is removed:
-/// `votedOut` names the cards that agreed, and the game ends, the other player's win (`VotedOut`), or
-/// a draw when both tallies are full (`BothVotedOut`).
+/// R1843000, R1843001: the vote tallies at the game-end point: a player whose tally is full is removed,
+/// the other player's win, or a draw when both tallies are full.
 fn vote_check(sink: &mut EngineSink<'_>) -> bool {
     let out: Vec<PlayerId> = PLAYER_IDS
         .into_iter()

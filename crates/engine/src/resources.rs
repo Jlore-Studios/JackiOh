@@ -2,19 +2,12 @@
 //! docs/stinkyscape-set.md ST3, ST5).
 //!
 //! A Resource is a (0) Spell token whose definition carries `resource` (`CardDef.resource`): its
-//! rarity and its prices. Since #2250 it is a hand card like any other (R2250000): a gain adds it to its
-//! gainer's hand, taking a slot, and a full hand burns it (R4); it is played from the hand, and played
-//! or discarded from there it pays its player Credits, its quote (R2250001). The Resource tray it once
-//! went to is gone.
-//!
-//! "Gain a random Resource" rolls `RESOURCE_RARITY_ODDS` over the rarities its pool holds, then picks
-//! uniformly among the Resources of the rarity rolled (R1840002). The pool is every Resource in the
-//! catalog, or the ids a card names ("only gives Narcor and Red Narcor").
+//! rarity and its prices. It is a hand card like any other (R2250000), and played or discarded from the
+//! hand it pays its player Credits, its quote (R2250001).
 //!
 //! Credits (`PlayerState.market_credits`) are a public count per player, absent until first gained
-//! (R1840005), and named apart from Jlarna's credit line (R1223), and spent at the Marketplace
-//! (`marketplace.rs`, #1853), which the first Resource or Credits either player gains opens
-//! (R1853000); while it is open a Resource's Credits are its quote (R1853002). The verbs a card script
+//! (R1840005), named apart from Jlarna's credit line (R1223), and spent at the Marketplace (#1853),
+//! which the first Resource or Credits either player gains opens (R1853000). The verbs a card script
 //! composes are `effects::tray`'s; this module is the rule they share.
 
 use crate::catalog::{find_def, registered_catalog};
@@ -43,10 +36,9 @@ fn resource_rarity(state: &GameState, def_id: &str) -> Option<PrintedRarity> {
         .map(|resource| resource.rarity)
 }
 
-/// R1840002: one random Resource's id. The candidates are the catalog's Resources, only those `pool`
-/// names when it names some; the roll is `RESOURCE_RARITY_ODDS` over the rarities the candidates hold
-/// (one draw over their weights' sum, walked in the table's order, as `catalog::roll_weighted` walks
-/// its table), then one Resource of that rarity, uniformly. With no candidate, `None` and no draw.
+/// R1840002: one random Resource's id, of the catalog's or only those `pool` names: the odds over the
+/// rarities they hold (one draw, walked in the table's order as `catalog::roll_weighted` walks its),
+/// then one of that rarity, uniformly. With no candidate, `None` and no draw.
 pub fn roll_resource(state: &GameState, rng: &mut Rng, pool: Option<&[String]>) -> Option<String> {
     let candidates: Vec<(String, PrintedRarity)> = resource_def_ids()
         .into_iter()
@@ -84,9 +76,8 @@ pub fn draw_sell_price(rng: &mut Rng, price: ResourcePrice) -> i32 {
     price.sell_min + rng.int(price.sell_max.max(price.sell_min) - price.sell_min + 1)
 }
 
-/// R1840001, R2250001: what a Resource fetches now: while the Marketplace is open, its quote this turn
-/// with no draw (R1853002); otherwise a whole number drawn uniformly in its face's sell range, the
-/// Radiant face's for a Radiant Resource. 0 for a card that is no Resource, with no draw.
+/// R1840001, R2250001: what a Resource fetches now: its quote this turn while the Marketplace is open,
+/// with no draw (R1853002); otherwise a draw in its face's sell range. 0, with no draw, for no Resource.
 pub fn sell_price(state: &GameState, rng: &mut Rng, card: &CardInstance) -> i32 {
     if let Some(quote) = crate::marketplace::sell_quote(state, card) {
         return quote;
@@ -102,9 +93,8 @@ pub fn sell_price(state: &GameState, rng: &mut Rng, card: &CardInstance) -> i32 
     draw_sell_price(rng, price)
 }
 
-/// R1840005: raise `player`'s Credits by `amount` and report the new count with the public
-/// `marketCreditsChanged`. A gain of 0 or less changes and reports nothing, so Credits stay absent
-/// until first gained; a first gain opens the Marketplace (R1853000).
+/// R1840005: raise `player`'s Credits by `amount`, reported by the public `marketCreditsChanged`. A gain
+/// of 0 or less changes and reports nothing, so Credits stay absent until first gained.
 pub fn add_market_credits(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32) {
     if amount <= 0 {
         return;
@@ -116,8 +106,7 @@ pub fn add_market_credits(sink: &mut EngineSink<'_>, player: PlayerId, amount: i
         .push(GameEvent::MarketCreditsChanged { player, value });
 }
 
-/// R1853003: `player`'s Credits fall by `amount`, a price the Marketplace refused unless they held it,
-/// and the public `marketCreditsChanged` reports the new count.
+/// R1853003: `player`'s Credits fall by `amount`, a price the Marketplace refused unless they held it.
 pub fn spend_market_credits(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32) {
     let value = sink.state.players[player].market_credits.unwrap_or(0) - amount;
     sink.state.players[player].market_credits = Some(value);
@@ -125,10 +114,8 @@ pub fn spend_market_credits(sink: &mut EngineSink<'_>, player: PlayerId, amount:
         .push(GameEvent::MarketCreditsChanged { player, value });
 }
 
-/// R1840000, R2250000: `player` gains a fresh Resource of `def_id`, Radiant when `radiant` says so,
-/// opening the Marketplace first if it is closed (R1853000): it is added to their hand as any card is
-/// (`draw::add_to_hand`: `addedToHand`, hidden from the other player as a gain is, R97), and a full
-/// hand burns it (R4).
+/// R1840000, R2250000: `player` gains a fresh Resource of `def_id`, opening the Marketplace first, into
+/// their hand as any card is (hidden from the other player as a gain is, R97); a full hand burns it (R4).
 pub fn gain_resource(sink: &mut EngineSink<'_>, player: PlayerId, def_id: &str, radiant: bool) {
     crate::marketplace::open_marketplace(sink);
     let mut card = new_instance(&mut *sink.state, def_id, player, Zone::Hand { player });
@@ -142,8 +129,7 @@ pub fn is_resource_card(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R2250001: a Resource `player` played or discarded from their hand pays them its Credits
-/// (`sell_price`, its quote while the Marketplace is open), reported by `marketCreditsChanged`. A card
-/// that is no Resource pays nothing and draws nothing.
+/// (`sell_price`). A card that is no Resource pays nothing and draws nothing.
 pub fn pay_resource_credits(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInstance) {
     if !is_resource_card(sink.state, card) {
         return;

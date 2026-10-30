@@ -1,4 +1,4 @@
-//! The other integration-test binary for the ported engine tests: the modules of `rules/` from `p`
+//! The other integration-test binary for the engine's rule tests: the modules of `rules/` from `p`
 //! on (`rules/mod_2.rs`; `tests/rules.rs` has the rest, #2090). The module is `rules` here too, so
 //! a test's path, `rules::<x>::…`, is the same in either binary.
 //!

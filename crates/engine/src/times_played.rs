@@ -1,14 +1,10 @@
-//! R429: how many times a card has been played (SPEC §10.1, §10.5 step 4), for the one Core card that
-//! counts its own plays, #31 KY's Math Equation — "Deal Fib(times played + 1) damage".
+//! R429: how many times a card has been played (SPEC §10.1, §10.5 step 4), for #31 KY's Math
+//! Equation ("Deal Fib(times played + 1) damage").
 //!
-//! The count lives on the instance, like `costMod`, so it rides the card through every zone and
-//! through leaving the field (R78 leaves it alone), and a copy or a Transform — a new instance — starts
-//! its own (R57). It is written in one place, §10.5 step 4, where every play is counted (the turn log,
-//! the game's `played` counter): a cast is a play there too (R70), and a countered play never reaches
-//! that step, so it is never counted. Only a card whose script sets `StaticFlags.countsPlays` carries
-//! the field at all, so a game without one hashes as it did before the field existed.
-//!
-//! Port of `packages/engine/src/timesPlayed.ts`.
+//! The count lives on the instance, so it rides the card through every zone and off the field (R78
+//! leaves it alone), and a copy or a Transform, a new instance, starts its own (R57). Only §10.5 step
+//! 4 counts a play: a cast is one there too (R70), and a countered play never reaches it. Only a card
+//! whose script sets `counts_plays` carries the field, so a game without one never serializes it.
 
 use crate::state::{CardInstance, GameState, find_instance_mut};
 
@@ -20,10 +16,8 @@ pub fn times_played_of(card: &CardInstance) -> i32 {
     }
 }
 
-/// R429, §10.5 step 4: one more play of this card, when its script counts them.
-///
-/// TS wrote through the live card; here `card` is the card as the caller holds it (its flags are
-/// read off it) and the count is written on the instance of that id in `state`.
+/// R429, §10.5 step 4: one more play of this card, when its script counts them. Its flags are
+/// read off `card` as the caller holds it; the count goes on the live instance of that id.
 pub fn count_play(state: &mut GameState, card: &CardInstance) {
     if crate::scripts::script_of(state, card).flags().counts_plays != Some(true) {
         return;

@@ -6,14 +6,10 @@
 //! check `s` (`hash_state`, §5.2), `v` (both seats' `view_for`) and `e` (the events), each an FNV-1a 32
 //! of the canonical JSON over its UTF-16 code units; last, the ending and length must be `end`.
 //!
-//! A game's first mismatch names the seed, step, hash and action, writes the Rust side's canonical text
-//! to `target/golden-diff/<seed>-<step>-<which>.json` and prints the command that writes the recorded
-//! side's. Every game is replayed, so fix the earliest divergent seed and step first. The games are
-//! split over GOLDEN_SHARDS tests to run on many threads (the engine's `clippy.toml` bans spawning one).
-//! Never edit a trace by hand; `cargo jackioh golden bless` rewrites the file from the Rust engine.
-//!
-//! The replay is `jackioh_engine::testkit::golden::replay_game`, which `cargo jackioh golden check` runs too
-//! (#1641); this file keeps the I/O, the sharding and the hotseat anchors.
+//! The games are split over GOLDEN_SHARDS tests to run on many threads (the engine's `clippy.toml` bans
+//! spawning one). Never edit a trace by hand; `cargo jackioh golden bless` rewrites the file from the
+//! Rust engine. The replay is `testkit::golden::replay_game`, which `cargo jackioh golden check` runs
+//! too (#1641).
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -56,8 +52,8 @@ fn write_diff(mismatch: &mut Mismatch) {
     mismatch.diff = Some(written);
 }
 
-/// Replays one line of `games.jsonl` with `golden::replay_game` (§13.3) and writes the Rust side of its first
-/// mismatch. `Ok` carries the number of steps replayed.
+/// Replays one line of `games.jsonl` (§13.3) and writes the Rust side of its first mismatch. `Ok`
+/// carries the number of steps replayed.
 fn replay_line(index: usize, line: &str) -> Result<usize, Box<Mismatch>> {
     let game: Value = serde_json::from_str(line)
         .unwrap_or_else(|error| panic!("games.jsonl line {}: not JSON: {error}", index + 1));
@@ -175,22 +171,18 @@ mod a_doctored_trace {
     }
 }
 
-/// R1846003, R2173000: the build's own games read the build's lists, and a game that plays neither
-/// reader (Stinkyscape #109 xxFreshJack and #111 Shockwave447, the only cards that ask for a BUSTED or
-/// complicated pool, R1846001), from its deck or made by a random effect, replays to its recorded
-/// hashes whatever the lists hold: every card in both, or none. One shard's games under each, on this
-/// thread's override of the compiled metrics.
-/// The games that play a reader are the build's version's, and replay under its own lists in the
-/// shards above; a carried version's fold reads its own (`card_metrics`, R2173000).
+/// R1846003, R2173000: a game that plays neither reader (Stinkyscape #109 xxFreshJack and #111
+/// Shockwave447, the only cards that ask for a BUSTED or complicated pool, R1846001), from its deck or
+/// made by a random effect, replays to its recorded hashes whatever the lists hold: every card in both,
+/// or none. One shard's games under each; the games that play a reader replay in the shards above.
 mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
     use super::*;
     use jackioh_engine::testkit::golden::events_text;
     use jackioh_engine::testkit::{clear_overrides, register_code_lines};
     use jackioh_engine::{CreateGameArgs, begin_game, create_recorded_game, reduce};
 
-    /// The cards that read the lists (R1846001), as `jackioh_cards::code_lines::reads_card_lists`
-    /// finds them in their scripts: the cards build's `LIST_READERS`, each quoted as a game's line
-    /// names it.
+    /// The cards that read the lists (R1846001), the cards build's `LIST_READERS`, each quoted as a
+    /// game's line names it.
     fn readers() -> Vec<String> {
         jackioh_cards::LIST_READERS
             .iter()
@@ -198,9 +190,8 @@ mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
             .collect()
     }
 
-    /// Whether any event of the game, replayed under the build's own lists, names a reader: one its
-    /// deck holds, or one a random effect makes mid-game (a random Legendary, a Discover), which the
-    /// line's text never names.
+    /// Whether any event of the game names a reader, one a random effect makes mid-game included,
+    /// which the line's text never names.
     fn names_a_reader(line: &str, readers: &[String]) -> bool {
         let game: Value = serde_json::from_str(line).expect("a golden line");
         let args: CreateGameArgs =
@@ -260,11 +251,10 @@ mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
     }
 }
 
-/// One test per shard of the games, numbered 0.. in order; `GOLDEN_SHARDS` is how many there are.
+/// One test per shard of the games, numbered 0.. in order.
 macro_rules! golden_shards {
     ($($name:ident = $shard:expr),* $(,)?) => {
-        /// How many tests the games are split over: game `i` is replayed by shard `i % GOLDEN_SHARDS`,
-        /// and the test harness runs the shards on as many threads.
+        /// How many tests the games are split over: game `i` is replayed by shard `i % GOLDEN_SHARDS`.
         const GOLDEN_SHARDS: usize = [$($shard),*].len();
 
         mod replays_the_golden_traces {
@@ -294,12 +284,10 @@ golden_shards!(
     shard_11 = 11,
 );
 
-// The recorded hotseat game: spec 01 asserts the browser's own hash equals a fold of this log, and
-// this file folds it with the real `reduce`, catalog and card scripts. It lives in the engine's tests,
-// which take `jackioh-cards` as a dev-dependency (§2), because a fold without the scripts registered
-// fizzles every Cry. The log is committed (`e2e/artifacts/` is gitignored, CI never runs Cypress), so
-// the fold always runs; the last test compares it with a local Cypress recording when there is one.
-// `HOTSEAT_HASH` is a literal: a fold compared with a fold would move together and prove nothing.
+// The recorded hotseat game: spec 01 asserts the browser's own hash equals a fold of this log, which
+// this file folds with the real catalog and card scripts (a dev-dependency, §2): without them every Cry
+// fizzles. The log is committed (`e2e/artifacts/` is gitignored), so the fold always runs. `HOTSEAT_HASH`
+// is a literal: a fold compared with a fold would move together and prove nothing.
 
 /// The recording, as `e2e/support/tasks/replay.ts` writes it: `{ seed, decks, log }`.
 #[derive(Deserialize)]
@@ -309,7 +297,7 @@ struct Recording {
     log: Vec<Action>,
 }
 
-/// The committed recording, compiled into the testkit (§3: data reaches a pure crate with `include_str!`).
+/// The committed recording, compiled into the testkit (§3: data reaches a pure crate by `include_str!`).
 const COMMITTED: &str = HOTSEAT;
 const COMMITTED_PATH: &str = "crates/engine/tests/golden/01-hotseat-full-game.json";
 
@@ -352,20 +340,17 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
 
     #[test]
     fn folds_the_browsers_own_seed_decks_log_to_the_recorded_final_state_hash() {
-        // The catalog and the card scripts, exactly as the web client registers them before the
-        // browser's first `reduce`. Without them the Crys fizzle and the hash moves.
+        // The catalog and card scripts, as the web client registers them before its first `reduce`.
         register_all();
         let recording = recording();
 
         // Every recorded action is legal against a fold from scratch, and the fold hashes to
-        // `golden::HOTSEAT_HASH`: `golden check`'s own check. A rejection would mean the log and the
-        // engine have parted company, and the hash would be a hash of a shorter game.
+        // `HOTSEAT_HASH` (`golden check`'s own check); a rejection would make it a shorter game's hash.
         assert_eq!(check_hotseat(), Ok(HOTSEAT_HASH.to_string()));
 
         let replayed = fold_recording(&recording.seed, &recording.decks, &recording.log);
 
-        // Anchors that say what that hash IS, so a future diff reads as a rules change and not as an
-        // unexplained number: the game is over, p1 won by hero death, and p2's hero is dead.
+        // Anchors saying what that hash IS, so a future diff reads as a rules change, not a bare number.
         assert_eq!(replayed.state.result, Some(EXPECTED_RESULT));
         assert_eq!(replayed.state.phase, Phase::Over);
         assert!(replayed.state.players.p2.hero.health <= 0);
@@ -374,8 +359,7 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
 
     #[test]
     fn is_a_fold_of_the_whole_log_one_action_fewer_is_a_different_hash() {
-        // The point of this one is that the assertion above cannot pass by accident. If `fold` ignored
-        // the log, or the hash ignored the state, these two would agree.
+        // If `fold` ignored the log, or the hash ignored the state, these two would agree.
         register_all();
         let recording = recording();
         let short = fold_recording(
@@ -442,9 +426,8 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
     fn matches_the_last_browser_recording_when_a_local_cypress_run_has_left_one() {
         let recorded = match std::fs::read_to_string(RECORDED) {
             Ok(text) => text,
-            // `e2e/artifacts/` is gitignored: on CI and on a checkout where Cypress has not run, there
-            // is nothing to compare. The fold above has already run against the committed copy, so
-            // nothing is being skipped here except a comparison with a file that does not exist.
+            // `e2e/artifacts/` is gitignored: with no Cypress run there is nothing to compare, and the
+            // fold above has already run against the committed copy.
             Err(_) => return,
         };
 
@@ -461,11 +444,9 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
 }
 
 // R781000: Magnetic is now Equip. A log recorded before the rename spells the play's flag `magnetic`
-// (golden seed 43's log as re-blessed for R1156000, its Equip flag spelled `magnetic` as logs before the
-// rename spell it, its Sentient Cat Ears played onto a Unit at step 7), and it reads as `equip`: the old
-// log and the same log renamed fold to one state, the old-name play accepted. Since Player 1 opens on
-// three cards again (R2368000) the log holds its first nine actions, p1's mulligan keeping c20 alone, its
-// fourth card c10 now a replacement, so every action folds.
+// (golden seed 43's log as re-blessed for R1156000, its Sentient Cat Ears played onto a Unit at step 7)
+// and it reads as `equip`. It holds its first nine actions, p1 opening on three cards (R2368000) and its
+// mulligan keeping c20 alone, so every action folds.
 const PRE_EQUIP_LOG: &str = include_str!("golden/pre-equip-log.json");
 
 mod r781000_a_log_recorded_before_the_equip_rename_still_folds {

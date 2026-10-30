@@ -1,10 +1,8 @@
 //! ME-RANDOMTARGETS (Meditative #86 Mayor Medinamogger): while a Mayor acts on the field,
 //! both players' declared targets, `target` prompts and attack targets are drawn at random from
 //! the legal ones (R1200; MD-E9). The Radiant face's Lucky 1 rolls its controller's draws again
-//! and keeps the better (R1201; MD-E10).
-//!
-//! Every draw goes through the match rng, so a replay draws the same targets, and luck 0 draws
-//! exactly once, so a game with no Lucky Mayor in it replays byte for byte as before (D14).
+//! and keeps the better (R1201; MD-E10). Luck 0 draws exactly once, so a game with no Lucky
+//! Mayor in it replays byte for byte (D14).
 
 use crate::combat::AttackTarget;
 use crate::damage::DamageTarget;
@@ -76,10 +74,9 @@ pub fn draw_picks(
     )
 }
 
-/// R1201: how an attack target ranks for `attacker` — first one whose strike back the attacker
-/// survives, then one the attacker destroys (MD-E10's order after the aim's side, which every
-/// legal attack target already is: an enemy). A Duos hero is destroyed only once its own HP and
-/// its team's pool are both gone (R1168003).
+/// R1201: how an attack target ranks for `attacker`: first one whose strike back it survives,
+/// then one it destroys (MD-E10's order after the aim's side, which every attack target is). A
+/// Duos hero is destroyed only once its own HP and its team's pool are both gone (R1168003).
 fn attack_score(
     state: &GameState,
     attacker: &crate::state::CardInstance,
@@ -100,11 +97,9 @@ fn attack_score(
     }
 }
 
-/// R1200, R1201: draw an attack's target from the ones the attacker may legally attack (§4.2
-/// steps 2 and 3: Taunt, lane restrictions, Rush on its arrival turn — `attack_targets` already
-/// holds them). An empty list returns `None` and draws nothing (R129: a fizzle takes no
-/// randomness). The chooser's Lucky rolls again, ranking by stats alone: surviving the strike
-/// back first, then destroying.
+/// R1200, R1201: draw an attack's target from the legal ones (`attack_targets`, §4.2 steps
+/// 2 and 3). An empty list draws nothing (R129: a fizzle takes no randomness). The chooser's
+/// Lucky rolls again, ranking by stats alone: surviving the strike back first, then destroying.
 pub fn draw_attack_target(
     state: &GameState,
     rng: &mut Rng,
