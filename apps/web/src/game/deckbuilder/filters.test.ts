@@ -8,10 +8,12 @@
 
 import type { CardCost, CardDef, CardFace, CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { CATALOG as CORE_CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS, setShips } from "@jackioh/shared";
+import { CHINESE, CHINESE_TERMS } from "../../cards/chinese.ts";
+import { resetLocaleForTests, setLocale } from "../../i18n/i18n.ts";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
 import {
@@ -614,6 +616,75 @@ describe("deckListOrder (B35)", () => {
 
   it("B35 an empty deck has no tiles", () => {
     expect(deckListOrder([], CATALOG)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R711000: the reader's language
+// ---------------------------------------------------------------------------------------------
+
+describe("R711000 the reader's language", () => {
+  afterEach(resetLocaleForTests);
+  const REAL: CatalogSnapshot = { version: "r711000-test", cards: CORE_CATALOG };
+  function real(id: string): CardDef {
+    const found = CORE_CATALOG[id];
+    if (found === undefined) throw new Error(`the catalog has no ${id}`);
+    return found;
+  }
+  const CN = (id: string): string => CHINESE[id]?.name ?? "";
+
+  it("R711000 under zh-CN a card's Chinese name finds it in the pool, the almanac and a filter, and its English name still does", async () => {
+    expect(searchMatches(real("core-002"), CN("core-002"))).toBe(false);
+    await setLocale("zh-CN");
+    expect(searchMatches(real("core-002"), CN("core-002"))).toBe(true);
+    expect(searchMatches(real("core-002"), "bigot")).toBe(true);
+    expect(matchesFilter(real("core-002"), filter({ search: CN("core-002") }))).toBe(true);
+    expect(almanacPool(REAL, filter({ search: CN("core-002") }), DEFAULT_SORT)).toContain("core-002");
+    expect(visiblePool(REAL, null, filter({ search: CN("core-002") }), DEFAULT_SORT)).toContain("core-002");
+    await setLocale("en");
+    expect(searchMatches(real("core-002"), CN("core-002"))).toBe(false);
+  });
+
+  it("R711000 under zh-CN the frame's words in Chinese find a card: tag, rarity, type and a keyword its text never names", async () => {
+    await setLocale("zh-CN");
+    expect(found(CHINESE_TERMS.tags.Felinor)).toEqual(["x-02"]);
+    expect(found(CHINESE_TERMS.rarities.Legendary)).toEqual(["x-05"]);
+    expect(found(CHINESE_TERMS.types["Field Trap"])).toEqual(["x-07"]);
+    expect(found(CHINESE_TERMS.keywords["Divine Shield"])).toEqual(["x-10"]);
+    await setLocale("en");
+    expect(found(CHINESE_TERMS.tags.Felinor)).toEqual([]);
+  });
+
+  it("R711000 under zh-CN each face's Chinese text finds the card", async () => {
+    await setLocale("zh-CN");
+    expect(searchMatches(real("core-002"), CHINESE["core-002"]?.base ?? "∅")).toBe(true);
+    expect(searchMatches(real("core-002"), CHINESE["core-002"]?.radiant ?? "∅")).toBe(true);
+  });
+
+  it("R711000 under zh-CN no catalog card's search reads a raw placeholder", async () => {
+    await setLocale("zh-CN");
+    for (const def of Object.values(CORE_CATALOG)) expect(searchMatches(def, "{"), def.id).toBe(false);
+  });
+
+  it("R711000 the name sort follows the Chinese names under zh-CN, and is today's under English", async () => {
+    const ids = ["core-002", "core-006", "core-007"];
+    const asc: PoolSort = { key: "name", dir: "asc" };
+    const desc: PoolSort = { key: "name", dir: "desc" };
+    expect(sortPool(ids, REAL, asc)).toEqual(["core-002", "core-007", "core-006"]);
+    await setLocale("zh-CN");
+    expect(sortPool(ids, REAL, asc)).toEqual(["core-007", "core-006", "core-002"]);
+    expect(sortPool(ids, REAL, desc)).toEqual(["core-002", "core-006", "core-007"]);
+    await setLocale("en");
+    expect(sortPool(ids, REAL, asc)).toEqual(["core-002", "core-007", "core-006"]);
+  });
+
+  it("R711000 the deck list orders a cost's cards by their Chinese names under zh-CN", async () => {
+    const draft = ["core-002", "core-011", "core-004", "core-007", "core-008"];
+    expect(deckListOrder(draft, REAL)).toEqual(["core-004", "core-007", "core-008", "core-011", "core-002"]);
+    await setLocale("zh-CN");
+    expect(deckListOrder(draft, REAL)).toEqual(["core-008", "core-007", "core-004", "core-011", "core-002"]);
+    await setLocale("en");
+    expect(deckListOrder(draft, REAL)).toEqual(["core-004", "core-007", "core-008", "core-011", "core-002"]);
   });
 });
 

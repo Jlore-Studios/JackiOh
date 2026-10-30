@@ -14,12 +14,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
 import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
+import { CHINESE } from "../cards/chinese.ts";
 import { resetCosmeticsForTests, writeCardPick } from "../cards/cosmetics.ts";
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { CARD_FLAVOUR } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { ALMANAC_CHIP_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
 import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import {
   CARD_POOL,
   DB_DETAIL_ADD,
@@ -81,6 +83,7 @@ afterEach(() => {
   closeInspect();
   cleanup();
   vi.unstubAllGlobals();
+  resetLocaleForTests();
   document.head.querySelector('link[rel="canonical"]')?.remove();
 });
 
@@ -331,6 +334,20 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     expect(screen.getByTestId(DB_SORT_DIR)).toHaveAttribute("data-dir", "desc");
     expect(shownIds()).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, { key: "name", dir: "desc" })]);
   });
+
+  it("R711000 under zh-CN the search finds a card by its Chinese name, live across a switch and back", async () => {
+    render(<AlmanacRoute />);
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: CHINESE["core-002"]?.name ?? "" } });
+    expect(shownIds()).toEqual([]);
+    await act(async () => {
+      await setLocale("zh-CN");
+    });
+    expect(shownIds()).toContain("core-002");
+    await act(async () => {
+      await setLocale("en");
+    });
+    expect(shownIds()).toEqual([]);
+  });
 });
 
 describe("R654 the almanac's card statistics block", SLOW_GRID, () => {
@@ -385,6 +402,9 @@ describe("R654 the almanac's card statistics block", SLOW_GRID, () => {
     render(<AlmanacRoute />);
     fireEvent.click(screen.getByTestId(poolCardId(unit.id)));
     const stats = await screen.findByTestId(INSPECT_STATS, undefined, SLOW);
+    // The block keeps its test id while the public aggregates load, so the first find resolves on
+    // the skeleton under load: wait for the read to land before asserting on its figures.
+    await waitFor(() => expect(screen.getByTestId(INSPECT_STATS)).toHaveTextContent("60%"), SLOW);
     expect(stats).toHaveTextContent("60%");
     // R661: the response still names its source, but the block never shows it.
     expect(stats.textContent).not.toContain("AI games + live games (provisional)");
