@@ -10,6 +10,7 @@
 //! defending (no `afterAttack` of its own) give nothing. The fresh exertion keeps its summoning sickness
 //! (`keepSick`, R2521002), unlike the Golem's: on its summon turn Rush lets it attack again a Unit only,
 //! the hero neither offered nor allowed (§6.1); on a later turn the extra attack may hit the hero.
+//! Through v0.5.10 the kill lifted its sickness, which `script_v0_5_10` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -18,9 +19,10 @@ pub const ID: &str = "stinkyscape-094";
 /// A hero target is `hero-<player>` in the combat's facts.
 const HERO_TARGET: &str = "hero-";
 
-pub fn script() -> CardScripts {
-    let base = Script {
-        after_attack: Some(hook(|ctx| {
+/// "After this destroys a Unit, it may attack again": `keep_sick` since issue #2521 (R2521002).
+fn tmack(keep_sick: bool) -> Script {
+    Script {
+        after_attack: Some(hook(move |ctx| {
             let Some(combat) = after_attack_of(ctx) else {
                 return Vec::new();
             };
@@ -31,11 +33,29 @@ pub fn script() -> CardScripts {
                 return Vec::new();
             }
             // R2521002: it may attack again, still summoning sick if it entered this turn.
-            vec![may_attack_again(json_as(json!({ "target": { "of": "self" }, "keepSick": true })))]
+            let mut args = json!({ "target": { "of": "self" } });
+            if keep_sick {
+                args["keepSick"] = json!(true);
+            }
+            vec![may_attack_again(json_as(args))]
         })),
         ..Script::default()
-    };
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = tmack(true);
     // The Radiant face adds Pierce, catalog data.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
+
+/// R767000: through v0.5.10 its kill lifted its summoning sickness, so its summon turn's extra attack
+/// could hit the hero; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_10() -> CardScripts {
+    let base = tmack(false);
     CardScripts {
         radiant: base.clone(),
         base,
@@ -48,7 +68,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use super::ID;
+    use super::{ID, script_v0_5_10};
 
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
     const VANILLA: &str = "core-008"; // (1) 4/4.
@@ -153,6 +173,20 @@ mod tests {
             assert!(offers(&s, &tmack, "hero-p2"));
             s.attack(&tmack, "hero");
             s.expect_health(P2, HERO_HEALTH - 9);
+        }
+
+        /// R767000: the script kept for the replays of v0.5.10 and before, whose kill lifted the sickness.
+        #[test]
+        fn r767000_a_game_on_v0_5_10_lets_its_summon_turn_kill_free_it_to_hit_the_hero() {
+            crate::under_kept(ID, script_v0_5_10(), || {
+                let mut s = in_hand(false);
+                s.play(ID, json!({ "zone": 1 }));
+                let tmack = s.unit_at(P1, 1);
+                s.attack(&tmack, s.unit_at(P2, 1));
+                assert!(offers(&s, &tmack, "hero-p2"));
+                s.attack(&tmack, "hero");
+                s.expect_health(P2, HERO_HEALTH - 9);
+            });
         }
 
         #[test]

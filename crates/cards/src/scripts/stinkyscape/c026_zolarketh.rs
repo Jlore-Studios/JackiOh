@@ -15,7 +15,8 @@
 //! one included (`run_activation`, R1876001). "At most once each turn": each run spends one of the
 //! University's own uses and a University with none left this turn is passed by (`spendUse`, R2521003),
 //! so one that used its own Activate, or that another ZolarKeth ran, runs no more this turn. The Radiant
-//! face does both in order, the piece Radiant.
+//! face does both in order, the piece Radiant. Through v0.5.10 its Cry summoned a Radiant University and
+//! its runs spent no use, which `script_v0_5_10` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -64,22 +65,22 @@ fn summon_piece(radiant: bool) -> Effect {
     })
 }
 
-/// R1876001, R2521003: each of your Universities runs its Activate, while it has a use left this turn,
-/// spending it.
-fn activate_universities() -> Effect {
+/// R1876001: each of your Universities runs its Activate; R2521003: with `spend`, only while it has a
+/// use left this turn, spending it.
+fn activate_universities(spend: bool) -> Effect {
     for_each_card(ForEachCardArgs {
         cards: Arc::new(your_universities),
-        each: Arc::new(|instance_id: &str| {
+        each: Arc::new(move |instance_id: &str| {
             run_activation(ActivationOfArgs {
                 instance_id: Some(instance_id.to_string()),
-                spend_use: Some(true),
+                spend_use: spend.then_some(true),
                 ..ActivationOfArgs::default()
             })
         }),
     })
 }
 
-fn ability(radiant: bool) -> ActivationDecl {
+fn ability(radiant: bool, current: bool) -> ActivationDecl {
     ActivationDecl {
         id: "command".to_string(),
         label: if radiant {
@@ -102,23 +103,30 @@ fn ability(radiant: bool) -> ActivationDecl {
         has: None,
         run: hook(move |ctx| {
             if radiant {
-                return vec![summon_piece(true), activate_universities()];
+                return vec![summon_piece(true), activate_universities(current)];
             }
             match ctx.modes.first().map(String::as_str) {
                 Some(PIECE) => vec![summon_piece(false)],
-                Some(UNIVERSITIES) => vec![activate_universities()],
+                Some(UNIVERSITIES) => vec![activate_universities(current)],
                 _ => vec![],
             }
         }),
     }
 }
 
-fn zolarketh(radiant: bool) -> Script {
+/// `current`: issue #2521's text (R2521003); `false` builds the scripts v0.5.10 ran.
+fn zolarketh(radiant: bool, current: bool) -> Script {
     Script {
-        // R2521003: the University is summoned on its base face from either face.
-        cry: Some(hook(|_ctx| {
+        cry: Some(hook(move |_ctx| {
+            // R2521003: the University is summoned on its base face from either face; through v0.5.10 on
+            // its Radiant face.
+            let university = if current {
+                json!({ "defId": UNIVERSITY })
+            } else {
+                json!({ "defId": UNIVERSITY, "radiant": true })
+            };
             vec![
-                summon(json_as(json!({ "defId": UNIVERSITY }))),
+                summon(json_as(university)),
                 for_each_card(ForEachCardArgs {
                     cards: Arc::new(summoned_universities),
                     each: Arc::new(|instance_id: &str| {
@@ -130,15 +138,24 @@ fn zolarketh(radiant: bool) -> Script {
                 }),
             ]
         })),
-        activations: vec![ability(radiant)],
+        activations: vec![ability(radiant, current)],
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: zolarketh(false),
-        radiant: zolarketh(true),
+        base: zolarketh(false, true),
+        radiant: zolarketh(true, true),
+    }
+}
+
+/// R767000: through v0.5.10 its Cry summoned a Radiant University and "Activate your Universities"
+/// spent none of their uses (R1876001); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_10() -> CardScripts {
+    CardScripts {
+        base: zolarketh(false, false),
+        radiant: zolarketh(true, false),
     }
 }
 
@@ -156,13 +173,15 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use super::{ID, PIECE, UNIVERSITIES, UNIVERSITY};
+    use super::{ID, PIECE, UNIVERSITIES, UNIVERSITY, script_v0_5_10};
     use crate::{filler, scenario};
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
     /// A base University's Buffs on each of its other permanents (M #97.6's `times`).
     const BASE_TIMES: usize = 2;
+    /// A Radiant University's.
+    const RADIANT_TIMES: usize = 4;
 
     /// p1 holds ZolarKeth (`radiant` its face) with 10 mana and has `field` on the field.
     fn board(radiant: bool, field: Value) -> Scenario {
@@ -324,5 +343,31 @@ mod tests {
         assert!(pieces[0].radiant);
         // The piece arrived first, so the University Buffs it too.
         assert_eq!(buffs(&s, &pieces[0]), BASE_TIMES);
+    }
+
+    /// R767000: the script kept for the replays of v0.5.10 and before: a Radiant University, and runs
+    /// that spend no use.
+    #[test]
+    fn r767000_a_game_on_v0_5_10_summons_a_radiant_university_and_spends_no_use() {
+        crate::under_kept(ID, script_v0_5_10(), || {
+            let mut s = board(false, json!([{ "def": VANILLA, "lane": 5 }]));
+            s.play(ID, json!({ "zone": 1 }));
+            assert!(university(&s).radiant);
+            s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
+            assert_eq!(buffs(&s, &s.unit_at(P1, 5)), RADIANT_TIMES);
+
+            let field = json!([
+                { "def": ID, "lane": 1 },
+                { "def": UNIVERSITY, "lane": 4 },
+                { "def": VANILLA, "lane": 5 },
+            ]);
+            let mut s = board(false, field);
+            let zolar = s.unit_at(P1, 1);
+            let free = s.unit_at(P1, 4);
+            s.activate(&zolar, json!({ "modes": [UNIVERSITIES] }));
+            // Its own use is still there to spend.
+            s.activate(&free, json!({}));
+            assert_eq!(buffs(&s, &s.unit_at(P1, 5)), BASE_TIMES);
+        });
     }
 }
