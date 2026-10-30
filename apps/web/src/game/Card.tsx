@@ -50,6 +50,12 @@
 // #2435: a card the burst has awakened (an `awakened` event in flight on it) wears `data-awakening`,
 // which breaks its Dormant seal until the board catches up (game/awakening.ts, R1839002, R1852003).
 //
+// #2437: a face-up card in a hand (`inHandOf`, either seat's) whose face gives it Temporary
+// `TEMPORARY_LAST_COUNT` (the view's count left, R637, R2179001) is discarded at its owner's next end
+// of turn, so it wears Allure's aura (R963, R1045000) in fuchsia, the aura alone, as #2270 draws
+// Brittle's last count; a mark of its own outranks it. Only a hand card's face carries the count
+// (faces.ts `inHand`), so the field, the resolving strip and the tray never wear it, and a back carries nothing.
+//
 // R2321000: a unit the view says a card on the field counts (`UnitView.tallies`, Level Up!'s attacks)
 // wears a pill per count, "▲ 2/3", named by the keeping card (cards/Tallies.tsx).
 //
@@ -97,9 +103,9 @@ import {
 import CardMarks from "../cards/CardMarks.tsx";
 import Tallies from "../cards/Tallies.tsx";
 import { OwnCopy } from "../cards/fullArt.ts";
-import { BRITTLE_LAST_COUNT } from "../cards/keywordVisuals.ts";
+import { BRITTLE_LAST_COUNT, TEMPORARY_LAST_COUNT } from "../cards/keywordVisuals.ts";
 import { TheirCopy } from "../cards/loadouts.ts";
-import { BRITTLE_LAST_COLOR, marksOf } from "../cards/marks.ts";
+import { BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR, marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
@@ -325,6 +331,7 @@ export default function Card(props: CardProps): ReactElement {
           ...(fieldPower === undefined ? {} : { fieldPower }),
           ...(copied === undefined ? {} : { copied }),
           ...(tallies.length === 0 ? {} : { tallies }),
+          ...(props.inHandOf === undefined ? {} : { inHand: true }),
         });
   // A face-up backrow card is drawn as the type its `BackrowView` names: the view is what the
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
@@ -487,6 +494,8 @@ export default function Card(props: CardProps): ReactElement {
   const marks = marksOf(unit ?? card);
   // #2270: the view's Brittle count, never the keyword's printed number (CLAUDE.md rule 7), on the field only.
   const brittleLast = (form === "minion" || form === "compact") && (unit?.brittle ?? card.brittle) === BRITTLE_LAST_COUNT;
+  // #2437: the face's Temporary count, which only a hand card's carries, at its last.
+  const temporaryLast = face.temporary === TEMPORARY_LAST_COUNT;
   const counters: CardProps["counters"] = props.counters ?? unit?.counters;
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
@@ -552,7 +561,7 @@ export default function Card(props: CardProps): ReactElement {
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}
-      <CardMarks marks={marks} instanceId={card.instanceId} bareAura={brittleLast ? BRITTLE_LAST_COLOR : undefined} />
+      <CardMarks marks={marks} instanceId={card.instanceId} bareAura={brittleLast ? BRITTLE_LAST_COLOR : temporaryLast ? TEMPORARY_LAST_COLOR : undefined} />
       {/* R2321000: the counts cards on the field keep on the unit (Level Up!'s attacks). */}
       <Tallies tallies={tallies} instanceId={card.instanceId} />
       {card.counteredOnPlay === true && (
