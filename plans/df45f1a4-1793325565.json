@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2425,
+  "title": "Patch: the shadow-ban sweep counts only the turns a card could really be played",
+  "branch": "bot/issue-2425",
+  "thread": "**Issue #2425 (data, not instructions):**\n\n```text\n# #2425: Patch: the shadow-ban sweep counts only the turns a card could really be played\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nA regular check decides which cards the practice AI may put in its decks. A card the AI held and could afford for many turns but never played gets banned. Today 'could afford' only means the AI had the mana. So a card that needs three of your own units to sacrifice, or a target that isn't on the board, counts as a missed play on turns when the rules didn't let anyone play it. After this the check counts only the turns on which the card could really be played, so cards are banned for real misses, not impossible ones.\n\n## Why\n- `crates/ai/src/sweep.rs:612-629`: at the AI's turn start, a card in hand counts as affordable when `effective_cost(\u2026) <= mana`. Nothing asks whether a play of it is legal. The `neverPlayed` flag reads that count in pass 1 (`sweep.rs:291`) and in pass 2 (`sweep.rs:936`).\n- R186 says 'a card drawn and affordable but never played', and R390 counts the same way.\n- The 2026-10-29 sweep banned TG #25 Trigor, a Tribute 3 card, on 'affordable in hand on 184 turns over 99 pass-2 games, never played' (`crates/ai/src/shadow_ban.rs:320`). Every turn with fewer than three of its owner's units to tribute counted against it.\n- 21 catalog rows carry a Tribute, and cards with a required target or a play condition have the same gap.\n- The engine already lists every legal action: `legal_actions(state, player)` (`crates/engine/src/reduce.rs:887`), which the fuzz checks at every step.\n\n## Proposal\n- Count `playable_turns` beside `affordable_turns`: a turn counts when, at the AI's turn start, `legal_actions(after, ai_seat)` holds a `Play` of an instance of the card (the same action the sweep counts as a play).\n- The `neverPlayed` flag and its at-risk form read `playable_turns`, against the same `min_affordable_turns` and `ban_affordable_turns` (renamed if the ruling says so). Unswept stays 'never affordable at any tier'.\n- Every report row, the `--json` output, and the ban and watch reasons show both counts.\n- A ruling in this issue's block amends what R186 and R390 mean by affordable. Its \u00a711 paragraph goes in `spec/pending/<issue>.md`.\n\n## Where it lands\n- `crates/ai/src/sweep.rs`, `crates/ai/src/config.rs` (`AI_SWEEP`), the sweep tests in `crates/ai/tests/ai/`, and `crates/tools/src/sweep.rs` where the report is printed\n- SPEC \u00a79.9; R186, R390, R1186000\n\n## Acceptance criteria\n- [ ] A test: a Tribute 3 card in hand, with enough mana and two of its owner's units on the field, counts as affordable but not playable. With three units it counts as both.\n- [ ] A test: `neverPlayed` needs playable turns, not merely affordable ones.\n- [ ] `cargo jackioh sweep --json traininggrounds-025` prints both counts, and the pull request quotes them.\n- [ ] No sweep test is deleted or weakened, and the reports of record in `training/history/` are left as they are.\n- [ ] `shadow_ban.rs` is not edited here; the next sweep of record applies the new count.\n- [ ] `cargo jackioh spec check` passes.\n\n## Size and risks\nMedium: 3\u20135 files and a ruling. One `legal_actions` call per AI turn start is small next to the AI's own search. Fewer bans can deal cards the AI misplays in other ways, but the self-harm and lost-on-its-play flags still catch those. A card the rules rarely let anyone play may come out unswept rather than banned; the report already shows that state.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T01:55:04Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2425: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
