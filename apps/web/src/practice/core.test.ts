@@ -592,13 +592,14 @@ function handOf(snapshot: PracticeSnapshot): string[] {
  * view is read. The Radiant pass's shadow ban (R186) changed the AI's random deck and moved them, and
  * patch v0.1.1 (its shadow ban of Zao Gao and CN-Viral Injection, then its card patches) moved the
  * AI-first pair twice more; #2278 moved seated p1 to `-h2` for the same reason, and #2454's
- * re-deal moved it back onto `-h`.
+ * re-deal moved it back onto `-h`. #2521's cards re-deal it again, so seated p1 is on `-h2` once more
+ * and seated p2 stays on `-h`.
  */
 describe("R265 the practice mulligan: the AI answers its own at once, and the human answers before or after it", () => {
   for (const human of ["p1", "p2"] as const) {
     it(`R265 seated ${human}: the AI answers first without waiting, the human's picker stays open, and the human's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);
-      const seed = `r265-ai-first-${human}-h`;
+      const seed = `r265-ai-first-${human}-${human === "p1" ? "h2" : "h"}`;
       const d = driver();
       const started = snapshotOf(
         d.send({

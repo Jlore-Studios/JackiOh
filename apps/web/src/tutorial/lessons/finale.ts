@@ -4,7 +4,9 @@
 // Goetzmann Game Design), and the only one with no pool hold, so random cards may be any card of every
 // shipped set (TG #40 draws from all of them). The AI's deck is twelve Training Grounds cards of every
 // kind the lessons taught, an Aura and a Death among them, none Legendary or Mythic (R2533001). Deck order
-// fixes this seed's deal (`scripts/lesson-deal.ts finale`).
+// fixes this seed's deal (`scripts/lesson-deal.ts finale`). Seed "-38" until #2521, whose cards change what
+// Goetzmann Game Design's random effects find, so the coach's line there took 12 turns; "-59" deals
+// Seance, Tutorial Master and Call to Chaos as early and wins within the lesson's 11.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -14,7 +16,7 @@ export const lesson: TutorialLesson = {
   title: "The final exam",
   summary: "Legendary and Mythic cards, random effects, Quickdraw and copies: everything at once.",
   discoveries: ["quickdraw", "legendary", "random", "copying"],
-  seed: "tg-finale-38",
+  seed: "tg-finale-59",
   humanSeat: "p1",
   poolHold: false,
   humanDeck: [
