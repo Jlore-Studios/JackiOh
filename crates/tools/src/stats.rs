@@ -66,12 +66,14 @@ use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, MatchSetup, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::{
-    CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, DEFAULT_CARD_STATS_FILTER,
+    CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, DEFAULT_CARD_STATS_FILTER,
     DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX, GAME_MODES, GameFigures, GameGroup, GameMode, GameRecord,
-    GameReport, PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals, WindowQuery,
-    WindowRequest, WindowedReport, Winner, card_stats, created_played_delta, describe_filter,
-    format_card_stats, format_delta, format_tally, game_report, windowed_card_stats,
+    GameReport, PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals, Tally,
+    WindowQuery, WindowRequest, WindowedCard, WindowedCreated, WindowedReport, Winner, card_stats,
+    created_played_delta, describe_filter, drawn_delta, format_card_stats, format_delta, format_tally,
+    game_report, not_drawn, windowed_card_stats,
 };
+use serde::Serialize;
 
 use crate::arena::{paired_interval, wilson_interval};
 use crate::selfplay_records::SELFPLAY_SERIES_PREFIX;
@@ -280,6 +282,71 @@ pub fn report(args: &ReportArgs) -> Result<CardStatsReport> {
     Ok(report)
 }
 
+/// R2427000: one card's row of `stats report --json`: the report's figures with the never-drawn
+/// tally and the drawn delta beside them.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CardRow<'a> {
+    #[serde(flatten)]
+    stats: &'a CardStats,
+    not_drawn: Tally,
+    drawn_delta: Option<f64>,
+}
+
+impl<'a> CardRow<'a> {
+    fn of(stats: &'a CardStats) -> CardRow<'a> {
+        CardRow {
+            stats,
+            not_drawn: not_drawn(stats),
+            drawn_delta: drawn_delta(stats),
+        }
+    }
+}
+
+/// R2427000: `stats report --json`, in the field order of `CardStatsReport`.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReportJson<'a> {
+    filter: &'a CardStatsFilter,
+    games: i32,
+    decks: i32,
+    cards: Vec<CardRow<'a>>,
+    created: &'a [CreatedStats],
+}
+
+/// R2427000: one card's row of `stats report --window --json`: the windowed row with the
+/// never-drawn tally and the drawn delta beside it, read off the row's figures.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WindowedRow<'a> {
+    #[serde(flatten)]
+    card: &'a WindowedCard,
+    not_drawn: Tally,
+    drawn_delta: Option<f64>,
+}
+
+impl<'a> WindowedRow<'a> {
+    fn of(card: &'a WindowedCard) -> WindowedRow<'a> {
+        WindowedRow {
+            card,
+            not_drawn: not_drawn(&card.stats),
+            drawn_delta: drawn_delta(&card.stats),
+        }
+    }
+}
+
+/// R2427000: `stats report --window --json`, in the field order of `WindowedReport`.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WindowJson<'a> {
+    at: &'a str,
+    patch: &'a CardWindow,
+    games: i64,
+    decks: i64,
+    cards: Vec<WindowedRow<'a>>,
+    created: &'a [WindowedCreated],
+}
+
 /// The report as `stats-cards` prints it: the table, with the catalog's names, or JSON.
 pub fn render(
     report: &CardStatsReport,
@@ -287,7 +354,14 @@ pub fn render(
     name_of: impl Fn(&str) -> Option<String>,
 ) -> String {
     if args.json {
-        return serde_json::to_string_pretty(report).unwrap_or_default();
+        let json = ReportJson {
+            filter: &report.filter,
+            games: report.games,
+            decks: report.decks,
+            cards: report.cards.iter().map(CardRow::of).collect(),
+            created: &report.created,
+        };
+        return serde_json::to_string_pretty(&json).unwrap_or_default();
     }
     let table = format_card_stats(report, name_of);
     match &args.card {
@@ -422,7 +496,15 @@ pub fn render_window(
     name_of: impl Fn(&str) -> Option<String>,
 ) -> String {
     if args.json {
-        return serde_json::to_string_pretty(report).unwrap_or_default();
+        let json = WindowJson {
+            at: &report.at,
+            patch: &report.patch,
+            games: report.games,
+            decks: report.decks,
+            cards: report.cards.iter().map(WindowedRow::of).collect(),
+            created: &report.created,
+        };
+        return serde_json::to_string_pretty(&json).unwrap_or_default();
     }
     let window = |window: &CardWindow| {
         format!(
@@ -1472,32 +1554,58 @@ mod tests {
     }
 
     #[test]
-    fn report_json_is_the_report_as_stats_cards_prints_it() {
+    fn r2427000_report_json_is_the_report_with_each_cards_never_drawn_tally_and_drawn_delta() {
         let (dir, paths) = scratch(&[(
             "a.jsonl",
-            record_line("m1", "live", "bo1", "p1", &["core-002"]) + "\n",
+            format!(
+                "{}\n{}\n{}\n",
+                record_line("m1", "live", "bo1", "p1", &["core-001"]),
+                record_line("m2", "live", "bo1", "p1", &["core-001"]),
+                record_line("m3", "live", "bo1", "p2", &["core-001"]),
+            ),
         )]);
         let (args, report) = report_of(&paths, &["--json"]);
+        assert_eq!((report.games, report.decks), (3, 6));
         let printed = render(&report, &args, |_| Some("never shown".to_string()));
         let parsed: Value = serde_json::from_str(&printed).unwrap();
-        assert_eq!(parsed, serde_json::to_value(&report).unwrap());
         assert_eq!(
             parsed["filter"],
             serde_json::json!({ "source": "live", "mode": null, "patch": null, "pilot": "unified" })
         );
-        assert_eq!((&parsed["games"], &parsed["decks"]), (&1.into(), &2.into()));
-        // core-001 is in p1's deck only: it is in the opening hand and played, a win going first.
+        assert_eq!((&parsed["games"], &parsed["decks"]), (&3.into(), &6.into()));
+        // core-001 is in every deck: p1's sides play it, p2's never draw it.
         let first = &parsed["cards"][0];
         assert_eq!(first["card"], "core-001");
         assert_eq!(
             first["inDeck"],
-            serde_json::json!({ "games": 1, "wins": 1, "draws": 0 })
+            serde_json::json!({ "games": 6, "wins": 3, "draws": 0 })
         );
+        assert_eq!(
+            first["notDrawn"],
+            serde_json::json!({ "games": 3, "wins": 1, "draws": 0 })
+        );
+        let delta = first["drawnDelta"].as_f64().expect("core-001 has drawnDelta");
+        assert!((delta - 1.0 / 3.0).abs() < 1e-12);
         assert_eq!(first["goingFirst"], first["played"]);
         assert_eq!(
             first["drawnNotPlayed"],
             serde_json::json!({ "games": 0, "wins": 0, "draws": 0 })
         );
+        // core-002 never leaves p1's hand: never drawn is empty and there is no delta.
+        let second = &parsed["cards"][1];
+        assert_eq!(second["card"], "core-002");
+        assert_eq!(
+            second["notDrawn"],
+            serde_json::json!({ "games": 0, "wins": 0, "draws": 0 })
+        );
+        assert!(second["drawnDelta"].is_null());
+        // Without the two new keys, the JSON is the report's, as `stats-cards --json` prints it.
+        let mut bare = parsed.clone();
+        for row in bare["cards"].as_array_mut().expect("rows") {
+            row.as_object_mut().expect("a row").remove("notDrawn");
+            row.as_object_mut().expect("a row").remove("drawnDelta");
+        }
+        assert_eq!(bare, serde_json::to_value(&report).unwrap());
         // The table is the report's, with the names the caller gives.
         let table = render(&report, &ReportArgs { json: false, ..args }, |card| {
             (card == "core-001").then(|| "Alpha".to_string())
@@ -1506,6 +1614,48 @@ mod tests {
             "Card win rates: live games, every mode, every patch, human and AI pilots (unified)."
         ));
         assert!(table.contains("core-001 Alpha"));
+        assert!(table.contains("Not drawn"));
+        assert!(table.contains("Drawn Δ"));
+        assert!(!table.contains("Played Δ"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn r2427000_report_window_json_adds_the_two_figures_to_each_cards_row() {
+        let (dir, paths) = scratch(&[(
+            "a.jsonl",
+            format!(
+                "{}\n{}\n{}\n",
+                record_line("m1", "live", "bo1", "p1", &["core-001"]),
+                record_line("m2", "live", "bo1", "p1", &["core-001"]),
+                record_line("m3", "live", "bo1", "p2", &["core-001"]),
+            ),
+        )]);
+        let named: Vec<&str> = paths.iter().map(|path| path.to_str().unwrap()).collect();
+        let args = report_args(&[named, vec!["--window", "v0.2.3b", "--json"]].concat()).unwrap();
+        let report = window_report(&args, "v0.2.3b").unwrap();
+        let printed = render_window(&report, &args, |_| None);
+        let parsed: Value = serde_json::from_str(&printed).unwrap();
+        let first = parsed["cards"]
+            .as_array()
+            .expect("rows")
+            .iter()
+            .find(|row| row["stats"]["card"] == "core-001")
+            .expect("core-001 has a row");
+        assert_eq!(
+            first["notDrawn"],
+            serde_json::json!({ "games": 3, "wins": 1, "draws": 0 })
+        );
+        let delta = first["drawnDelta"].as_f64().expect("core-001 has drawnDelta");
+        assert!((delta - 1.0 / 3.0).abs() < 1e-12);
+        // Without the two new keys, the JSON is the windowed report's.
+        let mut bare = parsed.clone();
+        for row in bare["cards"].as_array_mut().expect("rows") {
+            let row = row.as_object_mut().expect("a row");
+            row.remove("notDrawn");
+            row.remove("drawnDelta");
+        }
+        assert_eq!(bare, serde_json::to_value(&report).unwrap());
         std::fs::remove_dir_all(dir).unwrap();
     }
 

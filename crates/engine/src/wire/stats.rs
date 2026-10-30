@@ -1370,6 +1370,27 @@ pub fn played_delta(stats: &CardStats) -> Option<f64> {
     Some(played - baseline)
 }
 
+/// R2427000: the decks that held the card and never had it in hand: in deck less played less
+/// drawn but not played, for games, wins and draws alike. Read off the totals, never stored.
+pub fn not_drawn(stats: &CardStats) -> Tally {
+    Tally {
+        games: stats.in_deck.games - stats.played.games - stats.drawn_not_played.games,
+        wins: stats.in_deck.wins - stats.played.wins - stats.drawn_not_played.wins,
+        draws: stats.in_deck.draws - stats.played.draws - stats.drawn_not_played.draws,
+    }
+}
+
+/// R2427000: the drawn delta, the drawn win rate (played and drawn but not played together) minus
+/// the never-drawn win rate, as a fraction. `None` when either side has no games; the public
+/// page's floor is the server's (R654).
+pub fn drawn_delta(stats: &CardStats) -> Option<f64> {
+    let mut drawn = stats.played;
+    add_tally(&mut drawn, &stats.drawn_not_played);
+    let drawn = win_rate(&drawn)?;
+    let baseline = win_rate(&not_drawn(stats))?;
+    Some(drawn - baseline)
+}
+
 /// R2089000: the Created played delta, R377's over a Created card's used and never-used seats.
 pub fn created_played_delta(stats: &CreatedStats) -> Option<f64> {
     let played = win_rate(&stats.created_played)?;
@@ -1742,8 +1763,8 @@ fn pad_start(text: &str, width: usize) -> String {
 }
 
 /// The report as a plain-text table: one row per card, each breakdown's win rate with its games
-/// beside it, and the played delta. `name_of` turns an id into the name shown after it (TS's
-/// default, `() => undefined`, is `|_| None`).
+/// beside it, and the never-drawn tally with the drawn delta. `name_of` turns an id into the name
+/// shown after it (TS's default, `() => undefined`, is `|_| None`).
 pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Option<String>) -> String {
     let named = |card: &str| match name_of(card) {
         None => card.to_string(),
@@ -1755,7 +1776,8 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
             .iter()
             .map(|breakdown| BREAKDOWN_TITLES[*breakdown].to_string()),
     );
-    header.push("Played Δ".to_string());
+    header.push("Not drawn".to_string());
+    header.push("Drawn Δ".to_string());
     let rows: Vec<Vec<String>> = report
         .cards
         .iter()
@@ -1766,7 +1788,8 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
                     .iter()
                     .map(|breakdown| format_tally(&stats[*breakdown])),
             );
-            row.push(format_delta(played_delta(stats)));
+            row.push(format_tally(&not_drawn(stats)));
+            row.push(format_delta(drawn_delta(stats)));
             row
         })
         .collect();
@@ -1775,9 +1798,10 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
         format!("Card win rates: {}.", describe_filter(&report.filter)),
         format!("{} games, {} decks.", report.games, report.decks),
         "Each cell is the win rate of the decks that held the card, with those games in brackets. A game counts once for".to_string(),
-        "each deck that held the card, and a draw is a game not won. Played Δ is the played win rate minus the drawn-but-".to_string(),
-        "not-played win rate, in points: drawn means the card reached the hand, in the opening hand or by a later draw.".to_string(),
-        "Played Radiant counts the decks that played the card Radiant at least once, Played normal the other played ones.".to_string(),
+        "each deck that held the card, and a draw is a game not won. Drawn means the card reached the hand, in the opening".to_string(),
+        "hand or by a later draw; Not drawn counts the decks that never had it there. Drawn Δ is the win rate of the decks".to_string(),
+        "that drew it, played or not, minus Not drawn's, in points. Played Radiant counts the decks that played the card".to_string(),
+        "Radiant at least once, Played normal the other played ones.".to_string(),
         String::new(),
     ];
     lines.extend(table(&header, &rows));
@@ -2369,6 +2393,44 @@ mod tests {
         }
 
         #[test]
+        fn r2427000_never_drawn_is_in_deck_less_both_drawn_sides_and_the_drawn_delta_needs_both() {
+            let stats = CardStats {
+                card: "a".to_string(),
+                in_deck: tally(20, 9, 3),
+                opening_hand: tally(0, 0, 0),
+                going_first: tally(0, 0, 0),
+                going_second: tally(0, 0, 0),
+                played: tally(8, 6, 1),
+                drawn_not_played: tally(4, 1, 1),
+                played_radiant: tally(0, 0, 0),
+                played_normal: tally(0, 0, 0),
+                created_played: tally(0, 0, 0),
+                created_not_played: tally(0, 0, 0),
+                created_played_radiant: tally(0, 0, 0),
+                created_played_normal: tally(0, 0, 0),
+            };
+            assert_eq!(not_drawn(&stats), tally(8, 2, 1));
+            let delta = drawn_delta(&stats).unwrap();
+            assert!((delta - (7.0 / 12.0 - 0.25)).abs() < 1e-12);
+            assert_eq!(format_delta(drawn_delta(&stats)), "+33.3");
+            // Nothing ever reached the hand: no baseline and no delta.
+            let never_drawn = CardStats {
+                in_deck: tally(12, 7, 2),
+                ..stats.clone()
+            };
+            assert_eq!(not_drawn(&never_drawn), tally(0, 0, 0));
+            assert_eq!(drawn_delta(&never_drawn), None);
+            // Nothing ever left it: never drawn is the whole deck, and still no delta.
+            let never_played = CardStats {
+                played: tally(0, 0, 0),
+                drawn_not_played: tally(0, 0, 0),
+                ..stats.clone()
+            };
+            assert_eq!(not_drawn(&never_played), never_played.in_deck);
+            assert_eq!(drawn_delta(&never_played), None);
+        }
+
+        #[test]
         fn r378_reads_live_games_only_unless_a_development_run_is_asked_for_by_name() {
             let records = vec![
                 GameRecord {
@@ -2514,10 +2576,12 @@ mod tests {
             for breakdown in BREAKDOWNS {
                 assert!(heading.contains(&BREAKDOWN_TITLES[*breakdown]));
             }
-            assert!(heading.contains("Played Δ"));
+            assert!(heading.contains("Not drawn"));
+            assert!(heading.contains("Drawn Δ"));
+            assert!(!heading.contains("Played Δ"));
 
             let alpha = lines.iter().find(|line| line.starts_with("a Alpha")).unwrap();
-            // In deck, opening hand, going first, going second, played, drawn-not-played, played-radiant, played-normal; then the delta.
+            // In deck, opening hand, going first, going second, played, drawn-not-played, played-radiant, played-normal, not drawn; then the delta.
             assert_eq!(
                 split_wide(alpha)[1..],
                 [
@@ -2529,6 +2593,7 @@ mod tests {
                     "— (0)",
                     "— (0)",
                     "— (0)",
+                    "— (0)",
                     "—"
                 ]
             );
@@ -2536,7 +2601,8 @@ mod tests {
             assert_eq!(
                 split_wide(beta)[1..],
                 [
-                    "0.0% (1)", "— (0)", "— (0)", "0.0% (1)", "— (0)", "0.0% (1)", "— (0)", "— (0)", "—"
+                    "0.0% (1)", "— (0)", "— (0)", "0.0% (1)", "— (0)", "0.0% (1)", "— (0)", "— (0)", "— (0)",
+                    "—"
                 ]
             );
 

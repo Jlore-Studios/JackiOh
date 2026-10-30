@@ -38,8 +38,8 @@ use jackioh_engine::wire::stats::{
     GameSource, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter, StatsTotals, Tally,
     TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport,
     add_created, add_stats, card_drills_of, card_family, card_stats_of, card_window, collapse_gameless,
-    created_played_delta, patch_windows, played_delta, sources_of, win_rate, windowed_card_stats,
-    windowed_game_figures,
+    created_played_delta, drawn_delta, not_drawn, patch_windows, played_delta, sources_of, win_rate,
+    windowed_card_stats, windowed_game_figures,
 };
 use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot};
 
@@ -79,6 +79,12 @@ pub struct PublicCardStat {
     pub drawn_not_played_games: i64,
     pub drawn_not_played_win_rate: Option<f64>,
     pub played_delta: Option<f64>,
+    /// R2427000: the decks that held the card and never drew it, and their win rate.
+    pub not_drawn_games: i64,
+    pub not_drawn_win_rate: Option<f64>,
+    /// R2427000: the drawn win rate minus the never-drawn one; as R654's played delta, it waits for the
+    /// sample floor on both its sides.
+    pub drawn_delta: Option<f64>,
     pub play_rate: f64,
     pub has_enough_games: bool,
     /// R1367000: the card's window and the records its figures count.
@@ -950,6 +956,13 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let delta = stat
             .filter(|_| played_games >= CARD_STATS_MIN_SAMPLE && unplayed_games >= CARD_STATS_MIN_SAMPLE)
             .and_then(played_delta);
+        // R2427000: never drawn is in deck less both drawn sides; its delta waits for the floor on both sides too.
+        let never_drawn = stat.map(not_drawn);
+        let (not_drawn_games, _) = never_drawn.as_ref().map(tally_of).unwrap_or((0, 0));
+        let not_drawn_rate = never_drawn.as_ref().and_then(win_rate);
+        let drawn_gap = stat
+            .filter(|_| drawn_games >= CARD_STATS_MIN_SAMPLE && not_drawn_games >= CARD_STATS_MIN_SAMPLE)
+            .and_then(drawn_delta);
         let play_rate = if total_decks > 0 {
             in_deck_games as f64 / total_decks as f64
         } else {
@@ -976,6 +989,9 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             drawn_not_played_games: unplayed_games,
             drawn_not_played_win_rate: drawn_not_played_rate,
             played_delta: delta,
+            not_drawn_games,
+            not_drawn_win_rate: not_drawn_rate,
+            drawn_delta: drawn_gap,
             play_rate,
             has_enough_games,
             window: PublicCardWindow::of(&window),

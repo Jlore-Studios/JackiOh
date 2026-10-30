@@ -45,9 +45,11 @@ catalog = load_catalog()  # id → name, set, rarity, cost, type, tags, off crat
 `all` (R378), every mode and patch unless named, and unless `pilot` names `human`, `ai` or `unified`, the human
 seats of live games (a ladder bot's side is read only when asked for) and every seat of the rest (R1451). Each
 deck counts once per game, a draw is a game not won, and the played delta is the played win rate minus the
-drawn-but-not-played win rate in percentage points. It returns one row per card with `<breakdown>_games`, `_wins`, `_draws`
-and `_rate` for `in_deck`, `opening_hand`, `going_first`, `going_second`, `played` and `drawn_not_played`, and
-`played_delta`; the frame's `attrs` hold `games` and `decks`.
+drawn-but-not-played win rate in percentage points. The drawn delta is the drawn win rate (played and
+drawn but not played together) minus the never-drawn win rate in percentage points (R2427000). It returns
+one row per card with `<breakdown>_games`, `_wins`, `_draws` and `_rate` for `in_deck`, `opening_hand`,
+`going_first`, `going_second`, `played`, `drawn_not_played` and `not_drawn`, and `played_delta` and
+`drawn_delta`; the frame's `attrs` hold `games` and `decks`.
 
 `load` reads the fields it names and ignores the rest, names a bad line by file and line, and refuses a record id
 it has already read (`stats report` would count the game twice), so files that overlap are trimmed first.
@@ -77,7 +79,7 @@ one; `test_notebooks.py` fails on a notebook that holds any), and `test_notebook
 
 | Notebook | What |
 |---|---|
-| `01-card-win-rates.ipynb` | R377's breakdowns for every card beside their games, by set and rarity, the 15 best and worst cards by in-deck win rate and by played delta, one patch against the one before it, and a development run against live games of the same patch (R378) |
+| `01-card-win-rates.ipynb` | R377's breakdowns for every card beside their games, by set and rarity, the 15 best and worst cards by in-deck win rate and by drawn delta, one patch against the one before it, and a development run against live games of the same patch (R378) |
 | `02-decks-and-play.ipynb` | Mana curves by mode and pilot, play rate and the cards most often drawn and not played, the turn cards are first played on, and the first player's win rate, how games end and the length of a game by mode and patch |
 | `03-ai-sweep-and-generations.ipynb` | A shadow-ban sweep's pass-1 lines per card and tier with its flags, and the AI's generations against random play and their parents, per lane |
 

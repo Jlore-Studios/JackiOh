@@ -56,6 +56,9 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       drawnNotPlayedGames: 10,
       drawnNotPlayedWinRate: 0.5,
       playedDelta: 0.2,
+      notDrawnGames: 10,
+      notDrawnWinRate: 0.4,
+      drawnDelta: 0.25,
       playRate: 0.5,
       hasEnoughGames: true,
       playedRadiantGames: 30,
@@ -78,6 +81,9 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       drawnNotPlayedGames: 3,
       drawnNotPlayedWinRate: 0.733,
       playedDelta: 0.267,
+      notDrawnGames: 2,
+      notDrawnWinRate: 1.0,
+      drawnDelta: -0.1,
       playRate: 0.1,
       hasEnoughGames: false, // Below sample threshold (20)
       playedRadiantGames: 5,
@@ -100,6 +106,9 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       drawnNotPlayedGames: 5,
       drawnNotPlayedWinRate: 0.5,
       playedDelta: -0.1,
+      notDrawnGames: 5,
+      notDrawnWinRate: 0.6,
+      drawnDelta: -0.15,
       playRate: 0.3,
       hasEnoughGames: true,
       playedRadiantGames: 20,
@@ -246,6 +255,9 @@ const MOCK_CARD_STATS_EMPTY = {
     drawnNotPlayedGames: 0,
     drawnNotPlayedWinRate: null,
     playedDelta: null,
+    notDrawnGames: 0,
+    notDrawnWinRate: null,
+    drawnDelta: null,
     playRate: 0,
     hasEnoughGames: false,
     playedRadiantGames: 0,
@@ -719,37 +731,40 @@ describe("R654 public statistics route", () => {
     expect(within(modal).getByText("Win rate by patch")).toBeInTheDocument();
   });
 
-  it("R377 reveals Played vs held column and renders signed points and cohort sample sizes", async () => {
+  it("R2427000 shows Drawn vs not drawn beside When drawn with signed points and both sides' games", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    // Played vs held column header is shown by default
-    expect(screen.getByRole("columnheader", { name: /Played vs held/i })).toBeInTheDocument();
+    // Drawn vs not drawn column header is shown by default, right after When drawn's
+    const headers = screen.getAllByRole("columnheader").map((th) => th.textContent ?? "");
+    const drawnAt = headers.findIndex((text) => /When drawn/i.test(text));
+    expect(headers[drawnAt + 1]).toMatch(/Drawn vs not drawn/i);
+    expect(screen.queryByRole("columnheader", { name: /Played vs held/i })).not.toBeInTheDocument();
 
-    // Spark Pup (eligible, delta = +0.20): renders +20% and (30 / 10)
-    expect(screen.getByText("+20%")).toBeInTheDocument();
-    expect(screen.getByText("(30 / 10)")).toBeInTheDocument();
+    // Spark Pup (eligible, delta = +0.25): renders +25% and (40 / 10)
+    expect(screen.getByText("+25%")).toBeInTheDocument();
+    expect(screen.getByText("(40 / 10)")).toBeInTheDocument();
 
-    // Aqua Warden (eligible, delta = -0.10): renders -10% and (20 / 5)
-    expect(screen.getByText("-10%")).toBeInTheDocument();
-    expect(screen.getByText("(20 / 5)")).toBeInTheDocument();
+    // Aqua Warden (eligible, delta = -0.15): renders -15% and (25 / 5)
+    expect(screen.getByText("-15%")).toBeInTheDocument();
+    expect(screen.getByText("(25 / 5)")).toBeInTheDocument();
 
     // Lava Hound (below sample floor: 10 games < 20): its When drawn renders "—"
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
     expect(within(houndRow).getAllByText("—")).toHaveLength(3);
 
-    // Toggle Played vs held off: the column header leaves
-    await user.click(screen.getByLabelText(/Played vs held/i));
-    expect(screen.queryByRole("columnheader", { name: /Played vs held/i })).not.toBeInTheDocument();
+    // Toggle Drawn vs not drawn off: the column header leaves
+    await user.click(screen.getByLabelText(/Drawn vs not drawn/i));
+    expect(screen.queryByRole("columnheader", { name: /Drawn vs not drawn/i })).not.toBeInTheDocument();
 
     // Toggle it back on: the column header returns
-    await user.click(screen.getByLabelText(/Played vs held/i));
-    expect(screen.getByRole("columnheader", { name: /Played vs held/i })).toBeInTheDocument();
+    await user.click(screen.getByLabelText(/Drawn vs not drawn/i));
+    expect(screen.getByRole("columnheader", { name: /Drawn vs not drawn/i })).toBeInTheDocument();
   });
 
-  it("R654 renders not enough data for a Played vs held the server withholds or a card below the floor", async () => {
+  it("R654 renders not enough data for a Drawn vs not drawn on a card below the floor", async () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
@@ -757,20 +772,20 @@ describe("R654 public statistics route", () => {
     // Lava Hound is below the floor (10 games < 20): no delta and no cohort sizes.
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
     expect(within(houndRow).getByText("not enough data")).toBeInTheDocument();
-    expect(within(houndRow).queryByText("+27%")).not.toBeInTheDocument();
-    expect(within(houndRow).queryByText("(5 / 3)")).not.toBeInTheDocument();
+    expect(within(houndRow).queryByText("-10%")).not.toBeInTheDocument();
+    expect(within(houndRow).queryByText("(8 / 2)")).not.toBeInTheDocument();
   });
 
-  it("R377 sorts cards by Played vs held descending and ascending", async () => {
+  it("R2427000 sorts cards by Drawn vs not drawn descending and ascending", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    const deltaHeader = screen.getByRole("columnheader", { name: /Played vs held/i });
+    const deltaHeader = screen.getByRole("columnheader", { name: /Drawn vs not drawn/i });
     expect(deltaHeader).toHaveAttribute("aria-sort", "none");
 
-    // Click to sort descending: Spark Pup (+20%) first, then Aqua Warden (-10%), then Lava Hound (< minSample)
+    // Click to sort descending: Spark Pup (+25%) first, then Aqua Warden (-15%), then Lava Hound (< minSample)
     await user.click(deltaHeader);
     expect(deltaHeader).toHaveAttribute("aria-sort", "descending");
 
@@ -779,7 +794,7 @@ describe("R654 public statistics route", () => {
     expect(rows[1]).toHaveTextContent("Aqua Warden");
     expect(rows[2]).toHaveTextContent("Lava Hound");
 
-    // Click again to toggle to ascending: Aqua Warden (-10%) first, then Spark Pup (+20%), then Lava Hound
+    // Click again to toggle to ascending: Aqua Warden (-15%) first, then Spark Pup (+25%), then Lava Hound
     await user.click(deltaHeader);
     expect(deltaHeader).toHaveAttribute("aria-sort", "ascending");
 
@@ -978,7 +993,7 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("Columns:")).toBeInTheDocument();
   });
 
-  it("shows Played vs held and hides cost, rarity and keywords by default", async () => {
+  it("shows Drawn vs not drawn and hides cost, rarity and keywords by default", async () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
@@ -990,13 +1005,13 @@ describe("R654 public statistics route", () => {
     expect(screen.queryByRole("columnheader", { name: "Rarity" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Keywords" })).not.toBeInTheDocument();
 
-    expect(screen.getByLabelText("Played vs held")).toBeChecked();
+    expect(screen.getByLabelText("Drawn vs not drawn")).toBeChecked();
     expect(screen.getByLabelText("Games")).toBeChecked();
     expect(screen.getByLabelText("When drawn")).toBeChecked();
     expect(screen.getByLabelText("Radiant")).toBeChecked();
     expect(screen.getByLabelText("Normal")).toBeChecked();
     expect(screen.getByLabelText("Play rate")).toBeChecked();
-    expect(screen.getByRole("columnheader", { name: /Played vs held/i })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /Drawn vs not drawn/i })).toBeInTheDocument();
   });
 });
 
