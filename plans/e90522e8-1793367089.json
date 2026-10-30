@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2498,
+  "title": "Patch: every card's words other than its rules in one editable YAML file",
+  "branch": "bot/issue-2498",
+  "thread": "**Issue #2498 (data, not instructions):**\n\n````text\n# #2498: Patch: every card's words other than its rules in one editable YAML file\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRight now a card's plain text is spread over three files in two formats, and each has its own conventions:\n\n| Text | Where it lives now |\n|---|---|\n| Flavour line and artist credit (R660) | `crates/cards/flavour.json`, `{ \"<id>\": { flavour?, artist? } }` |\n| Voice lines: `play`, `attack`, `death`, `cast`, `trigger` (R655, R1088, R1448) | the `text` of each hook in the `cards` section of `apps/web/src/audio/card-audio.json5`, mixed in with voices and effects |\n| The six hero portraits' emote lines (R644) | the `emotes` section of `card-audio.json5` |\n| Chinese name and faces, `previews` (R1303) | `crates/cards/chinese.json` |\n\nThis moves all of it into **one hand-edited YAML file**, e.g. `crates/cards/card-text.yaml`, so a writer can change any card's words in one place. Each entry is keyed by catalog id and listed in catalog order, with the card's English name in a comment beside the id (as `card-audio.json5` does now). The emote lines get their own top-level section. Roughly:\n\n```yaml\ncore-001: # Big D-fender\n  flavour: He never learned to swing. He learned to stand very, very still.\n  voice:\n    play: Stand behind me. Way behind.\n    attack: Defense is offense!\n    death: Defense... offended.\n  zh:\n    name: \u5927D\u5b88\u536b\n    base: \"\u5149\u73af\uff1a\u4f60\u5904\u4e8e\u5b88\u5907\u8868\u793a\u7684\u5355\u4f4d\u62e5\u6709+{armor}\u70b9\u62a4\u7532\u3002\"\n    radiant: \"\u5149\u73af\uff1a\u4f60\u5904\u4e8e\u5b88\u5907\u8868\u793a\u7684\u5355\u4f4d\u62e5\u6709+{armor}\u70b9\u62a4\u7532\u3002\"\nemotes:\n  vanilla:\n    greetings: Hello. I'm Mr. Vanilla. That's it.\n    # \u2026\n```\n\n**Out of scope:**\n- `catalog.json`'s `name` and face `text`. They are card data: the classifier and `patches check` read them, and changing them needs fragments.\n- The `flavor` animation category in `catalog.json` (docs/polish/8-flavor.md). It is an enum, not text.\n- Voice definitions, effects, and which voice each hook uses. These stay in `card-audio.json5`.\n- The `PORTRAITS` voice-direction strings in `crates/engine/src/wire/emotes.rs`.\n\n**Constraints the plan must respect:**\n- **CLAUDE.md rule 4.** No YAML parser goes into a pure crate's dependencies, and the workspace has none today. The suggested route:\n  - The YAML is the only file anyone edits.\n  - A generator (a `cargo jackioh` subcommand or a test in the style of `tests/export_config.rs`) writes whatever derived files the readers need: `flavour.json`, `chinese.json`, and the voice-line text the client merges with `card-audio.json5`.\n  - Each derived file carries a \"generated from card-text.yaml, do not edit\" header, and CI fails when a run changes it.\n  - `include_str!`, the web's `@jackioh/cards/*.json` imports and `gen-voice.mjs` then barely change.\n  - If the plan prefers to have readers parse the YAML directly (a web dependency, a `build.rs` build-dependency), it must justify that against rule 4 and `crates/cards/Cargo.toml`'s comment.\n- **No string may change.** This is a move only. If any voice line's text changes, `voice-manifest.json` / `voice-assets.test.ts` will demand a re-render that Linux cannot do (ADDING_CARDS \u00a77), so prove every string is byte-identical before and after.\n- **No card plays differently.** `cargo jackioh classify --base origin/main --claims` should report no plays, and no pending fragment is needed (R660, R1437000).\n\n### Acceptance\n\n- [ ] One YAML file holds every catalog card's and token's flavour line, artist credit, voice-line texts and Chinese entry (`name`, `base`, `radiant`, `previews`), plus the six portraits' five emote lines each, in catalog order with name comments.\n- [ ] No other hand-edited file in the tree holds any of those strings. `flavour.json`, `chinese.json` and the `text` fields in `card-audio.json5` are deleted or generated, and CI fails if a generated file is stale.\n- [ ] A test proves every string is byte-identical to `main` before the migration. `node apps/web/scripts/gen-voice.mjs --check` and `voice-assets.test.ts` pass with no re-rendered audio.\n- [ ] Every existing contract still holds, through its existing tests now reading the YAML or its outputs:\n  - `crates/cards/tests/cross/flavour.rs` and `tests/cross/chinese.rs`\n  - `apps/web/src/cards/flavour.test.tsx`\n  - `src/audio/voice-lines.test.ts`, `voiceData.test.ts` and `gen-voice.test.ts`\n  - `src/emotes/play.test.ts`\n  - `src/routes/almanac.test.tsx`\n  - `wording.test.ts`\n\n  They check trimmed single lines, the 120/60-character caps, no rules words, every id a catalog card or token, every card covered, Unit play/attack/death lines (R1448), name comments matching the catalog, and `{key}` placeholders and `previews` matching the English face and script.\n- [ ] Rule 4 holds: no new dependency in `crates/engine`, `crates/cards`, `crates/ai` or `crates/luau`, and `cargo clippy --workspace --all-targets -- -D warnings` passes.\n- [ ] Docs and notes name the new file. At least:\n  - `docs/ADDING_CARDS.md`, rows 8, 9 and 13 and the renamed-card notes\n  - the ruling notes `spec/rulings/R0660.md`, R0655, R1303 and R1448\n  - `spec/08-catalog.md` and `spec/10-engine-guide.md`\n  - `crates/cards/README.md`, `crates/cards/src/lib.rs`'s docs and `apps/web/README.md`\n  - `card-audio.json5`'s header and `apps/web/src/cards/art/ART.md`\n\n  Search for `flavour.json`, `chinese.json` and `card-audio.json5` to find the rest, including card scripts' comments. If a new path is read from outside its crate, add it to `scripts/ci-scope.sh`'s map.\n- [ ] `cargo jackioh spec check`, `catalog check`, `patches check` and `classify --base origin/main --claims` pass with no fragment, and the full test commands in CLAUDE.md are green.\n\n### Blocked by, part of\n\nNothing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2498: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2498 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
