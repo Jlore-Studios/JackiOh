@@ -9394,6 +9394,9 @@
         }
       }
     },
+    "2477": {
+      "suggestion": true
+    },
     "2484": {
       "action": "review",
       "asks": [],
