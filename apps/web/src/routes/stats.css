@@ -217,10 +217,6 @@
   border-color: var(--tavern-gold, #f5a623);
 }
 
-.stats-td--keywords {
-  color: var(--text-dim, #9aa1b8);
-}
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -402,25 +398,6 @@
   text-decoration: underline;
 }
 
-.stats-rarity-tag {
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.stats-rarity-tag[data-rarity="Legendary"] {
-  color: #ffd24a;
-}
-
-.stats-rarity-tag[data-rarity="Epic"] {
-  color: #c084fc;
-}
-
-.stats-rarity-tag[data-rarity="Rare"] {
-  color: #60a5fa;
-}
-
 .stats-td--winrate {
   min-width: 140px;
 }
@@ -453,10 +430,6 @@
 .stats-not-enough {
   font-size: 12px;
   font-style: italic;
-  color: var(--text-dim, #9aa1b8);
-}
-
-.stats-not-played {
   color: var(--text-dim, #9aa1b8);
 }
 

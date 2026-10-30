@@ -2,7 +2,7 @@
 //
 // Accessible signed out and signed in.
 // Provides three tabs:
-//  - Cards: sortable, filterable table of card win rates, play rates, and personal numbers.
+//  - Cards: sortable, filterable table of card win rates and play rates; the filters, not columns, cover cost, rarity and keyword (R2446000).
 //  - Sets: each set's cards on the patch (below).
 //  - Players: public player aggregates (games, win rate, favourite cards, fun stats from #125).
 // Features:
@@ -46,15 +46,13 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
-import { readSession } from "../net/session.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS, SET_STATS_DIGITS, SET_STATS_OUTLIER_Z } from "../stats/config.ts";
 import { CreatedPanel } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
-import { faceRate, formatPlayedDelta, winPercent } from "../stats/model.ts";
+import { faceRate, formatPlayedDelta } from "../stats/model.ts";
 import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "../stats/patches.ts";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
-import { usePlayerStats } from "../stats/store.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
 import { TokensPanel } from "../stats/TokensPanel.tsx";
@@ -100,14 +98,6 @@ function keywordName(kind: KeywordKind): string {
   return readerTerms()?.keywords[kind] ?? kind;
 }
 
-function keywordLabel(id: string, language?: string): string {
-  const kinds = keywordKinds(id);
-  if (kinds.length === 0) return "";
-  const names = kinds.map(keywordName);
-  names.sort((a, b) => a.localeCompare(b, language));
-  return names.join(", ");
-}
-
 /** The tokens a card's text names (`CardDef.refs`, R279), the card itself left out: what the drill-down shows it makes. */
 function tokensOf(def: CardDef): CardDef[] {
   return (def.refs ?? []).flatMap((id) => {
@@ -143,9 +133,6 @@ type TabKey = "cards" | "sets" | "players";
 type ViewKey = "table" | "grid";
 type SortColumn =
   | "name"
-  | "cost"
-  | "rarity"
-  | "keyword"
   | "games"
   | "winRate"
   | "drawnWinRate"
@@ -157,9 +144,6 @@ type SortDirection = "asc" | "desc";
 
 const SORT_COLUMNS: readonly SortColumn[] = [
   "name",
-  "cost",
-  "rarity",
-  "keyword",
   "games",
   "winRate",
   "drawnWinRate",
@@ -171,9 +155,6 @@ const SORT_COLUMNS: readonly SortColumn[] = [
 
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
-  cost: "Cost",
-  rarity: "Rarity",
-  keyword: "Keywords",
   games: "Games",
   winRate: "Win rate",
   drawnWinRate: "When drawn",
@@ -184,7 +165,18 @@ const SORT_LABELS: Record<SortColumn, string> = {
 };
 
 function defaultDirection(col: SortColumn): SortDirection {
-  return col === "name" || col === "cost" || col === "rarity" || col === "keyword" ? "asc" : "desc";
+  return col === "name" ? "asc" : "desc";
+}
+
+/**
+ * R2446000: the sort an address asks for. One the table no longer offers (an old address's `cost`, `rarity` or
+ * `keyword`) is the default, win rate descending, its direction too.
+ */
+function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection } {
+  const asked = params.get("sort");
+  const col = asked === null ? "winRate" : SORT_COLUMNS.find((known) => known === asked);
+  if (col === undefined) return { col: "winRate", dir: "desc" };
+  return { col, dir: params.get("dir") === "asc" ? "asc" : "desc" };
 }
 
 /** The Cards tab's read for these filters; an empty filter asks for nothing, as `fetchCardStats` always did. */
@@ -209,12 +201,8 @@ export default function StatsRoute(): ReactElement {
   });
   const [patch, setPatch] = useState<string>(initialParams.get("patch") ?? "");
   const [search, setSearch] = useState<string>(initialParams.get("search") ?? "");
-  const [sortCol, setSortCol] = useState<SortColumn>(
-    (initialParams.get("sort") as SortColumn) ?? "winRate",
-  );
-  const [sortDir, setSortDir] = useState<SortDirection>(
-    initialParams.get("dir") === "asc" ? "asc" : "desc",
-  );
+  const [sortCol, setSortCol] = useState<SortColumn>(() => sortOf(initialParams).col);
+  const [sortDir, setSortDir] = useState<SortDirection>(() => sortOf(initialParams).dir);
   const [setFilter, setSetFilter] = useState<string>(initialParams.get("set") ?? "");
   const [rarityFilter, setRarityFilter] = useState<string>(initialParams.get("rarity") ?? "");
   const [costFilter, setCostFilter] = useState<string>(initialParams.get("cost") ?? "");
@@ -232,9 +220,6 @@ export default function StatsRoute(): ReactElement {
   // Column visibility
   const [visibleCols, setVisibleCols] = useState({
     thumbnail: true,
-    cost: false,
-    rarity: false,
-    keywords: false,
     games: true,
     winRate: true,
     drawnWinRate: true,
@@ -242,7 +227,6 @@ export default function StatsRoute(): ReactElement {
     normalWinRate: true,
     playRate: true,
     playedDelta: true,
-    personal: true,
   });
 
   // Card stats response. R2125000: a revisit starts on the table these filters last read and reads it again behind it.
@@ -283,10 +267,6 @@ export default function StatsRoute(): ReactElement {
   const [setsError, setSetsError] = useState(false);
   // Bumped by the Sets tab's Retry, as `cardStatsAttempt` is by the table's.
   const [setsAttempt, setSetsAttempt] = useState(0);
-
-
-  const playerStats = usePlayerStats();
-  const signedIn = readSession() !== null;
 
   // Sync state to URL
   const updateUrl = useCallback(() => {
@@ -569,19 +549,8 @@ export default function StatsRoute(): ReactElement {
         if (aRate !== null && bRate !== null && aRate !== bRate) {
           return (aRate - bRate) * flip;
         }
-      } else if (sortCol === "keyword") {
-        const aLabel = keywordLabel(a.id, language);
-        const bLabel = keywordLabel(b.id, language);
-        if (aLabel && !bLabel) return -1;
-        if (!aLabel && bLabel) return 1;
-        if (aLabel && bLabel) {
-          const diff = aLabel.localeCompare(bLabel, language);
-          if (diff !== 0) return diff * flip;
-        }
       } else if (sortCol === "games") {
         if (a.games !== b.games) return (a.games - b.games) * flip;
-      } else if (sortCol === "cost") {
-        if (a.cost !== b.cost) return (a.cost - b.cost) * flip;
       } else if (sortCol === "playRate") {
         if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
       } else if (sortCol === "playedDelta") {
@@ -592,10 +561,6 @@ export default function StatsRoute(): ReactElement {
         if (a.playedDelta !== null && b.playedDelta !== null && a.playedDelta !== b.playedDelta) {
           return (a.playedDelta - b.playedDelta) * flip;
         }
-      } else if (sortCol === "rarity") {
-        const rarities = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
-        const diff = rarities.indexOf(a.rarity) - rarities.indexOf(b.rarity);
-        if (diff !== 0) return diff * flip;
       } else if (sortCol === "name") {
         const diff = compareNames(a, b);
         if (diff !== 0) return diff * flip;
@@ -899,30 +864,6 @@ export default function StatsRoute(): ReactElement {
                   <label className="stats-col-toggle">
                     <input
                       type="checkbox"
-                      checked={visibleCols.cost}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, cost: e.target.checked }))}
-                    />
-                    {t("Cost")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.rarity}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, rarity: e.target.checked }))}
-                    />
-                    {t("Rarity")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.keywords}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, keywords: e.target.checked }))}
-                    />
-                    {t("Keywords")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
                       checked={visibleCols.games}
                       onChange={(e) => setVisibleCols((c) => ({ ...c, games: e.target.checked }))}
                     />
@@ -968,16 +909,6 @@ export default function StatsRoute(): ReactElement {
                     />
                     {t("Played vs held")}
                   </label>
-                  {signedIn && (
-                    <label className="stats-col-toggle">
-                      <input
-                        type="checkbox"
-                        checked={visibleCols.personal}
-                        onChange={(e) => setVisibleCols((c) => ({ ...c, personal: e.target.checked }))}
-                      />
-                      {t("Your stats")}
-                    </label>
-                  )}
                 </div>
               )}
             </div>
@@ -1055,57 +986,6 @@ export default function StatsRoute(): ReactElement {
                       >
                         {t("Name")} {sortCol === "name" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
-                      {visibleCols.cost && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "cost" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("cost")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("cost");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Cost")}{sortCol === "cost" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
-                        </th>
-                      )}
-                      {visibleCols.rarity && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "rarity" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("rarity")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("rarity");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Rarity")} {sortCol === "rarity" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
-                      {visibleCols.keywords && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "keyword" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("keyword")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("keyword");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Keywords")} {sortCol === "keyword" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
                       {visibleCols.games && (
                         <th
                           scope="col"
@@ -1223,17 +1103,10 @@ export default function StatsRoute(): ReactElement {
                           {t("Played vs held")} {sortCol === "playedDelta" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
-                      {signedIn && visibleCols.personal && (
-                        <th scope="col" className="stats-th">
-                          {t("Your stats")}
-                        </th>
-                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredCards.map((card) => {
-                      const personalPlayed = playerStats.cards[card.id]?.played ?? 0;
-                      const personalRate = winPercent(playerStats);
                       const radiantRate = faceRate(card.playedRadiantGames, card.playedRadiantWinRate, minSample);
                       const normalRate = faceRate(card.playedNormalGames, card.playedNormalWinRate, minSample);
 
@@ -1262,19 +1135,6 @@ export default function StatsRoute(): ReactElement {
                           <td className="stats-td stats-td--name">
                             <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>
                           </td>
-                          {visibleCols.cost && <td className="stats-td">{card.cost}</td>}
-                          {visibleCols.rarity && (
-                            <td className="stats-td">
-                              <span className="stats-rarity-tag" data-rarity={card.rarity}>
-                                {t(card.rarity)}
-                              </span>
-                            </td>
-                          )}
-                          {visibleCols.keywords && (
-                            <td className="stats-td stats-td--keywords">
-                              {keywordLabel(card.id, locale === "en" ? undefined : locale) || "—"}
-                            </td>
-                          )}
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
                           <td className="stats-td stats-td--winrate">
                             {card.hasEnoughGames && card.winRate !== null ? (
@@ -1322,17 +1182,6 @@ export default function StatsRoute(): ReactElement {
                                 </span>
                               ) : (
                                 <span className="stats-not-enough">{t("not enough data")}</span>
-                              )}
-                            </td>
-                          )}
-                          {signedIn && visibleCols.personal && (
-                            <td className="stats-td stats-td--personal">
-                              {personalPlayed > 0 ? (
-                                <span>
-                                  {personalPlayed}× {personalRate !== null ? `(${personalRate}%)` : ""}
-                                </span>
-                              ) : (
-                                <span className="stats-not-played">0</span>
                               )}
                             </td>
                           )}

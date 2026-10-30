@@ -3,8 +3,9 @@
 //! Stratos." (R1860008).
 //!
 //! Engine: `fill_board` with Stinkyscape #68 Stratos (Core #62 Friend of Felinors' verb): every
-//! open unit zone of its caster's, a Dormant card's zone not one (R1839000), each a summoned card
-//! of its own definition, no Cry (R1), no token; Radiant `radiant: true`. Each is a Starship
+//! open unit zone of its caster's, a Dormant card's zone not one (R1839000), then, as Stratos flies,
+//! every empty backrow zone, where each stands (R2248000), each a summoned card of its own
+//! definition, no Cry (R1), no token; Radiant `radiant: true`. Each is a Starship
 //! Piece, so each that dies fuses (R1852000). A Spell's resolution hangs off `cry` (Core #5
 //! Stockpile's shape).
 
@@ -36,8 +37,9 @@ pub fn script() -> CardScripts {
 }
 
 // Stinkyscape #158 Stratos Swarm — SPEC §8.10 row 158, BUILD M12 row S 158: "fills every open unit
-// zone of its caster's with Stratos, Flying Starship Pieces, no Cry; a Dormant card's zone is not
-// filled; a full board summons none; radiant Radiant Stratos".
+// zone of its caster's with Stratos, Flying Starship Pieces, no Cry, then every empty backrow zone
+// (R2248000); a Dormant card's zone is not filled; a full board, both rows, summons none; radiant
+// Radiant Stratos".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -50,11 +52,19 @@ mod tests {
     const STRATOS: &str = "stinkyscape-068"; // 3/3 Flying Starship Piece.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const WELL: &str = "core-006"; // Mana Well, a Field Spell to fill a backrow zone.
 
     /// The def ids in p1's five unit zones, `None` where empty.
     fn row(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.unit(PlayerId::P1, lane).map(|unit| unit.def_id))
+            .collect()
+    }
+
+    /// The def ids in p1's five backrow zones, `None` where empty.
+    fn backrow(s: &Scenario) -> Vec<Option<String>> {
+        (1..=5)
+            .map(|lane| s.backrow(PlayerId::P1, lane).map(|card| card.def_id))
             .collect()
     }
 
@@ -72,7 +82,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1860008_fills_every_open_unit_zone_with_stratos_no_cry() {
+        fn r1860008_r2248000_fills_every_open_unit_zone_then_the_backrow_with_stratos_no_cry() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SWARM, ANCHOR], "mana": 10, "field": [VANILLA], "library": filler(4) },
@@ -85,6 +95,7 @@ mod tests {
             for lane in lanes.iter().skip(1) {
                 assert_eq!(lane, &Some(STRATOS.to_string()));
             }
+            assert_eq!(backrow(&s), vec![Some(STRATOS.to_string()); 5], "it flies (R2248000)");
             // Each summoned Stratos is base and a Starship Piece.
             let token = s.unit(PlayerId::P1, 2).expect("a Stratos");
             assert!(!token.radiant);
@@ -131,7 +142,7 @@ mod tests {
         }
 
         #[test]
-        fn r1860008_a_full_board_summons_none() {
+        fn r1860008_r2248000_a_full_unit_row_fills_the_backrow_and_a_full_board_summons_none() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
@@ -147,6 +158,30 @@ mod tests {
             for lane in row(&s) {
                 assert_eq!(lane, Some(VANILLA.to_string()));
             }
+            assert_eq!(backrow(&s), vec![Some(STRATOS.to_string()); 5]);
+            let summoned = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Summoned { .. }))
+                .count();
+            assert_eq!(summoned, 5);
+
+            // Both rows full: none.
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [SWARM, ANCHOR],
+                    "mana": 10,
+                    "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+                    "backrow": [WELL, WELL, WELL, WELL, WELL],
+                    "library": filler(4),
+                },
+                "p2": { "hand": [ANCHOR], "library": filler(4) },
+            }));
+            s.play(SWARM, json!({}));
+            assert!(
+                !s.events().iter().any(|event| matches!(event, GameEvent::Summoned { .. })),
+                "nothing summoned"
+            );
         }
     }
 

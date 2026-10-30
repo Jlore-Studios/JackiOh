@@ -51,7 +51,6 @@ import {
 import Hand from "./Hand.tsx";
 import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
-import Credits from "./Credits.tsx";
 import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
 import StarscapeMap from "./StarscapeMap.tsx";
@@ -69,6 +68,7 @@ import { FriendsButton } from "../together/FriendsButton.tsx";
 import { formatSeconds, t } from "../i18n/i18n.ts";
 import { ActingProvider } from "./spent.ts";
 import { KeywordLossProvider, keywordLossesFrom } from "./keywordLoss.ts";
+import { AwakeningProvider, awakeningsFrom } from "./awakening.ts";
 import { WearerProvider, seatDeckCosmetics, useSeatDeckCosmetics, type Wear } from "./wearer.ts";
 import Backdrop from "./Backdrop.tsx";
 import { DEFAULT_CARD_COSMETICS, useCosmetics, useOwnsAccountCosmetic } from "../cards/cosmetics.ts";
@@ -536,9 +536,6 @@ function Seat({
           ))}
         </span>
       )}
-      {/* R1840005: the Credits beside the hand, absent until the view carries them. A Resource is a
-          hand card (R2250000). */}
-      <Credits side={side} credits={seat.marketCredits} />
     </div>
   );
 }
@@ -618,6 +615,8 @@ export default function Board({
   const pops = popsFrom(view, animating, animated);
   // #1598: the cards losing a keyword, read off the burst as the pops are (keywordLoss.ts).
   const keywordLosses = keywordLossesFrom(view, animating, animated);
+  // #2435: the cards the burst has awakened, their Dormant seal broken (awakening.ts).
+  const awakenings = awakeningsFrom(view, animating, animated);
   // R318: fatigue and a full library on a library pile, a full hand over a hand, as the pops are.
   const notices = noticesFrom(view, animating, animated);
   const burnNotice = (side: Side): ReactElement => (
@@ -677,12 +676,14 @@ export default function Board({
   // R243: the match-made definitions and field powers this view names, for every card drawn below;
   // #258: and who is acting now, for the units that have no action left (spent.ts); R1295000: and
   // whose cards wear the device's cosmetics (wearer.ts); R1297000: and the deck's picks; R1834004: and
-  // both seats' loadouts; #1598: and which cards are losing a keyword (keywordLoss.ts).
+  // both seats' loadouts; #1598: and which cards are losing a keyword (keywordLoss.ts);
+  // #2435: and which cards the burst has awakened (awakening.ts).
   return (
     <MatchCardsProvider view={view}>
       <ActingProvider view={view}>
       <WearerProvider seat={wear.seat} deck={deckCosmetics} loadouts={loadouts} viewer={view.viewer}>
       <KeywordLossProvider lost={keywordLosses}>
+      <AwakeningProvider awake={awakenings}>
       <div
         className="board"
         data-testid={testid.board}
@@ -824,6 +825,7 @@ export default function Board({
 
         <Log view={view} revealed={logOpen} />
       </div>
+      </AwakeningProvider>
       </KeywordLossProvider>
       </WearerProvider>
       </ActingProvider>

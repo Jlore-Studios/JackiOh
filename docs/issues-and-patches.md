@@ -39,7 +39,7 @@ every push (#1370). Nothing else sets them, and no label overrides the classifie
 | `kind:app` | It changes the client or the server, what players see and use |
 | `kind:internal` | CI, the bots, tooling, docs, tests or a refactor |
 | `tier:major` | A set ships: the next `v0.Z.0` |
-| `tier:patch` | 10 or more cards play differently, or a rule every game meets: the next `v0.Z.X` |
+| `tier:patch` | 50 or more cards play differently, or a rule every game meets: the next `v0.Z.X` |
 | `tier:micro` | Fewer cards, or their words alone: the next letter |
 
 The type labels stay for routing (the night bot's sweeps and the forms read them), though a `Patch:`
@@ -122,8 +122,11 @@ does to the cards through the classifier and names it:
   arrival opens no line and earns the tier its cards do, so Training Grounds ships as a patch of
   Stinkyscape's v0.5, whose line is "Stinkyscape & Training Grounds". Wrapping is the owner's call,
   never a builder's.
-- **Patch, `v0.Z.(X+1)`**: 10 or more card families play differently (`PATCH_MIN_CARDS`), or a rule
-  every game meets changed.
+- **Patch, `v0.Z.(X+1)`**: 50 or more card families play differently (`PATCH_MIN_CARDS`), or a rule
+  every game meets changed: divergences that name no card in a quarter of the classifier's unforced
+  games (`RULE_MIN_GAMES`), or a base build that refuses the head's decks. A patch restarts every
+  card's statistics (R1367000), so it waits for a change broad enough to move them (#2455,
+  R2455000); the bar was 10 families, and any one divergence without a card, until then.
 - **Micro, the newest version with the next letter** (after v0.3.18, v0.3.18b, then v0.3.18c):
   anything smaller, and any change to wording alone however many cards it touches.
 
@@ -151,8 +154,9 @@ in `patches.json`, so readers never parse a version, and the order of patches is
 ## Version retcon
 
 #1371 (part 7 of #1360, R1371000) renamed every shipped version to what the classifier (R1365000)
-would have called it: a major where a set first ships, a patch where `PATCH_MIN_CARDS` or more card
-families play differently, a micro for anything smaller or for wording alone. `cargo jackioh patches
+would have called it: a major where a set first ships, a patch where 10 or more card families (then
+`PATCH_MIN_CARDS`) play differently, a micro for anything smaller or for wording alone. #2455 raised
+the bar to 50 for later patches and renamed none (R2455000). `cargo jackioh patches
 retcon` computed the map from the snapshots and, from the Rust scripts on, the scripts each patch's own
 commits changed, and renamed every name the repository and the database hold. Docs, commit messages,
 code comments and the older issue and pull request titles keep the old names; translate them with this

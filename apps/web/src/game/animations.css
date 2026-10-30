@@ -1316,6 +1316,52 @@
   animation-duration: calc(700ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
+/* --- awakened: a Dormant card's seal breaks (400 ms, R1839002, #2435) ---------------------- */
+/* The board still shows the card Dormant, so this breaks DormantSeal.tsx's seal; `data-awakening`
+   (game/awakening.ts) then holds it gone through a Starship's launch (R1852003). */
+@keyframes jk-dormant-break {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.06) rotate(-3deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4) rotate(8deg);
+  }
+}
+
+@keyframes jk-dormant-lift {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+[data-animating="awakened"] .cf-dormant-veil,
+[data-animating="awakened"] .cf-dormant-bands {
+  animation-duration: calc(400ms * var(--anim-scale) * var(--anim-squeeze, 1));
+  animation-timing-function: var(--ease-out);
+  animation-fill-mode: both;
+}
+
+[data-animating="awakened"] .cf-dormant-veil {
+  animation-name: jk-dormant-lift;
+}
+
+[data-animating="awakened"] .cf-dormant-bands {
+  animation-name: jk-dormant-break;
+}
+
+[data-awakening]:not([data-animating="awakened"]) .cf-dormant {
+  opacity: 0;
+}
+
 /* --- voteCast / votedOut / fled: issue #1843's endings (R1843000, R1843002) ----------- */
 /* A vote flares its card (400 ms); the agreement holds the banner (1200 ms); the fleer's hero
    fades out of the universe (900 ms). */
