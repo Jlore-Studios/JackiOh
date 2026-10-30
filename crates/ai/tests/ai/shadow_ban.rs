@@ -1759,17 +1759,25 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         );
     }
 
+    /// R2521010: the sets whose cards the shadow ban may hold (`BAN_SETS` in the tools' sweep), so the
+    /// unban lane may lift a card of any of them.
+    const BAN_SETS: [SetName; 4] = [
+        SetName::Meditative,
+        SetName::MeditativePlus,
+        SetName::Stinkyscape,
+        SetName::TrainingGrounds,
+    ];
+
     #[test]
-    fn r732000_the_unbanned_ids_are_sorted_meditative_cards_out_of_the_ban() {
+    fn r732000_r2521010_the_unbanned_ids_are_sorted_cards_of_the_ban_sets_out_of_the_ban() {
         jackioh_cards::register_all();
         assert!(
             SHADOW_UNBANNED.windows(2).all(|pair| pair[0] < pair[1]),
             "{SHADOW_UNBANNED:?}: not sorted by id"
         );
         for &def_id in SHADOW_UNBANNED {
-            assert_eq!(
-                def_of(None, def_id).set,
-                SetName::Meditative,
+            assert!(
+                BAN_SETS.contains(&def_of(None, def_id).set),
                 "{def_id}: the shadow ban takes no card of an earlier set (R732000)"
             );
             assert!(
