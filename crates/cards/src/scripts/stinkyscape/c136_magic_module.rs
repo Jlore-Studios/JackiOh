@@ -46,7 +46,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage.
-    const STARTOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
 
     /// The hand's new cards once p1's Starship holding the Module (Radiant if `radiant`) launches.
     fn added_on_launch(seed: &str, radiant: bool) -> Vec<CardDef> {
@@ -95,7 +95,7 @@ mod tests {
         for (radiant, spell_damage) in [(false, 2), (true, 4)] {
             let (mut s, ship) = built_starship(
                 "r1859005-field",
-                json!([{ "def": STARTOS, "lane": 1 }]),
+                json!([{ "def": STRATOS, "lane": 1 }]),
                 json!({
                     "hand": [LUNAR],
                     "field": [{ "def": ID, "lane": 2, "radiant": radiant }],

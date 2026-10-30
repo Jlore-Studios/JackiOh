@@ -339,6 +339,9 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/tests/store/contract.rs", [false, true, false]],
     ["crates/server/tests/support/test_app.rs", [false, true, false]],
     ["crates/server/tests/server_store.rs", [false, true, false]],
+    // The seed test seeds the real catalog and counts the shipped sets' tags (#2204).
+    ["crates/cards/catalog.json", [false, true, false]],
+    ["crates/engine/src/wire/catalog_types.rs", [false, true, false]],
     ["crates/server/src/env.rs", [false, false, true]],
     ["crates/server/src/main.rs", [false, false, true]],
     ["crates/server/src/app.rs", [false, false, true]],
@@ -538,6 +541,9 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/cards/catalog.json", [...RUST]],
     ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
+    // acceptance.rs holds the server tests' helpers to tests/support/ (#2385); tests/store/ is not scanned.
+    ["crates/server/tests/api/queue.rs", ["rust_server", "rust_tools_wasm"]],
+    ["crates/server/tests/store/contract.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
     ["crates/luau/src/lib.rs", ["rust_luau", "rust_tools_wasm"]],

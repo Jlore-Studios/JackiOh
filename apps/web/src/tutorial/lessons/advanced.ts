@@ -1,4 +1,6 @@
-// Lesson data (SPEC §9.10, R291); ../lessons.ts defines its fields and ../scripts/advanced.ts is the coach.
+// Lesson 4 data (SPEC §9.10, R291, R2205003); ../scripts/advanced.ts is the coach. Training Grounds
+// cards only, none Legendary or Mythic, the pool hold on. The player goes second, so The Coin is
+// theirs (R244). Deck order fixes this seed's deal (`scripts/lesson-deal.ts advanced`).
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -6,56 +8,46 @@ export const lesson: TutorialLesson = {
   id: "advanced",
   number: 4,
   title: "Tricks of the trade",
-  summary: "The mulligan, The Coin, Radiant cards, tribes, tokens, Tribute and the yellow glow.",
-  mechanics: ["Mulligan", "The Coin", "Radiant", "Tribes", "Tokens", "Tribute", "Yellow glow"],
-  // The human goes second, so receives The Coin (R244). This seed exchanges the 7/7 for The Rock and
-  // times Friend of Felinors and Reno for the coach; the coach and autopilot win by turn seven with
-  // the hero no lower than 22 (verified with scripts/lesson-deal.ts).
-  seed: "tutorial-advanced-3087",
+  summary: "The mulligan, The Coin, Radiant cards, tribes, Tribute, Death and tokens that don't last.",
+  discoveries: ["mulligan", "the-coin", "radiant", "tribe", "tribute", "death", "temporary-tokens"],
+  seed: "tg-advanced-10",
   humanSeat: "p2",
+  poolHold: true,
   humanDeck: [
-    "core-062", // Friend of Felinors (Common)
-    "core-092", // Felinor Fiender (Legendary: the tribe's payoff)
-    "core-026", // Glowy Jelly Bean (Rare)
-    "core-066", // The Rock (Common)
-    "core-081", // Radiant Saintess (Epic)
-    "core-012", // Duplicating Felinors (Rare)
-    "core-053", // Reno (Common)
-    "core-025", // 4-mana 7/7 (Common)
-    "core-015", // Me and Mr Token (Common)
-    "core-008", // Mr. Vanilla (Common)
-    "core-011", // Tempo Timmy (Common)
-    "core-020", // Pointmaster (Common)
-    "core-068", // Twisted Sorcerer (Common)
-    "core-032", // Prem Panther (Rare)
-    "core-045", // Deft Duelist (Rare)
-    "core-019", // Midrange Menace (Common)
-    "core-013", // Jlockeed Shredder-10 (Common)
-    "core-044", // True Strike (Common)
-    "core-037", // Gravedigger (Rare)
-    "core-035", // Lunar Eclipse (Rare)
+    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-050", // Glowy Jelly Bean, Rare
+    "traininggrounds-015", // In a hurry, Common
+    "traininggrounds-032", // Selfless Protector, Epic
+    "traininggrounds-051", // Big Felinor, Rare
+    "traininggrounds-054", // The Rock, Common
+    "traininggrounds-023", // Quadrupling Felinors, Rare
+    "traininggrounds-027", // Hopeful Jelly Bean, Rare
+    "traininggrounds-031", // Level Up!, Epic
+    "traininggrounds-025", // Trigor, Rare
+    "traininggrounds-036", // Training Dummy, Epic
+    "traininggrounds-033", // Guerilla Felinor, Epic
+    "traininggrounds-030", // Floodgates, Epic
+    "traininggrounds-035", // Corpse Recycler, Epic
+    "traininggrounds-049", // Reoccurring Dream, Rare
+    "traininggrounds-022", // Right-Hand Felinor, Rare
+    "traininggrounds-017", // Flaming Felinor, Rare
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-008", // Clobberer, Common
   ],
-  // The AI applies cheap board pressure without racing the player during setup. Its 4+ mana cards are
-  // uncast at AI_TUTORIAL.manaCap (3); none can copy, steal, or remove The Rock. Since both seats open
-  // on four cards (R1156000), the order deals the AI Rapid Replenish as its fourth card: the deal is the
-  // one it had on three cards, with Rapid Replenish moved up from late in its library to the top.
-  // Right-house defender, lesson 2's Taunt, holds Me and Mr Token's place (#1728): once the AI switched
-  // a spent attacker to Defense Position (#1713), a beginner who ignores the coach won 5 of the 10 other
-  // deals R293's sweep plays, and with the defender wins 8 of them (31 of the first 40). The lesson's
-  // tokens are the player's own.
   aiDeck: [
-    "core-008", // Mr. Vanilla
-    "core-029", // GIGA Glowy Jelly Bean: costs 6, never cast
-    "core-072", // Reminisce
-    "core-003", // Right-house defender
-    "core-001", // Big D-fender
-    "core-030", // Archivist
-    "core-005", // Stockpile
-    "core-054", // Straaza: costs 4, never cast
-    "core-004", // Gary the Gambler
-    "core-010", // Rapid Replenish
-    "core-025", // 4-mana 7/7: costs 4, never cast
-    "core-014", // Jlockeed's Weapons: costs 4, never cast
+    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-002", // Personal Trainer, Common
+    "traininggrounds-005", // Midlane Menace, Common
+    "traininggrounds-006", // Chosen by the Sun, Common
+    "traininggrounds-007", // Chosen by the Moon, Common
+    "traininggrounds-022", // Right-Hand Felinor, Rare
+    "traininggrounds-053", // Prejudiced Postdoc, Rare
+    "traininggrounds-013", // Explosive Runes, Common
+    "traininggrounds-019", // Extra Rations, Rare
+    "traininggrounds-047", // Midrange Menace, Common
+    "traininggrounds-011", // Thwomp, Common
   ],
   retryTip: "Send expensive cards back in the mulligan, play The Coin on your first turn, and let big units like The Rock do the fighting.",
 };

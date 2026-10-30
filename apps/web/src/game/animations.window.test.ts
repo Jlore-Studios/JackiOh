@@ -104,15 +104,24 @@ const CLONE_MACHINE = "core-033";
 const VIRAL_INJECTION = "core-090";
 
 /** `n` distinct deckable ids, cheapest first (as `cheap20` picks them), after the ones a game needs.
- * Deckable is `cheap20`'s rule: no token, and only a set that ships (R1420). */
+ * Deckable is `cheap20`'s rule: no token, and only a set that ships (R1420). Re-pinned for the
+ * Training Grounds release (#2204): a deck holds a Core card or its snapshot, never both (R2195000),
+ * so a card whose pair (its `snapshotOf`, or its own id) the deck holds is skipped, as the Rust
+ * tests' `deal()` does. */
 function cheapest(n: number, needs: readonly string[] = []): string[] {
   const catalog = realPort().catalog?.() ?? {};
   const pool = Object.values(catalog)
     .filter((def: CardDef) => !def.token && !def.tags.includes("Token") && setShips(def.set))
     .sort(byIndex)
     .sort((a, b) => printedCost(a.cost) - printedCost(b.cost));
+  const pairOf = (id: string): string => catalog[id]?.snapshotOf ?? id;
   const deck = [...needs];
-  for (const def of pool) if (deck.length < n && !deck.includes(def.id)) deck.push(def.id);
+  const pairs = new Set(deck.map(pairOf));
+  for (const def of pool) {
+    if (deck.length >= n || pairs.has(pairOf(def.id))) continue;
+    deck.push(def.id);
+    pairs.add(pairOf(def.id));
+  }
   return deck;
 }
 
@@ -126,8 +135,7 @@ type OverflowGame = { label: string; game: () => RealGame; seed: number; prefer:
  * cheaper Meditative cards let p1 empty its hand in seeds 1 and 2, so seed 3 joins them for the burn.
  */
 function overflowGames(): OverflowGame[] {
-  // Nine opening cards: the four every seat draws (R1156000) and five extra.
-  const burner: Handicap = { ...HUMAN_HANDICAP, deckSize: 30, extraOpeningCards: 5, extraDrawsPerTurn: 2 };
+  const burner: Handicap = { ...HUMAN_HANDICAP, deckSize: 30, extraOpeningCards: 6, extraDrawsPerTurn: 2 };
   const short: Handicap = { ...HUMAN_HANDICAP, deckSize: 6 };
   const capped: Handicap = { ...HUMAN_HANDICAP, deckSize: LIBRARY_CAP };
   const games: OverflowGame[] = [];

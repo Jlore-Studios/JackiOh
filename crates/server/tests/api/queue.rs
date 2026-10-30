@@ -44,7 +44,6 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_engine::{
@@ -72,17 +71,9 @@ use jackioh_server::db::store::{BotDeck, NewBot, ProfileStatus, SavedDeck, Store
 use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
-use crate::support::store::{fake_lock, q, to_json, uuid};
+use crate::support::store::{fake_lock, from, q, to_json, uuid};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
-
-/// A port value built from an object literal, so the test depends on the JSON shape only.
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    match serde_json::from_value(value.clone()) {
-        Ok(parsed) => parsed,
-        Err(error) => panic!("{error}: {value}"),
-    }
-}
 
 /// R143's seeds are held in `queue.rs`'s process-wide map, which every test of this binary shares.
 /// The tests that send a seed, or count the map, take this, so `e2e_seed_count()` sees only their own.
@@ -2810,6 +2801,48 @@ mod r253_what_may_be_queued_through_the_real_validator {
             tickets_table(&w.app).await.first().map(|row| row["deck"].clone()),
             Some(json!(w.pool[..w.size]))
         );
+    }
+
+    /// R2195000: with the Training Grounds set shipped (issue #2204), the server's validator refuses a
+    /// deck holding a Core card and its snapshot under L3, and takes either alone.
+    #[tokio::test(start_paused = true)]
+    async fn r2195000_refuses_a_best_of_1_deck_holding_a_core_card_and_its_snapshot_l3() {
+        let w = real_wiring().await;
+        let (core, snapshot) = ("core-002", "traininggrounds-041");
+        assert!(w.pool.iter().any(|id| id == snapshot), "the snapshot ships");
+        let rest: Vec<String> = w
+            .pool
+            .iter()
+            .filter(|id| *id != core && *id != snapshot)
+            .take(w.size - 2)
+            .cloned()
+            .collect();
+        let both: Vec<String> = [core, snapshot]
+            .iter()
+            .map(|id| (*id).to_string())
+            .chain(rest.iter().cloned())
+            .collect();
+        let pair_deck = save_deck_for(&w.app, "real", &both, "Twins").await;
+        let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": pair_deck }), "L3").await;
+        assert!(
+            refused["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("snapshot"),
+            "{refused}"
+        );
+        let mut one: Vec<String> = vec![snapshot.to_string()];
+        one.extend(
+            w.pool
+                .iter()
+                .filter(|id| *id != core && *id != snapshot)
+                .take(w.size - 1)
+                .cloned(),
+        );
+        let one_deck = save_deck_for(&w.app, "real", &one, "Snapshot alone").await;
+        let (status, body) =
+            enqueue_with(&w.app, &w.token, json!({ "mode": "bo1", "deckId": one_deck })).await;
+        assert_eq!(status, 200, "{body}");
     }
 
     #[tokio::test(start_paused = true)]

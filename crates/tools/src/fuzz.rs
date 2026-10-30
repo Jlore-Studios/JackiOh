@@ -146,7 +146,7 @@ use jackioh_engine::testkit::{
     preview_every_set, set_ships,
 };
 use jackioh_engine::{
-    AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardInstance, CardType,
+    AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardDef, CardInstance, CardType,
     CreateGameOptions, DECK_SIZE, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState,
     EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS,
     PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game,
@@ -486,19 +486,22 @@ static BOARD_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     pool
 });
 
+/// R23: an Immutable card, on either face, is never fused.
+pub(crate) fn is_immutable(def: &CardDef) -> bool {
+    [&def.base, &def.radiant].iter().any(|face| {
+        face.keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::Immutable)
+    })
+}
+
 /// The Units a manufactured board's fused card can be made of: no token, and no Immutable card, which
 /// R23 means is never fused. Sorted by catalog id.
-static FUSABLE_UNITS: LazyLock<Vec<String>> = LazyLock::new(|| {
+pub(crate) static FUSABLE_UNITS: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
         .filter(|(_, def)| def.type_ == CardType::Unit && !def.is_token())
-        .filter(|(_, def)| {
-            ![&def.base, &def.radiant].iter().any(|face| {
-                face.keywords
-                    .iter()
-                    .any(|keyword| keyword.kind() == KeywordKind::Immutable)
-            })
-        })
+        .filter(|(_, def)| !is_immutable(def))
         .map(|(id, _)| id.clone())
         .collect();
     pool.sort();
@@ -1492,7 +1495,7 @@ pub(crate) fn largest_in_json(value: &Value) -> i64 {
 
 /// One action's weights, in `MEASURES`' order: the events `reduce` returned, the largest number on
 /// any instance of `state` (the state it produced) and the instances in it.
-fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
+pub(crate) fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
     let (largest, instances) = instances_of(state).fold((0_i64, 0_i64), |(largest, count), card| {
         (largest.max(largest_number(card)), count + 1)
     });
@@ -1549,7 +1552,7 @@ fn growth_message(
 }
 
 /// The failure message of the first measure past its bound, when one is: a value at the bound passes.
-fn growth_breach(
+pub(crate) fn growth_breach(
     weights: &[i64; 3],
     state: &GameState,
     step: usize,
@@ -2919,18 +2922,19 @@ pub(crate) mod tests {
         const HELD_FIXTURE: &str = "fuzz-held";
 
         /// BUILD M13's foundation gate, "the fuzz tool previews it" (R2194000): while the Training
-        /// Grounds set is held, the fuzz pool deals its cards and the golden traces' pool none.
+        /// Grounds set was held, the fuzz pool dealt its cards and the golden traces' pool none. Since
+        /// its release (#2204) it ships, so both pools deal it.
         #[test]
-        fn r2194000_the_fuzz_pool_holds_the_held_training_grounds_set_and_the_golden_pool_none() {
+        fn r2194000_the_fuzz_pool_and_the_golden_pool_hold_the_shipped_training_grounds_set() {
             register_all();
             let training_grounds =
                 |id: &String| CATALOG[id.as_str()].set == jackioh_engine::SetName::TrainingGrounds;
             assert!(
-                !set_ships(jackioh_engine::SetName::TrainingGrounds),
-                "held until its release, #2204"
+                set_ships(jackioh_engine::SetName::TrainingGrounds),
+                "shipped by its release, #2204"
             );
             assert!(FUZZ_POOL.iter().any(training_grounds));
-            assert!(!SHIPPED_FUZZ_POOL.iter().any(training_grounds));
+            assert!(SHIPPED_FUZZ_POOL.iter().any(training_grounds));
         }
 
         #[test]

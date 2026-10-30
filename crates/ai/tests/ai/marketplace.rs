@@ -7,7 +7,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, ai_options, is_legal, register_cards};
+use super::support::{AI, HUMAN, ai_options, clone, is_legal, register_cards};
 
 const VANILLA: &str = "core-008";
 const PRICE: i32 = 40;
@@ -19,6 +19,11 @@ const LIBRARY: &[&str] = &[
 /// `PRICE`; the human's Mr. Vanilla on the field, so the turn has a board to weigh. `theirs` is the
 /// card the human's own offer holds, ahead of the AI's in the Marketplace's list.
 fn board(seed: &str, theirs: &str) -> GameState {
+    priced_board(seed, theirs, PRICE)
+}
+
+/// `board` with the AI's Mr. Vanilla at `price`.
+fn priced_board(seed: &str, theirs: &str, price: i32) -> GameState {
     register_cards();
     let mut state = scenario(json!({
         "seed": seed,
@@ -31,8 +36,8 @@ fn board(seed: &str, theirs: &str) -> GameState {
     let offer = |def_id: &str, owner: PlayerId| MarketOffer {
         def_id: def_id.to_string(),
         radiant: None,
-        base: PRICE,
-        price: PRICE,
+        base: price,
+        price,
         stock: 1,
         bought: PerPlayer::new(0, 0),
         owner: Some(owner),
@@ -91,4 +96,65 @@ fn r1853004_r2250002_the_opponents_offers_never_change_the_decision() {
         );
     }
     assert_eq!(redact(&b, AI).marketplace, redact(&a, AI).marketplace);
+}
+
+/// `evaluate(state, AI)` with the AI's weights.
+fn eval(state: &GameState) -> f64 {
+    evaluate(state, AI, NextSwing::Enemy, &AI_EVAL)
+}
+
+#[test]
+fn held_credits_are_worth_what_they_buy_on_the_own_side_only() {
+    // #2389: a Credit is priced at the hand's worth of the mana it buys (R1853002).
+    assert_eq!(
+        AI_EVAL.market_credit,
+        AI_EVAL.hand_per_cost / f64::from(MARKETPLACE_CREDITS_PER_MANA)
+    );
+    let held = board("ai-market-credits", VANILLA);
+    let mut none = clone(&held);
+    none.players[AI].market_credits = None;
+    assert!((eval(&held) - eval(&none) - 100.0 * AI_EVAL.market_credit).abs() < 1e-9);
+    // The human's Credits are no part of the AI's side.
+    let mut theirs = clone(&held);
+    theirs.players[HUMAN].market_credits = Some(100);
+    assert_eq!(eval(&theirs), eval(&held));
+    // The frozen baseline prices none.
+    let greedy = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL);
+    assert_eq!(greedy(&held), greedy(&none));
+}
+
+/// A price no card's place in hand is worth at `AI_EVAL.market_credit` a Credit (30 points), all the
+/// Credits the AI holds. Before #2389 a Credit was worth nothing, so the AI bought at any price.
+const OVERPRICED: i32 = 1000;
+
+#[test]
+fn the_ai_keeps_its_credits_over_an_overpriced_offer() {
+    let mut state = priced_board("ai-market-overpriced", VANILLA, OVERPRICED);
+    state.players[AI].market_credits = Some(OVERPRICED);
+    let buy = ActionBody::MarketBuy { offer: 0 };
+    assert!(is_legal(&state, AI, &buy), "setup: the AI can afford it");
+    for k in ["ai-market-k1", "ai-market-k2", "ai-market-k3"] {
+        let decision = decide(&state, AI, &mut ai_options(k, AI_BUDGET)).expect("a decision");
+        assert_ne!(decision.action, buy, "{k}: {:?}", decision.line);
+    }
+}
+
+/// Stinkyscape T-gellium, a Resource (R2250000).
+const GELLIUM: &str = "stinkyscape-t-gellium";
+
+#[test]
+fn a_resource_plays_for_its_quote_too() {
+    register_cards();
+    let mut s = scenario(json!({
+        "seed": "ai-market-quote",
+        "p1": { "hand": [GELLIUM, "core-005"], "library": LIBRARY },
+        "p2": { "hand": ["core-005"], "library": LIBRARY },
+    }));
+    s.play(GELLIUM, json!({}));
+    let played = s.state().clone();
+    let quote = played.players[AI].market_credits.unwrap_or(0);
+    assert!(quote > 0, "setup: the play pays its quote (R2250001)");
+    let mut unpaid = clone(&played);
+    unpaid.players[AI].market_credits = None;
+    assert!((eval(&played) - eval(&unpaid) - f64::from(quote) * AI_EVAL.market_credit).abs() < 1e-9);
 }

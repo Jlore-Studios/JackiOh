@@ -3,14 +3,16 @@
 // whose view carries a `tradeReason`, puts the bar on it with the price and the Trades left the view
 // gives; it sends the listed `trade` and nothing else (CLAUDE.md rule 7).
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
 import { testid } from "./contract.ts";
 import Game from "./Game.tsx";
+import { handHintsTestid } from "./HandHints.tsx";
 import { offersTrade, tradeOfferFor } from "./TradeControl.tsx";
+import { withCatalog } from "../test/board.tsx";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 
 const TRADE_H1: ActionBody = { type: "trade", instanceId: "h1" };
@@ -99,5 +101,19 @@ describe("R1838000 the Trade bar on a 1v1 board", () => {
     pointAt("h2");
     expect(screen.queryByTestId(testid.tradeBar)).toBeNull();
     expect(screen.queryByTestId(testid.trade("h2"))).toBeNull();
+  });
+
+  it("R1838000 #2269 the Trade control still appears over a Tradable card wearing the hint pip", () => {
+    const onAction = vi.fn<(body: ActionBody) => void>();
+    render(withCatalog(<Game view={holding()} legal={[TRADE_H1, END_TURN]} onAction={onAction} />));
+    pointAt("h1");
+    const pip = within(screen.getByTestId(handHintsTestid("h1"))).getByRole("img", { name: "Tradable" });
+    expect(pip).toHaveAttribute("data-hint", "tradable");
+    expect(pip).not.toHaveAttribute("data-dimmed");
+    expect(screen.getByTestId(testid.tradeBar)).toBeTruthy();
+    const control = screen.getByTestId(testid.trade("h1")) as HTMLButtonElement;
+    expect(control.disabled).toBe(false);
+    fireEvent.click(control);
+    expect(onAction).toHaveBeenCalledWith(TRADE_H1);
   });
 });

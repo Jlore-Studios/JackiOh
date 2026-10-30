@@ -8,6 +8,7 @@ import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
 import { getSeriesForMatch, type SeriesView } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import { attempt } from "../together/session.ts";
 import { followInApp } from "./nav.tsx";
 import "./lobby.css";
 
@@ -36,11 +37,6 @@ export const SERIES_OUTCOME_HEADLINE: Readonly<Record<SeriesResult["outcome"], s
   draw: "The series is a draw",
   abandoned: "The series was called off",
 };
-
-/** Defer calls so synchronous test throws become promise rejections. */
-function attempt<T>(call: () => Promise<T>): Promise<T> {
-  return Promise.resolve().then(call);
-}
 
 function seriesOf(answer: unknown): SeriesView | null {
   if (typeof answer !== "object" || answer === null) return null;

@@ -34,10 +34,10 @@ The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch
 before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `catalog.rs`'s rows,
 `RARITY_COUNTS` and `SET_SIZES`, and the tools' `sets()` and tag counts.
 
-Also grep the Markdown for the stated totals (`572 cards`, `138 tokens`, `710`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
+Also grep the Markdown for the stated totals (`632 cards`, `139 tokens`, `771`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; and the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; the Training Grounds set is held now, while tracker #2193 builds it, until its release, issue #2204, R2194000) differs in five places, the Training Grounds paths below standing for any held set's:
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; and the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; no set is held now) differs in five places, the Training Grounds paths below standing for any held set's:
 - Its script goes in `src/scripts/training_grounds/` (id `traininggrounds-NNN`, a token's `traininggrounds-NNN-k`; Stinkyscape's
   had entries outside the numbers too, `stinkyscape-t-<name>`). The foundation (issue #2194) wrote a stub for every entry there,
   `STUB (#2194):` in its header (the snapshots #41–#60 are part 2's, #2195, which adds their entries and scripts): a card
@@ -240,6 +240,11 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested
   fusion resumed Final Gambit's step against the wrong ingredient (#105). If a wave fails at a seed that has nothing to do with
   your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test. A failure you fix or file gets a record in `crates/tools/fuzz-corpus/` in the same change (its README), so its deal survives the next card.
+- **The fused-pair sweep** (`cargo jackioh fused-pairs`, #2381) fuses the text of every card with a Death, a trigger, a start- or
+  end-of-turn hook, an aura or a fused hook onto every fusable Unit, and plays each pair until the board settles. A new card with one of
+  those hooks joins the texts, and a new Unit joins the bodies, so the pull request's stride sample can move onto pairs nobody has
+  played. A failure prints both ids, the seed and `cargo jackioh fused-pairs --pair <body>+<text>`, which plays it again on any day. Fix
+  it, or file it and list the pair in `KNOWN_OPEN` (`crates/tools/src/fused_pairs.rs`) with its open issue; never skip it any other way.
 - **A renamed card** (a patch that changes a `name`) fails `voice-lines.test.ts` until its comment in `card-audio.json5`, the name on the
   line of its id, says the new name (R655).
 - **A card patched to Legendary or Mythic** (or a token's `printedRarity`) fails `music-assets.test.ts` until it has row 12's intro, and one

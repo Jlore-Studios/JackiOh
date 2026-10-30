@@ -21,6 +21,7 @@
     { "id": "classic-plus-8", "title": "Play 8 Classic+ cards", "goal": { "kind": "playSetCards", "set": "Classic+" }, "target": 8, "jlore": 60 },
     { "id": "meditative-8", "title": "Play 8 Meditative cards", "goal": { "kind": "playSetCards", "set": "Meditative" }, "target": 8, "jlore": 60 },
     { "id": "meditative-plus-8", "title": "Play 8 Meditative+ cards", "goal": { "kind": "playSetCards", "set": "Meditative+" }, "target": 8, "jlore": 60 },
-    { "id": "stinkyscape-8", "title": "Play 8 Stinkyscape cards", "goal": { "kind": "playSetCards", "set": "Stinkyscape" }, "target": 8, "jlore": 60 }
+    { "id": "stinkyscape-8", "title": "Play 8 Stinkyscape cards", "goal": { "kind": "playSetCards", "set": "Stinkyscape" }, "target": 8, "jlore": 60 },
+    { "id": "training-grounds-8", "title": "Play 8 Training Grounds cards", "goal": { "kind": "playSetCards", "set": "Training Grounds" }, "target": 8, "jlore": 60 }
   ]
 }

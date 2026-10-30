@@ -906,9 +906,12 @@ mod tests {
         assert_eq!(sets_without_a_quest(&quests), Vec::<SetName>::new());
         let without: Vec<QuestDef> = quests
             .into_iter()
-            .filter(|quest| quest.id != "stinkyscape-8")
+            .filter(|quest| quest.id != "stinkyscape-8" && quest.id != "training-grounds-8")
             .collect();
-        assert_eq!(sets_without_a_quest(&without), vec![SetName::Stinkyscape]);
+        assert_eq!(
+            sets_without_a_quest(&without),
+            vec![SetName::Stinkyscape, SetName::TrainingGrounds]
+        );
     }
 
     #[test]

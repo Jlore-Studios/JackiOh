@@ -454,6 +454,12 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         if set_ships(SetName::Stinkyscape) { n } else { 0 }
     }
 
+    /// R2204000: `n` once the Training Grounds set ships, and nothing before. Its snapshots (#41–#60)
+    /// carry their Core card's tags (R2195000), so they count beside its own cards.
+    fn training_grounds(n: usize) -> usize {
+        if set_ships(SetName::TrainingGrounds) { n } else { 0 }
+    }
+
     /// The harness's truncate: every table but `public.cards`, including the three that reference it.
     const TRUNCATE: &str = "truncate
   public.series, public.results, public.match_actions, public.tickets, public.matches,
@@ -565,6 +571,11 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
                 "stinkyscape-130",
             ]);
         }
+        // R2204000: the Training Grounds set's two, #45 Jlockeed's Weapons and #48 Jlockeed
+        // Shredder-10, the snapshots of Core #14 and #13 that carry its tags (R2195000), once it ships.
+        if set_ships(SetName::TrainingGrounds) {
+            expected.extend(["traininggrounds-045", "traininggrounds-048"]);
+        }
         assert_eq!(jlockeed, expected);
         let tagged = |tag: &str| {
             entries
@@ -609,16 +620,21 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // Classic+ #32 (Otherworldly), its three tokens (Other-Origins) and Core #26 to #29 (Jelly
         // Bean); and, once it ships, on the Stinkyscape set's #4.1 to #4.6 (Terminus), its two
         // Quests (#7 The Greatest Heist and #112 Job Application), its three Otherworldlies (#10 to
-        // #12) and their nine spells (Other-Origins).
-        for (tag, count, stinky) in [
-            ("Terminus", 1, 6),
-            ("Quest", 1, 2),
-            ("Otherworldly", 1, 3),
-            ("Other-Origins", 3, 9),
-            ("Jelly Bean", 4, 0),
+        // #12) and their nine spells (Other-Origins); and, once it ships, on the Training Grounds
+        // set's #27 Hopeful Jelly Bean and #50 Glowy Jelly Bean, a snapshot (R2195000).
+        for (tag, count, stinky, grounds) in [
+            ("Terminus", 1, 6, 0),
+            ("Quest", 1, 2, 0),
+            ("Otherworldly", 1, 3, 0),
+            ("Other-Origins", 3, 9, 0),
+            ("Jelly Bean", 4, 0, 2),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
-            assert_eq!(tagged(tag), count + stinkyscape(stinky), "{tag}");
+            assert_eq!(
+                tagged(tag),
+                count + stinkyscape(stinky) + training_grounds(grounds),
+                "{tag}"
+            );
         }
         // R1857000: the four tags 0065 admits, the Stinkyscape set's alone: #27 to #36 (Drone
         // Core), #50 to #61 and #140 to #143 (Weapon), #137.1 to #137.4 (War Doctrine) and #91 and

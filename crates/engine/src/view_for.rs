@@ -53,6 +53,8 @@
 //!     combinations R90's bound cut (`play_choices::hand_play_choices_truncated`). R1844001: a sixth,
 //!     `paretoOptimal` (the Pareto hint), on the viewer's own hand cards only, while the viewer is
 //!     shown the hint and the judge would call the card's play optimal (`pareto::pareto_hint_ids`).
+//!     R2268000: a seventh, `tribute` (how many Tributes a play of the card asks now,
+//!     `play_choices::tribute_cost_of`), on the viewer's own hand cards only, and never at 0.
 //!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
 //!     (`attack_reason_of`).
 //!   - R979000: `playReason` on the viewer's own hand cards that may act now and have no legal play
@@ -88,7 +90,8 @@ use crate::mana::{NEXT_REFRESH_MODIFIER_ID, effective_cost, modifier_is_live};
 use crate::marks::marks_on;
 use crate::own_library::own_library_view;
 use crate::params::params_view;
-use crate::play_choices::{embiggen_play_cost, hand_play_choices_truncated};
+use crate::plague::plague_on;
+use crate::play_choices::{embiggen_play_cost, hand_play_choices_truncated, tribute_cost_of};
 use crate::preview::{backrow_is_public, is_face_down, preview_of};
 use crate::script::ConditionZone;
 use crate::setup::{mulligan_prompt_for, returned_awaiting_shuffle};
@@ -546,6 +549,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         // filled in by `card_view` from the instance data; bare views carry none.
         tags: None,
         embiggen_cost: None,
+        tribute: None,
         attack: None,
         health: None,
         power: None,
@@ -680,6 +684,16 @@ fn with_condition(mut view: CardView, active: bool) -> CardView {
 /// other card; this file asks it only of the viewer's own hand.
 fn with_embiggen_cost(mut view: CardView, state: &GameState, card: &CardInstance) -> CardView {
     view.embiggen_cost = embiggen_play_cost(state, card);
+    view
+}
+
+/// #2268, R2268000: a card in the viewer's own hand whose play asks a Tribute carries how many
+/// (`tribute`), read by the function its play is held to (`play_choices::tribute_cost_of`), so the
+/// client never works one out (CLAUDE.md rule 7). Absent at 0 and on every other card; this file
+/// asks it only of the viewer's own hand.
+fn with_tribute(mut view: CardView, state: &GameState, card: &CardInstance) -> CardView {
+    let tribute = tribute_cost_of(state, card);
+    view.tribute = (tribute > 0).then_some(tribute);
     view
 }
 
@@ -1001,12 +1015,6 @@ fn turn_open_to(state: &GameState, card: &CardInstance) -> bool {
         && state.active == card.controller
 }
 
-/// The tokens a card carries now; an untouched card carries none (§6.3 Plague Counter). A private
-/// copy of `plague::plague_on` (fullsend rule 5).
-fn plague_tokens_on(card: &CardInstance) -> i32 {
-    card.counters.plague.unwrap_or(0).max(0)
-}
-
 /// A public backrow card names its owner and its controller, since R33's readability and #87's board
 /// swap both turn on the controller and a stolen card sits in a backrow that is not its own. A
 /// face-down zone is `{ faceDown: true, cost }`: §10.8 grants the non-controller that a zone is
@@ -1022,7 +1030,7 @@ fn backrow_view(
     let card = card?;
     // B5 E19, R471: Plague Counters are public wherever they sit, a face-down card's included; B5 E21: a
     // backrow pile shows how many cards lie under its top, as a unit pile does (R13, R447).
-    let plague = plague_tokens_on(card);
+    let plague = plague_on(card);
     let under: i32 = match slot_of(state, card) {
         None => 0,
         Some(slot) => beneath_at(state, slot).len() as i32,
@@ -1484,7 +1492,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                         card,
                         viewer,
                     );
-                    with_pareto_hint(view, hinted.contains(&card.id))
+                    with_tribute(with_pareto_hint(view, hinted.contains(&card.id)), state, card)
                 })
                 .collect(),
         )

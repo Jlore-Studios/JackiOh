@@ -281,7 +281,10 @@ mod tests {
                 s.end_turn();
                 grow(&mut s, tree.as_str());
                 assert!(fused(&s));
-                s.expect_refused(|s| s.activate(tree.as_str(), json!({})));
+                // Re-pinned for the Training Grounds release (#2204): the seed's pick is now Core #98
+                // Heroic Power, whose own Activate the fused Tree carries, so the second activation names
+                // the Tree's.
+                s.expect_refused(|s| s.activate(tree.as_str(), json!({ "ability": "grow" })));
             }
 
             #[test]

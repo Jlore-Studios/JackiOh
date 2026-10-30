@@ -1878,27 +1878,6 @@ pub async fn redeem(t: &mut PgTx<'_>, input: &RedeemInviteCodeInput) -> Result<R
     to_redeem_result(get(&row, "redeem_invite_code")?)
 }
 
-/// `redeem` under the name `tests/store/postgres.rs` drives it by, kept because that suite is about
-/// `app.redeem_invite_code` specifically rather than about the port. It is the same function;
-/// `code_hash` is narrowed to text because a spec that means "no such code" says so with a hash
-/// that matches nothing.
-pub async fn redeem_invite_code(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    code_hash: &str,
-    ip_hash: &str,
-) -> Result<RedeemResult, StoreError> {
-    redeem(
-        t,
-        &RedeemInviteCodeInput {
-            profile_id: profile_id.to_string(),
-            code_hash: Some(code_hash.to_string()),
-            ip_hash: ip_hash.to_string(),
-        },
-    )
-    .await
-}
-
 /// The retention purge, as one call to `app.purge_expired_rows` (migration 0013, with 0029's third
 /// cutoff for the play telemetry, R1442, and 0041's fourth for the game records' detail, R1044001):
 /// the only path `match_actions`' append-only guard lets a delete through.

@@ -1,602 +1,100 @@
-// Fixed "spells" coach script (SPEC §9.10). Steps use only the view and legal actions
-// (CLAUDE.md rule 7), retiring when no longer applicable.
+// Lesson 2's coach (SPEC §9.10, R2205000): spells and the keywords units fight with, each a moment
+// the player can find for themselves. A spell clears a unit too big to fight, a Cry fires as its unit
+// is played, a wall of Taunt and Armor stands in the way, a Divine Shield pops, a Rush unit attacks at
+// once, a Pierce card ignores Armor, and a unit can guard in Defense Position. Picks read the view and
+// the legal actions only (CLAUDE.md rule 7).
 
-import type { ActionBody, PlayerView, Selection, UnitView } from "@jackioh/shared";
+import type { LessonScript } from "../coach.ts";
+import { unitOf, unitsOf } from "../steps.ts";
+import { attackBy, either, finishOf, isCard, keyworded, momentOf, playOf, type Pick } from "./kit.ts";
 
-import { t } from "../../i18n/i18n.ts";
-import { cardName, hasKeyword, legalAttacksOf, readerCardName, trades, yourMove, type Attack } from "../advice.ts";
-import type { CoachCtx, CoachStep, LessonScript } from "../coach.ts";
-import {
-  attackWith,
-  endTurn,
-  freshOf,
-  heroTargetId,
-  info,
-  inHand,
-  keepHand,
-  myMain,
-  myTurnNumber,
-  playCard,
-  switchPosition,
-  tip,
-  unitOf,
-  unitsOf,
-} from "../steps.ts";
+const THWOMP = "traininggrounds-011";
+const HIT_JOB = "traininggrounds-046";
+const PATH_OF_EXILE = "traininggrounds-026";
+const TRUE_STRIKE = "traininggrounds-058";
+const FAN_OF_KNIVES = "traininggrounds-010";
+const KNIFE_JUGGLER = "traininggrounds-018";
+const FLAMING_FELINOR = "traininggrounds-017";
+const PERSONAL_TRAINER = "traininggrounds-002";
+const SUN = "traininggrounds-006";
+const MOON = "traininggrounds-007";
+const OGRE = "traininggrounds-004";
 
-const VANILLA = "core-008";
-const TIMMY = "core-011";
-const LUNAR = "core-035";
-const TRUE_STRIKE = "core-044";
-const SORCERER = "core-068";
-const DUELIST = "core-045";
-const BIG_D = "core-001";
-const HIT_JOB = "core-016";
-const DEFENDER = "core-003";
-const SEVEN = "core-025";
-const JILLIAX = "core-056";
-const COIN = "core-t-coin";
+const any = (): boolean => true;
 
-/** The English names the coach's lines use for the lesson's cards, read through the reader's card table where a line is built. */
-const VANILLA_NAME = "Mr. Vanilla";
-const TIMMY_NAME = "Tempo Timmy";
-const DEFENDER_NAME = "Right-house defender";
-const DUELIST_NAME = "Deft Duelist";
-const BIG_D_NAME = "Big D-fender";
-
-/** The damage the lesson's damage cards print (§8: #35, #44, #68), which the coach aims and says. */
-const LUNAR_DAMAGE = 3;
-const TRUE_STRIKE_DAMAGE = 4;
-const SORCERER_DAMAGE = 4;
-
-// View reads
-
-/** The AI's units that carry Taunt, printed or from Defense Position. */
-function enemyTaunts(view: PlayerView): UnitView[] {
-  return unitsOf(view, "opponent").filter((unit) => hasKeyword(unit, "Taunt"));
-}
-
-/** Checks whether this unit arrived after the turn started, for Rush and Charge prompts. */
-function arrivedThisTurn(view: PlayerView, defId: string): boolean {
-  const unit = unitOf(view, "you", defId);
-  if (unit === undefined) return false;
-  for (let index = view.events.length - 1; index >= 0; index -= 1) {
-    const event = view.events[index];
-    if (event?.type === "summoned" && event.instanceId === unit.instanceId) return true;
-    if (event?.type === "turnStarted") return false;
-  }
-  return false;
-}
-
-/** A unit's name on either side, from the catalog the page holds (`ctx.nameOf`). */
-function unitName(ctx: CoachCtx, instanceId: string): string {
-  const unit = [...unitsOf(ctx.view, "you"), ...unitsOf(ctx.view, "opponent")].find((candidate) => candidate.instanceId === instanceId);
-  return unit === undefined ? t("that unit") : cardName(ctx, unit.defId);
-}
-
-// Aiming spells and Cries
-
-/** What a step asks the player to aim at: a selection its play action carries (R81). */
-type Aim = (ctx: CoachCtx) => Selection | null;
-
-function sameSelection(a: Selection, b: Selection): boolean {
-  if (a.pick === "instance" && b.pick === "instance") return a.instanceId === b.instanceId;
-  if (a.pick === "hero" && b.pick === "hero") return a.player === b.player;
-  return false;
-}
-
-function byValue(a: UnitView, b: UnitView): number {
-  return b.attack + b.health - (a.attack + a.health);
-}
-
-/** Prioritizes lethal Taunts, then unshielded units; `ignoresArmor` is True Strike's text. */
-function damageAim(damage: number, ignoresArmor = false): Aim {
-  return (ctx) => {
-    const dealt = (unit: UnitView): number => (ignoresArmor ? damage : Math.max(0, damage - unit.armor));
-    const open = unitsOf(ctx.view, "opponent").filter((unit) => !hasKeyword(unit, "Divine Shield") && dealt(unit) > 0);
-    const kills = open.filter((unit) => unit.health <= dealt(unit));
-    kills.sort((a, b) => Number(hasKeyword(b, "Taunt")) - Number(hasKeyword(a, "Taunt")) || byValue(a, b));
-    const target = kills[0] ?? [...open].sort(byValue)[0];
-    return target === undefined ? { pick: "hero", player: ctx.view.opponent.player } : { pick: "instance", instanceId: target.instanceId };
-  };
-}
-
-/** The biggest enemy unit with no Divine Shield to soak a hit; else the enemy hero. */
-function biggestOpen(ctx: CoachCtx): Selection | null {
-  const target = unitsOf(ctx.view, "opponent")
-    .filter((unit) => !hasKeyword(unit, "Divine Shield"))
-    .sort(byValue)[0];
-  return target === undefined ? { pick: "hero", player: ctx.view.opponent.player } : { pick: "instance", instanceId: target.instanceId };
-}
-
-/** Prefer a Taunt, which blocks hero attacks, otherwise the biggest enemy. */
-function removalAim(ctx: CoachCtx): Selection | null {
-  const taunts = enemyTaunts(ctx.view);
-  const target = [...(taunts.length > 0 ? taunts : unitsOf(ctx.view, "opponent"))].sort(byValue)[0];
-  return target === undefined ? null : { pick: "instance", instanceId: target.instanceId };
-}
-
-/** What `removalAim` picks, and why when it is a Taunt. */
-function removalText(ctx: CoachCtx): string {
-  const taunts = enemyTaunts(ctx.view).length;
-  const params = { name: readerCardName(HIT_JOB, "Hit Job"), target: aimName(ctx, removalAim) };
-  if (taunts === 0) return t("{name} destroys a unit outright. It's not damage, so no shield or Armor saves it. Aim it at {target}.", params);
-  if (taunts === 1) return t("{name} destroys a unit outright. It's not damage, so no shield or Armor saves it. Aim it at {target}, the Taunt in your way.", params);
-  return t("{name} destroys a unit outright. It's not damage, so no shield or Armor saves it. Aim it at {target}, the biggest Taunt in your way.", params);
-}
-
-function aimName(ctx: CoachCtx, aim: Aim): string {
-  const target = aim(ctx);
-  if (target?.pick === "hero") return t("the enemy hero");
-  if (target?.pick === "instance") return unitName(ctx, target.instanceId);
-  return t("an enemy");
-}
-
-type Common = {
-  id: string;
-  title: CoachStep["title"];
-  text: CoachStep["text"];
-  when?: (ctx: CoachCtx) => boolean;
-  anchor?: CoachStep["anchor"];
-  holdAi?: boolean;
+/** Put one of the player's units, not yet guarding, into Defense Position. */
+const guard: Pick = (ctx) => {
+  const ready = new Set(unitsOf(ctx.view, "you").filter((unit) => unit.position === "ATK").map((unit) => unit.instanceId));
+  return ctx.legal.find((action) => action.type === "switchPosition" && ready.has(action.instanceId));
 };
-
-/** Targeted-card prompt (§6.2); retires if its card leaves hand before it can show. */
-function playAt(options: Common & { defId: string; aim: Aim }): CoachStep {
-  const { defId, aim, when, ...rest } = options;
-  const matches = (action: ActionBody, ctx: CoachCtx): boolean => {
-    const card = inHand(ctx.view, defId);
-    const target = aim(ctx);
-    if (card === undefined || target === null || action.type !== "play" || action.instanceId !== card.instanceId) return false;
-    return (action.targets ?? []).some((selection) => sameSelection(selection, target));
-  };
-  return {
-    kind: "act",
-    anchor: { kind: "handCard", defId },
-    ...rest,
-    when: (ctx) => myMain(ctx) && ctx.legal.some((action) => matches(action, ctx)) && (when === undefined || when(ctx)),
-    done: (ctx) => inHand(ctx.view, defId) === undefined,
-    moot: (ctx, since) => since === null && inHand(ctx.view, defId) === undefined,
-    expect: matches,
-  };
-}
-
-/** Restricts steps to the player's turn, retiring unavailable prompts without blocking later steps; `done` wins over `moot`. */
-function onTurn(n: number, step: CoachStep): CoachStep {
-  const ownWhen = step.when;
-  const ownMoot = step.moot;
-  const showable = (ctx: CoachCtx): boolean => ownWhen === undefined || ownWhen(ctx);
-  return {
-    ...step,
-    when: (ctx) => myTurnNumber(ctx.view) === n && showable(ctx),
-    moot: (ctx, since) => {
-      const turn = myTurnNumber(ctx.view);
-      if (turn > n) return true;
-      if (turn < n || !myMain(ctx)) return false;
-      if (ownMoot !== undefined && ownMoot(ctx, since)) return true;
-      return (since === null || step.kind === "act") && !showable(ctx);
-    },
-  };
-}
-
-// Attack suggestions
-
-/** Advice-only view of attack outcome (§4.3); the engine resolves the attack. */
-function outcome(ctx: CoachCtx, attack: Attack): { kills: boolean; survives: boolean } | undefined {
-  return trades(ctx).find((trade) => trade.action.attackerId === attack.attackerId && trade.action.targetId === attack.targetId);
-}
-
-/** Prefer hero attacks, then killing attacks whose attacker survives. */
-function goodAttack(ctx: CoachCtx): Attack | undefined {
-  const attacks = legalAttacksOf(ctx);
-  const hero = heroTargetId(ctx.view, "opponent");
-  const face = attacks.find((attack) => attack.targetId === hero);
-  if (face !== undefined) return face;
-  const killing = attacks
-    .map((attack) => ({ attack, result: outcome(ctx, attack) }))
-    .filter((entry) => entry.result?.kills === true);
-  killing.sort((a, b) => Number(b.result?.survives) - Number(a.result?.survives));
-  return killing[0]?.attack;
-}
-
-/** An "End your turn" text that first says to attack when the board still offers a good attack. */
-function endTurnText(settled: () => string): (ctx: CoachCtx) => string {
-  return (ctx) => (goodAttack(ctx) === undefined ? settled() : t("Attack with what can still attack, then press End turn."));
-}
-
-/** Suggests good attacks; clearing stops after Taunts are gone, otherwise when no attack remains. */
-function attackWell(options: Common & { clearing?: boolean }): CoachStep {
-  const { when, clearing = false, ...rest } = options;
-  const blocked = (ctx: CoachCtx): boolean => enemyTaunts(ctx.view).length > 0;
-  return {
-    kind: "act",
-    anchor: (ctx) => {
-      const attack = goodAttack(ctx);
-      const unit = attack === undefined ? undefined : unitsOf(ctx.view, "you").find((candidate) => candidate.instanceId === attack.attackerId);
-      return unit === undefined ? { kind: "units", side: "you" } : { kind: "unit", side: "you", defId: unit.defId };
-    },
-    ...rest,
-    when: (ctx) => myMain(ctx) && goodAttack(ctx) !== undefined && (!clearing || blocked(ctx)) && (when === undefined || when(ctx)),
-    moot: (ctx, since) => clearing && since === null && myMain(ctx) && !blocked(ctx),
-    done: (ctx, since) => {
-      if (ctx.view.turn !== since.turn) return true;
-      if (clearing) return !blocked(ctx);
-      return myMain(ctx) && goodAttack(ctx) === undefined;
-    },
-    expect: (action, ctx) => {
-      const best = goodAttack(ctx);
-      return best !== undefined && action.type === "attack" && action.attackerId === best.attackerId && action.targetId === best.targetId;
-    },
-  };
-}
-
-/** What `attackWell` says about the attack it suggests now. */
-function attackAdvice(ctx: CoachCtx): string {
-  const attack = goodAttack(ctx);
-  if (attack === undefined) return t("Attack with the units that can.");
-  const attacker = unitName(ctx, attack.attackerId);
-  if (attack.targetId === heroTargetId(ctx.view, "opponent")) return t("Nothing guards the enemy hero now: attack it with {attacker}.", { attacker });
-  const names = { target: unitName(ctx, attack.targetId), attacker };
-  if (outcome(ctx, attack)?.survives === false) {
-    return t("The AI's {target} has Taunt and blocks the way. Attack it with {attacker}: both fall, but the Taunt is gone.", names);
-  }
-  return t("The AI's {target} has Taunt and blocks the way. {attacker} can destroy it: attack it.", names);
-}
-
-// Endgame
-
-/** Names the next move until the enemy hero falls. */
-const win: CoachStep = yourMove({ id: "win", title: "Win the game", final: true });
-
-// Script
 
 export const script: LessonScript = {
   lessonId: "spells",
+  teaches: ["spell", "removal", "cry", "taunt", "armor", "divine-shield", "rush", "pierce", "defense-position"],
+  tips: [],
   steps: [
-    info({
-      id: "welcome",
-      title: "Spells and keywords",
-      text: "This time you'll cast spells, and meet keywords: short words on a card, like Taunt or Rush, that change how it fights.",
+    momentOf({
+      id: "wall",
+      title: "A wall in the way",
+      text: "That wall of Taunt is in your way. Is there a way around it, or through it?",
+      discovers: ["taunt", "armor"],
+      hints: ["Try to attack the hero. Where are your units allowed to go?", "Attack the Taunt unit itself, and watch its Armor take the first damage."],
+      pick: either(attackBy(any, isCard(MOON)), attackBy(any, keyworded("Taunt"))),
     }),
-    keepHand({
-      id: "keep",
-      title: "Keep your hand",
-      text: "These cards suit this lesson. Press Ready to keep them all.",
+    momentOf({
+      id: "removal",
+      title: "Too big to fight",
+      text: "An enemy unit stands in your way, and a fight could cost you. Is there a card that doesn't need to fight it?",
+      discovers: ["spell", "removal"],
+      hints: ["Not every card is a unit. Read the cards in your hand.", "Play a spell that destroys a unit, aimed at the enemy's biggest."],
+      pick: playOf([HIT_JOB, PATH_OF_EXILE, THWOMP, TRUE_STRIKE], { target: "enemy" }),
     }),
-    onTurn(
-      1,
-      playCard({
-        id: "first-unit",
-        defId: VANILLA,
-        title: () => t("Play {name}", { name: readerCardName(VANILLA, VANILLA_NAME) }),
-        text: () => t("Start like last time: play {name} into one of your lanes.", { name: readerCardName(VANILLA, VANILLA_NAME) }),
-      }),
-    ),
-    onTurn(
-      1,
-      info({
-        id: "read-cards",
-        title: "Read any card",
-        text: () =>
-          t("Hover over any card (press and hold on a phone) to see it large, with what each of its keywords means. Try {name}.", {
-            name: readerCardName(TIMMY, TIMMY_NAME),
-          }),
-        anchor: (ctx) => {
-          if (inHand(ctx.view, TIMMY) !== undefined) return { kind: "handCard", defId: TIMMY };
-          return unitOf(ctx.view, "you", TIMMY) === undefined ? { kind: "hand" } : { kind: "unit", side: "you", defId: TIMMY };
-        },
-        when: myMain,
-      }),
-    ),
-    onTurn(
-      1,
-      endTurn({
-        id: "end-1",
-        title: "End the turn",
-        text: (ctx) =>
-          inHand(ctx.view, TIMMY) === undefined
-            ? t("Your mana is spent. Press End turn.")
-            : t("Your mana is spent, and {name} is for next turn. Press End turn.", { name: readerCardName(TIMMY, TIMMY_NAME) }),
-      }),
-    ),
-
-    onTurn(
-      2,
-      attackWith({
-        id: "attack-taunt",
-        attacker: VANILLA,
-        target: { defId: DEFENDER },
-        title: "Attack the Taunt",
-        text: (ctx) => {
-          const defender = unitOf(ctx.view, "opponent", DEFENDER);
-          const shielded = defender !== undefined && hasKeyword(defender, "Divine Shield");
-          const names = { attacker: readerCardName(VANILLA, VANILLA_NAME), target: readerCardName(DEFENDER, DEFENDER_NAME) };
-          return shielded
-            ? t("Drag {attacker} onto {target}. It also has Divine Shield: watch what happens to this first hit.", names)
-            : t("Drag {attacker} onto {target} to start clearing the way to the hero.", names);
-        },
-      }),
-    ),
-    onTurn(
-      2,
-      playAt({
-        id: "first-spell",
-        defId: LUNAR,
-        aim: damageAim(LUNAR_DAMAGE),
-        title: "Cast a spell",
-        text: (ctx) =>
-          t("A spell is a one-shot card. Pick {spell}, then pick its target: {target}. It takes {damage} damage.", {
-            spell: readerCardName(LUNAR, "Lunar Eclipse"),
-            target: aimName(ctx, damageAim(LUNAR_DAMAGE)),
-            damage: String(LUNAR_DAMAGE),
-          }),
-      }),
-    ),
-    onTurn(
-      2,
-      playCard({
-        id: "play-rush",
-        defId: TIMMY,
-        title: "Rush",
-        text: () =>
-          t("{name} has Rush: it may attack a unit on the turn it arrives, though not the hero. Play it.", { name: readerCardName(TIMMY, TIMMY_NAME) }),
-      }),
-    ),
-    onTurn(
-      2,
-      attackWith({
-        id: "rush-attack",
-        attacker: TIMMY,
-        title: "Attack at once",
-        text: () => t("No waiting, thanks to Rush: attack an enemy unit with {name} right away.", { name: readerCardName(TIMMY, TIMMY_NAME) }),
-        when: (ctx) => arrivedThisTurn(ctx.view, TIMMY),
-      }),
-    ),
-
-    onTurn(
-      3,
-      playAt({
-        id: "cry",
-        defId: SORCERER,
-        aim: biggestOpen,
-        title: "A Cry",
-        text: (ctx) =>
-          t("{name} has a Cry: an effect that fires as you play it. Play it, aim its {damage} damage at {target}, and put it in any free zone.", {
-            name: readerCardName(SORCERER, "Twisted Sorcerer"),
-            damage: String(SORCERER_DAMAGE),
-            target: aimName(ctx, biggestOpen),
-          }),
-      }),
-    ),
-    onTurn(
-      3,
-      playAt({
-        id: "second-spell",
-        defId: TRUE_STRIKE,
-        aim: damageAim(TRUE_STRIKE_DAMAGE, true),
-        title: "Ignore Armor",
-        text: (ctx) =>
-          t("{name} deals {damage} damage, and Armor (which makes hits smaller) can't reduce it. Aim it at {target}.", {
-            name: readerCardName(TRUE_STRIKE, "True Strike"),
-            damage: String(TRUE_STRIKE_DAMAGE),
-            target: aimName(ctx, damageAim(TRUE_STRIKE_DAMAGE, true)),
-          }),
-      }),
-    ),
-    onTurn(
-      3,
-      attackWith({
-        id: "first-strike",
-        attacker: TIMMY,
-        target: { defId: DEFENDER },
-        title: "First Strike",
-        text: () =>
-          t("{attacker} has First Strike: it hits first, so if that blow kills, it takes no damage back. Attack {target}.", {
-            attacker: readerCardName(TIMMY, TIMMY_NAME),
-            target: readerCardName(DEFENDER, DEFENDER_NAME),
-          }),
-        // Show First Strike only when the blow kills.
-        when: (ctx) => {
-          const attack = legalAttacksOf(ctx).find(
-            (candidate) =>
-              candidate.attackerId === unitOf(ctx.view, "you", TIMMY)?.instanceId &&
-              candidate.targetId === unitOf(ctx.view, "opponent", DEFENDER)?.instanceId,
-          );
-          return attack !== undefined && outcome(ctx, attack)?.kills === true;
-        },
-      }),
-    ),
-    onTurn(
-      3,
-      attackWith({
-        id: "open-hero",
-        attacker: VANILLA,
-        target: "hero",
-        title: "The way is open",
-        text: () => t("No Taunt stands in the way now. Attack the enemy hero with {name}.", { name: readerCardName(VANILLA, VANILLA_NAME) }),
-      }),
-    ),
-    onTurn(
-      3,
-      endTurn({
-        id: "end-3",
-        title: "End the turn",
-        text: endTurnText(() =>
-          t("That's the turn: {name} can attack from your next one. Press End turn.", { name: readerCardName(SORCERER, "Twisted Sorcerer") }),
-        ),
-      }),
-    ),
-
-    onTurn(4, attackWell({ id: "clear-way", title: "Clear the way", text: attackAdvice, clearing: true })),
-    onTurn(
-      4,
-      playCard({
-        id: "play-charge",
-        defId: DUELIST,
-        title: "Charge",
-        text: () =>
-          t("{name} has Charge: it may attack anything on the turn it arrives, even the hero. Play it.", { name: readerCardName(DUELIST, DUELIST_NAME) }),
-      }),
-    ),
-    onTurn(
-      4,
-      attackWith({
-        id: "charge-attack",
-        attacker: DUELIST,
-        target: "hero",
-        title: "Straight at the hero",
-        text: () => t("Attack the enemy hero with {name} now.", { name: readerCardName(DUELIST, DUELIST_NAME) }),
-        when: (ctx) => arrivedThisTurn(ctx.view, DUELIST),
-      }),
-    ),
-    onTurn(4, attackWell({ id: "attack-4", title: "Attack", text: attackAdvice })),
-    onTurn(
-      4,
-      playCard({
-        id: "play-guard",
-        defId: BIG_D,
-        title: "A guard",
-        text: () => t("{name} has 0 Attack, so it never attacks. Its job is guarding your hero. Play it.", { name: readerCardName(BIG_D, BIG_D_NAME) }),
-      }),
-    ),
-    onTurn(
-      4,
-      switchPosition({
-        id: "defense",
-        defId: BIG_D,
-        to: "DEF",
-        title: "Defense Position",
-        text: () =>
-          t("Press the small ⟳ button at the top right of {name}. In Defense it turns sideways and gains Taunt and Armor, so enemies must hit it first.", {
-            name: readerCardName(BIG_D, BIG_D_NAME),
-          }),
-      }),
-    ),
-    onTurn(4, endTurn({ id: "end-4", title: "End the turn", text: endTurnText(() => t("Your mana is spent. Press End turn.")) })),
-
-    onTurn(
-      5,
-      playAt({
-        id: "removal",
-        defId: HIT_JOB,
-        aim: removalAim,
-        title: "Destroy a unit",
-        text: removalText,
-      }),
-    ),
-    win,
-  ],
-  tips: [
-    tip({
-      id: "coin",
-      title: () => readerCardName(COIN, "The Coin"),
-      text: () => t("The AI played {name}: whoever goes second gets one, for 1 extra mana once.", { name: readerCardName(COIN, "The Coin") }),
-      anchor: { kind: "hero", side: "opponent" },
-      when: (ctx) => freshOf(ctx, "cardPlayed").some((event) => event.defId === COIN && event.player !== ctx.view.viewer),
-      holdAi: true,
+    momentOf({
+      id: "cry",
+      title: "A battle cry",
+      text: "Some units do something the moment they arrive. Which of yours says so?",
+      discovers: ["cry"],
+      hints: ["Look for the word Cry on a card in your hand.", "Play a unit whose text starts with Cry, and watch what happens as it lands."],
+      pick: playOf([FLAMING_FELINOR, PERSONAL_TRAINER]),
     }),
-    tip({
-      id: "taunt",
-      title: "Taunt",
-      text: (ctx) => {
-        const unit = enemyTaunts(ctx.view)[0];
-        const name = unit === undefined ? t("unit") : cardName(ctx, unit.defId);
-        return t(
-          "The AI's {name} has Taunt, a bodyguard keyword: while a unit with Taunt stands, your units must attack it before anything else, the hero included.",
-          { name },
-        );
-      },
-      anchor: (ctx) => {
-        const unit = enemyTaunts(ctx.view)[0];
-        return unit === undefined ? null : { kind: "unit", side: "opponent", defId: unit.defId };
-      },
-      when: (ctx) => enemyTaunts(ctx.view).some((unit) => unit.position === "ATK"),
-      holdAi: true,
-    }),
-    tip({
+    momentOf({
       id: "shield",
-      title: "Divine Shield",
-      text: "Divine Shield: the shield took that whole hit, then broke. The next hit does damage.",
-      when: (ctx) => {
-        const theirs = new Set(unitsOf(ctx.view, "opponent").map((unit) => unit.instanceId));
-        return freshOf(ctx, "divineShieldLost").some((event) => theirs.has(event.instanceId));
-      },
+      title: "A golden glow",
+      text: "Chosen by the Sun glows with a Divine Shield. What happens the first time it is hit?",
+      discovers: ["divine-shield"],
+      hints: ["Put it on the field, then let it fight.", "Attack with Chosen by the Sun, or let the AI hit it, and watch the shield."],
+      pick: either(playOf([SUN]), attackBy(isCard(SUN))),
+      when: (ctx) => unitOf(ctx.view, "opponent", SUN) === undefined,
     }),
-    tip({
-      id: "reborn",
-      title: "Reborn",
-      text: "Reborn: the first time it dies, it comes back with 1 health, shield and Taunt too. It only does this once.",
-      anchor: { kind: "unit", side: "opponent", defId: DEFENDER },
-      when: (ctx) => {
-        const died = new Set(freshOf(ctx, "destroyed").map((event) => event.instanceId));
-        return freshOf(ctx, "summoned").some((event) => event.player !== ctx.view.viewer && died.has(event.instanceId));
-      },
+    momentOf({
+      id: "rush",
+      title: "In a rush",
+      text: "Boulder Fist Ogre looks eager. Must it rest the turn it arrives, like the others?",
+      discovers: ["rush"],
+      hints: ["Read its keyword: Rush.", "Play Boulder Fist Ogre, then drag it straight onto an enemy unit."],
+      pick: either(playOf([OGRE]), attackBy(isCard(OGRE))),
     }),
-    tip({
-      id: "spent",
-      title: "Spells are spent",
-      text: () =>
-        t("{name} went to your graveyard: a spell works once. It also made your next spell this turn cost (1) less.", {
-          name: readerCardName(LUNAR, "Lunar Eclipse"),
-        }),
-      anchor: { kind: "graveyard", side: "you" },
-      when: (ctx) => ctx.view.you.graveyard.some((card) => card.defId === LUNAR),
+    momentOf({
+      id: "pierce",
+      title: "Through the Armor",
+      text: "Armor soaks up damage. Do any of your cards hit straight through it?",
+      discovers: ["pierce"],
+      hints: ["Look for the word Pierce.", "Play True Strike, Fan of Knives or Knife Juggler."],
+      pick: either(playOf([TRUE_STRIKE], { target: "enemy" }), playOf([FAN_OF_KNIVES, KNIFE_JUGGLER])),
     }),
-    tip({
-      id: "ai-defense",
-      title: "The AI defends",
-      text: "The AI turned a unit sideways: Defense Position. It gains Taunt and Armor, but it can't attack.",
-      anchor: (ctx) => {
-        const unit = unitsOf(ctx.view, "opponent").find((candidate) => candidate.position === "DEF");
-        return unit === undefined ? { kind: "units", side: "opponent" } : { kind: "unit", side: "opponent", defId: unit.defId };
-      },
-      when: (ctx) => unitsOf(ctx.view, "opponent").some((unit) => unit.position === "DEF"),
-      holdAi: true,
+    momentOf({
+      id: "guard",
+      title: "Hold the line",
+      text: "Not every unit has to attack. Can one of yours stand guard instead?",
+      discovers: ["defense-position"],
+      hints: ["Click one of your units to see what else it can do.", "Switch a unit to Defense Position: it gains Taunt and 1 Armor."],
+      pick: guard,
     }),
-    tip({
-      id: "defense-back",
-      title: "Switching back",
-      text: "A unit in Defense can't attack. The same button switches it back, but a switch uses up that unit's action for the turn.",
-      anchor: (ctx) => {
-        const unit = unitsOf(ctx.view, "you").find((candidate) => candidate.position === "DEF");
-        return unit === undefined ? null : { kind: "unit", side: "you", defId: unit.defId };
-      },
-      when: (ctx) => unitsOf(ctx.view, "you").some((unit) => unit.position === "DEF"),
-    }),
-    tip({
-      id: "ai-spell",
-      title: "The AI's spells",
-      text: "The AI cast a spell at you. Its spells can hit your units or your hero, just like yours.",
-      when: (ctx) => freshOf(ctx, "cardPlayed").some((event) => event.player !== ctx.view.viewer && event.defId === LUNAR),
-    }),
-    tip({
-      id: "lifesteal",
-      title: "Lifesteal",
-      text: () => t("{name} has Lifesteal: the damage it deals heals the AI's hero by as much.", { name: readerCardName(JILLIAX, "Jilliax") }),
-      anchor: { kind: "hero", side: "opponent" },
-      when: (ctx) => {
-        // Include Jilliax destroyed in this exchange.
-        const jilliax = new Set([
-          ...unitsOf(ctx.view, "opponent").filter((unit) => unit.defId === JILLIAX).map((unit) => unit.instanceId),
-          ...freshOf(ctx, "destroyed").filter((event) => event.defId === JILLIAX && event.owner !== ctx.view.viewer).map((event) => event.instanceId),
-        ]);
-        const struck = freshOf(ctx, "damage").some((event) => event.sourceId !== null && jilliax.has(event.sourceId) && event.amount > 0);
-        return struck && freshOf(ctx, "healed").some((event) => event.targetId === heroTargetId(ctx.view, "opponent"));
-      },
-    }),
-    tip({
-      id: "fatigue",
-      title: "An empty deck",
-      text: "The AI's deck is empty. From now on, each card it should draw hurts its hero instead: 1, then 2, then 3.",
-      anchor: { kind: "library", side: "opponent" },
-      when: (ctx) => ctx.view.result === null && ctx.view.opponent.libraryCount === 0,
-    }),
-    tip({
-      id: "armor",
-      title: "Armor",
-      text: () =>
-        t("{name} has Armor 7: every hit on it is 7 smaller, so small units can't hurt it at all.", { name: readerCardName(SEVEN, "4-mana 7/7") }),
-      anchor: { kind: "unit", side: "you", defId: SEVEN },
-      when: (ctx) => unitOf(ctx.view, "you", SEVEN) !== undefined,
+    finishOf({
+      id: "finish",
+      title: "Finish it",
+      text: "You know your tools now. How do you finish the enemy hero?",
+      hints: ["Clear the Taunts first, with a spell or a trade.", "Then send every ready unit at the hero."],
     }),
   ],
 };

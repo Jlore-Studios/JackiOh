@@ -134,7 +134,8 @@ mod tests {
             sets.sort();
             // Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
             // #1187): the Meditative+ set joins it (M+ #1 Bob's Plan, #24 Bob, #26 Scratch Pad); and for
-            // the Stinkyscape release (#1884): that set.
+            // the Stinkyscape release (#1884): that set; and for the Training Grounds release (#2204): that
+            // set (#37 Seance, #38 Tutorial Master, #39 Call to Chaos, #40 Goetzmann Game Design).
             assert_eq!(
                 sets,
                 vec![
@@ -144,6 +145,7 @@ mod tests {
                     "Meditative".to_string(),
                     "Meditative+".to_string(),
                     "Stinkyscape".to_string(),
+                    "Training Grounds".to_string(),
                 ]
             );
         }

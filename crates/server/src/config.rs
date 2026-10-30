@@ -128,9 +128,10 @@ pub const MAX_TRUSTED_PROXY_HOPS: usize = 5;
 pub const IPV6_RATE_LIMIT_PREFIX_BITS: u32 = 56;
 
 /// The largest request body the API reads, in bytes. Every body the API accepts is a small JSON
-/// object (a code, three decks of card ids), so 64 KiB is generous; past it the body is refused
-/// before it is parsed.
-pub const API_MAX_BODY_BYTES: usize = 65_536;
+/// object (a code, three decks of card ids) but the account's statistics copy, which may reach
+/// `PLAYER_STATS_BYTES_MAX` (R1142000), so the cap is that; past it the body is refused before it is
+/// parsed.
+pub const API_MAX_BODY_BYTES: usize = PLAYER_STATS_BYTES_MAX;
 
 /// The client's sign-up check. Twelve characters, not Supabase Auth's default of six: a six-letter
 /// password falls to guessing and credential stuffing. The auth provider's own minimum must be set
@@ -729,7 +730,8 @@ pub const DECK_CODE_VERSION: i32 = 2;
 pub const DECK_CODE_CORE_ONLY_VERSION: i32 = 1;
 
 /// The shape of `CATALOG_NUMBER_SET_OFFSETS` (SURFACE §4.2), keyed by set name exactly as TS's object
-/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`, `"Meditative+"`, `"Stinkyscape"`).
+/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`, `"Meditative+"`, `"Stinkyscape"`,
+/// `"Training Grounds"`).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CatalogNumberSetOffsets {
     #[serde(rename = "Core")]
@@ -744,15 +746,18 @@ pub struct CatalogNumberSetOffsets {
     pub meditative_plus: i32,
     #[serde(rename = "Stinkyscape")]
     pub stinkyscape: i32,
+    #[serde(rename = "Training Grounds")]
+    pub training_grounds: i32,
 }
 
 /// SPEC §11 R255, R339 (B2.2), R1410: a card's catalog number in a version 2 deck or trio code is
 /// its §5 index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative
-/// 3000 + n, Meditative+ 4000 + n, Stinkyscape 5000 + n — still written as LEB128. No set holds
-/// 1000 cards, so a number names one set and one card. Meditative's offset is the next thousand in
-/// catalog order (R1420), and so is Meditative+'s after it (v0.3.15, issue #1187, R1178000) and
-/// Stinkyscape's after that (issue #1884, R1857000); none moved another set's, so a code minted
-/// before a set shipped reads as it always did.
+/// 3000 + n, Meditative+ 4000 + n, Stinkyscape 5000 + n, Training Grounds 6000 + n — still written
+/// as LEB128. No set holds 1000 cards, so a number names one set and one card. Meditative's offset
+/// is the next thousand in catalog order (R1420), and so is Meditative+'s after it (v0.3.15, issue
+/// #1187, R1178000), Stinkyscape's after that (issue #1884, R1857000) and Training Grounds' after
+/// Stinkyscape's (issue #2204); none moved another set's, so a code minted before a set shipped
+/// reads as it always did.
 pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSetOffsets {
     core: 0,
     classic: 1000,
@@ -760,6 +765,7 @@ pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSet
     meditative: 3000,
     meditative_plus: 4000,
     stinkyscape: 5000,
+    training_grounds: 6000,
 };
 /// SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
 /// a full deck with the longest name is under 200 characters, so this leaves room for whatever a
@@ -972,8 +978,10 @@ pub const PLAYER_STATS_CACHE_TTL_SECONDS: i64 = 60;
 pub const PLAYER_STATS_PAGE_LIMIT: usize = 50;
 
 /// The most text the stored player statistics JSON of one account may come to, in bytes.
-/// Bounds request body and stored payload (R1142000: raised from 16384 to 65536 so pruned catalog fits).
-pub const PLAYER_STATS_BYTES_MAX: usize = 65536;
+/// Bounds request body and stored payload (R1142000: raised from 16384 to 65536 so pruned catalog fits,
+/// then to 131072 by the Training Grounds release, issue #2204, when 771 entries at four-digit
+/// counters came to 67,445 bytes).
+pub const PLAYER_STATS_BYTES_MAX: usize = 131_072;
 
 // ---------------------------------------------------------------------------------------------
 // Play telemetry (SPEC §9.11, R1442): how humans pace their moves, for the ladder bots (#636).
@@ -2666,6 +2674,18 @@ pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
 /// retention loop sweeps them. A day outlasts any retry a player makes after a slow answer
 /// (`API_REQUEST_TIMEOUT_SECONDS`) while keeping the table to a day of spends.
 pub const IDEMPOTENCY_KEY_TTL_HOURS: i64 = 24;
+/// SPEC §14.11, R2378000: how many spends (a pack bought or opened, a token redeemed, a cosmetic
+/// pack opened, a chase bought) one account runs at once. A spend sent while they run waits its
+/// turn in this process, holding no database connection, so a burst of presses cannot hold the
+/// pool's connections waiting on the account's economy lock (issue #2378).
+pub const ECONOMY_SPENDS_RUNNING_MAX: usize = 1;
+/// SPEC §14.11, R2378000: how many spends of one account may wait their turn behind the ones
+/// running. One sent past it is refused at once with 429 and spends nothing. Four cover a person's
+/// tabs and devices pressing together; a script's burst is refused past them.
+pub const ECONOMY_SPENDS_WAITING_MAX: usize = 4;
+/// SPEC §14.11, R2378000: the wait the refusal of a spend sent past `ECONOMY_SPENDS_WAITING_MAX`
+/// states (`retryAfterMs`, R192).
+pub const SPEND_BUSY_RETRY_AFTER_MS: i64 = 1_000;
 /// SPEC §14.8, R1483000: how many unclaimed, unexpired practice seeds an account holds at once; a
 /// request past it is refused and issues nothing. Bounds one account's place in the claim queue
 /// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).

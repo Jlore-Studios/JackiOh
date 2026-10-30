@@ -2512,5 +2512,616 @@
     "pr": 2232,
     "title": "patches ship: v0.5.0",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "d7e93b03a7801eafda7ed2ecfa45a68c1909a037",
+    "pr": 2238,
+    "title": "a finished match's log is folded once, before its result's transaction takes the season and economy locks",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "4261e872a056b2826cc8a2ef4252378395f2d6c8",
+    "pr": 2236,
+    "title": "patches log: 0b87f86..651ac2e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "f01e13024b36ad8e898cda0c1a1cadefc028f984",
+    "pr": 2237,
+    "title": "the web's tests share one settle, withCatalog, renderBoard and PointerEvent polyfill, and a guard stops new copies",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "a578facebe6a14ab723df3ba53893d419d2eeac3",
+    "pr": 2229,
+    "title": "the check that every long card face has a short form runs in the web's unit tests on every pull request",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "43cf9775bcae427baeb383325378a913a1c1ee8c",
+    "pr": 2241,
+    "title": "Training Grounds, the foundation",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "1d7f5cb38b09ca297f9a0f4b639cbce3cd48a96e",
+    "pr": 2228,
+    "title": "44x44 tap areas for small controls on phones",
+    "kind": "app",
+    "player": "On a phone, small buttons, links and fields take a tap across a whole fingertip."
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "94fec4b155b5e2fb3e44bda3adf3e2581d184117",
+    "pr": 2244,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "795c3f2dfaf33902e4fcd4ba1597a56b9e54a2d9",
+    "pr": 2239,
+    "title": "replace one held daily quest a day",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "3fbb5fb8c1d8d2563843d568fdc2279aeedde644",
+    "pr": 2263,
+    "title": "Training Grounds, the set's look and sound",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "a0acb322a1503723e8780571acd29fdfb238aa29",
+    "title": "Merge pull request #2272 from Jlore-Studios/claude/amazing-cray-hdnd2a",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "dc3dbe0a03269cbbdf87d0dd03f08b4ef8227884",
+    "pr": 2275,
+    "title": "Training Grounds, the units on existing keywords and Cries",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "9c8dafb0fcc9076f5ccd913c91c861c049ffca35",
+    "pr": 2245,
+    "title": "a tutorial lesson can't be lost, and its random cards hold Legendary and Mythic back until the last lesson",
+    "kind": "ai",
+    "player": "Tutorial lessons can no longer be lost: your hero never falls below 1 Health."
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "7c0acdb6a47c10b327208b29f49ee52eec3518a2",
+    "pr": 2281,
+    "title": "the learn lane plays the newest patch, and a new set stops an export early on the set before",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "aaa4164e7455cee6e200254f7a04dd89b162679f",
+    "pr": 2264,
+    "title": "Training Grounds, the backrow, with Goliath Situation and Level Up!'s attack count",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "b63232fb0447470341443b9c5585b6eb9e4603b4",
+    "pr": 2189,
+    "title": "view transitions between menu screens",
+    "kind": "app",
+    "player": "Menus fade into one another instead of cutting; games, replays and Reduce motion stay as they were."
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "934e98c9d3b56b49e7624623697337e9260aeb17",
+    "pr": 2295,
+    "title": "the shadow-ban sweep commits as github-actions[bot], not a stranger's account",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "ea22cbbce3f7c0a83a4e10b56c03c172b3b90a1e",
+    "title": "Merge pull request #2282 from Jlore-Studios/claude/tg-chaos-2200",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "f230b3a764c35a4ce415596a40e5afe3943bb450",
+    "pr": 2290,
+    "title": "a bot match nobody opens is lost after the grace again",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "2b6fe6beafa09d2cc7619ff364c104063bf66212",
+    "title": "Merge pull request #2277 from Jlore-Studios/claude/tg-triggers-2197",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "ffee883abf765aab5b7a51dff80255951652a954",
+    "pr": 2292,
+    "title": "the account screen shows this ranked season's record beside the rank",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "047d8661ae97f7cd69d303b07567accc80b102e1",
+    "pr": 2294,
+    "title": "the weaker ladder bots make plausible mistakes instead of uniformly random moves",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "d870ed3787866c2f7714d56399d67347ec65be6e",
+    "pr": 2286,
+    "title": "Training Grounds #41–#60, the Core snapshots, one per deck",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "21efa2fedafe9e7f7852bab3561cafeaf7d8eddd",
+    "pr": 2283,
+    "title": "Training Grounds, the spells, with set-stats on one unit, a copy that keeps its cost and tokens that die at end of turn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "1fb8cb6d40cfea91e134930112fdf8c06e6fbdce",
+    "pr": 2289,
+    "title": "the game log says what each play aimed at and what dealt each hit",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "b62feb424f4266b7a941a2a54743a0426a7bb087",
+    "pr": 2303,
+    "title": "the deck builder's pool draws a face when it nears the screen, and every stats table scrolls by keyboard",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "9ea917acd2826549d1d5ec9d958081626712cdc2",
+    "pr": 2155,
+    "title": "a deck holding a card the newest patch changed says so, and what changed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "8258a6e51feb0a5c3c47a4a105b3e90a51739b41",
+    "pr": 2265,
+    "title": "the shadow ban swept again after the Stinkyscape set shipping",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "e0ad4af7cb1a1e953a6b530ba7e4a815fc5d9b46",
+    "pr": 2297,
+    "title": "the M12 audit's remaining minor findings after the Stinkyscape release",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "9c183c145c6556319cb3c497072863c5348cdf71",
+    "pr": 2217,
+    "title": "the tests' must helper comes from the testkit, and the check keeps it so",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "05e864db3bf72242496cafde9ed264975d0efa88",
+    "pr": 2312,
+    "title": "patches ship: v0.5.1, v0.5.2",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.2",
+    "commit": "da5a454ec10200fdfe856ce52bc5a2d6b338d448",
+    "pr": 2302,
+    "title": "a card's printed trigger condition holds when the card is no trap (Prison answers only the opponent's Units)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "2403b16670fe097bc6939f13537458481e3222c8",
+    "pr": 2262,
+    "title": "named layers, corner radii and shadow depths, and gradients only where they mean something",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "68edaae1adf824bddceb29a99d4699bb775629b6",
+    "pr": 2288,
+    "title": "the slow web and server CI jobs split under five minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "163edc7f4ff4f15e642ad714e9e5197b5ef34d1f",
+    "title": "Merge pull request #2186 from Jlore-Studios/bot/issue-2124",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "b74d2888f19aa1ede487b7a218fbe836a57f64ea",
+    "pr": 2296,
+    "title": "the technical log gains the five entries of the stuck log #2242",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "8c65cabcd3b8ead0c8abc32656cf0c47151aa28a",
+    "pr": 2314,
+    "title": "the lethal hint in every offline game against the AI",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "c2bb39cdedb38d977b05791668ca0d35e0003a56",
+    "title": "Merge pull request #2284 from Jlore-Studios/claude/peaceful-maxwell-r7812c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "cf13e1bae5af65c20eb14d5222ca7b84f4e5657d",
+    "pr": 2316,
+    "title": "a gate's redirect joins the view transition that drew its screen, and a skipped transition is no error",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "91d05cce20a695a4987c24577e9628679162d280",
+    "pr": 2306,
+    "title": "hand hints, a tiny icon row on the viewer's own hand cards",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "f9249bab97e910603c06f8975ba5c953030c0f30",
+    "pr": 2319,
+    "title": "the AI deals itself the Stinkyscape set, the gate lifted",
+    "kind": "ai",
+    "player": "The practice AI now builds its decks with Stinkyscape cards too."
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "51b2645873d3829c9f00f0c5bcaaf52254175a0a",
+    "pr": 2163,
+    "title": "a deck keeps its earlier versions, and one can be restored",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "6a83160e37172e0f3f86c58349ded65e54e3e7e1",
+    "pr": 2322,
+    "title": "patches ship: v0.5.2b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "bf53671d42e02406fbaca4dd24b17d16a1a2830a",
+    "pr": 2326,
+    "title": "Trigor's chain ends against forced attacks and Poisonous (R2197002's terminator)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "3f3d2261537d25b4db31ce6db3c2cfa5682b6367",
+    "pr": 2308,
+    "title": "Training Grounds, the AI plays every card, and the sweep of record before it ships",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "23a91c99c29c10f9c2331433ba1f84c22cb5a19b",
+    "pr": 2329,
+    "title": "Training Grounds' screens show Level Up!'s attack count, mark In a hurry's tokens as end-of-turn, and fit a long hero badge on a phone",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "c5eeb1494d6e1f251a86f4918bc0c95d8aec7c8d",
+    "title": "Merge pull request #2301 from Jlore-Studios/bot/issue-2266",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "4bbd0d855aa9c4bcfec1619ef346caaff410f1c4",
+    "pr": 2343,
+    "title": "a job ran over 7 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "177023fbe7ceec1f22035dc81099ac1f64f2ed6f",
+    "pr": 2337,
+    "title": "show the keyboard shortcuts the client already has",
+    "kind": "app",
+    "player": "Keyboard shortcuts now show in tooltips, the command menu and the home page footer, with ⌘ on Apple devices and Ctrl elsewhere."
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "a2c193a32d5429c2d3b70c92c02074a274493ff4",
+    "pr": 2342,
+    "title": "the playmat taps everywhere but on a card, occupied zones included",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "0edb316a300dec24a15fbc9ec9254628071c2573",
+    "pr": 2298,
+    "title": "the card-token pick shows the cards it can unlock, with the deck builder's search, and asks before it spends the token",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "59597ef68093378e70031c5be0cfc249c24e0195",
+    "pr": 2347,
+    "title": "equal-height board rows and full-size Defense cards",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "052f5a7f13d4085391d177c80aa5861295b8d97c",
+    "pr": 2344,
+    "title": "patches ship: v0.5.3",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "b7a4418ed0aae166ed6bc985c81e759a49774dca",
+    "pr": 2352,
+    "title": "the AI prices an extra-turn card in hand and its banked Anomaly misses",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "d737897afa59daf19c3bb5a07bc1eff24877c9c2",
+    "pr": 2349,
+    "title": "the Stinkyscape release audit's last MINORs: Prison's R2271000 tests pin the fix, no \"held\" wording, the script count",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "0c15ac98c08de1941105665cd7fe4574686293ca",
+    "pr": 2355,
+    "title": "the hero badge's popover closes without a window key handler (R2126000)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "5f7bb0be1e8d3697333e0aa92cf3ecafa7cba262",
+    "pr": 2354,
+    "title": "the Almanac passes axe again and the board fits a 1024x768 tablet",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "fea35ce3a56b0f839648926b76449b7490117e27",
+    "pr": 2335,
+    "title": "a few named durations and easing curves for every motion on the board",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "4e5adcf3c8d43fcf1e01d9f2416354ee0fa75dcf",
+    "pr": 2359,
+    "title": "the frozen key-handler census drops ModifierBadge, which no longer has one (R2126000)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "381c255cc23e60b97db7b8a6e310a390209c30d7",
+    "pr": 2356,
+    "title": "Floodgates' Death ends against a fused self-resummon",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.3",
+    "commit": "0283f6dbee21ded69476a19d4e8733959600274c",
+    "pr": 2358,
+    "title": "the shadow ban swept again after a dispatch, over 10 card(s), with #2333's cards",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "55e115dfce9641ac48c72490bdbd589ad93f9e21",
+    "pr": 2360,
+    "title": "the Shop fits one screen again on a phone (R1580000)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "156aefc4c0390e8e6e36d50820d7d268b7758e52",
+    "pr": 2361,
+    "title": "spec 03's play after the trap is one Radiant Saintess's new cost allows",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "a27d3da93d9ce77ccb49eef978f605c9bb029db1",
+    "pr": 2362,
+    "title": "patches ship: v0.5.4, v0.5.5, v0.5.6",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "18f73763243e9eefa84d424273f2fb260fdc9b31",
+    "pr": 2336,
+    "title": "drop the \"Provisional statistics\" banner and the \"How to read these statistics\" notes from /stats",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "2383d89363c56291ce540fa8beb483b68ecffa07",
+    "pr": 2364,
+    "title": "patches log: da5a454..0283f6d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "622a10b5bffdba2c1e5a35de7c2f68e8407bf8fd",
+    "pr": 2365,
+    "title": "I4 reads \"Animated on your turn\" as the animation had it, fuzz seed 2443",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "81e2bbb88be7a07829d8f660afbbd661424afdf2",
+    "pr": 2350,
+    "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-10-29",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "52bd29e11fb2cadaadebae69295d718b558d6cf8",
+    "pr": 2366,
+    "title": "main lands pull requests through a merge queue, so two green alone no longer land red together",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.6",
+    "commit": "82ab41de7ee91d4a15619ef70de703e2d009eb6d",
+    "pr": 2371,
+    "title": "a Tokens toggle on /stats with each token's win rate",
+    "kind": "app",
+    "player": "The statistics page can show each token's win rate: turn on Show tokens on the Cards tab."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "5f8bff82c0b301e62d7db658a9ab9f54d1f562f6",
+    "pr": 2377,
+    "title": "patches log: 0283f6d..18f7376",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "8e04d4897c388bf98ccda7f6196d8967ccf5af69",
+    "pr": 2372,
+    "title": "the shadow ban swept again over the Training Grounds set, with Stinkyscape ungated",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "ab43a743828a4823be40553126559157a8e8c884",
+    "pr": 2393,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "fe7a340778530f3ec3a73d32bcf027a34a028dcf",
+    "pr": 2293,
+    "title": "the tutorial remade from Training Grounds, five lessons that can't be lost and a coach that lets you discover the rules",
+    "kind": "app",
+    "player": "The tutorial is remade from the Training Grounds set: five lessons you can't lose, a coach that asks rather than tells, and a Field Guide of everything you discover."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "a7ab98d16fa27f5fcb57443af3f4eb95752c0700",
+    "pr": 2397,
+    "title": "the shadow ban swept again after the Training Grounds set shipping",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "681d21729645aabf288cc4d7fe2698e71cbc3298",
+    "pr": 2398,
+    "title": "the Almanac's whole grid and its scroll match the 481-card baseline",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "000f35fe655093a63516bab9f09ecce672d7d938",
+    "pr": 2399,
+    "title": "the store's seed test expects Training Grounds' Jlockeed and Jelly Bean cards",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "abf139aff6248ca8f0c037fa7cd95efd7a859382",
+    "pr": 2400,
+    "title": "WIP: the AI prices the Credits it holds at what they buy (#2389)",
+    "kind": "ai",
+    "player": "The AI now saves its Marketplace Credits rather than spending them on any offer at any price."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "d718820a387ed60f48bd66a6693f2318bf27c044",
+    "pr": 2348,
+    "title": "a Tradable hand hint, dimmed once the turn's Trade is spent",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "6df2db20bd4e6e017e76ea88bcca9f24a6aa51d2",
+    "pr": 2339,
+    "title": "Back closes the top sheet or dialog before it leaves the screen",
+    "kind": "app",
+    "player": "Back closes the open sheet or dialog first instead of leaving the screen."
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "55c3e31746161a65b9a02f188d1a0da8d01f9922",
+    "pr": 2405,
+    "title": "a player watching the finished match's replay is still taken to the rematch both sides agreed to",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "edaa93ada13aa1862fdd51da93e2f42db9c238d7",
+    "pr": 2406,
+    "title": "patches ship: v0.5.7, v0.5.8",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.8",
+    "commit": "59cec786eb678d49cfcd57c5897fe93ebb372369",
+    "pr": 2408,
+    "title": "a patches promotion or log is stuck",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7807472b68d36f3b0cb0f180274dbf69ad62b990",
+    "title": "Merge pull request #2401 from Jlore-Studios/bot/issue-2378",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b35166c8f7c092edcb88f6eb0fc89f52d627d575",
+    "pr": 2404,
+    "title": "the first player's opening hand draws 3",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "549a9c157bdedc51aba484b7bbfbbea77d6cd33a",
+    "pr": 2411,
+    "title": "patches log: 25aa954..59cec78",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "ec376fd63aafc7865e42d4b70db2f70e36aa2f74",
+    "pr": 2414,
+    "title": "a daily sweep fuses each triggered card's text onto Units and plays it until the board settles",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "55b2aaca64a498964229d326a4bc8420e9354121",
+    "pr": 2413,
+    "title": "patches ship: v0.5.9",
+    "kind": "app"
   }
 ]

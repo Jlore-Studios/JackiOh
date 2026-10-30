@@ -50,14 +50,7 @@ use crate::wire::{
     Winner, ZoneName, ZoneRef, has_keyword,
 };
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
-use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
-
-/// The card as it stands in the state now, by id; the copy itself when it is nowhere.
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone())
-}
+use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
 
 /// Every unit on the field: the card that acts in each unit zone, the top of its pile (§3.2).
 ///
@@ -186,7 +179,7 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
             // same turn finds none left to take). R347 keeps Taunt off a unit while it is Indestructible,
             // so there is none here to report; the stamp still matters if it stops being Indestructible
             // before the turn ends (a Vanilla).
-            let now = live(sink.state, &unit);
+            let now = live_or(sink.state, &unit);
             let had_taunt = has_keyword(
                 &crate::layers::unit_view(sink.state, &now).keywords,
                 KeywordKind::Taunt,
@@ -775,7 +768,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     let read: Vec<ReadCard> = dying
         .iter()
         .map(|card| {
-            let unit = live(sink.state, card);
+            let unit = live_or(sink.state, card);
             let view = crate::layers::unit_view(sink.state, &unit);
             ReadCard {
                 reborn: has_keyword(&view.keywords, KeywordKind::Reborn),
@@ -1013,8 +1006,8 @@ fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
 }
 
 pub fn state_check(sink: &mut EngineSink<'_>) {
-    // R460, R1875006: the cards whose would-die follow-up resolved in this check, which answer no
-    // later pass of it, as each card replaces an event at most once.
+    // R460, R1875006: the cards whose would-die replacement flickered or resolved its follow-up in this
+    // check, which answer no later pass of it, as each card replaces an event at most once.
     let mut resolved_first: Vec<String> = Vec::new();
     for _pass in 0..STATE_CHECK_PASS_CAP {
         if sink.state.result.is_some() {
@@ -1067,8 +1060,11 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             return;
         }
         // R1850003, R1850002, R1850005: the card-on-card verbs' standing rules, each a whole step that
-        // the check starts over after when it changed something.
-        if crate::card_on_card::release_held(sink) || crate::card_on_card::standing_text(sink) {
+        // the check starts over after when it changed something; then R2280001's owed animations.
+        if crate::card_on_card::release_held(sink)
+            || crate::card_on_card::standing_text(sink)
+            || crate::animated::animate_owed(sink)
+        {
             continue;
         }
 
@@ -1139,9 +1135,9 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         // `destroyed` (R461, R1124's shape). Without such an aura every card is collected, as before.
         let (exiled, remaining): (Vec<CardInstance>, Vec<CardInstance>) = remaining
             .into_iter()
-            .partition(|card| crate::replacements::destroy_exiles(sink.state, &live(sink.state, card)));
+            .partition(|card| crate::replacements::destroy_exiles(sink.state, &live_or(sink.state, card)));
         for card in &exiled {
-            let card = live(sink.state, card);
+            let card = live_or(sink.state, card);
             crate::zones::exile_to_pile(sink, card);
         }
         let mut collected = collect(sink, &remaining, DeathCause::Collected);

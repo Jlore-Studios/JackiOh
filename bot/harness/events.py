@@ -18,14 +18,14 @@ from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso, parse_iso
 from harness.commands import Command
-from harness.config import (IDENTITY, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
-                            LABEL_REVISE, LABEL_SUGGESTION, LABEL_TREE, LABEL_WORKING, MARKER,
-                            MODES, MODE_LABELS, OTHERS, SLASH)
+from harness.config import (IDENTITY, LABEL_BLOCKED, LABEL_BUILD, LABEL_PERSON_MERGES, LABEL_PR,
+                            LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_SUGGESTION, LABEL_TREE,
+                            LABEL_WORKING, MARKER, MODES, MODE_LABELS, OTHERS, SLASH)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.providers import Provider
-from harness.queue import (label_names, queue_build, queue_review, queue_revise, set_state_label,
-                           stop, wip_branch)
+from harness.queue import (cleared, is_human, label_names, queue_build, queue_review,
+                           queue_revise, set_state_label, stop, wip_branch)
 from harness.state import item as state_item
 from harness import threads
 from harness.status import report
@@ -576,6 +576,8 @@ def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
     if run.get("conclusion") not in CI_FAILED:
         return [f"ignored: conclusion {run.get('conclusion')}"]
     branch = str(run.get("head_branch") or "")
+    if branch.startswith(QUEUE_BRANCH):
+        return on_queue_ci(ctx, run)
     numbers = [int(p["number"]) for p in run.get("pull_requests") or [] if p.get("number")]
     if not numbers and branch:
         numbers = [int(p["number"]) for p in ctx.gh.list_pulls(state="open", head=branch)]
@@ -602,33 +604,80 @@ def on_ci(ctx: Context, payload: dict[str, Any]) -> list[str]:
                              f"ci rerun #{number}")
             out.append(f"#{number}: re-ran the failed jobs of run {run['id']}")
             continue
-        fixes = int(record.get("ci_fixes", 0))
-        link = f"[run]({run.get('html_url')})"
-        if fixes and str(record.get("ci_fixed_head") or "") == sha:
-            # Every CI fix that left it red is a strike of its own (#316), not only the last one:
-            # this is the head the last CI fix pushed (`deliver._revise`). A head some other
-            # revision made is no strike, whatever fixes came before.
-            try:
-                stepped = stepup.strike(ctx, number, f"CI still failed after {fixes} fix(es)",
-                                        link=link)
-            except GitHubError:
-                stepped = False
-            if stepped:
-                out.append(f"#{number}: stepped up after {fixes} CI fixes")
-                continue
-        if fixes >= ctx.cfg.max_failures:
-            set_state_label(ctx, number, names, LABEL_BLOCKED)
-            if pull.get("auto_merge"):
-                try:
-                    ctx.gh.disable_auto_merge(pull["node_id"])
-                except GitHubError:
-                    pass
-            ctx.gh.create_comment(number, f"CI failed again ({link}) after {fixes} tries at "
-                                  "fixing it, so I stopped. It needs a person.")
-            out.append(f"#{number}: blocked after {fixes} CI fixes")
-            continue
-        reply = queue_revise(ctx, number, by=ctx.cfg.bot_login, source="ci",
-                             extra={"ci_run_id": run["id"], "ci_sha": sha, "ci_fixes": fixes + 1})
-        ctx.gh.create_comment(number, f"CI failed again ({link}). {reply}")
-        out.append(f"#{number}: queued a CI fix")
+        out.append(_fix_ci(ctx, number, pull, names, record, run, sha, "CI failed again"))
     return out or ["no open pull request for this run"]
+
+
+def _fix_ci(ctx: Context, number: int, pull: dict[str, Any], names: set[str],
+            record: dict[str, Any], run: dict[str, Any], sha: str, failed: str) -> str:
+    """What a red head gets once its one re-run is spent: a strike, a stop once the CI fixes are
+    used up, or else a CI fix with `run`'s logs. `failed` opens the comment."""
+    fixes = int(record.get("ci_fixes", 0))
+    link = f"[run]({run.get('html_url')})" if run.get("html_url") else "no CI run found"
+    if fixes and str(record.get("ci_fixed_head") or "") == sha:
+        # Every CI fix that left it red is a strike of its own (#316), not only the last one:
+        # this is the head the last CI fix pushed (`deliver._revise`). A head some other
+        # revision made is no strike, whatever fixes came before.
+        try:
+            stepped = stepup.strike(ctx, number, f"CI still failed after {fixes} fix(es)",
+                                    link=link)
+        except GitHubError:
+            stepped = False
+        if stepped:
+            return f"#{number}: stepped up after {fixes} CI fixes"
+    if fixes >= ctx.cfg.max_failures:
+        set_state_label(ctx, number, names, LABEL_BLOCKED)
+        if pull.get("auto_merge"):
+            try:
+                ctx.gh.disable_auto_merge(pull["node_id"])
+            except GitHubError:
+                pass
+        ctx.gh.create_comment(number, f"{failed} ({link}) after {fixes} tries at "
+                              "fixing it, so I stopped. It needs a person.")
+        return f"#{number}: blocked after {fixes} CI fixes"
+    reply = queue_revise(ctx, number, by=ctx.cfg.bot_login, source="ci",
+                         extra={"ci_run_id": run.get("id"), "ci_sha": sha, "ci_fixes": fixes + 1})
+    ctx.gh.create_comment(number, f"{failed} ({link}). {reply}")
+    return f"#{number}: queued a CI fix"
+
+
+#: The branches `main`'s merge queue builds on: `gh-readonly-queue/<base>/pr-<number>-<sha>`.
+QUEUE_BRANCH = "gh-readonly-queue/"
+
+
+def on_queue_ci(ctx: Context, run: dict[str, Any]) -> list[str]:
+    """CI failed on the merge queue's build of a pull request (infra/github.tf): `main` with every
+    pull request ahead of it and this one on top. Its own CI ran on an older `main`, so the rest
+    of `on_ci` never hears of it. One still in the queue was built again without a pull request
+    ahead of it that failed, and is left to the queue. One taken out failed itself, and gets a CI
+    fix with this run's logs at once, with no re-run: its own CI already passed, so what failed is
+    nearly always what `main` and it do together, which fails the same way again (four of the five
+    red runs on main of 2026-10-29). The revision merges `main` first and is reviewed as any, and
+    its auto-merge queues it again at the back. A held pull request (a revision, a stop,
+    `queue.hold_merge`) and a head the reviews never cleared are left alone."""
+    found = re.match(rf"{QUEUE_BRANCH}{re.escape(ctx.cfg.default_branch)}/pr-(\d+)-",
+                     str(run.get("head_branch") or ""))
+    if not found:
+        return [f"ignored: {run.get('head_branch')} is not a build of the default branch's queue"]
+    number = int(found.group(1))
+    pull = ctx.gh.get_pull(number)
+    if LABEL_PR not in label_names(pull):
+        return [f"#{number}: not a bot pull request"]
+    if pull.get("state") != "open":
+        return [f"#{number}: closed"]
+    try:
+        queued = ctx.gh.in_merge_queue(pull["node_id"])
+    except GitHubError as exc:
+        return [f"#{number}: could not read whether it is still in the merge queue ({exc})"]
+    if queued:
+        return [f"#{number}: still in the merge queue, built again without what failed ahead of it"]
+    names = label_names(pull)
+    record = ctx.store.load()["items"].get(str(number), {})
+    if (names & {LABEL_BLOCKED, LABEL_REVISE, LABEL_WORKING, LABEL_READY, LABEL_PERSON_MERGES}
+            or is_human(names) or record.get("stop_requested")):
+        return [f"#{number}: out of the merge queue, and held, so left alone"]
+    sha = str((pull.get("head") or {}).get("sha") or "")
+    if cleared(record).get("sha") != sha:
+        return [f"#{number}: out of the merge queue, and its head is not the cleared one"]
+    return [_fix_ci(ctx, number, pull, names, record, run, sha,
+                    "The merge queue took this out: CI failed on `main` with it on top")]

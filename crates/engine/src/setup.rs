@@ -36,7 +36,7 @@ fn seat_of(player: PlayerId) -> usize {
     player.seat()
 }
 
-/// §2.1, R1156000: the seat's entry in the opening-draw table, the source of truth, not two constants.
+/// §2.1, R2368000: the seat's entry in the opening-draw table, the source of truth, not two constants.
 pub fn opening_draw_for(player: PlayerId) -> i32 {
     OPENING_DRAW
         .get(seat_of(player))

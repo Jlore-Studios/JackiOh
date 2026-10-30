@@ -285,7 +285,7 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
         assert_eq!(summary["seats"]["p1"]["deck"], json!(decks.0));
         assert_eq!(
             summary["seats"]["p1"]["opening"].as_array().map(Vec::len),
-            Some(4)
+            Some(3)
         );
         // §2.1, R244: the seat going second opens with its four cards and The Coin, which is Created,
         // so it is no card of the opening hand but that seat's Created card, never used (R2089000).

@@ -24,14 +24,11 @@ use jackioh_server::db::store::{CollectionEntry, MatchStatus, SeriesStatus, Tick
 use jackioh_server::seats::{Lease, Seat, Seats, Taken};
 
 use crate::support::deps::{TestAppOptions, add_user, call, empty_test_app, record_logs, test_app_with};
-use crate::support::store::{fake, store, uuid};
+use crate::support::engine::playable;
+use crate::support::store::{fake, from, store, uuid};
 
 /// The epoch-ms stamp the saved decks carry; nothing reads it back.
 const AT: i64 = 1_700_000_000_000;
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
 
 /// The three kinds of game a door starts, and of seat the ledger holds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -69,22 +66,6 @@ fn rival_seat(kind: Kind) -> Seat {
 // ---------------------------------------------------------------------------------------------
 // Accounts, decks and trios (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
-
-/// Every playable catalog id, in `catalog.json` order.
-fn playable() -> Vec<String> {
-    jackioh_cards::register_all();
-    jackioh_cards::CATALOG
-        .iter()
-        .filter(|(_, def)| {
-            !def.token
-                && !serde_json::to_value(&def.tags)
-                    .expect("tags")
-                    .as_array()
-                    .is_some_and(|tags| tags.contains(&json!("Token")))
-        })
-        .map(|(id, _)| id.clone())
-        .collect()
-}
 
 /// The `n`th run of `DECK_SIZE` playable ids: legal, and disjoint from every other `n`.
 fn deck_at(n: usize) -> Vec<String> {

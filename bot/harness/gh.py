@@ -463,6 +463,44 @@ class GitHub:
             {"id": node_id},
         )
 
+    def in_merge_queue(self, node_id: str) -> bool:
+        """Whether a pull request is in `main`'s merge queue now. REST has no field for it, and its
+        `auto_merge` reads null for a queued pull request."""
+        data = self.graphql(
+            "query($id: ID!) { node(id: $id) { ... on PullRequest { isInMergeQueue } } }",
+            {"id": node_id},
+        )
+        return bool(((data or {}).get("node") or {}).get("isInMergeQueue"))
+
+    def queue_removal(self, node_id: str) -> dict[str, str] | None:
+        """How the merge queue took a pull request out, when that is the last thing auto-merge or
+        the queue did to it (`{"actor", "type", "reason"}`: the remover's login and GraphQL type,
+        `User` or `Bot`), else None: still queued, never queued, or auto-merge turned on or off
+        since."""
+        data = self.graphql(
+            "query($id: ID!) { node(id: $id) { ... on PullRequest { isInMergeQueue"
+            " timelineItems(last: 1, itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT,"
+            " REMOVED_FROM_MERGE_QUEUE_EVENT, AUTO_MERGE_ENABLED_EVENT, AUTO_MERGE_DISABLED_EVENT])"
+            " { nodes { __typename ... on RemovedFromMergeQueueEvent { reason"
+            " actor { __typename login } } } } } } }",
+            {"id": node_id},
+        )
+        node = (data or {}).get("node") or {}
+        last = (((node.get("timelineItems") or {}).get("nodes") or [None])[-1]) or {}
+        if node.get("isInMergeQueue") or last.get("__typename") != "RemovedFromMergeQueueEvent":
+            return None
+        actor = last.get("actor") or {}
+        return {"actor": str(actor.get("login") or ""), "type": str(actor.get("__typename") or ""),
+                "reason": str(last.get("reason") or "")}
+
+    def dequeue(self, node_id: str) -> None:
+        """Take a pull request out of `main`'s merge queue (infra/github.tf). GitHub answers with
+        an error when it is not in the queue."""
+        self.graphql(
+            "mutation($id: ID!) { dequeuePullRequest(input: {id: $id}) { clientMutationId } }",
+            {"id": node_id},
+        )
+
     def pin_issue(self, node_id: str) -> None:
         """Pin an issue to the top of the issue list (at most three are pinned)."""
         self.graphql(

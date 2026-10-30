@@ -31,6 +31,7 @@ use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StoreError};
 
 use crate::support::deps;
+use crate::support::store::fail_on;
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
@@ -196,17 +197,6 @@ async fn owned(server: &Server, profile_id: &str) -> IndexMap<String, i64> {
         .collect()
 }
 
-async fn fail_on(server: &Server, failing: &'static str) {
-    store_of(&server.app).lock().await.on_call =
-        Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
-            if method == failing {
-                Err(StoreError::Other("injected fault".to_string()))
-            } else {
-                Ok(())
-            }
-        }));
-}
-
 /// The row without its `at`, which the server stamps from its own clock.
 fn without_at(row: &Value) -> Value {
     let mut row = row.clone();
@@ -232,7 +222,7 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
     #[tokio::test]
     async fn writes_both_tables_or_neither_a_fault_on_collection_append_grants_leaves_collection_unchanged() {
         let (server, _token) = setup().await;
-        fail_on(&server, "collection.appendGrants").await;
+        fail_on(&server.app, "collection.appendGrants", "injected fault").await;
 
         let error = grant(
             &server,
@@ -251,7 +241,7 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
     #[tokio::test]
     async fn writes_both_tables_or_neither_a_fault_on_collection_upsert_quantities_leaves_grants_unchanged() {
         let (server, _token) = setup().await;
-        fail_on(&server, "collection.upsertQuantities").await;
+        fail_on(&server.app, "collection.upsertQuantities", "injected fault").await;
 
         let error = grant(
             &server,
@@ -281,7 +271,7 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
         .expect("the grant");
         let before = collection_rows(&server).await;
 
-        fail_on(&server, "collection.appendGrants").await;
+        fail_on(&server.app, "collection.appendGrants", "injected fault").await;
         let error = grant(
             &server,
             PROFILE,
