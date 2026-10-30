@@ -9465,6 +9465,13 @@
     "2478": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T13:30:50Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Fails easy on line 3 at least, since it adds ruling R2478000 and edits \u00a79.8, and on line 1 with 16 files. It is not hard: it touches no engine, AI or migration, and all the code is in crates/server."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
