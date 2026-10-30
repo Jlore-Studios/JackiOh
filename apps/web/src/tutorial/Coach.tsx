@@ -1,4 +1,6 @@
 // Coach bubble and anchor ring (SPEC §9.10, R292): wait for board animation and keep controls clear.
+// R2434003: on a desktop the bubble docks to a corner, never the middle of the board; the ring is the
+// pointing at a target.
 // R314: it never skips or blocks play; focus stays in prompts and dialogs.
 // CLAUDE.md rule 7: anchors come from view testids.
 
@@ -17,7 +19,6 @@ import {
 import { LANES, testid } from "../game/contract.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import {
-  COACH_BUBBLE_GAP_PX,
   COACH_BUBBLE_MIN_HEIGHT_PX,
   COACH_DOCK_QUERY,
   COACH_RING_PAD_PX,
@@ -204,7 +205,6 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
   const stale = shown !== null && key !== displayKey(latest.display);
   const targets = shown?.targets ?? [];
   const targetKey = targets.join(" ");
-  const slim = display?.mode === "waiting";
   const dock = useSyncExternalStore(subscribeDock, currentDock, serverDock);
   const panel = dock === "panel";
 
@@ -256,11 +256,9 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
         anchor: ring,
         bubble: { width: element?.offsetWidth ?? 0, height: element?.offsetHeight ?? 0 },
         viewport: { width: window.innerWidth, height: window.innerHeight },
-        slim,
         insetTop: hud === null ? 0 : hud.top + hud.height,
         avoid,
         keepClear,
-        gap: COACH_BUBBLE_GAP_PX,
         margin: COACH_VIEWPORT_MARGIN_PX,
         minHeight: COACH_BUBBLE_MIN_HEIGHT_PX,
       });
@@ -278,7 +276,7 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, { capture: true });
     };
-  }, [visible, shown, targetKey, slim, panel, expanded]);
+  }, [visible, shown, targetKey, panel, expanded]);
 
   // Never move focus out of an open prompt or dialog.
   useEffect(() => {

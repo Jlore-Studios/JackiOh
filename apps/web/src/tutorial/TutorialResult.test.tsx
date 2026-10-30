@@ -1,5 +1,5 @@
 // The end of a lesson (tutorial/TutorialResult.tsx): a win completes the lesson and offers the next
-// one, a loss offers the lesson's tip and Retry.
+// one, a loss offers the lesson's tip and Retry, and a concede is a loss that says so (R2434002).
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -146,6 +146,23 @@ describe("the end of a lesson", () => {
     fireEvent.click(retry);
     expect(on.onRetry).toHaveBeenCalledTimes(1);
     expect(readTutorialProgress().completed).toEqual([]);
+    // Only a concede is kept as a loss (R2434002).
+    expect(readTutorialProgress().lost).toEqual([]);
+  });
+
+  it("R2434002 a concede is a loss and says so plainly: the lesson is not won, and this device keeps it as lost", () => {
+    render(
+      <TutorialResult result={{ winner: "p2", reason: "concede" }} viewer="p1" lesson={lesson(1)} next={lesson(2)} unlockedNow {...handlers()} />,
+    );
+    const dialog = screen.getByTestId(tutorialTestid.result);
+    expect(dialog).toHaveAttribute("data-outcome", "loss");
+    expect(dialog).toHaveAccessibleName("Lesson lost");
+    expect(dialog).toHaveTextContent("You conceded. That counts as a loss.");
+    expect(screen.getByTestId(tutorialTestid.retry)).toHaveFocus();
+    const progress = readTutorialProgress();
+    expect(progress.completed).toEqual([]);
+    expect(progress.lost).toEqual([lesson(1).id]);
+    expect(lessonStatus(progress, lesson(2))).toBe("locked");
   });
 
   it("a draw is Not quite too", () => {

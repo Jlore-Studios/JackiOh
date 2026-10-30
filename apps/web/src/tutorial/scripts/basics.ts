@@ -1,11 +1,11 @@
-// Lesson 1's coach (SPEC §9.10, R2205000): a welcome, then moments that ask rather than tell. The
-// player finds mana and playing a unit, that a unit rests the turn it arrives, that any ready unit can
-// hit the enemy hero, and what two units do when they fight; the AI's own hits teach hero health, and
-// the last moment ends with the win. Every pick reads the view and the legal actions (CLAUDE.md rule 7).
+// Lesson 1's coach (SPEC §9.10, R2205000, R2434001): a welcome, then three moments that ask rather
+// than tell, and nothing a later lesson teaches. The player finds mana and playing a unit, that a ready
+// unit can hit the enemy hero, and what two units do when they fight; the last moment ends with the
+// win. Every pick reads the view and the legal actions (CLAUDE.md rule 7).
 
-import type { CoachCtx, LessonScript } from "../coach.ts";
-import { info, myHand, unitsOf } from "../steps.ts";
-import { endTurnPick, finishOf, hitHero, momentOf, tradeUnits, type Pick } from "./kit.ts";
+import type { LessonScript } from "../coach.ts";
+import { info, myHand } from "../steps.ts";
+import { finishOf, hitHero, momentOf, tradeUnits, type Pick } from "./kit.ts";
 
 /** The cheapest unit the player may play now. */
 const cheapestUnit: Pick = (ctx) => {
@@ -18,14 +18,9 @@ const cheapestUnit: Pick = (ctx) => {
   return undefined;
 };
 
-/** A unit of the player's is resting, and none can attack yet. */
-function resting(ctx: CoachCtx): boolean {
-  return unitsOf(ctx.view, "you").some((unit) => unit.sick === true) && !ctx.legal.some((action) => action.type === "attack");
-}
-
 export const script: LessonScript = {
   lessonId: "basics",
-  teaches: ["mana", "play-unit", "summoning-sickness", "attack-hero", "trade", "hero-health", "winning"],
+  teaches: ["mana", "play-unit", "attack-hero", "trade", "winning"],
   tips: [],
   steps: [
     info({
@@ -42,20 +37,11 @@ export const script: LessonScript = {
       pick: cheapestUnit,
     }),
     momentOf({
-      id: "resting",
-      title: "Ready to fight?",
-      text: "Your unit is on the field. Can it attack this turn?",
-      discovers: ["summoning-sickness"],
-      hints: ["A unit that can attack glows green. Does yours?", "A unit rests on the turn it arrives. Press End turn and look again on your next turn."],
-      pick: endTurnPick,
-      when: resting,
-    }),
-    momentOf({
       id: "hero",
       title: "The enemy hero",
       text: "The enemy hero has 20 health. How do you bring it down?",
       discovers: ["attack-hero"],
-      hints: ["Your ready units glow green. Where can they go?", "Drag a green unit onto the enemy hero."],
+      hints: ["A unit rests the turn it arrives; after that it glows green. Where can it go?", "Drag a green unit onto the enemy hero."],
       pick: hitHero,
     }),
     momentOf({

@@ -126,6 +126,14 @@ type SuiteOptions = {
   randomRuns: number;
 };
 
+/** R2434001, #2433: the cards the AI seat played in a run that are not Core cards, with where. */
+export function nonCorePlays(run: LessonRun): string[] {
+  const ai = opponentOf(run.humanSeat);
+  return stepsOf(run)
+    .flatMap((step) => step.events)
+    .flatMap((event) => (event.type === "cardPlayed" && event.player === ai && catalog[event.defId]?.set !== "Core" ? [event.defId] : []));
+}
+
 /** The policies other than the coach's own line that must each still end in the human's win (R2205001). */
 const OTHER_POLICIES: readonly LessonPolicy[] = ["coach-passive", "autopilot", "reckless"];
 
@@ -148,7 +156,7 @@ export function lessonSuite(lessonId: string, options: SuiteOptions): void {
       coach = playLesson(lessonId, { policy: "coach" });
     }, LESSON_GAME_TIMEOUT_MS);
 
-    it(`R293 R2205000 ${lessonId}: the coach's line wins, every moment shows and is done, and every listed mechanic is found`, () => {
+    it(`R293 R2205000 R2434001 ${lessonId}: the coach's line wins, every moment shows and is done, every listed mechanic is found, and the AI plays only Core cards`, () => {
       expect(coach.winner, "the human wins").toBe(human);
       expect(coach.view.result?.reason).not.toBe("turn-cap");
       expect(coach.humanTurns, "within the lesson's turns").toBeLessThanOrEqual(options.coachTurnsMax);
@@ -162,6 +170,7 @@ export function lessonSuite(lessonId: string, options: SuiteOptions): void {
       for (const id of lesson.discoveries) expect(coach.coach.found, `${id} is found`).toContain(id);
       expect(coach.script.teaches, "the script teaches the lesson's list").toEqual(lesson.discoveries);
       expect(coach.humanActions.filter((entry) => entry.refused !== null), "the engine takes every move").toEqual([]);
+      expect(nonCorePlays(coach), "the AI plays only Core cards").toEqual([]);
     });
 
     it(`R2205000 ${lessonId}: the coach never shows more than ${String(TUTORIAL_BUBBLES_PER_MOVE_MAX)} "Got it"s in a row on its line`, () => {
@@ -171,25 +180,27 @@ export function lessonSuite(lessonId: string, options: SuiteOptions): void {
 
     for (const policy of OTHER_POLICIES) {
       it(
-        `R293 R2205001 ${lessonId}: the ${policy} player ends the lesson in the human's win, with no loss, draw or stall`,
+        `R293 R2205001 R2434001 ${lessonId}: the ${policy} player ends the lesson in the human's win, with no loss, draw or stall, and the AI plays only Core cards`,
         () => {
           const run = playLesson(lessonId, { policy });
           expect(run.winner).toBe(human);
           expect(run.view.result?.reason).not.toBe("turn-cap");
           expect(run.coach.finished).toBe(true);
           expect(run.humanActions.filter((entry) => entry.refused !== null)).toEqual([]);
+          expect(nonCorePlays(run), "the AI plays only Core cards").toEqual([]);
         },
         LESSON_GAME_TIMEOUT_MS,
       );
     }
 
     it(
-      `R293 R2205001 ${lessonId}: a player who makes random moves still wins, and never stalls or breaks the coach`,
+      `R293 R2205001 R2434001 ${lessonId}: a player who makes random moves still wins, never stalls or breaks the coach, and the AI plays only Core cards`,
       () => {
         for (let n = 1; n <= sweep(options.randomRuns); n += 1) {
           const run = playLesson(lessonId, { policy: "random", policySeed: `${lessonId}:random:${String(n)}` });
           expect(run.winner, `policy seed ${String(n)}: the human wins`).toBe(human);
           expect(run.coach.finished, `policy seed ${String(n)}: the coach is finished`).toBe(true);
+          expect(nonCorePlays(run), `policy seed ${String(n)}: the AI plays only Core cards`).toEqual([]);
         }
       },
       options.randomRuns * RANDOM_GAME_MS,

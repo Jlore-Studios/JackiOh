@@ -2,6 +2,8 @@
 // and draw retry the same lesson. It reads only the human's `PlayerView` (CLAUDE.md rule 7).
 // R314, R2205002: a win names each mechanic the game did not show found, with its rule, and the
 // Field Guide keeps it from then on.
+// R2434002: a concede is the one way to lose a lesson (R2201000): the result says so plainly, the
+// lesson is not won, and this device keeps it as lost until it is.
 
 import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -14,7 +16,7 @@ import { outcomeOf } from "../practice/PracticeResult.tsx";
 import { DIFFICULTY_LABEL } from "../practice/Tier.tsx";
 import { discoveryById } from "./discoveries.ts";
 import type { TutorialLesson } from "./lessons.ts";
-import { markFound, markLessonComplete } from "./progress.ts";
+import { markFound, markLessonComplete, markLessonLost } from "./progress.ts";
 import { tutorialTestid } from "./testids.ts";
 import "../practice/practice.css";
 import "./tutorial.css";
@@ -119,7 +121,7 @@ function notQuiteLine(outcome: "loss" | "draw" | "win", reason: Result["reason"]
     case "both-heroes-dead":
       return t("Your hero has fallen this time.");
     case "concede":
-      return t("You conceded this one.");
+      return t("You conceded. That counts as a loss.");
     default:
       return t("The lesson has ended.");
   }
@@ -144,9 +146,11 @@ export function TutorialResult({
   const titleId = useId();
   const primary = useRef<HTMLButtonElement>(null);
 
+  const conceded = outcome === "loss" && result.reason === "concede";
   useEffect(() => {
     if (won) markLessonComplete(lesson.id);
-  }, [won, lesson.id]);
+    else if (conceded) markLessonLost(lesson.id);
+  }, [won, conceded, lesson.id]);
 
   const named = missed.join(" ");
   useEffect(() => {
@@ -171,7 +175,7 @@ export function TutorialResult({
   let line: string;
   let primaryButton: ReactElement;
   if (!won) {
-    title = t("Not quite");
+    title = conceded ? t("Lesson lost") : t("Not quite");
     line = notQuiteLine(outcome, result.reason);
     primaryButton = (
       <button ref={primary} type="button" className="practice-play" data-testid={tutorialTestid.retry} onClick={onRetry}>

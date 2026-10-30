@@ -595,14 +595,14 @@ describe("the coach bubble", () => {
 });
 
 describe("the coach on a phone: a panel between the HUD and the board", () => {
-  it("floats beside its anchor on a desktop, and is a panel in the page on the board's phone layouts", () => {
+  it("R2434003 docks to a corner on a desktop, never the middle of the board, and is a panel in the page on the board's phone layouts", () => {
     phoneLayout(false);
     const source = fakeSource();
     source.push(snap(myTurn(1)));
     const { unmount } = mount(source, boardWith(["hand-you"]));
     expect(bubble()).toHaveAttribute("data-coach-dock", "float");
     expect(bubble()).toHaveClass("coach--float");
-    expect(bubble()).toHaveAttribute("data-coach-side");
+    expect(bubble().getAttribute("data-coach-side")).toMatch(/^dock-(top|bottom)-(left|right)$/);
     expect(bubble().style.left).not.toBe("");
     unmount();
     tracker?.dispose();

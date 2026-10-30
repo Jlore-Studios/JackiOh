@@ -42,7 +42,7 @@ import {
   waitForMoment,
 } from "../../support/tutorial.ts";
 
-const LATER_LESSON = "traps";
+const LATER_LESSON = "casting";
 
 const FAST_LOBBY = `${PRACTICE_PATH}?pace=fast`;
 
@@ -117,7 +117,9 @@ function expectLessonGame(data: TutorialData, lesson: TutorialLessonData): void 
     expect(debug.humanSeat, "the lesson's own seat").to.eq(lesson.humanSeat);
     expect(debug.decks[human], "the human plays the lesson's humanDeck").to.deep.eq(lesson.humanDeck);
     expect(debug.decks[1 - human], "the AI plays the lesson's aiDeck").to.deep.eq(lesson.aiDeck);
-    expect(debug.handicaps[aiSeat], "the AI seat's handicap is the tutorial's (R290)").to.deep.eq(TUTORIAL_HANDICAP);
+    expect(debug.handicaps[aiSeat], "the AI seat's handicap is the tutorial's (R290), and its pool hold (R2434001)").to.deep.eq(
+      lesson.poolHold ? { ...TUTORIAL_HANDICAP, poolHold: true } : TUTORIAL_HANDICAP,
+    );
     expect(
       debug.handicaps[lesson.humanSeat],
       "the human plays a human's resources with the lesson's smaller deck (R1705005), and its pool hold (R2201001)",

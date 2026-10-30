@@ -1,11 +1,12 @@
-// Coach placement never covers its anchor or the HUD. Prefer clear sides, protecting `keepClear`
-// over `avoid`; dock to the roomier edge only when none fit. Phones use Coach.tsx's page panel:
-// their boards leave no safe floating position.
+// Coach placement (R2434003): the floating bubble docks to a corner of the viewport, never the middle
+// of the board, and never over its anchor or the HUD when a corner is clear of them, protecting
+// `keepClear` over `avoid`. The ring, not the bubble, points at the target. Phones use Coach.tsx's
+// page panel: their boards leave no safe floating position.
 
 export type Rect = { left: number; top: number; width: number; height: number };
 export type Size = { width: number; height: number };
 
-export type BubbleSide = "below" | "above" | "right" | "left" | "center" | "corner" | "dock-top" | "dock-bottom";
+export type BubbleSide = "dock-bottom-right" | "dock-bottom-left" | "dock-top-right" | "dock-top-left";
 
 export type BubblePlacement = {
   side: BubbleSide;
@@ -18,19 +19,13 @@ export type PlaceInput = {
   anchor: Rect | null;
   bubble: Size;
   viewport: Size;
-  slim: boolean;
   insetTop: number;
   avoid?: readonly Rect[];
   /** Play targets take priority over `avoid`. */
   keepClear?: readonly Rect[];
-  gap: number;
   margin: number;
   minHeight: number;
 };
-
-function clamp(value: number, low: number, high: number): number {
-  return high < low ? low : Math.min(Math.max(value, low), high);
-}
 
 export function overlapArea(a: Rect, b: Rect): number {
   const width = Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left);
@@ -57,108 +52,57 @@ export function padRect(rect: Rect, pad: number): Rect {
   return { left: rect.left - pad, top: rect.top - pad, width: rect.width + 2 * pad, height: rect.height + 2 * pad };
 }
 
-function dock(input: PlaceInput, anchor: Rect): BubblePlacement {
-  const { viewport, bubble, margin, gap, minHeight } = input;
+type Spot = { side: BubbleSide; left: number; top: number; maxHeight: number | null };
+
+/**
+ * R2434003: the four corners a bubble docks to, the bottom ones first, beside the heroes' rows: the
+ * right edge (over the log) before the left. Every one is at an edge of the viewport, under the HUD,
+ * so no bubble is ever in the middle of the board.
+ */
+function spots(input: PlaceInput): Spot[] {
+  const { viewport, bubble, margin, minHeight } = input;
   const topEdge = input.insetTop + margin;
   const bottomEdge = viewport.height - margin;
-  const centreX = anchor.left + anchor.width / 2;
-  const left = clamp(centreX - bubble.width / 2, margin, viewport.width - margin - bubble.width);
-
-  const roomAbove = anchor.top - gap - topEdge;
-  const roomBelow = bottomEdge - (anchor.top + anchor.height + gap);
-  if (roomAbove >= roomBelow) {
-    return { side: "dock-top", left, top: topEdge, maxHeight: Math.max(minHeight, roomAbove) };
-  }
-  const maxHeight = Math.max(minHeight, roomBelow);
-  const height = Math.min(bubble.height, maxHeight);
-  return { side: "dock-bottom", left, top: bottomEdge - height, maxHeight };
+  const room = bottomEdge - topEdge;
+  const height = Math.min(bubble.height, Math.max(minHeight, room));
+  const maxHeight = bubble.height > room ? Math.max(minHeight, room) : null;
+  const right = Math.max(margin, viewport.width - margin - bubble.width);
+  const bottom = Math.max(topEdge, bottomEdge - height);
+  return [
+    { side: "dock-bottom-right", left: right, top: bottom, maxHeight },
+    { side: "dock-bottom-left", left: margin, top: bottom, maxHeight },
+    { side: "dock-top-right", left: right, top: topEdge, maxHeight },
+    { side: "dock-top-left", left: margin, top: topEdge, maxHeight },
+  ];
 }
 
-type Candidate = { side: BubbleSide; left: number; top: number; fits: boolean };
-
-function candidates(input: PlaceInput, anchor: Rect): Candidate[] {
-  const { viewport, bubble, gap, margin } = input;
-  const topEdge = input.insetTop + margin;
-  const bottomEdge = viewport.height - margin;
-  const right = anchor.left + anchor.width;
-  const bottom = anchor.top + anchor.height;
-  const centreX = anchor.left + anchor.width / 2;
-  const centreY = anchor.top + anchor.height / 2;
-  const alongX = clamp(centreX - bubble.width / 2, margin, viewport.width - margin - bubble.width);
-  const alongY = clamp(centreY - bubble.height / 2, topEdge, bottomEdge - bubble.height);
-
-  const below: Candidate = { side: "below", left: alongX, top: bottom + gap, fits: bottom + gap + bubble.height <= bottomEdge };
-  const above: Candidate = {
-    side: "above",
-    left: alongX,
-    top: anchor.top - gap - bubble.height,
-    fits: anchor.top - gap - bubble.height >= topEdge,
-  };
-  const toRight: Candidate = {
-    side: "right",
-    left: right + gap,
-    top: alongY,
-    fits: right + gap + bubble.width <= viewport.width - margin && bubble.height <= bottomEdge - topEdge,
-  };
-  const toLeft: Candidate = {
-    side: "left",
-    left: anchor.left - gap - bubble.width,
-    top: alongY,
-    fits: anchor.left - gap - bubble.width >= margin && bubble.height <= bottomEdge - topEdge,
-  };
-
-  // Try the roomier side first.
-  const vertical = centreY > (topEdge + bottomEdge) / 2 ? [above, below] : [below, above];
-  const horizontal = viewport.width - right >= anchor.left ? [toRight, toLeft] : [toLeft, toRight];
-  return [...vertical, ...horizontal];
-}
-
+/**
+ * R2434003: where the floating bubble docks. It is always at an edge (`spots`), never in the middle of
+ * the board and never over its anchor when a corner is clear of it: the anchor first, then `keepClear`,
+ * then `avoid` decide among the corners, and a tie keeps the earlier corner. The pointing at a target
+ * is the ring (Coach.tsx), not the bubble's place.
+ */
 export function placeBubble(input: PlaceInput): BubblePlacement {
-  const { anchor, bubble, viewport, margin } = input;
-
-  if (anchor === null) {
-    if (input.slim) {
-      return {
-        side: "corner",
-        left: Math.max(margin, viewport.width - margin - bubble.width),
-        top: Math.max(input.insetTop + margin, viewport.height - margin - bubble.height),
-        maxHeight: null,
-      };
+  const { bubble } = input;
+  const covers = (spot: Spot, rects: readonly Rect[]): number => {
+    const height = spot.maxHeight === null ? bubble.height : Math.min(bubble.height, spot.maxHeight);
+    return rects.reduce((sum, rect) => sum + overlapArea({ left: spot.left, top: spot.top, width: bubble.width, height }, rect), 0);
+  };
+  let best: Spot | undefined;
+  let score: [number, number, number] = [Infinity, Infinity, Infinity];
+  for (const spot of spots(input)) {
+    const next: [number, number, number] = [
+      covers(spot, input.anchor === null ? [] : [input.anchor]),
+      covers(spot, input.keepClear ?? []),
+      covers(spot, input.avoid ?? []),
+    ];
+    if (next[0] < score[0] || (next[0] === score[0] && (next[1] < score[1] || (next[1] === score[1] && next[2] < score[2])))) {
+      best = spot;
+      score = next;
     }
-    const centre: BubblePlacement = {
-      side: "center",
-      left: Math.max(margin, (viewport.width - bubble.width) / 2),
-      top: Math.max(input.insetTop + margin, (viewport.height - bubble.height) / 2),
-      maxHeight: null,
-    };
-    // Prompts open in the middle, so step beside one.
-    const blocked = [...(input.keepClear ?? []), ...(input.avoid ?? [])].find(
-      (rect) => overlapArea({ left: centre.left, top: centre.top, ...bubble }, rect) > 0,
-    );
-    return blocked === undefined ? centre : placeBubble({ ...input, anchor: blocked, avoid: [], keepClear: [] });
+    if (next[0] === 0 && next[1] === 0 && next[2] === 0) break;
   }
-
-  const fitting = candidates(input, anchor).filter((candidate) => candidate.fits);
-  if (fitting.length === 0) return dock(input, anchor);
-  const covers = (candidate: Candidate, rects: readonly Rect[]): number =>
-    rects.reduce(
-      (sum, rect) => sum + overlapArea({ left: candidate.left, top: candidate.top, ...bubble }, rect),
-      0,
-    );
-  // When all sides cover something, protect `keepClear` before soft obstacles (e2e spec 22).
-  let best: Candidate | undefined;
-  let leastClear = Infinity;
-  let leastSoft = Infinity;
-  for (const candidate of fitting) {
-    const clear = covers(candidate, input.keepClear ?? []);
-    const soft = covers(candidate, input.avoid ?? []);
-    if (clear < leastClear || (clear === leastClear && soft < leastSoft)) {
-      best = candidate;
-      leastClear = clear;
-      leastSoft = soft;
-    }
-    if (clear === 0 && soft === 0) break;
-  }
-  if (best === undefined) return dock(input, anchor);
-  return { side: best.side, left: best.left, top: best.top, maxHeight: null };
+  const chosen = best ?? spots(input)[0];
+  if (chosen === undefined) throw new Error("no spot");
+  return { side: chosen.side, left: chosen.left, top: chosen.top, maxHeight: chosen.maxHeight };
 }
