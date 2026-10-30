@@ -469,7 +469,7 @@ pub(crate) fn preview_seen(
         }
     }
     // The two sides only: the view's events name cards by `instanceId` too.
-    let view = serde_json::to_value(s.view(viewer)).expect("a view serialises");
+    let view = serde_json::to_value(s.view(viewer)).expect("a view serializes");
     find(&view["you"], instance_id)
         .or_else(|| find(&view["opponent"], instance_id))
         .and_then(|preview| preview.as_array().cloned())
