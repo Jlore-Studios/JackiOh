@@ -1,6 +1,6 @@
 //! Issue #2521, "Patch: Stinkyscape balance changes I": behaviours B21 to B37 of its frozen spec
 //! (`.fullsend/SPEC.md`), written by the spec-tester from that spec and the catalog alone, before any
-//! script of the issue existed. Every test names the behaviour it proves (`b21_…` to `b36_…`); about
+//! script of the issue existed. Every test names the behavior it proves (`b21_…` to `b36_…`); about
 //! half of them check a refusal, a fallback or a boundary. B37 (the AI's shadow ban) cannot be reached
 //! from this crate, which does not depend on `jackioh-ai`; the gap note says so.
 //!
@@ -180,7 +180,7 @@ fn b21_radiant_meteor_tramples_its_excess_into_the_hero() {
     assert_eq!(
         s.state().players.p2.hero.health,
         HERO_HEALTH - (METEOR_DAMAGE - health),
-        "with no neighbour, the Radiant face's excess past the target goes to its hero"
+        "with no neighbor, the Radiant face's excess past the target goes to its hero"
     );
 }
 
@@ -200,7 +200,7 @@ fn b21_base_meteor_never_reaches_the_hero() {
 #[test]
 fn b21_radiant_meteor_stops_at_a_neighbour_that_takes_the_whole_excess() {
     let mut s = meteor_board(
-        "b21-neighbour",
+        "b21-neighbor",
         true,
         json!([
             { "def": GENN, "lane": 2 },
@@ -218,7 +218,7 @@ fn b21_radiant_meteor_stops_at_a_neighbour_that_takes_the_whole_excess() {
     assert_eq!(
         s.card(&left).damage + s.card(&right).damage,
         METEOR_DAMAGE - health,
-        "the excess goes onto a neighbour, which takes it whole"
+        "the excess goes onto a neighbor, which takes it whole"
     );
     assert_eq!(
         s.state().players.p2.hero.health,
@@ -1189,7 +1189,7 @@ fn at(s: &Scenario) -> i32 {
     s.state().players.p1.starscape.as_ref().map_or(0, |map| map.at)
 }
 
-fn travelled(events: &[GameEvent]) -> Vec<(i32, StarscapeReward)> {
+fn traveled(events: &[GameEvent]) -> Vec<(i32, StarscapeReward)> {
     events
         .iter()
         .filter_map(|event| match event {
@@ -1220,7 +1220,7 @@ fn b32_star_chart_travels_its_nodes_along_the_map() {
         s.play(STAR_CHART, json!({}));
         assert_eq!(at(&s), nodes, "radiant {radiant}");
         assert_eq!(
-            travelled(s.last_events()),
+            traveled(s.last_events()),
             (1..=nodes)
                 .map(|node| (node, StarscapeReward::Heal))
                 .collect::<Vec<_>>(),
@@ -1243,7 +1243,7 @@ fn b32_star_chart_charts_the_map_when_its_caster_has_none() {
         .expect("the first travel charts a map");
     assert_eq!(map.nodes.len() as i32, STARSCAPE_EDGE_TRAVELS);
     assert_eq!(map.at, STAR_CHART_NODES);
-    assert_eq!(travelled(s.last_events()).len() as i32, STAR_CHART_NODES);
+    assert_eq!(traveled(s.last_events()).len() as i32, STAR_CHART_NODES);
 }
 
 #[test]
@@ -1254,7 +1254,7 @@ fn b32_star_chart_stops_at_the_edge_which_adds_edge_of_the_universe() {
     s.play(STAR_CHART, json!({}));
     assert_eq!(at(&s), STARSCAPE_EDGE_TRAVELS);
     assert_eq!(
-        travelled(s.last_events()),
+        traveled(s.last_events()),
         vec![(STARSCAPE_EDGE_TRAVELS, StarscapeReward::Edge)]
     );
     assert_eq!(
@@ -1268,7 +1268,7 @@ fn b32_star_chart_stops_at_the_edge_which_adds_edge_of_the_universe() {
     set_map(&mut s, STARSCAPE_EDGE_TRAVELS - 2);
     s.play(STAR_CHART, json!({}));
     assert_eq!(at(&s), STARSCAPE_EDGE_TRAVELS);
-    assert_eq!(travelled(s.last_events()).len(), 2, "no travel past the edge");
+    assert_eq!(traveled(s.last_events()).len(), 2, "no travel past the edge");
     assert_eq!(hand_of(&s, EDGE_OF_THE_UNIVERSE).len(), 1);
 }
 

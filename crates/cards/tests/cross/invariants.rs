@@ -1414,7 +1414,7 @@ mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
                 GameEvent::Redirected { what: RedirectWhat::Attack, from_id, to_id, .. }
                     if *from_id == menace && *to_id == ally
             )),
-            "the trap re-aimed the attack at the Golem's neighbour: {:?}",
+            "the trap re-aimed the attack at the Golem's neighbor: {:?}",
             g.last_events()
         );
         assert!(killed_and_survived(&g, &golem, &ally).is_some());

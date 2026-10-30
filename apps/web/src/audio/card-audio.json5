@@ -28,7 +28,7 @@
 // A hook gives a voice line, { voice: "<a voice>", text: "<the line>" }, an effect,
 // { effect: "<an effect>" }, or both in one object; with both, the effect starts first.
 //
-// To add a card: copy a neighbour's entry to where the catalog puts the card, change the id and the
+// To add a card: copy a neighbor's entry to where the catalog puts the card, change the id and the
 // name comment, and give a Unit a play, an attack and a death line (R1448), anything else a cast line.
 // A new or changed line has to be rendered: `pnpm --filter @jackioh/web gen:voice` on macOS, or on
 // Windows (or WSL) for a SAPI voice, or a push whose commit message holds `[gen:voice]`, which renders

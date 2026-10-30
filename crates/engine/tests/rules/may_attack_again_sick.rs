@@ -180,12 +180,12 @@ mod r2521002_may_attack_again_keeps_summoning_sickness {
             json_as(json!({ "target": { "of": "self" }, "keepSick": true }));
         assert_eq!(args.keep_sick, Some(true));
         assert_eq!(
-            serde_json::to_value(&args).expect("serialises")["keepSick"],
+            serde_json::to_value(&args).expect("serializes")["keepSick"],
             json!(true)
         );
         let plain: effects::MayAttackAgainArgs = json_as(json!({ "target": { "of": "self" } }));
         assert_eq!(plain.keep_sick, None);
-        let wire = serde_json::to_value(&plain).expect("serialises");
+        let wire = serde_json::to_value(&plain).expect("serializes");
         assert!(wire.get("keepSick").is_none(), "{wire}");
     }
 }

@@ -89,8 +89,8 @@ mod tests {
         s.state().players.p1.starscape.as_ref().map_or(0, |map| map.at)
     }
 
-    /// The nodes the play travelled to, in order.
-    fn travelled(s: &Scenario) -> Vec<i32> {
+    /// The nodes the play traveled to, in order.
+    fn traveled(s: &Scenario) -> Vec<i32> {
         s.last_events()
             .iter()
             .filter_map(|event| match event {
@@ -119,7 +119,7 @@ mod tests {
             let mut s = charting("star-chart", false, Some(0));
             let mana = s.state().players.p1.mana.current;
             s.play(ID, json!({}));
-            assert_eq!(travelled(&s), vec![1, 2]);
+            assert_eq!(traveled(&s), vec![1, 2]);
             assert_eq!(at(&s), 2);
             assert_eq!(s.state().players.p1.hero.health, HEALTH + 2 * heal(), "two Heals");
             assert_eq!(s.state().players.p1.mana.current, mana, "no travel price is paid");
@@ -134,21 +134,21 @@ mod tests {
             assert_eq!(map.nodes.len() as i32, STARSCAPE_EDGE_TRAVELS);
             assert_eq!(map.at, 2);
             assert!(s.state().rng_cursor > cursor, "the chart draws from the match rng");
-            assert_eq!(travelled(&s), vec![1, 2]);
+            assert_eq!(traveled(&s), vec![1, 2]);
         }
 
         #[test]
         fn r2521008_it_stops_at_the_edge_adding_edge_of_the_universe() {
             let mut s = charting("star-chart-edge", false, Some(STARSCAPE_EDGE_TRAVELS - 1));
             s.play(ID, json!({}));
-            assert_eq!(travelled(&s), vec![STARSCAPE_EDGE_TRAVELS], "one travel, then the edge");
+            assert_eq!(traveled(&s), vec![STARSCAPE_EDGE_TRAVELS], "one travel, then the edge");
             assert_eq!(at(&s), STARSCAPE_EDGE_TRAVELS);
             assert_eq!(edges_in_hand(&s), 1);
 
             // Standing on the edge already, it travels nowhere and adds nothing.
             let mut s = charting("star-chart-past", false, Some(STARSCAPE_EDGE_TRAVELS));
             s.play(ID, json!({}));
-            assert!(travelled(&s).is_empty());
+            assert!(traveled(&s).is_empty());
             assert_eq!(at(&s), STARSCAPE_EDGE_TRAVELS);
             assert_eq!(edges_in_hand(&s), 0);
         }
@@ -166,7 +166,7 @@ mod tests {
             let mut s = charting("star-chart-param", false, Some(0));
             assert_eq!(crate::upgrade_number(&mut s, ID, "nodes"), 3);
             s.play(ID, json!({}));
-            assert_eq!(travelled(&s), vec![1, 2, 3]);
+            assert_eq!(traveled(&s), vec![1, 2, 3]);
         }
     }
 
@@ -177,7 +177,7 @@ mod tests {
         fn r2521008_travels_4_nodes_gaining_each_reward() {
             let mut s = charting("star-chart-radiant", true, Some(0));
             s.play(ID, json!({}));
-            assert_eq!(travelled(&s), vec![1, 2, 3, 4]);
+            assert_eq!(traveled(&s), vec![1, 2, 3, 4]);
             assert_eq!(at(&s), 4);
             assert_eq!(s.state().players.p1.hero.health, HEALTH + 4 * heal(), "four Heals");
         }
@@ -187,7 +187,7 @@ mod tests {
             let mut s = charting("star-chart-radiant-edge", true, Some(STARSCAPE_EDGE_TRAVELS - 2));
             s.play(ID, json!({}));
             assert_eq!(
-                travelled(&s),
+                traveled(&s),
                 vec![STARSCAPE_EDGE_TRAVELS - 1, STARSCAPE_EDGE_TRAVELS],
                 "two travels of four, the second to the edge"
             );

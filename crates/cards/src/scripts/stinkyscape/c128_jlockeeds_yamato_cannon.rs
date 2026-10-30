@@ -96,7 +96,7 @@ mod tests {
             let cannon = s.unit(P1, 3).expect("the Cannon").id;
             let [left, middle, right] = [2, 3, 4].map(|lane| s.unit(P2, lane).expect("a Vanilla").id);
             s.attack(cannon.as_str(), middle.as_str());
-            // The target takes the hit, its neighbours the splash, and the 4 back never lands.
+            // The target takes the hit, its neighbors the splash, and the 4 back never lands.
             s.expect_in_zone(middle.as_str(), "graveyard");
             s.expect_in_zone(left.as_str(), "graveyard");
             s.expect_in_zone(right.as_str(), "graveyard");

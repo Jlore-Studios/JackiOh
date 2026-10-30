@@ -291,10 +291,10 @@ mod r2521003_run_activation_spends_a_use {
         let args: ActivationOfArgs = json_as(json!({ "instanceId": "c1", "spendUse": true }));
         assert_eq!(args.spend_use, Some(true));
         assert_eq!(
-            serde_json::to_value(&args).expect("serialises")["spendUse"],
+            serde_json::to_value(&args).expect("serializes")["spendUse"],
             json!(true)
         );
-        let wire = serde_json::to_value(ActivationOfArgs::default()).expect("serialises");
+        let wire = serde_json::to_value(ActivationOfArgs::default()).expect("serializes");
         assert!(wire.get("spendUse").is_none(), "{wire}");
     }
 }

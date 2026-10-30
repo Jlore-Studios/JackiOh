@@ -7,9 +7,9 @@
 //!
 //! Engine: a declared target, any Unit on either side (R81); one `damage` whose `trampleOnto` sends
 //! its excess past the target's Health onto the Units beside it in its row on its side (§3.1), one
-//! drawn from the match rng when there are two, each counting it only up to its Health, a neighbour
+//! drawn from the match rng when there are two, each counting it only up to its Health, a neighbor
 //! Immune to Spells passed by and one that takes the hit whole stopping the rest (R1848001); with no
-//! neighbour the excess is lost. The Radiant face's `adjacentAndHero` sends what passes both on to
+//! neighbor the excess is lost. The Radiant face's `adjacentAndHero` sends what passes both on to
 //! the target's controller's hero. Then `lock` on the target's zone (§6.3 Lock), in the text's order:
 //! a target the hit killed still stands there until the state check, so its zone is Locked whether
 //! it died or not.
@@ -49,11 +49,11 @@ pub fn script() -> CardScripts {
 }
 
 // S #3 Meteor — SPEC §8.10 row S 3, BUILD M12 row S 3: "15 to a chosen Unit, its excess going to one
-// neighbour drawn at random, then the other (R1848001), each counting it only up to its Health; a
-// neighbour's Divine Shield stops the rest; a neighbour Immune to Spells is passed by; with no
-// neighbour the excess is lost; the target's zone is Locked whether it died or not, and no card can
+// neighbor drawn at random, then the other (R1848001), each counting it only up to its Health; a
+// neighbor's Divine Shield stops the rest; a neighbor Immune to Spells is passed by; with no
+// neighbor the excess is lost; the target's zone is Locked whether it died or not, and no card can
 // be played into it; damage reads through `param()`; radiant 15 (#2521), and what passes both
-// neighbours hits the target's controller's hero".
+// neighbors hits the target's controller's hero".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -99,7 +99,7 @@ mod tests {
 
             s.play(METEOR, json!({ "targets": pick::instance(&units[1]) }));
 
-            // 4 to the target, 4 to each neighbour, and the last 3 lost.
+            // 4 to the target, 4 to each neighbor, and the last 3 lost.
             for unit in &units {
                 s.expect_in_zone(unit, "graveyard");
             }

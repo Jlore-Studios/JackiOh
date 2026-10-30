@@ -1,6 +1,6 @@
 //! Issue #2521, "Patch: Stinkyscape balance changes I": the spec-tester's suite for behaviours B1–B20 of
 //! `.fullsend/SPEC.md`, written against SPEC's surface before the code that makes them true. Each test
-//! names the behaviour it holds the code to (`b<n>_…`); each card's own file still holds its own tests.
+//! names the behavior it holds the code to (`b<n>_…`); each card's own file still holds its own tests.
 //!
 //!  - B1–B5, the Resources: their tags and prices, Korrelite's Pierce and Echo, Narcor's Legendary pool,
 //!    Red Narcor's mana and draw.
@@ -112,7 +112,7 @@ const FACTIONS: [Faction; 5] = [
     ),
 ];
 
-// B9–B16: the Starship Pieces and their neighbours.
+// B9–B16: the Starship Pieces and their neighbors.
 const CANNON_V3: &str = "stinkyscape-052";
 const FLAK_V3: &str = "stinkyscape-053";
 const STRATOS: &str = "stinkyscape-068";
@@ -504,7 +504,7 @@ fn b1_reknite_korrelite_gellium_axnit_narcor_and_red_narcor_carry_resource_and_t
 
 #[test]
 fn b2_korrelite_prices_its_credits_2_to_5_and_radiant_4_to_10_and_a_card_with_no_resource_prices_none() {
-    let korrelite = serde_json::to_value(card_def(KORRELITE)).expect("a CardDef serialises");
+    let korrelite = serde_json::to_value(card_def(KORRELITE)).expect("a CardDef serializes");
     let prices = &korrelite["resource"];
     assert_eq!(
         (&prices["base"]["sellMin"], &prices["base"]["sellMax"]),
@@ -1226,7 +1226,7 @@ fn b14_cloaking_module_is_a_2_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_t
     let mut radiant_printed = printed;
     radiant_printed.push(KeywordKind::ImmuneToSpells);
     assert_eq!(radiant, radiant_printed);
-    let faces = serde_json::to_value(def).expect("a CardDef serialises");
+    let faces = serde_json::to_value(def).expect("a CardDef serializes");
     assert_eq!(
         (&faces["base"]["attack"], &faces["base"]["health"]),
         (&json!(2), &json!(2))
