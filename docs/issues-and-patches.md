@@ -39,7 +39,7 @@ every push (#1370). Nothing else sets them, and no label overrides the classifie
 | `kind:app` | It changes the client or the server, what players see and use |
 | `kind:internal` | CI, the bots, tooling, docs, tests or a refactor |
 | `tier:major` | A set ships: the next `v0.Z.0` |
-| `tier:patch` | 50 or more cards play differently, or a rule every game meets: the next `v0.Z.X` |
+| `tier:patch` | 15 or more cards reprinted, 50 or more that play differently, or a rule every game meets: the next `v0.Z.X` |
 | `tier:micro` | Fewer cards, or their words alone: the next letter |
 
 The type labels stay for routing (the night bot's sweeps and the forms read them), though a `Patch:`
@@ -122,8 +122,10 @@ does to the cards through the classifier and names it:
   arrival opens no line and earns the tier its cards do, so Training Grounds ships as a patch of
   Stinkyscape's v0.5, whose line is "Stinkyscape & Training Grounds". Wrapping is the owner's call,
   never a builder's.
-- **Patch, `v0.Z.(X+1)`**: 50 or more card families play differently (`PATCH_MIN_CARDS`), or a rule
-  every game meets changed: divergences that name no card in a quarter of the classifier's unforced
+- **Patch, `v0.Z.(X+1)`**: 15 or more card families are reprinted (`PATCH_MIN_REPRINTS`, R2499000:
+  their catalog entry changed and they play differently, as in a balance pass), 50 or more play
+  differently by any route, the engine's included (`PATCH_MIN_CARDS`), or a rule every game meets
+  changed: divergences that name no card in a quarter of the classifier's unforced
   games (`RULE_MIN_GAMES`), or a base build that refuses the head's decks. A patch restarts every
   card's statistics (R1367000), so it waits for a change broad enough to move them (#2455,
   R2455000); the bar was 10 families, and any one divergence without a card, until then.

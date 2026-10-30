@@ -5,6 +5,11 @@
 //! or micro) and the card families that play differently. Nothing overrides it: no flag, title or
 //! label.
 //!
+//! A card change is a patch when `PATCH_MIN_REPRINTS` families are reprinted (their catalog entry
+//! changed and they play differently: a balance pass), when `PATCH_MIN_CARDS` families play
+//! differently by any route, or when a rule every game meets changed (R2455000, R2499000); anything
+//! smaller is a micro.
+//!
 //! Stage 1 reads the diff. `catalog.json` card by card: the wording fields (`WORDING_FIELDS`) a
 //! player reads and no game does, every other field plays. Each card script's code, the lines
 //! `catalog loc` counts, so its tests, comments, `use` lines and layout are not code. The sets
@@ -74,6 +79,12 @@ const UNFORCED_GAMES: u32 = 200;
 /// every game meets, a quarter of them. Fewer is a rule few games meet, which moves no card's
 /// statistics enough to restart them all, and counts as no card.
 const RULE_MIN_GAMES: usize = UNFORCED_GAMES as usize / 4;
+
+/// R2499000: the families a change must reprint for a patch, however few others it reaches. A
+/// reprinted family's catalog entry changed and it plays differently: a balance pass, which moves
+/// those cards' stats on purpose, as an engine change that only reaches cards does not
+/// (`PATCH_MIN_CARDS`).
+pub(crate) const PATCH_MIN_REPRINTS: usize = 15;
 
 /// Stage 2: the self-play games a change to the AI plays on both builds, and their seed base.
 const SELFPLAY_GAMES: u32 = 8;
@@ -465,6 +476,9 @@ pub(crate) struct Classification {
     pub sets: Vec<String>,
     /// The families that play differently.
     pub cards: Vec<String>,
+    /// R2499000: the families of `cards` whose catalog entry changed, a field that plays or their
+    /// wording beside a change to their play.
+    pub reprinted: Vec<String>,
     /// The families whose wording alone changed.
     pub wording: Vec<String>,
     /// A rule every game meets (`Checked::rule`) made the tier a patch.
@@ -495,9 +509,14 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
         }
     }
     let rule = checked.is_some_and(|checked| checked.rule);
+    let reprinted: Vec<String> = cards
+        .iter()
+        .filter(|family| diff.play.contains(*family) || diff.wording.contains(*family))
+        .cloned()
+        .collect();
     let tier = if diff.sets.iter().any(|set| !wrapped(set)) {
         Some(Tier::Major)
-    } else if rule || cards.len() >= PATCH_MIN_CARDS {
+    } else if rule || cards.len() >= PATCH_MIN_CARDS || reprinted.len() >= PATCH_MIN_REPRINTS {
         Some(Tier::Patch)
     } else if !cards.is_empty() || !diff.wording.is_empty() {
         Some(Tier::Micro)
@@ -528,6 +547,7 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
             .cloned()
             .collect(),
         cards: cards.into_iter().collect(),
+        reprinted,
         rule,
         stage2: if checked.is_some() { "ran" } else { "skipped" },
         unchecked,
@@ -1036,6 +1056,7 @@ fn print_classification(classification: &Classification) {
     for (label, list) in [
         ("sets that ship", &classification.sets),
         ("cards that play differently", &classification.cards),
+        ("of them reprinted", &classification.reprinted),
         ("wording only", &classification.wording),
         ("not checked (no --parent-bin)", &classification.unchecked),
     ] {
@@ -1086,20 +1107,71 @@ mod tests {
         assert!(classified.cards.is_empty());
     }
 
+    // R2499000: a balance pass is a patch from `PATCH_MIN_REPRINTS` reprinted families.
     #[test]
-    fn r1365000_r2455000_one_family_short_of_the_bar_is_a_micro_and_the_bar_a_patch() {
+    fn r2499000_fourteen_reprinted_families_are_a_micro_and_fifteen_a_patch() {
         for (n, tier) in [
-            (10, Tier::Micro),
-            (PATCH_MIN_CARDS - 1, Tier::Micro),
-            (PATCH_MIN_CARDS, Tier::Patch),
+            (PATCH_MIN_REPRINTS - 1, Tier::Micro),
+            (PATCH_MIN_REPRINTS, Tier::Patch),
         ] {
             let diff = read_diff(
                 &side(cards(n, 1, "T."), SHIPPED),
                 &side(cards(n, 2, "T."), SHIPPED),
                 &[],
             );
-            assert_eq!(classify(&diff, None).tier, Some(tier), "{n} cards");
+            let classified = classify(&diff, None);
+            assert_eq!(
+                (classified.tier, classified.reprinted.len()),
+                (Some(tier), n),
+                "{n} cards"
+            );
         }
+    }
+
+    // R2455000, R2499000: families an engine change only reaches reprint nothing, so they need the
+    // wider bar, `PATCH_MIN_CARDS`.
+    #[test]
+    fn r2455000_r2499000_families_the_engine_only_reaches_need_the_wider_bar() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let diff = Diff {
+            play_code: true,
+            ..read_diff(&both, &both, &[])
+        };
+        for (n, tier) in [
+            (PATCH_MIN_REPRINTS, Tier::Micro),
+            (PATCH_MIN_CARDS - 1, Tier::Micro),
+            (PATCH_MIN_CARDS, Tier::Patch),
+        ] {
+            let reached = Checked {
+                touched: (1..=n).map(|k| format!("core-{k:03}")).collect(),
+                ..Checked::default()
+            };
+            let classified = classify(&diff, Some(&reached));
+            assert_eq!(
+                (classified.tier, classified.reprinted.len()),
+                (Some(tier), 0),
+                "{n} cards"
+            );
+        }
+    }
+
+    // R2499000: a rework rewrites a card's text and its script, so its wording beside a script that
+    // plays reprints it; its wording alone does not.
+    #[test]
+    fn r2499000_a_rework_reprints_its_card_through_its_wording_and_its_script() {
+        let diff = read_diff(
+            &side(cards(PATCH_MIN_REPRINTS, 1, "Old."), SHIPPED),
+            &side(cards(PATCH_MIN_REPRINTS, 1, "New."), SHIPPED),
+            &[],
+        );
+        let reworked = Checked {
+            scripts: diff.wording.clone(),
+            ..Checked::default()
+        };
+        let classified = classify(&diff, Some(&reworked));
+        assert_eq!(classified.reprinted.len(), PATCH_MIN_REPRINTS);
+        assert_eq!(classified.tier, Some(Tier::Patch));
+        assert_eq!(classify(&diff, Some(&Checked::default())).tier, Some(Tier::Micro));
     }
 
     #[test]
