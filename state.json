@@ -10360,8 +10360,10 @@
       "feedback_since": "2026-10-30T05:49:27Z",
       "issue": 2437,
       "kind": "revise",
-      "queued_at": "2026-10-30T08:01:21Z",
+      "queued_at": "2026-10-30T08:02:29Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
