@@ -4,7 +4,7 @@
 //! An honest claim pays `JLORE_PRACTICE_WIN` or `JLORE_PRACTICE_LOSS` and the practice XP; a
 //! forged result, a forged AI move, another seed's log, an unfinished log, a sandbox tool, a seed
 //! claimed before, a lapsed seed and a pruned one pay nothing and say why (R1303000–R1303003, whose
-//! proving tests live here). A claim past `PRACTICE_VERIFY_CONCURRENCY` waits and still pays, and
+//! proving tests live here). A seed given back frees its place, and only the caller's unclaimed seed can be (R2379000). A claim past `PRACTICE_VERIFY_CONCURRENCY` waits and still pays, and
 //! so does one whose caller stops waiting. A paid game moves the account's quests by what it did,
 //! as a ladder game does (R1304001). The day's Jlore cap holds a game's Jlore back and says so,
 //! and an account holds only `PRACTICE_SEEDS_OPEN_MAX` open seeds (R1483000). A pay the store fails is
@@ -127,6 +127,19 @@ async fn issue(app: &Arc<App>, token: &str) -> (String, Value) {
     assert_eq!(status, 201, "{body}");
     let seed = body["seed"].as_str().expect("a seed").to_string();
     (seed, body)
+}
+
+/// `DELETE /api/practice/seeds/:seed`: the status and the answer, whatever they are.
+async fn release(app: &Arc<App>, token: &str, seed: &str) -> (u16, Value) {
+    let (status, _, body) = call(
+        app,
+        "DELETE",
+        &format!("/api/practice/seeds/{seed}"),
+        Some(token),
+        Value::Null,
+    )
+    .await;
+    (status, body)
 }
 
 /// A seed row written without the route, issued at `issued_at`.
@@ -1187,6 +1200,79 @@ async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {
     assert_eq!(
         fake_ref(&app).lock().await.tables.economy.practice_seeds.len(),
         PRACTICE_SEEDS_OPEN_MAX as usize
+    );
+}
+
+// ---------------------------------------------------------------------------
+// A seed given back (R2379000).
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn r2379000_a_released_seed_frees_its_place_and_its_claim_is_unknown() {
+    let (app, token) = authed().await;
+    let mut seeds = Vec::new();
+    for _ in 0..PRACTICE_SEEDS_OPEN_MAX {
+        seeds.push(issue(&app, &token).await.0);
+    }
+    let (status, _) = request_seed(&app, &token).await;
+    assert_eq!(status, 409);
+
+    let setup = kept_setup(&app, &seeds[0]).await;
+    let (status, body) = release(&app, &token, &seeds[0]).await;
+    assert_eq!((status, body), (200, json!({ "released": true })));
+    assert!(store!(app, |t| t.economy_practice_seed_get(A, &seeds[0])).is_none());
+
+    let (status, _) = request_seed(&app, &token).await;
+    assert_eq!(status, 201);
+
+    let (log, _, _) = play(&seeds[0], &setup, Human::Concede);
+    assert_eq!(
+        claim(&app, &token, &seeds[0], "loss", &log).await,
+        refusal("unknown_seed")
+    );
+    assert_unpaid(&app).await;
+}
+
+#[tokio::test]
+async fn r2379000_another_accounts_claimed_or_unknown_seed_is_a_404_that_changes_nothing() {
+    let (app, token) = authed().await;
+    let setup = setup(Difficulty::Easy, Vec::new());
+    let _ = fake_ref(&app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": "profile-b", "userId": "user-b", "status": "active" }));
+    store!(app, |t| t.economy_practice_seed_insert(&PracticeSeed {
+        seed: "practice-theirs".to_string(),
+        profile_id: "profile-b".to_string(),
+        setup: setup.clone(),
+        issued_at: now_ms(),
+        claimed_at: None,
+    }));
+
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    assert_eq!(
+        claim(&app, &token, &seed, "loss", &log).await["paid"],
+        json!(true)
+    );
+
+    for unknown in ["practice-theirs", seed.as_str(), "practice-never-issued"] {
+        let (status, body) = release(&app, &token, unknown).await;
+        assert_eq!(status, 404, "{body}");
+        assert_eq!(body["error"]["code"], json!("not_found"));
+    }
+    assert!(
+        store!(app, |t| t
+            .economy_practice_seed_get("profile-b", "practice-theirs"))
+        .is_some(),
+        "the other account's seed is still held"
+    );
+    assert!(
+        store!(app, |t| t.economy_practice_seed_get(A, &seed))
+            .expect("A's seed is still held")
+            .claimed_at
+            .is_some(),
+        "the claimed seed stays burned"
     );
 }
 

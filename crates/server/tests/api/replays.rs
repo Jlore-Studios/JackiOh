@@ -15,7 +15,6 @@
 
 use std::sync::Arc;
 
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_engine::config::REPLAY_PAGE_STEPS;
@@ -39,7 +38,7 @@ use crate::support::engine::{
     TEST_GLITCH_SWAP, begun_game, decks_that_open_on_the_mulligans, fake_deck, hand_card, install_test_cards,
     past_the_mulligans, real_pool,
 };
-use crate::support::store::{fake_lock, q, to_json};
+use crate::support::store::{fake_lock, from, q, to_json};
 
 const A: &str = "profile-a";
 const B: &str = "profile-b";
@@ -55,10 +54,6 @@ const OLD_CATALOG: &str = "v0.0.1-old";
 // ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
-
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
 
 /// The three accounts' tokens: A and B play, C never holds a seat.
 struct Tokens {

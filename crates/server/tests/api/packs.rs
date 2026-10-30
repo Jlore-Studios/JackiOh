@@ -29,7 +29,7 @@ use jackioh_server::config::{
 use jackioh_server::cosmetics::{
     Cosmetic, CosmeticKind, CosmeticRarity, global_cosmetics, pack_cosmetics, portrait_of, shipped,
 };
-use jackioh_server::db::store::{CollectionEntry, StoreError};
+use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::math::PityCounters;
 use jackioh_server::economy::packs::{
     BarSettle, BarsSettled, OpenedPack, PACK_GRANT_REASON, open_pack, slot_bar_points,
@@ -45,7 +45,7 @@ use jackioh_server::economy::tiers::{card_odds, cosmetic_odds};
 use jackioh_server::economy::tokens::card_bar_points;
 
 use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
-use crate::support::store::{fake, uuid};
+use crate::support::store::{fail_on, fake, stop_failing, uuid};
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
@@ -125,21 +125,6 @@ async fn open(app: &Arc<App>, token: &str, pack: &str) -> OpenedPack {
     .await;
     assert_eq!(status, 200, "{body}");
     serde_json::from_value(body).expect("an opened pack")
-}
-
-/// The store's fault hook: every call named `failing` errors.
-async fn fail_on(app: &App, failing: &'static str) {
-    fake(app).lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
-        if method == failing {
-            Err(StoreError::Other("injected fault".to_string()))
-        } else {
-            Ok(())
-        }
-    }));
-}
-
-async fn heal(app: &App) {
-    fake(app).lock().await.on_call = None;
 }
 
 /// A store value as JSON.
@@ -1032,7 +1017,7 @@ async fn a_fault_on_the_collection_leaves_no_partial_grant() {
     let (app, token) = setup().await;
     buy(&app, &token, "Core").await;
     let before = everything(&app).await;
-    fail_on(&app, "collection.appendGrants").await;
+    fail_on(&app, "collection.appendGrants", "injected fault").await;
     let (status, _, body) = call(
         &app,
         "POST",
@@ -1041,7 +1026,7 @@ async fn a_fault_on_the_collection_leaves_no_partial_grant() {
         json!({ "pack": "Core" }),
     )
     .await;
-    heal(&app).await;
+    stop_failing(&app).await;
     assert_eq!(status, 500, "{body}");
     assert_eq!(everything(&app).await, before);
     assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 1);
@@ -1060,7 +1045,7 @@ async fn a_fault_on_the_counters_leaves_no_partial_grant() {
         .expect("R111's grant");
     buy(&app, &token, "Core").await;
     let before = everything(&app).await;
-    fail_on(&app, "economy.counters.grant").await;
+    fail_on(&app, "economy.counters.grant", "injected fault").await;
     let (status, _, body) = call(
         &app,
         "POST",
@@ -1069,7 +1054,7 @@ async fn a_fault_on_the_counters_leaves_no_partial_grant() {
         json!({ "pack": "Core" }),
     )
     .await;
-    heal(&app).await;
+    stop_failing(&app).await;
     assert_eq!(status, 500, "{body}");
     assert_eq!(everything(&app).await, before);
     assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 1);
@@ -1842,9 +1827,9 @@ async fn r2378000_a_refused_or_failed_spend_gives_its_turn_back() {
         .await
         .expect("R111's grant");
     buy(&app, &token, "Core").await;
-    fail_on(&app, "economy.counters.grant").await;
+    fail_on(&app, "economy.counters.grant", "injected fault").await;
     let (status, _, body) = open_core().await;
-    heal(&app).await;
+    stop_failing(&app).await;
     assert_eq!(status, 500, "{body}");
     assert_eq!(app.spends.claims(PROFILE), 0, "so does a failure");
     open(&app, &token, "Core").await;
