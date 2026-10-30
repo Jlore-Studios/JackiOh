@@ -10230,6 +10230,14 @@
           "claude": "strong"
         }
       }
+    },
+    "2470": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-30T04:40:06Z",
+      "issue": 2446,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
