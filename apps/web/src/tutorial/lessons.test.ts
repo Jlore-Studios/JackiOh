@@ -1,7 +1,8 @@
 // R291 lessons are deterministic R187 practice games with the R290 handicap; the practice core exposes
-// only the human's view (rule 7). R2205003: five lessons dealt from Training Grounds alone, no
-// Legendary or Mythic card in either deck before the last and the human's pool hold on, and the last
-// lesson's human deck holding the set's Legendary and Mythic cards.
+// only the human's view (rule 7). R2205003, R2434001: five lessons, one subject each; the human's
+// decks Training Grounds cards, the AI's Core cards; no Legendary or Mythic card in either deck before
+// the last and the pool hold on both seats there; the last lesson's human deck holding the set's
+// Legendary and Mythic cards.
 
 import { describe, expect, it } from "vitest";
 
@@ -23,65 +24,49 @@ import { scriptFor } from "./scripts/index.ts";
 const catalog = registeredCatalog();
 
 const SHOWPIECE_RARITIES: readonly string[] = ["Legendary", "Mythic"];
-/** R2205003: the set every lesson's cards come from. */
-const LESSON_SET = "Training Grounds";
-/** R2205003: the lesson ids, the four kept from the Core tutorial so progress carries over, and the fifth. */
-const LESSON_IDS: readonly string[] = ["basics", "spells", "traps", "advanced", "finale"];
-/** R2205003: the Legendary and Mythic cards the last lesson's human holds, at the least. */
+/** R2205003: the set every human deck's cards come from. */
+const HUMAN_SET = "Training Grounds";
+/** R2434001: the set every AI deck's cards come from. */
+const AI_SET = "Core";
+/** R2434001: the lesson ids in path order, `basics` and `finale` kept, the three between new (R2434000). */
+const LESSON_IDS: readonly string[] = ["basics", "keywords", "casting", "backrow", "finale"];
+/** R2205003, R2434001: the Legendary and Mythic cards the last lesson's human holds, at the least. */
 const FINALE_SHOWPIECES: readonly string[] = ["traininggrounds-037", "traininggrounds-038", "traininggrounds-039", "traininggrounds-040"];
-
-// R291: the AI gets each mechanic only after its lesson teaches it.
-const BACKROW_TYPES: readonly string[] = ["Trap", "Field Trap", "Field Spell"];
-const BACKROW_LESSON = 3;
-const SPELL_LESSON = 2;
-// Lesson 1 excludes combat keywords (§4, §6.1).
-const COMBAT_KEYWORDS: readonly string[] = [
-  "Taunt",
-  "Rush",
-  "Charge",
-  "First Strike",
-  "Divine Shield",
-  "Reborn",
-  "Poisonous",
-  "Lifesteal",
-  "Trample",
-  "Cleave",
-  "Indestructible",
-  "Stack",
-  "Can't attack",
-];
+/** The last lesson teaches everything else, so anything no earlier lesson names comes there first. */
+const EVERYTHING = 5;
 
 /**
- * R2205003 (§9.10): the lesson that teaches each ability a card can show on its face, so an AI deck
- * holds "nothing the lessons before it have not taught": its type, a keyword, or an ability its text
- * names. A keyword no lesson teaches is not listed (TG #14's Trample).
+ * R2434001 (§9.10): the lesson that teaches each ability a card can show on its face, so a deck holds
+ * "nothing a later lesson teaches": its type, a keyword, or an ability its text names. Lesson 1 is
+ * units with a few Cries and Rush; lesson 2 the other keywords; lesson 3 spells; lesson 4 the backrow;
+ * every other keyword and ability is lesson 5's.
  */
-const TYPE_LESSON: Readonly<Record<string, number>> = { Unit: 1, Spell: 2, Trap: 3, "Field Trap": 3, "Field Spell": 3 };
-const KEYWORD_LESSON: Readonly<Record<string, number>> = { Taunt: 2, Armor: 2, "Divine Shield": 2, Rush: 2, Pierce: 2 };
+const TYPE_LESSON: Readonly<Record<string, number>> = { Unit: 1, Spell: 3, Trap: 4, "Field Trap": 4, "Field Spell": 4 };
+// Trample comes only on TG #14 Explosive Trap's damage, so it is the backrow's, with its Trap.
+const KEYWORD_LESSON: Readonly<Record<string, number>> = { Rush: 1, Taunt: 2, Armor: 2, "Divine Shield": 2, Pierce: 2, Trample: 4 };
 const TEXT_LESSON: readonly (readonly [string, number])[] = [
-  ["Cry:", 2],
-  ["Aura:", 3],
-  ["Death:", 4],
-  ["Tribute", 4],
-  ["Defense Position", 2],
+  ["Cry:", 1],
+  ["Aura:", EVERYTHING],
+  ["Death:", EVERYTHING],
+  ["Tribute", EVERYTHING],
+  ["Radiant", EVERYTHING],
+  ["Quickdraw", EVERYTHING],
 ];
-/**
- * Lesson 1's AI deck is 12 distinct Training Grounds units, and the set has only three with no
- * ability (#1, #8, #43), so its other nine carry a Cry, one lesson early. Nothing else comes early.
- */
-const EARLY_IN_LESSON_1: readonly string[] = ["Cry:"];
 /** R2201000: all the idle human ever sends, the mulligan and a prompt's answer aside. */
 const IDLE_MOVES: readonly string[] = ["mulligan", "answer", "endTurn"];
 
 /** Every ability of a card's face with the lesson that teaches it. */
 function abilitiesOf(card: CardDef): { ability: string; lesson: number }[] {
   const found: { ability: string; lesson: number }[] = [{ ability: card.type, lesson: TYPE_LESSON[card.type] ?? Infinity }];
-  for (const keyword of card.base.keywords) {
-    const lesson = KEYWORD_LESSON[keyword.kind];
-    if (lesson !== undefined) found.push({ ability: keyword.kind, lesson });
-  }
+  for (const keyword of card.base.keywords) found.push({ ability: keyword.kind, lesson: KEYWORD_LESSON[keyword.kind] ?? EVERYTHING });
   for (const [words, lesson] of TEXT_LESSON) if (card.base.text.includes(words)) found.push({ ability: words, lesson });
   return found;
+}
+
+/** R2434001: a unit with no text, or whose only text is the keyword Rush. */
+function vanilla(card: CardDef): boolean {
+  const keywords = card.base.keywords.map((keyword) => keyword.kind);
+  return card.type === "Unit" && (card.base.text === "" || (card.base.text === "Rush" && keywords.join() === "Rush"));
 }
 
 function def(id: string): CardDef {
@@ -101,7 +86,7 @@ function dealOf(lesson: TutorialLesson, seed = lesson.seed) {
 }
 
 describe("R291 the tutorial's lessons", () => {
-  it("R291 R2205003 are the five lessons, in path order, each with a script whose last step is final", () => {
+  it("R291 R2205003 R2434001 are the five lessons, in path order, each with a script whose last step is final", () => {
     expect(TUTORIAL_LESSONS.map((lesson) => lesson.id)).toEqual(LESSON_IDS);
     expect(TUTORIAL_LESSONS.map((lesson) => lesson.number)).toEqual(TUTORIAL_LESSONS.map((_lesson, index) => index + 1));
     expect(new Set(TUTORIAL_LESSONS.map((lesson) => lesson.id)).size).toBe(TUTORIAL_LESSONS.length);
@@ -131,25 +116,31 @@ describe("R291 the tutorial's lessons", () => {
     expect(nextLessonOf(TUTORIAL_LESSONS.at(-1)?.id ?? "")).toBeUndefined();
   });
 
-  it("R291 R2205003 give the human a deck of TUTORIAL_HUMAN's size from Training Grounds, its Legendary and Mythic cards only in the last lesson", () => {
+  it("R291 R2205003 R2434001 give the human a deck of TUTORIAL_HUMAN's size from Training Grounds, its Legendary and Mythic cards only in the last lesson", () => {
     for (const lesson of TUTORIAL_LESSONS) {
       expect(lesson.humanDeck.length, lesson.id).toBe(TUTORIAL_HUMAN.deckSize);
-      expect(new Set(lesson.humanDeck).size, `${lesson.id}: no duplicates (§2.6)`).toBe(TUTORIAL_HUMAN.deckSize);
-      for (const id of [...lesson.humanDeck, ...lesson.aiDeck]) {
+      for (const id of lesson.humanDeck) {
         expect(def(id).token, `${lesson.id}: ${id} is no Token`).toBe(false);
-        expect(def(id).set, `${lesson.id}: ${id} is a Training Grounds card`).toBe(LESSON_SET);
+        expect(def(id).set, `${lesson.id}: ${id} is a Training Grounds card`).toBe(HUMAN_SET);
       }
+      // R2434001: a card comes twice only when it is a vanilla unit, one with no text or only Rush,
+      // and never more often than TUTORIAL_HUMAN's deckCopies (R2433001).
+      const seen = new Map<string, number>();
+      for (const id of lesson.humanDeck) {
+        if (seen.has(id)) expect(vanilla(def(id)), `${lesson.id}: ${id} ${def(id).name} comes twice`).toBe(true);
+        seen.set(id, (seen.get(id) ?? 0) + 1);
+      }
+      for (const [id, copies] of seen) expect(copies, `${lesson.id}: ${id}`).toBeLessThanOrEqual(TUTORIAL_HUMAN.deckCopies ?? 1);
       const showpieces = lesson.humanDeck.filter((id) => SHOWPIECE_RARITIES.includes(def(id).rarity));
       const last = lesson.number === TUTORIAL_LESSONS.length;
       if (last) for (const id of FINALE_SHOWPIECES) expect(lesson.humanDeck, `${lesson.id} deals ${id}`).toContain(id);
       else expect(showpieces, `${lesson.id}: none before the last lesson`).toEqual([]);
       // The pool hold is on exactly where the decks hold none, so nothing random brings one in.
       expect(lesson.poolHold, `${lesson.id}: the pool hold`).toBe(!last);
-      expect(lessonHandicaps(lesson).human.poolHold === true, lesson.id).toBe(!last);
     }
   });
 
-  it("R291 give the AI exactly the tutorial handicap's deck, free of the shadow ban and of anything not yet taught", () => {
+  it("R291 R2434001 give the AI exactly the tutorial handicap's deck of distinct Core cards, free of the shadow ban and of every Legendary and Mythic", () => {
     for (const lesson of TUTORIAL_LESSONS) {
       const deck = lesson.aiDeck;
       expect(deck.length, lesson.id).toBe(AI_TUTORIAL.deckSize);
@@ -157,41 +148,50 @@ describe("R291 the tutorial's lessons", () => {
       for (const id of deck) {
         const card = def(id);
         const where = `${lesson.id}: ${id} ${card.name}`;
+        expect(card.set, `${where} is a Core card`).toBe(AI_SET);
         expect(card.token, where).toBe(false);
         if (lesson.aiShadowBanned?.[id] === undefined) expect(SHADOW_BAN_IDS, where).not.toContain(id);
         expect(SHOWPIECE_RARITIES, where).not.toContain(card.rarity);
-        if (lesson.number < BACKROW_LESSON) expect(BACKROW_TYPES, `${where}: no backrow card before lesson ${String(BACKROW_LESSON)}`).not.toContain(card.type);
-        if (lesson.number < SPELL_LESSON) {
-          expect(card.type, `${where}: units only in lesson 1`).toBe("Unit");
-          const keywords = card.base.keywords.map((keyword) => keyword.kind);
-          for (const keyword of keywords) expect(COMBAT_KEYWORDS, `${where}: ${keyword}`).not.toContain(keyword);
-        }
       }
     }
   });
 
-  it("R2205003 R2206001 give the AI only what this lesson or an earlier one teaches, lesson 1's Cry units aside: no Aura before lesson 3, no Death before lesson 4", () => {
-    const early: string[] = [];
+  it("R2201001 R2434001 hold Legendary and Mythic cards out of both seats' random pools in lessons 1 to 4, and neither in lesson 5", () => {
+    for (const lesson of TUTORIAL_LESSONS) {
+      const { human, ai } = lessonHandicaps(lesson);
+      expect(human.poolHold === true, `${lesson.id}: the human's hold`).toBe(lesson.poolHold);
+      expect(ai.poolHold === true, `${lesson.id}: the AI's hold`).toBe(lesson.poolHold);
+    }
+  });
+
+  it("R2434001 give both seats only what this lesson or an earlier one teaches: spells from lesson 3, the backrow from lesson 4, the rest in lesson 5", () => {
     const untaught: string[] = [];
     for (const lesson of TUTORIAL_LESSONS) {
-      for (const id of lesson.aiDeck) {
-        const card = def(id);
-        for (const { ability, lesson: teaches } of abilitiesOf(card)) {
-          if (teaches <= lesson.number) continue;
-          if (lesson.number === 1 && teaches === SPELL_LESSON && EARLY_IN_LESSON_1.includes(ability)) early.push(id);
-          else untaught.push(`${lesson.id}: ${id} ${card.name} shows ${ability}, taught in lesson ${String(teaches)}`);
+      for (const [who, deck] of [["human", lesson.humanDeck], ["AI", lesson.aiDeck]] as const) {
+        for (const id of new Set(deck)) {
+          const card = def(id);
+          for (const { ability, lesson: teaches } of abilitiesOf(card)) {
+            if (teaches > lesson.number) untaught.push(`${lesson.id} (${who}): ${id} ${card.name} shows ${ability}, taught in lesson ${String(teaches)}`);
+          }
         }
       }
     }
     expect(untaught).toEqual([]);
-    // Only the units lesson 1 must hold for want of vanilla ones come early.
-    const vanilla = Object.values(catalog).filter(
-      (card) => card.set === LESSON_SET && !card.token && card.type === "Unit" && abilitiesOf(card).length === 1 && card.base.text === "",
-    );
+  });
+
+  it("R2206001 R2434001 make lesson 1 vanilla first: most of the human's deck is vanilla units, the rest a few Cries, and the AI's units carry at most a Cry or Rush", () => {
     const [basics] = TUTORIAL_LESSONS;
     if (basics === undefined) throw new Error("no lessons");
-    for (const card of vanilla) expect(basics.aiDeck, `basics holds every vanilla unit first: ${card.id}`).toContain(card.id);
-    expect(early.length, "the Cry units of lesson 1").toBe(AI_TUTORIAL.deckSize - vanilla.length);
+    const plain = basics.humanDeck.filter((id) => vanilla(def(id)));
+    expect(plain.length, "vanilla units are most of the deck").toBeGreaterThan(basics.humanDeck.length / 2);
+    for (const id of basics.humanDeck.filter((each) => !vanilla(def(each)))) {
+      expect(def(id).base.text, `${id}: the rest are Cries`).toMatch(/^Cry:/);
+    }
+    for (const id of basics.aiDeck) {
+      const card = def(id);
+      expect(card.type, `${id}: units only`).toBe("Unit");
+      for (const { ability } of abilitiesOf(card)) expect(["Unit", "Cry:", "Rush"], `${id} ${card.name}`).toContain(ability);
+    }
   });
 
   for (const lesson of TUTORIAL_LESSONS) {
@@ -254,7 +254,9 @@ describe("R291 the tutorial's lessons", () => {
       expect(debug.debug.seed).toBe(lesson.seed);
       expect(debug.debug.decks).toEqual(decksOf(lesson));
       const handicaps = lessonHandicaps(lesson);
-      expect(debug.debug.handicaps).toEqual({ [aiSeat]: AI_TUTORIAL, [lesson.humanSeat]: handicaps.human });
+      expect(debug.debug.handicaps).toEqual({ [aiSeat]: handicaps.ai, [lesson.humanSeat]: handicaps.human });
+      // R2433000, R2434001: the opponent's decks are Core cards, so it plays AI_TUTORIAL whole, its Core-only bar on.
+      expect(handicaps.ai.coreOnly, lesson.id).toBe(true);
     }
   });
 
@@ -273,7 +275,7 @@ describe("R291 the tutorial's lessons", () => {
     }
   });
 
-  it("R2205003 prints every lesson's words and every line its coach can show in zh-CN too (R711000)", () => {
+  it("R2205003 R2434001 prints every lesson's words and every line its coach can show in zh-CN too (R711000)", () => {
     const lines: string[] = [];
     for (const lesson of TUTORIAL_LESSONS) {
       lines.push(lesson.title, lesson.summary, lesson.retryTip);
