@@ -125,7 +125,7 @@ fn board(seed: &str, field: Value) -> Scenario {
 fn apply(s: &mut Scenario, effect: Effect) -> Vec<GameEvent> {
     let state = s.state_mut();
     let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+    let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
         {

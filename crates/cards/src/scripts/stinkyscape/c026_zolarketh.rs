@@ -238,10 +238,12 @@ mod tests {
     #[test]
     fn r2521003_a_university_it_ran_has_spent_its_own_use_this_turn() {
         // ZolarKeth already on the field (no Cry), its one University free to activate.
-        let mut s = board(
-            false,
-            json!([{ "def": ID, "lane": 1 }, { "def": UNIVERSITY, "lane": 4 }, { "def": VANILLA, "lane": 5 }]),
-        );
+        let field = json!([
+            { "def": ID, "lane": 1 },
+            { "def": UNIVERSITY, "lane": 4 },
+            { "def": VANILLA, "lane": 5 },
+        ]);
+        let mut s = board(false, field);
         let zolar = s.unit_at(P1, 1);
         let free = s.unit_at(P1, 4);
         let vanilla = s.unit_at(P1, 5);
@@ -252,7 +254,7 @@ mod tests {
 
     #[test]
     fn r2521003_a_university_that_activated_itself_is_skipped() {
-        // The free University in lane 2 runs before the Cry's (lane 3), so no Buff of the Cry's reaches it first.
+        // The free University (lane 2) runs before the Cry's (lane 3): no Buff of the Cry's reaches it first.
         let mut s = board(false, json!([{ "def": UNIVERSITY, "lane": 2 }, { "def": VANILLA, "lane": 5 }]));
         let free = s.unit_at(P1, 2);
         let vanilla = s.unit_at(P1, 5);
@@ -262,7 +264,7 @@ mod tests {
         let cry = s.unit_at(P1, 3);
         assert_eq!(cry.def_id, UNIVERSITY, "the Cry's University");
         s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
-        // Only the Cry's University ran: its Buffs, and none from the spent one (which would reach the Cry's).
+        // Only the Cry's University ran: its Buffs, none from the spent one (which would reach the Cry's).
         assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
         assert_eq!(buffs(&s, &free), BASE_TIMES);
         assert_eq!(buffs(&s, &cry), 0, "the spent University ran nothing");
@@ -309,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn r275_r2521003_radiant_4_18_summons_a_base_university_then_a_radiant_piece_and_activates_your_universities() {
+    fn r275_r2521003_radiant_4_18_a_base_university_then_a_radiant_piece_and_your_universities() {
         let mut s = board(true, json!([]));
         s.play(ID, json!({ "zone": 1 }));
         s.expect_stats(ID, json!({ "attack": 4, "health": 18 }));

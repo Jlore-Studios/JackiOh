@@ -31,9 +31,7 @@ pub fn script() -> CardScripts {
                 return Vec::new();
             }
             // R2521002: it may attack again, still summoning sick if it entered this turn.
-            vec![may_attack_again(json_as(
-                json!({ "target": { "of": "self" }, "keepSick": true }),
-            ))]
+            vec![may_attack_again(json_as(json!({ "target": { "of": "self" }, "keepSick": true })))]
         })),
         ..Script::default()
     };

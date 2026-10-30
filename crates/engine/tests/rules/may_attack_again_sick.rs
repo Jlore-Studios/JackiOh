@@ -93,7 +93,8 @@ fn offers(s: &Scenario, attacker: &str, target: &str) -> bool {
     legal_actions(s.state(), P1).iter().any(|action| {
         matches!(
             action,
-            ActionBody::Attack { attacker_id, target_id, .. } if attacker_id == attacker && target_id == target
+            ActionBody::Attack { attacker_id, target_id, .. }
+                if attacker_id == attacker && target_id == target
         )
     })
 }

@@ -1,16 +1,18 @@
-//! Meditative+ #1 Bob's Plan (SPEC §8.9 row 1, R1185000, R1563003, R640, R380, R387, R673). (1) Spell,
-//! Quickdraw, Mythic.
-//!   Base:    "Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit; for
-//!            Aestheticize the Game, Discover a Spa Day, a Garage Sale or a Leg Day."
+//! Meditative+ #1 Bob's Plan (SPEC §8.9 row 1, R1185000, R1563003, R2521008, R640, R380, R387, R673). (1)
+//! Spell, Quickdraw, Mythic.
+//!   Base:    "Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit; a
+//!            Star Chart for Alteran Reach; for Aestheticize the Game, Discover a Spa Day, a Garage Sale
+//!            or a Leg Day."
 //!   Radiant: "Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp
-//!            for Reach the Summit; for Aestheticize the Game, Discover a Radiant Spa Day, Garage Sale or
-//!            Leg Day."
+//!            for Reach the Summit; a Radiant Star Chart for Alteran Reach; for Aestheticize the Game,
+//!            Discover a Radiant Spa Day, Garage Sale or Leg Day."
 //!
 //! THE PICK is one draw of the match rng over the Wincon pool (`{ tags: [Wincon] }`, the non-token
 //! cards of the sets that ship, R380, in catalog order, so it replays, R60; never this card, R387),
 //! through `pick_generated`, so R673's Glitch odds apply to it as to any card generated into a hand.
 //! THE PLAN is the AI generated card `WINCON_PLANS` names for the card picked (R1185000, the brief's
-//! MP5 D3), added after it: M+ #1.1 Base Camp for M #8 Reach the Summit. M #20 Aestheticize the Game
+//! MP5 D3), added after it: M+ #1.1 Base Camp for M #8 Reach the Summit, and since #2521 M+ #1.5 Star
+//! Chart for S #148 Alteran Reach (R2521008), which travels its starscape map. M #20 Aestheticize the Game
 //! has three lines to win on, so since #1563 its plan is a Discover of one card per line (R1563003): M+
 //! #1.2 Spa Day (the hero's health), #1.3 Garage Sale (the graveyard) and #1.4 Leg Day (the Units'
 //! totals), the chosen one added. A card with no plan (a later set's Wincon card, or a Glitch) is added
@@ -29,6 +31,8 @@ pub const ID: &str = "meditativeplus-001";
 pub const WINCON_PLANS: &[(&str, &[&str])] = &[
     // M #8 Reach the Summit: levels and mana, M+ #1.1 Base Camp.
     ("meditative-008", &["meditativeplus-001-1"]),
+    // S #148 Alteran Reach: the starscape map, M+ #1.5 Star Chart (R2521008).
+    ("stinkyscape-148", &["meditativeplus-001-5"]),
     // M #20 Aestheticize the Game: the hero's health, M+ #1.2 Spa Day; the graveyard, M+ #1.3 Garage
     // Sale; the Units' totals, M+ #1.4 Leg Day.
     (
@@ -127,10 +131,11 @@ pub fn script_v0_4_0f() -> CardScripts {
 }
 
 // Meditative+ #1 Bob's Plan — SPEC §8.9 row 1, BUILD M11 row M+ 1: "Quickdraw (R640); adds one
-// Wincon card from the shipped pool, M 8 or M 20, each seen over the seeds, by one rng pick that
-// replays; after M 8 a base Base Camp (M+ 1.1); after M 20 a Discover of Spa Day, Garage Sale and Leg
-// Day (M+ 1.2 to 1.4), the chosen one added (R1563003); a full hand burns the helper, then the card; a
-// Wincon card the plan table does not name (a fixture) is added alone; radiant both are Radiant".
+// Wincon card from the shipped pool, M 8, M 20 or S 148, each seen over the seeds, by one rng pick that
+// replays; after M 8 a base Base Camp (M+ 1.1); after S 148 a Star Chart (M+ 1.5, R2521008); after M 20
+// a Discover of Spa Day, Garage Sale and Leg Day (M+ 1.2 to 1.4), the chosen one added (R1563003); a
+// full hand burns the helper, then the card; a Wincon card the plan table does not name (a fixture) is
+// added alone; radiant both are Radiant".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,6 +150,8 @@ mod tests {
     const SPA_DAY: &str = "meditativeplus-001-2";
     const GARAGE_SALE: &str = "meditativeplus-001-3";
     const LEG_DAY: &str = "meditativeplus-001-4";
+    const ALTERAN_REACH: &str = "stinkyscape-148";
+    const STAR_CHART: &str = "meditativeplus-001-5";
 
     fn casting(seed: &str, radiant: bool, hand_extra: usize) -> Scenario {
         crate::register_all();
@@ -220,6 +227,7 @@ mod tests {
                 let expected = match cards.first().map(|card| card.def_id.as_str()) {
                     Some(SUMMIT) => vec![SUMMIT, BASE_CAMP],
                     Some(AESTHETICIZE) => vec![AESTHETICIZE, SPA_DAY],
+                    Some(ALTERAN_REACH) => vec![ALTERAN_REACH, STAR_CHART],
                     other => panic!("seed {n} added {other:?}"),
                 };
                 assert_eq!(def_ids(&cards), expected, "seed {n}");
@@ -227,7 +235,7 @@ mod tests {
                 if !seen.contains(&expected[0].to_string()) {
                     seen.push(expected[0].to_string());
                 }
-                if seen.len() == 2 {
+                if seen.len() == 3 {
                     return;
                 }
             }
@@ -270,6 +278,16 @@ mod tests {
             s.play(ID, json!({}));
             assert!(s.state().pending.is_none());
             assert_eq!(def_ids(&added(&s)), vec![SUMMIT, BASE_CAMP]);
+        }
+
+        #[test]
+        fn r2521008_alteran_reach_comes_with_a_star_chart_with_no_discover() {
+            let mut s = casting_for(ALTERAN_REACH, false, 1);
+            s.play(ID, json!({}));
+            assert!(s.state().pending.is_none());
+            let cards = added(&s);
+            assert_eq!(def_ids(&cards), vec![ALTERAN_REACH, STAR_CHART]);
+            assert!(cards.iter().all(|card| !card.radiant), "the base face adds them base");
         }
 
         #[test]
@@ -332,6 +350,16 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn r2521008_a_radiant_alteran_reach_comes_with_a_radiant_star_chart() {
+            let mut s = casting_for(ALTERAN_REACH, true, 1);
+            s.play(ID, json!({}));
+            assert!(s.state().pending.is_none());
+            let cards = added(&s);
+            assert_eq!(def_ids(&cards), vec![ALTERAN_REACH, STAR_CHART]);
+            assert!(cards.iter().all(|card| card.radiant));
+        }
 
         #[test]
         fn r1185000_r1563003_the_card_and_its_plan_are_both_radiant() {
