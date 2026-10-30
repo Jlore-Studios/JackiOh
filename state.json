@@ -9408,13 +9408,9 @@
     "what": "revise #2420 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-30T00:00:16Z",
+    "at": "2026-10-30T00:10:52Z",
     "notes": [
-      "delivered build #2387 on muse (run 40948489243): approved",
-      "started revise #2407 on muse (run 40977181635)",
-      "started revise #2420 on muse (run 40977252267)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered revise #2341 on claude-8 (run 40969054485): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -10120,7 +10116,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T00:00:16Z",
+  "loop_tick": "2026-10-30T00:10:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
