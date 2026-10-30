@@ -8053,18 +8053,18 @@
           "conflicts": [
             "crates/engine/tests/golden/games.jsonl"
           ],
-          "from": "ad28104201d502da798df056f73ac4023b9f2ce6",
-          "main": "59cec786eb678d49cfcd57c5897fe93ebb372369"
+          "from": "6002a10efc822910a74e17f62bd2db4201a69fdc",
+          "main": "549a9c157bdedc51aba484b7bbfbbea77d6cd33a"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40956670571",
+            "run": "40969054485",
             "tier": "strong"
           }
         ],
-        "sha": "6002a10efc822910a74e17f62bd2db4201a69fdc",
+        "sha": "347f837e001202392773653e1c7ab8d84facd0e4",
         "tiers": {
           "claude": "strong"
         }
