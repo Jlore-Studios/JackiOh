@@ -10431,11 +10431,13 @@
         "by": "`claude` (strong)",
         "sha": "bd396b9df79fac17a3929f9a105b4d8c0ce950ab"
       },
+      "closed_at": "2026-10-30T19:51:00Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-30T16:04:38Z",
       "issue": 2478,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
