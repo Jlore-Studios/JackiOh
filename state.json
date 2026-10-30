@@ -10126,11 +10126,11 @@
       "onto": "bot/issue-2497",
       "part_of": 2497,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-5",
       "round_tier": "",
-      "run_id": "41112530075",
+      "run_id": "pending:1b574298-1793388579",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-10-30T19:06:48Z",
+      "started_at": "2026-10-30T19:29:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -10434,9 +10434,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-30T19:06:48Z",
+    "at": "2026-10-30T19:29:58Z",
     "url": "",
-    "what": "build #2502 on claude-3"
+    "what": "build #2502 on claude-5"
   },
   "last_sweep": {
     "at": "2026-10-30T19:21:20Z",
