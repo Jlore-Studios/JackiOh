@@ -9992,21 +9992,28 @@
       "taken_asks": []
     },
     "2446": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-10-30T04:26:17Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:94e041d3-1793334624",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-30T04:30:46Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-30T04:18:02Z",
+    "at": "2026-10-30T04:30:46Z",
     "url": "",
-    "what": "build #2437 on claude-3"
+    "what": "plan #2446 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-30T04:14:06Z",
