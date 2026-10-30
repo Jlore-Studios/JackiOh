@@ -36,7 +36,6 @@ fn in_hand(s: &Scenario, player: PlayerId, def_id: &str) -> CardInstance {
         .unwrap_or_else(|| panic!("no {def_id} in {player:?}'s hand"))
 }
 
-/// Whether `player` may attack the enemy hero with `attacker` now.
 fn may_attack_hero(s: &Scenario, attacker: &str) -> bool {
     let player = s.card(attacker).controller;
     let hero = format!("hero-{}", opponent_of(player));

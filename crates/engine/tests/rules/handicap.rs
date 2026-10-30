@@ -39,8 +39,6 @@ fn on_both(p1: Handicap, p2: Handicap) -> Handicaps {
     }
 }
 
-// Fixtures: two cast-on-draw Spells for R183.
-
 fn spell(id: &str, index: &str) -> CardDef {
     json_as(json!({
         "id": id,
@@ -341,14 +339,14 @@ fn refusal(run: impl FnOnce()) -> Option<String> {
     }
 }
 
-/// Why `createGame` refused these options, or `None` when it made a game.
+/// Why `create_game` refused these options, or `None` when it made a game.
 fn create_refusal(options: CreateGameOptions) -> Option<String> {
     refusal(move || {
         create_game(&options);
     })
 }
 
-/// `createGame` on options written as JSON: refused when the typed options cannot hold them (a
+/// `create_game` on options written as JSON: refused when the typed options cannot hold them (a
 /// fractional number), else as `create_refusal`.
 fn create_refusal_json(options: Value) -> Option<String> {
     match serde_json::from_value::<CreateGameOptions>(options) {

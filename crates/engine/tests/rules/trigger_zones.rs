@@ -334,7 +334,7 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
 
         let after_hand = round_to_p1_start(&held);
         assert!(notes(&after_hand).is_empty());
-        // The observable damage the bug did: a unit in a lane, from a card that was never on the board.
+        // The observable damage: a unit in a lane, from a card that was never on the board.
         assert_eq!(tokens_of(&after_hand, PlayerId::P1), 0);
         assert!(
             after_hand

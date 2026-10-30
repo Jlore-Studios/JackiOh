@@ -1,4 +1,4 @@
-//! §10.5 step 3's two v0.2.0 rules (R449): a play replaced by another card (Classic #23 Devil's Pact)
+//! §10.5 step 3's two rules (R449): a play replaced by another card (Classic #23 Devil's Pact)
 //! and plays made Radiant by tag (Classic+ #68 Organic Produce: R213's rule by tag, read at step 1 as
 //! R214 reads Gifted Program).
 //!
@@ -92,7 +92,6 @@ fn pending_id(state: &GameState) -> String {
         .unwrap_or_default()
 }
 
-/// Cast the card, then settle.
 fn cast_and_settle(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
     let mut sink = Bench::new(state);
     sink.run(state, |s| {

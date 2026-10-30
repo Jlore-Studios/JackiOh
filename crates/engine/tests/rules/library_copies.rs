@@ -1,7 +1,5 @@
-//! T-AI-3 Hallucination's verb, `addLibraryCopies` (SPEC §8.7 row T-AI-3; R57, R60, R97, R129, R385):
+//! T-AI-3 Hallucination's verb, `add_library_copies` (SPEC §8.7 row T-AI-3; R57, R60, R97, R129, R385):
 //! copies of different random cards of a deck into the caster's hand, Brittle given to each that lands.
-//!
-//! Port of `packages/engine/test/library-copies.test.ts`.
 
 use std::collections::BTreeSet;
 
@@ -22,8 +20,7 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `run(state, effect)`: the effect applied for p1 with no card of its own, the rng cursor written
-/// back; its events.
+/// The effect applied for p1 with no card of its own, the rng cursor written back; its events.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, P1)
 }
@@ -45,12 +42,10 @@ fn added_to_hand(events: &[GameEvent]) -> Vec<(String, String)> {
         .collect()
 }
 
-/// TS `/fx-3[234]/`.
 fn names_a_source(text: &str) -> bool {
     ["fx-32", "fx-33", "fx-34"].iter().any(|id| text.contains(id))
 }
 
-/// addLibraryCopies (T-AI-3)
 mod add_library_copies_t_ai_3 {
     use super::*;
 

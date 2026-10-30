@@ -62,7 +62,6 @@ fn force(state: &mut GameState, attacker: &str, target: &str) -> Vec<GameEvent> 
     run(state, |sink| force_attack(sink, &attacker, &target)).1
 }
 
-/// The damage `id` has taken.
 fn damage_on(state: &GameState, id: &str) -> i32 {
     find_instance(state, id).map_or(0, |card| card.damage)
 }
@@ -248,7 +247,6 @@ mod r783002_flying {
         assert!(!attack_targets(&state, &walker.id).contains(&bird.id));
         assert!(attack_targets(&state, &archer.id).contains(&bird.id));
         assert!(attack_targets(&state, &wing.id).contains(&bird.id));
-        // The other attacks are still offered.
         assert!(!attack_targets(&state, &walker.id).is_empty());
 
         // The reducer refuses exactly the one it does not offer.
@@ -486,7 +484,6 @@ mod r1081000_flying_backrow {
             ),
             "the flyer stands in backrow lane 2"
         );
-        // It counts among its controller's Units.
         assert!(active_units_of(&next, P1).iter().any(|unit| unit.id == bird.id));
         // Its backrow entry carries the Unit it is, with its live attack.
         let view = view_for(&next, P1);
@@ -1135,7 +1132,6 @@ mod r1081000_flying_backrow {
             killer_of(&state, Some(&victim)).map(|card| card.id.clone()),
             Some(wing.id.clone())
         );
-        // It may go Berserk.
         assert!(can_go_berserk(&state, &wing));
         // It may attack again.
         if let Some(card) = find_instance_mut(&mut state, &wing.id) {

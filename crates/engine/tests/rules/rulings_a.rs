@@ -1159,7 +1159,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             backrow_card.id
         );
 
-        // A Locked destination takes the card (R831000; it bounced it before patch v0.3.10).
+        // A Locked destination takes the card (R831000).
         let mut locked = game("r14b");
         let entering = put(&mut locked, BODY, slot(P1, UNITS, 2), json!({}));
         lock_zone(&mut locked, slot(P1, UNITS, 3));
@@ -2129,7 +2129,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             sink.events.clone()
         };
 
-        // R2179002: no count of plays takes it (through v0.5.2 it counted as one, R40).
+        // R2179002, R40: no count of plays takes it.
         assert_eq!(state.players.p1.turn_log.cards_played, played_before);
         assert!(!state.players.p1.turn_log.played_ids.contains(&spell.id));
         assert_eq!(state.counters.played, counter_before);

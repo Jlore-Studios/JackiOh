@@ -1,4 +1,4 @@
-//! Pick N different entries of a list (`doRandomEntries`): N different entries (R60) drawn from
+//! Pick N different entries of a list (`do_random_entries`): N different entries (R60) drawn from
 //! the match rng as the effect resolves, resolved in the list's order and named to both players
 //! before they resolve (R436); N at or above the list's length does every entry with no rng draw.
 //! Meditative #49.1 YileGPT Prime (MD-C23, R1023) is its user.
@@ -10,7 +10,6 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::damage_combat::{answer, ask_controller, note, notes, playing, round_trip};
 use crate::rules::fixtures::harness::sink_for;
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -18,7 +17,6 @@ fn by(player: PlayerId) -> HookOptions {
     }
 }
 
-/// Five entries noting `entry-0` … `entry-4`, in list order.
 fn five() -> Vec<RandomEntry> {
     (0..5)
         .map(|index| RandomEntry {
@@ -65,7 +63,6 @@ mod pick_n {
                 })],
                 &mut make_context(&mut sink, None, by(P1)),
             );
-            // Two draws were taken from the match rng.
             assert!(sink.rng.cursor() > before);
             let got = picked(sink.state);
             assert_eq!(got.len(), 2);
@@ -127,7 +124,6 @@ mod pick_n {
                 })],
                 &mut make_context(&mut sink, None, by(P1)),
             );
-            // Every entry, in list order — and the rng cursor never moved.
             assert_eq!(picked(sink.state), vec![0, 1, 2, 3, 4]);
             assert_eq!(sink.rng.cursor(), before, "count {count}");
             assert_eq!(announced(sink.events).len(), 5);

@@ -8,8 +8,6 @@
 //! it). A Spell's declarations never offer a card Immune to Spells, and the v0.2.0 filter fields — a
 //! graveyard pick, a cost range, damaged, Plague Counters, a named predicate — narrow what a declaration
 //! offers.
-//!
-//! Port of `packages/engine/test/targeting.test.ts`.
 
 use jackioh_engine::testkit::*;
 
@@ -86,12 +84,10 @@ fn answer(state: &GameState, player_id: PlayerId, selection: Vec<Selection>) -> 
     )
 }
 
-/// `state.players[p].units[i]?.[0]`: the top card of a unit pile.
 fn top(pile: &Option<Pile>) -> Option<&CardInstance> {
     pile.as_ref().and_then(|cards| cards.first())
 }
 
-/// `eventsOfType(events, kind).map((event) => event[field])`.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_json(events, kind)
         .into_iter()
@@ -99,12 +95,11 @@ fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value
         .collect()
 }
 
-/// `toMatch(/text/)` on an error that must be there.
 fn says(error: &Option<String>, text: &str) -> bool {
     error.as_deref().is_some_and(|message| message.contains(text))
 }
 
-/// `Array.prototype.indexOf` / `lastIndexOf`: -1 when absent.
+/// -1 when absent.
 fn index_of(order: &[GameEventType], wanted: GameEventType) -> i64 {
     order
         .iter()
@@ -118,7 +113,7 @@ fn last_index_of(order: &[GameEventType], wanted: GameEventType) -> i64 {
         .map_or(-1, |at| at as i64)
 }
 
-/// A play as its JSON, so its `targets` and the absence of `discards` read as TS reads them.
+/// A play as its JSON, so a test reads its `targets` and the absence of `discards`.
 fn play_json(play: &impl serde::Serialize) -> Value {
     serde_json::to_value(play).expect("a play serializes")
 }
@@ -708,7 +703,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
                 data: IndexMap::new(),
             },
         };
-        // TS `string | null`: a refusal is an `Err` with its text (SURFACE §4.4.9).
+        // A refusal is an `Err` with its text (SURFACE §4.4.9).
         assert!(why_target_answer_refused(&state, &pending, &[at(&first), at(&second)]).is_err());
         assert!(why_target_answer_refused(&state, &pending, &[at(&first)]).is_ok());
     }

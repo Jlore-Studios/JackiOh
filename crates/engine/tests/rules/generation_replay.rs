@@ -1,7 +1,5 @@
-//! Port of `packages/engine/test/generation-replay.test.ts`.
-//!
 //! Whole games on decks of the generation fixtures (docs/classic-sets.md B5 E19, E23–E25), played by
-//! the random policy of §10.7 and folded back from their logs (§9.2, §9.3, `replay.ts`): every
+//! the random policy of §10.7 and folded back from their logs (§9.2, §9.3): every
 //! placement prompt, fusion, digest id, transform and recruit a game reaches replays to the same
 //! state, and every state a prompt paused on survives a JSON round trip.
 

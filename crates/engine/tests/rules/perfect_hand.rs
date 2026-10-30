@@ -340,7 +340,6 @@ fn contains_all(list: &[String], expected: &[String]) -> bool {
     expected.iter().all(|entry| list.contains(entry))
 }
 
-/// The `defId` of each event of this type.
 fn def_ids_of(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
     events
         .iter()

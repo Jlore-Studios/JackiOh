@@ -443,8 +443,8 @@ mod b5_e30_c_29s_verbs_over_the_frozen_board_r417_r564 {
             &json_of(state.transient_defs.get(FUSED)),
             &json!({ "base": { "attack": 4, "health": 4 } })
         ));
-        // Rust registers no fused scripts, it composes them on lookup from the definition above.
-        // Surface contract: docs/v0.3.0/SURFACE.md §6.6.
+        // No fused script is registered: it is composed on lookup from the definition above
+        // (docs/v0.3.0/SURFACE.md §6.6).
         let _composed = script_of(&state, NESTED);
     }
 

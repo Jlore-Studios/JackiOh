@@ -60,7 +60,7 @@ fn of_type(events: &[Value], kind: &str) -> Vec<Value> {
         .collect()
 }
 
-/// `eventsOfType(events, kind)[0]?.[field]`: `Null` when there is no such event.
+/// The first `kind` event's `field`: `Null` when there is no such event.
 fn first_field(events: &[Value], kind: &str, field: &str) -> Value {
     of_type(events, kind)
         .first()

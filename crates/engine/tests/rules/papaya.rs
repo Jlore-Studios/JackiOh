@@ -49,7 +49,6 @@ fn key(x: i32, y: i32) -> String {
     format!("mode:{x},{y}")
 }
 
-/// The "done" option's key.
 fn done() -> String {
     format!("mode:{PAPAYA_DONE}")
 }

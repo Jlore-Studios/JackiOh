@@ -1,4 +1,4 @@
-//! Port of `packages/engine/test/hotseat.smoke.test.ts`.
+//! The M1 gate's hotseat smoke.
 
 use jackioh_engine::testkit::*;
 

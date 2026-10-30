@@ -63,7 +63,6 @@ fn run(state: &mut GameState, effect: Effect, target: Option<&str>) {
     state.rng_cursor = rng.cursor();
 }
 
-/// `{ target: { of: "chosen" } }`.
 fn chosen() -> Value {
     json!({ "target": { "of": "chosen" } })
 }

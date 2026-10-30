@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/start-of-opponent-turn.test.ts`.
-//!
 //! Classic #62 Living Bomb's card-specific hook (R400, R68): `Script.startOfOpponentTurn`, "at the start
 //! of your opponent's turn", queued at R62's start-of-turn trigger point right after the turn player's own
 //! `startOfTurn` hooks — R68's order, the active player's cards and then the opponent's — and never on its
@@ -12,7 +10,6 @@ use super::fixtures::harness::{act, new_game, put as put_with, slot};
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
-/// The harness's `put(state, defId, ref)` with TS's default `options = {}`.
 fn put(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     put_with(state, def_id, at, json!({}))
 }
@@ -100,7 +97,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// `act` with the player apart from the body.
 fn act_as(state: &GameState, player: PlayerId, body: ActionBody) -> GameState {
     act(
         state,

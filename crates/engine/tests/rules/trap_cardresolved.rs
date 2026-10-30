@@ -1,11 +1,5 @@
 //! R17's second trap moment, step 7's `cardResolved` (SPEC §10.3, §10.5 step 7; R17, R61, R100, R119).
 //!
-//!   * R17: a trap whose trigger names `cardResolved` is offered it and resolves to completion there.
-//!   * R61: `permanent: true` marks a card still in play.
-//!   * R100: `cardResolved` is not a `TRAP_WINDOW_EVENTS` member, so the end-of-turn window never
-//!     delivers it.
-//!   * R119: a trap does not answer the arrival event that names it (step 4 or its own step 7).
-//!
 //! The events are built by hand: the step-7 emission lands separately, and the trap side is tested
 //! against the declared event. Fixtures are this file's own: `tr-` defs indexed from 2300 (BUILD §0).
 

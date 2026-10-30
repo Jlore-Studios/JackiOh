@@ -1,9 +1,9 @@
-//! SPEC §10.4's stat and keyword layers (BUILD M3-T4). `unitView` is the only reader of a unit's
+//! SPEC §10.4's stat and keyword layers (BUILD M3-T4). `unit_view` is the only reader of a unit's
 //! totals ("compute a unit's view on every read, never store totals"), so every assertion goes
 //! through it: one layer at a time, then the ordered sequence, then the keyword set. The last test
 //! proves nothing is written back into the state.
 //!
-//! `./fixtures/combat` carries the aura and keyword bodies; Suppressive Aura (#46), Jlockeed's
+//! `fixtures/combat.rs` carries the aura and keyword bodies; Suppressive Aura (#46), Jlockeed's
 //! Weapons (#14) and Felinor Fiender (#92) get local defs below.
 
 use jackioh_engine::testkit::*;
@@ -168,10 +168,9 @@ fn units_aura(stat_mod: Value, side: Side) -> AuraHook {
 
 /// §10.4 layer 2 and R39: Felinor Fiender's stats are its printed ones plus the combined layer-4
 /// stats of its controller's OTHER Felinors, R13's dormant Stack cards included, never below printed.
-/// R131: it never counts itself (matched by instance, not tag, since a Fuse can union in `Felinor`,
-/// R77), and the sum reads `faceOf` plus `buffs`, never `unitView`, so it cannot recurse. It rides on
-/// the aura hook (layer 5): observably equal for an additive contribution, though §10.4 orders the
-/// set-stat before layer 4.
+/// R131: it never counts itself, and the sum reads `face_of` plus `buffs`, never `unit_view`, so it
+/// cannot recurse. It rides on the aura hook (layer 5): observably equal for an additive
+/// contribution, though §10.4 orders the set-stat before layer 4.
 fn felinor_set_stat() -> AuraHook {
     aura_hook(|args| {
         let state = args.state;
@@ -312,7 +311,7 @@ fn layer_scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// A fresh game with the local defs folded in; `newGame` resets the registry, so this runs after.
+/// A fresh game with the local defs folded in; `new_game` resets the registry, so this runs after.
 fn board(seed: &str) -> GameState {
     let state = new_game(seed, None);
     let mut catalog = catalog::registered_catalog().clone();

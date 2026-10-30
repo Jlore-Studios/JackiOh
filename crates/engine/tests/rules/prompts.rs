@@ -2,7 +2,7 @@
 //! re-enter the script that asked (SPEC §10.6, BUILD M3-T3).
 //!
 //! What this file has to prove, in the words of the acceptance list: a state with an open prompt
-//! survives `JSON.parse(JSON.stringify(state))` and answering still works; the opponent's `viewFor`
+//! survives a JSON round trip and answering still works; the opponent's `viewFor`
 //! shows `pendingFor: playerId` and no options; an `answer` with an option not in `options` errors;
 //! `legalActions` lists every option. Around those: `resume` is a script id, a step name and
 //! captured data and never a closure (§9.3), chained prompts run to the end of the chain (Private
@@ -10,10 +10,7 @@
 //! parks the tail rather than skipping it, R81's split between play choices and resolution choices,
 //! and R98's "a card that asks a question while it resolves is still itself".
 //!
-//! The fixture cards here have no Core counterpart yet (M4 builds the real ones), so they live in
-//! this file rather than in a shared fixture, as aiPolicy.test.ts does for its own (BUILD §0).
-//!
-//! Port of `packages/engine/test/prompts.test.ts`.
+//! The fixture cards are this file's own, not a shared fixture's (BUILD §0).
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -31,19 +28,16 @@ use crate::rules::fixtures::harness::{
 };
 use crate::rules::fixtures::scripts::{going_long, x_bolt};
 
-// ---------------------------------------------------------------------------
 // Fixture definitions
-// ---------------------------------------------------------------------------
 
-/// Copies `extra`'s keys over `into`'s (TS's `{ ...defaults, ...extra }`).
+/// Copies `extra`'s keys over `into`'s.
 fn merge(into: &mut Value, extra: Value) {
     if let (Some(into), Value::Object(extra)) = (into.as_object_mut(), extra) {
         into.extend(extra);
     }
 }
 
-/// TS's `def(name, type, extra)`. TS numbered the fixtures with a module counter from 1400; each
-/// card's index is written out where it is defined, in the TS file's order.
+/// Each fixture's index, from 1400, is written out where it is defined.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     let mut card = json!({
         "id": format!("pr-{name}"),
@@ -123,9 +117,7 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // Fixture scripts
-// ---------------------------------------------------------------------------
 
 /// The picks every step of a chain has made so far, oldest first (§10.6's "captured data").
 fn picked_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
@@ -353,9 +345,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-// ---------------------------------------------------------------------------
 // Harness
-// ---------------------------------------------------------------------------
 
 fn register() {
     let mut catalog = registered_catalog().clone();
@@ -377,7 +367,7 @@ fn four_mana() -> ManaState {
     }
 }
 
-/// p1's main phase on turn 3 with 4 mana; `newGame` re-registers the fixtures, so `register` is after.
+/// p1's main phase on turn 3 with 4 mana; `new_game` re-registers the fixtures, so `register` is after.
 fn board(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
     register();
@@ -388,7 +378,7 @@ fn board(seed: &str) -> GameState {
     state
 }
 
-/// Past both mulligans, in p1's main phase, the way playChoices-filters.test.ts sets up.
+/// Past both mulligans, in p1's main phase.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep = hand_ids(&state, P1);
@@ -408,7 +398,7 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// `resolvingCard`'s options.
+/// `resolving_card`'s options.
 #[derive(Default)]
 struct Resolving {
     player: Option<PlayerId>,
@@ -496,7 +486,6 @@ fn answer_input(player: PlayerId, choice_id: &str, selection: Vec<Selection>) ->
     }
 }
 
-/// `whyAnswerRefused(pending, { playerId, choiceId, selection })`.
 fn refusal(
     pending: &PendingChoice,
     player: PlayerId,
@@ -527,13 +516,12 @@ fn answer(sink: &mut EngineSink<'_>, pending: &PendingChoice, keys: &[&str]) -> 
         .map(|error| error.to_string())
 }
 
-/// Apply one effect outside a card, the way `resolve.ts` does.
+/// Apply one effect outside a card.
 fn run(state: &mut GameState, effect: Effect, controller: PlayerId) {
     run_effect(state, effect, controller);
 }
 
-/// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. As in the TS
-/// tests, nothing writes the sink's cursor back.
+/// A sink whose rng starts at the state's cursor, as reduce does; nothing writes its cursor back.
 fn with_sink<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> R {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -541,9 +529,8 @@ fn with_sink<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R)
     f(&mut sink)
 }
 
-/// TS's `deepValues` walk asserted that nothing reachable from a state fragment is a function. A
-/// Rust closure cannot be a field of a serializable type, so the port asserts what that walk was
-/// for: the fragment is plain data, which serializes and reads back equal (§9.3).
+/// The fragment is plain data, which serializes and reads back equal (§9.3): no closure can be a
+/// field of a serializable type.
 fn expect_plain_data<T: Serialize + DeserializeOwned + PartialEq + std::fmt::Debug>(value: &T) {
     let json = serde_json::to_value(value).expect("serializable");
     let back: T = serde_json::from_value(json).expect("deserializable");
@@ -565,7 +552,7 @@ fn mode_ids(options: &[PromptOption]) -> Vec<String> {
         .collect()
 }
 
-/// The selection an `answer` action carries (TS `action.selection`).
+/// The selection an `answer` action carries.
 fn selection_of(action: &ActionBody) -> Vec<Selection> {
     match action {
         ActionBody::Answer { selection, .. } => selection.clone(),
@@ -584,8 +571,6 @@ fn hand_defs(state: &GameState, player: PlayerId) -> Vec<String> {
         .map(|card| card.def_id.clone())
         .collect()
 }
-
-// ---------------------------------------------------------------------------
 
 mod prompts_s10_6_m3_t3 {
     use super::*;
@@ -819,7 +804,7 @@ mod prompts_s10_6_m3_t3 {
             None
         );
         assert_eq!(state.pending.as_ref(), Some(&pending));
-        // The sink is over this very state (TS: `sink.state` is `state`).
+        // The sink is over this very state.
         let state_at: *const GameState = &state;
         with_sink(&mut state, |sink| assert!(std::ptr::eq(&*sink.state, state_at)));
     }
@@ -1059,12 +1044,9 @@ mod prompts_s10_6_m3_t3 {
         });
         let owed = state.work[0].clone();
 
-        // The parked tail's hook is the card's own (`cry`), which no engine sequence claims, so the
-        // only thing that can run it is the handler `prompts.ts` registers for itself. This file
-        // registers none — unlike `pauses.test.ts`, which supplies that wiring on the module's behalf
-        // and so cannot notice it missing. R113 raises rather than dropping an item nobody can resume,
-        // so a dropped registration turns every mid-list prompt into an error: assert the wiring, not
-        // just the behavior.
+        // The parked tail's hook is the card's own (`cry`), which no engine sequence claims. R113 raises
+        // rather than dropping an item nobody can resume, so a lost wiring turns every mid-list prompt
+        // into an error: assert the wiring, not just the behavior.
         assert!(can_resume(&state, &owed.resume));
         let mut nobody = owed.resume.clone();
         nobody.hook = "__noSuchHook".to_string();
@@ -1074,7 +1056,7 @@ mod prompts_s10_6_m3_t3 {
     #[test]
     fn r98_a_card_that_asks_a_question_while_it_resolves_is_still_itself() {
         let mut state = board("r98-self");
-        // §10.5 step 4 parks a resolving card in `resolving`, which `findInstance` searches (R98).
+        // §10.5 step 4 parks a resolving card in `resolving`, which `find_instance` searches (R98).
         let card = resolving_card(
             &mut state,
             &asker().id,
@@ -1122,8 +1104,8 @@ mod prompts_s10_6_m3_t3 {
             assert_eq!(answer(sink, &pending, &["mode:ask-b"]), None);
         });
 
-        // `remember` writes on `ctx.self`, so an empty memory is the proof that self was null. TS held
-        // the card object itself; here it is nowhere in the state, and nothing in the state remembers.
+        // `remember` writes on `ctx.self`, so an empty memory is the proof that self was null: the card
+        // is nowhere in the state, and nothing in the state remembers.
         assert!(!card.memory.contains_key("sawSelf"));
         assert!(find_instance(&state, &card.id).is_none());
         assert!(
@@ -1179,7 +1161,7 @@ mod prompts_s10_6_m3_t3 {
     #[test]
     fn r81_opens_discover_target_mode_and_hand_prompts_and_never_one_of_the_five_play_choices() {
         // §10.6 lists sixteen kinds; the module names all sixteen, since the five play choices stay for later sets,
-        // and B5 E18's five new ones (prompt-kinds.test.ts proves each of those), plus ME-CRAFT's `craft`.
+        // and B5 E18's five new ones (`prompt_kinds.rs` proves each of those), plus ME-CRAFT's `craft`.
         let mut all: Vec<String> = PROMPT_KINDS.iter().map(|kind| kind.to_string()).collect();
         all.sort();
         assert_eq!(
@@ -1329,9 +1311,8 @@ mod prompts_s10_6_m3_t3 {
 
         // Tribute: the units sacrificed travel in `play.tributes`, and the declaration that names them
         // is answered in `targets` like every other declared pick (#22's meal is read off `ctx.targets`
-        // that way). The sacrifice itself is the play validator's (§10.5 step 2, R90); what R81 says
-        // here is that neither half pauses the play with a prompt — this is the same action shape
-        // `legalActions` enumerates for the card.
+        // that way), the action shape `legalActions` enumerates. The sacrifice itself is the play
+        // validator's (§10.5 step 2, R90); R81 says neither half pauses the play with a prompt.
         let mut trib_state = playing("r81-tribute");
         let fodder = put(&mut trib_state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         let summoner = in_hand(&mut trib_state, &tributer().id, P1, 1).remove(0);
@@ -1375,9 +1356,6 @@ mod prompts_s10_6_m3_t3 {
 
         // §10.2's `answer {choiceId, selection}`: an option the prompt never offered comes back as an
         // error on the result, with the state untouched.
-        // DISCREPANCY: src/reduce.ts answers `answer` with "prompts arrive with M3" instead of routing
-        // it to `prompts.answerPrompt`, which already validates and resumes. The wiring is the
-        // reducer's half of M3-T3; `prompts.ts` holds up its end.
         let bad = act_result(
             &played.state,
             json!({

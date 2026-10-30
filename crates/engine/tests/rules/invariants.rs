@@ -125,9 +125,7 @@ fn i7_work_a_game_over_left_owed_is_not_orphaned() {
     assert_eq!(orphaned(&monitor.after(&[], &state)), Vec::<&String>::new());
 }
 
-// ---------------------------------------------------------------------------------------------
 // I9: what an action announces is what it left (#1719)
-// ---------------------------------------------------------------------------------------------
 
 /// The I9 findings of a monitor started on `start` and fed one action's `events`, which left `state`.
 fn wire_findings(start: &GameState, events: &[GameEvent], state: &GameState) -> Vec<String> {
@@ -264,9 +262,7 @@ fn i9_a_game_over_that_is_not_the_result_is_flagged() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // I9: each fatigue draw is the seat's next, at its damage (#1902)
-// ---------------------------------------------------------------------------------------------
 
 /// p1 ends their first turn into p2's draw from an empty library, p2 having taken `taken` fatigue
 /// draws before it: one `fatigue` for p2's draw `taken + 1` (§2.4, R3, R315).

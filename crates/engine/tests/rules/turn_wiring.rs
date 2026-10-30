@@ -157,7 +157,6 @@ fn since(state: &GameState, from: usize) -> Vec<String> {
     notes(state).into_iter().skip(from).collect()
 }
 
-/// The entries that are not p2's.
 fn without_p2(entries: Vec<String>) -> Vec<String> {
     entries
         .into_iter()

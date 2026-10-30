@@ -1,9 +1,8 @@
 // Issue #1848: Stinkyscape's spell verbs, each an engine primitive proved on the fixture scripts of
-// `fixtures/spell_verbs.rs` (no Stinkyscape card ships yet). R1848000 a Freeze that never thaws;
-// R1848001 a Spell's Trample onto adjacent Units (and the hero); R1848002 Poisonous for a Spell and
-// "your next Spell this turn"; R1848003 copies with a fixed X; R1848004 lose or gain N mana next turn;
-// R1848005 the melee; R1848006 Inflation; and R1868000 (#1868) an X card's declared target read at the
-// play's X.
+// `fixtures/spell_verbs.rs`. R1848000 a Freeze that never thaws; R1848001 a Spell's Trample onto
+// adjacent Units (and the hero); R1848002 Poisonous for a Spell and "your next Spell this turn";
+// R1848003 copies with a fixed X; R1848004 lose or gain N mana next turn; R1848005 the melee;
+// R1848006 Inflation; and R1868000 (#1868) an X card's declared target read at the play's X.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;

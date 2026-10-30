@@ -1,10 +1,7 @@
 // M1's replay gate, over games this suite generates from its own script-less fixture catalog.
-//
-// BUILD M5-T3's replay — the log a BROWSER recorded, folded with the real catalog and the 110 card
-// scripts — cannot live here: it needs `@jackioh/cards`, and the dependency runs the other way
-// (cards -> engine). It is `packages/cards/test/hotseat-replay.test.ts`.
-//
-// Port of `packages/engine/test/replay.test.ts`.
+// BUILD M5-T3's replay — the log a BROWSER recorded, folded with the real catalog and the card
+// scripts — cannot live here: it needs `jackioh-cards`, and the dependency runs the other way
+// (cards -> engine). It is in `crates/tools/src/replay.rs`.
 
 use jackioh_engine::testkit::*;
 

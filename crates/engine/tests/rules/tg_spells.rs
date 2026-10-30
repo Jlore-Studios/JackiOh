@@ -47,7 +47,6 @@ fn stats_of(s: &Scenario, id: &str) -> (i32, i32, i32) {
     (view.attack, view.max_health, view.health)
 }
 
-/// The cards of `def_id` in `player`'s hand.
 fn in_hand(s: &Scenario, player: PlayerId, def_id: &str) -> Vec<CardInstance> {
     s.hand(player)
         .into_iter()

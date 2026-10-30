@@ -1,15 +1,13 @@
-// Port of `packages/engine/test/rng.test.ts`: the seeded rng (M1-T2).
-//
-// TS ran `fixtures/rng-child.ts` in a separate Node process to prove a resumed cursor reproduces the
-// sequence anywhere. The Rust port asks the fixture's port (`fixtures/rng_child.rs`) for the same JSON
-// it printed — `{ draws, cursor }` from `(seed, cursor, count)`, its argv — so the draws cross a
-// serialized boundary built from nothing but the seed and the cursor (see the spec-gaps note).
+// The seeded rng (M1-T2). To prove a resumed cursor reproduces the sequence anywhere, the test asks
+// `fixtures/rng_child.rs` for its JSON — `{ draws, cursor }` from `(seed, cursor, count)`, its argv — so
+// the draws cross a serialized boundary built from nothing but the seed and the cursor (see the
+// spec-gaps note).
 
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::rng_child;
 
-/// TS `childDraws`: what the child prints for `(seed, cursor, count)`, parsed.
+/// What the child prints for `(seed, cursor, count)`, parsed.
 fn child_draws(seed: &str, cursor: u32, count: u32) -> (Vec<f64>, u32) {
     let out = rng_child::rng_child(&[seed, &cursor.to_string(), &count.to_string()]);
     let parsed: Value = serde_json::from_str(&out).expect("the child prints JSON");

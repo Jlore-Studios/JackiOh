@@ -3,9 +3,8 @@
 // These decks are scripted — an end-of-turn trigger, a Death hook, two traps, a delayed effect, an Echo
 // card and three cards that open prompts — so the folds exercise the queues, and the run asserts it.
 //
-// 30 seeds: a game on these decks runs ~85 actions (every prompt is an action), and each seed is
-// played once and replayed twice (`fold`, then step by step). The run is seeded end to end, so what it
-// reaches is fixed rather than sampled: more seeds would add breadth, not confidence.
+// 30 seeds, each played once and replayed twice (`fold`, then step by step). The run is seeded end to
+// end, so what it reaches is fixed rather than sampled: more seeds would add breadth, not confidence.
 
 use std::sync::OnceLock;
 
@@ -477,7 +476,7 @@ fn start_state(seed: &str) -> GameState {
     .state
 }
 
-/// One game by the random policy of §10.7 (`chooseAction`, so the run draws from exactly the set
+/// One game by the random policy of §10.7 (`choose_action`, so the run draws from exactly the set
 /// R84 names), walking every state it passes through on the way.
 fn play_scripted_game(seed: &str) -> (Walk, Vec<Action>) {
     register_all();

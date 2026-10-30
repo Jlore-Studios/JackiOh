@@ -95,7 +95,6 @@ fn tool(op: Value, player: PlayerId, nonce: &str) -> Action {
     Action::new(ActionBody::Sandbox { op: json_as(op) }, player, nonce)
 }
 
-/// Apply `action`, which must be accepted, and log it.
 fn apply(state: &mut GameState, log: &mut Vec<Action>, action: Action) -> Vec<GameEvent> {
     let out = reduce(state, &action);
     assert_eq!(out.error, None, "{action:?} is accepted");

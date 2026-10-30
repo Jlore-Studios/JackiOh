@@ -2,8 +2,6 @@
 //! triggers in R68 order, return Reborn units to their reserved zones, repeat until stable.
 //! The fixture defs and scripts this file needs live here, registered on top of the shared
 //! fixture catalog, so no shared fixture has to grow for them (CLAUDE.md, BUILD §0).
-//!
-//! Port of `packages/engine/test/statecheck.test.ts`.
 
 use jackioh_engine::effects::health::set_stats_all;
 use jackioh_engine::testkit::*;
@@ -11,12 +9,10 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::harness::{Bench, both, events_of_type, json_of, new_game, put, slot};
 
-/// The live card TS's test kept a handle on, read back from the state.
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no instance {id}"))
 }
 
-/// The live card, to write through as TS's test wrote through its handle.
 fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no instance {id}"))
 }
@@ -25,7 +21,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// `eventsOfType(events, type).map((e) => e.instanceId)` for the event types that carry one.
 fn instance_ids(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
     events_of_type(events, kind)
         .iter()
@@ -38,7 +33,7 @@ fn instance_ids(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
         .collect()
 }
 
-/// The text of a caught panic (TS `toThrow(/…/)` reads the thrown error's message).
+/// The text of a caught panic.
 fn panic_text(payload: Box<dyn std::any::Any + Send>) -> String {
     if let Some(text) = payload.downcast_ref::<String>() {
         text.clone()
@@ -49,9 +44,7 @@ fn panic_text(payload: Box<dyn std::any::Any + Send>) -> String {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Fixture effects: the three verbs these tests need before M3-T1 ships them.
-// ---------------------------------------------------------------------------
+// Fixture effects: the three verbs these tests need.
 
 /// One effect, one hit per unit on the board: the Big Felinor / Jlockeed Shredder case (R59).
 fn smite_every_unit(amount: i32) -> Effect {
@@ -117,10 +110,7 @@ fn lock_own_first_lane() -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------
-// Fixture cards. TS numbered them from a module counter starting at 900; each def's index is
-// written out here in the order TS created them.
-// ---------------------------------------------------------------------------
+// Fixture cards.
 
 fn unit_def_of(name: &str, index: u32, attack: i32, health: i32, keywords: Value) -> CardDef {
     json_as(json!({

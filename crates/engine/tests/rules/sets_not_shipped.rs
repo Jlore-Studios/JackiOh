@@ -1,20 +1,12 @@
-//! R1420: a set the catalog holds before it ships (`SHIPPED_SETS`). The Meditative set was one while
-//! issue #496 built it and shipped in v0.3.5 (issue #553), so it now draws, deals and leans like Core;
-//! the gate stays for the next set, which these tests stand in for with fixture cards of the reserved
-//! Boss set, a set `SHIPPED_SETS` does not list. Such a set's cards are in no pool that names no set,
-//! in no deck, and in no random deck, until the patch that lists the set; a pool that names the set,
-//! or names its cards, reaches them; and the testkit's preview opens the set on one thread, as the
-//! fuzz tool does. Also R1421 (a Prime pool holds the Prime tokens) and R1422 (`anyTags`), the pool
-//! pieces the set's cards share, and R1371 (the newest shipped set, which a preview never moves).
-//! R1178000: the Meditative+ set (issue #1173) was the next held set, in the catalog order after
-//! Meditative, and shipped in v0.3.15 (issue #1187), so its fixture cards here now draw, deal and lean
-//! like Meditative's, and the gate's tests stay on the Boss set; its Potion tag names no tribe.
-//! R1857000: the Stinkyscape set (issue #1836) was the third held set, after Meditative+ in the
-//! catalog order, and shipped with its release (#1884), so its fixture cards here now draw, deal and
-//! lean like Meditative+'s; its four tags name no tribe.
-//! R2194000: the Training Grounds set (issue #2193) was the fourth held set, after Stinkyscape in the
-//! catalog order, and shipped with its release (#2204), so its fixture cards here now draw, deal and
-//! lean like Stinkyscape's, and it is the newest set.
+//! R1420: a set the catalog holds before it ships (`SHIPPED_SETS`). Fixture cards of the reserved
+//! Boss set, which `SHIPPED_SETS` does not list, stand in for the next held set: its cards are in no
+//! pool that names no set, in no deck and in no random deck until the patch that lists the set; a
+//! pool that names the set, or its cards, reaches them; and the testkit's preview opens the set on
+//! one thread, as the fuzz tool does. Also R1421 (a Prime pool holds the Prime tokens) and R1422
+//! (`anyTags`), the pool pieces the set's cards share, and R1371 (the newest shipped set, which a
+//! preview never moves). The held sets that have shipped, Meditative (issues #496, #553), Meditative+
+//! (#1173, R1178000; its Potion tag names no tribe), Stinkyscape (R1857000; its four tags name no
+//! tribe) and Training Grounds (R2194000), draw, deal and lean like Core.
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, pair_key, set_is_open};
@@ -45,14 +37,9 @@ fn card(id: &str, set: &str, index: &str, tags: &[&str], token: bool) -> CardDef
     }))
 }
 
-/// Twenty-one shipped Core cards (a deck's worth and one), two Meditative cards and a Meditative
-/// token (shipped since v0.3.5), two cards and a token of the Boss set (which does not ship), two
-/// cards and three tokens of the Meditative+ set (shipped since v0.3.15, R1178000: its Prime, M+
-/// #16.1, and the AI generated helpers of M+ #1, #1.1 and #1.2), two Prime tokens and a KY and a Book
-/// card for the pools, and three cards and two tokens of the Stinkyscape set (shipped since its
-/// release, #1884, R1857000: a Drone Core, a Weapon and a Swarm Unit, a War Doctrine and an AI
-/// generated card), and two cards and a token of the Training Grounds set (shipped since its release,
-/// #2204, R2194000: a Human Unit, a Call to Chaos edition and the Golem it summons).
+/// Twenty-one shipped Core cards (a deck's worth and one), two cards and a token of the Boss set
+/// (which does not ship), and for the pools a few cards and tokens of each shipped set: Prime and AI
+/// generated tokens, a KY and a Book card, and each later set's own tags.
 fn defs() -> CardDefs {
     let mut defs: Vec<CardDef> = (1..=21)
         .map(|n| card(&format!("core-{n:03}"), "Core", &n.to_string(), &[], false))
@@ -192,9 +179,8 @@ fn training_grounds(ids: &[String]) -> Vec<String> {
 mod r1420_a_set_the_catalog_holds_before_it_ships {
     use super::*;
 
-    /// The release (v0.3.5, issue #553) listed the Meditative set: it ships, in its catalog place
-    /// after Classic+, and every set that ships is in the catalog order in that order. The reserved
-    /// Boss sets ship no card.
+    /// The Meditative set ships (issue #553), in its catalog place after Classic+, and every set that
+    /// ships is in the catalog order in that order. The reserved Boss sets ship no card.
     #[test]
     fn r1420_the_meditative_set_shipped_in_v0_3_5_and_keeps_its_place_in_the_catalog_order() {
         assert!(set_ships(SetName::Meditative));
@@ -350,7 +336,7 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
         setup();
         let catalog = defs();
         let mut cards: Vec<String> = (1..=18).map(|n| format!("core-{n:03}")).collect();
-        // A shipped Meditative card passes L3 since v0.3.5; the Boss card does not.
+        // A shipped Meditative card passes L3; the Boss card does not.
         cards.push("meditative-034".to_string());
         cards.push("boss-002".to_string());
         let collection: IndexMap<String, i32> = cards.iter().map(|id| (id.clone(), 1)).collect();
@@ -380,10 +366,9 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
 mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_meditative {
     use super::*;
 
-    /// Meditative+ is the fifth set of the catalog order, right after Meditative, and ships since
-    /// v0.3.15 (#1187): it is open and a lean names it. It was the newest set until the Stinkyscape
-    /// set shipped after it (#1884, R1857000). The reserved Boss set, which does not ship, still has
-    /// no lean.
+    /// Meditative+ is the fifth set of the catalog order, right after Meditative, and ships (#1187):
+    /// it is open and a lean names it. It was the newest set until the Stinkyscape set shipped after it
+    /// (#1884, R1857000). The reserved Boss set, which does not ship, has no lean.
     #[test]
     fn r1178000_meditative_plus_follows_meditative_in_the_catalog_order_and_ships_as_the_newest_set() {
         assert_eq!(SetName::MeditativePlus.as_str(), "Meditative+");
@@ -551,9 +536,6 @@ mod r1371_the_newest_shipped_set {
             .position(|set| *set == newest)
             .expect("the newest set is in the catalog order");
         assert!(CATALOG_SETS[at + 1..].iter().all(|set| !set_ships(*set)));
-        // Classic+ until the Meditative set's release, Meditative from v0.3.5, the Meditative+ set
-        // from v0.3.15 (R1178000), the Stinkyscape set from its release (#1884, R1857000), and the
-        // Training Grounds set from its own (#2204, R2194000).
         assert_eq!(newest, SetName::TrainingGrounds);
         // A preview opens a set's pools on this thread; it ships nothing, so the newest set stays.
         let _preview = preview_sets(&[SetName::Boss]);
@@ -585,9 +567,7 @@ mod r1421_a_prime_or_ai_pool_holds_its_tokens {
             pool(json!({ "tags": ["Human"] })),
             vec!["core-022", "traininggrounds-001"]
         );
-        // An AI pool is the AI generated cards, every one a token, alone or beside other tags: the
-        // ten of Classic+, since Meditative+ shipped M+ #1.1 Base Camp and #1.2 Spa Day, and since
-        // Stinkyscape shipped its ten (R1857000).
+        // An AI pool is the AI generated cards, every one a token, alone or beside other tags.
         assert_eq!(
             pool(json!({ "tags": ["AI"] })),
             vec![
@@ -765,8 +745,8 @@ mod r1837000_terminus_quest_otherworldly_other_origins_and_jelly_bean {
 
 /// R1857000: the Stinkyscape set (issue #1836) was the third set R1420's gate held, as R1178000 said
 /// of Meditative+: sixth in the catalog order, right after Meditative+, and in no pool that names no
-/// set, no deck and no lean until its release (#1884) listed it in `SHIPPED_SETS`. Since then it ships
-/// as the newest set. Its four tags are family tags that no rule reads (R1424).
+/// set, no deck and no lean until its release (#1884) listed it in `SHIPPED_SETS`. Its four tags are
+/// family tags that no rule reads (R1424).
 mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
     use super::*;
 
@@ -787,8 +767,7 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             at(SetName::Stinkyscape),
             at(SetName::MeditativePlus).map(|at| at + 1)
         );
-        // Shipped: it is open and a lean names it. It was the newest set until the Training Grounds
-        // set shipped after it (#2204, R2194000).
+        // Shipped: it is open and a lean names it.
         assert!(set_ships(SetName::Stinkyscape));
         assert_eq!(SHIPPED_SETS.get(5), Some(&SetName::Stinkyscape));
         assert!(set_is_open(SetName::Stinkyscape));
@@ -1043,8 +1022,7 @@ mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
 
 /// R2195000: a Training Grounds snapshot (#41–#60) names the Core card it copies (`snapshotOf`), and a
 /// deck holds the Core card or the snapshot, never both: `create_game`'s check and the shared
-/// validator's L3 refuse the pair, and take either alone. The set is held, so the deck is judged under
-/// a preview of it, as the testkit opens it.
+/// validator's L3 refuse the pair, and take either alone.
 mod r2195000_a_deck_holds_a_core_card_or_its_snapshot_never_both {
     use super::*;
     use jackioh_engine::validator::{CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutRule};
@@ -1117,8 +1095,6 @@ mod r2195000_a_deck_holds_a_core_card_or_its_snapshot_never_both {
         }
     }
 
-    // Re-pinned for the Training Grounds release (#2204): unpreviewed, the snapshot was refused as a
-    // held card; since the set shipped it is taken alone, and the pair is still refused.
     #[test]
     fn r2195000_r1420_unpreviewed_the_snapshot_alone_is_taken_since_its_set_shipped() {
         register_catalog(with_snapshot());

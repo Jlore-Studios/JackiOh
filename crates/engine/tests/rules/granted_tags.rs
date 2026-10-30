@@ -120,7 +120,6 @@ mod r923_granted_tags_md_b15 {
                 "{zone:?}"
             );
         }
-        // A JSON round trip keeps it too.
         let back: GameState = serde_json::from_value(json_of(&state)).expect("a state survives JSON");
         assert_eq!(live(&back, &unit.id).granted_tags, Some(vec![Tag::Cn]));
     }

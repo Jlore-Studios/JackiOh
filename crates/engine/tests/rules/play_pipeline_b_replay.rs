@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/play-pipeline-b-replay.test.ts`.
-//!
 //! Replay with play pipeline B's cards (SPEC §9.2, §9.3; docs/classic-sets.md B5 E11, E12, E15, B4.5):
 //! whole games on decks of this workstream's fixtures — graveyard permissions, random casts, casts from
 //! the graveyard, price rules, Forever&'s return, a Tribute card — played by §10.7's random policy,
@@ -52,8 +50,6 @@ fn seeds() -> Vec<String> {
     (0..8).map(|at| format!("pb-replay-{}", at + 1)).collect()
 }
 
-// TS: "Each seed is played once and folded twice; long random-policy games on these decks take
-// seconds", hence its TEST_TIMEOUT_MS of 120 000. Rust tests take no timeout.
 const STEP_CAP: usize = 4000;
 
 struct Played {
@@ -104,7 +100,7 @@ fn play(seed: &str) -> Played {
             .iter()
             .find(|action| action.action_type() == ActionType::EndTurn)
             .cloned();
-        // TS's short-circuit order: `chance` draws only when there are others and an end turn.
+        // The short-circuit order matters: `chance` draws only when there are others and an end turn.
         let chosen = if others.is_empty() || (end_turn.is_some() && policy.chance(AI_END_TURN_PROBABILITY)) {
             match end_turn {
                 Some(end) => end,

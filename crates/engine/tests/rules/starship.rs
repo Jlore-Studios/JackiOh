@@ -215,7 +215,6 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
         let piece = id_at(&s, P1, 2);
         assert!(!building_a_ship(s.state(), P1));
         bolt_at(&mut s, &piece);
-        // The original goes to its graveyard as usual.
         assert_eq!(s.card(&piece).zone.z(), ZoneName::Graveyard);
         // The Starship stands in the middle of the backrow (R2249000), Dormant, holding the piece.
         let ship = ship_of(&s, P1);
@@ -638,7 +637,6 @@ mod r1852003_the_launch {
                 .is_some_and(|last| last > cry_hit),
             "the When launched hits after the Cry: {answer_events:?}"
         );
-        // A launched Starship has no launch left, and it is a Unit now.
         assert!(!offers_launch(&s, P1, &ship.id));
         assert!(
             active_units_of(s.state(), P1)
@@ -800,7 +798,6 @@ mod r1852003_the_launch {
         let from = s.events().len();
         bolt_at(&mut s, &piece);
         let ship = ship_of(&s, P1);
-        // Summoned this turn, the Starship entered the field this turn.
         assert_eq!(s.card(&ship.id).summoned_turn, Some(s.state().turn));
         assert_eq!(
             monitor.after(&s.events()[from..], s.state()),
@@ -1081,7 +1078,6 @@ mod r1852007_a_stack_card_onto_the_dormant_starship {
             .expect("the lander is in exile");
         assert_eq!(lander_card.zone.z(), ZoneName::Exile);
         assert_eq!(health_of(&s, P2), health, "its Cry never resolved");
-        // The Starship tops its zone again, still Dormant.
         assert_eq!(id_at(&s, P1, lane), ship.id);
         assert!(is_dormant_starship(s.card(&ship.id)));
     }

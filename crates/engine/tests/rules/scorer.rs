@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/scorer.test.ts`.
-//!
 //! The Zephyrs scorer (SPEC §10.7's scorer bullet, R29, §8 #97; BUILD M3-T7).
 //!
 //! The candidate pool is pinned: this file registers its own small catalog (Core, but for the cards a
@@ -22,17 +20,12 @@ use super::fixtures::harness::{new_game, put as put_with, slot};
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
-/// The harness's `put(state, defId, ref)` with TS's default `options = {}`.
 fn put(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     put_with(state, def_id, at, json!({}))
 }
 
-// ---------------------------------------------------------------------------
 // The pinned candidate pool.
-// ---------------------------------------------------------------------------
 
-/// TS `def(name, args: DefArgs)`: `args` is TS's `DefArgs` literal (`index`, `cost?` = 1, `type?` =
-/// "Unit", `attack?`, `health?`, `keywords?` = [], `radiant?`, `token?`, `set?`).
 fn def(name: &str, args: Value) -> CardDef {
     let index = args["index"].clone();
     let cost = args.get("cost").cloned().unwrap_or(json!(1));

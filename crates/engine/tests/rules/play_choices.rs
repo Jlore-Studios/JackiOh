@@ -1,8 +1,8 @@
 //! The refusals a play's choices go through, and the channel they travel in (SPEC §10.5 step 1,
 //! §10.6, R81, R90).
 //!
-//! This file owns the refusals the M3 BLOCKER was about: a card dormant under a Stack, the
-//! opponent's hand, and the counts a declaration asks for.
+//! The refusals: a card dormant under a Stack, the opponent's hand, and the counts a declaration
+//! asks for.
 //!
 //! It also holds R81's core, a statement about *where* a choice lives: Zone, X, embiggen, Tribute and
 //! the targets and modes a card's script declares travel in the `play` action, which `legalActions`
@@ -299,7 +299,6 @@ fn combo_action(instance_id: &str, combo: &PlayChoices) -> PlayAction {
     play_action(instance_id, combo.targets.as_deref(), combo.modes.as_deref())
 }
 
-/// `playChoiceCombinations(...)` answered `[{}]`: one answer, and it is the empty one.
 fn is_one_empty_answer(combos: &[PlayChoices]) -> bool {
     combos.len() == 1 && combos[0].targets.is_none() && combos[0].modes.is_none()
 }

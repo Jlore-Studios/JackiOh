@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/mana-before-play.test.ts`.
-//!
 //! `EffectContext.manaBeforePlay` (Classic #22 Mid Runner: "If you had 4 or more mana when you played
 //! this"): the player's current mana as the play began — at §10.5 step 1, before step 2 pays — or as a
 //! cast began, handed to the played card's own Cry and every continuation of it, across a pause and a
@@ -94,7 +92,7 @@ fn playing(seed: &str, mana: i32) -> GameState {
     state
 }
 
-/// TS `{ ...body, playerId }`: an action body with its sender, as the JSON the fixtures take.
+/// An action body with its sender, as the JSON the fixtures take.
 fn with_player(body: &ActionBody, player: PlayerId) -> Value {
     let mut value = serde_json::to_value(body).expect("an action body serializes");
     value["playerId"] = json!(player);

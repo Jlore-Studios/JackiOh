@@ -91,7 +91,6 @@ fn trap_of<'a>(state: &'a GameState, trap_id: &str) -> &'a CardInstance {
     find_instance(state, trap_id).expect("the trap is gone")
 }
 
-/// The trap, to write through.
 fn trap_of_mut<'a>(state: &'a mut GameState, trap_id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, trap_id).expect("the trap is gone")
 }
@@ -104,7 +103,6 @@ fn ingredient_defs(state: &GameState, def_id: &str) -> Option<Vec<String>> {
         .map(|parts| parts.iter().map(|part| part.def_id.clone()).collect())
 }
 
-/// The first `fused` event's instance ids.
 fn first_fused_ids(events: &[GameEvent]) -> Option<Vec<String>> {
     events_of_type(events, GameEventType::Fused)
         .iter()

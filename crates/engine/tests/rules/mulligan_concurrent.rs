@@ -9,8 +9,6 @@
 //!  - R269: a draw offer stands until it is answered or its offerer's turn ends, both seats see it,
 //!    and one that lapses blocks nothing.
 //!  - R36: a declined offer's block shows on its offerer's view alone, as the turns it still covers.
-//!
-//! Port of `packages/engine/test/mulligan-concurrent.test.ts`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -23,7 +21,6 @@ use crate::rules::fixtures::scripts::{cn_virus, hinder};
 
 const SEATS: [PlayerId; 2] = [P1, P2];
 
-/// An `ActionInput` from its TS object literal.
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }

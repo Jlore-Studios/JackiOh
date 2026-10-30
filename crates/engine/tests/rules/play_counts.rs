@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/playCounts.test.ts`.
-//!
 //! What every play leaves to be counted (docs/classic-sets.md B5 E4; R451): per player per turn, the
 //! plays by type (Classic+ #37 Wardrum), on both players' turns and cleared at every start of turn;
 //! per player per game, the plays by tag (Classic+ #64's Fruit, AI Scaling Law's AI); game-wide, the
@@ -29,7 +27,7 @@ fn game(seed: &str) -> GameState {
     ready
 }
 
-/// TS `must`: `body` is the TS `ActionBody` literal; the player and a fresh nonce are added.
+/// `body` with the player and a fresh nonce added, reduced; a refusal panics.
 fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let mut body = body;
     body["playerId"] = json!(player_id);
@@ -41,7 +39,7 @@ fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResul
     result
 }
 
-/// TS `hand`: a card put in `player`'s hand with the face asked for; answers its copy as it stands.
+/// A card put in `player`'s hand with the face asked for; answers its copy as it stands.
 fn hand(state: &mut GameState, player: PlayerId, def_id: &str, radiant: bool) -> CardInstance {
     let card = in_hand(state, def_id, player, 1)
         .into_iter()
@@ -117,7 +115,7 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
             PlayerId::P2,
             Zone::Hand { player: PlayerId::P2 },
         );
-        // TS `sinkFor(state)`: the rng from the state's cursor; nothing writes the cursor back.
+        // The rng from the state's cursor; nothing writes the cursor back.
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {

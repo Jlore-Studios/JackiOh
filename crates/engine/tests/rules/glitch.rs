@@ -1,12 +1,7 @@
-//! The Glitch Easter egg (issue #170; subsystems/glitch.ts, catalog.pickGenerated; R673–R679). Through a
-//! fixture Glitch registered under the real id; the real card's test (packages/cards/test/classic/
-//! t-glitch-glitch.test.ts) covers the same cases again on the real catalog.
-//!
-//! `pickGenerated`'s third argument (TS `GlitchOdds`, `{ systemPlays? }`) and `seatPlayedBy`'s first
-//! are the state in Rust; where TS passed a bare object literal, this passes the test's state with
-//! only that field set.
-//!
-//! Port of `packages/engine/test/glitch.test.ts`.
+//! The Glitch Easter egg (issue #170; R673–R679), through a fixture Glitch registered under the real
+//! id; the real card's tests (`crates/cards/src/scripts/classic/t_glitch_glitch.rs`) cover it on the
+//! real catalog. `pick_generated`'s odds and `seat_played_by`'s first argument are a state: the tests
+//! pass their own with only that field set.
 
 use jackioh_engine::catalog::{CatalogQueryArgs, find_def, pick_generated, query};
 use jackioh_engine::effects::glitch;
@@ -24,7 +19,7 @@ use jackioh_engine::zones::{card_at, slots_of};
 use crate::rules::fixtures::catalog::spell_def;
 use crate::rules::fixtures::harness::{in_hand, json_of, new_game, put, round_trip, slot};
 
-/// `{ ...spellDef(index, overrides), ...rest }`: the fixture Spell with `rest`'s fields laid over it.
+/// The fixture Spell with `rest`'s fields laid over it.
 fn spell_with(index: i32, overrides: Value, rest: Value) -> CardDef {
     let mut card = json_of(spell_def(index, overrides));
     if let (Some(card), Some(rest)) = (card.as_object_mut(), rest.as_object()) {
@@ -117,7 +112,7 @@ fn catalog_query(body: Value) -> Vec<CardDef> {
     query(&args).into_iter().cloned().collect()
 }
 
-/// The state as `pickGenerated`'s odds: TS's `{ systemPlays }` literal, the state with that field set.
+/// The state as `pick_generated`'s odds, with `system_plays` set.
 fn odds(state: &GameState, system_plays: Option<i32>) -> GameState {
     let mut odds = state.clone();
     odds.system_plays = system_plays;
@@ -420,7 +415,6 @@ mod r677_the_seat_swap {
         assert!(seats_swapped(&state));
         assert_eq!(seat_played_by(&state, P1), P2);
         assert_eq!(seat_played_by(&state, P2), P1);
-        // TS `seatPlayedBy({ seatSwaps: 2 }, "p1")`: a state whose seats were swapped twice.
         let mut twice = state.clone();
         twice.seat_swaps = Some(2);
         assert_eq!(seat_played_by(&twice, P1), P1);
