@@ -16891,7 +16891,7 @@
         "min": 1
       }
     ],
-    "loc": 0,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Travel {nodes|node|nodes} along your starscape map, gaining each node's reward."
@@ -25490,7 +25490,7 @@
     "refs": [
       "stinkyscape-t-dormant-starship"
     ],
-    "loc": 0,
+    "loc": 44,
     "base": {
       "keywords": [],
       "text": "If you have a Dormant Starship, launch it, then Discover a War Doctrine and cast it."
@@ -25511,7 +25511,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 0,
+    "loc": 6,
     "base": {
       "attack": 2,
       "health": 2,

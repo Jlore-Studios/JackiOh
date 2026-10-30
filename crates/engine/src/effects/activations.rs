@@ -34,8 +34,9 @@ pub struct ActivationOfArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ability: Option<String>,
     /// R2521003 (S #26 ZolarKeth's "A University can be Activated at most once each turn"):
-    /// `runActivation` runs the ability only while it has a use left this turn, and spends one. Only
-    /// ever `Some(true)`.
+    /// `runActivation` runs the ability only when it has not been used this turn, and then spends
+    /// every use it has this turn, a Buff's extra ones included (R884000), so the card is Activated
+    /// once that turn. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spend_use: Option<bool>,
 }
@@ -90,10 +91,12 @@ pub fn run_activation(args: ActivationOfArgs) -> Effect {
             return;
         };
         if args.spend_use == Some(true) {
-            if ability_uses_this_turn(ctx.state, &card, &decl.id) >= uses_allowed(&card, &decl) {
+            if ability_uses_this_turn(ctx.state, &card, &decl.id) > 0 {
                 return;
             }
-            mark_use(ctx.state, &card.id, &decl.id);
+            for _ in 0..uses_allowed(&card, &decl) {
+                mark_use(ctx.state, &card.id, &decl.id);
+            }
         }
         let controller = ctx.controller;
         let paid = ActivationPaid {

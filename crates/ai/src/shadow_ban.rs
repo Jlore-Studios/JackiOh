@@ -317,16 +317,7 @@
 /// lane (`SHADOW_UNBANNED`, R2521010), so the table is empty again (#2452): a banned card the beam
 /// never casts is a dead slot costing a fraction of a draw, on the generations 4–8 precedent. Both
 /// are dealt at stock weight and not in `UNBANNED_PREFER`.
-pub const SHADOW_BAN: &[(&str, &str)] = &[
-    (
-        "stinkyscape-149",
-        "neverPlayed: hard: affordable in hand on 69 turns over 45 pass-2 games, never played",
-    ),
-    (
-        "traininggrounds-025",
-        "neverPlayed: easy: affordable in hand on 184 turns over 99 pass-2 games, never played",
-    ),
-];
+pub const SHADOW_BAN: &[(&str, &str)] = &[];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{

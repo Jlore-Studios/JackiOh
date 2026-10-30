@@ -563,10 +563,11 @@ mod tests {
                 let Some(pending) = s.state().pending.clone() else {
                     continue;
                 };
-                if s.state().result.is_some() {
+                // A box that cast a card asking its own caster on p2's turn (#2521's pool) pauses on
+                // p1's prompt instead: this test wants the other player's.
+                if s.state().result.is_some() || pending.player_id != P2 {
                     continue;
                 }
-                assert_eq!(pending.player_id, P2);
                 assert_eq!(pending.kind, PromptKind::Mode);
 
                 let revived: GameState =

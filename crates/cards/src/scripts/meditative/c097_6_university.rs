@@ -7,8 +7,8 @@
 //!            reports hidden ones. Tunes: times 2 ↑ (Radiant 4; never above 5, R884000)."
 //!
 //! One script serves both faces: only the declared `times` (2, Radiant 4) and the health differ. S #26
-//! ZolarKeth's "Activate your Universities" runs this ability as its own effect, spending one of this
-//! card's uses and passing it by with none left this turn (`spendUse`, R2521003).
+//! ZolarKeth's "Activate your Universities" runs this ability as its own effect when it has not been
+//! used this turn, then spends every use it has this turn (`spendUse`, R2521003).
 
 use jackioh_engine::prelude::*;
 

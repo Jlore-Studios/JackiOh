@@ -1,8 +1,9 @@
 //! R2521003 (issue #2521): `runActivation` with `spendUse` (S #26 ZolarKeth's "Activate your
 //! Universities" beside its "A University can be Activated at most once each turn") runs another card's
-//! ability only while that ability has a use left this turn, counted as its own Activate counts it (B3.2
-//! rules 1, 3 and 9), and spends one: an ability its card used itself is passed by, a second run the same
-//! turn finds none left, an "Activate 2" runs twice, and the next turn starts the count afresh. The run is
+//! ability only when that ability has not been used this turn, counted as its own Activate counts it
+//! (B3.2 rules 1, 3 and 9), and then spends every use it has this turn: an ability its card used itself
+//! is passed by, a second run the same turn finds it spent, an "Activate 2" runs once and is spent, and
+//! the next turn starts the count afresh. The run is
 //! still no activation of the card's (no `activated` event) and R1876000's refusal of its own use is still
 //! not read. Without `spendUse` nothing changes (R1876001).
 //!
@@ -191,16 +192,14 @@ mod r2521003_run_activation_spends_a_use {
     }
 
     #[test]
-    fn r2521003_an_activate_n_runs_once_for_each_of_its_uses() {
+    fn r2521003_an_activate_n_runs_once_and_spends_every_use() {
         let mut s = board("r2521003-n", json!([{ "def": ACADEMY, "lane": 1 }]));
         let academy = s.unit_at(P1, 1).id;
         let before = mana(&s);
-        for _ in 0..ACADEMY_USES {
-            apply(&mut s, run_of(&academy, true));
-        }
-        assert_eq!(mana(&s), before + GAIN * ACADEMY_USES);
         apply(&mut s, run_of(&academy, true));
-        assert_eq!(mana(&s), before + GAIN * ACADEMY_USES);
+        assert_eq!(mana(&s), before + GAIN);
+        apply(&mut s, run_of(&academy, true));
+        assert_eq!(mana(&s), before + GAIN, "a card it ran is Activated once that turn");
         assert_eq!(
             why_not(&s, &academy),
             Some(format!(
@@ -228,7 +227,7 @@ mod r2521003_run_activation_spends_a_use {
     }
 
     #[test]
-    fn r2521003_a_second_dean_the_same_turn_runs_only_what_has_a_use_left() {
+    fn r2521003_a_second_dean_the_same_turn_runs_nothing_the_first_ran() {
         let mut s = board(
             "r2521003-deans",
             json!([
@@ -244,11 +243,11 @@ mod r2521003_run_activation_spends_a_use {
         let academy = s.unit_at(P1, 4).id;
         let before = mana(&s);
         s.activate(first.as_str(), json!({}));
-        // The school's one use and one of the academy's two.
+        // The school's one use, and the academy once, its two uses spent.
         assert_eq!(mana(&s), before + 2 * GAIN);
         s.activate(second.as_str(), json!({}));
-        // The school has none left; the academy its second.
-        assert_eq!(mana(&s), before + 3 * GAIN);
+        // Each was Activated this turn, so the second dean runs neither.
+        assert_eq!(mana(&s), before + 2 * GAIN);
         assert_eq!(why_not(&s, &school).as_deref(), Some(SPENT));
         assert_eq!(
             why_not(&s, &academy),

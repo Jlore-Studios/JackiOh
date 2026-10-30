@@ -12,9 +12,10 @@
 //! random non-token Starship Piece Unit summoned (`query::starship_pieces()`, R1878000, narrowed to
 //! Units, R380), or each University of its controller's acting on the field, in board order, runs its
 //! Activate's effect (Buff each of its other permanents N times) as an ability of this card, the refused
-//! one included (`run_activation`, R1876001). "At most once each turn": each run spends one of the
-//! University's own uses and a University with none left this turn is passed by (`spendUse`, R2521003),
-//! so one that used its own Activate, or that another ZolarKeth ran, runs no more this turn. The Radiant
+//! one included (`run_activation`, R1876001). "At most once each turn": a University that has been
+//! Activated this turn is passed by, and a run spends every use it has this turn, a Buff's extra ones
+//! included (`spendUse`, R2521003), so one that used its own Activate, or that another ZolarKeth ran,
+//! runs no more this turn. The Radiant
 //! face does both in order, the piece Radiant. Through v0.5.11 its Cry summoned a Radiant University and
 //! its runs spent no use, which `script_v0_5_11` keeps (R767000).
 
@@ -65,8 +66,8 @@ fn summon_piece(radiant: bool) -> Effect {
     })
 }
 
-/// R1876001: each of your Universities runs its Activate; R2521003: with `spend`, only while it has a
-/// use left this turn, spending it.
+/// R1876001: each of your Universities runs its Activate; R2521003: with `spend`, only one not
+/// Activated this turn, every use of it then spent.
 fn activate_universities(spend: bool) -> Effect {
     for_each_card(ForEachCardArgs {
         cards: Arc::new(your_universities),
@@ -161,7 +162,7 @@ pub fn script_v0_5_11() -> CardScripts {
 
 // S #26 ZolarKeth — SPEC §8.10 row 26, BUILD M12 row S 26: "Cry (played): a base University summoned,
 // its own Activate refused; Activate mode 1: a random Starship Piece summoned; mode 2: each University of
-// yours with its use left this turn buffs your other permanents as its Activate does, spending that use;
+// yours not Activated this turn buffs your other permanents as its Activate does, spending its uses;
 // radiant 4/18, both modes in order, the piece Radiant, the University base".
 //
 // A Buff is counted by the `upgraded` events naming each card. A University never Buffs itself, so one
