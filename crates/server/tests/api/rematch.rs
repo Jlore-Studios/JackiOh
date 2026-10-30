@@ -30,7 +30,6 @@ use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_engine::{ActionBody, PlayerId, newest_shipped_set};
@@ -45,17 +44,9 @@ use jackioh_server::db::fake::{CallOutcome, FakeTables};
 use jackioh_server::db::store::{MatchSeat, StartMatchInput, StoreError};
 
 use crate::support::deps::{add_user, call, test_app};
-use crate::support::store::{fake_lock, q, to_json};
+use crate::support::store::{fake_lock, from, q, to_json};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
-
-/// Builds a value from a JSON literal, so the test depends on the JSON shape only.
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    match serde_json::from_value(value.clone()) {
-        Ok(parsed) => parsed,
-        Err(error) => panic!("{error}: {value}"),
-    }
-}
 
 /// `{ status, body }` of one request.
 async fn request(app: &Arc<App>, method: &str, path: &str, token: &str, body: Option<Value>) -> (u16, Value) {

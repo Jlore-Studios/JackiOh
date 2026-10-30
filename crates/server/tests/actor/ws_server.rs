@@ -29,7 +29,8 @@ use jackioh_server::app::{App, router};
 use jackioh_server::config::WS_MAX_CONNECTIONS_PER_ADDRESS;
 
 use crate::support::deps::{add_user, test_app};
-use crate::support::store::fake;
+use crate::support::engine::playable;
+use crate::support::store::{fake, from};
 
 /// How long a read waits before the test calls the socket silent. Real time: the listener does
 /// real I/O, so tokio's clock is not paused in this file.
@@ -38,27 +39,6 @@ const READ_TIMEOUT: Duration = Duration::from_secs(5);
 /// The per-address count may be process-wide, so the tests of this file run one at a time: each opens
 /// up to the cap from 127.0.0.1.
 static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-/// Every playable catalog id, in `catalog.json` order: real decks, so the real registry can start
-/// the match the socket attaches to.
-fn playable() -> Vec<String> {
-    jackioh_cards::register_all();
-    jackioh_cards::CATALOG
-        .iter()
-        .filter(|(_, def)| {
-            !def.token
-                && !serde_json::to_value(&def.tags)
-                    .expect("tags")
-                    .as_array()
-                    .is_some_and(|tags| tags.contains(&json!("Token")))
-        })
-        .map(|(id, _)| id.clone())
-        .collect()
-}
 
 fn deck_size() -> usize {
     usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size")
