@@ -117,7 +117,7 @@ fn public_card(entry: Option<&Option<BackrowView>>) -> PublicBackrowView {
 
 /// A backrow entry as its JSON.
 fn entry_json(entry: &impl serde::Serialize) -> Value {
-    serde_json::to_value(entry).expect("a view serialises")
+    serde_json::to_value(entry).expect("a view serializes")
 }
 
 mod r371_the_controllers_view_marks_a_face_down_trap_as_unrevealed {
@@ -155,7 +155,7 @@ mod r371_the_controllers_view_marks_a_face_down_trap_as_unrevealed {
         assert_eq!(entry_json(&theirs[1])["faceDown"], json!(true));
         assert!(
             !serde_json::to_string(&theirs)
-                .expect("serialises")
+                .expect("serializes")
                 .contains("unrevealed")
         );
     }
@@ -268,7 +268,7 @@ mod r372_a_grades_letter_and_a_worded_value_travel_in_the_view {
             );
         }
         assert_eq!(
-            serde_json::to_value(GRADES.to_vec()).expect("serialises"),
+            serde_json::to_value(GRADES.to_vec()).expect("serializes"),
             json!(["E", "D", "C", "B", "A", "S"])
         );
     }
@@ -306,7 +306,7 @@ mod r372_a_grades_letter_and_a_worded_value_travel_in_the_view {
             };
             let entry = public_card(side.backrow.first());
             assert_eq!(
-                serde_json::to_value(&entry.preview).expect("serialises"),
+                serde_json::to_value(&entry.preview).expect("serializes"),
                 json!([
                     { "label": "Grade", "value": 4, "display": "B" },
                     { "label": "N", "value": 4 },

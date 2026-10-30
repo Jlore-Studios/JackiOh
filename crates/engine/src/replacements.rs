@@ -94,9 +94,9 @@ pub struct ReplacementRecord {
 
 /// Where a follow-up's context data carries its `ReplacementRecord`.
 pub const REPLACED_KEY: &str = "replaced";
-/// R1704001: where a card that cancelled a lethal hit and stayed on the field notes the turn it did,
+/// R1704001: where a card that canceled a lethal hit and stayed on the field notes the turn it did,
 /// so it cancels one hit a turn.
-pub const CANCELLED_MEMORY_KEY: &str = "cancelledTurn";
+pub const CANCELED_MEMORY_KEY: &str = "cancelledTurn";
 
 /// The record a follow-up step was handed (Classic #14's copies read `flickered`), or `None`.
 /// (TS `replacementOf(ctx: { data })`; it came through JSON, so it is read back defensively.)
@@ -378,14 +378,14 @@ pub enum LethalHitTo {
     /// The hit now goes here, as a new instance from the same source (boxed: a Unit target carries
     /// its whole instance).
     Target(Box<DamageTarget>),
-    /// R1704001: the hit is cancelled and deals nothing.
-    Cancelled,
+    /// R1704001: the hit is canceled and deals nothing.
+    Canceled,
 }
 
 /// §4.4 between the caps and step 5: a hit of `amount` would bring its target — `player`'s hero,
 /// or, since ME-LETHALGUARD (R1204), one of their Units — to 0 or less. Returns where the hit now
 /// goes — the damage pipeline deals it there as a new instance from the same source, through that
-/// destination's own Armor, divisor and caps — or that it was cancelled (R1704001), or `None` when
+/// destination's own Armor, divisor and caps — or that it was canceled (R1704001), or `None` when
 /// nothing replaced it. Only the target's controller's cards answer: "you would take lethal damage".
 /// (TS `lethalHitWindow(sink, { player, amount, sourceId })`; the hit's fields are arguments, with
 /// the Unit's id added for the guard.)
@@ -422,15 +422,15 @@ pub fn lethal_hit_window(
         };
         // R1704001: a cancel answers only for its own hero, and the hit deals nothing: no new
         // instance, so nothing is redirected. A card that stays on the field after it (a Field Trap,
-        // a fusion) cancels one hit a turn, so its follow-up's own fatigue cannot be cancelled for ever.
+        // a fusion) cancels one hit a turn, so its follow-up's own fatigue cannot be canceled for ever.
         if def.instead.cancel == Some(true) {
             let turn = sink.state.turn;
-            let cancelled_this_turn = live_or(sink.state, &cand.card)
+            let canceled_this_turn = live_or(sink.state, &cand.card)
                 .memory
-                .get(CANCELLED_MEMORY_KEY)
+                .get(CANCELED_MEMORY_KEY)
                 .and_then(Value::as_i64)
                 == Some(i64::from(turn));
-            if !matches!(target, DamageTarget::Hero { .. }) || cancelled_this_turn {
+            if !matches!(target, DamageTarget::Hero { .. }) || canceled_this_turn {
                 continue;
             }
             let fired = fire(sink, &mut cand);
@@ -444,9 +444,9 @@ pub fn lethal_hit_window(
                 && card.zone.z() == ZoneName::Field
             {
                 card.memory
-                    .insert(CANCELLED_MEMORY_KEY.to_string(), Value::from(turn));
+                    .insert(CANCELED_MEMORY_KEY.to_string(), Value::from(turn));
             }
-            return Some(LethalHitTo::Cancelled);
+            return Some(LethalHitTo::Canceled);
         }
         // R1204: whether this card answers is decided before it fires. A `self` redirect answers
         // for its controller's hero and other Units — never the target itself, and never twice for

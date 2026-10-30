@@ -152,7 +152,7 @@ describe("06 room code — a networked match between a browser and a Node client
     });
 
     // ASK: create through §9.5's endpoint until the room screen has testids. R143 requires the
-    // E2E server to honour this §9.3 seed; R264 makes a Best-of-1 room carry one deck id.
+    // E2E server to honor this §9.3 seed; R264 makes a Best-of-1 room carry one deck id.
     // R1989000 pins the host to p1 beside the seed, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string; expiresAt: number; mode: string }>({

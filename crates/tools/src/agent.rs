@@ -162,7 +162,7 @@ fn answer_decide(request: Request) -> Value {
                 rng_cursor: rng.cursor(),
                 detail,
             })
-            .unwrap_or_else(|error| json!({ "error": format!("agent: answer did not serialise: {error}") }))
+            .unwrap_or_else(|error| json!({ "error": format!("agent: answer did not serialize: {error}") }))
         }
         Err(panic) => json!({ "error": format!("agent: decide panicked: {}", panic_message(&*panic)) }),
     }

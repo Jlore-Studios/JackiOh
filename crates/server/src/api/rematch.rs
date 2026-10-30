@@ -192,7 +192,7 @@ fn seat_of(match_row: &MatchRow, profile_id: &str) -> Option<PlayerId> {
 /// match: a Best-of-1 replays the frozen decks and portraits under a fresh seed, an All Random deals
 /// fresh decks from it, each leaning on the set its seat picked, if any (`leans`, R1372, R924000).
 /// R1989000 swaps the seats: the finished match's P2 takes P1, its P1 takes P2, each profile's
-/// deck, portrait, slots and lean travelling with it; All Random redeals are keyed by the new seat.
+/// deck, portrait, slots and lean traveling with it; All Random redeals are keyed by the new seat.
 async fn create_rematch(
     app: &Arc<App>,
     finished: &MatchRow,

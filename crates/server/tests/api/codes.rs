@@ -168,7 +168,7 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
     rows.iter()
-        .map(|row| serde_json::to_value(row).expect("a row serialises"))
+        .map(|row| serde_json::to_value(row).expect("a row serializes"))
         .collect()
 }
 
@@ -846,7 +846,7 @@ mod section_9_4_step_6_claiming_the_code {
         let minted = mint(&server, None, None).await;
 
         let rows = codes(&server).await;
-        let stored = serde_json::to_string(&rows).expect("the rows serialise");
+        let stored = serde_json::to_string(&rows).expect("the rows serialize");
         assert!(!stored.contains(&minted.formatted));
         assert!(!stored.contains(&minted.formatted.replace('-', "")));
         assert_eq!(rows[0]["codeHash"], json!(code_hash(&minted.formatted)));
@@ -905,7 +905,7 @@ mod r145_the_identical_error_for_every_code_dependent_refusal_section_9_4 {
             serde_json::to_string(
                 &json!({ "error": { "code": "invalid_code", "message": REDEMPTION_IDENTICAL_ERROR } })
             )
-            .expect("the body serialises")
+            .expect("the body serializes")
         );
     }
 }

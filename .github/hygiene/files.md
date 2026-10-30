@@ -17,7 +17,7 @@ workflow, script, `build.rs`, `include_str!`, `import.meta.glob`, test glob, fix
 - the generated wire types, checked by CI;
 - `docs/radiant-audit.md` and `assets/music/LICENSES.md`, read by tests;
 - the training history files;
-- `bot/tests/squishy_cases.py`, run as a subprocess;
+- `bot/go/tests/squishy_cases_test.go`, run in a process started as Squishy;
 - `e2e/`'s own lockfile;
 - the font licences.
 

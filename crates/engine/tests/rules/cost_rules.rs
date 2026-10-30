@@ -80,7 +80,7 @@ fn cast_new_of(def_id: String) -> Effect {
 fn plays_json(state: &GameState, instance_id: &str) -> Vec<Value> {
     plays_of(state, instance_id, PlayerId::P1)
         .iter()
-        .map(|play| serde_json::to_value(play).expect("a play serialises"))
+        .map(|play| serde_json::to_value(play).expect("a play serializes"))
         .collect()
 }
 
@@ -88,7 +88,7 @@ fn instance_ids(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
     events_of_type(events, kind)
         .iter()
         .filter_map(|event| {
-            serde_json::to_value(event).expect("an event serialises")["instanceId"]
+            serde_json::to_value(event).expect("an event serializes")["instanceId"]
                 .as_str()
                 .map(str::to_string)
         })

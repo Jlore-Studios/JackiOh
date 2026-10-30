@@ -2165,7 +2165,7 @@ pub fn scenario(opts: Value) -> Scenario {
 #[cfg(test)]
 mod tests {
     //! The harness proves itself (BUILD M4-T3). Every case leans on cards whose scripts do not
-    //! matter to it and asserts ENGINE behaviour, never card text:
+    //! matter to it and asserts ENGINE behavior, never card text:
     //!
     //!   core-025 "4-mana 7/7"  Unit, cost 4, 7/7 Armor 7 / radiant 7/7 Indestructible — keywords only
     //!   core-056 "Jilliax"     Unit, cost 2, 3/2 Rush Taunt Lifesteal Divine Shield — keywords only
@@ -2272,7 +2272,7 @@ mod tests {
         }
 
         #[test]
-        fn honours_radiant_position_damage_and_face_up() {
+        fn honors_radiant_position_damage_and_face_up() {
             let mut s = scenario(json!({
                 "p1": {
                     "field": [{ "def": "core-043", "radiant": true }, { "def": "core-025", "position": "DEF", "damage": 3, "lane": 4 }],
@@ -2651,7 +2651,7 @@ mod tests {
         }
 
         #[test]
-        fn honours_stats_override_s10_4_layer_1_r41() {
+        fn honors_stats_override_s10_4_layer_1_r41() {
             let mut s = scenario(
                 json!({ "p1": { "field": [{ "defId": "core-043", "statsOverride": { "attack": 3, "health": 3 } }] } }),
             );
@@ -3165,7 +3165,7 @@ mod tests {
         }
 
         fn text<T: serde::Serialize + ?Sized>(value: &T) -> String {
-            serde_json::to_string(value).expect("serialises")
+            serde_json::to_string(value).expect("serializes")
         }
 
         #[test]
@@ -3197,7 +3197,7 @@ mod tests {
         #[test]
         fn reports_the_viewer_the_turn_and_the_phase() {
             let s = scenario(json!({ "turn": 5, "active": "p2", "p1": { "field": ["core-025"] } }));
-            let view = serde_json::to_value(s.view("p1")).expect("a view serialises");
+            let view = serde_json::to_value(s.view("p1")).expect("a view serializes");
             assert_eq!(view["viewer"], "p1");
             assert_eq!(view["you"]["player"], "p1");
             assert_eq!(view["opponent"]["player"], "p2");
@@ -3212,7 +3212,7 @@ mod tests {
             let s = scenario(
                 json!({ "p1": { "hand": ["core-025"] }, "p2": { "hand": ["core-043", "core-010"] } }),
             );
-            let view = serde_json::to_value(s.view("p1")).expect("a view serialises");
+            let view = serde_json::to_value(s.view("p1")).expect("a view serializes");
             assert!(view["you"]["hand"].is_array());
             assert!(!view["opponent"]["hand"].is_array());
             assert!(!view["opponent"]["hand"].to_string().contains("core-043"));

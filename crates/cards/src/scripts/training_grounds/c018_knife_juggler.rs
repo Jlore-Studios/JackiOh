@@ -261,12 +261,12 @@ mod tests {
                         "library": crate::filler(4),
                     },
                 }));
-                let armoured = s.unit_at(P2, 1).id;
-                s.card_mut(armoured.as_str()).granted_keywords = vec![json_as(json!({ "kind": "Armor", "n": 2 }))];
-                assert_eq!(s.stats(armoured.as_str()).armor, 2);
+                let armored = s.unit_at(P2, 1).id;
+                s.card_mut(armored.as_str()).granted_keywords = vec![json_as(json!({ "kind": "Armor", "n": 2 }))];
+                assert_eq!(s.stats(armored.as_str()).armor, 2);
                 s.play(VANILLA, json!({ "zone": 1 }));
-                if throws(&s).iter().any(|(target, _)| *target == armoured) {
-                    s.expect_in_zone(armoured.as_str(), "graveyard");
+                if throws(&s).iter().any(|(target, _)| *target == armored) {
+                    s.expect_in_zone(armored.as_str(), "graveyard");
                     return;
                 }
             }

@@ -20,7 +20,7 @@ use jackioh_engine::testkit::{
 use super::support::random_decks;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Misbehaviour {
+enum Misbehavior {
     Refuse,
     Throw,
     Null,
@@ -53,7 +53,7 @@ fn due(fired_on: &OnceCell<GameState>, state: &GameState, seat: PlayerId) -> boo
 /// TS's mocked baselines: `random_action` refuses or throws once (`Refuse`, `Throw`), `greedy_action`
 /// answers null once (`Null`), each at the first state `due` holds for; every other call is the real one.
 fn scripted<'a>(
-    mode: Misbehaviour,
+    mode: Misbehavior,
     cfg: &'a MatchConfig,
     fired_on: &'a OnceCell<GameState>,
 ) -> impl FnMut(&GameState, PlayerId, Option<ActionBody>) -> Option<ActionBody> + 'a {
@@ -61,10 +61,9 @@ fn scripted<'a>(
         let controller = &cfg.controllers[seat];
         let random = matches!(controller, SeatController::Random);
         let greedy = matches!(controller, SeatController::Greedy);
-        if random && matches!(mode, Misbehaviour::Refuse | Misbehaviour::Throw) && due(fired_on, state, seat)
-        {
+        if random && matches!(mode, Misbehavior::Refuse | Misbehavior::Throw) && due(fired_on, state, seat) {
             let _ = fired_on.set(state.clone());
-            if mode == Misbehaviour::Throw {
+            if mode == Misbehavior::Throw {
                 panic!("scripted controller failure");
             }
             return Some(ActionBody::Attack {
@@ -72,7 +71,7 @@ fn scripted<'a>(
                 target_id: format!("hero-{}", opponent_of(seat)),
             });
         }
-        if greedy && mode == Misbehaviour::Null && due(fired_on, state, seat) {
+        if greedy && mode == Misbehavior::Null && due(fired_on, state, seat) {
             let _ = fired_on.set(state.clone());
             return None;
         }
@@ -91,7 +90,7 @@ mod surface_play_match_when_a_controller_misbehaves {
         let mut replacement: Option<ActionBody> = None;
         let record = {
             let mut hooks = MatchHooks {
-                override_choice: Some(Box::new(scripted(Misbehaviour::Refuse, &cfg, &fired_on))),
+                override_choice: Some(Box::new(scripted(Misbehavior::Refuse, &cfg, &fired_on))),
                 after_action: Some(Box::new(
                     |before: &GameState, _after: &GameState, seat: PlayerId, action: &ActionBody| {
                         if fired_on.get() == Some(before) && seat == PlayerId::P1 {
@@ -127,7 +126,7 @@ mod surface_play_match_when_a_controller_misbehaves {
         let fired_on: OnceCell<GameState> = OnceCell::new();
         let record = {
             let mut hooks = MatchHooks {
-                override_choice: Some(Box::new(scripted(Misbehaviour::Throw, &cfg, &fired_on))),
+                override_choice: Some(Box::new(scripted(Misbehavior::Throw, &cfg, &fired_on))),
                 ..MatchHooks::default()
             };
             play_match(&cfg, &mut hooks)
@@ -148,7 +147,7 @@ mod surface_play_match_when_a_controller_misbehaves {
         let fired_on: OnceCell<GameState> = OnceCell::new();
         let record = {
             let mut hooks = MatchHooks {
-                override_choice: Some(Box::new(scripted(Misbehaviour::Null, &cfg, &fired_on))),
+                override_choice: Some(Box::new(scripted(Misbehavior::Null, &cfg, &fired_on))),
                 ..MatchHooks::default()
             };
             play_match(&cfg, &mut hooks)

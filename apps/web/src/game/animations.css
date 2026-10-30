@@ -391,7 +391,7 @@
 
 /* --- healthLost: purple number pops on the hero, no shake (300 ms) --------------------- */
 
-/* The target dims as the life drains out; the fx layer's void motes and splat carry the colour. */
+/* The target dims as the life drains out; the fx layer's void motes and splat carry the color. */
 @keyframes jk-loss-pop {
   0% {
     filter: brightness(1);
@@ -492,7 +492,7 @@
   }
 }
 
-/* The burn front: a band two card-heights tall, charred (the zone's own colour, so the card reads
+/* The burn front: a band two card-heights tall, charred (the zone's own color, so the card reads
    as gone) below a glowing ember edge and clear above it. It starts a card-height below the card
    and climbs by transform; the card clips it (board.css: .card is overflow: hidden). */
 @keyframes jk-burn-climb {
@@ -624,7 +624,7 @@
  * view. It is `data-playing="true"` only while that entry is in flight, and every motion below runs
  * off that attribute (or off the pile's own `data-animating`), so it follows the squeeze like any
  * row. Resting, a notice keeps its tag up and its card at the end of its motion: burned away, fizzled
- * or dropped. overflow.css places and colours them; this block only moves them. The refused or burned
+ * or dropped. overflow.css places and colors them; this block only moves them. The refused or burned
  * card is a small face, or a back for R97's sentinel; the fx layer's fire, dust and smoke play over
  * it and never replace it (R200). */
 
@@ -1221,9 +1221,9 @@
   animation-name: jk-rotate-atk;
 }
 
-/* --- controlChanged: card slides across the centre line (450 ms) --------------------- */
+/* --- controlChanged: card slides across the center line (450 ms) --------------------- */
 
-@keyframes jk-cross-centre {
+@keyframes jk-cross-center {
   0% {
     transform: translateY(calc(-1 * (var(--card-h, 112px) + 2 * var(--gap, 6px))));
     opacity: 0.35;
@@ -1235,7 +1235,7 @@
 }
 
 [data-animating="controlChanged"] {
-  animation-name: jk-cross-centre;
+  animation-name: jk-cross-center;
   animation-duration: calc(450ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-timing-function: var(--ease-standard);
   z-index: var(--z-result);
@@ -1282,7 +1282,7 @@
   animation-timing-function: var(--ease-standard);
 }
 
-/* --- swapped: the swapped values cross the centre line together (500 ms) ------------- */
+/* --- swapped: the swapped values cross the center line together (500 ms) ------------- */
 
 @keyframes jk-swap-cross {
   0%,
@@ -1731,7 +1731,7 @@
   font-weight: 700;
 }
 
-/* The route's first way on is the primary action, in the one primary colour (index.css). When that
+/* The route's first way on is the primary action, in the one primary color (index.css). When that
    is the rematch block, the block is no button: its first button, Rematch, is the primary (#477:
    the rule used to paint the whole block gold and hand its ink to Double or nothing). */
 .result-overlay__actions > :first-child:not(.result-overlay__view, .rematch),

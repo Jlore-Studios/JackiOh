@@ -322,7 +322,7 @@ mod b5_e39_enchant_r443 {
             .find(|card| card.instance_id == held.id)
             .and_then(|card| card.enchantments.clone());
         assert_eq!(shown, Some(vec![RETURN]));
-        let theirs = serde_json::to_string(&view_for(&state, PlayerId::P2)).expect("the view serialises");
+        let theirs = serde_json::to_string(&view_for(&state, PlayerId::P2)).expect("the view serializes");
         assert!(!theirs.contains("returnAfterResolve"));
     }
 }

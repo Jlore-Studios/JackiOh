@@ -233,7 +233,7 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     expect(lines()).toEqual([
       "You kept a secret",
       "Your secret was Greed",
-      "Opponent guessed Attack: the reward is cancelled",
+      "Opponent guessed Attack: the reward is canceled",
     ]);
     expect(lines().join("\n")).not.toContain("greed");
   });

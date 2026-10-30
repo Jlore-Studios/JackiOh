@@ -73,7 +73,7 @@ fn view_events(state: &GameState, viewer: PlayerId) -> Vec<Value> {
     view_for(state, viewer)
         .events
         .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
         .collect()
 }
 
@@ -523,7 +523,7 @@ mod r457_b5_e3_draw_limits {
         );
         assert_eq!(state.players.p2.library.len(), library);
         let round: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("a state serialises"))
+            serde_json::from_value(serde_json::to_value(&state).expect("a state serializes"))
                 .expect("and parses");
         assert_eq!(round, state);
 

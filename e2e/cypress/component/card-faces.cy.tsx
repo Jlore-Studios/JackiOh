@@ -1,4 +1,4 @@
-// Polish 6: the pixel half of the card faces (docs/polish/6-cards.md, behaviours B15 and B21).
+// Polish 6: the pixel half of the card faces (docs/polish/6-cards.md, behaviors B15 and B21).
 //
 // jsdom has no layout, so apps/web/src/cards/CardFace.test.tsx can only check the DOM. Whether a
 // name and a rules box fit their boxes is a question for a real layout engine, and so is whether
@@ -23,7 +23,7 @@
 //   B21  `Game` rendering `fullBoardView()` inside `.app-shell.app-shell--wide`, WITH the real
 //        catalog in `CatalogContext`: no horizontal overflow and all 20 field cards visible at
 //        1280x720 and 390x844. board-layout.cy.tsx measures the same board with no catalog, where
-//        every name is a short def id; this is the long-name case. The centre of every field card
+//        every name is a short def id; this is the long-name case. The center of every field card
 //        must also hit the card itself, because that is where a click lands.
 //
 // Every measurement sits inside `.should()`, so it retries while `useFitText` settles. Each also
@@ -230,7 +230,7 @@ describe("R1017002: every card the homescreen's hand can deal prints whole on a 
 /* ------------------------------------------------------------------- Radiant frames, B13/B14 */
 
 // A radiant face is gold foil, but gilds its frame rather than replacing it: the type's panel
-// colour and the rarity's edge still show, so a radiant Trap and a radiant Field Trap, or a radiant
+// color and the rarity's edge still show, so a radiant Trap and a radiant Field Trap, or a radiant
 // Common and a radiant Rare, never draw the same frame.
 describe("radiant frames keep their type and rarity", () => {
   const RADIANT = [
@@ -508,10 +508,10 @@ describe("B21: the full board with the real catalog fits 1280x720 and 390x844", 
       });
     });
 
-    // Cypress (and a player) clicks a card at its centre. Every field unit carries a switch-position
+    // Cypress (and a player) clicks a card at its center. Every field unit carries a switch-position
     // <button>, disabled unless switching is legal, and a disabled button swallows the click, so a
-    // badge drawn over the centre makes the card unclickable (found by e2e specs 02, 04 and 11).
-    it(`B21 the centre of every field card hits the card itself, not a control inside it, at ${where}`, () => {
+    // badge drawn over the center makes the card unclickable (found by e2e specs 02, 04 and 11).
+    it(`B21 the center of every field card hits the card itself, not a control inside it, at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
       cy.get(`${BOARD} .field [data-testid^="card-"]`).should("have.length.at.least", 10);
 
@@ -523,7 +523,7 @@ describe("B21: the full board with the real catalog fits 1280x720 and 390x844", 
           const owner = hit?.closest("[data-testid]") ?? null;
           return owner === card ? [] : [`${card.getAttribute("data-testid") ?? "?"} → ${owner?.getAttribute("data-testid") ?? hit?.tagName ?? "nothing"}`];
         });
-        expect(covered, `field cards whose centre is covered at ${where}`).to.deep.equal([]);
+        expect(covered, `field cards whose center is covered at ${where}`).to.deep.equal([]);
       });
     });
   }

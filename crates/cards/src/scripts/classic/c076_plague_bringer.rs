@@ -210,7 +210,7 @@ mod tests {
             place_all(&mut s, &pawn);
 
             assert_eq!(s.card(&pawn).counters.plague, Some(2));
-            assert!(!serde_json::to_string(&s.view(P1)).expect("serialisable").contains(PAWN));
+            assert!(!serde_json::to_string(&s.view(P1)).expect("serializable").contains(PAWN));
             let theirs = js(&s.view(P2));
             let backrow = theirs["you"]["backrow"].as_array().cloned().unwrap_or_default();
             assert!(backrow.iter().any(|card| !card.is_null() && card["defId"] == json!(PAWN)));
@@ -247,7 +247,7 @@ mod tests {
             s.play(BRINGER, json!({}));
             let vanilla = s.card(VANILLA).clone();
 
-            let revived: GameState = serde_json::from_str(&serde_json::to_string(s.state()).expect("serialisable"))
+            let revived: GameState = serde_json::from_str(&serde_json::to_string(s.state()).expect("serializable"))
                 .expect("a state reads back");
             assert_eq!(&revived, s.state());
             let choice = must(revived.pending.clone(), "the placement prompt");

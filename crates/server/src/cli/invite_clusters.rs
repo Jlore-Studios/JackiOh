@@ -96,12 +96,12 @@ pub fn parse_invite_clusters_args(argv: &[String]) -> anyhow::Result<InviteClust
     };
     for arg in argv {
         let Some((name, raw)) = named(arg) else {
-            bail!("Unrecognised argument {}.\n\n{}", quoted(arg), usage());
+            bail!("Unrecognized argument {}.\n\n{}", quoted(arg), usage());
         };
         match name {
             "window" => options.window_seconds = bounded(name, raw, 1, MAX_WINDOW_SECONDS)?,
             "min-accounts" => options.min_accounts = bounded(name, raw, 1, MAX_MIN_ACCOUNTS)?,
-            _ => bail!("Unrecognised option --{name}.\n\n{}", usage()),
+            _ => bail!("Unrecognized option --{name}.\n\n{}", usage()),
         }
     }
     Ok(options)

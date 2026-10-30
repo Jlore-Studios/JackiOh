@@ -450,7 +450,7 @@ mod summarize_game_s9_11 {
         game.send(PlayerId::P2, ActionBody::Concede);
         let summary = summarize_game(&fold_args("summary-early-concede", decks(), game.log.clone()));
         assert_eq!(
-            serde_json::to_value(&summary).expect("a summary serialises"),
+            serde_json::to_value(&summary).expect("a summary serializes"),
             json!({
                 "first": "p1",
                 "winner": "p1",

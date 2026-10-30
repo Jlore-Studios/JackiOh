@@ -64,7 +64,7 @@ export type DragPlan = {
   /** kind "attack" or "activate", or a play where no remaining candidate has a zone and some has targets. Otherwise a card ghost. */
   arrow: boolean;
   /**
-   * R658: what a release on nothing (or a cancelled drag) leaves, when it is not IDLE: a build lifted
+   * R658: what a release on nothing (or a canceled drag) leaves, when it is not IDLE: a build lifted
    * again from its picks goes back to that build, so a missed drop never throws the picks away.
    */
   missed?: Interaction;

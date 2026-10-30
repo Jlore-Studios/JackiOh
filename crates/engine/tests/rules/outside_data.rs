@@ -223,7 +223,7 @@ mod r1183005_the_code_discover {
         }
 
         // The chooser reads the code and nothing that names the card; the opponent reads nothing.
-        let mine = serde_json::to_value(view_for(s.state(), P1).pending).expect("serialises");
+        let mine = serde_json::to_value(view_for(s.state(), P1).pending).expect("serializes");
         for option in mine["options"].as_array().expect("options") {
             assert_eq!(option["code"], json!(true));
             assert!(option.get("defId").is_none());
@@ -236,7 +236,7 @@ mod r1183005_the_code_discover {
         for (id, _) in BLOCKS {
             assert!(!mine.to_string().contains(id), "no id in the chooser's prompt");
         }
-        let theirs = serde_json::to_value(view_for(s.state(), P2).pending).expect("serialises");
+        let theirs = serde_json::to_value(view_for(s.state(), P2).pending).expect("serializes");
         assert_eq!(theirs["forYou"], json!(false));
         assert!(theirs.get("options").is_none());
     }

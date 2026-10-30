@@ -1129,7 +1129,7 @@ fn section_6_pools() -> Vec<(PersonaName, Section6Rows)> {
 fn wire_name(key: impl serde::Serialize) -> String {
     match serde_json::to_value(key) {
         Ok(Value::String(name)) => name,
-        other => panic!("a row key serialises as a string, not {other:?}"),
+        other => panic!("a row key serializes as a string, not {other:?}"),
     }
 }
 

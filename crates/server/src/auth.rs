@@ -20,7 +20,7 @@
 //!    `GET /auth/v1/user`, and only a live answer is remembered, per session, for
 //!    `AUTH_SESSION_LIVE_CACHE_SECONDS`. That answer is also the authoritative user, so it stands in
 //!    for the admin lookup while fresh.
-//!  - TWO-STEP SIGN-IN (R665): an account with a verified TOTP factor is honoured only with an `aal2`
+//!  - TWO-STEP SIGN-IN (R665): an account with a verified TOTP factor is honored only with an `aal2`
 //!    token. Whether it has a factor comes from the provider's user, never the token, and the last
 //!    answer is remembered per user so an outage cannot lower the bar (`mfa_enrolled`).
 
@@ -148,7 +148,7 @@ pub struct AuthApiUser {
 #[derive(Clone, Debug, PartialEq)]
 pub enum AdminLookup {
     Ok(AuthApiUser),
-    /// The auth server has no such user any more (deleted); the token must not be honoured.
+    /// The auth server has no such user any more (deleted); the token must not be honored.
     Missing,
     /// Nobody answered. The identity stands, but the email counts as unverified (fail closed).
     Unavailable,
@@ -449,7 +449,7 @@ enum SessionCheck {
     Remembered,
     /// Asked just now: live, and this is the authoritative user.
     Live(AuthApiUser),
-    /// The provider has ended the session (or the user): the token must not be honoured.
+    /// The provider has ended the session (or the user): the token must not be honored.
     Ended,
     /// Nobody answered. The identity stands, as for R159's outage; see `verify_access_token`.
     Unavailable,
@@ -523,7 +523,7 @@ impl std::fmt::Display for JwksFetchError {
     }
 }
 
-/// The caches are behaviour (R194, R665, R159), not optimisations.
+/// The caches are behavior (R194, R665, R159), not optimizations.
 pub struct SupabaseAuth {
     auth_base: String,
     jwks_url: String,
@@ -952,7 +952,7 @@ impl SupabaseAuth {
         let user = match self.fetch_user_by_token(token).await {
             AdminLookup::Unavailable => return SessionCheck::Unavailable,
             // `/user` answers for the token's own user; any other id is the provider misbehaving, and a
-            // token is never honoured on someone else's answer.
+            // token is never honored on someone else's answer.
             AdminLookup::Ok(user) if user.id == sub => user,
             AdminLookup::Ok(_) | AdminLookup::Missing => {
                 let mut live = self

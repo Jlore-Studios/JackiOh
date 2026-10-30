@@ -86,7 +86,7 @@ fn limits() -> Limits {
 
 /// §9.4: "Missing, expired and exhausted codes return an identical error in identical time."
 ///
-/// One constructor, no `details`, so all serialise to the same bytes. A revoked or malformed code
+/// One constructor, no `details`, so all serialize to the same bytes. A revoked or malformed code
 /// takes this path too (§9.8's brute-force row). The reason stays in `code_attempts.reason`,
 /// which §9.4 says is "never returned to the client".
 fn identical_code_error() -> ApiError {

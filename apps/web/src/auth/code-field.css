@@ -203,7 +203,7 @@
   overflow-wrap: anywhere;
 }
 
-/* `.app-shell p` sets a dim colour and a max width on every paragraph; the hint is a warning. */
+/* `.app-shell p` sets a dim color and a max width on every paragraph; the hint is a warning. */
 .app-shell .code-field__hint {
   color: var(--text);
   max-width: none;
@@ -327,7 +327,7 @@
 }
 
 /* --- in the tavern (auth/tavern.css): the invite screen's skin -------------------------------- */
-/* Slots cut into dark wood, brass-edged. A group that is full glows teal, the colour of the
+/* Slots cut into dark wood, brass-edged. A group that is full glows teal, the color of the
    landing's gems; the group the caret is in is lit gold, which is also how focus shows. */
 
 .tavern .code-field__segments {

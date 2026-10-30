@@ -453,6 +453,39 @@ pub fn last_face_up_played(state: &GameState, player: PlayerId) -> Option<FaceUp
         .and_then(|log| log.last_face_up_play.clone())
 }
 
+/// R1850003, R1865000, R2476000: the cards held beneath `holder` on its stay now (`effects::hold`), in
+/// the order taken: Stinkyscape #9 Ticketed's permanent, #135.1 Sack's Unit, #112 Job Application's
+/// resume. A card held on an earlier stay of the holder's is not its own (`stays`). Each was taken in
+/// public, so its preview may name it. Copies.
+pub fn held_beneath(state: &GameState, holder: &CardInstance) -> Vec<CardInstance> {
+    state
+        .held
+        .iter()
+        .flatten()
+        .filter(|held| {
+            held.holder_id == holder.id
+                && !crate::stays::left_field_after(state, held.holder_mark, &holder.id)
+        })
+        .map(|held| held.card.clone())
+        .collect()
+}
+
+/// R1855003, R2476000: how many of `player`'s Anomaly scans have missed this game, which the Scanning
+/// Probes' chances grow by (`effects::anomaly_chances`). A miss is silent, so only the player may read
+/// it: a preview of it stays in their own hand.
+pub fn anomaly_misses_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].anomaly_misses.unwrap_or(0)
+}
+
+/// R1849004, R2476000: how much more `card`'s own-turn redirect (Stinkyscape #5 Masochism Unmasked)
+/// may take off its controller's hero this turn: its declared `cap` (R386) less what it has taken this
+/// turn, at least 0. `None` for a card with no such redirect.
+pub fn own_turn_redirect_left(state: &GameState, card: &CardInstance) -> Option<i32> {
+    let redirect = crate::scripts::flags_of(state, card).own_turn_redirect?;
+    let cap = crate::params::declared_or(state, card, "cap", redirect.cap).max(0);
+    Some((cap - crate::damage::own_turn_redirect_moved(state, card)).max(0))
+}
+
 // ---------------------------------------------------------------------------
 // v0.2.0 readers: the Classic #1–#45 cards (card-specific, the cards-classic-a workstream)
 // ---------------------------------------------------------------------------

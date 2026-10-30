@@ -6,7 +6,7 @@
 //!  - **R166**: a sweep pairs the oldest ticket first, against the oldest opponent its window
 //!    admits — not the closest in rating — and ties break on ticket id, so a replay of the same
 //!    open set pairs the same way.
-//!  - **R167**: a queued player may cancel, and cancelling is idempotent. Cancel never unmakes a
+//!  - **R167**: a queued player may cancel, and canceling is idempotent. Cancel never unmakes a
 //!    pairing; it only closes a ticket that is still open.
 //!  - **R253**: a Best-of-1 deck is checked on L2, L3, L5, L6 and a Best-of-3 trio on L1–L6, by the
 //!    real shared validator, with the decks' own names in its sentences.
@@ -640,7 +640,7 @@ mod r897000_an_abandoned_ticket_expires_before_it_seats_anyone {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn r897000_stale_tickets_are_cancelled_by_the_sweep_and_pair_nobody() {
+    async fn r897000_stale_tickets_are_canceled_by_the_sweep_and_pair_nobody() {
         let app = test_app().await;
         // PREMISE: the two would pair at once — same rating, same instant — so what follows is
         // the expiry, not the window.
@@ -898,7 +898,7 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r167_is_idempotent_a_second_cancel_is_told_nothing_was_cancelled_not_given_an_error() {
+    async fn r167_is_idempotent_a_second_cancel_is_told_nothing_was_canceled_not_given_an_error() {
         let app = test_app().await;
         let token = active_profile(&app, "twice", 1000.0).await;
         let [deck, ..] = decks_from();
@@ -920,7 +920,7 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r167_never_unmakes_a_pairing_a_ticket_paired_a_moment_earlier_reports_nothing_cancelled() {
+    async fn r167_never_unmakes_a_pairing_a_ticket_paired_a_moment_earlier_reports_nothing_canceled() {
         let app = test_app().await;
         let one = active_profile(&app, "p-one", 1000.0).await;
         let two = active_profile(&app, "p-two", 1000.0).await;
@@ -1437,7 +1437,7 @@ mod r640002_the_queue_readout {
         claimed_pair(&app, ["t-5", "t-6"], "bo1", [21_000, 26_000]).await;
         claimed_pair(&app, ["t-r1", "t-r2"], "random", [5_000, 5_000]).await;
         claimed_pair(&app, ["t-r3", "t-r4"], "random", [5_000, 5_000]).await;
-        // A ticket still open and one cancelled have waited for nothing.
+        // A ticket still open and one canceled have waited for nothing.
         for id in ["t-open", "t-gone"] {
             seed_ticket(
                 &app,

@@ -109,10 +109,10 @@ fn mean(values: &[f64]) -> f64 {
     }
 }
 
-fn spread(values: &[f64], centre: f64) -> f64 {
+fn spread(values: &[f64], center: f64) -> f64 {
     let squares: Vec<f64> = values
         .iter()
-        .map(|value| (value - centre) * (value - centre))
+        .map(|value| (value - center) * (value - center))
         .collect();
     mean(&squares).sqrt()
 }
@@ -125,9 +125,9 @@ fn highest(values: &[f64]) -> f64 {
     values.iter().copied().fold(f64::NEG_INFINITY, f64::max)
 }
 
-pub fn reset_glicko(glicko: &Glicko, centre: f64) -> Glicko {
+pub fn reset_glicko(glicko: &Glicko, center: f64) -> Glicko {
     Glicko {
-        rating: centre + (glicko.rating - centre) * (1.0 - SEASON_RESET_STRENGTH),
+        rating: center + (glicko.rating - center) * (1.0 - SEASON_RESET_STRENGTH),
         deviation: (glicko.deviation * glicko.deviation
             + SEASON_RESET_DEVIATION_BOOST * SEASON_RESET_DEVIATION_BOOST)
             .sqrt()
@@ -144,13 +144,13 @@ pub fn soft_reset(players: &[ResetPlayer]) -> SoftReset {
     // Stable sort (SURFACE §4.4.1).
     ordered.sort_by(|a, b| a.profile_id.cmp(&b.profile_id));
     let before: Vec<f64> = ordered.iter().map(|player| player.glicko.rating).collect();
-    let centre = mean(&before);
+    let center = mean(&before);
     let changes: Vec<ResetChange> = ordered
         .iter()
         .map(|player| ResetChange {
             profile_id: player.profile_id.clone(),
             before: player.glicko,
-            after: reset_glicko(&player.glicko, centre),
+            after: reset_glicko(&player.glicko, center),
         })
         .collect();
     let after: Vec<f64> = changes.iter().map(|change| change.after.rating).collect();
@@ -158,8 +158,8 @@ pub fn soft_reset(players: &[ResetPlayer]) -> SoftReset {
     let deviations_after: Vec<f64> = changes.iter().map(|change| change.after.deviation).collect();
     let report = ResetReport {
         players: ordered.len(),
-        mean: centre,
-        spread_before: spread(&before, centre),
+        mean: center,
+        spread_before: spread(&before, center),
         spread_after: spread(&after, mean(&after)),
         deviation_before: mean(&deviations_before),
         deviation_after: mean(&deviations_after),

@@ -48,7 +48,7 @@ until `main` ships another.
    them, `stats-import` refuses a file that holds any other, and no live figure counts a development
    record unless the query asks for `--source=all`.
 4. It does not reach players except as R654 says: until a patch has `PUBLIC_STATS_MIN_LIVE_GAMES` live
-   games, the public card statistics are padded with development games and labelled provisional, and
+   games, the public card statistics are padded with development games and labeled provisional, and
    once it has them the live games alone are read.
 
 ## What it leaves

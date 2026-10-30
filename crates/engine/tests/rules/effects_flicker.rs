@@ -51,7 +51,7 @@ fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
 }
 
 fn as_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
+    serde_json::to_value(value).expect("serializes")
 }
 
 /// One field of each event, as TS's `.map((e) => e.<key>)` read it.

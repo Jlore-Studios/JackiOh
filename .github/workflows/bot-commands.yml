@@ -32,10 +32,6 @@ on:
 
 permissions: {}
 
-env:
-  PYTHONUTF8: "1"
-  PYTHONDONTWRITEBYTECODE: "1"
-
 jobs:
   event:
     name: event
@@ -47,7 +43,7 @@ jobs:
     # actor. A CI run and a closed bot pull request are handled whoever caused them: the bot's own
     # push starts the CI runs it answers, and GitHub credits an auto-merge to the bot. A CI run of
     # the merge queue's (`gh-readonly-queue/main/pr-<n>-<sha>`) is any pull request's; the handler
-    # answers only the bot's own (`events.on_queue_ci`).
+    # answers only the bot's own (`events.OnQueueCI`).
     if: >-
       github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
       || (github.event_name == 'workflow_run'
@@ -90,9 +86,7 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
 
       - name: Handle the event, or sweep for anything left unanswered
         working-directory: bot
@@ -115,12 +109,12 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            python -m harness sweep
+            harness sweep
           else
-            python -m harness event
+            harness event
           fi
 
-      # The pinned "Night bot status" issue (bot/harness/dashboard.py), rewritten after every
+      # The pinned "Night bot status" issue (bot/go/internal/dashboard), rewritten after every
       # sweep: what each lane runs, the subscriptions' usage, the queue and the last runs, and
       # Squishy's section apart from them (`--companions`, drawn by its own process). Editing
       # its body notifies nobody; a failure only warns.
@@ -143,4 +137,4 @@ jobs:
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
-        run: python -m harness dashboard --companions
+        run: harness dashboard --companions

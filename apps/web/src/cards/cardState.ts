@@ -138,7 +138,7 @@ export const FROZEN_WORDS = "Frozen: can't attack, switch position or use its Ac
 /** R1848000, R2246000, §6.1: what the badge of a unit Frozen forever says. */
 export const FROZEN_FOREVER_WORDS = "Frozen forever: can't attack, switch position or use its Activate, and never thaws";
 
-/** R1174000: the frost badge's glyph, drawn in text presentation (U+FE0E) so it takes the badge's colour. */
+/** R1174000: the frost badge's glyph, drawn in text presentation (U+FE0E) so it takes the badge's color. */
 export const FROZEN_GLYPH = "\u2744\uFE0E";
 
 /** R1839000, §6.1: what a Dormant card's badge says when no countdown will wake it. */

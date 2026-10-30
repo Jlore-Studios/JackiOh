@@ -236,7 +236,7 @@ fn r768_another_catalog_version_or_a_wrong_hash_is_refused_with_no_steps() {
 
     // The refusal's wire shape, which the client's `ReplayOpen` types.
     assert_eq!(
-        serde_json::to_value(refused(ReplayRefusal::RulesChanged)).expect("serialises"),
+        serde_json::to_value(refused(ReplayRefusal::RulesChanged)).expect("serializes"),
         json!({ "kind": "refused", "reason": "rules_changed" })
     );
 }

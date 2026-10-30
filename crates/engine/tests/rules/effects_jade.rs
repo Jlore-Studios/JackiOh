@@ -118,14 +118,14 @@ fn r961_an_add_of_0_or_less_changes_and_reports_nothing() {
 }
 
 #[test]
-fn r961_a_game_without_jade_serialises_no_jade_in_state_or_view() {
+fn r961_a_game_without_jade_serializes_no_jade_in_state_or_view() {
     // D14: a game that never uses the counter serializes, hashes and replays as before.
     let state = game("jade-absent");
-    let raw = serde_json::to_value(&state).expect("state serialises");
+    let raw = serde_json::to_value(&state).expect("state serializes");
     assert_eq!(raw["players"]["p1"].get("jade"), None);
     assert_eq!(raw["players"]["p2"].get("jade"), None);
     for viewer in [PlayerId::P1, PlayerId::P2] {
-        let view = serde_json::to_value(view_for(&state, viewer)).expect("view serialises");
+        let view = serde_json::to_value(view_for(&state, viewer)).expect("view serializes");
         assert_eq!(view["you"].get("jade"), None);
         assert_eq!(view["opponent"].get("jade"), None);
     }

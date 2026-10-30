@@ -57,7 +57,7 @@ fn run(sink: &mut EngineSink, effect: Effect, self_: Option<&CardInstance>, targ
 fn placements(events: &[GameEvent]) -> Vec<Value> {
     events
         .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
         .filter(|event| event["type"] == "counterChanged" && event["counter"] == "plague")
         .map(|event| {
             let mut entry = json!({ "id": event["instanceId"], "value": event["value"] });
@@ -140,11 +140,11 @@ fn play_on(card: &CardInstance, target: &CardInstance) -> Value {
 }
 
 fn view_json(state: &GameState, player: PlayerId) -> Value {
-    serde_json::to_value(view_for(state, player)).expect("a view serialises")
+    serde_json::to_value(view_for(state, player)).expect("a view serializes")
 }
 
 fn thaw(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).expect("a state serialises")).expect("a state parses")
+    serde_json::from_value(serde_json::to_value(state).expect("a state serializes")).expect("a state parses")
 }
 
 /// A sink over `state`, the rng at the state's cursor; the cursor is never written back.
@@ -226,7 +226,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         let data = round
             .pending
             .as_ref()
-            .map(|p| serde_json::to_value(&p.resume.data).expect("data serialises"));
+            .map(|p| serde_json::to_value(&p.resume.data).expect("data serializes"));
         assert!(matches_object(
             &data.unwrap_or(Value::Null),
             &json!({ "count": 3, "amount": 1 })

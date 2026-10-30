@@ -61,6 +61,10 @@ const MARKS: readonly { word: string; pattern: RegExp }[] = [
   { word: "a straight double quote", pattern: /"/u },
 ];
 
+/** WRITING.md, Consistent: American spelling (#2445). "optimism" and "optimistic" are American too. */
+const BRITISH =
+  /colour|behaviour|centre|honour|favour|armour|licence|defence|catalogue|labell(ed|ing)|cancell(ed|ing)|modell(ed|ing)|travell(ed|ing)|(serial|normal|recogn|optim|organ)is[eai]/i;
+
 /** Every string or JSX text in a non-test source that zh-CN.json translates. */
 function playerTexts(): { at: string; text: string }[] {
   return sources(SRC).flatMap(wordsIn).filter(({ text }) => Object.hasOwn(zhCN, text) || Object.hasOwn(zhCN, text.trim()));
@@ -93,6 +97,19 @@ describe("WRITING.md the client's words for players", () => {
       .sort();
     expect(found).toEqual([]);
     expect(Object.keys(zhCN).filter((key) => key.includes("’"))).toEqual([]);
+  });
+
+  it("no sentence the client shows a player and no dictionary key spells a word the British way", () => {
+    const found = playerTexts()
+      .filter(({ text }) => BRITISH.test(text))
+      .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`)
+      .sort();
+    expect(found).toEqual([]);
+    expect(Object.keys(zhCN).filter((key) => BRITISH.test(key))).toEqual([]);
+    expect(BRITISH.test("Room cancelled. Its code no longer works.")).toBe(true);
+    expect(BRITISH.test("Favourite card")).toBe(true);
+    expect(BRITISH.test("Room canceled. Its code no longer works.")).toBe(false);
+    expect(BRITISH.test("Read that edge as optimistic.")).toBe(false);
   });
 
   it("the guards flag the old words and marks and pass the new ones", () => {

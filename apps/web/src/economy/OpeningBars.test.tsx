@@ -1,5 +1,5 @@
 // The opening's two bars and the reward reveal (#1658, R1953000), from crafted answers: both bars
-// pinned at the top as a HUD, unmoved ones included; each spent slot's points flying into it, labelled
+// pinned at the top as a HUD, unmoved ones included; each spent slot's points flying into it, labeled
 // with the server's points and tinted by rarity; then each bar filling from its points before to its
 // points after, a full one pulsing as it bursts and revealing what its fill paid; and the reveal
 // flying its items out one by one with the pack opening's sting, or all at once with one sting under
@@ -299,7 +299,7 @@ describe("#1953 the opening's HUD", () => {
     expect(five).toHaveAttribute("data-rarity", "Legendary");
     expect(ten).toHaveTextContent(/^\+10$/);
     expect(ten).toHaveAttribute("data-rarity", "Mythic");
-    // Each takes off from its slot's centre for the HUD's, one stagger after the one before.
+    // Each takes off from its slot's center for the HUD's, one stagger after the one before.
     expect(five.style.getPropertyValue("--flight-x")).toBe("150px");
     expect(five.style.getPropertyValue("--flight-y")).toBe("470px");
     expect(five.style.getPropertyValue("--flight-dx")).toBe("350px");

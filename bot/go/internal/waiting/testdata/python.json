@@ -1,0 +1,802 @@
+{
+"need": [
+[
+"review",
+"easy",
+{},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"easy",
+{
+"review_floor": "strong"
+},
+[
+"review",
+"strong",
+"a person asked for a strong review"
+]
+],
+[
+"review",
+"easy",
+{
+"review_floor": "medium"
+},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"easy",
+{
+"review_floor": "weak"
+},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"easy",
+{
+"review_floor": "bogus"
+},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"easy",
+{
+"audit_tier": "strong"
+},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"easy",
+{
+"audit_tier": "medium"
+},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"easy",
+{
+"bot_pr": true
+},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"easy",
+{
+"bot_pr": true,
+"conflict": true
+},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"easy",
+{
+"bot_pr": true,
+"audit_tier": "weak"
+},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"easy",
+{
+"bot_pr": false,
+"audit_tier": "strong"
+},
+[
+"review",
+"medium",
+""
+]
+],
+[
+"review",
+"medium",
+{},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"review_floor": "strong"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"review_floor": "medium"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"review_floor": "weak"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"review_floor": "bogus"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"audit_tier": "strong"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"audit_tier": "medium"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"bot_pr": true
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"bot_pr": true,
+"conflict": true
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"bot_pr": true,
+"audit_tier": "weak"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"medium",
+{
+"bot_pr": false,
+"audit_tier": "strong"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"review_floor": "strong"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"review_floor": "medium"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"review_floor": "weak"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"review_floor": "bogus"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"audit_tier": "strong"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"audit_tier": "medium"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"bot_pr": true
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"bot_pr": true,
+"conflict": true
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"bot_pr": true,
+"audit_tier": "weak"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"review",
+"hard",
+{
+"bot_pr": false,
+"audit_tier": "strong"
+},
+[
+"review",
+"strong",
+"its final audit"
+]
+],
+[
+"revise",
+"easy",
+{},
+[
+"revise",
+"medium",
+"a person's pull request wants a reviewer in its run"
+]
+],
+[
+"revise",
+"easy",
+{
+"review_floor": "strong"
+},
+[
+"revise",
+"medium",
+"a person's pull request wants a reviewer in its run"
+]
+],
+[
+"revise",
+"easy",
+{
+"review_floor": "medium"
+},
+[
+"revise",
+"medium",
+"a person's pull request wants a reviewer in its run"
+]
+],
+[
+"revise",
+"easy",
+{
+"review_floor": "weak"
+},
+[
+"revise",
+"medium",
+"a person's pull request wants a reviewer in its run"
+]
+],
+[
+"revise",
+"easy",
+{
+"review_floor": "bogus"
+},
+[
+"revise",
+"medium",
+"a person's pull request wants a reviewer in its run"
+]
+],
+[
+"revise",
+"easy",
+{
+"audit_tier": "strong"
+},
+[
+"revise",
+"strong",
+"it answers a strong reviewer's audit"
+]
+],
+[
+"revise",
+"easy",
+{
+"audit_tier": "medium"
+},
+[
+"revise",
+"medium",
+"it answers a medium reviewer's audit"
+]
+],
+[
+"revise",
+"easy",
+{
+"bot_pr": true
+},
+[
+"revise",
+"weak",
+""
+]
+],
+[
+"revise",
+"easy",
+{
+"bot_pr": true,
+"conflict": true
+},
+[
+"revise",
+"medium",
+"a conflict with main wants a reviewer in its run"
+]
+],
+[
+"revise",
+"easy",
+{
+"bot_pr": true,
+"audit_tier": "weak"
+},
+[
+"revise",
+"weak",
+""
+]
+],
+[
+"revise",
+"easy",
+{
+"bot_pr": false,
+"audit_tier": "strong"
+},
+[
+"revise",
+"strong",
+"it answers a strong reviewer's audit"
+]
+],
+[
+"revise",
+"medium",
+{},
+[
+"revise",
+"medium",
+""
+]
+],
+[
+"revise",
+"medium",
+{
+"review_floor": "strong"
+},
+[
+"revise",
+"medium",
+""
+]
+],
+[
+"revise",
+"medium",
+{
+"review_floor": "medium"
+},
+[
+"revise",
+"medium",
+""
+]
+],
+[
+"revise",
+"medium",
+{
+"review_floor": "weak"
+},
+[
+"revise",
+"medium",
+""
+]
+],
+[
+"revise",
+"medium",
+{
+"review_floor": "bogus"
+},
+[
+"revise",
+"medium",
+""
+]
+],
+[
+"revise",
+"medium",
+{
+"audit_tier": "strong"
+},
+[
+"revise",
+"strong",
+"it answers a strong reviewer's audit"
+]
+],
+[
+"revise",
+"medium",
+{
+"audit_tier": "medium"
+},
+[
+"revise",
+"medium",
+""
+]
+],
+[
+"revise",
+"medium",
+{
+"bot_pr": true
+},
+[
+"revise",
+"medium",
+""
+]
+],
+[
+"revise",
+"medium",
+{
+"bot_pr": true,
+"conflict": true
+},
+[
+"revise",
+"medium",
+""
+]
+],
+[
+"revise",
+"medium",
+{
+"bot_pr": true,
+"audit_tier": "weak"
+},
+[
+"revise",
+"medium",
+""
+]
+],
+[
+"revise",
+"medium",
+{
+"bot_pr": false,
+"audit_tier": "strong"
+},
+[
+"revise",
+"strong",
+"it answers a strong reviewer's audit"
+]
+],
+[
+"revise",
+"hard",
+{},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"review_floor": "strong"
+},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"review_floor": "medium"
+},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"review_floor": "weak"
+},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"review_floor": "bogus"
+},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"audit_tier": "strong"
+},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"audit_tier": "medium"
+},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"bot_pr": true
+},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"bot_pr": true,
+"conflict": true
+},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"bot_pr": true,
+"audit_tier": "weak"
+},
+[
+"revise",
+"strong",
+""
+]
+],
+[
+"revise",
+"hard",
+{
+"bot_pr": false,
+"audit_tier": "strong"
+},
+[
+"revise",
+"strong",
+""
+]
+]
+]
+}

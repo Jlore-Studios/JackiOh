@@ -46,7 +46,7 @@ impl std::fmt::Display for Matchup {
     }
 }
 
-/// One value per matchup, serialised `{ "ai-vs-random": …, … }`.
+/// One value per matchup, serialized `{ "ai-vs-random": …, … }`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct ByMatchup<T> {
     #[serde(rename = "ai-vs-random")]

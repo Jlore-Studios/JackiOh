@@ -11,10 +11,10 @@
 //! card stands on the field; it goes when Palantir leaves).
 //!
 //! The steal answers the opponent's announce (`cardAnnounced`, §10.5 step 3a) as a Counter (§6.3, B5
-//! E1, R448): the card is cancelled before it moves and goes to your hand as your own card (B5 E2, the
+//! E1, R448): the card is canceled before it moves and goes to your hand as your own card (B5 E2, the
 //! Steal off the field: its owner changes, §3.2, R12; a full hand burns it into your graveyard, R317),
 //! and then you cast it (R831001): a cast by Palantir's controller (R70), every choice made at random
-//! and each target aimed in your favour (R452, R656), after which it goes to your graveyard as your
+//! and each target aimed in your favor (R452, R656), after which it goes to your graveyard as your
 //! card. A cast is a play and is answered too (R70). The Spells it answers are the (1) Cost ones, their
 //! own cost as they stand out of play (R65: an X Spell counts 0, R396), Books or not.
 //!   - Base: "Tribute this to steal and cast it" is a price paid without asking (no "you may", balance patch 1):
@@ -66,7 +66,7 @@ fn draw_limit() -> DrawLimitHook {
 }
 
 /// "Steal it and cast it yourself": countered into your hand, then cast by you, every choice at
-/// random but aimed in your favour (R831001, R452, R656).
+/// random but aimed in your favor (R831001, R452, R656).
 fn steal_and_cast(spell: &str) -> Vec<Effect> {
     let card = json!({ "of": "instance", "instanceId": spell });
     vec![
@@ -88,15 +88,32 @@ fn steal_one() -> TriggerDef {
     .with_when(|ctx, event| answered(ctx, event).is_some())
 }
 
+/// The Spells the Radiant face has stolen so far, as `memory.stolen` holds them: 0 before the first.
+fn stolen_in(stored: Option<&Value>) -> i32 {
+    stored.and_then(Value::as_f64).map_or(0, |n| n as i32)
+}
+
+/// R2476000: the Radiant face's count, after "Once it has stolen {threshold}" filled as the face prints
+/// it now (R386). On the field only, where it counts (R78 resets it as it leaves). Each steal was a
+/// public counter and cast. The base face Tributes on its first steal, so it counts nothing.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let label = format!("Once it has stolen {}", param(&ctx, "threshold"));
+        vec![count_preview(&label, stolen_in(ctx.self_.memory.get(STOLEN)))]
+    })
+}
+
 /// Radiant: steal each one, count them, and Tribute this once it has stolen {threshold}.
 fn steal_some() -> TriggerDef {
     TriggerDef::new("palantir-spells", &[GameEventType::CardAnnounced], |ctx, event| {
         let Some(spell) = answered(ctx, event) else {
             return vec![];
         };
-        let before = recalled(ctx, STOLEN);
         // The count so far, 0 before the first steal.
-        let total = before.as_ref().and_then(Value::as_f64).map_or(0, |n| n as i32) + 1;
+        let total = stolen_in(recalled(ctx, STOLEN).as_ref()) + 1;
         let mut effects = steal_and_cast(&spell);
         effects.push(remember(json_as(json!({ "key": STOLEN, "value": total }))));
         if total >= param(&*ctx, "threshold") {
@@ -118,6 +135,7 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         draw_limit: Some(limit),
         triggers: vec![steal_some()],
+        preview: Some(preview()),
         ..Script::default()
     };
 
@@ -643,6 +661,21 @@ mod tests {
                 assert_eq!(s.card(&stockpile).owner, P2);
                 s.expect_in_zone(&palantir, "field");
                 assert!(stolen(&s, &palantir).is_none());
+            }
+
+            /// R2476000: the Radiant face shows the Spells it has stolen after "Once it has stolen 3", to
+            /// both seats: 0, then 1 after it steals a Stockpile, and it stays on the field until 3.
+            #[test]
+            fn r2476000_it_previews_the_spells_it_has_stolen_toward_its_threshold() {
+                crate::register_all();
+                let mut s = setup(json!({}), json!({}), true);
+                let palantir = s.card(PALANTIR).id.clone();
+                let label = "Once it has stolen 3".to_string();
+                assert_eq!(crate::preview_seen(&s, P1, &palantir), vec![(label.clone(), 0, None)]);
+                s.play(STOCKPILE, json!({}));
+                s.expect_in_zone(palantir.as_str(), "field");
+                assert_eq!(crate::preview_seen(&s, P1, &palantir), vec![(label.clone(), 1, None)]);
+                assert_eq!(crate::preview_seen(&s, P2, &palantir), vec![(label, 1, None)]);
             }
 
             #[test]

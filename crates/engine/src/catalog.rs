@@ -2,7 +2,7 @@
 //! registry rather than carrying it in GameState, which stays serializable. Fused and crafted
 //! definitions live in `state.transientDefs` and win over the registry.
 //!
-//! Port of `packages/engine/src/catalog.ts`. Three changes of shape, none of behaviour (SURFACE §3,
+//! Port of `packages/engine/src/catalog.ts`. Three changes of shape, none of behavior (SURFACE §3,
 //! §6.6, §8):
 //!
 //! - The registry is a `OnceLock`, set once by `register_catalog` (which `jackioh_cards::register_all`
@@ -51,7 +51,7 @@ use crate::wire::{
 };
 
 /// A hasher for the registries' card ids (`catalog-NNN`, `classicplus-NNN`, …): short strings looked
-/// up thousands of times a turn, where SipHash's defence against chosen keys buys nothing, since the
+/// up thousands of times a turn, where SipHash's defense against chosen keys buys nothing, since the
 /// keys are the catalog's own. A map's iteration order is its insertion order whatever its hasher, so
 /// this changes how fast an id is found and nothing else.
 #[derive(Default, Clone, Copy)]

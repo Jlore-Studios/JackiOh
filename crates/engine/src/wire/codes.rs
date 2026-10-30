@@ -8,7 +8,7 @@
 //! The reading is:
 //!  1. Input longer than `max_input_length` is refused unread, so config bounds the work a caller can
 //!     make a redemption do.
-//!  2. Unicode compatibility normalisation (NFKC), which folds fullwidth forms and ligatures.
+//!  2. Unicode compatibility normalization (NFKC), which folds fullwidth forms and ligatures.
 //!  3. Upper case one code point at a time. A code point whose upper case is more than one character
 //!     ("ß" becomes "SS") is kept as it was, so it reads as foreign instead of growing the code.
 //!  4. Every separator removed: whitespace, ASCII and Unicode dashes, the soft hyphen and the
@@ -22,7 +22,7 @@
 //! `apps/web/src/wire/codes.ts`, and both are tested against one table,
 //! `crates/engine/tests/fixtures/code-input-cases.json`, so they cannot drift.
 //!
-//! The pure crates have no Unicode-normalisation crate (SURFACE §2, §3), so step 2's NFKC is written
+//! The pure crates have no Unicode-normalization crate (SURFACE §2, §3), so step 2's NFKC is written
 //! out here (`nfkc`): the full compatibility decompositions, the canonical combining classes and the
 //! primary composites of the Unicode version the TypeScript ran on (Node 22's ICU, Unicode 16.0),
 //! generated from that engine's own `String.prototype.normalize` and checked against it on every code
@@ -555,7 +555,7 @@ pub fn excluded_characters(format: &CodeFormat) -> Vec<String> {
 /// `String.prototype.normalize("NFKC")`: the full compatibility decomposition, the canonical
 /// ordering of each run of combining marks (a stable sort by combining class), then canonical
 /// composition (UAX #15), with Hangul by arithmetic. The tables below are the Unicode 16.0 data the
-/// TypeScript's engine normalised with (see the module header).
+/// TypeScript's engine normalized with (see the module header).
 mod nfkc {
     use std::cmp::Ordering;
 
@@ -2835,7 +2835,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------------------------
-    // B1: separators, normalisation and the canonical reading
+    // B1: separators, normalization and the canonical reading
     // -----------------------------------------------------------------------------------------
 
     /// Every separator `is_code_separator` names, one of each kind.
@@ -3369,7 +3369,7 @@ mod tests {
     // The NFKC this port writes out (not in the TS suite, which had the engine's own).
     // -----------------------------------------------------------------------------------------
 
-    mod nfkc_as_the_typescript_engine_normalised {
+    mod nfkc_as_the_typescript_engine_normalized {
         use super::*;
 
         #[test]

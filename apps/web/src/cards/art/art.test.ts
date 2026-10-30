@@ -1,5 +1,5 @@
 // Polish 6, slice A: the procedural art module, tested pure (docs/polish/6-cards.md, Surface A,
-// behaviours B1–B5). Nothing here renders; `CardArt.test.tsx` covers the DOM (B6).
+// behaviors B1–B5). Nothing here renders; `CardArt.test.tsx` covers the DOM (B6).
 // Where the doc names a published algorithm (FNV-1a, mulberry32) its reference outputs are pinned,
 // since a wrong hash passes any test that checks no vector.
 

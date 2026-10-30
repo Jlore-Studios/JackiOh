@@ -587,8 +587,8 @@ fn land(
     {
         let source_id = source.map(|card| card.id.clone());
         let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
-        if let Some(LethalHitTo::Cancelled) = to {
-            // R1704001: a cancelled hit deals nothing, and emits no damage event.
+        if let Some(LethalHitTo::Canceled) = to {
+            // R1704001: a canceled hit deals nothing, and emits no damage event.
             return Landed::default();
         }
         if let Some(LethalHitTo::Target(to)) = to {
@@ -650,7 +650,7 @@ fn land(
     {
         let source_id = source.map(|card| card.id.clone());
         let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
-        if let Some(LethalHitTo::Cancelled) = to {
+        if let Some(LethalHitTo::Canceled) = to {
             return Landed::default();
         }
         if let Some(LethalHitTo::Target(to)) = to {
@@ -881,6 +881,19 @@ fn adjacent_units_of(
 /// `{ turn, moved }`, as an Activate ability notes its uses (`subsystems::activate`).
 const OWN_TURN_REDIRECT_KEY: &str = "ownTurnRedirect";
 
+/// R1849004: how much `card`'s own-turn redirect has taken off its controller's hero this turn, read
+/// off its note (`OWN_TURN_REDIRECT_KEY`); a note from another turn is 0. What the cap's rest is
+/// counted from, here and in its preview (`query::own_turn_redirect_left`, R2476000).
+pub(crate) fn own_turn_redirect_moved(state: &GameState, card: &CardInstance) -> i32 {
+    card.memory
+        .get(OWN_TURN_REDIRECT_KEY)
+        .filter(|record| {
+            record.get("turn").and_then(serde_json::Value::as_i64) == Some(i64::from(state.turn))
+        })
+        .and_then(|record| record.get("moved").and_then(serde_json::Value::as_i64))
+        .map_or(0, |moved| moved as i32)
+}
+
 /// What an own-turn redirect did to one hit: how much it took off the hero, and what that dealt to
 /// the opponent's hero.
 struct Moved {
@@ -920,12 +933,7 @@ fn own_turn_redirect(
             crate::params::declared_or(sink.state, &card, "multiplier", redirect.multiplier.unwrap_or(1))
                 .max(1);
         let turn = sink.state.turn;
-        let used = card
-            .memory
-            .get(OWN_TURN_REDIRECT_KEY)
-            .filter(|record| record.get("turn").and_then(serde_json::Value::as_i64) == Some(i64::from(turn)))
-            .and_then(|record| record.get("moved").and_then(serde_json::Value::as_i64))
-            .map_or(0, |moved| moved as i32);
+        let used = own_turn_redirect_moved(sink.state, &card);
         let take = rest.min(cap - used);
         if take <= 0 {
             continue;

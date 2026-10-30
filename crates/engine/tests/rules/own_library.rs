@@ -113,7 +113,7 @@ fn created_entry(def_id: &str, radiant: bool, count: i32) -> LibraryEntryView {
 }
 
 fn to_json(value: &impl serde::Serialize) -> String {
-    serde_json::to_string(value).expect("serialises")
+    serde_json::to_string(value).expect("serializes")
 }
 
 /// R310 the viewer's own library, without its order
@@ -159,7 +159,7 @@ mod r310_the_viewer_s_own_library_without_its_order {
 
         // The opponent's library is a count and nothing else (§9.1, §10.8).
         assert!(view.opponent.own_library.is_none());
-        let opponent = serde_json::to_value(&view.opponent).expect("serialises");
+        let opponent = serde_json::to_value(&view.opponent).expect("serializes");
         assert!(
             !opponent
                 .as_object()
@@ -255,7 +255,7 @@ mod r310_the_viewer_s_own_library_without_its_order {
         }
         // An entry is three fields and no more: nothing a position, a live cost or a roll could ride on.
         for entry in &cards {
-            let json = serde_json::to_value(entry).expect("serialises");
+            let json = serde_json::to_value(entry).expect("serializes");
             let mut keys: Vec<String> = json.as_object().expect("an object").keys().cloned().collect();
             keys.sort();
             assert_eq!(keys, vec!["count", "defId", "radiant"]);

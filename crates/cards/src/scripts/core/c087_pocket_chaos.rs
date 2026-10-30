@@ -255,7 +255,7 @@ mod tests {
 
             s.play(CHAOS, json!({ "modes": ["board"] }));
 
-            // Lane-preserving: the same row and lane on the other side of the centre line.
+            // Lane-preserving: the same row and lane on the other side of the center line.
             assert_eq!(s.unit(P2, 1).map(|card| card.id.clone()), Some(gary.id.clone()));
             assert!(s.unit(P1, 1).is_none());
             assert_eq!(s.unit(P1, 3).map(|card| card.id.clone()), Some(reno.id.clone()));
@@ -315,7 +315,7 @@ mod tests {
             s.expect_in_zone(&gary, "hand");
             assert!(s.hand(Some(P1)).iter().any(|card| card.id == gary.id));
             assert!(s.unit(P2, 1).is_none());
-            // The lock is a zone flag: it neither travelled nor was cleared.
+            // The lock is a zone flag: it neither traveled nor was cleared.
             assert!(is_locked(s.state(), slot(P2, 1)));
             assert!(!is_locked(s.state(), slot(P1, 1)));
             s.expect_events(json!(["swapped", "bounced"]));
@@ -357,7 +357,7 @@ mod tests {
             let this = s.card(CHAOS).clone();
 
             // `playChoices` refuses a play that answers a declared mode with nothing, which is the engine's
-            // own guard; the script's fizzle is the second line of defence §8's Conventions ask for.
+            // own guard; the script's fizzle is the second line of defense §8's Conventions ask for.
             s.expect_refused_with(
                 |s| {
                     s.play(&this, json!({ "modes": [] }))
@@ -526,10 +526,10 @@ mod tests {
             // Each player now holds the other's old library, and was shown none of it.
             assert_eq!(js(&s.view(Some(P1)).you.own_library), json!({ "cards": [], "unknown": 2 }));
             assert_eq!(js(&s.view(Some(P2)).you.own_library), json!({ "cards": [], "unknown": 1 }));
-            let mine = serde_json::to_string(&s.view(Some(P1))).expect("serialises");
+            let mine = serde_json::to_string(&s.view(Some(P1))).expect("serializes");
             assert!(!mine.contains(&format!("\"{RENO}\"")));
             assert!(!mine.contains(&format!("\"{POSTDOC}\"")));
-            let theirs = serde_json::to_string(&s.view(Some(P2))).expect("serialises");
+            let theirs = serde_json::to_string(&s.view(Some(P2))).expect("serializes");
             assert!(!theirs.contains(&format!("\"{GARY}\"")));
         }
     }

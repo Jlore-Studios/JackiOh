@@ -390,7 +390,7 @@ fn r1834006_under_the_minimum_keeps_the_prior() {
 async fn cosmetics_fit_refuses_an_unknown_argument() {
     let refusal = cosmetics_fit::run(vec!["--min=3".to_string()]).await;
     let message = refusal.expect_err("an option it does not take").to_string();
-    assert!(message.contains("Unrecognised argument \"--min=3\""), "{message}");
+    assert!(message.contains("Unrecognized argument \"--min=3\""), "{message}");
     assert!(
         message.contains("Usage: jackioh-server cosmetics-fit"),
         "{message}"

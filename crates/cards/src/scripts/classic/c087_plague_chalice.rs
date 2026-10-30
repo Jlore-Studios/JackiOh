@@ -359,7 +359,7 @@ mod tests {
             assert_eq!(graveyard, [PAWN]);
             // p1 reads it only now that the graveyard shows it.
             let opponent = js(&t.view(P1))["opponent"].clone();
-            assert!(serde_json::to_string(&opponent).expect("serialisable").contains(PAWN));
+            assert!(serde_json::to_string(&opponent).expect("serializable").contains(PAWN));
         }
 
         /// leaving the field ends it: exiled, it counters nothing more

@@ -498,7 +498,7 @@ mod r781000_a_log_recorded_before_the_equip_rename_still_folds {
             .log
             .iter()
             .find(|action| action.nonce == "golden-7")
-            .map(|action| serde_json::to_value(action).expect("an action serialises"));
+            .map(|action| serde_json::to_value(action).expect("an action serializes"));
         let played = played.expect("step 7 is in the log");
         assert_eq!(
             played["equip"],
