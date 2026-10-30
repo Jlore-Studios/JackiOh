@@ -18044,14 +18044,18 @@
         {
           "at": "2026-10-30T10:03:12Z",
           "minutes": 97.3
+        },
+        {
+          "at": "2026-10-30T11:28:28Z",
+          "minutes": 140.8
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-30T14:06:00Z",
-          "utilization": 0.02
+          "utilization": 0.03
         },
-        "observed_at": "2026-10-30T10:03:12Z",
+        "observed_at": "2026-10-30T11:28:28Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
           "utilization": 0.94
