@@ -433,7 +433,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
                 play_fillers(&mut s, 2, P1);
-                assert!(!serde_json::to_string(&s.view(P2)).expect("a view serialises").contains(AUCTION));
+                assert!(!serde_json::to_string(&s.view(P2)).expect("a view serializes").contains(AUCTION));
             }
 
             #[test]

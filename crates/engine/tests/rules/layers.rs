@@ -9,7 +9,7 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{
-    armoured, big_body, big_dfender, indestructible, plain, poisonous, shielded, spikey_pillow, stacker,
+    armored, big_body, big_dfender, indestructible, plain, poisonous, shielded, spikey_pillow, stacker,
     taunter, zero_attack,
 };
 use crate::rules::fixtures::harness::{both, live, new_game, put, slot};
@@ -758,7 +758,7 @@ mod s10_4_keyword_set {
     #[test]
     fn s10_4_armor_is_summed_across_every_source_printed_granted_defense_position_and_auras() {
         let mut state = board("armor-sum");
-        let unit = put(&mut state, &armoured.id, p1(Row::Units, 2), json!({}));
+        let unit = put(&mut state, &armored.id, p1(Row::Units, 2), json!({}));
         assert_eq!(view(&state, &unit.id).armor, 7);
 
         edit(&mut state, &unit.id, |c| {
@@ -813,7 +813,7 @@ mod s10_4_keyword_set {
         edit(&mut state, &ghoul.id, |c| c.radiant = true);
         assert_eq!(
             serde_json::to_value(layers::face_of(&state, &live(&state, &ghoul.id)))
-                .expect("a face serialises"),
+                .expect("a face serializes"),
             json!({ "attack": 6, "health": 6, "keywords": [{ "kind": "Pierce" }] })
         );
         let v = view(&state, &ghoul.id);
@@ -836,7 +836,7 @@ mod s10_4_keyword_set {
         });
         assert_eq!(
             serde_json::to_value(layers::face_of(&state, &live(&state, &bread.id)))
-                .expect("a face serialises"),
+                .expect("a face serializes"),
             json!({ "attack": 3, "health": 3, "keywords": [{ "kind": "Rush" }] })
         );
     }
@@ -918,15 +918,15 @@ mod s10_4_recomputation {
         assert_eq!((first.attack, first.max_health, first.health), (3, 3, 3));
 
         // Reading writes nothing: §10.1 keeps the state JSON-only, so a round-trip compares exactly.
-        let snapshot = serde_json::to_string(&state).expect("a state serialises");
+        let snapshot = serde_json::to_string(&state).expect("a state serializes");
         view(&state, &unit.id);
         view(&state, &unit.id);
         assert_eq!(
-            serde_json::to_string(&state).expect("a state serialises"),
+            serde_json::to_string(&state).expect("a state serializes"),
             snapshot
         );
 
-        let fields = serde_json::to_value(live(&state, &unit.id)).expect("a card serialises");
+        let fields = serde_json::to_value(live(&state, &unit.id)).expect("a card serializes");
         let fields = fields.as_object().expect("a card is an object");
         assert!(!fields.contains_key("attack"));
         assert!(!fields.contains_key("maxHealth"));

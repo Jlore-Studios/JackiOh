@@ -431,12 +431,12 @@ mod r831003_each_cell_is_discovered_among_3_random_cells {
         let pending = open_as(&state, PromptKind::Mode, P1);
         assert!(
             !serde_json::to_string(&pending.options)
-                .expect("options serialise")
+                .expect("options serialize")
                 .contains(&trap.id)
         );
         assert!(
             !serde_json::to_string(&view_for(&state, P1).pending)
-                .expect("a view serialises")
+                .expect("a view serializes")
                 .contains(&trap.id)
         );
         for opened in events_json(&view_for(&state, P2).events, GameEventType::PromptOpened) {

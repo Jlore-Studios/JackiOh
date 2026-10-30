@@ -83,7 +83,7 @@ fn may_preview(state: &GameState, card: &CardInstance, viewer: PlayerId, zone: C
     }
 }
 
-/// R280: the labelled numbers `viewer` sees on `card`, or `None` for none. Pure: it copies what the
+/// R280: the labeled numbers `viewer` sees on `card`, or `None` for none. Pure: it copies what the
 /// hook returns, so the view holds no reference into a script, and it calls the hook at most once.
 pub fn preview_of(
     state: &GameState,

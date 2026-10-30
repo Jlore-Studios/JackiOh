@@ -772,12 +772,12 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
         ));
     }
     // `rooms_release` deletes only an unjoined row: a claim that landed after the read keeps its room.
-    let cancelled = release_room(&mut tx, &code).await?;
+    let canceled = release_room(&mut tx, &code).await?;
     tx.commit().await?;
-    if cancelled {
+    if canceled {
         tracing::info!(event = "room.cancelled", code = %code, hostProfileId = %profile_id);
     }
-    Ok(json_response(200, json!({ "cancelled": cancelled })))
+    Ok(json_response(200, json!({ "cancelled": canceled })))
 }
 
 /// GET /api/rooms — the caller's own rooms nobody has joined and not expired, newest first, as
@@ -804,7 +804,7 @@ pub async fn mine(app: &Arc<App>, req: Req) -> ApiResult {
 
 // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
 
-/// SPEC S7, B49: frees a challenge's room once the challenge is declined or cancelled, in the
+/// SPEC S7, B49: frees a challenge's room once the challenge is declined or canceled, in the
 /// caller's transaction: an unjoined room goes (its code is free again, R110, and a join meets the
 /// miss an unknown code is), with the end-to-end seed its host held for it (R143). A room someone
 /// joined is never touched. False when there was no unjoined room under the code.

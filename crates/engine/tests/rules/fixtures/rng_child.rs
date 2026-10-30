@@ -21,7 +21,7 @@ pub fn rng_child(args: &[&str]) -> String {
     // `JSON.stringify({ draws, cursor })` keeps that key order; serde_json's map would sort it.
     format!(
         "{{\"draws\":{},\"cursor\":{}}}",
-        serde_json::to_string(&draws).expect("draws serialise"),
+        serde_json::to_string(&draws).expect("draws serialize"),
         rng.cursor()
     )
 }

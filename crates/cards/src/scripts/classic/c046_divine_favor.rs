@@ -195,7 +195,7 @@ mod tests {
                 // Hinder's discard is random (R682): no prompt opens, and the one card held goes.
                 assert!(s.state().pending.is_none());
                 let round: GameState =
-                    serde_json::from_str(&serde_json::to_string(s.state()).expect("the state serialises"))
+                    serde_json::from_str(&serde_json::to_string(s.state()).expect("the state serializes"))
                         .expect("the state parses back");
                 assert_eq!(&round, s.state());
                 // Hinder's chain repeats into one Menace; Divine Favor asks for no more.

@@ -1034,7 +1034,7 @@
   pointer-events: none;
 }
 
-/* The sheet: a centred dialog on a wide screen, a bottom sheet on a phone. The grid scrolls
+/* The sheet: a centered dialog on a wide screen, a bottom sheet on a phone. The grid scrolls
    between the pinned header and the pinned actions row. */
 .inspect-list-sheet {
   --list-face-h: 200px;
@@ -1062,7 +1062,7 @@
   animation: inspect-fade 160ms ease-out;
 }
 
-/* Issue #2121 (R2121000): the centred dialog has no grip, but its header still starts a swipe. */
+/* Issue #2121 (R2121000): the centered dialog has no grip, but its header still starts a swipe. */
 .inspect-list-sheet .inspect-grip {
   display: none;
   align-self: center;

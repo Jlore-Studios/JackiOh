@@ -108,7 +108,7 @@ pub fn catalog_from(defs: CardDefs, version: &str) -> Catalog {
     let card_ids = defs.keys().cloned().collect();
     // CardDef's serde shape is the catalog's own (field order and absences included).
     let defs_json =
-        serde_json::to_string(&defs).unwrap_or_else(|error| panic!("CardDefs serialise: {error}"));
+        serde_json::to_string(&defs).unwrap_or_else(|error| panic!("CardDefs serialize: {error}"));
     Catalog {
         version: version.to_string(),
         defs,
@@ -244,7 +244,7 @@ pub async fn get_catalog_version(app: &Arc<App>, req: Req) -> ApiResult {
     if let Some(defs) = jackioh_cards::catalog_defs_at(version) {
         let version_json = serde_json::to_string(version).unwrap_or_else(|_| "\"\"".to_string());
         let defs_json =
-            serde_json::to_string(defs).unwrap_or_else(|error| panic!("CardDefs serialise: {error}"));
+            serde_json::to_string(defs).unwrap_or_else(|error| panic!("CardDefs serialize: {error}"));
         let body = format!("{{\"version\":{version_json},\"defs\":{defs_json}}}");
         let response = Response::builder()
             .status(200)

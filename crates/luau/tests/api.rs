@@ -596,7 +596,7 @@ fn readers_probe_values() {
 // --------------------------------------------------------------------------------
 
 /// (verb, minimal args) pairs: each must build through `effect_of` with the
-/// verb's own kind. The parity scenarios above prove the behaviour; this table
+/// verb's own kind. The parity scenarios above prove the behavior; this table
 /// proves every other verb group is wired.
 fn verb_cases() -> Vec<(&'static str, Value)> {
     vec![

@@ -15,7 +15,7 @@ import "./blocked.css";
 /** How long the mark stays on the zone before it is taken down. */
 export const BLOCKED_MARK_MS = 700;
 
-/** Where a refused drop landed: the locked zone's centre and its size. `key` renews the mark. */
+/** Where a refused drop landed: the locked zone's center and its size. `key` renews the mark. */
 export type Blocked = { key: number; testid: string; x: number; y: number; size: number };
 
 export default function BlockedMark(props: { blocked: Blocked | null; onDone: () => void }): ReactElement | null {

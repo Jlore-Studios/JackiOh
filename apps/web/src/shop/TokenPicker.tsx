@@ -67,11 +67,11 @@ export default function TokenPicker({
   const [reading, setReading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     setReading(true);
     Promise.all([getTokens(token), getCollection(token)]).then(
       ([barsAnswer, collectionAnswer]) => {
-        if (!cancelled) {
+        if (!canceled) {
           setBars(barsAnswer);
           setCollection(collectionAnswer);
           setLoadError(null);
@@ -79,7 +79,7 @@ export default function TokenPicker({
         }
       },
       (cause: unknown) => {
-        if (!cancelled) {
+        if (!canceled) {
           setReading(false);
           // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
           const keptBars = cachedRead<TokenBarsResponse>(token, keptPaths.tokens);
@@ -95,7 +95,7 @@ export default function TokenPicker({
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, revision, attempt]);
 

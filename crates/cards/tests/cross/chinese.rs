@@ -188,7 +188,7 @@ fn preview_labels(id: &str) -> Vec<(FaceKind, String)> {
             "p1": { "hand": [{ "def": id, "radiant": radiant }, "core-010"], "library": libraries },
             "p2": { "library": libraries, "field": ["core-019"] },
         }));
-        let view = serde_json::to_value(s.view(PlayerId::P1)).expect("a view serialises");
+        let view = serde_json::to_value(s.view(PlayerId::P1)).expect("a view serializes");
         views.extend(view["you"]["hand"].as_array().cloned().unwrap_or_default());
         if card.type_ != CardType::Spell {
             let row = if card.type_ == CardType::Unit {
@@ -200,7 +200,7 @@ fn preview_labels(id: &str) -> Vec<(FaceKind, String)> {
                 "p1": { row: [{ "def": id, "radiant": radiant, "faceUp": true }], "library": libraries },
                 "p2": { "library": libraries, "field": ["core-019"] },
             }));
-            let view = serde_json::to_value(s.view(PlayerId::P1)).expect("a view serialises");
+            let view = serde_json::to_value(s.view(PlayerId::P1)).expect("a view serializes");
             for pile in ["units", "backrow"] {
                 views.extend(view["you"][pile].as_array().cloned().unwrap_or_default());
             }

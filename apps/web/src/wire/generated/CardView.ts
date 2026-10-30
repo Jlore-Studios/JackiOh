@@ -110,7 +110,7 @@ tradeReason?: string,
  */
 choicesTruncated?: true, 
 /**
- * R280, §10.8: what the card's formula comes to now, one entry per labelled number its script's
+ * R280, §10.8: what the card's formula comes to now, one entry per labeled number its script's
  * `preview` hook returns — the label the formula as the running face prints it, the value what it
  * would come to if the card resolved now. Only on a card view the viewer may read: its own hand, a
  * unit on top of its pile, a face-up backrow card, a face-down one for its controller. Absent when

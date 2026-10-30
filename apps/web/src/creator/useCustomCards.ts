@@ -35,7 +35,7 @@ export function useCustomCards(
 
   useEffect(() => {
     if (token === null) return;
-    let cancelled = false;
+    let canceled = false;
     let pending: Promise<CustomCardsResponse>;
     try {
       pending = loader.current(token);
@@ -44,18 +44,18 @@ export function useCustomCards(
     }
     pending.then(
       (response) => {
-        if (cancelled) return;
+        if (canceled) return;
         const cards = Array.isArray(response.cards) ? response.cards : [];
         setLoaded({ token, state: { kind: "ready", cards, limit: response.limits.cards } });
       },
       (cause: unknown) => {
-        if (cancelled) return;
+        if (canceled) return;
         const { retryAfterMs } = readFailureOf(cause);
         setLoaded({ token, state: retryAfterMs === undefined ? { kind: "failed" } : { kind: "failed", retryAfterMs } });
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, generation]);
 

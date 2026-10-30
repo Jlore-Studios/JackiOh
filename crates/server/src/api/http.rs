@@ -39,7 +39,7 @@ use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
 // Errors
 // ---------------------------------------------------------------------------
 
-/// Every error code the API answers with (TS `ApiErrorCode`), serialised as TS's literals.
+/// Every error code the API answers with (TS `ApiErrorCode`), serialized as TS's literals.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum ApiErrorCode {
@@ -323,7 +323,7 @@ pub fn ok(body: Value) -> Response {
     json(200, body)
 }
 
-/// `ok` for anything serialisable: the body as its JSON.
+/// `ok` for anything serializable: the body as its JSON.
 pub fn ok_of<T: Serialize>(body: &T) -> ApiResult {
     Ok(ok(to_json(body)?))
 }

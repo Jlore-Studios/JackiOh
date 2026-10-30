@@ -8,7 +8,7 @@
 //! discard, a hand count, a steal out of the hand) reaches it (R448). This module is only the record
 //! of which announces are open, read by every module that must know: the Counter verb
 //! (`effects::move_::counter_play`), the trap dispatch and the trigger queue (a response to an announce
-//! that a Counter has already cancelled finds no card: a trap stays set, a trigger fizzles), and
+//! that a Counter has already canceled finds no card: a trap stays set, a trigger fizzles), and
 //! `view_for` and the AI's redaction (a card being set face-down is read by its player alone while it
 //! waits). It is a leaf: it reads and writes `state.announcing` and nothing else.
 //!
@@ -29,8 +29,8 @@ pub fn announce_of<'a>(state: &'a GameState, instance_id: &str) -> Option<&'a An
         .find(|record| record.instance_id == instance_id)
 }
 
-/// R448: whether this card's play is still announced and uncancelled — what a Counter can still
-/// answer. False once a Counter has cancelled it (the rest find no card and stay set), and once
+/// R448: whether this card's play is still announced and uncanceled — what a Counter can still
+/// answer. False once a Counter has canceled it (the rest find no card and stay set), and once
 /// step 4 has moved it (the window is over).
 pub fn is_announce_live(state: &GameState, instance_id: &str) -> bool {
     announce_of(state, instance_id).is_some_and(|record| record.countered != Some(true))
@@ -72,7 +72,7 @@ pub fn end_announce(state: &mut GameState, instance_id: &str) -> Option<Announce
     record
 }
 
-/// R448: a Counter cancelled this announce. Returns false when there was nothing live to cancel.
+/// R448: a Counter canceled this announce. Returns false when there was nothing live to cancel.
 pub fn mark_countered(state: &mut GameState, instance_id: &str) -> bool {
     let Some(record) = state
         .announcing

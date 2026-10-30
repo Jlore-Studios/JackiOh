@@ -42,19 +42,19 @@ pub struct MintOptions {
     pub expires_in_days: Option<i64>,
 }
 
-/// Parses `--flag=value` arguments, rejecting anything it does not recognise.
+/// Parses `--flag=value` arguments, rejecting anything it does not recognize.
 pub fn parse_mint_args(argv: &[String]) -> Result<MintOptions> {
     let mut options = MintOptions::default();
 
     for arg in argv {
         let Some((name, raw)) = flag_of(arg) else {
-            return Err(anyhow!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg)));
+            return Err(anyhow!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg)));
         };
 
         // The name is checked before the value, so `--label=bring-up` is reported as the unknown
         // option it is rather than as a malformed number.
         if name != "max-uses" && name != "expires-in-days" {
-            return Err(anyhow!("Unrecognised option --{name}.\n\n{USAGE}"));
+            return Err(anyhow!("Unrecognized option --{name}.\n\n{USAGE}"));
         }
 
         let value = js_number(raw);

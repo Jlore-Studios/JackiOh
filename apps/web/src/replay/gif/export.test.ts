@@ -85,14 +85,14 @@ describe("the GIF export's tries", () => {
     ]);
   });
 
-  it("an export can be cancelled", async () => {
+  it("an export can be canceled", async () => {
     const controller = new AbortController();
     let started = false;
     const waiting: GifRender = (_plan, _assets, options) => {
       started = true;
       return new Promise((_resolve, reject) => {
         options.signal.addEventListener("abort", () => {
-          reject(new DOMException("cancelled", "AbortError"));
+          reject(new DOMException("canceled", "AbortError"));
         });
       });
     };
@@ -100,11 +100,11 @@ describe("the GIF export's tries", () => {
     await Promise.resolve();
     expect(started).toBe(true);
     controller.abort();
-    expect(await running).toEqual({ kind: "cancelled" });
+    expect(await running).toEqual({ kind: "canceled" });
 
-    // Already cancelled: nothing is drawn.
+    // Already canceled: nothing is drawn.
     const { render, asked } = recorder([]);
-    expect(await exportGif({ clip, preset: "square", lookup }, { signal: controller.signal, onProgress: () => undefined }, render)).toEqual({ kind: "cancelled" });
+    expect(await exportGif({ clip, preset: "square", lookup }, { signal: controller.signal, onProgress: () => undefined }, render)).toEqual({ kind: "canceled" });
     expect(asked).toEqual([]);
 
     // A failure that is not a cancellation is the caller's to report.

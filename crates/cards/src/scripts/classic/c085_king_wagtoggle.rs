@@ -205,7 +205,7 @@ mod tests {
             assert!(trap.face_up != Some(true));
             let theirs = js(&s.view(P2));
             assert!(matches_object(&theirs["opponent"]["backrow"][0], &json!({ "faceDown": true })));
-            assert!(!serde_json::to_string(&theirs["events"]).expect("serialisable").contains(SHEEPISH));
+            assert!(!serde_json::to_string(&theirs["events"]).expect("serializable").contains(SHEEPISH));
         }
 
         /// R386 its tuned number: one Upgrade makes it Recruit 2

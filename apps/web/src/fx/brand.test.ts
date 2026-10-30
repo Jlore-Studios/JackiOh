@@ -1,4 +1,4 @@
-// R437: the brand flourish a mark plays as it lands on a card (brand.ts), in the colours of the one
+// R437: the brand flourish a mark plays as it lands on a card (brand.ts), in the colors of the one
 // palette table the card's aura reads (cards/marks.ts).
 
 import type { GameEvent } from "@jackioh/shared";
@@ -30,7 +30,7 @@ function plan(event: GameEvent, D = ANIMATIONS.marked.durationMs): FxCue[] {
 }
 
 describe("R437 the brand", () => {
-  it("R437 a mark landing brands its card with a sigil in the palette's colours, a ring and a burst at the slam", () => {
+  it("R437 a mark landing brands its card with a sigil in the palette's colors, a ring and a burst at the slam", () => {
     const D = 400;
     const cues = plan(marked(true), D);
     const sigil = cues.find((cue): cue is FxBrandCue => cue.kind === "brand");
@@ -41,14 +41,14 @@ describe("R437 the brand", () => {
     expect(cues).toContainEqual(expect.objectContaining({ kind: "burst", preset: palette.preset, at: AT, delayMs: slam }));
   });
 
-  it("R437 another colour key brands in its own colours; an unknown key falls back to the default", () => {
+  it("R437 another color key brands in its own colors; an unknown key falls back to the default", () => {
     const green = plan(marked(true, "green")).find((cue): cue is FxBrandCue => cue.kind === "brand");
     expect(green?.tint.rim).toBe(MARK_PALETTES.green.rim);
     const unknown = plan(marked(true, "ultraviolet")).find((cue): cue is FxBrandCue => cue.kind === "brand");
     expect(unknown?.tint.rim).toBe(MARK_PALETTES[DEFAULT_MARK_COLOR].rim);
   });
 
-  it("R437 a mark leaving puffs away in its colour, with no sigil", () => {
+  it("R437 a mark leaving puffs away in its color, with no sigil", () => {
     const cues = plan(marked(false, "crimson"));
     expect(cues.some((cue) => cue.kind === "brand")).toBe(false);
     expect(cues).toEqual([expect.objectContaining({ kind: "burst", preset: MARK_PALETTES.crimson.preset, at: AT })]);

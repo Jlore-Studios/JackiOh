@@ -28,7 +28,7 @@ import {
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
 const SVG_PREFIX = "data:image/svg+xml,";
 /**
- * Where a glyph's centre may stand: a full face's art window shows about y 18 to 82 of the square
+ * Where a glyph's center may stand: a full face's art window shows about y 18 to 82 of the square
  * (a Unit's portrait 12 to 88), and a portrait's oval narrows at the sides.
  */
 const SHOWN = { left: 10, right: 90, top: 22, bottom: 78, figureBottom: 84 } as const;
@@ -296,7 +296,7 @@ describe("R503 a card's motif comes from its name", () => {
 });
 
 describe("R503 how a motif is drawn", () => {
-  it("R503 a plain card wears its motif as its emblem, in the motif's own colours; a radiant face gilds it", () => {
+  it("R503 a plain card wears its motif as its emblem, in the motif's own colors; a radiant face gilds it", () => {
     const burn = def("classic-036");
     const base = faceSpec(burn, false);
     expect(base.theme).toBe("spell");

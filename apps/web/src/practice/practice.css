@@ -3,9 +3,9 @@
    is Game.tsx, unchanged, laid out and drawn by board.css and the card faces exactly as in hotseat
    and online play; this file only gives it the screen's height (see "the game screen").
 
-   Every colour is a token from index.css, except in the lobby, which is in the tavern
-   (auth/tavern.css, `.tavern` on the lobby's root) and takes its `--tavern-*` colours. A tier's
-   colour is `--tier` (Easy green, Medium gold, Hard red), set wherever a tier is drawn, so a crest,
+   Every color is a token from index.css, except in the lobby, which is in the tavern
+   (auth/tavern.css, `.tavern` on the lobby's root) and takes its `--tavern-*` colors. A tier's
+   color is `--tier` (Easy green, Medium gold, Hard red), set wherever a tier is drawn, so a crest,
    a card and the HUD agree. Motion is scaled by `--anim-scale`, which index.css sets to 0 under
    prefers-reduced-motion. */
 
@@ -74,7 +74,7 @@
 
 /* The lobby is a tavern screen (`app-shell tavern`, routes/practice.tsx): the page, its light, the
    table, Back, the gear, the notices and the buttons are tavern.css's. The rules below draw only
-   what is practice's own, in the tavern's colours; a hairline is its brass at 30%, a stronger edge
+   what is practice's own, in the tavern's colors; a hairline is its brass at 30%, a stronger edge
    at 55%, as tavern.css draws them. */
 
 /* R765: the banners that top the lobby (a saved practice game, a live online game), as wide as the
@@ -297,7 +297,7 @@
   white-space: nowrap;
 }
 
-/* A line where the AI gets more than you: the tier's colour and a rising marker. */
+/* A line where the AI gets more than you: the tier's color and a rising marker. */
 .practice-tier__stat[data-ahead="true"] .practice-tier__stat-value {
   color: color-mix(in srgb, var(--tier) 72%, var(--tavern-parchment));
 }
@@ -663,7 +663,7 @@
 }
 
 /* Stuck, it floats `--hud-inset` below the viewport's edge, and its first shadow is a band of the
-   page's colour filling that gap, so the board never shows through above it. */
+   page's color filling that gap, so the board never shows through above it. */
 .practice-hud {
   --tier: var(--legal);
   --hud-inset: 6px;
@@ -901,7 +901,7 @@
 
 /* ---- the result dialog -------------------------------------------------------------------- */
 
-/* Centred by the dialog's auto margins rather than by `place-items`, so a dialog taller than a
+/* Centered by the dialog's auto margins rather than by `place-items`, so a dialog taller than a
    landscape phone scrolls from its top instead of being clipped above the fold. */
 .practice-result-scrim {
   position: fixed;
@@ -1279,7 +1279,7 @@
     background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
   }
 
-  /* The last shadow is a halo in the page's own colour: invisible where Start rests, and a clean
+  /* The last shadow is a halo in the page's own color: invisible where Start rests, and a clean
      edge over whatever scrolls beneath it. The rest are tavern.css's primary shadows, which this
      rule outranks. */
   .tavern.practice--lobby .practice-setup button.practice-play {
@@ -1359,7 +1359,7 @@
 
 /* A short desktop (a 1280x720 laptop): the tiers and the deck fill the screen and Start sat on its
    fold, cut in half. As on a phone, Start leaves the footer panel and rides along the bottom of the
-   viewport, over a halo in the page's colour, while the form scrolls under it. */
+   viewport, over a halo in the page's color, while the form scrolls under it. */
 @media (min-width: 721px) and (min-height: 521px) and (max-height: 820px) {
   .practice-setup__footer {
     display: contents;
@@ -1647,7 +1647,7 @@
   display: none;
 }
 
-/* While the AI thinks, its hero breathes a ring in the opponent's colour: the other seat is
+/* While the AI thinks, its hero breathes a ring in the opponent's color: the other seat is
    visibly "on". Not while the hero animates, so animations.css's damage shake and the like win. */
 .practice-table[data-thinking="true"] .hero-opponent:not([data-animating]) {
   animation: practice-hero-think calc(1.4s * var(--anim-scale, 1)) ease-in-out infinite;

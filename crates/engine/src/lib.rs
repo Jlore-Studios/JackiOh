@@ -18,7 +18,7 @@
 //! - `validator` stays a module (TS `@jackioh/validator` was its own package, and its
 //!   `validateDeck` is not `state.ts`'s): `jackioh_engine::validator::validate_deck`.
 //!
-//! Three names are defined twice in TS and resolved here explicitly, in `@jackioh/engine`'s favour,
+//! Three names are defined twice in TS and resolved here explicitly, in `@jackioh/engine`'s favor,
 //! because that is what a TS import from `@jackioh/engine` meant: `UnitView` is `layers`' (§10.4's
 //! layered stats; the view's is `wire::UnitView`), `HeroView` is `query`'s (`heroOf`'s answer; the
 //! view's is `wire::HeroView`), and `PlayAction` is `play_choices`' (`play_steps` has its own).

@@ -1,4 +1,4 @@
-// The match clock (BUILD M7-T1). It decides nothing: R79 fixes the behaviour and the server's match
+// The match clock (BUILD M7-T1). It decides nothing: R79 fixes the behavior and the server's match
 // actor runs it, so a paused turn clock is a `turnDeadline` of `null` in the frame the server pushed,
 // not an inference drawn here (CLAUDE.md rule 7).
 //

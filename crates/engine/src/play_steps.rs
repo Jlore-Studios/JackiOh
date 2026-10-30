@@ -437,7 +437,7 @@ pub struct PlayRun {
     /// the step is its window, which a response's question can pause, so the step is re-entered there.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub announced: Option<bool>,
-    /// R448: a Counter cancelled the play in its announce window: nothing after it happens but step 8.
+    /// R448: a Counter canceled the play in its announce window: nothing after it happens but step 8.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub countered: Option<bool>,
     /// R449: step 3 replaced the card played by a new card (Classic #23 Devil's Pact). The new card makes

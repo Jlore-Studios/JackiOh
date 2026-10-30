@@ -47,7 +47,7 @@ fn started(seed: &str) -> GameState {
 fn values(events: &[GameEvent]) -> Vec<Value> {
     events
         .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
         .collect()
 }
 
@@ -360,7 +360,7 @@ mod r316_library_overflow {
         );
         // `copyOf` is bookkeeping: it names the face-down card's id, so no view carries it.
         for viewer in PLAYER_IDS {
-            let text = serde_json::to_string(&views[viewer]).expect("the view serialises");
+            let text = serde_json::to_string(&views[viewer]).expect("the view serializes");
             assert!(!text.contains("copyOf"), "{viewer}: {text}");
         }
 

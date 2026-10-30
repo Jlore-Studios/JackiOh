@@ -40,7 +40,7 @@ fn fused_onto(big_unit: &str) -> Scenario {
 
 /// TS `JSON.parse(JSON.stringify(state))`: only the state's JSON is kept, as a match actor keeps it.
 fn through_json(state: &GameState) -> GameState {
-    let text = serde_json::to_string(state).expect("a state serialises");
+    let text = serde_json::to_string(state).expect("a state serializes");
     serde_json::from_str(&text).expect("a state's JSON parses back")
 }
 

@@ -248,7 +248,7 @@ mod tests {
             // Hinder is cast on the first draw; its discard is random (R682), so with one card held the
             // Vanilla goes with no prompt opening.
             assert!(s.state().pending.is_none());
-            let round: GameState = serde_json::from_str(&serde_json::to_string(s.state()).expect("serialisable"))
+            let round: GameState = serde_json::from_str(&serde_json::to_string(s.state()).expect("serializable"))
                 .expect("a state reads back");
             assert_eq!(&round, s.state());
             let after = s.state().clone();
@@ -276,7 +276,7 @@ mod tests {
             s.play(RISKY, json!({}));
             let theirs = js(&s.view(P2));
             let kept = [s.card(FILLER).id.clone(), s.card(STOCKPILE).id.clone()];
-            let text = serde_json::to_string(&theirs["events"]).expect("serialisable");
+            let text = serde_json::to_string(&theirs["events"]).expect("serializable");
             for id in &kept {
                 assert!(!text.contains(id.as_str()));
             }

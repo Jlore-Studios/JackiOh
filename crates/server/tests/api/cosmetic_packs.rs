@@ -70,7 +70,7 @@ async fn setup() -> (Arc<App>, String) {
 
 /// A store value as JSON.
 fn to<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a store value serialises")
+    serde_json::to_value(value).expect("a store value serializes")
 }
 
 /// Everything `p1` holds and every ledger row it has, the collection's included, as one value.
@@ -232,7 +232,7 @@ async fn owns_cosmetic(app: &App, card_id: Option<&str>, cosmetic_id: &str) -> b
     }
 }
 
-/// An opening answered by the route, read back as the type the route serialises.
+/// An opening answered by the route, read back as the type the route serializes.
 fn opened(body: &Value) -> OpenedCosmeticPack {
     serde_json::from_value(body.clone()).unwrap_or_else(|error| panic!("{error}: {body}"))
 }

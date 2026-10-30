@@ -395,7 +395,7 @@ pub async fn read_samples(
 /// `cosmetics-fit`'s arguments after the subcommand (`main.rs`): none.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     if let Some(arg) = args.first() {
-        bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
+        bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
     }
     let connection_string = database_url()?;
     // One connection: this process runs one read and exits.

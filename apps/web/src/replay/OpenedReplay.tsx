@@ -24,17 +24,17 @@ export default function OpenedReplay({ load, onLeave, ...player }: OpenedReplayP
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     load().then(
       (loaded) => {
-        if (!cancelled) setSource(loaded);
+        if (!canceled) setSource(loaded);
       },
       (cause: unknown) => {
-        if (!cancelled) setFailure(replayFailureOf(cause));
+        if (!canceled) setFailure(replayFailureOf(cause));
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
     // One load per mount and per Try again.
   }, [attempt]);

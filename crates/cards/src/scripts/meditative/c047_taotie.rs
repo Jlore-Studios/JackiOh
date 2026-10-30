@@ -405,7 +405,7 @@ mod tests {
                 let round_tripped: GameState =
                     serde_json::from_value(js(s.state())).expect("JSON is a state");
                 let same = find_instance(&round_tripped, &after.id).expect("the fused card");
-                // The fusion's transient definition travelled with it: still one fused card with
+                // The fusion's transient definition traveled with it: still one fused card with
                 // the summed stats, not two cards and not the printed one.
                 assert_eq!(same.def_id, after.def_id);
                 assert_ne!(same.def_id, TAOTIE);

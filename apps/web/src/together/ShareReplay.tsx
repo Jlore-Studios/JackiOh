@@ -36,23 +36,23 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
 
   useEffect(() => {
     if (!open || friends !== null) return;
-    let cancelled = false;
+    let canceled = false;
     Promise.all([attempt(() => getFriends({ keep: false })), attempt(() => getReplayShares(matchId))]).then(
       ([answer, shares]) => {
-        if (cancelled) return;
+        if (canceled) return;
         setShared(new Set(shares.friendIds));
         setFriends(answer.friends);
         setError(null);
       },
       (cause: unknown) => {
-        if (cancelled) return;
+        if (canceled) return;
         const failure = readFailureOf(cause);
         setError(failure.message);
         setReadWaitMs(failure.retryAfterMs);
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [open, friends, matchId, reads]);
 

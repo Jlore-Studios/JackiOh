@@ -151,7 +151,7 @@ mod tests {
         }
 
         #[test]
-        fn r12_a_card_that_crosses_the_centre_line_changes_controller_and_never_owner() {
+        fn r12_a_card_that_crosses_the_center_line_changes_controller_and_never_owner() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 5 }] },

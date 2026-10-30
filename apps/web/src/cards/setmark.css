@@ -1,7 +1,7 @@
 /*
  * The set mark (R503, cards/setMark.ts): a small round plate on the frame holding the card's set
  * glyph. It sits in the band between the name ribbon and the rules box, right of the rarity gem, so
- * it clears the cost gem (top left), the crest (top centre), the name, the gem, the stats (bottom
+ * it clears the cost gem (top left), the crest (top center), the name, the gem, the stats (bottom
  * corners) and every Radiant mark (the gold text and stats). It moves with the gem in the long and
  * compact layouts, sits under the gem in the small layout (a hand card), and hides on the smallest
  * faces, where it would be noise. It never moves, so reduced motion needs nothing here.

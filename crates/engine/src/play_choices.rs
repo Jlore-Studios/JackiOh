@@ -58,7 +58,7 @@ pub use crate::config::{RADIANT_SHEEP_TRIBUTE_VALUE, SHEEP_TRIBUTE_VALUE};
 
 /// The `play` member of the action union, without the `playerId` and `nonce` the caller adds (TS
 /// `Extract<ActionBody, { type: "play" }>`): the fields of `ActionBody::Play`, as a struct so a reader
-/// names them (`action.targets`). It serialises as that action body, `"type": "play"` included.
+/// names them (`action.targets`). It serializes as that action body, `"type": "play"` included.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
 #[serde(into = "ActionBody", try_from = "ActionBody")]
 pub struct PlayAction {

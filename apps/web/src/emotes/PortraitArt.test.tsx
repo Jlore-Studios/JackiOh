@@ -1,7 +1,7 @@
 // R1332's vivid portraits (issue #544): each of the six has a look of its own, drawn as layers
 // over the card's oval — a lit ground, a breathing light, drifting motes and a rim — the same on
 // the board, in the hero's inspect view and in the deck builder's picker, deterministic, and
-// stilled by Reduce Motion. The colours and the motes are `portraitLook.ts`'s; the CSS is
+// stilled by Reduce Motion. The colors and the motes are `portraitLook.ts`'s; the CSS is
 // `portrait.css`, read here as text the way `emotes.test.tsx` reads emotes.css.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -31,13 +31,13 @@ afterEach(() => {
 });
 
 describe("R1332 the six looks", () => {
-  it("R1332 every portrait has a look of its own: six different grounds, every colour #rrggbb", () => {
+  it("R1332 every portrait has a look of its own: six different grounds, every color #rrggbb", () => {
     expect(Object.keys(PORTRAIT_LOOKS).sort()).toEqual([...PORTRAIT_IDS].sort());
     const grounds = new Set<string>();
     for (const id of PORTRAIT_IDS) {
       const look = PORTRAIT_LOOKS[id];
-      for (const colour of [...look.ground, look.light, look.rim, look.mote]) {
-        expect(colour, `${id}'s colour`).toMatch(HEX);
+      for (const color of [...look.ground, look.light, look.rim, look.mote]) {
+        expect(color, `${id}'s color`).toMatch(HEX);
       }
       grounds.add(look.ground.join(">"));
     }

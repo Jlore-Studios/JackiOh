@@ -118,9 +118,9 @@ fn de<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
 }
 
-/// A row as the JSON it serialises to.
+/// A row as the JSON it serializes to.
 fn js<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a store row serialises")
+    serde_json::to_value(value).expect("a store row serializes")
 }
 
 fn now_ms() -> i64 {

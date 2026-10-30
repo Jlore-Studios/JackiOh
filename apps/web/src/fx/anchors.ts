@@ -5,14 +5,14 @@
 // every element under jsdom) resolves to null so the director skips the cue.
 //
 // A hand anchor is the box of the cards it holds plus the slot the next card takes, clipped to the
-// strip (the strip's centre is empty table); an empty hand is the strip itself.
+// strip (the strip's center is empty table); an empty hand is the strip itself.
 //
 // `boardShakeSink` writes the individual CSS `translate` and `rotate` properties, which compose with
 // the board's `transform` keyframes, and restores the inline values the board carried before.
 
 import type { FxAnchor, FxBox, FxPoint, FxShakeOffset, FxShakeSink, FxVec } from "./types.ts";
 
-const CENTRE: FxPoint = { x: 0.5, y: 0.5 };
+const CENTER: FxPoint = { x: 0.5, y: 0.5 };
 
 /** `CSS.escape` does not exist under jsdom; a testid only needs its quotes and backslashes escaped. */
 function attrValue(value: string): string {
@@ -92,7 +92,7 @@ export function resolveAnchor(anchor: FxAnchor, doc?: Document, win?: Window): F
 }
 
 export function pointIn(box: FxBox, at?: FxPoint): FxVec {
-  const p = at ?? CENTRE;
+  const p = at ?? CENTER;
   return { x: box.x + box.width * p.x, y: box.y + box.height * p.y };
 }
 

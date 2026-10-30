@@ -32,7 +32,7 @@ mod tests {
     const TRUE_STRIKE: &str = "core-044"; // (1) Spell, Pierce: 4 damage to a declared Unit or hero.
     const ECHOES: &str = "core-040"; // Field Spell: start of turn, damage to the enemy hero = your exile count.
     const FILLER: &str = "core-005";
-    const TRAP: &str = "classic-052"; // (2) Trap: a lethal hit is cancelled, then heal and draw.
+    const TRAP: &str = "classic-052"; // (2) Trap: a lethal hit is canceled, then heal and draw.
 
     use crate::scenario;
 

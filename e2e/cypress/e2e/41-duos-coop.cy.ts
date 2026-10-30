@@ -3,7 +3,7 @@
 // this spec drives over `/ws/duos` itself, as the networked specs drive their second seat over
 // `/ws/match` (spec 06's `wsPlayer`, whose frames are the 1v1 protocol's, not S6's).
 //
-// What it asserts, by behaviour:
+// What it asserts, by behavior:
 // - B60 "The co-op panel creates a room (difficulty, deck or random), shows its code, … joins by code,
 //   and navigates both players to `/duos/:matchId` once the guest joins."
 // - B61 "The Duos board renders `Game.tsx` for the own duel; a life strip shows own HP (`duos-own-hp`)

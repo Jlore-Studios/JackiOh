@@ -120,7 +120,7 @@ fn last_index_of(order: &[GameEventType], wanted: GameEventType) -> i64 {
 
 /// A play as its JSON, so its `targets` and the absence of `discards` read as TS reads them.
 fn play_json(play: &impl serde::Serialize) -> Value {
-    serde_json::to_value(play).expect("a play serialises")
+    serde_json::to_value(play).expect("a play serializes")
 }
 
 fn names_first(play: &Value, card: &CardInstance) -> bool {

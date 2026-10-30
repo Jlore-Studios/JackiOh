@@ -1,5 +1,5 @@
 // Polish 6, slice B: the tall card face in jsdom (docs/polish/6-cards.md, "CardFace DOM",
-// behaviours B8's gem, B10's `RulesText`, B12–B14, and the jsdom half of B15).
+// behaviors B8's gem, B10's `RulesText`, B12–B14, and the jsdom half of B15).
 //
 // jsdom has no layout, so nothing here measures fit. What it can check is the DOM contract: which
 // elements exist, what they carry, and that `useFitText` leaves an element with no layout alone.
@@ -1147,7 +1147,7 @@ describe("R1177001: every token says Token, on every layout", () => {
     expect(cf.querySelector(".cf-token")).toBeNull();
   });
 
-  it("R1177001 R1177000 a token fused with a real card is labelled as the real card it is; tokens fused together as a token", () => {
+  it("R1177001 R1177000 a token fused with a real card is labeled as the real card it is; tokens fused together as a token", () => {
     const real = fusedDef([def("core-t-rush"), def("core-011")]);
     expect(real.token).toBe(false);
     expect(real.tags).not.toContain("Token");

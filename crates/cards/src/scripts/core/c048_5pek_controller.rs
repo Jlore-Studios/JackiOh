@@ -1,6 +1,6 @@
 //! #48 5pek Controller (SPEC §8.2): "Switch the position of every unit", radiant "Choose: all enemy
 //! units, or all units". The radiant cell restates the whole clause (§8 Conventions), so it replaces
-//! the base one; "all units" is the base behaviour offered as one of the two options.
+//! the base one; "all units" is the base behavior offered as one of the two options.
 //!
 //! R81 lists #48: the radiant choice is a DECLARED mode, so it travels in the play action's `modes`
 //! and never pauses resolution, no `PendingChoice`. The base face declares nothing.

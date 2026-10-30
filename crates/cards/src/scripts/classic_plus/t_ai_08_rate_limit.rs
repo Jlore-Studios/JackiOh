@@ -117,7 +117,7 @@ mod tests {
     }
 
     fn view_text(s: &Scenario, player: PlayerId) -> String {
-        serde_json::to_string(&s.view(player)).expect("serialises")
+        serde_json::to_string(&s.view(player)).expect("serializes")
     }
 
     mod t_ai_8_rate_limit {
@@ -213,7 +213,7 @@ mod tests {
                 assert_eq!(s.state().pending.as_ref().map(|pending| js(&pending.kind)), Some(json!("discover")));
                 assert_eq!(s.state().active, P2);
                 let thawed: GameState =
-                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
+                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serializes")).expect("parses");
                 assert_eq!(hash_state(&thawed), hash_state(s.state()));
                 // The offered def ids come from the view (§10.8): the raw state options carry only the key
                 // and the selection to send back.

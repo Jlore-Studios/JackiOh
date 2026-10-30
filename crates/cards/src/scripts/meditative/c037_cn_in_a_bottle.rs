@@ -424,14 +424,14 @@ mod tests {
                 let _ = apply_for_p1(&mut s, &[cast_new(json_as(json!({ "def": BOTTLE })))]);
                 let new_card = s.hand(P1).last().cloned().expect("the card it added");
                 assert_ne!(new_card.def_id, FILLER);
-                let theirs = serde_json::to_string(&s.view(P2)).expect("the view serialises");
+                let theirs = serde_json::to_string(&s.view(P2)).expect("the view serializes");
                 assert!(!theirs.contains(&new_card.id), "p2 never reads the new card's id");
                 assert!(
                     !theirs.contains(&new_card.def_id),
                     "p2 never reads {}",
                     new_card.def_id
                 );
-                let mine = serde_json::to_string(&s.view(P1)).expect("the view serialises");
+                let mine = serde_json::to_string(&s.view(P1)).expect("the view serializes");
                 assert!(mine.contains(&new_card.def_id), "p1 reads its own card");
             }
 

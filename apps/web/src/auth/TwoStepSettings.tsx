@@ -74,19 +74,19 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     listTotpFactors(token)
       .then((factors) => {
-        if (cancelled) return;
+        if (canceled) return;
         const verified = factors.find((factor) => factor.verified);
         // Read once per attempt: a token handed down later (a renewal, this screen's own raise) is the same account.
         setPhase((now) => (now.kind !== "loading" ? now : verified === undefined ? { kind: "off" } : { kind: "on", factorId: verified.id }));
       })
       .catch(() => {
-        if (!cancelled) setPhase((now) => (now.kind === "loading" ? { kind: "unknown" } : now));
+        if (!canceled) setPhase((now) => (now.kind === "loading" ? { kind: "unknown" } : now));
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, attempt]);
 

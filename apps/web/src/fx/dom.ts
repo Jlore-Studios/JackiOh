@@ -13,14 +13,14 @@ function px(value: number): string {
   return `${value}px`;
 }
 
-function centreOf(box: FxBox): { x: number; y: number } {
+function centerOf(box: FxBox): { x: number; y: number } {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-function placeAtCentre(el: HTMLElement, box: FxBox): void {
-  const centre = centreOf(box);
-  el.style.setProperty("--fx-x", px(centre.x));
-  el.style.setProperty("--fx-y", px(centre.y));
+function placeAtCenter(el: HTMLElement, box: FxBox): void {
+  const center = centerOf(box);
+  el.style.setProperty("--fx-x", px(center.x));
+  el.style.setProperty("--fx-y", px(center.y));
   el.style.setProperty("--fx-w", px(box.width));
   el.style.setProperty("--fx-h", px(box.height));
 }
@@ -32,16 +32,16 @@ function cover(el: HTMLElement, box: FxBox): void {
   el.style.setProperty("--fx-h", px(box.height));
 }
 
-function tint(el: HTMLElement, colours: FxTint): void {
-  el.style.setProperty("--fx-mark-rim", colours.rim);
-  el.style.setProperty("--fx-mark-core", colours.core);
-  el.style.setProperty("--fx-mark-glow", colours.glow);
+function tint(el: HTMLElement, colors: FxTint): void {
+  el.style.setProperty("--fx-mark-rim", colors.rim);
+  el.style.setProperty("--fx-mark-core", colors.core);
+  el.style.setProperty("--fx-mark-glow", colors.glow);
 }
 
-function tintVars(el: HTMLElement, colours: FxTint): void {
-  el.style.setProperty("--fx-tint-rim", colours.rim);
-  el.style.setProperty("--fx-tint-core", colours.core);
-  el.style.setProperty("--fx-tint-glow", colours.glow);
+function tintVars(el: HTMLElement, colors: FxTint): void {
+  el.style.setProperty("--fx-tint-rim", colors.rim);
+  el.style.setProperty("--fx-tint-core", colors.core);
+  el.style.setProperty("--fx-tint-glow", colors.glow);
 }
 
 function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
@@ -116,14 +116,14 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       if (at === null) return null;
       el.setAttribute("data-tone", cue.tone);
       el.setAttribute("data-amount", signedAmount(cue.tone, cue.amount));
-      placeAtCentre(el, at);
+      placeAtCenter(el, at);
       break;
     }
     case "rays": {
       const at = boxes.at ?? null;
       if (at === null) return null;
       el.setAttribute("data-tone", cue.tone);
-      placeAtCentre(el, at);
+      placeAtCenter(el, at);
       break;
     }
     case "sheen": {
@@ -136,8 +136,8 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       const from = boxes.from ?? null;
       const to = boxes.to ?? null;
       if (from === null || to === null) return null;
-      const start = centreOf(from);
-      const end = centreOf(to);
+      const start = centerOf(from);
+      const end = centerOf(to);
       el.style.setProperty("--fx-x", px(start.x));
       el.style.setProperty("--fx-y", px(start.y));
       el.style.setProperty("--fx-dx", px(end.x - start.x));
@@ -177,14 +177,14 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     case "brand": {
       const at = boxes.at ?? null;
       if (at === null) return null;
-      placeAtCentre(el, at);
+      placeAtCenter(el, at);
       tint(el, cue.tint);
       break;
     }
     case "shield": {
       const at = boxes.at ?? null;
       if (at === null) return null;
-      placeAtCentre(el, at);
+      placeAtCenter(el, at);
       el.setAttribute("data-size", cue.size);
       break;
     }
@@ -331,7 +331,7 @@ export function mountHold(
   };
   place(parts.land);
 
-  const landCentre = centreOf(parts.land);
+  const landCenter = centerOf(parts.land);
   const startScale = parts.from !== null ? parts.from.height / Math.max(1, parts.land.height) : DROP_SCALE;
   const view = doc.defaultView;
   if (view !== null && view.innerWidth > 0) {
@@ -344,9 +344,9 @@ export function mountHold(
     }
   }
   if (parts.from !== null) {
-    const start = centreOf(parts.from);
-    el.style.setProperty("--fx-dx", px(start.x - landCentre.x));
-    el.style.setProperty("--fx-dy", px(start.y - landCentre.y));
+    const start = centerOf(parts.from);
+    el.style.setProperty("--fx-dx", px(start.x - landCenter.x));
+    el.style.setProperty("--fx-dy", px(start.y - landCenter.y));
     el.style.setProperty("--fx-s", (parts.from.height / Math.max(1, parts.land.height)).toFixed(3));
     el.style.setProperty("--fx-o0", "1");
   } else {
