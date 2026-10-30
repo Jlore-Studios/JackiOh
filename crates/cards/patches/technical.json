@@ -3205,5 +3205,96 @@
     "pr": 2438,
     "title": "patches ship: v0.5.10",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "07fef3cf1f372ac863ff241f23c9b9815f101ca8",
+    "pr": 2440,
+    "title": "the fuzz names the pool cards its games never played",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "0c6ed4c84fd6ad73fc87e0114f12bad24cc1d4a6",
+    "pr": 2441,
+    "title": "the shadow-ban sweep counts only the turns a card could really be played",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "703cd36038d13b3b5b1d51f6cc42c6e0c91bbdc9",
+    "pr": 2443,
+    "title": "a card opened from the patch notes shows its loading and retry states instead of nothing",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "fc232fc01121a5a913a615694846b2bd1040fc4d",
+    "pr": 2407,
+    "title": "in Chinese, the deck builder's, Almanac's and Shop's search and name sort read the Chinese card names",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "04f53195f7aa6760d0e62ef45228bdc74a83a02c",
+    "pr": 2442,
+    "title": "the cards lib job and the classifier's AI check under five minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "2f46afc9e0020decffcb58283622f2dfda6471f4",
+    "pr": 2449,
+    "title": "patches log: 2d62a51..90789d8",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "bac632df40c6c0615a9aaa71a060071ec3ba522a",
+    "pr": 2451,
+    "title": "the AI prices a unit's Death by what it leaves behind, so it plays Trigor",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "5756e8e578e4e102b9c11e1c04ebb0f8d823ad5c",
+    "pr": 2454,
+    "title": "every summon of a Flying Unit may land in the backrow",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "6667f6a764e71a980c5341e2e387d56b1fe80347",
+    "pr": 2456,
+    "title": "the Credits count is a badge by the hero, as the Jade Counter is",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "7649399084475272cd9b5061dfe98c9a8d9b220d",
+    "pr": 2448,
+    "title": "a tutorial opponent plays only Core cards, whatever reaches its hand",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "20eb41ddf17d99426dccbfd958abb00d7c24b9c1",
+    "pr": 2466,
+    "title": "patches ship: v0.5.10b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "5915f0940b27dc63e4e1f53cf33a23c4ae3e4dbd",
+    "pr": 2467,
+    "title": "make a Dormant card on the field unmistakable (greyed out and bound)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "1cbfe316dcb45fd0c97e937923bc16ed6cf173c6",
+    "pr": 2468,
+    "title": "a patch only when the change moves the stats of the cards broadly; everything smaller is a micro (#2455)",
+    "kind": "internal"
   }
 ]
