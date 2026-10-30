@@ -1398,10 +1398,16 @@ export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
   return keptGet<LeaderboardResponse>(keptPaths.leaderboard, token);
 }
 
-/** `GET /api/matches/:id/ranks`: both seats' ranks and win streaks for the match screen (R604, R612, R2101000). */
+/**
+ * `GET /api/matches/:id/ranks`: both seats' ranks and win streaks for the match screen (R604, R612, R2101000).
+ * R2388000: once a ranked match's rated record is written, each seat's rank before and after it; absent until then, on an unranked match and on a series' earlier game.
+ */
 export type MatchRanksResponse = {
   ranked: boolean;
-  seats: Record<"p1" | "p2", { profileId: string; username: string; rank: VisibleRank; streak: number; you: boolean }>;
+  seats: Record<
+    "p1" | "p2",
+    { profileId: string; username: string; rank: VisibleRank; streak: number; you: boolean; rankBefore?: VisibleRank; rankAfter?: VisibleRank }
+  >;
 };
 
 export function getMatchRanks(token: string, matchId: string): Promise<MatchRanksResponse> {

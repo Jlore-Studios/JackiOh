@@ -81,7 +81,6 @@ mod tests {
 
     #[test]
     fn r65_played_adds_six_each_costing_one_less() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = setup(false, 1);
         s.play(COMMANDER, json!({}));
         assert_eq!(cores(&s), vec![(false, -1); 6]);
@@ -90,7 +89,6 @@ mod tests {
 
     #[test]
     fn a_full_hand_burns_the_rest() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = setup(false, 6);
         s.play(COMMANDER, json!({}));
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
@@ -100,7 +98,6 @@ mod tests {
 
     #[test]
     fn cards_and_discount_read_through_param() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = setup(false, 1);
         set_param(s.card_mut(COMMANDER), "cards", 2);
         set_param(s.card_mut(COMMANDER), "discount", 3);
@@ -119,7 +116,6 @@ mod tests {
 
     #[test]
     fn radiant_16_24_adds_radiant_ones() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = setup(true, 1);
         s.play(COMMANDER, json!({}));
         let commander = s.unit(P1, 1).expect("the Commander");

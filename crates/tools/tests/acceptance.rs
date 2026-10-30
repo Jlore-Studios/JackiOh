@@ -50,6 +50,12 @@
 //!    `targets_of` and `tributes_of` under `crates/cards/tests/cross/` (its `mod.rs`); and `det`,
 //!    `ai_options` and `js` under `crates/ai/tests/` (`ai/support.rs`). A test file copied from an
 //!    old one brings no copy back (docs/ADDING_CARDS.md §2 asks the card tests the same).
+//!
+//! And one for R1420's preview (#2257):
+//!
+//!  - Preview: every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not list.
+//!    A preview opens a held set on one test's thread, and one of a set that ships opens nothing,
+//!    so the patch that ships a set takes its previews out with it.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -57,6 +63,7 @@ use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use jackioh_engine::wire::SHIPPED_SETS;
 use serde_json::Value;
 
 fn repo() -> PathBuf {
@@ -1755,4 +1762,59 @@ fn readme_the_drift_check_finds_each_disagreement() {
         drift(&row.replace("`patches retcon [--any]`", "`run`")),
         ["`jackioh patches` is in no row of the table"]
     );
+}
+
+/// The 1-based lines of `text` where a `preview_sets(&[…])` names only sets `SHIPPED_SETS` lists,
+/// read by their `SetName` variants: such a preview opens nothing (R1420).
+fn previews_of_shipped_sets_only(text: &str) -> Vec<usize> {
+    const CALL: &str = "preview_sets(&[";
+    let shipped: Vec<String> = SHIPPED_SETS.iter().map(|set| format!("{set:?}")).collect();
+    let mut lines = Vec::new();
+    let mut from = 0;
+    while let Some(found) = text[from..].find(CALL) {
+        let start = from + found + CALL.len();
+        from = start;
+        let list = text[start..].split(']').next().unwrap_or("");
+        let shipped_only = list
+            .split(',')
+            .map(|set| set.trim().rsplit("::").next().unwrap_or(""))
+            .filter(|name| !name.is_empty())
+            .all(|name| shipped.iter().any(|set| set == name));
+        if shipped_only {
+            lines.push(text[..start].matches('\n').count() + 1);
+        }
+    }
+    lines
+}
+
+#[test]
+fn preview_no_test_previews_only_sets_that_ship() {
+    let root = repo();
+    let mut files = Vec::new();
+    rust_sources(&root.join("crates"), &mut files);
+    let mut calls = 0;
+    let mut stale = Vec::new();
+    for file in files {
+        let relative = fold(file.strip_prefix(&root).unwrap_or(&file)).unwrap_or_default();
+        // This file plants previews of shipped sets, to show the scan finds them.
+        if relative == "crates/tools/tests/acceptance.rs" {
+            continue;
+        }
+        let text = fs::read_to_string(&file).unwrap_or_default();
+        calls += text.matches("preview_sets(&[").count();
+        for line in previews_of_shipped_sets_only(&text) {
+            stale.push(format!("{relative}:{line}"));
+        }
+    }
+    assert!(calls > 0, "the scan found no `preview_sets(&[…])` under crates/");
+    assert!(
+        stale.is_empty(),
+        "a preview of sets that all ship opens nothing (R1420): delete it, or keep only the sets `SHIPPED_SETS` does not list: {stale:?}"
+    );
+}
+
+#[test]
+fn preview_the_scan_finds_each_preview_of_shipped_sets_only() {
+    let text = "let _a = preview_sets(&[SetName::Core]);\nlet _b = preview_sets(&[SetName::Boss]);\nlet _c = preview_sets(&[\n    SetName::Meditative,\n    jackioh_engine::SetName::Stinkyscape,\n]);\nlet _d = preview_sets(&[SetName::MeditativePlus, SetName::Custom]);\nlet _e = preview_every_set();\n";
+    assert_eq!(previews_of_shipped_sets_only(text), [1, 3]);
 }

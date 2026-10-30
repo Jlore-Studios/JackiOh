@@ -8385,7 +8385,6 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
             assert_eq!(entry.radiant_fallback, Some(true), "R349's fallback");
             assert_eq!(entry.set, SetName::Stinkyscape);
             // In no deck (R1857001), even with its set open.
-            let _preview = jackioh_engine::testkit::preview_sets(&[SetName::Stinkyscape]);
             assert!(!jackioh_engine::deckable(entry));
             assert!(jackioh_engine::made_by_a_rule(entry));
         }

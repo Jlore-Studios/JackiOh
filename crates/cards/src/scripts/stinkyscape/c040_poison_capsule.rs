@@ -69,10 +69,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     /// The amounts of the `damage` events from `source`, in order.
     fn hits_from(s: &Scenario, source: &str) -> Vec<i32> {
         s.events()
@@ -94,7 +90,6 @@ mod tests {
         #[test]
         fn r1860001_cry_places_2_counters_on_the_one_permanent_a_single_prompt_names() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [CAPSULE, ANCHOR], "mana": 10, "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "field": [MENACE], "library": filler(4) },
@@ -113,7 +108,6 @@ mod tests {
         #[test]
         fn r1860001_this_card_is_a_choice_among_the_rest() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [CAPSULE, ANCHOR], "mana": 10, "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -129,7 +123,6 @@ mod tests {
         #[test]
         fn r1860002_end_of_turn_one_hit_of_counters_times_1_to_each_enemy() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [ANCHOR],
@@ -155,7 +148,6 @@ mod tests {
         #[test]
         fn r1860002_with_no_counter_on_it_nothing() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [CAPSULE], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
@@ -171,7 +163,6 @@ mod tests {
         #[test]
         fn r1860002_counters_on_another_permanent_add_nothing() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [ANCHOR],
@@ -194,7 +185,6 @@ mod tests {
         #[test]
         fn counters_and_damage_read_through_param() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [CAPSULE, ANCHOR], "mana": 10, "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
@@ -218,7 +208,6 @@ mod tests {
         #[test]
         fn r1860001_radiant_cry_places_4_counters() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": CAPSULE, "radiant": true }, ANCHOR],
@@ -238,7 +227,6 @@ mod tests {
         #[test]
         fn r1860002_radiant_end_of_turn_one_hit_of_counters_times_1_to_each_enemy() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [ANCHOR],

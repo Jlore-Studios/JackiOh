@@ -74,6 +74,9 @@ mod tests {
     const FIENDER: &str = "core-092"; // Felinor Fiender, Stack, the pile's top.
     const WALL: &str = "meditative-097-7"; // The Great Wall, printed Immutable.
     const ECLIPSE: &str = "core-035"; // Lunar Eclipse: deal 3 damage.
+    const WORMHOLE: &str = "stinkyscape-139"; // a Trap: counters an opponent's Spell aimed at their own side.
+    const BOOK: &str = "classicplus-057"; // Book of Stats: "Give a Unit +5/+5."
+    const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4, no text.
 
     fn meal(n: i32) -> Value {
         json!([{ "def": BODY, "lane": n }])
@@ -351,6 +354,41 @@ mod tests {
                 // 饕餮 died, and the Saintess's Death it carried made p1's other Unit Radiant.
                 s.expect_in_zone(id.as_str(), "graveyard");
                 assert!(s.card(&felinor).radiant);
+            }
+
+            #[test]
+            fn r1020_r2226000_an_eaten_traps_reveal_never_fires_from_its_unit_zone() {
+                let mut s = scenario(json!({
+                    "seed": "taotie-trap",
+                    "p1": {
+                        "field": [{ "def": TAOTIE, "lane": 1 }],
+                        "library": [FILLER, FILLER, FILLER],
+                    },
+                    "p2": {
+                        "backrow": [{ "def": WORMHOLE, "lane": 1 }],
+                        "hand": [VANILLA, BOOK],
+                        "library": [FILLER, FILLER, FILLER],
+                    },
+                }));
+
+                s.end_turn(); // p1's end: 饕餮 eats the Wormhole, p2's only permanent.
+                assert!(fused(&s));
+                s.play(VANILLA, json!({ "zone": 1 }));
+                let vanilla = s.unit(P2, 1).expect("p2's Vanilla");
+                s.play(
+                    BOOK,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }),
+                );
+
+                // The eaten Wormhole's text never answers from 饕餮's unit zone, not even p2's Spell aimed
+                // at its own Unit, which its condition admits (R2271000): no counter, no prompt, and the
+                // Book's +5/+5 lands on p2's 4/4.
+                assert!(s.state().pending.is_none());
+                assert!(!s
+                    .events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Countered { .. })));
+                s.expect_stats(&vanilla, json!({ "attack": 9, "health": 9 }));
             }
 
             #[test]

@@ -29,8 +29,8 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_alert, log_in
 use crate::app::App;
 use crate::config::{BOT_GRIND_STEP_GAMES, BOT_STRENGTHS};
 use crate::db::store::{
-    BotRating, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide, Season,
-    SeasonStanding, StoreError, Tx,
+    BotRating, MatchRow, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide,
+    Season, SeasonStanding, SeriesStatus, StoreError, Tx,
 };
 use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game_scored, widen_for_promotions};
 use crate::ranked::ladder::{
@@ -899,9 +899,35 @@ pub struct SeatRank {
     /// the caller's; 0 for a seat with no row.
     pub streak: i64,
     pub you: bool,
+    /// R2388000: the seat's visible rank before and after this match's rated record (R611; a ranked
+    /// series' last game, the series', R604). Absent until it is written and on an unranked match or
+    /// a series' earlier game: "not recorded yet", never "no change". Never the rating (R612).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rank_before: Option<VisibleRank>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rank_after: Option<VisibleRank>,
 }
 
-/// `GET /api/matches/:matchId/ranks`: both seats' ranks and win streaks for the match screen (R612, R2101000).
+/// R2388000: the rated record a match's seats moved by: its own for a ranked match, the series'
+/// for the last game of a ranked series that is over (R604), none otherwise.
+async fn rated_game_id(tx: &mut Tx<'_>, row: &MatchRow) -> Result<Option<String>, StoreError> {
+    if row.ranked != Some(true) {
+        return Ok(None);
+    }
+    Ok(match tx.series_with_game(&row.id).await? {
+        None => Some(row.id.clone()),
+        Some(series) => {
+            let last = series.games.last().is_some_and(|game| game.match_id == row.id);
+            if series.status == SeriesStatus::Over && last {
+                Some(series.id)
+            } else {
+                None
+            }
+        }
+    })
+}
+
+/// `GET /api/matches/:matchId/ranks`: both seats' ranks and win streaks for the match screen (R612, R2101000), and once its rated record is written each seat's rank before and after it (R2388000).
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct MatchRanksBody {
@@ -932,20 +958,34 @@ pub async fn match_ranks(
         )
         .await?;
     let usernames = usernames_of(&mut tx, [row.players.0.as_str(), row.players.1.as_str()]).await?;
+    let rated = match rated_game_id(&mut tx, &row).await? {
+        Some(id) => tx.ranked_game(&id).await?,
+        None => None,
+    };
     tx.commit().await?;
     // R640000: a ladder bot's seat shows its own season row, read as a player's is, as the
     // leaderboard shows it: nothing on the screen tells the two apart.
     let jlorious = jlorious_order(&standings_of(&standings));
-    let seat = |profile_id: &str| SeatRank {
-        profile_id: profile_id.to_string(),
-        username: username_in(&usernames, profile_id),
-        rank: rank_in(&standings, &jlorious, profile_id),
-        streak: standings
-            .iter()
-            .find(|standing| standing.rank.profile_id == profile_id)
-            .map(|standing| standing.rank.streak as i64)
-            .unwrap_or(0),
-        you: profile_id == viewer_id,
+    let seat = |profile_id: &str| {
+        // R2388000: the seat's side of the record, a ladder bot's named by its bot id (R640000).
+        let side = rated.as_ref().and_then(|game| {
+            [&game.sides.0, &game.sides.1]
+                .into_iter()
+                .find(|side| side.profile_id.as_deref().or(side.bot_id.as_deref()) == Some(profile_id))
+        });
+        SeatRank {
+            profile_id: profile_id.to_string(),
+            username: username_in(&usernames, profile_id),
+            rank: rank_in(&standings, &jlorious, profile_id),
+            streak: standings
+                .iter()
+                .find(|standing| standing.rank.profile_id == profile_id)
+                .map(|standing| standing.rank.streak as i64)
+                .unwrap_or(0),
+            you: profile_id == viewer_id,
+            rank_before: side.and_then(|side| side.rank_before),
+            rank_after: side.and_then(|side| side.rank_after),
+        }
     };
     // A missing flag is unranked (a pre-0022 row, or a room's), so this game moved nothing.
     Ok(Some(MatchRanksBody {

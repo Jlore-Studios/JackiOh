@@ -188,8 +188,6 @@ mod tests {
 
             #[test]
             fn r640_quickdraw_deals_it_in_the_opening_hand() {
-                // R1420: a deck may hold a held set's card only while the set is previewed.
-                let _preview = preview_sets(&[SetName::Stinkyscape]);
                 crate::register_all();
                 // R640: `setup` deals every library card carrying `quickdraw` into the opening hand,
                 // the base face and the Radiant one alike.

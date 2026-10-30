@@ -107,7 +107,6 @@ mod tests {
 
     /// p1 plays Olivian Expanse with `hand` beside it and `library` in their deck.
     fn expanse(seed: &str, radiant: bool, hand: Value, library: Value) -> Scenario {
-        let _preview = preview_sets(&[SetName::Stinkyscape]);
         let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
         cards.extend(hand.as_array().cloned().unwrap_or_default());
         let mut s = scenario(json!({

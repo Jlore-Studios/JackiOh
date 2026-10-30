@@ -33,10 +33,6 @@ mod tests {
     const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
         keywords
             .iter()
@@ -65,7 +61,6 @@ mod tests {
     #[test]
     fn pierce_ignores_armor() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [ROUNDS, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "field": [ARMORED], "library": filler(4) },
@@ -83,7 +78,6 @@ mod tests {
     #[test]
     fn r1852001_equipped_onto_a_unit_the_host_gains_3_1_and_pierce_and_stays_no_piece() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [VANILLA, ROUNDS, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -103,7 +97,6 @@ mod tests {
     #[test]
     fn radiant_is_a_6_2_with_pierce() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": ROUNDS, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },

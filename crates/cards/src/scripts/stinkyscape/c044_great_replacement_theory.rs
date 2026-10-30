@@ -150,7 +150,6 @@ mod tests {
 
     #[test]
     fn r640_quickdraw_deals_it_in_the_opening_hand() {
-        let _preview = preview_sets(&[SetName::Stinkyscape]);
         crate::register_all();
         let scripts = script();
         assert_eq!(scripts.base.flags().quickdraw, Some(true));

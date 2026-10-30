@@ -35,10 +35,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
         keywords
             .iter()
@@ -75,7 +71,6 @@ mod tests {
     #[test]
     fn reborn_returns_it_at_1_health_with_brittle_2_ticking() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [MODULE], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -95,7 +90,6 @@ mod tests {
     #[test]
     fn r1852001_equipped_onto_a_unit_the_host_gains_5_5_and_reborn_and_stays_no_piece() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [VANILLA, MODULE, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -115,7 +109,6 @@ mod tests {
     #[test]
     fn radiant_is_a_10_10_with_brittle_4_and_reborn() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": MODULE, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
