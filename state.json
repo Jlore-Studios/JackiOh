@@ -7261,7 +7261,7 @@
         "by": "`muse` (medium), `claude` (strong)",
         "sha": "3dace19b78b11583b7e8db399c8e1ffb9c4ebbe4"
       },
-      "cross_rounds": 1,
+      "cross_rounds": 2,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -7278,12 +7278,19 @@
       },
       "interruptions": 0,
       "issue": 2279,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The kept guarded script is filed under v0.5.10b, but v0.5.10c also shipped with the guarded script, so once this change ships, replays of v0.5.10c games will run the new unguarded script.",
+          "evidence": "shipped.json and patches.json end at v0.5.10c (0a3700394 'patches ship: v0.5.10c', shipped from 30465612a, which still had the `animated()` guard); crates/cards/patches/v0.5.10c.json still prints meditative-049-3 as an Animated Field Spell. ADDING_CARDS.md:194 says to add `(ID, the newest shipped version, fn)`, and history.rs `covering()` picks the kept entry at the earliest version at or after the replay's, so v0.5.10c (after v0.5.10b) gets None and runs the build's own script. The entry was written in 0033508e4, before the branch merged the v0.5.10c ship in 1b8cfb4d7. The unguarded script then plays differently: `force_attacks_on` only checks `acts_on_field`, which is true for a backrow card (zones.rs:1797, `zone.z() == Field`), so a v0.5.10c Girlfriend left in the backrow by a full board now draws every enemy Unit's attack. That game's replay fails its hash or shows the game wrong. Fix: rename the entry, `script_v0_5_10b`, its doc comment and its test to v0.5.10c; v0.5.10c's snapshot of the card matches v0.5.10b's (same blob).",
+          "severity": "blocking",
+          "where": "crates/cards/src/history.rs:310"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
-      "queued_at": "2026-10-30T09:41:12Z",
+      "queued_at": "2026-10-30T09:51:57Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -7291,7 +7298,7 @@
       "run_id": "41035527957",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-30T09:43:36Z",
       "stop_requested": false,
       "taken_asks": [],
