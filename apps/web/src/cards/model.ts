@@ -514,7 +514,7 @@ function withViewParams(def: CardDef | undefined, values: Readonly<Record<string
  */
 function creditsOf(def: CardDef | undefined, radiant: boolean): FaceCredits | null {
   const resource = def?.resource;
-  if (resource === undefined || resource === null) return null;
+  if (resource === undefined) return null;
   const price = radiant ? resource.radiant : resource.base;
   return { min: price.sellMin, max: price.sellMax };
 }

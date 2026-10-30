@@ -282,12 +282,13 @@ fn summon_dormant_starship(sink: &mut EngineSink<'_>, player: PlayerId) -> Optio
     None
 }
 
-/// R1852000–R1852002: a Starship Piece died (`snapshot` is the card as it stood, R89): a copy of it
-/// fuses into its owner's Dormant Starship — the player whose graveyard it entered, whoever controlled
-/// it (R1852002) — summoning one first if they have none. The fusion is R77's with the Starship kept
-/// (its zone, its Dormant status, its memory), the copy on the face it was on (R469), and the Starship
-/// is never made a piece by it (R1852001). Nothing happens when the Starship cannot be had, or when the
-/// fusion would pass `FUSED_CARDS_CAP` (R874000).
+/// R1852000–R1852002: a Starship Piece died (`snapshot` is the card as it stood, R89): a copy of it,
+/// its base version (`piece_copy`, R2521000), fuses into its owner's Dormant Starship — the player
+/// whose graveyard it entered, whoever controlled it (R1852002) — summoning one first if they have
+/// none. The fusion is R77's with the Starship kept (its zone, its Dormant status, its memory), the copy
+/// on the face it was on (R469), and the Starship is never made a piece by it (R1852001). Its memory
+/// and `starshipFused` name the copy's definition, the base one. Nothing happens when the Starship
+/// cannot be had, or when the fusion would pass `FUSED_CARDS_CAP` (R874000).
 pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
     let owner = snapshot.owner;
     let ship_id = match dormant_starship_of(sink.state, owner) {
@@ -306,8 +307,10 @@ pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
     } else {
         None
     };
+    // R2521000: the memory and the event name the base definition the copy is of.
+    let base_def_id = copy.def_id.clone();
     let record = StarshipPieceRecord {
-        def_id: copy.def_id.clone(),
+        def_id: base_def_id.clone(),
         radiant: if copy.radiant { Some(true) } else { None },
     };
     let fused = fuse(
@@ -332,7 +335,7 @@ pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
         player: owner,
         instance_id: ship_id,
         piece_id: snapshot.id.clone(),
-        def_id: snapshot.def_id.clone(),
+        def_id: base_def_id,
         pieces,
     });
 }

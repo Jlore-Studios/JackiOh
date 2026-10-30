@@ -58,6 +58,10 @@
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, a foil over
 // its art, a finish and a border, each on its own attribute apart from the rarity foil
 // (cosmetics.ts, cosmetics.css). Every other face, and a face wearing the defaults, carries none.
+//
+// R2521009: a Resource's full face prints what it sells for on the face shown, "Credits: 2–5"
+// (`.cf-text-credits`, the model's `credits`), as a line under its text, in hand, in the inspect
+// views, the Almanac and the deck builder alike, since each draws this face.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -74,7 +78,7 @@ import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
 import { showsFullArt, useFullArt } from "./fullArt.ts";
-import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel } from "./model.ts";
+import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf } from "./setMark.ts";
@@ -195,7 +199,7 @@ function tagWords(face: FaceModel, tag: Tag | typeof ALL_TRIBES): string {
  */
 function printedText(face: FaceModel, text: string): string {
   const values = face.values.map((entry) => ` {${printedValue(entry)}}`).join("");
-  return [`${text}${values}`, gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
+  return [`${text}${values}`, creditsLine(face), gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
 }
 
 /** What a face's rules box prints (issues #814, #1017). */
@@ -435,6 +439,11 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
                   {...(face.text.tuned === undefined ? {} : { tuned: face.text.tuned })}
                   chinese={face.chinese === true}
                 />
+              </span>
+            )}
+            {face.credits != null && (
+              <span className="cf-text-credits" data-credits-min={face.credits.min} data-credits-max={face.credits.max}>
+                {creditsLine(face)}
               </span>
             )}
             {face.gained.length > 0 && (
