@@ -81,7 +81,7 @@ Each run keeps its reports as the artifact `learn-<run>` (the fit's report, the 
 gate's report, `deliver.json`, the weights) for 90 days, and its summary says how far it got. The
 night bot's status issue ("Night bot status", pinned) has a section for the lane: the generation on
 `main`, the lane's pull request, the next scheduled run and how each of the last runs ended
-(`bot/harness/dashboard.py`, `learn_lane`).
+(`bot/go/internal/dashboard`, `LearnLane`).
 
 ## Running unattended
 

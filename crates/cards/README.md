@@ -113,7 +113,10 @@ mod tests {
 - **`preview`** is R280's number a formula comes to now: `{ label, value }` pairs, each label an
   exact substring of the running face's text, each value what the card's own resolution would deal
   or gain. It reads only public facts and the card's own face and counters, never a library's
-  contents or a hand's cards. A declared number (`params`) is not a preview.
+  contents or a hand's cards. A declared number (`params`) is not a preview. R2476000: a card that
+  remembers something shows it the same way, a count through `count_preview`, a remembered card by
+  name through `card_preview` (the dash, `NOTHING_REMEMBERED`, before there is one), read with the
+  same function its resolution reads it with; what only its owner may know stays in their hand.
 
 **Purity (CLAUDE.md rules 4 and 5).** A hook reads its `EffectContext` and returns `Vec<Effect>`;
 it never assigns to the state, never calls an engine mutator and never reaches for a clock or the
@@ -199,7 +202,7 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
   Lifesteal (R1748001). `usesPlague: true`: a Field Spell that uses the Plague Counters on itself, on
   which a Buff places one and from which a Nerf removes one on the field (R1748002).
 - `snapshotOf`: set on no card since issue #2511 (R2511001). The catalogs shipped from v0.5.7 to
-  v0.5.10d set it on Training Grounds #41–#60, the Core card each copies, and a replay folded under
+  v0.5.11 set it on Training Grounds #41–#60, the Core card each copies, and a replay folded under
   one still reads it (one Discover offers one of the pair, R2204001); `catalog check` refuses it now.
   Those twenty are the Legacy cards, named `Legacy: <Core name>` and tagged Legacy (R2511000), each
   its own card beside its Core card; its script is a copy of the Core card's code, not a re-export

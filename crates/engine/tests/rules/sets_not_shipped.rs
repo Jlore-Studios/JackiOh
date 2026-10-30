@@ -1092,13 +1092,13 @@ mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
 /// R2195000, R2511001: a Legacy card (Training Grounds #41–#60) is its own card, so a deck holds it
 /// beside the Core card it copies: `create_game`'s check and the shared validator's L3 take the two
 /// together, as they take either alone. R2195000's pair rule is superseded; a definition that still
-/// names its Core card (`snapshotOf`, the catalogs shipped from v0.5.7 to v0.5.10d) is judged the same.
+/// names its Core card (`snapshotOf`, the catalogs shipped from v0.5.7 to v0.5.11) is judged the same.
 mod r2195000_r2511001_a_deck_holds_a_core_card_and_its_legacy_card_together {
     use super::*;
     use jackioh_engine::validator::{CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutRule};
 
     /// `defs()` with core-002's Legacy card beside it, naming core-002 as a carried catalog of
-    /// v0.5.7 to v0.5.10d did (`marked`) or not, as the build's does.
+    /// v0.5.7 to v0.5.11 did (`marked`) or not, as the build's does.
     fn with_legacy(marked: bool) -> CardDefs {
         let mut catalog = defs();
         let mut legacy = card("traininggrounds-041", "Training Grounds", "41", &[], false);

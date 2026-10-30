@@ -34,13 +34,13 @@ every push (#1370). Nothing else sets them, and no label overrides the classifie
 
 | Label | For |
 |---|---|
-| `kind:cards` | It changes how a card plays (its data, its script, or an engine rule its games meet) or its words |
+| `kind:cards` | It changes how a card plays (its data, its script, or an engine rule its games meet), its words, or how it looks (`apps/web/src/cards/`, R2529000) |
 | `kind:ai` | It changes the practice and ladder AI's decisions |
 | `kind:app` | It changes the client or the server, what players see and use |
 | `kind:internal` | CI, the bots, tooling, docs, tests or a refactor |
 | `tier:major` | A set ships: the next `v0.Z.0` |
-| `tier:patch` | 50 or more cards play differently, or a rule every game meets: the next `v0.Z.X` |
-| `tier:micro` | Fewer cards, or their words alone: the next letter |
+| `tier:patch` | 15 or more cards reprinted, 50 or more that play differently, or a rule every game meets: the next `v0.Z.X` |
+| `tier:micro` | Fewer cards, their words alone, or how they look: the next letter |
 
 The type labels stay for routing (the night bot's sweeps and the forms read them), though a `Patch:`
 title names none.
@@ -53,9 +53,9 @@ is Claude Opus's alone), `human` (people do it, such as a decision or any change
 labels (the bot's pickup order) and the `bot:*` labels are separate. Never add `bot:build` while
 retitling or relabeling, because it queues a build.
 
-Every label, with its color and description, is listed once, in `bot/harness/config.py`'s
-`LABELS`: the sweep creates one the repository lacks and deletes one it retired
-(`RETIRED_LABELS`), and `harness setup` also restores a changed one.
+Every label, with its color and description, is listed once, in `bot/go/internal/config`'s
+`Labels`: the sweep creates one the repository lacks and deletes one it retired
+(`RetiredLabels`), and `harness setup` also restores a changed one.
 
 **Who does an issue: one label each.** `bot:build` hands an issue to the night bot, which queues it;
 so does assigning the bot or commenting `/harness build`. `human` hands it to people: triage
@@ -68,7 +68,7 @@ Otherwise the night bot's planner rates the issue when it plans it, and it count
 then: **easy** only when it is small (at most 10 files and 400 lines), in one crate or app,
 touches none of `SPEC.md`, the notes in `spec/`, `BUILD.md` or the shared surfaces, does no engine,
 AI, catalog, card or migration work, is checked by a unit test, leaves the builder no decision, and
-is blocked by nothing (`bot/harness/easy.py`); **hard** for engine rules, the AI, design across
+is blocked by nothing (`bot/go/internal/easy`); **hard** for engine rules, the AI, design across
 crates, a migration, or about 40 files or more; **medium** for the rest. Triage
 gives no difficulty beyond the form's answer. Every ten minutes the sweep labels what is left bare
 (#735): a planned issue with no difficulty gets `difficulty:medium`, and a bot pull request its
@@ -101,7 +101,8 @@ A pull request has no type.
 names a version before it ships: the version follows from what the change does to the cards
 ([Version numbers](#version-numbers)), and the issue and the pull request are retitled
 `Patch v0.3.18: aimed random casts and the Deft keyword` when it ships. A change that ships no card
-data never takes a version and keeps its `Patch:` title. Its kind (Cards, AI, App, Internal) is the
+data never takes a version and keeps its `Patch:` title, unless it changes how cards look or ships a
+system the owner names, which take one through a fragment (R2529000). Its kind (Cards, AI, App, Internal) is the
 classifier's label on its pull request, never its title's.
 
 A pull request takes the same titles ([Pull requests](#pull-requests)). The older prefixes
@@ -122,13 +123,22 @@ does to the cards through the classifier and names it:
   arrival opens no line and earns the tier its cards do, so Training Grounds ships as a patch of
   Stinkyscape's v0.5, whose line is "Stinkyscape & Training Grounds". Wrapping is the owner's call,
   never a builder's.
-- **Patch, `v0.Z.(X+1)`**: 50 or more card families play differently (`PATCH_MIN_CARDS`), or a rule
-  every game meets changed: divergences that name no card in a quarter of the classifier's unforced
+- **Patch, `v0.Z.(X+1)`**: 15 or more card families are reprinted (`PATCH_MIN_REPRINTS`, R2499000:
+  their catalog entry changed and they play differently, as in a balance pass), 50 or more play
+  differently by any route, the engine's included (`PATCH_MIN_CARDS`), or a rule every game meets
+  changed: divergences that name no card in a quarter of the classifier's unforced
   games (`RULE_MIN_GAMES`), or a base build that refuses the head's decks. A patch restarts every
   card's statistics (R1367000), so it waits for a change broad enough to move them (#2455,
   R2455000); the bar was 10 families, and any one divergence without a card, until then.
 - **Micro, the newest version with the next letter** (after v0.3.18, v0.3.18b, then v0.3.18c):
-  anything smaller, and any change to wording alone however many cards it touches.
+  anything smaller, any change to wording alone however many cards it touches, and any change to how
+  cards look (the client's `apps/web/src/cards/`: faces, art, frames, foils, marks), which plays no
+  card (R2529000).
+- **A system the owner names** (`SYSTEM_RELEASES` in `crates/tools/src/classify.rs`, by its tracker
+  issue, R2529000), such as card packs, ships as a patch whatever its cards earn, its fragment
+  claiming it with `--system <issue>`. Naming one is the owner's call, never a builder's. Card
+  statistics read such a patch as a micro over the cards it plays, so no other card's figures
+  restart.
 
 A family is a card with its tokens. A card plays differently when its catalog entry changes a field
 other than its wording (`name`, a face's `text`, `refs`, `printedRarity`, `index`), when it is added
@@ -224,7 +234,7 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
 
   n is the order the parts are meant to merge in. When a part is added or moved, update m on the
   rest. The night bot holds a part until the parts before it, the same parent's sub-issues, have
-  closed (`bot/harness/queue.py`, `waits_for`), so a part that is not linked waits for nothing.
+  closed (`bot/go/internal/queue`, `WaitsFor`), so a part that is not linked waits for nothing.
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
 - **Going live.** A change to a card goes live through a pending fragment:
@@ -232,7 +242,8 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
   the title, claiming the catalog cards the branch changed. A card whose script or engine rule
   changed how it plays, with no catalog change, is claimed with `--plays <ids>`, and a rule every
   game meets with `--rule`, as `cargo jackioh classify --base origin/main --parent-bin <main's
-  jackioh>` names them (R1366000). After the branch merges `patches ship` promotes it, naming the
+  jackioh>` names them (R1366000). A change to how cards look is claimed with `--visual`, and a
+  system the owner names with `--system <issue>` (R2529000). After the branch merges `patches ship` promotes it, naming the
   version from its tier, appending it to `patches.json` and bumping the catalog version everywhere
   it lives (`crates/cards/README.md` §6), and the next deploy reseeds the database. The PR that adds the fragment is the last part, and the patch is
   live when the promotion PR merges. A patch with no card data change is live when its last part
@@ -329,13 +340,13 @@ sample of All Random. The base build needs the flag, so the first such compariso
 - **Title.** A pull request's title becomes the subject of the squash commit it lands as, so it
   follows [Titles](#titles), usually as its issue's does. The `pr title` check
   (`.github/workflows/pr-title.yml`) fails one that doesn't and runs again when it is edited. Its
-  pattern is triage's (`bot/harness/triage.py`, `CONVENTION`), plus the titles tools give their own
-  pull requests (`AUTOMATED_PULL`): `patches ship: v0.3.1` (`patches-ship.yml`),
+  pattern is triage's (`bot/go/internal/triage`, `Convention`), plus the titles tools give their own
+  pull requests (`AutomatedPull`): `patches ship: v0.3.1` (`patches-ship.yml`),
   `Promote main to production: N commit(s) up to abc1234` (`scripts/promote-production.sh`), a
   training lane's `AI gen N (improve): …`, `AI gen N (unban): …` or `AI gen N (learn): …`, and GitHub's `Revert "…"` of
   a title that passes. The bots title theirs from the builder's answer when it follows the
   convention, else from the issue, else as `Patch: <what it does>` with the old prefix dropped,
-  as the fix of a workflow's `CI: …` alert is (`triage.pull_title`), and merge by squash, so
+  as the fix of a workflow's `CI: …` alert is (`triage.PullTitle`), and merge by squash, so
   their branch commits' subjects (`bot: build pass 1 for #85`) never become one on `main`.
 - **Body.** The template asks for `Closes #n` (a part says `Closes #<part>` and
   `Part of #<tracker>`), what changed, the tests run, the risks, the rulings added or changed and

@@ -21,7 +21,7 @@ body:
     id: acceptance
     attributes:
       label: Acceptance
-      description: What its tests (`cd bot && python3 -m unittest discover -s tests -t .`) or a run show once it is done.
+      description: What its tests (`cd bot/go && go test ./...`) or a run show once it is done.
     validations:
       required: true
   - type: dropdown

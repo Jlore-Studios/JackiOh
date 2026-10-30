@@ -970,7 +970,7 @@ pub fn deckable(def: &CardDef) -> bool {
 /// R2204001, R2511001: the key a Discover from the catalog offers once. A definition that names the
 /// Core card it copied (`CardDef.snapshot_of`) shares that card's key; every other card is its own.
 /// The build's catalog names none, so every card is its own key and an offer may show a Core card
-/// and its Legacy card both; the catalogs shipped from v0.5.7 to v0.5.10d name one for each of
+/// and its Legacy card both; the catalogs shipped from v0.5.7 to v0.5.11 name one for each of
 /// Training Grounds #41–#60, so a replay folded under one (R767000) offers what its game offered.
 /// Only the two Discovers read it (`effects::choose`'s offer and `subsystems::scorer::top_three`); a
 /// deck holds both cards (R2511001).
