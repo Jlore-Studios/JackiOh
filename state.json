@@ -10083,7 +10083,7 @@
       "planned_by_id": "muse",
       "planned_tier": "medium",
       "provider": "claude-8",
-      "run_id": "pending:b3853432-1793382396",
+      "run_id": "41101498635",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-30T17:47:04Z",
       "stop_requested": false,
