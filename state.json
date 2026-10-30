@@ -9370,7 +9370,25 @@
       "feedback_since": "2026-10-29T20:22:41Z",
       "issue": 2387,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40948489243",
+            "tier": "medium"
+          }
+        ],
+        "sha": "46294e91e28a9f190035c2bb642a2c7f79d981f6",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
