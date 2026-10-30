@@ -1,6 +1,5 @@
-//! The rng verbs and the two subsystem wrappers
-//! (SPEC §6.1 Lucky X, §6.3 Fuse/Rotate/Make Radiant, §3.1's rotation-topology ruling, §10.4, §10.7;
-//! R14, R32, R60, R77, R88, R102; BUILD M3-T1).
+//! The rng verbs and the two subsystem wrappers (SPEC §6.1 Lucky X, §6.3 Fuse/Rotate/Make Radiant, §3.1's
+//! rotation topology, §10.4, §10.7; R14, R32, R60, R77, R88, R102; BUILD M3-T1).
 //!
 //! `flipCoins` and `radiantChance` own randomness, so every test counts DRAWS as well as outcomes:
 //! §10.7 stores the cursor in state, so a verb that took a draw only sometimes would break §9.3's
@@ -57,7 +56,6 @@ fn gary() -> CardDef {
     unit_def_of("gary", 1601, json!({}))
 }
 
-/// Plain bodies for the library pool and the rotation ring.
 fn body() -> CardDef {
     unit_def_of("body", 1602, json!({}))
 }
@@ -131,7 +129,6 @@ struct Ran {
     cursor: u32,
 }
 
-/// Apply effects and hand back the events and the rng cursor the run left behind.
 fn run(state: &mut GameState, effects: &[Effect], options: RunOptions) -> Ran {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -157,7 +154,6 @@ fn run(state: &mut GameState, effects: &[Effect], options: RunOptions) -> Ran {
     }
 }
 
-/// Draws taken by one run, which is the only honest way to say "this verb rolled N times".
 fn draws(ran: &Ran) -> u32 {
     ran.cursor
 }
@@ -224,7 +220,6 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
             with_self(&unit),
         );
 
-        // Five flips, no more and no fewer: the cursor is state, so this is a rule (§10.7).
         assert_eq!(draws(&ran), 5);
         // "coins-known" at cursor 0 flips T H H H H: four heads, one tail.
         let buffs = live(&state, &unit.id).buffs;
@@ -240,8 +235,7 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
     }
 
     /// R1440: a flipper with Lucky 1 (given to it, R1438) flips each coin twice and keeps heads if
-    /// either lands heads, so five coins take ten draws and land the heads the seed's pairs predict.
-    /// Gary's rider is one more coin, rolled the same way: two draws.
+    /// either lands heads, so five coins take ten draws, and Gary's rider coin takes two.
     #[test]
     fn r1440_a_flipper_with_lucky_1_takes_two_draws_a_coin_and_keeps_heads() {
         let mut state = game("coins-known");
@@ -331,7 +325,6 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
         let mut state = game("coins-known");
         assert_eq!(state.rng_cursor, 0);
 
-        // `{ of: "self" }` with no self, and `{ of: "chosen" }` with nothing chosen: both fizzle.
         let no_self = run(
             &mut state,
             &[coins(
@@ -475,8 +468,7 @@ mod r32_r130_flip_coin_keyword_s8_1_c4_s10_4_s10_7 {
 
         let ran = run(&mut state, &[rider()], with_self(&unit));
 
-        // The second flip of the "coins-known" stream is heads. The sink cursor is absolute, so
-        // one draw from cursor 1 leaves it at 2.
+        // The stream's second flip is heads; the sink cursor is absolute, so one draw from 1 ends at 2.
         assert_eq!(draws(&ran) - 1, 1);
         assert_eq!(
             live(&state, &unit.id).granted_keywords,
@@ -489,7 +481,6 @@ mod r32_r130_flip_coin_keyword_s8_1_c4_s10_4_s10_7 {
         let mut state = game("coins-known");
         assert_eq!(state.rng_cursor, 0);
 
-        // `{ of: "self" }` with no self: the coin is never flipped.
         let ran = run(&mut state, &[rider()], as_p1());
 
         assert_eq!(draws(&ran), 0);
@@ -579,11 +570,9 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
             as_p1(),
         );
 
-        // Six rolls for the six cards: how many draws the effect takes does not hang on how many of a
-        // library nobody may read were Radiant already (§9.1).
+        // Six rolls: how many draws it takes does not hang on how many hidden cards were Radiant (§9.1).
         assert_eq!(draws(&ran), 6);
-        // At chance 1 every roll hits, and a library card is hidden from both seats, so every success is
-        // cued, changed or not (R177): the cues cannot count the Radiant ones either.
+        // A library card is hidden from both seats, so every success is cued, changed or not (R177).
         assert!(library.iter().all(|card| live(&state, &card.id).radiant));
         assert_eq!(
             ids_of_type(&ran.events, "radiantSet"),
@@ -621,9 +610,8 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
         assert_eq!(draws(&base_ran), 6);
         assert_eq!(draws(&face_ran), 12);
 
-        // On this seed #42's radiant face ("Lucky 1 at 40%") really does flag strictly more than its
-        // base face ("30%"): 5 cards against 3. That is a per-seed fact, not a theorem — the two faces
-        // read different draws off the same stream, so no seed-independent ordering exists to assert.
+        // On this seed #42's radiant face (Lucky 1 at 40%) flags 5 cards to its base face's (30%) 3: a
+        // per-seed fact, as the two faces read different draws off the same stream.
         assert_eq!(radiant_at(&base_state, &base_library), vec![1, 3, 4]);
         assert_eq!(radiant_at(&face_state, &face_library), vec![0, 1, 2, 3, 4]);
         assert!(radiant_at(&face_state, &face_library).len() > radiant_at(&base_state, &base_library).len());
@@ -730,7 +718,6 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
                 },
             )
         };
-        // p1's Luck 1 doubles the six rolls; p2 rolls as before.
         assert_eq!(draws(&run_for(PlayerId::P1)), 12);
         assert_eq!(draws(&run_for(PlayerId::P2)), 6);
     }
@@ -759,7 +746,6 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
     #[test]
     fn r77_c85_radiant_fuses_one_ingredient_onto_every_target_one_fusion_at_a_time() {
         let mut state = game("fuse-each");
-        // #85's played permanent, plus two of the controller's matching permanents.
         let played = put(
             &mut state,
             &alpha().id,
@@ -787,10 +773,9 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
             as_p1(),
         );
 
-        // R77: each target is its own fusion with its own transient definition. The second fusion is
-        // the whole point — the played card ceased to exist in the first one, and an ingredient only
-        // ever contributes its DEFINITION, so it still fuses. Re-resolving it by id would have found
-        // nothing, dropped below FUSE_MIN_INGREDIENTS and silently changed nothing.
+        // R77: each target is its own fusion with its own transient definition. The played card ceased to
+        // exist in the first, but an ingredient only ever contributes its DEFINITION, so the second still
+        // fuses; re-resolving it by id would find nothing and silently change nothing.
         let mut keys = transient_ids(&state);
         keys.sort();
         assert_eq!(keys, vec!["t-1:rn-alpha+rn-beta", "t-2:rn-alpha+rn-beta"]);
@@ -803,7 +788,6 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
             kept_second.as_ref().map(|c| c.id.clone()),
             Some(second.id.clone())
         );
-        // Each kept card now IS a fused card, and the two fusions are distinct definitions.
         assert_ne!(kept_first.as_ref().map(|c| c.def_id.clone()), Some(beta().id));
         assert_ne!(kept_second.as_ref().map(|c| c.def_id.clone()), Some(beta().id));
         assert_ne!(
@@ -857,7 +841,6 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         let ran = run(&mut state, &[effect], as_p1());
 
         assert_eq!(draws(&ran), 1);
-        // Exactly ONE fusion happened, so exactly one target was consumed into a fused card.
         assert_eq!(transient_ids(&state), vec!["t-1:rn-alpha+rn-beta"]);
         let fused_count = [&first, &second]
             .iter()
@@ -895,7 +878,6 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
 
         assert_eq!(draws(&ran), 0);
         assert!(state.transient_defs.is_empty());
-        // The ingredient is untouched: nothing was consumed for a fusion that never happened.
         assert_eq!(
             find_instance(&state, &played.id).map(|c| c.def_id.clone()),
             Some(alpha().id)
@@ -953,7 +935,6 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         assert_eq!(effective_cost(&state, &result, Default::default()), 0);
         assert!(state.players.p2.hand.is_empty());
 
-        // One `fused` event, naming the ingredients and the result, and nothing else the wrapper made.
         let fused_events = events_json(&ran.events, "fused");
         assert_eq!(fused_events.len(), 1);
         let event = &fused_events[0];
@@ -1063,7 +1044,6 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         assert_eq!(now.damage, 1);
         let view = unit_view(&state, &now);
         assert_eq!((view.attack, view.max_health, view.health), (3, 4, 3));
-        // The other ingredient ceased to exist: no graveyard, no death, no pile.
         assert!(card_at(&state, slot(PlayerId::P1, Row::Units, 2)).is_none());
         assert!(find_instance(&state, &played.id).is_none());
         assert!(state.players.p1.graveyard.is_empty());
@@ -1094,7 +1074,6 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
 
 // rotate (#52 Silly Silas)
 
-/// Where a card sits now, as "p2 units 5", for readable assertions.
 fn where_is(state: &GameState, card: &CardInstance) -> String {
     match find_instance(state, &card.id).map(|now| now.zone.clone()) {
         None => "gone".to_string(),
@@ -1214,8 +1193,7 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
             json!({}),
         );
 
-        // The card's two faces share one hook and pass only the direction, so the radiant behavior
-        // has to come from `ctx.radiant`.
+        // The faces share one hook passing only the direction, so radiant behavior comes from `ctx.radiant`.
         let ran = run(
             &mut state,
             &[turning("right")],
@@ -1268,7 +1246,6 @@ mod r1085_grant_keywords_random_unit {
 
         let ran = run(&mut state, &[granting()], as_p1());
 
-        // One pick, and exactly one of the two Units holds both keywords afterwards.
         assert_eq!(draws(&ran), 1);
         let kinds_of = |id: &str| -> Vec<KeywordKind> {
             keywords_of(&state, &live(&state, id))

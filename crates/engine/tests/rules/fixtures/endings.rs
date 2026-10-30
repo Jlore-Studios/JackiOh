@@ -1,14 +1,9 @@
 //! Test-only cards for issue #1843's two endings: a vote to remove a player (`vote_out`, R1843000,
-//! R1843001) and a flight from the game (`flee`, R1843002, R1843003). Each does it through the engine's
-//! own verbs, as a card script would, so the engine never imports `crates/cards`; the Stinkyscape cards
-//! that use them (#18.1 MELCHIOR, #18.2 BALTHASAR, #18.3 CASPER, #148.1 Edge of the Universe) are built
-//! later, behind the set's gate (R1420), and test the same cases again.
-//!
-//! The three voters are the Brains' shape: Field Spells that vote at their controller's start of turn
-//! on a condition of their own. CASPER's ("you Floated last turn") is the card part's; its fixture votes
-//! every turn.
-//!
-//! Ids are prefixed `en-` and indexed from 18430, so they collide with no other fixture file's.
+//! R1843001) and a flight from the game (`flee`, R1843002, R1843003), each through the engine's own
+//! verbs, as a card script would, since the engine never imports `crates/cards`. The Stinkyscape cards
+//! using them (#18.1 MELCHIOR, #18.2 BALTHASAR, #18.3 CASPER, #148.1 Edge of the Universe) sit behind
+//! the set's gate (R1420) and test the same cases again. Ids are prefixed `en-` and indexed from 18430,
+//! so they collide with no other fixture file's.
 
 #![allow(non_upper_case_globals)]
 

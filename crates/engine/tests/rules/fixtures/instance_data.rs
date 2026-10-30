@@ -1,8 +1,6 @@
-//! Fixture cards for patch v0.2.0's instance data (docs/classic-sets.md B2.7, B3.3, B3.4, E38, E39):
-//! Brittle, Degrade and Upgrade, declared numbers, KY's Constant, faces with their own type and X
-//! stats, enchantments. Each reproduces the shape of the Classic or Classic+ card named in its doc
-//! comment through the effects library (BUILD §0). `instance_game` registers them on top of the
-//! shared fixture catalog.
+//! Fixture cards for instance data (docs/classic-sets.md B2.7, B3.3, B3.4, E38, E39), each the shape of
+//! the Classic or Classic+ card its doc names, through the effects library (BUILD §0). `instance_game`
+//! registers them on top of the shared fixture catalog.
 
 #![allow(non_upper_case_globals)]
 
@@ -18,8 +16,7 @@ use jackioh_engine::testkit::*;
 use super::catalog::vanilla_deck;
 use super::harness::{both, setup_catalog};
 
-/// A Core Common 2/2 Unit at cost 1 (4/4 Radiant) whose faces print
-/// `name`, `overrides` over it.
+/// A Core Common 2/2 Unit at cost 1 (4/4 Radiant) whose faces print `name`, `overrides` over it.
 fn def(name: &str, index: i32, overrides: Value) -> CardDef {
     let mut card = json!({
         "id": format!("id-{name}"),

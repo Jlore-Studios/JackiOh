@@ -1,7 +1,6 @@
-//! The effects library's cross-cutting acceptance items and the core verbs with no test file of
-//! their own (BUILD M3-T1, SPEC §6.3's verb table): R70's cast, R78's reset and draw, addToHand,
-//! shuffleInto, loseHealth, mana, memory, position. M3-T1's other items (steal R15, summon R64,
-//! fuse R77, bounce, Immutable R23, recruit) are the per-effect files'.
+//! The effects library's cross-cutting items and the core verbs with no test file of their own (BUILD
+//! M3-T1, SPEC §6.3): R70's cast, R78's reset, draw, addToHand, shuffleInto, loseHealth, mana, memory,
+//! position. Steal (R15), summon (R64), fuse (R77), bounce, Immutable (R23) and recruit have their own.
 
 use jackioh_engine::effects::{
     TargetSpec, add_random_from_graveyard, add_to_hand, damage, draw, gain_mana, lose_health, next_turn_mana,
@@ -20,7 +19,6 @@ use super::fixtures::harness::{Bench, events_of_type, in_hand, new_game, put, se
 use super::fixtures::scripts::{anti_oneshot, stockpile};
 use crate::rules::fixtures::harness::{json_of, live, live_mut, matches_object};
 
-/// Like `put`, but the card is made Radiant before it is placed.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let player = at.player;
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
@@ -35,7 +33,6 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
 
 // Fixtures: a Spell with a Cry, for R70's cast.
 
-/// A def named `ec-<name>`, with `extra` spread over it.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     let mut def = json!({
         "id": format!("ec-{name}"),
@@ -117,8 +114,7 @@ impl RunOptions {
     }
 }
 
-/// Builds the context over a fresh sink and hands it to `f` (a context borrows the state, so it
-/// cannot be handed back). The card is looked up again by id.
+/// A context over a fresh sink, lent to `f`: it borrows the state, so it cannot be handed back.
 fn with_context<R>(
     state: &mut GameState,
     options: RunOptions,
@@ -144,8 +140,7 @@ fn with_context<R>(
     f(&mut ctx)
 }
 
-/// Apply effects outside any card, as the resolver does, and hand back the events (§10.3). The
-/// sink's rng is not written back to the state.
+/// Apply effects outside any card, as the resolver does (§10.3); the rng is not written back.
 fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<GameEvent> {
     let RunOptions {
         controller,
@@ -170,8 +165,6 @@ fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<
     std::mem::take(&mut sink.events)
 }
 
-/// `resolve_target`'s answer as JSON: `{ kind: "unit", instance }`, `{ kind: "hero", player }`, or
-/// `null`.
 fn target_json(target: Option<DamageTarget>) -> Value {
     match target {
         Some(DamageTarget::Unit { instance }) => json!({ "kind": "unit", "instance": instance }),
@@ -194,7 +187,6 @@ fn on_instance(card: &CardInstance) -> Option<Vec<Selection>> {
     }])
 }
 
-/// One field of every event of a type, in order.
 fn field_of(events: &[GameEvent], of: GameEventType, key: &str) -> Vec<Value> {
     events_of_type(events, of)
         .iter()
@@ -507,7 +499,6 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
             vec![json!("p2")]
         );
 
-        // A count of 0 draws nothing.
         assert_eq!(
             run(
                 &mut state,
@@ -564,7 +555,6 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         assert_eq!(def_ids(&state.players.p1.graveyard), vec![taunter.id.clone()]);
     }
 
-    /// `[plain, taunter, stockpile]`, each put in p1's hand and moved to the graveyard.
     fn bury(state: &mut GameState) -> Vec<CardInstance> {
         [plain.id.clone(), taunter.id.clone(), stockpile().id]
             .iter()
@@ -592,7 +582,6 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         assert!(buried.iter().any(|card| card.id == moved.id));
         assert_eq!(state.players.p1.graveyard.len(), 2);
 
-        // Seeded: the same state and seed return the same card.
         let mut again = game("add-random-graveyard");
         let buried_again = bury(&mut again);
         run(
@@ -609,7 +598,6 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
             must(buried_again.get(index), "the same slot").id
         );
 
-        // An empty graveyard gives nothing.
         let mut empty = game("add-random-empty");
         assert_eq!(
             run(
@@ -705,7 +693,6 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         assert!(copies.iter().all(|card| card.radiant));
         assert!(copies.iter().all(|card| card.id != self_card.id));
 
-        // With no card running there is nothing to copy.
         let mut bare = game("shuffle-copies-bare");
         set_library(&mut bare, P1, &[] as &[&str]);
         assert_eq!(
@@ -786,7 +773,7 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
             json!([{ "type": "manaChanged", "player": "p1", "current": 3, "max": 1 }])
         );
 
-        // The enemy's mana when the effect names it, and a drain floors at 0.
+        // The enemy's mana when named, and a drain floors at 0.
         run(
             &mut state,
             vec![gain_mana(json_as(json!({ "amount": 1, "player": "enemy" })))],
@@ -841,7 +828,6 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
         assert!(events_of_type(&over, GameEventType::ManaChanged).is_empty());
         assert_eq!(state.players.p1.mana.current, 6);
 
-        // The enemy's pool when the effect names it.
         state.players.p2.mana = ManaState {
             current: 1,
             max: 2,
@@ -890,7 +876,7 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
         // One refresh only: the modifier is spent.
         assert_eq!(state.players.p2.mana.next_turn_mod, 0);
 
-        // A big penalty floors the refresh at 0 rather than going negative.
+        // A big penalty floors the refresh at 0.
         run(
             &mut state,
             vec![next_turn_mana(json_as(
@@ -947,7 +933,6 @@ mod s10_1_memory_what_a_card_remembers_r43_m3_t1 {
             json!({ "meal": "eaten", "grade": 2, (REMEMBERED_KEY): ["meal", "grade"] })
         );
 
-        // With no card running there is nowhere to remember anything.
         assert_eq!(
             run(
                 &mut state,
@@ -983,7 +968,6 @@ mod s10_1_memory_what_a_card_remembers_r43_m3_t1 {
         assert!(options.iter().any(|option| first == Some(json!(option))));
         assert_eq!(pick("remember-random"), first);
 
-        // An empty option list remembers nothing, and so does a call with no card running.
         let mut state = game("remember-random-empty");
         let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
         run(
@@ -1044,7 +1028,7 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
             json!([{ "type": "positionSwitched", "instanceId": unit.id, "position": "DEF" }])
         );
 
-        // A named position rather than a flip, and naming the one it is already in changes nothing.
+        // A named position, not a flip; naming the one it is already in changes nothing.
         run(
             &mut state,
             vec![switch_position_of(json_as(
@@ -1118,7 +1102,6 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
                 .all(|unit| !live(&state, *unit).exertion.switched)
         );
 
-        // One side only when the effect names it.
         run(
             &mut state,
             vec![switch_all_positions(json_as(json!({ "side": "enemy" })))],
@@ -1161,7 +1144,6 @@ mod s6_3_the_effects_barrel_m3_t1 {
         ];
 
         for effect in &built {
-            // The kind must still name something.
             let _: &'static str = effect.kind;
             let _: &EffectApply = &effect.apply;
             assert!(!effect.kind.is_empty());

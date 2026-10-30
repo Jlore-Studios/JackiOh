@@ -189,8 +189,7 @@ mod r667_the_counter_warning_on_the_viewers_hand {
         in_hand(&mut held, &counter_field().id, PlayerId::P2, 1);
         assert_eq!(warned(&view_for(&held, PlayerId::P1)), Vec::<String>::new());
 
-        // A Trap answers through `traps.rs`, never the trigger dispatch, and face-down it is
-        // unreadable (R97).
+        // A Trap answers through `traps.rs`, not the trigger dispatch, and face-down is unreadable (R97).
         let mut trapped = playing("r658-trap");
         put(
             &mut trapped,

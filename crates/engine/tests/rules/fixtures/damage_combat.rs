@@ -1,10 +1,7 @@
 //! Fixture cards for the damage and combat systems (docs/classic-sets.md B5 E5–E9, E35, E37, and
-//! §4.5's backrow Death). The engine never imports the cards crate (CLAUDE.md), so each system is
-//! proved through a card shaped like the one that will use it: a Final Gambit, a Voidwalker, a Blood
-//! Moon, a Joro. Ids are `dc-…`, indexed from 4700, so they collide with no other test file.
-//!
-//! The action nonce is a per-thread counter (each test runs on its own thread), and an action body is
-//! JSON (`act(&state, json!({ "type": "endTurn", "playerId": "p1" }))`) or any `ActionInput`.
+//! §4.5's backrow Death), each proved through a card shaped like the one that will use it, since the
+//! engine never imports the cards crate. Ids are `dc-…`, indexed from 4700, so they collide with no other
+//! test file. The action nonce is a per-thread counter (each test runs on its own thread).
 
 #![allow(non_upper_case_globals)]
 
@@ -267,7 +264,6 @@ pub static statue: LazyLock<CardDef> = LazyLock::new(|| plain_unit("statue", 472
 pub static charger: LazyLock<CardDef> = LazyLock::new(|| plain_unit("charger", 4726, 4, 2));
 /// Classic+ #19.5's shape: while Berserk, attacks its own hero at its controller's start of turn; Radiant can't go Berserk.
 pub static bot_loser: LazyLock<CardDef> = LazyLock::new(|| plain_unit("bot-loser", 4727, 5, 5));
-/// An immune unit: Immune to Spells printed.
 pub static warded: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
         "warded",
@@ -309,7 +305,6 @@ pub static leech: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Lifesteal" }]),
     )
 });
-/// A plain 2/2 and a plain 1/8, bodies to attack with and at.
 pub static grunt: LazyLock<CardDef> = LazyLock::new(|| plain_unit("grunt", 4734, 2, 2));
 pub static wall: LazyLock<CardDef> = LazyLock::new(|| plain_unit("wall", 4735, 1, 8));
 /// A Field Trap that notes every declared attack and every summon it is offered (it fires again and again).
@@ -1178,8 +1173,8 @@ pub fn round_trip(state: &GameState) -> GameState {
         .expect("a state's JSON is a state")
 }
 
-/// §9.3: the live game and its replay agree. `start` is the state the log was played from; the log is
-/// folded again from a clone of it through `reduce`, and the two end states hash the same.
+/// §9.3: the live game and its replay agree: `log` folded through `reduce` from a clone of `start`
+/// hashes as `live` does.
 pub fn replays_to(start: &GameState, log: &[Action], live: &GameState) -> bool {
     let mut state = clone_state(start);
     for action in log {

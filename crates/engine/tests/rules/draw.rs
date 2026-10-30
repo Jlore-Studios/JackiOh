@@ -13,7 +13,6 @@ fn def_ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
 
-/// The state is drawn in place; the events come back.
 fn draw_from(state: &mut GameState, library: &[String], count: i32) -> Vec<GameEvent> {
     set_library(state, PlayerId::P1, library);
     let mut bench = Bench::new(state);
@@ -184,8 +183,7 @@ mod draw_m1_t7 {
         let library: Vec<String> = (0..40).map(|_| drawer.id.clone()).collect();
         let events = draw_from(&mut state, &library, 1);
 
-        // One draw set all of it off, so it is one chain: 20 casts, however deeply they nested, and the
-        // cast-on-draw card each open draw then met went to the hand uncast (R58).
+        // One draw, one chain: 20 casts however deep they nested, the rest to the hand uncast (R58).
         assert_eq!(
             events_json(&events, GameEventType::CardPlayed).len(),
             CAST_ON_DRAW_CHAIN_CAP as usize

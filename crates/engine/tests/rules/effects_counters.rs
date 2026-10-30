@@ -52,7 +52,6 @@ fn hand_card(state: &mut GameState, def_id: &str) -> CardInstance {
     card
 }
 
-/// The `value` of every `counterChanged` event, in order.
 fn counter_values(events: &[GameEvent]) -> Vec<i32> {
     events_of_type(events, GameEventType::CounterChanged)
         .iter()
@@ -251,7 +250,6 @@ mod lock_s3_2_m3_t1 {
             },
         );
 
-        // The occupant stays where it was, with its stats and its zone untouched.
         assert_eq!(
             card_at(&state, slot(P2, Units, 2)).map(|card| card.id.clone()),
             Some(occupant.id.clone())

@@ -17,7 +17,7 @@ fn text(value: &Value, key: &str) -> String {
     value[key].as_str().unwrap_or_default().to_string()
 }
 
-/// A state check over `state`, the rng at its cursor, handing back the events it emitted.
+/// A state check over `state`, the rng at its cursor; its events.
 fn snake_dies(state: &mut GameState) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -28,7 +28,6 @@ fn snake_dies(state: &mut GameState) -> Vec<GameEvent> {
     events
 }
 
-/// `damage_split(args)` applied from `self_`, handing back the events.
 fn split_from(
     state: &mut GameState,
     self_: Option<&CardInstance>,
@@ -178,7 +177,6 @@ mod e37_damage_split {
                 json!([target.id, 1])
             ]
         );
-        // With no enemy unit standing there is nothing to hit.
         let mut empty = clone_state(&state);
         for zone in empty.players.p2.units.iter_mut() {
             *zone = None;
@@ -261,7 +259,6 @@ mod s03_damage_random_enemies {
         unique.sort();
         unique.dedup();
         assert_eq!(unique.len(), 2, "no enemy takes both hits: {targets:?}");
-        // The same seed and board draw the same enemies (R60: the match rng).
         let (mut again, source) = two_walls();
         let redrawn = events_json(
             &random_enemies_from(

@@ -1,6 +1,5 @@
-//! B5 E7 set health and E8 heal into damage, the effect verbs (`effects/health.rs`). The replacement
-//! that turns a heal into damage as it happens is `replacements.rs`'s; this file proves the verbs
-//! a card writes: `setHealth` (Classic #29) and `convertHealing`.
+//! B5 E7 set health and E8 heal into damage, the verbs a card writes (`effects/health.rs`): `setHealth`
+//! (Classic #29) and `convertHealing`; the replacement that turns a heal into damage is `replacements.rs`'s.
 
 use jackioh_engine::effects::{convert_healing, heal, set_health};
 use jackioh_engine::testkit::*;
@@ -162,7 +161,6 @@ mod e8_convert_healing {
         };
         assert_eq!(mods.len(), 1);
         let mut only = mods[0].clone();
-        // Any string id.
         assert!(only.get("id").is_some_and(Value::is_string));
         if let Value::Object(fields) = &mut only {
             fields.remove("id");

@@ -1,6 +1,5 @@
-//! The two cost-changing effects (BUILD M3-T1). R65 owns the order the inputs combine and
-//! `effectiveCost` is the only thing that reads them; these tests assert that order rather than
-//! recomputing it, plus R78's rule that both inputs travel with the card between zones.
+//! The two cost-changing effects (BUILD M3-T1): R65's order of their inputs, asserted through
+//! `effectiveCost` (the only reader) rather than recomputed, and R78's rule that both travel with the card.
 
 use jackioh_engine::effects::{PlayerModifierSpec, set_cost_mod, set_cost_override};
 use jackioh_engine::testkit::*;
@@ -18,8 +17,7 @@ struct RunOptions {
     targets: Option<Vec<Selection>>,
 }
 
-/// Applies `effect` in a context built over `sink`. The card is looked up again by id, so the
-/// context sees it as it stands now.
+/// The card is looked up again by id, so the context sees it as it stands now.
 fn run(sink: &mut EngineSink<'_>, effect: Effect, options: RunOptions) {
     let RunOptions {
         self_,
@@ -39,7 +37,6 @@ fn run(sink: &mut EngineSink<'_>, effect: Effect, options: RunOptions) {
     (effect.apply)(&mut ctx);
 }
 
-/// The id-less modifier, split into the `expiry` and `kind` the engine's `add_modifier` takes.
 fn add_modifier_spec(
     sink: &mut EngineSink<'_>,
     player: PlayerId,
@@ -60,7 +57,6 @@ fn on_instance(instance: &CardInstance) -> Vec<Selection> {
     }]
 }
 
-/// The `cost` of every `costChanged` event, in order.
 fn costs(events: &[GameEvent]) -> Vec<i32> {
     events_of_type(events, GameEventType::CostChanged)
         .iter()
@@ -411,8 +407,8 @@ mod a_price_for_a_card_in_a_hand_in_hand_only_r4 {
         state.players.p1.graveyard.push(burned.clone());
         let mut sink = Bench::new(&state);
 
-        // #31's "+1", #37r's and #72's "costs 1 less", #72r's "costs 0": written after the move, each is
-        // the price of a card that reached the hand, and a card the move burned keeps its cost.
+        // #31's, #37r's, #72's and #72r's prices, written after the move: each is a hand card's price,
+        // and a card the move burned keeps its cost.
         for card in [&in_hand, &burned] {
             run(
                 &mut sink.sink(&mut state),

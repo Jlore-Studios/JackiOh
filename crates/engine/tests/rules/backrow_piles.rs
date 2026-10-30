@@ -1,9 +1,6 @@
-//! Backrow piles and carriers (docs/classic-sets.md B5 E21; R446, R447): a backrow card with Stack tops
-//! an occupied backrow zone, only the top acts (a face-down trap under a pile never fires, an aura under
-//! one is off), a pile travels whole; and a carrier (Classic+ #33 Ivory Tower) holds one Unit played on
-//! top of it — a Unit for every rule that can neither attack nor be attacked, stepping down into a unit
-//! zone when its zone stops carrying it; a carrier that fuses its Unit (Classic+ #33 Ivory Tower, R653)
-//! takes one a stay. Pauses, a round trip, a replay and each seat's view included.
+//! Backrow piles and carriers (docs/classic-sets.md B5 E21; R446, R447): a backrow card with Stack tops an
+//! occupied backrow zone, only the top acting; a carrier (Classic+ #33 Ivory Tower) holds one Unit played
+//! on top of it, and one that fuses its Unit (R653) takes one a stay.
 
 use serde::Serialize;
 
@@ -194,7 +191,6 @@ mod r447_b5_e21_backrow_piles {
             view_for(&state, P1).you.units[0].as_ref().map(|unit| unit.attack),
             Some(3)
         );
-        // The top leaves: the banner resumes acting.
         let mut sink = sink_for(&mut state);
         (destroy_all(json_as(json!({ "side": "self", "rows": ["backrow"] }))).apply)(&mut make_context(
             &mut sink,
@@ -227,7 +223,6 @@ mod r447_b5_e21_backrow_piles {
         );
         let top = stack_onto(&mut state, &cover.id, &flag);
         assert_ne!(by_id(&state, &flag.id).summoned_turn, Some(state.turn));
-        // The top leaves: the banner resumes acting, as a card that entered the field on this turn.
         let mut sink = sink_for(&mut state);
         (destroy_all(json_as(json!({ "side": "self", "rows": ["backrow"] }))).apply)(&mut make_context(
             &mut sink,
@@ -254,7 +249,6 @@ mod r447_b5_e21_backrow_piles {
         );
         let top = stack_onto(&mut state, &golem.id, &flag);
         assert_ne!(by_id(&state, &flag.id).summoned_turn, Some(state.turn));
-        // The top animates: it steps into a unit zone without leaving the field, and the banner resumes.
         let mut sink = sink_for(&mut state);
         (animate(json_as(
             json!({ "target": { "of": "instance", "instanceId": top.id } }),
@@ -285,7 +279,6 @@ mod r447_b5_e21_backrow_piles {
         assert!(events_of_type(&first.events, GameEventType::TrapFired).is_empty());
         assert!(notes_of(find_instance(&state, &trap.id)).is_empty());
 
-        // Take the top off: the trap resumes, face-down, and answers the next play.
         let mut sink = sink_for(&mut state);
         (destroy_all(json_as(json!({ "side": "enemy", "rows": ["backrow"] }))).apply)(&mut make_context(
             &mut sink,
@@ -481,8 +474,7 @@ mod r447_b5_e21_backrow_piles {
 mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
     use super::*;
 
-    /// The state after p1 played a plain body onto a Tower in backrow lane 2, the Tower, and the
-    /// carried Unit's id.
+    /// p1's plain body played onto a Tower in backrow lane 2: the state, the Tower, the carried Unit's id.
     struct TowerGame {
         state: GameState,
         tower: CardInstance,
@@ -797,7 +789,6 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
             }
             let mut paused = cast.state;
             assert_eq!(paused.pending.as_ref().map(|pending| pending.player_id), Some(P1));
-            // The Tower is marked; the check waits for the whole list, so the Unit is still where it was.
             assert!(is_carried(&paused, by_id(&paused, &rider)));
             let paused_hash = hash_state(&paused);
             if round_trip {
@@ -886,7 +877,7 @@ mod r653_a_carrier_that_fuses_its_unit_takes_one_unit_a_stay {
                 .unwrap_or_default()
                 .contains("taken its one Unit")
         );
-        // Leaving the field clears the note (R78): back on the field, it is a new arrival and takes one again.
+        // Leaving the field clears the note (R78): back on the field, a new arrival, it takes one again.
         let gone = live(sink.state, &holder.id);
         bounce_card(&mut sink, &gone);
         let gone = by_id(sink.state, &holder.id);

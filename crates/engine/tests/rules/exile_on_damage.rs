@@ -2,8 +2,7 @@
 //!
 //! Damage a card with `StaticFlags.exiles_on_damage` deals to a Unit marks it (SPEC §4.4 step 7),
 //! and the next state check exiles it ahead of deaths (SPEC §4.5 step 1): no Death, no Reborn, no
-//! `destroyed`. A hit the pipeline stopped — Divine Shield, Indestructible, the zero rule — dealt
-//! no damage, so it marks nothing.
+//! `destroyed`. A hit the pipeline stopped dealt no damage, so it marks nothing.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -12,7 +11,7 @@ use crate::rules::fixtures::combat::{big_body, indestructible, plain, shielded};
 use crate::rules::fixtures::combat_judge::{banisher, banisher_cleave, combat_judge_game};
 use crate::rules::fixtures::harness::{live, put, sink_for, slot};
 
-/// A game at turn 4, P1's main phase, with the combat-judge fixtures registered.
+/// Turn 4, P1's main phase, the combat-judge fixtures registered.
 fn board(seed: &str) -> GameState {
     let mut state = combat_judge_game(seed, None);
     state.turn = 4;
@@ -25,7 +24,6 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// Run `f` on a sink over `state` and hand back what it emitted.
 fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
     let mut sink = sink_for(state);
     let out = f(&mut sink);
@@ -78,8 +76,7 @@ fn pile_of(state: &GameState, player: PlayerId, pile: &str) -> Vec<String> {
 
 #[test]
 fn r1124_exiled_before_deaths_no_death_reborn_destroyed() {
-    // A 2/2 Banisher into a 3/3: 2 damage marks it, and the check exiles it — though the strike
-    // back destroyed the Banisher first.
+    // A 2/2 Banisher into a 3/3: exiled, though the strike back destroyed the Banisher first.
     let mut state = board("r1124-exiled");
     let attacker = put(
         &mut state,
@@ -119,8 +116,7 @@ fn r1124_shield_indestructible_zero_stop_it() {
     assert!(exiled_ids(&events).is_empty());
     assert_eq!(by_id(&state, &defender.id).divine_shield_spent, Some(true));
 
-    // Indestructible takes nothing: nothing marked, nothing exiled, the defender still on the field.
-    // Only the Banisher is destroyed, by the 4/4's strike back.
+    // Indestructible takes nothing: nothing marked or exiled; only the Banisher dies, to the strike back.
     let mut state = board("r1124-indestructible");
     let attacker = put(
         &mut state,
@@ -172,8 +168,7 @@ fn r1124_shield_indestructible_zero_stop_it() {
 
 #[test]
 fn r1124_cleave_exiles_source_still_dies() {
-    // A 4/2 Cleave Banisher into a 5/10 with a 3/3 beside it: the hit and the cleave both mark,
-    // both are exiled, and the source still dies to the strike back.
+    // A 4/2 Cleave Banisher into a 5/10 beside a 3/3: both hits mark and exile; the source still dies.
     let mut state = board("r1124-cleave");
     let attacker = put(
         &mut state,

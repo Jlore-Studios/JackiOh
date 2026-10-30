@@ -40,12 +40,10 @@ fn unit(index: u32, name: &str, cost: i32, attack: i32, health: i32, keywords: V
 
 // Ranged and Flying (R783000–R783003)
 
-/// A Ranged 2/3.
 pub fn ranged() -> CardDef {
     unit(7830, "ranged", 1, 2, 3, json!([{ "kind": "Ranged" }]))
 }
 
-/// A Ranged 2/3 with Cleave.
 pub fn ranged_cleaver() -> CardDef {
     unit(
         7831,
@@ -57,7 +55,6 @@ pub fn ranged_cleaver() -> CardDef {
     )
 }
 
-/// A Ranged 4/2 with Trample.
 pub fn ranged_trampler() -> CardDef {
     unit(
         7832,
@@ -69,7 +66,6 @@ pub fn ranged_trampler() -> CardDef {
     )
 }
 
-/// A Ranged 2/2 with First Strike and Poisonous.
 pub fn ranged_striker() -> CardDef {
     unit(
         7833,
@@ -81,7 +77,6 @@ pub fn ranged_striker() -> CardDef {
     )
 }
 
-/// A First Strike 3/1.
 pub fn first_striker() -> CardDef {
     unit(
         7834,
@@ -93,12 +88,10 @@ pub fn first_striker() -> CardDef {
     )
 }
 
-/// A Flying 2/3.
 pub fn flyer() -> CardDef {
     unit(7835, "flyer", 1, 2, 3, json!([{ "kind": "Flying" }]))
 }
 
-/// A Flying 1/4 with Taunt.
 pub fn flying_taunter() -> CardDef {
     unit(
         7836,
@@ -110,7 +103,6 @@ pub fn flying_taunter() -> CardDef {
     )
 }
 
-/// A plain 3/3.
 pub fn grunt() -> CardDef {
     unit(7837, "grunt", 1, 3, 3, json!([]))
 }
@@ -164,7 +156,6 @@ pub fn cloak_spells() -> CardDef {
     def(7845, "cloak-spells", "Field Spell", 1, json!([]))
 }
 
-/// A vanilla 2/2 at (2).
 pub fn plain_unit() -> CardDef {
     unit(7846, "plain-unit", 2, 2, 2, json!([]))
 }
@@ -191,7 +182,6 @@ pub fn crater_unit() -> CardDef {
     unit(7850, "crater-unit", 1, 2, 2, json!([{ "kind": "Crater" }]))
 }
 
-/// A Crater 1/1 with Reborn.
 pub fn crater_reborn() -> CardDef {
     unit(
         7851,
@@ -203,7 +193,6 @@ pub fn crater_reborn() -> CardDef {
     )
 }
 
-/// A Crater 2/2 with Cloaked.
 pub fn crater_cloaked() -> CardDef {
     unit(
         7852,
@@ -220,8 +209,7 @@ pub fn crater_trap() -> CardDef {
     def(7853, "crater-trap", "Trap", 1, json!([{ "kind": "Crater" }]))
 }
 
-/// A Crater Trap that fires as it replaces (§5.1): an enemy's heal becomes Pierce damage (Blood Moon's
-/// shape).
+/// A Crater Trap firing as it replaces (§5.1): an enemy's heal becomes Pierce damage (Blood Moon's shape).
 pub fn crater_moon() -> CardDef {
     def(7867, "crater-moon", "Trap", 1, json!([{ "kind": "Crater" }]))
 }
@@ -241,7 +229,6 @@ pub fn flicker_all() -> CardDef {
     def(7856, "flicker-all", "Spell", 1, json!([]))
 }
 
-/// A Stack 1/1.
 pub fn stacker() -> CardDef {
     unit(7857, "stacker", 1, 1, 1, json!([{ "kind": "Stack" }]))
 }
@@ -382,7 +369,6 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// 1 to the enemy hero.
 fn ping() -> Vec<Effect> {
     vec![effects::damage(json_as(
         json!({ "to": { "of": "enemyHero" }, "amount": 1 }),

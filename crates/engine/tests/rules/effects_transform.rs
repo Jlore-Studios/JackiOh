@@ -1,7 +1,6 @@
 //! Transform and Vanilla (SPEC §6.3, BUILD M3-T1): replacement in place with no Cry (R1), the
 //! replaced card ceasing to exist (R35), Immutable refusing both (R23), and Vanilla clearing
-//! printed keywords only (§6.3, §10.4). The fixture cards these tests need are registered here, so
-//! no shared fixture has to grow for them (BUILD §0).
+//! printed keywords only (§6.3, §10.4). Its fixture cards are registered here (BUILD §0).
 
 use jackioh_engine::effects::{damage, transform, vanilla};
 use jackioh_engine::testkit::*;
@@ -136,8 +135,7 @@ fn game() -> GameState {
     state
 }
 
-/// Apply one effect and hand back the events it emitted; the rng starts at the state's cursor, as
-/// reduce does.
+/// One effect's events; the rng starts at the state's cursor, as reduce does.
 fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -209,13 +207,13 @@ mod transform_s6_3_r23_r35_m3_t1 {
                 lane: 3,
             }
         );
-        // A fresh instance: the old card's damage does not come with it, and the new body is sick.
+        // A fresh instance: no old damage, and the new body is sick.
         assert_eq!(now.damage, 0);
         assert!(!now.radiant);
         assert!(is_sick(&state, &now));
         assert_eq!(unit_view(&state, &now).attack, 2);
 
-        // R1: a Transform result never fires a Cry, so the enemy hero is untouched.
+        // R1: a Transform result fires no Cry: the enemy hero is untouched.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
     }
 
@@ -274,7 +272,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
         let mut state = game();
         state.active = PlayerId::P1;
         let turn = state.turn;
-        // A unit that has been on the field since an earlier turn, with its exertions unspent: ready.
+        // On the field since an earlier turn, its exertions unspent: ready.
         let old = put(
             &mut state,
             &combat_fx::plain.id,
@@ -290,7 +288,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
         assert_eq!(now.summoned_turn, Some(state.turn));
         assert!(is_sick(&state, &now));
 
-        // The opponent's own unit, transformed on the opponent's turn, is sick for that turn too.
+        // The opponent's unit, transformed on their turn, is sick for that turn too.
         state.active = PlayerId::P2;
         let theirs = put(
             &mut state,
@@ -383,7 +381,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
         assert_eq!(live(&state, &printed.id).def_id, immutable().id);
         assert_eq!(live(&state, &granted.id).def_id, combat_fx::plain.id.clone());
 
-        // A unit with no Immutable in the same spot is replaced, so the refusal is the keyword's work.
+        // With no Immutable the same spot is replaced, so the refusal is the keyword's.
         let open = put(
             &mut state,
             &combat_fx::plain.id,
@@ -539,7 +537,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
             by(PlayerId::P2),
         );
 
-        // A library is ordered top to bottom, so the replacement takes the replaced card's place.
+        // A library is ordered, so the replacement takes the replaced card's place.
         assert_eq!(
             def_ids_of(&state.players.p2.library),
             vec![plain_id, sheep().id, crier_id]
@@ -628,7 +626,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
 
         let now = at(&state, PlayerId::P1, Row::Units, 1).expect("the replacement");
         assert!(now.radiant);
-        // The radiant face of the fixture doubles the printed stats.
+        // The fixture's radiant face doubles the printed stats.
         assert_eq!(unit_view(&state, &now).attack, 4);
         assert_eq!(unit_view(&state, &now).max_health, 4);
     }
@@ -663,7 +661,7 @@ mod vanilla_s6_3_r23_m3_t1 {
         let now = live(&state, &unit.id);
         assert!(now.vanilla);
         assert!(!unit_has(&state, &now, KeywordKind::Taunt));
-        // A granted keyword is another layer and is not printed text, so it survives (§10.4).
+        // A granted keyword is another layer, not printed text, so it survives (§10.4).
         assert!(unit_has(&state, &now, KeywordKind::Rush));
         // R781003: back to the 2/5 it prints, its +1/+1 gone; its 2 damage stays.
         let view = unit_view(&state, &now);

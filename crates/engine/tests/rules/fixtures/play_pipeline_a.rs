@@ -1,7 +1,6 @@
 //! Fixture cards for play pipeline A (docs/classic-sets.md B5 E1, E2, E4, E5, E9; Classic #4, #10, #17,
-//! #23, #33, #72, #87, #89; Classic+ #37, #64, #68; AI Refusal, Autocomplete, Scaling Law). The engine
-//! never depends on `crates/cards` (CLAUDE.md), so each system is proved on a card of its shape here.
-//! Ids are `pa-*`, indices from 5000, registered on top of the shared fixture catalog by `with_play_a`.
+//! #23, #33, #72, #87, #89; Classic+ #37, #64, #68; AI Refusal, Autocomplete, Scaling Law), each system
+//! proved on a card of its shape. Ids `pa-*` from 5000, on the shared fixture catalog by `with_play_a`.
 
 use std::sync::LazyLock;
 
@@ -54,31 +53,30 @@ fn any_target() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))]
 }
 
-/// One definition per card.
 pub struct Pa {
-    /// A Spell that deals 2 to a declared target (unit or hero); Radiant deals 4.
+    /// Deals 2 to a declared target (unit or hero); Radiant deals 4.
     pub bolt: CardDef,
-    /// A Spell with no choices that deals 1 to the enemy hero, so its resolution shows.
+    /// No choices, deals 1 to the enemy hero, so its resolution shows.
     pub ping: CardDef,
-    /// A Unit whose Cry deals 3 to the enemy hero.
+    /// Its Cry deals 3 to the enemy hero.
     pub crier: CardDef,
-    /// A Unit whose Cry declares a target (not a Spell: Immune to Spells does not stop it).
+    /// Its Cry declares a target (not a Spell: Immune to Spells does not stop it).
     pub zapper: CardDef,
-    /// A Trap that counters the opponent's play, whatever it is (Classic #72's shape).
+    /// Counters the opponent's play, whatever it is (Classic #72's shape).
     pub counter_trap: CardDef,
     /// A second one, to prove the rest find no card and stay set.
     pub counter_trap2: CardDef,
-    /// A Trap that counters the opponent's Spell into exile when it cost 1 or less (Classic #10).
+    /// Counters the opponent's Spell into exile when it cost 1 or less (Classic #10).
     pub exile_trap: CardDef,
-    /// A Trap that steals the opponent's play (Classic #72 Radiant).
+    /// Steals the opponent's play (Classic #72 Radiant).
     pub steal_trap: CardDef,
-    /// A Trap that counters a Spell targeting one of your units (AI Refusal).
+    /// Counters a Spell targeting one of your units (AI Refusal).
     pub refusal: CardDef,
-    /// A Field Spell whose aura counters any play that paid 1 (Classic #87's shape, count fixed at 1).
+    /// Its aura counters any play that paid 1 (Classic #87's shape, count fixed at 1).
     pub chalice: CardDef,
-    /// A Field Spell that asks, on the opponent's Spell, whether to Tribute itself to steal it (Classic #4).
+    /// Asks, on the opponent's Spell, whether to Tribute itself to steal it (Classic #4).
     pub palantir: CardDef,
-    /// A Field Spell that makes its controller discard their hand when the opponent announces anything.
+    /// Makes its controller discard their hand when the opponent announces anything.
     pub shredder: CardDef,
     /// A Trap the opponent sets face-down, and a Field Trap.
     pub hidden_trap: CardDef,
@@ -87,11 +85,10 @@ pub struct Pa {
     pub joro: CardDef,
     /// Classic #89 Paul Allen's Ghost: 2 more cards to target it.
     pub ghost: CardDef,
-    /// A Unit Immune to Spells.
     pub immune: CardDef,
-    /// A Spell whose Cry asks for a unit target (a card continuation's prompt), then deals 2 to it.
+    /// Its Cry asks for a unit target (a card continuation's prompt), then deals 2 to it.
     pub chooser: CardDef,
-    /// A Spell with Echo 1 that deals 1 to a declared unit target: its repeat asks the pipeline's own prompt.
+    /// Echo 1, deals 1 to a declared unit target: its repeat asks the pipeline's own prompt.
     pub echo_bolt: CardDef,
     /// Declarations with the filter fields.
     pub grave_raiser: CardDef,
@@ -112,9 +109,9 @@ pub struct Pa {
     pub ai_card: CardDef,
     /// A Field Spell, for plays by type.
     pub field: CardDef,
-    /// A Spell that deals 1 to each of two declared units.
+    /// Deals 1 to each of two declared units.
     pub twin: CardDef,
-    /// A Field Spell that asks its controller a question whenever the opponent announces a play.
+    /// Asks its controller a question whenever the opponent announces a play.
     pub watcher: CardDef,
     /// Quickdraw copies (§6.2: they start in the opening hand), for games folded from a log.
     pub q_bolt: CardDef,
@@ -218,7 +215,6 @@ pub static PA_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// `{ of: "instance", instanceId }` aimed at the announced play.
 fn counter_instance(instance_id: &str) -> Effect {
     effects::counter_play(json_as(
         json!({ "target": { "of": "instance", "instanceId": instance_id } }),
@@ -230,7 +226,6 @@ fn announced_by_the_opponent(ctx: &EffectContext<'_>, event: &GameEvent) -> bool
     matches!(event, GameEvent::CardAnnounced { player, .. } if *player != ctx.controller)
 }
 
-/// A data bag entry as text: a string as itself, "undefined" for a missing key.
 fn js_string(value: Option<&Value>) -> String {
     match value {
         None => "undefined".to_string(),
@@ -779,7 +774,6 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
     table
 }
 
-/// This file's definitions, by id.
 pub fn catalog() -> CardDefs {
     PA_DEFS
         .iter()
@@ -787,12 +781,10 @@ pub fn catalog() -> CardDefs {
         .collect()
 }
 
-/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     scripts_table()
 }
 
-/// Register this file's defs and scripts on top of whatever is registered now.
 pub fn register_play_a() {
     let mut all_defs = registered_catalog().clone();
     all_defs.extend(catalog());

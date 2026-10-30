@@ -1,10 +1,9 @@
 //! A seat that plays only Core cards (SPEC §9.10; R2433000): the handicap's `coreOnly`, which the
-//! tutorial opponent plays under (`AI_TUTORIAL`). The seat never plays, sets or casts a card whose set
-//! is not Core, however the card reached its hand; what it holds on the field by other means is left
-//! alone. Absent, the field reaches no game.
+//! tutorial opponent plays under (`AI_TUTORIAL`), never plays, sets or casts a non-Core card, however
+//! it reached its hand; what it holds on the field by other means is left alone. Absent, the field
+//! reaches no game.
 //!
-//! Fixtures: the vanilla catalog (`fx-1` up, every one Core) and this file's `co-` cards, Classic
-//! Units and Spells and three Core Spells whose Cry Discovers, summons from the hand or bounces.
+//! Fixtures: the vanilla catalog (`fx-1` up, every one Core) and this file's `co-` cards.
 
 use jackioh_engine::effects::{
     add_to_hand, bounce, chosen_options, discover_from_catalog, summon_random_from_hand,
@@ -169,7 +168,6 @@ fn keep_both(mut state: GameState) -> GameState {
     state
 }
 
-/// p1's main phase on turn 1, p1 barred or not.
 fn playing(seed: &str, bar: bool) -> GameState {
     keep_both(begin_game(&created(seed, bar.then(barred), None)).state)
 }
@@ -180,7 +178,6 @@ fn to_hand(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInstanc
     card
 }
 
-/// The instance ids `legal_actions` lists a play of for `player`.
 fn listed_plays(state: &GameState, player: PlayerId) -> Vec<String> {
     legal_actions(state, player)
         .into_iter()
@@ -337,7 +334,6 @@ mod r2433000_a_seat_that_plays_only_core_cards {
                 Some((deck.clone(), vanilla_deck(DECK_SIZE, 1))),
             );
             let mut state = begin_game(&created).state;
-            // p1 throws its whole hand back and redraws; p2 keeps.
             state = act(
                 &state,
                 ActionInput {

@@ -1,8 +1,6 @@
-//! Helpers the prompts-and-movement tests share (docs/classic-sets.md B5 E13, E16–E18, E26): a board
-//! with the fixtures registered, a Spell resolving, an answer by option key, a round trip, and a short
-//! replayable game whose opening hands hold the fixture under test (Quickdraw, R225).
-//! A sink borrows the state, so `cast_now` and `answer_keys` answer the sink's events; the rng's
-//! cursor is written back to the state and the caller reads the state it passed in.
+//! Helpers the prompts-and-movement tests share (docs/classic-sets.md B5 E13, E16–E18, E26). A sink
+//! borrows the state, so `cast_now` and `answer_keys` return its events and write the rng's cursor
+//! back to the state the caller passed in.
 
 use jackioh_engine::testkit::*;
 
@@ -40,7 +38,6 @@ pub fn resolving_card(state: &mut GameState, def_id: &str, player: PlayerId, rad
     card
 }
 
-/// What the sink a helper ran held besides the state: its events.
 pub struct SinkResult {
     pub events: Vec<GameEvent>,
 }
@@ -53,7 +50,7 @@ impl std::ops::Deref for SinkResult {
     }
 }
 
-/// Run a resolving card's Cry the resumable way and settle, as the pipeline does; returns the sink.
+/// Run a resolving card's Cry the resumable way and settle, as the pipeline does.
 pub fn cast_now(state: &mut GameState, def_id: &str, player: PlayerId, radiant: bool) -> SinkResult {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
@@ -75,7 +72,7 @@ pub fn cast_now(state: &mut GameState, def_id: &str, player: PlayerId, radiant: 
     SinkResult { events }
 }
 
-/// What `answer_keys` answers: the sink's events, and the refusal (`None` when accepted).
+/// The sink's events, and the refusal (`None` when accepted).
 pub struct AnswerResult {
     pub events: Vec<GameEvent>,
     pub error: Option<String>,
@@ -119,7 +116,6 @@ pub fn answer_keys(state: &mut GameState, keys: &[&str]) -> AnswerResult {
     AnswerResult { events, error }
 }
 
-/// The open prompt, asserted to be of this kind and held by this player.
 pub fn open_as(state: &GameState, kind: PromptKind, player: PlayerId) -> PendingChoice {
     let pending = must(state.pending.clone(), &format!("a {kind} prompt"));
     assert_eq!(pending.kind, kind);
@@ -146,9 +142,8 @@ pub struct Replayable {
     pub decks: (Vec<String>, Vec<String>),
 }
 
-/// A replayable game (§9.2, §9.3): each deck is vanilla fixtures plus the named Quickdraw cards, so the
-/// opening hands hold them whatever the shuffle; both mulligans keep everything, and it is p1's first
-/// main phase. The log and decks go to `fold`, which must rebuild the very same state.
+/// A replayable game (§9.2, §9.3), p1's first main phase: each deck holds the named Quickdraw cards
+/// (R225), so the opening hands hold them whatever the shuffle, and both mulligans keep everything.
 pub fn replayable(seed: &str, p1_cards: &[String], p2_cards: &[String]) -> Replayable {
     setup_catalog();
     register_prompt_fixtures();
@@ -190,7 +185,6 @@ pub fn expect_replays(seed: &str, decks: &(Vec<String>, Vec<String>), log: &[Act
     assert_eq!(hash_state(&folded.state), hash_state(live));
 }
 
-/// The first card in `player`'s hand of this definition.
 pub fn hand_card(state: &GameState, player: PlayerId, def_id: &str) -> CardInstance {
     must(
         state.players[player]

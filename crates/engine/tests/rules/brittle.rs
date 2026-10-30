@@ -1,7 +1,5 @@
-//! Brittle X (docs/classic-sets.md B3.3; R385, R438, R440, R441, R638): where the count lives, when it
-//! starts, when it ticks (on the field only), what a crumble does, what a Vanilla does to it, what the
-//! views show, and a crumble whose Death asks something pausing the settle after the tick (R113), with
-//! the paused game surviving a JSON round trip and resuming identically.
+//! Brittle X (docs/classic-sets.md B3.3; R385, R438, R440, R441, R638): the count, its start and its tick
+//! (on the field only), a crumble, a Vanilla, the views, and a crumble whose Death pauses the settle (R113).
 
 use serde::Serialize;
 
@@ -70,7 +68,6 @@ fn with_live(state: &mut GameState, id: &str, change: impl FnOnce(&GameState, &m
     *by_id_mut(state, id) = card;
 }
 
-/// A game at `turn`, `active`'s, with nothing else set up.
 fn at(turn: i32, active: PlayerId) -> GameState {
     let mut state = instance_game("brittle", None);
     state.turn = turn;
@@ -133,8 +130,7 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
             json_as(json!({ "radiant": true })),
         );
         assert_eq!(count_of(&state, &radiant.id), Some(4));
-        // R687: a Field Trap set face-down has entered the field but is unrevealed, so it starts
-        // no count — no Brittle while unrevealed (Classic+ #74).
+        // R687: a face-down Field Trap entered the field unrevealed, so it starts no count (Classic+ #74).
         let trap = put(
             &mut state,
             &brittle_trap.id,
@@ -164,7 +160,6 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
             slot(P1, Row::Units, 1),
             Default::default()
         ));
-        // R638: the count is kept, and its turn cycle starts on the field, at this arrival.
         assert_eq!(by_id(&state, &card.id).brittle, Some(counter(5, 6, false)));
     }
 
@@ -347,7 +342,6 @@ mod r385_b3_3_a_crumble {
         assert_eq!(zone_of(&state, &unit.id), ZoneName::Field);
         assert_eq!(count_of(&state, &unit.id), Some(0));
         assert_eq!(events_of_type(&second, GameEventType::Crumbled).len(), 1);
-        // Nothing more to take off: no second counterChanged.
         assert_eq!(events_of_type(&second, GameEventType::CounterChanged).len(), 0);
     }
 

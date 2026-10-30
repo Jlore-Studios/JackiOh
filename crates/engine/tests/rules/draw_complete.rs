@@ -1,9 +1,8 @@
 //! The draw-complete point of a cast-on-draw draw (SPEC §2.4, R58, R70; Classic #9 Income Tax's shape).
 //!
-//! R58: a cast-on-draw card is cast as it is drawn, and the draw is complete once that cast has
-//! resolved, so a trap or trigger answering the draw answers it after the cast. The cast's own windows
-//! (its announce, R448, and its step 4) offer every event so far to the traps, so the draw holds the
-//! `drawn` back until its cast's pipeline has finished, across a question the cast asks too.
+//! R58: the draw completes once its cast-on-draw card's cast resolves. The cast's windows (its announce,
+//! R448, and step 4) offer the traps every event so far, so the draw holds its `drawn` back until the
+//! cast's pipeline is done, across a question the cast asks too.
 
 use jackioh_engine::draw::draw;
 use jackioh_engine::effects::damage;
@@ -175,7 +174,6 @@ mod r58_a_draw_that_casts_is_complete_once_its_cast_has_resolved {
         let fired = index_of(&events, fired_of(&trap.id));
         assert!(resolved >= 0);
         assert!(fired > resolved);
-        // Both happened: the cast's 1 to p2, the trap's 2 to p1.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 2);
         assert_eq!(state.held_draws, None);

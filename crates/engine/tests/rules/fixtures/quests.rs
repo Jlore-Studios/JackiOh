@@ -1,6 +1,5 @@
-//! Test-only cards for the quests subsystem (docs/classic-sets.md B5 E33), so the engine half of
-//! Classic #90 In Too Deep is proved without `jackioh-cards` (CLAUDE.md: the engine never imports it).
-//! `tree` is a small quest tree shaped like In Too Deep's, with a pause mid-reward, a quest reached
+//! Test-only cards for the quests subsystem (docs/classic-sets.md B5 E33), the engine half of Classic
+//! #90 In Too Deep. `tree` is a small quest tree in its shape, with a pause mid-reward, a quest reached
 //! by two paths, a reward two quests offer and an aura reward.
 
 use std::sync::LazyLock;
@@ -86,7 +85,6 @@ pub static GOALS: LazyLock<IndexMap<GoalKind, QuestGoal>> = LazyLock::new(|| {
 /// The id of the one quest each goal card has.
 pub const ONLY_QUEST: &str = "q";
 
-/// `QuestGoal["kind"]` as written (`goal.kind`).
 fn goal_kind_of(goal: &QuestGoal) -> String {
     serde_json::to_value(goal)
         .ok()
@@ -136,8 +134,6 @@ pub const TREE_HEAL: i32 = 2;
 pub const TREE_PING: i32 = 1;
 pub const TREE_BUFF: i32 = 2;
 
-/// draws 2 → heal (→ kill) or ask (→ board); kill → both (→ mana); board → both (→ mana) or hand
-/// (→ fresh); mana → aura (end); fresh (draws 2) → heal (→ kill).
 pub static TREE: LazyLock<QuestBook> = LazyLock::new(|| {
     json_as(json!({
         "first": "draws",
@@ -531,7 +527,6 @@ pub fn quest_scripts() -> IndexMap<String, CardScripts> {
     table
 }
 
-/// This file's definitions, by id.
 pub fn catalog() -> CardDefs {
     QUEST_DEFS
         .iter()
@@ -539,7 +534,6 @@ pub fn catalog() -> CardDefs {
         .collect()
 }
 
-/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     quest_scripts()
 }

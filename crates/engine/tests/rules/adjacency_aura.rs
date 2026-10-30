@@ -1,8 +1,6 @@
-//! R2197001: an adjacency aura (TG #21 Flame Tongue Totem's "Aura: Adjacent Units have +3 Attack.") read
-//! through §10.4's layer 5 on fixture scripts. The aura is a script over the zone helpers (`slot_of`,
-//! `adjacent`, `is_adjacent_card`); these tests hold the engine's side of it: only a pile's top projects
-//! or receives an aura (R13), a source standing in the backrow reaches only standing Units (R1081000),
-//! and the bonus follows the zones as they stand, stored nowhere.
+//! R2197001: an adjacency aura (TG #21 Flame Tongue Totem) read through §10.4's layer 5 on fixture
+//! scripts: only a pile's top projects or receives an aura (R13), a source standing in the backrow reaches
+//! only standing Units (R1081000), and the bonus follows the zones as they stand, stored nowhere.
 
 use jackioh_engine::testkit::*;
 
@@ -27,7 +25,6 @@ fn def(overrides: Value) -> CardDef {
     ))
 }
 
-/// A 0/4 whose aura gives the Units beside it +3 Attack.
 fn totem() -> CardDef {
     def(json!({
         "id": "aa-totem",
@@ -50,7 +47,6 @@ fn flying_totem() -> CardDef {
     }))
 }
 
-/// A 2/2 Flying body that stands in a backrow zone.
 fn flyer() -> CardDef {
     let flying = json!({ "attack": 2, "health": 2, "keywords": [{ "kind": "Flying" }], "text": "Flying" });
     def(json!({

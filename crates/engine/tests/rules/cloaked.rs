@@ -137,7 +137,6 @@ mod r783004_cloaked_set {
                 .collect();
             lanes.sort();
             assert_eq!(lanes, vec![2, 3, 4, 5], "{}", card.def_id);
-            // No targets or modes are declared when it is set.
             assert!(
                 offered
                     .iter()
@@ -166,7 +165,6 @@ mod r783004_cloaked_set {
         let mut state = playing("r783004-no-trap");
         let trap = in_hand(&mut state, &cloaked_trap().id, P1);
         let field_trap = in_hand(&mut state, &cloaked_field_trap().id, P1);
-        // A Trap or a Field Trap is set as itself, never by Cloaked.
         for card in [&trap, &field_trap] {
             assert!(!plays_of(&state, &card.id, P1).is_empty());
             assert_eq!(face_down_offered(&state, &card.id, P1), Vec::<Value>::new());
@@ -236,7 +234,6 @@ mod r783004_cloaked_set {
                 .as_array()
                 .is_some_and(|list| list.iter().any(|entry| entry["ability"] == json!("reveal")))
         );
-        // The opponent sees a face-down zone and its cost, nothing more.
         let theirs = backrow_as_seen(&state, P1, P2, 2);
         assert_eq!(theirs["faceDown"], json!(true));
         for hidden in ["defId", "instanceId", "revealAt", "activations"] {
@@ -346,7 +343,7 @@ mod r783006_cloaked_reveal {
         );
         assert_eq!(revealed.id, set.id);
         assert_eq!(attacks_of(&state, &set.id), 0);
-        // Its Reveal is spent with the card's set form: nothing more to reveal.
+        // Its Reveal went with its set form.
         assert!(!reveal_offered(&state, &set.id, P1));
     }
 
@@ -450,7 +447,6 @@ mod r783006_cloaked_reveal {
         let before = hero_health(&state, P2);
         state = act(&state, reveal_body(&set.id, "p1"));
         assert!(state.pending.is_none());
-        // Its Cry runs as it reveals.
         assert_eq!(hero_health(&state, P2), before - 1);
         let revealed = must(
             state.players.p1.backrow[3].clone(),
@@ -479,7 +475,6 @@ mod r783006_cloaked_reveal {
             assert_eq!(still.id, set.id);
             assert_eq!(still.set_as.map(|stamp| stamp.reveal), Some(RevealAt::Cloaked));
         }
-        // p1's turn again; p2 is not its controller.
         assert!(!reveal_offered(&state, &set.id, P2));
         let refused = jackioh_engine::subsystems::activate::why_cannot_activate_ability(
             &state,
@@ -491,7 +486,7 @@ mod r783006_cloaked_reveal {
         state = end_turn(&state, "p1");
         assert!(!reveal_offered(&state, &set.id, P2));
         assert!(refusal(&act_result(&state, reveal_body(&set.id, "p2"))).contains("not yours"));
-        // Nor on its controller's view during the opponent's turn: offered only on p1's own turn.
+        // Nor to p1 on p2's turn: offered only on its controller's own turn.
         assert!(!reveal_offered(&state, &set.id, P1));
     }
 
@@ -519,14 +514,12 @@ mod r783007_hand_auras {
         let spell = in_hand(&mut state, &plain_spell().id, P1);
         let theirs = in_hand(&mut state, &plain_unit().id, P2);
 
-        // While it acts, the Units in its controller's hand have Cloaked; Spells and the opponent's
-        // cards do not.
+        // While it acts, the Units in its controller's hand have Cloaked; not Spells, not p2's cards.
         assert!(jackioh_engine::alt_play::is_cloaked(&state, &unit));
         assert!(!face_down_offered(&state, &unit.id, P1).is_empty());
         assert_eq!(face_down_offered(&state, &spell.id, P1), Vec::<Value>::new());
         assert!(!jackioh_engine::alt_play::is_cloaked(&state, &theirs));
 
-        // Set one; the aura leaves the field; the set card stays set, its Reveal still its own.
         let set = cloak(&mut state, &unit.id, 2);
         remove(&mut state, &lender.id);
         let other = in_hand(&mut state, &plain_unit().id, P1);

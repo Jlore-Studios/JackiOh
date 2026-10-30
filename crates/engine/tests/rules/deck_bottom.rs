@@ -39,7 +39,6 @@ mod r80_the_named_end_of_the_library {
             })))],
             &mut make_context(&mut sink, None, by(P1)),
         );
-        // The fresh card is last, the rest untouched — and the rng cursor never moved.
         let after: Vec<String> = sink
             .state
             .players

@@ -1,9 +1,7 @@
-//! ME-JADE (Meditative #39.2 Jade, #39.4 Red Jade, #39.5 Jade Beauty; docs/meditative-set.md M5,
-//! Group C's systems): each player's public Jade Counter, which only rises, written by `add_jade`
-//! with the public `jadeChanged` event (R961, MD-C2), and its crossings of 5 (summon a Jade Beauty)
-//! and 10 (make every Jade Beauty Radiant, or summon a Radiant one) inside the same add (R962,
-//! MD-C3). Through fixture scripts (fixtures/jade.rs); the real cards' tests cover the same cases
-//! again (`crates/cards/src/scripts/meditative/`).
+//! ME-JADE (Meditative #39.2 Jade, #39.4 Red Jade, #39.5 Jade Beauty; docs/meditative-set.md M5):
+//! each player's public Jade Counter, which only rises (`add_jade`, `jadeChanged`, R961, MD-C2), and
+//! its crossings of 5 (summon a Jade Beauty) and 10 (make every Jade Beauty Radiant, or summon a Radiant
+//! one) inside the same add (R962, MD-C3). Fixtures: `fixtures/jade.rs`.
 
 use jackioh_engine::effects::add_jade;
 use jackioh_engine::effects::destroy::{DestroyArgs, destroy};
@@ -35,7 +33,6 @@ fn resolving(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInsta
     card
 }
 
-/// One effect on a sink over `state`, the rng cursor written back; its events.
 fn run(
     state: &mut GameState,
     effect: Effect,
@@ -211,8 +208,7 @@ fn r962_crossing_10_with_none_summons_a_radiant_one() {
     let mut state = game("jade-ascend-empty");
     add(&mut state, 5, PlayerId::P1);
     assert_eq!(beauties(&state, PlayerId::P1).len(), 1);
-    // The Beauty leaves the field (destroyed here: `destroy` marks, §4.5's state check collects
-    // the mark and the token vanishes, R11), so 10 finds none to ascend.
+    // Destroyed (§4.5's state check collects the mark, the token vanishes, R11): none left to ascend.
     let beauty = beauties(&state, PlayerId::P1)[0].clone();
     let spell = resolving(&mut state, "fx-mana-well", PlayerId::P1);
     {

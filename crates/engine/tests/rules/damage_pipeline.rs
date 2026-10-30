@@ -1,7 +1,7 @@
 //! B5 E6's additions to the damage pipeline (SPEC §4.4; docs/classic-sets.md B5 E6; R463): Spell
 //! Damage at step 0, the hero's divisors after Armor and the lowest hit cap at step 3, Trample on a
-//! Spell — and that every projection of a hit (R44's lethal projection, the Zephyrs scorer) reads the
-//! same steps as the hit itself.
+//! Spell, and every projection of a hit (R44's lethal one, the Zephyrs scorer) reading the same steps
+//! as the hit itself.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::subsystems::lethal::projected_hero_damage;
@@ -325,9 +325,8 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
         assert_eq!(projected_hero_damage(&unguarded, P2, 9, false), 5);
     }
 
-    /// R2179005: a guard that guards itself caps each hit on its own Unit at §4.4 step 3, after Armor
-    /// and before a Trample's excess is split off; the hero's cap is unchanged, and another guard's is
-    /// the hero's alone.
+    /// R2179005: a self-guard caps each hit on its own Unit at §4.4 step 3, after Armor and before a
+    /// Trample's excess is split off; another guard's cap is the hero's alone.
     #[test]
     fn r2179005_a_guard_that_guards_itself_caps_each_hit_on_its_unit_and_nothing_tramples_past_it() {
         let mut state = playing("dc-self-guard");

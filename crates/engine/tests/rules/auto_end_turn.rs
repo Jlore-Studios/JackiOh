@@ -200,9 +200,8 @@ mod r345_the_automatic_turn_end_is_each_players_to_turn_off {
     }
 }
 
-// #188: `auto_end_due` needs to know only whether some action holds the turn open, so it walks
-// `each_legal_action` and stops at the first one. A card past that point is never priced: in a
-// long game that walk ran after every simulated action and was nearly a third of the AI's time.
+// #188: `auto_end_due` stops `each_legal_action` at the first action holding the turn open, so a card
+// past it is never priced: the walk runs after every action the AI simulates.
 fn priced_def() -> CardDef {
     spell_def(0, json!({ "id": "fx-priced", "name": "Fixture Priced Spell" }))
 }

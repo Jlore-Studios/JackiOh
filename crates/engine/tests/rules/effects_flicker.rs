@@ -1,8 +1,7 @@
 //! Flicker (docs/classic-sets.md B5 E22, R444): the card leaves the field and re-enters the same zone at
 //! once — R78's reset, summoning sick, no Cry, no Death — and counts as summoned. A unit token comes back
 //! (R444, as R175 brings one back through Reborn); a Trap re-enters face-down (R33, R227); an animated card
-//! stays a Unit in its zone. Played through `reduce` with a pause after the flicker, a round trip, a
-//! replay, and both seats' views. Fixtures: `fixtures/field.rs`.
+//! stays a Unit in its zone. Fixtures: `fixtures/field.rs`.
 
 use jackioh_engine::effects::flicker::{flicker, flicker_card};
 use jackioh_engine::effects::health::set_stats_all;
@@ -36,7 +35,6 @@ fn apply(bench: &mut Bench, state: &mut GameState, effect: Effect, controller: P
     (effect.apply)(&mut ctx);
 }
 
-/// `flicker_card` on the card as it stands in the state now.
 fn flicker_by_id(bench: &mut Bench, state: &mut GameState, id: &str) -> bool {
     let card = by_id(state, id).clone();
     flicker_card(&mut bench.sink(state), &card)
@@ -50,7 +48,6 @@ fn as_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serializes")
 }
 
-/// One field of each event.
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
     match as_json(events) {
         Value::Array(items) => items

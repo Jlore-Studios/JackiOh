@@ -1,10 +1,8 @@
-//! A fused card's scripts are its own, whatever else the process has fused (R77, R179, §9.3).
-//!
-//! The script registry is the process's (a server's many matches, the AI's simulated worlds), so two
-//! states can each fuse into the same `t-<n>` slot from different cards; R179's id names the
-//! ingredients, so those two fusions get two ids. A fused script is never registered:
-//! `scripts::script_of(state, def_id)` composes it from the state's fused definition and the state
-//! keeps what it composed (`GameState::fused_scripts`). Surface contract: docs/v0.3.0/SURFACE.md §6.6, §17.
+//! A fused card's scripts are its own, whatever else the process has fused (R77, R179, §9.3). The
+//! registry is the process's (a server's matches, the AI's worlds), so two states can fuse into one
+//! `t-<n>` slot from different cards; R179's id names the ingredients, so they get two ids. A fused script
+//! is never registered: `scripts::script_of(state, def_id)` composes it from the state's definition and
+//! the state keeps it (`GameState::fused_scripts`). Surface contract: docs/v0.3.0/SURFACE.md §6.6, §17.
 
 use std::cell::Cell;
 use std::sync::Arc;
@@ -127,7 +125,6 @@ fn games(seeds: &[&str]) -> Vec<GameState> {
     states
 }
 
-/// A fresh match in which p1 crafts `first` + `second` into hand: the match's first fusion.
 fn crafted_game(seed: &str, first: &CardDef, second: &CardDef) -> GameState {
     let mut state = games(&[seed]).into_iter().next().expect("one match");
     craft(&mut state, &[first.id.clone(), second.id.clone()]);
@@ -140,8 +137,7 @@ fn only_fused(state: &GameState) -> String {
     ids[0].clone()
 }
 
-/// What the scripts for `def_id` do right now: its Cry, run with no play behind it on a copy of
-/// `state` and applied, as the markers its ingredients' Cries record.
+/// What `def_id`'s scripts do now: its Cry, run on a copy of `state`, as its ingredients' markers.
 fn markers(state: &GameState, def_id: &str) -> Vec<String> {
     let Some(cry) = script_of(state, def_id).base.cry.clone() else {
         return vec![];
@@ -301,8 +297,7 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
 
     #[test]
     fn r179_reads_a_fused_id_back_one_way_the_parentheses_keep_a_nested_ingredient_whole() {
-        // `fused_ingredients` reads a digest id's list off the state's definition; a readable id needs
-        // none, so any state answers for these.
+        // A digest id's list is read off the state's definition; a readable id needs none: any state answers.
         let state = new_game("fuse-registry-ids", None);
         let parts = |ids: &[&str]| Some(ids.iter().map(|id| id.to_string()).collect::<Vec<_>>());
         // `t-1:a+b` fused with c and d, and `t-1:a+b+c` fused with d, are two different cards.
@@ -334,8 +329,7 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
             ScriptRef::Static(_) => panic!("a fused id's script is composed"),
         };
 
-        // The Fuse composed the scripts as it minted the id, so every lookup reads that one script, which
-        // runs its ingredients' texts.
+        // The Fuse composed them as it minted the id, so every lookup reads that one script.
         assert!(Arc::ptr_eq(&composed(&first), &composed(&first)));
         assert_eq!(markers(&first, &id), marker_list(&[&alpha, &beta]));
 

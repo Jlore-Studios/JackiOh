@@ -1,7 +1,7 @@
 //! The §6.3 combat verbs a card script needs: Forced attack (#9 Moths to the Flame, #60 Bear
 //! Honeypot), Cancel an attack (#96 My Pawn) and the AI turn behind it (§10.7, R44, R84).
-//! These effects are thin wrappers, so the tests assert the wrapper's own decisions (who is
-//! compelled, in what order, against what target) and leave §4.3 and §4.4 to the combat tests.
+//! The effects are thin wrappers, so the tests assert who is compelled, in what order, against what
+//! target, and leave §4.3 and §4.4 to the combat tests.
 
 use jackioh_engine::effects::{
     ai_plays_out_turn, cancel_attack, forced_attacks, forced_attacks_on, redirect_attack, summon,
@@ -18,7 +18,6 @@ use crate::rules::fixtures::harness::{json_of, live, live_mut};
 
 // Fixture cards fixtures/combat.rs does not carry.
 
-/// `overrides` replaces the def's fields key by key.
 fn def_of_kind(name: &str, index: &str, type_: &str, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("fc-{name}"),
@@ -41,7 +40,6 @@ fn def_of_kind(name: &str, index: &str, type_: &str, overrides: Value) -> CardDe
     json_as(def)
 }
 
-/// The faces every backrow fixture below prints.
 fn backrow_faces(text: &str) -> Value {
     json!({ "base": { "keywords": [], "text": text }, "radiant": { "keywords": [], "text": text } })
 }
@@ -54,9 +52,8 @@ fn frail() -> CardDef {
 fn ambush() -> CardDef {
     def_of_kind("ambush", "942", "Trap", backrow_faces("trap"))
 }
-/// A Field Trap that answers every declaration and does nothing with it (R61). A FIELD Trap on
-/// purpose: it stays on the field after firing, so a second offer of one declaration would fire it
-/// again, which R100 forbids.
+/// A Field Trap that answers every declaration and does nothing (R61); a Field Trap stays after firing,
+/// so a second offer of one declaration would fire it again, which R100 forbids.
 fn watcher() -> CardDef {
     def_of_kind("watcher", "943", "Field Trap", backrow_faces("field trap"))
 }
@@ -165,7 +162,6 @@ fn mode_options(options: &[&str]) -> Vec<PromptOption> {
         .collect()
 }
 
-/// `openPrompt`'s arguments for a prompt nothing can service.
 fn inert_prompt(player: PlayerId, kind: &str, prompt: &str, options: &[&str]) -> OpenPromptArgs {
     json_as(json!({
         "player": player,
@@ -334,7 +330,6 @@ fn unused() -> Exertion {
     }
 }
 
-/// One field of every event of a type, in order.
 fn field_of(events: &[GameEvent], of: GameEventType, key: &str) -> Vec<Value> {
     events_of_type(events, of)
         .iter()
@@ -374,7 +369,6 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
             },
         );
 
-        // One declaration per attacker, in lane order, all marked forced and all aimed at Moths.
         assert_eq!(
             declarations(&events),
             vec![
@@ -390,8 +384,7 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
         for attacker in [&defending, &sick, &ready] {
             assert_eq!(live(&state, attacker).exertion, unused());
         }
-        // Position is ignored but not changed: the Defense-Position unit still has its Armor +1, so
-        // Moths' 1 attack strikes it for 0 while the two Attack-Position units take 1 each (§4.1).
+        // Position is ignored, not changed: the Defense unit's Armor +1 takes Moths' 1 attack to 0 (§4.1).
         assert_eq!(live(&state, &defending).position, Some(Position::Def));
         assert_eq!(
             [
@@ -425,8 +418,8 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
         );
 
         assert_eq!(attacker_ids(&events), vec![first.id.clone()]);
-        // §4.5: each forced attack is its own combat followed by its own state check, so the target is
-        // already off the field when the second attacker's turn in the loop comes up.
+        // §4.5: each forced attack is its own combat and state check, so the target is gone before the
+        // second attacker comes up.
         assert!(card_at(&state, slot(P1, Units, 1)).is_none());
         assert_eq!(
             field_of(&events, GameEventType::Destroyed, "instanceId"),
@@ -513,7 +506,6 @@ mod forced_attacks_s6_3_forced_attack_r53_c60 {
             .collect();
         assert_eq!(summoned.len(), 2);
         assert!(!summoned.contains(&older.id));
-        // Exactly the two fresh tokens, in lane order, and nothing else on the side.
         assert_eq!(attacker_ids(&events), summoned);
         assert_eq!(live(&state, &victim).damage, 6);
         assert_eq!(live(&state, &older).damage, 0);
@@ -554,9 +546,8 @@ fn busy_board(seed: &str) -> GameState {
     state
 }
 
-/// R283, R59: Radiant #96 destroys the attacker it stopped, then hands the turn over. `destroy` only
-/// marks, so the effect's `settleFirst` runs the state check before the AI's first action. Another
-/// player's open prompt stops the playout before it acts (§9.3), leaving only the check to observe.
+/// R283, R59: Radiant #96 destroys the attacker it stopped, then hands over; `destroy` only marks, so
+/// `settleFirst` checks before the AI acts. Another player's prompt (§9.3) leaves only the check to see.
 fn marked_board(seed: &str) -> (GameState, Vec<GameEvent>, CardInstance) {
     let mut state = busy_board(seed);
     let marked = card_at(&state, slot(P1, Units, 1)).expect("p1's unit").clone();
@@ -577,8 +568,8 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
     fn r44_sets_ai_turn_on_the_named_player_and_takes_no_action_while_another_players_prompt_is_open() {
         let mut state = busy_board("ai-flag");
         let mut sink = Bench::new(&state);
-        // §9.3: somebody else's open prompt blocks every action, so the playout stops at once and the
-        // only thing left to observe is the lockout flag this verb sets before handing over.
+        // §9.3: somebody else's open prompt stops the playout at once, leaving only the lockout flag
+        // this verb sets before handing over.
         open_prompt(
             &mut sink.sink(&mut state),
             inert_prompt(P2, "target", "not yours", &["x", "y"]),
@@ -619,15 +610,12 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
         // R84: the policy never picks `concede`, so the game is still running.
         assert!(state.result.is_none());
         assert!(sink.events.len() > 1);
-        // R152: the lockout lasts "until end of turn" (§8 #96), so the turn's cleanup clears it as the
-        // turn the AI played out closes.
+        // R152: the lockout lasts "until end of turn" (§8 #96): that turn's cleanup clears it.
         assert!(!state.players.p1.ai_turn);
     }
 
-    // Each nested action of the playout settles its own events (§10.3) before they are copied onto the
-    // caller's list for the client (R168); the caller's loop must not offer them to the traps again. A
-    // per-event "already dispatched" mark covers that range in the middle of the window's own events,
-    // which a cursor cannot skip. Below: one Field Trap firing per `manaChanged`.
+    // Each nested playout action settles its own events (§10.3) before they join the caller's list
+    // (R168); a per-event mark, not a cursor, keeps the caller's loop from offering them to traps again.
     #[test]
     fn s10_3_an_ai_turns_events_are_dispatched_once_not_again_by_the_callers_own_loop() {
         let (mut state, attacker, _defender, backrow) = swing("ai-redispatch", &[pawn().id, meter().id]);
@@ -863,8 +851,8 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         assert!(index_of(&order, "attackDeclared") >= 0);
         assert!(index_of(&order, "trapFired") > index_of(&order, "attackDeclared"));
         assert!(index_of(&order, "damage") > index_of(&order, "trapFired"));
-        // R61: the trap fired and did nothing, so the combat is the ordinary one — the 3/3 hits the
-        // 5/10 for 3 and is struck back for 5, which kills it and takes it off the field (§4.5, R78).
+        // R61: the trap did nothing, so the combat is ordinary: 3 to the 5/10, 5 back, which kills the
+        // 3/3 and takes it off the field (§4.5, R78).
         assert_eq!(live(&state, &defender).damage, 3);
         assert_eq!(
             field_of(&sink.events, GameEventType::Damage, "amount"),
@@ -899,8 +887,8 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         let paused = reduce(&state, &attack_action(&attacker.id, &defender.id, "n1"));
         assert_eq!(paused.error, None);
 
-        // The window stopped where it stood: the prompt is state, the declaration is still open, and
-        // the combat is owed rather than resolved or dropped (§9.3, R113).
+        // The window stopped where it stood: the declaration is still open and the combat owed (§9.3,
+        // R113).
         let pending = paused.state.pending.clone();
         assert_eq!(pending.as_ref().map(|p| p.player_id), Some(P1));
         let declared = paused
@@ -948,8 +936,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         );
         assert_eq!(answered.error, None);
 
-        // The traps the window still owed ran before the combat it precedes, so the second trap's
-        // cancel still lands and no damage is ever dealt.
+        // The traps still owed ran before the combat, so the second trap's cancel lands: no damage.
         assert_eq!(
             field_of(&answered.events, GameEventType::AttackCancelled, "byInstanceId"),
             vec![json!(canceling.id)]
@@ -969,15 +956,15 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         let trap = backrow[0].clone();
         let mut sink = Bench::new(&state);
 
-        // §4.2's last paragraph: the compelling effect declares this, so there is no open declaration
-        // at any point — and R53's combat and state check happen inside the call, as before.
+        // §4.2's last paragraph: the compelling effect declares this, so no declaration is ever open;
+        // R53's combat and state check happen inside the call.
         force_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
         assert!(state.declared_attack.is_none());
         assert_eq!(live(&state, &defender).damage, 3);
         assert!(!live(&state, &attacker).exertion.attacked);
 
-        // The forced declaration still reaches the traps, through §10.3's immediate check — it is only
-        // the window that a forced attack skips — and `cancelAttack` there has nothing to mark.
+        // The forced declaration still reaches the traps through §10.3's immediate check (only the
+        // window is skipped), and `cancelAttack` there has nothing to mark.
         settle(&mut sink.sink(&mut state), Default::default());
         assert_eq!(
             field_of(&sink.events, GameEventType::TrapFired, "instanceId"),
@@ -1008,8 +995,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
 mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
     use super::*;
 
-    /// P2's 3/3 with a second 3/3 beside it, declaring on P1's 5/10, with `trap` behind P1.
-    /// The neighbour is the swing's second body (lane 2, beside the attacker in lane 1).
+    /// P2's 3/3 with a second 3/3 beside it in lane 2, declaring on P1's 5/10, with `trap` behind P1.
     fn redirect_swing(
         seed: &str,
         trap: &str,
@@ -1020,7 +1006,6 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
         (state, attacker, defender, neighbour, trap)
     }
 
-    /// Each `damage` event as `(sourceId, targetId, amount)`.
     fn hits(events: &[GameEvent]) -> Vec<(Option<String>, String, i32)> {
         events
             .iter()
@@ -1036,7 +1021,6 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
             .collect()
     }
 
-    /// The ids `destroyed` names, in order.
     fn destroyed_ids(events: &[GameEvent]) -> Vec<String> {
         events
             .iter()
@@ -1047,8 +1031,7 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
             .collect()
     }
 
-    /// §4.3 between allies, two 3/3s: the attacker hits its neighbour for 3 and is struck back for
-    /// 3, and the state check destroys both. The original target is untouched.
+    /// §4.3 between two allied 3/3s: both destroyed, the original target untouched.
     fn assert_allies_fought(
         sink: &Bench,
         state: &GameState,
@@ -1077,7 +1060,6 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
         let (mut state, attacker, defender, neighbour, trap) = redirect_swing("redirect", &redirector().id);
         let mut sink = Bench::new(&state);
 
-        // Declare on P1's big body; the window re-aims at the attacker's own neighbour.
         let _ = declare_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
 
         assert_eq!(
@@ -1090,9 +1072,8 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
 
     #[test]
     fn r1122_later_trap_skips_it() {
-        // The redirector answers first (lane order); the canceller behind it is never offered the
-        // re-aimed attack, so no attack is canceled, the canceller stays set and the allies still
-        // fight.
+        // The redirector answers first (lane order), so the canceller is never offered the re-aimed
+        // attack: it stays set and the allies still fight.
         let (mut state, attacker, defender, backrow) =
             swing("redirect-skip", &[redirector().id, canceller().id]);
         let neighbour = card_at(&state, slot(P2, Units, 2)).cloned().unwrap();
@@ -1110,7 +1091,6 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
 
     #[test]
     fn r1122_forced_attack_never_opens_the_window() {
-        // A forced attack resolves as aimed: no window, no redirect, the trap stays set.
         let (mut state, attacker, defender, backrow) = swing("redirect-forced", &[redirector().id]);
         let trap = backrow.into_iter().next().unwrap();
         let mut sink = Bench::new(&state);
@@ -1123,8 +1103,8 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
 
     #[test]
     fn r1123_copies_after_the_check() {
-        // P2's 5/10 beside a 3/3, declaring on P1's 3/3: re-aimed at the ally, the 5 kills it, and
-        // P1 — the Radiant trap's controller — gets a fresh copy of it after the check.
+        // P2's 5/10 re-aimed at its allied 3/3 kills it, and P1, the Radiant trap's controller, gets a
+        // fresh copy of it after the check.
         let mut state = game("redirect-copies");
         state.active = P2;
         let attacker = put(&mut state, &big_body.id, slot(P2, Units, 1), json!({}));
@@ -1140,8 +1120,7 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
 
         let _ = declare_attack(&mut sink.sink(&mut state), &attacker, &on_unit(&defender));
 
-        // The copy stands for P1, fresh: no damage on it, a new id, the victim in the graveyard. P1's
-        // own 3/3, the attack's first target, is not the copy.
+        // A fresh copy stands for P1; P1's own 3/3, the attack's first target, is not it.
         let copies: Vec<CardInstance> = active_units_of(&state, P1)
             .into_iter()
             .filter(|unit| unit.def_id == plain.id && unit.id != defender.id)

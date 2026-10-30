@@ -17,8 +17,7 @@ fn game() -> GameState {
     state
 }
 
-/// The effect applied for p1 (unless `hook` names another controller) on a sink over `state`, the
-/// rng cursor written back; its events.
+/// The effect applied for p1 (or `hook`'s controller) over `state`, rng cursor written back; its events.
 fn run(
     state: &mut GameState,
     effect: Effect,

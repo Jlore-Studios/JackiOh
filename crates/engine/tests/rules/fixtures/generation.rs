@@ -1,9 +1,7 @@
-//! Fixture cards for the generation systems (docs/classic-sets.md B5 E19, E23, E24, E25): Plague
-//! placements, the Fuse variants, the Transform variants and the Recruit extensions. The engine never
-//! imports `crates/cards` (CLAUDE.md), so each shape a Classic or Classic+ card will take is written
-//! here once, in the smallest script that has it, and the tests drive them through `reduce`.
-//!
-//! Ids are `gen-*` and indexes 4601 upward, so nothing collides with another fixture file's.
+//! Fixture cards for the generation systems (docs/classic-sets.md B5 E19, E23, E24, E25): each shape a
+//! Classic or Classic+ card will take, in the smallest script that has it (the engine never imports
+//! `crates/cards`), driven through `reduce`. Ids are `gen-*` and indexes 4601 upward, so nothing collides
+//! with another fixture file's.
 
 #![allow(non_upper_case_globals)]
 

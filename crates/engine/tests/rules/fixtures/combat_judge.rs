@@ -1,7 +1,6 @@
-//! Fixtures for the Meditative batch 18 engine tests (R1120–R1127): one card per behavior the
-//! batch's systems add — a combat-only attack modifier, a Poisonous one, an exile-on-damage unit and
-//! the two judge faces — each echoing the §8 card its doc names, on both faces alike, so
-//! `{ radiant: true }` never silently changes what the fixture means.
+//! Fixtures for the Meditative batch 18 engine tests (R1120–R1127), one per behavior its systems add,
+//! each echoing the §8 card its doc names on both faces alike, so `{ radiant: true }` never silently
+//! changes what the fixture means.
 
 #![allow(non_upper_case_globals)]
 
@@ -31,7 +30,7 @@ fn def(overrides: Value) -> CardDef {
     json_as(literal)
 }
 
-/// Meditative #52's modifier as a fixture: +2 while any attacker strikes any Unit (R1120).
+/// Meditative #52's modifier: +2 while any attacker strikes any Unit (R1120).
 pub static herald: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cj-herald",
@@ -43,8 +42,7 @@ pub static herald: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// Meditative #52's Radiant face as a fixture: its controller's attackers get +2 and Poisonous
-/// (R1120).
+/// Meditative #52's Radiant face: its controller's attackers get +2 and Poisonous (R1120).
 pub static herald_poison: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cj-herald-poison",
@@ -56,7 +54,7 @@ pub static herald_poison: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// Meditative #72 as a fixture: a 2/2 that exiles on damage (R1124).
+/// Meditative #72: a 2/2 that exiles on damage (R1124).
 pub static banisher: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cj-banisher",
@@ -69,7 +67,7 @@ pub static banisher: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// Meditative #72's Radiant face as a fixture: a 4/2 with Cleave that exiles on damage (R1124).
+/// Meditative #72's Radiant face: a 4/2 with Cleave that exiles on damage (R1124).
 pub static banisher_cleave: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cj-banisher-cleave",
@@ -82,7 +80,7 @@ pub static banisher_cleave: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// Meditative #71's base face as a fixture: judges plays (R1125).
+/// Meditative #71's base face: judges plays (R1125).
 pub static judge: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cj-judge",
@@ -95,7 +93,7 @@ pub static judge: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// Meditative #71's Radiant face as a fixture: judges plays and hears emotes (R1125, R1127).
+/// Meditative #71's Radiant face: judges plays and hears emotes (R1125, R1127).
 pub static judge_emote: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cj-judge-emote",
@@ -132,8 +130,7 @@ pub static cheap: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// A 5/5 for 6 (Radiant 10/10): better stats, a worse rate, so the judge prefers the cheap body
-/// (R1125).
+/// A 5/5 for 6 (Radiant 10/10): better stats, a worse rate, so the judge prefers the cheap body (R1125).
 pub static dear: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cj-dear",

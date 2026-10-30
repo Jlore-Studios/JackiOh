@@ -1,14 +1,7 @@
-//! MD-D4 and MD-D5 (docs/meditative-set.md M5): combat-only attack modifiers and
-//! `conditionTargets` (R1120, R1121).
-//!
-//! R1120: an `attack_mods` hook adds to an attacker's strike in the one combat it started against a
-//! Unit — the strike, its Cleave and its Trample excess — never the strike back, never a hero hit,
-//! never the listed attack. A hook's Poisonous marks with the hit (SPEC §4.4 step 7). The AI's
-//! projection reads the same bonus.
-//!
-//! R1121: `UnitView.condition_targets` names the enemy Units a modifier would apply to if the
-//! viewer's own attacker attacked them now — only on attackers that may act now, never off turn,
-//! never with a prompt open, never on the enemy's cards.
+//! MD-D4 and MD-D5 (docs/meditative-set.md M5): combat-only attack modifiers and `conditionTargets`.
+//! R1120: an `attack_mods` hook adds to an attacker's strike in the one combat it started against a Unit,
+//! its Poisonous marking with the hit (SPEC §4.4 step 7). R1121: `UnitView.condition_targets` names the
+//! enemy Units a modifier would apply to if the viewer's own attacker attacked them now.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -17,7 +10,6 @@ use crate::rules::fixtures::combat::{big_body, cleaver, plain, trampler};
 use crate::rules::fixtures::combat_judge::{combat_judge_game, herald, herald_poison};
 use crate::rules::fixtures::harness::{live, put, sink_for, slot};
 
-/// A game at turn 4, P1's main phase, with the combat-judge fixtures registered.
 fn board(seed: &str) -> GameState {
     let mut state = combat_judge_game(seed, None);
     state.turn = 4;
@@ -30,7 +22,6 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// Run `f` on a sink over `state` and hand back what it emitted.
 fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
     let mut sink = sink_for(state);
     let out = f(&mut sink);
@@ -68,7 +59,6 @@ fn hits(events: &[GameEvent]) -> Vec<(Option<String>, String, i32)> {
         .collect()
 }
 
-/// The `conditionTargets` of the unit `instance_id` in this viewer's view, if the view shows it.
 fn condition_targets(state: &GameState, viewer: PlayerId, instance_id: &str) -> Option<Vec<String>> {
     let view = view_for(state, viewer);
     let seat = if viewer == P1 { &view.you } else { &view.opponent };
@@ -135,8 +125,8 @@ mod attack_mods_r1120 {
             (Some(attacker.id.clone()), neighbour.id.clone(), 5)
         );
 
-        // The Trample excess: 6 + 2 over a 3-health body sends 5 on. The body's own `damage` event
-        // reads what it took, its 3 health (§4.4 step 5, R63); the bonus shows in the 5 carried on.
+        // The Trample excess: 6 + 2 over a 3-health body sends 5 on; the body's own `damage` reads its 3
+        // health (§4.4 step 5, R63), the bonus showing in the 5 carried on.
         let mut state = board("r1120-trample");
         put(
             &mut state,
@@ -245,9 +235,8 @@ mod attack_mods_r1120 {
 
     #[test]
     fn r1120_lethal_reads_bonus() {
-        // My Pawn projects what an attack would deal the defending hero (R44): a 6/4 Trample with the
-        // +2 on a 3/3 carries 8 - 3 = 5 on, where its listed 6 alone would carry 3; on the hero
-        // itself it deals the listed 6.
+        // My Pawn projects what an attack would deal the defending hero (R44): a 6/4 Trample with +2 on a
+        // 3/3 carries 8 - 3 = 5 on (its listed 6 alone, 3); on the hero itself it deals the listed 6.
         let mut state = board("r1120-lethal");
         put(
             &mut state,
@@ -315,13 +304,11 @@ mod attack_mods_r1121 {
         );
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let foe = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
-        // The enemy's cards carry no yellow in the opponent's view.
         assert_eq!(condition_targets(&state, P2, &attacker.id), None);
         assert_eq!(condition_targets(&state, P2, &foe.id), None);
-        // Off turn the viewer's own attackers carry none either.
         state.active = P2;
         assert_eq!(condition_targets(&state, P1, &attacker.id), None);
-        // Nor with a prompt open: `can_act` answers false, so the hook is never asked.
+        // With a prompt open `can_act` answers false, so the hook is never asked.
         state.active = P1;
         state.pending = Some(json_as(json!({
             "id": "q1",

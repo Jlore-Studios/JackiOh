@@ -73,7 +73,7 @@ pub fn crier() -> CardDef {
     )
 }
 
-/// A Spell whose resolution casts the plain Spell (R70): the cast is the later play, though it resolves first.
+/// A Spell whose resolution casts the plain Spell (R70): the cast is the later play, yet resolves first.
 pub fn caster() -> CardDef {
     spell_def(
         966,
@@ -100,7 +100,6 @@ pub fn twice_forward_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// A new card of that definition, cast by the running card's controller.
 fn cast_new_of(def_id: String) -> Effect {
     effects::cast_new(effects::CastNewArgs {
         def: effects::CastNewDef::from(def_id),

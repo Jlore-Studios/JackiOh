@@ -35,7 +35,6 @@ fn set_dormant(state: &mut GameState, id: &str, dormant: bool) {
 mod r1850001_duo_and_squad {
     use super::*;
 
-    /// The marks `viewer` reads on the card `id`, wherever on the field it is.
     fn marks_in_view(state: &GameState, viewer: PlayerId, id: &str) -> Vec<(String, String)> {
         let view = serde_json::to_value(view_for(state, viewer)).expect("a view serializes");
         let mut found: Vec<(String, String)> = Vec::new();
@@ -157,8 +156,8 @@ mod r1850001_duo_and_squad {
             true,
             json!({ "zone": { "row": "units", "lane": 2 } }),
         );
-        // Lane order, then the backrow: a face-up Radiant card (the Squad itself, `shining`) is passed
-        // by, a face-down one is marked whatever it wears, and the enemy's are not the player's.
+        // Lane order, then the backrow: a face-up Radiant card (`shining`) is passed by, a face-down one is
+        // marked whatever it wears, and the enemy's are not the player's.
         assert_eq!(
             duo_marks(&played.events, true),
             vec![unit.id.clone(), field.id.clone(), trap.id.clone()]
@@ -188,7 +187,6 @@ mod r1850001_duo_and_squad {
             true,
             json!({ "zone": { "row": "units", "lane": 2 } }),
         );
-        // R1839000: a Dormant card is marked by nothing.
         assert_eq!(duo_marks(&played.events, true), vec![awake.id.clone()]);
     }
 }
@@ -359,7 +357,6 @@ mod r1850002_exile_auras {
         let theirs = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
         let source = put(&mut state, &cheap_exiler().id, slot(P1, Row::Units, 2), json!({}));
         set_dormant(&mut state, &source.id, true);
-        // R1839000: a Dormant card's lasting text is off, its aura with it.
         assert!(exiled(&check(&mut state)).is_empty());
         // Awake, its aura passes the Dormant card by, as every walk of the board does.
         set_dormant(&mut state, &source.id, false);
@@ -525,7 +522,6 @@ mod r1850003_hold_beneath {
         destroy(&mut state, &cover.id);
         assert_eq!(top(&state, P2, 1).map(|card| card.id), Some(bag.id.clone()));
         assert_eq!(state.held.as_ref().map(Vec::len), Some(1));
-        // Dormant, it is on the field still, and holds (R1839000).
         set_dormant(&mut state, &bag.id, true);
         assert!(summoned(&check(&mut state)).is_empty());
         assert!(!on_field(&state, &held.id));
@@ -572,7 +568,6 @@ mod r1850003_hold_beneath {
 
     #[test]
     fn r1850003_held_reads_as_where_the_card_and_its_holder_are_now() {
-        // Both on the board: both seats read the card and its holder.
         let mut state = playing("held-view");
         let held = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
         let (holder, mut events) = ticketed(&mut state, &held.id);
@@ -584,8 +579,7 @@ mod r1850003_hold_beneath {
             assert_eq!(seen[0]["holderId"], json!(holder));
         }
 
-        // The holder bounced to p1's hand, and the card it released, keeping its id, bounced to
-        // p2's: each seat reads only the card now in its own hand (R97).
+        // Holder and released card (id kept) bounced to p1's and p2's hands: each seat reads its own (R97).
         for id in [holder.clone(), held.id.clone()] {
             events.extend(apply(
                 &mut state,
@@ -617,8 +611,7 @@ mod r1850003_hold_beneath {
 
     #[test]
     fn r1850003_a_held_card_reads_to_both_seats_held_and_released() {
-        // I6, the fuzz's hidden-information monitor: a held card is in no pile, yet it was face-up as
-        // it went, so `held` naming it hides nothing from either seat.
+        // I6: a held card is in no pile, yet it went face-up, so `held` naming it hides nothing from a seat.
         let mut state = playing("held-i6");
         let held = put(&mut state, &crier().id, slot(P2, Row::Units, 2), json!({}));
         let played = play(&state, P1, &ticket().id, false, at("backrow", 1, &held.id));
@@ -640,8 +633,8 @@ mod r1850003_hold_beneath {
 
     #[test]
     fn r1850003_a_held_cards_hidden_nerfs_ride_it_and_no_seats_copy_holds_them() {
-        // R1845000: a hidden Nerf rides its card in every zone, beneath a holder too, and the copy made
-        // for a seat (the dry run's, the AI's redaction) drops it there as from every other card.
+        // R1845000: a hidden Nerf rides its card beneath a holder too, and a seat's copy (the dry run's,
+        // the AI's redaction) drops it there.
         const HIDDEN_NERFS: i32 = 2;
         let counts = |state: &GameState| -> Vec<Option<i32>> {
             state
@@ -669,7 +662,6 @@ mod r1850003_hold_beneath {
         // R419: the snapshot's card goes back to its zone from wherever it is now, beneath its holder too.
         let mut state = playing("rollback");
         let held = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
-        // This turn's snapshot, taken with the card on the board.
         state.board_history = None;
         subsystems::board_history::record_board_snapshot(&mut state);
         let (holder, _) = ticketed(&mut state, &held.id);
@@ -720,7 +712,6 @@ mod r1865000_set_aside_from_hand {
         put(state, &ticket().id, slot(P1, Row::Backrow, lane), json!({}))
     }
 
-    /// p1's `def_id`, put in p1's hand.
     fn in_p1_hand(state: &mut GameState, def_id: &str) -> CardInstance {
         in_hand(state, def_id, P1, 1)
             .into_iter()

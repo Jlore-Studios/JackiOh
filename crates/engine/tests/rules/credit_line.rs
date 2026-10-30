@@ -20,7 +20,6 @@ mod r1223_borrowing {
             slot(PlayerId::P1, Row::Backrow, 1),
             json!({}),
         );
-        // 2 current, a (3) body: the 2 go first and 1 is borrowed over four instalments.
         state.players.p1.mana.current = 2;
         let dealt = in_hand(&mut state, &body().id, PlayerId::P1, 1);
         let card = live(&state, only(&dealt));
@@ -51,7 +50,6 @@ mod r1223_borrowing {
             json!({}),
         );
         state.players.p1.mana.current = 0;
-        // Borrow 3 of the 4: 1, 1, 1 owed, 1 of credit left.
         let first = only(&in_hand(&mut state, &body().id, PlayerId::P1, 2));
         let card = live(&state, &first);
         let after = act(
@@ -67,8 +65,7 @@ mod r1223_borrowing {
         assert_eq!(credit_available(&after, PlayerId::P1), 1);
         assert_eq!(spendable_mana(&after, PlayerId::P1), 1);
 
-        // The second body needs 3 with only 1 spendable: the listing hides it, and the reducer
-        // refuses it — the two agree.
+        // The second body needs 3, only 1 is spendable: the listing hides it and the reducer refuses it.
         let second = after
             .players
             .p1
@@ -177,7 +174,6 @@ mod r1224_repayment {
             json!({}),
         );
         state.players.p1.mana.current = 0;
-        // Borrow 3 this turn: 1, 1, 1.
         let owed = pay_on(&mut state, PlayerId::P1, 3);
         assert_eq!(owed, 3);
         assert_eq!(state.players.p1.owed_instalments, Some(vec![1, 1, 1]));

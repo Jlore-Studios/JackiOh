@@ -264,8 +264,7 @@ fn going_long_scripts() -> CardScripts {
 pub use jackioh_engine::subsystems::hero_power::HERO_POWER_NAMES as HERO_POWERS;
 
 /// #98 Heroic Power (R752): costs (0), rolls one of the thirteen powers at start of game, and each power
-/// is one of its Activate abilities. The roll is the generic `rememberRandom` over the stored names
-/// (R103), which is all setup's tests need; the abilities are the subsystem's own.
+/// is one of its Activate abilities. The generic `rememberRandom` rolls it (R103), all setup's tests need.
 pub fn heroic_power() -> CardDef {
     def(json!({
         "id": "fx-heroic-power",

@@ -1,8 +1,7 @@
-//! "After this attacks" (`Script.afterAttack`): the attacker's hook, run once the state check that closes
-//! each of its combats has run — a declared attack's (§4.2 step 5) and a forced one's (R53) — and only
-//! for an attacker still on the field on the stay it attacked from: one that died there runs nothing
-//! (R2285001); never for an attack called off before it fought (R44). Classic #13 Boots on the Ground,
-//! Classic+ #73.1 Classic Golem and Core #32 Prem Panther (R426) are its users.
+//! "After this attacks" (`Script.afterAttack`): the attacker's hook, run once the state check closing each
+//! of its combats has run, a declared attack's (§4.2 step 5) or a forced one's (R53), and only for an
+//! attacker still on the stay it attacked from (R2285001); never for an attack called off before it fought
+//! (R44). Users: Classic #13 Boots on the Ground, Classic+ #73.1 Classic Golem, Core #32 Prem Panther (R426).
 
 use jackioh_engine::effects::forced_attacks_on;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -30,7 +29,6 @@ fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// The id of the top card of a unit pile, if there is one.
 fn top_id(pile: &Option<Pile>) -> Option<&str> {
     pile.as_ref()
         .and_then(|pile| pile.first())

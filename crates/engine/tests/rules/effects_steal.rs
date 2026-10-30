@@ -1,6 +1,5 @@
 //! Steal (SPEC §6.3, BUILD M3-T1): R15's placement, R12's ownership, R33's face-down trap and
-//! #86's "steal all enemy units". The fixture Trap this file needs is registered here, so no shared
-//! fixture has to grow for it (BUILD §0).
+//! #86's "steal all enemy units". Its fixture Trap is registered here, so no shared one grows (BUILD §0).
 
 use jackioh_engine::testkit::*;
 
@@ -36,7 +35,6 @@ fn game() -> GameState {
     state
 }
 
-/// Apply one effect and hand back the events it emitted.
 fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -112,8 +110,7 @@ mod r15_steal_s6_3_m3_t1 {
             }
         );
 
-        // The card never left the field, so R78's reset does not apply: damage, buffs, position and
-        // counters stay.
+        // It never left the field, so R78's reset does not apply: damage, buffs, position, counters stay.
         assert_eq!(now.damage, 1);
         assert_eq!(now.buffs, AttackHealth { attack: 2, health: 0 });
         assert_eq!(now.position, Some(Position::Def));

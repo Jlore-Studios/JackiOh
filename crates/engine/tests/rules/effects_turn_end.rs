@@ -1,8 +1,7 @@
-//! Ending a turn from an effect (docs/classic-sets.md B5 E10, R456): `endTurn` and `endTurnAfterActions`,
-//! the "your turn ends" rider they leave (`modifiers.cutTurnShort`), and the reducer ending the turn
-//! once it is due (`reduce.endDueTurns`): after the rest of the effect list, the action and any prompt
-//! it opened, as if End turn were pressed. Classic+ #26 drawn at its controller's start of turn ends that
-//! turn before its main phase; "one more action" counts main-phase actions only, not the one that set it.
+//! Ending a turn from an effect (docs/classic-sets.md B5 E10, R456): `end_turn` and `end_turn_after_actions`,
+//! the "your turn ends" rider they leave, and the reducer ending the turn once due: after the rest of
+//! the effect list, the action and any prompt it opened. Classic+ #26 drawn at its controller's start
+//! of turn ends that turn before its main phase; "one more action" counts later main-phase actions.
 
 use jackioh_engine::effects::{end_turn, end_turn_after_actions};
 use jackioh_engine::testkit::*;
@@ -59,7 +58,6 @@ struct Played {
     card: CardInstance,
 }
 
-/// Put the card in `state`'s hand and play it from there.
 fn play(state: &mut GameState, player: PlayerId, def_id: &str) -> Played {
     let card = in_hand(state, def_id, player, 1).remove(0);
     let ReduceResult {
@@ -83,7 +81,6 @@ fn answer(state: &GameState) -> ReduceResult {
     )
 }
 
-/// The first position, or -1.
 fn index_of(types: &[GameEventType], type_: GameEventType) -> i64 {
     types
         .iter()
@@ -91,7 +88,6 @@ fn index_of(types: &[GameEventType], type_: GameEventType) -> i64 {
         .map_or(-1, |at| at as i64)
 }
 
-/// The last position, or -1.
 fn last_index_of(types: &[GameEventType], type_: GameEventType) -> i64 {
     types
         .iter()
@@ -108,7 +104,6 @@ fn turn_ends_mods(state: &GameState, player: PlayerId) -> Vec<PlayerModifier> {
         .collect()
 }
 
-/// `turn_ends_of` as JSON (its kind's fields flat beside `id` and `expiry`), `null` when there is none.
 fn turn_ends_json(state: &GameState, player: PlayerId) -> Value {
     json_of(turn_ends_of(state, player))
 }
@@ -234,7 +229,6 @@ mod b5_e10_end_your_turn_r456 {
         }))
         .state;
         let mut log: Vec<Action> = Vec::new();
-        /// One action, logged under the nonce `rp<log length>`, applied to the state.
         fn step(state: &mut GameState, log: &mut Vec<Action>, body: Value) -> Vec<GameEvent> {
             let mut action = body;
             action["nonce"] = json!(format!("rp{}", log.len()));
@@ -541,7 +535,7 @@ mod b5_e10_the_opponents_trap_ends_the_turn_r456_the_ai_card_rate_limit {
         assert!(
             index_of(&types, GameEventType::CardResolved) < index_of(&types, GameEventType::TurnCutShort)
         );
-        // The trap fired face-up and went to its graveyard: both players may read what cut the turn.
+        // The trap fired face-up into its graveyard: both players may read what cut the turn.
         for viewer in [PlayerId::P1, PlayerId::P2] {
             assert!(matches_object(
                 &first_cut_in(&view_for(&after, viewer).events),

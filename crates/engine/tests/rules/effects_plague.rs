@@ -1,7 +1,5 @@
-//! Plague Counters, extended (docs/classic-sets.md B5 E19, R471, R689): "Place N Plague Counters" as N
-//! placements all on the one permanent a single prompt names, "Place N on X" as one placement,
-//! placement multipliers, the "placed on this" trigger, stats per token through the layers, removal,
-//! and what each player sees.
+//! Plague Counters, extended (docs/classic-sets.md B5 E19, R471, R689): "Place N Plague Counters" is N
+//! placements all on the one permanent a single prompt names; "Place N on X" is one placement.
 
 use std::collections::BTreeSet;
 
@@ -39,7 +37,6 @@ fn pick(card: &CardInstance) -> Selection {
     }
 }
 
-/// The effect applied as p1's, the targets picked by instance.
 fn run(sink: &mut EngineSink, effect: Effect, self_: Option<&CardInstance>, targets: &[&CardInstance]) {
     let mut ctx = make_context(
         sink,
@@ -76,7 +73,6 @@ fn placement(id: &str, value: i32, placed: Option<i32>) -> Value {
     }
 }
 
-/// A board with a permanent in each kind of place: p1's unit, p2's unit, p2's face-down trap.
 struct Board {
     run: Run,
     mine: CardInstance,
@@ -116,7 +112,6 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hero.health
 }
 
-/// The events of the last `n` applied actions, in order.
 fn last_events(state: &GameState, n: usize) -> Vec<GameEvent> {
     let from = state.applied.len().saturating_sub(n);
     state.applied[from..]
@@ -189,7 +184,6 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         // The rest of the Cry waits for the placements (R113).
         assert_eq!(hero_health(&run.state, PlayerId::P2), enemy_before);
 
-        // One answer puts both placements on the same face-down card: no second prompt opens.
         run = answer(&run, pick(&trap), None);
         // `reduce` works on a copy, so the card is read back out of the state the answer returned.
         let trap_now = run.state.players.p2.backrow[2].clone().expect("the trap");
@@ -324,7 +318,6 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         );
         assert!(!mine.to_string().contains(&quiet_trap.id));
 
-        // The one answer lands both placements on the trap (R689).
         run = answer(&run, pick(&trap), None);
         // The event names the trap to its controller and hides it from the placer (R97); the count on the
         // card's back is public to both (R471).
@@ -397,7 +390,6 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
             "a hidden option must not name its card"
         );
         assert!(!mine.to_string().contains(&trap.def_id));
-        // A card the placer may read is offered as before: its id and definition, no coordinates.
         let readable = option_of(&theirs.id);
         assert_eq!(readable["defId"], json!(theirs.def_id));
         for field in ["player", "row", "lane"] {
@@ -959,7 +951,6 @@ mod r452_e19_placements_under_a_random_cast_b5_e12 {
         settle(&mut sink, Default::default());
         assert!(sink.state.pending.is_none());
         assert!(events_json(&*sink.events, "promptOpened").is_empty());
-        // Its two placements both landed, and the rest of its text ran after them.
         assert_eq!(placements(&*sink.events).len(), 2);
         assert_eq!(hero_health(&*sink.state, PlayerId::P2), 29);
     }

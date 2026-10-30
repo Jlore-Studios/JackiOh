@@ -10,8 +10,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{act, act_result, new_game};
 
-/// Past both mulligans, in p1's main phase on turn 1, with no automatic turn end on either seat
-/// (R82 would otherwise run a zero-mana turn on by itself).
+/// Past both mulligans, p1's main phase on turn 1, no auto turn end (else R82 ends a zero-mana turn).
 fn playing(seed: &str) -> GameState {
     let decks = (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21));
     let mut state = begin_game(&new_game(&format!("extra-turns-{seed}"), Some(decks))).state;
@@ -31,7 +30,6 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// Apply one effect and hand back the events it emitted.
 fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -98,7 +96,6 @@ mod r844_lost_refreshes {
         assert_eq!(state.players.p1.mana.next_turn_mod, 0);
         assert_eq!(state.players.p1.lost_refresh_through, None);
 
-        // Turn 5 is normal again.
         state = end_turn(&state);
         state = end_turn(&state);
         assert_eq!(state.turn, 5);
@@ -242,7 +239,6 @@ mod r845_extra_turn_basics {
         assert_eq!(state.players.p1.mana.current, 0);
         assert_eq!(state.players.p1.lost_refresh_through, None);
 
-        // The turn after is normal.
         state = end_turn(&state);
         assert_eq!(state.active, PlayerId::P2);
         state = end_turn(&state);

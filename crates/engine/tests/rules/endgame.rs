@@ -222,7 +222,7 @@ mod ending_the_game_m1_t8 {
         state.players[P1].library = vec![];
         state.players[P1].hero.health = 40; // survive the fatigue draws
 
-        // p1 ends; p2 plays their turn; p1's next turn has nothing to do, so it ends itself.
+        // p1's next turn has nothing to do, so it ends itself.
         state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         let result = reduce(
             &state,
@@ -263,7 +263,7 @@ mod ending_the_game_m1_t8 {
             &action(json!({ "type": "timeout", "playerId": "p1", "nonce": "to1" })),
         );
         assert_eq!(answered.error, None);
-        // p1's mulligan is answered (R268), so p2's is all that is left rather than the turn ending.
+        // p1's mulligan is answered (R268): p2's is left, not the turn ending.
         assert_eq!(mulligan_owed(&answered.state), vec![P2]);
         assert_eq!(answered.state.turn, 0);
 

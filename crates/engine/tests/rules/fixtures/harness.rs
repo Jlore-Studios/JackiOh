@@ -1,12 +1,10 @@
 //! Small helpers shared by the engine tests: a registered fixture catalog, a sink and placement.
 //! The registries are the testkit's thread-local override, so `setup_catalog` registers for the
-//! calling test's thread only. Surface contract: docs/v0.3.0/SURFACE.md §8.
-//! `put` hands back an owned copy of the placed card; a test that changes it writes through
-//! `find_instance_mut`.
-//! The rules tests take `both`, `spread`, `json_of`, `events_json`, the nonce, the action, card and
-//! effect helpers, the sink bench (`Bench`), `sink_for`, `ids_of`, `types_of` and `hand_ids` from here
-//! rather than a copy (#1777, #1997, #2024; crates/tools/tests/acceptance.rs refuses a copy, a local
-//! `static NONCE` and a local struct of just `events` and `rng`).
+//! calling test's thread only. Surface contract: docs/v0.3.0/SURFACE.md §8. `put` hands back an owned
+//! copy of the placed card; a test that changes it writes through `find_instance_mut`. The rules tests
+//! take these helpers from here rather than a copy (#1777, #1997, #2024), as `acceptance.rs` in
+//! crates/tools/tests checks: no copy of those it lists, no local `static NONCE`, no local struct of
+//! just `events` and `rng`.
 
 use std::borrow::Borrow;
 use std::cell::Cell;
@@ -46,9 +44,8 @@ pub fn sink_for(state: &mut GameState) -> EngineSink<'_> {
     EngineSink::new(state, events, rng)
 }
 
-/// A sink's events and rng: the rng from the state's seed and cursor, as reduce starts one, and no
-/// events yet. The state stays the test's, lent with the bench to one engine call
-/// at a time (`sink`, `run`), so the test reads the state and the events between calls.
+/// A sink's events and rng (from the state's seed and cursor, as reduce starts one). The state stays the
+/// test's, lent with the bench to one engine call at a time, so the test reads both between calls.
 pub struct Bench {
     pub events: Vec<GameEvent>,
     pub rng: Rng,
@@ -216,8 +213,7 @@ pub fn act_logged(state: &GameState, body: impl Serialize, log: &mut Vec<Action>
     result
 }
 
-/// `act` with the nonce given, so two copies of one state sent the same action stay equal, `applied`
-/// and all.
+/// `act` with the nonce given, so two copies of one state sent the same action stay equal, `applied` and all.
 pub fn act_with_nonce(state: &GameState, body: impl Serialize, nonce: &str) -> GameState {
     let action = json_as::<ActionInput>(json_of(body)).with_nonce(nonce);
     accepted(&action, reduce(state, &action)).state
@@ -292,7 +288,6 @@ pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)
         if step > 4000 {
             panic!("game {seed} did not finish");
         }
-        // The last fallback for the seat to act is the active player.
         let player = seat_to_act(&state).unwrap_or(state.active);
         let actions: Vec<ActionBody> = legal_actions(&state, player)
             .into_iter()

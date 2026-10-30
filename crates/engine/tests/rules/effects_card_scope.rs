@@ -152,7 +152,7 @@ mod card_scopes_r242_r440 {
             (matching, whole)
         });
         assert_eq!(matching, vec![spell.clone()]);
-        // The unit on the field is public and left out; the face-down trap and the hand unit are kept, unmatched.
+        // The public field unit is left out; the face-down trap and the hand unit are kept, unmatched.
         assert_eq!(
             whole,
             vec![(trap.id.clone(), false), (unit, false), (spell, true)]

@@ -1,9 +1,7 @@
-//! Test-only cards for the systems Training Grounds part 5 builds (issue #2198): one Unit's Attack and
-//! Health set (`set_stats`, R2198000), an exact copy of a permanent into the hand (`add_to_hand`'s
-//! `exact` rider, R2198001) and tokens destroyed at the end of the turn they arrive (R2198002), each
-//! through the engine's own verbs, so the engine never imports `crates/cards`.
-//!
-//! Ids are prefixed `tg5-` and indexed from 21980, so they collide with no other fixture file's.
+//! Test-only cards for Training Grounds part 5's systems (#2198): a Unit's Attack and Health set
+//! (`set_stats`, R2198000), an exact copy of a permanent into the hand (`add_to_hand`'s `exact` rider,
+//! R2198001) and tokens destroyed at the end of the turn they arrive (R2198002), through the engine's own
+//! verbs so the engine never imports `crates/cards`. Ids are `tg5-` from 21980, clear of other fixtures'.
 
 #![allow(non_upper_case_globals)]
 
@@ -20,7 +18,6 @@ use super::harness::both;
 
 /// The Attack and Health the set fixture sets, Dino-size's 10/10.
 pub const SET_TO: i32 = 10;
-/// How many tokens the hurry fixture summons.
 pub const TOKENS: i32 = 2;
 /// The price the priced Seance fixture gives its copy, the Radiant Seance's (0).
 pub const COPY_COST: i32 = 0;
@@ -62,7 +59,6 @@ fn card(
 /// choose an Immutable Unit, which no Spell may, R781001, and reach R23's guard).
 pub static dino: LazyLock<CardDef> =
     LazyLock::new(|| card(21980, "dino", "Unit", Some((1, 1)), json!([]), false));
-/// A 5/5 Immutable Unit (R23).
 pub static stoic: LazyLock<CardDef> = LazyLock::new(|| {
     card(
         21981,
@@ -82,7 +78,6 @@ pub static seance_free: LazyLock<CardDef> =
 /// A Spell: "Add a copy of a permanent to your hand" (R1242's plain `copyOf`, for the difference).
 pub static copier: LazyLock<CardDef> =
     LazyLock::new(|| card(21984, "copier", "Spell", None, json!([]), false));
-/// A 3/3 Rush unit token.
 pub static dasher: LazyLock<CardDef> = LazyLock::new(|| {
     card(
         21985,
@@ -192,7 +187,6 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     ])
 });
 
-/// Registers the core catalog and these fixtures with their scripts.
 pub fn register_tg5_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();

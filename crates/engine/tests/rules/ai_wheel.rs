@@ -21,8 +21,7 @@ fn filler(count: usize) -> Value {
     json!(vec![FILLER; count])
 }
 
-/// `effects` applied for p1 as a card's list is, then settled (`effects_cast.rs`'s `run`, with no
-/// running card).
+/// `effects` applied for p1 as a card's list is, then settled (`effects_cast.rs`'s `run`, no running card).
 fn run(state: &mut GameState, effects: Vec<Effect>) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -43,7 +42,6 @@ fn run(state: &mut GameState, effects: Vec<Effect>) -> Vec<GameEvent> {
     events
 }
 
-/// How many cards `player` played among `events`.
 fn plays_by(events: &[GameEvent], player: PlayerId) -> usize {
     events
         .iter()
@@ -60,8 +58,7 @@ fn engaged(events: &[GameEvent], player: PlayerId) -> bool {
 mod r1844000_the_autopilot_aura {
     use super::*;
 
-    /// p1 to act on turn 9 with `aura` in the backrow, `hand` and `library`; p2 with a card to play,
-    /// so their turn does not end by itself.
+    /// p1 to act on turn 9 with `aura` in the backrow; p2 with a card to play, so their turn won't end.
     fn piloted(seed: &str, aura: &str, hand: Value, library: Value) -> Scenario {
         register_ai_wheel();
         scenario(json!({

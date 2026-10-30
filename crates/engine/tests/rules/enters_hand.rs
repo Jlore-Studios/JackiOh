@@ -1,9 +1,7 @@
 //! The `enters_hand` hook (docs/meditative-set.md, group B's Systems; MD-B18, R925): "When this
-//! enters your hand" runs on every arrival in a hand through §2.4's add-to-hand — a draw, an add or
-//! a Discover, a bounce or return, a gift or a steal off the field, the opening deal and the
-//! mulligan's replacements — after R151's start-of-game clause. A card a full hand burns never
-//! entered it, and a deck arrival never runs it. The `arrives` rider on `transform_random` runs the
-//! replacement's own arrival hooks (Meditative #37).
+//! enters your hand" runs on every arrival in a hand through §2.4's add-to-hand, after R151's
+//! start-of-game clause; a card a full hand burns never entered it, and a deck arrival never runs it.
+//! The `arrives` rider on `transform_random` runs the replacement's own arrival hooks (Meditative #37).
 
 use jackioh_engine::effects::{add_to_hand, bounce, draw, shuffle_into, transform_random};
 use jackioh_engine::testkit::*;
@@ -23,7 +21,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// The effect applied for p1 on a sink over `state`, the rng cursor written back; its events.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, P1)
 }
@@ -41,7 +38,7 @@ mod r925_enters_hand_md_b18 {
 
     #[test]
     fn r925_a_draw_an_add_and_a_bounce_run_the_clause() {
-        // A draw: the greeter on top of the library arrives Chinese.
+        // A draw.
         let mut state = game("enters-draw");
         set_library(&mut state, P1, &[greeter.id.as_str()]);
         run(&mut state, draw(json_as(json!({ "count": 1 }))));
@@ -49,14 +46,14 @@ mod r925_enters_hand_md_b18 {
         assert_eq!(drawn.def_id, greeter.id);
         assert!(is_chinese(&state, &drawn.id));
 
-        // An add: a fresh greeter added to the hand arrives Chinese.
+        // An add.
         let mut state = game("enters-add");
         run(&mut state, add_to_hand(json_as(json!({ "defId": greeter.id }))));
         let added = state.players.p1.hand.last().cloned().expect("the added card");
         assert_eq!(added.def_id, greeter.id);
         assert!(is_chinese(&state, &added.id));
 
-        // A bounce: the greeter returns from the field to the hand Chinese.
+        // A bounce.
         let mut state = game("enters-bounce");
         let fielded = put(&mut state, &greeter.id, slot(P1, Row::Units, 1), json!({}));
         assert!(!is_chinese(&state, &fielded.id));
@@ -73,7 +70,7 @@ mod r925_enters_hand_md_b18 {
 
     #[test]
     fn r925_a_shuffle_into_the_deck_and_a_burn_do_not() {
-        // A deck arrival runs no hand clause: the greeter shuffled in stays as printed.
+        // A deck arrival runs no hand clause.
         let mut state = game("enters-deck");
         set_library(&mut state, P1, &[] as &[&str]);
         run(
@@ -90,8 +87,7 @@ mod r925_enters_hand_md_b18 {
         assert_eq!(shuffled.def_id, greeter.id);
         assert!(!is_chinese(&state, &shuffled.id));
 
-        // A burn never entered the hand: the greeter a full hand refuses reaches the graveyard
-        // as printed.
+        // A burn never entered the hand: the card reaches the graveyard as printed.
         let mut state = game("enters-burn");
         in_hand(&mut state, &plain.id, P1, HAND_CAP);
         run(&mut state, add_to_hand(json_as(json!({ "defId": greeter.id }))));
@@ -109,8 +105,6 @@ mod r925_enters_hand_md_b18 {
 
     #[test]
     fn r925_the_opening_deal_runs_it() {
-        // The greeter first in p1's deck: over 40 seeds, every dealt greeter is Chinese, and some
-        // seed deals it.
         let mut dealt = 0;
         for n in 0..40 {
             let seed = format!("enters-deal-{n}");
@@ -137,8 +131,7 @@ mod r925_enters_hand_md_b18 {
 
     #[test]
     fn r925_arrives_runs_the_new_card_s_arrival_hooks() {
-        // Adding the bottle replaces it in place: the opener lands at its index, Radiant, Chinese,
-        // costing (0), and having run its own start-of-game clause (R151).
+        // Adding the bottle replaces it in place with the opener, its start-of-game clause run (R151).
         let mut state = game("enters-arrives");
         let hand_before = state.players.p1.hand.len();
         run(&mut state, add_to_hand(json_as(json!({ "defId": bottle.id }))));
@@ -150,8 +143,7 @@ mod r925_enters_hand_md_b18 {
         assert_eq!(new_card.cost_override, Some(0));
         assert_eq!(new_card.memory.get("opened"), Some(&Value::Bool(true)));
 
-        // Without `arrives`, the same replacement lands but its own clauses do not run: the
-        // opener arrives with no memory of `opened`.
+        // Without `arrives`, the same replacement lands but its own clauses do not run.
         let mut state = game("enters-no-arrives");
         let held = first(in_hand(&mut state, &bottle.id, P1, 1));
         run(

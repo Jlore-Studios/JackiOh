@@ -420,7 +420,6 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
 
     #[test]
     fn armor_sums_across_sources_so_a_granted_armor_1_adds_to_printed_armor_and_defense() {
-        // §6.1.
         let mut state = game("grant-armor");
         let unit = put(
             &mut state,
@@ -616,7 +615,7 @@ mod r21_random_keywords_m3_t1 {
             .position = Some(Position::Def);
         let mut b = Bench::new(&state);
 
-        // Every draw the 14-entry pool has room for but Taunt, and nothing it has (R781005, R1025000, R1615000).
+        // Every draw the 14-entry pool has room for but Taunt, nothing it has (R781005, R1025000, R1615000).
         let me = Some(live(&state, &unit.id));
         let count = RANDOM_KEYWORD_POOL.len() - 1;
         run(
@@ -645,8 +644,7 @@ mod r21_random_keywords_m3_t1 {
         );
         let mut b = Bench::new(&state);
 
-        // Drawing the pool dry on a unit with no keyword hands out every entry, and Armor 1 and
-        // Spell Damage +1 are not among them.
+        // Drawn dry on a keywordless unit: every entry, never Armor 1 or Spell Damage +1.
         run(
             &mut b,
             &mut state,
@@ -682,8 +680,7 @@ mod r21_random_keywords_m3_t1 {
         );
         let mut b = Bench::new(&state);
 
-        // Drawing the pool dry on a unit with no keyword hands out all fourteen entries, Taunt
-        // among them, and Charge and Indestructible are not among them.
+        // Drawn dry on a keywordless unit: all fourteen, Taunt among them, never Charge or Indestructible.
         run(
             &mut b,
             &mut state,

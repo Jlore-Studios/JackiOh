@@ -1,10 +1,8 @@
 //! Meditative #95 Call to Chaos (Meditative Edition)'s table (`subsystems/call_to_chaos_meditative.rs`),
-//! rolled by Core #95's subsystem (R28, R87, R423, R436): each of the ten entries against fixture pools,
-//! the third edition in the Call to Chaos pool (R1240, R1420), the
-//! rest-of-game entry and its cap (R1241), the hand fusion and `add_to_hand { copyOf }` (R1242), the
-//! Acclaimed pool (R1243), Bounce then Nerf (R1244), `shuffle_into { memory }` through JSON (R1246) and
-//! the Radiant's three different entries in list order (R423). The real card's test covers the same
-//! cases against the real catalog.
+//! rolled by Core #95's subsystem (R28, R87, R423, R436), on fixture pools: the third edition in the pool
+//! (R1240, R1420), the rest-of-game entry and its cap (R1241), the hand fusion and `add_to_hand { copyOf }`
+//! (R1242), the Acclaimed pool (R1243), Bounce then Nerf (R1244), `shuffle_into { memory }` through JSON
+//! (R1246) and the Radiant's three different entries in list order.
 
 use jackioh_engine::catalog::query;
 use jackioh_engine::effects::add_to_hand::{AddToHandArgs, add_to_hand};
@@ -58,7 +56,6 @@ fn register(med_cry: Option<Hook>, other_cry: Option<Hook>) {
     register_scripts(registered);
 }
 
-/// A main phase on p1's turn, empty hands and an empty p1 deck.
 fn game(seed: &str, med_cry: Option<Hook>, other_cry: Option<Hook>) -> GameState {
     let mut state = new_game(seed, None);
     register(med_cry, other_cry);
@@ -133,7 +130,6 @@ fn labels_of<D: std::borrow::Borrow<ChaosEffectDef>>(effects: &[D]) -> Vec<Strin
         .collect()
 }
 
-/// A seed whose roll (base or Radiant) the predicate accepts.
 fn seed_where(radiant: bool, accept: impl Fn(&[String]) -> bool, tag: &str) -> String {
     jackioh_engine::testkit::seed_where(tag, |seed| {
         accept(&names_of(&roll_chaos_effects(
@@ -144,7 +140,6 @@ fn seed_where(radiant: bool, accept: impl Fn(&[String]) -> bool, tag: &str) -> S
     })
 }
 
-/// One field of every event of a type, as JSON.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .iter()
@@ -168,7 +163,6 @@ fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
         .unwrap_or(-1)
 }
 
-/// The live card.
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
@@ -189,7 +183,6 @@ fn chaos_pool() -> Vec<String> {
     )
 }
 
-/// The defs a list of events played, in order.
 fn played(events: &[GameEvent]) -> Vec<String> {
     strings_of(&field_of(events, GameEventType::CardPlayed, "defId"))
 }
@@ -808,8 +801,7 @@ mod r874000_the_fusion_cap {
             );
             held *= 1 + CHAOS_MED_FUSE_COPIES as usize;
         }
-        // The next fusion would hold `held`, past the cap: it is not made, so the entry does nothing,
-        // and the hand, its prices and the transient definitions stay as they were.
+        // The next fusion would hold `held`, past the cap: not made; hand, prices and transient defs stay.
         let hand = state.players.p1.hand.clone();
         let defs = state.transient_defs.len();
         let events = run(&mut state, entry("fuse"), None);

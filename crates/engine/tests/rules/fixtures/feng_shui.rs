@@ -1,7 +1,6 @@
-//! Fixture cards for Meditative #40 Feng Shui (R980–R987). The engine never imports the cards
-//! crate (CLAUDE.md), so the element cycle, the judgement and Luck are proved on cards of
-//! their shape here. Ids are `fs-*`, indices from 8600, registered on top of the shared fixture
-//! catalog by `with_feng_shui`.
+//! Fixture cards for Meditative #40 Feng Shui (R980–R987): the element cycle, the judgement and Luck,
+//! proved on cards of their shape since the engine never imports the cards crate. Ids are `fs-*`,
+//! indices from 8600, registered on top of the shared fixture catalog by `with_feng_shui`.
 
 use std::sync::LazyLock;
 

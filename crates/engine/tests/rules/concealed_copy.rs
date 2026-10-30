@@ -20,12 +20,10 @@ const OTHER_SNARE: &str = "cc-other-snare";
 const QUIZ: &str = "cc-quiz";
 /// A vanilla Unit: what both seats' hands and libraries are dealt.
 const FILLER: &str = "fx-10";
-/// The card p1's own last board holds.
 const OWN_BOARD: &str = "fx-3";
 const ANSWERED: &str = "answered";
 const PRIZE: i32 = 3;
 
-/// The fixture catalog with the two Traps and the quiz Spell, and the quiz's script, registered.
 fn register() {
     register_outside_data();
     let mut catalog = registered_catalog().clone();
@@ -78,8 +76,7 @@ fn register() {
     register_scripts(scripts);
 }
 
-/// p2 holds a face-down `trap` in lane 1 with two Plague Counters; the board as the turn began is
-/// recorded in the history (R419).
+/// p2's face-down `trap` in lane 1 with two Plague Counters, the board recorded in the history (R419).
 fn board(trap: &str) -> GameState {
     register();
     let s = scenario(json!({
@@ -103,8 +100,7 @@ fn entry(def_id: &str) -> LastBoardEntry {
     }
 }
 
-/// Every record a viewer may not read, written into `state`: the decks the match began with, both
-/// seats' Glitch boards, both last boards and three secrets (p2's unrevealed one holds `choice`).
+/// Every record a viewer may not read, written into `state` (p2's unrevealed secret holds `choice`).
 fn hide_records(state: &mut GameState, deck: &str, their_board: &str, choice: SecretChoice) {
     state.opening = Some(OpeningRecord {
         decks: (vec![deck.to_string()], vec![deck.to_string()]),

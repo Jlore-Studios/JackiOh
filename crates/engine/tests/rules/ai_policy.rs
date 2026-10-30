@@ -1,7 +1,6 @@
-//! The random legal-action policy of SPEC §10.7 (BUILD M3-T7, R44): determinism from the seed, a
-//! choice that is always one `legalActions` offered, the end-of-turn rule, uniform prompt answers,
-//! and a playout that always terminates. The endless fixture card lives here, not in a shared
-//! fixture (BUILD §0).
+//! The random legal-action policy of SPEC §10.7 (BUILD M3-T7, R44): determinism from the seed, a choice that
+//! is always one `legalActions` offered, the end-of-turn rule, uniform prompt answers and a playout that
+//! always terminates. The endless fixture card lives here, not in a shared fixture (BUILD §0).
 
 use jackioh_engine::effects::choose_mode;
 use jackioh_engine::subsystems::ai_policy::{
@@ -14,9 +13,8 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::combat::{big_body, plain};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
 
-/// A fixture with no Core counterpart: answering its prompt re-opens the same prompt, so the policy
-/// is offered an answer and never an `endTurn`. It exists to prove the playout guard, since nothing
-/// else in the engine can loop forever.
+/// No Core counterpart: answering its prompt re-opens the same prompt, so the policy is never offered an
+/// `endTurn`. It proves the playout guard, since nothing else in the engine can loop forever.
 fn endless_question() -> CardDef {
     json_as(json!({
         "id": "ai-endless-question",
@@ -73,7 +71,6 @@ fn board(seed: &str) -> GameState {
     state
 }
 
-/// A board with something to do: cards to play, a unit to attack with and a unit to attack.
 fn busy_board(seed: &str) -> GameState {
     let mut state = board(seed);
     in_hand(&mut state, "fx-1", P1, 2);
@@ -130,8 +127,7 @@ fn sequence(state: &GameState, seed: &str, steps: usize) -> Vec<Option<ActionBod
     (0..steps).map(|_| choose_action(state, P1, &mut rng)).collect()
 }
 
-/// The board the sink drove (the sink's own state, moved in place), the events
-/// it collected, and the playout's result.
+/// The sink's own state (moved in place), the events it collected and the playout's result.
 fn playout(seed: &str) -> (GameState, Vec<GameEvent>, PlayoutResult) {
     let mut original = busy_board(seed);
     let mut events: Vec<GameEvent> = Vec::new();
@@ -248,7 +244,6 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         // The prompt is not p2's, so p2 has nothing to do (§9.3).
         assert_eq!(choose_action(sink.state, P2, &mut Rng::new("p2", 0)), None);
 
-        // A playout answers it, and the answer the reducer gets is a legal one.
         let result = play_out_turn(&mut sink, P1, PolicyOptions::default());
         assert_eq!(result.error, None);
         assert_eq!(
@@ -346,8 +341,7 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
 
         let result = play_out_turn(&mut sink, P1, PolicyOptions::default());
 
-        // Every step after the first is an answer to a prompt the last answer re-opened, so the policy
-        // is never offered an `endTurn`: only the guard stops it.
+        // Each answer re-opens the prompt, so no `endTurn` is ever offered: only the guard stops it.
         assert_eq!(
             result.actions.first().map(|action| action.action_type()),
             Some(ActionType::Play)

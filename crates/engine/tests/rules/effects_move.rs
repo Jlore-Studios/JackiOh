@@ -1,6 +1,5 @@
 //! Exile, Bounce, Discard and Counter (SPEC §6.3, §2.4, §3.2, R11, R12, R16, R78, BUILD M3-T1).
-//! Fixture defs and scripts are registered here on top of the shared catalog, so no shared fixture has
-//! to grow for them (CLAUDE.md, BUILD §0).
+//! Fixture defs and scripts are registered here, so no shared fixture has to grow for them (BUILD §0).
 
 use jackioh_engine::testkit::*;
 
@@ -92,7 +91,6 @@ fn local_scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
@@ -113,7 +111,6 @@ struct RunOptions {
     self_: Option<CardInstance>,
 }
 
-/// Apply one effect the way a script's hook would, and hand back the events it emitted.
 fn run(
     state: &mut GameState,
     effect: Effect,
@@ -671,7 +668,7 @@ mod r16_discard_s6_3_m3_t1 {
 // counter
 
 /// B5 E1, R448: what §10.5's announce leaves for a Counter to answer — the card moved out of its
-/// player's hand into the resolving zone and its announce open. These pin the verb.
+/// player's hand into the resolving zone and its announce open.
 fn announced(state: &mut GameState, card: Option<CardInstance>) -> CardInstance {
     let Some(mut card) = card else {
         panic!("no card to announce");

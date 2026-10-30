@@ -1,7 +1,6 @@
-//! Fixtures for the engine half of the Core patches and cosmetics: the play count R429 keeps
-//! (`timesPlayed`), the price a return that keeps it is noted with (R429, R766, issue #557) and the
-//! mark R437 puts on a card a delayed effect waits for. Test-only definitions and scripts, prefixed
-//! `cp-` and indexed from 4400, so they collide with no other file's.
+//! Fixtures for the engine half of the Core patches and cosmetics: R429's play count (`timesPlayed`),
+//! the kept price of a return (R766, issue #557) and R437's mark. Prefixed `cp-` and indexed from 4400,
+//! so they collide with no other file's.
 
 #![allow(non_upper_case_globals)]
 
