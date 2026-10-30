@@ -8815,7 +8815,7 @@
         "tier": "strong",
         "why": "hard's 'design across crates' was the doubtful line: one crate and one app, the design fixed here, no engine, AI or migration; a new ruling rules out easy"
       },
-      "failures": 0,
+      "failures": 1,
       "forced": false,
       "handoff": {
         "at": "2026-10-29T21:33:14Z",
