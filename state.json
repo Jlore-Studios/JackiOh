@@ -10362,6 +10362,13 @@
     "2540": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T19:42:58Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 6 fails outright (every edit is under .github/), and nothing touches crates/engine or crates/ai, so it is not hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-7",
