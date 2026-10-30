@@ -6902,6 +6902,10 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-10-28T18:37:24Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-8` (claude, opus) rejected it: `crates/cards/src/history.rs:310`: The replay keeper for AI Girlfriend's guarded script is filed under v0.5.8, but v0.5.9 is the newest shipped version and also "
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
