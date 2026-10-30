@@ -7302,10 +7302,8 @@
       "verdict_rounds": 1
     },
     "2309": {
-      "action": "review",
-      "asks": [
-        "c:6524696782"
-      ],
+      "action": "revise",
+      "asks": [],
       "audit_tier": "strong",
       "ci_fixed_head": "b85a5b8209cd58dc2d88ec360a206996a990f765",
       "ci_fixes": 2,
@@ -7331,20 +7329,22 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-30T14:03:36Z",
       "requested_by": "MaxGoetzmann",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
-      "run_id": "41038008880",
+      "run_id": "pending:239aeb71-1793369649",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-10-30T10:04:10Z",
+      "started_at": "2026-10-30T14:14:38Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6524696782"
+      ],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
@@ -9982,9 +9982,9 @@
   },
   "labels_synced": "10eb94bf70389cb1",
   "last_run": {
-    "at": "2026-10-30T13:58:53Z",
+    "at": "2026-10-30T14:14:38Z",
     "url": "",
-    "what": "build #2498 on claude-6"
+    "what": "revise #2309 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-30T13:56:42Z",
