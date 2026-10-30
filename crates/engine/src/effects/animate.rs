@@ -2,8 +2,6 @@
 //! list ends with — "Then summon this as a Unit in Defense Position" (Classic #5 Tesla), "Summon this as
 //! a Unit" (Classic #38 Jackiestan Auctioneer). The move itself is `animated::animate_card`; this is the
 //! thin Effect a card script composes (CLAUDE.md rule 5).
-//!
-//! Port of `packages/engine/src/effects/animate.ts`.
 
 use serde::{Deserialize, Serialize};
 
@@ -38,8 +36,6 @@ pub fn animate(args: AnimateArgs) -> Effect {
         if crate::animated::animated_kind_of(ctx.state, &card).is_none() {
             return;
         }
-        // TS `args.position === undefined ? {} : { position: args.position }`: the options object's one
-        // field, passed as it stands.
         let _ = crate::animated::animate_card(
             ctx,
             &card,

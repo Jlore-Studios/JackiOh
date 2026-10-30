@@ -4,7 +4,7 @@
 //! The result is a *definition*, not an instance: both faces fuse, so Make Radiant keeps working (§5.2),
 //! written fresh into `state.transient_defs` as match state surviving a JSON round-trip (§10.1). Scripts
 //! are code no JSON can hold, so Rust registers nothing (SURFACE §3, §6.6): they are composed from the
-//! ingredients' scripts by TS's `combineObjects` rules then and there, and R179's id names the
+//! ingredients' scripts by `combine_objects`'s rules then and there, and R179's id names the
 //! ingredients, so a replay of the same action list runs the same scripts (§9.3).
 //!
 //! R77 keeps an ingredient's *instance* already on the field, zone, damage and counters intact; only the
@@ -797,7 +797,7 @@ fn combined_checks(checks: Vec<TargetCheck>) -> TargetCheck {
     target_check(move |args| checks.iter().all(|check| check(args)))
 }
 
-/// TS `combineValues` for a hook-valued key (a Cry, Death, a start/end-of-turn or delayed hook, a resume
+/// A hook-valued key (a Cry, Death, a start/end-of-turn or delayed hook, a resume
 /// step): one hook running each in turn, so "both Cry and Death lists run" (R77) — each built only when the
 /// one before resolved (`lazy_part`, R102), so a later ingredient reads the board the earlier ones left
 /// (#68's "8 if your hero is below 10" after Reno set it to 30, #22's meal after #100 exiled it). An
@@ -825,7 +825,7 @@ fn combine_hooks(values: Vec<Option<Hook>>, key: &str, parent: &str) -> Option<H
 type ReadListHook<R> = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<R> + Send + Sync>;
 type ConditionListHook<R> = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> Vec<R> + Send + Sync>;
 
-/// TS `combineValues` for an `EAGER_KEYS` read of `{ state, self, radiant }`: one ingredient's read
+/// An `EAGER_KEYS` read of `{ state, self, radiant }`: one ingredient's read
 /// stays as it is, several become their lists in ingredient order, each asked with the same arguments.
 fn eager_read<R: 'static>(values: Vec<Option<ReadListHook<R>>>) -> Option<ReadListHook<R>> {
     let defined: Vec<ReadListHook<R>> = values.into_iter().flatten().collect();
@@ -963,7 +963,7 @@ fn least_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
 }
 
 /// The static flags that are an amount of what the text does, not a quality the card has: #79's Echo +1,
-/// #38's Combo, #84's hero Armor (TS `SUMMED_FLAGS`). R102: a card fused from two such texts carries both,
+/// #38's Combo, #84's hero Armor. R102: a card fused from two such texts carries both,
 /// so amounts add — a Twinspell onto a Twinspell grants Echo +2, as two standing apart do (R124) — where
 /// a quality (`castOnDraw`, `immutable`) is had once, a requirement (`tribute`) takes the stricter,
 /// and a `true` is one.
@@ -1126,7 +1126,7 @@ fn combine_quests(records: &[Script]) -> Option<QuestBook> {
     }
 }
 
-/// TS `combineObjects` over the ingredients' scripts, `records` aligned with the ingredients: every kind
+/// The ingredients' scripts combined, `records` aligned with the ingredients: every kind
 /// of value combines by one rule, which is what keeps this working as `Script` grows new hooks —
 /// a hook becomes one hook running each in turn (`combine_hooks`), an aura running each at once; a list
 /// becomes the lists in ingredient order; a nested object combines key by key; a flag is true when any
@@ -1546,7 +1546,7 @@ fn with_choices(effect: Effect, targets: Vec<Selection>, modes: Vec<String>) -> 
 /// R102 concatenates the ingredients' declared targets and modes in ingredient order, and R90 reads that
 /// flat list declaration by declaration — so each ingredient's Cry resolves with its OWN slice of the play's
 /// choices, not the whole list: handed the whole list, every ingredient read its first slot (a crafted Bigot
-/// + Twisted Sorcerer aimed the Sorcerer's 4 at the unit Bigot destroyed). Modes split by mode-declaration
+/// and Twisted Sorcerer aimed the Sorcerer's 4 at the unit Bigot destroyed). Modes split by mode-declaration
 /// counts; targets split by R90's rule over the active declarations (`forModes`) — with the lengths §10.5
 /// step 1 read the play with, handed over in `data` (`DECLARATION_SLICES_KEY`), since the board at resolution
 /// is not the checked one. Only a Cry with no play behind it measures against the board as it stands.
@@ -1784,8 +1784,8 @@ fn compose_specs(
     }
 }
 
-/// SURFACE §6.6: a fused (or crafted) definition's two scripts, composed from its ingredients' scripts —
-/// what TS registered as it minted the def, and `syncFusedScripts` rebuilt from the id alone (R179).
+/// SURFACE §6.6: a fused (or crafted) definition's two scripts, composed from its ingredients' scripts
+/// from the id alone (R179).
 /// R468: a digest id's list is read off its definition, so a digest naming another digest finds both.
 /// A definition naming no fusion has no script.
 pub fn compose_fused_scripts(state: &GameState, def: &CardDef) -> CardScripts {
@@ -2174,8 +2174,8 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         None,
     );
 
-    // The def is match state; its id names the scripts (R179, SURFACE §6.6), composed now as TS registered
-    // them when minting; a digest id's list rides on the def (R468).
+    // The def is match state; its id names the scripts (R179, SURFACE §6.6); a digest id's list rides on
+    // the def (R468).
     sink.state.transient_defs.insert(def.id.clone(), def.clone());
     crate::scripts::sync_fused_scripts(sink.state);
 
