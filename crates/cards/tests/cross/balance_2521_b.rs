@@ -5,13 +5,12 @@
 //! from this crate, which does not depend on `jackioh-ai`; the gap note says so.
 //!
 //!  - B21 Meteor deals 15 on both faces, its Radiant face trampling on to the hero (§6.3, R1848001).
-//!  - B22 Tmack Trav's extra attack after a kill on its Rush turn is never at the hero (R2521002).
-//!  - B23, B24 ZolarKeth's University on its base face, and each University once a turn (R2521003).
+//!  - B22 Tmack Trav's extra attack after a kill on its Rush turn is never at the hero.
+//!  - B23, B24 ZolarKeth's University on its base face, and each University once a turn.
 //!  - B25 Going Long and Aluneth are no Quickdraw cards; B26 the five new costs.
-//!  - B27 Pestilent Slime spreads its counters one placement each (R2521005); B28 Memory Leak's Crater.
-//!  - B29 Starfleet Commander; B30 Preemptive Strike; B31 Bob's Plan's Star Chart; B32 Star Chart
-//!    (R2521008).
-//!  - B33, B34 CN Tech's and NA Tech's fallbacks (R2521007); B35 Fruit Launcher's Grapes (R2521006).
+//!  - B27 Pestilent Slime spreads its counters one placement each; B28 Memory Leak's Crater.
+//!  - B29 Starfleet Commander; B30 Preemptive Strike; B31 Bob's Plan's Star Chart; B32 Star Chart.
+//!  - B33, B34 CN Tech's and NA Tech's fallbacks; B35 Fruit Launcher's Grapes.
 //!  - B36 the Resource and Faction tags.
 
 use jackioh_cards::{CATALOG, card_def, register_all};
@@ -212,7 +211,7 @@ fn b21_radiant_meteor_stops_at_a_neighbour_that_takes_the_whole_excess() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// B22 Tmack Trav (R2521002)
+// B22 Tmack Trav
 // ---------------------------------------------------------------------------------------------
 
 /// p1 holds Tmack Trav; p2 has a Mr. Vanilla in lanes 1 and 2.
@@ -299,7 +298,7 @@ fn b22_tmack_on_a_later_turn_may_send_its_extra_attack_at_the_hero() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// B23, B24 ZolarKeth and its Universities (R2521003)
+// B23, B24 ZolarKeth and its Universities
 // ---------------------------------------------------------------------------------------------
 
 fn activations_listed(s: &Scenario, card: &CardInstance) -> usize {
@@ -577,10 +576,20 @@ fn b26_the_catalog_prints_the_new_costs() {
     }
 }
 
+/// The plays `legal_actions` lists for p1's copy of `card` in hand.
+fn plays_listed(s: &Scenario, card: &str) -> Vec<ActionBody> {
+    let held = s.card(card).id.clone();
+    legal_actions(s.state(), P1)
+        .into_iter()
+        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == held))
+        .collect()
+}
+
 #[test]
 fn b26_one_mana_short_of_the_new_cost_is_refused() {
     for (card, radiant, cost) in COSTS.into_iter().filter(|(_, _, cost)| *cost > 0) {
         let mut s = priced(card, radiant, cost - 1);
+        assert!(plays_listed(&s, card).is_empty(), "{card} is not offered at {} mana", cost - 1);
         s.expect_refused_with(
             |s| s.play(card, json!({})),
             &format!("costs {cost}, more than your mana"),
@@ -593,14 +602,18 @@ fn b26_one_mana_short_of_the_new_cost_is_refused() {
 fn b26_exactly_the_new_cost_plays_it() {
     for (card, radiant, cost) in COSTS {
         let mut s = priced(card, radiant, cost);
-        s.play(card, json!({}));
+        let play = plays_listed(&s, card)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| panic!("{card} is offered at {cost} mana"));
+        s.act(play, P1, "play it for exactly its cost");
         assert!(hand_of(&s, card).is_empty(), "{card} was played");
         assert_eq!(s.state().players.p1.mana.current, 0, "{card} cost all {cost}");
     }
 }
 
 // ---------------------------------------------------------------------------------------------
-// B27 Pestilent Slime (R2521005)
+// B27 Pestilent Slime
 // ---------------------------------------------------------------------------------------------
 
 /// p1's Pestilent Slime in lane 1 holding `plague` counters, then `field` and `backrow`; p2's Mr.
@@ -1034,7 +1047,7 @@ fn b31_aestheticize_the_game_keeps_its_discover_and_gets_no_star_chart() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// B32 Star Chart (R2521008)
+// B32 Star Chart
 // ---------------------------------------------------------------------------------------------
 
 /// p1 holds a Star Chart and has `mana`; p2's hero at 100, so no node's damage ends the game.
@@ -1148,7 +1161,7 @@ fn b32_star_chart_plays_at_no_mana_and_its_travels_cost_none() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// B33 CN Tech, B34 NA Tech (R2521007)
+// B33 CN Tech, B34 NA Tech
 // ---------------------------------------------------------------------------------------------
 
 /// A win-rate table of `(id, wins, games)` rows.
@@ -1304,7 +1317,7 @@ fn b34_na_tech_with_both_ends_named_fuses_them() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// B35 Fruit Launcher (R2521006)
+// B35 Fruit Launcher
 // ---------------------------------------------------------------------------------------------
 
 /// p1's Fruit Launcher (lane 1) activated at p1's Mr. Vanilla (lane 2), by the activation
