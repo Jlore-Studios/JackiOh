@@ -17,10 +17,6 @@
 // This module and `config.py` are the only ones that read `os.environ`.
 package identity
 
-import (
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
-)
-
 // REPO_ROOT = Path(__file__).resolve().parents[2]
 var RepoRoot any // unported
 
@@ -79,14 +75,14 @@ var Keys = []string{"name", "title", "command", "label_prefix", "branch_prefix",
 
 // An `Identity` from a config's `identity` section (None or {} is the night bot's).
 
-func Parse(raw any, suggestions bool /* = True */) *git.Identity {
+func Parse(raw any, suggestions bool /* = True */) *Identity {
 	panic("unported: identity.parse")
 }
 
 // The identity in `<root>/<home>/config.json`; the night bot's when the file or the section
 // is missing (a test's temporary root, say). A section that is there but wrong is an error.
 
-func Load(root string /* = None */, where string /* = None */) *git.Identity {
+func Load(root string /* = None */, where string /* = None */) *Identity {
 	panic("unported: identity.load")
 }
 
