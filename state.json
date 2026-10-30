@@ -9446,6 +9446,8 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-30T09:52:48Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "41036728528",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
