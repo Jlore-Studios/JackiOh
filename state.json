@@ -9931,15 +9931,15 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-30T21:45:34Z",
       "round_tier": "medium",
-      "run_id": "41119692458",
+      "run_id": "pending:d7530f33-1793396728",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-30T19:59:24Z",
+      "started_at": "2026-10-30T21:45:49Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -10468,9 +10468,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-30T21:37:45Z",
+    "at": "2026-10-30T21:45:49Z",
     "url": "",
-    "what": "build #2503 on claude-3"
+    "what": "revise #2493 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-30T21:39:45Z",
