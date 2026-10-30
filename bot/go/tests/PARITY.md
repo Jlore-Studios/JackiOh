@@ -3,8 +3,9 @@
 Every test the Python suite held in `bot/tests/` (each `test…` method of a `unittest.TestCase` in
 `test_*.py` and `squishy_cases.py`) beside the Go test that stands for it in `bot/go/tests/`,
 named as PORTING.md §7 says. The port's parity script wrote it, from the Python suite and the Go
-one, before the Python harness and its tests were deleted in the same pull request; the Python is
-in the history at the merge's first parent. `test_machine.py` and `test_hygiene.py` stayed in
+one, before the Python suite was deleted in the same pull request (the Python harness itself stays,
+used by no workflow, until the runs started before the merge have drained); the Python is in the
+history at the merge's first parent. `test_machine.py` and `test_hygiene.py` stayed in
 Python beside their Python subjects and are not listed.
 
 **989 of 989 ported; 0 missing.**
