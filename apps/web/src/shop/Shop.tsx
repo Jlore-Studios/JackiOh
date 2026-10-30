@@ -8,11 +8,15 @@
 // the request is out; on the answer a copy of the pack flies into that kind's count (transform and
 // opacity, `shop.css`; with Reduce motion the count just changes) and every pill is told the
 // balance (`announceWallet`).
+//
+// ONE SPEND AT A TIME (R2378000): while any spend of the tab is out (`net/spending.ts`), every Buy
+// waits, disabled and turning a loading wheel (`economy/spend.css`), and a press sends nothing.
 
 import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 
 import { useReducedMotion } from "../economy/FillBar.tsx";
 import { announceWallet } from "../economy/wallet.ts";
+import "../economy/spend.css";
 import { t } from "../i18n/i18n.ts";
 import {
   buyPack,
@@ -24,6 +28,7 @@ import {
   type WalletResponse,
 } from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
+import { spendOutNow, useSpendOut } from "../net/spending.ts";
 import PackObject from "../packs/PackObject.tsx";
 import { packName } from "../packs/packs.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -75,6 +80,7 @@ export default function Shop({
   // How many packs of each kind were bought this visit: a new count mounts a new flying copy.
   const [flights, setFlights] = useState<Readonly<Record<string, number>>>({});
   const reduced = useReducedMotion();
+  const spendOut = useSpendOut();
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +116,7 @@ export default function Shop({
   }, [token, revision, attempt]);
 
   const buy = (pack: string): void => {
-    if (busy !== null) return;
+    if (busy !== null || spendOutNow()) return;
     setBusy(pack);
     setError(null);
     buyPack(token, pack).then(
@@ -192,8 +198,10 @@ export default function Shop({
                   <div className="account-actions">
                     <button
                       type="button"
+                      className="spend-wait"
                       data-testid={shopTestid.buy(pack)}
-                      disabled={short > 0 || busy !== null}
+                      disabled={short > 0 || busy !== null || spendOut}
+                      aria-busy={spendOut && short === 0}
                       onClick={() => {
                         buy(pack);
                       }}

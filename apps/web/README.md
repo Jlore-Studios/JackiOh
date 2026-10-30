@@ -94,6 +94,8 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `PracticeLeave` and `ChatPanel` call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
 `commandEntryTestid`), `routes/commandEntries.ts` (the actions, the pages and the Almanac
@@ -149,7 +151,7 @@ present for exactly that window.
 **Concede asks first** (`ConfirmConcede.tsx`, mounted by `Game.tsx`, so every mode has it). The
 `concede` control opens `concede-dialog`, a modal `alertdialog` "Concede this game?"; only
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
-focus on open and is what Escape and a click outside do; Tab stays in the dialog, and the focus goes
+focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
 
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
@@ -259,7 +261,8 @@ The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`
 `scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
 `fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
 `settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
-mode (`advance`, `runAllTimers`) are named options; and `board.tsx` `withCatalog` and `renderBoard`,
+mode (`advance`, `runAllTimers`) are named options; `history.ts` the browser's Back and Forward
+(`pressBack`, `pressForward`), which need real timers; and `board.tsx` `withCatalog` and `renderBoard`,
 the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
 defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
 
@@ -352,6 +355,11 @@ routes/play.tsx         /play, the Play hub (R1578000): one screen that does not
 net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
                         clipboard, read once off the address bar into this tab, through a sign-in, for
                         the lobby
+net/spending.ts         R2378000: whether one of the tab's spends is out, from its press until its answer or
+                        its failure (`net/api.ts`'s spends run through `whileSpending`); the Shop's Buy and
+                        the pack panel's Open, Open all, sealed pack, Reveal all and Next pack wait on it,
+                        Buy, Open and Open all turning economy/spend.css's wheel, and a 429 keeps its
+                        press's key
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
                         then the game), and useLiveGame, the live match, series or co-op game the menus'
@@ -421,7 +429,8 @@ economy/                #1651: the economy's shared pieces: `wallet.ts`, the bal
                         level by level with each level's rewards, and its quests, from the server's
                         `economy` answer (the match and Duos results, a paid practice game's); `bars.ts`
                         the pure stages; Reduce motion (the setting or the system's) shows every end state
-                        at once, and the effects' intensity off flies and pulses nothing
+                        at once, and the effects' intensity off flies and pulses nothing; `spend.css`, the
+                        loading wheel a spend button turns while one of the tab's spends is out (R2378000)
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown

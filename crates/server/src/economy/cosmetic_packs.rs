@@ -21,7 +21,8 @@
 //!   (R2124000).
 //! - The routes, all `AuthLevel::Active`: `GET /api/cosmetic-packs` (the bar, the packs held and
 //!   the slots' odds), `POST /api/cosmetic-packs/open` and `POST /api/cosmetic-packs/chase`
-//!   (`{ cosmeticId, cardId? }`).
+//!   (`{ cosmeticId, cardId? }`), each spend in the account's turn (`economy::spend_slots`,
+//!   R2378000).
 //!
 //! An opening and a purchase run under the account's lock (R1301003), so neither rolls on, nor
 //! spends, counters the other is moving.
@@ -639,20 +640,21 @@ pub async fn get_cosmetic_packs(app: &Arc<App>, req: Req) -> ApiResult {
 /// `POST /api/cosmetic-packs/open` (`AuthLevel::Active`): [`open_cosmetic_pack`] over the shipped
 /// registry, from a fresh seed (`SystemIds::seed`, 16 random bytes), so no seed the account can
 /// read foretells a later roll (§14.11), with an optional `Idempotency-Key` (R2124000);
-/// [`open_cosmetic_pack_once`].
+/// [`open_cosmetic_pack_once`], in the account's spend turn (R2378000).
 pub async fn post_open(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let request = RequestKey::of(app, &req, "/api/cosmetic-packs/open")?;
     let registry = crate::cosmetics::shipped()
         .map_err(|error| ApiError::internal(format!("cosmetics.json: {error}")))?;
+    let _turn = app.spends.claim(&profile.id).await?;
     open_cosmetic_pack_once(app, &profile.id, &registry, &SystemIds.seed(), request.as_ref())
         .await?
         .answer()
 }
 
 /// `POST /api/cosmetic-packs/chase` (`AuthLevel::Active`): `{ cosmeticId, cardId? }` over the
-/// shipped registry, with an optional `Idempotency-Key` (R2124000); [`buy_chase_once`], answering
-/// the bar and packs after it.
+/// shipped registry, with an optional `Idempotency-Key` (R2124000); [`buy_chase_once`], in the
+/// account's spend turn (R2378000), answering the bar and packs after it.
 pub async fn post_chase(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let cosmetic_id = str(&req.body, "cosmeticId")?;
@@ -660,6 +662,7 @@ pub async fn post_chase(app: &Arc<App>, req: Req) -> ApiResult {
     let request = RequestKey::of(app, &req, "/api/cosmetic-packs/chase")?;
     let registry = crate::cosmetics::shipped()
         .map_err(|error| ApiError::internal(format!("cosmetics.json: {error}")))?;
+    let _turn = app.spends.claim(&profile.id).await?;
     buy_chase_once(
         app,
         &profile.id,

@@ -10931,8 +10931,6 @@
     ],
     "loc": 5,
     "base": {
-      "attack": 0,
-      "health": 1,
       "keywords": [
         {
           "kind": "Animated"
@@ -10945,8 +10943,6 @@
       "text": "Animated, Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse a copy of the last into this and gain +{brittleGain} Brittle."
     },
     "radiant": {
-      "attack": 0,
-      "health": 2,
       "keywords": [
         {
           "kind": "Animated"
@@ -18883,8 +18879,6 @@
     ],
     "loc": 24,
     "base": {
-      "attack": 1,
-      "health": 1,
       "keywords": [
         {
           "kind": "Animated"
@@ -18896,8 +18890,6 @@
       "text": "Animated, Flying\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nUpon reaching 10 keywords, make this Radiant."
     },
     "radiant": {
-      "attack": 2,
-      "health": 2,
       "keywords": [
         {
           "kind": "Animated"
