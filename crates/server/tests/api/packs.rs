@@ -6,12 +6,14 @@
 //! the active account `p1`. An opening the test must steer (a registry with cosmetics a pack may
 //! drop, R1301002) calls `open_pack` with that registry; the route opens over the shipped one,
 //! whose every entry but the six full arts (R1313000) and the five portraits but vanilla
-//! (R1827000) is a starter.
+//! (R1827000) is a starter. A spend sent while the account's other spends run waits its turn
+//! (R2378000): the test takes the turns with spends of its own, held until it lets them go.
 
 use std::sync::Arc;
 
 use indexmap::IndexMap;
 use serde_json::{Value, json};
+use tokio::sync::watch;
 
 use jackioh_engine::wire::PrintedRarity;
 use jackioh_engine::{CardDefs, SetName};
@@ -20,14 +22,14 @@ use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, COSMETIC_TIER_WEIGHTS, COSMETIC_TOKEN_BAR_SIZE,
-    CosmeticTokenStep, GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME,
-    PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS,
-    PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
+    CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, GLOBAL_COSMETIC_FLOOR_RARITY,
+    GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS,
+    PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, SPEND_BUSY_RETRY_AFTER_MS, TIER_WEIGHT_TOTAL,
 };
 use jackioh_server::cosmetics::{
     Cosmetic, CosmeticKind, CosmeticRarity, global_cosmetics, pack_cosmetics, portrait_of, shipped,
 };
-use jackioh_server::db::store::{CollectionEntry, StoreError};
+use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::math::PityCounters;
 use jackioh_server::economy::packs::{
     BarSettle, BarsSettled, OpenedPack, PACK_GRANT_REASON, open_pack, slot_bar_points,
@@ -35,6 +37,7 @@ use jackioh_server::economy::packs::{
 use jackioh_server::economy::roll::{
     Holdings, OpeningLog, PackKind, Slot, SlotGrant, pack_pool, roll_opening,
 };
+use jackioh_server::economy::spend_slots::SPEND_BUSY_MESSAGE;
 use jackioh_server::economy::store::{
     Counter, CounterGrant, EconomyReason, InventoryItem, JloreGrant, JloreReason,
 };
@@ -42,7 +45,7 @@ use jackioh_server::economy::tiers::{card_odds, cosmetic_odds};
 use jackioh_server::economy::tokens::card_bar_points;
 
 use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
-use crate::support::store::{fake, uuid};
+use crate::support::store::{fail_on, fake, stop_failing, uuid};
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
@@ -122,21 +125,6 @@ async fn open(app: &Arc<App>, token: &str, pack: &str) -> OpenedPack {
     .await;
     assert_eq!(status, 200, "{body}");
     serde_json::from_value(body).expect("an opened pack")
-}
-
-/// The store's fault hook: every call named `failing` errors.
-async fn fail_on(app: &App, failing: &'static str) {
-    fake(app).lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
-        if method == failing {
-            Err(StoreError::Other("injected fault".to_string()))
-        } else {
-            Ok(())
-        }
-    }));
-}
-
-async fn heal(app: &App) {
-    fake(app).lock().await.on_call = None;
 }
 
 /// A store value as JSON.
@@ -1029,7 +1017,7 @@ async fn a_fault_on_the_collection_leaves_no_partial_grant() {
     let (app, token) = setup().await;
     buy(&app, &token, "Core").await;
     let before = everything(&app).await;
-    fail_on(&app, "collection.appendGrants").await;
+    fail_on(&app, "collection.appendGrants", "injected fault").await;
     let (status, _, body) = call(
         &app,
         "POST",
@@ -1038,7 +1026,7 @@ async fn a_fault_on_the_collection_leaves_no_partial_grant() {
         json!({ "pack": "Core" }),
     )
     .await;
-    heal(&app).await;
+    stop_failing(&app).await;
     assert_eq!(status, 500, "{body}");
     assert_eq!(everything(&app).await, before);
     assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 1);
@@ -1057,7 +1045,7 @@ async fn a_fault_on_the_counters_leaves_no_partial_grant() {
         .expect("R111's grant");
     buy(&app, &token, "Core").await;
     let before = everything(&app).await;
-    fail_on(&app, "economy.counters.grant").await;
+    fail_on(&app, "economy.counters.grant", "injected fault").await;
     let (status, _, body) = call(
         &app,
         "POST",
@@ -1066,7 +1054,7 @@ async fn a_fault_on_the_counters_leaves_no_partial_grant() {
         json!({ "pack": "Core" }),
     )
     .await;
-    heal(&app).await;
+    stop_failing(&app).await;
     assert_eq!(status, 500, "{body}");
     assert_eq!(everything(&app).await, before);
     assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 1);
@@ -1693,4 +1681,238 @@ async fn r2124000_the_same_key_twice_opens_one_pack_and_answers_the_same_slots()
         "the retry rolls and grants nothing"
     );
     assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 1);
+}
+
+// ---------------------------------------------------------------------------------------------
+// R2378000: an account runs one spend at a time, the rest waiting their turn
+// ---------------------------------------------------------------------------------------------
+
+/// How many times `until_claims` lets the spawned requests run before it gives up.
+const YIELDS: usize = 1_000;
+
+/// Lets the spawned requests run until `profile_id` has `claims` spends running or waiting.
+async fn until_claims(app: &App, profile_id: &str, claims: usize) {
+    for _ in 0..YIELDS {
+        if app.spends.claims(profile_id) == claims {
+            return;
+        }
+        tokio::task::yield_now().await;
+    }
+    panic!(
+        "{profile_id} has {} spends, not {claims}",
+        app.spends.claims(profile_id)
+    );
+}
+
+/// `count` spends of `profile_id`'s own, running or waiting their turn, each held until the
+/// sender this answers is dropped.
+async fn hold_turns(app: &Arc<App>, profile_id: &'static str, count: usize) -> watch::Sender<()> {
+    let (release, held) = watch::channel(());
+    for _ in 0..count {
+        let (app, mut held) = (Arc::clone(app), held.clone());
+        tokio::spawn(async move {
+            let _turn = app.spends.claim(profile_id).await;
+            // Errs once the sender is dropped.
+            held.changed().await.ok();
+        });
+    }
+    until_claims(app, profile_id, count).await;
+    release
+}
+
+/// As many spends as an account runs and keeps waiting at once.
+fn full() -> usize {
+    ECONOMY_SPENDS_RUNNING_MAX + ECONOMY_SPENDS_WAITING_MAX
+}
+
+/// The refusal of a spend sent past the waiting ones.
+fn assert_busy(status: u16, body: &Value) {
+    assert_eq!(status, 429, "{body}");
+    assert_eq!(body["error"]["code"], json!("rate_limited"), "{body}");
+    assert_eq!(body["error"]["message"], json!(SPEND_BUSY_MESSAGE), "{body}");
+    assert_eq!(
+        body["error"]["details"]["retryAfterMs"],
+        json!(SPEND_BUSY_RETRY_AFTER_MS),
+        "{body}"
+    );
+}
+
+/// A spend of `{ pack: "Core" }` on `path`, sent from its own task, with `key` when given.
+fn spawn_spend(
+    app: &Arc<App>,
+    token: &str,
+    path: &'static str,
+    key: Option<&str>,
+) -> tokio::task::JoinHandle<(u16, axum::http::HeaderMap, Value)> {
+    let (app, token, key) = (Arc::clone(app), token.to_string(), key.map(str::to_string));
+    tokio::spawn(async move {
+        let body = json!({ "pack": "Core" });
+        match key {
+            Some(key) => call_with_key(&app, "POST", path, Some(&token), body, &key).await,
+            None => call(&app, "POST", path, Some(&token), body).await,
+        }
+    })
+}
+
+#[tokio::test]
+async fn r2378000_a_buy_and_an_open_sent_while_a_spend_runs_wait_their_turn_then_run() {
+    let (app, token) = setup().await;
+    buy(&app, &token, "Core").await;
+    fund(&app, price()).await;
+    let before = everything(&app).await;
+    let release = hold_turns(&app, PROFILE, ECONOMY_SPENDS_RUNNING_MAX).await;
+
+    let opened = spawn_spend(&app, &token, "/api/packs/open", None);
+    let bought = spawn_spend(&app, &token, "/api/packs/buy", None);
+    until_claims(&app, PROFILE, ECONOMY_SPENDS_RUNNING_MAX + 2).await;
+    assert!(
+        !opened.is_finished() && !bought.is_finished(),
+        "both wait their turn"
+    );
+    assert_eq!(everything(&app).await, before, "and neither has run");
+
+    drop(release);
+    for (what, request) in [("the open", opened), ("the buy", bought)] {
+        let (status, _, body) = request.await.expect("the request's task");
+        assert_eq!(status, 200, "{what}: {body}");
+    }
+    until_claims(&app, PROFILE, 0).await;
+    assert_eq!(purchases(&everything(&app).await), 2);
+    assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 1);
+}
+
+#[tokio::test]
+async fn r2378000_a_buy_or_an_open_sent_past_the_waiting_ones_is_refused_at_once_and_writes_nothing() {
+    let (app, token) = setup().await;
+    buy(&app, &token, "Core").await;
+    fund(&app, price()).await;
+    let before = everything(&app).await;
+    let release = hold_turns(&app, PROFILE, full()).await;
+
+    for path in ["/api/packs/buy", "/api/packs/open"] {
+        let (status, _, body) = call(&app, "POST", path, Some(&token), json!({ "pack": "Core" })).await;
+        assert_busy(status, &body);
+    }
+    assert_eq!(everything(&app).await, before, "a refused spend writes nothing");
+    assert_eq!(app.spends.claims(PROFILE), full(), "and takes no place");
+    let (status, _, body) = call(&app, "GET", "/api/packs", Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "a read takes no turn: {body}");
+
+    drop(release);
+    until_claims(&app, PROFILE, 0).await;
+    assert_eq!(open(&app, &token, "Core").await.unopened, 0);
+}
+
+#[tokio::test]
+async fn r2378000_a_refused_or_failed_spend_gives_its_turn_back() {
+    let (app, token) = setup().await;
+    let open_core = || {
+        call(
+            &app,
+            "POST",
+            "/api/packs/open",
+            Some(&token),
+            json!({ "pack": "Core" }),
+        )
+    };
+    let (status, _, body) = open_core().await;
+    assert_eq!(
+        (status, body["error"]["code"].clone()),
+        (409, json!("conflict")),
+        "{body}"
+    );
+    assert_eq!(app.spends.claims(PROFILE), 0, "a refusal gives its turn back");
+
+    grant_entire_catalog(&app, PROFILE, None)
+        .await
+        .expect("R111's grant");
+    buy(&app, &token, "Core").await;
+    fail_on(&app, "economy.counters.grant", "injected fault").await;
+    let (status, _, body) = open_core().await;
+    stop_failing(&app).await;
+    assert_eq!(status, 500, "{body}");
+    assert_eq!(app.spends.claims(PROFILE), 0, "so does a failure");
+    open(&app, &token, "Core").await;
+}
+
+#[tokio::test]
+async fn r2378000_a_retry_racing_its_first_try_waits_its_turn_and_answers_as_the_first_did() {
+    let (app, token) = setup().await;
+    fund(&app, price() * 2).await;
+    let key = uuid(2378001);
+    let release = hold_turns(&app, PROFILE, ECONOMY_SPENDS_RUNNING_MAX).await;
+
+    let first = spawn_spend(&app, &token, "/api/packs/buy", Some(&key));
+    let retry = spawn_spend(&app, &token, "/api/packs/buy", Some(&key));
+    until_claims(&app, PROFILE, ECONOMY_SPENDS_RUNNING_MAX + 2).await;
+    drop(release);
+    let (first_status, _, first) = first.await.expect("the first try's task");
+    let (retry_status, _, retry) = retry.await.expect("the retry's task");
+    assert_eq!((first_status, retry_status), (200, 200), "{first} {retry}");
+    assert_eq!(retry, first, "the retry answers what its first try answered");
+    assert_eq!(purchases(&everything(&app).await), 1);
+    assert_eq!(keys_held(&app).await, 1);
+}
+
+#[tokio::test]
+async fn r2378000_a_keyed_buy_refused_past_the_waiting_ones_keeps_nothing_and_runs_when_sent_again() {
+    let (app, token) = setup().await;
+    fund(&app, price()).await;
+    let key = uuid(2378002);
+    let buy_keyed = || {
+        call_with_key(
+            &app,
+            "POST",
+            "/api/packs/buy",
+            Some(&token),
+            json!({ "pack": "Core" }),
+            &key,
+        )
+    };
+    let release = hold_turns(&app, PROFILE, full()).await;
+    let (status, _, body) = buy_keyed().await;
+    assert_busy(status, &body);
+    assert_eq!(keys_held(&app).await, 0, "a refusal keeps no key");
+
+    drop(release);
+    until_claims(&app, PROFILE, 0).await;
+    let (first_status, _, first) = buy_keyed().await;
+    assert_eq!(first_status, 200, "{first}");
+    let (again_status, _, again) = buy_keyed().await;
+    assert_eq!(again_status, 200, "{again}");
+    assert_eq!(again, first);
+    assert_eq!(purchases(&everything(&app).await), 1);
+}
+
+#[tokio::test]
+async fn r2378000_another_account_spends_while_one_account_s_turns_are_full() {
+    let (app, token) = setup().await;
+    fake(&app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": "p2", "userId": "u2", "status": "active" }));
+    let other = add_user(&app, "u2", "p2@example.test", true);
+    fund_of(&app, PROFILE, price()).await;
+    fund_of(&app, "p2", price()).await;
+    let release = hold_turns(&app, PROFILE, full()).await;
+
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/packs/buy",
+        Some(&other),
+        json!({ "pack": "Core" }),
+    )
+    .await;
+    assert_eq!(status, 200, "p2: {body}");
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/packs/buy",
+        Some(&token),
+        json!({ "pack": "Core" }),
+    )
+    .await;
+    assert_busy(status, &body);
+    drop(release);
 }

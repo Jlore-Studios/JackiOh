@@ -127,6 +127,33 @@ mod tests {
             );
         }
 
+        /// BUILD M13 TG 50 "never itself" (R90): no legal play of the Bean names the Bean, and a play
+        /// that names it is refused.
+        #[test]
+        fn r90_the_bean_is_never_its_own_pick() {
+            crate::register_all();
+            let mut s = glowy(json!(["traininggrounds-050", "core-005"]));
+            let bean = hand_id_of(s.state(), "traininggrounds-050");
+            let other = hand_id_of(s.state(), "core-005");
+
+            let plays: Vec<Value> = legal_actions(s.state(), PlayerId::P1)
+                .iter()
+                .map(crate::js)
+                .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(bean))
+                .collect();
+            assert!(!plays.is_empty());
+            let picks: Vec<Value> = plays
+                .iter()
+                .flat_map(|play| play["targets"].as_array().cloned().unwrap_or_default())
+                .map(|target| target["instanceId"].clone())
+                .collect();
+            assert!(picks.contains(&json!(other)), "{picks:?}");
+            assert!(!picks.contains(&json!(bean)), "{picks:?}");
+
+            s.expect_refused(|s| s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": bean }] })));
+            assert!(radiant_hand(s.state()).is_empty());
+        }
+
         #[test]
         fn s8_conventions_an_empty_hand_fizzles_the_pick_and_the_spell_still_counts_as_played() {
             crate::register_all();

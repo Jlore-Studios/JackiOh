@@ -13,8 +13,10 @@
 //! - **The end** (REVIEW A3.6, R2197004): a Trigor that a Trigor's Death summoned this turn summons
 //!   nothing when it dies this turn, so each lineage adds at most one body a turn. Growth alone (R2197002)
 //!   was no terminator: a Poisonous hit, a destroy or two Trigors forced into each other (S #24 Warp
-//!   Disruptor II) kill a body whatever its size. Such a Trigor is the only one that arrived this turn
-//!   wearing a stat override, so the hook reads the card as it died (R78) and needs no new field.
+//!   Disruptor II) kill a body whatever its size. The Death marks the Trigor it summons in that
+//!   Trigor's memory (`CHAIN_MARK`, R2206000), and the hook reads the card as it died (R78): a stat
+//!   override is no mark, since TG #34 Dino-size's Set stats and a Seance copy wear one too (R2198000,
+//!   R2198001), and a played Trigor they touch still summons. Leaving the field clears the mark (R78).
 
 use jackioh_engine::prelude::*;
 
@@ -22,6 +24,9 @@ pub const ID: &str = "traininggrounds-025";
 
 /// §6.3 "Tribute 3": three of your Units.
 const TRIBUTE_COST: i32 = 3;
+
+/// R2206000: the memory key the Death's summon sets on the Trigor it makes, holding the turn.
+const CHAIN_MARK: &str = "trigorChain";
 
 fn trigor() -> Script {
     Script {
@@ -33,10 +38,11 @@ fn trigor() -> Script {
             let Some(this) = ctx.self_.clone() else {
                 return vec![];
             };
-            // R2197004: a Trigor a Trigor's Death summoned this turn (the only Trigor with a stat
-            // override and this turn's arrival) summons nothing when it dies this turn, so each
-            // lineage adds at most one body a turn whatever kills them.
-            if this.stats_override.is_some() && this.summoned_turn == Some(ctx.state.turn) {
+            // R2197004, R2206000: a Trigor a Trigor's Death summoned this turn (its mark holds this
+            // turn) summons nothing when it dies this turn, so each lineage adds at most one body a
+            // turn whatever kills them.
+            let turn = ctx.state.turn;
+            if this.memory.get(CHAIN_MARK).and_then(Value::as_i64) == Some(i64::from(turn)) {
                 return vec![];
             }
             let base = base_stats_of(ctx.state, &this);
@@ -47,6 +53,7 @@ fn trigor() -> Script {
                 "player": "self",
                 "radiant": false,
                 "statsOverride": { "attack": base.attack + grow, "health": base.health + grow },
+                "memory": { CHAIN_MARK: turn },
             })))]
         })),
         ..Script::default()
@@ -81,6 +88,8 @@ mod tests {
     const SUPPRESSIVE: &str = "core-046"; // (2) Field Spell: Aura: All Units −1/−1; Radiant: enemy Units −2/−2.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
     const MOTHS: &str = "core-009"; // (2) 1/14.
+    /// TG #34 Dino-size: "Set a Unit's Attack and Health to 10/10."
+    const DINO: &str = "traininggrounds-034";
     /// S #24 Warp Disruptor II: "After your opponent summons a Unit, each of your Units attacks it."
     const DISRUPTOR_II: &str = "stinkyscape-024";
 
@@ -325,6 +334,26 @@ mod tests {
             let veteran = trigor_id(&s);
             hit(&mut s, &veteran);
             assert_eq!(trigors(&s), vec![(1, 9, 9, false)], "set up on an earlier turn, it is no chain body");
+        }
+
+        /// REVIEW B-1: a stat override is no chain mark. A Trigor played this turn and set to 10/10 by
+        /// TG #34 Dino-size still summons its successor, a 13/13, when it dies this turn; that one, the
+        /// chain's, carries the mark and summons nothing when it dies this turn too.
+        #[test]
+        fn r2206000_r2197004_a_played_trigor_set_to_10_10_this_turn_still_summons_a_13_13() {
+            let mut s = game(json!([VANILLA, VANILLA, VANILLA]), json!([ID, DINO, HIT_JOB, HIT_JOB, FILLER]));
+            let three: Vec<String> = (1..=3).map(|lane| s.unit_at(P1, lane).id).collect();
+            s.play(ID, json!({ "tributes": three, "zone": 1 }));
+            let played = trigor_id(&s);
+            s.play(DINO, json!({ "targets": [{ "pick": "instance", "instanceId": played }] }));
+            assert_eq!(trigors(&s), vec![(1, 10, 10, false)]);
+            assert!(s.card(played.as_str()).stats_override.is_some());
+            hit(&mut s, &played);
+            assert_eq!(trigors(&s), vec![(1, 13, 13, false)], "a played Trigor summons its successor");
+            let successor = trigor_id(&s);
+            assert_eq!(s.card(successor.as_str()).memory.get(super::super::CHAIN_MARK), Some(&json!(s.state().turn)));
+            hit(&mut s, &successor);
+            assert!(trigors(&s).is_empty(), "the chain's body summons nothing this turn");
         }
     }
 

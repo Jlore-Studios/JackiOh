@@ -963,7 +963,7 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826, #1997, #2023).
+/// rather than copying (#1777, #1826, #1997, #2023, #2385).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
@@ -988,6 +988,16 @@ const KIT_READERS: &[&str] = &[
     "crates/cards",
     "crates/luau/tests",
     "crates/ai/tests",
+];
+
+/// The server test trees `tests/server.rs` compiles with `tests/support/`, where no file but a
+/// helper's home may define one (#2385). `tests/store/` builds into `server_store` without them.
+const SERVER_SUPPORT_READERS: &[&str] = &[
+    "crates/server/tests/actor",
+    "crates/server/tests/api",
+    "crates/server/tests/bots",
+    "crates/server/tests/loops",
+    "crates/server/tests/support",
 ];
 
 const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
@@ -1045,6 +1055,37 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
         structs: &[],
         dirs: &["crates/ai/tests"],
         more_than: 40,
+    },
+    SharedHelpers {
+        home: "crates/server/tests/support/store.rs",
+        names: &[
+            "fake",
+            "fake_ref",
+            "fake_lock",
+            "to_json",
+            "from",
+            "uuid",
+            "advance",
+            "advance_and_yield",
+            "sleep_settled",
+            "table",
+            "fake_read",
+            "fail_on",
+            "stop_failing",
+            "hmac_sha256_hex",
+        ],
+        statics: &[],
+        structs: &[],
+        dirs: SERVER_SUPPORT_READERS,
+        more_than: 80,
+    },
+    SharedHelpers {
+        home: "crates/server/tests/support/engine.rs",
+        names: &["playable"],
+        statics: &[],
+        structs: &[],
+        dirs: SERVER_SUPPORT_READERS,
+        more_than: 80,
     },
 ];
 
@@ -1258,7 +1299,7 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper, nonce counter or sink bench (#1777, #1826, #1997, #2023, #2024): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench (#1777, #1826, #1997, #2023, #2024, #2385): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
@@ -1360,6 +1401,40 @@ fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
     copies.sort();
     expected.sort();
     assert_eq!(copies, expected);
+}
+
+#[test]
+fn helpers_the_check_refuses_a_copy_in_the_server_tests() {
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-server-helpers-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let root = scratch.0.as_path();
+    let _ = fs::remove_dir_all(root);
+    let write = |path: &str, text: &str| {
+        let path = root.join(path);
+        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
+        fs::write(path, text).expect("the file");
+    };
+    let from = "fn from<T: DeserializeOwned>(value: Value) -> T {\n    serde_json::from_value(value).expect(\"a value\")\n}\n";
+    write("crates/server/tests/api/planted.rs", from);
+    // tests/store/ builds without tests/support/, so its own copy is not one.
+    write("crates/server/tests/store/planted.rs", from);
+    write(
+        "crates/server/tests/bots/planted.rs",
+        "use super::*;\nfn playable() -> Vec<String> {\n    Vec::new()\n}\n",
+    );
+    let mut copies = shared_helper_copies(root);
+    drop(scratch);
+    copies.sort();
+    assert_eq!(
+        copies,
+        [
+            "crates/server/tests/api/planted.rs:1",
+            "crates/server/tests/bots/planted.rs:2"
+        ]
+    );
 }
 
 /// The built `jackioh`, whose clap surface the README's command table is held to (#1720).

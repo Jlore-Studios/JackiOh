@@ -13,7 +13,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-029";
 
-/// The leftmost lane, the board's last (§3.1, R2196003).
+/// The leftmost lane, the board's first (§3.1, R2196003).
 const LEFTMOST: i32 = 1;
 
 fn sweep(side: ScopeSide) -> Script {
