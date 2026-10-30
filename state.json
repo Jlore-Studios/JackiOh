@@ -10110,11 +10110,13 @@
         "by": "`muse` (medium)",
         "sha": "23371075251737672dc2c22e310d14782f4e4e99"
       },
+      "closed_at": "2026-10-30T06:19:09Z",
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-30T04:07:19Z",
       "issue": 2439,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
