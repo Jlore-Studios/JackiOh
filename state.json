@@ -10107,11 +10107,11 @@
       "onto": "bot/issue-2497",
       "part_of": 2497,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-1",
       "round_tier": "",
-      "run_id": "41084741710",
-      "runs_on": "night-vm-muse-fill",
-      "started_at": "2026-10-30T15:52:38Z",
+      "run_id": "pending:6a123ae4-1793382440",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-30T17:47:47Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -10331,9 +10331,9 @@
   },
   "labels_synced": "10eb94bf70389cb1",
   "last_run": {
-    "at": "2026-10-30T17:47:04Z",
+    "at": "2026-10-30T17:47:47Z",
     "url": "",
-    "what": "build #2500 on claude-8"
+    "what": "build #2501 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-30T17:28:25Z",
