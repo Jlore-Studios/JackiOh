@@ -8283,6 +8283,7 @@
     "2386": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-29T16:50:46Z",
         "difficulty": "medium",
@@ -8301,7 +8302,7 @@
         "reason": "the run's time budget is spent",
         "trail": "- Release build is running in the background; verification of the pass-1 code against the spec checks out so far. I'll continue once the build lands: fresh stats run, refresh, then the test/golden/classify gates.\n- Waiting on three parallel jobs: the debug winrates tests (verifying the new Fills test firsthand), the 200-game stats run, and the origin/main parent build. Notes updated; I'll proceed to the refresh once the stats run completes.\n- All three jobs are alive and progressing (stats game 47 computing, parent build linking, tests compiling). Waiting on their terminal results.\n- Firsthand evidence secured: the winrates suite passes 10/10 (including the new R2386000 Fills test), and the compiled-table card test fails exactly as designed (`[Stinkyscape, TrainingGrounds]` vs `[]`). Stats run at 50/200. Waiting on it and the parent build.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-2386 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-2386/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
