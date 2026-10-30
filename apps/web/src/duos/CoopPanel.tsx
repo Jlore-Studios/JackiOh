@@ -9,6 +9,8 @@
 // player's words. The host waits on the room: it is read every COOP_ROOM_POLL_MS until it names its
 // match, and then both players are on the board (the guest goes straight from its join). A room the
 // tab opened is remembered for the tab (COOP_ROOM_KEY, try/catch), so a reload picks the wait up.
+//
+// R915005: a deck naming a custom card is listed off, "(practice only)", and never picked.
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -31,6 +33,7 @@ import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { coopLinkUrl, forgetCoopLink, readCoopLink, sendRoomLink } from "../net/roomLink.ts";
 import { sendChat, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { deckPracticeOnly, practiceOnlyLabel } from "../together/challengeChoice.ts";
 import { attempt, messageOf } from "../together/session.ts";
 import { COOP_ROOM_KEY, COOP_ROOM_POLL_MS } from "./config.ts";
 import { duosTestid } from "./testids.ts";
@@ -63,11 +66,13 @@ export function writeCoopDeck(id: string): void {
 
 /**
  * R2094000: the deck a join starts on: the last co-op pick when still saved (a random deal
- * stays one), else the first saved deck, else none (a random deal).
+ * stays one), else the first saved deck, else none (a random deal). R915005: never a deck that plays
+ * only in practice, which a co-op room refuses (§13.9).
  */
 export function defaultCoopDeck(decks: readonly SavedDeck[], remembered: string | null): SavedDeck | null {
   if (remembered === RANDOM) return null;
-  return decks.find((deck) => deck.id === remembered) ?? decks[0] ?? null;
+  const online = decks.filter((deck) => !deckPracticeOnly(deck));
+  return online.find((deck) => deck.id === remembered) ?? online[0] ?? null;
 }
 
 const DIFFICULTY_LABEL: Readonly<Record<Difficulty, string>> = {
@@ -373,11 +378,17 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
             }}
           >
             <option value={RANDOM}>{t("Random deck")}</option>
-            {decks.map((each) => (
-              <option key={each.id} value={each.id}>
-                {each.name}
-              </option>
-            ))}
+            {decks.map((each) =>
+              deckPracticeOnly(each) ? (
+                <option key={each.id} value={each.id} disabled>
+                  {practiceOnlyLabel(each.name)}
+                </option>
+              ) : (
+                <option key={each.id} value={each.id}>
+                  {each.name}
+                </option>
+              ),
+            )}
           </select>
         </label>
         {deck === RANDOM ? (
@@ -392,6 +403,11 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
           />
         ) : null}
       </div>
+      {decks.some(deckPracticeOnly) ? (
+        <p className="coop-panel__note" data-testid={duosTestid.coopPracticeOnly}>
+          {t("A deck with a custom card plays only in practice, against the AI.")}
+        </p>
+      ) : null}
       {loadError === null ? null : (
         <>
           <p id={decksErrorId} className="coop-panel__error" role="alert">

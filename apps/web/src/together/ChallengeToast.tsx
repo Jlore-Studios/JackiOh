@@ -9,6 +9,8 @@
 // (`LeanSetPickerLazy.tsx`: the shell mounts the toast on every screen, #778). Accept joins the room by
 // its code with that pick, which accepts the challenge (B49), and takes the player to the game: one
 // press (R1831000). Decline declines it.
+// R915005: a deck naming a custom card (or a trio holding one) is listed off, "(practice only)", with the
+// lobby's note, and never picked.
 // Either way the toast goes. A screen holding unsaved work asks first, and the toast stays until
 // the player goes (R1754000). A join the server refuses is shown in its words, with "Open in lobby",
 // the way a room link opens `/play` with the room's code and mode filled in (R767), as it does when
@@ -39,7 +41,16 @@ import { roomLinkPath } from "../net/roomLink.ts";
 import { declineChallenge, type Challenge } from "../net/social.ts";
 import { QueueFound } from "../routes/GameBanner.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { choiceOf, pickDeck, pickTrio, readChallengeChoice, rememberChallengeChoice } from "./challengeChoice.ts";
+import {
+  choiceOf,
+  deckPracticeOnly,
+  pickDeck,
+  pickTrio,
+  practiceOnlyLabel,
+  readChallengeChoice,
+  rememberChallengeChoice,
+  trioPracticeOnly,
+} from "./challengeChoice.ts";
 import { followingChallenge, stopFollowingChallenge } from "./follow.ts";
 import { messageOf } from "./session.ts";
 import { reloadSocial, useSocialPoll } from "./socialPoll.ts";
@@ -63,6 +74,14 @@ function gameAfterJoin(answer: { matchId: string | null; seriesId: string | null
   if (typeof answer.matchId === "string" && answer.matchId.length > 0) return paths.match(answer.matchId);
   if (typeof answer.seriesId === "string" && answer.seriesId.length > 0) return paths.series(answer.seriesId);
   return paths.play;
+}
+
+/** R915005: the ids of the decks (or, for Conquest, the trios) the toast lists but never picks. */
+function practiceOnlyIds(saved: Saved | "failed" | null, mode: Challenge["mode"]): ReadonlySet<string> {
+  if (saved === null || saved === "failed" || mode === "random") return new Set();
+  const off: readonly { id: string }[] =
+    mode === "bo3" ? saved.trios.filter((trio) => trioPracticeOnly(trio, saved.decks)) : saved.decks.filter(deckPracticeOnly);
+  return new Set(off.map((entry) => entry.id));
 }
 
 export function ChallengeToast(): ReactElement {
@@ -154,7 +173,7 @@ export function ChallengeToast(): ReactElement {
     if (saved === null || saved === "failed" || challenge.mode === "random") return null;
     const remembered = readChallengeChoice();
     const chosen = picks[challenge.challengeId];
-    if (challenge.mode === "bo3") return pickTrio(saved.trios, chosen ?? remembered.trioId)?.id ?? null;
+    if (challenge.mode === "bo3") return pickTrio(saved.trios, chosen ?? remembered.trioId, saved.decks)?.id ?? null;
     return pickDeck(saved.decks, chosen ?? remembered.deckId)?.id ?? null;
   };
 
@@ -232,6 +251,7 @@ export function ChallengeToast(): ReactElement {
           const lean = challenge.mode === "random" ? leanFor(challenge) : null;
           const choice = choiceOf(challenge.mode, pick, pick, lean);
           const list = saved === null || saved === "failed" ? [] : challenge.mode === "bo3" ? saved.trios : saved.decks;
+          const practice = practiceOnlyIds(saved, challenge.mode);
           const busy = joining === id || declining === id;
           // Nothing to join with, or the join was refused: the lobby is the way in.
           const lobby = refusedId === id || (challenge.mode !== "random" && saved !== null && choice === null);
@@ -267,13 +287,26 @@ export function ChallengeToast(): ReactElement {
                       setPicks((before) => ({ ...before, [id]: value }));
                     }}
                   >
-                    {list.map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.name}
-                      </option>
-                    ))}
+                    {list.map((entry) =>
+                      practice.has(entry.id) ? (
+                        <option key={entry.id} value={entry.id} disabled>
+                          {practiceOnlyLabel(entry.name)}
+                        </option>
+                      ) : (
+                        <option key={entry.id} value={entry.id}>
+                          {entry.name}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </label>
+              ) : null}
+              {practice.size > 0 ? (
+                <p className="challenge-toast__note" data-testid={challengeToastTestid.practiceOnly}>
+                  {challenge.mode === "bo3"
+                    ? t("A trio holding a deck with a custom card cannot play Conquest: custom cards play only in practice.")
+                    : t("A deck with a custom card plays only in practice, against the AI.")}
+                </p>
               ) : null}
               {challenge.mode === "random" ? (
                 <LeanSetPickerLazy
