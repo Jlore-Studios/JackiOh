@@ -15,12 +15,16 @@
 //! facts both seats see: the cost an enemy face-down card shows (R351), the fatigue draws a side has
 //! taken (§2.4) and Windfury (R636). #1722 prices what a side holds in its player modifiers, public on
 //! both seats (R169): its rest-of-game start-of-turn effects (R458) and its closest alternative win
-//! (R848), and a delayed discard of its hand (Classic #37 Last Hurrah) as a discount on that hand. It
-//! reads only what the seat may know or what a determinization sampled, and nothing here reads a
-//! handicap or a difficulty (R180).
+//! (R848), and a delayed discard of its hand (Classic #37 Last Hurrah) as a discount on that hand.
+//! #2424 prices a unit's Death by what it leaves behind (R2424000): the decision's root probes each
+//! Death the seat can read (`death_prices`), and `unit_worth` and `kill_worth` read the prices it
+//! holds (`with_death_prices`). It reads only what the seat may know or what a determinization
+//! sampled, and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
+
+use std::cell::Cell;
 
 use jackioh_engine::config::{
     CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
@@ -28,19 +32,23 @@ use jackioh_engine::config::{
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
-    AltWinCondition, AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword,
-    KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, SeatOutcome, Slumber, Tag,
-    UnitView, acting_with_flag, active_brittle_count, active_units_of, animated_with_stats, armor_of,
-    attack_restriction, attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_keywords,
-    card_type_of_face, credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn,
-    has_keyword, heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left, modifier_is_live,
-    outcome_for, owed_mana_of, own_cost, pierces, query_cost, reset_instance, stats_with_buffs, subsystems,
-    takes_strike_back, unit_has, unit_view, units_on_field_of,
+    ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
+    GameState, Grant, Keyword, KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, Row,
+    SandboxOp, SeatOutcome, Slumber, SpawnZone, Tag, UnitView, ZoneName, acting_with_flag,
+    active_brittle_count, active_units_of, animated_with_stats, armor_of, attack_restriction,
+    attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
+    card_type_of_face, credit_lapsing, death_hook_of, effective_cost, effective_life, find_def,
+    find_instance, first_entry_zone, frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of,
+    is_temporary_card, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
+    pile_at, query_cost, reset_instance, slots_of, stats_with_buffs, subsystems, takes_strike_back, unit_has,
+    unit_view, units_on_field_of, why_sandbox_refused,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
-use crate::config::{AI_EVAL, AI_EXTRA_TURN_CARDS, EvalWeights};
+use crate::config::{AI_DEATH_PROBE_NODES, AI_EVAL, AI_EXTRA_TURN_CARDS, EvalWeights};
+use crate::simulate::{create_sub_counter, simulate};
+use crate::types::NodeCounter;
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
 /// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
@@ -130,8 +138,94 @@ pub(crate) fn deft_in_defense(view: &UnitView) -> bool {
     view.position == Position::Def && has_keyword(&view.keywords, KeywordKind::Deft)
 }
 
+/// R2424000: what a unit's Death leaves its controller, as a decision's root priced it (`death_prices`),
+/// and the card it prices: its definition, its face, its granted Deaths and its stat override (Trigor's
+/// Death reads its base stats), so the same card the search moves or makes later reads the same price.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DeathPrice {
+    pub def_id: String,
+    pub radiant: bool,
+    pub grants: Vec<Grant>,
+    pub stats_override: Option<AttackHealth>,
+    pub price: f64,
+}
+
+impl DeathPrice {
+    /// The price `card` would hold, at 0 until it is probed.
+    fn key(card: &CardInstance) -> Self {
+        Self {
+            def_id: card.def_id.clone(),
+            radiant: card.radiant,
+            grants: card.grants.clone().unwrap_or_default(),
+            stats_override: card.stats_override,
+            price: 0.0,
+        }
+    }
+
+    fn is_for(&self, card: &CardInstance) -> bool {
+        self.def_id == card.def_id
+            && self.radiant == card.radiant
+            && self.stats_override == card.stats_override
+            && self.grants.as_slice() == card.grants.as_deref().unwrap_or_default()
+    }
+}
+
+// CLAUDE.md rule 4's scoped exception (R2424000): the Death prices of the decision in flight on this
+// thread, held by `DeathPricing` for that one decision and put back after it, so every `unit_worth`
+// the search makes reads them without a parameter through every scorer.
+thread_local! {
+    static DEATH_PRICES: Cell<Vec<DeathPrice>> = const { Cell::new(Vec::new()) };
+}
+
+/// R2424000: `prices` held on this thread until the guard drops, then the prices held before put back,
+/// a panic included.
+pub(crate) struct DeathPricing(Vec<DeathPrice>);
+
+impl DeathPricing {
+    pub(crate) fn hold(prices: Vec<DeathPrice>) -> Self {
+        Self(DEATH_PRICES.with(|cell| cell.replace(prices)))
+    }
+}
+
+impl Drop for DeathPricing {
+    fn drop(&mut self) {
+        let before = std::mem::take(&mut self.0);
+        DEATH_PRICES.with(|cell| cell.set(before));
+    }
+}
+
+/// R2424000: `run` with `prices` held on this thread for that call alone, as a decision holds the ones
+/// its root priced. The prices held before are put back after it, a panic included.
+pub fn with_death_prices<T>(prices: Vec<DeathPrice>, run: impl FnOnce() -> T) -> T {
+    let _held = DeathPricing::hold(prices);
+    run()
+}
+
+/// R2424000: what `unit`'s Death leaves its controller, by the prices held (`with_death_prices`), while
+/// its Death is live (`death_hook_of`: a Vanilla unit has none). 0 outside a decision, for a card its
+/// root did not price, and at a zero `death` weight (no reading).
+fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
+    if w.death == 0.0 {
+        return 0.0;
+    }
+    let price = DEATH_PRICES.with(|cell| {
+        let prices = cell.take();
+        let price = prices
+            .iter()
+            .find(|entry| entry.is_for(unit))
+            .map(|entry| entry.price);
+        cell.set(prices);
+        price
+    });
+    match price {
+        Some(price) if death_hook_of(state, unit).is_some() => price,
+        _ => 0.0,
+    }
+}
+
 /// One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
-/// Damage per point, all discounted by its Brittle count.
+/// Damage per point, all discounted by its Brittle count, and `death` of what its Death leaves behind
+/// (R2424000).
 pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
     let view = unit_view(state, unit);
     let weights = &w.keyword;
@@ -179,8 +273,11 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f6
         }
     }
     // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's
-    // Plague Counters are mana it already banked, not part of the body that crumbles.
-    value * brittle_share(unit, w) + w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
+    // Plague Counters are mana it already banked, not part of the body that crumbles. R2424000: so is
+    // what its Death leaves, since Brittle's end is a death too.
+    value * brittle_share(unit, w)
+        + w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
+        + w.death * death_price(state, unit, w)
 }
 
 /// B3.4, R65: the crystals the card's own `costMod` moves its cost by (`own_cost`, floored at 0 as a
@@ -854,15 +951,180 @@ fn reborn_body(state: &GameState, taunt: &CardInstance) -> Option<(CardInstance,
 }
 
 /// What destroying `unit` takes off the board (#1796): its `unit_worth`, less the worth of the body it
-/// comes back as while its Reborn is unspent (§4.5 step 4, `reborn_return`). A spent Reborn is gone
+/// comes back as while its Reborn is unspent (§4.5 step 4, `reborn_return`), and less what its Death
+/// leaves its controller (`death_price`), whole, as Reborn's body is (R2424000). A spent Reborn is gone
 /// from its keywords (§10.4), so such a unit is worth its whole `unit_worth`.
-pub(crate) fn kill_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
-    let worth = unit_worth(state, unit, w);
+pub fn kill_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
+    let worth = unit_worth(state, unit, w) - death_price(state, unit, w);
     if !unit_has(state, unit, KeywordKind::Reborn) {
         return worth;
     }
     let (body, _) = reborn_return(state, unit);
     worth - unit_worth(state, &body, w)
+}
+
+/// R923003: the sandbox's tool `op` as `seat` uses it on the probe world `state`, one node of `counter`
+/// (`simulate`). `None` when the counter refuses it; `Some(None)` when the tool is refused (checked
+/// first, so no refusal counts as a failed simulation), the step fails, or it leaves a prompt open or
+/// the game over, which the probe neither answers nor prices.
+fn sandbox_step(
+    state: &GameState,
+    seat: PlayerId,
+    op: SandboxOp,
+    counter: &dyn NodeCounter,
+) -> Option<Option<GameState>> {
+    if why_sandbox_refused(state, &op).is_err() {
+        return Some(None);
+    }
+    let Ok(next) = simulate(state, seat, &ActionBody::Sandbox { op }, counter)? else {
+        return Some(None);
+    };
+    Some((next.pending.is_none() && next.result.is_none()).then_some(next))
+}
+
+/// R2424000: what `unit`'s Death leaves its controller on `before`, a sandbox (R923000): the controller's
+/// evaluation after the sandbox's destroy, which runs its Death, less after its remove, which does not
+/// (R923003), less the body a Reborn brings back, which `kill_worth` takes off on its own. `None` when
+/// the counter is spent; `Some(None)` when there is nothing to price: the destroy spares the unit, or
+/// either tool leaves a prompt open or ends the game (`sandbox_step`).
+fn death_probe(
+    before: &GameState,
+    seat: PlayerId,
+    unit: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<f64>> {
+    let destroy = SandboxOp::Destroy {
+        instance_id: unit.id.clone(),
+    };
+    let Some(destroyed) = sandbox_step(before, seat, destroy, counter)? else {
+        return Some(None);
+    };
+    // A unit still on the field with its Reborn as it was is one the destroy spared (Indestructible).
+    let spared = find_instance(&destroyed, &unit.id)
+        .is_some_and(|card| card.zone.z() == ZoneName::Field && card.reborn_spent == unit.reborn_spent);
+    if spared {
+        return Some(None);
+    }
+    let remove = SandboxOp::Remove {
+        instance_id: unit.id.clone(),
+    };
+    let Some(removed) = sandbox_step(before, seat, remove, counter)? else {
+        return Some(None);
+    };
+    let reborn = if unit_has(before, unit, KeywordKind::Reborn) {
+        unit_worth(before, &reborn_return(before, unit).0, &AI_EVAL)
+    } else {
+        0.0
+    };
+    let owner = unit.controller;
+    Some(Some(
+        evaluate(&destroyed, owner, NextSwing::Enemy, &AI_EVAL)
+            - evaluate(&removed, owner, NextSwing::Enemy, &AI_EVAL)
+            - reborn,
+    ))
+}
+
+/// R2424000: `death_probe` for a Unit in `seat`'s hand, placed on its field first (R923001's spawn,
+/// a fresh card of its definition and face) in the zone a summon would take (`first_entry_zone`). On a
+/// full unit row the first zone whose pile is a single card is cleared first, by the sandbox's remove.
+fn spawned_death_probe(
+    world: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<f64>> {
+    let cleared;
+    let (room, slot) = match first_entry_zone(world, seat, Row::Units) {
+        Some(slot) => (world, slot),
+        None => {
+            let single = slots_of(seat, Row::Units)
+                .into_iter()
+                .find_map(|slot| match pile_at(world, slot) {
+                    Some(pile) if pile.len() == 1 => Some((slot, pile[0].id.clone())),
+                    _ => None,
+                });
+            let Some((slot, top)) = single else {
+                return Some(None);
+            };
+            let Some(state) = sandbox_step(world, seat, SandboxOp::Remove { instance_id: top }, counter)?
+            else {
+                return Some(None);
+            };
+            cleared = state;
+            (&cleared, slot)
+        }
+    };
+    let spawn = SandboxOp::Spawn {
+        player: seat,
+        def_id: card.def_id.clone(),
+        radiant: card.radiant.then_some(true),
+        to: SpawnZone::Field {
+            row: Row::Units,
+            lane: slot.lane,
+        },
+    };
+    let Some(placed) = sandbox_step(room, seat, spawn, counter)? else {
+        return Some(None);
+    };
+    let Some(unit) = card_at(&placed, slot).cloned() else {
+        return Some(None);
+    };
+    death_probe(&placed, seat, &unit, counter)
+}
+
+/// R2424000: the Death prices a decision of `seat`'s holds (`DeathPricing`), probed on `world`, its
+/// probe world (a function of what the seat sees, R185), each card once: every unit on either field
+/// whose Death is live (`death_hook_of`), the seat's first, then each Unit in the seat's own hand with
+/// one (`spawned_death_probe`, R923001); one the same as a card already listed (`DeathPrice::is_for`)
+/// is not probed again. Each runs on a sandbox copy (R923000) with both players' automatic turn end
+/// off (R345), so no tool's step ends the turn (R82), and with no price held, so a probe reads none
+/// (`death_probe`, R923003). The probes draw at most `AI_DEATH_PROBE_NODES` nodes from `counter`; the
+/// cards left when they run out are not priced. Nothing is priced while a prompt is open, which refuses
+/// the tools, once the game is over, or at a zero `AI_EVAL.death`.
+pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<DeathPrice> {
+    if AI_EVAL.death == 0.0 || world.pending.is_some() || world.result.is_some() {
+        return Vec::new();
+    }
+    let field = active_units_of(world, seat)
+        .into_iter()
+        .chain(active_units_of(world, seat.opponent()))
+        .map(|unit| (unit, false));
+    let hand = world.players[seat]
+        .hand
+        .iter()
+        .filter(|card| card_type_of_face(world, &card.def_id, card.radiant) == CardType::Unit)
+        .map(|card| (card, true));
+    let mut candidates: Vec<(DeathPrice, &CardInstance, bool)> = Vec::new();
+    for (card, in_hand) in field.chain(hand) {
+        if death_hook_of(world, card).is_some() && !candidates.iter().any(|(key, _, _)| key.is_for(card)) {
+            candidates.push((DeathPrice::key(card), card, in_hand));
+        }
+    }
+    if candidates.is_empty() {
+        return Vec::new();
+    }
+    let mut sandbox = world.clone();
+    sandbox.sandbox = Some(true);
+    for player in PLAYER_IDS {
+        sandbox.players[player].auto_end_turn = Some(false);
+    }
+    let probes = create_sub_counter(counter, AI_DEATH_PROBE_NODES);
+    with_death_prices(Vec::new(), || {
+        let mut priced = Vec::new();
+        for (key, card, in_hand) in candidates {
+            let probed = if in_hand {
+                spawned_death_probe(&sandbox, seat, card, &probes)
+            } else {
+                death_probe(&sandbox, seat, card, &probes)
+            };
+            match probed {
+                None => break,
+                Some(None) => {}
+                Some(Some(price)) => priced.push(DeathPrice { price, ..key }),
+            }
+        }
+        priced
+    })
 }
 
 /// Who swings next, for the threat and pressure terms: "enemy" (the default) reads a state as the end

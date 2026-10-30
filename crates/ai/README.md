@@ -14,13 +14,16 @@ environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes fr
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
 `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
+Its one thread-local, the Death prices of the decision in flight (`evaluate::with_death_prices`, R2424000),
+is set for one decision and put back after it, a panic included (CLAUDE.md rule 4); outside a decision it
+prices nothing.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
 
 Every AI number is a named constant (CLAUDE.md rule 9): `AI_BUDGET`, `AI_GATE_BUDGET`, `AI_SEARCH`,
-`AI_DETERMINIZE`, `AI_MULLIGAN` and `AI_MULLIGAN_CURVE` in `src/config.rs`, and the deck, gate, sweep
-and development-run numbers in their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`,
+`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE` and `AI_DEATH_PROBE_NODES` in `src/config.rs`, and
+the deck, gate, sweep and development-run numbers in their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`,
 `AI_SWEEP` in `sweep.rs`, `AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE`,
 `DUOS_GATE_WIN_FLOOR` and `DUOS_GATE_GREEDY_WIN_FLOOR` in `src/config.rs`. The tiers are the engine's (`AI_DIFFICULTY`, `AI_TUTORIAL`
 and Duos's `duos_ai_team` in `crates/engine/src/config.rs`).
@@ -64,15 +67,19 @@ one redaction (R1184002).
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
-less the body it comes back as, #1796; plus a Trample attacker's excess on the hero and a Lifesteal
-attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
+less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
+attacker's excess on the hero and a Lifesteal attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
 evaluation prefers) on every determinization, and plays the first action of the best mean. A line
 leaving a countdown waiting (an effect "in N turns" with its public badge, R1181000) is replied to again
 on a copy whose countdowns come due at the seat's next turn start, and the scores are blended at
 `AI_REPLY.countdown_share` per turn the farthest still waits past its owner's next turn start (#1995);
 with none waiting, nothing changes. A Dormant card (R1839000) acts in no line and threatens no face until
 it wakes, but the evaluation counts it as the unit it wakes as, `slumber_turn_share` of it per turn left
-on its countdown, or `slumber_waiting_share` with none (R2380000). It re-plans after every action, so a
+on its countdown, or `slumber_waiting_share` with none (R2380000). A unit's Death counts by what it
+leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
+Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
+the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
+`kill_worth` takes all of it off a kill. It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
 it still wins without, R1965000; none, when the budget or the clock stops the trim before it has that

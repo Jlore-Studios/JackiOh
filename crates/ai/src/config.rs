@@ -415,6 +415,10 @@ pub struct EvalWeights {
     /// R2380000: the share of its awake `unit_worth` a Dormant card with no countdown counts, one
     /// that waits for an effect to wake it (the Dormant Starship's launch).
     pub slumber_waiting_share: f64,
+    /// R2424000: the share of what a unit's Death leaves its controller (`evaluate::death_price`) that
+    /// `unit_worth` adds; `kill_worth` takes the whole price off a kill, as Reborn's body. Below 1, so
+    /// killing a unit whose Death pays its owner is worth less than its body.
+    pub death: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -555,6 +559,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // "Dormant for 2 turns" counts a quarter of the unit it wakes as; an effect's wake at half too.
     slumber_turn_share: 0.5,
     slumber_waiting_share: 0.5,
+    // R2424000: an untuned start for the training lanes, as R2380000's shares are.
+    death: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -585,6 +591,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_from: 10.0,
     closing_weight: 3.0,
 };
+
+/// R2424000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two per field
+/// unit with a Death, three or four per own hand Unit with one.
+pub const AI_DEATH_PROBE_NODES: usize = 24;
 
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -738,6 +748,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     // R2380000's Dormant cards came after the gates were fixed too: nothing, as it gave them.
     slumber_turn_share: 0.0,
     slumber_waiting_share: 0.0,
+    // R2424000 came after the gates were fixed: nothing, as it gave a Death.
+    death: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,

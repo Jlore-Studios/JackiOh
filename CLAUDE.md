@@ -46,10 +46,11 @@ trap backrow. This file binds every agent, not only Claude.
    what would break purity, tests included. The only statics are the catalog and the script registry,
    `OnceLock`s set once by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under
    among them, each built once on first use), `jackioh-luau`'s thread-local VM, which holds compiled
-   chunks and scripts and no game state (#442 L8), and three engine thread-locals, each set for one call and
-   put back after it: the shipped catalog a replay is folding under (R767000), the custom-script host
-   `custom::with_custom_scripts` lends (#915, R915002), and whether the step in flight holds its game's
-   random pools (`catalog::with_pool_hold`, R2201001). A Luau script is kept pure by its host: the sandbox
+   chunks and scripts and no game state (#442 L8), and four thread-locals, each set for one call and put
+   back after it: three of the engine's (the shipped catalog a replay is folding under, R767000; the
+   custom-script host `custom::with_custom_scripts` lends, #915, R915002; and whether the step in flight
+   holds its game's random pools, `catalog::with_pool_hold`, R2201001) and the AI's Death prices for the
+   decision in flight (`evaluate::with_death_prices`, R2424000). A Luau script is kept pure by its host: the sandbox
    (L5), the integer boundary every value crosses (L6) and the lint (L6, L7), all in
    `crates/luau/README.md`. Data reaches a pure crate only at compile time (`include_str!`,
    `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.

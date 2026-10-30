@@ -47,6 +47,7 @@ use crate::config::{
     AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
 };
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
+use crate::evaluate::{DeathPricing, death_prices};
 use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
@@ -415,6 +416,10 @@ fn plan(
     let budget = scaled_budget(budget, fat_width(&probe, scratch.candidates.len()));
     let stage = create_sub_counter(counter, budget.nodes);
     let counter: &dyn NodeCounter = &stage;
+
+    // R2424000: every Death the seat can read, priced once on the probe world for the whole decision,
+    // its probes drawn from the searched section's nodes; the prices are held until the plan returns.
+    let _deaths = DeathPricing::hold(death_prices(&probe, seat, counter));
 
     // The determinizations' draws: with a style's own two (passing over lethal, picking a
     // finalist), the only draws decide ever takes from options.rng.
