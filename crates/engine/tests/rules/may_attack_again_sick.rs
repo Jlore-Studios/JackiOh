@@ -104,7 +104,8 @@ mod r2521002_may_attack_again_keeps_summoning_sickness {
 
     #[test]
     fn r2521002_a_rush_unit_that_kills_on_its_summon_turn_attacks_again_a_unit_only() {
-        let mut s = board("r2521002-summon-turn", json!([keeper().id, fodder().id]), json!([]));
+        let hand = json!([keeper().id, fodder().id]);
+        let mut s = board("r2521002-summon-turn", hand, json!([]));
         s.play(keeper().id.as_str(), json!({ "zone": 1 }));
         let striker = s.unit_at(P1, 1).id;
         s.attack(striker.as_str(), s.unit_at(P2, 1));
@@ -142,7 +143,8 @@ mod r2521002_may_attack_again_keeps_summoning_sickness {
 
     #[test]
     fn r2521002_played_its_sickness_ends_with_the_turn_and_a_later_kill_frees_it_to_hit_the_hero() {
-        let mut s = board("r2521002-next-turn", json!([keeper().id, fodder().id]), json!([]));
+        let hand = json!([keeper().id, fodder().id]);
+        let mut s = board("r2521002-next-turn", hand, json!([]));
         s.play(keeper().id.as_str(), json!({ "zone": 1 }));
         let striker = s.unit_at(P1, 1).id;
         s.attack(striker.as_str(), s.unit_at(P2, 1));
@@ -157,7 +159,8 @@ mod r2521002_may_attack_again_keeps_summoning_sickness {
 
     #[test]
     fn r2521002_without_keep_sick_the_kill_lifts_the_sickness_for_the_turn_as_ever() {
-        let mut s = board("r2521002-lifted", json!([lifter().id, fodder().id]), json!([]));
+        let hand = json!([lifter().id, fodder().id]);
+        let mut s = board("r2521002-lifted", hand, json!([]));
         s.play(lifter().id.as_str(), json!({ "zone": 1 }));
         let striker = s.unit_at(P1, 1).id;
         s.attack(striker.as_str(), s.unit_at(P2, 1));
