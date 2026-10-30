@@ -18,13 +18,16 @@
 //! (R848), and a delayed discard of its hand (Classic #37 Last Hurrah) as a discount on that hand.
 //! #2424 prices a unit's Death by what it leaves behind (R2424000): the decision's root probes each
 //! Death the seat can read (`death_prices`), and `unit_worth` and `kill_worth` read the prices it
-//! holds (`with_death_prices`). It reads only what the seat may know or what a determinization
-//! sampled, and nothing here reads a handicap or a difficulty (R180).
+//! holds (`with_death_prices`). #2477 prices an own backrow card's start-of-turn and end-of-turn
+//! hooks by one firing (R2477000): the root fires each (`turn_hook_prices`) and `material` reads the
+//! prices it holds (`with_turn_hook_prices`). It reads only what the seat may know or what a
+//! determinization sampled, and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
 
 use std::cell::Cell;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::config::{
     CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
@@ -33,21 +36,24 @@ use jackioh_engine::config::{
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
-    GameState, Grant, Keyword, KeywordKind, ModifierKind, PLAYER_IDS, PlayerId, PlayerState, Position, Row,
-    SandboxOp, SeatOutcome, Slumber, SpawnZone, Tag, UnitView, ZoneName, acting_with_flag,
-    active_brittle_count, active_units_of, animated_with_stats, armor_of, attack_restriction,
-    attacks_per_turn, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
-    card_type_of_face, credit_lapsing, death_hook_of, effective_cost, effective_life, find_def,
-    find_instance, first_entry_zone, frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of,
-    is_temporary_card, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
-    pile_at, query_cost, reset_instance, slots_of, stats_with_buffs, subsystems, takes_strike_back, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused,
+    EngineSink, GameEvent, GameState, Grant, HookName, Keyword, KeywordKind, ModifierKind, PLAYER_IDS,
+    PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone,
+    Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag, active_brittle_count,
+    active_units_of, animated_with_stats, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
+    board_totals, cannot_attack, card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of,
+    effective_cost, effective_life, find_def, find_instance, first_entry_zone, frozen_next_turn, has_keyword,
+    heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left, modifier_is_live, outcome_for,
+    owed_mana_of, own_cost, pierces, pile_at, query_cost, queue_hook, reset_instance, script_of, settle,
+    slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook,
+    unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
-use crate::config::{AI_DEATH_PROBE_NODES, AI_EVAL, AI_EXTRA_TURN_CARDS, EvalWeights};
-use crate::simulate::{create_sub_counter, simulate};
+use crate::config::{
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_EXTRA_TURN_CARDS, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+};
+use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
 use crate::types::NodeCounter;
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
@@ -219,6 +225,91 @@ fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
     });
     match price {
         Some(price) if death_hook_of(state, unit).is_some() => price,
+        _ => 0.0,
+    }
+}
+
+/// R2477000: what one firing of an own backrow card's start-of-turn and end-of-turn hooks gives its
+/// controller, as a decision's root priced it (`turn_hook_prices`), and the card it prices: its
+/// definition and its face, so the same card the search moves or sets later reads the same price.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TurnHookPrice {
+    pub def_id: String,
+    pub radiant: bool,
+    pub price: f64,
+}
+
+impl TurnHookPrice {
+    /// The price `card` would hold, at 0 until it is probed.
+    fn key(card: &CardInstance) -> Self {
+        Self {
+            def_id: card.def_id.clone(),
+            radiant: card.radiant,
+            price: 0.0,
+        }
+    }
+
+    fn is_for(&self, card: &CardInstance) -> bool {
+        self.def_id == card.def_id && self.radiant == card.radiant
+    }
+}
+
+// CLAUDE.md rule 4's scoped exception (R2477000): the turn-hook prices of the decision in flight on
+// this thread, held by `TurnHookPricing` for that one decision and put back after it, so every
+// `material` the search makes reads them without a parameter through every scorer.
+thread_local! {
+    static TURN_HOOK_PRICES: Cell<Vec<TurnHookPrice>> = const { Cell::new(Vec::new()) };
+}
+
+/// R2477000: `prices` held on this thread until the guard drops, then the prices held before put back,
+/// a panic included.
+pub(crate) struct TurnHookPricing(Vec<TurnHookPrice>);
+
+impl TurnHookPricing {
+    pub(crate) fn hold(prices: Vec<TurnHookPrice>) -> Self {
+        Self(TURN_HOOK_PRICES.with(|cell| cell.replace(prices)))
+    }
+}
+
+impl Drop for TurnHookPricing {
+    fn drop(&mut self) {
+        let before = std::mem::take(&mut self.0);
+        TURN_HOOK_PRICES.with(|cell| cell.set(before));
+    }
+}
+
+/// R2477000: `run` with `prices` held on this thread for that call alone, as a decision holds the ones
+/// its root priced. The prices held before are put back after it, a panic included.
+pub fn with_turn_hook_prices<T>(prices: Vec<TurnHookPrice>, run: impl FnOnce() -> T) -> T {
+    let _held = TurnHookPricing::hold(prices);
+    run()
+}
+
+/// R2477000: whether the face `card` runs has a start-of-turn or an end-of-turn hook (`script_of`: a
+/// Vanilla card has none).
+fn has_turn_hook(state: &GameState, card: &CardInstance) -> bool {
+    let script = script_of(state, card);
+    script.start_of_turn.is_some() || script.end_of_turn.is_some()
+}
+
+/// R2477000: what one firing of `card`'s turn hooks gives its controller, by the prices held
+/// (`with_turn_hook_prices`), while its face has one (`has_turn_hook`). 0 outside a decision, for a card
+/// its root did not price, and at a zero `turn_hook` weight (no reading).
+fn turn_hook_price(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
+    if w.turn_hook == 0.0 {
+        return 0.0;
+    }
+    let price = TURN_HOOK_PRICES.with(|cell| {
+        let prices = cell.take();
+        let price = prices
+            .iter()
+            .find(|entry| entry.is_for(card))
+            .map(|entry| entry.price);
+        cell.set(prices);
+        price
+    });
+    match price {
+        Some(price) if has_turn_hook(state, card) => price,
         _ => 0.0,
     }
 }
@@ -628,6 +719,11 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
             Some(def) if readable_by(state, card, seat) => {
                 value += brittle_share(card, w)
                     * (w.backrow_base + w.backrow_per_cost * f64::from(query_cost(def)));
+                // R2477000: what one firing of its turn hooks gives the seat, as the decision's root priced
+                // it. Own side only: the enemy's backrow is priced as before.
+                if player == seat {
+                    value += w.turn_hook * turn_hook_price(state, card, w);
+                }
                 // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share), with stats (R2280000).
                 if w.animated_share != 0.0 && animated_with_stats(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w);
@@ -1124,6 +1220,180 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
             }
         }
         priced
+    })
+}
+
+/// R2477000: the two hooks a turn fires for its player's cards (§6.2, R62), in the order a turn meets them.
+const TURN_HOOKS: [HookName; 2] = [HookName::StartOfTurn, HookName::EndOfTurn];
+
+/// R2477000: `before` after one firing of `holder`'s `hook`, queued as its controller's turn would queue
+/// it (`queue_hook`, R68) and drained by the resolution loop (`settle`), where the decision stands:
+/// under its game's pool hold (R2201001), on the state's own random stream with the cursor written back
+/// (CLAUDE.md rule 4), as `reduce` steps a game.
+fn fire_turn_hook(before: &GameState, holder: &TriggerHolder, hook: HookName) -> GameState {
+    with_pool_hold(before, || {
+        let mut next = before.clone();
+        sync_fused_scripts(&mut next);
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&next.seed, next.rng_cursor);
+        {
+            let mut sink = EngineSink::new(&mut next, &mut events, &mut rng);
+            queue_hook(&mut sink, holder, hook);
+            settle(&mut sink, SettleOptions::default());
+        }
+        next.rng_cursor = rng.cursor();
+        next
+    })
+}
+
+/// R2477000: what one firing of `holder`'s `hook` on `before` gives its controller: the controller's
+/// evaluation after it less before it, and `AI_EVAL.next_turn_mana` for each crystal it gained, which
+/// the evaluation does not count (it prices the coming refresh, not the mana in hand). One node of
+/// `counter`: `None` when the counter refuses it; `Some(None)` when there is nothing to price: the
+/// firing panics (counted as a failed simulation, `note_sim_panic`), or leaves a prompt open or the
+/// game over, which the probe neither answers nor prices.
+fn hook_firing_price(
+    before: &GameState,
+    holder: &TriggerHolder,
+    hook: HookName,
+    counter: &dyn NodeCounter,
+) -> Option<Option<f64>> {
+    if !counter.take() {
+        return None;
+    }
+    let after = match catch_unwind(AssertUnwindSafe(|| fire_turn_hook(before, holder, hook))) {
+        Ok(after) => after,
+        Err(payload) => {
+            note_sim_panic(counter, payload.as_ref());
+            return Some(None);
+        }
+    };
+    if after.pending.is_some() || after.result.is_some() {
+        return Some(None);
+    }
+    let owner = holder.controller;
+    let gained = after.players[owner].mana.current - before.players[owner].mana.current;
+    Some(Some(
+        evaluate(&after, owner, NextSwing::Enemy, &AI_EVAL)
+            - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL)
+            + AI_EVAL.next_turn_mana * f64::from(gained),
+    ))
+}
+
+/// R2477000: what one firing of each turn hook of `seat`'s backrow card `instance_id` gives it on
+/// `before`, a sandbox (R923000), the hooks' prices summed (`hook_firing_price`), each fired on
+/// `before` alone. `None` when the counter is spent; `Some(None)` when no hook of it is priced.
+fn turn_hook_probe(
+    before: &GameState,
+    seat: PlayerId,
+    instance_id: &str,
+    counter: &dyn NodeCounter,
+) -> Option<Option<f64>> {
+    let mut total: Option<f64> = None;
+    for hook in TURN_HOOKS {
+        let Some(holder) = trigger_holders_with_hook(before, hook, Some(seat))
+            .into_iter()
+            .find(|holder| holder.zone == TriggerZone::Backrow && holder.card.id == instance_id)
+        else {
+            continue;
+        };
+        if let Some(price) = hook_firing_price(before, &holder, hook, counter)? {
+            total = Some(total.unwrap_or(0.0) + price);
+        }
+    }
+    Some(total)
+}
+
+/// R2477000: `turn_hook_probe` for a Field Spell in `seat`'s hand, set in its backrow first (R923001's
+/// spawn, a fresh card of its definition and face) in the zone a set would take (`first_entry_zone`).
+/// A full backrow prices nothing.
+fn spawned_turn_hook_probe(
+    world: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<f64>> {
+    let Some(slot) = first_entry_zone(world, seat, Row::Backrow) else {
+        return Some(None);
+    };
+    let spawn = SandboxOp::Spawn {
+        player: seat,
+        def_id: card.def_id.clone(),
+        radiant: card.radiant.then_some(true),
+        to: SpawnZone::Field {
+            row: Row::Backrow,
+            lane: slot.lane,
+        },
+    };
+    let Some(placed) = sandbox_step(world, seat, spawn, counter)? else {
+        return Some(None);
+    };
+    let Some(set) = card_at(&placed, slot).cloned() else {
+        return Some(None);
+    };
+    turn_hook_probe(&placed, seat, &set.id, counter)
+}
+
+/// R2477000: the turn-hook prices a decision of `seat`'s holds (`TurnHookPricing`), probed on `world`,
+/// its probe world (a function of what the seat sees, R185), each card once: every card in the seat's
+/// own backrow with a start-of-turn or an end-of-turn hook (`trigger_holders_with_hook`), then each Field
+/// Spell in its own hand with one (`spawned_turn_hook_probe`, R923001); one the same as a card already
+/// listed (`TurnHookPrice::is_for`) is not probed again. The enemy's backrow is never probed. Each runs
+/// on a sandbox copy (R923000) with both players' automatic turn end off (R345), so no tool's step ends
+/// the turn (R82), and with no price held, so a probe reads none, a Death price included. The probes
+/// draw at most `AI_TURN_HOOK_PROBE_NODES` nodes from `counter`; the cards left when they run out are
+/// not priced. Nothing is priced while a prompt is open, which refuses the tools, once the game is over,
+/// or at a zero `AI_EVAL.turn_hook`.
+pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<TurnHookPrice> {
+    if AI_EVAL.turn_hook == 0.0 || world.pending.is_some() || world.result.is_some() {
+        return Vec::new();
+    }
+    let backrow: Vec<CardInstance> = TURN_HOOKS
+        .into_iter()
+        .flat_map(|hook| trigger_holders_with_hook(world, hook, Some(seat)))
+        .filter(|holder| holder.zone == TriggerZone::Backrow)
+        .map(|holder| holder.card)
+        .collect();
+    let hand = world.players[seat]
+        .hand
+        .iter()
+        .filter(|card| {
+            card_type_of_face(world, &card.def_id, card.radiant) == CardType::FieldSpell
+                && has_turn_hook(world, card)
+        })
+        .map(|card| (card, true));
+    let mut candidates: Vec<(TurnHookPrice, &CardInstance, bool)> = Vec::new();
+    for (card, in_hand) in backrow.iter().map(|card| (card, false)).chain(hand) {
+        if !candidates.iter().any(|(key, _, _)| key.is_for(card)) {
+            candidates.push((TurnHookPrice::key(card), card, in_hand));
+        }
+    }
+    if candidates.is_empty() {
+        return Vec::new();
+    }
+    let mut sandbox = world.clone();
+    sandbox.sandbox = Some(true);
+    for player in PLAYER_IDS {
+        sandbox.players[player].auto_end_turn = Some(false);
+    }
+    let probes = create_sub_counter(counter, AI_TURN_HOOK_PROBE_NODES);
+    with_death_prices(Vec::new(), || {
+        with_turn_hook_prices(Vec::new(), || {
+            let mut priced = Vec::new();
+            for (key, card, in_hand) in candidates {
+                let probed = if in_hand {
+                    spawned_turn_hook_probe(&sandbox, seat, card, &probes)
+                } else {
+                    turn_hook_probe(&sandbox, seat, &card.id, &probes)
+                };
+                match probed {
+                    None => break,
+                    Some(None) => {}
+                    Some(Some(price)) => priced.push(TurnHookPrice { price, ..key }),
+                }
+            }
+            priced
+        })
     })
 }
 
