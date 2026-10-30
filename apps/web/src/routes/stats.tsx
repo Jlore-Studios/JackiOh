@@ -2,13 +2,13 @@
 //
 // Accessible signed out and signed in.
 // Provides three tabs:
-//  - Cards: sortable, filterable table of card win rates, play rates, and personal numbers.
+//  - Cards: sortable, filterable table of card win rates and play rates; the filters, not columns, cover cost, rarity and keyword (R2446000).
 //  - Sets: each set's cards on the patch (below).
 //  - Players: public player aggregates (games, win rate, favourite cards, fun stats from #125).
 // Features:
 //  - No provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661); the patch bar below is the way back to the previous patch.
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
-//    for a Played vs held the server withholds until both its sides reach the floor (R654).
+//    for a Drawn vs not drawn the server withholds until both its sides reach the floor (R654, R2427000).
 //  - URL search params for shareable views.
 //  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
 //    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
@@ -46,15 +46,13 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
-import { readSession } from "../net/session.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS, SET_STATS_DIGITS, SET_STATS_OUTLIER_Z } from "../stats/config.ts";
 import { CreatedPanel } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
-import { faceRate, formatPlayedDelta, winPercent } from "../stats/model.ts";
+import { faceRate, formatPlayedDelta } from "../stats/model.ts";
 import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type PatchWindow } from "../stats/patches.ts";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
-import { usePlayerStats } from "../stats/store.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
 import { TokensPanel } from "../stats/TokensPanel.tsx";
@@ -100,14 +98,6 @@ function keywordName(kind: KeywordKind): string {
   return readerTerms()?.keywords[kind] ?? kind;
 }
 
-function keywordLabel(id: string, language?: string): string {
-  const kinds = keywordKinds(id);
-  if (kinds.length === 0) return "";
-  const names = kinds.map(keywordName);
-  names.sort((a, b) => a.localeCompare(b, language));
-  return names.join(", ");
-}
-
 /** The tokens a card's text names (`CardDef.refs`, R279), the card itself left out: what the drill-down shows it makes. */
 function tokensOf(def: CardDef): CardDef[] {
   return (def.refs ?? []).flatMap((id) => {
@@ -143,48 +133,50 @@ type TabKey = "cards" | "sets" | "players";
 type ViewKey = "table" | "grid";
 type SortColumn =
   | "name"
-  | "cost"
-  | "rarity"
-  | "keyword"
   | "games"
   | "winRate"
   | "drawnWinRate"
+  | "drawnDelta"
   | "radiantWinRate"
   | "normalWinRate"
-  | "playRate"
-  | "playedDelta";
+  | "playRate";
 type SortDirection = "asc" | "desc";
 
 const SORT_COLUMNS: readonly SortColumn[] = [
   "name",
-  "cost",
-  "rarity",
-  "keyword",
   "games",
   "winRate",
   "drawnWinRate",
+  "drawnDelta",
   "radiantWinRate",
   "normalWinRate",
   "playRate",
-  "playedDelta",
 ] as const;
 
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
-  cost: "Cost",
-  rarity: "Rarity",
-  keyword: "Keywords",
   games: "Games",
   winRate: "Win rate",
   drawnWinRate: "When drawn",
+  drawnDelta: "Drawn vs not drawn",
   radiantWinRate: "Radiant",
   normalWinRate: "Normal",
   playRate: "Play rate",
-  playedDelta: "Played vs held",
 };
 
 function defaultDirection(col: SortColumn): SortDirection {
-  return col === "name" || col === "cost" || col === "rarity" || col === "keyword" ? "asc" : "desc";
+  return col === "name" ? "asc" : "desc";
+}
+
+/**
+ * R2446000: the sort an address asks for. One the table no longer offers (an old address's `cost`, `rarity` or
+ * `keyword`) is the default, win rate descending, its direction too.
+ */
+function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection } {
+  const asked = params.get("sort");
+  const col = asked === null ? "winRate" : SORT_COLUMNS.find((known) => known === asked);
+  if (col === undefined) return { col: "winRate", dir: "desc" };
+  return { col, dir: params.get("dir") === "asc" ? "asc" : "desc" };
 }
 
 /** The Cards tab's read for these filters; an empty filter asks for nothing, as `fetchCardStats` always did. */
@@ -209,12 +201,8 @@ export default function StatsRoute(): ReactElement {
   });
   const [patch, setPatch] = useState<string>(initialParams.get("patch") ?? "");
   const [search, setSearch] = useState<string>(initialParams.get("search") ?? "");
-  const [sortCol, setSortCol] = useState<SortColumn>(
-    (initialParams.get("sort") as SortColumn) ?? "winRate",
-  );
-  const [sortDir, setSortDir] = useState<SortDirection>(
-    initialParams.get("dir") === "asc" ? "asc" : "desc",
-  );
+  const [sortCol, setSortCol] = useState<SortColumn>(() => sortOf(initialParams).col);
+  const [sortDir, setSortDir] = useState<SortDirection>(() => sortOf(initialParams).dir);
   const [setFilter, setSetFilter] = useState<string>(initialParams.get("set") ?? "");
   const [rarityFilter, setRarityFilter] = useState<string>(initialParams.get("rarity") ?? "");
   const [costFilter, setCostFilter] = useState<string>(initialParams.get("cost") ?? "");
@@ -232,17 +220,13 @@ export default function StatsRoute(): ReactElement {
   // Column visibility
   const [visibleCols, setVisibleCols] = useState({
     thumbnail: true,
-    cost: false,
-    rarity: false,
-    keywords: false,
     games: true,
     winRate: true,
     drawnWinRate: true,
+    drawnDelta: true,
     radiantWinRate: true,
     normalWinRate: true,
     playRate: true,
-    playedDelta: true,
-    personal: true,
   });
 
   // Card stats response. R2125000: a revisit starts on the table these filters last read and reads it again behind it.
@@ -283,10 +267,6 @@ export default function StatsRoute(): ReactElement {
   const [setsError, setSetsError] = useState(false);
   // Bumped by the Sets tab's Retry, as `cardStatsAttempt` is by the table's.
   const [setsAttempt, setSetsAttempt] = useState(0);
-
-
-  const playerStats = usePlayerStats();
-  const signedIn = readSession() !== null;
 
   // Sync state to URL
   const updateUrl = useCallback(() => {
@@ -569,33 +549,20 @@ export default function StatsRoute(): ReactElement {
         if (aRate !== null && bRate !== null && aRate !== bRate) {
           return (aRate - bRate) * flip;
         }
-      } else if (sortCol === "keyword") {
-        const aLabel = keywordLabel(a.id, language);
-        const bLabel = keywordLabel(b.id, language);
-        if (aLabel && !bLabel) return -1;
-        if (!aLabel && bLabel) return 1;
-        if (aLabel && bLabel) {
-          const diff = aLabel.localeCompare(bLabel, language);
-          if (diff !== 0) return diff * flip;
-        }
       } else if (sortCol === "games") {
         if (a.games !== b.games) return (a.games - b.games) * flip;
-      } else if (sortCol === "cost") {
-        if (a.cost !== b.cost) return (a.cost - b.cost) * flip;
       } else if (sortCol === "playRate") {
         if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
-      } else if (sortCol === "playedDelta") {
+      } else if (sortCol === "drawnDelta") {
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        if (a.playedDelta !== null && b.playedDelta === null) return -1;
-        if (a.playedDelta === null && b.playedDelta !== null) return 1;
-        if (a.playedDelta !== null && b.playedDelta !== null && a.playedDelta !== b.playedDelta) {
-          return (a.playedDelta - b.playedDelta) * flip;
+        const aDelta = a.drawnDelta ?? null;
+        const bDelta = b.drawnDelta ?? null;
+        if (aDelta !== null && bDelta === null) return -1;
+        if (aDelta === null && bDelta !== null) return 1;
+        if (aDelta !== null && bDelta !== null && aDelta !== bDelta) {
+          return (aDelta - bDelta) * flip;
         }
-      } else if (sortCol === "rarity") {
-        const rarities = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
-        const diff = rarities.indexOf(a.rarity) - rarities.indexOf(b.rarity);
-        if (diff !== 0) return diff * flip;
       } else if (sortCol === "name") {
         const diff = compareNames(a, b);
         if (diff !== 0) return diff * flip;
@@ -899,30 +866,6 @@ export default function StatsRoute(): ReactElement {
                   <label className="stats-col-toggle">
                     <input
                       type="checkbox"
-                      checked={visibleCols.cost}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, cost: e.target.checked }))}
-                    />
-                    {t("Cost")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.rarity}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, rarity: e.target.checked }))}
-                    />
-                    {t("Rarity")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.keywords}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, keywords: e.target.checked }))}
-                    />
-                    {t("Keywords")}
-                  </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
                       checked={visibleCols.games}
                       onChange={(e) => setVisibleCols((c) => ({ ...c, games: e.target.checked }))}
                     />
@@ -935,6 +878,14 @@ export default function StatsRoute(): ReactElement {
                       onChange={(e) => setVisibleCols((c) => ({ ...c, drawnWinRate: e.target.checked }))}
                     />
                     {t("When drawn")}
+                  </label>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.drawnDelta}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, drawnDelta: e.target.checked }))}
+                    />
+                    {t("Drawn vs not drawn")}
                   </label>
                   <label className="stats-col-toggle">
                     <input
@@ -960,24 +911,6 @@ export default function StatsRoute(): ReactElement {
                     />
                     {t("Play rate")}
                   </label>
-                  <label className="stats-col-toggle">
-                    <input
-                      type="checkbox"
-                      checked={visibleCols.playedDelta}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, playedDelta: e.target.checked }))}
-                    />
-                    {t("Played vs held")}
-                  </label>
-                  {signedIn && (
-                    <label className="stats-col-toggle">
-                      <input
-                        type="checkbox"
-                        checked={visibleCols.personal}
-                        onChange={(e) => setVisibleCols((c) => ({ ...c, personal: e.target.checked }))}
-                      />
-                      {t("Your stats")}
-                    </label>
-                  )}
                 </div>
               )}
             </div>
@@ -1055,57 +988,6 @@ export default function StatsRoute(): ReactElement {
                       >
                         {t("Name")} {sortCol === "name" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
-                      {visibleCols.cost && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "cost" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("cost")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("cost");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Cost")}{sortCol === "cost" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
-                        </th>
-                      )}
-                      {visibleCols.rarity && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "rarity" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("rarity")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("rarity");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Rarity")} {sortCol === "rarity" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
-                      {visibleCols.keywords && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "keyword" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("keyword")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("keyword");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Keywords")} {sortCol === "keyword" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
                       {visibleCols.games && (
                         <th
                           scope="col"
@@ -1153,6 +1035,23 @@ export default function StatsRoute(): ReactElement {
                           tabIndex={0}
                         >
                           {t("When drawn")} {sortCol === "drawnWinRate" && (sortDir === "asc" ? "↑" : "↓")}
+                        </th>
+                      )}
+                      {visibleCols.drawnDelta && (
+                        <th
+                          scope="col"
+                          className="stats-th stats-th--sortable"
+                          aria-sort={sortCol === "drawnDelta" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          onClick={() => handleSort("drawnDelta")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSort("drawnDelta");
+                            }
+                          }}
+                          tabIndex={0}
+                        >
+                          {t("Drawn vs not drawn")} {sortCol === "drawnDelta" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                       {visibleCols.radiantWinRate && (
@@ -1206,34 +1105,10 @@ export default function StatsRoute(): ReactElement {
                           {t("Play rate")} {sortCol === "playRate" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
-                      {visibleCols.playedDelta && (
-                        <th
-                          scope="col"
-                          className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "playedDelta" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                          onClick={() => handleSort("playedDelta")}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSort("playedDelta");
-                            }
-                          }}
-                          tabIndex={0}
-                        >
-                          {t("Played vs held")} {sortCol === "playedDelta" && (sortDir === "asc" ? "↑" : "↓")}
-                        </th>
-                      )}
-                      {signedIn && visibleCols.personal && (
-                        <th scope="col" className="stats-th">
-                          {t("Your stats")}
-                        </th>
-                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredCards.map((card) => {
-                      const personalPlayed = playerStats.cards[card.id]?.played ?? 0;
-                      const personalRate = winPercent(playerStats);
                       const radiantRate = faceRate(card.playedRadiantGames, card.playedRadiantWinRate, minSample);
                       const normalRate = faceRate(card.playedNormalGames, card.playedNormalWinRate, minSample);
 
@@ -1262,19 +1137,6 @@ export default function StatsRoute(): ReactElement {
                           <td className="stats-td stats-td--name">
                             <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>
                           </td>
-                          {visibleCols.cost && <td className="stats-td">{card.cost}</td>}
-                          {visibleCols.rarity && (
-                            <td className="stats-td">
-                              <span className="stats-rarity-tag" data-rarity={card.rarity}>
-                                {t(card.rarity)}
-                              </span>
-                            </td>
-                          )}
-                          {visibleCols.keywords && (
-                            <td className="stats-td stats-td--keywords">
-                              {keywordLabel(card.id, locale === "en" ? undefined : locale) || "—"}
-                            </td>
-                          )}
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
                           <td className="stats-td stats-td--winrate">
                             {card.hasEnoughGames && card.winRate !== null ? (
@@ -1298,6 +1160,20 @@ export default function StatsRoute(): ReactElement {
                                 : "—"}
                             </td>
                           )}
+                          {visibleCols.drawnDelta && (
+                            <td className="stats-td">
+                              {card.hasEnoughGames && typeof card.drawnDelta === "number" ? (
+                                <span>
+                                  {formatPlayedDelta(card.drawnDelta)}{" "}
+                                  <span className="stats-sample-hint">
+                                    ({card.drawnGames} / {card.notDrawnGames ?? 0})
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="stats-not-enough">{t("not enough data")}</span>
+                              )}
+                            </td>
+                          )}
                           {visibleCols.radiantWinRate && (
                             <td className="stats-td">
                               {radiantRate !== null ? `${Math.round(radiantRate * 100)}%` : "—"}
@@ -1310,31 +1186,6 @@ export default function StatsRoute(): ReactElement {
                           )}
                           {visibleCols.playRate && (
                             <td className="stats-td">{`${Math.round(card.playRate * 100)}%`}</td>
-                          )}
-                          {visibleCols.playedDelta && (
-                            <td className="stats-td">
-                              {card.hasEnoughGames && card.playedDelta !== null ? (
-                                <span>
-                                  {formatPlayedDelta(card.playedDelta)}{" "}
-                                  <span className="stats-sample-hint">
-                                    ({card.playedGames} / {card.drawnNotPlayedGames})
-                                  </span>
-                                </span>
-                              ) : (
-                                <span className="stats-not-enough">{t("not enough data")}</span>
-                              )}
-                            </td>
-                          )}
-                          {signedIn && visibleCols.personal && (
-                            <td className="stats-td stats-td--personal">
-                              {personalPlayed > 0 ? (
-                                <span>
-                                  {personalPlayed}× {personalRate !== null ? `(${personalRate}%)` : ""}
-                                </span>
-                              ) : (
-                                <span className="stats-not-played">0</span>
-                              )}
-                            </td>
                           )}
                         </tr>
                       );

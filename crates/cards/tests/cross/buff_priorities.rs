@@ -2,7 +2,7 @@
 //! a Buff never draws a card's cost nor a number only its Cry reads (R1748000); a Buff gives a Field
 //! Spell Indestructible, and a Spell or a Field Spell that deals damage Pierce or Lifesteal (R1748001);
 //! on the field a Buff places a Plague Counter on a Field Spell that uses its own, and a Nerf removes
-//! one (R1748002).
+//! one (R1748002). Since issue #2436 a Buff may give a Field Spell Immutable too (R2436000).
 
 use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes, degrade, destroy, upgrade};
 use jackioh_engine::testkit::*;
@@ -98,6 +98,15 @@ fn hits(s: &Scenario) -> Vec<(i32, i32)> {
         .collect()
 }
 
+/// Living Bomb face-up in p1's backrow, on `seed`.
+fn living_bomb(seed: &str) -> Scenario {
+    scenario(json!({
+        "seed": seed,
+        "p1": { "hand": [FILLER], "backrow": [{ "def": LIVING_BOMB, "faceUp": true }] },
+        "p2": { "hand": [FILLER] },
+    }))
+}
+
 #[test]
 fn r1748000_a_cry_number_is_out_of_reach_on_the_field() {
     // In hand its Cry is still to come: its cost and both its numbers are in reach.
@@ -127,10 +136,13 @@ fn r1748000_a_cry_number_is_out_of_reach_on_the_field() {
 
 #[test]
 fn r1748001_a_buff_gives_a_field_spell_indestructible() {
-    let mut s = scenario(json!({
-        "p1": { "hand": [FILLER], "backrow": [{ "def": LIVING_BOMB, "faceUp": true }] },
-        "p2": { "hand": [FILLER] },
-    }));
+    // R2436000: its keyword row draws Indestructible or Immutable, on a seed that draws Indestructible.
+    let seed = seed_where("living-bomb-indestructible", |seed| {
+        let mut s = living_bomb(seed);
+        tune(&mut s, LIVING_BOMB, TuneDirection::Upgrade);
+        has(&s, LIVING_BOMB, KeywordKind::Indestructible)
+    });
+    let mut s = living_bomb(&seed);
     assert_eq!(rows(&s, LIVING_BOMB, TuneDirection::Upgrade), [TuneRow::Keyword]);
     assert!(!has(&s, LIVING_BOMB, KeywordKind::Indestructible));
 
@@ -148,8 +160,8 @@ fn r1748001_a_buff_gives_a_field_spell_indestructible() {
             ..
         }
     )));
-    // Indestructible already, it has nothing left to gain.
-    assert!(rows(&s, LIVING_BOMB, TuneDirection::Upgrade).is_empty());
+    // Indestructible already, it has Immutable left to gain (R2436000).
+    assert_eq!(rows(&s, LIVING_BOMB, TuneDirection::Upgrade), [TuneRow::Keyword]);
     // And it keeps its zone through a destroy, as a printed Indestructible would.
     let id = s.card(LIVING_BOMB).id.clone();
     apply_for_p1(
@@ -159,6 +171,46 @@ fn r1748001_a_buff_gives_a_field_spell_indestructible() {
         ))],
     );
     assert_eq!(s.card(LIVING_BOMB).zone.z(), ZoneName::Field);
+    // Its next Buff has Immutable alone to give, with no draw (R129).
+    tune(&mut s, LIVING_BOMB, TuneDirection::Upgrade);
+    assert!(has(&s, LIVING_BOMB, KeywordKind::Immutable));
+}
+
+#[test]
+fn r2436000_a_buff_may_give_a_field_spell_immutable_and_nothing_tunes_it_after() {
+    // Its keyword row draws Indestructible or Immutable, on a seed that draws Immutable.
+    let seed = seed_where("living-bomb-immutable", |seed| {
+        let mut s = living_bomb(seed);
+        tune(&mut s, LIVING_BOMB, TuneDirection::Upgrade);
+        has(&s, LIVING_BOMB, KeywordKind::Immutable)
+    });
+    let mut s = living_bomb(&seed);
+    assert!(!immutable_in_play(s.state(), s.card(LIVING_BOMB)));
+
+    let events = tune(&mut s, LIVING_BOMB, TuneDirection::Upgrade);
+
+    assert!(has(&s, LIVING_BOMB, KeywordKind::Immutable));
+    assert!(!has(&s, LIVING_BOMB, KeywordKind::Indestructible));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        GameEvent::Upgraded {
+            change: TuningChange::Keyword {
+                keyword: Keyword::Immutable,
+                added: true,
+                ..
+            },
+            ..
+        }
+    )));
+    // Face-up on the field it is Immutable in play: no Spell, Field Spell or Field Trap targets it (R781001).
+    assert!(immutable_in_play(s.state(), s.card(LIVING_BOMB)));
+    // And no Buff or Nerf changes it again (R23): neither has a row, and another Buff leaves it as it is.
+    for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
+        assert!(rows(&s, LIVING_BOMB, direction).is_empty(), "{direction:?}");
+    }
+    let tuned = s.card(LIVING_BOMB).tuning.clone();
+    tune(&mut s, LIVING_BOMB, TuneDirection::Upgrade);
+    assert_eq!(s.card(LIVING_BOMB).tuning, tuned);
 }
 
 #[test]
@@ -264,8 +316,8 @@ fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
 
 #[test]
 fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
-    // Granted Indestructible, it has no keyword to gain: a Buff draws between its Activate's count (the
-    // X row) and the plague row, on a seed that draws the plague row.
+    // Granted Indestructible, it has Immutable alone to gain (R2436000): a Buff draws among its keyword
+    // row, its Activate's count (the X row) and the plague row, on a seed that draws the plague row.
     let plantation = |seed: &str| {
         let mut s = scenario(json!({
             "seed": seed,
@@ -285,7 +337,7 @@ fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
     let mut s = plantation(&seed);
     assert_eq!(
         rows(&s, PLANTATION, TuneDirection::Upgrade),
-        [TuneRow::X, TuneRow::Plague]
+        [TuneRow::Keyword, TuneRow::X, TuneRow::Plague]
     );
 
     let events = tune(&mut s, PLANTATION, TuneDirection::Upgrade);

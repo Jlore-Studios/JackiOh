@@ -383,7 +383,7 @@ jackioh-server stats-cards --patch=<patch> --pilot=ai             # the ladder b
 
 Each row of the report is a card: the win rate, with the games behind it, of the decks that held it
 (in deck), held it in the opening hand, went first or second with it, played it, or drew it and never
-played it, and its played delta (the played win rate less the drawn-but-not-played one, in points). A
+played it, the decks that never drew it, and its drawn delta (the drawn win rate less the never-drawn one, in points). A
 card's play rate is its played games over its in-deck games, both printed in the row. `--json` has the
 same figures as numbers, and `stats-cards --source=all` reads both sources at once. Development and
 live games are never added together unless asked (R378, R1451).
