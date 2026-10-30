@@ -5,53 +5,17 @@ package events
 // `any` so this package compiles whether `config` declares them as `any` or as their own types.
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
-	"reflect"
-	"runtime"
 	"strconv"
-	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/trust"
 )
-
-// typeName is `type(exc).__name__`. herr's types carry the Python classes' names, so the last
-// part of a Go type's name is the Python one.
-func typeName(err error) string {
-	var pe *py.Error
-	if errors.As(err, &pe) {
-		return pe.Type
-	}
-	var p *herr.Panic
-	if errors.As(err, &p) {
-		return "Exception"
-	}
-	var re runtime.Error
-	if errors.As(err, &re) {
-		return "RuntimeError"
-	}
-	var pathErr *fs.PathError
-	if errors.As(err, &pathErr) {
-		return "OSError"
-	}
-	name := reflect.TypeOf(err).String()
-	name = strings.TrimPrefix(name, "*")
-	if i := strings.LastIndex(name, "."); i >= 0 {
-		name = name[i+1:]
-	}
-	return name
-}
-
-// errText is `str(exc)`.
-func errText(err error) string { return err.Error() }
 
 // userID is a user's `id` as trust.level takes it: None when absent.
 func userID(v any) *int {

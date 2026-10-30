@@ -361,7 +361,7 @@ func RunCommands(ctx *hctx.Context, found []*commands.Command, thread *pyjson.Ob
 		var answer string
 		if err := herr.Try(func() { answer = Execute(ctx, command, thread, user, ask) }); err != nil {
 			// a failure is answered, never dropped in silence
-			replies = append(replies, head+fmt.Sprintf("That failed (%s: %s). ", typeName(err), py.SliceTo(errText(err), 300))+
+			replies = append(replies, head+fmt.Sprintf("That failed (%s: %s). ", herr.Name(err), py.SliceTo(herr.Str(err), 300))+
 				"Nothing is lost by saying it again.")
 			continue
 		}

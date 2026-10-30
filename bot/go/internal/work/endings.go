@@ -67,7 +67,7 @@ func (x *Worker) finish() {
 		}
 		x.recordHead()
 	}); err != nil {
-		x.Result.Set("bundle_error", py.SliceTo(redact.Redact(excStr(err), nil), 500))
+		x.Result.Set("bundle_error", py.SliceTo(redact.Redact(herr.Str(err), nil), 500))
 	}
 }
 

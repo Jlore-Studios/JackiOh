@@ -38,7 +38,7 @@ func TestTemplateIsStringTemplate(t *testing.T) {
 		got, err := pyTemplate(c[0]).substitute(values)
 		failed := ""
 		if err != nil {
-			failed = excName(err) + ": " + excStr(err)
+			failed = herr.Name(err) + ": " + herr.Str(err)
 			got = ""
 		}
 		if got != c[1] || failed != c[2] {
@@ -93,16 +93,16 @@ func TestFormatAndErrors(t *testing.T) {
 		t.Errorf("pyFormat braces: %q", got)
 	}
 	err := herr.Try(func() { pyFormat("{missing}", nil) })
-	if err == nil || excName(err)+": "+excStr(err) != "KeyError: 'missing'" {
+	if err == nil || herr.Name(err)+": "+herr.Str(err) != "KeyError: 'missing'" {
 		t.Errorf("pyFormat missing key: %v", err)
 	}
 	err = herr.Try(func() { readText("testdata/no such file", true) })
 	if want := "FileNotFoundError: [Errno 2] No such file or directory: 'testdata/no such file'"; err == nil ||
-		excName(err)+": "+excStr(err) != want {
-		t.Errorf("OSError: %q", excName(err)+": "+excStr(err))
+		herr.Name(err)+": "+herr.Str(err) != want {
+		t.Errorf("OSError: %q", herr.Name(err)+": "+herr.Str(err))
 	}
 	if err := herr.Try(func() { py.MustInt("x") }); err == nil ||
-		excStr(err) != "invalid literal for int() with base 10: 'x'" {
+		herr.Str(err) != "invalid literal for int() with base 10: 'x'" {
 		t.Errorf("pyInt: %v", err)
 	}
 }

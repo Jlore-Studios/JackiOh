@@ -1,149 +1,24 @@
 package work
 
-// The few Python behaviours work.py leans on that the foundation packages do not hold yet:
-// string.Template (the prompts and the easy rule), str.format (the module's own `{name}`
-// templates), the CompletedProcess git.Run returns, pathlib's file reads and writes, and the
-// `type(exc).__name__` and `str(exc)` a failure's reason is made of. Private to this package;
-// each names the Python it stands for.
+// The few Python behaviours work.py leans on that py and herr do not hold: string.Template (the
+// prompts and the easy rule), str.format (the module's own `{name}` templates), the
+// CompletedProcess git.Run returns, and pathlib's file reads and writes. Each names the Python it
+// stands for.
 
 import (
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"reflect"
 	"regexp"
 	"strings"
-	"syscall"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
-
-// ------------------------------------------------------------------ Python's own exceptions
-
-// excName is type(exc).__name__ for what a run's `except Exception` caught.
-func excName(err error) string {
-	switch e := err.(type) {
-	case *Interrupt:
-		return "Interrupt"
-	case *py.Error:
-		return e.Type
-	case *herr.HarnessError:
-		return "HarnessError"
-	case *herr.ConfigError:
-		return "ConfigError"
-	case *herr.GitHubError:
-		return "GitHubError"
-	case *herr.GitError:
-		return "GitError"
-	case *herr.StateConflict:
-		return "StateConflict"
-	case *herr.StateUnreadable:
-		return "StateUnreadable"
-	case *herr.LoginError:
-		return "LoginError"
-	case *fs.PathError:
-		return osErrorName(e.Err)
-	case *os.LinkError:
-		return osErrorName(e.Err)
-	case *os.SyscallError:
-		return osErrorName(e.Err)
-	case syscall.Errno:
-		return osErrorName(e)
-	case *exec.Error:
-		if errors.Is(e.Err, exec.ErrNotFound) {
-			return "FileNotFoundError"
-		}
-		return "OSError"
-	}
-	t := reflect.TypeOf(err)
-	for t != nil && t.Kind() == reflect.Pointer {
-		t = t.Elem()
-	}
-	if t == nil || t.Name() == "" {
-		return "Exception"
-	}
-	return t.Name()
-}
-
-// osErrorName is the OSError subclass Python raises for an errno.
-func osErrorName(err error) string {
-	var errno syscall.Errno
-	if !errors.As(err, &errno) {
-		return "OSError"
-	}
-	switch errno {
-	case syscall.ENOENT:
-		return "FileNotFoundError"
-	case syscall.EEXIST:
-		return "FileExistsError"
-	case syscall.EACCES, syscall.EPERM:
-		return "PermissionError"
-	case syscall.EISDIR:
-		return "IsADirectoryError"
-	case syscall.ENOTDIR:
-		return "NotADirectoryError"
-	case syscall.EINTR:
-		return "InterruptedError"
-	case syscall.ETIMEDOUT:
-		return "TimeoutError"
-	}
-	return "OSError"
-}
-
-// excStr is str(exc): an OSError as Python words it (`[Errno 2] No such file or directory:
-// 'path'`), anything else its message.
-func excStr(err error) string {
-	switch e := err.(type) {
-	case *fs.PathError:
-		if n, s, ok := errnoText(e.Err); ok {
-			return fmt.Sprintf("[Errno %d] %s: %s", n, s, py.Repr(e.Path))
-		}
-	case *os.LinkError:
-		if n, s, ok := errnoText(e.Err); ok {
-			return fmt.Sprintf("[Errno %d] %s: %s -> %s", n, s, py.Repr(e.Old), py.Repr(e.New))
-		}
-	case *os.SyscallError:
-		if n, s, ok := errnoText(e.Err); ok {
-			return fmt.Sprintf("[Errno %d] %s", n, s)
-		}
-	case syscall.Errno:
-		if n, s, ok := errnoText(e); ok {
-			return fmt.Sprintf("[Errno %d] %s", n, s)
-		}
-	}
-	return err.Error()
-}
-
-// errnoText is an errno and its strerror (C's, capitalised as glibc writes it).
-func errnoText(err error) (int, string, bool) {
-	var errno syscall.Errno
-	if !errors.As(err, &errno) {
-		return 0, "", false
-	}
-	s := errno.Error()
-	if r, size := utf8.DecodeRuneInString(s); size > 0 {
-		s = string(unicode.ToUpper(r)) + s[size:]
-	}
-	return int(errno), s, true
-}
-
-// isOSError is `except OSError`.
-func isOSError(err error) bool {
-	var pe *fs.PathError
-	var le *os.LinkError
-	var se *os.SyscallError
-	var errno syscall.Errno
-	var ee *exec.Error
-	return errors.As(err, &pe) || errors.As(err, &le) || errors.As(err, &se) ||
-		errors.As(err, &errno) || errors.As(err, &ee)
-}
 
 // ------------------------------------------------------------------ values
 

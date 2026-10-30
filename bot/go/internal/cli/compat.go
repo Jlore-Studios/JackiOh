@@ -10,11 +10,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -84,17 +82,6 @@ func writeText(path, text string) {
 
 // ---------------------------------------------------------------------------- exceptions
 
-// isOSError is `isinstance(exc, OSError)` for the errors Go returns where Python raised one.
-func isOSError(err error) bool {
-	var pathErr *fs.PathError
-	var linkErr *os.LinkError
-	var sysErr *os.SyscallError
-	var execErr *exec.Error
-	var errno syscall.Errno
-	return errors.As(err, &pathErr) || errors.As(err, &linkErr) || errors.As(err, &sysErr) ||
-		errors.As(err, &execErr) || errors.As(err, &errno)
-}
-
 // isValueError is `isinstance(exc, ValueError)`: one this package raised, or a Go error another
 // package raised for Python's (not one of the harness's own, an OSError, or a Go runtime error,
 // which stands for a bug).
@@ -105,7 +92,7 @@ func isValueError(err error) bool {
 	}
 	var p *herr.Panic
 	var re runtime.Error
-	return !herr.IsHarness(err) && !isOSError(err) && !errors.As(err, &p) && !errors.As(err, &re)
+	return !herr.IsHarness(err) && !herr.IsOSError(err) && !errors.As(err, &p) && !errors.As(err, &re)
 }
 
 // catchIf runs fn and returns the error it raised when `match` says the except clause takes it;
@@ -130,91 +117,23 @@ func lastLine(r any) string {
 	if !ok {
 		err = &herr.Panic{Value: r}
 	}
-	name := ""
-	var pe *py.Error
-	var p *herr.Panic
-	var re runtime.Error
-	var pathErr *fs.PathError
+	var exc *py.Error
 	var timeout *timeoutExpired
-	var harness herr.Harness
+	var panicked *herr.Panic
+	var fault runtime.Error
+	name := strings.TrimPrefix(fmt.Sprintf("%T", err), "*") // a Go error's own type
 	switch {
-	case errors.As(err, &pe):
-		name = pe.Type
-	case errors.As(err, &harness):
-		name = "harness.errors." + reflect.TypeOf(harness).Elem().Name()
+	case errors.As(err, &exc), herr.IsOSError(err), errors.As(err, &panicked), errors.As(err, &fault):
+		name = herr.Name(err)
+	case herr.IsHarness(err):
+		name = "harness.errors." + herr.Name(err)
 	case errors.As(err, &timeout):
 		name = "subprocess.TimeoutExpired"
-	case errors.As(err, &pathErr):
-		return osErrorLine(pathErr)
-	case errors.As(err, &p):
-		name = "Exception"
-	case errors.As(err, &re):
-		name = "RuntimeError"
-	default:
-		name = strings.TrimPrefix(reflect.TypeOf(err).String(), "*")
 	}
-	if msg := err.Error(); msg != "" {
+	if msg := herr.Str(err); msg != "" {
 		return name + ": " + msg
 	}
 	return name
-}
-
-// osErrorLine is the last line of an OSError's traceback: `FileNotFoundError: [Errno 2] No such
-// file or directory: 'plan.json'`.
-func osErrorLine(e *fs.PathError) string {
-	var errno syscall.Errno
-	if !errors.As(e.Err, &errno) {
-		return "OSError: " + e.Error()
-	}
-	name := "OSError"
-	switch errno {
-	case syscall.ENOENT:
-		name = "FileNotFoundError"
-	case syscall.EACCES, syscall.EPERM:
-		name = "PermissionError"
-	case syscall.EISDIR:
-		name = "IsADirectoryError"
-	case syscall.ENOTDIR:
-		name = "NotADirectoryError"
-	case syscall.EEXIST:
-		name = "FileExistsError"
-	}
-	return fmt.Sprintf("%s: %s", name, osErrorText(e))
-}
-
-// osErrorText is str(OSError): `[Errno 2] No such file or directory: 'plan.json'`.
-func osErrorText(err error) string {
-	var pathErr *fs.PathError
-	var errno syscall.Errno
-	if errors.As(err, &pathErr) && errors.As(pathErr.Err, &errno) {
-		return fmt.Sprintf("[Errno %d] %s: %s", int(errno), capitalize(errno.Error()), py.Repr(pathErr.Path))
-	}
-	var execErr *exec.Error
-	if errors.As(err, &execErr) {
-		if errors.As(execErr.Err, &errno) {
-			return fmt.Sprintf("[Errno %d] %s: %s", int(errno), capitalize(errno.Error()), py.Repr(execErr.Name))
-		}
-		return fmt.Sprintf("[Errno %d] %s: %s", int(syscall.ENOENT), "No such file or directory", py.Repr(execErr.Name))
-	}
-	if errors.As(err, &errno) {
-		return fmt.Sprintf("[Errno %d] %s", int(errno), capitalize(errno.Error()))
-	}
-	return err.Error()
-}
-
-func capitalize(s string) string {
-	if s == "" {
-		return s
-	}
-	return strings.ToUpper(s[:1]) + s[1:]
-}
-
-// excText is str(exc) as an f-string prints it.
-func excText(err error) string {
-	if isOSError(err) {
-		return osErrorText(err)
-	}
-	return err.Error()
 }
 
 // ---------------------------------------------------------------------------- subprocess

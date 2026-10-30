@@ -6,13 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"reflect"
-	"runtime"
 	"strings"
-	"syscall"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
@@ -115,7 +111,7 @@ func deliverRun(ctx *hctx.Context, run *pyjson.Object, scratch string) string {
 		}
 		return fmt.Sprintf("could not deliver %s, try %d of %d "+
 			"(%s: %s): %s", what, tries, plan.DeliverTries,
-			pyTypeName(exc), py.SliceTo(redact.Redact(pyStr(exc), nil), 300), then)
+			herr.Name(exc), py.SliceTo(redact.Redact(herr.Str(exc), nil), 300), then)
 	}
 	status := py.OrStr(outcome.Get("status"), "")
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
@@ -281,55 +277,4 @@ func clone(ctx *hctx.Context, into string) string {
 	git.NewGit(filepath.Dir(into), nil).Run(true, CloneTimeout, nil, "clone", "--quiet", "--filter=blob:none",
 		"--no-tags", "--branch", ctx.Cfg.DefaultBranch, url, into)
 	return into
-}
-
-// pyTypeName is type(exc).__name__ for what a delivery raised: the harness's own errors by their
-// class, Python's OSError subclasses for Go's file errors, and RuntimeError for a Go fault (which
-// Python would have raised as an AttributeError, KeyError or TypeError).
-func pyTypeName(err error) string {
-	var exc *py.Error
-	var errno syscall.Errno
-	var fault runtime.Error
-	var panicked *herr.Panic
-	switch {
-	case errors.As(err, &exc):
-		return exc.Type
-	case errors.As(err, &fault), errors.As(err, &panicked):
-		return "RuntimeError"
-	}
-	switch err.(type) {
-	case *herr.HarnessError, *herr.ConfigError, *herr.GitHubError, *herr.GitError, *herr.StateConflict,
-		*herr.StateUnreadable, *herr.LoginError:
-		return reflect.TypeOf(err).Elem().Name()
-	}
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		return "FileNotFoundError"
-	case errors.Is(err, fs.ErrExist):
-		return "FileExistsError"
-	case errors.Is(err, fs.ErrPermission):
-		return "PermissionError"
-	case errors.Is(err, syscall.ENOTDIR):
-		return "NotADirectoryError"
-	case errors.Is(err, syscall.EISDIR):
-		return "IsADirectoryError"
-	case errors.As(err, &errno):
-		return "OSError"
-	}
-	return "Exception"
-}
-
-// pyStr is str(exc): an OSError on a path as Python words it ("[Errno 13] Permission denied:
-// '/tmp/x'"), anything else as its error says.
-func pyStr(err error) string {
-	var path *fs.PathError
-	var errno syscall.Errno
-	if errors.As(err, &path) && errors.As(path.Err, &errno) {
-		text := errno.Error()
-		if text != "" {
-			text = strings.ToUpper(text[:1]) + text[1:]
-		}
-		return fmt.Sprintf("[Errno %d] %s: %s", int(errno), text, py.Repr(path.Path))
-	}
-	return err.Error()
 }

@@ -1020,7 +1020,7 @@ func (x *Worker) checkpoint() {
 		herr.Raise(stop) // a cancel that arrived while it wrote
 	}
 	// A checkpoint never stops the work.
-	x.Result.Set("checkpoint_error", py.SliceTo(redact.Redact(excStr(err), nil), 500))
+	x.Result.Set("checkpoint_error", py.SliceTo(redact.Redact(herr.Str(err), nil), 500))
 }
 
 func (x *Worker) isDying() bool {
@@ -1206,7 +1206,7 @@ func (x *Worker) Run() *pyjson.Object {
 		}
 		// Every failure must still leave a result.
 		x.holdSignals()
-		reason := py.SliceTo(redact.Redact(excName(err)+": "+excStr(err), nil), 2000)
+		reason := py.SliceTo(redact.Redact(herr.Name(err)+": "+herr.Str(err), nil), 2000)
 		if disk.IsFull(err) {
 			// The machine's disk, not the item: a pause that keeps what was built.
 			x.Interrupted(NewInterrupt("the machine's disk filled up ("+reason+")", "disk", ""))
@@ -1234,7 +1234,7 @@ func (x *Worker) readDisk(when string) *pyjson.Object {
 	record, _ := x.Result.SetDefault("disk", pyjson.New()).(*pyjson.Object)
 	var found *pyjson.Object
 	if err := herr.Try(func() { found = x.DiskReader() }); err != nil {
-		if isOSError(err) {
+		if herr.IsOSError(err) {
 			return nil
 		}
 		herr.Raise(err)

@@ -192,11 +192,7 @@ type osError struct {
 }
 
 func (e *osError) Error() string {
-	msg := e.errno.Error()
-	if msg != "" {
-		msg = strings.ToUpper(msg[:1]) + msg[1:]
-	}
-	text := fmt.Sprintf("[Errno %d] %s", int(e.errno), msg)
+	text := py.ErrnoText(e.errno)
 	if e.named {
 		text += ": " + py.Repr(e.filename)
 	}

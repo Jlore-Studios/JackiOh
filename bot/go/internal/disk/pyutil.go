@@ -29,13 +29,7 @@ type osError struct {
 	filename string
 }
 
-func (e *osError) Error() string {
-	msg := e.errno.Error()
-	if msg != "" {
-		msg = strings.ToUpper(msg[:1]) + msg[1:]
-	}
-	return fmt.Sprintf("[Errno %d] %s: %s", int(e.errno), msg, py.Repr(e.filename))
-}
+func (e *osError) Error() string { return py.ErrnoText(e.errno) + ": " + py.Repr(e.filename) }
 
 func (e *osError) Unwrap() error { return e.errno }
 

@@ -5,44 +5,11 @@ package sweep
 // package compiles whether `config` declares them as `any` or as their own types.
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
-	"reflect"
-	"runtime"
-	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
-
-// typeName is `type(exc).__name__`. herr's types carry the Python classes' names, so the last
-// part of a Go type's name is the Python one.
-func typeName(err error) string {
-	var pe *py.Error
-	if errors.As(err, &pe) {
-		return pe.Type
-	}
-	var p *herr.Panic
-	if errors.As(err, &p) {
-		return "Exception"
-	}
-	var re runtime.Error
-	if errors.As(err, &re) {
-		return "RuntimeError"
-	}
-	var pathErr *fs.PathError
-	if errors.As(err, &pathErr) {
-		return "OSError"
-	}
-	name := strings.TrimPrefix(reflect.TypeOf(err).String(), "*")
-	if i := strings.LastIndex(name, "."); i >= 0 {
-		name = name[i+1:]
-	}
-	return name
-}
 
 func contains(xs []string, s string) bool {
 	for _, x := range xs {

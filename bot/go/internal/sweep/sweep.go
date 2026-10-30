@@ -115,7 +115,7 @@ func Sweep(ctx *hctx.Context) []string {
 		var got []string
 		if err := herr.Try(func() { got = p.run(ctx, since) }); err != nil {
 			// one part failing never stops the rest
-			notes = append(notes, fmt.Sprintf("%s: could not finish (%s: %s)", p.name, typeName(err),
+			notes = append(notes, fmt.Sprintf("%s: could not finish (%s: %s)", p.name, herr.Name(err),
 				py.SliceTo(err.Error(), 200)))
 			continue
 		}
@@ -237,7 +237,7 @@ func issueTypes(ctx *hctx.Context, since time.Time) []string {
 			done = triage.Apply(ctx.GH, py.MustInt(py.Item(issue, "number")), p)
 		}); err != nil {
 			// one issue never stops the rest
-			done = []string{fmt.Sprintf("could not type it (%s)", typeName(err))}
+			done = []string{fmt.Sprintf("could not type it (%s)", herr.Name(err))}
 		}
 		notes = append(notes, fmt.Sprintf("#%s: %s", py.Str(py.Item(issue, "number")), strings.Join(done, "; ")))
 	}
@@ -306,7 +306,7 @@ func each(items []*pyjson.Object, act func(*pyjson.Object) string, notes *[]stri
 	for _, entry := range items {
 		var note string
 		if err := herr.Try(func() { note = act(entry) }); err != nil {
-			note = fmt.Sprintf("skipped one (%s: %s)", typeName(err), py.SliceTo(err.Error(), 200))
+			note = fmt.Sprintf("skipped one (%s: %s)", herr.Name(err), py.SliceTo(err.Error(), 200))
 		}
 		if note != "" {
 			*notes = append(*notes, note)

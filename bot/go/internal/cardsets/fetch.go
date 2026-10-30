@@ -109,9 +109,9 @@ func raiseNetwork(err error) {
 	case errors.As(err, &dns):
 		reason = "[Errno -3] Temporary failure in name resolution"
 	case errors.As(err, &errno):
-		reason = errnoText(errno)
+		reason = py.ErrnoText(errno)
 		if !sending {
-			raise(osErrorName(errno), reason)
+			raise(py.OSErrorName(errno), reason)
 		}
 	default:
 		inner := err
@@ -121,30 +121,4 @@ func raiseNetwork(err error) {
 		reason = inner.Error()
 	}
 	raise("URLError", "<urlopen error "+reason+">")
-}
-
-// errnoText is str(OSError(errno)) without a file name: "[Errno 111] Connection refused".
-func errnoText(errno syscall.Errno) string {
-	text := errno.Error()
-	if text != "" {
-		text = strings.ToUpper(text[:1]) + text[1:]
-	}
-	return fmt.Sprintf("[Errno %d] %s", int(errno), text)
-}
-
-// osErrorName is the OSError subclass Python raises for errno.
-func osErrorName(errno syscall.Errno) string {
-	switch errno {
-	case syscall.ECONNRESET:
-		return "ConnectionResetError"
-	case syscall.ECONNREFUSED:
-		return "ConnectionRefusedError"
-	case syscall.ECONNABORTED:
-		return "ConnectionAbortedError"
-	case syscall.EPIPE:
-		return "BrokenPipeError"
-	case syscall.ETIMEDOUT:
-		return "TimeoutError"
-	}
-	return "OSError"
 }

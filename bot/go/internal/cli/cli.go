@@ -604,8 +604,8 @@ func CmdWork(cfg *config.Config, args *Args) int {
 		}
 		var sealed string
 		if exc, ok := catchIf(func() { sealed = logins.Seal(login) },
-			func(err error) bool { return isValueError(err) || isOSError(err) }); ok {
-			say("work: could not seal the refreshed login: " + redact.Redact(excText(exc), nil))
+			func(err error) bool { return isValueError(err) || herr.IsOSError(err) }); ok {
+			say("work: could not seal the refreshed login: " + redact.Redact(herr.Str(exc), nil))
 			return
 		}
 		if sealed != "" {
@@ -804,7 +804,7 @@ func current(cfg *config.Config, since time.Time) *config.Config {
 		secrets = providers.NewerSecrets(cfg.Secrets, ctx.Store.Load(), since)
 	}); err != nil {
 		// one bad tick must not end the loop
-		say(redact.Redact("::warning::kept the subscriptions and secrets as they were: "+excText(err), nil))
+		say(redact.Redact("::warning::kept the subscriptions and secrets as they were: "+herr.Str(err), nil))
 	}
 	if refused {
 		return nil
@@ -850,7 +850,7 @@ func companions(cfg *config.Config, doSweep bool, argv []string /* = ("dashboard
 		if doSweep && other.TokenEnv != "" && config.CompanionEnv(other, nil)["BOT_GITHUB_TOKEN"] != "" {
 			done, err := Companion(other, "sweep")
 			if err != nil {
-				say(redact.Redact(fmt.Sprintf("::warning::%s's sweep did not run: %s", other.Name, excText(err)), nil))
+				say(redact.Redact(fmt.Sprintf("::warning::%s's sweep did not run: %s", other.Name, herr.Str(err)), nil))
 			} else {
 				for _, line := range py.Splitlines(done.Stdout) {
 					say(redact.Redact(fmt.Sprintf("%s: %s", other.Name, line), nil))
@@ -863,7 +863,7 @@ func companions(cfg *config.Config, doSweep bool, argv []string /* = ("dashboard
 		}
 		drawn, err := Companion(other, argv...)
 		if err != nil {
-			say(redact.Redact(fmt.Sprintf("::warning::%s's %s was not drawn: %s", other.Name, what, excText(err)), nil))
+			say(redact.Redact(fmt.Sprintf("::warning::%s's %s was not drawn: %s", other.Name, what, herr.Str(err)), nil))
 			continue
 		}
 		if drawn.Returncode == 0 && strings.TrimSpace(drawn.Stdout) != "" {
@@ -922,7 +922,7 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 				}
 			}); err != nil {
 				// one bad tick must not end the loop
-				say(redact.Redact("::warning::the sweep failed: "+excText(err), nil))
+				say(redact.Redact("::warning::the sweep failed: "+herr.Str(err), nil))
 			}
 		}
 		var extra []string
@@ -934,14 +934,14 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 				cardsets.FetchJSON)
 			say(redact.Redact("dashboard: "+note, nil))
 		}); err != nil {
-			say(redact.Redact("::warning::the status issue was not updated: "+excText(err), nil))
+			say(redact.Redact("::warning::the status issue was not updated: "+herr.Str(err), nil))
 		}
 		if err := herr.Try(func() {
 			if note := disk.Alert(Ctx(cfg, true)); note != "" {
 				say(redact.Redact("disk: "+note, nil))
 			}
 		}); err != nil {
-			say(redact.Redact("::warning::the disk issue was not settled: "+excText(err), nil))
+			say(redact.Redact("::warning::the disk issue was not settled: "+herr.Str(err), nil))
 		}
 		if every == 0 || Monotonic()+float64(every) > deadline {
 			return 0
@@ -952,7 +952,7 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 			if err := herr.Try(func() {
 				say(redact.Redact("runners: "+dashboard.RefreshRunners(Ctx(cfg, true)), nil))
 			}); err != nil {
-				say(redact.Redact("::warning::the runners were not redrawn: "+excText(err), nil))
+				say(redact.Redact("::warning::the runners were not redrawn: "+herr.Str(err), nil))
 			}
 		}
 		Sleep(max(0.0, due-Monotonic()))

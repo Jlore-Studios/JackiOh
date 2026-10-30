@@ -18,6 +18,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 )
 
 // Request is urllib.request.Request as the client builds it: the method, the URL, the headers
@@ -235,11 +237,7 @@ func osErrorText(err error) string {
 	}
 	var errno syscall.Errno
 	if errors.As(err, &errno) {
-		text := errno.Error()
-		if text != "" {
-			text = strings.ToUpper(text[:1]) + text[1:]
-		}
-		return fmt.Sprintf("[Errno %d] %s", int(errno), text)
+		return py.ErrnoText(errno)
 	}
 	return err.Error()
 }
