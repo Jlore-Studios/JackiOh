@@ -425,8 +425,8 @@ fn summon_existing(
     if card.zone.z() == ZoneName::Field {
         return None;
     }
-    // R2433000: a card in the hand of a seat that plays only Core cards, and of another set, is put
-    // onto the field by no effect: a summon out of a hand is that hand's play.
+    // R2533000: a card in the hand of a seat that plays only the tutorial's cards, and not one of them,
+    // is put onto the field by no effect: a summon out of a hand is that hand's play.
     if let Zone::Hand { player: holder } = card.zone
         && crate::state::barred_from_play(ctx.state, holder, card)
     {
@@ -1260,7 +1260,7 @@ pub fn summon_random_from_hand(args: SummonRandomFromHandArgs) -> Effect {
             .hand
             .iter()
             .filter(|card| card_type_of(ctx.state, card) == CardType::Unit)
-            // R2433000: the pick is among the Units the hand may play.
+            // R2533000: the pick is among the Units the hand may play.
             .filter(|card| !crate::state::barred_from_play(ctx.state, player, card))
             .cloned()
             .collect();

@@ -472,12 +472,17 @@ fn history_json(
         }
         carried.push(entry);
     }
-    // R1371000: the old names the version retcon renamed, which a reader of an unmarked file maps.
+    // R1371000: the old names the version retcon renamed, which a reader of an unmarked file maps;
+    // R2532000: and, by the scheme an older marked file names, the names a later retcon renamed.
     let aliases_path = patches_dir.join("aliases.json");
-    let aliases = if aliases_path.exists() {
-        read_json(&aliases_path)["aliases"].clone()
+    let (aliases, marked) = if aliases_path.exists() {
+        let file = read_json(&aliases_path);
+        (
+            file["aliases"].clone(),
+            file.get("marked").cloned().unwrap_or(serde_json::json!({})),
+        )
     } else {
-        serde_json::json!({})
+        (serde_json::json!({}), serde_json::json!({}))
     };
     serde_json::json!({
         "order": versions,
@@ -486,6 +491,7 @@ fn history_json(
         "cardLists": card_lists,
         "versions": carried,
         "aliases": aliases,
+        "marked": marked,
     })
     .to_string()
 }

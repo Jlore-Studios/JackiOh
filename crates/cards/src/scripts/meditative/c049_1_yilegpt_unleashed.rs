@@ -27,7 +27,7 @@ pub const ID: &str = "meditative-049-1";
 const DATACENTERS: &str = "classicplus-078";
 /// C #18 Glitch in the System, added Radiant at (0).
 const GLITCH: &str = "classic-018";
-/// M #49.3 AI Girlfriend, summoned to animate at once.
+/// M #49.3 AI Girlfriend, summoned straight into a unit zone (R64).
 const GIRLFRIEND: &str = "meditative-049-3";
 /// M #49.2 Yile's Virus, filling the opponent's board (or two Radiant ones, Radiant face).
 const VIRUS: &str = "meditative-049-2";
@@ -402,10 +402,40 @@ mod tests {
             }
 
             #[test]
-            fn r1025_an_ai_girlfriend_animating() {
+            fn r1025_an_ai_girlfriend_summoned_straight_into_a_unit_zone() {
                 let s = rolling("AI Girlfriend", None);
                 assert!(field_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
                 assert!(!backrow_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
+            }
+
+            #[test]
+            fn r1025_with_a_full_board_the_girlfriend_entry_summons_nothing() {
+                // Every unit zone full at Cry resolution: the summon fizzles (R64).
+                for n in 0..96 {
+                    let mut s = scenario(json!({
+                        "seed": format!("unleashed-girlfriend-full-{n}"),
+                        "p1": {
+                            "field": [
+                                { "def": "core-012", "lane": 1 },
+                                { "def": "core-012", "lane": 2 },
+                                { "def": "core-012", "lane": 3 },
+                                { "def": "core-012", "lane": 4 },
+                            ],
+                            "hand": [UNLEASHED, FILLER],
+                            "library": [FILLER, FILLER, FILLER, FILLER],
+                            "mana": 10,
+                        },
+                        "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                    }));
+                    s.play(UNLEASHED, json!({ "zone": 5 }));
+                    if !rolled(&s).iter().any(|label| label.contains("AI Girlfriend")) {
+                        continue;
+                    }
+                    assert!(!field_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
+                    assert!(!backrow_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
+                    return;
+                }
+                panic!("no seed rolled AI Girlfriend");
             }
 
             #[test]

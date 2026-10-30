@@ -15172,7 +15172,30 @@
       "stinkyscape-173",
       "stinkyscape-174",
       "stinkyscape-175",
-      "stinkyscape-t"
+      "stinkyscape-t",
+      "stinkyscape-t-ai-01",
+      "stinkyscape-t-ai-02",
+      "stinkyscape-t-ai-03",
+      "stinkyscape-t-ai-04",
+      "stinkyscape-t-ai-05",
+      "stinkyscape-t-ai-06",
+      "stinkyscape-t-ai-07",
+      "stinkyscape-t-ai-08",
+      "stinkyscape-t-ai-09",
+      "stinkyscape-t-ai-10",
+      "stinkyscape-t-anomaly-found",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-drone-corvette",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-meltdown-layer",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-propagation-layer",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite",
+      "stinkyscape-t-shield-layer"
     ],
     "changes": [
       {
@@ -16342,7 +16365,7 @@
     ]
   },
   {
-    "version": "v0.5.1",
+    "version": "v0.5.0b",
     "date": "2026-10-28",
     "title": "Buffs on the field skip a paid Tribute",
     "source": "#2261",
@@ -16364,7 +16387,7 @@
       "bf2908714fdb1f697f684f1ac784d4942d2caf55"
     ],
     "reconstructed": false,
-    "tier": "patch",
+    "tier": "micro",
     "plays": [
       "classic-009",
       "classic-045",
@@ -16403,7 +16426,7 @@
     ]
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "date": "2026-10-28",
     "title": "Stinkyscape's first pass: Frozen, Dormant, Equip, Flying summons, the Marketplace and Anomaly Found!",
     "source": "#2246, #2247, #2248, #2258, #2259, #2260",
@@ -16563,7 +16586,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.2b",
+    "version": "v0.5.1b",
     "date": "2026-10-29",
     "title": "A card's printed trigger condition holds when the card is no trap (Prison answers only the opponent's Units)",
     "source": "#2271",
@@ -16595,7 +16618,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "date": "2026-10-29",
     "title": "Stinkyscape's first pass: the Starship's face and where it arrives",
     "source": "#2249",
@@ -16756,7 +16779,7 @@
     ]
   },
   {
-    "version": "v0.5.4",
+    "version": "v0.5.3",
     "date": "2026-10-29",
     "title": "Meditative balance changes IV",
     "source": "#2179",
@@ -17091,7 +17114,7 @@
     ]
   },
   {
-    "version": "v0.5.5",
+    "version": "v0.5.4",
     "date": "2026-10-29",
     "title": "Stinkyscape's first pass: Resources join the hand, and the Marketplace offers each player its own cards",
     "source": "#2250",
@@ -17276,7 +17299,7 @@
     ]
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "date": "2026-10-29",
     "title": "Attack timings, and Classic Golem transforms its target",
     "source": "#2285",
@@ -17298,7 +17321,7 @@
       "688d840212064815f73f4b98696126c51073816b"
     ],
     "reconstructed": false,
-    "tier": "patch",
+    "tier": "micro",
     "plays": [
       "classic-013",
       "classic-045",
@@ -17334,7 +17357,7 @@
     ]
   },
   {
-    "version": "v0.5.6b",
+    "version": "v0.5.4c",
     "date": "2026-10-29",
     "title": "Stratos is spelled as Stratos Swarm spells it",
     "source": "#2327",
@@ -17376,7 +17399,7 @@
     ]
   },
   {
-    "version": "v0.5.7",
+    "version": "v0.5.5",
     "date": "2026-10-29",
     "title": "Training Grounds, the release: the set ships to the normal game as the newest set",
     "source": "Issue #2204, part 11 of the tracker #2193",
@@ -17833,7 +17856,7 @@
     ]
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "date": "2026-10-29",
     "title": "A backrow card becomes a Unit only with Animated and stats",
     "source": "#2280",
@@ -17859,7 +17882,7 @@
       "12e7d9f7949a5e0ab46c83c524507abed84083cb"
     ],
     "reconstructed": false,
-    "tier": "patch",
+    "tier": "micro",
     "plays": [
       "classic-071",
       "classicplus-009",
@@ -17897,7 +17920,7 @@
     ]
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "date": "2026-10-29",
     "title": "The first player's opening hand draws 3",
     "source": "#2368",
@@ -18098,7 +18121,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.9b",
+    "version": "v0.5.6b",
     "date": "2026-10-30",
     "title": "Trigor's chain is marked by its summon, so a played Trigor set by Dino-size still summons",
     "source": "Issue #2206, part 13 of the tracker #2193 (REVIEW B-1)",
@@ -18126,7 +18149,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "date": "2026-10-30",
     "title": "A Trap fused into a Unit never fires from its unit zone, whatever fused it",
     "source": "#2226",
@@ -18145,7 +18168,7 @@
       "9fd1a4185f53428513b46769f46d31bf928a3d0a"
     ],
     "reconstructed": false,
-    "tier": "patch",
+    "tier": "micro",
     "plays": [
       "meditative-027",
       "meditative-039",
@@ -18157,7 +18180,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.10b",
+    "version": "v0.5.6d",
     "date": "2026-10-30",
     "title": "Every summon of a Flying Unit may land in the backrow",
     "source": "#2453",
@@ -18187,7 +18210,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.10c",
+    "version": "v0.5.6e",
     "date": "2026-10-30",
     "title": "A Buff may give a Field Spell Immutable",
     "source": "#2436",
@@ -18255,7 +18278,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.10d",
+    "version": "v0.5.6f",
     "date": "2026-10-30",
     "title": "Job Application prints its quest one stage a line, as The Greatest Heist does",
     "source": "#2450",
@@ -18289,7 +18312,7 @@
     ]
   },
   {
-    "version": "v0.5.11",
+    "version": "v0.5.7",
     "date": "2026-10-30",
     "title": "Cards show what they remember",
     "source": "#2476",

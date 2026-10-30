@@ -7,7 +7,7 @@
 // Its format is versioned apart from R1141000's 1v1 file, and like that file it is made in the
 // page and handed to the browser's downloads, never uploaded or kept.
 
-import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
+import { CATALOG_VERSION, versionNameFrom } from "@jackioh/cards";
 
 import { REPLAY_JSON_MAX_STEPS } from "../replay/config.ts";
 import { NOT_A_REPLAY, OTHER_PATCH, TOO_BIG, UNSUPPORTED } from "../replay/download.ts";
@@ -20,7 +20,8 @@ import { DUOS_SEATS } from "./seats.ts";
 
 /** What a reader of the file checks first: what it is, and which shape of it. */
 export const DUOS_REPLAY_JSON_FORMAT = "jackioh-duos-replay";
-export const DUOS_REPLAY_JSON_VERSION = 2;
+/** R2532000: 3 since the v0.5 retcon (#2532), its versions named by `VERSIONS_SCHEME`. */
+export const DUOS_REPLAY_JSON_VERSION = 3;
 /** R1371000: the version a file written before the version retcon carries; its catalog is an old name. */
 export const DUOS_REPLAY_JSON_UNMARKED_VERSION = 1;
 
@@ -65,9 +66,12 @@ export function duosReplayJsonFile(steps: DuosReplaySteps): File {
  * checked only for its seat and round, never for rules (CLAUDE.md rule 7).
  */
 export function parseDuosReplayJson(json: Record<string, unknown>): DuosReplaySteps {
-  const unmarked = json.version === DUOS_REPLAY_JSON_UNMARKED_VERSION;
-  if (json.format !== DUOS_REPLAY_JSON_FORMAT || (json.version !== DUOS_REPLAY_JSON_VERSION && !unmarked)) throw new ReplayFailure("error", UNSUPPORTED);
-  const played = unmarked && typeof json.catalogVersion === "string" ? currentVersionName(json.catalogVersion) : json.catalogVersion;
+  // R2532000: the file's version is the scheme its catalog is named by, read through `aliases.json`.
+  const scheme = json.version;
+  if (json.format !== DUOS_REPLAY_JSON_FORMAT || typeof scheme !== "number" || !Number.isInteger(scheme) || scheme < DUOS_REPLAY_JSON_UNMARKED_VERSION || scheme > DUOS_REPLAY_JSON_VERSION) {
+    throw new ReplayFailure("error", UNSUPPORTED);
+  }
+  const played = typeof json.catalogVersion === "string" ? versionNameFrom(scheme, json.catalogVersion) : json.catalogVersion;
   if (played !== CATALOG_VERSION) throw new ReplayFailure("error", OTHER_PATCH);
   const { seat, steps } = json;
   if (!DUOS_SEATS.some((each) => each === seat)) throw new ReplayFailure("error", NOT_A_REPLAY);

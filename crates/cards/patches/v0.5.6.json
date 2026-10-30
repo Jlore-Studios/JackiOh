@@ -3344,7 +3344,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 3,
     "base": {
@@ -10540,7 +10541,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 3,
     "base": {
@@ -10629,8 +10631,6 @@
     ],
     "loc": 5,
     "base": {
-      "attack": 0,
-      "health": 1,
       "keywords": [
         {
           "kind": "Animated"
@@ -10643,8 +10643,6 @@
       "text": "Animated, Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse a copy of the last into this and gain +{brittleGain} Brittle."
     },
     "radiant": {
-      "attack": 0,
-      "health": 2,
       "keywords": [
         {
           "kind": "Animated"
@@ -15441,7 +15439,8 @@
       "core-095",
       "classicplus-073",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 22,
     "base": {
@@ -17642,7 +17641,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 37,
     "base": {
@@ -18373,8 +18373,6 @@
     ],
     "loc": 24,
     "base": {
-      "attack": 1,
-      "health": 1,
       "keywords": [
         {
           "kind": "Animated"
@@ -18386,8 +18384,6 @@
       "text": "Animated, Flying\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nUpon reaching 10 keywords, make this Radiant."
     },
     "radiant": {
-      "attack": 2,
-      "health": 2,
       "keywords": [
         {
           "kind": "Animated"
@@ -20500,7 +20496,7 @@
   "stinkyscape-068": {
     "id": "stinkyscape-068",
     "index": "68",
-    "name": "Startos",
+    "name": "Stratos",
     "set": "Stinkyscape",
     "type": "Unit",
     "tags": [],
@@ -23781,7 +23777,8 @@
       "classicplus-073",
       "meditative-095",
       "stinkyscape-150",
-      "stinkyscape-151"
+      "stinkyscape-151",
+      "traininggrounds-039"
     ],
     "loc": 28,
     "base": {
@@ -23815,7 +23812,8 @@
       "stinkyscape-150",
       "stinkyscape-150-1",
       "stinkyscape-151",
-      "stinkyscape-159"
+      "stinkyscape-159",
+      "traininggrounds-039"
     ],
     "loc": 22,
     "base": {
@@ -23907,7 +23905,8 @@
       "stinkyscape-t-drone-corvette",
       "stinkyscape-t-shield-layer",
       "stinkyscape-t-propagation-layer",
-      "stinkyscape-t-meltdown-layer"
+      "stinkyscape-t-meltdown-layer",
+      "traininggrounds-039"
     ],
     "loc": 77,
     "base": {
@@ -24154,11 +24153,11 @@
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Fill your board with Startos."
+      "text": "Fill your board with Stratos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your board with Radiant Startos."
+      "text": "Fill your board with Radiant Stratos."
     }
   },
   "stinkyscape-159": {
@@ -25672,6 +25671,2074 @@
         }
       ],
       "text": "Starship Piece\nDeath: Add a random Radiant Starship Piece to your hand."
+    }
+  },
+  "traininggrounds-001": {
+    "id": "traininggrounds-001",
+    "index": "1",
+    "name": "Spikey Steven",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 2,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 15,
+      "health": 6,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "traininggrounds-002": {
+    "id": "traininggrounds-002",
+    "index": "2",
+    "name": "Personal Trainer",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
+    "loc": 19,
+    "base": {
+      "attack": 3,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Give one of your other Humans +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Give one of your other Humans +{buff}/+{buff}."
+    }
+  },
+  "traininggrounds-003": {
+    "id": "traininggrounds-003",
+    "index": "3",
+    "name": "Group leader",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "attack",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 25,
+    "base": {
+      "attack": 4,
+      "health": 1,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{attack} Attack."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 2,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{attack} Attack."
+    }
+  },
+  "traininggrounds-004": {
+    "id": "traininggrounds-004",
+    "index": "4",
+    "name": "Boulder Fist Ogre",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush"
+    },
+    "radiant": {
+      "attack": 18,
+      "health": 21,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush"
+    }
+  },
+  "traininggrounds-005": {
+    "id": "traininggrounds-005",
+    "index": "5",
+    "name": "Midlane Menace",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
+    "loc": 25,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: If this is in midlane, it gains +{buff}/+{buff} and Rush."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: If this is in midlane, it gains +{buff}/+{buff} and Rush."
+    }
+  },
+  "traininggrounds-006": {
+    "id": "traininggrounds-006",
+    "index": "6",
+    "name": "Chosen by the Sun",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield"
+    },
+    "radiant": {
+      "attack": 9,
+      "health": 9,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield"
+    }
+  },
+  "traininggrounds-007": {
+    "id": "traininggrounds-007",
+    "index": "7",
+    "name": "Chosen by the Moon",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 3
+        }
+      ],
+      "text": "Taunt, Armor 3"
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 6
+        }
+      ],
+      "text": "Taunt, Armor 6"
+    }
+  },
+  "traininggrounds-008": {
+    "id": "traininggrounds-008",
+    "index": "8",
+    "name": "Clobberer",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 14,
+      "health": 7,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 42,
+      "health": 14,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "traininggrounds-009": {
+    "id": "traininggrounds-009",
+    "index": "9",
+    "name": "Ravager",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "buff",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 22,
+    "base": {
+      "attack": 7,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nWhenever this destroys a Unit, it gains +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 17,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nWhenever this destroys a Unit, it gains +{buff}/+{buff}."
+    }
+  },
+  "traininggrounds-010": {
+    "id": "traininggrounds-010",
+    "index": "10",
+    "name": "Fan of Knives",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 25,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal {damage} damage to all enemies. Draw {draw|card|cards}."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Echo 1, Pierce\nDeal {damage} damage to all enemies. Draw {draw|card|cards}."
+    }
+  },
+  "traininggrounds-011": {
+    "id": "traininggrounds-011",
+    "index": "11",
+    "name": "Thwomp",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 10,
+        "radiant": 100,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 15,
+    "base": {
+      "keywords": [],
+      "text": "Deal {damage} damage to a Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Deal {damage} damage to a Unit."
+    }
+  },
+  "traininggrounds-012": {
+    "id": "traininggrounds-012",
+    "index": "12",
+    "name": "Fortify",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "health",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 30,
+    "base": {
+      "keywords": [],
+      "text": "Give a Unit +{health} Health, +{armor} Armor and Taunt."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a Unit +{health} Health, +{armor} Armor, Taunt and Divine Shield."
+    }
+  },
+  "traininggrounds-013": {
+    "id": "traininggrounds-013",
+    "index": "13",
+    "name": "Explosive Runes",
+    "set": "Training Grounds",
+    "type": "Trap",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 33,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks your hero: Deal {damage} damage to all enemies."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nReveals when an enemy Unit attacks your hero: Deal {damage} damage to all enemies."
+    }
+  },
+  "traininggrounds-014": {
+    "id": "traininggrounds-014",
+    "index": "14",
+    "name": "Explosive Trap",
+    "set": "Training Grounds",
+    "type": "Trap",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 6,
+        "radiant": 12,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      }
+    ],
+    "loc": 36,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Trample"
+        }
+      ],
+      "text": "Trample\nReveals when your opponent plays a Unit: After it resolves, deal {damage} damage to it."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Trample"
+        },
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Trample, Pierce\nReveals when your opponent plays a Unit: After it resolves, deal {damage} damage to it."
+    }
+  },
+  "traininggrounds-015": {
+    "id": "traininggrounds-015",
+    "index": "15",
+    "name": "In a hurry",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "core-t-rush"
+    ],
+    "params": [
+      {
+        "key": "tokens",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 50,
+    "base": {
+      "keywords": [],
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}. At the end of this turn, destroy them."
+    }
+  },
+  "traininggrounds-016": {
+    "id": "traininggrounds-016",
+    "index": "16",
+    "name": "Celestial Caller",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "traininggrounds-006",
+      "traininggrounds-007"
+    ],
+    "loc": 26,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        },
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 3
+        }
+      ],
+      "text": "Divine Shield, Taunt, Armor 3\nCry: Summon a Chosen by the Sun to the left of this and a Chosen by the Moon to the right of this."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        },
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 6
+        }
+      ],
+      "text": "Divine Shield, Taunt, Armor 6\nCry: Summon a Radiant Chosen by the Sun to the left of this and a Radiant Chosen by the Moon to the right of this."
+    }
+  },
+  "traininggrounds-017": {
+    "id": "traininggrounds-017",
+    "index": "17",
+    "name": "Flaming Felinor",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
+    "loc": 19,
+    "base": {
+      "attack": 3,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Deal {damage} damage to all other Units."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: Deal {damage} damage to all enemy Units."
+    }
+  },
+  "traininggrounds-018": {
+    "id": "traininggrounds-018",
+    "index": "18",
+    "name": "Knife Juggler",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 57,
+    "base": {
+      "attack": 3,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nAfter you summon a Unit, deal {damage} damage to a random enemy."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nAfter you summon a Unit, deal {damage} damage to a random enemy."
+    }
+  },
+  "traininggrounds-019": {
+    "id": "traininggrounds-019",
+    "index": "19",
+    "name": "Extra Rations",
+    "set": "Training Grounds",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 22,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Draw {draw|card|cards}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Draw {draw|card|cards}. They cost ({discount}) less."
+    }
+  },
+  "traininggrounds-020": {
+    "id": "traininggrounds-020",
+    "index": "20",
+    "name": "Recruitment Posters",
+    "set": "Training Grounds",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "loc": 19,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Add a random Training Grounds card to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Add a random Radiant Training Grounds card to your hand."
+    }
+  },
+  "traininggrounds-021": {
+    "id": "traininggrounds-021",
+    "index": "21",
+    "name": "Flame Tongue Totem",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "attack",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 30,
+    "base": {
+      "attack": 0,
+      "health": 4,
+      "keywords": [],
+      "text": "Aura: Adjacent Units have +{attack} Attack."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 8,
+      "keywords": [],
+      "text": "Aura: Adjacent Units have +{attack} Attack."
+    }
+  },
+  "traininggrounds-022": {
+    "id": "traininggrounds-022",
+    "index": "22",
+    "name": "Right-Hand Felinor",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
+    "loc": 36,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: If this is to the right of a Unit, give this and that Unit +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: If this is to the right of a Unit, give this and that Unit +{buff}/+{buff}."
+    }
+  },
+  "traininggrounds-023": {
+    "id": "traininggrounds-023",
+    "index": "23",
+    "name": "Quadrupling Felinors",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "copies",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
+    "loc": 13,
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Summon {copies|copy|copies} of this."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Summon {copies|copy|copies} of this."
+    }
+  },
+  "traininggrounds-024": {
+    "id": "traininggrounds-024",
+    "index": "24",
+    "name": "Goliath Situation",
+    "set": "Training Grounds",
+    "type": "Field Trap",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      },
+      {
+        "key": "minCost",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 46,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Unit: Cards in your hand that cost less than that Unit cost ({setCost})."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a ({minCost}) Cost or more Unit: Cards in your hand that cost no more than that Unit cost ({setCost})."
+    }
+  },
+  "traininggrounds-025": {
+    "id": "traininggrounds-025",
+    "index": "25",
+    "name": "Trigor",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "traininggrounds-025"
+    ],
+    "params": [
+      {
+        "key": "grow",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 33,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Tribute 3\nDeath: Summon a Trigor with this one's base stats +{grow}/+{grow}."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Tribute 3\nDeath: Summon a Trigor with this one's base stats +{grow}/+{grow}."
+    }
+  },
+  "traininggrounds-026": {
+    "id": "traininggrounds-026",
+    "index": "26",
+    "name": "Path of Exile",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 29,
+    "base": {
+      "keywords": [],
+      "text": "Exile a permanent. Draw {draw|card|cards}."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Cleave"
+        }
+      ],
+      "text": "Cleave\nExile a permanent. Draw {draw|card|cards}."
+    }
+  },
+  "traininggrounds-027": {
+    "id": "traininggrounds-027",
+    "index": "27",
+    "name": "Hopeful Jelly Bean",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [
+      "Jelly Bean"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 4,
+    "loc": 28,
+    "base": {
+      "keywords": [],
+      "text": "Make a permanent Radiant."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Cleave"
+        }
+      ],
+      "text": "Cleave\nMake a permanent Radiant."
+    }
+  },
+  "traininggrounds-028": {
+    "id": "traininggrounds-028",
+    "index": "28",
+    "name": "Occidental",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 3,
+    "loc": 29,
+    "base": {
+      "attack": 9,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Destroy all permanents in the rightmost lane."
+    },
+    "radiant": {
+      "attack": 18,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Destroy all enemy permanents in the rightmost lane."
+    }
+  },
+  "traininggrounds-029": {
+    "id": "traininggrounds-029",
+    "index": "29",
+    "name": "Oriental",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 3,
+    "loc": 29,
+    "base": {
+      "attack": 5,
+      "health": 9,
+      "keywords": [],
+      "text": "Cry: Destroy all permanents in the leftmost lane."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 18,
+      "keywords": [],
+      "text": "Cry: Destroy all enemy permanents in the leftmost lane."
+    }
+  },
+  "traininggrounds-030": {
+    "id": "traininggrounds-030",
+    "index": "30",
+    "name": "Floodgates",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "armorGain",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 68,
+    "base": {
+      "attack": 0,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 3
+        }
+      ],
+      "text": "Armor 3\nWhenever a Unit is summoned, this gains +{armorGain} Armor.\nDeath: Destroy all your Units."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 24,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 6
+        }
+      ],
+      "text": "Armor 6\nWhenever a Unit is summoned, this gains +{armorGain} Armor.\nDeath: Destroy all your Units."
+    }
+  },
+  "traininggrounds-031": {
+    "id": "traininggrounds-031",
+    "index": "31",
+    "name": "Level Up!",
+    "set": "Training Grounds",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "attacks",
+        "base": 3,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 68,
+    "base": {
+      "keywords": [],
+      "text": "After one of your Units has attacked {attacks|time|times} since this arrived, it becomes Radiant."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "After one of your Units has attacked {attacks|time|times} since this arrived, it becomes Radiant."
+    }
+  },
+  "traininggrounds-032": {
+    "id": "traininggrounds-032",
+    "index": "32",
+    "name": "Selfless Protector",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "loc": 24,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [],
+      "text": "Death: Give your Units Divine Shield."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Give your Units Divine Shield.\nDeath: Give your Units Divine Shield."
+    }
+  },
+  "traininggrounds-033": {
+    "id": "traininggrounds-033",
+    "index": "33",
+    "name": "Guerilla Felinor",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "damage",
+        "base": 7,
+        "radiant": 14,
+        "better": "up",
+        "step": 2,
+        "min": 1,
+        "cry": true
+      }
+    ],
+    "loc": 11,
+    "base": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Deal {damage} damage randomly split among enemy Units."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nCry: Deal {damage} damage randomly split among enemy Units."
+    }
+  },
+  "traininggrounds-034": {
+    "id": "traininggrounds-034",
+    "index": "34",
+    "name": "Dino-size",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 3,
+    "loc": 18,
+    "base": {
+      "keywords": [],
+      "text": "Set a Unit's Attack and Health to 10/10."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Set a Unit's Attack and Health to 20/20."
+    }
+  },
+  "traininggrounds-035": {
+    "id": "traininggrounds-035",
+    "index": "35",
+    "name": "Corpse Recycler",
+    "set": "Training Grounds",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "core-t-rush"
+    ],
+    "loc": 29,
+    "base": {
+      "keywords": [],
+      "text": "After a non-Token Unit dies, summon a Rush Token for its controller."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "After a non-Token Unit dies, summon a Radiant Rush Token for its controller."
+    }
+  },
+  "traininggrounds-036": {
+    "id": "traininggrounds-036",
+    "index": "36",
+    "name": "Training Dummy",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 23,
+    "base": {
+      "attack": 0,
+      "health": 3,
+      "keywords": [],
+      "text": "Can't be in Defense Position.\nDeath: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 6,
+      "keywords": [],
+      "text": "Death: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand."
+    }
+  },
+  "traininggrounds-037": {
+    "id": "traininggrounds-037",
+    "index": "37",
+    "name": "Seance",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 23,
+    "base": {
+      "keywords": [],
+      "text": "Add an exact copy of a permanent to your hand, keeping its cost changes."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add an exact copy of a permanent to your hand. It costs ({setCost})."
+    }
+  },
+  "traininggrounds-038": {
+    "id": "traininggrounds-038",
+    "index": "38",
+    "name": "Tutorial Master",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "cards",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 22,
+    "base": {
+      "attack": 4,
+      "health": 16,
+      "keywords": [],
+      "text": "Cry: Add {cards|random Training Grounds card|random Training Grounds cards} to your hand. They cost ({discount}) less.\nDeath: Add {cards|random Training Grounds card|random Training Grounds cards} to your hand. They cost ({discount}) less."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 32,
+      "keywords": [],
+      "text": "Cry: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand. They cost ({discount}) less.\nDeath: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand. They cost ({discount}) less."
+    }
+  },
+  "traininggrounds-039": {
+    "id": "traininggrounds-039",
+    "index": "39",
+    "name": "Call to Chaos (Training-Grounds Edition)",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [
+      "Call to Chaos"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "core-095",
+      "classicplus-073",
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151",
+      "traininggrounds-039",
+      "traininggrounds-039-1",
+      "traininggrounds-040",
+      "core-t-rush"
+    ],
+    "loc": 22,
+    "base": {
+      "keywords": [],
+      "text": "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and refresh 4 mana; add 4 random Training Grounds cards to your hand, which cost (0); gain 8 mana and draw 2 cards; summon 6 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (0); summon 5 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; add a random Call to Chaos to your hand, which costs (0), now and at the start of every second turn of yours for the rest of the game; cast a random Call to Chaos."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Three different random effects, resolved in the order listed: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and refresh 4 mana; add 4 random Training Grounds cards to your hand, which cost (0); gain 8 mana and draw 2 cards; summon 6 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (0); summon 5 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; add a random Call to Chaos to your hand, which costs (0), now and at the start of every second turn of yours for the rest of the game; cast a random Call to Chaos."
+    }
+  },
+  "traininggrounds-039-1": {
+    "id": "traininggrounds-039-1",
+    "index": "39.1",
+    "name": "Training-Grounds Golem",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "token": true,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Armor",
+          "n": 10
+        },
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Divine Shield"
+        },
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Rush, Armor 10, Taunt, Divine Shield, Pierce"
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Armor",
+          "n": 20
+        },
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Divine Shield"
+        },
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Rush, Armor 20, Taunt, Divine Shield, Pierce"
+    }
+  },
+  "traininggrounds-040": {
+    "id": "traininggrounds-040",
+    "index": "40",
+    "name": "Goetzmann Game Design",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw"
+    ],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 0,
+    "loc": 23,
+    "base": {
+      "keywords": [],
+      "text": "Add a random card to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add a random Radiant card to your hand."
+    }
+  },
+  "traininggrounds-041": {
+    "id": "traininggrounds-041",
+    "index": "41",
+    "name": "Bigot",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "loc": 23,
+    "snapshotOf": "core-002",
+    "base": {
+      "attack": 4,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Destroy an enemy non-Human Unit."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Destroy all enemy non-Human Units."
+    }
+  },
+  "traininggrounds-042": {
+    "id": "traininggrounds-042",
+    "index": "42",
+    "name": "Stockpile",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "heal",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 14,
+    "snapshotOf": "core-005",
+    "base": {
+      "keywords": [],
+      "text": "Draw {draw}. Heal your hero {heal}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw {draw}. Heal your hero {heal}."
+    }
+  },
+  "traininggrounds-043": {
+    "id": "traininggrounds-043",
+    "index": "43",
+    "name": "Mr. Vanilla",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "snapshotOf": "core-008",
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "traininggrounds-044": {
+    "id": "traininggrounds-044",
+    "index": "44",
+    "name": "Duplicating Felinors",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "loc": 15,
+    "snapshotOf": "core-012",
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Summon a copy of this."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Summon a copy of this."
+    }
+  },
+  "traininggrounds-045": {
+    "id": "traininggrounds-045",
+    "index": "45",
+    "name": "Jlockeed's Weapons",
+    "set": "Training Grounds",
+    "type": "Field Spell",
+    "tags": [
+      "Jlockeed"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "attack",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 26,
+    "snapshotOf": "core-014",
+    "base": {
+      "keywords": [],
+      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
+    }
+  },
+  "traininggrounds-046": {
+    "id": "traininggrounds-046",
+    "index": "46",
+    "name": "Hit Job",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "loc": 22,
+    "snapshotOf": "core-016",
+    "base": {
+      "keywords": [],
+      "text": "Destroy a Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Destroy a Unit and the Units adjacent to it."
+    }
+  },
+  "traininggrounds-047": {
+    "id": "traininggrounds-047",
+    "index": "47",
+    "name": "Midrange Menace",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "loc": 15,
+    "snapshotOf": "core-019",
+    "base": {
+      "attack": 9,
+      "health": 9,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nEnd of turn: Heal this to full."
+    },
+    "radiant": {
+      "attack": 18,
+      "health": 18,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Taunt, Immutable\nEnd of turn: Heal this to full."
+    }
+  },
+  "traininggrounds-048": {
+    "id": "traininggrounds-048",
+    "index": "48",
+    "name": "Jlockeed Shredder-10",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Jlockeed"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 12,
+    "snapshotOf": "core-013",
+    "base": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [],
+      "text": "End of turn: Deal {damage} damage to each enemy."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 20,
+      "keywords": [],
+      "text": "End of turn: Deal {damage} damage to each enemy."
+    }
+  },
+  "traininggrounds-049": {
+    "id": "traininggrounds-049",
+    "index": "49",
+    "name": "Reoccurring Dream",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "chance",
+        "base": 30,
+        "radiant": 40,
+        "better": "up",
+        "step": 10,
+        "min": 1,
+        "max": 100
+      }
+    ],
+    "loc": 64,
+    "snapshotOf": "core-023",
+    "base": {
+      "keywords": [],
+      "text": "{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Lucky 1\n{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+    }
+  },
+  "traininggrounds-050": {
+    "id": "traininggrounds-050",
+    "index": "50",
+    "name": "Glowy Jelly Bean",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [
+      "Jelly Bean"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "loc": 18,
+    "snapshotOf": "core-026",
+    "base": {
+      "keywords": [],
+      "text": "Make a card in your hand Radiant."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Make 2 cards in your hand Radiant."
+    }
+  },
+  "traininggrounds-051": {
+    "id": "traininggrounds-051",
+    "index": "51",
+    "name": "Big Felinor",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 4,
+    "loc": 15,
+    "snapshotOf": "core-043",
+    "base": {
+      "attack": 3,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Destroy all non-Felinor Units."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 20,
+      "keywords": [],
+      "text": "Cry: Destroy all enemy non-Felinor Units."
+    }
+  },
+  "traininggrounds-052": {
+    "id": "traininggrounds-052",
+    "index": "52",
+    "name": "Snom Bunny Mind Control",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 4,
+    "loc": 26,
+    "snapshotOf": "core-049",
+    "base": {
+      "keywords": [],
+      "text": "Steal an enemy Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Steal an enemy Unit. Make it Radiant."
+    }
+  },
+  "traininggrounds-053": {
+    "id": "traininggrounds-053",
+    "index": "53",
+    "name": "Prejudiced Postdoc",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "loc": 28,
+    "snapshotOf": "core-061",
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Choose a Human Unit on the field. Summon a Vanilla copy of it."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Choose any Unit on the field. Summon a Vanilla copy of it."
+    }
+  },
+  "traininggrounds-054": {
+    "id": "traininggrounds-054",
+    "index": "54",
+    "name": "The Rock",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 4,
+    "loc": 15,
+    "snapshotOf": "core-066",
+    "base": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        }
+      ],
+      "text": "Tribute 1, Indestructible"
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Tribute 1, Indestructible, Immutable"
+    }
+  },
+  "traininggrounds-055": {
+    "id": "traininggrounds-055",
+    "index": "55",
+    "name": "Reminisce",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 32,
+    "snapshotOf": "core-072",
+    "base": {
+      "keywords": [],
+      "text": "Discover a card from your graveyard. It costs ({discount}) less. Exile this."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Discover a card from your graveyard. It costs ({setCost}). Exile this."
+    }
+  },
+  "traininggrounds-056": {
+    "id": "traininggrounds-056",
+    "index": "56",
+    "name": "Corpse Eater",
+    "set": "Training Grounds",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 4,
+    "loc": 39,
+    "snapshotOf": "core-089",
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nWhile this is in your hand, it gains the attack and health of each Unit that dies."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Rush, Divine Shield\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
+    }
+  },
+  "traininggrounds-057": {
+    "id": "traininggrounds-057",
+    "index": "57",
+    "name": "Recycling Initiative",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 78,
+    "snapshotOf": "core-039",
+    "base": {
+      "keywords": [],
+      "text": "Exile this.\nEnd of turn: Add a copy of each other card you played this turn to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Exile this.\nEnd of turn: Add a Radiant copy of each other card you played this turn to your hand. They cost ({discount}) less."
+    }
+  },
+  "traininggrounds-058": {
+    "id": "traininggrounds-058",
+    "index": "58",
+    "name": "True Strike",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 4,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 19,
+    "snapshotOf": "core-044",
+    "base": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal {damage} damage. Exile this."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal {damage} damage. Exile this."
+    }
+  },
+  "traininggrounds-059": {
+    "id": "traininggrounds-059",
+    "index": "59",
+    "name": "Fig of Life",
+    "set": "Training Grounds",
+    "type": "Spell",
+    "tags": [
+      "Fruit"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "heal",
+        "base": 20,
+        "radiant": 40,
+        "better": "up",
+        "step": 5,
+        "min": 1
+      }
+    ],
+    "loc": 21,
+    "snapshotOf": "core-047",
+    "base": {
+      "keywords": [],
+      "text": "Heal a target {heal}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Heal a target {heal}."
+    }
+  },
+  "traininggrounds-060": {
+    "id": "traininggrounds-060",
+    "index": "60",
+    "name": "Rush Token Farm",
+    "set": "Training Grounds",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "core-t-rush"
+    ],
+    "params": [
+      {
+        "key": "buff",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 33,
+    "snapshotOf": "core-058",
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Summon a Rush Token."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Summon a Rush Token.\nAura: Your Rush Tokens have +{buff}/+{buff}."
     }
   }
 }
