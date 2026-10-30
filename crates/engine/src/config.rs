@@ -34,6 +34,9 @@ pub const MEDIUM_EXTRA_DECK_CARDS: i32 = 5;
 pub const HARD_EXTRA_DECK_CARDS: i32 = 10;
 /// §2.6, §9.4
 pub const MAX_COPIES: i32 = 1;
+/// §9.4 L1, R252: the decks a Conquest loadout (a trio) holds, exactly. The validator's L1 reads it,
+/// and so does the web's trio editor, through `engineConfig.ts`.
+pub const LOADOUT_DECKS: usize = 3;
 /// §2.3
 pub const MAX_MANA: i32 = 4;
 /// §2
@@ -2231,6 +2234,23 @@ pub const ANOMALY_ROLL_SIDES: i32 = 100;
 /// R1845002: the offer comes due at the start of the opponent's next turn, counted in their own turns
 /// (R1181000), so its badge counts down on the offerer's side while it waits.
 pub const TRADE_OFFER_TURNS: i32 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// Emotes (SPEC §9.5, §10.10; R643, R1341): the dealt hand and the rate limit, which the server and
+// the web enforce alike (`wire::emotes`, `apps/web/src/wire/emotes.ts`)
+// ---------------------------------------------------------------------------------------------
+
+/// How many emotes a seat is dealt each game (R1341): the menu shows these and nothing else.
+pub const EMOTE_HAND_SIZE: usize = 8;
+/// How many of a hand are voice lines (R1341); the other `EMOTE_HAND_SIZE - EMOTE_HAND_VOICE` are
+/// emoji. A fixed split, so every hand speaks in its portrait's voice and the menu keeps one shape.
+pub const EMOTE_HAND_VOICE: usize = 3;
+/// R643: the pause between two emotes from one player.
+pub const EMOTE_COOLDOWN_MS: i64 = 1500;
+/// R643: the rolling window the cap is counted over.
+pub const EMOTE_WINDOW_MS: i64 = 20_000;
+/// R643: at most this many emotes in a window.
+pub const EMOTE_WINDOW_MAX: usize = 5;
 
 #[cfg(test)]
 mod tests {
