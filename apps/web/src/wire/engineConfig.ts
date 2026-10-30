@@ -16,7 +16,7 @@ import type { Tag } from "./generated/Tag.ts";
 export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbPrice, DuosTeamRules };
 
 export const AI_DIFFICULTY: Readonly<Record<Difficulty, Handicap>> = {"easy":{"deckSize":25,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0},"medium":{"deckSize":30,"manaBonus":1,"manaCap":5,"extraOpeningCards":1,"extraDrawsPerTurn":0},"hard":{"deckSize":35,"manaBonus":1,"manaCap":7,"extraOpeningCards":1,"extraDrawsPerTurn":1}};
-export const AI_TUTORIAL: Handicap = {"deckSize":12,"manaBonus":0,"manaCap":3,"extraOpeningCards":0,"extraDrawsPerTurn":0,"heroHealth":20};
+export const AI_TUTORIAL: Handicap = {"deckSize":12,"manaBonus":0,"manaCap":3,"extraOpeningCards":0,"extraDrawsPerTurn":0,"heroHealth":20,"coreOnly":true};
 export const COIN_DEF_ID = "core-t-coin";
 export const CRAFT_ADJECTIVES: readonly string[] = ["Pure","Seeded","Async","Recursive","Generic","Static","Lazy","Mutable"];
 export const CRAFT_HAT_PRICES: readonly CraftHatPrice[] = [{"hat":"cry","lines":2,"multiplier":1,"types":["Unit","Field Spell"]},{"hat":"death","lines":2,"multiplier":1,"types":["Unit"]},{"hat":"startOfTurn","lines":2,"multiplier":2,"types":["Unit","Field Spell"]},{"hat":"endOfTurn","lines":2,"multiplier":2,"types":["Unit","Field Spell"]},{"hat":"whenCast","lines":2,"multiplier":1,"types":["Spell"]},{"hat":"opponentPlaysUnit","lines":4,"multiplier":1,"types":["Trap"]},{"hat":"opponentPlaysSpell","lines":4,"multiplier":1,"types":["Trap"]},{"hat":"opponentAttacks","lines":4,"multiplier":1,"types":["Trap"]},{"hat":"activate","lines":4,"multiplier":1,"types":[]}];
@@ -67,6 +67,6 @@ export const SANDBOX_HERO_HEALTH_MAX = 99;
 export const SANDBOX_MANA_MAX = 10;
 export const TRIBAL_TAGS: readonly Tag[] = ["Human","Felinor","KY","CN","Jlockeed"];
 export const TURN_CAP_PLAYER_TURNS = 60;
-export const TUTORIAL_HUMAN: Handicap = {"deckSize":20,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0,"heroFloor":1};
+export const TUTORIAL_HUMAN: Handicap = {"deckSize":20,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0,"heroFloor":1,"deckCopies":4};
 export const VERSIONS_SCHEME = 2;
 export const VOTE_TALLY_SIZE = 3;
