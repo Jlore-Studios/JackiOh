@@ -10479,11 +10479,12 @@
     "what": "revise #2493 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-30T22:00:38Z",
+    "at": "2026-10-30T22:12:51Z",
     "notes": [
-      "delivered build #2503 on claude-3 (run 41132463181): interrupted",
-      "started build #2503 on claude-4 (run 41135311211)",
-      "nothing more to start: nothing is queued"
+      "delivered revise #2493 on claude-3 (run 41134404357): interrupted",
+      "started revise #2493 on agy (run 41136767122)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -11187,7 +11188,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T22:00:38Z",
+  "loop_tick": "2026-10-30T22:12:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
