@@ -1,6 +1,10 @@
 {
-  "halt": {},
-  "halted": false,
+  "halt": {
+    "at": "2026-10-30T14:32:52Z",
+    "by": "squishy-squooby",
+    "reason": "the harness moves to Go (#2473): halted for the merge; start follows it"
+  },
+  "halted": true,
   "handled": {
     "c:6304683581": {
       "at": "2026-10-21T00:11:31Z",
