@@ -26,8 +26,6 @@ export const TUTORIAL_PROGRESS_VERSION = 1;
 
 export const COACH_RING_PAD_PX = 6;
 
-export const COACH_BUBBLE_GAP_PX = 12;
-
 export const COACH_VIEWPORT_MARGIN_PX = 8;
 
 /** Re-measure animated or hovered cards, which need not emit a resize. */

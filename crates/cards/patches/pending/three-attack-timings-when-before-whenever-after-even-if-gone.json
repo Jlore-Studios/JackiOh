@@ -1,7 +1,7 @@
 {
   "title": "Three attack timings: When before, Whenever after even if gone, After only if still there",
   "sources": "Issue #2396, follows #2285",
-  "notes": "The owner's ruling (#2396), replacing part of #2285's reading: a card's own attack and kill triggers have three timings. \"When this attacks\" resolves before any damage of the attack (R2285000); \"Whenever this attacks\" and \"Whenever this destroys a Unit\" after the attack or the kill, once its combat's state check has run, whether or not the card is still on the field, once (R2396000); \"After\" only for a card still on the field (R2285001, R1245). Prem Panther draws when it trades, Boots on the Ground moves to \"When\", and CN Golem shuffles its CN-Virus though it dies in the combat that killed; Badger, Honey Badger, Windfurious Prime and Nature Titan now print \"When\", and Bot Loser and Training Grounds' Ravager \"After\", playing as before. The plays are the families classify's second stage finds against main's build, and the rule its divergences that touch no card.",
+  "notes": "The owner's ruling (#2396), replacing part of #2285's reading: a card's own attack and kill triggers have three timings. \"When this attacks\" resolves before any damage of the attack (R2285000); \"Whenever this attacks\" and \"Whenever this destroys a Unit\" after the attack or the kill, once its combat's state check has run, whether or not the card is still on the field, once (R2396000); \"After\" only for a card still on the field (R2285001, R1245). Prem Panther draws when it trades, Boots on the Ground moves to \"When\", and CN Golem shuffles its CN-Virus though it dies in the combat that killed; Badger, Honey Badger, Windfurious Prime and Nature Titan now print \"When\", and Bot Loser and Training Grounds' Ravager \"After\", playing as before. The plays are the families classify's second stage finds against main's build; its divergences that touch no card are too few to be a rule (R2455000).",
   "player": {
     "title": "When, Whenever and After this attacks",
     "new": [],
@@ -35,15 +35,16 @@
     "classicplus-049",
     "classicplus-076",
     "core-068",
+    "core-t-rush",
     "meditative-064",
     "meditative-071",
     "meditative-095-1",
     "stinkyscape-061",
+    "stinkyscape-068",
     "stinkyscape-074",
     "stinkyscape-085",
     "stinkyscape-099",
     "traininggrounds-028",
     "traininggrounds-054"
-  ],
-  "rule": true
+  ]
 }

@@ -45,8 +45,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the scripts v0.5.10b and before ran: "After this attacks", only for a survivor (R2285001).
-pub fn script_v0_5_10b() -> CardScripts {
+/// R767000: the scripts v0.5.10c and before ran: "After this attacks", only for a survivor (R2285001).
+pub fn script_v0_5_10c() -> CardScripts {
     let base = Script {
         after_attack: Some(draws()),
         ..Script::default()
@@ -418,13 +418,13 @@ mod tests {
         }
     }
 
-    // R767000: a game on v0.5.10b folds under the script it ran, "After this attacks" for a survivor.
-    mod v0_5_10b {
+    // R767000: a game on v0.5.10c folds under the script it ran, "After this attacks" for a survivor.
+    mod v0_5_10c {
         use super::*;
 
         #[test]
-        fn r767000_a_game_on_v0_5_10b_that_dies_draws_nothing() {
-            crate::under_kept(BOOTS, super::super::script_v0_5_10b(), || {
+        fn r767000_a_game_on_v0_5_10c_that_dies_draws_nothing() {
+            crate::under_kept(BOOTS, super::super::script_v0_5_10c(), || {
                 let mut s = scenario(json!({
                     "p1": { "hand": [ANCHOR], "field": [BOOTS], "library": [A, B] },
                     "p2": { "hand": [ANCHOR], "field": [MENACE] },

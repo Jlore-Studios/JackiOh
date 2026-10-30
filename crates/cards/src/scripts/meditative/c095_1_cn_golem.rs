@@ -20,7 +20,7 @@ pub const ID: &str = "meditative-095-1";
 const CN_VIRUS: &str = "core-090-1";
 
 /// "Whenever this destroys a Unit, shuffle {viruses} CN-Virus into your opponent's deck." `gone`: it
-/// answers the kill even once it has left the field (R2396000); the v0.5.10b script's did not (R1245).
+/// answers the kill even once it has left the field (R2396000); the v0.5.10c script's did not (R1245).
 fn on_kill(radiant: bool, gone: bool) -> TriggerDef {
     let trigger = TriggerDef::new("cn-golem-kill", &[GameEventType::Destroyed], move |ctx, event| {
         let killed_by_me = match (event, ctx.self_.as_ref()) {
@@ -63,9 +63,9 @@ pub fn script() -> CardScripts {
     scripts(true)
 }
 
-/// R767000: the scripts v0.5.10b and before ran: the kill answered only while the Golem still stood on
+/// R767000: the scripts v0.5.10c and before ran: the kill answered only while the Golem still stood on
 /// the field as it was dispatched (R1245).
-pub fn script_v0_5_10b() -> CardScripts {
+pub fn script_v0_5_10c() -> CardScripts {
     scripts(false)
 }
 
@@ -336,14 +336,14 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.10b and before, which answered a kill only
+        /// R767000: the script kept for the replays of v0.5.10c and before, which answered a kill only
         /// while the Golem still stood on the field (R1245).
-        mod v0_5_10b {
+        mod v0_5_10c {
             use super::*;
 
             #[test]
             fn r767000_a_dying_golem_shuffles_nothing() {
-                crate::under_kept(ID, super::super::super::script_v0_5_10b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_5_10c(), || {
                     let mut s = game(json!({ "damage": 9 }), json!([{ "def": VANILLA, "lane": 3 }]), 4);
                     let golem = golem_id(&s);
                     attack_lane(&mut s, &golem, 3);

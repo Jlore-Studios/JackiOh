@@ -79,6 +79,7 @@
 //!   cargo jackioh fuzz --seeds 200 --handicap --json   the handicapped wave as one JSON object
 //!   cargo jackioh fuzz --from <seed> --seeds 1      one seed a report named (`--handicap` too, for a handicapped one)
 //!   cargo jackioh fuzz --regress                    the regression corpus
+//!   cargo jackioh fuzz --seeds 200 --cards <ids|set>   the named cards in both decks of every seed (#2387)
 //!
 //! # The regression corpus (#1197)
 //!
@@ -131,6 +132,18 @@
 //! `--json` count the seeds that took it. The corpus replays without it, and the shipped §10.7
 //! policy (`AI_SKIPPED_ACTIONS`) is unchanged.
 //!
+//! # Forced cards (#2387)
+//!
+//! A seed deals 50 of about 630 cards, so a plain wave deals any one card in fewer than one seed in
+//! ten. `--cards` deals the named cards into both decks of every seed of the gate's wave and of the
+//! handicapped wave, so a card's own run exercises it. The forcing goes through `golden.rs`: each
+//! forced card takes a first slot in place of a card from the end, the deck keeps its size and holds
+//! no card twice, R2195000 holds (a token goes in through the card whose `refs` name it, R279), and
+//! an unknown id is refused with a message naming it. One set's name forces a slice of
+//! `FORCED_SET_CARDS_PER_SEED` of its cards a seed, in turn, until every one has been dealt. The
+//! streams are untouched, so a wave without `--cards` is the same wave it always played. The summary,
+//! `--json` and each failure name the forced cards, and a failure's `reproduce:` line replays its seed.
+//!
 //! # Pool coverage (#2426)
 //!
 //! A card dealt into many decks may never have its rules run, when the policy never plays it. Each
@@ -160,7 +173,7 @@ use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardDef, CardInstance, CardType,
     CreateGameOptions, DECK_SIZE, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState,
     EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS,
-    PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game,
+    PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, SetName, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game,
     create_game, create_recorded_game, find_instance, fold, has_standing_draw_offer, hash_state,
     legal_actions, made_by_a_rule, mulligan_owed, opponent_of, reduce, seat_to_act, subsystems,
     validate_deck,
@@ -171,8 +184,10 @@ use serde_json::{Value, json};
 
 use crate::agent::panic_message;
 use crate::gate::MS_PER_SECOND;
+use crate::golden::{force_into, resolve_force};
 
-/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos | --regress]` (SURFACE §12).
+/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos | --regress] [--cards ids|set]`
+/// (SURFACE §12).
 #[derive(clap::Args, Debug)]
 pub struct Args {
     /// The first seed of the wave (TS `JACKIOH_FUZZ_FROM`): 1 for the gate. `--from 700 --seeds 1`
@@ -191,6 +206,12 @@ pub struct Args {
     /// unless `--seeds` says otherwise.
     #[arg(long)]
     pub duos: bool,
+    /// Deal these into both decks of every seed of the gate's or the handicapped wave (#2387): card ids,
+    /// each forced as `golden record --force` forces it (a token through the card whose `refs` name it),
+    /// or one set's name as the catalog spells it ("Stinkyscape", "Training Grounds"), whose cards go in
+    /// FORCED_SET_CARDS_PER_SEED a seed, in turn.
+    #[arg(long, value_name = "IDS|SET", value_delimiter = ',', conflicts_with_all = ["duos", "regress"])]
+    pub cards: Vec<String>,
     /// Replay the regression corpus (`crates/tools/fuzz-corpus/`, #1197) instead of a wave: each kept
     /// failure's pinned decks, never a deal from the live pool.
     #[arg(long, conflicts_with_all = ["from", "seeds", "handicap", "duos"])]
@@ -213,10 +234,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         return crate::duos_fuzz::run(from, args.seeds, args.json);
     }
     let ran = wave_size(args.seeds);
+    let forcing = Forcing::from_cards(&args.cards)?;
     let wave = if args.handicap {
-        play_handicap_wave(from, ran)
+        play_handicap_wave(from, ran, &forcing)
     } else {
-        play_wave(from, ran)
+        play_wave(from, ran, &forcing)
     };
     if args.json {
         println!("{}", serde_json::to_string_pretty(&wave.json())?);
@@ -426,6 +448,135 @@ pub(crate) fn deal_deck(shuffled: &mut impl Iterator<Item = String>, size: usize
         }
     }
     deck
+}
+
+// ---------------------------------------------------------------------------------------------
+// Forced cards (#2387)
+// ---------------------------------------------------------------------------------------------
+
+/// How many of a set's cards `--cards <set>` forces into one seed's decks (#2387): every set holds more
+/// cards than a deck, so seed k takes the k-th slice of this many in `FUZZ_POOL`'s order, wrapping round.
+pub const FORCED_SET_CARDS_PER_SEED: usize = 10;
+
+/// What `--cards` deals into both decks of every seed (#2387); the default forces nothing.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Forcing {
+    /// What `--cards` named, as given.
+    named: Vec<String>,
+    /// The ids with each token resolved to its carrier (`golden::resolve_force`), or the set's cards of `FUZZ_POOL`.
+    cards: Vec<String>,
+    /// How many of `cards` one seed forces: all of an id list, `FORCED_SET_CARDS_PER_SEED` of a set's.
+    per_seed: usize,
+}
+
+impl Forcing {
+    /// What `--cards named` forces, or the default when it named nothing.
+    pub(crate) fn from_cards(named: &[String]) -> anyhow::Result<Forcing> {
+        if named.is_empty() {
+            return Ok(Forcing::default());
+        }
+        // R1420: the fuzz deals every set, so the forcing resolves under the same preview.
+        let _preview = preview_every_set();
+        if let Some(set) = SetName::ALL
+            .iter()
+            .copied()
+            .find(|known| named.iter().any(|entry| entry == known.as_str()))
+        {
+            if named.len() > 1 {
+                bail!(
+                    "--cards takes card ids or one set's name, not {}",
+                    named.join(",")
+                );
+            }
+            let cards: Vec<String> = FUZZ_POOL
+                .iter()
+                .filter(|id| CATALOG.get(id.as_str()).is_some_and(|def| def.set == set))
+                .cloned()
+                .collect();
+            if cards.is_empty() {
+                bail!("--cards {}: the set holds no card a deck may hold", set.as_str());
+            }
+            let per_seed = FORCED_SET_CARDS_PER_SEED.min(cards.len());
+            return Ok(Forcing {
+                named: named.to_vec(),
+                cards,
+                per_seed,
+            });
+        }
+        let cards = resolve_force(named).context("--cards")?;
+        if cards.len() > usize::try_from(DECK_SIZE).unwrap_or(0) {
+            bail!("--cards: {} cards do not fit a deck of {DECK_SIZE}", cards.len());
+        }
+        Ok(Forcing {
+            named: named.to_vec(),
+            cards: cards.clone(),
+            per_seed: cards.len(),
+        })
+    }
+
+    /// The cards seed `seed` forces: the whole list, or the seed's slice of a set's, in turn.
+    pub(crate) fn for_seed(&self, seed: u32) -> Vec<String> {
+        let count = self.cards.len();
+        if self.per_seed >= count {
+            return self.cards.clone();
+        }
+        let turn = usize::try_from(seed.saturating_sub(1)).unwrap_or(0) % count;
+        let first = (turn * self.per_seed) % count;
+        (first..first + self.per_seed)
+            .map(|at| self.cards[at % count].clone())
+            .collect()
+    }
+
+    /// `decks` with this seed's forced cards in both: untouched when nothing is forced, so a wave
+    /// without `--cards` plays the games it always played.
+    pub(crate) fn deal(&self, seed: u32, decks: (Vec<String>, Vec<String>)) -> (Vec<String>, Vec<String>) {
+        let forced = self.for_seed(seed);
+        if forced.is_empty() {
+            return decks;
+        }
+        (force_into(&decks.0, &forced), force_into(&decks.1, &forced))
+    }
+
+    /// `play` over this seed's forced decks, naming them on the failure.
+    fn play(
+        &self,
+        seed: u32,
+        decks: (Vec<String>, Vec<String>),
+        play: impl FnOnce((Vec<String>, Vec<String>)) -> Result<Passed, Failure>,
+    ) -> Result<Passed, Failure> {
+        play(self.deal(seed, decks)).map_err(|failure| Failure {
+            forced: self.for_seed(seed),
+            ..failure
+        })
+    }
+
+    /// The summary's line naming what `--cards` forced, or `None` when it forced nothing.
+    fn summary_line(&self) -> Option<String> {
+        if self.cards.is_empty() {
+            return None;
+        }
+        let named = self.named.join(",");
+        if self.per_seed < self.cards.len() {
+            Some(format!(
+                "  forced (--cards {named}): {} of its {} cards into both decks of each seed, in turn\n",
+                self.per_seed,
+                self.cards.len()
+            ))
+        } else {
+            Some(format!(
+                "  forced (--cards {named}): {} into both decks of every seed\n",
+                self.cards.join(", ")
+            ))
+        }
+    }
+
+    /// `--json`'s `forced`: `null` when `--cards` forced nothing.
+    fn json(&self) -> Value {
+        if self.cards.is_empty() {
+            return Value::Null;
+        }
+        json!({ "named": self.named, "cards": self.cards, "perSeed": self.per_seed })
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1811,8 +1962,11 @@ struct Failure {
     signature: String,
     message: String,
     /// The two decks the seed was dealt, p1's then p2's: a handicapped seat's is longer than
-    /// `DECK_SIZE`, so the report cannot split one flat list.
-    decks: (Vec<String>, Vec<String>),
+    /// `DECK_SIZE`, so the report cannot split one flat list. Boxed: `Failure` rides in every
+    /// `Result<Passed, Failure>`, so it stays under clippy's `result_large_err` threshold.
+    decks: Box<(Vec<String>, Vec<String>)>,
+    /// The cards `--cards` forced into both decks of this seed (#2387); empty without it.
+    forced: Vec<String>,
     turn: i64,
     actions: i64,
 }
@@ -2113,6 +2267,15 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
             first.seed, first.turn, first.actions
         ));
         lines.push(format!("  start: {}", first.start.as_str()));
+        if !first.forced.is_empty() {
+            lines.push(format!("  forced: {}", first.forced.join(", ")));
+            lines.push(format!(
+                "  reproduce: cargo jackioh fuzz --from {} --seeds 1{} --cards {}",
+                first.seed,
+                if handicapped { " --handicap" } else { "" },
+                first.forced.join(",")
+            ));
+        }
         lines.push(format!("  message: {}", first.message));
         let shown: Vec<String> = seeds.iter().take(40).cloned().collect();
         let more = if seeds.len() > 40 {
@@ -2171,9 +2334,13 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
     ));
     lines.push(format!("  {}", all_cards.join(", ")));
     lines.push(String::new());
+    let forced = failures
+        .iter()
+        .find_map(|failure| (!failure.forced.is_empty()).then(|| failure.forced.join(",")));
     lines.push(format!(
-        "Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1{}",
-        if handicapped { " --handicap" } else { "" }
+        "Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1{}{}",
+        if handicapped { " --handicap" } else { "" },
+        forced.map_or_else(String::new, |cards| format!(" --cards {cards}"))
     ));
     lines.join("\n")
 }
@@ -2298,8 +2465,8 @@ struct Passed {
 
 /// One seed through the four assertions: never panic, always terminate by hero death or the R2 cap,
 /// and fold `(seed, log)` to the same hash; a failure names every card in this seed's decks.
-fn fuzz_seed(seed: u32) -> Result<Passed, Failure> {
-    fuzz_deal(seed, decks_for_seed(seed))
+fn fuzz_seed(seed: u32, forcing: &Forcing) -> Result<Passed, Failure> {
+    forcing.play(seed, decks_for_seed(seed), |decks| fuzz_deal(seed, decks))
 }
 
 /// One game through the four assertions: `seed` names the game's and the policy's streams, `decks` the
@@ -2315,9 +2482,11 @@ fn fuzz_deal_probed(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer
 
 /// One seed of the handicapped wave through the same checks as the gate's: its rotation's tier and
 /// seat (`handicap_for_seed`), its decks (`handicap_decks_for_seed`), its own streams.
-fn fuzz_handicap_seed(seed: u32) -> Result<Passed, Failure> {
+fn fuzz_handicap_seed(seed: u32, forcing: &Forcing) -> Result<Passed, Failure> {
     let SeedHandicap { seat, handicap, .. } = handicap_for_seed(seed);
-    fuzz_handicap_deal(seed, handicap_decks_for_seed(seed, seat, &handicap), reduce)
+    forcing.play(seed, handicap_decks_for_seed(seed, seat, &handicap), |decks| {
+        fuzz_handicap_deal(seed, decks, reduce)
+    })
 }
 
 /// `decks` played as `seed`'s handicapped game, the probes' forged actions going through `probe`.
@@ -2395,7 +2564,8 @@ fn run_seed(setup: &GameSetup, decks: (Vec<String>, Vec<String>), probe: Reducer
         stage,
         signature: signature_of(stage, &message),
         message,
-        decks,
+        decks: Box::new(decks),
+        forced: Vec::new(),
         turn,
         actions,
     })
@@ -2425,22 +2595,30 @@ struct Wave {
     starts: IndexMap<&'static str, usize>,
     /// How many seeds, passed or failed, took the endings channel (#1572).
     endings: usize,
+    /// What `--cards` forced (#2387).
+    forcing: Forcing,
     /// Which cards the passing games dealt and played (#2426): a failed seed adds nothing.
     coverage: Coverage,
 }
 
 /// Plays the gate's seeds `from..from + ran`, in parallel, and gathers them back in seed order.
-fn play_wave(from: u32, ran: u32) -> Wave {
-    play_seeds(false, from, ran, fuzz_seed)
+fn play_wave(from: u32, ran: u32, forcing: &Forcing) -> Wave {
+    play_seeds(false, from, ran, forcing, |seed| fuzz_seed(seed, forcing))
 }
 
 /// Plays the handicapped wave's seeds `from..from + ran` the same way.
-fn play_handicap_wave(from: u32, ran: u32) -> Wave {
-    play_seeds(true, from, ran, fuzz_handicap_seed)
+fn play_handicap_wave(from: u32, ran: u32, forcing: &Forcing) -> Wave {
+    play_seeds(true, from, ran, forcing, |seed| fuzz_handicap_seed(seed, forcing))
 }
 
 /// `seed` over `from..from + ran`, in parallel, gathered back in seed order into one wave's numbers.
-fn play_seeds(handicapped: bool, from: u32, ran: u32, seed: fn(u32) -> Result<Passed, Failure>) -> Wave {
+fn play_seeds(
+    handicapped: bool,
+    from: u32,
+    ran: u32,
+    forcing: &Forcing,
+    seed: impl Fn(u32) -> Result<Passed, Failure> + Sync + Send,
+) -> Wave {
     record_panic_locations();
     register_all();
     let started_at = Instant::now();
@@ -2468,6 +2646,7 @@ fn play_seeds(handicapped: bool, from: u32, ran: u32, seed: fn(u32) -> Result<Pa
         checkpoint_max_ms: 0,
         starts: IndexMap::new(),
         endings: (from..from + ran).filter(|seed| setup_of(*seed).endings).count(),
+        forcing: forcing.clone(),
         coverage: Coverage::default(),
     };
     for result in results {
@@ -2575,14 +2754,17 @@ impl Wave {
             .join(" ");
         text.push_str(&format!("  starts: {starts}\n"));
         text.push_str(&format!("  endings channel: {} seed(s)\n", self.endings));
+        if let Some(line) = self.forcing.summary_line() {
+            text.push_str(&line);
+        }
         text.push_str(&self.coverage.line());
         text.push_str(&heaviest_lines(&self.heaviest));
         text
     }
 
     /// `--json`: the wave's failures (the handicapped wave's with their tier and seat, `null` in the
-    /// gate's), each seed's start counted (#1503), the pool coverage (#2426), each measure's heaviest
-    /// actions and the growth bounds (#1254).
+    /// gate's), each seed's start counted (#1503), the forced cards (#2387), the pool coverage
+    /// (#2426), each measure's heaviest actions and the growth bounds (#1254).
     fn json(&self) -> Value {
         json!({
             "from": self.from,
@@ -2597,10 +2779,12 @@ impl Wave {
                 "turn": failure.turn,
                 "step": failure.actions,
                 "message": failure.message,
+                "forced": failure.forced,
             })).collect::<Vec<_>>(),
             "heaviest": self.heaviest,
             "starts": self.start_counts().collect::<IndexMap<_, _>>(),
             "endingsChannel": self.endings,
+            "forced": self.forcing.json(),
             "coverage": self.coverage.json(),
             "bounds": MEASURES
                 .into_iter()
@@ -3012,7 +3196,12 @@ pub(crate) mod tests {
                 let (p1, p2) = decks_for_seed(*seed);
                 p1.iter().chain(p2.iter()).any(held)
             }) {
-                assert_eq!(fuzz_seed(seed).err().map(|failure| failure.message), None);
+                assert_eq!(
+                    fuzz_seed(seed, &Forcing::default())
+                        .err()
+                        .map(|failure| failure.message),
+                    None
+                );
             }
             // A fixture held card, dealt first into both decks, so the path runs whatever ships.
             let held_set = jackioh_engine::wire::CATALOG_SETS
@@ -3087,6 +3276,7 @@ pub(crate) mod tests {
                 checkpoint_max_ms: 0,
                 starts: IndexMap::new(),
                 endings: 0,
+                forcing: Forcing::default(),
                 coverage: Coverage::default(),
             };
             assert!(wave(2500).summary().starts_with("[M4 fuzz] FULL GATE\n"));
@@ -3112,6 +3302,7 @@ pub(crate) mod tests {
                 checkpoint_max_ms: 0,
                 starts: IndexMap::new(),
                 endings: 0,
+                forcing: Forcing::default(),
                 coverage: Coverage::default(),
             };
             assert!(
@@ -3130,7 +3321,7 @@ pub(crate) mod tests {
         #[test]
         fn plays_the_seeded_games_to_a_result_and_replays_each_to_the_same_hash_short_wave() {
             let ran = wave_size(None);
-            let wave = play_wave(first_seed(None), ran);
+            let wave = play_wave(first_seed(None), ran, &Forcing::default());
             print!("{}", wave.summary());
             let detail = if wave.failures.is_empty() {
                 String::new()
@@ -3494,7 +3685,7 @@ pub(crate) mod tests {
                 failure.message
             );
             let decks = planted_handicap_decks(failure.seed);
-            assert_eq!(failure.decks, decks);
+            assert_eq!(&*failure.decks, &decks);
             let text = report(std::slice::from_ref(&failure), 1, 0.0);
             assert!(text.contains("[growth]"), "{text}");
             assert!(
@@ -3601,6 +3792,7 @@ pub(crate) mod tests {
                 checkpoint_max_ms: 0,
                 starts: IndexMap::new(),
                 endings: 0,
+                forcing: Forcing::default(),
                 coverage: Coverage::default(),
             };
             let summary = wave.summary();
@@ -3787,7 +3979,7 @@ pub(crate) mod tests {
             assert_eq!(failure.stage, FailureStage::Probe, "{}", failure.message);
             assert_eq!((tier, seat), (Difficulty::Hard, PlayerId::P1));
             assert_eq!(failure.rotation, Some((tier, seat)));
-            assert_eq!(failure.decks, decks);
+            assert_eq!(&*failure.decks, &decks);
             assert!(failure.decks.0.len() > failure.decks.1.len());
             assert_eq!(
                 failure.signature,
@@ -3916,7 +4108,8 @@ pub(crate) mod tests {
             let replay = || replay_record(&record).unwrap_or_else(|failure| panic!("{}", failure.message));
             let first = replay();
             assert_eq!(first.hash, replay().hash);
-            let live = fuzz_seed(1).unwrap_or_else(|failure| panic!("{}", failure.message));
+            let live =
+                fuzz_seed(1, &Forcing::default()).unwrap_or_else(|failure| panic!("{}", failure.message));
             assert_ne!(first.hash, live.hash);
         }
 
@@ -4061,7 +4254,7 @@ pub(crate) mod tests {
         fn r180_seeds_with_one_seat_on_medium_or_hard_no_throw_a_real_ending_and_a_replay_that_matches() {
             let from = first_seed(None);
             let size = wave_size(None);
-            let wave = play_handicap_wave(from, size);
+            let wave = play_handicap_wave(from, size, &Forcing::default());
             print!("{}", wave.summary());
             let detail = if wave.failures.is_empty() {
                 String::new()
@@ -4128,7 +4321,7 @@ pub(crate) mod tests {
 
         #[test]
         fn a_handicapped_wave_prints_as_one_json_object_with_each_failure_s_tier_and_seat() {
-            let wave = play_handicap_wave(1, 2);
+            let wave = play_handicap_wave(1, 2, &Forcing::default());
             let json = wave.json();
             assert_eq!(json["from"], json!(1));
             assert_eq!(json["ran"], json!(2));
@@ -4148,8 +4341,9 @@ pub(crate) mod tests {
                 start: StartKind::Plain,
                 stage: FailureStage::Growth,
                 signature: String::new(),
-                message: "step 3 grew".to_string(),
-                decks: (Vec::new(), Vec::new()),
+                message: "step 3 grew".into(),
+                decks: Box::new((Vec::new(), Vec::new())),
+                forced: Vec::new(),
                 turn: 4,
                 actions: 3,
             };
@@ -4174,7 +4368,7 @@ pub(crate) mod tests {
         #[test]
         fn r679_seed_4679_whose_glitch_voids_the_match_passes() {
             // The daily run's handicapped seed that a Glitch voided at 96b68c9 (#1055).
-            if let Err(failure) = fuzz_handicap_seed(4679) {
+            if let Err(failure) = fuzz_handicap_seed(4679, &Forcing::default()) {
                 panic!("[{}] {}", failure.stage.as_str(), failure.message);
             }
         }
@@ -4378,7 +4572,7 @@ pub(crate) mod tests {
         fn a_seed_played_alone_starts_from_the_start_it_draws_in_its_wave() {
             for start in DRAWN_STARTS {
                 let seed = first_seed_drawing(start);
-                let wave = play_wave(seed, 1);
+                let wave = play_wave(seed, 1, &Forcing::default());
                 assert!(wave.failures.is_empty(), "{}", report(&wave.failures, 1, 0.0));
                 let counts: Vec<(&str, usize)> = wave.start_counts().collect();
                 let expected: Vec<(&str, usize)> = START_KINDS
@@ -4404,8 +4598,9 @@ pub(crate) mod tests {
                 start: StartKind::GlitchBoards,
                 stage: FailureStage::Replay,
                 signature: String::new(),
-                message: "it broke".to_string(),
-                decks: (Vec::new(), Vec::new()),
+                message: "it broke".into(),
+                decks: Box::new((Vec::new(), Vec::new())),
+                forced: Vec::new(),
                 turn: 2,
                 actions: 1,
             };
@@ -4427,6 +4622,7 @@ pub(crate) mod tests {
                 checkpoint_max_ms: 0,
                 starts: IndexMap::from([("glitch-boards", 1)]),
                 endings: 0,
+                forcing: Forcing::default(),
                 coverage: Coverage::default(),
             };
             let summary = wave.summary();
@@ -4455,7 +4651,8 @@ pub(crate) mod tests {
             };
             let replayed = replay_record(&record).unwrap_or_else(|failure| panic!("{}", failure.message));
             assert_eq!(replayed.start, StartKind::Plain);
-            let drawn = fuzz_seed(seed).unwrap_or_else(|failure| panic!("{}", failure.message));
+            let drawn =
+                fuzz_seed(seed, &Forcing::default()).unwrap_or_else(|failure| panic!("{}", failure.message));
             assert_eq!(drawn.start, StartKind::LastBoards);
             assert_ne!(replayed.hash, drawn.hash);
         }
@@ -4713,7 +4910,7 @@ pub(crate) mod tests {
             let failure = fuzz_deal_probed(seed, decks.clone(), fuzz_probe_stage::seatless)
                 .err()
                 .expect("a reducer that breaks the wrong-seat probe must fail the seed");
-            assert_eq!((failure.seed, &failure.decks), (seed, &decks));
+            assert_eq!((failure.seed, &*failure.decks), (seed, &decks));
             let text = report(std::slice::from_ref(&failure), 1, 0.0);
             assert!(text.contains(&format!("example: seed {seed} (")), "{text}");
             assert!(
@@ -4725,11 +4922,225 @@ pub(crate) mod tests {
                 "{text}"
             );
 
-            let wave = play_wave(seed, 1);
+            let wave = play_wave(seed, 1, &Forcing::default());
             assert_eq!(wave.endings, 1);
             let summary = wave.summary();
             assert!(summary.contains("\n  endings channel: 1 seed(s)\n"), "{summary}");
             assert_eq!(wave.json()["endingsChannel"], json!(1));
+        }
+    }
+
+    mod fuzz_forced_cards {
+        use super::fuzz_probe_stage::seatless;
+        use super::*;
+
+        /// The seeds CI's `cargo jackioh fuzz --seeds 200` plays.
+        const CI_SEEDS: u32 = 200;
+
+        fn forcing_of(named: &[&str]) -> anyhow::Result<Forcing> {
+            register_all();
+            Forcing::from_cards(&named.iter().map(|id| id.to_string()).collect::<Vec<_>>())
+        }
+
+        /// The deck holds every forced id at `size` cards, and passes the checks a dealt deck does:
+        /// the size, no id twice and never both of an R2195000 pair (`validate_deck`).
+        fn assert_forced(deck: &[String], forced: &[String], size: usize) {
+            assert_eq!(deck.len(), size, "{deck:?}");
+            for id in forced {
+                assert!(deck.contains(id), "{id} is not in {deck:?}");
+            }
+            if let Err(error) = validate_deck(deck, &CATALOG, "p1", i32::try_from(size).unwrap_or(0)) {
+                panic!("{error:?}");
+            }
+        }
+
+        #[test]
+        fn every_seed_s_two_decks_hold_the_forced_cards_keep_their_size_and_hold_no_card_twice() {
+            register_all();
+            let _preview = preview_every_set();
+            let forcing = forcing_of(&["core-090", "traininggrounds-041"]).unwrap();
+            let size = usize::try_from(DECK_SIZE).unwrap_or(0);
+            let mut pair_ran = false;
+            for seed in 1..=CI_SEEDS {
+                let forced = forcing.for_seed(seed);
+                assert_eq!(
+                    forced,
+                    ["core-090", "traininggrounds-041"]
+                        .into_iter()
+                        .map(str::to_string)
+                        .collect::<Vec<_>>()
+                );
+                let (p1, p2) = forcing.deal(seed, decks_for_seed(seed));
+                assert_forced(&p1, &forced, size);
+                assert_forced(&p2, &forced, size);
+                let SeedHandicap { seat, handicap, .. } = handicap_for_seed(seed);
+                let (h1, h2) = handicap_decks_for_seed(seed, seat, &handicap);
+                let (n1, n2) = (h1.len(), h2.len());
+                let (f1, f2) = forcing.deal(seed, (h1, h2));
+                assert_forced(&f1, &forced, n1);
+                assert_forced(&f2, &forced, n2);
+                let (plain1, plain2) = decks_for_seed(seed);
+                pair_ran = pair_ran
+                    || plain1.contains(&"core-002".to_string())
+                    || plain2.contains(&"core-002".to_string());
+            }
+            assert!(
+                pair_ran,
+                "no seed's plain deal held core-002, so the pair path never ran"
+            );
+        }
+
+        #[test]
+        fn a_set_s_cards_are_forced_a_slice_a_seed_until_every_one_has_been() {
+            register_all();
+            let _preview = preview_every_set();
+            let forcing = forcing_of(&["Training Grounds"]).unwrap();
+            let cards: Vec<String> = FUZZ_POOL
+                .iter()
+                .filter(|id| {
+                    CATALOG
+                        .get(id.as_str())
+                        .is_some_and(|def| def.set == SetName::TrainingGrounds)
+                })
+                .cloned()
+                .collect();
+            assert_eq!(forcing.cards, cards);
+            assert_eq!(forcing.per_seed, FORCED_SET_CARDS_PER_SEED);
+            let size = usize::try_from(DECK_SIZE).unwrap_or(0);
+            let slices = cards.len().div_ceil(forcing.per_seed);
+            let mut seen: Vec<String> = Vec::new();
+            for seed in 1..=slices as u32 {
+                let forced = forcing.for_seed(seed);
+                assert_eq!(forced.len(), forcing.per_seed);
+                assert_eq!(forced.iter().collect::<IndexSet<_>>().len(), forced.len());
+                let (p1, p2) = forcing.deal(seed, decks_for_seed(seed));
+                assert_forced(&p1, &forced, size);
+                assert_forced(&p2, &forced, size);
+                seen.extend(forced);
+            }
+            seen.sort();
+            seen.dedup();
+            let mut all = cards.clone();
+            all.sort();
+            assert_eq!(seen, all);
+        }
+
+        #[test]
+        fn a_token_is_forced_through_its_referrer_and_an_unknown_id_is_refused_with_a_message() {
+            register_all();
+            let _preview = preview_every_set();
+            let forcing = forcing_of(&["core-t-felinor"]).unwrap();
+            assert_eq!(forcing.cards, ["classic-032".to_string()]);
+            let (p1, p2) = forcing.deal(1, decks_for_seed(1));
+            for deck in [&p1, &p2] {
+                assert!(deck.contains(&"classic-032".to_string()), "{deck:?}");
+                assert!(!deck.contains(&"core-t-felinor".to_string()), "{deck:?}");
+            }
+            let err = format!("{:#}", forcing_of(&["no-such-card"]).unwrap_err());
+            assert!(err.starts_with("--cards"), "{err}");
+            assert!(err.contains("no-such-card: not in the catalog"), "{err}");
+            // `{:#}` prints the whole context chain; `Display` shows only `--cards`.
+            let pair = format!(
+                "{:#}",
+                forcing_of(&["core-002", "traininggrounds-041"]).unwrap_err()
+            );
+            assert!(pair.contains("R2195000"), "{pair}");
+            let set = format!("{:#}", forcing_of(&["Stinkyscape", "core-090"]).unwrap_err());
+            assert!(set.contains("one set's name"), "{set}");
+        }
+
+        #[test]
+        fn a_forced_failure_names_its_cards_and_its_reproduce_line_replays_it() {
+            register_all();
+            let _preview = preview_every_set();
+            for named in [&["core-t-felinor"][..], &["Training Grounds"][..]] {
+                let forcing = forcing_of(named).unwrap();
+                let (seed, failure) = (2..=SWEEP_SEEDS)
+                    .find_map(|seed| {
+                        forcing
+                            .play(seed, decks_for_seed(seed), |decks| {
+                                fuzz_deal_probed(seed, decks, seatless)
+                            })
+                            .err()
+                            .map(|failure| (seed, failure))
+                    })
+                    .expect("a forced seed must fail under the seatless probe reducer");
+                assert_eq!(failure.forced, forcing.for_seed(seed));
+                let text = report(std::slice::from_ref(&failure), 1, 0.0);
+                assert!(
+                    text.contains(&format!("  forced: {}", failure.forced.join(", "))),
+                    "{text}"
+                );
+                assert!(
+                    text.contains(&format!(
+                        "  reproduce: cargo jackioh fuzz --from {seed} --seeds 1 --cards {}",
+                        failure.forced.join(",")
+                    )),
+                    "{text}"
+                );
+                assert!(
+                    text.contains(&format!(
+                        "Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1 --cards {}",
+                        failure.forced.join(",")
+                    )),
+                    "{text}"
+                );
+                let rotated = Failure {
+                    rotation: Some(handicap_for_seed(seed).who()),
+                    ..failure.clone()
+                };
+                let rotated_text = report(std::slice::from_ref(&rotated), 1, 0.0);
+                assert!(
+                    rotated_text.contains(&format!(
+                        "  reproduce: cargo jackioh fuzz --from {seed} --seeds 1 --handicap --cards {}",
+                        failure.forced.join(",")
+                    )),
+                    "{rotated_text}"
+                );
+                // The `reproduce:` line's `--cards` fails the same seed the same way.
+                let replay = Forcing::from_cards(&failure.forced).unwrap();
+                let again = replay
+                    .play(seed, decks_for_seed(seed), |decks| {
+                        fuzz_deal_probed(seed, decks, seatless)
+                    })
+                    .err()
+                    .expect("the reproduce line's --cards must fail the same seed");
+                assert_eq!(again.decks, failure.decks);
+                assert_eq!(again.message, failure.message);
+                assert_eq!(again.forced, failure.forced);
+            }
+        }
+
+        #[test]
+        fn a_forced_wave_names_its_cards_in_the_summary_and_json_and_no_cards_deals_as_before() {
+            register_all();
+            let _preview = preview_every_set();
+            let wave = play_wave(1, 1, &forcing_of(&["core-t-felinor"]).unwrap());
+            let summary = wave.summary();
+            assert!(
+                summary.contains(
+                    "  forced (--cards core-t-felinor): classic-032 into both decks of every seed\n"
+                ),
+                "{summary}"
+            );
+            assert_eq!(
+                wave.json()["forced"],
+                json!({"named": ["core-t-felinor"], "cards": ["classic-032"], "perSeed": 1})
+            );
+            let plain = Forcing::default();
+            for seed in 1..=CI_SEEDS {
+                assert_eq!(plain.deal(seed, decks_for_seed(seed)), decks_for_seed(seed));
+                let SeedHandicap { seat, handicap, .. } = handicap_for_seed(seed);
+                let dealt = handicap_decks_for_seed(seed, seat, &handicap);
+                assert_eq!(plain.deal(seed, dealt.clone()), dealt);
+            }
+            let wave = play_wave(1, 1, &Forcing::default());
+            assert_eq!(wave.json()["forced"], Value::Null);
+            assert!(
+                !wave.summary().contains("  forced (--cards"),
+                "{}",
+                wave.summary()
+            );
         }
     }
 
@@ -4785,8 +5196,8 @@ pub(crate) mod tests {
         fn the_coverage_is_the_same_on_one_thread_and_on_four() {
             let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
             let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
-            let serial = one.install(|| play_wave(1, THREAD_TEST_SEEDS));
-            let parallel = four.install(|| play_wave(1, THREAD_TEST_SEEDS));
+            let serial = one.install(|| play_wave(1, THREAD_TEST_SEEDS, &Forcing::default()));
+            let parallel = four.install(|| play_wave(1, THREAD_TEST_SEEDS, &Forcing::default()));
             assert!(
                 serial.failures.is_empty(),
                 "{}",

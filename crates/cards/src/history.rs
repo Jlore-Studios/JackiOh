@@ -90,7 +90,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// Dropshipping gave Brittle {brittle}; The Power to Punish's damage did not pierce; Spiritually 中国 did one
 /// of its three at random (R920); Radiant Saintess's Radiant Death radiated the hand; Book of Buff's base
 /// face could take a hand card; Claude's Datacenter added at its controller's end of turn; and KY's Test
-/// asked two-digit sums (R580) from v0.5.2's bank (R2179003). #2396's three ran theirs through v0.5.10b:
+/// asked two-digit sums (R580) from v0.5.2's bank (R2179003). #2396's three ran theirs through v0.5.10c:
 /// Prem Panther drew and Boots on the Ground drew or Recruited only after an attack they survived, and CN
 /// Golem shuffled nothing when it died in the combat that killed (R2396000).
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
@@ -311,15 +311,15 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c042_kys_test::ID, "v0.5.2", c042_kys_test::script_v0_5_2),
     (
         c032_prem_panther::ID,
-        "v0.5.10b",
-        c032_prem_panther::script_v0_5_10b,
+        "v0.5.10c",
+        c032_prem_panther::script_v0_5_10c,
     ),
     (
         c013_boots_on_the_ground::ID,
-        "v0.5.10b",
-        c013_boots_on_the_ground::script_v0_5_10b,
+        "v0.5.10c",
+        c013_boots_on_the_ground::script_v0_5_10c,
     ),
-    (c095_1_cn_golem::ID, "v0.5.10b", c095_1_cn_golem::script_v0_5_10b),
+    (c095_1_cn_golem::ID, "v0.5.10c", c095_1_cn_golem::script_v0_5_10c),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
