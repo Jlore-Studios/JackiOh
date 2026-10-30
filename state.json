@@ -6,12 +6,8 @@
   "dashboard": {
     "issue": 148
   },
-  "halt": {
-    "at": "2026-10-30T14:32:49Z",
-    "by": "squishy-squooby",
-    "reason": "the harness moves to Go (#2473): halted for the merge; start follows it"
-  },
-  "halted": true,
+  "halt": {},
+  "halted": false,
   "handled": {
     "c:6398740340": {
       "at": "2026-10-25T14:15:48Z",
