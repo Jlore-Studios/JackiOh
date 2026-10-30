@@ -1,10 +1,10 @@
 // Lesson 1 data (SPEC §9.10, R291, R2434001); ../lessons.ts defines its fields and ../scripts/basics.ts
 // is the coach. The first steps, and nothing else: the player's deck is mostly vanilla units, copies
-// of Training Grounds' three with no text at all and of its Rush-only Boulder Fist Ogre, with four
-// Cry units; the AI's is twelve Core units whose one ability, if any, is a Cry or Rush. No spell,
-// keyword but Rush, backrow card, Legendary or Mythic, the pool hold on. The copies need the human's
-// handicap to allow them (`deckCopies`, #2433). Deck order fixes this seed's deal
-// (`scripts/lesson-deal.ts basics`): reordering it changes the game, so rerun the lesson's tests.
+// of Training Grounds' three with no text at all and of its Rush-only Boulder Fist Ogre, at most
+// `deckCopies` (4) of each (R2433001), with six Cry units; the AI's is twelve Core units whose one
+// ability, if any, is a Cry or Rush. No spell, keyword but Rush, backrow card, Legendary or Mythic,
+// the pool hold on. Deck order fixes this seed's deal (`scripts/lesson-deal.ts basics`): reordering
+// it changes the game, so rerun the lesson's tests.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -29,10 +29,10 @@ export const lesson: TutorialLesson = {
     "traininggrounds-008", // Clobberer, Common
     "traininggrounds-022", // Right-Hand Felinor, Rare
     "traininggrounds-043", // Mr. Vanilla, Common
-    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-023", // Quadrupling Felinors, Rare
     "traininggrounds-005", // Midlane Menace, Common
     "traininggrounds-008", // Clobberer, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-033", // Guerilla Felinor, Epic
     "traininggrounds-002", // Personal Trainer, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-001", // Spikey Steven, Common
