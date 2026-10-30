@@ -150,7 +150,9 @@ describe("R962000 a sandbox game spawns the custom cards it carries", () => {
     const send = workerOver(memorySaveStore());
     // Re-pinned for R2368000's three-card opening hand: "r962000-web" deals the human nothing to play on
     // turn 1, so R82 ends it and the AI's board is lethal on its own by the human's first main phase.
-    const seed = "r962000-web-1";
+    // Re-pinned again for #2521's card changes, under which "r962000-web-1"'s AI wins by attacking with
+    // the S #48 it summoned the turn before and never needs the card.
+    const seed = "r962000-web-2";
     let last = snapshotOf(await send({ type: "start", config: { ...CONFIG, seed, sandbox: true } }));
     expect(luauModuleInUse()).toBe(true);
 
