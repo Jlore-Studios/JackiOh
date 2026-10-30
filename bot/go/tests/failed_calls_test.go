@@ -24,71 +24,13 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	ts "github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
 
-// ---------------------------------------------------------------------------- from test_work
-
-// failedCallsDone is test_work.DONE.
-const failedCallsDone = "<!-- bot: {\"status\": \"done\", \"title\": \"Make the rules v2\"} -->\n## What changed\nRules v2."
-
-// failedCallsApprove is test_work.APPROVE.
-const failedCallsApprove = "<!-- review: {\"verdict\": \"approve\", \"findings\": []} -->\nLooked hard; fine."
-
-// failedCallsGates is test_work.GATES.
-func failedCallsGates() []any {
-	return []any{pyjson.New("name", "rules exist", "run", "test -f src/game.txt", "timeout_minutes", 1),
-		pyjson.New("name", "no broken file", "run", "test ! -f broken.txt", "timeout_minutes", 1)}
-}
-
-// failedCallsBuilder is test_work.builder(edits): a builder that writes `edits` (name → text) in
-// its worktree and answers DONE.
-func failedCallsBuilder(edits map[string]string) runner.Handler {
-	return func(request *runner.RunRequest) *runner.RunResult {
-		for name, content := range edits {
-			target := filepath.Join(request.Cwd, name)
-			if err := os.MkdirAll(filepath.Dir(target), 0o777); err != nil {
-				panic(err)
-			}
-			if err := os.WriteFile(target, []byte(content), 0o666); err != nil {
-				panic(err)
-			}
-		}
-		result := runner.NewRunResult(true, failedCallsDone)
-		result.Usage = pyjson.New("five_hour", pyjson.New("utilization", 0.3, "resets_at", nil))
-		return result
-	}
-}
-
-// failedCallsReviewer is test_work.reviewer(text).
-func failedCallsReviewer(text string) runner.Handler {
-	return func(request *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, text) }
-}
-
 // ---------------------------------------------------------------------------- from test_cross
-
-// failedCallsAll is test_cross.ALL.
-func failedCallsAll() map[string]string {
-	return map[string]string{"HARNESS_SECRETS_SET": strings.Join(providers.SecretNames, " ")}
-}
-
-// failedCallsTimedBuilder is test_cross.timed_builder(edits, minutes=10.0).
-func failedCallsTimedBuilder(edits map[string]string, minutes float64) runner.Handler {
-	inner := failedCallsBuilder(edits)
-	return func(request *runner.RunRequest) *runner.RunResult {
-		result := inner(request)
-		result.DurationS = minutes * 60
-		return result
-	}
-}
-
-// failedCallsMedium is test_cross.MEDIUM: each medium subscription's model and family.
-var failedCallsMedium = map[string][2]string{"muse": {"muse-spark-1.3-contributor", "muse"},
-	"agy": {"gemini-3.8-flash-high", "gemini"}}
 
 // failedCallsBuildOnMedium is test_cross.ReviewRuleTests.build_on_medium(h) (provider="muse",
 // edits=None): by day the Claude accounts are closed: Muse, first of the medium models (#317 part
@@ -98,8 +40,8 @@ func failedCallsBuildOnMedium(t *testing.T, h *failedCallsHarness) (int, *pyjson
 	provider := "muse"
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
 	fake := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build":  {failedCallsTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}, 10.0)},
-		"review": {failedCallsReviewer(failedCallsApprove)}})
+		"build":  {crossTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}, 10.0)},
+		"review": {workReviewer(workApprove)}})
 	planned, result := h.night(fake, false)
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{provider, "approved"})
 	roles, models := []string{}, map[string]bool{}
@@ -108,7 +50,7 @@ func failedCallsBuildOnMedium(t *testing.T, h *failedCallsHarness) (int, *pyjson
 		models[c.Model] = true
 	}
 	assertEqual(t, roles, []string{"plan", "build", "review"})
-	assertEqual(t, models, map[string]bool{failedCallsMedium[provider][0]: true})
+	assertEqual(t, models, map[string]bool{crossMedium[provider][0]: true})
 	pr := h.gh.ListPulls("open", "bot/issue-12", 200)[0].Int("number")
 	return pr, result
 }
@@ -139,7 +81,7 @@ func newFailedCallsHarness(t *testing.T, env map[string]string, at time.Time, ma
 	h.env = map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
 		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
 	maps.Copy(h.env, env)
-	h.overrides = pyjson.New("gates", failedCallsGates(),
+	h.overrides = pyjson.New("gates", workGates,
 		"install", pyjson.New("run", "true", "timeout_minutes", 1), "max_review_cycles", 2)
 	h.machine, h.at = machine, at
 	h.cfg = ts.MakeConfig(ts.Config{Env: h.env, Machine: machine, Overrides: h.overrides.Copy()})
@@ -211,21 +153,12 @@ func failedCallsFailing(seconds float64, error_ string) runner.Handler {
 	}
 }
 
-// failedCallsRunner is FakeRunner(handlers), one handler a role.
-func failedCallsRunner(handlers map[string]runner.Handler) *runner.FakeRunner {
-	queues := map[string][]runner.Handler{}
-	for role, handler := range handlers {
-		queues[role] = []runner.Handler{handler}
-	}
-	return runner.NewFakeRunner(queues)
-}
-
 // ---------------------------------------------------------------------------- InstantFailureTests
 
 func TestFailedCalls_ACallThatFailsInSecondsBacksTheSubscriptionOffAndSparesTheItem(t *testing.T) {
-	h := newFailedCallsHarness(t, failedCallsAll(), ts.Day, ts.Machine)
+	h := newFailedCallsHarness(t, crossAll, ts.Day, ts.Machine)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	planned, result := h.night(failedCallsRunner(map[string]runner.Handler{"plan": failedCallsFailing(2, "}")}), false)
+	planned, result := h.night(workFake(map[string]runner.Handler{"plan": failedCallsFailing(2, "}")}), false)
 	provider := planned.Str("provider")
 	assertEqual(t, result.Get("status"), "infra")
 	assertIn(t, "CLI failed at once: }", result.Get("reason"))
@@ -241,9 +174,9 @@ func TestFailedCalls_ACallThatFailsInSecondsBacksTheSubscriptionOffAndSparesTheI
 	comments := h.gh.BotComments(12)
 	assertIn(t, "That is not this item's fault", comments[len(comments)-1])
 	// The subscription is left alone: the next run goes elsewhere.
-	planned, _ = h.night(failedCallsRunner(map[string]runner.Handler{
-		"build":  failedCallsBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": failedCallsReviewer(failedCallsApprove)}), false)
+	planned, _ = h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}), false)
 	assertNotEqual(t, planned.Get("provider"), provider)
 }
 
@@ -251,7 +184,7 @@ func TestFailedCalls_ThreeInARowAskAPerson(t *testing.T) {
 	h := newFailedCallsHarness(t, map[string]string{"HARNESS_SECRETS_SET": ""}, ts.Day, []string{"muse"})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	for range 3 {
-		h.night(failedCallsRunner(map[string]runner.Handler{"plan": failedCallsFailing(3, "Error: model unavailable")}),
+		h.night(workFake(map[string]runner.Handler{"plan": failedCallsFailing(3, "Error: model unavailable")}),
 			true)
 	}
 	issues := []*pyjson.Object{}
@@ -283,9 +216,9 @@ func failedCallsPyStr(v any) string {
 }
 
 func TestFailedCalls_ABuilderThatFailsAfterWorkingAWhileButChangedNothingFailsTheRun(t *testing.T) {
-	h := newFailedCallsHarness(t, failedCallsAll(), ts.Day, ts.Machine)
+	h := newFailedCallsHarness(t, crossAll, ts.Day, ts.Machine)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	_, result := h.night(failedCallsRunner(map[string]runner.Handler{"build": failedCallsFailing(600, "the session crashed")}),
+	_, result := h.night(workFake(map[string]runner.Handler{"build": failedCallsFailing(600, "the session crashed")}),
 		false)
 	assertEqual(t, result.Get("status"), "failed")
 	assertIn(t, "the builder's session failed and changed nothing: the session crashed", result.Get("reason"))
@@ -298,9 +231,9 @@ func TestFailedCalls_ABuilderThatFailsAfterWorkingAWhileButChangedNothingFailsTh
 
 // Claude's turn limit ends a long session `ok: false`: its work is still a pass.
 func TestFailedCalls_ABuilderThatFailedAfterDoingWorkKeepsIt(t *testing.T) {
-	h := newFailedCallsHarness(t, failedCallsAll(), ts.Day, ts.Machine)
+	h := newFailedCallsHarness(t, crossAll, ts.Day, ts.Machine)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	inner := failedCallsBuilder(map[string]string{"src/game.txt": "v2\n"})
+	inner := workBuilder(map[string]string{"src/game.txt": "v2\n"})
 
 	turnLimit := func(request *runner.RunRequest) *runner.RunResult {
 		done := inner(request)
@@ -308,19 +241,19 @@ func TestFailedCalls_ABuilderThatFailedAfterDoingWorkKeepsIt(t *testing.T) {
 		result.ExitCode, result.DurationS, result.Error = 1, 5400, "error_max_turns"
 		return result
 	}
-	_, result := h.night(failedCallsRunner(map[string]runner.Handler{"build": turnLimit,
-		"review": failedCallsReviewer(failedCallsApprove)}), false)
+	_, result := h.night(workFake(map[string]runner.Handler{"build": turnLimit,
+		"review": workReviewer(workApprove)}), false)
 	assertEqual(t, result.Get("status"), "approved")
 	cycles := pyjson.List(result.Get("cycles"))
 	assertEqual(t, pyjson.Obj(cycles[0]).Obj("builder").Get("changed"), true)
 }
 
 func TestFailedCalls_AReviewCallThatFailsNamesItsError(t *testing.T) {
-	h := newFailedCallsHarness(t, failedCallsAll(), ts.Day, ts.Machine)
+	h := newFailedCallsHarness(t, crossAll, ts.Day, ts.Machine)
 	h.committedHours() // claude-3 works all day: the Strong final can audit
 	pr, _ := failedCallsBuildOnMedium(t, h)
 	assertEqual(t, h.gh.LabelNames(pr), providersSetOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
-	_, review := h.night(failedCallsRunner(map[string]runner.Handler{"review": failedCallsFailing(900, "overloaded")}), false)
+	_, review := h.night(workFake(map[string]runner.Handler{"review": failedCallsFailing(900, "overloaded")}), false)
 	assertEqual(t, review.Get("status"), "failed")
 	assertEqual(t, review.Get("reason"), "the reviewer's call failed: overloaded")
 	comments := h.gh.BotComments(pr)

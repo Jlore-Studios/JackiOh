@@ -30,8 +30,8 @@ import (
 func reviewFixesMediumPR(t *testing.T, h *crossHarness) int {
 	t.Helper()
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
-	h.night(crossRunner(map[string]runner.Handler{"build": crossTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
-		"review": crossReviewer(crossApprove)}))
+	h.night(workFake(map[string]runner.Handler{"build": crossTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
+		"review": workReviewer(workApprove)}))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
 	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	return pr
@@ -60,21 +60,21 @@ func TestReviewFixes_ARevisionByAnotherModelTurnsStrongAutoMergeOff(t *testing.T
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	reviewFixesUpdate(h, 12, pyjson.New("planned_at", clock.ISO(testsupport.Day), "planned_tier", "medium",
 		"planned_by_id", "muse"))
-	h.night(crossRunner(map[string]runner.Handler{"build": crossBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": crossReviewer(crossApprove)}))
+	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
 	crossNextRun(h, "778")
-	h.night(crossRunner(map[string]runner.Handler{"review": crossReviewer(crossApprove)})) // claude-3 audits at night
-	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)                                  // Strong: auto-merge on
+	h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)})) // claude-3 audits at night
+	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)                             // Strong: auto-merge on
 	// A revision is queued by a path that leaves auto-merge alone, and Muse does it by day:
 	// its medium approval alone is not enough, so the strong approval of the old head is gone.
 	thread := h.gh.Threads.Item(pr)
 	thread.Set("labels", append(thread.List("labels"), pyjson.New("name", config.LabelRevise)))
 	testsupport.ClockOf(h.ctx).At = testsupport.Day
-	planned, result := h.night(crossRunner(map[string]runner.Handler{
-		"revise": crossBuilder(map[string]string{"src/game.txt": "v2.1\n"}),
-		"review": crossReviewer(crossApprove)}))
+	planned, result := h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{"src/game.txt": "v2.1\n"}),
+		"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"muse", "approved"})
 	assertNotIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
 	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross))
@@ -86,7 +86,7 @@ func TestReviewFixes_AutoMergeIsPinnedToTheApprovedCommit(t *testing.T) {
 	// By day no Strong seat is free; at night claude-3 reviews, and its one strong
 	// approval pins auto-merge to the head (#695).
 	h.committedHours()
-	planned, _ := h.night(crossRunner(map[string]runner.Handler{"review": crossReviewer(crossApprove)}))
+	planned, _ := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), crossKey(t, planned, "seats", "review", "tier")}, []any{"claude-3", "strong"})
 	votes := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes")
 	assertEqual(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], crossKey(t, votes, "sha"))
@@ -118,10 +118,10 @@ func TestReviewFixes_OnlyTheBotsOwnPullRequestsGetASecondReview(t *testing.T) {
 }
 
 func TestReviewFixes_WithOnlyItsBuilderSetUpItWaitsForAStrongReviewer(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossSecrets(), Machine: []string{"agy"}, At: testsupport.Day})
+	h := newCrossHarness(t, crossHarnessOpts{Env: providersSecrets(), Machine: []string{"agy"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
-	h.night(crossRunner(map[string]runner.Handler{"build": crossBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": crossReviewer(crossApprove)}))
+	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}))
 	comment := crossLast(t, h.gh.BotComments(12))
 	// Only a Strong approval ships a medium item (#725): agy's in-run approval is recorded,
 	// and the head waits for a Strong seat no setup has.
@@ -138,10 +138,10 @@ func TestReviewFixes_ACommentDuringTheReviewGetsItsRevisionBeforeAnyMerge(t *tes
 
 	commented := func(request *runner.RunRequest) *runner.RunResult {
 		reviewFixesUpdate(h, pr, pyjson.New("pending_request", true))
-		return crossReviewer(crossApprove)(request)
+		return workReviewer(workApprove)(request)
 	}
 
-	h.night(crossRunner(map[string]runner.Handler{"review": commented}))
+	h.night(workFake(map[string]runner.Handler{"review": commented}))
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
 	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelRevise, "difficulty:medium"))
 	assertFalse(t, pyjson.Truthy(crossKey(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "pending_request")))
@@ -182,7 +182,7 @@ func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
 	pr := reviewFixesMediumPR(t, h)
 	builds := strings.Count(crossRead(t, log), "\n")
 	assertTrue(t, builds >= 1) // the build did install, so the log works
-	planned, review := h.night(crossRunner(map[string]runner.Handler{"review": crossReviewer(crossApprove)}))
+	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("action"), review.Get("status")}, []any{"review", "reviewed"})
 	assertEqual(t, strings.Count(crossRead(t, log), "\n"), builds)
 	assertNotIn(t, fmt.Sprintf("item-%d", pr), crossRead(t, log))
@@ -214,7 +214,7 @@ func TestReviewFixes_ARunGithubCannotReadKeepsItsLaneAndItsItem(t *testing.T) {
 	}
 
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day,
-		Cfg: testsupport.MakeConfig(testsupport.Config{Env: crossSecrets(), Machine: []string{"gpt"}})})
+		Cfg: testsupport.MakeConfig(testsupport.Config{Env: providersSecrets(), Machine: []string{"gpt"}})})
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		state.Item(s, 3).Update(pyjson.New("run_id", "9", "provider", "gpt"))
 		return nil
@@ -313,15 +313,15 @@ func TestReviewFixes_EveryModelCallHandsARefreshedLoginOnAtOnce(t *testing.T) {
 	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	r := crossRunner(map[string]runner.Handler{"build": crossBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": crossReviewer(crossApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)})
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), filepath.Join(h.root, "out-calls"),
 		nil, func() { calls = append(calls, 1) }, nil, nil, nil, nil).Run()
 	assertEqual(t, len(calls), len(r.Calls))
 }
 
 func TestReviewFixes_OnlyAClaudeAccountCanWaitForQuiet(t *testing.T) {
-	raw := crossRawProviders()
+	raw := providersRaw()
 	crossObj(t, raw, "providers", "gpt").Set("quiet_check", true)
 	_, raised := herr.Catch[*herr.ConfigError](func() { providers.Parse(raw) })
 	assertTrue(t, raised, "ConfigError not raised")

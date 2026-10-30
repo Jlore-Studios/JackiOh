@@ -34,12 +34,12 @@ func declinedSurvey(titles ...string) *runner.FakeRunner {
 		items = append(items, pyjson.Dumps(pyjson.New("title", title, "body", "## Why\nx")))
 	}
 	text := "<!-- suggestions: [" + strings.Join(items, ",") + "] -->"
-	return runner.NewFakeRunner(map[string][]runner.Handler{"suggest": {difficultyReviewer(text)}})
+	return runner.NewFakeRunner(map[string][]runner.Handler{"suggest": {workReviewer(text)}})
 }
 
 // declinedPlanRunner is FakeRunner({"plan": lambda r: RunResult(True, text)}).
 func declinedPlanRunner(text string) *runner.FakeRunner {
-	return runner.NewFakeRunner(map[string][]runner.Handler{"plan": {difficultyReviewer(text)}})
+	return runner.NewFakeRunner(map[string][]runner.Handler{"plan": {workReviewer(text)}})
 }
 
 // ---------------------------------------------------------------------------- IdleTests

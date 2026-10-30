@@ -171,10 +171,10 @@ func TestHuman_ABuilderThatSaysOnlyAPersonCanDoItHandsItOn(t *testing.T) {
 	// #796: GitHub had made the label grey and bare when it was first put on.
 	h.gh.Labels.Set(config.LabelHumanRequired, pyjson.New("name", config.LabelHumanRequired, "color", "ededed",
 		"description", ""))
-	_, result := h.night(ratingRunner(map[string]runner.Handler{
-		"build": ratingBuilder(map[string]string{}, humanBlocked("Set `VITE_SUPABASE_URL` in Vercel's project settings.",
+	_, result := h.night(workFake(map[string]runner.Handler{
+		"build": workBuilder(map[string]string{}, humanBlocked("Set `VITE_SUPABASE_URL` in Vercel's project settings.",
 			true)),
-		"review": ratingReviewer(ratingApprove)}))
+		"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "human_required")}, []any{"blocked", true})
 	assertIn(t, "Set `VITE_SUPABASE_URL` in Vercel's project settings.",
 		humanHandedToPeople(t, h, 12))
@@ -188,9 +188,9 @@ func TestHuman_ABuilderThatSaysOnlyAPersonCanDoItHandsItOn(t *testing.T) {
 func TestHuman_ABuildWhoseWholeChangeThePathGuardPutBackHandsItOn(t *testing.T) {
 	h := newRatingHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	_, result := h.night(ratingRunner(map[string]runner.Handler{
-		"build":  ratingBuilder(map[string]string{"bot/harness/new.py": "x = 1\n"}),
-		"review": ratingReviewer(ratingApprove)}))
+	_, result := h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"bot/harness/new.py": "x = 1\n"}),
+		"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "human_required")}, []any{"blocked", true})
 	assertIn(t, "is in paths the bot may not change", humanHandedToPeople(t, h, 12))
 }
@@ -198,9 +198,9 @@ func TestHuman_ABuildWhoseWholeChangeThePathGuardPutBackHandsItOn(t *testing.T) 
 func TestHuman_AQuestionAPersonCanAnswerIsStillOnlyAQuestion(t *testing.T) {
 	h := newRatingHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	h.night(ratingRunner(map[string]runner.Handler{
-		"build":  ratingBuilder(map[string]string{}, humanBlocked("Option A or B?", false)),
-		"review": ratingReviewer(ratingApprove)}))
+	h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{}, humanBlocked("Option A or B?", false)),
+		"review": workReviewer(workApprove)}))
 	labels := h.gh.LabelNames(12)
 	assertIn(t, config.LabelBlocked, labels)
 	assertNotIn(t, config.LabelHumanRequired, labels)
@@ -218,10 +218,10 @@ func TestHuman_ARevisionOnlyAPersonCanMakeHandsThePullRequestOn(t *testing.T) {
 	h.gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: []string{config.LabelPR, config.LabelRevise},
 		SHA: start})
 	h.gh.AddComment(40, "@jgoetzmann-bot also run it in CI", fakes.Comment{User: fakes.Operator})
-	_, result := h.night(ratingRunner(map[string]runner.Handler{
-		"revise": ratingBuilder(map[string]string{}, humanBlocked("Add a job to `.github/workflows/ci.yml`.",
+	_, result := h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{}, humanBlocked("Add a job to `.github/workflows/ci.yml`.",
 			true)),
-		"review": ratingReviewer(ratingApprove)}))
+		"review": workReviewer(workApprove)}))
 	assertEqual(t, eventsDig(t, result, "status"), "blocked")
 	assertEqual(t, h.gh.LabelNames(40), eventsSet(config.LabelPR, config.LabelHumanRequired)) // `bot:pr` stays
 	said := eventsLast(t, h.gh.BotComments(40))

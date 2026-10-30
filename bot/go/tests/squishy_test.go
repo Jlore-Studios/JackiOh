@@ -38,72 +38,6 @@ import (
 // SQUISHY
 var squishyUser = pyjson.New("login", "squishy-squooby", "id", 334289562)
 
-// ------------------------------------------------------------------ what test_squishy imports
-//
-// From test_dashboard (offline) and test_workflows (read, job, selftest, linted), as this file's
-// own: each test file of package tests keeps its helpers.
-
-// squishyOffline is offline() (test_dashboard): the loop's contexts on a fake GitHub, so a test
-// never reaches the network, until the test ends.
-func squishyOffline(t *testing.T, gh ...*fakes.FakeGitHub) {
-	t.Helper()
-	fake := fakes.NewFakeGitHub()
-	if len(gh) > 0 && gh[0] != nil {
-		fake = gh[0]
-	}
-	real := cli.Ctx
-	cli.Ctx = func(cfg *config.Config, write bool) *hctx.Context {
-		return testsupport.MakeCtx(fake, testsupport.Ctx{At: testsupport.Night, Cfg: cfg})
-	}
-	t.Cleanup(func() { cli.Ctx = real })
-}
-
-// WORKFLOWS (test_workflows)
-var squishyWorkflows = filepath.Join(config.RepoRoot, ".github", "workflows")
-
-// squishyRead is read(name) (test_workflows).
-func squishyRead(t *testing.T, name string) string {
-	t.Helper()
-	return basicsReadFile(t, filepath.Join(squishyWorkflows, name))
-}
-
-// The next job at a job's indent: Python's lookahead `(?=^  [a-z][\w-]*:\n|\Z)`, which Go's
-// regexp has not, found after the job's own line.
-var squishyNextJob = regexp.MustCompile(`(?m)^  [a-z][\w-]*:\n`)
-
-// squishyJob is job(text, name) (test_workflows): the block of one job: from `  name:` to the next
-// job at the same indent.
-func squishyJob(t *testing.T, text, name string) string {
-	t.Helper()
-	start := regexp.MustCompile(`(?m)^  ` + regexp.QuoteMeta(name) + `:\n`).FindStringIndex(text)
-	if start == nil {
-		t.Fatalf("no job %s", name)
-	}
-	rest := text[start[1]:]
-	if next := squishyNextJob.FindStringIndex(rest); next != nil {
-		return rest[:next[0]]
-	}
-	return rest
-}
-
-// squishySelftest is selftest() (test_workflows): the `bot selftest` job's block: a job of CI's
-// since #1455, which had a workflow of its own.
-func squishySelftest(t *testing.T) string {
-	t.Helper()
-	return squishyJob(t, squishyRead(t, "ci.yml"), "bot-selftest")
-}
-
-// ACTIONLINT_EVERY_WORKFLOW (test_workflows)
-const squishyActionlintEveryWorkflow = "rhysd/actionlint:1.7.7 -color $(ls .github/workflows/*.yml)"
-
-// squishyLinted is linted(name) (test_workflows): whether bot selftest's actionlint reads the
-// workflow `name`: it reads every one there is.
-func squishyLinted(t *testing.T, name string) bool {
-	t.Helper()
-	info, err := os.Stat(filepath.Join(squishyWorkflows, name))
-	return strings.Contains(squishySelftest(t), squishyActionlintEveryWorkflow) && err == nil && info.Mode().IsRegular()
-}
-
 // ------------------------------------------------------------------ SquishyProcessTests
 
 // squishy_cases_test.go's tests in a process started as Squishy: this test binary again, with
@@ -403,7 +337,7 @@ func TestSquishy_TheLoopDrawsSquishyInAProcessOfItsOwn(t *testing.T) {
 	realRun, realSweep, realUpdate, realStdout := cli.SubprocessRun, cli.Sweep, dashboard.Update, cli.Stdout
 	cli.SubprocessRun, dashboard.Update, cli.Stdout = run, update, &out
 	cli.Sweep = func(ctx *hctx.Context) []string { return []string{} }
-	squishyOffline(t)
+	dashboardOffline(t, nil)
 	defer func() {
 		cli.SubprocessRun, cli.Sweep, dashboard.Update, cli.Stdout = realRun, realSweep, realUpdate, realStdout
 	}()
@@ -438,7 +372,7 @@ func TestSquishy_NoCompanionsUnlessAsked(t *testing.T) {
 	}
 	realRun, realUpdate, realStdout := cli.SubprocessRun, dashboard.Update, cli.Stdout
 	cli.SubprocessRun, dashboard.Update, cli.Stdout = run, update, &bytes.Buffer{}
-	squishyOffline(t)
+	dashboardOffline(t, nil)
 	defer func() { cli.SubprocessRun, dashboard.Update, cli.Stdout = realRun, realUpdate, realStdout }()
 	assertEqual(t, cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{}), 0)
 }
@@ -489,7 +423,7 @@ func TestSquishy_TheLoopDrawsSquishysRecordInAProcessOfItsOwn(t *testing.T) {
 	}
 	realRun, realUpdate, realStdout := cli.SubprocessRun, dashboard.Update, cli.Stdout
 	cli.SubprocessRun, dashboard.Update, cli.Stdout = run, update, &bytes.Buffer{}
-	squishyOffline(t)
+	dashboardOffline(t, nil)
 	defer func() { cli.SubprocessRun, dashboard.Update, cli.Stdout = realRun, realUpdate, realStdout }()
 	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Stats: true, Companions: true})
 	assertEqual(t, seen, [][]string{{"## 🫧 Squishy\n"}})
@@ -514,7 +448,7 @@ func TestSquishy_SquishysRunsAndModesAreReadFromItsComments(t *testing.T) {
 // ------------------------------------------------------------------ SquishyWorkflowTests
 
 func TestSquishy_EveryJobRunsAsSquishy(t *testing.T) {
-	for _, text := range []string{squishyRead(t, "squishy-run.yml"), squishyRead(t, "squishy-commands.yml")} {
+	for _, text := range []string{workflowsRead(t, "squishy-run.yml"), workflowsRead(t, "squishy-commands.yml")} {
 		assertIn(t, "  HARNESS_HOME: .squishy\n", text)
 		assertNotIn(t, "secrets.BOT_GITHUB_TOKEN", text)
 		assertIn(t, "BOT_GITHUB_TOKEN: ${{ secrets.SQUISHY_GITHUB_TOKEN }}", text)
@@ -522,8 +456,8 @@ func TestSquishy_EveryJobRunsAsSquishy(t *testing.T) {
 }
 
 func TestSquishy_ClaudeRunsOnGithubsRunnersWithOnlyItsOwnSecret(t *testing.T) {
-	runText := squishyRead(t, "squishy-run.yml")
-	work := squishyJob(t, runText, "work")
+	runText := workflowsRead(t, "squishy-run.yml")
+	work := workflowsJob(t, runText, "work")
 	assertIn(t, "runs-on: ubuntu-latest", work)
 	assertNotIn(t, "night-vm", runText)
 	assertNotIn(t, "BOT_GITHUB_TOKEN", work)
@@ -543,16 +477,16 @@ func TestSquishy_ClaudeRunsOnGithubsRunnersWithOnlyItsOwnSecret(t *testing.T) {
 	assertEqual(t, grants, map[string]string{"contents": "read"})
 	// Never the step name bright-bots-harness reads as the shared subscription's spending.
 	assertNotIn(t, "name: Build, check and review\n", runText)
-	assertIn(t, "group: squishy-run-plan", squishyJob(t, runText, "plan"))
-	assertIn(t, ".squishy/HALT", squishyJob(t, runText, "gate"))
-	assertIn(t, ".squishy/HALT", squishyJob(t, runText, "plan"))
+	assertIn(t, "group: squishy-run-plan", workflowsJob(t, runText, "plan"))
+	assertIn(t, ".squishy/HALT", workflowsJob(t, runText, "gate"))
+	assertIn(t, ".squishy/HALT", workflowsJob(t, runText, "plan"))
 }
 
 func TestSquishy_EverySecretListNamesEverySecret(t *testing.T) {
 	lists := regexp.MustCompile(`HARNESS_SECRETS_SET: >-\n((?:\s+\$\{\{.*\}\}\n)+)`)
 	named := regexp.MustCompile(`secrets\.(\w+) != '' && '(\w+)'`)
 	for _, name := range []string{"squishy-run.yml", "squishy-commands.yml", "bot-status.yml"} {
-		for _, found := range lists.FindAllStringSubmatch(squishyRead(t, name), -1) {
+		for _, found := range lists.FindAllStringSubmatch(workflowsRead(t, name), -1) {
 			secrets := []string{}
 			for _, m := range named.FindAllStringSubmatch(found[1], -1) {
 				secrets = append(secrets, m[1])
@@ -563,7 +497,7 @@ func TestSquishy_EverySecretListNamesEverySecret(t *testing.T) {
 }
 
 func TestSquishy_ItsEarsHearOnlySquishy(t *testing.T) {
-	text := squishyRead(t, "squishy-commands.yml")
+	text := workflowsRead(t, "squishy-commands.yml")
 	for _, wanted := range []string{"github.actor != 'squishy-squooby'", "'/squishy'", "'@squishy-squooby'",
 		"startsWith(github.event.label.name, 'squishy:')",
 		"github.event.assignee.login == 'squishy-squooby'",
@@ -577,21 +511,21 @@ func TestSquishy_ItsEarsHearOnlySquishy(t *testing.T) {
 }
 
 func TestSquishy_TheStatusLoopRunsSquishyBesideTheNightBot(t *testing.T) {
-	refresh := squishyJob(t, squishyRead(t, "bot-status.yml"), "refresh")
+	refresh := workflowsJob(t, workflowsRead(t, "bot-status.yml"), "refresh")
 	assertIn(t, "SQUISHY_GITHUB_TOKEN: ${{ secrets.SQUISHY_GITHUB_TOKEN }}", refresh)
 	assertIn(t, "--companions", refresh)
 	// The Python reads `python -m harness dashboard --companions`: the workflows run the Go
 	// binary now (`.github/actions/harness`), whose command line is `harness …`.
-	assertIn(t, "harness dashboard --companions", squishyRead(t, "bot-commands.yml"))
+	assertIn(t, "harness dashboard --companions", workflowsRead(t, "bot-commands.yml"))
 }
 
 func TestSquishy_SelftestLintsAndLoadsSquishy(t *testing.T) {
-	text := squishySelftest(t)
+	text := workflowsSelftest(t)
 	// The Python reads `HARNESS_HOME=.squishy python3.13 -m harness window`: the selftest loads
 	// Squishy with the Go binary now.
 	assertIn(t, "HARNESS_HOME=.squishy harness window", text)
 	for _, name := range []string{"squishy-run.yml", "squishy-commands.yml"} {
-		assertTrue(t, squishyLinted(t, name), name)
+		assertTrue(t, workflowsLinted(t, name), name)
 	}
 }
 

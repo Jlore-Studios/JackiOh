@@ -45,8 +45,9 @@ func workChanges(claim string, where ...string) string {
 }
 
 // workBuilder is builder(edits, text=DONE): a scripted builder that writes `edits` (path → text,
-// or nil to delete the file) into its worktree and reports `text`, with a 5-hour reading of 30%.
-func workBuilder(edits map[string]any, text ...string) runner.Handler {
+// or nil to delete the file, in a map[string]any) into its worktree and reports `text`, with a
+// 5-hour reading of 30%.
+func workBuilder[V any](edits map[string]V, text ...string) runner.Handler {
 	report := workDone
 	if len(text) > 0 {
 		report = text[0]
@@ -56,7 +57,8 @@ func workBuilder(edits map[string]any, text ...string) runner.Handler {
 		// edits depend on one another.
 		for _, name := range slices.Sorted(maps.Keys(edits)) {
 			target := filepath.Join(request.Cwd, name)
-			if edits[name] == nil {
+			content := any(edits[name])
+			if content == nil {
 				if err := os.Remove(target); err != nil && !os.IsNotExist(err) {
 					panic(err)
 				}
@@ -65,7 +67,7 @@ func workBuilder(edits map[string]any, text ...string) runner.Handler {
 			if err := os.MkdirAll(filepath.Dir(target), 0o777); err != nil {
 				panic(err)
 			}
-			if err := os.WriteFile(target, []byte(edits[name].(string)), 0o666); err != nil {
+			if err := os.WriteFile(target, []byte(content.(string)), 0o666); err != nil {
 				panic(err)
 			}
 		}
@@ -87,11 +89,11 @@ var workGates = []any{
 }
 
 // workFake is FakeRunner(handlers): each role's handler, or its list of handlers in the order
-// they answer (a runner.Handler, a func of its type, or a slice of either).
-func workFake(handlers map[string]any) *runner.FakeRunner {
+// they answer (a runner.Handler, a func of its type, or a slice of either), in a map of any of them.
+func workFake[H any](handlers map[string]H) *runner.FakeRunner {
 	script := map[string][]runner.Handler{}
 	for role, h := range handlers {
-		switch v := h.(type) {
+		switch v := any(h).(type) {
 		case runner.Handler:
 			script[role] = []runner.Handler{v}
 		case func(*runner.RunRequest) *runner.RunResult:
@@ -146,7 +148,7 @@ func newWorkMachineGateWorld(t *testing.T) *workMachineGateWorld {
 func (w *workMachineGateWorld) worker(runsOn string) *work.Worker {
 	plan := workPlan("action", "build", "number", 12, "title", "Rules v2", "branch", "bot/issue-12",
 		"thread", "Please make the rules v2.", "runs_on", runsOn)
-	return work.NewWorker(w.cfg, plan, workFake(nil), w.clone, filepath.Join(w.root, runsOn),
+	return work.NewWorker(w.cfg, plan, workFake[runner.Handler](nil), w.clone, filepath.Join(w.root, runsOn),
 		filepath.Join(w.root, "out-"+runsOn), nil, nil, nil, nil, nil, nil)
 }
 

@@ -56,15 +56,6 @@ func wipInterruptions(t *testing.T, record *pyjson.Object, present bool) int {
 	return n
 }
 
-// wipRunner is FakeRunner(handlers), one handler for each role.
-func wipRunner(handlers map[string]runner.Handler) *runner.FakeRunner {
-	queued := map[string][]runner.Handler{}
-	for role, h := range handlers {
-		queued[role] = []runner.Handler{h}
-	}
-	return runner.NewFakeRunner(queued)
-}
-
 func wipRead(path string) string {
 	text, err := os.ReadFile(path)
 	if err != nil {
@@ -76,8 +67,8 @@ func wipRead(path string) string {
 func TestWip_ACutOffRevisionKeepsItsWorkBesideThePullRequest(t *testing.T) {
 	h := newDifficultyHarness(t)
 	start := wipPull(h)
-	_, first := h.night(wipRunner(map[string]runner.Handler{
-		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
+	_, first := h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
 	assertEqual(t, first.Get("status"), "interrupted")
 	assertEqual(t, h.originSHA("bot/issue-12"), start) // the pull request is untouched
 	assertEqual(t, h.originSHA("bot/wip/40"), first.Get("head"))
@@ -91,9 +82,9 @@ func TestWip_ACutOffRevisionKeepsItsWorkBesideThePullRequest(t *testing.T) {
 	seen := map[string]string{}
 	finishing := func(request *runner.RunRequest) *runner.RunResult {
 		seen["file"] = wipRead(filepath.Join(request.Cwd, "src", "game.txt"))
-		return difficultyBuilder(map[string]string{"src/game.txt": "whole\n"})(request)
+		return workBuilder(map[string]string{"src/game.txt": "whole\n"})(request)
 	}
-	r := wipRunner(map[string]runner.Handler{"revise": finishing, "review": difficultyReviewer(difficultyApprove)})
+	r := workFake(map[string]runner.Handler{"revise": finishing, "review": workReviewer(workApprove)})
 	planned, second := h.night(r)
 	assertEqual(t, planned.Obj("wip").Get("sha"), first.Get("head"))
 	assertEqual(t, seen["file"], "half\n")
@@ -108,17 +99,17 @@ func TestWip_ACutOffRevisionKeepsItsWorkBesideThePullRequest(t *testing.T) {
 func TestWip_ABranchThatMovedSinceStartsAfresh(t *testing.T) {
 	h := newDifficultyHarness(t)
 	wipPull(h)
-	h.night(wipRunner(map[string]runner.Handler{
-		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
+	h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
 	moved := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/other.txt": "a person's\n"},
 		"bot/issue-12")
 	h.gh.Threads.Item(40).Obj("head").Set("sha", moved)
 	seen := map[string]string{}
 	looking := func(request *runner.RunRequest) *runner.RunResult {
 		seen["file"] = wipRead(filepath.Join(request.Cwd, "src", "game.txt"))
-		return difficultyBuilder(map[string]string{"src/game.txt": "redone\n"})(request)
+		return workBuilder(map[string]string{"src/game.txt": "redone\n"})(request)
 	}
-	r := wipRunner(map[string]runner.Handler{"revise": looking, "review": difficultyReviewer(difficultyApprove)})
+	r := workFake(map[string]runner.Handler{"revise": looking, "review": workReviewer(workApprove)})
 	_, result := h.night(r)
 	assertEqual(t, seen["file"], "v2\n")
 	assertEqual(t, result.Obj("wip").Get("ignored"), "bot/wip/40")
@@ -129,7 +120,7 @@ func TestWip_PausesThatGetNowhereBlockItAfterThree(t *testing.T) {
 	h := newDifficultyHarness(t)
 	wipPull(h)
 	for n := range 3 {
-		_, result := h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
+		_, result := h.night(workFake(map[string]runner.Handler{"revise": wipCapped}))
 		assertEqual(t, result.Get("status"), "interrupted")
 		if n < 2 {
 			assertEqual(t, h.gh.LabelNames(40), map[string]bool{config.LabelPR: true, config.LabelRevise: true})
@@ -145,11 +136,11 @@ func TestWip_PausesThatGetNowhereBlockItAfterThree(t *testing.T) {
 func TestWip_AResumedRevisionThatGetsNowhereStillCounts(t *testing.T) {
 	h := newDifficultyHarness(t)
 	wipPull(h)
-	_, first := h.night(wipRunner(map[string]runner.Handler{
-		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
+	_, first := h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
 	assertEqual(t, wipInterruptions(t, wipRecord(h), false), 0)
 	for _, n := range []int{1, 2} {
-		_, result := h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
+		_, result := h.night(workFake(map[string]runner.Handler{"revise": wipCapped}))
 		assertEqual(t, result.Get("status"), "interrupted")
 		assertEqual(t, h.originSHA("bot/wip/40"), first.Get("head")) // kept, not moved on
 		assertEqual(t, wipInterruptions(t, wipRecord(h), true), n)
@@ -161,12 +152,12 @@ func TestWip_AResumedRevisionThatGetsNowhereStillCounts(t *testing.T) {
 func TestWip_MainsCommitsMergedInAreNoProgress(t *testing.T) {
 	h := newDifficultyHarness(t)
 	wipPull(h)
-	h.night(wipRunner(map[string]runner.Handler{
-		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
+	h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
 	for _, n := range []int{1, 2} {
 		fakes.PushBranch(h.origin, h.root, "main", map[string]string{
 			fmt.Sprintf("docs/other-%d.md", n): "someone else's\n"})
-		_, result := h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
+		_, result := h.night(workFake(map[string]runner.Handler{"revise": wipCapped}))
 		assertEqual(t, result.Get("status"), "interrupted")
 		assertEqual(t, wipInterruptions(t, wipRecord(h), true), n)
 	}
@@ -175,11 +166,11 @@ func TestWip_MainsCommitsMergedInAreNoProgress(t *testing.T) {
 func TestWip_APauseThatMovesTheWorkOnResetsTheCount(t *testing.T) {
 	h := newDifficultyHarness(t)
 	wipPull(h)
-	h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
-	h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
+	h.night(workFake(map[string]runner.Handler{"revise": wipCapped}))
+	h.night(workFake(map[string]runner.Handler{"revise": wipCapped}))
 	assertEqual(t, wipInterruptions(t, wipRecord(h), true), 2)
-	_, result := h.night(wipRunner(map[string]runner.Handler{
-		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
+	_, result := h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
 	assertEqual(t, result.Get("status"), "interrupted")
 	assertEqual(t, wipInterruptions(t, wipRecord(h), true), 0)
 	assertEqual(t, h.gh.LabelNames(40), map[string]bool{config.LabelPR: true, config.LabelRevise: true})
@@ -189,8 +180,8 @@ func TestWip_ClosingThePullRequestDropsItsWip(t *testing.T) {
 	h := newDifficultyHarness(t)
 	h.gh.AddIssue(12)
 	wipPull(h)
-	h.night(wipRunner(map[string]runner.Handler{
-		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
+	h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
 	assertIn(t, "wip", wipRecord(h))
 	pr := h.gh.Threads.Item(40).Copy()
 	pr.Set("merged", false)

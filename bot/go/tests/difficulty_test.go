@@ -39,81 +39,8 @@ import (
 
 // ---------------------------------------------------------------------------- test_work.py's
 
-// test_work.DONE
-var difficultyDone = "<!-- bot: {\"status\": \"done\", \"title\": \"Make the rules v2\"} -->\n## What changed\nRules v2."
-
-// test_work.APPROVE
-var difficultyApprove = "<!-- review: {\"verdict\": \"approve\", \"findings\": []} -->\nLooked hard; fine."
-
-// test_work.changes: a review that blocks on `claim` (where = "src/game.txt").
-func difficultyChanges(claim string, where ...string) string {
-	at := "src/game.txt"
-	if len(where) > 0 {
-		at = where[0]
-	}
-	finding := pyjson.New("severity", "blocking", "where", at, "claim", claim, "evidence", "read it")
-	return "<!-- review: " + pyjson.Dumps(pyjson.New("verdict", "changes", "findings", []any{finding})) +
-		" -->\nNo."
-}
-
-// test_work.builder: a builder that writes `edits` into its worktree and answers `text` (DONE).
-func difficultyBuilder(edits map[string]string, text ...string) runner.Handler {
-	answer := difficultyDone
-	if len(text) > 0 {
-		answer = text[0]
-	}
-	return func(request *runner.RunRequest) *runner.RunResult {
-		for _, name := range slices.Sorted(func(yield func(string) bool) {
-			for k := range edits {
-				if !yield(k) {
-					return
-				}
-			}
-		}) {
-			target := filepath.Join(request.Cwd, name)
-			if err := os.MkdirAll(filepath.Dir(target), 0o777); err != nil {
-				panic(err)
-			}
-			if err := os.WriteFile(target, []byte(edits[name]), 0o666); err != nil {
-				panic(err)
-			}
-		}
-		result := runner.NewRunResult(true, answer)
-		result.Usage = pyjson.New("five_hour", pyjson.New("utilization", 0.3, "resets_at", nil))
-		return result
-	}
-}
-
-// test_work.reviewer: a call that answers `text`.
-func difficultyReviewer(text string) runner.Handler {
-	return func(request *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, text) }
-}
-
-// test_work.GATES
-func difficultyGates() []any {
-	return []any{
-		pyjson.New("name", "rules exist", "run", "test -f src/game.txt", "timeout_minutes", 1),
-		pyjson.New("name", "no broken file", "run", "test ! -f broken.txt", "timeout_minutes", 1),
-	}
-}
-
-// difficultyRunner is FakeRunner({role: handler or [handlers]}).
-func difficultyRunner(handlers map[string][]runner.Handler) *runner.FakeRunner {
-	return runner.NewFakeRunner(handlers)
-}
-
 // one is a role's single handler, as FakeRunner takes it.
 func difficultyOne(h runner.Handler) []runner.Handler { return []runner.Handler{h} }
-
-// ---------------------------------------------------------------------------- test_providers.py's and test_cross.py's
-
-// test_providers.secrets
-func difficultySecrets(names ...string) map[string]string {
-	return map[string]string{"HARNESS_SECRETS_SET": strings.Join(names, " ")}
-}
-
-// test_cross.ALL
-func difficultyAll() map[string]string { return difficultySecrets(providers.SecretNames...) }
 
 // ---------------------------------------------------------------------------- test_flow.py's Harness
 
@@ -160,7 +87,7 @@ func newDifficultyHarness(t *testing.T, opts ...difficultyHarnessOpts) *difficul
 	for k, v := range o.Env {
 		env[k] = v
 	}
-	overrides := pyjson.New("gates", difficultyGates(),
+	overrides := pyjson.New("gates", workGates,
 		"install", pyjson.New("run", "true", "timeout_minutes", 1), "max_review_cycles", 2)
 	overrides.Update(o.Overrides)
 	at := o.At
@@ -257,7 +184,7 @@ func difficultyCtxFor(gh *fakes.FakeGitHub, opts ...difficultyCtxOpts) *hctx.Con
 	}
 	env := o.Env
 	if env == nil {
-		env = difficultySecrets(providers.SecretNames...)
+		env = providersSecrets(providers.SecretNames...)
 	}
 	machine := o.Machine
 	if machine == nil {
@@ -323,10 +250,21 @@ func difficultySeats(planned *pyjson.Object) map[string]any {
 	return out
 }
 
+// difficultySeatAt is seats(planned)[role]: the role's seat, or nil for None; a role the plan has
+// no seat for is a KeyError.
+func difficultySeatAt(t *testing.T, planned *pyjson.Object, role string) any {
+	t.Helper()
+	seat, ok := difficultySeats(planned)[role]
+	if !ok {
+		t.Fatalf("KeyError: %q in %s", role, pyjson.Dumps(planned.Get("seats")))
+	}
+	return seat
+}
+
 // difficultySeatOf is seats(planned)[role], which must be a seat.
 func difficultySeatOf(t *testing.T, planned *pyjson.Object, role string) difficultySeat {
 	t.Helper()
-	seat, ok := difficultySeats(planned)[role].(difficultySeat)
+	seat, ok := difficultySeatAt(t, planned, role).(difficultySeat)
 	if !ok {
 		t.Fatalf("no %s seat in %s", role, pyjson.Dumps(planned.Get("seats")))
 	}
@@ -393,7 +331,7 @@ func TestDifficulty_PriorityNeverDecidesWhoMayTakeIt(t *testing.T) {
 // With the weaker models off, an easy item goes to claude-3's Sonnet, medium since #317 part 5.
 func TestDifficulty_AnEasyItemIsBuiltWithSonnetOnAClaudeAccount(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	ctx := difficultyCtxFor(gh, difficultyCtxOpts{Env: difficultySecrets("CLAUDE_CODE_OAUTH_TOKEN_3"),
+	ctx := difficultyCtxFor(gh, difficultyCtxOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_3"),
 		Machine: []string{}})
 	difficultyQueue(gh, ctx, 3, false, difficultyEasy)
 	planned := difficultyMake(ctx)
@@ -412,7 +350,7 @@ func TestDifficulty_AnEasyItemIsBuiltWithSonnetOnAClaudeAccount(t *testing.T) {
 // Opus for planning, reviews and hard items.
 func TestDifficulty_AMediumItemOnAClaudeAccountIsBuiltWithSonnet(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	ctx := difficultyCtxFor(gh, difficultyCtxOpts{Env: difficultySecrets("CLAUDE_CODE_OAUTH_TOKEN_3"),
+	ctx := difficultyCtxFor(gh, difficultyCtxOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_3"),
 		Machine: []string{}})
 	difficultyQueue(gh, ctx, 3, true)
 	planned := difficultyMake(ctx)
@@ -503,7 +441,7 @@ func TestDifficulty_ASonnetStandInBuildsOnlyEasyItemsTheWeakOneCannotTake(t *tes
 		})
 		raw.Set("plan_lanes", 0)
 		pyjson.Obj(raw.Obj("providers").Obj("claude-4").List("extra_models")[0]).Set("takes_over", "lite")
-		cfg := testsupport.MakeConfig(testsupport.Config{Env: difficultySecrets(providers.SecretNames...),
+		cfg := testsupport.MakeConfig(testsupport.Config{Env: providersSecrets(providers.SecretNames...),
 			Machine: machine})
 		pool := providers.Parse(raw)
 		pool.MaxParallel, pool.MachineParallel = 20, 20
@@ -546,12 +484,12 @@ func TestDifficulty_EveryClaudeAccountBuildsAMediumItemOnSonnet(t *testing.T) {
 		t.Run("account="+account, func(t *testing.T) {
 			gh := fakes.NewFakeGitHub()
 			ctx := difficultyCtxFor(gh, difficultyCtxOpts{
-				Env: difficultySecrets(difficultyClaudeSecrets[account]), Machine: []string{}})
+				Env: providersSecrets(difficultyClaudeSecrets[account]), Machine: []string{}})
 			difficultyQueue(gh, ctx, 3, true, difficultyMedium)
 			assertEqual(t, difficultySeats(difficultyMake(ctx))["build"], difficultySeat{account, "sonnet", "medium"})
 			gh = fakes.NewFakeGitHub()
 			ctx = difficultyCtxFor(gh, difficultyCtxOpts{
-				Env: difficultySecrets(difficultyClaudeSecrets[account]), Machine: []string{}})
+				Env: providersSecrets(difficultyClaudeSecrets[account]), Machine: []string{}})
 			difficultyQueue(gh, ctx, 3, true, difficultyHard)
 			assertEqual(t, difficultySeats(difficultyMake(ctx))["build"], difficultySeat{account, "opus", "strong"})
 		})
@@ -625,7 +563,7 @@ func TestDifficulty_WithNoModelOfItsTierFreeItStepsUpAndSaysWhy(t *testing.T) {
 	// switched off for the test, so only its Opus is left.
 	gh = fakes.NewFakeGitHub()
 	ctx = difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day,
-		Env: difficultySecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: []string{}, CommittedHours: true})
+		Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: []string{}, CommittedHours: true})
 	ctx = difficultyWithPool(gh, testsupport.Day, ctx.Cfg, func(p *providers.Pool) {
 		difficultyReplaceProvider(p, "claude-2", func(c *providers.Provider) { c.ExtraModels = []*providers.ExtraModel{} })
 	})
@@ -637,7 +575,7 @@ func TestDifficulty_WithNoModelOfItsTierFreeItStepsUpAndSaysWhy(t *testing.T) {
 
 func TestDifficulty_APersonsPullRequestIsRevisedOnlyWithAReviewerInTheRun(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: difficultySecrets(),
+	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: providersSecrets(),
 		Machine: []string{"lite"}})
 	gh.AddPull(9, "feature/someone", fakes.Pull{Labels: []string{"bot:revise", difficultyEasy}})
 	// Only the weak one is free, and it cannot review: a person's PR gets no review run, so it
@@ -675,7 +613,7 @@ func TestDifficulty_RevisionsFollowTheBuildingRule(t *testing.T) {
 func TestDifficulty_AStrongPlannerPlansOnThePlanningLane(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, Cfg: testsupport.MakeConfig(
-		testsupport.Config{Env: difficultySecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine,
+		testsupport.Config{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine,
 			CommittedHours: true, CommittedPlanLanes: true})})
 	difficultyQueue(gh, ctx, 3, false)
 	planned := difficultyMake(ctx)
@@ -718,7 +656,7 @@ func TestDifficulty_AMediumModelPlansARatedMediumItemInItsRun(t *testing.T) {
 
 func TestDifficulty_WithNoPlannerFreeNothingIsBuilt(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: difficultySecrets(),
+	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: providersSecrets(),
 		Machine: []string{"lite"}})
 	difficultyQueue(gh, ctx, 3, false, difficultyEasy)
 	planned := difficultyMake(ctx)
@@ -726,12 +664,12 @@ func TestDifficulty_WithNoPlannerFreeNothingIsBuilt(t *testing.T) {
 }
 
 func TestDifficulty_APlanningRunHandsItsPlanToTheBuilder(t *testing.T) {
-	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: difficultySecrets("CLAUDE_CODE_OAUTH_TOKEN_2"),
+	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"),
 		Machine: testsupport.Machine, At: testsupport.Day, PlanLanes: true})
 	h.committedHours()
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	planText := "1. **Goal.** Rules v2.\n2. **Steps.** Edit src/game.txt; run the checks."
-	planner := difficultyRunner(map[string][]runner.Handler{"plan": difficultyOne(func(request *runner.RunRequest) *runner.RunResult {
+	planner := workFake(map[string][]runner.Handler{"plan": difficultyOne(func(request *runner.RunRequest) *runner.RunResult {
 		return runner.NewRunResult(true, planText)
 	})})
 	planned, result := h.night(planner)
@@ -769,10 +707,10 @@ func TestDifficulty_APlanningRunHandsItsPlanToTheBuilder(t *testing.T) {
 			panic(err)
 		}
 		seen["notes"] = string(notes)
-		return difficultyBuilder(map[string]string{"src/game.txt": "rules v2\n"})(request)
+		return workBuilder(map[string]string{"src/game.txt": "rules v2\n"})(request)
 	}
-	r := difficultyRunner(map[string][]runner.Handler{"build": difficultyOne(building),
-		"review": difficultyOne(difficultyReviewer(difficultyApprove))})
+	r := workFake(map[string][]runner.Handler{"build": difficultyOne(building),
+		"review": difficultyOne(workReviewer(workApprove))})
 	planned, result = h.night(r)
 	// One lane, one owner (#725): Muse keeps the medium item it planned. Its own review approves,
 	// but the rule still waits for a Strong seat (`bot:cross-review`).
@@ -860,7 +798,7 @@ func TestDifficulty_AHardPullRequestWaitsForStrong(t *testing.T) {
 func TestDifficulty_NoWeakReviewRunsGoOut(t *testing.T) {
 	reviewWithTheWeakOneOnly := func(labels []string, votes *pyjson.Object) *pyjson.Object {
 		gh := fakes.NewFakeGitHub()
-		ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: difficultySecrets(),
+		ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: providersSecrets(),
 			Machine: []string{"lite"}})
 		difficultyPull(gh, ctx, labels, votes)
 		return difficultyMake(ctx)
@@ -870,7 +808,7 @@ func TestDifficulty_NoWeakReviewRunsGoOut(t *testing.T) {
 	assertEqual(t, reviewWithTheWeakOneOnly([]string{difficultyHard}, nil).Get("action"), "none")
 	// An easy item takes the weakest seat that ships it: medium, not weak.
 	gh := fakes.NewFakeGitHub()
-	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: difficultySecrets(),
+	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: providersSecrets(),
 		Machine: []string{"lite", "agy"}})
 	difficultyPull(gh, ctx, []string{difficultyEasy}, nil)
 	planned := difficultyMake(ctx)
@@ -895,7 +833,7 @@ func TestDifficulty_WhetherTheReviewersSetUpCouldStillShipIt(t *testing.T) {
 }
 
 func TestDifficulty_TheRule(t *testing.T) {
-	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: difficultyAll(), Machine: testsupport.Machine})
+	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	out := filepath.Join(h.root, "o")
 	if err := os.Mkdir(out, 0o777); err != nil {
 		t.Fatal(err)
@@ -996,7 +934,7 @@ func (s *difficultySelfCheck) worker(r *runner.FakeRunner, opts ...difficultyWor
 		raw.Obj("providers").Obj("agy").Set("self_check", true) // a self-checker with a reviewer too
 	}
 	cfg := testsupport.MakeConfig(testsupport.Config{Machine: testsupport.AllMachine, Overrides: pyjson.New(
-		"gates", difficultyGates(), "install", pyjson.New("run", "true", "timeout_minutes", 1),
+		"gates", workGates, "install", pyjson.New("run", "true", "timeout_minutes", 1),
 		"max_review_cycles", 3, "max_self_check_rounds", o.Rounds)})
 	replaced := *cfg
 	replaced.Pool = providers.Parse(raw)
@@ -1017,19 +955,11 @@ func (s *difficultySelfCheck) worker(r *runner.FakeRunner, opts ...difficultyWor
 		nil, nil, nil, nil)
 }
 
-func difficultyRoles(r *runner.FakeRunner) []string {
-	roles := []string{}
-	for _, c := range r.Calls {
-		roles = append(roles, c.Role)
-	}
-	return roles
-}
-
 func TestDifficulty_ACleanFirstSelfCheck(t *testing.T) {
 	s := newDifficultySelfCheck(t)
-	r := difficultyRunner(map[string][]runner.Handler{
-		"build":      difficultyOne(difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})),
-		"self_check": difficultyOne(difficultyReviewer(difficultyApprove))})
+	r := workFake(map[string][]runner.Handler{
+		"build":      difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2\n"})),
+		"self_check": difficultyOne(workReviewer(workApprove))})
 	result := s.worker(r).Run()
 	calls := []any{}
 	for _, c := range r.Calls {
@@ -1047,13 +977,13 @@ func TestDifficulty_ACleanFirstSelfCheck(t *testing.T) {
 
 func TestDifficulty_FlaggedThenFixed(t *testing.T) {
 	s := newDifficultySelfCheck(t)
-	r := difficultyRunner(map[string][]runner.Handler{
-		"build": difficultyOne(difficultyBuilder(map[string]string{"src/game.txt": "v2 (half)\n"})),
-		"fix":   difficultyOne(difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})),
-		"self_check": {difficultyReviewer(difficultyChanges("Only half the rules.")),
-			difficultyReviewer(difficultyApprove)}})
+	r := workFake(map[string][]runner.Handler{
+		"build": difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2 (half)\n"})),
+		"fix":   difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2\n"})),
+		"self_check": {workReviewer(workChanges("Only half the rules.")),
+			workReviewer(workApprove)}})
 	result := s.worker(r).Run()
-	assertEqual(t, difficultyRoles(r), []string{"build", "self_check", "fix", "self_check"})
+	assertEqual(t, workRoles(r), []string{"build", "self_check", "fix", "self_check"})
 	assertIn(t, "Only half the rules.", r.Calls[2].Prompt)
 	assertIn(t, "Your self check's blocking findings", r.Calls[2].Prompt)
 	assertEqual(t, []any{result.Get("status"), result.Get("self_check_findings")}, []any{"built", []any{}})
@@ -1067,13 +997,13 @@ func TestDifficulty_FlaggedThenFixed(t *testing.T) {
 
 func TestDifficulty_TheCapSendsItToReviewWithTheOpenFindings(t *testing.T) {
 	s := newDifficultySelfCheck(t)
-	r := difficultyRunner(map[string][]runner.Handler{
-		"build":      difficultyOne(difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})),
-		"fix":        difficultyOne(difficultyBuilder(map[string]string{"src/game.txt": "v2 again\n"})),
-		"self_check": difficultyOne(difficultyReviewer(difficultyChanges("Still not sure about the Coin."))),
-		"review":     difficultyOne(difficultyReviewer(difficultyApprove))})
+	r := workFake(map[string][]runner.Handler{
+		"build":      difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2\n"})),
+		"fix":        difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2 again\n"})),
+		"self_check": difficultyOne(workReviewer(workChanges("Still not sure about the Coin."))),
+		"review":     difficultyOne(workReviewer(workApprove))})
 	result := s.worker(r, difficultyWorkerOpts{Provider: "agy", Review: true, Rounds: 2}).Run()
-	assertEqual(t, difficultyRoles(r), []string{"build", "self_check", "fix", "self_check", "review"})
+	assertEqual(t, workRoles(r), []string{"build", "self_check", "fix", "self_check", "review"})
 	reviewPrompt := r.Calls[len(r.Calls)-1].Prompt
 	assertIn(t, "ran out with these findings still open", reviewPrompt)
 	assertIn(t, "Still not sure about the Coin.", reviewPrompt)
@@ -1083,40 +1013,40 @@ func TestDifficulty_TheCapSendsItToReviewWithTheOpenFindings(t *testing.T) {
 
 func TestDifficulty_ACleanSelfCheckIsNotAnApproval(t *testing.T) {
 	s := newDifficultySelfCheck(t)
-	r := difficultyRunner(map[string][]runner.Handler{
-		"build":      difficultyOne(difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})),
-		"fix":        difficultyOne(difficultyBuilder(map[string]string{"src/game.txt": "v2 fixed\n"})),
-		"self_check": difficultyOne(difficultyReviewer(difficultyApprove)),
-		"review": {difficultyReviewer(difficultyChanges("The Coin is wrong.")),
-			difficultyReviewer(difficultyApprove)}})
+	r := workFake(map[string][]runner.Handler{
+		"build":      difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2\n"})),
+		"fix":        difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2 fixed\n"})),
+		"self_check": difficultyOne(workReviewer(workApprove)),
+		"review": {workReviewer(workChanges("The Coin is wrong.")),
+			workReviewer(workApprove)}})
 	result := s.worker(r, difficultyWorkerOpts{Provider: "agy", Review: true}).Run()
 	// The reviewer's findings go to a fix, which goes through the self check again.
-	assertEqual(t, difficultyRoles(r), []string{"build", "self_check", "review", "fix", "self_check", "review"})
+	assertEqual(t, workRoles(r), []string{"build", "self_check", "review", "fix", "self_check", "review"})
 	assertEqual(t, result.Get("status"), "approved")
 	assertEqual(t, len(result.List("cycles")), 2)
 }
 
 func TestDifficulty_ARevisionChecksItselfToo(t *testing.T) {
 	s := newDifficultySelfCheck(t)
-	r := difficultyRunner(map[string][]runner.Handler{
-		"revise":     difficultyOne(difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})),
-		"self_check": difficultyOne(difficultyReviewer(difficultyApprove))})
+	r := workFake(map[string][]runner.Handler{
+		"revise":     difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2\n"})),
+		"self_check": difficultyOne(workReviewer(workApprove))})
 	result := s.worker(r, difficultyWorkerOpts{Action: "revise"}).Run()
-	assertEqual(t, difficultyRoles(r), []string{"revise", "self_check"})
+	assertEqual(t, workRoles(r), []string{"revise", "self_check"})
 	assertEqual(t, result.Get("status"), "built")
 }
 
 func TestDifficulty_ASelfCheckedBuildWaitsForAReviewRun(t *testing.T) {
-	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: difficultySecrets(), Machine: []string{"lite"},
+	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: providersSecrets(), Machine: []string{"lite"},
 		At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, difficultyEasy}})
 	h.ctx.Store.Update(func(s *pyjson.Object) any {
 		state.Item(s, 12).Update(pyjson.New("planned_at", clock.ISO(testsupport.Day)))
 		return nil
 	}, "state")
-	planned, result := h.night(difficultyRunner(map[string][]runner.Handler{
-		"build":      difficultyOne(difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})),
-		"self_check": difficultyOne(difficultyReviewer(difficultyApprove))}))
+	planned, result := h.night(workFake(map[string][]runner.Handler{
+		"build":      difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2\n"})),
+		"self_check": difficultyOne(workReviewer(workApprove))}))
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"lite", "built"})
 	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
 	pr, _ := pyjson.AsInt(pull.Get("number"))
@@ -1151,7 +1081,7 @@ func TestDifficulty_StatusAndProvidersShowTiersAndSelfCheck(t *testing.T) {
 	// `harness providers` (and `window`, the same command), as bot selftest runs it.
 	out, restore := controllerCapture(t, &cli.Stdout)
 	assertEqual(t, cli.CmdProviders(testsupport.MakeConfig(testsupport.Config{
-		Env: difficultySecrets(providers.SecretNames...), Machine: testsupport.AllMachine}),
+		Env: providersSecrets(providers.SecretNames...), Machine: testsupport.AllMachine}),
 		&cli.Args{Offline: true}), 0)
 	restore()
 	printed := out.String()

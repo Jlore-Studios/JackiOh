@@ -277,7 +277,7 @@ func TestSquishyCases_TheBuilderIsToldToRunFullsendAndItsChangeShipsLikeAnyBuild
 		journalWrite(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
 		return runner.NewRunResult(true, squishyCasesDone)
 	}
-	planned, result := world.run(journalRunner(map[string]runner.Handler{"build": build,
+	planned, result := world.run(workFake(map[string]runner.Handler{"build": build,
 		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
 	assertEqual(t, []any{planned.Get("action"), planned.Get("mode")}, []any{"build", "oneshot"})
 	assertEqual(t, planned.Get("branch"), "squishy/issue-12")
@@ -317,7 +317,7 @@ func squishyCasesSplit(t *testing.T, mode string, tree ...*pyjson.Object) (*squi
 	world := newSquishyCasesWorld(t)
 	world.gh.AddIssue(40, fakes.Issue{Title: "A big project", Body: "Do it all.\n\nDone when: it works.",
 		Labels: []string{"squishy:build", "squishy:" + mode, "priority:high"}})
-	_, result := world.run(journalRunner(map[string]runner.Handler{"plan": func(r *runner.RunRequest) *runner.RunResult {
+	_, result := world.run(workFake(map[string]runner.Handler{"plan": func(r *runner.RunRequest) *runner.RunResult {
 		return runner.NewRunResult(true, squishyCasesAnswer(answer))
 	}}))
 	return world, result
@@ -394,7 +394,7 @@ func TestSquishyCases_TheCloseOutClosesATreeThatIsDone(t *testing.T) {
 		prompts = append(prompts, request.Prompt)
 		return runner.NewRunResult(true, `<!-- split: {"done": true, "summary": "It works on main."} -->`)
 	}
-	_, result := world.run(journalRunner(map[string]runner.Handler{"plan": closeOut}))
+	_, result := world.run(workFake(map[string]runner.Handler{"plan": closeOut}))
 	assertEqual(t, result.Get("status"), "split")
 	if len(prompts) == 0 {
 		t.Fatal("IndexError: the planner was never called")
@@ -423,7 +423,7 @@ func TestSquishyCases_FullsendLandsOnSquishysBranch(t *testing.T) {
 		journalWrite(t, filepath.Join(request.Cwd, "src", "engine.ts"), "rule\n")
 		return runner.NewRunResult(true, squishyCasesDone)
 	}
-	r := journalRunner(map[string]runner.Handler{"build": build})
+	r := workFake(map[string]runner.Handler{"build": build})
 	planned, result := world.run(r)
 	assertEqual(t, []any{planned.Get("number"), planned.Get("onto"), result.Get("status")}, []any{41, onto, "part"})
 	roles := []string{}

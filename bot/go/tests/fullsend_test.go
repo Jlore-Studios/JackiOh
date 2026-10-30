@@ -85,7 +85,7 @@ func fullsendBuilder(edits map[string]string, prompts *[]string) runner.Handler 
 
 // A runner whose builder writes `edits`: a part's run calls nothing else.
 func fullsendBuilds(edits map[string]string) *runner.FakeRunner {
-	return crossRunner(map[string]runner.Handler{"build": fullsendBuilder(edits, nil)})
+	return workFake(map[string]runner.Handler{"build": fullsendBuilder(edits, nil)})
 }
 
 // fullsendWorld is World: a repository, a fake GitHub and the night bot's three jobs (plan,
@@ -167,7 +167,7 @@ func (w *fullsendWorld) split() *pyjson.Object {
 	w.t.Helper()
 	w.gh.AddIssue(fullsendParent, fakes.Issue{Title: "A big project", Body: "Do it all.\n\nDone when: it works.",
 		Labels: []string{config.LabelBuild, fullsendLabel}})
-	_, result := w.run(crossRunner(map[string]runner.Handler{"plan": crossAnswer(fullsendAnswer(fullsendTree()))}))
+	_, result := w.run(workFake(map[string]runner.Handler{"plan": crossAnswer(fullsendAnswer(fullsendTree()))}))
 	return result
 }
 
@@ -250,7 +250,7 @@ func TestFullsend_TheSplitSetsUpTheBranchAndOpensParts(t *testing.T) {
 	}
 	world.gh.AddIssue(fullsendParent, fakes.Issue{Title: "A big project", Body: "Do it all.",
 		Labels: []string{config.LabelBuild, fullsendLabel, "priority:high"}})
-	_, result := world.run(crossRunner(map[string]runner.Handler{"plan": split}))
+	_, result := world.run(workFake(map[string]runner.Handler{"plan": split}))
 	assertEqual(t, result.Get("status"), "split")
 	assertIn(t, "## This is a fullsend split", prompts[0])
 	assertIn(t, "Each part lands on `"+fullsendOnto+"`", prompts[0])
@@ -305,12 +305,12 @@ func fullsendPartWorld(t *testing.T) *fullsendWorld {
 func TestFullsend_APartLandsOnTheBranchWithoutAPullRequest(t *testing.T) {
 	world := fullsendPartWorld(t)
 	prompts := []string{}
-	r := crossRunner(map[string]runner.Handler{"build": fullsendBuilder(map[string]string{"src/rules.txt": "the rules\n"}, &prompts)})
+	r := workFake(map[string]runner.Handler{"build": fullsendBuilder(map[string]string{"src/rules.txt": "the rules\n"}, &prompts)})
 	planned, result := world.run(r)
 	assertEqual(t, []any{planned.Get("number"), planned.Get("onto"), planned.Get("part_of")},
 		[]any{fullsendRules, fullsendOnto, fullsendParent})
 	assertEqual(t, result.Get("status"), "part")
-	assertEqual(t, crossRoles(r), []string{"build"}) // no checks, no review
+	assertEqual(t, workRoles(r), []string{"build"}) // no checks, no review
 	assertIn(t, fmt.Sprintf("This is part of fullsend tree #%d. Your change lands on `%s`", fullsendParent, fullsendOnto),
 		prompts[0])
 	assertEqual(t, len(world.gh.ListPulls("all", "", 200)), 0)
@@ -376,7 +376,7 @@ func TestFullsend_ALaterPartStartsFromThePartsBeforeIt(t *testing.T) {
 		seen = append(seen, crossIsFile(filepath.Join(request.Cwd, "src", "rules.txt")))
 		return fullsendBuilder(map[string]string{"src/client.txt": "ui\n"}, nil)(request)
 	}
-	planned, result := world.run(crossRunner(map[string]runner.Handler{"build": client}))
+	planned, result := world.run(workFake(map[string]runner.Handler{"build": client}))
 	assertEqual(t, []any{planned.Get("number"), result.Get("status")}, []any{fullsendClient, "part"})
 	assertEqual(t, seen, []bool{true})
 	assertEqual(t, result.Get("start"), landed)
@@ -438,7 +438,7 @@ func TestFullsend_AWeakBuildersPartIsMeasuredAgainstTheBranch(t *testing.T) {
 	r := fullsendBuilds(map[string]string{"src/client.txt": "ui\n"})
 	planned, result := world.run(r)
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"lite", "part"})
-	assertEqual(t, crossRoles(r), []string{"build"}) // no self check
+	assertEqual(t, workRoles(r), []string{"build"}) // no self check
 	assertTrue(t, world.has(fullsendOnto, "src/client.txt"))
 	assertEqual(t, world.gh.GetIssue(fullsendClient).Get("state"), "closed")
 	// A part of its own that breaks the rule lands nothing, and a stronger model takes it.
@@ -613,7 +613,7 @@ func TestFullsend_TheReconcileOpensOnePullIntoMain(t *testing.T) {
 	}
 	planned, result := func() (*pyjson.Object, *pyjson.Object) {
 		defer func() { world.gh.Patch.CreatePull = nil }()
-		return world.run(crossRunner(map[string]runner.Handler{
+		return world.run(workFake(map[string]runner.Handler{
 			"build":  fullsendBuilder(map[string]string{"src/game.txt": "rules A and B\n"}, &prompts),
 			"review": crossAnswer(fullsendApprove)}))
 	}()

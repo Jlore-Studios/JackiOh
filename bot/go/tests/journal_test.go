@@ -27,7 +27,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/journal"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
@@ -44,64 +43,6 @@ const journalNotes = "## State\n\nRules v2 is half written; the Coin is next. Tr
 //
 // From test_cross (ALL), test_work (DONE, APPROVE, GATES, builder, reviewer), test_wip (capped)
 // and test_flow (Harness), as this file's own: each test file of package tests keeps its helpers.
-
-// ALL (test_cross): every provider secret set.
-var journalAll = map[string]string{"HARNESS_SECRETS_SET": strings.Join(providers.SecretNames, " ")}
-
-// DONE (test_work)
-const journalDone = "<!-- bot: {\"status\": \"done\", \"title\": \"Make the rules v2\"} -->\n## What changed\nRules v2."
-
-// APPROVE (test_work)
-const journalApprove = "<!-- review: {\"verdict\": \"approve\", \"findings\": []} -->\nLooked hard; fine."
-
-// GATES (test_work)
-func journalGates() []any {
-	return []any{
-		pyjson.New("name", "rules exist", "run", "test -f src/game.txt", "timeout_minutes", 1),
-		pyjson.New("name", "no broken file", "run", "test ! -f broken.txt", "timeout_minutes", 1),
-	}
-}
-
-// journalBuilder is builder(edits) (test_work): a builder that writes `edits` and reports DONE.
-func journalBuilder(edits map[string]string) runner.Handler {
-	return func(request *runner.RunRequest) *runner.RunResult {
-		for name, content := range edits {
-			target := filepath.Join(request.Cwd, name)
-			if err := os.MkdirAll(filepath.Dir(target), 0o777); err != nil {
-				panic(err)
-			}
-			if err := os.WriteFile(target, []byte(content), 0o666); err != nil {
-				panic(err)
-			}
-		}
-		result := runner.NewRunResult(true, journalDone)
-		result.Usage = pyjson.New("five_hour", pyjson.New("utilization", 0.3, "resets_at", nil))
-		return result
-	}
-}
-
-// journalReviewer is reviewer(text) (test_work).
-func journalReviewer(text string) runner.Handler {
-	return func(request *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, text) }
-}
-
-// journalCapped is capped (test_wip): the subscription's usage crossed its cap mid-call
-// (`usage_stop`): a pause, no parking.
-func journalCapped(request *runner.RunRequest) *runner.RunResult {
-	result := runner.NewRunResult(false, "")
-	result.ExitCode, result.DurationS, result.Error = 1, 1800, "stopped mid-call"
-	result.Extra = pyjson.New("usage_stop", "5-hour usage is 91%, at or over its 90% cap")
-	return result
-}
-
-// journalRunner is FakeRunner(handlers): each role's one handler.
-func journalRunner(handlers map[string]runner.Handler) *runner.FakeRunner {
-	queues := map[string][]runner.Handler{}
-	for role, h := range handlers {
-		queues[role] = []runner.Handler{h}
-	}
-	return runner.NewFakeRunner(queues)
-}
 
 // journalHarness is Harness (test_flow): one repository, one fake GitHub, and the three jobs of a
 // night run.
@@ -136,7 +77,7 @@ func newJournalHarness(t *testing.T, opts ...journalHarnessOpts) *journalHarness
 	for k, v := range o.Env {
 		env[k] = v
 	}
-	overrides := pyjson.New("gates", journalGates(), "install", pyjson.New("run", "true", "timeout_minutes", 1),
+	overrides := pyjson.New("gates", workGates, "install", pyjson.New("run", "true", "timeout_minutes", 1),
 		"max_review_cycles", 2)
 	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine, Overrides: overrides})
 	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: o.At})
@@ -376,11 +317,11 @@ func TestJournal_ReadingKeepsTheEndFromARun(t *testing.T) {
 // journal, and the next one starts from it.
 
 func TestJournal_ACutOffRunJournalsAndTheNextPicksUp(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: journalAll, Machine: testsupport.Machine})
+	h := newJournalHarness(t, journalHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
-	first := journalRunner(map[string]runner.Handler{
-		"build":  journalBuilder(map[string]string{"src/game.txt": "half\n", work.NotesFile: journalNotes}),
-		"review": journalCapped})
+	first := workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "half\n", work.NotesFile: journalNotes}),
+		"review": wipCapped})
 	planned, result := h.night(first)
 	assertEqual(t, []any{planned.Get("provider"), planned.Get("runs_on"), result.Get("status")},
 		[]any{"claude-3", "ubuntu-latest", "interrupted"})
@@ -407,9 +348,9 @@ func TestJournal_ACutOffRunJournalsAndTheNextPicksUp(t *testing.T) {
 	pickingUp := func(request *runner.RunRequest) *runner.RunResult {
 		seen["journal"] = basicsReadFile(t, filepath.Join(request.Cwd, journal.JournalFile))
 		seen["file"] = basicsReadFile(t, filepath.Join(request.Cwd, "src", "game.txt"))
-		return journalBuilder(map[string]string{"src/game.txt": "whole\n"})(request)
+		return workBuilder(map[string]string{"src/game.txt": "whole\n"})(request)
 	}
-	second := journalRunner(map[string]runner.Handler{"build": pickingUp, "review": journalReviewer(journalApprove)})
+	second := workFake(map[string]runner.Handler{"build": pickingUp, "review": workReviewer(workApprove)})
 	planned, result = h.night(second)
 	assertIn(t, "Tried a table of rules", planned.Str("journal"))
 	assertIn(t, "Tried a table of rules", seen["journal"])
@@ -438,7 +379,7 @@ func TestJournal_ACutOffRunJournalsAndTheNextPicksUp(t *testing.T) {
 // The journal is a record, never a gate: a read that fails in the claim and a write that fails
 // in deliver leave the run as it would have been.
 func TestJournal_AJournalThatFailsNeverStopsTheRun(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: journalAll, Machine: testsupport.Machine})
+	h := newJournalHarness(t, journalHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	real := h.gh.Own().GetFile
 	h.gh.Patch.GetFile = func(path, ref string) (string, string) {
@@ -447,25 +388,25 @@ func TestJournal_AJournalThatFailsNeverStopsTheRun(t *testing.T) {
 		}
 		return real(path, ref)
 	}
-	planned, result := h.night(journalRunner(map[string]runner.Handler{
-		"build":  journalBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": journalReviewer(journalApprove)}))
+	planned, result := h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}))
 	assertNotIn(t, "journal", planned)
 	assertEqual(t, result.Get("status"), "approved")
 	assertTrue(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)) > 0)
 }
 
 func TestJournal_APullRequestsRunsGoToItsIssuesJournal(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: journalAll, Machine: testsupport.Machine})
+	h := newJournalHarness(t, journalHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
-	h.night(journalRunner(map[string]runner.Handler{
-		"build":  journalBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": journalReviewer(journalApprove)}))
+	h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}))
 	pr := h.gh.ListPulls("open", "bot/issue-12", 200)[0].Int("number")
 	h.gh.AddLabels(pr, []string{config.LabelRevise}) // a person asked for another pass
-	planned, _ := h.night(journalRunner(map[string]runner.Handler{
-		"revise": journalBuilder(map[string]string{"src/game.txt": "v3\n"}),
-		"review": journalReviewer(journalApprove)}))
+	planned, _ := h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{"src/game.txt": "v3\n"}),
+		"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("action"), planned.Get("issue_number")}, []any{"revise", 12})
 	assertIn(t, "build #12", planned.Str("journal"))
 	runs := journal.RunsIn(journalText(h))
@@ -481,7 +422,7 @@ func TestJournal_APullRequestsRunsGoToItsIssuesJournal(t *testing.T) {
 // the machine holds no GitHub credential, and ignored in the clone it keeps.
 
 func TestJournal_AMachineRunReadsAndWritesTheJournal(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: journalAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newJournalHarness(t, journalHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	earlier := journal.Section(
 		pyjson.New("status", "interrupted", "interrupt", "usage", "reason", "claude-5 stops mid-call",
@@ -491,9 +432,9 @@ func TestJournal_AMachineRunReadsAndWritesTheJournal(t *testing.T) {
 	seen := map[string]string{}
 	building := func(request *runner.RunRequest) *runner.RunResult {
 		seen["journal"] = basicsReadFile(t, filepath.Join(request.Cwd, journal.JournalFile))
-		return journalBuilder(map[string]string{"src/game.txt": "v2\n"})(request)
+		return workBuilder(map[string]string{"src/game.txt": "v2\n"})(request)
 	}
-	r := journalRunner(map[string]runner.Handler{"build": building, "review": journalReviewer(journalApprove)})
+	r := workFake(map[string]runner.Handler{"build": building, "review": workReviewer(workApprove)})
 	planned, _ := h.night(r)
 	assertEqual(t, []any{planned.Get("provider"), planned.Get("runs_on")}, []any{"muse", "night-vm-muse"})
 	assertIn(t, "claude-5 stops mid-call", seen["journal"])
@@ -524,9 +465,9 @@ func TestJournal_ACancelledJobIsAPauseThatKeepsItsWork(t *testing.T) {
 			t.Fatal(err)
 		}
 		time.Sleep(5 * time.Second) // the handler stops the call before this ends
-		return runner.NewRunResult(true, journalDone)
+		return runner.NewRunResult(true, workDone)
 	}
-	_, result := h.night(journalRunner(map[string]runner.Handler{"build": cancelled}))
+	_, result := h.night(workFake(map[string]runner.Handler{"build": cancelled}))
 	// Put back: Python's handler is signal.default_int_handler again; Go relays SIGINT to no one
 	// and no longer ignores it.
 	assertFalse(t, signal.Ignored(syscall.SIGINT))
@@ -584,9 +525,9 @@ func TestJournal_AKilledJobLeavesItsLastCheckpoint(t *testing.T) {
 	out, killed := filepath.Join(h.root, "out-0"), filepath.Join(h.root, "killed")
 	killedDuringReview := func(request *runner.RunRequest) *runner.RunResult {
 		journalCopyTree(out, killed) // what the upload step finds if the job dies now
-		return runner.NewRunResult(true, journalApprove)
+		return runner.NewRunResult(true, workApprove)
 	}
-	r := journalRunner(map[string]runner.Handler{"build": journalBuilder(map[string]string{"src/game.txt": "v2\n"}),
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": killedDuringReview})
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	checkpoint := journalLoad(t, filepath.Join(killed, "result.json"))
@@ -619,7 +560,7 @@ func TestJournal_AKilledJobLeavesItsLastCheckpoint(t *testing.T) {
 func TestJournal_ACancelSomethingSwallowedStillStopsTheRun(t *testing.T) {
 	h := newJournalHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	worker := work.NewWorker(h.cfg, plan.Make(h.ctx, false, nil, "auto", nil), journalRunner(nil), h.clone,
+	worker := work.NewWorker(h.cfg, plan.Make(h.ctx, false, nil, "auto", nil), workFake[runner.Handler](nil), h.clone,
 		filepath.Join(h.root, "work"), filepath.Join(h.root, "out-0"), nil, nil, nil, nil, nil, nil)
 	worker.Signalled = "the job was stopped (SIGTERM): cancelled, or past its time limit"
 	stopped := assertRaises[*work.Interrupt](t, func() { worker.Check() })
@@ -635,8 +576,8 @@ func TestJournal_AKilledJobThatGotNowhereCounts(t *testing.T) {
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, "out-0")
-	work.NewWorker(h.cfg, planned, journalRunner(map[string]runner.Handler{
-		"build": journalBuilder(map[string]string{}), "review": journalReviewer(journalApprove)}),
+	work.NewWorker(h.cfg, planned, workFake(map[string]runner.Handler{
+		"build": workBuilder(map[string]string{}), "review": workReviewer(workApprove)}),
 		h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	result := journalLoad(t, filepath.Join(out, "result.json"))
 	result.Update(pyjson.New("status", "interrupted", "interrupt", "died", "reason", "killed", "head", nil))

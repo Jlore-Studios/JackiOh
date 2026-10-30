@@ -119,32 +119,6 @@ func dashboardGitHubError(msg string, status int) *herr.GitHubError {
 	return &herr.GitHubError{Msg: msg, Status: status}
 }
 
-// dashboardSecrets is test_providers.secrets.
-func dashboardSecrets(names ...string) map[string]string {
-	return map[string]string{"HARNESS_SECRETS_SET": strings.Join(names, " ")}
-}
-
-// dashboardEarly is test_providers.EARLY.
-var dashboardEarly = time.Date(2026, 10, 9, 6, 0, 0, 0, time.UTC)
-
-// dashboardTooCloseToStart is test_providers.too_close_to_start: the night claude-4 and claude-6
-// sat idle with work queued: outside their hours, under their 50% cap there, but not 5 points
-// under it (`start_headroom`); every other subscription refused until later.
-func dashboardTooCloseToStart() *pyjson.Object {
-	later := clock.ISO(dashboardEarly.Add(6 * time.Hour))
-	byID := pyjson.New()
-	for _, pid := range testsupport.RawProviders().Obj("providers").Keys() {
-		byID.Set(pid, pyjson.New("refused_until", later))
-	}
-	byID.Set("claude-4", pyjson.New("usage", pyjson.New(
-		"five_hour", pyjson.New("utilization", 0.49, "resets_at", "2026-10-09T09:10:00Z"),
-		"observed_at", "2026-10-09T04:37:07Z")))
-	byID.Set("claude-6", pyjson.New("usage", pyjson.New(
-		"five_hour", pyjson.New("utilization", 0.45, "resets_at", "2026-10-09T07:50:00Z"),
-		"observed_at", "2026-10-09T03:34:44Z")))
-	return pyjson.New("providers", byID)
-}
-
 // dashboardGist is `{"g1": {"files": {PC_FILE: {"content": json.dumps(beat)}}}}`.
 func dashboardGist(beat *pyjson.Object) map[string]*pyjson.Object {
 	return map[string]*pyjson.Object{"g1": pyjson.New("files", pyjson.New(dashboard.PCFile,
@@ -820,7 +794,7 @@ func TestDashboard_EachIdleAccountSaysWhyInItsBox(t *testing.T) {
 	gh, _ := dashboardSetUp()
 	later := clock.ISO(testsupport.Night.Add(70 * time.Minute))
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night,
-		Cfg: testsupport.MakeConfig(testsupport.Config{Env: waitingAll()})}) // every secret set
+		Cfg: testsupport.MakeConfig(testsupport.Config{Env: crossAll})}) // every secret set
 
 	dashboardSeed(ctx, "seed", func(s *pyjson.Object) {
 		s.Obj("providers").Set("claude-2", pyjson.New("usage", pyjson.New("five_hour",
@@ -854,10 +828,10 @@ func TestDashboard_EachIdleAccountSaysWhyInItsBox(t *testing.T) {
 // hours, the line a build starts under and the reset; and the full status says the same.
 func TestDashboard_AnAccountTooCloseToItsCapToStartIsPausedNotOpen(t *testing.T) {
 	gh, _ := dashboardSetUp()
-	cfg := testsupport.MakeConfig(testsupport.Config{Env: waitingAll(), CommittedHours: true})
-	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: dashboardEarly, Cfg: cfg})
+	cfg := testsupport.MakeConfig(testsupport.Config{Env: crossAll, CommittedHours: true})
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: providersEarly, Cfg: cfg})
 	dashboardSeed(ctx, "seed", func(s *pyjson.Object) {
-		s.Obj("providers").Update(dashboardTooCloseToStart().Obj("providers"))
+		s.Obj("providers").Update(providersTooCloseToStart().Obj("providers"))
 	})
 	st := ctx.Store.Load()
 	pool := cfg.Pool
@@ -887,7 +861,7 @@ func TestDashboard_AnAccountTooCloseToItsCapToStartIsPausedNotOpen(t *testing.T)
 	assertIn(t, "Usage: 5-hour 49% (cap 50% now, 70% in its hours; builds and plans start "+
 		"under 45%; resets in 3h 10m) (read 1h 22m ago).", body)
 	// In its hours the other cap is the one outside them; an uncapped account says so.
-	day := testsupport.MakeCtx(gh, testsupport.Ctx{At: dashboardEarly.Add(3 * time.Hour), Cfg: cfg})
+	day := testsupport.MakeCtx(gh, testsupport.Ctx{At: providersEarly.Add(3 * time.Hour), Cfg: cfg})
 	assertEqual(t, status.CapText(day, pool.Get("claude-4"), "five_hour", nil),
 		"cap 70% now, 50% outside its hours")
 	assertEqual(t, status.CapText(day, pool.Get("claude-3"), "five_hour", nil), "no cap")
@@ -902,7 +876,7 @@ func TestDashboard_AnAccountTooCloseToItsCapToStartIsPausedNotOpen(t *testing.T)
 // and a planning run of claude-3's (no caps) on the planning lane beside its own.
 func TestDashboard_EverySubscriptionsLanesWithTheTotals(t *testing.T) {
 	gh, _ := dashboardSetUp()
-	cfg := testsupport.MakeConfig(testsupport.Config{Env: dashboardSecrets(providers.SecretNames...),
+	cfg := testsupport.MakeConfig(testsupport.Config{Env: providersSecrets(providers.SecretNames...),
 		Machine: testsupport.AllMachine, CommittedPlanLanes: true})
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, Cfg: cfg})
 	runs := []struct {

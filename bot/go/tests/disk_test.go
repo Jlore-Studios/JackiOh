@@ -214,8 +214,8 @@ type diskWorkerSetup struct {
 func newDiskWorkerSetup(t *testing.T) *diskWorkerSetup {
 	s := &diskWorkerSetup{root: t.TempDir()}
 	s.origin, s.clone = fakes.MakeOrigin(s.root)
-	s.cfg = testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", wasteGates(),
-		"install", wasteInstall())})
+	s.cfg = testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", workGates,
+		"install", workInstall())})
 	return s
 }
 
@@ -258,7 +258,7 @@ func diskPatchClean(t *testing.T, value string) (*int, func()) {
 
 func TestDisk_UnderTheFloorAfterCleaningItDoesNoWorkAndBlamesTheMachine(t *testing.T) {
 	s := newDiskWorkerSetup(t)
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "v2\n"})})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"})})
 	clean, done := diskPatchClean(t, "cleaned")
 	result := s.worker(r, []*pyjson.Object{diskFound(99, 0.06), diskFound(97, 1)}).Run()
 	done()
@@ -275,8 +275,8 @@ func TestDisk_UnderTheFloorAfterCleaningItDoesNoWorkAndBlamesTheMachine(t *testi
 
 func TestDisk_RoomEnoughNeedsNoCleanAndTheWorkGoesOn(t *testing.T) {
 	s := newDiskWorkerSetup(t)
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
-		"review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
+		"review": workReviewer(workApprove)})
 	clean, done := diskPatchClean(t, "")
 	result := s.worker(r, []*pyjson.Object{diskFound(40, 18)}).Run()
 	done()
@@ -288,8 +288,8 @@ func TestDisk_RoomEnoughNeedsNoCleanAndTheWorkGoesOn(t *testing.T) {
 
 func TestDisk_CleaningThatMakesRoomLetsItStart(t *testing.T) {
 	s := newDiskWorkerSetup(t)
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
-		"review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
+		"review": workReviewer(workApprove)})
 	_, done := diskPatchClean(t, "ok")
 	result := s.worker(r, []*pyjson.Object{diskFound(85, 4), diskFound(60, 12)}).Run()
 	done()
@@ -302,7 +302,7 @@ func TestDisk_ADiskThatFillsUpMidRunPausesAndKeepsTheWork(t *testing.T) {
 		herr.Must(os.WriteFile(filepath.Join(request.Cwd, "src", "game.txt"), []byte("half of v2\n"), 0o666))
 		panic(&diskOSError{syscall.ENOSPC, "No space left on device"})
 	}
-	result := s.worker(wasteRunner(map[string]runner.Handler{"build": fillsUp}), []*pyjson.Object{diskFound(50, 15)}).Run()
+	result := s.worker(workFake(map[string]runner.Handler{"build": fillsUp}), []*pyjson.Object{diskFound(50, 15)}).Run()
 	assertEqual(t, result.Get("status"), "interrupted")
 	assertEqual(t, result.Get("interrupt"), "disk")
 	assertIn(t, "the machine's disk filled up", wasteStr(result, "reason"))
@@ -310,8 +310,8 @@ func TestDisk_ADiskThatFillsUpMidRunPausesAndKeepsTheWork(t *testing.T) {
 
 func TestDisk_GithubsRunnersReadNoDisk(t *testing.T) {
 	s := newDiskWorkerSetup(t)
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
-		"review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
+		"review": workReviewer(workApprove)})
 	result := s.worker(r, []*pyjson.Object{diskFound(99, 0.01)}, "ubuntu-latest").Run()
 	assertEqual(t, result.Get("status"), "approved")
 	assertTrue(t, !result.Has("disk"))
@@ -355,8 +355,8 @@ func TestDisk_AJobOnGithubsRunnersReportsNothing(t *testing.T) {
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, "out-hosted")
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)})
 	wasteWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out).Run()
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	assertTrue(t, !h.ctx.Store.Load().Has("machine_disk"))

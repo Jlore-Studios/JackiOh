@@ -12,19 +12,12 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 )
-
-// closedAll is test_cross's ALL, which test_closed imports: every subscription's secret set.
-// (cross_test.go holds the twin of test_cross itself.)
-func closedAll() map[string]string {
-	return map[string]string{"HARNESS_SECRETS_SET": strings.Join(providers.SecretNames, " ")}
-}
 
 // closedRuns is RUNS: runs holding every lane of the machine's subscriptions (Muse has four);
 // someone closed #5 while its run went on.
@@ -47,7 +40,7 @@ func TestClosed_ItsRunKeepsItsLane(t *testing.T) {
 	}
 	gh.AddIssue(8, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, Cfg: testsupport.MakeConfig(
-		testsupport.Config{Env: closedAll(), Machine: testsupport.Machine})})
+		testsupport.Config{Env: crossAll, Machine: testsupport.Machine})})
 	flowUpdate(ctx, func(s *pyjson.Object) {
 		for _, run := range closedRuns {
 			state.Item(s, run.number).Update(pyjson.New("run_id", run.runID, "provider", run.provider))
@@ -64,7 +57,7 @@ func TestClosed_ItsRunKeepsItsLane(t *testing.T) {
 }
 
 func TestClosed_ItsWorkIsNotDelivered(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Env: closedAll()})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
 	h.GH.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: flowLabels(config.LabelBuild)})
 	build := workBuilder(map[string]any{"src/game.txt": "rules v2\n"})
 	closedMeanwhile := func(request *runner.RunRequest) *runner.RunResult {
@@ -85,7 +78,7 @@ func TestClosed_ADeadRunsLabelIsClearedNotRequeued(t *testing.T) {
 	gh.AddIssue(5, fakes.Issue{Labels: flowLabels(config.LabelWorking), State: "closed"})
 	gh.Runs.Set("51", pyjson.New("status", "completed", "conclusion", "cancelled"))
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{Cfg: testsupport.MakeConfig(
-		testsupport.Config{Env: closedAll(), Machine: testsupport.Machine})})
+		testsupport.Config{Env: crossAll, Machine: testsupport.Machine})})
 	flowUpdate(ctx, func(s *pyjson.Object) {
 		state.Item(s, 5).Update(pyjson.New("run_id", "51", "provider", "gpt"))
 	})

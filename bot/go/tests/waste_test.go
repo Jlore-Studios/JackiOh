@@ -38,79 +38,6 @@ import (
 // flow_test.go, work_test.go and cross_test.go hold theirs; disk_test.go, needs_plan_test.go and
 // pickup_labels_test.go, which import the same, use these too. Only what those tests call is here.
 
-// wasteDone is test_work.DONE.
-const wasteDone = "<!-- bot: {\"status\": \"done\", \"title\": \"Make the rules v2\"} -->\n## What changed\nRules v2."
-
-// wasteApprove is test_work.APPROVE.
-const wasteApprove = "<!-- review: {\"verdict\": \"approve\", \"findings\": []} -->\nLooked hard; fine."
-
-// wasteChanges is test_work.changes(claim, where="src/game.txt").
-func wasteChanges(claim string, where ...string) string {
-	at := "src/game.txt"
-	if len(where) > 0 {
-		at = where[0]
-	}
-	finding := pyjson.New("severity", "blocking", "where", at, "claim", claim, "evidence", "read it")
-	return "<!-- review: " + pyjson.Dumps(pyjson.New("verdict", "changes", "findings", []any{finding})) +
-		" -->\nNo."
-}
-
-// wasteBuilder is test_work.builder(edits, text=DONE): a handler that writes each file of `edits`
-// into the run's worktree (in the order of their names) and answers `text`.
-func wasteBuilder(edits map[string]string, text ...string) runner.Handler {
-	said := wasteDone
-	if len(text) > 0 {
-		said = text[0]
-	}
-	return func(request *runner.RunRequest) *runner.RunResult {
-		for _, name := range slices.Sorted(maps.Keys(edits)) {
-			target := filepath.Join(request.Cwd, name)
-			herr.Must(os.MkdirAll(filepath.Dir(target), 0o777))
-			herr.Must(os.WriteFile(target, []byte(edits[name]), 0o666))
-		}
-		result := runner.NewRunResult(true, said)
-		result.Usage = pyjson.New("five_hour", pyjson.New("utilization", 0.3, "resets_at", nil))
-		return result
-	}
-}
-
-// wasteReviewer is test_work.reviewer(text).
-func wasteReviewer(text string) runner.Handler {
-	return func(*runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, text) }
-}
-
-// wasteGates is test_work.GATES, as config.json's JSON.
-func wasteGates() []any {
-	return []any{
-		pyjson.New("name", "rules exist", "run", "test -f src/game.txt", "timeout_minutes", 1),
-		pyjson.New("name", "no broken file", "run", "test ! -f broken.txt", "timeout_minutes", 1),
-	}
-}
-
-// wasteInstall is the `install` every test here gives the config: {"run": "true", ...}.
-func wasteInstall() *pyjson.Object { return pyjson.New("run", "true", "timeout_minutes", 1) }
-
-// wasteAll is test_cross.ALL: every provider secret set.
-var wasteAll = map[string]string{"HARNESS_SECRETS_SET": strings.Join(providers.SecretNames, " ")}
-
-// wasteRunner is FakeRunner(handlers): one handler for each role.
-func wasteRunner(handlers map[string]runner.Handler) *runner.FakeRunner {
-	queues := map[string][]runner.Handler{}
-	for role, handler := range handlers {
-		queues[role] = []runner.Handler{handler}
-	}
-	return runner.NewFakeRunner(queues)
-}
-
-// wasteRoles is `[c.role for c in runner.calls]`.
-func wasteRoles(r *runner.FakeRunner) []string {
-	roles := []string{}
-	for _, call := range r.Calls {
-		roles = append(roles, call.Role)
-	}
-	return roles
-}
-
 // wasteHarnessOpts is test_flow.Harness's keyword arguments; a zero field is the default.
 type wasteHarnessOpts struct {
 	Env       map[string]string // env = None
@@ -141,7 +68,7 @@ func newWasteHarness(t *testing.T, opts ...wasteHarnessOpts) *wasteHarness {
 	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
 		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
 	maps.Copy(env, o.Env)
-	overrides := pyjson.New("gates", wasteGates(), "install", wasteInstall(), "max_review_cycles", 2)
+	overrides := pyjson.New("gates", workGates, "install", workInstall(), "max_review_cycles", 2)
 	overrides.Update(o.Overrides)
 	at := o.At
 	if at.IsZero() {
@@ -244,7 +171,7 @@ func TestWaste_ATimedOutGateIsNeverRunAgainOnMain(t *testing.T) {
 	_, clone := fakes.MakeOrigin(root)
 	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New(
 		"gates", []any{pyjson.New("name", "unit", "run", "false", "timeout_minutes", 1)},
-		"install", wasteInstall())})
+		"install", workInstall())})
 	worker := wasteWorker(cfg, pyjson.New("action", "build", "number", 12, "branch", "bot/issue-12"),
 		runner.NewFakeRunner(nil), clone, filepath.Join(root, "work"), filepath.Join(root, "out"))
 	results := []*gates.GateResult{wasteTimedOut("unit")}
@@ -289,9 +216,9 @@ func wasteRunPlan(t *testing.T, text string) (*runner.FakeRunner, *pyjson.Object
 	t.Helper()
 	root := t.TempDir()
 	_, clone := fakes.MakeOrigin(root)
-	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", wasteGates(),
-		"install", wasteInstall())})
-	r := wasteRunner(map[string]runner.Handler{"plan": func(*runner.RunRequest) *runner.RunResult {
+	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", workGates,
+		"install", workInstall())})
+	r := workFake(map[string]runner.Handler{"plan": func(*runner.RunRequest) *runner.RunResult {
 		return runner.NewRunResult(true, text)
 	}})
 	return r, wasteWorker(cfg, wastePlanItem(), r, clone, filepath.Join(root, "work"), filepath.Join(root, "out")).Run()
@@ -335,7 +262,7 @@ func TestWaste_APlanTheDescriptionRefusedGoesWholeIntoItsComment(t *testing.T) {
 	planText := "## Goal\nThe first step.\n" + strings.Repeat("x", 25_000) + "\nThe last step."
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, "out-plan")
-	r := wasteRunner(map[string]runner.Handler{"plan": func(*runner.RunRequest) *runner.RunResult {
+	r := workFake(map[string]runner.Handler{"plan": func(*runner.RunRequest) *runner.RunResult {
 		return runner.NewRunResult(true, planText)
 	}})
 	asPlan := planned.Copy().Set("action", "plan")
@@ -353,11 +280,11 @@ func TestWaste_APlanTheDescriptionRefusedGoesWholeIntoItsComment(t *testing.T) {
 func TestWaste_ABuildThatOnlyChangesForbiddenPathsStopsAndAsksAPerson(t *testing.T) {
 	h := newWasteHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Title: "Tune the bot", Labels: []string{config.LabelBuild}})
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"bot/harness/tuned.py": "x = 1\n"}),
-		"review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"bot/harness/tuned.py": "x = 1\n"}),
+		"review": workReviewer(workApprove)})
 	_, result := h.night(r)
 	assertEqual(t, result.Get("status"), "blocked", result.Get("reason"))
-	assertTrue(t, !slices.Contains(wasteRoles(r), "review")) // no rounds spent on it
+	assertTrue(t, !slices.Contains(workRoles(r), "review")) // no rounds spent on it
 	assertTrue(t, !result.Has("bundle"))
 	_, found := h.originSHA("bot/issue-12")
 	assertFalse(t, found)
@@ -372,11 +299,11 @@ func TestWaste_ABuildThatOnlyChangesForbiddenPathsStopsAndAsksAPerson(t *testing
 func TestWaste_ABuildWithWorkOutsideThemGoesOn(t *testing.T) {
 	h := newWasteHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	r := wasteRunner(map[string]runner.Handler{
-		"build": wasteBuilder(map[string]string{"bot/x.py": "1\n", "src/game.txt": "v2\n"}),
-		"fix":   wasteBuilder(map[string]string{}), "review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{
+		"build": workBuilder(map[string]string{"bot/x.py": "1\n", "src/game.txt": "v2\n"}),
+		"fix":   workBuilder(map[string]string{}), "review": workReviewer(workApprove)})
 	_, result := h.night(r)
-	assertTrue(t, slices.Contains(wasteRoles(r), "review"))
+	assertTrue(t, slices.Contains(workRoles(r), "review"))
 	assertFalse(t, pyjson.Equal(result.Get("status"), "blocked"))
 }
 
@@ -411,9 +338,9 @@ func TestWaste_GithubFailingToAnswerDoesNotStopIt(t *testing.T) {
 
 func TestWaste_EachFailureInARowWaitsLonger(t *testing.T) {
 	st := pyjson.New()
-	pool := testsupport.MakeConfig(testsupport.Config{Env: wasteAll, CommittedHours: true}).Pool // claude-3 works all day
+	pool := testsupport.MakeConfig(testsupport.Config{Env: crossAll, CommittedHours: true}).Pool // claude-3 works all day
 	claude := pool.Get("claude-3")
-	secrets := providers.SecretsOf(wasteAll)
+	secrets := providers.SecretsOf(crossAll)
 	waits := []time.Duration{}
 	for range 4 {
 		providers.NoteInfra(st, "claude-3", "401 OAuth access token is invalid", wasteAt, true)
@@ -433,7 +360,7 @@ func TestWaste_AFailureThatIsNotTheProvidersKeepsTheStreak(t *testing.T) {
 }
 
 func TestWaste_AStreakAsksAPersonOnceAndAWorkingRunEndsIt(t *testing.T) {
-	h := newWasteHarness(t, wasteHarnessOpts{Env: wasteAll, Machine: testsupport.Machine, At: wasteAt})
+	h := newWasteHarness(t, wasteHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: wasteAt})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	provider := wasteStr(planned, "provider")
@@ -484,8 +411,8 @@ func wastePull(t *testing.T, gh *fakes.FakeGitHub, branch string) *pyjson.Object
 func TestWaste_AnUnapprovedPullRequestSaysHowManyRoundsItTookAndWhy(t *testing.T) {
 	h := newWasteHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	h.night(wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": wasteReviewer("LGTM")}))
+	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer("LGTM")}))
 	body := wasteStr(wastePull(t, h.gh, "bot/issue-12"), "body")
 	assertIn(t, "It stopped without an approval after 1 of 2 round(s): the reviewer's "+
 		"answer could not be read twice in a row, so this is a draft", body)
@@ -496,8 +423,8 @@ func TestWaste_TheSquashCommitTakesThePullRequestsTitle(t *testing.T) {
 	// claude-3 alone, so its Opus review meets the rule (#695) and auto-merge turns on.
 	h := newWasteHarness(t, wasteHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	h.night(wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": wasteReviewer(wasteApprove)}))
+	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}))
 	pr, _ := pyjson.AsInt(wastePull(t, h.gh, "bot/issue-12").Get("number"))
 	// Neither the builder's title nor the fake issue's passes the title check, so it is written.
 	assertEqual(t, h.gh.MergeTitles[fmt.Sprintf("PR_%d", pr)], fmt.Sprintf("Patch: Make the rules v2 (#%d)", pr))
@@ -509,16 +436,16 @@ func TestWaste_TheSquashCommitTakesThePullRequestsTitle(t *testing.T) {
 func TestWaste_ATitleThatBreaksTheConventionGivesWayToTheIssues(t *testing.T) {
 	issue := "Patch: the rules, version two"
 	for _, c := range [][2]string{
-		{wasteDone, issue},
-		{strings.ReplaceAll(wasteDone, "Make the rules v2", "Patch v0.3.2: the rules, version two"),
+		{workDone, issue},
+		{strings.ReplaceAll(workDone, "Make the rules v2", "Patch v0.3.2: the rules, version two"),
 			"Patch v0.3.2: the rules, version two"},
 	} {
 		text, want := c[0], c[1]
 		// claude-3 alone, so its Opus review meets the rule (#695) and auto-merge turns on.
 		h := newWasteHarness(t, wasteHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 		h.gh.AddIssue(12, fakes.Issue{Title: issue, Labels: []string{config.LabelBuild}})
-		h.night(wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "v2\n"}, text),
-			"review": wasteReviewer(wasteApprove)}))
+		h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}, text),
+			"review": workReviewer(workApprove)}))
 		pull := wastePull(t, h.gh, "bot/issue-12")
 		assertEqual(t, pull.Get("title"), want)
 		assertEqual(t, h.gh.MergeTitles["PR_"+py.Str(pull.Get("number"))],

@@ -58,7 +58,7 @@ func switchRated(difficulty string) runner.Handler {
 
 // switchHarness is SwitchTests.harness.
 func switchHarness(t *testing.T) *difficultyHarness {
-	return newDifficultyHarness(t, difficultyHarnessOpts{Env: difficultyAll(),
+	return newDifficultyHarness(t, difficultyHarnessOpts{Env: crossAll,
 		Overrides: pyjson.New("max_review_cycles", 4)})
 }
 
@@ -105,10 +105,10 @@ func TestSwitch_TheBuilderAsksForOpusAndItsNextPassRunsOnIt(t *testing.T) {
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchMedium}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build": {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "opus"))},
-		"fix":   {difficultyBuilder(map[string]string{"src/game.txt": "v3\n"})},
-		"review": {difficultyReviewer(difficultyChanges("v2 misses a rule")),
-			difficultyReviewer(difficultyApprove)}})
+		"build": {workBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "opus"))},
+		"fix":   {workBuilder(map[string]string{"src/game.txt": "v3\n"})},
+		"review": {workReviewer(workChanges("v2 misses a rule")),
+			workReviewer(workApprove)}})
 	planned, result := h.night(r)
 	assertEqual(t, []any{planned.Get("provider"), planned.Obj("seats").Obj("build").Get("model")},
 		[]any{"claude-3", "sonnet"})
@@ -132,11 +132,11 @@ func TestSwitch_RoundsSentBackOnSonnetMoveTheBuilderToOpus(t *testing.T) {
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchMedium}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build": {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})},
-		"fix": {difficultyBuilder(map[string]string{"src/game.txt": "v3\n"}),
-			difficultyBuilder(map[string]string{"src/game.txt": "v4\n"})},
-		"review": {difficultyReviewer(difficultyChanges("not yet")), difficultyReviewer(difficultyChanges("still no")),
-			difficultyReviewer(difficultyApprove)}})
+		"build": {workBuilder(map[string]string{"src/game.txt": "v2\n"})},
+		"fix": {workBuilder(map[string]string{"src/game.txt": "v3\n"}),
+			workBuilder(map[string]string{"src/game.txt": "v4\n"})},
+		"review": {workReviewer(workChanges("not yet")), workReviewer(workChanges("still no")),
+			workReviewer(workApprove)}})
 	_, result := h.night(r)
 	assertEqual(t, work.SwitchUpAfter, 2)
 	assertEqual(t, result.Get("status"), "approved")
@@ -151,9 +151,9 @@ func TestSwitch_AHardItemKeepsOpusWhateverTheBuilderAsks(t *testing.T) {
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchHard}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "sonnet"))},
-		"fix":    {difficultyBuilder(map[string]string{"src/game.txt": "v3\n"})},
-		"review": {difficultyReviewer(difficultyChanges("not yet")), difficultyReviewer(difficultyApprove)}})
+		"build":  {workBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "sonnet"))},
+		"fix":    {workBuilder(map[string]string{"src/game.txt": "v3\n"})},
+		"review": {workReviewer(workChanges("not yet")), workReviewer(workApprove)}})
 	_, result := h.night(r)
 	assertEqual(t, [][]string{switchModels(r, "build"), switchModels(r, "fix")}, [][]string{{"opus"}, {"opus"}})
 	assertEqual(t, result.Get("switches"), []any{})
@@ -166,9 +166,9 @@ func TestSwitch_OpusOnAMediumItemMayHandThePlainWorkToSonnet(t *testing.T) {
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	switchToOpus(planned)
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "sonnet"))},
-		"fix":    {difficultyBuilder(map[string]string{"src/game.txt": "v3\n"})},
-		"review": {difficultyReviewer(difficultyChanges("a typo")), difficultyReviewer(difficultyApprove)}})
+		"build":  {workBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "sonnet"))},
+		"fix":    {workBuilder(map[string]string{"src/game.txt": "v3\n"})},
+		"review": {workReviewer(workChanges("a typo")), workReviewer(workApprove)}})
 	out := filepath.Join(h.root, "out-opus")
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
@@ -185,12 +185,12 @@ func TestSwitch_SonnetGetsItsTwoTriesAfterOpusHandsItTheWork(t *testing.T) {
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	switchToOpus(planned)
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build": {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "sonnet"))},
-		"fix": {difficultyBuilder(map[string]string{"src/game.txt": "v3\n"}),
-			difficultyBuilder(map[string]string{"src/game.txt": "v4\n"}),
-			difficultyBuilder(map[string]string{"src/game.txt": "v5\n"})},
-		"review": {difficultyReviewer(difficultyChanges("one")), difficultyReviewer(difficultyChanges("two")),
-			difficultyReviewer(difficultyChanges("three")), difficultyReviewer(difficultyApprove)}})
+		"build": {workBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "sonnet"))},
+		"fix": {workBuilder(map[string]string{"src/game.txt": "v3\n"}),
+			workBuilder(map[string]string{"src/game.txt": "v4\n"}),
+			workBuilder(map[string]string{"src/game.txt": "v5\n"})},
+		"review": {workReviewer(workChanges("one")), workReviewer(workChanges("two")),
+			workReviewer(workChanges("three")), workReviewer(workApprove)}})
 	out := filepath.Join(h.root, "out-tries")
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	result := switchResult(t, out)
@@ -215,8 +215,8 @@ func TestSwitch_AnItemTheBotRatedAndItsPlannerRatesHarderIsBuiltOnOpus(t *testin
 		return nil
 	}, "state")
 	r := runner.NewFakeRunner(map[string][]runner.Handler{"plan": {switchRated("hard")},
-		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})},
-		"review": {difficultyReviewer(difficultyApprove)}})
+		"build":  {workBuilder(map[string]string{"src/game.txt": "v2\n"})},
+		"review": {workReviewer(workApprove)}})
 	planned, result := h.night(r)
 	assertEqual(t, []any{planned.Obj("seats").Obj("build").Get("model"), planned.Obj("rating").Get("source")},
 		[]any{"sonnet", "bot"})
@@ -230,8 +230,8 @@ func TestSwitch_ThePlannersRatingMovesTheBuilderInsteadOfSendingItBack(t *testin
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{"plan": {switchRated("hard")},
-		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})},
-		"review": {difficultyReviewer(difficultyApprove)}})
+		"build":  {workBuilder(map[string]string{"src/game.txt": "v2\n"})},
+		"review": {workReviewer(workApprove)}})
 	planned, result := h.night(r)
 	assertEqual(t, planned.Obj("seats").Obj("build").Get("model"), "sonnet")
 	assertEqual(t, result.Get("status"), "approved")
@@ -256,8 +256,8 @@ func TestSwitch_TheBuilderIsToldItMaySwitch(t *testing.T) {
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchMedium}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})},
-		"review": {difficultyReviewer(difficultyApprove)}})
+		"build":  {workBuilder(map[string]string{"src/game.txt": "v2\n"})},
+		"review": {workReviewer(workApprove)}})
 	h.night(r)
 	buildPrompt := switchPrompt(t, r, "build")
 	assertIn(t, "## Your model", buildPrompt)
@@ -273,9 +273,9 @@ func TestSwitch_ALaneWithOneModelNeverSwitches(t *testing.T) {
 		Machine: []string{"muse"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}}) // unrated, so a medium model may plan it
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "opus"))},
-		"fix":    {difficultyBuilder(map[string]string{"src/game.txt": "v3\n"})},
-		"review": {difficultyReviewer(difficultyChanges("not yet")), difficultyReviewer(difficultyApprove)}})
+		"build":  {workBuilder(map[string]string{"src/game.txt": "v2\n"}, switchDone("next_model", "opus"))},
+		"fix":    {workBuilder(map[string]string{"src/game.txt": "v3\n"})},
+		"review": {workReviewer(workChanges("not yet")), workReviewer(workApprove)}})
 	planned, result := h.night(r)
 	assertEqual(t, planned.Get("provider"), "muse")
 	used := map[string]bool{}

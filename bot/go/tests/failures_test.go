@@ -11,21 +11,11 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/failures"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 )
-
-// failuresLaneCtx is test_needs_plan.lane_ctx(gh): every subscription, the committed planning
-// lane, and room on the build lanes (at=NIGHT, machine=ALL_MACHINE, max_parallel=20, env=None).
-func failuresLaneCtx(gh *fakes.FakeGitHub) *hctx.Context {
-	cfg := testsupport.MakeConfig(testsupport.Config{Env: difficultySecrets(providers.SecretNames...),
-		Machine: testsupport.AllMachine, CommittedPlanLanes: true})
-	return testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, Cfg: testsupport.WithLanes(cfg, 20, 20)})
-}
 
 // failuresCycleOpts is cycle's keyword arguments; a zero field is the default.
 type failuresCycleOpts struct {
@@ -139,7 +129,7 @@ func TestFailures_NothingRecordedStillReads(t *testing.T) {
 
 func TestFailures_APlannedItemCarriesBotPlannedAndLosesItIfItNeedsAPlanAgain(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	ctx := failuresLaneCtx(gh)
+	ctx := needsPlanLaneCtx(gh)
 	pairs := []any{}
 	for i, p := range []string{"claude-3", "claude-1", "claude-4", "claude-2"} {
 		pairs = append(pairs, p, 50+i)

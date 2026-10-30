@@ -243,9 +243,9 @@ func TestHardening_ACachedGetSendsItsEtagAndKeepsTheAnswerGithubSaysIsUnchanged(
 func hardeningApprovedRun(h *ratingHarness) (*pyjson.Object, string) {
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, fmt.Sprintf("out-%d-%d", 12, h.outs()))
-	work.NewWorker(h.cfg, planned, ratingRunner(map[string]runner.Handler{
-		"build":  ratingBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": ratingReviewer(ratingApprove)}),
+	work.NewWorker(h.cfg, planned, workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}),
 		h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	return planned, out
 }
@@ -289,9 +289,9 @@ func TestHardening_TheModelJobItselfStopsAfterTheLastReview(t *testing.T) {
 		}
 		return "", "", false
 	}
-	result := work.NewWorker(h.cfg, planned, ratingRunner(map[string]runner.Handler{
-		"build":  ratingBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": ratingReviewer(ratingApprove)}),
+	result := work.NewWorker(h.cfg, planned, workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}),
 		h.clone, filepath.Join(h.root, "work"), filepath.Join(h.root, "out-probe"), probe,
 		nil, nil, nil, nil, nil).Run()
 	assertEqual(t, eventsDig(t, result, "status"), "stopped")
@@ -327,9 +327,9 @@ func TestHardening_ARevisionAskedForDuringTheBuildIsKept(t *testing.T) {
 	planned = pyjson.New("action", "build", "number", 12, "branch", "bot/issue-12", "title", "t")
 	eventsUpdateItem(h.ctx, 12, "started_at", "2026-09-30T03:00:00Z")
 	out := filepath.Join(h.root, "out-keep")
-	work.NewWorker(h.cfg, planned, ratingRunner(map[string]runner.Handler{
-		"build":  ratingBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": ratingReviewer(ratingApprove)}),
+	work.NewWorker(h.cfg, planned, workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}),
 		h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	h.gh.AddLabels(40, []string{config.LabelRevise}) // a person asks for a change while it builds
 	hardeningDeliver(h, planned, out)

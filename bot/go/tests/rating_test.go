@@ -15,7 +15,6 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -34,80 +33,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
-
-// ---------------------------------------------------------------------------- from test_work.py
-
-// ratingDone is test_work.DONE.
-const ratingDone = "<!-- bot: {\"status\": \"done\", \"title\": \"Make the rules v2\"} -->\n## What changed\nRules v2."
-
-// ratingApprove is test_work.APPROVE.
-const ratingApprove = "<!-- review: {\"verdict\": \"approve\", \"findings\": []} -->\nLooked hard; fine."
-
-// ratingGates is test_work.GATES.
-func ratingGates() []any {
-	return []any{
-		pyjson.New("name", "rules exist", "run", "test -f src/game.txt", "timeout_minutes", 1),
-		pyjson.New("name", "no broken file", "run", "test ! -f broken.txt", "timeout_minutes", 1),
-	}
-}
-
-// ratingBuilder is test_work.builder(edits, text=DONE): a handler that writes `edits` (in
-// sorted order: a Go map has no other) under the request's cwd and answers `text`.
-func ratingBuilder(edits map[string]string, text ...string) runner.Handler {
-	said := ratingDone
-	if len(text) > 0 {
-		said = text[0]
-	}
-	return func(request *runner.RunRequest) *runner.RunResult {
-		for _, name := range slices.Sorted(maps.Keys(edits)) {
-			target := filepath.Join(request.Cwd, name)
-			if err := os.MkdirAll(filepath.Dir(target), 0o777); err != nil {
-				panic(err)
-			}
-			if err := os.WriteFile(target, []byte(edits[name]), 0o666); err != nil {
-				panic(err)
-			}
-		}
-		result := runner.NewRunResult(true, said)
-		result.Usage = pyjson.New("five_hour", pyjson.New("utilization", 0.3, "resets_at", nil))
-		return result
-	}
-}
-
-// ratingReviewer is test_work.reviewer(text).
-func ratingReviewer(text string) runner.Handler {
-	return func(request *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, text) }
-}
-
-// ratingRunner is FakeRunner({role: handler, ...}).
-func ratingRunner(handlers map[string]runner.Handler) *runner.FakeRunner {
-	queues := map[string][]runner.Handler{}
-	for role, h := range handlers {
-		queues[role] = []runner.Handler{h}
-	}
-	return runner.NewFakeRunner(queues)
-}
-
-// ---------------------------------------------------------------------------- from test_difficulty.py
-
-// ratingSeats is test_difficulty.seats: each seat of a plan as (provider, model, tier), None for
-// an empty one, the self check's left out.
-func ratingSeats(t *testing.T, planned *pyjson.Object) map[string]any {
-	t.Helper()
-	out := map[string]any{}
-	eventsDig(t, planned, "seats").(*pyjson.Object).Items(func(role string, v any) bool {
-		if role == "self_check" {
-			return true
-		}
-		if seat := pyjson.Obj(v); pyjson.Truthy(seat) {
-			out[role] = []any{eventsDig(t, seat, "provider"), eventsDig(t, seat, "model"), eventsDig(t, seat, "tier")}
-		} else {
-			out[role] = nil
-		}
-		return true
-	})
-	return out
-}
 
 // ---------------------------------------------------------------------------- from test_flow.py
 
@@ -146,7 +71,7 @@ func newRatingHarness(t *testing.T, opts ...ratingHarnessOpts) *ratingHarness {
 	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
 		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
 	maps.Copy(env, o.Env)
-	overrides := pyjson.New("gates", ratingGates(), "install", pyjson.New("run", "true", "timeout_minutes", 1),
+	overrides := pyjson.New("gates", workGates, "install", pyjson.New("run", "true", "timeout_minutes", 1),
 		"max_review_cycles", 2)
 	overrides.Update(o.Overrides)
 	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine,
@@ -253,7 +178,7 @@ func ratingRatedPlan(difficulty string, files []string, why string) string {
 
 // ratingPlanner is planner(text): a runner whose planner answers `text` in five minutes.
 func ratingPlanner(text string) *runner.FakeRunner {
-	return ratingRunner(map[string]runner.Handler{"plan": func(request *runner.RunRequest) *runner.RunResult {
+	return workFake(map[string]runner.Handler{"plan": func(request *runner.RunRequest) *runner.RunResult {
 		result := runner.NewRunResult(true, text)
 		result.DurationS = 300
 		return result
@@ -389,11 +314,11 @@ func TestRating_ABuildRunThatRatesItsItemOutOfReachStopsAfterPlanning(t *testing
 	h := newRatingHarness(t, ratingHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"muse"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
-	planned, result := h.night(ratingRunner(map[string]runner.Handler{
+	planned, result := h.night(workFake(map[string]runner.Handler{
 		"plan": func(r *runner.RunRequest) *runner.RunResult {
 			return runner.NewRunResult(true, ratingRatedPlan("hard", nil, "the resolution loop"))
 		},
-		"build": ratingBuilder(map[string]string{})}))
+		"build": workBuilder(map[string]string{})}))
 	assertEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, result, "status")}, []any{"build", "planned"})
 	assertIn(t, "rated difficulty:hard", eventsDig(t, result, "reason"))
 	assertIn(t, ratingHard, h.gh.LabelNames(12))
@@ -410,8 +335,8 @@ func TestRating_AWeakBuildersChangeThatBreaksTheRuleIsNotPushed(t *testing.T) {
 	for n := range 11 {
 		many[fmt.Sprintf("src/f%d.txt", n)] = "x\n"
 	}
-	planned, result := h.night(ratingRunner(map[string]runner.Handler{"build": ratingBuilder(many),
-		"self_check": ratingReviewer(ratingApprove)}))
+	planned, result := h.night(workFake(map[string]runner.Handler{"build": workBuilder(many),
+		"self_check": workReviewer(workApprove)}))
 	assertEqual(t, []any{eventsDig(t, planned, "provider"), eventsDig(t, result, "status")}, []any{"lite", "built"})
 	assertEqual(t, h.gh.ListPulls("open", "", 200), []*pyjson.Object{})
 	assertIn(t, "breaks the easy rule (line 1: it changes 11 files, over 10)",
@@ -533,8 +458,8 @@ func TestRating_ReviewQueuesAReviewRunAtATierAndNoRevision(t *testing.T) {
 		[]any{"strong", "check the replay"})
 	// By night a strong model is free: it takes the review, with the notes.
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	review := ratingSeats(t, planned)["review"]
-	assertEqual(t, []any{eventsDig(t, planned, "action"), pyjson.List(review)[2]}, []any{"review", "strong"})
+	review := difficultySeatOf(t, planned, "review")
+	assertEqual(t, []any{eventsDig(t, planned, "action"), review[2]}, []any{"review", "strong"})
 	assertEqual(t, eventsDig(t, planned, "review_notes"), "check the replay")
 	// By day only medium models are free (in tests): a strong-floor review waits.
 	gh2 := fakes.NewFakeGitHub()

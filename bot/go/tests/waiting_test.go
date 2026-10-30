@@ -8,7 +8,6 @@ package tests
 
 import (
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
@@ -23,11 +22,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/waiting"
 )
-
-// waitingAll is test_cross.ALL: every secret the workflows hand over.
-func waitingAll() map[string]string {
-	return map[string]string{"HARNESS_SECRETS_SET": strings.Join(providers.SecretNames, " ")}
-}
 
 // waitingClaudeRefused is claude_refused: every Claude account refused a call: `first` until
 // 22:05, the others later. No `first` is "claude-2".
@@ -58,7 +52,7 @@ type waitingQueue struct {
 func newWaitingQueue() *waitingQueue {
 	gh := fakes.NewFakeGitHub()
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, Cfg: testsupport.MakeConfig(
-		testsupport.Config{Env: waitingAll(), Machine: []string{"muse"}})})
+		testsupport.Config{Env: crossAll, Machine: []string{"muse"}})})
 	return &waitingQueue{gh: gh, ctx: ctx}
 }
 
@@ -199,7 +193,7 @@ func TestWaiting_AnUnratedBuildNeedsAMediumPlannerFirst(t *testing.T) {
 
 func TestWaiting_ASubscriptionWithNoLaneWhereItRunsIsFullNotFree(t *testing.T) {
 	w := newWaitingQueue()
-	cfg := testsupport.WithLanes(testsupport.MakeConfig(testsupport.Config{Env: waitingAll(),
+	cfg := testsupport.WithLanes(testsupport.MakeConfig(testsupport.Config{Env: crossAll,
 		Machine: []string{"muse", "agy"}}), 11, 1)
 	ctx := testsupport.MakeCtx(w.gh, testsupport.Ctx{At: testsupport.Night, Cfg: cfg})
 	w.gh.AddIssue(50, fakes.Issue{Labels: []string{config.LabelWorking}})

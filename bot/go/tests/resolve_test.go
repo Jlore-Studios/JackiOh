@@ -521,18 +521,14 @@ func (w *resolveWorld) head() (string, string) {
 	return check, fakes.Git(check, "rev-parse", "got")
 }
 
-func resolveRunner(handlers map[string][]runner.Handler) *runner.FakeRunner {
-	return runner.NewFakeRunner(handlers)
-}
-
 func TestResolve_AConflictOnlyInResolverFilesSpendsNoBuilderSession(t *testing.T) {
 	w := newResolveWorld(t)
 	start := w.diverge(map[string]string{resolveIndex: "| R1 |\n| R2 |\n", resolveGolden: "game 1 branch\n", resolveGame: "rules v2\n"},
 		map[string]string{resolveIndex: "| R1 |\n| R3 |\n", resolveGolden: "game 1 main\n"})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""))
 	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
-	assertEqual(t, crossRoles(r), []string{"review"})
+	assertEqual(t, workRoles(r), []string{"review"})
 	check, head := w.head()
 	parents := strings.Fields(fakes.Git(check, "rev-list", "--parents", "-n", "1", head))
 	assertEqual(t, parents[1], start)
@@ -557,7 +553,7 @@ func TestResolve_AConflictOnlyInResolverFilesSpendsNoBuilderSession(t *testing.T
 func TestResolve_ACommentThatQuotesTheEmptyFeedbackIsStillFeedback(t *testing.T) {
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveIndex: "| R2 |\n"}, map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
 	quoting := prompts.Data("Comment by @jgoetzmann:\n\nYou said "+threads.NoFeedback+"; rename rules to laws.",
 		"Feedback on #30")
 	w.runWorker(r, w.plan(quoting))
@@ -567,7 +563,7 @@ func TestResolve_ACommentThatQuotesTheEmptyFeedbackIsStillFeedback(t *testing.T)
 func TestResolve_EveryReviewerHearsTheHarnessResolvedByARule(t *testing.T) {
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveIndex: "| R2 |\n", resolveGame: "rules v2\n"}, map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""))
 	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
 	review := r.Calls[0].Prompt
@@ -598,10 +594,10 @@ func TestResolve_AMergeWhoseTreeIsTheBranchsStillRecordsMain(t *testing.T) {
 		"install", pyjson.New("run", "true", "timeout_minutes", 1), "max_review_cycles", 3,
 		"resolvers", []any{pyjson.New("path", resolveGolden, "run", "printf 'game branch\\n' > "+resolveGolden,
 			"timeout_minutes", 1)})})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""), cfg)
 	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
-	assertEqual(t, crossRoles(r), []string{"review"})
+	assertEqual(t, workRoles(r), []string{"review"})
 	check, head := w.head()
 	assertIn(t, main, strings.Fields(fakes.Git(check, "rev-list", "--parents", "-n", "1", head))[1:])
 	assertEqual(t, fakes.Git(check, "show", head+":"+resolveGolden), "game branch")
@@ -615,12 +611,12 @@ func TestResolve_TheReviewStillJudgesTheHarnessMergeAndSendsFindingsToTheBuilder
 		crossPut(filepath.Join(request.Cwd, resolveGame), "rules v3\n")
 		return runner.NewRunResult(true, resolveDone)
 	}
-	r := resolveRunner(map[string][]runner.Handler{
+	r := workFake(map[string][]runner.Handler{
 		"review": {crossAnswer(resolveChanges), crossAnswer(resolveApprove)},
 		"fix":    {fix}})
 	result := w.runWorker(r, w.plan(""))
 	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
-	assertEqual(t, crossRoles(r), []string{"review", "fix", "review"})
+	assertEqual(t, workRoles(r), []string{"review", "fix", "review"})
 	assertIn(t, "say v3", r.Calls[1].Prompt)
 	assertIn(t, "- `"+resolveIndex+"`: took `main`'s version; leave it as it is", r.Calls[1].Prompt)
 	check, head := w.head()
@@ -633,7 +629,7 @@ func TestResolve_AFixAfterARegeneratedFileIsToldToRunItsCommandAgain(t *testing.
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveGolden: "game 1 branch\n", resolveGame: "rules v2\n"},
 		map[string]string{resolveGolden: "game 1 main\n"})
-	r := resolveRunner(map[string][]runner.Handler{
+	r := workFake(map[string][]runner.Handler{
 		"review": {crossAnswer(resolveChanges), crossAnswer(resolveApprove)},
 		"fix":    {crossAnswer(resolveDone)}})
 	w.runWorker(r, w.plan(""))
@@ -653,7 +649,7 @@ func TestResolve_RedChecksOnTheHarnessMergeAreNotApproved(t *testing.T) {
 	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", []any{red},
 		"install", pyjson.New("run", "true", "timeout_minutes", 1), "max_review_cycles", 1,
 		"resolvers", []any{pyjson.New("path", resolveIndex, "take", "main")})})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove), "fix": crossAnswer(resolveDone)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove), "fix": crossAnswer(resolveDone)})
 	result := w.runWorker(r, w.plan(""), cfg)
 	assertNotEqual(t, result.Get("status"), "approved")
 	assertEqual(t, r.Calls[0].Role, "review")
@@ -668,11 +664,11 @@ func TestResolve_NewFeedbackStillGoesToTheBuilderToldWhatTheHarnessDid(t *testin
 		seen["index"] = crossMustRead(filepath.Join(request.Cwd, resolveIndex))
 		return runner.NewRunResult(true, resolveDone)
 	}
-	r := crossRunner(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
 	feedback := prompts.Data("Comment by @jgoetzmann:\n\nPlease also rename it.", "Feedback on #30")
 	result := w.runWorker(r, w.plan(feedback))
 	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
-	assertEqual(t, crossRoles(r), []string{"revise", "review"})
+	assertEqual(t, workRoles(r), []string{"revise", "review"})
 	assertEqual(t, seen["index"], "| R3 |\n")
 	prompt := r.Calls[0].Prompt
 	assertIn(t, "The harness resolved these conflicts itself", prompt)
@@ -695,10 +691,10 @@ func TestResolve_ACodeConflictReachesTheBuilderWithOnlyWhatIsLeft(t *testing.T) 
 		crossPut(filepath.Join(request.Cwd, resolveGolden), "game main and branch\n")
 		return runner.NewRunResult(true, resolveDone)
 	}
-	r := crossRunner(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""))
 	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
-	assertEqual(t, crossRoles(r), []string{"revise", "review"})
+	assertEqual(t, workRoles(r), []string{"revise", "review"})
 	assertEqual(t, seen["index"], "| R3 |\n")
 	assertIn(t, "<<<<<<<", seen["golden"]) // the traces wait for the code: the builder's
 	prompt := r.Calls[0].Prompt
@@ -723,7 +719,7 @@ func TestResolve_ACodeConflictReachesTheBuilderWithOnlyWhatIsLeft(t *testing.T) 
 func TestResolve_EarlierFindingsStillGoToTheBuilder(t *testing.T) {
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveIndex: "| R2 |\n"}, map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
 	findings := []any{pyjson.New("severity", "blocking", "where", resolveGame, "claim", "still open", "evidence", "e")}
 	w.runWorker(r, w.plan("", "previous_findings", findings))
 	assertEqual(t, r.Calls[0].Role, "revise")
@@ -732,7 +728,7 @@ func TestResolve_EarlierFindingsStillGoToTheBuilder(t *testing.T) {
 func TestResolve_ACIRevisionIsNeverMergeOnly(t *testing.T) {
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveIndex: "| R2 |\n"}, map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
 	p := w.plan("")
 	p.Set("source", "ci")
 	w.runWorker(r, p)
@@ -751,7 +747,7 @@ func TestResolve_WithoutResolversTheBuilderGetsEveryConflictAsBefore(t *testing.
 		crossPut(filepath.Join(request.Cwd, resolveIndex), "| R2 |\n| R3 |\n")
 		return runner.NewRunResult(true, resolveDone)
 	}
-	r := crossRunner(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""), cfg)
 	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
 	assertIn(t, "<<<<<<<", seen["index"])
@@ -766,10 +762,10 @@ func TestResolve_AClearedChangesReviewerHearsTheHarnessResolvedIt(t *testing.T) 
 	w := newResolveWorld(t)
 	start := w.diverge(map[string]string{resolveIndex: "| R2 |\n", resolveGame: "rules v2\n"},
 		map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan("", "cleared", pyjson.New("sha", start, "by", "Opus")))
 	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
-	assertEqual(t, crossRoles(r), []string{"review"})
+	assertEqual(t, workRoles(r), []string{"review"})
 	review := r.Calls[0].Prompt
 	assertIn(t, "the harness resolved `"+resolveIndex+"` itself (took `main`'s version)", review)
 	assertIn(t, "the files the harness resolved follow its rule", review)

@@ -52,7 +52,7 @@ func controllerLoopCtx(gh *fakes.FakeGitHub, loop bool, at ...time.Time) *hctx.C
 	if len(at) > 0 {
 		when = at[0]
 	}
-	cfg := testsupport.MakeConfig(testsupport.Config{Env: difficultySecrets(providers.SecretNames...),
+	cfg := testsupport.MakeConfig(testsupport.Config{Env: providersSecrets(providers.SecretNames...),
 		Machine: []string{"muse"}, Overrides: pyjson.New("controller", true)})
 	replaced := *cfg
 	replaced.ControllerLoop, replaced.RunID = loop, "777"
@@ -538,8 +538,8 @@ func controllerStartedBuild(t *testing.T) (*difficultyHarness, *hctx.Context, st
 	planned := controllerFetch(t, ctx, ref)
 	out := filepath.Join(h.root, "out")
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "rules v2\n"})},
-		"review": {difficultyReviewer(difficultyApprove)}})
+		"build":  {workBuilder(map[string]string{"src/game.txt": "rules v2\n"})},
+		"review": {workReviewer(workApprove)}})
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	h.gh.Artifacts[runID] = []*pyjson.Object{pyjson.New("id", 1, "name", "work", "expired", false)}
 	h.gh.ArtifactZips[1] = controllerZipped(t, out)

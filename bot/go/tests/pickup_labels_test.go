@@ -358,8 +358,8 @@ func TestPickupLabels_SetupCreatesTheNewLabels(t *testing.T) {
 func TestPickupLabels_ThePullRequestKeepsTheIssuesDifficultyAndTier(t *testing.T) {
 	h := newWasteHarness(t, wasteHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:easy", "Priority:High")
-	planned, result := h.night(wasteRunner(map[string]runner.Handler{
-		"build": wasteBuilder(map[string]string{"src/game.txt": "v2\n"}), "review": wasteReviewer(wasteApprove)}))
+	planned, result := h.night(workFake(map[string]runner.Handler{
+		"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}), "review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), planned.Get("priority"), planned.Get("difficulty"), result.Get("status")},
 		[]any{"muse", "high", "easy", "approved"})
 	pr, _ := pyjson.AsInt(wastePull(t, h.gh, "bot/issue-12").Get("number"))
@@ -374,10 +374,10 @@ func TestPickupLabels_ThePullRequestKeepsTheIssuesDifficultyAndTier(t *testing.T
 func TestPickupLabels_ADraftPullRequestKeepsThemToo(t *testing.T) {
 	h := newWasteHarness(t, wasteHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:hard", pickupLabelsLow)
-	planned, result := h.night(wasteRunner(map[string]runner.Handler{
-		"build":  wasteBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"fix":    wasteBuilder(map[string]string{"src/game.txt": "v3\n"}),
-		"review": wasteReviewer(wasteChanges("Still wrong."))}), true)
+	planned, result := h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"fix":    workBuilder(map[string]string{"src/game.txt": "v3\n"}),
+		"review": workReviewer(workChanges("Still wrong."))}), true)
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"claude-3", "not_approved"})
 	pull := wastePull(t, h.gh, "bot/issue-12")
 	assertTrue(t, pull.Truthy("draft"))

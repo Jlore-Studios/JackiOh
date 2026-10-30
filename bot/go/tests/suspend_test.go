@@ -285,9 +285,9 @@ func TestSuspend_ARunGoingWhenItsSubscriptionIsSuspendedPausesUncharged(t *testi
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	building := func(request *runner.RunRequest) *runner.RunResult {
 		suspendSuspend(h.ctx, "claude-1")
-		return ratingBuilder(map[string]string{"src/game.txt": "v2\n"})(request)
+		return workBuilder(map[string]string{"src/game.txt": "v2\n"})(request)
 	}
-	fake := ratingRunner(map[string]runner.Handler{"build": building, "review": ratingReviewer(ratingApprove)})
+	fake := workFake(map[string]runner.Handler{"build": building, "review": workReviewer(workApprove)})
 	_, result := suspendRunWithProbe(t, h, fake)
 	assertEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "interrupt")}, []any{"interrupted", "suspend"})
 	roles := []string{}
@@ -308,9 +308,9 @@ func TestSuspend_AFinishedChangeIsStillHandedOn(t *testing.T) {
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	reviewing := func(request *runner.RunRequest) *runner.RunResult {
 		suspendSuspend(h.ctx, "claude-1")
-		return ratingReviewer(ratingApprove)(request)
+		return workReviewer(workApprove)(request)
 	}
-	fake := ratingRunner(map[string]runner.Handler{"build": ratingBuilder(map[string]string{"src/game.txt": "v2\n"}),
+	fake := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": reviewing})
 	_, result := suspendRunWithProbe(t, h, fake)
 	assertEqual(t, eventsDig(t, result, "status"), "approved")

@@ -50,7 +50,7 @@ type planDraftTrailRunner struct {
 }
 
 func newPlanDraftTrailRunner(handlers map[string]runner.Handler) *planDraftTrailRunner {
-	return &planDraftTrailRunner{crossRunner(handlers)}
+	return &planDraftTrailRunner{workFake(handlers)}
 }
 
 func (x *planDraftTrailRunner) Run(request *runner.RunRequest) *runner.RunResult {
@@ -67,7 +67,7 @@ func (x *planDraftTrailRunner) Trail(transcript string) string {
 
 // planDraftHarness is planning_harness.
 func planDraftHarness(t *testing.T) *crossHarness {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine,
+	h := newCrossHarness(t, crossHarnessOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine,
 		At: testsupport.Day, CommittedPlanLanes: true})
 	h.committedHours()
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
@@ -109,7 +109,7 @@ func TestPlanDraft_ACutOffPlanKeepsItsDraftAndTheNextPlannerGoesOnFromIt(t *test
 		seen["prompt"] = request.Prompt
 		return runner.NewRunResult(true, planDraftPlan)
 	}
-	planned, second := h.night(crossRunner(map[string]runner.Handler{"plan": finishing}))
+	planned, second := h.night(workFake(map[string]runner.Handler{"plan": finishing}))
 	assertEqual(t, []any{planned.Get("action"), second.Get("status")}, []any{"plan", "planned"})
 	assertEqual(t, crossKey(t, planned, "handoff", "kind"), "draft")
 	assertEqual(t, strings.TrimSpace(seen["draft"]), planDraftDraft)
@@ -131,7 +131,7 @@ func TestPlanDraft_ACutOffPlanKeepsItsDraftAndTheNextPlannerGoesOnFromIt(t *test
 // left stays for the one after.
 func TestPlanDraft_ARunStoppedBeforeItStartsKeepsTheLastDraft(t *testing.T) {
 	h := planDraftHarness(t)
-	h.night(crossRunner(map[string]runner.Handler{"plan": planDraftCutOffPlanner}))
+	h.night(workFake(map[string]runner.Handler{"plan": planDraftCutOffPlanner}))
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	assertEqual(t, planned.Get("action"), "plan")
 	out := filepath.Join(h.root, "out-stopped")
@@ -167,7 +167,7 @@ func TestPlanDraft_APlannerCutOffBeforeAnyDraftStillHandsOnWhatItFound(t *testin
 		seen["prompt"] = request.Prompt
 		return runner.NewRunResult(true, planDraftPlan)
 	}
-	h.night(crossRunner(map[string]runner.Handler{"plan": finishing}))
+	h.night(workFake(map[string]runner.Handler{"plan": finishing}))
 	assertIn(t, "It left no draft, only the end of its session below", seen["prompt"])
 	assertNotIn(t, "Picking up from another agent", seen["prompt"])
 }
@@ -175,7 +175,7 @@ func TestPlanDraft_APlannerCutOffBeforeAnyDraftStillHandsOnWhatItFound(t *testin
 func TestPlanDraft_AFinishedPlanHandsOnNoDraft(t *testing.T) {
 	root := crossMkdtemp(t)
 	_, clone := fakes.MakeOrigin(root)
-	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", crossWorkGates(),
+	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", workGates,
 		"install", pyjson.New("run", "true", "timeout_minutes", 1))})
 
 	drafting := func(request *runner.RunRequest) *runner.RunResult {
@@ -184,7 +184,7 @@ func TestPlanDraft_AFinishedPlanHandsOnNoDraft(t *testing.T) {
 	}
 	p := pyjson.New("action", "plan", "number", 12, "title", "Rules v2", "branch", "bot/issue-12",
 		"thread", "Please make the rules v2.")
-	result := work.NewWorker(cfg, p, crossRunner(map[string]runner.Handler{"plan": drafting}), clone,
+	result := work.NewWorker(cfg, p, workFake(map[string]runner.Handler{"plan": drafting}), clone,
 		filepath.Join(root, "work"), filepath.Join(root, "out"), nil, nil, nil, nil, nil, nil).Run()
 	assertEqual(t, result.Get("status"), "planned")
 	assertNotIn(t, "draft", crossObj(t, result, "handoff"))
@@ -197,7 +197,7 @@ func TestPlanDraft_AFinishedPlanHandsOnNoDraft(t *testing.T) {
 func TestPlanDraft_ABuilderNeverStartsFromADraft(t *testing.T) {
 	root := crossMkdtemp(t)
 	_, clone := fakes.MakeOrigin(root)
-	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", crossWorkGates(),
+	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", workGates,
 		"install", pyjson.New("run", "true", "timeout_minutes", 1))})
 	handoff := pyjson.New("kind", "draft", "provider", "claude-4", "family", "claude",
 		"reason", "`claude-4` stops mid-call", "notes", "", "trail", "", "draft", planDraftDraft)
@@ -221,7 +221,7 @@ func TestPlanDraft_ABuilderNeverStartsFromADraft(t *testing.T) {
 func TestPlanDraft_APlanInTheDescriptionReplacesADraft(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, Cfg: testsupport.MakeConfig(testsupport.Config{
-		Env: crossSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine, CommittedPlanLanes: true})})
+		Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine, CommittedPlanLanes: true})})
 	body := issueplan.WithPlan("Make the rules v2.", planDraftPlan, "a person", "")
 	gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: body})
 	ctx.Store.Update(func(s *pyjson.Object) any {
