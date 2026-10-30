@@ -10211,20 +10211,28 @@
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
-          "claude"
+          "muse"
         ],
-        "builder": "claude",
+        "builder": "muse",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/engine/tests/golden/games.jsonl"
+          ],
+          "from": "2093bc33532c0ef1bff7dc2358efa8269ddaff0b",
+          "main": "7649399084475272cd9b5061dfe98c9a8d9b220d"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "41006769834",
-            "tier": "strong"
+            "family": "muse",
+            "run": "41014195894",
+            "tier": "medium"
           }
         ],
-        "sha": "2093bc33532c0ef1bff7dc2358efa8269ddaff0b",
+        "sha": "8bd1a8fab15f4ef9a59df2e52adcbcd92fccd02e",
         "tiers": {
-          "claude": "strong"
+          "muse": "medium"
         }
       }
     },
