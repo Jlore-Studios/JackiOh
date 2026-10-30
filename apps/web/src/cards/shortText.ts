@@ -21,9 +21,11 @@
 // The Stinkyscape set (R1857000) printed its rows before its cards were built: its two Call to
 // Chaos editions (#150 and #151) take "colon" as the other three do, and every other face its rows
 // put over the limit clamps, unless the card's part (docs/stinkyscape-set.md ST13) wrote its own.
-// Where a clamp would still cut a face at 270 px (#7 The Greatest Heist, #112 Job Application), or a
-// face just at the limit took the long layout at 170 px (#4.5 1v1 Final Destination's and #26
-// ZolarKeth's base faces), it prints its first lines or up to its first colon instead (#2067).
+// Where a face just at the limit took the long layout at 170 px (#4.5 1v1 Final Destination's and
+// #26 ZolarKeth's base faces), it prints its first lines or up to its first colon instead (#2067).
+// The set's two staged Quests, #7 The Greatest Heist and #112 Job Application, print one stage (questFace.ts,
+// R2450000), measured as they print it: Heist's base face fits whole, and its Radiant face and both
+// of Job Application's, a line or two over, clamp.
 // The held Training Grounds set (R2194000) does the same while it is built: its Call to Chaos edition (#39) takes
 // "colon", and the Radiant faces of #16 Celestial Caller and #38 Tutorial Master clamp, until each
 // card's part (docs/training-grounds-set.md TG5) writes its own.
@@ -79,7 +81,7 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditativeplus-024": { base: "clamp", radiant: "clamp" },
   "stinkyscape-004-4": { base: "clamp", radiant: "clamp" },
   "stinkyscape-004-5": { base: "colon", radiant: "clamp" },
-  "stinkyscape-007": { base: 2, radiant: 1 },
+  "stinkyscape-007": { radiant: "clamp" },
   "stinkyscape-016": { base: "clamp" },
   "stinkyscape-018-1": { base: "clamp", radiant: "clamp" },
   "stinkyscape-018-2": { base: "clamp", radiant: "clamp" },
@@ -91,7 +93,7 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "stinkyscape-039": { base: "clamp", radiant: "clamp" },
   "stinkyscape-077": { base: "clamp", radiant: "clamp" },
   "stinkyscape-087": { radiant: "clamp" },
-  "stinkyscape-112": { base: 2, radiant: 3 },
+  "stinkyscape-112": { base: "clamp", radiant: "clamp" },
   "stinkyscape-116": { base: "clamp", radiant: "clamp" },
   "stinkyscape-139": { base: "clamp", radiant: "clamp" },
   "stinkyscape-143": { radiant: "clamp" },
@@ -140,10 +142,6 @@ export const LONG_FACES: readonly string[] = [
   "core-098 radiant",
   "classicplus-073 base",
   "classicplus-073 radiant",
-  "stinkyscape-007 base",
-  "stinkyscape-007 radiant",
-  "stinkyscape-112 base",
-  "stinkyscape-112 radiant",
   "stinkyscape-150 base",
   "stinkyscape-150 radiant",
   "stinkyscape-151 base",

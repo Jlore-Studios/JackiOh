@@ -67,6 +67,9 @@ export const BRITTLE_CRACK_STAGES = 3;
 /** #2270: the Brittle count at which a card on the field crumbles at its next tick (R385); game/Card.tsx draws it a gray aura. */
 export const BRITTLE_LAST_COUNT = 1;
 
+/** #2437: the Temporary count at which a card in a hand is discarded at its owner's next end of turn (R637, R2179001); game/Card.tsx draws it a fuchsia aura. A plain Temporary is Temporary 1. */
+export const TEMPORARY_LAST_COUNT = 1;
+
 /** The effects layer (fx.css) draws Divine Shield's cocoon and its pulse (R200); the bubble here holds still. */
 export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
   Taunt: {
@@ -348,6 +351,21 @@ function numberOf(kind: KeywordKind, keywords: readonly Keyword[], source: Keywo
 /** R385's cracks: one at BRITTLE_CRACK_STAGES or more, the full web at 1. */
 export function brittleStage(count: number): number {
   return Math.min(BRITTLE_CRACK_STAGES, Math.max(1, BRITTLE_CRACK_STAGES + 1 - count));
+}
+
+/**
+ * #2437, R2179001: the count a card's keywords give its Temporary X: the largest of its Temporary entries,
+ * a plain one counting TEMPORARY_LAST_COUNT, as the engine's `temporary::temporary_number`; null with none.
+ * The engine writes the count left into the keyword (`layers::card_keywords`, `with_temporary_count`).
+ */
+export function temporaryLeft(keywords: readonly Keyword[]): number | null {
+  let most: number | null = null;
+  for (const keyword of keywords) {
+    if (keyword.kind !== "Temporary") continue;
+    const n = keyword.n ?? TEMPORARY_LAST_COUNT;
+    if (most === null || n > most) most = n;
+  }
+  return most;
 }
 
 /**
