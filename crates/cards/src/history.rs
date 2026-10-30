@@ -256,70 +256,66 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.12c",
         c075_infinite_reserves::script_v0_4_12c,
     ),
-    (c048_tranquility::ID, "v0.5.2", c048_tranquility::script_v0_5_2),
+    (c048_tranquility::ID, "v0.5.1", c048_tranquility::script_v0_5_2),
     (
         c045_knowledge_breaker::ID,
-        "v0.5.2",
+        "v0.5.1",
         c045_knowledge_breaker::script_v0_5_2,
     ),
     (
         c030_felinor_fuser::ID,
-        "v0.5.2",
+        "v0.5.1",
         c030_felinor_fuser::script_v0_5_2,
     ),
     (
         c083_transmogulate::ID,
-        "v0.5.2",
+        "v0.5.1",
         c083_transmogulate::script_v0_5_2,
     ),
-    (c023_devils_pact::ID, "v0.5.2", c023_devils_pact::script_v0_5_2),
-    (c085_playtester::ID, "v0.5.2", c085_playtester::script_v0_5_2),
+    (c023_devils_pact::ID, "v0.5.1", c023_devils_pact::script_v0_5_2),
+    (c085_playtester::ID, "v0.5.1", c085_playtester::script_v0_5_2),
     (
         c102_catboy_maid_ssr::ID,
-        "v0.5.2",
+        "v0.5.1",
         c102_catboy_maid_ssr::script_v0_5_2,
     ),
     (
         c009_magic_amplifier::ID,
-        "v0.5.2",
+        "v0.5.1",
         c009_magic_amplifier::script_v0_5_2,
     ),
-    (c035_prep::ID, "v0.5.2", c035_prep::script_v0_5_2),
-    (c011_anime_armor::ID, "v0.5.2", c011_anime_armor::script_v0_5_2),
-    (c023_dropshipping::ID, "v0.5.2", c023_dropshipping::script_v0_5_2),
+    (c035_prep::ID, "v0.5.1", c035_prep::script_v0_5_2),
+    (c011_anime_armor::ID, "v0.5.1", c011_anime_armor::script_v0_5_2),
+    (c023_dropshipping::ID, "v0.5.1", c023_dropshipping::script_v0_5_2),
     (
         c020_the_power_to_punish::ID,
-        "v0.5.2",
+        "v0.5.1",
         c020_the_power_to_punish::script_v0_5_2,
     ),
     (
         c032_spiritually_zhongguo::ID,
-        "v0.5.2",
+        "v0.5.1",
         c032_spiritually_zhongguo::script_v0_5_2,
     ),
     (
         c081_radiant_saintess::ID,
-        "v0.5.2",
+        "v0.5.1",
         c081_radiant_saintess::script_v0_5_2,
     ),
-    (c071_book_of_buff::ID, "v0.5.2", c071_book_of_buff::script_v0_5_2),
+    (c071_book_of_buff::ID, "v0.5.1", c071_book_of_buff::script_v0_5_2),
     (
         c078_claudes_datacenter::ID,
-        "v0.5.2",
+        "v0.5.1",
         c078_claudes_datacenter::script_v0_5_2,
     ),
-    (c042_kys_test::ID, "v0.5.2", c042_kys_test::script_v0_5_2),
-    (
-        c032_prem_panther::ID,
-        "v0.5.11",
-        c032_prem_panther::script_v0_5_11,
-    ),
+    (c042_kys_test::ID, "v0.5.1", c042_kys_test::script_v0_5_2),
+    (c032_prem_panther::ID, "v0.5.7", c032_prem_panther::script_v0_5_11),
     (
         c013_boots_on_the_ground::ID,
-        "v0.5.11",
+        "v0.5.7",
         c013_boots_on_the_ground::script_v0_5_11,
     ),
-    (c095_1_cn_golem::ID, "v0.5.11", c095_1_cn_golem::script_v0_5_11),
+    (c095_1_cn_golem::ID, "v0.5.7", c095_1_cn_golem::script_v0_5_11),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -345,6 +341,10 @@ struct History {
     /// R1371000: `patches/aliases.json`'s map, each old name to its new one; empty before the retcon.
     #[serde(default)]
     aliases: IndexMap<String, String>,
+    /// R2532000: `patches/aliases.json`'s `marked`: for each older scheme a marked file can name, each
+    /// of its names a later retcon renamed, to its name now.
+    #[serde(default)]
+    marked: IndexMap<String, IndexMap<String, String>>,
 }
 
 /// R2173000: a `card_metrics/<version>.json`: the BUSTED and complicated lists a version shipped with.
@@ -424,6 +424,25 @@ pub fn current_version_name(unmarked: &str) -> &str {
 /// R1371000: the new name of a version the retcon renamed, `None` for any other name.
 pub fn version_alias(old: &str) -> Option<&'static str> {
     HISTORY.aliases.get(old).map(String::as_str)
+}
+
+/// R2532000: the name a version from a file named by `scheme` goes by now (`VERSIONS_SCHEME` is
+/// today's): an unmarked file's (scheme 1) through `version_alias`, an older marked file's through
+/// `patches/aliases.json`'s `marked`, and today's as it is.
+pub fn version_name_from(scheme: u32, name: &str) -> &str {
+    version_alias_from(scheme, name).unwrap_or(name)
+}
+
+/// R2532000: the name now of a version a retcon renamed since `scheme`, `None` for any other name.
+pub fn version_alias_from(scheme: u32, name: &str) -> Option<&'static str> {
+    if scheme <= 1 {
+        return version_alias(name);
+    }
+    HISTORY
+        .marked
+        .get(&scheme.to_string())?
+        .get(name)
+        .map(String::as_str)
 }
 
 /// R388: every shipped catalog version from `patches.json`, in release order.

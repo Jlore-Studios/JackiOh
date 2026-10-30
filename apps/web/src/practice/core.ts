@@ -46,7 +46,7 @@
 // decides under PRACTICE_EARNING_AI_CLOCK_MS, and a decision that cap still cuts marks it (clockCut, kept
 // in its save), which the claim's answer carries beside the claim, never in it.
 
-import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
+import { CATALOG_VERSION, versionNameFrom } from "@jackioh/cards";
 import {
   beginGame,
   carriedVersions,
@@ -466,10 +466,11 @@ function foldable(replay: PracticeReplay): boolean {
 
 /**
  * R1371000: the catalog a kept game or save was played on, as it is named now: one kept before the
- * version retcon carries no `versions` marker and names it the old way.
+ * version retcon carries no `versions` marker and names it the old way, and one of an older marker
+ * names a v0.5 version as it was before the v0.5 retcon (R2532000).
  */
 export function catalogOf(kept: Pick<PracticeReplay, "catalog" | "versions">): string {
-  return kept.versions === undefined ? currentVersionName(kept.catalog) : kept.catalog;
+  return versionNameFrom(kept.versions ?? 1, kept.catalog);
 }
 
 /**
