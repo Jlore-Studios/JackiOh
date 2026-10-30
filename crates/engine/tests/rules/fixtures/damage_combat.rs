@@ -15,7 +15,6 @@ use jackioh_engine::testkit::*;
 
 use super::harness::{act, act_result, both, new_game, next_action, put, slot};
 
-/// A Core Common at cost 0 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut card = json!({
         "id": format!("dc-{name}"),
@@ -38,7 +37,6 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// The Radiant face doubles the stats. Pass `json!([])` for no keywords.
 fn unit(
     name: &str,
     index: i32,
@@ -67,7 +65,6 @@ fn plain_unit(name: &str, index: i32, attack: i32, health: i32) -> CardDef {
 pub const LOG_LANE: i32 = 5;
 pub static log_card: LazyLock<CardDef> = LazyLock::new(|| def("log", 4701, "Field Spell", json!({})));
 
-/// Everything the note log has recorded, in order.
 pub fn notes(state: &GameState) -> Vec<String> {
     match state.players.p1.backrow.get((LOG_LANE - 1) as usize) {
         Some(Some(log)) => match log.memory.get("steps").and_then(Value::as_array) {
@@ -115,7 +112,6 @@ pub fn ask_controller(step: impl Into<String>) -> Effect {
     })
 }
 
-/// An optional boolean as text: `"true"`, `"false"` or `"undefined"`.
 fn js_bool(value: Option<bool>) -> String {
     match value {
         Some(value) => value.to_string(),
@@ -478,7 +474,6 @@ fn gambit_script(amount: i32) -> Script {
     }
 }
 
-/// R1704001: `gambit_script`, canceling the hit.
 fn cancel_gambit_script(amount: i32) -> Script {
     Script {
         replacements: vec![ReplacementDef {
@@ -1148,7 +1143,6 @@ pub fn playing(seed: &str) -> GameState {
     state
 }
 
-/// Answer the one open prompt, whoever it belongs to.
 pub fn answer(state: &GameState) -> ReduceResult {
     let Some(pending) = state.pending.as_ref() else {
         panic!("expected a prompt to be open");
@@ -1173,8 +1167,7 @@ pub fn round_trip(state: &GameState) -> GameState {
         .expect("a state's JSON is a state")
 }
 
-/// §9.3: the live game and its replay agree: `log` folded through `reduce` from a clone of `start`
-/// hashes as `live` does.
+/// §9.3: the live game and its replay agree.
 pub fn replays_to(start: &GameState, log: &[Action], live: &GameState) -> bool {
     let mut state = clone_state(start);
     for action in log {
@@ -1200,7 +1193,6 @@ impl Recorder {
         &self.current
     }
 
-    /// Plays one action with the next nonce and records it; panics with a refusal's text.
     pub fn play(&mut self, body: impl serde::Serialize) -> ReduceResult {
         let action = next_action(body);
         let result = reduce(&self.current, &action);

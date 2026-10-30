@@ -49,7 +49,7 @@ fn view(state: &GameState, id: &str) -> UnitView {
     unit_view(state, &live(state, id))
 }
 
-/// Apply one effect the way the engine does: a context over the sink, then `apply` (§10.9).
+/// Apply one effect the way the engine does (§10.9).
 fn run(
     bench: &mut Bench,
     state: &mut GameState,

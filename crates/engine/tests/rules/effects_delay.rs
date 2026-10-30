@@ -18,7 +18,6 @@ use super::fixtures::combat::indestructible;
 use super::fixtures::harness::{Bench, events_of_type, ids_of, in_hand, new_game, put, slot};
 use crate::rules::fixtures::harness::{act, json_of, matches_object};
 
-/// `put`, with the card made Radiant before it is placed.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let player = at.player;
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
@@ -153,7 +152,6 @@ struct RunOptions {
     controller: Option<PlayerId>,
 }
 
-/// Apply effects straight onto `state` and keep the events.
 fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<GameEvent> {
     let RunOptions { self_, controller } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
@@ -299,7 +297,6 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
             json!({ "owner": "p1", "at": { "phase": "end", "player": "p1" } }),
         );
 
-        // And it comes due at that turn's end: 2 to p2's hero, as the turn ends.
         let after = end_turns(&state, 1);
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 2);
         assert!(after.delayed.is_empty());
@@ -372,7 +369,6 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
 
         let ended = end_turns(&state, 1);
 
-        // The card's own `delayed` hook ran, reading the amount the continuation carried.
         assert_eq!(ended.players.p2.hero.health, HERO_HEALTH - 3);
         // R62/§10.1: the entry is dropped once it has resolved, so it never fires twice.
         assert!(ended.delayed.is_empty());
@@ -397,7 +393,6 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         );
         assert_eq!(only(&state.delayed).resume.hook, RESUME_HOOK);
 
-        // The fixture's `resume` table holds exactly this step, and the reader looks it up there.
         let ended = end_turns(&state, 1);
         assert_eq!(ended.players.p2.hero.health, HERO_HEALTH - 4);
         assert!(ended.delayed.is_empty());
@@ -415,7 +410,6 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
             as_scribe(&scribe),
         );
 
-        // p1 ends; p2's whole turn passes with the entry still waiting.
         let after_p1 = end_turns(&state, 1);
         assert_eq!(after_p1.active, P2);
         assert_eq!(after_p1.players.p2.hero.health, HERO_HEALTH);
@@ -512,7 +506,6 @@ mod delay_watching_hand_cards_r1140_r1141 {
         json!({ "mark": "steal", "color": "purple" })
     }
 
-    /// p1's pocket step, due at p1's next start of turn, watching `ids` in a hand.
     fn watching(state: &mut GameState, scribe: &CardInstance, ids: &[String]) {
         run(
             state,
@@ -527,7 +520,6 @@ mod delay_watching_hand_cards_r1140_r1141 {
         );
     }
 
-    /// The cards of `seat`'s own hand whose view carries a mark.
     fn marked_in_own_hand(state: &GameState, seat: PlayerId) -> Vec<String> {
         match view_for(state, seat).you.hand {
             HandView::Cards(cards) => cards
@@ -568,7 +560,6 @@ mod delay_watching_hand_cards_r1140_r1141 {
         assert_eq!(marked_in_own_hand(&state, P2), vec![ids[1].clone()]);
         assert_eq!(view_for(&state, P1).opponent.hand_marked, Some(1));
 
-        // At p1's next start of turn the one still watched is p1's, in p1's hand.
         let after = end_turns(&state, 2);
         assert_eq!(after.active, P1);
         assert!(after.delayed.is_empty());
@@ -697,7 +688,6 @@ fn five_real_shapes(turn: i32) -> Vec<Effect> {
     ]
 }
 
-/// The modifier's tag.
 fn kind_of(modifier: &PlayerModifier) -> String {
     json_of(modifier)["kind"]
         .as_str()
@@ -859,7 +849,6 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
             Some(ModifierExpiry::Used)
         );
 
-        // One removal event per modifier taken, naming exactly the three that went.
         let removed: Vec<String> = events_of_type(&events, GameEventType::ModifierChanged)
             .iter()
             .filter_map(|event| match event {

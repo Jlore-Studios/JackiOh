@@ -297,8 +297,8 @@ mod r1176000_r767000_a_game_from_before_the_rule {
 
     const BUILD: &str = "v-cn";
 
-/// A game from a deck of one translator and the vanilla fixtures, each seat taking its first legal
-/// choice, until a card in Chinese has been played (`None` if the game ends first).
+    /// A game from a deck of one translator and the vanilla fixtures, each seat taking its first legal
+    /// choice, until a card in Chinese has been played (`None` if the game ends first).
     fn played(seed: &str) -> Option<(GameState, ReplayInput)> {
         let mut mine = vec![translator.id.clone()];
         mine.extend(vanilla_deck(DECK_SIZE - 1, 1));

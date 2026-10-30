@@ -83,12 +83,11 @@ const BRUTE_ATTACK: i32 = 5;
 /// What a fresh seat has left once a NUKE has spent its own HP: the pool less the overflow.
 const POOL_AFTER_NUKE: i32 = DUOS_POOL_HEALTH - (NUKE_DAMAGE - DUOS_OWN_HEALTH);
 
-/// The steps a random Duos game may take before the fuzz calls it stuck.
 const MAX_FUZZ_STEPS: usize = 20_000;
 
-/// The random-policy games B25's test plays here. B25's 200 seeds are `cargo jackioh fuzz --duos`'s
-/// (its default), on the real catalog; 200 in this binary took longer than every other rules test
-/// together, so the `rules` group plays a tenth of them on the fixture cards.
+/// B25's 200 seeds are `cargo jackioh fuzz --duos`'s (its default), on the real catalog; 200 in this
+/// binary took longer than every other rules test together, so the `rules` group plays a tenth of them
+/// on the fixture cards.
 const FUZZ_SEEDS: usize = 20;
 
 fn face(text: &str) -> Value {
@@ -129,7 +128,6 @@ fn coin() -> CardDef {
     }))
 }
 
-/// Four decks' worth of vanilla units (`fx-1` … `fx-<4 × DECK_SIZE>`), The Coin and this file's cards.
 fn catalog() -> CardDefs {
     let mut defs = vanilla_catalog(4 * DECK_SIZE, 1);
     for def in [
@@ -163,7 +161,6 @@ fn catalog() -> CardDefs {
     defs
 }
 
-/// A Spell whose resolution is `make`'s effects.
 fn on_play(make: fn() -> Vec<Effect>) -> CardScripts {
     both(Script {
         cry: Some(hook(move |_ctx| make())),
@@ -264,7 +261,6 @@ fn setup() {
 
 // Games
 
-/// One disjoint block of `DECK_SIZE` vanilla ids per seat: A1 first, then B1, A2 and B2.
 fn decks() -> DuosDecks {
     DuosDecks {
         a1: vanilla_deck(DECK_SIZE, 1),
@@ -344,7 +340,6 @@ fn duos_act(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosRedu
     )
 }
 
-/// The action, which must be accepted.
 fn ok(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosState {
     let what = label(&body);
     let result = duos_act(state, seat, body);
@@ -354,7 +349,6 @@ fn ok(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosState {
     result.state
 }
 
-/// The action, which must be refused and change nothing.
 fn refused(state: &DuosState, seat: DuosSeat, body: DuosActionBody) {
     let what = label(&body);
     let before = duos_hash(state);
@@ -397,7 +391,6 @@ fn keep_all(state: DuosState) -> DuosState {
     state
 }
 
-/// Every round seat that has not ended ends its turn, so the round closes.
 fn finish_round(state: DuosState) -> DuosState {
     let round = state.round;
     let mut state = state;
@@ -458,7 +451,6 @@ fn on_field(state: &DuosState, seat: DuosSeat, id: &str) -> bool {
         .any(|card| card.id == id)
 }
 
-/// A new card of `def_id` in the seat's hand, at its right end; its instance id.
 fn give(state: &mut DuosState, seat: DuosSeat, def_id: &str) -> String {
     let player = seat.player();
     let game = &mut state.duels[seat.duel()];
@@ -514,7 +506,6 @@ fn offers_play(state: &DuosState, seat: DuosSeat, id: &str) -> bool {
     })
 }
 
-/// The play of `id` the wrapper offers the seat.
 fn legal_play(state: &DuosState, seat: DuosSeat, id: &str) -> DuosActionBody {
     duos_legal_actions(state, seat)
         .into_iter()
@@ -547,7 +538,6 @@ fn legal_attack(state: &DuosState, seat: DuosSeat, attacker: &str, target: &str)
         .unwrap_or_else(|| panic!("{seat} is offered no attack of {attacker} on {target}"))
 }
 
-/// Gives the seat a `def_id` and plays it, which must be accepted.
 fn cast(state: DuosState, seat: DuosSeat, def_id: &str) -> DuosReduceResult {
     let mut state = state;
     let id = give(&mut state, seat, def_id);
@@ -565,7 +555,6 @@ fn has_duel_event(events: &[DuosEvent], kind: GameEventType) -> bool {
         .any(|event| matches!(event, DuosEvent::Duel { event, .. } if event.event_type() == kind))
 }
 
-/// The pass's `(from, to, instanceId, newInstanceId)`, one per `passed` event.
 fn passed(events: &[DuosEvent]) -> Vec<(DuosSeat, DuosSeat, String, String)> {
     events
         .iter()
@@ -624,7 +613,6 @@ fn strings_in(value: &Value) -> IndexSet<String> {
     out
 }
 
-/// Every seat's pool reads its team's, and a spent seat's health reads it too.
 fn expect_pools_agree(state: &DuosState) {
     for seat in DUOS_SEATS {
         let pool = state.teams[seat.team()].pool;
@@ -681,9 +669,8 @@ impl Live {
     }
 }
 
-/// §10.7's random policy over the four seats: a uniform seat among those that may act, then a
-/// uniform action, ending the turn when it is all that is left or with AI_END_TURN_PROBABILITY.
-/// Concedes are left out, so a game ends by a pool, a duel's own end or the turn cap.
+/// §10.7's random policy over the four seats, concedes left out, so a game ends by a pool, a duel's
+/// own end or the turn cap.
 fn play_randomly(live: &mut Live, seed: &str, max_steps: usize) {
     let mut policy = Rng::new(&format!("duos-policy-{seed}"), 0);
     for step in 0..max_steps {
@@ -759,7 +746,6 @@ mod b1_two_ordinary_duels {
                 "duel {d}: The Coin waits for the mulligan"
             );
         }
-        // Each seat sits in its own duel with its own deck.
         for seat in DUOS_SEATS {
             let deck = deck_of(seat);
             let own = side(&state, seat);
@@ -1096,7 +1082,6 @@ mod b5_turn_end_sync {
         );
     }
 
-    /// One action under the seat's own nonce.
     fn under(state: &DuosState, seat: DuosSeat, nonce: &str, body: DuosActionBody) -> DuosReduceResult {
         duos_reduce(
             state,

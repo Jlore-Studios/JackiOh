@@ -252,8 +252,6 @@ fn chosen() -> Value {
     json!({ "of": "chosen" })
 }
 
-// destroyAll
-
 mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
     use super::*;
 
@@ -317,7 +315,6 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
 
     #[test]
     fn rows_units_backrow_marks_a_backrow_card_too_c88_twisting_nether() {
-        // §6.3: rows ["units", "backrow"] (#88 Twisting Nether).
         let mut state = game("destroyAll-backrow");
         let ally_unit = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let ally_backrow = put(
@@ -450,8 +447,6 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
     }
 }
 
-// destroyAdjacentTo
-
 mod destroy_adjacent_to_s3_1_m3_t1 {
     use super::*;
 
@@ -538,8 +533,6 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
         assert_eq!(run.events, Vec::<GameEvent>::new());
     }
 }
-
-// damageAll
 
 mod damage_all_s6_3_s4_4_r59_m3_t1 {
     use super::*;
@@ -781,8 +774,6 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
     }
 }
 
-// bounceAll
-
 mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
     use super::*;
 
@@ -874,8 +865,6 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
     }
 }
 
-// exileAll
-
 mod exile_all_s6_3_r11_r55_m3_t1 {
     use super::*;
 
@@ -959,8 +948,6 @@ mod exile_all_s6_3_r11_r55_m3_t1 {
     }
 }
 
-// exileAdjacentTo
-
 mod exile_adjacent_to_s3_1_m3_t1 {
     use super::*;
 
@@ -1027,8 +1014,6 @@ mod exile_adjacent_to_s3_1_m3_t1 {
         assert_eq!(run.id_at(PlayerId::P2, Row::Units, 3), Some(target.id.clone()));
     }
 }
-
-// discardHand
 
 mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
     use super::*;
@@ -1127,8 +1112,6 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
         );
     }
 }
-
-// exileHand
 
 mod exile_hand_s6_3_r11_r55_s10_7_m3_t1 {
     use super::*;

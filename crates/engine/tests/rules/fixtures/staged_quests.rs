@@ -106,12 +106,10 @@ pub const HEAR_BACK_TURNS: i32 = 2;
 pub const RESUME_COST: i32 = 2;
 /// Where the fixture remembers its resume's cost (`remember`), which the Interview's first goal reads.
 pub const RESUME_KEY: &str = "resumeCost";
-/// The three Interview goals' ids, in the stage's order.
 pub const PROVE: &str = "prove";
 pub const BEHAVIORAL: &str = "behavioral";
 pub const HARDBALL: &str = "hardball";
 pub const OFFER_MANA: i32 = 2;
-/// The damage the Hardball question asks for in one instance.
 pub const HARDBALL_DAMAGE: i32 = 12;
 
 pub static APPLICATION_STAGES: LazyLock<Vec<QuestStage>> = LazyLock::new(|| {
@@ -334,7 +332,6 @@ pub static radiant_tylannt: LazyLock<CardDef> = LazyLock::new(|| spell(18545, "r
 
 // The goals' drivers
 
-/// An Acclaimed 1/1, and a plain 1/1 with no tag.
 pub static acclaimed: LazyLock<CardDef> =
     LazyLock::new(|| def(18546, "acclaimed", "Unit", 1, json!(["Acclaimed"]), Some((1, 1))));
 pub static nobody: LazyLock<CardDef> =
@@ -563,7 +560,6 @@ pub static STAGED_QUEST_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     .collect()
 });
 
-/// The engine's fixture catalog and the quest fixtures, with these cards and scripts on top.
 pub fn register_staged_quest_fixtures() {
     super::harness::setup_catalog();
     super::quests::register_quest_fixtures();

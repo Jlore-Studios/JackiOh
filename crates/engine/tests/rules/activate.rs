@@ -104,7 +104,6 @@ fn lacks(value: &Value, key: &str) -> bool {
     value.as_object().is_none_or(|object| !object.contains_key(key))
 }
 
-/// The refusal's text, or `None` when it may be activated.
 fn why_not(state: &GameState, player: PlayerId, instance_id: &str, ability: Option<&str>) -> Option<String> {
     why_cannot_activate_ability(state, player, instance_id, ability)
         .err()
@@ -123,7 +122,6 @@ fn hero_target() -> Value {
     json!({ "targets": [{ "pick": "hero", "player": "p2" }] })
 }
 
-/// The abilities `legal_actions` lists under one card, by name.
 fn listed_abilities(state: &GameState, instance: &str) -> Vec<Option<String>> {
     legal_actions(state, P1)
         .into_iter()
@@ -149,7 +147,6 @@ fn ability_ids(state: &GameState, instance: &str) -> Vec<String> {
         .collect()
 }
 
-/// Apply `effect` for `controller` with no card running it, then settle.
 fn apply(state: &mut GameState, controller: PlayerId, effect: Effect) {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
@@ -171,7 +168,6 @@ fn apply(state: &mut GameState, controller: PlayerId, effect: Effect) {
     state.rng_cursor = rng.cursor();
 }
 
-/// The first target as JSON (null when there is none).
 fn first_target<T: serde::Serialize>(body: &T) -> Value {
     json_of(body)["targets"][0].clone()
 }
@@ -768,7 +764,6 @@ mod r384_b3_2_rule_4_costs {
         assert_eq!(alone.players.p2.hero.health, HERO_HEALTH - 5);
         assert!(alone.players.p1.units[0].is_none());
 
-        // The refusals: none, two, an enemy unit, the same unit twice.
         let ally = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
         assert_eq!(
             act_result(&state, activate(P1, &eater.id, hero_target()))
@@ -1773,7 +1768,6 @@ mod r1751000_fused_activates_have_separate_cooldowns {
             json!("spell"),
         );
 
-        // Activate recall on the target BEFORE fusion.
         let state = act(
             &state,
             activate(P1, &card_inst.id, json!({ "ability": "recall" })),
@@ -1789,7 +1783,6 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         let live_target = card(&fused_state, &card_inst.id).clone();
         fuse_onto(&mut fused_state, vec![live_target, other], &card_inst);
 
-        // The fused card has recall (from target at ingredient 0) and zap (from food).
         assert_eq!(
             why_not(&fused_state, P1, &card_inst.id, Some("recall")),
             Some("that ability has already been used this turn".to_string())

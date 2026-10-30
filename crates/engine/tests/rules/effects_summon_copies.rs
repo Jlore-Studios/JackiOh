@@ -230,7 +230,6 @@ mod summon_with_random_keywords_r21_s7_80 {
             assert_eq!(first.iter().collect::<IndexSet<_>>().len(), 2);
             assert_eq!(second.iter().collect::<IndexSet<_>>().len(), 2);
         }
-        // Independent rolls, so on some seed the two tokens are not the same pair of keywords.
         assert!(pairs.iter().any(|(first, second)| first != second));
     }
 

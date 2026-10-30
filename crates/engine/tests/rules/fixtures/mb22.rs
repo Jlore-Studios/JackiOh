@@ -14,7 +14,6 @@ use jackioh_engine::testkit::*;
 use super::damage_combat::note;
 use super::harness::{act, both, new_game, next_action};
 
-/// A Core Common at cost 0 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut card = json!({
         "id": format!("mb22-{name}"),
@@ -37,7 +36,6 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// A Unit whose Radiant face doubles the stats.
 fn unit(
     name: &str,
     index: i32,
@@ -65,7 +63,6 @@ fn both_of(base: Script, radiant: Script) -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// A replacement with no `where`, `when`, `then` or `by`.
 fn replacement(id: &str, on: ReplacementMoment, instead: Value) -> ReplacementDef {
     ReplacementDef {
         id: id.to_string(),
@@ -78,7 +75,6 @@ fn replacement(id: &str, on: ReplacementMoment, instead: Value) -> ReplacementDe
     }
 }
 
-/// Any unit or hero, either side.
 fn any_target() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))]
 }
@@ -169,7 +165,6 @@ pub static guard2: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// A plain 1/4 ally to guard.
 pub static ally: LazyLock<CardDef> = LazyLock::new(|| plain_unit("ally", 9210, 1, 4));
 /// A plain 1/20 ally no 10-damage hit kills.
 pub static wall: LazyLock<CardDef> = LazyLock::new(|| plain_unit("wall", 9211, 1, 20));
@@ -208,7 +203,6 @@ pub static bastion: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Indestructible" }]),
     )
 });
-/// A plain 3/2 attacker.
 pub static skirmisher: LazyLock<CardDef> = LazyLock::new(|| plain_unit("skirmisher", 9214, 3, 2));
 /// A 2/6 Taunt: while a Mayor acts every drawn attack target is this.
 pub static palisade: LazyLock<CardDef> = LazyLock::new(|| {
@@ -450,7 +444,7 @@ pub fn playing(seed: &str) -> GameState {
     state
 }
 
-/// §9.3: the log folded again from `start` through `reduce` hashes the same as the live game.
+/// §9.3: the live game and its replay agree.
 pub fn replays_to(start: &GameState, log: &[Action], live: &GameState) -> bool {
     let mut state = clone_state(start);
     for action in log {
@@ -475,7 +469,6 @@ impl Recorder {
         &self.current
     }
 
-    /// Plays one action with the next nonce and records it; panics with a refusal's text.
     pub fn play(&mut self, body: impl serde::Serialize) -> ReduceResult {
         let action = next_action(body);
         let result = reduce(&self.current, &action);

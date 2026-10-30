@@ -188,7 +188,6 @@ fn card_id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
     card_at(state, at).map(|card| card.id.clone())
 }
 
-// R171
 mod r171_a_change_of_control_is_an_entry_s4_1 {
     use super::*;
 
@@ -656,7 +655,6 @@ fn live_by_id(state: &GameState, id: &str) -> CardInstance {
         .unwrap_or_else(|| panic!("{id} is gone"))
 }
 
-// R172
 mod r172_a_stolen_unit_dies_as_its_controller_s {
     use super::*;
 

@@ -16,7 +16,6 @@ use jackioh_engine::testkit::*;
 use super::catalog::vanilla_deck;
 use super::harness::{both, setup_catalog};
 
-/// A Core Common 2/2 Unit at cost 1 (4/4 Radiant) whose faces print `name`, `overrides` over it.
 fn def(name: &str, index: i32, overrides: Value) -> CardDef {
     let mut card = json!({
         "id": format!("id-{name}"),
@@ -822,7 +821,6 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
     ])
 });
 
-/// The fixture catalog with these cards, registered on top of the shared one; returns the whole catalog.
 pub fn register_instance_fixtures() -> CardDefs {
     setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();
@@ -836,7 +834,6 @@ pub fn register_instance_fixtures() -> CardDefs {
     defs
 }
 
-/// A game in setup with these fixtures registered; decks default to the vanilla fixture decks.
 pub fn instance_game(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> GameState {
     register_instance_fixtures();
     create_game(&CreateGameOptions {

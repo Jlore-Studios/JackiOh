@@ -31,7 +31,7 @@ fn def(overrides: Value) -> CardDef {
 
 // Bodies with no keywords.
 
-/// The vanilla 3/3 every test attacks with, trades and targets. No keywords at all (§6.1).
+/// The vanilla 3/3 every test attacks with, trades and targets.
 pub static plain: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cb-plain",
@@ -461,7 +461,6 @@ pub static COMBAT_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::n
     ])
 });
 
-/// Every combat fixture on top of `base`.
 pub fn combat_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for entry in COMBAT_DEFS.iter() {

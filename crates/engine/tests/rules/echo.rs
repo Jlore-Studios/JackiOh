@@ -108,12 +108,10 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// R802's fixture hook: X is the caster's max mana.
 fn max_mana_echo() -> Option<EchoXHook> {
     Some(read_hook(|args| max_mana_of(args.state, args.self_.controller)))
 }
 
-/// Raises the running card's controller's max mana by 2 (a test-only write).
 fn grow_max_mana() -> Effect {
     Effect::new("ec:growMaxMana", |ctx| {
         let controller = ctx.controller;
@@ -286,12 +284,11 @@ fn echo_mods(state: &GameState, player: PlayerId) -> Vec<PlayerModifier> {
         .collect()
 }
 
-/// §10.1's `echoQueue`.
 fn echo_queue(state: &GameState) -> Vec<EchoItem> {
     state.echo_queue.clone()
 }
 
-/// An Echo the engine owes, granted the way #79 grants one, so each test starts from one line.
+/// An Echo the engine owes, granted the way #79 grants one.
 fn pending_echo(state: &mut GameState, player: PlayerId, amount: i32) {
     let mut bench = Bench::new(state);
     add_modifier(
@@ -315,7 +312,6 @@ fn pluck(events: &[GameEvent], kind: GameEventType, key: &str) -> Vec<Value> {
 fn in_pile(pile: &[CardInstance], id: &str) -> bool {
     pile.iter().any(|held| held.id == id)
 }
-
 
 mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
     use super::*;
@@ -370,7 +366,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );
         assert_eq!(first.error, None);
-        // Play resolves, then the same instance re-resolves 1 more time: 2 damage twice.
         assert_eq!(first.state.players.p2.hero.health, HERO_HEALTH - 4);
         // One play, two resolutions: the repeat is not a second play, so `played` rises once (§6.3).
         assert_eq!(first.state.counters.played, once.counters.played + 1);
@@ -388,8 +383,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
     #[test]
     fn s10_1_declares_echo_queue_on_every_game_state_beside_trigger_queue_and_delayed() {
-        // SPEC §10.1's state model lists `echoQueue: EchoRepeat[]` on `GameState`, so every state
-        // carries one, the way `triggerQueue` and `delayed` do.
         let state = playing("echo-queue-field");
         let json = serde_json::to_value(&state).expect("a state serializes");
         assert!(json.get("echoQueue").is_some());
@@ -423,8 +416,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
     #[test]
     fn r81_s10_5_step_6_asks_fresh_prompts_inside_each_echo_repeat_and_one_pauses_the_repeats_behind_it() {
-        // §6.3: "the same instance re-resolves X times with fresh mode/target prompts … a prompt inside
-        // one repeat pauses the rest until it is answered".
         let mut state = playing("echo-prompt");
         pending_echo(&mut state, PlayerId::P1, 2);
         let card = hand_card(&mut state, &ask_spell().id, PlayerId::P1);
@@ -434,7 +425,7 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         );
         assert_eq!(played.error, None);
 
-        // Answer the open Discover with its first option, and say what opened next.
+        // Answer the open Discover with its first option.
         let answer = |from: &GameState| -> GameState {
             let pending = from.pending.as_ref();
             assert_eq!(pending.map(|open| open.kind), Some(PromptKind::Discover));
@@ -451,7 +442,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
             )
         };
 
-        // Resolution 1's prompt is open, and both repeats are still owed behind it.
         let first_id = played.state.pending.as_ref().map(|open| open.id.clone());
         assert_eq!(
             played.state.pending.as_ref().map(|open| open.kind),
@@ -467,7 +457,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         assert_ne!(after_first.pending.as_ref().map(|open| open.id.clone()), first_id);
         assert_eq!(echo_queue(&after_first).len(), 1);
 
-        // Repeat 2 asks the last one, and once it is answered nothing is owed and nothing is pending.
         let after_second = answer(&after_first);
         assert_eq!(
             after_second.pending.as_ref().map(|open| open.kind),
@@ -481,8 +470,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
     #[test]
     fn r70_gives_a_cast_spell_twinspells_echo_even_though_the_cast_itself_pays_nothing() {
-        // R70: "A cast never uses a cost discount, since it pays nothing, but a cast Spell does use
-        // Twinspell's Echo".
         let mut state = playing("r70-cast-echo");
         pending_echo(&mut state, PlayerId::P1, 1);
         let card = hand_card(&mut state, &pinger().id, PlayerId::P1);
@@ -491,7 +478,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         cast_card(&mut bench.sink(&mut state), &card, Default::default());
         settle(&mut bench.sink(&mut state), Default::default());
 
-        // Free, counted as a play, and repeated once: 2 damage twice.
         assert_eq!(
             pluck(&bench.events, GameEventType::CardPlayed, "costPaid"),
             vec![json!(0)]
@@ -561,7 +547,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
         settle(&mut bench.sink(&mut state), Default::default());
 
-        // Two resolutions, one play, and the card is on the field with nothing left owed.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
         assert_eq!(events_of_type(&bench.events, GameEventType::CardPlayed).len(), 1);
         assert_eq!(
@@ -644,7 +629,6 @@ mod r802_computed_echo_x {
         // X = 3: three repeats, four resolutions.
         let (before, three) = play_at("r802-three", &echo_x().id, 3);
         assert_eq!(three.players.p2.hero.health, HERO_HEALTH - 8);
-        // One play however many resolutions.
         assert_eq!(three.counters.played, before.counters.played + 1);
         assert_eq!(echo_queue(&three), Vec::<EchoItem>::new());
     }

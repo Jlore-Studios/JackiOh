@@ -153,8 +153,6 @@ fn js_string<V: Borrow<Value>>(value: Option<V>) -> String {
     }
 }
 
-// The cards
-
 /// Classic+ #76.1's shape: "Activate: Deal 1 damage" (Radiant: Activate 2, 2 damage).
 pub static pinger: LazyLock<CardDef> = LazyLock::new(|| def("pinger", 4102, "Field Spell", json!({})));
 fn ping(uses: i32, amount: i32) -> ActivationDecl {

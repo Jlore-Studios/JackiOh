@@ -51,7 +51,6 @@ pub const AMP_DECLARED: &str = "sp-amp-declared";
 pub const BOLT: &str = "sp-bolt";
 /// A (2) Spell, untargeted: 1 damage to the enemy hero, twice.
 pub const ZAP: &str = "sp-zap";
-/// A (0) Spell that does nothing.
 pub const NOTHING: &str = "sp-nothing";
 /// An X Spell: X damage to the enemy hero.
 pub const XBOLT: &str = "sp-xbolt";
@@ -87,9 +86,7 @@ pub const PILER: &str = "sp-piler";
 pub const ASKER: &str = "sp-asker";
 /// A (1) Spell: Echo 1, and 1 damage to a declared enemy Unit or hero.
 pub const ECHO_BOLT: &str = "sp-echo-bolt";
-/// A vanilla 1/9 body.
 pub const BODY: &str = "sp-body";
-/// A vanilla 1/1.
 pub const PAWN: &str = "sp-pawn";
 
 pub fn catalog() -> CardDefs {

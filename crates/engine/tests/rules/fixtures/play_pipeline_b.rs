@@ -126,7 +126,6 @@ pub fn ask_target() -> CardDef {
     def(4536, "ask-target", "Spell", json!({ "cost": 1 }))
 }
 
-/// The pool the random casters below cast from, named card by card.
 pub const RANDOM_POOL: &[&str] = &[
     "pb-target-spell",
     "pb-mode-spell",
@@ -302,7 +301,7 @@ pub static PB_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The discover pool: three vanilla fixture units every test catalog holds.
+/// Three vanilla fixture units every test catalog holds.
 pub const DISCOVER_POOL: &[&str] = &["fx-1", "fx-2", "fx-3"];
 
 fn ask(
@@ -834,9 +833,8 @@ pub fn register_pipeline_b() {
     register_scripts(all_scripts);
 }
 
-// Harness shared by the pipeline B tests
+// Harness
 
-/// Past the mulligans, in p1's main phase, with these cards registered and p1 at 4 mana.
 pub fn pb_playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();

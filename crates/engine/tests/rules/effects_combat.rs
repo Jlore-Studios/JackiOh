@@ -103,8 +103,7 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// §6.3 Redirect's attack half (R1122, R1123), the way #64 Traitorous Blood calls it: the first
-/// acting neighbour, `copyDestroyed` on the Radiant-shaped one.
+/// §6.3 Redirect's attack half (R1122, R1123), the way #64 Traitorous Blood calls it.
 fn redirect_script(copy_destroyed: bool) -> CardScripts {
     let script = Script {
         triggers: vec![TriggerDef::new(
@@ -337,8 +336,6 @@ fn field_of(events: &[GameEvent], of: GameEventType, key: &str) -> Vec<Value> {
         .collect()
 }
 
-// forcedAttacksOn — #9 Moths to the Flame
-
 mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
     use super::*;
 
@@ -452,8 +449,6 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
         );
     }
 }
-
-// forcedAttacks — #60 Bear Honeypot
 
 mod forced_attacks_s6_3_forced_attack_r53_c60 {
     use super::*;
@@ -798,7 +793,6 @@ fn type_names(events: &[GameEvent]) -> Vec<&'static str> {
     events.iter().map(|event| event.event_type().as_str()).collect()
 }
 
-/// The first position, or -1.
 fn index_of(types: &[&str], wanted: &str) -> i64 {
     types.iter().position(|t| *t == wanted).map_or(-1, |at| at as i64)
 }
@@ -851,8 +845,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         assert!(index_of(&order, "attackDeclared") >= 0);
         assert!(index_of(&order, "trapFired") > index_of(&order, "attackDeclared"));
         assert!(index_of(&order, "damage") > index_of(&order, "trapFired"));
-        // R61: the trap did nothing, so the combat is ordinary: 3 to the 5/10, 5 back, which kills the
-        // 3/3 and takes it off the field (§4.5, R78).
+        // R61: the trap did nothing, so the combat is ordinary and the 3/3 leaves the field (§4.5, R78).
         assert_eq!(live(&state, &defender).damage, 3);
         assert_eq!(
             field_of(&sink.events, GameEventType::Damage, "amount"),
@@ -887,8 +880,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         let paused = reduce(&state, &attack_action(&attacker.id, &defender.id, "n1"));
         assert_eq!(paused.error, None);
 
-        // The window stopped where it stood: the declaration is still open and the combat owed (§9.3,
-        // R113).
+        // The window stopped: the declaration is still open and the combat owed (§9.3, R113).
         let pending = paused.state.pending.clone();
         assert_eq!(pending.as_ref().map(|p| p.player_id), Some(P1));
         let declared = paused
@@ -1103,8 +1095,7 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
 
     #[test]
     fn r1123_copies_after_the_check() {
-        // P2's 5/10 re-aimed at its allied 3/3 kills it, and P1, the Radiant trap's controller, gets a
-        // fresh copy of it after the check.
+        // The re-aim kills P2's own 3/3; P1, the Radiant trap's controller, gets a fresh copy of it.
         let mut state = game("redirect-copies");
         state.active = P2;
         let attacker = put(&mut state, &big_body.id, slot(P2, Units, 1), json!({}));

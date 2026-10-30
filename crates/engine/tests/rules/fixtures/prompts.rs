@@ -137,7 +137,7 @@ fn pickle_script() -> Script {
     }
 }
 
-/// Classic #18 Glitch in the System: a `number` declared with the play (R81), 0 to 10.
+/// Classic #18 Glitch in the System: a `number` declared with the play (R81).
 pub fn glitch() -> CardDef {
     def(3103, "glitch", "Spell", json!({ "cost": 0 }))
 }
@@ -1002,7 +1002,6 @@ fn mill_script() -> Script {
     }
 }
 
-/// A plain Spell and a plain Unit to play.
 pub fn spark() -> CardDef {
     def(3131, "spark", "Spell", json!({ "cost": 0 }))
 }

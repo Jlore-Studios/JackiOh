@@ -50,7 +50,6 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
     events
 }
 
-/// One `tune_once` application, on the card as it stands now.
 fn once(state: &mut GameState, id: &str, direction: TuneDirection) -> Vec<GameEvent> {
     let card = live(state, id);
     let mut events = Vec::new();
@@ -190,8 +189,8 @@ mod b3_4_the_menu_row_by_row_r386 {
             degrade(json_as(json!({ "instanceId": spell.id, "times": 4 }))),
             RunOptions::default(),
         );
-        // 1 → 2 → 3 → 4, and at (4) nothing is left to change: the fourth application is cued `none`
-        // because the card is in a hand the other player may not read (R440).
+        // At (4) nothing is left to change: the fourth application is cued `none` because the card is
+        // in a hand the other player may not read (R440).
         assert_eq!(
             json_of(changes(&degraded)),
             json!([
@@ -376,7 +375,6 @@ mod b3_4_the_menu_row_by_row_r386 {
                     ..HookOptions::default()
                 },
             );
-            // Draw until the keyword row takes Rush, then read what is left.
             for _ in 0..40 {
                 let now = live(&*ctx.state, &unit.id);
                 if !has_rush(&unit_view(&*ctx.state, &now).keywords) {
@@ -511,7 +509,7 @@ mod b3_4_the_menu_row_by_row_r386 {
             [Some(1), Some(2), Some(2)]
         );
 
-        // Upgrade's X row: one better each — Echo 2, Activate 3, Tribute 1.
+        // Upgrade's X row: one better each.
         for (id, key) in [
             (&echo.id, "Echo"),
             (&active.id, "Activate"),
@@ -1966,7 +1964,6 @@ mod r1748000_in_play {
             json!(["stats", "keyword"])
         );
         assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
-        // Ten Buffs and ten Nerfs on the field leave its price as it was.
         for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
             for _ in 0..10 {
                 once(&mut state, &unit.id, direction);
@@ -2013,7 +2010,6 @@ mod r2261000_tribute_in_play {
             json!(["stats", "keyword"])
         );
         assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
-        // Ten Buffs and ten Nerfs on the field leave its Tribute as it was.
         for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
             for _ in 0..10 {
                 once(&mut state, &unit.id, direction);

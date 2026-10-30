@@ -94,7 +94,6 @@ fn flights(events: &[GameEvent]) -> Vec<(PlayerId, FleeOpponent)> {
         .collect()
 }
 
-/// The last two event types, newest first.
 fn tail(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().rev().take(2).map(GameEvent::event_type).collect()
 }

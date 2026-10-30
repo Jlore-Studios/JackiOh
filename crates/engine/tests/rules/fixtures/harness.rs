@@ -16,8 +16,7 @@ use super::catalog::{vanilla_catalog, vanilla_deck};
 use super::combat::{COMBAT_SCRIPTS, combat_catalog};
 use super::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
 
-/// The fixture catalog every engine test starts from: the vanilla units, the Rush token and the
-/// scripted and combat fixtures, with their scripts.
+/// The fixture catalog every engine test starts from, with its scripts.
 pub fn setup_catalog() {
     register_catalog(combat_catalog(fixture_catalog(vanilla_catalog(2 * DECK_SIZE, 1))));
     let mut merged: IndexMap<String, CardScripts> = FIXTURE_SCRIPTS.clone();
@@ -59,7 +58,6 @@ impl Bench {
         }
     }
 
-    /// A sink over `state` that appends to the bench's events and draws from its rng.
     pub fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
         EngineSink::new(state, &mut self.events, &mut self.rng)
     }
@@ -123,7 +121,7 @@ pub fn set_library(
     cards
 }
 
-/// The events of one type, in order; `type_` is a `GameEventType` or its string (`"damage"`).
+/// `type_` is a `GameEventType` or its string (`"damage"`).
 pub fn events_of_type(events: &[GameEvent], type_: impl ToString) -> Vec<GameEvent> {
     let wanted = type_.to_string();
     events
@@ -133,12 +131,10 @@ pub fn events_of_type(events: &[GameEvent], type_: impl ToString) -> Vec<GameEve
         .collect()
 }
 
-/// `events_of_type`, each event as its JSON.
 pub fn events_json(events: &[GameEvent], kind: impl ToString) -> Vec<Value> {
     events_of_type(events, kind).into_iter().map(json_of).collect()
 }
 
-/// The cards' ids, in order; `cards` holds the cards or references to them.
 pub fn ids_of<C: Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
     cards.iter().map(|card| card.borrow().id.clone()).collect()
 }
@@ -151,7 +147,6 @@ pub fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     ids_of(&state.players[player].hand)
 }
 
-/// The same script on the base and the Radiant face.
 pub fn both(script: Script) -> CardScripts {
     CardScripts {
         base: script.clone(),
@@ -190,12 +185,10 @@ pub fn next_action(body: impl Serialize) -> Action {
     json_as::<ActionInput>(json_of(body)).with_nonce(next_nonce())
 }
 
-/// `reduce` with the next nonce; a refusal comes back in the result.
 pub fn act_result(state: &GameState, body: impl Serialize) -> ReduceResult {
     reduce(state, &next_action(body))
 }
 
-/// `act_result` for an action that must be accepted: a refusal panics with the action's type and reason.
 pub fn act_ok(state: &GameState, body: impl Serialize) -> ReduceResult {
     let action = next_action(body);
     accepted(&action, reduce(state, &action))
@@ -234,7 +227,6 @@ pub fn live(state: &GameState, card: impl Into<CardRef>) -> CardInstance {
         .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
-/// The card in `state`, by its id or a copy of it, to write through.
 pub fn live_mut(state: &mut GameState, card: impl Into<CardRef>) -> &mut CardInstance {
     let id = ref_id(card.into());
     find_instance_mut(state, &id).unwrap_or_else(|| panic!("no card {id} in the state"))
@@ -333,7 +325,6 @@ pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)
     RandomGame { state, log, decks }
 }
 
-/// A value as JSON, the shape the tests compare.
 pub fn json_of(value: impl serde::Serialize) -> serde_json::Value {
     serde_json::to_value(value).expect("serializes")
 }

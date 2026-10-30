@@ -82,7 +82,6 @@ mod r1850001_duo_and_squad {
         for viewer in [P1, P2] {
             assert_eq!(marks_in_view(&played.state, viewer, &target.id), gold);
         }
-        // Not at the start of the other player's turn: at its marker's next.
         let theirs = pass(&played.state);
         assert!(
             !find_instance(&theirs.state, &target.id)
@@ -380,7 +379,6 @@ mod r1850003_hold_beneath {
             .collect()
     }
 
-    /// p1's ticket in backrow lane 1, holding p2's card `held`; the ticket's id.
     fn ticketed(state: &mut GameState, held: &str) -> (String, Vec<GameEvent>) {
         let holder = put(state, &ticket().id, slot(P1, Row::Backrow, 1), json!({}));
         let events = apply(
@@ -707,7 +705,6 @@ mod r1850003_hold_beneath {
 mod r1865000_set_aside_from_hand {
     use super::*;
 
-    /// p1's ticket in backrow `lane`: the holder a card is set aside beneath.
     fn holder(state: &mut GameState, lane: i32) -> CardInstance {
         put(state, &ticket().id, slot(P1, Row::Backrow, lane), json!({}))
     }
@@ -947,7 +944,6 @@ mod r1865000_set_aside_from_hand {
 mod r1850004_cast_for_yourself {
     use super::*;
 
-    /// p1's main phase with p2's Wormhole set face-down in backrow lane 1 (Radiant when `radiant`).
     fn guarded(seed: &str, radiant: bool) -> GameState {
         let mut state = playing(seed);
         put(

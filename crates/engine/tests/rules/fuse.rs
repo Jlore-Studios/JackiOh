@@ -289,7 +289,6 @@ fn keyword_kinds(keywords: &[Keyword]) -> Vec<String> {
     kinds
 }
 
-/// `fuse(sink, args)`, `args` holding its instances as the state holds them now.
 fn fuse_in(state: &mut GameState, sink: &mut Bench, args: Value) -> Option<CardInstance> {
     let args: FuseArgs = json_as(args);
     fuse(&mut sink.sink(state), args)
@@ -338,8 +337,6 @@ fn played_by_p2() -> GameEvent {
         "costPaid": 1,
     }))
 }
-
-// The transient definition.
 
 mod fuse_the_transient_definition_r77_m3_t7 {
     use super::*;
@@ -518,7 +515,6 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 30); // 10 + 20
 
-        // The base face of the same definition still holds the base pair.
         live_mut(&mut state, &result.id).radiant = false;
         let card = live(&state, &result.id);
         run_hook(
@@ -918,8 +914,6 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
     }
 }
 
-// Fused traps and Craft a Card.
-
 mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     use super::*;
 
@@ -1102,8 +1096,6 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
         assert!(lone.transient_defs.is_empty());
     }
 }
-
-// R1177000: the Token tag goes with the token flag.
 
 mod r1177000_a_fused_card_wears_the_token_tag_only_when_it_is_a_token {
     use super::*;

@@ -63,7 +63,6 @@ pub static summit_escape: LazyLock<CardDef> = LazyLock::new(|| card(18438, "summ
 /// A (0) Spell that makes both players flee at once.
 pub static exodus: LazyLock<CardDef> = LazyLock::new(|| card(18439, "exodus", "Spell", 0));
 
-/// "Votes to remove you if …": the verb when the condition holds, nothing when it does not.
 fn vote_if(holds: bool) -> Vec<Effect> {
     if holds {
         vec![vote_out(Default::default())]
@@ -221,7 +220,6 @@ static ENDINGS_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The engine's fixture catalog (`harness::setup_catalog`) with these cards and scripts on top.
 pub fn register_endings_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();

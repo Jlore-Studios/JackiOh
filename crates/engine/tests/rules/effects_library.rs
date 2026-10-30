@@ -159,7 +159,7 @@ fn resolving_self(state: &mut GameState, def_id: &str, player: PlayerId) -> Card
     card
 }
 
-/// The effects applied in order through one context on a fresh sink; the rng is not written back.
+/// The rng is not written back.
 fn run(
     state: &mut GameState,
     effects: Vec<Effect>,
