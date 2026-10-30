@@ -9463,7 +9463,7 @@
       "provider": "claude-7",
       "queued_at": "2026-10-30T13:03:32Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:c805a89b-1793365800",
+      "run_id": "41061030194",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-30T13:10:21Z",
       "stop_requested": false,
