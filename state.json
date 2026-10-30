@@ -7339,7 +7339,7 @@
       "requested_by": "MaxGoetzmann",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "41070148390",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
