@@ -1,51 +1,175 @@
 package runner
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
+	"unsafe"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
 // The fake CLIs of bot/tests/test_runner.py and test_backends.py, run for real: the launch, its
-// watcher, its timeout and its reaping, and Muse's TUI in a pseudo-terminal.
+// watcher, its timeout and its reaping, and Muse's TUI in a pseudo-terminal. The Python's fakes
+// are Python scripts; here each is this test binary run again as a helper process (fakeClaude,
+// fakeMuse), behind a two-line sh script, so the tests need no Python.
 
-const fakeClaude = `#!%s
-import json, os, sys, time
-prompt = sys.stdin.read()
-mode = os.environ.get("FAKE_MODE", "ok")
-def emit(obj):
-    print(json.dumps(obj), flush=True)
-emit({"type": "system", "subtype": "init"})
-if mode == "sleep":
-    time.sleep(30)
-if mode == "climb":
-    for share in (0.3, 0.6):
-        emit({"type": "rate_limit_event", "rate_limit_info": {"status": "allowed",
-              "unifiedWindows": {"five_hour": {"utilization": share, "resetsAt": 1790710800}}}})
-        time.sleep(0.4)
-    time.sleep(30)
-if mode == "daemon":
-    import subprocess
-    child = subprocess.Popen(["setsid", "sleep", "300"], start_new_session=True)
-    open(os.environ["FAKE_PID"], "w").write(str(child.pid))
-print("to stderr", file=sys.stderr)
-emit({"type": "result", "is_error": False, "result": "done: " + prompt[:20], "num_turns": 7})
-`
+// fakeSwitch names the fake CLI this test binary is when started by fakeBin's script.
+const fakeSwitch = "JACKIOH_RUNNER_FAKE_CLI"
 
-func fakeBin(t *testing.T, name, script string) string {
-	t.Helper()
-	python, err := exec.LookPath("python3")
-	if err != nil {
-		t.Skip("no python3 for the fake CLI")
+// The fakes run before any test: started by fakeBin's script, this binary is the fake and
+// nothing else.
+func init() {
+	switch os.Getenv(fakeSwitch) {
+	case "claude":
+		fakeClaude()
+		os.Exit(0)
+	case "muse":
+		fakeMuse()
+		os.Exit(0)
 	}
+}
+
+// fakeEnv is os.environ.get(name, default).
+func fakeEnv(name, def string) string {
+	if v, ok := os.LookupEnv(name); ok {
+		return v
+	}
+	return def
+}
+
+// fakeClaude is the fake `claude`: the prompt on stdin, its stream-json on stdout as FAKE_MODE
+// says, a line on stderr.
+func fakeClaude() {
+	data, _ := io.ReadAll(os.Stdin)
+	prompt := string(data)
+	mode := fakeEnv("FAKE_MODE", "ok")
+	emit := func(obj *pyjson.Object) { fmt.Println(pyjson.Dumps(obj)) } // os.Stdout is unbuffered
+	emit(pyjson.New("type", "system", "subtype", "init"))
+	if mode == "sleep" {
+		time.Sleep(30 * time.Second)
+	}
+	if mode == "climb" {
+		for _, share := range []float64{0.3, 0.6} {
+			emit(pyjson.New("type", "rate_limit_event", "rate_limit_info", pyjson.New("status", "allowed",
+				"unifiedWindows", pyjson.New("five_hour", pyjson.New("utilization", share, "resetsAt", 1790710800)))))
+			time.Sleep(400 * time.Millisecond)
+		}
+		time.Sleep(30 * time.Second)
+	}
+	if mode == "daemon" {
+		child := exec.Command("setsid", "sleep", "300")
+		child.SysProcAttr = &syscall.SysProcAttr{Setsid: true} // start_new_session=True
+		if err := child.Start(); err != nil {
+			panic(err)
+		}
+		if err := os.WriteFile(os.Getenv("FAKE_PID"), []byte(strconv.Itoa(child.Process.Pid)), 0o666); err != nil {
+			panic(err)
+		}
+	}
+	fmt.Fprintln(os.Stderr, "to stderr")
+	emit(pyjson.New("type", "result", "is_error", false, "result", "done: "+py.SliceTo(prompt, 20), "num_turns", 7))
+}
+
+// fakeMuse is the fake `muse` TUI: in a raw terminal it asks where the cursor is, asks once to
+// trust its workspace, draws its prompt and, typed `/usage`, its usage panel.
+func fakeMuse() {
+	mode := fakeEnv("FAKE_MODE", "ok")
+	argv := os.Args[1:]
+	workspace := argv[slices.Index(argv, "--workspace")+1]
+	draw := func(text string) { os.Stdout.Write([]byte(text)) }
+	readByte := func() byte {
+		var b [1]byte
+		if n, err := os.Stdin.Read(b[:]); n == 0 || err != nil {
+			os.Exit(1) // the terminal is gone
+		}
+		return b[0]
+	}
+	answer := func() []byte {
+		var got []byte
+		for !bytes.HasSuffix(got, []byte("\r")) {
+			got = append(got, readByte())
+		}
+		log, err := os.OpenFile(filepath.Join(workspace, "typed.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
+		if err != nil {
+			panic(err)
+		}
+		log.Write(append(bytes.TrimSpace(got), '\n'))
+		log.Close()
+		return bytes.TrimSpace(got)
+	}
+	fakeSetRaw(0)
+	draw("\x1b[6n")
+	var where []byte
+	for !bytes.HasSuffix(where, []byte("R")) {
+		where = append(where, readByte())
+	}
+	if _, err := os.Stat(filepath.Join(workspace, ".trusted")); err != nil {
+		draw("Do you trust this workspace?\r\n> 1 Trust and continue\r\n  2 Quit\r\n")
+		if string(answer()) != "1" {
+			os.Exit(3)
+		}
+		if err := os.WriteFile(filepath.Join(workspace, ".trusted"), nil, 0o666); err != nil {
+			panic(err)
+		}
+	}
+	draw("\x1b7 Muse Code 1.4.2\x1b8\r\n❯ \r\n")
+	if string(answer()) == "/usage" {
+		week := "35"
+		if mode == "spent" {
+			week = "97"
+		}
+		draw("│ Session usage │\r\n" +
+			"│ Current 5% used · Resets at 6:42 PM │\r\n" +
+			"│ Weekly " + week + "% used · Resets Oct 5 at 12:00 AM │\r\n")
+	}
+	time.Sleep(30 * time.Second)
+}
+
+// fakeSetRaw is tty.setraw(fd): the terminal in raw mode, set once its queued input is flushed
+// (TCSAFLUSH, whose ioctl is TCSETSF: TCSETS + 2 on every Linux).
+func fakeSetRaw(fd uintptr) {
+	var mode syscall.Termios
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, syscall.TCGETS, uintptr(unsafe.Pointer(&mode))); errno != 0 {
+		panic(errno)
+	}
+	mode.Iflag &^= syscall.BRKINT | syscall.ICRNL | syscall.INPCK | syscall.ISTRIP | syscall.IXON
+	mode.Oflag &^= syscall.OPOST
+	mode.Cflag &^= syscall.CSIZE | syscall.PARENB
+	mode.Cflag |= syscall.CS8
+	mode.Lflag &^= syscall.ECHO | syscall.ICANON | syscall.IEXTEN | syscall.ISIG
+	mode.Cc[syscall.VMIN] = 1
+	mode.Cc[syscall.VTIME] = 0
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, syscall.TCSETS+2, uintptr(unsafe.Pointer(&mode))); errno != 0 {
+		panic(errno)
+	}
+}
+
+// fakeBin writes the fake CLI `which` to a new `name`: a script that runs this test binary as
+// it. It starts the binary from the repository root, where the harness's packages find
+// `.harness/` as they load; neither fake reads its working directory.
+func fakeBin(t *testing.T, name, which string) string {
+	t.Helper()
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'" }
 	path := filepath.Join(t.TempDir(), name)
-	if err := os.WriteFile(path, []byte(strings.Replace(script, "%s", python, 1)), 0o755); err != nil {
+	script := "#!/bin/sh\ncd " + quote(config.RepoRoot) + " && " + fakeSwitch + "=" + which + " exec " +
+		quote(self) + " \"$@\"\n"
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	return path
@@ -53,7 +177,7 @@ func fakeBin(t *testing.T, name, script string) string {
 
 func launchFake(t *testing.T, mode string, timeout int, stop func(*pyjson.Object) string) (*launchResult, *RunResult, string) {
 	t.Helper()
-	bin := fakeBin(t, "claude", fakeClaude)
+	bin := fakeBin(t, "claude", "claude")
 	dir := t.TempDir()
 	x := NewClaudeCli(bin, nil, nil)
 	request := &RunRequest{Role: "build", Cwd: dir, TimeoutS: timeout, UsageStop: stop,
@@ -170,41 +294,8 @@ func TestLaunchWithoutTheBinary(t *testing.T) {
 	}
 }
 
-const fakeMuse = `#!%s
-import json, os, sys, time, tty
-mode = os.environ.get("FAKE_MODE", "ok")
-argv = sys.argv[1:]
-workspace = argv[argv.index("--workspace") + 1]
-def draw(text):
-    os.write(1, text.encode("utf-8"))
-def answer():
-    got = b""
-    while not got.endswith(b"\r"):
-        got += os.read(0, 1)
-    with open(os.path.join(workspace, "typed.log"), "ab") as log:
-        log.write(got.strip() + b"\n")
-    return got.strip()
-tty.setraw(0)
-draw("\x1b[6n")
-where = b""
-while not where.endswith(b"R"):
-    where += os.read(0, 1)
-if not os.path.exists(os.path.join(workspace, ".trusted")):
-    draw("Do you trust this workspace?\r\n> 1 Trust and continue\r\n  2 Quit\r\n")
-    if answer() != b"1":
-        sys.exit(3)
-    open(os.path.join(workspace, ".trusted"), "w").close()
-draw("\x1b7 Muse Code 1.4.2\x1b8\r\n❯ \r\n")
-if answer() == b"/usage":
-    week = "97" if mode == "spent" else "35"
-    draw("│ Session usage │\r\n"
-         "│ Current 5% used · Resets at 6:42 PM │\r\n"
-         "│ Weekly " + week + "% used · Resets Oct 5 at 12:00 AM │\r\n")
-time.sleep(30)
-`
-
 func TestMuseScreenReadsTheUsagePanel(t *testing.T) {
-	bin := fakeBin(t, "muse", fakeMuse)
+	bin := fakeBin(t, "muse", "muse")
 	workspace := filepath.Join(t.TempDir(), "usage")
 	env := map[string]string{"PATH": os.Getenv("PATH")}
 	started := time.Now()
