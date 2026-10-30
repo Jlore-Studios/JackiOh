@@ -74,19 +74,18 @@ func wipRead(path string) string {
 }
 
 func TestWip_ACutOffRevisionKeepsItsWorkBesideThePullRequest(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	start := wipPull(h)
 	_, first := h.night(wipRunner(map[string]runner.Handler{
 		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
-	is.Equal(first.Get("status"), "interrupted")
-	is.Equal(h.originSHA("bot/issue-12"), start) // the pull request is untouched
-	is.Equal(h.originSHA("bot/wip/40"), first.Get("head"))
+	assertEqual(t, first.Get("status"), "interrupted")
+	assertEqual(t, h.originSHA("bot/issue-12"), start) // the pull request is untouched
+	assertEqual(t, h.originSHA("bot/wip/40"), first.Get("head"))
 	record := wipRecord(h)
-	is.Equal([]any{record.Obj("wip").Get("sha"), record.Obj("wip").Get("start")}, []any{first.Get("head"), start})
+	assertEqual(t, []any{record.Obj("wip").Get("sha"), record.Obj("wip").Get("start")}, []any{first.Get("head"), start})
 	said := h.gh.BotComments(40)
-	is.In("The work so far is on `bot/wip/40`", said[len(said)-1])
-	is.Equal(wipInterruptions(t, record, false), 0) // it moved on: no strike
+	assertIn(t, "The work so far is on `bot/wip/40`", said[len(said)-1])
+	assertEqual(t, wipInterruptions(t, record, false), 0) // it moved on: no strike
 
 	// The next revision starts from it, is told so, and finishes the job.
 	seen := map[string]string{}
@@ -96,18 +95,17 @@ func TestWip_ACutOffRevisionKeepsItsWorkBesideThePullRequest(t *testing.T) {
 	}
 	r := wipRunner(map[string]runner.Handler{"revise": finishing, "review": difficultyReviewer(difficultyApprove)})
 	planned, second := h.night(r)
-	is.Equal(planned.Obj("wip").Get("sha"), first.Get("head"))
-	is.Equal(seen["file"], "half\n")
-	is.In("Your worktree starts from `bot/wip/40`", r.Calls[0].Prompt)
-	is.Equal(second.Get("status"), "approved")
-	is.Equal(second.Get("start"), start) // deliver still checks against the PR's head
-	is.Equal(fakes.Git(h.origin, "show", h.originSHA("bot/issue-12")+":src/game.txt"), "whole")
-	is.Equal(h.originSHA("bot/wip/40"), "") // done with
-	is.NotIn("wip", wipRecord(h))
+	assertEqual(t, planned.Obj("wip").Get("sha"), first.Get("head"))
+	assertEqual(t, seen["file"], "half\n")
+	assertIn(t, "Your worktree starts from `bot/wip/40`", r.Calls[0].Prompt)
+	assertEqual(t, second.Get("status"), "approved")
+	assertEqual(t, second.Get("start"), start) // deliver still checks against the PR's head
+	assertEqual(t, fakes.Git(h.origin, "show", h.originSHA("bot/issue-12")+":src/game.txt"), "whole")
+	assertEqual(t, h.originSHA("bot/wip/40"), "") // done with
+	assertNotIn(t, "wip", wipRecord(h))
 }
 
 func TestWip_ABranchThatMovedSinceStartsAfresh(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	wipPull(h)
 	h.night(wipRunner(map[string]runner.Handler{
@@ -122,48 +120,45 @@ func TestWip_ABranchThatMovedSinceStartsAfresh(t *testing.T) {
 	}
 	r := wipRunner(map[string]runner.Handler{"revise": looking, "review": difficultyReviewer(difficultyApprove)})
 	_, result := h.night(r)
-	is.Equal(seen["file"], "v2\n")
-	is.Equal(result.Obj("wip").Get("ignored"), "bot/wip/40")
-	is.In("the pull request's branch moved after it stopped", r.Calls[0].Prompt)
+	assertEqual(t, seen["file"], "v2\n")
+	assertEqual(t, result.Obj("wip").Get("ignored"), "bot/wip/40")
+	assertIn(t, "the pull request's branch moved after it stopped", r.Calls[0].Prompt)
 }
 
 func TestWip_PausesThatGetNowhereBlockItAfterThree(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	wipPull(h)
 	for n := range 3 {
 		_, result := h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
-		is.Equal(result.Get("status"), "interrupted")
+		assertEqual(t, result.Get("status"), "interrupted")
 		if n < 2 {
-			is.Equal(h.gh.LabelNames(40), map[string]bool{config.LabelPR: true, config.LabelRevise: true})
+			assertEqual(t, h.gh.LabelNames(40), map[string]bool{config.LabelPR: true, config.LabelRevise: true})
 		}
 	}
-	is.Equal(h.gh.LabelNames(40), map[string]bool{config.LabelPR: true, config.LabelBlocked: true})
+	assertEqual(t, h.gh.LabelNames(40), map[string]bool{config.LabelPR: true, config.LabelBlocked: true})
 	said := h.gh.BotComments(40)
-	is.In("cut off 3 runs in a row without its work moving on", said[len(said)-1])
+	assertIn(t, "cut off 3 runs in a row without its work moving on", said[len(said)-1])
 }
 
 // A revision that resumes from `bot/wip/<pr>` pushes it again every time; only a commit of its own
 // past the kept head is progress, so pauses with none still add up.
 func TestWip_AResumedRevisionThatGetsNowhereStillCounts(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	wipPull(h)
 	_, first := h.night(wipRunner(map[string]runner.Handler{
 		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
-	is.Equal(wipInterruptions(t, wipRecord(h), false), 0)
+	assertEqual(t, wipInterruptions(t, wipRecord(h), false), 0)
 	for _, n := range []int{1, 2} {
 		_, result := h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
-		is.Equal(result.Get("status"), "interrupted")
-		is.Equal(h.originSHA("bot/wip/40"), first.Get("head")) // kept, not moved on
-		is.Equal(wipInterruptions(t, wipRecord(h), true), n)
+		assertEqual(t, result.Get("status"), "interrupted")
+		assertEqual(t, h.originSHA("bot/wip/40"), first.Get("head")) // kept, not moved on
+		assertEqual(t, wipInterruptions(t, wipRecord(h), true), n)
 	}
 }
 
 // Every revision merges `main` in; its squash commits are no merges, but they are not the run's
 // work, so a cut-off run that did nothing else still counts.
 func TestWip_MainsCommitsMergedInAreNoProgress(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	wipPull(h)
 	h.night(wipRunner(map[string]runner.Handler{
@@ -172,37 +167,35 @@ func TestWip_MainsCommitsMergedInAreNoProgress(t *testing.T) {
 		fakes.PushBranch(h.origin, h.root, "main", map[string]string{
 			fmt.Sprintf("docs/other-%d.md", n): "someone else's\n"})
 		_, result := h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
-		is.Equal(result.Get("status"), "interrupted")
-		is.Equal(wipInterruptions(t, wipRecord(h), true), n)
+		assertEqual(t, result.Get("status"), "interrupted")
+		assertEqual(t, wipInterruptions(t, wipRecord(h), true), n)
 	}
 }
 
 func TestWip_APauseThatMovesTheWorkOnResetsTheCount(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	wipPull(h)
 	h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
 	h.night(wipRunner(map[string]runner.Handler{"revise": wipCapped}))
-	is.Equal(wipInterruptions(t, wipRecord(h), true), 2)
+	assertEqual(t, wipInterruptions(t, wipRecord(h), true), 2)
 	_, result := h.night(wipRunner(map[string]runner.Handler{
 		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
-	is.Equal(result.Get("status"), "interrupted")
-	is.Equal(wipInterruptions(t, wipRecord(h), true), 0)
-	is.Equal(h.gh.LabelNames(40), map[string]bool{config.LabelPR: true, config.LabelRevise: true})
+	assertEqual(t, result.Get("status"), "interrupted")
+	assertEqual(t, wipInterruptions(t, wipRecord(h), true), 0)
+	assertEqual(t, h.gh.LabelNames(40), map[string]bool{config.LabelPR: true, config.LabelRevise: true})
 }
 
 func TestWip_ClosingThePullRequestDropsItsWip(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	h.gh.AddIssue(12)
 	wipPull(h)
 	h.night(wipRunner(map[string]runner.Handler{
 		"revise": difficultyBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
-	is.In("wip", wipRecord(h))
+	assertIn(t, "wip", wipRecord(h))
 	pr := h.gh.Threads.Item(40).Copy()
 	pr.Set("merged", false)
 	pr.Set("state", "closed")
 	events.Handle(h.ctx, "pull_request", pyjson.New("action", "closed", "pull_request", pr))
-	is.In("bot/wip/40", h.gh.DeletedBranches)
-	is.NotIn("wip", wipRecord(h))
+	assertIn(t, "bot/wip/40", h.gh.DeletedBranches)
+	assertNotIn(t, "wip", wipRecord(h))
 }

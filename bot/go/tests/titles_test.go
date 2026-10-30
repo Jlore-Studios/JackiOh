@@ -29,7 +29,7 @@ func TestTitles_WhatItDoesDropsAnyPrefixOldOrNewAndKeepsThePart(t *testing.T) {
 	}
 	for _, c := range cases {
 		part, rest := titles.WhatItDoes(c[0])
-		basicsEqual(t, [2]string{part, rest}, [2]string{c[1], c[2]}, c[0])
+		assertEqual(t, [2]string{part, rest}, [2]string{c[1], c[2]}, c[0])
 	}
 }
 
@@ -38,20 +38,20 @@ func TestTitles_NewTitlesPassTheTitleCheck(t *testing.T) {
 		"Patch v0.2.X (part 2 of 4): the lobby", "Night bot: a cap"} {
 		for _, version := range []string{"", "v0.3.18", "v0.4.0c"} {
 			retitled := titles.NewTitle(title, version)
-			basicsTrue(t, triage.PullTitleOK(retitled), retitled)
+			assertTrue(t, triage.PullTitleOK(retitled), retitled)
 		}
 	}
-	basicsEqual(t, titles.NewTitle("Patch v0.3.X: Bigot costs (3)", "v0.3.18"), "Patch v0.3.18: Bigot costs (3)")
-	basicsEqual(t, titles.NewTitle("Patch v0.2.X (part 2 of 4): the lobby", "v0.2.4"),
+	assertEqual(t, titles.NewTitle("Patch v0.3.X: Bigot costs (3)", "v0.3.18"), "Patch v0.3.18: Bigot costs (3)")
+	assertEqual(t, titles.NewTitle("Patch v0.2.X (part 2 of 4): the lobby", "v0.2.4"),
 		"Patch v0.2.4 (part 2 of 4): the lobby")
-	basicsEqual(t, titles.NewTitle("CI: daily super run failed", ""), "Patch: daily super run failed")
+	assertEqual(t, titles.NewTitle("CI: daily super run failed", ""), "Patch: daily super run failed")
 }
 
 func TestTitles_ACommitsPullRequestAndTheIssuesItCloses(t *testing.T) {
-	basicsEqual(t, titles.PullOf("Patch v0.3.X: Bigot costs (3) (#1401)"), 1401)
-	basicsEqual(t, titles.PullOf("Merge pull request #1362 from Jlore-Studios/bot/issue-1300"), 1362)
-	basicsEqual(t, titles.PullOf("bot: build pass 1 for #85"), 0)
-	basicsEqual(t, titles.ClosedBy("Closes #1366\nPart of #1360\nfixes #7, Resolves #7"), []int{1366, 7})
+	assertEqual(t, titles.PullOf("Patch v0.3.X: Bigot costs (3) (#1401)"), 1401)
+	assertEqual(t, titles.PullOf("Merge pull request #1362 from Jlore-Studios/bot/issue-1300"), 1362)
+	assertEqual(t, titles.PullOf("bot: build pass 1 for #85"), 0)
+	assertEqual(t, titles.ClosedBy("Closes #1366\nPart of #1360\nfixes #7, Resolves #7"), []int{1366, 7})
 }
 
 func TestTitles_RetitlesWhatAPromotionShippedAndNamesTheVersion(t *testing.T) {
@@ -65,14 +65,14 @@ func TestTitles_RetitlesWhatAPromotionShippedAndNamesTheVersion(t *testing.T) {
 	for _, entry := range entries {
 		versions = append(versions, entry.Str("version"))
 	}
-	basicsEqual(t, versions, []string{"v0.3.17b"})
+	assertEqual(t, versions, []string{"v0.3.17b"})
 	done := titles.RetitleShipped(gh, entries, func(sha string) string { return "Patch v0.3.X: Bigot costs (3) (#9)" })
-	basicsEqual(t, done, []string{"#9: Patch v0.3.17b: Bigot costs (3)", "#5: Patch v0.3.17b: Bigot costs (3)"})
-	basicsEqual(t, gh.GetPull(9).Get("title"), "Patch v0.3.17b: Bigot costs (3)")
-	basicsEqual(t, gh.GetIssue(5).Get("title"), "Patch v0.3.17b: Bigot costs (3)")
+	assertEqual(t, done, []string{"#9: Patch v0.3.17b: Bigot costs (3)", "#5: Patch v0.3.17b: Bigot costs (3)"})
+	assertEqual(t, gh.GetPull(9).Get("title"), "Patch v0.3.17b: Bigot costs (3)")
+	assertEqual(t, gh.GetIssue(5).Get("title"), "Patch v0.3.17b: Bigot costs (3)")
 	comments := gh.ListComments(5, 300)
-	basicsIn(t, "Shipped as **v0.3.17b**", comments[len(comments)-1].Str("body"))
-	basicsEqual(t, titles.Shipped(after, after), []*pyjson.Object{})
+	assertIn(t, "Shipped as **v0.3.17b**", comments[len(comments)-1].Str("body"))
+	assertEqual(t, titles.Shipped(after, after), []*pyjson.Object{})
 }
 
 func TestTitles_ALockedThreadIsUnlockedForTheCommentAndLockedAgain(t *testing.T) {
@@ -85,18 +85,18 @@ func TestTitles_ALockedThreadIsUnlockedForTheCommentAndLockedAgain(t *testing.T)
 	titles.RetitleShipped(gh, entries, func(sha string) string { return "Patch v0.3.X: Bigot costs (3) (#9)" })
 	for _, number := range []int{5, 9} {
 		comments := gh.ListComments(number, 300)
-		basicsIn(t, "Shipped as **v0.3.17b**", comments[len(comments)-1].Str("body"))
-		basicsTrue(t, gh.GetIssue(number).Truthy("locked"))
+		assertIn(t, "Shipped as **v0.3.17b**", comments[len(comments)-1].Str("body"))
+		assertTrue(t, gh.GetIssue(number).Truthy("locked"))
 	}
 }
 
 func TestTitles_APushThatRenamesShippedVersionsShipsNothing(t *testing.T) {
 	before := []*pyjson.Object{pyjson.New("version", "v0.3.16"), pyjson.New("version", "v0.3.17")}
 	retcon := []*pyjson.Object{pyjson.New("version", "v0.4.0b"), pyjson.New("version", "v0.4.0c")}
-	basicsEqual(t, titles.Shipped(before, retcon), []*pyjson.Object{})
-	basicsEqual(t, titles.Shipped(before, append(append([]*pyjson.Object{}, retcon...),
+	assertEqual(t, titles.Shipped(before, retcon), []*pyjson.Object{})
+	assertEqual(t, titles.Shipped(before, append(append([]*pyjson.Object{}, retcon...),
 		pyjson.New("version", "v0.4.0d"))), []*pyjson.Object{})
-	basicsEqual(t, titles.Shipped(before, before[:1]), []*pyjson.Object{})
+	assertEqual(t, titles.Shipped(before, before[:1]), []*pyjson.Object{})
 }
 
 // ------------------------------------------------------------------ RetconTests
@@ -140,12 +140,12 @@ func TestTitles_TitlesAWorkflowOrAToolFindsAreLeftAlone(t *testing.T) {
 		"Night bot status", "patches ship: v0.3.17", "AI gen 13 (improve): in training",
 		"Promote main to production: 3 commit(s) up to abc1234",
 		`Revert "Patch v0.3.X: a fix"`} {
-		basicsTrue(t, titles.LeftAlone_(titlesThreadOf(9, title)), title)
+		assertTrue(t, titles.LeftAlone_(titlesThreadOf(9, title)), title)
 	}
-	basicsTrue(t, titles.LeftAlone_(titlesThreadOf(148, "Anything")))
-	basicsTrue(t, titles.LeftAlone_(titlesThreadOf(9, "Merging to production in 3 hours",
+	assertTrue(t, titles.LeftAlone_(titlesThreadOf(148, "Anything")))
+	assertTrue(t, titles.LeftAlone_(titlesThreadOf(9, "Merging to production in 3 hours",
 		titlesThread{Labels: []string{"production merge"}})))
-	basicsFalse(t, titles.LeftAlone_(titlesThreadOf(9, "CI: the learn lane folds an export")))
+	assertFalse(t, titles.LeftAlone_(titlesThreadOf(9, "CI: the learn lane folds an export")))
 }
 
 func TestTitles_PlansTheNewTitlesAndTheOpenIssuesKindLabels(t *testing.T) {
@@ -167,7 +167,7 @@ func TestTitles_PlansTheNewTitlesAndTheOpenIssuesKindLabels(t *testing.T) {
 	for _, r := range rows {
 		got = append(got, row{r.Number, r.New, r.Label})
 	}
-	basicsEqual(t, got, []row{
+	assertEqual(t, got, []row{
 		{1, "Patch v0.3.4: Bigot costs (3)", ""},
 		{2, "Patch: patch numbers (part 2 of 8): fragments", "kind:internal"},
 		{3, "Patch: daily quests", "kind:app"},
@@ -175,7 +175,7 @@ func TestTitles_PlansTheNewTitlesAndTheOpenIssuesKindLabels(t *testing.T) {
 		{7, "Patch: a cap", ""},
 	})
 	for _, r := range rows {
-		basicsTrue(t, triage.PullTitleOK(r.New), r.New)
+		assertTrue(t, triage.PullTitleOK(r.New), r.New)
 	}
 	// Run again over its own result, it changes nothing.
 	done := []*pyjson.Object{}
@@ -186,7 +186,7 @@ func TestTitles_PlansTheNewTitlesAndTheOpenIssuesKindLabels(t *testing.T) {
 		}
 		done = append(done, titlesThreadOf(r.Number, r.New, titlesThread{Labels: labels}))
 	}
-	basicsEqual(t, titles.PlanRetcon(done, map[int]string{1: "v0.3.4"}), []*titles.Retitle{})
+	assertEqual(t, titles.PlanRetcon(done, map[int]string{1: "v0.3.4"}), []*titles.Retitle{})
 }
 
 func TestTitles_AShippedPatchNamesItsSourceItsPullRequestAndTheIssuesItCloses(t *testing.T) {
@@ -197,7 +197,7 @@ func TestTitles_AShippedPatchNamesItsSourceItsPullRequestAndTheIssuesItCloses(t 
 		pyjson.New("version", "v0.3.5", "source", "#8", "commits", []any{}),
 	}
 	found := titles.VersionsByThread(patches, gh, func(sha string) string { return "Bigot costs (3) (#9)" })
-	basicsEqual(t, found, map[int]string{7: "v0.3.4", 8: "v0.3.5", 9: "v0.3.4", 5: "v0.3.4"})
+	assertEqual(t, found, map[int]string{7: "v0.3.4", 8: "v0.3.5", 9: "v0.3.4", 5: "v0.3.4"})
 }
 
 func TestTitles_WritesEachTitleAndLabelWithAPauseBetween(t *testing.T) {
@@ -205,12 +205,12 @@ func TestTitles_WritesEachTitleAndLabelWithAPauseBetween(t *testing.T) {
 	gh.AddIssue(2, fakes.Issue{Title: "Architecture: a thing"})
 	rows := titles.PlanRetcon([]*pyjson.Object{titlesThreadOf(2, "Architecture: a thing")}, map[int]string{})
 	slept := []float64{}
-	basicsEqual(t, titles.ApplyRetcon(gh, rows, 2.0, func(s float64) { slept = append(slept, s) }), 1)
-	basicsEqual(t, gh.GetIssue(2).Get("title"), "Patch: a thing")
+	assertEqual(t, titles.ApplyRetcon(gh, rows, 2.0, func(s float64) { slept = append(slept, s) }), 1)
+	assertEqual(t, gh.GetIssue(2).Get("title"), "Patch: a thing")
 	names := []string{}
 	for _, l := range pyjson.Objs(gh.GetIssue(2).Get("labels")) {
 		names = append(names, l.Str("name"))
 	}
-	basicsIn(t, "kind:internal", names)
-	basicsEqual(t, slept, []float64{2.0})
+	assertIn(t, "kind:internal", names)
+	assertEqual(t, slept, []float64{2.0})
 }

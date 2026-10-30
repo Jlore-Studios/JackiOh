@@ -62,10 +62,10 @@ func TestSkills_EverySkillCarriesOnlyAllowedKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Strings(skills)
-	workflowsTrue(t, len(skills) > 0)
+	assertTrue(t, len(skills) > 0)
 	for _, path := range skills {
 		keys := skillsFrontmatterKeys(t, workflowsFile(t, path))
-		workflowsTrue(t, keys["description"], path)
+		assertTrue(t, keys["description"], path)
 		extra := []string{}
 		for key := range keys {
 			if !skillsAllowedKeys[key] {
@@ -73,7 +73,7 @@ func TestSkills_EverySkillCarriesOnlyAllowedKeys(t *testing.T) {
 			}
 		}
 		sort.Strings(extra)
-		workflowsTrue(t, len(extra) == 0, path, extra)
+		assertTrue(t, len(extra) == 0, path, extra)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestSkills_ASkillHoldsOnlyMarkdownAndALicence(t *testing.T) {
 			return err
 		}
 		if workflowsIsFile(path) {
-			workflowsTrue(t, slices.ContainsFunc(skillsAllowedFiles, func(end string) bool {
+			assertTrue(t, slices.ContainsFunc(skillsAllowedFiles, func(end string) bool {
 				return strings.HasSuffix(filepath.Base(path), end)
 			}), path)
 		}
@@ -96,5 +96,5 @@ func TestSkills_ASkillHoldsOnlyMarkdownAndALicence(t *testing.T) {
 
 func TestSkills_TheReaderSeesKeysThatGrant(t *testing.T) {
 	text := "---\nname: x\ndescription: >\n  y: z\nallowed-tools: Bash\n---\nbody: 1\n"
-	workflowsEqualMaps(t, skillsFrontmatterKeys(t, text), workflowsSet("name", "description", "allowed-tools"))
+	assertEqual(t, skillsFrontmatterKeys(t, text), workflowsSet("name", "description", "allowed-tools"))
 }

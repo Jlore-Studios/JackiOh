@@ -45,13 +45,13 @@ func TestMarkers_MarkersThatSurviveTheSelfChecksAndOneFixEndUnapproved(t *testin
 		"self_check": workReviewer(workApprove),
 		"fix":        workBuilder(map[string]any{"src/game.txt": markersMarked + "again\n"})})
 	planned, result := h.Night(r)
-	flowEq(t, planned.Get("provider"), "lite")
-	flowEq(t, result.Get("status"), "not_approved")
-	flowIn(t, "conflict markers are still in src/game.txt", result.Str("reason"))
-	flowTrue(t, pyjson.Obj(flowPath(result, "cycles", 0)).Has("marker_fix"))
-	flowEq(t, h.OriginSHA("bot/issue-12"), "")
-	flowEq(t, len(h.GH.ListPulls("open", "", 200)), 0)
-	flowIn(t, "conflict markers are still in `src/game.txt`", flowLast(t, h.GH.BotComments(12)))
+	assertEqual(t, planned.Get("provider"), "lite")
+	assertEqual(t, result.Get("status"), "not_approved")
+	assertIn(t, "conflict markers are still in src/game.txt", result.Str("reason"))
+	assertTrue(t, pyjson.Obj(flowPath(result, "cycles", 0)).Has("marker_fix"))
+	assertEqual(t, h.OriginSHA("bot/issue-12"), "")
+	assertEqual(t, len(h.GH.ListPulls("open", "", 200)), 0)
+	assertIn(t, "conflict markers are still in `src/game.txt`", flowLast(t, h.GH.BotComments(12)))
 }
 
 func TestMarkers_AFixThatClearsThemLetsItGoToReview(t *testing.T) {
@@ -60,8 +60,8 @@ func TestMarkers_AFixThatClearsThemLetsItGoToReview(t *testing.T) {
 		"self_check": workReviewer(workApprove),
 		"fix":        workBuilder(map[string]any{"src/game.txt": "rules v2, with main's\n"})})
 	_, result := h.Night(r)
-	flowEq(t, result.Get("status"), "built")
-	flowEq(t, fakes.Git(h.Origin, "show", result.Str("head")+":src/game.txt"), "rules v2, with main's")
+	assertEqual(t, result.Get("status"), "built")
+	assertEqual(t, fakes.Git(h.Origin, "show", result.Str("head")+":src/game.txt"), "rules v2, with main's")
 }
 
 // ---------------------------------------------------------------------------- DeliverTests
@@ -99,9 +99,9 @@ func TestMarkers_DeliverRefusesMarkersInAFileTheChangeTouched(t *testing.T) {
 	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	planned, out := markersBundle(t, h, map[string]string{"src/game.txt": markersMarked})
 	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	flowEq(t, h.OriginSHA("bot/issue-12"), "")
-	flowEq(t, h.GH.LabelNames(12), flowSet(config.LabelBlocked))
-	flowIn(t, "conflict markers are still in `src/game.txt`", flowLast(t, h.GH.BotComments(12)))
+	assertEqual(t, h.OriginSHA("bot/issue-12"), "")
+	assertEqual(t, h.GH.LabelNames(12), flowSet(config.LabelBlocked))
+	assertIn(t, "conflict markers are still in `src/game.txt`", flowLast(t, h.GH.BotComments(12)))
 }
 
 func TestMarkers_AMarkerLineInAFileTheChangeLeftAloneIsNotItsFault(t *testing.T) {
@@ -110,5 +110,5 @@ func TestMarkers_AMarkerLineInAFileTheChangeLeftAloneIsNotItsFault(t *testing.T)
 	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	planned, out := markersBundle(t, h, map[string]string{"src/game.txt": "rules v2\n"})
 	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	flowTrue(t, h.OriginSHA("bot/issue-12") != "", "origin_sha is not None")
+	assertTrue(t, h.OriginSHA("bot/issue-12") != "", "origin_sha is not None")
 }

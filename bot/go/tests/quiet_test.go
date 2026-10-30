@@ -98,27 +98,27 @@ func quietS(five, seven float64, resets, status string) *quiet.Sample {
 }
 
 func TestQuiet_Cases(t *testing.T) {
-	basicsEqual(t, quiet.Compare(quietS(0.10, 0.5, "r1", "allowed"), quietS(0.10, 0.5, "r1", "allowed")), "quiet")
-	basicsEqual(t, quiet.Compare(quietS(0.10, 0.5, "r1", "allowed"), quietS(0.11, 0.5, "r1", "allowed")), "rose")
-	basicsEqual(t, quiet.Compare(quietS(0.10, 0.50, "r1", "allowed"), quietS(0.10, 0.51, "r1", "allowed")), "rose")
-	basicsEqual(t, quiet.Compare(quietS(0.40, 0.5, "r1", "allowed"), quietS(0.02, 0.5, "r2", "allowed")), "inconclusive")
-	basicsEqual(t, quiet.Compare(quietS(0.10, 0.5, "r1", "allowed"), quietS(0.10, 0.5, "r1", "rejected")), "refused")
+	assertEqual(t, quiet.Compare(quietS(0.10, 0.5, "r1", "allowed"), quietS(0.10, 0.5, "r1", "allowed")), "quiet")
+	assertEqual(t, quiet.Compare(quietS(0.10, 0.5, "r1", "allowed"), quietS(0.11, 0.5, "r1", "allowed")), "rose")
+	assertEqual(t, quiet.Compare(quietS(0.10, 0.50, "r1", "allowed"), quietS(0.10, 0.51, "r1", "allowed")), "rose")
+	assertEqual(t, quiet.Compare(quietS(0.40, 0.5, "r1", "allowed"), quietS(0.02, 0.5, "r2", "allowed")), "inconclusive")
+	assertEqual(t, quiet.Compare(quietS(0.10, 0.5, "r1", "allowed"), quietS(0.10, 0.5, "r1", "rejected")), "refused")
 }
 
 // ------------------------------------------------------------------ WaitTests
 
 func TestQuiet_QuietAfterOneInterval(t *testing.T) {
 	result, world := quietVerdict([]*pyjson.Object{quietUsage(0.10), quietUsage(0.10)}, nil)
-	basicsTrue(t, result.Quiet)
-	basicsEqual(t, world.pings, 2)
-	basicsEqual(t, world.sleeps, []float64{600.0})
+	assertTrue(t, result.Quiet)
+	assertEqual(t, world.pings, 2)
+	assertEqual(t, world.sleeps, []float64{600.0})
 }
 
 func TestQuiet_ARiseWaitsAndLooksAgain(t *testing.T) {
 	result, world := quietVerdict([]*pyjson.Object{quietUsage(0.10), quietUsage(0.13), quietUsage(0.13)}, nil)
-	basicsTrue(t, result.Quiet)
-	basicsEqual(t, world.pings, 3)
-	basicsEqual(t, len(result.Samples), 3)
+	assertTrue(t, result.Quiet)
+	assertEqual(t, world.pings, 3)
+	assertEqual(t, len(result.Samples), 3)
 }
 
 func TestQuiet_ARiseWhileThePartnerSpendsIsExcused(t *testing.T) {
@@ -128,10 +128,10 @@ func TestQuiet_ARiseWhileThePartnerSpendsIsExcused(t *testing.T) {
 		return "jgoetzmann/bright-bots-harness implement.yml: Run planned items"
 	}
 	result, _ := quietVerdict([]*pyjson.Object{quietUsage(0.10), quietUsage(0.20)}, partner)
-	basicsTrue(t, result.Quiet)
-	basicsIn(t, "Run planned items", result.ExcusedBy)
-	basicsEqual(t, len(seen), 1)
-	basicsTrue(t, seen[0][0].Equal(quietT0) && seen[0][1].Equal(quietT0.Add(10*time.Minute)), seen)
+	assertTrue(t, result.Quiet)
+	assertIn(t, "Run planned items", result.ExcusedBy)
+	assertEqual(t, len(seen), 1)
+	assertTrue(t, seen[0][0].Equal(quietT0) && seen[0][1].Equal(quietT0.Add(10*time.Minute)), seen)
 }
 
 func TestQuiet_APersonWhoKeepsWorkingHoldsTheRunBack(t *testing.T) {
@@ -140,28 +140,28 @@ func TestQuiet_APersonWhoKeepsWorkingHoldsTheRunBack(t *testing.T) {
 		readings = append(readings, quietUsage(0.10+0.02*float64(i)))
 	}
 	result, world := quietVerdict(readings, nil)
-	basicsFalse(t, result.Quiet)
-	basicsIn(t, "40 minutes", result.Reason)
-	basicsEqual(t, world.pings, 5) // one reading, then one every ten minutes for forty
+	assertFalse(t, result.Quiet)
+	assertIn(t, "40 minutes", result.Reason)
+	assertEqual(t, world.pings, 5) // one reading, then one every ten minutes for forty
 }
 
 func TestQuiet_AWindowThatTurnedOverIsReadAgain(t *testing.T) {
 	result, world := quietVerdict([]*pyjson.Object{quietUsage(0.60, "a"), quietUsage(0.01, "b"),
 		quietUsage(0.01, "b")}, nil)
-	basicsTrue(t, result.Quiet)
-	basicsEqual(t, world.pings, 3)
+	assertTrue(t, result.Quiet)
+	assertEqual(t, world.pings, 3)
 }
 
 func TestQuiet_RefusedAndUnreadable(t *testing.T) {
 	result, _ := quietVerdict([]*pyjson.Object{quietUsage(0.10), quietUsage(0.10, "", "rejected")}, nil)
-	basicsFalse(t, result.Quiet)
-	basicsIn(t, "refused", result.Reason)
+	assertFalse(t, result.Quiet)
+	assertIn(t, "refused", result.Reason)
 	result, world := quietVerdict([]*pyjson.Object{nil}, nil)
-	basicsTrue(t, result.Quiet) // no reading at all: going ahead, as the partner does
-	basicsIn(t, "going ahead", result.Reason)
-	basicsEqual(t, world.sleeps, []float64{})
+	assertTrue(t, result.Quiet) // no reading at all: going ahead, as the partner does
+	assertIn(t, "going ahead", result.Reason)
+	assertEqual(t, world.sleeps, []float64{})
 	result, _ = quietVerdict([]*pyjson.Object{quietUsage(0.10), nil, quietUsage(0.10)}, nil)
-	basicsTrue(t, result.Quiet) // a reading missing later is skipped, not a verdict
+	assertTrue(t, result.Quiet) // a reading missing later is skipped, not a verdict
 }
 
 // quietReader is FakeReader.
@@ -228,35 +228,35 @@ func quietSpending(steps []*pyjson.Object, status string, updated time.Time) str
 func TestQuiet_ASpendingStepInsideTheInterval(t *testing.T) {
 	found := quietSpending([]*pyjson.Object{quietStep("Run planned items (harness run --item)", quietT1.Add(-time.Hour))},
 		"", time.Time{})
-	basicsIn(t, "Run planned items", found)
+	assertIn(t, "Run planned items", found)
 }
 
 func TestQuiet_AStepGithubSkippedSpentNothing(t *testing.T) {
 	skipped := quietStep("Run planned items", quietT1)
 	skipped.Set("conclusion", "skipped")
-	basicsEqual(t, quietSpending([]*pyjson.Object{skipped}, "", time.Time{}), "") // None
+	assertEqual(t, quietSpending([]*pyjson.Object{skipped}, "", time.Time{}), "") // None
 }
 
 func TestQuiet_AStepThatEndedBeforeOrNeverStarted(t *testing.T) {
 	before := quietStep("Run planned items", quietT1.Add(-2*time.Hour), quietT1.Add(-time.Minute))
-	basicsEqual(t, quietSpending([]*pyjson.Object{before}, "", time.Time{}), "")
-	basicsEqual(t, quietSpending([]*pyjson.Object{quietStep("Run planned items", time.Time{})}, "", time.Time{}), "")
+	assertEqual(t, quietSpending([]*pyjson.Object{before}, "", time.Time{}), "")
+	assertEqual(t, quietSpending([]*pyjson.Object{quietStep("Run planned items", time.Time{})}, "", time.Time{}), "")
 }
 
 func TestQuiet_WaitingAtThePartnersOwnGateIsNotSpending(t *testing.T) {
 	gate := quietStep("Wait until the subscription is quiet (harness quiet)", quietT1)
-	basicsEqual(t, quietSpending([]*pyjson.Object{gate}, "", time.Time{}), "")
+	assertEqual(t, quietSpending([]*pyjson.Object{gate}, "", time.Time{}), "")
 }
 
 func TestQuiet_AnOldFinishedRunIsNotReadAndErrorsExcuseNothing(t *testing.T) {
 	old := quietT1.Add(-3 * time.Hour)
-	basicsEqual(t, quietSpending([]*pyjson.Object{quietStep("Run planned items", old.Add(-time.Hour))},
+	assertEqual(t, quietSpending([]*pyjson.Object{quietStep("Run planned items", old.Add(-time.Hour))},
 		"completed", old), "")
 	failing := quiet.PartnerSpending([]*config.Partner{quietPartner},
 		func(repo string) quiet.RunReader {
 			return &quietReader{runs: map[string][]*pyjson.Object{}, jobs: map[any][]*pyjson.Object{}, fail: true}
 		}, quietT1, quietT2)
-	basicsEqual(t, failing, "")
+	assertEqual(t, failing, "")
 }
 
 // quietClient is the reader's Client: a token refuses, no token answers.
@@ -280,8 +280,8 @@ func TestQuiet_TheReaderFallsBackToNoToken(t *testing.T) {
 		return &quietClient{token: token}
 	}
 	reader := quiet.NewPartnerReader("x/y", "actions-token", factory)
-	basicsEqual(t, reader.ListRuns("implement.yml", 10), []*pyjson.Object{pyjson.New("id", 7)})
-	basicsEqual(t, made, []string{"actions-token", ""})
+	assertEqual(t, reader.ListRuns("implement.yml", 10), []*pyjson.Object{pyjson.New("id", 7)})
+	assertEqual(t, made, []string{"actions-token", ""})
 }
 
 // ------------------------------------------------------------------ PingTests
@@ -300,11 +300,11 @@ func TestQuiet_ThePingIsOneTurnOfTheSmallModelInAnEmptyDirectory(t *testing.T) {
 		}, "\n")}, nil
 	}
 	found := runner.PingUsage("claude", "haiku", run, "", "")
-	basicsAlmostEqual(t, found.Obj("five_hour").Float("utilization"), 0.12)
-	basicsIn(t, "--max-turns", argv)
-	basicsEqual(t, argv[slices.Index(argv, "--model")+1], "haiku")
-	basicsIn(t, "bot-ping-", cwd)
-	basicsNotIn(t, "BOT_GITHUB_TOKEN", env)
+	assertAlmostEqual(t, found.Obj("five_hour").Float("utilization"), 0.12)
+	assertIn(t, "--max-turns", argv)
+	assertEqual(t, argv[slices.Index(argv, "--model")+1], "haiku")
+	assertIn(t, "bot-ping-", cwd)
+	assertNotIn(t, "BOT_GITHUB_TOKEN", env)
 }
 
 // ------------------------------------------------------------------ PeekTests
@@ -327,9 +327,9 @@ func quietAgree(t *testing.T, gh *fakes.FakeGitHub, at time.Time) (bool, string,
 	before := quietLabels(gh)
 	look := plan.Peek_(ctx, false, nil, "auto")
 	after := quietLabels(gh)
-	basicsEqual(t, before, after, "peek changed labels")
+	assertEqual(t, before, after, "peek changed labels")
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	basicsEqual(t, look.Work, planned.Str("action") != "none", look.Reason, " ", pyjson.Dumps(planned))
+	assertEqual(t, look.Work, planned.Str("action") != "none", look.Reason, " ", pyjson.Dumps(planned))
 	return look.Work, look.Reason, look.Forced
 }
 
@@ -337,14 +337,14 @@ func TestQuiet_AQueuedIssue(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	work, _, _ := quietAgree(t, gh, testsupport.Night)
-	basicsEqual(t, work, true)
+	assertEqual(t, work, true)
 }
 
 func TestQuiet_NothingByDay(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	work, _, _ := quietAgree(t, gh, testsupport.Day)
-	basicsEqual(t, work, false)
+	assertEqual(t, work, false)
 }
 
 func TestQuiet_AForcedItemSkipsTheQuietCheck(t *testing.T) {
@@ -353,7 +353,7 @@ func TestQuiet_AForcedItemSkipsTheQuietCheck(t *testing.T) {
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
 	ctx.Store.Update(func(s *pyjson.Object) any { state.Item(s, 3).Set("forced", true); return nil }, "state")
 	look := plan.Peek_(ctx, false, nil, "auto")
-	basicsEqual(t, []any{look.Work, look.Reason, look.Forced, look.QuietProvider},
+	assertEqual(t, []any{look.Work, look.Reason, look.Forced, look.QuietProvider},
 		[]any{true, "#3 (medium) is queued to build, for `claude-1`: plan on " +
 			"`claude-1` (claude, `opus`, strong); build on `claude-1` (claude, " +
 			"`sonnet`, medium); review on `claude-1` (claude, `opus`, strong)",
@@ -361,18 +361,18 @@ func TestQuiet_AForcedItemSkipsTheQuietCheck(t *testing.T) {
 	idle := testsupport.MakeCtx(fakes.NewFakeGitHub(), testsupport.Ctx{At: testsupport.Day})
 	testsupport.IdleFor(idle)
 	look = plan.Peek_(idle, true, nil, "auto")
-	basicsEqual(t, []bool{look.Work, look.Forced}, []bool{true, true})
+	assertEqual(t, []bool{look.Work, look.Forced}, []bool{true, true})
 }
 
 func TestQuiet_ASurveyWhenIdle(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	basicsFalse(t, plan.Peek_(testsupport.MakeCtx(gh), false, nil, "auto").Work) // idle, but not for 30 minutes yet
-	basicsTrue(t, plan.Peek_(testsupport.MakeCtx(gh), false, nil, "auto").Idle)
+	assertFalse(t, plan.Peek_(testsupport.MakeCtx(gh), false, nil, "auto").Work) // idle, but not for 30 minutes yet
+	assertTrue(t, plan.Peek_(testsupport.MakeCtx(gh), false, nil, "auto").Idle)
 	ctx := testsupport.MakeCtx(gh)
 	testsupport.IdleFor(ctx)
 	look := plan.Peek_(ctx, false, nil, "auto")
-	basicsTrue(t, look.Work)
-	basicsIn(t, "survey", look.Reason)
+	assertTrue(t, look.Work)
+	assertIn(t, "survey", look.Reason)
 }
 
 func TestQuiet_ADeadRunsItemCountsAsWork(t *testing.T) {
@@ -386,8 +386,8 @@ func TestQuiet_ADeadRunsItemCountsAsWork(t *testing.T) {
 		return nil
 	}, "state")
 	look := plan.Peek_(ctx, false, nil, "auto")
-	basicsTrue(t, look.Work)
-	basicsIn(t, "left working", look.Reason)
+	assertTrue(t, look.Work)
+	assertIn(t, "left working", look.Reason)
 }
 
 func TestQuiet_AConflictedBotPRCountsAsWork(t *testing.T) {
@@ -398,18 +398,18 @@ func TestQuiet_AConflictedBotPRCountsAsWork(t *testing.T) {
 		s.Set("suggest", pyjson.New("last_run", "2026-09-30T02:59:00Z", "requested", false))
 		return nil
 	}, "state")
-	basicsIn(t, "conflicts with main", plan.Peek_(ctx, false, nil, "auto").Reason)
+	assertIn(t, "conflicts with main", plan.Peek_(ctx, false, nil, "auto").Reason)
 }
 
 func TestQuiet_TheCommittedConfig(t *testing.T) {
 	cfg := testsupport.MakeConfig()
-	basicsTrue(t, cfg.Quiet.Enabled)
-	basicsEqual(t, [2]int{cfg.Quiet.IntervalMinutes, cfg.Quiet.MaxWaitMinutes}, [2]int{10, 120})
+	assertTrue(t, cfg.Quiet.Enabled)
+	assertEqual(t, [2]int{cfg.Quiet.IntervalMinutes, cfg.Quiet.MaxWaitMinutes}, [2]int{10, 120})
 	partner := cfg.Quiet.Partners[0]
-	basicsEqual(t, partner.Repo, "jgoetzmann/bright-bots-harness")
+	assertEqual(t, partner.Repo, "jgoetzmann/bright-bots-harness")
 	steps := partner.Workflows.Get("implement.yml")
 	if s, ok := steps.([]string); ok {
 		steps = pyjson.ListOf(s)
 	}
-	basicsIn(t, "Run planned items", steps)
+	assertIn(t, "Run planned items", steps)
 }

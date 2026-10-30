@@ -37,14 +37,14 @@ func TestLeftovers_ClosedItemsAreDroppedAfterAWeekAndLightenedBefore(t *testing.
 		}
 	})
 	notes := plan.Prune(ctx, ctx.Store.Load())
-	flowEq(t, notes, []string{"pruned the state file: dropped 1 closed item(s), lightened 1"})
+	assertEqual(t, notes, []string{"pruned the state file: dropped 1 closed item(s), lightened 1"})
 	items := ctx.Store.Load().Obj("items")
-	flowFalse(t, items.Has("1"))
-	flowEq(t, flowPath(items, "2"), pyjson.New("failures", 1))
-	flowTrue(t, pyjson.Obj(flowPath(items, "3")).Has("handoff")) // open: untouched
+	assertFalse(t, items.Has("1"))
+	assertEqual(t, flowPath(items, "2"), pyjson.New("failures", 1))
+	assertTrue(t, pyjson.Obj(flowPath(items, "3")).Has("handoff")) // open: untouched
 	// Once a day.
 	gh.Threads.Item(3).Set("state", "closed")
-	flowEq(t, plan.Prune(ctx, ctx.Store.Load()), []string{})
+	assertEqual(t, plan.Prune(ctx, ctx.Store.Load()), []string{})
 }
 
 // ---------------------------------------------------------------------------- FixEffortTests
@@ -61,7 +61,7 @@ func TestLeftovers_AFixPassRunsAtTheFixEffort(t *testing.T) {
 		efforts[c.Role] = c.Effort
 	}
 	// Builds run at the seat's effort, fix and review one notch down (#695).
-	flowEq(t, []string{efforts["build"], efforts["fix"], efforts["review"]}, []string{"xhigh", "high", "high"})
+	assertEqual(t, []string{efforts["build"], efforts["fix"], efforts["review"]}, []string{"xhigh", "high", "high"})
 }
 
 // ---------------------------------------------------------------------------- CatchUpTests
@@ -80,11 +80,11 @@ func TestLeftovers_MainThatMovedDuringTheBuildIsMergedBeforeTheReview(t *testing
 		return workReviewer(workApprove)(request)
 	}
 	_, result := h.Night(workFake(map[string]any{"build": building, "review": reviewing}))
-	flowEq(t, result.Get("status"), "approved")
-	flowEq(t, flowPath(result, "cycles", 0, "caught_up"), moved["main"])
-	flowEq(t, seen["readme"], "news\n")
+	assertEqual(t, result.Get("status"), "approved")
+	assertEqual(t, flowPath(result, "cycles", 0, "caught_up"), moved["main"])
+	assertEqual(t, seen["readme"], "news\n")
 	head := h.OriginSHA("bot/issue-12")
-	flowEq(t, fakes.Git(h.Origin, "merge-base", "--is-ancestor", moved["main"], head), "")
+	assertEqual(t, fakes.Git(h.Origin, "merge-base", "--is-ancestor", moved["main"], head), "")
 }
 
 func TestLeftovers_AMainThatWouldConflictIsLeftForTheConflictPath(t *testing.T) {
@@ -95,6 +95,6 @@ func TestLeftovers_AMainThatWouldConflictIsLeftForTheConflictPath(t *testing.T) 
 		return workBuilder(map[string]any{"src/game.txt": "v2\n"})(request)
 	}
 	_, result := h.Night(workFake(map[string]any{"build": building, "review": workReviewer(workApprove)}))
-	flowEq(t, result.Get("status"), "approved")
-	flowFalse(t, pyjson.Obj(flowPath(result, "cycles", 0)).Has("caught_up"))
+	assertEqual(t, result.Get("status"), "approved")
+	assertFalse(t, pyjson.Obj(flowPath(result, "cycles", 0)).Has("caught_up"))
 }

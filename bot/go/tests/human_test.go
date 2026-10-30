@@ -51,60 +51,60 @@ func humanPlanBody(files []string, head ...string) string {
 
 func TestHuman_APlanThatTouchesOnlyForbiddenPathsNeedsAPerson(t *testing.T) {
 	why := human.PlanNeeds(humanPlanBody(humanBotFiles), humanForbidden())
-	eventsIn(t, "`bot/harness/events.py`, `bot/README.md`", why)
-	eventsIn(t, "a person has to make the change", why)
+	assertIn(t, "`bot/harness/events.py`, `bot/README.md`", why)
+	assertIn(t, "a person has to make the change", why)
 }
 
 func TestHuman_APlanWithAnythingTheBotMayChangeDoesNot(t *testing.T) {
 	forbidden := humanForbidden()
-	eventsEqual(t, human.PlanNeeds(humanPlanBody(append(slices.Clone(humanBotFiles), "src/game.txt")), forbidden), "")
-	eventsEqual(t, human.PlanNeeds("1. Edit it.", forbidden), "") // no table at all
-	eventsEqual(t, human.PlanNeeds("", forbidden), "")
+	assertEqual(t, human.PlanNeeds(humanPlanBody(append(slices.Clone(humanBotFiles), "src/game.txt")), forbidden), "")
+	assertEqual(t, human.PlanNeeds("1. Edit it.", forbidden), "") // no table at all
+	assertEqual(t, human.PlanNeeds("", forbidden), "")
 }
 
 func TestHuman_ThePlannersOwnLineBeforeTheGoalSaysIt(t *testing.T) {
 	forbidden := humanForbidden()
 	game := []string{"src/game.txt"}
 	head := "**Human required:** add `RENDER_API_KEY` in GitHub's\n  Actions secrets.\n\n"
-	eventsEqual(t, human.PlanNeeds(humanPlanBody(game, head), forbidden),
+	assertEqual(t, human.PlanNeeds(humanPlanBody(game, head), forbidden),
 		"add `RENDER_API_KEY` in GitHub's")
 	said := "Human required: set `VITE_FLAG` in Vercel.\n\n"
-	eventsEqual(t, human.PlanNeeds(humanPlanBody(game, said), forbidden),
+	assertEqual(t, human.PlanNeeds(humanPlanBody(game, said), forbidden),
 		"set `VITE_FLAG` in Vercel.")
 	// Past the Goal the words are the plan's own, not the planner's verdict.
 	late := humanPlanBody(game) + "\n**Human required:** nothing, really.\n"
-	eventsEqual(t, human.PlanNeeds(late, forbidden), "")
+	assertEqual(t, human.PlanNeeds(late, forbidden), "")
 	// A planner that says nobody is needed is not taken at its word the other way.
 	for _, nobody := range []string{"**Human required:** none.\n\n", "Human required: no\n\n"} {
-		eventsEqual(t, human.PlanNeeds(humanPlanBody(game, nobody), forbidden), "")
+		assertEqual(t, human.PlanNeeds(humanPlanBody(game, nobody), forbidden), "")
 	}
 	// With no Goal heading, only the plan's opening lines count.
 	bare := strings.Repeat("1. Edit `src/game.txt`.\n", 6) + "Human required: a dashboard.\n"
-	eventsEqual(t, human.PlanNeeds(bare, forbidden), "")
-	eventsEqual(t, human.PlanNeeds("Human required: a dashboard.\n"+bare, forbidden),
+	assertEqual(t, human.PlanNeeds(bare, forbidden), "")
+	assertEqual(t, human.PlanNeeds("Human required: a dashboard.\n"+bare, forbidden),
 		"a dashboard.")
 }
 
 func TestHuman_TheCommentNamesThePeopleAndTheWayBack(t *testing.T) {
 	text := human.Ask("Add the secret.", "jgoetzmann-bot", "build this", " What I had is on `b`.", "")
-	eventsTrue(t, strings.HasPrefix(text, humanPeople+" this needs a person: I cannot build this "+
+	assertTrue(t, strings.HasPrefix(text, humanPeople+" this needs a person: I cannot build this "+
 		"myself. What I had is on `b`."))
-	eventsIn(t, "Add the secret.", text)
-	eventsIn(t, "assigned you and labelled it `"+config.LabelHumanRequired+"`", text)
-	eventsIn(t, "take the label off and `/harness build`", text)
+	assertIn(t, "Add the secret.", text)
+	assertIn(t, "assigned you and labelled it `"+config.LabelHumanRequired+"`", text)
+	assertIn(t, "take the label off and `/harness build`", text)
 }
 
 // ---------------------------------------------------------------------------- ReportTests
 
 func TestHuman_OnlyABlockedReportWithATrueFlagCounts(t *testing.T) {
 	report := verdicts.BuildReport_(humanBlocked("Add the secret.", true))
-	eventsEqual(t, []any{report.Status, report.Question, report.HumanRequired},
+	assertEqual(t, []any{report.Status, report.Question, report.HumanRequired},
 		[]any{"blocked", "Add the secret.", true})
-	eventsFalse(t, verdicts.BuildReport_(humanBlocked("Which?", false)).
+	assertFalse(t, verdicts.BuildReport_(humanBlocked("Which?", false)).
 		HumanRequired)
-	eventsFalse(t, verdicts.BuildReport_(
+	assertFalse(t, verdicts.BuildReport_(
 		`<!-- bot: {"status": "done", "human_required": true} -->`).HumanRequired)
-	eventsFalse(t, verdicts.BuildReport_(
+	assertFalse(t, verdicts.BuildReport_(
 		`<!-- bot: {"status": "blocked", "human_required": "yes"} -->`).HumanRequired)
 }
 
@@ -117,23 +117,23 @@ func TestHuman_OnlyABlockedReportWithATrueFlagCounts(t *testing.T) {
 func humanHandedToPeople(t *testing.T, h *ratingHarness, number int) string {
 	t.Helper()
 	labels := h.gh.LabelNames(number)
-	eventsIn(t, config.LabelHumanRequired, labels)
+	assertIn(t, config.LabelHumanRequired, labels)
 	both := map[string]bool{}
 	for n := range labels {
 		if human.LetsGo[n] {
 			both[n] = true
 		}
 	}
-	eventsEqual(t, both, eventsSet(), labels)
+	assertEqual(t, both, eventsSet(), labels)
 	assigned := map[string]bool{}
 	for _, a := range pyjson.List(eventsDig(t, h.gh.Threads.Item(number), "assignees")) {
 		assigned[pyjson.Str(eventsDig(t, a, "login"))] = true
 	}
-	eventsEqual(t, assigned, eventsSet("MaxGoetzmann", "jgoetzmann"))
+	assertEqual(t, assigned, eventsSet("MaxGoetzmann", "jgoetzmann"))
 	said := eventsLast(t, h.gh.BotComments(number))
-	eventsTrue(t, strings.HasPrefix(said, humanPeople), said)
-	eventsIn(t, "So it is yours now: I took my labels off, unassigned myself", said)
-	eventsTrue(t, eventsDig(t, h.ctx.Store.Load(), "items", fmt.Sprint(number), "question"))
+	assertTrue(t, strings.HasPrefix(said, humanPeople), said)
+	assertIn(t, "So it is yours now: I took my labels off, unassigned myself", said)
+	assertTrue(t, eventsDig(t, h.ctx.Store.Load(), "items", fmt.Sprint(number), "question"))
 	return said
 }
 
@@ -143,14 +143,14 @@ func TestHuman_APlanThatTouchesOnlyBotFilesIsHandedToPeopleUnbuilt(t *testing.T)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Bring back suggestions."})
 	h.gh.AddAssignees(12, []string{"jgoetzmann-bot"}) // #760 was assigned to the bot
 	planned, result := h.night(ratingPlanner(ratingRatedPlan("medium", humanBotFiles, "")))
-	eventsEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, result, "status")}, []any{"plan", "blocked"})
-	eventsTrue(t, eventsDig(t, result, "human_required"))
+	assertEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, result, "status")}, []any{"plan", "blocked"})
+	assertTrue(t, eventsDig(t, result, "human_required"))
 	said := humanHandedToPeople(t, h, 12)
-	eventsIn(t, "`bot/harness/events.py`", said)
-	eventsIn(t, "the plan is in this issue's description", said)
-	eventsIn(t, "Files to touch", issueplan.PlanOf(pyjson.Str(eventsDig(t, h.gh.Threads.Item(12), "body"))))
-	eventsIn(t, "bot:planned", h.gh.LabelNames(12)) // what it has stays
-	eventsNotEqual(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("number"), 12)
+	assertIn(t, "`bot/harness/events.py`", said)
+	assertIn(t, "the plan is in this issue's description", said)
+	assertIn(t, "Files to touch", issueplan.PlanOf(pyjson.Str(eventsDig(t, h.gh.Threads.Item(12), "body"))))
+	assertIn(t, "bot:planned", h.gh.LabelNames(12)) // what it has stays
+	assertNotEqual(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("number"), 12)
 }
 
 func TestHuman_APlannerThatSaysOnlyAPersonCanDoItIsBelieved(t *testing.T) {
@@ -160,8 +160,8 @@ func TestHuman_APlannerThatSaysOnlyAPersonCanDoItIsBelieved(t *testing.T) {
 		"## 1. Goal", "**Human required:** create `RENDER_DEPLOY_HOOK_URL` in GitHub's "+
 			"secrets.\n\n## 1. Goal")
 	_, result := h.night(ratingPlanner(text))
-	eventsEqual(t, eventsDig(t, result, "status"), "blocked")
-	eventsIn(t, "create `RENDER_DEPLOY_HOOK_URL` in GitHub's secrets.",
+	assertEqual(t, eventsDig(t, result, "status"), "blocked")
+	assertIn(t, "create `RENDER_DEPLOY_HOOK_URL` in GitHub's secrets.",
 		humanHandedToPeople(t, h, 12))
 }
 
@@ -175,12 +175,12 @@ func TestHuman_ABuilderThatSaysOnlyAPersonCanDoItHandsItOn(t *testing.T) {
 		"build": ratingBuilder(map[string]string{}, humanBlocked("Set `VITE_SUPABASE_URL` in Vercel's project settings.",
 			true)),
 		"review": ratingReviewer(ratingApprove)}))
-	eventsEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "human_required")}, []any{"blocked", true})
-	eventsIn(t, "Set `VITE_SUPABASE_URL` in Vercel's project settings.",
+	assertEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "human_required")}, []any{"blocked", true})
+	assertIn(t, "Set `VITE_SUPABASE_URL` in Vercel's project settings.",
 		humanHandedToPeople(t, h, 12))
 	entry := pyjson.List(config.Labels.Get(config.LabelHumanRequired))
 	color, description := entry[0], entry[1]
-	eventsEqual(t, eventsDig(t, h.gh.Labels, config.LabelHumanRequired),
+	assertEqual(t, eventsDig(t, h.gh.Labels, config.LabelHumanRequired),
 		pyjson.New("name", config.LabelHumanRequired, "color", color,
 			"description", description))
 }
@@ -191,8 +191,8 @@ func TestHuman_ABuildWhoseWholeChangeThePathGuardPutBackHandsItOn(t *testing.T) 
 	_, result := h.night(ratingRunner(map[string]runner.Handler{
 		"build":  ratingBuilder(map[string]string{"bot/harness/new.py": "x = 1\n"}),
 		"review": ratingReviewer(ratingApprove)}))
-	eventsEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "human_required")}, []any{"blocked", true})
-	eventsIn(t, "is in paths the bot may not change", humanHandedToPeople(t, h, 12))
+	assertEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "human_required")}, []any{"blocked", true})
+	assertIn(t, "is in paths the bot may not change", humanHandedToPeople(t, h, 12))
 }
 
 func TestHuman_AQuestionAPersonCanAnswerIsStillOnlyAQuestion(t *testing.T) {
@@ -202,11 +202,11 @@ func TestHuman_AQuestionAPersonCanAnswerIsStillOnlyAQuestion(t *testing.T) {
 		"build":  ratingBuilder(map[string]string{}, humanBlocked("Option A or B?", false)),
 		"review": ratingReviewer(ratingApprove)}))
 	labels := h.gh.LabelNames(12)
-	eventsIn(t, config.LabelBlocked, labels)
-	eventsNotIn(t, config.LabelHumanRequired, labels)
+	assertIn(t, config.LabelBlocked, labels)
+	assertNotIn(t, config.LabelHumanRequired, labels)
 	said := eventsLast(t, h.gh.BotComments(12))
-	eventsTrue(t, strings.HasPrefix(said, "I need a decision before I can build this."))
-	eventsNotIn(t, humanPeople, said)
+	assertTrue(t, strings.HasPrefix(said, "I need a decision before I can build this."))
+	assertNotIn(t, humanPeople, said)
 }
 
 func TestHuman_ARevisionOnlyAPersonCanMakeHandsThePullRequestOn(t *testing.T) {
@@ -222,29 +222,29 @@ func TestHuman_ARevisionOnlyAPersonCanMakeHandsThePullRequestOn(t *testing.T) {
 		"revise": ratingBuilder(map[string]string{}, humanBlocked("Add a job to `.github/workflows/ci.yml`.",
 			true)),
 		"review": ratingReviewer(ratingApprove)}))
-	eventsEqual(t, eventsDig(t, result, "status"), "blocked")
-	eventsEqual(t, h.gh.LabelNames(40), eventsSet(config.LabelPR, config.LabelHumanRequired)) // `bot:pr` stays
+	assertEqual(t, eventsDig(t, result, "status"), "blocked")
+	assertEqual(t, h.gh.LabelNames(40), eventsSet(config.LabelPR, config.LabelHumanRequired)) // `bot:pr` stays
 	said := eventsLast(t, h.gh.BotComments(40))
-	eventsTrue(t, strings.HasPrefix(said, humanPeople+" this needs a person: I cannot revise this"))
-	eventsIn(t, "`/harness revise <notes>`", said)
+	assertTrue(t, strings.HasPrefix(said, humanPeople+" this needs a person: I cannot revise this"))
+	assertIn(t, "`/harness revise <notes>`", said)
 }
 
 func TestHuman_TheBotLeavesItAloneUntilTheLabelComesOff(t *testing.T) {
 	h := newRatingHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelHumanRequired}})
 	ratingAsk(h, 12, "@jgoetzmann-bot exception for this issue", 51)
-	eventsIn(t, "#12 is labelled `"+config.LabelHumanRequired+"`", eventsLast(t, h.gh.BotComments(12)))
-	eventsNotIn(t, config.LabelBuild, h.gh.LabelNames(12))
+	assertIn(t, "#12 is labelled `"+config.LabelHumanRequired+"`", eventsLast(t, h.gh.BotComments(12)))
+	assertNotIn(t, config.LabelBuild, h.gh.LabelNames(12))
 	// A queue label put on by hand is not picked up while it is on.
 	h.gh.AddLabels(12, []string{config.LabelBuild})
 	skipped := []string{}
-	eventsEqual(t, queue.Candidates(h.ctx, h.ctx.Store.Load(), &skipped, nil), []*queue.Candidate{})
-	eventsIn(t, "#12 skipped: labelled `"+config.LabelHumanRequired+"`", skipped[0])
+	assertEqual(t, queue.Candidates(h.ctx, h.ctx.Store.Load(), &skipped, nil), []*queue.Candidate{})
+	assertIn(t, "#12 skipped: labelled `"+config.LabelHumanRequired+"`", skipped[0])
 	// A person did their part and took it off: the next request queues it.
 	h.gh.RemoveLabel(12, config.LabelHumanRequired)
 	ratingAsk(h, 12, "/harness build", 52)
-	eventsIn(t, "Queued #12", eventsLast(t, h.gh.BotComments(12)))
-	eventsEqual(t, eventsDig(t, plan.Make(h.ctx, false, nil, "auto", nil), "number"), 12)
+	assertIn(t, "Queued #12", eventsLast(t, h.gh.BotComments(12)))
+	assertEqual(t, eventsDig(t, plan.Make(h.ctx, false, nil, "auto", nil), "number"), 12)
 }
 
 func TestHuman_APersonsHumanRequiredHandsTheIssueToPeopleAsHumanDoes(t *testing.T) {
@@ -252,22 +252,22 @@ func TestHuman_APersonsHumanRequiredHandsTheIssueToPeopleAsHumanDoes(t *testing.
 		"sender", pyjson.New("login", "MaxGoetzmann"),
 		"issue", pyjson.New("number", 12, "labels", []any{}, "user", pyjson.New("login", "MaxGoetzmann")))
 	step, why := triage.Gate(payload, trust.TrustParse(""), "jgoetzmann-bot", false)
-	eventsEqual(t, [2]string{step, why}, [2]string{"human", "#12: @MaxGoetzmann labelled it human required"})
+	assertEqual(t, [2]string{step, why}, [2]string{"human", "#12: @MaxGoetzmann labelled it human required"})
 	thread := pyjson.New("number", 12, "state", "open", "assignees", []any{pyjson.New("login", "jgoetzmann-bot")},
 		"labels", eventsLabels(config.LabelHumanRequired, config.LabelBuild))
 	decided := triage.Decide("human", thread, false, "jgoetzmann-bot", nil, true)
-	eventsEqual(t, []any{decided.Assignees, decided.Unassign, decided.Remove},
+	assertEqual(t, []any{decided.Assignees, decided.Unassign, decided.Remove},
 		[]any{[]string{"MaxGoetzmann", "jgoetzmann"}, []string{"jgoetzmann-bot"}, []string{config.LabelBuild}})
 	// The bot's own hand-over is the bot's to make: triage leaves it alone.
 	payload.Set("sender", pyjson.New("login", "jgoetzmann-bot"))
 	step, _ = triage.Gate(payload, trust.TrustParse(""), "jgoetzmann-bot", false)
-	eventsEqual(t, step, "")
+	assertEqual(t, step, "")
 }
 
 func TestHuman_TheLabelIsOneTheSweepMakes(t *testing.T) {
 	entry := pyjson.List(config.Labels.Get(config.LabelHumanRequired))
 	color, description := pyjson.Str(entry[0]), pyjson.Str(entry[1])
-	eventsEqual(t, len([]rune(color)), 6)
+	assertEqual(t, len([]rune(color)), 6)
 	if n := len([]rune(description)); n > config.LabelDescriptionMax {
 		t.Fatalf("assertLessEqual: %d > %d", n, config.LabelDescriptionMax)
 	}

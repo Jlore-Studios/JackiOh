@@ -54,13 +54,13 @@ func TestClosed_ItsRunKeepsItsLane(t *testing.T) {
 		}
 	})
 	planned := flowMake(ctx)
-	flowEq(t, planned.Get("action"), "none")
-	flowIn(t, "`gpt` is busy", planned.Str("reason")) // its lane is still the closed #5's
+	assertEqual(t, planned.Get("action"), "none")
+	assertIn(t, "`gpt` is busy", planned.Str("reason")) // its lane is still the closed #5's
 	text := status.Report(ctx)
 	// Its six runs are on the machine, whose slots are apart from GitHub's lanes.
-	flowIn(t, "0 of 8 lanes on GitHub's runners, 8 free; 6 of "+
+	assertIn(t, "0 of 8 lanes on GitHub's runners, 8 free; 6 of "+
 		fmt.Sprintf("%d on the night box", ctx.Cfg.Pool.MachineParallel), text)
-	flowIn(t, "`gpt` (codex", text)
+	assertIn(t, "`gpt` (codex", text)
 }
 
 func TestClosed_ItsWorkIsNotDelivered(t *testing.T) {
@@ -72,12 +72,12 @@ func TestClosed_ItsWorkIsNotDelivered(t *testing.T) {
 		return build(request)
 	}
 	_, result := h.Night(workFake(map[string]any{"build": closedMeanwhile, "review": workReviewer(workApprove)}))
-	flowEq(t, result.Get("status"), "approved") // the run itself finished its work
-	flowEq(t, len(h.GH.ListPulls("open", "bot/issue-12", 200)), 0)
-	flowEq(t, h.OriginSHA("bot/issue-12"), "")
+	assertEqual(t, result.Get("status"), "approved") // the run itself finished its work
+	assertEqual(t, len(h.GH.ListPulls("open", "bot/issue-12", 200)), 0)
+	assertEqual(t, h.OriginSHA("bot/issue-12"), "")
 	labels := h.GH.LabelNames(12)
-	flowFalse(t, labels[config.LabelWorking] || labels[config.LabelBuild], labels)
-	flowIn(t, "was closed while a run was working on it", flowLast(t, h.GH.BotComments(12)))
+	assertFalse(t, labels[config.LabelWorking] || labels[config.LabelBuild], labels)
+	assertIn(t, "was closed while a run was working on it", flowLast(t, h.GH.BotComments(12)))
 }
 
 func TestClosed_ADeadRunsLabelIsClearedNotRequeued(t *testing.T) {
@@ -89,13 +89,13 @@ func TestClosed_ADeadRunsLabelIsClearedNotRequeued(t *testing.T) {
 	flowUpdate(ctx, func(s *pyjson.Object) {
 		state.Item(s, 5).Update(pyjson.New("run_id", "51", "provider", "gpt"))
 	})
-	flowIn(t, "#5", plan.HousekeepingDue(ctx, ctx.Store.Load()))
+	assertIn(t, "#5", plan.HousekeepingDue(ctx, ctx.Store.Load()))
 	notes := plan.Housekeeping(ctx, ctx.Store.Load())
-	flowEq(t, gh.LabelNames(5), flowSet())
-	flowEq(t, gh.BotComments(5), []string{}) // no "back in the queue"
+	assertEqual(t, gh.LabelNames(5), flowSet())
+	assertEqual(t, gh.BotComments(5), []string{}) // no "back in the queue"
 	found := false
 	for _, note := range notes {
 		found = found || strings.Contains(note, "#5 was closed")
 	}
-	flowTrue(t, found, notes)
+	assertTrue(t, found, notes)
 }

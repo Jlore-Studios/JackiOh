@@ -35,16 +35,16 @@ func TestLanes_AMediumBuildStaysWithItsPlanner(t *testing.T) {
 	claude := pool.Get("claude-3")
 	muse, agy := pool.Get("muse"), pool.Get("agy")
 	seat, note := lanesSeat(pool, []*providers.Provider{claude, muse, agy}, "medium", "muse", "")
-	flowEq(t, lanesSeatID(t, seat), []any{"muse", "medium"})
-	flowIn(t, "one lane, one owner", note)
+	assertEqual(t, lanesSeatID(t, seat), []any{"muse", "medium"})
+	assertIn(t, "one lane, one owner", note)
 }
 
 func TestLanes_ABuildKeepsItsPlannerWithANote(t *testing.T) {
 	pool := testsupport.MakeConfig().Pool
 	muse := pool.Get("muse")
 	seat, note := lanesSeat(pool, []*providers.Provider{muse}, "medium", "muse", "")
-	flowEq(t, lanesSeatID(t, seat)[0], "muse")
-	flowIn(t, "its planner `muse` keeps it", note)
+	assertEqual(t, lanesSeatID(t, seat)[0], "muse")
+	assertIn(t, "its planner `muse` keeps it", note)
 }
 
 // The owner keeps it only when it can build it (#725): with the planner not free, the lane's
@@ -54,15 +54,15 @@ func TestLanes_ABusyPlannerLosesItToTheLane(t *testing.T) {
 	claude := pool.Get("claude-3")
 	agy := pool.Get("agy")
 	seat, _ := lanesSeat(pool, []*providers.Provider{claude, agy}, "medium", "muse", "")
-	flowEq(t, lanesSeatID(t, seat), []any{"agy", "medium"})
+	assertEqual(t, lanesSeatID(t, seat), []any{"agy", "medium"})
 }
 
 func TestLanes_NoPlannerMeansNoAvoidance(t *testing.T) {
 	pool := testsupport.MakeConfig().Pool
 	claude, muse := pool.Get("claude-3"), pool.Get("muse")
 	seat, note := lanesSeat(pool, []*providers.Provider{claude, muse}, "medium", "", "")
-	flowEq(t, lanesSeatID(t, seat), []any{"muse", "medium"})
-	flowEq(t, note, "")
+	assertEqual(t, lanesSeatID(t, seat), []any{"muse", "medium"})
+	assertEqual(t, note, "")
 }
 
 // An easy item goes weak-first even when its medium planner is free (#725): the planner must
@@ -71,7 +71,7 @@ func TestLanes_AnEasyBuildStillAvoidsItsPlanner(t *testing.T) {
 	pool := testsupport.MakeConfig(testsupport.Config{Machine: []string{"muse", "lite"}}).Pool
 	muse, lite := pool.Get("muse"), pool.Get("lite")
 	seat, _ := lanesSeat(pool, []*providers.Provider{muse, lite}, "easy", "muse", "")
-	flowEq(t, lanesSeatID(t, seat)[0], "lite")
+	assertEqual(t, lanesSeatID(t, seat)[0], "lite")
 }
 
 // A revision that answers a final audit stays at the auditor's tier or above (#725), so the
@@ -81,9 +81,9 @@ func TestLanes_ARevisionAnsweringAnAuditStaysAtItsTier(t *testing.T) {
 	claude := pool.Get("claude-3")
 	muse, agy := pool.Get("muse"), pool.Get("agy")
 	seat, _ := lanesSeat(pool, []*providers.Provider{muse, agy, claude}, "medium", "", "strong")
-	flowEq(t, lanesSeatID(t, seat), []any{"claude-3", "strong"})
+	assertEqual(t, lanesSeatID(t, seat), []any{"claude-3", "strong"})
 	seat, _ = lanesSeat(pool, []*providers.Provider{muse, agy}, "easy", "", "medium")
-	flowEq(t, lanesSeatID(t, seat)[1], "medium")
+	assertEqual(t, lanesSeatID(t, seat)[1], "medium")
 }
 
 func TestLanes_AnEasyBuildTriesTheWeakOneBeforeGpt(t *testing.T) {
@@ -92,12 +92,12 @@ func TestLanes_AnEasyBuildTriesTheWeakOneBeforeGpt(t *testing.T) {
 	pool := testsupport.MakeConfig(testsupport.Config{Machine: []string{"muse", "lite"}}).Pool
 	gpt, lite := pool.Get("gpt"), pool.Get("lite")
 	seat, _ := lanesSeat(pool, []*providers.Provider{gpt, lite}, "easy", "", "")
-	flowEq(t, lanesSeatID(t, seat)[0], "lite")
+	assertEqual(t, lanesSeatID(t, seat)[0], "lite")
 }
 
 func TestLanes_AHardBuildTakesAStrongSeat(t *testing.T) {
 	pool := testsupport.MakeConfig().Pool
 	claude, muse := pool.Get("claude-3"), pool.Get("muse")
 	seat, _ := lanesSeat(pool, []*providers.Provider{muse, claude}, "hard", "", "")
-	flowEq(t, lanesSeatID(t, seat), []any{"claude-3", "strong"})
+	assertEqual(t, lanesSeatID(t, seat), []any{"claude-3", "strong"})
 }

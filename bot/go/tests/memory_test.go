@@ -50,14 +50,14 @@ func memoryProc(t *testing.T, root string, availableKiB, swapFreeKiB, swapped, s
 func TestMemory_ItReadsTheKernelsCounters(t *testing.T) {
 	root := memoryProc(t, t.TempDir(), 4_000_000, 7_000_000, 12, 2_500_000, 1_000_000)
 	found := memory.Reading(testsupport.Day, root)
-	flowEq(t, []any{found.Get("total"), found.Get("available"), found.Get("swap_used")},
+	assertEqual(t, []any{found.Get("total"), found.Get("available"), found.Get("swap_used")},
 		[]any{8_000_000 * 1024, 4_000_000 * 1024, 1_000_000 * 1024})
-	flowEq(t, []any{found.Get("swapped"), found.Get("stall_some"), found.Get("stall_full")},
+	assertEqual(t, []any{found.Get("swapped"), found.Get("stall_some"), found.Get("stall_full")},
 		[]any{12, 2.5, 1.0})
 }
 
 func TestMemory_NoKernelFiguresIsNoReading(t *testing.T) {
-	flowTrue(t, memory.Reading(testsupport.Day, t.TempDir()) == nil, "reading is None")
+	assertTrue(t, memory.Reading(testsupport.Day, t.TempDir()) == nil, "reading is None")
 }
 
 func TestMemory_AJobsRunIsTheChangeBetweenItsReadings(t *testing.T) {
@@ -69,10 +69,10 @@ func TestMemory_AJobsRunIsTheChangeBetweenItsReadings(t *testing.T) {
 	memory.Add(record, base.Copy().Set("available", 3*memoryGib).Set("swapped", 400).Set("stall_some", 30.0).
 		Set("stall_full", 12.0).Set("at", clock.ISO(testsupport.Day.Add(20*time.Minute))))
 	found := memory.Summary(record)
-	flowEq(t, []any{found.Get("low_available"), found.Get("high_swap"), found.Get("swapped")},
+	assertEqual(t, []any{found.Get("low_available"), found.Get("high_swap"), found.Get("swapped")},
 		[]any{memoryGib, memoryGib, 300})
-	flowEq(t, []any{found.Get("stall_some"), found.Get("stall_full")}, []any{20.0, 10.0})
-	flowTrue(t, memory.Summary(pyjson.New()) == nil, "summary({}) is None")
+	assertEqual(t, []any{found.Get("stall_some"), found.Get("stall_full")}, []any{20.0, 10.0})
+	assertTrue(t, memory.Summary(pyjson.New()) == nil, "summary({}) is None")
 }
 
 // ---------------------------------------------------------------------------- WorkerTests
@@ -106,15 +106,15 @@ func TestMemory_AMachineJobRecordsItsMemory(t *testing.T) {
 	result := memoryRunOn(t, "night-vm-muse", []*pyjson.Object{base.Copy().Set("available", 6*memoryGib),
 		base.Copy().Set("available", 2*memoryGib).Set("stall_full", 7.0)})
 	readings, _ := pyjson.AsInt(flowPath(result, "memory", "readings"))
-	flowTrue(t, readings >= 3, readings) // start, each call, checks, end
-	flowEq(t, memory.Summary(result.Obj("memory")).Get("stall_full"), 7.0)
-	flowEq(t, flowPath(result, "memory", "low_available"), 2*memoryGib)
+	assertTrue(t, readings >= 3, readings) // start, each call, checks, end
+	assertEqual(t, memory.Summary(result.Obj("memory")).Get("stall_full"), 7.0)
+	assertEqual(t, flowPath(result, "memory", "low_available"), 2*memoryGib)
 }
 
 func TestMemory_AJobOnGithubsRunnersReadsNothing(t *testing.T) {
 	result := memoryRunOn(t, "ubuntu-latest", []*pyjson.Object{pyjson.New("total", 1, "available", 1,
 		"swap_used", 0, "at", clock.ISO(testsupport.Day))})
-	flowFalse(t, result.Has("memory"))
+	assertFalse(t, result.Has("memory"))
 }
 
 // ---------------------------------------------------------------------------- DeliverTests
@@ -134,13 +134,13 @@ func TestMemory_DeliverKeepsAMachineRunsMemory(t *testing.T) {
 	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	planned, _ := h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
-	flowEq(t, planned.Get("provider"), "muse")
+	assertEqual(t, planned.Get("provider"), "muse")
 	kept := pyjson.Objs(h.Ctx.Store.Load().Get("machine_memory"))
-	flowEq(t, len(kept), 1)
+	assertEqual(t, len(kept), 1)
 	total, _ := pyjson.AsFloat(flowPath(kept[0], "total"))
-	flowTrue(t, total > 0, kept[0].Get("total"))
-	flowEq(t, kept[0].Get("runner"), "night-vm-muse")
-	flowFalse(t, kept[0].Has("box"))
+	assertTrue(t, total > 0, kept[0].Get("total"))
+	assertEqual(t, kept[0].Get("runner"), "night-vm-muse")
+	assertFalse(t, kept[0].Has("box"))
 }
 
 func TestMemory_ARunOnTheSecondBoxKeepsItsBox(t *testing.T) {
@@ -155,7 +155,7 @@ func TestMemory_ARunOnTheSecondBoxKeepsItsBox(t *testing.T) {
 	if len(kept) == 0 {
 		t.Fatal("IndexError: no machine_memory kept")
 	}
-	flowEq(t, []any{kept[0].Get("runner"), kept[0].Get("box")}, []any{"night-vm-muse-b2", "b2"})
+	assertEqual(t, []any{kept[0].Get("runner"), kept[0].Get("box")}, []any{"night-vm-muse-b2", "b2"})
 }
 
 // ---------------------------------------------------------------------------- LineTests
@@ -175,14 +175,14 @@ func TestMemory_TheStatusIssueSaysWhetherTheBoxRanShort(t *testing.T) {
 		memory.Note(state, entry, entry.Str("runner"), "")
 	}
 	text := memory.Line(state, testsupport.Day)
-	flowIn(t, "(2 runs): memory to spare", text) // the run 30 hours ago is out of it
-	flowIn(t, "Least available 3.0 GB of 8.0 GB", text)
+	assertIn(t, "(2 runs): memory to spare", text) // the run 30 hours ago is out of it
+	assertIn(t, "Least available 3.0 GB of 8.0 GB", text)
 	memory.Note(state, memoryEntry(0.5, "stall_full", 12.0, "swapped", 40,
 		"low_available", py.FloorDiv(memoryGib, 2)), "night-vm-agy", "")
 	text = memory.Line(state, testsupport.Day)
-	flowIn(t, "**short of memory**", text)
-	flowIn(t, "1 run(s) stalled on memory for 5 s or more (longest 12 s); 1 swapped", text)
-	flowEq(t, memory.Line(pyjson.New(), testsupport.Day), "")
+	assertIn(t, "**short of memory**", text)
+	assertIn(t, "1 run(s) stalled on memory for 5 s or more (longest 12 s); 1 swapped", text)
+	assertEqual(t, memory.Line(pyjson.New(), testsupport.Day), "")
 }
 
 func TestMemory_ARunnersNameSaysItsBox(t *testing.T) {
@@ -192,7 +192,7 @@ func TestMemory_ARunnersNameSaysItsBox(t *testing.T) {
 		{"night-vm-muse-b2", "night-vm-muse", "b2"},
 		{"night-vm-muse-2-b2", "night-vm-muse", "b2"},
 		{"someone-else", "night-vm-muse", ""}} {
-		flowEq(t, memory.BoxOf(c[0], c[1]), c[2], c[0])
+		assertEqual(t, memory.BoxOf(c[0], c[1]), c[2], c[0])
 	}
 }
 
@@ -208,10 +208,10 @@ func TestMemory_EachBoxHasItsOwnVerdict(t *testing.T) {
 		t.Fatalf("ValueError: %d lines after the first, not 2, in:\n%s", len(lines)-1, text)
 	}
 	night, second := lines[1], lines[2]
-	flowIn(t, "**Machine memory, last 24 hours**, a line a box:", text)
-	flowIn(t, "- the night box (2 runs): memory to spare", night)
-	flowIn(t, "- the `b2` box (1 runs): **short of memory**", second)
-	flowIn(t, "(longest 30 s); 1 swapped", second)
+	assertIn(t, "**Machine memory, last 24 hours**, a line a box:", text)
+	assertIn(t, "- the night box (2 runs): memory to spare", night)
+	assertIn(t, "- the `b2` box (1 runs): **short of memory**", second)
+	assertIn(t, "(longest 30 s); 1 swapped", second)
 }
 
 func TestMemory_TheStateKeepsTheNewestRunsOnly(t *testing.T) {
@@ -220,12 +220,12 @@ func TestMemory_TheStateKeepsTheNewestRunsOnly(t *testing.T) {
 		memory.Note(state, memoryEntry(0, "swapped", n), "night-vm-muse", "")
 	}
 	kept := state.List("machine_memory")
-	flowEq(t, len(kept), memory.Keep)
-	flowEq(t, flowPath(state, "machine_memory", -1, "swapped"), memory.Keep+4)
+	assertEqual(t, len(kept), memory.Keep)
+	assertEqual(t, flowPath(state, "machine_memory", -1, "swapped"), memory.Keep+4)
 }
 
 func TestMemory_TheStatusIssueCarriesTheLine(t *testing.T) {
 	ctx := testsupport.MakeCtx(nil, testsupport.Ctx{At: testsupport.Day})
 	flowUpdate(ctx, func(s *pyjson.Object) { memory.Note(s, memoryEntry(1), "night-vm-muse", "") })
-	flowIn(t, "**Machine memory, last 24 hours** (1 runs)", dashboard.Render(ctx, nil, "", nil, true))
+	assertIn(t, "**Machine memory, last 24 hours** (1 runs)", dashboard.Render(ctx, nil, "", nil, true))
 }

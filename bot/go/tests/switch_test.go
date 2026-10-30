@@ -95,15 +95,13 @@ func switchResult(t *testing.T, out string) *pyjson.Object {
 // ---------------------------------------------------------------------------- ReportTests
 
 func TestSwitch_TheReportHeaderCarriesTheModelAskedFor(t *testing.T) {
-	is := difficultyCheckOf(t)
-	is.Equal(verdicts.BuildReport_(switchDone("next_model", "Opus")).NextModel, "opus")
-	is.Equal(verdicts.BuildReport_(switchDone()).NextModel, "")
+	assertEqual(t, verdicts.BuildReport_(switchDone("next_model", "Opus")).NextModel, "opus")
+	assertEqual(t, verdicts.BuildReport_(switchDone()).NextModel, "")
 }
 
 // ---------------------------------------------------------------------------- SwitchTests
 
 func TestSwitch_TheBuilderAsksForOpusAndItsNextPassRunsOnIt(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchMedium}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
@@ -112,26 +110,25 @@ func TestSwitch_TheBuilderAsksForOpusAndItsNextPassRunsOnIt(t *testing.T) {
 		"review": {difficultyReviewer(difficultyChanges("v2 misses a rule")),
 			difficultyReviewer(difficultyApprove)}})
 	planned, result := h.night(r)
-	is.Equal([]any{planned.Get("provider"), planned.Obj("seats").Obj("build").Get("model")},
+	assertEqual(t, []any{planned.Get("provider"), planned.Obj("seats").Obj("build").Get("model")},
 		[]any{"claude-3", "sonnet"})
-	is.Equal(result.Get("status"), "approved")
-	is.Equal([][]string{switchModels(r, "build"), switchModels(r, "fix")}, [][]string{{"sonnet"}, {"opus"}})
-	is.Equal(switchModels(r, "review"), []string{"opus", "opus"})
-	is.Equal(result.Get("switches"), []any{pyjson.New("n", 1, "from", "sonnet", "to", "opus",
+	assertEqual(t, result.Get("status"), "approved")
+	assertEqual(t, [][]string{switchModels(r, "build"), switchModels(r, "fix")}, [][]string{{"sonnet"}, {"opus"}})
+	assertEqual(t, switchModels(r, "review"), []string{"opus", "opus"})
+	assertEqual(t, result.Get("switches"), []any{pyjson.New("n", 1, "from", "sonnet", "to", "opus",
 		"why", "the builder asked for it")})
 	cycles := result.List("cycles")
-	is.Equal(pyjson.Obj(cycles[0]).Obj("builder").Get("next_model"), "opus")
+	assertEqual(t, pyjson.Obj(cycles[0]).Obj("builder").Get("next_model"), "opus")
 	built := []any{}
 	for _, c := range cycles {
 		built = append(built, pyjson.Obj(c).Obj("builder").Get("model"))
 	}
-	is.Equal(built, []any{"sonnet", "opus"})
+	assertEqual(t, built, []any{"sonnet", "opus"})
 	said := h.gh.BotComments(12)
-	is.In("after round 1 it switched to `opus`: the builder asked for it", said[len(said)-1])
+	assertIn(t, "after round 1 it switched to `opus`: the builder asked for it", said[len(said)-1])
 }
 
 func TestSwitch_RoundsSentBackOnSonnetMoveTheBuilderToOpus(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchMedium}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
@@ -141,17 +138,16 @@ func TestSwitch_RoundsSentBackOnSonnetMoveTheBuilderToOpus(t *testing.T) {
 		"review": {difficultyReviewer(difficultyChanges("not yet")), difficultyReviewer(difficultyChanges("still no")),
 			difficultyReviewer(difficultyApprove)}})
 	_, result := h.night(r)
-	is.Equal(work.SwitchUpAfter, 2)
-	is.Equal(result.Get("status"), "approved")
-	is.Equal([][]string{switchModels(r, "build"), switchModels(r, "fix")},
+	assertEqual(t, work.SwitchUpAfter, 2)
+	assertEqual(t, result.Get("status"), "approved")
+	assertEqual(t, [][]string{switchModels(r, "build"), switchModels(r, "fix")},
 		[][]string{{"sonnet"}, {"sonnet", "opus"}})
-	is.Equal(result.Get("switches"), []any{pyjson.New(
+	assertEqual(t, result.Get("switches"), []any{pyjson.New(
 		"n", 2, "from", "sonnet", "to", "opus",
 		"why", "the reviewer sent back 2 rounds in a row on `sonnet`")})
 }
 
 func TestSwitch_AHardItemKeepsOpusWhateverTheBuilderAsks(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchHard}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
@@ -159,13 +155,12 @@ func TestSwitch_AHardItemKeepsOpusWhateverTheBuilderAsks(t *testing.T) {
 		"fix":    {difficultyBuilder(map[string]string{"src/game.txt": "v3\n"})},
 		"review": {difficultyReviewer(difficultyChanges("not yet")), difficultyReviewer(difficultyApprove)}})
 	_, result := h.night(r)
-	is.Equal([][]string{switchModels(r, "build"), switchModels(r, "fix")}, [][]string{{"opus"}, {"opus"}})
-	is.Equal(result.Get("switches"), []any{})
-	is.In("keeps its builder on `opus`", switchPrompt(t, r, "build"))
+	assertEqual(t, [][]string{switchModels(r, "build"), switchModels(r, "fix")}, [][]string{{"opus"}, {"opus"}})
+	assertEqual(t, result.Get("switches"), []any{})
+	assertIn(t, "keeps its builder on `opus`", switchPrompt(t, r, "build"))
 }
 
 func TestSwitch_OpusOnAMediumItemMayHandThePlainWorkToSonnet(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchMedium}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
@@ -178,14 +173,13 @@ func TestSwitch_OpusOnAMediumItemMayHandThePlainWorkToSonnet(t *testing.T) {
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	result := switchResult(t, out)
-	is.Equal([][]string{switchModels(r, "build"), switchModels(r, "fix")}, [][]string{{"opus"}, {"sonnet"}})
-	is.Equal(pyjson.Obj(result.List("switches")[0]).Get("to"), "sonnet")
+	assertEqual(t, [][]string{switchModels(r, "build"), switchModels(r, "fix")}, [][]string{{"opus"}, {"sonnet"}})
+	assertEqual(t, pyjson.Obj(result.List("switches")[0]).Get("to"), "sonnet")
 }
 
 // The builder's ask is taken once its round is judged, so a round Opus built and the reviewer sent
 // back counts against Opus, not Sonnet.
 func TestSwitch_SonnetGetsItsTwoTriesAfterOpusHandsItTheWork(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchMedium}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
@@ -200,13 +194,13 @@ func TestSwitch_SonnetGetsItsTwoTriesAfterOpusHandsItTheWork(t *testing.T) {
 	out := filepath.Join(h.root, "out-tries")
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	result := switchResult(t, out)
-	is.Equal([][]string{switchModels(r, "build"), switchModels(r, "fix")},
+	assertEqual(t, [][]string{switchModels(r, "build"), switchModels(r, "fix")},
 		[][]string{{"opus"}, {"sonnet", "sonnet", "opus"}})
 	moves := []any{}
 	for _, m := range result.List("switches") {
 		moves = append(moves, []any{pyjson.Obj(m).Get("to"), pyjson.Obj(m).Get("why")})
 	}
-	is.Equal(moves, []any{
+	assertEqual(t, moves, []any{
 		[]any{"sonnet", "the builder asked for it"},
 		[]any{"opus", "the reviewer sent back 2 rounds in a row on `sonnet`"}})
 }
@@ -214,7 +208,6 @@ func TestSwitch_SonnetGetsItsTwoTriesAfterOpusHandsItTheWork(t *testing.T) {
 // The bot rated it medium (a step up, say); the run's planner rates it hard. The run moves its
 // builder to Opus rather than building a hard item on Sonnet.
 func TestSwitch_AnItemTheBotRatedAndItsPlannerRatesHarderIsBuiltOnOpus(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchMedium}})
 	h.ctx.Store.Update(func(s *pyjson.Object) any {
@@ -225,26 +218,25 @@ func TestSwitch_AnItemTheBotRatedAndItsPlannerRatesHarderIsBuiltOnOpus(t *testin
 		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})},
 		"review": {difficultyReviewer(difficultyApprove)}})
 	planned, result := h.night(r)
-	is.Equal([]any{planned.Obj("seats").Obj("build").Get("model"), planned.Obj("rating").Get("source")},
+	assertEqual(t, []any{planned.Obj("seats").Obj("build").Get("model"), planned.Obj("rating").Get("source")},
 		[]any{"sonnet", "bot"})
-	is.Equal(switchModels(r, "build"), []string{"opus"})
-	is.Equal(pyjson.Obj(result.List("switches")[0]).Get("to"), "opus")
+	assertEqual(t, switchModels(r, "build"), []string{"opus"})
+	assertEqual(t, pyjson.Obj(result.List("switches")[0]).Get("to"), "opus")
 }
 
 // An unrated item starts on Sonnet; its planner rates it hard, so the same run builds it on the
 // account's Opus rather than queueing it again for a strong builder.
 func TestSwitch_ThePlannersRatingMovesTheBuilderInsteadOfSendingItBack(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{"plan": {switchRated("hard")},
 		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "v2\n"})},
 		"review": {difficultyReviewer(difficultyApprove)}})
 	planned, result := h.night(r)
-	is.Equal(planned.Obj("seats").Obj("build").Get("model"), "sonnet")
-	is.Equal(result.Get("status"), "approved")
-	is.Equal(switchModels(r, "build"), []string{"opus"})
-	is.Equal(result.Get("switches"), []any{pyjson.New("n", 0, "from", "sonnet", "to", "opus",
+	assertEqual(t, planned.Obj("seats").Obj("build").Get("model"), "sonnet")
+	assertEqual(t, result.Get("status"), "approved")
+	assertEqual(t, switchModels(r, "build"), []string{"opus"})
+	assertEqual(t, result.Get("switches"), []any{pyjson.New("n", 0, "from", "sonnet", "to", "opus",
 		"why", "its planner rated it difficulty:hard")})
 	latest := 0
 	for n, thread := range h.gh.Threads.All() {
@@ -256,12 +248,11 @@ func TestSwitch_ThePlannersRatingMovesTheBuilderInsteadOfSendingItBack(t *testin
 	for name := range h.gh.LabelNames(latest) {
 		labels[name] = true
 	}
-	is.In(switchHard, labels)
-	is.In("before round 1 it switched to `opus`", strings.Join(h.gh.BotComments(12), "\n"))
+	assertIn(t, switchHard, labels)
+	assertIn(t, "before round 1 it switched to `opus`", strings.Join(h.gh.BotComments(12), "\n"))
 }
 
 func TestSwitch_TheBuilderIsToldItMaySwitch(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := switchHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, switchMedium}})
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
@@ -269,16 +260,15 @@ func TestSwitch_TheBuilderIsToldItMaySwitch(t *testing.T) {
 		"review": {difficultyReviewer(difficultyApprove)}})
 	h.night(r)
 	buildPrompt := switchPrompt(t, r, "build")
-	is.In("## Your model", buildPrompt)
-	is.In("`opus` (strong) and `sonnet` (medium)", buildPrompt)
-	is.In("\"next_model\": \"opus\"", buildPrompt)
+	assertIn(t, "## Your model", buildPrompt)
+	assertIn(t, "`opus` (strong) and `sonnet` (medium)", buildPrompt)
+	assertIn(t, "\"next_model\": \"opus\"", buildPrompt)
 	// Its reviewer reads no such note: it reviews, it does not choose.
 	reviewPrompt := switchPrompt(t, r, "review")
-	is.NotIn("## Your model", reviewPrompt)
+	assertNotIn(t, "## Your model", reviewPrompt)
 }
 
 func TestSwitch_ALaneWithOneModelNeverSwitches(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"muse"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}}) // unrated, so a medium model may plan it
@@ -287,12 +277,12 @@ func TestSwitch_ALaneWithOneModelNeverSwitches(t *testing.T) {
 		"fix":    {difficultyBuilder(map[string]string{"src/game.txt": "v3\n"})},
 		"review": {difficultyReviewer(difficultyChanges("not yet")), difficultyReviewer(difficultyApprove)}})
 	planned, result := h.night(r)
-	is.Equal(planned.Get("provider"), "muse")
+	assertEqual(t, planned.Get("provider"), "muse")
 	used := map[string]bool{}
 	for _, m := range append(switchModels(r, "build"), switchModels(r, "fix")...) {
 		used[m] = true
 	}
-	is.Equal(used, map[string]bool{"muse-spark-1.3-contributor": true})
-	is.Equal(result.Get("switches"), []any{})
-	is.NotIn("## Your model", switchPrompt(t, r, "build"))
+	assertEqual(t, used, map[string]bool{"muse-spark-1.3-contributor": true})
+	assertEqual(t, result.Get("switches"), []any{})
+	assertNotIn(t, "## Your model", switchPrompt(t, r, "build"))
 }

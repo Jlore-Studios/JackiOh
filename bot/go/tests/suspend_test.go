@@ -60,26 +60,26 @@ func suspendVerbs(body string) [][2]string {
 // ---------------------------------------------------------------------------- ParseTests
 
 func TestSuspend_SuspendIsAnOperatorCommandAfterEitherPrefix(t *testing.T) {
-	eventsEqual(t, suspendVerbs("/harness suspend claude-3 using it myself"),
+	assertEqual(t, suspendVerbs("/harness suspend claude-3 using it myself"),
 		[][2]string{{"suspend", "claude-3 using it myself"}})
-	eventsEqual(t, suspendVerbs("@jgoetzmann-bot suspend claude-3"), [][2]string{{"suspend", "claude-3"}})
-	eventsEqual(t, suspendVerbs("@jgoetzmann-bot suspend: claude-3 using it myself"),
+	assertEqual(t, suspendVerbs("@jgoetzmann-bot suspend claude-3"), [][2]string{{"suspend", "claude-3"}})
+	assertEqual(t, suspendVerbs("@jgoetzmann-bot suspend: claude-3 using it myself"),
 		[][2]string{{"suspend", "claude-3 using it myself"}})
-	eventsEqual(t, suspendVerbs("@jgoetzmann-bot suspend the old animation")[0][0], "request")
-	eventsEqual(t, commands.Parse("/harness suspend gpt", suspendBotName)[0].Level(), 3)
+	assertEqual(t, suspendVerbs("@jgoetzmann-bot suspend the old animation")[0][0], "request")
+	assertEqual(t, commands.Parse("/harness suspend gpt", suspendBotName)[0].Level(), 3)
 }
 
 func TestSuspend_ResumeWithASubscriptionIsStartWithItsName(t *testing.T) {
-	eventsEqual(t, suspendVerbs("/harness resume claude-3"), [][2]string{{"start", "claude-3"}})
-	eventsEqual(t, suspendVerbs("@jgoetzmann-bot resume claude-3"), [][2]string{{"start", "claude-3"}})
-	eventsEqual(t, suspendVerbs("@jgoetzmann-bot start with option A")[0][0], "request")
+	assertEqual(t, suspendVerbs("/harness resume claude-3"), [][2]string{{"start", "claude-3"}})
+	assertEqual(t, suspendVerbs("@jgoetzmann-bot resume claude-3"), [][2]string{{"start", "claude-3"}})
+	assertEqual(t, suspendVerbs("@jgoetzmann-bot start with option A")[0][0], "request")
 }
 
 func TestSuspend_HelpExplainsSuspend(t *testing.T) {
 	text := commands.HelpText(suspendBotName, "suspend")
-	eventsIn(t, "`suspend <subscription> [reason]`", text)
-	eventsIn(t, "For example: `@jgoetzmann-bot suspend: claude-3", text)
-	eventsIn(t, "`suspend <subscription> [reason]`", commands.HelpText(suspendBotName, ""))
+	assertIn(t, "`suspend <subscription> [reason]`", text)
+	assertIn(t, "For example: `@jgoetzmann-bot suspend: claude-3", text)
+	assertIn(t, "`suspend <subscription> [reason]`", commands.HelpText(suspendBotName, ""))
 }
 
 // ---------------------------------------------------------------------------- CommandTests
@@ -131,45 +131,45 @@ func (w *suspendCommands) suspended(providerID string) *pyjson.Object {
 
 func TestSuspend_SuspendAndResumeOneSubscription(t *testing.T) {
 	w := newSuspendCommands(t)
-	eventsEqual(t, w.why("claude-1"), "") // None
+	assertEqual(t, w.why("claude-1"), "") // None
 	w.send("/harness suspend claude-1 using it myself")
-	eventsIn(t, "Suspended `claude-1`", w.reply())
+	assertIn(t, "Suspended `claude-1`", w.reply())
 	held := eventsDig(t, w.ctx.Store.Load(), "providers", "claude-1", "suspended")
-	eventsEqual(t, []any{eventsDig(t, held, "by"), eventsDig(t, held, "reason")}, []any{"jgoetzmann", "using it myself"})
-	eventsEqual(t, w.why("claude-1"), "suspended by @jgoetzmann (using it myself); "+
+	assertEqual(t, []any{eventsDig(t, held, "by"), eventsDig(t, held, "reason")}, []any{"jgoetzmann", "using it myself"})
+	assertEqual(t, w.why("claude-1"), "suspended by @jgoetzmann (using it myself); "+
 		"`/harness resume claude-1` lifts it")
-	eventsIn(t, "suspended", w.why("claude-1", true))
-	eventsIn(t, "suspended by @jgoetzmann", status.Report(w.ctx))
-	eventsFalse(t, w.ctx.Store.Load().Get("halted"))
+	assertIn(t, "suspended", w.why("claude-1", true))
+	assertIn(t, "suspended by @jgoetzmann", status.Report(w.ctx))
+	assertFalse(t, w.ctx.Store.Load().Get("halted"))
 	w.send("/harness resume claude-1")
-	eventsIn(t, "Resumed `claude-1`", w.reply())
-	eventsNotIn(t, "suspended", eventsDig(t, w.ctx.Store.Load(), "providers", "claude-1"))
-	eventsEqual(t, w.why("claude-1"), "") // None
+	assertIn(t, "Resumed `claude-1`", w.reply())
+	assertNotIn(t, "suspended", eventsDig(t, w.ctx.Store.Load(), "providers", "claude-1"))
+	assertEqual(t, w.why("claude-1"), "") // None
 }
 
 func TestSuspend_TheMentionFormSuspendsWithAReasonAfterAColon(t *testing.T) {
 	w := newSuspendCommands(t)
 	w.send("@jgoetzmann-bot suspend: claude-2 for the demo")
-	eventsEqual(t, eventsDig(t, w.suspended("claude-2"), "reason"), "for the demo")
+	assertEqual(t, eventsDig(t, w.suspended("claude-2"), "reason"), "for the demo")
 	w.send("@jgoetzmann-bot resume claude-2")
-	eventsNone(t, w.suspended("claude-2"))
+	assertIsNone(t, w.suspended("claude-2"))
 }
 
 func TestSuspend_SuspendNeedsTheOperator(t *testing.T) {
 	w := newSuspendCommands(t)
 	w.send("/harness suspend claude-1", suspendHelper, "COLLABORATOR")
-	eventsIn(t, "operator level", w.reply())
-	eventsNone(t, w.suspended("claude-1"))
+	assertIn(t, "operator level", w.reply())
+	assertIsNone(t, w.suspended("claude-1"))
 }
 
 func TestSuspend_AnUnknownOrMissingSubscriptionChangesNothing(t *testing.T) {
 	w := newSuspendCommands(t)
 	w.send("/harness suspend claude-9")
-	eventsIn(t, "`claude-9` is not a subscription", w.reply())
-	eventsIn(t, "`claude-1`", w.reply())
+	assertIn(t, "`claude-9` is not a subscription", w.reply())
+	assertIn(t, "`claude-1`", w.reply())
 	w.send("/harness suspend")
-	eventsIn(t, "needs a subscription", w.reply())
-	eventsEqual(t, eventsDig(t, w.ctx.Store.Load(), "providers"), pyjson.New())
+	assertIn(t, "needs a subscription", w.reply())
+	assertEqual(t, eventsDig(t, w.ctx.Store.Load(), "providers"), pyjson.New())
 }
 
 func TestSuspend_ResumeOfASubscriptionLeavesAHaltAlone(t *testing.T) {
@@ -177,29 +177,29 @@ func TestSuspend_ResumeOfASubscriptionLeavesAHaltAlone(t *testing.T) {
 	w.send("/harness halt away")
 	w.send("/harness suspend claude-1")
 	w.send("/harness resume claude-1")
-	eventsIn(t, "still halted", w.reply())
-	eventsTrue(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
-	eventsNone(t, w.suspended("claude-1"))
+	assertIn(t, "still halted", w.reply())
+	assertTrue(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertIsNone(t, w.suspended("claude-1"))
 	w.send("/harness resume over")
-	eventsIn(t, "`over` is not a subscription", w.reply())
-	eventsTrue(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertIn(t, "`over` is not a subscription", w.reply())
+	assertTrue(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
 	// A bare start, or one with a note that names no subscription, lifts the halt as it always
 	// did, and never a suspension.
 	w.send("/harness suspend gpt")
 	w.send("/harness start now, back from vacation")
-	eventsIn(t, "Started.", w.reply())
-	eventsFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
-	eventsNotNone(t, w.suspended("gpt"))
+	assertIn(t, "Started.", w.reply())
+	assertFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertIsNotNone(t, w.suspended("gpt"))
 	w.send("/harness halt again")
 	w.send("/harness start")
-	eventsFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
-	eventsNotNone(t, w.suspended("gpt"))
+	assertFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertIsNotNone(t, w.suspended("gpt"))
 }
 
 func TestSuspend_ResumeOfOneNotSuspendedSaysSo(t *testing.T) {
 	w := newSuspendCommands(t)
 	w.send("/harness resume claude-1")
-	eventsIn(t, "`claude-1` is not suspended", w.reply())
+	assertIn(t, "`claude-1` is not suspended", w.reply())
 }
 
 // ---------------------------------------------------------------------------- SchedulingTests
@@ -223,33 +223,33 @@ func TestSuspend_ASuspendedSubscriptionTakesNoWorkEvenForced(t *testing.T) {
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	suspendSuspend(ctx, "claude-1")
 	planned := plan.Make(ctx, true, nil, "auto", nil)
-	eventsEqual(t, eventsDig(t, planned, "action"), "none")
-	eventsIn(t, "`claude-1` suspended by @jgoetzmann", eventsDig(t, planned, "reason"))
+	assertEqual(t, eventsDig(t, planned, "action"), "none")
+	assertIn(t, "`claude-1` suspended by @jgoetzmann", eventsDig(t, planned, "reason"))
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		if _, ok := providers.Record(s, "claude-1").Pop("suspended"); !ok {
 			t.Fatal(`KeyError: 'suspended'`)
 		}
 		return nil
 	}, "state")
-	eventsEqual(t, eventsDig(t, plan.Make(ctx, false, nil, "auto", nil), "action"), "build")
+	assertEqual(t, eventsDig(t, plan.Make(ctx, false, nil, "auto", nil), "action"), "build")
 }
 
 func TestSuspend_TheProbeStopsARunOnASuspendedSubscription(t *testing.T) {
 	gh, ctx := newSuspendScheduling()
 	gh.AddIssue(5)
 	pool := ctx.Cfg.Pool
-	eventsNone(t, suspendProbe(ctx, 5, pool.Get("claude-1")))
+	assertIsNone(t, suspendProbe(ctx, 5, pool.Get("claude-1")))
 	suspendSuspend(ctx, "claude-1")
-	eventsEqual(t, suspendProbe(ctx, 5, pool.Get("claude-1")),
+	assertEqual(t, suspendProbe(ctx, 5, pool.Get("claude-1")),
 		[2]string{"`claude-1` was suspended by @jgoetzmann", "suspend"})
-	eventsNone(t, suspendProbe(ctx, 5, pool.Get("claude-2")))
+	assertIsNone(t, suspendProbe(ctx, 5, pool.Get("claude-2")))
 }
 
 func TestSuspend_TheStatusIssueShowsASuspendedAccountAsOff(t *testing.T) {
 	_, ctx := newSuspendScheduling()
 	suspendSuspend(ctx, "claude-1")
 	style, text := dashboard.Account(ctx, ctx.Store.Load(), ctx.Cfg.Pool.Get("claude-1"))
-	eventsEqual(t, [2]string{style, text}, [2]string{"off", "⚫ suspended"})
+	assertEqual(t, [2]string{style, text}, [2]string{"off", "⚫ suspended"})
 }
 
 // ---------------------------------------------------------------------------- RunTests
@@ -258,7 +258,7 @@ func TestSuspend_TheStatusIssueShowsASuspendedAccountAsOff(t *testing.T) {
 func suspendRunWithProbe(t *testing.T, h *ratingHarness, fake *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
 	t.Helper()
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	eventsEqual(t, eventsDig(t, planned, "provider"), "claude-1")
+	assertEqual(t, eventsDig(t, planned, "provider"), "claude-1")
 	out := filepath.Join(h.root, "out-suspend")
 	number := 12
 	result := work.NewWorker(h.cfg, planned, fake, h.clone, filepath.Join(h.root, "work"), out,
@@ -289,18 +289,18 @@ func TestSuspend_ARunGoingWhenItsSubscriptionIsSuspendedPausesUncharged(t *testi
 	}
 	fake := ratingRunner(map[string]runner.Handler{"build": building, "review": ratingReviewer(ratingApprove)})
 	_, result := suspendRunWithProbe(t, h, fake)
-	eventsEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "interrupt")}, []any{"interrupted", "suspend"})
+	assertEqual(t, []any{eventsDig(t, result, "status"), eventsDig(t, result, "interrupt")}, []any{"interrupted", "suspend"})
 	roles := []string{}
 	for _, c := range fake.Calls {
 		roles = append(roles, c.Role)
 	}
-	eventsEqual(t, roles, []string{"plan", "build"}) // no review
-	eventsIn(t, config.LabelBuild, h.gh.LabelNames(12))
-	eventsIn(t, "Paused: `claude-1` was suspended by @jgoetzmann", eventsLast(t, h.gh.BotComments(12)))
+	assertEqual(t, roles, []string{"plan", "build"}) // no review
+	assertIn(t, config.LabelBuild, h.gh.LabelNames(12))
+	assertIn(t, "Paused: `claude-1` was suspended by @jgoetzmann", eventsLast(t, h.gh.BotComments(12)))
 	record := state.Item(h.ctx.Store.Load(), 12)
-	eventsEqual(t, suspendCount(t, record, "interruptions"), 0)
-	eventsEqual(t, suspendCount(t, record, "failures"), 0)
-	eventsNotNone(t, h.originSHA("bot/issue-12")) // the work so far is kept
+	assertEqual(t, suspendCount(t, record, "interruptions"), 0)
+	assertEqual(t, suspendCount(t, record, "failures"), 0)
+	assertIsNotNone(t, h.originSHA("bot/issue-12")) // the work so far is kept
 }
 
 func TestSuspend_AFinishedChangeIsStillHandedOn(t *testing.T) {
@@ -313,6 +313,6 @@ func TestSuspend_AFinishedChangeIsStillHandedOn(t *testing.T) {
 	fake := ratingRunner(map[string]runner.Handler{"build": ratingBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": reviewing})
 	_, result := suspendRunWithProbe(t, h, fake)
-	eventsEqual(t, eventsDig(t, result, "status"), "approved")
-	eventsEqual(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)), 1)
+	assertEqual(t, eventsDig(t, result, "status"), "approved")
+	assertEqual(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)), 1)
 }

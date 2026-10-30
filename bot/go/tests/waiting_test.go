@@ -106,18 +106,18 @@ func TestWaiting_AHardItemWaitsForAStrongModelAndSaysWhichFreesFirst(t *testing.
 	})
 	explained := w.explain()
 	row := waitingRow(t, explained, 41)
-	dashboardEq(t, []string{row.Step, row.Difficulty, row.Tier}, []string{"build", "hard", "strong"})
-	dashboardTrue(t, row.Starts == nil, "row.starts is not None")
-	dashboardEq(t, row.Waiting, "⏳ **a strong model (Opus)**: first free `claude-2` at 22:05")
+	assertEqual(t, []string{row.Step, row.Difficulty, row.Tier}, []string{"build", "hard", "strong"})
+	assertTrue(t, row.Starts == nil, "row.starts is not None")
+	assertEqual(t, row.Waiting, "⏳ **a strong model (Opus)**: first free `claude-2` at 22:05")
 	// Muse may start work, but nothing queued is for it: idle, never "free".
-	dashboardEq(t, waitingNow(t, explained, "muse").Kind, "idle")
-	dashboardEq(t, waitingNow(t, explained, "claude-2").Kind, "capped")
+	assertEqual(t, waitingNow(t, explained, "muse").Kind, "idle")
+	assertEqual(t, waitingNow(t, explained, "claude-2").Kind, "capped")
 	body := dashboard.Render(w.ctx, nil, "", nil, true)
-	dashboardIn(t, "| #41 | Hard work | build | 🔴 hard → strong | ⏳ **a strong model (Opus)**: "+
+	assertIn(t, "| #41 | Hard work | build | 🔴 hard → strong | ⏳ **a strong model (Opus)**: "+
 		"first free `claude-2` at 22:05 | — |", body)
-	dashboardIn(t, "1 waits for a strong model", body)
-	dashboardIn(t, "🔋 **1 of 12 subscriptions can start work now**: `muse`", body)
-	dashboardIn(t, `<b>muse</b><br/>⚪ idle<br/>nothing queued is for it`, body)
+	assertIn(t, "1 waits for a strong model", body)
+	assertIn(t, "🔋 **1 of 12 subscriptions can start work now**: `muse`", body)
+	assertIn(t, `<b>muse</b><br/>⚪ idle<br/>nothing queued is for it`, body)
 }
 
 func TestWaiting_ARevisionThatAnswersAStrongAuditWaitsForStrong(t *testing.T) {
@@ -130,9 +130,9 @@ func TestWaiting_ARevisionThatAnswersAStrongAuditWaitsForStrong(t *testing.T) {
 		waitingClaudeRefused(s, pool)
 	})
 	row := waitingRow(t, w.explain(), 9)
-	dashboardEq(t, []string{row.Step, row.Difficulty, row.Tier}, []string{"revise", "medium", "strong"})
-	dashboardEq(t, row.TierWhy, "it answers a strong reviewer's audit")
-	dashboardTrue(t, row.Starts == nil, "row.starts is not None")
+	assertEqual(t, []string{row.Step, row.Difficulty, row.Tier}, []string{"revise", "medium", "strong"})
+	assertEqual(t, row.TierWhy, "it answers a strong reviewer's audit")
+	assertTrue(t, row.Starts == nil, "row.starts is not None")
 	// Without the audit, Muse (medium) takes it at the next run, and says so.
 	waitingSeed(w.ctx, "no audit", func(s *pyjson.Object) {
 		state.Item(s, 9).Update(pyjson.New("audit_tier", ""))
@@ -142,10 +142,10 @@ func TestWaiting_ARevisionThatAnswersAStrongAuditWaitsForStrong(t *testing.T) {
 	if row.Starts == nil {
 		t.Fatalf("row.starts is None")
 	}
-	dashboardEq(t, row.Starts.Provider.ID, "muse")
+	assertEqual(t, row.Starts.Provider.ID, "muse")
 	muse := waitingNow(t, explained, "muse")
-	dashboardEq(t, []string{muse.Kind, muse.Text}, []string{"next", "▶️ takes #9 next"})
-	dashboardIn(t, "▶️ **starts at the next run** on `muse` (`muse-spark-1.3-contributor`, "+
+	assertEqual(t, []string{muse.Kind, muse.Text}, []string{"next", "▶️ takes #9 next"})
+	assertIn(t, "▶️ **starts at the next run** on `muse` (`muse-spark-1.3-contributor`, "+
 		"medium)", dashboard.Render(w.ctx, nil, "", nil, true))
 }
 
@@ -154,9 +154,9 @@ func TestWaiting_APartWaitsForThePartBeforeIt(t *testing.T) {
 	w.gh.AddIssue(1, fakes.Issue{Title: "Patch v0.9.X (part 1 of 2): the base"})
 	w.gh.AddIssue(2, fakes.Issue{Title: "Patch v0.9.X (part 2 of 2): the rest", Labels: []string{config.LabelBuild}})
 	row := waitingRow(t, w.explain(), 2)
-	dashboardTrue(t, row.Held, "row.held")
-	dashboardEq(t, row.Waiting, "waits for #1 to close")
-	dashboardIn(t, "| #2 | Patch v0.9.X (part 2 of 2): the rest | — | — | ⏸️ held back: waits "+
+	assertTrue(t, row.Held, "row.held")
+	assertEqual(t, row.Waiting, "waits for #1 to close")
+	assertIn(t, "| #2 | Patch v0.9.X (part 2 of 2): the rest | — | — | ⏸️ held back: waits "+
 		"for #1 to close | — |", dashboard.Render(w.ctx, nil, "", nil, true))
 }
 
@@ -180,8 +180,8 @@ func TestWaiting_PartsWaitForTheirOwnParentsEarlierPartsNeverAnotherPatchs(t *te
 		}
 	}
 	explained := w.explain()
-	dashboardEq(t, waitingRow(t, explained, 12).Waiting, "waits for #11 to close")
-	dashboardEq(t, waitingRow(t, explained, 22).Waiting, "waits for #21 to close")
+	assertEqual(t, waitingRow(t, explained, 12).Waiting, "waits for #11 to close")
+	assertEqual(t, waitingRow(t, explained, 22).Waiting, "waits for #21 to close")
 }
 
 func TestWaiting_AnUnratedBuildNeedsAMediumPlannerFirst(t *testing.T) {
@@ -189,12 +189,12 @@ func TestWaiting_AnUnratedBuildNeedsAMediumPlannerFirst(t *testing.T) {
 	w.gh.AddIssue(5, fakes.Issue{Title: "New thing", Labels: []string{config.LabelBuild}})
 	waitingSeed(w.ctx, "seed", func(s *pyjson.Object) { waitingClaudeRefused(s, w.ctx.Cfg.Pool) })
 	row := waitingRow(t, w.explain(), 5)
-	dashboardEq(t, []string{row.Step, row.Difficulty, row.Tier, row.TierWhy},
+	assertEqual(t, []string{row.Step, row.Difficulty, row.Tier, row.TierWhy},
 		[]string{"plan", "unrated", "medium", "rates and plans it first"})
 	if row.Starts == nil {
 		t.Fatalf("row.starts is None")
 	}
-	dashboardEq(t, row.Starts.Provider.ID, "muse") // Muse plans it in its own run
+	assertEqual(t, row.Starts.Provider.ID, "muse") // Muse plans it in its own run
 }
 
 func TestWaiting_ASubscriptionWithNoLaneWhereItRunsIsFullNotFree(t *testing.T) {
@@ -209,9 +209,9 @@ func TestWaiting_ASubscriptionWithNoLaneWhereItRunsIsFullNotFree(t *testing.T) {
 	})
 	s := ctx.Store.Load()
 	explained := waiting.Explain(ctx, s, pyjson.New("50", "muse"), w.gh.ListIssues("", "open", 300, ""), "")
-	dashboardEq(t, waitingNow(t, explained, "muse").Kind, "busy")
-	dashboardEq(t, waitingNow(t, explained, "agy").Kind, "full")
-	dashboardIn(t, "the night box is full", waitingNow(t, explained, "agy").Text)
+	assertEqual(t, waitingNow(t, explained, "muse").Kind, "busy")
+	assertEqual(t, waitingNow(t, explained, "agy").Kind, "full")
+	assertIn(t, "the night box is full", waitingNow(t, explained, "agy").Text)
 }
 
 func TestWaiting_HaltedNothingStarts(t *testing.T) {
@@ -219,18 +219,18 @@ func TestWaiting_HaltedNothingStarts(t *testing.T) {
 	w.gh.AddIssue(7, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}})
 	waitingSeed(w.ctx, "halt", func(s *pyjson.Object) { s.Set("halted", true) })
 	body := dashboard.Render(w.ctx, nil, "", nil, true)
-	dashboardIn(t, "> 🛑 **Halted**: halted by /harness halt.", body)
+	assertIn(t, "> 🛑 **Halted**: halted by /harness halt.", body)
 	explained := waiting.Explain(w.ctx, w.ctx.Store.Load(), pyjson.New(),
 		w.gh.ListIssues("", "open", 300, ""), "halted by /harness halt")
 	row := waitingRow(t, explained, 7)
-	dashboardTrue(t, row.Starts == nil, "row.starts is not None")
-	dashboardEq(t, row.Waiting, "halted by /harness halt")
+	assertTrue(t, row.Starts == nil, "row.starts is not None")
+	assertEqual(t, row.Waiting, "halted by /harness halt")
 }
 
 func TestWaiting_TheDifficultyLegendNamesEachTiersModels(t *testing.T) {
 	w := newWaitingQueue()
 	legend := dashboard.DifficultyLegend(w.ctx.Cfg.Pool)
-	dashboardIn(t, "🔴 **hard**: a strong model only (Opus)", legend)
-	dashboardIn(t, "a medium or strong model (muse, agy, gpt, Sonnet, then Opus)", legend)
-	dashboardIn(t, "any model, the weak ones first (lite)", legend)
+	assertIn(t, "🔴 **hard**: a strong model only (Opus)", legend)
+	assertIn(t, "a medium or strong model (muse, agy, gpt, Sonnet, then Opus)", legend)
+	assertIn(t, "any model, the weak ones first (lite)", legend)
 }

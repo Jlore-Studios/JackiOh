@@ -298,22 +298,22 @@ func TestRating_AMediumPlannerRatesAnUnratedItemEasyAndItIsCleared(t *testing.T)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	fake := ratingPlanner(ratingRatedPlan("easy", nil, ""))
 	planned, result := h.night(fake)
-	eventsEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, planned, "provider"), eventsDig(t, result, "status")},
+	assertEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, planned, "provider"), eventsDig(t, result, "status")},
 		[]any{"plan", "muse", "planned"})
-	eventsEqual(t, eventsDig(t, planned, "rating"), pyjson.New("difficulty", "medium", "source", "", "by", ""))
-	eventsIn(t, "Rate how hard it is", ratingPrompt(t, fake, 0))
-	eventsIn(t, "At most 10 files changed", ratingPrompt(t, fake, 0))
-	eventsIn(t, ratingEasy, h.gh.LabelNames(12))
+	assertEqual(t, eventsDig(t, planned, "rating"), pyjson.New("difficulty", "medium", "source", "", "by", ""))
+	assertIn(t, "Rate how hard it is", ratingPrompt(t, fake, 0))
+	assertIn(t, "At most 10 files changed", ratingPrompt(t, fake, 0))
+	assertIn(t, ratingEasy, h.gh.LabelNames(12))
 	record := eventsDig(t, h.ctx.Store.Load(), "items", "12")
-	eventsEqual(t, []any{eventsDig(t, record, "difficulty_by", "difficulty"), eventsDig(t, record, "difficulty_by", "tier")},
+	assertEqual(t, []any{eventsDig(t, record, "difficulty_by", "difficulty"), eventsDig(t, record, "difficulty_by", "tier")},
 		[]any{"easy", "medium"})
 	said := eventsLast(t, h.gh.BotComments(12))
-	eventsIn(t, "Rated `difficulty:easy` by `muse`", said)
-	eventsIn(t, "Cleared and queued to build", said)
-	eventsNotIn(t, "<!-- bot:", issueplan.PlanOf(pyjson.Str(eventsDig(t, h.gh.Threads.Item(12), "body"))))
+	assertIn(t, "Rated `difficulty:easy` by `muse`", said)
+	assertIn(t, "Cleared and queued to build", said)
+	assertNotIn(t, "<!-- bot:", issueplan.PlanOf(pyjson.Str(eventsDig(t, h.gh.Threads.Item(12), "body"))))
 	// The weak one builds it from Muse's plan, which meets an easy item's floor.
 	planned = plan.Make(h.ctx, false, nil, "auto", nil)
-	eventsEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, planned, "provider")}, []any{"build", "lite"})
+	assertEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, planned, "provider")}, []any{"build", "lite"})
 }
 
 // A planner that leaves out its `<!-- bot: ... -->` line must not leave the item unlabelled
@@ -323,10 +323,10 @@ func TestRating_APlanWithNoRatingLineStillLabelsTheItemMedium(t *testing.T) {
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	_, rest, _ := strings.Cut(ratingRatedPlan("easy", nil, ""), "\n")
 	h.night(ratingPlanner(rest))
-	eventsEqual(t, ratingDifficulties(h.gh.LabelNames(12)), eventsSet(ratingMedium))
+	assertEqual(t, ratingDifficulties(h.gh.LabelNames(12)), eventsSet(ratingMedium))
 	record := eventsDig(t, h.ctx.Store.Load(), "items", "12")
-	eventsEqual(t, eventsDig(t, record, "difficulty_by", "difficulty"), "medium")
-	eventsIn(t, "gave no rating, so it is `difficulty:medium`", eventsLast(t, h.gh.BotComments(12)))
+	assertEqual(t, eventsDig(t, record, "difficulty_by", "difficulty"), "medium")
+	assertIn(t, "gave no rating, so it is `difficulty:medium`", eventsLast(t, h.gh.BotComments(12)))
 }
 
 // A medium plan meets a medium item's floor (#695): no strong plan comes next, it is cleared to
@@ -335,9 +335,9 @@ func TestRating_AMediumRatingByAMediumPlannerStands(t *testing.T) {
 	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	h.night(ratingPlanner(ratingRatedPlan("medium", nil, "a new ruling")))
-	eventsIn(t, ratingMedium, h.gh.LabelNames(12))
-	eventsNotIn(t, config.LabelNeedsPlan, h.gh.LabelNames(12))
-	eventsIn(t, "Cleared and queued to build", eventsLast(t, h.gh.BotComments(12)))
+	assertIn(t, ratingMedium, h.gh.LabelNames(12))
+	assertNotIn(t, config.LabelNeedsPlan, h.gh.LabelNames(12))
+	assertIn(t, "Cleared and queued to build", eventsLast(t, h.gh.BotComments(12)))
 }
 
 func TestRating_ARatingIsNeverLoweredAndAPersonsLabelNeverReplaced(t *testing.T) {
@@ -350,29 +350,29 @@ func TestRating_ARatingIsNeverLoweredAndAPersonsLabelNeverReplaced(t *testing.T)
 		"planned_at", "2026-09-29T00:00:00Z", "planned_tier", "medium")
 	fake := ratingPlanner(ratingRatedPlan("easy", nil, ""))
 	planned, _ := h.night(fake)
-	eventsEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, planned, "provider")}, []any{"plan", "claude-1"})
-	eventsIn(t, "you may rate it higher, never lower", ratingPrompt(t, fake, 0))
-	eventsIn(t, ratingHard, h.gh.LabelNames(12))
-	eventsIn(t, "a rating is never lowered", eventsLast(t, h.gh.BotComments(12)))
-	eventsIn(t, "Cleared and queued", eventsLast(t, h.gh.BotComments(12)))
+	assertEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, planned, "provider")}, []any{"plan", "claude-1"})
+	assertIn(t, "you may rate it higher, never lower", ratingPrompt(t, fake, 0))
+	assertIn(t, ratingHard, h.gh.LabelNames(12))
+	assertIn(t, "a rating is never lowered", eventsLast(t, h.gh.BotComments(12)))
+	assertIn(t, "Cleared and queued", eventsLast(t, h.gh.BotComments(12)))
 	// A person's label: the planner is told not to rate, and a rating it gives anyway is
 	// ignored.
 	h = ratingDayHarness(t, "muse")
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, ratingEasy}, Body: "Make the rules v2."})
 	fake = ratingPlanner(ratingRatedPlan("hard", nil, ""))
 	planned, _ = h.night(fake)
-	eventsEqual(t, eventsDig(t, planned, "rating", "source"), "person")
-	eventsIn(t, "A person set this item's difficulty", ratingPrompt(t, fake, 0))
-	eventsEqual(t, ratingDifficulties(h.gh.LabelNames(12)), eventsSet(ratingEasy))
+	assertEqual(t, eventsDig(t, planned, "rating", "source"), "person")
+	assertIn(t, "A person set this item's difficulty", ratingPrompt(t, fake, 0))
+	assertEqual(t, ratingDifficulties(h.gh.LabelNames(12)), eventsSet(ratingEasy))
 }
 
 func TestRating_AnEasyPlanThatBreaksTheRuleIsMedium(t *testing.T) {
 	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	h.night(ratingPlanner(ratingRatedPlan("easy", []string{"src/game.txt", "SPEC.md"}, "")))
-	eventsIn(t, ratingMedium, h.gh.LabelNames(12))
+	assertIn(t, ratingMedium, h.gh.LabelNames(12))
 	said := eventsLast(t, h.gh.BotComments(12))
-	eventsIn(t, "The easy rule does not hold (lines 3–5: the plan touches `SPEC.md`)", said)
+	assertIn(t, "The easy rule does not hold (lines 3–5: the plan touches `SPEC.md`)", said)
 	h = ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	files := []string{}
@@ -380,7 +380,7 @@ func TestRating_AnEasyPlanThatBreaksTheRuleIsMedium(t *testing.T) {
 		files = append(files, fmt.Sprintf("src/f%d.txt", n))
 	}
 	h.night(ratingPlanner(ratingRatedPlan("easy", files, "")))
-	eventsIn(t, "line 1: the plan touches 11 files, over 10", eventsLast(t, h.gh.BotComments(12)))
+	assertIn(t, "line 1: the plan touches 11 files, over 10", eventsLast(t, h.gh.BotComments(12)))
 }
 
 // With the planning lane off, Muse plans the unrated item in its own build run; it rates it hard,
@@ -394,11 +394,11 @@ func TestRating_ABuildRunThatRatesItsItemOutOfReachStopsAfterPlanning(t *testing
 			return runner.NewRunResult(true, ratingRatedPlan("hard", nil, "the resolution loop"))
 		},
 		"build": ratingBuilder(map[string]string{})}))
-	eventsEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, result, "status")}, []any{"build", "planned"})
-	eventsIn(t, "rated difficulty:hard", eventsDig(t, result, "reason"))
-	eventsIn(t, ratingHard, h.gh.LabelNames(12))
-	eventsIn(t, config.LabelBuild, h.gh.LabelNames(12))
-	eventsNone(t, h.originSHA("bot/issue-12"))
+	assertEqual(t, []any{eventsDig(t, planned, "action"), eventsDig(t, result, "status")}, []any{"build", "planned"})
+	assertIn(t, "rated difficulty:hard", eventsDig(t, result, "reason"))
+	assertIn(t, ratingHard, h.gh.LabelNames(12))
+	assertIn(t, config.LabelBuild, h.gh.LabelNames(12))
+	assertIsNone(t, h.originSHA("bot/issue-12"))
 }
 
 func TestRating_AWeakBuildersChangeThatBreaksTheRuleIsNotPushed(t *testing.T) {
@@ -412,16 +412,16 @@ func TestRating_AWeakBuildersChangeThatBreaksTheRuleIsNotPushed(t *testing.T) {
 	}
 	planned, result := h.night(ratingRunner(map[string]runner.Handler{"build": ratingBuilder(many),
 		"self_check": ratingReviewer(ratingApprove)}))
-	eventsEqual(t, []any{eventsDig(t, planned, "provider"), eventsDig(t, result, "status")}, []any{"lite", "built"})
-	eventsEqual(t, h.gh.ListPulls("open", "", 200), []*pyjson.Object{})
-	eventsIn(t, "breaks the easy rule (line 1: it changes 11 files, over 10)",
+	assertEqual(t, []any{eventsDig(t, planned, "provider"), eventsDig(t, result, "status")}, []any{"lite", "built"})
+	assertEqual(t, h.gh.ListPulls("open", "", 200), []*pyjson.Object{})
+	assertIn(t, "breaks the easy rule (line 1: it changes 11 files, over 10)",
 		eventsLast(t, h.gh.BotComments(12)))
 	// A person labelled it easy, so the label stays, under a medium floor.
-	eventsIn(t, ratingEasy, h.gh.LabelNames(12))
-	eventsIn(t, config.LabelBuild, h.gh.LabelNames(12))
-	eventsEqual(t, eventsDig(t, h.ctx.Store.Load(), "items", "12", "difficulty_floor"), "medium")
-	eventsNotNone(t, h.originSHA("bot/issue-12"))                                             // the work is kept on its branch
-	eventsEqual(t, eventsDig(t, plan.Make(h.ctx, false, nil, "auto", nil), "action"), "none") // The weak one may not take it now
+	assertIn(t, ratingEasy, h.gh.LabelNames(12))
+	assertIn(t, config.LabelBuild, h.gh.LabelNames(12))
+	assertEqual(t, eventsDig(t, h.ctx.Store.Load(), "items", "12", "difficulty_floor"), "medium")
+	assertIsNotNone(t, h.originSHA("bot/issue-12"))                                           // the work is kept on its branch
+	assertEqual(t, eventsDig(t, plan.Make(h.ctx, false, nil, "auto", nil), "action"), "none") // The weak one may not take it now
 }
 
 // ---------------------------------------------------------------------------- StepUpTests
@@ -436,18 +436,18 @@ func TestRating_ThreeStrikesRaiseABotRatedItemAStep(t *testing.T) {
 	gh, ctx := ratingCtx()
 	gh.AddIssue(12, fakes.Issue{Labels: []string{ratingEasy}})
 	eventsUpdateItem(ctx, 12, "difficulty_by", pyjson.New("difficulty", "easy", "provider", "muse"))
-	eventsFalse(t, stepup.Strike(ctx, 12, "the run failed: a", ""))
-	eventsFalse(t, stepup.Strike(ctx, 12, "its reviewer did not approve it: b", ""))
-	eventsTrue(t, stepup.Strike(ctx, 12, "the run failed: c", ""))
-	eventsIn(t, ratingMedium, gh.LabelNames(12))
-	eventsNotIn(t, ratingEasy, gh.LabelNames(12))
-	eventsIn(t, config.LabelBuild, gh.LabelNames(12))
+	assertFalse(t, stepup.Strike(ctx, 12, "the run failed: a", ""))
+	assertFalse(t, stepup.Strike(ctx, 12, "its reviewer did not approve it: b", ""))
+	assertTrue(t, stepup.Strike(ctx, 12, "the run failed: c", ""))
+	assertIn(t, ratingMedium, gh.LabelNames(12))
+	assertNotIn(t, ratingEasy, gh.LabelNames(12))
+	assertIn(t, config.LabelBuild, gh.LabelNames(12))
 	said := eventsLast(t, gh.BotComments(12))
-	eventsIn(t, "This failed 3 times at `difficulty:easy`", said)
-	eventsIn(t, "the run failed: a; its reviewer did not approve it: b; the run failed: c",
+	assertIn(t, "This failed 3 times at `difficulty:easy`", said)
+	assertIn(t, "the run failed: a; its reviewer did not approve it: b; the run failed: c",
 		said)
 	record := eventsDig(t, ctx.Store.Load(), "items", "12")
-	eventsEqual(t, []any{eventsDig(t, record, "strikes"), eventsDig(t, record, "difficulty_by", "difficulty")}, []any{0, "medium"})
+	assertEqual(t, []any{eventsDig(t, record, "strikes"), eventsDig(t, record, "difficulty_by", "difficulty")}, []any{0, "medium"})
 }
 
 func TestRating_APersonsLabelOrHardAsksAPerson(t *testing.T) {
@@ -456,16 +456,16 @@ func TestRating_APersonsLabelOrHardAsksAPerson(t *testing.T) {
 	for n := range 3 {
 		stepup.Strike(ctx, 12, fmt.Sprintf("failure %d", n), "")
 	}
-	eventsEqual(t, gh.LabelNames(12), eventsSet(ratingEasy, config.LabelBlocked))
-	eventsIn(t, "A person set `difficulty:easy`, so I do not change it: should it be "+
+	assertEqual(t, gh.LabelNames(12), eventsSet(ratingEasy, config.LabelBlocked))
+	assertIn(t, "A person set `difficulty:easy`, so I do not change it: should it be "+
 		"`difficulty:medium`?", eventsLast(t, gh.BotComments(12)))
 	gh.AddIssue(13, fakes.Issue{Labels: []string{ratingHard}})
 	eventsUpdateItem(ctx, 13, "difficulty_by", pyjson.New("difficulty", "hard"))
 	for n := range 3 {
 		stepup.Strike(ctx, 13, fmt.Sprintf("failure %d", n), "")
 	}
-	eventsIn(t, config.LabelBlocked, gh.LabelNames(13))
-	eventsIn(t, "no stronger model", eventsLast(t, gh.BotComments(13)))
+	assertIn(t, config.LabelBlocked, gh.LabelNames(13))
+	assertIn(t, "no stronger model", eventsLast(t, gh.BotComments(13)))
 }
 
 func TestRating_StrikesOnAPullRequestCountOnItsIssueAndRebuildIt(t *testing.T) {
@@ -477,22 +477,22 @@ func TestRating_StrikesOnAPullRequestCountOnItsIssueAndRebuildIt(t *testing.T) {
 	for n := range 3 {
 		stepup.Strike(ctx, 40, fmt.Sprintf("rejected %d", n), "")
 	}
-	eventsEqual(t, eventsDig(t, gh.Threads.Item(40), "state"), "closed")
-	eventsIn(t, ratingHard, gh.LabelNames(12)) // unrated, so medium, and one step up is hard
+	assertEqual(t, eventsDig(t, gh.Threads.Item(40), "state"), "closed")
+	assertIn(t, ratingHard, gh.LabelNames(12)) // unrated, so medium, and one step up is hard
 	both := map[string]bool{}
 	for n := range gh.LabelNames(12) {
 		if n == config.LabelBuild || n == config.LabelPROpen {
 			both[n] = true
 		}
 	}
-	eventsEqual(t, both, eventsSet(config.LabelBuild))
-	eventsIn(t, [2]string{"bot/old/issue-12-20260930-0300", "h1"}, gh.CreatedBranches)
-	eventsIn(t, "bot/issue-12", gh.DeletedBranches)
-	eventsIn(t, "bot/wip/40", gh.DeletedBranches)
+	assertEqual(t, both, eventsSet(config.LabelBuild))
+	assertIn(t, [2]string{"bot/old/issue-12-20260930-0300", "h1"}, gh.CreatedBranches)
+	assertIn(t, "bot/issue-12", gh.DeletedBranches)
+	assertIn(t, "bot/wip/40", gh.DeletedBranches)
 	record := eventsDig(t, ctx.Store.Load(), "items", "12")
-	eventsEqual(t, []any{eventsDig(t, record, "previous_pr"), eventsDig(t, record, "previous_branch")},
+	assertEqual(t, []any{eventsDig(t, record, "previous_pr"), eventsDig(t, record, "previous_branch")},
 		[]any{40, "bot/old/issue-12-20260930-0300"})
-	eventsTrue(t, eventsDig(t, ctx.Store.Load(), "items", "40", "rebuilt"))
+	assertTrue(t, eventsDig(t, ctx.Store.Load(), "items", "40", "rebuilt"))
 }
 
 // ---------------------------------------------------------------------------- CommandTests
@@ -509,42 +509,42 @@ func TestRating_RebuildClosesThePullRequestAndQueuesTheIssue(t *testing.T) {
 	gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelPROpen}})
 	gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: []string{config.LabelPR}, SHA: "h1"})
 	reply := ratingRunCommand(ctx, 40, "/harness rebuild")
-	eventsEqual(t, reply, "Closed #40 and queued #12 to build again from `main`.")
-	eventsEqual(t, eventsDig(t, gh.Threads.Item(40), "state"), "closed")
-	eventsIn(t, config.LabelBuild, gh.LabelNames(12))
-	eventsIn(t, "@jgoetzmann asked for it", eventsDig(t, ctx.Store.Load(), "items", "12", "previous_why"))
+	assertEqual(t, reply, "Closed #40 and queued #12 to build again from `main`.")
+	assertEqual(t, eventsDig(t, gh.Threads.Item(40), "state"), "closed")
+	assertIn(t, config.LabelBuild, gh.LabelNames(12))
+	assertIn(t, "@jgoetzmann asked for it", eventsDig(t, ctx.Store.Load(), "items", "12", "previous_why"))
 	// The same from the issue; and an issue with no pull request has nothing to rebuild.
 	gh.AddIssue(13)
-	eventsIn(t, "no open pull request of mine to rebuild",
+	assertIn(t, "no open pull request of mine to rebuild",
 		ratingRunCommand(ctx, 13, "@jgoetzmann-bot rebuild"))
 	// The new build is told about the old pull request.
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	eventsEqual(t, []any{eventsDig(t, planned, "number"), eventsDig(t, planned, "previous_pr")}, []any{12, 40})
+	assertEqual(t, []any{eventsDig(t, planned, "number"), eventsDig(t, planned, "previous_pr")}, []any{12, 40})
 }
 
 func TestRating_ReviewQueuesAReviewRunAtATierAndNoRevision(t *testing.T) {
 	gh, ctx := ratingCtx()
 	gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: []string{config.LabelPR}, SHA: "h1"})
 	reply := ratingRunCommand(ctx, 40, "/harness review strong check the replay")
-	eventsIn(t, "Queued a review run of #40, by a strong model or stronger", reply)
-	eventsEqual(t, gh.LabelNames(40), eventsSet(config.LabelPR, config.LabelCross))
+	assertIn(t, "Queued a review run of #40, by a strong model or stronger", reply)
+	assertEqual(t, gh.LabelNames(40), eventsSet(config.LabelPR, config.LabelCross))
 	record := eventsDig(t, ctx.Store.Load(), "items", "40")
-	eventsEqual(t, []any{eventsDig(t, record, "review_floor"), eventsDig(t, record, "review_notes")},
+	assertEqual(t, []any{eventsDig(t, record, "review_floor"), eventsDig(t, record, "review_notes")},
 		[]any{"strong", "check the replay"})
 	// By night a strong model is free: it takes the review, with the notes.
 	planned := plan.Make(ctx, false, nil, "auto", nil)
 	review := ratingSeats(t, planned)["review"]
-	eventsEqual(t, []any{eventsDig(t, planned, "action"), pyjson.List(review)[2]}, []any{"review", "strong"})
-	eventsEqual(t, eventsDig(t, planned, "review_notes"), "check the replay")
+	assertEqual(t, []any{eventsDig(t, planned, "action"), pyjson.List(review)[2]}, []any{"review", "strong"})
+	assertEqual(t, eventsDig(t, planned, "review_notes"), "check the replay")
 	// By day only medium models are free (in tests): a strong-floor review waits.
 	gh2 := fakes.NewFakeGitHub()
 	ctx2 := testsupport.MakeCtx(gh2, testsupport.Ctx{At: testsupport.Day, Cfg: testsupport.MakeConfig(testsupport.Config{Machine: []string{"muse"}})})
 	gh2.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: []string{config.LabelPR}, SHA: "h1"})
 	ratingRunCommand(ctx2, 40, "/harness review strong")
-	eventsEqual(t, eventsDig(t, plan.Make(ctx2, false, nil, "auto", nil), "action"), "none")
+	assertEqual(t, eventsDig(t, plan.Make(ctx2, false, nil, "auto", nil), "action"), "none")
 	ratingRunCommand(ctx2, 40, "/harness review medium")
-	eventsEqual(t, eventsDig(t, plan.Make(ctx2, false, nil, "auto", nil), "provider"), "muse")
+	assertEqual(t, eventsDig(t, plan.Make(ctx2, false, nil, "auto", nil), "provider"), "muse")
 	// On an issue it says where it works.
 	gh.AddIssue(13)
-	eventsIn(t, "one of my pull requests", ratingRunCommand(ctx, 13, "/harness review"))
+	assertIn(t, "one of my pull requests", ratingRunCommand(ctx, 13, "/harness review"))
 }

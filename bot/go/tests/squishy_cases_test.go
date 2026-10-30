@@ -145,14 +145,14 @@ func squishyCasesLast(t *testing.T, items []string) string {
 
 func TestSquishyCases_EverythingIsSquishys(t *testing.T) {
 	squishyCasesModule(t)
-	basicsEqual(t, []string{config.LabelBuild, config.Slash, config.StateBranch},
+	assertEqual(t, []string{config.LabelBuild, config.Slash, config.StateBranch},
 		[]string{"squishy:build", "/squishy", "squishy-state"})
-	basicsEqual(t, config.NightWorkflow, "squishy-run.yml")
-	basicsEqual(t, journal.Branch, "squishy-journal")
-	basicsEqual(t, queue.BranchForIssue(5), "squishy/issue-5")
-	basicsEqual(t, queue.WipBranch(5), "squishy/wip/5")
-	basicsEqual(t, config.CommitPrefix, "squishy")
-	basicsEqual(t, basicsSet(config.ModeLabels.Keys()...), basicsSet("squishy:oneshot", "squishy:split",
+	assertEqual(t, config.NightWorkflow, "squishy-run.yml")
+	assertEqual(t, journal.Branch, "squishy-journal")
+	assertEqual(t, queue.BranchForIssue(5), "squishy/issue-5")
+	assertEqual(t, queue.WipBranch(5), "squishy/wip/5")
+	assertEqual(t, config.CommitPrefix, "squishy")
+	assertEqual(t, basicsSet(config.ModeLabels.Keys()...), basicsSet("squishy:oneshot", "squishy:split",
 		"squishy:split-bot", "squishy:fullsend"))
 }
 
@@ -160,22 +160,22 @@ func TestSquishyCases_ItsLabelsAndNoSuggestions(t *testing.T) {
 	squishyCasesModule(t)
 	labels := config.Labels
 	description := func(name string) string { return pyjson.Str(pyjson.List(labels.Get(name))[1]) }
-	basicsNotIn(t, "squishy:suggestion", labels)
-	basicsNotIn(t, "squishy:approved", labels)
+	assertNotIn(t, "squishy:suggestion", labels)
+	assertNotIn(t, "squishy:approved", labels)
 	for _, name := range []string{"squishy:build", "squishy:oneshot", "squishy:split", "squishy:split-bot",
 		"squishy:fullsend", config.LabelTree, "human"} {
-		basicsIn(t, name, labels)
+		assertIn(t, name, labels)
 	}
-	basicsIn(t, "Squishy", description("squishy:working"))
-	basicsIn(t, "Queued for Squishy to split into parts", description("squishy:fullsend"))
-	basicsIn(t, "whose sub-issues Squishy made", description(config.LabelTree))
-	basicsIn(t, "that the night bot builds", description("squishy:split-bot"))
+	assertIn(t, "Squishy", description("squishy:working"))
+	assertIn(t, "Queued for Squishy to split into parts", description("squishy:fullsend"))
+	assertIn(t, "whose sub-issues Squishy made", description(config.LabelTree))
+	assertIn(t, "that the night bot builds", description("squishy:split-bot"))
 	all := true
 	for _, name := range labels.Keys() {
 		all = all && len([]rune(description(name))) <= config.LabelDescriptionMax
 	}
-	basicsTrue(t, all)
-	basicsFalse(t, testsupport.MakeConfig(testsupport.Config{Env: squishyCasesEnv}).SuggestionsEnabled)
+	assertTrue(t, all)
+	assertFalse(t, testsupport.MakeConfig(testsupport.Config{Env: squishyCasesEnv}).SuggestionsEnabled)
 }
 
 func TestSquishyCases_ItsCommands(t *testing.T) {
@@ -185,18 +185,18 @@ func TestSquishyCases_ItsCommands(t *testing.T) {
 	for _, c := range commands.Parse("/squishy oneshot\n/squishy split bot\n@squishy-squooby split", bot) {
 		read = append(read, [2]string{c.Verb, c.Args})
 	}
-	basicsEqual(t, read, [][2]string{{"oneshot", ""}, {"split", "bot"}, {"split", ""}})
-	basicsEqual(t, commands.Parse("/harness build", bot), []*commands.Command{})
+	assertEqual(t, read, [][2]string{{"oneshot", ""}, {"split", "bot"}, {"split", ""}})
+	assertEqual(t, commands.Parse("/harness build", bot), []*commands.Command{})
 	text := commands.HelpText(bot, "")
-	basicsIn(t, "`oneshot [notes]`", text)
-	basicsIn(t, "`split [bot] [notes]`", text)
-	basicsIn(t, "`fullsend [notes]`", text)
-	basicsIn(t, "hand it back, then `/squishy build`", text) // #802: its own slash
-	basicsIn(t, "`build`, `oneshot`, `split`, `fullsend` or `revise`", text)
-	basicsNotIn(t, "`suggest`", text)
-	basicsNotIn(t, "`approve`", text) // it makes no suggestions to vote on (#796)
-	basicsIn(t, "I do not know `approve`", commands.HelpText(bot, "approve"))
-	basicsIn(t, "`/squishy help`", commands.Pointer_(bot))
+	assertIn(t, "`oneshot [notes]`", text)
+	assertIn(t, "`split [bot] [notes]`", text)
+	assertIn(t, "`fullsend [notes]`", text)
+	assertIn(t, "hand it back, then `/squishy build`", text) // #802: its own slash
+	assertIn(t, "`build`, `oneshot`, `split`, `fullsend` or `revise`", text)
+	assertNotIn(t, "`suggest`", text)
+	assertNotIn(t, "`approve`", text) // it makes no suggestions to vote on (#796)
+	assertIn(t, "I do not know `approve`", commands.HelpText(bot, "approve"))
+	assertIn(t, "`/squishy help`", commands.Pointer_(bot))
 }
 
 // ------------------------------------------------------------------ QueueCases
@@ -207,12 +207,12 @@ func TestSquishyCases_OneshotAndSplitQueueInTheirMode(t *testing.T) {
 	gh := world.gh
 	gh.AddIssue(3)
 	reply := world.ask(3, "/squishy oneshot")[0]
-	basicsIn(t, "build it in one run with fullsend", reply)
-	basicsEqual(t, gh.LabelNames(3), basicsSet("squishy:build", "squishy:oneshot"))
+	assertIn(t, "build it in one run with fullsend", reply)
+	assertEqual(t, gh.LabelNames(3), basicsSet("squishy:build", "squishy:oneshot"))
 	world.ask(3, "/squishy split bot")
-	basicsEqual(t, gh.LabelNames(3), basicsSet("squishy:build", "squishy:split-bot"))
+	assertEqual(t, gh.LabelNames(3), basicsSet("squishy:build", "squishy:split-bot"))
 	world.ask(3, "/squishy build")
-	basicsEqual(t, gh.LabelNames(3), basicsSet("squishy:build"))
+	assertEqual(t, gh.LabelNames(3), basicsSet("squishy:build"))
 }
 
 func TestSquishyCases_AModeLabelQueuesItInThatMode(t *testing.T) {
@@ -222,7 +222,7 @@ func TestSquishyCases_AModeLabelQueuesItInThatMode(t *testing.T) {
 	gh.AddIssue(4, fakes.Issue{Labels: []string{"squishy:split"}})
 	events.OnIssueChange(world.ctx, pyjson.New("action", "labeled", "issue", gh.GetIssue(4),
 		"label", pyjson.New("name", "squishy:split"), "sender", fakes.Operator), false)
-	basicsEqual(t, gh.LabelNames(4), basicsSet("squishy:build", "squishy:split"))
+	assertEqual(t, gh.LabelNames(4), basicsSet("squishy:build", "squishy:split"))
 	found := queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil)
 	type row struct {
 		Number  int
@@ -233,7 +233,7 @@ func TestSquishyCases_AModeLabelQueuesItInThatMode(t *testing.T) {
 	for _, c := range found {
 		got = append(got, row{c.Number, c.Mode, c.Planned})
 	}
-	basicsEqual(t, got, []row{{4, "split", true}})
+	assertEqual(t, got, []row{{4, "split", true}})
 }
 
 func TestSquishyCases_TheNightBotsIssuesAreLeftAlone(t *testing.T) {
@@ -242,18 +242,18 @@ func TestSquishyCases_TheNightBotsIssuesAreLeftAlone(t *testing.T) {
 	gh := world.gh
 	gh.AddIssue(5, fakes.Issue{Labels: []string{"bot:build"}})
 	reply := world.ask(5, "/squishy oneshot")[0]
-	basicsIn(t, "is the night bot's (@jgoetzmann-bot)", reply)
-	basicsEqual(t, gh.LabelNames(5), basicsSet("bot:build"))
+	assertIn(t, "is the night bot's (@jgoetzmann-bot)", reply)
+	assertEqual(t, gh.LabelNames(5), basicsSet("bot:build"))
 	gh.AddIssue(6)
 	gh.AddAssignees(6, []string{"jgoetzmann-bot"})
-	basicsIn(t, "the night bot's", world.ask(6, "/squishy build")[0])
+	assertIn(t, "the night bot's", world.ask(6, "/squishy build")[0])
 }
 
 func TestSquishyCases_NoSuggestions(t *testing.T) {
 	squishyCasesModule(t)
 	world := newSquishyCasesWorld(t)
 	world.gh.AddIssue(7)
-	basicsEqual(t, world.ask(7, "/squishy suggest"), []string{"Squishy makes no suggestions."})
+	assertEqual(t, world.ask(7, "/squishy suggest"), []string{"Squishy makes no suggestions."})
 }
 
 func TestSquishyCases_AModeNeverRunsOverAnOpenPullRequest(t *testing.T) {
@@ -261,7 +261,7 @@ func TestSquishyCases_AModeNeverRunsOverAnOpenPullRequest(t *testing.T) {
 	world := newSquishyCasesWorld(t)
 	world.gh.AddIssue(8, fakes.Issue{Labels: []string{config.LabelPROpen}})
 	world.gh.AddPull(9, "squishy/issue-8")
-	basicsIn(t, "`/squishy rebuild`", world.ask(8, "/squishy oneshot")[0])
+	assertIn(t, "`/squishy rebuild`", world.ask(8, "/squishy oneshot")[0])
 }
 
 // ------------------------------------------------------------------ OneShotCases
@@ -279,28 +279,28 @@ func TestSquishyCases_TheBuilderIsToldToRunFullsendAndItsChangeShipsLikeAnyBuild
 	}
 	planned, result := world.run(journalRunner(map[string]runner.Handler{"build": build,
 		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
-	basicsEqual(t, []any{planned.Get("action"), planned.Get("mode")}, []any{"build", "oneshot"})
-	basicsEqual(t, planned.Get("branch"), "squishy/issue-12")
+	assertEqual(t, []any{planned.Get("action"), planned.Get("mode")}, []any{"build", "oneshot"})
+	assertEqual(t, planned.Get("branch"), "squishy/issue-12")
 	planSeat, ok := planned.Obj("seats").Lookup("plan") // planned["seats"]["plan"]: a KeyError when absent
-	basicsTrue(t, ok, "KeyError: 'plan'")
-	basicsEqual(t, planSeat, nil) // it writes its own spec: no planner first
-	basicsEqual(t, planned.Get("provider"), "claude-squishy")
-	basicsIn(t, "one-shot build", world.gh.BotComments(12)[0])
+	assertTrue(t, ok, "KeyError: 'plan'")
+	assertEqual(t, planSeat, nil) // it writes its own spec: no planner first
+	assertEqual(t, planned.Get("provider"), "claude-squishy")
+	assertIn(t, "one-shot build", world.gh.BotComments(12)[0])
 	if len(prompts) == 0 {
 		t.Fatal("IndexError: the builder was never called")
 	}
 	prompt := prompts[0]
-	basicsIn(t, ".claude/skills/fullsend/SKILL.md", prompt)
-	basicsIn(t, "git worktree add -b squishy/oneshot-12/<slice> .fullsend/worktrees/<slice>", prompt)
-	basicsIn(t, "git commit -m\n   \"fullsend: phase N for #12\"", prompt)
-	basicsEqual(t, result.Get("status"), "approved")
+	assertIn(t, ".claude/skills/fullsend/SKILL.md", prompt)
+	assertIn(t, "git worktree add -b squishy/oneshot-12/<slice> .fullsend/worktrees/<slice>", prompt)
+	assertIn(t, "git commit -m\n   \"fullsend: phase N for #12\"", prompt)
+	assertEqual(t, result.Get("status"), "approved")
 	exclude := filepath.Join(fakes.Git(world.clone, "rev-parse", "--path-format=absolute", "--git-common-dir"),
 		"info", "exclude")
-	basicsIn(t, "/.fullsend/", basicsReadFile(t, exclude))
+	assertIn(t, "/.fullsend/", basicsReadFile(t, exclude))
 	pulls := world.gh.ListPulls("open", "squishy/issue-12", 200)
-	basicsEqual(t, len(pulls), 1)
+	assertEqual(t, len(pulls), 1)
 	if len(pulls) > 0 {
-		basicsIn(t, "squishy:pr", world.gh.LabelNames(pulls[0].Int("number")))
+		assertIn(t, "squishy:pr", world.gh.LabelNames(pulls[0].Int("number")))
 	}
 }
 
@@ -327,52 +327,52 @@ func TestSquishyCases_SplitOpensLinkedSubIssuesSquishyBuilds(t *testing.T) {
 	squishyCasesModule(t)
 	world, result := squishyCasesSplit(t, "split")
 	gh := world.gh
-	basicsEqual(t, result.Get("status"), "split")
+	assertEqual(t, result.Get("status"), "split")
 	engine, client := 41, 42 // opened in build order
-	basicsEqual(t, gh.GetIssue(engine).Get("title"), "Part 1: the engine")
+	assertEqual(t, gh.GetIssue(engine).Get("title"), "Part 1: the engine")
 	// Its type labels as far as the repository has them, never a reserved one, then the parent's
 	// priority, its difficulty and Squishy's queue label.
-	basicsEqual(t, gh.LabelNames(engine), basicsSet("patch", "difficulty:hard", "priority:high", "squishy:build"))
-	basicsEqual(t, gh.LabelNames(client), basicsSet("patch", "difficulty:easy", "priority:high", "squishy:build"))
+	assertEqual(t, gh.LabelNames(engine), basicsSet("patch", "difficulty:hard", "priority:high", "squishy:build"))
+	assertEqual(t, gh.LabelNames(client), basicsSet("patch", "difficulty:easy", "priority:high", "squishy:build"))
 	body := gh.GetIssue(client).Str("body")
-	basicsIn(t, fmt.Sprintf("Blocked by #%d.", engine), body)
-	basicsIn(t, "Part of #40, split by Squishy", body)
-	basicsIn(t, issueplan.Start, body)
-	basicsEqual(t, gh.BlockedBy(client)[0].Get("number"), engine)
+	assertIn(t, fmt.Sprintf("Blocked by #%d.", engine), body)
+	assertIn(t, "Part of #40, split by Squishy", body)
+	assertIn(t, issueplan.Start, body)
+	assertEqual(t, gh.BlockedBy(client)[0].Get("number"), engine)
 	children := []any{}
 	for _, c := range gh.ListSubIssues(40) {
 		children = append(children, c.Get("number"))
 	}
-	basicsEqual(t, children, []any{engine, client})
-	basicsEqual(t, gh.LabelNames(40), basicsSet("priority:high", config.LabelTree))
-	basicsIn(t, fmt.Sprintf("- [ ] #%d (after #%d)", client, engine), squishyCasesLast(t, gh.BotComments(40)))
+	assertEqual(t, children, []any{engine, client})
+	assertEqual(t, gh.LabelNames(40), basicsSet("priority:high", config.LabelTree))
+	assertIn(t, fmt.Sprintf("- [ ] #%d (after #%d)", client, engine), squishyCasesLast(t, gh.BotComments(40)))
 	record := world.ctx.Store.Load().Obj("items").Obj("40")
-	basicsEqual(t, record.Obj("tree").Get("children"), []any{engine, client})
+	assertEqual(t, record.Obj("tree").Get("children"), []any{engine, client})
 	// Both are queued for Squishy, the engine first; each counts as planned.
 	found := queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil)
 	got := [][2]any{}
 	for _, c := range found {
 		got = append(got, [2]any{c.Number, c.Planned})
 	}
-	basicsEqual(t, got, [][2]any{{engine, true}})
+	assertEqual(t, got, [][2]any{{engine, true}})
 }
 
 func TestSquishyCases_SplitBotQueuesThemForTheNightBot(t *testing.T) {
 	squishyCasesModule(t)
 	world, _ := squishyCasesSplit(t, "split-bot")
-	basicsEqual(t, world.gh.LabelNames(41), basicsSet("patch", "difficulty:hard", "priority:high", "bot:build"))
-	basicsIn(t, "queued for the night bot (@jgoetzmann-bot)", squishyCasesLast(t, world.gh.BotComments(40)))
-	basicsEqual(t, queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil), []*queue.Candidate{})
+	assertEqual(t, world.gh.LabelNames(41), basicsSet("patch", "difficulty:hard", "priority:high", "bot:build"))
+	assertIn(t, "queued for the night bot (@jgoetzmann-bot)", squishyCasesLast(t, world.gh.BotComments(40)))
+	assertEqual(t, queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil), []*queue.Candidate{})
 }
 
 func TestSquishyCases_AnAnswerItCannotUseOpensNothing(t *testing.T) {
 	squishyCasesModule(t)
 	world, result := squishyCasesSplit(t, "split", pyjson.New("done", false, "issues", []any{pyjson.New("key", "a")}))
-	basicsEqual(t, result.Get("status"), "failed")
+	assertEqual(t, result.Get("status"), "failed")
 	numbers := world.gh.Threads.Keys()
 	sort.Ints(numbers)
-	basicsEqual(t, numbers, []int{40})
-	basicsIn(t, "could not be used", squishyCasesLast(t, world.gh.BotComments(40)))
+	assertEqual(t, numbers, []int{40})
+	assertIn(t, "could not be used", squishyCasesLast(t, world.gh.BotComments(40)))
 }
 
 func TestSquishyCases_TheCloseOutClosesATreeThatIsDone(t *testing.T) {
@@ -386,8 +386,8 @@ func TestSquishyCases_TheCloseOutClosesATreeThatIsDone(t *testing.T) {
 		return nil
 	}, "state")
 	notes := sweep.Trees(world.ctx, testsupport.Night)
-	basicsEqual(t, notes, []string{"#40: its sub-issues have all closed; queued its close-out"})
-	basicsEqual(t, world.gh.LabelNames(40), basicsSet("priority:high", config.LabelTree, "squishy:build",
+	assertEqual(t, notes, []string{"#40: its sub-issues have all closed; queued its close-out"})
+	assertEqual(t, world.gh.LabelNames(40), basicsSet("priority:high", config.LabelTree, "squishy:build",
 		"squishy:split"))
 	prompts := []string{}
 	closeOut := func(request *runner.RunRequest) *runner.RunResult {
@@ -395,29 +395,29 @@ func TestSquishyCases_TheCloseOutClosesATreeThatIsDone(t *testing.T) {
 		return runner.NewRunResult(true, `<!-- split: {"done": true, "summary": "It works on main."} -->`)
 	}
 	_, result := world.run(journalRunner(map[string]runner.Handler{"plan": closeOut}))
-	basicsEqual(t, result.Get("status"), "split")
+	assertEqual(t, result.Get("status"), "split")
 	if len(prompts) == 0 {
 		t.Fatal("IndexError: the planner was never called")
 	}
-	basicsIn(t, "#41 [closed] Part 1: the engine", prompts[0])
-	basicsEqual(t, world.gh.GetIssue(40).Get("state"), "closed")
-	basicsNotIn(t, config.LabelTree, world.gh.LabelNames(40))
+	assertIn(t, "#41 [closed] Part 1: the engine", prompts[0])
+	assertEqual(t, world.gh.GetIssue(40).Get("state"), "closed")
+	assertNotIn(t, config.LabelTree, world.gh.LabelNames(40))
 }
 
 func TestSquishyCases_FullsendLandsOnSquishysBranch(t *testing.T) {
 	squishyCasesModule(t)
 	world, result := squishyCasesSplit(t, "fullsend")
-	basicsEqual(t, result.Get("status"), "split")
+	assertEqual(t, result.Get("status"), "split")
 	onto := "squishy/issue-40"
-	basicsEqual(t, fakes.Git(world.origin, "rev-parse", "refs/heads/"+onto),
+	assertEqual(t, fakes.Git(world.origin, "rev-parse", "refs/heads/"+onto),
 		fakes.Git(world.origin, "rev-parse", "refs/heads/main"))
 	for _, child := range []int{41, 42} {
-		basicsIn(t, "squishy:build", world.gh.LabelNames(child))
+		assertIn(t, "squishy:build", world.gh.LabelNames(child))
 		record := world.ctx.Store.Load().Obj("items").Obj(fmt.Sprint(child))
-		basicsEqual(t, []any{record.Get("onto"), record.Get("part_of")}, []any{onto, 40})
+		assertEqual(t, []any{record.Get("onto"), record.Get("part_of")}, []any{onto, 40})
 	}
-	basicsEqual(t, world.gh.LabelNames(40), basicsSet("priority:high", config.LabelTree))
-	basicsIn(t, "This is a fullsend tree: each part lands on `"+onto+"`", squishyCasesLast(t, world.gh.BotComments(40)))
+	assertEqual(t, world.gh.LabelNames(40), basicsSet("priority:high", config.LabelTree))
+	assertIn(t, "This is a fullsend tree: each part lands on `"+onto+"`", squishyCasesLast(t, world.gh.BotComments(40)))
 
 	build := func(request *runner.RunRequest) *runner.RunResult {
 		journalWrite(t, filepath.Join(request.Cwd, "src", "engine.ts"), "rule\n")
@@ -425,23 +425,23 @@ func TestSquishyCases_FullsendLandsOnSquishysBranch(t *testing.T) {
 	}
 	r := journalRunner(map[string]runner.Handler{"build": build})
 	planned, result := world.run(r)
-	basicsEqual(t, []any{planned.Get("number"), planned.Get("onto"), result.Get("status")}, []any{41, onto, "part"})
+	assertEqual(t, []any{planned.Get("number"), planned.Get("onto"), result.Get("status")}, []any{41, onto, "part"})
 	roles := []string{}
 	for _, call := range r.Calls {
 		roles = append(roles, call.Role)
 	}
-	basicsEqual(t, roles, []string{"build"})
-	basicsEqual(t, fakes.Git(world.origin, "show", "refs/heads/"+onto+":src/engine.ts"), "rule")
-	basicsEqual(t, world.gh.GetIssue(41).Get("state"), "closed")
-	basicsEqual(t, world.gh.ListPulls("all", "", 200), []*pyjson.Object{})
+	assertEqual(t, roles, []string{"build"})
+	assertEqual(t, fakes.Git(world.origin, "show", "refs/heads/"+onto+":src/engine.ts"), "rule")
+	assertEqual(t, world.gh.GetIssue(41).Get("state"), "closed")
+	assertEqual(t, world.gh.ListPulls("all", "", 200), []*pyjson.Object{})
 }
 
 func TestSquishyCases_TheNightBotsFullsendIsLeftAlone(t *testing.T) {
 	squishyCasesModule(t)
 	world := newSquishyCasesWorld(t)
 	world.gh.AddIssue(44, fakes.Issue{Labels: []string{"bot:fullsend"}})
-	basicsIn(t, "is the night bot's (@jgoetzmann-bot)", world.ask(44, "/squishy fullsend")[0])
-	basicsEqual(t, world.gh.LabelNames(44), basicsSet("bot:fullsend"))
+	assertIn(t, "is the night bot's (@jgoetzmann-bot)", world.ask(44, "/squishy fullsend")[0])
+	assertEqual(t, world.gh.LabelNames(44), basicsSet("bot:fullsend"))
 }
 
 func TestSquishyCases_StopOnATreeStopsItsSubIssues(t *testing.T) {
@@ -450,9 +450,9 @@ func TestSquishyCases_StopOnATreeStopsItsSubIssues(t *testing.T) {
 	world.gh.AddIssue(43, fakes.Issue{Labels: []string{"bot:build"}})
 	world.gh.AddSubIssue(40, world.gh.GetIssue(43).Int("id"))
 	replies := world.ask(40, "/squishy stop")
-	basicsIn(t, "Its open sub-issues leave the queue too: #41, #42, #43.", replies[0])
-	basicsNotIn(t, "squishy:build", world.gh.LabelNames(41))
-	basicsIn(t, "@jgoetzmann-bot stop", squishyCasesLast(t, world.gh.BotComments(43)))
+	assertIn(t, "Its open sub-issues leave the queue too: #41, #42, #43.", replies[0])
+	assertNotIn(t, "squishy:build", world.gh.LabelNames(41))
+	assertIn(t, "@jgoetzmann-bot stop", squishyCasesLast(t, world.gh.BotComments(43)))
 }
 
 // ------------------------------------------------------------------ SectionCases
@@ -468,12 +468,12 @@ func TestSquishyCases_ItsSectionOfTheStatusIssue(t *testing.T) {
 		world.gh.AddSubIssue(51, world.gh.GetIssue(child).Int("id"))
 	}
 	text := dashboard.Section(world.ctx)
-	basicsTrue(t, strings.HasPrefix(text, dashboard.SectionStart))
-	basicsIn(t, "## 🫧 Squishy", text)
-	basicsIn(t, "| #50 | Huge | one-shot (fullsend) |", text)
-	basicsIn(t, "| #51 | Parent | 1 of 2 closed", text)
-	basicsIn(t, "`claude-squishy`", text)
-	basicsIn(t, "### Last Squishy runs", text)
+	assertTrue(t, strings.HasPrefix(text, dashboard.SectionStart))
+	assertIn(t, "## 🫧 Squishy", text)
+	assertIn(t, "| #50 | Huge | one-shot (fullsend) |", text)
+	assertIn(t, "| #51 | Parent | 1 of 2 closed", text)
+	assertIn(t, "`claude-squishy`", text)
+	assertIn(t, "### Last Squishy runs", text)
 }
 
 // The timeline of runs going now and the lanes as boxes, as the night bot's part of the issue has
@@ -490,23 +490,23 @@ func TestSquishyCases_ItsSectionDrawsTheNightBotsChartsForItsOwnLanes(t *testing
 	}, "state")
 	world.gh.Runs.Set("901", pyjson.New("id", 901, "status", "in_progress"))
 	text := dashboard.Section(world.ctx)
-	basicsEqual(t, strings.Count(text, "```mermaid"), 2)
-	basicsIn(t, "gantt", text)
-	basicsIn(t, "claude-squishy · building 60", text)
-	basicsIn(t, "Squishy's Claude account, on GitHub's runners: 1 of 1 working", text)
-	basicsIn(t, "🟢 building #60", text)
-	basicsNotIn(t, "subgraph machine", text)
-	basicsNotIn(t, "~~~", text)
+	assertEqual(t, strings.Count(text, "```mermaid"), 2)
+	assertIn(t, "gantt", text)
+	assertIn(t, "claude-squishy · building 60", text)
+	assertIn(t, "Squishy's Claude account, on GitHub's runners: 1 of 1 working", text)
+	assertIn(t, "🟢 building #60", text)
+	assertNotIn(t, "subgraph machine", text)
+	assertNotIn(t, "~~~", text)
 	idle := dashboard.Section(newSquishyCasesWorld(t).ctx)
-	basicsIn(t, "Nothing is running right now.", idle)
-	basicsEqual(t, strings.Count(idle, "Nothing is running right now."), 1)
+	assertIn(t, "Nothing is running right now.", idle)
+	assertEqual(t, strings.Count(idle, "Nothing is running right now."), 1)
 	// No full status in the shared issue: the line under its heading points to it.
-	basicsNotIn(t, "Squishy's full status", text)
-	basicsNotIn(t, "**Squishy status**", text)
-	basicsIn(t, "`/squishy status` gives the same facts on demand", text)
+	assertNotIn(t, "Squishy's full status", text)
+	assertNotIn(t, "**Squishy status**", text)
+	assertIn(t, "`/squishy status` gives the same facts on demand", text)
 	// Only the box styles its chart uses.
-	basicsIn(t, "classDef busy", text)
-	basicsNotIn(t, "classDef broken", text)
+	assertIn(t, "classDef busy", text)
+	assertNotIn(t, "classDef broken", text)
 }
 
 func TestSquishyCases_ItsSectionOfTheStatisticsIssue(t *testing.T) {
@@ -529,13 +529,13 @@ func TestSquishyCases_ItsSectionOfTheStatisticsIssue(t *testing.T) {
 	say(60, "Every sub-issue of this has closed, and its end state holds on `main` "+
 		"([run]("+run+"/3)), so I am closing it.", "2026-09-30T02:00:00Z")
 	text := stats.BotSection(world.ctx)
-	basicsTrue(t, strings.HasPrefix(text, stats.SectionStart))
-	basicsIn(t, "🫧 <b>Squishy's record</b>", text)
-	basicsIn(t, "| Runs started | 2 | 2 | 2 | 2 |", text)
-	basicsIn(t, "| One-shot builds started | 1 | 1 | 1 | 1 |", text)
-	basicsIn(t, "| Splits run | 1 | 1 | 1 | 1 |", text)
-	basicsIn(t, "| Sub-issues they opened | 3 | 3 | 3 | 3 |", text)
-	basicsIn(t, "| Trees closed, their end state holding | 1 | 1 | 1 | 1 |", text)
-	basicsIn(t, "`squishy-run.yml` workflow runs", text)
-	basicsIn(t, "**Its pull requests merged** (0)", text)
+	assertTrue(t, strings.HasPrefix(text, stats.SectionStart))
+	assertIn(t, "🫧 <b>Squishy's record</b>", text)
+	assertIn(t, "| Runs started | 2 | 2 | 2 | 2 |", text)
+	assertIn(t, "| One-shot builds started | 1 | 1 | 1 | 1 |", text)
+	assertIn(t, "| Splits run | 1 | 1 | 1 | 1 |", text)
+	assertIn(t, "| Sub-issues they opened | 3 | 3 | 3 | 3 |", text)
+	assertIn(t, "| Trees closed, their end state holding | 1 | 1 | 1 | 1 |", text)
+	assertIn(t, "`squishy-run.yml` workflow runs", text)
+	assertIn(t, "**Its pull requests merged** (0)", text)
 }

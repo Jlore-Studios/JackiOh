@@ -101,14 +101,14 @@ func failedCallsBuildOnMedium(t *testing.T, h *failedCallsHarness) (int, *pyjson
 		"build":  {failedCallsTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}, 10.0)},
 		"review": {failedCallsReviewer(failedCallsApprove)}})
 	planned, result := h.night(fake, false)
-	providersEq(t, []any{planned.Get("provider"), result.Get("status")}, []any{provider, "approved"})
+	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{provider, "approved"})
 	roles, models := []string{}, map[string]bool{}
 	for _, c := range fake.Calls {
 		roles = append(roles, c.Role)
 		models[c.Model] = true
 	}
-	providersEq(t, roles, []string{"plan", "build", "review"})
-	providersEq(t, models, map[string]bool{failedCallsMedium[provider][0]: true})
+	assertEqual(t, roles, []string{"plan", "build", "review"})
+	assertEqual(t, models, map[string]bool{failedCallsMedium[provider][0]: true})
 	pr := h.gh.ListPulls("open", "bot/issue-12", 200)[0].Int("number")
 	return pr, result
 }
@@ -227,24 +227,24 @@ func TestFailedCalls_ACallThatFailsInSecondsBacksTheSubscriptionOffAndSparesTheI
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned, result := h.night(failedCallsRunner(map[string]runner.Handler{"plan": failedCallsFailing(2, "}")}), false)
 	provider := planned.Str("provider")
-	providersEq(t, result.Get("status"), "infra")
-	providersIn(t, "CLI failed at once: }", result.Get("reason"))
+	assertEqual(t, result.Get("status"), "infra")
+	assertIn(t, "CLI failed at once: }", result.Get("reason"))
 	st := h.ctx.Store.Load()
-	providersEq(t, st.Obj("providers").Obj(provider).Obj("infra").Get("streak"), 1)
+	assertEqual(t, st.Obj("providers").Obj(provider).Obj("infra").Get("streak"), 1)
 	failures, _ := pyjson.AsInt(st.Obj("items").Obj("12").GetOr("failures", 0))
-	providersEq(t, failures, 0)
+	assertEqual(t, failures, 0)
 	both := map[string]bool{} // label_names(12) & {LABEL_BUILD}
 	if h.gh.LabelNames(12)[config.LabelBuild] {
 		both[config.LabelBuild] = true
 	}
-	providersEq(t, both, providersSetOf(config.LabelBuild))
+	assertEqual(t, both, providersSetOf(config.LabelBuild))
 	comments := h.gh.BotComments(12)
-	providersIn(t, "That is not this item's fault", comments[len(comments)-1])
+	assertIn(t, "That is not this item's fault", comments[len(comments)-1])
 	// The subscription is left alone: the next run goes elsewhere.
 	planned, _ = h.night(failedCallsRunner(map[string]runner.Handler{
 		"build":  failedCallsBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": failedCallsReviewer(failedCallsApprove)}), false)
-	providersNe(t, planned.Get("provider"), provider)
+	assertNotEqual(t, planned.Get("provider"), provider)
 }
 
 func TestFailedCalls_ThreeInARowAskAPerson(t *testing.T) {
@@ -260,14 +260,14 @@ func TestFailedCalls_ThreeInARowAskAPerson(t *testing.T) {
 			issues = append(issues, thread)
 		}
 	}
-	providersEq(t, len(issues), 1)
-	providersIn(t, "model unavailable", issues[0].Get("body"))
+	assertEqual(t, len(issues), 1)
+	assertIn(t, "model unavailable", issues[0].Get("body"))
 	names := map[string]bool{}
 	for _, label := range pyjson.List(issues[0].Get("labels")) {
 		names[pyjson.Obj(label).Str("name")] = true
 	}
 	for _, want := range []string{"night bot", "human"} {
-		providersTrue(t, names[want], want, " not in ", names)
+		assertTrue(t, names[want], want, " not in ", names)
 	}
 }
 
@@ -287,13 +287,13 @@ func TestFailedCalls_ABuilderThatFailsAfterWorkingAWhileButChangedNothingFailsTh
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	_, result := h.night(failedCallsRunner(map[string]runner.Handler{"build": failedCallsFailing(600, "the session crashed")}),
 		false)
-	providersEq(t, result.Get("status"), "failed")
-	providersIn(t, "the builder's session failed and changed nothing: the session crashed", result.Get("reason"))
+	assertEqual(t, result.Get("status"), "failed")
+	assertIn(t, "the builder's session failed and changed nothing: the session crashed", result.Get("reason"))
 	cycles := pyjson.List(result.Get("cycles"))
-	providersEq(t, pyjson.Obj(cycles[0]).Obj("builder").Get("changed"), false)
-	providersNone(t, h.originSHA("bot/issue-12")) // no "pass 1" commit, nothing pushed
+	assertEqual(t, pyjson.Obj(cycles[0]).Obj("builder").Get("changed"), false)
+	assertIsNone(t, h.originSHA("bot/issue-12")) // no "pass 1" commit, nothing pushed
 	failures, _ := pyjson.AsInt(h.ctx.Store.Load().Obj("items").Obj("12").Get("failures"))
-	providersEq(t, failures, 1)
+	assertEqual(t, failures, 1)
 }
 
 // Claude's turn limit ends a long session `ok: false`: its work is still a pass.
@@ -310,22 +310,22 @@ func TestFailedCalls_ABuilderThatFailedAfterDoingWorkKeepsIt(t *testing.T) {
 	}
 	_, result := h.night(failedCallsRunner(map[string]runner.Handler{"build": turnLimit,
 		"review": failedCallsReviewer(failedCallsApprove)}), false)
-	providersEq(t, result.Get("status"), "approved")
+	assertEqual(t, result.Get("status"), "approved")
 	cycles := pyjson.List(result.Get("cycles"))
-	providersEq(t, pyjson.Obj(cycles[0]).Obj("builder").Get("changed"), true)
+	assertEqual(t, pyjson.Obj(cycles[0]).Obj("builder").Get("changed"), true)
 }
 
 func TestFailedCalls_AReviewCallThatFailsNamesItsError(t *testing.T) {
 	h := newFailedCallsHarness(t, failedCallsAll(), ts.Day, ts.Machine)
 	h.committedHours() // claude-3 works all day: the Strong final can audit
 	pr, _ := failedCallsBuildOnMedium(t, h)
-	providersEq(t, h.gh.LabelNames(pr), providersSetOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), providersSetOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	_, review := h.night(failedCallsRunner(map[string]runner.Handler{"review": failedCallsFailing(900, "overloaded")}), false)
-	providersEq(t, review.Get("status"), "failed")
-	providersEq(t, review.Get("reason"), "the reviewer's call failed: overloaded")
+	assertEqual(t, review.Get("status"), "failed")
+	assertEqual(t, review.Get("reason"), "the reviewer's call failed: overloaded")
 	comments := h.gh.BotComments(pr)
-	providersIn(t, "the reviewer's call failed: overloaded", comments[len(comments)-1])
-	providersNotIn(t, "could not be read", comments[len(comments)-1])
+	assertIn(t, "the reviewer's call failed: overloaded", comments[len(comments)-1])
+	assertNotIn(t, "could not be read", comments[len(comments)-1])
 }
 
 // ---------------------------------------------------------------------------- StderrTests
@@ -333,7 +333,7 @@ func TestFailedCalls_AReviewCallThatFailsNamesItsError(t *testing.T) {
 func TestFailedCalls_AJSONErrorBodyGivesItsMessage(t *testing.T) {
 	stderr := "Welcome\n{\n  \"error\": {\n    \"type\": \"rate\",\n" +
 		"    \"message\": \"Your daily allowance is spent\"\n  }\n}\n"
-	providersEq(t, runner.StderrError(stderr, "x"), "Your daily allowance is spent")
+	assertEqual(t, runner.StderrError(stderr, "x"), "Your daily allowance is spent")
 }
 
 func TestFailedCalls_OtherwiseTheLastLines(t *testing.T) {
@@ -342,6 +342,6 @@ func TestFailedCalls_OtherwiseTheLastLines(t *testing.T) {
 		lines = append(lines, fmt.Sprintf("line %d", n))
 	}
 	found := runner.StderrError(strings.Join(lines, "\n"), "x")
-	providersTrue(t, strings.HasPrefix(found, "line 10\n") && strings.HasSuffix(found, "line 29"))
-	providersEq(t, runner.StderrError("  \n", "lite exited 1"), "lite exited 1")
+	assertTrue(t, strings.HasPrefix(found, "line 10\n") && strings.HasSuffix(found, "line 29"))
+	assertEqual(t, runner.StderrError("  \n", "lite exited 1"), "lite exited 1")
 }

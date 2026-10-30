@@ -33,7 +33,7 @@ func reviewFixesMediumPR(t *testing.T, h *crossHarness) int {
 	h.night(crossRunner(map[string]runner.Handler{"build": crossTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
 		"review": crossReviewer(crossApprove)}))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
-	crossEq(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	return pr
 }
 
@@ -63,10 +63,10 @@ func TestReviewFixes_ARevisionByAnotherModelTurnsStrongAutoMergeOff(t *testing.T
 	h.night(crossRunner(map[string]runner.Handler{"build": crossBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": crossReviewer(crossApprove)}))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
-	crossEq(t, h.gh.AutoMerge, map[string]string{})
+	assertEqual(t, h.gh.AutoMerge, map[string]string{})
 	crossNextRun(h, "778")
 	h.night(crossRunner(map[string]runner.Handler{"review": crossReviewer(crossApprove)})) // claude-3 audits at night
-	crossIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)                                   // Strong: auto-merge on
+	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)                                  // Strong: auto-merge on
 	// A revision is queued by a path that leaves auto-merge alone, and Muse does it by day:
 	// its medium approval alone is not enough, so the strong approval of the old head is gone.
 	thread := h.gh.Threads.Item(pr)
@@ -75,9 +75,9 @@ func TestReviewFixes_ARevisionByAnotherModelTurnsStrongAutoMergeOff(t *testing.T
 	planned, result := h.night(crossRunner(map[string]runner.Handler{
 		"revise": crossBuilder(map[string]string{"src/game.txt": "v2.1\n"}),
 		"review": crossReviewer(crossApprove)}))
-	crossEq(t, []any{planned.Get("provider"), result.Get("status")}, []any{"muse", "approved"})
-	crossNotIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
-	crossEq(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross))
+	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"muse", "approved"})
+	assertNotIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
+	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross))
 }
 
 func TestReviewFixes_AutoMergeIsPinnedToTheApprovedCommit(t *testing.T) {
@@ -87,9 +87,9 @@ func TestReviewFixes_AutoMergeIsPinnedToTheApprovedCommit(t *testing.T) {
 	// approval pins auto-merge to the head (#695).
 	h.committedHours()
 	planned, _ := h.night(crossRunner(map[string]runner.Handler{"review": crossReviewer(crossApprove)}))
-	crossEq(t, []any{planned.Get("provider"), crossKey(t, planned, "seats", "review", "tier")}, []any{"claude-3", "strong"})
+	assertEqual(t, []any{planned.Get("provider"), crossKey(t, planned, "seats", "review", "tier")}, []any{"claude-3", "strong"})
 	votes := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes")
-	crossEq(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], crossKey(t, votes, "sha"))
+	assertEqual(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], crossKey(t, votes, "sha"))
 }
 
 func TestReviewFixes_ARejectionStandsUntilItsModelApprovesOrTheHeadMoves(t *testing.T) {
@@ -98,15 +98,15 @@ func TestReviewFixes_ARejectionStandsUntilItsModelApprovesOrTheHeadMoves(t *test
 		h.deliverRepo, "", nil, "")
 	medium := func() *pyjson.Object { return pyjson.New("gpt", "medium", "muse", "medium", "gemini", "medium") }
 	// Only a Strong approval ships (#695): medium ones, weak with medium, never do.
-	crossFalse(t, d.RuleMet(pyjson.New("approvals", []any{"gpt", "muse"}, "tiers", medium()), "medium"))
-	crossFalse(t, d.RuleMet(pyjson.New("approvals", []any{"gpt", "muse"}, "tiers", medium(),
+	assertFalse(t, d.RuleMet(pyjson.New("approvals", []any{"gpt", "muse"}, "tiers", medium()), "medium"))
+	assertFalse(t, d.RuleMet(pyjson.New("approvals", []any{"gpt", "muse"}, "tiers", medium(),
 		"rejections", []any{"gemini"}), "medium")) // votes are by family
-	crossFalse(t, d.RuleMet(pyjson.New("approvals", []any{"gpt", "gemini"}, "tiers", medium(),
+	assertFalse(t, d.RuleMet(pyjson.New("approvals", []any{"gpt", "gemini"}, "tiers", medium(),
 		"rejections", []any{}), "medium"))
-	crossTrue(t, d.RuleMet(pyjson.New("approvals", []any{"claude"}, "tiers", pyjson.New("claude", "strong")), "medium"))
-	crossFalse(t, d.RuleMet(pyjson.New("approvals", []any{"claude"}, "tiers", pyjson.New("claude", "strong"),
+	assertTrue(t, d.RuleMet(pyjson.New("approvals", []any{"claude"}, "tiers", pyjson.New("claude", "strong")), "medium"))
+	assertFalse(t, d.RuleMet(pyjson.New("approvals", []any{"claude"}, "tiers", pyjson.New("claude", "strong"),
 		"rejections", []any{"gemini"}), "medium"))
-	crossTrue(t, d.RuleMet(pyjson.New("approvals", []any{"claude", "gemini"},
+	assertTrue(t, d.RuleMet(pyjson.New("approvals", []any{"claude", "gemini"},
 		"tiers", pyjson.New("claude", "strong", "gemini", "medium"),
 		"rejections", []any{}), "medium"))
 }
@@ -114,7 +114,7 @@ func TestReviewFixes_ARejectionStandsUntilItsModelApprovesOrTheHeadMoves(t *test
 func TestReviewFixes_OnlyTheBotsOwnPullRequestsGetASecondReview(t *testing.T) {
 	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddPull(30, "feature/someone", fakes.Pull{Labels: []string{config.LabelCross}})
-	crossNe(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("number"), 30)
+	assertNotEqual(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("number"), 30)
 }
 
 func TestReviewFixes_WithOnlyItsBuilderSetUpItWaitsForAStrongReviewer(t *testing.T) {
@@ -125,8 +125,8 @@ func TestReviewFixes_WithOnlyItsBuilderSetUpItWaitsForAStrongReviewer(t *testing
 	comment := crossLast(t, h.gh.BotComments(12))
 	// Only a Strong approval ships a medium item (#725): agy's in-run approval is recorded,
 	// and the head waits for a Strong seat no setup has.
-	crossIn(t, "`gemini` (medium) approved it, so it waits for one strong model's final audit (Opus)", comment)
-	crossIn(t, "No subscription that could give that review is set up", comment)
+	assertIn(t, "`gemini` (medium) approved it, so it waits for one strong model's final audit (Opus)", comment)
+	assertIn(t, "No subscription that could give that review is set up", comment)
 }
 
 // ---------------------------------------------------------------------------- SecondReviewTests
@@ -142,9 +142,9 @@ func TestReviewFixes_ACommentDuringTheReviewGetsItsRevisionBeforeAnyMerge(t *tes
 	}
 
 	h.night(crossRunner(map[string]runner.Handler{"review": commented}))
-	crossEq(t, h.gh.AutoMerge, map[string]string{})
-	crossEq(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelRevise, "difficulty:medium"))
-	crossFalse(t, pyjson.Truthy(crossKey(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "pending_request")))
+	assertEqual(t, h.gh.AutoMerge, map[string]string{})
+	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelRevise, "difficulty:medium"))
+	assertFalse(t, pyjson.Truthy(crossKey(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "pending_request")))
 }
 
 func TestReviewFixes_AReviewWhoseRunDiesBacksOffItsSubscriptionAndIsCounted(t *testing.T) {
@@ -153,15 +153,15 @@ func TestReviewFixes_AReviewWhoseRunDiesBacksOffItsSubscriptionAndIsCounted(t *t
 	seen := []string{}
 	for _, attempt := range []int{1, 2} {
 		planned := plan.Make(h.ctx, false, nil, "auto", nil)
-		crossEq(t, []any{planned.Get("action"), planned.Get("number")}, []any{"review", pr})
+		assertEqual(t, []any{planned.Get("action"), planned.Get("number")}, []any{"review", pr})
 		seen = append(seen, crossStr(t, planned, "provider"))
 		deliver.NewDeliverer(h.ctx, planned, reviewFixesEmptyOut(t, h, fmt.Sprintf("died-%d", attempt)), h.deliverRepo,
 			"", nil, "").Run()
 	}
 	// Each death backs its subscription off; the next strong seat takes it.
-	crossEq(t, seen, []string{"claude-3", "claude-7"})
-	crossEq(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelBlocked, "difficulty:medium"))
-	crossIn(t, "died 2 times", crossLast(t, h.gh.BotComments(pr)))
+	assertEqual(t, seen, []string{"claude-3", "claude-7"})
+	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelBlocked, "difficulty:medium"))
+	assertIn(t, "died 2 times", crossLast(t, h.gh.BotComments(pr)))
 }
 
 func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
@@ -181,11 +181,11 @@ func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
 	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: testsupport.Day})
 	pr := reviewFixesMediumPR(t, h)
 	builds := strings.Count(crossRead(t, log), "\n")
-	crossTrue(t, builds >= 1) // the build did install, so the log works
+	assertTrue(t, builds >= 1) // the build did install, so the log works
 	planned, review := h.night(crossRunner(map[string]runner.Handler{"review": crossReviewer(crossApprove)}))
-	crossEq(t, []any{planned.Get("action"), review.Get("status")}, []any{"review", "reviewed"})
-	crossEq(t, strings.Count(crossRead(t, log), "\n"), builds)
-	crossNotIn(t, fmt.Sprintf("item-%d", pr), crossRead(t, log))
+	assertEqual(t, []any{planned.Get("action"), review.Get("status")}, []any{"review", "reviewed"})
+	assertEqual(t, strings.Count(crossRead(t, log), "\n"), builds)
+	assertNotIn(t, fmt.Sprintf("item-%d", pr), crossRead(t, log))
 }
 
 // ---------------------------------------------------------------------------- InfraTests
@@ -194,13 +194,13 @@ func TestReviewFixes_ABrokenSubscriptionBacksOffAlone(t *testing.T) {
 	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	crossEq(t, planned.Get("provider"), "muse")
+	assertEqual(t, planned.Get("provider"), "muse")
 	out := reviewFixesEmptyOut(t, h, "infra")
 	crossWrite(t, filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New("status", "infra",
 		"reason", "agy's login is not a login")))
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	planned = plan.Make(h.ctx, false, nil, "auto", nil)
-	crossEq(t, []any{planned.Get("number"), planned.Get("provider")}, []any{12, "agy"})
+	assertEqual(t, []any{planned.Get("number"), planned.Get("provider")}, []any{12, "agy"})
 }
 
 func TestReviewFixes_ARunGithubCannotReadKeepsItsLaneAndItsItem(t *testing.T) {
@@ -220,8 +220,8 @@ func TestReviewFixes_ARunGithubCannotReadKeepsItsLaneAndItsItem(t *testing.T) {
 		return nil
 	}, "state")
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	crossEq(t, gh.LabelNames(3), crossSet(config.LabelWorking)) // not requeued
-	crossEq(t, planned.Get("action"), "none")                   // gpt, its only subscription, is held
+	assertEqual(t, gh.LabelNames(3), crossSet(config.LabelWorking)) // not requeued
+	assertEqual(t, planned.Get("action"), "none")                   // gpt, its only subscription, is held
 }
 
 // reviewFixesHeld is a held run: (number, provider).
@@ -248,8 +248,8 @@ func TestReviewFixes_ARunRequestIsKeptWhenEveryLaneIsBusy(t *testing.T) {
 		}
 		return nil
 	}, "state")
-	crossIn(t, "every lane is busy", crossStr(t, plan.Make(ctx, false, nil, "auto", nil), "reason"))
-	crossNe(t, crossKey(t, ctx.Store.Load(), "run_requested"), nil)
+	assertIn(t, "every lane is busy", crossStr(t, plan.Make(ctx, false, nil, "auto", nil), "reason"))
+	assertNotEqual(t, crossKey(t, ctx.Store.Load(), "run_requested"), nil)
 }
 
 // A full machine leaves GitHub's lanes to the Claude accounts, and Claude runs filling GitHub's
@@ -282,8 +282,8 @@ func TestReviewFixes_GithubSRunnersAndTheMachineHaveLanesOfTheirOwn(t *testing.T
 				return nil
 			}, "state")
 			planned := plan.Make(ctx, false, nil, "auto", nil)
-			crossEq(t, []any{planned.Get("action"), planned.Get("number")}, []any{"build", 4})
-			crossEq(t, ctx.Cfg.Pool.OnMachine(crossStr(t, planned, "provider")), c.onMachine)
+			assertEqual(t, []any{planned.Get("action"), planned.Get("number")}, []any{"build", 4})
+			assertEqual(t, ctx.Cfg.Pool.OnMachine(crossStr(t, planned, "provider")), c.onMachine)
 		})
 	}
 }
@@ -305,7 +305,7 @@ func TestReviewFixes_AVaultWriteThatRacesAnotherWriterIsTriedAgain(t *testing.T)
 	h.gh.ConflictsToInject = 1
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	text, _ := h.gh.GetFile("vault/muse.enc", "bot-state")
-	crossEq(t, strings.TrimSpace(text), sealed)
+	assertEqual(t, strings.TrimSpace(text), sealed)
 }
 
 func TestReviewFixes_EveryModelCallHandsARefreshedLoginOnAtOnce(t *testing.T) {
@@ -317,12 +317,12 @@ func TestReviewFixes_EveryModelCallHandsARefreshedLoginOnAtOnce(t *testing.T) {
 		"review": crossReviewer(crossApprove)})
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), filepath.Join(h.root, "out-calls"),
 		nil, func() { calls = append(calls, 1) }, nil, nil, nil, nil).Run()
-	crossEq(t, len(calls), len(r.Calls))
+	assertEqual(t, len(calls), len(r.Calls))
 }
 
 func TestReviewFixes_OnlyAClaudeAccountCanWaitForQuiet(t *testing.T) {
 	raw := crossRawProviders()
 	crossObj(t, raw, "providers", "gpt").Set("quiet_check", true)
 	_, raised := herr.Catch[*herr.ConfigError](func() { providers.Parse(raw) })
-	crossTrue(t, raised, "ConfigError not raised")
+	assertTrue(t, raised, "ConfigError not raised")
 }

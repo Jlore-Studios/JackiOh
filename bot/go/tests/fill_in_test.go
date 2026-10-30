@@ -91,18 +91,16 @@ func fillInSet(names ...string) map[string]bool {
 // ---------------------------------------------------------------------------- FillInTests
 
 func TestFillIn_WithGptAndAgyFreeEachKeepsItsLane(t *testing.T) {
-	is := difficultyCheckOf(t)
 	gh := fillInSetUp()
 	ctx := fillInCtxFor(gh)
 	taken, reason := fillInTakeAll(gh, ctx)
-	is.Equal(taken, []fillInTaken{{3, "muse", "night-vm-muse"}, {4, "muse", "night-vm-muse"},
+	assertEqual(t, taken, []fillInTaken{{3, "muse", "night-vm-muse"}, {4, "muse", "night-vm-muse"},
 		{5, "muse", "night-vm-muse"}, {6, "muse", "night-vm-muse"},
 		{7, "agy", "night-vm-agy"}, {8, "gpt", "night-vm-gpt"}})
-	is.In("`muse` is busy", reason)
+	assertIn(t, "`muse` is busy", reason)
 }
 
 func TestFillIn_MuseFillsTheLaneOfOneThatCannotStart(t *testing.T) {
-	is := difficultyCheckOf(t)
 	gh := fillInSetUp()
 	// Room for every lane on the machine (`machine_parallel`, six, is its own test's), so what
 	// holds gpt back is its lane.
@@ -112,14 +110,14 @@ func TestFillIn_MuseFillsTheLaneOfOneThatCannotStart(t *testing.T) {
 	taken, _ := fillInTakeAll(gh, ctx)
 	// Muse, first in the tier order, takes its own four lanes, then gpt's lane before agy takes
 	// its own.
-	is.Equal(taken, []fillInTaken{{3, "muse", "night-vm-muse"}, {4, "muse", "night-vm-muse"},
+	assertEqual(t, taken, []fillInTaken{{3, "muse", "night-vm-muse"}, {4, "muse", "night-vm-muse"},
 		{5, "muse", "night-vm-muse"}, {6, "muse", "night-vm-muse"},
 		{7, "muse", fillInFill}, {8, "agy", "night-vm-agy"}})
 	s := ctx.Store.Load()
-	is.Equal(s.Obj("items").Obj("7").Get("runs_on"), fillInFill)
+	assertEqual(t, s.Obj("items").Obj("7").Get("runs_on"), fillInFill)
 	lanes := plan.ReadLanes(ctx, s)
-	is.Equal([]any{lanes.Filling, lanes.Count("muse")}, []any{map[int]bool{7: true}, 5})
-	is.True(lanes.Full(ctx.Cfg.Pool.Get("muse")))
+	assertEqual(t, []any{lanes.Filling, lanes.Count("muse")}, []any{map[int]bool{7: true}, 5})
+	assertTrue(t, lanes.Full(ctx.Cfg.Pool.Get("muse")))
 	// gpt's reset comes while Muse holds its lane: gpt waits for it, so the night box never runs
 	// more than three jobs (Muse's own runner there, and the two lanes).
 	ctx.Store.Update(func(s *pyjson.Object) any {
@@ -127,25 +125,24 @@ func TestFillIn_MuseFillsTheLaneOfOneThatCannotStart(t *testing.T) {
 		return nil
 	}, "state")
 	again := plan.Make(ctx, false, nil, "auto", nil)
-	is.Equal(again.Get("action"), "none")
-	is.In("`gpt` waits for its lane on its box, which `muse` fills now", pyjson.Str(again.Get("reason")))
-	is.True(plan.FillInFull(ctx.Cfg.Pool, ctx.Cfg.Pool.Get("gpt"), plan.ReadLanes(ctx, ctx.Store.Load())))
+	assertEqual(t, again.Get("action"), "none")
+	assertIn(t, "`gpt` waits for its lane on its box, which `muse` fills now", pyjson.Str(again.Get("reason")))
+	assertTrue(t, plan.FillInFull(ctx.Cfg.Pool, ctx.Cfg.Pool.Get("gpt"), plan.ReadLanes(ctx, ctx.Store.Load())))
 	live := pyjson.New()
 	for _, c := range taken {
 		live.Set(strconv.Itoa(c.Number), c.Provider)
 	}
 	explained := waiting.Explain(ctx, ctx.Store.Load(), live, nil, "")
 	gpt := explained.Now.Get("gpt").(*waiting.Now)
-	is.Equal(gpt.Kind, "full")
-	is.In("`muse` fills it", gpt.Text)
+	assertEqual(t, gpt.Kind, "full")
+	assertIn(t, "`muse` fills it", gpt.Text)
 	// Once Muse's run there ends, the lane is gpt's again.
 	gh.Runs.Set("7", pyjson.New("status", "completed"))
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	is.Equal([]any{planned.Get("provider"), planned.Get("runs_on")}, []any{"gpt", "night-vm-gpt"})
+	assertEqual(t, []any{planned.Get("provider"), planned.Get("runs_on")}, []any{"gpt", "night-vm-gpt"})
 }
 
 func TestFillIn_WithBothOffMuseTakesBothLanesAndRunsSixAtMost(t *testing.T) {
-	is := difficultyCheckOf(t)
 	gh := fillInSetUp()
 	ctx := fillInCtxFor(gh, "muse")
 	taken, reason := fillInTakeAll(gh, ctx)
@@ -153,42 +150,39 @@ func TestFillIn_WithBothOffMuseTakesBothLanesAndRunsSixAtMost(t *testing.T) {
 	for _, c := range taken {
 		runners = append(runners, c.RunsOn)
 	}
-	is.Equal(runners, []string{"night-vm-muse", "night-vm-muse", "night-vm-muse", "night-vm-muse",
+	assertEqual(t, runners, []string{"night-vm-muse", "night-vm-muse", "night-vm-muse", "night-vm-muse",
 		fillInFill, fillInFill})
-	is.In("`muse` is busy", reason)
-	is.Equal(ctx.Cfg.Pool.MachineParallel, 6)
+	assertIn(t, "`muse` is busy", reason)
+	assertEqual(t, ctx.Cfg.Pool.MachineParallel, 6)
 }
 
 func TestFillIn_APlanningRunOfGptOrAgyHoldsASharedLane(t *testing.T) {
-	is := difficultyCheckOf(t)
 	gh := fillInSetUp()
 	ctx := fillInCtxFor(gh)
 	pool := ctx.Cfg.Pool
 	lanes := &plan.Lanes{Limit: 8, MachineLimit: 6, Machine: fillInSet(testsupport.Machine...)}
 	lanes = lanes.WithRun(40, "gpt", "plan", false).WithRun(41, "muse", "build", true)
-	is.True(plan.FillInFull(pool, pool.Get("agy"), lanes))
-	is.False(plan.FillInFull(pool, pool.Get("muse"), lanes))
-	is.Equal([]int{lanes.FillingBy("muse"), lanes.AllBy("gpt")}, []int{1, 1})
+	assertTrue(t, plan.FillInFull(pool, pool.Get("agy"), lanes))
+	assertFalse(t, plan.FillInFull(pool, pool.Get("muse"), lanes))
+	assertEqual(t, []int{lanes.FillingBy("muse"), lanes.AllBy("gpt")}, []int{1, 1})
 	// Muse's fill-in takes none of its own lanes.
-	is.False(lanes.Full(pool.Get("muse")))
+	assertFalse(t, lanes.Full(pool.Get("muse")))
 }
 
 func TestFillIn_TheSurveyNeverFillsALane(t *testing.T) {
-	is := difficultyCheckOf(t)
 	gh := fillInSetUp()
 	ctx := fillInCtxFor(gh, "muse")
 	lanes := &plan.Lanes{Limit: 8, Held: map[int]string{40: "muse", 41: "muse", 42: "muse", 43: "muse"},
 		MachineLimit: 6, Machine: fillInSet(testsupport.Machine...)}
 	s := ctx.Store.Load()
 	muse := ctx.Cfg.Pool.Get("muse")
-	is.Equal(plan.RunnerFor(ctx, s, muse, lanes, "build"), fillInFill)
-	is.Equal(plan.RunnerFor(ctx, s, muse, lanes, "suggest"), "")
+	assertEqual(t, plan.RunnerFor(ctx, s, muse, lanes, "build"), fillInFill)
+	assertEqual(t, plan.RunnerFor(ctx, s, muse, lanes, "suggest"), "")
 }
 
 // ---------------------------------------------------------------------------- CheckTests
 
 func TestFillIn_ADispatchMayNameTheFillInRunnersOfItsOwnSubscriptionOnly(t *testing.T) {
-	is := difficultyCheckOf(t)
 	ctx := fillInCtxFor(fakes.NewFakeGitHub())
 	given := func(changes map[string]string) map[string]string {
 		out := map[string]string{"cli": "muse", "secret": "", "shared": "false"}
@@ -198,10 +192,10 @@ func TestFillIn_ADispatchMayNameTheFillInRunnersOfItsOwnSubscriptionOnly(t *test
 		return out
 	}
 	planned := pyjson.New("provider", "muse", "runs_on", fillInFill, "cli", "muse")
-	is.Equal(controller.Check(ctx, planned, given(map[string]string{"runs_on": fillInFill})), []string{})
-	is.True(len(controller.Check(ctx, planned, given(map[string]string{"runs_on": "night-vm-muse"}))) > 0)
+	assertEqual(t, controller.Check(ctx, planned, given(map[string]string{"runs_on": fillInFill})), []string{})
+	assertTrue(t, len(controller.Check(ctx, planned, given(map[string]string{"runs_on": "night-vm-muse"}))) > 0)
 	gpt := pyjson.New("provider", "gpt", "runs_on", fillInFill, "cli", "codex")
-	is.True(len(controller.Check(ctx, gpt, given(map[string]string{"cli": "codex", "runs_on": fillInFill}))) > 0)
+	assertTrue(t, len(controller.Check(ctx, gpt, given(map[string]string{"cli": "codex", "runs_on": fillInFill}))) > 0)
 }
 
 // ---------------------------------------------------------------------------- ParseTests
@@ -213,17 +207,15 @@ func fillInRaw(fill *pyjson.Object) *pyjson.Object {
 }
 
 func TestFillIn_TheCommittedFillIn(t *testing.T) {
-	is := difficultyCheckOf(t)
 	pool := providers.Load(testsupport.Root)
 	muse := pool.Get("muse")
-	is.Equal([]any{muse.RunsOn, muse.Lanes, *muse.FillIn},
+	assertEqual(t, []any{muse.RunsOn, muse.Lanes, *muse.FillIn},
 		[]any{"night-vm-muse", 4, providers.FillIn{RunsOn: fillInFill, Of: []string{"gpt", "agy"}}})
-	is.Equal([]string{pool.FillerOf("gpt").ID, pool.FillerOf("agy").ID}, []string{"muse", "muse"})
-	is.True(pool.FillerOf("lite") == nil)
+	assertEqual(t, []string{pool.FillerOf("gpt").ID, pool.FillerOf("agy").ID}, []string{"muse", "muse"})
+	assertTrue(t, pool.FillerOf("lite") == nil)
 }
 
 func TestFillIn_ItRefusesABadFillIn(t *testing.T) {
-	is := difficultyCheckOf(t)
 	for _, c := range []struct {
 		fill    *pyjson.Object
 		message string
@@ -235,26 +227,24 @@ func TestFillIn_ItRefusesABadFillIn(t *testing.T) {
 		{pyjson.New("runs_on", "ubuntu-latest", "for", []any{"gpt"}), "on the machine"},
 		{pyjson.New("runs_on", fillInFill, "for", []any{"gpt"}, "lanes", 2), "unknown keys"},
 	} {
-		caught := difficultyRaises[*herr.ConfigError](t, func() { providers.Parse(fillInRaw(c.fill)) },
+		caught := assertRaises[*herr.ConfigError](t, func() { providers.Parse(fillInRaw(c.fill)) },
 			pyjson.Dumps(c.fill))
-		is.In(c.message, caught.Error(), fmt.Sprint(pyjson.Dumps(c.fill)))
+		assertIn(t, c.message, caught.Error(), fmt.Sprint(pyjson.Dumps(c.fill)))
 	}
 }
 
 func TestFillIn_OneMovedToGithubsRunnersHasNoLaneToLend(t *testing.T) {
-	is := difficultyCheckOf(t)
 	raw := testsupport.RawProviders()
 	raw.Obj("providers").Obj("gpt").Update(pyjson.New("login", "secret", "secret", "CODEX_AUTH_JSON",
 		"runs_on", "ubuntu-latest"))
 	pool := providers.Parse(raw)
-	is.Equal(pool.FilledBy(pool.Get("muse")), []string{"agy"})
-	is.True(pool.FillerOf("gpt") == nil)
+	assertEqual(t, pool.FilledBy(pool.Get("muse")), []string{"agy"})
+	assertTrue(t, pool.FillerOf("gpt") == nil)
 }
 
 // ---------------------------------------------------------------------------- BoxTests
 
 func TestFillIn_AFillInRunnerIsOnTheNightBox(t *testing.T) {
-	is := difficultyCheckOf(t)
-	is.Equal(memory.BoxOf("night-vm-muse-fill-2", fillInFill), "")
-	is.Equal(memory.BoxOf("night-vm-muse-2-b2", "night-vm-muse"), "b2")
+	assertEqual(t, memory.BoxOf("night-vm-muse-fill-2", fillInFill), "")
+	assertEqual(t, memory.BoxOf("night-vm-muse-2-b2", "night-vm-muse"), "b2")
 }

@@ -45,45 +45,41 @@ func declinedPlanRunner(text string) *runner.FakeRunner {
 // ---------------------------------------------------------------------------- IdleTests
 
 func TestDeclined_QueuedWorkThatWaitsForAnotherSubscriptionNoLongerStopsASurvey(t *testing.T) {
-	is := difficultyCheckOf(t)
 	// By day only Muse is free, and a hard item needs a strong model: Muse has nothing it can
 	// start, so after 30 minutes it surveys, though the queue is not empty.
 	h := mediumBiasDayHarness(t, "muse")
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	look := plan.Peek_(h.ctx, false, nil, "auto")
-	is.Equal([]bool{look.Work, look.Idle}, []bool{false, true})
+	assertEqual(t, []bool{look.Work, look.Idle}, []bool{false, true})
 	testsupport.IdleFor(h.ctx, 29)
-	is.False(plan.Peek_(h.ctx, false, nil, "auto").Work)
+	assertFalse(t, plan.Peek_(h.ctx, false, nil, "auto").Work)
 	testsupport.IdleFor(h.ctx, 30)
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	is.Equal([]any{planned.Get("action"), planned.Get("provider"), planned.Get("count")},
+	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), planned.Get("count")},
 		[]any{"suggest", "muse", 10})
 }
 
 func TestDeclined_NoSecondSurveyWhileOneRuns(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	testsupport.IdleFor(h.ctx, 45)
 	h.ctx.Store.Update(func(s *pyjson.Object) any {
 		s.Obj("suggest").Update(pyjson.New("provider", "claude-3", "run_id", "9"))
 		return nil
 	}, "state")
-	is.Equal(plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false), 0)
-	is.Equal(plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), true), 10)
+	assertEqual(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false), 0)
+	assertEqual(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), true), 10)
 }
 
 func TestDeclined_TheCapStillHolds(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	for n := 20; n < 30; n++ {
 		h.gh.AddIssue(n, fakes.Issue{Labels: []string{config.LabelSuggestion}})
 	}
 	testsupport.IdleFor(h.ctx, 120)
-	is.Equal(plan.Make(h.ctx, false, nil, "auto", nil).Get("action"), "none")
+	assertEqual(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("action"), "none")
 }
 
 func TestDeclined_AnUnfinishedSurveyGivesTheClockBack(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	testsupport.IdleFor(h.ctx, 45)
 	before := h.ctx.Store.Load().Obj("suggest").Get("idle_since")
@@ -93,26 +89,24 @@ func TestDeclined_AnUnfinishedSurveyGivesTheClockBack(t *testing.T) {
 			result.ExitCode, result.Error = 1, "boom"
 			return result
 		}}}))
-	is.Equal(planned.Get("action"), "suggest")
-	is.Equal(h.ctx.Store.Load().Obj("suggest").Get("idle_since"), before)
+	assertEqual(t, planned.Get("action"), "suggest")
+	assertEqual(t, h.ctx.Store.Load().Obj("suggest").Get("idle_since"), before)
 }
 
 // ---------------------------------------------------------------------------- LogTests
 
 func TestDeclined_ARejectVoteIsLogged(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	h.gh.AddIssue(21, fakes.Issue{Title: "Patch v0.3.Y: shinier coins", Labels: []string{config.LabelSuggestion}})
 	declinedAsk(h, 21, "reject", 61)
 	entries := declined.Entries(h.ctx.Store.Load())
-	is.Equal(len(entries), 1)
+	assertEqual(t, len(entries), 1)
 	entry := entries[0]
-	is.Equal([]any{entry.Get("number"), entry.Get("title"), entry.Get("why")},
+	assertEqual(t, []any{entry.Get("number"), entry.Get("title"), entry.Get("why")},
 		[]any{21, "Patch v0.3.Y: shinier coins", "rejected by @jgoetzmann"})
 }
 
 func TestDeclined_TheSurveyReadsEveryOneAndARepeatIsNotOpened(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := newDifficultyHarness(t)
 	// Closed by hand long ago (#777's way), and rejected by a vote.
 	h.gh.AddIssue(30, fakes.Issue{Title: "Architecture: a fuzz monitor for piles", State: "closed",
@@ -124,10 +118,10 @@ func TestDeclined_TheSurveyReadsEveryOneAndARepeatIsNotOpened(t *testing.T) {
 	r := declinedSurvey("Patch v0.3.Y: Shinier coins!", "Patch v0.3.Y: a new idea")
 	h.night(r)
 	prompt := r.Calls[0].Prompt
-	is.In("## Suggestions that came to nothing", prompt)
-	is.In("#30 Architecture: a fuzz monitor for piles: closed unbuilt by a person "+
+	assertIn(t, "## Suggestions that came to nothing", prompt)
+	assertIn(t, "#30 Architecture: a fuzz monitor for piles: closed unbuilt by a person "+
 		"(not planned)", prompt)
-	is.In("#31 Patch v0.3.Y: shinier coins: rejected by @jgoetzmann", prompt)
+	assertIn(t, "#31 Patch v0.3.Y: shinier coins: rejected by @jgoetzmann", prompt)
 	made := []string{}
 	for _, thread := range h.gh.Threads.Values() {
 		labelled := false
@@ -140,43 +134,40 @@ func TestDeclined_TheSurveyReadsEveryOneAndARepeatIsNotOpened(t *testing.T) {
 			made = append(made, pyjson.Str(thread.Get("title")))
 		}
 	}
-	is.Equal(made, []string{"Patch v0.3.Y: a new idea"}) // the reworded repeat was dropped
+	assertEqual(t, made, []string{"Patch v0.3.Y: a new idea"}) // the reworded repeat was dropped
 }
 
 func TestDeclined_AnApprovedSuggestionTheBotCannotBuildIsLogged(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := mediumBiasDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Title: "Night bot: tune the sweep", Labels: []string{config.LabelSuggestion}})
 	declinedAsk(h, 12, "approve", 63)
 	h.night(declinedPlanRunner(mediumBiasRatedPlan("medium", []string{"bot/harness/sweep.py"}, "")))
-	is.In(config.LabelHumanRequired, h.gh.LabelNames(12))
+	assertIn(t, config.LabelHumanRequired, h.gh.LabelNames(12))
 	entries := declined.Entries(h.ctx.Store.Load())
-	is.Equal(len(entries), 1)
+	assertEqual(t, len(entries), 1)
 	entry := entries[0]
-	is.Equal(entry.Get("number"), 12)
-	is.True(strings.HasPrefix(pyjson.Str(entry.Get("why")), "the bot could not build it: Every file its plan "+
+	assertEqual(t, entry.Get("number"), 12)
+	assertTrue(t, strings.HasPrefix(pyjson.Str(entry.Get("why")), "the bot could not build it: Every file its plan "+
 		"touches"), entry.Get("why"))
 }
 
 func TestDeclined_APlainIssueHandedToPeopleIsNotADeclinedSuggestion(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := mediumBiasDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Title: "Night bot: tune the sweep", Labels: []string{config.LabelBuild}})
 	h.night(declinedPlanRunner(mediumBiasRatedPlan("medium", []string{"bot/harness/sweep.py"}, "")))
-	is.In(config.LabelHumanRequired, h.gh.LabelNames(12))
-	is.Equal(declined.Entries(h.ctx.Store.Load()), []*pyjson.Object{})
+	assertIn(t, config.LabelHumanRequired, h.gh.LabelNames(12))
+	assertEqual(t, declined.Entries(h.ctx.Store.Load()), []*pyjson.Object{})
 }
 
 func TestDeclined_TheLogKeepsOneEntryEachAndTheNewest(t *testing.T) {
-	is := difficultyCheckOf(t)
 	s := pyjson.New("suggest", pyjson.New())
 	for n := range declined.Limit + 5 {
 		declined.Note(s, n, "Idea "+strconv.Itoa(n), "rejected",
 			clock.ISO(clock.ParseISO("2026-10-13T00:00:00Z").Add(time.Duration(n)*time.Minute)))
 	}
-	is.False(declined.Note(s, declined.Limit+4, "Again", "rejected", "now"))
+	assertFalse(t, declined.Note(s, declined.Limit+4, "Again", "rejected", "now"))
 	log := declined.Entries(s)
-	is.Equal([]any{len(log), log[0].Get("number")}, []any{declined.Limit, 5})
-	is.True(declined.Known(s, "idea 7"))
-	is.False(declined.Known(s, "idea 4")) // dropped as the oldest
+	assertEqual(t, []any{len(log), log[0].Get("number")}, []any{declined.Limit, 5})
+	assertTrue(t, declined.Known(s, "idea 7"))
+	assertFalse(t, declined.Known(s, "idea 4")) // dropped as the oldest
 }

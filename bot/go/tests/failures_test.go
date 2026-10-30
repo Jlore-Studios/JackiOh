@@ -88,7 +88,6 @@ func failuresCycle(n int, opts ...failuresCycleOpts) *pyjson.Object {
 
 // #314: a failed review or self-check call shows its error in the round-by-round table.
 func TestFailures_TheReviewersAndTheSelfChecksErrorsArePrinted(t *testing.T) {
-	is := difficultyCheckOf(t)
 	failed := pyjson.New("verdict", "unreadable", "readable", false, "findings", []any{},
 		"error", "Your daily allowance is spent")
 	rounds := []*pyjson.Object{
@@ -99,50 +98,46 @@ func TestFailures_TheReviewersAndTheSelfChecksErrorsArePrinted(t *testing.T) {
 				"flagged", 1)}),
 	}
 	text := failures.Why(rounds, 10, "")
-	is.In("**review unreadable**: Your daily allowance is spent", text)
-	is.In("**self-check call failed**: model unavailable", text)
+	assertIn(t, "**review unreadable**: Your daily allowance is spent", text)
+	assertIn(t, "**self-check call failed**: model unavailable", text)
 }
 
 // ---------------------------------------------------------------------------- WhyTests
 
 func TestFailures_EveryRoundUsedSaysWhyRoundByRound(t *testing.T) {
-	is := difficultyCheckOf(t)
 	cycles := []*pyjson.Object{failuresCycle(1, failuresCycleOpts{Red: []string{"typecheck"}}), failuresCycle(2),
 		failuresCycle(3, failuresCycleOpts{Claims: []string{"It breaks replay.", "R12 has no test."}})}
-	is.True(failures.Stuck(cycles, 3))
+	assertTrue(t, failures.Stuck(cycles, 3))
 	text := failures.Why(cycles, 3, "no approval after 3 review cycles")
-	is.In("### Why it failed 3 times", text)
-	is.In("**The reviewer blocked 3 of 3 reviewed round(s)**", text)
-	is.In("**Checks were red in 1 round(s):** `typecheck` ×1", text)
-	is.NotIn("`unit`", strings.Split(text, "<details>")[0]) // red on main too: not this change's
-	is.In("`src/a.ts`: It breaks replay. (×3)", text)
-	is.In("| 1 | build on `opus`, 12.0 min | red: `typecheck` (exit 2) | blocked", text)
-	is.In("**Builder time:** 36 min over 3 round(s).", text)
+	assertIn(t, "### Why it failed 3 times", text)
+	assertIn(t, "**The reviewer blocked 3 of 3 reviewed round(s)**", text)
+	assertIn(t, "**Checks were red in 1 round(s):** `typecheck` ×1", text)
+	assertNotIn(t, "`unit`", strings.Split(text, "<details>")[0]) // red on main too: not this change's
+	assertIn(t, "`src/a.ts`: It breaks replay. (×3)", text)
+	assertIn(t, "| 1 | build on `opus`, 12.0 min | red: `typecheck` (exit 2) | blocked", text)
+	assertIn(t, "**Builder time:** 36 min over 3 round(s).", text)
 }
 
 func TestFailures_ARunThatStoppedSoonerSaysItsRealCountAndReason(t *testing.T) {
-	is := difficultyCheckOf(t)
 	cycles := []*pyjson.Object{failuresCycle(1, failuresCycleOpts{Failed: true, Error: "Individual quota reached.",
 		Review: "unreadable"})}
-	is.False(failures.Stuck(cycles, 10))
+	assertFalse(t, failures.Stuck(cycles, 10))
 	text := failures.Why(cycles, 10, "the reviewer's answer could not be read twice in a row")
-	is.In("### Why it stopped after 1 of 10 round(s)", text)
-	is.In("its answer could not be read in 1", text)
-	is.In("**The builder's session failed in 1 round(s)**, most often: Individual "+
+	assertIn(t, "### Why it stopped after 1 of 10 round(s)", text)
+	assertIn(t, "its answer could not be read in 1", text)
+	assertIn(t, "**The builder's session failed in 1 round(s)**, most often: Individual "+
 		"quota reached.", text)
-	is.In("**review unreadable**", text)
+	assertIn(t, "**review unreadable**", text)
 }
 
 func TestFailures_NothingRecordedStillReads(t *testing.T) {
-	is := difficultyCheckOf(t)
-	is.In("### Why it stopped after 0 of 10 round(s)", failures.Why(nil, 10, ""))
-	is.False(failures.Stuck([]*pyjson.Object{}, 0))
+	assertIn(t, "### Why it stopped after 0 of 10 round(s)", failures.Why(nil, 10, ""))
+	assertFalse(t, failures.Stuck([]*pyjson.Object{}, 0))
 }
 
 // ---------------------------------------------------------------------------- PlannedLabelTests
 
 func TestFailures_APlannedItemCarriesBotPlannedAndLosesItIfItNeedsAPlanAgain(t *testing.T) {
-	is := difficultyCheckOf(t)
 	gh := fakes.NewFakeGitHub()
 	ctx := failuresLaneCtx(gh)
 	pairs := []any{}
@@ -158,9 +153,9 @@ func TestFailures_APlannedItemCarriesBotPlannedAndLosesItIfItNeedsAPlanAgain(t *
 	}, "state")
 	gh.AddLabels(4, []string{config.LabelPlanned}) // a medium item with a medium plan
 	plan.Make(ctx, false, nil, "auto", nil)
-	is.In(config.LabelPlanned, gh.LabelNames(3))
-	is.NotIn(config.LabelNeedsPlan, gh.LabelNames(3))
+	assertIn(t, config.LabelPlanned, gh.LabelNames(3))
+	assertNotIn(t, config.LabelNeedsPlan, gh.LabelNames(3))
 	// A medium plan meets a medium item's floor (#695): it keeps its plan, no new one.
-	is.In(config.LabelPlanned, gh.LabelNames(4))
-	is.NotIn(config.LabelNeedsPlan, gh.LabelNames(4))
+	assertIn(t, config.LabelPlanned, gh.LabelNames(4))
+	assertNotIn(t, config.LabelNeedsPlan, gh.LabelNames(4))
 }

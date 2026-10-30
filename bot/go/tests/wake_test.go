@@ -48,45 +48,45 @@ var wakeWakes = func() []time.Time {
 // ------------------------------------------------------------------ WindowTests
 
 func TestWake_TheWakeTimesAreSixAndEveryFourHoursAroundItInEitherSeason(t *testing.T) {
-	basicsEqual(t, wake.Every, 4*time.Hour)
+	assertEqual(t, wake.Every, 4*time.Hour)
 	for _, at := range wakeWakes {
-		basicsEqual(t, wake.WakeTime(at), at)
-		basicsEqual(t, wake.WakeTime(at.Add(-47*time.Minute)), at)
+		assertEqual(t, wake.WakeTime(at), at)
+		assertEqual(t, wake.WakeTime(at.Add(-47*time.Minute)), at)
 	}
-	basicsEqual(t, wake.WakeTime(wakeCDTSix).In(clock.Zone(wake.Zone)).Hour(), 6)
+	assertEqual(t, wake.WakeTime(wakeCDTSix).In(clock.Zone(wake.Zone)).Hour(), 6)
 }
 
 func TestWake_EachRunIsForAtMostOneWakeTime(t *testing.T) {
-	basicsEqual(t, (24*time.Hour)%wake.Every, time.Duration(0))
-	basicsTrue(t, wake.Early+wake.Late <= wake.Every)
+	assertEqual(t, (24*time.Hour)%wake.Every, time.Duration(0))
+	assertTrue(t, wake.Early+wake.Late <= wake.Every)
 }
 
 // `13 * * * *`: the firing in the hour before a wake time sleeps until it; the two after it still
 // wake the sessions, should GitHub drop the first.
 func TestWake_EveryWakeTimeHasAFiringThatSleepsUntilItAndTwoAfter(t *testing.T) {
 	text := basicsReadFile(t, filepath.Join(config.RepoRoot, ".github", "workflows", wake.Workflow))
-	basicsIn(t, `- cron: "13 * * * *"`, text)
+	assertIn(t, `- cron: "13 * * * *"`, text)
 	for _, at := range wakeWakes {
 		for _, fired := range []time.Time{at.Add(-47 * time.Minute), at.Add(13 * time.Minute),
 			at.Add(73 * time.Minute)} {
-			basicsEqual(t, wake.WakeTime(fired), at, fired)
+			assertEqual(t, wake.WakeTime(fired), at, fired)
 		}
 	}
 }
 
 func TestWake_ALateRunWakesAtOnceAndAMuchLaterOneDoesNothing(t *testing.T) {
-	basicsEqual(t, wake.WakeTime(wakeCDTSix.Add(40*time.Minute)), wakeCDTSix)
-	basicsTrue(t, wake.WakeTime(wakeCDTSix.Add(wake.Late)).IsZero())
-	basicsTrue(t, wake.WakeTime(wakeCDTSix.Add(-wake.Early-time.Minute)).IsZero())
+	assertEqual(t, wake.WakeTime(wakeCDTSix.Add(40*time.Minute)), wakeCDTSix)
+	assertTrue(t, wake.WakeTime(wakeCDTSix.Add(wake.Late)).IsZero())
+	assertTrue(t, wake.WakeTime(wakeCDTSix.Add(-wake.Early-time.Minute)).IsZero())
 }
 
 // 2027-03-14: 02:00 Chicago does not exist, so it and 06:00 are three hours apart.
 func TestWake_ASpringForwardNightKeepsItsWindowsApart(t *testing.T) {
 	six := time.Date(2027, 3, 14, 11, 0, 0, 0, time.UTC)
 	two := wake.WakeTime(six.Add(-3 * time.Hour))
-	basicsFalse(t, two.IsZero())
-	basicsEqual(t, wake.WakeTime(six.Add(-30*time.Minute)), six)
-	basicsEqual(t, wake.WakeTime(two.Add(30*time.Minute)), two)
+	assertFalse(t, two.IsZero())
+	assertEqual(t, wake.WakeTime(six.Add(-30*time.Minute)), six)
+	assertEqual(t, wake.WakeTime(two.Add(30*time.Minute)), two)
 }
 
 func TestWake_ARunThatFinishedGreenSinceTheWakeTimeHasWokenThem(t *testing.T) {
@@ -94,15 +94,15 @@ func TestWake_ARunThatFinishedGreenSinceTheWakeTimeHasWokenThem(t *testing.T) {
 	early := pyjson.New("conclusion", "success", "updated_at", clock.ISO(wakeCDTSix.Add(-2*time.Hour)))
 	failed := pyjson.New("conclusion", "failure", "updated_at", clock.ISO(wakeCDTSix.Add(2*time.Minute)))
 	later := wakeCDTSix.Add(30 * time.Minute)
-	basicsTrue(t, wake.AlreadyWoken([]*pyjson.Object{early, green}, later))
-	basicsFalse(t, wake.AlreadyWoken([]*pyjson.Object{early, failed}, later))
+	assertTrue(t, wake.AlreadyWoken([]*pyjson.Object{early, green}, later))
+	assertFalse(t, wake.AlreadyWoken([]*pyjson.Object{early, failed}, later))
 }
 
 // A run sleeping until ten finds six's green run, which woke six's sessions, not ten's.
 func TestWake_TheLastWakeDoesNotCountForTheNext(t *testing.T) {
 	green := pyjson.New("conclusion", "success", "updated_at", clock.ISO(wakeCDTSix.Add(2*time.Minute)))
-	basicsFalse(t, wake.AlreadyWoken([]*pyjson.Object{green}, wakeCDTSix.Add(wake.Every-47*time.Minute)))
-	basicsFalse(t, wake.AlreadyWoken([]*pyjson.Object{green}, wakeCDTSix.Add(3*time.Hour)))
+	assertFalse(t, wake.AlreadyWoken([]*pyjson.Object{green}, wakeCDTSix.Add(wake.Every-47*time.Minute)))
+	assertFalse(t, wake.AlreadyWoken([]*pyjson.Object{green}, wakeCDTSix.Add(3*time.Hour)))
 }
 
 // ------------------------------------------------------------------ AccountTests
@@ -127,10 +127,10 @@ func TestWake_EveryClaudeSubscriptionWithItsSecretIsWoken(t *testing.T) {
 	for n := 1; n < 9; n++ {
 		ids = append(ids, fmt.Sprintf("claude-%d", n))
 	}
-	basicsEqual(t, basicsSet(wakeField(found, "id")...), basicsSet(ids...))
-	basicsEqual(t, basicsSet(wakeField(found, "secret")...), basicsSet(strings.Fields(wakeSet)...))
-	basicsEqual(t, basicsSet(wakeField(found, "home")...), basicsSet(".harness"))
-	basicsEqual(t, notes, []string{})
+	assertEqual(t, basicsSet(wakeField(found, "id")...), basicsSet(ids...))
+	assertEqual(t, basicsSet(wakeField(found, "secret")...), basicsSet(strings.Fields(wakeSet)...))
+	assertEqual(t, basicsSet(wakeField(found, "home")...), basicsSet(".harness"))
+	assertEqual(t, notes, []string{})
 }
 
 func TestWake_ARunningSessionAMissingSecretAndASuspensionAreLeftAlone(t *testing.T) {
@@ -143,11 +143,11 @@ func TestWake_ARunningSessionAMissingSecretAndASuspensionAreLeftAlone(t *testing
 	found, notes := wake.Accounts(wakeCfg(strings.ReplaceAll(wakeSet, "CLAUDE_CODE_OAUTH_TOKEN_4", "")),
 		state, wakeCDTSix, ".harness")
 	ids := wakeField(found, "id")
-	basicsNotIn(t, "claude-1", ids)
-	basicsIn(t, "claude-2", ids, "a session whose window has ended is not running")
-	basicsNotIn(t, "claude-3", ids)
-	basicsNotIn(t, "claude-4", ids)
-	basicsEqual(t, len(notes), 3, notes)
+	assertNotIn(t, "claude-1", ids)
+	assertIn(t, "claude-2", ids, "a session whose window has ended is not running")
+	assertNotIn(t, "claude-3", ids)
+	assertNotIn(t, "claude-4", ids)
+	assertEqual(t, len(notes), 3, notes)
 }
 
 func TestWake_ASessionItsLimitRefusesIsLeftAloneUntilItResets(t *testing.T) {
@@ -161,15 +161,15 @@ func TestWake_ASessionItsLimitRefusesIsLeftAloneUntilItResets(t *testing.T) {
 	state := pyjson.New("providers", pyjson.New("claude-1", refused, "claude-2", week, "claude-3", over))
 	found, notes := wake.Accounts(wakeCfg(wakeSet), state, wakeCDTSix, ".harness")
 	ids := wakeField(found, "id")
-	basicsNotIn(t, "claude-1", ids)
-	basicsNotIn(t, "claude-2", ids)
-	basicsIn(t, "claude-3", ids, "a refusal that has run out holds nothing")
-	basicsEqual(t, len(notes), 2, notes)
+	assertNotIn(t, "claude-1", ids)
+	assertNotIn(t, "claude-2", ids)
+	assertIn(t, "claude-3", ids, "a refusal that has run out holds nothing")
+	assertEqual(t, len(notes), 2, notes)
 	all := true
 	for _, n := range notes {
 		all = all && strings.Contains(n, "usage limit refuses calls until")
 	}
-	basicsTrue(t, all, notes)
+	assertTrue(t, all, notes)
 }
 
 // The list is the pool's Claude subscriptions, however many there are.
@@ -182,18 +182,18 @@ func TestWake_EveryNewClaudeSubscriptionIsWokenAndNoneOfAnotherCLI(t *testing.T)
 		}
 	}
 	found, _ := wake.Accounts(cfg, pyjson.New("providers", pyjson.New()), wakeCDTSix, ".harness")
-	basicsEqual(t, wakeField(found, "id"), claude)
+	assertEqual(t, wakeField(found, "id"), claude)
 }
 
 func TestWake_AHaltedBotWakesNothing(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: wakeCDTSix, Cfg: wakeCfg(wakeSet)})
 	found, _ := wake.ToWake(ctx, ".harness")
-	basicsEqual(t, len(found), 8)
+	assertEqual(t, len(found), 8)
 	ctx.Store.Update(func(s *pyjson.Object) any { s.Set("halted", true); return nil }, "halt")
 	found, notes := wake.ToWake(ctx, ".harness")
-	basicsEqual(t, found, []*pyjson.Object{})
-	basicsEqual(t, notes, []string{"halted: a wake is a model call"})
+	assertEqual(t, found, []*pyjson.Object{})
+	assertEqual(t, notes, []string{"halted: a wake is a model call"})
 }
 
 // wakeRan is ran(): a stand-in for `subprocess.run` whose CLI prints `stdout`; `seen` (when not
@@ -225,22 +225,22 @@ func wakeAfter(argv []string, flag string) string {
 func TestWake_TheWakeIsOneTurnOfHaikuAtLowEffortWithNothingLoaded(t *testing.T) {
 	seen := map[string]any{}
 	found := runner.PingUsage("claude", wake.Model, wakeRan(wakeEvent("allowed", 0.01), seen), "", wake.Effort)
-	basicsAlmostEqual(t, found.Obj("five_hour").Float("utilization"), 0.01)
+	assertAlmostEqual(t, found.Obj("five_hour").Float("utilization"), 0.01)
 	argv := seen["argv"].([]string)
-	basicsEqual(t, wakeAfter(argv, "--model"), "claude-haiku-5-5")
-	basicsEqual(t, wakeAfter(argv, "--effort"), "low")
-	basicsEqual(t, wakeAfter(argv, "--max-turns"), "1")
-	basicsEqual(t, wakeAfter(argv, "--tools"), "")
-	basicsEqual(t, wakeAfter(argv, "--system-prompt"), runner.PingSystem)
+	assertEqual(t, wakeAfter(argv, "--model"), "claude-haiku-5-5")
+	assertEqual(t, wakeAfter(argv, "--effort"), "low")
+	assertEqual(t, wakeAfter(argv, "--max-turns"), "1")
+	assertEqual(t, wakeAfter(argv, "--tools"), "")
+	assertEqual(t, wakeAfter(argv, "--system-prompt"), runner.PingSystem)
 	for _, flag := range []string{"--strict-mcp-config", "--disable-slash-commands", "--no-session-persistence"} {
-		basicsIn(t, flag, argv)
+		assertIn(t, flag, argv)
 	}
 }
 
 func TestWake_TheQuietPingNamesNoEffort(t *testing.T) {
 	seen := map[string]any{}
 	runner.PingUsage("claude", "haiku", wakeRan("", seen), "", "")
-	basicsNotIn(t, "--effort", seen["argv"].([]string))
+	assertNotIn(t, "--effort", seen["argv"].([]string))
 }
 
 // ------------------------------------------------------------------ WakeTests
@@ -259,29 +259,29 @@ func wakeWake(stdout string) (bool, string) {
 
 func TestWake_APingStartsTheSession(t *testing.T) {
 	ok, line := wakeWake(wakeEvent("allowed", 0.01))
-	basicsTrue(t, ok)
-	basicsIn(t, "the 5-hour session is running", line)
+	assertTrue(t, ok)
+	assertIn(t, "the 5-hour session is running", line)
 }
 
 func TestWake_APingItsLimitRejectsIsReportedNotFailed(t *testing.T) {
 	ok, line := wakeWake(strings.Join([]string{
 		wakeEvent("rejected", 1.0, "resetsAt", 1790710800),
 		pyjson.Dumps(pyjson.New("type", "result", "is_error", true, "result", "You've hit your limit"))}, "\n"))
-	basicsTrue(t, ok, line)
-	basicsIn(t, "its usage limit refused the ping", line)
-	basicsIn(t, clock.ISO(time.Unix(1790710800, 0).UTC()), line)
+	assertTrue(t, ok, line)
+	assertIn(t, "its usage limit refused the ping", line)
+	assertIn(t, clock.ISO(time.Unix(1790710800, 0).UTC()), line)
 }
 
 func TestWake_ARefusalTheCLIGivesOnlyInWordsIsOneToo(t *testing.T) {
 	ok, line := wakeWake(pyjson.Dumps(pyjson.New("type", "result", "is_error", true,
 		"result", "Claude AI usage limit reached")))
-	basicsTrue(t, ok, line)
-	basicsIn(t, "its usage limit refused the ping", line)
+	assertTrue(t, ok, line)
+	assertIn(t, "its usage limit refused the ping", line)
 }
 
 func TestWake_APingThatSaysNothingFails(t *testing.T) {
 	ok, line := wakeWake(pyjson.Dumps(pyjson.New("type", "result", "is_error", true,
 		"result", "connection reset")))
-	basicsFalse(t, ok)
-	basicsIn(t, "no usage reading", line)
+	assertFalse(t, ok)
+	assertIn(t, "no usage reading", line)
 }

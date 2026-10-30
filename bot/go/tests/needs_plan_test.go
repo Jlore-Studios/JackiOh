@@ -193,28 +193,28 @@ func needsPlanFour() []needsPlanHeld {
 
 func TestNeedsPlan_ThePlanSectionGoesInComesOutAndIsReplaced(t *testing.T) {
 	body := issueplan.WithPlan("Make the rules v2.", "1. Edit `src/a.ts`.", "`claude-3`", "run 7")
-	workflowsTrue(t, strings.HasPrefix(body, "Make the rules v2.\n\n"+issueplan.Start+"\n## Plan\n"))
-	workflowsIn(t, "_Written by `claude-3` (run 7)", body)
-	workflowsNotIn(t, config.Marker, body) // the description must not read as the bot's own
-	workflowsEqual(t, issueplan.PlanOf(body), "1. Edit `src/a.ts`.")
-	workflowsEqual(t, issueplan.WithoutPlan(body), "Make the rules v2.")
+	assertTrue(t, strings.HasPrefix(body, "Make the rules v2.\n\n"+issueplan.Start+"\n## Plan\n"))
+	assertIn(t, "_Written by `claude-3` (run 7)", body)
+	assertNotIn(t, config.Marker, body) // the description must not read as the bot's own
+	assertEqual(t, issueplan.PlanOf(body), "1. Edit `src/a.ts`.")
+	assertEqual(t, issueplan.WithoutPlan(body), "Make the rules v2.")
 	again := issueplan.WithPlan(body, "1. Edit `src/b.ts`.", "`claude-1`", "")
-	workflowsEqual(t, strings.Count(again, issueplan.Start), 1)
-	workflowsEqual(t, issueplan.PlanOf(again), "1. Edit `src/b.ts`.")
+	assertEqual(t, strings.Count(again, issueplan.Start), 1)
+	assertEqual(t, issueplan.PlanOf(again), "1. Edit `src/b.ts`.")
 	// A person's edit is the plan; text they add after the section stays theirs.
 	edited := strings.ReplaceAll(again, "src/b.ts", "src/c.ts") + "\nAlso: thanks."
-	workflowsEqual(t, issueplan.PlanOf(edited), "1. Edit `src/c.ts`.")
-	workflowsEqual(t, issueplan.WithoutPlan(edited), "Make the rules v2.\n\nAlso: thanks.")
-	workflowsEqual(t, issueplan.PlanOf("No plan here."), "")
-	workflowsEqual(t, issueplan.PlanOf(""), "") // plan_of(None): the Go body is "" for None
+	assertEqual(t, issueplan.PlanOf(edited), "1. Edit `src/c.ts`.")
+	assertEqual(t, issueplan.WithoutPlan(edited), "Make the rules v2.\n\nAlso: thanks.")
+	assertEqual(t, issueplan.PlanOf("No plan here."), "")
+	assertEqual(t, issueplan.PlanOf(""), "") // plan_of(None): the Go body is "" for None
 }
 
 func TestNeedsPlan_ALongPlanGivesWayToTheTask(t *testing.T) {
 	task := strings.Repeat("t", 30_000)
 	body := issueplan.WithPlan(task, strings.Repeat("p", 60_000), "`claude-3`", "")
-	workflowsLessEqual(t, py.Len(body), issueplan.BodyLimit)
-	workflowsTrue(t, strings.HasPrefix(body, task))
-	workflowsIn(t, "cut to fit the description", body)
+	assertLessEqual(t, py.Len(body), issueplan.BodyLimit)
+	assertTrue(t, strings.HasPrefix(body, task))
+	assertIn(t, "cut to fit the description", body)
 }
 
 // ---------------------------------------------------------------------------- StageTests
@@ -240,7 +240,7 @@ func TestNeedsPlan_QueuedItemsWithoutAStrongPlanCarryTheLabel(t *testing.T) {
 	}
 	// A medium plan is enough for an easy or medium item; only a hard one needs a strong model's
 	// (#317 part 6, #695).
-	workflowsEqualMaps(t, labelled, map[int]bool{3: true})
+	assertEqual(t, labelled, map[int]bool{3: true})
 }
 
 // ---------------------------------------------------------------------------- PlanningLaneTests
@@ -267,7 +267,7 @@ func TestNeedsPlan_PlanningComesFirstEasyFirstAndTakesNoBuildLane(t *testing.T) 
 	planned := needsPlanMake(ctx)
 	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "plan", 4, "claude-1") // claude-1 holds nothing else
 	needsPlanSeatIs(t, planned, "plan", [3]string{"claude-1", "opus", "strong"})
-	workflowsEqualMaps(t, gh.LabelNames(4), workflowsSet(config.LabelWorking, config.LabelNeedsPlan, needsPlanEasy,
+	assertEqual(t, gh.LabelNames(4), workflowsSet(config.LabelWorking, config.LabelNeedsPlan, needsPlanEasy,
 		"priority:low"))
 	needsPlanRunning(gh, ctx, planned)
 	planned = needsPlanMake(ctx)
@@ -275,7 +275,7 @@ func TestNeedsPlan_PlanningComesFirstEasyFirstAndTakesNoBuildLane(t *testing.T) 
 	needsPlanRunning(gh, ctx, planned)
 	// Both planning lanes are taken, and claude-1, planning, does not build too.
 	action := py.Str(needsPlanMake(ctx).Get("action"))
-	workflowsTrue(t, action != "plan" && action != "build", action)
+	assertTrue(t, action != "plan" && action != "build", action)
 	needsPlanPlannedBy(ctx, 4)
 	gh.Runs.Delete("4")
 	labels := []any{}
@@ -285,7 +285,7 @@ func TestNeedsPlan_PlanningComesFirstEasyFirstAndTakesNoBuildLane(t *testing.T) 
 	gh.Threads.Item(4).Set("labels", labels)
 	planned = needsPlanMake(ctx)
 	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "build", 4, "lite")
-	workflowsTrue(t, needsPlanSeat(t, planned, "plan") == nil) // built from the plan, not planned again
+	assertTrue(t, needsPlanSeat(t, planned, "plan") == nil) // built from the plan, not planned again
 }
 
 // Planning comes first: claude-3 (two lanes, no caps) plans two items at once, before it builds
@@ -328,9 +328,9 @@ func TestNeedsPlan_Claude1NeverPlansWhileItBuilds(t *testing.T) {
 	ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: needsPlanSecrets("CLAUDE_CODE_OAUTH_TOKEN")})
 	needsPlanBusy(gh, ctx, needsPlanHeld{"claude-1", 50})
 	needsPlanQueue(gh, ctx, 3, false)
-	wasteEq(t, needsPlanMake(ctx).Get("action"), "none")
+	assertEqual(t, needsPlanMake(ctx).Get("action"), "none")
 	gh.Runs.Delete("50")
-	wasteEq(t, needsPlanMake(ctx).Get("action"), "plan")
+	assertEqual(t, needsPlanMake(ctx).Get("action"), "plan")
 }
 
 // claude-2 (capped) has one lane (#695): while it holds a run it takes nothing more, neither a
@@ -341,13 +341,13 @@ func TestNeedsPlan_ACappedSubscriptionTakesNothingWhileHolding(t *testing.T) {
 	ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: needsPlanSecrets("CLAUDE_CODE_OAUTH_TOKEN_2")})
 	needsPlanBusy(gh, ctx, needsPlanHeld{"claude-2", 50})
 	needsPlanQueue(gh, ctx, 3, false)
-	wasteEq(t, needsPlanMake(ctx).Get("action"), "none")
+	assertEqual(t, needsPlanMake(ctx).Get("action"), "none")
 	gh.Runs.Delete("50")
 	planned := needsPlanMake(ctx)
 	needsPlanIs(t, planned, []string{"action", "provider"}, "plan", "claude-2")
 	needsPlanRunning(gh, ctx, planned)
 	needsPlanQueue(gh, ctx, 4, true)
-	wasteEq(t, needsPlanMake(ctx).Get("action"), "none") // the lane is held again
+	assertEqual(t, needsPlanMake(ctx).Get("action"), "none") // the lane is held again
 }
 
 // At 87% of its 5-hour window claude-2 (cap 90%, long runs start under 85%) starts neither a
@@ -368,9 +368,9 @@ func TestNeedsPlan_HeadroomHoldsBackPlansAsItDoesBuilds(t *testing.T) {
 	}
 	reading(0.87)
 	needsPlanQueue(gh, ctx, 3, true) // planned: a build
-	wasteEq(t, needsPlanMake(ctx).Get("action"), "none")
+	assertEqual(t, needsPlanMake(ctx).Get("action"), "none")
 	needsPlanQueue(gh, ctx, 4, false) // not planned: a plan
-	wasteEq(t, needsPlanMake(ctx).Get("action"), "none")
+	assertEqual(t, needsPlanMake(ctx).Get("action"), "none")
 	reading(0.8)
 	planned := needsPlanMake(ctx)
 	needsPlanIs(t, planned, []string{"action", "number"}, "plan", 4)
@@ -387,15 +387,15 @@ func TestNeedsPlan_APlanningRunTakesARunnerWhereItRuns(t *testing.T) {
 	needsPlanBusy(gh, ctx, needsPlanHeld{"agy", 53}, needsPlanHeld{"muse", 54}, needsPlanHeld{"claude-4", 55},
 		needsPlanHeld{"claude-5", 56})
 	needsPlanQueue(gh, ctx, 3, false)
-	wasteEq(t, needsPlanMake(ctx).Get("action"), "none")
+	assertEqual(t, needsPlanMake(ctx).Get("action"), "none")
 	// A slot free on the machine: a planner there plans, though GitHub's lanes are full.
 	gh = fakes.NewFakeGitHub()
 	ctx = needsPlanLaneCtx(gh, needsPlanLane{MaxParallel: 2})
 	needsPlanBusy(gh, ctx, needsPlanHeld{"agy", 53}, needsPlanHeld{"claude-4", 55}, needsPlanHeld{"claude-5", 56})
 	needsPlanQueue(gh, ctx, 3, false)
 	planned := needsPlanMake(ctx)
-	wasteEq(t, planned.Get("action"), "plan")
-	workflowsTrue(t, ctx.Cfg.Pool.OnMachine(py.Str(planned.Get("provider"))), planned.Get("provider"))
+	assertEqual(t, planned.Get("action"), "plan")
+	assertTrue(t, ctx.Cfg.Pool.OnMachine(py.Str(planned.Get("provider"))), planned.Get("provider"))
 	// A lane free on GitHub's runners: the strong planner there goes first.
 	gh = fakes.NewFakeGitHub()
 	ctx = needsPlanLaneCtx(gh, needsPlanLane{MaxParallel: 2})
@@ -411,7 +411,7 @@ func TestNeedsPlan_APlanningRunTakesARunnerWhereItRuns(t *testing.T) {
 	needsPlanBusy(gh, ctx, needsPlanHeld{"agy", 53}, needsPlanHeld{"muse", 54}, needsPlanHeld{"claude-4", 55},
 		needsPlanHeld{"claude-5", 56})
 	needsPlanQueue(gh, ctx, 3, false)
-	workflowsIn(t, "every lane is busy", py.Str(needsPlanMake(ctx).Get("reason")))
+	assertIn(t, "every lane is busy", py.Str(needsPlanMake(ctx).Get("reason")))
 }
 
 // By day (the Claude accounts keep to the night here) no strong model is free: an item nobody has
@@ -434,8 +434,8 @@ func TestNeedsPlan_AMediumModelRatesAndPlansAnUnratedItemOnTheLane(t *testing.T)
 	gh = fakes.NewFakeGitHub()
 	ctx = needsPlanLaneCtx(gh, needsPlanLane{At: testsupport.Day, Machine: []string{"lite"}})
 	needsPlanQueue(gh, ctx, 3, false, needsPlanEasy)
-	wasteEq(t, needsPlanMake(ctx).Get("action"), "none")
-	workflowsTrue(t, gh.LabelNames(3)[config.LabelNeedsPlan])
+	assertEqual(t, needsPlanMake(ctx).Get("action"), "none")
+	assertTrue(t, gh.LabelNames(3)[config.LabelNeedsPlan])
 }
 
 func TestNeedsPlan_APlanWrittenInABuildRunGoesIntoTheDescriptionToo(t *testing.T) {
@@ -444,12 +444,12 @@ func TestNeedsPlan_APlanWrittenInABuildRunGoesIntoTheDescriptionToo(t *testing.T
 	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
 		"review": wasteReviewer(wasteApprove)})
 	planned, result := h.night(r)
-	wasteEq(t, []any{planned.Get("action"), planned.Get("provider"), result.Get("status")},
+	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), result.Get("status")},
 		[]any{"build", "muse", "approved"})
 	record := h.ctx.Store.Load().Obj("items").Obj("12")
-	wasteEq(t, record.Get("planned_tier"), "medium")
-	workflowsTrue(t, issueplan.PlanOf(wasteStr(h.gh.Threads.Item(12), "body")) != "")
-	workflowsTrue(t, !h.gh.LabelNames(12)[config.LabelNeedsPlan])
+	assertEqual(t, record.Get("planned_tier"), "medium")
+	assertTrue(t, issueplan.PlanOf(wasteStr(h.gh.Threads.Item(12), "body")) != "")
+	assertTrue(t, !h.gh.LabelNames(12)[config.LabelNeedsPlan])
 }
 
 // ---------------------------------------------------------------------------- PersonsPlanTests
@@ -470,11 +470,11 @@ func TestNeedsPlan_ItCountsAsAStrongPlanAndTheWeakOneBuildsFromIt(t *testing.T) 
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild, needsPlanEasy}, Body: needsPlanBody()})
 	planned := needsPlanMake(ctx)
 	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "build", 3, "lite")
-	workflowsTrue(t, needsPlanSeat(t, planned, "plan") == nil) // not planned again
-	workflowsTrue(t, !gh.LabelNames(3)[config.LabelNeedsPlan])
-	wasteEq(t, planned.Obj("handoff").Get("notes"), "1. In `apps/web/src/cards/art/Art.tsx`, delay the draw.")
-	wasteEq(t, planned.Obj("handoff").Get("provider"), "the issue's description")
-	workflowsIn(t, issueplan.Start, wasteStr(gh.Threads.Item(3), "body")) // the bot left it as it was
+	assertTrue(t, needsPlanSeat(t, planned, "plan") == nil) // not planned again
+	assertTrue(t, !gh.LabelNames(3)[config.LabelNeedsPlan])
+	assertEqual(t, planned.Obj("handoff").Get("notes"), "1. In `apps/web/src/cards/art/Art.tsx`, delay the draw.")
+	assertEqual(t, planned.Obj("handoff").Get("provider"), "the issue's description")
+	assertIn(t, issueplan.Start, wasteStr(gh.Threads.Item(3), "body")) // the bot left it as it was
 }
 
 func TestNeedsPlan_WithoutTheMarkersItIsOnlyTextAndABotsMediumPlanStillCountsAsMedium(t *testing.T) {
@@ -496,5 +496,5 @@ func TestNeedsPlan_WithoutTheMarkersItIsOnlyTextAndABotsMediumPlanStillCountsAsM
 	// claude-7, the first idle account in the usage order (`plan.balance`).
 	needsPlanSeatIs(t, planned, "build", [3]string{"claude-7", "sonnet", "medium"})
 	needsPlanSeatIs(t, planned, "review", [3]string{"claude-7", "opus", "strong"})
-	workflowsTrue(t, !gh.LabelNames(4)[config.LabelNeedsPlan])
+	assertTrue(t, !gh.LabelNames(4)[config.LabelNeedsPlan])
 }

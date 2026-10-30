@@ -8,7 +8,6 @@ package tests
 
 import (
 	"fmt"
-	"math"
 	"net/url"
 	"strings"
 	"testing"
@@ -143,15 +142,6 @@ func cardsetsDraw(ctx *hctx.Context, fetch cardsets.Fetch) string {
 	return cardsets.Draw(ctx, patches, minSample, oldest)
 }
 
-// cardsetsAlmost is assertAlmostEqual: round(a - b, 7) == 0.
-func cardsetsAlmost(t *testing.T, got any, want float64) {
-	t.Helper()
-	f, ok := got.(float64)
-	if !ok || math.Round((f-want)*1e7) != 0 {
-		t.Errorf("%#v != %v within 7 places", got, want)
-	}
-}
-
 // ---------------------------------------------------------------------------- ReadTests
 
 func TestCardsets_TheLastThreePatchesWith1000GamesEachReadAtItsNewestVersion(t *testing.T) {
@@ -163,16 +153,16 @@ func TestCardsets_TheLastThreePatchesWith1000GamesEachReadAtItsNewestVersion(t *
 	for _, p := range patches {
 		got = append(got, []any{p.Name, p.Version, p.Live, p.Games})
 	}
-	dashboardEq(t, got, [][]any{{"v0.4.2", "v0.4.2b", true, 1200}, {"v0.4.0", "v0.4.0c", false, 1100},
+	assertEqual(t, got, [][]any{{"v0.4.2", "v0.4.2b", true, 1200}, {"v0.4.0", "v0.4.0c", false, 1100},
 		{"v0.3.5", "v0.3.5", true, 1500}})
-	dashboardEq(t, []any{minSample, oldest}, []any{20, "v0.3.5"})
+	assertEqual(t, []any{minSample, oldest}, []any{20, "v0.3.5"})
 	// A cleared patch is read once (live alone); an uncleared one adds its AI games; an older
 	// version of a patch already read is only walked through.
-	dashboardEq(t, api.asked, [][2]string{{"v0.4.2b", "live"}, {"v0.4.2", "live"}, {"v0.4.1", "live"},
+	assertEqual(t, api.asked, [][2]string{{"v0.4.2b", "live"}, {"v0.4.2", "live"}, {"v0.4.1", "live"},
 		{"v0.4.1", "dev"}, {"v0.4.0c", "live"}, {"v0.4.0c", "dev"},
 		{"v0.4.0", "live"}, {"v0.3.5", "live"}})
 	card := patches[1].Cards.Get("core-001").(*cardsets.Card)
-	dashboardEq(t, []int{card.Wins, card.Games}, []int{550, 1100})
+	assertEqual(t, []int{card.Wins, card.Games}, []int{550, 1100})
 }
 
 func TestCardsets_SetsPoolEveryCardAndTakeMeanAndMedianOverTheSampledOnes(t *testing.T) {
@@ -185,30 +175,30 @@ func TestCardsets_SetsPoolEveryCardAndTakeMeanAndMedianOverTheSampledOnes(t *tes
 		}
 		rows[row.Name] = row
 	}
-	dashboardEq(t, names, []string{"Core", "Classic"}) // highest pooled first
+	assertEqual(t, names, []string{"Core", "Classic"}) // highest pooled first
 	core, classic := rows["Core"], rows["Classic"]
-	dashboardEq(t, []int{core.Cards, core.Games, core.Wins}, []int{1, 3800, 2000})
+	assertEqual(t, []int{core.Cards, core.Games, core.Wins}, []int{1, 3800, 2000})
 	// classic-002's 10 games count in the pool but not in the mean or median (under 20).
-	dashboardEq(t, []int{classic.Cards, classic.Games, classic.Wins}, []int{2, 3810, 1855})
-	dashboardEq(t, classic.Rates, []float64{1850.0 / 3800.0})
-	cardsetsAlmost(t, core.ByPatch.Get("v0.4.2"), 700.0/1200.0)
-	cardsetsAlmost(t, classic.ByPatch.Get("v0.4.0"), 555.0/1110.0)
+	assertEqual(t, []int{classic.Cards, classic.Games, classic.Wins}, []int{2, 3810, 1855})
+	assertEqual(t, classic.Rates, []float64{1850.0 / 3800.0})
+	assertAlmostEqual(t, core.ByPatch.Get("v0.4.2"), 700.0/1200.0)
+	assertAlmostEqual(t, classic.ByPatch.Get("v0.4.0"), 555.0/1110.0)
 }
 
 func TestCardsets_TheSectionNamesTheHighestSetAndTheCardsFarFromHalf(t *testing.T) {
 	ctx := testsupport.MakeCtx(nil, testsupport.Ctx{At: testsupport.Day})
 	text := cardsetsDraw(ctx, newCardsetsProduction().call)
-	dashboardTrue(t, strings.HasPrefix(text, cardsets.Start) && strings.HasSuffix(text, cardsets.End))
-	dashboardIn(t, "v0.4.2 (1,200 live games), v0.4.0 (1,100 live and AI games) and v0.3.5 "+
+	assertTrue(t, strings.HasPrefix(text, cardsets.Start) && strings.HasSuffix(text, cardsets.End))
+	assertIn(t, "v0.4.2 (1,200 live games), v0.4.0 (1,100 live and AI games) and v0.3.5 "+
 		"(1,500 live games)", text)
-	dashboardIn(t, "| Set | Cards | Card-games | Pooled | Mean | Median | v0.4.2 | v0.4.0 | "+
+	assertIn(t, "| Set | Cards | Card-games | Pooled | Mean | Median | v0.4.2 | v0.4.0 | "+
 		"v0.3.5 |", text)
-	dashboardIn(t, "| Core | 1 | 3,800 | 52.6% ±0.8 | 52.6% | 52.6% | 58.3% | 50.0% | 50.0% |",
+	assertIn(t, "| Core | 1 | 3,800 | 52.6% ±0.8 | 52.6% | 52.6% | 58.3% | 50.0% | 50.0% |",
 		text)
-	dashboardIn(t, "Highest pooled: **Core**; mean: **Core**; median: **Core**.", text)
+	assertIn(t, "Highest pooled: **Core**; mean: **Core**; median: **Core**.", text)
 	// Stockpile, 2000 of 3800, is 3.2 standard errors over half.
-	dashboardIn(t, "| Stockpile (`core-001`) | Core | 52.6% | 3,800 | +3.2 |", text)
-	dashboardNotIn(t, "nearer 50%", text)
+	assertIn(t, "| Stockpile (`core-001`) | Core | 52.6% | 3,800 | +3.2 |", text)
+	assertNotIn(t, "nearer 50%", text)
 }
 
 // The status issue keeps under GitHub's limit: `OUTLIERS_SHOWN` of the cards far from half,
@@ -226,11 +216,11 @@ func TestCardsets_OnlyTheCardsFurthestFromHalfAreListed(t *testing.T) {
 		{"v0.4.1", cardsetsPayload("v0.4.1", nil, true, 10, []cardsetsCard{}), nil}}
 	text := cardsetsDraw(testsupport.MakeCtx(nil, testsupport.Ctx{At: testsupport.Day}),
 		newCardsetsProduction(history).call)
-	dashboardIn(t, fmt.Sprintf("Cards 3 or more standard errors from 50%% (%d)", extra), text)
-	dashboardIn(t, fmt.Sprintf("Card %d (`", extra-1), text)
-	dashboardIn(t, "Card 3 (`", text)
-	dashboardNotIn(t, "Card 2 (`", text)
-	dashboardIn(t, "_… and 3 nearer 50%, in `/api/stats/cards`._", text)
+	assertIn(t, fmt.Sprintf("Cards 3 or more standard errors from 50%% (%d)", extra), text)
+	assertIn(t, fmt.Sprintf("Card %d (`", extra-1), text)
+	assertIn(t, "Card 3 (`", text)
+	assertNotIn(t, "Card 2 (`", text)
+	assertIn(t, "_… and 3 nearer 50%, in `/api/stats/cards`._", text)
 }
 
 func TestCardsets_NoPatchWithEnoughGamesSaysSo(t *testing.T) {
@@ -238,12 +228,12 @@ func TestCardsets_NoPatchWithEnoughGamesSaysSo(t *testing.T) {
 		cardsetsPayload("v0.1.0", nil, false, 10, []cardsetsCard{})}}
 	text := cardsetsDraw(testsupport.MakeCtx(nil, testsupport.Ctx{At: testsupport.Day}),
 		newCardsetsProduction(thin).call)
-	dashboardIn(t, "no patch back to v0.1.0 has 1,000 games yet", text)
+	assertIn(t, "no patch back to v0.1.0 has 1,000 games yet", text)
 	alone := []cardsetsVersion{{"v0.3.5", cardsetsPayload("v0.3.5", nil, true, 1500,
 		[]cardsetsCard{cardsetsWith(cardsetsCore, 750, 1500)}), nil}}
 	one := cardsetsDraw(testsupport.MakeCtx(nil, testsupport.Ctx{At: testsupport.Day}),
 		newCardsetsProduction(alone).call)
-	dashboardIn(t, "once a day: the one patch with 1,000 games or more, v0.3.5 (1,500 live "+
+	assertIn(t, "once a day: the one patch with 1,000 games or more, v0.3.5 (1,500 live "+
 		"games)._", one)
 }
 
@@ -254,36 +244,36 @@ func TestCardsets_ReadOnceADayAndAFailedReadKeepsTheLastWithANote(t *testing.T) 
 	gh := ctx.GH.(*fakes.FakeGitHub)
 	api := newCardsetsProduction()
 	first := cardsets.Section(ctx, ctx.Store.Load(), "", api.call)
-	dashboardIn(t, "Highest pooled", first)
-	dashboardEq(t, ctx.Store.Load().Obj("card_sets").Get("ok"), true)
+	assertIn(t, "Highest pooled", first)
+	assertEqual(t, ctx.Store.Load().Obj("card_sets").Get("ok"), true)
 	// Within the day the section is kept, unread.
 	soon := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(23 * time.Hour)})
-	dashboardEq(t, cardsets.Section(soon, soon.Store.Load(), first, api.call), first)
-	dashboardEq(t, len(api.asked), 8)
+	assertEqual(t, cardsets.Section(soon, soon.Store.Load(), first, api.call), first)
+	assertEqual(t, len(api.asked), 8)
 	// No fetcher (a test, Squishy's loop): kept as it is.
-	dashboardEq(t, cardsets.Section(soon, soon.Store.Load(), first, nil), first)
+	assertEqual(t, cardsets.Section(soon, soon.Store.Load(), first, nil), first)
 
 	down := func(string) any {
 		panic(&cardsets.ReadError{Type: "URLError", Msg: "<urlopen error timed out>"})
 	}
 	later := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(24 * time.Hour)})
 	failed := cardsets.Section(later, later.Store.Load(), first, down)
-	dashboardIn(t, "> ⚠️ The read at 2026-09-30 12:00 failed (URLError: <urlopen error timed "+
+	assertIn(t, "> ⚠️ The read at 2026-09-30 12:00 failed (URLError: <urlopen error timed "+
 		"out>); it is tried again in 60 minutes.", failed)
-	dashboardIn(t, "Highest pooled", failed) // the last good figures stay
+	assertIn(t, "Highest pooled", failed) // the last good figures stay
 	// A second failure an hour on replaces the note, never stacks it.
 	hour := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(25 * time.Hour)})
 	again := cardsets.Section(hour, hour.Store.Load(), failed, down)
-	dashboardEq(t, strings.Count(again, "> ⚠️"), 1)
-	dashboardEq(t, strings.ReplaceAll(again, "13:00", "12:00"), failed)
+	assertEqual(t, strings.Count(again, "> ⚠️"), 1)
+	assertEqual(t, strings.ReplaceAll(again, "13:00", "12:00"), failed)
 	// A good read clears it.
 	back := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(26 * time.Hour)})
-	dashboardNotIn(t, "⚠️", cardsets.Section(back, back.Store.Load(), again, api.call))
+	assertNotIn(t, "⚠️", cardsets.Section(back, back.Store.Load(), again, api.call))
 	// A first read that fails still draws the section, saying so.
 	bare := cardsets.Section(testsupport.MakeCtx(nil, testsupport.Ctx{At: testsupport.Day}), pyjson.New(),
 		"", down)
-	dashboardEq(t, cardsets.Kept(bare), bare)
-	dashboardIn(t, "failed (URLError", bare)
+	assertEqual(t, cardsets.Kept(bare), bare)
+	assertIn(t, "failed (URLError", bare)
 }
 
 func TestCardsets_TheStatusIssueCarriesItInTheStatistics(t *testing.T) {
@@ -302,18 +292,18 @@ func TestCardsets_TheStatusIssueCarriesItInTheStatistics(t *testing.T) {
 	number := numbers[0]
 	body := gh.Threads.Get(number).Str("body")
 	section := cardsets.Kept(body)
-	dashboardIn(t, section, stats.Kept(body))
-	dashboardLess(t, strings.Index(body, "### The last two weeks"), strings.Index(body, cardsets.Start))
-	dashboardLess(t, strings.Index(body, cardsets.End), strings.Index(body, "### Per window"))
+	assertIn(t, section, stats.Kept(body))
+	assertLess(t, strIndex(t, body, "### The last two weeks"), strIndex(t, body, cardsets.Start))
+	assertLess(t, strIndex(t, body, cardsets.End), strIndex(t, body, "### Per window"))
 	// The statistics are counted again in 51 minutes; the section is kept, not read again.
 	asked := len(api.asked)
 	later := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(51 * time.Minute)})
 	dashboard.Update(later, nil, true, nil, false, api.call)
-	dashboardEq(t, len(api.asked), asked)
-	dashboardEq(t, cardsets.Kept(gh.Threads.Get(number).Str("body")), section)
+	assertEqual(t, len(api.asked), asked)
+	assertEqual(t, cardsets.Kept(gh.Threads.Get(number).Str("body")), section)
 	// A day on, the next count reads it afresh.
 	tomorrow := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(24 * time.Hour)})
 	dashboard.Update(tomorrow, nil, true, nil, false, api.call)
-	dashboardEq(t, len(api.asked), 2*asked)
-	dashboardIn(t, "Read at 2026-09-30 12:00", gh.Threads.Get(number).Str("body"))
+	assertEqual(t, len(api.asked), 2*asked)
+	assertIn(t, "Read at 2026-09-30 12:00", gh.Threads.Get(number).Str("body"))
 }

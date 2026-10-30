@@ -71,23 +71,23 @@ func TestHardening_AControlVerbInPlainWordsIsARequest(t *testing.T) {
 	for _, body := range []string{"@jgoetzmann-bot start with option A", "@jgoetzmann-bot go ahead with plan B",
 		"@jgoetzmann-bot stop using the old sprite", "@jgoetzmann-bot halt the timer when",
 		"@jgoetzmann-bot help the player find the Coin"} {
-		eventsEqual(t, hardeningVerbs(body, hardeningBotName)[0][0], "request", body)
+		assertEqual(t, hardeningVerbs(body, hardeningBotName)[0][0], "request", body)
 	}
 }
 
 func TestHardening_ABareControlVerbIsStillACommand(t *testing.T) {
-	eventsEqual(t, hardeningVerbs("@jgoetzmann-bot start", hardeningBotName), [][2]string{{"start", ""}})
-	eventsEqual(t, hardeningVerbs("@jgoetzmann-bot run #12", hardeningBotName), [][2]string{{"run", "#12"}})
-	eventsEqual(t, hardeningVerbs("@jgoetzmann-bot stop", hardeningBotName), [][2]string{{"stop", ""}})
-	eventsEqual(t, hardeningVerbs("/harness halt it is late", hardeningBotName), [][2]string{{"halt", "it is late"}})
+	assertEqual(t, hardeningVerbs("@jgoetzmann-bot start", hardeningBotName), [][2]string{{"start", ""}})
+	assertEqual(t, hardeningVerbs("@jgoetzmann-bot run #12", hardeningBotName), [][2]string{{"run", "#12"}})
+	assertEqual(t, hardeningVerbs("@jgoetzmann-bot stop", hardeningBotName), [][2]string{{"stop", ""}})
+	assertEqual(t, hardeningVerbs("/harness halt it is late", hardeningBotName), [][2]string{{"halt", "it is late"}})
 }
 
 func TestHardening_CommandsWrittenAsMarkdown(t *testing.T) {
 	for _, body := range []string{"- /harness build", "`/harness build`", "**/harness build**", "1. /harness build"} {
-		eventsEqual(t, hardeningVerbs(body, hardeningBotName), [][2]string{{"build", ""}}, body)
+		assertEqual(t, hardeningVerbs(body, hardeningBotName), [][2]string{{"build", ""}}, body)
 	}
-	eventsEqual(t, hardeningVerbs("please /harness build this", hardeningBotName), [][2]string{})
-	eventsTrue(t, commands.NamesTheBot("please /harness build this", hardeningBotName))
+	assertEqual(t, hardeningVerbs("please /harness build this", hardeningBotName), [][2]string{})
+	assertTrue(t, commands.NamesTheBot("please /harness build this", hardeningBotName))
 }
 
 // hardeningVerbs is ParserTests.verbs: each command's (verb, args).
@@ -111,21 +111,21 @@ func TestHardening_AnEditBySomeoneElseRunsNothing(t *testing.T) {
 	_, ctx := newHardeningEvents()
 	out := events.Handle(ctx, "issue_comment",
 		hardeningComment(5, "/harness halt", hardeningCommentOpts{Action: "edited", Sender: hardeningHelper}))
-	eventsIn(t, "someone other than", out[0])
-	eventsFalse(t, eventsDig(t, ctx.Store.Load(), "halted"))
+	assertIn(t, "someone other than", out[0])
+	assertFalse(t, eventsDig(t, ctx.Store.Load(), "halted"))
 }
 
 func TestHardening_AnEditRunsOnlyWhatItAdded(t *testing.T) {
 	gh, ctx := newHardeningEvents()
 	events.Handle(ctx, "issue_comment", hardeningComment(5, "thanks @jgoetzmann-bot!", hardeningCommentOpts{CID: 7}))
-	eventsIn(t, "I saw my name", eventsLast(t, gh.BotComments(5)))
+	assertIn(t, "I saw my name", eventsLast(t, gh.BotComments(5)))
 	events.Handle(ctx, "issue_comment", hardeningComment(5, "/harness status", hardeningCommentOpts{CID: 8}))
 	replies := len(gh.BotComments(5))
 	events.Handle(ctx, "issue_comment",
 		hardeningComment(5, "/harness status\n/harness halt", hardeningCommentOpts{CID: 8, Action: "edited"}))
-	eventsTrue(t, eventsDig(t, ctx.Store.Load(), "halted"))
-	eventsNotIn(t, "Night bot status", eventsLast(t, gh.BotComments(5)))
-	eventsEqual(t, len(gh.BotComments(5)), replies+1)
+	assertTrue(t, eventsDig(t, ctx.Store.Load(), "halted"))
+	assertNotIn(t, "Night bot status", eventsLast(t, gh.BotComments(5)))
+	assertEqual(t, len(gh.BotComments(5)), replies+1)
 }
 
 func TestHardening_TheSameCommentIsNeverRunTwice(t *testing.T) {
@@ -133,7 +133,7 @@ func TestHardening_TheSameCommentIsNeverRunTwice(t *testing.T) {
 	events.Handle(ctx, "issue_comment", hardeningComment(5, "/harness halt", hardeningCommentOpts{CID: 9}))
 	eventsUpdateState(ctx, "halted", false)
 	events.Handle(ctx, "issue_comment", hardeningComment(5, "/harness halt", hardeningCommentOpts{CID: 9}))
-	eventsFalse(t, eventsDig(t, ctx.Store.Load(), "halted"))
+	assertFalse(t, eventsDig(t, ctx.Store.Load(), "halted"))
 }
 
 func TestHardening_AReviewThatNamesTheBotGetsAHint(t *testing.T) {
@@ -144,7 +144,7 @@ func TestHardening_AReviewThatNamesTheBotGetsAHint(t *testing.T) {
 			"author_association", "OWNER",
 			"body", "looks fine, maybe @jgoetzmann-bot could tidy it"))
 	events.Handle(ctx, "pull_request_review", payload)
-	eventsIn(t, "I saw my name", eventsLast(t, gh.BotComments(9)))
+	assertIn(t, "I saw my name", eventsLast(t, gh.BotComments(9)))
 }
 
 func TestHardening_TheBuildLabelOnAPullRequestAsksForARevision(t *testing.T) {
@@ -153,7 +153,7 @@ func TestHardening_TheBuildLabelOnAPullRequestAsksForARevision(t *testing.T) {
 	payload := pyjson.New("action", "labeled", "sender", fakes.Operator, "label", pyjson.New("name", config.LabelBuild),
 		"pull_request", pyjson.New("number", 9))
 	events.Handle(ctx, "pull_request_target", payload)
-	eventsEqual(t, gh.LabelNames(9), eventsSet(config.LabelRevise))
+	assertEqual(t, gh.LabelNames(9), eventsSet(config.LabelRevise))
 }
 
 func TestHardening_AFailedAndACancelledRunCountAsCI(t *testing.T) {
@@ -168,7 +168,7 @@ func TestHardening_AFailedAndACancelledRunCountAsCI(t *testing.T) {
 		events.Handle(ctx, "workflow_run", pyjson.New("action", "completed", "sender", fakes.Bot,
 			"workflow_run", payload))
 	}
-	eventsEqual(t, len(gh.Reruns), 2)
+	assertEqual(t, len(gh.Reruns), 2)
 }
 
 func TestHardening_RunNowIsWrittenDownBeforeItStarts(t *testing.T) {
@@ -179,13 +179,13 @@ func TestHardening_RunNowIsWrittenDownBeforeItStarts(t *testing.T) {
 		herr.Raise(&herr.GitHubError{Msg: "no", Status: 500})
 	}
 	events.Handle(ctx, "issue_comment", hardeningComment(5, "/harness run #5", hardeningCommentOpts{CID: 10}))
-	eventsIn(t, "the next hourly run does it", eventsLast(t, gh.BotComments(5)))
+	assertIn(t, "the next hourly run does it", eventsLast(t, gh.BotComments(5)))
 	gh.Threads.Item(5).Set("labels", eventsLabels(config.LabelBuild))
 	look := plan.Peek_(ctx, false, nil, "auto") // by day, outside claude-1's hours
-	eventsEqual(t, []any{look.Work, look.Forced}, []any{true, true})
+	assertEqual(t, []any{look.Work, look.Forced}, []any{true, true})
 	planned := plan.Make(ctx, false, nil, "auto", nil)
-	eventsEqual(t, eventsDig(t, planned, "number"), 5)
-	eventsNone(t, ctx.Store.Load().Get("run_requested")) // taken up once
+	assertEqual(t, eventsDig(t, planned, "number"), 5)
+	assertIsNone(t, ctx.Store.Load().Get("run_requested")) // taken up once
 }
 
 // ---------------------------------------------------------------------------- TokenTests
@@ -202,10 +202,10 @@ func TestHardening_ARefusedBotTokenFallsBackToTheActionsToken(t *testing.T) {
 		return &gh.Response{Header: http.Header{}, Body: []byte(pyjson.Dumps(pyjson.New("ok", true)))}, nil
 	}
 	client := gh.NewGitHub("o/r", "bot-token", false, opener, nil, "actions-token")
-	eventsEqual(t, client.Request("GET", "/x", nil, "", false, false), pyjson.New("ok", true))
-	eventsEqual(t, seen, []string{"Bearer bot-token", "Bearer actions-token"})
+	assertEqual(t, client.Request("GET", "/x", nil, "", false, false), pyjson.New("ok", true))
+	assertEqual(t, seen, []string{"Bearer bot-token", "Bearer actions-token"})
 	client.Request("GET", "/y", nil, "", false, false)
-	eventsEqual(t, eventsLast(t, seen), "Bearer actions-token")
+	assertEqual(t, eventsLast(t, seen), "Bearer actions-token")
 }
 
 // ---------------------------------------------------------------------------- ConditionalGetTests
@@ -230,11 +230,11 @@ func TestHardening_ACachedGetSendsItsEtagAndKeepsTheAnswerGithubSaysIsUnchanged(
 			Body: []byte(pyjson.Dumps(pyjson.New("jobs", []any{pyjson.New("id", 1)})))}, nil
 	}
 	client := gh.NewGitHub("o/r", "token-for-etags", false, opener, nil, "")
-	eventsEqual(t, client.ListJobs(5, true), []*pyjson.Object{pyjson.New("id", 1)})
-	eventsEqual(t, client.ListJobs(5, true), []*pyjson.Object{pyjson.New("id", 1)}) // the 304, answered as kept
-	eventsEqual(t, sent, []any{nil, `"v1"`})
+	assertEqual(t, client.ListJobs(5, true), []*pyjson.Object{pyjson.New("id", 1)})
+	assertEqual(t, client.ListJobs(5, true), []*pyjson.Object{pyjson.New("id", 1)}) // the 304, answered as kept
+	assertEqual(t, sent, []any{nil, `"v1"`})
 	client.ListJobs(5, false) // a plain GET stays unconditional
-	eventsEqual(t, eventsLast(t, sent), nil)
+	assertEqual(t, eventsLast(t, sent), nil)
 }
 
 // ---------------------------------------------------------------------------- DeliverTests
@@ -261,9 +261,9 @@ func TestHardening_AStopAfterTheLastCheckpointPublishesNoPullRequest(t *testing.
 	eventsUpdateItem(h.ctx, 12,
 		"stop_requested", true, "stopped_by", "jgoetzmann", "stopped_at", "2026-09-30T03:30:00Z")
 	hardeningDeliver(h, planned, out)
-	eventsEqual(t, h.gh.ListPulls("open", "bot/issue-12", 200), []*pyjson.Object{})
-	eventsEqual(t, h.gh.LabelNames(12), eventsSet("bot:planned", "difficulty:medium"))
-	eventsIn(t, "Stopped, as asked", eventsLast(t, h.gh.BotComments(12)))
+	assertEqual(t, h.gh.ListPulls("open", "bot/issue-12", 200), []*pyjson.Object{})
+	assertEqual(t, h.gh.LabelNames(12), eventsSet("bot:planned", "difficulty:medium"))
+	assertIn(t, "Stopped, as asked", eventsLast(t, h.gh.BotComments(12)))
 }
 
 func TestHardening_AHaltAfterTheLastCheckpointKeepsTheWorkQueued(t *testing.T) {
@@ -272,9 +272,9 @@ func TestHardening_AHaltAfterTheLastCheckpointKeepsTheWorkQueued(t *testing.T) {
 	planned, out := hardeningApprovedRun(h)
 	eventsUpdateState(h.ctx, "halted", true)
 	hardeningDeliver(h, planned, out)
-	eventsEqual(t, h.gh.ListPulls("open", "bot/issue-12", 200), []*pyjson.Object{})
-	eventsEqual(t, h.gh.LabelNames(12), eventsSet(config.LabelBuild, "bot:planned", "difficulty:medium"))
-	eventsNotNone(t, h.originSHA("bot/issue-12"))
+	assertEqual(t, h.gh.ListPulls("open", "bot/issue-12", 200), []*pyjson.Object{})
+	assertEqual(t, h.gh.LabelNames(12), eventsSet(config.LabelBuild, "bot:planned", "difficulty:medium"))
+	assertIsNotNone(t, h.originSHA("bot/issue-12"))
 }
 
 func TestHardening_TheModelJobItselfStopsAfterTheLastReview(t *testing.T) {
@@ -294,7 +294,7 @@ func TestHardening_TheModelJobItselfStopsAfterTheLastReview(t *testing.T) {
 		"review": ratingReviewer(ratingApprove)}),
 		h.clone, filepath.Join(h.root, "work"), filepath.Join(h.root, "out-probe"), probe,
 		nil, nil, nil, nil, nil).Run()
-	eventsEqual(t, eventsDig(t, result, "status"), "stopped")
+	assertEqual(t, eventsDig(t, result, "status"), "stopped")
 }
 
 func TestHardening_StopThenANewRequestIsAnsweredAfterTheStop(t *testing.T) {
@@ -302,15 +302,15 @@ func TestHardening_StopThenANewRequestIsAnsweredAfterTheStop(t *testing.T) {
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned, out := hardeningApprovedRun(h)
 	events.Handle(h.ctx, "issue_comment", hardeningComment(12, "/harness stop", hardeningCommentOpts{CID: 21}))
-	eventsEqual(t, h.gh.LabelNames(12), eventsSet(config.LabelWorking))
+	assertEqual(t, h.gh.LabelNames(12), eventsSet(config.LabelWorking))
 	events.Handle(h.ctx, "issue_comment",
 		hardeningComment(12, "@jgoetzmann-bot do it with a Token class instead", hardeningCommentOpts{CID: 22}))
 	clk := testsupport.ClockOf(h.ctx)
 	at := clk.At
 	clk.At = time.Date(at.Year(), at.Month(), at.Day(), at.Hour(), 20, at.Second(), at.Nanosecond(), at.Location())
 	hardeningDeliver(h, planned, out)
-	eventsEqual(t, h.gh.ListPulls("open", "bot/issue-12", 200), []*pyjson.Object{})
-	eventsIn(t, config.LabelBuild, h.gh.LabelNames(12)) // the new request is queued
+	assertEqual(t, h.gh.ListPulls("open", "bot/issue-12", 200), []*pyjson.Object{})
+	assertIn(t, config.LabelBuild, h.gh.LabelNames(12)) // the new request is queued
 }
 
 func TestHardening_ARevisionAskedForDuringTheBuildIsKept(t *testing.T) {
@@ -322,7 +322,7 @@ func TestHardening_ARevisionAskedForDuringTheBuildIsKept(t *testing.T) {
 	h.gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: []string{config.LabelPR, config.LabelRevise}, SHA: start})
 	h.gh.Threads.Item(40).Set("draft", true)
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	eventsEqual(t, eventsDig(t, planned, "action"), "revise") // revisions first
+	assertEqual(t, eventsDig(t, planned, "action"), "revise") // revisions first
 	h.gh.Threads.Item(40).Set("labels", eventsLabels(config.LabelPR))
 	planned = pyjson.New("action", "build", "number", 12, "branch", "bot/issue-12", "title", "t")
 	eventsUpdateItem(h.ctx, 12, "started_at", "2026-09-30T03:00:00Z")
@@ -333,8 +333,8 @@ func TestHardening_ARevisionAskedForDuringTheBuildIsKept(t *testing.T) {
 		h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	h.gh.AddLabels(40, []string{config.LabelRevise}) // a person asks for a change while it builds
 	hardeningDeliver(h, planned, out)
-	eventsIn(t, config.LabelRevise, h.gh.LabelNames(40))
-	eventsNotIn(t, "PR_40", h.gh.AutoMerge)
+	assertIn(t, config.LabelRevise, h.gh.LabelNames(40))
+	assertNotIn(t, "PR_40", h.gh.AutoMerge)
 }
 
 // hardeningWriteResult is out.mkdir(); (out / "result.json").write_text(json.dumps(result)).
@@ -353,11 +353,11 @@ func TestHardening_AFailedSurveyGivesBackTheRequest(t *testing.T) {
 		return nil
 	}, "state")
 	planned := plan.Make(h.ctx, false, nil, "suggest", nil)
-	eventsTrue(t, eventsDig(t, planned, "was_requested"))
+	assertTrue(t, eventsDig(t, planned, "was_requested"))
 	out := filepath.Join(h.root, "out-survey")
 	hardeningWriteResult(t, out, pyjson.New("status", "failed", "reason", "boom"))
 	hardeningDeliver(h, planned, out)
-	eventsTrue(t, eventsDig(t, h.ctx.Store.Load(), "suggest", "requested"))
+	assertTrue(t, eventsDig(t, h.ctx.Store.Load(), "suggest", "requested"))
 }
 
 func TestHardening_AnUnfinishedSurveyIsDueAgain(t *testing.T) {
@@ -365,11 +365,11 @@ func TestHardening_AnUnfinishedSurveyIsDueAgain(t *testing.T) {
 	eventsUpdateState(h.ctx, "suggest", pyjson.New("last_run", nil, "requested", false))
 	testsupport.IdleFor(h.ctx)
 	planned := plan.Make(h.ctx, true, nil, "suggest", nil)
-	eventsEqual(t, eventsDig(t, planned, "action"), "suggest")
+	assertEqual(t, eventsDig(t, planned, "action"), "suggest")
 	out := filepath.Join(h.root, "out-cut-short")
 	hardeningWriteResult(t, out, pyjson.New("status", "interrupted",
 		"reason", "the usage limit was reached"))
 	hardeningDeliver(h, planned, out)
-	eventsNone(t, eventsDig(t, h.ctx.Store.Load(), "suggest", "last_run"))
-	eventsTrue(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false))
+	assertIsNone(t, eventsDig(t, h.ctx.Store.Load(), "suggest", "last_run"))
+	assertTrue(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false))
 }

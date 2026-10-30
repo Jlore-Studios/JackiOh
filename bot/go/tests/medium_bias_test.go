@@ -103,127 +103,115 @@ func mediumBiasLast(comments []string) string { return comments[len(comments)-1]
 // ---------------------------------------------------------------------------- BorderlineBreachTests
 
 func TestMediumBias_ASmallPlanAndChangeHold(t *testing.T) {
-	is := difficultyCheckOf(t)
 	cfg := testsupport.MakeConfig()
-	is.Equal(easy.PlanBreach(mediumBiasTable([]string{"src/game.txt"}), cfg.Easy, cfg.ReviewPaths,
+	assertEqual(t, easy.PlanBreach(mediumBiasTable([]string{"src/game.txt"}), cfg.Easy, cfg.ReviewPaths,
 		cfg.ForbiddenPaths), "")
-	is.Equal(easy.ChangeBreach(pyjson.New("src/game.txt", 10), cfg.Easy), "")
+	assertEqual(t, easy.ChangeBreach(pyjson.New("src/game.txt", 10), cfg.Easy), "")
 }
 
 func TestMediumBias_APlanCloseToTheFileLimitIsMedium(t *testing.T) {
-	is := difficultyCheckOf(t)
 	cfg := testsupport.MakeConfig()
 	breach := easy.PlanBreach(mediumBiasTable(mediumBiasFiles(9)), cfg.Easy, cfg.ReviewPaths, cfg.ForbiddenPaths)
-	is.In("close to the limit of 10", breach)
-	is.In("borderline easy is medium", breach)
+	assertIn(t, "close to the limit of 10", breach)
+	assertIn(t, "borderline easy is medium", breach)
 	// Room to spare stays easy, and going over keeps its old message.
-	is.Equal(easy.PlanBreach(mediumBiasTable(mediumBiasFiles(8)), cfg.Easy, cfg.ReviewPaths,
+	assertEqual(t, easy.PlanBreach(mediumBiasTable(mediumBiasFiles(8)), cfg.Easy, cfg.ReviewPaths,
 		cfg.ForbiddenPaths), "")
-	is.In("over 10", easy.PlanBreach(mediumBiasTable(mediumBiasFiles(11)), cfg.Easy, cfg.ReviewPaths,
+	assertIn(t, "over 10", easy.PlanBreach(mediumBiasTable(mediumBiasFiles(11)), cfg.Easy, cfg.ReviewPaths,
 		cfg.ForbiddenPaths))
 }
 
 func TestMediumBias_AChangeCloseToALimitIsMedium(t *testing.T) {
-	is := difficultyCheckOf(t)
 	cfg := testsupport.MakeConfig()
-	is.In("borderline easy is medium", easy.ChangeBreach(mediumBiasCounts(9), cfg.Easy))
-	is.In("close to the limit of 400", easy.ChangeBreach(pyjson.New("src/big.txt", 350), cfg.Easy))
-	is.In("over 10", easy.ChangeBreach(mediumBiasCounts(11), cfg.Easy))
+	assertIn(t, "borderline easy is medium", easy.ChangeBreach(mediumBiasCounts(9), cfg.Easy))
+	assertIn(t, "close to the limit of 400", easy.ChangeBreach(pyjson.New("src/big.txt", 350), cfg.Easy))
+	assertIn(t, "over 10", easy.ChangeBreach(mediumBiasCounts(11), cfg.Easy))
 }
 
 // A `max_files: 1` lane (fullsend parts) still builds a one-file change as easy.
 func TestMediumBias_TinyLimitsHaveNoBorderlineZone(t *testing.T) {
-	is := difficultyCheckOf(t)
 	cfg := testsupport.MakeConfig()
 	tiny := *cfg.Easy
 	tiny.MaxFiles = 1
-	is.Equal(easy.PlanBreach(mediumBiasTable([]string{"src/client.txt"}), &tiny, cfg.ReviewPaths,
+	assertEqual(t, easy.PlanBreach(mediumBiasTable([]string{"src/client.txt"}), &tiny, cfg.ReviewPaths,
 		cfg.ForbiddenPaths), "")
-	is.Equal(easy.ChangeBreach(pyjson.New("src/client.txt", 1), &tiny), "")
+	assertEqual(t, easy.ChangeBreach(pyjson.New("src/client.txt", 1), &tiny), "")
 }
 
 func TestMediumBias_AnUnsureWhyIsDoubtAndAConfidentOneIsNot(t *testing.T) {
-	is := difficultyCheckOf(t)
 	for _, why := range []string{"torn between easy and medium",
 		"borderline easy, but the files fit",
 		"not sure about the shared surface",
 		"close to the limit on files",
 		"could go either way"} {
-		is.True(easy.UncertainWhy(why), why)
+		assertTrue(t, easy.UncertainWhy(why), why)
 	}
 	for _, why := range []string{"one file, one test", "a single copy-paste", ""} {
-		is.False(easy.UncertainWhy(why), why)
+		assertFalse(t, easy.UncertainWhy(why), why)
 	}
 }
 
 // ---------------------------------------------------------------------------- RatingBiasTests
 
 func TestMediumBias_AClearEasyItemStillRatesEasy(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := mediumBiasDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
 	r := mediumBiasPlanner(mediumBiasRatedPlan("easy", nil, ""))
 	h.night(r)
-	is.In(mediumBiasEasy, h.gh.LabelNames(12))
-	is.In("Rated `difficulty:easy`", mediumBiasLast(h.gh.BotComments(12)))
+	assertIn(t, mediumBiasEasy, h.gh.LabelNames(12))
+	assertIn(t, "Rated `difficulty:easy`", mediumBiasLast(h.gh.BotComments(12)))
 }
 
 func TestMediumBias_APlanCloseToTheLimitRatesMedium(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := mediumBiasDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
 	h.night(mediumBiasPlanner(mediumBiasRatedPlan("easy", mediumBiasFiles(9), "")))
-	is.In(mediumBiasMedium, h.gh.LabelNames(12))
-	is.In("borderline easy is medium", mediumBiasLast(h.gh.BotComments(12)))
+	assertIn(t, mediumBiasMedium, h.gh.LabelNames(12))
+	assertIn(t, "borderline easy is medium", mediumBiasLast(h.gh.BotComments(12)))
 }
 
 func TestMediumBias_AnUnsureRatingRatesMedium(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := mediumBiasDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
 	h.night(mediumBiasPlanner(mediumBiasRatedPlan("easy", nil, "torn between easy and medium")))
-	is.In(mediumBiasMedium, h.gh.LabelNames(12))
-	is.In("was unsure", mediumBiasLast(h.gh.BotComments(12)))
+	assertIn(t, mediumBiasMedium, h.gh.LabelNames(12))
+	assertIn(t, "was unsure", mediumBiasLast(h.gh.BotComments(12)))
 }
 
 func TestMediumBias_ThePlannerIsToldToPreferMediumWhenInDoubt(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h := mediumBiasDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
 	r := mediumBiasPlanner(mediumBiasRatedPlan("easy", nil, ""))
 	h.night(r)
-	is.In("When in doubt", r.Calls[0].Prompt)
-	is.In("At most 10 files changed", r.Calls[0].Prompt)
+	assertIn(t, "When in doubt", r.Calls[0].Prompt)
+	assertIn(t, "At most 10 files changed", r.Calls[0].Prompt)
 }
 
 func TestMediumBias_TheRuleKeepsTheTiebreakerAndNamesBorderline(t *testing.T) {
-	is := difficultyCheckOf(t)
-	is.In("choose the higher", easy.Rule)
-	is.In("borderline easy is **medium**", easy.Rule)
-	is.In("room to spare", easy.Rule)
+	assertIn(t, "choose the higher", easy.Rule)
+	assertIn(t, "borderline easy is **medium**", easy.Rule)
+	assertIn(t, "room to spare", easy.Rule)
 }
 
 // ---------------------------------------------------------------------------- WeakTierUntouchedTests
 
 func TestMediumBias_WeakBuildsOnlyEasy(t *testing.T) {
-	is := difficultyCheckOf(t)
-	is.Equal(config.MinTier, map[string]string{"easy": "weak", "medium": "medium", "hard": "strong"})
+	assertEqual(t, config.MinTier, map[string]string{"easy": "weak", "medium": "medium", "hard": "strong"})
 }
 
 func TestMediumBias_AWeakApprovalNeverShips(t *testing.T) {
-	is := difficultyCheckOf(t)
 	// A weak approval is a finding round, not a vote (#725): no weak review runs go out, and it
 	// never ships anything at any difficulty.
-	is.True(reviewrule.Met([]string{"weak", "medium"}, "easy")) // the medium ships it
-	is.False(reviewrule.Met([]string{"weak", "medium"}, "medium"))
-	is.False(reviewrule.Met([]string{"weak", "medium"}, "hard"))
-	is.False(reviewrule.Helps([]string{}, "weak", "easy"))
-	is.False(reviewrule.Helps([]string{}, "weak", "medium"))
-	is.False(reviewrule.Reachable([]string{}, []string{"weak"}, "easy"))
-	is.True(reviewrule.Reachable([]string{"medium"}, []string{"weak"}, "easy")) // already met
+	assertTrue(t, reviewrule.Met([]string{"weak", "medium"}, "easy")) // the medium ships it
+	assertFalse(t, reviewrule.Met([]string{"weak", "medium"}, "medium"))
+	assertFalse(t, reviewrule.Met([]string{"weak", "medium"}, "hard"))
+	assertFalse(t, reviewrule.Helps([]string{}, "weak", "easy"))
+	assertFalse(t, reviewrule.Helps([]string{}, "weak", "medium"))
+	assertFalse(t, reviewrule.Reachable([]string{}, []string{"weak"}, "easy"))
+	assertTrue(t, reviewrule.Reachable([]string{"medium"}, []string{"weak"}, "easy")) // already met
 	// Only a Strong approval ships medium and hard; a medium one ships easy.
-	is.True(reviewrule.Met([]string{"strong"}, "hard"))
-	is.False(reviewrule.Met([]string{"medium", "medium"}, "hard"))
-	is.False(reviewrule.Met([]string{"weak"}, "easy"))
-	is.True(reviewrule.Met([]string{"medium"}, "easy"))
+	assertTrue(t, reviewrule.Met([]string{"strong"}, "hard"))
+	assertFalse(t, reviewrule.Met([]string{"medium", "medium"}, "hard"))
+	assertFalse(t, reviewrule.Met([]string{"weak"}, "easy"))
+	assertTrue(t, reviewrule.Met([]string{"medium"}, "easy"))
 }
