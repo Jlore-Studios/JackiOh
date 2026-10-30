@@ -96,6 +96,8 @@ mod tests {
     const DEFENDER: &str = "core-003"; // (1) Right-house defender, 1/1 Taunt, Divine Shield, Reborn.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
+    const ZAO_GAO: &str = "core-080"; // (2) Spell: discard 2 random cards, summon 2 Rush Tokens.
+    const RUSH_TOKEN: &str = "core-t-rush";
 
     /// p1, active with 10 mana, has a Knife Juggler (`radiant` its face) in lane 5 and `hand`; p2 has a
     /// 1/14 in lane 1 so a hit may land on a Unit.
@@ -173,6 +175,22 @@ mod tests {
             s.play(CALL_TO_ARMS, json!({}));
             assert_eq!(s.unit_at(P1, 1).def_id, VANILLA, "the Recruit");
             assert_eq!(throws(&s).len(), 1);
+        }
+
+        #[test]
+        fn r2197000_a_token_your_spell_summons_draws_a_hit() {
+            // Core #80 Zao Gao, a Spell, summons two Rush Tokens: each is an arrival, so two hits.
+            let mut s = board(false, json!([ZAO_GAO, FILLER, FILLER, FILLER]), crate::filler(4));
+            s.play(ZAO_GAO, json!({}));
+            let tokens = s
+                .last_events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Summoned { def_id, player, .. } if def_id == RUSH_TOKEN && *player == P1))
+                .count();
+            assert_eq!(tokens, 2, "the Spell summoned two tokens");
+            let hits = throws(&s);
+            assert_eq!(hits.len(), 2, "{hits:?}");
+            assert!(hits.iter().all(|(target, amount)| *amount == 1 && is_enemy(&s, target)), "{hits:?}");
         }
 
         #[test]

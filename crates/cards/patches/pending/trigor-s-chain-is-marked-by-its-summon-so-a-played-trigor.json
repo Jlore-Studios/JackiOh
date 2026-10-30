@@ -1,0 +1,21 @@
+{
+  "title": "Trigor's chain is marked by its summon, so a played Trigor set by Dino-size still summons",
+  "sources": "Issue #2206, part 13 of the tracker #2193 (REVIEW B-1)",
+  "notes": "R2206000: TG #25 Trigor's Death marks the Trigor it summons in that Trigor's memory, and a Trigor so marked this turn summons nothing when it dies this turn (R2197004). The terminator read a stat override before, so a played Trigor that TG #34 Dino-size or a Set stats touched summoned nothing when it died that turn. A fresh summon may seed the card's memory (§6.3). The other two cards claimed are those classify's unforced games meet beside a Trigor chain whose games diverge: their own play is unchanged.",
+  "player": {
+    "title": "Trigor",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "A Trigor you played whose stats were set this turn, by Dino-size for instance, now summons its successor when it dies, as its text says."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "traininggrounds-025",
+    "classic-020",
+    "classic-080"
+  ]
+}
