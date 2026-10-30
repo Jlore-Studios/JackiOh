@@ -9505,6 +9505,13 @@
     "2479": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T13:45:38Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 3 fails outright: it adds ruling R2479000 and edits spec \u00a79.5 and spec/pending; otherwise one app and 8 files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
