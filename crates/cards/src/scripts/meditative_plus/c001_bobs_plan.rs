@@ -324,7 +324,7 @@ mod tests {
             }));
             let catalog: CardDefs = registered_catalog()
                 .iter()
-                .filter(|(id, _)| id.as_str() != SUMMIT && id.as_str() != AESTHETICIZE)
+                .filter(|(id, _)| ![SUMMIT, AESTHETICIZE, ALTERAN_REACH].contains(&id.as_str()))
                 .map(|(id, def)| (id.clone(), def.clone()))
                 .chain([(wincon.id.clone(), wincon)])
                 .collect();
