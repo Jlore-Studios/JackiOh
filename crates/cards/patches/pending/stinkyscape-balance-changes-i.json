@@ -1,7 +1,7 @@
 {
   "title": "Stinkyscape balance changes I",
   "sources": "#2521",
-  "notes": "The owner's first Stinkyscape balance pass (#2521, with #2452): Resources gain the Resource tag and show their Credits; the five Faction cards are renamed and cost (2), and Swear Loyalities exiles only another faction's cards from hand and deck (R2521004); fifteen cards lose Starship Piece and a dead piece fuses its base version (R2521000); Beams, Cannons and Repeaters no longer target heroes, with new damage and uses; the Flaks roll each enemy's damage (R2521001); Meteor, Stratos, ZolarKeth (R2521003), Tmack Trav (R2521002), Pestilent Slime (R2521005), Memory Leak, Starfleet Commander, Yamato Cannon, Paragon-X, Narcor, Red Narcor, Korrelite and four costs change; Going Long and Aluneth lose Quickdraw; Preemptive Strike, Cloaking Module and Star Chart are new (R2521008); CN Tech and NA Tech fall back to hard-coded ends (R2521007).",
+  "notes": "The owner's first Stinkyscape balance pass (#2521, with #2452): Resources gain the Resource tag and show their Credits; the five Faction cards are renamed and cost (2), and Swear Loyalities exiles only another faction's cards from hand and deck (R2521004); fifteen cards lose Starship Piece and a dead piece fuses its base version (R2521000); Beams, Cannons and Repeaters no longer target heroes, with new damage and uses; the Flaks roll each enemy's damage (R2521001); Meteor, Stratos, ZolarKeth (R2521003), Tmack Trav (R2521002), Pestilent Slime (R2521005), Memory Leak, Starfleet Commander, Yamato Cannon, Paragon-X, Narcor, Red Narcor, Korrelite and four costs change; Going Long and Aluneth lose Quickdraw; Preemptive Strike, Cloaking Module and Star Chart are new (R2521008); CN Tech and NA Tech fall back to hard-coded ends (R2521007); xxFreshJack and Shockwave447 play differently, since the rewritten scripts move cards across the BUSTED and complicated lists they read (R2173001).",
   "player": {
     "title": "Stinkyscape balance changes I",
     "new": [
@@ -100,8 +100,7 @@
     "stinkyscape-t-red-narcor"
   ],
   "plays": [
-    "stinkyscape-094",
-    "meditative-050",
-    "meditativeplus-002"
+    "stinkyscape-109",
+    "stinkyscape-111"
   ]
 }

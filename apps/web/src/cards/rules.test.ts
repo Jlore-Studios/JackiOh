@@ -743,6 +743,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       "End the turn": ["end the turn"],
       Allure: ["Allured"],
       Launch: ["launch", "launches"],
+      // #2521: ZolarKeth's "A University can be Activated at most once each turn" (R2521003).
+      Activate: ["Activated"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);
