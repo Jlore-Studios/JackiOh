@@ -1,15 +1,16 @@
-//! #32 Prem Panther (SPEC §8.2 row 32): 5/4 "Rush / After this attacks, draw 2 for each Unit that
+//! #32 Prem Panther (SPEC §8.2 row 32): 5/4 "Rush / Whenever this attacks, draw 2 for each Unit that
 //! attack destroyed", radiant 10/8 "Rush, Cleave / the same"; a Panther that died in the combat draws
-//! nothing (R2285001).
+//! all the same, once (R2396000).
 //!
 //! Rush and Cleave are printed on the catalog faces, so §10.4 layer 1 grants them. The text is the
 //! engine's `afterAttack` hook, which runs once the state check that closes each combat the Panther
 //! attacked in (declared or forced, R53, R59) has run, with the combat's facts (`afterAttackOf`): the
 //! Units whose lethal hit it dealt there (its strike and its Cleave's; a defender's strike back is the
-//! defender's, and a defending Panther runs no hook). The engine runs it only for a Panther still on the
-//! field on the stay it attacked from (R2285001), so one that traded itself away draws nothing, nor
-//! does one back through Reborn, a new stay (R83). The hook acts for the player who controlled it in
-//! that combat, though a Death in the check (#86 Mrow's) took it since.
+//! defender's, and a defending Panther runs no hook). "Whenever" is `afterAttackEvenIfGone`: the engine
+//! runs it whether or not the Panther is still on the field, one that traded itself away as the snapshot
+//! it fought with, and once for one back through Reborn, whose body is a new stay (R83, R426). The hook
+//! acts for the player who controlled it in that combat, though a Death in the check (#86 Mrow's) took
+//! it since (R212).
 
 use jackioh_engine::combat::after_attack_of;
 use jackioh_engine::effects::draw;
@@ -35,9 +36,27 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: Script {
             after_attack: Some(after_attack.clone()),
+            after_attack_even_if_gone: true,
             ..Script::default()
         },
         // "Rush, Cleave / the same": the keyword list is the radiant face's, the text is unchanged.
+        radiant: Script {
+            after_attack: Some(after_attack),
+            after_attack_even_if_gone: true,
+            ..Script::default()
+        },
+    }
+}
+
+/// R767000: the scripts v0.5.11 and before ran: "After this attacks", only for a Panther that survived
+/// (R2285001).
+pub fn script_v0_5_11() -> CardScripts {
+    let after_attack = after_attack();
+    CardScripts {
+        base: Script {
+            after_attack: Some(after_attack.clone()),
+            ..Script::default()
+        },
         radiant: Script {
             after_attack: Some(after_attack),
             ..Script::default()
@@ -45,13 +64,14 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32 (R426): "Rush / After this
-// attacks, draw 2 for each Unit that attack destroyed"; radiant "Rush, Cleave / the same".
+// #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32 (R426, R2396000): "Rush /
+// Whenever this attacks, draw 2 for each Unit that attack destroyed"; radiant "Rush, Cleave / the same".
 //
 // R426: it draws only after an attack it made, declared or forced (R53), 2 for each Unit that attack
 // destroyed (the Unit it attacked, plus the Radiant face's Cleave kills); never for a Unit it kills
-// defending. Survival is not asked: the hook is owed on the snapshot the Panther fought with, so it
-// draws even when it dies in the combat, even one back through Reborn. R42 says who killed a Unit.
+// defending. Survival is not asked (R2396000): the hook is owed on the snapshot the Panther fought with,
+// so it draws even when it dies in the combat, once even for one back through Reborn, and for the
+// player who attacked with it (R212). R42 says who killed a Unit.
 //
 // Sparring partners: #15 Me and Mr Token (1/1, no keywords; its Cry does not fire from a `field`
 // setup), #13 Jlockeed Shredder-10 (8/10, kills a 5/4 Panther on the swing back and survives), #11
@@ -78,6 +98,13 @@ mod tests {
 
     fn drew(events: &[GameEvent]) -> bool {
         events.iter().any(|event| matches!(event, GameEvent::Drawn { .. }))
+    }
+
+    fn draws_in(events: &[GameEvent]) -> usize {
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Drawn { .. }))
+            .count()
     }
 
     mod base {
@@ -123,7 +150,7 @@ mod tests {
         }
 
         #[test]
-        fn r2285001_draws_nothing_when_it_dies_in_that_combat_though_its_attack_destroyed_a_unit() {
+        fn r2396000_draws_2_when_it_trades() {
             let mut s = scn(json!({
                 "seed": "panther-trade",
                 "p1": { "field": ["32", "15"], "library": ["15", "15", "15"] },
@@ -132,15 +159,15 @@ mod tests {
             let panther = must(s.unit("p1", 1), "p1's Panther");
             let other = must(s.unit("p2", 1), "p2's Panther");
 
-            // 5 into a 5/4 and 5 back into a 5/4: both die. "After this attacks" runs only for a Panther
-            // that survived the combat, so the trade draws nothing (issue #2285 reverses balance patch 1).
+            // 5 into a 5/4 and 5 back into a 5/4: both die. "Whenever this attacks" asks no survival, so
+            // the trade draws 2 for the Unit it destroyed (issue #2396).
             s.attack(&panther, &other);
 
             s.expect_in_zone(&panther, "graveyard");
             s.expect_in_zone(&other, "graveyard");
-            assert_eq!(s.hand("p1").len(), 0);
-            assert_eq!(s.pile("p1", "library").len(), 3);
-            assert!(!drew(s.last_events()));
+            assert_eq!(s.hand("p1").len(), 2);
+            assert_eq!(s.pile("p1", "library").len(), 1);
+            assert_eq!(draws_in(s.last_events()), 2);
             // The death names the Panther as its killer (R42).
             let death = destroyed_event(&s, &other.id);
             assert_eq!(death["killerId"], json!(panther.id));
@@ -239,8 +266,7 @@ mod tests {
         }
 
         #[test]
-        fn r2285001_r83_a_panther_that_dies_in_the_combat_and_comes_back_through_reborn_draws_nothing_the_reborn_body_is_a_new_stay()
-        {
+        fn r2396000_r83_a_trade_back_through_reborn_draws_2_once() {
             let mut s = scn(json!({
                 "seed": "panther-reborn",
                 "p1": { "field": ["32"], "hand": ["5"], "library": ["15", "15", "15"] },
@@ -252,8 +278,9 @@ mod tests {
                 .granted_keywords
                 .push(json_as(json!({ "kind": "Reborn" })));
 
-            // 5 into p2's 5/4 Panther and 5 back: both die, and p1's comes back at 1 health. The Reborn body
-            // is a new arrival (R83, R174), not the Panther that attacked, so nothing is drawn.
+            // 5 into p2's 5/4 Panther and 5 back: both die, and p1's comes back at 1 health. The attack is
+            // answered once, as the Panther that died (R2396000); the Reborn body is a new arrival (R83,
+            // R174), which answers nothing more.
             let other = must(s.unit("p2", 1), "p2's Panther");
             s.attack(&panther, &other);
 
@@ -262,9 +289,9 @@ mod tests {
                 GameEvent::Destroyed { instance_id, .. } if *instance_id == panther.id
             )));
             s.expect_in_zone(&panther, "field");
-            assert!(!drew(s.last_events()));
-            assert_eq!(s.hand("p1").len(), 1);
-            assert_eq!(s.pile("p1", "library").len(), 3);
+            assert_eq!(draws_in(s.last_events()), 2);
+            assert_eq!(s.hand("p1").len(), 3);
+            assert_eq!(s.pile("p1", "library").len(), 1);
         }
 
         #[test]
@@ -345,7 +372,7 @@ mod tests {
         }
 
         #[test]
-        fn r2285001_radiant_cleave_kills_draw_nothing_when_the_panther_dies_in_that_combat() {
+        fn r2396000_radiant_cleave_kills_draw_2_each_though_the_panther_dies() {
             let mut s = scn(json!({
                 "seed": "panther-cleave-dies",
                 "p1": {
@@ -358,7 +385,7 @@ mod tests {
             let panther = must(s.unit("p1", 1), "the radiant Panther");
 
             // 10 kills the 6/10 and cleaves both 1/1s; 6 back kills the 10/8, 2 damage down already. Three
-            // kills the attack destroyed, but the Panther died, so p1 draws nothing.
+            // kills the attack destroyed, and the Panther that died draws 2 for each (R2396000).
             let shredder = must(s.unit("p2", 2), "p2's Shredder");
             s.attack(&panther, &shredder);
 
@@ -366,9 +393,9 @@ mod tests {
             for lane in 1..=3 {
                 assert!(s.unit("p2", lane).is_none(), "p2 lane {lane} should be empty");
             }
-            assert!(!drew(s.last_events()));
-            assert_eq!(s.hand("p1").len(), 1);
-            assert_eq!(s.pile("p1", "library").len(), 8);
+            assert_eq!(draws_in(s.last_events()), 6);
+            assert_eq!(s.hand("p1").len(), 7);
+            assert_eq!(s.pile("p1", "library").len(), 2);
         }
 
         #[test]
@@ -436,6 +463,31 @@ mod tests {
             s.attack(&panther, &prey);
 
             assert_eq!(s.hand("p1").len(), draws as usize);
+        }
+    }
+
+    /// R767000: the script kept for the replays of v0.5.11 and before, "After this attacks" for a
+    /// Panther that survived (R2285001).
+    mod v0_5_11 {
+        use super::*;
+
+        #[test]
+        fn r767000_a_game_on_v0_5_11_draws_nothing_for_a_trade() {
+            crate::under_kept(super::super::ID, super::super::script_v0_5_11(), || {
+                let mut s = scn(json!({
+                    "seed": "panther-trade",
+                    "p1": { "field": ["32", "15"], "library": ["15", "15", "15"] },
+                    "p2": { "field": ["32"] },
+                }));
+                let panther = must(s.unit("p1", 1), "p1's Panther");
+                let other = must(s.unit("p2", 1), "p2's Panther");
+
+                s.attack(&panther, &other);
+
+                s.expect_in_zone(&panther, "graveyard");
+                assert!(!drew(s.last_events()));
+                assert_eq!(s.hand("p1").len(), 0);
+            });
         }
     }
 }

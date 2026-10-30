@@ -9,3 +9,29 @@
   gap: 4px;
   max-width: 100%;
 }
+
+/* R2480000: the question the offer asks before it spends, TokenPicker's card-token confirm
+   (shop.css's .token-confirm) drawn in the offer's own place, narrow enough for a tile. */
+.token-offer__question {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--pal-parchment) 5%, transparent);
+  text-align: center;
+}
+
+.token-offer__question > p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.token-offer__answers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}

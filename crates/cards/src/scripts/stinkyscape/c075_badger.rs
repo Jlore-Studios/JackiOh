@@ -1,10 +1,10 @@
 //! SPEC §8.10 Stinkyscape 75 Badger, a card of the Stinkyscape set.
-//!   Base:    "Starship Piece\nWhenever this attacks, gain a random Stinkyscape Resource." (2/3)
-//!   Radiant: "Starship Piece\nWhenever this attacks, gain a random Radiant Stinkyscape Resource." (4/6)
+//!   Base:    "Starship Piece\nWhen this attacks, gain a random Stinkyscape Resource." (2/3)
+//!   Radiant: "Starship Piece\nWhen this attacks, gain a random Radiant Stinkyscape Resource." (4/6)
 //!
 //! Starship Piece is the engine's printed keyword: its death fuses a copy into its owner's Dormant
-//! Starship (R1852000). "Whenever this attacks" is the engine's `whenAttacks` hook, Classic #45 Nature
-//! Titan's: it runs for the player who controls this card before any damage of each attack it makes,
+//! Starship (R1852000). "When this attacks" is the engine's `whenAttacks` hook, Classic #45 Nature
+//! Titan's (R2396000: "When", not "Whenever", which resolves after the attack): it runs for the player who controls this card before any damage of each attack it makes,
 //! declared or forced (R53, R2285000), so a Badger that dies in the combat has already gained; it never
 //! runs for a defending Badger, nor for an attack called off in its trap window (R44, Core #96 My
 //! Pawn). It is `gain_resources` of one random Resource into the hand (R1840000, R1840002), a ninth

@@ -585,6 +585,12 @@ pub const API_REJECTION_ALERT_THRESHOLD: usize = 20;
 /// and the least time between two alerts for one key. A minute, the API limit's own window, so a
 /// sustained flood alerts once a minute.
 pub const API_REJECTION_ALERT_WINDOW_MS: i64 = 60_000;
+/// SPEC §11 R2478000: how many verified auth users the router remembers the profile id of
+/// (`api::http::KnownProfiles`), so a request from an account whose `API_REQUESTS_PER_MINUTE` is
+/// spent is refused before the store is read. Ten thousand: far more accounts than one server hears
+/// from in the minute a budget lasts, in about two megabytes; past it the user remembered longest
+/// ago is dropped and reads the store once more.
+pub const KNOWN_PROFILES_MAX: usize = 10_000;
 /// SPEC §11 R835002: how many malformed frames from one seat, inside `REJECTION_ALERT_WINDOW_MS`,
 /// the actor answers before it closes that seat's socket. Ten: a stale client sends a few, never
 /// this many, so past it the peer is a flooder, not a bug.
@@ -924,10 +930,12 @@ pub const CARD_STATS_CURVE_TOP: i32 = 6;
 /// Cache-Control max-age in seconds for public card statistics endpoints.
 pub const CARD_STATS_CACHE_TTL_SECONDS: i64 = 300;
 
-/// SPEC §11 R978000: how many computed per-patch reports (one per patch, `?source=` and `?pilot=`)
-/// the server keeps in memory at once, each for `CARD_STATS_CACHE_TTL_SECONDS`; keeping another
-/// drops the one kept longest ago. Room for every patch in `patches.json` (30 at v0.3.7b) under all
-/// three pilots, with as many again to grow into.
+/// SPEC §11 R978000, R2491000: how many computed reports each of the card statistics' kept stores
+/// (`api::stats::KeptReports`) holds at once, each for `CARD_STATS_CACHE_TTL_SECONDS`; keeping
+/// another drops the one kept longest ago. The card drill-down keeps at most 24 however many patches
+/// ship, a patch history and the current patch's report for each of three pilots and four modes, so
+/// the bound holds down the list route's windowed reports, one per patch, `?source=`, `?pilot=` and
+/// `?mode=` asked for.
 pub const CARD_STATS_KEPT_REPORTS: usize = 256;
 
 /// SPEC §11 R654: how many co-played cards a card's drill-down (`GET /api/stats/cards/:id`) lists,

@@ -8,7 +8,8 @@
 //! A card change is a patch when `PATCH_MIN_REPRINTS` families are reprinted (their catalog entry
 //! changed and they play differently: a balance pass), when `PATCH_MIN_CARDS` families play
 //! differently by any route, or when a rule every game meets changed (R2455000, R2499000); anything
-//! smaller is a micro.
+//! smaller is a micro. R2529000: a change to how cards look (`CARD_VISUALS`) is a micro too, with no
+//! family, and a system the owner names (`SYSTEM_RELEASES`) ships as a patch, its fragment's claim.
 //!
 //! Stage 1 reads the diff. `catalog.json` card by card: the wording fields (`WORDING_FIELDS`) a
 //! player reads and no game does, every other field plays. Each card script's code, the lines
@@ -101,6 +102,22 @@ pub(crate) fn wrapped(set: &str) -> bool {
     WRAPPED_SETS.iter().any(|(wrapped, _)| wrapped.as_str() == set)
 }
 
+/// R2529000: where the cards' look lives in the client: their faces, art, frames, foils and marks,
+/// and the CSS that draws them. A change there (its tests aside) changes how cards look and not how
+/// they play, so it is a micro of no family, claimed by a fragment's `visual`.
+const CARD_VISUALS: &str = "apps/web/src/cards/";
+
+/// R2529000: the systems the owner names a patch, each by its tracker issue and a name. The
+/// classifier cannot tell a huge system from a big refactor, so a fragment claims one
+/// (`patches --system <issue>`) and `patches ship` names it a patch whatever its cards earn. Naming
+/// one is the owner's call, never a builder's, as wrapping a set is (R2204000).
+pub(crate) const SYSTEM_RELEASES: &[(u32, &str)] = &[];
+
+/// R2529000: whether the owner names `issue` a system (`SYSTEM_RELEASES`).
+pub(crate) fn system_named(issue: u32) -> bool {
+    SYSTEM_RELEASES.iter().any(|(named, _)| *named == issue)
+}
+
 const CATALOG_PATH: &str = "crates/cards/catalog.json";
 pub(crate) const SETS_PATH: &str = "crates/engine/src/wire/catalog_types.rs";
 
@@ -185,6 +202,8 @@ enum Area {
     /// crate outside the scripts (shared helpers, the compiled data, the build script).
     PlayCode,
     Ai,
+    /// R2529000: the cards' look in the client (`CARD_VISUALS`).
+    CardVisual,
     App,
     Internal,
 }
@@ -220,6 +239,9 @@ fn area(path: &str) -> Area {
     }
     if path == "crates/ai/generation.json" {
         return Area::Ai;
+    }
+    if path.starts_with(CARD_VISUALS) {
+        return Area::CardVisual;
     }
     if let Some(file) = path.strip_prefix("crates/ai/src/") {
         return if AI_TOOLING.contains(&file) {
@@ -363,6 +385,8 @@ pub(crate) struct Diff {
     pub scripts: BTreeSet<String>,
     pub play_code: bool,
     pub ai: bool,
+    /// R2529000: the cards' look changed (`CARD_VISUALS`).
+    pub visual: bool,
     pub app: bool,
 }
 
@@ -427,6 +451,7 @@ pub(crate) fn read_diff(before: &Side, after: &Side, files: &[FileChange]) -> Di
             }
             Area::PlayCode => diff.play_code = true,
             Area::Ai => diff.ai = true,
+            Area::CardVisual => diff.visual = true,
             Area::App => diff.app = true,
             Area::Catalog | Area::Internal => {}
         }
@@ -483,6 +508,8 @@ pub(crate) struct Classification {
     pub wording: Vec<String>,
     /// A rule every game meets (`Checked::rule`) made the tier a patch.
     pub rule: bool,
+    /// R2529000: the cards' look changed, a micro of no family at least.
+    pub visual: bool,
     pub stage2: &'static str,
     /// What stage 2 would have checked, when it did not run.
     pub unchecked: Vec<String>,
@@ -518,7 +545,7 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
         Some(Tier::Major)
     } else if rule || cards.len() >= PATCH_MIN_CARDS || reprinted.len() >= PATCH_MIN_REPRINTS {
         Some(Tier::Patch)
-    } else if !cards.is_empty() || !diff.wording.is_empty() {
+    } else if !cards.is_empty() || !diff.wording.is_empty() || diff.visual {
         Some(Tier::Micro)
     } else {
         None
@@ -549,6 +576,7 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
         cards: cards.into_iter().collect(),
         reprinted,
         rule,
+        visual: diff.visual,
         stage2: if checked.is_some() { "ran" } else { "skipped" },
         unchecked,
     }
@@ -937,6 +965,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
     }
     let cards_changed = !diff.play.is_empty()
         || !diff.wording.is_empty()
+        || diff.visual
         || !diff.sets.is_empty()
         || !checked.scripts.is_empty()
         || !checked.touched.is_empty()
@@ -1066,6 +1095,9 @@ fn print_classification(classification: &Classification) {
     }
     if classification.rule {
         println!("  divergences no card explains: a rule every game meets");
+    }
+    if classification.visual {
+        println!("  how cards look changed");
     }
 }
 
@@ -1406,6 +1438,40 @@ mod tests {
         assert!(classification.cards.contains(&"stinkyscape-109".to_string()));
     }
 
+    // R2529000: how cards look is a micro of no family; its tests and the rest of the client are not.
+    #[test]
+    fn r2529000_a_change_to_how_cards_look_is_a_micro_of_no_family() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let face = |path: &str| {
+            read_diff(
+                &both,
+                &both,
+                &[file(path, "export const gold = 1;\n", "export const gold = 2;\n")],
+            )
+        };
+        let looks = classify(&face("apps/web/src/cards/CardFace.tsx"), None);
+        assert_eq!(
+            (looks.kind, looks.tier, looks.visual),
+            (Kind::Cards, Some(Tier::Micro), true)
+        );
+        assert!(looks.cards.is_empty());
+        assert_eq!(labels(&looks), vec!["kind:cards", "tier:micro"]);
+        let test = classify(&face("apps/web/src/cards/CardFace.test.tsx"), None);
+        assert_eq!((test.kind, test.tier, test.visual), (Kind::Internal, None, false));
+        let board = classify(&face("apps/web/src/game/Game.tsx"), None);
+        assert_eq!((board.kind, board.tier, board.visual), (Kind::App, None, false));
+        let comment = read_diff(
+            &both,
+            &both,
+            &[file(
+                "apps/web/src/cards/CardFace.tsx",
+                "export const gold = 1;\n",
+                "// The gold.\nexport const gold = 1;\n",
+            )],
+        );
+        assert_eq!(classify(&comment, None).kind, Kind::Internal);
+    }
+
     #[test]
     fn r1365000_a_script_edit_to_comments_tests_or_layout_is_internal() {
         let edited = SCRIPT
@@ -1490,6 +1556,9 @@ mod tests {
         for (path, expected) in [
             ("apps/web/src/game/Game.tsx", Area::App),
             ("apps/web/src/game/Game.test.tsx", Area::Internal),
+            ("apps/web/src/cards/CardFace.tsx", Area::CardVisual),
+            ("apps/web/src/cards/cards.css", Area::CardVisual),
+            ("apps/web/src/cards/CardFace.test.tsx", Area::Internal),
             ("crates/server/src/api/stats.rs", Area::App),
             ("crates/engine/src/wire/stats.rs", Area::App),
             ("crates/engine/src/combat.rs", Area::PlayCode),

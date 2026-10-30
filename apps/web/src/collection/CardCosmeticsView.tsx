@@ -296,6 +296,7 @@ export default function CardCosmeticsView({
         tier={tier}
         held={tokens}
         cosmeticId={item.id}
+        name={item.name}
         cardId={def.id}
         onRedeemed={setTokens}
         testid={T.tokenOffer(item.id)}

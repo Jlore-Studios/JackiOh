@@ -52,6 +52,10 @@ pub struct App {
     /// §9.8's per-account rate limit at the API (R109, R157), one per app: a fresh app starts with an
     /// empty window, so one test's flood cannot leak into the next.
     pub limiter: api::http::RateLimiter,
+    /// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, which refuses
+    /// an account whose R109 budget is spent before the store is read. One per app, for the limiter's
+    /// reason.
+    pub known_profiles: api::http::KnownProfiles,
     /// R1443: sign-ins by username, counted per address and, apart, per username. One per app, for
     /// the limiter's reason.
     pub sign_in_limiter: api::http::RateLimiter,
@@ -1005,6 +1009,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
             crate::config::API_REQUESTS_PER_MINUTE as _,
             API_RATE_WINDOW_MS as _,
         ),
+        known_profiles: api::http::KnownProfiles::default(),
         sign_in_limiter: api::http::create_rate_limiter(
             crate::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
             crate::config::USERNAME_SIGN_IN_WINDOW_MS,
