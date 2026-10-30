@@ -331,8 +331,18 @@ mod r1303_the_chinese_tables {
                     problems.push(format!("{id} {face}: \"{chinese}\" is not in the Chinese face"));
                 }
             }
+            // R2476000: a label shown only in a state the plain views above never reach (Classic+ #34's
+            // chosen line, an Asteroid's pool rider) is held to the same two texts on some face: its
+            // English in the English face, its Chinese in that face's Chinese.
             for key in unused {
-                problems.push(format!("{id}: no view carries the label \"{key}\""));
+                let chinese = previews[key.as_str()].as_str().unwrap_or("");
+                let faithful = FACES.iter().any(|&face| {
+                    card.face(face).text.contains(&filled(card, key, face))
+                        && chinese_face(card, entry, face).contains(&filled(card, chinese, face))
+                });
+                if !faithful {
+                    problems.push(format!("{id}: no view carries the label \"{key}\""));
+                }
             }
             // A Chinese label may print a number its English leaves out (C+ #74's "每打出{plays}张牌" for
             // "your opponent plays"), but only one the card declares, so the client can fill it.

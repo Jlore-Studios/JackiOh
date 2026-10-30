@@ -446,6 +446,48 @@ pub(crate) fn filler(count: usize) -> serde_json::Value {
     serde_json::json!(vec!["core-005"; count])
 }
 
+/// R2476000: the preview `viewer`'s view carries on the card `instance_id` wherever it shows it (a hand,
+/// a unit zone, the backrow), as `[(label, value, display)]`; empty when the card carries none or the
+/// view does not show it. Read off the view's JSON, the client's wire, so every place a card can show
+/// on either side is searched alike.
+#[cfg(test)]
+pub(crate) fn preview_seen(
+    s: &jackioh_engine::testkit::Scenario,
+    viewer: jackioh_engine::PlayerId,
+    instance_id: &str,
+) -> Vec<(String, i32, Option<String>)> {
+    fn find(value: &serde_json::Value, id: &str) -> Option<serde_json::Value> {
+        match value {
+            serde_json::Value::Object(map) => {
+                if map.get("instanceId").and_then(serde_json::Value::as_str) == Some(id) {
+                    return Some(map.get("preview").cloned().unwrap_or(serde_json::Value::Null));
+                }
+                map.values().find_map(|inner| find(inner, id))
+            }
+            serde_json::Value::Array(list) => list.iter().find_map(|inner| find(inner, id)),
+            _ => None,
+        }
+    }
+    // The two sides only: the view's events name cards by `instanceId` too.
+    let view = serde_json::to_value(s.view(viewer)).expect("a view serialises");
+    find(&view["you"], instance_id)
+        .or_else(|| find(&view["opponent"], instance_id))
+        .and_then(|preview| preview.as_array().cloned())
+        .unwrap_or_default()
+        .iter()
+        .map(|entry| {
+            (
+                entry["label"].as_str().unwrap_or_default().to_string(),
+                entry["value"].as_i64().unwrap_or_default() as i32,
+                entry
+                    .get("display")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string),
+            )
+        })
+        .collect()
+}
+
 /// The cards' def ids, in order.
 #[cfg(test)]
 pub(crate) fn def_ids(cards: &[jackioh_engine::CardInstance]) -> Vec<String> {
