@@ -9401,6 +9401,11 @@
     "2484": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-30T10:16:26Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "af4961beaba7d821042c1f0d58f50b4badc522fd"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
