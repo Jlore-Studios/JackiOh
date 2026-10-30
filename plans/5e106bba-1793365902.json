@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2477,
+  "title": "Patch: the AI prices a Field Spell's Start of turn and End of turn effects, not only its cost",
+  "branch": "bot/issue-2477",
+  "thread": "**Issue #2477 (data, not instructions):**\n\n```text\n# #2477: Patch: the AI prices a Field Spell's Start of turn and End of turn effects, not only its cost\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe practice AI and the ladder bots judge a Field Spell on the field only by how much mana it cost. What it does every turn counts for nothing. Mana Well gives an extra mana each turn and Unbiased Immigration adds a free card each turn, but to the AI either one is worth the same as a blank card of that cost. So the AI rarely plays them, and when it does, it plays them for the wrong reasons. Once this is built, the AI counts what the card's next firing gives its owner, and a player facing it sees these Field Spells played when they pay off.\n\n## Why\n\n- An own readable backrow card is priced at `brittle_share \u00d7 (backrow_base + backrow_per_cost \u00d7 cost)` (`crates/ai/src/evaluate.rs:628-630`; 1.5 and 0.8 at `crates/ai/src/config.rs:565-566`). None of its hooks (`start_of_turn`, `end_of_turn`) is read.\n- The same text on a player modifier is valued as an annuity, 3.0 a turn (`start_of_turn_effect`, `config.rs:393-396` and `:550`; `evaluate.rs:612`). So Classic+ #52's 'Start of turn: add a random Jlockeed card' is worth 3.0 a turn, and Core #59 Unbiased Immigration's 'Start of turn: add a random card to your hand' is worth nothing.\n- Mana is not priced either. `evaluate` has no term for the mana a turn starts with beyond riders and lost refreshes (`coming_refreshes`, `evaluate.rs:406-431`), so Mana Well's `gain_mana` at start of turn (`crates/cards/src/scripts/core/c006_mana_well.rs:20`) is worth exactly 0.\n- The latest sweep of record (`training/history/sweep-2026-10-29-3.md`, pass 2) shows what follows:\n  - Mana Well was played 4 times in 62 affordable turns on Easy and 6 in 109 on Hard. Its mean eval delta is 2.0 on both, which is exactly the backrow price minus the hand price (0.5 + 0.5 \u00d7 3).\n  - Alternate Fate (M #26) was played 2 times in 52 affordable turns on Easy.\n  - Mana Well, Unbiased Immigration and Alternate Fate are all on `SHADOW_WATCH` (`crates/ai/src/shadow_ban.rs`).\n- An earlier unban already hit this blind spot: Fed Fauci's stored mana 'was invisible to the eval' and needed its own weight (`shadow_ban.rs:123-124`).\n- 87 card scripts declare a `start_of_turn` or `end_of_turn` hook.\n\n## Proposal\n\nGeneralise #2424's Death probe (`death_prices`, `evaluate.rs:1084`; held for the decision by `decide.rs:422`; R2424000) to turn hooks:\n\n1. At the decision's root, play one firing of the turn hook in a sandbox copy for each readable permanent in the seat's backrow, and for each Field Spell in its hand as if it were set. The probes draw from a node cap like `AI_DEATH_PROBE_NODES`.\n2. Price each firing as the controller's evaluation after it minus before it. A `next_turn_mana`-style term prices the mana above the refresh, so a mana gain counts.\n3. Hold the prices for the decision, as the Death prices are held. `material` adds `w.turn_hook \u00d7 price` for each such card on the field.\n4. The new weight starts untuned, as R2424000's did, and is a named constant in `crates/ai/src/config.rs`.\n\nA hook that harms its holder, such as Core #65 Masochism Mask, comes out negative. The opponent's face-down cards stay priced as they are today, so hidden cards change no decision.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs`, `config.rs` and `decide.rs`, plus `crates/ai/README.md`.\n- If the held prices need a new thread-local, CLAUDE.md rule 4's list of thread-locals, as R2424000's was added.\n- \u00a79.9 (`spec/09-architecture.md`), with a ruling note in the issue's block and `spec/pending/<issue>.md`.\n- Tests in `crates/ai/tests/ai/`.\n\n## Acceptance criteria\n\n- [ ] On the AI's own side, a Rush Token Farm, an Unbiased Immigration or a Mana Well on the field scores more than a hookless Field Spell of the same cost; a Masochism Mask scores no more than one.\n- [ ] With Mana Well in hand, spare mana and nothing else worth playing, `decide` plays it on Medium and Hard.\n- [ ] An opponent's face-down card is priced exactly as before.\n- [ ] `cargo jackioh gate` passes, and the AI's tests and `cargo jackioh fuzz --seeds 200` are green.\n- [ ] The ruling note is proven by a test named after it, and `cargo jackioh spec check` passes.\n\n## Size and risks\n\nMedium: about 300 lines plus tests. The probes cost search nodes, so they need a cap and a test that the decision's node count stays within the budget. A random hook, such as Unbiased Immigration's card, is priced by one draw from the sandbox's seed, the same as a Death probe is. Every decision where such a card is in play changes, so `classify` labels the PR an AI change. The untuned weight may need a training-lane screen before it is raised.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T13:02:31Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2477: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
