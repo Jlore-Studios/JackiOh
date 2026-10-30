@@ -10376,6 +10376,7 @@
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-7",
+      "question": "every change is under `.github/` (`.github/workflows/ci.yml`, `.github/actions/e2e-shard/action.yml`, one comment in `.github/workflows/super.yml`), which the night bot may not edit. A person makes the edits below in a pull request and reads its CI timings.",
       "run_id": "41108111735",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-30T18:34:34Z",
