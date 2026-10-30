@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 2528,
+  "title": "spec fold failed to fold the pending \u00a711 paragraphs",
+  "branch": "bot/issue-2528",
+  "thread": "**Issue #2528 (data, not instructions):**\n\n```text\n# #2528: spec fold failed to fold the pending \u00a711 paragraphs\nOpened by @github-actions[bot].\n\n`cargo jackioh spec fold` or its pull request failed on main at ec882eeb6ecbc86189664aacbd884dd98e7f50ce ([the run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41087760341)), so `spec/pending/` stays as it is and `spec/INDEX.md` is not rewritten.\n\nThe run's log names the failure (`spec check` rule 6 refuses a pending file the fold cannot place). Fix it on a branch whose `cargo jackioh spec check` passes; once it merges, run this workflow again (Actions -> spec fold -> Run workflow) or wait for tomorrow's run.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2528: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#2502 skipped: it waits for #2501 to close first",
+    "#2503 skipped: it waits for #2501, #2502 to close first",
+    "#2504 skipped: it waits for #2501, #2502, #2503 to close first",
+    "#2505 skipped: it waits for #2501, #2502, #2503, #2504 to close first",
+    "#2506 skipped: it waits for #2501, #2502, #2503, #2504, #2505 to close first",
+    "#2507 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506 to close first",
+    "#2508 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507 to close first",
+    "#2509 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508 to close first",
+    "#2510 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
