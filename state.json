@@ -12621,10 +12621,10 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-30T22:40:00Z",
-          "utilization": 0.4
+          "utilization": 0.94
         },
-        "observed_at": "2026-10-30T18:06:16Z",
-        "status": "allowed"
+        "observed_at": "2026-10-30T22:49:31Z",
+        "status": "allowed_warning"
       }
     },
     "claude-2": {
