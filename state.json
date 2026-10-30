@@ -9691,6 +9691,14 @@
       "taken_asks": [
         "c:6513041458"
       ]
+    },
+    "2432": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-30T01:28:38Z",
+      "issue": 2388,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
