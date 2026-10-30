@@ -7311,11 +7311,9 @@
       "ci_run_id": 40880089883,
       "ci_sha": "bf8fc316739db7f239ddf5f1628462763abd34b4",
       "cleared": {
-        "at": "2026-10-29T13:14:18Z",
-        "by": "`claude` (strong)",
-        "carried_from": "2bd828277ea70e0a98be29107ea9e6508e9183c2",
-        "resolved_by": "`muse` (medium)",
-        "sha": "bf8fc316739db7f239ddf5f1628462763abd34b4"
+        "at": "2026-10-30T11:43:40Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "d6f4e4af292c7dc3581cfe3371a64e74ad03ab6c"
       },
       "cross_rounds": 0,
       "died": 0,
