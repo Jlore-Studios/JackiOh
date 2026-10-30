@@ -725,7 +725,9 @@ mod r1370_a_deck_that_leans_on_a_set {
         // Re-pinned for the Stinkyscape release (#1884) the same way: the literals gate it too, and
         // deal the decks unchanged. Every pin was re-dealt again for #2179, whose costs move the curve.
         // And for the Training Grounds release (#2204): the literals gate it as well, so the decks are
-        // still the ones dealt before it was in any pool.
+        // still the ones dealt before it was in any pool. The human and themed pins were re-dealt for
+        // #2521, whose Memory Leak and Going Long changes move the builder's picks: their seeds stop at
+        // the same cursors.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -750,9 +752,9 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-010",
                     "core-055",
                     "classicplus-007",
-                    "classicplus-031",
-                    "core-076",
-                    "classicplus-008",
+                    "classicplus-033",
+                    "core-077",
+                    "classicplus-011",
                 ],
             ),
             (
@@ -844,9 +846,9 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-066",
                     "core-070",
                     "classicplus-063",
-                    "core-093",
-                    "classic-075",
-                    "classicplus-013",
+                    "core-089",
+                    "classic-088",
+                    "classicplus-026",
                 ],
             ),
         ];
