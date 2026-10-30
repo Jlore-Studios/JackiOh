@@ -10,11 +10,11 @@
 //! each SPECTATE_DELAY_MS after the state it shows, with `legal: []` (`MatchActor::attach_watcher`).
 //!
 //! Every refusal is the one `error` frame, `forbidden`, and a close with R148's 4403 (4401 before
-//! sign-in, 1011 for a fault), all with the same message, so a socket learns that it may not watch,
-//! never which check said so. No frame after the hello reaches the reducer: once the actor has the
-//! socket a later hello is answered with the view it was last sent (R1103000, so R1441's wake probe
-//! hears a live socket), and every other frame is dropped unread. A watcher leaving changes nothing
-//! in the match but the count its players see (B51).
+//! sign-in, 4429 past the account's budget (R2478000), 1011 for a fault), all with the same message,
+//! so a socket learns that it may not watch, never which check said so. No frame after the hello
+//! reaches the reducer: once the actor has the socket a later hello is answered with the view it was
+//! last sent (R1103000, so R1441's wake probe hears a live socket), and every other frame is dropped
+//! unread. A watcher leaving changes nothing in the match but the count its players see (B51).
 //! Before the hello the socket waits behind the gate `/ws/duos` waits behind (`actor::guard::HelloGate`,
 //! R835002): a frame that is not the hello is answered `malformed` and past
 //! `MALFORMED_FRAMES_PER_WINDOW` of them the socket is closed, and a hello that does not come within
@@ -37,8 +37,8 @@ use crate::actor::guard::HelloGate;
 use crate::actor::match_actor::WATCH_NOT_ALLOWED as NOT_ALLOWED;
 use crate::actor::protocol::{SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
-use crate::actor::ws_server::{Socket, WS_CLOSE};
-use crate::api::http::assert_active;
+use crate::actor::ws_server::{Socket, WATCH_PATH, WS_CLOSE};
+use crate::api::http::{ApiErrorCode, assert_active, upgrade_profile};
 use crate::app::App;
 use crate::db::store::{MatchPhase, MatchStatus, Profile, StoreError, Tx};
 use crate::social::friends::are_friends;
@@ -192,11 +192,14 @@ async fn authenticate(app: &Arc<App>, token: Option<String>) -> Result<Profile, 
     let Ok(user) = app.auth.verify(&token).await else {
         return Err(refused(WS_CLOSE.unauthorized, "sign in first"));
     };
-    let mut tx = app.db.begin(None).await?;
-    let profile = tx.profiles_get_by_user_id(&user.user_id).await?;
-    tx.commit().await?;
-    let Some(profile) = profile else {
-        return Err(refused(WS_CLOSE.unauthorized, "sign in first"));
+    // SPEC §11 R2478000: the upgrade is one request against the account's R109 budget.
+    let profile = match upgrade_profile(app, &user, WATCH_PATH).await {
+        Ok(Some(profile)) => profile,
+        Ok(None) => return Err(refused(WS_CLOSE.unauthorized, "sign in first")),
+        Err(error) if error.code == ApiErrorCode::RateLimited => {
+            return Err(refused(WS_CLOSE.rate_limited, &error.message));
+        }
+        Err(error) => return Err(WatchFailure::Threw(error.message)),
     };
     assert_active(&profile).map_err(|error| refused(WS_CLOSE.forbidden, &error.message))?;
     Ok(profile)

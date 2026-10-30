@@ -553,17 +553,19 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // 1–7 hold the card affordable on no turn and game 8 does, so the check plays eight.
     //
     // Re-pinned for issue #2511 (R2511001), when the AI's deck stopped passing over a Core card's
-    // Legacy card and the deals moved: Easy's game 1 no longer draws Pile On, so its check plays three
-    // games, one of which draws it, never affordable.
+    // Legacy card and the deals moved: Easy's game 1 no longer draws Pile On, and with #2542's pricing
+    // of Field Spells game 3 brings it to four crystals once through another card's discount, so no
+    // run of games from game 1 holds it drawn and never affordable. The Easy check is GIGA Glowy Jelly
+    // Bean's again (7, only Float brings it down): game 2 draws it, never at four crystals.
 
-    /// R186 Pile On (5 mana) is unswept at Easy's four crystals
+    /// R186 GIGA Glowy Jelly Bean (7 mana) is unswept at Easy's four crystals
     #[test]
-    fn r186_pile_on_5_mana_is_unswept_at_easys_four_crystals() {
+    fn r186_giga_glowy_jelly_bean_7_mana_is_unswept_at_easys_four_crystals() {
         jackioh_cards::register_all();
         let easy = js(sweep_card(
-            "classic-060",
+            "core-029",
             &SweepOptions {
-                seeds: Some(3),
+                seeds: Some(2),
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Easy),
