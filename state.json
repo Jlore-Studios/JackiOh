@@ -9993,6 +9993,10 @@
       "started_at": "2026-10-30T13:58:53Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2501": {
+      "onto": "bot/issue-2497",
+      "part_of": 2497
     }
   },
   "labels_synced": "10eb94bf70389cb1",
