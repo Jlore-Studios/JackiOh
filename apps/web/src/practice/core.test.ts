@@ -972,7 +972,9 @@ describe("R1705005 a lesson's fixed human deck is smaller than DECK_SIZE", () =>
       const debug = debugOf(d);
       // R2201001: lessons 1–4 add their pool hold to the human's handicap.
       const humanHandicap = lesson.poolHold ? { ...TUTORIAL_HUMAN, poolHold: true } : TUTORIAL_HUMAN;
-      expect(debug.handicaps, lesson.id).toEqual({ [opponentOf(human)]: AI_TUTORIAL, [human]: humanHandicap });
+      // R2433000: until #2434 deals the opponent Core decks, it plays AI_TUTORIAL without the Core-only bar.
+      const opponentHandicap = { ...AI_TUTORIAL, coreOnly: undefined };
+      expect(debug.handicaps, lesson.id).toEqual({ [opponentOf(human)]: opponentHandicap, [human]: humanHandicap });
       expect(debug.decks[seatIndex(human)], lesson.id).toHaveLength(TUTORIAL_HUMAN.deckSize);
       // The handicap is part of the game: it folds back to the same hash with it.
       const replayed = fold({ seed: debug.seed, decks: debug.decks, handicaps: debug.handicaps, log: debug.log });

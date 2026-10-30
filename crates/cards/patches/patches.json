@@ -18124,5 +18124,66 @@
       "traininggrounds-025"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.5.10",
+    "date": "2026-10-30",
+    "title": "A Trap fused into a Unit never fires from its unit zone, whatever fused it",
+    "source": "#2226",
+    "notes": "R2226000, R1020: a Trap's or Field Trap's text fused into a card that stands in a unit zone and is no trap never fires from there, whatever fused it (饕餮, an Equip, a Starship Piece's copy in its Dormant Starship). Queued as a unit's trigger it answered every event its condition admits since R2271000 (v0.5.2b), so 饕餮 holding Wormhole stole the opponent's Spells from its unit zone; before R2271000 read that condition, the same 饕餮 countered and recast its own controller's Spell for ever, which the daily fuzz waves of #2226 found. The classifier shows Clip-Farming Lawyer (meditative-027), 赌石 Addict (meditative-039), Tnack Trav (stinkyscape-020), Spacerace Stimulus (stinkyscape-131), the Dormant Starship (stinkyscape-t-dormant-starship), the token a Starship Piece's fused text stands in, and The Rock (traininggrounds-054) playing differently, and a divergence no card explains: a Trap fused into a card no deck held.",
+    "player": {
+      "title": "A Trap fused into a Unit stays quiet",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Trap fused into a Unit no longer springs from it, whatever fused it: Wormhole eaten by 饕餮 no longer steals your opponent's Spells."
+      ]
+    },
+    "commits": [
+      "9fd1a4185f53428513b46769f46d31bf928a3d0a"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "meditative-027",
+      "meditative-039",
+      "stinkyscape-020",
+      "stinkyscape-131",
+      "stinkyscape-t-dormant-starship",
+      "traininggrounds-054"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10b",
+    "date": "2026-10-30",
+    "title": "Every summon of a Flying Unit may land in the backrow",
+    "source": "#2453",
+    "notes": "R2248000 made every summon's: \"fill your board\" with a Flying Unit fills the backrow after the unit row, each standing there (Drone Core VIII, stinkyscape-034; Stratos Swarm, stinkyscape-158, R1860008), and the Recruit of every permanent, the random summon from hand (R1083) and the attack summons (R1202, R1203), which looked only at the unit row before they drew or moved, read a Flying Unit's backrow too. The classifier's stage 2 against main shows those two, the Drone Interceptor token (stinkyscape-t-drone-interceptor) the fill summons, and Jogg's Box (classicplus-047), whose random Spells include them, playing differently.",
+    "player": {
+      "title": "Flying Units fill your backrow",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Filling your board with a Flying Unit fills your backrow too, after your unit row: Drone Core VIII and Stratos Swarm now fill both rows.",
+        "Pile On, Skull of J'Nari, Windfast and Windfurious Prime put a Flying Unit in your backrow when your unit row is full."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "5756e8e578e4e102b9c11e1c04ebb0f8d823ad5c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-047",
+      "stinkyscape-034",
+      "stinkyscape-158",
+      "stinkyscape-t-drone-interceptor"
+    ],
+    "changes": []
   }
 ]

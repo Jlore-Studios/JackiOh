@@ -143,7 +143,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath, patch } = props;
   const { filter, onFilter, sort, onSort, onRename, onRenameDone, onPortrait, onCards, onDelete, onDuplicate, onSaveNow, onBack, history } = props;
 
-  useLocale();
+  const locale = useLocale();
   const label = deckLabel(deck, limits.nameLength);
   const [compare, setCompare] = useState<Compare>(NO_COMPARE);
   const [status, setStatus] = useState<StatusLine | null>(null);
@@ -202,7 +202,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
 
   const pool = useMemo(
     () => visiblePool(catalog, collection, filter, sort, winRates.rates ?? undefined),
-    [catalog, collection, filter, sort, winRates.rates],
+    [catalog, collection, filter, sort, winRates.rates, locale],
   );
   const verdict = useMemo(
     () => deckVerdict(deck, catalog, collection, limits.nameLength),

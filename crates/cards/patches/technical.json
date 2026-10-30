@@ -3170,5 +3170,40 @@
     "pr": 2428,
     "title": "patches ship: v0.5.9b",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "f280ef8e0d074cd990db70a5f6c9b42a63f01d71",
+    "pr": 2431,
+    "title": "patches log: 55b2aac..2d62a51",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "cc1969069eb3c089eef6996833f1386e4582debb",
+    "pr": 2307,
+    "title": "daily quests for Stinkyscape, Radiant upgrades and position switches, and every set that ships keeps a set quest",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "d1b9471f05961c165c44ab01cf49b06537fbf660",
+    "pr": 2432,
+    "title": "a ranked match's result shows the rank and pips it moved you to",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "9fd1a4185f53428513b46769f46d31bf928a3d0a",
+    "pr": 2403,
+    "title": "a Trap fused into a Unit stays quiet, a gray outline on a card with 1 Brittle left, no previews of shipped sets, and the cards lib job under five minutes",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "90789d8706784a32c18b345d09ec3b293f8b4ee2",
+    "pr": 2438,
+    "title": "patches ship: v0.5.10",
+    "kind": "app"
   }
 ]

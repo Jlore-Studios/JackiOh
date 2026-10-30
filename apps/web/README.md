@@ -219,11 +219,10 @@ graveyard, that pile glows and its sheet (`cards/inspect/CardList.tsx`) puts "Pl
 (`pile-play-<instanceId>`) under the card; it reports `{ on: "graveyard" }`, closes the sheet, and the
 play is built as a hand card's.
 
-**The Resource tray and Credits** (issue #1840, R1840000, R1840003, R1840005). `ResourceTray.tsx` draws
-each seat's `resourceTray` and `marketCredits` from the view alone, in `tray-<side>`, and nothing while
-the view carries neither: the viewer's own Resources as cards (`tray-card-<instanceId>`), the
-opponent's as a count (`tray-count-<side>`), and the Credits in `market-credits-<side>`, on both seats.
-A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is built as a hand card's.
+**Credits** (issue #1840, R1840005). `Hero.tsx` draws each seat's `marketCredits` from the view alone,
+as a pill in the hero's badge row beside the Jade Counter's (`market-credits-<side>`, on both seats),
+and nothing while the view carries none; a count of 0 still shows. A Resource is a hand card since
+#2250 (R2250000), so the hand draws it and there is no Resource tray.
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's

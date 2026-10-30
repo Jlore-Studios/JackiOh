@@ -43,6 +43,11 @@
 // ME-CN, R1301: a Chinese unit's name plate is the model's Chinese name and its keyword titles are
 // the table's words (chinese.ts); its chips keep their marks, and its art the English name's motif.
 //
+// R1839000: a Dormant card wears `data-dormant` (its countdown, or "true" with none) and the
+// binding seal (DormantSeal.tsx), greyed and bound under the state rail. On `awakened` (R1839002)
+// the seal breaks (game/animations.css) and stays broken until the board catches up
+// (game/awakening.ts's `data-awakening`).
+//
 // R1177001: a token unit wears the token mark (CardFace.tsx's TokenMark, `.cf-token`) in its stats
 // row, in the room between attack and health, as its full face says "Token Unit": the board is where
 // a token is met most. The row's tests read its stats by their own classes, never its whole text.
@@ -65,6 +70,7 @@ import { useCosmeticAttributes } from "./cosmetics.ts";
 import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
+import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
 import { keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
 import { foilFor, frameRarity, type FaceModel } from "./model.ts";
@@ -144,6 +150,7 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
   const settings = useCardSettings();
   const cosmetics = useCosmeticAttributes(face, worn, settings.animatedFoil);
   const plan = keywordFxPlan(unit);
+  const dormant = dormantAttr(face.dormant);
   const nameRef = useRef<HTMLSpanElement>(null);
   useFitText(nameRef, face.name);
 
@@ -162,6 +169,7 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
       data-vanilla={unit.vanilla === true ? "true" : undefined}
       data-tuned={face.tuning?.verdict}
+      data-dormant={dormant}
       {...cosmetics}
     >
       <span className="cf-scale">
@@ -239,6 +247,9 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
         </span>
 
         <KeywordIcons keywords={unit.keywords} armor={unit.armor} chinese={face.chinese === true} />
+
+        {/* #2435, R1839000: a Dormant card greyed and bound, under the state rail (DormantSeal.tsx). */}
+        {dormant === undefined ? null : <DormantSeal />}
 
         <CardStates face={face} omit={DRAWN_BY_TREATMENTS} />
 
