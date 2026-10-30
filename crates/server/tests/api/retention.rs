@@ -6,9 +6,7 @@
 //! for the manual clock.
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 
-use serde::Serialize;
-use serde::de::DeserializeOwned;
-use serde_json::{Value, json};
+use serde_json::json;
 
 use jackioh_engine::wire::GameRecord;
 use jackioh_server::api::retention::purge_expired;
@@ -22,22 +20,13 @@ use jackioh_server::economy::idempotency::sweep_expired;
 use jackioh_server::economy::store::IdempotencyRow;
 
 use crate::support::deps::test_app;
-use crate::support::store::fake_lock;
+use crate::support::store::{fake_lock, from, to_json};
 
 const DAY_MS: i64 = 86_400_000;
 const HOUR_MS: i64 = 3_600_000;
 const MINUTE_MS: i64 = 60_000;
 
 // Harness (a private copy per file)
-
-/// Builds a value from a JSON literal, so the test depends on the JSON shape only.
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn json_of<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
 
 fn finished_match(id: &str, finished_at: Option<i64>) -> MatchRow {
     from(json!({
@@ -164,7 +153,7 @@ mod the_retention_purge {
 
         let purged = purge_expired(&app).await.expect("purgeExpired");
         assert_eq!(
-            json_of(&purged),
+            to_json(&purged),
             json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 1, "gameRecords": 1 })
         );
         let data = fake_lock(&app).await;
@@ -226,7 +215,7 @@ mod the_retention_purge {
 
         let purged = purge_expired(&app).await.expect("purgeExpired");
         assert_eq!(
-            json_of(&purged),
+            to_json(&purged),
             json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0, "gameRecords": 0 })
         );
         let data = fake_lock(&app).await;
