@@ -7290,10 +7290,14 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "5df11cb5c29d896b3af1b08fda110959b26e62a1",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "2310": {
