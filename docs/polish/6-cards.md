@@ -97,7 +97,8 @@ board still fits 1280×720 and 390×844.
   `apps/web/public/art/*.webp` files land.
 - There are no class tabs (JackiOh has no classes), no crafting and no golden or diamond tiers.
   Flavour text and artist credits came later (R660): a sidecar beside the catalog
-  (`packages/cards/flavour.json`), shown in the inspect views and the detail view, never on a face.
+  (`crates/cards/flavour.json`, written since #2498 from `crates/cards/card-text.yaml`), shown in the
+  inspect views and the detail view, never on a face.
 - **Hearthstone's click-to-add in the pool.** The brief says "in the deck builder, a click opens a
   detail view", so a click on a pool card opens it and its "Add to Deck N" adds the card. Adding
   still takes one gesture: the "+" on every pool card, or a drag onto a deck. (The fix stage changed

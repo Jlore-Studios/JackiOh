@@ -1,5 +1,6 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviors B33 and B34, and R655's file: `card-audio.json5`
-// against the catalog it voices.
+// Polish task 2 (docs/polish/2-sound.md), behaviors B33 and B34, and R655's file: `card-audio.json5`,
+// with its words from `voice-text.json` (written from crates/cards/card-text.yaml, #2498), against
+// the catalog it voices.
 //
 //   B33  exactly the catalog's ids (Core's 111 among them), each card's kind from its catalog type
 //        (the file never states it); a unit carries a `play` and a `death` line (a hook with a voice
@@ -17,10 +18,11 @@
 //   R655 the sections are voices, effects and cards, in that order; each card's entry names the card
 //        in a comment on the line of its id, in catalog order; comments and trailing commas parse;
 //        every effect a hook names is in the bank, every bank effect is a recipe sfx.ts has, and
-//        every one is used.
+//        every one is used; and the file writes no words, which are card-text.yaml's.
 //
-// Both files are read off disk rather than imported, so this checks the committed file itself and
-// not whatever `voiceData.ts` makes of it. Each test collects every offender before asserting, so
+// The files are read off disk rather than imported, so this checks the committed files themselves,
+// joined by `voiceData.ts`'s `withVoiceText` as the client joins them, and not what its parser
+// makes of them. Each test collects every offender before asserting, so
 // a red run names all of them at once instead of the first.
 
 import { readFileSync } from "node:fs";
@@ -32,11 +34,13 @@ import { describe, expect, it } from "vitest";
 
 import { BANNED_RULES_WORDS, BANNED_WORDS_MAX_SHARE, CARD_HOOK_NAMES, VOICE_MAX_WORDS } from "./constants.ts";
 import { SFX_IDS } from "./sfx.ts";
+import { withVoiceText } from "./voiceData.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(here, "../../../..");
 const CATALOG_PATH = resolve(REPO, "crates/cards/catalog.json");
 const AUDIO_PATH = resolve(here, "card-audio.json5");
+const VOICE_TEXT_PATH = resolve(here, "voice-text.json");
 
 type EntryKind = "unit" | "spell" | "trap";
 type Hook = "play" | "attack" | "death" | "cast" | "trigger";
@@ -90,7 +94,9 @@ const CATALOG = catalogRaw as Record<string, { type?: unknown; name?: unknown }>
 const CATALOG_IDS: readonly string[] = Object.keys(CATALOG);
 
 const SOURCE = readFileSync(AUDIO_PATH, "utf8");
-const tableRaw = JSON5.parse<unknown>(SOURCE);
+/** The file as written, its words not joined in. */
+const WRITTEN = JSON5.parse<unknown>(SOURCE);
+const tableRaw = withVoiceText(WRITTEN, JSON.parse(readFileSync(VOICE_TEXT_PATH, "utf8")));
 if (!isRecord(tableRaw)) throw new Error(`${AUDIO_PATH}: expected an object`);
 const TABLE: Json = tableRaw;
 const VOICES: Json = isRecord(TABLE.voices) ? TABLE.voices : {};
@@ -514,6 +520,24 @@ describe("card-audio.json5's layout and effects (R655)", () => {
       .filter(([, effect]) => !isRecord(effect) || typeof effect.sfx !== "string" || !(SFX_IDS as readonly string[]).includes(effect.sfx))
       .map(([name, effect]) => `${name}: sfx ${JSON.stringify(isRecord(effect) ? effect.sfx : effect)}`);
     expect(wrong, "effects whose sfx is not a recipe").toEqual([]);
+  });
+
+  it("R655 R644 card-audio.json5 writes no words: no hook has a text or lines, no portrait a line", () => {
+    const written = isRecord(WRITTEN) ? WRITTEN : {};
+    const wrong: string[] = [];
+    for (const [id, entry] of Object.entries(isRecord(written.cards) ? written.cards : {})) {
+      for (const [hook, value] of Object.entries(isRecord(entry) ? entry : {})) {
+        for (const field of ["text", "lines"]) {
+          if (isRecord(value) && field in value) wrong.push(`cards.${id}.${hook}.${field}`);
+        }
+      }
+    }
+    for (const [portrait, entry] of Object.entries(isRecord(written.emotes) ? written.emotes : {})) {
+      for (const line of ["greetings", "wellPlayed", "oops", "thanks", "threaten"]) {
+        if (isRecord(entry) && line in entry) wrong.push(`emotes.${portrait}.${line}`);
+      }
+    }
+    expect(wrong, "words written in card-audio.json5, which card-text.yaml holds").toEqual([]);
   });
 
   it("R655 uses every bank effect on at least one card", () => {
