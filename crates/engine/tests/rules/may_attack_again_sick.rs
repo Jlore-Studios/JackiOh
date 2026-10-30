@@ -77,11 +77,11 @@ fn register() {
 /// p1 holds `p1_hand` and has `p1_field`; p2 has three fodders, in lanes 1 to 3. Neither turn ends by itself.
 fn board(seed: &str, p1_hand: Value, p1_field: Value) -> Scenario {
     register();
-    let fodder = fodder().id;
+    let prey = fodder().id;
     let mut s = scenario(json!({
         "seed": seed,
-        "p1": { "hand": p1_hand, "field": p1_field, "library": [fodder, fodder] },
-        "p2": { "hand": [fodder], "field": [fodder, fodder, fodder], "library": [fodder, fodder] },
+        "p1": { "hand": p1_hand, "field": p1_field, "library": [prey, prey] },
+        "p2": { "hand": [prey], "field": [prey, prey, prey], "library": [prey, prey] },
     }));
     s.state_mut().players.p1.auto_end_turn = Some(false);
     s.state_mut().players.p2.auto_end_turn = Some(false);

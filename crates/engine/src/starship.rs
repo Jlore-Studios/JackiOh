@@ -184,7 +184,8 @@ fn base_piece_def(state: &GameState, def_id: &str) -> Option<String> {
             .iter()
             .rev()
             .find_map(|spec| base_piece_def(state, &spec.def_id)),
-        None => has_keyword(&def.base.keywords, KeywordKind::StarshipPiece).then(|| def.id.clone()),
+        None if has_keyword(&def.base.keywords, KeywordKind::StarshipPiece) => Some(def.id.clone()),
+        None => None,
     }
 }
 
@@ -196,7 +197,8 @@ fn base_piece_def(state: &GameState, def_id: &str) -> Option<String> {
 /// before it died (R89). Its id is fresh, so it can be named by no other card.
 fn piece_copy(state: &mut GameState, snapshot: &CardInstance) -> CardInstance {
     let owner = snapshot.owner;
-    let def_id = base_piece_def(state, &snapshot.def_id).unwrap_or_else(|| snapshot.def_id.clone());
+    let def_id = base_piece_def(state, &snapshot.def_id)
+        .unwrap_or_else(|| snapshot.def_id.clone());
     let mut copy = new_instance(state, &def_id, owner, Zone::Gone { player: owner });
     copy.radiant = snapshot.radiant;
     copy.stats_override = snapshot.stats_override;

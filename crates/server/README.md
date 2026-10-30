@@ -980,6 +980,9 @@ and its 52 tokens the day `SHIPPED_SETS` lists it (R1420). No row is rewritten; 
 card's tags as the catalog holds them, and 0016's grant hands every active account the cards the new
 catalog version adds (R481).
 
+Migration 0068 widens the `cards` tag check once more, as 0065 did, with #2521's Resource and Faction tags,
+so `seed-catalog` can write the six Resources and the five Faction cards as the catalog now tags them.
+
 Migration 0066 adds `deck_versions` (R2100000) and only adds objects and rows: one row per version of
 a saved deck, its name and cards as one save wrote them and `saved_at`, read newest first through
 `deck_versions_deck_saved_idx`. Its composite foreign key on `(profile_id, deck_id)` names only a deck

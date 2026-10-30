@@ -223,7 +223,8 @@ play is built as a hand card's.
 each seat's `resourceTray` and `marketCredits` from the view alone, in `tray-<side>`, and nothing while
 the view carries neither: the viewer's own Resources as cards (`tray-card-<instanceId>`), the
 opponent's as a count (`tray-count-<side>`), and the Credits in `market-credits-<side>`, on both seats.
-A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is built as a hand card's.
+A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is built as a hand card's. A Resource's face prints `Credits: <min>–<max>` under its text, its face's `resource` prices
+(`cards/model.ts`, R2521009).
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
