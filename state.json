@@ -7311,12 +7311,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "wip": {
-        "at": "2026-10-30T14:51:32Z",
-        "provider": "claude-8",
-        "sha": "c5667ccda2f161ea79c21ef5cd5471d14894ff95",
-        "start": "5df11cb5c29d896b3af1b08fda110959b26e62a1"
       }
     },
     "2310": {
