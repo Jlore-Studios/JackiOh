@@ -9605,6 +9605,9 @@
         }
       }
     },
+    "2489": {
+      "suggestion": true
+    },
     "2492": {
       "action": "review",
       "asks": [],
