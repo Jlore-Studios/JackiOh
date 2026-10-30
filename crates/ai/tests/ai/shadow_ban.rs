@@ -1633,12 +1633,11 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
     #[test]
     fn r2203000_the_shadow_ban_holds_at_most_half_the_training_grounds_set() {
         jackioh_cards::register_all();
-        let _preview = preview_sets(&[SetName::TrainingGrounds]);
         let cards = ai_pool()
             .iter()
             .filter(|id| def_of(None, id).set == SetName::TrainingGrounds)
             .count();
-        assert!(cards > 0, "the previewed set deals its cards");
+        assert!(cards > 0, "the set deals its cards");
         let banned = SHADOW_BAN
             .iter()
             .filter(|(def_id, _)| def_of(None, def_id).set == SetName::TrainingGrounds)

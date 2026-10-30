@@ -215,7 +215,6 @@ mod tests {
         #[test]
         fn r987_feng_shui_s_luck_adds_a_roll() {
             crate::register_all();
-            let _open = preview_sets(&[SetName::Meditative]);
             for radiant in [false, true] {
                 let bare: Vec<usize> = SEEDS
                     .iter()

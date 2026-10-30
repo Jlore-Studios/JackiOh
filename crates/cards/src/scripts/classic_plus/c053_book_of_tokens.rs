@@ -108,7 +108,6 @@ mod tests {
         #[test]
         fn r987_feng_shui_s_luck_adds_a_roll() {
             crate::register_all();
-            let _open = preview_sets(&[SetName::Meditative]);
             let twos = |judge: bool| -> i32 {
                 let mut found = 0;
                 for n in 0..40 {
