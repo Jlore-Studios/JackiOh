@@ -159,10 +159,11 @@ A change to a card is a patch (R388, R646). No one names its version: `patches s
 ships, from what it does to the cards (R1366000): a major when a set ships, a patch (the next X) when
 15 or more card families are reprinted, 50 or more play differently or a rule meets a quarter of the
 games (R2455000, R2499000), a micro
-(the next letter) for anything smaller or for wording alone; never reopen a shipped one. A branch claims its card changes with a pending fragment:
+(the next letter) for anything smaller, for wording alone or for a change to how cards look
+(`apps/web/src/cards/`, claimed with `--visual`, R2529000); never reopen a shipped one. A branch claims its card changes with a pending fragment:
 
 ```
-cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>" [--plays <ids>] [--rule]
+cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>" [--plays <ids>] [--rule] [--visual]
 ```
 
 It writes or updates `crates/cards/patches/pending/<slug>.json`, named after the title, containing the
