@@ -8685,16 +8685,16 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-30T12:03:22Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "41033693511",
+      "run_id": "pending:cb26f5b8-1793361796",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-30T09:28:28Z",
+      "started_at": "2026-10-30T12:03:37Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -9535,9 +9535,9 @@
   },
   "labels_synced": "10eb94bf70389cb1",
   "last_run": {
-    "at": "2026-10-30T11:51:46Z",
+    "at": "2026-10-30T12:03:37Z",
     "url": "",
-    "what": "revise #2310 on muse"
+    "what": "revise #2415 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-30T11:57:04Z",
