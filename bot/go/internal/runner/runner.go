@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
@@ -207,9 +208,9 @@ var ExitTimeout int = 124
 var ExitNotFound int = 127
 
 // defaultPark is DEFAULT_PARK: when a refusal names no reset time, try again after this long.
-// It lives in providers (providers.DefaultPark, PORTING §2), which this package reads once that
-// port lands: `var defaultPark = providers.DefaultPark`.
-var defaultPark = "+PT60M"
+// It lives in providers (providers.DefaultPark), which the Python imported from here lazily: the one
+// import cycle Go would not allow.
+var defaultPark = providers.DefaultPark
 
 // ErrorLines is how many of a failed CLI's last stderr lines its error keeps (`stderr_error`).
 var ErrorLines int = 20

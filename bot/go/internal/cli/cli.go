@@ -427,7 +427,7 @@ func CmdQuiet(cfg *config.Config, args *Args) int {
 		func() *pyjson.Object { return runner.PingUsage(cfg.ClaudeBin(), cfg.Quiet.PingModel, nil, "", "") },
 		func(t1, t2 time.Time) string {
 			return quiet.PartnerSpending(cfg.Quiet.Partners,
-				func(repo string) any { return quiet.NewPartnerReader(repo, token, nil) }, t1, t2)
+				func(repo string) quiet.RunReader { return quiet.NewPartnerReader(repo, token, nil) }, t1, t2)
 		},
 		ctx.Now,
 		Sleep,
@@ -614,11 +614,7 @@ func CmdWork(cfg *config.Config, args *Args) int {
 		}
 	}
 
-	var loginArg any
-	if login != nil {
-		loginArg = login
-	}
-	run := runner.GetRunner(cfg, provider, loginArg)
+	run := runner.GetRunner(cfg, provider, login)
 	var item *int
 	if pyjson.Truthy(number) {
 		n := intOf(number)

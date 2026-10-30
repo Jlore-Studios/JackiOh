@@ -14,6 +14,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 )
 
 // needPorted skips a test while a package it leans on is still the generated stub (each package
@@ -219,7 +220,7 @@ func TestWake(t *testing.T) {
 	saved := Ping
 	t.Cleanup(func() { Ping = saved })
 	answer := func(result, usage string) {
-		Ping = func(claudeBin string, model string, run func(...any) any, token string, effort string) (*pyjson.Object, *pyjson.Object) {
+		Ping = func(claudeBin string, model string, run runner.RunFunc, token string, effort string) (*pyjson.Object, *pyjson.Object) {
 			if model != "claude-haiku-5-5" || effort != "low" || token != "" || run != nil {
 				t.Errorf("ping(%q, %q, %v, %q, %q)", claudeBin, model, run != nil, token, effort)
 			}
