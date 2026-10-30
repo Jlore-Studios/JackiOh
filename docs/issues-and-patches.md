@@ -53,9 +53,9 @@ is Claude Opus's alone), `human` (people do it, such as a decision or any change
 labels (the bot's pickup order) and the `bot:*` labels are separate. Never add `bot:build` while
 retitling or relabeling, because it queues a build.
 
-Every label, with its color and description, is listed once, in `bot/harness/config.py`'s
-`LABELS`: the sweep creates one the repository lacks and deletes one it retired
-(`RETIRED_LABELS`), and `harness setup` also restores a changed one.
+Every label, with its color and description, is listed once, in `bot/go/internal/config`'s
+`Labels`: the sweep creates one the repository lacks and deletes one it retired
+(`RetiredLabels`), and `harness setup` also restores a changed one.
 
 **Who does an issue: one label each.** `bot:build` hands an issue to the night bot, which queues it;
 so does assigning the bot or commenting `/harness build`. `human` hands it to people: triage
@@ -68,7 +68,7 @@ Otherwise the night bot's planner rates the issue when it plans it, and it count
 then: **easy** only when it is small (at most 10 files and 400 lines), in one crate or app,
 touches none of `SPEC.md`, the notes in `spec/`, `BUILD.md` or the shared surfaces, does no engine,
 AI, catalog, card or migration work, is checked by a unit test, leaves the builder no decision, and
-is blocked by nothing (`bot/harness/easy.py`); **hard** for engine rules, the AI, design across
+is blocked by nothing (`bot/go/internal/easy`); **hard** for engine rules, the AI, design across
 crates, a migration, or about 40 files or more; **medium** for the rest. Triage
 gives no difficulty beyond the form's answer. Every ten minutes the sweep labels what is left bare
 (#735): a planned issue with no difficulty gets `difficulty:medium`, and a bot pull request its
@@ -226,7 +226,7 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
 
   n is the order the parts are meant to merge in. When a part is added or moved, update m on the
   rest. The night bot holds a part until the parts before it, the same parent's sub-issues, have
-  closed (`bot/harness/queue.py`, `waits_for`), so a part that is not linked waits for nothing.
+  closed (`bot/go/internal/queue`, `WaitsFor`), so a part that is not linked waits for nothing.
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
 - **Going live.** A change to a card goes live through a pending fragment:
@@ -331,13 +331,13 @@ sample of All Random. The base build needs the flag, so the first such compariso
 - **Title.** A pull request's title becomes the subject of the squash commit it lands as, so it
   follows [Titles](#titles), usually as its issue's does. The `pr title` check
   (`.github/workflows/pr-title.yml`) fails one that doesn't and runs again when it is edited. Its
-  pattern is triage's (`bot/harness/triage.py`, `CONVENTION`), plus the titles tools give their own
-  pull requests (`AUTOMATED_PULL`): `patches ship: v0.3.1` (`patches-ship.yml`),
+  pattern is triage's (`bot/go/internal/triage`, `Convention`), plus the titles tools give their own
+  pull requests (`AutomatedPull`): `patches ship: v0.3.1` (`patches-ship.yml`),
   `Promote main to production: N commit(s) up to abc1234` (`scripts/promote-production.sh`), a
   training lane's `AI gen N (improve): …`, `AI gen N (unban): …` or `AI gen N (learn): …`, and GitHub's `Revert "…"` of
   a title that passes. The bots title theirs from the builder's answer when it follows the
   convention, else from the issue, else as `Patch: <what it does>` with the old prefix dropped,
-  as the fix of a workflow's `CI: …` alert is (`triage.pull_title`), and merge by squash, so
+  as the fix of a workflow's `CI: …` alert is (`triage.PullTitle`), and merge by squash, so
   their branch commits' subjects (`bot: build pass 1 for #85`) never become one on `main`.
 - **Body.** The template asks for `Closes #n` (a part says `Closes #<part>` and
   `Part of #<tracker>`), what changed, the tests run, the risks, the rulings added or changed and

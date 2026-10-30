@@ -11,11 +11,12 @@ trap backrow. This file binds every agent, not only Claude.
 - `BUILD.md` is the work order (milestones, acceptance criteria, the per-card must-pass tables); `REVIEW.md` is
   the audit, its reports in `reviews/`.
 - Each crate's and app's `README.md` (`crates/*`, `apps/web`, `e2e`) is its contract: read it before you
-  change that code. So is `infra/README.md`, for the hosts' dashboard settings as Terraform (#1708). Also:
-  `docs/ADDING_CARDS.md`, `docs/issues-and-patches.md` (titles, labels, patch and ruling numbers),
-  `docs/architecture.md`, `docs/deploy-cloudflare.md` (what runs where), `bot/README.md`,
-  `training/README.md`, `docs/v0.3.0/SURFACE.md` (every boundary between the crates and the client) and
-  `docs/v0.4.0/` (the Luau card scripts, #442, and their return to Rust, #902).
+  change that code. So are `infra/README.md`, for the hosts' dashboard settings as Terraform (#1708), and
+  `bot/go/README.md`, for the bots' harness in Go (#467). Also: `docs/ADDING_CARDS.md`,
+  `docs/issues-and-patches.md` (titles, labels, patch and ruling numbers), `docs/architecture.md`,
+  `docs/deploy-cloudflare.md` (what runs where), `bot/README.md`, `training/README.md`, `docs/v0.3.0/SURFACE.md`
+  (every boundary between the crates and the client) and `docs/v0.4.0/` (the Luau card scripts, #442, and
+  their return to Rust, #902).
 - The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md` and the design briefs `docs/*-set*.md`,
   each named in REVIEW.md's Part A inputs) are what REVIEW Part A checks the spec against; read them only
   when the task is about them.
@@ -73,7 +74,7 @@ trap backrow. This file binds every agent, not only Claude.
    fails when a run changes them. Nothing else states a number.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
 11. An agent that opens an issue gives it one `difficulty:*` label by `docs/issues-and-patches.md` (How hard
-    it is; `bot/harness/easy.py` holds the easy rule), **hard** for engine rules, the AI, design across
+    it is; `bot/go/internal/easy` holds the easy rule), **hard** for engine rules, the AI, design across
     crates, a migration, or about 40 files or more. Torn between two, take the harder. The bot never changes
     your label, so a wrong easy reaches a weak model: when you cannot judge it, leave it off and the planner
     rates it.
@@ -92,8 +93,8 @@ Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules 
 ## Commands
 
 `rust-toolchain.toml` pins Rust and its two WebAssembly targets for `crates/`, and `crates/luau` needs a C++
-compiler (`mlua` builds Luau from source); Node ≥ 22.13 and pnpm 11 for `apps/web` and `e2e` only.
-`cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
+compiler (`mlua` builds Luau from source); Node ≥ 22.13 and pnpm 11 for `apps/web` and `e2e` only; Go for
+`bot/go` (its `go.mod` pins it). `cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
 
 ```
 cargo fmt --check
@@ -115,7 +116,8 @@ pnpm --dir apps/web build          # the production bundle
 pnpm --dir apps/web typecheck
 pnpm --dir apps/web test           # the web's unit tests (vitest, jsdom)
 pnpm exec eslint apps/web e2e
-cd bot && python3 -m unittest discover -s tests -t .   # the bot selftest's suite, the skills' frontmatter included; inside a bot's run, unset HARNESS_HOME and HARNESS_DRY_RUN first
+cd bot/go && go test ./...                             # the bot selftest's harness suite, the skills' frontmatter included; inside a bot's run, unset HARNESS_HOME and HARNESS_DRY_RUN first
+cd bot && python3 -m unittest discover -s tests -t .   # the bot selftest's Python suites: what stays Python (bot/machine's Lambdas and scripts, .github/hygiene's branch rule)
 sh crates/server/tests/sql/run.sh          # schema, RLS and trigger invariants (Docker: a throwaway postgres:16)
 sh crates/server/tests/db/run.sh           # the server's store against postgres:16 (Docker; KEEP_DB=1 keeps it)
 cargo jackioh fuzz --from <seed> --seeds 1   # replay one failing fuzz seed (--handicap for the handicapped wave)
@@ -183,9 +185,10 @@ keeps its rule per pull request, which its `daily:` reason names. Each workflow'
 
 ## The night bot
 
-`@jgoetzmann-bot` (the night bot, `.harness/`) and `@squishy-squooby` (Squishy, `.squishy/`) build issues on
-the owner's subscriptions; `bot/README.md` says which issues each takes. `human` keeps every bot off an issue,
-and `bot:build` queues one for the night bot, so never add it while retitling or relabeling.
+`@jgoetzmann-bot` (the night bot, `.harness/`) and `@squishy-squooby` (Squishy, `.squishy/`), one harness
+(`bot/go/`, a Go binary) under two configs, build issues on the owner's subscriptions; `bot/README.md` says
+which issues each takes. `human` keeps every bot off an issue, and `bot:build` queues one for the night bot,
+so never add it while retitling or relabeling.
 
 A bot's builder or reviewer must not change `.github/`, `.harness/`, `.squishy/`, `bot/` or `.claude/`, except
 that Squishy may change `.claude/skills/` (the full lists are `forbidden_paths` in each bot's `config.json`):
