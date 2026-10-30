@@ -331,7 +331,6 @@ mod tests {
 
         #[test]
         fn r1181001_supplies_adds_a_radiant_jlockeed_card_at_2_never_supply_drop() {
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             let mut s = game("m+004-supplies", false, json!({}), json!({}));
             cast(&mut s, SUPPLIES, false);
             pass_own_turns(&mut s, 2);
@@ -344,7 +343,6 @@ mod tests {
 
         #[test]
         fn r387_supplies_never_adds_supply_drop_over_five_seeds() {
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             for seed in 0..5 {
                 let mut s = game(
                     &format!("m+004-never-itself-{seed}"),
@@ -372,7 +370,6 @@ mod tests {
 
         #[test]
         fn embiggened_supplies_adds_5_cards_after_five_turns() {
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             let mut s = game("m+004-embiggened-supplies", false, json!({}), json!({}));
             cast(&mut s, SUPPLIES, true);
             pass_own_turns(&mut s, 4);
@@ -398,7 +395,6 @@ mod tests {
 
         #[test]
         fn r386_supplies_cards_and_cost_read_through_param() {
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             let mut s = game("m+004-tuned-supplies", false, json!({}), json!({}));
             let drop = s.hand(P1)[0].id.clone();
             assert_eq!(crate::upgrade_number(&mut s, &drop, "cards"), 2);
@@ -425,7 +421,6 @@ mod tests {
 
         #[test]
         fn r386_the_embiggened_supplies_count_reads_through_param() {
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             let mut s = game("m+004-tuned-embiggened-supplies", false, json!({}), json!({}));
             let drop = s.hand(P1)[0].id.clone();
             assert_eq!(crate::degrade_number(&mut s, &drop, "embiggenedCards"), 4);
@@ -464,7 +459,6 @@ mod tests {
 
         #[test]
         fn supplies_adds_2_cards_at_0() {
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             let mut s = game("m+004-radiant-supplies", true, json!({}), json!({}));
             cast(&mut s, SUPPLIES, false);
             pass_own_turns(&mut s, 3);
@@ -475,7 +469,6 @@ mod tests {
 
         #[test]
         fn r1181001_embiggened_supplies_fills_the_hand_counted_as_it_resolves() {
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             let mut s = game("m+004-radiant-fill", true, json!({}), json!({}));
             cast(&mut s, SUPPLIES, true);
             assert_eq!(

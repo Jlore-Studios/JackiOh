@@ -1481,9 +1481,8 @@ mod m_plus_n11_living_mana_potion {
     use super::*;
 
     /// The listed `activate`: p1 has Spell Damage +5 this turn (R1180001); the base face Tributes the
-    /// potion, the Radiant face keeps it, once a turn. Held in a preview of the set (R1420, R1178000).
+    /// potion, the Radiant face keeps it, once a turn.
     fn activates(radiant: bool) {
-        let _preview = preview_sets(&[SetName::MeditativePlus]);
         let mut s = scenario(json!({
             "p1": { "field": [on(LIVING_MANA_POTION, radiant)], "hand": [STOCKPILE] },
             "p2": { "hand": [FILLER] },
@@ -1514,9 +1513,8 @@ mod m_plus_n12_living_armor_potion {
     use super::*;
 
     /// The listed `activate`: p1's hero has 5 Armor (R757); the base face Tributes the potion,
-    /// the Radiant face keeps it, once a turn. Held in a preview of the set (R1420, R1178000).
+    /// the Radiant face keeps it, once a turn.
     fn activates(radiant: bool) {
-        let _preview = preview_sets(&[SetName::MeditativePlus]);
         let mut s = scenario(json!({
             "p1": { "field": [on(LIVING_ARMOR_POTION, radiant)], "hand": [STOCKPILE] },
             "p2": { "hand": [FILLER] },
@@ -1547,9 +1545,8 @@ mod m_plus_n13_living_health_potion {
     use super::*;
 
     /// The listed `activate`: p1's hero heals 5 (R1179002); the base face Tributes the potion,
-    /// the Radiant face keeps it, once a turn. Held in a preview of the set (R1420, R1178000).
+    /// the Radiant face keeps it, once a turn.
     fn activates(radiant: bool) {
-        let _preview = preview_sets(&[SetName::MeditativePlus]);
         let mut s = scenario(json!({
             "p1": { "health": 20, "field": [on(LIVING_HEALTH_POTION, radiant)], "hand": [STOCKPILE] },
             "p2": { "hand": [FILLER] },

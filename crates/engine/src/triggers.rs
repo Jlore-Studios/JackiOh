@@ -199,6 +199,26 @@ fn zone_registers_hook(_state: &GameState, holder: &TriggerHolder, hook: HookNam
     zone_registers_hook_in(holder.zone, &holder.card, hook)
 }
 
+/// R1020, R2226000: a Trap's or Field Trap's text fused into a card that stands in a unit zone as no
+/// trap never fires from there, whatever fused it. Queued as a unit's trigger it would answer every
+/// event its `when` admits (R2271000) for as long as the card stands, with nothing to arm or spend it
+/// (#2226: before that `when` was read, 饕餮 holding Wormhole countered and recast its own controller's
+/// Spell forever).
+fn is_fused_trap_text_in_unit_zone(
+    state: &GameState,
+    card: &CardInstance,
+    zone: TriggerZone,
+    trigger: &TriggerDef,
+) -> bool {
+    zone == TriggerZone::Field
+        && crate::subsystems::fuse::is_trap_ingredient_trigger(
+            state,
+            crate::subsystems::unit_text::text_def_of(card).0,
+            &trigger.id,
+        )
+        && !is_trap_card(state, card)
+}
+
 /// `zone_registers_hook` for a card in `zone`, before its holder is built.
 fn zone_registers_hook_in(zone: TriggerZone, card: &CardInstance, hook: HookName) -> bool {
     if zone == TriggerZone::Hand || zone == TriggerZone::Library {
@@ -224,7 +244,11 @@ fn holder_of(
     let triggers: Vec<TriggerDef> = if zone == TriggerZone::Hand {
         crate::book_swap::granted_hand_triggers(card, registered_triggers(&script, zone)).to_vec()
     } else {
-        registered_triggers(&script, zone).to_vec()
+        registered_triggers(&script, zone)
+            .iter()
+            .filter(|trigger| !is_fused_trap_text_in_unit_zone(state, card, zone, trigger))
+            .cloned()
+            .collect()
     };
     TriggerHolder {
         card: card.clone(),
@@ -326,7 +350,9 @@ fn registers_trigger_on(
 ) -> bool {
     let script = crate::scripts::script_of(state, card);
     let printed = registered_triggers(&script, zone);
-    let wakes = |def: &TriggerDef| def.on.contains(&event_type);
+    let wakes = |def: &TriggerDef| {
+        def.on.contains(&event_type) && !is_fused_trap_text_in_unit_zone(state, card, zone, def)
+    };
     if zone == TriggerZone::Hand {
         crate::book_swap::granted_hand_triggers(card, printed)
             .iter()

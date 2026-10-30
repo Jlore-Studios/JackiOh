@@ -56,7 +56,6 @@ mod tests {
     }
 
     fn pouched(seed: &str, radiant: bool) -> Scenario {
-        let _preview = preview_sets(&[SetName::MeditativePlus]);
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": POUCH, "radiant": radiant }, FILLER] },
@@ -86,7 +85,6 @@ mod tests {
     fn r1179003_repeats_are_allowed() {
         crate::register_all();
         let seed = seed_where("m+014-repeat", |seed| {
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             let mut s = scenario(json!({
                 "seed": seed,
                 "p1": { "hand": [POUCH, FILLER] },
@@ -155,7 +153,6 @@ mod tests {
         // potion fills it and the second burns.
         let mut hand = vec![json!(POUCH)];
         hand.extend((0..HAND_CAP - 1).map(|_| json!(FILLER)));
-        let _preview = preview_sets(&[SetName::MeditativePlus]);
         let mut s = scenario(json!({
             "seed": "m+014-burn",
             "p1": { "hand": hand },
@@ -171,7 +168,6 @@ mod tests {
     #[test]
     fn r386_cards_reads_through_param() {
         crate::register_all();
-        let _preview = preview_sets(&[SetName::MeditativePlus]);
         let mut s = scenario(json!({
             "seed": "m+014-param",
             "p1": { "hand": [POUCH, FILLER] },

@@ -40,7 +40,6 @@ fn r1183005_the_ai_answers_a_code_discover_with_one_of_its_places() {
 #[test]
 fn r1183002_a_seat_the_autopilot_plays_for_is_never_asked_to_act() {
     register_cards();
-    let _preview = preview_sets(&[SetName::MeditativePlus]);
     let mut s = scenario(json!({
         "seed": "ai-autopilot",
         "active": "p2",

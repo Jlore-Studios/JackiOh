@@ -7,13 +7,16 @@
 //
 // It moves only under full motion: the media query and "Reduce motion" hold every part still, the
 // aura and badge still drawn (marks.css). It reads the marks it is given only (CLAUDE.md rule 7).
+//
+// #2270: given `bareAura` and no mark, it draws the aura alone in that colour, with no badge, no words and
+// no `data-marks` (nothing is marked): the gray of a card on the field at its last Brittle count (game/Card.tsx).
 
 import type { CSSProperties, ReactElement } from "react";
 
 import type { CardMark } from "@jackioh/shared";
 
 import { t, useLocale } from "../i18n/i18n.ts";
-import { MARK_GLYPH, MARK_MOTES, markColorOf, markWords, paletteFor } from "./marks.ts";
+import { MARK_GLYPH, MARK_MOTES, markColorOf, markWords, paletteFor, type MarkColor } from "./marks.ts";
 import "./marks.css";
 
 /** The aura's testid: `marks-<instanceId>` (never `card-…`, so no board selector resolves to it). */
@@ -26,12 +29,37 @@ function paletteStyle(color: string): CSSProperties {
   return { "--mark-rim": palette.rim, "--mark-core": palette.core, "--mark-glow": palette.glow } as CSSProperties;
 }
 
-export type CardMarksProps = { marks: readonly CardMark[]; instanceId: string };
+/** The corruption aura over the card: the vignette, the crackling edge and the drifting motes (marks.css). */
+function MarkAura(): ReactElement {
+  return (
+    <span className="card-marks__aura" aria-hidden="true">
+      <span className="card-marks__vignette" />
+      <span className="card-marks__edge" />
+      {Array.from({ length: MARK_MOTES }, (_unused, index) => (
+        <span key={index} className="card-marks__mote" data-mote={index} />
+      ))}
+    </span>
+  );
+}
 
-export default function CardMarks({ marks, instanceId }: CardMarksProps): ReactElement | null {
+export type CardMarksProps = {
+  marks: readonly CardMark[];
+  instanceId: string;
+  /** #2270: with no mark to draw, the aura alone in this colour: no badge, no words, no `data-marks`. */
+  bareAura?: MarkColor;
+};
+
+export default function CardMarks({ marks, instanceId, bareAura }: CardMarksProps): ReactElement | null {
   useLocale();
   const first = marks[0];
-  if (first === undefined) return null;
+  if (first === undefined) {
+    if (bareAura === undefined) return null;
+    return (
+      <span className="card-marks" data-testid={marksTestid(instanceId)} data-mark-color={bareAura} style={paletteStyle(bareAura)}>
+        <MarkAura />
+      </span>
+    );
+  }
   return (
     <span
       className="card-marks"
@@ -40,13 +68,7 @@ export default function CardMarks({ marks, instanceId }: CardMarksProps): ReactE
       data-mark-color={markColorOf(first.color)}
       style={paletteStyle(first.color)}
     >
-      <span className="card-marks__aura" aria-hidden="true">
-        <span className="card-marks__vignette" />
-        <span className="card-marks__edge" />
-        {Array.from({ length: MARK_MOTES }, (_unused, index) => (
-          <span key={index} className="card-marks__mote" data-mote={index} />
-        ))}
-      </span>
+      <MarkAura />
       <span className="card-marks__badges">
         {marks.map((entry, index) => {
           const words = markWords(entry.mark);

@@ -298,7 +298,6 @@ mod tests {
         #[test]
         fn r1184000_a_game_with_the_competition_replays_from_its_log_to_the_same_hash() {
             crate::register_all();
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             let mut deck = vec![ID.to_string()];
             for id in [
                 "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007",

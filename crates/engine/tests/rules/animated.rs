@@ -497,7 +497,6 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_r1062_its_end_of_turn_text_runs_while_it_is_a_unit_and_cleanup_sends_it_home_its_next_start_of_turn_animates_it_again_not_summoning_sick()
      {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = playing("animated-spatula-cycle");
         let card = put(
             &mut state,
@@ -793,7 +792,6 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
     #[test]
     fn r1062_animated_at_its_start_of_turn_after_an_earlier_entry_it_is_not_summoning_sick_and_its_rush_reaches_the_hero()
      {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = playing("r1062-not-sick");
         let card = put(
             &mut state,

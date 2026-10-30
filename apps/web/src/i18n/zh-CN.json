@@ -1968,6 +1968,8 @@
   "Removed": "移除",
   "Loading this patch's cards…": "正在加载本次更新的卡牌…",
   "This patch's cards didn't load.": "本次更新的卡牌未能加载。",
+  "Loading this card…": "正在加载这张牌…",
+  "This card didn't load.": "这张牌未能加载。",
   "Find a card in {version}": "在{version}中查找卡牌",
   "Card name": "卡牌名称",
   "No card changed.": "没有卡牌改动。",

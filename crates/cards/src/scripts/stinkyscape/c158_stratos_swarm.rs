@@ -51,10 +51,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     /// The def ids in p1's five unit zones, `None` where empty.
     fn row(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
@@ -78,7 +74,6 @@ mod tests {
         #[test]
         fn r1860008_fills_every_open_unit_zone_with_stratos_no_cry() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [SWARM, ANCHOR], "mana": 10, "field": [VANILLA], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -99,7 +94,6 @@ mod tests {
         #[test]
         fn r1839000_a_dormant_cards_zone_is_not_filled() {
             crate::register_all();
-            let _preview = open();
             // A Dormant Unit in lane 2 (a Dormant Starship stands in the backrow, R2249000).
             let mut s = scenario(json!({
                 "p1": {
@@ -139,7 +133,6 @@ mod tests {
         #[test]
         fn r1860008_a_full_board_summons_none() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [SWARM, ANCHOR],
@@ -163,7 +156,6 @@ mod tests {
         #[test]
         fn r1860008_radiant_fills_every_open_unit_zone_with_radiant_stratos() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": SWARM, "radiant": true }, ANCHOR],

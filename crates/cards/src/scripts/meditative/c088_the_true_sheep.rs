@@ -144,7 +144,6 @@ mod tests {
 
             #[test]
             fn r1221_the_pool_is_the_tribute_cost_cards() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = holding("sheep-pool", false);
                 s.play(ID, json!({ "zone": 1 }));
                 let options = option_ids(&open(s.state()));
@@ -215,7 +214,6 @@ mod tests {
 
             #[test]
             fn r1222_discovers_three_different_to_hand_and_stays() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = holding("sheep-stays", false);
                 s.play(ID, json!({ "zone": 1 }));
                 let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
@@ -233,7 +231,6 @@ mod tests {
             #[test]
             fn r1222_the_pick_costs_1() {
                 // Patch v0.3.10 (#831): "It costs (1)", a `costOverride` read through `param()`.
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = holding("sheep-costs", false);
                 s.play(ID, json!({ "zone": 1 }));
                 let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
@@ -244,7 +241,6 @@ mod tests {
 
             #[test]
             fn r386_its_set_cost_reads_through_param() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = holding("sheep-costs", false);
                 step_param(s.card_mut(ID), "setCost", -1);
                 s.play(ID, json!({ "zone": 1 }));
@@ -256,7 +252,6 @@ mod tests {
 
             #[test]
             fn worth_5_pays_boom_big_maxs_tribute_3_alone() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = crate::scenario(json!({
                     "seed": "sheep-pays",
                     "p1": { "field": [ID], "hand": [MAX, FILLER], "library": [FILLER, FILLER], "mana": 10 },
@@ -286,7 +281,6 @@ mod tests {
 
             #[test]
             fn the_pick_is_radiant_and_the_worth_is_500() {
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = holding("sheep-radiant", true);
                 s.play(ID, json!({ "zone": 1 }));
                 let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
