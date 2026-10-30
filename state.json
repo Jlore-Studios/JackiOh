@@ -8808,7 +8808,7 @@
         "reason": "the run's time budget is spent",
         "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-2386 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-2386/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- received SIGTERM; flushed session logs"
       },
-      "interruptions": 0,
+      "interruptions": 1,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
