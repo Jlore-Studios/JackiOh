@@ -309,8 +309,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c042_kys_test::ID, "v0.5.2", c042_kys_test::script_v0_5_2),
     (
         c049_3_ai_girlfriend::ID,
-        "v0.5.10b",
-        c049_3_ai_girlfriend::script_v0_5_10b,
+        "v0.5.11",
+        c049_3_ai_girlfriend::script_v0_5_11,
     ),
 ];
 
