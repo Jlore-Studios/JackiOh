@@ -8679,7 +8679,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-30T04:31:20Z",
+      "feedback_since": "2026-10-30T09:28:28Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-30T09:25:41Z",
@@ -8703,11 +8703,11 @@
       "run_id": "41033693511",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-30T09:28:28Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "claude"
