@@ -17708,17 +17708,21 @@
         {
           "at": "2026-10-30T01:57:46Z",
           "minutes": 222.5
+        },
+        {
+          "at": "2026-10-30T02:41:12Z",
+          "minutes": 68.8
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-30T04:04:00Z",
-          "utilization": 0.14
+          "utilization": 0.2
         },
-        "observed_at": "2026-10-30T01:57:46Z",
+        "observed_at": "2026-10-30T02:41:12Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
-          "utilization": 0.8
+          "utilization": 0.82
         },
         "status": "allowed"
       }
