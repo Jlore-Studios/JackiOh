@@ -5,7 +5,8 @@
 //!   entry names a goal read from a finished game's public facts ([`QuestGoal`]), its target and
 //!   its Jlore, from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry of the same goal paying
 //!   more. [`problems`] is its check. A shipped id is never renamed or removed: a held quest and
-//!   its ledger rows name it.
+//!   its ledger rows name it. Every set that ships has a `playSetCards` entry, so the release
+//!   that ships a set adds its quest ([[R2253000]]); a unit test holds it.
 //! - Arrivals ([`top_up`], [[R1304000]]): an account's first visit starts its clock, and one quest
 //!   falls due every `QUEST_INTERVAL_HOURS` from then. A top-up brings every quest that fell due
 //!   while there was room, each dated when it fell due, so a long absence returns exactly
@@ -43,7 +44,8 @@ use crate::db::store::{StoreResult, Tx};
 pub const QUESTS_JSON: &str = include_str!("../../quests.json");
 
 /// What a quest counts, read from a finished game's public facts: its result, the cards a seat
-/// played from its hand, its Traps that fired and its attacks.
+/// played from its hand, its Traps that fired, its attacks, its Units' position switches and its
+/// Radiant upgrades.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum QuestGoal {
@@ -65,6 +67,10 @@ pub enum QuestGoal {
     PlayRadiant,
     /// Attacks declared.
     AttackWithUnits,
+    /// Position switches by Units the seat controlled, as its record counts them (R1256000, R2253000).
+    PositionSwitches,
+    /// Cards of the seat's that an effect made Radiant, as its record counts them (R1256000, R2253000).
+    RadiantUpgrades,
     /// Cards of one set played; the set ships (R1420).
     PlaySetCards { set: SetName },
 }
@@ -198,11 +204,17 @@ pub struct PlayedCard {
 
 /// What one seat did in a finished game, as the quests count it: the public facts of the game
 /// the engine's `summarize_game` reads off its log (R376), and the attacks its log holds.
+/// R2253000: its `positionSwitches` and `radiantUpgrades` count as the record holds them, 0 when
+/// it holds neither.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct GameTally {
     pub played: Vec<PlayedCard>,
     pub traps_fired: i64,
     pub attacks: i64,
+    /// R2253000: the seat's `positionSwitches` (R1256000), 0 when its record has none.
+    pub position_switches: i64,
+    /// R2253000: the seat's `radiantUpgrades` (R1256000), 0 when its record has none.
+    pub radiant_upgrades: i64,
 }
 
 /// One seat's tally: its plays from `seat` (none when the game could not be read), looked up in
@@ -241,6 +253,8 @@ pub fn tally_seat(seat: Option<&SeatSummary>, attacks: i64, defs: &CardDefs) -> 
     GameTally {
         played,
         traps_fired: i64::from(seat.traps_fired.unwrap_or(0)),
+        position_switches: i64::from(seat.position_switches.unwrap_or(0)),
+        radiant_upgrades: i64::from(seat.radiant_upgrades.unwrap_or(0)),
         attacks,
     }
 }
@@ -263,6 +277,8 @@ pub fn progress_of(goal: &QuestGoal, won: Option<bool>, tally: &GameTally) -> i6
         QuestGoal::FireTraps => tally.traps_fired,
         QuestGoal::PlayRadiant => count(&|card| card.radiant),
         QuestGoal::AttackWithUnits => tally.attacks,
+        QuestGoal::PositionSwitches => tally.position_switches,
+        QuestGoal::RadiantUpgrades => tally.radiant_upgrades,
         QuestGoal::PlaySetCards { set } => count(&|card| card.set == *set),
     }
 }
@@ -752,6 +768,8 @@ mod tests {
             ],
             traps_fired: 4,
             attacks: 7,
+            position_switches: 3,
+            radiant_upgrades: 5,
         };
         let won = Some(true);
         for (goal, count) in [
@@ -764,6 +782,8 @@ mod tests {
             (QuestGoal::FireTraps, 4),
             (QuestGoal::PlayRadiant, 2),
             (QuestGoal::AttackWithUnits, 7),
+            (QuestGoal::PositionSwitches, 3),
+            (QuestGoal::RadiantUpgrades, 5),
             (QuestGoal::PlaySetCards { set: SetName::Core }, 3),
             (
                 QuestGoal::PlaySetCards {
@@ -814,6 +834,8 @@ mod tests {
                 ],
                 traps_fired: 2,
                 attacks: 5,
+                position_switches: 0,
+                radiant_upgrades: 0,
             }
         );
         assert_eq!(
@@ -864,5 +886,53 @@ mod tests {
                 },
             ]
         );
+    }
+
+    /// The sets that ship with no `playSetCards` entry in `quests`.
+    fn sets_without_a_quest(quests: &[QuestDef]) -> Vec<SetName> {
+        SHIPPED_SETS
+            .into_iter()
+            .filter(|set| {
+                !quests
+                    .iter()
+                    .any(|quest| quest.goal == QuestGoal::PlaySetCards { set: *set })
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r2253000_every_shipped_set_has_a_set_quest() {
+        let quests = shipped().unwrap_or_else(|error| panic!("quests.json: {error}"));
+        assert_eq!(sets_without_a_quest(&quests), Vec::<SetName>::new());
+        let without: Vec<QuestDef> = quests
+            .into_iter()
+            .filter(|quest| quest.id != "stinkyscape-8" && quest.id != "training-grounds-8")
+            .collect();
+        assert_eq!(
+            sets_without_a_quest(&without),
+            vec![SetName::Stinkyscape, SetName::TrainingGrounds]
+        );
+    }
+
+    #[test]
+    fn r2253000_switches_and_upgrades_move_their_quests_as_the_record_counts_them() {
+        let defs = &*jackioh_cards::CATALOG;
+        // A seat's record as stored, read off its JSON: `fields` adds the counts it holds.
+        let moved = |fields: &str| {
+            let json = format!(r#"{{"deck":[],"opening":[],"drawn":[],"played":[]{fields}}}"#);
+            let seat: SeatSummary = serde_json::from_str(&json).expect("a seat summary");
+            let tally = tally_seat(Some(&seat), 0, defs);
+            [QuestGoal::RadiantUpgrades, QuestGoal::PositionSwitches]
+                .map(|goal| progress_of(&goal, Some(true), &tally))
+        };
+        assert_eq!(moved(r#","radiantUpgrades":2"#), [2, 0]);
+        assert_eq!(moved(r#","positionSwitches":2"#), [0, 2]);
+        assert_eq!(moved(r#","radiantUpgrades":1,"positionSwitches":3"#), [1, 3]);
+        // A record written before R1256000 holds neither count, and a game the server could not read
+        // has no seat: neither quest moves.
+        assert_eq!(moved(""), [0, 0]);
+        let unread = tally_seat(None, 4, defs);
+        assert_eq!(progress_of(&QuestGoal::RadiantUpgrades, Some(true), &unread), 0);
+        assert_eq!(progress_of(&QuestGoal::PositionSwitches, Some(true), &unread), 0);
     }
 }
