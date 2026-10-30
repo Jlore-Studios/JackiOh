@@ -518,8 +518,9 @@ pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Brittle,
     KeywordKind::Untributable,
 ];
-/// R1748001: the keywords a Buff's keyword row may add to a Field Spell.
-pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible];
+/// R1748001: the keywords a Buff's keyword row may add to a Field Spell, in this order; R2436000 added
+/// Immutable after Indestructible.
+pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible, KeywordKind::Immutable];
 /// R1748001: the keywords a Buff's keyword row may add to a Spell or a Field Spell that deals damage
 /// (`CardDef.deals_damage`).
 pub const TUNE_DAMAGE_KEYWORDS: &[KeywordKind] = &[KeywordKind::Pierce, KeywordKind::Lifesteal];
