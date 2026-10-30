@@ -10350,9 +10350,12 @@
         "resolved_by": "`claude` (strong)",
         "sha": "402671df4566d60d1a8cf17007bcb1e9f0aeb3af"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-30T07:52:24Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2450,
       "kind": "revise",
       "last_findings": [],
