@@ -9518,7 +9518,15 @@
       "feedback_since": "2026-10-30T06:44:17Z",
       "issue": 2386,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [],
+        "sha": "9cb762e59d687a3327c7cc6ab3f9d6fa56bcf485",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "10eb94bf70389cb1",
