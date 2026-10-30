@@ -35,6 +35,7 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
@@ -312,7 +313,7 @@ func (x *Provider) Hours(zoneName string) string {
 	if x.OffHours.Len() > 0 && x.Schedule.Mode == "window" {
 		var caps []string
 		x.OffHours.Items(func(window string, share any) bool {
-			caps = append(caps, fmt.Sprintf("%s of %s", percent(mustFloat(share)), WindowNames[window]))
+			caps = append(caps, fmt.Sprintf("%s of %s", py.Percent(py.MustFloat(share), 0), WindowNames[window]))
 			return true
 		})
 		text += ", outside them up to " + strings.Join(caps, " and ")
@@ -344,7 +345,7 @@ func (x *Provider) HeldCaps(at time.Time, zoneName string, usage any /* = None *
 	caps := x.Limits.Stops()
 	if x.OffHours.Len() > 0 && zoneName != "" && !x.Schedule.IsOpen(zoneName, at) {
 		x.OffHours.Items(func(window string, share any) bool {
-			caps.Set(window, pyMin(mustFloat(caps.GetOr(window, 1.0)), mustFloat(share)))
+			caps.Set(window, pyMin(py.MustFloat(caps.GetOr(window, 1.0)), py.MustFloat(share)))
 			return true
 		})
 	}
@@ -393,7 +394,7 @@ func (x *LateWeek) Since(at time.Time, zoneName string) time.Time {
 	zone := clock.Zone(zoneName)
 	local := at.In(zone)
 	year, month, day := local.Date()
-	day -= pyMod(weekday(local)-x.Weekday, 7)
+	day -= py.Mod(weekday(local)-x.Weekday, 7)
 	start := localTime(year, month, day, x.Start.Hour, x.Start.Minute, zone)
 	if start.After(at) {
 		start = localTime(year, month, day-7, x.Start.Hour, x.Start.Minute, zone)
@@ -472,7 +473,7 @@ func TierAtLeast(tier string, floor string) bool {
 func tierRank(tier string) int {
 	rank, ok := TierRank[tier]
 	if !ok {
-		panic(fmt.Errorf("KeyError: %s", reprStr(tier)))
+		panic(fmt.Errorf("KeyError: %s", py.Repr(tier)))
 	}
 	return rank
 }
@@ -565,7 +566,7 @@ func (x *Pool) Ordered() []*Provider {
 	for _, name := range x.Priority {
 		p := x.provider(name)
 		if p == nil {
-			panic(fmt.Errorf("KeyError: %s", reprStr(name)))
+			panic(fmt.Errorf("KeyError: %s", py.Repr(name)))
 		}
 		out = append(out, p)
 	}

@@ -104,21 +104,13 @@ var OtherBotVerbs = []string{"stop"}
 // FromOtherBot is from_other_bot: the comment's author is another bot in the repository
 // (`config.OTHERS`).
 func FromOtherBot(user *pyjson.Object) bool {
-	login := strings.ToLower(orStr(user.Get("login")))
+	login := strings.ToLower(py.OrStr(user.Get("login"), ""))
 	for _, other := range others() {
 		if strings.ToLower(other.Login) == login {
 			return true
 		}
 	}
 	return false
-}
-
-// orStr is `str(v or "")`.
-func orStr(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
 }
 
 // IsOwn is _is_own: true for a comment the bot wrote (a person quoting it keeps the marker
@@ -179,7 +171,7 @@ func Claim(ctx *hctx.Context, key string, lines []string) []string {
 		cutoff := now.Add(-time.Duration(ClaimDays) * 24 * time.Hour)
 		var old []string
 		handled.Items(func(k string, v any) bool {
-			at := parseISO(pyjson.Obj(v).Get("at"))
+			at := clock.ParseISOValue(pyjson.Obj(v).Get("at"))
 			if at.IsZero() {
 				at = now
 			}
@@ -239,7 +231,7 @@ func reply(ctx *hctx.Context, number int, body string) {
 // of either.
 func OnComment(ctx *hctx.Context, payload *pyjson.Object, reviewComment bool /* = False */) []string {
 	comment := payload.Obj("comment")
-	body := orStr(comment.Get("body"))
+	body := py.OrStr(comment.Get("body"), "")
 	if IsOwn(body) {
 		return []string{"ignored: the bot's own comment"}
 	}
@@ -270,7 +262,7 @@ func OnComment(ctx *hctx.Context, payload *pyjson.Object, reviewComment bool /* 
 	} else {
 		thread = payload.Obj("issue")
 	}
-	if voted != "" && OpenSuggestion(ctx, intOf(orZero(thread.Get("number")))) {
+	if voted != "" && OpenSuggestion(ctx, py.MustInt(py.Or(thread.Get("number"), 0))) {
 		// A vote on one of my suggestions (#760). `@bot reject` would otherwise read as a request
 		// to build it, so the vote is what its line means.
 		rest := []*commands.Command{{Verb: voted, Args: "", Force: false, Line: voteLine}}
@@ -296,7 +288,7 @@ func OnComment(ctx *hctx.Context, payload *pyjson.Object, reviewComment bool /* 
 	if lvl <= 0 {
 		return []string{fmt.Sprintf("ignored: @%s is not on the trust list", py.Str(user.Get("login")))}
 	}
-	commentID := intOf(key(comment, "id"))
+	commentID := py.MustInt(py.Item(comment, "id"))
 	prefix := "c"
 	if reviewComment {
 		prefix = "rc"
@@ -331,17 +323,9 @@ func OnComment(ctx *hctx.Context, payload *pyjson.Object, reviewComment bool /* 
 		ctx.GH.React(commentID, asks.Queued, reviewComment)
 	}
 	login := py.Str(user.GetOr("login", ""))
-	reply(ctx, intOf(key(thread, "number")), "@"+login+"\n\n"+strings.Join(replies, "\n\n"))
+	reply(ctx, py.MustInt(py.Item(thread, "number")), "@"+login+"\n\n"+strings.Join(replies, "\n\n"))
 	ctx.GH.React(commentID, Answered, reviewComment)
 	return replies
-}
-
-// orZero is `v or 0`.
-func orZero(v any) any {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	return v
 }
 
 // RunCommands is run_commands: run each command and return its reply. `ask` is the comment they
@@ -388,7 +372,7 @@ func RunCommands(ctx *hctx.Context, found []*commands.Command, thread *pyjson.Ob
 
 // Execute is execute.
 func Execute(ctx *hctx.Context, command *commands.Command, thread *pyjson.Object, user *pyjson.Object, ask *asks.Ask /* = None */) string {
-	number := intOf(orZero(thread.Get("number")))
+	number := py.MustInt(py.Or(thread.Get("number"), 0))
 	isPR := thread.Has("pull_request")
 	by := py.Str(user.GetOr("login", ""))
 	verb := command.Verb
@@ -453,8 +437,8 @@ func Execute(ctx *hctx.Context, command *commands.Command, thread *pyjson.Object
 	if verb == "run" {
 		target := strings.TrimLeft(command.Args, "#")
 		var item *int
-		if isDigit(target) {
-			n := intOf(target)
+		if py.IsDecimal(target) {
+			n := py.MustInt(target)
 			item = &n
 		}
 		return runNow(ctx, item)
@@ -582,7 +566,7 @@ func AnswerVote(ctx *hctx.Context, vote string, number int, by string, ask *asks
 	ctx.GH.UpdateIssue(number, pyjson.New("state", "closed", "state_reason", "not_planned"))
 	// Logged, so no survey offers it again however long ago it was (#797).
 	ctx.Store.Update(func(s *pyjson.Object) any {
-		declined.Note(s, number, orStr(issue.Get("title")), "rejected by @"+by, clock.ISO(ctx.Now()))
+		declined.Note(s, number, py.OrStr(issue.Get("title"), ""), "rejected by @"+by, clock.ISO(ctx.Now()))
 		return nil
 	}, fmt.Sprintf("suggestion #%d rejected", number))
 	return fmt.Sprintf("Rejected: I closed #%d without building it. Reopen it and comment `approve` ", number) +
@@ -619,7 +603,7 @@ func StopTree(ctx *hctx.Context, parent int, by string) string {
 		if child.Get("state") != "open" {
 			continue
 		}
-		number := intOf(key(child, "number"))
+		number := py.MustInt(py.Item(child, "number"))
 		var other = -1
 		names := map[string]bool{}
 		for n := range queue.LabelNames(child) {
@@ -666,7 +650,7 @@ func subscription(ctx *hctx.Context, word string) (*providers.Provider, string) 
 func firstSubscription(ctx *hctx.Context, args string) *providers.Provider {
 	fields := strings.Fields(args)
 	if len(fields) == 0 {
-		panic(&pyError{"IndexError", "list index out of range"})
+		panic(&py.Error{Type: "IndexError", Msg: "list index out of range"})
 	}
 	provider, _ := subscription(ctx, fields[0])
 	return provider
@@ -685,7 +669,7 @@ func saidResume(command *commands.Command) bool {
 func resume(ctx *hctx.Context, command *commands.Command) string {
 	fields := strings.Fields(command.Args)
 	if len(fields) == 0 {
-		panic(&pyError{"IndexError", "list index out of range"})
+		panic(&py.Error{Type: "IndexError", Msg: "list index out of range"})
 	}
 	provider, problem := subscription(ctx, fields[0])
 	if provider == nil {
@@ -744,7 +728,7 @@ func OnReview(ctx *hctx.Context, payload *pyjson.Object) []string {
 	if FromOtherBot(user) {
 		return []string{"ignored: another bot's review"}
 	}
-	body := orStr(review.Get("body"))
+	body := py.OrStr(review.Get("body"), "")
 	found := commands.Parse(body, ctx.Cfg.BotLogin)
 	changes := queue.LabelNames(pull)[labelPR()] && lvl >= 2 &&
 		strings.ToLower(py.Str(review.GetOr("state", ""))) == "changes_requested"
@@ -766,7 +750,7 @@ func OnReview(ctx *hctx.Context, payload *pyjson.Object) []string {
 	if len(Claim(ctx, "r:"+py.Str(review.Get("id")), lines)) == 0 {
 		return []string{"ignored: already answered"}
 	}
-	number := intOf(key(pull, "number"))
+	number := py.MustInt(py.Item(pull, "number"))
 	login := py.Str(user.GetOr("login", ""))
 	var replies []string
 	if len(found) > 0 {
@@ -791,7 +775,7 @@ func OnIssueChange(ctx *hctx.Context, payload *pyjson.Object, isPR bool) []strin
 	sender := payload.Obj("sender")
 	// Only people with triage access can label or assign, so GitHub has vouched for the sender.
 	lvl := trustLevel(ctx.Trust, py.Str(sender.GetOr("login", "")), sender.Get("id"), "COLLABORATOR")
-	number := intOf(orZero(thread.Get("number")))
+	number := py.MustInt(py.Or(thread.Get("number"), 0))
 	action := payload.Get("action")
 	var mode *string
 	if action == "labeled" {
@@ -850,7 +834,7 @@ func OnPullClosed(ctx *hctx.Context, payload *pyjson.Object) []string {
 		return []string{"ignored: not a bot pull request"}
 	}
 	issue := threads.LinkedIssue(pull)
-	number := intOf(key(pull, "number"))
+	number := py.MustInt(py.Item(pull, "number"))
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		rec := state.Item(s, number)
 		rec.Set("closed_at", clock.ISO(ctx.Now()))
@@ -892,19 +876,19 @@ func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 	if !containsAny(CIFailed, run.Get("conclusion")) {
 		return []string{"ignored: conclusion " + py.Str(run.Get("conclusion"))}
 	}
-	branch := orStr(run.Get("head_branch"))
+	branch := py.OrStr(run.Get("head_branch"), "")
 	if strings.HasPrefix(branch, QueueBranch) {
 		return OnQueueCI(ctx, run)
 	}
 	var numbers []int
 	for _, p := range pyjson.Objs(run.Get("pull_requests")) {
 		if p.Truthy("number") {
-			numbers = append(numbers, intOf(key(p, "number")))
+			numbers = append(numbers, py.MustInt(py.Item(p, "number")))
 		}
 	}
 	if len(numbers) == 0 && branch != "" {
 		for _, p := range ctx.GH.ListPulls("open", branch, 200) {
-			numbers = append(numbers, intOf(key(p, "number")))
+			numbers = append(numbers, py.MustInt(py.Item(p, "number")))
 		}
 	}
 	var out []string
@@ -926,14 +910,14 @@ func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 		}
 		sha := py.Str(run.Get("head_sha"))
 		reruns := record.Obj("ci_reruns").Copy()
-		if intOf(reruns.GetOr(sha, 0)) < ctx.Cfg.CIReruns {
-			act(ctx).RerunFailedJobs(key(run, "id"))
-			reruns.Set(sha, intOf(reruns.GetOr(sha, 0))+1)
+		if py.MustInt(reruns.GetOr(sha, 0)) < ctx.Cfg.CIReruns {
+			act(ctx).RerunFailedJobs(py.Item(run, "id"))
+			reruns.Set(sha, py.MustInt(reruns.GetOr(sha, 0))+1)
 			ctx.Store.Update(func(s *pyjson.Object) any {
 				state.Item(s, number).Set("ci_reruns", reruns)
 				return nil
 			}, fmt.Sprintf("ci rerun #%d", number))
-			out = append(out, fmt.Sprintf("#%d: re-ran the failed jobs of run %s", number, py.Str(key(run, "id"))))
+			out = append(out, fmt.Sprintf("#%d: re-ran the failed jobs of run %s", number, py.Str(py.Item(run, "id"))))
 			continue
 		}
 		out = append(out, fixCI(ctx, number, pull, names, record, run, sha, "CI failed again"))
@@ -948,12 +932,12 @@ func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 // CI fixes are used up, or else a CI fix with `run`'s logs. `failed` opens the comment.
 func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]bool,
 	record *pyjson.Object, run *pyjson.Object, sha string, failed string) string {
-	fixes := intOf(record.GetOr("ci_fixes", 0))
+	fixes := py.MustInt(record.GetOr("ci_fixes", 0))
 	link := "no CI run found"
 	if run.Truthy("html_url") {
 		link = fmt.Sprintf("[run](%s)", py.Str(run.Get("html_url")))
 	}
-	if fixes != 0 && orStr(record.Get("ci_fixed_head")) == sha {
+	if fixes != 0 && py.OrStr(record.Get("ci_fixed_head"), "") == sha {
 		// Every CI fix that left it red is a strike of its own (#316), not only the last one:
 		// this is the head the last CI fix pushed (`deliver._revise`). A head some other
 		// revision made is no strike, whatever fixes came before.
@@ -970,7 +954,7 @@ func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]
 	if fixes >= ctx.Cfg.MaxFailures {
 		queue.SetStateLabel(ctx, number, names, labelBlocked())
 		if pull.Truthy("auto_merge") {
-			herr.Catch[*herr.GitHubError](func() { ctx.GH.DisableAutoMerge(py.Str(key(pull, "node_id"))) })
+			herr.Catch[*herr.GitHubError](func() { ctx.GH.DisableAutoMerge(py.Str(py.Item(pull, "node_id"))) })
 		}
 		ctx.GH.CreateComment(number, fmt.Sprintf("%s (%s) after %d tries at ", failed, link, fixes)+
 			"fixing it, so I stopped. It needs a person.")
@@ -998,11 +982,11 @@ var QueueBranch = "gh-readonly-queue/"
 // alone.
 func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 	pattern := regexp.MustCompile("^" + QueueBranch + regexp.QuoteMeta(ctx.Cfg.DefaultBranch) + `/pr-(\d+)-`)
-	found := pattern.FindStringSubmatch(orStr(run.Get("head_branch")))
+	found := pattern.FindStringSubmatch(py.OrStr(run.Get("head_branch"), ""))
 	if found == nil {
 		return []string{fmt.Sprintf("ignored: %s is not a build of the default branch's queue", py.Str(run.Get("head_branch")))}
 	}
-	number := intOf(found[1])
+	number := py.MustInt(found[1])
 	pull := ctx.GH.GetPull(number)
 	if !queue.LabelNames(pull)[labelPR()] {
 		return []string{fmt.Sprintf("#%d: not a bot pull request", number)}
@@ -1011,7 +995,7 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 		return []string{fmt.Sprintf("#%d: closed", number)}
 	}
 	var queued bool
-	if exc, ok := herr.Catch[*herr.GitHubError](func() { queued = ctx.GH.InMergeQueue(py.Str(key(pull, "node_id"))) }); ok {
+	if exc, ok := herr.Catch[*herr.GitHubError](func() { queued = ctx.GH.InMergeQueue(py.Str(py.Item(pull, "node_id"))) }); ok {
 		return []string{fmt.Sprintf("#%d: could not read whether it is still in the merge queue (%s)", number, exc.Error())}
 	}
 	if queued {
@@ -1023,7 +1007,7 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 		queue.IsHuman(names) || record.Truthy("stop_requested") {
 		return []string{fmt.Sprintf("#%d: out of the merge queue, and held, so left alone", number)}
 	}
-	sha := orStr(pull.Obj("head").Get("sha"))
+	sha := py.OrStr(pull.Obj("head").Get("sha"), "")
 	if !pyjson.Equal(queue.Cleared(record).Get("sha"), sha) {
 		return []string{fmt.Sprintf("#%d: out of the merge queue, and its head is not the cleared one", number)}
 	}

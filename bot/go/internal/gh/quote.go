@@ -4,13 +4,8 @@ package gh
 // and more; url.QueryEscape writes `~` as %7E).
 
 import (
-	"errors"
 	"fmt"
-	"math"
-	"regexp"
-	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -49,42 +44,4 @@ func urlencode(query *pyjson.Object) string {
 		return true
 	})
 	return strings.Join(parts, "&")
-}
-
-// str0 is `str(v or "")`: "" for a falsy value, else str(v).
-func str0(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// floatSyntax is what float() reads, once stripped: a decimal number with digits that may be
-// any script's and `_` between two of them, or inf, infinity or nan in any case.
-var floatSyntax = regexp.MustCompile(`^[+-]?(?:(?i:inf|infinity|nan)|(?:\p{Nd}(?:_?\p{Nd})*(?:\.(?:\p{Nd}(?:_?\p{Nd})*)?)?|\.\p{Nd}(?:_?\p{Nd})*)(?:[eE][+-]?\p{Nd}(?:_?\p{Nd})*)?)$`)
-
-// pyFloat is float(text), and false where float() raises ValueError.
-func pyFloat(text string) (float64, bool) {
-	clean := py.Strip(text)
-	if !floatSyntax.MatchString(clean) {
-		return 0, false
-	}
-	if strings.EqualFold(strings.TrimLeft(clean, "+-"), "nan") {
-		return math.NaN(), true // Go reads no sign on a NaN
-	}
-	var b strings.Builder
-	for _, r := range clean {
-		switch {
-		case r == '_':
-		case unicode.IsDigit(r) && r > 0x7f:
-			b.WriteByte(byte('0' + py.DigitValue(r)))
-		default:
-			b.WriteRune(r)
-		}
-	}
-	f, err := strconv.ParseFloat(b.String(), 64)
-	if err != nil && !errors.Is(err, strconv.ErrRange) {
-		return 0, false
-	}
-	return f, true
 }

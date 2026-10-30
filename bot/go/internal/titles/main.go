@@ -10,13 +10,10 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math"
 	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
@@ -57,14 +54,14 @@ func Main(argv []string /* = None */) (code int) {
 		}
 		patches, err := pyjson.Loads(data)
 		if err != nil {
-			herr.Raise(&jsonDecodeError{err.Error()})
+			herr.Raise(&py.Error{Type: "json.decoder.JSONDecodeError", Msg: err.Error()})
 		}
 		rows := PlanRetcon(patchList(threads), VersionsByThread(patchList(patches), client, subjectOfCommit))
 		if args.numbers != "" {
 			wanted := map[int]bool{}
 			for _, n := range strings.Split(args.numbers, ",") {
 				if py.Strip(n) != "" {
-					wanted[pyInt(n)] = true
+					wanted[py.MustInt(n)] = true
 				}
 			}
 			kept := []*Retitle{}
@@ -102,7 +99,7 @@ func Main(argv []string /* = None */) (code int) {
 func environ(name string) string {
 	value, ok := os.LookupEnv(name)
 	if !ok {
-		herr.Raise(&keyError{name})
+		herr.Raise(py.KeyError(name))
 	}
 	return value
 }
@@ -153,15 +150,6 @@ func (e *calledProcessError) Error() string {
 	return fmt.Sprintf("Command '%s' returned non-zero exit status %d.", py.Repr(e.cmd), e.code)
 }
 
-// keyError is KeyError; jsonDecodeError is json.JSONDecodeError.
-type keyError struct{ key string }
-
-func (e *keyError) Error() string { return py.Repr(e.key) }
-
-type jsonDecodeError struct{ msg string }
-
-func (e *jsonDecodeError) Error() string { return e.msg }
-
 // exceptionLine is the last line of the traceback Python prints for an uncaught exception.
 func exceptionLine(r any) string {
 	err, ok := r.(error)
@@ -171,10 +159,7 @@ func exceptionLine(r any) string {
 	var (
 		ghErr  *herr.GitHubError
 		called *calledProcessError
-		key    *keyError
-		value  *valueError
-		typ    *typeError
-		decode *jsonDecodeError
+		exc    *py.Error
 		ghVal  *gh.ValueError
 		path   *fs.PathError
 	)
@@ -183,14 +168,8 @@ func exceptionLine(r any) string {
 		return "harness.errors.GitHubError: " + ghErr.Msg
 	case errors.As(err, &called):
 		return "subprocess.CalledProcessError: " + called.Error()
-	case errors.As(err, &key):
-		return "KeyError: " + key.Error()
-	case errors.As(err, &value):
-		return "ValueError: " + value.Error()
-	case errors.As(err, &typ):
-		return "TypeError: " + typ.Error()
-	case errors.As(err, &decode):
-		return "json.decoder.JSONDecodeError: " + decode.Error()
+	case errors.As(err, &exc):
+		return exc.Type + ": " + exc.Msg
 	case errors.As(err, &ghVal):
 		return "json.decoder.JSONDecodeError: " + ghVal.Error()
 	case errors.As(err, &path) && errors.Is(err, fs.ErrNotExist):
@@ -352,14 +331,14 @@ func parseArgs(argv []string) (*arguments, int, bool) {
 		}
 		switch opt.kind {
 		case "int":
-			n, ok := parseInt(value)
-			if !ok {
+			n, err := py.Int(value)
+			if err != nil {
 				return fail(sub.usage, sub.prog, "argument "+opt.flag+": invalid int value: "+py.Repr(value))
 			}
 			args.limit = n
 		case "float":
-			f, ok := parseFloat(value)
-			if !ok {
+			f, err := py.Float(value)
+			if err != nil {
 				return fail(sub.usage, sub.prog, "argument "+opt.flag+": invalid float value: "+py.Repr(value))
 			}
 			args.pause = f
@@ -428,34 +407,4 @@ func classify(a string, options []option) (kind string, opt option, explicit str
 func isPositional(a string, options []option) bool {
 	kind, _, _, _ := classify(a, options)
 	return kind == "positional"
-}
-
-// floatSyntax is what float() reads, once stripped: a decimal number with digits that may be any
-// script's and `_` between two of them, or inf, infinity or nan in any case.
-var floatSyntax = regexp.MustCompile(`^[+-]?(?:(?i:inf|infinity|nan)|(?:\p{Nd}(?:_?\p{Nd})*(?:\.(?:\p{Nd}(?:_?\p{Nd})*)?)?|\.\p{Nd}(?:_?\p{Nd})*)(?:[eE][+-]?\p{Nd}(?:_?\p{Nd})*)?)$`)
-
-// parseFloat is float(text), and false where float() raises ValueError.
-func parseFloat(text string) (float64, bool) {
-	clean := py.Strip(text)
-	if !floatSyntax.MatchString(clean) {
-		return 0, false
-	}
-	if strings.EqualFold(strings.TrimLeft(clean, "+-"), "nan") {
-		return math.NaN(), true // Go reads no sign on a NaN
-	}
-	var b strings.Builder
-	for _, r := range clean {
-		switch {
-		case r == '_':
-		case r > 0x7f && unicode.IsDigit(r):
-			b.WriteByte(byte('0' + py.DigitValue(r)))
-		default:
-			b.WriteRune(r)
-		}
-	}
-	f, err := strconv.ParseFloat(b.String(), 64)
-	if err != nil && !errors.Is(err, strconv.ErrRange) {
-		return 0, false
-	}
-	return f, true
 }

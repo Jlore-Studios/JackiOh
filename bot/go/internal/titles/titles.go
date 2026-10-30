@@ -41,7 +41,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
@@ -137,10 +136,10 @@ func NewTitle(title string, version string /* = "" */) string {
 // PullOf is the pull request a commit on main landed, from its subject, or 0.
 func PullOf(subject string) int {
 	if m := squash.FindStringSubmatch(subject); m != nil {
-		return pyInt(m[1])
+		return py.MustInt(m[1])
 	}
 	if m := merge.FindStringSubmatch(subject); m != nil {
-		return pyInt(m[1])
+		return py.MustInt(m[1])
 	}
 	return 0
 }
@@ -149,7 +148,7 @@ func PullOf(subject string) int {
 func ClosedBy(body string) []int {
 	seen := []int{}
 	for _, n := range findAllAtWordStart(closes, body) {
-		number := pyInt(n)
+		number := py.MustInt(n)
 		if !containsInt(seen, number) {
 			seen = append(seen, number)
 		}
@@ -258,8 +257,8 @@ func RetitleShipped(gh gh.Client, entries []*pyjson.Object, subjectOf func(sha s
 	}
 	done := []string{}
 	for _, entry := range entries {
-		version := str0(entry.Get("version"))
-		for _, commit := range iterate(entry.Get("commits")) {
+		version := py.OrStr(entry.Get("version"), "")
+		for _, commit := range py.Each(entry.Get("commits")) {
 			number := PullOf(subjectOf(py.Str(commit)))
 			if number == 0 {
 				continue
@@ -269,7 +268,7 @@ func RetitleShipped(gh gh.Client, entries []*pyjson.Object, subjectOf func(sha s
 				continue
 			}
 			threads := []thread{{number, pull, true}}
-			for _, issue := range ClosedBy(str0(pull.Get("body"))) {
+			for _, issue := range ClosedBy(py.OrStr(pull.Get("body"), "")) {
 				var data *pyjson.Object
 				if _, failed := herr.Catch[*herr.GitHubError](func() { data = gh.GetIssue(issue) }); failed {
 					continue
@@ -277,7 +276,7 @@ func RetitleShipped(gh gh.Client, entries []*pyjson.Object, subjectOf func(sha s
 				threads = append(threads, thread{issue, data, false})
 			}
 			for _, t := range threads {
-				title := str0(t.data.Get("title"))
+				title := py.OrStr(t.data.Get("title"), "")
 				retitled := NewTitle(title, version)
 				if retitled != title {
 					if t.isPull {
@@ -312,8 +311,8 @@ func comment(gh gh.Client, number int, locked bool, body string) {
 // name LeftAlone is the pattern's, as in Python, where the two differ by case.)
 func LeftAlone_(thread *pyjson.Object) bool {
 	labels := labelNames(thread)
-	title := strings.Join(py.Split(str0(thread.Get("title"))), " ")
-	return pyInt(orZero(thread.Get("number"))) == StatusIssue || labels[ProductionLabel] ||
+	title := strings.Join(py.Split(py.OrStr(thread.Get("title"), "")), " ")
+	return py.MustInt(py.Or(thread.Get("number"), 0)) == StatusIssue || labels[ProductionLabel] ||
 		LeftAlone.MatchString(title)
 }
 
@@ -321,7 +320,7 @@ func LeftAlone_(thread *pyjson.Object) bool {
 // thread.get("labels") or []}`.
 func labelNames(thread *pyjson.Object) map[string]bool {
 	names := map[string]bool{}
-	for _, label := range iterate(thread.Get("labels")) {
+	for _, label := range py.Each(thread.Get("labels")) {
 		if o, ok := label.(*pyjson.Object); ok {
 			names[py.Str(o.Get("name"))] = true
 		} else {
@@ -337,12 +336,12 @@ func labelNames(thread *pyjson.Object) map[string]bool {
 func VersionsByThread(patches []*pyjson.Object, gh gh.Client, subjectOf func(sha string) string) map[int]string {
 	found := map[int]string{}
 	for _, entry := range patches {
-		version := str0(entry.Get("version"))
+		version := py.OrStr(entry.Get("version"), "")
 		var numbers []int
-		for _, m := range sourceNumber.FindAllStringSubmatch(str0(entry.Get("source")), -1) {
-			numbers = append(numbers, pyInt(m[1]))
+		for _, m := range sourceNumber.FindAllStringSubmatch(py.OrStr(entry.Get("source"), ""), -1) {
+			numbers = append(numbers, py.MustInt(m[1]))
 		}
-		for _, commit := range iterate(entry.Get("commits")) {
+		for _, commit := range py.Each(entry.Get("commits")) {
 			number := 0
 			if _, failed := herr.Catch[*calledProcessError](func() { number = PullOf(subjectOf(py.Str(commit))) }); failed {
 				number = 0
@@ -352,7 +351,7 @@ func VersionsByThread(patches []*pyjson.Object, gh gh.Client, subjectOf func(sha
 			}
 			numbers = append(numbers, number)
 			herr.Catch[*herr.GitHubError](func() {
-				numbers = append(numbers, ClosedBy(str0(gh.GetPull(number).Get("body")))...)
+				numbers = append(numbers, ClosedBy(py.OrStr(gh.GetPull(number).Get("body"), ""))...)
 			})
 		}
 		for _, number := range numbers {
@@ -377,18 +376,18 @@ type Retitle struct {
 func PlanRetcon(threads []*pyjson.Object, versions map[int]string) []*Retitle {
 	ordered := append([]*pyjson.Object{}, threads...)
 	sort.SliceStable(ordered, func(i, j int) bool {
-		return pyInt(ordered[i].Get("number")) < pyInt(ordered[j].Get("number"))
+		return py.MustInt(ordered[i].Get("number")) < py.MustInt(ordered[j].Get("number"))
 	})
 	rows := []*Retitle{}
 	for _, thread := range ordered {
 		if LeftAlone_(thread) {
 			continue
 		}
-		number := pyInt(thread.Get("number"))
-		old := strings.Join(py.Split(str0(thread.Get("title"))), " ")
+		number := py.MustInt(thread.Get("number"))
+		old := strings.Join(py.Split(py.OrStr(thread.Get("title"), "")), " ")
 		newTitle := NewTitle(old, versions[number])
 		pull := thread.Has("pull_request")
-		state := str0(thread.Get("state"))
+		state := py.OrStr(thread.Get("state"), "")
 		label := ""
 		if !pull && state == "open" {
 			for _, pk := range PrefixKinds {
@@ -475,107 +474,3 @@ func firstRune(s string) (rune, int) {
 	}
 	return -1, 1
 }
-
-// str0 is `str(v or "")`.
-func str0(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// orZero is `v or 0`.
-func orZero(v any) any {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	return v
-}
-
-// iterate is `for e in value or []` over a JSON value: a list's items, an object's keys.
-func iterate(value any) []any {
-	switch v := value.(type) {
-	case []any:
-		return v
-	case *pyjson.Object:
-		return pyjson.ListOf(v.Keys())
-	}
-	return nil
-}
-
-// pyInt is int(v) for a JSON number or a string of digits; it raises ValueError (as int() does)
-// for anything else.
-func pyInt(v any) int {
-	switch x := v.(type) {
-	case string:
-		n, ok := parseInt(x)
-		if !ok {
-			herr.Raise(&valueError{"invalid literal for int() with base 10: " + py.Repr(x)})
-		}
-		return n
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	herr.Raise(&typeError{fmt.Sprintf("int() argument must be a string, a bytes-like object or a real number, not '%s'", typeName(v))})
-	return 0
-}
-
-// parseInt is int(text): surrounding whitespace, a sign, then digits of any one script with `_`
-// between two of them.
-func parseInt(text string) (int, bool) {
-	s := py.Strip(text)
-	neg := false
-	if s != "" && (s[0] == '+' || s[0] == '-') {
-		neg = s[0] == '-'
-		s = s[1:]
-	}
-	if s == "" {
-		return 0, false
-	}
-	n, lastDigit := 0, false
-	for _, r := range s {
-		switch {
-		case unicode.IsDigit(r):
-			n = n*10 + py.DigitValue(r)
-			lastDigit = true
-		case r == '_' && lastDigit:
-			lastDigit = false
-		default:
-			return 0, false
-		}
-	}
-	if !lastDigit {
-		return 0, false
-	}
-	if neg {
-		n = -n
-	}
-	return n, true
-}
-
-func typeName(v any) string {
-	switch v.(type) {
-	case nil:
-		return "NoneType"
-	case []any:
-		return "list"
-	case *pyjson.Object:
-		return "dict"
-	}
-	return fmt.Sprintf("%T", v)
-}
-
-// valueError and typeError are Python's ValueError and TypeError.
-type valueError struct{ msg string }
-
-func (e *valueError) Error() string { return e.msg }
-
-type typeError struct{ msg string }
-
-func (e *typeError) Error() string { return e.msg }

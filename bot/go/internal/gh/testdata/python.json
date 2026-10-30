@@ -44,35 +44,5 @@
  ],
  "urlencode": [
   "state=open&labels=bot%3Abuild%2Chuman&since=2026-10-30T01%3A02%3A03Z&head=o%3Abot%2Fissue+5&per_page=100&page=2"
- ],
- "float": [
-  ["60", true, "60.0"],
-  [" 2.5 ", true, "2.5"],
-  ["1e3", true, "1000.0"],
-  ["inf", true, "inf"],
-  ["-Infinity", true, "-inf"],
-  ["nan", true, "nan"],
-  ["+nan", true, "nan"],
-  ["1_0", true, "10.0"],
-  ["1__0", false, ""],
-  ["_1", false, ""],
-  ["1_", false, ""],
-  ["0x10", false, ""],
-  ["1e", false, ""],
-  [".5", true, "0.5"],
-  ["5.", true, "5.0"],
-  ["١٢", true, "12.0"],
-  ["abc", false, ""],
-  ["", false, ""],
-  [" ", false, ""],
-  ["1.5e-3", true, "0.0015"],
-  ["1E+2", true, "100.0"],
-  ["infinit", false, ""],
-  ["Inf", true, "inf"],
-  ["+inf", true, "inf"],
-  ["1_0.5_5", true, "10.55"],
-  ["1e1_0", true, "10000000000.0"],
-  ["--1", false, ""],
-  ["+-1", false, ""]
  ]
 }

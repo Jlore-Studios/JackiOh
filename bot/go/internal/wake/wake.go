@@ -85,7 +85,7 @@ func AlreadyWoken(runs []*pyjson.Object, now time.Time) bool {
 		return false
 	}
 	for _, run := range runs {
-		ended := parseISO(run.Get("updated_at"))
+		ended := clock.ParseISOValue(run.Get("updated_at"))
 		if pyjson.Equal(run.Get("conclusion"), "success") && !ended.IsZero() && !ended.Before(since) {
 			return true
 		}
@@ -97,7 +97,7 @@ func AlreadyWoken(runs []*pyjson.Object, now time.Time) bool {
 func runningUntil(entry *pyjson.Object, now time.Time) time.Time {
 	usage := entry.Obj("usage")
 	reading := usage.Obj("five_hour")
-	resets := parseISO(reading.Get("resets_at"))
+	resets := clock.ParseISOValue(reading.Get("resets_at"))
 	if !resets.IsZero() && resets.After(now) {
 		return resets
 	}
@@ -109,11 +109,11 @@ func runningUntil(entry *pyjson.Object, now time.Time) time.Time {
 // `now`.
 func refusedUntil(entry *pyjson.Object, now time.Time) time.Time {
 	usage := entry.Obj("usage")
-	times := []time.Time{parseISO(entry.Get("refused_until"))}
+	times := []time.Time{clock.ParseISOValue(entry.Get("refused_until"))}
 	usage.Items(func(_ string, value any) bool {
 		if w, ok := value.(*pyjson.Object); ok && w != nil {
-			if utilization, isNumber := number(w.Get("utilization")); isNumber && utilization >= 1.0 {
-				times = append(times, parseISO(w.Get("resets_at")))
+			if utilization, isNumber := py.Number(w.Get("utilization")); isNumber && utilization >= 1.0 {
+				times = append(times, clock.ParseISOValue(w.Get("resets_at")))
 			}
 		}
 		return true
@@ -187,7 +187,7 @@ func Wake(cfg *config.Config, providerID string) (bool, string) {
 	if result != nil {
 		text = result.Get("result")
 	}
-	limited := result != nil && result.Truthy("is_error") && rateLimited(orEmpty(text))
+	limited := result != nil && result.Truthy("is_error") && rateLimited(py.OrStr(text, ""))
 	if pyjson.Equal(usage.Get("status"), "rejected") || limited {
 		var resets any = "its reset"
 		if usage.Truthy("rejected_resets_at") {
@@ -212,33 +212,6 @@ func Wake(cfg *config.Config, providerID string) (bool, string) {
 // is the stub's `any` or a *regexp.Regexp.
 func rateLimited(text string) bool {
 	return any(runner.RateLimitWords).(interface{ MatchString(string) bool }).MatchString(text)
-}
-
-// orEmpty is str(v or "").
-func orEmpty(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// parseISO is clock.parse_iso of any JSON value: None (the zero time) for a falsy one.
-func parseISO(v any) time.Time {
-	if !pyjson.Truthy(v) {
-		return time.Time{}
-	}
-	return clock.ParseISO(py.Str(v))
-}
-
-// number is isinstance(v, (int, float)), a bool counting as 0 or 1.
-func number(v any) (float64, bool) {
-	if b, ok := v.(bool); ok {
-		if b {
-			return 1, true
-		}
-		return 0, true
-	}
-	return pyjson.AsFloat(v)
 }
 
 // localTime is a wall-clock time (held in UTC) read in `zone` as Python's aware datetimes are,

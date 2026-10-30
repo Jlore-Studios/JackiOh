@@ -260,9 +260,9 @@ func (x *GitHub) Request(method string, path string, body any /* = None */, acce
 		if retryable && attempt+1 < Retries {
 			wait := BackoffSeconds * float64(attempt+1)
 			if retryAfter != "" {
-				f, ok := pyFloat(retryAfter)
-				if !ok {
-					herr.Raise(&ValueError{Msg: "could not convert string to float: " + py.Repr(retryAfter)})
+				f, err := py.Float(retryAfter)
+				if err != nil {
+					herr.Raise(&ValueError{Msg: err.Error()})
 				}
 				wait = f
 			}
@@ -357,7 +357,7 @@ func (x *GitHub) Graphql(query string, variables *pyjson.Object) *pyjson.Object 
 	}
 	if pyjson.Truthy(errs) {
 		var texts []string
-		for _, e := range iterate(errs) {
+		for _, e := range py.Each(errs) {
 			if eo, ok := e.(*pyjson.Object); ok {
 				texts = append(texts, py.Str(eo.GetOr("message", eo)))
 			} else {
@@ -371,17 +371,6 @@ func (x *GitHub) Graphql(query string, variables *pyjson.Object) *pyjson.Object 
 		return pyjson.New()
 	}
 	return pyjson.Obj(o.GetOr("data", pyjson.New()))
-}
-
-// iterate is `for e in value` over a JSON value: a list's items, an object's keys.
-func iterate(value any) []any {
-	switch v := value.(type) {
-	case []any:
-		return v
-	case *pyjson.Object:
-		return pyjson.ListOf(v.Keys())
-	}
-	return nil
 }
 
 func (x *GitHub) r() string { return "/repos/" + x.Repo }

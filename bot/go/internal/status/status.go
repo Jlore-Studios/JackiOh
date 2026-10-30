@@ -54,9 +54,6 @@ func numbers(items []*pyjson.Object) string {
 	return strings.Join(shown, ", ")
 }
 
-// percent is f"{x:.0%}".
-func percent(x float64) string { return fmt.Sprintf("%.0f%%", x*100) }
-
 // usageArg is a reading as the `usage` argument: a None reading stays None.
 func usageArg(usage *pyjson.Object) any {
 	if usage == nil {
@@ -84,16 +81,16 @@ func CapText(ctx *hctx.Context, provider *providers.Provider, window string, usa
 	cap_, capped := capOf(provider.CapsAt(now, cfg.Timezone, usage, time.Time{}), window)
 	text := "no cap"
 	if capped {
-		text = "cap " + percent(cap_)
+		text = "cap " + py.Percent(cap_, 0)
 	}
 	usual, usualCapped := capOf(provider.CapsAt(now, cfg.Timezone, nil, time.Time{}), window)
 	if capped && usualCapped && cap_ != usual {
 		held, heldCapped := capOf(provider.HeldCaps(now, cfg.Timezone, usage), window)
 		if heldCapped && held != cap_ { // its last hour lifted it
-			return fmt.Sprintf("%s now (its last hour), %s after the reset", text, percent(held))
+			return fmt.Sprintf("%s now (its last hour), %s after the reset", text, py.Percent(held, 0))
 		}
 		return fmt.Sprintf("%s now (its late week, from %s), "+
-			"%s after the reset", text, provider.LateWeek.Describe(), percent(usual))
+			"%s after the reset", text, provider.LateWeek.Describe(), py.Percent(usual, 0))
 	}
 	hours := provider.Schedule.Window(cfg.Timezone)
 	if hours == nil || !provider.OffHours.Has(window) {
@@ -107,11 +104,11 @@ func CapText(ctx *hctx.Context, provider *providers.Provider, window string, usa
 			outside = own
 		}
 		outside = math.Min(outside, offHours)
-		return fmt.Sprintf("%s now, %s outside its hours", text, percent(outside))
+		return fmt.Sprintf("%s now, %s outside its hours", text, py.Percent(outside, 0))
 	}
 	inHours := "none"
 	if owned {
-		inHours = percent(own)
+		inHours = py.Percent(own, 0)
 	}
 	return fmt.Sprintf("%s now, ", text) + inHours + " in its hours"
 }
@@ -151,7 +148,7 @@ func WindowNotes(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.
 	if capped {
 		start := providers.StartUnder(provider, window, cap_)
 		if start < cap_ {
-			notes = append(notes, "builds and plans start under "+percent(start))
+			notes = append(notes, "builds and plans start under "+py.Percent(start, 0))
 		}
 	}
 	if budget != nil {
@@ -159,8 +156,8 @@ func WindowNotes(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.
 		notes = append(notes, fmt.Sprintf("%.0f of %s min", providers.MinutesSpent(entry, since), py.Str(budget)))
 	}
 	if isReading {
-		observed := parseISO(usage.Get("observed_at"))
-		resets := parseISO(reading.Get("resets_at"))
+		observed := clock.ParseISOValue(usage.Get("observed_at"))
+		resets := clock.ParseISOValue(reading.Get("resets_at"))
 		if resets.IsZero() && !observed.IsZero() {
 			resets = observed.Add(windowSpan(window))
 		}
@@ -172,7 +169,7 @@ func WindowNotes(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.
 }
 
 func usageText(provider *providers.Provider, entry *pyjson.Object, ctx *hctx.Context) string {
-	usage, isDict := orDefault(entry.Get("usage"), pyjson.New()).(*pyjson.Object)
+	usage, isDict := py.Or(entry.Get("usage"), pyjson.New()).(*pyjson.Object)
 	var parts []string
 	noted := map[string]bool{} // the windows whose notes say their minutes
 	for _, w := range [][2]string{{"five_hour", "5-hour"}, {"seven_day", "7-day"}} {
@@ -184,12 +181,12 @@ func usageText(provider *providers.Provider, entry *pyjson.Object, ctx *hctx.Con
 		if reading == nil {
 			continue
 		}
-		resets := parseISO(reading.Get("resets_at"))
+		resets := clock.ParseISOValue(reading.Get("resets_at"))
 		if !resets.IsZero() && !resets.After(ctx.Now()) {
 			parts = append(parts, label+": reset since the reading")
 			continue
 		}
-		text := fmt.Sprintf("%s %s", label, percent(pyFloat(reading.GetOr("utilization", 0))))
+		text := fmt.Sprintf("%s %s", label, py.Percent(py.MustFloat(reading.GetOr("utilization", 0)), 0))
 		notes := WindowNotes(ctx, provider, entry, window, nil)
 		noted[window] = true
 		if len(notes) > 0 {
@@ -209,7 +206,7 @@ func usageText(provider *providers.Provider, entry *pyjson.Object, ctx *hctx.Con
 	}
 	var observed time.Time
 	if isDict {
-		observed = parseISO(usage.Get("observed_at"))
+		observed = clock.ParseISOValue(usage.Get("observed_at"))
 	}
 	if !observed.IsZero() && len(parts) > 0 {
 		parts[len(parts)-1] += fmt.Sprintf(" (read %s ago)", clock.HumanDelta(ctx.Now().Sub(observed)))
@@ -247,7 +244,7 @@ func LanesNow(ctx *hctx.Context, state *pyjson.Object) (*pyjson.Object, *pyjson.
 	for _, issue := range plan.WorkingThreads(ctx) { // closed ones too: a run goes on until it ends
 		record := state.Obj("items").Obj(py.Str(issue.Get("number")))
 		held.Set(strconv.Itoa(issue.Int("number")),
-			py.Str(orDefault(record.Get("provider"), providers.LegacyProvider)))
+			py.Str(py.Or(record.Get("provider"), providers.LegacyProvider)))
 	}
 	survey := state.Obj("suggest")
 	if survey.Truthy("provider") {
@@ -339,10 +336,10 @@ func RunningLines(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object) 
 				does = "working on"
 			}
 			what = fmt.Sprintf("%s #%d", does, number)
-			since = parseISO(record.Get("started_at"))
+			since = clock.ParseISOValue(record.Get("started_at"))
 		} else {
 			what = "a suggestion survey"
-			since = parseISO(record.Get("last_run"))
+			since = clock.ParseISOValue(record.Get("last_run"))
 		}
 		provider := cfg.Pool.Get(providerID)
 		name := "`" + providerID + "`"

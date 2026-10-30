@@ -438,11 +438,11 @@ func NewWorker(cfg *config.Config, plan *pyjson.Object, runner any, repoDir stri
 	x.System = x.substitute("system", map[string]string{
 		"bot": cfg.BotLogin, "repo": cfg.Repo, "title": strings.TrimPrefix(name, "the "),
 		"who": who})
-	x.Provider = cfg.Pool.Get(strOr(plan.Get("provider"), ""))
+	x.Provider = cfg.Pool.Get(py.OrStr(plan.Get("provider"), ""))
 	if x.Provider == nil {
 		x.Provider = cfg.Pool.Ordered()[0]
 	}
-	x.OnMachine = !providers.Hosted(strOr(plan.Get("runs_on"), x.Provider.RunsOn))
+	x.OnMachine = !providers.Hosted(py.OrStr(plan.Get("runs_on"), x.Provider.RunsOn))
 	x.Gates = []*config.Gate{}
 	for _, gate := range cfg.Gates {
 		if gate.Machine || !x.OnMachine {
@@ -530,7 +530,7 @@ func seatDict(seat *providers.Seat) any {
 func (x *Worker) planItem(key string) any {
 	v, ok := x.Plan.Lookup(key)
 	if !ok {
-		herr.Raise(&keyError{key: key})
+		herr.Raise(py.KeyError(key))
 	}
 	return v
 }
@@ -547,7 +547,7 @@ func (x *Worker) seat(seats *pyjson.Object, role string) *providers.Seat {
 	if entry == nil {
 		return nil
 	}
-	return x.Cfg.Pool.Seat(x.Provider.ID, strOr(entry.Get("model"), ""))
+	return x.Cfg.Pool.Seat(x.Provider.ID, py.OrStr(entry.Get("model"), ""))
 }
 
 // SeatFor is work.Worker.seat_for.
@@ -572,21 +572,21 @@ func (x *Worker) SeatFor(role string) *providers.Seat {
 // CyclesCap is in-run review verdict rounds for this item's difficulty (#725): 3 for a medium
 // or easy item, then it goes to its final audit; 10 for a hard one, which stays with Opus.
 func (x *Worker) CyclesCap() int {
-	return pyInt(x.Cfg.MaxReviewCycles.GetOr(x.Difficulty(), 3))
+	return py.MustInt(x.Cfg.MaxReviewCycles.GetOr(x.Difficulty(), 3))
 }
 
 // Verdict rounds earlier runs used with this owner tier (#725): usage pauses, infra
 // failures, halts and stops never reach a verdict, so they never spend one; a new owner
 // tier starts its own count.
 func (x *Worker) roundsSpent() int {
-	if strOr(x.Plan.Get("round_tier"), "") != x.BuildSeat.Tier {
+	if py.OrStr(x.Plan.Get("round_tier"), "") != x.BuildSeat.Tier {
 		return 0
 	}
 	used := x.Plan.Get("rounds_used")
 	if !pyjson.Truthy(used) {
 		used = 0
 	}
-	return pyInt(used)
+	return py.MustInt(used)
 }
 
 // The run used every verdict round with this owner (#725): a hard item stays
@@ -608,11 +608,11 @@ func (x *Worker) roundsOut(total int) (string, string) {
 // it in this run, else the plan's.
 func (x *Worker) Difficulty() string {
 	rated := pyjson.Obj(x.Result.Obj("plan").Get("rating"))
-	planned := strOr(x.Plan.Get("difficulty"), "medium")
+	planned := py.OrStr(x.Plan.Get("difficulty"), "medium")
 	if _, ok := config.MinTier[planned]; !ok {
 		planned = "medium"
 	}
-	found := strOr(rated.Get("difficulty"), planned)
+	found := py.OrStr(rated.Get("difficulty"), planned)
 	if _, ok := config.MinTier[found]; !ok {
 		found = planned
 	}
@@ -747,7 +747,7 @@ func (x *Worker) Render(name string, values *pyjson.Object) string {
 func (x *Worker) substitute(name string, values map[string]string) string {
 	text, ok := x.Templates[name]
 	if !ok {
-		herr.Raise(&keyError{key: name})
+		herr.Raise(py.KeyError(name))
 	}
 	out, err := pyTemplate(text).substitute(values)
 	herr.Must(err)
@@ -823,7 +823,7 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 	if !pyjson.Truthy(maxTurns) {
 		v, ok := x.Cfg.MaxTurns.Lookup("review")
 		if !ok {
-			herr.Raise(&keyError{key: "review"})
+			herr.Raise(py.KeyError("review"))
 		}
 		maxTurns = v
 	}
@@ -846,7 +846,7 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 		SystemAppend:    x.System,
 		AllowedTools:    tools,
 		DisallowedTools: deny,
-		MaxTurns:        pyInt(maxTurns),
+		MaxTurns:        py.MustInt(maxTurns),
 		TimeoutS:        max(60, timeout),
 		Model:           seat.Model,
 		Effort:          effort,
@@ -905,7 +905,7 @@ func tokenCount(tokens *pyjson.Object, name string) int {
 	if !pyjson.Truthy(v) {
 		return 0
 	}
-	return pyInt(v)
+	return py.MustInt(v)
 }
 
 // While a call runs: the reading it just streamed, against the provider's caps (and
@@ -1253,7 +1253,7 @@ func number(v any) float64 {
 func free(found *pyjson.Object) float64 {
 	v, ok := found.Lookup("free")
 	if !ok {
-		herr.Raise(&keyError{key: "free"})
+		herr.Raise(py.KeyError("free"))
 	}
 	return number(v)
 }

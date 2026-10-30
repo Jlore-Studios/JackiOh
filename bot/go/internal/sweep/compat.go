@@ -10,88 +10,20 @@ import (
 	"io/fs"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
-	"time"
-	"unicode"
 
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-// pyError is one of Python's own exceptions where the Python raised it (KeyError, ValueError,
-// TypeError), so a note that names the exception names the same one.
-type pyError struct {
-	name string
-	msg  string
-}
-
-func (e *pyError) Error() string { return e.msg }
-
-// key is d[k]: the value, or a KeyError.
-func key(o *pyjson.Object, k string) any {
-	v, ok := o.Lookup(k)
-	if !ok {
-		panic(&pyError{"KeyError", py.Repr(k)})
-	}
-	return v
-}
-
-// intOf is int(v) for a JSON value.
-func intOf(v any) int {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	case string:
-		t := strings.TrimFunc(x, unicode.IsSpace)
-		body := strings.TrimLeft(t, "+-")
-		ok := len(t)-len(body) <= 1 && body != "" && !strings.HasPrefix(body, "_") &&
-			!strings.HasSuffix(body, "_") && !strings.Contains(body, "__")
-		for _, r := range body {
-			if (r < '0' || r > '9') && r != '_' {
-				ok = false
-			}
-		}
-		if ok {
-			if n, err := strconv.Atoi(strings.ReplaceAll(t, "_", "")); err == nil {
-				return n
-			}
-		}
-		panic(&pyError{"ValueError", "invalid literal for int() with base 10: " + py.Repr(x)})
-	case nil:
-		panic(&pyError{"TypeError", "int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"})
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	panic(&pyError{"TypeError", fmt.Sprintf("int() argument must be a string, a bytes-like object or a real number, not '%T'", v)})
-}
-
-// isDigit is str.isdigit().
-func isDigit(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if !unicode.IsDigit(r) {
-			return false
-		}
-	}
-	return true
-}
-
 // typeName is `type(exc).__name__`. herr's types carry the Python classes' names, so the last
 // part of a Go type's name is the Python one.
 func typeName(err error) string {
-	var pe *pyError
+	var pe *py.Error
 	if errors.As(err, &pe) {
-		return pe.name
+		return pe.Type
 	}
 	var p *herr.Panic
 	if errors.As(err, &p) {
@@ -110,22 +42,6 @@ func typeName(err error) string {
 		name = name[i+1:]
 	}
 	return name
-}
-
-// parseISO is clock.parse_iso over any JSON value: zero (None) for a falsy one.
-func parseISO(v any) time.Time {
-	if !pyjson.Truthy(v) {
-		return time.Time{}
-	}
-	return clock.ParseISO(py.Str(v))
-}
-
-// orStr is `str(v or "")`.
-func orStr(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
 }
 
 func contains(xs []string, s string) bool {

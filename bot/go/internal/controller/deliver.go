@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -118,7 +117,7 @@ func deliverRun(ctx *hctx.Context, run *pyjson.Object, scratch string) string {
 			"(%s: %s): %s", what, tries, plan.DeliverTries,
 			pyTypeName(exc), py.SliceTo(redact.Redact(pyStr(exc), nil), 300), then)
 	}
-	status := orStr(outcome.Get("status"))
+	status := py.OrStr(outcome.Get("status"), "")
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		Record(ctx, runID, pyjson.New("done", true, "status", status))
 	}); failed {
@@ -146,9 +145,9 @@ func countTry(ctx *hctx.Context, runID string, ref string) int {
 		if !ok {
 			entry = pyjson.New()
 		}
-		tries = pyInt(orDefault(entry.Get("tries"), 0)) + 1
+		tries = py.MustInt(py.Or(entry.Get("tries"), 0)) + 1
 		book.Set(runID, entry.Copy().Set("ref", ref).Set("tries", tries).Set("at", iso(ctx.Now())))
-		byAge := sortedBy(book.Keys(), func(key string) string { return orStr(book.Obj(key).Get("at")) })
+		byAge := sortedBy(book.Keys(), func(key string) string { return py.OrStr(book.Obj(key).Get("at"), "") })
 		for _, old := range byAge[:max(0, len(byAge)-KeepDeliveries)] {
 			book.Delete(old)
 		}
@@ -264,18 +263,13 @@ func extractAll(archive *zip.Reader, root string) {
 	}
 }
 
-// pyException is a Python exception other than ValueError that a delivery can raise and note.
-type pyException struct{ typ, msg string }
-
-func (e *pyException) Error() string { return e.msg }
-
 // zipError is what zipfile raised where archive/zip fails.
 func zipError(err error, name string) error {
 	switch {
 	case errors.Is(err, zip.ErrFormat):
-		return &pyException{"BadZipFile", "File is not a zip file"}
+		return &py.Error{Type: "BadZipFile", Msg: "File is not a zip file"}
 	case errors.Is(err, zip.ErrChecksum):
-		return &pyException{"BadZipFile", "Bad CRC-32 for file " + py.Repr(name)}
+		return &py.Error{Type: "BadZipFile", Msg: "Bad CRC-32 for file " + py.Repr(name)}
 	}
 	return err
 }
@@ -293,16 +287,13 @@ func clone(ctx *hctx.Context, into string) string {
 // class, Python's OSError subclasses for Go's file errors, and RuntimeError for a Go fault (which
 // Python would have raised as an AttributeError, KeyError or TypeError).
 func pyTypeName(err error) string {
-	var value *ValueError
-	var other *pyException
+	var exc *py.Error
 	var errno syscall.Errno
 	var fault runtime.Error
 	var panicked *herr.Panic
 	switch {
-	case errors.As(err, &value):
-		return value.Type
-	case errors.As(err, &other):
-		return other.typ
+	case errors.As(err, &exc):
+		return exc.Type
 	case errors.As(err, &fault), errors.As(err, &panicked):
 		return "RuntimeError"
 	}
@@ -341,25 +332,4 @@ func pyStr(err error) string {
 		return fmt.Sprintf("[Errno %d] %s: %s", int(errno), text, py.Repr(path.Path))
 	}
 	return err.Error()
-}
-
-// pyInt is int(text) on a reference's digits, or on a record's count.
-func pyInt(v any) int {
-	if s, ok := v.(string); ok {
-		n, err := strconv.Atoi(strings.TrimSpace(s))
-		if err != nil {
-			panic(&pyException{"ValueError", "invalid literal for int() with base 10: " + py.Repr(s)})
-		}
-		return n
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	if b, ok := v.(bool); ok && b {
-		return 1
-	} else if ok {
-		return 0
-	}
-	panic(&pyException{"TypeError", fmt.Sprintf(
-		"int() argument must be a string, a bytes-like object or a real number, not %T", v)})
 }

@@ -20,7 +20,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
@@ -30,93 +29,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
-
-// pyError is one of Python's own exceptions where the Python raised it uncaught or caught it by
-// name (ValueError, KeyError, TypeError, AttributeError, json.decoder.JSONDecodeError).
-type pyError struct {
-	name string
-	msg  string
-}
-
-func (e *pyError) Error() string { return e.msg }
-
-// parseInt is int(s) for a string: surrounding whitespace, a sign and single underscores between
-// digits allowed, as Python's are; a ValueError otherwise.
-func parseInt(s string) (int, error) {
-	t := strings.TrimFunc(s, unicode.IsSpace)
-	body := strings.TrimLeft(t, "+-")
-	ok := len(t)-len(body) <= 1 && body != "" && !strings.HasPrefix(body, "_") &&
-		!strings.HasSuffix(body, "_") && !strings.Contains(body, "__")
-	for _, r := range body {
-		if (r < '0' || r > '9') && r != '_' {
-			ok = false
-		}
-	}
-	if ok {
-		if n, err := strconv.Atoi(strings.ReplaceAll(t, "_", "")); err == nil {
-			return n, nil
-		}
-	}
-	return 0, &pyError{"ValueError", "invalid literal for int() with base 10: " + py.Repr(s)}
-}
-
-// pyInt is int(s), raising its ValueError.
-func pyInt(s string) int {
-	n, err := parseInt(s)
-	if err != nil {
-		panic(err)
-	}
-	return n
-}
-
-// intOf is int(v) for a JSON value.
-func intOf(v any) int {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	case string:
-		return pyInt(x)
-	case nil:
-		panic(&pyError{"TypeError", "int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"})
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	panic(&pyError{"TypeError", fmt.Sprintf("int() argument must be a string, a bytes-like object or a real number, not '%T'", v)})
-}
-
-// isDigit is str.isdigit().
-func isDigit(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if !unicode.IsDigit(r) {
-			return false
-		}
-	}
-	return true
-}
-
-// key is d[k]: the value, or a KeyError.
-func key(o *pyjson.Object, k string) any {
-	v, ok := o.Lookup(k)
-	if !ok {
-		panic(&pyError{"KeyError", py.Repr(k)})
-	}
-	return v
-}
-
-// or is `v or def`.
-func or(v any, def any) any {
-	if pyjson.Truthy(v) {
-		return v
-	}
-	return def
-}
 
 // lower is `str(b).lower()` for a bool.
 func lower(b bool) string {
@@ -134,14 +46,6 @@ func pyBool(b bool) string {
 	return "False"
 }
 
-// parseISO is clock.parse_iso over any JSON value: zero (None) for a falsy one.
-func parseISO(v any) time.Time {
-	if !pyjson.Truthy(v) {
-		return time.Time{}
-	}
-	return clock.ParseISO(py.Str(v))
-}
-
 // readJSON is `json.loads(Path(path).read_text(encoding="utf-8"))`: an OSError or a
 // JSONDecodeError goes up, uncaught, as in the Python.
 func readJSON(path string) any {
@@ -154,7 +58,7 @@ func readJSON(path string) any {
 func loads(text string) any {
 	v, err := pyjson.LoadsString(text)
 	if err != nil {
-		panic(&pyError{"json.decoder.JSONDecodeError", err.Error()})
+		panic(&py.Error{Type: "json.decoder.JSONDecodeError", Msg: err.Error()})
 	}
 	return v
 }
@@ -164,25 +68,7 @@ func object(v any) *pyjson.Object {
 	if o, ok := v.(*pyjson.Object); ok && o != nil {
 		return o
 	}
-	panic(&pyError{"AttributeError", fmt.Sprintf("'%s' object has no attribute 'get'", pyTypeName(v))})
-}
-
-func pyTypeName(v any) string {
-	switch v.(type) {
-	case nil:
-		return "NoneType"
-	case []any:
-		return "list"
-	case string:
-		return "str"
-	case bool:
-		return "bool"
-	case int:
-		return "int"
-	case float64:
-		return "float"
-	}
-	return fmt.Sprintf("%T", v)
+	panic(&py.Error{Type: "AttributeError", Msg: fmt.Sprintf("'%s' object has no attribute 'get'", py.TypeName(v))})
 }
 
 // mkdirParent is `Path(path).parent.mkdir(parents=True, exist_ok=True)`; an OSError goes up.
@@ -213,9 +99,9 @@ func isOSError(err error) bool {
 // package raised for Python's (not one of the harness's own, an OSError, or a Go runtime error,
 // which stands for a bug).
 func isValueError(err error) bool {
-	var pe *pyError
+	var pe *py.Error
 	if errors.As(err, &pe) {
-		return pe.name == "ValueError" || pe.name == "json.decoder.JSONDecodeError"
+		return pe.Type == "ValueError" || pe.Type == "json.decoder.JSONDecodeError"
 	}
 	var p *herr.Panic
 	var re runtime.Error
@@ -245,7 +131,7 @@ func lastLine(r any) string {
 		err = &herr.Panic{Value: r}
 	}
 	name := ""
-	var pe *pyError
+	var pe *py.Error
 	var p *herr.Panic
 	var re runtime.Error
 	var pathErr *fs.PathError
@@ -253,7 +139,7 @@ func lastLine(r any) string {
 	var harness herr.Harness
 	switch {
 	case errors.As(err, &pe):
-		name = pe.name
+		name = pe.Type
 	case errors.As(err, &harness):
 		name = "harness.errors." + reflect.TypeOf(harness).Elem().Name()
 	case errors.As(err, &timeout):

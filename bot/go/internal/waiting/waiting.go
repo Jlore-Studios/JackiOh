@@ -69,14 +69,6 @@ func tierEntries(pool *providers.Pool, tier string) []*providers.TierEntry {
 	return v.([]*providers.TierEntry)
 }
 
-// orStr is `str(v or "")`.
-func orStr(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
 // recordOf is `state["items"].get(str(number)) or {}`.
 func recordOf(s *pyjson.Object, number int) *pyjson.Object {
 	if record := s.Obj("items").Obj(strconv.Itoa(number)); record != nil {
@@ -297,7 +289,7 @@ func HeldBy(ctx *hctx.Context, s *pyjson.Object, provider *providers.Provider, f
 	if infra == nil {
 		infra = pyjson.New()
 	}
-	failed := clock.ParseISO(orStr(infra.Get("at")))
+	failed := clock.ParseISOValue(infra.Get("at"))
 	if !forced && !failed.IsZero() && now.Sub(failed) < providers.InfraBackoff(infra) {
 		back := failed.Add(providers.InfraBackoff(infra))
 		return &Now{Kind: "broken", Text: "⛔ its last run could not work<br/>tries again " + Clock(ctx, back),
@@ -314,9 +306,6 @@ func HeldBy(ctx *hctx.Context, s *pyjson.Object, provider *providers.Provider, f
 	}
 	return &Now{Kind: kind, Text: "⏸️ " + CappedText(ctx, provider, entry, frees, reviews), Until: frees}
 }
-
-// percent is f"{x:.0%}".
-func percent(x float64) string { return fmt.Sprintf("%.0f%%", x*100) }
 
 // floatOr0 is `float(v or 0)`.
 func floatOr0(v any) float64 {
@@ -343,7 +332,7 @@ func floatOr0(v any) float64 {
 // Which limit holds a capped subscription, and when it can start a build or a plan again.
 func CappedText(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.Object, frees time.Time, reviews bool /* = False */) string {
 	now := ctx.Now()
-	until := clock.ParseISO(orStr(entry.Get("refused_until")))
+	until := clock.ParseISOValue(entry.Get("refused_until"))
 	if !until.IsZero() && until.After(now) {
 		return "refused a call<br/>until " + Clock(ctx, until)
 	}
@@ -359,7 +348,7 @@ func CappedText(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.O
 		if reading == nil {
 			continue
 		}
-		resets := clock.ParseISO(orStr(reading.Get("resets_at")))
+		resets := clock.ParseISOValue(reading.Get("resets_at"))
 		if !resets.IsZero() && !resets.After(now) {
 			continue
 		}
@@ -368,9 +357,9 @@ func CappedText(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.O
 		if used < start {
 			continue
 		}
-		held := fmt.Sprintf("%s %s of its %s cap", providers.WindowNames[window], percent(used), percent(cap_))
+		held := fmt.Sprintf("%s %s of its %s cap", providers.WindowNames[window], py.Percent(used, 0), py.Percent(cap_, 0))
 		if used < cap_ {
-			held += "<br/>long runs start under " + percent(start)
+			held += "<br/>long runs start under " + py.Percent(start, 0)
 			if reviews {
 				held += "; reviews only"
 			}
@@ -481,7 +470,7 @@ func HeldRows(heldBack map[int]string, issues []*pyjson.Object) []*Row {
 			panic(fmt.Errorf("KeyError: 'number'"))
 		}
 		n, _ := pyjson.AsInt(v)
-		titles[n] = orStr(t.Get("title"))
+		titles[n] = py.OrStr(t.Get("title"), "")
 	}
 	numbers := make([]int, 0, len(heldBack))
 	for n := range heldBack {

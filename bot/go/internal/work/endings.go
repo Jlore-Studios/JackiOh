@@ -104,7 +104,7 @@ func (x *Worker) suggest() {
 	if !pyjson.Truthy(count) {
 		count = 0
 	}
-	n := pyInt(count)
+	n := py.MustInt(count)
 	if n <= 0 {
 		x.Result.Set("status", "nothing")
 		x.Result.Set("reason", "the suggestion cap is full")

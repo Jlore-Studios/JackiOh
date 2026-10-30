@@ -161,7 +161,7 @@ func ParseMuseUsage(screen string, now time.Time) *pyjson.Object {
 				resets = reset
 			}
 		}
-		usage.Set(window, pyjson.New("utilization", py.RoundN(math.Min(1.0, atof(percent)/100.0), 4),
+		usage.Set(window, pyjson.New("utilization", py.RoundN(math.Min(1.0, py.MustFloat(percent)/100.0), 4),
 			"resets_at", resets))
 	}
 	if usage.Len() == 0 {

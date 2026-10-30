@@ -23,7 +23,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -106,80 +105,6 @@ func findAfterBoundary(re *regexp.Regexp, text string) [][]int {
 		pos = loc[0] + max(size, 1)
 	}
 	return found
-}
-
-// asciiDigits is s with every decimal digit written in ASCII, for strconv.
-func asciiDigits(s string) string {
-	return strings.Map(func(r rune) rune {
-		if r > 0x7f && unicode.IsDigit(r) {
-			return '0' + rune(py.DigitValue(r))
-		}
-		return r
-	}, s)
-}
-
-// atof is float(s) for `\d+(?:\.\d+)?`, of any script.
-func atof(s string) float64 {
-	f, _ := strconv.ParseFloat(asciiDigits(s), 64)
-	return f
-}
-
-// isNumber is isinstance(v, (int, float)) for a JSON value (a bool is an int in Python).
-func isNumber(v any) bool {
-	switch v.(type) {
-	case int, float64, bool:
-		return true
-	}
-	return false
-}
-
-// toFloat is float(v) for a value isNumber accepts.
-func toFloat(v any) float64 {
-	switch x := v.(type) {
-	case int:
-		return float64(x)
-	case float64:
-		return x
-	case bool:
-		if x {
-			return 1
-		}
-	}
-	return 0
-}
-
-// toInt is int(v) for a value isNumber accepts: a float truncated.
-func toInt(v any) int {
-	if f, ok := v.(float64); ok {
-		return int(f)
-	}
-	return int(toFloat(v))
-}
-
-// pyFloat is float(v) for any JSON value: a number as it is, a string as Python parses one, and
-// anything else Python's TypeError.
-func pyFloat(v any) float64 {
-	if isNumber(v) {
-		return toFloat(v)
-	}
-	if s, ok := v.(string); ok {
-		f, err := strconv.ParseFloat(strings.ReplaceAll(asciiDigits(py.Strip(s)), "_", ""), 64)
-		if err != nil {
-			panic(fmt.Errorf("could not convert string to float: %s", py.Repr(s)))
-		}
-		return f
-	}
-	panic(fmt.Errorf("float() argument must be a string or a real number, not '%s'", pyType(v)))
-}
-
-func pyType(v any) string {
-	switch v.(type) {
-	case nil:
-		return "NoneType"
-	case []any:
-		return "list"
-	}
-	return "dict"
 }
 
 // eachLine is `for line in open(path, encoding="utf-8", errors="replace")`: each line as

@@ -6,7 +6,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 )
@@ -37,22 +36,6 @@ func TestNeedMatchesPython(t *testing.T) {
 		step, tier, why := Need(c)
 		if got, want := pyjson.Dumps([]any{step, tier, why}), pyjson.Dumps(r[3]); got != want {
 			t.Errorf("Need(%s %s %s) = %s, want %s", r[0], r[1], pyjson.Dumps(extra), got, want)
-		}
-	}
-}
-
-func TestCapitalizeAndPercentMatchPython(t *testing.T) {
-	data := expected(t)
-	for _, pair := range data.List("capitalize") {
-		word := pair.([]any)[0].(string)
-		if got, want := py.Capitalize(word), pair.([]any)[1].(string); got != want {
-			t.Errorf("py.Capitalize(%q) = %q, want %q", word, got, want)
-		}
-	}
-	for _, pair := range data.List("percent") {
-		x, _ := pyjson.AsFloat(pair.([]any)[0])
-		if got, want := percent(x), pair.([]any)[1].(string); got != want {
-			t.Errorf("percent(%v) = %q, want %q", x, got, want)
 		}
 	}
 }

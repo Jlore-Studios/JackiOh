@@ -337,18 +337,19 @@ func CodexUsage(codexHome string, since float64) *pyjson.Object {
 	usage := pyjson.New("status", "allowed")
 	for _, key := range []string{"primary", "secondary"} {
 		window, ok := newest.Get(key).(*pyjson.Object)
-		if !ok || window == nil || !isNumber(window.Get("used_percent")) {
+		used, isNumber := py.Number(window.Get("used_percent"))
+		if !ok || window == nil || !isNumber {
 			continue
 		}
 		minutes, hasMinutes := window.Lookup("window_minutes")
 		name := "seven_day"
-		if isNumber(minutes) && toFloat(minutes) <= 360 {
+		if n, isNumber := py.Number(minutes); isNumber && n <= 360 {
 			name = "five_hour"
 		}
 		if key == "primary" && (!hasMinutes || minutes == nil) {
 			name = "five_hour"
 		}
-		usage.Set(name, pyjson.New("utilization", toFloat(window.Get("used_percent"))/100.0,
+		usage.Set(name, pyjson.New("utilization", used/100.0,
 			"resets_at", isoOrNone(window.Get("resets_at"))))
 	}
 	if usage.Len() > 1 {
@@ -419,7 +420,7 @@ func ParseAgyUsage(text string, model string) *pyjson.Object {
 		if share == nil || window == "" {
 			continue
 		}
-		fraction := atof(share[1]) / 100.0
+		fraction := py.MustFloat(share[1]) / 100.0
 		used := 1.0 - fraction
 		if strings.Contains(limit, "used") {
 			used = fraction
@@ -610,7 +611,7 @@ func dictKey(v any) string {
 	case string:
 		return "s" + x
 	case bool, int, float64:
-		f := toFloat(x)
+		f, _ := py.Number(x)
 		if f == float64(int64(f)) {
 			return "n" + strconv.FormatInt(int64(f), 10)
 		}

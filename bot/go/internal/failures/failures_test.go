@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
@@ -41,7 +42,7 @@ func TestMatchesPython(t *testing.T) {
 			xs = append(xs, f)
 		}
 		want, _ := pyjson.AsFloat(c[1])
-		if got := pySum(xs); got != want {
+		if got := py.Sum(xs); got != want {
 			t.Errorf("sum(%v) = %v, want %v", xs, got, want)
 		}
 	}

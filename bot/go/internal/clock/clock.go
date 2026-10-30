@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
 // TimeOfDay is Python's datetime.time: a wall-clock time with no date or zone.
@@ -60,6 +61,15 @@ func ParseISO(text string) time.Time {
 		return time.Time{}
 	}
 	return parsed
+}
+
+// ParseISOValue is parse_iso of a JSON value, as the Python passes whatever a record holds:
+// None (the zero time) for a falsy value, else the time its str() reads as.
+func ParseISOValue(v any) time.Time {
+	if !pyjson.Truthy(v) {
+		return time.Time{}
+	}
+	return ParseISO(py.Str(v))
 }
 
 // Now is the current instant, or `override` (HARNESS_NOW) when it parses.
@@ -198,16 +208,17 @@ func usCentralLocation() *time.Location {
 func ParseHhmm(text string) (TimeOfDay, error) {
 	parts := strings.Split(py.Strip(text), ":")
 	if len(parts) < 2 {
-		return TimeOfDay{}, fmt.Errorf("not enough values to unpack (expected 2, got %d)", len(parts))
+		return TimeOfDay{}, &py.Error{Type: "ValueError",
+			Msg: fmt.Sprintf("not enough values to unpack (expected 2, got %d)", len(parts))}
 	}
 	if len(parts) > 2 {
-		return TimeOfDay{}, fmt.Errorf("too many values to unpack (expected 2)")
+		return TimeOfDay{}, &py.Error{Type: "ValueError", Msg: "too many values to unpack (expected 2)"}
 	}
-	hours, hoursBig, err := pyInt(parts[0])
+	hours, hoursBig, err := py.IntText(parts[0])
 	if err != nil {
 		return TimeOfDay{}, err
 	}
-	minutes, minutesBig, err := pyInt(parts[1])
+	minutes, minutesBig, err := py.IntText(parts[1])
 	if err != nil {
 		return TimeOfDay{}, err
 	}
@@ -218,11 +229,11 @@ func ParseHhmm(text string) (TimeOfDay, error) {
 	}{{hours, hoursBig}, {minutes, minutesBig}} {
 		switch {
 		case v.big:
-			panic(&overflowError{"Python int too large to convert to C long"})
+			panic(&py.Error{Type: "OverflowError", Msg: "Python int too large to convert to C long"})
 		case v.n > math.MaxInt32:
-			panic(&overflowError{"signed integer is greater than maximum"})
+			panic(&py.Error{Type: "OverflowError", Msg: "signed integer is greater than maximum"})
 		case v.n < math.MinInt32:
-			panic(&overflowError{"signed integer is less than minimum"})
+			panic(&py.Error{Type: "OverflowError", Msg: "signed integer is less than minimum"})
 		}
 	}
 	if hours < 0 || hours > 23 {

@@ -40,7 +40,7 @@ func SuggestionsDue(ctx *hctx.Context, state *pyjson.Object, force bool /* = Fal
 	if suggest.Truthy("provider") && !force {
 		return 0 // one is running (a dead one's claim is cleared by `housekeeping`)
 	}
-	idle := parseISO(suggest.Get("idle_since"))
+	idle := clock.ParseISOValue(suggest.Get("idle_since"))
 	due := force || suggest.Truthy("requested") ||
 		(!idle.IsZero() && ctx.Now().Sub(idle) >= time.Duration(cfg.SuggestionsIdleMinutes)*time.Minute)
 	if !due {

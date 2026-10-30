@@ -18,7 +18,6 @@ package declined
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -45,7 +44,7 @@ func Note(state *pyjson.Object, number int, title string, why string, at string)
 	suggest, ok := state.SetDefault("suggest", pyjson.New()).(*pyjson.Object)
 	log := Entries(state)
 	for _, e := range log {
-		if toInt(orZero(e.Get("number"))) == number {
+		if py.MustInt(py.Or(e.Get("number"), 0)) == number {
 			return false
 		}
 	}
@@ -74,12 +73,12 @@ func Sync(state *pyjson.Object, closed []*pyjson.Object, at string) []int {
 		if issue.Has("pull_request") || !pyjson.Equal(issue.Get("state"), "closed") {
 			continue
 		}
-		reason := orDefault(issue.Get("state_reason"), "closed")
-		number := toInt(issue.Get("number"))
-		if Note(state, number, orDefault(issue.Get("title"), ""),
+		reason := py.OrStr(issue.Get("state_reason"), "closed")
+		number := py.MustInt(issue.Get("number"))
+		if Note(state, number, py.OrStr(issue.Get("title"), ""),
 			fmt.Sprintf("closed unbuilt by a person (%s)", strings.ReplaceAll(reason, "_", " ")),
-			orDefault(issue.Get("closed_at"), at)) {
-			added = append(added, toInt(issue.Get("number")))
+			py.OrStr(issue.Get("closed_at"), at)) {
+			added = append(added, py.MustInt(issue.Get("number")))
 		}
 	}
 	return added
@@ -92,7 +91,7 @@ func Known(state *pyjson.Object, title string) bool {
 		return false
 	}
 	for _, e := range Entries(state) {
-		if key(orDefault(e.Get("title"), "")) == k {
+		if key(py.OrStr(e.Get("title"), "")) == k {
 			return true
 		}
 	}
@@ -110,42 +109,4 @@ func Lines(state *pyjson.Object) string {
 		return "(none)"
 	}
 	return strings.Join(found, "\n")
-}
-
-// orDefault is `str(v or def)`.
-func orDefault(v any, def string) string {
-	if !pyjson.Truthy(v) {
-		return def
-	}
-	return py.Str(v)
-}
-
-// orZero is `v or 0`.
-func orZero(v any) any {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	return v
-}
-
-// toInt is int(v) for a JSON value; what int() refuses raises (panics), as in Python.
-func toInt(v any) int {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	case string:
-		n, err := strconv.Atoi(strings.ReplaceAll(py.Strip(x), "_", ""))
-		if err != nil {
-			panic(fmt.Errorf("invalid literal for int() with base 10: %s", py.Repr(x)))
-		}
-		return n
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	panic(fmt.Errorf("int() argument must be a string, a bytes-like object or a real number, not '%s'",
-		"NoneType"))
 }

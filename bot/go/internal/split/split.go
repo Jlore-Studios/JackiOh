@@ -169,7 +169,7 @@ func FromDict(raw any, difficulties []string /* = ("easy", "medium", "hard") */)
 		return &Tree{false, "", []*SubIssue{}, []string{"no `<!-- split: {...} -->` header with a JSON object"}}
 	}
 	done := obj.Truthy("done")
-	summary := py.SliceTo(py.Strip(orEmpty(obj.Get("summary"))), 4000)
+	summary := py.SliceTo(py.Strip(py.OrStr(obj.Get("summary"), "")), 4000)
 	var entries []any
 	if v := obj.Get("issues"); pyjson.Truthy(v) {
 		list, ok := v.([]any)
@@ -191,24 +191,24 @@ func FromDict(raw any, difficulties []string /* = ("easy", "medium", "hard") */)
 			tree.Problems = append(tree.Problems, where+" is not an object")
 			continue
 		}
-		key := py.Strip(orDefault(entry.Get("key"), fmt.Sprintf("s%d", i+1)))
+		key := py.Strip(py.OrStr(entry.Get("key"), fmt.Sprintf("s%d", i+1)))
 		if !keyPattern.MatchString(key) || seen[key] {
 			tree.Problems = append(tree.Problems, fmt.Sprintf("%s: key %s is not a short unique name", where, py.Repr(key)))
 			continue
 		}
 		seen[key] = true
-		title := py.SliceTo(strings.Join(py.Split(orEmpty(entry.Get("title"))), " "), TitleChars)
-		body := py.SliceTo(py.Strip(orEmpty(entry.Get("body"))), BodyChars)
+		title := py.SliceTo(strings.Join(py.Split(py.OrStr(entry.Get("title"), "")), " "), TitleChars)
+		body := py.SliceTo(py.Strip(py.OrStr(entry.Get("body"), "")), BodyChars)
 		if title == "" || body == "" {
 			tree.Problems = append(tree.Problems, fmt.Sprintf("%s (%s): needs a title and a body", where, key))
 			continue
 		}
-		difficulty := py.Lower(py.Strip(orEmpty(entry.Get("difficulty"))))
+		difficulty := py.Lower(py.Strip(py.OrStr(entry.Get("difficulty"), "")))
 		if difficulty != "" && !contains(difficulties, difficulty) {
 			difficulty = ""
 		}
 		labels := []string{}
-		for _, label := range iterate(entry.Get("labels")) {
+		for _, label := range py.Each(entry.Get("labels")) {
 			if l := py.Strip(py.Str(label)); l != "" && !contains(labels, l) {
 				labels = append(labels, l)
 			}
@@ -218,20 +218,20 @@ func FromDict(raw any, difficulties []string /* = ("easy", "medium", "hard") */)
 		}
 		blockedBy := []string{}
 		var numbered []any
-		for _, k := range iterate(entry.Get("blocked_by")) {
+		for _, k := range py.Each(entry.Get("blocked_by")) {
 			if s, ok := k.(string); ok && !numberRef.MatchString(py.Strip(s)) {
 				blockedBy = append(blockedBy, py.Strip(s))
 			}
 		}
-		for _, k := range iterate(entry.Get("blocked_by")) {
+		for _, k := range py.Each(entry.Get("blocked_by")) {
 			if numberRef.MatchString(py.Strip(py.Str(k))) {
 				numbered = append(numbered, k)
 			}
 		}
-		numbered = append(numbered, iterate(entry.Get("blocked_by_issues"))...)
+		numbered = append(numbered, py.Each(entry.Get("blocked_by_issues"))...)
 		tree.Issues = append(tree.Issues, &SubIssue{
 			Key: key, Title: title, Body: body,
-			Plan:       py.SliceTo(py.Strip(orEmpty(entry.Get("plan"))), PlanChars),
+			Plan:       py.SliceTo(py.Strip(py.OrStr(entry.Get("plan"), "")), PlanChars),
 			Difficulty: difficulty, Labels: labels,
 			BlockedBy:       blockedBy,
 			BlockedByIssues: ints(numbered),
@@ -393,17 +393,6 @@ func Checklist(parent int, made []Made, builder string, summary string, link str
 	return strings.Join(lines, "\n")
 }
 
-// orEmpty is `str(v or "")`.
-func orEmpty(v any) string { return orDefault(v, "") }
-
-// orDefault is `str(v or def)`.
-func orDefault(v any, def string) string {
-	if !pyjson.Truthy(v) {
-		return def
-	}
-	return py.Str(v)
-}
-
 func contains(list []string, s string) bool {
 	for _, e := range list {
 		if e == s {
@@ -411,28 +400,6 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
-}
-
-// iterate is `for x in v or ()` over a JSON value as Python iterates it: a list's items, a
-// string's characters, an object's keys. Anything else that is truthy raises (panics with)
-// Python's TypeError, which nothing here catches.
-func iterate(v any) []any {
-	if !pyjson.Truthy(v) {
-		return nil
-	}
-	switch x := v.(type) {
-	case []any:
-		return x
-	case string:
-		var out []any
-		for _, r := range x {
-			out = append(out, string(r))
-		}
-		return out
-	case *pyjson.Object:
-		return pyjson.ListOf(x.Keys())
-	}
-	panic(fmt.Errorf("'%T' object is not iterable", v))
 }
 
 // decimal is int() of a run of Unicode decimal digits.

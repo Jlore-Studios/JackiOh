@@ -95,10 +95,10 @@ func Pct(part float64, whole float64) string {
 func linesText(pulls []*pyjson.Object) string {
 	added, removed := 0, 0
 	for _, p := range pulls {
-		added += intOr(p.Get("additions"))
+		added += py.MustInt(py.Or(p.Get("additions"), 0))
 	}
 	for _, p := range pulls {
-		removed += intOr(p.Get("deletions"))
+		removed += py.MustInt(py.Or(p.Get("deletions"), 0))
 	}
 	return fmt.Sprintf("+%s / −%s", py.Thousands(added), py.Thousands(removed))
 }
@@ -106,7 +106,7 @@ func linesText(pulls []*pyjson.Object) string {
 func total(pulls []*pyjson.Object, key string) int {
 	sum := 0
 	for _, p := range pulls {
-		sum += intOr(p.Get(key))
+		sum += py.MustInt(py.Or(p.Get(key), 0))
 	}
 	return sum
 }
@@ -114,8 +114,8 @@ func total(pulls []*pyjson.Object, key string) int {
 func medianToMerge(merged []*pyjson.Object) string {
 	var took []time.Duration
 	for _, p := range merged {
-		if !parseISO(p.Get("merged_at")).IsZero() && !parseISO(p.Get("created_at")).IsZero() {
-			took = append(took, minus(parseISO(p.Get("merged_at")), parseISO(p.Get("created_at"))))
+		if !clock.ParseISOValue(p.Get("merged_at")).IsZero() && !clock.ParseISOValue(p.Get("created_at")).IsZero() {
+			took = append(took, minus(clock.ParseISOValue(p.Get("merged_at")), clock.ParseISOValue(p.Get("created_at"))))
 		}
 	}
 	if len(took) == 0 {
@@ -143,7 +143,7 @@ func tokensText(w *Window) string {
 }
 
 func titleOf(pull *pyjson.Object) string {
-	title := strings.ReplaceAll(orStr(pull.Get("title")), "|", `\|`)
+	title := strings.ReplaceAll(py.OrStr(pull.Get("title"), ""), "|", `\|`)
 	if py.Len(title) <= TitleShown {
 		return title
 	}
@@ -171,7 +171,7 @@ func countStarts(w *Window, action string) int {
 	return n
 }
 
-func sumOf(c *Counter, keys []string) int {
+func sumOf(c *py.Counter, keys []string) int {
 	n := 0
 	for _, k := range keys {
 		n += c.Get(k)
@@ -226,8 +226,8 @@ func Summary(windows []*Window) []string {
 		{"Issues closed by them", func(w *Window) string {
 			closed := map[int]bool{}
 			for _, p := range w.Merged {
-				for _, m := range Closes.FindAllStringSubmatch(orStr(p.Get("body")), -1) {
-					closed[pyInt(m[1])] = true
+				for _, m := range Closes.FindAllStringSubmatch(py.OrStr(p.Get("body"), ""), -1) {
+					closed[py.MustInt(m[1])] = true
 				}
 			}
 			return itoa(len(closed))
@@ -236,9 +236,9 @@ func Summary(windows []*Window) []string {
 		{"Files changed in them", func(w *Window) string { return py.Thousands(total(w.Merged, "changed_files")) }},
 		{"Commits in them", func(w *Window) string { return py.Thousands(total(w.Merged, "commits")) }},
 		{"Median time from opening to merge", func(w *Window) string { return medianToMerge(w.Merged) }},
-		{"Model hours", func(w *Window) string { return fmt.Sprintf("%.1f", pySum(floatsOf(w.Minutes))/60) }},
+		{"Model hours", func(w *Window) string { return fmt.Sprintf("%.1f", py.Sum(floatsOf(w.Minutes))/60) }},
 		{"Model tokens (in / out / cached)", tokensText},
-		{"Model cost (USD)", func(w *Window) string { return fmt.Sprintf("$%.2f", pySum(floatsOf(w.Cost))) }},
+		{"Model cost (USD)", func(w *Window) string { return fmt.Sprintf("$%.2f", py.Sum(floatsOf(w.Cost))) }},
 		{fmt.Sprintf("`%s` workflow runs", py.Str(config.NightWorkflow)), func(w *Window) string {
 			return itoa(len(w.Runs))
 		}},
@@ -265,7 +265,7 @@ func floatsOf(d *pyjson.Object) []float64 {
 	return out
 }
 
-// BySubscription is stats.by_subscription: provider id -> *Counter.
+// BySubscription is stats.by_subscription: provider id -> *py.Counter.
 func BySubscription(w *Window, who *Credits) *pyjson.Object {
 	counts := pyjson.New()
 	kinds := outcomeKinds()
@@ -288,8 +288,8 @@ func BySubscription(w *Window, who *Credits) *pyjson.Object {
 	for _, pull := range w.Merged {
 		c := counterAt(counts, who.Builder(pull))
 		c.Add("pr:merged", 1)
-		c.Add("added", intOr(pull.Get("additions")))
-		c.Add("removed", intOr(pull.Get("deletions")))
+		c.Add("added", py.MustInt(py.Or(pull.Get("additions"), 0)))
+		c.Add("removed", py.MustInt(py.Or(pull.Get("deletions"), 0)))
 	}
 	return counts
 }
@@ -484,24 +484,24 @@ func OverTime(ctx *hctx.Context, w *Window) []string {
 	}
 
 	day := func(at any) string {
-		when := parseISO(at)
+		when := clock.ParseISOValue(at)
 		if when.IsZero() {
 			return ""
 		}
 		return Local(ctx, when).Format("01-02")
 	}
 
-	perDay := NewCounter()
+	perDay := py.NewCounter()
 	for _, e := range w.Starts() {
 		perDay.Add(day(e.At), 1)
 	}
-	mergedDay := NewCounter()
+	mergedDay := py.NewCounter()
 	for _, p := range w.Merged {
 		mergedDay.Add(day(p.Get("merged_at")), 1)
 	}
-	addedDay := NewCounter()
+	addedDay := py.NewCounter()
 	for _, p := range w.Merged {
-		addedDay.Add(day(p.Get("merged_at")), intOr(p.Get("additions")))
+		addedDay.Add(day(p.Get("merged_at")), py.MustInt(py.Or(p.Get("additions"), 0)))
 	}
 	perDays := make([]int, len(days))
 	merged, added := []bar{}, []bar{}
@@ -542,10 +542,10 @@ func MergedTable(ctx *hctx.Context, merged []*pyjson.Object, who *Credits, shown
 		"| Pull request | Merged | Planned | Built | Revised | Approved | Open for | Lines " +
 			"| Files |", "|---|---|---|---|---|---|---|---|---|"}
 	for _, p := range head(merged, shown) {
-		number := pyInt(p.Get("number"))
-		took := minus(parseISO(p.Get("merged_at")), parseISO(p.Get("created_at")))
+		number := py.MustInt(p.Get("number"))
+		took := minus(clock.ParseISOValue(p.Get("merged_at")), clock.ParseISOValue(p.Get("created_at")))
 		built := who.Builder(p)
-		when := Local(ctx, parseISO(p.Get("merged_at"))).Format("Mon 01-02 15:04")
+		when := Local(ctx, clock.ParseISOValue(p.Get("merged_at"))).Format("Mon 01-02 15:04")
 		lines = append(lines, fmt.Sprintf("| #%d %s | %s | %s "+
 			"| %s "+
 			"| %s | %s "+
@@ -553,7 +553,7 @@ func MergedTable(ctx *hctx.Context, merged []*pyjson.Object, who *Credits, shown
 			number, titleOf(p), when, whoText(who.Planned[number]),
 			builtText(built),
 			whoText(who.Revised[number]), whoText(who.Approved[number]),
-			clock.HumanDelta(took), linesText([]*pyjson.Object{p}), intOr(p.Get("changed_files"))))
+			clock.HumanDelta(took), linesText([]*pyjson.Object{p}), py.MustInt(py.Or(p.Get("changed_files"), 0))))
 	}
 	if len(merged) > shown {
 		lines = append(lines, fmt.Sprintf("\n_… and %d older ones._", len(merged)-shown))
@@ -628,8 +628,8 @@ func BotSection(ctx *hctx.Context) string {
 	} else {
 		lines = append(lines, "| Pull request | Built | Approved | Open for | Lines |", "|---|---|---|---|---|")
 		for _, p := range head(merged, SectionMerges) {
-			number := pyInt(p.Get("number"))
-			took := minus(parseISO(p.Get("merged_at")), parseISO(p.Get("created_at")))
+			number := py.MustInt(p.Get("number"))
+			took := minus(clock.ParseISOValue(p.Get("merged_at")), clock.ParseISOValue(p.Get("created_at")))
 			built := who.Builder(p)
 			lines = append(lines, fmt.Sprintf("| #%d %s "+
 				"| %s "+
@@ -656,7 +656,7 @@ func Block(ctx *hctx.Context, facts *Facts, shown int /* = MERGES_SHOWN */, extr
 	pulls := facts.Pulls
 	var first time.Time
 	if len(facts.Events) > 0 {
-		first = parseISO(facts.Events[0].At)
+		first = clock.ParseISOValue(facts.Events[0].At)
 	}
 	openNow, closedUnmerged := 0, 0
 	for _, p := range pulls {
@@ -669,7 +669,7 @@ func Block(ctx *hctx.Context, facts *Facts, shown int /* = MERGES_SHOWN */, extr
 			closedUnmerged++
 		}
 	}
-	endedRuns := NewCounter()
+	endedRuns := py.NewCounter()
 	for _, r := range facts.Runs {
 		endedRuns.Add(r[1], 1)
 	}
@@ -732,7 +732,7 @@ func Kept(body string) string {
 
 // Due is stats.due.
 func Due(ctx *hctx.Context, state *pyjson.Object) bool {
-	last := parseISO(state.Obj("statistics").Get("at"))
+	last := clock.ParseISOValue(state.Obj("statistics").Get("at"))
 	return last.IsZero() || ctx.Now().Sub(last) >= StatsEvery
 }
 

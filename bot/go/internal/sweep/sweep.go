@@ -89,7 +89,7 @@ type part struct {
 // Sweep is sweep.
 func Sweep(ctx *hctx.Context) []string {
 	st := ctx.Store.Load()
-	first := parseISO(st.Obj("last_sweep").Get("since"))
+	first := clock.ParseISOValue(st.Obj("last_sweep").Get("since"))
 	now := ctx.Now()
 	if first.IsZero() {
 		ctx.Store.Update(func(s *pyjson.Object) any {
@@ -199,12 +199,12 @@ func GreenHeads(ctx *hctx.Context, since time.Time) []string {
 		if !queue.LabelNames(pull)[labelPR()] {
 			return ""
 		}
-		number := intOf(key(pull, "number"))
+		number := py.MustInt(py.Item(pull, "number"))
 		record := items.Obj(strconv.Itoa(number))
 		if _, ok := record.Get("cleared").(*pyjson.Object); !ok {
 			return ""
 		}
-		if stepup.ClearIfGreen(ctx, number, orStr(pull.Obj("head").Get("sha"))) {
+		if stepup.ClearIfGreen(ctx, number, py.OrStr(pull.Obj("head").Get("sha"), "")) {
 			return fmt.Sprintf("#%d: approved and green, so its strikes are cleared", number)
 		}
 		return ""
@@ -234,12 +234,12 @@ func issueTypes(ctx *hctx.Context, since time.Time) []string {
 		var done []string
 		if err := herr.Try(func() {
 			p := &triage.Plan{IssueType: wanted}
-			done = triage.Apply(ctx.GH, intOf(key(issue, "number")), p)
+			done = triage.Apply(ctx.GH, py.MustInt(py.Item(issue, "number")), p)
 		}); err != nil {
 			// one issue never stops the rest
 			done = []string{fmt.Sprintf("could not type it (%s)", typeName(err))}
 		}
-		notes = append(notes, fmt.Sprintf("#%s: %s", py.Str(key(issue, "number")), strings.Join(done, "; ")))
+		notes = append(notes, fmt.Sprintf("#%s: %s", py.Str(py.Item(issue, "number")), strings.Join(done, "; ")))
 	}
 	return notes
 }
@@ -268,15 +268,15 @@ func difficultyLabels(ctx *hctx.Context, since time.Time) []string {
 		if queue.LabelledDifficulty(names) != "" || queue.IsHuman(names) {
 			return ""
 		}
-		number := intOf(key(thread, "number"))
+		number := py.MustInt(py.Item(thread, "number"))
 		if thread.Has("head") {
 			if !names[labelPR()] {
 				return ""
 			}
-			ref := orStr(thread.Obj("head").Get("ref"))
+			ref := py.OrStr(thread.Obj("head").Get("ref"), "")
 			wanted := "medium"
-			if strings.HasPrefix(ref, stem) && isDigit(py.SliceFrom(ref, py.Len(stem))) {
-				issue := ctx.GH.GetIssue(intOf(py.SliceFrom(ref, py.Len(stem))))
+			if strings.HasPrefix(ref, stem) && py.IsDecimal(py.SliceFrom(ref, py.Len(stem))) {
+				issue := ctx.GH.GetIssue(py.MustInt(py.SliceFrom(ref, py.Len(stem))))
 				if got := queue.LabelledDifficulty(queue.LabelNames(issue)); got != "" {
 					wanted = got
 				}
@@ -316,17 +316,17 @@ func each(items []*pyjson.Object, act func(*pyjson.Object) string, notes *[]stri
 
 // number is _number: the issue or pull request number at the end of an API URL, or None.
 func number(url any) *int {
-	match := numberRe.FindStringSubmatch(orStr(url))
+	match := numberRe.FindStringSubmatch(py.OrStr(url, ""))
 	if match == nil {
 		return nil
 	}
-	n := intOf(match[1])
+	n := py.MustInt(match[1])
 	return &n
 }
 
 // settled is _settled.
 func settled(ctx *hctx.Context, stamp any, since time.Time) bool {
-	at := parseISO(stamp)
+	at := clock.ParseISOValue(stamp)
 	return !at.IsZero() && !at.Before(since) && !at.After(ctx.Now().Add(-Settle))
 }
 
@@ -335,7 +335,7 @@ func trusted(ctx *hctx.Context, entry *pyjson.Object) bool {
 	user := entry.Obj("user")
 	var id *int
 	if v := user.Get("id"); v != nil {
-		n := intOf(v)
+		n := py.MustInt(v)
 		id = &n
 	}
 	assoc := ""
@@ -363,8 +363,8 @@ func comments(ctx *hctx.Context, since time.Time) []string {
 	for _, list := range lists {
 		reviewComment := list.reviewComment
 		act := func(comment *pyjson.Object) string {
-			created := parseISO(comment.Get("created_at"))
-			updated := parseISO(comment.Get("updated_at"))
+			created := clock.ParseISOValue(comment.Get("created_at"))
+			updated := clock.ParseISOValue(comment.Get("updated_at"))
 			if updated.IsZero() {
 				updated = created
 			}
@@ -375,7 +375,7 @@ func comments(ctx *hctx.Context, since time.Time) []string {
 				return ""
 			}
 			login := strings.ToLower(py.Str(comment.Obj("user").GetOr("login", "")))
-			body := orStr(comment.Get("body"))
+			body := py.OrStr(comment.Get("body"), "")
 			if login == strings.ToLower(ctx.Cfg.BotLogin) || login == events.ActionsBot || events.IsOwn(body) {
 				return ""
 			}
@@ -391,8 +391,8 @@ func comments(ctx *hctx.Context, since time.Time) []string {
 			if reviewComment {
 				prefix = "rc"
 			}
-			claimKey := prefix + ":" + py.Str(key(comment, "id"))
-			if events.Claimed(ctx, claimKey) || events.Answered_(ctx, intOf(key(comment, "id")), reviewComment) {
+			claimKey := prefix + ":" + py.Str(py.Item(comment, "id"))
+			if events.Claimed(ctx, claimKey) || events.Answered_(ctx, py.MustInt(py.Item(comment, "id")), reviewComment) {
 				return ""
 			}
 			var payload *pyjson.Object
@@ -432,7 +432,7 @@ func reviews(ctx *hctx.Context, since time.Time) []string {
 	}
 
 	act := func(thread *pyjson.Object) string {
-		n := intOf(key(thread, "number"))
+		n := py.MustInt(py.Item(thread, "number"))
 		isBotPR := queue.LabelNames(thread)[labelPR()]
 		var answered []string
 		for _, review := range ctx.GH.ListReviews(n) {
@@ -440,7 +440,7 @@ func reviews(ctx *hctx.Context, since time.Time) []string {
 				continue
 			}
 			changes := isBotPR && strings.ToUpper(py.Str(review.GetOr("state", ""))) == "CHANGES_REQUESTED"
-			if !(changes || asks(ctx, orStr(review.Get("body")))) {
+			if !(changes || asks(ctx, py.OrStr(review.Get("body"), ""))) {
 				continue
 			}
 			if events.Claimed(ctx, "r:"+py.Str(review.Get("id"))) {
@@ -468,7 +468,7 @@ func assignments(ctx *hctx.Context, since time.Time) []string {
 	notes := []string{}
 
 	act := func(thread *pyjson.Object) string {
-		n := intOf(key(thread, "number"))
+		n := py.MustInt(py.Item(thread, "number"))
 		record := st.Obj("items").Obj(strconv.Itoa(n))
 		if intersects(queue.LabelNames(thread), append(append([]string(nil), QueueLabels...), labelPROpen())) ||
 			record.Truthy("queued_at") || record.Truthy("stop_requested") {
@@ -514,7 +514,7 @@ func failedCI(ctx *hctx.Context, since time.Time) []string {
 	}
 
 	act := func(thread *pyjson.Object) string {
-		n := intOf(key(thread, "number"))
+		n := py.MustInt(py.Item(thread, "number"))
 		if intersects(queue.LabelNames(thread), QueueLabels) || st.Obj("items").Obj(strconv.Itoa(n)).Truthy("stop_requested") {
 			return ""
 		}
@@ -549,7 +549,7 @@ func failedCI(ctx *hctx.Context, since time.Time) []string {
 			if !pyjson.Truthy(attempt) {
 				attempt = 1
 			}
-			return py.Str(r.GetOr("created_at", "")), intOf(attempt)
+			return py.Str(r.GetOr("created_at", "")), py.MustInt(attempt)
 		}
 		latest := failed[0]
 		bestAt, bestTry := rank(latest)
@@ -595,7 +595,7 @@ func Trees(ctx *hctx.Context, since time.Time) []string {
 	notes := []string{}
 
 	act := func(thread *pyjson.Object) string {
-		n := intOf(key(thread, "number"))
+		n := py.MustInt(py.Item(thread, "number"))
 		names := queue.LabelNames(thread)
 		if thread.Has("pull_request") || intersects(names, append(append([]string(nil), QueueLabels...), labelPROpen())) ||
 			queue.IsHuman(names) {
@@ -615,7 +615,7 @@ func Trees(ctx *hctx.Context, since time.Time) []string {
 			}
 		}
 		tree, _ := record.Get("tree").(*pyjson.Object)
-		mode := orStr(tree.Get("mode"))
+		mode := py.OrStr(tree.Get("mode"), "")
 		if !contains(splits, mode) {
 			mode = splits[0]
 		}

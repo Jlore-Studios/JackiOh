@@ -36,22 +36,8 @@ func marker() string {
 	return v.(string)
 }
 
-// orStr is `str(v or "")`.
-func orStr(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
 // key is `entry[k]`: a KeyError when the entry is no object holding it.
-func key(entry any, k string) any {
-	v, ok := pyjson.Obj(entry).Lookup(k)
-	if !ok {
-		panic(fmt.Errorf("KeyError: %s", py.Repr(k)))
-	}
-	return v
-}
+func key(entry any, k string) any { return py.Item(pyjson.Obj(entry), k) }
 
 // closes is `_CLOSES.search(text)` and its group 1:
 // `(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b`.
@@ -127,7 +113,7 @@ func closes(text string) (int, bool) {
 func isBot(entry *pyjson.Object, botLogin string) bool {
 	login := py.Lower(py.Str(entry.Obj("user").GetOr("login", "")))
 	return login == py.Lower(botLogin) || login == "github-actions[bot]" ||
-		strings.Contains(orStr(entry.Get("body")), marker())
+		strings.Contains(py.OrStr(entry.Get("body"), ""), marker())
 }
 
 func trusted(entry *pyjson.Object, tr *trust.Trust) bool {
@@ -139,7 +125,7 @@ func trusted(entry *pyjson.Object, tr *trust.Trust) bool {
 		userID = &n
 	}
 	login := user.GetOr("login", "")
-	return tr.Level(orStr(login), userID, orStr(entry.Get("author_association"))) >= 1
+	return tr.Level(py.OrStr(login, ""), userID, py.OrStr(entry.Get("author_association"), "")) >= 1
 }
 
 func clip(text string) string {
@@ -153,7 +139,7 @@ func clip(text string) string {
 func IssueThread(gh gh.Client, trust *trust.Trust, number int, botLogin string) string {
 	issue := gh.GetIssue(number)
 	author := py.Str(issue.Obj("user").GetOr("login", "?"))
-	body := orStr(issue.Get("body"))
+	body := py.OrStr(issue.Get("body"), "")
 	if body == "" {
 		body = "(no description)"
 	}
@@ -170,7 +156,7 @@ func IssueThread(gh gh.Client, trust *trust.Trust, number int, botLogin string) 
 		}
 		who := py.Str(comment.Obj("user").GetOr("login", "?"))
 		parts = append(parts, "", fmt.Sprintf("---\nComment by @%s at %s:", who,
-			py.Str(comment.GetOr("created_at", ""))), "", orStr(comment.Get("body")))
+			py.Str(comment.GetOr("created_at", ""))), "", py.OrStr(comment.Get("body"), ""))
 	}
 	if skipped > 0 {
 		parts = append(parts, "", fmt.Sprintf("(%d comment(s) from people outside the trust list were left out.)", skipped))
@@ -180,7 +166,7 @@ func IssueThread(gh gh.Client, trust *trust.Trust, number int, botLogin string) 
 
 // LinkedIssue is threads.linked_issue: the issue the pull request's body says it closes, or nil.
 func LinkedIssue(pull *pyjson.Object) *int {
-	if n, ok := closes(orStr(pull.Get("body"))); ok {
+	if n, ok := closes(py.OrStr(pull.Get("body"), "")); ok {
 		return &n
 	}
 	return nil
@@ -188,7 +174,7 @@ func LinkedIssue(pull *pyjson.Object) *int {
 
 // PullText is threads.pull_text.
 func PullText(pull *pyjson.Object) string {
-	body := orStr(pull.Get("body"))
+	body := py.OrStr(pull.Get("body"), "")
 	if body == "" {
 		body = "(no description)"
 	}
@@ -222,21 +208,21 @@ func PullFeedback(gh gh.Client, trust *trust.Trust, number int, botLogin string,
 		// The PR's own feedback still goes through whatever this raises.
 		herr.Try(func() {
 			for _, comment := range gh.ListComments(*issue, 300) {
-				at := clock.ParseISO(orStr(comment.Get("created_at")))
+				at := clock.ParseISO(py.OrStr(comment.Get("created_at"), ""))
 				if isBot(comment, botLogin) || !trusted(comment, trust) {
 					continue
 				}
 				if cutoff.IsZero() || at.IsZero() || at.After(cutoff) {
 					who := py.Str(key(key(comment, "user"), "login"))
 					entries = append(entries, entry{py.Str(comment.GetOr("created_at", "")),
-						fmt.Sprintf("Comment by @%s on issue #%d:\n\n%s", who, *issue, orStr(comment.Get("body")))})
+						fmt.Sprintf("Comment by @%s on issue #%d:\n\n%s", who, *issue, py.OrStr(comment.Get("body"), ""))})
 				}
 			}
 		})
 	}
 
 	newer := func(e *pyjson.Object, k string) bool {
-		at := clock.ParseISO(orStr(e.Get(k)))
+		at := clock.ParseISO(py.OrStr(e.Get(k), ""))
 		return cutoff.IsZero() || at.IsZero() || at.After(cutoff)
 	}
 
@@ -244,11 +230,11 @@ func PullFeedback(gh gh.Client, trust *trust.Trust, number int, botLogin string,
 		if !isBot(comment, botLogin) && trusted(comment, trust) && newer(comment, "created_at") {
 			who := py.Str(key(key(comment, "user"), "login"))
 			entries = append(entries, entry{py.Str(comment.GetOr("created_at", "")),
-				fmt.Sprintf("Comment by @%s:\n\n%s", who, orStr(comment.Get("body")))})
+				fmt.Sprintf("Comment by @%s:\n\n%s", who, py.OrStr(comment.Get("body"), ""))})
 		}
 	}
 	for _, review := range gh.ListReviews(number) {
-		body := py.Strip(orStr(review.Get("body")))
+		body := py.Strip(py.OrStr(review.Get("body"), ""))
 		state := py.Str(review.GetOr("state", ""))
 		if isBot(review, botLogin) || !trusted(review, trust) {
 			continue
@@ -274,7 +260,7 @@ func PullFeedback(gh gh.Client, trust *trust.Trust, number int, botLogin string,
 		}
 		where := fmt.Sprintf("%s:%s", py.Str(line.GetOr("path", "?")), py.Str(at))
 		entries = append(entries, entry{py.Str(line.GetOr("created_at", "")),
-			fmt.Sprintf("Line comment by @%s on %s:\n\n%s", who, where, orStr(line.Get("body")))})
+			fmt.Sprintf("Line comment by @%s on %s:\n\n%s", who, where, py.OrStr(line.Get("body"), ""))})
 	}
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].at < entries[j].at })
 	if len(entries) == 0 {

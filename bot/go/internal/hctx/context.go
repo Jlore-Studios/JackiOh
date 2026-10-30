@@ -46,14 +46,9 @@ func (x *Context) Now() time.Time {
 // `providers.Schedule.window`), so it raises AttributeError, and nothing calls it. Ported as it
 // is.
 func (x *Context) Window() *clock.Window {
-	herr.Raise(&attributeError{"'Config' object has no attribute 'window_start'"})
+	herr.Raise(&py.Error{Type: "AttributeError", Msg: "'Config' object has no attribute 'window_start'"})
 	return nil
 }
-
-// attributeError is Python's AttributeError.
-type attributeError struct{ msg string }
-
-func (e *attributeError) Error() string { return e.msg }
 
 // RepoHalted is true when `.harness/HALT` exists on the default branch. The file exists when it
 // has a sha (`gh.GitHub.GetFile`): an empty HALT halts too.

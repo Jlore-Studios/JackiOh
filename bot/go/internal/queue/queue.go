@@ -87,43 +87,13 @@ func recordOf(s *pyjson.Object, number int) *pyjson.Object {
 	return pyjson.New()
 }
 
-// orStr is `str(v or "")`.
-func orStr(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// intOr0 is `int(v or 0)`.
-func intOr0(v any) int {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	switch x := v.(type) {
-	case bool:
-		return 1
-	case string:
-		n, err := strconv.Atoi(py.Strip(x))
-		if err != nil {
-			panic(fmt.Errorf("ValueError: invalid literal for int() with base 10: %s", py.Repr(x)))
-		}
-		return n
-	}
-	n, ok := pyjson.AsInt(v)
-	if !ok {
-		panic(fmt.Errorf("TypeError: int() argument must be a string or a real number, not %T", v))
-	}
-	return n
-}
-
 // numberOf is `int(thread["number"])`, a KeyError when it has none.
 func numberOf(thread *pyjson.Object) int {
 	v, ok := thread.Lookup("number")
 	if !ok {
 		panic(fmt.Errorf("KeyError: 'number'"))
 	}
-	return intOr0(v)
+	return py.MustInt(py.Or(v, 0))
 }
 
 // lowered is `{name.lower() for name in names}`.
@@ -218,7 +188,7 @@ func Owner(thread *pyjson.Object) *identity.Other {
 	assignees := map[string]bool{}
 	for _, a := range thread.List("assignees") {
 		if o, ok := a.(*pyjson.Object); ok {
-			assignees[py.Lower(orStr(o.Get("login")))] = true
+			assignees[py.Lower(py.OrStr(o.Get("login"), ""))] = true
 		}
 	}
 	for _, other := range cfgOthers(config.Others) {
@@ -308,7 +278,7 @@ func IsFullsend(mode string, record *pyjson.Object) bool {
 // A fullsend part (#505): its record says it lands on its tree's branch, as deliver wrote
 // when it opened the part, or `adopt` when it took in an issue someone had opened.
 func IsPart(record *pyjson.Object) bool {
-	parent := intOr0(record.Get("part_of"))
+	parent := py.MustInt(py.Or(record.Get("part_of"), 0))
 	return parent != 0 && record.Get("onto") == BranchForIssue(parent)
 }
 
@@ -403,7 +373,7 @@ func LabelledDifficulty(names map[string]bool) string {
 func CarriedDifficulty(record *pyjson.Object) string {
 	var found []string
 	for _, key := range []string{"difficulty", "difficulty_floor"} {
-		if d := orStr(record.Get(key)); slices.Contains(config.Difficulties, d) {
+		if d := py.OrStr(record.Get(key), ""); slices.Contains(config.Difficulties, d) {
 			found = append(found, d)
 		}
 	}
@@ -662,7 +632,7 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 // several commits. Without it a one-commit pull request lands on `main` under the bot's own
 // commit message ("bot: build pass 1 for #85").
 func MergeTitle(pull *pyjson.Object, method string) string {
-	title := py.Strip(orStr(pull.Get("title")))
+	title := py.Strip(py.OrStr(pull.Get("title"), ""))
 	if method != "squash" || title == "" {
 		return ""
 	}
@@ -693,8 +663,8 @@ func HoldMerge(ctx *hctx.Context, pull *pyjson.Object) {
 // did it, and once for each commit `main` is at, so one that conflicts again waits for `main`
 // to move. The housekeeping pass calls it. A note of what it did, or "".
 func RequeueCleared(ctx *hctx.Context, pull *pyjson.Object, record *pyjson.Object) string {
-	head := orStr(pull.Obj("head").Get("sha"))
-	node := orStr(pull.Get("node_id"))
+	head := py.OrStr(pull.Obj("head").Get("sha"), "")
+	node := py.OrStr(pull.Get("node_id"), "")
 	names := LabelNames(pull)
 	if pull.Truthy("auto_merge") || pull.Get("state") != "open" || node == "" ||
 		pull.Get("mergeable_state") == "dirty" || Cleared(record).Get("sha") != head ||

@@ -118,12 +118,12 @@ func IsFull(exc error) bool {
 
 // TooFull is disk.too_full.
 func TooFull(found *pyjson.Object) bool {
-	return intOf(found.Get("percent")) >= AlertPercent || intOf(found.Get("free")) < Floor
+	return py.MustInt(found.Get("percent")) >= AlertPercent || py.MustInt(found.Get("free")) < Floor
 }
 
 // Recovered is disk.recovered.
 func Recovered(found *pyjson.Object) bool {
-	return intOf(found.Get("percent")) <= ClearPercent && intOf(found.Get("free")) >= Floor
+	return py.MustInt(found.Get("percent")) <= ClearPercent && py.MustInt(found.Get("free")) >= Floor
 }
 
 // Size is `17.3 GB`.
@@ -133,8 +133,8 @@ func Size(n int) string {
 
 // Describe is `83% full, 5.1 GB free of 30.0 GB`.
 func Describe(found *pyjson.Object) string {
-	return py.Str(found.Get("percent")) + "% full, " + Size(intOf(found.Get("free"))) + " free of " +
-		Size(intOf(found.Get("total")))
+	return py.Str(found.Get("percent")) + "% full, " + Size(py.MustInt(found.Get("free"))) + " free of " +
+		Size(py.MustInt(found.Get("total")))
 }
 
 // Clean is disk.clean; a variable so the tests can replace it.
@@ -161,16 +161,24 @@ func valid(found any) *pyjson.Object {
 	if !ok || obj == nil {
 		return nil
 	}
-	total, ok1 := pyInt(obj.Lookup("total"))
-	free, ok2 := pyInt(obj.Lookup("free"))
-	percent, ok3 := pyInt(obj.Lookup("percent"))
+	num := func(key string) (int, bool) { // int(obj[key]); False where it raises
+		v, ok := obj.Lookup(key)
+		if !ok {
+			return 0, false
+		}
+		n, err := py.Int(v)
+		return n, err == nil
+	}
+	total, ok1 := num("total")
+	free, ok2 := num("free")
+	percent, ok3 := num("percent")
 	if !ok1 || !ok2 || !ok3 {
 		return nil
 	}
 	if total <= 0 || !(0 <= free && free <= total) || !(0 <= percent && percent <= 100) {
 		return nil
 	}
-	at := clock.ParseISO(isoText(obj.Get("at")))
+	at := clock.ParseISOValue(obj.Get("at"))
 	shown := ""
 	if !at.IsZero() {
 		shown = clock.ISO(at)
@@ -195,8 +203,8 @@ func Note(state *pyjson.Object, found *pyjson.Object, runner string, runURL stri
 	if entry == nil {
 		entry = pyjson.New()
 	}
-	kept := clock.ParseISO(isoText(entry.Obj("reading").Get("at")))
-	at := clock.ParseISO(isoText(found.Get("at")))
+	kept := clock.ParseISOValue(entry.Obj("reading").Get("at"))
+	at := clock.ParseISOValue(found.Get("at"))
 	if !kept.IsZero() && !at.IsZero() && at.Before(kept) {
 		return
 	}
@@ -210,7 +218,7 @@ func findOpen(ctx *hctx.Context, number any) *pyjson.Object {
 	if pyjson.Truthy(number) {
 		var issue *pyjson.Object
 		if _, failed := herr.Catch[*herr.GitHubError](func() {
-			issue = ctx.GH.GetIssue(intOf(number))
+			issue = ctx.GH.GetIssue(py.MustInt(number))
 		}); !failed && pyjson.Equal(issue.Get("state"), "open") {
 			return issue
 		}
@@ -234,11 +242,11 @@ func closedSince(ctx *hctx.Context, number any, found *pyjson.Object) bool {
 	}
 	var closed time.Time
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
-		closed = clock.ParseISO(isoText(ctx.GH.GetIssue(intOf(number)).Get("closed_at")))
+		closed = clock.ParseISOValue(ctx.GH.GetIssue(py.MustInt(number)).Get("closed_at"))
 	}); failed {
 		return false
 	}
-	at := clock.ParseISO(isoText(found.Get("at")))
+	at := clock.ParseISOValue(found.Get("at"))
 	return !closed.IsZero() && !at.IsZero() && !closed.Before(at)
 }
 
@@ -289,7 +297,7 @@ func Alert(ctx *hctx.Context) string {
 	issue := findOpen(ctx, entry.Get("issue"))
 	number, open := 0, issue != nil
 	if open {
-		number = intOf(issue.Get("number"))
+		number = py.MustInt(issue.Get("number"))
 	}
 	if TooFull(found) {
 		if !open && closedSince(ctx, entry.Get("issue"), found) {
@@ -297,7 +305,7 @@ func Alert(ctx *hctx.Context) string {
 		}
 		noteText := ""
 		if !open {
-			number = intOf(ctx.GH.CreateIssue(Title, body(entry), Labels).Get("number"))
+			number = py.MustInt(ctx.GH.CreateIssue(Title, body(entry), Labels).Get("number"))
 			noteText = "opened #" + py.Str(number) + ": the machine's disk is " + Describe(found)
 		} else if !pyjson.Equal(entry.Get("shown"), found.Get("at")) {
 			ctx.GH.UpdateIssue(number, pyjson.New("body", body(entry)))

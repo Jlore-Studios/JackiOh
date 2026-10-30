@@ -105,7 +105,7 @@ func TestADeliverysErrorIsNotedByItsPythonName(t *testing.T) {
 	for _, c := range []struct {
 		err        error
 		name, text string
-	}{{&ValueError{"ValueError", "no plan x on bot-state"}, "ValueError", "no plan x on bot-state"},
+	}{{&ValueError{Type: "ValueError", Msg: "no plan x on bot-state"}, "ValueError", "no plan x on bot-state"},
 		{&herr.GitHubError{Msg: "no", Status: 500}, "GitHubError", "no"},
 		{&herr.GitError{Msg: "clone failed"}, "GitError", "clone failed"},
 		{denied, "PermissionError", "[Errno 13] Permission denied: '/x'"},

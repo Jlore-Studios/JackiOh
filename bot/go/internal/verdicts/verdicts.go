@@ -77,12 +77,12 @@ func Rating(text string) (map[string]string, string) {
 	if !ok {
 		return nil, source
 	}
-	difficulty := py.Lower(py.Strip(orEmpty(found.Get("difficulty"))))
+	difficulty := py.Lower(py.Strip(py.OrStr(found.Get("difficulty"), "")))
 	if !contains(Ratings, difficulty) {
 		return nil, rest
 	}
 	return map[string]string{"difficulty": difficulty,
-		"why": py.SliceTo(strings.Join(py.Split(orEmpty(found.Get("why"))), " "), 300)}, rest
+		"why": py.SliceTo(strings.Join(py.Split(py.OrStr(found.Get("why"), "")), " "), 300)}, rest
 }
 
 // BuildReport is verdicts.BuildReport. Status is "done", "blocked" or "unknown".
@@ -113,7 +113,7 @@ func BuildReport_(text string) *BuildReport {
 	}
 	title := py.SliceTo(strings.Join(py.Split(py.Str(found.GetOr("title", ""))), " "), 200)
 	question := py.SliceTo(py.Strip(py.Str(found.GetOr("question", ""))), 4000)
-	nextModel := py.SliceTo(py.Lower(strings.Trim(py.Strip(orEmpty(found.Get("next_model"))), "`")), 40)
+	nextModel := py.SliceTo(py.Lower(strings.Trim(py.Strip(py.OrStr(found.Get("next_model"), "")), "`")), 40)
 	human := status == "blocked" && found.Get("human_required") == true
 	return &BuildReport{status, title, question, rest, nextModel, human}
 }
@@ -271,14 +271,6 @@ func orNil(v any) any {
 		return []any{}
 	}
 	return v
-}
-
-// orEmpty is `str(v or "")`.
-func orEmpty(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
 }
 
 func contains(list []string, s string) bool {

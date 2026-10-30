@@ -108,7 +108,7 @@ func LaneRows(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 	order := func(row *pyjson.Object) key {
 		id := row.Str("id")
 		number := strings.TrimPrefix(id, "claude-")
-		if row.Truthy("claude") && isDigits(number) {
+		if row.Truthy("claude") && py.IsDecimal(number) {
 			n, _ := strconv.Atoi(number)
 			return key{0, n, ""}
 		}
@@ -211,14 +211,15 @@ func markedRows(data any) ([]*pyjson.Object, bool) {
 		if !has {
 			return nil, false
 		}
-		row := pyjson.New("id", py.Str(id), "bot", strOr(r.Get("bot")),
-			"claude", r.Truthy("claude"), "where", strOr(r.Get("where")),
+		row := pyjson.New("id", py.Str(id), "bot", py.OrStr(r.Get("bot"), ""),
+			"claude", r.Truthy("claude"), "where", py.OrStr(r.Get("where"), ""),
 			"github", r.Truthy("github"), "off", r.Truthy("off"),
-			"secret", strOr(r.Get("secret")), "startable", r.Truthy("startable"))
+			"secret", py.OrStr(r.Get("secret"), ""), "startable", r.Truthy("startable"))
 		for _, k := range []string{"lanes", "used", "planning", "runs", "filling", "filled"} {
 			n := 0
 			if v := r.Get(k); pyjson.Truthy(v) {
-				if n, ok = pyInt(v); !ok {
+				var err error
+				if n, err = py.Int(v); err != nil {
 					return nil, false
 				}
 			}
@@ -229,7 +230,7 @@ func markedRows(data any) ([]*pyjson.Object, bool) {
 			return nil, false
 		}
 		row.Set("fills", fills)
-		row.Set("filler", strOr(r.Get("filler")))
+		row.Set("filler", py.OrStr(r.Get("filler"), ""))
 		rows = append(rows, row)
 	}
 	return rows, true

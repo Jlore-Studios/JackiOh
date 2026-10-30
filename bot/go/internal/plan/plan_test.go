@@ -134,20 +134,6 @@ func TestLoopRef(t *testing.T) {
 	}
 }
 
-func TestPyInt(t *testing.T) {
-	good := map[string]int{"1761800000": 1761800000, " 12 ": 12, "+3": 3, "-4": -4, "1_000": 1000, "007": 7}
-	for text, want := range good {
-		if got, ok := pyInt(text); !ok || got != want {
-			t.Errorf("pyInt(%q) = %d, %v", text, got, ok)
-		}
-	}
-	for _, text := range []string{"", "abc", "1__0", "_1", "1_", "1.5", "99999999999999999999"} {
-		if _, ok := pyInt(text); ok {
-			t.Errorf("pyInt(%q) parsed", text)
-		}
-	}
-}
-
 func TestNothingAndVaultPath(t *testing.T) {
 	if got := pyjson.Dumps(Nothing("nothing is queued")); got != `{"action": "none", "reason": "nothing is queued"}` {
 		t.Errorf("Nothing = %s", got)

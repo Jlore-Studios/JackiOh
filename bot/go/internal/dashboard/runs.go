@@ -24,7 +24,7 @@ func TreesTable(ctx *hctx.Context, state *pyjson.Object) []string {
 		if issue.Has("pull_request") {
 			continue
 		}
-		number := mustInt(issue.Get("number"))
+		number := py.MustInt(issue.Get("number"))
 		var children []*pyjson.Object
 		herr.Catch[*herr.GitHubError](func() { children = ctx.GH.ListSubIssues(number) })
 		closed := 0
@@ -64,7 +64,7 @@ func resultOf(run *pyjson.Object) string {
 // runRow is a run as a row of the last runs (`runs_table`, `learn_lane`): when it started,
 // hovering how long it took, its trigger, `result` and its link.
 func runRow(ctx *hctx.Context, run *pyjson.Object, result string) string {
-	at := parseISO(run.Get("created_at"))
+	at := clock.ParseISOValue(run.Get("created_at"))
 	when := "?"
 	if !at.IsZero() {
 		when = hover(Local(ctx, at).Format("Mon 15:04"), took(ctx, run, at), "")
@@ -104,14 +104,14 @@ func RunsTable(ctx *hctx.Context) []string {
 
 // took is _took: how long a run took, or had been going when this was written.
 func took(ctx *hctx.Context, run *pyjson.Object, created time.Time) string {
-	began := parseISO(run.Get("run_started_at"))
+	began := clock.ParseISOValue(run.Get("run_started_at"))
 	if began.IsZero() {
 		began = created
 	}
 	if run.Str("status") != "completed" {
 		return runningFor(ctx, began)
 	}
-	ended := parseISO(run.Get("updated_at"))
+	ended := clock.ParseISOValue(run.Get("updated_at"))
 	if ended.IsZero() {
 		return "finished"
 	}
@@ -177,7 +177,7 @@ func LearnOutcome(run *pyjson.Object, jobs []*pyjson.Object) string {
 	}
 	named := func(items []*pyjson.Object, prefix string) *pyjson.Object {
 		for _, i := range items {
-			if strings.HasPrefix(strOr(i.Get("name")), prefix) {
+			if strings.HasPrefix(py.OrStr(i.Get("name"), ""), prefix) {
 				return i
 			}
 		}
@@ -191,7 +191,7 @@ func LearnOutcome(run *pyjson.Object, jobs []*pyjson.Object) string {
 	retrain, planJob := named(jobs, "retrain"), named(jobs, "plan")
 	var lost []*pyjson.Object
 	for _, j := range jobs {
-		if strings.HasPrefix(strOr(j.Get("name")), "export") &&
+		if strings.HasPrefix(py.OrStr(j.Get("name"), ""), "export") &&
 			!strIn(j.Get("conclusion"), "success", "skipped") {
 			lost = append(lost, j)
 		}
@@ -311,7 +311,7 @@ func LearnLane(ctx *hctx.Context, found *Found /* = None */) []string {
 			pulled = "none open."
 			return
 		}
-		opened := parseISO(pull.Get("created_at"))
+		opened := clock.ParseISOValue(pull.Get("created_at"))
 		since := " open"
 		if !opened.IsZero() {
 			since = " open since " + clockText(ctx, opened)

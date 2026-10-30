@@ -493,9 +493,9 @@ func UsageFromEvent(event *pyjson.Object) *pyjson.Object {
 	if windows, ok := info.Get("unifiedWindows").(*pyjson.Object); ok && windows != nil {
 		for _, name := range UsageWindows {
 			window, ok := windows.Get(name).(*pyjson.Object)
-			if ok && window != nil && isNumber(window.Get("utilization")) {
+			if utilization, isNumber := py.Number(window.Get("utilization")); ok && window != nil && isNumber {
 				usage.Set(name, pyjson.New(
-					"utilization", toFloat(window.Get("utilization")),
+					"utilization", utilization,
 					"resets_at", isoOrNone(window.Get("resetsAt"))))
 			}
 		}

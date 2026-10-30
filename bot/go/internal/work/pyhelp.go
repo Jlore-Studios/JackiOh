@@ -14,7 +14,6 @@ import (
 	"os/exec"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"syscall"
 	"unicode"
@@ -28,39 +27,13 @@ import (
 
 // ------------------------------------------------------------------ Python's own exceptions
 
-// keyError is Python's KeyError: str() of it is the key's repr.
-type keyError struct{ key string }
-
-func (e *keyError) Error() string { return py.Repr(e.key) }
-
-// valueError is Python's ValueError.
-type valueError struct{ msg string }
-
-func (e *valueError) Error() string { return e.msg }
-
-// typeError is Python's TypeError.
-type typeError struct{ msg string }
-
-func (e *typeError) Error() string { return e.msg }
-
-// runtimeError is Python's RuntimeError, which work.py raises for a run that cannot go on.
-type runtimeError struct{ msg string }
-
-func (e *runtimeError) Error() string { return e.msg }
-
 // excName is type(exc).__name__ for what a run's `except Exception` caught.
 func excName(err error) string {
 	switch e := err.(type) {
 	case *Interrupt:
 		return "Interrupt"
-	case *keyError:
-		return "KeyError"
-	case *valueError:
-		return "ValueError"
-	case *typeError:
-		return "TypeError"
-	case *runtimeError:
-		return "RuntimeError"
+	case *py.Error:
+		return e.Type
 	case *herr.HarnessError:
 		return "HarnessError"
 	case *herr.ConfigError:
@@ -174,40 +147,6 @@ func isOSError(err error) bool {
 
 // ------------------------------------------------------------------ values
 
-// strOr is `str(v or def)`: v's str() when it is truthy, else def.
-func strOr(v any, def string) string {
-	if pyjson.Truthy(v) {
-		return py.Str(v)
-	}
-	return def
-}
-
-// pyInt is int(v): an int as is, a float truncated, a string parsed; anything else raises.
-func pyInt(v any) int {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	case string:
-		n, err := strconv.Atoi(strings.ReplaceAll(strings.TrimSpace(x), "_", ""))
-		if err != nil {
-			herr.Raise(&valueError{msg: "invalid literal for int() with base 10: " + py.Repr(x)})
-		}
-		return n
-	case nil:
-		herr.Raise(&typeError{msg: "int() argument must be a string, a bytes-like object or a " +
-			"real number, not 'NoneType'"})
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	herr.Raise(&typeError{msg: fmt.Sprintf("int() argument must be a string, a bytes-like object "+
-		"or a real number, not '%T'", v)})
-	return 0
-}
-
 // noneIfEmpty is a `str | None` field as JSON: the harness's Go types hold None as "".
 func noneIfEmpty(s string) any {
 	if s == "" {
@@ -258,7 +197,7 @@ func pyFormat(s string, values map[string]any) string {
 		name := m[1 : len(m)-1]
 		v, ok := values[name]
 		if !ok {
-			herr.Raise(&keyError{key: name})
+			herr.Raise(py.KeyError(name))
 		}
 		return py.Str(v)
 	})
@@ -295,7 +234,7 @@ func (t pyTemplate) substitute(values map[string]string) (string, error) {
 			}
 			v, ok := values[name]
 			if !ok {
-				return "", &keyError{key: name}
+				return "", py.KeyError(name)
 			}
 			b.WriteString(v)
 		default:
@@ -346,37 +285,8 @@ func invalidPlaceholder(src string, at int) error {
 			start = i + 1
 		}
 	}
-	return &valueError{msg: fmt.Sprintf("Invalid placeholder in string: line %d, col %d", lineno,
-		len(prefix)-start)}
-}
-
-// templateText is the text of what prompts.load returned: a string.Template, whose Go form
-// holds its source as a string, a `Template` or `Text` field, or a String method.
-func templateText(t any) string {
-	if s, ok := t.(string); ok {
-		return s
-	}
-	v := reflect.ValueOf(t)
-	for v.IsValid() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) {
-		if v.IsNil() {
-			break
-		}
-		v = v.Elem()
-	}
-	if v.IsValid() && v.Kind() == reflect.Struct {
-		for _, name := range []string{"Template", "Text", "Source"} {
-			if f := v.FieldByName(name); f.IsValid() && f.Kind() == reflect.String {
-				return f.String()
-			}
-		}
-	}
-	if s, ok := t.(fmt.Stringer); ok {
-		return s.String()
-	}
-	if v.IsValid() && v.Kind() == reflect.String {
-		return v.String()
-	}
-	panic(fmt.Sprintf("work: prompts.Load returned %T, which holds no template text", t))
+	return &py.Error{Type: "ValueError", Msg: fmt.Sprintf("Invalid placeholder in string: line %d, col %d",
+		lineno, len(prefix)-start)}
 }
 
 // ------------------------------------------------------------------ git

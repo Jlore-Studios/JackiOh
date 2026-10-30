@@ -94,9 +94,9 @@ func NoteUsage(state *pyjson.Object, providerID string, usage *pyjson.Object, re
 		}
 		counted = append(counted, pyjson.New(
 			"at", clock.ISO(at),
-			"input", mustInt(orZero(tokens.Get("input"))),
-			"output", mustInt(orZero(tokens.Get("output"))),
-			"cache", mustInt(orZero(tokens.Get("cache_read")))+mustInt(orZero(tokens.Get("cache_write"))),
+			"input", py.MustInt(py.Or(tokens.Get("input"), 0)),
+			"output", py.MustInt(py.Or(tokens.Get("output"), 0)),
+			"cache", py.MustInt(py.Or(tokens.Get("cache_read"), 0))+py.MustInt(py.Or(tokens.Get("cache_write"), 0)),
 			"cost", py.RoundN(cost, 4)))
 		entry.Set("tokens_spent", lastN(counted, SpentKeep))
 	}
@@ -119,8 +119,8 @@ func NearFullReset(usage any, at time.Time) time.Time {
 		if !ok {
 			continue
 		}
-		resets := parseISO(reading.Get("resets_at"))
-		utilization, isNumber := number(reading.Get("utilization"))
+		resets := clock.ParseISOValue(reading.Get("resets_at"))
+		utilization, isNumber := py.Number(reading.Get("utilization"))
 		if !resets.IsZero() && resets.After(at) && isNumber && utilization >= NearFull {
 			if found.IsZero() || resets.After(found) {
 				found = resets
@@ -174,7 +174,7 @@ func ClearInfra(state *pyjson.Object, providerID string) *int {
 	if !pyjson.Truthy(issue) {
 		return nil
 	}
-	n := mustInt(issue)
+	n := py.MustInt(issue)
 	return &n
 }
 
@@ -183,7 +183,7 @@ func streakOf(infra *pyjson.Object) int {
 	if infra.Len() == 0 {
 		return 0
 	}
-	n, err := pyInt(orValue(infra.Get("streak"), 1))
+	n, err := py.Int(py.Or(infra.Get("streak"), 1))
 	if err != nil {
 		return 1
 	}
@@ -210,7 +210,7 @@ func Duration(text string) time.Duration {
 	if match == nil || (match[1] == "" && match[2] == "" && match[3] == "") {
 		return 30 * time.Minute
 	}
-	hours, minutes, seconds := digitsInt(match[1]), digitsInt(match[2]), digitsInt(match[3])
+	hours, minutes, seconds := py.Atoi(match[1]), py.Atoi(match[2]), py.Atoi(match[3])
 	return time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute +
 		time.Duration(seconds)*time.Second
 }
@@ -221,12 +221,12 @@ func Duration(text string) time.Duration {
 // about to start) leaves `start_headroom` under each cap; a run going on stops at the cap
 // itself.
 func Refusal(provider *Provider, entry *pyjson.Object, at time.Time, zoneName string /* = None */, starting bool /* = False */, lastHour time.Time /* = None */) string {
-	until := parseISO(entry.Get("refused_until"))
+	until := clock.ParseISOValue(entry.Get("refused_until"))
 	if !until.IsZero() && until.After(at) {
 		return fmt.Sprintf("it refused a call; its limit resets at %s", clock.ISO(until))
 	}
 	usage := CurrentUsage(provider, entry)
-	observed := parseISO(usage.Get("observed_at"))
+	observed := clock.ParseISOValue(usage.Get("observed_at"))
 	caps := provider.CapsAt(at, zoneName, usage, lastHour)
 	outside := !pyjson.Equal(provider.CapsAt(at, zoneName, nil, time.Time{}), provider.Limits.Stops())
 	for _, window := range caps.Keys() {
@@ -239,14 +239,14 @@ func Refusal(provider *Provider, entry *pyjson.Object, at time.Time, zoneName st
 		if !ok {
 			continue
 		}
-		resets := parseISO(reading.Get("resets_at"))
+		resets := clock.ParseISOValue(reading.Get("resets_at"))
 		if resets.IsZero() && !observed.IsZero() {
 			resets = observed.Add(Windows[window])
 		}
 		if resets.IsZero() || !resets.After(at) {
 			continue // that window has reset since the reading, or cannot be dated
 		}
-		utilization, isNumber := number(reading.Get("utilization"))
+		utilization, isNumber := py.Number(reading.Get("utilization"))
 		if isNumber && utilization >= stop {
 			where := ""
 			if outside {
@@ -254,11 +254,11 @@ func Refusal(provider *Provider, entry *pyjson.Object, at time.Time, zoneName st
 			}
 			if stop < limit {
 				return fmt.Sprintf("%s usage is %s, too close to its %s cap%s to start a long run "+
-					"(it starts under %s); it resets at %s", WindowNames[window], percent(utilization),
-					percent(limit), where, percent(stop), clock.ISO(resets))
+					"(it starts under %s); it resets at %s", WindowNames[window], py.Percent(utilization, 0),
+					py.Percent(limit, 0), where, py.Percent(stop, 0), clock.ISO(resets))
 			}
 			return fmt.Sprintf("%s usage is %s, at or over its %s cap%s; it resets at %s",
-				WindowNames[window], percent(utilization), percent(stop), where, clock.ISO(resets))
+				WindowNames[window], py.Percent(utilization, 0), py.Percent(stop, 0), where, clock.ISO(resets))
 		}
 	}
 	budgets := provider.Limits.Budgets()
@@ -284,12 +284,12 @@ var BalanceStep float64 = 0.1
 // minute budgets. As in `refusal`, a window that has reset since the reading is all free, and
 // a refusal not yet over leaves nothing.
 func Room(provider *Provider, entry *pyjson.Object, at time.Time, zoneName string /* = None */) float64 {
-	until := parseISO(entry.Get("refused_until"))
+	until := clock.ParseISOValue(entry.Get("refused_until"))
 	if !until.IsZero() && until.After(at) {
 		return 0.0
 	}
 	usage := CurrentUsage(provider, entry)
-	observed := parseISO(usage.Get("observed_at"))
+	observed := clock.ParseISOValue(usage.Get("observed_at"))
 	caps := provider.CapsAt(at, zoneName, usage, time.Time{})
 	free := []float64{1.0}
 	for _, window := range windowOrder {
@@ -297,15 +297,15 @@ func Room(provider *Provider, entry *pyjson.Object, at time.Time, zoneName strin
 		if !ok {
 			continue
 		}
-		resets := parseISO(reading.Get("resets_at"))
+		resets := clock.ParseISOValue(reading.Get("resets_at"))
 		if resets.IsZero() && !observed.IsZero() {
 			resets = observed.Add(Windows[window])
 		}
-		utilization, isNumber := number(reading.Get("utilization"))
+		utilization, isNumber := py.Number(reading.Get("utilization"))
 		if resets.IsZero() || !resets.After(at) || !isNumber {
 			continue
 		}
-		limit := mustFloat(caps.GetOr(window, 1.0))
+		limit := py.MustFloat(caps.GetOr(window, 1.0))
 		share := 0.0
 		if limit > 0 {
 			share = pyMax(0.0, limit-utilization) / limit
@@ -331,7 +331,7 @@ func Room(provider *Provider, entry *pyjson.Object, at time.Time, zoneName strin
 
 // StartUnder is the usage a build, a revision or a plan must be under to start, under `cap`.
 func StartUnder(provider *Provider, window string, cap_ float64) float64 {
-	return pyMax(0.0, cap_-mustFloat(provider.Limits.Headroom.GetOr(window, 0.0)))
+	return pyMax(0.0, cap_-py.MustFloat(provider.Limits.Headroom.GetOr(window, 0.0)))
 }
 
 // LastHourOf is when its 5-hour session resets, if `usage` finds `provider` in that session's last hour
@@ -349,12 +349,12 @@ func LastHourOf(provider *Provider, usage any, at time.Time, zoneName string) ti
 	}
 	held, hasCap := provider.HeldCaps(at, zoneName, usage).Lookup("five_hour")
 	reading, ok := mapping(obj.Get("five_hour"))
-	if !hasCap || held == nil || mustFloat(held) >= 1.0 || !ok {
+	if !hasCap || held == nil || py.MustFloat(held) >= 1.0 || !ok {
 		return time.Time{}
 	}
-	limit := mustFloat(held)
-	resets := parseISO(reading.Get("resets_at"))
-	used, isNumber := number(reading.Get("utilization"))
+	limit := py.MustFloat(held)
+	resets := clock.ParseISOValue(reading.Get("resets_at"))
+	used, isNumber := py.Number(reading.Get("utilization"))
 	if resets.IsZero() || !(at.Before(resets) && !resets.After(at.Add(LastHour))) ||
 		!isNumber || used > limit+LastHourSlack {
 		return time.Time{}
@@ -375,7 +375,7 @@ func LateWeekHolds(provider *Provider, usage any, at time.Time, zoneName string)
 	if late == nil || zoneName == "" || !readingOK {
 		return false
 	}
-	resets := parseISO(reading.Get("resets_at"))
+	resets := clock.ParseISOValue(reading.Get("resets_at"))
 	return !resets.IsZero() && resets.After(at) && resets.Sub(late.Since(at, zoneName)) <= LateWeekSpan
 }
 
@@ -394,18 +394,18 @@ func FreesAt(provider *Provider, entry *pyjson.Object, at time.Time, zoneName st
 		}
 		times = append(times, t)
 	}
-	until := parseISO(entry.Get("refused_until"))
+	until := clock.ParseISOValue(entry.Get("refused_until"))
 	if !until.IsZero() && until.After(at) {
 		add(until)
 	}
 	usage := CurrentUsage(provider, entry)
-	observed := parseISO(usage.Get("observed_at"))
+	observed := clock.ParseISOValue(usage.Get("observed_at"))
 	for _, window := range windowOrder {
 		reading, ok := mapping(usage.Get(window))
 		if !ok {
 			continue
 		}
-		resets := parseISO(reading.Get("resets_at"))
+		resets := clock.ParseISOValue(reading.Get("resets_at"))
 		if resets.IsZero() && !observed.IsZero() {
 			resets = observed.Add(Windows[window])
 		}
@@ -439,14 +439,14 @@ func MinutesSpent(entry *pyjson.Object, since time.Time) float64 {
 	if entry.Truthy("spent") {
 		spent = entry.Get("spent")
 	}
-	for _, item := range iterate(spent) {
+	for _, item := range py.MustIter(spent) {
 		var at time.Time
 		run, ok := mapping(item)
 		if ok {
-			at = parseISO(run.Get("at"))
+			at = clock.ParseISOValue(run.Get("at"))
 		}
 		if !at.IsZero() && !at.Before(since) {
-			total += mustFloat(orZero(run.Get("minutes")))
+			total += py.MustFloat(py.Or(run.Get("minutes"), 0))
 		}
 	}
 	return total
@@ -501,7 +501,7 @@ func SecretsRecord(secrets *Secrets, state *pyjson.Object, now time.Time) *pyjso
 	}
 	names := sortedNames(secrets.Present)
 	record := state.Obj("secrets")
-	at := parseISO(record.Get("at"))
+	at := clock.ParseISOValue(record.Get("at"))
 	if pyjson.Equal(record.Get("set"), pyjson.ListOf(names)) && !at.IsZero() && now.Sub(at) < SecretsNoteEvery {
 		return nil
 	}
@@ -514,7 +514,7 @@ func SecretsRecord(secrets *Secrets, state *pyjson.Object, now time.Time) *pyjso
 // would otherwise miss a secret added since. The zero `since` is None.
 func NewerSecrets(secrets *Secrets, state *pyjson.Object, since time.Time) *Secrets {
 	record := state.Obj("secrets")
-	at := parseISO(record.Get("at"))
+	at := clock.ParseISOValue(record.Get("at"))
 	names, isList := record.Get("set").([]any)
 	if at.IsZero() || !isList || (!since.IsZero() && !at.After(since)) {
 		return secrets
@@ -552,7 +552,7 @@ func offHours(raw any, where string) *pyjson.Object {
 
 // lanes is _lanes.
 func lanes(raw any, where string) int {
-	n, err := pyInt(raw)
+	n, err := py.Int(raw)
 	if err != nil {
 		configError("%s: %s is not a number", where, py.Repr(raw))
 	}
@@ -594,7 +594,7 @@ func CurrentUsage(provider *Provider, entry *pyjson.Object) *pyjson.Object {
 	if !ok {
 		return pyjson.New()
 	}
-	observed := parseISO(usage.Get("observed_at"))
+	observed := clock.ParseISOValue(usage.Get("observed_at"))
 	if !provider.UsageSince.IsZero() && (observed.IsZero() || observed.Before(provider.UsageSince)) {
 		return pyjson.New()
 	}
@@ -646,7 +646,7 @@ func Availability(provider *Provider, state *pyjson.Object, at time.Time, zoneNa
 	if !ok {
 		infra = pyjson.New()
 	}
-	failed := parseISO(infra.Get("at"))
+	failed := clock.ParseISOValue(infra.Get("at"))
 	backoff := InfraBackoff(infra)
 	if !forced && !failed.IsZero() && at.Sub(failed) < backoff {
 		streak := streakOf(infra)
@@ -655,7 +655,7 @@ func Availability(provider *Provider, state *pyjson.Object, at time.Time, zoneNa
 			times = fmt.Sprintf(", %d times in a row", streak)
 		}
 		return fmt.Sprintf("its last run could not work%s (%s); it is left alone until %s", times,
-			py.SliceTo(orEmpty(infra.Get("reason")), 120), clock.ISO(failed.Add(backoff)))
+			py.SliceTo(py.OrStr(infra.Get("reason"), ""), 120), clock.ISO(failed.Add(backoff)))
 	}
 	return Refusal(provider, entry, at, zoneName, starting, time.Time{})
 }
@@ -686,7 +686,7 @@ func StartReason(provider *Provider, state *pyjson.Object, at time.Time, zoneNam
 		reason += "; it takes reviews only"
 	}
 	frees := FreesAt(provider, entry, at, zoneName)
-	if !frees.IsZero() && !frees.Equal(parseISO(entry.Get("refused_until"))) { // that one says so
+	if !frees.IsZero() && !frees.Equal(clock.ParseISOValue(entry.Get("refused_until"))) { // that one says so
 		reason += "; it can start a build or a plan again in " + clock.HumanDelta(frees.Sub(at))
 	}
 	return reason

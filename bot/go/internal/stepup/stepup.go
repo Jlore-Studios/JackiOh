@@ -59,43 +59,13 @@ func recordOf(s *pyjson.Object, number int) *pyjson.Object {
 	return pyjson.New()
 }
 
-// orStr is `str(v or "")`.
-func orStr(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// intOr0 is `int(v or 0)`.
-func intOr0(v any) int {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	switch x := v.(type) {
-	case bool:
-		return 1
-	case string:
-		n, err := strconv.Atoi(py.Strip(x))
-		if err != nil {
-			panic(fmt.Errorf("ValueError: invalid literal for int() with base 10: %s", py.Repr(x)))
-		}
-		return n
-	}
-	n, ok := pyjson.AsInt(v)
-	if !ok {
-		panic(fmt.Errorf("TypeError: int() argument must be a string or a real number, not %T", v))
-	}
-	return n
-}
-
 // numberOf is `int(thread["number"])`, a KeyError when it has none.
 func numberOf(thread *pyjson.Object) int {
 	v, ok := thread.Lookup("number")
 	if !ok {
 		panic(fmt.Errorf("KeyError: 'number'"))
 	}
-	return intOr0(v)
+	return py.MustInt(py.Or(v, 0))
 }
 
 // threadsOf is the order CPython iterates `{target, *([pr] if pr else [])}` in, which is the
@@ -145,7 +115,7 @@ func Pair(ctx *hctx.Context, number int) (int, *int) {
 		return number, nil
 	}
 	record := recordOf(ctx.Store.Load(), number)
-	issue := intOr0(record.Get("issue"))
+	issue := py.MustInt(py.Or(record.Get("issue"), 0))
 	if issue == 0 {
 		if linked := threads.LinkedIssue(thread); linked != nil {
 			issue = *linked
@@ -176,20 +146,20 @@ func Strike(ctx *hctx.Context, number int, why string, link string /* = "" */) b
 
 	change := func(s *pyjson.Object) any {
 		entry := stateItem(s, target)
-		entry.Set("strikes", intOr0(entry.Get("strikes"))+1)
+		entry.Set("strikes", py.MustInt(py.Or(entry.Get("strikes"), 0))+1)
 		log := append(slices.Clone(pyjson.List(entry.Get("strike_log"))), py.SliceTo(why, 200))
 		entry.Set("strike_log", slices.Clone(lastN(log, StrikeLog)))
 		return nil
 	}
 	s := ctx.Store.Update(change, fmt.Sprintf("strike #%d", target))
 	entry := stateItem(s, target)
-	count := intOr0(entry.Get("strikes"))
+	count := py.MustInt(py.Or(entry.Get("strikes"), 0))
 	if count < config.StepUpAfter {
 		return false
 	}
 	var reasons []string
 	for _, r := range lastN(pyjson.List(entry.Get("strike_log")), count) {
-		reasons = append(reasons, orStr(r))
+		reasons = append(reasons, py.OrStr(r, ""))
 	}
 	StepUp(ctx, target, pr, reasons, link)
 	return true
@@ -233,7 +203,7 @@ func ClearIfGreen(ctx *hctx.Context, pr int, head string) bool {
 		return false
 	}
 	target, _ := Pair(ctx, pr)
-	if intOr0(recordOf(ctx.Store.Load(), target).Get("strikes")) == 0 {
+	if py.MustInt(py.Or(recordOf(ctx.Store.Load(), target).Get("strikes"), 0)) == 0 {
 		return false
 	}
 	if !Green(ctx, head) {
@@ -367,7 +337,7 @@ func StepUp(ctx *hctx.Context, target int, pr *int, reasons []string, link strin
 func Rebuild(ctx *hctx.Context, issue int, pr int, why string, said string /* = "" */) string {
 	pull := ctx.GH.GetPull(pr)
 	head := pull.Obj("head")
-	branch, sha := orStr(head.Get("ref")), orStr(head.Get("sha"))
+	branch, sha := py.OrStr(head.Get("ref"), ""), py.OrStr(head.Get("sha"), "")
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		stateItem(s, pr).Set("rebuilt", true)
 		return nil

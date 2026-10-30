@@ -143,7 +143,7 @@ func NewDeliverer(ctx *hctx.Context, plan *pyjson.Object, outDir string, repoDir
 		x.Plan.Set("provider", provider)
 	}
 	pool := ctx.Cfg.Pool
-	x.Provider = pool.Get(orStr(x.Plan.Get("provider"), ""))
+	x.Provider = pool.Get(py.OrStr(x.Plan.Get("provider"), ""))
 	if x.Provider == nil {
 		x.Provider = pool.Get(providers.LegacyProvider)
 	}
@@ -158,7 +158,7 @@ func NewDeliverer(ctx *hctx.Context, plan *pyjson.Object, outDir string, repoDir
 		if entry.Len() == 0 {
 			return nil
 		}
-		return pool.Seat(x.Provider.ID, orStr(entry.Get("model"), ""))
+		return pool.Seat(x.Provider.ID, py.OrStr(entry.Get("model"), ""))
 	}
 	x.BuildSeat = seat("build")
 	if x.BuildSeat == nil {
@@ -187,15 +187,15 @@ func (x *Deliverer) Run() *pyjson.Object {
 	usage, resetAt := x.Result.Get("usage"), x.Result.Get("reset_at")
 	// The refreshed login first: a rotated one that is lost cannot be recovered.
 	x.storeVault()
-	minutes := tryFloatOr0(x.Result.Get("minutes"))
+	minutes, _ := py.Float(py.Or(x.Result.Get("minutes"), 0))
 	tokens := pyjson.Obj(x.Result.Get("tokens"))
-	cost := tryFloatOr0(x.Result.Get("cost_usd"))
+	cost, _ := py.Float(py.Or(x.Result.Get("cost_usd"), 0))
 	x.Ctx.Store.Update(func(s *pyjson.Object) any {
 		var spent *float64
 		if cost > 0 {
 			spent = &cost
 		}
-		providers.NoteUsage(s, x.Provider.ID, pyjson.Obj(usage), orStr(resetAt, ""), x.Ctx.Now(),
+		providers.NoteUsage(s, x.Provider.ID, pyjson.Obj(usage), py.OrStr(resetAt, ""), x.Ctx.Now(),
 			minutes, tokens, spent)
 		return nil
 	}, "usage "+x.Provider.ID)
@@ -262,7 +262,7 @@ func (x *Deliverer) machineDisk() {
 	if found == nil {
 		return
 	}
-	reported := orStr(x.Result.Obj("disk").Get("runner"), "")
+	reported := py.OrStr(x.Result.Obj("disk").Get("runner"), "")
 	runner := x.Provider.RunsOn
 	if runnerName.MatchString(reported) {
 		runner = reported
@@ -290,8 +290,8 @@ func (x *Deliverer) machineMemory() {
 	if found == nil {
 		return
 	}
-	reported := orStr(x.Result.Obj("disk").Get("runner"), "")
-	label := orStr(x.Plan.Get("runs_on"), x.Provider.RunsOn) // a fill-in's too
+	reported := py.OrStr(x.Result.Obj("disk").Get("runner"), "")
+	label := py.OrStr(x.Plan.Get("runs_on"), x.Provider.RunsOn) // a fill-in's too
 	runner := label
 	if runnerName.MatchString(reported) {
 		runner = reported
@@ -307,7 +307,7 @@ func (x *Deliverer) machineMemory() {
 // not work there is over (`providers.clear_infra`), and the issue asking a person about it,
 // if one was opened, is closed.
 func (x *Deliverer) loginWorks() {
-	calls := tryIntOr0(x.Result.Get("model_calls"))
+	calls, _ := py.Int(py.Or(x.Result.Get("model_calls"), 0))
 	if x.Result.Get("status") == "infra" || calls == 0 {
 		return
 	}
@@ -367,7 +367,7 @@ func (x *Deliverer) askAboutInfra(streak int, reason string) {
 		x.log(fmt.Sprintf("could not open an issue about %s: %s", id, exc.Error()))
 		return
 	}
-	number := intOr0(issue.Get("number"))
+	number := py.MustInt(py.Or(issue.Get("number"), 0))
 	if number != 0 {
 		x.Ctx.Store.Update(func(s *pyjson.Object) any {
 			infra := providers.Record(s, id).SetDefault("infra", pyjson.New())
@@ -380,13 +380,13 @@ func (x *Deliverer) askAboutInfra(streak int, reason string) {
 
 // Work the branch out again from GitHub, whatever the plan file says.
 func (x *Deliverer) rederive() {
-	number := mustInt(x.Plan.Get("number"))
+	number := py.MustInt(x.Plan.Get("number"))
 	if action := x.Plan.Get("action"); action == "plan" || action == "build" {
 		x.Plan.Set("branch", queue.BranchForIssue(number))
 		// Where a fullsend part lands (#505) comes from the state file, which deliver wrote
 		// when it opened the part, never from the plan file alone.
 		record := x.Record(number)
-		parent := intOr0(record.Get("part_of"))
+		parent := py.MustInt(py.Or(record.Get("part_of"), 0))
 		x.Plan.Pop("onto")
 		x.Plan.Pop("part_of")
 		if parent != 0 && record.Get("onto") == queue.BranchForIssue(parent) {

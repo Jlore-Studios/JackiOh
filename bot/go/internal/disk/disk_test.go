@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
@@ -29,22 +28,6 @@ func python(t *testing.T, key string) [][]any {
 		cases = append(cases, pyjson.List(c))
 	}
 	return cases
-}
-
-func TestIntIsPythons(t *testing.T) {
-	for _, c := range python(t, "int") {
-		n, ok := pyInt(c[0], true)
-		var got any
-		if ok {
-			got = n
-		}
-		if pyjson.Dumps(got) != pyjson.Dumps(c[1]) {
-			t.Errorf("int(%s): got %v, want %v", py.Repr(c[0]), pyjson.Dumps(got), pyjson.Dumps(c[1]))
-		}
-	}
-	if _, ok := pyInt(5, false); ok {
-		t.Error("a missing key is KeyError")
-	}
 }
 
 func TestSizeDescribeAndTheRules(t *testing.T) {

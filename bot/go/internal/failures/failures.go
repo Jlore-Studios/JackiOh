@@ -10,9 +10,6 @@ package failures
 
 import (
 	"fmt"
-	"math"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -100,7 +97,7 @@ func reviewCell(review *pyjson.Object, selfChecks []any) string {
 				flagged++
 			}
 			if r, ok := s.Get("review").(*pyjson.Object); ok {
-				if e := orEmpty(r.Get("error")); e != "" {
+				if e := py.OrStr(r.Get("error"), ""); e != "" {
 					failed = append(failed, e)
 				}
 			}
@@ -125,7 +122,7 @@ func reviewCell(review *pyjson.Object, selfChecks []any) string {
 			parts = append(parts, fmt.Sprintf("blocked, %d finding(s); first `%s`: %s", len(found),
 				Cell(first.Get("where"), 60), Cell(first.Get("claim"), 90)))
 		} else {
-			parts = append(parts, orDefault(review.Get("verdict"), "approved"))
+			parts = append(parts, py.OrStr(review.Get("verdict"), "approved"))
 		}
 	}
 	return strings.Join(parts, "; ")
@@ -223,10 +220,10 @@ func Why(cycles []*pyjson.Object, limit int, reason string /* = "" */) string {
 	var minutes []float64
 	for _, b := range builders {
 		if b.Len() > 0 {
-			minutes = append(minutes, pyFloat(orZero(b.Get("minutes"))))
+			minutes = append(minutes, py.MustFloat(py.Or(b.Get("minutes"), 0)))
 		}
 	}
-	if total := pySum(minutes); total != 0 {
+	if total := py.Sum(minutes); total != 0 {
 		lines = append(lines, fmt.Sprintf("- **Builder time:** %.0f min over %d round(s).", total, rounds))
 	}
 	seen := &counter{}
@@ -250,7 +247,7 @@ func Why(cycles []*pyjson.Object, limit int, reason string /* = "" */) string {
 		for _, e := range again {
 			lines = append(lines, fmt.Sprintf("- %s (×%d)", e.shown, e.n))
 		}
-	} else if len(seen.order) > 0 {
+	} else if len(seen.shown) > 0 {
 		lines = append(lines, "", "No finding came back twice: each round's review found something new.")
 	}
 	if len(cycles) > 0 {
@@ -273,10 +270,9 @@ func Why(cycles []*pyjson.Object, limit int, reason string /* = "" */) string {
 	return strings.Join(lines, "\n")
 }
 
-// counter is collections.Counter over keys in the order they first came, with most_common.
+// counter is a py.Counter over keys, each shown as the text it was first counted with.
 type counter struct {
-	order  []string
-	counts map[string]int
+	counts *py.Counter
 	shown  map[string]string
 }
 
@@ -287,83 +283,21 @@ type counted struct {
 
 func (c *counter) add(key, shown string) {
 	if c.counts == nil {
-		c.counts, c.shown = map[string]int{}, map[string]string{}
+		c.counts, c.shown = py.NewCounter(), map[string]string{}
 	}
-	if _, ok := c.counts[key]; !ok {
-		c.order = append(c.order, key)
+	if _, ok := c.shown[key]; !ok {
 		c.shown[key] = shown
 	}
-	c.counts[key]++
+	c.counts.Add(key, 1)
 }
 
 // mostCommon is Counter.most_common(): by count, the first counted first among equals.
 func (c *counter) mostCommon() []counted {
-	out := make([]counted, len(c.order))
-	for i, k := range c.order {
-		out[i] = counted{c.shown[k], c.counts[k]}
+	var out []counted
+	if c.counts != nil {
+		for _, e := range c.counts.MostCommon(-1) {
+			out = append(out, counted{c.shown[e.Key], e.N})
+		}
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].n > out[j].n })
 	return out
-}
-
-// orEmpty is `str(v or "")`.
-func orEmpty(v any) string { return orDefault(v, "") }
-
-// orDefault is `str(v or def)`.
-func orDefault(v any, def string) string {
-	if !pyjson.Truthy(v) {
-		return def
-	}
-	return py.Str(v)
-}
-
-// orZero is `v or 0`.
-func orZero(v any) any {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	return v
-}
-
-// pyFloat is float(v) for a JSON value; what float() refuses raises (panics), as in Python.
-func pyFloat(v any) float64 {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	case string:
-		f, err := strconv.ParseFloat(strings.ReplaceAll(strings.TrimFunc(x, py.IsSpace), "_", ""), 64)
-		if err != nil {
-			panic(fmt.Errorf("could not convert string to float: %s", py.Repr(x)))
-		}
-		return f
-	}
-	if f, ok := pyjson.AsFloat(v); ok {
-		return f
-	}
-	panic(fmt.Errorf("float() argument must be a string or a real number, not '%T'", v))
-}
-
-// pySum is sum() over floats as Python 3.12+ adds them: Neumaier's compensated summation, so
-// sum([0.1] * 10) is 1.0.
-func pySum(xs []float64) float64 {
-	if len(xs) == 0 {
-		return 0
-	}
-	total, c := xs[0], 0.0
-	for _, x := range xs[1:] {
-		t := total + x
-		if math.Abs(total) >= math.Abs(x) {
-			c += (total - t) + x
-		} else {
-			c += (x - t) + total
-		}
-		total = t
-	}
-	if c != 0 && !math.IsInf(c, 0) && !math.IsNaN(c) {
-		total += c
-	}
-	return total
 }

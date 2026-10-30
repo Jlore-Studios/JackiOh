@@ -94,40 +94,7 @@ func containsValue(list []any, v any) bool {
 
 // list is `holder.get(key) or []` iterated: a list's items (a string's characters and an
 // object's keys, as Python iterates them).
-func list(holder *pyjson.Object, key string) []any {
-	v := holder.Get(key)
-	if !pyjson.Truthy(v) {
-		return nil
-	}
-	switch x := v.(type) {
-	case []any:
-		return x
-	case string:
-		var out []any
-		for _, r := range x {
-			out = append(out, string(r))
-		}
-		return out
-	case *pyjson.Object:
-		return pyjson.ListOf(x.Keys())
-	}
-	panic(&typeError{"'" + typeName(v) + "' object is not iterable"})
-}
-
-func typeName(v any) string {
-	switch v.(type) {
-	case bool:
-		return "bool"
-	case float64:
-		return "float"
-	}
-	return "int"
-}
-
-// typeError is Python's TypeError.
-type typeError struct{ msg string }
-
-func (e *typeError) Error() string { return e.msg }
+func list(holder *pyjson.Object, key string) []any { return py.Each(holder.Get(key)) }
 
 func strs(xs []any) []string {
 	out := make([]string, len(xs))

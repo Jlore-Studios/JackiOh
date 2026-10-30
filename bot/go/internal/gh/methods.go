@@ -136,7 +136,7 @@ func (x *GitHub) ListSubIssues(parent int) []*pyjson.Object {
 func (x *GitHub) UpdateIssue(number int, fields *pyjson.Object) *pyjson.Object {
 	fields = fields.Copy()
 	if body, ok := fields.Lookup("body"); ok {
-		fields.Set("body", WithMarker(str0(body)))
+		fields.Set("body", WithMarker(py.OrStr(body, "")))
 	}
 	return obj(x.Request("PATCH", fmt.Sprintf("%s/issues/%d", x.r(), number), fields, "", false, false))
 }
@@ -248,8 +248,8 @@ func (x *GitHub) SyncLabel(name string, color string, description string) string
 		return "created"
 	}
 	label := obj(found)
-	if strings.ToLower(str0(label.Get("color"))) == strings.ToLower(color) &&
-		str0(label.Get("description")) == description {
+	if strings.ToLower(py.OrStr(label.Get("color"), "")) == strings.ToLower(color) &&
+		py.OrStr(label.Get("description"), "") == description {
 		return ""
 	}
 	x.Request("PATCH", x.r()+"/labels/"+quoted, pyjson.New("color", color, "description", description),
@@ -303,7 +303,7 @@ func (x *GitHub) CreatePull(title string, head string, base string, body string,
 func (x *GitHub) UpdatePull(number int, fields *pyjson.Object) *pyjson.Object {
 	fields = fields.Copy()
 	if body, ok := fields.Lookup("body"); ok {
-		fields.Set("body", WithMarker(str0(body)))
+		fields.Set("body", WithMarker(py.OrStr(body, "")))
 	}
 	if title, ok := fields.Lookup("title"); ok {
 		fields.Set("title", py.SliceTo(redact.Redact(py.Str(title), nil), 250))
@@ -336,10 +336,10 @@ func (x *GitHub) RequiredChecks(branch string) map[string]bool {
 	}
 	checks := data.Obj("protection").Obj("required_status_checks")
 	found := map[string]bool{}
-	for _, c := range iterate(checks.Get("contexts")) {
+	for _, c := range py.Each(checks.Get("contexts")) {
 		found[py.Str(c)] = true
 	}
-	for _, c := range iterate(checks.Get("checks")) {
+	for _, c := range py.Each(checks.Get("checks")) {
 		if o, ok := c.(*pyjson.Object); ok {
 			found[py.Str(o.Get("context"))] = true
 		}
@@ -417,9 +417,9 @@ func (x *GitHub) QueueRemoval(nodeID string) map[string]string {
 	}
 	actor := last.Obj("actor")
 	return map[string]string{
-		"actor":  str0(actor.Get("login")),
-		"type":   str0(actor.Get("__typename")),
-		"reason": str0(last.Get("reason")),
+		"actor":  py.OrStr(actor.Get("login"), ""),
+		"type":   py.OrStr(actor.Get("__typename"), ""),
+		"reason": py.OrStr(last.Get("reason"), ""),
 	}
 }
 
@@ -476,7 +476,7 @@ func (x *GitHub) GetFile(path string, ref string) (string, string) {
 	if !isDict || data.Get("type") != "file" {
 		return "", ""
 	}
-	content := str0(data.Get("content"))
+	content := py.OrStr(data.Get("content"), "")
 	if content == "" && data.Truthy("size") && data.Truthy("sha") {
 		// Over 1 MB the contents API leaves `content` empty (`encoding: "none"`); the blob API
 		// serves up to 100 MB. Read as empty, state.json was wiped on 2026-10-25
@@ -484,7 +484,7 @@ func (x *GitHub) GetFile(path string, ref string) (string, string) {
 		blob := x.Request("GET", x.r()+"/git/blobs/"+py.Str(data.Get("sha")), nil, "", false, false)
 		content = ""
 		if b, ok := blob.(*pyjson.Object); ok {
-			content = str0(b.Get("content"))
+			content = py.OrStr(b.Get("content"), "")
 		}
 	}
 	raw, err := b64decode(content)

@@ -136,7 +136,7 @@ func ThreadOf(payload *pyjson.Object) (*pyjson.Object, bool) {
 	if payload.Truthy("pull_request") {
 		return pyjson.Obj(payload.Get("pull_request")).Copy(), true
 	}
-	issue := orEmpty(payload.Get("issue"))
+	issue := pyjson.Obj(payload.Get("issue"))
 	return issue.Copy(), issue.Has("pull_request")
 }
 
@@ -325,9 +325,9 @@ var taskPrefixes = []string{"architecture:", "refactor:", "ci:", "night bot:", "
 // a failure is a Bug; tooling, CI, the bot and trackers are a Task; something new for players or
 // the team is a Feature; anything else a Task. "" when the organisation has none of those.
 func FallbackType(issue *pyjson.Object, types map[string]string) string {
-	title := str0(issue.Get("title"))
+	title := py.OrStr(issue.Get("title"), "")
 	names := map[string]bool{}
-	for _, label := range iterate(issue.Get("labels")) {
+	for _, label := range py.Each(issue.Get("labels")) {
 		names[strings.ToLower(py.Str(pyjson.Obj(label).Get("name")))] = true
 	}
 	lower := strings.ToLower(title)
@@ -364,7 +364,7 @@ func IssueTypes(gh gh.Client) map[string]string {
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
 		for _, t := range gh.ListIssueTypes() {
 			if t.Truthy("name") {
-				found[py.Str(t.Get("name"))] = str0(t.Get("description"))
+				found[py.Str(t.Get("name"))] = py.OrStr(t.Get("description"), "")
 			}
 		}
 	}); failed {
@@ -399,8 +399,8 @@ func Gate(payload *pyjson.Object, trust *trust.Trust, botLogin string, asked boo
 		return "open", "#" + number + ": a person called triage on it"
 	}
 	if payload.Get("action") == "labeled" {
-		name := str0(orEmpty(payload.Get("label")).Get("name"))
-		sender := str0(orEmpty(payload.Get("sender")).Get("login"))
+		name := py.OrStr(pyjson.Obj(payload.Get("label")).Get("name"), "")
+		sender := py.OrStr(pyjson.Obj(payload.Get("sender")).Get("login"), "")
 		if isPR || !HumanLabels[strings.ToLower(name)] {
 			return "", "label " + name + " asks nothing of triage"
 		}
@@ -416,12 +416,12 @@ func Gate(payload *pyjson.Object, trust *trust.Trust, botLogin string, asked boo
 	if payload.Get("action") != "opened" {
 		return "", py.Str(payload.Get("action")) + " asks nothing of triage"
 	}
-	user := orEmpty(thread.Get("user"))
-	login := str0(user.Get("login"))
+	user := pyjson.Obj(thread.Get("user"))
+	login := py.OrStr(user.Get("login"), "")
 	if isBot(login, botLogin) {
 		return "", "opened by " + login + ", which labels its own"
 	}
-	association := strings.ToUpper(str0(thread.Get("author_association")))
+	association := strings.ToUpper(py.OrStr(thread.Get("author_association"), ""))
 	if !inSet(trustedAssociations(), association) && trust.Level(login, userID(user.Get("id")), association) < 1 {
 		named := association
 		if named == "" {
@@ -465,7 +465,7 @@ func userID(v any) *int {
 
 func names(thread *pyjson.Object) []string {
 	out := []string{}
-	for _, label := range iterate(thread.Get("labels")) {
+	for _, label := range py.Each(thread.Get("labels")) {
 		out = append(out, py.Str(pyjson.Obj(label).Get("name")))
 	}
 	return out
@@ -474,8 +474,8 @@ func names(thread *pyjson.Object) []string {
 // HandToPeople is `human` on an issue: both people take it, and the bot lets go of it.
 func HandToPeople(plan *Plan, thread *pyjson.Object, botLogin string) {
 	assigned := map[string]bool{}
-	for _, a := range iterate(thread.Get("assignees")) {
-		assigned[strings.ToLower(str0(pyjson.Obj(a).Get("login")))] = true
+	for _, a := range py.Each(thread.Get("assignees")) {
+		assigned[strings.ToLower(py.OrStr(pyjson.Obj(a).Get("login"), ""))] = true
 	}
 	var add []string
 	for _, h := range Humans {
@@ -524,13 +524,13 @@ func Decide(step string, thread *pyjson.Object, isPR bool, botLogin string, type
 		return plan
 	}
 	if form && !isPR {
-		for _, name := range FormLabels(str0(thread.Get("body"))) {
+		for _, name := range FormLabels(py.OrStr(thread.Get("body"), "")) {
 			if !lowered[strings.ToLower(name)] {
 				plan.Labels = append(plan.Labels, name)
 			}
 		}
 	}
-	kind := TypeLabel(str0(thread.Get("title")))
+	kind := TypeLabel(py.OrStr(thread.Get("title"), ""))
 	typed := false
 	for _, label := range TypeLabels {
 		if lowered[label] {
@@ -544,7 +544,7 @@ func Decide(step string, thread *pyjson.Object, isPR bool, botLogin string, type
 		return plan
 	}
 	if !thread.Truthy("type") { // a person's type stays
-		labelled := append([]any{}, iterate(thread.Get("labels"))...)
+		labelled := append([]any{}, py.Each(thread.Get("labels"))...)
 		for _, n := range plan.Labels {
 			labelled = append(labelled, pyjson.New("name", n))
 		}
@@ -618,9 +618,9 @@ func catchValueError(fn func()) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
-				var mine *valueError
+				var mine *py.Error
 				var client *gh.ValueError
-				if errors.As(e, &mine) || errors.As(e, &client) {
+				if errors.As(e, &mine) && mine.Type == "ValueError" || errors.As(e, &client) {
 					err = e
 					return
 				}
@@ -632,11 +632,6 @@ func catchValueError(fn func()) (err error) {
 	return nil
 }
 
-// valueError is Python's ValueError.
-type valueError struct{ msg string }
-
-func (e *valueError) Error() string { return e.msg }
-
 // setType sets the issue's type. GitHub drops a type it will not take without an error, so read
 // the answer back.
 func setType(gh gh.Client, number int, name string) {
@@ -645,34 +640,12 @@ func setType(gh gh.Client, number int, name string) {
 	if o, ok := got.(*pyjson.Object); ok {
 		got = o.Get("name")
 	}
-	if strings.ToLower(str0(got)) != strings.ToLower(name) {
-		herr.Raise(&valueError{"GitHub did not keep it"})
+	if strings.ToLower(py.OrStr(got, "")) != strings.ToLower(name) {
+		herr.Raise(&py.Error{Type: "ValueError", Msg: "GitHub did not keep it"})
 	}
 }
 
 // ------------------------------------------------------------------ Python's str
-
-// str0 is `str(v or "")`.
-func str0(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// orEmpty is `v or {}` read as an object.
-func orEmpty(v any) *pyjson.Object { return pyjson.Obj(v) }
-
-// iterate is `for e in value or []` over a JSON value: a list's items, an object's keys.
-func iterate(value any) []any {
-	switch v := value.(type) {
-	case []any:
-		return v
-	case *pyjson.Object:
-		return pyjson.ListOf(v.Keys())
-	}
-	return nil
-}
 
 func contains(xs []string, s string) bool {
 	for _, x := range xs {

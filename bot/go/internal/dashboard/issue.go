@@ -237,17 +237,17 @@ func room(ctx *hctx.Context, view *View, body string, again func() string) strin
 // trusted is _trusted.
 func trusted(ctx *hctx.Context, issue *pyjson.Object) bool {
 	user := issue.Obj("user")
-	login := strOr(user.Get("login"))
+	login := py.OrStr(user.Get("login"), "")
 	if strings.ToLower(login) == strings.ToLower(ctx.Cfg.BotLogin) {
 		return true
 	}
 	var userID *int
 	if id := user.Get("id"); id != nil {
-		if n, ok := pyInt(id); ok {
+		if n, err := py.Int(id); err == nil {
 			userID = &n
 		}
 	}
-	return ctx.Trust.Level(login, userID, strOr(issue.Get("author_association"))) >= 1
+	return ctx.Trust.Level(login, userID, py.OrStr(issue.Get("author_association"), "")) >= 1
 }
 
 // Find is find: the open status issue: the one the state file names, or one to adopt.
@@ -255,7 +255,7 @@ func Find(ctx *hctx.Context, state *pyjson.Object) *pyjson.Object {
 	if number := state.Obj("dashboard").Get("issue"); pyjson.Truthy(number) {
 		var named *pyjson.Object
 		herr.Catch[*herr.GitHubError](func() {
-			issue := ctx.GH.GetIssue(mustInt(number))
+			issue := ctx.GH.GetIssue(py.MustInt(number))
 			if pyjson.Equal(issue.Get("state"), "open") && !issue.Has("pull_request") {
 				named = issue
 			}
@@ -266,7 +266,7 @@ func Find(ctx *hctx.Context, state *pyjson.Object) *pyjson.Object {
 	}
 	for _, issue := range ctx.GH.ListIssues("", "open", 300, "") {
 		if !issue.Has("pull_request") && pyjson.Equal(issue.Get("title"), Title) &&
-			strings.Contains(strOr(issue.Get("body")), Marker) && trusted(ctx, issue) {
+			strings.Contains(py.OrStr(issue.Get("body"), ""), Marker) && trusted(ctx, issue) {
 			return issue
 		}
 	}
@@ -298,12 +298,12 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 	state := view.State
 	issue := Find(ctx, state)
 	if issue != nil {
-		Explain(ctx, mustInt(issue.Get("number")), state)
+		Explain(ctx, py.MustInt(issue.Get("number")), state)
 	}
 	view.Runners = RunnersSection(ctx, state, view.Found, defaultRoom)
 	bodyNow := ""
 	if issue != nil {
-		bodyNow = strOr(issue.Get("body"))
+		bodyNow = py.OrStr(issue.Get("body"), "")
 	}
 	kept := stats.Kept(bodyNow) // "" is None: a kept block is never empty
 	note := ""
@@ -338,10 +338,10 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 	var done string
 	if issue == nil {
 		issue = ctx.GH.CreateIssue(Title, body, Labels)
-		number = mustInt(issue.Get("number"))
+		number = py.MustInt(issue.Get("number"))
 		done = fmt.Sprintf("opened #%d", number)
 		if exc, failed := herr.Catch[*herr.GitHubError](func() {
-			ctx.GH.PinIssue(strOr(issue.Get("node_id")))
+			ctx.GH.PinIssue(py.OrStr(issue.Get("node_id"), ""))
 		}); failed {
 			done += fmt.Sprintf("; could not pin it (%d): pin it by hand", exc.Status)
 		} else {
@@ -349,7 +349,7 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 		}
 		Explain(ctx, number, state) // the next rewrite links it
 	} else {
-		number = mustInt(issue.Get("number"))
+		number = py.MustInt(issue.Get("number"))
 		ctx.GH.UpdateIssue(number, pyjson.New("body", body))
 		done = fmt.Sprintf("rewrote #%d", number)
 	}

@@ -278,10 +278,10 @@ func Dump(obj any) {
 // the test strips a `#` that int() then refuses, so `--item '#5'` raises its ValueError, as in the
 // Python.
 func itemArg(item string) *int {
-	if !isDigit(strings.TrimLeft(strings.TrimSpace(item), "#")) {
+	if !py.IsDecimal(strings.TrimLeft(strings.TrimSpace(item), "#")) {
 		return nil
 	}
-	n := pyInt(item)
+	n := py.MustInt(item)
 	return &n
 }
 
@@ -324,12 +324,12 @@ func CmdPlan(cfg *config.Config, args *Args) int {
 	writeText(args.Out, pyjson.DumpsIndent(planned, 2)+"\n")
 	// The provider, its CLI and the name of its secret steer the model job: which CLI to install
 	// and which one secret to hand it. They come from providers.json, never from the model.
-	Output(pyjson.New("action", key(planned, "action"), "number", or(planned.Get("number"), ""),
-		"provider", or(planned.Get("provider"), ""), "cli", or(planned.Get("cli"), ""),
-		"secret", or(planned.Get("secret"), ""),
+	Output(pyjson.New("action", py.Item(planned, "action"), "number", py.Or(planned.Get("number"), ""),
+		"provider", py.Or(planned.Get("provider"), ""), "cli", py.Or(planned.Get("cli"), ""),
+		"secret", py.Or(planned.Get("secret"), ""),
 		"shared", lower(planned.Truthy("shared")),
-		"runs_on", or(planned.Get("runs_on"), "ubuntu-latest")))
-	action := py.Str(key(planned, "action"))
+		"runs_on", py.Or(planned.Get("runs_on"), "ubuntu-latest")))
+	action := py.Str(py.Item(planned, "action"))
 	what := action
 	if action != "none" && planned.Truthy("number") {
 		what = fmt.Sprintf("%s #%s", action, py.Str(planned.Get("number")))
@@ -348,7 +348,7 @@ func CmdPlan(cfg *config.Config, args *Args) int {
 	}
 	var notes []string
 	for _, k := range []string{"routing", "skipped"} {
-		for _, line := range pyjson.List(or(planned.Get(k), []any{})) {
+		for _, line := range pyjson.List(py.Or(planned.Get(k), []any{})) {
 			notes = append(notes, py.Str(line))
 		}
 	}
@@ -528,7 +528,7 @@ func MakeProbe(ctx *hctx.Context, number *int, provider *providers.Provider /* =
 		if held != nil {
 			by := ""
 			if held.Truthy("by") {
-				by = " by @" + py.Str(key(held, "by"))
+				by = " by @" + py.Str(py.Item(held, "by"))
 			}
 			return &[2]string{fmt.Sprintf("`%s` was suspended%s", provider.ID, by), "suspend"}
 		}
@@ -583,7 +583,7 @@ func CmdWork(cfg *config.Config, args *Args) int {
 		}
 		if secret != "" || provider.CLI != "claude" || provider.Login == "machine" {
 			exc, failed := herr.Catch[*herr.LoginError](func() {
-				login = logins.Prepare(provider, secret, orStr(planned.Get("vault")),
+				login = logins.Prepare(provider, secret, py.OrStr(planned.Get("vault"), ""),
 					filepath.Join(args.WorkDir, ".logins", provider.ID))
 			})
 			if failed {
@@ -617,7 +617,7 @@ func CmdWork(cfg *config.Config, args *Args) int {
 	run := runner.GetRunner(cfg, provider, login)
 	var item *int
 	if pyjson.Truthy(number) {
-		n := intOf(number)
+		n := py.MustInt(number)
 		item = &n
 	}
 	var worker *work.Worker
@@ -644,9 +644,6 @@ func CmdWork(cfg *config.Config, args *Args) int {
 	say(fmt.Sprintf("work: %s: %s", py.Str(result.Get("status")), py.Str(result.GetOr("reason", ""))))
 	return 0
 }
-
-// orStr is `str(v or "")`.
-func orStr(v any) string { return py.Str(or(v, "")) }
 
 // CmdPlanFetch is cmd_plan_fetch: a night run the status loop started with its plan (#1455): read
 // the plan from the state branch into `--out`. With `--check` (the model job), the runner, CLI,
@@ -699,13 +696,13 @@ func CmdDeliver(cfg *config.Config, args *Args) int {
 	}
 	ctx := Ctx(cfg, true)
 	var number *int
-	if isDigit(args.Number) {
-		n := pyInt(args.Number)
+	if py.IsDecimal(args.Number) {
+		n := py.MustInt(args.Number)
 		number = &n
 	}
 	outcome := deliver.NewDeliverer(ctx, planned, args.Out, cfg.Root, args.Action, number, args.Provider).Run()
 	var log []string
-	for _, line := range pyjson.List(key(outcome, "log")) {
+	for _, line := range pyjson.List(py.Item(outcome, "log")) {
 		log = append(log, py.Str(line))
 	}
 	items := make([]string, len(log))
@@ -771,7 +768,7 @@ func runCreated(cfg *config.Config) time.Time {
 		return time.Time{}
 	}
 	var at time.Time
-	if err := herr.Try(func() { at = parseISO(Ctx(cfg, true).GH.GetRun(cfg.RunID).Get("created_at")) }); err != nil {
+	if err := herr.Try(func() { at = clock.ParseISOValue(Ctx(cfg, true).GH.GetRun(cfg.RunID).Get("created_at")) }); err != nil {
 		return time.Time{} // not knowing only means trusting the newest record
 	}
 	return at
@@ -1030,7 +1027,7 @@ func CmdDispatch(cfg *config.Config, args *Args) int {
 	var item *int
 	shown := "None"
 	if args.Item != "" {
-		n := pyInt(args.Item)
+		n := py.MustInt(args.Item)
 		item, shown = &n, strconv.Itoa(n)
 	}
 	ctx.Dispatch(item, args.Force, args.Mode)
@@ -1282,14 +1279,14 @@ func CmdSetup(cfg *config.Config, args *Args) int {
 // convenience, never a reason for a red run.
 func CmdTriage(cfg *config.Config, args *Args) int {
 	payload := object(readJSON(args.Payload))
-	asked := strings.TrimLeft(strings.TrimSpace(orStr(payload.Obj("inputs").Get("number"))), "#")
+	asked := strings.TrimLeft(strings.TrimSpace(py.OrStr(payload.Obj("inputs").Get("number"), "")), "#")
 	var number int
 	var done []string
 	var decided *triage.Plan
 	if exc, failed := catchIf(func() {
 		ctx := Ctx(cfg, true)
 		if asked != "" { // `workflow_dispatch`: a person called triage on this thread
-			payload = pyjson.New("issue", ctx.GH.GetIssue(pyInt(asked)))
+			payload = pyjson.New("issue", ctx.GH.GetIssue(py.MustInt(asked)))
 		}
 		step, why := triage.Gate(payload, trust.TrustLoad(filepath.Join(cfg.Root, asPath(any(config.TrustPath)))),
 			cfg.BotLogin, asked != "")
@@ -1302,7 +1299,7 @@ func CmdTriage(cfg *config.Config, args *Args) int {
 			return
 		}
 		thread, _ := triage.ThreadOf(payload)
-		number = intOf(key(thread, "number"))
+		number = py.MustInt(py.Item(thread, "number"))
 		issue := ctx.GH.GetIssue(number) // afresh: what a person set meanwhile counts
 		isPR := issue.Has("pull_request")
 		var types map[string]string
@@ -1334,7 +1331,7 @@ func CmdTriage(cfg *config.Config, args *Args) int {
 // CmdForget is cmd_forget: clear an item's failure count and findings, so it can be queued fresh.
 func CmdForget(cfg *config.Config, args *Args) int {
 	ctx := Ctx(cfg, true)
-	number := pyInt(args.Number)
+	number := py.MustInt(args.Number)
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		rec := state.Item(s, number)
 		rec.Set("failures", 0)
@@ -1526,7 +1523,7 @@ func prTitle(argv []string) int {
 		"for a part. No title names a version before it ships.")
 	path := GithubEnv()["GITHUB_STEP_SUMMARY"]
 	if path == "" {
-		panic(&pyError{"KeyError", py.Repr("GITHUB_STEP_SUMMARY")})
+		panic(py.KeyError("GITHUB_STEP_SUMMARY"))
 	}
 	appendText(path, "### The title breaks the convention\n\n`"+title+"`\n\n"+
 		"Titles follow [docs/issues-and-patches.md]("+server+"/"+

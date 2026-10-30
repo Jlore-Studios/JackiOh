@@ -82,12 +82,7 @@ var Sleep = func(seconds float64) { time.Sleep(time.Duration(seconds * float64(t
 
 // ValueError is the ValueError `fetch` raises, which its callers catch: Type is type(exc).__name__
 // (`ValueError`, or `JSONDecodeError` for a plan that is not JSON) and Msg is str(exc).
-type ValueError struct {
-	Type string
-	Msg  string
-}
-
-func (e *ValueError) Error() string { return e.Msg }
+type ValueError = py.Error
 
 func valueError(format string, args ...any) *ValueError {
 	return &ValueError{Type: "ValueError", Msg: fmt.Sprintf(format, args...)}
@@ -160,7 +155,7 @@ func startOne(ctx *hctx.Context, sleep func(float64)) (string, bool) {
 		return strings.TrimRight("nothing more to start: "+py.Str(planned.GetOr("reason", "")), ": "), false
 	}
 	what := What(planned)
-	runsOn := py.Str(orDefault(planned.Get("runs_on"), "ubuntu-latest"))
+	runsOn := py.Str(py.Or(planned.Get("runs_on"), "ubuntu-latest"))
 	shared, dryRun := "false", "false"
 	if planned.Truthy("shared") {
 		shared = "true"
@@ -168,8 +163,8 @@ func startOne(ctx *hctx.Context, sleep func(float64)) (string, bool) {
 	if ctx.Cfg.DryRun {
 		dryRun = "true"
 	}
-	inputs := map[string]string{"plan_ref": ref, "runs_on": runsOn, "cli": orStr(planned.Get("cli")),
-		"secret": orStr(planned.Get("secret")), "shared": shared, "dry_run": dryRun}
+	inputs := map[string]string{"plan_ref": ref, "runs_on": runsOn, "cli": py.OrStr(planned.Get("cli"), ""),
+		"secret": py.OrStr(planned.Get("secret"), ""), "shared": shared, "dry_run": dryRun}
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		ctx.GH.PutFile(fmt.Sprintf("%s/%s.json", Plans, ref), pyjson.DumpsIndent(planned, 2)+"\n",
 			py.Str(config.StateBranch), "", fmt.Sprintf("plan %s [skip ci]", ref))
@@ -203,8 +198,8 @@ func Find(ctx *hctx.Context, ref string, sleep func(float64)) string {
 		found, listed := "", false
 		herr.Catch[*herr.GitHubError](func() {
 			for _, run := range ctx.GH.ListRuns(py.Str(config.NightWorkflow), "", 20, false) {
-				if strings.HasPrefix(orStr(run.Get("display_title")), TitlePrefix(ref)) {
-					found, listed = orStr(run.Get("id")), true
+				if strings.HasPrefix(py.OrStr(run.Get("display_title"), ""), TitlePrefix(ref)) {
+					found, listed = py.OrStr(run.Get("id"), ""), true
 					return
 				}
 			}
@@ -244,12 +239,12 @@ func Resolve(ctx *hctx.Context) []string {
 	items := state.Obj("items")
 	for _, number := range items.Keys() {
 		entry, ok := items.Get(number).(*pyjson.Object)
-		if ok && strings.HasPrefix(orStr(entry.Get("run_id")), plan.Pending) {
+		if ok && strings.HasPrefix(py.OrStr(entry.Get("run_id"), ""), plan.Pending) {
 			waiting.Set(py.SliceFrom(py.Str(entry.Get("run_id")), py.Len(plan.Pending)), number)
 		}
 	}
 	survey := state.Obj("suggest")
-	if strings.HasPrefix(orStr(survey.Get("run_id")), plan.Pending) {
+	if strings.HasPrefix(py.OrStr(survey.Get("run_id"), ""), plan.Pending) {
 		waiting.Set(py.SliceFrom(py.Str(survey.Get("run_id")), py.Len(plan.Pending)), "suggest")
 	}
 	if waiting.Len() == 0 {
@@ -263,7 +258,7 @@ func Resolve(ctx *hctx.Context) []string {
 	}
 	found := pyjson.New() // ref -> run id
 	for _, run := range runs {
-		title := orStr(run.Get("display_title"))
+		title := py.OrStr(run.Get("display_title"), "")
 		for _, ref := range waiting.Keys() {
 			if strings.HasPrefix(title, TitlePrefix(ref)) && run.Truthy("id") {
 				found.Set(ref, py.Str(run.Get("id")))
@@ -323,7 +318,7 @@ func Prune(ctx *hctx.Context) []string {
 		if !Ref.MatchString(ref) {
 			continue
 		}
-		made := time.Unix(int64(pyInt(ref[strings.LastIndex(ref, "-")+1:])), 0).UTC()
+		made := time.Unix(int64(py.MustInt(ref[strings.LastIndex(ref, "-")+1:])), 0).UTC()
 		if !made.Before(cutoff) {
 			continue
 		}
@@ -366,7 +361,7 @@ func Fetch(ctx *hctx.Context, ref string) (*pyjson.Object, error) {
 // a dispatch cannot hand a model job a secret, a CLI or a runner its subscription does not have.
 func Check(ctx *hctx.Context, planned *pyjson.Object, given map[string]string) []string {
 	problems := []string{}
-	providerID := orStr(planned.Get("provider"))
+	providerID := py.OrStr(planned.Get("provider"), "")
 	provider := ctx.Cfg.Pool.Get(providerID)
 	if provider == nil {
 		return []string{fmt.Sprintf("the plan names no subscription providers.json has (%s)", py.Repr(providerID))}
@@ -381,7 +376,7 @@ func Check(ctx *hctx.Context, planned *pyjson.Object, given map[string]string) [
 	if provider.FillIn != nil {
 		runners = append(runners, provider.FillIn.RunsOn)
 	}
-	runsOn := py.Str(orDefault(planned.Get("runs_on"), "ubuntu-latest"))
+	runsOn := py.Str(py.Or(planned.Get("runs_on"), "ubuntu-latest"))
 	expectedRunsOn := runners[0]
 	for _, runner := range runners {
 		if runner == runsOn {
@@ -396,7 +391,7 @@ func Check(ctx *hctx.Context, planned *pyjson.Object, given map[string]string) [
 		plannedShared = "true"
 	}
 	plannedValues := map[string]string{"runs_on": runsOn,
-		"cli": orStr(planned.Get("cli")), "secret": orStr(planned.Get("secret")), "shared": plannedShared}
+		"cli": py.OrStr(planned.Get("cli"), ""), "secret": py.OrStr(planned.Get("secret"), ""), "shared": plannedShared}
 	for _, key := range keys {
 		want := expected[key]
 		if plannedValues[key] != want {
@@ -410,17 +405,6 @@ func Check(ctx *hctx.Context, planned *pyjson.Object, given map[string]string) [
 	}
 	return problems
 }
-
-// orDefault is `v or d`.
-func orDefault(v, d any) any {
-	if pyjson.Truthy(v) {
-		return v
-	}
-	return d
-}
-
-// orStr is str(v or "").
-func orStr(v any) string { return py.Str(orDefault(v, "")) }
 
 // sortedBy is sorted(keys, key=key): a stable sort by a string key.
 func sortedBy(keys []string, key func(string) string) []string {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 )
 
 // testdata/python.json is what work.py's own helpers and string.Template give for the same
@@ -100,7 +101,7 @@ func TestFormatAndErrors(t *testing.T) {
 		excName(err)+": "+excStr(err) != want {
 		t.Errorf("OSError: %q", excName(err)+": "+excStr(err))
 	}
-	if err := herr.Try(func() { pyInt("x") }); err == nil ||
+	if err := herr.Try(func() { py.MustInt("x") }); err == nil ||
 		excStr(err) != "invalid literal for int() with base 10: 'x'" {
 		t.Errorf("pyInt: %v", err)
 	}

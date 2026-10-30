@@ -521,7 +521,7 @@ func (p *ArgumentParser) getValue(a *argAction, s string) any {
 	if !a.isInt {
 		return s
 	}
-	n, err := parseInt(s)
+	n, err := py.Int(s)
 	if err != nil {
 		p.fail(argumentError(a, "invalid int value: "+py.Repr(s)))
 	}

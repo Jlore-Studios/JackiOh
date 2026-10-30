@@ -33,8 +33,8 @@ func (x *Deliverer) lateStop(number int, status string) string {
 	}
 	state := x.Ctx.Store.Load()
 	record := state.Obj("items").Obj(strconv.Itoa(number))
-	started := clock.ParseISO(orStr(record.Get("started_at"), ""))
-	stopped := clock.ParseISO(orStr(record.Get("stopped_at"), ""))
+	started := clock.ParseISO(py.OrStr(record.Get("started_at"), ""))
+	stopped := clock.ParseISO(py.OrStr(record.Get("stopped_at"), ""))
 	if record.Truthy("stop_requested") && (started.IsZero() || stopped.IsZero() || !stopped.Before(started)) {
 		x.Result.Set("status", "stopped")
 		x.Result.Set("reason", "stopped by @"+py.Str(record.Get("stopped_by")))
@@ -62,7 +62,7 @@ func (x *Deliverer) hasResultPlan() bool {
 
 // Item is Deliverer._item.
 func (x *Deliverer) Item() {
-	number := mustInt(x.Plan.Get("number"))
+	number := py.MustInt(x.Plan.Get("number"))
 	x.RatingNote = ""
 	action := x.Plan.Get("action")
 	if (action == "plan" || action == "build") && x.hasResultPlan() {
@@ -121,7 +121,7 @@ func (x *Deliverer) deliverItem(number int) {
 		x.Interrupted(number, kind)
 		return
 	}
-	mode := orStr(x.Plan.Get("mode"), "")
+	mode := py.OrStr(x.Plan.Get("mode"), "")
 	if status == "split" && (strings.HasPrefix(mode, "split") || mode == "fullsend") {
 		x.SplitOut(number)
 		x.settle(number)
@@ -173,7 +173,7 @@ func (x *Deliverer) planned(number int, status string) {
 		if rated != "" {
 			kept = " " + rated + kept
 		}
-		x.NeedsPerson(number, orStr(x.Result.Get("question"), ""), "build this", kept, "")
+		x.NeedsPerson(number, py.OrStr(x.Result.Get("question"), ""), "build this", kept, "")
 		return
 	}
 	if status != "planned" {
@@ -181,9 +181,9 @@ func (x *Deliverer) planned(number int, status string) {
 			x.requeueLabel(number, "build")
 			handoff := x.Result.Obj("handoff")
 			kept := ""
-			if strings.TrimSpace(orStr(handoff.Get("draft"), "")) != "" {
+			if strings.TrimSpace(py.OrStr(handoff.Get("draft"), "")) != "" {
 				kept = " Its draft so far is kept, and the next planning run goes on from it."
-			} else if handoff.Truthy("planning") && strings.TrimSpace(orStr(handoff.Get("trail"), "")) != "" {
+			} else if handoff.Truthy("planning") && strings.TrimSpace(py.OrStr(handoff.Get("trail"), "")) != "" {
 				kept = " The end of its session is kept for the next planning run."
 			}
 			x.GH.CreateComment(number, fmt.Sprintf("Planning was cut short (%s): %s.%s It stays queued.",
@@ -217,7 +217,7 @@ func (x *Deliverer) planned(number int, status string) {
 		return
 	}
 	plan := x.resultPlan()
-	text := py.SliceTo(redact.Redact(orStr(plan.Get("text"), ""), nil), issueplan.PlanChars)
+	text := py.SliceTo(redact.Redact(py.OrStr(plan.Get("text"), ""), nil), issueplan.PlanChars)
 	x.GH.CreateComment(number, fmt.Sprintf("Planned on %s (%s), but the description could not take "+
 		"the plan, so it is here. It is queued to build from this plan, on the cheapest model its "+
 		"difficulty allows.\n\n<details><summary>The plan</summary>\n\n%s\n\n</details>", who, x.link(), text))
@@ -255,19 +255,19 @@ func (x *Deliverer) ApplyRating(number int) string {
 			"item is routed anyway.", who)
 	}
 	wanted := py.Str(rated.Get("difficulty"))
-	earlier := orStr(record.Obj("difficulty_by").Get("difficulty"), "")
+	earlier := py.OrStr(record.Obj("difficulty_by").Get("difficulty"), "")
 	if hasString(config.Difficulties, earlier) && indexOf(config.Difficulties, wanted) < indexOf(config.Difficulties, earlier) {
 		wanted = earlier // a rating stands: nobody lowers it
 	}
 	breach := ""
 	if wanted == "easy" {
-		breach = easy.PlanBreach(orStr(plan.Get("text"), ""), x.Cfg.Easy, x.Cfg.ReviewPaths, x.Cfg.ForbiddenPaths)
+		breach = easy.PlanBreach(py.OrStr(plan.Get("text"), ""), x.Cfg.Easy, x.Cfg.ReviewPaths, x.Cfg.ForbiddenPaths)
 		if breach != "" {
 			wanted = "medium"
-		} else if easy.UncertainWhy(orStr(rated.Get("why"), "")) {
+		} else if easy.UncertainWhy(py.OrStr(rated.Get("why"), "")) {
 			// Torn between two means the higher (#695): the planner admitted doubt.
 			breach = fmt.Sprintf("the rating itself was unsure (%s), so borderline easy is medium",
-				py.SliceTo(strings.TrimSpace(orStr(rated.Get("why"), "")), 140))
+				py.SliceTo(strings.TrimSpace(py.OrStr(rated.Get("why"), "")), 140))
 			wanted = "medium"
 		}
 	}
@@ -275,7 +275,7 @@ func (x *Deliverer) ApplyRating(number int) string {
 	x.setDifficulty(number, wanted, labels)
 	x.remember(number, pyjson.New("difficulty_by", pyjson.New(
 		"difficulty", wanted, "provider", x.Provider.ID, "tier", tier, "at", clock.ISO(x.Ctx.Now()),
-		"why", py.SliceTo(orStr(rated.Get("why"), ""), 300))))
+		"why", py.SliceTo(py.OrStr(rated.Get("why"), ""), 300))))
 	why := ""
 	if rated.Truthy("why") {
 		why = ": " + py.Str(rated.Get("why"))
@@ -319,9 +319,9 @@ func (x *Deliverer) setDifficulty(number int, difficulty string, labels map[stri
 func (x *Deliverer) planner() (string, string) {
 	plan := x.resultPlan()
 	seat := plan.Obj("seat")
-	planner := x.Cfg.Pool.Seat(x.Provider.ID, orStr(seat.Get("model"), ""))
+	planner := x.Cfg.Pool.Seat(x.Provider.ID, py.OrStr(seat.Get("model"), ""))
 	if planner == nil {
-		return x.Provider.Describe(), orStr(seat.Get("tier"), "")
+		return x.Provider.Describe(), py.OrStr(seat.Get("tier"), "")
 	}
 	return planner.Describe(), planner.Tier
 }
@@ -330,13 +330,13 @@ func (x *Deliverer) planner() (string, string) {
 // take the item out of the Needs plan stage. False when the description could not take it.
 func (x *Deliverer) planIntoIssue(number int, who string) bool {
 	plan := x.resultPlan()
-	text := strings.TrimSpace(redact.Redact(orStr(plan.Get("text"), ""), nil))
+	text := strings.TrimSpace(redact.Redact(py.OrStr(plan.Get("text"), ""), nil))
 	if text == "" {
 		return false
 	}
 	if _, ok := herr.Catch[*herr.GitHubError](func() {
 		thread := x.GH.GetIssue(number)
-		x.GH.SetIssueBody(number, issueplan.WithPlan(orStr(thread.Get("body"), ""), text, who, x.link()))
+		x.GH.SetIssueBody(number, issueplan.WithPlan(py.OrStr(thread.Get("body"), ""), text, who, x.link()))
 	}); ok {
 		return false
 	}
@@ -425,8 +425,8 @@ func (x *Deliverer) keepHandoff(number int) {
 	}
 	var kept *pyjson.Object
 	if !finished && isDict {
-		notes := redact.Redact(orStr(handoff.Get("notes"), ""), nil)
-		draft := strings.TrimSpace(redact.Redact(orStr(handoff.Get("draft"), ""), nil))
+		notes := redact.Redact(py.OrStr(handoff.Get("notes"), ""), nil)
+		draft := strings.TrimSpace(redact.Redact(py.OrStr(handoff.Get("draft"), ""), nil))
 		kind := "work"
 		if status == "planned" {
 			kind = "plan"
@@ -441,10 +441,10 @@ func (x *Deliverer) keepHandoff(number int) {
 		}
 		kept = pyjson.New("provider", x.Provider.ID, "family", x.Provider.Family,
 			"kind", kind,
-			"at", orStr(handoff.Get("at"), ""),
-			"reason", py.SliceTo(redact.Redact(orStr(x.Result.Get("reason"), ""), nil), 500),
+			"at", py.OrStr(handoff.Get("at"), ""),
+			"reason", py.SliceTo(redact.Redact(py.OrStr(x.Result.Get("reason"), ""), nil), 500),
 			"notes", keptNotes,
-			"trail", py.SliceFrom(redact.Redact(orStr(handoff.Get("trail"), ""), nil), -HandoffTrail))
+			"trail", py.SliceFrom(redact.Redact(py.OrStr(handoff.Get("trail"), ""), nil), -HandoffTrail))
 		if kind == "draft" && draft != "" {
 			kept.Set("draft", cut(draft, issueplan.PlanChars, true))
 		}
@@ -479,7 +479,7 @@ func (x *Deliverer) journal(number int) {
 	if models == "" {
 		models = x.Provider.CLI
 	}
-	text := journalmod.Section(x.Result, x.Provider.ID, models, orStr(x.Plan.Get("action"), "?"),
+	text := journalmod.Section(x.Result, x.Provider.ID, models, py.OrStr(x.Plan.Get("action"), "?"),
 		number, clock.ISO(x.Ctx.Now()), x.Cfg.RunURL())
 	if x.Cfg.DryRun {
 		x.log(fmt.Sprintf("dry run: would add this run to the journal of #%d", key))
@@ -530,7 +530,7 @@ func (x *Deliverer) link() string {
 // Claude account switches between Opus and Sonnet: `work.Worker._switch`).
 func (x *Deliverer) builtOn() string {
 	var moves []string
-	for _, m := range iterate(orList(x.Result.Get("switches"))) {
+	for _, m := range py.Each(x.Result.Get("switches")) {
 		move, ok := m.(*pyjson.Object)
 		if !ok {
 			continue
@@ -564,7 +564,7 @@ func (x *Deliverer) requeueLabel(number int, kind string) {
 // of the queue, and two in a row block it.
 func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) {
 	x.Chain = false
-	reason := orStr(x.Result.Get("reason"), NoResult)
+	reason := py.OrStr(x.Result.Get("reason"), NoResult)
 	now := clock.ISO(x.Ctx.Now())
 	label := requeue
 	if label == "" {
@@ -596,11 +596,11 @@ func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) 
 	}
 	state := x.Ctx.Store.Update(func(s *pyjson.Object) any {
 		entry := statemod.Item(s, number)
-		entry.Set("died", mustInt(statemod.Item(s, number).GetOr("died", 0))+1)
+		entry.Set("died", py.MustInt(statemod.Item(s, number).GetOr("died", 0))+1)
 		entry.Set("queued_at", now)
 		return nil
 	}, fmt.Sprintf("died #%d", number))
-	died := mustInt(statemod.Item(state, number).GetOr("died", 0))
+	died := py.MustInt(statemod.Item(state, number).GetOr("died", 0))
 	if died >= DiedLimit {
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
 		x.remember(number, pyjson.New("forced", false))
@@ -630,7 +630,7 @@ func (x *Deliverer) keepWork(number int, kind string) (bool, string) {
 // request's branch not moved meanwhile, and no forbidden path. `(pushed, problem)`.
 func (x *Deliverer) publishWip(number int) (bool, string) {
 	name := x.Result.Get("bundle")
-	branch := orStr(x.Plan.Get("branch"), "")
+	branch := py.OrStr(x.Plan.Get("branch"), "")
 	if !pyjson.Truthy(name) || branch == "" {
 		return false, ""
 	}
@@ -648,7 +648,7 @@ func (x *Deliverer) publishWip(number int) (bool, string) {
 	if exc, ok := herr.Catch[*herr.GitError](func() { head = x.Repo.FetchBundle(bundle, branch, local) }); ok {
 		return false, "the bundle could not be read: " + exc.Error()
 	}
-	start := orStr(x.Result.Get("start"), "")
+	start := py.OrStr(x.Result.Get("start"), "")
 	if head != x.Result.Get("head") || start == "" || x.isAncestor(start, head) != 0 {
 		return false, "the bundle does not hold the work the result names"
 	}
@@ -703,11 +703,11 @@ func (x *Deliverer) dropWip(number int) {
 // this run started when it did not build on that. A revision that resumes from its wip
 // pushes it again every time, so "pushed" alone is no progress.
 func (x *Deliverer) progressed(number int, kind string, before string) bool {
-	head := orStr(x.Result.Get("head"), "")
+	head := py.OrStr(x.Result.Get("head"), "")
 	if head == "" {
 		return false
 	}
-	for _, base := range []string{before, orStr(x.Result.Get("start"), "")} {
+	for _, base := range []string{before, py.OrStr(x.Result.Get("start"), "")} {
 		if base == "" || x.isAncestor(base, head) != 0 {
 			continue
 		}
@@ -730,7 +730,7 @@ func (x *Deliverer) progressed(number int, kind string, before string) bool {
 
 // Interrupted is Deliverer._interrupted.
 func (x *Deliverer) Interrupted(number int, kind string) {
-	interrupt := orStr(x.Result.Get("interrupt"), "budget")
+	interrupt := py.OrStr(x.Result.Get("interrupt"), "budget")
 	reason := x.Result.Get("reason")
 	var kept any
 	if kind == "revise" {
@@ -738,11 +738,11 @@ func (x *Deliverer) Interrupted(number int, kind string) {
 	}
 	before := ""
 	if k, ok := kept.(*pyjson.Object); ok {
-		before = orStr(k.Get("sha"), "")
+		before = py.OrStr(k.Get("sha"), "")
 	}
 	pushed, problem := x.keepWork(number, kind)
 	moved := pushed && x.progressed(number, kind, before)
-	calls := tryIntOr0(x.Result.Get("model_calls"))
+	calls, _ := py.Int(py.Or(x.Result.Get("model_calls"), 0))
 	// A cut-off run that made progress (its work moved on) is a step of a long job, not a
 	// failure; one that made none counts, whatever cut it off, except a halt, the machine's
 	// disk, or a run stopped before any model call (#317 part 3). Before this only the time
@@ -753,12 +753,12 @@ func (x *Deliverer) Interrupted(number int, kind string) {
 			if moved {
 				entry.Set("interruptions", 0)
 			} else {
-				entry.Set("interruptions", mustInt(entry.GetOr("interruptions", 0))+1)
+				entry.Set("interruptions", py.MustInt(entry.GetOr("interruptions", 0))+1)
 			}
 			return nil
 		}
 		state := x.Ctx.Store.Update(count, fmt.Sprintf("interrupted #%d", number))
-		countNow := mustInt(statemod.Item(state, number).GetOr("interruptions", 0))
+		countNow := py.MustInt(statemod.Item(state, number).GetOr("interruptions", 0))
 		if countNow >= x.Cfg.MaxFailures {
 			queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
 			x.remember(number, pyjson.New("forced", false))
@@ -771,7 +771,7 @@ func (x *Deliverer) Interrupted(number int, kind string) {
 	}
 	x.requeueLabel(number, kind)
 	rounds, roundTier := x.rounds()
-	x.remember(number, pyjson.New("last_findings", orList(x.Result.Get("findings")),
+	x.remember(number, pyjson.New("last_findings", py.Or(x.Result.Get("findings"), []any{}),
 		"verdict_rounds", rounds, "round_tier", roundTier))
 	where := "on the branch"
 	if kind == "revise" {
@@ -795,7 +795,7 @@ func (x *Deliverer) builderWorked() bool {
 	if !pyjson.Truthy(cycles) {
 		return true // a result from before rounds were recorded, or a test's
 	}
-	for _, e := range iterate(cycles) {
+	for _, e := range py.Each(cycles) {
 		c, ok := e.(*pyjson.Object)
 		if !ok {
 			continue
@@ -872,11 +872,11 @@ func (x *Deliverer) easyBreach(number int, kind string) bool {
 // fullsend part (#505), against its tree's branch: the parts before it are not its change.
 func (x *Deliverer) bundleCounts() *pyjson.Object {
 	name := x.Result.Get("bundle")
-	branch := orStr(x.Plan.Get("branch"), "")
+	branch := py.OrStr(x.Plan.Get("branch"), "")
 	if !pyjson.Truthy(name) || branch == "" || !isFile(outPath(x.OutDir, py.Str(name))) {
 		return pyjson.New()
 	}
-	base := orStr(x.Plan.Get("onto"), x.Cfg.DefaultBranch)
+	base := py.OrStr(x.Plan.Get("onto"), x.Cfg.DefaultBranch)
 	var counts *pyjson.Object
 	if _, ok := herr.Catch[*herr.GitError](func() {
 		x.fetch(base, true)
@@ -905,15 +905,15 @@ func (x *Deliverer) strike(number int, why string) bool {
 // Fail is Deliverer._fail: a run that produced nothing usable: requeue it, or block it after
 // too many.
 func (x *Deliverer) Fail(number int, kind string) {
-	if x.strike(number, "the run failed: "+orStr(x.Result.Get("reason"), "unknown")) {
+	if x.strike(number, "the run failed: "+py.OrStr(x.Result.Get("reason"), "unknown")) {
 		return
 	}
 	state := x.Ctx.Store.Update(func(s *pyjson.Object) any {
-		statemod.Item(s, number).Set("failures", mustInt(statemod.Item(s, number).GetOr("failures", 0))+1)
+		statemod.Item(s, number).Set("failures", py.MustInt(statemod.Item(s, number).GetOr("failures", 0))+1)
 		return nil
 	}, fmt.Sprintf("failure #%d", number))
-	fails := mustInt(statemod.Item(state, number).GetOr("failures", 0))
-	reason := orStr(x.Result.Get("reason"), "unknown")
+	fails := py.MustInt(statemod.Item(state, number).GetOr("failures", 0))
+	reason := py.OrStr(x.Result.Get("reason"), "unknown")
 	if fails >= x.Cfg.MaxFailures {
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
 		x.remember(number, pyjson.New("forced", false))
@@ -974,7 +974,7 @@ func (x *Deliverer) cameToNothing(number int, why string) {
 	if !x.Record(number).Truthy("suggestion") {
 		return
 	}
-	title := orStr(x.GH.GetIssue(number).Get("title"), "")
+	title := py.OrStr(x.GH.GetIssue(number).Get("title"), "")
 	x.Ctx.Store.Update(func(s *pyjson.Object) any {
 		declined.Note(s, number, title, why, clock.ISO(x.Ctx.Now()))
 		return nil
@@ -1009,7 +1009,7 @@ func (x *Deliverer) settle(number int) {
 	target := number
 	pr := 0
 	if status == "approved" {
-		pr = intOr0(record.Get("pr"))
+		pr = py.MustInt(py.Or(record.Get("pr"), 0))
 	}
 	if x.Plan.Get("action") == "build" && pr != 0 {
 		target = pr
@@ -1058,7 +1058,7 @@ func (x *Deliverer) build(number int, status string) {
 		// #141 was opened by a run whose builder failed with a 401 in 0.0 minutes, from
 		// commits earlier runs had left on the branch (#317 part 4).
 		x.Result.Set("reason", "no builder session in the run worked: "+
-			orStr(x.Result.Get("reason"), "no reason recorded"))
+			py.OrStr(x.Result.Get("reason"), "no reason recorded"))
 		x.Fail(number, "build")
 		return
 	}
@@ -1084,7 +1084,7 @@ func (x *Deliverer) build(number int, status string) {
 	}
 	started := x.Record(number).Get("started_at")
 	if status == "blocked" {
-		question := orStr(firstTruthy(x.Result.Get("question"), x.Result.Get("reason")), "")
+		question := py.OrStr(py.Or(x.Result.Get("question"), x.Result.Get("reason")), "")
 		kept := ""
 		if pushed {
 			kept = fmt.Sprintf(" What I had is on `%s`.", branch)
@@ -1107,7 +1107,7 @@ func (x *Deliverer) build(number int, status string) {
 	}
 	body := x.pullBody(number, approved)
 	// A title the title check passes (#187): the builder's, else the issue's.
-	title := triage.PullTitle(orStr(x.Result.Get("title"), ""), orStr(x.Plan.Get("title"), ""))
+	title := triage.PullTitle(py.OrStr(x.Result.Get("title"), ""), py.OrStr(x.Plan.Get("title"), ""))
 	if title == "" {
 		title = fmt.Sprintf("Build #%d", number)
 	}
@@ -1115,17 +1115,17 @@ func (x *Deliverer) build(number int, status string) {
 	if pull == nil {
 		pull = x.createPull(title, branch, body, !(approved || built))
 	} else {
-		x.GH.UpdatePull(mustInt(pull.Get("number")), pyjson.New("title", title, "body", body))
+		x.GH.UpdatePull(py.MustInt(pull.Get("number")), pyjson.New("title", title, "body", body))
 		if (approved || built) && pull.Truthy("draft") {
 			x.try(func() { x.GH.MarkReady(py.Str(pull.Get("node_id"))) })
 		}
 	}
-	pr := intOr0(pull.Get("number"))
+	pr := py.MustInt(py.Or(pull.Get("number"), 0))
 	if pr != 0 {
 		x.GH.AddLabels(pr, append([]string{labelPR()}, x.Carried(number)...))
 		x.remember(pr, pyjson.New("issue", number, "feedback_since", started, "failures", 0, "kind", "revise",
 			"difficulty", x.Difficulty(number),
-			"self_check_findings", orList(x.Result.Get("self_check_findings"))))
+			"self_check_findings", py.Or(x.Result.Get("self_check_findings"), []any{})))
 	}
 	issueLabels := x.Labels(number)
 	if approved || built {
@@ -1146,7 +1146,7 @@ func (x *Deliverer) build(number int, status string) {
 				"revision that answers it."
 		}
 		if pr != 0 {
-			head := orStr(x.Result.Get("head"), "")
+			head := py.OrStr(x.Result.Get("head"), "")
 			var rule string
 			if approved {
 				rule = x.approved(pr, head, mergeNote == "", true, true, nil)
@@ -1157,7 +1157,7 @@ func (x *Deliverer) build(number int, status string) {
 				mergeNote = rule
 			}
 		}
-		cycles := pyLen(orList(x.Result.Get("cycles")))
+		cycles := pyLen(py.Or(x.Result.Get("cycles"), []any{}))
 		var said string
 		if approved {
 			said = fmt.Sprintf("Its adversarial reviewer, %s, approved it on round %d of %d.",
@@ -1192,7 +1192,7 @@ func (x *Deliverer) build(number int, status string) {
 			"to have me try again with your notes.", x.notApprovedHead(), pr, x.link(),
 			x.findingsMd(), x.whyMd(), stuck, x.Cfg.BotLogin, pr))
 		rounds, roundTier := x.rounds()
-		x.remember(number, pyjson.New("last_findings", orList(x.Result.Get("findings")), "pr", pr,
+		x.remember(number, pyjson.New("last_findings", py.Or(x.Result.Get("findings"), []any{}), "pr", pr,
 			"verdict_rounds", rounds, "round_tier", roundTier))
 	}
 }

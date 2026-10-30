@@ -21,7 +21,7 @@ import (
 // Difficulty is Deliverer._difficulty: the item's difficulty: its labels, and what its record
 // carries (a bot PR keeps its issue's).
 func (x *Deliverer) Difficulty(number int) string {
-	return queue.DifficultyOf(x.Labels(number), orStr(x.Record(number).Get("difficulty"), ""))
+	return queue.DifficultyOf(x.Labels(number), py.OrStr(x.Record(number).Get("difficulty"), ""))
 }
 
 // The head's approvals as (family, tier), one per review.
@@ -43,8 +43,8 @@ func tiersOf(approvals [][2]string) []string {
 // (`review_rule.met`) and no model's rejection of it stands (a model that rejected it and
 // later approved it has withdrawn it).
 func (x *Deliverer) RuleMet(votes *pyjson.Object, difficulty string /* = "medium" */) bool {
-	approvals := iterate(orList(votes.Get("approvals")))
-	for _, family := range iterate(orList(votes.Get("rejections"))) {
+	approvals := py.Each(votes.Get("approvals"))
+	for _, family := range py.Each(votes.Get("rejections")) {
 		if !containsEqual(approvals, family) {
 			return false
 		}
@@ -111,9 +111,9 @@ func (x *Deliverer) Vote(pr int, head string, approve bool, builder bool, carrie
 		if !approve {
 			key, other = "rejections", "approvals"
 		}
-		current.Set(key, uniq(append(append([]any{}, iterate(current.GetOr(key, []any{}))...), family)))
+		current.Set(key, uniq(append(append([]any{}, py.Each(current.GetOr(key, []any{}))...), family)))
 		rest := []any{}
-		for _, f := range iterate(current.GetOr(other, []any{})) {
+		for _, f := range py.Each(current.GetOr(other, []any{})) {
 			if f != family {
 				rest = append(rest, f)
 			}
@@ -178,9 +178,9 @@ func (x *Deliverer) clear_(pr int, head string, votes *pyjson.Object) {
 	// The item's strikes end once this head is green in CI too (#316): the sweep sees that
 	// (`sweep._green_heads`), and a merge does (`events.on_pull_closed`).
 	if carried, ok := votes.Get("carried").(*pyjson.Object); ok {
-		entry.Set("by", orStr(carried.Get("by"), who))
+		entry.Set("by", py.OrStr(carried.Get("by"), who))
 		entry.Set("resolved_by", who)
-		entry.Set("carried_from", orStr(carried.Get("from"), ""))
+		entry.Set("carried_from", py.OrStr(carried.Get("from"), ""))
 	}
 	x.remember(pr, pyjson.New("cleared", entry))
 }
@@ -199,7 +199,7 @@ func (x *Deliverer) Carry(record *pyjson.Object, head string) (*pyjson.Object, s
 	if record.Get("source") != "conflict" || cleared.Len() == 0 {
 		return nil, ""
 	}
-	start := orStr(x.Result.Get("start"), "")
+	start := py.OrStr(x.Result.Get("start"), "")
 	if cleared.Get("sha") != start {
 		return nil, "the branch had moved on from the commit they cleared"
 	}
@@ -239,7 +239,7 @@ func (x *Deliverer) Carry(record *pyjson.Object, head string) (*pyjson.Object, s
 		return nil, fmt.Sprintf("it changed more than the conflicts (%s)", shownPaths(beyond))
 	}
 	return pyjson.New("from", start, "main", main, "conflicts", pyjson.ListOf(conflicts),
-		"by", orStr(cleared.Get("by"), "")), ""
+		"by", py.OrStr(cleared.Get("by"), "")), ""
 }
 
 // What a conflict revision of a cleared change did with the clearance, for the comment
@@ -258,7 +258,7 @@ func (x *Deliverer) carryLine(record *pyjson.Object, carry *pyjson.Object, whyNo
 		return fmt.Sprintf("%s, but that does not carry over: %s. ", said, whyNot)
 	}
 	var files []string
-	for _, p := range iterate(orList(carry.Get("conflicts"))) {
+	for _, p := range py.Each(carry.Get("conflicts")) {
 		files = append(files, py.Str(p))
 	}
 	resolved := "merged it cleanly"
@@ -384,7 +384,7 @@ func (x *Deliverer) SecondReview(number int, status string) {
 		return
 	}
 	head := x.branchHead(number)
-	reviewed := orStr(x.Result.Get("reviewed_sha"), "")
+	reviewed := py.OrStr(x.Result.Get("reviewed_sha"), "")
 	who := x.Provider.Describe()
 	if reviewed != head {
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelCross())
@@ -413,8 +413,8 @@ func (x *Deliverer) SecondReview(number int, status string) {
 	if x.strike(number, fmt.Sprintf("%s rejected it: %s", who, first)) {
 		return
 	}
-	rounds := mustInt(record.GetOr("cross_rounds", 0)) + 1
-	findings := orList(x.Result.Get("findings"))
+	rounds := py.MustInt(record.GetOr("cross_rounds", 0)) + 1
+	findings := py.Or(x.Result.Get("findings"), []any{})
 	if rounds >= x.Cfg.MaxFailures {
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
 		x.remember(number, pyjson.New("cross_rounds", rounds, "last_findings", findings))
@@ -434,18 +434,18 @@ func (x *Deliverer) SecondReview(number int, status string) {
 
 // The pull request's head as git sees it on origin now (the API can lag a push).
 func (x *Deliverer) branchHead(number int) string {
-	branch := orStr(x.Plan.Get("branch"), "")
+	branch := py.OrStr(x.Plan.Get("branch"), "")
 	if branch != "" {
 		x.fetch(branch, false)
 		if found := x.Repo.Rev("origin/" + branch); found != "" {
 			return found
 		}
 	}
-	return orStr(x.GH.GetPull(number).Obj("head").Get("sha"), "")
+	return py.OrStr(x.GH.GetPull(number).Obj("head").Get("sha"), "")
 }
 
 func (x *Deliverer) failReview(number int, record *pyjson.Object) {
-	fails := mustInt(record.GetOr("failures", 0)) + 1
+	fails := py.MustInt(record.GetOr("failures", 0)) + 1
 	x.remember(number, pyjson.New("failures", fails))
 	if fails >= x.Cfg.MaxFailures {
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())

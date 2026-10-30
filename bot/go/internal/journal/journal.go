@@ -26,7 +26,6 @@ package journal
 
 import (
 	"fmt"
-	"math"
 	"math/rand/v2"
 	"regexp"
 	"strconv"
@@ -95,7 +94,7 @@ func Key(plan *pyjson.Object) int {
 	if !pyjson.Truthy(v) {
 		v = 0
 	}
-	n, err := pyInt(v)
+	n, err := py.Int(v)
 	if err != nil {
 		return 0
 	}
@@ -189,7 +188,7 @@ func tokenCount(tokens *pyjson.Object, name string) int {
 	if !pyjson.Truthy(v) {
 		return 0
 	}
-	n, err := pyInt(v)
+	n, err := py.Int(v)
 	if err != nil {
 		panic(err)
 	}
@@ -257,22 +256,6 @@ func StepRows(steps []any) []string {
 	return rows
 }
 
-// orStr is str(v or default).
-func orStr(v any, def string) string {
-	if !pyjson.Truthy(v) {
-		return def
-	}
-	return py.Str(v)
-}
-
-// orZero is f"{v or 0}".
-func orZero(v any) string {
-	if !pyjson.Truthy(v) {
-		return "0"
-	}
-	return py.Str(v)
-}
-
 // fence is the notes or draft in a Markdown fence that a ```` inside cannot close.
 func fence(summary, text string) []string {
 	return []string{"", "<details><summary>" + summary + "</summary>", "",
@@ -281,11 +264,11 @@ func fence(summary, text string) []string {
 
 // Section is the journal's section for one run, from the model job's result.
 func Section(result *pyjson.Object, provider string, models string, action string, number int, at string, runURL string /* = "" */) string {
-	status := orStr(result.Get("status"), "unknown")
+	status := py.OrStr(result.Get("status"), "unknown")
 	if s, ok := result.Get("interrupt").(string); ok && s == "died" {
 		status = "died"
 	}
-	reason := strings.TrimSpace(redact.Redact(orStr(result.Get("reason"), ""), nil))
+	reason := strings.TrimSpace(redact.Redact(py.OrStr(result.Get("reason"), ""), nil))
 	link := "a run"
 	if runURL != "" {
 		link = "[run](" + runURL + ")"
@@ -299,7 +282,7 @@ func Section(result *pyjson.Object, provider string, models string, action strin
 		fmt.Sprintf("%s on `%s` (%s). It ended **%s**", link, provider, models, status) + ended}
 	minutes, calls := result.Get("minutes"), result.Get("model_calls")
 	if minutes != nil || calls != nil {
-		lines = append(lines, fmt.Sprintf("Model calls: %s, %s model minutes.", orZero(calls), orZero(minutes)))
+		lines = append(lines, fmt.Sprintf("Model calls: %s, %s model minutes.", py.Str(py.Or(calls, 0)), py.Str(py.Or(minutes, 0))))
 	}
 	tokens, _ := result.Get("tokens").(*pyjson.Object)
 	total := tokenTotal(tokens)
@@ -328,12 +311,12 @@ func Section(result *pyjson.Object, provider string, models string, action strin
 		lines = append(lines, StepRows(steps)...)
 	}
 	handoff, _ := result.Get("handoff").(*pyjson.Object)
-	notes := strings.TrimSpace(redact.Redact(orStr(handoff.Get("notes"), ""), nil))
+	notes := strings.TrimSpace(redact.Redact(py.OrStr(handoff.Get("notes"), ""), nil))
 	if notes != "" {
 		notes = Compact(notes, NotesChars)
 		lines = append(lines, fence("The builder's notes when it stopped", notes)...)
 	}
-	draft := py.SliceTo(strings.TrimSpace(redact.Redact(orStr(handoff.Get("draft"), ""), nil)), NotesChars)
+	draft := py.SliceTo(strings.TrimSpace(redact.Redact(py.OrStr(handoff.Get("draft"), ""), nil)), NotesChars)
 	if draft != "" {
 		lines = append(lines, fence("The planner's draft when it stopped", draft)...)
 	}
@@ -478,44 +461,4 @@ func RunsIn(text string) []string {
 // URL is journal.url.
 func URL(serverURL string, repo string, number int) string {
 	return fmt.Sprintf("%s/%s/blob/%s/%s", serverURL, repo, Branch, PathFor(number))
-}
-
-// pyInt is int(v) for a JSON value, with Python's errors (TypeError, ValueError) as an error.
-func pyInt(v any) (int, error) {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1, nil
-		}
-		return 0, nil
-	case int:
-		return x, nil
-	case int64:
-		return int(x), nil
-	case float64:
-		if math.IsNaN(x) || math.IsInf(x, 0) {
-			return 0, fmt.Errorf("cannot convert float %s to integer", pyjson.FloatRepr(x))
-		}
-		return int(x), nil
-	case string:
-		s := strings.TrimSpace(x)
-		sign := ""
-		if strings.HasPrefix(s, "+") || strings.HasPrefix(s, "-") {
-			sign, s = s[:1], s[1:]
-		}
-		ok := s != "" && !strings.HasPrefix(s, "_") && !strings.HasSuffix(s, "_") && !strings.Contains(s, "__")
-		digits := strings.ReplaceAll(s, "_", "")
-		for _, r := range digits {
-			ok = ok && r >= '0' && r <= '9'
-		}
-		if n, err := strconv.Atoi(sign + digits); ok && err == nil {
-			return n, nil
-		}
-		return 0, fmt.Errorf("invalid literal for int() with base 10: %s", py.Repr(x))
-	}
-	name := map[bool]string{true: "NoneType", false: "list"}[v == nil]
-	if _, ok := v.(*pyjson.Object); ok {
-		name = "dict"
-	}
-	return 0, fmt.Errorf("int() argument must be a string, a bytes-like object or a real number, not '%s'", name)
 }

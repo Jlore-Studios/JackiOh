@@ -75,7 +75,7 @@ func QueueTable(ctx *hctx.Context, explained *waiting.Explained, issues []*pyjso
 	rows := explained.Rows
 	modes := map[int]string{}
 	for _, i := range issues {
-		modes[mustInt(i.Get("number"))] = queue.ModeOf(queue.LabelNames(i))
+		modes[py.MustInt(i.Get("number"))] = queue.ModeOf(queue.LabelNames(i))
 	}
 	var lines []string
 	for _, row := range upTo(rows, QueueRows) {

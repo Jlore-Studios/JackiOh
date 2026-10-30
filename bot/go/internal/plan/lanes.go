@@ -249,8 +249,8 @@ func OthersOnGithub(ctx *hctx.Context) int {
 			}
 			for _, run := range runs {
 				if eqStr(run.Get("status"), status) &&
-					strings.HasSuffix(orStr(run.Get("path"), ""), "/"+other.Workflow) &&
-					!strings.Contains(orStr(run.Get("display_title"), ""), " on night-vm-") {
+					strings.HasSuffix(py.OrStr(run.Get("path"), ""), "/"+other.Workflow) &&
+					!strings.Contains(py.OrStr(run.Get("display_title"), ""), " on night-vm-") {
 					count++
 				}
 			}
@@ -280,10 +280,10 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 		Filling: map[int]bool{}}
 	lanes.Shared = OthersOnGithub(ctx)
 	for _, thread := range WorkingThreads(ctx) {
-		number := toInt(thread.Get("number"))
+		number := py.MustInt(thread.Get("number"))
 		record := recordOf(state, strconv.Itoa(number))
 		if RunAlive(ctx, record.Get("run_id")) {
-			lanes.Held[number] = orStr(record.Get("provider"), providers.LegacyProvider)
+			lanes.Held[number] = py.OrStr(record.Get("provider"), providers.LegacyProvider)
 			if eqStr(record.Get("action"), "plan") {
 				lanes.Planning[number] = true
 			}
@@ -302,7 +302,7 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 // FillsIn is: an item's run is in another subscription's lane: it went to its provider's
 // fill-in runners (`Provider.fill_in`), which `claim` records as its `runs_on`.
 func FillsIn(pool *providers.Pool, record *pyjson.Object) bool {
-	provider := pool.Get(orStr(record.Get("provider"), ""))
+	provider := pool.Get(py.OrStr(record.Get("provider"), ""))
 	return provider != nil && provider.FillIn != nil &&
 		eqStr(record.Get("runs_on"), provider.FillIn.RunsOn)
 }

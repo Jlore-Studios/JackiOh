@@ -44,6 +44,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
@@ -243,12 +244,12 @@ func Classify(body string) string {
 
 // Parse is one bot comment as an event: what happened, in which run, on which subscription.
 func Parse(comment *pyjson.Object) *Event {
-	body := orStr(comment.Get("body"))
-	issueURL := strings.TrimRight(py.Str(orDefault(comment.Get("issue_url"), "0")), "/")
+	body := py.OrStr(comment.Get("body"), "")
+	issueURL := strings.TrimRight(py.Str(py.Or(comment.Get("issue_url"), "0")), "/")
 	last := issueURL[strings.LastIndex(issueURL, "/")+1:]
 	number := 0
 	if last != "" {
-		number = pyInt(last)
+		number = py.MustInt(last)
 	}
 	kind := Classify(body)
 	run := RunLink.FindStringSubmatch(body)
@@ -268,7 +269,7 @@ func Parse(comment *pyjson.Object) *Event {
 		}
 	}
 	split := SplitInto.FindStringSubmatch(body)
-	event := &Event{At: orStr(comment.Get("created_at")), Number: number, Kind: kind,
+	event := &Event{At: py.OrStr(comment.Get("created_at"), ""), Number: number, Kind: kind,
 		Action: action, Approvers: approvers}
 	if run != nil {
 		event.Run = run[1]
@@ -277,11 +278,11 @@ func Parse(comment *pyjson.Object) *Event {
 		event.Provider, event.Model = seat[1], seat[3]
 	}
 	if opened != nil {
-		pr := pyInt(opened[1])
+		pr := py.MustInt(opened[1])
 		event.PR = &pr
 	}
 	if split != nil {
-		event.Count = pyInt(split[1])
+		event.Count = py.MustInt(split[1])
 	}
 	return event
 }
@@ -310,7 +311,7 @@ func Joined(events []*Event) []*Event {
 var Collect = collect
 
 func loginOf(thing *pyjson.Object) string {
-	return strings.ToLower(orStr(thing.Obj("user").Get("login")))
+	return strings.ToLower(py.OrStr(thing.Obj("user").Get("login"), ""))
 }
 
 func collect(ctx *hctx.Context) *Facts {
@@ -330,7 +331,7 @@ func collect(ctx *hctx.Context) *Facts {
 		}
 		var detail *pyjson.Object
 		if _, failed := herr.Catch[*herr.GitHubError](func() {
-			detail = gh.GetPull(pyInt(pull.Get("number")))
+			detail = gh.GetPull(py.MustInt(pull.Get("number")))
 		}); failed {
 			detail = pull
 		}
@@ -346,22 +347,22 @@ func collect(ctx *hctx.Context) *Facts {
 		if !pyjson.Truthy(ended) {
 			ended = run.Get("status")
 		}
-		facts.Runs = append(facts.Runs, [2]string{orStr(run.Get("created_at")), py.Str(orDefault(ended, "?"))})
+		facts.Runs = append(facts.Runs, [2]string{py.OrStr(run.Get("created_at"), ""), py.Str(py.Or(ended, "?"))})
 	}
 	providers := ctx.Store.Load().Obj("providers")
 	for _, providerID := range providers.Keys() {
 		record := providers.Obj(providerID)
 		spent := []SpentEntry{}
-		for _, entry := range listOr(record.Get("spent")) {
+		for _, entry := range py.Each(record.Get("spent")) {
 			e := pyjson.Obj(entry)
-			spent = append(spent, SpentEntry{orStr(e.Get("at")), floatOr(e.Get("minutes"))})
+			spent = append(spent, SpentEntry{py.OrStr(e.Get("at"), ""), py.MustFloat(py.Or(e.Get("minutes"), 0))})
 		}
 		facts.Spent.Set(providerID, spent)
 		counted := []TokenEntry{}
-		for _, entry := range listOr(record.Get("tokens_spent")) {
+		for _, entry := range py.Each(record.Get("tokens_spent")) {
 			e := pyjson.Obj(entry)
-			counted = append(counted, TokenEntry{orStr(e.Get("at")), intOr(e.Get("input")),
-				intOr(e.Get("output")), intOr(e.Get("cache")), floatOr(e.Get("cost"))})
+			counted = append(counted, TokenEntry{py.OrStr(e.Get("at"), ""), py.MustInt(py.Or(e.Get("input"), 0)),
+				py.MustInt(py.Or(e.Get("output"), 0)), py.MustInt(py.Or(e.Get("cache"), 0)), py.MustFloat(py.Or(e.Get("cost"), 0))})
 		}
 		facts.Counted.Set(providerID, counted)
 	}
@@ -386,7 +387,7 @@ func NewCredits() *Credits {
 }
 
 func (x *Credits) Builder(pull *pyjson.Object) string {
-	if built, ok := x.Built[pyInt(pull.Get("number"))]; ok {
+	if built, ok := x.Built[py.MustInt(pull.Get("number"))]; ok {
 		return built
 	}
 	return Unrecorded
@@ -394,12 +395,12 @@ func (x *Credits) Builder(pull *pyjson.Object) string {
 
 // IssueOf is the issue a pull request builds: its branch `bot/issue-<n>`, or its first `Closes #n`.
 func IssueOf(pull *pyjson.Object) *int {
-	if branch := BranchIssue.FindStringSubmatch(orStr(pull.Obj("head").Get("ref"))); branch != nil {
-		n := pyInt(branch[1])
+	if branch := BranchIssue.FindStringSubmatch(py.OrStr(pull.Obj("head").Get("ref"), "")); branch != nil {
+		n := py.MustInt(branch[1])
 		return &n
 	}
-	if closes := Closes.FindStringSubmatch(orStr(pull.Get("body"))); closes != nil {
-		n := pyInt(closes[1])
+	if closes := Closes.FindStringSubmatch(py.OrStr(pull.Get("body"), "")); closes != nil {
+		n := py.MustInt(closes[1])
 		return &n
 	}
 	return nil
@@ -429,8 +430,8 @@ func Credits_(events []*Event, pulls []*pyjson.Object) *Credits {
 	}
 
 	for _, pull := range pulls {
-		number, issue := pyInt(pull.Get("number")), IssueOf(pull)
-		openedAt := orStr(pull.Get("created_at"))
+		number, issue := py.MustInt(pull.Get("number")), IssueOf(pull)
+		openedAt := py.OrStr(pull.Get("created_at"), "")
 		if _, built := out.Built[number]; !built && issue != nil {
 			var builds []*Event
 			for _, e := range events {
@@ -489,8 +490,8 @@ func (x *Window) Starts() []*Event {
 	return out
 }
 
-func (x *Window) Outcomes() *Counter {
-	c := NewCounter()
+func (x *Window) Outcomes() *py.Counter {
+	c := py.NewCounter()
 	kinds := outcomeKinds()
 	for _, e := range x.Events {
 		if contains(kinds, e.Kind) {
@@ -511,7 +512,7 @@ func within(at any, start time.Time) bool {
 	if start.IsZero() {
 		return true
 	}
-	when := parseISO(at)
+	when := clock.ParseISOValue(at)
 	return !when.IsZero() && !when.Before(start)
 }
 
@@ -552,7 +553,7 @@ func Window_(name string, span *time.Duration, now time.Time, facts *Facts) *Win
 				minutes = append(minutes, entry.Minutes)
 			}
 		}
-		w.Minutes.Set(pid, pySum(minutes))
+		w.Minutes.Set(pid, py.Sum(minutes))
 	}
 	for _, pid := range facts.Counted.Keys() {
 		var tokens [3]int
@@ -580,7 +581,7 @@ func Window_(name string, span *time.Duration, now time.Time, facts *Facts) *Win
 				cost = append(cost, entry.Cost)
 			}
 		}
-		w.Cost.Set(pid, pySum(cost))
+		w.Cost.Set(pid, py.Sum(cost))
 	}
 	return w
 }

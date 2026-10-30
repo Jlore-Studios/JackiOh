@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
@@ -60,7 +61,7 @@ func factsOf(o *pyjson.Object) *Facts {
 		entries := []SpentEntry{}
 		for _, e := range spent.List(pid) {
 			pair := pyjson.List(e)
-			entries = append(entries, SpentEntry{pyjson.Str(pair[0]), pyFloat(pair[1])})
+			entries = append(entries, SpentEntry{pyjson.Str(pair[0]), py.MustFloat(pair[1])})
 		}
 		facts.Spent.Set(pid, entries)
 	}
@@ -69,7 +70,7 @@ func factsOf(o *pyjson.Object) *Facts {
 		entries := []TokenEntry{}
 		for _, e := range counted.List(pid) {
 			x := pyjson.List(e)
-			entries = append(entries, TokenEntry{pyjson.Str(x[0]), pyInt(x[1]), pyInt(x[2]), pyInt(x[3]), pyFloat(x[4])})
+			entries = append(entries, TokenEntry{pyjson.Str(x[0]), py.MustInt(x[1]), py.MustInt(x[2]), py.MustInt(x[3]), py.MustFloat(x[4])})
 		}
 		facts.Counted.Set(pid, entries)
 	}
@@ -199,10 +200,10 @@ func TestNumbersAreWrittenAsPythonWroteThem(t *testing.T) {
 	for _, s := range pyjson.Objs(g.Get("sums")) {
 		var xs []float64
 		for _, x := range s.List("xs") {
-			xs = append(xs, pyFloat(x))
+			xs = append(xs, py.MustFloat(x))
 		}
 		// Python's sum of nothing is the int 0, which every caller writes as 0.0 would be.
-		got := pySum(xs)
+		got := py.Sum(xs)
 		if want := s.Float("sum"); got != want || (len(xs) > 0 && pyjson.FloatRepr(got) != s.Str("repr")) {
 			t.Errorf("sum of %d: got %s, want %s", len(xs), pyjson.FloatRepr(got), s.Str("repr"))
 		}
@@ -220,22 +221,6 @@ func TestNumbersAreWrittenAsPythonWroteThem(t *testing.T) {
 		titleOf(pyjson.New("title", strings.Repeat("é", 71)))}
 	if want := pyjson.Strings(g.Get("titles")); !reflect.DeepEqual(titles, want) {
 		t.Errorf("titles: got %q, want %q", titles, want)
-	}
-}
-
-func TestCounterKeepsPythonsOrder(t *testing.T) {
-	c := NewCounter()
-	for _, k := range []string{"b", "a", "c", "a", "b", "d"} {
-		c.Add(k, 1)
-	}
-	c.Add("e", 0)
-	got := c.MostCommon(-1)
-	want := []Count{{"b", 2}, {"a", 2}, {"c", 1}, {"d", 1}, {"e", 0}}
-	if !reflect.DeepEqual(got, want) || c.Total() != 6 || c.Len() != 5 || c.Get("zzz") != 0 || c.Len() != 5 {
-		t.Fatalf("got %v total %d len %d", got, c.Total(), c.Len())
-	}
-	if top := c.MostCommon(3); len(top) != 3 || top[2].Key != "c" {
-		t.Fatalf("most_common(3) = %v", top)
 	}
 }
 

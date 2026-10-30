@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 	_ "time/tzdata"
+
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 )
 
 func TestLocalTimeIsFoldZero(t *testing.T) {
@@ -60,47 +62,6 @@ func TestDateFromISO(t *testing.T) {
 	}
 }
 
-func TestIntAndFloat(t *testing.T) {
-	for _, c := range []struct {
-		in   any
-		want int
-		ok   bool
-	}{
-		{" 12 ", 12, true}, {"1_000", 1000, true}, {"+5", 5, true}, {"-3", -3, true},
-		{"1.5", 0, false}, {"", 0, false}, {"١٢", 12, true}, {"1__0", 0, false}, {"_1", 0, false},
-		{2.7, 2, true}, {true, 1, true}, {nil, 0, false}, {"two", 0, false}, {[]any{}, 0, false},
-	} {
-		got, err := pyInt(c.in)
-		if (err == nil) != c.ok || got != c.want {
-			t.Errorf("int(%#v): got %d, %v", c.in, got, err)
-		}
-	}
-	for _, c := range []struct {
-		in   any
-		want float64
-		ok   bool
-	}{
-		{" 0.5 ", 0.5, true}, {"1_0.5", 10.5, true}, {"1e-3", 0.001, true}, {".5", 0.5, true},
-		{"5.", 5, true}, {"0x10", 0, false}, {"abc", 0, false}, {"١.٥", 1.5, true}, {98, 98, true},
-		{nil, 0, false}, {"1_", 0, false},
-	} {
-		got, err := pyFloat(c.in)
-		if (err == nil) != c.ok || got != c.want {
-			t.Errorf("float(%#v): got %v, %v", c.in, got, err)
-		}
-	}
-}
-
-func TestPercent(t *testing.T) {
-	// f"{x:.0%}"
-	for x, want := range map[float64]string{0.125: "12%", 0.7: "70%", 0.45: "45%", 0.005: "0%",
-		1: "100%", 0.955: "96%", 0.945: "94%"} {
-		if got := percent(x); got != want {
-			t.Errorf("percent(%v): got %s want %s", x, got, want)
-		}
-	}
-}
-
 func TestPurePath(t *testing.T) {
 	for _, c := range []struct {
 		parts []string
@@ -126,7 +87,7 @@ func TestLabelAndDigits(t *testing.T) {
 		}
 	}
 	for s, want := range map[string]int{"١٢": 12, "𝟗": 9, "𝟎𝟏": 1, "٣": 3, "42": 42} {
-		if got := digitsInt(s); got != want {
+		if got := py.Atoi(s); got != want {
 			t.Errorf("int(%q): got %d want %d", s, got, want)
 		}
 	}

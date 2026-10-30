@@ -60,7 +60,7 @@ func (x *Deliverer) Suggestions() {
 	state := x.Ctx.Store.Load()
 	var fresh []*pyjson.Object
 	for _, entry := range found {
-		if declined.Known(state, orStr(entry.Get("title"), "")) {
+		if declined.Known(state, py.OrStr(entry.Get("title"), "")) {
 			// It came to nothing before (#797): the survey was told, and it is not opened.
 			x.log("dropped a suggestion that came to nothing before: " + py.Str(entry.Get("title")))
 			continue
@@ -68,8 +68,8 @@ func (x *Deliverer) Suggestions() {
 		fresh = append(fresh, entry)
 	}
 	for _, entry := range headN(fresh, room) {
-		title := strings.TrimSpace(orStr(entry.Get("title"), ""))
-		body := strings.TrimSpace(orStr(entry.Get("body"), ""))
+		title := strings.TrimSpace(py.OrStr(entry.Get("title"), ""))
+		body := strings.TrimSpace(py.OrStr(entry.Get("body"), ""))
 		if title == "" || body == "" {
 			continue
 		}
@@ -79,7 +79,7 @@ func (x *Deliverer) Suggestions() {
 			"it plans it. Comment `reject` to close it without building it.", x.Cfg.BotLogin, labelBuild())
 		labels := []string{labelSuggestion()}
 		// Its class sets its priority (#1409); a class with none, or no class, sets nothing.
-		kind := orStr(entry.Get("class"), "")
+		kind := py.OrStr(entry.Get("class"), "")
 		if level := x.Cfg.SuggestionPriorities[kind]; level != "" {
 			labels = append(labels, "priority:"+level)
 			footer += fmt.Sprintf("\n\nClass: `%s` → `priority:%s`; relabel to change it.", kind, level)

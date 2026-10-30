@@ -131,7 +131,7 @@ func PendingRun(ctx *hctx.Context, runID string) string {
 		return "unknown"
 	}
 	for _, run := range runs {
-		if strings.HasPrefix(orStr(run.Get("display_title"), ""), "bot-night "+ref+" ") {
+		if strings.HasPrefix(py.OrStr(run.Get("display_title"), ""), "bot-night "+ref+" ") {
 			if inStrs(run.Get("status"), Live...) || AwaitingDelivery(ctx, run) {
 				return "alive"
 			}
@@ -139,8 +139,8 @@ func PendingRun(ctx *hctx.Context, runID string) string {
 		}
 	}
 	// int(ref.rsplit("-", 1)[-1]), and the datetime it names.
-	stamp, ok := pyInt(ref[strings.LastIndex(ref, "-")+1:])
-	if !ok || stamp < minTimestamp || stamp > maxTimestamp {
+	stamp, err := py.Int(ref[strings.LastIndex(ref, "-")+1:])
+	if err != nil || stamp < minTimestamp || stamp > maxTimestamp {
 		return "dead"
 	}
 	made := time.Unix(int64(stamp), 0).UTC()
@@ -196,7 +196,7 @@ var Deliveries = "loop_deliveries"
 
 // LoopRef is the plan reference of a night run the status loop started, or "" for any other run.
 func LoopRef(run *pyjson.Object) string {
-	if found := LoopTitle.FindStringSubmatch(orStr(run.Get("display_title"), "")); found != nil {
+	if found := LoopTitle.FindStringSubmatch(py.OrStr(run.Get("display_title"), "")); found != nil {
 		return found[1]
 	}
 	return ""
@@ -209,7 +209,7 @@ func AwaitingDelivery(ctx *hctx.Context, run *pyjson.Object) bool {
 	if inStrs(run.Get("status"), Live...) || LoopRef(run) == "" {
 		return false
 	}
-	ended := parseISO(run.Get("updated_at"))
+	ended := clock.ParseISOValue(run.Get("updated_at"))
 	if ended.IsZero() || ctx.Now().Sub(ended) >= DeliverWithin {
 		return false
 	}
@@ -218,7 +218,7 @@ func AwaitingDelivery(ctx *hctx.Context, run *pyjson.Object) bool {
 	if !isDict || entry == nil {
 		return true
 	}
-	return !(entry.Truthy("done") || toInt(orValue(entry.Get("tries"), 0)) >= DeliverTries)
+	return !(entry.Truthy("done") || py.MustInt(py.Or(entry.Get("tries"), 0)) >= DeliverTries)
 }
 
 // RunAlive is true unless the run is known to have ended.
@@ -246,12 +246,12 @@ func LoopAlive(ctx *hctx.Context) bool {
 		runs := ctx.GH.ListRuns(config.StatusWorkflow, "in_progress", 5, false)
 		going = slices.ContainsFunc(runs, func(run *pyjson.Object) bool {
 			return eqStr(run.Get("status"), "in_progress") &&
-				strings.HasSuffix(orStr(run.Get("path"), ""), "/"+config.StatusWorkflow)
+				strings.HasSuffix(py.OrStr(run.Get("path"), ""), "/"+config.StatusWorkflow)
 		})
 		if !going {
 			return
 		}
-		tick = parseISO(ctx.Store.Load().Get("loop_tick"))
+		tick = clock.ParseISOValue(ctx.Store.Load().Get("loop_tick"))
 	}); failed || !going {
 		return false
 	}
@@ -278,7 +278,7 @@ func takePlanningLock(ctx *hctx.Context, owner string) bool {
 		held := state.Obj("planning")
 		var since time.Time
 		if held.Truthy("at") {
-			since = parseISO(held.Get("at"))
+			since = clock.ParseISOValue(held.Get("at"))
 		}
 		holder := held.Get("owner")
 		if holder != nil && !pyjson.Equal(holder, owner) && !since.IsZero() && now.Sub(since) < LockTtl {

@@ -92,13 +92,9 @@ type Fetch func(url string) any
 // ReadError is one of the Python exceptions `section` catches from a read and names in its note
 // (OSError, ValueError, LookupError, TypeError, AttributeError and their subclasses): Type is
 // type(exc).__name__ (`URLError`, `HTTPError`, `TimeoutError`, `JSONDecodeError`, `KeyError`, …)
-// and Msg is str(exc).
-type ReadError struct {
-	Type string
-	Msg  string
-}
-
-func (e *ReadError) Error() string { return e.Msg }
+// and Msg is str(exc). It is py's Error, so what py's int(), float() and iteration raise in a read
+// is one too.
+type ReadError = py.Error
 
 func raise(typ, msg string) { herr.Raise(&ReadError{Type: typ, Msg: msg}) }
 
@@ -199,15 +195,15 @@ func URL(base string, version string, source string) string {
 }
 
 func add(cards *pyjson.Object, rows any) {
-	for _, row := range iterate(orDefault(rows, []any{})) {
-		games := pyInt(orDefault(get(row, "games"), 0))
+	for _, row := range py.MustIter(py.Or(rows, []any{})) {
+		games := py.MustInt(py.Or(get(row, "games"), 0))
 		rate := get(row, "winRate")
 		id := py.Str(item(row, "id"))
 		name := get(row, "name")
 		if !pyjson.Truthy(name) {
 			name = item(row, "id")
 		}
-		fresh := &Card{ID: py.Str(item(row, "id")), Name: py.Str(name), Set: py.Str(orDefault(get(row, "set"), "?"))}
+		fresh := &Card{ID: py.Str(item(row, "id")), Name: py.Str(name), Set: py.Str(py.Or(get(row, "set"), "?"))}
 		card, ok := cards.Get(id).(*Card)
 		if !ok {
 			card = fresh
@@ -215,7 +211,7 @@ func add(cards *pyjson.Object, rows any) {
 		}
 		card.Games += games
 		if rate != nil {
-			card.Wins += py.Round(pyFloat(rate) * float64(games))
+			card.Wins += py.Round(py.MustFloat(rate) * float64(games))
 		}
 	}
 }
@@ -229,20 +225,20 @@ func Read(fetch Fetch, base string /* = API */) ([]*Patch, int, string) {
 	minSample := MinSample
 	for range Walk {
 		live := fetch(URL(base, version, "live"))
-		version = py.Str(orDefault(get(live, "patch"), ""))
-		minSample = pyInt(orDefault(get(live, "minSample"), minSample))
+		version = py.Str(py.Or(get(live, "patch"), ""))
+		minSample = py.MustInt(py.Or(get(live, "minSample"), minSample))
 		name := version
 		if match := Version.FindStringSubmatch(version); match != nil {
 			name = match[1]
 		}
 		if !seen[name] { // the newest version of its patch: its window holds the whole patch
 			seen[name] = true
-			cleared := pyjson.Truthy(get(orDefault(get(live, "gate"), pyjson.New()), "cleared"))
-			patch := NewPatch(name, version, cleared, pyInt(orDefault(get(live, "totalGames"), 0)))
+			cleared := pyjson.Truthy(get(py.Or(get(live, "gate"), pyjson.New()), "cleared"))
+			patch := NewPatch(name, version, cleared, py.MustInt(py.Or(get(live, "totalGames"), 0)))
 			add(patch.Cards, get(live, "cards"))
 			if !cleared {
 				dev := fetch(URL(base, version, "dev"))
-				patch.Games += pyInt(orDefault(get(dev, "totalGames"), 0))
+				patch.Games += py.MustInt(py.Or(get(dev, "totalGames"), 0))
 				add(patch.Cards, get(dev, "cards"))
 			}
 			if patch.Games >= MinGames {
@@ -371,7 +367,7 @@ func Outliers(patches []*Patch, minSample int) []Outlier {
 
 func pct(value *float64) string {
 	if value != nil {
-		return fmt.Sprintf("%.1f%%", *value*100)
+		return py.Percent(*value, 1)
 	}
 	return "—"
 }

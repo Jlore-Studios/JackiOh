@@ -9,9 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
@@ -113,22 +111,6 @@ func sortedInts(set map[int]bool) []int {
 	return out
 }
 
-// orStr is str(v or def).
-func orStr(v any, def string) string {
-	if pyjson.Truthy(v) {
-		return py.Str(v)
-	}
-	return def
-}
-
-// orValue is `v or def`.
-func orValue(v any, def any) any {
-	if pyjson.Truthy(v) {
-		return v
-	}
-	return def
-}
-
 // eqStr is `v == s` for a JSON value v and a string s.
 func eqStr(v any, s string) bool {
 	x, ok := v.(string)
@@ -141,73 +123,12 @@ func inStrs(v any, options ...string) bool {
 	return ok && slices.Contains(options, x)
 }
 
-// isDigits is str.isdigit() for the ASCII digits a state file's keys are made of.
-func isDigits(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
-}
-
-// pyInt is int(text): surrounding whitespace, a sign and single underscores between digits
-// allowed. False where Python raises ValueError (or an int would not fit).
-func pyInt(text string) (int, bool) {
-	s := strings.TrimSpace(text)
-	neg := false
-	if s != "" && (s[0] == '+' || s[0] == '-') {
-		neg, s = s[0] == '-', s[1:]
-	}
-	if s == "" || s[0] == '_' || s[len(s)-1] == '_' || strings.Contains(s, "__") {
-		return 0, false
-	}
-	digits := strings.ReplaceAll(s, "_", "")
-	if !isDigits(digits) {
-		return 0, false
-	}
-	n, err := strconv.Atoi(digits)
-	if err != nil {
-		return 0, false
-	}
-	if neg {
-		n = -n
-	}
-	return n, true
-}
-
-// toInt is int(v) for a JSON value: an int as is, a float truncated, a bool 0 or 1, a string
-// parsed. It raises as Python does on anything else.
-func toInt(v any) int {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	case string:
-		n, ok := pyInt(x)
-		if !ok {
-			panic(fmt.Errorf("invalid literal for int() with base 10: %s", py.Repr(x)))
-		}
-		return n
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	panic(fmt.Errorf("int() argument must be a string, a bytes-like object or a real number, "+
-		"not %T", v))
-}
-
 // intPtr is an `int | None` read from JSON: nil for None, else int(v).
 func intPtr(v any) *int {
 	if v == nil {
 		return nil
 	}
-	n := toInt(v)
+	n := py.MustInt(v)
 	return &n
 }
 
@@ -218,9 +139,6 @@ func intOrNone(n *int) any {
 	}
 	return *n
 }
-
-// parseISO is clock.parse_iso over a JSON value (zero for None).
-func parseISO(v any) time.Time { return clock.ParseISO(pyjson.Str(v)) }
 
 // recordOf is `state["items"].get(key, {})`.
 func recordOf(state *pyjson.Object, key string) *pyjson.Object {

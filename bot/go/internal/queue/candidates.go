@@ -125,10 +125,10 @@ func PlanOf(record *pyjson.Object, thread *pyjson.Object, kind string, mode stri
 		return pyjson.New("planned", true, "plan_tier", "strong", "planned_by", "")
 	}
 	if record.Truthy("planned_at") {
-		return pyjson.New("planned", true, "plan_tier", orStr(record.Get("planned_tier")),
-			"planned_by", orStr(record.Get("planned_by_id")))
+		return pyjson.New("planned", true, "plan_tier", py.OrStr(record.Get("planned_tier"), ""),
+			"planned_by", py.OrStr(record.Get("planned_by_id"), ""))
 	}
-	if kind == "build" && issueplan.PlanOf(orStr(thread.Get("body"))) != "" {
+	if kind == "build" && issueplan.PlanOf(py.OrStr(thread.Get("body"), "")) != "" {
 		return pyjson.New("planned", true, "plan_tier", "strong", "planned_by", "")
 	}
 	return pyjson.New("planned", false, "plan_tier", "", "planned_by", "")
@@ -326,7 +326,7 @@ func PartOf(title string) (name string, total int, n int, ok bool) {
 // The issue a thread is a sub-issue of, from GitHub's own link, or 0. (`_PARENT`: the link as
 // GitHub writes it on the issue, `…/issues/<n>`, searched with `/issues/(\d+)$`.)
 func ParentOf(thread *pyjson.Object) int {
-	rs := []rune(orStr(thread.Get("parent_issue_url")))
+	rs := []rune(py.OrStr(thread.Get("parent_issue_url"), ""))
 	for i := range rs {
 		start, ok := literalAt(rs, i, "/issues/")
 		if !ok {
@@ -372,7 +372,7 @@ type PatchPart struct {
 // sub-issue of, which every part has, so two patches' parts never mix when their titles both
 // open `Patch (part 2 of 4)`. A part with no parent link falls back to its title's name.
 func PatchOf(thread *pyjson.Object) *PatchPart {
-	name, total, n, ok := PartOf(orStr(thread.Get("title")))
+	name, total, n, ok := PartOf(py.OrStr(thread.Get("title"), ""))
 	if !ok {
 		return nil
 	}
@@ -391,7 +391,7 @@ func PatchOf(thread *pyjson.Object) *PatchPart {
 func WaitsFor(ctx *hctx.Context, threads []*pyjson.Object) map[int][]int {
 	named := map[int]map[int]bool{}
 	for _, t := range threads {
-		named[numberOf(t)] = NamedBlockers(orStr(t.Get("body")))
+		named[numberOf(t)] = NamedBlockers(py.OrStr(t.Get("body"), ""))
 	}
 	parts := map[int]*PatchPart{}
 	var partOrder []int // the dict's order
@@ -453,7 +453,7 @@ func WaitsFor(ctx *hctx.Context, threads []*pyjson.Object) map[int][]int {
 			blockers[n] = true
 		}
 		if summary := thread.Obj("issue_dependencies_summary"); summary != nil &&
-			intOr0(summary.Get("blocked_by")) > 0 {
+			py.MustInt(py.Or(summary.Get("blocked_by"), 0)) > 0 {
 			herr.Catch[*herr.GitHubError](func() {
 				for _, b := range ctx.GH.BlockedBy(number) {
 					if b.Get("state") == "open" {
@@ -556,14 +556,14 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 				queuedAt = thread.Get("created_at")
 			}
 			c := NewCandidate(number, kind, py.Str(thread.GetOr("title", "")), record.Truthy("forced"),
-				orStr(queuedAt))
+				py.OrStr(queuedAt, ""))
 			// A fullsend's split and its reconcile are a strong model's (#505).
 			if mode == "fullsend" {
 				c.Difficulty = "hard"
 			} else {
 				c.Difficulty = DifficultyOf(names, CarriedDifficulty(record))
 			}
-			c.Builder = orStr(votes.Get("builder"))
+			c.Builder = py.OrStr(votes.Get("builder"), "")
 			c.Priority = PriorityTier(names)
 			plan := PlanOf(record, thread, kind, mode)
 			c.Planned, c.PlanTier, c.PlannedBy = plan.Bool("planned"), plan.Str("plan_tier"), plan.Str("planned_by")
@@ -578,16 +578,16 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			c.Rated = kind != "build" || Rated(names, record)
 			c.Conflict = kind == "revise" && record.Get("source") == "conflict"
 			if kind == "review" {
-				c.ReviewFloor = orStr(record.Get("review_floor"))
+				c.ReviewFloor = py.OrStr(record.Get("review_floor"), "")
 			}
 			c.Mode = mode
 			c.Part = kind == "build" && mode == "" && IsPart(record)
 			if kind == "revise" {
-				c.AuditTier = orStr(record.Get("audit_tier"))
+				c.AuditTier = py.OrStr(record.Get("audit_tier"), "")
 			}
 			if kind == "build" || kind == "revise" {
-				c.RoundsUsed = intOr0(record.Get("verdict_rounds"))
-				c.RoundTier = orStr(record.Get("round_tier"))
+				c.RoundsUsed = py.MustInt(py.Or(record.Get("verdict_rounds"), 0))
+				c.RoundTier = py.OrStr(record.Get("round_tier"), "")
 			}
 			found[number] = c
 			order = append(order, number)
