@@ -10520,10 +10520,12 @@
     "what": "build #2504 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-30T22:12:51Z",
+    "at": "2026-10-30T22:20:44Z",
     "notes": [
-      "delivered revise #2493 on claude-3 (run 41134404357): interrupted",
-      "started revise #2493 on agy (run 41136767122)",
+      "delivered build #2503 on claude-4 (run 41135311211): part",
+      "delivered build #2490 on claude-6 (run 41101663237): approved",
+      "started revise #2551 on claude-6 (run 41137753465)",
+      "started build #2504 on claude-4 (run 41137803773)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -11229,7 +11231,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T22:12:51Z",
+  "loop_tick": "2026-10-30T22:20:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
