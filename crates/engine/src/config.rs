@@ -2082,10 +2082,11 @@ pub const DUOS_SETTLE_CAP: usize = 4 * TURN_CAP_PLAYER_TURNS as usize;
 // Patch numbers and card statistics by window (#1360, R1365000, R1367000; SPEC §9.11, R654)
 // ---------------------------------------------------------------------------------------------
 
-/// R1365000: the card families that must play differently for a change to be a patch; fewer is a
-/// micro. `cargo jackioh classify` reads it, and so does a card's stats window (R1367000) for a
-/// shipped version that recorded no tier.
-pub const PATCH_MIN_CARDS: usize = 10;
+/// R1365000, raised from 10 by R2455000: the card families that must play differently for a change to
+/// be a patch; fewer is a micro. A patch restarts every card's statistics (R1367000), so it waits for
+/// a change broad enough to move them. `cargo jackioh classify` reads it, and so does a card's stats
+/// window for a shipped version that recorded no tier.
+pub const PATCH_MIN_CARDS: usize = 50;
 
 /// SPEC §11 R654, amended by R1367000: the live games (ranked and unranked, tutorial excluded) a
 /// card's stats window must log before its figures are live-only. Fewer, and the card shows its
