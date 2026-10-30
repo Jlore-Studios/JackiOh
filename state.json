@@ -9453,18 +9453,24 @@
       "suggestion": true
     },
     "2479": {
-      "asks": [
-        "c:6523487143"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-10-30T13:03:32Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:c805a89b-1793365800",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-30T13:10:21Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6523487143"
+      ]
     },
     "2480": {
       "asks": [
@@ -9672,9 +9678,9 @@
   },
   "labels_synced": "10eb94bf70389cb1",
   "last_run": {
-    "at": "2026-10-30T12:24:50Z",
+    "at": "2026-10-30T13:10:21Z",
     "url": "",
-    "what": "revise #2493 on muse"
+    "what": "plan #2479 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-30T13:01:41Z",
