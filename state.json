@@ -18596,6 +18596,12 @@
         "number": 2423,
         "title": "Patch: the deck builder counts the deck's Units, Spells and Traps",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-30T13:09:55Z",
+        "number": 2483,
+        "title": "Patch: the tab title says when a Conquest series is waiting for your deck pick",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
