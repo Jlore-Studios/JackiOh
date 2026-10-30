@@ -13953,7 +13953,7 @@
     "index": "49.3",
     "name": "AI Girlfriend",
     "set": "Meditative",
-    "type": "Field Spell",
+    "type": "Unit",
     "tags": [
       "CN",
       "Token"
@@ -13980,26 +13980,20 @@
       "health": 30,
       "keywords": [
         {
-          "kind": "Animated"
-        },
-        {
           "kind": "Can't attack"
         }
       ],
-      "text": "Animated, Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker."
+      "text": "Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker."
     },
     "radiant": {
       "attack": 4,
       "health": 60,
       "keywords": [
         {
-          "kind": "Animated"
-        },
-        {
           "kind": "Can't attack"
         }
       ],
-      "text": "Animated, Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker {times|time|times}."
+      "text": "Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker {times|time|times}."
     }
   },
   "meditative-050": {

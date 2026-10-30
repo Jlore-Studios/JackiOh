@@ -1558,7 +1558,9 @@
       death: { voice: "alien" },
     },
     "meditative-049-3": { // AI Girlfriend
-      cast: { voice: "diva" },
+      play: { voice: "diva" },
+      attack: { voice: "diva" },
+      death: { voice: "diva" },
     },
     "meditative-050": { // CN Tech
       cast: { voice: "robot" },
