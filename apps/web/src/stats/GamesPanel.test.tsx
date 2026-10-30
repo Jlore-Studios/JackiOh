@@ -49,7 +49,7 @@ function answer(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200 });
 }
 
-const FIGURE_LINES = [/First player wins/, /Median .* turns/, /reach fatigue/, /set traps fired/];
+const FIGURE_LINES = [/First player wins/, /Median .* turns/, /reach fatigue/];
 
 afterEach(() => {
   cleanup();
@@ -57,7 +57,7 @@ afterEach(() => {
 });
 
 describe("R1994000 the Games panel", () => {
-  it("R1994000 the panel shows the first player's wins with their margin, the median turns, fatigue and traps", async () => {
+  it("R1994000 the panel shows the first player's wins with their margin, the median turns and fatigue", async () => {
     const fetchMock = vi.fn((_input: RequestInfo | URL) => Promise.resolve(answer(gamesResponse(FIGURES))));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -66,7 +66,6 @@ describe("R1994000 the Games panel", () => {
     expect(await screen.findByText("First player wins 51% (±5)", undefined, SLOW)).toBeInTheDocument();
     expect(screen.getByText("Median 17 turns")).toBeInTheDocument();
     expect(screen.getByText("12% of games reach fatigue")).toBeInTheDocument();
-    expect(screen.getByText("120 of 300 set traps fired")).toBeInTheDocument();
     expect(screen.queryByTestId(statsTestid.gamesFew)).toBeNull();
 
     const url = new URL(String(fetchMock.mock.calls[0]?.[0]), window.location.origin);
@@ -76,6 +75,16 @@ describe("R1994000 the Games panel", () => {
     const panel = screen.getByTestId(statsTestid.gamesPanel);
     expect(panel.textContent).not.toMatch(/\blive\b|AI/);
     expect(panel.textContent).not.toContain("Counted over");
+  });
+
+  it("R2446000 the panel shows no set traps line, whatever traps the response counts", async () => {
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL) => Promise.resolve(answer(gamesResponse(FIGURES)))));
+
+    render(<GamesPanel patch="v0.5.1" mode="bo1" />);
+
+    expect(await screen.findByText("First player wins 51% (±5)", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.getByTestId(statsTestid.gamesPanel).textContent).not.toMatch(/trap/i);
   });
 
   it("#2115 a rows skeleton stands in for the figures while the read is pending", async () => {

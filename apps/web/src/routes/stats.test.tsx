@@ -664,24 +664,6 @@ describe("R654 public statistics route", () => {
     expect(asked()).not.toContainEqual({ search: "alp", page: "2" });
   });
 
-  it("R654 shows player's personal stats when signed in and local stats exist", async () => {
-    // Set mock active session
-    window.localStorage.setItem(
-      SESSION_STORAGE_KEY,
-      JSON.stringify({ accessToken: "active-token", refreshToken: "refresh", expiresAt: 9999999999 }),
-    );
-    // Record game with core-001 played
-    recordGame(
-      { ...EMPTY_LOG, seen: ["core-001"], played: { "core-001": 5 } },
-      "win",
-    );
-
-    render(<StatsRoute />);
-
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-    expect(screen.getByText(/5×/)).toBeInTheDocument();
-  });
-
   it("R654 site footer links to stats page", () => {
     render(<SiteFooter />);
     const footerLink = screen.getByTestId(siteFooterTestid.stats);
@@ -840,7 +822,7 @@ describe("R654 public statistics route", () => {
     expect(rows[0]).toHaveTextContent("Spark Pup");
   });
 
-  it("R654 keyword filter+sort", async () => {
+  it("R654 keyword filter", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
@@ -857,19 +839,6 @@ describe("R654 public statistics route", () => {
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    // Keywords column is hidden by default; show it first
-    await user.click(screen.getByLabelText("Keywords"));
-
-    // Keyword column header is present
-    const keywordHeader = screen.getByRole("columnheader", { name: /Keywords/i });
-    expect(keywordHeader).toBeInTheDocument();
-
-    // Verify keyword labels in table
-    const table = screen.getByTestId(statsTestid.cardsTable);
-    expect(within(table).getByText("Immutable, Taunt")).toBeInTheDocument();
-    expect(within(table).getByText("Cleave, Rush")).toBeInTheDocument();
-    expect(within(table).getByText("Taunt")).toBeInTheDocument();
-
     // Filter by keyword: "Taunt"
     const keywordSelect = screen.getByLabelText(/Filter by keyword/i);
     await user.selectOptions(keywordSelect, "Taunt");
@@ -885,26 +854,6 @@ describe("R654 public statistics route", () => {
     await user.selectOptions(keywordSelect, "");
     rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
     expect(rows).toHaveLength(4);
-
-    // Click Keywords header to sort ascending: Cleave, Rush -> Immutable, Taunt -> Taunt -> (none)
-    await user.click(keywordHeader);
-    expect(keywordHeader).toHaveAttribute("aria-sort", "ascending");
-
-    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
-    expect(rows[0]).toHaveTextContent("Prem Panther");
-    expect(rows[1]).toHaveTextContent("Midrange Menace");
-    expect(rows[2]).toHaveTextContent("Lava Golem");
-    expect(rows[3]).toHaveTextContent("Spark Pup");
-
-    // Click Keywords header to toggle descending: Taunt -> Immutable, Taunt -> Cleave, Rush -> (none)
-    await user.click(keywordHeader);
-    expect(keywordHeader).toHaveAttribute("aria-sort", "descending");
-
-    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
-    expect(rows[0]).toHaveTextContent("Lava Golem");
-    expect(rows[1]).toHaveTextContent("Midrange Menace");
-    expect(rows[2]).toHaveTextContent("Prem Panther");
-    expect(rows[3]).toHaveTextContent("Spark Pup");
   });
 
   it("R654 sort control mirrors headers", async () => {
@@ -932,12 +881,11 @@ describe("R654 public statistics route", () => {
     expect(sortDirBtn).toHaveTextContent("↓");
     expect(nameHeader).toHaveAttribute("aria-sort", "descending");
 
-    // Clicking table header updates select control (Cost is hidden by default; show it first)
-    await user.click(screen.getByLabelText("Cost"));
-    const costHeader = screen.getByRole("columnheader", { name: /Cost/i });
-    await user.click(costHeader);
-    expect(sortSelect).toHaveValue("cost");
-    expect(sortDirBtn).toHaveTextContent("↑");
+    // Clicking a table header updates the select control
+    const gamesHeader = within(screen.getByTestId(statsTestid.cardsTable)).getByRole("columnheader", { name: /^Games/ });
+    await user.click(gamesHeader);
+    expect(sortSelect).toHaveValue("games");
+    expect(gamesHeader).toHaveAttribute("aria-sort", "descending");
   });
 
   it("R654 grid view and toggle", async () => {
@@ -978,17 +926,10 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("Columns:")).toBeInTheDocument();
   });
 
-  it("shows Played vs held and hides cost, rarity and keywords by default", async () => {
+  it("shows Played vs held and every other column by default", async () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-
-    expect(screen.getByLabelText("Cost")).not.toBeChecked();
-    expect(screen.getByLabelText("Rarity")).not.toBeChecked();
-    expect(screen.getByLabelText("Keywords")).not.toBeChecked();
-    expect(screen.queryByRole("columnheader", { name: "Cost" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "Rarity" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "Keywords" })).not.toBeInTheDocument();
 
     expect(screen.getByLabelText("Played vs held")).toBeChecked();
     expect(screen.getByLabelText("Games")).toBeChecked();
@@ -1584,6 +1525,85 @@ describe("R1973000 the Daily runs tab is gone", () => {
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Cards", "Sets", "Players"]);
     expect(screen.queryByText("Daily runs")).toBeNull();
     expect(requested("/api/stats/ci")).toEqual([]);
+  });
+});
+
+describe("R2446000 the Cards table's columns", () => {
+  it("R2446000 offers no Cost, Rarity, Keywords or Your stats column, toggle or sort, signed in with local stats", async () => {
+    window.localStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({ accessToken: "active-token", refreshToken: "refresh", expiresAt: 9999999999 }),
+    );
+    recordGame({ ...EMPTY_LOG, seen: ["core-001"], played: { "core-001": 5 } }, "win");
+
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent?.replace(/[↑↓]/g, "").trim())).toEqual([
+      "Card",
+      "Name",
+      "Games",
+      "Win rate",
+      "When drawn",
+      "Radiant",
+      "Normal",
+      "Play rate",
+      "Played vs held",
+    ]);
+    for (const label of ["Cost", "Rarity", "Keywords", "Your stats"]) {
+      expect(screen.queryByLabelText(label)).toBeNull();
+    }
+    expect(screen.queryByText(/5×/)).toBeNull();
+    expect(
+      within(screen.getByTestId(statsTestid.sortSelect))
+        .getAllByRole("option")
+        .map((option) => option.getAttribute("value")),
+    ).toEqual(["name", "games", "winRate", "drawnWinRate", "radiantWinRate", "normalWinRate", "playRate", "playedDelta"]);
+  });
+
+  it("R2446000 an old address's sort by cost, rarity or keyword opens on the default sort, win rate descending", async () => {
+    for (const gone of ["cost", "rarity", "keyword"]) {
+      at(`/stats?sort=${gone}&dir=asc`);
+      render(<StatsRoute />);
+
+      const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+      expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("winRate");
+      expect(screen.getByTestId(statsTestid.sortDir)).toHaveTextContent("↓");
+      expect(within(table).getByRole("columnheader", { name: /Win rate/ })).toHaveAttribute("aria-sort", "descending");
+      expect([...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"))).toEqual([
+        "core-001",
+        "core-003",
+        "core-002",
+      ]);
+      await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+      cleanup();
+    }
+  });
+
+  it("R2446000 the rarity, cost and keyword filters stay: the address sets them and the server is asked for rarity and cost", async () => {
+    const user = userEvent.setup();
+    at("/stats?rarity=Rare&cost=2&keyword=Taunt");
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.screen, undefined, SLOW);
+    expect(screen.getByLabelText("Filter by rarity")).toHaveValue("Rare");
+    expect(screen.getByLabelText("Filter by cost")).toHaveValue("2");
+    expect(screen.getByLabelText("Filter by keyword")).toHaveValue("Taunt");
+    await waitFor(
+      () =>
+        expect(requested("/api/stats/cards").map((url) => [url.searchParams.get("rarity"), url.searchParams.get("cost")])).toContainEqual([
+          "Rare",
+          "2",
+        ]),
+      SLOW,
+    );
+
+    await user.selectOptions(screen.getByLabelText("Filter by cost"), "3");
+    await waitFor(() => expect(requested("/api/stats/cards").some((url) => url.searchParams.get("cost") === "3")).toBe(true), SLOW);
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("rarity")).toBe("Rare");
+    expect(params.get("cost")).toBe("3");
+    expect(params.get("keyword")).toBe("Taunt");
   });
 });
 
