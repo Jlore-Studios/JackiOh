@@ -6,8 +6,8 @@
 //!   death pass has returned its Reborn bodies and reported its graveyard (`state_check`'s last step), a
 //!   copy of it fuses into its owner's Dormant Starship (R77, `subsystems::fuse`), summoning one first if
 //!   they have none (R1852000, R1852002). The copy is the piece's base version (R2521000): a fresh card
-//!   of the piece it was printed as — a fusion's last ingredient that prints the keyword, a fused
-//!   ingredient walked the same way (`base_piece_def`) — on its Radiant face if it was Radiant, with a
+//!   of the piece it was printed as — for a fusion, the card the others were fused into, its last
+//!   ingredient, a fused one walked the same way (`base_piece_def`) — on its Radiant face if it was Radiant, with a
 //!   token's X/X and its language (R57's library copy), and without its tuning, so no Buff, Nerf or
 //!   Upgrade and no card fused into it reaches the Starship. A discard, a mill or any other way into a
 //!   graveyard fuses nothing.
@@ -171,34 +171,29 @@ pub fn piece_number(ctx: &crate::script::EffectContext<'_>, def_id: &str, radian
 // ---------------------------------------------------------------------------------------------
 
 /// R2521000: the definition a dead piece's copy is a fresh card of, the piece it was printed as. A
-/// fusion (`CardDef.ingredients`) is walked from its last ingredient to its first — an Equip's host,
-/// the card the Fuse kept and the one R1852001 reads the keyword off, is its last — a fused ingredient
-/// walked the same way where it stands, to the first definition that is no fusion and whose base face
-/// prints Starship Piece. A card that is no fusion is its own definition when its base face prints it.
-/// `None` when nothing walked prints it (a piece by a grant or a lend, R1878001, R1878003): the copy is
-/// then of the dead card's own definition, as R1852000 made it.
-fn base_piece_def(state: &GameState, def_id: &str) -> Option<String> {
-    let def = crate::catalog::find_def(Some(state), def_id)?;
-    match &def.ingredients {
-        Some(specs) => specs
-            .iter()
-            .rev()
-            .find_map(|spec| base_piece_def(state, &spec.def_id)),
-        None if has_keyword(&def.base.keywords, KeywordKind::StarshipPiece) => Some(def.id.clone()),
-        None => None,
+/// fusion (`CardDef.ingredients`) is the card the others were fused into, its last ingredient — an
+/// Equip's host, the card the Fuse kept, the one R1852001 reads the keyword off — walked the same way
+/// where that ingredient is itself a fusion. A card that is no fusion is its own definition, so a host
+/// that is a piece by a grant or a lend (R1878001, R1878003) still fuses as itself.
+fn base_piece_def(state: &GameState, def_id: &str) -> String {
+    let kept = crate::catalog::find_def(Some(state), def_id)
+        .and_then(|def| def.ingredients.as_ref())
+        .and_then(|specs| specs.last());
+    match kept {
+        Some(kept) => base_piece_def(state, &kept.def_id),
+        None => def_id.to_string(),
     }
 }
 
 /// R1852000, R2521000: the copy of a dead piece that fuses, its base version: a fresh card in no pile,
-/// owned by its owner, of its base definition (`base_piece_def`, else its own), carrying of what R57's
+/// owned by its owner, of its base definition (`base_piece_def`), carrying of what R57's
 /// library copy carries its Radiant face, a token's X/X (`statsOverride`, `armorOverride`, its printed
 /// face, R175) and its language (R1300), and never its tuning — a Buff, Nerf or Upgrade (B3.4) was the
 /// dead card's, so the piece fuses with its printed numbers. Read off `snapshot`, the card as it stood
 /// before it died (R89). Its id is fresh, so it can be named by no other card.
 fn piece_copy(state: &mut GameState, snapshot: &CardInstance) -> CardInstance {
     let owner = snapshot.owner;
-    let def_id = base_piece_def(state, &snapshot.def_id)
-        .unwrap_or_else(|| snapshot.def_id.clone());
+    let def_id = base_piece_def(state, &snapshot.def_id);
     let mut copy = new_instance(state, &def_id, owner, Zone::Gone { player: owner });
     copy.radiant = snapshot.radiant;
     copy.stats_override = snapshot.stats_override;

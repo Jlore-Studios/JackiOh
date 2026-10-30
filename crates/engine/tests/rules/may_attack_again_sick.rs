@@ -164,7 +164,11 @@ mod r2521002_may_attack_again_keeps_summoning_sickness {
         s.play(lifter().id.as_str(), json!({ "zone": 1 }));
         let striker = s.unit_at(P1, 1).id;
         s.attack(striker.as_str(), s.unit_at(P2, 1));
-        assert_eq!(s.card(striker.as_str()).summoned_turn, None, "the sickness is lifted");
+        assert_eq!(
+            s.card(striker.as_str()).summoned_turn,
+            None,
+            "the sickness is lifted"
+        );
         assert!(offers(&s, &striker, ENEMY_HERO));
         s.attack(striker.as_str(), "hero");
         s.expect_health(P2, HERO_HEALTH - STRIKER_ATTACK);

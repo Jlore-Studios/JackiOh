@@ -1,9 +1,8 @@
 // R2521000 (issue #2521): a dead Starship Piece fuses its base version into its owner's Dormant
 // Starship (`starship::piece_copy`): a fresh card of the piece it was printed as — for a fusion, the
-// last ingredient whose base face prints Starship Piece, a fused ingredient walked the same way — on its
+// card the others were fused into, its last ingredient, a fused one walked the same way — on its
 // Radiant face if it was Radiant, and without its tuning. The Starship's memory and `starshipFused`
-// name that base definition; a fusion none of whose ingredients prints the keyword fuses as R1852000
-// made it. Proved on the fixtures of `fixtures/starship.rs`.
+// name that base definition. Proved on the fixtures of `fixtures/starship.rs`.
 
 use jackioh_engine::testkit::PlayerId::P1;
 use jackioh_engine::testkit::*;
@@ -69,9 +68,7 @@ fn fused_def_of(s: &Scenario, piece: &str) -> String {
     s.last_events()
         .iter()
         .find_map(|event| match event {
-            GameEvent::StarshipFused {
-                piece_id, def_id, ..
-            } if piece_id == piece => Some(def_id.clone()),
+            GameEvent::StarshipFused { piece_id, def_id, .. } if piece_id == piece => Some(def_id.clone()),
             _ => None,
         })
         .unwrap_or_else(|| panic!("no starshipFused names {piece}"))
@@ -156,7 +153,7 @@ mod r2521000_a_dead_piece_fuses_its_base_version {
     }
 
     #[test]
-    fn r2521000_r1878001_a_kept_card_that_lent_itself_the_piece_fuses_the_ingredient_that_prints_it() {
+    fn r2521000_r1878001_a_kept_card_that_lent_itself_the_piece_fuses_itself() {
         let mut s = board(json!([lender.id, plate.id, bolt.id]), json!([]));
         s.play(lender.id.as_str(), json!({ "zone": 1, "embiggen": true }));
         let host = id_at(&s, 1);
@@ -164,26 +161,25 @@ mod r2521000_a_dead_piece_fuses_its_base_version {
         assert_eq!(id_at(&s, 1), host, "the lender is the kept card");
         assert!(keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
         bolt_at(&mut s, &host);
-        // The lender's base face prints no Starship Piece, so the walk goes on to the plate.
+        // The kept card is the fusion's last ingredient, so the lender fuses, never the plate on it.
         let ship = ship_of(&s);
-        assert_eq!(starship_pieces_of(&ship), vec![record(&plate.id, false)]);
-        assert_eq!(fused_def_of(&s, &host), plate.id);
-        s.expect_stats(ship.id.as_str(), json!({ "attack": 1, "health": 2 }));
+        assert_eq!(starship_pieces_of(&ship), vec![record(&lender.id, false)]);
+        assert_eq!(fused_def_of(&s, &host), lender.id);
+        s.expect_stats(ship.id.as_str(), json!({ "attack": 1, "health": 1 }));
     }
 
     #[test]
-    fn r2521000_r1852000_a_fusion_none_of_whose_ingredients_prints_the_keyword_fuses_as_before() {
+    fn r2521000_r1852000_a_fusion_none_of_whose_ingredients_prints_the_keyword_fuses_its_kept_card() {
         let mut s = board(json!([lender.id, clamp.id, bolt.id]), json!([]));
         s.play(lender.id.as_str(), json!({ "zone": 1, "embiggen": true }));
         let host = id_at(&s, 1);
         equip_onto_lane_1(&mut s, clamp.id.as_str());
-        let fused = s.card(&host).def_id.clone();
         assert!(keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
         bolt_at(&mut s, &host);
-        // Neither the lender nor the clamp prints it: the copy is of the dead card's own definition.
+        // Neither the lender nor the clamp prints it: the base is still the kept card, the lender.
         let ship = ship_of(&s);
-        assert_eq!(starship_pieces_of(&ship), vec![record(&fused, false)]);
-        assert_eq!(fused_def_of(&s, &host), fused);
+        assert_eq!(starship_pieces_of(&ship), vec![record(&lender.id, false)]);
+        assert_eq!(fused_def_of(&s, &host), lender.id);
     }
 
     #[test]
@@ -204,10 +200,7 @@ mod r2521000_a_dead_piece_fuses_its_base_version {
 
     #[test]
     fn r2521000_a_tuned_piece_fuses_with_its_printed_numbers_and_no_tuning() {
-        let mut s = board(
-            json!([bolt.id]),
-            json!([{ "def": booster.id, "lane": 1 }]),
-        );
+        let mut s = board(json!([bolt.id]), json!([{ "def": booster.id, "lane": 1 }]));
         let piece = id_at(&s, 1);
         s.card_mut(&piece).tuning = Some(Tuning {
             attack: Some(1),

@@ -124,7 +124,12 @@ fn slot(player: PlayerId, row: Row, lane: i32) -> ZoneSlot {
 fn answer_first(s: &mut Scenario, player: PlayerId) {
     let pending = s.state().pending.clone().expect("a prompt is open");
     assert_eq!(pending.player_id, player, "the prompt is {player:?}'s");
-    let key = pending.options.first().expect("the prompt offers an option").key.clone();
+    let key = pending
+        .options
+        .first()
+        .expect("the prompt offers an option")
+        .key
+        .clone();
     s.answer(json!(key));
 }
 
@@ -144,7 +149,11 @@ fn meteor_board(seed: &str, radiant: bool, p2_field: Value) -> Scenario {
 fn b21_meteor_deals_15_to_its_target_on_both_faces() {
     for radiant in [false, true] {
         // A lone Radiant Genn (42 Health) takes the whole hit and survives it: nothing is left over.
-        let mut s = meteor_board("b21-fifteen", radiant, json!([{ "def": GENN, "radiant": true, "lane": 3 }]));
+        let mut s = meteor_board(
+            "b21-fifteen",
+            radiant,
+            json!([{ "def": GENN, "radiant": true, "lane": 3 }]),
+        );
         let genn = s.unit_at(P2, 3);
         let before = s.stats(&genn).health;
         s.play(METEOR, json!({ "targets": pick::instance(&genn) }));
@@ -153,7 +162,11 @@ fn b21_meteor_deals_15_to_its_target_on_both_faces() {
             before - METEOR_DAMAGE,
             "Meteor (radiant {radiant}) deals {METEOR_DAMAGE}"
         );
-        assert_eq!(s.state().players.p2.hero.health, HERO_HEALTH, "no excess, nothing to the hero");
+        assert_eq!(
+            s.state().players.p2.hero.health,
+            HERO_HEALTH,
+            "no excess, nothing to the hero"
+        );
     }
 }
 
@@ -207,7 +220,11 @@ fn b21_radiant_meteor_stops_at_a_neighbour_that_takes_the_whole_excess() {
         METEOR_DAMAGE - health,
         "the excess goes onto a neighbour, which takes it whole"
     );
-    assert_eq!(s.state().players.p2.hero.health, HERO_HEALTH, "so none reaches the hero");
+    assert_eq!(
+        s.state().players.p2.hero.health,
+        HERO_HEALTH,
+        "so none reaches the hero"
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -312,7 +329,11 @@ fn activations_listed(s: &Scenario, card: &CardInstance) -> usize {
 }
 
 fn zolarketh_played(seed: &str, radiant: bool) -> (Scenario, CardInstance) {
-    let mut s = board(seed, json!({ "hand": [on(ZOLARKETH, radiant), VANILLA] }), json!({}));
+    let mut s = board(
+        seed,
+        json!({ "hand": [on(ZOLARKETH, radiant), VANILLA] }),
+        json!({}),
+    );
     s.play(ZOLARKETH, json!({}));
     let university = s.card(UNIVERSITY).clone();
     s.expect_in_zone(&university, "field");
@@ -335,11 +356,19 @@ fn b23_zolarketh_summons_a_university_on_its_base_face_from_both_faces() {
 fn b23_the_summoned_university_is_refused_its_own_activate_now_and_on_a_later_turn() {
     for radiant in [false, true] {
         let (mut s, university) = zolarketh_played("b23-refused", radiant);
-        assert_eq!(activations_listed(&s, &university), 0, "none of its abilities is listed");
+        assert_eq!(
+            activations_listed(&s, &university),
+            0,
+            "none of its abilities is listed"
+        );
         s.expect_refused(|s| s.activate(&university, json!({})));
         s.end_turn().end_turn();
         assert_eq!(s.state().active, P1);
-        assert_eq!(activations_listed(&s, &university), 0, "still none on a later turn");
+        assert_eq!(
+            activations_listed(&s, &university),
+            0,
+            "still none on a later turn"
+        );
         s.expect_refused(|s| s.activate(&university, json!({})));
     }
 }
@@ -362,7 +391,10 @@ fn campus(seed: &str, zolars: &[bool]) -> Campus {
     let zolars: Vec<CardInstance> = (1..=lanes).map(|lane| s.unit_at(P1, lane)).collect();
     let first = s.unit_at(P1, lanes + 1);
     let second = s.unit_at(P1, lanes + 2);
-    assert_eq!((first.def_id.as_str(), second.def_id.as_str()), (UNIVERSITY, UNIVERSITY));
+    assert_eq!(
+        (first.def_id.as_str(), second.def_id.as_str()),
+        (UNIVERSITY, UNIVERSITY)
+    );
     Campus {
         s,
         zolars,
@@ -386,7 +418,12 @@ fn universities_action(s: &Scenario, zolar: &CardInstance) -> ActionBody {
             }
             _ => false,
         })
-        .unwrap_or_else(|| panic!("legal_actions lists no `Activate your Universities` on {}", zolar.id))
+        .unwrap_or_else(|| {
+            panic!(
+                "legal_actions lists no `Activate your Universities` on {}",
+                zolar.id
+            )
+        })
 }
 
 /// How many Buffs (`upgraded`) `events` gave `card`.
@@ -434,7 +471,11 @@ fn b24_a_university_zolarketh_ran_has_spent_its_use_and_is_refused_its_own_activ
         let action = universities_action(&s, &zolars[0]);
         s.act(action, P1, "ZolarKeth activates the Universities");
         for university in [&first, &second] {
-            assert_eq!(activations_listed(&s, university), 0, "radiant {radiant}: its use is spent");
+            assert_eq!(
+                activations_listed(&s, university),
+                0,
+                "radiant {radiant}: its use is spent"
+            );
             s.expect_refused(|s| s.activate(university, json!({})));
         }
     }
@@ -449,7 +490,11 @@ fn b24_a_university_that_activated_itself_this_turn_is_skipped() {
         second,
     } = campus("b24-skipped", &[false]);
     s.activate(&first, json!({}));
-    assert_eq!(ran(s.last_events(), &first, &second), (true, false), "the first activated itself");
+    assert_eq!(
+        ran(s.last_events(), &first, &second),
+        (true, false),
+        "the first activated itself"
+    );
     let action = universities_action(&s, &zolars[0]);
     s.act(action, P1, "ZolarKeth activates the Universities");
     assert_eq!(
@@ -495,7 +540,11 @@ fn b24_a_new_turn_gives_each_university_its_use_back() {
     s.end_turn().end_turn();
     assert_eq!(s.state().active, P1);
     s.activate(&first, json!({}));
-    assert_eq!(ran(s.last_events(), &first, &second), (true, false), "its use came back with the turn");
+    assert_eq!(
+        ran(s.last_events(), &first, &second),
+        (true, false),
+        "its use came back with the turn"
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -504,9 +553,9 @@ fn b24_a_new_turn_gives_each_university_its_use_back() {
 
 /// 24 plain Core cards, none Quickdraw and none cast on draw: with one more card, a deck.
 const PLAIN_DECK: [&str; 24] = [
-    "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015", "core-016",
-    "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043", "core-044", "core-053",
-    "core-055", "core-001", "core-003", "core-004", "core-009", "core-010",
+    "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
+    "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
+    "core-044", "core-053", "core-055", "core-001", "core-003", "core-004", "core-009", "core-010",
 ];
 
 /// Both seats' decks the plain cards and `card`, through setup's opening deal.
@@ -589,7 +638,11 @@ fn plays_listed(s: &Scenario, card: &str) -> Vec<ActionBody> {
 fn b26_one_mana_short_of_the_new_cost_is_refused() {
     for (card, radiant, cost) in COSTS.into_iter().filter(|(_, _, cost)| *cost > 0) {
         let mut s = priced(card, radiant, cost - 1);
-        assert!(plays_listed(&s, card).is_empty(), "{card} is not offered at {} mana", cost - 1);
+        assert!(
+            plays_listed(&s, card).is_empty(),
+            "{card} is not offered at {} mana",
+            cost - 1
+        );
         s.expect_refused_with(
             |s| s.play(card, json!({})),
             &format!("costs {cost}, more than your mana"),
@@ -682,8 +735,16 @@ fn b27_each_counter_is_placed_once_on_a_permanent_of_its_controller() {
             json!([{ "def": SHEEPISH_TRAP, "faceUp": false }]),
         );
         slime_dies(&mut s);
-        assert_eq!(plague_on_field(&s, P1), 3, "radiant {radiant}: all three counters are on p1's side");
-        assert_eq!(placements(s.last_events()), vec![1, 1, 1], "one placement for each counter");
+        assert_eq!(
+            plague_on_field(&s, P1),
+            3,
+            "radiant {radiant}: all three counters are on p1's side"
+        );
+        assert_eq!(
+            placements(s.last_events()),
+            vec![1, 1, 1],
+            "one placement for each counter"
+        );
     }
 }
 
@@ -752,7 +813,11 @@ fn b27_with_no_permanent_left_the_counters_are_lost() {
     let mut s = slime_board("b27-lost", false, 3, json!([]), json!([]));
     slime_dies(&mut s);
     assert!(permanents(&s, P1).is_empty(), "p1 has nothing on the field");
-    assert_eq!(placements(s.last_events()), Vec::<i32>::new(), "nothing is placed");
+    assert_eq!(
+        placements(s.last_events()),
+        Vec::<i32>::new(),
+        "nothing is placed"
+    );
     assert_eq!(plague_on_field(&s, P2), 0, "and nothing goes to the opponent");
 }
 
@@ -789,7 +854,10 @@ fn memory_leak_into_lane_2(radiant: bool) -> Scenario {
         row: Row::Backrow,
         lane: 2,
     };
-    assert!(!is_locked(s.state(), slot(P1, Row::Backrow, 2)), "not Locked before");
+    assert!(
+        !is_locked(s.state(), slot(P1, Row::Backrow, 2)),
+        "not Locked before"
+    );
     let play = legal_actions(s.state(), P1)
         .into_iter()
         .find(|action| {
@@ -833,14 +901,26 @@ fn b28_memory_leak_locks_no_other_zone() {
     for radiant in [false, true] {
         let s = memory_leak_into_lane_2(radiant);
         for lane in (1..=BACKROW_ZONES).filter(|lane| *lane != 2) {
-            assert!(!is_locked(s.state(), slot(P1, Row::Backrow, lane)), "p1's backrow lane {lane}");
+            assert!(
+                !is_locked(s.state(), slot(P1, Row::Backrow, lane)),
+                "p1's backrow lane {lane}"
+            );
         }
         for lane in 1..=UNIT_ZONES {
-            assert!(!is_locked(s.state(), slot(P1, Row::Units, lane)), "p1's unit lane {lane}");
-            assert!(!is_locked(s.state(), slot(P2, Row::Units, lane)), "p2's unit lane {lane}");
+            assert!(
+                !is_locked(s.state(), slot(P1, Row::Units, lane)),
+                "p1's unit lane {lane}"
+            );
+            assert!(
+                !is_locked(s.state(), slot(P2, Row::Units, lane)),
+                "p2's unit lane {lane}"
+            );
         }
         for lane in 1..=BACKROW_ZONES {
-            assert!(!is_locked(s.state(), slot(P2, Row::Backrow, lane)), "p2's backrow lane {lane}");
+            assert!(
+                !is_locked(s.state(), slot(P2, Row::Backrow, lane)),
+                "p2's backrow lane {lane}"
+            );
         }
     }
 }
@@ -851,7 +931,11 @@ fn b28_memory_leak_locks_no_other_zone() {
 
 /// p1's AP Rounds attacks p2's Genn and dies, so p1 has a Dormant Starship; p1 holds `hand`.
 fn with_dormant_starship(seed: &str, hand: Value) -> (Scenario, String) {
-    let mut s = board(seed, json!({ "hand": hand, "field": [AP_ROUNDS] }), json!({ "field": [GENN] }));
+    let mut s = board(
+        seed,
+        json!({ "hand": hand, "field": [AP_ROUNDS] }),
+        json!({ "field": [GENN] }),
+    );
     let piece = s.unit_at(P1, 1);
     let wall = s.unit_at(P2, 1);
     s.attack(&piece, &wall);
@@ -898,7 +982,11 @@ fn launches_then_casts_a_war_doctrine(card: &str, seed: &str) {
     for radiant in [false, true] {
         let (mut s, ship) = with_dormant_starship(seed, json!([on(card, radiant), VANILLA]));
         s.play(card, json!({}));
-        assert_eq!(launches_of(&s, P1), vec![ship.clone()], "radiant {radiant}: the Starship launched");
+        assert_eq!(
+            launches_of(&s, P1),
+            vec![ship.clone()],
+            "radiant {radiant}: the Starship launched"
+        );
         let launched_at = s
             .events()
             .iter()
@@ -907,14 +995,25 @@ fn launches_then_casts_a_war_doctrine(card: &str, seed: &str) {
         let asked_at = s
             .events()
             .iter()
-            .position(|event| matches!(event, GameEvent::PromptOpened { player: PlayerId::P1, .. }))
+            .position(|event| {
+                matches!(
+                    event,
+                    GameEvent::PromptOpened {
+                        player: PlayerId::P1,
+                        ..
+                    }
+                )
+            })
             .expect("the Discover asks p1");
         assert!(launched_at < asked_at, "the launch comes before the Discover");
         answer_first(&mut s, P1);
         let cast = doctrines_cast(&s);
         assert_eq!(cast.len(), 1, "one War Doctrine is cast: {cast:?}");
         assert_eq!(cast[0].1, radiant, "on the face of the card that cast it");
-        assert!(dormant_starship_of(s.state(), P1).is_none(), "no Dormant Starship is left");
+        assert!(
+            dormant_starship_of(s.state(), P1).is_none(),
+            "no Dormant Starship is left"
+        );
     }
 }
 
@@ -991,7 +1090,10 @@ fn b30_preemptive_strike_never_launches_the_opponents_dormant_starship() {
         .clone();
     s.play(PREEMPTIVE_STRIKE, json!({}));
     assert!(s.state().pending.is_none(), "no Discover");
-    assert!(launches_of(&s, P1).is_empty() && launches_of(&s, P2).is_empty(), "nothing launched");
+    assert!(
+        launches_of(&s, P1).is_empty() && launches_of(&s, P2).is_empty(),
+        "nothing launched"
+    );
     assert_eq!(
         dormant_starship_of(s.state(), P2).map(|ship| ship.id.clone()),
         Some(theirs),
@@ -1004,7 +1106,11 @@ fn b30_preemptive_strike_never_launches_the_opponents_dormant_starship() {
 // ---------------------------------------------------------------------------------------------
 
 fn bobs_plan(seed: &str, radiant: bool) -> Scenario {
-    let mut s = board(seed, json!({ "hand": [on(BOBS_PLAN, radiant), VANILLA] }), json!({}));
+    let mut s = board(
+        seed,
+        json!({ "hand": [on(BOBS_PLAN, radiant), VANILLA] }),
+        json!({}),
+    );
     s.play(BOBS_PLAN, json!({}));
     s
 }
@@ -1018,7 +1124,10 @@ fn b31_bobs_plan_adds_a_star_chart_with_alteran_reach() {
         let s = bobs_plan(&seed, radiant);
         let charts = hand_of(&s, STAR_CHART);
         assert_eq!(charts.len(), 1, "radiant {radiant}: one Star Chart");
-        assert_eq!(charts[0].radiant, radiant, "a Radiant Star Chart from the Radiant Bob's Plan");
+        assert_eq!(
+            charts[0].radiant, radiant,
+            "a Radiant Star Chart from the Radiant Bob's Plan"
+        );
         assert!(hand_of(&s, BASE_CAMP).is_empty(), "no Base Camp");
     }
 }
@@ -1037,7 +1146,9 @@ fn b31_reach_the_summit_keeps_its_base_camp_and_gets_no_star_chart() {
 fn b31_aestheticize_the_game_keeps_its_discover_and_gets_no_star_chart() {
     // The one plan that asks: neither of the other two Wincons came, and a Discover is open.
     let discovering = |s: &Scenario| {
-        hand_of(s, ALTERAN_REACH).is_empty() && hand_of(s, REACH_THE_SUMMIT).is_empty() && s.state().pending.is_some()
+        hand_of(s, ALTERAN_REACH).is_empty()
+            && hand_of(s, REACH_THE_SUMMIT).is_empty()
+            && s.state().pending.is_some()
     };
     let seed = seed_where("b31-aestheticize", |seed| discovering(&bobs_plan(seed, false)));
     let mut s = bobs_plan(&seed, false);
@@ -1110,7 +1221,9 @@ fn b32_star_chart_travels_its_nodes_along_the_map() {
         assert_eq!(at(&s), nodes, "radiant {radiant}");
         assert_eq!(
             travelled(s.last_events()),
-            (1..=nodes).map(|node| (node, StarscapeReward::Heal)).collect::<Vec<_>>(),
+            (1..=nodes)
+                .map(|node| (node, StarscapeReward::Heal))
+                .collect::<Vec<_>>(),
             "one travel a node, each giving its reward"
         );
     }
@@ -1121,7 +1234,13 @@ fn b32_star_chart_charts_the_map_when_its_caster_has_none() {
     let mut s = chart_board("b32-chart", false, MAX_MANA);
     assert_eq!(s.state().players.p1.starscape, None);
     s.play(STAR_CHART, json!({}));
-    let map = s.state().players.p1.starscape.clone().expect("the first travel charts a map");
+    let map = s
+        .state()
+        .players
+        .p1
+        .starscape
+        .clone()
+        .expect("the first travel charts a map");
     assert_eq!(map.nodes.len() as i32, STARSCAPE_EDGE_TRAVELS);
     assert_eq!(map.at, STAR_CHART_NODES);
     assert_eq!(travelled(s.last_events()).len() as i32, STAR_CHART_NODES);
@@ -1138,7 +1257,11 @@ fn b32_star_chart_stops_at_the_edge_which_adds_edge_of_the_universe() {
         travelled(s.last_events()),
         vec![(STARSCAPE_EDGE_TRAVELS, StarscapeReward::Edge)]
     );
-    assert_eq!(hand_of(&s, EDGE_OF_THE_UNIVERSE).len(), 1, "the edge adds Edge of the Universe");
+    assert_eq!(
+        hand_of(&s, EDGE_OF_THE_UNIVERSE).len(),
+        1,
+        "the edge adds Edge of the Universe"
+    );
 
     // Two short: the Radiant face travels two of its four nodes.
     let mut s = chart_board("b32-edge-radiant", true, MAX_MANA);
@@ -1220,13 +1343,19 @@ fn b33_cn_tech_with_an_empty_table_adds_lunar_eclipse_on_its_face() {
 #[test]
 fn b33_cn_tech_with_no_row_of_enough_games_adds_lunar_eclipse() {
     let short = [(VANILLA, CN_TECH_MIN_GAMES - 1, CN_TECH_MIN_GAMES - 1)];
-    assert_eq!(cn_tech_adds("b33-short", false, &short), vec![(LUNAR_ECLIPSE.to_string(), false)]);
+    assert_eq!(
+        cn_tech_adds("b33-short", false, &short),
+        vec![(LUNAR_ECLIPSE.to_string(), false)]
+    );
 }
 
 #[test]
 fn b33_cn_tech_naming_only_itself_adds_lunar_eclipse() {
     let itself = [(CN_TECH, CN_TECH_MIN_GAMES, CN_TECH_MIN_GAMES)];
-    assert_eq!(cn_tech_adds("b33-itself", true, &itself), vec![(LUNAR_ECLIPSE.to_string(), true)]);
+    assert_eq!(
+        cn_tech_adds("b33-itself", true, &itself),
+        vec![(LUNAR_ECLIPSE.to_string(), true)]
+    );
 }
 
 #[test]
@@ -1323,7 +1452,11 @@ fn b34_na_tech_with_both_ends_named_fuses_them() {
 /// p1's Fruit Launcher (lane 1) activated at p1's Mr. Vanilla (lane 2), by the activation
 /// `legal_actions` lists for that target; the definitions cast in that step, in order.
 fn fruit_cast(seed: &str, radiant: bool) -> Vec<String> {
-    let mut s = board(seed, json!({ "field": [on(FRUIT_LAUNCHER, radiant), VANILLA] }), json!({}));
+    let mut s = board(
+        seed,
+        json!({ "field": [on(FRUIT_LAUNCHER, radiant), VANILLA] }),
+        json!({}),
+    );
     let launcher = s.unit_at(P1, 1);
     let target = s.unit_at(P1, 2);
     let at_target = Selection::Instance {
@@ -1355,7 +1488,10 @@ fn b35_fruit_launcher_can_cast_a_grape_token() {
                 .is_some_and(|fruit| GRAPES.contains(&fruit.as_str()))
         });
         let cast = fruit_cast(&seed, radiant);
-        assert!(card_def(&cast[0]).token, "a Grape is a token, and the pool takes it");
+        assert!(
+            card_def(&cast[0]).token,
+            "a Grape is a token, and the pool takes it"
+        );
     }
 }
 
@@ -1368,7 +1504,10 @@ fn b35_fruit_launcher_casts_nothing_but_a_fruit_of_a_set_that_ships() {
             let fruit = cast.first().unwrap_or_else(|| panic!("{seed}: a Fruit is cast"));
             let def = card_def(fruit);
             assert!(def.tags.contains(&Tag::Fruit), "{seed}: {fruit} is a Fruit");
-            assert!(SHIPPED_SETS.contains(&def.set), "{seed}: {fruit} is of a set that ships");
+            assert!(
+                SHIPPED_SETS.contains(&def.set),
+                "{seed}: {fruit} is of a set that ships"
+            );
         }
     }
 }
@@ -1428,7 +1567,11 @@ fn b36_the_two_tags_sit_after_swarm_and_before_token_in_that_order() {
             .unwrap_or_else(|| panic!("{tag} is in Tag::ALL"))
     };
     assert!(at(Tag::Swarm) < at(Tag::Resource), "Resource after Swarm");
-    assert_eq!(at(Tag::Faction), at(Tag::Resource) + 1, "Faction right after Resource");
+    assert_eq!(
+        at(Tag::Faction),
+        at(Tag::Resource) + 1,
+        "Faction right after Resource"
+    );
     assert!(at(Tag::Faction) < at(Tag::Token), "both before Token");
 }
 
@@ -1440,10 +1583,21 @@ fn b36_the_census_counts_six_resources_and_five_factions() {
 
 #[test]
 fn b36_no_other_card_carries_either_tag() {
-    assert_eq!(carrying(Tag::Resource), sorted(&RESOURCES), "only the six Resources");
-    assert_eq!(carrying(Tag::Faction), sorted(&FACTIONS), "only the five Faction cards");
+    assert_eq!(
+        carrying(Tag::Resource),
+        sorted(&RESOURCES),
+        "only the six Resources"
+    );
+    assert_eq!(
+        carrying(Tag::Faction),
+        sorted(&FACTIONS),
+        "only the five Faction cards"
+    );
     for id in RESOURCES {
-        assert!(!card_def(id).tags.contains(&Tag::Faction), "{id} is no Faction card");
+        assert!(
+            !card_def(id).tags.contains(&Tag::Faction),
+            "{id} is no Faction card"
+        );
     }
     for id in FACTIONS {
         assert!(!card_def(id).tags.contains(&Tag::Resource), "{id} is no Resource");

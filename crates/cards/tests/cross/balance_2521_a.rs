@@ -82,12 +82,22 @@ const FACTIONS: [Faction; 5] = [
     (
         GOLDEN,
         "Faction: Golden Accord",
-        &["stinkyscape-072", "stinkyscape-073", "stinkyscape-074", "stinkyscape-069"],
+        &[
+            "stinkyscape-072",
+            "stinkyscape-073",
+            "stinkyscape-074",
+            "stinkyscape-069",
+        ],
     ),
     (
         PEGASUS,
         "Faction: Pegasus",
-        &["stinkyscape-113", "stinkyscape-094", "stinkyscape-123", "stinkyscape-114"],
+        &[
+            "stinkyscape-113",
+            "stinkyscape-094",
+            "stinkyscape-123",
+            "stinkyscape-114",
+        ],
     ),
     (
         STAR_JUMPER,
@@ -547,7 +557,10 @@ fn b3_korrelite_pierces_an_armor_7_unit_and_an_armored_hero_alike() {
             s.expect_health(P2, 29);
         }
     }
-    assert!(unit_hit, "in 30 seeds the random enemy was the Armor 7 Unit at least once");
+    assert!(
+        unit_hit,
+        "in 30 seeds the random enemy was the Armor 7 Unit at least once"
+    );
 }
 
 #[test]
@@ -586,13 +599,25 @@ fn narcor_adds_one_legendary(radiant: bool) {
         );
         let card = &added[0];
         let def = card_def(&card.def_id);
-        assert_eq!(def.rarity, Rarity::Legendary, "seed {i}: {} is no Legendary", def.id);
+        assert_eq!(
+            def.rarity,
+            Rarity::Legendary,
+            "seed {i}: {} is no Legendary",
+            def.id
+        );
         assert!(!def.token, "seed {i}: {} is a token", def.id);
-        assert!(set_is_open(def.set), "seed {i}: {} is of a set that does not ship", def.id);
+        assert!(
+            set_is_open(def.set),
+            "seed {i}: {} is of a set that does not ship",
+            def.id
+        );
         assert_eq!(card.radiant, radiant, "seed {i}: {} on the wrong face", def.id);
         seen.insert(def.id);
     }
-    assert!(seen.len() > 1, "a random Legendary card, not one fixed card: {seen:?}");
+    assert!(
+        seen.len() > 1,
+        "a random Legendary card, not one fixed card: {seen:?}"
+    );
 }
 
 #[test]
@@ -643,8 +668,15 @@ fn b5_red_narcor_s_mana_is_this_turn_s_and_leaves_the_max_where_it_was_even_past
         let (s, max) = red_narcor(radiant);
         let mana = s.state().players[P1].mana;
         let gained = if radiant { 4 } else { 2 };
-        assert_eq!(mana.max, max, "radiant {radiant}: Gain mana adds to this turn's mana only");
-        assert_eq!(mana.current, 1 + gained, "radiant {radiant}: past the max of {max}");
+        assert_eq!(
+            mana.max, max,
+            "radiant {radiant}: Gain mana adds to this turn's mana only"
+        );
+        assert_eq!(
+            mana.current,
+            1 + gained,
+            "radiant {radiant}: past the max of {max}"
+        );
     }
 }
 
@@ -677,7 +709,11 @@ fn b6_each_faction_card_still_adds_its_cards_on_the_face_it_was_cast_on() {
             let before = s.hand(P1);
             s.play(id, json!({}));
             let added = new_in_hand(&before, &s);
-            assert_eq!(def_ids_sorted(&added), ids_sorted(adds), "{name}, radiant {radiant}");
+            assert_eq!(
+                def_ids_sorted(&added),
+                ids_sorted(adds),
+                "{name}, radiant {radiant}"
+            );
             assert!(
                 added.iter().all(|card| card.radiant == radiant),
                 "{name}: every card it adds is on its face (radiant {radiant})"
@@ -724,7 +760,11 @@ fn b7_swear_loyalities_adds_the_chosen_faction_card_of_all_five_on_its_own_face(
             let before = s.hand(P1);
             swear(&mut s, faction);
             let added = new_in_hand(&before, &s);
-            assert_eq!(def_ids_sorted(&added), vec![faction.to_string()], "{name}, radiant {radiant}");
+            assert_eq!(
+                def_ids_sorted(&added),
+                vec![faction.to_string()],
+                "{name}, radiant {radiant}"
+            );
             assert_eq!(
                 added[0].radiant, radiant,
                 "{name}: the Radiant Swear Loyalities adds the Radiant face, the base one the base face"
@@ -779,9 +819,20 @@ fn b8_swear_loyalities_exiles_every_card_of_another_faction_from_its_caster_s_ha
             .copied()
             .filter(|id| !exiled_by_choosing(id, chosen))
             .collect();
-        assert!(exiled.len() >= 8, "the fixture holds other factions' cards for {name}");
-        assert_eq!(def_ids_sorted(&s.pile(P1, "exile")), ids_sorted(&exiled), "choosing {name}");
-        assert_eq!(def_ids_sorted(&s.hand(P1)), ids_sorted(&kept_hand), "choosing {name}");
+        assert!(
+            exiled.len() >= 8,
+            "the fixture holds other factions' cards for {name}"
+        );
+        assert_eq!(
+            def_ids_sorted(&s.pile(P1, "exile")),
+            ids_sorted(&exiled),
+            "choosing {name}"
+        );
+        assert_eq!(
+            def_ids_sorted(&s.hand(P1)),
+            ids_sorted(&kept_hand),
+            "choosing {name}"
+        );
         assert_eq!(
             def_ids_sorted(&s.pile(P1, "library")),
             ids_sorted(&kept_library),
@@ -806,8 +857,16 @@ fn b8_a_card_of_no_faction_is_never_exiled_whichever_faction_is_chosen() {
         assert!(exiled.is_empty(), "choosing {name}: {exiled:?}");
         let mut kept_hand = hand.to_vec();
         kept_hand.push(chosen);
-        assert_eq!(def_ids_sorted(&s.hand(P1)), ids_sorted(&kept_hand), "choosing {name}");
-        assert_eq!(def_ids_sorted(&s.pile(P1, "library")), ids_sorted(&library), "choosing {name}");
+        assert_eq!(
+            def_ids_sorted(&s.hand(P1)),
+            ids_sorted(&kept_hand),
+            "choosing {name}"
+        );
+        assert_eq!(
+            def_ids_sorted(&s.pile(P1, "library")),
+            ids_sorted(&library),
+            "choosing {name}"
+        );
     }
 }
 
@@ -840,7 +899,12 @@ fn b8_tylannt_stays_when_ethics_or_vanguard_is_chosen_and_is_exiled_otherwise() 
 
 #[test]
 fn b8_graveyards_the_field_and_the_other_player_s_zones_are_never_exiled() {
-    let p1_graveyard = ["stinkyscape-110", "stinkyscape-072", "stinkyscape-115", "stinkyscape-076"];
+    let p1_graveyard = [
+        "stinkyscape-110",
+        "stinkyscape-072",
+        "stinkyscape-115",
+        "stinkyscape-076",
+    ];
     let p2_hand = ["stinkyscape-115", "stinkyscape-074", "stinkyscape-113", ANCHOR];
     let p2_library = ["stinkyscape-094", "stinkyscape-078", "stinkyscape-110"];
     let p2_graveyard = ["stinkyscape-096", "stinkyscape-161"];
@@ -865,12 +929,28 @@ fn b8_graveyards_the_field_and_the_other_player_s_zones_are_never_exiled() {
             .into_iter()
             .filter(|card| card.def_id != SWEAR)
             .collect();
-        assert_eq!(def_ids_sorted(&p1_graveyard_now), ids_sorted(&p1_graveyard), "choosing {name}");
+        assert_eq!(
+            def_ids_sorted(&p1_graveyard_now),
+            ids_sorted(&p1_graveyard),
+            "choosing {name}"
+        );
         assert_eq!(s.unit_at(P1, 1).def_id, "stinkyscape-079", "choosing {name}");
         assert_eq!(s.unit_at(P1, 2).def_id, "stinkyscape-094", "choosing {name}");
-        assert_eq!(def_ids_sorted(&s.hand(P2)), ids_sorted(&p2_hand), "choosing {name}");
-        assert_eq!(def_ids_sorted(&s.pile(P2, "library")), ids_sorted(&p2_library), "choosing {name}");
-        assert_eq!(def_ids_sorted(&s.pile(P2, "graveyard")), ids_sorted(&p2_graveyard), "choosing {name}");
+        assert_eq!(
+            def_ids_sorted(&s.hand(P2)),
+            ids_sorted(&p2_hand),
+            "choosing {name}"
+        );
+        assert_eq!(
+            def_ids_sorted(&s.pile(P2, "library")),
+            ids_sorted(&p2_library),
+            "choosing {name}"
+        );
+        assert_eq!(
+            def_ids_sorted(&s.pile(P2, "graveyard")),
+            ids_sorted(&p2_graveyard),
+            "choosing {name}"
+        );
         assert!(s.pile(P2, "exile").is_empty(), "choosing {name}");
     }
 }
@@ -902,7 +982,10 @@ fn b9_the_fifteen_die_on_either_face_and_fuse_nothing() {
             let s = felinor_clears(def, radiant);
             assert!(in_graveyard(&s, P1, def), "{def} (radiant {radiant}) died");
             let fused = fused_into_a_starship(s.events());
-            assert!(fused.is_empty(), "{def} (radiant {radiant}) is no Starship Piece: {fused:?}");
+            assert!(
+                fused.is_empty(),
+                "{def} (radiant {radiant}) is no Starship Piece: {fused:?}"
+            );
             assert!(
                 dormant_starship_of(s.state(), P1).is_none(),
                 "{def} (radiant {radiant}) built p1 no Dormant Starship"
@@ -926,7 +1009,10 @@ fn b9_the_random_starship_piece_pool_offers_none_of_the_fifteen() {
         .map(|def| def.id.clone())
         .collect();
     for def in NOT_PIECES {
-        assert!(!holds(&pool, def), "{def} is offered as a Starship Piece: {pool:?}");
+        assert!(
+            !holds(&pool, def),
+            "{def} is offered as a Starship Piece: {pool:?}"
+        );
     }
     assert!(holds(&pool, FLAK_V3), "{pool:?}");
     assert!(holds(&pool, CLOAKING_MODULE), "{pool:?}");
@@ -987,7 +1073,11 @@ fn b11_a_buffed_piece_fuses_with_its_printed_numbers_not_its_buffed_ones() {
 
         hit_job_p1_lane_1(&mut s);
 
-        assert_eq!(fused_into_a_starship(s.events()), vec![CANNON_V3.to_string()], "radiant {radiant}");
+        assert_eq!(
+            fused_into_a_starship(s.events()),
+            vec![CANNON_V3.to_string()],
+            "radiant {radiant}"
+        );
         let ship = p1_ship(&s);
         assert_eq!(pieces_of(&ship), vec![piece(CANNON_V3, radiant)]);
         let steps = ship
@@ -1085,7 +1175,11 @@ fn b13_stratos_swarm_fills_every_unit_zone_with_stratos_on_its_own_face() {
             assert_eq!(unit.radiant, radiant, "lane {lane}");
             let view = s.stats(unit.id.as_str());
             let stats = if radiant { (6, 2) } else { (3, 1) };
-            assert_eq!((view.attack, view.max_health), stats, "radiant {radiant}, lane {lane}");
+            assert_eq!(
+                (view.attack, view.max_health),
+                stats,
+                "radiant {radiant}, lane {lane}"
+            );
             let shown = kinds(&s, &unit.id);
             assert!(
                 shown.contains(&KeywordKind::Flying) && shown.contains(&KeywordKind::Ranged),
@@ -1133,8 +1227,14 @@ fn b14_cloaking_module_is_a_2_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_t
     radiant_printed.push(KeywordKind::ImmuneToSpells);
     assert_eq!(radiant, radiant_printed);
     let faces = serde_json::to_value(def).expect("a CardDef serialises");
-    assert_eq!((&faces["base"]["attack"], &faces["base"]["health"]), (&json!(2), &json!(2)));
-    assert_eq!((&faces["radiant"]["attack"], &faces["radiant"]["health"]), (&json!(4), &json!(4)));
+    assert_eq!(
+        (&faces["base"]["attack"], &faces["base"]["health"]),
+        (&json!(2), &json!(2))
+    );
+    assert_eq!(
+        (&faces["radiant"]["attack"], &faces["radiant"]["health"]),
+        (&json!(4), &json!(4))
+    );
 }
 
 #[test]
@@ -1155,7 +1255,10 @@ fn b14_cloaking_module_is_played_onto_a_unit_by_its_equip() {
             holds(&host, CLOAKING_MODULE) && holds(&host, VANILLA),
             "radiant {radiant}: fused into the Vanilla: {host:?}"
         );
-        assert!(s.unit(P1, 2).is_none(), "radiant {radiant}: it took no zone of its own");
+        assert!(
+            s.unit(P1, 2).is_none(),
+            "radiant {radiant}: it took no zone of its own"
+        );
         assert!(!s.hand(P1).iter().any(|card| card.def_id == CLOAKING_MODULE));
     }
 }
@@ -1178,7 +1281,10 @@ fn b14_cloaking_module_is_set_face_down_by_its_cloaked() {
         let set = must(s.backrow(P1, 1), "the set Cloaking Module");
         assert_eq!(set.def_id, CLOAKING_MODULE, "radiant {radiant}");
         assert_ne!(set.face_up, Some(true), "radiant {radiant}: set face-down");
-        assert!(s.unit(P1, 1).is_none(), "radiant {radiant}: no Unit stands in lane 1");
+        assert!(
+            s.unit(P1, 1).is_none(),
+            "radiant {radiant}: no Unit stands in lane 1"
+        );
     }
 }
 
@@ -1187,7 +1293,10 @@ fn b14_cloaking_module_dies_as_a_starship_piece_on_either_face() {
     for radiant in [false, true] {
         let s = felinor_clears(CLOAKING_MODULE, radiant);
         assert!(in_graveyard(&s, P1, CLOAKING_MODULE), "radiant {radiant}");
-        assert_eq!(fused_into_a_starship(s.events()), vec![CLOAKING_MODULE.to_string()]);
+        assert_eq!(
+            fused_into_a_starship(s.events()),
+            vec![CLOAKING_MODULE.to_string()]
+        );
         assert_eq!(pieces_of(&p1_ship(&s)), vec![piece(CLOAKING_MODULE, radiant)]);
     }
 }
@@ -1208,9 +1317,15 @@ fn b14_a_spell_destroying_all_permanents_takes_the_base_module_but_never_the_rad
         s.play(TWISTING_NETHER, json!({}));
         if radiant {
             s.expect_in_zone(module.as_str(), "field");
-            assert!(dormant_starship_of(s.state(), P1).is_none(), "nothing died to fuse");
+            assert!(
+                dormant_starship_of(s.state(), P1).is_none(),
+                "nothing died to fuse"
+            );
         } else {
-            assert!(in_graveyard(&s, P1, CLOAKING_MODULE), "Immutable keeps no \"all\" effect off it");
+            assert!(
+                in_graveyard(&s, P1, CLOAKING_MODULE),
+                "Immutable keeps no \"all\" effect off it"
+            );
             assert_eq!(pieces_of(&p1_ship(&s)), vec![piece(CLOAKING_MODULE, false)]);
         }
     }
@@ -1230,7 +1345,10 @@ fn b15_paragon_x_survives_a_spell_that_destroys_all_permanents_on_either_face() 
         let paragon = s.unit_at(P2, 1).id;
         s.play(TWISTING_NETHER, json!({}));
         s.expect_in_zone(paragon.as_str(), "field");
-        assert!(in_graveyard(&s, P2, VANILLA), "radiant {radiant}: the Spell did resolve");
+        assert!(
+            in_graveyard(&s, P2, VANILLA),
+            "radiant {radiant}: the Spell did resolve"
+        );
     }
 }
 
@@ -1255,11 +1373,15 @@ fn b15_no_spell_may_target_paragon_x() {
             )
             .collect();
         assert!(
-            plays.iter().any(|play| targets_of(play) == vec![the_card(&vanilla)]),
+            plays
+                .iter()
+                .any(|play| targets_of(play) == vec![the_card(&vanilla)]),
             "radiant {radiant}: Hit Job may aim at the Vanilla"
         );
         assert!(
-            !plays.iter().any(|play| targets_of(play).contains(&the_card(&paragon))),
+            !plays
+                .iter()
+                .any(|play| targets_of(play).contains(&the_card(&paragon))),
             "radiant {radiant}: Hit Job is offered Paragon-X"
         );
         let at_paragon = pick::id(&paragon);
@@ -1305,7 +1427,10 @@ fn b16_radiant_yamato_cannon_attacks_a_unit_the_turn_it_is_played() {
     let (mut s, yamato) = yamato_played(true);
     let vanilla = s.unit_at(P2, 1).id;
     s.attack(yamato.as_str(), vanilla.as_str());
-    assert!(in_graveyard(&s, P2, VANILLA), "an 8/2 Rush Unit's attack killed the 4/4");
+    assert!(
+        in_graveyard(&s, P2, VANILLA),
+        "an 8/2 Rush Unit's attack killed the 4/4"
+    );
     s.expect_in_zone(yamato.as_str(), "field");
 }
 
@@ -1337,7 +1462,9 @@ fn b17_no_aimed_weapon_lists_the_enemy_hero_as_a_target_of_its_activate() {
             let menace = s.unit_at(P2, 1).id;
             let listed = activations(&s, &weapon);
             assert!(
-                listed.iter().any(|action| targets_of(action) == vec![the_card(&menace)]),
+                listed
+                    .iter()
+                    .any(|action| targets_of(action) == vec![the_card(&menace)]),
                 "{name} (radiant {radiant}) may aim at p2's Menace: {listed:?}"
             );
             assert!(
@@ -1392,7 +1519,11 @@ fn b18_each_aimed_weapon_deals_its_damage_to_an_enemy_unit_on_either_face() {
             let (mut s, weapon) = armed(def, radiant, json!([MENACE]));
             let menace = s.unit_at(P2, 1).id;
             let ability = ability_of(&s, &weapon);
-            s.act(aimed(&weapon, &ability, the_card(&menace)), P1, "the weapon aimed at the Menace");
+            s.act(
+                aimed(&weapon, &ability, the_card(&menace)),
+                P1,
+                "the weapon aimed at the Menace",
+            );
             let expected = if radiant { radiant_damage } else { base };
             let on_menace: Vec<i32> = hits(s.last_events())
                 .into_iter()
@@ -1414,13 +1545,21 @@ fn b18_each_aimed_weapon_reads_its_damage_through_its_declared_number() {
             set_param(s.card_mut(weapon.as_str()), "damage", tuned);
             let menace = s.unit_at(P2, 1).id;
             let ability = ability_of(&s, &weapon);
-            s.act(aimed(&weapon, &ability, the_card(&menace)), P1, "the tuned weapon aimed at the Menace");
+            s.act(
+                aimed(&weapon, &ability, the_card(&menace)),
+                P1,
+                "the tuned weapon aimed at the Menace",
+            );
             let on_menace: Vec<i32> = hits(s.last_events())
                 .into_iter()
                 .filter(|(target, _)| *target == menace)
                 .map(|(_, amount)| amount)
                 .collect();
-            assert_eq!(on_menace, vec![tuned], "{name} (radiant {radiant}): `damage` set to {tuned}");
+            assert_eq!(
+                on_menace,
+                vec![tuned],
+                "{name} (radiant {radiant}): `damage` set to {tuned}"
+            );
         }
     }
 }
@@ -1433,7 +1572,11 @@ fn repeater_uses_a_turn(def: &str, uses: i32) {
         let ability = ability_of(&s, &repeater);
         for lane in 1..=uses {
             let menace = s.unit_at(P2, lane).id;
-            s.act(aimed(&repeater, &ability, the_card(&menace)), P1, "a use of the Repeater");
+            s.act(
+                aimed(&repeater, &ability, the_card(&menace)),
+                P1,
+                "a use of the Repeater",
+            );
             assert!(
                 hits(s.last_events()).iter().any(|(target, _)| *target == menace),
                 "{def} (radiant {radiant}): use {lane} hit its Menace"
@@ -1478,10 +1621,18 @@ fn b20_each_flak_round_hits_the_enemy_units_then_the_enemy_hero_v3_once_v4_twice
                     shot.hits
                 );
                 for round in shot.hits.chunks(ENEMIES_A_ROUND) {
-                    assert_eq!(round[2].0, ENEMY_HERO, "{def}: the hero last in each round, {:?}", shot.hits);
+                    assert_eq!(
+                        round[2].0, ENEMY_HERO,
+                        "{def}: the hero last in each round, {:?}",
+                        shot.hits
+                    );
                     let mut units = vec![round[0].0.clone(), round[1].0.clone()];
                     units.sort();
-                    assert_eq!(units, shot.units, "{def}: each enemy Unit once a round, {:?}", shot.hits);
+                    assert_eq!(
+                        units, shot.units,
+                        "{def}: each enemy Unit once a round, {:?}",
+                        shot.hits
+                    );
                 }
             }
         }
@@ -1516,7 +1667,10 @@ fn b20_base_flak_weights_its_amounts_60_30_10_lowest_first() {
     assert_eq!(rolled.len(), 150 * ENEMIES_A_ROUND * 3);
     let (ones, twos, threes) = (tally(&rolled, 1), tally(&rolled, 2), tally(&rolled, 3));
     assert_eq!(ones + twos + threes, rolled.len(), "base Flak rolls 1 to 3 only");
-    assert!(ones > twos + threes, "1 is 60%: {ones} 1s, {twos} 2s, {threes} 3s");
+    assert!(
+        ones > twos + threes,
+        "1 is 60%: {ones} 1s, {twos} 2s, {threes} 3s"
+    );
     assert!(twos > 2 * threes, "2 is 30%, 3 is 10%: {twos} 2s, {threes} 3s");
     assert!(threes > 0, "3 is 10%, never left out");
 }
@@ -1528,10 +1682,21 @@ fn b20_radiant_flak_s_lucky_1_rolls_twice_per_target_and_keeps_the_higher() {
     let rolled = amounts(FLAK_V5, true, "b20-lucky", 200, &untuned);
     assert_eq!(rolled.len(), 200 * ENEMIES_A_ROUND * 3);
     let (twos, threes, fours) = (tally(&rolled, 2), tally(&rolled, 3), tally(&rolled, 4));
-    assert_eq!(twos + threes + fours, rolled.len(), "Radiant Flak rolls 2 to 4 only");
-    assert!(threes > twos, "the higher kept makes 3 the most common: {twos} 2s, {threes} 3s, {fours} 4s");
+    assert_eq!(
+        twos + threes + fours,
+        rolled.len(),
+        "Radiant Flak rolls 2 to 4 only"
+    );
+    assert!(
+        threes > twos,
+        "the higher kept makes 3 the most common: {twos} 2s, {threes} 3s, {fours} 4s"
+    );
     assert!(twos > fours, "{twos} 2s, {fours} 4s");
-    assert!(fours * 100 > rolled.len() * 14, "4 comes near 19%, not 10%: {fours} of {}", rolled.len());
+    assert!(
+        fours * 100 > rolled.len() * 14,
+        "4 comes near 19%, not 10%: {fours} of {}",
+        rolled.len()
+    );
 }
 
 #[test]
@@ -1556,8 +1721,14 @@ fn b20_each_target_and_each_round_of_a_flak_rolls_its_own_amount() {
             rounds_differ = true;
         }
     }
-    assert!(targets_differ, "in 40 volleys some round dealt its enemies different amounts");
-    assert!(rounds_differ, "in 40 volleys some round dealt the hero another amount than the first");
+    assert!(
+        targets_differ,
+        "in 40 volleys some round dealt its enemies different amounts"
+    );
+    assert!(
+        rounds_differ,
+        "in 40 volleys some round dealt the hero another amount than the first"
+    );
 }
 
 #[test]
@@ -1584,13 +1755,9 @@ fn b20_a_flak_whose_least_equals_its_most_always_deals_that_amount() {
 #[test]
 fn b20_a_flak_tuned_past_three_values_weights_each_past_the_third_as_the_third_and_never_passes_most() {
     // 1 to 5 over 60/30/10/10/10: 1 is half, 2 a quarter, 3, 4 and 5 a twelfth each.
-    let rolled = amounts(
-        FLAK_V5,
-        false,
-        "b20-wide",
-        100,
-        &|card: &mut CardInstance| set_param(card, "most", 5),
-    );
+    let rolled = amounts(FLAK_V5, false, "b20-wide", 100, &|card: &mut CardInstance| {
+        set_param(card, "most", 5)
+    });
     assert!(
         rolled.iter().all(|amount| (1..=5).contains(amount)),
         "never outside 1..=5"
@@ -1616,5 +1783,8 @@ fn b20_a_flak_whose_least_and_most_a_nerf_crossed_rolls_between_them_lowest_firs
         "never outside 1..=3"
     );
     let (ones, twos, threes) = (tally(&rolled, 1), tally(&rolled, 2), tally(&rolled, 3));
-    assert!(ones > twos && twos > threes && threes > 0, "{ones} 1s, {twos} 2s, {threes} 3s");
+    assert!(
+        ones > twos && twos > threes && threes > 0,
+        "{ones} 1s, {twos} 2s, {threes} 3s"
+    );
 }

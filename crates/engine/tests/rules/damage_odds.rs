@@ -95,7 +95,12 @@ fn register_odds_fixtures() {
     crate::rules::fixtures::harness::setup_catalog();
     let mut catalog: CardDefs = registered_catalog().clone();
     for def in [
-        card(252100, FLAK, (0, 4), json!([{ "kind": "Lucky", "n": RADIANT_LUCKY }])),
+        card(
+            252100,
+            FLAK,
+            (0, 4),
+            json!([{ "kind": "Lucky", "n": RADIANT_LUCKY }]),
+        ),
         card(252101, WALL, (0, 40), json!([])),
         card(252102, PLAIN, (1, 1), json!([])),
     ] {
@@ -177,7 +182,11 @@ fn volley_as_foreseen(s: &mut Scenario, lucky: i32) -> Vec<(String, i32)> {
     s.activate(FLAK, json!({}));
     let hits = damage_hits(s.last_events());
     assert_eq!(hits, expected, "one roll per target, in the order they are hit");
-    assert_eq!(s.state().rng_cursor, cursor, "1 + Lucky draws per target, and no other");
+    assert_eq!(
+        s.state().rng_cursor,
+        cursor,
+        "1 + Lucky draws per target, and no other"
+    );
     let to_hero: i32 = hits
         .iter()
         .filter(|(target, _)| target == "hero-p2")
@@ -211,9 +220,16 @@ mod r2521001_each_target_rolls_its_own_amount {
             hero_differed |= hits[2].1 != hits[0].1;
             seen.extend(hits.iter().map(|(_, amount)| *amount));
         }
-        assert!(walls_differed, "two enemies can take different amounts in one sweep");
+        assert!(
+            walls_differed,
+            "two enemies can take different amounts in one sweep"
+        );
         assert!(hero_differed, "the hero rolls apart from the units");
-        assert_eq!(seen, BTreeSet::from([1, 2, 3]), "every face of the odds comes up, none other");
+        assert_eq!(
+            seen,
+            BTreeSet::from([1, 2, 3]),
+            "every face of the odds comes up, none other"
+        );
     }
 
     #[test]
@@ -333,7 +349,10 @@ mod r2521001_without_odds_nothing_changes {
     fn r2521001_the_args_without_odds_write_no_new_key_so_old_states_read_and_write_the_same() {
         let plain: DamageAllArgs = json_as(json!({ "amount": PLAIN_AMOUNT, "side": "enemy" }));
         assert!(plain.odds.is_none() && plain.lucky.is_none());
-        assert_eq!(json_of(&plain), json!({ "amount": PLAIN_AMOUNT, "side": "enemy" }));
+        assert_eq!(
+            json_of(&plain),
+            json!({ "amount": PLAIN_AMOUNT, "side": "enemy" })
+        );
     }
 
     #[test]

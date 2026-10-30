@@ -203,7 +203,9 @@ mod r2521003_run_activation_spends_a_use {
         assert_eq!(mana(&s), before + GAIN * ACADEMY_USES);
         assert_eq!(
             why_not(&s, &academy),
-            Some(format!("that ability has been used {ACADEMY_USES} times this turn"))
+            Some(format!(
+                "that ability has been used {ACADEMY_USES} times this turn"
+            ))
         );
     }
 
@@ -250,7 +252,9 @@ mod r2521003_run_activation_spends_a_use {
         assert_eq!(why_not(&s, &school).as_deref(), Some(SPENT));
         assert_eq!(
             why_not(&s, &academy),
-            Some(format!("that ability has been used {ACADEMY_USES} times this turn"))
+            Some(format!(
+                "that ability has been used {ACADEMY_USES} times this turn"
+            ))
         );
     }
 
