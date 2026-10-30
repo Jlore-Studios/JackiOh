@@ -259,7 +259,7 @@ func defNames(defs []labelDef) []string {
 }
 
 // Labels is every label the repository uses, with its colour and description: the one list
-// (#187). The sweep creates any the repository lacks; `python3 -m harness setup` creates them and
+// (#187). The sweep creates any the repository lacks; `harness setup` creates them and
 // brings each one's colour and description back to this list. The bot's own labels are the
 // running bot's: `bot:*` in the night bot's process, `squishy:*` in Squishy's
 // (`HARNESS_HOME=.squishy`).

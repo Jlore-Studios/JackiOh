@@ -14,7 +14,7 @@
 //   - an open issue or PR assigned to the bot that nothing ever queued;
 //   - a failed CI run on the head of a bot PR that nothing reran or queued a fix for;
 //   - a label the bot uses (`config.LABELS`) that the repository does not have: a new one used to
-//     wait for a person to run `python3 -m harness setup`, so the method labels (#307) shipped
+//     wait for a person to run `harness setup`, so the method labels (#307) shipped
 //     without existing, and no issue could be triaged; and one it no longer uses
 //     (`config.RETIRED_LABELS`), which it deletes;
 //   - a tree the bot split (`squishy:tree`, #60) whose sub-issues have all closed: its close-out is
@@ -141,7 +141,7 @@ func Sweep(ctx *hctx.Context) []string {
 // one in `config.RETIRED_LABELS` it still has, once each time those lists change
 // (`labels_synced`, their fingerprint, in the state file), so a tick normally reads nothing. A
 // label a person deleted comes back with the next change to the list, or with
-// `python3 -m harness setup`.
+// `harness setup`.
 func Labels(ctx *hctx.Context, since time.Time) []string {
 	specs := labels()
 	sorted := append([]labelSpec(nil), specs...)

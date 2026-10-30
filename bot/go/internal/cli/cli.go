@@ -1,13 +1,13 @@
 // Package cli is bot/harness/__main__.py.
 //
-// The command line: `python -m harness <command>` from the `bot/` directory.
+// The command line: `harness <command>` from the `bot/` directory.
 //
 // The workflows call `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An operator
 // calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`, `setup` and `forget`, with a
 // token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`.
 //
 // Two more commands stand for the workflows' other ways into the harness, and are not in the
-// help, which stays `python -m harness`'s: `titles shipped|retcon …` is `python3 -m
+// help, which stays `harness`'s: `titles shipped|retcon …` is `python3 -m
 // harness.titles …` (patches-ship.yml, title-retcon.yml), and `pr-title --title=…` is the inline
 // check of pr-title.yml.
 package cli
@@ -821,7 +821,7 @@ func current(cfg *config.Config, since time.Time) *config.Config {
 	return &fresh
 }
 
-// Companion is _companion: run `python -m harness <argv>` as another bot (`config.OTHERS`, #60):
+// Companion is _companion: run `harness <argv>` as another bot (`config.OTHERS`, #60):
 // its home, its token. One process is one bot, since the labels and branches are fixed when it
 // starts. Here the other process is this binary, run from `bot/` as the Python was; the error is
 // Python's OSError or TimeoutExpired.
@@ -1351,7 +1351,7 @@ func CmdForget(cfg *config.Config, args *Args) int {
 
 // Parser is parser.
 func Parser() *ArgumentParser {
-	top := newParser("python -m harness", doc)
+	top := newParser("harness", doc)
 	sub := top.subparsers("command", true)
 	p := sub.addParser(top, "plan", "decide what this night run does, and claim it")
 	p.option("--out", nil, "").required = true
@@ -1433,7 +1433,7 @@ func Parser() *ArgumentParser {
 }
 
 // doc is the module's docstring, the top parser's description.
-const doc = "The command line: `python -m harness <command>` from the `bot/` directory.\n\n" +
+const doc = "The command line: `harness <command>` from the `bot/` directory.\n\n" +
 	"The workflows call `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An operator\n" +
 	"calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`, `setup` and `forget`, with a\n" +
 	"token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`.\n"
@@ -1484,7 +1484,7 @@ func Main(argv []string /* = None */) (code int) {
 	}
 	if len(argv) > 0 {
 		switch argv[0] {
-		case "titles": // python3 -m harness.titles …
+		case "titles": // harness titles …
 			return titles.Main(argv[1:])
 		case "pr-title": // pr-title.yml's check
 			return prTitle(argv[1:])
@@ -1510,7 +1510,7 @@ func Main(argv []string /* = None */) (code int) {
 // repository come as `--title`, `--server-url` and `--repository` (the workflow's TITLE,
 // GITHUB_SERVER_URL and GITHUB_REPOSITORY); the step summary is the job's.
 func prTitle(argv []string) int {
-	p := newParser("python -m harness pr-title", "")
+	p := newParser("harness pr-title", "")
 	p.option("--title", nil, "the pull request's title").required = true
 	p.option("--server-url", "", "GITHUB_SERVER_URL, for the summary's link")
 	p.option("--repository", "", "GITHUB_REPOSITORY, for the summary's link")

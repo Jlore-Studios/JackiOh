@@ -140,19 +140,19 @@ func run(t *testing.T, argv ...string) (int, string, string) {
 
 func TestMainExitCodes(t *testing.T) {
 	code, out, errOut := run(t, "--help")
-	if code != 0 || !strings.HasPrefix(out, "usage: python -m harness [-h]\n") || errOut != "" {
+	if code != 0 || !strings.HasPrefix(out, "usage: harness [-h]\n") || errOut != "" {
 		t.Errorf("--help: %d %q %q", code, out, errOut)
 	}
 	code, out, errOut = run(t, "plan", "-h")
-	if code != 0 || !strings.HasPrefix(out, "usage: python -m harness plan [-h] --out OUT") {
+	if code != 0 || !strings.HasPrefix(out, "usage: harness plan [-h] --out OUT") {
 		t.Errorf("plan -h: %d %q %q", code, out, errOut)
 	}
 	code, out, errOut = run(t, "bogus")
-	if code != 2 || out != "" || !strings.Contains(errOut, "python -m harness: error: argument command: invalid choice: 'bogus'") {
+	if code != 2 || out != "" || !strings.Contains(errOut, "harness: error: argument command: invalid choice: 'bogus'") {
 		t.Errorf("bogus: %d %q %q", code, out, errOut)
 	}
 	code, _, errOut = run(t, "work", "--plan", "p")
-	if code != 2 || !strings.HasSuffix(errOut, "python -m harness work: error: the following arguments are required: --out, --work-dir\n") {
+	if code != 2 || !strings.HasSuffix(errOut, "harness work: error: the following arguments are required: --out, --work-dir\n") {
 		t.Errorf("work: %d %q", code, errOut)
 	}
 	code, _, errOut = run(t, "dispatch", "--mode", "nightly")
@@ -160,7 +160,7 @@ func TestMainExitCodes(t *testing.T) {
 		t.Errorf("dispatch: %d %q", code, errOut)
 	}
 	code, _, errOut = run(t, "pr-title")
-	if code != 2 || !strings.Contains(errOut, "python -m harness pr-title: error: the following arguments are required: --title") {
+	if code != 2 || !strings.Contains(errOut, "harness pr-title: error: the following arguments are required: --title") {
 		t.Errorf("pr-title: %d %q", code, errOut)
 	}
 }

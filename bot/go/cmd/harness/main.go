@@ -1,4 +1,4 @@
-// Command harness is the night bot's command line, `python -m harness`'s twin
+// Command harness is the night bot's command line, `harness`'s twin
 // (bot/harness/__main__.py).
 package main
 
