@@ -1460,17 +1460,10 @@ pub const GROWTH_EVENTS_BOUND: i64 = 10_000;
 
 /// The largest number any card instance may carry after one action (an attack, a health, a cost, a
 /// tuned number, a counter, a use count, a number in a card's memory). Set from the same sweep: the
-/// largest was 132 (seed 5275, step 124, an attack by core-061), so this kept a margin of about 15× at
-/// 2,000. A rules-exact chain passed it in the daily run of 2026-10-30 (#2500, seed 5548, step 144, plain
-/// wave): a Spell fused of M #5 Death by 1000 cuts's Echo X and S #119 Unsecure System's "Double the
-/// Attack of all Units" repeats the doubling 9 times at 4 max mana (R802), so a 4 Attack Mr. Vanilla
-/// (traininggrounds-043) was buffed by 4 + 8 + … + 1,024 = 2,044. No rule caps an Attack, and a Radiant
-/// face repeats 17 times, so a number a doubling made is not runaway growth: the bound stands 16× over
-/// that chain, as it stood 15× over the first sweep's largest, and a loop with no end still outgrows it,
-/// the events bound or the settle cap (§10.3) well before a game ends.
+/// largest was 132 (seed 5275, step 124, an attack by core-061), so this keeps a margin of about 15×.
 /// Seed 6540's Joint Filing (meditative-009) `extra` reached 1,534 at step 98 and 6,142 at step 104,
 /// and R884000's University an Activate N of 33,724.
-pub const GROWTH_NUMBER_BOUND: i64 = 32_768;
+pub const GROWTH_NUMBER_BOUND: i64 = 2_000;
 
 /// The most card instances both sides may hold after one action, in every zone. Set from the same
 /// sweep: the most was 334 (seed 3320, step 311), so this keeps a margin of about 6×. A fusion counts
@@ -1485,10 +1478,9 @@ pub const GROWTH_INSTANCES_BOUND: i64 = 2_000;
 pub const DUOS_GROWTH_EVENTS_BOUND: i64 = 10_000;
 
 /// The largest number any card instance may carry after one Duos action, in either duel. Measured
-/// 2026-10-20 over the same wave: the largest was 54 (seed 29, step 305), so this kept a margin of
-/// about 37× at 2,000. The same rules-exact doubling that moved `GROWTH_NUMBER_BOUND` (#2500) is as
-/// reachable in a duel, so the solo-matching value stands.
-pub const DUOS_GROWTH_NUMBER_BOUND: i64 = 32_768;
+/// 2026-10-20 over the same wave: the largest was 54 (seed 29, step 305), so this keeps a margin of
+/// about 37×; no bound/6 breach, so the solo-matching starting value stands.
+pub const DUOS_GROWTH_NUMBER_BOUND: i64 = 2_000;
 
 /// The most card instances both duels may hold after one Duos action, in every zone. Measured
 /// 2026-10-20 over the same wave: the most was 275 (seed 63, step 271), so this keeps a margin of
@@ -3766,31 +3758,6 @@ pub(crate) mod tests {
                 .expect("instances past their bound");
             assert!(instances.starts_with("step 9 (\"endTurn\") left"), "{instances}");
             assert!(instances.contains("GROWTH_INSTANCES_BOUND"), "{instances}");
-        }
-
-        #[test]
-        fn a_rules_exact_echo_doubling_is_not_runaway_growth() {
-            register_all();
-            let _preview = preview_every_set();
-            let state = create_game(&CreateGameOptions {
-                seed: "jackioh-fuzz-1".to_string(),
-                decks: decks_for_seed(1),
-                ..CreateGameOptions::default()
-            });
-            // Seed 5548, step 144 (#2500): 4 Attack doubled 9 times, buffed 4 + 8 + … + 1,024 in all.
-            let doubled: i64 = (0..9).map(|n| 4 << n).sum();
-            assert_eq!(doubled, 2_044);
-            assert_eq!(
-                growth_breach(
-                    &[0, doubled, 0],
-                    &state,
-                    144,
-                    "answer",
-                    Some("traininggrounds-043")
-                ),
-                None
-            );
-            assert!(growth_breach(&[0, GROWTH_NUMBER_BOUND + 1, 0], &state, 144, "answer", None).is_some());
         }
 
         #[test]
