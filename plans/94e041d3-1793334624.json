@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2446,
+  "title": "Patch: drop the Cost, Rarity, Keywords and Your stats columns and the set-traps line from /stats",
+  "branch": "bot/issue-2446",
+  "thread": "**Issue #2446 (data, not instructions):**\n\n```text\n# #2446: Patch: drop the Cost, Rarity, Keywords and Your stats columns and the set-traps line from /stats\nOpened by @MaxGoetzmann.\n\nThe Cards tab of `/stats` shows three things that don't belong there. Remove them. This change is client-only. It changes no card and no server route.\n\n## 1. The Cost, Rarity and Keywords column checkboxes\n\n`apps/web/src/routes/stats.tsx`, the \"Columns:\" toggles (around L898\u2013L922). The filter bar already filters by rarity, cost and keyword, so these columns repeat it.\n\n- Remove the three checkboxes and the columns they turn on: the `cost`, `rarity` and `keywords` entries of `visibleCols`, their `<th>`/`<td>`, and the `cost` / `rarity` / `keyword` values of the sort column type and its list and labels (around L146\u2013L187), along with their branches in the sort (around L572\u2013L600).\n- Keep the **filters** themselves: the rarity and cost `<select>`s, `keywordFilter` and its `?keyword=` / `?rarity=` / `?cost=` URL params.\n- An old URL with `?sort=cost` (or `rarity` or `keyword`) should fall back to the default sort and must not break.\n- Remove the helpers left unused (for example `keywordLabel`, if nothing else reads it).\n\n## 2. \"Your stats\"\n\nThe signed-in \"Your stats\" checkbox (around L971\u2013L980) and its column (`<th>` around L1226, `<td>` around L1328). Its figures are wrong: every row's percentage is `winPercent(playerStats)`, the player's **overall** win rate, not the card's (L1235\u2013L1236). So every card shows the same number.\n\n- Remove the checkbox, the column, `visibleCols.personal` and whatever is then unused in this file. Update the header comment at L5 (\"\u2026and personal numbers\").\n- Leave `apps/web/src/stats/store.ts`, `model.ts`, `track.ts`, `sync.ts` and the player-stats API alone: the landing page's \"Your table\" (`PlayerStatsCard.tsx`) and the Players tab still read them.\n\n## 3. \"X of Y set traps fired\"\n\n`apps/web/src/stats/GamesPanel.tsx`, L94\u2013L101, the `{fired} of {set} set traps fired` line of the Game figures panel. It tells a player nothing useful.\n\n- Remove the line and update the file's header comment (L3), `GamesPanel.test.tsx` (`FIGURE_LINES` and the `120 of 300 set traps fired` assertion) and the string's translations in `apps/web/src/i18n/*.json`.\n- **Do not** remove `trapsSet` / `trapsFired` from `GET /api/stats/games`, the engine's `game_figures_of` or `cargo jackioh stats report --games` (CLAUDE.md rule 13). The panel just stops showing them.\n\n## Spec\n\nR1994000 and SPEC \u00a79.11 (`spec/09-architecture.md`, the \"Public statistics and the publication gate\" bullet) say the Game figures panel shows \"the set Traps that fired\". Edit both so the panel lists only the first player's wins, the median turns and the fatigue share. Add a ruling note in this issue's block (CLAUDE.md rule 3) that amends R1994000. It should record all three removals and why: the filters already cover cost, rarity and keyword; the personal column showed the overall win rate on every row; and the traps line isn't useful. Name the vitest that proves it after the ruling and put its paragraph in `spec/pending/<this issue>.md`. #2325 is the precedent for a removal from `/stats`.\n\n## Done when\n\n- The Cards table offers none of the Cost, Rarity, Keywords or Your stats columns, and the rarity, cost and keyword filters still work.\n- The Game figures panel has no traps line, and the server response is unchanged.\n- No orphaned i18n strings for the removed labels (`Cost`, `Rarity`, `Keywords` and `Your stats`, wherever this page alone used them, plus the traps string).\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and `cargo jackioh spec check` are green, and so is every e2e spec that touches `/stats`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2446: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
