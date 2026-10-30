@@ -1714,7 +1714,7 @@ describe("R655 a card's effect and a Unit picked up to attack", () => {
  * --------------------------------------------------------------------------------------------- */
 
 describe("R669 the mix's panning, ducking and reverb", () => {
-  it("R669 an sfx cue with a pan plays through a stereo panner into the sfx bus; a centred one does not", () => {
+  it("R669 an sfx cue with a pan plays through a stereo panner into the sfx bus; a centered one does not", () => {
     const r = rig();
     const audio = unlocked(r);
     const bus = buses(audio);
@@ -1728,7 +1728,7 @@ describe("R669 the mix's panning, ducking and reverb", () => {
     expect(audio.inputsOf(panner).some((n) => n.kind === "gain")).toBe(true);
 
     expect(r.engine.playSfx("death")).toBe(true);
-    expect(audio.nodesOf("stereoPanner"), "a centred cue adds no panner").toHaveLength(1);
+    expect(audio.nodesOf("stereoPanner"), "a centered cue adds no panner").toHaveLength(1);
     expect(audio.violations).toEqual([]);
   });
 

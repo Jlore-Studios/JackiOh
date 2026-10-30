@@ -2,7 +2,7 @@
 //! R880–R883): the recipe a `craft` prompt's answer carries, the block price tables the editor
 //! prices from, and the preview the editor shows.
 //!
-//! A recipe is plain data, like every other `Selection`: it serialises as the client writes it
+//! A recipe is plain data, like every other `Selection`: it serializes as the client writes it
 //! (camelCase, every `Option` optional and skipped when absent), so it survives the JSON round trip
 //! a paused state takes (§10.6, R113) and names the transient definition it compiles to (R882).
 //!

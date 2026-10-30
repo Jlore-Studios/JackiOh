@@ -341,7 +341,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
             expiresAt,
           });
         };
-        // #1442: a Ranged attacker rears and flashes where it stands, its shot doing the travelling.
+        // #1442: a Ranged attacker rears and flashes where it stands, its shot doing the traveling.
         if (cue.still === true) {
           aim("0px", "0px");
           return;

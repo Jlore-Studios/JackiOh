@@ -2,7 +2,7 @@
  *
  * One look on every menu: a brass tankard beside the words, in a dashed brass frame. Nothing moves,
  * so Reduce motion needs no rule. Full width with wrapping words, so a menu stays one screen
- * (R1581000). Palette colours only, as palette.test.ts requires.
+ * (R1581000). Palette colors only, as palette.test.ts requires.
  */
 
 .empty-state {

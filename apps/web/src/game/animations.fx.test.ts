@@ -1,4 +1,4 @@
-// docs/polish/1-animations.md, behaviours B1 to B5: the animation table's `fx` column, the runner's
+// docs/polish/1-animations.md, behaviors B1 to B5: the animation table's `fx` column, the runner's
 // lifecycle signals, and the viewer's effects-speed and reduce settings (R201).
 //
 // `animations.test.ts` is B3's real proof: it must stay green without a single edit. This file adds
@@ -418,7 +418,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   transformed: ["jk-spin-face", 400, "card-<instanceId>"],
   fused: ["jk-fuse-merge", 500, "card-<instanceIds[0]>"],
   positionSwitched: ["jk-rotate-def", 250, "card-<instanceId>"],
-  controlChanged: ["jk-cross-centre", 450, "zone-<side>-<row>-<lane>"],
+  controlChanged: ["jk-cross-center", 450, "zone-<side>-<row>-<lane>"],
   rotated: ["jk-lane-slide", 500, "board"],
   swapped: ["jk-swap-cross", 500, "board"],
   locked: ["jk-chain-close", 250, "zone-<side>-<row>-<lane>"],
@@ -438,7 +438,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: ["jk-card-played", 300, "hand-card-<instanceId> | hand-<side>"],
   countered: ["jk-exile-fade", 450, "hand-card-<instanceId> | graveyard-<side> | exile-<side> | hand-<side>"],
-  stolen: ["jk-cross-centre", 450, "hand-<side>"],
+  stolen: ["jk-cross-center", 450, "hand-<side>"],
   unlocked: ["jk-chain-close", 250, "zone-<side>-<row>-<lane>"],
   activated: ["jk-icon-pop", 300, "card-<instanceId>"],
   animated: ["jk-summon-scale", 350, "zone-<side>-units-<unitLane>"],

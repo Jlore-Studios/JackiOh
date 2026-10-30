@@ -271,7 +271,7 @@ mod tests {
                 created: Some(true),
             }));
             let id = prime.first().map(|card| card.id.clone()).unwrap_or_else(|| "?".to_string());
-            assert!(!serde_json::to_string(&s.view(P2)).expect("serialises").contains(&id));
+            assert!(!serde_json::to_string(&s.view(P2)).expect("serializes").contains(&id));
         }
 
         #[test]

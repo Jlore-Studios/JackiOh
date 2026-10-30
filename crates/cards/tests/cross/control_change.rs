@@ -1,4 +1,4 @@
-//! R171 and R172 with the real cards (SPEC §4.1, §11; docs/polish/4-edge-cases.md behaviours 1 to 10,
+//! R171 and R172 with the real cards (SPEC §4.1, §11; docs/polish/4-edge-cases.md behaviors 1 to 10,
 //! 14 and 15). Every card that changes control — #36 radiant, #49, #50, #52, #86 and #87 — makes the
 //! unit it moves enter its new controller's side on that turn: summoning sick exactly as a unit
 //! summoned that turn is, with Rush and Charge applying as usual, and with a fresh exertion for its
@@ -350,7 +350,7 @@ mod r171_with_the_cards_that_change_control {
     }
 
     #[test]
-    fn r171_c52_cards_that_cross_the_centre_line_enter_their_new_side_cards_moving_along_their_own_side_keep_their_readiness()
+    fn r171_c52_cards_that_cross_the_center_line_enter_their_new_side_cards_moving_along_their_own_side_keep_their_readiness()
      {
         let mut g = setup(json!({
             "p1": {

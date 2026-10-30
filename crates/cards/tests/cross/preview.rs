@@ -134,7 +134,7 @@ fn preview_hook(id: &str, face: FaceKind) -> Option<PreviewHook> {
 
 /// A view part as the JSON the client receives (`null` for an empty place).
 fn json_of<T: Serialize>(part: &T) -> Value {
-    serde_json::to_value(part).expect("a view serialises")
+    serde_json::to_value(part).expect("a view serializes")
 }
 
 fn own_hand(view: &PlayerView) -> Vec<CardView> {

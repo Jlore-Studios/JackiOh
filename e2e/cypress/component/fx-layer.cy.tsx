@@ -167,7 +167,7 @@ describe("Polish 1: the effects layer over a real board", () => {
       // B40: the splat leaves the idle card clickable and lights its canvas area.
       cy.wrap(seen).should((saw: Seen) => {
         expect(saw.splatOverIdleCard, "its damage splat is on screen after the card's own damage motion has finished").to.eq(true);
-        expect(saw.clickLandsOnCard, `elementFromPoint at the card's centre is inside the card, and the board fits (last hit: ${saw.lastHit})`).to.eq(true);
+        expect(saw.clickLandsOnCard, `elementFromPoint at the card's center is inside the card, and the board fits (last hit: ${saw.lastHit})`).to.eq(true);
         expect(saw.litNearCard, "a lit canvas pixel near the damaged card").to.eq(true);
       });
 

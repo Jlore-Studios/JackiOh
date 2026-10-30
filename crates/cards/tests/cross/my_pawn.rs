@@ -3,7 +3,7 @@
 //! edge-case hunt (docs/polish/4-edge-cases.md, lenses L5 and L7).
 //! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
-//!  - §4.2 step 4, §6.3, R99: a cancelled attack resolves no combat, so a second My Pawn stays armed.
+//!  - §4.2 step 4, §6.3, R99: a canceled attack resolves no combat, so a second My Pawn stays armed.
 //!  - §3.2, §6.3 Exile: a My Pawn its own AI turn exiled stays in exile. R152, §3.2: its effect is the
 //!    rest of the turn it took, so it is in the graveyard by the time the next turn starts.
 //!  - R168, §10.10: the AI turn's events reach the view once, after the declaration that handed it over.
@@ -47,7 +47,7 @@ mod section_4_2_step_4_the_window_after_a_cancel {
     use super::*;
 
     #[test]
-    fn r99_section_6_3_a_second_my_pawn_does_not_fire_on_an_attack_the_first_one_already_cancelled() {
+    fn r99_section_6_3_a_second_my_pawn_does_not_fire_on_an_attack_the_first_one_already_canceled() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).

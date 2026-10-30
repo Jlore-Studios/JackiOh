@@ -1430,7 +1430,7 @@ mod r1075000_a_host_cancels_and_finds_their_room {
     }
 
     #[tokio::test]
-    async fn r1075000_a_second_cancel_and_an_unknown_code_report_cancelled_false() {
+    async fn r1075000_a_second_cancel_and_an_unknown_code_report_canceled_false() {
         let _turn = ROOMS.lock().await;
         let h = harness(false).await;
         let code = host_room(&h).await;
@@ -1543,7 +1543,7 @@ mod r1075000_a_host_cancels_and_finds_their_room {
     }
 
     #[tokio::test]
-    async fn r1075000_a_challenges_room_is_neither_listed_nor_cancelled_here() {
+    async fn r1075000_a_challenges_room_is_neither_listed_nor_canceled_here() {
         let _turn = ROOMS.lock().await;
         let h = harness(false).await;
         let code = host_room(&h).await;

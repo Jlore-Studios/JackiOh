@@ -570,7 +570,7 @@ mod tests {
                 assert_eq!(pending.kind, PromptKind::Mode);
 
                 let revived: GameState =
-                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
+                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serializes")).expect("parses");
                 assert_eq!(&revived, s.state());
                 let picks = first_picks(&pending);
                 let resumed = reduce(

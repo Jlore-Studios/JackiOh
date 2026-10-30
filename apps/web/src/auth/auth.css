@@ -4,7 +4,7 @@
    SCOPED. Every rule sits under `.auth-screen`, which only those two screens render, and the tokens
    are defined there rather than on `:root`: `index.css` belongs to no task, and the shared `.panel`,
    `.notice`, `.form-card` and `.link-button` rules it holds are reused here. Their tavern look
-   (colours, the framed board, the gold button) is `tavern.css`'s, under `.tavern`, which these
+   (colors, the framed board, the gold button) is `tavern.css`'s, under `.tavern`, which these
    screens also carry; this file keeps only the layout and states that are the forms' own. */
 
 .auth-screen {
@@ -26,7 +26,7 @@
   gap: 4px;
 }
 
-/* A field's own problem, under the field it belongs to. Colour AND text, never colour alone. */
+/* A field's own problem, under the field it belongs to. Color AND text, never color alone. */
 .auth-screen .auth-field-error {
   margin: 2px 0 0;
   color: color-mix(in srgb, var(--auth-error) 55%, var(--text));

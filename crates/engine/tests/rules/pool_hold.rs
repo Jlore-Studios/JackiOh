@@ -188,7 +188,7 @@ fn played(seed: &str, hold: bool, verb: &str) -> GameState {
 /// Which of the held rarities' pool cards the state names anywhere: a hand, a row, a graveyard, a
 /// prompt's options.
 fn held_seen(state: &GameState) -> Vec<&'static str> {
-    let text = serde_json::to_string(state).expect("serialises");
+    let text = serde_json::to_string(state).expect("serializes");
     [
         "ph-unit-legendary",
         "ph-unit-mythic",
@@ -201,7 +201,7 @@ fn held_seen(state: &GameState) -> Vec<&'static str> {
 }
 
 fn any_pool_card_seen(state: &GameState) -> bool {
-    let text = serde_json::to_string(state).expect("serialises");
+    let text = serde_json::to_string(state).expect("serializes");
     text.contains("ph-unit-") || text.contains("ph-spell-")
 }
 

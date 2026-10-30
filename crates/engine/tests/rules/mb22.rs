@@ -286,7 +286,7 @@ fn r1200_r1044_a_face_down_play_under_a_mayor_draws_no_target() {
             ),
             "{set:?}"
         );
-        let mut body = serde_json::to_value(&set).expect("a play serialises");
+        let mut body = serde_json::to_value(&set).expect("a play serializes");
         body["playerId"] = json!("p1");
         let result = act_result(&state, body);
         assert!(result.error.is_none(), "{set:?}: {:?}", result.error);
@@ -642,14 +642,14 @@ fn r1203_a_fallen_target_cancels_the_attack_exertion_spent() {
 
     let result = act_result(&state, attack_action(P1, &prime.id, &ally.id));
     assert!(result.error.is_none(), "{:?}", result.error);
-    // The target had left the field before its combat: cancelled, exertion spent.
-    let cancelled: Vec<&GameEvent> = result
+    // The target had left the field before its combat: canceled, exertion spent.
+    let canceled: Vec<&GameEvent> = result
         .events
         .iter()
         .filter(|event| matches!(event, GameEvent::AttackCancelled { .. }))
         .collect();
-    assert_eq!(cancelled.len(), 1, "attackCancelled is emitted");
-    match &cancelled[0] {
+    assert_eq!(canceled.len(), 1, "attackCancelled is emitted");
+    match &canceled[0] {
         GameEvent::AttackCancelled {
             attacker_id,
             by_instance_id,

@@ -165,7 +165,7 @@ fn snapshot(catalog: &Catalog) -> Value {
 
 /// The validator's verdict: empty for `{ ok: true }`, else its errors.
 fn issues(result: impl Serialize) -> Vec<Value> {
-    let value = serde_json::to_value(&result).expect("a verdict serialises");
+    let value = serde_json::to_value(&result).expect("a verdict serializes");
     if value.get("ok") == Some(&json!(true)) || value.get("Ok").is_some() {
         return Vec::new();
     }
@@ -587,7 +587,7 @@ mod r388_get_api_catalog_version_serves_the_catalog_as_each_patch_left_it_b4_2 {
                 .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
             let snapshot: CardDefs = serde_json::from_str(&raw)
                 .unwrap_or_else(|error| panic!("parse {}: {error}", path.display()));
-            let snapshot_value = serde_json::to_value(&snapshot).expect("CardDefs serialises");
+            let snapshot_value = serde_json::to_value(&snapshot).expect("CardDefs serializes");
             assert_eq!(
                 body["defs"], snapshot_value,
                 "{version}: defs match snapshot exactly"
@@ -622,7 +622,7 @@ mod r388_get_api_catalog_version_serves_the_catalog_as_each_patch_left_it_b4_2 {
         assert_eq!(body["version"], "core-1");
         assert_eq!(
             body["defs"],
-            serde_json::to_value(&catalog.defs).expect("serialises")
+            serde_json::to_value(&catalog.defs).expect("serializes")
         );
     }
 

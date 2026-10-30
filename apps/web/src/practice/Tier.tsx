@@ -2,7 +2,7 @@
 // and the result screen share, so a tier looks the same everywhere it appears.
 //
 // The crest is inline SVG with no gradients (a gradient needs a document-unique id, and three
-// crests share a page), coloured entirely from CSS through `--tier` (practice.css), so it costs no
+// crests share a page), colored entirely from CSS through `--tier` (practice.css), so it costs no
 // asset and follows the theme tokens. Its gems count the tier's rank in `DIFFICULTIES`.
 
 import type { ReactElement } from "react";

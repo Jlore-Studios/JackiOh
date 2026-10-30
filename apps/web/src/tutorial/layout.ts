@@ -61,8 +61,8 @@ function dock(input: PlaceInput, anchor: Rect): BubblePlacement {
   const { viewport, bubble, margin, gap, minHeight } = input;
   const topEdge = input.insetTop + margin;
   const bottomEdge = viewport.height - margin;
-  const centreX = anchor.left + anchor.width / 2;
-  const left = clamp(centreX - bubble.width / 2, margin, viewport.width - margin - bubble.width);
+  const centerX = anchor.left + anchor.width / 2;
+  const left = clamp(centerX - bubble.width / 2, margin, viewport.width - margin - bubble.width);
 
   const roomAbove = anchor.top - gap - topEdge;
   const roomBelow = bottomEdge - (anchor.top + anchor.height + gap);
@@ -82,10 +82,10 @@ function candidates(input: PlaceInput, anchor: Rect): Candidate[] {
   const bottomEdge = viewport.height - margin;
   const right = anchor.left + anchor.width;
   const bottom = anchor.top + anchor.height;
-  const centreX = anchor.left + anchor.width / 2;
-  const centreY = anchor.top + anchor.height / 2;
-  const alongX = clamp(centreX - bubble.width / 2, margin, viewport.width - margin - bubble.width);
-  const alongY = clamp(centreY - bubble.height / 2, topEdge, bottomEdge - bubble.height);
+  const centerX = anchor.left + anchor.width / 2;
+  const centerY = anchor.top + anchor.height / 2;
+  const alongX = clamp(centerX - bubble.width / 2, margin, viewport.width - margin - bubble.width);
+  const alongY = clamp(centerY - bubble.height / 2, topEdge, bottomEdge - bubble.height);
 
   const below: Candidate = { side: "below", left: alongX, top: bottom + gap, fits: bottom + gap + bubble.height <= bottomEdge };
   const above: Candidate = {
@@ -108,7 +108,7 @@ function candidates(input: PlaceInput, anchor: Rect): Candidate[] {
   };
 
   // Try the roomier side first.
-  const vertical = centreY > (topEdge + bottomEdge) / 2 ? [above, below] : [below, above];
+  const vertical = centerY > (topEdge + bottomEdge) / 2 ? [above, below] : [below, above];
   const horizontal = viewport.width - right >= anchor.left ? [toRight, toLeft] : [toLeft, toRight];
   return [...vertical, ...horizontal];
 }
@@ -125,7 +125,7 @@ export function placeBubble(input: PlaceInput): BubblePlacement {
         maxHeight: null,
       };
     }
-    const centre: BubblePlacement = {
+    const center: BubblePlacement = {
       side: "center",
       left: Math.max(margin, (viewport.width - bubble.width) / 2),
       top: Math.max(input.insetTop + margin, (viewport.height - bubble.height) / 2),
@@ -133,9 +133,9 @@ export function placeBubble(input: PlaceInput): BubblePlacement {
     };
     // Prompts open in the middle, so step beside one.
     const blocked = [...(input.keepClear ?? []), ...(input.avoid ?? [])].find(
-      (rect) => overlapArea({ left: centre.left, top: centre.top, ...bubble }, rect) > 0,
+      (rect) => overlapArea({ left: center.left, top: center.top, ...bubble }, rect) > 0,
     );
-    return blocked === undefined ? centre : placeBubble({ ...input, anchor: blocked, avoid: [], keepClear: [] });
+    return blocked === undefined ? center : placeBubble({ ...input, anchor: blocked, avoid: [], keepClear: [] });
   }
 
   const fitting = candidates(input, anchor).filter((candidate) => candidate.fits);

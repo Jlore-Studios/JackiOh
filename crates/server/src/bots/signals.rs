@@ -31,7 +31,7 @@ pub fn standard_normal(rng: &mut Rng) -> f64 {
 pub struct Standing {
     /// How far behind it stands as R1442 measures a person's concession: the AI's evaluation from
     /// its side, negated, the scale `ConcedeFit`'s threshold is fitted on. The evaluation is not
-    /// centred on an even board (it counts the enemy hero's health against the seat), so this alone
+    /// centered on an even board (it counts the enemy hero's health against the seat), so this alone
     /// never says whether the seat is behind.
     pub deficit: f64,
     /// How far it trails its opponent: half the gap between the opponent's evaluation from its own

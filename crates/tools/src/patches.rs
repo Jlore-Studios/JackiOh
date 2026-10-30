@@ -300,7 +300,7 @@ pub(crate) mod js {
         serde_json::from_str(text)
     }
 
-    /// Compact JSON for anything serde writes in field order (fields serialise in declaration order).
+    /// Compact JSON for anything serde writes in field order (fields serialize in declaration order).
     pub fn stringify<T: serde::Serialize + ?Sized>(value: &T) -> String {
         serde_json::to_string(value).unwrap_or_else(|error| panic!("JSON.stringify: {error}"))
     }
@@ -979,7 +979,7 @@ pub mod patches_io {
     /// Fills a raw entry's face text from the entry's printed values: `{key|singular|plural}` takes the
     /// singular wording at 1 and the plural at any other value; unknown keys are left as written. A
     /// private copy (the engine's `fill_params` takes a typed `CardDef`, which a snapshot entry, or a
-    /// test's partial one, need not deserialise into).
+    /// test's partial one, need not deserialize into).
     fn fill_params(def: &Object, face: &str) -> String {
         let text = def
             .get(face)

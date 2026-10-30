@@ -473,7 +473,7 @@ function Seat({
         emotes={emotes?.(side)}
       />
       <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} />
-      {/* R1847000: the seat's starscape map, both seats' once its player has first travelled. */}
+      {/* R1847000: the seat's starscape map, both seats' once its player has first traveled. */}
       {seat.starscape !== undefined && <StarscapeMap side={side} starscape={seat.starscape} />}
       <span className="piles">
         {/* R373: the rules' library is shown to players as the Deck. */}

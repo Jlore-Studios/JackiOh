@@ -122,7 +122,7 @@ pub fn seed_override_of(app: &App, body: &Value) -> Result<Option<String>, ApiEr
     }
 }
 
-/// ticket id -> the seed its enqueue asked for, until the ticket is paired or cancelled.
+/// ticket id -> the seed its enqueue asked for, until the ticket is paired or canceled.
 ///
 /// Module state because `try_pair` is also run by the sweeper, which never sees a handler's locals.
 /// Nothing is written here outside end-to-end mode (`seed_override_of` refuses the field), and the
@@ -179,7 +179,7 @@ pub fn seat_override_of(app: &App, body: &Value) -> Result<Option<jackioh_engine
     }
 }
 
-/// ticket id -> the seat its enqueue asked for, until the ticket is paired or cancelled.
+/// ticket id -> the seat its enqueue asked for, until the ticket is paired or canceled.
 ///
 /// Module state beside `E2E_SEAT_BY_TICKET`, for the same reason: the R1989000 pin is a test-mode
 /// field and `Ticket` must not carry it. `actor/rooms.rs` holds `room code -> seat` the same way.
@@ -267,7 +267,7 @@ impl QueuePresence {
             .insert(profile_id.to_string(), now);
     }
 
-    /// The ticket is gone (paired, cancelled, left or expired): its entry goes with it.
+    /// The ticket is gone (paired, canceled, left or expired): its entry goes with it.
     pub fn forget(&self, profile_id: &str) {
         self.heard
             .lock()
@@ -824,7 +824,7 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
         });
     }
 
-    // SPEC §11 R897000: a ticket unheard from for longer than `QUEUE_TICKET_STALE_MS` is cancelled
+    // SPEC §11 R897000: a ticket unheard from for longer than `QUEUE_TICKET_STALE_MS` is canceled
     // before pairing, so an absent player is never seated, never charged the disconnect grace and
     // never takes a phantom ranked loss. A profile never heard from gets `enqueued_at`'s grace of
     // one window (an old client that never touches), and a restarted server judges nothing until it
@@ -1596,7 +1596,7 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
 /// `DELETE /api/queue` (active): leaving the queue. Idempotent; `cancelled: false` when there was
 /// nothing open to cancel.
 ///
-/// R167: a queued player may cancel, and cancelling is idempotent, because the sweeper (R108) can
+/// R167: a queued player may cancel, and canceling is idempotent, because the sweeper (R108) can
 /// pair a ticket between the client deciding to cancel and the request arriving: cancel never
 /// unmakes a pairing, it only closes a ticket still open.
 pub async fn dequeue(app: &Arc<App>, req: Req) -> ApiResult {
@@ -1612,7 +1612,7 @@ async fn dequeue_route(app: &App, req: Req) -> ApiResult {
     };
     tx.tickets_cancel(&ticket.id, now_ms()).await?;
     tx.commit().await?;
-    // R143: a cancelled ticket will never be paired, so its seed is dropped with it. R1989000:
+    // R143: a canceled ticket will never be paired, so its seed is dropped with it. R1989000:
     // its seat pin goes with it.
     forget_seed(&ticket.id);
     forget_seat(&ticket.id);

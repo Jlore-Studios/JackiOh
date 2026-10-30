@@ -95,7 +95,7 @@ string_union! {
 string_union! {
     /// R1366: `controlChanged.how`, the verb that moved the card: §6.3 Steal (`steal`), or R1423's give
     /// to the other player (`give`). Absent for a card a board move carried across (a board swap, a
-    /// rotation across the centre line, a rollback's restore).
+    /// rotation across the center line, a rollback's restore).
     pub enum ControlHow {
         Steal = "steal",
         Give = "give",
@@ -344,7 +344,7 @@ pub enum GameEvent {
     },
     /// §4.4 step 5: `amount` is what got through. `absorbed` (R1360) is what the target's Armor took
     /// off this hit at step 2 — never the hero's divisors or cap, Divine Shield or Indestructible, and 0
-    /// under Pierce — and is left off the wire at 0 (D14), so a hit Armor had no part in serialises as
+    /// under Pierce — and is left off the wire at 0 (D14), so a hit Armor had no part in serializes as
     /// it did before the field existed. Public, as `amount` is.
     Damage {
         source_id: Option<String>,
@@ -618,7 +618,7 @@ pub enum GameEvent {
         player: PlayerId,
         turn: i32,
         /// R845 (Meditative #19.1): set on an extra turn's banner turn. Only ever `Some(true)`,
-        /// so a normal turn serialises exactly as before.
+        /// so a normal turn serializes exactly as before.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         extra: Option<bool>,
@@ -694,7 +694,7 @@ pub enum GameEvent {
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         face_down: Option<bool>,
     },
-    /// B5 E1: an announced play was cancelled. `to` is where the card went (a steal sends it to a hand, E2).
+    /// B5 E1: an announced play was canceled. `to` is where the card went (a steal sends it to a hand, E2).
     Countered {
         player: PlayerId,
         instance_id: String,
@@ -871,7 +871,7 @@ pub enum GameEvent {
         outcome: FengShuiOutcome,
     },
     /// R437: a card gained or lost a mark — a pending effect aimed at it, shown on it in both views
-    /// (#50 K-Pop Fanatic's steal is `"steal"`, purple). `color` is a key the client maps to a colour.
+    /// (#50 K-Pop Fanatic's steal is `"steal"`, purple). `color` is a key the client maps to a color.
     Marked {
         instance_id: String,
         mark: String,
@@ -899,7 +899,7 @@ pub enum GameEvent {
     },
     /// MD-D26 (Meditative #69 The Maestro): `player` paid `amount` mana for a play's price or an
     /// activation's price. Public: it names a player and a number, never a card. It is emitted only
-    /// while a card answers it, so a game with no listener serialises, hashes and replays as before.
+    /// while a card answers it, so a game with no listener serializes, hashes and replays as before.
     ManaSpent {
         player: PlayerId,
         amount: i32,
@@ -1078,7 +1078,7 @@ pub enum GameEvent {
         player: PlayerId,
         opponent: FleeOpponent,
     },
-    /// R1847001: `player` travelled to `node` (1 to `STARSCAPE_EDGE_TRAVELS`) of their starscape map,
+    /// R1847001: `player` traveled to `node` (1 to `STARSCAPE_EDGE_TRAVELS`) of their starscape map,
     /// which gives `reward`. Public: a player, a number and a reward.
     StarscapeTravelled {
         player: PlayerId,
@@ -1531,7 +1531,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn events_serialise_as_ts_writes_them() {
+    fn events_serialize_as_ts_writes_them() {
         let event = GameEvent::Damage {
             source_id: None,
             target_id: "hero-p2".into(),
@@ -1594,7 +1594,7 @@ mod tests {
 
     /// R1361: the report of a hit Armor took whole has `damage`'s fields, `absorbed` for `amount`.
     #[test]
-    fn r1361_damage_absorbed_serialises_with_damages_fields() {
+    fn r1361_damage_absorbed_serializes_with_damages_fields() {
         let event = GameEvent::DamageAbsorbed {
             source_id: None,
             target_id: "hero-p2".into(),

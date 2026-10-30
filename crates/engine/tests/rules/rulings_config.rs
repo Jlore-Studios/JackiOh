@@ -8,7 +8,7 @@
 //!   `spec/rulings/R<nnnn>.md`, and `cargo jackioh spec check` holds what its completeness test held;
 //! - its 23 pins on other files' source text (SQL migrations, `actor.ts`, `codes.ts`, …) and its
 //!   reads of `apps/server/src/config.ts` constants are dropped (#133): the server's own tests prove
-//!   those rulings by behaviour, and the notes name them.
+//!   those rulings by behavior, and the notes name them.
 //!
 //! Every value is compared through its JSON form where its Rust type is a struct or an enum (the
 //! form `export_config` hands the web, SURFACE §5.1), so the assertion reads exactly as the TS one

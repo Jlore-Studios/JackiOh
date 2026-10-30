@@ -11,7 +11,7 @@
    turns (`data-view="list|editor"` on the root): the editor gets the whole width, which the pool
    and the deck's sidebar need, and "← All decks" goes back. Both halves stay mounted either way. */
 
-/* --- colours of state -------------------------------------------------------------------------- */
+/* --- colors of state -------------------------------------------------------------------------- */
 
 .workshop {
   --ws-amber: #e0a93b;
@@ -913,7 +913,7 @@
 
 /* Side by side, the rail and the deck's sidebar each give up some width, so the filters stay on two
    rows at 1280 px and the pool keeps two whole rows of cards on a 720 px screen. The status toast
-   centres on the pool, between the rail (208 px and a 14 px gap) and the sidebar (300 px and a
+   centers on the pool, between the rail (208 px and a 14 px gap) and the sidebar (300 px and a
    14 px gap). */
 @media (min-width: 1101px) {
   .ws-layout {

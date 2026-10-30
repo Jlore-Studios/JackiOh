@@ -275,7 +275,7 @@ fn r81_embiggen_cost_rides_only_the_viewers_own_hand_cards_with_an_embiggen_pric
         json!({ "type": "play", "instanceId": id, "zone": { "row": "backrow", "lane": 1 }, "embiggen": true, "playerId": "p1" }),
     );
     let field =
-        serde_json::to_value(view_for(&after, PlayerId::P1).you.backrow).expect("the backrow serialises");
+        serde_json::to_value(view_for(&after, PlayerId::P1).you.backrow).expect("the backrow serializes");
     assert!(
         !field.to_string().contains("embiggenCost"),
         "no backrow view carries embiggenCost"

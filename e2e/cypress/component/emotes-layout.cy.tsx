@@ -53,7 +53,7 @@ const EPSILON = 0.5;
 /** The inspect view's portrait is large, however short the screen: the board's oval is 44 px. */
 const INSPECT_PORTRAIT_MIN_PX = 96;
 
-/** The seat centres the portrait from 761x501 up and puts it at the seat's left edge below that. */
+/** The seat centers the portrait from 761x501 up and puts it at the seat's left edge below that. */
 const VIEWPORTS = [
   { width: 1280, height: 720, touch: false },
   { width: 768, height: 1024, touch: true },
@@ -113,7 +113,7 @@ function fontSizePx(element: Element): number {
 
 /**
  * Opens a hero's inspect view by a right-click on its portrait (R1449): the portrait, not the hero's
- * centre, where a phone puts the power.
+ * center, where a phone puts the power.
  */
 function openView(side: "you" | "opponent"): void {
   cy.get(`${ts(`hero-${side}`)} .hero-portrait`).rightclick();

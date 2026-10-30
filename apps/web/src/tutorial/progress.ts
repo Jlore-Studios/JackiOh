@@ -50,7 +50,7 @@ function strings(ids: Iterable<unknown>): Set<string> {
   return wanted;
 }
 
-function normalise(
+function normalize(
   ids: Iterable<unknown>,
   hiddenChoice: TutorialHiddenChoice | null = null,
   foundIds: Iterable<unknown> = [],
@@ -76,7 +76,7 @@ export function parseTutorialProgress(raw: unknown): TutorialProgress {
     }
     if (!isRecord(value) || value.v !== TUTORIAL_PROGRESS_VERSION || !Array.isArray(value.completed)) return EMPTY;
     const found = Array.isArray(value.found) ? (value.found as unknown[]) : [];
-    return normalise(value.completed as unknown[], parseChoice(value.hiddenChoice), found);
+    return normalize(value.completed as unknown[], parseChoice(value.hiddenChoice), found);
   } catch {
     return EMPTY;
   }
@@ -140,13 +140,13 @@ function commit(next: TutorialProgress): TutorialProgress {
 
 export function markLessonComplete(id: string): TutorialProgress {
   const current = readTutorialProgress();
-  return commit(normalise([...current.completed, id], current.hiddenChoice, current.found));
+  return commit(normalize([...current.completed, id], current.hiddenChoice, current.found));
 }
 
 /** R2205002: entries the game showed found, kept on this device only. */
 export function markFound(ids: readonly string[]): TutorialProgress {
   const current = readTutorialProgress();
-  return commit(normalise(current.completed, current.hiddenChoice, [...current.found, ...ids]));
+  return commit(normalize(current.completed, current.hiddenChoice, [...current.found, ...ids]));
 }
 
 /**
@@ -165,7 +165,7 @@ export function fieldGuideOf(progress: TutorialProgressLike, lessons: readonly T
 export function setTutorialHidden(hidden: boolean, now: number = Date.now()): TutorialProgress {
   const current = readTutorialProgress();
   const at = Math.max(Math.floor(now), (current.hiddenChoice?.at ?? -1) + 1);
-  return commit(normalise(current.completed, Object.freeze({ hidden, at }), current.found));
+  return commit(normalize(current.completed, Object.freeze({ hidden, at }), current.found));
 }
 
 export function isTutorialHidden(progress: TutorialProgress): boolean {
@@ -191,7 +191,7 @@ function newerChoice(a: TutorialHiddenChoice | null, b: TutorialHiddenChoice | n
 
 /** R321: merging copies cannot lose a completion or let an older choice win. */
 export function mergeTutorialProgress(a: TutorialProgressLike, b: TutorialProgressLike): TutorialProgress {
-  return normalise(
+  return normalize(
     [...a.completed, ...b.completed],
     newerChoice(parseChoice(a.hiddenChoice), parseChoice(b.hiddenChoice)),
     [...(a.found ?? []), ...(b.found ?? [])],

@@ -11,7 +11,7 @@
 //! A rider (R1203; MD-E15): on every attack the Prime makes, declared or forced, `joiners` Units
 //! drawn uniformly from its controller's hand and deck together are summoned (no Cry) and attack
 //! its target first as forced attacks, in lane order, before the Prime's own combat; joiners stay.
-//! A declared attack whose target is gone is cancelled, the exertion spent.
+//! A declared attack whose target is gone is canceled, the exertion spent.
 //!
 //! Everything parked is plain JSON (R113): the owed combat or bounce runs here. Every draw is the
 //! match rng's.
@@ -246,7 +246,7 @@ pub fn joiners_first(
 // Afterwards (R1202)
 // ---------------------------------------------------------------------------
 
-/// R1202: bounce the substitute after its combat — even when its attack was cancelled — if it is
+/// R1202: bounce the substitute after its combat — even when its attack was canceled — if it is
 /// still on the field on the stay it attacked from. The game over ends everything; a prompt open
 /// owes the bounce behind it.
 pub fn bounce_after(sink: &mut EngineSink<'_>, id: &str, since: u32) {

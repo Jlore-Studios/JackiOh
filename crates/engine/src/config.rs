@@ -572,7 +572,7 @@ pub const ACTIVATE_UNLIMITED_CAP: i32 = 100;
 /// (`u32`, the type of the per-call `EngineSink::converting` counter it bounds.)
 pub const DAMAGE_REDIRECT_CAP: u32 = 2 * BACKROW_ZONES as u32;
 
-/// `BERSERK_MARK`'s shape: a mark and its colour key (R437).
+/// `BERSERK_MARK`'s shape: a mark and its color key (R437).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct MarkSpec {
@@ -580,14 +580,14 @@ pub struct MarkSpec {
     pub color: &'static str,
 }
 
-/// B5 E35: the mark a Berserk unit carries in both views (R437's reusable mark), and its colour key.
+/// B5 E35: the mark a Berserk unit carries in both views (R437's reusable mark), and its color key.
 pub const BERSERK_MARK: MarkSpec = MarkSpec {
     mark: "berserk",
     color: "red",
 };
 
 /// R1174000: the mark a Unit is announced Frozen with (`added: true`) and thawed with (`added:
-/// false`), public in both views (R437's reusable mark), and its colour key: the client's frost.
+/// false`), public in both views (R437's reusable mark), and its color key: the client's frost.
 pub const FROZEN_MARK: MarkSpec = MarkSpec {
     mark: "frozen",
     color: "cyan",
@@ -1949,7 +1949,7 @@ pub const HETU_ELEMENTS: [CardElement; 10] = [
     CardElement::Metal,
 ];
 /// R980: the element of an index with no digit (T-rush, T-coin and the other named tokens): 土, the
-/// centre.
+/// center.
 pub const ELEMENT_WITHOUT_DIGIT: CardElement = CardElement::Earth;
 /// R981: the generating cycle, each element generating the next (木→火→土→金→水→木).
 pub const GENERATING_CYCLE: [CardElement; 5] = [

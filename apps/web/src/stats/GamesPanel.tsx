@@ -25,25 +25,25 @@ export function GamesPanel({ patch, mode }: { patch: string; mode: string }): Re
   useLocale();
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const controller = new AbortController();
     setLoading(true);
     setError(false);
 
     getGameStats({ patch: patch || undefined, mode: mode || undefined, signal: controller.signal })
       .then((res) => {
-        if (cancelled) return;
+        if (canceled) return;
         setData(res);
         setLoading(false);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (canceled) return;
         setError(true);
         setLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      canceled = true;
       controller.abort();
     };
   }, [patch, mode, attempt]);

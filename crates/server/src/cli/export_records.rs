@@ -53,14 +53,14 @@ pub fn parse_export_args(argv: &[String]) -> anyhow::Result<ExportOptions> {
 
     for arg in argv {
         let Some((name, raw)) = flag(arg) else {
-            bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
+            bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
         };
         match name {
             "source" => query.source = one_of::<SourceFilter>(name, raw, SOURCE_FILTERS, USAGE)?,
             "mode" => query.mode = Some(one_of::<GameMode>(name, raw, GAME_MODES, USAGE)?),
             "patch" => query.patch = Some(raw.to_owned()),
             "out" => out = Some(PathBuf::from(raw)),
-            _ => bail!("Unrecognised option --{name}.\n\n{USAGE}"),
+            _ => bail!("Unrecognized option --{name}.\n\n{USAGE}"),
         }
     }
 

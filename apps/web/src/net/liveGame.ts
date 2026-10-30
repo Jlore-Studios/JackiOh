@@ -77,7 +77,7 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
 
   useEffect(() => {
     if (token === null || me === null || watched === null) return;
-    let cancelled = false;
+    let canceled = false;
     // A wake while a read is out would only repeat it; each effect run counts its own.
     let reading = false;
     const check = (): void => {
@@ -86,7 +86,7 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
       attempt(() => reader.current(token))
         .then(
           (next) => {
-            if (!cancelled) setPolled({ after: me, game: bannerGameOf(next) });
+            if (!canceled) setPolled({ after: me, game: bannerGameOf(next) });
           },
           () => undefined,
         )
@@ -98,7 +98,7 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
     // A throttled tab's interval stalls; waking it reads the account again at once.
     const stopWake = pageWake(check);
     return () => {
-      cancelled = true;
+      canceled = true;
       stopWake();
       clearInterval(handle);
     };
@@ -186,7 +186,7 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
 
   useEffect(() => {
     if (!watching) return;
-    let cancelled = false;
+    let canceled = false;
     // A wake while a read is out would only repeat it; each effect run counts its own.
     let reading = false;
     const check = (): void => {
@@ -200,7 +200,7 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
       attempt(() => callWithRenewal(session.accessToken, (token) => reader.current(token)))
         .then(
           (answer) => {
-            if (cancelled) return;
+            if (canceled) return;
             if (answer.kind !== "ok") {
               if (answer.kind === "signedOut") {
                 endedReads.current = 0;
@@ -238,7 +238,7 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
     // A throttled tab's interval stalls; waking it reads the account again at once.
     const stopWake = pageWake(check);
     return () => {
-      cancelled = true;
+      canceled = true;
       stopWake();
       clearInterval(handle);
     };

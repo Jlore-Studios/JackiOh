@@ -202,16 +202,16 @@ fn r1853000_r2250002_the_first_resource_gained_opens_it_and_rolls_each_player_th
 #[test]
 fn r1853000_credits_open_it_and_nothing_else_does() {
     let fresh = new_game("r1853000-fresh", None);
-    let json = serde_json::to_value(&fresh).expect("a state serialises");
+    let json = serde_json::to_value(&fresh).expect("a state serializes");
     assert!(json.get("marketplace").is_none(), "a new game has no Marketplace");
 
     // A Resource laid out by the setup is no gain, and a gain of no Credits is none either.
     let mut state = board("r1853000-credits", "p1", json!({ "hand": [COMMON_A] }), json!({}));
     assert!(credits(&mut state, P1, 0).is_empty());
-    let json = serde_json::to_value(&state).expect("a state serialises");
+    let json = serde_json::to_value(&state).expect("a state serializes");
     assert!(json.get("marketplace").is_none());
     for viewer in [P1, P2] {
-        let view = serde_json::to_value(view_for(&state, viewer)).expect("a view serialises");
+        let view = serde_json::to_value(view_for(&state, viewer)).expect("a view serializes");
         assert!(view.get("marketplace").is_none(), "{viewer:?}'s view");
     }
 

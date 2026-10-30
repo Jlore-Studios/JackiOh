@@ -26,27 +26,27 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   const signedIn = readSession() !== null;
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const controller = new AbortController();
     setLoading(true);
     setError(false);
 
     getCardStats({ card: cardId, signal: controller.signal })
       .then((res) => {
-        if (cancelled) return;
+        if (canceled) return;
         setMinSample(res.minSample);
         const match = res.cards.find((c) => c.id === cardId) ?? null;
         setStat(match);
         setLoading(false);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (canceled) return;
         setError(true);
         setLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      canceled = true;
       controller.abort();
     };
   }, [cardId, attempt]);

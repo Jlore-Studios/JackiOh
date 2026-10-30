@@ -233,7 +233,7 @@ prototype's network (two relabels) won +0.065 [+0.024, +0.106] over 1,600 paired
 the outcomes-only one won +0.010 on the same deals. `fit.py` fits (c) that way by default
 (`TD_LAMBDA`).
 
-**Measured (2026-10-18): λ = 0.3, relabelled twice.** On the learn lane's 100,000-game export
+**Measured (2026-10-18): λ = 0.3, relabeled twice.** On the learn lane's 100,000-game export
 (run 5), λ from 0.9 to 0.3 and one to three relabels all leave held-out turns 4-10 between 0.6080
 and 0.6117 (seed 1; seeds 2 and 3 at 0.7 and 0.3 alike), so the choice is made in play (D6's last
 table). `fit.py` fits (c) on the outcomes, then twice more from the same start (`TD_RELABELS`), each
@@ -314,7 +314,7 @@ puzzles are such positions, and a network retrained on all of run 5's games miss
 of 0.55) with this network, whose share on fresh deals is 0.536. What is left to improve is the
 network.
 
-**Measured (2026-10-18): TD(0.3), relabelled twice, at half.** Each row below is 1,600 paired games
+**Measured (2026-10-18): TD(0.3), relabeled twice, at half.** Each row below is 1,600 paired games
 against `main`'s hand eval (83102dd94) at `Finalists`, with seed 1's network of the learn lane's
 100,000-game export, integer, as the lane ships it. `explore3-466` is where the variants were chosen;
 `confirm3-466` holds 800 deals none of them was chosen on.
@@ -327,7 +327,7 @@ against `main`'s hand eval (83102dd94) at `Finalists`, with seed 1's network of 
 | **TD(0.3), two relabels** | **0.5** | **3** | **+0.090 [+0.051, +0.129]** | **+0.113 [+0.072, +0.155]** |
 | TD(0.3), two relabels | 0.65 | 3 | | +0.107 [+0.064, +0.150] |
 
-TD(0.3) relabelled twice won more than TD(0.7) relabelled once on both deal sets, by +0.039 and
+TD(0.3) relabeled twice won more than TD(0.7) relabeled once on both deal sets, by +0.039 and
 0.025. At a share of 0.556 against the hand eval on fresh deals, it is the first network measured
 above the gate's bar (0.55). The share stays at half. With the switch on, each of the three seeds'
 TD(0.3) networks failed one of the AI's tests at 0.65 (the Coin's P17, or #1143's Glowy Jelly Bean),

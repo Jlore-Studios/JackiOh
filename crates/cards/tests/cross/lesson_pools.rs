@@ -42,7 +42,7 @@ fn unheld_pool() -> Vec<String> {
 /// The Legendary and Mythic definitions the state names anywhere: an instance's `defId`, or a
 /// prompt option's `mode:<defId>`.
 fn held_named(state: &GameState) -> Vec<String> {
-    let text = serde_json::to_string(state).expect("the state serialises");
+    let text = serde_json::to_string(state).expect("the state serializes");
     let mut named: Vec<String> = Vec::new();
     for marker in ["\"defId\":\"", "\"mode:"] {
         for piece in text.split(marker).skip(1) {

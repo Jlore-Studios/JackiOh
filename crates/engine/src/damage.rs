@@ -587,8 +587,8 @@ fn land(
     {
         let source_id = source.map(|card| card.id.clone());
         let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
-        if let Some(LethalHitTo::Cancelled) = to {
-            // R1704001: a cancelled hit deals nothing, and emits no damage event.
+        if let Some(LethalHitTo::Canceled) = to {
+            // R1704001: a canceled hit deals nothing, and emits no damage event.
             return Landed::default();
         }
         if let Some(LethalHitTo::Target(to)) = to {
@@ -650,7 +650,7 @@ fn land(
     {
         let source_id = source.map(|card| card.id.clone());
         let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
-        if let Some(LethalHitTo::Cancelled) = to {
+        if let Some(LethalHitTo::Canceled) = to {
             return Landed::default();
         }
         if let Some(LethalHitTo::Target(to)) = to {

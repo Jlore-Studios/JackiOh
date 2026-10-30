@@ -4,7 +4,7 @@
 // end, and the HUD always offers exit.
 //
 // R2205000: a `moment` poses a question and is done once the player finds what it sets up. The coach
-// recognises each Field Guide entry (discoveries.ts) from the view alone and names the rule in a
+// recognizes each Field Guide entry (discoveries.ts) from the view alone and names the rule in a
 // discovery bubble; a moment's hint escalates only when the player stalls or asks for one, and a
 // moment never holds the AI.
 

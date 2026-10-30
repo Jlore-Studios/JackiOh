@@ -2,7 +2,7 @@
 //!
 //! Every fixture in this file is its own — defs prefixed `rb-`, registered on top of the shared
 //! fixture catalog by `game()` — so it cannot collide with another test file's fixtures (BUILD §0).
-//! Rows whose behaviour belongs to a card that does not exist until M4 test the engine machinery the
+//! Rows whose behavior belongs to a card that does not exist until M4 test the engine machinery the
 //! card will call and name the card test that proves the rest.
 //!
 //! Port of `packages/engine/test/rulings-b.test.ts` (SURFACE §4.1, §8). TS held live
@@ -49,7 +49,7 @@ const TRAMPLER: &str = "rb-trampler";
 const TRAMPLE_LEECH: &str = "rb-trample-leech";
 const CLEAVER: &str = "rb-cleaver";
 const SHIELDED: &str = "rb-shielded";
-const ARMOURED: &str = "rb-armoured";
+const ARMORED: &str = "rb-armored";
 const POISONER: &str = "rb-poisoner";
 const ZERO_ATTACK: &str = "rb-zero-attack";
 /// §5.2's last bullet: a card with no radiant form still sets the flag (R74).
@@ -69,7 +69,7 @@ const EQUATION: &str = "rb-equation";
 const GIGA: &str = "rb-giga";
 const X_CARD: &str = "rb-x-card";
 const EMBIGGEN_CARD: &str = "rb-embiggen";
-/// R75: a token index of the "N.1" form the §5.3 table normalises (#90.1).
+/// R75: a token index of the "N.1" form the §5.3 table normalizes (#90.1).
 const DOTTED: &str = "rb-dotted";
 const SPELL_TOKEN: &str = "rb-spell-token";
 const CASTER: &str = "rb-caster";
@@ -173,7 +173,7 @@ fn defs() -> Vec<CardDef> {
         ),
         unit_def_of(n, "cleaver", 3, 6, json!([{ "kind": "Cleave" }]), no()),
         unit_def_of(n, "shielded", 2, 2, json!([{ "kind": "Divine Shield" }]), no()),
-        unit_def_of(n, "armoured", 1, 6, json!([{ "kind": "Armor", "n": 5 }]), no()),
+        unit_def_of(n, "armored", 1, 6, json!([{ "kind": "Armor", "n": 5 }]), no()),
         unit_def_of(n, "poisoner", 1, 4, json!([{ "kind": "Poisonous" }]), no()),
         unit_def_of(n, "zero-attack", 0, 6, none(), no()),
         unit_def_of(
@@ -1609,9 +1609,9 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(instance_in(sink.state, &shield.id).divine_shield_spent, None);
 
         // A hit reduced to 0 by Armor emits no `damage` and triggers nothing: R1361's report alone.
-        let armour = put(sink.state, ARMOURED, slot(P2, UNITS, 3), json!({})); // Armor 5
+        let armor = put(sink.state, ARMORED, slot(P2, UNITS, 3), json!({})); // Armor 5
         let before = sink.events.len();
-        assert_eq!(deal_damage(&mut sink, hit(None, unit_hit(&armour), 2)), 0);
+        assert_eq!(deal_damage(&mut sink, hit(None, unit_hit(&armor), 2)), 0);
         let types: Vec<GameEventType> = sink.events[before..].iter().map(GameEvent::event_type).collect();
         assert_eq!(types, vec![GameEventType::DamageAbsorbed]);
 

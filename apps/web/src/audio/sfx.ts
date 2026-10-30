@@ -566,7 +566,7 @@ const trapSting: SfxRecipe = (ctx, out, at) => {
 
 /**
  * Each family's four chimes, their FM ratio and their spacing (the default is the plain spell). The
- * peak and the span are the plain spell's, so a family changes the colour and never the level.
+ * peak and the span are the plain spell's, so a family changes the color and never the level.
  */
 const SPELL_CHIMES: Readonly<Record<SfxTimbre | "plain", { hz: readonly number[]; ratio: number; step: number }>> = {
   plain: { hz: [1319, 1760, 2093, 2637], ratio: 3.5, step: 0.06 },
@@ -625,7 +625,7 @@ function spellTexture(k: Kit, timbre: SfxTimbre | undefined): void {
   }
 }
 
-/** A spell is cast: four FM chimes with a shimmering tremolo, in its family's colour. */
+/** A spell is cast: four FM chimes with a shimmering tremolo, in its family's color. */
 const spell: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.78;
   const k = kit(ctx, out, at, len);

@@ -43,7 +43,7 @@ function fakeApi(): CreatorApi {
   };
 }
 
-function unloadIsCancelled(): boolean {
+function unloadIsCanceled(): boolean {
   const event = new Event("beforeunload", { cancelable: true });
   window.dispatchEvent(event);
   return event.defaultPrevented;
@@ -115,16 +115,16 @@ describe("R1484000 the creator asks before leaving a card with changes not yet s
 
   it("R1484000 with unsaved work a reload or a closed tab asks first, and not on an untouched new card", async () => {
     await openRoute();
-    expect(unloadIsCancelled()).toBe(false);
+    expect(unloadIsCanceled()).toBe(false);
     typeName("Half made");
-    expect(unloadIsCancelled()).toBe(true);
+    expect(unloadIsCanceled()).toBe(true);
   });
 
   it("R1484000 after a save Back leaves at once and a reload is not held, and a note Back opened goes away", async () => {
     await openRoute();
     typeName("Saved card");
     await waitFor(() => expect((screen.getByTestId(creatorTestid.save) as HTMLButtonElement).disabled).toBe(false));
-    expect(unloadIsCancelled()).toBe(true);
+    expect(unloadIsCanceled()).toBe(true);
 
     fireEvent.click(screen.getByTestId(navTestid.back));
     expect(screen.getByText(UNSAVED)).toBeInTheDocument();
@@ -135,7 +135,7 @@ describe("R1484000 the creator asks before leaving a card with changes not yet s
     await waitFor(() => expect(screen.queryByText(UNSAVED)).toBeNull());
     // That render commits the note's removal before its effect cleanup drops the beforeunload
     // listener, and a busy scheduler can yield in between, so the listener is waited for too.
-    await waitFor(() => expect(unloadIsCancelled()).toBe(false));
+    await waitFor(() => expect(unloadIsCanceled()).toBe(false));
 
     fireEvent.click(screen.getByTestId(navTestid.back));
     expect(window.location.pathname).toBe(paths.collection);
@@ -144,9 +144,9 @@ describe("R1484000 the creator asks before leaving a card with changes not yet s
   it("R1484000 the beforeunload listener is gone after the page unmounts", async () => {
     const view = await openRoute();
     typeName("Half made");
-    expect(unloadIsCancelled()).toBe(true);
+    expect(unloadIsCanceled()).toBe(true);
     view.unmount();
-    expect(unloadIsCancelled()).toBe(false);
+    expect(unloadIsCanceled()).toBe(false);
   });
 });
 

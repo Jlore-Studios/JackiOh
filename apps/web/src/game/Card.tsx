@@ -550,7 +550,7 @@ export default function Card(props: CardProps): ReactElement {
       <Tallies tallies={tallies} instanceId={card.instanceId} />
       {card.counteredOnPlay === true && (
         // R667: a green, bubbling "don't play this" over the face, by shape (bubbles and a crossed
-        // cup) as well as colour, with the words in a tooltip, the inspect note and for a screen
+        // cup) as well as color, with the words in a tooltip, the inspect note and for a screen
         // reader. The film takes no pointer, and a click or drag on the badge still reaches the card
         // it sits in; under reduced motion it holds still as a plain green tint (countered.css).
         <span className="countered-warning" data-testid={testid.countered(card.instanceId)}>
@@ -590,7 +590,7 @@ export default function Card(props: CardProps): ReactElement {
       )}
 
       {props.unrevealed === true && (
-        // R371: the tag says it in words and with the struck-through eye, never by colour alone.
+        // R371: the tag says it in words and with the struck-through eye, never by color alone.
         <span className="unrevealed-tag" data-testid={testid.unrevealed(card.instanceId)} title={t(UNREVEALED_NOTE)}>
           <Icon name="eyeOff" />
           <span className="unrevealed-tag-text">{t(FACE_DOWN_TAG)}</span>

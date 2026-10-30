@@ -340,7 +340,7 @@ mod tests {
                 let mut s = after_their_turn(&[(MENACE, Some(1))], json!({}), json!({}), false);
                 s.play(AUTOCOMPLETE, json!({}));
                 let copy = copy_of(&s, MENACE).map(|card| card.id).unwrap_or_else(|| "?".to_string());
-                let theirs = serde_json::to_string(&s.view(P2)).expect("serialises");
+                let theirs = serde_json::to_string(&s.view(P2)).expect("serializes");
                 assert!(!theirs.contains(&copy));
                 assert_eq!(js(&s.view(P2))["opponent"]["hand"], json!({ "count": s.hand(P1).len() }));
             }

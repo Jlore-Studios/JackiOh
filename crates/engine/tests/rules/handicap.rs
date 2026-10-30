@@ -7,7 +7,7 @@
 //! cast-on-draw Spells of this file's own (`hc-`, from 2800) for R183's draw chain.
 //!
 //! `create_game` and `fold` panic, caught by `refusal`; `validate_handicap` answers `Result`. A value
-//! `Handicap`'s `i32`s cannot hold is built as JSON and counts as refused when it does not deserialise
+//! `Handicap`'s `i32`s cannot hold is built as JSON and counts as refused when it does not deserialize
 //! (`handicap_refused`).
 
 use jackioh_engine::testkit::*;
@@ -368,7 +368,7 @@ fn options(seed: &str, decks: (Vec<String>, Vec<String>), handicaps: Handicaps) 
 
 /// A handicap as JSON with one field replaced.
 fn with_field(handicap: &Handicap, field: &str, value: Value) -> Value {
-    let mut json = serde_json::to_value(handicap).expect("a handicap serialises");
+    let mut json = serde_json::to_value(handicap).expect("a handicap serializes");
     json[field] = value;
     json
 }
@@ -456,7 +456,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
             ["easy", "medium", "hard"]
         );
         assert_eq!(
-            keys_sorted(&serde_json::to_value(AI_DIFFICULTY).expect("the table serialises")),
+            keys_sorted(&serde_json::to_value(AI_DIFFICULTY).expect("the table serializes")),
             ["easy", "hard", "medium"]
         );
         assert_eq!(DRAWS_PER_TURN, 1);
@@ -483,7 +483,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
             on_p2(HUMAN_HANDICAP),
         ];
         for handicaps in variants {
-            let label = serde_json::to_string(&handicaps).expect("handicaps serialise");
+            let label = serde_json::to_string(&handicaps).expect("handicaps serialize");
             let state = game("r180-b1", Some(handicaps), Some(decks.clone()));
             for player in PLAYER_IDS {
                 assert!(state.players[player].handicap.is_none(), "{label}: {player}");
@@ -545,7 +545,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
 
     #[test]
     fn r180_validate_handicap_refuses_a_handicap_with_a_missing_field_or_a_field_of_the_wrong_type() {
-        let mut missing = serde_json::to_value(AI_DIFFICULTY.hard).expect("a handicap serialises");
+        let mut missing = serde_json::to_value(AI_DIFFICULTY.hard).expect("a handicap serializes");
         missing
             .as_object_mut()
             .expect("a handicap is an object")
@@ -568,7 +568,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
             with_field(&HUMAN_HANDICAP, "manaBonus", json!(-1)),
             with_field(&HUMAN_HANDICAP, "manaCap", json!(4.5)),
             with_field(&HUMAN_HANDICAP, "extraOpeningCards", json!(-2)),
-            // JSON has no NaN or Infinity: serde_json writes both as null, which no count deserialises from.
+            // JSON has no NaN or Infinity: serde_json writes both as null, which no count deserializes from.
             with_field(&HUMAN_HANDICAP, "extraDrawsPerTurn", json!(f64::NAN)),
             with_field(&HUMAN_HANDICAP, "manaBonus", json!(f64::INFINITY)),
             with_field(&HUMAN_HANDICAP, "deckSize", json!(0)),
@@ -1554,7 +1554,7 @@ fn without_hero_health(handicap: Handicap) -> Handicap {
 }
 
 fn field_of(handicap: &Handicap, field: &str) -> i64 {
-    serde_json::to_value(handicap).expect("a handicap serialises")[field]
+    serde_json::to_value(handicap).expect("a handicap serializes")[field]
         .as_i64()
         .expect("a handicap field is a number")
 }
@@ -1596,7 +1596,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
             DIFFICULTIES.iter().map(|d| d.as_str()).collect::<Vec<_>>(),
             ["easy", "medium", "hard"]
         );
-        let keys = keys_sorted(&serde_json::to_value(AI_DIFFICULTY).expect("the table serialises"));
+        let keys = keys_sorted(&serde_json::to_value(AI_DIFFICULTY).expect("the table serializes"));
         assert_eq!(keys, ["easy", "hard", "medium"]);
         assert!(!keys.contains(&"tutorial".to_string()));
         assert!(![AI_DIFFICULTY.easy, AI_DIFFICULTY.medium, AI_DIFFICULTY.hard].contains(&AI_TUTORIAL));
@@ -1758,7 +1758,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
             ),
         ];
         for handicaps in variants {
-            let label = serde_json::to_string(&handicaps).expect("handicaps serialise");
+            let label = serde_json::to_string(&handicaps).expect("handicaps serialize");
             let state = game("r290-human", Some(handicaps), Some(decks.clone()));
             for player in PLAYER_IDS {
                 assert!(state.players[player].handicap.is_none(), "{label}: {player}");
@@ -1788,7 +1788,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
             let h = AI_DIFFICULTY[difficulty];
             let decks = decks_for(Some(&on_p2(h)));
             let tier = game(&format!("r290-{difficulty}"), Some(on_p2(h)), Some(decks.clone()));
-            let stored = serde_json::to_value(tier.players.p2.handicap).expect("a handicap serialises");
+            let stored = serde_json::to_value(tier.players.p2.handicap).expect("a handicap serializes");
             assert_eq!(keys_sorted(&stored), five_fields_sorted(), "{difficulty}");
             assert_eq!(tier.players.p2.handicap, Some(h), "{difficulty}");
             assert_eq!(tier.players.p2.hero.health, HERO_HEALTH, "{difficulty}");
@@ -1801,7 +1801,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 })),
                 Some(decks),
             );
-            let stored = serde_json::to_value(explicit.players.p2.handicap).expect("a handicap serialises");
+            let stored = serde_json::to_value(explicit.players.p2.handicap).expect("a handicap serializes");
             assert_eq!(keys_sorted(&stored), five_fields_sorted(), "{difficulty}");
             assert_eq!(explicit.players.p2.handicap, Some(h), "{difficulty}");
             assert_eq!(hash_state(&explicit), hash_state(&tier), "{difficulty}");

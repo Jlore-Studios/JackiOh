@@ -201,7 +201,7 @@ mod tests {
             assert!(locks.contains(&json!({ "type": "locked", "player": "p1", "row": "backrow", "lane": 3 })));
             // No event p2 is shown names the Trap.
             let trap = must(s.backrow(P1, 3), "p1's Trap");
-            let text = serde_json::to_string(&seen).expect("serialisable");
+            let text = serde_json::to_string(&seen).expect("serializable");
             assert!(!text.contains(SHEEPISH));
             assert!(!text.contains(&format!("\"{}\"", trap.id)));
         }

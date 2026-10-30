@@ -1174,7 +1174,7 @@ pub(crate) fn checkpoint_step(stream: &str, paused: &[usize], actions: usize) ->
 /// newest row and §10.1 requires paused work to survive. A 1v1 game's or a Duos game's.
 pub(crate) fn round_trip<S: Serialize + for<'de> Deserialize<'de>>(state: &S) -> Result<S, String> {
     let text = serde_json::to_string(state)
-        .map_err(|error| format!("the round trip could not serialise the state: {error}"))?;
+        .map_err(|error| format!("the round trip could not serialize the state: {error}"))?;
     serde_json::from_str(&text)
         .map_err(|error| format!("the round trip could not parse the state back: {error}"))
 }

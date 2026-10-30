@@ -118,7 +118,7 @@ builds reads its own game's hold without the state (R2201001).
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
 
 The engine never depends on `jackioh-cards` (only its tests do). An engine test that needs a card's
-behaviour uses a test-only script in `tests/rules/fixtures/`, and the real card's test covers the
+behavior uses a test-only script in `tests/rules/fixtures/`, and the real card's test covers the
 same case again.
 
 ## Duos (§13)

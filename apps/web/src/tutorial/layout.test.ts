@@ -122,9 +122,9 @@ describe("the coach bubble's placement", () => {
   });
 
   it("with no anchor, an info step floats in the middle and the waiting bubble in the corner", () => {
-    const centre = placeBubble(input({}));
-    expect(centre.side).toBe("center");
-    expect(centre.left).toBe((1280 - 340) / 2);
+    const center = placeBubble(input({}));
+    expect(center.side).toBe("center");
+    expect(center.left).toBe((1280 - 340) / 2);
     const slim = { width: 260, height: 44 };
     const corner = placeBubble(input({ slim: true, bubble: slim }));
     expect(corner.side).toBe("corner");
@@ -140,7 +140,7 @@ describe("the coach bubble's placement", () => {
     expect(inside(bubbleRect(place), VIEWPORT, 8, 60)).toBe(true);
   });
 
-  it("with no room round the anchor, it docks at its own width, centred on it, on the side with more room", () => {
+  it("with no room round the anchor, it docks at its own width, centered on it, on the side with more room", () => {
     const short = { width: 1280, height: 580 };
     const bubble = { width: 340, height: 120 };
     // More room below the prompt than above it: against the bottom edge, as tall as the room.

@@ -26,7 +26,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 | 9 | `crates/cards/flavour.json` | the card's flavour line, `"<id>": { "flavour": "…" }`: one short line in the source notes' voice, no rules words, at most 120 characters (R660); it is not card data, so no fragment claims it | `tests/cross/flavour.rs`, `apps/web/src/cards/flavour.test.tsx` |
 | 10 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …) | `tests/cross/query.rs` |
 | 11 | `crates/cards/patches/pending/<slug>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)), which also claims the win-rate table (`"winRates": true`) when the patch refreshes `crates/cards/data/win_rates.json` (R1329000); the shipped history, the tables under `patches/win_rates/` and the version sites move at promotion, not here | `patches check` |
-| 12 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its licence row | `music-assets.test.ts` (the daily audio run) |
+| 12 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its license row | `music-assets.test.ts` (the daily audio run) |
 | 13 | `crates/cards/chinese.json` | the card's Chinese entry (R1303): `{ name, base, radiant }` in Simplified Chinese, each face keeping exactly its English face's `{key}`s, plus `previews` exactly where the script declares `preview`; it is not card data, so no fragment claims it | `tests/cross/chinese.rs` |
 
 The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch tests, the e2e component specs) count
@@ -139,7 +139,7 @@ mod tests {
         s.expect_in_zone(ID, "field");
     }
 
-    // …one case per behaviour in the spec row, base and radiant separately.
+    // …one case per behavior in the spec row, base and radiant separately.
 }
 ```
 
@@ -263,7 +263,7 @@ nothing), `crates/server/src/**` and `crates/ai/src/**` (they read the catalog),
 When the text needs a verb, keyword, filter or board fact that no card uses: find where the most similar existing mechanic lives, add the new
 one beside it in that pattern, and test it there. A verb is an effect in `crates/engine/src/effects/` (re-exported by `effects/mod.rs` and the
 prelude), a new board fact goes in `crates/engine/src/query.rs`, a new keyword also needs its row in spec §6.1 (the web glossary reads that
-table). Engine tests that need the card's behaviour use a fixture script in `crates/engine/tests/rules/fixtures/`. Keep the card's script a
+table). Engine tests that need the card's behavior use a fixture script in `crates/engine/tests/rules/fixtures/`. Keep the card's script a
 list of those effects (CLAUDE.md rules 4 and 5). A rule the spec does not decide is a new ruling note with a proving test (CLAUDE.md rule 3).
 No escalation step.
 

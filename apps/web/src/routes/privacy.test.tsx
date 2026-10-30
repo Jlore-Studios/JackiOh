@@ -195,7 +195,7 @@ describe("the privacy policy", () => {
     const kept = section(/how long we keep it/i);
     expect(kept).toContain(`co-op games included: ${String(MATCH_ACTION_RETENTION_DAYS)} days after the match ends`);
     expect(kept).toContain(`A challenge: about ${String(minutes(CHALLENGE_TTL_MS))} minutes after it was sent`);
-    expect(kept).toMatch(/accepted, declined, cancelled or left unanswered/);
+    expect(kept).toMatch(/accepted, declined, canceled or left unanswered/);
     expect(kept).toContain(`A co-op room: about ${String(minutes(DUOS_ROOM_TTL_MS))} minutes after it was made`);
     expect(kept).toMatch(/the player who shared it takes it back \(only they can\)/);
     expect(kept).toMatch(/removes the friendship or blocks the other, which deletes every share between you for good/);

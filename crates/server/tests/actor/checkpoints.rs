@@ -52,7 +52,7 @@ fn live_row(seed: &str, decks: &Decks) -> MatchRow {
         "status": "live",
         "createdAt": created_at,
         "finishedAt": null,
-        "clocks": serde_json::to_value(initial_clocks(created_at)).expect("serialises"),
+        "clocks": serde_json::to_value(initial_clocks(created_at)).expect("serializes"),
     }))
 }
 
@@ -440,7 +440,7 @@ async fn a_recorder_read_back_from_a_checkpoint_carries_on_as_replaying_the_whol
     let at = 20;
 
     let saved: Recorder = serde_json::from_str(
-        &serde_json::to_string(&replay(Pinned::default(), &row, &rows[..at], None).0).expect("serialises"),
+        &serde_json::to_string(&replay(Pinned::default(), &row, &rows[..at], None).0).expect("serializes"),
     )
     .expect("reads back");
     let resumed = replay_from(
@@ -524,7 +524,7 @@ async fn every_state_of_a_whole_game_checkpoints_and_passes_its_checks() {
                 bot_moved_turn: PerPlayer::new(None, Some(state.turn)),
             };
             let checkpoint = checkpoint_row(&row, seq as i64, &action.nonce, &body, row.created_at)
-                .expect("a checkpoint serialises");
+                .expect("a checkpoint serializes");
             let read = verify(&checkpoint, &row, &rows).unwrap_or_else(|refusal| {
                 panic!("{seed} at seq {seq}: refused for its {}", refusal.as_str())
             });

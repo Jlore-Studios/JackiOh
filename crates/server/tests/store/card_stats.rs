@@ -105,7 +105,7 @@ mod stats_cards_options {
     use super::*;
 
     fn filter_json(options: &CardStatsOptions) -> Value {
-        serde_json::to_value(&options.filter).expect("a filter serialises")
+        serde_json::to_value(&options.filter).expect("a filter serializes")
     }
 
     #[test]
@@ -165,9 +165,9 @@ mod stats_cards_options {
         assert!(refusal(&["--source=practice"]).contains("--source must be one of live, dev, all"));
         assert!(refusal(&["--mode=bo5"]).contains("--mode must be one of bo1, bo3, random"));
         assert!(refusal(&["--pilot=robot"]).contains("--pilot"));
-        assert!(refusal(&["--deck=1"]).contains("Unrecognised option --deck"));
-        assert!(refusal(&["--patch"]).contains("Unrecognised argument"));
-        assert!(refusal(&["v0.2.3"]).contains("Unrecognised argument"));
+        assert!(refusal(&["--deck=1"]).contains("Unrecognized option --deck"));
+        assert!(refusal(&["--patch"]).contains("Unrecognized argument"));
+        assert!(refusal(&["v0.2.3"]).contains("Unrecognized argument"));
     }
 }
 
@@ -205,7 +205,7 @@ mod stats_cards_report {
             .iter()
             .find(|stats| stats.card == "core-001")
             .expect("core-001 has a row");
-        serde_json::to_value(row).expect("a row serialises")["inDeck"].clone()
+        serde_json::to_value(row).expect("a row serializes")["inDeck"].clone()
     }
 
     #[tokio::test]
@@ -268,7 +268,7 @@ mod stats_cards_report {
         assert_eq!(report.cards.len(), 1);
         assert_eq!(report.cards[0].stats.card, "core-001");
         assert_eq!(report.cards[0].stats.in_deck.games, 3);
-        let json = serde_json::to_string(&report).expect("serialises");
+        let json = serde_json::to_string(&report).expect("serializes");
         assert_eq!(
             serde_json::from_str::<jackioh_engine::wire::WindowedReport>(&json).expect("reads back"),
             report
@@ -396,7 +396,7 @@ mod stats_cards_report {
             serde_json::from_str(&render_card_stats(&report, &as_json, &nobody)).expect("--json prints JSON");
         assert_eq!(
             parsed,
-            serde_json::to_value(&report).expect("a report serialises")
+            serde_json::to_value(&report).expect("a report serializes")
         );
     }
 
@@ -739,7 +739,7 @@ mod stats_export {
             "--out=/runs/all.jsonl",
         ]);
         assert_eq!(
-            serde_json::to_value(&named.query).expect("a query serialises"),
+            serde_json::to_value(&named.query).expect("a query serializes"),
             json!({ "source": "all", "mode": "random", "patch": "v0.2.3" })
         );
         assert_eq!(named.out, PathBuf::from("/runs/all.jsonl"));
@@ -756,10 +756,10 @@ mod stats_export {
         // The refusal carries stats-export's own usage, not stats-cards's.
         assert!(refusal(&["--out=a.jsonl", "--mode=bo5"]).contains("Usage: jackioh-server stats-export"));
         // The pilot is a seat's, and the card a report's: neither narrows which records are written.
-        assert!(refusal(&["--out=a.jsonl", "--pilot=ai"]).contains("Unrecognised option --pilot"));
-        assert!(refusal(&["--out=a.jsonl", "--card=core-001"]).contains("Unrecognised option --card"));
-        assert!(refusal(&["--out=a.jsonl", "--json"]).contains("Unrecognised argument"));
-        assert!(refusal(&["records.jsonl"]).contains("Unrecognised argument"));
+        assert!(refusal(&["--out=a.jsonl", "--pilot=ai"]).contains("Unrecognized option --pilot"));
+        assert!(refusal(&["--out=a.jsonl", "--card=core-001"]).contains("Unrecognized option --card"));
+        assert!(refusal(&["--out=a.jsonl", "--json"]).contains("Unrecognized argument"));
+        assert!(refusal(&["records.jsonl"]).contains("Unrecognized argument"));
     }
 
     #[tokio::test]

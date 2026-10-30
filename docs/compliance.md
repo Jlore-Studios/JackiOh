@@ -80,7 +80,7 @@ line only after that review.
 5. Each agreement is a row of `terms_acceptances` (account, version, source, time). Accounts made
    before migration 0034 hold a `baseline` row at their creation time.
 
-## 5. Cancelling
+## 5. Canceling
 
 JackiOh has no payments or subscriptions, so there is nothing to cancel; "Delete my account" on
 `/account` removes an account. A paid feature must bring a cancel button in settings, renewal

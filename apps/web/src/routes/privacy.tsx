@@ -270,7 +270,7 @@ export default function PrivacyRoute(): ReactElement {
             <li>Chat messages, and any report of one: {CHAT_RETENTION_DAYS} days after the message was sent.</li>
             <li>
               A challenge: about {CHALLENGE_TTL_MS / MS_PER_MINUTE} minutes after it was sent, whether it was
-              accepted, declined, cancelled or left unanswered.
+              accepted, declined, canceled or left unanswered.
             </li>
             <li>
               A co-op room: about {DUOS_ROOM_TTL_MS / MS_PER_MINUTE} minutes after it was made, or twice that
@@ -278,7 +278,7 @@ export default function PrivacyRoute(): ReactElement {
             </li>
             <li>
               A friendship: until either of you removes it or blocks the other. A friend request: until it is
-              accepted, declined or cancelled, or either of you blocks the other. A block: until the player who
+              accepted, declined or canceled, or either of you blocks the other. A block: until the player who
               made it lifts it.
             </li>
             <li>
