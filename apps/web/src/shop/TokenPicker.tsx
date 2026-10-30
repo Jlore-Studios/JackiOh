@@ -18,7 +18,7 @@ import { readerName } from "../cards/chinese.ts";
 import FillBar from "../economy/FillBar.tsx";
 import CardBrowser from "../game/deckbuilder/CardBrowser.tsx";
 import { DEFAULT_FILTER, DEFAULT_SORT, type PoolFilter, type PoolSort } from "../game/deckbuilder/filters.ts";
-import { t } from "../i18n/i18n.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import {
   getCollection,
   getTokens,
@@ -183,9 +183,10 @@ function TokenBody({
   // Whether the open detail asks before it spends the token.
   const [asking, setAsking] = useState(false);
   const questionId = useId();
+  const locale = useLocale();
   const catalog = useMemo(() => ({ version: collection.catalogVersion, cards: CATALOG }), [collection.catalogVersion]);
   const unowned = useMemo(() => unownedCards(collection), [collection]);
-  const pool = useMemo(() => tokenPoolIds(unowned, catalog, filter, sort), [unowned, catalog, filter, sort]);
+  const pool = useMemo(() => tokenPoolIds(unowned, catalog, filter, sort), [unowned, catalog, filter, sort, locale]);
   const detailDef = detailCardId === null ? undefined : CATALOG[detailCardId];
   // The detail closes behind the inspect overlay, as in the deck editor: at most one at a time.
   const openDetail = (cardId: string): void => {
