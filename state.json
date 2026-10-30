@@ -9507,10 +9507,12 @@
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
+      "pr": 2543,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-30T13:03:48Z",
       "requested_by": "MaxGoetzmann",
-      "round_tier": "",
+      "round_tier": "medium",
       "run_id": "41086577749",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-30T16:04:38Z",
@@ -9519,7 +9521,7 @@
       "taken_asks": [
         "c:6523494117"
       ],
-      "verdict_rounds": 0
+      "verdict_rounds": 2
     },
     "2479": {
       "action": "build",
