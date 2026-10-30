@@ -132,6 +132,7 @@ mod tests {
             tier: (!cards.is_empty() || rule).then_some(Tier::Micro),
             sets: Vec::new(),
             cards: cards.iter().map(|card| (*card).to_string()).collect(),
+            reprinted: Vec::new(),
             wording: Vec::new(),
             rule,
             stage2,
