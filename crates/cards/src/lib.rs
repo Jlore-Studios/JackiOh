@@ -8,7 +8,8 @@
 //! - `register_all()`: hands the catalog, its code blocks (R1183004), its card metrics (R1846000) and
 //!   every card's scripts to the engine, once.
 //! - `catalog_json()`, `flavour_json()`, `chinese_json()`, `chinese_terms_json()`, `catalog_version()`:
-//!   the data, compiled in (SURFACE §3: data reaches a pure crate only at compile time).
+//!   the data, compiled in (SURFACE §3: data reaches a pure crate only at compile time). The flavour
+//!   and Chinese sidecars are generated from `card-text.yaml` (#2498), which no pure crate parses.
 //! - `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION`, `card_def`, `card_def_by_index`: `catalog-data.ts`'s
 //!   readers of the shipped catalog, under their TS names (SURFACE §4.2).
 //!
@@ -83,13 +84,16 @@ pub fn catalog_json() -> &'static str {
 /// crates inline that function (a literal is copied into each codegen unit that inlines it).
 static CATALOG_JSON: &str = include_str!(concat!(env!("OUT_DIR"), "/catalog.json"));
 
-/// `packages/cards/flavour.json` as compiled in (the client's flavour lines and artists).
+/// R660: `crates/cards/flavour.json` as compiled in (the client's flavour lines and artists), which
+/// `crates/tools/tests/export_card_text.rs` writes from `card-text.yaml` beside it (#2498): no pure
+/// crate parses YAML (CLAUDE.md rule 4). Its `"//"` entry says so and is no card's.
 pub fn flavour_json() -> &'static str {
     include_str!("../flavour.json")
 }
 
 /// ME-CN, R1303: `crates/cards/chinese.json` as compiled in, every card's name and faces in Simplified
-/// Chinese (the client's `apps/web/src/cards/chinese.ts`). A sidecar like `flavour.json`: no rule reads it.
+/// Chinese (the client's `apps/web/src/cards/chinese.ts`). A sidecar like `flavour.json`, written from
+/// each card's `zh` in `card-text.yaml` the same way: no rule reads it.
 pub fn chinese_json() -> &'static str {
     include_str!("../chinese.json")
 }

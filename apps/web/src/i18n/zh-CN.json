@@ -3302,6 +3302,8 @@
   "Epic tokens held: {count}": "持有史诗代币：{count}",
   "Unlock with a Rare token ({count} held)": "用稀有代币解锁（持有 {count} 个）",
   "Unlock with an Epic token ({count} held)": "用史诗代币解锁（持有 {count} 个）",
+  "Unlock {name}? This spends 1 Rare token.": "解锁{name}？这将花费 1 个稀有代币。",
+  "Unlock {name}? This spends 1 Epic token.": "解锁{name}？这将花费 1 个史诗代币。",
   "Spend cosmetic tokens on a locked cosmetic in your Collection": "在收藏中把外观代币用在未解锁的外观上",
   "Card for {name}": "{name}所属卡牌",
   "Pick": "挑选",
@@ -3737,5 +3739,8 @@
   "Mind the AI's face-down cards: they may be Traps.": "小心AI盖放的牌：它们可能是陷阱。",
   "Lesson lost": "课程失败",
   "You conceded. That counts as a loss.": "你认输了。这算作失败。",
-  "Lost: you conceded": "失败：你认输了"
+  "Lost: you conceded": "失败：你认输了",
+  "Leave the match?": "离开在线对局？",
+  "It goes on without you. Come back within {seconds} seconds or it counts as a loss.": "对局会在没有你的情况下继续。{seconds} 秒内回来，否则算作失败。",
+  "Stay": "留下"
 }

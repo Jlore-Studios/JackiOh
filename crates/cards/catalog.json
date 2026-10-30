@@ -1115,7 +1115,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nAfter this attacks, draw {draw} for each Unit that attack destroyed."
+      "text": "Rush\nWhenever this attacks, draw {draw} for each Unit that attack destroyed."
     },
     "radiant": {
       "attack": 10,
@@ -1128,7 +1128,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Rush, Cleave\nAfter this attacks, draw {draw} for each Unit that attack destroyed."
+      "text": "Rush, Cleave\nWhenever this attacks, draw {draw} for each Unit that attack destroyed."
     }
   },
   "core-033": {
@@ -4475,7 +4475,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nAfter this attacks, draw {draw}."
+      "text": "Charge\nWhen this attacks, draw {draw}."
     },
     "radiant": {
       "attack": 4,
@@ -4485,7 +4485,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nAfter this attacks, Recruit {recruits|card|cards}."
+      "text": "Charge\nWhen this attacks, Recruit {recruits|card|cards}."
     }
   },
   "classic-014": {
@@ -5668,13 +5668,13 @@
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Tribute 1\nCry and whenever this attacks: Draw {draw} and heal your hero {heal}."
+      "text": "Tribute 1\nCry and when this attacks: Draw {draw} and heal your hero {heal}."
     },
     "radiant": {
       "attack": 12,
       "health": 12,
       "keywords": [],
-      "text": "Tribute 1\nCry and whenever this attacks: Draw {draw} and heal your hero {heal}."
+      "text": "Tribute 1\nCry and when this attacks: Draw {draw} and heal your hero {heal}."
     }
   },
   "classic-046": {
@@ -8510,7 +8510,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Rush, First Strike\nWhenever this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
+      "text": "Rush, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
     },
     "radiant": {
       "attack": 8,
@@ -8523,7 +8523,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Charge, First Strike\nWhenever this destroys a Unit, it gains +{attackGain} Attack.\nThis can't go Berserk."
+      "text": "Charge, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nThis can't go Berserk."
     }
   },
   "classicplus-020": {
@@ -15585,7 +15585,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Rush, Windfury\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
+      "text": "Rush, Windfury\nWhen this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
     },
     "radiant": {
       "attack": 10,
@@ -15601,7 +15601,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Rush, Windfury, First Strike\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
+      "text": "Rush, Windfury, First Strike\nWhen this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
     }
   },
   "meditative-092": {
@@ -21402,7 +21402,7 @@
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nWhenever this attacks, gain a random Stinkyscape Resource."
+      "text": "Starship Piece\nWhen this attacks, gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 4,
@@ -21412,7 +21412,7 @@
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nWhenever this attacks, gain a random Radiant Stinkyscape Resource."
+      "text": "Starship Piece\nWhen this attacks, gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-076": {
@@ -21438,7 +21438,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Rush\nWhenever this attacks, gain a random Stinkyscape Resource."
+      "text": "Starship Piece, Rush\nWhen this attacks, gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 8,
@@ -21451,7 +21451,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Rush\nWhenever this attacks, gain a random Radiant Stinkyscape Resource."
+      "text": "Starship Piece, Rush\nWhen this attacks, gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-077": {
@@ -26681,7 +26681,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this destroys a Unit, it gains +{buff}/+{buff}."
+      "text": "Rush\nAfter this destroys a Unit, it gains +{buff}/+{buff}."
     },
     "radiant": {
       "attack": 14,
@@ -26691,7 +26691,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this destroys a Unit, it gains +{buff}/+{buff}."
+      "text": "Rush\nAfter this destroys a Unit, it gains +{buff}/+{buff}."
     }
   },
   "traininggrounds-010": {

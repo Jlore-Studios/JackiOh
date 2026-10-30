@@ -11,8 +11,8 @@
 //! AI, the policy and a timeout (R881). Only M+ #16's Death puts one in a deck (a Radiant one on its
 //! Radiant face).
 //!
-//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
-//! written, and the release renders it (`[gen:voice]`, R1448).
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry and
+//! its `card-text.yaml` lines are written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::effects::{choose_craft, chosen_recipe, craft_card};
 use jackioh_engine::prelude::*;
