@@ -309,11 +309,7 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c078_claudes_datacenter::script_v0_5_2,
     ),
     (c042_kys_test::ID, "v0.5.1", c042_kys_test::script_v0_5_2),
-    (
-        c032_prem_panther::ID,
-        "v0.5.7",
-        c032_prem_panther::script_v0_5_11,
-    ),
+    (c032_prem_panther::ID, "v0.5.7", c032_prem_panther::script_v0_5_11),
     (
         c013_boots_on_the_ground::ID,
         "v0.5.7",
