@@ -9460,7 +9460,25 @@
       "feedback_since": "2026-10-30T08:12:09Z",
       "issue": 2427,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "41024877261",
+            "tier": "medium"
+          }
+        ],
+        "sha": "022c1f8374e7906130603ea094a1d8e71a9acb0e",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     }
   },
   "labels_synced": "10eb94bf70389cb1",
