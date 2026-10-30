@@ -3381,5 +3381,26 @@
     "pr": 2474,
     "title": "standardize spelling to American English",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "b9687a41011ea3e7cbdb984f58cd15570613e5a2",
+    "pr": 2522,
+    "title": "a balance pass of 15 reprinted cards is a patch; an engine fix needs 50 cards or most games (#2499)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "8e08854a683af9a8ad8b187a68e35279e491510f",
+    "pr": 2523,
+    "title": "patches ship: v0.5.11",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "5ffe4ecc9c21929387148aea91ce0ca356e49b58",
+    "pr": 2473,
+    "title": "the night bot's harness in Go",
+    "kind": "internal"
   }
 ]
