@@ -9453,6 +9453,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2492": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-30T08:12:09Z",
+      "issue": 2427,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "10eb94bf70389cb1",
