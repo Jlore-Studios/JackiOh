@@ -10582,12 +10582,11 @@
     "what": "build #2505 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-30T23:23:15Z",
+    "at": "2026-10-30T23:31:33Z",
     "notes": [
-      "delivered revise #2493 on agy (run 41136767122): approved",
-      "started revise #2493 on agy (run 41144349844)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered build #2504 on claude-7 (run 41143041974): part",
+      "started build #2505 on claude-7 (run 41145129672)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -11291,7 +11290,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T23:23:15Z",
+  "loop_tick": "2026-10-30T23:31:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
