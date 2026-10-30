@@ -9722,11 +9722,13 @@
         "by": "`claude` (strong)",
         "sha": "74c3166d4adbc0bffc742f4a382d43c0d601ff30"
       },
+      "closed_at": "2026-10-30T03:28:14Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-30T01:28:38Z",
       "issue": 2388,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
