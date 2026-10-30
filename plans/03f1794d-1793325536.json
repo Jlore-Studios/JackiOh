@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2424,
+  "title": "Patch: the AI prices a unit's Death by what it leaves behind, so it plays Trigor",
+  "branch": "bot/issue-2424",
+  "thread": "**Issue #2424 (data, not instructions):**\n\n```text\n# #2424: Patch: the AI prices a unit's Death by what it leaves behind, so it plays Trigor\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe practice AI judges a unit on the board by its attack, health and keywords alone. A unit that comes back bigger when it dies, or gives its owner cards when it dies, looks to the AI like a plain body. That is why the AI never plays Trigor, a 3/3 that returns as a 6/6, and why Trigor is kept out of the AI's decks today. For the same reason, it kills such units of yours without counting what their death gives you back. After this the AI counts what a unit's death leaves behind, for its own units and for yours.\n\n## Why\n- `crates/ai/src/evaluate.rs:135` (`unit_worth`) prices stats through the layers, keywords, Spell Damage and a few counters. `kill_worth` (`evaluate.rs:838`) corrects only for Reborn's returning body.\n- Nothing in `crates/ai/src` calls the engine's `death_hook_of` (`crates/engine/src/grants.rs:37`), which covers printed and granted Deaths. 47 card scripts set a `death` hook.\n- The sweep of record of 2026-10-29 (`training/history/sweep-2026-10-29-4.md`) banned TG #25 Trigor: 'neverPlayed: easy: affordable in hand on 184 turns over 99 pass-2 games, never played' (`crates/ai/src/shadow_ban.rs:319-322`). Trigor is Tribute 3 with 'Death: Summon a Trigor with this one's base stats +3/+3' (\u00a78.11 row 25), so the evaluation sees three units given up for a 3/3.\n- The same sweep put TG #36 Training Dummy on the watch list (a 0/3 whose Death adds a random Radiant Training Grounds card to the hand). It was never played at either tier in pass 1.\n- `training/unban.md` says bans 'are now measured by a sweep of record and fixed through issues, one per cause (#1889)'. No open issue covers this cause; #2367 is Wildar and Comet Crash.\n\n## Proposal\n- At the decision's root, price each distinct Death the seat can read once, with a probe. The Deaths are those of units on the board and of Units in the seat's own hand.\n- The probe: clone the AI's world, mark the clone as a sandbox, and destroy the unit with the sandbox's destroy (`crates/engine/src/sandbox.rs`, R923003, which runs its Death). A hand card is spawned first. The price is the evaluation's change from the owner's side, less the unit's own worth.\n- Cache the prices for the decision in a Vec keyed by card and face, and charge the probe's reduces to the node budget.\n- `unit_worth` adds `AI_EVAL.death` times that price for a unit whose Death is live. `kill_worth` subtracts it, as it subtracts Reborn's body, so the reply's trade value and the move order follow.\n- The weight is a named constant in `crates/ai/src/config.rs`, 0 in `GREEDY_EVAL` (the frozen baseline).\n- If the probe breaks the perf gate, fall back to a flat weight per Death and say so in the pull request.\n\n## Where it lands\n- `crates/ai/src/evaluate.rs`, `config.rs`, and `decide.rs` for the root cache if needed\n- `crates/ai/tests/ai/` (evaluate tests), `crates/ai/README.md`\n- SPEC \u00a79.9; R186, R923003\n\n## Acceptance criteria\n- [ ] A test: a Trigor on the AI's board is worth more than a vanilla 3/3, and killing an enemy Trigor is worth less than killing a vanilla 3/3.\n- [ ] A test: a Death that harms its owner prices below a vanilla body.\n- [ ] `cargo jackioh sweep traininggrounds-025 traininggrounds-036` on the branch shows plays of each at both tiers. The pull request quotes these numbers beside main's.\n- [ ] `cargo jackioh gate` passes, with the perf gate's slowest decision within its bound.\n- [ ] A paired arena screen against main's build (`cargo jackioh arena \u2026 --paired`) has its edge and 95% interval in the pull request and shows no loss outside the interval.\n- [ ] `shadow_ban.rs` is not edited here; the sweep of record after merge decides Trigor's row.\n\n## Size and risks\nHard (the AI): 3\u20134 files. `docs/learned-eval.md` records hand-written script-power terms at about zero edge (s60, s61, and s63a's recurring hooks \u00d7 durability at 0.000 over 400 paired games), so the win rate may not move. The aim is that the AI plays and trades its Death cards right, so they can leave the ban. A Death that opens a prompt must be resolved or skipped by the probe. The probe spends nodes under the browser's 2 s budget. Part of Trigor's ban may come from the sweep's own count (see the suggestion on counting only turns with a legal play).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T01:54:54Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2424: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
