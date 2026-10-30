@@ -710,8 +710,8 @@ pub fn complete_draw(
     });
 
     let at = link_for(sink.state, link);
-    // R2433000: a seat that plays only Core cards casts no other card on draw; it is drawn as any
-    // card is.
+    // R2533000: a seat that plays only the tutorial's cards casts no other card on draw; it is drawn as
+    // any card is.
     if casts_on_draw(sink.state, &card)
         && !crate::state::barred_from_play(sink.state, player, &card)
         && at.chain < CAST_ON_DRAW_CHAIN_CAP
@@ -775,7 +775,7 @@ pub fn cast_dealt_card(sink: &mut EngineSink, card: &CardInstance) -> bool {
     };
     if !casts_on_draw(sink.state, card)
         || !room_to_cast(sink.state, player, card)
-        // R2433000: nor one dealt to it.
+        // R2533000: nor one dealt to it.
         || crate::state::barred_from_play(sink.state, player, card)
     {
         return false;

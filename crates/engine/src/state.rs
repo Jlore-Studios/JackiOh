@@ -2185,7 +2185,7 @@ fn is_human_handicap(handicap: &Handicap, standard: i32) -> bool {
         && starting_hero_health(Some(handicap)) == HERO_HEALTH
         && handicap.hero_floor.is_none()
         && handicap.pool_hold != Some(true)
-        && handicap.core_only != Some(true)
+        && handicap.tutorial_cards_only != Some(true)
         && handicap.deck_copies.is_none_or(|copies| copies == MAX_COPIES)
 }
 
@@ -2200,20 +2200,32 @@ pub fn can_lose(state: &GameState, player: PlayerId) -> bool {
     hero_floor_of(state, player).is_none()
 }
 
-/// R2433000: whether `player` plays only Core cards (its handicap's `coreOnly`).
-pub fn plays_only_core(state: &GameState, player: PlayerId) -> bool {
+/// R2533000: whether `player` plays only the tutorial's cards (its handicap's `tutorialCardsOnly`).
+pub fn plays_only_tutorial_cards(state: &GameState, player: PlayerId) -> bool {
     state.players[player]
         .handicap
-        .is_some_and(|h| h.core_only == Some(true))
+        .is_some_and(|h| h.tutorial_cards_only == Some(true))
 }
 
-/// R2433000: whether `player` may not play `card`: the seat plays only Core cards and the card's
-/// definition is of another set. Asked of a card in its hand or its graveyard, however it got
-/// there; a card that reaches the field another way (a summon, a steal) is not played.
+/// R2533000: whether `def` is a card the tutorial opponent may play: of TUTORIAL_CARD_SET, its rarity
+/// none of TUTORIAL_BARRED_RARITIES, a token's read from its printed rarity.
+pub fn is_tutorial_card(def: &CardDef) -> bool {
+    let rarity = if def.rarity == crate::wire::Rarity::Token {
+        def.printed_rarity
+            .and_then(|printed| printed.as_str().parse::<crate::wire::Rarity>().ok())
+    } else {
+        Some(def.rarity)
+    };
+    def.set == crate::config::TUTORIAL_CARD_SET
+        && !rarity.is_some_and(|rarity| crate::config::TUTORIAL_BARRED_RARITIES.contains(&rarity))
+}
+
+/// R2533000 (replacing R2433000's Core-only bar): whether `player` may not play `card`: the seat plays
+/// only the tutorial's cards and this is not one. Asked of a card in its hand or its graveyard,
+/// however it got there; a card that reaches the field another way (a summon, a steal) is not played.
 pub fn barred_from_play(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
-    plays_only_core(state, player)
-        && !crate::catalog::find_def(Some(state), &card.def_id)
-            .is_some_and(|def| def.set == crate::wire::SetName::Core)
+    plays_only_tutorial_cards(state, player)
+        && !crate::catalog::find_def(Some(state), &card.def_id).is_some_and(is_tutorial_card)
 }
 
 /// R2201001: whether the game holds Legendary and Mythic cards out of its random pools: either
@@ -2697,7 +2709,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
                 // R2201000, R2201001: each joins only when set, so no other game stores either.
                 hero_floor: handicap.hero_floor,
                 pool_hold: handicap.pool_hold.filter(|hold| *hold),
-                core_only: handicap.core_only.filter(|only| *only),
+                tutorial_cards_only: handicap.tutorial_cards_only.filter(|only| *only),
                 deck_copies: handicap.deck_copies.filter(|copies| *copies != MAX_COPIES),
             });
             side.hero.health = hero_health;

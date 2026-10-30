@@ -3,8 +3,8 @@
 //! `apps/web/src` imports from it today (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
 //! imports, R768's two replay constants, R1382's `TRIBAL_TAGS`, the custom cards' and the practice
 //! sandbox's limits, R915001 and R923002, Duos co-op's six, #936 S1, R1563006's sequence clock, and
-//! R1705003's and R1705005's earlier deck size and lesson handicap, and #1843's vote tally and the
-//! endings whose winner's opponent draws, R1843000 and R1843004),
+//! R1705003's and R1705005's earlier deck size and lesson handicap, #1843's vote tally and the
+//! endings whose winner's opponent draws, R1843000 and R1843004, and R2533000's tutorial cards),
 //! generated from `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md
 //! rule 9).
 //!
@@ -16,7 +16,8 @@
 //! against the same shapes it did (`DIFFICULTIES` is `readonly Difficulty[]`, not `string[]`). The
 //! two types come from the generated ts-rs files, which are `config.rs`'s own `Handicap` and
 //! `Difficulty`; `TRIBAL_TAGS` is typed with the generated `Tag`, `DUOS_HUMAN_TEAM` with the
-//! generated `DuosTeamRules`, and `LOSER_DRAWS_REASONS` with the generated `GameOverReason`.
+//! generated `DuosTeamRules`, `LOSER_DRAWS_REASONS` with the generated `GameOverReason`, and
+//! `TUTORIAL_CARD_SET` and `TUTORIAL_BARRED_RARITIES` with the generated `SetName` and `Rarity`.
 #![allow(
     clippy::disallowed_methods,
     reason = "a generator, not the rules: it writes the client's constants file, as build.rs writes the registry"
@@ -32,7 +33,8 @@ use jackioh_engine::config::{
     DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, EARLIER_DECK_SIZE, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
     KY_COMPETITION_SECONDS, LIBRARY_CAP, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET,
     REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX,
-    SANDBOX_MANA_MAX, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_HUMAN, VERSIONS_SCHEME, VOTE_TALLY_SIZE,
+    SANDBOX_MANA_MAX, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET,
+    TUTORIAL_HUMAN, VERSIONS_SCHEME, VOTE_TALLY_SIZE,
 };
 use serde::Serialize;
 
@@ -56,6 +58,8 @@ import type { CraftVerbPrice } from \"./generated/CraftVerbPrice.ts\";
 import type { DuosTeamRules } from \"./generated/DuosTeamRules.ts\";
 import type { GameOverReason } from \"./generated/GameOverReason.ts\";
 import type { KeywordKind } from \"./generated/KeywordKind.ts\";
+import type { Rarity } from \"./generated/Rarity.ts\";
+import type { SetName } from \"./generated/SetName.ts\";
 import type { Tag } from \"./generated/Tag.ts\";
 
 export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbPrice, DuosTeamRules };
@@ -169,6 +173,13 @@ fn engine_config_ts() -> String {
         constant("TRIBAL_TAGS", Some("readonly Tag[]"), TRIBAL_TAGS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
         // R1705005: the human seat's handicap in a lesson.
+        // R2533000: the cards the tutorial opponent plays, which a lesson's deck test reads.
+        constant(
+            "TUTORIAL_BARRED_RARITIES",
+            Some("readonly Rarity[]"),
+            TUTORIAL_BARRED_RARITIES,
+        ),
+        constant("TUTORIAL_CARD_SET", Some("SetName"), &TUTORIAL_CARD_SET),
         constant("TUTORIAL_HUMAN", Some("Handicap"), &TUTORIAL_HUMAN),
         // R1843000: the votes in one turn that remove a player, which a vote's banner counts toward.
         constant("VOTE_TALLY_SIZE", None, &VOTE_TALLY_SIZE),
@@ -193,8 +204,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Fifty-five constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 55, "{text}");
+    // Fifty-seven constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 57, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 
