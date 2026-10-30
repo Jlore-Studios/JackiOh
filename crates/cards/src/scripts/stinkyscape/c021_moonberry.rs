@@ -57,7 +57,7 @@ mod tests {
     /// C+ #32.1–#32.3, the Other-Origins tokens of the sets that ship now.
     const SHIPPED_TOKENS: [&str; 3] = ["classicplus-032-1", "classicplus-032-2", "classicplus-032-3"];
 
-    /// S #10.1–#12.3, the set's nine Other-Origins tokens once it ships.
+    /// S #10.1–#12.3, the set's nine Other-Origins tokens since it shipped (#1884).
     const STINKYSCAPE_TOKENS: [&str; 9] = [
         "stinkyscape-010-1",
         "stinkyscape-010-2",
@@ -82,10 +82,9 @@ mod tests {
         s.hand(P1).into_iter().find(|card| card.def_id != FILLER).map(|card| card.def_id).unwrap_or_default()
     }
 
-    /// A play of one Moonberry under the Stinkyscape preview; the card it added.
-    fn added_previewed(seed: &str, radiant: bool) -> CardInstance {
+    /// A play of one Moonberry over `seed`; the card it added.
+    fn added_card(seed: &str, radiant: bool) -> CardInstance {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Stinkyscape]);
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": MOONBERRY, "radiant": radiant }, FILLER] },
@@ -133,10 +132,10 @@ mod tests {
         }
 
         #[test]
-        fn r1867007_under_preview_sets_the_nine_s_tokens_join_the_pool() {
+        fn r1867007_the_nine_s_tokens_join_the_pool() {
             let mut seen: IndexSet<String> = IndexSet::new();
             for seed in 0..200 {
-                let added = added_previewed(&format!("moonberry-preview-{seed}"), false);
+                let added = added_card(&format!("moonberry-preview-{seed}"), false);
                 assert!(crate::card_def(&added.def_id).token, "{} is a token", added.def_id);
                 assert!(
                     SHIPPED_TOKENS.contains(&added.def_id.as_str())
@@ -147,7 +146,7 @@ mod tests {
                 seen.insert(added.def_id);
             }
             for token in STINKYSCAPE_TOKENS {
-                assert!(seen.contains(token), "{token} is added under the preview");
+                assert!(seen.contains(token), "{token} is added over the seeds");
             }
         }
     }
@@ -215,7 +214,7 @@ mod tests {
             let probe = scenario(json!({ "p1": { "hand": [FILLER] }, "p2": { "hand": [FILLER] } }));
             let mut zeros = 0;
             for seed in 0..60 {
-                let added = added_previewed(&format!("moonberry-radiant-{seed}"), true);
+                let added = added_card(&format!("moonberry-radiant-{seed}"), true);
                 assert!(added.radiant, "{} is Radiant", added.def_id);
                 assert_eq!(added.cost_mod, -1, "{} costs 1 less", added.def_id);
                 let printed = query_cost(&crate::card_def(&added.def_id));

@@ -42,6 +42,11 @@
 // carries the marks its view entry lists (R33: the player who cannot read the card still sees it is
 // marked); the opponent's hand of backs carries none.
 //
+// #2270: a card on the field (a unit, an Animated card, a face-up backrow card) whose view gives it Brittle
+// `BRITTLE_LAST_COUNT` crumbles at its next tick (R385, R638), so it wears Allure's aura (R963, R1045000) in
+// gray, the aura alone (CardMarks' `bareAura`); a mark of its own outranks it. A card in the hand, the
+// resolving strip or the tray never wears it.
+//
 // R2321000: a unit the view says a card on the field counts (`UnitView.tallies`, Level Up!'s attacks)
 // wears a pill per count, "▲ 2/3", named by the keeping card (cards/Tallies.tsx).
 //
@@ -89,8 +94,9 @@ import {
 import CardMarks from "../cards/CardMarks.tsx";
 import Tallies from "../cards/Tallies.tsx";
 import { OwnCopy } from "../cards/fullArt.ts";
+import { BRITTLE_LAST_COUNT } from "../cards/keywordVisuals.ts";
 import { TheirCopy } from "../cards/loadouts.ts";
-import { marksOf } from "../cards/marks.ts";
+import { BRITTLE_LAST_COLOR, marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
@@ -472,6 +478,8 @@ export default function Card(props: CardProps): ReactElement {
 
   const position = unit?.position;
   const marks = marksOf(unit ?? card);
+  // #2270: the view's Brittle count, never the keyword's printed number (CLAUDE.md rule 7), on the field only.
+  const brittleLast = (form === "minion" || form === "compact") && (unit?.brittle ?? card.brittle) === BRITTLE_LAST_COUNT;
   const counters: CardProps["counters"] = props.counters ?? unit?.counters;
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
@@ -537,7 +545,7 @@ export default function Card(props: CardProps): ReactElement {
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}
-      <CardMarks marks={marks} instanceId={card.instanceId} />
+      <CardMarks marks={marks} instanceId={card.instanceId} bareAura={brittleLast ? BRITTLE_LAST_COLOR : undefined} />
       {/* R2321000: the counts cards on the field keep on the unit (Level Up!'s attacks). */}
       <Tallies tallies={tallies} instanceId={card.instanceId} />
       {card.counteredOnPlay === true && (

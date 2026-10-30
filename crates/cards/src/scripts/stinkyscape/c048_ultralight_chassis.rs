@@ -34,10 +34,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     fn kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)
             .keywords
@@ -72,7 +68,6 @@ mod tests {
     #[test]
     fn rush_may_attack_a_unit_the_turn_it_is_played_but_not_the_hero() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [CHASSIS, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
@@ -89,7 +84,6 @@ mod tests {
     #[test]
     fn death_fuses_a_copy_into_the_dormant_starship() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CHASSIS], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -112,7 +106,6 @@ mod tests {
     #[test]
     fn r1852001_equipped_onto_a_unit_the_host_gains_4_1_and_rush_and_stays_no_piece() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [VANILLA, CHASSIS, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },

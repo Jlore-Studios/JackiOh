@@ -54,7 +54,6 @@ mod tests {
     /// p1 plays Devin Bot (`radiant_face`) with an otherwise empty board.
     fn played(seed: &str, radiant_face: bool) -> Scenario {
         crate::register_all();
-        let _guard = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -126,7 +125,6 @@ mod tests {
 
             #[test]
             fn has_no_reborn_since_patch_v0_3_10_so_it_dies_for_good() {
-                let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = board(
                     "devin-reborn-keyword",
                     json!(["core-008", "core-008", "core-008", "core-008"]),
@@ -144,7 +142,6 @@ mod tests {
 
             #[test]
             fn r1_a_cast_fires_the_cry_too() {
-                let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = board("devin-cast", json!([]));
                 let (seed, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
                 let mut rng = Rng::new(&seed, cursor);
@@ -171,7 +168,6 @@ mod tests {
 
             #[test]
             fn r1136000_r1080_a_locked_zone_gets_its_own_pick_too() {
-                let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = board("devin-locked", json!([]));
                 lock_zone(
                     s.state_mut(),
@@ -191,7 +187,6 @@ mod tests {
 
             #[test]
             fn r1080_each_zone_its_own_pick_tokens_included() {
-                let _guard = preview_sets(&[SetName::Meditative]);
                 let mut mixed = false;
                 let mut token = false;
                 for n in 0..40 {
@@ -211,7 +206,6 @@ mod tests {
 
             #[test]
             fn r1_the_summoned_1_1s_fire_no_cry() {
-                let _guard = preview_sets(&[SetName::Meditative]);
                 for n in 0..10 {
                     let mut s = board(&format!("devin-no-cry-{n}"), json!([]));
                     s.play(BOT, json!({}));
@@ -229,7 +223,6 @@ mod tests {
 
             #[test]
             fn r129_a_board_it_fills_itself_draws_no_random_number() {
-                let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = board(
                     "devin-last-zone",
                     json!(["core-008", "core-008", "core-008", "core-008"]),
@@ -244,7 +237,6 @@ mod tests {
             #[test]
             fn r1080_r129_a_full_board_refuses_the_play() {
                 crate::register_all();
-                let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = scenario(json!({
                     "seed": "devin-full-board",
                     "p1": {
@@ -262,7 +254,6 @@ mod tests {
             #[test]
             fn its_death_brings_nothing_back_and_fires_no_cry() {
                 crate::register_all();
-                let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = scenario(json!({
                     "seed": "devin-reborn",
                     "p1": {

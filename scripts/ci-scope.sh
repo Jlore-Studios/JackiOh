@@ -94,10 +94,11 @@
 #    wasm; and scripts/build-wasm.sh (crates/wasm/tests/export_parity.rs holds the Luau module's factory
 #    types it writes to the C bindings) tools, wasm.
 #  - acceptance.rs (tools) also scans every source under apps/, crates/ and e2e/ for a Markdown read
-#    (V23), every Rust source for a file it includes from outside its crate, and every Rust source for
-#    an `#[ignore]` that does not say it runs daily, so a diff there that adds a line holding a
-#    reader call (`readFileSync(`, `include_str!(`, `include_bytes!(`, `read_to_string(`),
-#    `CARGO_MANIFEST_DIR` or `#[ignore` runs tools, wasm.
+#    (V23), every Rust source for a file it includes from outside its crate, every Rust source for
+#    an `#[ignore]` that does not say it runs daily, and every Rust source for a preview of sets that
+#    all ship (#2257), so a diff there that adds a line holding a reader call (`readFileSync(`,
+#    `include_str!(`, `include_bytes!(`, `read_to_string(`), `CARGO_MANIFEST_DIR`, `#[ignore` or
+#    `preview_sets(` runs tools, wasm.
 #  - web runs for everything but what no web test, build or typecheck reads: the server's, the
 #    tools' and luau's crates (except each manifest, which every cargo command loads, and the files
 #    the web's tests read there: env.rs, the Dockerfile, tests/deploy/, the practice claim fixture,
@@ -288,7 +289,7 @@ done
 
 # acceptance.rs's scans, which read every source under apps/, crates/ and e2e/.
 if git diff --no-renames -U0 "$base...$head" -- apps crates e2e 2>/dev/null |
-  grep -qE '^\+.*(readFileSync\(|include_str!\(|include_bytes!\(|read_to_string\(|CARGO_MANIFEST_DIR|#\[ignore)'; then
+  grep -qE '^\+.*(readFileSync\(|include_str!\(|include_bytes!\(|read_to_string\(|CARGO_MANIFEST_DIR|#\[ignore|preview_sets\()'; then
   on rust_tools_wasm
 fi
 

@@ -177,8 +177,7 @@ mod tests {
             }
 
             #[test]
-            fn r1142_never_itself_with_the_set_previewed() {
-                let _preview = preview_sets(&[SetName::Meditative]);
+            fn r1142_never_itself_though_its_set_ships() {
                 for n in 0..6 {
                     let mut s = decreed(&format!("mandate-pool-{n}"), false, json!([VANILLA, VANILLA, VANILLA]), json!([]));
                     s.play(ID, json!({}));

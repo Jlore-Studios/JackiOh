@@ -227,14 +227,14 @@ jobs:
   # on the fake store, the tools. One job compiling the whole workspace took 14 minutes, nearly all
   # of it compiling, so each group compiles only its own crates and what they build on (the engine
   # and the cards at opt-level 2, about two minutes in every group but `engine`, which builds them
-  # at 0, and the two `engine rules`), side by side. The engine and the cards each split further, by
-  # test binary: the rule tests (themselves in two, #2090), the engine's unit tests and the cards'
-  # unit tests (one per card) each take two to three minutes to compile at opt-level 2 on their own,
-  # and the golden replay runs apart from the engine's unit tests (#1608). So does the AI, whose
-  # tests take minutes to play their games rather than to compile; the server and the tools split by
-  # test name instead, each group running what its filters pick. `binaries` lists every test binary
-  # of a crate split that way, checked against Cargo so a new one cannot go unrun; the last group
-  # takes every crate no other group names, so a new crate cannot either.
+  # at 0, and the two `engine rules` and `cards lib`), side by side. The engine and the cards each
+  # split further, by test binary: the rule tests (themselves in two, #2090), the engine's unit
+  # tests and the cards' unit tests (one per card) each take two to three minutes to compile at
+  # opt-level 2 on their own, and the golden replay runs apart from the engine's unit tests (#1608).
+  # So does the AI, whose tests take minutes to play their games rather than to compile; the server
+  # and the tools split by test name instead, each group running what its filters pick. `binaries`
+  # lists every test binary of a crate split that way, checked against Cargo so a new one cannot go
+  # unrun; the last group takes every crate no other group names, so a new crate cannot either.
   # The engine's two features: testkit, which its `rules` binary requires, and ts, whose
   # export_bindings tests (in its unit tests) write apps/web/src/wire/generated/ (SURFACE §5.1); the
   # engine's and the server's export_config tests write engineConfig.ts and serverConfig.ts. What a
@@ -292,11 +292,17 @@ jobs:
             scope: engine
             cache: engine-rules
             test: -p jackioh-engine --features jackioh-engine/testkit --test golden
-          # Every card's tests, ported from TypeScript (V5), and the cross-card tests.
+          # Every card's tests, ported from TypeScript (V5), and the cross-card tests. The cards' unit
+          # tests (one module per card, 8,133 tests) took the job past seven minutes at Cargo.toml's
+          # opt-level 2 (#2353), nearly all of it compiling: on four cores the engine in about 85 s,
+          # then that binary in 275, the tests running in 8. Here the engine is at opt-level 1 and the
+          # cards at 0, as in `engine rules`: the engine compiles in about 70 s, the binary in 75 and
+          # the tests run in 13 (with the engine at 0 too, 30 s less compiling and 57 s of tests). Each
+          # `--config` stays one unquoted word: the `cargo test` step splits TEST on spaces.
           - group: cards lib
             scope: cards_lib
             cache: cards-lib
-            test: -p jackioh-cards --lib
+            test: -p jackioh-cards --lib --config profile.test.package.jackioh-engine.opt-level=1 --config profile.test.package.jackioh-cards.opt-level=0
           - group: cards
             scope: cards
             cache: cards
