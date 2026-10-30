@@ -9574,6 +9574,13 @@
     "2426": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T02:17:40Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "easy line 9 fails: open PR #2420 (#2387, `fuzz --cards`) also changes crates/tools/src/fuzz.rs and the README's fuzz row; the rest (one crate, ~220 lines, no spec) would pass"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
