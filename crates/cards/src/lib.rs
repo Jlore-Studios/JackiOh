@@ -460,8 +460,9 @@ pub(crate) fn events_json(s: &jackioh_engine::testkit::Scenario) -> Vec<serde_js
 
 /// R2195003: a Training Grounds snapshot plays exactly as its Core card. The same game, built by
 /// `setup` and played by `play` once with each card's id, logs the same events and ends in the same
-/// state, the snapshot's id read as the Core card's. The one thing left out is the element its play
-/// records (`gameLog.lastElement`, R980), which is its own number's, as R2195003 rules.
+/// state, the snapshot's id read as the Core card's. Left out are the element its play records
+/// (`gameLog.lastElement`, R980), which is its own number's, as R2195003 rules, and the Legacy tag its
+/// play counts (`gameLog.playedByTag`), which only a Legacy card carries (R2511000).
 #[cfg(test)]
 pub(crate) fn expect_plays_as(
     core: &str,
@@ -485,6 +486,9 @@ pub(crate) fn expect_plays_as(
         {
             if let Some(log) = side["gameLog"].as_object_mut() {
                 log.remove("lastElement");
+                if let Some(by_tag) = log.get_mut("playedByTag").and_then(|tags| tags.as_object_mut()) {
+                    by_tag.remove("Legacy");
+                }
             }
         }
         (events, state)

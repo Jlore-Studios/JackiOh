@@ -3037,82 +3037,82 @@
     "traininggrounds-040": { // Goetzmann Game Design
       cast: { voice: "prof", text: "Let me design you something." },
     },
-    "traininggrounds-041": { // Bigot
+    "traininggrounds-041": { // Legacy: Bigot
       play: { voice: "snob", text: "Ugh. Not your kind again." },
       attack: { voice: "snob", text: "Begone, riffraff!" },
       death: { voice: "snob", text: "Tolerance wins. Again." },
     },
-    "traininggrounds-042": { // Stockpile
+    "traininggrounds-042": { // Legacy: Stockpile
       cast: { voice: "narrator", text: "Hoarding is self care." },
     },
-    "traininggrounds-043": { // Mr. Vanilla
+    "traininggrounds-043": { // Legacy: Mr. Vanilla
       play: { voice: "plain", text: "Hello. I am very normal." },
       attack: { voice: "plain", text: "Excuse me. Attacking." },
       death: { voice: "plain", text: "Plain. Simple. Gone." },
     },
-    "traininggrounds-044": { // Duplicating Felinors
+    "traininggrounds-044": { // Legacy: Duplicating Felinors
       play: { voice: "cat", text: "Meow. Meow again." },
       attack: { voice: "cat", text: "Double pounce!", effect: "catChirp" },
       death: { voice: "cat", text: "Both of us?" },
     },
-    "traininggrounds-045": { // Jlockeed's Weapons
+    "traininggrounds-045": { // Legacy: Jlockeed's Weapons
       cast: { voice: "robot", text: "Defense contract approved.", effect: "metalClank" },
     },
-    "traininggrounds-046": { // Hit Job
+    "traininggrounds-046": { // Legacy: Hit Job
       cast: { voice: "hustler-hitman", text: "Nothing personal, pal.", effect: "sharpCrack" },
     },
-    "traininggrounds-047": { // Midrange Menace
+    "traininggrounds-047": { // Legacy: Midrange Menace
       play: { voice: "brute", text: "Not too big. Not too small." },
       attack: { voice: "brute", text: "Medium smash." },
       death: { voice: "brute", text: "Should have gone aggro." },
     },
-    "traininggrounds-048": { // Jlockeed Shredder-10
+    "traininggrounds-048": { // Legacy: Jlockeed Shredder-10
       play: { voice: "robot", text: "Shredder online. Paperwork offline.", effect: "engineRev" },
       attack: { voice: "robot", text: "Shredding commenced.", effect: "servoWhirr" },
       death: { voice: "robot", text: "Warranty void.", effect: "powerDown" },
     },
-    "traininggrounds-049": { // Reoccurring Dream
+    "traininggrounds-049": { // Legacy: Reoccurring Dream
       cast: { voice: "whisper", text: "Wait. Haven't we done this?" },
     },
-    "traininggrounds-050": { // Glowy Jelly Bean
+    "traininggrounds-050": { // Legacy: Glowy Jelly Bean
       cast: { voice: "wobble", text: "Taste the glow!" },
     },
-    "traininggrounds-051": { // Big Felinor
+    "traininggrounds-051": { // Legacy: Big Felinor
       play: { voice: "cat", text: "Big cat. Bigger problems." },
       attack: { voice: "cat", text: "Big cat pounce!", effect: "bigCatPounce" },
       death: { voice: "cat", text: "Landed on my back?" },
     },
-    "traininggrounds-052": { // Snom Bunny Mind Control
+    "traininggrounds-052": { // Legacy: Snom Bunny Mind Control
       cast: { voice: "posh", text: "Hop along. You're mine now." },
     },
-    "traininggrounds-053": { // Prejudiced Postdoc
+    "traininggrounds-053": { // Legacy: Prejudiced Postdoc
       play: { voice: "snob", text: "Peer review? Rejected." },
       attack: { voice: "snob", text: "Your thesis is wrong." },
       death: { voice: "snob", text: "My grant... expired." },
     },
-    "traininggrounds-054": { // The Rock
+    "traininggrounds-054": { // Legacy: The Rock
       play: { voice: "brute", text: "Rock solid. Rock steady.", effect: "stoneThud" },
       attack: { voice: "brute", text: "Rock bottom!", effect: "rumble" },
       death: { voice: "brute", text: "Just gravel now.", effect: "crumble" },
     },
-    "traininggrounds-055": { // Reminisce
+    "traininggrounds-055": { // Legacy: Reminisce
       cast: { voice: "storyteller", text: "Ah, the good old days." },
     },
-    "traininggrounds-056": { // Corpse Eater
+    "traininggrounds-056": { // Legacy: Corpse Eater
       play: { voice: "alien", text: "Anyone gonna finish that?" },
       attack: { voice: "alien", text: "Fresh meat.", effect: "squelch" },
       death: { voice: "alien", text: "Finally... full." },
     },
-    "traininggrounds-057": { // Recycling Initiative
+    "traininggrounds-057": { // Legacy: Recycling Initiative
       cast: { voice: "zoomer", text: "Reduce, reuse, replay!" },
     },
-    "traininggrounds-058": { // True Strike
+    "traininggrounds-058": { // Legacy: True Strike
       cast: { voice: "hero", text: "Bullseye, baby.", effect: "zip" },
     },
-    "traininggrounds-059": { // Fig of Life
+    "traininggrounds-059": { // Legacy: Fig of Life
       cast: { voice: "storyteller", text: "A fig a day!", effect: "squelch" },
     },
-    "traininggrounds-060": { // Rush Token Farm
+    "traininggrounds-060": { // Legacy: Rush Token Farm
       cast: { voice: "elder", text: "Fresh tokens, farm to table!" },
     },
   },

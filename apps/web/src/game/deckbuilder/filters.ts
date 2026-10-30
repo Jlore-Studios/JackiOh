@@ -93,6 +93,8 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Drone Core",
   "Weapon",
   "Swarm",
+  // R2511000: Training Grounds #41 to #60, the Legacy cards.
+  "Legacy",
 ];
 
 /**

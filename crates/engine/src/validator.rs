@@ -316,8 +316,6 @@ fn check(
             }
         }
 
-        // R2195000: each card's pair key in this deck, with the first id that brought it.
-        let mut pairs: IndexMap<&str, &CardId> = IndexMap::new();
         for card_id in &deck_order {
             // L7 (R915005) — a custom card plays only in practice. It is judged by this rule alone.
             if crate::custom::is_custom_id(card_id) {
@@ -364,26 +362,6 @@ fn check(
                     deck: Some(deck_number),
                     card_id: Some(card_id.clone()),
                 });
-            }
-
-            // L3 (R2195000) — a Core card or its Training Grounds snapshot, never both.
-            if let Some(def) = def {
-                match pairs.get(crate::catalog::pair_key(def)) {
-                    Some(other) => errors.push(LoadoutError {
-                        rule: LoadoutRule::L3,
-                        message: format!(
-                            "{} cannot contain both {} and {}: a deck holds a Core card or its Training Grounds snapshot, not both.",
-                            label_at(index),
-                            label(other),
-                            label(card_id)
-                        ),
-                        deck: Some(deck_number),
-                        card_id: Some(card_id.clone()),
-                    }),
-                    None => {
-                        pairs.insert(crate::catalog::pair_key(def), card_id);
-                    }
-                }
             }
 
             // L3 (copies) — at most MAX_COPIES of a card per deck.

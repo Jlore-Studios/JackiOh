@@ -2305,8 +2305,6 @@ pub fn validate_deck_with(
         )));
     }
     let mut seen: Vec<&str> = Vec::with_capacity(deck.len());
-    // R2195000: each catalog card's pair key, with the id that brought it.
-    let mut pairs: Vec<(&str, &str)> = Vec::with_capacity(deck.len());
     for def_id in deck {
         if crate::custom::is_custom_id(def_id) {
             if !customs.contains_key(def_id) {
@@ -2325,17 +2323,6 @@ pub fn validate_deck_with(
         };
         too_many_copies(&seen, def_id, label, copies)?;
         seen.push(def_id);
-        let key = crate::catalog::pair_key(def);
-        // R2195000: a copy of the same id is no pair; R2433001 counts copies above.
-        if let Some((_, other)) = pairs
-            .iter()
-            .find(|(held, other)| *held == key && *other != def_id.as_str())
-        {
-            return Err(EngineError::new(format!(
-                "{label}: \"{other}\" and \"{def_id}\" are a Core card and its Training Grounds snapshot; a deck holds one of the two (§2.6 L3, R2195000)"
-            )));
-        }
-        pairs.push((key, def_id));
         if def.is_token() {
             return Err(EngineError::new(format!(
                 "{label}: \"{def_id}\" is a Token card and cannot be in a deck (§2.6 L3)"

@@ -19,23 +19,23 @@ export const lesson: TutorialLesson = {
     "traininggrounds-002", // Personal Trainer, Common
     "traininggrounds-005", // Midlane Menace, Common
     "traininggrounds-022", // Right-Hand Felinor, Rare
-    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
     "traininggrounds-023", // Quadrupling Felinors, Rare
     "traininggrounds-017", // Flaming Felinor, Rare
-    "traininggrounds-041", // Bigot, Common
+    "traininggrounds-041", // Legacy: Bigot, Common
     "traininggrounds-033", // Guerilla Felinor, Epic
     "traininggrounds-006", // Chosen by the Sun, Common
     "traininggrounds-007", // Chosen by the Moon, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-009", // Ravager, Common
-    "traininggrounds-047", // Midrange Menace, Common
+    "traininggrounds-047", // Legacy: Midrange Menace, Common
     "traininggrounds-018", // Knife Juggler, Rare
     "traininggrounds-016", // Celestial Caller, Rare
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
-    "traininggrounds-056", // Corpse Eater, Epic
-    "traininggrounds-048", // Jlockeed Shredder-10, Common
+    "traininggrounds-056", // Legacy: Corpse Eater, Epic
+    "traininggrounds-048", // Legacy: Jlockeed Shredder-10, Common
   ],
   aiDeck: [
     "core-008", // Mr. Vanilla, Common

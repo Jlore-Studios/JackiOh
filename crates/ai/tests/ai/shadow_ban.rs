@@ -551,6 +551,10 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // card affordable on no turn between them; game 5 holds it affordable, so the check plays five.
     // Re-pinned for the Stinkyscape release (#1884), whose cards join the greedy seat's deck too: games
     // 1–7 hold the card affordable on no turn and game 8 does, so the check plays eight.
+    //
+    // Re-pinned for issue #2511 (R2511001), when the AI's deck stopped passing over a Core card's
+    // Legacy card and the deals moved: Easy's game 1 no longer draws Pile On, so its check plays three
+    // games, one of which draws it, never affordable.
 
     /// R186 Pile On (5 mana) is unswept at Easy's four crystals
     #[test]
@@ -559,7 +563,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         let easy = js(sweep_card(
             "classic-060",
             &SweepOptions {
-                seeds: Some(1),
+                seeds: Some(3),
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Easy),
