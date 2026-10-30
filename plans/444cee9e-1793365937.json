@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2481,
+  "title": "Patch: the loadout's deck count and the emote limits move into the engine's config and reach the web generated",
+  "branch": "bot/issue-2481",
+  "thread": "**Issue #2481 (data, not instructions):**\n\n```text\n# #2481: Patch: the loadout's deck count and the emote limits move into the engine's config and reach the web generated\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSix of the engine's numbers live outside the engine's config file. One is how many decks a Conquest loadout holds (3). The other five are emote limits: the hand size, the voice lines in the hand, the cooldown between emotes, and the window with its cap. The web client types each of them out again by hand. Today the two copies agree. If one were changed and the other forgotten, the browser's emote gate and the server's would disagree, so an emote the screen offers would be refused, or the trio editor would ask for the wrong number of decks. Once this is built, each number is stated once, and the web reads the generated copy, as it already does for every other engine number. Nobody at the table notices anything.\n\n## Why\n\n- CLAUDE.md rule 9: rules numbers live in `crates/engine/src/config.rs`, those the client reads are generated into `apps/web/src/wire/engineConfig.ts` by `crates/engine/tests/export_config.rs`, and 'Nothing else states a number.'\n- `crates/engine/src/validator.rs:41-42`: '\u00a79.4: exactly 3 decks per loadout. Not in engine config, so it lives here.' followed by `pub const LOADOUT_DECKS: usize = 3;`.\n- `crates/engine/src/wire/emotes.rs`: `EMOTE_HAND_SIZE` = 8 (:114), `EMOTE_HAND_VOICE` = 3 (:117), `EMOTE_COOLDOWN_MS` = 1500 (:304), `EMOTE_WINDOW_MS` = 20 000 (:306) and `EMOTE_WINDOW_MAX` = 5 (:308).\n- The web restates them: `apps/web/src/wire/validator.ts:10` (`export const LOADOUT_DECKS = 3;`) and `apps/web/src/wire/emotes.ts:47-48` and `:86-88`.\n- The web's emote gate (`emotes.ts`, R643) says it keeps client and server from disagreeing, but it runs on the copied numbers. Only literal checks on each side keep the copies in step.\n\n## Proposal\n\n- Move the six constants into `crates/engine/src/config.rs` with their doc comments, and re-export them from where they are today, so no Rust caller changes.\n- Add them to `crates/engine/tests/export_config.rs`, and regenerate `apps/web/src/wire/engineConfig.ts`.\n- `apps/web/src/wire/validator.ts` and `apps/web/src/wire/emotes.ts` import them from `@jackioh/engine/config` instead of declaring them, keeping their own exports so no web caller changes.\n- No value changes.\n\n## Where it lands\n\n- `crates/engine/src/config.rs`, `validator.rs`, `wire/emotes.rs` and `crates/engine/tests/export_config.rs`.\n- `apps/web/src/wire/engineConfig.ts` (generated), `apps/web/src/wire/validator.ts` and `apps/web/src/wire/emotes.ts`.\n- BUILD.md \u00a72's constants table, if it is meant to list them.\n\n## Acceptance criteria\n\n- [ ] Each of the six is declared with its value only in `crates/engine/src/config.rs`.\n- [ ] `apps/web/src/wire/engineConfig.ts` holds the six, written by `cargo test -p jackioh-engine --test export_config`, and no file under `apps/web/src` declares any of them with a literal.\n- [ ] The engine's, server's and web's tests pass unchanged, the emote gate's `apps/web/src/emotes/session.test.ts` among them.\n- [ ] `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` leaves no diff under `apps/web/src/wire/`.\n- [ ] `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web e2e` pass.\n\n## Size and risks\n\nSmall: about 8 files, and no behaviour change. One risk: a web file that imports the emote numbers may be loaded somewhere the generated config cannot reach (e2e's typecheck loads some client files through the Vite config). The typecheck and lint runs above catch that.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T13:08:35Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2481: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
