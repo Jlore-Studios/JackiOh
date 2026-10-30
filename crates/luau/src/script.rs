@@ -587,7 +587,13 @@ fn parse_triggers(
 
             let run = hooks::adapt_trigger_run(site_trig, bytecode, key, i);
 
-            triggers.push(TriggerDef { id, on, when, run });
+            triggers.push(TriggerDef {
+                id,
+                on,
+                when,
+                run,
+                even_if_gone: false,
+            });
         }
     }
     Ok(triggers)
