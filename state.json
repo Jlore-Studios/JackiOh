@@ -10240,13 +10240,6 @@
       "status": "interrupted",
       "tries": 1
     },
-    "40908328502": {
-      "at": "2026-10-29T16:14:51Z",
-      "done": true,
-      "ref": "cbabf496-1793289970",
-      "status": "built",
-      "tries": 1
-    },
     "40910177704": {
       "at": "2026-10-29T16:50:32Z",
       "done": true,
@@ -10868,6 +10861,11 @@
       "done": true,
       "ref": "fa3c9cad-1793337426",
       "status": "interrupted",
+      "tries": 1
+    },
+    "41010517881": {
+      "at": "2026-10-30T05:56:37Z",
+      "ref": "28e50fdb-1793339314",
       "tries": 1
     }
   },
