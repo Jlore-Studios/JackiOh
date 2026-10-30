@@ -1,10 +1,9 @@
 // scripts/promote-production.sh, the logic of .github/workflows/promote-production.yml: the merge of
-// main into production through a pull request, Vercel's hold and fast-forward, and the one countdown
-// issue that can hold or delay either and shows the queue. Each case runs the real script in a fresh
-// clone of a throwaway "origin", with a stand-in for `gh` (below) that keeps issues, pull requests,
-// comments, reactions, CI runs and Vercel's deployments in a JSON file and does the merge for real
-// with git, so what production ends up holding is what GitHub would leave it, and one for `curl`
-// that records the deploy hook's calls.
+// main into production through a pull request, and the one countdown issue that can hold or delay it
+// and shows the queue. Each case runs the real script in a fresh clone of a throwaway "origin", with a
+// stand-in for `gh` (below) that keeps issues, pull requests, comments, reactions and CI runs in a
+// JSON file and does the merge for real with git, so what production ends up holding is what GitHub
+// would leave it.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -125,11 +124,6 @@ if (a === "run" && b === "list" && f("--status") === undefined && f("--commit") 
     out(issue(m[1]).comments.map((c) => ({ id: c.id, user: { login: c.login, type: c.type }, author_association: c.assoc, created_at: c.at, body: c.body })));
   } else if ((m = /^repos\/[^/]+\/[^/]+\/issues\/comments\/(\d+)\/reactions$/.exec(b))) {
     st.reactions.push({ comment: Number(m[1]), content: f("-f").replace(/^content=/, "") });
-  } else if ((m = /^repos\/[^/]+\/[^/]+\/deployments\/(\d+)\/statuses/.exec(b))) {
-    const d = st.deployments.find((x) => x.id === Number(m[1]));
-    out(d ? [{ state: d.state }] : []);
-  } else if (/^repos\/[^/]+\/[^/]+\/deployments\?environment=Production&/.test(b)) {
-    out(st.deployments.map((d) => ({ id: d.id, sha: d.sha, environment: "Production", creator: { login: d.creator ?? "vercel[bot]" } })));
   } else if ((m = /^repos\/[^/]+\/[^/]+\/git\/refs\/heads\/(.+)$/.exec(b)) && f("-X") === "DELETE") {
     git(origin, "update-ref", "-d", "refs/heads/" + m[1]);
   } else { process.stderr.write("fake gh: unsupported api call " + argv.join(" ") + "\n"); process.exit(2); }
@@ -138,21 +132,9 @@ fs.writeFileSync(file, JSON.stringify(st));
 process.stdout.write(printed);
 `;
 
-/** The stand-in for `curl`: the live server's GET /api/catalog serves FAKE_SERVED_CATALOG (no answer
- * when it is empty), and every other call, Vercel's deploy hook, is written down. */
-const FAKE_CURL = `#!/bin/sh
-case "$*" in
-  */api/catalog*) [ -n "$FAKE_SERVED_CATALOG" ] || exit 7; printf '{"version":"%s"}' "$FAKE_SERVED_CATALOG"; exit 0 ;;
-esac
-echo "$*" >> "$FAKE_GH_DIR/curl.log"
-[ -z "$FAKE_CURL_FAIL" ] || exit 22
-`;
-
 interface Comment { id: number; login: string; type: string; assoc: string; at: string; body: string }
 interface Issue { number: number; title: string; body: string; labels: string[]; assignees?: string[]; state: "open" | "closed"; reason: string; comments: Comment[] }
 interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean }
-/** What Vercel's GitHub app reported for a build of main: its commit and its latest status. */
-interface Deployment { id: number; sha: string; state: string; creator?: string }
 interface Gh {
   next: number;
   nextComment: number;
@@ -164,7 +146,6 @@ interface Gh {
   failed: string[];
   running: string[];
   newestGreen: string;
-  deployments: Deployment[];
   failMerges: number;
   fail: string[];
   log: string[];
@@ -212,8 +193,9 @@ function commit(w: World, name: string, files: Record<string, string>, green = t
   return sha;
 }
 
-const renderYaml = (catalog: string): string =>
-  `services:\n  - type: web\n    envVars:\n      - key: NODE_ENV\n        value: production\n      - key: CATALOG_VERSION\n        value: ${catalog}\n`;
+/** crates/cards/patches/patches.json, whose newest entry is the catalog version a commit ships. */
+const PATCHES = "crates/cards/patches/patches.json";
+const patches = (...versions: string[]): string => `${JSON.stringify(versions.map((version) => ({ version })), null, 2)}\n`;
 
 /** origin with main at c3 (all green) and production at c1, as after a few days' work. */
 function world(): World {
@@ -224,14 +206,12 @@ function world(): World {
   mkdirSync(join(root, "gh"));
   writeFileSync(join(w.bin, "gh"), FAKE_GH);
   chmodSync(join(w.bin, "gh"), 0o755);
-  writeFileSync(join(w.bin, "curl"), FAKE_CURL);
-  chmodSync(join(w.bin, "curl"), 0o755);
   git(root, "init", "-q", "--bare", "-b", "main", w.origin);
   git(root, "init", "-q", "-b", "main", w.work);
   git(w.work, "remote", "add", "origin", w.origin);
-  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], failed: [], running: [], newestGreen: "", deployments: [], failMerges: 0, fail: [], log: [], tokens: [] };
+  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], failed: [], running: [], newestGreen: "", failMerges: 0, fail: [], log: [], tokens: [] };
   writeFileSync(stateFile(w), JSON.stringify(empty));
-  commit(w, "c1", { "render.yaml": renderYaml("v0.2.0b"), "app.txt": "one\n" });
+  commit(w, "c1", { [PATCHES]: patches("v0.2.0a", "v0.2.0b"), "app.txt": "one\n" });
   git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/production`);
   commit(w, "c2", { "app.txt": "two\n" });
   commit(w, "c3", { "app.txt": "three\n" });
@@ -261,13 +241,7 @@ function run(w: World, event: string, now: string, extra: Record<string, string>
       MERGE_RETRY_SECONDS: "0",
       FAKE_GH_DIR: join(w.root, "gh"),
       FAKE_GH_ORIGIN: w.origin,
-      RUN_SHA: "",
       INPUT_SHA: "",
-      INPUT_TARGET: "",
-      VERCEL_DEPLOY_HOOK_URL: "",
-      FAKE_CURL_FAIL: "",
-      SERVER_URL: "",
-      FAKE_SERVED_CATALOG: "",
       ...extra,
     },
   });
@@ -296,19 +270,6 @@ const comment = (w: World, number: number, body: string, when: string, who: { lo
   return id;
 };
 const reactions = (w: World, id: number): string[] => gh(w).reactions.filter((r) => r.comment === id).map((r) => r.content);
-/** The commit a tag names on origin, or "" when there is no such tag. */
-const tagAt = (w: World, tag: string): string => git(w.origin, "for-each-ref", "--format=%(objectname)", `refs/tags/${tag}`);
-/** The deploy hook's calls, one line of curl's arguments each. */
-const hookCalls = (w: World): string[] => {
-  try {
-    return readFileSync(join(w.root, "gh", "curl.log"), "utf8").split("\n").filter((line) => line !== "");
-  } catch {
-    return [];
-  }
-};
-const HOOK = "https://api.vercel.com/v1/integrations/deploy/prj_x/hook";
-/** The live server the catalog gate asks (SERVER_URL); the stand-in `curl` answers for it. */
-const SERVER = "https://server.test";
 
 /** The first check, which opens issue #1 for Oct 5 15:00 UTC; the rest of the cases start from there. */
 function counting(): World {
@@ -399,7 +360,7 @@ describe("the countdown issue", () => {
       s.green.push(ahead);
       s.newestGreen = ahead;
     });
-    ok(run(w, "workflow_run", "2026-10-05T16:30:00Z", { RUN_SHA: ahead }));
+    ok(run(w, "workflow_run", "2026-10-05T16:30:00Z"));
     expect(gh(w).prs).toHaveLength(2);
     expect(tree(w, "production")).toBe(tree(w, ahead));
     expect(issue(w, 1).title).toBe("Merging to production in 23 hours (2026-10-06 10:00 AM CT)");
@@ -488,7 +449,7 @@ describe("the countdown in the title", () => {
     ok(run(w, "schedule", "2026-10-04T22:07:00Z"));
     expect(issue(w, 1).title).toBe("Merging to production in 17 hours (2026-10-05 10:00 AM CT)");
     expect(issue(w, 1).body).toBe(body);
-    ok(run(w, "workflow_run", "2026-10-05T09:40:00Z", { RUN_SHA: w.sha.c3 as string }));
+    ok(run(w, "workflow_run", "2026-10-05T09:40:00Z"));
     expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 10:00 AM CT)");
     ok(run(w, "schedule", "2026-10-05T14:07:00Z"));
     expect(issue(w, 1).title).toBe("Merging to production in 1 hour (2026-10-05 10:00 AM CT)");
@@ -655,135 +616,55 @@ describe("holding and delaying from the comments", () => {
   });
 });
 
-describe("Vercel, from the same issue", () => {
-  it("/hold vercel puts the hold tag on main, says so, and leaves production's countdown alone", () => {
+describe("staging, which deploys itself", () => {
+  it("is not held from here: a command that names it is refused, and holds nothing", () => {
+    // Read as a reason, `/hold staging` would hold production: the opposite of what it asks.
     const w = counting();
-    const id = comment(w, 1, "/hold vercel the art is half in", "2026-10-05T10:00:00Z");
-    ok(run(w, "issue_comment", "2026-10-05T10:01:00Z"));
-    expect(reactions(w, id)).toEqual(["+1"]);
-    expect(tagAt(w, "vercel-hold")).toBe(w.sha.c3);
-    expect(issue(w, 1).body).toContain("vercel_held=1 vercel_until=0");
-    expect(issue(w, 1).body).toContain("**Vercel (staging): on hold.**");
-    expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 10:00 AM CT) · Vercel on hold");
-    expect(marker(issue(w, 1))).toContain("held=0");
+    const ids = ["/hold vercel the art is half in", "/delay staging 3h", "/fast-forward Vercel", "/resume staging"].map((body, i) =>
+      comment(w, 1, body, `2026-10-05T10:0${i}:00Z`),
+    );
+    const r = ok(run(w, "issue_comment", "2026-10-05T10:05:00Z"));
+    expect(ids.map((id) => reactions(w, id))).toEqual(ids.map(() => ["confused"]));
+    expect(r.text).toContain("staging deploys every green commit of main by itself (deploy-staging.yml)");
+    expect(marker(issue(w, 1))).toBe(`due=${DUE} held=0 last=${ids.at(-1)}`);
+    expect(gh(w).prs).toEqual([]);
     // Production still merges at its time.
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
     expect(gh(w).prs).toHaveLength(1);
-    expect(tagAt(w, "vercel-hold")).toBe(w.sha.c3);
-    expect(hookCalls(w)).toEqual([]);
   });
 
-  it("/resume vercel takes the tag away and has Vercel build what the hold kept back, through the deploy hook", () => {
-    const w = counting();
-    comment(w, 1, "/hold staging", "2026-10-05T10:00:00Z");
-    ok(run(w, "issue_comment", "2026-10-05T10:01:00Z"));
-    const later = commit(w, "c4", { "app.txt": "four\n" });
-    comment(w, 1, "/resume vercel", "2026-10-05T11:00:00Z");
-    ok(run(w, "issue_comment", "2026-10-05T11:01:00Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
-    expect(tagAt(w, "vercel-hold")).toBe("");
-    expect(tagAt(w, "vercel-fast-forward")).toBe(later);
-    expect(hookCalls(w)).toEqual([`-fsS -X POST -o /dev/null ${HOOK}`]);
-    expect(issue(w, 1).comments.at(-1)?.body).toContain(`Vercel is building \`${later.slice(0, 7)}\`, main's newest commit, past the hour between its builds (its hold is over).`);
-    expect(issue(w, 1).title).toBe("Merging to production in 4 hours (2026-10-05 10:00 AM CT)");
-  });
-
-  it("/delay vercel 3h holds Vercel for three hours, and the first check after them builds", () => {
-    const w = counting();
-    comment(w, 1, "/delay vercel 3h", "2026-10-05T10:00:00Z");
-    ok(run(w, "issue_comment", "2026-10-05T10:01:00Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
-    expect(issue(w, 1).body).toContain(`vercel_held=0 vercel_until=${at("2026-10-05T13:00:00Z")}`);
-    expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 10:00 AM CT) · Vercel held until 2026-10-05 8:00 AM CT");
-    expect(tagAt(w, "vercel-hold")).toBe(w.sha.c3);
-    ok(run(w, "schedule", "2026-10-05T12:07:00Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
-    expect(hookCalls(w)).toEqual([]);
-    ok(run(w, "schedule", "2026-10-05T13:07:00Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
-    expect(tagAt(w, "vercel-hold")).toBe("");
-    expect(tagAt(w, "vercel-fast-forward")).toBe(w.sha.c3);
-    expect(hookCalls(w)).toHaveLength(1);
-    expect(issue(w, 1).body).toContain("vercel_held=0 vercel_until=0");
-  });
-
-  it("/fast-forward vercel builds main's newest commit now, past a hold, and leaves production alone", () => {
-    const w = counting();
-    comment(w, 1, "/hold vercel", "2026-10-04T17:00:00Z");
-    ok(run(w, "issue_comment", "2026-10-04T17:01:00Z"));
-    const before = production(w);
-    const id = comment(w, 1, "/fast-forward vercel", "2026-10-04T18:00:00Z");
-    ok(run(w, "issue_comment", "2026-10-04T18:00:30Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
-    expect(reactions(w, id)).toEqual(["+1"]);
-    expect(tagAt(w, "vercel-hold")).toBe("");
-    expect(tagAt(w, "vercel-fast-forward")).toBe(w.sha.c3);
-    expect(hookCalls(w)).toHaveLength(1);
-    expect(issue(w, 1).comments.at(-1)?.body).toContain("(/fast-forward)");
-    expect(production(w)).toBe(before);
-    expect(gh(w).prs).toEqual([]);
-    expect(issue(w, 1).title).toBe("Merging to production in 21 hours (2026-10-05 10:00 AM CT)");
-  });
-
-  it("/fast-forward both merges production and builds Vercel", () => {
-    const w = counting();
-    comment(w, 1, "/fast-forward both", "2026-10-04T18:00:00Z");
-    ok(run(w, "issue_comment", "2026-10-04T18:00:30Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
-    expect(gh(w).prs.map((p) => p.merged)).toEqual([true]);
-    expect(hookCalls(w)).toHaveLength(1);
-  });
-
-  it("says the next push builds it when the deploy hook is not set, or refused, and skips one Vercel already serves", () => {
-    const w = counting();
-    comment(w, 1, "/fast-forward vercel", "2026-10-04T18:00:00Z");
-    ok(run(w, "issue_comment", "2026-10-04T18:00:30Z"));
-    expect(tagAt(w, "vercel-fast-forward")).toBe(w.sha.c3);
-    expect(hookCalls(w)).toEqual([]);
-    expect(issue(w, 1).comments.at(-1)?.body).toContain("at the next push to `main`");
-    expect(issue(w, 1).comments.at(-1)?.body).toContain("`VERCEL_DEPLOY_HOOK_URL` secret is not set");
-
-    comment(w, 1, "/fast-forward vercel", "2026-10-04T18:10:00Z");
-    ok(run(w, "issue_comment", "2026-10-04T18:10:30Z", { VERCEL_DEPLOY_HOOK_URL: HOOK, FAKE_CURL_FAIL: "1" }));
-    expect(issue(w, 1).comments.at(-1)?.body).toContain("Vercel's deploy hook refused the request");
-
-    edit(w, (s) => s.deployments.push({ id: 7, sha: w.sha.c3 as string, state: "success" }));
-    comment(w, 1, "/fast-forward vercel", "2026-10-04T18:20:00Z");
-    ok(run(w, "issue_comment", "2026-10-04T18:20:30Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
-    expect(issue(w, 1).comments.at(-1)?.body).toContain(`Vercel already serves \`${(w.sha.c3 as string).slice(0, 7)}\``);
-    expect(hookCalls(w)).toHaveLength(1);
-  });
-
-  it("reads a hold's reason as production's when it names no target", () => {
+  it("takes a first word naming production as production's, and any other as the reason", () => {
     const w = counting();
     comment(w, 1, "/hold the vercel build is slow", "2026-10-05T10:00:00Z");
     comment(w, 1, "/delay production 2h", "2026-10-05T10:01:00Z");
     ok(run(w, "issue_comment", "2026-10-05T10:02:00Z"));
     expect(marker(issue(w, 1))).toContain(`due=${DUE + 2 * 3600} held=1`);
-    expect(issue(w, 1).body).toContain("vercel_held=0 vercel_until=0");
-    expect(tagAt(w, "vercel-hold")).toBe("");
   });
 
-  it("is in the issue's instructions", () => {
+  it("is in the issue's body as deploying itself, and the commands are production's alone", () => {
     const w = counting();
-    expect(issue(w, 1).body).toContain("| `/fast-forward vercel` |");
-    expect(issue(w, 1).body).toContain("| `/hold vercel`, `/delay vercel 3h`, `/resume vercel` |");
+    const body = issue(w, 1).body;
+    expect(body).toContain("**Staging** deploys every commit of `main` whose CI passed, by itself (`deploy-staging.yml`)");
+    expect(body).not.toMatch(/vercel/iu);
+    expect(issue(w, 1).title).not.toMatch(/vercel/iu);
   });
 
-  it("runs by hand for Vercel alone, or both, and refuses a target it does not know", () => {
+  it("reads a state line written while Vercel was staging, and writes it back without Vercel's fields", () => {
     const w = counting();
-    ok(run(w, "workflow_dispatch", "2026-10-04T18:00:00Z", { INPUT_TARGET: "vercel", VERCEL_DEPLOY_HOOK_URL: HOOK }));
-    expect(hookCalls(w)).toHaveLength(1);
-    expect(gh(w).prs).toEqual([]);
-    expect(issue(w, 1).comments.at(-1)?.body).toContain("(a manual run)");
-    ok(run(w, "workflow_dispatch", "2026-10-04T18:10:00Z", { INPUT_TARGET: "both", VERCEL_DEPLOY_HOOK_URL: HOOK }));
-    expect(gh(w).prs).toHaveLength(1);
-    const refused = run(w, "workflow_dispatch", "2026-10-04T18:20:00Z", { INPUT_TARGET: "everything" });
-    expect(refused.status).not.toBe(0);
-    expect(refused.text).toContain("The target must be production, vercel or both");
+    edit(w, (s) => {
+      const i = s.issues[0] as Issue;
+      i.title = "Merging to production in 23 hours (2026-10-05 10:00 AM CT) · Vercel on hold";
+      i.body = i.body.replace(/^<!-- promote-production due=(\d+) held=0 last=0 -->/u, "<!-- promote-production due=$1 held=1 last=7 vercel_held=1 vercel_until=0 -->");
+    });
+    expect(issue(w, 1).body).toContain("vercel_held=1");
+    ok(run(w, "schedule", "2026-10-04T17:07:00Z"));
+    expect(issue(w, 1).body.split("\n")[0]).toBe(`<!-- promote-production due=${DUE} held=1 last=7 -->`);
+    expect(issue(w, 1).title).toBe("Merging to production: on hold (was due 2026-10-05 10:00 AM CT)");
   });
 
-  it("names the two tags scripts/vercel-ignore.sh reads", () => {
-    const script = readFileSync(SCRIPT, "utf8");
-    const ignore = readFileSync(join(ROOT, "scripts/vercel-ignore.sh"), "utf8");
-    for (const [name, tag] of [["STAGING_HOLD_TAG", "vercel-hold"], ["STAGING_FAST_FORWARD_TAG", "vercel-fast-forward"]]) {
-      expect(new RegExp(`: "\\$\\{${name}:=([^}]+)\\}"`, "u").exec(script)?.[1]).toBe(tag);
-      expect(ignore).toContain(`refs/tags/${tag}`);
-    }
+  it("is never the manual run's to choose: the workflow and the script have no target", () => {
+    expect(WORKFLOW).not.toMatch(/^ {6}target:/mu);
+    expect(readFileSync(SCRIPT, "utf8")).not.toContain("INPUT_TARGET");
   });
 });
 
@@ -797,9 +678,8 @@ describe("the queue in the issue", () => {
   };
   const short = (sha: string | undefined): string => (sha ?? "").slice(0, 7);
 
-  it("lists what main has that is not live on both, by pull request, newest first, with its CI and where it stands", () => {
+  it("lists what main has that production does not, by pull request, newest first, with its CI and where it stands", () => {
     const w = world();
-    edit(w, (s) => s.deployments.push({ id: 9, sha: w.sha.c2 as string, state: "success" }, { id: 8, sha: w.sha.c1 as string, state: "success" }));
     const four = commit(w, "c4", { "app.txt": "four\n" }, false, "Patch: four | more (#14)");
     edit(w, (s) => s.failed.push(four));
     // A pull request merged with a merge commit, its title on the body's first line.
@@ -815,125 +695,78 @@ describe("the queue in the issue", () => {
     edit(w, (s) => s.running.push(merged));
     ok(run(w, "schedule", "2026-10-04T16:00:00Z"));
     const body = issue(w, 1).body;
-    expect(body).toContain(`Cloudflare serves \`main\` as of \`${short(w.sha.c1)}\`; Vercel serves \`${short(w.sha.c2)}\`.`);
-    expect(body).toContain("Not live on both yet, newest first: 4.");
+    expect(body).toContain(`Production serves \`main\` as of \`${short(w.sha.c1)}\`.`);
+    expect(body).toContain("Not live yet, newest first: 4.");
+    expect(body).toContain("| Pull request | CI | Production |");
     expect(rows(issue(w, 1))).toEqual([
-      "| #15 Patch: the side quest | ⏳ running | queued | waits for CI |",
-      "| #14 Patch: four \\| more | ❌ failed | queued | waits for CI |",
-      `| \`${short(w.sha.c3)}\` change c3 | ✅ passed | queued | next merge |`,
-      `| \`${short(w.sha.c2)}\` change c2 | ✅ passed | 🟢 live | next merge |`,
+      "| #15 Patch: the side quest | ⏳ running | waits for CI |",
+      "| #14 Patch: four \\| more | ❌ failed | waits for CI |",
+      `| \`${short(w.sha.c3)}\` change c3 | ✅ passed | next merge |`,
+      `| \`${short(w.sha.c2)}\` change c2 | ✅ passed | next merge |`,
     ]);
   });
 
   it("follows a merge and a hold, and says when everything is live", () => {
     const w = counting();
-    edit(w, (s) => s.deployments.push({ id: 9, sha: w.sha.c3 as string, state: "success" }));
     comment(w, 1, "/hold", "2026-10-04T17:00:00Z");
     ok(run(w, "issue_comment", "2026-10-04T17:01:00Z"));
     expect(rows(issue(w, 1)).map((row) => row.split(" | ").at(-1))).toEqual(["held |", "held |"]);
     ok(run(w, "workflow_dispatch", "2026-10-04T18:00:00Z"));
     expect(rows(issue(w, 1))).toEqual([]);
-    expect(issue(w, 1).body).toContain("Everything on `main` is live on both.");
-  });
-
-  it("says what Vercel serves is unknown, and lists against production alone, when no deployment can be read", () => {
-    const w = counting();
-    expect(issue(w, 1).body).toContain("what Vercel serves could not be read");
-    expect(rows(issue(w, 1)).map((row) => row.split(" | ")[2])).toEqual(["?", "?"]);
-    // A failed deployment is not what Vercel serves.
-    edit(w, (s) => s.deployments.push({ id: 9, sha: w.sha.c3 as string, state: "failure" }));
-    ok(run(w, "schedule", "2026-10-04T17:07:00Z"));
-    expect(issue(w, 1).body).toContain("what Vercel serves could not be read");
+    expect(issue(w, 1).body).toContain(`Production serves \`main\` as of \`${short(w.sha.c3)}\`. Everything on \`main\` is live.`);
   });
 });
 
-describe("the catalog fast path", () => {
-  it("merges a catalog bump at once, past a hold, and leaves the countdown standing", () => {
+describe("a catalog bump", () => {
+  // Production's site and server ship together from production, so neither runs ahead of the other
+  // on the catalog version (R105), and a bump needs no way round the countdown.
+  it("waits for the countdown like any other change", () => {
+    const w = counting();
+    const before = production(w);
+    const bump = commit(w, "c4", { [PATCHES]: patches("v0.2.0a", "v0.2.0b", "v0.2.1"), "app.txt": "four\n" });
+    expect(ok(run(w, "workflow_run", "2026-10-05T11:00:00Z")).output).not.toContain("promoted=true");
+    expect(production(w)).toBe(before);
+    expect(gh(w).prs).toEqual([]);
+    ok(run(w, "workflow_run", "2026-10-05T15:20:00Z"));
+    expect(tree(w, "production")).toBe(tree(w, bump));
+  });
+
+  it("is held by a hold, like any other change", () => {
     const w = counting();
     comment(w, 1, "/hold", "2026-10-05T10:00:00Z");
     ok(run(w, "issue_comment", "2026-10-05T10:01:00Z"));
-    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1"), "app.txt": "four\n" });
-    ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: bump }));
-    expect(gh(w).prs).toHaveLength(1);
-    expect(gh(w).prs[0]?.title).toContain("3 commit(s)");
-    expect(tree(w, "production")).toBe(tree(w, bump));
-    expect(issue(w, 1).state).toBe("open");
-    expect(marker(issue(w, 1))).toContain("held=1");
-    expect(issue(w, 1).comments.at(-1)?.body).toContain("Catalog v0.2.1 could not wait");
-    expect(gh(w).prs[0]?.body).toContain("a catalog bump to v0.2.1, which is never held");
-  });
-
-  it("leaves a commit that does not change the catalog for the scheduled merge", () => {
-    const w = counting();
-    const before = production(w);
-    const plain = commit(w, "c4", { "app.txt": "four\n" });
-    expect(ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: plain })).text).toContain("No catalog change");
-    expect(production(w)).toBe(before);
+    commit(w, "c4", { [PATCHES]: patches("v0.2.0a", "v0.2.0b", "v0.2.1") });
+    ok(run(w, "workflow_run", "2026-10-05T16:00:00Z"));
     expect(gh(w).prs).toEqual([]);
   });
 
-  it("is also caught by the hourly check, should the event have been lost", () => {
+  it("is named in the pull request and on the issue, from patches.json's newest entry", () => {
     const w = counting();
-    commit(w, "c4", { "render.yaml": renderYaml("v0.2.1") });
-    ok(run(w, "schedule", "2026-10-04T17:07:00Z"));
-    expect(gh(w).prs).toHaveLength(1);
-    expect(issue(w, 1).state).toBe("open");
-  });
-
-  it("waits while the live server serves another catalog, as when Render could not deploy, then merges once it serves the bump", () => {
-    const w = counting();
-    const before = production(w);
-    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1"), "app.txt": "four\n" });
-    const behind = ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: bump, SERVER_URL: SERVER, FAKE_SERVED_CATALOG: "v0.2.0b" }));
-    expect(behind.text).toContain(`it moves production to catalog v0.2.1, and the live server (${SERVER}) serves v0.2.0b`);
-    expect(production(w)).toBe(before);
-    expect(gh(w).prs).toEqual([]);
-    expect(behind.output).not.toContain("promoted=true");
-    ok(run(w, "workflow_run", "2026-10-05T11:30:00Z", { RUN_SHA: bump, SERVER_URL: SERVER, FAKE_SERVED_CATALOG: "v0.2.1" }));
-    expect(tree(w, "production")).toBe(tree(w, bump));
-    expect(issue(w, 1).comments.at(-1)?.body).toContain("Catalog v0.2.1 could not wait");
-  });
-
-  it("waits when the live server does not answer", () => {
-    const w = counting();
-    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1") });
-    const silent = ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: bump, SERVER_URL: SERVER }));
-    expect(silent.text).toContain("serves nothing (it did not answer)");
-    expect(gh(w).prs).toEqual([]);
-  });
-
-  it("holds the scheduled merge of a catalog the server lacks too, but a run by hand merges it", () => {
-    const w = counting();
-    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1") });
-    ok(run(w, "schedule", "2026-10-05T15:07:00Z", { SERVER_URL: SERVER, FAKE_SERVED_CATALOG: "v0.2.0b" }));
-    expect(gh(w).prs).toEqual([]);
-    ok(run(w, "workflow_dispatch", "2026-10-05T15:10:00Z", { SERVER_URL: SERVER, FAKE_SERVED_CATALOG: "v0.2.0b" }));
-    expect(tree(w, "production")).toBe(tree(w, bump));
-  });
-
-  it("asks the server nothing for a merge that leaves the catalog as it is", () => {
-    const w = counting();
-    ok(run(w, "schedule", "2026-10-05T15:07:00Z", { SERVER_URL: SERVER }));
-    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
+    commit(w, "c4", { [PATCHES]: patches("v0.2.0a", "v0.2.0b", "v0.2.1") });
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
+    expect(gh(w).prs[0]?.body).toContain("- Catalog: v0.2.1\n");
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("commits up to");
+    expect(issue(w, 1).comments.at(-1)?.body).toContain(", catalog v0.2.1.");
+    expect(readFileSync(SCRIPT, "utf8")).not.toContain("render.yaml");
   });
 });
 
 describe("a green push to main, for a cron GitHub never starts", () => {
   it("does the whole check: opens the countdown issue when there is none, and merges nothing yet", () => {
     const w = world();
-    const plain = commit(w, "c4", { "app.txt": "four\n" });
-    ok(run(w, "workflow_run", "2026-10-04T16:00:00Z", { RUN_SHA: plain }));
+    commit(w, "c4", { "app.txt": "four\n" });
+    ok(run(w, "workflow_run", "2026-10-04T16:00:00Z"));
     expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 23 hours (2026-10-05 10:00 AM CT)"]);
     expect(gh(w).prs).toEqual([]);
   });
 
   it("waits for the issue's time, then the first one after it merges, with no scheduled run at all", () => {
     const w = counting();
-    const early = commit(w, "c4", { "app.txt": "four\n" });
-    ok(run(w, "workflow_run", "2026-10-05T14:59:00Z", { RUN_SHA: early }));
+    commit(w, "c4", { "app.txt": "four\n" });
+    ok(run(w, "workflow_run", "2026-10-05T14:59:00Z"));
     expect(gh(w).prs).toEqual([]);
     const late = commit(w, "c5", { "app.txt": "five\n" });
-    ok(run(w, "workflow_run", "2026-10-05T15:40:00Z", { RUN_SHA: late }));
+    ok(run(w, "workflow_run", "2026-10-05T15:40:00Z"));
     expect(gh(w).prs.map((p) => [p.number, p.merged])).toEqual([[2, true]]);
     expect(tree(w, "production")).toBe(tree(w, late));
     expect(issue(w, 1).comments.at(-1)?.body).toContain("Merged to production in #2");
@@ -943,8 +776,8 @@ describe("a green push to main, for a cron GitHub never starts", () => {
   it("is held by a hold, like any other check", () => {
     const w = counting();
     comment(w, 1, "/hold", "2026-10-05T10:00:00Z");
-    const late = commit(w, "c4", { "app.txt": "four\n" });
-    ok(run(w, "workflow_run", "2026-10-05T16:00:00Z", { RUN_SHA: late }));
+    commit(w, "c4", { "app.txt": "four\n" });
+    ok(run(w, "workflow_run", "2026-10-05T16:00:00Z"));
     expect(gh(w).prs).toEqual([]);
     expect(marker(issue(w, 1))).toContain("held=1");
   });
@@ -1002,8 +835,8 @@ describe("running it by hand", () => {
 });
 
 describe("the deploy job", () => {
-  // GitHub Actions builds production and puts it on Cloudflare (the workflow's `deploy` job), and only
-  // when the promote job's `promoted` output says production moved.
+  // GitHub Actions builds production, the site and its server, and puts it on Cloudflare (the
+  // workflow's `deploy` job), and only when the promote job's `promoted` output says production moved.
   it("is signalled when a merge moves production, and not when nothing does", () => {
     const w = counting();
     expect(ok(run(w, "schedule", "2026-10-05T14:07:00Z")).output).not.toContain("promoted=true");
@@ -1012,12 +845,12 @@ describe("the deploy job", () => {
     expect(ok(run(w, "schedule", "2026-10-06T15:07:00Z")).output).not.toContain("promoted=true");
   });
 
-  it("is signalled by a catalog bump, and by creating production, and not by a hold", () => {
+  it("is signalled by creating production, and not by a hold, a catalog bump's included", () => {
     const w = counting();
     comment(w, 1, "/hold", "2026-10-05T10:00:00Z");
     expect(ok(run(w, "issue_comment", "2026-10-05T10:01:00Z")).output).not.toContain("promoted=true");
-    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1") });
-    expect(ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: bump })).output).toContain("promoted=true");
+    commit(w, "c4", { [PATCHES]: patches("v0.2.0a", "v0.2.0b", "v0.2.1") });
+    expect(ok(run(w, "workflow_run", "2026-10-05T16:00:00Z")).output).not.toContain("promoted=true");
 
     const fresh = world();
     git(fresh.origin, "update-ref", "-d", "refs/heads/production");
@@ -1031,6 +864,13 @@ describe("the deploy job", () => {
     expect(WORKFLOW).toContain("needs.promote.outputs.promoted == 'true'");
     expect(WORKFLOW).toMatch(/github\.event_name == 'workflow_dispatch' && inputs\.redeploy/u);
     expect(WORKFLOW).toMatch(/^ {6}redeploy:\n/mu);
+  });
+
+  it("deploys the Worker and the server's container together, then waits for the server to report the commit", () => {
+    // `--env=""` names the top level, production, which wrangler otherwise warns is left implicit.
+    expect(WORKFLOW).toContain('pnpm --dir apps/edge exec wrangler deploy --config ../../wrangler.jsonc --env="" --var "DEPLOYED_COMMIT:$sha"');
+    expect(WORKFLOW).not.toContain("--containers-rollout");
+    expect(WORKFLOW).toMatch(/uses: \.\/\.github\/actions\/poll-live\n {8}with:\n {10}site: \$\{\{ env\.SITE \}\}\n {10}commit: \$\{\{ steps\.deploy\.outputs\.sha \}\}\n/u);
   });
 });
 
@@ -1127,7 +967,7 @@ describe("what stops it", () => {
       s.green.push(red);
       s.newestGreen = red;
     });
-    ok(run(w, "workflow_run", "2026-10-05T15:20:00Z", { RUN_SHA: red }));
+    ok(run(w, "workflow_run", "2026-10-05T15:20:00Z"));
     expect(gh(w).prs).toHaveLength(1);
     expect(tree(w, "production")).toBe(tree(w, red));
     expect(issue(w, 1).comments.at(-1)?.body).toContain("Merged to production in #2");
@@ -1204,6 +1044,6 @@ describe("the workflow", () => {
   });
 
   it("asks for the permissions the script uses, and no more", () => {
-    expect(WORKFLOW).toMatch(/^permissions:\n {2}contents: write\n {2}actions: read\n {2}deployments: read\n {2}issues: write\n {2}pull-requests: write\n/mu);
+    expect(WORKFLOW).toMatch(/^permissions:\n {2}contents: write\n {2}actions: read\n {2}issues: write\n {2}pull-requests: write\n\n/mu);
   });
 });

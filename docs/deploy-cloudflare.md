@@ -33,7 +33,8 @@ merging a pull request whose head is a green commit of main, so its files always
 
 1. A pull request merges into `main` through the merge queue (branch protection requires the five
    CI checks).
-2. CI runs again on the push to main. When it passes, `deploy-staging.yml` checks out that commit,
+2. CI runs again on the push to main. When it passes, `deploy-staging.yml` checks out that commit
+   (or main's newest green commit, if a newer one already passed, so staging never goes backwards),
    builds the web with `apps/web/.env.staging`, checks the bundle, and runs `wrangler deploy --env
    staging`, which builds the server's image on the runner and deploys the Worker, the static files
    and the container together. It then polls `https://staging.jackioh.com/api/catalog` (through
@@ -59,7 +60,8 @@ seed and log when its sockets return (SPEC §9.5), as after any restart.
 One issue labeled `production merge` stays open for good. Its title reads "Merging to production in
 23 hours (2026-10-05 10:00 AM CT)", and every check brings the hours up to date. The first line of
 its body is a hidden state line; leave it alone. Under the countdown it lists every pull request on
-`main` that is not live yet, with its CI and whether staging and production have it.
+`main` that is not on production yet, with its push-to-main CI (passed, failed, running) and where it
+stands for production (live, the next merge, waits for CI, held).
 
 Anyone with write access comments on the issue:
 
@@ -70,8 +72,10 @@ Anyone with write access comments on the issue:
 | `/delay 3h`, `/delay 2d` | Moves the merge later by that long, at most 168 hours at a time. |
 | `/fast-forward` | Merges now, past a hold. |
 
-Each command is acknowledged with a 👍 (😕 when refused or not understood). Staging takes no
-command: it deploys every green commit of main. `scripts/promote-production.sh` holds the rules, the
+Each command is acknowledged with a 👍 (😕 when refused or not understood). A command may name
+its target first (`/hold production`; `prod` and `cloudflare` mean the same); one that names
+`staging` or `vercel` is refused with a 😕 and changes nothing. Staging takes no command: it deploys
+every green commit of main. `scripts/promote-production.sh` holds the rules, the
 hour (`RELEASE_HOUR`, `RELEASE_TZ`) and the label (`RELEASE_LABEL`).
 
 ### 2.2 The rules the promotion enforces
@@ -205,6 +209,8 @@ Only once step 6 has run cleanly for a day or so, and with the owners' say-so (C
   back too before relying on it. Either way, `/hold` the countdown until the fix has merged.
 - **Change a secret:** `wrangler secret put` (section 4, step 3), then redeploy that site (Run
   workflow on deploy staging, or promote production with **redeploy**).
+- **Deploy staging by hand:** Actions -> deploy staging -> Run workflow. With no `sha` it deploys
+  main's newest green commit; a `sha` given must be on main and have a green push-to-main CI run.
 - **A dev account (SPEC §14.10):** the `DEV_PROFILE_IDS` secret of that site's Worker, each
   developer's profile id comma-separated (from `/account`: "Manage sign-in & account", then "Show
   account secret ID"); then redeploy. A malformed id refuses the boot, and the Worker's logs name it.

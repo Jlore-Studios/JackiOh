@@ -1,0 +1,174 @@
+# Deploys main to staging, https://staging.jackioh.com (the `jackioh-staging` Worker, wrangler.jsonc's
+# `env.staging`), after every push to main whose CI passed: the site and its game server together,
+# as promote-production.yml's `deploy` job puts `production` on jackioh.com, with the same setup and
+# staging's own build (`build:staging`, apps/web/.env.staging) and bundle check. Nothing holds it: the
+# production countdown issue holds production only. docs/deploy-cloudflare.md is the plan.
+#
+# Two ways in:
+#   workflow_run (CI)  a push to main whose CI run passed: that commit. A CI run that passes on an
+#                      older commit than main's newest green one (run again by hand) deploys the
+#                      newest instead, so staging never goes back.
+#   workflow_dispatch  by hand (Actions -> deploy staging -> Run workflow): the `sha` given, which must
+#                      be a commit of main whose push-to-main CI passed, or main's newest such commit.
+#                      Staging's server shares production's database for now (docs/deploy-cloudflare.md)
+#                      and migrates it as it boots, so nothing that has not merged and passed runs there.
+#
+# One deploy at a time, and a newer one cancels the one running: the newest green commit wins. The
+# concurrency group is the job's, so a CI run that wakes nothing (red, or a pull request's) never
+# cancels a deploy. The job's `environment: staging` records each deploy as a GitHub deployment.
+#
+# Needs CLOUDFLARE_API_TOKEN, the secret production's deploy uses, and for the live check an Access
+# service token that Cloudflare Access lets through to staging.jackioh.com, in CF_ACCESS_CLIENT_ID and
+# CF_ACCESS_CLIENT_SECRET: without them the check is skipped with a notice, since Access refuses
+# everyone else. wrangler builds the server's image with this runner's Docker (the deploy job's
+# timeout in promote-production.yml says why it takes an hour at most). The server's own secrets are
+# the Worker's (`wrangler secret put --env staging`, apps/edge/README.md), never this repository's.
+name: deploy staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit of main to deploy (default: the newest one whose CI passed)"
+        required: false
+        default: ""
+
+env:
+  # The Cloudflare account both Workers live in, as promote-production.yml has it: an identifier, not
+  # a secret.
+  CLOUDFLARE_ACCOUNT_ID: 3c0495fcdd2622a08e1a91b8de248b46
+  # Staging's address, behind Cloudflare Access (infra/cloudflare.tf).
+  SITE: https://staging.jackioh.com
+  # How long the live check waits for the server to report the deployed commit, as production's.
+  LIVE_SECONDS: "900"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    name: build and deploy to staging
+    # A workflow_run fires for every completed CI run on main; only a green push gets past here.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: true
+    environment:
+      name: staging
+      url: ${{ env.SITE }}
+    runs-on: ubuntu-latest
+    # A cold release build of the server's image, as production's deploy job (its comment says more).
+    timeout-minutes: 60
+    env:
+      # The install covers the whole workspace, e2e/ included; no browser is needed here.
+      CYPRESS_INSTALL_BINARY: "0"
+    steps:
+      - name: the commit to deploy
+        id: sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          set -euo pipefail
+          green() {
+            gh run list --workflow ci.yml --branch main --event push --status success --limit 1 "$@" \
+              --json headSha --jq '.[0].headSha // ""'
+          }
+          newest=$(green)
+          if [ -n "$RUN_SHA" ]; then
+            sha=$RUN_SHA
+            # `ahead`: the newest green commit has this one in its history.
+            if [ -n "$newest" ] && [ "$newest" != "$sha" ] \
+              && [ "$(gh api "repos/$GH_REPO/compare/$sha...$newest" --jq .status)" = ahead ]; then
+              echo "::notice::${sha:0:12} is older than main's newest green commit, ${newest:0:12}, which is what deploys."
+              sha=$newest
+            fi
+          else
+            sha=${INPUT_SHA:-$newest}
+            if [ -z "$sha" ]; then
+              echo "::error::No push to main has a passing CI run; nothing can be deployed."
+              exit 1
+            fi
+            sha=$(gh api "repos/$GH_REPO/commits/$sha" --jq .sha) || { echo "::error::$INPUT_SHA is not a commit of $GH_REPO."; exit 1; }
+            case $(gh api "repos/$GH_REPO/compare/$sha...main" --jq .status) in
+              ahead | identical) ;;
+              *) echo "::error::$sha is not on main."; exit 1 ;;
+            esac
+            if [ -z "$(green --commit "$sha")" ]; then
+              echo "::error::$sha has no passing push-to-main CI run."
+              exit 1
+            fi
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "deploying ${sha:0:12} to staging"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.sha.outputs.sha }}
+
+      # As production's deploy job: the build's prebuild runs scripts/build-wasm.sh, which needs the
+      # Rust half, and the Node half installs apps/edge's wrangler.
+      - uses: ./.github/actions/setup
+
+      # From apps/web/.env.staging alone: the publishable key a repository variable may hold is
+      # production's (promote-production.yml), and staging's Supabase project need not stay the same.
+      - name: build the web app for staging
+        run: pnpm --filter @jackioh/web build:staging
+
+      - name: refuse a bundle that cannot sign in or reach the server
+        run: node apps/web/scripts/check-production-bundle.mjs --staging
+
+      - name: deploy the site and its server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SHA: ${{ steps.sha.outputs.sha }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::The CLOUDFLARE_API_TOKEN secret is not set, so staging was built but not deployed. docs/deploy-cloudflare.md, section 4, step 2, says how to make one."
+            exit 1
+          fi
+          pnpm --dir apps/edge exec wrangler deploy --config ../../wrangler.jsonc --env staging --var "DEPLOYED_COMMIT:$SHA"
+
+      # A step's `if` cannot read secrets, so this one says whether the token is there.
+      - name: whether Access will let the check through
+        id: access
+        env:
+          ACCESS_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          ACCESS_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          if [ -n "$ACCESS_ID" ] && [ -n "$ACCESS_SECRET" ]; then
+            echo "set=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::CF_ACCESS_CLIENT_ID or CF_ACCESS_CLIENT_SECRET is not set, so nothing checks that $SITE runs the deploy: Cloudflare Access refuses a request without a service token (docs/deploy-cloudflare.md)."
+            echo "set=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: wait for the server on this commit
+        if: steps.access.outputs.set == 'true'
+        uses: ./.github/actions/poll-live
+        with:
+          site: ${{ env.SITE }}
+          commit: ${{ steps.sha.outputs.sha }}
+          seconds: ${{ env.LIVE_SECONDS }}
+          access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+
+      - name: say so
+        env:
+          SHA: ${{ steps.sha.outputs.sha }}
+          CHECKED: ${{ steps.access.outputs.set }}
+        run: |
+          if [ "$CHECKED" = true ]; then
+            echo "### staging is live at $SITE, its server on \`${SHA:0:12}\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### staging deployed \`${SHA:0:12}\` to $SITE (not checked: no Access service token)" >> "$GITHUB_STEP_SUMMARY"
+          fi

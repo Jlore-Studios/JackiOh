@@ -1,5 +1,5 @@
 # Holds CI to its budget (#73): every job should finish under TARGET_MINUTES. After every run of CI
-# (`bot selftest` among its jobs since #1455) or deploy watch, this reads how long each of its jobs took and, if any went over
+# (`bot selftest` among its jobs since #1455), this reads how long each of its jobs took and, if any went over
 # ALERT_MINUTES, opens an issue naming them, or comments on the one already open, so a slow job is
 # seen and split before it grows into the old 19-minute wait. The night bot's own workflows are
 # exempt: a build legitimately runs for hours.
@@ -7,7 +7,9 @@
 # Never the daily super run (super.yml): CI is what every pull request waits on, so its jobs are held
 # under five minutes (docs/v0.3.0/README.md §7, V24), while the super run carries what is slow on
 # purpose (10,000 fuzz seeds, the full AI gates, coverage, every e2e spec) and waits on nobody. It is
-# left off the list below by design; do not add it. Inside CI, `rust (training gate)`
+# left off the list below by design; do not add it. Nor the deploys (promote-production.yml,
+# deploy-staging.yml), whose jobs build the server's image from nothing every time and wait on
+# nobody's pull request. Inside CI, `rust (training gate)`
 # is exempt too: it replays a training lane's 200 promotion games, runs only on an ai/* branch's
 # pull request, and is one command that no matrix can split. So are `e2e all (k/8)` and `e2e component
 # (chrome)`: super.yml's e2e jobs, which CI runs only when a person dispatches it with `e2e: all`.
@@ -35,7 +37,7 @@ name: ci duration
 
 on:
   workflow_run:
-    workflows: ["CI", "deploy watch"]
+    workflows: ["CI"]
     types: [completed]
 
 env:

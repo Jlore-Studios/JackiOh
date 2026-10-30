@@ -37,8 +37,9 @@ from harness.context import Context
 START = "<!-- jackioh-bot:card-sets -->"
 END = "<!-- /jackioh-bot:card-sets -->"
 HEADING = "### 🃏 Which set's cards win most"
-#: Production's server (`render.yaml`), whose public card statistics are read.
-API = "https://jackioh-server.onrender.com"
+#: Production's server, behind jackioh.com's Worker at the site's own origin (`wrangler.jsonc`), whose
+#: public card statistics are read.
+API = "https://jackioh.com"
 #: How often the figures are read, and how soon a failed read is tried again.
 EVERY = timedelta(days=1)
 RETRY = timedelta(hours=1)
