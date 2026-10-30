@@ -118,7 +118,7 @@ func ownPIDs() map[int]bool {
 	herr.Must(err)
 	found := map[int]bool{}
 	for _, entry := range entries {
-		if !isDecimal(entry.Name()) {
+		if !py.IsDecimal(entry.Name()) {
 			continue
 		}
 		info, err := os.Stat(filepath.Join("/proc", entry.Name()))
@@ -126,7 +126,7 @@ func ownPIDs() map[int]bool {
 			continue
 		}
 		if st, ok := info.Sys().(*syscall.Stat_t); ok && st.Uid == uid {
-			found[atoi(entry.Name())] = true
+			found[py.Atoi(entry.Name())] = true
 		}
 	}
 	return found
@@ -142,7 +142,7 @@ func statFields(pid int) ([]string, bool) {
 	if i < 0 {
 		return nil, false
 	}
-	return fields(string(stat[i+1:])), true
+	return py.Split(string(stat[i+1:])), true
 }
 
 // ancestors is this process and every one above it.

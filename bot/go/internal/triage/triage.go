@@ -22,7 +22,7 @@
 // also how a person approves one of the bot's suggestions; handing it to people is `human`.
 //
 // The patterns are Python's `re` patterns with Python's classes spelled out, since Go's are ASCII:
-// `\d` is any script's decimal digit (\p{Nd}), `\s` and `\S` Python's whitespace (`pyS`), and `\b`,
+// `\d` is any script's decimal digit (\p{Nd}), `\s` and `\S` Python's whitespace (`py.ReS`), and `\b`,
 // which RE2 has no Unicode form of, the neighbouring character tested against Python's `\w`
 // (letters, digits, `_`). `.github/workflows/pr-title.yml` calls PullTitleOK.
 package triage
@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
@@ -41,15 +40,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/titles"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/trust"
-)
-
-// pyS is Python's `\s` in a str pattern (str.isspace()), pyNotS its `\S`; pyNotW is not its
-// `\w`.
-const (
-	pySet  = `\t\n\v\f\r\x{1c}-\x{20}\x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
-	pyS    = `[` + pySet + `]`
-	pyNotS = `[^` + pySet + `]`
-	pyNotW = `[^\p{L}\p{N}_]`
 )
 
 // Humans is the people a human task goes to.
@@ -80,7 +70,7 @@ type PrefixType struct {
 // (`kind:*`, #1370).
 var PrefixTypes = []PrefixType{
 	{regexp.MustCompile(`(?i)^Patch v\p{Nd}`), "patch"},
-	{regexp.MustCompile(`^v\p{Nd}+\.\p{Nd}+\.0(?:$|` + pyNotW + `)`), "major version"},
+	{regexp.MustCompile(`^v\p{Nd}+\.\p{Nd}+\.0(?:$|` + py.ReNotW + `)`), "major version"},
 	{regexp.MustCompile(`(?i)^Night bot:`), "night bot"},
 	{regexp.MustCompile(`(?i)^(?:Architecture|CI):`), "architecture"},
 }
@@ -93,7 +83,7 @@ const partOf = `(?: \(part \p{Nd}+ of \p{Nd}+\))?`
 // `(part n of m)` after either. The older prefixes (`Patch v0.3.X`, `Patch v0.3.Y`, `vX.Y.0`,
 // `Night bot`, `CI` and `Architecture`) stopped passing once the title retcon (#1372) had
 // retitled every thread.
-var Convention = regexp.MustCompile(`^Patch(?: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]?)?` + partOf + `: ` + pyNotS)
+var Convention = regexp.MustCompile(`^Patch(?: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]?)?` + partOf + `: ` + py.ReNotS)
 
 // AutomatedPull matches the titles tools give the pull requests they open, which the title check
 // passes as they are (`pull_title_ok`): `patches ship: v0.3.1` (patches-ship.yml; several versions
@@ -106,7 +96,7 @@ var AutomatedPull = regexp.MustCompile(
 	`^(?:patches ship: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]?(?:, v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]?)*$` +
 		`|patches log: [0-9a-f]{7,40}\.\.[0-9a-f]{7,40}$` +
 		`|Promote main to production: \p{Nd}+ commit\(s\) up to [0-9a-f]{7,40}$` +
-		`|AI gen \p{Nd}+ \((?:improve|unban|learn)\): ` + pyNotS + `)`)
+		`|AI gen \p{Nd}+ \((?:improve|unban|learn)\): ` + py.ReNotS + `)`)
 
 // Revert matches GitHub's Revert button's title for its pull request: `Revert "<the reverted pull
 // request's title>"`.
@@ -151,14 +141,14 @@ func ThreadOf(payload *pyjson.Object) (*pyjson.Object, bool) {
 }
 
 func FollowsConvention(title string) bool {
-	return Convention.MatchString(strip(title))
+	return Convention.MatchString(py.Strip(title))
 }
 
 // PullTitleOK is whether a pull request's title may become the squash commit's subject (the title
 // check, `.github/workflows/pr-title.yml`, #187): it follows the convention, it is one a tool
 // gives its own pull requests (`AUTOMATED_PULL`), or it reverts a pull request whose title passes.
 func PullTitleOK(title string) bool {
-	text := strip(title)
+	text := py.Strip(title)
 	if revert := Revert.FindStringSubmatch(text); revert != nil {
 		return PullTitleOK(revert[1])
 	}
@@ -172,13 +162,13 @@ func PullTitleOK(title string) bool {
 // `Patch: …`.
 func PullTitle(chosen string, issue string) string {
 	for _, title := range []string{chosen, issue} {
-		if strip(title) != "" && PullTitleOK(title) {
-			return strings.Join(split(title), " ")
+		if py.Strip(title) != "" && PullTitleOK(title) {
+			return strings.Join(py.Split(title), " ")
 		}
 	}
-	text := strip(chosen)
+	text := py.Strip(chosen)
 	if text == "" {
-		text = strip(issue)
+		text = py.Strip(issue)
 	}
 	if text == "" {
 		return ""
@@ -188,7 +178,7 @@ func PullTitle(chosen string, issue string) string {
 
 // TypeLabel is the type label a title's prefix names, or "" for a title with no prefix.
 func TypeLabel(title string) string {
-	text := strip(title)
+	text := py.Strip(title)
 	for _, pt := range PrefixTypes {
 		if pt.Pattern.MatchString(text) {
 			return pt.Label
@@ -210,11 +200,11 @@ var who = []string{py.Str(config.LabelBuild), HumanLabel}
 func FormLabels(body string) []string {
 	keys, answers := []string{}, map[string]string{}
 	for _, m := range formAnswers(strings.ReplaceAll(body, "\r\n", "\n")) {
-		key := strings.ToLower(strip(m[0]))
+		key := strings.ToLower(py.Strip(m[0]))
 		if _, ok := answers[key]; !ok {
 			keys = append(keys, key)
 		}
-		answers[key] = strings.ToLower(strip(m[1]))
+		answers[key] = strings.ToLower(py.Strip(m[1]))
 	}
 	labels := []string{}
 	difficulty := ""
@@ -298,7 +288,7 @@ func formAnswers(body string) [][2]string {
 		answerEnd, matchEnd := n, n
 		for e := k; e <= n; e++ {
 			w := e
-			for w < n && isSpace(text[w]) {
+			for w < n && py.IsSpace(text[w]) {
 				w++
 			}
 			end := -1
@@ -323,10 +313,10 @@ func formAnswers(body string) [][2]string {
 
 var (
 	bugWords = regexp.MustCompile(
-		`(?i)(?:^|` + pyNotW + `)(bug|fails?|failing|failed|broken|breaks|crash(?:es)?|wrong|lag(?:s|gy)?|regression` +
-			`|errors?|not working|doesn'?t work|stuck|stall(?:s|ing)?|hangs?)(?:$|` + pyNotW + `)`)
+		`(?i)(?:^|` + py.ReNotW + `)(bug|fails?|failing|failed|broken|breaks|crash(?:es)?|wrong|lag(?:s|gy)?|regression` +
+			`|errors?|not working|doesn'?t work|stuck|stall(?:s|ing)?|hangs?)(?:$|` + py.ReNotW + `)`)
 	featureWords = regexp.MustCompile(
-		`(?i)(?:^|` + pyNotW + `)(new|adds?|support|page|mode|screen|easter egg|leaderboard|emotes?|feature)(?:$|` + pyNotW + `)`)
+		`(?i)(?:^|` + py.ReNotW + `)(new|adds?|support|page|mode|screen|easter egg|leaderboard|emotes?|feature)(?:$|` + py.ReNotW + `)`)
 )
 
 var taskPrefixes = []string{"architecture:", "refactor:", "ci:", "night bot:", "tests:", "docs:"}
@@ -661,13 +651,6 @@ func setType(gh gh.Client, number int, name string) {
 }
 
 // ------------------------------------------------------------------ Python's str
-
-// isSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c-\x1f.
-func isSpace(r rune) bool { return unicode.IsSpace(r) || r >= 0x1c && r <= 0x1f }
-
-// strip is str.strip(); split is str.split().
-func strip(s string) string   { return strings.TrimFunc(s, isSpace) }
-func split(s string) []string { return strings.FieldsFunc(s, isSpace) }
 
 // str0 is `str(v or "")`.
 func str0(v any) string {

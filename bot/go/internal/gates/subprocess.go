@@ -6,11 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"sort"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
-	"unicode/utf8"
 )
 
 // completed is what subprocess.run(..., capture_output=True, timeout=...) gives back: the output
@@ -139,60 +137,4 @@ func envList(env map[string]string) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-// translateNewlines is what text mode does to the output: "\r\n" and "\r" become "\n".
-func translateNewlines(s string) string {
-	return strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
-}
-
-// decode is bytes.decode("utf-8", "replace"): each maximal ill-formed subsequence becomes one
-// U+FFFD, as Python's decoder does (Go's own conversion would leave the bytes in the string).
-func decode(b []byte) string {
-	var out strings.Builder
-	for i := 0; i < len(b); {
-		r, size := utf8.DecodeRune(b[i:])
-		if r != utf8.RuneError || size > 1 {
-			out.WriteRune(r)
-			i += size
-			continue
-		}
-		out.WriteRune(utf8.RuneError)
-		i += invalidLength(b[i:])
-	}
-	return out.String()
-}
-
-// invalidLength is how many bytes at the start of b (which do not start a well-formed sequence)
-// form the longest prefix of one: the bytes one U+FFFD stands for, at least 1.
-func invalidLength(b []byte) int {
-	lo, hi := byte(0x80), byte(0xBF)
-	var need int
-	switch c := b[0]; {
-	case c >= 0xC2 && c <= 0xDF:
-		need = 1
-	case c == 0xE0:
-		need, lo = 2, 0xA0
-	case c >= 0xE1 && c <= 0xEC, c == 0xEE, c == 0xEF:
-		need = 2
-	case c == 0xED:
-		need, hi = 2, 0x9F
-	case c == 0xF0:
-		need, lo = 3, 0x90
-	case c >= 0xF1 && c <= 0xF3:
-		need = 3
-	case c == 0xF4:
-		need, hi = 3, 0x8F
-	default:
-		return 1
-	}
-	n := 1
-	for k := 0; k < need && n < len(b); k++ {
-		if b[n] < lo || b[n] > hi {
-			break
-		}
-		lo, hi = 0x80, 0xBF
-		n++
-	}
-	return n
 }

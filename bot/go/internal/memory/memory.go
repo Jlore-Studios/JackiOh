@@ -65,7 +65,7 @@ func fields(path string) (map[string]string, error) {
 	found := map[string]string{}
 	for _, line := range py.Splitlines(strings.ToValidUTF8(string(data), "\uFFFD")) {
 		name, rest, _ := strings.Cut(strings.Replace(line, ":", " ", 1), " ")
-		found[name] = pyStrip(rest)
+		found[name] = py.Strip(rest)
 	}
 	return found, nil
 }
@@ -79,7 +79,7 @@ func pressure(path string) (map[string]float64, error) {
 	totals := map[string]float64{}
 	for _, line := range py.Splitlines(strings.ToValidUTF8(string(data), "\uFFFD")) {
 		kind, rest, _ := strings.Cut(line, " ")
-		for _, part := range pyFields(rest) {
+		for _, part := range py.Split(rest) {
 			key, value, _ := strings.Cut(part, "=")
 			if key == "total" && isDigits(value) {
 				n, _ := pyInt(value)
@@ -105,7 +105,7 @@ func Reading(at time.Time, proc string /* = PROC */) *pyjson.Object {
 	}
 	kib := map[string]int{}
 	for _, name := range []string{"MemTotal", "MemAvailable", "SwapTotal", "SwapFree"} {
-		parts := pyFields(getOr(info, name, "0"))
+		parts := py.Split(getOr(info, name, "0"))
 		if len(parts) == 0 {
 			return nil
 		}
@@ -341,7 +341,7 @@ func pyFloat(v any) (float64, error) {
 		}
 		return 0, nil
 	case string:
-		f, err := strconv.ParseFloat(strings.ReplaceAll(pyStrip(x), "_", ""), 64)
+		f, err := strconv.ParseFloat(strings.ReplaceAll(py.Strip(x), "_", ""), 64)
 		if err != nil {
 			return 0, fmt.Errorf("could not convert string to float: %s", py.Repr(x))
 		}
@@ -378,7 +378,7 @@ func typeName(v any) string {
 // with single underscores between them.
 func pyInt(s string) (int, error) {
 	invalid := fmt.Errorf("invalid literal for int() with base 10: %s", py.SliceTo(py.Repr(s), 200))
-	t := pyStrip(s)
+	t := py.Strip(s)
 	neg := false
 	if t != "" && (t[0] == '+' || t[0] == '-') {
 		neg, t = t[0] == '-', t[1:]
@@ -437,12 +437,3 @@ func decimalValue(r rune) (int, bool) {
 	}
 	return 0, false
 }
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
-
-// pyStrip is str.strip().
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }
-
-// pyFields is str.split().
-func pyFields(s string) []string { return strings.FieldsFunc(s, pyIsSpace) }

@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
@@ -141,9 +140,6 @@ func inStrs(v any, options ...string) bool {
 	x, ok := v.(string)
 	return ok && slices.Contains(options, x)
 }
-
-// rstrip is str.rstrip().
-func rstrip(s string) string { return strings.TrimRightFunc(s, unicode.IsSpace) }
 
 // isDigits is str.isdigit() for the ASCII digits a state file's keys are made of.
 func isDigits(s string) bool {

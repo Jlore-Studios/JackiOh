@@ -57,11 +57,11 @@ func key(entry any, k string) any {
 // `(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b`.
 func closes(text string) (int, bool) {
 	rs := []rune(text)
-	sOrD := func(i int) bool { return i < len(rs) && (foldEq(rs[i], 's') || foldEq(rs[i], 'd')) }
+	sOrD := func(i int) bool { return i < len(rs) && (py.FoldEq(rs[i], 's') || py.FoldEq(rs[i], 'd')) }
 	// Each alternative's ends, the optional part taken first.
 	stems := []func(p int) []int{
 		func(p int) []int { // close[sd]?
-			end, ok := foldAt(rs, p, "close")
+			end, ok := py.FoldAt(rs, p, "close")
 			if !ok {
 				return nil
 			}
@@ -71,17 +71,17 @@ func closes(text string) (int, bool) {
 			return []int{end}
 		},
 		func(p int) []int { // fix(?:e[sd])?
-			end, ok := foldAt(rs, p, "fix")
+			end, ok := py.FoldAt(rs, p, "fix")
 			if !ok {
 				return nil
 			}
-			if end < len(rs) && foldEq(rs[end], 'e') && sOrD(end+1) {
+			if end < len(rs) && py.FoldEq(rs[end], 'e') && sOrD(end+1) {
 				return []int{end + 2, end}
 			}
 			return []int{end}
 		},
 		func(p int) []int { // resolve[sd]?
-			end, ok := foldAt(rs, p, "resolve")
+			end, ok := py.FoldAt(rs, p, "resolve")
 			if !ok {
 				return nil
 			}
@@ -94,7 +94,7 @@ func closes(text string) (int, bool) {
 	// \s+#(\d+)\b after a stem ending at e.
 	rest := func(e int) (int, bool) {
 		i := e
-		for i < len(rs) && isSpace(rs[i]) {
+		for i < len(rs) && py.IsSpace(rs[i]) {
 			i++
 		}
 		if i == e || i >= len(rs) || rs[i] != '#' {
@@ -104,13 +104,13 @@ func closes(text string) (int, bool) {
 		for j < len(rs) && unicode.IsDigit(rs[j]) {
 			j++
 		}
-		if j == i+1 || !boundary(rs, j) {
+		if j == i+1 || !py.Boundary(rs, j) {
 			return 0, false
 		}
-		return digitsInt(rs[i+1 : j]), true
+		return py.Atoi(string(rs[i+1 : j])), true
 	}
 	for p := range rs {
-		if !boundary(rs, p) {
+		if !py.Boundary(rs, p) {
 			continue
 		}
 		for _, stem := range stems {
@@ -125,8 +125,8 @@ func closes(text string) (int, bool) {
 }
 
 func isBot(entry *pyjson.Object, botLogin string) bool {
-	login := lower(py.Str(entry.Obj("user").GetOr("login", "")))
-	return login == lower(botLogin) || login == "github-actions[bot]" ||
+	login := py.Lower(py.Str(entry.Obj("user").GetOr("login", "")))
+	return login == py.Lower(botLogin) || login == "github-actions[bot]" ||
 		strings.Contains(orStr(entry.Get("body")), marker())
 }
 
@@ -204,8 +204,8 @@ var NoFeedback string = "(no new comments from trusted people)"
 // `text` is what `pull_feedback` gives #`number` when nobody trusted wrote anything new (or
 // nothing at all): equal to it, never merely holding its words, which a comment could quote.
 func NoFeedback_(text string, number int) bool {
-	return strip(text) == "" ||
-		strip(text) == strip(prompts.Data(NoFeedback, fmt.Sprintf("Feedback on #%d", number)))
+	return py.Strip(text) == "" ||
+		py.Strip(text) == py.Strip(prompts.Data(NoFeedback, fmt.Sprintf("Feedback on #%d", number)))
 }
 
 type entry struct {
@@ -248,7 +248,7 @@ func PullFeedback(gh gh.Client, trust *trust.Trust, number int, botLogin string,
 		}
 	}
 	for _, review := range gh.ListReviews(number) {
-		body := strip(orStr(review.Get("body")))
+		body := py.Strip(orStr(review.Get("body")))
 		state := py.Str(review.GetOr("state", ""))
 		if isBot(review, botLogin) || !trusted(review, trust) {
 			continue
@@ -258,7 +258,7 @@ func PullFeedback(gh gh.Client, trust *trust.Trust, number int, botLogin string,
 		}
 		who := py.Str(key(key(review, "user"), "login"))
 		entries = append(entries, entry{py.Str(review.GetOr("submitted_at", "")),
-			fmt.Sprintf("Review by @%s (%s):\n\n%s", who, strings.ReplaceAll(lower(state), "_", " "), body)})
+			fmt.Sprintf("Review by @%s (%s):\n\n%s", who, strings.ReplaceAll(py.Lower(state), "_", " "), body)})
 	}
 	for _, line := range gh.ListReviewComments(number) {
 		if isBot(line, botLogin) || !trusted(line, trust) || !newer(line, "created_at") {

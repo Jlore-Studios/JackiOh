@@ -26,20 +26,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-// isSpace is str.isspace() for one character.
-func isSpace(r rune) bool {
-	switch {
-	case r >= '\t' && r <= '\r', r >= 0x1c && r <= 0x20, r == 0x85, r == 0xa0, r == 0x1680,
-		r >= 0x2000 && r <= 0x200a, r == 0x2028, r == 0x2029, r == 0x202f, r == 0x205f,
-		r == 0x3000:
-		return true
-	}
-	return false
-}
-
-// strip is str.strip().
-func strip(s string) string { return strings.TrimFunc(s, isSpace) }
-
 // isoText is `str(v or "")`, what parse_iso is given.
 func isoText(v any) string {
 	if !pyjson.Truthy(v) {
@@ -69,7 +55,7 @@ func pyInt(v any, present bool) (int, bool) {
 		}
 		return int(x), true
 	case string:
-		s := strip(x)
+		s := py.Strip(x)
 		neg := false
 		if strings.HasPrefix(s, "+") || strings.HasPrefix(s, "-") {
 			neg, s = s[0] == '-', s[1:]
@@ -82,7 +68,7 @@ func pyInt(v any, present bool) (int, bool) {
 			if !unicode.IsDigit(r) {
 				return 0, false
 			}
-			n = n*10 + digitValue(r)
+			n = n*10 + py.DigitValue(r)
 		}
 		if neg {
 			n = -n
@@ -99,19 +85,6 @@ func intOf(v any) int {
 		panic(fmt.Errorf("invalid literal for int() with base 10: %s", py.Repr(v)))
 	}
 	return n
-}
-
-// digitValue is the value of one decimal digit of any script: Unicode assigns them in runs of
-// ten, zero first.
-func digitValue(r rune) int {
-	if r >= '0' && r <= '9' {
-		return int(r - '0')
-	}
-	start := r
-	for unicode.IsDigit(start - 1) {
-		start--
-	}
-	return int(r-start) % 10
 }
 
 // osError is an OSError as Python prints it: "[Errno 2] No such file or directory: 'bash'".
@@ -288,9 +261,5 @@ func decodeStrict(b []byte) (string, error) {
 		}
 		i += size
 	}
-	s := string(b)
-	if strings.Contains(s, "\r") {
-		s = strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
-	}
-	return s, nil
+	return py.Universal(string(b)), nil
 }

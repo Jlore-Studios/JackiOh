@@ -17,9 +17,6 @@ import (
 // Redaction = "[REDACTED]"
 var Redaction string = "[REDACTED]"
 
-// pySpace is Python's `\s` inside a character class (str.isspace()); Go's `\s` is ASCII.
-const pySpace = `\t\n\v\f\r\x1c-\x1f \x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
-
 // A pattern and what replaces its match. Go's regexp has no lookbehind and its `\b` is ASCII, so
 // Python's `\b` before a word is a captured `(^|[^\w])` (Python's Unicode `\w`) that the
 // replacement keeps; a match never needs the character the one before it ended on, so the
@@ -30,7 +27,7 @@ type pattern struct {
 	repl string
 }
 
-const wordStart = `(^|[^\p{L}\p{N}_])`
+const wordStart = `(^|` + py.ReNotW + `)`
 
 var patterns = []pattern{
 	{regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----`), Redaction},
@@ -39,9 +36,9 @@ var patterns = []pattern{
 	{regexp.MustCompile(`gh[pousr]_[A-Za-z0-9]{30,}`), Redaction},
 	{regexp.MustCompile(`AKIA[0-9A-Z]{16}`), Redaction},
 	// (?i)\bbearer\s+[A-Za-z0-9._\-]{16,}
-	{regexp.MustCompile(wordStart + `[bB][eE][aA][rR][eE][rR][` + pySpace + `]+[A-Za-z0-9._\-ıİſK]{16,}`), "${1}" + Redaction},
+	{regexp.MustCompile(wordStart + `[bB][eE][aA][rR][eE][rR][` + py.SpaceClass + `]+[A-Za-z0-9._\-ıİſK]{16,}`), "${1}" + Redaction},
 	// (?i)\bbasic\s+[A-Za-z0-9+/=]{24,}
-	{regexp.MustCompile(wordStart + `[bB][aA][sSſ][iIıİ][cC][` + pySpace + `]+[A-Za-z0-9+/=ıİſK]{24,}`), "${1}" + Redaction},
+	{regexp.MustCompile(wordStart + `[bB][aA][sSſ][iIıİ][cC][` + py.SpaceClass + `]+[A-Za-z0-9+/=ıİſK]{24,}`), "${1}" + Redaction},
 }
 
 var (

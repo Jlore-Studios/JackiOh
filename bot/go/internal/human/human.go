@@ -66,22 +66,17 @@ func labelList(v any) []string {
 	return nil
 }
 
-// Python's `\s` in a str pattern is Unicode (str.isspace()); RE2's is ASCII.
-const pySpaceChars = `\t\n\v\f\r \x{1c}-\x{1f}\x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
-
-const pySpace = `[` + pySpaceChars + `]`
-
 // said is _SAID, `(?im)^[\s>*_]*human required[*_]*\s*:[*_]*\s*(.*)$`: a planner's own word that
 // only a person can do the task: `**Human required:** <what>`.
-var said = regexp.MustCompile(`(?im)^[` + pySpaceChars + `>*_]*human required[*_]*` + pySpace + `*:[*_]*` +
-	pySpace + `*(.*)$`)
+var said = regexp.MustCompile(`(?im)^[` + py.SpaceClass + `>*_]*human required[*_]*` + py.ReS + `*:[*_]*` +
+	py.ReS + `*(.*)$`)
 
 // goal is _GOAL, `(?im)^\s*(?:#+\s*)?(?:\d+\.\s*)?\**\s*goal\b`: the plan's **Goal** heading: the
 // planner's line goes before it (`bot/prompts/plan.md`). Only its start is read, so its `\b`
 // (Unicode in Python, which RE2 has not) is written as the end of the text or a character after
 // "goal" that is not a word character.
-var goal = regexp.MustCompile(`(?im)^` + pySpace + `*(?:#+` + pySpace + `*)?(?:\p{Nd}+\.` + pySpace +
-	`*)?\**` + pySpace + `*goal(?:$|[^\p{L}\p{N}_])`)
+var goal = regexp.MustCompile(`(?im)^` + py.ReS + `*(?:#+` + py.ReS + `*)?(?:\p{Nd}+\.` + py.ReS +
+	`*)?\**` + py.ReS + `*goal(?:$|` + py.ReNotW + `)`)
 
 // headLines is how many lines open a plan with no **Goal** heading, where the planner's line may
 // stand.

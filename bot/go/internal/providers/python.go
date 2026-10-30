@@ -18,9 +18,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-// pySpace is Python's `\s` (str.isspace) as an RE2 class; RE2's own `\s` is ASCII.
-const pySpace = `[\t\n\v\f\r\x1c-\x1f\x{85}\p{Z}]`
-
 // mapping is isinstance(v, Mapping): v as an object. A nil *pyjson.Object is None.
 func mapping(v any) (*pyjson.Object, bool) {
 	o, ok := v.(*pyjson.Object)

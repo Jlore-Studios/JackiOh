@@ -51,13 +51,6 @@ func urlencode(query *pyjson.Object) string {
 	return strings.Join(parts, "&")
 }
 
-// isSpace is str.isspace() for one character: Go's unicode.IsSpace and the separators
-// \x1c-\x1f, which Python counts as whitespace and Go does not.
-func isSpace(r rune) bool { return unicode.IsSpace(r) || r >= 0x1c && r <= 0x1f }
-
-// strip is str.strip().
-func strip(s string) string { return strings.TrimFunc(s, isSpace) }
-
 // str0 is `str(v or "")`: "" for a falsy value, else str(v).
 func str0(v any) string {
 	if !pyjson.Truthy(v) {
@@ -72,7 +65,7 @@ var floatSyntax = regexp.MustCompile(`^[+-]?(?:(?i:inf|infinity|nan)|(?:\p{Nd}(?
 
 // pyFloat is float(text), and false where float() raises ValueError.
 func pyFloat(text string) (float64, bool) {
-	clean := strip(text)
+	clean := py.Strip(text)
 	if !floatSyntax.MatchString(clean) {
 		return 0, false
 	}
@@ -84,7 +77,7 @@ func pyFloat(text string) (float64, bool) {
 		switch {
 		case r == '_':
 		case unicode.IsDigit(r) && r > 0x7f:
-			b.WriteByte(byte('0' + digitValue(r)))
+			b.WriteByte(byte('0' + py.DigitValue(r)))
 		default:
 			b.WriteRune(r)
 		}
@@ -94,14 +87,4 @@ func pyFloat(text string) (float64, bool) {
 		return 0, false
 	}
 	return f, true
-}
-
-// digitValue is the value of a decimal digit of any script: Unicode keeps each script's digits
-// in a run of ten, 0 to 9, so it is the distance from the start of its run, modulo ten.
-func digitValue(r rune) int {
-	start := r
-	for unicode.IsDigit(start - 1) {
-		start--
-	}
-	return int(r-start) % 10
 }

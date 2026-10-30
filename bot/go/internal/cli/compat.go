@@ -400,10 +400,8 @@ func subprocessRun(argv []string, opts RunOptions) (*Completed, error) {
 			code = -int(ws.Signal())
 		}
 	}
-	text := func(b bytes.Buffer) string {
-		return strings.ReplaceAll(strings.ReplaceAll(b.String(), "\r\n", "\n"), "\r", "\n")
-	}
-	return &Completed{Args: argv, Returncode: code, Stdout: text(stdout), Stderr: text(stderr)}, nil
+	return &Completed{Args: argv, Returncode: code, Stdout: py.Universal(stdout.String()),
+		Stderr: py.Universal(stderr.String())}, nil
 }
 
 // ---------------------------------------------------------------------------- values

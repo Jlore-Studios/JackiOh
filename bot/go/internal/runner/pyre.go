@@ -1,12 +1,10 @@
 package runner
 
-// The Python behaviours this package's parsing and processes depend on where Go's own differ:
-// what `\s`, `\w`, `\d` and `\b` match in a Python regular expression over str (Unicode, where
-// RE2's are ASCII), the extra letters re.IGNORECASE matches (ı and İ for i), str.strip() and
-// str.split(), int() and float() over Unicode digits, bytes.decode("utf-8", "replace"), the
-// universal newlines of a file read as text, pathlib's with_suffix, and subprocess's way of
-// finding, starting, timing out and reporting a program (Popen, run, OSError,
-// TimeoutExpired). Each is private here; py could hold them for every package.
+// The Python behaviours this package's parsing and processes depend on where Go's own differ and
+// py does not hold them: `\b` at a byte offset, the extra letters re.IGNORECASE matches (ı and İ
+// for i), float() over Unicode digits, the universal newlines of a file read as text, pathlib's
+// with_suffix, and subprocess's way of finding, starting, timing out and reporting a program
+// (Popen, run, OSError, TimeoutExpired).
 
 import (
 	"bufio"
@@ -31,38 +29,8 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 )
 
-// pySpace is the body of a character class matching Python's `\s` over str (str.isspace).
-const pySpace = `\t\n\v\f\r \x1c-\x1f\x85\xa0\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
-
 // pySpaceNoNL is `[^\S\n]`: Python's whitespace but the line feed.
 const pySpaceNoNL = `\t\v\f\r \x1c-\x1f\x85\xa0\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
-
-// pyWord is the body of a character class matching Python's `\w` over str: letters, numbers and
-// the underscore, with CJK Extension I, which Python 3.13 (Unicode 15.1) counts as letters and
-// Go's tables (Unicode 15.0) do not know yet.
-const pyWord = `\p{L}\p{N}_\x{2ebf0}-\x{2ee5d}`
-
-// pyDigit is Python's `\d` over str: a decimal digit of any script.
-const pyDigit = `\p{Nd}`
-
-// isSpace is str.isspace() for one character, and what `\s` matches.
-func isSpace(r rune) bool {
-	switch {
-	case r >= '\t' && r <= '\r', r >= 0x1c && r <= 0x20, r == 0x85, r == 0xa0, r == 0x1680,
-		r >= 0x2000 && r <= 0x200a, r == 0x2028, r == 0x2029, r == 0x202f, r == 0x205f,
-		r == 0x3000:
-		return true
-	}
-	return false
-}
-
-// isWord is what Python's `\w` matches.
-func isWord(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_' || (r >= 0x2ebf0 && r <= 0x2ee5d)
-}
-
-// isDigit is what Python's `\d` matches.
-func isDigit(r rune) bool { return unicode.IsDigit(r) }
 
 // fold is the ASCII letter re.IGNORECASE matches r to: a letter's lower case, and the four
 // others Python counts (İ and ı as i, ſ as s, the Kelvin sign as k). Anything else is itself.
@@ -99,7 +67,7 @@ func beforeIsWord(text string, i int) bool {
 		return false
 	}
 	r, _ := utf8.DecodeLastRuneInString(text[:i])
-	return isWord(r)
+	return py.IsWord(r)
 }
 
 // afterIsWord is whether the character at byte offset i of text is a word character.
@@ -108,7 +76,7 @@ func afterIsWord(text string, i int) bool {
 		return false
 	}
 	r, _ := utf8.DecodeRuneInString(text[i:])
-	return isWord(r)
+	return py.IsWord(r)
 }
 
 // findAfterBoundary is re.finditer for a pattern that begins with `\b` before a word
@@ -140,33 +108,11 @@ func findAfterBoundary(re *regexp.Regexp, text string) [][]int {
 	return found
 }
 
-// digitValue is the value of one decimal digit of any script: Unicode assigns them in runs of
-// ten, zero first.
-func digitValue(r rune) int {
-	if r >= '0' && r <= '9' {
-		return int(r - '0')
-	}
-	start := r
-	for unicode.IsDigit(start - 1) {
-		start--
-	}
-	return int(r-start) % 10
-}
-
-// atoi is int(s) for a string of decimal digits (`\d+`), of any script.
-func atoi(s string) int {
-	n := 0
-	for _, r := range s {
-		n = n*10 + digitValue(r)
-	}
-	return n
-}
-
 // asciiDigits is s with every decimal digit written in ASCII, for strconv.
 func asciiDigits(s string) string {
 	return strings.Map(func(r rune) rune {
 		if r > 0x7f && unicode.IsDigit(r) {
-			return '0' + rune(digitValue(r))
+			return '0' + rune(py.DigitValue(r))
 		}
 		return r
 	}, s)
@@ -177,32 +123,6 @@ func atof(s string) float64 {
 	f, _ := strconv.ParseFloat(asciiDigits(s), 64)
 	return f
 }
-
-// isDecimal is str.isdigit() as int() then reads it: every character a decimal digit. (A
-// superscript digit is isdigit() but not int(), so Python raised there; here it is text.)
-func isDecimal(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if !unicode.IsDigit(r) {
-			return false
-		}
-	}
-	return true
-}
-
-// strip is str.strip().
-func strip(s string) string { return strings.TrimFunc(s, isSpace) }
-
-// lstrip is str.lstrip().
-func lstrip(s string) string { return strings.TrimLeftFunc(s, isSpace) }
-
-// rstrip is str.rstrip().
-func rstrip(s string) string { return strings.TrimRightFunc(s, isSpace) }
-
-// fields is str.split() with no separator.
-func fields(s string) []string { return strings.FieldsFunc(s, isSpace) }
 
 // isNumber is isinstance(v, (int, float)) for a JSON value (a bool is an int in Python).
 func isNumber(v any) bool {
@@ -243,7 +163,7 @@ func pyFloat(v any) float64 {
 		return toFloat(v)
 	}
 	if s, ok := v.(string); ok {
-		f, err := strconv.ParseFloat(strings.ReplaceAll(asciiDigits(strip(s)), "_", ""), 64)
+		f, err := strconv.ParseFloat(strings.ReplaceAll(asciiDigits(py.Strip(s)), "_", ""), 64)
 		if err != nil {
 			panic(fmt.Errorf("could not convert string to float: %s", py.Repr(s)))
 		}
@@ -262,79 +182,6 @@ func pyType(v any) string {
 	return "dict"
 }
 
-// decodeReplace is bytes.decode("utf-8", errors="replace"): each maximal invalid subpart is
-// one U+FFFD, as Python's decoder does (Go's own range over a string gives one per byte).
-func decodeReplace(b []byte) string {
-	if utf8.Valid(b) {
-		return string(b)
-	}
-	var sb strings.Builder
-	for i := 0; i < len(b); {
-		r, size := utf8.DecodeRune(b[i:])
-		if r != utf8.RuneError || size > 1 {
-			sb.Write(b[i : i+size])
-			i += size
-			continue
-		}
-		i += invalidLen(b[i:])
-		sb.WriteRune(utf8.RuneError)
-	}
-	return sb.String()
-}
-
-// invalidLen is the length of the maximal subpart of an ill-formed UTF-8 sequence at b[0].
-func invalidLen(b []byte) int {
-	c := b[0]
-	need, lo, hi := 0, byte(0x80), byte(0xbf)
-	switch {
-	case c >= 0xc2 && c <= 0xdf:
-		need = 1
-	case c == 0xe0:
-		need, lo = 2, 0xa0
-	case c >= 0xe1 && c <= 0xec, c == 0xee, c == 0xef:
-		need = 2
-	case c == 0xed:
-		need, hi = 2, 0x9f
-	case c == 0xf0:
-		need, lo = 3, 0x90
-	case c >= 0xf1 && c <= 0xf3:
-		need = 3
-	case c == 0xf4:
-		need, hi = 3, 0x8f
-	default:
-		return 1
-	}
-	n := 1
-	for k := 0; k < need && n < len(b); k++ {
-		x := b[n]
-		if k > 0 {
-			lo, hi = 0x80, 0xbf
-		}
-		if x < lo || x > hi {
-			break
-		}
-		n++
-	}
-	return n
-}
-
-// universal is text read in Python's text mode: "\r\n" and a lone "\r" become "\n".
-func universal(s string) string {
-	if !strings.Contains(s, "\r") {
-		return s
-	}
-	return strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
-}
-
-// readText is path.read_text(encoding="utf-8", errors="replace").
-func readText(path string) (string, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return universal(decodeReplace(b)), nil
-}
-
 // eachLine is `for line in open(path, encoding="utf-8", errors="replace")`: each line as
 // text mode gives it, ending in "\n" but perhaps the last.
 func eachLine(path string, fn func(line string)) error {
@@ -348,7 +195,7 @@ func eachLine(path string, fn func(line string)) error {
 		chunk, err := r.ReadBytes('\n')
 		if len(chunk) > 0 {
 			for _, line := range splitCR(chunk) {
-				fn(universal(decodeReplace(line)))
+				fn(py.Universal(py.DecodeReplace(line)))
 			}
 		}
 		if err == io.EOF {
@@ -636,8 +483,8 @@ func SubprocessRun(argv []string, args RunArgs) (*Completed, error) {
 	}
 	if before(written) && before(read) && before(read) && before(exited) {
 		return &Completed{Args: argv, ReturnCode: returnCode(cmd.ProcessState),
-			Stdout: universal(decodeReplace(stdout.Bytes())),
-			Stderr: universal(decodeReplace(stderr.Bytes()))}, nil
+			Stdout: py.Universal(py.DecodeReplace(stdout.Bytes())),
+			Stderr: py.Universal(py.DecodeReplace(stderr.Bytes()))}, nil
 	}
 	cmd.Process.Kill()
 	<-exited

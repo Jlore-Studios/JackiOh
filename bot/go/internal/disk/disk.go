@@ -151,7 +151,7 @@ func clean(root string, env map[string]string) string {
 	if err != nil {
 		return "the clean-up did not run: " + err.Error()
 	}
-	return py.SliceFrom(strip(stdout+stderr), -2000)
+	return py.SliceFrom(py.Strip(stdout+stderr), -2000)
 }
 
 // valid is _valid: a reading from a model job's result, checked: that job's files are not

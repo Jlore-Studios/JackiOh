@@ -214,8 +214,8 @@ func fillIn(raw any, where string) *FillIn {
 
 // lateWeekFrom is the pattern `late_week`'s `from` must match:
 // `\s*([A-Za-z]{3})[A-Za-z]*\s+(\d{1,2}:\d{2})\s*`, with Python's Unicode `\s` and `\d`.
-var lateWeekFrom = regexp.MustCompile(`\A` + pySpace + `*([A-Za-z]{3})[A-Za-z]*` + pySpace +
-	`+(\p{Nd}{1,2}:\p{Nd}{2})` + pySpace + `*\z`)
+var lateWeekFrom = regexp.MustCompile(`\A` + py.ReS + `*([A-Za-z]{3})[A-Za-z]*` + py.ReS +
+	`+(\p{Nd}{1,2}:\p{Nd}{2})` + py.ReS + `*\z`)
 
 // lateWeek is _late_week.
 func lateWeek(raw any, where string) *LateWeek {

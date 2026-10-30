@@ -6,6 +6,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 )
@@ -44,8 +45,8 @@ func TestCapitalizeAndPercentMatchPython(t *testing.T) {
 	data := expected(t)
 	for _, pair := range data.List("capitalize") {
 		word := pair.([]any)[0].(string)
-		if got, want := capitalize(word), pair.([]any)[1].(string); got != want {
-			t.Errorf("capitalize(%q) = %q, want %q", word, got, want)
+		if got, want := py.Capitalize(word), pair.([]any)[1].(string); got != want {
+			t.Errorf("py.Capitalize(%q) = %q, want %q", word, got, want)
 		}
 	}
 	for _, pair := range data.List("percent") {

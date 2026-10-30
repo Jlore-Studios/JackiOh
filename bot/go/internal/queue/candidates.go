@@ -33,7 +33,7 @@ func PriorityTier(names map[string]bool) int {
 	tier := NoPriority
 	found := false
 	for name := range names {
-		if t, ok := PriorityTiers[lower(name)]; ok && (!found || t < tier) {
+		if t, ok := PriorityTiers[py.Lower(name)]; ok && (!found || t < tier) {
 			tier, found = t, true
 		}
 	}
@@ -168,7 +168,7 @@ func NeedsPlan(candidate *Candidate) bool {
 var KindOrder = map[string]int{"review": 0, "revise": 1, "build": 2}
 
 // blank is `[^\S\n]`: whitespace other than a newline.
-func blank(r rune) bool { return r != '\n' && isSpace(r) }
+func blank(r rune) bool { return r != '\n' && py.IsSpace(r) }
 
 func skipBlank(rs []rune, i int) int {
 	for i < len(rs) && blank(rs[i]) {
@@ -189,7 +189,7 @@ func issueAt(rs []rune, i int) (int, int, bool) {
 	if j == i+1 {
 		return 0, 0, false
 	}
-	return j, digitsInt(rs[i+1 : j]), true
+	return j, py.Atoi(string(rs[i+1 : j])), true
 }
 
 // blockedWords are _BLOCKED_BY's alternatives, in its order: `blocked by|depends on|do not start
@@ -205,11 +205,11 @@ var blockedWords = []string{"blocked by", "depends on", "do not start until", "w
 //
 // It returns where the match ends and the numbers its group 1 names (`re.findall(r"#(\d+)")`).
 func blockedAt(rs []rune, p int) (int, []int, bool) {
-	if !boundary(rs, p) {
+	if !py.Boundary(rs, p) {
 		return 0, nil, false
 	}
 	for _, word := range blockedWords {
-		i, ok := foldAt(rs, p, word)
+		i, ok := py.FoldAt(rs, p, word)
 		if !ok {
 			continue
 		}
@@ -228,8 +228,8 @@ func blockedAt(rs []rune, p int) (int, []int, bool) {
 			switch {
 			case j < len(rs) && (rs[j] == ',' || rs[j] == '&'):
 				j++
-			case boundary(rs, j):
-				if k, ok := foldAt(rs, j, "and"); ok && boundary(rs, k) {
+			case py.Boundary(rs, j):
+				if k, ok := py.FoldAt(rs, j, "and"); ok && py.Boundary(rs, k) {
 					j = k
 				}
 			}
@@ -281,10 +281,10 @@ func partMatch(title string) (string, int, int, bool) {
 			break // `.` stops at a newline
 		}
 		i := e
-		for i < len(rs) && isSpace(rs[i]) {
+		for i < len(rs) && py.IsSpace(rs[i]) {
 			i++
 		}
-		i, ok := foldAt(rs, i, "(part ")
+		i, ok := py.FoldAt(rs, i, "(part ")
 		if !ok {
 			continue
 		}
@@ -295,8 +295,8 @@ func partMatch(title string) (string, int, int, bool) {
 		if j == i {
 			continue
 		}
-		n := digitsInt(rs[i:j])
-		k, ok := foldAt(rs, j, " of ")
+		n := py.Atoi(string(rs[i:j]))
+		k, ok := py.FoldAt(rs, j, " of ")
 		if !ok {
 			continue
 		}
@@ -307,7 +307,7 @@ func partMatch(title string) (string, int, int, bool) {
 		if l == k || l >= len(rs) || rs[l] != ')' {
 			continue
 		}
-		return string(rs[:e]), n, digitsInt(rs[k:l]), true
+		return string(rs[:e]), n, py.Atoi(string(rs[k:l])), true
 	}
 	return "", 0, 0, false
 }
@@ -316,11 +316,11 @@ func partMatch(title string) (string, int, int, bool) {
 // share a name such as "Patch v0.2.X", so the parts of one patch are those with its name and its
 // m.
 func PartOf(title string) (name string, total int, n int, ok bool) {
-	prefix, n, total, ok := partMatch(strip(title))
+	prefix, n, total, ok := partMatch(py.Strip(title))
 	if !ok {
 		return "", 0, 0, false
 	}
-	return strings.Join(fields(lower(prefix)), " "), total, n, true
+	return strings.Join(py.Split(py.Lower(prefix)), " "), total, n, true
 }
 
 // The issue a thread is a sub-issue of, from GitHub's own link, or 0. (`_PARENT`: the link as
@@ -338,7 +338,7 @@ func ParentOf(thread *pyjson.Object) int {
 		}
 		// `$` is the end, or just before a newline that ends the text.
 		if j > start && (j == len(rs) || (j == len(rs)-1 && rs[j] == '\n')) {
-			return digitsInt(rs[start:j])
+			return py.Atoi(string(rs[start:j]))
 		}
 	}
 	return 0

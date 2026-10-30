@@ -55,7 +55,7 @@ func ParseISO(text string) time.Time {
 	if text == "" {
 		return time.Time{}
 	}
-	parsed, ok := fromISOFormat(strings.ReplaceAll(pyStrip(text), "Z", "+00:00"))
+	parsed, ok := fromISOFormat(strings.ReplaceAll(py.Strip(text), "Z", "+00:00"))
 	if !ok {
 		return time.Time{}
 	}
@@ -196,7 +196,7 @@ func usCentralLocation() *time.Location {
 // message; an hour or minute beyond a C int raises (panics with) the OverflowError time()
 // raises, which no caller catches.
 func ParseHhmm(text string) (TimeOfDay, error) {
-	parts := strings.Split(pyStrip(text), ":")
+	parts := strings.Split(py.Strip(text), ":")
 	if len(parts) < 2 {
 		return TimeOfDay{}, fmt.Errorf("not enough values to unpack (expected 2, got %d)", len(parts))
 	}

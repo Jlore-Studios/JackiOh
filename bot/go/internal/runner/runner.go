@@ -39,8 +39,8 @@ func (w *Words) MatchString(text string) bool { return w.re.MatchString(foldI(te
 
 // RateLimitWords is RATE_LIMIT_WORDS.
 var RateLimitWords = &Words{regexp.MustCompile(
-	`(?i)(usage limit|rate limit|too many requests|limit reached|hit your (?:[` + pyWord + `]+ )?limit` +
-		`|quota exceeded|exhausted your (?:[` + pyWord + `]+ )?quota|resource_exhausted|terminalquotaerror` +
+	`(?i)(usage limit|rate limit|too many requests|limit reached|hit your (?:[` + py.WordClass + `]+ )?limit` +
+		`|quota exceeded|exhausted your (?:[` + py.WordClass + `]+ )?quota|resource_exhausted|terminalquotaerror` +
 		// agy, once its plan's allowance is spent: "Individual quota reached. Please upgrade your
 		// subscription to increase your limits. Resets in 1h44m44s."
 		`|quota reached|upgrade your subscription to increase your limits` +
@@ -51,10 +51,10 @@ var RateLimitWords = &Words{regexp.MustCompile(
 
 // ResetsAt is RESETS_AT: "resets at 2026-10-26T00:00:00Z" (Muse): when a refusal ends, as a
 // time.
-var ResetsAt = regexp.MustCompile(`(?i)resets? at[` + pySpace + `]+(` + pyDigit + `{4}-` + pyDigit +
-	pyDigit + `-` + pyDigit + pyDigit + `T` + pyDigit + pyDigit + `:` + pyDigit + pyDigit + `(?::` +
-	pyDigit + pyDigit + `(?:\.` + pyDigit + `+)?)?(?:Z|[+-]` + pyDigit + pyDigit + `:?` + pyDigit +
-	pyDigit + `))`)
+var ResetsAt = regexp.MustCompile(`(?i)resets? at[` + py.SpaceClass + `]+(` + py.DigitClass + `{4}-` + py.DigitClass +
+	py.DigitClass + `-` + py.DigitClass + py.DigitClass + `T` + py.DigitClass + py.DigitClass + `:` + py.DigitClass + py.DigitClass + `(?::` +
+	py.DigitClass + py.DigitClass + `(?:\.` + py.DigitClass + `+)?)?(?:Z|[+-]` + py.DigitClass + py.DigitClass + `:?` + py.DigitClass +
+	py.DigitClass + `))`)
 
 // ResetsIn is RESETS_IN: "Resets in 1h44m44s" (agy), "resets in 3h", "try again in 5 days 2 hours
 // 22 minutes" (Codex): how long a refusal lasts. The Python is the regular expression
@@ -88,9 +88,9 @@ func (resetsInPattern) FindStringSubmatch(text string) []string {
 		}
 		return p
 	}
-	spaceOrComma := func(r rune) bool { return isSpace(r) || r == ',' }
+	spaceOrComma := func(r rune) bool { return py.IsSpace(r) || r == ',' }
 	digits := func(p int) (string, int) {
-		e := skip(p, isDigit)
+		e := skip(p, py.IsDigit)
 		return string(rs[p:e]), e
 	}
 	head := func(p int) (int, bool) {
@@ -117,7 +117,7 @@ func (resetsInPattern) FindStringSubmatch(text string) []string {
 	if start < 0 {
 		return nil
 	}
-	boundary := func(p int) bool { return p >= n || !isWord(rs[p]) }
+	boundary := func(p int) bool { return p >= n || !py.IsWord(rs[p]) }
 	// unit is `(\d+)\s*<letter>(?:<rest>)?` and what may follow it: the longest of `options`
 	// that is there, tried in order, its end then checked by `follows`.
 	unit := func(p int, letter string, options []string, follows func(int) bool) (string, int, bool) {
@@ -125,7 +125,7 @@ func (resetsInPattern) FindStringSubmatch(text string) []string {
 		if num == "" {
 			return "", p, false
 		}
-		q, ok := lit(skip(q, isSpace), letter)
+		q, ok := lit(skip(q, py.IsSpace), letter)
 		if !ok {
 			return "", p, false
 		}
@@ -137,7 +137,7 @@ func (resetsInPattern) FindStringSubmatch(text string) []string {
 		return "", p, false
 	}
 	var groups [6]string
-	pos = skip(pos, isSpace)
+	pos = skip(pos, py.IsSpace)
 	if num, e, ok := unit(pos, "d", []string{"ays", "ay", ""}, boundary); ok {
 		groups[0], pos = num, e
 	}
@@ -154,7 +154,7 @@ func (resetsInPattern) FindStringSubmatch(text string) []string {
 	if num, e, ok := unit(pos, "m", []string{"inutes", "inute", "ins", "in", ""}, notLetter); ok {
 		groups[3], pos = num, e
 	} else if num, q := digits(pos); num != "" {
-		if e, ok := lit(q, "m"); ok && e < n && isDigit(rs[e]) {
+		if e, ok := lit(q, "m"); ok && e < n && py.IsDigit(rs[e]) {
 			groups[4], pos = num, e
 		}
 	}
@@ -219,7 +219,7 @@ var ErrorLines int = 20
 // `error_description`, looked for inside a nested `error` object too.
 func jsonMessage(body any) string {
 	if s, ok := body.(string); ok {
-		return strip(s)
+		return py.Strip(s)
 	}
 	obj, ok := body.(*pyjson.Object)
 	if !ok {
@@ -246,7 +246,7 @@ func jsonMessage(body any) string {
 func StderrError(stderr string, fallback string) string {
 	var lines []string
 	for _, line := range py.Splitlines(stderr) {
-		if strip(line) != "" {
+		if py.Strip(line) != "" {
 			lines = append(lines, line)
 		}
 	}
@@ -254,7 +254,7 @@ func StderrError(stderr string, fallback string) string {
 		return fallback
 	}
 	for start := len(lines) - 1; start >= 0; start-- {
-		if !strings.HasPrefix(lstrip(lines[start]), "{") {
+		if !strings.HasPrefix(py.Lstrip(lines[start]), "{") {
 			continue
 		}
 		body, err := pyjson.LoadsString(strings.Join(lines[start:], "\n"))
@@ -281,7 +281,7 @@ func resetsInMinutes(text string) (int, bool) {
 	for i, s := range match[1:] {
 		if s != "" {
 			named = true
-			g[i] = atoi(s)
+			g[i] = py.Atoi(s)
 		}
 	}
 	if !named {
@@ -322,11 +322,11 @@ func fromISOFormat(s string) (time.Time, bool) {
 	if len(s) < 16 {
 		return time.Time{}, false
 	}
-	year, month, day := atoi(s[0:4]), atoi(s[5:7]), atoi(s[8:10])
-	hour, minute, second := atoi(s[11:13]), atoi(s[14:16]), 0
+	year, month, day := py.Atoi(s[0:4]), py.Atoi(s[5:7]), py.Atoi(s[8:10])
+	hour, minute, second := py.Atoi(s[11:13]), py.Atoi(s[14:16]), 0
 	rest := s[16:]
 	if strings.HasPrefix(rest, ":") && len(rest) >= 3 {
-		second, rest = atoi(rest[1:3]), rest[3:]
+		second, rest = py.Atoi(rest[1:3]), rest[3:]
 		if strings.HasPrefix(rest, ".") {
 			i := 1
 			for i < len(rest) && rest[i] >= '0' && rest[i] <= '9' {
@@ -347,7 +347,7 @@ func fromISOFormat(s string) (time.Time, bool) {
 	if len(hhmm) != 4 {
 		return time.Time{}, false
 	}
-	offset := atoi(hhmm[0:2])*60 + atoi(hhmm[2:4])
+	offset := py.Atoi(hhmm[0:2])*60 + py.Atoi(hhmm[2:4])
 	if year < 1 || month < 1 || month > 12 || day < 1 || day > daysIn(year, month) ||
 		hour > 23 || minute > 59 || second > 59 || offset >= 24*60 {
 		return time.Time{}, false
@@ -449,12 +449,12 @@ func epochISO(value any) (string, bool) {
 	case float64:
 		return unixISO(v), true
 	case string:
-		s := strip(v)
+		s := py.Strip(v)
 		if s == "" {
 			return "", false
 		}
-		if isDecimal(s) {
-			return epochISO(atoi(s))
+		if py.IsDecimal(s) {
+			return epochISO(py.Atoi(s))
 		}
 		return s, true
 	}
@@ -518,7 +518,7 @@ func UsageFromEvent(event *pyjson.Object) *pyjson.Object {
 
 // jsonLine is one line as _json_lines reads it: the JSON object it holds, or nil.
 func jsonLine(line string) *pyjson.Object {
-	text := strip(line)
+	text := py.Strip(line)
 	if !strings.HasPrefix(text, "{") {
 		return nil
 	}
@@ -574,7 +574,7 @@ func Clip(text any, limit int /* = 300 */) string {
 	if pyjson.Truthy(text) {
 		shown = py.Str(text)
 	}
-	flat := strings.Join(fields(shown), " ")
+	flat := strings.Join(py.Split(shown), " ")
 	if py.Len(flat) <= limit {
 		return flat
 	}
@@ -593,7 +593,7 @@ func trailText(entries []string) string {
 
 // Read is _read: a file's text, "" when it cannot be read.
 func Read(path string) string {
-	text, err := readText(path)
+	text, err := py.ReadText(path)
 	if err != nil {
 		return ""
 	}

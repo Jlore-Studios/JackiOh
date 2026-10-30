@@ -337,7 +337,7 @@ func pyInt(s string) (n int, big bool, err error) {
 		switch {
 		case r < 0x80:
 			b.WriteRune(r)
-		case pyIsSpace(r):
+		case py.IsSpace(r):
 			b.WriteByte(' ')
 		default:
 			if d, ok := decimalValue(r); ok {
@@ -403,12 +403,3 @@ func decimalValue(r rune) (int, bool) {
 	}
 	return 0, false
 }
-
-// pyIsSpace is str.isspace() for one character (Python's `\s`): Go's unicode.IsSpace and the
-// four separators \x1c to \x1f.
-func pyIsSpace(r rune) bool {
-	return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f)
-}
-
-// pyStrip is str.strip(): strings.TrimSpace, and the separators \x1c to \x1f too.
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }

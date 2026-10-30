@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/human"
@@ -475,25 +474,6 @@ func outPath(dir, name string) string {
 func isFile(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.Mode().IsRegular()
-}
-
-// readReplace is `Path.read_text(encoding="utf-8", errors="replace")`: a byte that is no part of
-// valid UTF-8 reads as U+FFFD. An OSError raises.
-func readReplace(path string) string {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-	if utf8.Valid(data) {
-		return string(data)
-	}
-	var b strings.Builder
-	for len(data) > 0 {
-		r, size := utf8.DecodeRune(data)
-		b.WriteRune(r)
-		data = data[size:]
-	}
-	return b.String()
 }
 
 // runnerName is `re.fullmatch(r"[\w.-]{1,80}", …)`, `\w` as Python's str patterns read it (any

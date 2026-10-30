@@ -60,14 +60,14 @@ func runGate(gate *config.Gate, cwd string, env map[string]string, timeoutS *int
 	var code int
 	proc := run([]string{"bash", "-c", gate.Run}, cwd, env, time.Duration(max(30, limit))*time.Second)
 	if !proc.timedOut {
-		output = translateNewlines(decode(proc.stdout))
+		output = py.Universal(py.DecodeReplace(proc.stdout))
 		if len(proc.stderr) > 0 {
-			output += "\n" + translateNewlines(decode(proc.stderr))
+			output += "\n" + py.Universal(py.DecodeReplace(proc.stderr))
 		}
 		code = proc.code
 	} else {
 		// The output read before the timeout, as bytes: subprocess decodes none of it.
-		output = decode(proc.stdout) + "\n" + decode(proc.stderr) + fmt.Sprintf("\n(timed out after %ds)", limit)
+		output = py.DecodeReplace(proc.stdout) + "\n" + py.DecodeReplace(proc.stderr) + fmt.Sprintf("\n(timed out after %ds)", limit)
 		code = TimedOut
 	}
 	return &GateResult{

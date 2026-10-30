@@ -104,7 +104,7 @@ func intOr0(v any) int {
 	case bool:
 		return 1
 	case string:
-		n, err := strconv.Atoi(strip(x))
+		n, err := strconv.Atoi(py.Strip(x))
 		if err != nil {
 			panic(fmt.Errorf("ValueError: invalid literal for int() with base 10: %s", py.Repr(x)))
 		}
@@ -130,7 +130,7 @@ func numberOf(thread *pyjson.Object) int {
 func lowered(names map[string]bool) map[string]bool {
 	out := make(map[string]bool, len(names))
 	for name := range names {
-		out[lower(name)] = true
+		out[py.Lower(name)] = true
 	}
 	return out
 }
@@ -218,14 +218,14 @@ func Owner(thread *pyjson.Object) *identity.Other {
 	assignees := map[string]bool{}
 	for _, a := range thread.List("assignees") {
 		if o, ok := a.(*pyjson.Object); ok {
-			assignees[lower(orStr(o.Get("login")))] = true
+			assignees[py.Lower(orStr(o.Get("login")))] = true
 		}
 	}
 	for _, other := range cfgOthers(config.Others) {
 		owns := slices.ContainsFunc(Owning, func(suffix string) bool {
 			return names[other.LabelPrefix+suffix]
 		})
-		if owns || assignees[lower(other.Login)] {
+		if owns || assignees[py.Lower(other.Login)] {
 			return other
 		}
 	}
@@ -374,7 +374,7 @@ func hardest(found []string, fallback string) string {
 func labelled(names map[string]bool) []string {
 	var found []string
 	for name := range names {
-		if d, ok := difficultyLabel(lower(name)); ok {
+		if d, ok := difficultyLabel(py.Lower(name)); ok {
 			found = append(found, d)
 		}
 	}
@@ -662,7 +662,7 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 // several commits. Without it a one-commit pull request lands on `main` under the bot's own
 // commit message ("bot: build pass 1 for #85").
 func MergeTitle(pull *pyjson.Object, method string) string {
-	title := strip(orStr(pull.Get("title")))
+	title := py.Strip(orStr(pull.Get("title")))
 	if method != "squash" || title == "" {
 		return ""
 	}
@@ -704,7 +704,7 @@ func RequeueCleared(ctx *hctx.Context, pull *pyjson.Object, record *pyjson.Objec
 	}
 	removal := ctx.GH.QueueRemoval(node)
 	if removal == nil || (removal["type"] == "User" &&
-		lower(removal["actor"]) != lower(ctx.Cfg.BotLogin)) {
+		py.Lower(removal["actor"]) != py.Lower(ctx.Cfg.BotLogin)) {
 		return ""
 	}
 	main := ctx.GH.BranchSHA(ctx.Cfg.DefaultBranch)

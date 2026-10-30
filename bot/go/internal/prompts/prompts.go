@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -140,7 +139,7 @@ func Load(name string, directory string /* = PROMPTS_DIR */) (*Template, error) 
 	if !utf8.Valid(data) {
 		return nil, fmt.Errorf("'utf-8' codec can't decode %s", filepath.Join(directory, name+".md"))
 	}
-	text := strings.ReplaceAll(strings.ReplaceAll(string(data), "\r\n", "\n"), "\r", "\n")
+	text := py.Universal(string(data))
 	return &Template{text}, nil
 }
 
@@ -177,7 +176,7 @@ var backticks = regexp.MustCompile("`+")
 
 // Data is `text` fenced as data. The fence is longer than any backtick run inside.
 func Data(text string, label string) string {
-	body := strings.TrimRightFunc(text, pyIsSpace)
+	body := strings.TrimRightFunc(text, py.IsSpace)
 	if body == "" {
 		body = "(empty)"
 	}
@@ -212,6 +211,3 @@ func splitlinesKeepends(s string) []string {
 	}
 	return out
 }
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }

@@ -50,7 +50,7 @@ func Main(argv []string /* = None */) (code int) {
 	client := gh.NewGitHub(environ("GITHUB_REPOSITORY"), environ("GH_TOKEN"), false, nil, nil, "")
 	if args.command == "retcon" {
 		threads := client.Paginate("repos/"+client.Repo+"/issues", pyjson.New("state", "all"), "", 100_000, false)
-		where := joinPath(strip(runGit("rev-parse", "--show-toplevel")), PatchesJSON)
+		where := joinPath(py.Strip(runGit("rev-parse", "--show-toplevel")), PatchesJSON)
 		data, err := os.ReadFile(where)
 		if err != nil {
 			herr.Raise(err)
@@ -63,7 +63,7 @@ func Main(argv []string /* = None */) (code int) {
 		if args.numbers != "" {
 			wanted := map[int]bool{}
 			for _, n := range strings.Split(args.numbers, ",") {
-				if strip(n) != "" {
+				if py.Strip(n) != "" {
 					wanted[pyInt(n)] = true
 				}
 			}
@@ -140,7 +140,7 @@ func gitOutput(args ...string) string {
 	}
 	herr.Must(err)
 	text := out.String()
-	return strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\r", "\n")
+	return py.Universal(text)
 }
 
 // calledProcessError is subprocess.CalledProcessError.
@@ -436,7 +436,7 @@ var floatSyntax = regexp.MustCompile(`^[+-]?(?:(?i:inf|infinity|nan)|(?:\p{Nd}(?
 
 // parseFloat is float(text), and false where float() raises ValueError.
 func parseFloat(text string) (float64, bool) {
-	clean := strip(text)
+	clean := py.Strip(text)
 	if !floatSyntax.MatchString(clean) {
 		return 0, false
 	}
@@ -448,7 +448,7 @@ func parseFloat(text string) (float64, bool) {
 		switch {
 		case r == '_':
 		case r > 0x7f && unicode.IsDigit(r):
-			b.WriteByte(byte('0' + digitValue(r)))
+			b.WriteByte(byte('0' + py.DigitValue(r)))
 		default:
 			b.WriteRune(r)
 		}

@@ -240,7 +240,7 @@ func (x *CodexCli) Run(request *RunRequest) *RunResult {
 		}
 	}
 	x.keep(launch, transcript)
-	text := strip(Read(last))
+	text := py.Strip(Read(last))
 	if text == "" && len(messages) > 0 {
 		text = messages[len(messages)-1]
 	}
@@ -383,12 +383,12 @@ func rglob(root, pattern string) []string {
 }
 
 // isoUTC is _ISO_UTC (Python's `$` also matches before a final line feed).
-var isoUTC = regexp.MustCompile(`^` + pyDigit + `{4}-` + pyDigit + `{2}-` + pyDigit + `{2}T` + pyDigit +
-	`{2}:` + pyDigit + `{2}(?::` + pyDigit + `{2}(?:\.` + pyDigit + `+)?)?Z\n?$`)
+var isoUTC = regexp.MustCompile(`^` + py.DigitClass + `{4}-` + py.DigitClass + `{2}-` + py.DigitClass + `{2}T` + py.DigitClass +
+	`{2}:` + py.DigitClass + `{2}(?::` + py.DigitClass + `{2}(?:\.` + py.DigitClass + `+)?)?Z\n?$`)
 
 var (
-	agyCells = regexp.MustCompile(`\t+|[` + pySpace + `]{2,}`)
-	agyShare = regexp.MustCompile(`^(` + pyDigit + `+(?:\.` + pyDigit + `+)?)%$`)
+	agyCells = regexp.MustCompile(`\t+|[` + py.SpaceClass + `]{2,}`)
+	agyShare = regexp.MustCompile(`^(` + py.DigitClass + `+(?:\.` + py.DigitClass + `+)?)%$`)
 )
 
 // ParseAgyUsage is agy's `/usage` table as a reading for `model`'s pool. Each row is a pool, a
@@ -400,9 +400,9 @@ func ParseAgyUsage(text string, model string) *pyjson.Object {
 	usage := pyjson.New()
 	for _, line := range py.Splitlines(text) {
 		var cells []string
-		for _, cell := range agyCells.Split(strip(line), -1) {
-			if strip(cell) != "" {
-				cells = append(cells, strip(cell))
+		for _, cell := range agyCells.Split(py.Strip(line), -1) {
+			if py.Strip(cell) != "" {
+				cells = append(cells, py.Strip(cell))
 			}
 		}
 		if len(cells) < 3 || strings.HasPrefix(strings.ToLower(cells[0]), "gemini") != gemini {
@@ -518,7 +518,7 @@ func (x *AgyCli) Run(request *RunRequest) *RunResult {
 	x.keep(launch, transcript)
 	text := ""
 	if result.Truthy("response") {
-		text = strip(py.Str(result.Get("response")))
+		text = py.Strip(py.Str(result.Get("response")))
 	}
 	var numTurns *int
 	if n, ok := intValue(result.Get("num_turns")); ok {

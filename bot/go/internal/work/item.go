@@ -313,13 +313,13 @@ func (x *Worker) seedNotes() {
 	handoff := pyjson.Obj(x.Plan.Get("handoff"))
 	cwd := cwdOf(x.Wt)
 	if notes := strOr(handoff.Get("notes"), ""); strings.TrimSpace(notes) != "" {
-		writeText(filepath.Join(cwd, NotesFile), rstrip(notes)+"\n")
+		writeText(filepath.Join(cwd, NotesFile), py.Rstrip(notes)+"\n")
 	}
 	if draft := strOr(handoff.Get("draft"), ""); strings.TrimSpace(draft) != "" {
-		writeText(filepath.Join(cwd, PlanDraftFile), rstrip(draft)+"\n")
+		writeText(filepath.Join(cwd, PlanDraftFile), py.Rstrip(draft)+"\n")
 	}
 	if text := strOr(x.Plan.Get("journal"), ""); strings.TrimSpace(text) != "" {
-		writeText(filepath.Join(cwd, journal.JournalFile), rstrip(text)+"\n")
+		writeText(filepath.Join(cwd, journal.JournalFile), py.Rstrip(text)+"\n")
 	}
 }
 
@@ -374,7 +374,7 @@ func (x *Worker) draft() string {
 	}
 	text := strings.TrimSpace(readText(path, true))
 	if py.Len(text) > issueplan.PlanChars {
-		text = rstrip(py.SliceTo(text, issueplan.PlanChars-py.Len(PlanCut))) + PlanCut
+		text = py.Rstrip(py.SliceTo(text, issueplan.PlanChars-py.Len(PlanCut))) + PlanCut
 	}
 	return text
 }
@@ -1027,7 +1027,7 @@ func (x *Worker) planning() {
 	x.resetTo(head)
 	rated, text := verdicts.Rating(redact.Redact(strings.TrimSpace(result.Text), nil))
 	if py.Len(text) > issueplan.PlanChars {
-		text = rstrip(py.SliceTo(text, issueplan.PlanChars-py.Len(PlanCut))) + PlanCut
+		text = py.Rstrip(py.SliceTo(text, issueplan.PlanChars-py.Len(PlanCut))) + PlanCut
 	}
 	if !result.OK || text == "" {
 		msg := "the planner on " + seat.Model + " wrote no plan"

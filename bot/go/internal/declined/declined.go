@@ -20,7 +20,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -33,7 +32,7 @@ var words = regexp.MustCompile(`[a-z0-9]+`)
 
 // key is _key: a title as the log compares it, lowercased, its words alone.
 func key(title string) string {
-	return strings.Join(words.FindAllString(pyLower(title), -1), " ")
+	return strings.Join(words.FindAllString(py.Lower(title), -1), " ")
 }
 
 // Entries is declined.entries.
@@ -52,8 +51,8 @@ func Note(state *pyjson.Object, number int, title string, why string, at string)
 	}
 	log = append(log, pyjson.New(
 		"number", number,
-		"title", py.SliceTo(strings.Join(pyFields(title), " "), 200),
-		"why", py.SliceTo(strings.Join(pyFields(why), " "), 300),
+		"title", py.SliceTo(strings.Join(py.Split(title), " "), 200),
+		"why", py.SliceTo(strings.Join(py.Split(why), " "), 300),
 		"at", at))
 	if len(log) > Limit {
 		log = log[len(log)-Limit:]
@@ -138,7 +137,7 @@ func toInt(v any) int {
 		}
 		return 0
 	case string:
-		n, err := strconv.Atoi(strings.ReplaceAll(pyStrip(x), "_", ""))
+		n, err := strconv.Atoi(strings.ReplaceAll(py.Strip(x), "_", ""))
 		if err != nil {
 			panic(fmt.Errorf("invalid literal for int() with base 10: %s", py.Repr(x)))
 		}
@@ -150,16 +149,3 @@ func toInt(v any) int {
 	panic(fmt.Errorf("int() argument must be a string, a bytes-like object or a real number, not '%s'",
 		"NoneType"))
 }
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
-
-// pyStrip is str.strip().
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }
-
-// pyFields is str.split().
-func pyFields(s string) []string { return strings.FieldsFunc(s, pyIsSpace) }
-
-// pyLower is str.lower(): strings.ToLower but for `İ`, which Python lowers to `i` and a
-// combining dot.
-func pyLower(s string) string { return strings.ToLower(strings.ReplaceAll(s, "\u0130", "i\u0307")) }

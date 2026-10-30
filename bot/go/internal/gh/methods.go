@@ -495,7 +495,7 @@ func (x *GitHub) GetFile(path string, ref string) (string, string) {
 	if v := data.Get("sha"); v != nil {
 		sha = py.Str(v)
 	}
-	return decodeReplace(raw), sha
+	return py.DecodeReplace(raw), sha
 }
 
 // b64decode is base64.b64decode(text): the characters outside the alphabet (GitHub's line
@@ -694,7 +694,7 @@ func (x *GitHub) JobLog(jobID any, tailChars int /* = 6000 */) string {
 	location := ""
 	resp, err := opener(req, 60*time.Second)
 	if err == nil {
-		return redact.Redact(py.SliceFrom(decodeReplace(resp.Body), -tailChars), nil)
+		return redact.Redact(py.SliceFrom(py.DecodeReplace(resp.Body), -tailChars), nil)
 	}
 	var exc *HTTPError
 	switch {
@@ -718,7 +718,7 @@ func (x *GitHub) JobLog(jobID any, tailChars int /* = 6000 */) string {
 		}
 		herr.Raise(err)
 	}
-	return redact.Redact(py.SliceFrom(decodeReplace(resp.Body), -tailChars), nil)
+	return redact.Redact(py.SliceFrom(py.DecodeReplace(resp.Body), -tailChars), nil)
 }
 
 // isURLOrTimeout is `except (urllib.error.URLError, TimeoutError)`, an HTTPError among them.

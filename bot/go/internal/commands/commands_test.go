@@ -106,14 +106,3 @@ func TestMisspeltAndCommandLinesMatchPython(t *testing.T) {
 		}
 	}
 }
-
-func TestLowerIsPythons(t *testing.T) {
-	for in, want := range map[string]string{
-		"BUİLD": "bui̇ld", "ΣΑΣ": "σας", "ΟΔΟΣ Α": "οδος α", "Σ": "σ", "AΣ.": "aς.",
-		"AΣ'B": "aσ'b", "--FORCE": "--force", "Straße": "straße",
-	} {
-		if got := lower(in); got != want {
-			t.Errorf("lower(%q) = %q, want %q", in, got, want)
-		}
-	}
-}

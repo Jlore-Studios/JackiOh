@@ -1,33 +1,78 @@
-package commands
+package py
 
-// Python's text rules where Go's differ, for the patterns this module matches by hand (RE2 has no
-// lookbehind, no Unicode `\b`, and its `(?i)` and `\s` are not Python's). Each names the Python it
-// stands for. Candidates for `py`.
+// Python's text rules where Go's differ: what str.isspace(), str.strip(), str.split() and
+// str.lower() take, and what `\s`, `\w`, `\d`, `\b` and re.IGNORECASE match in a pattern over
+// str. RE2's classes are ASCII and it has no lookbehind or Unicode `\b`, so a pattern that needs
+// Python's builds its classes from the constants here, and a match RE2 cannot express is written
+// in code with the rune functions.
 
 import (
 	"strings"
 	"unicode"
 )
 
-// isSpace is str.isspace() for one character, which re's `\s`, str.strip() and str.split() go by:
+// SpaceClass, WordClass and DigitClass are the bodies of RE2 character classes that match what
+// Python's `\s`, `\w` and `\d` match in a str pattern, for a class that adds to them
+// (`[` + py.SpaceClass + `>*_]`). WordClass names CJK Extension I, which Python 3.13 (Unicode
+// 15.1) counts as letters and Go's tables (Unicode 15.0) do not know yet.
+const (
+	SpaceClass = `\t\n\v\f\r \x1c-\x1f\x85\xa0\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
+	WordClass  = `\p{L}\p{N}_\x{2ebf0}-\x{2ee5d}`
+	DigitClass = `\p{Nd}`
+)
+
+// ReS, ReNotS, ReW and ReNotW are Python's `\s`, `\S`, `\w` and `\W` in a str pattern, as RE2
+// classes to write in their place (DigitClass, `\p{Nd}`, stands for `\d` as it is).
+const (
+	ReS    = `[` + SpaceClass + `]`
+	ReNotS = `[^` + SpaceClass + `]`
+	ReW    = `[` + WordClass + `]`
+	ReNotW = `[^` + WordClass + `]`
+)
+
+// IsSpace is str.isspace() for one character, which `\s`, str.strip() and str.split() go by:
 // Go's unicode.IsSpace and the separators U+001C to U+001F.
-func isSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
+func IsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
 
-// isWord is re's `\w`: str.isalnum() or "_".
-func isWord(r rune) bool { return r == '_' || unicode.IsLetter(r) || unicode.IsNumber(r) }
+// IsWord is what `\w` matches: str.isalnum() or "_" (WordClass).
+func IsWord(r rune) bool {
+	return r == '_' || unicode.IsLetter(r) || unicode.IsNumber(r) || (r >= 0x2ebf0 && r <= 0x2ee5d)
+}
 
-// strip is str.strip().
-func strip(s string) string { return strings.TrimFunc(s, isSpace) }
+// IsDigit is what `\d` matches, and str.isdecimal() for one character: a decimal digit of any
+// script (not str.isdigit(), which also takes the superscripts int() refuses).
+func IsDigit(r rune) bool { return unicode.IsDigit(r) }
 
-// lstrip is str.lstrip().
-func lstrip(s string) string { return strings.TrimLeftFunc(s, isSpace) }
+// IsDecimal is str.isdecimal(): not empty, and every character a decimal digit, so int() reads
+// it. The harness's `s.isdigit()` guards an `int(s)`, and is this: the superscript digits
+// isdigit() also takes would make that int() raise.
+func IsDecimal(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if !IsDigit(r) {
+			return false
+		}
+	}
+	return true
+}
 
-// fields is str.split().
-func fields(s string) []string { return strings.FieldsFunc(s, isSpace) }
+// Strip is str.strip().
+func Strip(s string) string { return strings.TrimFunc(s, IsSpace) }
 
-// lower is str.lower(): each character's lowercase, but İ (U+0130) becomes "i̇" and a capital
+// Lstrip is str.lstrip().
+func Lstrip(s string) string { return strings.TrimLeftFunc(s, IsSpace) }
+
+// Rstrip is str.rstrip().
+func Rstrip(s string) string { return strings.TrimRightFunc(s, IsSpace) }
+
+// Split is str.split() with no separator: the runs of non-whitespace.
+func Split(s string) []string { return strings.FieldsFunc(s, IsSpace) }
+
+// Lower is str.lower(): each character's lowercase, but İ (U+0130) becomes "i̇" and a capital
 // sigma at the end of a word becomes ς, as Python's full mapping has it.
-func lower(s string) string {
+func Lower(s string) string {
 	rs := []rune(s)
 	var b strings.Builder
 	for i := range rs {
@@ -52,9 +97,9 @@ func writeLower(b *strings.Builder, rs []rune, i int) {
 	}
 }
 
-// capitalize is str.capitalize(): the first character in titlecase (Python's full mapping,
+// Capitalize is str.capitalize(): the first character in titlecase (Python's full mapping,
 // which writes some as two or three), the rest lowercased.
-func capitalize(s string) string {
+func Capitalize(s string) string {
 	rs := []rune(s)
 	if len(rs) == 0 {
 		return ""
@@ -74,17 +119,17 @@ func capitalize(s string) string {
 // titleFull is the titlecase of the characters whose full mapping (SpecialCasing.txt) is more
 // than one character; every other character's is unicode.ToTitle's.
 var titleFull = map[rune]string{0x00df: "Ss", 0x0149: "ʼN",
-	0x01f0: "J̌", 0x0390: "Ϊ́", 0x03b0: "Ϋ́",
+	0x01f0: "J̌", 0x0390: "Ϊ́", 0x03b0: "Ϋ́",
 	0x0587: "Եւ", 0x1e96: "H̱", 0x1e97: "T̈", 0x1e98: "W̊",
 	0x1e99: "Y̊", 0x1e9a: "Aʾ", 0x1f50: "Υ̓",
 	0x1f52: "Υ̓̀", 0x1f54: "Υ̓́", 0x1f56: "Υ̓͂",
 	0x1fb2: "Ὰͅ", 0x1fb4: "Άͅ", 0x1fb6: "Α͂",
-	0x1fb7: "ᾼ͂", 0x1fc2: "Ὴͅ", 0x1fc4: "Ήͅ",
-	0x1fc6: "Η͂", 0x1fc7: "ῌ͂", 0x1fd2: "Ϊ̀",
-	0x1fd3: "Ϊ́", 0x1fd6: "Ι͂", 0x1fd7: "Ϊ͂",
-	0x1fe2: "Ϋ̀", 0x1fe3: "Ϋ́", 0x1fe4: "Ρ̓",
-	0x1fe6: "Υ͂", 0x1fe7: "Ϋ͂", 0x1ff2: "Ὼͅ",
-	0x1ff4: "Ώͅ", 0x1ff6: "Ω͂", 0x1ff7: "ῼ͂",
+	0x1fb7: "ᾼ͂", 0x1fc2: "Ὴͅ", 0x1fc4: "Ήͅ",
+	0x1fc6: "Η͂", 0x1fc7: "ῌ͂", 0x1fd2: "Ϊ̀",
+	0x1fd3: "Ϊ́", 0x1fd6: "Ι͂", 0x1fd7: "Ϊ͂",
+	0x1fe2: "Ϋ̀", 0x1fe3: "Ϋ́", 0x1fe4: "Ρ̓",
+	0x1fe6: "Υ͂", 0x1fe7: "Ϋ͂", 0x1ff2: "Ὼͅ",
+	0x1ff4: "Ώͅ", 0x1ff6: "Ω͂", 0x1ff7: "ῼ͂",
 	0xfb00: "Ff", 0xfb01: "Fi", 0xfb02: "Fl",
 	0xfb03: "Ffi", 0xfb04: "Ffl", 0xfb05: "St",
 	0xfb06: "St", 0xfb13: "Մն", 0xfb14: "Մե", 0xfb15: "Մի",
@@ -138,9 +183,9 @@ var extraCases = map[rune][]rune{0x0069: {0x0131}, 0x0073: {0x017f}, 0x00b5: {0x
 	0x1c87: {0x0463}, 0x1c88: {0xa64b}, 0x1e61: {0x1e9b}, 0x1e9b: {0x1e61}, 0x1fbe: {0x0345, 0x03b9},
 	0x1fd3: {0x0390}, 0x1fe3: {0x03b0}, 0xa64b: {0x1c88}, 0xfb05: {0xfb06}, 0xfb06: {0xfb05}}
 
-// foldEq is whether text character x matches pattern character c under re.IGNORECASE: c exactly
+// FoldEq is whether text character x matches pattern character c under re.IGNORECASE: c exactly
 // when it has no case, else x's lowercase is c's or one of c's extra cases.
-func foldEq(x, c rune) bool {
+func FoldEq(x, c rune) bool {
 	lc := unicode.ToLower(c)
 	if lc == c && unicode.ToUpper(c) == c {
 		return x == c
@@ -157,10 +202,10 @@ func foldEq(x, c rune) bool {
 	return false
 }
 
-// foldAt matches the literal pat at rs[i:] under re.IGNORECASE, and returns where it ends.
-func foldAt(rs []rune, i int, pat string) (int, bool) {
+// FoldAt matches the literal pat at rs[i:] under re.IGNORECASE, and returns where it ends.
+func FoldAt(rs []rune, i int, pat string) (int, bool) {
 	for _, c := range pat {
-		if i >= len(rs) || !foldEq(rs[i], c) {
+		if i >= len(rs) || !FoldEq(rs[i], c) {
 			return 0, false
 		}
 		i++
@@ -168,25 +213,28 @@ func foldAt(rs []rune, i int, pat string) (int, bool) {
 	return i, true
 }
 
-// foldEqual is whether all of text matches the literal pat under re.IGNORECASE.
-func foldEqual(text, pat string) bool {
+// FoldEqual is whether all of text matches the literal pat under re.IGNORECASE.
+func FoldEqual(text, pat string) bool {
 	rs := []rune(text)
-	end, ok := foldAt(rs, 0, pat)
+	end, ok := FoldAt(rs, 0, pat)
 	return ok && end == len(rs)
 }
 
-// digitsInt is int() of a run of re's `\d`, Unicode decimal digits all.
-func digitsInt(ds []rune) int {
+// Atoi is int() of what `\d+` matched: decimal digits of any script, 0 for none.
+func Atoi(digits string) int {
 	n := 0
-	for _, d := range ds {
-		n = n*10 + digitValue(d)
+	for _, d := range digits {
+		n = n*10 + DigitValue(d)
 	}
 	return n
 }
 
-// digitValue is a decimal digit's value: Unicode puts each script's digits 0 to 9 in a row, so
+// DigitValue is a decimal digit's value: Unicode puts each script's digits 0 to 9 in a row, so
 // it is the digit's place in its run of digits.
-func digitValue(d rune) int {
+func DigitValue(d rune) int {
+	if d >= '0' && d <= '9' {
+		return int(d - '0')
+	}
 	start := d
 	for unicode.IsDigit(start - 1) {
 		start--
@@ -194,12 +242,12 @@ func digitValue(d rune) int {
 	return int(d-start) % 10
 }
 
-// boundary is re's `\b` at rs[i]: a word character on one side and none on the other.
-func boundary(rs []rune, i int) bool {
+// Boundary is `\b` at rs[i]: a word character on one side and none on the other.
+func Boundary(rs []rune, i int) bool {
 	if len(rs) == 0 {
 		return false
 	}
-	before := i > 0 && isWord(rs[i-1])
-	after := i < len(rs) && isWord(rs[i])
+	before := i > 0 && IsWord(rs[i-1])
+	after := i < len(rs) && IsWord(rs[i])
 	return before != after
 }

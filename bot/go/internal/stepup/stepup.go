@@ -76,7 +76,7 @@ func intOr0(v any) int {
 	case bool:
 		return 1
 	case string:
-		n, err := strconv.Atoi(strip(x))
+		n, err := strconv.Atoi(py.Strip(x))
 		if err != nil {
 			panic(fmt.Errorf("ValueError: invalid literal for int() with base 10: %s", py.Repr(x)))
 		}
@@ -310,7 +310,7 @@ func StepUp(ctx *hctx.Context, target int, pr *int, reasons []string, link strin
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			low, isDifficulty := strings.CutPrefix(lower(name), "difficulty:")
+			low, isDifficulty := strings.CutPrefix(py.Lower(name), "difficulty:")
 			if isDifficulty && slices.Contains(difficulties, low) && name != wanted {
 				Try(func() { ctx.GH.RemoveLabel(number, name) })
 			}

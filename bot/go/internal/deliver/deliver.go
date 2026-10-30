@@ -222,7 +222,9 @@ func (x *Deliverer) storeVault() {
 	if !isFile(path) {
 		return
 	}
-	text := strings.TrimSpace(readReplace(path))
+	text, err := py.ReadText(path)
+	herr.Must(err)
+	text = strings.TrimSpace(text)
 	if !vault.LooksSealed(text) {
 		x.log("ignored a vault that is not sealed")
 		return

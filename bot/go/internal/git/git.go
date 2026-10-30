@@ -17,7 +17,6 @@ import (
 	"syscall"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
@@ -107,7 +106,7 @@ func (x *Git) Run(check bool /* = True */, timeout int /* = 600 */, extraEnv map
 			text = proc.Stdout
 		}
 		herr.Raise(&herr.GitError{Msg: fmt.Sprintf("git %s failed (%d): %s",
-			strings.Join(args, " "), proc.Returncode, py.SliceFrom(strip(text), -800))})
+			strings.Join(args, " "), proc.Returncode, py.SliceFrom(py.Strip(text), -800))})
 	}
 	return proc
 }
@@ -153,17 +152,11 @@ func runText(argv []string, cwd string, env map[string]string, timeout int) *Com
 }
 
 // text is bytes as `text=True` reads them: decode("utf-8", "replace"), then universal newlines.
-func text(b []byte) string {
-	s := decodeReplace(b)
-	if !strings.Contains(s, "\r") {
-		return s
-	}
-	return strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
-}
+func text(b []byte) string { return py.Universal(py.DecodeReplace(b)) }
 
 // Out is the stripped stdout of Run(check, 600, nil, args...).
 func (x *Git) Out(check bool /* = True */, args ...string) string {
-	return strip(x.Run(check, 600, nil, args...).Stdout)
+	return py.Strip(x.Run(check, 600, nil, args...).Stdout)
 }
 
 // ------------------------------------------------------------------ facts
@@ -175,7 +168,7 @@ func (x *Git) Head() string {
 // Rev is the commit `ref` names, or "" (None) when it names none.
 func (x *Git) Rev(ref string) string {
 	proc := x.Run(false, 600, nil, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
-	return strip(proc.Stdout)
+	return py.Strip(proc.Stdout)
 }
 
 func (x *Git) MergeBase(a string, b string /* = "HEAD" */) string {
@@ -192,7 +185,7 @@ func (x *Git) ChangedPaths(base string, head string /* = "HEAD" */) []string {
 func nonBlank(text string) []string {
 	out := []string{}
 	for _, line := range py.Splitlines(text) {
-		if strip(line) != "" {
+		if py.Strip(line) != "" {
 			out = append(out, line)
 		}
 	}
@@ -217,8 +210,8 @@ func (x *Git) Markers(ref string, paths []string) []string {
 		if strings.HasPrefix(line, ref+":") {
 			_, p, _ = strings.Cut(line, ":")
 		}
-		if strip(p) != "" {
-			found = append(found, strip(p))
+		if py.Strip(p) != "" {
+			found = append(found, py.Strip(p))
 		}
 	}
 	return found
@@ -249,19 +242,9 @@ func count(n string) int {
 		if !unicode.IsDigit(r) {
 			return 0
 		}
-		value = value*10 + digitValue(r)
+		value = value*10 + py.DigitValue(r)
 	}
 	return value
-}
-
-// digitValue is the value of a decimal digit of any script (str.isdigit() takes them, and int()
-// reads them): each script's digits are a run of ten, 0 to 9.
-func digitValue(r rune) int {
-	start := r
-	for unicode.IsDigit(start - 1) {
-		start--
-	}
-	return int(r-start) % 10
 }
 
 // NamesBetween is the paths that differ between two commits (a two-dot diff, renames split).
@@ -272,7 +255,7 @@ func (x *Git) NamesBetween(a string, b string /* = "HEAD" */) []string {
 // Blob is the blob id of `path` at `ref`, or "" (None) when it is not there.
 func (x *Git) Blob(ref string, path string) string {
 	proc := x.Run(false, 600, nil, "rev-parse", "--verify", "--quiet", ref+":"+path)
-	return strip(proc.Stdout)
+	return py.Strip(proc.Stdout)
 }
 
 // Unsanctioned is the paths matching `patterns` that `head` holds differently from every anchor.
@@ -405,7 +388,7 @@ func (x *Git) Merge(ref string, who *Identity) []string {
 		if text == "" {
 			text = proc.Stdout
 		}
-		herr.Raise(&herr.GitError{Msg: fmt.Sprintf("git merge %s failed: %s", ref, py.SliceFrom(strip(text), -800))})
+		herr.Raise(&herr.GitError{Msg: fmt.Sprintf("git merge %s failed: %s", ref, py.SliceFrom(py.Strip(text), -800))})
 	}
 	return paths
 }
@@ -555,69 +538,4 @@ func joinPath(dir, p string) string {
 		return p
 	}
 	return strings.TrimRight(dir, "/") + "/" + p
-}
-
-// isSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c-\x1f.
-func isSpace(r rune) bool { return unicode.IsSpace(r) || r >= 0x1c && r <= 0x1f }
-
-// strip is str.strip().
-func strip(s string) string { return strings.TrimFunc(s, isSpace) }
-
-// decodeReplace is bytes.decode("utf-8", "replace"): each maximal invalid subsequence is one
-// U+FFFD, as CPython's decoder writes it (Go's conversions write one per byte).
-func decodeReplace(b []byte) string {
-	if utf8.Valid(b) {
-		return string(b)
-	}
-	var out strings.Builder
-	for i := 0; i < len(b); {
-		c := b[i]
-		if c < 0x80 {
-			out.WriteByte(c)
-			i++
-			continue
-		}
-		need, lo, hi := 0, byte(0x80), byte(0xBF)
-		switch {
-		case c >= 0xC2 && c <= 0xDF:
-			need = 1
-		case c >= 0xE0 && c <= 0xEF:
-			need = 2
-			if c == 0xE0 {
-				lo = 0xA0
-			} else if c == 0xED {
-				hi = 0x9F
-			}
-		case c >= 0xF0 && c <= 0xF4:
-			need = 3
-			if c == 0xF0 {
-				lo = 0x90
-			} else if c == 0xF4 {
-				hi = 0x8F
-			}
-		default:
-			out.WriteRune(utf8.RuneError)
-			i++
-			continue
-		}
-		j, ok := i+1, true
-		for k := 0; k < need; k++ {
-			if j >= len(b) {
-				ok = false
-				break
-			}
-			if k == 0 && (b[j] < lo || b[j] > hi) || k > 0 && (b[j] < 0x80 || b[j] > 0xBF) {
-				ok = false
-				break
-			}
-			j++
-		}
-		if !ok {
-			out.WriteRune(utf8.RuneError)
-		} else {
-			out.Write(b[i:j])
-		}
-		i = j
-	}
-	return out.String()
 }

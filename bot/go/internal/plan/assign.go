@@ -262,7 +262,7 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 				"tree's reconcile checks and reviews it", seat.Tier)
 		}
 		if seat.Tier == floor {
-			return seat, rstrip(prefix)
+			return seat, py.Rstrip(prefix)
 		}
 		var later []string
 		for _, rest := range usable[index+1:] {

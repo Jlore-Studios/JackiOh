@@ -168,7 +168,7 @@ func TierNames(pool *providers.Pool, tier string) string {
 			continue
 		}
 		if !slices.ContainsFunc(owners, func(p *providers.Provider) bool { return p.CLI != "claude" }) {
-			names = append(names, capitalize(entry.Model))
+			names = append(names, py.Capitalize(entry.Model))
 		} else {
 			ids := make([]string, len(owners))
 			for i, p := range owners {
@@ -327,7 +327,7 @@ func floatOr0(v any) float64 {
 	case bool:
 		return 1
 	case string:
-		f, err := strconv.ParseFloat(strip(x), 64)
+		f, err := strconv.ParseFloat(py.Strip(x), 64)
 		if err != nil {
 			panic(fmt.Errorf("ValueError: could not convert string to float: %s", py.Repr(x)))
 		}

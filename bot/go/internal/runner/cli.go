@@ -356,7 +356,7 @@ func (x *cliBase) watch(proc *process, raw string, request *RunRequest, done <-c
 		}
 		chunk := ""
 		if b, err := readFrom(raw, offset); err == nil {
-			chunk = universal(decodeReplace(b))
+			chunk = py.Universal(py.DecodeReplace(b))
 			offset += int64(len(b))
 		}
 		lines := strings.Split(pending+chunk, "\n")
@@ -410,7 +410,7 @@ func (x *cliBase) keep(launch *launchResult, transcript string) {
 // prompt is the system text, a note on the CLI, then the task: for a CLI with no flag for an
 // appended system prompt.
 func (x *cliBase) prompt(request *RunRequest) string {
-	return rstrip(request.SystemAppend) + "\n\n" + strings.ReplaceAll(CLINote, "{cli}", x.cli) +
+	return py.Rstrip(request.SystemAppend) + "\n\n" + strings.ReplaceAll(CLINote, "{cli}", x.cli) +
 		"\n\n---\n\n" + request.Prompt
 }
 
@@ -418,7 +418,7 @@ func (x *cliBase) prompt(request *RunRequest) string {
 func (x *cliBase) Trail(transcript string) string {
 	var entries []string
 	for _, line := range py.Splitlines(Read(transcript)) {
-		if strip(line) != "" {
+		if py.Strip(line) != "" {
 			entries = append(entries, Clip(line, 300))
 		}
 	}

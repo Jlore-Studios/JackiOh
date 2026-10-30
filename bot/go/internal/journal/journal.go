@@ -32,7 +32,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
@@ -75,13 +74,10 @@ var MaxAttempts int = 6
 // Cut is what `compact` leaves where it cut the log.
 var Cut string = "(earlier lines of the log were cut here)\n"
 
-// pySpace is Python's `\s` in a str pattern (str.isspace()): RE2's `\s` is ASCII only.
-const pySpace = `[\t\n\v\f\r \x{1c}-\x{1f}\x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}]`
-
 // logHeading is _LOG, `^##\s+Log\b.*$` (multiline). RE2's `\b` is ASCII only, so Python's
 // Unicode boundary after "Log" is written out: the line ends there, or goes on with a character
 // that is not a word character.
-var logHeading = regexp.MustCompile(`(?m)^##` + pySpace + `+Log(?:[^\p{L}\p{N}_\n].*)?$`)
+var logHeading = regexp.MustCompile(`(?m)^##` + py.ReS + `+Log(?:[^` + py.WordClass + `\n].*)?$`)
 
 var details = regexp.MustCompile(`(?s)\n<details><summary>The (?:builder's notes|planner's draft).*?</details>\n`)
 
@@ -118,9 +114,9 @@ func Compact(notes string, limit int) string {
 	if found == nil {
 		return py.SliceFrom(notes, -limit)
 	}
-	state := rstrip(notes[:found[0]]) + "\n\n"
+	state := py.Rstrip(notes[:found[0]]) + "\n\n"
 	if py.Len(state) > py.FloorDiv(limit, 2) {
-		state = rstrip(py.SliceTo(state, py.FloorDiv(limit, 2))) + "\n(the rest of the state was cut here)\n\n"
+		state = py.Rstrip(py.SliceTo(state, py.FloorDiv(limit, 2))) + "\n(the rest of the state was cut here)\n\n"
 	}
 	heading := notes[found[0]:found[1]] + "\n"
 	room := max(0, limit-py.Len(state)-py.Len(heading)-py.Len(Cut))
@@ -131,9 +127,6 @@ func Compact(notes string, limit int) string {
 	}
 	return state + heading + Cut + tail
 }
-
-// rstrip is str.rstrip().
-func rstrip(s string) string { return strings.TrimRightFunc(s, unicode.IsSpace) }
 
 // Cell is journal._cell.
 func Cell(text any) string {
@@ -344,7 +337,7 @@ func Section(result *pyjson.Object, provider string, models string, action strin
 	if draft != "" {
 		lines = append(lines, fence("The planner's draft when it stopped", draft)...)
 	}
-	return rstrip(strings.Join(lines, "\n")) + "\n"
+	return py.Rstrip(strings.Join(lines, "\n")) + "\n"
 }
 
 // Header is journal.header.
@@ -391,7 +384,7 @@ func Trim(text string, limit int /* = FILE_CHARS */) string {
 		dropped++
 	}
 	if dropped > 0 {
-		head = rstrip(head) + fmt.Sprintf("\n\n_%d older run(s) dropped from this file; the ", dropped) +
+		head = py.Rstrip(head) + fmt.Sprintf("\n\n_%d older run(s) dropped from this file; the ", dropped) +
 			"branch's history keeps them._\n"
 	}
 	return strings.Join(append([]string{head}, runs...), "\n")
@@ -411,7 +404,7 @@ func Append(gh gh.Client, number int, text string, sleep func(float64) /* = time
 		old, sha := gh.GetFile(path, Branch)
 		start := Header(number) + "\n"
 		if old != "" {
-			start = rstrip(old) + "\n\n"
+			start = py.Rstrip(old) + "\n\n"
 		}
 		updated := Trim(start+text, FileChars)
 		// `old is None`: the Go client gives ("", "") for (None, None), and a file that is there

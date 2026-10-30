@@ -61,24 +61,3 @@ func TestMatchesPython(t *testing.T) {
 		t.Errorf("seal then open failed: %q", sealed)
 	}
 }
-
-func TestDecodeReplace(t *testing.T) {
-	cases := map[string]string{
-		"ok":                       "ok",
-		"\xe2\x82":                 "\ufffd",
-		"\xe2\x41":                 "\ufffdA",
-		"\xf0\x90\x80\x41":         "\ufffdA",
-		"\xff\xfe":                 "\ufffd\ufffd",
-		"\xed\xa0\x80":             "\ufffd\ufffd\ufffd",
-		"a\xc3\xa9\xc3":            "a\u00e9\ufffd",
-		"\xf4\x90\x80\x80!":        "\ufffd\ufffd\ufffd\ufffd!",
-		"\xe0\x80\x80":             "\ufffd\ufffd\ufffd",
-		"\xf1\x80\x80\xe2\x82\xac": "\ufffd\u20ac",
-	}
-	// Each answer is Python's bytes.decode("utf-8", "replace").
-	for in, want := range cases {
-		if got := decodeReplace([]byte(in)); got != want {
-			t.Errorf("decode(%q) = %q, want %q", in, got, want)
-		}
-	}
-}

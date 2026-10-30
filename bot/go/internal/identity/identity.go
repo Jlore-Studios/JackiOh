@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -135,7 +134,7 @@ func (x *Identity) CommitPrefix() string {
 
 // Home is the bot's home directory, relative to the repository root.
 func Home() string {
-	found := strings.Trim(strings.TrimFunc(os.Getenv("HARNESS_HOME"), pyIsSpace), "/")
+	found := strings.Trim(strings.TrimFunc(os.Getenv("HARNESS_HOME"), py.IsSpace), "/")
 	if found == "" {
 		return ".harness"
 	}
@@ -347,6 +346,3 @@ func iterate(v any) []any {
 type typeError struct{ msg string }
 
 func (e *typeError) Error() string { return e.msg }
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }

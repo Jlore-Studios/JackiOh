@@ -238,9 +238,6 @@ func appendTo(o *pyjson.Object, key string, v any) {
 	o.Set(key, append(o.List(key), v))
 }
 
-// rstrip is str.rstrip().
-func rstrip(s string) string { return strings.TrimRightFunc(s, unicode.IsSpace) }
-
 // first12 is `s[:12]`.
 func first12(s string) string { return py.SliceTo(s, 12) }
 
@@ -436,26 +433,17 @@ func isFile(path string) bool {
 	return err == nil && info.Mode().IsRegular()
 }
 
-// readText is Path.read_text(encoding="utf-8"), with errors="replace" when `replace` (each
-// byte that is not UTF-8 read as U+FFFD). An OSError raises.
+// readText is Path.read_text(encoding="utf-8"), with errors="replace" when `replace` (strict
+// reads the bytes as they are). An OSError raises.
 func readText(path string, replace bool) string {
+	if replace {
+		text, err := py.ReadText(path)
+		herr.Must(err)
+		return text
+	}
 	data, err := os.ReadFile(path)
 	herr.Must(err)
-	if !replace || utf8.Valid(data) {
-		return string(data)
-	}
-	var b strings.Builder
-	for len(data) > 0 {
-		r, size := utf8.DecodeRune(data)
-		if r == utf8.RuneError && size <= 1 {
-			b.WriteRune(utf8.RuneError)
-			size = 1
-		} else {
-			b.WriteRune(r)
-		}
-		data = data[size:]
-	}
-	return b.String()
+	return py.Universal(string(data))
 }
 
 // writeText is Path.write_text(text, encoding="utf-8").

@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -33,11 +32,11 @@ func Cell(text any, limit int /* = CELL_CHARS */) string {
 	if pyjson.Truthy(text) {
 		s = py.Str(text)
 	}
-	flat := strings.ReplaceAll(strings.Join(strings.FieldsFunc(s, pyIsSpace), " "), "|", "\\|")
+	flat := strings.ReplaceAll(strings.Join(strings.FieldsFunc(s, py.IsSpace), " "), "|", "\\|")
 	if py.Len(flat) <= limit {
 		return flat
 	}
-	return strings.TrimRightFunc(py.SliceTo(flat, limit-1), pyIsSpace) + "…"
+	return strings.TrimRightFunc(py.SliceTo(flat, limit-1), py.IsSpace) + "…"
 }
 
 // red is _red: the checks this change turned red (not the ones red on main too, nor skipped).
@@ -335,7 +334,7 @@ func pyFloat(v any) float64 {
 		}
 		return 0
 	case string:
-		f, err := strconv.ParseFloat(strings.ReplaceAll(strings.TrimFunc(x, pyIsSpace), "_", ""), 64)
+		f, err := strconv.ParseFloat(strings.ReplaceAll(strings.TrimFunc(x, py.IsSpace), "_", ""), 64)
 		if err != nil {
 			panic(fmt.Errorf("could not convert string to float: %s", py.Repr(x)))
 		}
@@ -368,6 +367,3 @@ func pySum(xs []float64) float64 {
 	}
 	return total
 }
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
