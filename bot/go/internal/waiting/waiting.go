@@ -206,7 +206,11 @@ func LanesOf(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object) *plan.Lan
 			machine[p.ID] = true
 		}
 	}
-	return &plan.Lanes{Limit: pool.MaxParallel, Held: live.Copy(), Planning: planning,
+	held := map[int]string{}
+	for _, key := range live.Keys() {
+		held[liveNumber(key)] = live.Str(key)
+	}
+	return &plan.Lanes{Limit: pool.MaxParallel, Held: held, Planning: planning,
 		PlanLimit: pool.PlanLanes, MachineLimit: pool.MachineParallel, Machine: machine,
 		Filling: filling}
 }
@@ -399,8 +403,8 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 			if len(pairs) == 0 {
 				break
 			}
-			candidate := pairs[0][0].(*queue.Candidate)
-			assignment := pairs[0][1].(*plan.Assignment)
+			candidate := pairs[0].Candidate
+			assignment := pairs[0].Assignment
 			starts.Set(strconv.Itoa(candidate.Number), assignment)
 			after = after.WithRun(candidate.Number, assignment.Provider.ID, assignment.Action,
 				assignment.FillsIn())
@@ -506,9 +510,9 @@ func Subscriptions(ctx *hctx.Context, s *pyjson.Object, lanes *plan.Lanes, after
 	found := pyjson.New()
 	for _, provider := range pool.Ordered() {
 		var running []int
-		for _, key := range lanes.Held.Keys() {
-			if lanes.Held.Get(key) == provider.ID {
-				running = append(running, liveNumber(key))
+		for number, id := range lanes.Held {
+			if id == provider.ID {
+				running = append(running, number)
 			}
 		}
 		sort.Ints(running)
