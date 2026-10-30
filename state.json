@@ -10308,11 +10308,13 @@
         "by": "`claude` (strong)",
         "sha": "2c40f2cfb3f5c813eef5df60159362d414bda004"
       },
+      "closed_at": "2026-10-30T18:50:15Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-30T15:44:39Z",
       "issue": 2479,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
