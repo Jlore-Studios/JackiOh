@@ -5,7 +5,7 @@
 //! Port of `packages/engine/test/effects-summon.test.ts`.
 
 use jackioh_engine::effects::{
-    damage, fill_board, fill_board_random, recruit, summon, summon_random_from_hand,
+    damage, fill_board, fill_board_random, recruit, recruit_all, summon, summon_random_from_hand,
 };
 use jackioh_engine::testkit::*;
 
@@ -1246,6 +1246,112 @@ mod r2248000_a_flying_unit_summoned_into_a_full_unit_row_stands_in_the_backrow {
 
         let mut full = full_row(&[1, 2, 3, 4, 5]);
         assert!(summon_flier(&mut full, json!({})).is_empty());
+    }
+
+    /// Every `Summoned` event's row and lane, in order.
+    fn placed(events: &[GameEvent]) -> Vec<(Row, i32)> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Summoned { row, lane, .. } => Some((*row, *lane)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r2248000_fill_your_board_with_a_flier_fills_the_unit_row_then_the_backrow_standing() {
+        let mut state = game();
+        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
+        put(
+            &mut state,
+            &field_spell().id,
+            slot(PlayerId::P1, Row::Backrow, 3),
+            json!({}),
+        );
+        lock_zone(&mut state, slot(PlayerId::P1, Row::Backrow, 5));
+        let events = run(
+            &mut state,
+            fill_board(json_as(json!({ "defId": flier().id }))),
+            RunOptions::default(),
+        );
+        assert_eq!(
+            placed(&events),
+            vec![
+                (Row::Units, 1),
+                (Row::Units, 3),
+                (Row::Units, 4),
+                (Row::Units, 5),
+                (Row::Backrow, 1),
+                (Row::Backrow, 2),
+                (Row::Backrow, 4),
+                (Row::Backrow, 5),
+            ],
+            "the unit row first, then every empty backrow zone, a Locked one included"
+        );
+        for lane in [1, 2, 4, 5] {
+            let card = card_at(&state, slot(PlayerId::P1, Row::Backrow, lane))
+                .expect("a flier")
+                .clone();
+            assert!(stands_in_backrow(&state, &card), "lane {lane} stands (R1081000)");
+        }
+
+        // A full unit row: the backrow alone. A token that cannot fly never reaches it.
+        let mut state = full_row(&[]);
+        let events = run(
+            &mut state,
+            fill_board(json_as(json!({ "defId": flier().id }))),
+            RunOptions::default(),
+        );
+        assert_eq!(
+            placed(&events),
+            (1..=5).map(|lane| (Row::Backrow, lane)).collect::<Vec<_>>()
+        );
+        let mut state = game();
+        run(
+            &mut state,
+            fill_board(json_as(json!({ "defId": RUSH_TOKEN }))),
+            RunOptions::default(),
+        );
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Backrow),
+            json!([null, null, null, null, null])
+        );
+    }
+
+    #[test]
+    fn r2248000_recruit_every_permanent_puts_a_flier_in_the_backrow_and_leaves_the_rest() {
+        let mut state = full_row(&[]);
+        set_library(&mut state, PlayerId::P1, &[crier().id, flier().id]);
+        let events = run(&mut state, recruit_all(json_as(json!({}))), RunOptions::default());
+        assert_eq!(summoned_def_ids(&events), vec![flier().id]);
+        assert_eq!(placed(&events), vec![(Row::Backrow, 1)]);
+        assert_eq!(def_ids_of(&state.players[PlayerId::P1].library), vec![crier().id]);
+    }
+
+    #[test]
+    fn r2248000_r1083_r129_a_flier_in_hand_is_summoned_into_the_backrow_of_a_full_unit_row() {
+        let mut state = full_row(&[]);
+        in_hand(&mut state, &flier().id, PlayerId::P1, 1);
+        let events = run(
+            &mut state,
+            summon_random_from_hand(json_as(json!({}))),
+            RunOptions::default(),
+        );
+        assert_eq!(placed(&events), vec![(Row::Backrow, 1)]);
+        assert!(state.players[PlayerId::P1].hand.is_empty());
+
+        // With its backrow full too, nothing lands and no pick is drawn.
+        let mut state = full_row(&[1, 2, 3, 4, 5]);
+        in_hand(&mut state, &flier().id, PlayerId::P1, 1);
+        let cursor = state.rng_cursor;
+        let events = run(
+            &mut state,
+            summon_random_from_hand(json_as(json!({}))),
+            RunOptions::default(),
+        );
+        assert!(events.is_empty());
+        assert_eq!(state.rng_cursor, cursor);
     }
 
     #[test]
