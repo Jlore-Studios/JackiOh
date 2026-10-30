@@ -404,7 +404,7 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         assert_eq!(phrase(Tag::Terminus), Some("Terminus card"));
         assert_eq!(phrase(Tag::WarDoctrine), Some("War Doctrine"));
         // Since the release (#1884) the set's makers are shipped cards: #4 Olivian Expanse and #154
-        // Dice of Doom name the Terminus pool and #137 Firststrike Capability the War Doctrines (Core
+        // Dice of Doom name the Terminus pool and #137 Starfleet Commander the War Doctrines (Core
         // #100 Ceaseless Void, the other Terminus card, names none and is no token).
         assert_eq!(
             shipped(naming("Terminus card")),
