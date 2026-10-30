@@ -67,7 +67,7 @@ export function portraitOrDefault(portrait: string | null | undefined): Portrait
   return isPortraitId(portrait) ? portrait : DEFAULT_PORTRAIT;
 }
 
-/** Launch roster: catalog lookup is by card name, never number; `flavour` guides `card-audio.json5`'s `emote-<id>`. */
+/** Launch roster: catalog lookup is by card name, never number; `flavour` guides `emote-<id>`'s voice and lines (`card-text.yaml`). */
 export const PORTRAITS: Record<PortraitId, { cardName: string; flavour: string }> = {
   vanilla: { cardName: "Mr. Vanilla", flavour: "Flat, polite, unbothered" },
   gary: { cardName: "Gary the Gambler", flavour: "Fast-talking card sharp" },
