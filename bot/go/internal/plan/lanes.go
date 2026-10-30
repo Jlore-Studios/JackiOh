@@ -249,8 +249,8 @@ func OthersOnGithub(ctx *hctx.Context) int {
 			}
 			for _, run := range runs {
 				if eqStr(run.Get("status"), status) &&
-					strings.HasSuffix(orStr(run.Get("path"), ""), "/"+other.Workflow) &&
-					!strings.Contains(orStr(run.Get("display_title"), ""), " on night-vm-") {
+					strings.HasSuffix(py.OrStr(run.Get("path"), ""), "/"+other.Workflow) &&
+					!strings.Contains(py.OrStr(run.Get("display_title"), ""), " on night-vm-") {
 					count++
 				}
 			}
@@ -262,7 +262,7 @@ func OthersOnGithub(ctx *hctx.Context) int {
 // WorkingThreads is every thread labelled `bot:working`, closed ones too: a run goes on after
 // someone closes its issue, and holds its lane until it ends (deliver then drops its work).
 func WorkingThreads(ctx *hctx.Context) []*pyjson.Object {
-	return ctx.GH.ListIssues(cs(config.LabelWorking), "all", 300, "")
+	return ctx.GH.ListIssues(config.LabelWorking, "all", 300, "")
 }
 
 // ReadLanes is the lanes held by runs that are still going. A run that ended without
@@ -280,10 +280,10 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 		Filling: map[int]bool{}}
 	lanes.Shared = OthersOnGithub(ctx)
 	for _, thread := range WorkingThreads(ctx) {
-		number := toInt(thread.Get("number"))
+		number := py.MustInt(thread.Get("number"))
 		record := recordOf(state, strconv.Itoa(number))
 		if RunAlive(ctx, record.Get("run_id")) {
-			lanes.Held[number] = orStr(record.Get("provider"), providers.LegacyProvider)
+			lanes.Held[number] = py.OrStr(record.Get("provider"), providers.LegacyProvider)
 			if eqStr(record.Get("action"), "plan") {
 				lanes.Planning[number] = true
 			}
@@ -302,7 +302,7 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 // FillsIn is: an item's run is in another subscription's lane: it went to its provider's
 // fill-in runners (`Provider.fill_in`), which `claim` records as its `runs_on`.
 func FillsIn(pool *providers.Pool, record *pyjson.Object) bool {
-	provider := pool.Get(orStr(record.Get("provider"), ""))
+	provider := pool.Get(py.OrStr(record.Get("provider"), ""))
 	return provider != nil && provider.FillIn != nil &&
 		eqStr(record.Get("runs_on"), provider.FillIn.RunsOn)
 }

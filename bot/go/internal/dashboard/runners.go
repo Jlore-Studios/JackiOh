@@ -211,7 +211,7 @@ func Explain(ctx *hctx.Context, number int, state *pyjson.Object) {
 	}
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		if pyjson.Truthy(commentID) {
-			ctx.GH.UpdateComment(mustInt(commentID), text)
+			ctx.GH.UpdateComment(py.MustInt(commentID), text)
 		}
 	}); failed {
 		if exc.Status != 404 {
@@ -283,7 +283,7 @@ func ReadRunners(ctx *hctx.Context) *Found {
 		return &Found{Failed: true}
 	}
 	sort.SliceStable(runs, func(i, j int) bool {
-		return strOr(runs[i].Get("created_at")) < strOr(runs[j].Get("created_at"))
+		return py.OrStr(runs[i].Get("created_at"), "") < py.OrStr(runs[j].Get("created_at"), "")
 	})
 	found := &Found{Unread: max(0, len(runs)-RunnerRuns)}
 	for _, run := range upTo(runs, RunnerRuns) {
@@ -312,7 +312,7 @@ func ReadRunners(ctx *hctx.Context) *Found {
 		if a != b {
 			return a < b
 		}
-		return strOr(found.Busy[i][1].Get("started_at")) < strOr(found.Busy[j][1].Get("started_at"))
+		return py.OrStr(found.Busy[i][1].Get("started_at"), "") < py.OrStr(found.Busy[j][1].Get("started_at"), "")
 	})
 	herr.Catch[*herr.GitHubError](func() {
 		var gather []*pyjson.Object
@@ -348,7 +348,7 @@ func heartbeat(ctx *hctx.Context) (*pyjson.Object, string) {
 		return nil, "its heartbeat could not be read"
 	}
 	b, ok := beat.(*pyjson.Object)
-	if !ok || b == nil || parseISO(b.Get("at")).IsZero() {
+	if !ok || b == nil || clock.ParseISOValue(b.Get("at")).IsZero() {
 		return nil, "no heartbeat yet"
 	}
 	return b, ""
@@ -356,12 +356,12 @@ func heartbeat(ctx *hctx.Context) (*pyjson.Object, string) {
 
 // isGather is _is_gather.
 func isGather(run *pyjson.Object) bool {
-	return strings.HasSuffix(strOr(run.Get("path")), "/"+GatherWorkflow)
+	return strings.HasSuffix(py.OrStr(run.Get("path"), ""), "/"+GatherWorkflow)
 }
 
 // Where is _where: where a job runs, from its runner's name and its label, as (order, words).
 func Where(job *pyjson.Object) (int, string) {
-	name := strOr(job.Get("runner_name"))
+	name := py.OrStr(job.Get("runner_name"), "")
 	label := ""
 	if labels := pyjson.List(job.Get("labels")); len(labels) > 0 {
 		label = py.Str(labels[0])
@@ -397,7 +397,7 @@ func Step_(job *pyjson.Object, limit int /* = 45 */) string {
 	steps := pyjson.Objs(job.Get("steps"))
 	for _, s := range steps {
 		if s.Str("status") == "in_progress" {
-			name := strOr(s.Get("name"))
+			name := py.OrStr(s.Get("name"), "")
 			if words, ok := StepWords[name]; ok {
 				name = words
 			}
@@ -421,7 +421,7 @@ func Step_(job *pyjson.Object, limit int /* = 45 */) string {
 func nightItems(state *pyjson.Object) *pyjson.Object {
 	found := pyjson.New()
 	state.Obj("items").Items(func(number string, v any) bool {
-		if record, ok := v.(*pyjson.Object); ok && record.Truthy("run_id") && isDigits(number) {
+		if record, ok := v.(*pyjson.Object); ok && record.Truthy("run_id") && py.IsDecimal(number) {
 			n, _ := strconv.Atoi(number)
 			found.Set(py.Str(record.Get("run_id")), n)
 		}
@@ -437,7 +437,7 @@ func nightItems(state *pyjson.Object) *pyjson.Object {
 // request it checks, or its title.
 func runFor(state *pyjson.Object, items *pyjson.Object, run *pyjson.Object) string {
 	number, known := items.Lookup(py.Str(run.Get("id")))
-	title := strOr(run.Get("display_title"))
+	title := py.OrStr(run.Get("display_title"), "")
 	if !known {
 		items.Items(func(ref string, n any) bool {
 			if strings.HasPrefix(ref, plan.Pending) &&
@@ -469,7 +469,7 @@ func runFor(state *pyjson.Object, items *pyjson.Object, run *pyjson.Object) stri
 // flow is _flow: `ci`: a run's workflow by its file, or by its name when the run does not say its
 // file.
 func flow(run *pyjson.Object) string {
-	path := strOr(run.Get("path"))
+	path := py.OrStr(run.Get("path"), "")
 	name := strings.TrimSuffix(path[strings.LastIndex(path, "/")+1:], ".yml")
 	if name != "" {
 		return name
@@ -487,7 +487,7 @@ var boxMarkup = strings.NewReplacer("`", "", `"`, "'", "<", "‹", ">", "›")
 // Text is _text: text for a box: one line, clipped, with nothing Mermaid or HTML would read as
 // markup.
 func Text(value any, limit int /* = 34 */) string {
-	flat := boxMarkup.Replace(strings.Join(strings.Fields(strOr(value)), " "))
+	flat := boxMarkup.Replace(strings.Join(strings.Fields(py.OrStr(value, "")), " "))
 	if py.Len(flat) <= limit {
 		return flat
 	}
@@ -542,7 +542,7 @@ func Boxes(sid string, title string, boxes []Box) []string {
 
 // fresh is _fresh: the PC's heartbeat while it is recent enough to trust.
 func fresh(ctx *hctx.Context, found *Found) *pyjson.Object {
-	at := parseISO(found.PC.Get("at"))
+	at := clock.ParseISOValue(found.PC.Get("at"))
 	if !at.IsZero() && ctx.Now().Sub(at) <= PCQuiet {
 		return found.PC
 	}
@@ -562,7 +562,8 @@ func pcLoad(beat *pyjson.Object, full bool) string {
 		if !ok {
 			return 0, false
 		}
-		return pyFloat(v)
+		f, err := py.Float(v)
+		return f, err == nil
 	}
 	if !beat.Truthy("memTotalGB") {
 		cpu, ok := num("cpu")
@@ -583,16 +584,16 @@ func pcLoad(beat *pyjson.Object, full bool) string {
 	if !ok {
 		return unreported
 	}
-	cpu, ok := pyFloat(beat.GetOr("cpuAll", cpuOwn))
-	if !ok {
+	cpu, err := py.Float(beat.GetOr("cpuAll", cpuOwn))
+	if err != nil {
 		return unreported
 	}
 	memOwn, ok := beat.Lookup("memGB")
 	if !ok {
 		return unreported
 	}
-	mem, ok := pyFloat(beat.GetOr("memAllGB", memOwn))
-	if !ok || whole == 0 {
+	mem, err := py.Float(beat.GetOr("memAllGB", memOwn))
+	if err != nil || whole == 0 {
 		return unreported
 	}
 	load := fmt.Sprintf("CPU %.0f%%, memory %.0f%%", cpu, 100*mem/whole)
@@ -656,7 +657,7 @@ func pcWork(beat *pyjson.Object, jobs [][2]*pyjson.Object, full bool) string {
 	}
 	slowed := false
 	for _, pair := range jobs {
-		if pcRunner(beat, strOr(pair[1].Get("runner_name"))).Truthy("throttled") {
+		if pcRunner(beat, py.OrStr(pair[1].Get("runner_name"), "")).Truthy("throttled") {
 			slowed = true
 			break
 		}
@@ -680,7 +681,7 @@ func pcWords(ctx *hctx.Context, beat *pyjson.Object, note string, jobs [][2]*pyj
 	if beat == nil {
 		return note
 	}
-	at := parseISO(beat.Get("at"))
+	at := clock.ParseISOValue(beat.Get("at"))
 	if at.IsZero() || ctx.Now().Sub(at) > PCQuiet {
 		return "not heard since " + clockText(ctx, at) + ": off, asleep, or its supervisor stopped"
 	}
@@ -727,21 +728,18 @@ func gatherBox(ctx *hctx.Context, found *Found, beat *pyjson.Object) Box {
 			continue
 		}
 		job := pair[1]
-		since := parseISO(job.Get("started_at"))
+		since := clock.ParseISOValue(job.Get("started_at"))
 		took := "?"
 		if !since.IsZero() {
 			took = clock.HumanDelta(ctx.Now().Sub(since))
 		}
 		lines := []string{title, "🟢 gathering", Text(Step_(job, 45), 34), "for " + took}
-		runner := pcRunner(beat, strOr(job.Get("runner_name")))
+		runner := pcRunner(beat, py.OrStr(job.Get("runner_name"), ""))
 		if runner.Truthy("throttled") {
 			return Box{append(lines, "⏸️ slowed: the PC is busy"), "paused"}
 		}
 		if cpus := runner.Get("cpus"); cpus != nil {
-			n, ok := pyFloat(cpus)
-			if !ok {
-				panic(fmt.Errorf("ValueError: could not convert to float: %s", py.Repr(cpus)))
-			}
+			n := py.MustFloat(cpus)
 			lines = append(lines, fmt.Sprintf("on %.1f CPUs", n))
 		}
 		return Box{lines, "busy"}
@@ -750,7 +748,7 @@ func gatherBox(ctx *hctx.Context, found *Found, beat *pyjson.Object) Box {
 		if !isGather(pair[0]) {
 			continue
 		}
-		since := parseISO(pair[1].Get("created_at"))
+		since := clock.ParseISOValue(pair[1].Get("created_at"))
 		waited := ""
 		if !since.IsZero() {
 			waited = "for " + clock.HumanDelta(ctx.Now().Sub(since))
@@ -764,12 +762,12 @@ func gatherBox(ctx *hctx.Context, found *Found, beat *pyjson.Object) Box {
 		}
 	}
 	sort.SliceStable(done, func(i, j int) bool { // sorted(…, reverse=True): equal ones keep their order
-		return strOr(done[i].Get("created_at")) > strOr(done[j].Get("created_at"))
+		return py.OrStr(done[i].Get("created_at"), "") > py.OrStr(done[j].Get("created_at"), "")
 	})
 	if len(done) == 0 {
 		return Box{[]string{title, "no run yet", "it plays each patch", "as it ships"}, "off"}
 	}
-	last, at := done[0], parseISO(done[0].Get("created_at"))
+	last, at := done[0], clock.ParseISOValue(done[0].Get("created_at"))
 	when := "?"
 	if !at.IsZero() {
 		when = clockText(ctx, at)
@@ -818,7 +816,8 @@ func played(runner *pyjson.Object, kind string) *playedGames {
 		if !ok {
 			return 0, false
 		}
-		return pyInt(v)
+		n, err := py.Int(v)
+		return n, err == nil
 	}
 	games, ok := intAt("games")
 	if !ok {
@@ -830,14 +829,15 @@ func played(runner *pyjson.Object, kind string) *playedGames {
 	}
 	start := 1
 	if v := progress.Get("from"); pyjson.Truthy(v) {
-		if start, ok = pyInt(v); !ok {
+		var err error
+		if start, err = py.Int(v); err != nil {
 			return nil
 		}
 	}
 	if games <= 0 || done < 0 {
 		return nil
 	}
-	return &playedGames{games, min(done, games), start, strOr(progress.Get("patch"))}
+	return &playedGames{games, min(done, games), start, py.OrStr(progress.Get("patch"), "")}
 }
 
 // ProgressChart is PROGRESS_CHART: the progress chart's colours, the usage charts' (`USAGE_CHART`):
@@ -866,7 +866,7 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 	var bars []bar
 	var notes []string
 	if beat == nil {
-		at := parseISO(found.PC.Get("at"))
+		at := clock.ParseISOValue(found.PC.Get("at"))
 		why := found.PCNote
 		if !at.IsZero() {
 			why = "not heard since " + clockText(ctx, at)
@@ -938,7 +938,7 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 				float64(done) / float64(games)})
 			notes = append(notes, "the shard plays games "+py.Thousands(first)+"–"+py.Thousands(last))
 		}
-		notes = append(notes, "heard "+clockText(ctx, parseISO(beat.Get("at"))))
+		notes = append(notes, "heard "+clockText(ctx, clock.ParseISOValue(beat.Get("at"))))
 	}
 	var labels, full, values []string
 	for _, b := range bars {
@@ -1018,7 +1018,7 @@ func boxSlots(ctx *hctx.Context, state *pyjson.Object, items *pyjson.Object, pla
 	}
 
 	working := func(pair [2]*pyjson.Object) []string {
-		since := parseISO(pair[1].Get("started_at"))
+		since := clock.ParseISOValue(pair[1].Get("started_at"))
 		took := "?"
 		if !since.IsZero() {
 			took = clock.HumanDelta(ctx.Now().Sub(since))
@@ -1085,7 +1085,7 @@ func RunnerDiagram(ctx *hctx.Context, state *pyjson.Object, found *Found, boxes 
 	beat := fresh(ctx, found)
 
 	busyBox := func(run, job *pyjson.Object, named bool) Box {
-		since := parseISO(job.Get("started_at"))
+		since := clock.ParseISOValue(job.Get("started_at"))
 		took := "?"
 		if !since.IsZero() {
 			took = clock.HumanDelta(ctx.Now().Sub(since))
@@ -1096,7 +1096,7 @@ func RunnerDiagram(ctx *hctx.Context, state *pyjson.Object, found *Found, boxes 
 			lines = []string{"<b>" + Text(job.Get("runner_name"), 34) + "</b>", "🟢 " + what}
 		}
 		lines = append(lines, Text(runFor(state, items, run), 34), Text(Step_(job, 45), 34), took)
-		if pcRunner(beat, strOr(job.Get("runner_name"))).Truthy("throttled") {
+		if pcRunner(beat, py.OrStr(job.Get("runner_name"), "")).Truthy("throttled") {
 			return Box{append(lines, "⏸️ slowed: the PC is busy"), "paused"}
 		}
 		return Box{lines, "busy"}
@@ -1188,10 +1188,10 @@ func RunnerDiagram(ctx *hctx.Context, state *pyjson.Object, found *Found, boxes 
 		pc = append(pc, busyBox(pair[0], pair[1], true))
 	}
 	for _, pair := range pcJobs {
-		withJobs[strOr(pair[1].Get("runner_name"))] = true
+		withJobs[py.OrStr(pair[1].Get("runner_name"), "")] = true
 	}
 	for _, runner := range pcRunners(beat) {
-		if withJobs[strOr(runner.Get("name"))] {
+		if withJobs[py.OrStr(runner.Get("name"), "")] {
 			continue
 		}
 		name := "<b>" + Text(runner.Get("name"), 34) + "</b>"
@@ -1248,11 +1248,11 @@ func RunnerDiagram(ctx *hctx.Context, state *pyjson.Object, found *Found, boxes 
 		for _, w := range waiting {
 			oldest := w.jobs[0] // min(…): the first of the equal ones
 			for _, pair := range w.jobs[1:] {
-				if strOr(pair[1].Get("created_at")) < strOr(oldest[1].Get("created_at")) {
+				if py.OrStr(pair[1].Get("created_at"), "") < py.OrStr(oldest[1].Get("created_at"), "") {
 					oldest = pair
 				}
 			}
-			since := parseISO(oldest[1].Get("created_at"))
+			since := clock.ParseISOValue(oldest[1].Get("created_at"))
 			count := fmt.Sprintf("⏳ %d jobs", len(w.jobs))
 			if len(w.jobs) == 1 {
 				count = "⏳ 1 job"
@@ -1330,12 +1330,12 @@ func RunnersSection(ctx *hctx.Context, state *pyjson.Object, found *Found /* = N
 	var rows []string
 	for _, pair := range upTo(busy, RunnerRows) {
 		run, job := pair[0], pair[1]
-		since := parseISO(job.Get("started_at"))
+		since := clock.ParseISOValue(job.Get("started_at"))
 		took := "?"
 		if !since.IsZero() {
 			took = clock.HumanDelta(ctx.Now().Sub(since))
 		}
-		link := strOr(job.Get("html_url"))
+		link := py.OrStr(job.Get("html_url"), "")
 		name := "—"
 		if job.Truthy("runner_name") {
 			name = "`" + py.Str(job.Get("runner_name")) + "`"
@@ -1429,8 +1429,8 @@ func refreshRunners(ctx *hctx.Context) string {
 	if !pyjson.Truthy(number) {
 		return "no status issue yet"
 	}
-	issue := ctx.GH.GetIssue(mustInt(number))
-	body := strOr(issue.Get("body"))
+	issue := ctx.GH.GetIssue(py.MustInt(number))
+	body := py.OrStr(issue.Get("body"), "")
 	start, end := strings.Index(body, RunnersStart), strings.Index(body, RunnersEnd)
 	if !pyjson.Equal(issue.Get("state"), "open") || start < 0 || end < start {
 		return "#" + py.Str(number) + " has no runners section to redraw: the next rewrite draws it"
@@ -1448,6 +1448,6 @@ func refreshRunners(ctx *hctx.Context) string {
 	if py.Len(fresh) > MaxBody {
 		return "#" + py.Str(number) + " would pass GitHub's limit: the next rewrite makes room"
 	}
-	ctx.GH.UpdateIssue(mustInt(number), pyjson.New("body", fresh))
+	ctx.GH.UpdateIssue(py.MustInt(number), pyjson.New("body", fresh))
 	return "redrew #" + py.Str(number) + "'s runners"
 }

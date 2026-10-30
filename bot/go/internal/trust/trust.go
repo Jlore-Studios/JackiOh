@@ -18,7 +18,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -32,6 +31,14 @@ var MaxLevel int = 3
 
 // LevelNames = {0: "nobody", 1: "asker", 2: "maintainer", 3: "operator"}
 var LevelNames = map[int]string{0: "nobody", 1: "asker", 2: "maintainer", 3: "operator"}
+
+// LevelName is `LEVEL_NAMES.get(level, level)` as an f-string writes it.
+func LevelName(level int) string {
+	if name, ok := LevelNames[level]; ok {
+		return name
+	}
+	return strconv.Itoa(level)
+}
 
 var (
 	loginPattern = regexp.MustCompile(`^[A-Za-z0-9-]{1,39}$`)
@@ -62,11 +69,11 @@ func TrustParse(text string) *Trust {
 	for i, raw := range py.Splitlines(text) {
 		number := i + 1
 		line, _, _ := strings.Cut(raw, "#")
-		line = pyStrip(line)
+		line = py.Strip(line)
 		if line == "" {
 			continue
 		}
-		parts := strings.FieldsFunc(line, pyIsSpace)
+		parts := strings.FieldsFunc(line, py.IsSpace)
 		login := strings.TrimLeft(parts[0], "@")
 		if !loginPattern.MatchString(login) {
 			problems = append(problems, fmt.Sprintf("line %d: %s is not a GitHub login", number, py.Repr(login)))
@@ -131,7 +138,7 @@ func TrustLoad(path string) *Trust {
 // Level is the level GitHub and the file together grant this account. 0 when either refuses.
 // `userID` nil is None; `association` "" is None.
 func (x *Trust) Level(login string, userID *int /* = None */, association string /* = None */) int {
-	entry, ok := x.Entries[pyLower(strings.TrimLeft(login, "@"))]
+	entry, ok := x.Entries[py.Lower(strings.TrimLeft(login, "@"))]
 	if !ok {
 		return 0
 	}
@@ -168,13 +175,3 @@ func isASCIIDigits(s string) bool {
 	}
 	return true
 }
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
-
-// pyStrip is str.strip().
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }
-
-// pyLower is str.lower(): strings.ToLower but for `İ`, which Python lowers to `i` and a
-// combining dot (so "İvan" is not "ivan").
-func pyLower(s string) string { return strings.ToLower(strings.ReplaceAll(s, "\u0130", "i\u0307")) }

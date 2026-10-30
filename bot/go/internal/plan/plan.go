@@ -90,7 +90,7 @@ var QuietStep = "Wait until the subscription is quiet"
 
 // OTHERS is config.OTHERS, imported by name in the Python and patched there by the tests: a
 // variable so the Go tests can replace it.
-var Others = othersOf(config.Others)
+var Others = config.Others
 
 // RunLink is ` ([run](url))` for a run in Actions, and nothing for one started by hand.
 func RunLink(cfg *config.Config) string {
@@ -126,21 +126,21 @@ func PendingRun(ctx *hctx.Context, runID string) string {
 	ref := py.SliceFrom(runID, py.Len(Pending))
 	var runs []*pyjson.Object
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
-		runs = ctx.GH.ListRuns(cs(config.NightWorkflow), "", 50, false)
+		runs = ctx.GH.ListRuns(config.NightWorkflow, "", 50, false)
 	}); failed {
 		return "unknown"
 	}
 	for _, run := range runs {
-		if strings.HasPrefix(orStr(run.Get("display_title"), ""), "bot-night "+ref+" ") {
-			if inStrs(run.Get("status"), Live...) || AwaitingDelivery(ctx, run) {
+		if strings.HasPrefix(py.OrStr(run.Get("display_title"), ""), "bot-night "+ref+" ") {
+			if py.In(run.Get("status"), Live...) || AwaitingDelivery(ctx, run) {
 				return "alive"
 			}
 			return "dead"
 		}
 	}
 	// int(ref.rsplit("-", 1)[-1]), and the datetime it names.
-	stamp, ok := pyInt(ref[strings.LastIndex(ref, "-")+1:])
-	if !ok || stamp < minTimestamp || stamp > maxTimestamp {
+	stamp, err := py.Int(ref[strings.LastIndex(ref, "-")+1:])
+	if err != nil || stamp < minTimestamp || stamp > maxTimestamp {
 		return "dead"
 	}
 	made := time.Unix(int64(stamp), 0).UTC()
@@ -162,7 +162,7 @@ func RunStatus(ctx *hctx.Context, runID any) string {
 	status := ""
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		run := ctx.GH.GetRun(runID)
-		if inStrs(run.Get("status"), Live...) || AwaitingDelivery(ctx, run) {
+		if py.In(run.Get("status"), Live...) || AwaitingDelivery(ctx, run) {
 			status = "alive"
 		} else {
 			status = "dead"
@@ -196,7 +196,7 @@ var Deliveries = "loop_deliveries"
 
 // LoopRef is the plan reference of a night run the status loop started, or "" for any other run.
 func LoopRef(run *pyjson.Object) string {
-	if found := LoopTitle.FindStringSubmatch(orStr(run.Get("display_title"), "")); found != nil {
+	if found := LoopTitle.FindStringSubmatch(py.OrStr(run.Get("display_title"), "")); found != nil {
 		return found[1]
 	}
 	return ""
@@ -206,10 +206,10 @@ func LoopRef(run *pyjson.Object) string {
 // deliver it: the loop started it, it ended less than `DELIVER_WITHIN` ago, and the loop has
 // neither delivered it nor given up on it (`DELIVERIES`).
 func AwaitingDelivery(ctx *hctx.Context, run *pyjson.Object) bool {
-	if inStrs(run.Get("status"), Live...) || LoopRef(run) == "" {
+	if py.In(run.Get("status"), Live...) || LoopRef(run) == "" {
 		return false
 	}
-	ended := parseISO(run.Get("updated_at"))
+	ended := clock.ParseISOValue(run.Get("updated_at"))
 	if ended.IsZero() || ctx.Now().Sub(ended) >= DeliverWithin {
 		return false
 	}
@@ -218,7 +218,7 @@ func AwaitingDelivery(ctx *hctx.Context, run *pyjson.Object) bool {
 	if !isDict || entry == nil {
 		return true
 	}
-	return !(entry.Truthy("done") || toInt(orValue(entry.Get("tries"), 0)) >= DeliverTries)
+	return !(entry.Truthy("done") || py.MustInt(py.Or(entry.Get("tries"), 0)) >= DeliverTries)
 }
 
 // RunAlive is true unless the run is known to have ended.
@@ -246,12 +246,12 @@ func LoopAlive(ctx *hctx.Context) bool {
 		runs := ctx.GH.ListRuns(config.StatusWorkflow, "in_progress", 5, false)
 		going = slices.ContainsFunc(runs, func(run *pyjson.Object) bool {
 			return eqStr(run.Get("status"), "in_progress") &&
-				strings.HasSuffix(orStr(run.Get("path"), ""), "/"+config.StatusWorkflow)
+				strings.HasSuffix(py.OrStr(run.Get("path"), ""), "/"+config.StatusWorkflow)
 		})
 		if !going {
 			return
 		}
-		tick = parseISO(ctx.Store.Load().Get("loop_tick"))
+		tick = clock.ParseISOValue(ctx.Store.Load().Get("loop_tick"))
 	}); failed || !going {
 		return false
 	}
@@ -278,7 +278,7 @@ func takePlanningLock(ctx *hctx.Context, owner string) bool {
 		held := state.Obj("planning")
 		var since time.Time
 		if held.Truthy("at") {
-			since = parseISO(held.Get("at"))
+			since = clock.ParseISOValue(held.Get("at"))
 		}
 		holder := held.Get("owner")
 		if holder != nil && !pyjson.Equal(holder, owner) && !since.IsZero() && now.Sub(since) < LockTtl {
@@ -314,10 +314,10 @@ func VaultPath(providerID string) string {
 func Stops(ctx *hctx.Context, state *pyjson.Object, force bool) string {
 	cfg := ctx.Cfg
 	if ctx.RepoHalted() {
-		return fmt.Sprintf("halted by %s on main", cs(config.HaltPath))
+		return fmt.Sprintf("halted by %s on main", config.HaltPath)
 	}
 	if state.Truthy("halted") {
-		return fmt.Sprintf("halted by %s halt", cs(config.Slash))
+		return fmt.Sprintf("halted by %s halt", config.Slash)
 	}
 	if cfg.Secrets.Known && !slices.ContainsFunc(cfg.Pool.Ordered(), func(p *providers.Provider) bool {
 		if !p.Enabled {

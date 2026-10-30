@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
@@ -105,7 +106,7 @@ func TestRunIsSubprocessRun(t *testing.T) {
 	env := map[string]string{"PATH": os.Getenv("PATH"), "ONLY": "this"}
 	p := run([]string{"bash", "-c", `printf 'a\r\nb\rc'; printf 'err' >&2; echo "$ONLY ${HOME:-nohome}" > f; exit 3`},
 		dir, env, 30*time.Second)
-	if p.timedOut || p.code != 3 || translateNewlines(decode(p.stdout)) != "a\nb\nc" || string(p.stderr) != "err" {
+	if p.timedOut || p.code != 3 || py.Universal(py.DecodeReplace(p.stdout)) != "a\nb\nc" || string(p.stderr) != "err" {
 		t.Errorf("run: %+v", p)
 	}
 	if got, _ := os.ReadFile(dir + "/f"); string(got) != "this nohome\n" {
@@ -126,30 +127,5 @@ func TestRunIsSubprocessRun(t *testing.T) {
 	p = run([]string{"bash", "-c", "sleep 30 & echo started"}, dir, env, 2*time.Second)
 	if !p.timedOut || !strings.HasPrefix(string(p.stdout), "started") || time.Since(started) > 10*time.Second {
 		t.Errorf("held pipe: %+v after %s", p, time.Since(started))
-	}
-}
-
-func TestDecodeReplacesAsPython(t *testing.T) {
-	// bytes.decode("utf-8", "replace"), from Python.
-	cases := []struct {
-		in   []byte
-		want string
-	}{
-		{[]byte{97, 226, 130, 98}, "a�b"},
-		{[]byte{255, 254}, "��"},
-		{[]byte{195, 40}, "�("},
-		{[]byte{240, 159, 152}, "�"},
-		{[]byte{237, 160, 128}, "���"},
-		{[]byte{224, 128, 175}, "���"},
-		{[]byte{244, 144, 128, 128}, "����"},
-		{[]byte{111, 107, 32, 226, 156, 147}, "ok ✓"},
-		{[]byte{192, 175}, "��"},
-		{[]byte{240, 159, 152, 128, 120}, "\U0001F600x"},
-		{[]byte{226, 130}, "�"},
-	}
-	for _, c := range cases {
-		if got := decode(c.in); got != c.want {
-			t.Errorf("decode(%v) = %q, want %q", c.in, got, c.want)
-		}
 	}
 }

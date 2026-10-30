@@ -42,6 +42,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -49,6 +50,7 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/commands"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/controller"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
@@ -72,7 +74,7 @@ var Settle = 10 * time.Minute
 var Edited = 5 * time.Second
 
 // QueueLabels is QUEUE_LABELS.
-var QueueLabels = []string{labelBuild(), labelRevise(), labelWorking(), labelBlocked()}
+var QueueLabels = []string{config.LabelBuild, config.LabelRevise, config.LabelWorking, config.LabelBlocked}
 
 // LiveRun is LIVE_RUN: a `bot-night` run in one of these states is going, or about to.
 var LiveRun = []string{"queued", "in_progress", "waiting", "pending", "requested"}
@@ -89,7 +91,7 @@ type part struct {
 // Sweep is sweep.
 func Sweep(ctx *hctx.Context) []string {
 	st := ctx.Store.Load()
-	first := parseISO(st.Obj("last_sweep").Get("since"))
+	first := clock.ParseISOValue(st.Obj("last_sweep").Get("since"))
 	now := ctx.Now()
 	if first.IsZero() {
 		ctx.Store.Update(func(s *pyjson.Object) any {
@@ -115,7 +117,7 @@ func Sweep(ctx *hctx.Context) []string {
 		var got []string
 		if err := herr.Try(func() { got = p.run(ctx, since) }); err != nil {
 			// one part failing never stops the rest
-			notes = append(notes, fmt.Sprintf("%s: could not finish (%s: %s)", p.name, typeName(err),
+			notes = append(notes, fmt.Sprintf("%s: could not finish (%s: %s)", p.name, herr.Name(err),
 				py.SliceTo(err.Error(), 200)))
 			continue
 		}
@@ -143,14 +145,14 @@ func Sweep(ctx *hctx.Context) []string {
 // label a person deleted comes back with the next change to the list, or with
 // `harness setup`.
 func Labels(ctx *hctx.Context, since time.Time) []string {
-	specs := labels()
-	sorted := append([]labelSpec(nil), specs...)
-	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].name < sorted[j].name })
+	specs := config.LabelSpecs()
+	sorted := append([]config.LabelSpec(nil), specs...)
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
 	items := make([]any, len(sorted))
 	for i, l := range sorted {
-		items[i] = []any{l.name, []any{l.color, l.description}}
+		items[i] = []any{l.Name, []any{l.Color, l.Description}}
 	}
-	sum := sha256.Sum256([]byte(pyjson.Dumps([]any{items, pyjson.ListOf(retiredLabels())})))
+	sum := sha256.Sum256([]byte(pyjson.Dumps([]any{items, pyjson.ListOf(config.RetiredLabels)})))
 	want := hex.EncodeToString(sum[:])[:16]
 	if pyjson.Equal(ctx.Store.Load().Get("labels_synced"), want) {
 		return []string{}
@@ -158,15 +160,15 @@ func Labels(ctx *hctx.Context, since time.Time) []string {
 	notes, refused := []string{}, false
 	for _, l := range specs {
 		var created bool
-		if exc, ok := herr.Catch[*herr.GitHubError](func() { created = ctx.GH.EnsureLabel(l.name, l.color, l.description) }); ok {
+		if exc, ok := herr.Catch[*herr.GitHubError](func() { created = ctx.GH.EnsureLabel(l.Name, l.Color, l.Description) }); ok {
 			// one GitHub refuses never stops the rest
 			refused = true
-			notes = append(notes, fmt.Sprintf("could not create the label `%s`: %s", l.name, py.SliceTo(exc.Error(), 200)))
+			notes = append(notes, fmt.Sprintf("could not create the label `%s`: %s", l.Name, py.SliceTo(exc.Error(), 200)))
 		} else if created {
-			notes = append(notes, fmt.Sprintf("created the label `%s`", l.name))
+			notes = append(notes, fmt.Sprintf("created the label `%s`", l.Name))
 		}
 	}
-	for _, name := range retiredLabels() {
+	for _, name := range config.RetiredLabels {
 		var deleted bool
 		if exc, ok := herr.Catch[*herr.GitHubError](func() { deleted = ctx.GH.DeleteLabel(name) }); ok {
 			refused = true
@@ -196,15 +198,15 @@ func GreenHeads(ctx *hctx.Context, since time.Time) []string {
 	items := ctx.Store.Load().Obj("items")
 
 	act := func(pull *pyjson.Object) string {
-		if !queue.LabelNames(pull)[labelPR()] {
+		if !queue.LabelNames(pull)[config.LabelPR] {
 			return ""
 		}
-		number := intOf(key(pull, "number"))
+		number := py.MustInt(py.Item(pull, "number"))
 		record := items.Obj(strconv.Itoa(number))
 		if _, ok := record.Get("cleared").(*pyjson.Object); !ok {
 			return ""
 		}
-		if stepup.ClearIfGreen(ctx, number, orStr(pull.Obj("head").Get("sha"))) {
+		if stepup.ClearIfGreen(ctx, number, py.OrStr(pull.Obj("head").Get("sha"), "")) {
 			return fmt.Sprintf("#%d: approved and green, so its strikes are cleared", number)
 		}
 		return ""
@@ -234,12 +236,12 @@ func issueTypes(ctx *hctx.Context, since time.Time) []string {
 		var done []string
 		if err := herr.Try(func() {
 			p := &triage.Plan{IssueType: wanted}
-			done = triage.Apply(ctx.GH, intOf(key(issue, "number")), p)
+			done = triage.Apply(ctx.GH, py.MustInt(py.Item(issue, "number")), p)
 		}); err != nil {
 			// one issue never stops the rest
-			done = []string{fmt.Sprintf("could not type it (%s)", typeName(err))}
+			done = []string{fmt.Sprintf("could not type it (%s)", herr.Name(err))}
 		}
-		notes = append(notes, fmt.Sprintf("#%s: %s", py.Str(key(issue, "number")), strings.Join(done, "; ")))
+		notes = append(notes, fmt.Sprintf("#%s: %s", py.Str(py.Item(issue, "number")), strings.Join(done, "; ")))
 	}
 	return notes
 }
@@ -268,15 +270,15 @@ func difficultyLabels(ctx *hctx.Context, since time.Time) []string {
 		if queue.LabelledDifficulty(names) != "" || queue.IsHuman(names) {
 			return ""
 		}
-		number := intOf(key(thread, "number"))
+		number := py.MustInt(py.Item(thread, "number"))
 		if thread.Has("head") {
-			if !names[labelPR()] {
+			if !names[config.LabelPR] {
 				return ""
 			}
-			ref := orStr(thread.Obj("head").Get("ref"))
+			ref := py.OrStr(thread.Obj("head").Get("ref"), "")
 			wanted := "medium"
-			if strings.HasPrefix(ref, stem) && isDigit(py.SliceFrom(ref, py.Len(stem))) {
-				issue := ctx.GH.GetIssue(intOf(py.SliceFrom(ref, py.Len(stem))))
+			if strings.HasPrefix(ref, stem) && py.IsDecimal(py.SliceFrom(ref, py.Len(stem))) {
+				issue := ctx.GH.GetIssue(py.MustInt(py.SliceFrom(ref, py.Len(stem))))
 				if got := queue.LabelledDifficulty(queue.LabelNames(issue)); got != "" {
 					wanted = got
 				}
@@ -284,7 +286,7 @@ func difficultyLabels(ctx *hctx.Context, since time.Time) []string {
 			ctx.GH.AddLabels(number, []string{"difficulty:" + wanted})
 			return fmt.Sprintf("#%d: no difficulty, so `difficulty:%s`", number, wanted)
 		}
-		if !names[labelPlanned()] {
+		if !names[config.LabelPlanned] {
 			return ""
 		}
 		ctx.GH.AddLabels(number, []string{"difficulty:medium"})
@@ -306,7 +308,7 @@ func each(items []*pyjson.Object, act func(*pyjson.Object) string, notes *[]stri
 	for _, entry := range items {
 		var note string
 		if err := herr.Try(func() { note = act(entry) }); err != nil {
-			note = fmt.Sprintf("skipped one (%s: %s)", typeName(err), py.SliceTo(err.Error(), 200))
+			note = fmt.Sprintf("skipped one (%s: %s)", herr.Name(err), py.SliceTo(err.Error(), 200))
 		}
 		if note != "" {
 			*notes = append(*notes, note)
@@ -316,17 +318,17 @@ func each(items []*pyjson.Object, act func(*pyjson.Object) string, notes *[]stri
 
 // number is _number: the issue or pull request number at the end of an API URL, or None.
 func number(url any) *int {
-	match := numberRe.FindStringSubmatch(orStr(url))
+	match := numberRe.FindStringSubmatch(py.OrStr(url, ""))
 	if match == nil {
 		return nil
 	}
-	n := intOf(match[1])
+	n := py.MustInt(match[1])
 	return &n
 }
 
 // settled is _settled.
 func settled(ctx *hctx.Context, stamp any, since time.Time) bool {
-	at := parseISO(stamp)
+	at := clock.ParseISOValue(stamp)
 	return !at.IsZero() && !at.Before(since) && !at.After(ctx.Now().Add(-Settle))
 }
 
@@ -335,7 +337,7 @@ func trusted(ctx *hctx.Context, entry *pyjson.Object) bool {
 	user := entry.Obj("user")
 	var id *int
 	if v := user.Get("id"); v != nil {
-		n := intOf(v)
+		n := py.MustInt(v)
 		id = &n
 	}
 	assoc := ""
@@ -363,8 +365,8 @@ func comments(ctx *hctx.Context, since time.Time) []string {
 	for _, list := range lists {
 		reviewComment := list.reviewComment
 		act := func(comment *pyjson.Object) string {
-			created := parseISO(comment.Get("created_at"))
-			updated := parseISO(comment.Get("updated_at"))
+			created := clock.ParseISOValue(comment.Get("created_at"))
+			updated := clock.ParseISOValue(comment.Get("updated_at"))
 			if updated.IsZero() {
 				updated = created
 			}
@@ -375,7 +377,7 @@ func comments(ctx *hctx.Context, since time.Time) []string {
 				return ""
 			}
 			login := strings.ToLower(py.Str(comment.Obj("user").GetOr("login", "")))
-			body := orStr(comment.Get("body"))
+			body := py.OrStr(comment.Get("body"), "")
 			if login == strings.ToLower(ctx.Cfg.BotLogin) || login == events.ActionsBot || events.IsOwn(body) {
 				return ""
 			}
@@ -391,8 +393,8 @@ func comments(ctx *hctx.Context, since time.Time) []string {
 			if reviewComment {
 				prefix = "rc"
 			}
-			claimKey := prefix + ":" + py.Str(key(comment, "id"))
-			if events.Claimed(ctx, claimKey) || events.Answered_(ctx, intOf(key(comment, "id")), reviewComment) {
+			claimKey := prefix + ":" + py.Str(py.Item(comment, "id"))
+			if events.Claimed(ctx, claimKey) || events.Answered_(ctx, py.MustInt(py.Item(comment, "id")), reviewComment) {
 				return ""
 			}
 			var payload *pyjson.Object
@@ -432,15 +434,15 @@ func reviews(ctx *hctx.Context, since time.Time) []string {
 	}
 
 	act := func(thread *pyjson.Object) string {
-		n := intOf(key(thread, "number"))
-		isBotPR := queue.LabelNames(thread)[labelPR()]
+		n := py.MustInt(py.Item(thread, "number"))
+		isBotPR := queue.LabelNames(thread)[config.LabelPR]
 		var answered []string
 		for _, review := range ctx.GH.ListReviews(n) {
 			if !settled(ctx, review.Get("submitted_at"), since) || !trusted(ctx, review) {
 				continue
 			}
 			changes := isBotPR && strings.ToUpper(py.Str(review.GetOr("state", ""))) == "CHANGES_REQUESTED"
-			if !(changes || asks(ctx, orStr(review.Get("body")))) {
+			if !(changes || asks(ctx, py.OrStr(review.Get("body"), ""))) {
 				continue
 			}
 			if events.Claimed(ctx, "r:"+py.Str(review.Get("id"))) {
@@ -468,9 +470,9 @@ func assignments(ctx *hctx.Context, since time.Time) []string {
 	notes := []string{}
 
 	act := func(thread *pyjson.Object) string {
-		n := intOf(key(thread, "number"))
+		n := py.MustInt(py.Item(thread, "number"))
 		record := st.Obj("items").Obj(strconv.Itoa(n))
-		if intersects(queue.LabelNames(thread), append(append([]string(nil), QueueLabels...), labelPROpen())) ||
+		if intersects(queue.LabelNames(thread), append(append([]string(nil), QueueLabels...), config.LabelPROpen)) ||
 			record.Truthy("queued_at") || record.Truthy("stop_requested") {
 			return ""
 		}
@@ -507,14 +509,14 @@ func failedCI(ctx *hctx.Context, since time.Time) []string {
 	st := ctx.Store.Load()
 	notes := []string{}
 	var pulls []*pyjson.Object
-	for _, t := range ctx.GH.ListIssues(labelPR(), "open", 300, "") {
+	for _, t := range ctx.GH.ListIssues(config.LabelPR, "open", 300, "") {
 		if t.Has("pull_request") {
 			pulls = append(pulls, t)
 		}
 	}
 
 	act := func(thread *pyjson.Object) string {
-		n := intOf(key(thread, "number"))
+		n := py.MustInt(py.Item(thread, "number"))
 		if intersects(queue.LabelNames(thread), QueueLabels) || st.Obj("items").Obj(strconv.Itoa(n)).Truthy("stop_requested") {
 			return ""
 		}
@@ -525,7 +527,7 @@ func failedCI(ctx *hctx.Context, since time.Time) []string {
 		workflows := events.CIWorkflows(ctx)
 		var runs []*pyjson.Object
 		for _, r := range ctx.GH.RunsForSHA(py.Str(sha), 30) {
-			if containsAny(workflows, r.Get("name")) {
+			if py.In(r.Get("name"), workflows...) {
 				runs = append(runs, r)
 			}
 		}
@@ -535,7 +537,7 @@ func failedCI(ctx *hctx.Context, since time.Time) []string {
 			if !pyjson.Truthy(stamp) {
 				stamp = r.Get("created_at")
 			}
-			if r.Get("status") == "completed" && containsAny(events.CIFailed, r.Get("conclusion")) &&
+			if r.Get("status") == "completed" && py.In(r.Get("conclusion"), events.CIFailed...) &&
 				settled(ctx, stamp, since.Add(-Lookback)) {
 				failed = append(failed, r)
 			}
@@ -549,7 +551,7 @@ func failedCI(ctx *hctx.Context, since time.Time) []string {
 			if !pyjson.Truthy(attempt) {
 				attempt = 1
 			}
-			return py.Str(r.GetOr("created_at", "")), intOf(attempt)
+			return py.Str(r.GetOr("created_at", "")), py.MustInt(attempt)
 		}
 		latest := failed[0]
 		bestAt, bestTry := rank(latest)
@@ -583,7 +585,7 @@ func failedCI(ctx *hctx.Context, since time.Time) []string {
 // one pull request into `main`. One stopped (`stop`) or blocked is left alone.
 func Trees(ctx *hctx.Context, since time.Time) []string {
 	var splits []string
-	for _, mode := range modes() {
+	for _, mode := range config.Modes {
 		if strings.HasPrefix(mode, "split") || mode == "fullsend" {
 			splits = append(splits, mode)
 		}
@@ -595,9 +597,9 @@ func Trees(ctx *hctx.Context, since time.Time) []string {
 	notes := []string{}
 
 	act := func(thread *pyjson.Object) string {
-		n := intOf(key(thread, "number"))
+		n := py.MustInt(py.Item(thread, "number"))
 		names := queue.LabelNames(thread)
-		if thread.Has("pull_request") || intersects(names, append(append([]string(nil), QueueLabels...), labelPROpen())) ||
+		if thread.Has("pull_request") || intersects(names, append(append([]string(nil), QueueLabels...), config.LabelPROpen)) ||
 			queue.IsHuman(names) {
 			return ""
 		}
@@ -615,8 +617,8 @@ func Trees(ctx *hctx.Context, since time.Time) []string {
 			}
 		}
 		tree, _ := record.Get("tree").(*pyjson.Object)
-		mode := orStr(tree.Get("mode"))
-		if !contains(splits, mode) {
+		mode := py.OrStr(tree.Get("mode"), "")
+		if !slices.Contains(splits, mode) {
 			mode = splits[0]
 		}
 		answer := queueBuild(ctx, n, ctx.Cfg.BotLogin, &mode)
@@ -637,7 +639,7 @@ func Trees(ctx *hctx.Context, since time.Time) []string {
 		return fmt.Sprintf("#%d: its sub-issues have all closed; queued its close-out", n)
 	}
 
-	each(ctx.GH.ListIssues(labelTree(), "open", 300, ""), act, &notes)
+	each(ctx.GH.ListIssues(config.LabelTree, "open", 300, ""), act, &notes)
 	return notes
 }
 
@@ -677,8 +679,8 @@ func nightRun(ctx *hctx.Context, since time.Time) []string {
 		}
 	}
 	var live []*pyjson.Object
-	for _, r := range ctx.GH.ListRuns(nightWorkflow(), "", 20, false) {
-		if containsAny(LiveRun, r.Get("status")) {
+	for _, r := range ctx.GH.ListRuns(config.NightWorkflow, "", 20, false) {
+		if py.In(r.Get("status"), LiveRun...) {
 			live = append(live, r)
 		}
 	}

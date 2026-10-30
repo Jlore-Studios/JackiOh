@@ -240,7 +240,7 @@ func (x *CodexCli) Run(request *RunRequest) *RunResult {
 		}
 	}
 	x.keep(launch, transcript)
-	text := strip(Read(last))
+	text := py.Strip(Read(last))
 	if text == "" && len(messages) > 0 {
 		text = messages[len(messages)-1]
 	}
@@ -337,18 +337,19 @@ func CodexUsage(codexHome string, since float64) *pyjson.Object {
 	usage := pyjson.New("status", "allowed")
 	for _, key := range []string{"primary", "secondary"} {
 		window, ok := newest.Get(key).(*pyjson.Object)
-		if !ok || window == nil || !isNumber(window.Get("used_percent")) {
+		used, isNumber := py.Number(window.Get("used_percent"))
+		if !ok || window == nil || !isNumber {
 			continue
 		}
 		minutes, hasMinutes := window.Lookup("window_minutes")
 		name := "seven_day"
-		if isNumber(minutes) && toFloat(minutes) <= 360 {
+		if n, isNumber := py.Number(minutes); isNumber && n <= 360 {
 			name = "five_hour"
 		}
 		if key == "primary" && (!hasMinutes || minutes == nil) {
 			name = "five_hour"
 		}
-		usage.Set(name, pyjson.New("utilization", toFloat(window.Get("used_percent"))/100.0,
+		usage.Set(name, pyjson.New("utilization", used/100.0,
 			"resets_at", isoOrNone(window.Get("resets_at"))))
 	}
 	if usage.Len() > 1 {
@@ -383,12 +384,12 @@ func rglob(root, pattern string) []string {
 }
 
 // isoUTC is _ISO_UTC (Python's `$` also matches before a final line feed).
-var isoUTC = regexp.MustCompile(`^` + pyDigit + `{4}-` + pyDigit + `{2}-` + pyDigit + `{2}T` + pyDigit +
-	`{2}:` + pyDigit + `{2}(?::` + pyDigit + `{2}(?:\.` + pyDigit + `+)?)?Z\n?$`)
+var isoUTC = regexp.MustCompile(`^` + py.DigitClass + `{4}-` + py.DigitClass + `{2}-` + py.DigitClass + `{2}T` + py.DigitClass +
+	`{2}:` + py.DigitClass + `{2}(?::` + py.DigitClass + `{2}(?:\.` + py.DigitClass + `+)?)?Z\n?$`)
 
 var (
-	agyCells = regexp.MustCompile(`\t+|[` + pySpace + `]{2,}`)
-	agyShare = regexp.MustCompile(`^(` + pyDigit + `+(?:\.` + pyDigit + `+)?)%$`)
+	agyCells = regexp.MustCompile(`\t+|[` + py.SpaceClass + `]{2,}`)
+	agyShare = regexp.MustCompile(`^(` + py.DigitClass + `+(?:\.` + py.DigitClass + `+)?)%$`)
 )
 
 // ParseAgyUsage is agy's `/usage` table as a reading for `model`'s pool. Each row is a pool, a
@@ -400,9 +401,9 @@ func ParseAgyUsage(text string, model string) *pyjson.Object {
 	usage := pyjson.New()
 	for _, line := range py.Splitlines(text) {
 		var cells []string
-		for _, cell := range agyCells.Split(strip(line), -1) {
-			if strip(cell) != "" {
-				cells = append(cells, strip(cell))
+		for _, cell := range agyCells.Split(py.Strip(line), -1) {
+			if py.Strip(cell) != "" {
+				cells = append(cells, py.Strip(cell))
 			}
 		}
 		if len(cells) < 3 || strings.HasPrefix(strings.ToLower(cells[0]), "gemini") != gemini {
@@ -419,7 +420,7 @@ func ParseAgyUsage(text string, model string) *pyjson.Object {
 		if share == nil || window == "" {
 			continue
 		}
-		fraction := atof(share[1]) / 100.0
+		fraction := py.MustFloat(share[1]) / 100.0
 		used := 1.0 - fraction
 		if strings.Contains(limit, "used") {
 			used = fraction
@@ -518,7 +519,7 @@ func (x *AgyCli) Run(request *RunRequest) *RunResult {
 	x.keep(launch, transcript)
 	text := ""
 	if result.Truthy("response") {
-		text = strip(py.Str(result.Get("response")))
+		text = py.Strip(py.Str(result.Get("response")))
 	}
 	var numTurns *int
 	if n, ok := intValue(result.Get("num_turns")); ok {
@@ -610,7 +611,7 @@ func dictKey(v any) string {
 	case string:
 		return "s" + x
 	case bool, int, float64:
-		f := toFloat(x)
+		f, _ := py.Number(x)
 		if f == float64(int64(f)) {
 			return "n" + strconv.FormatInt(int64(f), 10)
 		}

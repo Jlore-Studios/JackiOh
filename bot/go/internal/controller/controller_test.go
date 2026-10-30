@@ -95,7 +95,7 @@ func TestAnUploadUnzipsAsZipfileDid(t *testing.T) {
 	if !ok || exc.Msg != "Empty filename." {
 		t.Errorf("an empty name: %+v", exc)
 	}
-	if err := zipError(zip.ErrFormat, ""); pyTypeName(err) != "BadZipFile" || err.Error() != "File is not a zip file" {
+	if err := zipError(zip.ErrFormat, ""); herr.Name(err) != "BadZipFile" || err.Error() != "File is not a zip file" {
 		t.Errorf("not a zip: %v", err)
 	}
 }
@@ -105,13 +105,13 @@ func TestADeliverysErrorIsNotedByItsPythonName(t *testing.T) {
 	for _, c := range []struct {
 		err        error
 		name, text string
-	}{{&ValueError{"ValueError", "no plan x on bot-state"}, "ValueError", "no plan x on bot-state"},
+	}{{&ValueError{Type: "ValueError", Msg: "no plan x on bot-state"}, "ValueError", "no plan x on bot-state"},
 		{&herr.GitHubError{Msg: "no", Status: 500}, "GitHubError", "no"},
 		{&herr.GitError{Msg: "clone failed"}, "GitError", "clone failed"},
 		{denied, "PermissionError", "[Errno 13] Permission denied: '/x'"},
-		{herr.Try(func() { panic("boom") }), "RuntimeError", "boom"}} {
-		if pyTypeName(c.err) != c.name || pyStr(c.err) != c.text {
-			t.Errorf("%T: %s: %s", c.err, pyTypeName(c.err), pyStr(c.err))
+		{herr.Try(func() { panic("boom") }), "Exception", "boom"}} {
+		if herr.Name(c.err) != c.name || herr.Str(c.err) != c.text {
+			t.Errorf("%T: %s: %s", c.err, herr.Name(c.err), herr.Str(c.err))
 		}
 	}
 }

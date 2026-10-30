@@ -30,7 +30,7 @@ func (x *Worker) saveWip(reason string) {
 		if x.Wt.MergeInProgress() && len(x.unresolvedMarkers()) > 0 {
 			run(x.Wt, false, "merge", "--abort")
 		}
-		x.commit(py.Str(config.CommitPrefix) + ": work in progress (" + reason + ")")
+		x.commit(config.CommitPrefix + ": work in progress (" + reason + ")")
 	})
 }
 
@@ -67,7 +67,7 @@ func (x *Worker) finish() {
 		}
 		x.recordHead()
 	}); err != nil {
-		x.Result.Set("bundle_error", py.SliceTo(redact.Redact(excStr(err), nil), 500))
+		x.Result.Set("bundle_error", py.SliceTo(redact.Redact(herr.Str(err), nil), 500))
 	}
 }
 
@@ -104,7 +104,7 @@ func (x *Worker) suggest() {
 	if !pyjson.Truthy(count) {
 		count = 0
 	}
-	n := pyInt(count)
+	n := py.MustInt(count)
 	if n <= 0 {
 		x.Result.Set("status", "nothing")
 		x.Result.Set("reason", "the suggestion cap is full")
@@ -125,7 +125,7 @@ func (x *Worker) suggest() {
 	prompt := x.Render("suggest", pyjson.New("repo", x.Cfg.Repo, "count", n,
 		"existing", existing, "declined", declined,
 		"priorities", ClassPriorities(x.Cfg.SuggestionPriorities)))
-	result := x.Call("suggest", prompt, cwdOf(wt), true,
+	result := x.Call("suggest", prompt, wt.Cwd, true,
 		"propose improvements while a lane has nothing to start", false)
 	found := verdicts.Suggestions(result.Text, n)
 	suggestions := []any{}
@@ -160,29 +160,10 @@ func ClassPriorities(priorities map[string]string) string {
 	return strings.Join(lines, "\n")
 }
 
-// priorityTier is `PRIORITY_TIERS.get(label, NO_PRIORITY)`. queue.PriorityTiers is untyped
-// until the queue package is ported; till then this reads queue.py's own table.
+// priorityTier is `PRIORITY_TIERS.get(label, NO_PRIORITY)`.
 func priorityTier(label string) int {
-	switch tiers := any(queue.PriorityTiers).(type) {
-	case map[string]int:
-		if n, ok := tiers[label]; ok {
-			return n
-		}
-		return queue.NoPriority
-	case *pyjson.Object:
-		if v, ok := tiers.Lookup(label); ok {
-			n, _ := pyjson.AsInt(v)
-			return n
-		}
-		return queue.NoPriority
-	}
-	switch label {
-	case config.LabelPriorityHigh:
-		return 0
-	case config.LabelPriorityMedium:
-		return 1
-	case config.LabelPriorityLow:
-		return 3
+	if n, ok := queue.PriorityTiers[label]; ok {
+		return n
 	}
 	return queue.NoPriority
 }

@@ -30,26 +30,19 @@ package providers
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
 // ProvidersPath is PROVIDERS_PATH: the running bot's subscriptions (`identity.py`):
 // `.harness/providers.json` for the night bot, `.squishy/providers.json` for Squishy.
-var ProvidersPath = purePath(homeDir(), "providers.json")
-
-// homeDir is identity.HOME, the bot's home directory, read once as the Python does at import.
-// fmt.Sprint reads it whether identity keeps it as a string or as the stub's `any`.
-func homeDir() string { return fmt.Sprint(identity.Home_) }
-
-// slash is identity.CURRENT.slash: this bot's slash command (`/harness`).
-func slash() string {
-	return any(identity.Current).(interface{ Slash() string }).Slash()
-}
+var ProvidersPath = purePath(identity.Home_, "providers.json")
 
 // DefaultPark is runner.DEFAULT_PARK, defined here so that providers need not import runner (the
 // Python's one import cycle, broken this way: runner uses this one). A refusal that names no
@@ -312,7 +305,7 @@ func (x *Provider) Hours(zoneName string) string {
 	if x.OffHours.Len() > 0 && x.Schedule.Mode == "window" {
 		var caps []string
 		x.OffHours.Items(func(window string, share any) bool {
-			caps = append(caps, fmt.Sprintf("%s of %s", percent(mustFloat(share)), WindowNames[window]))
+			caps = append(caps, fmt.Sprintf("%s of %s", py.Percent(py.MustFloat(share), 0), WindowNames[window]))
 			return true
 		})
 		text += ", outside them up to " + strings.Join(caps, " and ")
@@ -344,7 +337,7 @@ func (x *Provider) HeldCaps(at time.Time, zoneName string, usage any /* = None *
 	caps := x.Limits.Stops()
 	if x.OffHours.Len() > 0 && zoneName != "" && !x.Schedule.IsOpen(zoneName, at) {
 		x.OffHours.Items(func(window string, share any) bool {
-			caps.Set(window, pyMin(mustFloat(caps.GetOr(window, 1.0)), mustFloat(share)))
+			caps.Set(window, pyMin(py.MustFloat(caps.GetOr(window, 1.0)), py.MustFloat(share)))
 			return true
 		})
 	}
@@ -393,7 +386,7 @@ func (x *LateWeek) Since(at time.Time, zoneName string) time.Time {
 	zone := clock.Zone(zoneName)
 	local := at.In(zone)
 	year, month, day := local.Date()
-	day -= pyMod(weekday(local)-x.Weekday, 7)
+	day -= py.Mod(weekday(local)-x.Weekday, 7)
 	start := localTime(year, month, day, x.Start.Hour, x.Start.Minute, zone)
 	if start.After(at) {
 		start = localTime(year, month, day-7, x.Start.Hour, x.Start.Minute, zone)
@@ -472,7 +465,7 @@ func TierAtLeast(tier string, floor string) bool {
 func tierRank(tier string) int {
 	rank, ok := TierRank[tier]
 	if !ok {
-		panic(fmt.Errorf("KeyError: %s", reprStr(tier)))
+		panic(fmt.Errorf("KeyError: %s", py.Repr(tier)))
 	}
 	return rank
 }
@@ -521,8 +514,8 @@ func (x *Pool) providerList() []*Provider {
 	return out
 }
 
-// tierEntries is self.tiers.get(tier, ()).
-func (x *Pool) tierEntries(tier string) []*TierEntry {
+// TierEntries is self.tiers.get(tier, ()).
+func (x *Pool) TierEntries(tier string) []*TierEntry {
 	entries, _ := x.Tiers.Get(tier).([]*TierEntry)
 	return entries
 }
@@ -536,7 +529,7 @@ func (x *Pool) OnMachine(providerID string) bool {
 // FillerOf is the subscription that fills `provider_id`'s lanes while it cannot use them, if any.
 func (x *Pool) FillerOf(providerID string) *Provider {
 	for _, p := range x.providerList() {
-		if p.FillIn != nil && contains(x.FilledBy(p), providerID) {
+		if p.FillIn != nil && slices.Contains(x.FilledBy(p), providerID) {
 			return p
 		}
 	}
@@ -565,7 +558,7 @@ func (x *Pool) Ordered() []*Provider {
 	for _, name := range x.Priority {
 		p := x.provider(name)
 		if p == nil {
-			panic(fmt.Errorf("KeyError: %s", reprStr(name)))
+			panic(fmt.Errorf("KeyError: %s", py.Repr(name)))
 		}
 		out = append(out, p)
 	}
@@ -578,7 +571,7 @@ func (x *Pool) Get(providerID string) *Provider {
 }
 
 func (x *Pool) entry(tier string, model string) (int, *TierEntry) {
-	entries := x.tierEntries(tier)
+	entries := x.TierEntries(tier)
 	for rank, entry := range entries {
 		if entry.Model == model {
 			return rank, entry

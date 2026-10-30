@@ -24,17 +24,14 @@
 package memory
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -65,7 +62,7 @@ func fields(path string) (map[string]string, error) {
 	found := map[string]string{}
 	for _, line := range py.Splitlines(strings.ToValidUTF8(string(data), "\uFFFD")) {
 		name, rest, _ := strings.Cut(strings.Replace(line, ":", " ", 1), " ")
-		found[name] = pyStrip(rest)
+		found[name] = py.Strip(rest)
 	}
 	return found, nil
 }
@@ -79,10 +76,10 @@ func pressure(path string) (map[string]float64, error) {
 	totals := map[string]float64{}
 	for _, line := range py.Splitlines(strings.ToValidUTF8(string(data), "\uFFFD")) {
 		kind, rest, _ := strings.Cut(line, " ")
-		for _, part := range pyFields(rest) {
+		for _, part := range py.Split(rest) {
 			key, value, _ := strings.Cut(part, "=")
-			if key == "total" && isDigits(value) {
-				n, _ := pyInt(value)
+			if key == "total" && py.IsDecimal(value) {
+				n, _ := py.Int(value)
 				totals[kind] = float64(n) / 1_000_000
 			}
 		}
@@ -105,11 +102,11 @@ func Reading(at time.Time, proc string /* = PROC */) *pyjson.Object {
 	}
 	kib := map[string]int{}
 	for _, name := range []string{"MemTotal", "MemAvailable", "SwapTotal", "SwapFree"} {
-		parts := pyFields(getOr(info, name, "0"))
+		parts := py.Split(getOr(info, name, "0"))
 		if len(parts) == 0 {
 			return nil
 		}
-		n, err := pyInt(parts[0])
+		n, err := py.Int(parts[0])
 		if err != nil {
 			return nil
 		}
@@ -118,8 +115,8 @@ func Reading(at time.Time, proc string /* = PROC */) *pyjson.Object {
 	found := pyjson.New("total", kib["MemTotal"], "available", kib["MemAvailable"],
 		"swap_used", kib["SwapTotal"]-kib["SwapFree"], "at", clock.ISO(at))
 	if stat, err := fields(filepath.Join(proc, "vmstat")); err == nil {
-		in, errIn := pyInt(getOr(stat, "pswpin", "0"))
-		out, errOut := pyInt(getOr(stat, "pswpout", "0"))
+		in, errIn := py.Int(getOr(stat, "pswpin", "0"))
+		out, errOut := py.Int(getOr(stat, "pswpout", "0"))
 		if errIn == nil && errOut == nil {
 			found.Set("swapped", in+out)
 		}
@@ -146,9 +143,9 @@ func Add(record *pyjson.Object, found *pyjson.Object) {
 	record.SetDefault("start", found.Copy())
 	record.Set("end", found.Copy())
 	available := found.Get("available")
-	record.Set("low_available", min(toInt(record.GetOr("low_available", available)), toInt(available)))
-	record.Set("high_swap", max(toInt(record.GetOr("high_swap", 0)), toInt(found.Get("swap_used"))))
-	record.Set("readings", toInt(record.GetOr("readings", 0))+1)
+	record.Set("low_available", min(py.MustInt(record.GetOr("low_available", available)), py.MustInt(available)))
+	record.Set("high_swap", max(py.MustInt(record.GetOr("high_swap", 0)), py.MustInt(found.Get("swap_used"))))
+	record.Set("readings", py.MustInt(record.GetOr("readings", 0))+1)
 }
 
 // Summary is a job's memory over its run: stall seconds, pages swapped, the least available.
@@ -165,8 +162,8 @@ func Summary(record *pyjson.Object) *pyjson.Object {
 		end = pyjson.Obj(v)
 	}
 	delta := func(key string) float64 {
-		a, errA := pyFloat(end.GetOr(key, 0))
-		b, errB := pyFloat(start.GetOr(key, 0))
+		a, errA := py.Float(end.GetOr(key, 0))
+		b, errB := py.Float(start.GetOr(key, 0))
 		if errA != nil || errB != nil {
 			return 0.0
 		}
@@ -176,10 +173,10 @@ func Summary(record *pyjson.Object) *pyjson.Object {
 		return 0.0
 	}
 	return pyjson.New(
-		"at", orEmpty(end.Get("at")),
-		"total", toInt(orZero(start.Get("total"))),
-		"low_available", toInt(orZero(record.Get("low_available"))),
-		"high_swap", toInt(orZero(record.Get("high_swap"))),
+		"at", py.OrStr(end.Get("at"), ""),
+		"total", py.MustInt(py.Or(start.Get("total"), 0)),
+		"low_available", py.MustInt(py.Or(record.Get("low_available"), 0)),
+		"high_swap", py.MustInt(py.Or(record.Get("high_swap"), 0)),
 		"stall_some", py.RoundN(delta("stall_some"), 1),
 		"stall_full", py.RoundN(delta("stall_full"), 1),
 		"swapped", int(delta("swapped")))
@@ -220,21 +217,21 @@ func gib(value int) string {
 // verdict is _verdict: one box's runs, the run count, whether it ran short, the least available,
 // the stalls.
 func verdict(runs []*pyjson.Object) string {
-	total, low := toInt(orZero(runs[0].Get("total"))), toInt(orZero(runs[0].Get("low_available")))
-	worst := mustFloat(orZero(runs[0].Get("stall_full")))
+	total, low := py.MustInt(py.Or(runs[0].Get("total"), 0)), py.MustInt(py.Or(runs[0].Get("low_available"), 0))
+	worst := py.MustFloat(py.Or(runs[0].Get("stall_full"), 0))
 	short, swapped := 0, 0
 	for i, e := range runs {
 		if i > 0 {
-			total = max(total, toInt(orZero(e.Get("total"))))
-			low = min(low, toInt(orZero(e.Get("low_available"))))
-			if f := mustFloat(orZero(e.Get("stall_full"))); f > worst { // max(): the first of equals
+			total = max(total, py.MustInt(py.Or(e.Get("total"), 0)))
+			low = min(low, py.MustInt(py.Or(e.Get("low_available"), 0)))
+			if f := py.MustFloat(py.Or(e.Get("stall_full"), 0)); f > worst { // max(): the first of equals
 				worst = f
 			}
 		}
-		if mustFloat(orZero(e.Get("stall_full"))) >= ShortFullS {
+		if py.MustFloat(py.Or(e.Get("stall_full"), 0)) >= ShortFullS {
 			short++
 		}
-		if toInt(orZero(e.Get("swapped"))) > 0 {
+		if py.MustInt(py.Or(e.Get("swapped"), 0)) > 0 {
 			swapped++
 		}
 	}
@@ -253,9 +250,9 @@ func Line(state *pyjson.Object, now time.Time) string {
 	var order []string
 	boxes := map[string][]*pyjson.Object{}
 	for _, entry := range pyjson.Objs(state.Get("machine_memory")) {
-		at := clock.ParseISO(orEmpty(entry.Get("at")))
+		at := clock.ParseISOValue(entry.Get("at"))
 		if !at.IsZero() && now.Sub(at) <= Window {
-			box := orEmpty(entry.Get("box"))
+			box := py.OrStr(entry.Get("box"), "")
 			if _, ok := boxes[box]; !ok {
 				order = append(order, box)
 			}
@@ -293,156 +290,3 @@ func f0(x float64) string {
 	}
 	return fmt.Sprintf("%.0f", x)
 }
-
-// orEmpty is `str(v or "")`.
-func orEmpty(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// orZero is `v or 0`.
-func orZero(v any) any {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	return v
-}
-
-// toInt is int(v) for a JSON value; what int() refuses raises (panics), as in Python.
-func toInt(v any) int {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	case string:
-		n, err := pyInt(x)
-		if err != nil {
-			panic(err)
-		}
-		return n
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	panic(fmt.Errorf("int() argument must be a string, a bytes-like object or a real number, not '%s'",
-		typeName(v)))
-}
-
-// pyFloat is float(v) for a JSON value, with the TypeError or ValueError float() raises.
-func pyFloat(v any) (float64, error) {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1, nil
-		}
-		return 0, nil
-	case string:
-		f, err := strconv.ParseFloat(strings.ReplaceAll(pyStrip(x), "_", ""), 64)
-		if err != nil {
-			return 0, fmt.Errorf("could not convert string to float: %s", py.Repr(x))
-		}
-		return f, nil
-	}
-	if f, ok := pyjson.AsFloat(v); ok {
-		return f, nil
-	}
-	return 0, fmt.Errorf("float() argument must be a string or a real number, not '%s'", typeName(v))
-}
-
-// mustFloat is float(v) where Python lets its error through.
-func mustFloat(v any) float64 {
-	f, err := pyFloat(v)
-	if err != nil {
-		panic(err)
-	}
-	return f
-}
-
-func typeName(v any) string {
-	switch v.(type) {
-	case nil:
-		return "NoneType"
-	case []any:
-		return "list"
-	case *pyjson.Object:
-		return "dict"
-	}
-	return fmt.Sprintf("%T", v)
-}
-
-// pyInt is int(s) for a string: whitespace around it, a sign, decimal digits (Unicode ones too)
-// with single underscores between them.
-func pyInt(s string) (int, error) {
-	invalid := fmt.Errorf("invalid literal for int() with base 10: %s", py.SliceTo(py.Repr(s), 200))
-	t := pyStrip(s)
-	neg := false
-	if t != "" && (t[0] == '+' || t[0] == '-') {
-		neg, t = t[0] == '-', t[1:]
-	}
-	if t == "" || t[0] == '_' || t[len(t)-1] == '_' || strings.Contains(t, "__") {
-		return 0, invalid
-	}
-	n := 0
-	for _, r := range t {
-		if r == '_' {
-			continue
-		}
-		d, ok := decimalValue(r)
-		if !ok {
-			return 0, invalid
-		}
-		if n > (math.MaxInt-d)/10 {
-			return 0, errors.New("Python int too large to convert to C long")
-		}
-		n = n*10 + d
-	}
-	if neg {
-		n = -n
-	}
-	return n, nil
-}
-
-// isDigits is str.isdigit() for the digits int() reads.
-func isDigits(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if _, ok := decimalValue(r); !ok {
-			return false
-		}
-	}
-	return true
-}
-
-// decimalValue is the digit a Unicode decimal digit (category Nd) stands for: every Nd range
-// runs in whole sets of ten from a zero.
-func decimalValue(r rune) (int, bool) {
-	if !unicode.IsDigit(r) {
-		return 0, false
-	}
-	for _, rg := range unicode.Nd.R16 {
-		if lo, hi := rune(rg.Lo), rune(rg.Hi); r >= lo && r <= hi {
-			return int(r-lo) / int(rg.Stride) % 10, true
-		}
-	}
-	for _, rg := range unicode.Nd.R32 {
-		if lo, hi := rune(rg.Lo), rune(rg.Hi); r >= lo && r <= hi {
-			return int(r-lo) / int(rg.Stride) % 10, true
-		}
-	}
-	return 0, false
-}
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
-
-// pyStrip is str.strip().
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }
-
-// pyFields is str.split().
-func pyFields(s string) []string { return strings.FieldsFunc(s, pyIsSpace) }

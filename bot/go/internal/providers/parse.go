@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -26,7 +27,7 @@ func fraction(value any, where string) *float64 {
 	if value == nil {
 		return nil
 	}
-	number := mustFloat(value)
+	number := py.MustFloat(value)
 	if !(0.0 < number && number <= 1.0) {
 		configError("%s: %s is outside (0, 1]", where, py.Str(value))
 	}
@@ -48,7 +49,7 @@ func schedule(raw any, where string) *Schedule {
 		var exc string
 		for _, key := range []string{"start", "end"} {
 			if !obj.Has(key) {
-				exc = reprStr(key) // str(KeyError('start')) is the key's repr
+				exc = py.Repr(key) // str(KeyError('start')) is the key's repr
 				break
 			}
 		}
@@ -69,7 +70,7 @@ func schedule(raw any, where string) *Schedule {
 		}
 		return &Schedule{Mode: "window", Start: start, End: end}
 	}
-	configError("%s.mode: %s is not always or window", where, reprStr(mode))
+	configError("%s.mode: %s is not always or window", where, py.Repr(mode))
 	return nil
 }
 
@@ -88,7 +89,7 @@ func headroom(raw any, where string) *pyjson.Object {
 	}
 	shares := pyjson.New()
 	obj.Items(func(window string, share any) bool {
-		number := mustFloat(share)
+		number := py.MustFloat(share)
 		if !(0.0 <= number && number < 1.0) {
 			configError("%s.%s: %s is outside [0, 1)", where, window, py.Str(share))
 		}
@@ -109,17 +110,17 @@ func limits(raw any, where string) *Limits {
 		return &Limits{Mode: "none", Headroom: pyjson.New()}
 	}
 	if mode != "caps" {
-		configError("%s.mode: %s is not caps or none", where, reprStr(mode))
+		configError("%s.mode: %s is not caps or none", where, py.Repr(mode))
 	}
 	minutes := func(key string) *int {
 		value := obj.Get(key)
 		if value == nil {
 			return nil
 		}
-		if mustInt(value) < 1 {
+		if py.MustInt(value) < 1 {
 			configError("%s.%s: must be at least 1", where, key)
 		}
-		n := mustInt(value)
+		n := py.MustInt(value)
 		return &n
 	}
 	fiveHour := fraction(obj.Get("five_hour"), where+".five_hour")
@@ -148,8 +149,8 @@ func tier(value any, where string) string {
 	if pyjson.Truthy(value) {
 		found = py.Str(value)
 	}
-	if !contains(Tiers, found) {
-		configError("%s: %s is not one of %s", where, reprStr(found), strings.Join(Tiers, ", "))
+	if !slices.Contains(Tiers, found) {
+		configError("%s: %s is not one of %s", where, py.Repr(found), strings.Join(Tiers, ", "))
 	}
 	return found
 }
@@ -175,7 +176,7 @@ func extraModels(raw any, effort string, where string) []*ExtraModel {
 		model := py.Str(entry.Get("model"))
 		modelEffort := py.Str(entry.GetOr("effort", effort))
 		modelTier := tier(entry.Get("tier"), fmt.Sprintf("%s[%d].tier", where, i))
-		found = append(found, &ExtraModel{model, modelEffort, modelTier, orEmpty(entry.Get("takes_over"))})
+		found = append(found, &ExtraModel{model, modelEffort, modelTier, py.OrStr(entry.Get("takes_over"), "")})
 	}
 	return found
 }
@@ -194,7 +195,7 @@ func fillIn(raw any, where string) *FillIn {
 	}
 	runsOn := py.Str(obj.Get("runs_on"))
 	if !label.MatchString(runsOn) || Hosted(runsOn) {
-		configError("%s.runs_on: %s is not a runner label on the machine", where, reprStr(runsOn))
+		configError("%s.runs_on: %s is not a runner label on the machine", where, py.Repr(runsOn))
 	}
 	list, isList := obj.Get("for").([]any)
 	var of []string
@@ -214,8 +215,8 @@ func fillIn(raw any, where string) *FillIn {
 
 // lateWeekFrom is the pattern `late_week`'s `from` must match:
 // `\s*([A-Za-z]{3})[A-Za-z]*\s+(\d{1,2}:\d{2})\s*`, with Python's Unicode `\s` and `\d`.
-var lateWeekFrom = regexp.MustCompile(`\A` + pySpace + `*([A-Za-z]{3})[A-Za-z]*` + pySpace +
-	`+(\p{Nd}{1,2}:\p{Nd}{2})` + pySpace + `*\z`)
+var lateWeekFrom = regexp.MustCompile(`\A` + py.ReS + `*([A-Za-z]{3})[A-Za-z]*` + py.ReS +
+	`+(\p{Nd}{1,2}:\p{Nd}{2})` + py.ReS + `*\z`)
 
 // lateWeek is _late_week.
 func lateWeek(raw any, where string) *LateWeek {
@@ -230,7 +231,7 @@ func lateWeek(raw any, where string) *LateWeek {
 		configError("%s: unknown keys %s", where, strings.Join(unknown, ", "))
 	}
 	found := lateWeekFrom.FindStringSubmatch(py.Str(obj.Get("from")))
-	if found == nil || !contains(Weekdays, strings.ToLower(found[1])) {
+	if found == nil || !slices.Contains(Weekdays, strings.ToLower(found[1])) {
 		configError(`%s.from: %s is not a weekday and a time ("Sun 17:00")`, where, py.Repr(obj.Get("from")))
 	}
 	var start clock.TimeOfDay
@@ -242,7 +243,7 @@ func lateWeek(raw any, where string) *LateWeek {
 		configError("%s.from: %s: %s", where, py.Repr(obj.Get("from")), err.Error())
 	}
 	return &LateWeek{
-		Weekday:  index(Weekdays, strings.ToLower(found[1])),
+		Weekday:  slices.Index(Weekdays, strings.ToLower(found[1])),
 		Start:    start,
 		SevenDay: *fraction(obj.Get("seven_day"), where+".seven_day"),
 		FiveHour: fraction(obj.Get("five_hour"), where+".five_hour"),
@@ -268,7 +269,7 @@ func tiersOf(raw any) *pyjson.Object {
 		if obj.Truthy(name) {
 			listed = obj.Get(name)
 		}
-		for i, item := range iterate(listed) {
+		for i, item := range py.MustIter(listed) {
 			if s, ok := item.(string); ok {
 				item = pyjson.New("model", s)
 			}
@@ -306,28 +307,28 @@ func provider(name string, raw any) *Provider {
 		}
 	}
 	cli := py.Str(obj.Get("cli"))
-	if !contains(Clis, cli) {
-		configError("%s.cli: %s is not one of %s", where, reprStr(cli), strings.Join(Clis, ", "))
+	if !slices.Contains(Clis, cli) {
+		configError("%s.cli: %s is not one of %s", where, py.Repr(cli), strings.Join(Clis, ", "))
 	}
 	login := py.Str(obj.GetOr("login", "secret"))
-	if !contains(Logins, login) {
-		configError("%s.login: %s is not one of %s", where, reprStr(login), strings.Join(Logins, ", "))
+	if !slices.Contains(Logins, login) {
+		configError("%s.login: %s is not one of %s", where, py.Repr(login), strings.Join(Logins, ", "))
 	}
-	secret := orEmpty(obj.Get("secret"))
+	secret := py.OrStr(obj.Get("secret"), "")
 	if login == "secret" {
-		if !contains(SecretClis, cli) {
+		if !slices.Contains(SecretClis, cli) {
 			configError(`%s: the %s CLI logs in on the machine only ("login": "machine")`, where, cli)
 		}
-		if !contains(SecretNames, secret) {
+		if !slices.Contains(SecretNames, secret) {
 			configError("%s.secret: %s is not one the workflows hand over (%s)", where,
-				reprStr(secret), strings.Join(SecretNames, ", "))
+				py.Repr(secret), strings.Join(SecretNames, ", "))
 		}
 	} else if secret != "" {
 		configError("%s.secret: a machine login takes no secret", where)
 	}
 	runsOn := py.Str(obj.GetOr("runs_on", "ubuntu-latest"))
 	if !label.MatchString(runsOn) {
-		configError("%s.runs_on: %s is not a runner label", where, reprStr(runsOn))
+		configError("%s.runs_on: %s is not a runner label", where, py.Repr(runsOn))
 	}
 	if login == "machine" && Hosted(runsOn) {
 		configError("%s: a machine login needs runs_on to be its runner on the machine "+
@@ -335,7 +336,7 @@ func provider(name string, raw any) *Provider {
 	}
 	var roles []string
 	if rawRoles, ok := obj.Lookup("roles"); ok {
-		for _, r := range iterate(rawRoles) {
+		for _, r := range py.MustIter(rawRoles) {
 			roles = append(roles, py.Str(r))
 		}
 	} else {
@@ -343,7 +344,7 @@ func provider(name string, raw any) *Provider {
 	}
 	var bad []string
 	for _, r := range roles {
-		if !contains(Roles, r) {
+		if !slices.Contains(Roles, r) {
 			bad = append(bad, r)
 		}
 	}
@@ -375,7 +376,7 @@ func provider(name string, raw any) *Provider {
 			}
 			if limit.(float64) <= own {
 				configError("%s.late_week: it raises a %s cap, and %s's is not under %s", where,
-					WindowNames[window], name, percent(limit.(float64)))
+					WindowNames[window], name, py.Percent(limit.(float64), 0))
 			}
 			return true
 		})
@@ -406,7 +407,7 @@ func provider(name string, raw any) *Provider {
 	p.Login = login
 	p.RunsOn = runsOn
 	p.OffFrom = offFrom(obj.Get("off_from"), where+".off_from")
-	p.OffReason = orEmpty(obj.Get("off_reason"))
+	p.OffReason = py.OrStr(obj.Get("off_reason"), "")
 	p.UsageSince = usageSince(obj.Get("usage_since"), where+".usage_since")
 	p.Lanes = lanes(obj.GetOr("lanes", 1), where+".lanes")
 	p.FillIn = fillIn(obj.Get("fill_in"), where+".fill_in")
@@ -414,8 +415,8 @@ func provider(name string, raw any) *Provider {
 	p.BuildLast = pyjson.Truthy(obj.GetOr("build_last", false))
 	p.EasyFirst = pyjson.Truthy(obj.GetOr("easy_first", false))
 	p.OffHours = offHours(obj.Get("off_hours"), where+".off_hours")
-	p.FixEffort = orEmpty(obj.Get("fix_effort"))
-	p.ReviewEffort = orEmpty(obj.Get("review_effort"))
+	p.FixEffort = py.OrStr(obj.Get("fix_effort"), "")
+	p.ReviewEffort = py.OrStr(obj.Get("review_effort"), "")
 	p.ExtraModels = extraModels(obj.Get("extra_models"), py.Str(obj.GetOr("effort", "")),
 		where+".extra_models")
 	p.LastHour = pyjson.Truthy(obj.GetOr("last_hour", false))
@@ -500,16 +501,16 @@ func Parse(raw any) *Pool {
 		if Hosted(p.RunsOn) {
 			configError("%s: only a subscription on the machine fills in lanes there", where)
 		}
-		if contains(labels, p.FillIn.RunsOn) {
+		if slices.Contains(labels, p.FillIn.RunsOn) {
 			configError("%s: %s is a subscription's own runner; a fill-in has runners of its own",
 				where, p.FillIn.RunsOn)
 		}
 		labels = append(labels, p.FillIn.RunsOn)
 		for _, other := range p.FillIn.Of {
 			if !providers.Has(other) || other == p.ID {
-				configError("%s: %s is not another subscription", where, reprStr(other))
+				configError("%s: %s is not another subscription", where, py.Repr(other))
 			}
-			if contains(filled, other) {
+			if slices.Contains(filled, other) {
 				configError("%s: another subscription fills %s's lanes already", where, other)
 			}
 			filled = append(filled, other)
@@ -520,12 +521,12 @@ func Parse(raw any) *Pool {
 	if obj.Truthy("priority") {
 		listed = obj.Get("priority")
 	}
-	for _, p := range iterate(listed) {
+	for _, p := range py.MustIter(listed) {
 		priority = append(priority, py.Str(p))
 	}
 	missing, extra := []string{}, []string{}
 	for _, p := range providers.Keys() {
-		if !contains(priority, p) {
+		if !slices.Contains(priority, p) {
 			missing = append(missing, p)
 		}
 	}
@@ -538,16 +539,16 @@ func Parse(raw any) *Pool {
 		configError("%s: priority must name every provider once (missing %s, unknown %s)",
 			ProvidersPath, py.Repr(missing), py.Repr(extra))
 	}
-	maxParallel := mustInt(obj.GetOr("max_parallel", 1))
+	maxParallel := py.MustInt(obj.GetOr("max_parallel", 1))
 	if maxParallel < 1 {
 		configError("%s: max_parallel must be at least 1", ProvidersPath)
 	}
 	tiers := tiersOf(obj.Get("tiers"))
-	machine := mustInt(obj.GetOr("machine_parallel", maxParallel))
+	machine := py.MustInt(obj.GetOr("machine_parallel", maxParallel))
 	if machine < 0 {
 		configError("%s: machine_parallel must be 0 or more", ProvidersPath)
 	}
-	planLanes := mustInt(obj.GetOr("plan_lanes", 0))
+	planLanes := py.MustInt(obj.GetOr("plan_lanes", 0))
 	if planLanes < 0 {
 		configError("%s: plan_lanes must be 0 or more", ProvidersPath)
 	}
@@ -555,7 +556,7 @@ func Parse(raw any) *Pool {
 		for _, extra := range p.ExtraModels {
 			if extra.TakesOver != "" && (!providers.Has(extra.TakesOver) || extra.TakesOver == p.ID) {
 				configError("%s: %s's %s takes over %s, which is not another provider",
-					ProvidersPath, p.ID, extra.Model, reprStr(extra.TakesOver))
+					ProvidersPath, p.ID, extra.Model, py.Repr(extra.TakesOver))
 			}
 		}
 	}

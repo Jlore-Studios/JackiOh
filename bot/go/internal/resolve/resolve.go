@@ -28,7 +28,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 
@@ -72,33 +71,8 @@ func marked(path string) bool {
 	return markerLine.Match(bytes.ReplaceAll(data, []byte("\r"), []byte("\n")))
 }
 
-// cwd is wt.cwd.
-func cwd(wt *git.Git) string { return fmt.Sprint(wt.Cwd) }
-
-// returnCode is a git.Git.run result's `returncode`. Git's port names the field; this reads
-// whichever of the names it may have, so the two ports build apart.
-func returnCode(proc any) int {
-	v := reflect.ValueOf(proc)
-	for v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface {
-		v = v.Elem()
-	}
-	if v.Kind() == reflect.Struct {
-		for _, name := range []string{"Returncode", "ReturnCode", "ExitCode", "Code"} {
-			if f := v.FieldByName(name); f.IsValid() && f.CanInt() {
-				return int(f.Int())
-			}
-		}
-	}
-	for _, name := range []string{"Returncode", "ReturnCode", "ExitCode"} {
-		if m := reflect.ValueOf(proc).MethodByName(name); m.IsValid() && m.Type().NumIn() == 0 {
-			return int(m.Call(nil)[0].Int())
-		}
-	}
-	panic(fmt.Sprintf("resolve: no return code on %T", proc))
-}
-
 func existsAt(wt *git.Git, ref string, path string) bool {
-	return returnCode(wt.Run(false, 600, nil, "cat-file", "-e", ref+":"+path)) == 0
+	return wt.Run(false, 600, nil, "cat-file", "-e", ref+":"+path).Returncode == 0
 }
 
 // takeMain is `base`'s side of `path` (the branch merged in, `main` but for a fullsend part): its
@@ -129,7 +103,7 @@ func runResolver(wt *git.Git, resolver *config.Resolver, env map[string]string, 
 	if !(existsAt(wt, "HEAD", path) && existsAt(wt, "MERGE_HEAD", path)) {
 		return &Resolution{Path: path, How: how, OK: false, WhyNot: "one side deleted the file, which no command decides"}
 	}
-	target := filepath.Join(cwd(wt), path)
+	target := filepath.Join(wt.Cwd, path)
 	var original []byte
 	hadOriginal := exists(target)
 	if hadOriginal {
@@ -159,7 +133,7 @@ func runResolver(wt *git.Git, resolver *config.Resolver, env map[string]string, 
 	}()
 	gate := config.NewGate("resolve "+path, resolver.Run, resolver.TimeoutMinutes)
 	timeout := int(seconds)
-	result := gates.RunGate(gate, cwd(wt), env, &timeout)
+	result := gates.RunGate(gate, wt.Cwd, env, &timeout)
 	var why string
 	switch {
 	case !result.OK:

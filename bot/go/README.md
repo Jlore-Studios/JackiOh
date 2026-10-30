@@ -32,7 +32,7 @@ stays Python (`bot/machine/`'s Lambdas and scripts, `.github/hygiene/`'s branch 
 | `internal/cli/` | the command line (`__main__.py`): every subcommand, the companion process, `$GITHUB_OUTPUT` and the step summary |
 | `internal/<module>/` | one package per Python module, named after it (`queue`, `plan`, `work`, `deliver`, `dashboard`, …), except `herr` (`errors.py`), `hctx` (`context.py`) and `reviewrule` (`review_rule.py`) |
 | `internal/pyjson/` | JSON as the Python held it, written byte for byte as `json.dumps` writes it |
-| `internal/py/` | the Python behaviours text and numbers depend on (`round` to even, floor division, `splitlines`, `fnmatch`, slicing by code point) |
+| `internal/py/` | the Python behaviours the harness depends on, one tested copy each: text (`strip`, `split`, `lower`, slicing by code point, `splitlines`, `fnmatch`, re's Unicode classes), bytes as text, numbers (`round` to even, floor division, `sum`, the `%` format), the built-ins over JSON values (`int()`, `float()`, `x or default`, iteration) and Python's own exceptions |
 | `internal/fakes/`, `internal/testsupport/` | the tests' in-memory GitHub and git helpers (`fakes.py`), and their configs, contexts and clocks (`support.py`) |
 | `tests/` | the suite: `bot/tests/test_<file>.py` became `tests/<file>_test.go`, each Python test a Go test of the same name (`PARITY.md` lists them) |
 
@@ -97,10 +97,12 @@ within a component, turned into a result at its edge. Here the edge is the comma
 
 ### Python's text and number rules (`py`)
 
-Python slices strings by code point, rounds half to even, floors integer division and splits
-lines at more characters than `\n`; Go does none of these by default. Every place the harness
-measures, slices, rounds or splits text that reaches a comment or the status issue uses `py`'s
-twin of the Python call, each tested against Python's own answers. Regular expressions are Go's
+Python slices strings by code point, rounds half to even, floors integer division, splits lines
+at more characters than `\n` and counts more characters as whitespace; its int() reads any
+script's digits and its `\w` any letter. Go does none of these by default. Every place the
+harness measures, slices, rounds, strips or splits text, or reads a number out of JSON, uses
+`py`'s twin of the Python call, one copy for the whole harness, each tested against Python 3.13's
+own answers (`internal/py/testdata.json`). Regular expressions are Go's
 RE2, which has no lookaround: the four Python patterns with one (`commands.py`'s mention and slash
 matching, `runner.py`'s reset time, `triage.py`'s form answers) are matched in code with the same
 results, and patterns over text people write keep Python's Unicode `\w` and `\b`.
@@ -201,7 +203,12 @@ The port's rules stay the harness's rules (`PORTING.md` has the full list):
 
 - Write and hash JSON only through `pyjson`; never `encoding/json`'s `Marshal`.
 - Raise with `herr.Raise`, catch with `herr.Catch` or `herr.Try`; a goroutine recovers its own.
-- Measure and slice text with `py.Len` and `py.Slice`, round with `py.Round`, sort stably.
+- Measure and slice text with `py.Len` and `py.Slice`, strip and split it with `py.Strip` and
+  `py.Split` (not `strings`'), round with `py.Round`, sort stably.
+- Read a JSON value with `py`'s built-ins (`py.Int`, `py.Float`, `py.Or`, `py.Each`, …), raise
+  Python's own exceptions as `*py.Error`, and name what an except caught with `herr.Name` and
+  `herr.Str`. A Python behaviour `py` lacks goes into `py` with a test against Python 3.13, not
+  into a package's private copy.
 - Only `config` and `identity` read the environment.
 - A new test seam is a package variable the package calls through.
 - The bots may not change `bot/` (their `forbidden_paths`): a change here is a person's.

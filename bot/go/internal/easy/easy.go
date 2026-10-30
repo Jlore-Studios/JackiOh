@@ -20,6 +20,7 @@ package easy
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
@@ -38,23 +39,14 @@ var BorderlineFiles int = 2
 // (#695).
 var BorderlineLines int = 100
 
-// Python's `\s`, `\d` and `\w` in a str pattern are Unicode; RE2's are ASCII. These classes are
-// Python's, and a `\b` is written out with them (RE2 has no lookaround).
-const (
-	pySpace    = `[\t\n\v\f\r \x{1c}-\x{1f}\x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}]`
-	pyDigit    = `\p{Nd}`
-	pyNotWord  = `[^\p{L}\p{N}_]`
-	pyWordChar = `[\p{L}\p{N}_]`
-)
-
 // uncertain is _UNCERTAIN: words in a planner's rating `why` that admit doubt: torn between two
 // means the higher (#695). Each `\b` sits beside a letter, so it is the start or end of the text
 // or a character that is not a word character.
 var uncertain = regexp.MustCompile(
-	`(?i)(?:^|` + pyNotWord + `)(borderline|torn|unsure|uncertain|not sure|close call|close to the (?:limit|line)` +
-		`|could go either|either way|debatable|judg?ment call|on the fence|lean(?:s|ing)?)(?:$|` + pyNotWord + `)`)
+	`(?i)(?:^|` + py.ReNotW + `)(borderline|torn|unsure|uncertain|not sure|close call|close to the (?:limit|line)` +
+		`|could go either|either way|debatable|judg?ment call|on the fence|lean(?:s|ing)?)(?:$|` + py.ReNotW + `)`)
 
-var wordChar = regexp.MustCompile(`^` + pyWordChar)
+var wordChar = regexp.MustCompile(`^` + py.ReW)
 
 // UncertainWhy is whether a planner's rating `why` admits doubt about easy (deliver then rates
 // medium: borderline easy is medium). A confident `why` ("one file, one test") is untouched.
@@ -103,8 +95,8 @@ var Rule = "" +
 // tableHeading is _TABLE_HEADING, `(?im)^\s*(?:#+\s*)?(?:\d+\.\s*)?\**\s*files to touch\b`,
 // without its `\b`, which tableHeadingEnd checks: the heading's end is used, so the boundary
 // cannot be a character the match takes.
-var tableHeading = regexp.MustCompile(`(?im)^` + pySpace + `*(?:#+` + pySpace + `*)?(?:` + pyDigit + `+\.` +
-	pySpace + `*)?\**` + pySpace + `*files to touch`)
+var tableHeading = regexp.MustCompile(`(?im)^` + py.ReS + `*(?:#+` + py.ReS + `*)?(?:` + py.DigitClass + `+\.` +
+	py.ReS + `*)?\**` + py.ReS + `*files to touch`)
 
 var pathCell = regexp.MustCompile("`([^`]+)`")
 
@@ -164,20 +156,11 @@ func PlanPaths(plan string) []string {
 		if !strings.Contains(path, "/") && !strings.Contains(path, ".") {
 			continue // the header row ("Path", "File"), or a cell that names no file
 		}
-		if !contains(found, path) {
+		if !slices.Contains(found, path) {
 			found = append(found, path)
 		}
 	}
 	return found
-}
-
-func contains(xs []string, s string) bool {
-	for _, x := range xs {
-		if x == s {
-			return true
-		}
-	}
-	return false
 }
 
 func offLimits(paths []string, patterns []string) []string {

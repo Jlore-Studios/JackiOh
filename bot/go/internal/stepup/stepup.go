@@ -39,15 +39,6 @@ import (
 // STRIKE_LOG: how many strike reasons an item keeps, for the comment that says why it stepped up.
 var StrikeLog int = 10
 
-// cfgStr reads a config value that config's stub still types `any`: nil until config is ported,
-// then a string (a value of another type stops here rather than read as empty).
-func cfgStr(v any) string {
-	if v == nil {
-		return ""
-	}
-	return v.(string)
-}
-
 // stateItem is state.item.
 func stateItem(s *pyjson.Object, number int) *pyjson.Object { return state.Item(s, number) }
 
@@ -59,43 +50,13 @@ func recordOf(s *pyjson.Object, number int) *pyjson.Object {
 	return pyjson.New()
 }
 
-// orStr is `str(v or "")`.
-func orStr(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// intOr0 is `int(v or 0)`.
-func intOr0(v any) int {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	switch x := v.(type) {
-	case bool:
-		return 1
-	case string:
-		n, err := strconv.Atoi(strip(x))
-		if err != nil {
-			panic(fmt.Errorf("ValueError: invalid literal for int() with base 10: %s", py.Repr(x)))
-		}
-		return n
-	}
-	n, ok := pyjson.AsInt(v)
-	if !ok {
-		panic(fmt.Errorf("TypeError: int() argument must be a string or a real number, not %T", v))
-	}
-	return n
-}
-
 // numberOf is `int(thread["number"])`, a KeyError when it has none.
 func numberOf(thread *pyjson.Object) int {
 	v, ok := thread.Lookup("number")
 	if !ok {
 		panic(fmt.Errorf("KeyError: 'number'"))
 	}
-	return intOr0(v)
+	return py.MustInt(py.Or(v, 0))
 }
 
 // threadsOf is the order CPython iterates `{target, *([pr] if pr else [])}` in, which is the
@@ -145,7 +106,7 @@ func Pair(ctx *hctx.Context, number int) (int, *int) {
 		return number, nil
 	}
 	record := recordOf(ctx.Store.Load(), number)
-	issue := intOr0(record.Get("issue"))
+	issue := py.MustInt(py.Or(record.Get("issue"), 0))
 	if issue == 0 {
 		if linked := threads.LinkedIssue(thread); linked != nil {
 			issue = *linked
@@ -176,20 +137,20 @@ func Strike(ctx *hctx.Context, number int, why string, link string /* = "" */) b
 
 	change := func(s *pyjson.Object) any {
 		entry := stateItem(s, target)
-		entry.Set("strikes", intOr0(entry.Get("strikes"))+1)
+		entry.Set("strikes", py.MustInt(py.Or(entry.Get("strikes"), 0))+1)
 		log := append(slices.Clone(pyjson.List(entry.Get("strike_log"))), py.SliceTo(why, 200))
 		entry.Set("strike_log", slices.Clone(lastN(log, StrikeLog)))
 		return nil
 	}
 	s := ctx.Store.Update(change, fmt.Sprintf("strike #%d", target))
 	entry := stateItem(s, target)
-	count := intOr0(entry.Get("strikes"))
+	count := py.MustInt(py.Or(entry.Get("strikes"), 0))
 	if count < config.StepUpAfter {
 		return false
 	}
 	var reasons []string
 	for _, r := range lastN(pyjson.List(entry.Get("strike_log")), count) {
-		reasons = append(reasons, orStr(r))
+		reasons = append(reasons, py.OrStr(r, ""))
 	}
 	StepUp(ctx, target, pr, reasons, link)
 	return true
@@ -233,7 +194,7 @@ func ClearIfGreen(ctx *hctx.Context, pr int, head string) bool {
 		return false
 	}
 	target, _ := Pair(ctx, pr)
-	if intOr0(recordOf(ctx.Store.Load(), target).Get("strikes")) == 0 {
+	if py.MustInt(py.Or(recordOf(ctx.Store.Load(), target).Get("strikes"), 0)) == 0 {
 		return false
 	}
 	if !Green(ctx, head) {
@@ -275,12 +236,12 @@ func StepUp(ctx *hctx.Context, target int, pr *int, reasons []string, link strin
 	}
 	difficulties := config.Difficulties
 	hardest := difficulties[len(difficulties)-1]
-	slash := cfgStr(config.Slash)
+	slash := config.Slash
 	if current == hardest || queue.RatingSource(names, record) == "person" {
 		for _, number := range threadsOf(target, pr) {
 			Try(func() {
 				queue.SetStateLabel(ctx, number, queue.LabelNames(ctx.GH.GetIssue(number)),
-					cfgStr(config.LabelBlocked))
+					config.LabelBlocked)
 			})
 		}
 		var ask string
@@ -310,7 +271,7 @@ func StepUp(ctx *hctx.Context, target int, pr *int, reasons []string, link strin
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			low, isDifficulty := strings.CutPrefix(lower(name), "difficulty:")
+			low, isDifficulty := strings.CutPrefix(py.Lower(name), "difficulty:")
 			if isDifficulty && slices.Contains(difficulties, low) && name != wanted {
 				Try(func() { ctx.GH.RemoveLabel(number, name) })
 			}
@@ -344,12 +305,12 @@ func StepUp(ctx *hctx.Context, target int, pr *int, reasons []string, link strin
 		// A pull request that closes no issue: revise it again, at the new difficulty.
 		Try(func() {
 			queue.SetStateLabel(ctx, target, queue.LabelNames(ctx.GH.GetIssue(target)),
-				cfgStr(config.LabelRevise))
+				config.LabelRevise)
 		})
 	} else {
 		Try(func() {
 			queue.SetStateLabel(ctx, target, queue.LabelNames(ctx.GH.GetIssue(target)),
-				cfgStr(config.LabelBuild))
+				config.LabelBuild)
 		})
 		ctx.Store.Update(func(s *pyjson.Object) any {
 			stateItem(s, target).Set("kind", "build").Set("queued_at", now).Set("failures", 0).
@@ -367,7 +328,7 @@ func StepUp(ctx *hctx.Context, target int, pr *int, reasons []string, link strin
 func Rebuild(ctx *hctx.Context, issue int, pr int, why string, said string /* = "" */) string {
 	pull := ctx.GH.GetPull(pr)
 	head := pull.Obj("head")
-	branch, sha := orStr(head.Get("ref")), orStr(head.Get("sha"))
+	branch, sha := py.OrStr(head.Get("ref"), ""), py.OrStr(head.Get("sha"), "")
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		stateItem(s, pr).Set("rebuilt", true)
 		return nil
@@ -381,7 +342,7 @@ func Rebuild(ctx *hctx.Context, issue int, pr int, why string, said string /* = 
 	}
 	old := ""
 	if branch == queue.BranchForIssue(issue) && sha != "" {
-		old = fmt.Sprintf("%sold/issue-%d-%s", cfgStr(config.BranchPrefix), issue,
+		old = fmt.Sprintf("%sold/issue-%d-%s", config.BranchPrefix, issue,
 			ctx.Now().Format("20060102-1504"))
 		if _, ok := herr.Catch[*herr.GitHubError](func() {
 			ctx.GH.CreateBranch(old, sha)
@@ -413,11 +374,11 @@ func Rebuild(ctx *hctx.Context, issue int, pr int, why string, said string /* = 
 	}
 	ctx.Store.Update(change, fmt.Sprintf("rebuild #%d", issue))
 	labels := queue.LabelNames(ctx.GH.GetIssue(issue))
-	if labelPROpen := cfgStr(config.LabelPROpen); labels[labelPROpen] {
+	if labelPROpen := config.LabelPROpen; labels[labelPROpen] {
 		Try(func() { ctx.GH.RemoveLabel(issue, labelPROpen) })
 	}
 	Try(func() {
-		queue.SetStateLabel(ctx, issue, queue.LabelNames(ctx.GH.GetIssue(issue)), cfgStr(config.LabelBuild))
+		queue.SetStateLabel(ctx, issue, queue.LabelNames(ctx.GH.GetIssue(issue)), config.LabelBuild)
 	})
 	kept := ""
 	if old != "" {
@@ -443,10 +404,10 @@ func RebuildRequest(ctx *hctx.Context, number int, by string) string {
 	if queue.IsHuman(queue.LabelNames(thread)) {
 		return queue.HumanReply(number, queue.LabelNames(thread))
 	}
-	slash := cfgStr(config.Slash)
+	slash := config.Slash
 	var issue, pr int
 	if thread.Has("pull_request") {
-		if !queue.LabelNames(thread)[cfgStr(config.LabelPR)] {
+		if !queue.LabelNames(thread)[config.LabelPR] {
 			return fmt.Sprintf("#%d is not a pull request I opened, so I will not close it.", number)
 		}
 		issue, _ = Pair(ctx, number)

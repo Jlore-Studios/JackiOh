@@ -37,7 +37,7 @@ import (
 // its parts land on (`_land_part`), and each part's record says so (`onto`, `part_of`).
 func (x *Deliverer) SplitOut(number int) {
 	tree := splitmod.FromDict(x.Result.Get("tree"), config.Difficulties)
-	mode := orStr(x.Plan.Get("mode"), "split")
+	mode := py.OrStr(x.Plan.Get("mode"), "split")
 	names := x.Labels(number)
 	if !tree.OK() {
 		x.Result.Set("reason", "the split could not be used: "+strings.Join(tree.Problems, "; "))
@@ -57,8 +57,8 @@ func (x *Deliverer) SplitOut(number int) {
 	queue.SetStateLabel(x.Ctx, number, names, "")
 	queue.SetMode(x.Ctx, number, names, "")
 	if tree.Done {
-		if names[labelTree()] {
-			x.try(func() { x.GH.RemoveLabel(number, labelTree()) })
+		if names[config.LabelTree] {
+			x.try(func() { x.GH.RemoveLabel(number, config.LabelTree) })
 		}
 		x.GH.CreateComment(number, fmt.Sprintf("Every sub-issue of this has closed, and its end state "+
 			"holds on `main` (%s), so I am closing it.\n\n"+
@@ -70,13 +70,13 @@ func (x *Deliverer) SplitOut(number int) {
 		x.log(fmt.Sprintf("#%d: its tree is done; closed it", number))
 		return
 	}
-	queueLabel, builder := labelBuild(), "me"
-	if all := others(); mode == "split-bot" && len(all) > 0 {
+	queueLabel, builder := config.LabelBuild, "me"
+	if all := config.Others; mode == "split-bot" && len(all) > 0 {
 		other := all[0]
 		queueLabel = other.LabelPrefix + "build"
 		builder = fmt.Sprintf("%s (@%s)", other.Name, other.Login)
 	}
-	who := fmt.Sprintf("%s (`%s`, %s)", botTitle(), x.BuildSeat.Model, x.link())
+	who := fmt.Sprintf("%s (`%s`, %s)", config.Title, x.BuildSeat.Model, x.link())
 	repoLabels := map[string]bool{}
 	for _, label := range x.GH.ListLabels() {
 		repoLabels[py.Str(label.Get("name"))] = true
@@ -124,8 +124,8 @@ func (x *Deliverer) SplitOut(number int) {
 			x.log(fmt.Sprintf("could not open %s: %s", py.Repr(issue.Key), exc.Error()))
 			continue
 		}
-		numbers[issue.Key] = intOr0(created.Get("number"))
-		ids[issue.Key] = intOr0(created.Get("id"))
+		numbers[issue.Key] = py.MustInt(py.Or(created.Get("number"), 0))
+		ids[issue.Key] = py.MustInt(py.Or(created.Get("id"), 0))
 		made = append(made, madeIssue{issue, numbers[issue.Key]})
 		if onto != "" {
 			x.remember(numbers[issue.Key], pyjson.New("onto", onto, "part_of", number))
@@ -141,7 +141,7 @@ func (x *Deliverer) SplitOut(number int) {
 			}
 		}
 		for _, blocker := range issue.BlockedByIssues {
-			x.try(func() { x.GH.AddBlockedBy(child, intOr0(x.GH.GetIssue(blocker).Get("id"))) })
+			x.try(func() { x.GH.AddBlockedBy(child, py.MustInt(py.Or(x.GH.GetIssue(blocker).Get("id"), 0))) })
 		}
 	}
 	if len(made) == 0 {
@@ -149,8 +149,8 @@ func (x *Deliverer) SplitOut(number int) {
 		x.Fail(number, "build")
 		return
 	}
-	if !x.Labels(number)[labelTree()] {
-		x.GH.AddLabels(number, []string{labelTree()})
+	if !x.Labels(number)[config.LabelTree] {
+		x.GH.AddLabels(number, []string{config.LabelTree})
 	}
 	pairs := make([]splitmod.Made, len(made))
 	children := make([]int, len(made))
@@ -207,7 +207,7 @@ func (x *Deliverer) integrationBranch(number int) (string, string) {
 // no forbidden path, no conflict marker. Either way the part closes as done: the reconcile
 // checks and reviews every part at once.
 func (x *Deliverer) LandPart(number int) {
-	onto, parent := py.Str(x.Plan.Get("onto")), mustInt(x.Plan.Get("part_of"))
+	onto, parent := py.Str(x.Plan.Get("onto")), py.MustInt(x.Plan.Get("part_of"))
 	if x.easyBreach(number, "build") {
 		return
 	}
@@ -227,7 +227,7 @@ func (x *Deliverer) LandPart(number int) {
 		change := func(state *pyjson.Object) any {
 			entry := statemod.Item(state, parent)
 			set := map[string]bool{parked: true}
-			for _, b := range iterate(orList(entry.Get("parked"))) {
+			for _, b := range py.Each(entry.Get("parked")) {
 				set[py.Str(b)] = true
 			}
 			kept := make([]string, 0, len(set))
@@ -269,7 +269,7 @@ func (x *Deliverer) LandPart(number int) {
 // conflicts with what is there, or the push lost the race twice.
 func (x *Deliverer) land(onto string, number int) (string, string) {
 	name := x.Result.Get("bundle")
-	branch := orStr(x.Plan.Get("branch"), "")
+	branch := py.OrStr(x.Plan.Get("branch"), "")
 	if !pyjson.Truthy(name) || !isFile(outPath(x.OutDir, py.Str(name))) {
 		return "", "the run left no bundle to land"
 	}
@@ -291,7 +291,7 @@ func (x *Deliverer) land(onto string, number int) (string, string) {
 	if head != x.Result.Get("head") {
 		return "", "the bundle's head is not the head the result names"
 	}
-	start := orStr(x.Result.Get("start"), "")
+	start := py.OrStr(x.Result.Get("start"), "")
 	if start == "" || x.isAncestor(start, head) != 0 {
 		return "", "the bundle does not descend from the commit the work started at"
 	}
@@ -314,7 +314,7 @@ func (x *Deliverer) land(onto string, number int) (string, string) {
 		if x.isAncestor(tip, local) == 0 {
 			target = head // nothing landed since it started: a fast-forward
 		} else {
-			target = x.mergeCommit(tip, local, fmt.Sprintf("%s: land #%d on %s", commitPrefix(), number, onto))
+			target = x.mergeCommit(tip, local, fmt.Sprintf("%s: land #%d on %s", config.CommitPrefix, number, onto))
 			if target == "" {
 				return "", "" // it conflicts with the parts that landed meanwhile
 			}
@@ -333,10 +333,10 @@ func (x *Deliverer) land(onto string, number int) (string, string) {
 // A merge commit of `local` onto `tip`, made without a worktree, or "" when the two
 // conflict.
 func (x *Deliverer) mergeCommit(tip string, local string, message string) string {
-	probe := completed(x.Repo.Run(false, 600, nil, "merge-tree", "--write-tree", "--no-messages", tip, local))
+	probe := x.Repo.Run(false, 600, nil, "merge-tree", "--write-tree", "--no-messages", tip, local)
 	tree := ""
-	if probe.returncode == 0 && strings.TrimSpace(probe.stdout) != "" {
-		tree = strings.Fields(probe.stdout)[0]
+	if probe.Returncode == 0 && strings.TrimSpace(probe.Stdout) != "" {
+		tree = strings.Fields(probe.Stdout)[0]
 	}
 	if tree == "" {
 		return ""
@@ -344,8 +344,8 @@ func (x *Deliverer) mergeCommit(tip string, local string, message string) string
 	who := git.IdentityBot(x.Cfg.BotLogin, x.Cfg.BotUserID)
 	env := map[string]string{"GIT_AUTHOR_NAME": who.Name, "GIT_AUTHOR_EMAIL": who.Email,
 		"GIT_COMMITTER_NAME": who.Name, "GIT_COMMITTER_EMAIL": who.Email}
-	return strings.TrimSpace(completed(x.Repo.Run(true, 600, env, "commit-tree", tree, "-p", tip, "-p", local,
-		"-m", message)).stdout)
+	return strings.TrimSpace(x.Repo.Run(true, 600, env, "commit-tree", tree, "-p", tip, "-p", local,
+		"-m", message).Stdout)
 }
 
 // Keep a part that could not land on its own branch, for the reconcile: "" when it is
@@ -368,13 +368,13 @@ func (x *Deliverer) park(own string) string {
 // CyclesCap is Deliverer._cycles_cap: in-run review verdict rounds for this item's difficulty
 // (#725).
 func (x *Deliverer) CyclesCap() int {
-	return mustInt(x.Cfg.MaxReviewCycles.GetOr(orStr(x.Plan.Get("difficulty"), "medium"), 3))
+	return py.MustInt(x.Cfg.MaxReviewCycles.GetOr(py.OrStr(x.Plan.Get("difficulty"), "medium"), 3))
 }
 
 // Verdict rounds this item used with its current owner, and that owner's tier (#725),
 // for the record: usage pauses and infra never reach a verdict, so they never spend one.
 func (x *Deliverer) rounds() (int, string) {
-	return intOr0(x.Result.Get("verdict_rounds")), orStr(x.Result.Get("round_tier"), "")
+	return py.MustInt(py.Or(x.Result.Get("verdict_rounds"), 0)), py.OrStr(x.Result.Get("round_tier"), "")
 }
 
 // The tier of the seat that just reviewed this pull request (#725): a revision that
@@ -383,7 +383,7 @@ func (x *Deliverer) auditTier() string {
 	seats := x.Plan.Obj("seats")
 	tier := ""
 	if review, ok := seats.Get("review").(*pyjson.Object); ok {
-		tier = orStr(review.Get("tier"), "")
+		tier = py.OrStr(review.Get("tier"), "")
 	}
 	if tier != "" {
 		return tier
@@ -394,17 +394,17 @@ func (x *Deliverer) auditTier() string {
 // The first words of a comment on a build or revision that was not approved: the real
 // round count, and the real reason when it stopped before its last round.
 func (x *Deliverer) notApprovedHead() string {
-	rounds := pyLen(orList(x.Result.Get("cycles")))
+	rounds := pyLen(py.Or(x.Result.Get("cycles"), []any{}))
 	limit := x.CyclesCap()
 	if failures.Stuck(objList(x.Result.Get("cycles")), limit) {
 		return fmt.Sprintf("After all %d rounds the reviewer still had blocking findings", limit)
 	}
-	reason := orStr(x.Result.Get("reason"), "no reason recorded")
+	reason := py.OrStr(x.Result.Get("reason"), "no reason recorded")
 	return fmt.Sprintf("It stopped without an approval after %d of %d round(s): %s", rounds, limit, reason)
 }
 
 func (x *Deliverer) whyMd() string {
-	return failures.Why(objList(x.Result.Get("cycles")), x.CyclesCap(), orStr(x.Result.Get("reason"), ""))
+	return failures.Why(objList(x.Result.Get("cycles")), x.CyclesCap(), py.OrStr(x.Result.Get("reason"), ""))
 }
 
 // Label a run that used every round `bot:stuck`, for a person to review; the sentence
@@ -415,18 +415,18 @@ func (x *Deliverer) markStuck(numbers ...int) string {
 	}
 	for _, number := range numbers {
 		if number != 0 {
-			x.try(func() { x.GH.AddLabels(number, []string{labelStuck()}) })
+			x.try(func() { x.GH.AddLabels(number, []string{config.LabelStuck}) })
 		}
 	}
 	return fmt.Sprintf("Labelled `%s`: it failed every round, so a person should read the "+
-		"above before anyone tries again. ", labelStuck())
+		"above before anyone tries again. ", config.LabelStuck)
 }
 
 // An approval clears `bot:stuck`.
 func (x *Deliverer) unstick(numbers ...int) {
 	for _, number := range numbers {
-		if number != 0 && x.Labels(number)[labelStuck()] {
-			x.try(func() { x.GH.RemoveLabel(number, labelStuck()) })
+		if number != 0 && x.Labels(number)[config.LabelStuck] {
+			x.try(func() { x.GH.RemoveLabel(number, config.LabelStuck) })
 		}
 	}
 }
@@ -449,10 +449,10 @@ func (x *Deliverer) inRunVerdicts() int {
 func (x *Deliverer) selfCheckSaid() string {
 	rounds := 0
 	for _, c := range objList(x.Result.Get("cycles")) {
-		rounds += pyLen(orList(c.Get("self_check")))
+		rounds += pyLen(py.Or(c.Get("self_check"), []any{}))
 	}
 	verdicts := x.inRunVerdicts()
-	openFindings := pyLen(orList(x.Result.Get("self_check_findings")))
+	openFindings := pyLen(py.Or(x.Result.Get("self_check_findings"), []any{}))
 	if verdicts != 0 {
 		return fmt.Sprintf("Its own reviewer read it %d time(s) in the run and asked for "+
 			"changes; the kept work goes to its final audit, which judges it from "+
@@ -475,7 +475,7 @@ func (x *Deliverer) createPull(title string, branch string, body string, draft b
 	}); ok {
 		existing := x.openPull()
 		if exc.Status == 422 && existing != nil {
-			x.GH.UpdatePull(mustInt(existing.Get("number")), pyjson.New("title", title, "body", body))
+			x.GH.UpdatePull(py.MustInt(existing.Get("number")), pyjson.New("title", title, "body", body))
 			return existing
 		}
 		herr.Raise(exc)
@@ -496,18 +496,18 @@ func (x *Deliverer) Revise(number int, status string) {
 		return
 	}
 	if status == "blocked" {
-		question := firstTruthy(x.Result.Get("question"), x.Result.Get("reason"))
+		question := py.Or(x.Result.Get("question"), x.Result.Get("reason"))
 		if x.Result.Truthy("human_required") {
 			x.holdAutoMerge(0)
-			x.NeedsPerson(number, orStr(question, ""), "revise this", "", fmt.Sprintf(
+			x.NeedsPerson(number, py.OrStr(question, ""), "revise this", "", fmt.Sprintf(
 				"`%s revise <notes>` (or `@%s <notes>`) queues the "+
-					"rest", slash(), x.Cfg.BotLogin))
+					"rest", config.Slash, x.Cfg.BotLogin))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.holdAutoMerge(0)
 		x.GH.CreateComment(number, "I need a decision before I can revise this.\n\n"+py.Str(question))
-		x.remember(number, pyjson.New("question", orStr(question, "")))
+		x.remember(number, pyjson.New("question", py.OrStr(question, "")))
 		return
 	}
 	if (status == "approved" || status == "built") && x.easyBreach(number, "revise") {
@@ -529,7 +529,7 @@ func (x *Deliverer) Revise(number int, status string) {
 		if x.strike(number, "a revision was not approved: "+first) {
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.holdAutoMerge(0)
 		stuck := x.markStuck(number)
 		tail := ""
@@ -540,14 +540,14 @@ func (x *Deliverer) Revise(number int, status string) {
 			"%s (%s).\n\n"+
 			"%s\n\n%s", x.notApprovedHead(), x.link(), x.findingsMd(), x.whyMd())+tail)
 		rounds, roundTier := x.rounds()
-		x.remember(number, pyjson.New("last_findings", orList(x.Result.Get("findings")),
+		x.remember(number, pyjson.New("last_findings", py.Or(x.Result.Get("findings"), []any{}),
 			"feedback_since", started, "verdict_rounds", rounds, "round_tier", roundTier))
 		return
 	}
 	approved := status == "approved"
 	pushed, problem := x.publish(approved)
 	if problem != "" {
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), labelBlocked())
+		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.holdAutoMerge(0)
 		x.GH.CreateComment(number, fmt.Sprintf("I could not push the revision (%s): %s.", x.link(), problem))
 		return
@@ -557,17 +557,17 @@ func (x *Deliverer) Revise(number int, status string) {
 	if approved {
 		x.unstick(number)
 	}
-	report := py.SliceTo(orStr(x.Result.Get("report"), ""), ReportChars)
+	report := py.SliceTo(py.OrStr(x.Result.Get("report"), ""), ReportChars)
 	rerun := !pushed && x.Record(number).Truthy("ci_run_id")
 	// The head a CI fix pushed: CI red on it is a strike (`events.on_ci`, #316).
 	fixed := pyjson.New()
 	if pushed && x.Record(number).Get("source") == "ci" {
-		fixed.Set("ci_fixed_head", orStr(x.Result.Get("head"), ""))
+		fixed.Set("ci_fixed_head", py.OrStr(x.Result.Get("head"), ""))
 	}
 	rounds, roundTier := x.rounds()
 	x.remember(number, pyjson.New("feedback_since", started, "failures", 0, "source", "", "last_findings", []any{},
 		"question", "", "verdict_rounds", rounds, "round_tier", roundTier,
-		"self_check_findings", orList(x.Result.Get("self_check_findings"))).Update(fixed))
+		"self_check_findings", py.Or(x.Result.Get("self_check_findings"), []any{})).Update(fixed))
 	note := ""
 	if !pushed && approved {
 		note = "\n\nI changed nothing: the reviewer agreed no change was needed."
@@ -581,9 +581,9 @@ func (x *Deliverer) Revise(number int, status string) {
 		pull := x.GH.GetPull(number)
 		// The commit the reviewer approved: what was pushed, or with nothing pushed, where
 		// the work started. Someone may have pushed meanwhile; that head nobody reviewed.
-		reviewed := orStr(x.Result.Get("start"), "")
+		reviewed := py.OrStr(x.Result.Get("start"), "")
 		if pushed {
-			reviewed = orStr(x.Result.Get("head"), "")
+			reviewed = py.OrStr(x.Result.Get("head"), "")
 		}
 		nowHead := x.branchHead(number)
 		waiting := x.Record(number).Truthy("pending_request")

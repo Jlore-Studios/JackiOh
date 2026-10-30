@@ -91,7 +91,7 @@ func opensslRun(args []string, data []byte, password string) ([]byte, error) {
 		if !errors.As(err, &exit) {
 			return nil, err
 		}
-		return nil, fmt.Errorf("openssl failed: %s", py.SliceTo(decodeReplace(stderr.Bytes()), 200))
+		return nil, fmt.Errorf("openssl failed: %s", py.SliceTo(py.DecodeReplace(stderr.Bytes()), 200))
 	}
 	return stdout.Bytes(), nil
 }
@@ -157,7 +157,7 @@ func Open(text string, secret string) *pyjson.Object {
 	if text == "" || py.Len(text) > MaxBytes || secret == "" {
 		return nil
 	}
-	parts := strings.SplitN(pyStrip(text), ":", 3)
+	parts := strings.SplitN(py.Strip(text), ":", 3)
 	if len(parts) != 3 {
 		return nil
 	}
@@ -199,7 +199,7 @@ func LooksSealed(text string) bool {
 	if text == "" || py.Len(text) > MaxBytes {
 		return false
 	}
-	parts := strings.SplitN(pyStrip(text), ":", 3)
+	parts := strings.SplitN(py.Strip(text), ":", 3)
 	if len(parts) != 3 || parts[0] != Version || py.Len(parts[1]) != 64 {
 		return false
 	}
@@ -231,7 +231,7 @@ func hexInt(s string) bool {
 		switch {
 		case r < 0x80:
 			b.WriteRune(r)
-		case pyIsSpace(r):
+		case py.IsSpace(r):
 			b.WriteByte(' ')
 		case unicode.IsDigit(r):
 			b.WriteByte('0') // its value does not matter here, only that it is a digit
@@ -257,61 +257,3 @@ func hexInt(s string) bool {
 	}
 	return true
 }
-
-// decodeReplace is bytes.decode("utf-8", "replace"): each maximal invalid subsequence (the bytes
-// a valid sequence could have started with) becomes one U+FFFD.
-func decodeReplace(b []byte) string {
-	var out strings.Builder
-	for i := 0; i < len(b); {
-		r, size := utf8.DecodeRune(b[i:])
-		if r != utf8.RuneError || size > 1 {
-			out.WriteRune(r)
-			i += size
-			continue
-		}
-		out.WriteRune(utf8.RuneError)
-		i += invalidLength(b[i:])
-	}
-	return out.String()
-}
-
-// invalidLength is how many bytes of an invalid sequence Python's decoder replaces at once: the
-// lead byte and the continuation bytes that were valid for it.
-func invalidLength(b []byte) int {
-	lead := b[0]
-	var need int
-	lo, hi := byte(0x80), byte(0xbf)
-	switch {
-	case lead >= 0xc2 && lead <= 0xdf:
-		need = 1
-	case lead == 0xe0:
-		need, lo = 2, 0xa0
-	case lead >= 0xe1 && lead <= 0xec, lead == 0xee, lead == 0xef:
-		need = 2
-	case lead == 0xed:
-		need, hi = 2, 0x9f
-	case lead == 0xf0:
-		need, lo = 3, 0x90
-	case lead >= 0xf1 && lead <= 0xf3:
-		need = 3
-	case lead == 0xf4:
-		need, hi = 3, 0x8f
-	default:
-		return 1
-	}
-	n := 1
-	for k := 0; k < need && n < len(b); k++ {
-		c := b[n]
-		if k == 0 && (c < lo || c > hi) || k > 0 && (c < 0x80 || c > 0xbf) {
-			break
-		}
-		n++
-	}
-	return n
-}
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
-
-// pyStrip is str.strip().
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }

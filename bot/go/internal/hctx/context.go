@@ -46,19 +46,14 @@ func (x *Context) Now() time.Time {
 // `providers.Schedule.window`), so it raises AttributeError, and nothing calls it. Ported as it
 // is.
 func (x *Context) Window() *clock.Window {
-	herr.Raise(&attributeError{"'Config' object has no attribute 'window_start'"})
+	herr.Raise(&py.Error{Type: "AttributeError", Msg: "'Config' object has no attribute 'window_start'"})
 	return nil
 }
-
-// attributeError is Python's AttributeError.
-type attributeError struct{ msg string }
-
-func (e *attributeError) Error() string { return e.msg }
 
 // RepoHalted is true when `.harness/HALT` exists on the default branch. The file exists when it
 // has a sha (`gh.GitHub.GetFile`): an empty HALT halts too.
 func (x *Context) RepoHalted() bool {
-	_, sha := x.GH.GetFile(py.Str(config.HaltPath), x.Cfg.DefaultBranch)
+	_, sha := x.GH.GetFile(config.HaltPath, x.Cfg.DefaultBranch)
 	return sha != ""
 }
 
@@ -73,7 +68,7 @@ func (x *Context) Dispatch(item *int /* = None */, force bool /* = False */, mod
 		forceText = "true"
 	}
 	inputs := map[string]string{"item": itemText, "force": forceText, "mode": mode}
-	x.Act().DispatchWorkflow(py.Str(config.NightWorkflow), x.Cfg.DefaultBranch, inputs)
+	x.Act().DispatchWorkflow(config.NightWorkflow, x.Cfg.DefaultBranch, inputs)
 }
 
 // Build is context.build. `token` "" is None (the only caller, `__main__._ctx`, passes "" only
@@ -101,8 +96,8 @@ func Build(cfg *config.Config, token string /* = None */, ghc gh.Client /* = Non
 	return &Context{
 		Cfg:       cfg,
 		GH:        client,
-		Store:     state.NewStateStore(client, py.Str(config.StateBranch), config.StateFile, sleep),
-		Trust:     trust.TrustLoad(filepath.Join(cfg.Root, py.Str(config.TrustPath))),
+		Store:     state.NewStateStore(client, config.StateBranch, config.StateFile, sleep),
+		Trust:     trust.TrustLoad(filepath.Join(cfg.Root, config.TrustPath)),
 		ClockFn:   clockFn,
 		ActionsGH: actions,
 	}

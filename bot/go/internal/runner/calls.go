@@ -91,7 +91,7 @@ func exhaustedReset(usage *pyjson.Object) string {
 	var resets []string
 	usage.Items(func(_ string, v any) bool {
 		w, ok := v.(*pyjson.Object)
-		if ok && w != nil && pyFloat(w.GetOr("utilization", 0)) >= 1.0 && w.Truthy("resets_at") {
+		if ok && w != nil && py.MustFloat(w.GetOr("utilization", 0)) >= 1.0 && w.Truthy("resets_at") {
 			resets = append(resets, py.Str(w.Get("resets_at")))
 		}
 		return true
@@ -118,7 +118,7 @@ func ownPIDs() map[int]bool {
 	herr.Must(err)
 	found := map[int]bool{}
 	for _, entry := range entries {
-		if !isDecimal(entry.Name()) {
+		if !py.IsDecimal(entry.Name()) {
 			continue
 		}
 		info, err := os.Stat(filepath.Join("/proc", entry.Name()))
@@ -126,7 +126,7 @@ func ownPIDs() map[int]bool {
 			continue
 		}
 		if st, ok := info.Sys().(*syscall.Stat_t); ok && st.Uid == uid {
-			found[atoi(entry.Name())] = true
+			found[py.Atoi(entry.Name())] = true
 		}
 	}
 	return found
@@ -142,7 +142,7 @@ func statFields(pid int) ([]string, bool) {
 	if i < 0 {
 		return nil, false
 	}
-	return fields(string(stat[i+1:])), true
+	return py.Split(string(stat[i+1:])), true
 }
 
 // ancestors is this process and every one above it.
@@ -249,7 +249,7 @@ func TokensFromBlock(block any) *pyjson.Object {
 	}
 	named := false
 	for _, kn := range TokenNames {
-		if isNumber(b.Get(kn[0])) {
+		if _, isNumber := py.Number(b.Get(kn[0])); isNumber {
 			named = true
 		}
 	}
@@ -260,8 +260,8 @@ func TokensFromBlock(block any) *pyjson.Object {
 	for _, kn := range TokenNames {
 		value := b.Get(kn[0])
 		n := 0
-		if isNumber(value) {
-			n = toInt(value)
+		if f, isNumber := py.Number(value); isNumber {
+			n = int(f)
 		}
 		found.Set(kn[1], n)
 	}
@@ -273,11 +273,10 @@ func CostFromResult(result *pyjson.Object) *float64 {
 	if result == nil {
 		return nil
 	}
-	cost := result.Get("total_cost_usd")
-	if !isNumber(cost) {
+	f, isNumber := py.Number(result.Get("total_cost_usd"))
+	if !isNumber {
 		return nil
 	}
-	f := toFloat(cost)
 	return &f
 }
 
@@ -350,11 +349,6 @@ func (x *FakeRunner) Run(request *RunRequest) *RunResult {
 // Trail is FakeRunner.trail.
 func (x *FakeRunner) Trail(transcript string) string { return "" }
 
-// keyError is Python's KeyError, whose text is the key's repr.
-type keyError struct{ key string }
-
-func (e *keyError) Error() string { return py.Repr(e.key) }
-
 // GetRunner is the backend for `provider` (the first Claude account when there is none), signed
 // in with `login`.
 func GetRunner(cfg *config.Config, provider *providers.Provider /* = None */, login *logins.Login /* = None */) Runner {
@@ -367,7 +361,7 @@ func GetRunner(cfg *config.Config, provider *providers.Provider /* = None */, lo
 	}
 	newBackend, ok := Backends[cli]
 	if !ok {
-		panic(&keyError{cli})
+		panic(py.KeyError(cli))
 	}
 	return newBackend(cfg.Bin(cli), login, nil)
 }

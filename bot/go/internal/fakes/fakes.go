@@ -431,7 +431,7 @@ func (o *Own) ListSubIssues(parent int) []*pyjson.Object {
 	sort.Ints(numbers)
 	for _, n := range numbers {
 		thread := o.Threads.Get(n)
-		if strings.HasSuffix(strOr(thread.Get("parent_issue_url")), suffix) {
+		if strings.HasSuffix(py.OrStr(thread.Get("parent_issue_url"), ""), suffix) {
 			out = append(out, deep(thread))
 		}
 	}
@@ -648,8 +648,8 @@ func (o *Own) SyncLabel(name string, color string, description string) string {
 		return "created"
 	}
 	found := pyjson.Obj(v)
-	if strings.ToLower(strOr(found.Get("color"))) == strings.ToLower(color) &&
-		strOr(found.Get("description")) == description {
+	if strings.ToLower(py.OrStr(found.Get("color"), "")) == strings.ToLower(color) &&
+		py.OrStr(found.Get("description"), "") == description {
 		return ""
 	}
 	found.Set("color", color)
@@ -1014,14 +1014,6 @@ func item(o *pyjson.Object, key string) any {
 		panic(keyError(key))
 	}
 	return v
-}
-
-// strOr is str(v or "").
-func strOr(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
 }
 
 // isNone is `v is None`.

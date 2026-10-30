@@ -207,9 +207,7 @@ func ctxFor(cfg *config.Config, write bool /* = True */) *hctx.Context {
 // build is `context_mod.build(cfg[, token=token])`, where a nil `token` is Python's None (the
 // config's write token, with the Actions token as its fallback and for Actions calls).
 //
-// NOTE(#467): the generated stub of hctx.Build takes `token string`, which cannot say None. Until
-// hctx's port gives the None its own value, None goes as "": this is the one line to change when
-// it does.
+// hctx.Build takes the token as a string, "" for None.
 func build(cfg *config.Config, token *string) *hctx.Context {
 	t := ""
 	if token != nil {
@@ -278,10 +276,10 @@ func Dump(obj any) {
 // the test strips a `#` that int() then refuses, so `--item '#5'` raises its ValueError, as in the
 // Python.
 func itemArg(item string) *int {
-	if !isDigit(strings.TrimLeft(strings.TrimSpace(item), "#")) {
+	if !py.IsDecimal(strings.TrimLeft(strings.TrimSpace(item), "#")) {
 		return nil
 	}
-	n := pyInt(item)
+	n := py.MustInt(item)
 	return &n
 }
 
@@ -324,12 +322,12 @@ func CmdPlan(cfg *config.Config, args *Args) int {
 	writeText(args.Out, pyjson.DumpsIndent(planned, 2)+"\n")
 	// The provider, its CLI and the name of its secret steer the model job: which CLI to install
 	// and which one secret to hand it. They come from providers.json, never from the model.
-	Output(pyjson.New("action", key(planned, "action"), "number", or(planned.Get("number"), ""),
-		"provider", or(planned.Get("provider"), ""), "cli", or(planned.Get("cli"), ""),
-		"secret", or(planned.Get("secret"), ""),
+	Output(pyjson.New("action", py.Item(planned, "action"), "number", py.Or(planned.Get("number"), ""),
+		"provider", py.Or(planned.Get("provider"), ""), "cli", py.Or(planned.Get("cli"), ""),
+		"secret", py.Or(planned.Get("secret"), ""),
 		"shared", lower(planned.Truthy("shared")),
-		"runs_on", or(planned.Get("runs_on"), "ubuntu-latest")))
-	action := py.Str(key(planned, "action"))
+		"runs_on", py.Or(planned.Get("runs_on"), "ubuntu-latest")))
+	action := py.Str(py.Item(planned, "action"))
 	what := action
 	if action != "none" && planned.Truthy("number") {
 		what = fmt.Sprintf("%s #%s", action, py.Str(planned.Get("number")))
@@ -348,7 +346,7 @@ func CmdPlan(cfg *config.Config, args *Args) int {
 	}
 	var notes []string
 	for _, k := range []string{"routing", "skipped"} {
-		for _, line := range pyjson.List(or(planned.Get(k), []any{})) {
+		for _, line := range pyjson.List(py.Or(planned.Get(k), []any{})) {
 			notes = append(notes, py.Str(line))
 		}
 	}
@@ -461,7 +459,7 @@ func CmdWake(cfg *config.Config, args *Args) int {
 	}
 	ctx := Ctx(cfg, false)
 	now := ctx.Now()
-	home := cfgStr(any(identity.Home_))
+	home := identity.Home_
 	if args.List {
 		found, notes := wake.ToWake(ctx, home)
 		say(pyjson.Dumps(found))
@@ -478,7 +476,7 @@ func CmdWake(cfg *config.Config, args *Args) int {
 	reason := ""
 	if !args.Now && at.IsZero() {
 		reason = fmt.Sprintf("outside the hours around the wake times (%s ", hhmm(wake.WakeAt)) +
-			fmt.Sprintf("%s and every %s around it)", wake.Zone, timedelta(duration(wake.Every)))
+			fmt.Sprintf("%s and every %s around it)", wake.Zone, timedelta(wake.Every))
 	} else if !at.IsZero() && wake.AlreadyWoken(ctx.GH.ListRuns(wake.Workflow, "success", 10, false), now) {
 		reason = fmt.Sprintf("an earlier run already woke the sessions of %s %s", hhmm(at), wake.Zone)
 	}
@@ -518,17 +516,17 @@ func MakeProbe(ctx *hctx.Context, number *int, provider *providers.Provider /* =
 
 	probe := func(lastUsage *pyjson.Object) *[2]string {
 		if ctx.RepoHalted() {
-			return &[2]string{fmt.Sprintf("halted by %s on main", cfgStr(any(config.HaltPath))), "halt"}
+			return &[2]string{fmt.Sprintf("halted by %s on main", config.HaltPath), "halt"}
 		}
 		st := ctx.Store.Load()
 		if st.Truthy("halted") {
-			return &[2]string{fmt.Sprintf("halted by %s halt", cfgStr(any(config.Slash))), "halt"}
+			return &[2]string{fmt.Sprintf("halted by %s halt", config.Slash), "halt"}
 		}
 		held := providers.Suspension(st, provider.ID)
 		if held != nil {
 			by := ""
 			if held.Truthy("by") {
-				by = " by @" + py.Str(key(held, "by"))
+				by = " by @" + py.Str(py.Item(held, "by"))
 			}
 			return &[2]string{fmt.Sprintf("`%s` was suspended%s", provider.ID, by), "suspend"}
 		}
@@ -583,7 +581,7 @@ func CmdWork(cfg *config.Config, args *Args) int {
 		}
 		if secret != "" || provider.CLI != "claude" || provider.Login == "machine" {
 			exc, failed := herr.Catch[*herr.LoginError](func() {
-				login = logins.Prepare(provider, secret, orStr(planned.Get("vault")),
+				login = logins.Prepare(provider, secret, py.OrStr(planned.Get("vault"), ""),
 					filepath.Join(args.WorkDir, ".logins", provider.ID))
 			})
 			if failed {
@@ -604,8 +602,8 @@ func CmdWork(cfg *config.Config, args *Args) int {
 		}
 		var sealed string
 		if exc, ok := catchIf(func() { sealed = logins.Seal(login) },
-			func(err error) bool { return isValueError(err) || isOSError(err) }); ok {
-			say("work: could not seal the refreshed login: " + redact.Redact(excText(exc), nil))
+			func(err error) bool { return isValueError(err) || herr.IsOSError(err) }); ok {
+			say("work: could not seal the refreshed login: " + redact.Redact(herr.Str(exc), nil))
 			return
 		}
 		if sealed != "" {
@@ -617,7 +615,7 @@ func CmdWork(cfg *config.Config, args *Args) int {
 	run := runner.GetRunner(cfg, provider, login)
 	var item *int
 	if pyjson.Truthy(number) {
-		n := intOf(number)
+		n := py.MustInt(number)
 		item = &n
 	}
 	var worker *work.Worker
@@ -644,9 +642,6 @@ func CmdWork(cfg *config.Config, args *Args) int {
 	say(fmt.Sprintf("work: %s: %s", py.Str(result.Get("status")), py.Str(result.GetOr("reason", ""))))
 	return 0
 }
-
-// orStr is `str(v or "")`.
-func orStr(v any) string { return py.Str(or(v, "")) }
 
 // CmdPlanFetch is cmd_plan_fetch: a night run the status loop started with its plan (#1455): read
 // the plan from the state branch into `--out`. With `--check` (the model job), the runner, CLI,
@@ -699,13 +694,13 @@ func CmdDeliver(cfg *config.Config, args *Args) int {
 	}
 	ctx := Ctx(cfg, true)
 	var number *int
-	if isDigit(args.Number) {
-		n := pyInt(args.Number)
+	if py.IsDecimal(args.Number) {
+		n := py.MustInt(args.Number)
 		number = &n
 	}
 	outcome := deliver.NewDeliverer(ctx, planned, args.Out, cfg.Root, args.Action, number, args.Provider).Run()
 	var log []string
-	for _, line := range pyjson.List(key(outcome, "log")) {
+	for _, line := range pyjson.List(py.Item(outcome, "log")) {
 		log = append(log, py.Str(line))
 	}
 	items := make([]string, len(log))
@@ -771,7 +766,7 @@ func runCreated(cfg *config.Config) time.Time {
 		return time.Time{}
 	}
 	var at time.Time
-	if err := herr.Try(func() { at = parseISO(Ctx(cfg, true).GH.GetRun(cfg.RunID).Get("created_at")) }); err != nil {
+	if err := herr.Try(func() { at = clock.ParseISOValue(Ctx(cfg, true).GH.GetRun(cfg.RunID).Get("created_at")) }); err != nil {
 		return time.Time{} // not knowing only means trusting the newest record
 	}
 	return at
@@ -794,7 +789,7 @@ func current(cfg *config.Config, since time.Time) *config.Config {
 	refused := false
 	if err := herr.Try(func() {
 		ctx := Ctx(cfg, true)
-		text, _ := ctx.GH.GetFile(asPath(any(providers.ProvidersPath)), cfg.DefaultBranch)
+		text, _ := ctx.GH.GetFile(providers.ProvidersPath, cfg.DefaultBranch)
 		if text != "" {
 			raw := loads(text)
 			if exc, ok := herr.Catch[*herr.ConfigError](func() { pool = providers.Parse(raw) }); ok {
@@ -807,7 +802,7 @@ func current(cfg *config.Config, since time.Time) *config.Config {
 		secrets = providers.NewerSecrets(cfg.Secrets, ctx.Store.Load(), since)
 	}); err != nil {
 		// one bad tick must not end the loop
-		say(redact.Redact("::warning::kept the subscriptions and secrets as they were: "+excText(err), nil))
+		say(redact.Redact("::warning::kept the subscriptions and secrets as they were: "+herr.Str(err), nil))
 	}
 	if refused {
 		return nil
@@ -827,7 +822,7 @@ func Companion(other *identity.Other, argv ...string) (*Completed, error) {
 		return nil, err
 	}
 	dir := ""
-	if root := cfgStr(any(config.RepoRoot)); root != "" {
+	if root := config.RepoRoot; root != "" {
 		dir = filepath.Join(root, "bot")
 	}
 	return SubprocessRun(append([]string{exe}, argv...), RunOptions{
@@ -846,14 +841,14 @@ var CompanionTimeout = 300
 // bot that cannot be run is a warning, and the issue goes on without its section.
 func companions(cfg *config.Config, doSweep bool, argv []string /* = ("dashboard", "--section-only") */, what string /* = "section" */) []string {
 	var sections []string
-	for _, other := range others() {
+	for _, other := range config.Others {
 		if other.Home == "" {
 			continue
 		}
 		if doSweep && other.TokenEnv != "" && config.CompanionEnv(other, nil)["BOT_GITHUB_TOKEN"] != "" {
 			done, err := Companion(other, "sweep")
 			if err != nil {
-				say(redact.Redact(fmt.Sprintf("::warning::%s's sweep did not run: %s", other.Name, excText(err)), nil))
+				say(redact.Redact(fmt.Sprintf("::warning::%s's sweep did not run: %s", other.Name, herr.Str(err)), nil))
 			} else {
 				for _, line := range py.Splitlines(done.Stdout) {
 					say(redact.Redact(fmt.Sprintf("%s: %s", other.Name, line), nil))
@@ -866,7 +861,7 @@ func companions(cfg *config.Config, doSweep bool, argv []string /* = ("dashboard
 		}
 		drawn, err := Companion(other, argv...)
 		if err != nil {
-			say(redact.Redact(fmt.Sprintf("::warning::%s's %s was not drawn: %s", other.Name, what, excText(err)), nil))
+			say(redact.Redact(fmt.Sprintf("::warning::%s's %s was not drawn: %s", other.Name, what, herr.Str(err)), nil))
 			continue
 		}
 		if drawn.Returncode == 0 && strings.TrimSpace(drawn.Stdout) != "" {
@@ -925,7 +920,7 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 				}
 			}); err != nil {
 				// one bad tick must not end the loop
-				say(redact.Redact("::warning::the sweep failed: "+excText(err), nil))
+				say(redact.Redact("::warning::the sweep failed: "+herr.Str(err), nil))
 			}
 		}
 		var extra []string
@@ -937,14 +932,14 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 				cardsets.FetchJSON)
 			say(redact.Redact("dashboard: "+note, nil))
 		}); err != nil {
-			say(redact.Redact("::warning::the status issue was not updated: "+excText(err), nil))
+			say(redact.Redact("::warning::the status issue was not updated: "+herr.Str(err), nil))
 		}
 		if err := herr.Try(func() {
 			if note := disk.Alert(Ctx(cfg, true)); note != "" {
 				say(redact.Redact("disk: "+note, nil))
 			}
 		}); err != nil {
-			say(redact.Redact("::warning::the disk issue was not settled: "+excText(err), nil))
+			say(redact.Redact("::warning::the disk issue was not settled: "+herr.Str(err), nil))
 		}
 		if every == 0 || Monotonic()+float64(every) > deadline {
 			return 0
@@ -955,7 +950,7 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 			if err := herr.Try(func() {
 				say(redact.Redact("runners: "+dashboard.RefreshRunners(Ctx(cfg, true)), nil))
 			}); err != nil {
-				say(redact.Redact("::warning::the runners were not redrawn: "+excText(err), nil))
+				say(redact.Redact("::warning::the runners were not redrawn: "+herr.Str(err), nil))
 			}
 		}
 		Sleep(max(0.0, due-Monotonic()))
@@ -1030,12 +1025,12 @@ func CmdDispatch(cfg *config.Config, args *Args) int {
 	var item *int
 	shown := "None"
 	if args.Item != "" {
-		n := pyInt(args.Item)
+		n := py.MustInt(args.Item)
 		item, shown = &n, strconv.Itoa(n)
 	}
 	ctx.Dispatch(item, args.Force, args.Mode)
-	say(fmt.Sprintf("dispatched %s (item=%s, force=%s, mode=%s)", cfgStr(any(config.NightWorkflow)), shown,
-		pyBool(args.Force), args.Mode))
+	say(fmt.Sprintf("dispatched %s (item=%s, force=%s, mode=%s)", config.NightWorkflow, shown,
+		py.Str(args.Force), args.Mode))
 	return 0
 }
 
@@ -1094,7 +1089,7 @@ func CmdProviders(cfg *config.Config, args *Args) int {
 	}
 	for _, tier := range providers.Tiers {
 		var order []string
-		for _, e := range tierEntries(cfg.Pool, tier) {
+		for _, e := range cfg.Pool.TierEntries(tier) {
 			s := e.Model
 			if checking[e.Model] {
 				s += " (self-check)"
@@ -1208,9 +1203,9 @@ func CmdDoctor(cfg *config.Config, args *Args) int {
 			names[py.Str(label.Get("name"))] = true
 		}
 		missingLabels := []string{}
-		for _, l := range labels() {
-			if !names[l.name] {
-				missingLabels = append(missingLabels, l.name)
+		for _, l := range config.LabelSpecs() {
+			if !names[l.Name] {
+				missingLabels = append(missingLabels, l.Name)
 			}
 		}
 		if len(missingLabels) > 0 {
@@ -1218,7 +1213,7 @@ func CmdDoctor(cfg *config.Config, args *Args) int {
 		} else {
 			ok = append(ok, "labels: all present")
 		}
-		stateBranch := cfgStr(any(config.StateBranch))
+		stateBranch := config.StateBranch
 		if ctx.GH.BranchSHA(stateBranch) == "" {
 			warnings = append(warnings, fmt.Sprintf("no `%s` branch yet (setup creates it)", stateBranch))
 		}
@@ -1259,13 +1254,13 @@ func CmdSetup(cfg *config.Config, args *Args) int {
 	ctx := Ctx(cfg, true)
 	// `LABELS` is the one list (#187): a missing label is created, and one whose colour or
 	// description someone changed by hand is brought back to it.
-	for _, l := range labels() {
-		if done := ctx.GH.SyncLabel(l.name, l.color, l.description); done != "" {
-			say(fmt.Sprintf("%s label %s", done, l.name))
+	for _, l := range config.LabelSpecs() {
+		if done := ctx.GH.SyncLabel(l.Name, l.Color, l.Description); done != "" {
+			say(fmt.Sprintf("%s label %s", done, l.Name))
 		}
 	}
 	if ctx.Store.Ensure() {
-		say("created branch " + cfgStr(any(config.StateBranch)))
+		say("created branch " + config.StateBranch)
 	}
 	if args.RepoSettings {
 		ctx.GH.UpdateRepo(pyjson.New("allow_auto_merge", true, "delete_branch_on_merge", true))
@@ -1282,16 +1277,16 @@ func CmdSetup(cfg *config.Config, args *Args) int {
 // convenience, never a reason for a red run.
 func CmdTriage(cfg *config.Config, args *Args) int {
 	payload := object(readJSON(args.Payload))
-	asked := strings.TrimLeft(strings.TrimSpace(orStr(payload.Obj("inputs").Get("number"))), "#")
+	asked := strings.TrimLeft(strings.TrimSpace(py.OrStr(payload.Obj("inputs").Get("number"), "")), "#")
 	var number int
 	var done []string
 	var decided *triage.Plan
 	if exc, failed := catchIf(func() {
 		ctx := Ctx(cfg, true)
 		if asked != "" { // `workflow_dispatch`: a person called triage on this thread
-			payload = pyjson.New("issue", ctx.GH.GetIssue(pyInt(asked)))
+			payload = pyjson.New("issue", ctx.GH.GetIssue(py.MustInt(asked)))
 		}
-		step, why := triage.Gate(payload, trust.TrustLoad(filepath.Join(cfg.Root, asPath(any(config.TrustPath)))),
+		step, why := triage.Gate(payload, trust.TrustLoad(filepath.Join(cfg.Root, config.TrustPath)),
 			cfg.BotLogin, asked != "")
 		shown := step
 		if shown == "" {
@@ -1302,7 +1297,7 @@ func CmdTriage(cfg *config.Config, args *Args) int {
 			return
 		}
 		thread, _ := triage.ThreadOf(payload)
-		number = intOf(key(thread, "number"))
+		number = py.MustInt(py.Item(thread, "number"))
 		issue := ctx.GH.GetIssue(number) // afresh: what a person set meanwhile counts
 		isPR := issue.Has("pull_request")
 		var types map[string]string
@@ -1334,7 +1329,7 @@ func CmdTriage(cfg *config.Config, args *Args) int {
 // CmdForget is cmd_forget: clear an item's failure count and findings, so it can be queued fresh.
 func CmdForget(cfg *config.Config, args *Args) int {
 	ctx := Ctx(cfg, true)
-	number := pyInt(args.Number)
+	number := py.MustInt(args.Number)
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		rec := state.Item(s, number)
 		rec.Set("failures", 0)
@@ -1526,7 +1521,7 @@ func prTitle(argv []string) int {
 		"for a part. No title names a version before it ships.")
 	path := GithubEnv()["GITHUB_STEP_SUMMARY"]
 	if path == "" {
-		panic(&pyError{"KeyError", py.Repr("GITHUB_STEP_SUMMARY")})
+		panic(py.KeyError("GITHUB_STEP_SUMMARY"))
 	}
 	appendText(path, "### The title breaks the convention\n\n`"+title+"`\n\n"+
 		"Titles follow [docs/issues-and-patches.md]("+server+"/"+

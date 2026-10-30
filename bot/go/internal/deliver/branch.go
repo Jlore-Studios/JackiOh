@@ -13,7 +13,7 @@ import (
 // ------------------------------------------------------------------ the branch
 
 func (x *Deliverer) openPull() *pyjson.Object {
-	branch := orStr(x.Plan.Get("branch"), "")
+	branch := py.OrStr(x.Plan.Get("branch"), "")
 	if branch == "" {
 		return nil
 	}
@@ -46,7 +46,7 @@ func (x *Deliverer) fetch(ref string, check bool) {
 
 // isAncestor is `self.repo.run("merge-base", "--is-ancestor", a, b, check=False).returncode`.
 func (x *Deliverer) isAncestor(a, b string) int {
-	return completed(x.Repo.Run(false, 600, nil, "merge-base", "--is-ancestor", a, b)).returncode
+	return x.Repo.Run(false, 600, nil, "merge-base", "--is-ancestor", a, b).Returncode
 }
 
 func (x *Deliverer) remoteURL() string {
@@ -57,7 +57,7 @@ func (x *Deliverer) remoteURL() string {
 // whose head holds a conflict marker in a file it changed is refused (#317 part 2).
 func (x *Deliverer) publish(approved bool) (bool, string) {
 	name := x.Result.Get("bundle")
-	branch := orStr(x.Plan.Get("branch"), "")
+	branch := py.OrStr(x.Plan.Get("branch"), "")
 	if !pyjson.Truthy(name) || branch == "" {
 		return false, ""
 	}
@@ -76,7 +76,7 @@ func (x *Deliverer) publish(approved bool) (bool, string) {
 	if head != x.Result.Get("head") {
 		return false, "the bundle's head is not the head the result names"
 	}
-	start := orStr(x.Result.Get("start"), "")
+	start := py.OrStr(x.Result.Get("start"), "")
 	if start == "" || x.isAncestor(start, head) != 0 {
 		return false, "the bundle does not descend from the commit the work started at"
 	}

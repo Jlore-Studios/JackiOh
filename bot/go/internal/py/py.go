@@ -1,6 +1,10 @@
-// Package py holds the few Python behaviours the harness's text and numbers depend on, where Go's
-// own differ: str() of a value, round() to even, floor division and modulo, str.splitlines(),
-// fnmatch and the thousands separator. Each function names the Python it stands for.
+// Package py holds the Python behaviours the harness depends on where Go's own differ, one tested
+// copy each: str() and repr() of a value, round() to even, floor division and modulo,
+// str.splitlines(), fnmatch and the thousands separator (here); str.strip(), split(), lower() and
+// re's Unicode classes (text.go); bytes.decode("utf-8", "replace") and text mode (decode.go);
+// int(), float(), `x or default`, iteration and Python's own exceptions (value.go); Counter,
+// sum() of floats, the `%` format and tuple sort keys (collections.go). Each function names the
+// Python it stands for, and the tests hold Python 3.13's answers (testdata.json).
 package py
 
 import (

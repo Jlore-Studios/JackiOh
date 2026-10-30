@@ -1,11 +1,8 @@
 package clock
 
 import (
-	"fmt"
-	"math"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 )
@@ -13,11 +10,6 @@ import (
 // This file is what parse_iso leans on from Python itself: datetime.fromisoformat as Python 3.13's
 // C module reads a string (Lib/_pydatetime.py's algorithm, which it follows but for one case
 // noted below), int() of a string, and str.strip().
-
-// overflowError is Python's OverflowError, which parse_iso and parse_hhmm let through.
-type overflowError struct{ msg string }
-
-func (e *overflowError) Error() string { return e.msg }
 
 // fromISOFormat is `datetime.fromisoformat(s).astimezone(timezone.utc)` (a naive result read
 // as UTC), and false where Python raises ValueError. A result outside years 1 to 9999 raises
@@ -57,7 +49,7 @@ func fromISOFormat(s string) (time.Time, bool) {
 		time.UTC)
 	utc := local.Add(-offset)
 	if utc.Year() < 1 || utc.Year() > 9999 {
-		panic(&overflowError{"date value out of range"})
+		panic(&py.Error{Type: "OverflowError", Msg: "date value out of range"})
 	}
 	return utc, true
 }
@@ -325,90 +317,3 @@ func isoTime(t []rune) ([4]int, time.Duration, bool) {
 	}
 	return comps, offset, true
 }
-
-// pyInt is int(s) for a string, base 10, with Python's message on a ValueError: Unicode
-// whitespace around it and Unicode decimal digits read as Python reads them, a sign, and single
-// underscores between digits. `big` says the value is beyond a C long (Python's int holds it;
-// whatever takes it as a C integer raises OverflowError).
-func pyInt(s string) (n int, big bool, err error) {
-	invalid := fmt.Errorf("invalid literal for int() with base 10: %s", py.SliceTo(py.Repr(s), 200))
-	var b strings.Builder
-	for _, r := range s {
-		switch {
-		case r < 0x80:
-			b.WriteRune(r)
-		case pyIsSpace(r):
-			b.WriteByte(' ')
-		default:
-			if d, ok := decimalValue(r); ok {
-				b.WriteByte(byte('0' + d))
-			} else {
-				b.WriteByte('?')
-			}
-		}
-	}
-	t := strings.Trim(b.String(), " \t\n\v\f\r")
-	neg := false
-	if t != "" && (t[0] == '+' || t[0] == '-') {
-		neg = t[0] == '-'
-		t = t[1:]
-	}
-	if t == "" || t[0] == '_' || t[len(t)-1] == '_' || strings.Contains(t, "__") {
-		return 0, false, invalid
-	}
-	limit := uint64(math.MaxInt64)
-	if neg {
-		limit++
-	}
-	var u uint64
-	for i := 0; i < len(t); i++ {
-		c := t[i]
-		if c == '_' {
-			continue
-		}
-		if c < '0' || c > '9' {
-			return 0, false, invalid
-		}
-		d := uint64(c - '0')
-		if big || u > (limit-d)/10 {
-			big = true
-			continue
-		}
-		u = u*10 + d
-	}
-	if big {
-		return 0, true, nil
-	}
-	if neg {
-		return int(-u), false, nil
-	}
-	return int(u), false, nil
-}
-
-// decimalValue is the digit a Unicode decimal digit (category Nd) stands for: every Nd range
-// runs in whole sets of ten from a zero.
-func decimalValue(r rune) (int, bool) {
-	if !unicode.IsDigit(r) {
-		return 0, false
-	}
-	for _, rg := range unicode.Nd.R16 {
-		if lo, hi := rune(rg.Lo), rune(rg.Hi); r >= lo && r <= hi {
-			return int(r-lo) / int(rg.Stride) % 10, true
-		}
-	}
-	for _, rg := range unicode.Nd.R32 {
-		if lo, hi := rune(rg.Lo), rune(rg.Hi); r >= lo && r <= hi {
-			return int(r-lo) / int(rg.Stride) % 10, true
-		}
-	}
-	return 0, false
-}
-
-// pyIsSpace is str.isspace() for one character (Python's `\s`): Go's unicode.IsSpace and the
-// four separators \x1c to \x1f.
-func pyIsSpace(r rune) bool {
-	return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f)
-}
-
-// pyStrip is str.strip(): strings.TrimSpace, and the separators \x1c to \x1f too.
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }

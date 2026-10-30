@@ -11,6 +11,7 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
 )
@@ -183,7 +184,7 @@ func TestMainCatchesAsPythonDoes(t *testing.T) {
 			"error: the state is gone\n"},
 		{"config", func(*config.Config, *Args) int { herr.Raise(&herr.ConfigError{Msg: "no repo"}); return 0 }, 1,
 			"error: no repo\n"},
-		{"value", func(*config.Config, *Args) int { pyInt("#5"); return 0 }, 1,
+		{"value", func(*config.Config, *Args) int { py.MustInt("#5"); return 0 }, 1,
 			"ValueError: invalid literal for int() with base 10: '#5'\n"},
 		{"oserror", func(*config.Config, *Args) int { readJSON("/nonexistent/plan.json"); return 0 }, 1,
 			"FileNotFoundError: [Errno 2] No such file or directory: '/nonexistent/plan.json'\n"},
@@ -218,8 +219,8 @@ func TestItemArgKeepsPythonsQuirk(t *testing.T) {
 	}
 	// `#5` passes the isdigit() test once stripped, and int() then refuses it.
 	err := herr.Try(func() { itemArg("#5") })
-	var pe *pyError
-	if !errors.As(err, &pe) || pe.name != "ValueError" {
+	var pe *py.Error
+	if !errors.As(err, &pe) || pe.Type != "ValueError" {
 		t.Errorf("#5: %v", err)
 	}
 }

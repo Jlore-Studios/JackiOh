@@ -98,7 +98,7 @@ func (x *Worker) resetTo(head string) {
 
 func (x *Worker) install() *gates.GateResult {
 	timeout := int(x.SecondsLeft())
-	result := gates.RunGate(x.Cfg.Install, cwdOf(x.Wt), x.Env, &timeout)
+	result := gates.RunGate(x.Cfg.Install, x.Wt.Cwd, x.Env, &timeout)
 	if result.OK {
 		x.InstalledAt = x.Wt.Head()
 	}
@@ -106,16 +106,16 @@ func (x *Worker) install() *gates.GateResult {
 }
 
 func (x *Worker) prepare(mergeMain bool /* = True */, install bool /* = True */) []string {
-	number := pyInt(x.planItem("number"))
+	number := py.MustInt(x.planItem("number"))
 	branch := py.Str(x.planItem("branch"))
 	fetchRef(x.Repo, x.Cfg.DefaultBranch, true)
 	fetchRef(x.Repo, branch, false)
-	onto := strOr(x.Plan.Get("onto"), "")
+	onto := py.OrStr(x.Plan.Get("onto"), "")
 	if onto != "" {
 		// A fullsend part (#505) starts from its tree's branch, and that is its base: every
 		// diff it measures leaves out the parts that landed before it.
 		if fetchRef(x.Repo, onto, false) != 0 || x.Repo.Rev("origin/"+onto) == "" {
-			herr.Raise(&runtimeError{msg: "the integration branch " + onto + " is gone"})
+			herr.Raise(&py.Error{Type: "RuntimeError", Msg: "the integration branch " + onto + " is gone"})
 		}
 		x.BaseRef = "origin/" + onto
 	}
@@ -126,7 +126,7 @@ func (x *Worker) prepare(mergeMain bool /* = True */, install bool /* = True */)
 	remote := "origin/" + branch
 	hasRemote := x.Repo.Rev(remote) != ""
 	if action := x.planItem("action"); (action == "revise" || action == "review") && !hasRemote {
-		herr.Raise(&runtimeError{msg: "the pull request's branch " + branch + " is not on origin"})
+		herr.Raise(&py.Error{Type: "RuntimeError", Msg: "the pull request's branch " + branch + " is not on origin"})
 	}
 	start := x.BaseRef
 	if hasRemote {
@@ -259,7 +259,7 @@ func (x *Worker) wipStart(number int, start string) string {
 	if wip == nil || !wip.Truthy("sha") {
 		return start
 	}
-	ref := py.Str(config.BranchPrefix) + "wip/" + strconv.Itoa(number)
+	ref := config.BranchPrefix + "wip/" + strconv.Itoa(number)
 	fetchRef(x.Repo, ref, false)
 	head := x.Repo.Rev("origin/" + ref)
 	if began, ok := wip.Get("start").(string); head != "" && ok && began == x.StartSHA {
@@ -311,15 +311,15 @@ func (x *Worker) excludeNotes() {
 // them (#342).
 func (x *Worker) seedNotes() {
 	handoff := pyjson.Obj(x.Plan.Get("handoff"))
-	cwd := cwdOf(x.Wt)
-	if notes := strOr(handoff.Get("notes"), ""); strings.TrimSpace(notes) != "" {
-		writeText(filepath.Join(cwd, NotesFile), rstrip(notes)+"\n")
+	cwd := x.Wt.Cwd
+	if notes := py.OrStr(handoff.Get("notes"), ""); strings.TrimSpace(notes) != "" {
+		writeText(filepath.Join(cwd, NotesFile), py.Rstrip(notes)+"\n")
 	}
-	if draft := strOr(handoff.Get("draft"), ""); strings.TrimSpace(draft) != "" {
-		writeText(filepath.Join(cwd, PlanDraftFile), rstrip(draft)+"\n")
+	if draft := py.OrStr(handoff.Get("draft"), ""); strings.TrimSpace(draft) != "" {
+		writeText(filepath.Join(cwd, PlanDraftFile), py.Rstrip(draft)+"\n")
 	}
-	if text := strOr(x.Plan.Get("journal"), ""); strings.TrimSpace(text) != "" {
-		writeText(filepath.Join(cwd, journal.JournalFile), rstrip(text)+"\n")
+	if text := py.OrStr(x.Plan.Get("journal"), ""); strings.TrimSpace(text) != "" {
+		writeText(filepath.Join(cwd, journal.JournalFile), py.Rstrip(text)+"\n")
 	}
 }
 
@@ -329,7 +329,7 @@ func (x *Worker) Handoff() *pyjson.Object {
 	if x.Wt == nil {
 		return nil
 	}
-	notesPath := filepath.Join(cwdOf(x.Wt), NotesFile)
+	notesPath := filepath.Join(x.Wt.Cwd, NotesFile)
 	notes := ""
 	if isFile(notesPath) {
 		notes = readText(notesPath, true)
@@ -350,7 +350,7 @@ func (x *Worker) Handoff() *pyjson.Object {
 		return nil
 	}
 	handoff := pyjson.New("provider", x.Provider.ID, "family", x.Provider.Family,
-		"at", clock.ISO(x.Now()), "reason", strOr(x.Result.Get("reason"), ""),
+		"at", clock.ISO(x.Now()), "reason", py.OrStr(x.Result.Get("reason"), ""),
 		"notes", redact.Redact(notes, nil), "trail", redact.Redact(trail, nil))
 	if draft != "" {
 		handoff.Set("draft", redact.Redact(draft, nil))
@@ -368,13 +368,13 @@ func (x *Worker) draft() string {
 	if x.Wt == nil {
 		return ""
 	}
-	path := filepath.Join(cwdOf(x.Wt), PlanDraftFile)
+	path := filepath.Join(x.Wt.Cwd, PlanDraftFile)
 	if !isFile(path) || isObj(x.Result.Get("plan")) {
 		return ""
 	}
 	text := strings.TrimSpace(readText(path, true))
 	if py.Len(text) > issueplan.PlanChars {
-		text = rstrip(py.SliceTo(text, issueplan.PlanChars-py.Len(PlanCut))) + PlanCut
+		text = py.Rstrip(py.SliceTo(text, issueplan.PlanChars-py.Len(PlanCut))) + PlanCut
 	}
 	return text
 }
@@ -388,14 +388,14 @@ func (x *Worker) HandoffText(builder bool /* = True */) string {
 // What a planner is told when an earlier planning run was cut off before it finished:
 // where its draft is, and the end of its session.
 func (x *Worker) draftSection(handoff *pyjson.Object) string {
-	draft := strings.TrimSpace(strOr(handoff.Get("draft"), ""))
-	trail := strings.TrimSpace(strOr(handoff.Get("trail"), ""))
+	draft := strings.TrimSpace(py.OrStr(handoff.Get("draft"), ""))
+	trail := strings.TrimSpace(py.OrStr(handoff.Get("trail"), ""))
 	if draft == "" && trail == "" {
 		return ""
 	}
 	parts := []string{"## An unfinished plan from an earlier run\n\nA planning run on `" +
 		py.Str(handoff.GetOr("provider", "?")) + "` (" + py.Str(handoff.GetOr("family", "?")) +
-		") was cut off before it finished: " + strOr(handoff.Get("reason"), "no reason recorded") + "."}
+		") was cut off before it finished: " + py.OrStr(handoff.Get("reason"), "no reason recorded") + "."}
 	if draft != "" {
 		parts[0] += " It kept a draft as it went, which is now `" + PlanDraftFile + "` at the " +
 			"top of your worktree, and below. Go on from it rather than starting " +
@@ -414,7 +414,7 @@ func (x *Worker) draftSection(handoff *pyjson.Object) string {
 
 // The section a first prompt gets when earlier runs left a journal (`journal.py`).
 func (x *Worker) journalText(builder bool /* = True */) string {
-	runs := journal.RunsIn(strOr(x.Plan.Get("journal"), ""))
+	runs := journal.RunsIn(py.OrStr(x.Plan.Get("journal"), ""))
 	if len(runs) == 0 {
 		return ""
 	}
@@ -462,7 +462,7 @@ func (x *Worker) handoffSection(builder bool /* = True */) string {
 		return x.draftSection(handoff)
 	}
 	if handoff.Get("kind") == "plan" {
-		if strings.TrimSpace(strOr(handoff.Get("notes"), "")) == "" {
+		if strings.TrimSpace(py.OrStr(handoff.Get("notes"), "")) == "" {
 			return ""
 		}
 		if x.Plan.Truthy("plan_in_issue") {
@@ -484,14 +484,14 @@ func (x *Worker) handoffSection(builder bool /* = True */) string {
 		where = "in your worktree (see above)"
 	}
 	parts := []string{"## Picking up from another agent\n\nAn earlier run on `" + provider + "` (" +
-		family + ") worked on this and stopped: " + strOr(handoff.Get("reason"), "no reason recorded") +
+		family + ") worked on this and stopped: " + py.OrStr(handoff.Get("reason"), "no reason recorded") +
 		". Its work so far is " + where + ". Below are the notes it kept and the end of its " +
 		"session. Check them against the diff and re-run the checks before you trust any of it. " +
 		"Go on from where it stopped rather than starting over."}
-	if strings.TrimSpace(strOr(handoff.Get("notes"), "")) != "" {
+	if strings.TrimSpace(py.OrStr(handoff.Get("notes"), "")) != "" {
 		parts = append(parts, prompts.Data(py.Str(handoff.Get("notes")), "Its notes"))
 	}
-	if strings.TrimSpace(strOr(handoff.Get("trail"), "")) != "" {
+	if strings.TrimSpace(py.OrStr(handoff.Get("trail"), "")) != "" {
 		parts = append(parts, prompts.Data(py.Str(handoff.Get("trail")), "The end of its session"))
 	}
 	return "\n\n" + strings.Join(parts, "\n\n")
@@ -502,7 +502,7 @@ func (x *Worker) wipText() string {
 	if x.WipUsed != "" {
 		return "\n\n## Unfinished work from the last run\n\nThe last revision run was cut " +
 			"off before it finished. Your worktree starts from `" + x.WipUsed + "`, " +
-			"which holds its commits (\"" + py.Str(config.CommitPrefix) + ": work in progress …\") on " +
+			"which holds its commits (\"" + config.CommitPrefix + ": work in progress …\") on " +
 			"top of the pull request: go on from where it stopped rather than starting over, and " +
 			"check what it did against the task before you build on it."
 	}
@@ -579,7 +579,7 @@ func (x *Worker) FirstWhy(role string, conflicts []string) string {
 	handoff := pyjson.Obj(x.Plan.Get("handoff"))
 	var why string
 	if role == "revise" {
-		why = "revise the pull request (" + strOr(x.Plan.Get("source"), "request") + ")"
+		why = "revise the pull request (" + py.OrStr(x.Plan.Get("source"), "request") + ")"
 		if len(conflicts) > 0 {
 			why += fmt.Sprintf("; `main` merged with conflicts in %d file(s)", len(conflicts))
 		}
@@ -591,7 +591,7 @@ func (x *Worker) FirstWhy(role string, conflicts []string) string {
 	}
 	if kind := handoff.Get("kind"); handoff.Len() > 0 && kind != "plan" && kind != "draft" {
 		why += "; picking up from `" + py.Str(handoff.GetOr("provider", "?")) + "`, which stopped: " +
-			strOr(handoff.Get("reason"), "no reason recorded")
+			py.OrStr(handoff.Get("reason"), "no reason recorded")
 	}
 	if x.WipUsed != "" {
 		why += "; starting from `" + x.WipUsed + "`"
@@ -631,7 +631,7 @@ func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
 		}
 		previous = "An earlier pull request for this issue, #" + py.Str(plan.Get("previous_pr")) +
 			", was closed and this issue built again from `main`: " +
-			strOr(plan.Get("previous_why"), "it kept failing") + kept + ". Start from " +
+			py.OrStr(plan.Get("previous_why"), "it kept failing") + kept + ". Start from " +
 			"`main`, learn from what went wrong, and do not repeat it.\n\n"
 	}
 	if prior := plan.Get("previous_findings"); pyjson.Truthy(prior) {
@@ -642,7 +642,7 @@ func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
 		previous += "An earlier run left this unfinished. The last review's blocking " +
 			"findings were:\n\n" + x.findingsText(findings, "Blocking findings")
 	}
-	if question := strings.TrimSpace(strOr(plan.Get("previous_question"), "")); question != "" {
+	if question := strings.TrimSpace(py.OrStr(plan.Get("previous_question"), "")); question != "" {
 		previous += "\n\nAn earlier run stopped to ask the question below. The answer, if " +
 			"someone gave one, is in the comments of the task above.\n\n" +
 			prompts.Data(question, "The question asked")
@@ -668,7 +668,7 @@ func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
 		"previous", previous, "gate_list", x.GateList())
 	var prompt string
 	if mode := plan.Get("mode"); mode == "oneshot" {
-		values.Set("slice_prefix", py.Str(config.BranchPrefix)+"oneshot-"+py.Str(number)+"/")
+		values.Set("slice_prefix", config.BranchPrefix+"oneshot-"+py.Str(number)+"/")
 		prompt = x.Render("oneshot", values)
 	} else if mode == "fullsend" && plan.Truthy("children") {
 		var parked []string
@@ -761,7 +761,7 @@ func (x *Worker) commit(message string) bool {
 func (x *Worker) unresolvedMarkers() []string {
 	var changed []string
 	for _, p := range x.Wt.ChangedPaths(x.BaseRef, "HEAD") {
-		if isFile(filepath.Join(cwdOf(x.Wt), p)) {
+		if isFile(filepath.Join(x.Wt.Cwd, p)) {
 			changed = append(changed, p)
 		}
 	}
@@ -801,7 +801,7 @@ func (x *Worker) guard() []*verdicts.Finding {
 	x.PutBack = touched
 	if len(touched) > 0 {
 		x.Wt.RestoreFrom(x.anchors(), touched)
-		x.commit(py.Str(config.CommitPrefix) + ": put back paths the bot may not change")
+		x.commit(config.CommitPrefix + ": put back paths the bot may not change")
 		found = append(found, newFinding(
 			"blocking", touched[0],
 			"The change edited "+strings.Join(touched, ", ")+", which the bot may not change ("+
@@ -844,7 +844,7 @@ func (x *Worker) checks() []*gates.GateResult {
 			return results
 		}
 	}
-	results = append(results, gates.RunAll(x.Gates, cwdOf(x.Wt), x.Env, x.SecondsLeft)...)
+	results = append(results, gates.RunAll(x.Gates, x.Wt.Cwd, x.Env, x.SecondsLeft)...)
 	x.readMemory() // the install and the typecheck are what a machine job's memory goes on
 	x.MarkPreExisting(results)
 	x.checksStep(results)
@@ -906,7 +906,7 @@ func (x *Worker) MarkPreExisting(results []*gates.GateResult) {
 				return
 			}
 			timeout := int(x.SecondsLeft())
-			again := gates.RunGate(gate, cwdOf(base), x.Env, &timeout)
+			again := gates.RunGate(gate, base.Cwd, x.Env, &timeout)
 			x.BaseGateCache.Set(result.Name, !again.OK)
 		}
 		result.PreExisting = x.BaseGateCache.Bool(result.Name)
@@ -984,7 +984,7 @@ func (x *Worker) Review(cycle int, report *verdicts.BuildReport, results []*gate
 		if attempt > 0 {
 			why += ", again: the last answer could not be read"
 		}
-		result := x.Call(role, prompt, cwdOf(x.Wt), true, why, false)
+		result := x.Call(role, prompt, x.Wt.Cwd, true, why, false)
 		x.resetTo(head)
 		review = verdicts.Review_(result.Text)
 		x.cameOfIt(verdictOutcome(review, result))
@@ -1012,7 +1012,7 @@ func (x *Worker) planning() {
 		"number", x.planItem("number"), "repo", x.Cfg.Repo, "branch", x.planItem("branch"),
 		"base", x.BaseSHA, "thread", x.Plan.GetOr("thread", ""),
 		"branch_state", x.branchState(), "gate_list", x.GateList(),
-		"difficulty", strOr(x.Plan.Get("difficulty"), "medium"),
+		"difficulty", py.OrStr(x.Plan.Get("difficulty"), "medium"),
 		"rating", x.ratingAsk(), "easy_rule", x.easyRule(),
 		"plan_words", py.Thousands(issueplan.PlanWords), "plan_chars", py.Thousands(issueplan.PlanChars),
 		"draft_file", PlanDraftFile,
@@ -1020,27 +1020,27 @@ func (x *Worker) planning() {
 	head := x.Wt.Head()
 	x.Planning = true
 	why := "plan the item before anyone builds it"
-	if isFile(filepath.Join(cwdOf(x.Wt), PlanDraftFile)) {
+	if isFile(filepath.Join(x.Wt.Cwd, PlanDraftFile)) {
 		why += ", going on from the last planner's draft"
 	}
-	result := x.Call("plan", prompt, cwdOf(x.Wt), true, why, true)
+	result := x.Call("plan", prompt, x.Wt.Cwd, true, why, true)
 	x.resetTo(head)
 	rated, text := verdicts.Rating(redact.Redact(strings.TrimSpace(result.Text), nil))
 	if py.Len(text) > issueplan.PlanChars {
-		text = rstrip(py.SliceTo(text, issueplan.PlanChars-py.Len(PlanCut))) + PlanCut
+		text = py.Rstrip(py.SliceTo(text, issueplan.PlanChars-py.Len(PlanCut))) + PlanCut
 	}
 	if !result.OK || text == "" {
 		msg := "the planner on " + seat.Model + " wrote no plan"
 		if result.Error != "" {
 			msg += ": " + result.Error
 		}
-		herr.Raise(&runtimeError{msg: msg})
+		herr.Raise(&py.Error{Type: "RuntimeError", Msg: msg})
 	}
 	if len(rated) > 0 && x.ratingSource() == "person" {
 		rated = nil // a person's label stands; the planner was told not to rate it
 	}
 	x.PlanText = text
-	notes := filepath.Join(cwdOf(x.Wt), NotesFile)
+	notes := filepath.Join(x.Wt.Cwd, NotesFile)
 	earlier := ""
 	if isFile(notes) {
 		earlier = readText(notes, true)
@@ -1052,18 +1052,18 @@ func (x *Worker) planning() {
 		plan.Set("rating", pyjson.New("difficulty", rated["difficulty"], "why", rated["why"]))
 	}
 	// The plan is finished: its draft is spent, and the builder never reads it.
-	unlinkMissingOK(filepath.Join(cwdOf(x.Wt), PlanDraftFile))
+	unlinkMissingOK(filepath.Join(x.Wt.Cwd, PlanDraftFile))
 }
 
 func (x *Worker) ratingSource() string {
 	rating := pyjson.Obj(x.Plan.Get("rating"))
-	return strOr(rating.Get("source"), "")
+	return py.OrStr(rating.Get("source"), "")
 }
 
 // What the planner is told about rating the item (#317 part 8).
 func (x *Worker) ratingAsk() string {
 	rating := pyjson.Obj(x.Plan.Get("rating"))
-	difficulty := strOr(rating.Get("difficulty"), strOr(x.Plan.Get("difficulty"), "medium"))
+	difficulty := py.OrStr(rating.Get("difficulty"), py.OrStr(x.Plan.Get("difficulty"), "medium"))
 	if x.ratingSource() == "person" {
 		return "A person set this item's difficulty: `difficulty:" + difficulty + "`. Plan for " +
 			"that, and give no rating line. If the rule below says it is harder, say so " +
@@ -1184,7 +1184,7 @@ func (x *Worker) needsAPerson() bool {
 // ask a person (the run then ends as `blocked`), and the round's record.
 func (x *Worker) buildPass(cycle int, role string, prompt string, why string /* = "" */) (*verdicts.BuildReport, *pyjson.Object) {
 	before := x.Wt.Head()
-	built := x.Call(role, prompt, cwdOf(x.Wt), false, or(why, fmt.Sprintf("round %d: %s", cycle, role)), false)
+	built := x.Call(role, prompt, x.Wt.Cwd, false, or(why, fmt.Sprintf("round %d: %s", cycle, role)), false)
 	report := verdicts.BuildReport_(built.Text)
 	builder := pyjson.New("role", role, "ok", built.OK, "turns", intOrNone(built.Turns),
 		"minutes", py.RoundN(built.DurationS/60, 1), "status", report.Status,
@@ -1216,7 +1216,7 @@ func (x *Worker) buildPass(cycle int, role string, prompt string, why string /* 
 		x.finish()
 		return nil, entry
 	}
-	x.commit(py.Str(config.CommitPrefix) + ": " + role + " pass " + strconv.Itoa(cycle) + " for #" +
+	x.commit(config.CommitPrefix + ": " + role + " pass " + strconv.Itoa(cycle) + " for #" +
 		py.Str(x.planItem("number")))
 	changed := x.Wt.Head() != before
 	builder.Set("changed", changed)
@@ -1247,7 +1247,7 @@ func (x *Worker) MergeOnly(conflicts []string) bool {
 	return plan.Get("action") == "revise" && plan.Get("source") == "conflict" &&
 		len(x.Resolved) > 0 && len(conflicts) == 0 && x.WipUsed == "" &&
 		!plan.Truthy("previous_findings") &&
-		threads.NoFeedback_(strOr(plan.Get("feedback"), ""), pyInt(x.planItem("number")))
+		threads.NoFeedback_(py.OrStr(plan.Get("feedback"), ""), py.MustInt(x.planItem("number")))
 }
 
 // Round one of a `_merge_only` revision: commit the merge as the harness resolved it,
@@ -1260,7 +1260,7 @@ func (x *Worker) mergePass(cycle int) (*verdicts.BuildReport, *pyjson.Object) {
 		paths = append(paths, r.Path)
 		lines = append(lines, "- `"+r.Path+"`: "+r.How)
 	}
-	message := py.Str(config.CommitPrefix) + ": merge " + x.Cfg.DefaultBranch + " for #" +
+	message := config.CommitPrefix + ": merge " + x.Cfg.DefaultBranch + " for #" +
 		py.Str(x.planItem("number")) + "; the harness resolved " + strings.Join(paths, ", ")
 	if !x.commit(message) && x.Wt.MergeInProgress() {
 		// The merged tree is the branch's own (`main` brought nothing else): the merge commit
@@ -1340,7 +1340,7 @@ func (x *Worker) selfCheckLoop(cycle int, entry *pyjson.Object, report *verdicts
 
 // Item is work.Worker._item: a build or a revision.
 func (x *Worker) Item() {
-	mode := strOr(x.Plan.Get("mode"), "")
+	mode := py.OrStr(x.Plan.Get("mode"), "")
 	if strings.HasPrefix(mode, "split") || (mode == "fullsend" && !x.Plan.Truthy("children")) {
 		x.Split() // a fullsend with sub-issues already is its reconcile: a build (#505)
 		return
@@ -1667,7 +1667,7 @@ func (x *Worker) SecondReview() {
 	x.prepare(false, false)
 	x.Check()
 	seat := x.SeatFor("review")
-	builder := strOr(x.Plan.Get("builder"), "an unknown model")
+	builder := py.OrStr(x.Plan.Get("builder"), "an unknown model")
 	var approved []string
 	for _, f := range pyjson.List(x.Plan.Get("approved")) {
 		approved = append(approved, py.Str(f))
@@ -1683,8 +1683,8 @@ func (x *Worker) SecondReview() {
 		"not installed in this run and you " +
 		"should not run the branch's code: read it. CI runs every check on the pull " +
 		"request before it can merge."
-	if notes := strings.TrimSpace(strOr(x.Plan.Get("review_notes"), "")); notes != "" {
-		context += "\n\nA person asked for this review (`" + py.Str(config.Slash) + " review`) with " +
+	if notes := strings.TrimSpace(py.OrStr(x.Plan.Get("review_notes"), "")); notes != "" {
+		context += "\n\nA person asked for this review (`" + config.Slash + " review`) with " +
 			"these notes:\n\n" + prompts.Data(notes, "Their notes")
 	}
 	var openFindings []*verdicts.Finding
@@ -1696,8 +1696,8 @@ func (x *Worker) SecondReview() {
 			"open; judge them too:\n\n" +
 			x.findingsText(openFindings, "Open self-check findings")
 	}
-	report := &verdicts.BuildReport{Status: "done", Title: strOr(x.Plan.Get("title"), ""),
-		Question: "", Body: strOr(x.Plan.Get("pull"), "")}
+	report := &verdicts.BuildReport{Status: "done", Title: py.OrStr(x.Plan.Get("title"), ""),
+		Question: "", Body: py.OrStr(x.Plan.Get("pull"), "")}
 	one := 1
 	review := x.review(1, report, []*gates.GateResult{}, []*verdicts.Finding{}, context, &one, "review")
 	appendTo(x.Result, "cycles", pyjson.New("n", 1, "review", review.ToDict()))
@@ -1728,11 +1728,11 @@ func (x *Worker) SecondReview() {
 func (x *Worker) Split() {
 	x.prepare(false, false)
 	x.Check()
-	children := strOr(x.Plan.Get("children"), "")
+	children := py.OrStr(x.Plan.Get("children"), "")
 	fullsend := ""
 	values := pyjson.New("number", x.planItem("number"), "repo", x.Cfg.Repo,
 		"thread", x.Plan.GetOr("thread", ""),
-		"builders", strOr(x.Plan.Get("builders"), "I"),
+		"builders", py.OrStr(x.Plan.Get("builders"), "I"),
 		"children", or(children, "The issue has no sub-issues yet."))
 	if x.Plan.Get("mode") == "fullsend" {
 		fullsend = pyFormat(split.FullsendNotes, map[string]any{"branch": x.planItem("branch")})
@@ -1746,7 +1746,7 @@ func (x *Worker) Split() {
 	if children != "" {
 		why = "close the tree out: check the issue against `main`"
 	}
-	result := x.Call("plan", prompt, cwdOf(x.Wt), true, why, false)
+	result := x.Call("plan", prompt, x.Wt.Cwd, true, why, false)
 	x.resetTo(head)
 	tree := split.Parse(redact.Redact(result.Text, nil), []string{"easy", "medium", "hard"})
 	x.Result.Set("tree", tree.ToDict())

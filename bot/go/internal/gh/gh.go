@@ -106,11 +106,11 @@ func (e *ValueError) Error() string { return e.Msg }
 // WithMarker is `body`, redacted, with the marker once at the end.
 func WithMarker(body string) string {
 	text := redact.Redact(body, nil)
-	marker := py.Str(config.Marker)
+	marker := config.Marker
 	if strings.Contains(text, marker) {
 		return text
 	}
-	if strip(text) != "" {
+	if py.Strip(text) != "" {
 		return text + "\n\n" + marker
 	}
 	return marker
@@ -120,7 +120,7 @@ func parsed(text string, raw bool) any {
 	if raw {
 		return text
 	}
-	if strip(text) == "" {
+	if py.Strip(text) == "" {
 		return pyjson.New()
 	}
 	v, err := pyjson.LoadsString(text)
@@ -220,7 +220,7 @@ func (x *GitHub) Request(method string, path string, body any /* = None */, acce
 		}
 		resp, err := x.Open(req, 60*time.Second)
 		if err == nil {
-			text := decodeReplace(resp.Body)
+			text := py.DecodeReplace(resp.Body)
 			etag := resp.Header.Get("ETag")
 			if cached && etag != "" {
 				Cached.put(key, [2]string{etag, text})
@@ -245,7 +245,7 @@ func (x *GitHub) Request(method string, path string, body any /* = None */, acce
 		}
 		detail := ""
 		if exc.Body != nil {
-			detail = decodeReplace(exc.Body)
+			detail = py.DecodeReplace(exc.Body)
 		}
 		if exc.Code == 401 && x.FallbackToken != "" && x.Token != x.FallbackToken {
 			x.Token = x.FallbackToken
@@ -260,9 +260,9 @@ func (x *GitHub) Request(method string, path string, body any /* = None */, acce
 		if retryable && attempt+1 < Retries {
 			wait := BackoffSeconds * float64(attempt+1)
 			if retryAfter != "" {
-				f, ok := pyFloat(retryAfter)
-				if !ok {
-					herr.Raise(&ValueError{Msg: "could not convert string to float: " + py.Repr(retryAfter)})
+				f, err := py.Float(retryAfter)
+				if err != nil {
+					herr.Raise(&ValueError{Msg: err.Error()})
 				}
 				wait = f
 			}
@@ -333,7 +333,7 @@ func (x *GitHub) Paginate(path string, params *pyjson.Object /* = None */, key s
 // perPage is int(query["per_page"]).
 func perPage(v any) int {
 	if s, ok := v.(string); ok {
-		n, err := strconv.Atoi(strip(s))
+		n, err := strconv.Atoi(py.Strip(s))
 		if err != nil {
 			herr.Raise(&ValueError{Msg: "invalid literal for int() with base 10: " + py.Repr(s)})
 		}
@@ -357,7 +357,7 @@ func (x *GitHub) Graphql(query string, variables *pyjson.Object) *pyjson.Object 
 	}
 	if pyjson.Truthy(errs) {
 		var texts []string
-		for _, e := range iterate(errs) {
+		for _, e := range py.Each(errs) {
 			if eo, ok := e.(*pyjson.Object); ok {
 				texts = append(texts, py.Str(eo.GetOr("message", eo)))
 			} else {
@@ -371,17 +371,6 @@ func (x *GitHub) Graphql(query string, variables *pyjson.Object) *pyjson.Object 
 		return pyjson.New()
 	}
 	return pyjson.Obj(o.GetOr("data", pyjson.New()))
-}
-
-// iterate is `for e in value` over a JSON value: a list's items, an object's keys.
-func iterate(value any) []any {
-	switch v := value.(type) {
-	case []any:
-		return v
-	case *pyjson.Object:
-		return pyjson.ListOf(v.Keys())
-	}
-	return nil
 }
 
 func (x *GitHub) r() string { return "/repos/" + x.Repo }

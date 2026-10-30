@@ -30,7 +30,7 @@
 // no workflow at all.
 //
 // The patterns are Python's `re` patterns with Python's classes spelled out, since Go's are ASCII:
-// `\d` is any script's decimal digit (\p{Nd}), `\s` Python's whitespace (`pyS`), and `\b`, which
+// `\d` is any script's decimal digit (\p{Nd}), `\s` Python's whitespace (`py.ReS`), and `\b`, which
 // RE2 has no Unicode form of, a check of the neighbouring character against Python's `\w`
 // (letters, digits, `_`).
 package titles
@@ -41,18 +41,11 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
-)
-
-// pyS is Python's `\s` in a str pattern (str.isspace()); pyNotW is not Python's `\w`.
-const (
-	pyS    = `[\t\n\v\f\r\x{1c}-\x{20}\x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}]`
-	pyNotW = `[^\p{L}\p{N}_]`
 )
 
 // prefix is a title's prefix, old or new, and the `(part n of m)` right after it.
@@ -62,13 +55,13 @@ var prefix = regexp.MustCompile(
 
 // closes is "Closes #12", "Fixes #12, #14": the issues a pull request's body says it closes.
 // Python's leading `\b` is `wordStart`.
-var closes = regexp.MustCompile(`(?i)(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)` + pyS + `+#(\p{Nd}+)`)
+var closes = regexp.MustCompile(`(?i)(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)` + py.ReS + `+#(\p{Nd}+)`)
 
 // squash and merge: a squash commit's subject ends with its pull request's number; a merge
 // commit says it.
 var (
-	squash = regexp.MustCompile(`\(#(\p{Nd}+)\)` + pyS + `*$`)
-	merge  = regexp.MustCompile(`^Merge pull request #(\p{Nd}+)(?:$|` + pyNotW + `)`)
+	squash = regexp.MustCompile(`\(#(\p{Nd}+)\)` + py.ReS + `*$`)
+	merge  = regexp.MustCompile(`^Merge pull request #(\p{Nd}+)(?:$|` + py.ReNotW + `)`)
 )
 
 // sourceNumber is `#(\d+)`: an issue a patch's `source` names.
@@ -89,11 +82,11 @@ var LeftAlone = regexp.MustCompile(
 		`|patches ship refused to promote the pending patches$` +
 		`|CI: a patches promotion or log is stuck$` +
 		`|Night bot: the machine's disk is filling up$` +
-		`|Architecture: weekly hygiene(?:$|` + pyNotW + `)` +
+		`|Architecture: weekly hygiene(?:$|` + py.ReNotW + `)` +
 		`|(?:Night bot|Squishy) status$` +
 		`|patches ship: ` +
 		`|Promote main to production: ` +
-		`|Merging to production(?:$|` + pyNotW + `)` +
+		`|Merging to production(?:$|` + py.ReNotW + `)` +
 		`|AI gen \p{Nd}+ ` +
 		`|Revert ")`)
 
@@ -121,12 +114,12 @@ var PrefixKinds = []PrefixKind{
 // WhatItDoes is `(part, rest)`: the ` (part n of m)` right after the prefix ("" for none) and the
 // title without its prefix. A title with no prefix is all rest.
 func WhatItDoes(title string) (string, string) {
-	text := strings.Join(split(title), " ")
+	text := strings.Join(py.Split(title), " ")
 	m := prefix.FindStringSubmatch(text)
 	if m == nil {
 		return "", text
 	}
-	return m[prefix.SubexpIndex("part")], strip(m[prefix.SubexpIndex("rest")])
+	return m[prefix.SubexpIndex("part")], py.Strip(m[prefix.SubexpIndex("rest")])
 }
 
 // NewTitle is the title in the new form: `Patch: …`, or `Patch v<version>: …` for a shipped card
@@ -143,10 +136,10 @@ func NewTitle(title string, version string /* = "" */) string {
 // PullOf is the pull request a commit on main landed, from its subject, or 0.
 func PullOf(subject string) int {
 	if m := squash.FindStringSubmatch(subject); m != nil {
-		return pyInt(m[1])
+		return py.MustInt(m[1])
 	}
 	if m := merge.FindStringSubmatch(subject); m != nil {
-		return pyInt(m[1])
+		return py.MustInt(m[1])
 	}
 	return 0
 }
@@ -155,7 +148,7 @@ func PullOf(subject string) int {
 func ClosedBy(body string) []int {
 	seen := []int{}
 	for _, n := range findAllAtWordStart(closes, body) {
-		number := pyInt(n)
+		number := py.MustInt(n)
 		if !containsInt(seen, number) {
 			seen = append(seen, number)
 		}
@@ -174,7 +167,7 @@ func findAllAtWordStart(re *regexp.Regexp, text string) []string {
 			break
 		}
 		start, end := at+loc[0], at+loc[1]
-		if start > 0 && isWord(lastRune(text[:start])) {
+		if start > 0 && py.IsWord(lastRune(text[:start])) {
 			_, size := firstRune(text[start:])
 			at = start + size
 			continue
@@ -246,7 +239,7 @@ func patchList(v any) []*pyjson.Object {
 
 // subjectOfCommit is the default `subject_of`: a commit's subject.
 func subjectOfCommit(sha string) string {
-	return strip(runGit("log", "-1", "--format=%s", sha))
+	return py.Strip(runGit("log", "-1", "--format=%s", sha))
 }
 
 type thread struct {
@@ -264,8 +257,8 @@ func RetitleShipped(gh gh.Client, entries []*pyjson.Object, subjectOf func(sha s
 	}
 	done := []string{}
 	for _, entry := range entries {
-		version := str0(entry.Get("version"))
-		for _, commit := range iterate(entry.Get("commits")) {
+		version := py.OrStr(entry.Get("version"), "")
+		for _, commit := range py.Each(entry.Get("commits")) {
 			number := PullOf(subjectOf(py.Str(commit)))
 			if number == 0 {
 				continue
@@ -275,7 +268,7 @@ func RetitleShipped(gh gh.Client, entries []*pyjson.Object, subjectOf func(sha s
 				continue
 			}
 			threads := []thread{{number, pull, true}}
-			for _, issue := range ClosedBy(str0(pull.Get("body"))) {
+			for _, issue := range ClosedBy(py.OrStr(pull.Get("body"), "")) {
 				var data *pyjson.Object
 				if _, failed := herr.Catch[*herr.GitHubError](func() { data = gh.GetIssue(issue) }); failed {
 					continue
@@ -283,7 +276,7 @@ func RetitleShipped(gh gh.Client, entries []*pyjson.Object, subjectOf func(sha s
 				threads = append(threads, thread{issue, data, false})
 			}
 			for _, t := range threads {
-				title := str0(t.data.Get("title"))
+				title := py.OrStr(t.data.Get("title"), "")
 				retitled := NewTitle(title, version)
 				if retitled != title {
 					if t.isPull {
@@ -318,8 +311,8 @@ func comment(gh gh.Client, number int, locked bool, body string) {
 // name LeftAlone is the pattern's, as in Python, where the two differ by case.)
 func LeftAlone_(thread *pyjson.Object) bool {
 	labels := labelNames(thread)
-	title := strings.Join(split(str0(thread.Get("title"))), " ")
-	return pyInt(orZero(thread.Get("number"))) == StatusIssue || labels[ProductionLabel] ||
+	title := strings.Join(py.Split(py.OrStr(thread.Get("title"), "")), " ")
+	return py.MustInt(py.Or(thread.Get("number"), 0)) == StatusIssue || labels[ProductionLabel] ||
 		LeftAlone.MatchString(title)
 }
 
@@ -327,7 +320,7 @@ func LeftAlone_(thread *pyjson.Object) bool {
 // thread.get("labels") or []}`.
 func labelNames(thread *pyjson.Object) map[string]bool {
 	names := map[string]bool{}
-	for _, label := range iterate(thread.Get("labels")) {
+	for _, label := range py.Each(thread.Get("labels")) {
 		if o, ok := label.(*pyjson.Object); ok {
 			names[py.Str(o.Get("name"))] = true
 		} else {
@@ -343,12 +336,12 @@ func labelNames(thread *pyjson.Object) map[string]bool {
 func VersionsByThread(patches []*pyjson.Object, gh gh.Client, subjectOf func(sha string) string) map[int]string {
 	found := map[int]string{}
 	for _, entry := range patches {
-		version := str0(entry.Get("version"))
+		version := py.OrStr(entry.Get("version"), "")
 		var numbers []int
-		for _, m := range sourceNumber.FindAllStringSubmatch(str0(entry.Get("source")), -1) {
-			numbers = append(numbers, pyInt(m[1]))
+		for _, m := range sourceNumber.FindAllStringSubmatch(py.OrStr(entry.Get("source"), ""), -1) {
+			numbers = append(numbers, py.MustInt(m[1]))
 		}
-		for _, commit := range iterate(entry.Get("commits")) {
+		for _, commit := range py.Each(entry.Get("commits")) {
 			number := 0
 			if _, failed := herr.Catch[*calledProcessError](func() { number = PullOf(subjectOf(py.Str(commit))) }); failed {
 				number = 0
@@ -358,7 +351,7 @@ func VersionsByThread(patches []*pyjson.Object, gh gh.Client, subjectOf func(sha
 			}
 			numbers = append(numbers, number)
 			herr.Catch[*herr.GitHubError](func() {
-				numbers = append(numbers, ClosedBy(str0(gh.GetPull(number).Get("body")))...)
+				numbers = append(numbers, ClosedBy(py.OrStr(gh.GetPull(number).Get("body"), ""))...)
 			})
 		}
 		for _, number := range numbers {
@@ -383,18 +376,18 @@ type Retitle struct {
 func PlanRetcon(threads []*pyjson.Object, versions map[int]string) []*Retitle {
 	ordered := append([]*pyjson.Object{}, threads...)
 	sort.SliceStable(ordered, func(i, j int) bool {
-		return pyInt(ordered[i].Get("number")) < pyInt(ordered[j].Get("number"))
+		return py.MustInt(ordered[i].Get("number")) < py.MustInt(ordered[j].Get("number"))
 	})
 	rows := []*Retitle{}
 	for _, thread := range ordered {
 		if LeftAlone_(thread) {
 			continue
 		}
-		number := pyInt(thread.Get("number"))
-		old := strings.Join(split(str0(thread.Get("title"))), " ")
+		number := py.MustInt(thread.Get("number"))
+		old := strings.Join(py.Split(py.OrStr(thread.Get("title"), "")), " ")
 		newTitle := NewTitle(old, versions[number])
 		pull := thread.Has("pull_request")
-		state := str0(thread.Get("state"))
+		state := py.OrStr(thread.Get("state"), "")
 		label := ""
 		if !pull && state == "open" {
 			for _, pk := range PrefixKinds {
@@ -467,16 +460,6 @@ func ApplyRetcon(gh gh.Client, rows []*Retitle, pause float64 /* = 0.0 */, sleep
 
 // ------------------------------------------------------------------ Python's str and int
 
-// isSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c-\x1f.
-func isSpace(r rune) bool { return unicode.IsSpace(r) || r >= 0x1c && r <= 0x1f }
-
-// strip is str.strip(); split is str.split().
-func strip(s string) string   { return strings.TrimFunc(s, isSpace) }
-func split(s string) []string { return strings.FieldsFunc(s, isSpace) }
-
-// isWord is Python's `\w` for one character.
-func isWord(r rune) bool { return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_' }
-
 func lastRune(s string) rune {
 	rs := []rune(s)
 	if len(rs) == 0 {
@@ -491,117 +474,3 @@ func firstRune(s string) (rune, int) {
 	}
 	return -1, 1
 }
-
-// str0 is `str(v or "")`.
-func str0(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// orZero is `v or 0`.
-func orZero(v any) any {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	return v
-}
-
-// iterate is `for e in value or []` over a JSON value: a list's items, an object's keys.
-func iterate(value any) []any {
-	switch v := value.(type) {
-	case []any:
-		return v
-	case *pyjson.Object:
-		return pyjson.ListOf(v.Keys())
-	}
-	return nil
-}
-
-// pyInt is int(v) for a JSON number or a string of digits; it raises ValueError (as int() does)
-// for anything else.
-func pyInt(v any) int {
-	switch x := v.(type) {
-	case string:
-		n, ok := parseInt(x)
-		if !ok {
-			herr.Raise(&valueError{"invalid literal for int() with base 10: " + py.Repr(x)})
-		}
-		return n
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	herr.Raise(&typeError{fmt.Sprintf("int() argument must be a string, a bytes-like object or a real number, not '%s'", typeName(v))})
-	return 0
-}
-
-// parseInt is int(text): surrounding whitespace, a sign, then digits of any one script with `_`
-// between two of them.
-func parseInt(text string) (int, bool) {
-	s := strip(text)
-	neg := false
-	if s != "" && (s[0] == '+' || s[0] == '-') {
-		neg = s[0] == '-'
-		s = s[1:]
-	}
-	if s == "" {
-		return 0, false
-	}
-	n, lastDigit := 0, false
-	for _, r := range s {
-		switch {
-		case unicode.IsDigit(r):
-			n = n*10 + digitValue(r)
-			lastDigit = true
-		case r == '_' && lastDigit:
-			lastDigit = false
-		default:
-			return 0, false
-		}
-	}
-	if !lastDigit {
-		return 0, false
-	}
-	if neg {
-		n = -n
-	}
-	return n, true
-}
-
-// digitValue is the value of a decimal digit of any script: each script's digits are a run of
-// ten, 0 to 9.
-func digitValue(r rune) int {
-	start := r
-	for unicode.IsDigit(start - 1) {
-		start--
-	}
-	return int(r-start) % 10
-}
-
-func typeName(v any) string {
-	switch v.(type) {
-	case nil:
-		return "NoneType"
-	case []any:
-		return "list"
-	case *pyjson.Object:
-		return "dict"
-	}
-	return fmt.Sprintf("%T", v)
-}
-
-// valueError and typeError are Python's ValueError and TypeError.
-type valueError struct{ msg string }
-
-func (e *valueError) Error() string { return e.msg }
-
-type typeError struct{ msg string }
-
-func (e *typeError) Error() string { return e.msg }

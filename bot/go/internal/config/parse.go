@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 
@@ -55,19 +56,13 @@ func raiseConfig(format string, args ...any) {
 	herr.Raise(&herr.ConfigError{Msg: fmt.Sprintf(format, args...)})
 }
 
-// isMapping is isinstance(v, Mapping).
-func isMapping(v any) bool {
-	_, ok := v.(*pyjson.Object)
-	return ok
-}
-
 // unknownKeys is sorted(set(raw) - known).
 func unknownKeys(raw *pyjson.Object, known ...[]string) []string {
 	out := []string{}
 	for _, k := range raw.Keys() {
 		found := false
 		for _, list := range known {
-			found = found || contains(list, k)
+			found = found || slices.Contains(list, k)
 		}
 		if !found {
 			out = append(out, k)
@@ -86,19 +81,19 @@ func easyRule(raw any) *EasyRule {
 		raiseConfig("easy: unknown keys %s", strings.Join(unknown, ", "))
 	}
 	rule, err := func() (*EasyRule, error) {
-		maxFiles, err := pyInt(o.GetOr("max_files", 10))
+		maxFiles, err := py.Int(o.GetOr("max_files", 10))
 		if err != nil {
 			return nil, err
 		}
-		maxLines, err := pyInt(o.GetOr("max_lines", 400))
+		maxLines, err := py.Int(o.GetOr("max_lines", 400))
 		if err != nil {
 			return nil, err
 		}
-		offLimits, err := strs(orEmpty(o.Get("off_limits")))
+		offLimits, err := strs(py.Or(o.Get("off_limits"), []any{}))
 		if err != nil {
 			return nil, err
 		}
-		generated, err := strs(orEmpty(o.Get("generated")))
+		generated, err := strs(py.Or(o.Get("generated"), []any{}))
 		if err != nil {
 			return nil, err
 		}
@@ -111,14 +106,6 @@ func easyRule(raw any) *EasyRule {
 		raiseConfig("easy: max_files and max_lines must be at least 1")
 	}
 	return rule
-}
-
-// orEmpty is `v or ()`.
-func orEmpty(v any) any {
-	if !pyjson.Truthy(v) {
-		return []any{}
-	}
-	return v
 }
 
 func gate(raw any, where string) *Gate {
@@ -139,7 +126,7 @@ func gate(raw any, where string) *Gate {
 		if err != nil {
 			return nil, err
 		}
-		minutes, err := pyInt(timeout)
+		minutes, err := py.Int(timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +179,7 @@ func resolvers(raw any) []*Resolver {
 		if (take != "") == (run != "") {
 			raiseConfig("%s: give exactly one of `take` and `run`", where)
 		}
-		if take != "" && !contains(ResolverTakes, take) {
+		if take != "" && !slices.Contains(ResolverTakes, take) {
 			raiseConfig("%s: `take` is one of %s", where, strings.Join(ResolverTakes, ", "))
 		}
 		if take != "" && entry.Has("timeout_minutes") {
@@ -230,10 +217,10 @@ func priorities(raw any) map[string]string {
 	bad := []string{}
 	out := map[string]string{}
 	o.Items(func(k string, v any) bool {
-		if !contains(SuggestionClasses, k) {
+		if !slices.Contains(SuggestionClasses, k) {
 			unknown = append(unknown, k)
 		}
-		if s, isStr := v.(string); !isStr || !contains(PriorityLevels, s) {
+		if s, isStr := v.(string); !isStr || !slices.Contains(PriorityLevels, s) {
 			bad = append(bad, k+": "+py.Repr(v))
 		}
 		out[k] = py.Str(v)
@@ -258,7 +245,7 @@ func quiet(raw any) *Quiet {
 		raiseConfig("quiet: expected an object")
 	}
 	partners := []*Partner{}
-	entries, err := pyIter(orNoList(o.Get("partners")))
+	entries, err := py.Iter(orNoList(o.Get("partners")))
 	herr.Must(err)
 	for i, entry := range entries {
 		p, err := func() (*Partner, error) {
@@ -289,14 +276,14 @@ func quiet(raw any) *Quiet {
 		}
 		partners = append(partners, p)
 	}
-	interval := mustInt(o.GetOr("interval_minutes", 10))
+	interval := py.MustInt(o.GetOr("interval_minutes", 10))
 	if interval < 1 {
 		raiseConfig("quiet.interval_minutes: must be at least 1")
 	}
 	return &Quiet{
 		Enabled:         pyjson.Truthy(o.GetOr("enabled", true)),
 		IntervalMinutes: interval,
-		MaxWaitMinutes:  mustInt(o.GetOr("max_wait_minutes", 120)),
+		MaxWaitMinutes:  py.MustInt(o.GetOr("max_wait_minutes", 120)),
 		PingModel:       py.Str(o.GetOr("ping_model", "haiku")),
 		Partners:        partners,
 	}
@@ -320,12 +307,12 @@ func reviewCycles(raw any) *pyjson.Object {
 	cycles := pyjson.New()
 	if o, ok := raw.(*pyjson.Object); ok {
 		o.Items(func(k string, v any) bool {
-			cycles.Set(k, mustInt(v))
+			cycles.Set(k, py.MustInt(v))
 			return true
 		})
 	} else {
 		for _, difficulty := range LaneReviewCycles.Keys() {
-			cycles.Set(difficulty, mustInt(raw))
+			cycles.Set(difficulty, py.MustInt(raw))
 		}
 	}
 	absent := []string{}
@@ -377,7 +364,7 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	turns := pyjson.New()
 	rawTurns := mustDict(raw.Get("max_turns"))
 	for _, k := range rawTurns.Keys() {
-		turns.Set(k, mustInt(rawTurns.Get(k)))
+		turns.Set(k, py.MustInt(rawTurns.Get(k)))
 	}
 	absent := []string{}
 	for _, role := range roles {
@@ -388,11 +375,11 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	if len(absent) > 0 {
 		raiseConfig("max_turns: missing %s", strings.Join(absent, ", "))
 	}
-	if m, ok := raw.Get("merge_method").(string); !ok || !contains([]string{"squash", "merge", "rebase"}, m) {
+	if m, ok := raw.Get("merge_method").(string); !ok || !slices.Contains([]string{"squash", "merge", "rebase"}, m) {
 		raiseConfig("merge_method: %s is not squash, merge or rebase", py.Repr(raw.Get("merge_method")))
 	}
 	suggestions := mustDict(raw.Get("suggestions"))
-	rawGates, err := pyIter(raw.Get("gates"))
+	rawGates, err := py.Iter(raw.Get("gates"))
 	herr.Must(err)
 	gates := []*Gate{}
 	for i, g := range rawGates {
@@ -401,7 +388,7 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	if len(gates) == 0 {
 		raiseConfig("gates: at least one gate is required")
 	}
-	selfChecks := mustInt(raw.GetOr("max_self_check_rounds", optional.Get("max_self_check_rounds")))
+	selfChecks := py.MustInt(raw.GetOr("max_self_check_rounds", optional.Get("max_self_check_rounds")))
 	if selfChecks < 1 {
 		raiseConfig("max_self_check_rounds: must be at least 1")
 	}
@@ -420,23 +407,23 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	c := &Config{Root: root, Repo: repo}
 	c.DefaultBranch = py.Str(raw.Get("default_branch"))
 	c.BotLogin = py.Str(raw.Get("bot_login"))
-	c.BotUserID = mustInt(raw.Get("bot_user_id"))
+	c.BotUserID = py.MustInt(raw.Get("bot_user_id"))
 	c.Operator = py.Str(raw.Get("operator"))
 	c.Timezone = py.Str(raw.Get("timezone"))
 	c.MaxTurns = turns
-	c.CallTimeoutMinutes = mustInt(raw.Get("call_timeout_minutes"))
-	c.JobBudgetMinutes = mustInt(raw.Get("job_budget_minutes"))
-	c.MinMinutesForACall = mustInt(raw.Get("min_minutes_for_a_call"))
+	c.CallTimeoutMinutes = py.MustInt(raw.Get("call_timeout_minutes"))
+	c.JobBudgetMinutes = py.MustInt(raw.Get("job_budget_minutes"))
+	c.MinMinutesForACall = py.MustInt(raw.Get("min_minutes_for_a_call"))
 	c.MaxReviewCycles = reviewCycles(raw.Get("max_review_cycles"))
-	c.MaxFailures = mustInt(raw.Get("max_failures"))
+	c.MaxFailures = py.MustInt(raw.Get("max_failures"))
 	c.AutoMerge = pyjson.Truthy(raw.Get("auto_merge"))
 	c.MergeMethod = py.Str(raw.Get("merge_method"))
 	c.CIWorkflow = py.Str(raw.Get("ci_workflow"))
 	c.RequiredChecks = mustStrs(raw.Get("required_checks"))
-	c.CIReruns = mustInt(raw.Get("ci_reruns"))
+	c.CIReruns = py.MustInt(raw.Get("ci_reruns"))
 	c.SuggestionsEnabled = pyjson.Truthy(suggestions.GetOr("enabled", true))
-	c.SuggestionsMaxOpen = mustInt(suggestions.GetOr("max_open", 4))
-	c.SuggestionsIdleMinutes = mustInt(suggestions.GetOr("idle_minutes", 30))
+	c.SuggestionsMaxOpen = py.MustInt(suggestions.GetOr("max_open", 4))
+	c.SuggestionsIdleMinutes = py.MustInt(suggestions.GetOr("idle_minutes", 30))
 	c.SuggestionPriorities = priorities(suggestions.GetOr("priorities", pyjson.New()))
 	c.Quiet = quiet(raw.Get("quiet"))
 	c.ForbiddenPaths = mustStrs(raw.Get("forbidden_paths"))
@@ -444,7 +431,7 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	c.UploadTranscripts = pyjson.Truthy(raw.Get("upload_transcripts"))
 	install, ok := raw.Get("install").(*pyjson.Object)
 	if !ok {
-		herr.Raise(typeError("unsupported operand type(s) for |: '%s' and 'dict'", typeName(raw.Get("install"))))
+		herr.Raise(typeError("unsupported operand type(s) for |: '%s' and 'dict'", py.TypeName(raw.Get("install"))))
 	}
 	c.Install = gate(install.Copy().Set("name", "install"), "install")
 	c.Gates = gates
@@ -552,7 +539,7 @@ func ChildEnv(env map[string]string /* = None */, keep []string /* = () */) map[
 	}
 	out := map[string]string{}
 	for k, v := range source {
-		if !contains(SecretKeys, k) || contains(keep, k) {
+		if !slices.Contains(SecretKeys, k) || slices.Contains(keep, k) {
 			out[k] = v
 		}
 	}

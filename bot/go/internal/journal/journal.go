@@ -26,13 +26,11 @@ package journal
 
 import (
 	"fmt"
-	"math"
 	"math/rand/v2"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
@@ -75,13 +73,10 @@ var MaxAttempts int = 6
 // Cut is what `compact` leaves where it cut the log.
 var Cut string = "(earlier lines of the log were cut here)\n"
 
-// pySpace is Python's `\s` in a str pattern (str.isspace()): RE2's `\s` is ASCII only.
-const pySpace = `[\t\n\v\f\r \x{1c}-\x{1f}\x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}]`
-
 // logHeading is _LOG, `^##\s+Log\b.*$` (multiline). RE2's `\b` is ASCII only, so Python's
 // Unicode boundary after "Log" is written out: the line ends there, or goes on with a character
 // that is not a word character.
-var logHeading = regexp.MustCompile(`(?m)^##` + pySpace + `+Log(?:[^\p{L}\p{N}_\n].*)?$`)
+var logHeading = regexp.MustCompile(`(?m)^##` + py.ReS + `+Log(?:[^` + py.WordClass + `\n].*)?$`)
 
 var details = regexp.MustCompile(`(?s)\n<details><summary>The (?:builder's notes|planner's draft).*?</details>\n`)
 
@@ -99,7 +94,7 @@ func Key(plan *pyjson.Object) int {
 	if !pyjson.Truthy(v) {
 		v = 0
 	}
-	n, err := pyInt(v)
+	n, err := py.Int(v)
 	if err != nil {
 		return 0
 	}
@@ -118,9 +113,9 @@ func Compact(notes string, limit int) string {
 	if found == nil {
 		return py.SliceFrom(notes, -limit)
 	}
-	state := rstrip(notes[:found[0]]) + "\n\n"
+	state := py.Rstrip(notes[:found[0]]) + "\n\n"
 	if py.Len(state) > py.FloorDiv(limit, 2) {
-		state = rstrip(py.SliceTo(state, py.FloorDiv(limit, 2))) + "\n(the rest of the state was cut here)\n\n"
+		state = py.Rstrip(py.SliceTo(state, py.FloorDiv(limit, 2))) + "\n(the rest of the state was cut here)\n\n"
 	}
 	heading := notes[found[0]:found[1]] + "\n"
 	room := max(0, limit-py.Len(state)-py.Len(heading)-py.Len(Cut))
@@ -131,9 +126,6 @@ func Compact(notes string, limit int) string {
 	}
 	return state + heading + Cut + tail
 }
-
-// rstrip is str.rstrip().
-func rstrip(s string) string { return strings.TrimRightFunc(s, unicode.IsSpace) }
 
 // Cell is journal._cell.
 func Cell(text any) string {
@@ -160,27 +152,6 @@ func Clock(at any) string {
 	return text
 }
 
-// isNumber is isinstance(v, (int, float)): a bool is an int in Python.
-func isNumber(v any) bool {
-	switch v.(type) {
-	case bool, int, int64, int32, float64, float32:
-		return true
-	}
-	return false
-}
-
-// asNumber is a value isNumber accepts, as a float (True is 1).
-func asNumber(v any) float64 {
-	if b, ok := v.(bool); ok {
-		if b {
-			return 1
-		}
-		return 0
-	}
-	f, _ := pyjson.AsFloat(v)
-	return f
-}
-
 // tokenTotal is sum(int(tokens.get(name) or 0) for name in ("input", "output")).
 func tokenTotal(tokens *pyjson.Object) int {
 	total := 0
@@ -196,7 +167,7 @@ func tokenCount(tokens *pyjson.Object, name string) int {
 	if !pyjson.Truthy(v) {
 		return 0
 	}
-	n, err := pyInt(v)
+	n, err := py.Int(v)
 	if err != nil {
 		panic(err)
 	}
@@ -208,7 +179,7 @@ func tokenCount(tokens *pyjson.Object, name string) int {
 func Took(step *pyjson.Object) string {
 	took := step.Get("minutes")
 	text := ""
-	if isNumber(took) {
+	if _, isNumber := py.Number(took); isNumber {
 		text = py.Str(took) + " min"
 	}
 	tokens, _ := step.Get("tokens").(*pyjson.Object)
@@ -219,12 +190,11 @@ func Took(step *pyjson.Object) string {
 			text = fmt.Sprintf("%d tok", total)
 		}
 	}
-	cost := step.Get("cost_usd")
-	if isNumber(cost) && asNumber(cost) > 0 {
+	if cost, isNumber := py.Number(step.Get("cost_usd")); isNumber && cost > 0 {
 		if text != "" {
-			text = fmt.Sprintf("%s, $%.2f", text, asNumber(cost))
+			text = fmt.Sprintf("%s, $%.2f", text, cost)
 		} else {
-			text = fmt.Sprintf("$%.2f", asNumber(cost))
+			text = fmt.Sprintf("$%.2f", cost)
 		}
 	}
 	return text
@@ -264,22 +234,6 @@ func StepRows(steps []any) []string {
 	return rows
 }
 
-// orStr is str(v or default).
-func orStr(v any, def string) string {
-	if !pyjson.Truthy(v) {
-		return def
-	}
-	return py.Str(v)
-}
-
-// orZero is f"{v or 0}".
-func orZero(v any) string {
-	if !pyjson.Truthy(v) {
-		return "0"
-	}
-	return py.Str(v)
-}
-
 // fence is the notes or draft in a Markdown fence that a ```` inside cannot close.
 func fence(summary, text string) []string {
 	return []string{"", "<details><summary>" + summary + "</summary>", "",
@@ -288,11 +242,11 @@ func fence(summary, text string) []string {
 
 // Section is the journal's section for one run, from the model job's result.
 func Section(result *pyjson.Object, provider string, models string, action string, number int, at string, runURL string /* = "" */) string {
-	status := orStr(result.Get("status"), "unknown")
+	status := py.OrStr(result.Get("status"), "unknown")
 	if s, ok := result.Get("interrupt").(string); ok && s == "died" {
 		status = "died"
 	}
-	reason := strings.TrimSpace(redact.Redact(orStr(result.Get("reason"), ""), nil))
+	reason := strings.TrimSpace(redact.Redact(py.OrStr(result.Get("reason"), ""), nil))
 	link := "a run"
 	if runURL != "" {
 		link = "[run](" + runURL + ")"
@@ -306,17 +260,17 @@ func Section(result *pyjson.Object, provider string, models string, action strin
 		fmt.Sprintf("%s on `%s` (%s). It ended **%s**", link, provider, models, status) + ended}
 	minutes, calls := result.Get("minutes"), result.Get("model_calls")
 	if minutes != nil || calls != nil {
-		lines = append(lines, fmt.Sprintf("Model calls: %s, %s model minutes.", orZero(calls), orZero(minutes)))
+		lines = append(lines, fmt.Sprintf("Model calls: %s, %s model minutes.", py.Str(py.Or(calls, 0)), py.Str(py.Or(minutes, 0))))
 	}
 	tokens, _ := result.Get("tokens").(*pyjson.Object)
 	total := tokenTotal(tokens)
-	cost := result.Get("cost_usd")
-	if total > 0 || (isNumber(cost) && asNumber(cost) > 0) {
+	cost, isNumber := py.Number(result.Get("cost_usd"))
+	if total > 0 || (isNumber && cost > 0) {
 		cached := tokenCount(tokens, "cache_read") + tokenCount(tokens, "cache_write")
 		line := fmt.Sprintf("Tokens: %d in / %d out / %d cached", tokenCount(tokens, "input"),
 			tokenCount(tokens, "output"), cached)
-		if isNumber(cost) {
-			line += fmt.Sprintf(", $%.2f", asNumber(cost))
+		if isNumber {
+			line += fmt.Sprintf(", $%.2f", cost)
 		}
 		lines = append(lines, line+".")
 	}
@@ -335,16 +289,16 @@ func Section(result *pyjson.Object, provider string, models string, action strin
 		lines = append(lines, StepRows(steps)...)
 	}
 	handoff, _ := result.Get("handoff").(*pyjson.Object)
-	notes := strings.TrimSpace(redact.Redact(orStr(handoff.Get("notes"), ""), nil))
+	notes := strings.TrimSpace(redact.Redact(py.OrStr(handoff.Get("notes"), ""), nil))
 	if notes != "" {
 		notes = Compact(notes, NotesChars)
 		lines = append(lines, fence("The builder's notes when it stopped", notes)...)
 	}
-	draft := py.SliceTo(strings.TrimSpace(redact.Redact(orStr(handoff.Get("draft"), ""), nil)), NotesChars)
+	draft := py.SliceTo(strings.TrimSpace(redact.Redact(py.OrStr(handoff.Get("draft"), ""), nil)), NotesChars)
 	if draft != "" {
 		lines = append(lines, fence("The planner's draft when it stopped", draft)...)
 	}
-	return rstrip(strings.Join(lines, "\n")) + "\n"
+	return py.Rstrip(strings.Join(lines, "\n")) + "\n"
 }
 
 // Header is journal.header.
@@ -391,7 +345,7 @@ func Trim(text string, limit int /* = FILE_CHARS */) string {
 		dropped++
 	}
 	if dropped > 0 {
-		head = rstrip(head) + fmt.Sprintf("\n\n_%d older run(s) dropped from this file; the ", dropped) +
+		head = py.Rstrip(head) + fmt.Sprintf("\n\n_%d older run(s) dropped from this file; the ", dropped) +
 			"branch's history keeps them._\n"
 	}
 	return strings.Join(append([]string{head}, runs...), "\n")
@@ -411,7 +365,7 @@ func Append(gh gh.Client, number int, text string, sleep func(float64) /* = time
 		old, sha := gh.GetFile(path, Branch)
 		start := Header(number) + "\n"
 		if old != "" {
-			start = rstrip(old) + "\n\n"
+			start = py.Rstrip(old) + "\n\n"
 		}
 		updated := Trim(start+text, FileChars)
 		// `old is None`: the Go client gives ("", "") for (None, None), and a file that is there
@@ -485,44 +439,4 @@ func RunsIn(text string) []string {
 // URL is journal.url.
 func URL(serverURL string, repo string, number int) string {
 	return fmt.Sprintf("%s/%s/blob/%s/%s", serverURL, repo, Branch, PathFor(number))
-}
-
-// pyInt is int(v) for a JSON value, with Python's errors (TypeError, ValueError) as an error.
-func pyInt(v any) (int, error) {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1, nil
-		}
-		return 0, nil
-	case int:
-		return x, nil
-	case int64:
-		return int(x), nil
-	case float64:
-		if math.IsNaN(x) || math.IsInf(x, 0) {
-			return 0, fmt.Errorf("cannot convert float %s to integer", pyjson.FloatRepr(x))
-		}
-		return int(x), nil
-	case string:
-		s := strings.TrimSpace(x)
-		sign := ""
-		if strings.HasPrefix(s, "+") || strings.HasPrefix(s, "-") {
-			sign, s = s[:1], s[1:]
-		}
-		ok := s != "" && !strings.HasPrefix(s, "_") && !strings.HasSuffix(s, "_") && !strings.Contains(s, "__")
-		digits := strings.ReplaceAll(s, "_", "")
-		for _, r := range digits {
-			ok = ok && r >= '0' && r <= '9'
-		}
-		if n, err := strconv.Atoi(sign + digits); ok && err == nil {
-			return n, nil
-		}
-		return 0, fmt.Errorf("invalid literal for int() with base 10: %s", py.Repr(x))
-	}
-	name := map[bool]string{true: "NoneType", false: "list"}[v == nil]
-	if _, ok := v.(*pyjson.Object); ok {
-		name = "dict"
-	}
-	return 0, fmt.Errorf("int() argument must be a string, a bytes-like object or a real number, not '%s'", name)
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
@@ -37,12 +38,12 @@ func outcome(fn func() any) *pyjson.Object {
 		return pyjson.New("ok", got)
 	}
 	var cfg *herr.ConfigError
-	var py *pyError
+	var exc *py.Error
 	switch {
 	case errors.As(err, &cfg):
 		return pyjson.New("error", "ConfigError: "+cfg.Msg)
-	case errors.As(err, &py):
-		return pyjson.New("error", py.Kind+": "+py.Msg)
+	case errors.As(err, &exc):
+		return pyjson.New("error", exc.Type+": "+exc.Msg)
 	}
 	panic(err)
 }
@@ -215,18 +216,5 @@ func TestConfigMethods(t *testing.T) {
 	c.ActionsToken = "a"
 	if c.WriteToken() != "a" {
 		t.Error("WriteToken falls back to the job's token")
-	}
-}
-
-func TestPyInt(t *testing.T) {
-	for in, want := range map[string]int{" 12 ": 12, "1_0": 10, "-3": -3, "+4": 4} {
-		if got, err := pyInt(in); err != nil || got != want {
-			t.Errorf("int(%q) = %d, %v", in, got, err)
-		}
-	}
-	for _, in := range []string{"", "1.5", "_1", "1__0", "abc", "1_"} {
-		if _, err := pyInt(in); err == nil {
-			t.Errorf("int(%q) parsed", in)
-		}
 	}
 }

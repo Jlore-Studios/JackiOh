@@ -4,13 +4,8 @@ package gh
 // and more; url.QueryEscape writes `~` as %7E).
 
 import (
-	"errors"
 	"fmt"
-	"math"
-	"regexp"
-	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -49,59 +44,4 @@ func urlencode(query *pyjson.Object) string {
 		return true
 	})
 	return strings.Join(parts, "&")
-}
-
-// isSpace is str.isspace() for one character: Go's unicode.IsSpace and the separators
-// \x1c-\x1f, which Python counts as whitespace and Go does not.
-func isSpace(r rune) bool { return unicode.IsSpace(r) || r >= 0x1c && r <= 0x1f }
-
-// strip is str.strip().
-func strip(s string) string { return strings.TrimFunc(s, isSpace) }
-
-// str0 is `str(v or "")`: "" for a falsy value, else str(v).
-func str0(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// floatSyntax is what float() reads, once stripped: a decimal number with digits that may be
-// any script's and `_` between two of them, or inf, infinity or nan in any case.
-var floatSyntax = regexp.MustCompile(`^[+-]?(?:(?i:inf|infinity|nan)|(?:\p{Nd}(?:_?\p{Nd})*(?:\.(?:\p{Nd}(?:_?\p{Nd})*)?)?|\.\p{Nd}(?:_?\p{Nd})*)(?:[eE][+-]?\p{Nd}(?:_?\p{Nd})*)?)$`)
-
-// pyFloat is float(text), and false where float() raises ValueError.
-func pyFloat(text string) (float64, bool) {
-	clean := strip(text)
-	if !floatSyntax.MatchString(clean) {
-		return 0, false
-	}
-	if strings.EqualFold(strings.TrimLeft(clean, "+-"), "nan") {
-		return math.NaN(), true // Go reads no sign on a NaN
-	}
-	var b strings.Builder
-	for _, r := range clean {
-		switch {
-		case r == '_':
-		case unicode.IsDigit(r) && r > 0x7f:
-			b.WriteByte(byte('0' + digitValue(r)))
-		default:
-			b.WriteRune(r)
-		}
-	}
-	f, err := strconv.ParseFloat(b.String(), 64)
-	if err != nil && !errors.Is(err, strconv.ErrRange) {
-		return 0, false
-	}
-	return f, true
-}
-
-// digitValue is the value of a decimal digit of any script: Unicode keeps each script's digits
-// in a run of ten, 0 to 9, so it is the distance from the start of its run, modulo ten.
-func digitValue(r rune) int {
-	start := r
-	for unicode.IsDigit(start - 1) {
-		start--
-	}
-	return int(r-start) % 10
 }

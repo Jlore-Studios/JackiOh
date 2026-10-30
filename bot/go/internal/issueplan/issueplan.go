@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 )
@@ -37,19 +36,16 @@ var PlanWords int = 2500
 // its comments keep room beside it. #307's plan was cut at the old 20,000.
 var PlanChars int = 30000
 
-// pySpace is Python's `\s` inside a character class (str.isspace()); Go's `\s` is ASCII.
-const pySpace = `\t\n\v\f\r\x1c-\x1f \x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
-
 var (
 	sectionPattern = regexp.QuoteMeta(Start) + `.*?(?:` + regexp.QuoteMeta(End) + `|\z)`
 	section        = regexp.MustCompile(`(?s)` + sectionPattern)
-	around         = regexp.MustCompile(`(?s)[` + pySpace + `]*` + sectionPattern + `[` + pySpace + `]*`)
-	header         = regexp.MustCompile(`\A[` + pySpace + `]*## Plan[` + pySpace + `]*\n+(?:_[^\n]*_[` + pySpace + `]*\n+)?`)
+	around         = regexp.MustCompile(`(?s)[` + py.SpaceClass + `]*` + sectionPattern + `[` + py.SpaceClass + `]*`)
+	header         = regexp.MustCompile(`\A[` + py.SpaceClass + `]*## Plan[` + py.SpaceClass + `]*\n+(?:_[^\n]*_[` + py.SpaceClass + `]*\n+)?`)
 )
 
 // WithoutPlan is the description with its Plan section taken out.
 func WithoutPlan(body string) string {
-	return pyStrip(around.ReplaceAllLiteralString(body, "\n\n"))
+	return py.Strip(around.ReplaceAllLiteralString(body, "\n\n"))
 }
 
 // PlanOf is the Plan section's text (a person's edits included), without its heading, or "".
@@ -60,7 +56,7 @@ func PlanOf(body string) string {
 	}
 	text := match[len(Start):]
 	text = strings.TrimSuffix(text, End)
-	return pyStrip(header.ReplaceAllLiteralString(text, ""))
+	return py.Strip(header.ReplaceAllLiteralString(text, ""))
 }
 
 // WithPlan is the description with `plan` as its Plan section, in place of any earlier one.
@@ -74,15 +70,9 @@ func WithPlan(body string, plan string, who string, link string /* = "" */) stri
 		"bot's builder starts from this section: edit it here to change the plan._", who, at)
 	head := fmt.Sprintf("%s\n\n%s\n## Plan\n\n%s\n\n", task, Start, note)
 	room := max(0, BodyLimit-py.Len(head)-py.Len(End)-40)
-	text := pyStrip(plan)
+	text := py.Strip(plan)
 	if py.Len(text) > room {
-		text = strings.TrimRightFunc(py.SliceTo(text, room), pyIsSpace) + "\n\n…(cut to fit the description)"
+		text = strings.TrimRightFunc(py.SliceTo(text, room), py.IsSpace) + "\n\n…(cut to fit the description)"
 	}
 	return strings.TrimLeft(fmt.Sprintf("%s%s\n%s\n", head, text, End), "\n")
 }
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
-
-// pyStrip is str.strip().
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }

@@ -150,7 +150,7 @@ func runURL(ctx *hctx.Context, runID any) string {
 
 // Cell is _cell: text for a table cell: one line, no pipes, clipped.
 func Cell(text any, limit int /* = 70 */) string {
-	flat := strings.ReplaceAll(strings.Join(strings.Fields(strOr(text)), " "), "|", `\|`)
+	flat := strings.ReplaceAll(strings.Join(strings.Fields(py.OrStr(text, "")), " "), "|", `\|`)
 	if py.Len(flat) <= limit {
 		return flat
 	}
@@ -170,7 +170,7 @@ func Bar(fraction *float64, cells int /* = BAR_CELLS */) string {
 		f = 1.0
 	}
 	full := py.Round(f * float64(cells))
-	return strings.Repeat("▰", full) + strings.Repeat("▱", max(0, cells-full)) + " " + percent(f, 0)
+	return strings.Repeat("▰", full) + strings.Repeat("▱", max(0, cells-full)) + " " + py.Percent(f, 0)
 }
 
 // barOf is bar(fraction, cells) with a reading.
@@ -187,11 +187,11 @@ func windowReading(ctx *hctx.Context, provider *providers.Provider, entry *pyjso
 	if reading == nil {
 		return 0, time.Time{}, 0, false
 	}
-	read, ok = pyFloat(reading.GetOr("utilization", 0))
-	if !ok {
+	read, err := py.Float(reading.GetOr("utilization", 0))
+	if err != nil {
 		return 0, time.Time{}, 0, false
 	}
-	resets := parseISO(reading.Get("resets_at"))
+	resets := clock.ParseISOValue(reading.Get("resets_at"))
 	if !resets.IsZero() && !resets.After(ctx.Now()) {
 		return 0.0, resets, read, true
 	}
@@ -203,7 +203,7 @@ func windowReading(ctx *hctx.Context, provider *providers.Provider, entry *pyjso
 func doing(state *pyjson.Object, number int) (string, string, time.Time) {
 	record := status.Record(state, number)
 	if number == 0 {
-		return "surveying", "survey", parseISO(record.Get("last_run"))
+		return "surveying", "survey", clock.ParseISOValue(record.Get("last_run"))
 	}
 	kind := py.Str(record.Get("kind"))
 	if pyjson.Equal(record.Get("action"), "plan") {
@@ -213,7 +213,7 @@ func doing(state *pyjson.Object, number int) (string, string, time.Time) {
 	if !ok {
 		verb = "working on"
 	}
-	return verb, "#" + strconv.Itoa(number), parseISO(record.Get("started_at"))
+	return verb, "#" + strconv.Itoa(number), clock.ParseISOValue(record.Get("started_at"))
 }
 
 // lane is one live lane: the item's number (0 for the suggestion survey) and its provider's id.
@@ -266,7 +266,7 @@ func RunningTable(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 	cfg := ctx.Cfg
 	titles := map[int]any{}
 	for _, issue := range issues {
-		titles[mustInt(issue.Get("number"))] = issue.Get("title")
+		titles[py.MustInt(issue.Get("number"))] = issue.Get("title")
 	}
 	var rows []string
 	for _, l := range byStart(ctx, state, live) {
@@ -379,7 +379,7 @@ func Timeline(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 		add(where, l.provider+" · "+verb+" "+strings.TrimLeft(item, "#"), since)
 	}
 	for _, pair := range pcJobs {
-		add("pc", jobName(pair[0], pair[1]), parseISO(pair[1].Get("started_at")))
+		add("pc", jobName(pair[0], pair[1]), clock.ParseISOValue(pair[1].Get("started_at")))
 	}
 	lines := []string{"```mermaid", TimelineStyle, "gantt",
 		"    title Runs going now, as of " + now.Format("15:04") + " (Central time)",
@@ -463,7 +463,7 @@ func miniUsage(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.Ob
 		capText := ""
 		if capValue != nil {
 			if c, _ := pyjson.AsFloat(capValue); c < 1.0 {
-				capText = " · cap " + percent(c, 0)
+				capText = " · cap " + py.Percent(c, 0)
 			}
 		}
 		switch {
@@ -476,7 +476,7 @@ func miniUsage(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.Ob
 		}
 	}
 	provider.Limits.Budgets().Items(func(window string, budget any) bool {
-		spent := providers.MinutesSpent(entry, ctx.Now().Add(-windowSpan(window)))
+		spent := providers.MinutesSpent(entry, ctx.Now().Add(-lookup(providers.Windows, window)))
 		lines = append(lines, lookup(providers.WindowNames, window)+" "+fmt.Sprintf("%.0f", spent)+"/"+
 			py.Str(budget)+" min")
 		return true
@@ -575,7 +575,7 @@ func TrainingBoxes(ctx *hctx.Context) []string {
 		if pull == nil {
 			text, style = "no pull request open<br/>between sessions, or stopped", "closed"
 		} else {
-			number, updated := py.Str(pull.Get("number")), parseISO(pull.Get("updated_at"))
+			number, updated := py.Str(pull.Get("number")), clock.ParseISOValue(pull.Get("updated_at"))
 			since := ""
 			if !updated.IsZero() {
 				since = "<br/>updated " + clockText(ctx, updated)
@@ -583,7 +583,7 @@ func TrainingBoxes(ctx *hctx.Context) []string {
 			switch {
 			case !pull.Truthy("draft"):
 				text, style = "▶️ promotion #"+number+"<br/>waiting on CI"+since, "next"
-			case strings.Contains(strOr(pull.Get("title")), "): idle,"):
+			case strings.Contains(py.OrStr(pull.Get("title"), ""), "): idle,"):
 				text, style = "⏸️ idle on #"+number+"<br/>the AI on main bans no card", "paused"
 			case !updated.IsZero() && ctx.Now().Sub(updated) > TrainingStale:
 				text, style = "⛔ #"+number+" unchanged"+since+"<br/>is the lane running?", "broken"
@@ -659,7 +659,7 @@ func LanesBoxes(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 		hostedTitle = "Claude accounts, on GitHub's runners"
 	}
 	if claude && len(hosted) == 1 && pool.MachineParallel == 0 {
-		hostedTitle = py.Str(config.Title) + "'s Claude account, on GitHub's runners"
+		hostedTitle = config.Title + "'s Claude account, on GitHub's runners"
 	}
 	lines := []string{"```mermaid", "flowchart TB"}
 	if len(hosted) > 0 {

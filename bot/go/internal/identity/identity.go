@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -135,7 +135,7 @@ func (x *Identity) CommitPrefix() string {
 
 // Home is the bot's home directory, relative to the repository root.
 func Home() string {
-	found := strings.Trim(strings.TrimFunc(os.Getenv("HARNESS_HOME"), pyIsSpace), "/")
+	found := strings.Trim(strings.TrimFunc(os.Getenv("HARNESS_HOME"), py.IsSpace), "/")
 	if found == "" {
 		return ".harness"
 	}
@@ -157,18 +157,10 @@ func other(raw any, where string) (*Other, error) {
 		Name:        py.Str(o.Get("name")),
 		Login:       py.Str(o.Get("login")),
 		LabelPrefix: py.Str(o.Get("label_prefix")),
-		Home:        orEmpty(o.Get("home")),
-		TokenEnv:    orEmpty(o.Get("token_env")),
-		Workflow:    orEmpty(o.Get("workflow")),
+		Home:        py.OrStr(o.Get("home"), ""),
+		TokenEnv:    py.OrStr(o.Get("token_env"), ""),
+		Workflow:    py.OrStr(o.Get("workflow"), ""),
 	}, nil
-}
-
-// orEmpty is `str(v or "")`.
-func orEmpty(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
 }
 
 // Keys are the keys an `identity` section may have.
@@ -189,7 +181,7 @@ func Parse(raw any, suggestions bool /* = True */) (*Identity, error) {
 	}
 	var unknown []string
 	for _, k := range section.Keys() {
-		if !contains(Keys, k) {
+		if !slices.Contains(Keys, k) {
 			unknown = append(unknown, k)
 		}
 	}
@@ -198,12 +190,12 @@ func Parse(raw any, suggestions bool /* = True */) (*Identity, error) {
 		return nil, fmt.Errorf("identity: unknown keys %s", strings.Join(unknown, ", "))
 	}
 	modes := []string{}
-	for _, m := range iterate(section.Get("modes")) {
+	for _, m := range py.Each(section.Get("modes")) {
 		modes = append(modes, py.Str(m))
 	}
 	var bad []string
 	for _, m := range modes {
-		if !contains(Modes, m) {
+		if !slices.Contains(Modes, m) {
 			bad = append(bad, m)
 		}
 	}
@@ -242,7 +234,7 @@ func Parse(raw any, suggestions bool /* = True */) (*Identity, error) {
 		}
 	}
 	others := []*Other{}
-	for i, o := range iterate(section.Get("others")) {
+	for i, o := range py.Each(section.Get("others")) {
 		parsed, err := other(o, fmt.Sprintf("identity.others[%d]", i))
 		if err != nil {
 			return nil, err
@@ -307,46 +299,3 @@ func loadCurrent() *Identity {
 	}
 	return found
 }
-
-func contains(list []string, s string) bool {
-	for _, e := range list {
-		if e == s {
-			return true
-		}
-	}
-	return false
-}
-
-// iterate is `for x in v or ()` over a JSON value as Python iterates it: a list's items, a
-// string's characters, an object's keys. Anything else that is truthy raises (panics with)
-// Python's TypeError, which nothing here catches.
-func iterate(v any) []any {
-	if !pyjson.Truthy(v) {
-		return nil
-	}
-	switch x := v.(type) {
-	case []any:
-		return x
-	case string:
-		var out []any
-		for _, r := range x {
-			out = append(out, string(r))
-		}
-		return out
-	case *pyjson.Object:
-		return pyjson.ListOf(x.Keys())
-	case bool:
-		panic(&typeError{"'bool' object is not iterable"})
-	case float64:
-		panic(&typeError{"'float' object is not iterable"})
-	}
-	panic(&typeError{"'int' object is not iterable"})
-}
-
-// typeError is Python's TypeError.
-type typeError struct{ msg string }
-
-func (e *typeError) Error() string { return e.msg }
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }

@@ -43,7 +43,7 @@ func (x *Deliverer) changed(branch string) []string {
 // The review rule approved the head but auto-merge cannot take it: label it `ready for
 // merge` and ask the operator to merge it.
 func (x *Deliverer) handToAPerson(pull *pyjson.Object, why string) string {
-	number := intOr0(pull.Get("number"))
+	number := py.MustInt(py.Or(pull.Get("number"), 0))
 	if number != 0 {
 		x.GH.AddLabels(number, []string{config.LabelReady})
 		x.try(func() { x.GH.RequestReviewers(number, []string{x.Cfg.Operator}) })
@@ -57,7 +57,7 @@ func (x *Deliverer) handToAPerson(pull *pyjson.Object, why string) string {
 func (x *Deliverer) autoMerge(pull *pyjson.Object, expectedHead string /* = "" */) string {
 	if !x.Cfg.AutoMerge {
 		if pull.Truthy("number") {
-			x.GH.AddLabels(mustInt(pull.Get("number")), []string{config.LabelReady})
+			x.GH.AddLabels(py.MustInt(pull.Get("number")), []string{config.LabelReady})
 		}
 		return fmt.Sprintf("Auto-merge is off in `.harness/config.json`, so it is labelled "+
 			"`%s`; a person merges it.", config.LabelReady)
@@ -65,8 +65,8 @@ func (x *Deliverer) autoMerge(pull *pyjson.Object, expectedHead string /* = "" *
 	if !pull.Truthy("node_id") {
 		return ""
 	}
-	branch := orStr(firstTruthy(pull.Obj("head").Get("ref"), x.Plan.Get("branch")), "")
-	if pull.Truthy("number") && x.Labels(mustInt(pull.Get("number")))[config.LabelPersonMerges] {
+	branch := py.OrStr(py.Or(pull.Obj("head").Get("ref"), x.Plan.Get("branch")), "")
+	if pull.Truthy("number") && x.Labels(py.MustInt(pull.Get("number")))[config.LabelPersonMerges] {
 		return x.handToAPerson(pull, fmt.Sprintf("it is labelled `%s`", config.LabelPersonMerges))
 	}
 	var review []string
@@ -109,7 +109,7 @@ func (x *Deliverer) autoMerge(pull *pyjson.Object, expectedHead string /* = "" *
 	if strings.Contains(strings.ToLower(refused), "clean status") {
 		// Every required check has already passed, so GitHub will not wait; merge it now.
 		merged := x.try(func() {
-			x.GH.MergePull(mustInt(pull.Get("number")), x.Cfg.MergeMethod, headline)
+			x.GH.MergePull(py.MustInt(pull.Get("number")), x.Cfg.MergeMethod, headline)
 		})
 		if merged == "" {
 			return "Every required check had already passed, so I merged it."
@@ -122,24 +122,16 @@ func (x *Deliverer) mergeTitle(pull *pyjson.Object) string {
 	return queue.MergeTitle(pull, x.Cfg.MergeMethod)
 }
 
-// actions is `ctx.act`: the client for Actions calls. The hctx stub leaves its Go type open.
-func (x *Deliverer) actions() interface{ RerunFailedJobs(runID any) } {
-	if client, ok := any(x.Ctx.Act()).(interface{ RerunFailedJobs(runID any) }); ok {
-		return client
-	}
-	return x.Ctx.GH
-}
-
 func (x *Deliverer) rerunCI(number int) {
 	runID := x.Record(number).Get("ci_run_id")
 	if pyjson.Truthy(runID) {
-		x.try(func() { x.actions().RerunFailedJobs(runID) })
+		x.try(func() { x.Ctx.Act().RerunFailedJobs(runID) })
 	}
 }
 
 // The first blocking finding's claim, cut short, for a strike's reason.
 func (x *Deliverer) firstFinding() string {
-	findings := pyjson.List(orList(x.Result.Get("findings")))
+	findings := pyjson.List(py.Or(x.Result.Get("findings"), []any{}))
 	if len(findings) == 0 {
 		return ""
 	}
@@ -147,8 +139,8 @@ func (x *Deliverer) firstFinding() string {
 	if !ok {
 		return ""
 	}
-	where := orStr(first.Get("where"), "")
-	claim := py.SliceTo(strings.Join(strings.Fields(orStr(first.Get("claim"), "")), " "), 140)
+	where := py.OrStr(first.Get("where"), "")
+	claim := py.SliceTo(strings.Join(strings.Fields(py.OrStr(first.Get("claim"), "")), " "), 140)
 	if where != "" {
 		return fmt.Sprintf("`%s`: %s", where, claim)
 	}
@@ -170,7 +162,7 @@ func (x *Deliverer) findingsMd() string {
 func (x *Deliverer) pullBody(number int, approved bool) string {
 	cycles := objList(x.Result.Get("cycles"))
 	review := pyjson.Obj(x.Result.Get("review"))
-	report := orStr(x.Result.Get("report"), "_The builder wrote no description._")
+	report := py.OrStr(x.Result.Get("report"), "_The builder wrote no description._")
 	parts := []string{fmt.Sprintf("Closes #%d", number), "", py.SliceTo(report, ReportChars), ""}
 	if approved {
 		parts = append(parts, fmt.Sprintf("### Adversarial review\n\nApproved on round %d of "+
@@ -230,9 +222,9 @@ func (x *Deliverer) pullBody(number int, approved bool) string {
 			OK:           g.Truthy("ok"),
 			ExitCode:     g.Int("exit_code"),
 			Seconds:      g.Float("seconds"),
-			Tail:         orStr(g.Get("tail"), ""),
+			Tail:         py.OrStr(g.Get("tail"), ""),
 			PreExisting:  g.Truthy("pre_existing"),
-			Skipped:      orStr(g.Get("skipped"), ""),
+			Skipped:      py.OrStr(g.Get("skipped"), ""),
 			Inconclusive: g.Truthy("inconclusive"),
 		})
 	}
@@ -247,6 +239,6 @@ func (x *Deliverer) pullBody(number int, approved bool) string {
 		"step by step, is in its %s. Comment "+
 		"`@%s <what to change>` or `%s revise <notes>` to ask "+
 		"for a revision, or `%s stop` to stop it.", x.Cfg.BotLogin, run, x.journalLink(number),
-		x.Cfg.BotLogin, slash(), slash()))
+		x.Cfg.BotLogin, config.Slash, config.Slash))
 	return strings.Join(parts, "\n")
 }

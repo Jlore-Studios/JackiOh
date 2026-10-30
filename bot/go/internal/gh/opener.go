@@ -18,7 +18,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
-	"unicode/utf8"
+
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 )
 
 // Request is urllib.request.Request as the client builds it: the method, the URL, the headers
@@ -236,71 +237,7 @@ func osErrorText(err error) string {
 	}
 	var errno syscall.Errno
 	if errors.As(err, &errno) {
-		text := errno.Error()
-		if text != "" {
-			text = strings.ToUpper(text[:1]) + text[1:]
-		}
-		return fmt.Sprintf("[Errno %d] %s", int(errno), text)
+		return py.ErrnoText(errno)
 	}
 	return err.Error()
-}
-
-// decodeReplace is bytes.decode("utf-8", "replace"): each maximal invalid subsequence (a stray
-// byte, or the valid start of a sequence cut short) is one U+FFFD, as CPython's decoder does.
-// Go's own conversions put one U+FFFD per byte.
-func decodeReplace(b []byte) string {
-	if utf8.Valid(b) {
-		return string(b)
-	}
-	var out strings.Builder
-	for i := 0; i < len(b); {
-		c := b[i]
-		if c < 0x80 {
-			out.WriteByte(c)
-			i++
-			continue
-		}
-		need, lo, hi := 0, byte(0x80), byte(0xBF)
-		switch {
-		case c >= 0xC2 && c <= 0xDF:
-			need = 1
-		case c >= 0xE0 && c <= 0xEF:
-			need = 2
-			if c == 0xE0 {
-				lo = 0xA0
-			} else if c == 0xED {
-				hi = 0x9F
-			}
-		case c >= 0xF0 && c <= 0xF4:
-			need = 3
-			if c == 0xF0 {
-				lo = 0x90
-			} else if c == 0xF4 {
-				hi = 0x8F
-			}
-		default:
-			out.WriteRune(utf8.RuneError)
-			i++
-			continue
-		}
-		j, ok := i+1, true
-		for k := 0; k < need; k++ {
-			if j >= len(b) {
-				ok = false
-				break
-			}
-			if k == 0 && (b[j] < lo || b[j] > hi) || k > 0 && (b[j] < 0x80 || b[j] > 0xBF) {
-				ok = false
-				break
-			}
-			j++
-		}
-		if !ok {
-			out.WriteRune(utf8.RuneError)
-		} else {
-			out.Write(b[i:j])
-		}
-		i = j
-	}
-	return out.String()
 }

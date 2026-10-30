@@ -24,6 +24,7 @@ package split
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -78,11 +79,8 @@ var PartNote string = "This is part of fullsend tree #{parent}. Your change land
 	"another part is missing is expected: a later run reconciles the parts and makes " +
 	"every check green.\n\n"
 
-// pySpace is Python's `\s` inside a character class (str.isspace()); Go's `\s` is ASCII.
-const pySpace = `\t\n\v\f\r\x1c-\x1f \x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
-
 var (
-	fence = regexp.MustCompile("(?s)```json[" + pySpace + "]*\n(.*?)\n```")
+	fence = regexp.MustCompile("(?s)```json[" + py.SpaceClass + "]*\n(.*?)\n```")
 	// Python's `\d` is any Unicode decimal digit.
 	issueRef  = regexp.MustCompile(`^#?(\p{Nd}{1,7})$`)
 	numberRef = regexp.MustCompile(`^#?\p{Nd}+$`)
@@ -148,7 +146,7 @@ func raw(text string) any {
 func ints(raw []any) []int {
 	found := []int{}
 	for _, entry := range raw {
-		if match := issueRef.FindStringSubmatch(pyStrip(py.Str(entry))); match != nil {
+		if match := issueRef.FindStringSubmatch(py.Strip(py.Str(entry))); match != nil {
 			found = append(found, decimal(match[1]))
 		}
 	}
@@ -172,7 +170,7 @@ func FromDict(raw any, difficulties []string /* = ("easy", "medium", "hard") */)
 		return &Tree{false, "", []*SubIssue{}, []string{"no `<!-- split: {...} -->` header with a JSON object"}}
 	}
 	done := obj.Truthy("done")
-	summary := py.SliceTo(pyStrip(orEmpty(obj.Get("summary"))), 4000)
+	summary := py.SliceTo(py.Strip(py.OrStr(obj.Get("summary"), "")), 4000)
 	var entries []any
 	if v := obj.Get("issues"); pyjson.Truthy(v) {
 		list, ok := v.([]any)
@@ -194,25 +192,25 @@ func FromDict(raw any, difficulties []string /* = ("easy", "medium", "hard") */)
 			tree.Problems = append(tree.Problems, where+" is not an object")
 			continue
 		}
-		key := pyStrip(orDefault(entry.Get("key"), fmt.Sprintf("s%d", i+1)))
+		key := py.Strip(py.OrStr(entry.Get("key"), fmt.Sprintf("s%d", i+1)))
 		if !keyPattern.MatchString(key) || seen[key] {
 			tree.Problems = append(tree.Problems, fmt.Sprintf("%s: key %s is not a short unique name", where, py.Repr(key)))
 			continue
 		}
 		seen[key] = true
-		title := py.SliceTo(strings.Join(pyFields(orEmpty(entry.Get("title"))), " "), TitleChars)
-		body := py.SliceTo(pyStrip(orEmpty(entry.Get("body"))), BodyChars)
+		title := py.SliceTo(strings.Join(py.Split(py.OrStr(entry.Get("title"), "")), " "), TitleChars)
+		body := py.SliceTo(py.Strip(py.OrStr(entry.Get("body"), "")), BodyChars)
 		if title == "" || body == "" {
 			tree.Problems = append(tree.Problems, fmt.Sprintf("%s (%s): needs a title and a body", where, key))
 			continue
 		}
-		difficulty := pyLower(pyStrip(orEmpty(entry.Get("difficulty"))))
-		if difficulty != "" && !contains(difficulties, difficulty) {
+		difficulty := py.Lower(py.Strip(py.OrStr(entry.Get("difficulty"), "")))
+		if difficulty != "" && !slices.Contains(difficulties, difficulty) {
 			difficulty = ""
 		}
 		labels := []string{}
-		for _, label := range iterate(entry.Get("labels")) {
-			if l := pyStrip(py.Str(label)); l != "" && !contains(labels, l) {
+		for _, label := range py.Each(entry.Get("labels")) {
+			if l := py.Strip(py.Str(label)); l != "" && !slices.Contains(labels, l) {
 				labels = append(labels, l)
 			}
 		}
@@ -221,20 +219,20 @@ func FromDict(raw any, difficulties []string /* = ("easy", "medium", "hard") */)
 		}
 		blockedBy := []string{}
 		var numbered []any
-		for _, k := range iterate(entry.Get("blocked_by")) {
-			if s, ok := k.(string); ok && !numberRef.MatchString(pyStrip(s)) {
-				blockedBy = append(blockedBy, pyStrip(s))
+		for _, k := range py.Each(entry.Get("blocked_by")) {
+			if s, ok := k.(string); ok && !numberRef.MatchString(py.Strip(s)) {
+				blockedBy = append(blockedBy, py.Strip(s))
 			}
 		}
-		for _, k := range iterate(entry.Get("blocked_by")) {
-			if numberRef.MatchString(pyStrip(py.Str(k))) {
+		for _, k := range py.Each(entry.Get("blocked_by")) {
+			if numberRef.MatchString(py.Strip(py.Str(k))) {
 				numbered = append(numbered, k)
 			}
 		}
-		numbered = append(numbered, iterate(entry.Get("blocked_by_issues"))...)
+		numbered = append(numbered, py.Each(entry.Get("blocked_by_issues"))...)
 		tree.Issues = append(tree.Issues, &SubIssue{
 			Key: key, Title: title, Body: body,
-			Plan:       py.SliceTo(pyStrip(orEmpty(entry.Get("plan"))), PlanChars),
+			Plan:       py.SliceTo(py.Strip(py.OrStr(entry.Get("plan"), "")), PlanChars),
 			Difficulty: difficulty, Labels: labels,
 			BlockedBy:       blockedBy,
 			BlockedByIssues: ints(numbered),
@@ -396,48 +394,6 @@ func Checklist(parent int, made []Made, builder string, summary string, link str
 	return strings.Join(lines, "\n")
 }
 
-// orEmpty is `str(v or "")`.
-func orEmpty(v any) string { return orDefault(v, "") }
-
-// orDefault is `str(v or def)`.
-func orDefault(v any, def string) string {
-	if !pyjson.Truthy(v) {
-		return def
-	}
-	return py.Str(v)
-}
-
-func contains(list []string, s string) bool {
-	for _, e := range list {
-		if e == s {
-			return true
-		}
-	}
-	return false
-}
-
-// iterate is `for x in v or ()` over a JSON value as Python iterates it: a list's items, a
-// string's characters, an object's keys. Anything else that is truthy raises (panics with)
-// Python's TypeError, which nothing here catches.
-func iterate(v any) []any {
-	if !pyjson.Truthy(v) {
-		return nil
-	}
-	switch x := v.(type) {
-	case []any:
-		return x
-	case string:
-		var out []any
-		for _, r := range x {
-			out = append(out, string(r))
-		}
-		return out
-	case *pyjson.Object:
-		return pyjson.ListOf(x.Keys())
-	}
-	panic(fmt.Errorf("'%T' object is not iterable", v))
-}
-
 // decimal is int() of a run of Unicode decimal digits.
 func decimal(s string) int {
 	n := 0
@@ -462,16 +418,3 @@ func decimalValue(r rune) int {
 	}
 	return 0
 }
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
-
-// pyStrip is str.strip().
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }
-
-// pyFields is str.split().
-func pyFields(s string) []string { return strings.FieldsFunc(s, pyIsSpace) }
-
-// pyLower is str.lower(): strings.ToLower but for `İ`, which Python lowers to `i` and a
-// combining dot.
-func pyLower(s string) string { return strings.ToLower(strings.ReplaceAll(s, "\u0130", "i\u0307")) }

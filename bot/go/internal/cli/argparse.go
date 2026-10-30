@@ -521,7 +521,7 @@ func (p *ArgumentParser) getValue(a *argAction, s string) any {
 	if !a.isInt {
 		return s
 	}
-	n, err := parseInt(s)
+	n, err := py.Int(s)
 	if err != nil {
 		p.fail(argumentError(a, "invalid int value: "+py.Repr(s)))
 	}
@@ -813,14 +813,11 @@ func fillText(text string, width int) string { return strings.Join(wrap(collapse
 // isTextWrapSpace is textwrap's `_whitespace` (and re.ASCII's `\s`).
 func isTextWrapSpace(r rune) bool { return strings.ContainsRune("\t\n\x0b\x0c\r ", r) }
 
-// isWord is `\w`.
-func isWord(r rune) bool { return r == '_' || unicode.IsLetter(r) || unicode.IsNumber(r) }
-
 // isLetter is `[^\d\W]`.
-func isLetter(r rune) bool { return isWord(r) && !unicode.IsDigit(r) }
+func isLetter(r rune) bool { return py.IsWord(r) && !unicode.IsDigit(r) }
 
 // isWordPunct is `[\w!"\'&.,?]`.
-func isWordPunct(r rune) bool { return isWord(r) || strings.ContainsRune(`!"'&.,?`, r) }
+func isWordPunct(r rune) bool { return py.IsWord(r) || strings.ContainsRune(`!"'&.,?`, r) }
 
 // dashes is how many `-` start rs[i:].
 func dashes(rs []rune, i int) int {
@@ -834,7 +831,7 @@ func dashes(rs []rune, i int) int {
 // emDashAt is `-{2,}(?=\w)` at rs[i:].
 func emDashAt(rs []rune, i int) int {
 	n := dashes(rs, i)
-	if n >= 2 && i+n < len(rs) && isWord(rs[i+n]) {
+	if n >= 2 && i+n < len(rs) && py.IsWord(rs[i+n]) {
 		return n
 	}
 	return 0

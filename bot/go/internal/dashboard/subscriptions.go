@@ -106,7 +106,7 @@ func usageCell(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.Ob
 				}
 			}
 			notes = append(kept, "reset "+clockText(ctx, reset)+", not read since (it read "+
-				percent(read, 0)+")")
+				py.Percent(read, 0)+")")
 		}
 	}
 	if len(notes) > 0 {
@@ -119,7 +119,7 @@ func usageCell(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.Ob
 // that.
 func readAgo(ctx *hctx.Context, entry *pyjson.Object) string {
 	usage, _ := entry.Get("usage").(*pyjson.Object)
-	observed := parseISO(usage.Get("observed_at"))
+	observed := clock.ParseISOValue(usage.Get("observed_at"))
 	if observed.IsZero() {
 		return "never"
 	}

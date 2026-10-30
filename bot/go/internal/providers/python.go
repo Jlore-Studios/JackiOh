@@ -1,25 +1,17 @@
 package providers
 
-// The Python behaviours this module's logic depends on, kept private here: isinstance checks on
-// JSON values, int() and float() of whatever providers.json or the state file holds, the `%`
-// format, a datetime in a zone with fold=0, date.fromisoformat and pathlib's joining.
+// The Python behaviours this module's logic depends on that py does not hold: isinstance checks
+// on JSON values, a datetime in a zone with fold=0, date.fromisoformat and pathlib's joining.
 
 import (
-	"fmt"
-	"math"
+	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
-
-// pySpace is Python's `\s` (str.isspace) as an RE2 class; RE2's own `\s` is ASCII.
-const pySpace = `[\t\n\v\f\r\x1c-\x1f\x{85}\p{Z}]`
 
 // mapping is isinstance(v, Mapping): v as an object. A nil *pyjson.Object is None.
 func mapping(v any) (*pyjson.Object, bool) {
@@ -49,7 +41,7 @@ func noneOrEmpty(raw any) bool {
 func unknownKeys(obj *pyjson.Object, allowed []string) []string {
 	var unknown []string
 	for _, k := range obj.Keys() {
-		if !contains(allowed, k) {
+		if !slices.Contains(allowed, k) {
 			unknown = append(unknown, k)
 		}
 	}
@@ -73,17 +65,6 @@ func repeated(xs []string) []string {
 	return twice
 }
 
-func contains(xs []string, x string) bool { return index(xs, x) >= 0 }
-
-func index(xs []string, x string) int {
-	for i, y := range xs {
-		if y == x {
-			return i
-		}
-	}
-	return -1
-}
-
 // sortedNames is sorted(a set of names).
 func sortedNames(set map[string]bool) []string {
 	names := []string{}
@@ -94,31 +75,8 @@ func sortedNames(set map[string]bool) []string {
 	return names
 }
 
-// iterate is Python's iteration over a JSON value: a list's items, a string's characters, an
-// object's keys. Anything else raises TypeError, as iterating it does.
-func iterate(v any) []any {
-	switch x := v.(type) {
-	case []any:
-		return x
-	case string:
-		out := []any{}
-		for _, r := range x {
-			out = append(out, string(r))
-		}
-		return out
-	case *pyjson.Object:
-		return pyjson.ListOf(x.Keys())
-	}
-	panic(fmt.Errorf("TypeError: '%s' object is not iterable", typeName(v)))
-}
-
 // listOf is list(v or []).
-func listOf(v any) []any {
-	if !pyjson.Truthy(v) {
-		return []any{}
-	}
-	return append([]any{}, iterate(v)...)
-}
+func listOf(v any) []any { return append([]any{}, py.Each(v)...) }
 
 // lastN is xs[-n:].
 func lastN(xs []any, n int) []any {
@@ -127,202 +85,6 @@ func lastN(xs []any, n int) []any {
 	}
 	return append([]any{}, xs...)
 }
-
-// orEmpty is str(v or "").
-func orEmpty(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// orZero is `v or 0`.
-func orZero(v any) any { return orValue(v, 0) }
-
-// orValue is `v or fallback`.
-func orValue(v, fallback any) any {
-	if pyjson.Truthy(v) {
-		return v
-	}
-	return fallback
-}
-
-// reprStr is repr() of a string.
-func reprStr(s string) string { return py.Repr(s) }
-
-// parseISO is clock.parse_iso of any JSON value: None (the zero time) for a falsy one, else the
-// time its str() reads as.
-func parseISO(v any) time.Time {
-	if !pyjson.Truthy(v) {
-		return time.Time{}
-	}
-	return clock.ParseISO(py.Str(v))
-}
-
-// number is isinstance(v, (int, float)): a bool is an int in Python, so it counts as 0 or 1.
-func number(v any) (float64, bool) {
-	if b, ok := v.(bool); ok {
-		if b {
-			return 1, true
-		}
-		return 0, true
-	}
-	return pyjson.AsFloat(v)
-}
-
-// typeName is type(v).__name__ for a JSON value.
-func typeName(v any) string {
-	switch v.(type) {
-	case nil:
-		return "NoneType"
-	case bool:
-		return "bool"
-	case int:
-		return "int"
-	case float64:
-		return "float"
-	case string:
-		return "str"
-	case []any:
-		return "list"
-	case *pyjson.Object:
-		return "dict"
-	}
-	return fmt.Sprintf("%T", v)
-}
-
-// pyInt is int(v): an int, a bool, a float (truncated), or a string of decimal digits with
-// Python's whitespace, sign and underscores. The error stands for ValueError or TypeError.
-func pyInt(v any) (int, error) {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1, nil
-		}
-		return 0, nil
-	case int:
-		return x, nil
-	case float64:
-		if math.IsNaN(x) || math.IsInf(x, 0) {
-			return 0, fmt.Errorf("ValueError: cannot convert float %s to integer", pyjson.FloatRepr(x))
-		}
-		return int(x), nil
-	case string:
-		s := strings.TrimSpace(x)
-		negative := false
-		if s != "" && (s[0] == '+' || s[0] == '-') {
-			negative = s[0] == '-'
-			s = s[1:]
-		}
-		digits, ok := pyDigits(s, false)
-		if !ok || digits == "" {
-			return 0, fmt.Errorf("ValueError: invalid literal for int() with base 10: %s", reprStr(x))
-		}
-		n, err := strconv.Atoi(digits)
-		if err != nil {
-			return 0, fmt.Errorf("ValueError: invalid literal for int() with base 10: %s", reprStr(x))
-		}
-		if negative {
-			n = -n
-		}
-		return n, nil
-	}
-	return 0, fmt.Errorf("TypeError: int() argument must be a string, a bytes-like object or a "+
-		"real number, not '%s'", typeName(v))
-}
-
-// mustInt is int(v) where the Python lets its error go up.
-func mustInt(v any) int {
-	n, err := pyInt(v)
-	if err != nil {
-		panic(err)
-	}
-	return n
-}
-
-// pyFloat is float(v): a number, a bool, or a string Python's float() reads (whitespace,
-// underscores between digits, inf and nan, any decimal digits).
-func pyFloat(v any) (float64, error) {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1, nil
-		}
-		return 0, nil
-	case int:
-		return float64(x), nil
-	case float64:
-		return x, nil
-	case string:
-		s, ok := pyDigits(strings.TrimSpace(x), true)
-		if ok && !strings.ContainsAny(s, "xXpP_") && s != "" {
-			f, err := strconv.ParseFloat(s, 64)
-			if err == nil || err.(*strconv.NumError).Err == strconv.ErrRange {
-				return f, nil
-			}
-		}
-		return 0, fmt.Errorf("ValueError: could not convert string to float: %s", reprStr(x))
-	}
-	return 0, fmt.Errorf("TypeError: float() argument must be a string or a real number, not '%s'",
-		typeName(v))
-}
-
-// mustFloat is float(v) where the Python lets its error go up.
-func mustFloat(v any) float64 {
-	f, err := pyFloat(v)
-	if err != nil {
-		panic(err)
-	}
-	return f
-}
-
-// pyDigits rewrites Python's decimal digits in s as ASCII and drops the underscores Python allows
-// (one, between two digits); false when an underscore stands anywhere else. Without `other`, any
-// character but a digit or an underscore is refused too.
-func pyDigits(s string, other bool) (string, bool) {
-	rs := []rune(s)
-	var b strings.Builder
-	for i, r := range rs {
-		switch {
-		case unicode.Is(unicode.Nd, r):
-			b.WriteByte(byte('0' + digitValue(r)))
-		case r == '_':
-			if i == 0 || i == len(rs)-1 || !unicode.Is(unicode.Nd, rs[i-1]) || !unicode.Is(unicode.Nd, rs[i+1]) {
-				return "", false
-			}
-		case other:
-			b.WriteRune(r)
-		default:
-			return "", false
-		}
-	}
-	return b.String(), true
-}
-
-// digitValue is the value of a decimal digit (Unicode category Nd), what Python's int() reads:
-// Unicode assigns them in runs of ten, 0 to 9, so a digit's value is its place in its run.
-func digitValue(r rune) int {
-	if r >= '0' && r <= '9' {
-		return int(r - '0')
-	}
-	k := 0
-	for unicode.Is(unicode.Nd, r-rune(k)-1) {
-		k++
-	}
-	return k % 10
-}
-
-// digitsInt is int() of what `\d+` matched, 0 for an empty (unmatched) group.
-func digitsInt(s string) int {
-	n := 0
-	for _, r := range s {
-		n = n*10 + digitValue(r)
-	}
-	return n
-}
-
-// percent is f"{x:.0%}": x times 100, rounded half to even, and a percent sign.
-func percent(x float64) string { return fmt.Sprintf("%.0f%%", x*100) }
 
 // pyMin is min(a, b): a unless b is smaller.
 func pyMin(a, b float64) float64 {
@@ -339,8 +101,6 @@ func pyMax(a, b float64) float64 {
 	}
 	return a
 }
-
-func pyMod(a, b int) int { return py.Mod(a, b) }
 
 // weekday is datetime.weekday(): Monday 0 to Sunday 6.
 func weekday(t time.Time) int { return (int(t.Weekday()) + 6) % 7 }

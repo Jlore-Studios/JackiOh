@@ -36,7 +36,7 @@ func Approvals(votes *pyjson.Object, familyTier func(string) string) [][2]string
 	found := [][2]string{}
 	if reviews, ok := votes.Get("reviews").([]any); ok {
 		for _, r := range pyjson.Objs(reviews) {
-			family := orEmpty(r.Get("family"))
+			family := py.OrStr(r.Get("family"), "")
 			tier := r.Get("tier")
 			shown := ""
 			if pyjson.Truthy(tier) {
@@ -49,7 +49,7 @@ func Approvals(votes *pyjson.Object, familyTier func(string) string) [][2]string
 		return found
 	}
 	tiers := votes.Obj("tiers")
-	for _, f := range iterate(votes.Get("approvals")) {
+	for _, f := range py.Each(votes.Get("approvals")) {
 		var tier any
 		if key, ok := f.(string); ok {
 			tier = tiers.Get(key)
@@ -147,33 +147,4 @@ func Who(approved [][2]string) string {
 		parts[i] = fmt.Sprintf("`%s` (%s)%s", a[0], a[1], times)
 	}
 	return strings.Join(parts, ", ")
-}
-
-// orEmpty is `str(v or "")`.
-func orEmpty(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// iterate is `for x in v or []` over a JSON value as Python iterates it: a list's items, a
-// string's characters, an object's keys.
-func iterate(v any) []any {
-	if !pyjson.Truthy(v) {
-		return nil
-	}
-	switch x := v.(type) {
-	case []any:
-		return x
-	case string:
-		var out []any
-		for _, r := range x {
-			out = append(out, string(r))
-		}
-		return out
-	case *pyjson.Object:
-		return pyjson.ListOf(x.Keys())
-	}
-	panic(fmt.Errorf("'%T' object is not iterable", v)) // Python's TypeError
 }

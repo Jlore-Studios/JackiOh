@@ -22,7 +22,7 @@
 // also how a person approves one of the bot's suggestions; handing it to people is `human`.
 //
 // The patterns are Python's `re` patterns with Python's classes spelled out, since Go's are ASCII:
-// `\d` is any script's decimal digit (\p{Nd}), `\s` and `\S` Python's whitespace (`pyS`), and `\b`,
+// `\d` is any script's decimal digit (\p{Nd}), `\s` and `\S` Python's whitespace (`py.ReS`), and `\b`,
 // which RE2 has no Unicode form of, the neighbouring character tested against Python's `\w`
 // (letters, digits, `_`). `.github/workflows/pr-title.yml` calls PullTitleOK.
 package triage
@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
@@ -43,15 +42,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/trust"
 )
 
-// pyS is Python's `\s` in a str pattern (str.isspace()), pyNotS its `\S`; pyNotW is not its
-// `\w`.
-const (
-	pySet  = `\t\n\v\f\r\x{1c}-\x{20}\x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
-	pyS    = `[` + pySet + `]`
-	pyNotS = `[^` + pySet + `]`
-	pyNotW = `[^\p{L}\p{N}_]`
-)
-
 // Humans is the people a human task goes to.
 var Humans = []string{"MaxGoetzmann", "jgoetzmann"}
 
@@ -59,15 +49,15 @@ var Humans = []string{"MaxGoetzmann", "jgoetzmann"}
 var TypeLabels = config.TypeLabels
 
 // HumanLabel is `human`.
-var HumanLabel = py.Str(config.LabelHuman)
+var HumanLabel = config.LabelHuman
 
 // HumanLabels is the labels that hand an issue to people: a person's `human`, and `human
 // required` (#793), the bot's own hand-over, which a person may put on too.
-var HumanLabels = map[string]bool{py.Str(config.LabelHuman): true, py.Str(config.LabelHumanRequired): true}
+var HumanLabels = map[string]bool{config.LabelHuman: true, config.LabelHumanRequired: true}
 
 // Queued is the bot's queue labels `human` takes off: people do the issue now. A run that holds
 // it (`bot:working`) or a pull request it opened keep theirs.
-var Queued = map[string]bool{py.Str(config.LabelBuild): true, py.Str(config.LabelNeedsPlan): true}
+var Queued = map[string]bool{config.LabelBuild: true, config.LabelNeedsPlan: true}
 
 // PrefixType is one of PrefixTypes: a title prefix and the type label it names.
 type PrefixType struct {
@@ -80,7 +70,7 @@ type PrefixType struct {
 // (`kind:*`, #1370).
 var PrefixTypes = []PrefixType{
 	{regexp.MustCompile(`(?i)^Patch v\p{Nd}`), "patch"},
-	{regexp.MustCompile(`^v\p{Nd}+\.\p{Nd}+\.0(?:$|` + pyNotW + `)`), "major version"},
+	{regexp.MustCompile(`^v\p{Nd}+\.\p{Nd}+\.0(?:$|` + py.ReNotW + `)`), "major version"},
 	{regexp.MustCompile(`(?i)^Night bot:`), "night bot"},
 	{regexp.MustCompile(`(?i)^(?:Architecture|CI):`), "architecture"},
 }
@@ -93,7 +83,7 @@ const partOf = `(?: \(part \p{Nd}+ of \p{Nd}+\))?`
 // `(part n of m)` after either. The older prefixes (`Patch v0.3.X`, `Patch v0.3.Y`, `vX.Y.0`,
 // `Night bot`, `CI` and `Architecture`) stopped passing once the title retcon (#1372) had
 // retitled every thread.
-var Convention = regexp.MustCompile(`^Patch(?: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]?)?` + partOf + `: ` + pyNotS)
+var Convention = regexp.MustCompile(`^Patch(?: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]?)?` + partOf + `: ` + py.ReNotS)
 
 // AutomatedPull matches the titles tools give the pull requests they open, which the title check
 // passes as they are (`pull_title_ok`): `patches ship: v0.3.1` (patches-ship.yml; several versions
@@ -106,7 +96,7 @@ var AutomatedPull = regexp.MustCompile(
 	`^(?:patches ship: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]?(?:, v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]?)*$` +
 		`|patches log: [0-9a-f]{7,40}\.\.[0-9a-f]{7,40}$` +
 		`|Promote main to production: \p{Nd}+ commit\(s\) up to [0-9a-f]{7,40}$` +
-		`|AI gen \p{Nd}+ \((?:improve|unban|learn)\): ` + pyNotS + `)`)
+		`|AI gen \p{Nd}+ \((?:improve|unban|learn)\): ` + py.ReNotS + `)`)
 
 // Revert matches GitHub's Revert button's title for its pull request: `Revert "<the reverted pull
 // request's title>"`.
@@ -146,19 +136,19 @@ func ThreadOf(payload *pyjson.Object) (*pyjson.Object, bool) {
 	if payload.Truthy("pull_request") {
 		return pyjson.Obj(payload.Get("pull_request")).Copy(), true
 	}
-	issue := orEmpty(payload.Get("issue"))
+	issue := pyjson.Obj(payload.Get("issue"))
 	return issue.Copy(), issue.Has("pull_request")
 }
 
 func FollowsConvention(title string) bool {
-	return Convention.MatchString(strip(title))
+	return Convention.MatchString(py.Strip(title))
 }
 
 // PullTitleOK is whether a pull request's title may become the squash commit's subject (the title
 // check, `.github/workflows/pr-title.yml`, #187): it follows the convention, it is one a tool
 // gives its own pull requests (`AUTOMATED_PULL`), or it reverts a pull request whose title passes.
 func PullTitleOK(title string) bool {
-	text := strip(title)
+	text := py.Strip(title)
 	if revert := Revert.FindStringSubmatch(text); revert != nil {
 		return PullTitleOK(revert[1])
 	}
@@ -172,13 +162,13 @@ func PullTitleOK(title string) bool {
 // `Patch: …`.
 func PullTitle(chosen string, issue string) string {
 	for _, title := range []string{chosen, issue} {
-		if strip(title) != "" && PullTitleOK(title) {
-			return strings.Join(split(title), " ")
+		if py.Strip(title) != "" && PullTitleOK(title) {
+			return strings.Join(py.Split(title), " ")
 		}
 	}
-	text := strip(chosen)
+	text := py.Strip(chosen)
 	if text == "" {
-		text = strip(issue)
+		text = py.Strip(issue)
 	}
 	if text == "" {
 		return ""
@@ -188,7 +178,7 @@ func PullTitle(chosen string, issue string) string {
 
 // TypeLabel is the type label a title's prefix names, or "" for a title with no prefix.
 func TypeLabel(title string) string {
-	text := strip(title)
+	text := py.Strip(title)
 	for _, pt := range PrefixTypes {
 		if pt.Pattern.MatchString(text) {
 			return pt.Label
@@ -201,7 +191,7 @@ func TypeLabel(title string) string {
 var priorities = []string{config.LabelPriorityHigh, config.LabelPriorityMedium, config.LabelPriorityLow}
 
 // who is who does it, as each form's dropdown spells it: the label in its brackets.
-var who = []string{py.Str(config.LabelBuild), HumanLabel}
+var who = []string{config.LabelBuild, HumanLabel}
 
 // FormLabels is the labels an issue form's dropdowns ask for (`.github/ISSUE_TEMPLATE/`), which
 // triage puts on when a trusted person opens the issue, as if they had set them by hand:
@@ -210,11 +200,11 @@ var who = []string{py.Str(config.LabelBuild), HumanLabel}
 func FormLabels(body string) []string {
 	keys, answers := []string{}, map[string]string{}
 	for _, m := range formAnswers(strings.ReplaceAll(body, "\r\n", "\n")) {
-		key := strings.ToLower(strip(m[0]))
+		key := strings.ToLower(py.Strip(m[0]))
 		if _, ok := answers[key]; !ok {
 			keys = append(keys, key)
 		}
-		answers[key] = strings.ToLower(strip(m[1]))
+		answers[key] = strings.ToLower(py.Strip(m[1]))
 	}
 	labels := []string{}
 	difficulty := ""
@@ -298,7 +288,7 @@ func formAnswers(body string) [][2]string {
 		answerEnd, matchEnd := n, n
 		for e := k; e <= n; e++ {
 			w := e
-			for w < n && isSpace(text[w]) {
+			for w < n && py.IsSpace(text[w]) {
 				w++
 			}
 			end := -1
@@ -323,10 +313,10 @@ func formAnswers(body string) [][2]string {
 
 var (
 	bugWords = regexp.MustCompile(
-		`(?i)(?:^|` + pyNotW + `)(bug|fails?|failing|failed|broken|breaks|crash(?:es)?|wrong|lag(?:s|gy)?|regression` +
-			`|errors?|not working|doesn'?t work|stuck|stall(?:s|ing)?|hangs?)(?:$|` + pyNotW + `)`)
+		`(?i)(?:^|` + py.ReNotW + `)(bug|fails?|failing|failed|broken|breaks|crash(?:es)?|wrong|lag(?:s|gy)?|regression` +
+			`|errors?|not working|doesn'?t work|stuck|stall(?:s|ing)?|hangs?)(?:$|` + py.ReNotW + `)`)
 	featureWords = regexp.MustCompile(
-		`(?i)(?:^|` + pyNotW + `)(new|adds?|support|page|mode|screen|easter egg|leaderboard|emotes?|feature)(?:$|` + pyNotW + `)`)
+		`(?i)(?:^|` + py.ReNotW + `)(new|adds?|support|page|mode|screen|easter egg|leaderboard|emotes?|feature)(?:$|` + py.ReNotW + `)`)
 )
 
 var taskPrefixes = []string{"architecture:", "refactor:", "ci:", "night bot:", "tests:", "docs:"}
@@ -335,9 +325,9 @@ var taskPrefixes = []string{"architecture:", "refactor:", "ci:", "night bot:", "
 // a failure is a Bug; tooling, CI, the bot and trackers are a Task; something new for players or
 // the team is a Feature; anything else a Task. "" when the organisation has none of those.
 func FallbackType(issue *pyjson.Object, types map[string]string) string {
-	title := str0(issue.Get("title"))
+	title := py.OrStr(issue.Get("title"), "")
 	names := map[string]bool{}
-	for _, label := range iterate(issue.Get("labels")) {
+	for _, label := range py.Each(issue.Get("labels")) {
 		names[strings.ToLower(py.Str(pyjson.Obj(label).Get("name")))] = true
 	}
 	lower := strings.ToLower(title)
@@ -374,7 +364,7 @@ func IssueTypes(gh gh.Client) map[string]string {
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
 		for _, t := range gh.ListIssueTypes() {
 			if t.Truthy("name") {
-				found[py.Str(t.Get("name"))] = str0(t.Get("description"))
+				found[py.Str(t.Get("name"))] = py.OrStr(t.Get("description"), "")
 			}
 		}
 	}); failed {
@@ -409,8 +399,8 @@ func Gate(payload *pyjson.Object, trust *trust.Trust, botLogin string, asked boo
 		return "open", "#" + number + ": a person called triage on it"
 	}
 	if payload.Get("action") == "labeled" {
-		name := str0(orEmpty(payload.Get("label")).Get("name"))
-		sender := str0(orEmpty(payload.Get("sender")).Get("login"))
+		name := py.OrStr(pyjson.Obj(payload.Get("label")).Get("name"), "")
+		sender := py.OrStr(pyjson.Obj(payload.Get("sender")).Get("login"), "")
 		if isPR || !HumanLabels[strings.ToLower(name)] {
 			return "", "label " + name + " asks nothing of triage"
 		}
@@ -426,12 +416,12 @@ func Gate(payload *pyjson.Object, trust *trust.Trust, botLogin string, asked boo
 	if payload.Get("action") != "opened" {
 		return "", py.Str(payload.Get("action")) + " asks nothing of triage"
 	}
-	user := orEmpty(thread.Get("user"))
-	login := str0(user.Get("login"))
+	user := pyjson.Obj(thread.Get("user"))
+	login := py.OrStr(user.Get("login"), "")
 	if isBot(login, botLogin) {
 		return "", "opened by " + login + ", which labels its own"
 	}
-	association := strings.ToUpper(str0(thread.Get("author_association")))
+	association := strings.ToUpper(py.OrStr(thread.Get("author_association"), ""))
 	if !inSet(trustedAssociations(), association) && trust.Level(login, userID(user.Get("id")), association) < 1 {
 		named := association
 		if named == "" {
@@ -475,7 +465,7 @@ func userID(v any) *int {
 
 func names(thread *pyjson.Object) []string {
 	out := []string{}
-	for _, label := range iterate(thread.Get("labels")) {
+	for _, label := range py.Each(thread.Get("labels")) {
 		out = append(out, py.Str(pyjson.Obj(label).Get("name")))
 	}
 	return out
@@ -484,8 +474,8 @@ func names(thread *pyjson.Object) []string {
 // HandToPeople is `human` on an issue: both people take it, and the bot lets go of it.
 func HandToPeople(plan *Plan, thread *pyjson.Object, botLogin string) {
 	assigned := map[string]bool{}
-	for _, a := range iterate(thread.Get("assignees")) {
-		assigned[strings.ToLower(str0(pyjson.Obj(a).Get("login")))] = true
+	for _, a := range py.Each(thread.Get("assignees")) {
+		assigned[strings.ToLower(py.OrStr(pyjson.Obj(a).Get("login"), ""))] = true
 	}
 	var add []string
 	for _, h := range Humans {
@@ -534,13 +524,13 @@ func Decide(step string, thread *pyjson.Object, isPR bool, botLogin string, type
 		return plan
 	}
 	if form && !isPR {
-		for _, name := range FormLabels(str0(thread.Get("body"))) {
+		for _, name := range FormLabels(py.OrStr(thread.Get("body"), "")) {
 			if !lowered[strings.ToLower(name)] {
 				plan.Labels = append(plan.Labels, name)
 			}
 		}
 	}
-	kind := TypeLabel(str0(thread.Get("title")))
+	kind := TypeLabel(py.OrStr(thread.Get("title"), ""))
 	typed := false
 	for _, label := range TypeLabels {
 		if lowered[label] {
@@ -554,7 +544,7 @@ func Decide(step string, thread *pyjson.Object, isPR bool, botLogin string, type
 		return plan
 	}
 	if !thread.Truthy("type") { // a person's type stays
-		labelled := append([]any{}, iterate(thread.Get("labels"))...)
+		labelled := append([]any{}, py.Each(thread.Get("labels"))...)
 		for _, n := range plan.Labels {
 			labelled = append(labelled, pyjson.New("name", n))
 		}
@@ -628,9 +618,9 @@ func catchValueError(fn func()) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
-				var mine *valueError
+				var mine *py.Error
 				var client *gh.ValueError
-				if errors.As(e, &mine) || errors.As(e, &client) {
+				if errors.As(e, &mine) && mine.Type == "ValueError" || errors.As(e, &client) {
 					err = e
 					return
 				}
@@ -642,11 +632,6 @@ func catchValueError(fn func()) (err error) {
 	return nil
 }
 
-// valueError is Python's ValueError.
-type valueError struct{ msg string }
-
-func (e *valueError) Error() string { return e.msg }
-
 // setType sets the issue's type. GitHub drops a type it will not take without an error, so read
 // the answer back.
 func setType(gh gh.Client, number int, name string) {
@@ -655,41 +640,12 @@ func setType(gh gh.Client, number int, name string) {
 	if o, ok := got.(*pyjson.Object); ok {
 		got = o.Get("name")
 	}
-	if strings.ToLower(str0(got)) != strings.ToLower(name) {
-		herr.Raise(&valueError{"GitHub did not keep it"})
+	if strings.ToLower(py.OrStr(got, "")) != strings.ToLower(name) {
+		herr.Raise(&py.Error{Type: "ValueError", Msg: "GitHub did not keep it"})
 	}
 }
 
 // ------------------------------------------------------------------ Python's str
-
-// isSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c-\x1f.
-func isSpace(r rune) bool { return unicode.IsSpace(r) || r >= 0x1c && r <= 0x1f }
-
-// strip is str.strip(); split is str.split().
-func strip(s string) string   { return strings.TrimFunc(s, isSpace) }
-func split(s string) []string { return strings.FieldsFunc(s, isSpace) }
-
-// str0 is `str(v or "")`.
-func str0(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// orEmpty is `v or {}` read as an object.
-func orEmpty(v any) *pyjson.Object { return pyjson.Obj(v) }
-
-// iterate is `for e in value or []` over a JSON value: a list's items, an object's keys.
-func iterate(value any) []any {
-	switch v := value.(type) {
-	case []any:
-		return v
-	case *pyjson.Object:
-		return pyjson.ListOf(v.Keys())
-	}
-	return nil
-}
 
 func contains(xs []string, s string) bool {
 	for _, x := range xs {

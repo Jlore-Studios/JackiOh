@@ -1,122 +1,28 @@
 package cli
 
-// Private helpers the command line needs from Python itself: `int()`, `str.isdigit()`, the
-// exceptions its except clauses name (OSError, ValueError), the last line of a traceback,
-// `str(timedelta)`, subprocess.run, and the running bot's constants from `config`, read through
-// `any` so this package compiles whether `config` declares them as `any` or as their own types.
+// Private helpers the command line needs from Python itself that py and herr do not hold: the
+// exceptions its except clauses name (ValueError), the last line of a traceback, `str(timedelta)`,
+// subprocess.run, and pathlib's and json's reads and writes.
 
 import (
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
-
-// pyError is one of Python's own exceptions where the Python raised it uncaught or caught it by
-// name (ValueError, KeyError, TypeError, AttributeError, json.decoder.JSONDecodeError).
-type pyError struct {
-	name string
-	msg  string
-}
-
-func (e *pyError) Error() string { return e.msg }
-
-// parseInt is int(s) for a string: surrounding whitespace, a sign and single underscores between
-// digits allowed, as Python's are; a ValueError otherwise.
-func parseInt(s string) (int, error) {
-	t := strings.TrimFunc(s, unicode.IsSpace)
-	body := strings.TrimLeft(t, "+-")
-	ok := len(t)-len(body) <= 1 && body != "" && !strings.HasPrefix(body, "_") &&
-		!strings.HasSuffix(body, "_") && !strings.Contains(body, "__")
-	for _, r := range body {
-		if (r < '0' || r > '9') && r != '_' {
-			ok = false
-		}
-	}
-	if ok {
-		if n, err := strconv.Atoi(strings.ReplaceAll(t, "_", "")); err == nil {
-			return n, nil
-		}
-	}
-	return 0, &pyError{"ValueError", "invalid literal for int() with base 10: " + py.Repr(s)}
-}
-
-// pyInt is int(s), raising its ValueError.
-func pyInt(s string) int {
-	n, err := parseInt(s)
-	if err != nil {
-		panic(err)
-	}
-	return n
-}
-
-// intOf is int(v) for a JSON value.
-func intOf(v any) int {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	case string:
-		return pyInt(x)
-	case nil:
-		panic(&pyError{"TypeError", "int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"})
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	panic(&pyError{"TypeError", fmt.Sprintf("int() argument must be a string, a bytes-like object or a real number, not '%T'", v)})
-}
-
-// isDigit is str.isdigit().
-func isDigit(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if !unicode.IsDigit(r) {
-			return false
-		}
-	}
-	return true
-}
-
-// key is d[k]: the value, or a KeyError.
-func key(o *pyjson.Object, k string) any {
-	v, ok := o.Lookup(k)
-	if !ok {
-		panic(&pyError{"KeyError", py.Repr(k)})
-	}
-	return v
-}
-
-// or is `v or def`.
-func or(v any, def any) any {
-	if pyjson.Truthy(v) {
-		return v
-	}
-	return def
-}
 
 // lower is `str(b).lower()` for a bool.
 func lower(b bool) string {
@@ -124,22 +30,6 @@ func lower(b bool) string {
 		return "true"
 	}
 	return "false"
-}
-
-// pyBool is `str(b)`.
-func pyBool(b bool) string {
-	if b {
-		return "True"
-	}
-	return "False"
-}
-
-// parseISO is clock.parse_iso over any JSON value: zero (None) for a falsy one.
-func parseISO(v any) time.Time {
-	if !pyjson.Truthy(v) {
-		return time.Time{}
-	}
-	return clock.ParseISO(py.Str(v))
 }
 
 // readJSON is `json.loads(Path(path).read_text(encoding="utf-8"))`: an OSError or a
@@ -154,7 +44,7 @@ func readJSON(path string) any {
 func loads(text string) any {
 	v, err := pyjson.LoadsString(text)
 	if err != nil {
-		panic(&pyError{"json.decoder.JSONDecodeError", err.Error()})
+		panic(&py.Error{Type: "json.decoder.JSONDecodeError", Msg: err.Error()})
 	}
 	return v
 }
@@ -164,25 +54,7 @@ func object(v any) *pyjson.Object {
 	if o, ok := v.(*pyjson.Object); ok && o != nil {
 		return o
 	}
-	panic(&pyError{"AttributeError", fmt.Sprintf("'%s' object has no attribute 'get'", pyTypeName(v))})
-}
-
-func pyTypeName(v any) string {
-	switch v.(type) {
-	case nil:
-		return "NoneType"
-	case []any:
-		return "list"
-	case string:
-		return "str"
-	case bool:
-		return "bool"
-	case int:
-		return "int"
-	case float64:
-		return "float"
-	}
-	return fmt.Sprintf("%T", v)
+	panic(&py.Error{Type: "AttributeError", Msg: fmt.Sprintf("'%s' object has no attribute 'get'", py.TypeName(v))})
 }
 
 // mkdirParent is `Path(path).parent.mkdir(parents=True, exist_ok=True)`; an OSError goes up.
@@ -198,28 +70,17 @@ func writeText(path, text string) {
 
 // ---------------------------------------------------------------------------- exceptions
 
-// isOSError is `isinstance(exc, OSError)` for the errors Go returns where Python raised one.
-func isOSError(err error) bool {
-	var pathErr *fs.PathError
-	var linkErr *os.LinkError
-	var sysErr *os.SyscallError
-	var execErr *exec.Error
-	var errno syscall.Errno
-	return errors.As(err, &pathErr) || errors.As(err, &linkErr) || errors.As(err, &sysErr) ||
-		errors.As(err, &execErr) || errors.As(err, &errno)
-}
-
 // isValueError is `isinstance(exc, ValueError)`: one this package raised, or a Go error another
 // package raised for Python's (not one of the harness's own, an OSError, or a Go runtime error,
 // which stands for a bug).
 func isValueError(err error) bool {
-	var pe *pyError
+	var pe *py.Error
 	if errors.As(err, &pe) {
-		return pe.name == "ValueError" || pe.name == "json.decoder.JSONDecodeError"
+		return pe.Type == "ValueError" || pe.Type == "json.decoder.JSONDecodeError"
 	}
 	var p *herr.Panic
 	var re runtime.Error
-	return !herr.IsHarness(err) && !isOSError(err) && !errors.As(err, &p) && !errors.As(err, &re)
+	return !herr.IsHarness(err) && !herr.IsOSError(err) && !errors.As(err, &p) && !errors.As(err, &re)
 }
 
 // catchIf runs fn and returns the error it raised when `match` says the except clause takes it;
@@ -244,91 +105,23 @@ func lastLine(r any) string {
 	if !ok {
 		err = &herr.Panic{Value: r}
 	}
-	name := ""
-	var pe *pyError
-	var p *herr.Panic
-	var re runtime.Error
-	var pathErr *fs.PathError
+	var exc *py.Error
 	var timeout *timeoutExpired
-	var harness herr.Harness
+	var panicked *herr.Panic
+	var fault runtime.Error
+	name := strings.TrimPrefix(fmt.Sprintf("%T", err), "*") // a Go error's own type
 	switch {
-	case errors.As(err, &pe):
-		name = pe.name
-	case errors.As(err, &harness):
-		name = "harness.errors." + reflect.TypeOf(harness).Elem().Name()
+	case errors.As(err, &exc), herr.IsOSError(err), errors.As(err, &panicked), errors.As(err, &fault):
+		name = herr.Name(err)
+	case herr.IsHarness(err):
+		name = "harness.errors." + herr.Name(err)
 	case errors.As(err, &timeout):
 		name = "subprocess.TimeoutExpired"
-	case errors.As(err, &pathErr):
-		return osErrorLine(pathErr)
-	case errors.As(err, &p):
-		name = "Exception"
-	case errors.As(err, &re):
-		name = "RuntimeError"
-	default:
-		name = strings.TrimPrefix(reflect.TypeOf(err).String(), "*")
 	}
-	if msg := err.Error(); msg != "" {
+	if msg := herr.Str(err); msg != "" {
 		return name + ": " + msg
 	}
 	return name
-}
-
-// osErrorLine is the last line of an OSError's traceback: `FileNotFoundError: [Errno 2] No such
-// file or directory: 'plan.json'`.
-func osErrorLine(e *fs.PathError) string {
-	var errno syscall.Errno
-	if !errors.As(e.Err, &errno) {
-		return "OSError: " + e.Error()
-	}
-	name := "OSError"
-	switch errno {
-	case syscall.ENOENT:
-		name = "FileNotFoundError"
-	case syscall.EACCES, syscall.EPERM:
-		name = "PermissionError"
-	case syscall.EISDIR:
-		name = "IsADirectoryError"
-	case syscall.ENOTDIR:
-		name = "NotADirectoryError"
-	case syscall.EEXIST:
-		name = "FileExistsError"
-	}
-	return fmt.Sprintf("%s: %s", name, osErrorText(e))
-}
-
-// osErrorText is str(OSError): `[Errno 2] No such file or directory: 'plan.json'`.
-func osErrorText(err error) string {
-	var pathErr *fs.PathError
-	var errno syscall.Errno
-	if errors.As(err, &pathErr) && errors.As(pathErr.Err, &errno) {
-		return fmt.Sprintf("[Errno %d] %s: %s", int(errno), capitalize(errno.Error()), py.Repr(pathErr.Path))
-	}
-	var execErr *exec.Error
-	if errors.As(err, &execErr) {
-		if errors.As(execErr.Err, &errno) {
-			return fmt.Sprintf("[Errno %d] %s: %s", int(errno), capitalize(errno.Error()), py.Repr(execErr.Name))
-		}
-		return fmt.Sprintf("[Errno %d] %s: %s", int(syscall.ENOENT), "No such file or directory", py.Repr(execErr.Name))
-	}
-	if errors.As(err, &errno) {
-		return fmt.Sprintf("[Errno %d] %s", int(errno), capitalize(errno.Error()))
-	}
-	return err.Error()
-}
-
-func capitalize(s string) string {
-	if s == "" {
-		return s
-	}
-	return strings.ToUpper(s[:1]) + s[1:]
-}
-
-// excText is str(exc) as an f-string prints it.
-func excText(err error) string {
-	if isOSError(err) {
-		return osErrorText(err)
-	}
-	return err.Error()
 }
 
 // ---------------------------------------------------------------------------- subprocess
@@ -400,10 +193,8 @@ func subprocessRun(argv []string, opts RunOptions) (*Completed, error) {
 			code = -int(ws.Signal())
 		}
 	}
-	text := func(b bytes.Buffer) string {
-		return strings.ReplaceAll(strings.ReplaceAll(b.String(), "\r\n", "\n"), "\r", "\n")
-	}
-	return &Completed{Args: argv, Returncode: code, Stdout: text(stdout), Stderr: text(stderr)}, nil
+	return &Completed{Args: argv, Returncode: code, Stdout: py.Universal(stdout.String()),
+		Stderr: py.Universal(stderr.String())}, nil
 }
 
 // ---------------------------------------------------------------------------- values
@@ -443,95 +234,4 @@ func hhmm(v any) string {
 		return fmt.Sprintf("%02d:%02d", t.Hour, t.Minute)
 	}
 	panic(fmt.Sprintf("cli: a time of type %T", v))
-}
-
-// duration is a timedelta constant of another module.
-func duration(v any) time.Duration {
-	if d, ok := v.(time.Duration); ok {
-		return d
-	}
-	panic(fmt.Sprintf("cli: a timedelta of type %T", v))
-}
-
-func cfgStr(v any) string {
-	switch x := v.(type) {
-	case nil:
-		return ""
-	case string:
-		return x
-	case fmt.Stringer:
-		return x.String()
-	}
-	panic(fmt.Sprintf("cli: constant of type %T, not a string", v))
-}
-
-// asPath is `path.as_posix()` (or a str) of another module's constant.
-func asPath(v any) string { return cfgStr(v) }
-
-// others is config.OTHERS.
-func others() []*identity.Other {
-	switch x := any(config.Others).(type) {
-	case nil:
-		return nil
-	case []*identity.Other:
-		return x
-	case []identity.Other:
-		out := make([]*identity.Other, len(x))
-		for i := range x {
-			out[i] = &x[i]
-		}
-		return out
-	}
-	panic(fmt.Sprintf("cli: config.OTHERS of type %T", config.Others))
-}
-
-// labelSpec is one of config.LABELS: name: (color, description).
-type labelSpec struct{ name, color, description string }
-
-// labels is `LABELS.items()`, in order.
-func labels() []labelSpec {
-	var out []labelSpec
-	var o *pyjson.Object
-	switch x := any(config.Labels).(type) {
-	case nil:
-		return nil
-	case *pyjson.Object:
-		o = x
-	default:
-		panic(fmt.Sprintf("cli: config.LABELS of type %T", config.Labels))
-	}
-	o.Items(func(name string, v any) bool {
-		var pair []string
-		switch t := v.(type) {
-		case []any:
-			pair = pyjson.Strings(t)
-		case []string:
-			pair = t
-		case [2]string:
-			pair = t[:]
-		}
-		if len(pair) != 2 {
-			panic(fmt.Sprintf("cli: config.LABELS[%q] of type %T", name, v))
-		}
-		out = append(out, labelSpec{name, pair[0], pair[1]})
-		return true
-	})
-	return out
-}
-
-// tierEntries is `cfg.pool.tiers.get(tier, ())`.
-func tierEntries(pool *providers.Pool, tier string) []*providers.TierEntry {
-	switch x := pool.Tiers.Get(tier).(type) {
-	case nil:
-		return nil
-	case []*providers.TierEntry:
-		return x
-	case []any:
-		var out []*providers.TierEntry
-		for _, e := range x {
-			out = append(out, e.(*providers.TierEntry))
-		}
-		return out
-	}
-	panic(fmt.Sprintf("cli: a pool tier of type %T", pool.Tiers.Get(tier)))
 }

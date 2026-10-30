@@ -75,7 +75,7 @@ func QueueTable(ctx *hctx.Context, explained *waiting.Explained, issues []*pyjso
 	rows := explained.Rows
 	modes := map[int]string{}
 	for _, i := range issues {
-		modes[mustInt(i.Get("number"))] = queue.ModeOf(queue.LabelNames(i))
+		modes[py.MustInt(i.Get("number"))] = queue.ModeOf(queue.LabelNames(i))
 	}
 	var lines []string
 	for _, row := range upTo(rows, QueueRows) {
@@ -134,7 +134,7 @@ var ModeKind = map[string]string{"oneshot": "one-shot (fullsend)", "split": "spl
 // WaitingForPeople is waiting_for_people: the items waiting for a person (`bot:blocked`), in a
 // line, or "".
 func WaitingForPeople(issues []*pyjson.Object) string {
-	blocked := py.Str(config.LabelBlocked)
+	blocked := config.LabelBlocked
 	var numbers []string
 	for _, i := range issues {
 		if queue.LabelNames(i)[blocked] {

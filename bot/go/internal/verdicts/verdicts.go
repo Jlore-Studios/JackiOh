@@ -11,9 +11,9 @@ package verdicts
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -21,9 +21,6 @@ import (
 
 // MaxFindings = 20
 var MaxFindings int = 20
-
-// pySpace is Python's `\s` inside a character class (str.isspace()); Go's `\s` is ASCII.
-const pySpace = `\t\n\v\f\r\x1c-\x1f \x{85}\x{a0}\x{1680}\x{2000}-\x{200a}\x{2028}\x{2029}\x{202f}\x{205f}\x{3000}`
 
 var (
 	headersMu sync.Mutex
@@ -36,7 +33,7 @@ func headerPattern(tag string) *regexp.Regexp {
 	defer headersMu.Unlock()
 	re, ok := headers[tag]
 	if !ok {
-		ws := `[` + pySpace + `]*`
+		ws := `[` + py.SpaceClass + `]*`
 		re = regexp.MustCompile(`<!--` + ws + regexp.QuoteMeta(tag) + ws + `:` + ws)
 		headers[tag] = re
 	}
@@ -48,21 +45,21 @@ func Header(text string, tag string) (any, string) {
 	source := text
 	match := headerPattern(tag).FindStringIndex(source)
 	if match == nil {
-		return nil, pyStrip(source)
+		return nil, py.Strip(source)
 	}
 	tail := source[match[1]:]
 	value, used, ok := rawDecode(tail)
 	if !ok {
 		if end := strings.Index(tail, "-->"); end >= 0 {
-			return nil, pyStrip(tail[end+3:])
+			return nil, py.Strip(tail[end+3:])
 		}
-		return nil, pyStrip(tail)
+		return nil, py.Strip(tail)
 	}
 	rest := tail[used:]
 	if close := strings.Index(rest, "-->"); close >= 0 {
 		rest = rest[close+3:]
 	}
-	return value, pyStrip(rest)
+	return value, py.Strip(rest)
 }
 
 // Ratings are the difficulties a planner may rate an item (`config.DIFFICULTIES`).
@@ -72,7 +69,7 @@ var Ratings = []string{"easy", "medium", "hard"}
 // answer starts with (#317 part 8), and the plan without it. Only a line at the very start counts:
 // a plan may quote such a line further down. A nil map is None.
 func Rating(text string) (map[string]string, string) {
-	source := pyStrip(text)
+	source := py.Strip(text)
 	if !strings.HasPrefix(source, "<!--") {
 		return nil, source
 	}
@@ -81,12 +78,12 @@ func Rating(text string) (map[string]string, string) {
 	if !ok {
 		return nil, source
 	}
-	difficulty := pyLower(pyStrip(orEmpty(found.Get("difficulty"))))
-	if !contains(Ratings, difficulty) {
+	difficulty := py.Lower(py.Strip(py.OrStr(found.Get("difficulty"), "")))
+	if !slices.Contains(Ratings, difficulty) {
 		return nil, rest
 	}
 	return map[string]string{"difficulty": difficulty,
-		"why": py.SliceTo(strings.Join(pyFields(orEmpty(found.Get("why"))), " "), 300)}, rest
+		"why": py.SliceTo(strings.Join(py.Split(py.OrStr(found.Get("why"), "")), " "), 300)}, rest
 }
 
 // BuildReport is verdicts.BuildReport. Status is "done", "blocked" or "unknown".
@@ -111,13 +108,13 @@ func BuildReport_(text string) *BuildReport {
 	if !ok {
 		return &BuildReport{Status: "unknown", Body: rest}
 	}
-	status := pyLower(py.Str(found.GetOr("status", "")))
+	status := py.Lower(py.Str(found.GetOr("status", "")))
 	if status != "done" && status != "blocked" {
 		status = "unknown"
 	}
-	title := py.SliceTo(strings.Join(pyFields(py.Str(found.GetOr("title", ""))), " "), 200)
-	question := py.SliceTo(pyStrip(py.Str(found.GetOr("question", ""))), 4000)
-	nextModel := py.SliceTo(pyLower(strings.Trim(pyStrip(orEmpty(found.Get("next_model"))), "`")), 40)
+	title := py.SliceTo(strings.Join(py.Split(py.Str(found.GetOr("title", ""))), " "), 200)
+	question := py.SliceTo(py.Strip(py.Str(found.GetOr("question", ""))), 4000)
+	nextModel := py.SliceTo(py.Lower(strings.Trim(py.Strip(py.OrStr(found.Get("next_model"), "")), "`")), 40)
 	human := status == "blocked" && found.Get("human_required") == true
 	return &BuildReport{status, title, question, rest, nextModel, human}
 }
@@ -207,22 +204,22 @@ func Review_(text string) *Review {
 	if !ok {
 		return &Review{Readable: false, Verdict: "unreadable", Findings: []*Finding{}, Body: rest}
 	}
-	verdict := pyLower(py.Str(found.GetOr("verdict", "")))
+	verdict := py.Lower(py.Str(found.GetOr("verdict", "")))
 	findings := []*Finding{}
 	if raw, ok := orNil(found.Get("findings")).([]any); ok {
 		if len(raw) > MaxFindings {
 			raw = raw[:MaxFindings]
 		}
 		for _, entry := range pyjson.Objs(raw) {
-			severity := pyLower(py.Str(entry.GetOr("severity", "blocking")))
+			severity := py.Lower(py.Str(entry.GetOr("severity", "blocking")))
 			if severity != "note" {
 				severity = "blocking"
 			}
 			findings = append(findings, &Finding{
 				severity,
 				py.SliceTo(py.Str(entry.GetOr("where", "?")), 300),
-				py.SliceTo(pyStrip(py.Str(entry.GetOr("claim", ""))), 2000),
-				py.SliceTo(pyStrip(py.Str(entry.GetOr("evidence", ""))), 2000),
+				py.SliceTo(py.Strip(py.Str(entry.GetOr("claim", ""))), 2000),
+				py.SliceTo(py.Strip(py.Str(entry.GetOr("evidence", ""))), 2000),
 			})
 		}
 	}
@@ -253,11 +250,11 @@ func Suggestions(text string, limit int) []*Suggestion {
 		if !ok {
 			continue
 		}
-		title := py.SliceTo(strings.Join(pyFields(py.Str(entry.GetOr("title", ""))), " "), 200)
-		body := pyStrip(py.Str(entry.GetOr("body", "")))
+		title := py.SliceTo(strings.Join(py.Split(py.Str(entry.GetOr("title", ""))), " "), 200)
+		body := py.Strip(py.Str(entry.GetOr("body", "")))
 		kind := ""
 		if k, ok := entry.Get("class").(string); ok {
-			kind = pyStrip(k)
+			kind = py.Strip(k)
 		}
 		if title != "" && body != "" {
 			found = append(found, &Suggestion{title, body, kind})
@@ -276,33 +273,3 @@ func orNil(v any) any {
 	}
 	return v
 }
-
-// orEmpty is `str(v or "")`.
-func orEmpty(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-func contains(list []string, s string) bool {
-	for _, e := range list {
-		if e == s {
-			return true
-		}
-	}
-	return false
-}
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
-
-// pyStrip is str.strip().
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }
-
-// pyFields is str.split().
-func pyFields(s string) []string { return strings.FieldsFunc(s, pyIsSpace) }
-
-// pyLower is str.lower(): strings.ToLower but for `İ`, which Python lowers to `i` and a
-// combining dot.
-func pyLower(s string) string { return strings.ToLower(strings.ReplaceAll(s, "\u0130", "i\u0307")) }

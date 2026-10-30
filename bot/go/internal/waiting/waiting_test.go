@@ -40,22 +40,6 @@ func TestNeedMatchesPython(t *testing.T) {
 	}
 }
 
-func TestCapitalizeAndPercentMatchPython(t *testing.T) {
-	data := expected(t)
-	for _, pair := range data.List("capitalize") {
-		word := pair.([]any)[0].(string)
-		if got, want := capitalize(word), pair.([]any)[1].(string); got != want {
-			t.Errorf("capitalize(%q) = %q, want %q", word, got, want)
-		}
-	}
-	for _, pair := range data.List("percent") {
-		x, _ := pyjson.AsFloat(pair.([]any)[0])
-		if got, want := percent(x), pair.([]any)[1].(string); got != want {
-			t.Errorf("percent(%v) = %q, want %q", x, got, want)
-		}
-	}
-}
-
 func TestHeldRows(t *testing.T) {
 	rows := HeldRows(map[int]string{9: "labelled `human`", 2: "waits for #1 to close"},
 		[]*pyjson.Object{pyjson.New("number", 2, "title", "Patch (part 2 of 2)"), pyjson.New("number", 3, "title", nil)})

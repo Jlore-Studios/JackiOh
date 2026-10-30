@@ -25,7 +25,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/trust"
@@ -81,45 +80,9 @@ var ForceLevel int = 3
 // MAX_COMMANDS
 var MaxCommands int = 10
 
-// The config values this module reads that config's stub still types `any`: nil until config is
-// ported, then each its own type (a value of another type stops here rather than read as empty).
-
-func cfgStr(v any) string {
-	if v == nil {
-		return ""
-	}
-	return v.(string)
-}
-
-func cfgStrs(v any) []string {
-	if v == nil {
-		return nil
-	}
-	return v.([]string)
-}
-
-// suggestions is config.IDENTITY.suggestions.
-func suggestions() bool {
-	v := any(config.Identity)
-	if v == nil {
-		return false
-	}
-	return v.(*identity.Identity).Suggestions
-}
-
-// levelName is trust.LEVEL_NAMES.get(level, level), as an f-string prints it.
-func levelName(level int) string {
-	if v := any(trust.LevelNames); v != nil {
-		if name, ok := v.(map[int]string)[level]; ok {
-			return name
-		}
-	}
-	return fmt.Sprint(level)
-}
-
 // _FENCE = ^\s*(```|~~~)
 func isFence(line string) bool {
-	text := lstrip(line)
+	text := py.Lstrip(line)
 	return strings.HasPrefix(text, "```") || strings.HasPrefix(text, "~~~")
 }
 
@@ -128,21 +91,21 @@ func isFence(line string) bool {
 func matchSlash(line string) (string, bool) {
 	rs := []rune(line)
 	i := 0
-	for i < len(rs) && isSpace(rs[i]) {
+	for i < len(rs) && py.IsSpace(rs[i]) {
 		i++
 	}
 	// The `(?:@[\w-]+\s+)*` repeats as often as it can, and gives back one at a time.
 	starts := []int{i}
 	for i < len(rs) && rs[i] == '@' {
 		j := i + 1
-		for j < len(rs) && (isWord(rs[j]) || rs[j] == '-') {
+		for j < len(rs) && (py.IsWord(rs[j]) || rs[j] == '-') {
 			j++
 		}
 		if j == i+1 {
 			break
 		}
 		k := j
-		for k < len(rs) && isSpace(rs[k]) {
+		for k < len(rs) && py.IsSpace(rs[k]) {
 			k++
 		}
 		if k == j {
@@ -151,9 +114,9 @@ func matchSlash(line string) (string, bool) {
 		i = k
 		starts = append(starts, i)
 	}
-	slash := cfgStr(config.Slash)
+	slash := config.Slash
 	for n := len(starts) - 1; n >= 0; n-- {
-		end, ok := foldAt(rs, starts[n], slash)
+		end, ok := py.FoldAt(rs, starts[n], slash)
 		if !ok {
 			continue
 		}
@@ -210,21 +173,21 @@ func (x *Command) Level() int {
 }
 
 func stripForce(args string) (string, bool) {
-	tokens := fields(args)
+	tokens := py.Split(args)
 	force := false
 	kept := []string{}
 	for _, t := range tokens {
-		if lower(t) == ForceFlag {
+		if py.Lower(t) == ForceFlag {
 			force = true
 		} else {
 			kept = append(kept, t)
 		}
 	}
-	return strip(strings.Join(kept, " ")), force
+	return py.Strip(strings.Join(kept, " ")), force
 }
 
 func canonical(word string) (string, bool) {
-	word = strings.Trim(lower(word), ":,.!?")
+	word = strings.Trim(py.Lower(word), ":,.!?")
 	if alias, ok := Aliases.Lookup(word); ok {
 		word = alias.(string)
 	}
@@ -269,7 +232,7 @@ func distance(a, b string) int {
 // a short one only one.
 func Misspelt(args string) string {
 	var words []string
-	for _, w := range fields(args) {
+	for _, w := range py.Split(args) {
 		if !issueRef(w) {
 			words = append(words, w)
 		}
@@ -277,7 +240,7 @@ func Misspelt(args string) string {
 	if len(words) != 1 {
 		return ""
 	}
-	word := strings.Trim(lower(words[0]), ":,.!?")
+	word := strings.Trim(py.Lower(words[0]), ":,.!?")
 	if py.Len(word) < 2 {
 		return ""
 	}
@@ -307,7 +270,7 @@ func CommandLines(body string) []string {
 			fenced = !fenced
 			continue
 		}
-		if fenced || strings.HasPrefix(lstrip(line), ">") {
+		if fenced || strings.HasPrefix(py.Lstrip(line), ">") {
 			continue
 		}
 		lines = append(lines, line)
@@ -339,10 +302,10 @@ var mentionArgs = map[string]func(string) bool{
 
 func empty(args string) bool { return args == "" }
 
-func oneWord(args string) bool { return !strings.ContainsFunc(args, isSpace) }
+func oneWord(args string) bool { return !strings.ContainsFunc(args, py.IsSpace) }
 
 func reviewArg(args string) bool {
-	return args == "" || foldEqual(args, "strong") || foldEqual(args, "medium")
+	return args == "" || py.FoldEqual(args, "strong") || py.FoldEqual(args, "medium")
 }
 
 func runArg(args string) bool {
@@ -353,7 +316,7 @@ func runArg(args string) bool {
 	return digits != "" && !strings.ContainsFunc(digits, func(r rune) bool { return !unicode.IsDigit(r) })
 }
 
-func splitArg(args string) bool { return args == "" || foldEqual(args, "bot") }
+func splitArg(args string) bool { return args == "" || py.FoldEqual(args, "bot") }
 
 // _WRAP
 const wrap = "`*_~"
@@ -362,7 +325,7 @@ const wrap = "`*_~"
 func listMark(line string) string {
 	rs := []rune(line)
 	i := 0
-	for i < len(rs) && isSpace(rs[i]) {
+	for i < len(rs) && py.IsSpace(rs[i]) {
 		i++
 	}
 	switch {
@@ -379,7 +342,7 @@ func listMark(line string) string {
 		i = j + 1
 	}
 	j := i
-	for j < len(rs) && isSpace(rs[j]) {
+	for j < len(rs) && py.IsSpace(rs[j]) {
 		j++
 	}
 	if j == i {
@@ -391,7 +354,7 @@ func listMark(line string) string {
 // unmark is a line without the markdown a person may wrap a command in: a list marker, and
 // backticks or emphasis around the whole command.
 func unmark(line string) string {
-	text := strip(listMark(line))
+	text := py.Strip(listMark(line))
 	for text != "" {
 		first, _ := utf8.DecodeRuneInString(text)
 		last, _ := utf8.DecodeLastRuneInString(text)
@@ -402,7 +365,7 @@ func unmark(line string) string {
 			text = ""
 			break
 		}
-		text = strip(text[1 : len(text)-1])
+		text = py.Strip(text[1 : len(text)-1])
 	}
 	return strings.TrimRight(strings.TrimLeft(text, wrap), wrap)
 }
@@ -421,34 +384,34 @@ func Read(rest string, line string, plainWords bool) *Command {
 		}
 	}
 	if ok {
-		return &Command{Verb: verb, Args: args, Force: force, Line: strip(line)}
+		return &Command{Verb: verb, Args: args, Force: force, Line: py.Strip(line)}
 	}
 	args, force = stripForce(rest)
 	if meant := Misspelt(args); meant != "" {
-		return &Command{Verb: "typo", Args: args, Force: force, Line: strip(line), Meant: meant}
+		return &Command{Verb: "typo", Args: args, Force: force, Line: py.Strip(line), Meant: meant}
 	}
-	return &Command{Verb: "request", Args: args, Force: force, Line: strip(line)}
+	return &Command{Verb: "request", Args: args, Force: force, Line: py.Strip(line)}
 }
 
 // matchMention is `^\s*@<login>\b[:,]?\s*(.*)$` (case-insensitive) on `line`, and its group 1.
 func matchMention(line string, login string) (string, bool) {
 	rs := []rune(line)
 	i := 0
-	for i < len(rs) && isSpace(rs[i]) {
+	for i < len(rs) && py.IsSpace(rs[i]) {
 		i++
 	}
 	if i >= len(rs) || rs[i] != '@' {
 		return "", false
 	}
-	end, ok := foldAt(rs, i+1, login)
-	if !ok || !boundary(rs, end) {
+	end, ok := py.FoldAt(rs, i+1, login)
+	if !ok || !py.Boundary(rs, end) {
 		return "", false
 	}
 	i = end
 	if i < len(rs) && (rs[i] == ':' || rs[i] == ',') {
 		i++
 	}
-	for i < len(rs) && isSpace(rs[i]) {
+	for i < len(rs) && py.IsSpace(rs[i]) {
 		i++
 	}
 	return string(rs[i:]), true
@@ -464,15 +427,15 @@ func Parse(body string, botLogin string) []*Command {
 		}
 		line := unmark(raw)
 		if rest, ok := matchSlash(line); ok {
-			found = append(found, Read(strip(rest), line, false))
+			found = append(found, Read(py.Strip(rest), line, false))
 			continue
 		}
 		rest, ok := matchMention(line, login)
 		if !ok {
 			continue
 		}
-		rest = strip(rest)
-		if strings.HasPrefix(lower(rest), cfgStr(config.Slash)) {
+		rest = py.Strip(rest)
+		if strings.HasPrefix(py.Lower(rest), config.Slash) {
 			continue // `@bot /harness verb` is matched by _SLASH above
 		}
 		found = append(found, Read(rest, line, true))
@@ -491,14 +454,14 @@ func withoutMention(line string, login string) string {
 	if len(rs) == 0 || rs[0] != '@' {
 		return line
 	}
-	end, ok := foldAt(rs, 1, login)
-	if !ok || !boundary(rs, end) {
+	end, ok := py.FoldAt(rs, 1, login)
+	if !ok || !py.Boundary(rs, end) {
 		return line
 	}
 	if end < len(rs) && (rs[end] == ':' || rs[end] == ',') {
 		end++
 	}
-	for end < len(rs) && isSpace(rs[end]) {
+	for end < len(rs) && py.IsSpace(rs[end]) {
 		end++
 	}
 	return string(rs[end:])
@@ -514,9 +477,9 @@ func Vote(body string, botLogin string) (string, string) {
 		if !ok {
 			rest = withoutMention(line, login)
 		}
-		word := lower(strip(strings.TrimRight(unmark(rest), ".!")))
+		word := py.Lower(py.Strip(strings.TrimRight(unmark(rest), ".!")))
 		if slices.Contains(Votes, word) {
-			return word, strip(line)
+			return word, py.Strip(line)
 		}
 	}
 	return "", ""
@@ -525,12 +488,12 @@ func Vote(body string, botLogin string) (string, string) {
 // namesHandle is `(?<![\w-])@<login>(?![\w-])` searched in `line`, case-insensitive.
 func namesHandle(line string, login string) bool {
 	rs := []rune(line)
-	edge := func(r rune) bool { return isWord(r) || r == '-' }
+	edge := func(r rune) bool { return py.IsWord(r) || r == '-' }
 	for i, r := range rs {
 		if r != '@' || (i > 0 && edge(rs[i-1])) {
 			continue
 		}
-		if end, ok := foldAt(rs, i+1, login); ok && (end == len(rs) || !edge(rs[end])) {
+		if end, ok := py.FoldAt(rs, i+1, login); ok && (end == len(rs) || !edge(rs[end])) {
 			return true
 		}
 	}
@@ -540,12 +503,12 @@ func namesHandle(line string, login string) bool {
 // namesSlash is `(?<![\w/])` + SLASH + `\b` searched in `line`, case-insensitive.
 func namesSlash(line string) bool {
 	rs := []rune(line)
-	slash := cfgStr(config.Slash)
+	slash := config.Slash
 	for i := range rs {
-		if i > 0 && (isWord(rs[i-1]) || rs[i-1] == '/') {
+		if i > 0 && (py.IsWord(rs[i-1]) || rs[i-1] == '/') {
 			continue
 		}
-		if end, ok := foldAt(rs, i, slash); ok && boundary(rs, end) {
+		if end, ok := py.FoldAt(rs, i, slash); ok && py.Boundary(rs, end) {
 			return true
 		}
 	}
@@ -589,7 +552,7 @@ var HelpRows = [][2]string{
 // Whether this bot has the verb: the modes only where they are, suggestions only where
 // they are made.
 func Offered(verb string) bool {
-	modes := cfgStrs(config.Modes)
+	modes := config.Modes
 	switch verb {
 	case "oneshot":
 		return slices.Contains(modes, "oneshot")
@@ -598,7 +561,7 @@ func Offered(verb string) bool {
 	case "fullsend":
 		return slices.Contains(modes, "fullsend")
 	case "suggest":
-		return suggestions()
+		return config.Identity.Suggestions
 	}
 	return true
 }
@@ -740,22 +703,22 @@ func format(template string, values map[string]string) string {
 
 // The line that says where the commands are listed.
 func Pointer_(bot string) string {
-	return format(Pointer, map[string]string{"bot": bot, "slash": cfgStr(config.Slash)})
+	return format(Pointer, map[string]string{"bot": bot, "slash": config.Slash})
 }
 
 // The reply to `help`, or to `help <verb>`.
 func HelpText(bot string, topic string /* = "" */) string {
-	words := fields(topic)
+	words := py.Split(topic)
 	word := ""
 	if len(words) > 0 {
 		word = words[0]
 	}
-	said := map[string]string{"bot": bot, "slash": cfgStr(config.Slash),
-		"prefix": cfgStr(config.LabelPrefix), "forced": Forced}
+	said := map[string]string{"bot": bot, "slash": config.Slash,
+		"prefix": config.LabelPrefix, "forced": Forced}
 	if word == "" {
 		return format(Help, said)
 	}
-	if slices.Contains(Votes, strings.Trim(lower(word), "`")) && Offered("suggest") {
+	if slices.Contains(Votes, strings.Trim(py.Lower(word), "`")) && Offered("suggest") {
 		return format(VoteHelp, said) + format(Pointer, said)
 	}
 	verb, ok := canonical(word)
@@ -776,5 +739,5 @@ func HelpText(bot string, topic string /* = "" */) string {
 		also = "; also written " + strings.Join(aliases, ", ")
 	}
 	return fmt.Sprintf("**`%s`** (level %d, %s%s)\n\n%s\n\nFor example: `%s`. ", usage, level,
-		levelName(level), also, format(what, said), format(example, said)) + format(Pointer, said)
+		trust.LevelName(level), also, format(what, said), format(example, said)) + format(Pointer, said)
 }

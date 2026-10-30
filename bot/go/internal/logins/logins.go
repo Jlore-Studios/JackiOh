@@ -158,7 +158,7 @@ func readText(path string) string {
 	if !utf8.Valid(data) {
 		panic(fmt.Errorf("UnicodeDecodeError: 'utf-8' codec can't decode %s", path))
 	}
-	return strings.ReplaceAll(strings.ReplaceAll(string(data), "\r\n", "\n"), "\r", "\n")
+	return py.Universal(string(data))
 }
 
 // isFile is Path.is_file().

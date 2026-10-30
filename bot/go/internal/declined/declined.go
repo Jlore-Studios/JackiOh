@@ -18,9 +18,7 @@ package declined
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -33,7 +31,7 @@ var words = regexp.MustCompile(`[a-z0-9]+`)
 
 // key is _key: a title as the log compares it, lowercased, its words alone.
 func key(title string) string {
-	return strings.Join(words.FindAllString(pyLower(title), -1), " ")
+	return strings.Join(words.FindAllString(py.Lower(title), -1), " ")
 }
 
 // Entries is declined.entries.
@@ -46,14 +44,14 @@ func Note(state *pyjson.Object, number int, title string, why string, at string)
 	suggest, ok := state.SetDefault("suggest", pyjson.New()).(*pyjson.Object)
 	log := Entries(state)
 	for _, e := range log {
-		if toInt(orZero(e.Get("number"))) == number {
+		if py.MustInt(py.Or(e.Get("number"), 0)) == number {
 			return false
 		}
 	}
 	log = append(log, pyjson.New(
 		"number", number,
-		"title", py.SliceTo(strings.Join(pyFields(title), " "), 200),
-		"why", py.SliceTo(strings.Join(pyFields(why), " "), 300),
+		"title", py.SliceTo(strings.Join(py.Split(title), " "), 200),
+		"why", py.SliceTo(strings.Join(py.Split(why), " "), 300),
 		"at", at))
 	if len(log) > Limit {
 		log = log[len(log)-Limit:]
@@ -75,12 +73,12 @@ func Sync(state *pyjson.Object, closed []*pyjson.Object, at string) []int {
 		if issue.Has("pull_request") || !pyjson.Equal(issue.Get("state"), "closed") {
 			continue
 		}
-		reason := orDefault(issue.Get("state_reason"), "closed")
-		number := toInt(issue.Get("number"))
-		if Note(state, number, orDefault(issue.Get("title"), ""),
+		reason := py.OrStr(issue.Get("state_reason"), "closed")
+		number := py.MustInt(issue.Get("number"))
+		if Note(state, number, py.OrStr(issue.Get("title"), ""),
 			fmt.Sprintf("closed unbuilt by a person (%s)", strings.ReplaceAll(reason, "_", " ")),
-			orDefault(issue.Get("closed_at"), at)) {
-			added = append(added, toInt(issue.Get("number")))
+			py.OrStr(issue.Get("closed_at"), at)) {
+			added = append(added, py.MustInt(issue.Get("number")))
 		}
 	}
 	return added
@@ -93,7 +91,7 @@ func Known(state *pyjson.Object, title string) bool {
 		return false
 	}
 	for _, e := range Entries(state) {
-		if key(orDefault(e.Get("title"), "")) == k {
+		if key(py.OrStr(e.Get("title"), "")) == k {
 			return true
 		}
 	}
@@ -112,54 +110,3 @@ func Lines(state *pyjson.Object) string {
 	}
 	return strings.Join(found, "\n")
 }
-
-// orDefault is `str(v or def)`.
-func orDefault(v any, def string) string {
-	if !pyjson.Truthy(v) {
-		return def
-	}
-	return py.Str(v)
-}
-
-// orZero is `v or 0`.
-func orZero(v any) any {
-	if !pyjson.Truthy(v) {
-		return 0
-	}
-	return v
-}
-
-// toInt is int(v) for a JSON value; what int() refuses raises (panics), as in Python.
-func toInt(v any) int {
-	switch x := v.(type) {
-	case bool:
-		if x {
-			return 1
-		}
-		return 0
-	case string:
-		n, err := strconv.Atoi(strings.ReplaceAll(pyStrip(x), "_", ""))
-		if err != nil {
-			panic(fmt.Errorf("invalid literal for int() with base 10: %s", py.Repr(x)))
-		}
-		return n
-	}
-	if n, ok := pyjson.AsInt(v); ok {
-		return n
-	}
-	panic(fmt.Errorf("int() argument must be a string, a bytes-like object or a real number, not '%s'",
-		"NoneType"))
-}
-
-// pyIsSpace is str.isspace() for one character: Go's unicode.IsSpace and \x1c to \x1f.
-func pyIsSpace(r rune) bool { return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f) }
-
-// pyStrip is str.strip().
-func pyStrip(s string) string { return strings.TrimFunc(s, pyIsSpace) }
-
-// pyFields is str.split().
-func pyFields(s string) []string { return strings.FieldsFunc(s, pyIsSpace) }
-
-// pyLower is str.lower(): strings.ToLower but for `İ`, which Python lowers to `i` and a
-// combining dot.
-func pyLower(s string) string { return strings.ToLower(strings.ReplaceAll(s, "\u0130", "i\u0307")) }

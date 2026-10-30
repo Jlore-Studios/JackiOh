@@ -38,22 +38,22 @@ var museWindows = [][2]string{{"five_hour", "Current"}, {"seven_day", "Weekly"}}
 //
 //	\b{label}\s+(\d+(?:\.\d+)?)%\s+used(?:[^\S\n]*\W[^\S\n]*Resets\s+(.+?))?[^\S\n]*(?:[│|]|$)
 func museRow(label string) *regexp.Regexp {
-	return regexp.MustCompile(`(?m)` + label + `[` + pySpace + `]+(` + pyDigit + `+(?:\.` + pyDigit +
-		`+)?)%[` + pySpace + `]+used(?:[` + pySpaceNoNL + `]*[^` + pyWord + `][` + pySpaceNoNL +
-		`]*Resets[` + pySpace + `]+(.+?))?[` + pySpaceNoNL + `]*(?:[│|]|$)`)
+	return regexp.MustCompile(`(?m)` + label + `[` + py.SpaceClass + `]+(` + py.DigitClass + `+(?:\.` + py.DigitClass +
+		`+)?)%[` + py.SpaceClass + `]+used(?:[` + pySpaceNoNL + `]*[^` + py.WordClass + `][` + pySpaceNoNL +
+		`]*Resets[` + py.SpaceClass + `]+(.+?))?[` + pySpaceNoNL + `]*(?:[│|]|$)`)
 }
 
 var museRows = map[string]*regexp.Regexp{"Current": museRow("Current"), "Weekly": museRow("Weekly")}
 
 // museWeekly is `\bWeekly\s+[\d.]+%\s+used`, without its `\b`.
-var museWeekly = regexp.MustCompile(`Weekly[` + pySpace + `]+[` + pyDigit + `.]+%[` + pySpace + `]+used`)
+var museWeekly = regexp.MustCompile(`Weekly[` + py.SpaceClass + `]+[` + py.DigitClass + `.]+%[` + py.SpaceClass + `]+used`)
 
 var months = []string{"jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"}
 
 // screenText is a terminal's output as text: control sequences gone, carriage returns as line
 // ends.
 func screenText(raw []byte) string {
-	text := terminalCodes.ReplaceAllLiteralString(decodeReplace(raw), "")
+	text := terminalCodes.ReplaceAllLiteralString(py.DecodeReplace(raw), "")
 	return strings.ReplaceAll(text, "\r", "\n")
 }
 
@@ -61,11 +61,11 @@ func screenText(raw []byte) string {
 // (\d{2})\s*([ap])\.?m\b`, as two patterns tried at each place in turn, with and without the
 // month; the `\b`s are checked by hand. `[a-z]` takes ı and İ as Python's IGNORECASE does.
 var (
-	museAtMonth = regexp.MustCompile(`^(?i)([a-zı\x{130}]{3})[a-zı\x{130}]*\.?[` + pySpace + `]+(` +
-		pyDigit + `{1,2}),?[` + pySpace + `]+at[` + pySpace + `]+(` + pyDigit + `{1,2}):(` + pyDigit +
-		`{2})[` + pySpace + `]*([ap])\.?m`)
-	museAt = regexp.MustCompile(`^(?i)at[` + pySpace + `]+(` + pyDigit + `{1,2}):(` + pyDigit + `{2})[` +
-		pySpace + `]*([ap])\.?m`)
+	museAtMonth = regexp.MustCompile(`^(?i)([a-zı\x{130}]{3})[a-zı\x{130}]*\.?[` + py.SpaceClass + `]+(` +
+		py.DigitClass + `{1,2}),?[` + py.SpaceClass + `]+at[` + py.SpaceClass + `]+(` + py.DigitClass + `{1,2}):(` + py.DigitClass +
+		`{2})[` + py.SpaceClass + `]*([ap])\.?m`)
+	museAt = regexp.MustCompile(`^(?i)at[` + py.SpaceClass + `]+(` + py.DigitClass + `{1,2}):(` + py.DigitClass + `{2})[` +
+		py.SpaceClass + `]*([ap])\.?m`)
 )
 
 // museAtSearch is that search: the month and day ("" without), hour, minute and `a` or `p`.
@@ -99,12 +99,12 @@ func MuseReset(text string, now time.Time) string {
 	var at time.Time
 	found := false
 	if month, day, hour, minute, half, ok := museAtSearch(text); ok {
-		hour24 := atoi(hour) % 12
+		hour24 := py.Atoi(hour) % 12
 		if strings.ToLower(half) == "p" {
 			hour24 += 12
 		}
 		at, found = func() (time.Time, bool) {
-			mins := atoi(minute)
+			mins := py.Atoi(minute)
 			if mins > 59 {
 				return time.Time{}, false
 			}
@@ -116,7 +116,7 @@ func MuseReset(text string, now time.Time) string {
 						index = i
 					}
 				}
-				d := atoi(day)
+				d := py.Atoi(day)
 				if index < 0 || d < 1 || d > daysIn(at.Year(), index+1) {
 					return time.Time{}, false // an unknown month, or a day the month has not
 				}
@@ -161,7 +161,7 @@ func ParseMuseUsage(screen string, now time.Time) *pyjson.Object {
 				resets = reset
 			}
 		}
-		usage.Set(window, pyjson.New("utilization", py.RoundN(math.Min(1.0, atof(percent)/100.0), 4),
+		usage.Set(window, pyjson.New("utilization", py.RoundN(math.Min(1.0, py.MustFloat(percent)/100.0), 4),
 			"resets_at", resets))
 	}
 	if usage.Len() == 0 {
@@ -324,10 +324,10 @@ func (x *MuseCli) Run(request *RunRequest) *RunResult {
 	if failed != nil {
 		return failed
 	}
-	text := strip(Read(raw))
+	text := py.Strip(Read(raw))
 	stderr := launch.stderr
 	transcriptText := text
-	if strip(stderr) != "" {
+	if py.Strip(stderr) != "" {
 		transcriptText += "\n\n--- stderr ---\n" + stderr
 	}
 	writeText(raw, transcriptText)

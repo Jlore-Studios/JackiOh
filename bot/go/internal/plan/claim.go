@@ -25,7 +25,7 @@ import (
 // providerFields is what the model job needs to know about the subscription it runs on. The
 // secret's value is never here: the workflow hands the model job only the secret named.
 func providerFields(ctx *hctx.Context, provider *providers.Provider) *pyjson.Object {
-	vault, _ := ctx.GH.GetFile(VaultPath(provider.ID), cs(config.StateBranch))
+	vault, _ := ctx.GH.GetFile(VaultPath(provider.ID), config.StateBranch)
 	// `shared` names the run's model step "Build, check and review", which the partner bot
 	// reads as this bot spending the shared subscription, so it excuses the rise. claude-1 is
 	// that subscription whether or not this bot waits for it to be quiet (`quiet_check`).
@@ -69,7 +69,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	cfg := ctx.Cfg
 	provider := assignment.Provider
 	number, kind := candidate.Number, candidate.Kind
-	labelPR, labelNeedsPlan := cs(config.LabelPR), cs(config.LabelNeedsPlan)
+	labelPR, labelNeedsPlan := config.LabelPR, config.LabelNeedsPlan
 	thread := ctx.GH.GetIssue(number)
 	names := queue.LabelNames(thread)
 	if !eqStr(thread.Get("state"), "open") {
@@ -87,10 +87,10 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			"title", thread.GetOr("title", ""),
 			"branch", queue.BranchForIssue(number),
 			"thread", threads.IssueThread(ctx.GH, ctx.Trust, number, cfg.BotLogin),
-			"previous_findings", orValue(record.Get("last_findings"), []any{}),
-			"previous_question", orValue(record.Get("question"), ""),
+			"previous_findings", py.Or(record.Get("last_findings"), []any{}),
+			"previous_question", py.Or(record.Get("question"), ""),
 		)
-		written := issueplan.PlanOf(orStr(thread.Get("body"), ""))
+		written := issueplan.PlanOf(py.OrStr(thread.Get("body"), ""))
 		if written != "" && assignment.Action == "build" {
 			// A person may have edited the plan in the description: the builder starts from that.
 			planned.Set("plan_in_issue", written)
@@ -99,7 +99,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		by := record.Obj("difficulty_by")
 		planned.Set("rating", pyjson.New("difficulty", candidate.Difficulty,
 			"source", queue.RatingSource(names, record),
-			"by", orStr(by.Get("provider"), "")))
+			"by", py.OrStr(by.Get("provider"), "")))
 		if candidate.Mode != "" {
 			planned.Set("mode", candidate.Mode)
 			if strings.HasPrefix(candidate.Mode, "split") || candidate.Mode == "fullsend" {
@@ -109,7 +109,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			if candidate.Mode == "fullsend" {
 				// The parts its reconcile merges first: those that could not land (#505).
 				parked := []any{}
-				for _, b := range pyjson.List(orValue(record.Get("parked"), nil)) {
+				for _, b := range pyjson.List(py.Or(record.Get("parked"), nil)) {
 					parked = append(parked, py.Str(b))
 				}
 				planned.Set("parked", parked)
@@ -118,12 +118,12 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		if record.Truthy("onto") {
 			// A fullsend part (#505): it lands on its tree's branch, not `main`.
 			planned.Set("onto", py.Str(record.Get("onto")))
-			planned.Set("part_of", toInt(orValue(record.Get("part_of"), 0)))
+			planned.Set("part_of", py.MustInt(py.Or(record.Get("part_of"), 0)))
 		}
 		if record.Truthy("previous_pr") {
 			planned.Set("previous_pr", record.Get("previous_pr"))
-			planned.Set("previous_branch", orStr(record.Get("previous_branch"), ""))
-			planned.Set("previous_why", orStr(record.Get("previous_why"), ""))
+			planned.Set("previous_branch", py.OrStr(record.Get("previous_branch"), ""))
+			planned.Set("previous_why", py.OrStr(record.Get("previous_why"), ""))
 		}
 		switch {
 		case candidate.Mode == "fullsend" && planned.Truthy("children"):
@@ -200,13 +200,13 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				"thread", joinNonEmpty("\n\n", pullText, issueText),
 				"bot_pr", true,
 				"issue_number", intOrNone(issueNumber),
-				"review_notes", orStr(record.Get("review_notes"), ""),
+				"review_notes", py.OrStr(record.Get("review_notes"), ""),
 			)
 			message = fmt.Sprintf("Starting a review now%s, on %s. `%s` built the change; it merges "+
 				"once %s approved the same commit.", RunLink(cfg), assignment.Review.Describe(),
 				builder, reviewrule.Summary)
 		} else {
-			source := orStr(record.Get("source"), "request")
+			source := py.OrStr(record.Get("source"), "request")
 			feedback := threads.PullFeedback(ctx.GH, ctx.Trust, number, cfg.BotLogin,
 				pyjson.Str(record.Get("feedback_since")), issueNumber)
 			if source == "ci" {
@@ -279,19 +279,19 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	}
 	if planned.Truthy("plan_in_issue") {
 		handoff := planned.Obj("handoff")
-		if handoff.Len() == 0 || inStrs(handoff.Get("kind"), "plan", "draft") {
+		if handoff.Len() == 0 || py.In(handoff.Get("kind"), "plan", "draft") {
 			if eqStr(handoff.Get("kind"), "draft") {
 				handoff = nil // the plan in the description is the plan: a draft gives way
 			}
 			merged := handoff.Copy()
 			merged.Set("kind", "plan")
-			merged.Set("provider", orValue(orValue(handoff.Get("provider"), record.Get("planned_by")),
+			merged.Set("provider", py.Or(py.Or(handoff.Get("provider"), record.Get("planned_by")),
 				"the issue's description"))
 			merged.Set("notes", planned.Get("plan_in_issue"))
 			planned.Set("handoff", merged)
 		}
 	}
-	queue.SetStateLabel(ctx, number, names, cs(config.LabelWorking))
+	queue.SetStateLabel(ctx, number, names, config.LabelWorking)
 	if names[labelNeedsPlan] && assignment.Action != "plan" {
 		ctx.GH.RemoveLabel(number, labelNeedsPlan) // this run plans it first, in the run
 	}
@@ -346,11 +346,11 @@ func CILogs(ctx *hctx.Context, runID any) string {
 	var jobs []*pyjson.Object
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		jobs = filter(ctx.GH.ListJobs(runID, false), func(j *pyjson.Object) bool {
-			return inStrs(j.Get("conclusion"), "failure", "timed_out", "cancelled")
+			return py.In(j.Get("conclusion"), "failure", "timed_out", "cancelled")
 		})
 		// The failed first: a merge-queue build cancels the rest of its run once a required check
 		// failed (ci.yml's `queue-cancel-*`), and those cancelled jobs say nothing.
-		jobs = sortedBy(jobs, func(j *pyjson.Object) []any { return []any{eqStr(j.Get("conclusion"), "cancelled")} })
+		jobs = py.SortedBy(jobs, func(j *pyjson.Object) []any { return []any{eqStr(j.Get("conclusion"), "cancelled")} })
 	}); failed {
 		return prompts.Data(fmt.Sprintf("(could not read the CI run: %s)", exc.Error()), "CI failure")
 	}

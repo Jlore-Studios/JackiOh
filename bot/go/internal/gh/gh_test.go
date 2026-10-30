@@ -12,13 +12,12 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-// testdata/python.json holds the Python's answers for the same inputs (urllib.parse, bytes.decode,
-// float() and unicodedata, Python 3.13).
+// testdata/python.json holds the Python's answers for the same inputs (urllib.parse, Python
+// 3.13).
 func python(t *testing.T, key string) []any {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("testdata", "python.json"))
@@ -53,36 +52,6 @@ func TestQuoteAsUrllib(t *testing.T) {
 		"head", "o:bot/issue 5", "per_page", 100, "page", 2)
 	if got, want := urlencode(query), python(t, "urlencode")[0]; got != want {
 		t.Errorf("urlencode = %q; Python %q", got, want)
-	}
-}
-
-func TestDecodeReplaceAsPython(t *testing.T) {
-	for _, c := range python(t, "decode") {
-		row := pyjson.List(c)
-		raw, _ := base64.StdEncoding.DecodeString(row[0].(string))
-		if got := decodeReplace(raw); got != row[1] {
-			t.Errorf("decodeReplace(%x) = %q; Python %q", raw, got, row[1])
-		}
-	}
-}
-
-func TestFloatAsPython(t *testing.T) {
-	for _, c := range python(t, "float") {
-		row := pyjson.List(c)
-		f, ok := pyFloat(row[0].(string))
-		if ok != row[1] || ok && pyjson.FloatRepr(f) != row[2] {
-			t.Errorf("pyFloat(%q) = %v, %v; Python %v %v", row[0], f, ok, row[1], row[2])
-		}
-	}
-	for _, c := range python(t, "nd") {
-		row := pyjson.List(c)
-		r := rune(row[0].(int))
-		if !unicode.IsDigit(r) {
-			continue // a digit newer than Go's Unicode tables
-		}
-		if got := digitValue(r); got != row[1] {
-			t.Errorf("digitValue(%U) = %d; Python %v", r, got, row[1])
-		}
 	}
 }
 

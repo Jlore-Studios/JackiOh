@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
@@ -155,7 +156,7 @@ func peek(ctx *hctx.Context, force bool, item *int, mode string, skipped *[]stri
 // RunRequest is a `/harness run` (or `start --force`) not yet taken up, if one is fresh enough.
 func RunRequest(ctx *hctx.Context, state *pyjson.Object) *pyjson.Object {
 	asked := state.Obj("run_requested")
-	at := parseISO(asked.Get("at"))
+	at := clock.ParseISOValue(asked.Get("at"))
 	if asked == nil || at.IsZero() || ctx.Now().Sub(at) > RunRequestTtl {
 		return nil
 	}
@@ -189,7 +190,7 @@ func AnnounceSwitchedOff(ctx *hctx.Context, state *pyjson.Object) []string {
 				"under `limits`;\n- or move `off_from` later.",
 				provider.ID, provider.CLI, provider.Model, offFrom, reason),
 			[]string{"night bot"})
-		number := toInt(orValue(issue.Get("number"), 0))
+		number := py.MustInt(py.Or(issue.Get("number"), 0))
 		providerID := provider.ID
 		ctx.Store.Update(func(s *pyjson.Object) any {
 			providers.Record(s, providerID).Set("off_announced", number)
@@ -209,17 +210,17 @@ func HousekeepingDue(ctx *hctx.Context, state *pyjson.Object) string {
 			return fmt.Sprintf("#%s was left working by a run that ended", py.Str(thread.Get("number")))
 		}
 	}
-	for _, thread := range ctx.GH.ListIssues(cs(config.LabelPR), "open", 300, "") {
+	for _, thread := range ctx.GH.ListIssues(config.LabelPR, "open", 300, "") {
 		names := queue.LabelNames(thread)
-		if !thread.Has("pull_request") || names[cs(config.LabelRevise)] || names[cs(config.LabelWorking)] ||
-			names[cs(config.LabelBlocked)] || queue.IsHuman(names) {
+		if !thread.Has("pull_request") || names[config.LabelRevise] || names[config.LabelWorking] ||
+			names[config.LabelBlocked] || queue.IsHuman(names) {
 			continue
 		}
 		record := recordOf(state, py.Str(thread.Get("number")))
 		if record.Truthy("stop_requested") {
 			continue
 		}
-		if eqStr(ctx.GH.GetPull(toInt(thread.Get("number"))).Get("mergeable_state"), "dirty") {
+		if eqStr(ctx.GH.GetPull(py.MustInt(thread.Get("number"))).Get("mergeable_state"), "dirty") {
 			return fmt.Sprintf("#%s conflicts with main", py.Str(thread.Get("number")))
 		}
 	}

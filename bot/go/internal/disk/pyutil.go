@@ -1,9 +1,8 @@
 package disk
 
-// The Python behaviours disk.py depends on where Go's own differ: int() of a JSON value,
-// str.strip(), and subprocess.run's way of finding, timing out and reporting a program, with
-// the OSError and TimeoutExpired texts the clean-up's note shows. Each is private here; py could
-// hold them for every package (runner keeps the same subprocess helpers).
+// The Python behaviours disk.py depends on where Go's own differ and py does not hold them:
+// subprocess.run's way of finding, timing out and reporting a program, with the OSError and
+// TimeoutExpired texts the clean-up's note shows (runner keeps the same subprocess helpers).
 
 import (
 	"bytes"
@@ -19,100 +18,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
-
-// isSpace is str.isspace() for one character.
-func isSpace(r rune) bool {
-	switch {
-	case r >= '\t' && r <= '\r', r >= 0x1c && r <= 0x20, r == 0x85, r == 0xa0, r == 0x1680,
-		r >= 0x2000 && r <= 0x200a, r == 0x2028, r == 0x2029, r == 0x202f, r == 0x205f,
-		r == 0x3000:
-		return true
-	}
-	return false
-}
-
-// strip is str.strip().
-func strip(s string) string { return strings.TrimFunc(s, isSpace) }
-
-// isoText is `str(v or "")`, what parse_iso is given.
-func isoText(v any) string {
-	if !pyjson.Truthy(v) {
-		return ""
-	}
-	return py.Str(v)
-}
-
-// pyInt is int(v) for a value read from a file: a number (a float truncated, a bool 0 or 1) or
-// the text of a base-10 integer (spaces around it, a sign, digits of any script, single
-// underscores between them). False where Python raised KeyError, TypeError or ValueError.
-func pyInt(v any, present bool) (int, bool) {
-	if !present {
-		return 0, false
-	}
-	switch x := v.(type) {
-	case int:
-		return x, true
-	case bool:
-		if x {
-			return 1, true
-		}
-		return 0, true
-	case float64:
-		if math.IsNaN(x) || math.IsInf(x, 0) {
-			return 0, false
-		}
-		return int(x), true
-	case string:
-		s := strip(x)
-		neg := false
-		if strings.HasPrefix(s, "+") || strings.HasPrefix(s, "-") {
-			neg, s = s[0] == '-', s[1:]
-		}
-		if s == "" || strings.HasPrefix(s, "_") || strings.HasSuffix(s, "_") || strings.Contains(s, "__") {
-			return 0, false
-		}
-		n := 0
-		for _, r := range strings.ReplaceAll(s, "_", "") {
-			if !unicode.IsDigit(r) {
-				return 0, false
-			}
-			n = n*10 + digitValue(r)
-		}
-		if neg {
-			n = -n
-		}
-		return n, true
-	}
-	return 0, false
-}
-
-// intOf is int(v), raising as Python does when v is no integer.
-func intOf(v any) int {
-	n, ok := pyInt(v, true)
-	if !ok {
-		panic(fmt.Errorf("invalid literal for int() with base 10: %s", py.Repr(v)))
-	}
-	return n
-}
-
-// digitValue is the value of one decimal digit of any script: Unicode assigns them in runs of
-// ten, zero first.
-func digitValue(r rune) int {
-	if r >= '0' && r <= '9' {
-		return int(r - '0')
-	}
-	start := r
-	for unicode.IsDigit(start - 1) {
-		start--
-	}
-	return int(r-start) % 10
-}
 
 // osError is an OSError as Python prints it: "[Errno 2] No such file or directory: 'bash'".
 type osError struct {
@@ -120,13 +29,7 @@ type osError struct {
 	filename string
 }
 
-func (e *osError) Error() string {
-	msg := e.errno.Error()
-	if msg != "" {
-		msg = strings.ToUpper(msg[:1]) + msg[1:]
-	}
-	return fmt.Sprintf("[Errno %d] %s: %s", int(e.errno), msg, py.Repr(e.filename))
-}
+func (e *osError) Error() string { return py.ErrnoText(e.errno) + ": " + py.Repr(e.filename) }
 
 func (e *osError) Unwrap() error { return e.errno }
 
@@ -288,9 +191,5 @@ func decodeStrict(b []byte) (string, error) {
 		}
 		i += size
 	}
-	s := string(b)
-	if strings.Contains(s, "\r") {
-		s = strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
-	}
-	return s, nil
+	return py.Universal(string(b)), nil
 }

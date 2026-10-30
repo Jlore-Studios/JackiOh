@@ -33,7 +33,7 @@ func PriorityTier(names map[string]bool) int {
 	tier := NoPriority
 	found := false
 	for name := range names {
-		if t, ok := PriorityTiers[lower(name)]; ok && (!found || t < tier) {
+		if t, ok := PriorityTiers[py.Lower(name)]; ok && (!found || t < tier) {
 			tier, found = t, true
 		}
 	}
@@ -125,10 +125,10 @@ func PlanOf(record *pyjson.Object, thread *pyjson.Object, kind string, mode stri
 		return pyjson.New("planned", true, "plan_tier", "strong", "planned_by", "")
 	}
 	if record.Truthy("planned_at") {
-		return pyjson.New("planned", true, "plan_tier", orStr(record.Get("planned_tier")),
-			"planned_by", orStr(record.Get("planned_by_id")))
+		return pyjson.New("planned", true, "plan_tier", py.OrStr(record.Get("planned_tier"), ""),
+			"planned_by", py.OrStr(record.Get("planned_by_id"), ""))
 	}
-	if kind == "build" && issueplan.PlanOf(orStr(thread.Get("body"))) != "" {
+	if kind == "build" && issueplan.PlanOf(py.OrStr(thread.Get("body"), "")) != "" {
 		return pyjson.New("planned", true, "plan_tier", "strong", "planned_by", "")
 	}
 	return pyjson.New("planned", false, "plan_tier", "", "planned_by", "")
@@ -168,7 +168,7 @@ func NeedsPlan(candidate *Candidate) bool {
 var KindOrder = map[string]int{"review": 0, "revise": 1, "build": 2}
 
 // blank is `[^\S\n]`: whitespace other than a newline.
-func blank(r rune) bool { return r != '\n' && isSpace(r) }
+func blank(r rune) bool { return r != '\n' && py.IsSpace(r) }
 
 func skipBlank(rs []rune, i int) int {
 	for i < len(rs) && blank(rs[i]) {
@@ -189,7 +189,7 @@ func issueAt(rs []rune, i int) (int, int, bool) {
 	if j == i+1 {
 		return 0, 0, false
 	}
-	return j, digitsInt(rs[i+1 : j]), true
+	return j, py.Atoi(string(rs[i+1 : j])), true
 }
 
 // blockedWords are _BLOCKED_BY's alternatives, in its order: `blocked by|depends on|do not start
@@ -205,11 +205,11 @@ var blockedWords = []string{"blocked by", "depends on", "do not start until", "w
 //
 // It returns where the match ends and the numbers its group 1 names (`re.findall(r"#(\d+)")`).
 func blockedAt(rs []rune, p int) (int, []int, bool) {
-	if !boundary(rs, p) {
+	if !py.Boundary(rs, p) {
 		return 0, nil, false
 	}
 	for _, word := range blockedWords {
-		i, ok := foldAt(rs, p, word)
+		i, ok := py.FoldAt(rs, p, word)
 		if !ok {
 			continue
 		}
@@ -228,8 +228,8 @@ func blockedAt(rs []rune, p int) (int, []int, bool) {
 			switch {
 			case j < len(rs) && (rs[j] == ',' || rs[j] == '&'):
 				j++
-			case boundary(rs, j):
-				if k, ok := foldAt(rs, j, "and"); ok && boundary(rs, k) {
+			case py.Boundary(rs, j):
+				if k, ok := py.FoldAt(rs, j, "and"); ok && py.Boundary(rs, k) {
 					j = k
 				}
 			}
@@ -281,10 +281,10 @@ func partMatch(title string) (string, int, int, bool) {
 			break // `.` stops at a newline
 		}
 		i := e
-		for i < len(rs) && isSpace(rs[i]) {
+		for i < len(rs) && py.IsSpace(rs[i]) {
 			i++
 		}
-		i, ok := foldAt(rs, i, "(part ")
+		i, ok := py.FoldAt(rs, i, "(part ")
 		if !ok {
 			continue
 		}
@@ -295,8 +295,8 @@ func partMatch(title string) (string, int, int, bool) {
 		if j == i {
 			continue
 		}
-		n := digitsInt(rs[i:j])
-		k, ok := foldAt(rs, j, " of ")
+		n := py.Atoi(string(rs[i:j]))
+		k, ok := py.FoldAt(rs, j, " of ")
 		if !ok {
 			continue
 		}
@@ -307,7 +307,7 @@ func partMatch(title string) (string, int, int, bool) {
 		if l == k || l >= len(rs) || rs[l] != ')' {
 			continue
 		}
-		return string(rs[:e]), n, digitsInt(rs[k:l]), true
+		return string(rs[:e]), n, py.Atoi(string(rs[k:l])), true
 	}
 	return "", 0, 0, false
 }
@@ -316,17 +316,17 @@ func partMatch(title string) (string, int, int, bool) {
 // share a name such as "Patch v0.2.X", so the parts of one patch are those with its name and its
 // m.
 func PartOf(title string) (name string, total int, n int, ok bool) {
-	prefix, n, total, ok := partMatch(strip(title))
+	prefix, n, total, ok := partMatch(py.Strip(title))
 	if !ok {
 		return "", 0, 0, false
 	}
-	return strings.Join(fields(lower(prefix)), " "), total, n, true
+	return strings.Join(py.Split(py.Lower(prefix)), " "), total, n, true
 }
 
 // The issue a thread is a sub-issue of, from GitHub's own link, or 0. (`_PARENT`: the link as
 // GitHub writes it on the issue, `…/issues/<n>`, searched with `/issues/(\d+)$`.)
 func ParentOf(thread *pyjson.Object) int {
-	rs := []rune(orStr(thread.Get("parent_issue_url")))
+	rs := []rune(py.OrStr(thread.Get("parent_issue_url"), ""))
 	for i := range rs {
 		start, ok := literalAt(rs, i, "/issues/")
 		if !ok {
@@ -338,7 +338,7 @@ func ParentOf(thread *pyjson.Object) int {
 		}
 		// `$` is the end, or just before a newline that ends the text.
 		if j > start && (j == len(rs) || (j == len(rs)-1 && rs[j] == '\n')) {
-			return digitsInt(rs[start:j])
+			return py.Atoi(string(rs[start:j]))
 		}
 	}
 	return 0
@@ -372,7 +372,7 @@ type PatchPart struct {
 // sub-issue of, which every part has, so two patches' parts never mix when their titles both
 // open `Patch (part 2 of 4)`. A part with no parent link falls back to its title's name.
 func PatchOf(thread *pyjson.Object) *PatchPart {
-	name, total, n, ok := PartOf(orStr(thread.Get("title")))
+	name, total, n, ok := PartOf(py.OrStr(thread.Get("title"), ""))
 	if !ok {
 		return nil
 	}
@@ -391,7 +391,7 @@ func PatchOf(thread *pyjson.Object) *PatchPart {
 func WaitsFor(ctx *hctx.Context, threads []*pyjson.Object) map[int][]int {
 	named := map[int]map[int]bool{}
 	for _, t := range threads {
-		named[numberOf(t)] = NamedBlockers(orStr(t.Get("body")))
+		named[numberOf(t)] = NamedBlockers(py.OrStr(t.Get("body"), ""))
 	}
 	parts := map[int]*PatchPart{}
 	var partOrder []int // the dict's order
@@ -453,7 +453,7 @@ func WaitsFor(ctx *hctx.Context, threads []*pyjson.Object) map[int][]int {
 			blockers[n] = true
 		}
 		if summary := thread.Obj("issue_dependencies_summary"); summary != nil &&
-			intOr0(summary.Get("blocked_by")) > 0 {
+			py.MustInt(py.Or(summary.Get("blocked_by"), 0)) > 0 {
 			herr.Catch[*herr.GitHubError](func() {
 				for _, b := range ctx.GH.BlockedBy(number) {
 					if b.Get("state") == "open" {
@@ -497,9 +497,9 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 	others := map[int]string{} // number -> the other bot's name
 	parted := map[int][]int{}  // number -> its open parts
 	var builds []*pyjson.Object
-	labelWorking, labelPR := cfgStr(config.LabelWorking), cfgStr(config.LabelPR)
-	labelCross := cfgStr(config.LabelCross)
-	for _, label := range []string{cfgStr(config.LabelBuild), cfgStr(config.LabelRevise), labelCross} {
+	labelWorking, labelPR := config.LabelWorking, config.LabelPR
+	labelCross := config.LabelCross
+	for _, label := range []string{config.LabelBuild, config.LabelRevise, labelCross} {
 		for _, thread := range ctx.GH.ListIssues(label, "open", 300, "") {
 			number := numberOf(thread)
 			names := LabelNames(thread)
@@ -556,14 +556,14 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 				queuedAt = thread.Get("created_at")
 			}
 			c := NewCandidate(number, kind, py.Str(thread.GetOr("title", "")), record.Truthy("forced"),
-				orStr(queuedAt))
+				py.OrStr(queuedAt, ""))
 			// A fullsend's split and its reconcile are a strong model's (#505).
 			if mode == "fullsend" {
 				c.Difficulty = "hard"
 			} else {
 				c.Difficulty = DifficultyOf(names, CarriedDifficulty(record))
 			}
-			c.Builder = orStr(votes.Get("builder"))
+			c.Builder = py.OrStr(votes.Get("builder"), "")
 			c.Priority = PriorityTier(names)
 			plan := PlanOf(record, thread, kind, mode)
 			c.Planned, c.PlanTier, c.PlannedBy = plan.Bool("planned"), plan.Str("plan_tier"), plan.Str("planned_by")
@@ -578,16 +578,16 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			c.Rated = kind != "build" || Rated(names, record)
 			c.Conflict = kind == "revise" && record.Get("source") == "conflict"
 			if kind == "review" {
-				c.ReviewFloor = orStr(record.Get("review_floor"))
+				c.ReviewFloor = py.OrStr(record.Get("review_floor"), "")
 			}
 			c.Mode = mode
 			c.Part = kind == "build" && mode == "" && IsPart(record)
 			if kind == "revise" {
-				c.AuditTier = orStr(record.Get("audit_tier"))
+				c.AuditTier = py.OrStr(record.Get("audit_tier"), "")
 			}
 			if kind == "build" || kind == "revise" {
-				c.RoundsUsed = intOr0(record.Get("verdict_rounds"))
-				c.RoundTier = orStr(record.Get("round_tier"))
+				c.RoundsUsed = py.MustInt(py.Or(record.Get("verdict_rounds"), 0))
+				c.RoundTier = py.OrStr(record.Get("round_tier"), "")
 			}
 			found[number] = c
 			order = append(order, number)

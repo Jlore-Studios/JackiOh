@@ -1,7 +1,6 @@
 package deliver
 
 import (
-	"math"
 	"os"
 	"slices"
 	"strings"
@@ -11,7 +10,7 @@ import (
 )
 
 // testdata/python.json holds what Python 3.13 answered: `list({a, b})` for pairs of issue
-// numbers, and int() and float() of JSON values.
+// numbers.
 func TestPyvalMatchesPython(t *testing.T) {
 	raw, err := os.ReadFile("testdata/python.json")
 	if err != nil {
@@ -31,32 +30,6 @@ func TestPyvalMatchesPython(t *testing.T) {
 		}
 		if got := setOrder(a, b); !slices.Equal(got, want) {
 			t.Errorf("list({%d, %d}) = %v, want %v", a, b, got, want)
-		}
-	}
-	for _, e := range cases.List("numbers") {
-		c := pyjson.List(e)
-		in, wantInt, wantFloat := c[0], pyjson.List(c[1]), pyjson.List(c[2])
-		n, ok := pyInt(in)
-		if ok != (wantInt[0] == "ok") || (ok && n != wantInt[1].(int)) {
-			t.Errorf("int(%#v) = %d, %v; want %v", in, n, ok, wantInt)
-		}
-		f, ok := pyFloat(in)
-		if ok != (wantFloat[0] == "ok") {
-			t.Errorf("float(%#v) ok = %v; want %v", in, ok, wantFloat)
-			continue
-		}
-		if !ok {
-			continue
-		}
-		switch w := wantFloat[1].(type) {
-		case string:
-			if (w == "nan") != math.IsNaN(f) || (w == "inf") != math.IsInf(f, 1) || (w == "-inf") != math.IsInf(f, -1) {
-				t.Errorf("float(%#v) = %v, want %s", in, f, w)
-			}
-		default:
-			if wf, _ := pyjson.AsFloat(w); wf != f {
-				t.Errorf("float(%#v) = %v, want %v", in, f, wf)
-			}
 		}
 	}
 }

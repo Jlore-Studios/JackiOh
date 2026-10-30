@@ -201,20 +201,6 @@ func TestCodexUsage(t *testing.T) {
 	}
 }
 
-func TestDecodeReplaceIsPythons(t *testing.T) {
-	// bytes.decode("utf-8", "replace") in Python 3.13.
-	for in, want := range map[string]string{
-		"ok": "ok", "\xff\xfe": "\ufffd\ufffd", "\xe2\x82": "\ufffd", "\xe2\x82\xac": "€",
-		"\xe2\x82x": "\ufffdx", "\xed\xa0\x80": "\ufffd\ufffd\ufffd", "\xf0\x9f\x98": "\ufffd",
-		"\xc0\xaf": "\ufffd\ufffd", "\xf4\x90\x80\x80": "\ufffd\ufffd\ufffd\ufffd",
-		"a\xe0\x80b": "a\ufffd\ufffdb", "\xf1\x80\x80": "\ufffd", "\xc2": "\ufffd",
-	} {
-		if got := decodeReplace([]byte(in)); got != want {
-			t.Errorf("%q: got %q, want %q", in, got, want)
-		}
-	}
-}
-
 func TestWithSuffix(t *testing.T) {
 	for in, want := range map[string]string{
 		"t/01-build.jsonl":    "t/01-build.raw",

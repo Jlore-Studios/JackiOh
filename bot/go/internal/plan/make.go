@@ -74,7 +74,7 @@ func Make(ctx *hctx.Context, force bool /* = False */, item *int /* = None */, m
 			if planned != nil {
 				planned.Set("housekeeping", pyjson.ListOf(notes))
 				planned.Set("forced", force || candidate.Forced)
-				planned.Set("priority", priorityName(candidate.Priority))
+				planned.Set("priority", queue.PriorityNames[candidate.Priority])
 				planned.Set("skipped", pyjson.ListOf(skipped))
 				FillLanes(ctx, lanes, candidate, assignment, planned)
 				return taken(planned)
@@ -110,7 +110,7 @@ func FillLanes(ctx *hctx.Context, lanes *Lanes, taken *queue.Candidate, assignme
 		return
 	}
 	state := ctx.Store.Load()
-	rest := filter(candidates(ctx, state, nil), func(c *queue.Candidate) bool { return c.Number != taken.Number })
+	rest := filter(queue.Candidates(ctx, state, nil, nil), func(c *queue.Candidate) bool { return c.Number != taken.Number })
 	if len(Pairs(ctx, state, rest, after, false, AnyQuiet, nil)) == 0 {
 		return
 	}
@@ -126,14 +126,14 @@ func FillLanes(ctx *hctx.Context, lanes *Lanes, taken *queue.Candidate, assignme
 // on the ones being planned now; and `bot:planned` on the queued ones a strong model has planned
 // (it stays after they leave the queue, and comes off only if the item needs a plan again).
 func SyncNeedsPlan(ctx *hctx.Context, state *pyjson.Object) []string {
-	needsPlan, plannedLabel := cs(config.LabelNeedsPlan), cs(config.LabelPlanned)
+	needsPlan, plannedLabel := config.LabelNeedsPlan, config.LabelPlanned
 	notes := []string{}
 	wanted := map[int]bool{}
 	planned := map[int]bool{}
 	hasPlanned := map[int]bool{}
 	var labelled []*pyjson.Object
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
-		queued := filter(candidates(ctx, state, nil), func(c *queue.Candidate) bool { return c.Kind == "build" })
+		queued := filter(queue.Candidates(ctx, state, nil, nil), func(c *queue.Candidate) bool { return c.Kind == "build" })
 		for _, c := range queued {
 			if queue.NeedsPlan(c) {
 				wanted[c.Number] = true
@@ -147,7 +147,7 @@ func SyncNeedsPlan(ctx *hctx.Context, state *pyjson.Object) []string {
 			}
 		}
 		for _, t := range ctx.GH.ListIssues(plannedLabel, "open", 300, "") {
-			hasPlanned[toInt(t.Get("number"))] = true
+			hasPlanned[py.MustInt(t.Get("number"))] = true
 		}
 	}); failed {
 		return []string{fmt.Sprintf("could not sync `%s`: %s", needsPlan, exc.Error())}
@@ -164,10 +164,10 @@ func SyncNeedsPlan(ctx *hctx.Context, state *pyjson.Object) []string {
 	}
 	have := map[int]bool{}
 	for _, thread := range labelled {
-		number := toInt(thread.Get("number"))
+		number := py.MustInt(thread.Get("number"))
 		have[number] = true
 		record := recordOf(state, strconv.Itoa(number))
-		planning := queue.LabelNames(thread)[cs(config.LabelWorking)] && eqStr(record.Get("action"), "plan")
+		planning := queue.LabelNames(thread)[config.LabelWorking] && eqStr(record.Get("action"), "plan")
 		if !wanted[number] && !planning {
 			ctx.GH.RemoveLabel(number, needsPlan)
 			notes = append(notes, fmt.Sprintf("#%d left the Needs plan stage", number))
@@ -213,7 +213,7 @@ var ShedWhenClosed = []string{"handoff", "last_findings", "self_check_findings",
 // `KEEP_CLOSED` ago, and the bulky parts of the others that are closed. Open threads keep
 // everything.
 func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
-	last := parseISO(state.Obj("pruned").Get("at"))
+	last := clock.ParseISOValue(state.Obj("pruned").Get("at"))
 	now := ctx.Now()
 	if !last.IsZero() && now.Sub(last) < PruneEvery {
 		return []string{}
@@ -221,7 +221,7 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 	openNow := map[int]bool{}
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		for _, t := range ctx.GH.ListIssues("", "open", 1000, "") {
-			openNow[toInt(t.Get("number"))] = true
+			openNow[py.MustInt(t.Get("number"))] = true
 		}
 	}); failed {
 		return []string{"could not prune the state file: " + exc.Error()}
@@ -229,10 +229,10 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 	var gone, shed []int
 	items := state.Obj("items")
 	for _, key := range items.Keys() {
-		if !isDigits(key) {
+		if !py.IsDecimal(key) {
 			continue
 		}
-		number := toInt(key)
+		number := py.MustInt(key)
 		if openNow[number] || number == 0 {
 			continue
 		}
@@ -243,7 +243,7 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 		if !eqStr(thread.Get("state"), "closed") {
 			continue
 		}
-		closed := parseISO(thread.Get("closed_at"))
+		closed := clock.ParseISOValue(thread.Get("closed_at"))
 		if !closed.IsZero() && now.Sub(closed) >= KeepClosed {
 			gone = append(gone, number)
 		} else if slices.ContainsFunc(ShedWhenClosed, items.Obj(key).Has) {
@@ -271,13 +271,13 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 // PRs; puts back in the merge queue a cleared one it took out with no failed build
 // (`queue.requeue_cleared`).
 func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
-	labelRevise, labelWorking := cs(config.LabelRevise), cs(config.LabelWorking)
-	labelBlocked := cs(config.LabelBlocked)
+	labelRevise, labelWorking := config.LabelRevise, config.LabelWorking
+	labelBlocked := config.LabelBlocked
 	notes := Prune(ctx, state)
 	for _, thread := range WorkingThreads(ctx) {
-		number := toInt(thread.Get("number"))
+		number := py.MustInt(thread.Get("number"))
 		record := recordOf(state, strconv.Itoa(number))
-		runID := orStr(record.Get("run_id"), "")
+		runID := py.OrStr(record.Get("run_id"), "")
 		if runID != "" && runID == ctx.Cfg.RunID {
 			continue
 		}
@@ -291,11 +291,11 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 		}
 		var wanted string
 		if eqStr(record.Get("kind"), "review") {
-			wanted = cs(config.LabelCross)
+			wanted = config.LabelCross
 		} else if thread.Has("pull_request") {
 			wanted = labelRevise
 		} else {
-			wanted = cs(config.LabelBuild)
+			wanted = config.LabelBuild
 		}
 		queue.SetStateLabel(ctx, number, queue.LabelNames(thread), wanted)
 		ctx.Store.Update(func(s *pyjson.Object) any {
@@ -313,7 +313,7 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 			return nil
 		}, "survey ended")
 	}
-	for _, thread := range ctx.GH.ListIssues(cs(config.LabelPR), "open", 300, "") {
+	for _, thread := range ctx.GH.ListIssues(config.LabelPR, "open", 300, "") {
 		if !thread.Has("pull_request") {
 			continue
 		}
@@ -321,10 +321,10 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 		if names[labelRevise] || names[labelWorking] || names[labelBlocked] || queue.IsHuman(names) {
 			continue
 		}
-		pull := ctx.GH.GetPull(toInt(thread.Get("number")))
+		pull := ctx.GH.GetPull(py.MustInt(thread.Get("number")))
 		record := recordOf(state, py.Str(pull.Get("number")))
 		if eqStr(pull.Get("mergeable_state"), "dirty") && !record.Truthy("stop_requested") {
-			number := toInt(pull.Get("number"))
+			number := py.MustInt(pull.Get("number"))
 			queue.SetStateLabel(ctx, number, names, labelRevise)
 			if pull.Truthy("auto_merge") && pull.Truthy("node_id") {
 				// The revision may come from another model; its approval decides afresh.
@@ -348,9 +348,9 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 			notes = append(notes, requeued)
 		}
 	}
-	labelPROpen := cs(config.LabelPROpen)
+	labelPROpen := config.LabelPROpen
 	for _, thread := range ctx.GH.ListIssues(labelPROpen, "open", 300, "") {
-		number := toInt(thread.Get("number"))
+		number := py.MustInt(thread.Get("number"))
 		if queue.OpenPullForBranch(ctx, queue.BranchForIssue(number)) == nil {
 			ctx.GH.RemoveLabel(number, labelPROpen)
 			notes = append(notes, fmt.Sprintf("#%d has no open bot PR any more", number))
