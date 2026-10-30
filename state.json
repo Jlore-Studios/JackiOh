@@ -9781,6 +9781,13 @@
     "2436": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T05:07:48Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 5 fails outright: the change is a rules constant in crates/engine/src/config.rs with a golden re-bless and a patch fragment, plus rule 3's new ruling R2436000; not hard, as it is one constant's value and no resolution-loop logic"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-7",
