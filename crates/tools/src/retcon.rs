@@ -616,6 +616,7 @@ const SKIP_PREFIXES: &[&str] = &[
 const SKIP_FILES: &[&str] = &[
     "crates/cards/src/versions.rs",
     "apps/web/src/replay/retcon.test.ts",
+    "apps/web/src/replay/retcon-v05.test.ts",
     "crates/tools/src/patches.rs",
     "crates/tools/src/classify.rs",
     "crates/tools/src/retcon.rs",
@@ -854,11 +855,7 @@ fn season_of(version: &str) -> Option<String> {
 /// map: a single statement per column joined to the map, so a name the map reuses (the old v0.3.4
 /// becomes v0.2.7b while the new v0.3.4 is the old v0.3.12) is renamed from its old value only. A
 /// column a key holds goes through a `~` name first, so no row meets a name another row still holds.
-pub fn migration_sql(number: u32, map: &[Renamed]) -> String {
-    migration_sql_for(number, map, &FIRST_RETCON)
-}
-
-/// R1371000, R2532000: `migration_sql` for one retcon.
+/// R2532000: `retcon` names the run: the first (`FIRST_RETCON`) or the v0.5 retcon (`V05_RETCON`).
 pub fn migration_sql_for(number: u32, map: &[Renamed], retcon: &RetconSql) -> String {
     let RetconSql {
         issue, title, marker, ..
@@ -1814,6 +1811,29 @@ mod tests {
         );
     }
 
+    // R2532000: the old v0.5.7 is Training Grounds' release and the new v0.5.7 is the old v0.5.11,
+    // so a replay marked 2 at v0.5.7 folds under the carried new v0.5.5.
+    #[test]
+    fn r2532000_a_replay_marked_2_folds_under_its_v0_5_name_now() {
+        jackioh_cards::register_all();
+        let old = crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.5.7", "versions": 2 }), 2)
+            .expect("carried")
+            .expect("an older catalog");
+        assert_eq!(old.version(), "v0.5.5");
+        assert!(old.defs().contains_key("traininggrounds-001"));
+        let aliases = read_aliases(&repo_root()).expect("the map");
+        assert_eq!(aliases.versions, VERSIONS_SCHEME);
+        assert_eq!(
+            aliases.renames_from(2).get("v0.5.11").map(String::as_str),
+            Some("v0.5.7")
+        );
+        assert_eq!(
+            aliases.renames_from(2).len(),
+            17,
+            "the v0.5 line's renames, and nothing before it"
+        );
+    }
+
     #[test]
     fn r1371000_the_repository_is_retconned_and_a_second_run_changes_nothing() {
         let root = repo_root();
@@ -1856,13 +1876,13 @@ mod tests {
                 plays: Vec::new(),
             },
         ];
-        let sql = migration_sql(47, &map);
+        let sql = migration_sql_for(47, &map, &FIRST_RETCON);
         assert!(
             sql.contains("insert into public.seasons (id, patch_version, started_at)\n      select 'v0.4'")
         );
         assert!(sql.contains("where id = 'v0.3'"));
         assert!(
-            !migration_sql(
+            !migration_sql_for(
                 47,
                 &map[..1]
                     .iter()
@@ -1870,7 +1890,8 @@ mod tests {
                         new: "v0.3.16".to_string(),
                         ..renamed.clone()
                     })
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>(),
+                &FIRST_RETCON
             )
             .contains("public.seasons (id"),
             "a season that keeps its name is left alone"

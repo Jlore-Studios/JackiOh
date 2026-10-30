@@ -23,7 +23,7 @@ const COIN: PublicCreatedStat = {
   createdPlayedNormalWinRate: 0.5,
   createdPlayedDelta: null,
   hasEnoughGames: true,
-  window: { from: "v0.5.1", liveGames: 40, source: "live", counted: ["v0.5.1"] },
+  window: { from: "v0.5.0b", liveGames: 40, source: "live", counted: ["v0.5.0b"] },
 };
 
 afterEach(cleanup);

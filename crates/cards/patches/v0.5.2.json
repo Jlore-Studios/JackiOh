@@ -24801,13 +24801,13 @@
       "attack": 0,
       "health": 0,
       "keywords": [],
-      "text": "Dormant until it launches.\nEach of your Starship Pieces that dies fuses a copy into this.\nA card played onto this by Stack while it is Dormant is exiled before it resolves.\nActivate: Pay (3) to launch this. It takes a random name, then every Cry fused into it fires, then every When launched."
+      "text": "Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."
     },
     "radiant": {
       "attack": 0,
       "health": 0,
       "keywords": [],
-      "text": "Dormant until it launches.\nEach of your Starship Pieces that dies fuses a copy into this.\nA card played onto this by Stack while it is Dormant is exiled before it resolves.\nActivate: Pay (3) to launch this. It takes a random name, then every Cry fused into it fires, then every When launched."
+      "text": "Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."
     }
   },
   "stinkyscape-t-drone-interceptor": {

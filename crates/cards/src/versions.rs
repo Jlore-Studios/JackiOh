@@ -191,4 +191,36 @@ mod tests {
             "selfplay-learned-v0.4.0c-1.jsonl"
         );
     }
+
+    // R2532000: a record marked 2 names the v0.5 line as it was before the v0.5 retcon, and is read
+    // through `aliases.json`'s `marked`; one marked 3 is today's; an unmarked one is scheme 1's.
+    #[test]
+    fn r2532000_a_record_marked_2_names_the_v0_5_line_as_it_was() {
+        let two = line("dev:v0.5.11:gather:1", "v0.5.11", r#","versions":2"#);
+        let three = line("dev:v0.5.7:gather:2", "v0.5.7", r#","versions":3"#);
+        let one = line("dev:v0.3.17b:gather:3", "v0.3.17b", "");
+        let records = read_game_record_lines(&format!("{two}\n{three}\n{one}\n")).expect("the records");
+        assert_eq!(records[0].patch, "v0.5.7", "the old v0.5.11 is the new v0.5.7");
+        assert_eq!(records[0].id, "dev:v0.5.7:gather:1");
+        assert_eq!(
+            records[1].patch, "v0.5.7",
+            "a record marked 3 names today's v0.5.7"
+        );
+        assert_eq!(records[2].patch, "v0.4.0d");
+        assert_eq!(
+            version_name_from(2, "v0.5.7"),
+            "v0.5.5",
+            "the old v0.5.7 is Training Grounds' release"
+        );
+        assert_eq!(
+            version_name_from(2, "v0.4.0"),
+            "v0.4.0",
+            "the retcon kept every earlier name"
+        );
+        assert_eq!(version_name_from(VERSIONS_SCHEME, "v0.5.11"), "v0.5.11");
+        assert_eq!(
+            versions_now_in(2, "selfplay-learned-v0.5.4-1.jsonl"),
+            "selfplay-learned-v0.5.3-1.jsonl"
+        );
+    }
 }
