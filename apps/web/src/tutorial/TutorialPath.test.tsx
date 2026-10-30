@@ -12,6 +12,7 @@ import {
   __resetTutorialProgressForTests,
   markFound,
   markLessonComplete,
+  markLessonLost,
   readTutorialProgress,
   setTutorialHidden,
 } from "./progress.ts";
@@ -73,6 +74,20 @@ describe("the lesson path", () => {
     expect(first.filter((chip) => chip.getAttribute("data-found") === "true").map((chip) => chip.textContent)).toEqual(["Found: ManaMana"]);
     for (const chip of chipsOf(lesson(2))) expect(chip).toHaveAttribute("data-found", "true");
     expect(screen.getByTestId(tutorialTestid.fieldGuidePath)).toBeInTheDocument();
+  });
+
+  it("R2434002 a lesson conceded last time stays open and says it was lost, until it is won", () => {
+    markLessonLost(lesson(1).id);
+    render(<TutorialPath onStart={vi.fn()} />);
+    expect(node(lesson(1))).toHaveAttribute("data-lost", "true");
+    expect(node(lesson(1))).toHaveAttribute("data-status", "unlocked");
+    expect(node(lesson(1))).toHaveTextContent("Lost: you conceded");
+    expect(node(lesson(2))).not.toHaveAttribute("data-lost");
+    act(() => {
+      markLessonComplete(lesson(1).id);
+    });
+    expect(node(lesson(1))).not.toHaveAttribute("data-lost");
+    expect(node(lesson(1))).toHaveAttribute("data-status", "completed");
   });
 
   it("with no progress: lesson 1 is open and up next, the rest are locked and say why", () => {

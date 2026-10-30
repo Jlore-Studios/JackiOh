@@ -1,8 +1,10 @@
-// Lesson 1 data (SPEC §9.10, R291, R2205003); ../lessons.ts defines its fields and ../scripts/basics.ts
-// is the coach. Training Grounds cards only, none Legendary or Mythic, the pool hold on. Deck order
-// fixes this seed's deal (`scripts/lesson-deal.ts basics`): reordering it changes the game, so rerun
-// the lesson's tests. The player's deck is units; the AI's is twelve units with no keyword (R291) and
-// no Aura or Death (R2205003): the set's three vanilla units and nine whose one ability is a Cry.
+// Lesson 1 data (SPEC §9.10, R291, R2434001); ../lessons.ts defines its fields and ../scripts/basics.ts
+// is the coach. The first steps, and nothing else: the player's deck is mostly vanilla units, copies
+// of Training Grounds' three with no text at all and of its Rush-only Boulder Fist Ogre, at most
+// `deckCopies` (4) of each (R2433001), with six Cry units; the AI's is twelve Core units whose one
+// ability, if any, is a Cry or Rush. No spell, keyword but Rush, backrow card, Legendary or Mythic,
+// the pool hold on. Deck order fixes this seed's deal (`scripts/lesson-deal.ts basics`): reordering
+// it changes the game, so rerun the lesson's tests.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -11,45 +13,45 @@ export const lesson: TutorialLesson = {
   number: 1,
   title: "First steps",
   summary: "Play units, attack, and bring the enemy hero down to 0.",
-  discoveries: ["mana", "play-unit", "summoning-sickness", "attack-hero", "trade", "hero-health", "winning"],
-  seed: "tg-basics-1",
+  discoveries: ["mana", "play-unit", "attack-hero", "trade", "winning"],
+  seed: "core-basics-5",
   humanSeat: "p1",
   poolHold: true,
   humanDeck: [
     "traininggrounds-001", // Spikey Steven, Common
     "traininggrounds-043", // Mr. Vanilla, Common
-    "traininggrounds-002", // Personal Trainer, Common
     "traininggrounds-008", // Clobberer, Common
-    "traininggrounds-003", // Group leader, Common
-    "traininggrounds-005", // Midlane Menace, Common
-    "traininggrounds-006", // Chosen by the Sun, Common
-    "traininggrounds-007", // Chosen by the Moon, Common
-    "traininggrounds-004", // Boulder Fist Ogre, Common
-    "traininggrounds-009", // Ravager, Common
-    "traininggrounds-047", // Midrange Menace, Common
-    "traininggrounds-048", // Jlockeed Shredder-10, Common
-    "traininggrounds-041", // Bigot, Common
-    "traininggrounds-017", // Flaming Felinor, Rare
-    "traininggrounds-018", // Knife Juggler, Rare
-    "traininggrounds-021", // Flame Tongue Totem, Rare
-    "traininggrounds-022", // Right-Hand Felinor, Rare
+    "traininggrounds-001", // Spikey Steven, Common
     "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-004", // Boulder Fist Ogre, Common
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-008", // Clobberer, Common
+    "traininggrounds-022", // Right-Hand Felinor, Rare
+    "traininggrounds-043", // Mr. Vanilla, Common
     "traininggrounds-023", // Quadrupling Felinors, Rare
-    "traininggrounds-032", // Selfless Protector, Epic
+    "traininggrounds-005", // Midlane Menace, Common
+    "traininggrounds-008", // Clobberer, Common
+    "traininggrounds-033", // Guerilla Felinor, Epic
+    "traininggrounds-002", // Personal Trainer, Common
+    "traininggrounds-004", // Boulder Fist Ogre, Common
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-008", // Clobberer, Common
   ],
   aiDeck: [
-    "traininggrounds-043", // Mr. Vanilla, Common
-    "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-002", // Personal Trainer, Common
-    "traininggrounds-028", // Occidental, Epic
-    "traininggrounds-022", // Right-Hand Felinor, Rare
-    "traininggrounds-044", // Duplicating Felinors, Rare
-    "traininggrounds-053", // Prejudiced Postdoc, Rare
-    "traininggrounds-033", // Guerilla Felinor, Epic
-    "traininggrounds-023", // Quadrupling Felinors, Rare
-    "traininggrounds-041", // Bigot, Common
-    "traininggrounds-051", // Big Felinor, Rare
-    "traininggrounds-008", // Clobberer, Common
+    "core-008", // Mr. Vanilla, Common
+    "core-004", // Gary the Gambler, Common
+    "core-012", // Duplicating Felinors, Rare
+    "core-015", // Me and Mr Token, Common
+    "core-030", // Archivist, Rare
+    "core-053", // Reno, Common
+    "core-061", // Prejudiced Postdoc, Rare
+    "core-068", // Twisted Sorcerer, Common
+    "core-077", // Professor Curvature, Rare
+    "core-002", // Bigot, Common
+    "core-032", // Prem Panther, Rare
+    "core-089", // Corpse Eater, Epic
   ],
   retryTip: "Play a unit every turn, trade only when your unit survives the hit, and send everything else at the enemy hero.",
 };

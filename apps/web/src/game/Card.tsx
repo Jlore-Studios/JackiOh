@@ -47,6 +47,9 @@
 // gray, the aura alone (CardMarks' `bareAura`); a mark of its own outranks it. A card in the hand, the
 // resolving strip or the tray never wears it.
 //
+// #2435: a card the burst has awakened (an `awakened` event in flight on it) wears `data-awakening`,
+// which breaks its Dormant seal until the board catches up (game/awakening.ts, R1839002, R1852003).
+//
 // R2321000: a unit the view says a card on the field counts (`UnitView.tallies`, Level Up!'s attacks)
 // wears a pill per count, "▲ 2/3", named by the keeping card (cards/Tallies.tsx).
 //
@@ -102,6 +105,7 @@ import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.
 import { liveFace } from "./faces.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
 import { useKeywordLost } from "./keywordLoss.ts";
+import { useAwakening } from "./awakening.ts";
 import { useSeatDeckCosmetics, useTheirLoadout, useWearerSeat } from "./wearer.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr, paretoAttr } from "./glow.ts";
@@ -370,6 +374,8 @@ export default function Card(props: CardProps): ReactElement {
   const animatingEvent = testId === undefined ? undefined : props.animating?.get(testId);
   // #1598: a `keywordGranted` that takes the keyword away plays as the icon going (keywordLoss.ts).
   const keywordLost = useKeywordLost(testId);
+  // #2435: an `awakened` in flight breaks the card's Dormant seal until the board catches up (awakening.ts).
+  const awakening = useAwakening(testId);
   // R979000: a card in your hand the view says cannot be played stays greyed out, as `legal` offers
   // it nothing, but its click still reaches the board, which shows `playReason` and sends nothing.
   const explains = card?.playReason !== undefined;
@@ -407,6 +413,7 @@ export default function Card(props: CardProps): ReactElement {
     "data-selected": selected ? "true" : undefined,
     "data-animating": animatingEvent,
     "data-lost": keywordLost ? "true" : undefined,
+    "data-awakening": awakening ? "true" : undefined,
     "data-glow": glowAttr(props.highlight, testId),
     "aria-disabled": clickable && !legal ? ("true" as const) : undefined,
     onClick: clickable ? fire : undefined,

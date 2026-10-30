@@ -58,7 +58,7 @@ const KEEP: Record<string, string[]> = {
 
 /** How many durations in each board sheet scale by --anim-scale: none loses the factor. */
 const ANIM_SCALED: Record<string, number> = {
-  "game/activate.css": 1, "game/animations.css": 64, "game/board.css": 12, "game/drag/blocked.css": 1, "game/facedown.css": 2,
+  "game/activate.css": 1, "game/animations.css": 65, "game/board.css": 12, "game/drag/blocked.css": 1, "game/facedown.css": 2,
   "game/highlights.css": 2, "game/notices.css": 1, "game/prompt.css": 2, "game/reveal.css": 2, "game/spent.css": 1,
 };
 

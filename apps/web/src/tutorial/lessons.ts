@@ -1,17 +1,18 @@
 // R291 lesson data (SPEC §9.10): fixed decks, seed and seat make R290 practice games repeatable.
-// R2205003: five lessons dealt from Training Grounds alone. Lessons 1–4 hold no Legendary or Mythic
-// card and set the human's `poolHold` (R2201001), so none is generated either; lesson 5 deals them.
-// Human decks meet §2.6 at `TUTORIAL_HUMAN`'s size; AI decks have R184's size, respect R186 and bring
-// spells and the backrow only after the lessons that teach them. `lessons.test.ts` holds them to it.
+// R2205003, R2434001: five lessons, one subject each. The human's decks are Training Grounds cards, the
+// AI's Core cards. Lessons 1–4 hold no Legendary or Mythic card and set `poolHold` (R2201001) on both
+// seats, so none is generated either; lesson 5 deals them to the human alone. Decks meet R184's sizes,
+// respect R186 and bring nothing a later lesson teaches. `lessons.test.ts` holds them to it.
+// R2434000: the ids of the lessons before #2434 read as the lesson in their place on the path.
 
 import { AI_TUTORIAL, TUTORIAL_HUMAN, type Handicap } from "@jackioh/engine/config";
 import type { PlayerId } from "@jackioh/shared";
 
-import { lesson as advanced } from "./lessons/advanced.ts";
+import { lesson as backrow } from "./lessons/backrow.ts";
 import { lesson as basics } from "./lessons/basics.ts";
+import { lesson as casting } from "./lessons/casting.ts";
 import { lesson as finale } from "./lessons/finale.ts";
-import { lesson as spells } from "./lessons/spells.ts";
-import { lesson as traps } from "./lessons/traps.ts";
+import { lesson as keywords } from "./lessons/keywords.ts";
 
 export type TutorialLesson = {
   id: string;
@@ -24,14 +25,25 @@ export type TutorialLesson = {
   humanSeat: PlayerId;
   humanDeck: readonly string[];
   aiDeck: readonly string[];
-  /** R2201001, R2205003: hold Legendary and Mythic cards out of every random pool (lessons 1–4). */
+  /** R2201001, R2205003, R2434001: hold Legendary and Mythic cards out of every random pool (lessons 1–4), on both seats. */
   poolHold: boolean;
   /** R291: an R186 exception a fixed lesson needs, with its reason. */
   aiShadowBanned?: Readonly<Record<string, string>>;
   retryTip: string;
 };
 
-export const TUTORIAL_LESSONS: readonly TutorialLesson[] = [basics, spells, traps, advanced, finale];
+export const TUTORIAL_LESSONS: readonly TutorialLesson[] = [basics, keywords, casting, backrow, finale];
+
+/**
+ * R2434000: the ids of lessons 2 to 4 before #2434 remade them, each read as the lesson now in its
+ * place, so a player who won the old lesson n has won lesson n. `basics` and `finale` kept theirs.
+ */
+export const EARLIER_LESSON_IDS: Readonly<Record<string, string>> = { spells: "keywords", traps: "casting", advanced: "backrow" };
+
+/** R2434000: the lesson an id names now, an earlier id read as the lesson in its place. */
+export function currentLessonId(id: string): string {
+  return Object.hasOwn(EARLIER_LESSON_IDS, id) ? (EARLIER_LESSON_IDS[id] ?? id) : id;
+}
 
 export function lessonById(id: string): TutorialLesson | undefined {
   return TUTORIAL_LESSONS.find((lesson) => lesson.id === id);
@@ -42,7 +54,8 @@ export function nextLessonOf(id: string): TutorialLesson | undefined {
   return lesson === undefined ? undefined : TUTORIAL_LESSONS.find((candidate) => candidate.number === lesson.number + 1);
 }
 
-/** R290, R1705005, R2201000, R2201001: the tutorial opponent's handicap and the human's, the pool hold on it when the lesson sets it. */
+/** R290, R1705005, R2201000, R2201001, R2433000, R2434001: the tutorial opponent's handicap, Core-only bar and all, and the human's, the pool hold on both when the lesson sets it. */
 export function lessonHandicaps(lesson: TutorialLesson): { human: Handicap; ai: Handicap } {
-  return { human: lesson.poolHold ? { ...TUTORIAL_HUMAN, poolHold: true } : { ...TUTORIAL_HUMAN }, ai: { ...AI_TUTORIAL } };
+  const hold = lesson.poolHold ? { poolHold: true } : {};
+  return { human: { ...TUTORIAL_HUMAN, ...hold }, ai: { ...AI_TUTORIAL, ...hold } };
 }
