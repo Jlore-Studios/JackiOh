@@ -9377,7 +9377,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-29T20:02:07Z",
+      "feedback_since": "2026-10-30T04:31:20Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-30T01:08:48Z",
@@ -9391,20 +9391,23 @@
       "interruptions": 0,
       "issue": 2396,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-8",
-      "question": "After main is merged, one per-PR test goes red: jackioh-tools `fuzz::tests::fuzz_handicapped_games_r180_r184_r187::r180_seeds_with_one_seat_on_medium_or_hard_no_throw_a_real_ending_and_a_replay_that_matches`. It fails on handicapped seed 4 with \"checkpoint took 5246ms\" (and 5486ms on a second run), past CHECKPOINT_TIME_BOUND_MS (5000ms). That happens when the whole tools test binary runs, as `cargo test --workspace` does. Run alone it passes at 2555ms, and CI's `tools fuzz` group passed once locally. The cause is legitimate and not slow code from this PR. Seed 4's game now changes right after p2's Boots on the Ground attacks (Boots draws before the damage), and the new game has three end-of-turns that each play p2's whole autopilot turn. The checkpoint sits at step 1, so the bound times the whole game. The bot may not raise a timeout. Which should it be: (a) speed up the engine's autopilot trials (`autopilot::trial`) in a separate issue that lands first, (b) a person changes the bound or what it times, or (c) merge and accept the timing risk?",
+      "question": "",
       "queued_at": "2026-10-30T04:29:23Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "strong",
       "run_id": "41003367703",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-30T04:31:20Z",
       "stop_requested": false,
       "taken_asks": [
         "c:6514930224"
       ],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
