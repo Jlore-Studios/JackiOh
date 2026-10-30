@@ -148,12 +148,6 @@ change: keeping them one line away would mean making every harness change twice 
 rollback rot within days. Reverting the pull request is the rollback, restoring the Python and
 the run lines together.
 
-One piece stays one more step: `bot/harness/`, `main`'s Python harness byte for byte, used by no
-workflow. A run GitHub started before the merge keeps its old workflow file (`python -m harness …`)
-while its later jobs (work, deliver) check out `main` afresh, so for the hours after the merge the
-Python must still be there for them, or their work is lost. A follow-up pull request deletes it once
-every run started before the merge has finished.
-
 ## What it gained
 
 Measured on one machine with the same checkout, each command run 20 times, the output of each pair
