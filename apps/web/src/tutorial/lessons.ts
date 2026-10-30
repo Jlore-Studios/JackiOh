@@ -42,7 +42,17 @@ export function nextLessonOf(id: string): TutorialLesson | undefined {
   return lesson === undefined ? undefined : TUTORIAL_LESSONS.find((candidate) => candidate.number === lesson.number + 1);
 }
 
+/**
+ * R2433000: the tutorial opponent's handicap as today's lessons deal it, without its Core-only bar.
+ * Today's opponent decks are Training Grounds cards, which the bar would keep in its hand; #2434 deals
+ * it Core decks and drops this, so every lesson's opponent plays `AI_TUTORIAL` whole.
+ */
+function lessonOpponent(): Handicap {
+  const { coreOnly: _bar, ...resources } = AI_TUTORIAL;
+  return resources;
+}
+
 /** R290, R1705005, R2201000, R2201001: the tutorial opponent's handicap and the human's, the pool hold on it when the lesson sets it. */
 export function lessonHandicaps(lesson: TutorialLesson): { human: Handicap; ai: Handicap } {
-  return { human: lesson.poolHold ? { ...TUTORIAL_HUMAN, poolHold: true } : { ...TUTORIAL_HUMAN }, ai: { ...AI_TUTORIAL } };
+  return { human: lesson.poolHold ? { ...TUTORIAL_HUMAN, poolHold: true } : { ...TUTORIAL_HUMAN }, ai: lessonOpponent() };
 }

@@ -70,7 +70,7 @@ export function almanacMeta(def: CardDef): string {
 }
 
 export default function AlmanacRoute(): ReactElement {
-  useLocale();
+  const locale = useLocale();
   const [filter, setFilter] = useState<PoolFilter>(DEFAULT_FILTER);
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   // `?card=<id>` opens that card's detail (`paths.almanacCard`, the statistics drill-down's link),
@@ -86,7 +86,7 @@ export default function AlmanacRoute(): ReactElement {
 
   const pool = useMemo(
     () => almanacPool(ALMANAC_CATALOG, filter, sort, winRates.rates ?? undefined),
-    [filter, sort, winRates.rates],
+    [filter, sort, winRates.rates, locale],
   );
   const detailDef = detailCardId === null ? undefined : ALMANAC_CATALOG.cards[detailCardId];
 

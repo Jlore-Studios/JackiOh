@@ -598,17 +598,17 @@ mod tests {
         let wording: Vec<Value> = (1..=20)
             .map(|n| change(&format!("core-{n:03}"), "changed", &["base.text"]))
             .collect();
-        let nine: Vec<Value> = (1..=9)
+        let short: Vec<Value> = (1..PATCH_MIN_CARDS)
             .map(|n| change(&format!("core-{n:03}"), "changed", &["cost"]))
             .collect();
-        let ten: Vec<Value> = (1..=10)
+        let bar: Vec<Value> = (1..=PATCH_MIN_CARDS)
             .map(|n| change(&format!("core-{n:03}-1"), "changed", &["cost"]))
             .collect();
         let entry = |version: &str, changes: &[Value]| json!({ "version": version, "changes": changes });
         let mut patches = vec![
             entry("a", &[change("core-001", "added", &[])]),
-            entry("b", &ten),
-            entry("c", &nine),
+            entry("b", &bar),
+            entry("c", &short),
             entry("d", &wording),
         ];
         assert_eq!(
@@ -629,7 +629,7 @@ mod tests {
         assert_eq!(newest_x(&patches).unwrap(), "e");
         // A recorded tier wins over the fallback.
         patches.push(json!({ "version": "g", "tier": "patch", "changes": [] }));
-        patches.push(json!({ "version": "h", "tier": "micro", "changes": ten }));
+        patches.push(json!({ "version": "h", "tier": "micro", "changes": bar }));
         assert_eq!(newest_x(&patches).unwrap(), "g");
     }
 

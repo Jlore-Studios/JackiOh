@@ -22,8 +22,9 @@
 //! - a card claimed only through its script keeps the claim only when its forced games diverge
 //!   between the builds (`luau diff`'s check), so a refactor claims nothing;
 //! - a change to code a card's play can rest on (`Area::PlayCode`) replays `UNFORCED_GAMES` unforced
-//!   games, and the cards each divergence touches play differently; a divergence that touches no
-//!   card is a rule every game meets, and makes a patch;
+//!   games, and the cards each divergence touches play differently; divergences that touch no card
+//!   are a rule every game meets, and make a patch, once they reach `RULE_MIN_GAMES` of the games
+//!   (R2455000), and fewer count as no card;
 //! - a change to the AI plays the same self-play games on both builds: identical logs mean the AI
 //!   decides as it did, and the change is Internal.
 //!
@@ -34,7 +35,7 @@
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command as Process;
+use std::process::{Child, Command as Process, Stdio};
 
 use anyhow::{Context, Result, bail};
 use jackioh_cards::register_all;
@@ -68,6 +69,11 @@ const FORCED_GAMES: u32 = 40;
 
 /// Stage 2: the unforced games a change to play code replays, `luau diff`'s count.
 const UNFORCED_GAMES: u32 = 200;
+
+/// R2455000: the unforced games that must hold a divergence touching no card for it to be a rule
+/// every game meets, a quarter of them. Fewer is a rule few games meet, which moves no card's
+/// statistics enough to restart them all, and counts as no card.
+const RULE_MIN_GAMES: usize = UNFORCED_GAMES as usize / 4;
 
 /// Stage 2: the self-play games a change to the AI plays on both builds, and their seed base.
 const SELFPLAY_GAMES: u32 = 8;
@@ -443,7 +449,8 @@ pub(crate) struct Checked {
     pub scripts: BTreeSet<String>,
     /// Families an unforced divergence touched, after a change to play code.
     pub touched: BTreeSet<String>,
-    /// An unforced divergence touched no card: a rule every game meets.
+    /// Divergences that touch no card held `RULE_MIN_GAMES` of the unforced games, or the base
+    /// build refused the head's decks: a rule every game meets (R2455000).
     pub rule: bool,
     /// Whether the AI's self-play logs differ; `None` when the check did not run.
     pub ai: Option<bool>,
@@ -460,7 +467,7 @@ pub(crate) struct Classification {
     pub cards: Vec<String>,
     /// The families whose wording alone changed.
     pub wording: Vec<String>,
-    /// A divergence no card explains made the tier a patch.
+    /// A rule every game meets (`Checked::rule`) made the tier a patch.
     pub rule: bool,
     pub stage2: &'static str,
     /// What stage 2 would have checked, when it did not run.
@@ -765,15 +772,27 @@ fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
     Ok(diverged)
 }
 
-/// A self-play run's games as the comparison reads them: seed, log, final hash and result (not the
-/// catalog version or the commit, which name the build).
-fn selfplay_games(bin: &Path, out: &Path) -> Result<Vec<Value>> {
+/// Starts `bin`'s self-play run into `out`. The head's and the base's run side by side (#2353): each
+/// plays its games on every core but then waits on its slowest, and one after the other they took
+/// `rust (classify)` past seven minutes. On four cores one run took 162 s, nearly all of it one game
+/// of 159 s; the two took 324 s in turn and 226 s side by side, their lines the same.
+fn start_selfplay(bin: &Path, out: &Path) -> Result<Child> {
     fs::create_dir_all(out).with_context(|| format!("creating {}", out.display()))?;
     let games = SELFPLAY_GAMES.to_string();
-    let output = Process::new(bin)
+    Process::new(bin)
         .args(["selfplay", "--games", &games, "--seed", SELFPLAY_SEED, "--out"])
         .arg(out)
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .with_context(|| format!("running {} selfplay", bin.display()))
+}
+
+/// A self-play run's games, once it has finished, as the comparison reads them: seed, log, final hash
+/// and result (not the catalog version or the commit, which name the build).
+fn selfplay_games(bin: &Path, out: &Path, run: Child) -> Result<Vec<Value>> {
+    let output = run
+        .wait_with_output()
         .with_context(|| format!("running {} selfplay", bin.display()))?;
     if !output.status.success() {
         bail!(
@@ -834,6 +853,12 @@ fn read_refusal(error: anyhow::Error, ships_a_set: bool) -> Result<bool> {
     }
 }
 
+/// R2455000: whether the unforced games holding a divergence that touches no card, by seed, are
+/// enough for a rule every game meets.
+fn every_game(cardless: &BTreeSet<String>) -> bool {
+    cardless.len() >= RULE_MIN_GAMES
+}
+
 /// R1365000's stage 2 against the parent build, this binary being the head's.
 fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
     let mut checked = Checked::default();
@@ -867,16 +892,24 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
         match parent_check(parent, &traces) {
             Ok((_, report)) => {
                 let games = games_in(&traces)?;
+                let mut cardless = BTreeSet::new();
                 for divergence in divergences(&report) {
                     let Some(game) = games.get(&divergence.seed) else {
                         continue;
                     };
                     let touched = touched_by(&divergence, game, head)?;
                     if touched.is_empty() {
-                        checked.rule = true;
+                        cardless.insert(divergence.seed.clone());
                     }
                     checked.touched.extend(touched);
                 }
+                if !cardless.is_empty() {
+                    eprintln!(
+                        "classify: a divergence no card explains in {} of {UNFORCED_GAMES} unforced games ({RULE_MIN_GAMES} make a rule every game meets)",
+                        cardless.len()
+                    );
+                }
+                checked.rule = every_game(&cardless);
             }
             Err(error) => checked.rule |= read_refusal(error, !diff.sets.is_empty())?,
         }
@@ -891,10 +924,13 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
     if diff.ai && !cards_changed {
         let dir = temp_traces().with_extension("selfplay");
         let current = std::env::current_exe().context("this binary's path")?;
-        let ours = selfplay_games(&current, &dir.join("head"))?;
-        let theirs = selfplay_games(parent, &dir.join("base"))?;
+        let (head_out, base_out) = (dir.join("head"), dir.join("base"));
+        let ours = start_selfplay(&current, &head_out);
+        let theirs = start_selfplay(parent, &base_out);
+        let ours = ours.and_then(|run| selfplay_games(&current, &head_out, run));
+        let theirs = theirs.and_then(|run| selfplay_games(parent, &base_out, run));
         let _ = fs::remove_dir_all(&dir);
-        checked.ai = Some(ours != theirs);
+        checked.ai = Some(ours? != theirs?);
     }
     Ok(checked)
 }
@@ -1008,7 +1044,7 @@ fn print_classification(classification: &Classification) {
         }
     }
     if classification.rule {
-        println!("  a divergence no card explains: a rule every game meets");
+        println!("  divergences no card explains: a rule every game meets");
     }
 }
 
@@ -1051,8 +1087,12 @@ mod tests {
     }
 
     #[test]
-    fn r1365000_nine_families_are_a_micro_and_ten_a_patch() {
-        for (n, tier) in [(9, Tier::Micro), (PATCH_MIN_CARDS, Tier::Patch)] {
+    fn r1365000_r2455000_one_family_short_of_the_bar_is_a_micro_and_the_bar_a_patch() {
+        for (n, tier) in [
+            (10, Tier::Micro),
+            (PATCH_MIN_CARDS - 1, Tier::Micro),
+            (PATCH_MIN_CARDS, Tier::Patch),
+        ] {
             let diff = read_diff(
                 &side(cards(n, 1, "T."), SHIPPED),
                 &side(cards(n, 2, "T."), SHIPPED),
@@ -1591,6 +1631,31 @@ mod tests {
         assert!(!refuses_decks(&other));
         let handicap = anyhow::anyhow!("p2: handicap.manaCap must be a non-negative integer (R180)");
         assert!(!refuses_decks(&handicap));
+    }
+
+    // R2455000: divergences that touch no card are a rule every game meets only once they hold a
+    // quarter of the unforced games; fewer leave the change to the families its divergences name, so
+    // a narrow engine fix (v0.5.10's six families) is a micro.
+    #[test]
+    fn r2455000_a_rule_needs_a_quarter_of_the_unforced_games() {
+        let seeds = |n: usize| -> BTreeSet<String> { (1..=n).map(|seed| seed.to_string()).collect() };
+        assert_eq!(RULE_MIN_GAMES, 50);
+        assert!(!every_game(&seeds(1)));
+        assert!(!every_game(&seeds(RULE_MIN_GAMES - 1)));
+        assert!(every_game(&seeds(RULE_MIN_GAMES)));
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let diff = Diff {
+            play_code: true,
+            ..read_diff(&both, &both, &[])
+        };
+        let narrow = Checked {
+            touched: (1..=6).map(|k| format!("core-{k:03}")).collect(),
+            ..Checked::default()
+        };
+        let classified = classify(&diff, Some(&narrow));
+        assert_eq!((classified.tier, classified.rule), (Some(Tier::Micro), false));
+        let wide = Checked { rule: true, ..narrow };
+        assert_eq!(classify(&diff, Some(&wide)).tier, Some(Tier::Patch));
     }
 
     #[test]

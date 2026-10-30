@@ -82,9 +82,16 @@ impl Tier {
     }
 }
 
+/// `AI_TUTORIAL` without its Core-only bar (R2433000): the tier's resources. The frozen run deals both
+/// seats from every set, which a lesson's opponent never holds, so the bar would only re-deal it.
+const UNBARRED_AI_TUTORIAL: Handicap = Handicap {
+    core_only: None,
+    ..AI_TUTORIAL
+};
+
 fn tier_handicap(tier: Tier) -> Handicap {
     match tier {
-        Tier::Tutorial => AI_TUTORIAL,
+        Tier::Tutorial => UNBARRED_AI_TUTORIAL,
         Tier::Easy => AI_DIFFICULTY.easy,
     }
 }
@@ -315,7 +322,7 @@ mod r290_the_tutorial_tier_by_play {
                     .as_ref()
                     .and_then(|handicaps| handicaps.get(ai_seat))
                     .copied(),
-                Some(AI_TUTORIAL)
+                Some(UNBARRED_AI_TUTORIAL)
             );
             assert_eq!(deck_at(&tutorial, ai_seat).len(), AI_TUTORIAL.deck_size as usize);
             assert_eq!(
@@ -415,6 +422,7 @@ fn passive_lesson(n: i32) -> (GameState, i32) {
     let ai_seat = human.opponent();
     let mut handicaps = config.handicaps.clone().expect("a tutorial game is handicapped");
     *handicaps.slot(human) = Some(TUTORIAL_HUMAN);
+    *handicaps.slot(ai_seat) = Some(AI_TUTORIAL);
     let mut state = begin_game(&create_game(&CreateGameOptions {
         seed: config.seed.clone(),
         decks: config.decks.clone(),

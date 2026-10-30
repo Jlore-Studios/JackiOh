@@ -228,6 +228,7 @@ fn row(stats: &SweepStats, tier: &str, flags: &str) -> String {
         flags.to_string(),
         format!("{}/{}", stats.drawn_games, stats.games),
         stats.affordable_turns.to_string(),
+        stats.playable_turns.to_string(),
         stats.plays.to_string(),
         stats.errors.to_string(),
         stats.timeouts.to_string(),
@@ -239,8 +240,8 @@ fn row(stats: &SweepStats, tier: &str, flags: &str) -> String {
 }
 
 const TABLE_HEAD: [&str; 2] = [
-    "| id | name | tier | flags | drawn/games | affordable turns | plays | errors | timeouts | raw timeouts | mean eval delta |",
-    "|---|---|---|---|---|---|---|---|---|---|---|",
+    "| id | name | tier | flags | drawn/games | affordable turns | playable turns | plays | errors | timeouts | raw timeouts | mean eval delta |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|",
 ];
 
 fn timed<T>(label: &str, run: impl FnOnce() -> T, describe: impl FnOnce(&T) -> String) -> T {
@@ -1361,7 +1362,7 @@ mod tests {
         let line = row(&stats, "easy", "a|b");
         assert!(line.starts_with("| core-011 | "), "{line}");
         assert!(line.contains(" a\\|b "), "{line}");
-        assert!(line.ends_with(" | 5/8 | 4 | 0 | 0 | 0 | 0 | n/a |"), "{line}");
+        assert!(line.ends_with(" | 5/8 | 4 | 0 | 0 | 0 | 0 | 0 | n/a |"), "{line}");
     }
 
     #[test]
@@ -1373,23 +1374,41 @@ mod tests {
         }))
         .unwrap();
         let line = row(&stats, "easy", "timeout");
-        assert!(line.ends_with(" | 5/8 | 4 | 2 | 0 | 1 | 3 | n/a |"), "{line}");
+        assert!(line.ends_with(" | 5/8 | 4 | 0 | 2 | 0 | 1 | 3 | n/a |"), "{line}");
         assert!(TABLE_HEAD[0].contains("| errors | timeouts | raw timeouts |"));
+        let bars = line.matches('|').count();
+        assert!(TABLE_HEAD.iter().all(|head| head.matches('|').count() == bars));
+    }
+
+    #[test]
+    fn r2425000_a_row_shows_the_playable_turns_beside_the_affordable_turns() {
+        jackioh_cards::register_all();
+        let stats: SweepStats = serde_json::from_value(serde_json::json!({
+            "defId": "traininggrounds-025", "games": 8, "drawnGames": 4, "affordableTurns": 18,
+            "playableTurns": 5, "plays": 0, "errors": 0, "timeouts": 0, "evalDeltaSum": 0, "evalDeltaCount": 0
+        }))
+        .unwrap();
+        let line = row(&stats, "easy", "neverPlayed");
+        assert!(
+            line.ends_with(" | 4/8 | 18 | 5 | 0 | 0 | 0 | 0 | n/a |"),
+            "{line}"
+        );
+        assert!(TABLE_HEAD[0].contains("| affordable turns | playable turns | plays |"));
         let bars = line.matches('|').count();
         assert!(TABLE_HEAD.iter().all(|head| head.matches('|').count() == bars));
     }
 
     /// Pass-1 and pass-2 lines as the slices emit them: meditative-011 and -012 time out, core-001 and
     /// meditative-022 are at risk (pass 2 cleared meditative-022's deal but not its watch).
-    const FIXTURE_LINES: &str = r#"{"defId":"meditative-011","games":8,"drawnGames":7,"affordableTurns":7,"plays":2,"errors":0,"timeouts":3,"evalDeltaSum":3.6,"evalDeltaCount":2,"tier":"easy","flags":["timeout"],"unswept":false}
-{"defId":"meditative-011","games":8,"drawnGames":5,"affordableTurns":9,"plays":2,"errors":0,"timeouts":1,"evalDeltaSum":12.4,"evalDeltaCount":2,"tier":"hard","flags":["timeout"],"unswept":false}
-{"defId":"meditative-012","games":8,"drawnGames":5,"affordableTurns":1,"plays":5,"errors":0,"timeouts":11,"evalDeltaSum":80,"evalDeltaCount":5,"tier":"easy","flags":["timeout"],"unswept":false}
-{"defId":"meditative-012","games":8,"drawnGames":4,"affordableTurns":2,"plays":3,"errors":0,"timeouts":0,"evalDeltaSum":30,"evalDeltaCount":3,"tier":"hard","flags":[],"unswept":false}
-{"defId":"meditative-022","games":8,"drawnGames":6,"affordableTurns":12,"plays":1,"errors":0,"timeouts":0,"evalDeltaSum":-4.8,"evalDeltaCount":1,"tier":"easy","flags":[],"unswept":false}
-{"defId":"meditative-022","games":8,"drawnGames":3,"affordableTurns":2,"plays":2,"errors":0,"timeouts":0,"evalDeltaSum":4,"evalDeltaCount":2,"tier":"hard","flags":[],"unswept":false}
-{"defId":"core-001","games":8,"drawnGames":6,"affordableTurns":23,"plays":0,"errors":0,"timeouts":0,"evalDeltaSum":0,"evalDeltaCount":0,"tier":"easy","flags":["neverPlayed"],"unswept":false}
-{"defId":"core-001","games":8,"drawnGames":2,"affordableTurns":2,"plays":1,"errors":0,"timeouts":0,"evalDeltaSum":1.5,"evalDeltaCount":1,"tier":"hard","flags":[],"unswept":false}
-{"forced":"meditative-022","tier":"easy","games":24,"cards":[{"defId":"meditative-022","games":24,"drawnGames":18,"affordableTurns":30,"plays":12,"errors":0,"timeouts":0,"evalDeltaSum":24,"evalDeltaCount":12}],"suspects":[]}
+    const FIXTURE_LINES: &str = r#"{"defId":"meditative-011","games":8,"drawnGames":7,"affordableTurns":7,"playableTurns":7,"plays":2,"errors":0,"timeouts":3,"evalDeltaSum":3.6,"evalDeltaCount":2,"tier":"easy","flags":["timeout"],"unswept":false}
+{"defId":"meditative-011","games":8,"drawnGames":5,"affordableTurns":9,"playableTurns":9,"plays":2,"errors":0,"timeouts":1,"evalDeltaSum":12.4,"evalDeltaCount":2,"tier":"hard","flags":["timeout"],"unswept":false}
+{"defId":"meditative-012","games":8,"drawnGames":5,"affordableTurns":1,"playableTurns":1,"plays":5,"errors":0,"timeouts":11,"evalDeltaSum":80,"evalDeltaCount":5,"tier":"easy","flags":["timeout"],"unswept":false}
+{"defId":"meditative-012","games":8,"drawnGames":4,"affordableTurns":2,"playableTurns":2,"plays":3,"errors":0,"timeouts":0,"evalDeltaSum":30,"evalDeltaCount":3,"tier":"hard","flags":[],"unswept":false}
+{"defId":"meditative-022","games":8,"drawnGames":6,"affordableTurns":12,"playableTurns":12,"plays":1,"errors":0,"timeouts":0,"evalDeltaSum":-4.8,"evalDeltaCount":1,"tier":"easy","flags":[],"unswept":false}
+{"defId":"meditative-022","games":8,"drawnGames":3,"affordableTurns":2,"playableTurns":2,"plays":2,"errors":0,"timeouts":0,"evalDeltaSum":4,"evalDeltaCount":2,"tier":"hard","flags":[],"unswept":false}
+{"defId":"core-001","games":8,"drawnGames":6,"affordableTurns":23,"playableTurns":23,"plays":0,"errors":0,"timeouts":0,"evalDeltaSum":0,"evalDeltaCount":0,"tier":"easy","flags":["neverPlayed"],"unswept":false}
+{"defId":"core-001","games":8,"drawnGames":2,"affordableTurns":2,"playableTurns":2,"plays":1,"errors":0,"timeouts":0,"evalDeltaSum":1.5,"evalDeltaCount":1,"tier":"hard","flags":[],"unswept":false}
+{"forced":"meditative-022","tier":"easy","games":24,"cards":[{"defId":"meditative-022","games":24,"drawnGames":18,"affordableTurns":30,"playableTurns":30,"plays":12,"errors":0,"timeouts":0,"evalDeltaSum":24,"evalDeltaCount":12}],"suspects":[]}
 "#;
 
     const FIXTURE_REPORT: &str = "training/history/sweep-fixture.md";
@@ -1434,11 +1453,11 @@ mod tests {
             watch: vec![
                 pair(
                     "core-001",
-                    "at risk: easy: pass 1 affordable on 23 turns over 8 games, never played",
+                    "at risk: easy: pass 1 affordable on 23 turns and playable on 23 over 8 games, never played",
                 ),
                 pair(
                     "meditative-022",
-                    "at risk: easy: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change -4.8",
+                    "at risk: easy: pass 1 affordable on 12 turns and playable on 12 over 8 games, played 1 time(s), mean evaluate change -4.8",
                 ),
             ],
             cleared: Vec::new(),
@@ -1581,8 +1600,8 @@ mod tests {
         jackioh_cards::register_all();
         let record = fixture_record();
         let good = fixture_written();
-        let core_001 = "    (\n        \"core-001\",\n        \"at risk: easy: pass 1 affordable on 23 turns over 8 games, never played\",\n    ),\n";
-        let meditative_022 = "    (\n        \"meditative-022\",\n        \"at risk: easy: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change -4.8\",\n    ),\n";
+        let core_001 = "    (\n        \"core-001\",\n        \"at risk: easy: pass 1 affordable on 23 turns and playable on 23 over 8 games, never played\",\n    ),\n";
+        let meditative_022 = "    (\n        \"meditative-022\",\n        \"at risk: easy: pass 1 affordable on 12 turns and playable on 12 over 8 games, played 1 time(s), mean evaluate change -4.8\",\n    ),\n";
         assert!(good.contains(core_001) && good.contains(meditative_022));
         let diff = |file: &str| check_file(file, &record).unwrap_err().to_string();
 
