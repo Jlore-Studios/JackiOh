@@ -9626,6 +9626,13 @@
     "2489": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T13:28:42Z",
+        "difficulty": "medium",
+        "provider": "claude-5",
+        "tier": "strong",
+        "why": "Fails easy rule 3: the issue asks for the new tests to be listed in spec/rulings/R915005.md's proven_in (a spec note). It also changes about 15 files and adds two small CSS rules for the notes' layout."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
