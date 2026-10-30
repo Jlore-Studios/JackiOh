@@ -402,6 +402,9 @@ describe("R654 the almanac's card statistics block", SLOW_GRID, () => {
     render(<AlmanacRoute />);
     fireEvent.click(screen.getByTestId(poolCardId(unit.id)));
     const stats = await screen.findByTestId(INSPECT_STATS, undefined, SLOW);
+    // The block keeps its test id while the public aggregates load, so the first find resolves on
+    // the skeleton under load: wait for the read to land before asserting on its figures.
+    await waitFor(() => expect(screen.getByTestId(INSPECT_STATS)).toHaveTextContent("60%"), SLOW);
     expect(stats).toHaveTextContent("60%");
     // R661: the response still names its source, but the block never shows it.
     expect(stats.textContent).not.toContain("AI games + live games (provisional)");
