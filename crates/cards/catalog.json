@@ -21456,13 +21456,13 @@
       "attack": 2,
       "health": 3,
       "keywords": [],
-      "text": "\nWhenever this attacks, gain a random Stinkyscape Resource."
+      "text": "Whenever this attacks, gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 4,
       "health": 6,
       "keywords": [],
-      "text": "\nWhenever this attacks, gain a random Radiant Stinkyscape Resource."
+      "text": "Whenever this attacks, gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-076": {
@@ -21551,13 +21551,13 @@
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "\nCry: Equip a random Miner into this."
+      "text": "Cry: Equip a random Miner into this."
     },
     "radiant": {
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "\nCry: Equip a random Radiant Miner into this, twice."
+      "text": "Cry: Equip a random Radiant Miner into this, twice."
     }
   },
   "stinkyscape-079": {
@@ -21651,13 +21651,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "\nCry: Discover 2 Rare Weapons and Equip them into this."
+      "text": "Cry: Discover 2 Rare Weapons and Equip them into this."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "\nCry: Discover 2 Epic Weapons and Equip them into this."
+      "text": "Cry: Discover 2 Epic Weapons and Equip them into this."
     }
   },
   "stinkyscape-082": {
@@ -21711,13 +21711,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "\nCry: Discover 3 Rare Weapons and Equip them into this."
+      "text": "Cry: Discover 3 Rare Weapons and Equip them into this."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "\nCry: Discover 3 Epic Weapons and Equip them into this."
+      "text": "Cry: Discover 3 Epic Weapons and Equip them into this."
     }
   },
   "stinkyscape-084": {
@@ -24945,13 +24945,6 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 0,
-    "refs": [
-      "stinkyscape-095",
-      "stinkyscape-159",
-      "stinkyscape-160",
-      "stinkyscape-161",
-      "stinkyscape-162"
-    ],
     "loc": 41,
     "base": {
       "keywords": [],

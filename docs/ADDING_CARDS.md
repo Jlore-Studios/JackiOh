@@ -34,7 +34,7 @@ The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch
 before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `catalog.rs`'s rows,
 `RARITY_COUNTS` and `SET_SIZES`, and the tools' `sets()` and tag counts.
 
-Also grep the Markdown for the stated totals (`632 cards`, `139 tokens`, `771`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
+Also grep the Markdown for the stated totals (`634 cards`, `140 tokens`, `774`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
 **A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; and the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; no set is held now) differs in five places, the Training Grounds paths below standing for any held set's:
