@@ -12,6 +12,8 @@
 //! on each Unit beside the target, read before the first hit, and Pierce is `ignoreArmor` (R346). Once
 //! a turn (R384), with an extra turn cooldown (R1841000). The number is the declared `damage` (R386),
 //! read through `param`.
+//! Through v0.5.11 the enemy hero was a target too, its hit halved (R1841001), which `script_v0_5_11`
+//! keeps (R767000).
 
 use jackioh_engine::effects::{
     BoardScope, DamageEffectArgs, DamageFlagArgs, TargetSpec, adjacent_to_aimed, damage,
@@ -66,6 +68,65 @@ fn beam() -> ActivationDecl {
 pub fn script() -> CardScripts {
     let base = Script {
         activations: vec![beam()],
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: the chosen enemy's hit, then the same hit on each Unit beside it, read before the first,
+/// as v0.5.11 ran it: the enemy hero a target too, its hit halved, rounded down (R1841001).
+fn shot_v0_5_11(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    let amount = param(ctx, "damage");
+    let hit = |to: TargetSpec| {
+        damage(DamageEffectArgs {
+            to,
+            amount,
+            flags: DamageFlagArgs {
+                ignore_armor: Some(true),
+                half_to_heroes: Some(true),
+                ..DamageFlagArgs::default()
+            },
+        })
+    };
+    let chosen = TargetSpec::Chosen { index: None };
+    let beside = adjacent_to_aimed(ctx, &chosen, &BoardScope::default(), TargetAim::Harm);
+    let mut hits = vec![hit(chosen)];
+    hits.extend(
+        beside
+            .into_iter()
+            .map(|unit| hit(TargetSpec::Instance { instance_id: unit.id })),
+    );
+    hits
+}
+
+/// R767000: the Activate as v0.5.11 ran it, aimed at an enemy Unit or the enemy hero.
+fn beam_v0_5_11() -> ActivationDecl {
+    ActivationDecl {
+        id: "beam".into(),
+        label: "Deal damage to an enemy, with Cleave and Pierce".into(),
+        uses: ActivationUses::Count(1),
+        cost: Some(ActivationCost {
+            extra_turn_cooldown: Some(true),
+            ..ActivationCost::default()
+        }),
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "enemy", "of": ["unit", "hero"] }),
+        )],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| shot_v0_5_11(ctx)),
+    }
+}
+
+/// R767000: through v0.5.11 its Activate could aim at the enemy hero, for half; `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
+    let base = Script {
+        activations: vec![beam_v0_5_11()],
         ..Script::default()
     };
     let radiant = base.clone();
@@ -159,6 +220,19 @@ mod tests {
 
     mod base {
         use super::*;
+
+        /// R767000: the script kept for the replays of v0.5.11 and before may aim at the enemy hero,
+        /// whose hit is halved, rounded down, with no Cleave off it (R1841001).
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11_halves_its_hit_on_the_enemy_hero() {
+            crate::under_kept(ID, script_v0_5_11(), || {
+                let halved = DAMAGE / HALF_DAMAGE_TO_HEROES_DIVISOR;
+                let mut s = beam_on(false, json!({}), json!({ "field": [MENACE, VANILLA] }));
+                s.activate(ID, at_hero());
+                assert_eq!(hits(s.last_events()), vec![("hero-p2".to_string(), halved)]);
+                s.expect_health(P2, HERO_HEALTH - halved);
+            });
+        }
 
         #[test]
         fn r1862000_hits_the_chosen_unit_and_each_unit_beside_it_through_armor() {

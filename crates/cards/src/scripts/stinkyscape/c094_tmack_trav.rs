@@ -10,7 +10,7 @@
 //! defending (no `afterAttack` of its own) give nothing. The fresh exertion keeps its summoning sickness
 //! (`keepSick`, R2521002), unlike the Golem's: on its summon turn Rush lets it attack again a Unit only,
 //! the hero neither offered nor allowed (§6.1); on a later turn the extra attack may hit the hero.
-//! Through v0.5.10 the kill lifted its sickness, which `script_v0_5_10` keeps (R767000).
+//! Through v0.5.11 the kill lifted its sickness, which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -52,9 +52,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.10 its kill lifted its summoning sickness, so its summon turn's extra attack
+/// R767000: through v0.5.11 its kill lifted its summoning sickness, so its summon turn's extra attack
 /// could hit the hero; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_10() -> CardScripts {
+pub fn script_v0_5_11() -> CardScripts {
     let base = tmack(false);
     CardScripts {
         radiant: base.clone(),
@@ -68,7 +68,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use super::{ID, script_v0_5_10};
+    use super::{ID, script_v0_5_11};
 
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
     const VANILLA: &str = "core-008"; // (1) 4/4.
@@ -175,10 +175,10 @@ mod tests {
             s.expect_health(P2, HERO_HEALTH - 9);
         }
 
-        /// R767000: the script kept for the replays of v0.5.10 and before, whose kill lifted the sickness.
+        /// R767000: the script kept for the replays of v0.5.11 and before, whose kill lifted the sickness.
         #[test]
-        fn r767000_a_game_on_v0_5_10_lets_its_summon_turn_kill_free_it_to_hit_the_hero() {
-            crate::under_kept(ID, script_v0_5_10(), || {
+        fn r767000_a_game_on_v0_5_11_lets_its_summon_turn_kill_free_it_to_hit_the_hero() {
+            crate::under_kept(ID, script_v0_5_11(), || {
                 let mut s = in_hand(false);
                 s.play(ID, json!({ "zone": 1 }));
                 let tmack = s.unit_at(P1, 1);

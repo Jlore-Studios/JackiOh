@@ -6,7 +6,8 @@
 //! and a Spell's sweep passes it by, its damage and its destroys alike, its Divine Shield kept; a Unit's
 //! or a Trap's lands. Tribute 2 is its play's cost (§6.3, `StaticFlags.tribute`, R101). Since #2521 it
 //! prints Immune to Spells in place of its Immune to Spell Damage flag (R1849000) and is no Starship
-//! Piece, so its death fuses nothing. Radiant: Pierce, the same keywords.
+//! Piece, so its death fuses nothing. Radiant: Pierce, the same keywords. Through v0.5.11 it carried
+//! the flag, which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -30,10 +31,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.10 it printed no Immune to Spells and carried Immune to Spell Damage as a flag
-/// (R1849000: a Spell's hit on it was no damage instance; a Spell's destroy still reached it), which
-/// the replays of those versions fold under once `KEPT_SCRIPTS` names this.
-pub fn script_v0_5_10() -> CardScripts {
+/// R767000: through v0.5.11 it printed no Immune to Spells and carried Immune to Spell Damage as a flag
+/// (R1849000: a Spell's hit on it was no damage instance; a Spell's destroy still reached it);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
             tribute: Some(TRIBUTE_COST),
@@ -171,14 +172,14 @@ mod tests {
         }
 
         #[test]
-        fn the_script_kept_for_v0_5_10_spares_it_a_spells_damage_by_its_flag() {
-            // As v0.5.10 printed it: no Immune to Spells, the flag alone (R1849000).
+        fn r767000_the_script_kept_for_v0_5_11_spares_it_a_spells_damage_by_its_flag() {
+            // As v0.5.11 printed it: no Immune to Spells, the flag alone (R1849000).
             let old = |def: &mut CardDef| {
                 for face in [&mut def.base, &mut def.radiant] {
                     face.keywords.retain(|keyword| keyword.kind() != KeywordKind::ImmuneToSpells);
                 }
             };
-            crate::under_kept_as(ID, super::super::script_v0_5_10(), old, || {
+            crate::under_kept_as(ID, super::super::script_v0_5_11(), old, || {
                 let mut s = on_the_field(false, json!([POWDER_SPRAY]));
                 let paragon = s.unit_at(P1, 1);
                 assert!(!immune_to_spells(s.state(), &paragon));

@@ -13,7 +13,9 @@
 //! either is sworn to; a card of no faction never goes; the piles are read once the Faction card is
 //! added, so it and every card of the chosen faction stay. The field, its caster's graveyard and the
 //! opponent's piles are not read (the opponent's untouched as in R1880001, its "wherever it is" narrowed
-//! to the hand and deck by R2521004). "Golden" is Golden Accord (ST8). Declares no numbers.
+//! to the hand and deck by R2521004). "Golden" is Golden Accord (ST8). Declares no numbers. Through
+//! v0.5.11 it exiled only the four other Faction cards, from its caster's library, hand and graveyard,
+//! which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -114,6 +116,57 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: swear_loyalities(false),
         radiant: swear_loyalities(true),
+    }
+}
+
+/// R767000: each mode's word and the Faction card it adds, the only cards v0.5.11's script exiled.
+const BUNDLES_V0_5_11: [(&str, &str); 5] = [
+    ("Vanguard Coalition", "stinkyscape-095"),
+    ("ETHICS", "stinkyscape-159"),
+    ("Golden Accord", "stinkyscape-160"),
+    ("Pegasus", "stinkyscape-161"),
+    ("Star-jumper Core", "stinkyscape-162"),
+];
+
+/// R767000: "Wherever it is" as v0.5.11 read it: its caster's piles, in Genn's Greed's order (R135).
+const ZONES_V0_5_11: [OffFieldZone; 3] = [OffFieldZone::Library, OffFieldZone::Hand, OffFieldZone::Graveyard];
+
+/// R767000: Swear Loyalities as v0.5.11 ran it: the chosen bundle added, then every card its caster
+/// owns of the four others exiled from its library, hand and graveyard (R1880001).
+fn swear_loyalities_v0_5_11(radiant: bool) -> Script {
+    Script {
+        modes: vec![ModeDecl {
+            kind: PromptKind::Mode,
+            options: BUNDLES_V0_5_11.iter().map(|(mode, _)| mode.to_string()).collect(),
+        }],
+        cry: Some(hook(move |ctx| {
+            let chosen = chosen_options(ctx);
+            let picked = |(mode, _): &&(&str, &str)| chosen.first().is_some_and(|option| option == mode);
+            let Some((_, kept)) = BUNDLES_V0_5_11.iter().find(picked) else {
+                return vec![];
+            };
+            let mut effects = vec![add_to_hand(json_as(json!({ "defId": kept, "radiant": radiant })))];
+            for zone in ZONES_V0_5_11 {
+                for card in zone_cards(&*ctx.state, ctx.controller, zone) {
+                    let bundle = BUNDLES_V0_5_11.iter().any(|(_, def_id)| card.def_id == *def_id);
+                    if card.def_id != *kept && bundle {
+                        let target = json!({ "of": "instance", "instanceId": card.id });
+                        effects.push(exile(json_as(json!({ "target": target }))));
+                    }
+                }
+            }
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+/// R767000: through v0.5.11 it exiled the other four Faction cards alone, its caster's graveyard's
+/// too; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
+    CardScripts {
+        base: swear_loyalities_v0_5_11(false),
+        radiant: swear_loyalities_v0_5_11(true),
     }
 }
 
@@ -265,6 +318,30 @@ mod tests {
         #[test]
         fn r1880001_r2521004_the_field_the_graveyard_and_the_opponents_cards_stay() {
             leaves_the_field_the_graveyard_and_the_opponent(false);
+        }
+
+        /// R767000: the script kept for the replays of v0.5.11 and before exiled the other four Faction
+        /// cards alone, from its caster's library, hand and graveyard in that order: Scornboi and
+        /// xxFreshJack stay.
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11_exiles_the_other_faction_cards_alone_the_graveyard_too() {
+            crate::under_kept(SWEAR, super::super::script_v0_5_11(), || {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": {
+                        "hand": [SWEAR, FILLER, SCORNBOI, VANGUARD],
+                        "library": [ETHICS, FRESH_JACK],
+                        "graveyard": [PEGASUS],
+                    },
+                    "p2": { "hand": [FILLER] },
+                }));
+
+                s.play(SWEAR, json!({ "modes": ["Golden Accord"] }));
+
+                assert_eq!(def_ids(&s.pile(P1, "hand")), [FILLER, SCORNBOI, GOLDEN_ACCORD]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), [FRESH_JACK]);
+                assert_eq!(def_ids(&s.pile(P1, "exile")), [ETHICS, VANGUARD, PEGASUS]);
+            });
         }
 
         /// §2.4: a full hand burns the Faction card, which stays in the graveyard, and the library is

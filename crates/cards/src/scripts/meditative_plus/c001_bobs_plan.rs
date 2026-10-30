@@ -20,7 +20,8 @@
 //! Quickdraw (R640) is a static flag beside the tag.
 //!
 //! `script_v0_4_0f` keeps the card as it ran through v0.4.0f, Spa Day M #20's only plan, for its
-//! replays (R767000).
+//! replays, and `script_v0_5_11` as it ran through v0.5.11, Alteran Reach added with no plan, for
+//! theirs (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -41,15 +42,33 @@ pub const WINCON_PLANS: &[(&str, &[&str])] = &[
     ),
 ];
 
+/// A table of Wincon cards and their plans, as `WINCON_PLANS`.
+type Plans = &'static [(&'static str, &'static [&'static str])];
+
+/// R767000: `WINCON_PLANS` through v0.5.11, before S #148 Alteran Reach had its Star Chart (R2521008),
+/// so it was added alone.
+const WINCON_PLANS_V0_5_11: Plans = &[
+    ("meditative-008", &["meditativeplus-001-1"]),
+    (
+        "meditative-020",
+        &["meditativeplus-001-2", "meditativeplus-001-3", "meditativeplus-001-4"],
+    ),
+];
+
 /// The step a Discovered plan's answer re-enters.
 const PLAN: &str = "plan";
 
-/// The plans `WINCON_PLANS` names for a card; none for a card it does not name.
-pub fn plans_of(def_id: &str) -> &'static [&'static str] {
-    WINCON_PLANS
+/// The plans `table` names for a card; none for a card it does not name.
+fn plans_in(table: Plans, def_id: &str) -> &'static [&'static str] {
+    table
         .iter()
         .find(|(wincon, _)| *wincon == def_id)
         .map_or(&[], |(_, plans)| *plans)
+}
+
+/// The plans `WINCON_PLANS` names for a card; none for a card it does not name.
+pub fn plans_of(def_id: &str) -> &'static [&'static str] {
+    plans_in(WINCON_PLANS, def_id)
 }
 
 /// The Wincon card, from the pool by the match rng (R380, R60, R673).
@@ -58,7 +77,8 @@ fn picked_wincon(ctx: &mut EffectContext<'_>) -> Option<String> {
     pick_generated(&mut *ctx.sink.rng, &pool, Some(&*ctx.sink.state)).map(|def| def.id.clone())
 }
 
-fn bobs_plan(radiant: bool) -> Script {
+/// `table`: `WINCON_PLANS`, or the one a kept script ran (R767000).
+fn bobs_plan(radiant: bool, table: Plans) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
@@ -69,7 +89,7 @@ fn bobs_plan(radiant: bool) -> Script {
                 return vec![];
             };
             let mut out = vec![add_to_hand(json_as(json!({ "defId": picked, "radiant": radiant })))];
-            match plans_of(&picked) {
+            match plans_in(table, &picked) {
                 [] => {}
                 [plan] => out.push(add_to_hand(json_as(json!({ "defId": plan, "radiant": radiant })))),
                 plans => out.push(discover_from_catalog(json_as(json!({
@@ -97,8 +117,17 @@ fn bobs_plan(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: bobs_plan(false),
-        radiant: bobs_plan(true),
+        base: bobs_plan(false, WINCON_PLANS),
+        radiant: bobs_plan(true, WINCON_PLANS),
+    }
+}
+
+/// R767000: Bob's Plan through v0.5.11, whose Alteran Reach came with no Star Chart (R2521008);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
+    CardScripts {
+        base: bobs_plan(false, WINCON_PLANS_V0_5_11),
+        radiant: bobs_plan(true, WINCON_PLANS_V0_5_11),
     }
 }
 
@@ -288,6 +317,18 @@ mod tests {
             let cards = added(&s);
             assert_eq!(def_ids(&cards), vec![ALTERAN_REACH, STAR_CHART]);
             assert!(cards.iter().all(|card| !card.radiant), "the base face adds them base");
+        }
+
+        /// R767000: the script kept for the replays of v0.5.11 and before adds Alteran Reach alone.
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11_adds_alteran_reach_with_no_star_chart() {
+            assert!(plans_in(WINCON_PLANS_V0_5_11, ALTERAN_REACH).is_empty());
+            crate::under_kept(ID, script_v0_5_11(), || {
+                let mut s = casting_for(ALTERAN_REACH, false, 1);
+                s.play(ID, json!({}));
+                assert!(s.state().pending.is_none());
+                assert_eq!(def_ids(&added(&s)), vec![ALTERAN_REACH]);
+            });
         }
 
         #[test]

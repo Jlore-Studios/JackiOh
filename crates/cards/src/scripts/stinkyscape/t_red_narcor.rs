@@ -10,7 +10,7 @@
 //! caster's library, a full hand burning the overflow and an empty library dealing fatigue (§2.4, R4).
 //! Both numbers are declared on each face (`mana` 2/4, `draw` 1/2) and read as it resolves (R386).
 //! Issue #2521 replaced its old random Legendary-or-Mythic add (at a discount, Radiant at a set cost)
-//! with this text.
+//! with this text; `script_v0_5_11` keeps the old add for the replays of v0.5.11 and before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -32,6 +32,35 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: face(),
         radiant: face(),
+    }
+}
+
+/// R767000: a face as v0.5.11 ran it: a random non-token Legendary or Mythic card added, at a `costMod`
+/// of −`discount` on the base face (never below (0), §2.3) and a `costOverride` of `setCost` on the
+/// Radiant one, Radiant, each number declared on its own face (R1431, R824000).
+fn face_v0_5_11(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let mut args = json!({ "query": { "rarity": ["Legendary", "Mythic"] } });
+            if radiant {
+                args["radiant"] = json!(true);
+                args["costOverride"] = json!(param(&*ctx, "setCost"));
+            } else {
+                args["costMod"] = json!(-param(&*ctx, "discount"));
+            }
+            vec![add_random_from_catalog(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+/// R767000: through v0.5.11 it added a random Legendary or Mythic card at a discount, Radiant at a set
+/// cost; `KEPT_SCRIPTS` folds those replays under it, the definitions they carry declaring `discount`
+/// and `setCost`.
+pub fn script_v0_5_11() -> CardScripts {
+    CardScripts {
+        base: face_v0_5_11(false),
+        radiant: face_v0_5_11(true),
     }
 }
 
@@ -114,6 +143,49 @@ mod tests {
         set_param(s.card_mut(id.as_str()), "draw", 3);
         play_resource(&mut s, P1, ID, Value::Null);
         assert_eq!(drawn(&s), ["core-008", "core-019", "core-025"]);
+    }
+
+    /// R767000: the script kept for the replays of v0.5.11 and before, under that version's declared
+    /// `discount`, added a random non-token Legendary or Mythic card at (2) less, never below (0), and
+    /// drew nothing.
+    #[test]
+    fn r767000_the_script_kept_for_v0_5_11_adds_a_legendary_or_mythic_at_its_discount() {
+        // v0.5.11's numbers, each declared on its own face (R1431, R824000), which the replay carries.
+        const DISCOUNT: i32 = 2;
+        let old = |def: &mut CardDef| {
+            let declared: Vec<Param> = serde_json::from_value(json!([
+                {
+                    "key": "discount", "base": DISCOUNT, "radiant": DISCOUNT, "better": "up", "step": 1,
+                    "min": 1, "tunedOn": "base"
+                },
+                {
+                    "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0,
+                    "tunedOn": "radiant"
+                }
+            ]))
+            .expect("v0.5.11's numbers");
+            def.params.get_or_insert_with(Vec::new).extend(declared);
+        };
+        crate::under_kept_as(ID, super::script_v0_5_11(), old, || {
+            let s = played(false);
+            let hand = s.hand(P1);
+            assert_eq!(hand.len(), 2, "one card added, none drawn");
+            let card = &hand[1];
+            let def = card_def(&card.def_id);
+            assert!(
+                matches!(def.rarity, Rarity::Legendary | Rarity::Mythic),
+                "{} is Legendary or Mythic",
+                def.id
+            );
+            assert!(!def.token, "{} is no token", def.id);
+            let printed = printed_cost(s.state(), card);
+            assert_eq!(
+                cost_now(s.state(), card),
+                (printed - DISCOUNT).max(0),
+                "{}",
+                card.def_id
+            );
+        });
     }
 
     mod radiant {

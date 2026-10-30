@@ -10,6 +10,8 @@
 //! hero is no legal target, and the old "deals half damage to heroes" is gone. Pierce is `ignoreArmor`
 //! (R346). Activate 4 is four uses a turn (R384, R1857003), each hit its own state check. The number
 //! is the declared `damage` (R386), read through `param`.
+//! Through v0.5.11 it had Activate 6 and the enemy hero was a target too, its hit halved
+//! (R1841001), which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::effects::{DamageEffectArgs, DamageFlagArgs, TargetSpec, damage};
 use jackioh_engine::prelude::*;
@@ -18,6 +20,9 @@ pub const ID: &str = "stinkyscape-059";
 
 /// Activate 4 (R1857003): four uses a turn.
 const USES: i32 = 4;
+
+/// R767000: Activate 6 (R1857003): the six uses a turn it had through v0.5.11.
+const USES_V0_5_11: i32 = 6;
 
 /// R1862000: the chosen enemy Unit's hit, through Armor.
 fn shot(ctx: &EffectContext<'_>) -> Vec<Effect> {
@@ -49,6 +54,51 @@ fn repeater() -> ActivationDecl {
 pub fn script() -> CardScripts {
     let base = Script {
         activations: vec![repeater()],
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: the chosen enemy's hit, through Armor, as v0.5.11 ran it: the enemy hero a target too,
+/// its hit halved, rounded down (R1841001).
+fn shot_v0_5_11(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    vec![damage(DamageEffectArgs {
+        to: TargetSpec::Chosen { index: None },
+        amount: param(ctx, "damage"),
+        flags: DamageFlagArgs {
+            ignore_armor: Some(true),
+            half_to_heroes: Some(true),
+            ..DamageFlagArgs::default()
+        },
+    })]
+}
+
+/// R767000: the Activate as v0.5.11 ran it, `USES_V0_5_11` a turn, aimed at an enemy Unit or the
+/// enemy hero.
+fn repeater_v0_5_11() -> ActivationDecl {
+    ActivationDecl {
+        id: "repeater".into(),
+        label: "Deal damage to an enemy, with Pierce".into(),
+        uses: ActivationUses::Count(USES_V0_5_11),
+        cost: None,
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "enemy", "of": ["unit", "hero"] }),
+        )],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| shot_v0_5_11(ctx)),
+    }
+}
+
+/// R767000: through v0.5.11 its Activate could aim at the enemy hero, for half, `USES_V0_5_11` times
+/// a turn; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
+    let base = Script {
+        activations: vec![repeater_v0_5_11()],
         ..Script::default()
     };
     let radiant = base.clone();
@@ -193,6 +243,23 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        /// R767000: the script kept for the replays of v0.5.11 and before may aim at the enemy hero,
+        /// whose hit is halved, rounded down (R1841001), `USES_V0_5_11` times a turn; the next is
+        /// refused.
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11_hits_the_enemy_hero_for_half_its_old_uses_a_turn() {
+            crate::under_kept(ID, script_v0_5_11(), || {
+                let halved = RADIANT_DAMAGE / HALF_DAMAGE_TO_HEROES_DIVISOR;
+                let mut s = repeater_on(true, json!({ "field": [VANILLA] }));
+                for _ in 0..USES_V0_5_11 {
+                    s.activate(ID, at_hero());
+                    assert_eq!(hits(s.last_events()), vec![("hero-p2".to_string(), halved)]);
+                }
+                s.expect_health(P2, HERO_HEALTH - USES_V0_5_11 * halved);
+                s.expect_refused(|s| s.activate(ID, at_hero()));
+            });
+        }
 
         #[test]
         fn r1862000_hits_the_chosen_enemy_unit_through_armor_twice_as_hard() {

@@ -16,6 +16,8 @@
 //! Lucky now plus its controller's Luck, as S #145 Fortify Flesh reads it (R1438, R987): the Radiant
 //! face prints Lucky 1, so each target rolls twice and takes the higher. Once a turn (R384). Both ends
 //! are declared numbers (R386), read through `param`.
+//! Through v0.5.11 it dealt its declared `damage` to all enemies, no roll, which `script_v0_5_11`
+//! keeps (R767000).
 
 use jackioh_engine::effects::{DamageOdds, damage_all};
 use jackioh_engine::prelude::*;
@@ -74,6 +76,40 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     // The same script: the Radiant face's range and its printed Lucky 1 are its catalog data.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: "deal `amount` damage to all enemies" as v0.5.11 ran it: its declared `damage`, no roll.
+fn round_v0_5_11(amount: i32) -> Vec<Effect> {
+    vec![damage_all(json_as(
+        json!({ "amount": amount, "side": "enemy", "heroes": true }),
+    ))]
+}
+
+/// R767000: the Activate as v0.5.11 ran it.
+fn flak_v0_5_11() -> ActivationDecl {
+    ActivationDecl {
+        id: "flak".into(),
+        label: "Deal damage to all enemies".into(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| round_v0_5_11(param(&*ctx, "damage"))),
+    }
+}
+
+/// R767000: through v0.5.11 its Activate dealt its declared `damage` to all enemies, with no roll and
+/// no Lucky; `KEPT_SCRIPTS` folds those replays under it, the definitions they carry declaring
+/// `damage`.
+pub fn script_v0_5_11() -> CardScripts {
+    let base = Script {
+        activations: vec![flak_v0_5_11()],
+        ..Script::default()
+    };
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -190,6 +226,32 @@ mod tests {
 
     mod base {
         use super::*;
+
+        /// R767000: the script kept for the replays of v0.5.11 and before, under that version's declared
+        /// `damage`, dealt it to each enemy Unit and then the enemy hero, round after round, rolling
+        /// nothing.
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11_deals_its_declared_damage_and_rolls_nothing() {
+            // v0.5.11's number, which its definition declared and the replay carries.
+            const DAMAGE: i32 = 2;
+            let old = |def: &mut CardDef| {
+                let declared: Vec<Param> = serde_json::from_value(json!([{
+                    "key": "damage", "base": DAMAGE, "radiant": 4, "better": "up", "step": 1, "min": 1
+                }]))
+                .expect("v0.5.11's damage");
+                def.params.get_or_insert_with(Vec::new).extend(declared);
+            };
+            crate::under_kept_as(ID, script_v0_5_11(), old, || {
+                let mut s = flak_on(false, "s053-kept", json!({ "field": [wall()] }));
+                let target = s.unit_at(P2, 1).id;
+                let cursor = s.state().rng_cursor;
+                s.activate(ID, json!({}));
+                let round = [(target, DAMAGE), ("hero-p2".to_string(), DAMAGE)];
+                let expected: Vec<(String, i32)> = (0..ROUNDS).flat_map(|_| round.clone()).collect();
+                assert_eq!(hits(s.last_events()), expected);
+                assert_eq!(s.state().rng_cursor, cursor, "no roll drawn");
+            });
+        }
 
         #[test]
         fn r1862001_r2521001_each_enemy_unit_then_the_hero_takes_its_own_1_to_3() {

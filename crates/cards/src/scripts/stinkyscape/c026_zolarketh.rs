@@ -15,8 +15,8 @@
 //! one included (`run_activation`, R1876001). "At most once each turn": each run spends one of the
 //! University's own uses and a University with none left this turn is passed by (`spendUse`, R2521003),
 //! so one that used its own Activate, or that another ZolarKeth ran, runs no more this turn. The Radiant
-//! face does both in order, the piece Radiant. Through v0.5.10 its Cry summoned a Radiant University and
-//! its runs spent no use, which `script_v0_5_10` keeps (R767000).
+//! face does both in order, the piece Radiant. Through v0.5.11 its Cry summoned a Radiant University and
+//! its runs spent no use, which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -114,11 +114,11 @@ fn ability(radiant: bool, current: bool) -> ActivationDecl {
     }
 }
 
-/// `current`: issue #2521's text (R2521003); `false` builds the scripts v0.5.10 ran.
+/// `current`: issue #2521's text (R2521003); `false` builds the scripts v0.5.11 ran.
 fn zolarketh(radiant: bool, current: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
-            // R2521003: the University is summoned on its base face from either face; through v0.5.10 on
+            // R2521003: the University is summoned on its base face from either face; through v0.5.11 on
             // its Radiant face.
             let university = if current {
                 json!({ "defId": UNIVERSITY })
@@ -150,9 +150,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.10 its Cry summoned a Radiant University and "Activate your Universities"
+/// R767000: through v0.5.11 its Cry summoned a Radiant University and "Activate your Universities"
 /// spent none of their uses (R1876001); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_10() -> CardScripts {
+pub fn script_v0_5_11() -> CardScripts {
     CardScripts {
         base: zolarketh(false, false),
         radiant: zolarketh(true, false),
@@ -173,7 +173,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use super::{ID, PIECE, UNIVERSITIES, UNIVERSITY, script_v0_5_10};
+    use super::{ID, PIECE, UNIVERSITIES, UNIVERSITY, script_v0_5_11};
     use crate::{filler, scenario};
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
@@ -345,11 +345,11 @@ mod tests {
         assert_eq!(buffs(&s, &pieces[0]), BASE_TIMES);
     }
 
-    /// R767000: the script kept for the replays of v0.5.10 and before: a Radiant University, and runs
+    /// R767000: the script kept for the replays of v0.5.11 and before: a Radiant University, and runs
     /// that spend no use.
     #[test]
-    fn r767000_a_game_on_v0_5_10_summons_a_radiant_university_and_spends_no_use() {
-        crate::under_kept(ID, script_v0_5_10(), || {
+    fn r767000_a_game_on_v0_5_11_summons_a_radiant_university_and_spends_no_use() {
+        crate::under_kept(ID, script_v0_5_11(), || {
             let mut s = board(false, json!([{ "def": VANILLA, "lane": 5 }]));
             s.play(ID, json!({ "zone": 1 }));
             assert!(university(&s).radiant);

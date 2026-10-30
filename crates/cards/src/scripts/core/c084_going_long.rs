@@ -10,6 +10,7 @@
 //! flag, #73's shape: the pipeline sums every backrow grant (R124: sources add, unlike step 3's cap),
 //! and §4.4 step 2, lethal, the scorer and §10.8's hero block all read that one function. Nothing is
 //! stored, so the Armor stops when the Field Spell leaves, and "Ignores armor" skips step 2 whole.
+//! Through v0.5.11 it was Quickdraw, which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -34,6 +35,27 @@ pub fn script() -> CardScripts {
     // "Armor 4 (Embiggened (4): 8)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
     let radiant = going_long();
     CardScripts { base, radiant }
+}
+
+/// R767000: Going Long through v0.5.11, with §6.2's Quickdraw flag beside the `heroArmor` one.
+fn going_long_v0_5_11() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            hero_armor: Some(FlagOrCount::Flag(true)),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    }
+}
+
+/// R767000: through v0.5.11 it was Quickdraw, setup dealing it into the opening hand (R640);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
+    CardScripts {
+        base: going_long_v0_5_11(),
+        radiant: going_long_v0_5_11(),
+    }
 }
 
 // #84 Going Long (SPEC §8.4 row 84). BUILD M4-T4: "Not dealt into the opening hand by setup (#2521 took its
@@ -161,6 +183,16 @@ mod tests {
             // A Quickdraw card is dealt on every seed; this one stays in the library on some.
             let seed = seed_where("going-long-no-quickdraw", |seed| !in_opening_hand(seed));
             assert!(!in_opening_hand(&seed));
+        }
+
+        /// R767000: the script kept for the replays of v0.5.11 and before is Quickdraw on both faces.
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11_is_quickdraw() {
+            let kept = script_v0_5_11();
+            for face in [&kept.base, &kept.radiant] {
+                assert_eq!(face.flags().quickdraw, Some(true));
+                assert!(face.flags().hero_armor.is_some());
+            }
         }
     }
 

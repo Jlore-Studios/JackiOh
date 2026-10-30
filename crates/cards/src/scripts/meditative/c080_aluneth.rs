@@ -18,7 +18,8 @@
 //! v0.3.13, #1194); a card cast on draw, a burned card and a fatigue draw get nothing. #2521 took its
 //! Quickdraw tag away, and with it the `quickdraw` static flag `setup.rs` reads (R640), so setup deals it
 //! as any other card. `script_v0_3_7b` keeps the undiscounted draw, and the Quickdraw it had then, for
-//! the replays of v0.3.7b and before (R767000).
+//! the replays of v0.3.7b and before, and `script_v0_5_11` the discounted draw with its Quickdraw for
+//! those of v0.5.11 and before (R767000).
 
 use jackioh_engine::effects::{draw, draw_priced, exile};
 use jackioh_engine::prelude::*;
@@ -42,8 +43,8 @@ fn draws_v0_3_7b(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![draw(json_as(json!({ "count": DRAWS })))]
 }
 
-/// `quickdraw`: the static flag setup reads (R640), which only the kept v0.3.7b script still carries
-/// (#2521 took the Quickdraw tag away).
+/// `quickdraw`: the static flag setup reads (R640), which only the kept v0.3.7b and v0.5.11 scripts
+/// still carry (#2521 took the Quickdraw tag away).
 fn aluneth(radiant: bool, quickdraw: bool, draws: fn(&mut EffectContext<'_>) -> Vec<Effect>) -> Script {
     let mut script = Script {
         static_flags: quickdraw.then(|| StaticFlags {
@@ -86,6 +87,16 @@ pub fn script_v0_3_7b() -> CardScripts {
     }
 }
 
+/// R767000: the scripts v0.5.11 and every version back to v0.3.7b's ran, whose draws were discounted
+/// and which were Quickdraw (R640) until #2521; `KEPT_SCRIPTS` folds those versions' replays under
+/// them.
+pub fn script_v0_5_11() -> CardScripts {
+    CardScripts {
+        base: aluneth(false, true, draws_discounted),
+        radiant: aluneth(true, true, draws_discounted),
+    }
+}
+
 // M #80 Aluneth — SPEC §8.8 row 80, BUILD M10 row M 80: "no Quickdraw (#2521): setup deals it as any
 // other card; at your end of turn only, three draws, burning past the cap and taking fatigue past the
 // deck, each card they put in the hand costing (1) less (the declared `discount`) and no other draw's;
@@ -95,7 +106,7 @@ pub fn script_v0_3_7b() -> CardScripts {
 // Activate: exile this".
 #[cfg(test)]
 mod tests {
-    use super::{DRAWS, ID, script, script_v0_3_7b};
+    use super::{DRAWS, ID, script, script_v0_3_7b, script_v0_5_11};
     use jackioh_engine::effects::{TuneDirection, applicable_changes, transform};
     use jackioh_engine::testkit::*;
 
@@ -177,7 +188,8 @@ mod tests {
             fn no_quickdraw_so_setup_deals_it_as_any_other_card() {
                 crate::register_all();
                 // #2521: no Quickdraw tag, and no `quickdraw` flag on either face, the one `setup` reads
-                // (R640); only the kept v0.3.7b script still carries it, for its replays (R767000).
+                // (R640); only the kept v0.3.7b and v0.5.11 scripts still carry it, for their replays
+                // (R767000).
                 assert!(!crate::card_def(ID).tags.contains(&Tag::Quickdraw));
                 let scripts = script();
                 assert_ne!(scripts.base.flags().quickdraw, Some(true));
@@ -201,6 +213,16 @@ mod tests {
             #[test]
             fn each_card_it_draws_costs_1_less_and_no_other_draw_does() {
                 discounted_draws(false);
+            }
+
+            /// R767000: the script kept for the replays of v0.5.11 and before is Quickdraw on both faces
+            /// and discounts its draws as the build's does.
+            #[test]
+            fn r767000_the_script_kept_for_v0_5_11_is_quickdraw_and_discounts_its_draws() {
+                let kept = script_v0_5_11();
+                assert_eq!(kept.base.flags().quickdraw, Some(true));
+                assert_eq!(kept.radiant.flags().quickdraw, Some(true));
+                crate::under_kept(ID, kept, || discounted_draws(false));
             }
 
             #[test]

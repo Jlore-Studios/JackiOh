@@ -17,6 +17,7 @@
 //! each drawn on its own from the match rng as it resolves, so one permanent may take several. A
 //! placement onto another Pestilent Slime is multiplied by that Slime's multiplier (R471). With no
 //! permanent there, the counters are lost; with none held, nothing happens and nothing is drawn.
+//! Through v0.5.11 it had no Death, which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::effects::place_plague_random;
 use jackioh_engine::prelude::*;
@@ -50,6 +51,17 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     // The same script: the Radiant face's ×3 is its declared `multiplier`, which `param` reads off the face it wears.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.5.11 it had no Death, so the counters it held left with it (R78); `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
+    let base = Script {
+        plague_multiplier: Some(read_hook(|args| param(&args, "multiplier"))),
+        ..Script::default()
+    };
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -160,6 +172,17 @@ mod tests {
 
         mod base {
             use super::*;
+
+            /// R767000: the script kept for the replays of v0.5.11 and before multiplies and has no Death.
+            #[test]
+            fn r767000_the_script_kept_for_v0_5_11_has_no_death() {
+                let kept = script_v0_5_11();
+                for face in [&kept.base, &kept.radiant] {
+                    assert!(face.plague_multiplier.is_some());
+                    assert!(face.death.is_none());
+                }
+                assert!(script().base.death.is_some(), "since #2521 it has one");
+            }
 
             #[test]
             fn r2521005_each_counter_it_died_with_is_one_placement_of_1_on_its_controllers_permanents() {

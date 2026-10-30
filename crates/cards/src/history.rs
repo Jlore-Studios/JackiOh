@@ -20,8 +20,8 @@ use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
     c008_pickle, c009_income_tax, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
-    c032_felinor_feelings, c035_prep, c039_outbreak, c052_final_gambit, c064_malzahars_recycler,
-    c088_siphon_squad, c090_in_too_deep,
+    c027_pestilent_slime, c032_felinor_feelings, c035_prep, c039_outbreak, c052_final_gambit,
+    c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c023_dropshipping, c030_felinor_fuser, c033_ivory_tower,
@@ -32,6 +32,7 @@ use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c042_eugenics,
     c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
     c069_call_to_arms, c075_infinite_reserves, c080_zao_gao, c081_radiant_saintess, c083_transmogulate,
+    c084_going_long,
 };
 use crate::scripts::meditative::{
     c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
@@ -42,6 +43,11 @@ use crate::scripts::meditative::{
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
+};
+use crate::scripts::stinkyscape::{
+    c026_zolarketh, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
+    c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
+    c061_flak_v5, c074_paragon_x, c094_tmack_trav, c163_swear_loyalities, t_narcor, t_red_narcor,
 };
 use crate::{CATALOG, REGISTRY, catalog_json};
 
@@ -90,7 +96,14 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// Dropshipping gave Brittle {brittle}; The Power to Punish's damage did not pierce; Spiritually 中国 did one
 /// of its three at random (R920); Radiant Saintess's Radiant Death radiated the hand; Book of Buff's base
 /// face could take a hand card; Claude's Datacenter added at its controller's end of turn; and KY's Test
-/// asked two-digit sums (R580) from v0.5.2's bank (R2179003).
+/// asked two-digit sums (R580) from v0.5.2's bank (R2179003). #2521's twenty-two ran theirs through
+/// v0.5.11: Pestilent Slime had no Death; Going Long and Aluneth were Quickdraw; Bob's Plan added
+/// Alteran Reach with no Star Chart; ZolarKeth summoned a Radiant University and ran Universities
+/// without spending their uses; the Beams, Repeaters and Cannons could hit the enemy hero for half,
+/// the Repeaters at Activate 4, 6 and 6; the Flaks dealt their declared damage, not a random range;
+/// Paragon-X carried Immune to Spell Damage as a flag; Tmack Trav's kill lifted its summoning
+/// sickness; Swear Loyalities exiled the other four Faction cards alone, from the graveyard too; Narcor
+/// added a Rare card; and Red Narcor added a Legendary or Mythic card at a discount.
 /// A card patch before them that changed a script's behavior kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -307,6 +320,36 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c078_claudes_datacenter::script_v0_5_2,
     ),
     (c042_kys_test::ID, "v0.5.2", c042_kys_test::script_v0_5_2),
+    (
+        c027_pestilent_slime::ID,
+        "v0.5.11",
+        c027_pestilent_slime::script_v0_5_11,
+    ),
+    (c084_going_long::ID, "v0.5.11", c084_going_long::script_v0_5_11),
+    (c080_aluneth::ID, "v0.5.11", c080_aluneth::script_v0_5_11),
+    (c001_bobs_plan::ID, "v0.5.11", c001_bobs_plan::script_v0_5_11),
+    (c026_zolarketh::ID, "v0.5.11", c026_zolarketh::script_v0_5_11),
+    (c050_beam_v3::ID, "v0.5.11", c050_beam_v3::script_v0_5_11),
+    (c051_repeater_v3::ID, "v0.5.11", c051_repeater_v3::script_v0_5_11),
+    (c052_cannon_v3::ID, "v0.5.11", c052_cannon_v3::script_v0_5_11),
+    (c053_flak_v3::ID, "v0.5.11", c053_flak_v3::script_v0_5_11),
+    (c054_beam_v4::ID, "v0.5.11", c054_beam_v4::script_v0_5_11),
+    (c055_repeater_v4::ID, "v0.5.11", c055_repeater_v4::script_v0_5_11),
+    (c056_cannon_v4::ID, "v0.5.11", c056_cannon_v4::script_v0_5_11),
+    (c057_flak_v4::ID, "v0.5.11", c057_flak_v4::script_v0_5_11),
+    (c058_beam_v5::ID, "v0.5.11", c058_beam_v5::script_v0_5_11),
+    (c059_repeater_v5::ID, "v0.5.11", c059_repeater_v5::script_v0_5_11),
+    (c060_cannon_v5::ID, "v0.5.11", c060_cannon_v5::script_v0_5_11),
+    (c061_flak_v5::ID, "v0.5.11", c061_flak_v5::script_v0_5_11),
+    (c074_paragon_x::ID, "v0.5.11", c074_paragon_x::script_v0_5_11),
+    (c094_tmack_trav::ID, "v0.5.11", c094_tmack_trav::script_v0_5_11),
+    (
+        c163_swear_loyalities::ID,
+        "v0.5.11",
+        c163_swear_loyalities::script_v0_5_11,
+    ),
+    (t_narcor::ID, "v0.5.11", t_narcor::script_v0_5_11),
+    (t_red_narcor::ID, "v0.5.11", t_red_narcor::script_v0_5_11),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

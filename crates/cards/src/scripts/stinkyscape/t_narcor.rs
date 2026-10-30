@@ -7,7 +7,8 @@
 //! makes them. The pool is every non-token Legendary card of the sets that ship (R380, R1420): the
 //! query's `rarity` is that rarity alone, so never a Mythic, and a pool that names no token never
 //! holds one (§5.1). Drawn uniformly (R60); a full hand burns the card (§2.4, R4). Radiant: the card is
-//! added on its Radiant face. Issue #2521 raised the pool from Rare to Legendary.
+//! added on its Radiant face. Issue #2521 raised the pool from Rare to Legendary; the Rare pool v0.5.11
+//! and every version before it drew from is `script_v0_5_11`'s (R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -30,6 +31,27 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: face(false),
         radiant: face(true),
+    }
+}
+
+/// R767000: a face as v0.5.11 ran it, adding a random Rare card.
+fn face_v0_5_11(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "rarity": "Rare" },
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+/// R767000: through v0.5.11 it added a random Rare card; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
+    CardScripts {
+        base: face_v0_5_11(false),
+        radiant: face_v0_5_11(true),
     }
 }
 
@@ -102,6 +124,19 @@ mod tests {
             .collect();
         assert_eq!(burned.len(), 1, "the added card is burned: {burned:?}");
         assert_eq!(card_def(&burned[0].def_id).rarity, Rarity::Legendary);
+    }
+
+    /// R767000: the script kept for the replays of v0.5.11 and before added a non-token Rare card.
+    #[test]
+    fn r767000_the_script_kept_for_v0_5_11_adds_a_rare() {
+        crate::under_kept(ID, super::script_v0_5_11(), || {
+            let s = played("narcor-kept", false, 1);
+            let hand = s.hand(P1);
+            assert_eq!(hand.len(), 2, "one card added");
+            let def = card_def(&hand[1].def_id);
+            assert_eq!(def.rarity, Rarity::Rare, "{} is Rare", def.id);
+            assert!(!def.token, "{} is no token", def.id);
+        });
     }
 
     mod radiant {
