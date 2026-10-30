@@ -10564,15 +10564,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "e2e/support/config.ts"
+          ],
+          "from": "4eef7be82c7b5881a95ca55d2bef6944f9b69d45",
+          "main": "c6f4b0fe261be5ca908f2890ea2bb9663ccbcbc1"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41117618496",
+            "run": "41142995071",
             "tier": "strong"
           }
         ],
-        "sha": "4eef7be82c7b5881a95ca55d2bef6944f9b69d45",
+        "sha": "06be48376bdba5c89a55fe27d484ce78e874cec3",
         "tiers": {
           "claude": "strong"
         }
