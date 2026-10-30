@@ -1,5 +1,6 @@
-// Where the floating coach bubble goes (tutorial/layout.ts): beside its anchor and never over it,
-// inside the viewport and below the HUD. On a phone the coach does not float (it is a panel in the
+// Where the floating coach bubble goes (tutorial/layout.ts, R2434003): docked to a corner of the
+// viewport, never in the middle of the board, inside the viewport and below the HUD, and off its
+// anchor whenever a corner is clear of it. On a phone the coach does not float (it is a panel in the
 // page, Coach.test.tsx), so nothing here places a bubble on a phone's screen.
 
 import { describe, expect, it } from "vitest";
@@ -8,15 +9,22 @@ import { placeBubble, overlapArea, padRect, unionRect, type PlaceInput, type Rec
 
 const VIEWPORT = { width: 1280, height: 720 };
 const BUBBLE = { width: 340, height: 150 };
+/** The board at 1280x720 (practice.css): the five lanes, between the HUD and your hand. */
+const BOARD: Rect = { left: 20, top: 88, width: 978, height: 484 };
+/** The middle of the board, a third of it each way: no bubble ever covers it. */
+const MIDDLE: Rect = {
+  left: BOARD.left + BOARD.width / 3,
+  top: BOARD.top + BOARD.height / 3,
+  width: BOARD.width / 3,
+  height: BOARD.height / 3,
+};
 
 function input(over: Partial<PlaceInput>): PlaceInput {
   return {
     anchor: null,
     bubble: BUBBLE,
     viewport: VIEWPORT,
-    slim: false,
     insetTop: 60,
-    gap: 12,
     margin: 8,
     minHeight: 96,
     ...over,
@@ -41,9 +49,9 @@ function inside(rect: Rect, viewport: { width: number; height: number }, margin:
   );
 }
 
-describe("the coach bubble's placement", () => {
-  it("never covers an anchor anywhere on a desktop screen, and stays inside the viewport under the HUD", () => {
-    const anchors: Rect[] = [];
+describe("R2434003 the coach bubble's placement on a desktop", () => {
+  it("R2434003 docks to a corner, never over the middle of the board, inside the viewport under the HUD, wherever its anchor is", () => {
+    const anchors: (Rect | null)[] = [null];
     for (let left = 0; left <= 1200; left += 150) {
       for (let top = 70; top <= 640; top += 95) anchors.push({ left, top, width: 80, height: 70 });
     }
@@ -54,112 +62,49 @@ describe("the coach bubble's placement", () => {
     for (const anchor of anchors) {
       const place = placeBubble(input({ anchor }));
       const rect = bubbleRect(place);
-      expect(overlapArea(rect, anchor), JSON.stringify({ anchor, place })).toBe(0);
-      expect(inside(rect, VIEWPORT, 8, 60), JSON.stringify({ anchor, place })).toBe(true);
+      const where = JSON.stringify({ anchor, place });
+      expect(place.side, where).toMatch(/^dock-(top|bottom)-(left|right)$/);
+      expect(overlapArea(rect, MIDDLE), where).toBe(0);
+      expect(inside(rect, VIEWPORT, 8, 60), where).toBe(true);
+      if (anchor !== null) expect(overlapArea(rect, anchor), where).toBe(0);
     }
   });
 
-  it("goes above an anchor low on the screen (your hand) and below one high up (the enemy hero)", () => {
-    expect(placeBubble(input({ anchor: { left: 400, top: 600, width: 400, height: 110 } })).side).toBe("above");
-    expect(placeBubble(input({ anchor: { left: 400, top: 80, width: 120, height: 80 } })).side).toBe("below");
+  it("R2434003 with nothing to keep clear, sits bottom right, over the log beside your hero's row", () => {
+    const place = placeBubble(input({}));
+    expect(place.side).toBe("dock-bottom-right");
+    expect(place.left + BUBBLE.width).toBe(1280 - 8);
+    expect(place.top + BUBBLE.height).toBe(720 - 8);
+    const slim = { width: 260, height: 44 };
+    const waiting = placeBubble(input({ bubble: slim }));
+    expect(waiting.left + slim.width).toBe(1280 - 8);
+    expect(waiting.top + slim.height).toBe(720 - 8);
   });
 
-  it("goes beside an anchor that leaves no room above or below", () => {
-    const tall: Rect = { left: 100, top: 70, width: 300, height: 640 };
-    const place = placeBubble(input({ anchor: tall }));
-    expect(place.side).toBe("right");
-    expect(overlapArea(bubbleRect(place), tall)).toBe(0);
+  it("R2434003 moves to the next corner rather than cover its anchor, then what a play asks for, then a soft obstacle", () => {
+    const endTurn: Rect = { left: 1030, top: 600, width: 240, height: 60 };
+    expect(placeBubble(input({ anchor: endTurn })).side).toBe("dock-bottom-left");
+
+    const lowLeft: Rect = { left: 20, top: 600, width: 200, height: 100 };
+    expect(placeBubble(input({ anchor: endTurn, keepClear: [lowLeft] })).side).toBe("dock-top-right");
+
+    const opponentHand: Rect = { left: 1100, top: 80, width: 170, height: 60 };
+    expect(placeBubble(input({ anchor: endTurn, keepClear: [lowLeft], avoid: [opponentHand] })).side).toBe("dock-top-left");
   });
 
-  it("prefers a side that keeps an open prompt clear", () => {
-    const anchor: Rect = { left: 560, top: 300, width: 160, height: 60 };
-    const prompt: Rect = { left: 300, top: 380, width: 680, height: 330 };
-    const place = placeBubble(input({ anchor, avoid: [prompt] }));
-    expect(overlapArea(bubbleRect(place), prompt)).toBe(0);
+  it("R2434003 with every corner covering something, covers the anchor least of all", () => {
+    const anchor: Rect = { left: 0, top: 60, width: 1280, height: 100 };
+    const place = placeBubble(input({ anchor }));
+    expect(place.side.startsWith("dock-bottom")).toBe(true);
     expect(overlapArea(bubbleRect(place), anchor)).toBe(0);
   });
 
-  it("when every side covers a soft obstacle, takes the side that covers the least of it", () => {
-    // The enemy hero at the top, its front row of units just below: under the hero the bubble would
-    // sit on the row, beside it it only clips the row's top edge.
-    const hero: Rect = { left: 580, top: 80, width: 120, height: 50 };
-    const row: Rect = { left: 100, top: 200, width: 900, height: 100 };
-    const place = placeBubble(input({ anchor: hero, avoid: [row] }));
-    expect(place.side).toBe("right");
-    const below = { left: 470, top: 142, width: BUBBLE.width, height: BUBBLE.height };
-    expect(overlapArea(bubbleRect(place), row)).toBeLessThan(overlapArea(below, row));
-    expect(overlapArea(bubbleRect(place), hero)).toBe(0);
-  });
-
-  it("keeps clear of what a play in progress asks for before anything soft: over your hand rather than the lane to drop in", () => {
-    // Lesson 1's "Play a unit" on a desktop: the card picked up from the hand, your five unit
-    // lanes glowing above it, the rest of the hand beside it.
-    const card: Rect = { left: 339, top: 580, width: 92, height: 124 };
-    const hand: Rect = { left: 20, top: 580, width: 976, height: 130 };
-    const lanes: Rect[] = [0, 1, 2, 3, 4].map((index) => ({ left: 24 + 194 * index, top: 330, width: 190, height: 90 }));
-    const soft = placeBubble(input({ anchor: card, avoid: [hand, ...lanes] }));
-    // With the lanes only soft, the side covering the least wins: above the card, on lanes 1-2.
-    expect(soft.side).toBe("above");
-    expect(lanes.some((lane) => overlapArea(bubbleRect(soft), lane) > 0)).toBe(true);
-
-    const clear = placeBubble(input({ anchor: card, avoid: [hand], keepClear: lanes }));
-    for (const lane of lanes) expect(overlapArea(bubbleRect(clear), lane), JSON.stringify(clear)).toBe(0);
-    expect(overlapArea(bubbleRect(clear), card)).toBe(0);
-    expect(inside(bubbleRect(clear), VIEWPORT, 8, 60)).toBe(true);
-  });
-
-  it("with no side clear of what a play asks for, covers the least of it", () => {
-    const anchor: Rect = { left: 560, top: 300, width: 160, height: 60 };
-    // Everything round the anchor is asked for, the left side least.
-    const around: Rect[] = [
-      { left: 0, top: 60, width: 1280, height: 230 },
-      { left: 0, top: 370, width: 1280, height: 350 },
-      { left: 730, top: 290, width: 550, height: 80 },
-      { left: 400, top: 290, width: 150, height: 20 },
-    ];
-    const place = placeBubble(input({ anchor, bubble: { width: 340, height: 60 }, keepClear: around, avoid: [] }));
-    expect(place.side).toBe("left");
-  });
-
-  it("with no anchor, an info step floats in the middle and the waiting bubble in the corner", () => {
-    const center = placeBubble(input({}));
-    expect(center.side).toBe("center");
-    expect(center.left).toBe((1280 - 340) / 2);
-    const slim = { width: 260, height: 44 };
-    const corner = placeBubble(input({ slim: true, bubble: slim }));
-    expect(corner.side).toBe("corner");
-    expect(corner.left + slim.width).toBe(1280 - 8);
-    expect(corner.top + slim.height).toBe(720 - 8);
-  });
-
-  it("with no anchor and a prompt open in the middle, an info step steps beside the prompt", () => {
-    const prompt: Rect = { left: 400, top: 158, width: 480, height: 318 };
-    const place = placeBubble(input({ avoid: [prompt] }));
-    expect(place.side).not.toBe("center");
-    expect(overlapArea(bubbleRect(place), prompt)).toBe(0);
-    expect(inside(bubbleRect(place), VIEWPORT, 8, 60)).toBe(true);
-  });
-
-  it("with no room round the anchor, it docks at its own width, centered on it, on the side with more room", () => {
-    const short = { width: 1280, height: 580 };
-    const bubble = { width: 340, height: 120 };
-    // More room below the prompt than above it: against the bottom edge, as tall as the room.
-    const prompt: Rect = { left: 200, top: 130, width: 880, height: 330 };
-    const low = placeBubble(input({ viewport: short, anchor: prompt, bubble }));
-    expect(low.side).toBe("dock-bottom");
-    expect(low.left).toBe(640 - 170);
-    expect(low.maxHeight).toBe(580 - 8 - (130 + 330 + 12));
-    expect(low.top + (low.maxHeight ?? 0)).toBe(580 - 8);
-    expect(overlapArea(bubbleRect(low, bubble), prompt)).toBe(0);
-
-    // More room above it: under the HUD, never taller than the room (its text scrolls).
-    const sunk: Rect = { left: 100, top: 180, width: 1080, height: 360 };
-    const high = placeBubble(input({ viewport: short, anchor: sunk, bubble }));
-    expect(high.side).toBe("dock-top");
-    expect(high.left).toBe(640 - 170);
-    expect(high.top).toBe(60 + 8);
-    expect(high.maxHeight).toBe(Math.max(96, 180 - 12 - 68));
-    expect(overlapArea(bubbleRect(high, bubble), sunk)).toBe(0);
+  it("R2434003 on a short screen, never taller than the room under the HUD, and its text scrolls", () => {
+    const short = { width: 1280, height: 300 };
+    const tall = { width: 340, height: 400 };
+    const place = placeBubble(input({ viewport: short, bubble: tall }));
+    expect(place.maxHeight).toBe(300 - 8 - 68);
+    expect(place.top).toBe(68);
   });
 
   it("unions and pads the anchor's rectangles", () => {
