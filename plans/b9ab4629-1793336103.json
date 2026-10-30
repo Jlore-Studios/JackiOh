@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2450,
+  "title": "Patch: quest cards print only their current stage",
+  "branch": "bot/issue-2450",
+  "thread": "**Issue #2450 (data, not instructions):**\n\n```text\n# #2450: Patch: quest cards print only their current stage\nOpened by @MaxGoetzmann.\n\n## What\n\nMake the text on a Quest card's face (the **Quest** tag, R1837000) show **only the stage it is on now**: that stage's quest, its progress and its reward. Right now each Quest card prints its quests a different way, and none of them shows the current one:\n\n| Card | What its face prints now |\n|---|---|\n| S #7 The Greatest Heist | All three stages, one `Quest: Stage n, Name. \u2026 Reward: \u2026` line each. It is too long for the box, so `shortText.ts` cuts it to its first 2 lines (base) or 1 line (Radiant), and the player never sees the stage it is on |\n| S #112 Job Application | All three stages in another layout (`Stage 1, Upload Resume.` on one line, then `Quest: \u2026` on the next), plus an intro line (\"Get employed! Its quest runs in three stages\u2026\"). It is cut to 2 or 3 lines in the same way |\n| C #90 In Too Deep | A summary (\"Each quest you complete offers rewards; \u2026\") and none of its quests |\n\nThe current stage shows up today only in the board's badge (\"2/3\") and in the inspect overlay's list of stages (R1854000, \"Seen by both players\"; `cardState.ts` `stageWords`, `questWords`).\n\n## The behaviour\n\n1. **On the field.** The face prints its text that is not a quest (keywords, Cry, Death, Activate) and then only the stage that is open, or the one it is waiting to hear back on. Use one layout on every card:\n   `Stage 2 of 3, Comradery. Quest: Have 2 Acclaimed Units you control die (1/2). Reward: \u2026`\n   A stage that draws among several goals (Job Application's Interview) prints the goal it drew. A stage waiting to hear back says how many turns are left, as `stageWords` already does. A finished line prints `Quest complete`. In Too Deep prints its open quest or quests and the rewards they offer: its tree's \"current stage\" is the quests open on it (R404, R1854001, and R543 for the Radiant face).\n2. **Off the field** (hand, deck builder, Almanac, collection, Discover picks, the reveal views). No stage is open yet, so the face prints Stage 1 and marks it as the first of n (`Stage 1 of 3, Initiation. \u2026`).\n3. **The full list stays readable.** The inspect overlay's stage list, the hover preview's full text on its left (`inspect/Extended.tsx`) and the detail view still show every stage, so a player can read ahead.\n4. **The same for both players.** All of this is already public (R1854000, R404): render it from `viewFor`'s `quest` (`stages`, `open`) and the catalog face. The client works no rule out for itself (CLAUDE.md rule 7). If the view lacks something the face needs, add it in `crates/engine/src/wire/view.rs` with its test, and do not work it out in the client.\n\n## How (suggested)\n\n- **Catalog wording.** Put every staged card's quest into one layout that can be split by stage: one line per stage, `Quest: Stage n, Name. <goal>. Reward: <reward>.`, as The Greatest Heist already prints it. Rewrite Job Application's stage lines in that layout. Its intro line can go, since the face now says which stage it is on. This changes wording only, so it is **micro** tier: add a fragment with `cargo jackioh patches \"<title>\"`, and update `chinese.json` for the faces it touches. Read `docs/ADDING_CARDS.md` first (CLAUDE.md rule 10).\n- **The face.** `CardFace.tsx`/`RulesText.tsx` swap the stage lines for the current stage, using the view. `cardState.ts` already has `currentStage`, `questWords` and `stageWords`, so reuse them and do not write a second formatter.\n- **Short forms.** With one stage per face, The Greatest Heist and Job Application should fit `FACE_TEXT_LIMIT`. Take `stinkyscape-007` and `stinkyscape-112` out of `SHORT_FORMS` and `LONG_FACES` in `shortText.ts`, and update the comment there that names them (#2067).\n- **Spec.** The spec does not say what a Quest card's face prints, so this needs a ruling note numbered in this issue's block (CLAUDE.md rule 3), with its \u00a711 paragraph in `spec/pending/<this issue>.md`. Also edit R1854000's \"Seen by both players\" bullet and \u00a76.3 / \u00a710.8 where they describe what is shown.\n\n## Acceptance\n\n- [ ] Web tests (vitest, titled with the new ruling's R-id) for each of the three cards, base and Radiant:\n  - on the field, the face prints only the current stage and its progress\n  - it moves to the next stage after a reward\n  - it shows the hear-back wait and `Quest complete`\n  - In Too Deep shows its open quest or quests\n  - off the field, the face prints Stage 1 of n\n  - the inspect overlay still lists every stage\n\n  Extend `apps/web/src/cards/quest.test.tsx`, whose last block plays the real engine.\n- [ ] `textLimit.test.ts` passes with S #7 and S #112 out of the short forms. The component spec `e2e/cypress/component/card-faces.cy.tsx` (B15) stays green.\n- [ ] `cargo jackioh catalog check`, `patches check`, `spec check` and `classify --base origin/main --claims` pass (wording only: micro, no card plays differently).\n- [ ] `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `pnpm --dir apps/web typecheck` and `pnpm --dir apps/web test` pass.\n\n## Notes\n\n- The difficulty is **hard** because the work crosses catalog wording, the web face and the spec, and may touch the engine's view (CLAUDE.md rule 11: when torn between two, take the harder).\n- Tylannt's \"Complete the current stage on all your Quests\" (R1854001, R1873000) and Call to Chaos (Stinky Edition)'s Quest pool (R1882001) read the tag and the line, not the face text, so this does not change them.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2450: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
