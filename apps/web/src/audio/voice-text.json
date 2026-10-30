@@ -1405,7 +1405,9 @@
       "death": "Quarantined. Rude, honestly."
     },
     "meditative-049-3": {
-      "cast": "Fight for my amusement, darlings."
+      "play": "Fight for my amusement, darlings.",
+      "attack": "For me? You shouldn't.",
+      "death": "We are so over."
     },
     "meditative-050": {
       "cast": "Winning formula found. You're welcome."

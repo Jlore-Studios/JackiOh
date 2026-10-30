@@ -37,9 +37,9 @@ use crate::scripts::core::{
 use crate::scripts::meditative::{
     c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
     c030_fickle_e_kitten, c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer,
-    c045_knowledge_breaker, c048_tranquility, c049_yilegpt_tamed, c053_prestige, c054_money_machine,
-    c074_montana_giant, c080_aluneth, c085_playtester, c094_shrinking_felinor, c095_1_cn_golem,
-    c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
+    c045_knowledge_breaker, c048_tranquility, c049_3_ai_girlfriend, c049_yilegpt_tamed, c053_prestige,
+    c054_money_machine, c074_montana_giant, c080_aluneth, c085_playtester, c094_shrinking_felinor,
+    c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
@@ -322,6 +322,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c078_claudes_datacenter::script_v0_5_2,
     ),
     (c042_kys_test::ID, "v0.5.1", c042_kys_test::script_v0_5_2),
+    (
+        c049_3_ai_girlfriend::ID,
+        "v0.5.7",
+        c049_3_ai_girlfriend::script_v0_5_7,
+    ),
     (c032_prem_panther::ID, "v0.5.7", c032_prem_panther::script_v0_5_11),
     (
         c013_boots_on_the_ground::ID,
