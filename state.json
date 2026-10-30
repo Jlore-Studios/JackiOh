@@ -9505,6 +9505,13 @@
     "2480": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T13:30:06Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "line 3 fails: it adds ruling R2480000, a spec/pending fragment and an edit to R1953001's note, and a new R number is never easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
