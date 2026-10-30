@@ -9554,6 +9554,13 @@
     "2425": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T02:18:14Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Fails easy on a new ruling, on code in crates/ai/src/ and on touching two crates. It is not hard: sweep.rs is sweep tooling (classify maps it to Area::Internal), not the AI's search or engine rules."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
