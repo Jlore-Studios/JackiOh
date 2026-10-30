@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2437,
+  "title": "Patch: a fuchsia outline on a Temporary 1 card in your hand, and a turns-left counter on every Temporary card there",
+  "branch": "bot/issue-2437",
+  "thread": "**Issue #2437 (data, not instructions):**\n\n```text\n# #2437: Patch: a fuchsia outline on a Temporary 1 card in your hand, and a turns-left counter on every Temporary card there\nOpened by @MaxGoetzmann.\n\n## What it does\n\nA Temporary card is discarded from its owner's hand once its count reaches 0 (R637, R2179001: each of its owner's end-of-turn cleanups takes 1 off; a plain Temporary is Temporary 1). Nothing in the hand shows how long a Temporary card has left, or warns that one is about to go. Make both visible, client only:\n\n1. **The \"about to be destroyed\" aura, in fuchsia, on Temporary 1.** A face-up card in a hand whose view gives it Temporary with a count of **1** (discarded at its owner's next end of turn) wears the **Allure mark's aura** (`cards/CardMarks.tsx`, `cards/marks.css`: the vignette, the edge and the motes; R963, R1045000), recoloured **fuchsia**, the aura alone, the way #2270 drew Brittle's last count in gray (`CardMarks`' `bareAura`, `BRITTLE_LAST_COLOR`, #2403).\n2. **A turns-left counter on every Temporary X card in a hand.** A face-up card in a hand that is Temporary (any count) shows a state-rail badge (`cards/cardState.ts`'s `stateBadges`, drawn by `cards/CardStates.tsx` and styled in `cards/cardstate.css`) with the count it has left, like Dormant's countdown badge (R1839000).\n\n### Details, so the builder has nothing to decide\n\n- **The count is the view's, never the printed number (CLAUDE.md rule 7).** The engine already writes the count left into the card's keywords (`layers::card_keywords` \u2192 `temporary::with_temporary_count`, R2179001): read the card view's `Temporary` keyword's `n`, a missing `n` counting **1** (plain Temporary). If a card somehow lists more than one Temporary entry, take the largest, as `temporary::temporary_number` does. Put that reading in one small helper (for example `temporaryLeft(keywords): number | null` in `cards/keywordVisuals.ts`, with a vitest test) and use it for both features.\n- **Named constants (rule 9).** `TEMPORARY_LAST_COUNT = 1` beside `BRITTLE_LAST_COUNT` in `cards/keywordVisuals.ts`; `TEMPORARY_LAST_COLOR: MarkColor = \"fuchsia\"` beside `BRITTLE_LAST_COLOR` in `cards/marks.ts`, documented like it.\n- **The palette.** Add a `fuchsia` entry to `MARK_PALETTES` in `cards/marks.ts`, after `gray`, with a `// #<this issue>` comment like gray's: `{ rim: \"#e879f9\", core: \"#fae8ff\", glow: \"#a21caf\", preset: \"arcane\" }`. It must stay distinct from Allure's `pink` (`#ff7ac8` / `#c2187a`).\n- **Where the aura goes.** Only a face-up card in a hand (`game/Card.tsx` with `inHandOf` set and a card, `game/Hand.tsx`), on either seat that the view shows face up. Never a card back (the opponent's hand of backs carries nothing, R33/R437 as now), never the field, the resolving strip, the tray or the deck. Brittle's gray aura stays field-only (#2270) and is unchanged.\n- **Precedence.** A real mark on the card (Allure, Duo, steal, the end-of-turn mark\u2026) keeps its own aura and badge; the fuchsia aura is drawn only when the card has no mark of its own, exactly as `bareAura` already works.\n- **The counter badge.** A new `StateBadgeKind` `\"temporary\"`: text `\u231b{n}` (the glyph a named constant, `TEMPORARY_GLYPH`, like `DORMANT_GLYPH`), `data-temporary=\"{n}\"`, its words (tooltip, accessible name, inspect line) through `t()`:\n  - n = 1: `\"Temporary 1: discarded at the end of its owner's turn\"`\n  - n > 1: `\"Temporary {n}: discarded after {n} of its owner's ends of turn\"`\n  \n  It goes in `stateBadges` right after the Brittle count (both end the card). The face model (`cards/model.ts`) carries the count only for a card in a hand, so a Temporary card that lands anywhere else shows no badge. Add both strings to the i18n catalogues the way other badge words are added (see `brittleWords`, `dormantWords`).\n- **Motion** follows the marks' existing rules (moves under full motion, held still under reduced motion and `<html data-reduce-motion=\"true\">`): reuse the existing `card-marks__*` CSS; no new aura CSS. The badge gets a disc colour in `cardstate.css` in the same fuchsia family (reuse the palette's values via the constants, or a CSS variable set from them; no new bare hex beyond the palette entry).\n- No engine, card, spec or wire change: the view already carries the count. No new ruling; cite R637, R2179001, R963, R1045000 and #2270 in comments. Do not put an R-id in a new test's title (use `#<this issue>`), so `cargo jackioh spec check` does not expect the file in another ruling's `proven_in`.\n\n## Acceptance\n\n- Vitest (`apps/web/src/cards/CardMarks.test.tsx` or a new test beside `Hand`):\n  - a hand card whose view has `Temporary` with no `n`, and one with `n: 1`, each render the aura with `data-mark-color=\"fuchsia\"` and no `card-mark-badge`, no `data-marks`;\n  - a hand card with `Temporary { n: 2 }` renders no fuchsia aura;\n  - a hand card with Temporary 1 that also carries a real mark renders that mark's aura and badge, not the fuchsia one;\n  - a Temporary 1 card on the field, in the resolving strip, and the opponent's hand of backs render no fuchsia aura;\n  - `MARK_PALETTES.fuchsia`'s values are hex and differ from `pink`'s.\n- Vitest for the badge (`apps/web/src/cards/cardState.test.tsx`): a hand card with Temporary (plain), Temporary 1 and Temporary 3 gets a `\"temporary\"` badge showing `\u231b1`, `\u231b1`, `\u231b3` with `data-temporary` and the words above; a card with no Temporary, and a Temporary card off the hand, get none; the badge sits right after a Brittle badge.\n- Vitest for the helper: no Temporary \u2192 `null`; plain \u2192 1; `n: 2` \u2192 2; two entries \u2192 the largest.\n- The existing marks, keyword-visual and card-state tests still pass.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and `cargo jackioh spec check` pass.\n\n## Blocked by, part of\n\nNothing. Follows #2270 (the gray Brittle aura, shipped in #2403), whose `bareAura` prop this reuses.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2437: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
