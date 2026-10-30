@@ -10144,8 +10144,18 @@
       "verdict_rounds": 0
     },
     "2504": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
       "onto": "bot/issue-2497",
-      "part_of": 2497
+      "part_of": 2497,
+      "pending_request": false,
+      "provider": "claude-4",
+      "run_id": "pending:d91bcd8d-1793398989",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-30T22:23:23Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2505": {
       "onto": "bot/issue-2497",
@@ -10505,9 +10515,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-30T22:22:57Z",
+    "at": "2026-10-30T22:23:23Z",
     "url": "",
-    "what": "revise #2551 on claude-6"
+    "what": "build #2504 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-30T22:12:51Z",
