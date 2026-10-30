@@ -3339,5 +3339,33 @@
     "pr": 2485,
     "title": "patches ship: v0.5.10c",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "246366b2e62922829aa29f539819c87e1c80fc68",
+    "pr": 2488,
+    "title": "patches log: 1cbfe31..0a37003",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "0c0e1a9b214ffe50e0ca071504dc2cafa009edfb",
+    "pr": 2492,
+    "title": "card statistics compare each card's games drawn against its games never drawn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "360a768343ec48e294c4b66260be2c1160304f5f",
+    "pr": 2484,
+    "title": "a fuchsia outline on a Temporary 1 card in your hand, and a turns-left counter on every Temporary card there",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "c99a94281c37c6f12f315bdce23c9e4a4e0ceaca",
+    "pr": 2494,
+    "title": "patches ship: v0.5.10d",
+    "kind": "app"
   }
 ]
