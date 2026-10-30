@@ -64,7 +64,7 @@ def test_lambda_one_fits_the_outcomes_alone(tmp_path):
 def test_each_relabel_refits_on_the_targets_the_fit_before_it_gives(tmp_path, monkeypatch):
     report = F.run([str(FIXTURE)], tmp_path, ROOT, seeds=(1,), curve=(), td_lambda=0.3, td_relabels=2, log=lambda _: None)
     assert (report["tdLambda"], report["tdRelabels"]) == (0.3, 2)
-    assert report["models"]["c"]["name"].endswith("on TD(0.3) targets, relabelled 2 times")
+    assert report["models"]["c"]["name"].endswith("on TD(0.3) targets, relabeled 2 times")
 
     # The loop itself, on stand-ins: fit k's network predicts k/10 everywhere.
     game, seat, step = np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([1, 2, 3])

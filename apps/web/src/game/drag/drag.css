@@ -8,7 +8,7 @@
  */
 
 :root {
-  /* The arrow and ghost colour over a spot that would do nothing on release. */
+  /* The arrow and ghost color over a spot that would do nothing on release. */
   --drag-invalid: var(--pal-ember-500);
 }
 
@@ -250,7 +250,7 @@
    and a pulse running toward the target; red-orange until it is over a spot, then green. */
 
 .drag-arrow {
-  --drag-arrow-colour: var(--drag-invalid);
+  --drag-arrow-color: var(--drag-invalid);
   --drag-arrow-core: var(--pal-slate-100);
   position: absolute;
   inset: 0;
@@ -260,17 +260,17 @@
 }
 
 .drag-arrow[data-valid="true"] {
-  --drag-arrow-colour: var(--glow-ready, var(--pal-green-400));
+  --drag-arrow-color: var(--glow-ready, var(--pal-green-400));
   --drag-arrow-core: var(--pal-white);
 }
 
 .drag-arrow-stop-tail {
-  stop-color: var(--drag-arrow-colour);
+  stop-color: var(--drag-arrow-color);
   stop-opacity: 0.4;
 }
 
 .drag-arrow-stop-tip {
-  stop-color: var(--drag-arrow-colour);
+  stop-color: var(--drag-arrow-color);
   stop-opacity: 1;
 }
 
@@ -307,14 +307,14 @@
 }
 
 .drag-arrow-head {
-  fill: var(--drag-arrow-colour);
+  fill: var(--drag-arrow-color);
   stroke: color-mix(in srgb, var(--pal-black) 50%, transparent);
   stroke-width: 2;
   stroke-linejoin: round;
 }
 
 .drag-arrow-origin {
-  fill: var(--drag-arrow-colour);
+  fill: var(--drag-arrow-color);
   stroke: color-mix(in srgb, var(--pal-white) 85%, transparent);
   stroke-width: 2.5;
 }
@@ -331,18 +331,18 @@
    ticks stop short of the middle, so the name or the health under the ring stays readable. */
 
 .drag-reticle {
-  --drag-reticle-colour: var(--glow-ready, var(--pal-green-400));
+  --drag-reticle-color: var(--glow-ready, var(--pal-green-400));
   --drag-reticle-tick: 8px;
   --drag-reticle-out: 4px;
   position: absolute;
   box-sizing: border-box;
-  border: 3px solid var(--drag-reticle-colour);
+  border: 3px solid var(--drag-reticle-color);
   border-radius: var(--radius-round);
-  background: radial-gradient(closest-side, transparent 72%, color-mix(in srgb, var(--drag-reticle-colour) 22%, transparent));
+  background: radial-gradient(closest-side, transparent 72%, color-mix(in srgb, var(--drag-reticle-color) 22%, transparent));
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--pal-black) 45%, transparent),
-    0 0 16px var(--drag-reticle-colour),
-    inset 0 0 10px color-mix(in srgb, var(--drag-reticle-colour) 70%, transparent);
+    0 0 16px var(--drag-reticle-color),
+    inset 0 0 10px color-mix(in srgb, var(--drag-reticle-color) 70%, transparent);
   transform: translate(-50%, -50%);
   animation: drag-reticle-pulse 0.8s var(--ease-in-out) infinite alternate;
 }
@@ -357,12 +357,12 @@
 .drag-reticle[data-shape="pad"] {
   z-index: var(--z-content);
   border-width: 3px;
-  border-color: color-mix(in srgb, var(--drag-reticle-colour) 45%, var(--pal-white));
+  border-color: color-mix(in srgb, var(--drag-reticle-color) 45%, var(--pal-white));
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--drag-reticle-colour) 24%, transparent);
+  background: color-mix(in srgb, var(--drag-reticle-color) 24%, transparent);
   box-shadow:
-    0 0 20px 3px color-mix(in srgb, var(--drag-reticle-colour) 55%, transparent),
-    inset 0 0 16px color-mix(in srgb, var(--drag-reticle-colour) 45%, transparent);
+    0 0 20px 3px color-mix(in srgb, var(--drag-reticle-color) 55%, transparent),
+    inset 0 0 16px color-mix(in srgb, var(--drag-reticle-color) 45%, transparent);
   animation-name: drag-pad-pulse;
 }
 
@@ -381,8 +381,8 @@
   background: none;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--pal-black) 45%, transparent),
-    0 0 18px 2px var(--drag-reticle-colour),
-    inset 0 0 12px color-mix(in srgb, var(--drag-reticle-colour) 55%, transparent);
+    0 0 18px 2px var(--drag-reticle-color),
+    inset 0 0 12px color-mix(in srgb, var(--drag-reticle-color) 55%, transparent);
   animation-name: drag-frame-pulse;
 }
 
@@ -424,9 +424,9 @@
   width: 3px;
   height: calc(100% + 2 * var(--drag-reticle-out));
   background: linear-gradient(
-    var(--drag-reticle-colour) 0 var(--drag-reticle-bar),
+    var(--drag-reticle-color) 0 var(--drag-reticle-bar),
     transparent var(--drag-reticle-bar) calc(100% - var(--drag-reticle-bar)),
-    var(--drag-reticle-colour) calc(100% - var(--drag-reticle-bar))
+    var(--drag-reticle-color) calc(100% - var(--drag-reticle-bar))
   );
 }
 
@@ -435,9 +435,9 @@
   height: 3px;
   background: linear-gradient(
     90deg,
-    var(--drag-reticle-colour) 0 var(--drag-reticle-bar),
+    var(--drag-reticle-color) 0 var(--drag-reticle-bar),
     transparent var(--drag-reticle-bar) calc(100% - var(--drag-reticle-bar)),
-    var(--drag-reticle-colour) calc(100% - var(--drag-reticle-bar))
+    var(--drag-reticle-color) calc(100% - var(--drag-reticle-bar))
   );
 }
 

@@ -9,7 +9,7 @@
 //!
 //! Engine: C #52 Final Gambit's replacement at "would take lethal damage" on its controller's hero
 //! (after Armor, multipliers and caps, R1204's judge), on either player's turn, in combat or by an
-//! effect: the trap fires, goes to the graveyard, and the hit is cancelled, dealing nothing
+//! effect: the trap fires, goes to the graveyard, and the hit is canceled, dealing nothing
 //! (R1704001). Its `then` step ends the turn running (`end_turn`, once what is resolving has resolved,
 //! R456); on its controller's own turn it owes them an extra turn (R845), on the opponent's their
 //! own next turn follows. Through that turn of theirs their Units have Charge (R1859007's

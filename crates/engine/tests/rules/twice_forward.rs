@@ -279,7 +279,7 @@ mod c_plus_c74s_field_trap_r425 {
         );
         assert_eq!(active_brittle_count(kept), Some(3));
         // Revealed, the opponent reads the card now.
-        let theirs = serde_json::to_string(&view_for(&second.state, PlayerId::P2)).expect("serialises");
+        let theirs = serde_json::to_string(&view_for(&second.state, PlayerId::P2)).expect("serializes");
         assert!(theirs.contains(&trap_id));
         assert!(theirs.contains(&forward().id));
     }

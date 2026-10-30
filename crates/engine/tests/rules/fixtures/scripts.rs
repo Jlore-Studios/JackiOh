@@ -1,4 +1,4 @@
-//! Test-only cards for M1-M3 engine tests (BUILD §0): each reproduces one behaviour of a real card
+//! Test-only cards for M1-M3 engine tests (BUILD §0): each reproduces one behavior of a real card
 //! through the effects library.
 
 use std::sync::LazyLock;

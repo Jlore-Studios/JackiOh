@@ -1371,11 +1371,11 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
 
         assert!(
             !open_ticket(&t.app, &t.host.id).await,
-            "the host's ticket is cancelled"
+            "the host's ticket is canceled"
         );
         assert!(
             !open_ticket(&t.app, &t.guest.id).await,
-            "the guest's ticket is cancelled"
+            "the guest's ticket is canceled"
         );
     }
 

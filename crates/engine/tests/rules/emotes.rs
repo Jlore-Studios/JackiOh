@@ -182,14 +182,14 @@ fn r1127_policy_never_emotes_auto_end_ignores() {
 fn r1127_view_emotes_heard_only_true() {
     // P1's judge hears P2: P2's view says so, P1's says nothing.
     let state = heard_against("r1127-view", P1);
-    let view = serde_json::to_value(view_for(&state, P2)).expect("serialises");
+    let view = serde_json::to_value(view_for(&state, P2)).expect("serializes");
     assert_eq!(view["emotesHeard"], serde_json::json!(true));
-    let view = serde_json::to_value(view_for(&state, P1)).expect("serialises");
+    let view = serde_json::to_value(view_for(&state, P1)).expect("serializes");
     assert!(view.get("emotesHeard").is_none());
     // No judge: neither view carries the field.
     let state = main_phase("r1127-view-off");
     for player in [P1, P2] {
-        let view = serde_json::to_value(view_for(&state, player)).expect("serialises");
+        let view = serde_json::to_value(view_for(&state, player)).expect("serializes");
         assert!(view.get("emotesHeard").is_none());
     }
 }

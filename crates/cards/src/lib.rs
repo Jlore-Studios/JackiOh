@@ -425,7 +425,7 @@ pub(crate) fn give_flying(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
 /// An engine value as its JSON, for the card tests' comparisons with TS's object literals.
 #[cfg(test)]
 pub(crate) fn js<T: serde::Serialize + ?Sized>(value: &T) -> serde_json::Value {
-    serde_json::to_value(value).expect("an engine value serialises")
+    serde_json::to_value(value).expect("an engine value serializes")
 }
 
 /// TS `{ ...base, ...over }` on two object literals (a test's side setup over its defaults).
@@ -662,7 +662,7 @@ mod tests {
     #[test]
     fn the_catalog_round_trips_through_card_defs() {
         let raw: serde_json::Value = serde_json::from_str(catalog_json()).expect("catalog.json is JSON");
-        let typed = serde_json::to_value(&*CATALOG).expect("CardDefs serialise");
+        let typed = serde_json::to_value(&*CATALOG).expect("CardDefs serialize");
         assert_eq!(typed, raw);
         assert_eq!(CATALOG_IDS.first().map(String::as_str), Some("core-001"));
         assert_eq!(card_def("core-002").name, "Bigot");

@@ -1178,7 +1178,7 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
     selection: [{ pick: "instance", instanceId }],
   });
 
-  it("is recognised by the engine's two sentences and the shape of its options, and nothing else", () => {
+  it("is recognized by the engine's two sentences and the shape of its options, and nothing else", () => {
     expect(isPlaguePlacementPrompt(placement)).toBe(true);
     expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: ONE }))).toBe(true);
     // Another target prompt over the same cards, a pick of several, another kind, a prompt not for you.

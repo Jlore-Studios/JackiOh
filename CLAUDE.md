@@ -60,7 +60,7 @@ trap backrow. This file binds every agent, not only Claude.
    same through the card kit, `docs/custom-cards.md`, which `crates/luau` turns into the same effects.)
 6. Every card has one script file, `crates/cards/src/scripts/<set>/<file>.rs` (its `pub const ID`, its
    header comment and `pub fn script()`), with its tests in the same file (`#[cfg(test)] mod tests`)
-   covering base and Radiant behaviour per its set's must-pass table in BUILD (M4-T4's for Core, M9's to
+   covering base and Radiant behavior per its set's must-pass table in BUILD (M4-T4's for Core, M9's to
    M12's for the later sets).
 7. The client sends intent and renders `viewFor` (the engine's `view_for`); it never enforces rules and never
    sees hidden information.
@@ -185,7 +185,7 @@ keeps its rule per pull request, which its `daily:` reason names. Each workflow'
 
 `@jgoetzmann-bot` (the night bot, `.harness/`) and `@squishy-squooby` (Squishy, `.squishy/`) build issues on
 the owner's subscriptions; `bot/README.md` says which issues each takes. `human` keeps every bot off an issue,
-and `bot:build` queues one for the night bot, so never add it while retitling or relabelling.
+and `bot:build` queues one for the night bot, so never add it while retitling or relabeling.
 
 A bot's builder or reviewer must not change `.github/`, `.harness/`, `.squishy/`, `bot/` or `.claude/`, except
 that Squishy may change `.claude/skills/` (the full lists are `forbidden_paths` in each bot's `config.json`):

@@ -92,7 +92,7 @@ const FLAVORS = [
 const MOTIONS: readonly FxShotMotion[] = ["arc", "bolt", "beam", "swipe"];
 
 describe("#1442 the looks", () => {
-  it("#1442 every Flavor has a look: two or three colours, a particle shape and a projectile", () => {
+  it("#1442 every Flavor has a look: two or three colors, a particle shape and a projectile", () => {
     expect([...FLAVORS].sort()).toEqual(Object.keys(FLAVOR_LOOKS).sort());
     for (const flavor of FLAVORS) {
       const look = FLAVOR_LOOKS[flavor];

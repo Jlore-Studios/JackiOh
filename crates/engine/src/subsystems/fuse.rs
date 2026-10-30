@@ -74,7 +74,7 @@ const RESUME_KEY: &str = "resume";
 /// The script keys whose functions return something other than effects, so they combine by building
 /// every ingredient's list at once: an aura's entries are read off the field on every stat read
 /// (§10.4), and there is no "when the list reaches it" for them. `preview` (R280) is the other: the
-/// labelled numbers `view_for` shows, a pure read with nothing to resolve, so a fusion's list is its
+/// labeled numbers `view_for` shows, a pure read with nothing to resolve, so a fusion's list is its
 /// ingredients' lists in ingredient order, each asked with the fused card's own context (the fused
 /// instance as `self`, the face it runs, the zone it is asked about), as R196 asks `conditionMet` —
 /// and each label still sits in the fused face's text, which prints every ingredient's text whole.

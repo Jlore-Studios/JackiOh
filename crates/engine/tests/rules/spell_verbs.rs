@@ -8,7 +8,7 @@
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::combat::{armoured, big_body, indestructible, pacifist, plain, shielded};
+use crate::rules::fixtures::combat::{armored, big_body, indestructible, pacifist, plain, shielded};
 use crate::rules::fixtures::spell_verbs::register_spell_verb_fixtures;
 
 /// `active`'s turn 9, its main phase; both sides hold `hand`s, the given fields, and plain cards to
@@ -372,7 +372,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             "r1848001-armor",
             false,
             json!([]),
-            json!([{ "def": armoured.id, "lane": 1 }, { "def": plain.id, "lane": 2 }]),
+            json!([{ "def": armored.id, "lane": 1 }, { "def": plain.id, "lane": 2 }]),
         );
         let (target, right) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
         s.play(meteor.id.as_str(), pick(&target));

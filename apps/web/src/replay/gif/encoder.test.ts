@@ -68,7 +68,7 @@ function decode(bytes: Uint8Array): Decoded {
   const flags = u8();
   u8();
   u8();
-  expect(flags & 0x80, "a global colour table").toBe(0x80);
+  expect(flags & 0x80, "a global color table").toBe(0x80);
   const palette = Uint8Array.from(Array.from({ length: 3 << ((flags & 7) + 1) }, u8));
   const decoded: Decoded = { version, width, height, palette, loops: false, frames: [], trailer: false };
   let delayCs = 0;
@@ -96,7 +96,7 @@ function decode(bytes: Uint8Array): Decoded {
     }
     expect(marker).toBe(0x2c);
     expect([u16(), u16(), u16(), u16()], "the image fills the canvas").toEqual([0, 0, width, height]);
-    expect(u8() & 0x80, "no local colour table").toBe(0);
+    expect(u8() & 0x80, "no local color table").toBe(0);
     const minSize = u8();
     const indices = lzwDecode(minSize, blocks());
     decoded.frames.push({ delayCs, indices: Uint8Array.from(indices) });
@@ -182,7 +182,7 @@ describe("R513000 the GIF encoder", () => {
     expect(Array.from(gif.frames[0]?.indices ?? [])).toEqual(expectedIndices(flat));
   });
 
-  it("the palette's own colours map to themselves", () => {
+  it("the palette's own colors map to themselves", () => {
     expect(GIF_PALETTE).toHaveLength(768);
     for (let i = 0; i < 252; i += 1) {
       expect(paletteIndex(GIF_PALETTE[i * 3] ?? -1, GIF_PALETTE[i * 3 + 1] ?? -1, GIF_PALETTE[i * 3 + 2] ?? -1)).toBe(i);

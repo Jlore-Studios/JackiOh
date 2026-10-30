@@ -1,5 +1,5 @@
 /* The web fonts (issue #262): one display face and one text face, both under the SIL Open Font
-   License and self-hosted from public/fonts (their licences beside them), so the page asks no
+   License and self-hosted from public/fonts (their licenses beside them), so the page asks no
    third party for anything and the CSP's `font-src 'self'` holds.
 
    - Alegreya (Huerta Tipográfica), the display face: titles, card names, the tavern's headings.

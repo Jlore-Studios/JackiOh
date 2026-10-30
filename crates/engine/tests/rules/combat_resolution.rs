@@ -260,7 +260,7 @@ mod combat_resolution_m2_t4 {
         assert_eq!(refused, None);
 
         // The state check never runs between the two hits of one combat (§4.5, R59), so both deaths
-        // land after both hits rather than the attacker's kill cancelling the strike back.
+        // land after both hits rather than the attacker's kill canceling the strike back.
         let kinds: Vec<GameEventType> = events
             .iter()
             .map(|event| event.event_type())
@@ -360,7 +360,7 @@ mod r53_forced_attacks_m2_t4 {
         let (_, events) = run(&mut state, |sink| force(sink, &sick.id, &flame.id));
 
         assert_eq!(
-            serde_json::to_value(events_of_type(&events, GameEventType::AttackDeclared)).expect("serialises"),
+            serde_json::to_value(events_of_type(&events, GameEventType::AttackDeclared)).expect("serializes"),
             json!([{ "type": "attackDeclared", "attackerId": sick.id, "targetId": flame.id, "forced": true }])
         );
         assert_eq!(by_id(&state, &flame.id).damage, 3);

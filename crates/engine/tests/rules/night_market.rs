@@ -344,7 +344,7 @@ fn r97_r1000_the_opponent_sees_only_an_open_prompt_and_a_hidden_card_arriving() 
     let mut state = opened("nm-hidden", false);
     let stall = stall_of(&state);
     let named = |view: &PlayerView| -> Vec<String> {
-        let text = serde_json::to_string(view).expect("a view serialises");
+        let text = serde_json::to_string(view).expect("a view serializes");
         stall
             .iter()
             .filter(|id| text.contains(id.as_str()))

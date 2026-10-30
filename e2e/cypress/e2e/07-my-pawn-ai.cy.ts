@@ -224,9 +224,9 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
             });
 
             cy.gameState().should((after) => {
-              // The cancelled hit never happened.
-              expect(heroHealth(after, "p2"), "the cancelled attack dealt no damage").to.eq(health);
-              expect(after.result, "the cancelled swing did not end the game").to.eq(null);
+              // The canceled hit never happened.
+              expect(heroHealth(after, "p2"), "the canceled attack dealt no damage").to.eq(health);
+              expect(after.result, "the canceled swing did not end the game").to.eq(null);
               // §5.1 spends the trap to its owner's graveyard.
               expect(
                 (peek(after, "p2").backrow ?? [])[TRAP_LANE - 1],

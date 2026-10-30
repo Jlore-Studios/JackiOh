@@ -1,5 +1,5 @@
 /**
- * What every flavor looks like (#1442, docs/polish/8-flavor.md): its colours, its particle shape and
+ * What every flavor looks like (#1442, docs/polish/8-flavor.md): its colors, its particle shape and
  * its projectile. The one table every flavor effect reads: the Ranged shot here, then the damage
  * projectile, casts, melee impacts, summons, deaths and trap reveals of the later parts of #1436.
  * Pure data, so a flavor with no look fails `typecheck`.
@@ -11,7 +11,7 @@ import { hashId } from "../cards/art/hash.ts";
 import { createRng } from "./rng.ts";
 import type { FxPreset, FxShot } from "./types.ts";
 
-/** Two or three `#rrggbb` colours, hot first: the core, the body and the glow. */
+/** Two or three `#rrggbb` colors, hot first: the core, the body and the glow. */
 export type FlavorColors = readonly [string, string] | readonly [string, string, string];
 
 /** `particle` is the preset a flavor's bursts use; `projectile` is the shot a Ranged attacker fires. */

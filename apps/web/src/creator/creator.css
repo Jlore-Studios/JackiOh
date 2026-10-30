@@ -1,6 +1,6 @@
 /* The card creator (creator/Creator.tsx, #920): the list of the account's cards beside the editor,
    whose form and builder or code view run down the left and whose preview and buttons sit right.
-   One column on a narrow screen. Colours are the app's own tokens (index.css). */
+   One column on a narrow screen. Colors are the app's own tokens (index.css). */
 
 .creator {
   display: grid;
@@ -251,7 +251,7 @@
 }
 
 /* The code view: a transparent text area over its highlighted copy, line for line. Both use the same
-   font, size, line height and padding, so the caret sits on the coloured text. */
+   font, size, line height and padding, so the caret sits on the colored text. */
 .creator-code__frame {
   position: relative;
   border: 1px solid var(--line-bright);

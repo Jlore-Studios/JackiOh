@@ -607,9 +607,9 @@ pub fn run_owed_firing(sink: &mut EngineSink<'_>, item: &WorkItem) {
 }
 
 /// §4.2 step 4, §6.3 "Cancel an attack": the window a declaration opens answers that declaration,
-/// and only while it stands. Once a trap has cancelled it (R44), or the window has closed — #96's AI
+/// and only while it stands. Once a trap has canceled it (R44), or the window has closed — #96's AI
 /// turn can end the turn, and every declaration the AI makes opens and closes its own — there is no
-/// attack left to answer: a cancelled attack resolves no combat, so it "would be lethal" to nobody,
+/// attack left to answer: a canceled attack resolves no combat, so it "would be lethal" to nobody,
 /// and a second My Pawn stays armed and face-down (R99). The same holds once a trap earlier in the
 /// window has destroyed, stolen or moved the attacker or its target (R220): that attack is over, and
 /// there is nothing for My Pawn to call off. A forced attack opens no window at all (R121) and is not
@@ -677,7 +677,7 @@ fn live_match(state: &GameState, trap_match: &TrapMatch, event: &GameEvent) -> O
 pub fn standing_event(sink: &EngineSink<'_>, event: &GameEvent, dispatch_mark: u32) -> Option<GameEvent> {
     let state: &GameState = &*sink.state;
     // B5 E1, R448: an announce is answered only while its play can still be countered. Once a Counter
-    // earlier in the window has cancelled it (or step 4 has moved the card), a later trap finds no card
+    // earlier in the window has canceled it (or step 4 has moved the card), a later trap finds no card
     // and is not offered it at all, so it stays set (R99) rather than firing at nothing (R61).
     if let GameEvent::CardAnnounced { instance_id, .. } = event {
         return if crate::announce::is_announce_live(state, instance_id) {

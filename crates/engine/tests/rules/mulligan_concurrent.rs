@@ -170,7 +170,7 @@ mod r265_the_mulligans_are_open_at_once {
             input(json!({ "type": "mulligan", "keep": [], "playerId": "p2" })),
         );
         let copy: GameState =
-            serde_json::from_str(&serde_json::to_string(&waiting).expect("serialises")).expect("parses");
+            serde_json::from_str(&serde_json::to_string(&waiting).expect("serializes")).expect("parses");
         assert_eq!(copy, waiting);
         assert_eq!(legal_actions(&copy, P1), legal_actions(&waiting, P1));
         assert_eq!(legal_actions(&copy, P2), vec![ActionBody::Concede]);
@@ -262,7 +262,7 @@ mod r266_an_answer_is_sealed_until_both_are_in {
         ));
         assert!(
             !serde_json::to_string(&seen)
-                .expect("serialises")
+                .expect("serializes")
                 .contains("\"kept\"")
         );
 
@@ -633,7 +633,7 @@ mod r269_a_draw_offer_s_lifetime {
                 "checkpoint {at}"
             );
             // CLAUDE.md rule 7, BUILD M3-T6's stringify check: p2's view names nothing of p1's block.
-            let theirs = serde_json::to_string(&view_for(&state, P2)).expect("a PlayerView serialises");
+            let theirs = serde_json::to_string(&view_for(&state, P2)).expect("a PlayerView serializes");
             assert!(
                 !theirs.contains("drawOfferBlockedTurns"),
                 "checkpoint {at}: {theirs}"

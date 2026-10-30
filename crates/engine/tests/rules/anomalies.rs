@@ -362,8 +362,8 @@ mod r1855001_a_replaced_boards_laid_units_fire_their_cries_at_random {
         let once = crowd_on("r1855001-replay");
         let again = crowd_on("r1855001-replay");
         assert_eq!(
-            serde_json::to_value(once.state()).expect("serialises"),
-            serde_json::to_value(again.state()).expect("serialises"),
+            serde_json::to_value(once.state()).expect("serializes"),
+            serde_json::to_value(again.state()).expect("serializes"),
             "the same seed draws the same choices"
         );
 
@@ -444,7 +444,7 @@ mod r1855001_a_replaced_boards_laid_units_fire_their_cries_at_random {
         assert!(s.unit(P1, 2).is_none(), "the rest waits for the answer");
         // §9.3: the paused replacement is data.
         let round: GameState =
-            serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
+            serde_json::from_str(&serde_json::to_string(s.state()).expect("serializes")).expect("parses");
         assert_eq!(&round, s.state());
 
         s.answer(json!("hello"));
@@ -475,7 +475,7 @@ mod r1855001_a_replaced_boards_laid_units_fire_their_cries_at_random {
         assert!(s.unit(P1, 2).is_some(), "the whole preset is laid first");
         // §9.3: the paused Cry is data, and nothing of the random mode is left on the state at rest.
         let round: GameState =
-            serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
+            serde_json::from_str(&serde_json::to_string(s.state()).expect("serializes")).expect("parses");
         assert_eq!(&round, s.state());
         assert!(s.state().casts_resolving.is_none());
 

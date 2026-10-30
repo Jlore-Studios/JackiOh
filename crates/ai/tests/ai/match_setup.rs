@@ -159,14 +159,14 @@ fn every_setup_input_reaches_the_game_and_its_fold() {
         Some(vec![PlayerId::P2])
     );
     assert_eq!(
-        serde_json::to_value(&first.last_boards).expect("last boards serialise"),
+        serde_json::to_value(&first.last_boards).expect("last boards serialize"),
         json!({
             "p1": [{ "defId": P1_BOARD_CARD, "radiant": false }],
             "p2": [{ "defId": P2_BOARD_CARD, "radiant": false }],
         })
     );
     assert_eq!(
-        serde_json::to_value(&first.glitch_boards).expect("Glitch boards serialise"),
+        serde_json::to_value(&first.glitch_boards).expect("Glitch boards serialize"),
         json!({
             "p1": [{ "defId": P2_BOARD_CARD, "radiant": false }],
             "p2": [{ "defId": P1_BOARD_CARD, "radiant": false }],
@@ -185,13 +185,13 @@ fn every_setup_input_reaches_the_game_and_its_fold() {
     assert_ne!(hash_state(&bare.state), record.hash);
 
     // The inputs are written beside the config's other keys, and read back from them.
-    let written = serde_json::to_value(&config).expect("a config serialises");
+    let written = serde_json::to_value(&config).expect("a config serializes");
     for key in ["dealt", "lastBoards", "glitchBoards"] {
         assert!(written.get(key).is_some(), "{key}");
     }
     assert!(written.get("setup").is_none());
     assert_eq!(
-        serde_json::from_value::<MatchConfig>(written).expect("a config deserialises"),
+        serde_json::from_value::<MatchConfig>(written).expect("a config deserializes"),
         config
     );
 }
@@ -202,7 +202,7 @@ fn a_config_without_setup_inputs_writes_and_plays_the_game_it_did_before() {
     let config = random_vs_random("match-setup-plain", MatchSetup::default());
     let record = play_match(&config, &mut MatchHooks::default());
 
-    let written = serde_json::to_value(&config).expect("a config serialises");
+    let written = serde_json::to_value(&config).expect("a config serializes");
     let mut keys: Vec<&str> = written
         .as_object()
         .expect("a config is an object")
@@ -212,7 +212,7 @@ fn a_config_without_setup_inputs_writes_and_plays_the_game_it_did_before() {
     keys.sort_unstable();
     assert_eq!(keys, ["controllers", "decks", "seed"]);
     assert_eq!(
-        serde_json::from_value::<MatchConfig>(written).expect("a config deserialises"),
+        serde_json::from_value::<MatchConfig>(written).expect("a config deserializes"),
         config
     );
 

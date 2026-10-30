@@ -100,8 +100,8 @@ export type RenderOptions = {
   onFrame: (frames: number) => void;
 };
 
-function cancelled(): DOMException {
-  return new DOMException("cancelled", "AbortError");
+function canceled(): DOMException {
+  return new DOMException("canceled", "AbortError");
 }
 
 /** The plan drawn in a worker: its bytes, null over the cap, or "unsupported" where a worker cannot draw. */
@@ -115,7 +115,7 @@ function viaWorker(plan: GifPlan, assets: GifAssets, options: RenderOptions): Pr
     };
     function onAbort(): void {
       end(() => {
-        reject(cancelled());
+        reject(canceled());
       });
     }
     options.signal.addEventListener("abort", onAbort, { once: true });
@@ -155,7 +155,7 @@ async function viaThread(plan: GifPlan, assets: GifAssets, options: RenderOption
 /**
  * The GIF's bytes, or null when they pass `options.maxBytes`. In a worker where there is one that
  * can draw (`via` "worker" insists on it and throws where there is none), else on the main thread
- * (`via` "thread"). A cancelled signal rejects with an `AbortError`.
+ * (`via` "thread"). A canceled signal rejects with an `AbortError`.
  */
 export async function renderGif(
   plan: GifPlan,
@@ -163,7 +163,7 @@ export async function renderGif(
   options: RenderOptions,
   via?: "worker" | "thread",
 ): Promise<Uint8Array<ArrayBuffer> | null> {
-  if (options.signal.aborted) throw cancelled();
+  if (options.signal.aborted) throw canceled();
   if (via !== "thread") {
     if (typeof Worker === "function" && typeof OffscreenCanvas === "function") {
       const drawn = await viaWorker(plan, assets, options);
@@ -189,7 +189,7 @@ export type GifProgress = { frame: number; frames: number; attempt: number; atte
 export type GifExportResult =
   | { kind: "ready"; file: File; attempt: GifAttempt }
   | { kind: "tooBig" }
-  | { kind: "cancelled" };
+  | { kind: "canceled" };
 
 /** The `render` an export draws with: `renderGif`, or a stand-in for a test. */
 export type GifRender = (plan: GifPlan, assets: GifAssets, options: RenderOptions) => Promise<Uint8Array<ArrayBuffer> | null>;
@@ -210,7 +210,7 @@ export async function exportGif(
   const portraits = input.portraits ?? { p1: DEFAULT_PORTRAIT, p2: DEFAULT_PORTRAIT };
   const attempts = attemptsFor(input.preset);
   for (const [index, attempt] of attempts.entries()) {
-    if (hooks.signal.aborted) return { kind: "cancelled" };
+    if (hooks.signal.aborted) return { kind: "canceled" };
     const size = REPLAY_GIF_SIZES[attempt.preset];
     const plan = planFrames(input.clip, { ...size, fps: attempt.fps, catalogVersion: CATALOG_VERSION, portraits });
     const assets = assetsFor(plan, input.clip, input.lookup);
@@ -226,7 +226,7 @@ export async function exportGif(
         return { kind: "ready", file: gifFile(bytes, `jackioh-replay-${String(first.step + 1)}-${String(last.step + 1)}.gif`), attempt };
       }
     } catch (cause) {
-      if (isAbort(cause) || hooks.signal.aborted) return { kind: "cancelled" };
+      if (isAbort(cause) || hooks.signal.aborted) return { kind: "canceled" };
       throw cause;
     }
   }

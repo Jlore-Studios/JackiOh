@@ -62,7 +62,7 @@ export function TokensPanel({
               { minSample },
             )}
           </p>
-          <TableScroll labelledBy={titleId}>
+          <TableScroll labeledBy={titleId}>
             <table className="stats-table" data-testid={statsTestid.tokensTable}>
               <thead>
                 <tr>

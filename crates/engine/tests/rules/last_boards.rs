@@ -143,7 +143,7 @@ mod b5_e30_last_boards_as_a_create_game_input_r417 {
         // Two cards no deck holds, so nothing else in a view can name them.
         let state = created(Some((vec![entry(TRAP, true)], vec![entry(FIELD_TRAP, true)])));
         for viewer in [P1, P2] {
-            let text = serde_json::to_string(&view_for(&state, viewer)).expect("a view serialises");
+            let text = serde_json::to_string(&view_for(&state, viewer)).expect("a view serializes");
             assert!(!text.contains(TRAP));
             assert!(!text.contains(FIELD_TRAP));
             assert!(!text.contains("lastBoard"));
@@ -365,7 +365,7 @@ mod b5_e30_c_29s_verbs_over_the_frozen_board_r417_r564 {
         );
         assert!(
             !serde_json::to_string(&view_for(&state, P2))
-                .expect("a view serialises")
+                .expect("a view serializes")
                 .contains("fx-token-rush")
         );
     }

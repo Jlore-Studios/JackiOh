@@ -494,7 +494,7 @@ describe("#1308 the pack-opening scene", () => {
 
     fireEvent.pointerDown(screen.getByTestId(T.pack), { clientX: 0, pointerId: 1 });
     fireEvent.pointerCancel(screen.getByTestId(T.pack), { pointerId: 1 });
-    expect(screen.getByTestId(T.object), "a cancelled press lets go").toHaveAttribute("data-state", "idle");
+    expect(screen.getByTestId(T.object), "a canceled press lets go").toHaveAttribute("data-state", "idle");
 
     rerender(<PackScene {...given} opened={openedPack()} />);
     expect(screen.getByTestId(T.object)).toHaveAttribute("data-state", "tearing");

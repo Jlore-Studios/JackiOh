@@ -42,7 +42,7 @@ export function createDuosRoom(body: { difficulty: Difficulty } & DuosDeckChoice
   return withSession((token) => apiRequest<{ code: string }>("/api/duos/rooms", { method: "POST", token, body }));
 }
 
-/** `GET /api/duos/rooms/:code`: 404 once the room expired (DUOS_ROOM_TTL_MS) or was cancelled. */
+/** `GET /api/duos/rooms/:code`: 404 once the room expired (DUOS_ROOM_TTL_MS) or was canceled. */
 export function getDuosRoom(code: string): Promise<DuosRoom> {
   return withSession((token) => apiRequest<DuosRoom>(`/api/duos/rooms/${encodeURIComponent(code)}`, { token }));
 }

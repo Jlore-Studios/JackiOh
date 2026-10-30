@@ -11,10 +11,10 @@
 //! card stands on the field; it goes when Palantir leaves).
 //!
 //! The steal answers the opponent's announce (`cardAnnounced`, §10.5 step 3a) as a Counter (§6.3, B5
-//! E1, R448): the card is cancelled before it moves and goes to your hand as your own card (B5 E2, the
+//! E1, R448): the card is canceled before it moves and goes to your hand as your own card (B5 E2, the
 //! Steal off the field: its owner changes, §3.2, R12; a full hand burns it into your graveyard, R317),
 //! and then you cast it (R831001): a cast by Palantir's controller (R70), every choice made at random
-//! and each target aimed in your favour (R452, R656), after which it goes to your graveyard as your
+//! and each target aimed in your favor (R452, R656), after which it goes to your graveyard as your
 //! card. A cast is a play and is answered too (R70). The Spells it answers are the (1) Cost ones, their
 //! own cost as they stand out of play (R65: an X Spell counts 0, R396), Books or not.
 //!   - Base: "Tribute this to steal and cast it" is a price paid without asking (no "you may", balance patch 1):
@@ -66,7 +66,7 @@ fn draw_limit() -> DrawLimitHook {
 }
 
 /// "Steal it and cast it yourself": countered into your hand, then cast by you, every choice at
-/// random but aimed in your favour (R831001, R452, R656).
+/// random but aimed in your favor (R831001, R452, R656).
 fn steal_and_cast(spell: &str) -> Vec<Effect> {
     let card = json!({ "of": "instance", "instanceId": spell });
     vec![

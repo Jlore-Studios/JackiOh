@@ -3,7 +3,7 @@
 // press landed on neither a card nor a board control. #2332: a zone's own margin, around the unit
 // or trap it holds, is playmat too. #1954: one press is one tap, in the look and sound of the
 // playmat's family; holding or dragging adds nothing. #2015: a tap takes the playmat of the half
-// it lands on, the opponent's above the centre line.
+// it lands on, the opponent's above the center line.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
 
@@ -61,8 +61,8 @@ export const TAP_SFX: Readonly<Record<TapFamily, SfxId>> = {
 
 /** The feel values the tap marks draw from (board.css reads the tint and flight as CSS vars). */
 export const TAP_FEEL = {
-  neonColours: ["#22d3ee", "#e879f9", "#a3e635", "#facc15"],
-  astralColours: ["#ffffff", "#c4b5fd", "#bae6fd"],
+  neonColors: ["#22d3ee", "#e879f9", "#a3e635", "#facc15"],
+  astralColors: ["#ffffff", "#c4b5fd", "#bae6fd"],
   astralStars: 5,
   astralSpreadPx: 16,
 } as const;
@@ -75,7 +75,7 @@ export type SandMark = {
   grain: boolean;
   build: number;
   variation: number;
-  /** Neon's ring colour, or one astral star's colour. */
+  /** Neon's ring color, or one astral star's color. */
   tint?: string;
   /** One astral star's flight, in px. */
   dx?: number;
@@ -92,7 +92,7 @@ export type SlamSand = { marks: readonly ("cracks" | "crater")[] };
 /** The DOM event a landing zone dispatches; it bubbles to the field this surface listens on. */
 export const SLAM_SAND_EVENT = "jk-slam-sand";
 
-/** #2015: the field's centre line, in % of its height; above it is the opponent's half (table.css's `.field-their-mat`, `inset: 0 0 50%`). */
+/** #2015: the field's center line, in % of its height; above it is the opponent's half (table.css's `.field-their-mat`, `inset: 0 0 50%`). */
 const FIELD_MIDLINE_PERCENT = 50;
 
 /** #185: dispatch a landing's sand marks at `zone` (the field's surface draws them under the cards). */
@@ -139,7 +139,7 @@ export function tapMarks(family: TapFamily, x: number, y: number, firstId: numbe
   };
   const first = mark(x, y, false);
   if (family === "neon") {
-    return [{ ...first, tint: pick(TAP_FEEL.neonColours, first.variation) }];
+    return [{ ...first, tint: pick(TAP_FEEL.neonColors, first.variation) }];
   }
   if (family === "astral") {
     return Array.from({ length: TAP_FEEL.astralStars }, (_, star) => {
@@ -147,7 +147,7 @@ export function tapMarks(family: TapFamily, x: number, y: number, firstId: numbe
       const distance = TAP_FEEL.astralSpreadPx * (0.4 + 0.6 * variationFor(y, x, first.id + star + 1));
       return {
         ...(star === 0 ? first : mark(x, y, false)),
-        tint: pick(TAP_FEEL.astralColours, variationFor(x + star, y, first.id)),
+        tint: pick(TAP_FEEL.astralColors, variationFor(x + star, y, first.id)),
         dx: Math.cos(angle) * distance,
         dy: Math.sin(angle) * distance,
       };
@@ -194,7 +194,7 @@ export default function SandSurface({ field, disabled, table, theirTable }: Sand
         ? 1
         : Math.min(SAND_FEEL.maximumBuild, build.current + 1);
       lastTap.current = now;
-      // #2015: each half taps in its own playmat, the opponent's above the centre line.
+      // #2015: each half taps in its own playmat, the opponent's above the center line.
       const family = tapFamilyOf(y < FIELD_MIDLINE_PERCENT ? theirTableRef.current : tableRef.current);
       const added = tapMarks(family, x, y, markId.current + 1, build.current);
       markId.current += added.length;
@@ -213,7 +213,7 @@ export default function SandSurface({ field, disabled, table, theirTable }: Sand
       }
     };
 
-    // #185: a slam's cracks and crater, centred on its zone and as wide as it, under the cards.
+    // #185: a slam's cracks and crater, centered on its zone and as wide as it, under the cards.
     const slam = (event: Event): void => {
       const detail = (event as CustomEvent<SlamSand>).detail;
       const zone = event.target;

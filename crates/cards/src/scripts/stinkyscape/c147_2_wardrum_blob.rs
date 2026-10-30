@@ -109,7 +109,7 @@ mod tests {
         let vanillas: Vec<String> = s.hand(P1).into_iter().map(|card| card.id).collect();
         assert_eq!(marked(&s), vanillas, "two equal plays share the mark");
         assert_eq!(s.state().players[P1].pareto_hint, None, "the aura stores nothing");
-        let theirs = serde_json::to_string(&s.view(P2)).expect("a view serialises");
+        let theirs = serde_json::to_string(&s.view(P2)).expect("a view serializes");
         assert!(!theirs.contains("paretoOptimal"), "never on the opponent's view");
         s.end_turn();
         assert!(

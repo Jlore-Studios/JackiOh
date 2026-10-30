@@ -25,7 +25,7 @@ import {
   ROTATION_POOL,
   dealLandingFan,
   fanPool,
-  favouringFullArt,
+  favoringFullArt,
   featureWeight,
   fitsTheFan,
   pickWeighted,
@@ -97,7 +97,7 @@ describe("R639 the rotation's pool", () => {
   });
 });
 
-describe("R639 favouring the cards that print at full size", () => {
+describe("R639 favoring the cards that print at full size", () => {
   it("R639 a card whose name and text fit the two shortest tiers weighs more than one that needs shrinking, and none weighs 0", () => {
     expect(FEATURE_WEIGHT_PLAIN).toBeGreaterThan(FEATURE_WEIGHT_DENSE);
     expect(FEATURE_WEIGHT_DENSE).toBeGreaterThan(0);
@@ -314,7 +314,7 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
         }
       }
       for (const seed of SEEDS) {
-        const hand = dealLandingFan(seeded(seed), fanPool(fullArt), favouringFullArt(EVEN, fullArt));
+        const hand = dealLandingFan(seeded(seed), fanPool(fullArt), favoringFullArt(EVEN, fullArt));
         expect(hand).toHaveLength(FAN_FACES);
         for (const { def } of hand) expect(fitsTheFan(def, fullArt), def.id).toBe(true);
       }
@@ -326,14 +326,14 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
     const other = FAN_POOL.find((def) => !isFullArt(def.name));
     if (other === undefined) throw new Error("no other card");
     for (const def of HEROES) {
-      expect(favouringFullArt(EVEN, true)(def), def.name).toBe(FULL_ART_WEIGHT_FACTOR);
-      expect(favouringFullArt(EVEN, false)(def), def.name).toBe(1);
-      expect(favouringFullArt(featureWeight, true)(def), def.name).toBe(FEATURE_WEIGHT_PLAIN * FULL_ART_WEIGHT_FACTOR);
+      expect(favoringFullArt(EVEN, true)(def), def.name).toBe(FULL_ART_WEIGHT_FACTOR);
+      expect(favoringFullArt(EVEN, false)(def), def.name).toBe(1);
+      expect(favoringFullArt(featureWeight, true)(def), def.name).toBe(FEATURE_WEIGHT_PLAIN * FULL_ART_WEIGHT_FACTOR);
     }
-    expect(favouringFullArt(EVEN, true)(other)).toBe(1);
+    expect(favoringFullArt(EVEN, true)(other)).toBe(1);
     // R2195001: a snapshot of a hero's card prints no full art, so it weighs as any card.
-    for (const def of HERO_SNAPSHOTS) expect(favouringFullArt(EVEN, true)(def), def.id).toBe(1);
-    expect(favouringFullArt(featureWeight, true)(other)).toBe(featureWeight(other));
+    for (const def of HERO_SNAPSHOTS) expect(favoringFullArt(EVEN, true)(def), def.id).toBe(1);
+    expect(favoringFullArt(featureWeight, true)(other)).toBe(featureWeight(other));
     // Drawn among the Core Commons that fit, the heroes' share grows by about the factor.
     const commons = fanPool(true).filter((def) => def.rarity === "Common");
     const heroes = commons.filter((def) => isFullArtCard(def.id, def.name)).length;
@@ -341,7 +341,7 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
     let drawn = 0;
     const DRAWS = 20_000;
     for (let i = 0; i < DRAWS; i += 1) {
-      const def = pickWeighted(commons, random, favouringFullArt(EVEN, true));
+      const def = pickWeighted(commons, random, favoringFullArt(EVEN, true));
       if (def !== undefined && isFullArtCard(def.id, def.name)) drawn += 1;
     }
     const share = (heroes * FULL_ART_WEIGHT_FACTOR) / (commons.length - heroes + heroes * FULL_ART_WEIGHT_FACTOR);

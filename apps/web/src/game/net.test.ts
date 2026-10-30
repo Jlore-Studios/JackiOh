@@ -767,7 +767,7 @@ describe("a silent socket", () => {
     h.wake();
     live.deliver({ type: "view", view: baseView({ turn: 3 }) });
 
-    // The answer cancelled the probe: nothing is left to run, and the socket stays.
+    // The answer canceled the probe: nothing is left to run, and the socket stays.
     expect(h.pending()).toBe(0);
     h.runTimers();
     expect(h.sockets).toHaveLength(1);

@@ -6,7 +6,7 @@
 //! JSON and replays (§9.3):
 //!
 //!   cry    one reward rolled per difficulty (`KY_TEST_REWARDS`; Hard has one entry, so no draw, R129),
-//!          then a `mode` prompt of the three difficulties, each labelled "<difficulty>: <reward>".
+//!          then a `mode` prompt of the three difficulties, each labeled "<difficulty>: <reward>".
 //!   ask    a problem of the chosen difficulty — generated for Easy (R580; since issue #2179 a
 //!          four-digit sum or difference, R2179003, `KyTestEasy`), drawn from the bank otherwise — as
 //!          an `answer` prompt (R465): the statement and the options in an rng-shuffled order, the

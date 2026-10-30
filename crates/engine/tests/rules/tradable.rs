@@ -240,7 +240,7 @@ fn r1838001_the_other_player_learns_that_a_card_was_traded_and_not_which() {
         "public: a player, no card"
     );
     for event in &theirs.events {
-        let json = serde_json::to_value(event).expect("an event serialises");
+        let json = serde_json::to_value(event).expect("an event serializes");
         match event {
             GameEvent::ShuffledIn { .. } | GameEvent::Drawn { .. } => {
                 assert_eq!(json["instanceId"], json!(HIDDEN_ID), "{json}");
@@ -267,7 +267,7 @@ fn r1838001_the_other_player_learns_that_a_card_was_traded_and_not_which() {
         .events
         .iter()
         .find(|event| event.event_type() == GameEventType::ShuffledIn)
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
         .expect("the shuffle-in");
     assert_eq!(
         shuffled["position"],

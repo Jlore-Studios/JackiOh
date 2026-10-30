@@ -116,7 +116,7 @@ fn only<T: Clone>(items: &[T]) -> T {
 
 /// A play as its JSON, so `play.zone?.lane` and `play.tributes` read as TS reads them.
 fn play_json(play: &impl serde::Serialize) -> Value {
-    serde_json::to_value(play).expect("a play serialises")
+    serde_json::to_value(play).expect("a play serializes")
 }
 
 fn lanes(plays: &[Value]) -> Vec<Value> {
@@ -327,7 +327,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         // The Death's summon found no other open zone and fizzled (R64).
         let summoned: Vec<Value> = events_of_type(&result.events, GameEventType::Summoned)
             .into_iter()
-            .map(|event| serde_json::to_value(event).expect("an event serialises")["defId"].clone())
+            .map(|event| serde_json::to_value(event).expect("an event serializes")["defId"].clone())
             .collect();
         assert!(!summoned.contains(&json!("fx-token-rush")));
     }
@@ -348,7 +348,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         );
         assert!(is_reserved(&paused, slot(PlayerId::P1, Row::Units, 5)));
         let round: GameState =
-            serde_json::from_value(serde_json::to_value(&paused).expect("serialises")).expect("deserialises");
+            serde_json::from_value(serde_json::to_value(&paused).expect("serializes")).expect("deserializes");
         let answers: Vec<ActionBody> = legal_actions(&paused, PlayerId::P1)
             .into_iter()
             .filter(|action| matches!(action, ActionBody::Answer { .. }))

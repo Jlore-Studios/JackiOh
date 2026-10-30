@@ -339,7 +339,7 @@ mod tests {
                 s.answer(json!(picks));
 
                 let revived: GameState =
-                    serde_json::from_str(&serde_json::to_string(s.state()).expect("the state serialises"))
+                    serde_json::from_str(&serde_json::to_string(s.state()).expect("the state serializes"))
                         .expect("the state parses back");
                 assert_eq!(&revived, s.state());
                 assert_eq!(hash_state(&revived), hash_state(s.state()));

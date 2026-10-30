@@ -164,7 +164,7 @@
 .tavern.app-shell .panel--auth {
   position: relative;
   max-width: 440px;
-  /* Lower on a tall screen, snug on a short one; never centred, so a notice appearing above the
+  /* Lower on a tall screen, snug on a short one; never centered, so a notice appearing above the
      form does not make the whole board jump. */
   margin-top: clamp(4px, calc(12vh - 40px), 120px);
   /* Clear of the corner studs on every side. */
@@ -546,7 +546,7 @@
 
 /* Touch targets (task 7's 44 px floor). The text-like ways on and out measured 17 to 22 px tall at
    390 px wide and on a phone on its side (integration QA), so on a touch screen, or one sized like a
-   phone either way up, each gets a finger's height with its words on the centre line. An anchor in
+   phone either way up, each gets a finger's height with its words on the center line. An anchor in
    running prose ("play vs AI") keeps its line and grows a hit area round it instead, as the deck
    builder's "+" does. Here rather than in auth.css because every tavern screen loads this file and
    the invite and account screens do not load that one. */
@@ -574,7 +574,7 @@
   }
 }
 
-/* A row of ways on: a link beside a button sits on the button's centre line. */
+/* A row of ways on: a link beside a button sits on the button's center line. */
 .tavern.app-shell .auth-actions > .link-button,
 .tavern.app-shell .row > .link-button {
   align-self: center;
@@ -615,7 +615,7 @@
   visibility: hidden;
 }
 
-/* In a row of ways on, the gold one keeps its colour but takes its neighbours' size. */
+/* In a row of ways on, the gold one keeps its color but takes its neighbours' size. */
 .tavern.app-shell .row .button-primary {
   min-height: 44px;
   padding: 8px 18px;
@@ -832,7 +832,7 @@
   }
 
   /* Both parts start at the top: a refusal appearing under the button lengthens the form's part
-     without moving the title beside it (the same reason the board is never centred). */
+     without moving the title beside it (the same reason the board is never centered). */
   .tavern.app-shell .panel--split {
     display: grid;
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);

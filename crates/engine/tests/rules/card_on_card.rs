@@ -38,7 +38,7 @@ mod r1850001_duo_and_squad {
 
     /// The marks `viewer` reads on the card `id`, wherever on the field it is.
     fn marks_in_view(state: &GameState, viewer: PlayerId, id: &str) -> Vec<(String, String)> {
-        let view = serde_json::to_value(view_for(state, viewer)).expect("a view serialises");
+        let view = serde_json::to_value(view_for(state, viewer)).expect("a view serializes");
         let mut found: Vec<(String, String)> = Vec::new();
         for side in ["you", "opponent"] {
             for row in ["units", "backrow"] {

@@ -92,7 +92,7 @@
 
 /* Touch sizing (B29, as the switch's): the glyph stays small on the card's edge, and a finger gets a
    hit area round it, a --hit-min tall band (R2122000) and only as wide as the tile allows, short of
-   the card's centre line (R2122000's split with the card), so the middle of the tile is always the
+   the card's center line (R2122000's split with the card), so the middle of the tile is always the
    card's own tap (attack, target) and drag. */
 @media (max-width: 1024px), (pointer: coarse) {
   .board .zone > .card:has(> .activate-controls) {

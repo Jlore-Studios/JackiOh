@@ -18,8 +18,8 @@
 //     lines were rendered this way, and their voiceHash is exactly the original formula, so adding the
 //     second backend left every one of those files current.
 //   - "sapi": Windows SAPI (`System.Speech`) driven through `powershell.exe`, natively or from WSL,
-//     where the WAVs go through a Windows-visible temp dir; then trimmed, pitch-shifted, coloured by
-//     the voice's own ffmpeg filter chain, peak-normalised and encoded by `ffmpeg` to the same mono
+//     where the WAVs go through a Windows-visible temp dir; then trimmed, pitch-shifted, colored by
+//     the voice's own ffmpeg filter chain, peak-normalized and encoded by `ffmpeg` to the same mono
 //     AAC at 22050 Hz and about 32 kbps. One PowerShell process renders a whole batch, because each
 //     start costs about a second.
 // Generate renders the keys whose backend this machine has. A key that needs rendering by a backend
@@ -59,7 +59,7 @@ const FFMPEG_ENCODE = [
 ];
 /** Silence below this level is trimmed from both ends of a SAPI render. */
 const TRIM_THRESHOLD_DB = -50;
-/** A SAPI render's loudest sample after normalising, in dBFS (Core's `say` files peak near -5). */
+/** A SAPI render's loudest sample after normalizing, in dBFS (Core's `say` files peak near -5). */
 const PEAK_TARGET_DB = -4;
 /** VOICE_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks (R501, R1448, R1884000). */
 const BUDGET_BYTES = 16 * 1024 * 1024;
@@ -616,7 +616,7 @@ async function peakDb(file) {
   return match ? Number(match[1]) : null;
 }
 
-/** WAV → trimmed, pitched, filtered, normalised M4A in the voice dir. */
+/** WAV → trimmed, pitched, filtered, normalized M4A in the voice dir. */
 async function encodeSapi(key, want, wav, dir, voiceDir) {
   const shaped = path.join(dir, `${key}.shaped.wav`);
   const m4a = path.join(dir, `${key}.m4a`);

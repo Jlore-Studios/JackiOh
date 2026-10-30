@@ -162,7 +162,7 @@ mod tests {
                     assert!(acting.contains(kind), "the Aura gives it {kind:?}");
                 }
                 // The view lists them, as every keyword it has.
-                let view = serde_json::to_string(&s.view(P1)).expect("the view serialises");
+                let view = serde_json::to_string(&s.view(P1)).expect("the view serializes");
                 assert!(view.contains("Equip"));
             }
 
