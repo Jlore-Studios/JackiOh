@@ -845,7 +845,7 @@ macro_rules! ticket_columns {
     };
 }
 
-/// `tickets.status` is queued/claimed/canceled; the port calls the same three open/matched/canceled.
+/// `tickets.status` is queued/claimed/cancelled; the port calls the same three open/matched/cancelled.
 fn to_ticket_status(value: &str) -> Result<TicketStatus, StoreError> {
     match value {
         "queued" => from_literal("open"),

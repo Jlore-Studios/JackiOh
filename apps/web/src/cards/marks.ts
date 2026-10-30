@@ -92,7 +92,7 @@ export const END_OF_TURN_MARK_COLOR: MarkColor = "orange";
 /** #2270: what a card on the field at its last Brittle count wears, the aura alone (no badge, no mark): Allure's, recolored gray. */
 export const BRITTLE_LAST_COLOR: MarkColor = "gray";
 
-/** #2437: what a hand card at its last Temporary count wears (R637, R2179001), the aura alone (no badge, no mark): Allure's, recoloured fuchsia. */
+/** #2437: what a hand card at its last Temporary count wears (R637, R2179001), the aura alone (no badge, no mark): Allure's, recolored fuchsia. */
 export const TEMPORARY_LAST_COLOR: MarkColor = "fuchsia";
 
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
