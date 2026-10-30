@@ -1,10 +1,11 @@
 # Parity: the Python suite and its Go port (#467)
 
-Every test of `bot/tests/` (each `test…` method of a `unittest.TestCase` in `test_*.py` and
-`squishy_cases.py`; `test_machine.py` and `test_hygiene.py` stay in Python) beside the Go test
-that stands for it in `bot/go/tests/`, named as PORTING.md §7 says. The port is not done while
-one is missing. Written by the port's parity script (`python3 -I parity.py <repo>`), which
-exits 1 until every row is ported; do not edit it by hand.
+Every test the Python suite held in `bot/tests/` (each `test…` method of a `unittest.TestCase` in
+`test_*.py` and `squishy_cases.py`) beside the Go test that stands for it in `bot/go/tests/`,
+named as PORTING.md §7 says. The port's parity script wrote it, from the Python suite and the Go
+one, before the Python harness and its tests were deleted in the same pull request; the Python is
+in the history at the merge's first parent. `test_machine.py` and `test_hygiene.py` stayed in
+Python beside their Python subjects and are not listed.
 
 **989 of 989 ported; 0 missing.**
 
