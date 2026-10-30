@@ -1,11 +1,6 @@
-// Anomalies, the board swap, and the Scanning Probes (issue #1855): a Spell exiles what it reaches of
-// its caster's board and lays a preset in its named zones (`replace_board`, R1855000), each laid Unit's
-// Cry firing once the board is laid with its caster's choices drawn at random (R1855001), each card
-// carrying the riders its own text reads (R1855002); and a scan that finds a Radiant or a plain
-// Anomaly, each miss raising that player's later chances (`scan_for_anomaly`, R1855003). Each through
-// a fixture script (`fixtures/anomalies.rs`) before a card uses it: Stinkyscape's Anomaly Found!, its
-// ten boards and the Scanning Probes (S20), whose boards add two readings: a Flying Unit named in the
-// backrow stands there (R1879001), and an entry laid on top of an earlier one makes a pile (R1879002).
+// Anomalies, the board swap, and the Scanning Probes (issue #1855): `replace_board` (R1855000, R1855001,
+// R1855002) and `scan_for_anomaly` (R1855003), each through a fixture script (`fixtures/anomalies.rs`):
+// Stinkyscape's Anomaly Found!, its ten boards and the Scanning Probes (S20, R1879001, R1879002).
 
 use jackioh_engine::effects::{AnomalyScan, anomaly_chances, anomaly_scan_of};
 use jackioh_engine::testkit::PlayerId::{P1, P2};

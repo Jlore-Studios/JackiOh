@@ -1,12 +1,5 @@
 //! Test-only cards for #783's five keywords: Ranged, Flying, Cloaked, Crater and Flashback
-//! (R783000–R783013).
-//!
-//! No catalog card prints them until #781's part 2, so these are the engine's proof: plain bodies
-//! for the combat keywords, a Cloaked Unit, Spell, Field Spell and Trap, Field Spells whose auras lend
-//! Cloaked to the cards in their controller's hand, the Trap price rules a Cloaked card must miss,
-//! Crater on every kind of card and on the Spells that summon, Recruit and Flicker, and a Flashback
-//! Spell and Unit.
-//!
+//! (R783000–R783013): the engine's proof, apart from the catalog's cards (#781's part 2).
 //! Ids are prefixed `kw-` and indexed from 7830 up, clear of every other fixture file (BUILD §0).
 
 use std::sync::LazyLock;
@@ -45,9 +38,7 @@ fn unit(index: u32, name: &str, cost: i32, attack: i32, health: i32, keywords: V
     ))
 }
 
-// ---------------------------------------------------------------------------
 // Ranged and Flying (R783000–R783003)
-// ---------------------------------------------------------------------------
 
 /// A Ranged 2/3.
 pub fn ranged() -> CardDef {
@@ -134,9 +125,7 @@ pub fn sniper() -> CardDef {
     unit(7839, "sniper", 1, 1, 1, json!([]))
 }
 
-// ---------------------------------------------------------------------------
 // Cloaked (R783004–R783009)
-// ---------------------------------------------------------------------------
 
 /// A Cloaked 3/3 at (3) whose Cry deals 2 to a chosen unit or hero.
 pub fn cloaked_unit() -> CardDef {
@@ -195,9 +184,7 @@ pub fn trap_discount() -> CardDef {
     unit(7849, "trap-discount", 1, 1, 1, json!([]))
 }
 
-// ---------------------------------------------------------------------------
 // Crater (R783010, R783011)
-// ---------------------------------------------------------------------------
 
 /// A Crater 2/2 whose Cry deals 1 to the enemy hero.
 pub fn crater_unit() -> CardDef {
@@ -299,9 +286,7 @@ pub fn crater_field() -> CardDef {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Flashback (R783012, R783013)
-// ---------------------------------------------------------------------------
 
 /// A Flashback Spell at (2): 2 to the enemy hero.
 pub fn flashback_spell() -> CardDef {

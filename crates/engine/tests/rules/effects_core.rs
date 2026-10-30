@@ -1,15 +1,7 @@
 //! The effects library's cross-cutting acceptance items and the core verbs with no test file of
-//! their own (BUILD M3-T1, SPEC §6.3's verb table).
-//!
-//! M3-T1's acceptance items: `steal` places into the same lane if free else first free and leaves
-//! excess (R15); `summon` with no zone takes the leftmost free zone and skips zones reserved for
-//! Reborn (R64); `cast` counts as a play with cost paid 0 (R70); `fuse` follows R77; leaving the
-//! field resets an instance per R78 while `costMod`, `costOverride` and `radiant` persist; `bounce`
-//! returns to the owner's hand and drops buffs (§6.3); `transform` and `vanilla` are refused on
-//! Immutable (R23); `recruit` scans top-down and keeps library order.
-//!
-//! The per-effect files own those verbs. This file owns R70's cast, R78's reset and the modules
-//! with no test file of their own: draw, addToHand, shuffleInto, loseHealth, mana, memory, position.
+//! their own (BUILD M3-T1, SPEC §6.3's verb table): R70's cast, R78's reset and draw, addToHand,
+//! shuffleInto, loseHealth, mana, memory, position. M3-T1's other items (steal R15, summon R64,
+//! fuse R77, bounce, Immutable R23, recruit) are the per-effect files'.
 
 use jackioh_engine::effects::{
     TargetSpec, add_random_from_graveyard, add_to_hand, damage, draw, gain_mana, lose_health, next_turn_mana,
@@ -210,7 +202,7 @@ fn field_of(events: &[GameEvent], of: GameEventType, key: &str) -> Vec<Value> {
         .collect()
 }
 
-// R70's cast and R78's reset: the two acceptance items no per-effect file owns.
+// R70's cast and R78's reset.
 
 mod r70_cast_r78_leaving_the_field_build_m3_t1 {
     use super::*;
@@ -1169,8 +1161,7 @@ mod s6_3_the_effects_barrel_m3_t1 {
         ];
 
         for effect in &built {
-            // The types say `kind` is a string and `apply` a function; the kind must still name
-            // something.
+            // The kind must still name something.
             let _: &'static str = effect.kind;
             let _: &EffectApply = &effect.apply;
             assert!(!effect.kind.is_empty());

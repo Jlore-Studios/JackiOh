@@ -1,7 +1,6 @@
 //! Test-only cards for Dormant (SPEC §6.1, §6.2 "When this awakens", §6.3 Awaken, R1839000–R1839003):
 //! the Dormant Units Stinkyscape will print, in their shapes, and the cards that try to reach them
-//! through the engine's own verbs. No shipped card is Dormant yet (Stinkyscape's two Imprisoned Units
-//! and its Dormant Starship come with the set), so the engine never imports `crates/cards` for this.
+//! through the engine's own verbs, so the engine never imports `crates/cards` for this.
 //!
 //! Ids are prefixed `sl-` and indexed from 18390, so they collide with no other fixture file's.
 
@@ -103,7 +102,6 @@ pub static call: LazyLock<CardDef> = LazyLock::new(|| def(18408, "call", "Spell"
 pub const LAUNCH: &str = "launch";
 /// The Starship's other ability, off while it is Dormant.
 pub const ZAP: &str = "zap";
-/// What the Starship's launch costs.
 pub const LAUNCH_MANA: i32 = 3;
 /// What the Imprisoned's awakening deals the enemy hero.
 pub const AWAKENING_DAMAGE: i32 = 3;

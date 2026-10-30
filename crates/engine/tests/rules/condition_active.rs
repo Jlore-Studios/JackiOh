@@ -1,10 +1,8 @@
 //! R195 (SPEC §10.8, §10.9): the engine's yellow glow, `conditionActive`, as `viewFor` surfaces it.
 //! B10 (SPEC's wording vs the rulings index) is not tested: `spec check` reads ids and test names.
 //!
-//! Every card is a test-only def whose hook is a `ConditionHook` built per test (`Hooks::new`): its
-//! answer is an `Arc<AtomicBool>` the test sets, and every question it is asked goes down a channel
-//! the test reads back. Defs and scripts go over the fixture catalog per test thread (the testkit's
-//! thread-local registries, SURFACE §8).
+//! Every card is a test-only def whose hook is a `ConditionHook` built per test (`Hooks::new`), over
+//! the fixture catalog per test thread (the testkit's thread-local registries, SURFACE §8).
 //!
 //! First match wins (docs/polish/7-mobile-ux.md, S2): game over; a field card not the viewer's; a
 //! hand card outside the viewer's own main phase or with a prompt open; a face with no hook -> false.
@@ -343,7 +341,6 @@ fn view_json_mentions(view: &PlayerView, needle: &str) -> bool {
     serde_json::to_string(view).expect("serializes").contains(needle)
 }
 
-/// A fresh sink over `state`, its rng at the state's cursor as reduce builds it.
 fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -> R {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);

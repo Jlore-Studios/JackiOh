@@ -1,10 +1,7 @@
 //! Test-only cards for the quests subsystem (docs/classic-sets.md B5 E33), so the engine half of
 //! Classic #90 In Too Deep is proved without `jackioh-cards` (CLAUDE.md: the engine never imports it).
-//!
-//!   - one Field Spell per goal kind (`GOAL_CARDS`), whose only quest is that goal and offers nothing;
-//!   - `tree`, a small quest tree shaped like In Too Deep's, with a pause mid-reward, a quest reached
-//!     by two paths, a reward two quests offer and an aura reward;
-//!   - plain helper Spells and a draw-limiting Field Spell the tests drive the counts with.
+//! `tree` is a small quest tree shaped like In Too Deep's, with a pause mid-reward, a quest reached
+//! by two paths, a reward two quests offer and an aura reward.
 
 use std::sync::LazyLock;
 
@@ -458,14 +455,14 @@ fn helper_scripts() -> IndexMap<String, CardScripts> {
 
 // Registration
 
-/// Graveyard cards back to hand: `returnRandomFromGraveyard` proved through a Spell.
+/// Graveyard cards back to hand: `return_random_from_graveyard` proved through a Spell.
 pub fn recall() -> CardDef {
     def(3321, "recall", "Spell", json!({}))
 }
 
 pub const RECALL: i32 = 2;
 
-/// A random Unit of yours +1/+1: `buffRandomUnit` proved through a Spell.
+/// A random Unit of yours +1/+1: `buff_random_unit` proved through a Spell.
 pub fn bless() -> CardDef {
     def(3322, "bless", "Spell", json!({}))
 }
@@ -547,7 +544,7 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
     quest_scripts()
 }
 
-/// Add these fixtures to whatever the harness registered (`newGame` registers its own first).
+/// Add these fixtures to whatever the harness registered (`new_game` registers its own first).
 pub fn register_quest_fixtures() {
     let mut all_defs = registered_catalog().clone();
     all_defs.extend(catalog());

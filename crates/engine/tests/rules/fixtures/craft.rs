@@ -172,7 +172,6 @@ static CRAFTER_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(
     ])
 });
 
-/// This file's defs, by id.
 pub fn catalog() -> IndexMap<String, CardDef> {
     let potion = fixture_spell("pm-potion-crafter", "3403", "crafter (potion)");
     let huge = fixture_spell("pm-huge-potion-crafter", "3404", "crafter (HUGE potion)");
@@ -186,7 +185,6 @@ pub fn catalog() -> IndexMap<String, CardDef> {
     ])
 }
 
-/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     CRAFTER_SCRIPTS.clone()
 }

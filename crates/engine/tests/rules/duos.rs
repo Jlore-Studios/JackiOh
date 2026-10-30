@@ -4,10 +4,9 @@
 //! the behavior it proves (`b<n>_…`).
 //!
 //! The engine does not depend on the real cards, so every game here deals vanilla fixture decks (one
-//! disjoint block of twenty ids per seat, so a card's id says whose deck it came from) and plays this
-//! file's own fixture cards: zero-cost Spells that hit, heal, swap, end the turn, take an extra turn or
-//! win, a lethal-hit redirect, a card with an arrival hook and a 5/5. They are registered through the
-//! testkit's per-thread override and handed to `duos_create` as `DuosCreateOptions.catalog`.
+//! disjoint block per seat, so a card's id says whose deck it came from) and plays this file's own
+//! fixture cards, registered through the testkit's per-thread override and handed to `duos_create` as
+//! `DuosCreateOptions.catalog`.
 //!
 //! A refusal is checked as the engine's contract has it: an error, and a state that hashes as before.
 
@@ -34,9 +33,7 @@ use crate::rules::fixtures::harness::{
     both, json_of, next_nonce, play_random_game, put, setup_catalog, slot,
 };
 
-// ---------------------------------------------------------------------------------------------
 // Fixture cards
-// ---------------------------------------------------------------------------------------------
 
 /// A Spell that does nothing: a move a seat can always make, so the wrapper never ends it as idle.
 const NOOP: &str = "fx-duos-noop";
@@ -265,9 +262,7 @@ fn setup() {
     register_scripts(scripts());
 }
 
-// ---------------------------------------------------------------------------------------------
 // Games
-// ---------------------------------------------------------------------------------------------
 
 /// One disjoint block of `DECK_SIZE` vanilla ids per seat: A1 first, then B1, A2 and B2.
 fn decks() -> DuosDecks {
@@ -416,9 +411,7 @@ fn finish_round(state: DuosState) -> DuosState {
     state
 }
 
-// ---------------------------------------------------------------------------------------------
 // Reading a seat
-// ---------------------------------------------------------------------------------------------
 
 fn side(state: &DuosState, seat: DuosSeat) -> &PlayerState {
     &state.duels[seat.duel()].players[seat.player()]
@@ -736,9 +729,7 @@ fn play_randomly(live: &mut Live, seed: &str, max_steps: usize) {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B1: two ordinary duels
-// ---------------------------------------------------------------------------------------------
 
 mod b1_two_ordinary_duels {
     use super::*;
@@ -865,9 +856,7 @@ mod b1_two_ordinary_duels {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B2: the four mulligans
-// ---------------------------------------------------------------------------------------------
 
 mod b2_mulligans {
     use super::*;
@@ -968,9 +957,7 @@ mod b2_mulligans {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B3: a 1v1 game is untouched
-// ---------------------------------------------------------------------------------------------
 
 mod b3_one_v_one_untouched {
     use super::*;
@@ -1000,9 +987,7 @@ mod b3_one_v_one_untouched {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B4–B9: rounds
-// ---------------------------------------------------------------------------------------------
 
 mod b4_round_seats {
     use super::*;
@@ -1298,10 +1283,7 @@ mod b7_turn_ended_by_an_effect {
     }
 
     /// #936: a first turn that ends as it begins, while the other duel's mulligans are still open,
-    /// used to open round 1 on the duel's new active player, so round 1 went to B1 and A2 and duel 0
-    /// stayed a turn ahead for the rest of the game, every round mixing the teams. On the server a
-    /// Tommy Tempo drawn at the start of A1's first turn put A1 in round 2, the AI team's, which then
-    /// waited a whole round clock for a person who was not expecting to act.
+    /// must not open round 1 on the duel's new active player, which would mix the teams every round.
     #[test]
     fn b7_a_first_turn_ended_before_round_1_opens_is_still_round_1s_and_its_seat_has_ended() {
         setup();
@@ -1462,9 +1444,7 @@ mod b9_idle_round_seats {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B10, B11: draws and concedes
-// ---------------------------------------------------------------------------------------------
 
 mod b10_no_draws_no_duel_concede {
     use super::*;
@@ -1632,9 +1612,7 @@ mod b11_team_concede {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B12–B18: life
-// ---------------------------------------------------------------------------------------------
 
 mod b12_starting_life {
     use super::*;
@@ -2137,9 +2115,7 @@ mod b18_health_swap {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B19–B22: passing
-// ---------------------------------------------------------------------------------------------
 
 mod b19_pass_legality {
     use super::*;
@@ -2491,9 +2467,7 @@ mod b22_passes_left {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B23: views
-// ---------------------------------------------------------------------------------------------
 
 mod b23_views {
     use super::*;
@@ -2688,9 +2662,7 @@ mod r1074000_a_passed_card_reads_to_its_passer_alone {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B24, B25: replay
-// ---------------------------------------------------------------------------------------------
 
 mod b24_fold {
     use super::*;

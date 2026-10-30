@@ -1,9 +1,6 @@
-//! Test-only definitions and scripts for `effects/datacenter.ts` (T-AI-4 Chain of Thought's chained draw,
-//! T-AI-6 Datacenter Fire's sweep). The engine does not depend on `packages/cards`; the real cards' tests
-//! cover the same cases again (packages/cards/test/classic-plus/t-ai-04-*.test.ts, t-ai-06-*.test.ts).
-//!
-//! Port of `packages/engine/test/fixtures/datacenter.ts`: each exported def is a `pub static` under TS's
-//! name snake_cased (`hard_field`, `x_cost`, `cast_on_draw`).
+//! Test-only definitions and scripts for the datacenter effects (T-AI-4 Chain of Thought's chained
+//! draw, T-AI-6 Datacenter Fire's sweep). The engine does not depend on the cards crate; the real
+//! cards' tests cover the same cases again.
 
 #![allow(non_upper_case_globals)]
 
@@ -202,7 +199,6 @@ pub static DATACENTER_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLoc
     ])
 });
 
-/// Part 24's brief, step 2: this file's scripts (`DATACENTER_SCRIPTS`).
 pub fn scripts() -> IndexMap<String, CardScripts> {
     DATACENTER_SCRIPTS.clone()
 }

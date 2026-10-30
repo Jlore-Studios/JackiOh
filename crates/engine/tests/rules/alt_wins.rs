@@ -1,7 +1,5 @@
 //! ME-WIN's held wins (SPEC §2.5, R848–R850): Meditative #8 and #20's systems, proved here
 //! through fixture-free effects so the engine owns them.
-//!
-//! Port of nothing shipped: no shipped card holds a win.
 
 use jackioh_engine::effects::{alt_win, win_game};
 use jackioh_engine::resolve::{HookOptions, make_context};
@@ -12,7 +10,7 @@ use jackioh_engine::triggers::{SettleOptions, settle};
 
 use crate::rules::fixtures::harness::{new_game, put, slot};
 
-/// Apply effects the way `resolve.ts` does, then settle: prompts drain, the board settles and the
+/// Apply effects, then settle: prompts drain, the board settles and the
 /// game-end point of the state check runs.
 fn run_settled(state: &mut GameState, effects: &[Effect], controller: PlayerId) {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);

@@ -1,9 +1,8 @@
 //! Test-only cards for the rest-of-game play watcher (issue #1863, R1863000): "for the rest of the
 //! game, the first time you play each …" (`watch_first_plays`). Each does it through the engine's own
 //! verbs, as a card script would, so the engine never imports `crates/cards`; the Stinkyscape Great
-//! Replacement Theory (S #44) is the card that uses it.
-//!
-//! Ids are prefixed `pw-` and indexed from 18630, so they collide with no other fixture file's.
+//! Replacement Theory (S #44) is the card that uses it. Ids are prefixed `pw-` and indexed from 18630, so
+//! they collide with no other fixture file's.
 
 use std::sync::LazyLock;
 

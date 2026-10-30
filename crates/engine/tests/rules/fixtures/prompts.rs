@@ -837,7 +837,7 @@ fn wardrum_script() -> Script {
     }
 }
 
-/// A deck trigger that asks, so its list parks under its id and resumes (R113, `work.scriptStepFor`).
+/// A deck trigger that asks, so its list parks under its id and resumes (R113, `work::script_step_for`).
 pub fn deck_asker() -> CardDef {
     unit(3124, "deck-asker", 1, 1, json!({ "cost": 1 }))
 }

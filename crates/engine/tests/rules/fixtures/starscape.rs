@@ -1,8 +1,7 @@
 //! Test-only cards for the starscape map (#1847, R1847000–R1847002): Stinkyscape #148 Alteran Reach's
 //! shape, a Field Spell whose abilities travel its controller's map (`subsystems::starscape_abilities`),
 //! and the card the edge adds, #148.1 Edge of the Universe's. The engine does not depend on
-//! `jackioh-cards`, and no Stinkyscape card exists before the set ships; the real cards' tests will
-//! cover the same cases again.
+//! `jackioh-cards`.
 //!
 //! Ids are prefixed `ss-` and indexed from 18470, so they collide with no other fixture file's.
 
@@ -13,7 +12,6 @@ use jackioh_engine::testkit::*;
 
 use super::catalog::spell_def;
 
-/// The fixture Reach's id.
 pub const REACH_ID: &str = "ss-reach";
 /// The card the edge adds.
 pub const EDGE_ID: &str = "ss-edge";

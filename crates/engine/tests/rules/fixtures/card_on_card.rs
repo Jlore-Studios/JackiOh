@@ -67,9 +67,7 @@ fn unit(index: u32, name: &str, cost: i32, stats: (i32, i32), keywords: Value) -
     unit_with(index, name, cost, stats, keywords, json!({}))
 }
 
-// ---------------------------------------------------------------------------
 // Copy a Unit's text (R1850000)
-// ---------------------------------------------------------------------------
 
 /// A 2/2 whose Cry copies the text of the Unit it chooses.
 pub fn copier() -> CardDef {
@@ -122,21 +120,16 @@ pub fn immutable_copier() -> CardDef {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Bodies the verbs act on
-// ---------------------------------------------------------------------------
 
-/// A (1) 1/1 with nothing printed.
 pub fn cheap() -> CardDef {
     unit(18504, "cheap", 1, (1, 1), json!([]))
 }
 
-/// A (3) 3/3 with nothing printed.
 pub fn dear() -> CardDef {
     unit(18505, "dear", 3, (3, 3), json!([]))
 }
 
-/// A (1) Field Spell with nothing printed.
 pub fn cheap_field() -> CardDef {
     def(18506, "cheap-field", "Field Spell", 1, json!([]))
 }
@@ -146,7 +139,6 @@ pub fn cheap_trap() -> CardDef {
     def(18507, "cheap-trap", "Trap", 1, json!([]))
 }
 
-/// A (1) Human 1/1.
 pub fn human() -> CardDef {
     unit_with(18508, "human", 1, (1, 1), json!([]), json!({ "tags": ["Human"] }))
 }
@@ -156,14 +148,11 @@ pub fn crier() -> CardDef {
     unit(18509, "crier", 1, (1, 1), json!([]))
 }
 
-/// A (1) 1/1 unit token.
 pub fn token() -> CardDef {
     unit_with(18510, "token", 1, (1, 1), json!([]), json!({ "token": true }))
 }
 
-// ---------------------------------------------------------------------------
 // Duo and Squad (R1850001)
-// ---------------------------------------------------------------------------
 
 /// A 2/2: "Cry: Duo with a permanent and make it Radiant next turn"; Radiant: "Cry: Squad with all
 /// your permanents and make them Radiant next turn" (Stinkyscape #110 iKwzki's shape).
@@ -171,9 +160,7 @@ pub fn duo() -> CardDef {
     unit(18511, "duo", 1, (2, 2), json!([]))
 }
 
-// ---------------------------------------------------------------------------
 // Exile auras (R1850002)
-// ---------------------------------------------------------------------------
 
 /// A (2) 4/4: "Aura: all permanents that cost (2) or less are exiled"; Radiant: all enemy ones
 /// (Stinkyscape #113 A Very Dandy Lad's shape, at a cost its own aura reaches).
@@ -194,9 +181,7 @@ pub fn tag_exiler() -> CardDef {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Hold beneath (R1850003)
-// ---------------------------------------------------------------------------
 
 /// A (2) Field Spell: "Cry: stack a permanent under this. Death: return it to its controller"
 /// (Stinkyscape #9 Ticketed's shape).
@@ -215,9 +200,7 @@ pub fn sack() -> CardDef {
     unit_with(18516, "sack", 1, (0, 4), json!([]), json!({ "token": true }))
 }
 
-// ---------------------------------------------------------------------------
 // Cast it for yourself (R1850004)
-// ---------------------------------------------------------------------------
 
 /// A (2) Trap: "Reveals when your opponent casts a beneficial Spell on themselves or a permanent they
 /// control. Cast it beneficially for yourself instead"; Radiant: "Cast its Radiant version …"
@@ -252,9 +235,7 @@ pub fn bolt() -> CardDef {
     def(18519, "bolt", "Spell", 1, json!([]))
 }
 
-// ---------------------------------------------------------------------------
 // Radiant on reaching N keywords (R1850005)
-// ---------------------------------------------------------------------------
 
 /// A 1/1 with Taunt and Rush: "When this has {ROD_KEYWORDS} or more keywords, make it Radiant"
 /// (Stinkyscape #16 Rod of Ages' 10, made small).
@@ -306,7 +287,6 @@ pub static COC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// `amount` to the enemy hero.
 fn ping(amount: i32) -> Effect {
     effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))
 }
@@ -572,9 +552,7 @@ pub fn register_card_on_card() {
     register_scripts(all_scripts);
 }
 
-// ---------------------------------------------------------------------------------------------
 // The verbs' tests' board helpers, shared by `card_on_card.rs` and `unit_text.rs` (two binaries)
-// ---------------------------------------------------------------------------------------------
 
 /// p1's first main phase, both mulligans kept, ten mana a side and #1850's cards registered.
 pub fn playing(seed: &str) -> GameState {
@@ -630,7 +608,6 @@ pub fn at(row: &str, lane: i32, target: &str) -> Value {
     })
 }
 
-/// End the active player's turn.
 pub fn pass(state: &GameState) -> ReduceResult {
     act_ok(state, json!({ "type": "endTurn", "playerId": state.active }))
 }

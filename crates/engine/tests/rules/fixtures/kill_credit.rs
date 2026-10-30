@@ -1,4 +1,4 @@
-//! Fixture cards for a kill credited to another unit (R42, R412) and for `isCastOnDraw` (R58),
+//! Fixture cards for a kill credited to another unit (R42, R412) and for `is_cast_on_draw` (R58),
 //! shaped like Classic+ #19.2 Jungle Loser, #19.5 Bot Loser and #26 Tommy Tempo. The engine never
 //! imports `crates/cards` (CLAUDE.md). Ids `kc-…`, indexed from 5800 so they collide with no other
 //! fixture file.

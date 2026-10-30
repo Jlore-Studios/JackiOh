@@ -5,8 +5,6 @@
 //! R466 is the hidden-information half: `stolen` names the card only to whoever could read it where it
 //! was taken or can read it now, and a card taken out of a library turns the rest of that library
 //! unknown to its owner, whose list (R310) would otherwise name it by what it stopped listing.
-//!
-//! Port of `packages/engine/test/effects-give.test.ts`.
 
 use jackioh_engine::effects::{draw_from_opponent, give_from_hand, take_from_library};
 use jackioh_engine::testkit::*;
@@ -600,7 +598,7 @@ mod e2_e16_the_change_of_owner_itself {
         let mut sink = Bench::new(&state);
         assert!(take_into_hand(&mut sink.sink(&mut state), &card, PlayerId::P1).is_none());
         assert!(!change_owner(&mut sink.sink(&mut state), &card, PlayerId::P1));
-        // TS read the object it handed in; nothing in the state holds a card that is gone.
+        // Nothing in the state holds a card that is gone.
         assert_eq!(card.owner, PlayerId::P2);
         assert!(find_instance(&state, &card.id).is_none());
         assert_eq!(sink.events, Vec::<GameEvent>::new());

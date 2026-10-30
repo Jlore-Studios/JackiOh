@@ -1,8 +1,6 @@
-//! B5 E7 set health and E8 heal into damage, the effect verbs (`effects/health.ts`). The replacement
-//! that turns a heal into damage as it happens is `replacements.test.ts`'s; this file proves the verbs
+//! B5 E7 set health and E8 heal into damage, the effect verbs (`effects/health.rs`). The replacement
+//! that turns a heal into damage as it happens is `replacements.rs`'s; this file proves the verbs
 //! a card writes: `setHealth` (Classic #29) and `convertHealing`.
-//!
-//! Port of `packages/engine/test/effects-health.test.ts`.
 
 use jackioh_engine::effects::{convert_healing, heal, set_health};
 use jackioh_engine::testkit::*;
@@ -12,7 +10,7 @@ use crate::rules::fixtures::damage_combat::{
 };
 use crate::rules::fixtures::harness::{Bench, events_of_type, in_hand, put, slot};
 
-/// `applyEffects(effects, makeContext(sink, self))`, the card read as it stands now.
+/// The effects applied with the card under `self_id`, read as it stands now, as `self`.
 fn apply(bench: &mut Bench, state: &mut GameState, effects: &[Effect], self_id: Option<&str>) {
     let self_: Option<CardInstance> = self_id.map(|id| {
         find_instance(&*state, id)
@@ -164,7 +162,7 @@ mod e8_convert_healing {
         };
         assert_eq!(mods.len(), 1);
         let mut only = mods[0].clone();
-        // TS `id: expect.any(String)`.
+        // Any string id.
         assert!(only.get("id").is_some_and(Value::is_string));
         if let Value::Object(fields) = &mut only {
             fields.remove("id");

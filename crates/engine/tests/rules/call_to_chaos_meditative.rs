@@ -1,6 +1,6 @@
 //! Meditative #95 Call to Chaos (Meditative Edition)'s table (`subsystems/call_to_chaos_meditative.rs`),
 //! rolled by Core #95's subsystem (R28, R87, R423, R436): each of the ten entries against fixture pools,
-//! the third edition in the Call to Chaos pool since its set shipped in v0.3.5 (R1240, R1420), the
+//! the third edition in the Call to Chaos pool (R1240, R1420), the
 //! rest-of-game entry and its cap (R1241), the hand fusion and `add_to_hand { copyOf }` (R1242), the
 //! Acclaimed pool (R1243), Bounce then Nerf (R1244), `shuffle_into { memory }` through JSON (R1246) and
 //! the Radiant's three different entries in list order (R423). The real card's test covers the same
@@ -71,7 +71,6 @@ fn game(seed: &str, med_cry: Option<Hook>, other_cry: Option<Hook>) -> GameState
     state
 }
 
-/// `{ table: CHAOS_MED_EFFECTS }`.
 fn med_table() -> CallToChaosArgs {
     CallToChaosArgs {
         table: Some(CHAOS_MED_EFFECTS),
@@ -160,7 +159,7 @@ fn strings_of(values: &[Value]) -> Vec<String> {
         .collect()
 }
 
-/// TS `Array.prototype.indexOf`: -1 when absent.
+/// -1 when absent.
 fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
     types
         .iter()
@@ -232,8 +231,6 @@ mod r1240_meditative_95s_table {
         );
     }
 
-    /// Until the release the third edition joined the pool only while its set was previewed; the set
-    /// shipped in v0.3.5, so the pool holds all three editions in every game.
     #[test]
     fn r1240_the_call_to_chaos_pool_holds_all_three_editions_since_the_meditative_set_shipped() {
         game("pool", None, None);
@@ -423,8 +420,7 @@ mod r1241_the_rest_of_game_entry {
     fn r1241_from_the_casters_next_turn_each_start_of_turn_casts_a_random_call_to_chaos_as_a_new_chain() {
         let recast = || hook(|_ctx| vec![cast_random_call_to_chaos()]);
         let mut state = begin_game(&new_game("eternal-turns", None)).state;
-        // Every edition's stand-in recasts, the Meditative one included: it is in the pool since its
-        // set shipped in v0.3.5 (R1240).
+        // Every edition's stand-in recasts, the Meditative one included: it is in the pool (R1240).
         register(Some(recast()), Some(recast()));
         for player in [P1, P2] {
             let keep = ids_of(&state.players[player].hand);

@@ -1,10 +1,6 @@
-//! Test-only cards for Tradable and the Trade (R1838000–R1838003): a Tradable Spell, a Unit with no
-//! text, and a Field Spell that lets nobody draw. The engine's proof; the shipped cards that print the
-//! keyword (Meditative #53 Prestige, #98 Showdown) test it again in their own files. And three Field
-//! Spells for Stinkyscape's trade cards (R1864002–R1864004): one whose aura lends Tradable to its
-//! controller's hand, one that gives its controller `FIXTURE_TRADES` Trades a turn, and one whose
-//! trigger on its controller's `traded` exiles the card the Trade put into the deck. Stinkyscape #164
-//! The Syndicate and #165 The Trade Union test them again in their own files.
+//! Test-only cards for Tradable and the Trade (R1838000–R1838003) and for Stinkyscape's trade cards
+//! (R1864002–R1864004), the engine's proof; the cards that print them (Meditative #53 Prestige, #98
+//! Showdown, Stinkyscape #164 The Syndicate and #165 The Trade Union) test them again in their own files.
 //!
 //! Ids are prefixed `trade-` and indexed from 18380 up, clear of every other fixture file (BUILD §0).
 

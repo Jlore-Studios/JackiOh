@@ -661,7 +661,6 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
     table
 });
 
-/// `base` with every turn fixture over it.
 pub fn turn_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for entry in TURN_DEFS.iter() {
@@ -670,7 +669,6 @@ pub fn turn_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// This file's scripts, by id: `TURN_SCRIPTS`.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     TURN_SCRIPTS.clone()
 }

@@ -23,7 +23,7 @@ fn action(literal: Value) -> Action {
     json_as(literal)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
+/// The hook options of a context `player` controls.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),

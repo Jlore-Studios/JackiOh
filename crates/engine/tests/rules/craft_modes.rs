@@ -2,8 +2,7 @@
 //! `fixtures/craft.rs`: the potion frame of M+ #16 Jazakus and M+ #16.1 Jazakus Prime
 //! (`pm-potion-crafter`, `pm-huge-potion-crafter`; R1182000, R1182001; a Spell with no stats since
 //! #1563, R1563008) and Scratch Pad's from-scratch canvas (`pm-scratch-crafter`, R1182002), and
-//! #1563's offer (R1563007) and retired Armor verb (R1563009). The cards themselves are proved again
-//! in `crates/cards`.
+//! #1563's offer (R1563007) and retired Armor verb (R1563009).
 
 use jackioh_engine::subsystems::craft::{
     compile_crafted_def, compile_crafted_scripts, craft_id, craft_potion_presets, craft_presets,

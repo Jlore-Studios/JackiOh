@@ -1,10 +1,6 @@
-//! Test-only definitions and scripts for `effects/fruit.ts` (the Classic+ Fruit verbs: C+ #65, #65.2,
-//! #65.3, #65.5, #66). The engine does not depend on `packages/cards`, so the five Grapes are stand-ins
-//! under the ids `GRAPE_ODDS` names, with the Fruit tag and the Token rarity the real ones carry; the
-//! real cards' tests cover the same cases again (packages/cards/test/classic-plus/065-*.test.ts).
-//!
-//! Port of `packages/engine/test/fixtures/fruit.ts`: each exported def is a `pub static` under TS's name
-//! snake_cased (`grape_roller`, `priced_draw`, `cast_on_draw`).
+//! Test-only definitions and scripts for the Classic+ Fruit verbs (C+ #65, #65.2, #65.3, #65.5, #66).
+//! The engine does not depend on `crates/cards`, so the five Grapes are stand-ins under the ids
+//! `GRAPE_ODDS` names, with the Fruit tag and the Token rarity the real ones carry.
 
 #![allow(non_upper_case_globals)]
 

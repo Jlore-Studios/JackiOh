@@ -1,10 +1,7 @@
 //! E29 board snapshots (docs/classic-sets.md B5 E29; SPEC §2.2, §10.1; R419, R562, R563, R566, R227): the
-//! record at each turn's start, the restore's three steps (`restoreBoard`), the R227 rename that keeps the
+//! record at each turn's start, the restore's three steps (`restore_board`), the R227 rename that keeps the
 //! history naming a card by its current id, R563's Reborn hold, the views, and a Rollback played through
-//! `reduce` that folds back from its log. Fixtures: `fixtures/boardHistory.ts`, and the field fixtures'
-//! Frostspatula and Ivory Tower shapes (`fixtures/field.ts`). The card itself: C+ #35's test file.
-//!
-//! Port of `packages/engine/test/boardHistory.test.ts`.
+//! `reduce` that folds back from its log. The card itself: C+ #35's test file.
 
 use jackioh_engine::subsystems::board_history::{record_board_snapshot, restore_board, snapshot_for};
 use jackioh_engine::testkit::*;
@@ -31,7 +28,7 @@ fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// The live card (TS held the object itself; Rust looks it up by id).
+/// The live card.
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
@@ -40,7 +37,7 @@ fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// The TS `restoreBoard(sinkFor(state, events), …)`: a sink whose rng starts at the state's cursor.
+/// `restore_board` on a sink whose rng starts at the state's cursor.
 fn restore(
     state: &mut GameState,
     events: &mut Vec<GameEvent>,
@@ -281,8 +278,8 @@ mod e29_the_restore_r419 {
             OffFieldZone::Hand,
             MoveToZoneOptions::default(),
         );
-        // TS renamed and placed the very object the hand held; Rust takes that card out of the hand
-        // first, so it is "a card that is in no pile" as `freshFaceDownId` asks, and is placed once.
+        // Out of the hand first, so it is "a card that is in no pile" as `fresh_face_down_id` asks,
+        // and is placed once.
         let at = state
             .players
             .p1
@@ -609,8 +606,7 @@ mod e29_through_reduce_s9_3 {
     #[test]
     fn r419_a_game_that_rolls_back_survives_json_and_folds_to_the_same_hash_from_its_log() {
         const SEED: &str = "bh-fold-0";
-        // TS leaned on the catalog an earlier test had registered (the vanilla fixtures); each Rust test
-        // starts on a fresh thread, so it registers them itself first.
+        // Each test starts on a fresh thread, so it registers the vanilla fixtures itself first.
         setup_catalog();
         register_board_history_fixtures();
         let mut first_deck = vec![rewind.id.clone()];

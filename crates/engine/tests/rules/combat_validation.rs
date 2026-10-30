@@ -1,7 +1,5 @@
 //! Attack validation: §4.2 steps 1 to 3, §4.1, §6.1 and R5, R6, R7 (M2-T2).
 //! One test per refusal reason, plus the positive cases that give the refusals meaning.
-//!
-//! Port of `packages/engine/test/combat-validation.test.ts`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -11,13 +9,11 @@ use crate::rules::fixtures::combat::{
 };
 use crate::rules::fixtures::harness::{act, events_of_type, new_game, next_nonce, put, slot};
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON body (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// An attack action from p1 (TS `attackVia(state, attackerId, targetId, player = "p1")`; no caller
-/// names another player).
 fn attack_via(state: &GameState, attacker_id: &str, target_id: &str) -> ReduceResult {
     let action: Action = json_as(json!({
         "type": "attack", "attackerId": attacker_id, "targetId": target_id, "playerId": "p1", "nonce": next_nonce()
@@ -82,15 +78,13 @@ fn names(state: &GameState, attacker_id: &str) -> Vec<String> {
         .collect()
 }
 
-/// `whyCannotAttack(state, attacker, target)` with the attacker as it stands now: its refusal, or
-/// `None` (TS `null`).
+/// `why_cannot_attack` with the attacker as it stands now: its refusal, or `None`.
 fn why(state: &GameState, attacker_id: &str, target: &AttackTarget) -> Option<String> {
     why_cannot_attack(state, instance(state, attacker_id), target)
         .err()
         .map(|error| error.message)
 }
 
-/// A unit target read as it stands now.
 fn unit(state: &GameState, id: &str) -> AttackTarget {
     on_unit(instance(state, id))
 }
@@ -503,7 +497,6 @@ mod attack_validation_the_target_4_2_steps_2_and_3_m2_t2 {
         assert_eq!(why(&state, &attacker.id, &unit(&state, &defending.id)), None);
         assert_eq!(names(&state, &attacker.id), vec![defending.id.clone()]);
 
-        // Back to Attack Position and the board opens up again.
         instance_mut(&mut state, &defending.id).position = Some(Position::Atk);
         assert_eq!(
             names(&state, &attacker.id),

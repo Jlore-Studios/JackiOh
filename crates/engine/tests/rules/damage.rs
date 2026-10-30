@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/damage.test.ts`.
-//!
 //! One test per step of the damage pipeline (SPEC §4.4), in order, steps 0, 0a and 4a among them,
 //! plus §6.3 healing and R18.
 
@@ -18,13 +16,12 @@ use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, live, ne
 use crate::rules::fixtures::scripts::anti_oneshot;
 use crate::rules::fixtures::stinkyscape_verbs::{MASOCHISM, PLAIN, REDIRECT_CAP, register_stinkyscape_verbs};
 
-/// TS `newGame()`: the harness's default seed.
 fn game() -> GameState {
     new_game("engine-test", None)
 }
 
-/// Where a hit lands: TS's `onUnit(instance)` and `onHero(player)`. A unit is named by id, so the hit
-/// is dealt to the card as the state holds it at that moment (TS hands over the live object).
+/// Where a hit lands. A unit is named by id, so the hit is dealt to the card as the state holds it at
+/// that moment.
 enum Aim<'a> {
     Unit(&'a str),
     Hero(PlayerId),
@@ -74,7 +71,7 @@ fn amounts(events: &[GameEvent], kind: GameEventType) -> Vec<i32> {
         .collect()
 }
 
-/// A fresh sink over `state`, its rng at the state's cursor as reduce builds it (TS `sinkFor`).
+/// A fresh sink over `state`, its rng at the state's cursor as reduce builds it.
 fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -> R {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -82,7 +79,6 @@ fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -
     run(&mut sink)
 }
 
-/// `describe("the damage pipeline (§4.4, M2-T3)")`.
 mod the_damage_pipeline_s4_4_m2_t3 {
     use super::*;
 
@@ -407,9 +403,9 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     #[test]
     fn r63_r1361_step_6_an_instance_armor_reduces_to_0_emits_no_damage_event_and_a_0_hit_is_no_instance_at_all()
      {
-        // M1 has no trigger dispatch, so what step 6 makes observable is the `damage` event an
-        // on-damage trigger such as Fed Fauci's Plague Counter would fire from: one per instance dealt,
-        // none at all for an instance stopped before step 5.
+        // What step 6 makes observable is the `damage` event an on-damage trigger such as Fed Fauci's
+        // Plague Counter would fire from: one per instance dealt, none at all for an instance stopped
+        // before step 5.
         let mut state = game();
         let armor = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({}));
         let shield = put(&mut state, &shielded.id, slot(P2, Row::Units, 2), json!({}));
@@ -669,7 +665,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     }
 }
 
-/// `describe("heal and lose health (§6.3, R18, R19, M2-T3)")`.
+/// Heal and lose health (§6.3, R18, R19, M2-T3).
 mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
     use super::*;
 
@@ -771,7 +767,6 @@ fn fed_fauci() -> CardDef {
     }))
 }
 
-/// `describe("on-damage triggers (§4.4 step 6, M2-T3)")`.
 mod on_damage_triggers_s4_4_step_6_m2_t3 {
     use super::*;
 

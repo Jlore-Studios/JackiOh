@@ -1,9 +1,8 @@
 //! Test-only cards for play pipeline B (docs/classic-sets.md B5 E11, E12, E15, B4.5; R391, R396,
 //! R452–R455), each reproducing through the effects library the shape of a Classic or Classic+ card
 //! that the systems exist for. The engine never depends on `crates/cards` (CLAUDE.md), so these are
-//! the engine's proof; the real cards' tests prove the same cases again.
-//!
-//! Ids are prefixed `pb-` and indexed from 4520 up, clear of every other fixture file (BUILD §0).
+//! the engine's proof. Ids are prefixed `pb-` and indexed from 4520 up, clear of every other fixture
+//! file (BUILD §0).
 
 use std::sync::{Arc, LazyLock};
 
@@ -384,7 +383,7 @@ fn cast_random_of(pool: Vec<String>, count: i32, radiant: Option<bool>, how: Val
     })
 }
 
-/// The Spells in the running card's controller's graveyard, by id (`castEach`'s `cards`).
+/// The Spells in the running card's controller's graveyard, by id (`cast_each`'s `cards`).
 fn graveyard_spells(ctx: &mut EffectContext<'_>) -> Vec<String> {
     ctx.state.players[ctx.controller]
         .graveyard
@@ -865,7 +864,7 @@ pub fn pb_playing(seed: &str) -> GameState {
     state
 }
 
-/// A card of `defId` put straight into `player`'s graveyard.
+/// A card of `def_id` put straight into `player`'s graveyard.
 pub fn in_graveyard(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, player, Zone::Graveyard { player });
     state.players[player].graveyard.push(card.clone());

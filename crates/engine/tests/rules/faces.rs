@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/faces.test.ts`.
-//!
 //! Faces that change more than text (docs/classic-sets.md B2.7, B5 E40): a face with its own type
 //! (Classic+ #22 Blood Moon's Radiant face is a Field Trap) and X in the stats (Classic+ #69 Buff
 //! Billy's "[3X/3X]"). Every rule that asks what an instance *is* reads the running face's type
@@ -20,7 +18,6 @@ fn game() -> GameState {
     state
 }
 
-/// `describe("B2.7 a face with its own type")`.
 mod b2_7_a_face_with_its_own_type {
     use super::*;
 
@@ -182,7 +179,6 @@ mod b2_7_a_face_with_its_own_type {
     }
 }
 
-/// `describe("B2.7 X in the stats (Buff Billy)")`.
 mod b2_7_x_in_the_stats_buff_billy {
     use super::*;
 

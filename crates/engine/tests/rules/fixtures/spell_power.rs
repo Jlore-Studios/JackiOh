@@ -1,10 +1,7 @@
 //! Test-only cards for the Meditative+ spell-power systems (issue #1180, docs/meditative-plus-set.md
-//! MP5, R1180000–R1180005): Spell Damage from an aura for one or both players and from a "this turn"
-//! player modifier, an aura giving its controller's Spells Lifesteal, the healing multiplier, health
-//! as the next Spell's price, and the hand-and-deck card that answers a Spell that targeted an enemy.
-//! Each reproduces a Meditative+ card's shape through the script hooks, the static flags and the
-//! effects library, so the engine is proved without `crates/cards`; the real cards are tested again in
-//! their own files. Ids are `sp-*`, indices from 11800 so they collide with nothing (BUILD §0).
+//! MP5, R1180000–R1180005). Each reproduces a Meditative+ card's shape through the script hooks, the
+//! static flags and the effects library, so the engine is proved without `crates/cards`. Ids are
+//! `sp-*`, indices from 11800 so they collide with nothing (BUILD §0).
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
@@ -97,7 +94,6 @@ pub const BODY: &str = "sp-body";
 /// A vanilla 1/1.
 pub const PAWN: &str = "sp-pawn";
 
-/// Every fixture definition.
 pub fn catalog() -> CardDefs {
     [
         def(11800, "amp", "Field Spell", json!({})),
@@ -187,7 +183,6 @@ fn health_price(echo: Option<i32>) -> Script {
     }
 }
 
-/// Every fixture script.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     let entries: Vec<(&str, Script)> = vec![
         (

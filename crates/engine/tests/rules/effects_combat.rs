@@ -1,13 +1,7 @@
 //! The §6.3 combat verbs a card script needs: Forced attack (#9 Moths to the Flame, #60 Bear
 //! Honeypot), Cancel an attack (#96 My Pawn) and the AI turn behind it (§10.7, R44, R84).
-//!
-//! These effects are thin wrappers, so the tests here assert the wrapper's own decisions — who is
-//! compelled, in what order, against what target, and what the wrapper leaves alone — and lean on
-//! combat-resolution.test.ts for §4.3 and §4.4 themselves. Every assertion runs through a real
-//! `EffectContext`, and the one verb the engine cannot service yet is a marked failing test rather
-//! than a tautology.
-//!
-//! Port of `packages/engine/test/effects-combat.test.ts`.
+//! These effects are thin wrappers, so the tests assert the wrapper's own decisions (who is
+//! compelled, in what order, against what target) and leave §4.3 and §4.4 to the combat tests.
 
 use jackioh_engine::effects::{
     ai_plays_out_turn, cancel_attack, forced_attacks, forced_attacks_on, redirect_attack, summon,
@@ -22,11 +16,9 @@ use super::fixtures::combat::{big_body, plain, taunter};
 use super::fixtures::harness::{Bench, events_of_type, in_hand, new_game, put, slot};
 use crate::rules::fixtures::harness::{json_of, live, live_mut};
 
-// ---------------------------------------------------------------------------
-// Fixture cards: the two bodies fixtures/combat.ts does not carry.
-// ---------------------------------------------------------------------------
+// Fixture cards fixtures/combat.rs does not carry.
 
-/// TS `defOfKind(name, index, type, overrides)`: `overrides` is spread over the def, key by key.
+/// `overrides` replaces the def's fields key by key.
 fn def_of_kind(name: &str, index: &str, type_: &str, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("fc-{name}"),
@@ -62,10 +54,9 @@ fn frail() -> CardDef {
 fn ambush() -> CardDef {
     def_of_kind("ambush", "942", "Trap", backrow_faces("trap"))
 }
-/// A Field Trap that answers every declaration and does nothing with it (R61's "fired, consumed,
-/// did nothing"). It is a FIELD Trap on purpose: §5.1 leaves one on the field after it fires, so a
-/// second offer of the same declaration would fire it a second time, which is what R100 forbids and
-/// what the `attackDeclared` event reaching both the window and §10.3's immediate check would do.
+/// A Field Trap that answers every declaration and does nothing with it (R61). A FIELD Trap on
+/// purpose: it stays on the field after firing, so a second offer of one declaration would fire it
+/// again, which R100 forbids.
 fn watcher() -> CardDef {
     def_of_kind("watcher", "943", "Field Trap", backrow_faces("field trap"))
 }
@@ -208,7 +199,6 @@ fn trap_script(on: GameEventType, run: fn() -> Vec<Effect>) -> CardScripts {
     }
 }
 
-/// TS `SCRIPTS`.
 fn fc_scripts() -> IndexMap<String, CardScripts> {
     let mut scripts = IndexMap::new();
     scripts.insert(
@@ -259,7 +249,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `RunOptions = { controller?: PlayerId; self?: CardInstance; targets?: Selection[] }`.
 #[derive(Default)]
 struct RunOptions {
     controller: Option<PlayerId>,
@@ -301,7 +290,6 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
     run_all(state, vec![effect], options)
 }
 
-/// `effect.apply(makeContext(sink, null, { controller }))` on a sink of the caller's.
 fn apply_as(mut sink: EngineSink<'_>, effect: Effect, controller: PlayerId) {
     let mut ctx = make_context(
         &mut sink,
@@ -354,9 +342,7 @@ fn field_of(events: &[GameEvent], of: GameEventType, key: &str) -> Vec<Value> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // forcedAttacksOn — #9 Moths to the Flame
-// ---------------------------------------------------------------------------
 
 mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
     use super::*;
@@ -474,9 +460,7 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // forcedAttacks — #60 Bear Honeypot
-// ---------------------------------------------------------------------------
 
 mod forced_attacks_s6_3_forced_attack_r53_c60 {
     use super::*;
@@ -553,11 +537,9 @@ mod forced_attacks_s6_3_forced_attack_r53_c60 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // aiPlaysOutTurn — §10.7's policy behind #96 My Pawn
-// ---------------------------------------------------------------------------
 
-/// A board with something to do, as aiPolicy.test.ts's `busyBoard` builds one (§10.7).
+/// A board with something to do (§10.7).
 fn busy_board(seed: &str) -> GameState {
     let mut state = game(seed);
     state.turn = 4;
@@ -572,12 +554,9 @@ fn busy_board(seed: &str) -> GameState {
     state
 }
 
-/// R283, R59: Radiant #96 destroys the attacker it stopped and then hands the turn over, and the
-/// destroyed attacker is collected "before the AI takes the turn". `destroy` only marks, so the
-/// effect's `settleFirst` runs the state check between the lockout and the AI's first action.
-/// Another player's open prompt stops the playout before it acts (§9.3), which leaves exactly the
-/// check to observe. TS handed back the open sink; here its events come back beside the state, and
-/// the caller's next sink starts its rng where this one left it (nothing here draws).
+/// R283, R59: Radiant #96 destroys the attacker it stopped, then hands the turn over. `destroy` only
+/// marks, so the effect's `settleFirst` runs the state check before the AI's first action. Another
+/// player's open prompt stops the playout before it acts (§9.3), leaving only the check to observe.
 fn marked_board(seed: &str) -> (GameState, Vec<GameEvent>, CardInstance) {
     let mut state = busy_board(seed);
     let marked = card_at(&state, slot(P1, Units, 1)).expect("p1's unit").clone();
@@ -640,19 +619,15 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
         // R84: the policy never picks `concede`, so the game is still running.
         assert!(state.result.is_none());
         assert!(sink.events.len() > 1);
-        // R152: the lockout lasts "until end of turn" (§8 #96), so `turn.ts`'s cleanup clears it as the
-        // turn the AI just played out closes — a player is never locked out of a turn that is no longer
-        // the one the effect took. `startTurn` keeps its own clear only as a backstop.
+        // R152: the lockout lasts "until end of turn" (§8 #96), so the turn's cleanup clears it as the
+        // turn the AI played out closes.
         assert!(!state.players.p1.ai_turn);
     }
 
-    // `subsystems/aiPolicy.playOutTurn` drives a NESTED `reduce` per action of the playout, and each
-    // of those settles its own events to completion (§10.3) before the playout copies them onto the
-    // caller's event list, so the client is told about them (R168). The caller's resolution loop must
-    // not offer them to the traps and the trigger queue again: `triggers.markDispatched` gives each of
-    // those events a per-event "already dispatched" mark, the one shape that covers a range in the
-    // MIDDLE of the window's own events (`trapFired`, `attackCancelled`, the playout, then
-    // `enteredGraveyard`), which a cursor cannot skip. Below: one Field Trap firing per `manaChanged`.
+    // Each nested action of the playout settles its own events (§10.3) before they are copied onto the
+    // caller's list for the client (R168); the caller's loop must not offer them to the traps again. A
+    // per-event "already dispatched" mark covers that range in the middle of the window's own events,
+    // which a cursor cannot skip. Below: one Field Trap firing per `manaChanged`.
     #[test]
     fn s10_3_an_ai_turns_events_are_dispatched_once_not_again_by_the_callers_own_loop() {
         let (mut state, attacker, _defender, backrow) = swing("ai-redispatch", &[pawn().id, meter().id]);
@@ -807,12 +782,9 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // cancelAttack — §6.3 Cancel an attack, §4.2 step 4, R44
-// ---------------------------------------------------------------------------
 
-/// p2 swings a 3/3 into p1's 5/10, with whatever traps the case puts in p1's backrow. TS answered
-/// `{ state, attacker, defender, backrow }`.
+/// p2 swings a 3/3 into p1's 5/10, with whatever traps the case puts in p1's backrow.
 fn swing(seed: &str, traps: &[String]) -> (GameState, CardInstance, CardInstance, Vec<CardInstance>) {
     let mut state = game(seed);
     state.active = P2;
@@ -838,7 +810,7 @@ fn type_names(events: &[GameEvent]) -> Vec<&'static str> {
     events.iter().map(|event| event.event_type().as_str()).collect()
 }
 
-/// `Array.prototype.indexOf`: the first position, or -1.
+/// The first position, or -1.
 fn index_of(types: &[&str], wanted: &str) -> i64 {
     types.iter().position(|t| *t == wanted).map_or(-1, |at| at as i64)
 }
@@ -904,8 +876,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
     #[test]
     fn r100_the_declaration_reaches_the_traps_once_the_windows_event_is_not_offered_again() {
         // A Field Trap stays on the field after firing (§5.1, R33), so a second offer of the same
-        // declaration — §10.3's immediate check taking the event off the frontier after the window has
-        // already delivered it — would show up here as a second `trapFired`.
+        // declaration (§10.3's immediate check after the window) would show up as a second `trapFired`.
         let (state, attacker, defender, backrow) = swing("window-once", &[watcher().id]);
         let field = backrow[0].clone();
         let result = reduce(&state, &attack_action(&attacker.id, &defender.id, "n1"));
@@ -1114,7 +1085,6 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
             json!([{ "type": "redirected", "what": "attack", "fromId": defender.id, "toId": neighbour.id, "byInstanceId": trap.id }])
         );
         assert_allies_fought(&sink, &state, &attacker, &defender, &neighbour);
-        // The window is shut again.
         assert!(state.declared_attack.is_none());
     }
 

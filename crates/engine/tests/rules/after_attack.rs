@@ -3,8 +3,6 @@
 //! for an attacker still on the field on the stay it attacked from: one that died there runs nothing
 //! (R2285001); never for an attack called off before it fought (R44). Classic #13 Boots on the Ground,
 //! Classic+ #73.1 Classic Golem and Core #32 Prem Panther (R426) are its users.
-//!
-//! Port of `packages/engine/test/after-attack.test.ts`.
 
 use jackioh_engine::effects::forced_attacks_on;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -16,12 +14,11 @@ use crate::rules::fixtures::damage_combat::{
 };
 use crate::rules::fixtures::harness::{put, sink_for, slot};
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON object (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),

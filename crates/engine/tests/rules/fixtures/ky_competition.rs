@@ -2,8 +2,7 @@
 //! R1184000, R1184001) and `summon`'s X (R1184003): `kc-competition` runs the card's own sequence and
 //! summons `kc-kenny`, a token that prints 0/0 with X stats 1/1 (Radiant 2/2) and has Rush while its X
 //! is at least `KENNY_RUSH_AT`, so the engine is proved without `crates/cards` (CLAUDE.md: the engine
-//! never imports it). The real cards, Lil' Kenny's six thresholds included, are proved again in
-//! `crates/cards/src/scripts/meditative_plus/`.
+//! never imports it).
 
 use jackioh_engine::subsystems::ky_competition::ky_competition_script;
 use jackioh_engine::testkit::*;

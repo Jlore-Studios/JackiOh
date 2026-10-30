@@ -1,7 +1,5 @@
 //! ME-TURN's lost refreshes and extra turns (SPEC §2.2, §2.3, R844–R847): Meditative #18,
 //! #19 and #19.1's systems, proved here through fixture-free effects so the engine owns them.
-//!
-//! Port of nothing shipped: no shipped card loses a refresh or owes a turn.
 
 use jackioh_engine::effects::{gain_mana, lose_refreshes, next_turn_mana, take_extra_turn};
 use jackioh_engine::resolve::{HookOptions, make_context};
@@ -33,7 +31,7 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// Apply one effect the way `resolve.ts` does, and hand back the events it emitted.
+/// Apply one effect and hand back the events it emitted.
 fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();

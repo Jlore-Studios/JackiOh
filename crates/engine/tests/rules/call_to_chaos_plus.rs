@@ -416,7 +416,6 @@ mod r423_c_plus_73s_table {
         let mut seen: Vec<String> = Vec::new();
         for i in 0..4 {
             let mut state = game(&format!("replace-{i}"), None, None);
-            // A copy: `setLibrary` hands back the library array itself.
             let old = set_library(&mut state, P1, &["fx-1", "fx-2", "fx-3", "fx-4", "fx-5"]);
             let events = run(&mut state, entry("replace"), None);
             assert_eq!(

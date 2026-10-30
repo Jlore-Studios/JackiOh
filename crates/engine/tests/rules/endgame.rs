@@ -1,4 +1,4 @@
-//! Port of `packages/engine/test/endgame.test.ts`: how a game ends (M1-T8, §2.5).
+//! How a game ends (M1-T8, §2.5).
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -32,7 +32,6 @@ fn offers_draw(state: &GameState, player: PlayerId) -> bool {
         .any(|a| a.action_type() == ActionType::OfferDraw)
 }
 
-/// `describe("ending the game (M1-T8)")`.
 mod ending_the_game_m1_t8 {
     use super::*;
 

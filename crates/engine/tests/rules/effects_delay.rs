@@ -1,24 +1,9 @@
-//! The two `modifiers.ts` verbs: `delay` and `addPlayerModifier`
-//! (SPEC §2.2, §2.3, §6.3 Cost/Mana, §10.1, §10.6; R30, R48, R62, R68, R76, R86, R126; BUILD
-//! M3-T1/M3-T5).
-//!
-//! `test/modifiers.test.ts` already proves the SUBSYSTEM — `scheduleDelayed`, `dueDelayed`,
-//! `addModifier`, `expireModifiers` and R62's two points in the turn loop. This file proves the two
-//! EFFECTS in front of it: that what a card file writes lands as the record the subsystem expects,
-//! and that the record really comes back at the turn boundary running the card's own script.
-//!
-//! It also pins ONE remaining gap in `effects/delay.ts`, which is NOT part of this work. It is
-//! marked `it.fails` (here `#[should_panic]`), so the runner reports it green while it is broken
-//! and turns RED the moment it is fixed — which is the point: a known-failing test naming a real gap
-//! is worth more than a passing tautology, and it cannot be forgotten. It carries its fix in a
-//! comment. The gap that used to sit beside it — `turn.runDelayed` being unable to re-enter a
-//! `resume` step table — is closed, and R126 now states the rule it was missing; its test is in
-//! "delay: coming due" below.
-//!
-//! The fixture cards are registered here on top of the shared fixture catalog, so no shared fixture
-//! has to grow for them (CLAUDE.md, BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-delay.test.ts`.
+//! The two modifier verbs, `delay` and `addPlayerModifier` (SPEC §2.2, §2.3, §6.3 Cost/Mana,
+//! §10.1, §10.6; R30, R48, R62, R68, R76, R86, R126; BUILD M3-T1/M3-T5). The subsystem has its own
+//! tests; these prove that what a card file writes lands as the record the subsystem expects, and
+//! that the record comes back at the turn boundary running the card's own script. One known gap is
+//! pinned as a `#[should_panic]` test, its fix in its comment. The fixture cards are registered here
+//! on top of the shared fixture catalog, so no shared fixture has to grow for them (BUILD §0).
 
 use jackioh_engine::effects::{
     DELAYED_HOOK, HAND_WATCH_KEY, THIS_TURN, add_player_modifier, damage, delay, due_resume, give_from_hand,
@@ -33,7 +18,7 @@ use super::fixtures::combat::indestructible;
 use super::fixtures::harness::{Bench, events_of_type, ids_of, in_hand, new_game, put, slot};
 use crate::rules::fixtures::harness::{act, json_of, matches_object};
 
-/// TS `put(state, defId, ref, { radiant: true })`: the card is made Radiant before it is placed.
+/// `put`, with the card made Radiant before it is placed.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let player = at.player;
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
@@ -46,12 +31,8 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     find_instance(state, &id).cloned().expect("the placed card")
 }
 
-// ---------------------------------------------------------------------------
 // Fixture cards. Indices start above 1500 so they never collide with another test file's locals.
-// ---------------------------------------------------------------------------
 
-/// TS `unitDefOf(name, overrides)`, whose module counter handed out 1501 to the first (and only) def;
-/// the index is written out here, as the order of the TS definitions fixed it.
 fn unit_def_of(name: &str, index: u32) -> CardDef {
     json_as(json!({
         "id": format!("dl-{name}"),
@@ -97,11 +78,9 @@ fn pocket_hook() -> Hook {
     })
 }
 
-/// A body that registers the same continuation BOTH ways: as its own `delayed` hook (the shape
-/// `turn.runDelayed` can re-enter today) and as an entry in its `resume` step table (the shape
-/// `prompts.runResume` and `work.cardStepFor` understand). That is what lets one fixture prove the
-/// first spelling works and the second does not, with nothing else different between the two tests.
-/// Its table also holds R1140's pocket step.
+/// A body that registers the same continuation BOTH ways, as its own `delayed` hook and as an entry
+/// in its `resume` step table, so the two R126 tests differ in nothing else. Its table also holds
+/// R1140's pocket step.
 fn bolt_script() -> Script {
     Script {
         delayed: Some(bolt_hook()),
@@ -132,9 +111,7 @@ fn dl_scripts() -> IndexMap<String, CardScripts> {
     .collect()
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 fn end_turns(state: &GameState, count: usize) -> GameState {
     let mut next = state.clone();
@@ -170,15 +147,13 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// TS `run`'s options: `{ self?: CardInstance | null; controller?: "p1" | "p2" }`.
 #[derive(Default)]
 struct RunOptions {
     self_: Option<CardInstance>,
     controller: Option<PlayerId>,
 }
 
-/// Apply effects the way `resolve.ts` does, straight onto `state`, and keep the events (TS handed
-/// back the sink; its `events` are what the tests read).
+/// Apply effects straight onto `state` and keep the events.
 fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<GameEvent> {
     let RunOptions { self_, controller } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
@@ -201,7 +176,6 @@ fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<
     events
 }
 
-/// `noUncheckedIndexedAccess` makes every index a maybe; these two narrow it once.
 fn only(entries: &[DelayedEffect]) -> &DelayedEffect {
     entries.first().expect("expected one delayed effect")
 }
@@ -225,9 +199,7 @@ fn as_scribe(scribe: &CardInstance) -> RunOptions {
     }
 }
 
-// ---------------------------------------------------------------------------
 // delay
-// ---------------------------------------------------------------------------
 
 mod delay_scheduling_s10_1_s10_6_r62_r68 {
     use super::*;
@@ -406,16 +378,9 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         assert!(ended.delayed.is_empty());
     }
 
-    /// R126's other spelling, on the same fixture: `bolt_script` registers the identical continuation
-    /// under BOTH keys — its own `delayed` hook (the test above) and an entry in its `resume` step
-    /// table (this one) — so the two tests differ in nothing but `resume.hook`.
-    ///
-    /// This was a gap: `turn.runDelayed` re-entered with `resolve.runHook`, which does `script[name]`
-    /// and CALLS the result, so `hook: "resume"` threw "hook is not a function" instead of looking
-    /// `resume.step` up in the table, and a card whose continuation sat only in `resume` resolved to
-    /// nothing at all. R126 settles it — "a card must never have to register one continuation under
-    /// two keys" — and `runDelayed` now goes through `prompts.runResume`, the one reader that
-    /// resolves both shapes.
+    /// R126's other spelling, on the same fixture: the continuation's `resume` step table entry, so
+    /// the two tests differ in nothing but `resume.hook`. R126: "a card must never have to register
+    /// one continuation under two keys"; one reader resolves both shapes.
     #[test]
     fn r126_the_step_table_form_re_enters_too_one_reader_resolves_a_hook_or_a_resume_step() {
         let mut state = playing("delay-step-table");
@@ -538,9 +503,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1140, R1141: a delayed effect watching cards in a hand (ME-HANDMARK, Meditative #76)
-// ---------------------------------------------------------------------------
 
 mod delay_watching_hand_cards_r1140_r1141 {
     use super::*;
@@ -667,25 +630,10 @@ mod delay_watching_hand_cards_r1140_r1141 {
 mod delay_the_remaining_gap_in_effects_delay_ts_not_part_of_this_work {
     use super::*;
 
-    /// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    /// GAP — A DELAY SCHEDULED WITH NO `ctx.self` HAS NO SCRIPT TO RE-ENTER.
-    ///
-    /// The engine half of this is fixed: `turn.runDelayed` no longer drops an entry whose
-    /// `resume.instanceId` is missing, and `prompts.runResume` resumes a continuation whose instance
-    /// has ceased to exist with `ctx.self === null` (R127). What is left is in THIS directory:
-    /// `prompts.resumeSelf` can only name the def id through `ctx.self`, so a scheduler with a null
-    /// self stores `defId: ""` — the passing "records a continuation with no instance" test above
-    /// pins exactly that — and `runResume` then finds no face, no hook and nothing to run.
-    ///
-    /// THE FIX, in `crates/engine/src/effects/delay.rs` (TS `packages/engine/src/effects/delay.ts`):
-    /// give `delay` a `defId` option that the card names when it has no instance to speak for it, and
-    /// pass it into the stored `Resume` in place of `resumeSelf`'s `ctx.self.defId`. No Core card is in
-    /// that position — every card that delays is on the field or parked in `resolving` when it does —
-    /// so this stays reported, not built, and this file does not own `src/`.
-    ///
-    /// THIS TEST IS `it.fails` (`#[should_panic]`): it passes while the gap is open and turns RED the
-    /// moment the option lands — delete the `#[should_panic]` then.
-    /// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    /// GAP: `resume_self` names the def only through `ctx.self`, so a delay scheduled with none stores
+    /// `defId: ""` and nothing re-enters (a vanished instance resumes with a null self, R127). The fix,
+    /// in `crates/engine/src/effects/delay.rs`: a `defId` option on `delay`; no Core card needs it, as
+    /// every card that delays is on the field or in `resolving`. Delete `#[should_panic]` when it lands.
     #[test]
     #[should_panic]
     fn gap_r76_a_delay_scheduled_with_no_ctx_self_stores_no_def_id_so_nothing_re_enters() {
@@ -706,9 +654,7 @@ mod delay_the_remaining_gap_in_effects_delay_ts_not_part_of_this_work {
     }
 }
 
-// ---------------------------------------------------------------------------
 // addPlayerModifier
-// ---------------------------------------------------------------------------
 
 /// The five shapes the Core cards really pass, each named by the card that passes it.
 fn five_real_shapes(turn: i32) -> Vec<Effect> {
@@ -751,7 +697,7 @@ fn five_real_shapes(turn: i32) -> Vec<Effect> {
     ]
 }
 
-/// `mod.kind`: the modifier's tag, as TS wrote it.
+/// The modifier's tag.
 fn kind_of(modifier: &PlayerModifier) -> String {
     json_of(modifier)["kind"]
         .as_str()
@@ -781,8 +727,8 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
         // Nothing lands on the opponent: `playerOf` resolved "self" against the controller.
         assert!(state.players.p2.mods.is_empty());
 
-        // `modifiers.addModifier` assigns the id, so every modifier has a distinct one (§9.3: it is
-        // derived from `nextSeq`, which makes it deterministic under replay).
+        // The engine assigns the id, so every modifier has a distinct one (§9.3: it is derived from
+        // `nextSeq`, which makes it deterministic under replay).
         let ids: Vec<String> = mods.iter().map(|m| m.id.clone()).collect();
         assert_eq!(ids.iter().collect::<IndexSet<_>>().len(), 5);
         assert!(ids.iter().all(|id| !id.is_empty()));
@@ -797,7 +743,7 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
             Value::Array(expected)
         );
 
-        // The shapes survive as written, `id` apart, so `mana.ts` reads back what the card meant.
+        // The shapes survive as written, `id` apart, so the cost code reads back what the card meant.
         let kinds: Vec<String> = mods.iter().map(kind_of).collect();
         assert_eq!(
             kinds,
@@ -877,8 +823,7 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
         );
         let before: Vec<PlayerModifier> = state.players.p1.mods.clone();
 
-        // §2.2's cleanup, which `turn.ts` runs at the end of this player's turn. TS ran it on the same
-        // sink, so its events follow the run's on one list.
+        // §2.2's cleanup, run at the end of this player's turn; its events follow the run's on one list.
         {
             let mut sink = Bench::new(&state);
             expire_modifiers(&mut sink.sink(&mut state), P1);

@@ -1,8 +1,7 @@
 //! Test-only cards for Frozen and Freeze (SPEC §6.1, §6.3, R1174000): each freezes, or does what a
-//! freeze test needs done to a Frozen Unit, through the engine's own verbs. No shipped card freezes
-//! yet (M+ #24 Bob is the first, #1185), so the engine never imports `crates/cards` for this.
-//!
-//! Ids are prefixed `fz-` and indexed from 11740, so they collide with no other fixture file's.
+//! freeze test needs done to a Frozen Unit, through the engine's own verbs: the engine never imports
+//! `crates/cards` (#1185). Ids are prefixed `fz-` and indexed from 11740, so they collide with no
+//! other fixture file's.
 
 #![allow(non_upper_case_globals)]
 

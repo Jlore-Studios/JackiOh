@@ -1,9 +1,8 @@
 //! Test-only cards for the Starship (SPEC §6.1 Starship Piece and Starship, §6.2 When launched, §6.3
 //! Launch; R1852000–R1852007): a fixture definition of the Dormant Starship under the id the engine
 //! summons (`DORMANT_STARSHIP_DEF_ID`), Starship Pieces in the shapes Stinkyscape will print, and the
-//! cards that kill, steal, discard, equip, stack onto and launch them through the engine's own verbs.
-//! No shipped card is a piece yet (the real Dormant Starship and its pieces come with the set), so the
-//! engine never imports `crates/cards` for this.
+//! cards that kill, steal, discard, equip, stack onto and launch them through the engine's own verbs,
+//! so the engine never imports `crates/cards` for this.
 //!
 //! Ids are prefixed `ss-` and indexed from 18520, so they collide with no other fixture file's.
 
@@ -179,11 +178,8 @@ pub static brute: LazyLock<CardDef> =
 pub const LAUNCHED_DAMAGE: i32 = 2;
 /// What the gunner's Cry deals the Unit it picks.
 pub const CRY_DAMAGE: i32 = 1;
-/// What the lander's Cry deals the enemy hero.
 pub const LANDER_DAMAGE: i32 = 3;
-/// What the countdown trap deals the enemy hero.
 pub const TRAP_DAMAGE: i32 = 2;
-/// What the bolt deals the Unit it picks.
 pub const BOLT_DAMAGE: i32 = 5;
 
 fn to_enemy_hero(amount: i32) -> Effect {

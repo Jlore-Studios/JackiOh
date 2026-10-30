@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/draw.test.ts`.
-
 use jackioh_engine::draw::{DrawOutcome, ShuffleInOutcome, draw, draw_one, shuffle_into_library};
 use jackioh_engine::effects::draw as draw_effect;
 use jackioh_engine::testkit::*;
@@ -15,7 +13,7 @@ fn def_ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
 
-/// TS `drawFrom(state, library, count = 1)`: the state is drawn in place; the events come back.
+/// The state is drawn in place; the events come back.
 fn draw_from(state: &mut GameState, library: &[String], count: i32) -> Vec<GameEvent> {
     set_library(state, PlayerId::P1, library);
     let mut bench = Bench::new(state);

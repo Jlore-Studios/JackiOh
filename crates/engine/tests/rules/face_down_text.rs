@@ -1,15 +1,8 @@
 //! R1487000: a face-down card's lasting text sleeps until it is revealed or face-up (SPEC §3.2,
-//! §10.4 layer 5, §10.8; R33, R686, R1149000).
-//!
-//!   * Set face-down, a Trap's hero Armor, aura, draw limit and Infinite Reserves act on nothing, so
-//!     the other seat's view shows what a textless Trap would leave.
-//!   * Revealed (R686) or face-up, each of them acts, and so does every other lasting text a reader
-//!     takes off the board: a carrier, a Tribute worth, a targeting cost, a Plague multiplier, an Echo.
-//!   * A lasting text fused onto a face-down Trap (C+ #31, R77, R102) sleeps with it, and the Trap
-//!     still fires on its trigger.
-//!   * A kept script whose text worked face-down (`Script::live_face_down`, R767000) still does.
-//!
-//! Fixtures are this file's own: `fd-` defs indexed from 14871 (BUILD §0).
+//! §10.4 layer 5, §10.8; R33, R686, R1149000): set face-down, a Trap's lasting text acts on nothing,
+//! so the other seat sees what a textless Trap would leave. A text fused onto a face-down Trap
+//! (C+ #31, R77, R102) sleeps with it, and a kept script whose text worked face-down
+//! (`Script::live_face_down`, R767000) still does. Fixtures: `fd-` defs indexed from 14871 (BUILD §0).
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;

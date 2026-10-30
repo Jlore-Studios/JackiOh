@@ -1,9 +1,7 @@
-//! `drawWhile` (effects/drawWhile.ts; Classic #46 Divine Favor's "draw until"): one draw at a time while
+//! `drawWhile` (Classic #46 Divine Favor's "draw until"): one draw at a time while
 //! a condition holds, read again before each draw, ending at the first draw that adds no card to the
 //! hand — fatigue, a burn at the hand cap, a cast on draw, a draw a draw limit stops (§2.4, R58, B5 E3)
 //! — or that leaves a question open.
-//!
-//! Port of `packages/engine/test/effects-drawWhile.test.ts`.
 
 use jackioh_engine::effects::{DrawWhileArgs, damage, draw_while};
 use std::sync::Arc;
@@ -28,7 +26,6 @@ fn spell(id: &str, cost: i32) -> CardDef {
     }))
 }
 
-/// TS `{ ...spell("limiter"), type: "Field Spell" }`.
 fn limiter() -> CardDef {
     CardDef {
         type_: CardType::FieldSpell,
@@ -98,13 +95,13 @@ fn setup(seed: &str) -> GameState {
     state
 }
 
-/// TS `drawTo(state, mark)` with a number: draw while p1's hand holds fewer than `mark` cards.
+/// Draw while p1's hand holds fewer than `mark` cards.
 fn below(mark: usize) -> impl Fn(&EffectContext<'_>) -> bool + Send + Sync + 'static {
     move |c: &EffectContext<'_>| c.state.players[PlayerId::P1].hand.len() < mark
 }
 
-/// Run `drawWhile` for p1 while `more` holds; returns the sink's events. Like TS's, the sink's rng
-/// starts at the state's cursor and is not written back.
+/// Run `drawWhile` for p1 while `more` holds; returns the sink's events. The sink's rng starts at
+/// the state's cursor and is not written back.
 fn draw_to(
     state: &mut GameState,
     more: impl Fn(&EffectContext<'_>) -> bool + Send + Sync + 'static,
@@ -180,7 +177,6 @@ mod draw_while_classic_46_divine_favor_s_draw_until {
         assert_eq!(state.players[PlayerId::P1].library.len(), 2);
     }
 
-    /// TS: "B5 E3 a draw a draw limit stops adds no card and ends it".
     #[test]
     fn b5_e3_a_draw_a_draw_limit_stops_adds_no_card_and_ends_it() {
         let mut state = setup("dw-limit");

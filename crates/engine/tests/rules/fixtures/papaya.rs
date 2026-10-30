@@ -1,11 +1,9 @@
-//! Port of `packages/engine/test/fixtures/papaya.ts`.
-//!
 //! Test-only cards for Classic+ #62 KY's Papaya's curve targeting (SPEC §8.7 row 62, R422; B5 E32).
-//! The fixture Spell runs the engine half of the card exactly as the real script does — `papayaBegin`
-//! on resolve, `papayaAnswered` on each answer — so the subsystem is proved without `packages/cards`
-//! (CLAUDE.md: the engine never imports it); the card's own test repeats the key cases. `curve` runs
-//! the rules through v0.4.0f (`PAPAYA_RULES_V0_4_0F`: "done", the exiles), which most of the suite
-//! proves, and `curve_now` today's (R1704000: four Discovers, the destroys).
+//! The fixture Spell runs the engine half of the card exactly as the real script does — `papaya_begin`
+//! on resolve, `papaya_answered` on each answer — so the subsystem is proved without `crates/cards`
+//! (CLAUDE.md: the engine never imports it). `curve` runs the rules through v0.4.0f (`PAPAYA_RULES_V0_4_0F`:
+//! "done", the exiles), which most of the suite proves, and `curve_now` today's (R1704000: four Discovers,
+//! the destroys).
 
 use std::sync::LazyLock;
 
@@ -118,7 +116,6 @@ pub static PAPAYA_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// TS `PAPAYA_SCRIPTS` (module-private there), as a call.
 pub fn papaya_scripts() -> IndexMap<String, CardScripts> {
     let mut table = IndexMap::new();
     table.insert(curve().id, both(curve_script()));
@@ -136,7 +133,7 @@ pub fn papaya_scripts() -> IndexMap<String, CardScripts> {
     table
 }
 
-/// This file's definitions, by id (the brief's `catalog()`).
+/// This file's definitions, by id.
 pub fn catalog() -> CardDefs {
     PAPAYA_DEFS
         .iter()
@@ -144,7 +141,7 @@ pub fn catalog() -> CardDefs {
         .collect()
 }
 
-/// This file's scripts, by id (the brief's `scripts()`).
+/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     papaya_scripts()
 }

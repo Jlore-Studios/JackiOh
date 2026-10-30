@@ -1,10 +1,8 @@
 //! Test-only cards for layered summons and the lethal guard on a pile (issue #1842): several Units
 //! summoned into one unit zone as a §3.2 Stack pile, bottom first (`summon_pile`, R1842000), and
 //! R1204's lethal guard standing in such a pile (R1842001). Each does it through the engine's own
-//! verbs, as a card script would, so the engine never imports `crates/cards`; the Stinkyscape Drone
-//! Battleship (S07) is the card that will use them.
-//!
-//! Ids are prefixed `ls-` and indexed from 18420, so they collide with no other fixture file's.
+//! verbs, as a card script would, so the engine never imports `crates/cards`. Ids are prefixed `ls-`
+//! and indexed from 18420, so they collide with no other fixture file's.
 
 #![allow(non_upper_case_globals)]
 
@@ -48,7 +46,7 @@ fn card(index: u32, name: &str, type_: &str, stats: Option<(i32, i32)>, keywords
     }))
 }
 
-/// A replacement as TS's literal `{ id, on, instead }`, with no `where`, `when`, `then` or `by`.
+/// A replacement with no `where`, `when`, `then` or `by`.
 fn replacement(id: &str, on: ReplacementMoment, instead: Value) -> ReplacementDef {
     ReplacementDef {
         id: id.to_string(),

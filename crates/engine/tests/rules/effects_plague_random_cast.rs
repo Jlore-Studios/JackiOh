@@ -1,9 +1,7 @@
 //! R452 meets E19 (R471, R689): "Place N Plague Counters" inside a random cast (Classic+ #47 Jogg's Box
 //! casting Classic #70 Book of Plague) asks its caster nothing — every placement goes on one random
 //! permanent — as a random cast makes every choice at random. Through fixture cards; the real cards'
-//! tests cover the same case again (packages/cards/test/classic-plus/047-joggs-box.test.ts).
-//!
-//! Port of `packages/engine/test/effects-plague-random-cast.test.ts`.
+//! tests cover the same case again.
 
 use jackioh_engine::testkit::*;
 
@@ -75,8 +73,6 @@ fn game(seed: &str) -> GameState {
 }
 
 fn cast_from_box(state: &mut GameState) {
-    // TS built the sink first and the casting card second; the sink touches no id, so the order of
-    // the two is the same game.
     let self_ = new_instance(
         state,
         &box_().id,

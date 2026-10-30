@@ -1,10 +1,4 @@
 //! Engine tests for the Blueprint systems (MB26, R1280–R1284).
-//!
-//! Systems tested:
-//! - STACK-BASE (R1281)
-//! - WIDE-TRIBUTE (R1282)
-//! - LANE-STRIKE (R1283)
-//! - CAPTURE (R1284)
 
 use jackioh_engine::effects::{self, CaptureArgs};
 use jackioh_engine::params::set_param;
@@ -73,9 +67,7 @@ fn as_p1() -> HookOptions {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1281: STACK-BASE
-// ---------------------------------------------------------------------------
 mod r1281_stack_base {
     use super::*;
 
@@ -227,9 +219,7 @@ mod r1281_stack_base {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1282: WIDE-TRIBUTE
-// ---------------------------------------------------------------------------
 mod r1282_wide_tribute {
     use super::*;
 
@@ -354,11 +344,9 @@ mod r1282_wide_tribute {
     fn r1282_legal_actions_lists_19_380_church_plays_on_a_full_board() {
         let mut state = board("r1282-full-board");
         register_blueprint();
-        // 5 own units
         for lane in 1..=5 {
             put(&mut state, "bp-cheap-unit", slot(P1, Row::Units, lane), json!({}));
         }
-        // 5 own backrows
         for lane in 1..=5 {
             put(
                 &mut state,
@@ -367,11 +355,9 @@ mod r1282_wide_tribute {
                 json!({}),
             );
         }
-        // 5 enemy units
         for lane in 1..=5 {
             put(&mut state, "bp-cheap-unit", slot(P2, Row::Units, lane), json!({}));
         }
-        // 5 enemy backrows
         for lane in 1..=5 {
             put(
                 &mut state,
@@ -389,9 +375,7 @@ mod r1282_wide_tribute {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1283: LANE-STRIKE
-// ---------------------------------------------------------------------------
 mod r1283_lane_strike {
     use super::*;
 
@@ -543,9 +527,7 @@ mod r1283_lane_strike {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1284: CAPTURE
-// ---------------------------------------------------------------------------
 mod r1284_capture {
     use super::*;
 
@@ -581,7 +563,6 @@ mod r1284_capture {
         assert_eq!(captured.controller, P1);
         assert_eq!(captured.summoned_turn, Some(4));
 
-        // ControlChanged event emitted
         assert!(res.events.iter().any(|e| matches!(
             e,
             GameEvent::ControlChanged {
@@ -594,7 +575,6 @@ mod r1284_capture {
             } if instance_id == &unit.id && *controller == P1 && *row == Row::Units && *lane == 1
         )));
 
-        // P2's unit zone is empty
         assert!(card_at(&state, slot(P2, Row::Units, 1)).is_none());
     }
 
@@ -640,7 +620,6 @@ mod r1284_capture {
         state.active = P2;
         state.players.p2.mana.current = 10;
 
-        // Play unit A
         let u_a = give_hand(&mut state, "bp-cheap-unit", P2);
         let _spare1 = give_hand(&mut state, "bp-cheap-unit", P2);
         let _spare2 = give_hand(&mut state, "bp-cheap-unit", P2);
@@ -648,10 +627,8 @@ mod r1284_capture {
             &state,
             json!({ "type": "play", "playerId": "p2", "instanceId": u_a.id, "zone": { "row": "units", "lane": 1 } }),
         );
-        // Apply damage to A
         find_instance_mut(&mut state, &u_a.id).unwrap().damage = 1;
 
-        // Play unit B
         let u_b = give_hand(&mut state, "bp-cheap-unit", P2);
         let state = act(
             &state,
@@ -719,7 +696,6 @@ mod r1284_capture {
             json!({ "type": "play", "playerId": "p2", "instanceId": u_b.id, "zone": { "row": "units", "lane": 1 } }),
         );
 
-        // Remove captor from field
         let captor_instance = find_instance(&state, &captor.id).unwrap().clone();
         remove_from_field(&mut state, &captor_instance, Default::default());
 
@@ -749,7 +725,6 @@ mod r1284_capture {
         })
         .apply)(&mut ctx);
 
-        // Plot is still in P2's pile
         assert_eq!(pile_at(ctx.state, slot(P1, Row::Units, 1)).unwrap().len(), 1);
         assert_eq!(pile_at(ctx.state, slot(P2, Row::Units, 1)).unwrap().len(), 2);
     }

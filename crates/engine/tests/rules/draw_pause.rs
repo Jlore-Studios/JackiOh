@@ -5,7 +5,6 @@
 //! Scarab's Discover, or anything Call to Chaos reaches. Neither draw loop may draw on past the prompt.
 //!   * §9.3, R113, R117: a cast that asks stops the chain; the rest is owed to `state.work` and the
 //!     answer draws exactly those cards, once each (likewise the whole draws a "draw N" has not made).
-//!   * §9.3, §10.1: the paused game survives a JSON round trip and resumes identically.
 //!   * R58: the owed chain carries its counter, so resuming cannot evade the cap.
 //!   * R4, R3: hand-cap burn and fatigue still apply past a pause; the paused draw counts once.
 //!   * R70, R122: the paused cast lands on the answer (§10.5 steps 6, 7), before the draw owed behind it.
@@ -344,7 +343,6 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
             .expect("an owed draw chain");
         assert_eq!(owed.player, PlayerId::P1);
         assert_eq!(owed.chain, 2);
-        // R217: the draw that began this chain finishes it, so the item closes it.
         assert!(owed.owns);
 
         let done = answer(&round);
@@ -355,8 +353,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
                 .map(str::to_string)
                 .to_vec()
         );
-        // The two cards still in the library were drawn, once each: the third was cast on draw, the
-        // fourth ended the chain in hand. Nothing was drawn twice and nothing was skipped.
+        // The two cards still in the library were drawn, once each.
         assert_eq!(done.state.counters.drawn, 4);
         assert_eq!(
             drawn_by(&done.events, PlayerId::P1),
@@ -367,7 +364,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         assert_eq!(done.state.pending, None);
         assert_eq!(done.state.work, Vec::<WorkItem>::new());
         // R2179002: a cast on draw is no play, so none of the three cast cards counted as one, across
-        // the pause (through v0.5.2 each counted exactly once, R70).
+        // the pause.
         assert_eq!(done.state.counters.played, 0);
         assert_eq!(done.state.players.p1.turn_log.cards_played, 0);
     }

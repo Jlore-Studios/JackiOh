@@ -9,7 +9,6 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::damage_combat::{grunt, playing};
 use crate::rules::fixtures::harness::sink_for;
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),

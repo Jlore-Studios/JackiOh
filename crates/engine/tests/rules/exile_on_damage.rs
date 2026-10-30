@@ -4,8 +4,6 @@
 //! and the next state check exiles it ahead of deaths (SPEC §4.5 step 1): no Death, no Reborn, no
 //! `destroyed`. A hit the pipeline stopped — Divine Shield, Indestructible, the zero rule — dealt
 //! no damage, so it marks nothing.
-//!
-//! Port of `packages/engine/test/exileOnDamage.test.ts`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -27,7 +25,7 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// TS `sinkFor(state)`: run `f` on a sink over `state` and hand back what it emitted.
+/// Run `f` on a sink over `state` and hand back what it emitted.
 fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
     let mut sink = sink_for(state);
     let out = f(&mut sink);
@@ -35,7 +33,7 @@ fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R
     (out, events)
 }
 
-/// `declareAttack(sink, attacker, target)` with both read live off the sink.
+/// `declare_attack` with the attacker read live off the sink.
 fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: AttackTarget) -> Option<String> {
     let attacker = live(sink.state, attacker_id);
     declare_attack(sink, &attacker, &target)

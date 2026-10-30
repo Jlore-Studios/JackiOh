@@ -1,9 +1,7 @@
 //! R446: a Unit a carrier holds is a Unit for every rule, so a hit lands on it — targeted
-//! or swept — as on any acting Unit (`zones.actsOnField`, which knows carried Units; the damage
-//! pipeline asks it rather than "the top of its unit zone"). Fixtures: `fixtures/field.ts`. And R53,
+//! or swept — as on any acting Unit (`zones::acts_on_field`, which knows carried Units; the damage
+//! pipeline asks it rather than "the top of its unit zone"). And R53,
 //! R446: it can't attack or be attacked, so a forced attack on "a random enemy" never draws it.
-//!
-//! Port of `packages/engine/test/carried-damage.test.ts`.
 
 use jackioh_engine::effects::combat::forced_attack_random;
 use jackioh_engine::effects::damage::damage_all;
@@ -14,12 +12,11 @@ use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::field::{flush, playing, tower};
 use crate::rules::fixtures::harness::{act_result, in_hand, put, sink_for, slot};
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON object (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),

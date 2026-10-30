@@ -1,8 +1,6 @@
 //! The buff and grantKeyword effects (BUILD M3-T1): layer 4 of §10.4, under the auras of layer 5,
 //! plus §6.1's keyword set, Armor summing across sources, and R21's random keyword pool.
 //! The all-keyword fixture unit this file needs is defined and registered here (BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-buff.test.ts`.
 
 use jackioh_engine::effects::{
     buff, buff_all_units, grant_keyword, grant_random_keywords, random_pool_keywords,
@@ -663,7 +661,7 @@ mod r21_random_keywords_m3_t1 {
         assert!(!kinds.contains(&"Armor".to_string()));
         assert!(!kinds.contains(&"Spell Damage".to_string()));
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len());
-        // Taunt is no longer held down, since the pool draws no Indestructible (R1615000).
+        // Taunt is not held down, since the pool draws no Indestructible (R1615000).
         assert!(kinds.len() >= RANDOM_KEYWORD_POOL.len() - 1);
         for keyword in &live(&state, &unit.id).granted_keywords {
             assert!(!matches!(
@@ -716,7 +714,7 @@ mod r21_random_keywords_m3_t1 {
         );
         let mut b = Bench::new(&state);
 
-        // Its printed Indestructible is no pool entry now, and still keeps Taunt out (R347).
+        // Its printed Indestructible is no pool entry, and still keeps Taunt out (R347).
         run(
             &mut b,
             &mut state,

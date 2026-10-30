@@ -1,8 +1,6 @@
 //! Test-only cards for a card's play gate (`Script.play_allowed`, R1851000–R1851002, issue #1851):
 //! Spells whose play needs an enemy Unit on the field though they declare no target, the shape of
-//! Meditative #53 Prestige's Radiant face ("De-Radiant every enemy card on the field"), which tests it
-//! again in its own file.
-//!
+//! Meditative #53 Prestige's Radiant face ("De-Radiant every enemy card on the field").
 //! Ids are prefixed `pg-` and indexed from 18510 up, clear of every other fixture file (BUILD §0).
 
 use std::sync::LazyLock;

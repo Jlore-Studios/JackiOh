@@ -1,7 +1,5 @@
-//! B5 E37 random split damage (`effects/split.ts`): "deal N damage split among enemies" — N hits of 1,
+//! B5 E37 random split damage: "deal N damage split among enemies" — N hits of 1,
 //! each a damage instance of its own on a random enemy still standing (Classic+ #3's Death).
-//!
-//! Port of `packages/engine/test/effects-split.test.ts`.
 
 use jackioh_engine::testkit::*;
 
@@ -15,13 +13,11 @@ use jackioh_engine::state_check::state_check;
 use super::fixtures::damage_combat::{bolt, grunt, playing, rattle, snake, wall, warded};
 use super::fixtures::harness::{events_json, in_hand, put, slot};
 
-/// A JSON string field, as an owned string.
 fn text(value: &Value, key: &str) -> String {
     value[key].as_str().unwrap_or_default().to_string()
 }
 
-/// A state check on a sink over `state` (`sinkFor`: the rng at the state's cursor), handing back the
-/// events it emitted.
+/// A state check over `state`, the rng at its cursor, handing back the events it emitted.
 fn snake_dies(state: &mut GameState) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -32,7 +28,7 @@ fn snake_dies(state: &mut GameState) -> Vec<GameEvent> {
     events
 }
 
-/// `applyEffects([effect], makeContext(sinkFor(state), self, options))`, handing back the events.
+/// `damage_split(args)` applied from `self_`, handing back the events.
 fn split_from(
     state: &mut GameState,
     self_: Option<&CardInstance>,

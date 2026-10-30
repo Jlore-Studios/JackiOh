@@ -1,10 +1,7 @@
-//! Deck and graveyard triggers, and "summon this from your hand or deck" (docs/classic-sets.md B5 E26):
-//! a card in a library answers its `deckTriggers` (Classic+ #37 Wardrum), a card in a graveyard its
-//! `graveyardTriggers` (Classic #47 Recurring Felinor), and a hand or deck trigger may summon its own
-//! card — no Cry, summoning sick, the leftmost open zone (Classic #66 EU Striker). R464 is their place
-//! in R68's order: after the hand's triggers and before the graveyard's, in the order the instances
-//! were created and never by library position, which is hidden (§9.1); and a library card's queue
-//! entry, like a hand card's, takes no number from the counter both seats read (R177).
+//! Deck and graveyard triggers (Classic+ #37 Wardrum, Classic #47 Recurring Felinor), and "summon this
+//! from your hand or deck" (Classic #66 EU Striker; docs/classic-sets.md B5 E26). R464 is their place
+//! in R68's order: after the hand's triggers and before the graveyard's, in creation order and never by
+//! library position, which is hidden (§9.1); a library card's queue entry takes no number (R177).
 
 use jackioh_engine::testkit::*;
 

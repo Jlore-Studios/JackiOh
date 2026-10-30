@@ -1,8 +1,6 @@
 //! Issue #1843's two endings (SPEC §2.5, R1843000–R1843003): a player removed from the game by a full
 //! tally of votes, and a player who flees. Proved on fixture scripts (`fixtures/endings.rs`) through
 //! the testkit's `scenario()`, so the engine owns both before any Stinkyscape card exists.
-//!
-//! Port of nothing shipped: no shipped card votes or flees, so no shipped game reaches either.
 
 use jackioh_engine::effects::{FleeArgs, flee, vote_out, win_game};
 use jackioh_engine::resolve::{HookOptions, make_context};

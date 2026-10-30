@@ -1,8 +1,6 @@
 //! Make Radiant (SPEC §6.3, §5.2, BUILD M3-T1): the on-field layer swap without a Cry (R22), a card
 //! with no radiant form still setting the flag (R74), and R60's random picks. The fixture cards
 //! these tests need are registered here, so no shared fixture has to grow for them (BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-radiant.test.ts`.
 
 use std::collections::BTreeSet;
 
@@ -94,8 +92,7 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// Apply one effect the way `resolve.ts` does, and hand back the events it emitted. `self_` is TS's
-/// `options.self` (null by default); `hook` the rest of the options.
+/// Apply one effect and hand back the events it emitted; `hook` holds the rest of the options.
 fn run(
     state: &mut GameState,
     effect: Effect,

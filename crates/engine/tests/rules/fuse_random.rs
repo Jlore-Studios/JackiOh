@@ -1,8 +1,7 @@
 //! `fuseCards` with a random ingredient (ME-FUSE-RANDOM): one card drawn uniformly from a scope —
 //! an enemy permanent on the field (tops of piles, both rows, face-down cards included, never an
 //! Immutable one) or a card of the opponent's library — fused into the kept target per R77 and
-//! R102. With no ingredient, or an Immutable kept card, nothing fuses and nothing is drawn.
-//! Meditative #47 饕餮 (MD-C20, R1020) is its user.
+//! R102. Meditative #47 饕餮 (MD-C20, R1020) is its user.
 
 use jackioh_engine::effects::fuse_cards;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -12,7 +11,6 @@ use crate::rules::fixtures::damage_combat::{grunt, pawn, playing};
 use crate::rules::fixtures::generation::{immutable, register_generation};
 use crate::rules::fixtures::harness::{events_json, put, set_library, sink_for, slot};
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -35,7 +33,6 @@ fn fuse_random(state: &mut GameState, kept: &str, scope: Value) {
     );
 }
 
-/// The units and backrow cards on this side, in lane order.
 fn field_count(state: &GameState, player: PlayerId) -> usize {
     let side = &state.players[player];
     side.units.iter().flatten().count() + side.backrow.iter().flatten().count()
@@ -147,7 +144,6 @@ mod r1020_a_random_enemy_permanent_fused_in {
             })))],
             &mut make_context(&mut sink, None, by(P1)),
         );
-        // Exactly one library card went into the fusion.
         let after: Vec<String> = sink
             .state
             .players
@@ -170,7 +166,7 @@ mod r1020_a_random_enemy_permanent_fused_in {
         assert!(find_instance(sink.state, &kept.id).is_some());
     }
 
-    /// The `kind` events each seat's view shows, read by their TS field names.
+    /// The `kind` events each seat's view shows.
     fn seen(state: &GameState, kind: &str) -> Vec<(PlayerId, Value)> {
         [P1, P2]
             .into_iter()

@@ -1,5 +1,4 @@
 //! Small helpers shared by the engine tests: a registered fixture catalog, a sink and placement.
-//!
 //! The registries are the testkit's thread-local override, so `setup_catalog` registers for the
 //! calling test's thread only. Surface contract: docs/v0.3.0/SURFACE.md §8.
 //! `put` hands back an owned copy of the placed card; a test that changes it writes through
@@ -47,8 +46,8 @@ pub fn sink_for(state: &mut GameState) -> EngineSink<'_> {
     EngineSink::new(state, events, rng)
 }
 
-/// TS `sinkFor(state, events)`'s events and rng: the rng from the state's seed and cursor, as reduce
-/// starts one, and no events yet. The state stays the test's, lent with the bench to one engine call
+/// A sink's events and rng: the rng from the state's seed and cursor, as reduce starts one, and no
+/// events yet. The state stays the test's, lent with the bench to one engine call
 /// at a time (`sink`, `run`), so the test reads the state and the events between calls.
 pub struct Bench {
     pub events: Vec<GameEvent>,
@@ -68,7 +67,6 @@ impl Bench {
         EngineSink::new(state, &mut self.events, &mut self.rng)
     }
 
-    /// `call` on a sink over `state`; what it returns comes back.
     pub fn run<T>(&mut self, state: &mut GameState, call: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
         call(&mut self.sink(state))
     }
@@ -138,8 +136,7 @@ pub fn events_of_type(events: &[GameEvent], type_: impl ToString) -> Vec<GameEve
         .collect()
 }
 
-/// The events of one type, in order, each as its JSON (TS's `eventsOfType`, read by the TS field
-/// names); `kind` is a `GameEventType` or its string, as `events_of_type` takes.
+/// `events_of_type`, each event as its JSON.
 pub fn events_json(events: &[GameEvent], kind: impl ToString) -> Vec<Value> {
     events_of_type(events, kind).into_iter().map(json_of).collect()
 }
@@ -149,17 +146,15 @@ pub fn ids_of<C: Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
     cards.iter().map(|card| card.borrow().id.clone()).collect()
 }
 
-/// The events' types, in order.
 pub fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().map(GameEvent::event_type).collect()
 }
 
-/// The ids of the cards in the player's hand, in order.
 pub fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     ids_of(&state.players[player].hand)
 }
 
-/// TS `both(script)`: the same script on the base and the Radiant face.
+/// The same script on the base and the Radiant face.
 pub fn both(script: Script) -> CardScripts {
     CardScripts {
         base: script.clone(),
@@ -167,8 +162,7 @@ pub fn both(script: Script) -> CardScripts {
     }
 }
 
-/// TS `{ ...base, ...extra }` on two object literals: `extra`'s keys replace `base`'s (the cards
-/// crate's `merged`). Anything but two objects leaves `base` as it is.
+/// `extra`'s keys replace `base`'s (the cards crate's `merged`); anything but two objects keeps `base`.
 pub fn spread(mut base: Value, extra: Value) -> Value {
     if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
         for (key, value) in from {
@@ -210,7 +204,6 @@ pub fn act_ok(state: &GameState, body: impl Serialize) -> ReduceResult {
     accepted(&action, reduce(state, &action))
 }
 
-/// `act_ok`'s state.
 pub fn act(state: &GameState, body: impl Serialize) -> GameState {
     act_ok(state, body).state
 }
@@ -237,7 +230,7 @@ fn accepted(action: &Action, result: ReduceResult) -> ReduceResult {
     result
 }
 
-/// The card as it stands in `state` now, by its id or a copy of it (TS held the live object).
+/// The card as it stands in `state` now, by its id or a copy of it.
 pub fn live(state: &GameState, card: impl Into<CardRef>) -> CardInstance {
     let id = ref_id(card.into());
     find_instance(state, &id)
@@ -245,7 +238,7 @@ pub fn live(state: &GameState, card: impl Into<CardRef>) -> CardInstance {
         .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
-/// The card in `state`, by its id or a copy of it, to write through (TS wrote the live object).
+/// The card in `state`, by its id or a copy of it, to write through.
 pub fn live_mut(state: &mut GameState, card: impl Into<CardRef>) -> &mut CardInstance {
     let id = ref_id(card.into());
     find_instance_mut(state, &id).unwrap_or_else(|| panic!("no card {id} in the state"))
@@ -345,7 +338,7 @@ pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)
     RandomGame { state, log, decks }
 }
 
-/// A value as JSON, the shape the tests compare (the TS tests' `JSON.parse(JSON.stringify(…))`).
+/// A value as JSON, the shape the tests compare.
 pub fn json_of(value: impl serde::Serialize) -> serde_json::Value {
     serde_json::to_value(value).expect("serializes")
 }
@@ -355,8 +348,8 @@ pub fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) 
     serde_json::from_value(json_of(value)).expect("parses back")
 }
 
-/// TS `toMatchObject`: every key the expected object names matches, recursively; an array matches
-/// element for element and in length; anything else is equal.
+/// Every key the expected object names matches, recursively; an array matches element for element
+/// and in length; anything else is equal.
 pub fn matches_object(actual: &serde_json::Value, expected: &serde_json::Value) -> bool {
     use serde_json::Value;
     match (actual, expected) {

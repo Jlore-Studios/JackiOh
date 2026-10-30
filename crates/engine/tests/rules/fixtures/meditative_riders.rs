@@ -1,9 +1,5 @@
-//! Test-only cards for the Meditative riders part (docs/meditative-set.md M5, R1100–R1110): an
-//! either-player Activate card (MD-D9, #54's shape, proved here while #54 waits for #525's Jade), a
-//! controller-only one, a note log for ordering granted Deaths (MD-D13), a granter and a bearer, a
-//! Book and an AI card for multi-pool fusion (MD-D14), and a `manaSpent` listener (MD-D26). The
-//! engine never imports `packages/cards`; the real cards' tests cover the same cases again.
-//!
+//! Test-only cards for the Meditative riders part (docs/meditative-set.md M5, R1100–R1110; MD-D9's
+//! Activate card is #54's shape, which needed #525's Jade). The engine never imports `crates/cards`.
 //! Ids are prefixed `rider-` and indexed from 4200, so they cannot collide with another fixture
 //! file's.
 
@@ -72,9 +68,7 @@ fn ability(id: &str, label: &str, cost: Option<ActivationCost>, run: Hook) -> Ac
     }
 }
 
-// ---------------------------------------------------------------------------
 // The note log
-// ---------------------------------------------------------------------------
 
 /// The note log's def: a Field Spell whose memory records what ran, in order.
 pub static log_card: LazyLock<CardDef> = LazyLock::new(|| def("log", 4200, json!({ "type": "Field Spell" })));
@@ -114,9 +108,7 @@ pub fn note(entry: impl Into<String>) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------
 // The cards
-// ---------------------------------------------------------------------------
 
 /// MD-D9: a Unit with "Activate: Spend (price). Gain 1 mana", open to either player, the price read
 /// off the declared `price` number (2) so a tuning of it reaches the cost.

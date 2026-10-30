@@ -1,7 +1,5 @@
 //! Combat resolution (BUILD M2-T4): the First Strike step, the simultaneous step, hero targets and
 //! forced attacks. SPEC §4.2's forced-attack paragraph, §4.3, §4.5, R53 and R59.
-//!
-//! Port of `packages/engine/test/combat-resolution.test.ts`.
 
 use jackioh_engine::combat::resolve_combat;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -40,7 +38,6 @@ fn field_ids(state: &GameState, player: PlayerId) -> Vec<String> {
         .collect()
 }
 
-/// The refusal a check gives, or `None` when it allows (TS `string | null`, `{ error?: string }`).
 fn refusal(check: Result<(), EngineError>) -> Option<String> {
     check.err().map(|error| error.message)
 }
@@ -85,7 +82,6 @@ fn attack_declared(events: &[GameEvent]) -> Vec<(String, String, bool)> {
         .collect()
 }
 
-/// TS `sinkFor(state, events)`: run `f` on a sink over `state` and hand back what it emitted.
 fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
     let mut sink = sink_for(state);
     let out = f(&mut sink);
@@ -93,7 +89,7 @@ fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R
     (out, events)
 }
 
-/// `declareAttack(sink, attacker, target)` with the attacker and a unit target read live off the sink.
+/// `declare_attack` with the attacker and a unit target read live off the sink.
 fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: Option<&str>) -> Option<String> {
     let attacker = live(sink.state, attacker_id);
     let target = match target {
@@ -103,7 +99,7 @@ fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: Option<&str>) -
     refusal(declare_attack(sink, &attacker, &target))
 }
 
-/// `forceAttack(sink, attacker, onUnit(target))` with both read live off the sink.
+/// `force_attack` with both read live off the sink.
 fn force(sink: &mut EngineSink<'_>, attacker_id: &str, target_id: &str) {
     let attacker = live(sink.state, attacker_id);
     let target = on_unit(by_id(sink.state, target_id));
@@ -581,9 +577,7 @@ mod r53_forced_attacks_m2_t4 {
 mod r1750000_trample_is_for_the_attack_alone {
     use super::*;
 
-    /// §4.4 steps 5 and 9, R1750000: the unit that is attacked takes no Trample onto its attacker's
-    /// hero. Its strike back deals its whole 6 to the 3/3 that hit it, which dies of it, and no
-    /// second instance follows.
+    /// §4.4 steps 5 and 9, R1750000: the unit that is attacked takes no Trample onto its attacker's hero.
     #[test]
     fn r1750000_a_defender_with_trample_strikes_back_without_trampling_into_the_attacker_s_hero() {
         let mut state = board("r1750000-strike-back");
@@ -610,8 +604,6 @@ mod r1750000_trample_is_for_the_attack_alone {
         assert_eq!(state.players[P1].hero.health, hero_before);
     }
 
-    /// The same Trample unit as the one that attacks: 6 into a 3/3 leaves 3 for its controller's
-    /// opponent's hero, as before.
     #[test]
     fn r1750000_an_attacker_with_trample_still_tramples_into_the_defender_s_hero() {
         let mut state = board("r1750000-attack");

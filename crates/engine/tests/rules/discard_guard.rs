@@ -1,13 +1,10 @@
 //! R800: the discard guard (`Script.discard_guard`, Meditative #1 Disruptive Disruptor's Aura, "You
 //! can't be forced to discard cards during your opponent's turn").
 //!
-//! What is pinned: while it is not the guarded player's turn, every discard an effect makes from their
-//! hand (`discard`, `discard_random`, `discard_hand`) moves no card, draws no random number (R129) and
-//! is reported by one public `discardPrevented { player, count }`; on their own turn the same discard
-//! happens; a discard paid as a price (an Activate's cost, R384, `discard_random_cards`; a targeting
-//! cost, R450, and Temporary's own-turn discard, R637, both `discard_from_hand`) never asks; a guard
-//! only guards from the field and only the players it names; two guards report once. The fixture is
-//! registered here, prefixed `dg-` and indexed 720, so no shared fixture grows for it (BUILD §0).
+//! While it is not the guarded player's turn, every discard an effect makes from their hand moves no
+//! card, draws no random number (R129) and is reported by one public `discardPrevented`; a discard
+//! paid as a price never asks. The fixture is registered here, prefixed `dg-` and indexed 720, so no
+//! shared fixture grows for it (BUILD §0).
 
 use jackioh_engine::draw::discard_guarded;
 use jackioh_engine::effects::{

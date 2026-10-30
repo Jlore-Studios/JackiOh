@@ -2,12 +2,8 @@
 //! R65, is in `spec/rulings/R0077.md`). One test per clause of R77, in the order the ruling writes them.
 //!
 //! The fixtures are local (`fu-` ids, indexes from 1501, so nothing collides with another test
-//! file's) because no shared fixture expresses what the two-face clause needs: an ingredient whose
-//! radiant stats are deliberately *not* double its base, so "the radiant form does the same with
-//! their radiant forms" is observable rather than a coincidence of doubling.
-//!
-//! The kept card is read back from the state by its id; an ingredient that ceased to exist
-//! (`{ z: "gone" }`, R86) is one the state holds in no pile.
+//! file's): an ingredient's radiant stats are deliberately *not* double its base, so the two-face
+//! clause is observable rather than a coincidence of doubling.
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::damage;
@@ -49,9 +45,7 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// Half of every fusion below. 2/3 Taunt on the base face and 3/9 Taunt + Divine Shield on the
-/// radiant one: the radiant stats are neither double the base nor the same keywords, so a fused
-/// radiant face built out of base forms would read differently from one built out of radiant forms.
+/// Half of every fusion below: its radiant face is neither double its base nor the same keywords.
 fn ingredient_a() -> CardDef {
     def(
         "ingredient-a",
@@ -306,13 +300,11 @@ fn fuse_in(state: &mut GameState, sink: &mut Bench, args: Value) -> Option<CardI
     fuse(&mut sink.sink(state), args)
 }
 
-/// `fuse(sinkFor(state), args)`.
 fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
     let mut sink = Bench::new(state);
     fuse_in(state, &mut sink, args)
 }
 
-/// The card placed, then made Radiant.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let card = put(state, def_id, at, json!({}));
     live_mut(state, &card.id).radiant = true;
@@ -337,7 +329,6 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
     ids
 }
 
-/// `(attack, maxHealth)` as §10.4's layers read the card.
 fn stats(state: &GameState, card: &CardInstance) -> (i32, i32) {
     let view = unit_view(state, card);
     (view.attack, view.max_health)
@@ -1128,7 +1119,6 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
 mod r1177000_a_fused_card_wears_the_token_tag_only_when_it_is_a_token {
     use super::*;
 
-    /// The fused definition's tags, sorted.
     fn tags_of(def: &CardDef) -> Vec<String> {
         let mut tags: Vec<String> = def.tags.iter().map(|tag| tag.as_str().to_string()).collect();
         tags.sort();

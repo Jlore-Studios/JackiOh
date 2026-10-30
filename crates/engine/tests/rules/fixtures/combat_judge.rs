@@ -1,10 +1,7 @@
 //! Fixtures for the Meditative batch 18 engine tests (R1120–R1127): one card per behavior the
 //! batch's systems add — a combat-only attack modifier, a Poisonous one, an exile-on-damage unit and
-//! the two judge faces — each on both faces alike, so `{ radiant: true }` never silently changes what
-//! the fixture means.
-//!
-//! Each def echoes the §8 card named in its doc comment, trimmed to the one property its name
-//! promises. The real cards, with their own tests, live in `crates/cards`.
+//! the two judge faces — each echoing the §8 card its doc names, on both faces alike, so
+//! `{ radiant: true }` never silently changes what the fixture means.
 
 #![allow(non_upper_case_globals)]
 
@@ -15,7 +12,7 @@ use jackioh_engine::testkit::*;
 use super::catalog::vanilla_deck;
 use super::harness::{both, setup_catalog};
 
-/// TS `def(overrides)`: a Core Common card with empty faces, `overrides` over it.
+/// A Core Common card with empty faces, `overrides` over it.
 fn def(overrides: Value) -> CardDef {
     let mut literal = json!({
         "set": "Core",

@@ -1,10 +1,5 @@
-//! Casts from anywhere and random casts (docs/classic-sets.md B5 E12, E39; R70, R452, R453): the cast
-//! verbs of `src/effects/cast.ts` — a card out of a graveyard, a new card of a named definition, random
-//! catalog cards — how a cast's choices are made (its caster's, or the rng's, narrowed to enemies when
-//! it targets them), its X, a cast permanent's zone, a pause inside a cast surviving JSON, the chain cap,
-//! and what the other seat reads.
-//!
-//! Port of `packages/engine/test/effects-cast.test.ts`.
+//! Casts from anywhere and random casts (docs/classic-sets.md B5 E12, E39; R70, R452, R453): how a
+//! cast's choices are made (its caster's, or the rng's, narrowed to enemies when it targets them).
 
 use std::collections::BTreeSet;
 
@@ -199,12 +194,12 @@ fn run(state: &mut GameState, effects: Vec<Effect>, self_id: Option<&str>) -> Ve
     events
 }
 
-/// TS `only` (fixtures/playPipelineB): the first item, which must exist.
+/// The first item, which must exist.
 fn only<T>(items: impl IntoIterator<Item = T>) -> T {
     items.into_iter().next().expect("expected at least one item")
 }
 
-/// TS `{ ...action, playerId }`: a legal action body as the literal `act` takes.
+/// A legal action body as the literal `act` takes.
 fn body_of(action: &ActionBody, player: PlayerId) -> Value {
     let mut body = serde_json::to_value(action).unwrap();
     body["playerId"] = json!(player);
@@ -218,7 +213,7 @@ fn answers(state: &GameState, player: PlayerId) -> Vec<ActionBody> {
         .collect()
 }
 
-/// The answer whose selection's JSON contains `text` (TS `JSON.stringify(action.selection).includes(text)`).
+/// The answer whose selection's JSON contains `text`.
 fn answer_containing(state: &GameState, player: PlayerId, text: &str) -> ActionBody {
     only(answers(state, player).into_iter().filter(|action| match action {
         ActionBody::Answer { selection, .. } => serde_json::to_string(selection).unwrap().contains(text),
@@ -234,7 +229,6 @@ fn answer_hero(state: &GameState, player: PlayerId, hero: PlayerId) -> ActionBod
     }))
 }
 
-/// TS `slice(-n)`.
 fn last_n<T: Clone>(items: &[T], n: usize) -> Vec<T> {
     items[items.len().saturating_sub(n)..].to_vec()
 }
@@ -807,7 +801,6 @@ mod e12_random_casts_r452 {
 
     #[test]
     fn r452_a_random_cast_chain_stops_at_random_cast_chain_cap_casts() {
-        // TS title: `R452 a random cast chain stops at RANDOM_CAST_CHAIN_CAP casts (${RANDOM_CAST_CHAIN_CAP})`.
         let mut state = playing("r452-cap");
         state.players[PlayerId::P2].hero.health = 1000;
         let card = only(in_hand(&mut state, PING_A, PlayerId::P1, 1));

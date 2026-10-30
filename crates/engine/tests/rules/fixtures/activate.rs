@@ -1,8 +1,7 @@
 //! Test-only cards for Activate (docs/classic-sets.md B3.2, R384). Each reproduces one shape of the
-//! Classic and Classic+ cards that use the keyword through the engine's own verbs (each card's own
-//! comment names its shape); the abilities a fused card carries are each read in its ingredient's
-//! place (R102). The engine does not depend on the cards crate; the real cards' tests cover the same
-//! cases again.
+//! Classic and Classic+ cards that use the keyword through the engine's own verbs; the abilities a
+//! fused card carries are each read in its ingredient's place (R102). The engine does not depend on
+//! the cards crate; the real cards' tests cover the same cases again.
 //!
 //! Ids are prefixed `act-` and indexed from 4100, so they cannot collide with another fixture file's.
 
@@ -126,7 +125,6 @@ fn faces_of(base: Script, radiant: Script) -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// One unit or hero.
 fn any_target() -> TargetDecl {
     TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))
 }

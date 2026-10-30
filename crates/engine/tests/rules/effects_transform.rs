@@ -2,8 +2,6 @@
 //! replaced card ceasing to exist (R35), Immutable refusing both (R23), and Vanilla clearing
 //! printed keywords only (§6.3, §10.4). The fixture cards these tests need are registered here, so
 //! no shared fixture has to grow for them (BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-transform.test.ts`.
 
 use jackioh_engine::effects::{damage, transform, vanilla};
 use jackioh_engine::testkit::*;
@@ -138,8 +136,8 @@ fn game() -> GameState {
     state
 }
 
-/// Apply one effect the way `resolve.ts` does, and hand back the events it emitted. TS's
-/// `sinkFor(state)` is the sink built here: its rng starts at the state's cursor, as reduce does.
+/// Apply one effect and hand back the events it emitted; the rng starts at the state's cursor, as
+/// reduce does.
 fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -152,7 +150,6 @@ fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameE
     events
 }
 
-/// TS `{ controller }`.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -160,12 +157,10 @@ fn by(player: PlayerId) -> HookOptions {
     }
 }
 
-/// `transform({ instanceId, defId })`.
 fn transform_into(instance_id: &str, def_id: &str) -> Effect {
     transform(json_as(json!({ "instanceId": instance_id, "defId": def_id })))
 }
 
-/// TS `string[]` for the harness's `setLibrary`, from the ids as written.
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
@@ -645,7 +640,6 @@ mod vanilla_s6_3_r23_m3_t1 {
     #[test]
     fn r781003_clears_printed_keywords_and_buffs_while_damage_and_granted_keywords_stay() {
         let mut state = game();
-        // The fixture Taunt unit is a 2/5 with Taunt.
         let unit = put(
             &mut state,
             &combat_fx::taunter.id,

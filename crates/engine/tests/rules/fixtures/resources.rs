@@ -1,8 +1,6 @@
 //! Test-only cards for Stinkyscape's Resources and Credits (#1840, R1840000–R1840006): six Resources,
 //! one of each rarity and two Commons, and an asteroid, the mining node's shape ("Activate: Take 2
-//! damage. Tribute this. Death: gain 2 random Resources"). No shipped card is a Resource yet
-//! (Stinkyscape's come with the set), so the engine never imports `crates/cards` for this.
-//!
+//! damage. Tribute this. Death: gain 2 random Resources"), so the engine never imports `crates/cards`.
 //! Ids are prefixed `fx-res-` and indexed from 18410, so they collide with no other fixture file's.
 
 use std::sync::LazyLock;

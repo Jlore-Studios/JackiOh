@@ -2,9 +2,7 @@
 //! unit zone as a Unit — as the last step of a trap's firing, as an Animated Field Spell enters, and for an
 //! "Animated on your turn" card at its controller's start of turn and back at their cleanup — with its
 //! home zone held, the rule's exceptions, a pause inside the firing, a round trip, a replay, and what
-//! each seat's view shows. Fixtures: `fixtures/field.ts`.
-//!
-//! Port of `packages/engine/test/animated.test.ts`.
+//! each seat's view shows.
 
 use serde::Serialize;
 
@@ -24,12 +22,11 @@ use crate::rules::fixtures::harness::{
     act, act_result, events_of_type, in_hand, json_of, live, matches_object, put, sink_for, slot,
 };
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON object (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -45,7 +42,7 @@ fn expect_match(actual: impl Serialize, expected: Value) {
     );
 }
 
-/// `events.map((event) => event.instanceId)`, read off the events' JSON.
+/// Each event's `instanceId`, read off the events' JSON.
 fn instance_ids(events: impl Serialize) -> Vec<String> {
     json_of(events)
         .as_array()
@@ -80,7 +77,7 @@ fn unit_ids(state: &GameState, player: PlayerId) -> Vec<String> {
         .collect()
 }
 
-/// What `playPlain` hands back: the state after the play, its events, and the played unit's id.
+/// What `play_plain` hands back: the state after the play, its events, and the played unit's id.
 struct Played {
     state: GameState,
     events: Vec<GameEvent>,
@@ -129,7 +126,6 @@ fn fill_units(state: &mut GameState, player: PlayerId) {
     }
 }
 
-/// TS `JSON.parse(JSON.stringify(state))`.
 fn json_round_trip(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state survives JSON")
 }
@@ -508,7 +504,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         animate_at_turn_start(&mut sink, P1);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 4)), Some(card.id.clone()));
 
-        // §2.2: the end-of-turn hooks, then cleanup's return (the order `turn.ts` runs them in).
+        // §2.2: the end-of-turn hooks, then cleanup's return.
         run_hooks_in_trigger_order(&mut sink, HookName::EndOfTurn, Some(P1));
         return_at_cleanup(&mut sink, P1);
         assert_eq!(notes_of(find_instance(sink.state, &card.id)), vec!["units"]);
@@ -810,8 +806,7 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
         assert!(attack_targets(sink.state, &now).contains(&DamageTarget::Hero { player: P2 }));
     }
 
-    /// D14: R1062 waited for the Meditative set, and until it opened the start-of-turn animation was
-    /// an entry (R383). The set shipped in v0.3.5, so R1062 holds in every game, nothing previewed.
+    /// D14: the Meditative set shipped in v0.3.5, so R1062 holds in every game, nothing previewed.
     #[test]
     fn r1062_holds_with_nothing_previewed_since_the_meditative_set_shipped_in_v0_3_5() {
         assert!(set_ships(SetName::Meditative));

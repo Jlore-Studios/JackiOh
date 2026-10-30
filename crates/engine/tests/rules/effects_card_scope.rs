@@ -2,8 +2,6 @@
 //! in hands and in decks, in R242's order — public cards, then the owner's hidden ones, then the
 //! decks' — with its filters, and every card of a hidden pile kept for a verb that must cue the whole
 //! pile (R440); and who may read a card where it sits (R97, R177).
-//!
-//! Port of `packages/engine/test/effects-cardScope.test.ts`.
 
 use jackioh_engine::effects::{CardScope, cards_in_card_scope, readers_of, unreadable_by};
 use jackioh_engine::testkit::*;
@@ -19,7 +17,6 @@ fn game(active: PlayerId) -> GameState {
     state
 }
 
-/// TS `sinkFor(state)`, then `makeContext(sink, self, options)`, handed to `f`.
 fn with_ctx<R>(
     state: &mut GameState,
     self_: Option<CardInstance>,

@@ -1,9 +1,7 @@
 //! Test-only cards for the systems Training Grounds part 5 builds (issue #2198): one Unit's Attack and
 //! Health set (`set_stats`, R2198000), an exact copy of a permanent into the hand (`add_to_hand`'s
-//! `exact` rider, R2198001) and tokens destroyed at the end of the turn they arrive (`summon`'s
-//! `rememberAs`, then a `delay` per token under the engine's destroy hook, R2198002). Each does it
-//! through the engine's own verbs, as a card script would, so the engine never imports `crates/cards`;
-//! the real cards (TG #34 Dino-size, #37 Seance, #15 In a hurry) test the same cases again.
+//! `exact` rider, R2198001) and tokens destroyed at the end of the turn they arrive (R2198002), each
+//! through the engine's own verbs, so the engine never imports `crates/cards`.
 //!
 //! Ids are prefixed `tg5-` and indexed from 21980, so they collide with no other fixture file's.
 
@@ -119,7 +117,6 @@ fn a_permanent() -> Vec<TargetDecl> {
     )]
 }
 
-/// A copy of the chosen permanent into its caster's hand: exact or not, priced or not.
 fn copy_script(exact: bool, cost: Option<i32>) -> CardScripts {
     both(Script {
         targets: a_permanent(),
@@ -140,7 +137,6 @@ fn copy_script(exact: bool, cost: Option<i32>) -> CardScripts {
     })
 }
 
-/// The key the hurry fixture remembers its `n`th token under.
 fn token_key(n: i32) -> String {
     format!("token{n}")
 }

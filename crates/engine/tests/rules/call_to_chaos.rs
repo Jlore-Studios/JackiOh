@@ -1,7 +1,6 @@
-//! Call to Chaos (BUILD M3-T7): SPEC §8 #95, §7's tokens and R28's capped recursion. The card file
-//! arrives in M4; these tests pin the machinery it will call — each of the ten effects, the base and
-//! radiant rolls, the chain cap, and what the ten do against a full board, a full hand and an empty
-//! library.
+//! Call to Chaos (BUILD M3-T7): SPEC §8 #95, §7's tokens and R28's capped recursion: each of the ten
+//! effects, the base and radiant rolls, the chain cap, and what the ten do against a full board, a full
+//! hand and an empty library.
 
 use jackioh_engine::subsystems::call_to_chaos::{
     CHAOS_CHAIN_KEY, CHAOS_EFFECTS, CHAOS_RECURSION, CallToChaosArgs, ChaosEffectDef,
@@ -547,7 +546,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             );
             assert_eq!(effects.len() as i32, CALL_TO_CHAOS_RADIANT_EFFECTS);
             let names = names_of(&effects);
-            // Three different entries: none comes up twice.
             assert_eq!(
                 names.iter().collect::<IndexSet<_>>().len() as i32,
                 CALL_TO_CHAOS_RADIANT_EFFECTS
@@ -703,7 +701,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         );
         assert!(expected.contains(&"Heal your hero 30".to_string()));
 
-        // The base face names its one.
         let mut base_state = game("chaos-announce-base", None);
         let mut base_events: Vec<GameEvent> = Vec::new();
         let base_card = chaos_card(&mut base_state, false, None);
@@ -730,7 +727,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     #[test]
     fn r28_caps_the_recursion_at_call_to_chaos_chain_cap_casts() {
         // Every cast copy recurses again, which is the worst case the cap has to stop.
-        // Each cast reports the link it is as its own script runs; a test builder, not a card file.
+        // Each cast reports the link it is as its own script runs.
         // A hook is `Fn + Send + Sync`, so it reports down a channel.
         let (sender, receiver) = std::sync::mpsc::channel::<i32>();
         let mut state = game(

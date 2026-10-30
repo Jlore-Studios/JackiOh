@@ -85,7 +85,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
@@ -135,8 +134,7 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
     run_all(state, &[effect], options)
 }
 
-/// The harness's `put` with the Radiant flag: made in its owner's hand, flagged, then placed; a copy
-/// of it as placed comes back.
+/// The harness's `put` with the Radiant flag set before the card is placed.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let mut card = new_instance(state, def_id, at.player, Zone::Hand { player: at.player });
     card.radiant = true;
@@ -382,7 +380,6 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
         // §4.1: a new body enters in Attack Position and is summoning sick for this turn.
         assert_eq!(copy.position, Some(Position::Atk));
         assert_eq!(copy.summoned_turn, Some(state.turn));
-        // The source is untouched by its own copy.
         let source = live(&state, &source.id);
         assert_eq!(source.damage, 4);
         assert_eq!(

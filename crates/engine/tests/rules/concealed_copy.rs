@@ -1,8 +1,6 @@
 //! R1714000 (issue #1714): the concealed copy a dry run plays on (R222) and the autopilot's tries
-//! play on (R1183003) keeps no record its viewer may not read — not the decks the match began with,
-//! the Glitch boards, the other seat's last board or unrevealed secret choices, nor a problem's key.
-//! So a try there cannot "peek", and two states that differ only in what the viewer may not read give
-//! the same copy and the same scores.
+//! play on (R1183003) keeps no record its viewer may not read, so two states that differ only in what
+//! the viewer may not read give the same copy and the same scores.
 
 use jackioh_engine::effects::{answered_correctly, choose_answer, damage, guess_secret};
 use jackioh_engine::subsystems::autopilot;
@@ -146,7 +144,6 @@ fn choice_of(state: &GameState, id: &str) -> Option<SecretChoice> {
     secret_of(state, id).expect("the secret is filed").choice
 }
 
-/// The effect applied for `player` on a sink over `state`, the rng cursor written back; its events.
 fn run(state: &mut GameState, player: PlayerId, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, player)
 }
@@ -202,7 +199,6 @@ mod r1714000_a_dry_runs_concealed_copy {
             .expect("the snapshot holds the trap");
         assert_eq!(held.def_id, HIDDEN_TRAP_DEF_ID);
         assert_eq!(held.counters.plague, Some(2));
-        // The state itself is untouched.
         let real = state.board_history.as_ref().and_then(|history| history.last());
         let real = real.expect("the history holds a snapshot").sides[P2].backrow[0]
             .as_ref()

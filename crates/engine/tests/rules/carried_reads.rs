@@ -211,7 +211,6 @@ fn carrying(seed: &str, def_id: &str) -> (GameState, CardInstance, CardInstance)
     (state, carrier, unit)
 }
 
-/// TS `makeContext(sink, null, { controller: "p1" })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),

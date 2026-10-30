@@ -1,13 +1,8 @@
 //! R1176000 (issue #1176): every card in Chinese is CN. A card instance whose `chinese` flag is set
-//! (R1300: `translate`, the `chinese` riders, a copy of a Chinese card, a crafted Fuse of one) has the
-//! CN tag wherever an instance's tags are read: `query::tags_of` adds it, so every reader sees it
-//! (scopes, targets, plays counted by tag), and the view lists it as the card's tags. A card is CN
-//! once, however many ways it is. Catalog pools read definitions and never see it. The tag follows the
-//! flag: a copy that keeps the flag keeps it, a Transform's new card has neither, and a Fuse that keeps
-//! an instance keeps that card's own language (R1300), so another ingredient's translation does not
-//! make it CN. A replay of a game played before the rule, in which a Chinese card was played or read
-//! by its tags, misses its final hash and is refused as `rules_changed` (R767000), never shown as
-//! another game.
+//! (R1300) has the CN tag wherever an instance's tags are read: `query::tags_of` adds it, so every
+//! reader sees it, and the view lists it. Catalog pools read definitions and never see it. A replay of a
+//! game played before the rule, in which a Chinese card was played or read by its tags, misses its final
+//! hash and is refused as `rules_changed` (R767000), never shown as another game.
 
 use jackioh_engine::effects::{destroy_all, grant_tag, summon_copy, transform, upgrade};
 use jackioh_engine::play_counts::record_play;
@@ -32,7 +27,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// The effect applied for p1 on a sink over `state`, the rng cursor written back; its events.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, P1)
 }
@@ -309,10 +303,8 @@ mod r1176000_r767000_a_game_from_before_the_rule {
     /// The build's catalog version, and the one the game below records.
     const BUILD: &str = "v-cn";
 
-    /// A game from a deck of one translator and the vanilla fixtures against the vanilla fixtures,
-    /// each seat taking its first legal play, then its first attack, then the end of its turn, until a
-    /// card in Chinese has been played (`None` if the game ends first): its state, and its seed, decks
-    /// and log as a replay's input.
+/// A game from a deck of one translator and the vanilla fixtures, each seat taking its first legal
+/// choice, until a card in Chinese has been played (`None` if the game ends first).
     fn played(seed: &str) -> Option<(GameState, ReplayInput)> {
         let mut mine = vec![translator.id.clone()];
         mine.extend(vanilla_deck(DECK_SIZE - 1, 1));
@@ -372,7 +364,6 @@ mod r1176000_r767000_a_game_from_before_the_rule {
             catalog_version: BUILD.to_string(),
             final_hash: hash.to_string(),
         };
-        // Recorded under the rule, the fold reaches its hash and the replay opens.
         assert!(matches!(
             replay_open(&input, &record(&hash_state(&live)), BUILD),
             ReplayOpen::Ready { .. }

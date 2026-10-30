@@ -1,9 +1,9 @@
 //! The autopilot (`subsystems/autopilot.rs`; Meditative+ #18 Cognitive Offloading, issue #1183,
 //! docs/meditative-plus-set.md MP5): "the AI plays the rest of your turn", engaged on its caster's own
 //! turn only and driven by `reduce` (R1183002), each action `choose`'s pure pick of the state and the
-//! player (R1183003), each through `fixtures::outside_data`, moved here from `outside_data.rs` so the
-//! subsystem has its own module (#2273). Stinkyscape's autopilot aura (R1844000) is `ai_wheel.rs`'s,
-//! and the real card (M+ #18) covers the same cases again.
+//! player (R1183003), each through `fixtures::outside_data` (#2273: the subsystem's own module).
+//! Stinkyscape's autopilot aura (R1844000) is `ai_wheel.rs`'s, and the real card (M+ #18) covers the
+//! same cases again.
 
 use jackioh_engine::config::AUTOPILOT_MAX_ACTIONS;
 use jackioh_engine::effects::autopilot;

@@ -6,7 +6,6 @@ use jackioh_engine::testkit::*;
 
 use super::harness::spread;
 
-/// Takes `key` out of the literal.
 fn take(overrides: &mut Value, key: &str) -> Option<Value> {
     overrides.as_object_mut().and_then(|object| object.remove(key))
 }

@@ -1,15 +1,11 @@
 //! The M2 gate (BUILD.md): 1,000 random combats between random keyword combinations never produce
 //! negative health, never leave a unit at health ≤ 0 on the field unless it is Indestructible with max
-//! health above 0 (R69), and never emit a `damage` event on an Indestructible target.
-//! R69: an Indestructible unit at 0 or less health stays while its max health is above 0, and is
-//! collected like any other once its max health falls to 0 or less. R46: a would-destroy on it
-//! switches it to Attack Position and takes its Taunt away for the turn.
+//! health above 0 (R69), and never emit a `damage` event on an Indestructible target. R46: a
+//! would-destroy on it switches it to Attack Position and takes its Taunt away for the turn.
 //!
 //! Case `i` draws from the seed `m2-combat-<i>`, so a violation reproduces from that seed alone
-//! (§10.7, §9.3). It pairs two keyword fixtures with zero to two granted keywords each, flips radiant
-//! and position, adds earlier damage or drags max health to 0, aims at a unit or the hero, and enters
-//! through `declareAttack` when §4.2 allows it or `forceAttack` when it does not (R53), then runs the
-//! §4.5 state check; step 2 stops it the moment a hero dies, so a game that is over may keep a body.
+//! (§10.7, §9.3). It enters through `declareAttack` when §4.2 allows it or `forceAttack` when it does
+//! not (R53).
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -152,9 +148,9 @@ fn dress(state: &mut GameState, unit_id: &str, rng: &mut Rng) {
             .buffs
             .health -= view.max_health;
     } else if rng.chance(0.5) && view.max_health > 1 {
-        // Earlier damage, the range running past max health on purpose: R69's second sentence (an
-        // Indestructible unit at 0 or less health, max health above 0, stays) is reachable no other
-        // way, since §4.4 step 4 stops an Indestructible unit taking damage. Others are collected (§4.5).
+        // Earlier damage, the range running past max health on purpose: R69's second sentence is
+        // reachable no other way, since §4.4 step 4 stops an Indestructible unit taking damage.
+        // Others are collected (§4.5).
         let earlier = rng.int(view.max_health + 3);
         find_instance_mut(state, unit_id).expect("dressed unit").damage = earlier;
     }
@@ -480,7 +476,6 @@ mod m2_gate_1_000_random_combats_build_m2_s4_3_s4_4_s4_5 {
     }
 }
 
-/// R69 and R46: the exception invariant 2 carves out.
 mod r69_and_r46_the_exception_invariant_2_carves_out {
     use super::*;
 

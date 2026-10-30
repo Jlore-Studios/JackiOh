@@ -1,8 +1,6 @@
-//! Combo-Index (BUILD M3-T7): SPEC §8 #93, R27, R60, R62 and §4.4 step 8.
-//!
-//! The card is a Field Spell with a grade counter on its instance. At the end of its controller's
-//! turn, "if cards played this turn >= grade, grade +1 and run every step from E up to the new
-//! grade" (§8 #93), the steps run in order and S is terminal (R27).
+//! Combo-Index (BUILD M3-T7): SPEC §8 #93, R27, R60, R62 and §4.4 step 8. A Field Spell with a grade
+//! counter: at the end of its controller's turn, "if cards played this turn >= grade, grade +1 and run
+//! every step from E up to the new grade" (§8 #93), the steps run in order and S is terminal (R27).
 
 use jackioh_engine::query::cards_played_this_turn;
 use jackioh_engine::subsystems::combo_index::{

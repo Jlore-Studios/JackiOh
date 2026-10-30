@@ -2,14 +2,8 @@
 //! 10 to 14). A change of control on the field is an entry: the card takes the current turn as its
 //! `summonedTurn` and a fresh exertion, on every path that changes control — Steal, Steal all, the
 //! board swap and a rotation across the center line — and on nothing else. R172 is the other half:
-//! a stolen unit dies as its controller's.
-//!
-//! Engine fixtures only (the engine never depends on `crates/cards`); `control_change_property.rs`
-//! checks the same rows over random boards.
-//!
-//! Every game is past both mulligans, in p1's main phase, so `legal_actions` and `reduce` answer as
-//! in a match. Verbs go straight through `effect.apply` with the actor as the context's controller,
-//! which is also how an effect on the opponent's turn is written (behavior 12).
+//! a stolen unit dies as its controller's. `control_change_property.rs` checks the same rows over
+//! random boards.
 
 use std::collections::BTreeSet;
 

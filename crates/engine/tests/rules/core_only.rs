@@ -1,10 +1,6 @@
 //! A seat that plays only Core cards (SPEC §9.10; R2433000): the handicap's `coreOnly`, which the
-//! tutorial opponent plays under (`AI_TUTORIAL`).
-//!
-//! The seat never plays, sets or casts a card whose set is not Core, however the card reached its
-//! hand: dealt, drawn, Discovered, added, returned. `legal_actions` lists no such play, `reduce`
-//! refuses one, a card drawn that casts on draw is drawn instead, and an effect that casts or summons
-//! a card out of the seat's hand takes none. What the seat holds on the field by other means is left
+//! tutorial opponent plays under (`AI_TUTORIAL`). The seat never plays, sets or casts a card whose set
+//! is not Core, however the card reached its hand; what it holds on the field by other means is left
 //! alone. Absent, the field reaches no game.
 //!
 //! Fixtures: the vanilla catalog (`fx-1` up, every one Core) and this file's `co-` cards, Classic

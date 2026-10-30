@@ -2,7 +2,7 @@
 //! card carries (R1870000), an exile that takes a Stack pile whole (R1870001), the Echo a resolving
 //! card gives itself (R1870002), "your Units have <keyword>" through the next turn (R1870004) and a
 //! keyword a card keeps for good (R1870007). Each does it through the engine's own verbs, as a card
-//! script would, so the engine never imports `crates/cards`; the cards come behind the set's gate.
+//! script would, so the engine never imports `crates/cards`.
 //!
 //! Ids are prefixed `tm-` and indexed from 18700, so they collide with no other fixture file's.
 
@@ -11,7 +11,6 @@ use jackioh_engine::testkit::*;
 
 use super::harness::both;
 
-/// What the exam deals the enemy hero with each resolution.
 pub const EXAM_DAMAGE: i32 = 1;
 
 /// A Spell with no text.

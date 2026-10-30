@@ -10,11 +10,8 @@ use jackioh_engine::testkit::*;
 use super::fixtures::field::flush;
 use super::fixtures::harness::{act, act_result, events_of_type, in_hand, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixture cards.
-// ---------------------------------------------------------------------------
 
-/// TS `defOfKind`, numbered from 1900.
 fn def_of_kind(name: &str, index: i32, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("eq-{name}"),
@@ -128,8 +125,8 @@ fn lender() -> CardDef {
     def_of_kind("lender", 1907, json!({}))
 }
 
-/// Stinkyscape #16 Rod of Ages's own shape since issue #2280: an Animated Field Spell with no stats that
-/// lends Equip, so it stays in its backrow zone and hosts there (R1869000, R2280000).
+/// Stinkyscape #16 Rod of Ages's own shape (#2280): an Animated Field Spell with no stats that lends
+/// Equip, so it stays in its backrow zone and hosts there (R1869000, R2280000).
 fn rod_shape() -> CardDef {
     def_of_kind(
         "rod",
@@ -289,9 +286,7 @@ fn fused_events(events: &[GameEvent]) -> Vec<GameEvent> {
     events_of_type(events, GameEventType::Fused)
 }
 
-// ---------------------------------------------------------------------------
 // R1086.
-// ---------------------------------------------------------------------------
 
 #[test]
 fn r1086_offered_onto_each_friendly_acting_unit() {
@@ -443,7 +438,6 @@ fn r1086_nothing_fuses_when_the_host_left_first() {
                 |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == &host_id)
             )
     );
-    // The Equip card stays the pile's top.
     assert_eq!(
         card_at(&next, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.id.clone()),
         Some(mag.id.clone())
@@ -519,9 +513,8 @@ fn r1086_replays_to_the_same_hash() {
     assert_eq!(run("equip-replay"), run("equip-replay"));
 }
 
-// R781000: Magnetic is now Equip. The shipped snapshots (v0.3.5, v0.3.6) and a log recorded before the
-// rename spell the keyword and the play's flag the old way, and both read as Equip, written back under
-// the new name only.
+// R781000: older snapshots and logs spell Equip and the play's flag as Magnetic; both read as Equip,
+// written back under the new name only.
 mod r781000_the_old_name_reads_as_equip {
     use super::*;
 

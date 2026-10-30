@@ -1,8 +1,6 @@
 //! Enchantments that ride a card (docs/classic-sets.md B5 E39; R443): `enchant` on a named card or a
 //! scope, never twice the same, kept in every zone and through leaving the field (R78's reset leaves
 //! them alone), carried by a copy and a Fuse, gone with a Transform, and shown where the card is read.
-//!
-//! Port of `packages/engine/test/effects-enchant.test.ts`.
 
 use jackioh_engine::effects::{enchant, shuffle_copies_of_self, summon_copy, transform};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
@@ -24,8 +22,8 @@ fn game() -> GameState {
     state
 }
 
-/// TS `run(state, effect, { self, ...hook })`: the effect applied for p1 (unless `hook` names another
-/// controller) on a fresh sink over `state`; its events. Like TS's, the rng is not written back.
+/// The effect applied for p1 (unless `hook` names another controller) on a fresh sink over `state`;
+/// its events. The rng is not written back.
 fn run(
     state: &mut GameState,
     effect: Effect,
@@ -54,12 +52,11 @@ fn enchant_one(id: &str, enchantment: Enchantment) -> Effect {
     enchant(json_as(json!({ "instanceId": id, "enchantment": enchantment })))
 }
 
-/// `enchantmentsOf(card)` for the card under `id` as it stands now.
+/// The enchantments of the card under `id` as it stands now.
 fn on(state: &GameState, id: &str) -> Vec<Enchantment> {
     enchantments_of(&live(state, id)).to_vec()
 }
 
-/// `state.players.p1.units[lane - 1]?.[0]`.
 fn top_unit(state: &GameState, lane: usize) -> Option<&CardInstance> {
     state.players[PlayerId::P1].units[lane - 1]
         .as_ref()
@@ -169,7 +166,6 @@ mod b5_e39_enchant_r443 {
             move_to_zone(&mut state, &mut now, zone, Default::default());
         }
         assert_eq!(on(&state, &unit.id), vec![RETURN]);
-        // TS kept the live object after emptying the exile pile; here the copy taken just before.
         let mut exiled = live(&state, &unit.id).clone();
         state.players[PlayerId::P1].exile = vec![];
         assert!(place_on_field(
@@ -268,7 +264,7 @@ mod b5_e39_enchant_r443 {
         }
         // In ingredient order, the target last (R77), each once.
         assert_eq!(on(&state, &unit.id), vec![CAST, ENEMIES]);
-        // TS's `{ enchantments: [CAST] }` and `{}`: two instances numbered apart from the game's own ids.
+        // Two instances numbered apart from the game's own ids.
         let mut numbering: u32 = 1;
         let mut enchanted = new_instance(
             &mut numbering,

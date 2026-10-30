@@ -1,8 +1,7 @@
-//! The card-on-card verbs (#1850, R1850000–R1850005) through the fixtures in
-//! `fixtures/card_on_card.rs`: copying a Unit's text (R1850000, in `unit_text.rs`, the subsystem's own
-//! module, since #2273), Duo and Squad, exile auras, holding a permanent
-//! beneath a card until it leaves, a beneficial Spell cast for yourself instead, and Radiant on reaching
-//! N keywords. Crater on a Field Spell (R1850006) is in `crater.rs`, with the rest of Crater.
+//! The card-on-card verbs (#1850, R1850000–R1850005) through the fixtures in `fixtures/card_on_card.rs`:
+//! Duo and Squad, exile auras, holding a permanent beneath a card until it leaves, a beneficial Spell
+//! cast for yourself instead, and Radiant on reaching N keywords. Copying a Unit's text (R1850000) is in
+//! `unit_text.rs` (#2273), Crater on a Field Spell (R1850006) in `crater.rs`.
 
 use jackioh_engine::reduce::{legal_actions, reduce};
 use jackioh_engine::testkit::*;

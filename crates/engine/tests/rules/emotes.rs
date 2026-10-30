@@ -3,10 +3,7 @@
 //! An emote becomes an `Emote` action with an `emoted` event, legal for either seat — on its own
 //! turn or the other's — only while the other seat controls an acting card that hears it ("whenever
 //! your opponent emotes"): never with a prompt or a mulligan open, never unheard, never to its own
-//! controller's judge. The random policy never emotes, an auto-end due ignores the emote, and the
-//! view carries `emotesHeard` only as `true`, on the seat that is heard.
-//!
-//! Port of `packages/engine/test/emotes.test.ts`.
+//! controller's judge.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;

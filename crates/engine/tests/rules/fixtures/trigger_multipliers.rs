@@ -1,8 +1,7 @@
 //! Test-only cards for ME-TRIG (docs/meditative-set.md M5; R820–R824): the trigger multipliers of
 //! Meditative #9 Joint Filing and #10 Double Counting, and #12 Fear Mongerer's "trigger your End of
 //! turn effects", each reproduced through the script hooks and the effects library so the engine is
-//! proved without `crates/cards` (CLAUDE.md: the engine never depends on it). The real cards are
-//! tested again in their own files.
+//! proved without `crates/cards` (CLAUDE.md: the engine never depends on it).
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
@@ -93,7 +92,6 @@ fn spell(index: u32, name: &str) -> CardDef {
     def(index, name, "Spell", json!({}))
 }
 
-/// Every fixture definition.
 pub fn catalog() -> CardDefs {
     [
         field_spell(9001, "joint"),
@@ -126,7 +124,6 @@ fn turn_extra(extra: i32) -> Script {
     }
 }
 
-/// Every fixture script.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     let enemy_unit_or_hero = TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "hero"] }));
     let any_unit_or_hero = TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }));

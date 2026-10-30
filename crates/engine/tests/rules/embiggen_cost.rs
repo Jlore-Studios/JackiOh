@@ -1,15 +1,10 @@
 //! #492, R81: the view's `embiggenCost` is what a play at the card's embiggen price then charges.
 //!
-//! An "A embiggen B" card in the viewer's own hand carries `cost`, its normal price as it stands, and
-//! `embiggenCost`, the embiggen price as it stands (`view_for::with_embiggen_cost`), so the client can
-//! show the price the picker's Embiggened card plays at without working one out (CLAUDE.md rule 7).
-//! Both are read by the function the play itself is priced by (`play_choices::embiggen_play_cost`,
-//! `mana::play_cost`), and this proves it from the outside: the number the view shows is the
-//! `costPaid` of the `embiggen: true` play `reduce` then accepts, the mana it takes, and the line
-//! `legalActions` offers that play at, with no cost change and under a discount (the card's own, a
-//! player's, and R363's "(4)+ Cost" threshold, which reaches the embiggen price and not the base one)
-//! and a surcharge, on both faces. Driven with the engine's fixture embiggen Field Spell (`pb-`); the
-//! cards crate proves the real Embiggen cards again (`crates/cards/tests/cross/embiggen_choices.rs`).
+//! An "A embiggen B" card in the viewer's own hand carries `cost` and `embiggenCost` as they stand
+//! (`view_for::with_embiggen_cost`), so the client never works a price out (CLAUDE.md rule 7). Both are
+//! read by the function the play is priced by (`play_choices::embiggen_play_cost`, `mana::play_cost`),
+//! and this proves it from the outside, under discounts and a surcharge, on both faces. The cards
+//! crate proves the real Embiggen cards again (`crates/cards/tests/cross/embiggen_choices.rs`).
 
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;

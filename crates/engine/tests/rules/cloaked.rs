@@ -1,8 +1,6 @@
-//! Cloaked (#783, R783004–R783008): a Unit, Spell or Field Spell that has Cloaked in its controller's
-//! hand may be set face-down as a Trap at its own price, hidden like any set card, and revealed only by
-//! its own Activate: Reveal, which is offered while the card can come out whole. An aura may lend the
-//! keyword to the cards of a type in its controller's hand. The fixtures in `fixtures/keywords_783.rs`
-//! stand in for the cards #781 prints.
+//! Cloaked (#783, R783004–R783008): a Unit, Spell or Field Spell with Cloaked in its controller's hand
+//! may be set face-down as a Trap at its own price, and revealed only by its own Activate: Reveal, offered
+//! while the card can come out whole. The fixtures in `fixtures/keywords_783.rs` stand in for #781's cards.
 
 use jackioh_engine::testkit::*;
 
@@ -29,14 +27,12 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hero.health
 }
 
-/// A fresh instance of `def_id` in `player`'s hand.
 fn in_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, player, Zone::Hand { player });
     state.players[player].hand.push(card.clone());
     card
 }
 
-/// The offered plays of this card that set it face-down, as JSON.
 fn face_down_offered(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<Value> {
     plays_of(state, instance_id, player)
         .iter()
@@ -45,7 +41,6 @@ fn face_down_offered(state: &GameState, instance_id: &str, player: PlayerId) -> 
         .collect()
 }
 
-/// A refusal's text (`""` when the action was not refused).
 fn refusal(result: &ReduceResult) -> String {
     result.error.clone().unwrap_or_default()
 }
@@ -72,7 +67,6 @@ fn reveal_body(id: &str, player: &str) -> Value {
     json!({ "type": "activate", "instanceId": id, "ability": "reveal", "playerId": player })
 }
 
-/// Whether `legal_actions` offers `player` this card's Reveal.
 fn reveal_offered(state: &GameState, id: &str, player: PlayerId) -> bool {
     legal_actions(state, player).iter().any(|action| {
         matches!(action, ActionBody::Activate { instance_id, ability, .. }
@@ -80,7 +74,6 @@ fn reveal_offered(state: &GameState, id: &str, player: PlayerId) -> bool {
     })
 }
 
-/// The open prompt answered with the option that picks this instance.
 fn answer_instance(state: &mut GameState, id: &str) {
     let pending = must(state.pending.clone(), "an open prompt");
     let key = must(
@@ -95,7 +88,6 @@ fn answer_instance(state: &mut GameState, id: &str) {
     assert_eq!(answered.error, None);
 }
 
-/// The player's backrow zone as `view_for(viewer)` shows it, as JSON.
 fn backrow_as_seen(state: &GameState, owner: PlayerId, viewer: PlayerId, lane: i32) -> Value {
     let view = serde_json::to_value(view_for(state, viewer)).expect("a view serializes");
     let side = if owner == viewer { "you" } else { "opponent" };
@@ -152,7 +144,6 @@ mod r783004_cloaked_set {
                     .all(|play| play.get("targets").is_none_or(Value::is_null))
             );
         }
-        // A card without Cloaked has no face-down play.
         assert_eq!(face_down_offered(&state, &plain.id, P1), Vec::<Value>::new());
         // A Unit set by its Cloaked has its own timing only.
         assert!(
@@ -442,7 +433,6 @@ mod r783006_cloaked_reveal {
         assert!(!reveal_offered(&state, &set.id, P1));
         assert!(refusal(&act_result(&state, reveal_body(&set.id, "p1"))).contains("can't be activated"));
 
-        // A unit arrives: the Reveal is offered.
         put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
         assert!(reveal_offered(&state, &set.id, P1));
     }

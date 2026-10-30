@@ -1,4 +1,4 @@
-//! What Armor takes off a hit, reported (patch v0.3.X, docs/meditative-set.md M8, MN05; SPEC §4.4,
+//! What Armor takes off a hit, reported (docs/meditative-set.md M8, MN05; SPEC §4.4,
 //! §6.1's Armor and Pierce rows, §10.3, §10.8).
 //!
 //! R1360: the `damage` event carries the Armor's part of the hit, `absorbed`: a unit's Armor or a

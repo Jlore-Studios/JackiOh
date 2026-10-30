@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/damage-pipeline.test.ts`.
-//!
 //! B5 E6's additions to the damage pipeline (SPEC §4.4; docs/classic-sets.md B5 E6; R463): Spell
 //! Damage at step 0, the hero's divisors after Armor and the lowest hit cap at step 3, Trample on a
 //! Spell — and that every projection of a hit (R44's lethal projection, the Zephyrs scorer) reads the
@@ -37,7 +35,6 @@ fn hero(player: PlayerId) -> DamageTarget {
     DamageTarget::Hero { player }
 }
 
-/// `describe("E6 Spell Damage (§4.4 step 0)")`.
 mod e6_spell_damage_s4_4_step_0 {
     use super::*;
 
@@ -132,7 +129,6 @@ mod e6_spell_damage_s4_4_step_0 {
     }
 }
 
-/// `describe("E6 Trample on a Spell")`.
 mod e6_trample_on_a_spell {
     use super::*;
 
@@ -203,7 +199,6 @@ mod e6_trample_on_a_spell {
     }
 }
 
-/// `describe("E6 hero divisors and caps (§4.4 steps 2 and 3)")`.
 mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
     use super::*;
 

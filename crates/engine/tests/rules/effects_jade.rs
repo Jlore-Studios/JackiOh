@@ -28,15 +28,14 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// The card running the script, resolving as a Spell does (§10.5 step 4). Like TS's, it is in no pile.
+/// The card running the script, resolving as a Spell does (§10.5 step 4), in no pile.
 fn resolving(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let mut card = new_instance(state, def_id, player, Zone::Resolving { player });
     card.radiant = false;
     card
 }
 
-/// TS `run(state, effect, self, targets, controller)`: one effect on a sink over `state`, the rng cursor
-/// written back; its events.
+/// One effect on a sink over `state`, the rng cursor written back; its events.
 fn run(
     state: &mut GameState,
     effect: Effect,

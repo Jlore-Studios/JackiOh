@@ -4,8 +4,6 @@
 //! choices (R81) are asked as prompts, because a triggered Cry has no play to carry them; nothing is
 //! played, so nothing counts a play; and a Cry that asks parks its own tail ahead of what the
 //! triggering list still owes (R113).
-//!
-//! Port of `packages/engine/test/effects-cry.test.ts`.
 
 use jackioh_engine::effects::{has_triggerable_cry, trigger_cry};
 use jackioh_engine::testkit::*;

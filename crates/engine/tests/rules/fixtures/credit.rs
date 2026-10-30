@@ -1,11 +1,5 @@
 //! Fixture cards for the credit line and the Untributable keyword (R1220–R1225, Meditative
 //! #89 Jlarna's systems). Ids are `cr-*`, indices from 8200 so they cannot collide (BUILD §0).
-//!
-//! The fixtures reproduce the shapes the real cards use, through JSON defs and the effects
-//! library: a lending Field Spell (`creditLine` 4, `creditInstalments` 4, with and without the
-//! lapsing face), a (3) vanilla Unit, a Field Spell with a mana-2 Activate, an Untributable Unit
-//! (with a "Tribute this" activation), an Untributable Field Spell whose `tributeWhen` always
-//! holds, and a Unit with a Tribute 1 play cost.
 
 use jackioh_engine::testkit::*;
 
@@ -13,7 +7,6 @@ use super::harness::{both, new_game, spread};
 
 pub use super::harness::{in_hand, put, slot};
 
-/// TS `def(name, type, extra)`; indices run from 8200 in declaration order.
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     json_as(spread(
         json!({

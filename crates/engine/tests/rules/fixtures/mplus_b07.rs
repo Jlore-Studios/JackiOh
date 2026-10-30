@@ -3,10 +3,8 @@
 //! R1185003), R429's play count raised (`raise_times_played`, R1185001), a board filled in Chinese
 //! (`fill_board`'s `chinese` rider) and a draw that fills the hand with copies (`draw_priced`'s
 //! `fillWithCopies`, R1185004). Each does it through the engine's own verbs, as a card script would,
-//! so the engine never imports `crates/cards`; the real cards (M+ #1.1 Base Camp, #21 Harmony Spirit,
-//! #24 Bob) test the same cases again.
-//!
-//! Ids are prefixed `b7-` and indexed from 11850, so they collide with no other fixture file's.
+//! so the engine never imports `crates/cards`. Ids are prefixed `b7-` and indexed from 11850, so they
+//! collide with no other fixture file's.
 
 #![allow(non_upper_case_globals)]
 

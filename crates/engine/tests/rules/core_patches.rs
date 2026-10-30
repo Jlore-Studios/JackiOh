@@ -9,8 +9,7 @@
 //!   R437  a delayed effect aimed at a card marks it in both views while it waits.
 //!
 //! R426 (#32 Prem Panther) rides `Script.afterAttack`. Every behavior runs through fixture scripts;
-//! the real cards prove it again in `crates/cards`. Pauses are JSON round-tripped mid-way, and the
-//! games that can be folded from `(seed, decks, log)` are folded and compared (§9.3).
+//! the real cards prove it again in `crates/cards`.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::marks::marks_on;

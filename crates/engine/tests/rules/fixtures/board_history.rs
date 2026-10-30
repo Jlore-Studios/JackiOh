@@ -1,9 +1,6 @@
 //! Fixtures for E29's board snapshots (docs/classic-sets.md B5 E29; C+ #35 Rollback, R419, R563): test-only
-//! scripts in the card's shape, since the engine never imports `packages/cards`. Defs are prefixed `bh-`
+//! scripts in the card's shape, since the engine never imports the cards crate. Defs are prefixed `bh-`
 //! and indexed from 9700, so they collide with no other file's catalog (BUILD §0).
-//!
-//! Port of `packages/engine/test/fixtures/boardHistory.ts`: each exported def is a `pub static` under
-//! TS's name (`rewind.id`, `phoenix.id`), registered on top of whatever the testkit override holds.
 
 #![allow(non_upper_case_globals)]
 

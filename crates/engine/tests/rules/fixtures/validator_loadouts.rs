@@ -1,16 +1,11 @@
-//! Shared builders for the loadout tests (SPEC §9.4 L1–L6, BUILD M6-T3).
+//! Shared builders for the loadout tests (SPEC §9.4 L1–L6, BUILD M6-T3, SURFACE §4.1).
 //!
 //! The catalog is synthetic, but the five cards the §9.4 messages name keep their real ids and
 //! names, so the message assertions read like the spec. Every size comes from DECK_SIZE and
 //! LOADOUT_DECKS: nothing here spells 20 or 3.
 //!
 //! Each injection below breaks exactly one rule. That is the point of the file: a careless
-//! mutation trips several rules at once (a second copy of a card is also a copy you may not own),
-//! so the collection grants 2 of the two ids the L3-copies and L4 injections duplicate, and grants
-//! the token, the banned card and the uncataloged id so those injections do not also trip L5.
-//!
-//! Port of `packages/validator/test/fixtures/loadouts.ts` (SURFACE §4.1). The rule tests
-//! (`validator.rs`, `validator_drafts.rs`) reach it as `crate::rules::fixtures::validator_loadouts`.
+//! mutation trips several rules at once (a second copy of a card is also a copy you may not own).
 
 use std::sync::LazyLock;
 
@@ -39,9 +34,7 @@ pub const CEASELESS_VOID: &str = "core-100";
 /// Owned, and absent from the snapshot, so L6 refuses it by id alone.
 pub const NOT_IN_CATALOG: &str = "core-999";
 
-/// `DECK_SIZE` as a length.
 const DECK_LEN: usize = DECK_SIZE as usize;
-/// `LOADOUT_DECKS` as a count of decks.
 #[allow(clippy::unnecessary_cast)]
 const LOADOUT_LEN: usize = LOADOUT_DECKS as usize;
 
@@ -49,7 +42,7 @@ const LOADOUT_LEN: usize = LOADOUT_DECKS as usize;
 const SPARE_COUNT: usize = DECK_LEN;
 const POOL_SIZE: usize = LOADOUT_LEN * DECK_LEN + SPARE_COUNT;
 
-/// TS's `NAMED` record: the three pool cards the messages name, by id.
+/// The three pool cards the messages name, by id.
 const NAMED: &[(&str, &str)] = &[
     (HIT_JOB, "Hit Job"),
     (ARCHIVIST, "Archivist"),
@@ -64,7 +57,6 @@ fn pool_id(n: usize) -> CardId {
     format!("core-{n:03}")
 }
 
-/// TS's `vanillaDef` object literal, as JSON.
 fn vanilla_json(id: &str, index: &str, name: &str) -> Value {
     json!({
         "id": id,
@@ -169,7 +161,7 @@ pub fn legal_loadout() -> LoadoutInput {
     }
 }
 
-// --- injections ------------------------------------------------------------
+// injections
 // Each one takes any legal loadout — the fixture's or a generated one — and breaks one rule.
 
 fn with_decks(input: &LoadoutInput, decks: Vec<LoadoutDeck>) -> LoadoutInput {
@@ -283,7 +275,6 @@ pub fn duplicate_in_deck(input: &LoadoutInput) -> LoadoutInput {
 pub fn insert_token(input: &LoadoutInput) -> LoadoutInput {
     match input.decks.len().checked_sub(1) {
         Some(last) => map_deck(input, last, |cards| substitute(cards, SHEEP_TOKEN)),
-        // TS's `decks.length - 1` is -1 here, which no deck's index matches.
         None => with_decks(input, input.decks.clone()),
     }
 }

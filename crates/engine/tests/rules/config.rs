@@ -1,9 +1,7 @@
-//! Port of `packages/engine/test/config.test.ts`: the BUILD §2 constants and the SPEC §11 "decide"
-//! rows, at the values `packages/engine/src/config.ts` states (CLAUDE.md rule 9).
+//! The BUILD §2 constants and the SPEC §11 "decide" rows at their stated values (CLAUDE.md rule 9).
 
 use jackioh_engine::testkit::*;
 
-/// `describe("config constants (BUILD §2)")`.
 mod config_constants_build_s2 {
     use super::*;
 

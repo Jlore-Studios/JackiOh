@@ -2,8 +2,6 @@
 //! #12.8 Frostspatula destroyed in the backrow): a Field Spell, Trap or Field Trap that prints Death
 //! fires it when it goes from its backrow zone to a graveyard — destroyed or sacrificed, as a Unit's
 //! does — in R68's order beside the units of its side, and never on a bounce or an exile (§6.2).
-//!
-//! Port of `packages/engine/test/backrow-death.test.ts`.
 
 use serde::Serialize;
 
@@ -16,12 +14,11 @@ use crate::rules::fixtures::damage_combat::{
 };
 use crate::rules::fixtures::harness::{events_of_type, in_hand, put, sink_for, slot};
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON object (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -33,7 +30,7 @@ fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// `events.map((event) => event.instanceId)`, read off the events' JSON.
+/// Each event's `instanceId`, read off the events' JSON.
 fn instance_ids(events: impl Serialize) -> Vec<String> {
     let json = serde_json::to_value(events).expect("events serialize");
     json.as_array()

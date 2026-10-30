@@ -1,14 +1,10 @@
-//! Port of `packages/engine/test/draw-limit.test.ts`.
-//!
 //! Draws counted per turn and limited (docs/classic-sets.md B5 E3, E4, R457), and the cast-on-draw
 //! enchantment and a Unit cast on draw with nowhere to stand (B5 E39, Classic+ #26, R459).
 //!
-//! What is pinned: every draw that happens is counted for its player on the turn it happens, whoever's
-//! turn that is — the start-of-turn draw and a fatigue draw included — and the `drawn` event carries the
-//! draw's number, which a trap reads however much later the loop hands it the event (Classic #9); a draw
-//! past a limit does not happen at all (no card moves, no fatigue, nothing is cast) and says so with a
-//! public `drawLimited`; the lowest limit holds and "both" binds its own controller; a named draw is a
-//! draw; and both survive a JSON round trip and a replay.
+//! Every draw that happens counts for its player on the turn it happens, whoever's turn that is, and
+//! the `drawn` event carries the draw's number, which a trap reads however much later the loop hands
+//! it the event (Classic #9); a draw past a limit does not happen at all and says so with a public
+//! `drawLimited`.
 
 use jackioh_engine::draw::{DrawOutcome, draw_blocked, draw_limit_of, draw_one, draws_this_turn};
 use jackioh_engine::effects::draw_from_library;

@@ -1,9 +1,6 @@
-//! Combat, damage and keyword fixtures for the M2-M3 engine tests (BUILD §0): one plain CardDef per
-//! keyword or statline the tests need. The real cards, with their own tests, arrive in M4.
-//!
-//! Each def echoes the §8 card named in its doc comment, trimmed to the one property its name
-//! promises; the stats are the ones the importing tests assert (SPEC §6.1 keywords, §4.1 to §4.5
-//! combat, §10.4 layers). A fixture named for a keyword carries that keyword on *both* faces, so
+//! Combat, damage and keyword fixtures for the M2-M3 engine tests (BUILD §0; SPEC §6.1 keywords, §4.1
+//! to §4.5 combat, §10.4 layers): each def echoes the §8 card its doc names, trimmed to the one
+//! property its name promises. A fixture named for a keyword carries that keyword on *both* faces, so
 //! `{ radiant: true }` never silently changes what the fixture means; the exceptions are the four
 //! defs that mirror a specific card's radiant text (Big D-fender, Moths, Deft Duelist, Spikey
 //! Pillow), which SPEC §8 pins.
@@ -479,7 +476,6 @@ pub fn combat_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// This file's scripts (`COMBAT_SCRIPTS`).
 pub fn scripts() -> IndexMap<String, CardScripts> {
     COMBAT_SCRIPTS.clone()
 }

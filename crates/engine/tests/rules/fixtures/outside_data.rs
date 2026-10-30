@@ -1,9 +1,7 @@
 //! Test-only cards for the Meditative+ batch "outside data and the autopilot" (issue #1183,
 //! docs/meditative-plus-set.md MP5): the two-pick fuse (R1183001), the autopilot (R1183002,
 //! R1183003) and the code-block Discover (R1183005). Each fixture is trimmed to the one property its
-//! name promises, the same script on both faces; the real cards (M+ #2, #18, #25) and their tests
-//! live in `crates/cards`.
-//!
+//! name promises, the same script on both faces; the real cards are M+ #2, #18 and #25.
 //! Ids are prefixed `od-` and indexed from 11830, so they cannot collide with another fixture file's.
 
 #![allow(non_upper_case_globals)]

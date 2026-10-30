@@ -9,8 +9,6 @@
 //! R1121: `UnitView.condition_targets` names the enemy Units a modifier would apply to if the
 //! viewer's own attacker attacked them now — only on attackers that may act now, never off turn,
 //! never with a prompt open, never on the enemy's cards.
-//!
-//! Port of `packages/engine/test/attackMods.test.ts`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -32,7 +30,7 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// TS `sinkFor(state)`: run `f` on a sink over `state` and hand back what it emitted.
+/// Run `f` on a sink over `state` and hand back what it emitted.
 fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
     let mut sink = sink_for(state);
     let out = f(&mut sink);
@@ -40,7 +38,7 @@ fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R
     (out, events)
 }
 
-/// `declareAttack(sink, attacker, target)` with both read live off the sink.
+/// `declare_attack` with both read live off the sink.
 fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: AttackTarget) -> Option<String> {
     let attacker = live(sink.state, attacker_id);
     declare_attack(sink, &attacker, &target)

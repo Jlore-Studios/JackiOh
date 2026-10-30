@@ -4,8 +4,7 @@
 //! be in Defense Position" (R1849006), a random forced attacker (R1849007), "when one of your Units is
 //! attacked" (R1849008) and a trap's chance to reveal (R1849009); and, for S15 (issue #1875), a Trap that
 //! answers a Unit's death in combat before anything moves (R1875006). Each does it through the engine's own
-//! verbs and static flags, as a card script would, so the engine never imports `crates/cards`; the
-//! Stinkyscape cards that use them come later, behind the set's gate.
+//! verbs and static flags, as a card script would, so the engine never imports `crates/cards`.
 //!
 //! Ids are prefixed `sv-` and indexed from 18490, and the two reprieves R1884001 adds at 18455 and
 //! 18456, so they collide with no other fixture file's.
@@ -16,26 +15,19 @@ use jackioh_engine::testkit::*;
 
 use super::harness::both;
 
-/// What the bolt deals the chosen Unit.
 pub const BOLT_DAMAGE: i32 = 3;
-/// What the ember deals each enemy Unit.
 pub const EMBER_DAMAGE: i32 = 2;
-/// What the zap deals the enemy hero.
 pub const ZAP_DAMAGE: i32 = 3;
-/// What the two self-burns deal their caster's own hero.
 pub const BURN_DAMAGE: i32 = 15;
 pub const SINGE_DAMAGE: i32 = 10;
 /// The Masochism fixtures' cap a turn, and the Radiant one's multiplier.
 pub const REDIRECT_CAP: i32 = 20;
 pub const REDIRECT_MULTIPLIER: i32 = 2;
-/// The Jempire's "+2 attack".
 pub const JEMPIRE_ATTACK: i32 = 2;
 /// The askers' buff once answered.
 pub const ASKER_ATTACK: i32 = 3;
-/// Aerelret's "30% chance to Reveal", and what it deals the attacker once revealed.
 pub const AERELRET_CHANCE: i32 = 30;
 pub const AERELRET_DAMAGE: i32 = 1;
-/// The lucky Aerelret's Lucky.
 pub const AERELRET_LUCKY: i32 = 2;
 /// What the reprieve's follow-up gives the Unit it answers for (Stinkyscape #138's shape, R1875006).
 pub const REPRIEVE_HEALTH: i32 = 10;
@@ -159,7 +151,6 @@ fn flags(value: Value) -> Option<StaticFlags> {
     Some(json_as(value))
 }
 
-/// One declared pick of a Unit or a backrow card as `filter` says.
 fn pick(filter: Value) -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, filter)]
 }
@@ -335,7 +326,6 @@ fn endless_reprieve(asking: bool) -> Script {
     }
 }
 
-/// A Spell that casts a new bolt aimed at the enemy hero, `aimOnly` or not.
 fn aimed_bolt(only: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {

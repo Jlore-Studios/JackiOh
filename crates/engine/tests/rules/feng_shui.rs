@@ -3,8 +3,8 @@
 //!
 //! The units' indices end in 1–5 on purpose (R980: 水 火 木 金 土); the Trap ends in 2 (火) and the
 //! judge in 0 (土). Every pipeline test puts a judge in p1's backrow and plays two cards: the first
-//! play writes the record, the second is judged against it. The record was written only while the
-//! Meditative set was open (R982, D14); the set shipped in v0.3.5, so it is written in every game.
+//! play writes the record, the second is judged against it. The record is written in every game
+//! (R982, D14).
 
 use jackioh_engine::subsystems::feng_shui::{element_of, element_of_index, last_element, reaction};
 use jackioh_engine::testkit::*;
@@ -29,7 +29,7 @@ fn game(seed: &str) -> GameState {
     ready
 }
 
-/// TS `must`: `body` is the TS `ActionBody` literal; the player and a fresh nonce are added.
+/// Reduce `body`, an action literal, with the player and a fresh nonce added; panics on a refusal.
 fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let mut body = body;
     body["playerId"] = json!(player_id);
@@ -41,7 +41,7 @@ fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResul
     result
 }
 
-/// TS `one`: a card put in `player`'s hand with the face asked for; answers its copy as it stands.
+/// A card put in `player`'s hand with the face asked for; answers its copy as it stands.
 fn one(state: &mut GameState, player: PlayerId, def_id: &str, radiant: bool) -> CardInstance {
     let card = in_hand(state, def_id, player, 1)
         .into_iter()
@@ -287,9 +287,7 @@ mod r982_a_face_down_play_is_neither_judged_nor_recorded {
 mod r982_the_record_is_written_in_every_game_since_the_set_shipped {
     use super::*;
 
-    /// Until the release no record was written while the set was closed, so every play was a first
-    /// play; the set shipped in v0.3.5, so with nothing previewed the first play is recorded and the
-    /// second is judged against it.
+    /// With nothing previewed, the first play is recorded and the second is judged against it.
     #[test]
     fn r982_the_record_is_written_in_every_game_since_the_set_shipped() {
         assert!(set_ships(SetName::Meditative));

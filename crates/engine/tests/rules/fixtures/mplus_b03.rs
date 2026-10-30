@@ -3,10 +3,8 @@
 //! aura over embiggen prices (the `embiggenGarden` static flag, R1181002) and a price for the
 //! Embiggened version alone (`add_to_hand`'s `embiggenCostOverride`, R1181003). Each does it through
 //! the engine's own verbs and flags, as a card script would, so the engine never imports
-//! `crates/cards`; the real cards (M+ #4 Supply Drop, #22 Mountaintop Garden, #23 Enormous
-//! Elderberry) test the same cases again.
-//!
-//! Ids are prefixed `b3-` and indexed from 11840, so they collide with no other fixture file's.
+//! `crates/cards`. Ids are prefixed `b3-` and indexed from 11840, so they collide with no other
+//! fixture file's.
 
 use std::sync::LazyLock;
 

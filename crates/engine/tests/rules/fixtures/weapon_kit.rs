@@ -2,8 +2,7 @@
 //! turn cooldown (`ActivationCost.extraTurnCooldown`, R1841000), damage that deals half to heroes
 //! (`halfToHeroes`, R1841001), Equip straight into this Unit from a pick (`equip_picks`, R1841002) and
 //! "Float reduces Tribute requirement by 1" (`float_lowers_tribute`, R1841003). Each does it through
-//! the engine's own verbs, as a card script would, so the engine never imports `crates/cards`; the
-//! Stinkyscape cards that use them come later, behind the set's gate.
+//! the engine's own verbs, as a card script would, so the engine never imports `crates/cards`.
 //!
 //! Ids are prefixed `wk-` and indexed from 18410, so they collide with no other fixture file's.
 
@@ -20,9 +19,7 @@ pub const BEAM_DAMAGE: i32 = 7;
 pub const PEA_DAMAGE: i32 = 1;
 /// What the blade's Cry deals the enemy hero, had it run.
 pub const BLADE_CRY_DAMAGE: i32 = 1;
-/// The proto's printed Tribute X.
 pub const PROTO_TRIBUTE: i32 = 3;
-/// The rack's Discover offer: "choose between 2".
 pub const RACK_OPTIONS: i32 = 2;
 /// How many picks the rack, the chest and the statue Equip.
 pub const PICKS: i32 = 2;
@@ -69,7 +66,6 @@ fn card(index: u32, id: &str, stats: (i32, i32), keywords: Value) -> CardDef {
     }))
 }
 
-/// One target: an enemy Unit or the enemy hero.
 fn enemy_target() -> TargetDecl {
     TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "hero"] }))
 }

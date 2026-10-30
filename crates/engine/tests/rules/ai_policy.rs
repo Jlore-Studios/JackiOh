@@ -1,9 +1,7 @@
 //! The random legal-action policy of SPEC §10.7 (BUILD M3-T7, R44): determinism from the seed, a
 //! choice that is always one `legalActions` offered, the end-of-turn rule, uniform prompt answers,
-//! and a playout that always terminates. The endless fixture card lives here rather than in a
-//! shared fixture, as statecheck.test.ts does (CLAUDE.md, BUILD §0).
-//!
-//! Port of `packages/engine/test/aiPolicy.test.ts`.
+//! and a playout that always terminates. The endless fixture card lives here, not in a shared
+//! fixture (BUILD §0).
 
 use jackioh_engine::effects::choose_mode;
 use jackioh_engine::subsystems::ai_policy::{
@@ -132,7 +130,7 @@ fn sequence(state: &GameState, seed: &str, steps: usize) -> Vec<Option<ActionBod
     (0..steps).map(|_| choose_action(state, P1, &mut rng)).collect()
 }
 
-/// TS `playout(seed)`: the board the sink drove (the sink's own state, moved in place), the events
+/// The board the sink drove (the sink's own state, moved in place), the events
 /// it collected, and the playout's result.
 fn playout(seed: &str) -> (GameState, Vec<GameEvent>, PlayoutResult) {
     let mut original = busy_board(seed);
@@ -273,8 +271,7 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
             assert!(!AI_SKIPPED_ACTIONS.contains(&action.action_type()));
         }
 
-        // The turn really passed, and the sink's own state object is the one that moved (in Rust the
-        // sink borrows the board it was built over, so the state handed back is that object).
+        // The turn really passed, and the sink's own state object is the one that moved.
         assert_eq!(first_state.active, P2);
         let ended: Vec<Value> = events_of_type(&first_events, GameEventType::TurnEnded)
             .iter()

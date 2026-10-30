@@ -1,13 +1,8 @@
 //! `forEachCard`: one effect for each card of a set a clause reads off the board (R113, R66).
-//!
 //! A list a prompt split is continued by building it again and skipping what already ran, which is
-//! exact only for a list whose shape does not hang on the board. A clause over a set it reads off the
-//! board is a part of the list instead: it reads its set once, as the list reaches it, and a pause
-//! inside it resumes over that same set (`EffectPart.memo`). #94 Genn's Greed's draw clause and #30
-//! radiant's two draws are written with it; their card tests cover the Core cases, and this file the
-//! verb on its own, with fixture cards.
-//!
-//! Port of `packages/engine/test/effects-each.test.ts`.
+//! exact only for a list whose shape does not hang on the board. A clause over a board set reads it
+//! once, as the list reaches it, and a pause inside it resumes over that same set (`EffectPart.memo`).
+//! #94 Genn's Greed and #30 radiant use it; their card tests cover the Core cases, this the verb.
 
 use std::sync::OnceLock;
 
@@ -37,8 +32,7 @@ fn drawer() -> CardDef {
     }))
 }
 
-/// Which card the question follows (TS `asksAfter: () => string | undefined`, a closure over a
-/// variable the test sets once the library's ids are known): set at most once, unset for "never".
+/// Which card the question follows, set once the library's ids are known: unset for "never".
 type AsksAfter = Arc<OnceLock<String>>;
 
 /// "Draw every card in your library", the first draw followed by a question. The set is the library

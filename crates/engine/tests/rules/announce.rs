@@ -4,11 +4,7 @@
 //! The first Counter cancels the play, which then never resolves and is never counted; the card goes to
 //! its owner's graveyard, to exile, or to the countering player's hand as theirs (E2).
 //!
-//! Pinned here, on fixture cards of the shapes Classic #4, #10, #17, #72 and #87 and AI Refusal have:
-//! the timing, what a countered play does not do, the second Counter that stays set, a non-trap
-//! response, a cast's announce, the card out of a discard's reach, a question in the window (pause,
-//! JSON round trip, replay from the log), the steal and its hand cap, and the redaction of a face-down
-//! card's announce.
+//! Pinned on fixture cards of the shapes Classic #4, #10, #17, #72 and #87 and AI Refusal have.
 
 use jackioh_engine::announce::open_announces;
 use jackioh_engine::testkit::*;
@@ -38,7 +34,7 @@ fn game(seed: &str) -> GameState {
     ready
 }
 
-/// `{ ...body, playerId, nonce }` reduced; a refusal panics.
+/// `body` with `playerId` and a nonce, reduced; a refusal panics.
 fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let mut action = body;
     action["playerId"] = json!(player_id);

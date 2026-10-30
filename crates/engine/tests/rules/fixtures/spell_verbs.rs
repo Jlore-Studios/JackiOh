@@ -1,7 +1,6 @@
 //! Test-only cards for Stinkyscape's spell verbs (issue #1848, R1848000–R1848006): each is the shape of
-//! the set card that will use a verb, written with the engine's own verbs through the prelude. No
-//! Stinkyscape card ships yet (the set comes later, behind its gate), so the engine never imports
-//! `crates/cards` for these.
+//! the set card that will use a verb, written with the engine's own verbs through the prelude, so the
+//! engine never imports `crates/cards` for these.
 //!
 //! Ids are prefixed `sv-` and indexed from 18480 (#1868's from 18680), so they collide with no other
 //! fixture file's.
@@ -37,7 +36,6 @@ fn def(index: u32, name: &str, type_: &str, cost: Value, base: Value, radiant: V
     }))
 }
 
-/// A Spell of `cost` whose two faces print `keywords` and the text `name`.
 fn spell(index: u32, name: &str, cost: Value, keywords: Value, radiant_keywords: Value) -> CardDef {
     def(
         index,
@@ -49,7 +47,6 @@ fn spell(index: u32, name: &str, cost: Value, keywords: Value, radiant_keywords:
     )
 }
 
-/// A Unit `attack`/`health` (twice that on its Radiant face) printing `keywords`.
 fn unit(index: u32, name: &str, attack: i32, health: i32, keywords: Value) -> CardDef {
     def(
         index,
@@ -61,20 +58,20 @@ fn unit(index: u32, name: &str, attack: i32, health: i32, keywords: Value) -> Ca
     )
 }
 
-// ---- R1848000: Freeze forever ----
+// R1848000: Freeze forever
 
 /// Stinkyscape #2 Absolute Zero's shape: "Freeze a Unit forever."
 pub static absolute_zero: LazyLock<CardDef> =
     LazyLock::new(|| spell(18480, "absolute-zero", json!(2), json!([]), json!([])));
 
-// ---- R1848001: a Spell's Trample onto adjacent Units ----
+// R1848001: a Spell's Trample onto adjacent Units
 
 /// Stinkyscape #3 Meteor's shape: "Deal 15 damage to a Unit. Tramples onto adjacent Units"; Radiant
 /// "Deal 20 damage to a Unit. Tramples onto adjacent Units and the enemy hero".
 pub static meteor: LazyLock<CardDef> =
     LazyLock::new(|| spell(18481, "meteor", json!(3), json!([]), json!([])));
 
-// ---- R1848002: Poisonous for a Spell ----
+// R1848002: Poisonous for a Spell
 
 /// Stinkyscape #13 Asphyxiants Cloud's shape: "Poisonous. Your next Spell this turn has Poisonous.
 /// Deal 1 damage to all enemies."
@@ -90,7 +87,7 @@ pub static cloud: LazyLock<CardDef> = LazyLock::new(|| {
 /// A Spell: "Deal 1 damage to a Unit" — the next Spell the Cloud's grant reaches.
 pub static ping: LazyLock<CardDef> = LazyLock::new(|| spell(18483, "ping", json!(0), json!([]), json!([])));
 
-// ---- R1848003: copies with a fixed X ----
+// R1848003: copies with a fixed X
 
 /// Stinkyscape #99 No-No Words' shape on a number a test reads: "(X) Deal X damage to the enemy hero."
 pub static nono: LazyLock<CardDef> = LazyLock::new(|| spell(18484, "nono", json!("X"), json!([]), json!([])));
@@ -102,7 +99,7 @@ pub static nono_book: LazyLock<CardDef> =
 pub static not_x_book: LazyLock<CardDef> =
     LazyLock::new(|| spell(18486, "not-x-book", json!(0), json!([]), json!([])));
 
-// ---- R1848004: lose or gain N mana next turn ----
+// R1848004: lose or gain N mana next turn
 
 /// Stinkyscape #117 Core System's mana half: "Lose 2 mana next turn."
 pub static core_system: LazyLock<CardDef> =
@@ -111,7 +108,7 @@ pub static core_system: LazyLock<CardDef> =
 pub static blackout: LazyLock<CardDef> =
     LazyLock::new(|| spell(18488, "blackout", json!(0), json!([]), json!([])));
 
-// ---- R1848005: the melee ----
+// R1848005: the melee
 
 /// Stinkyscape #120 Wild System's shape: "All units attack each other until only one survives (max 20
 /// attacks). Gain 1 mana next turn."
@@ -131,7 +128,7 @@ pub static untouchable: LazyLock<CardDef> = LazyLock::new(|| unit(18498, "untouc
 pub static adept: LazyLock<CardDef> =
     LazyLock::new(|| unit(18497, "adept", 1, 1, json!([{ "kind": "Spell Damage", "n": 2 }])));
 
-// ---- R1848006: Inflation ----
+// R1848006: Inflation
 
 /// Stinkyscape #153 Stimmycheck's shape: "Inflation (15%). Add a Stimmycheck to your hand with +10%
 /// chance at Inflation"; its Radiant face prints Lucky 1. The copy is added at once rather than at the
@@ -162,7 +159,7 @@ pub static sanctions: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-// ---- R1868000: a declared target that reads the play's X ----
+// R1868000: a declared target that reads the play's X
 
 /// Stinkyscape #99 No-No Words' shape: "(X) Destroy a Unit with less than 4X Attack", the pick needed
 /// (R703).
@@ -172,7 +169,6 @@ pub static nono_x: LazyLock<CardDef> =
 /// resolves).
 pub static riser: LazyLock<CardDef> = LazyLock::new(|| unit(18681, "riser", 3, 3, json!([])));
 
-/// A declared pick of one Unit, either side.
 fn a_unit() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "of": ["unit"] }))]
 }
@@ -418,8 +414,7 @@ pub static SPELL_VERB_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The freeze fixtures (`register_freeze_fixtures`, the engine's fixture catalog under them) with these
-/// cards and scripts on top.
+/// The freeze fixtures (`register_freeze_fixtures`) with these cards and scripts on top.
 pub fn register_spell_verb_fixtures() {
     super::freeze::register_freeze_fixtures();
     let mut defs: CardDefs = registered_catalog().clone();

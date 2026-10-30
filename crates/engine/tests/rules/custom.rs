@@ -101,9 +101,7 @@ fn board(cards: &[&str]) -> Value {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915000: the id space and the definition
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r915000_a_custom_id_is_the_prefix_and_a_tail_of_lowercase_letters_digits_and_hyphens() {
@@ -192,9 +190,7 @@ fn r915000_a_game_reads_its_custom_cards_definitions_and_nothing_else_does() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915001: the frame's limits
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r915001_a_valid_card_has_no_issue_and_each_limit_names_its_field() {
@@ -301,9 +297,7 @@ fn r915001_a_valid_card_has_no_issue_and_each_limit_names_its_field() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915002: the host lent for a call
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r915002_a_custom_card_runs_the_lent_host_s_script_and_none_without_one() {
@@ -353,9 +347,7 @@ fn r915002_a_lent_host_is_put_back_when_its_call_ends() {
     assert!(!has_cry(), "and none after");
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915004: a hook that failed says so
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r915004_script_failed_names_the_card_its_controller_and_what_went_wrong() {
@@ -388,9 +380,7 @@ fn r915004_script_failed_names_the_card_its_controller_and_what_went_wrong() {
     });
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915005: practice only
-// ---------------------------------------------------------------------------------------------
 
 fn snapshot() -> CatalogSnapshot {
     CatalogSnapshot {
@@ -473,9 +463,7 @@ fn r915005_a_game_is_dealt_a_custom_card_only_when_given_it_valid_and_once() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915006: the game carries its custom cards
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r915006_a_game_keeps_its_custom_cards_without_the_builder_and_folds_the_same() {
@@ -531,9 +519,7 @@ fn r915006_a_log_with_a_custom_card_s_play_folds_to_the_live_hash_under_the_same
     });
 }
 
-// ---------------------------------------------------------------------------------------------
 // R962000: a sandbox game spawns the custom cards it carries
-// ---------------------------------------------------------------------------------------------
 
 /// The vanilla units and the combat fixtures, among them Spikey Pillow, whose aura takes 2 attack off
 /// its controller's units.

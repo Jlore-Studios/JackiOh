@@ -1,9 +1,7 @@
 //! Test-only cards and a table for Stinkyscape's Marketplace (#1853, R1853000–R1853005; #2250,
 //! R2250002): a (0) Spell, a (4) and a (5) Unit and a (1) Spell standing in for Call to Chaos (Scape
 //! Edition)'s lot, all of the Boss-X set so a set lot draws among them, and `MARKET_TABLE`, the fixture
-//! table in the shape of the set's (S21): a pool of named cards, one named card, and a set. The engine
-//! never imports `crates/cards` for this; the Resources are `fixtures/resources.rs`'.
-//!
+//! table in the shape of the set's (S21). The Resources are `fixtures/resources.rs`'.
 //! Ids are prefixed `fx-mkt-` and indexed from 18530, so they collide with no other fixture file's; the
 //! hand-sale card (R1861000), kept apart from the table's cards, is 18610.
 

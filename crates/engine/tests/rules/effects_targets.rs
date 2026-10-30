@@ -1,12 +1,8 @@
 //! The target and scope vocabulary every other verb's arguments are written in (SPEC §3.1, §3.2,
-//! §6.3, §10.6, R13, R68, R81). Two things are under test: `{ of: "instance" }`, the TargetSpec
-//! variant that lets a verb name a card a script already holds the id of, and the board scope
-//! (`cardsInScope`, `adjacentTo`, `matchesScope`) that the board-wide verbs are thin walks over.
-//!
-//! The scope lives here rather than on `TargetSpec` because `resolveTarget` answers with one
-//! `DamageTarget | null`: every verb written in a TargetSpec is single-target by construction, so a
-//! multi-card spec could not be threaded through them. The fixture cards these tests need are
-//! registered here, so no shared fixture has to grow (BUILD §0).
+//! §6.3, §10.6, R13, R68, R81): `{ of: "instance" }`, the TargetSpec variant that names a card a
+//! script holds the id of, and the board scope the board-wide verbs are thin walks over. The scope is
+//! not a `TargetSpec` because one resolves to a single target, so a multi-card spec could not be
+//! threaded through the verbs. The fixture cards are registered here (BUILD §0).
 
 use jackioh_engine::effects::{
     BoardScope, TargetSpec, adjacent_to, cards_in_scope, instance_of, matches_scope, resolve_target,

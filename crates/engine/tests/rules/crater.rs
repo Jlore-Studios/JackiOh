@@ -1,8 +1,7 @@
 //! Crater (#783, R783010, R783011, R1850006): a Unit Locks its own zone as it arrives on the field, every
 //! way it arrives, before its Cry; a Trap Locks its backrow zone as it is revealed, and a Field Spell as
-//! it enters. The Lock is R688's: it
-//! refuses plays, a Stack play included, and outlasts the card. The fixtures in
-//! `fixtures/keywords_783.rs` stand in for the cards #781 prints.
+//! it enters. The Lock is R688's: it refuses plays, a Stack play included, and outlasts the card. The
+//! fixtures in `fixtures/keywords_783.rs` stand in for the cards #781 prints.
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::zones::is_locked;

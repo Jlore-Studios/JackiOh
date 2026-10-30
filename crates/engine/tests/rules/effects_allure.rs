@@ -2,10 +2,7 @@
 //! every enemy Unit" marks each one `allure` (pink, R437), and at the start of the Allurer's next turn
 //! each marked Unit still under the opponent's control is stolen in lane order (R15), summoning sick
 //! (R171), or destroyed with no open unit zone — an ordinary destroy, so Death and Reborn apply and an
-//! Indestructible Unit stays (R46, R963, MD-C4). A marked Unit that leaves the field loses its mark and
-//! is not taken (R174); the Allure lands even after the Allurer has left (R76); a Unit already its
-//! taker's is neither stolen nor destroyed. Through fixture scripts (fixtures/jade.rs); Jade Beauty's
-//! own tests cover the same cases again (`crates/cards/src/scripts/meditative/`).
+//! Indestructible Unit stays (R46, R963, MD-C4). Through fixture scripts (fixtures/jade.rs).
 
 use jackioh_engine::effects::delay::DELAYED_ALLURE_HOOK;
 use jackioh_engine::effects::destroy::{DestroyArgs, destroy};

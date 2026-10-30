@@ -1,9 +1,6 @@
-//! R171 over random boards (SPEC §4.1, §11; docs/polish/4-edge-cases.md "fast-check properties").
-//!
-//! Each case builds a random board (per side and lane, optionally a keyword body entered this turn,
-//! last turn or never marked, with any exertion, and optionally a Stack card on top), then applies
-//! one to three random control changes for either player, the inactive one too: a steal, Steal all,
-//! the board swap, or a rotation either way on either face. Four properties are read from outside:
+//! R171 over random boards (SPEC §4.1, §11; docs/polish/4-edge-cases.md "fast-check properties"):
+//! one to three random control changes for either player, the inactive one too, on a random board.
+//! Four properties are read from outside:
 //!   P1 bookkeeping: only a card that crossed takes this turn and a fresh exertion, and one a steal
 //!      uncovered in its pile takes this turn and keeps its own (R1829000); a controller changes only
 //!      with a `controlChanged`; no owner changes.
@@ -112,7 +109,6 @@ struct Case {
 
 // The arbitraries: seeded `Rng` draws, since the workspace has no fast-check (SURFACE §2)
 
-/// `fc.option(arb)`: nil one time in five (fast-check's default `freq`).
 fn option<T>(rng: &mut Rng, arb: impl FnOnce(&mut Rng) -> T) -> Option<T> {
     if rng.int(5) == 0 { None } else { Some(arb(rng)) }
 }

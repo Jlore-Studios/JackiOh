@@ -413,7 +413,6 @@ pub static FIXTURE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::
     table
 });
 
-/// `base` with every fixture definition over it.
 pub fn fixture_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for entry in FIXTURE_DEFS.iter() {
@@ -422,7 +421,6 @@ pub fn fixture_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     FIXTURE_SCRIPTS.clone()
 }
