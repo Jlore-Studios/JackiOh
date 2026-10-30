@@ -18,12 +18,12 @@
 # and a git bundle that deliver checks for itself before pushing.
 #
 # With `controller` on (.harness/config.json, #1455), bot-status's loop plans the work and starts
-# each run with its plan made (bot/harness/controller.py): `plan_ref` names the plan, which the loop
+# each run with its plan made (bot/go/internal/controller): `plan_ref` names the plan, which the loop
 # wrote to the state branch, and `runs_on`, `cli`, `secret` and `shared` are its runner, CLI,
 # secret name and shared flag. Such a run skips gate, plan and deliver, so it waits in GitHub's
 # queue once, for its model job, not four times; work's first step holds those inputs to the plan
 # and to providers.json before any step is handed a secret. The loop delivers the run itself once
-# it ends (#1537, `controller.deliver`): it reads the plan from the state branch, where the model
+# it ends (#1537, `controller.Deliver`): it reads the plan from the state branch, where the model
 # job cannot write, and the `work` upload through the Actions API. A run started any other way
 # (the schedule, a command, a person) gates, plans and delivers itself, and its gate defers to the
 # loop while the loop is going.
@@ -140,7 +140,7 @@ jobs:
         working-directory: bot
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          # Which provider secrets exist, never their values (providers.SECRETS).
+          # Which provider secrets exist, never their values (providers.SecretNames).
           HARNESS_SECRETS_SET: >-
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
@@ -169,7 +169,7 @@ jobs:
 
       # Skipped for forced work and for any subscription that is not shared. Usage readings ten
       # minutes apart (a one-turn Haiku call each), for up to two hours; a rise that is not the
-      # partner bot's holds that subscription back. The step's name is what plan.quiet_waiting
+      # partner bot's holds that subscription back. The step's name is what plan.QuietWaiting
       # looks for, so only one run waits at a time.
       - name: Wait until the subscription is quiet
         id: quiet
@@ -444,8 +444,8 @@ jobs:
         run: harness doctor --work --plan "$RUNNER_TEMP/plan/plan.json"
 
       # bright-bots-harness reads a step named "Build, check and review" as this bot spending the
-      # shared Claude subscription (quiet.py), so only a run on it (claude-1) has that name; a run
-      # on any other subscription must not excuse a rise on the shared one.
+      # shared Claude subscription (bot/go/internal/quiet), so only a run on it (claude-1) has that
+      # name; a run on any other subscription must not excuse a rise on the shared one.
       - name: Build, check and review
         if: env.PLAN_SHARED == 'true'
         working-directory: bot

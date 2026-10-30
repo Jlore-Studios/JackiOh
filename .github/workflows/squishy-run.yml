@@ -5,7 +5,7 @@
 # always runs on GitHub's ubuntu-latest: no job here touches the bot's machine. Its labels,
 # commands, branches, state and journal are its own (`squishy:build`, `/squishy`,
 # `squishy/issue-<n>`, `squishy-state`, `squishy-journal`), and it never takes an issue that is
-# the night bot's (`queue.owner`). Beside a plain build it has three modes: `oneshot` (the whole
+# the night bot's (`queue.Owner`). Beside a plain build it has three modes: `oneshot` (the whole
 # issue in one run with fullsend), `split` (sub-issues it builds) and `split-bot` (sub-issues the
 # night bot builds).
 #
@@ -92,7 +92,7 @@ jobs:
         working-directory: bot
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          # Which provider secrets exist, never their values (providers.SECRETS).
+          # Which provider secrets exist, never their values (providers.SecretNames).
           HARNESS_SECRETS_SET: >-
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
@@ -253,7 +253,7 @@ jobs:
         run: harness doctor --work --plan "$RUNNER_TEMP/plan/plan.json"
 
       # Not "Build, check and review": bright-bots-harness reads a step of that name as the night
-      # bot spending the shared Claude subscription (quiet.py), which Squishy never spends.
+      # bot spending the shared Claude subscription (bot/go/internal/quiet), which Squishy never spends.
       - name: Work on Squishy's account (build, check and review)
         working-directory: bot
         env:

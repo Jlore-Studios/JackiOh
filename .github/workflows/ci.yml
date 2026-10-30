@@ -26,10 +26,11 @@
 #   db         sql, the store contract and the Render deploy rehearsal against a real Postgres, each
 #              only when the pull request touches what it tests (scripts/ci-scope.sh's `db_sql`,
 #              `db_store` and `db_deploy`); a skip passes.
-#   bot selftest  the night bot's own suite (bot/) on Python 3.12 and 3.13, its CLI's start under both
-#              bots' configs, and actionlint over every workflow, only when the pull request touches
-#              what those read (the `changes` job's `bot`); a skip passes. It had a workflow of its
-#              own, bot-selftest.yml, that ran on every pull request (#1455).
+#   bot selftest  the harness's suite (bot/go: gofmt, go vet, go test), its binary's start under both
+#              bots' configs, the Python suites of what stays Python (bot/machine, .github/hygiene)
+#              on Python 3.12 and 3.13, and actionlint over every workflow, only when the pull request
+#              touches what those read (the `changes` job's `bot`); a skip passes. It had a workflow
+#              of its own, bot-selftest.yml, that ran on every pull request (#1455).
 #
 # The release build, the WASM modules and the built client travel between jobs as artifacts
 # (`rust-release`, `web-wasm` and `web-wasm-luau`, `web-build`), so each is compiled once per run,
@@ -126,7 +127,7 @@ jobs:
   # `bot` is `false` only for a pull request that changes none of the paths bot selftest's tests and
   # lints read. Those are the bot's code and switches, all of .github/ and .claude/ (the tests read
   # both directories whole: the workflows, the issue forms, the skills), the scripts
-  # (test_repo_meta.py reads scripts/*.sh), the training lanes' prompts and loop,
+  # (bot/go/tests/repo_meta_test.go reads scripts/*.sh), the training lanes' prompts and loop,
   # docs/issues-and-patches.md, and the toolchain and .cargo/ (the night bot's checks pin both). It
   # is set here, not in ci-scope.sh, because a bot-only diff is exactly the one ci-scope.sh answers
   # `full=false` for, and because .github/ is a path the bots may not change. Any doubt says `true`.
@@ -673,7 +674,7 @@ jobs:
           echo "labels=$(jq -c '.labels // []' "$RUNNER_TEMP/classify.json" 2>/dev/null || echo '[]')" >> "$GITHUB_OUTPUT"
           jq -r '.problems // [] | .[] | "::error title=classify::" + .' "$RUNNER_TEMP/classify.json" 2>/dev/null || true
           exit "$status"
-      # The labels, as bot/harness/config.py's LABELS writes them (`--force` keeps the colour and
+      # The labels, as bot/go/internal/config's Labels writes them (`--force` keeps the colour and
       # description that list gives), any other kind and tier label off first.
       # A label is the classifier's word, not a gate: a token that may not write labels (a fork's
       # pull request) warns here and leaves the check to the step above.
@@ -1455,7 +1456,7 @@ jobs:
   # request out when that check reported, so the rest of the run only holds runners every other run
   # waits for (up to 50 minutes on 2026-10-29). One job after each of the five cancels the run then,
   # and the bot that owns the pull request answers the cancelled run with a CI fix
-  # (bot/harness/events.py `on_queue_ci`). Never sooner, at a failed piece: a run cancelled before a
+  # (bot/go/internal/events `OnQueueCI`). Never sooner, at a failed piece: a run cancelled before a
   # summary job runs leaves that required check skipped, and a skipped required check counts as
   # passing, which here would let the queue land the pull request.
   queue-cancel-rust:
