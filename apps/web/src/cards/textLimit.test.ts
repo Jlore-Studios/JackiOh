@@ -1,7 +1,8 @@
 // R1017000: every catalog face fits the measured text limit (constants.ts FACE_TEXT_LIMIT), or prints
 // a short form that does (shortText.ts SHORT_FORMS), so no face in the Almanac or the deck builder
 // shrinks its art for its words. The pixel half, that no face takes the long layout at 170 px, is the
-// component spec's (e2e/cypress/component/card-faces.cy.tsx B15).
+// component spec's (e2e/cypress/component/card-faces.cy.tsx B15). R2450000: a staged Quest is measured
+// by the one stage it prints (questFace.ts).
 
 import { describe, expect, it } from "vitest";
 
@@ -10,6 +11,7 @@ import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
 import { FACE_TEXT_LIMIT, PREVIEW_TEXT_LIMIT, TEXT_TIER_MAX } from "./constants.ts";
 import { faceModel } from "./model.ts";
+import { questFaceText } from "./questFace.ts";
 import {
   LONG_FACES,
   MORE,
@@ -26,11 +28,12 @@ import {
 const DEFS = Object.values(CATALOG);
 const FACES = [false, true] as const;
 
-/** What a collection face prints: its whole text, or its short form. */
+/** What a collection face prints: its whole text (a staged Quest's first stage, R2450000), or its short form. */
 function printed(defId: string, radiant: boolean): { full: string; form: ShortForm | null; shown: string } {
   const def = CATALOG[defId];
   if (def === undefined) throw new Error(`no ${defId}`);
-  const full = faceModel({ defId, def, radiant }).text.full;
+  const face = faceModel({ defId, def, radiant });
+  const full = questFaceText(face)?.full ?? face.text.full;
   const form = shortFormOf(defId, radiant);
   return { full, form, shown: (form === null ? null : cutText(full, form)) ?? full };
 }
@@ -94,7 +97,7 @@ describe("R1017000 the face text limit", () => {
     }
   });
 
-  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards, five Stinkyscape rows and the held Training Grounds #39) each print a short form", () => {
+  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards, two Stinkyscape rows and the held Training Grounds #39) each print a short form", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printed(def.id, face).full.length > TEXT_TIER_MAX.xl).map(
         (face) => `${def.id} ${face ? "radiant" : "base"}`,
@@ -106,6 +109,21 @@ describe("R1017000 the face text limit", () => {
       expect(shortFormOf(id ?? "", label === "radiant"), entry).not.toBeNull();
     }
     expect([...long].sort()).toEqual([...LONG_FACES].sort());
+  });
+
+  it("R2450000 a staged Quest is measured by the stage it prints: no cut short form, Heist's base face whole, the rest clamped and whole in the hover preview", () => {
+    expect(shortFormOf("stinkyscape-007", false)).toBeNull();
+    for (const [defId, radiant] of [["stinkyscape-007", true], ["stinkyscape-112", false], ["stinkyscape-112", true]] as const) {
+      expect(shortFormOf(defId, radiant), `${defId} ${String(radiant)}`).toBe("clamp");
+    }
+    for (const [defId, radiant] of [["stinkyscape-007", false], ["stinkyscape-007", true], ["stinkyscape-112", false], ["stinkyscape-112", true]] as const) {
+      const { full } = printed(defId, radiant);
+      expect(full, `${defId} ${String(radiant)} prints one stage`).toContain("Stage 1 of 3, ");
+      expect(full).not.toContain("Stage 2");
+      expect(overLimit(full, PREVIEW_TEXT_LIMIT), `${defId} ${String(radiant)}`).toBe(false);
+    }
+    expect(overLimit(printed("stinkyscape-007", false).full, FACE_TEXT_LIMIT)).toBe(false);
+    expect(LONG_FACES.filter((entry) => entry.startsWith("stinkyscape-007 ") || entry.startsWith("stinkyscape-112 "))).toEqual([]);
   });
 
   it("MN09 the premise: the set is in the catalog with a Chinese face for every card, and its longest faces are named", () => {
