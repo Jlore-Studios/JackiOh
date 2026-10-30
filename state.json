@@ -9508,9 +9508,12 @@
     "2493": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-30T10:18:40Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2386,
       "kind": "revise",
       "last_findings": [],
