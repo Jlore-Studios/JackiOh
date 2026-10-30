@@ -208,8 +208,10 @@ fn r290_gives_the_tutorial_opponent_a_handicap_below_easy_12_cards_3_mana_a_hero
             "extraOpeningCards": 0,
             "extraDrawsPerTurn": 0,
             "heroHealth": 20,
-            // R2433000: it plays only Core cards.
-            "coreOnly": true
+            // R2533000: it plays only Training Grounds cards that are not Legendary or Mythic.
+            "tutorialCardsOnly": true,
+            // R2533001: its deck may hold copies, as a lesson's human's does.
+            "deckCopies": 4
         })
     );
     let tiers = json_of(config::DIFFICULTIES);

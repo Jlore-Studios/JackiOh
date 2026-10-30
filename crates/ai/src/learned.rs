@@ -247,12 +247,14 @@ pub fn open_score_with(
 
 /// R1012003: whether a seat plays the tutorial opponent's tier: its handicap is `AI_TUTORIAL`'s
 /// resources, whatever the lesson adds that is no resource (R2201000's floor, R2201001's pool hold,
-/// R2433000's Core-only bar, which a lesson played before it lacks).
+/// R2533000's bar and R2533001's copies, which a lesson played before them lacks; R2433000's Core-only
+/// bar, which a lesson played under it held, folds to no field now).
 pub fn is_tutorial_opponent(handicap: Option<Handicap>) -> bool {
     let resources = |handicap: Handicap| Handicap {
         hero_floor: None,
         pool_hold: None,
-        core_only: None,
+        tutorial_cards_only: None,
+        deck_copies: None,
         ..handicap
     };
     handicap.is_some_and(|handicap| resources(handicap) == resources(AI_TUTORIAL))

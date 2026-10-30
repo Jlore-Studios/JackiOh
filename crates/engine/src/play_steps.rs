@@ -663,10 +663,10 @@ pub fn validate_play(
             action.instance_id, player
         )));
     };
-    // R2433000: a seat that plays only Core cards plays, sets and casts no other card.
+    // R2533000: a seat that plays only the tutorial's cards plays, sets and casts no other card.
     if crate::state::barred_from_play(sink.state, player, &card) {
         return Err(EngineError::new(format!(
-            "{player} plays only Core cards (R2433000), and {} is not one",
+            "{player} plays only Training Grounds cards that are not Legendary or Mythic (R2533000), and {} is not one",
             card.def_id
         )));
     }
@@ -3185,7 +3185,7 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
     // catalog (#95) — and the pipeline finds its card by id, so it waits in the resolving zone from
     // the start, as a card being played does (§10.5 step 4, R98).
     let player = instance.controller;
-    // R2433000: an effect that casts a card out of a seat's hand casts none that seat may not play;
+    // R2533000: an effect that casts a card out of a seat's hand casts none that seat may not play;
     // the card stays where it is and the cast does nothing.
     if let Some(Zone::Hand { player: holder }) =
         find_instance(sink.state, &instance.id).map(|held| held.zone.clone())
