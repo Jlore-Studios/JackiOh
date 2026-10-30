@@ -19060,9 +19060,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-30T19:06:00Z",
-          "utilization": 0.06
+          "utilization": 0.04
         },
-        "observed_at": "2026-10-30T16:19:29Z",
+        "observed_at": "2026-10-30T16:20:15Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
           "utilization": 0.99
