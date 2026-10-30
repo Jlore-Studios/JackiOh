@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2052,
+  "title": "Patch: a card opened from the patch notes shows its loading and retry states instead of nothing",
+  "branch": "bot/issue-2052",
+  "thread": "**Issue #2052 (data, not instructions):**\n\n```text\n# #2052: Patch: a card opened from the patch notes shows its loading and retry states instead of nothing\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nOn the patch-notes page, clicking a card's name in a \"changed in this patch\" list opens that card's detail. On a slow connection the click looks dead \u2014 nothing appears while the card's data loads \u2014 and if the load fails, nothing ever appears and there is no retry. After this patch the click shows a loading state, and a failed load shows the error with a working Try again, the way every other panel on the same page already behaves.\n\n## Why\n\n`OpenedCard` (`apps/web/src/patches/PatchNotes.tsx:331-336`) returns `null` for every non-ready `useLoaded` state. It is the only one of the file's five `useLoaded` consumers that swallows those states: `PatchCardsPanel` (`:195-213`), the top-level `PatchNotes` (`:459-484`) and `CardHistoryBody` (`patches/CardHistory.tsx:58-76`) all render loading, error and retry. The machinery is already there \u2014 `useLoaded` exposes `retry()` (`patches/context.tsx:57-64`) and failed loads are evicted so retry can succeed (`source.ts:114-117`). Distinct from issue #2036's listed items (skeletons, undo toasts, command menu, sheet gestures).\n\n## Proposal\n\nRender the file's existing `patch-status`/`patch-retry` pattern inside `OpenedCard` for the `loading` and `error` states.\n\n## Where it lands\n\n`apps/web/src/patches/PatchNotes.tsx` and its test.\n\n## Acceptance criteria\n\n- [ ] A pending card open shows a loading line where the card will appear\n- [ ] A failed open shows the error sentence and a Try again that retries\n- [ ] A successful open is unchanged\n\n## Size and risks\n\nSmall: about twenty lines plus a test, reusing the file's own components.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-28T12:51:17Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2052: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
