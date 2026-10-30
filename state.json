@@ -7395,12 +7395,6 @@
           "claude": "strong",
           "muse": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-30T16:29:38Z",
-        "provider": "muse",
-        "sha": "1e47550fcc35121e76a6ca72200113b5b1f3491d",
-        "start": "d6f4e4af292c7dc3581cfe3371a64e74ad03ab6c"
       }
     },
     "2314": {
