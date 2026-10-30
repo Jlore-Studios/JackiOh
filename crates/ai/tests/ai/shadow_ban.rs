@@ -541,9 +541,10 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // game 1 ran 21 turns, the card affordable on two of them, and once the AI priced a Dormant card it
     // ran 36, the card drawn on turn 30 at 0. Pile On (5) has no discount of its own, so only another
     // card's could bring it to Easy's four crystals: in game 1 it was in hand from turn 7, unaffordable,
-    // until the game ended on turn 9. Re-pinned for #2521, whose changed cards re-deal the filler: games
-    // 1 and 2 no longer draw it and game 3 does, unaffordable, so the check plays three. Both checks
-    // deal from the frozen fixture pool (issue #1113), so a shadow-ban change re-deals neither.
+    // until the game ended on turn 9. Re-pinned for #2521, whose changed cards re-deal the filler, as
+    // Megabase's turn as a Unit does (#2278): game 1 no longer draws it and game 2 does, unaffordable,
+    // so the check plays two. Both checks deal from the frozen fixture pool (issue #1113), so a
+    // shadow-ban change re-deals neither.
     //
     // Hard's check plays five: re-pinned for v0.3.5, the Meditative set joins the greedy seat's deck (a
     // player's, which the AI's soft gate leaves whole, R1390), and the AI wins games 1 and 2 on turns 7
@@ -560,7 +561,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         let easy = js(sweep_card(
             "classic-060",
             &SweepOptions {
-                seeds: Some(3),
+                seeds: Some(2),
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Easy),
