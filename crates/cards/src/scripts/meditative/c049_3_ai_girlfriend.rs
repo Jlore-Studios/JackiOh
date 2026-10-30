@@ -48,9 +48,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.8 the start-of-turn hook ran with the Animated backrow guard;
+/// R767000: through v0.5.9b the start-of-turn hook ran with the Animated backrow guard;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_8() -> CardScripts {
+pub fn script_v0_5_9b() -> CardScripts {
     let guarded: Hook = hook(|ctx| {
         let animated = matches!(
             ctx.live_self().map(|me| &me.zone),
@@ -357,6 +357,48 @@ mod tests {
                 s.start_turn();
 
                 assert_eq!(nerfed(&s), vec![big.id.clone(), big.id]);
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.5.9b and before, when it was an Animated
+        /// Field Spell whose forced attacks found no target from the backrow.
+        mod v0_5_9b {
+            use super::*;
+
+            #[test]
+            fn r767000_a_game_on_v0_5_9b_folds_under_the_kept_script_a_girlfriend_left_in_the_backrow_draws_no_attack()
+            {
+                crate::register_all();
+                jackioh_engine::with_shipped(crate::catalog_at("v0.5.9b"), || {
+                    let mut s = scenario(json!({
+                        "seed": "girlfriend-kept",
+                        "p1": {
+                            "field": [
+                                { "def": TOUGH, "lane": 1 },
+                                { "def": TOUGH, "lane": 2 },
+                                { "def": TOUGH, "lane": 3 },
+                                { "def": TOUGH, "lane": 4 },
+                                { "def": TOUGH, "lane": 5 },
+                            ],
+                            "hand": [GIRLFRIEND, FILLER],
+                            "library": [FILLER, FILLER],
+                            "mana": 4,
+                        },
+                        "p2": {
+                            "field": [{ "def": TOUGH, "lane": 1 }],
+                            "hand": [FILLER],
+                            "library": [FILLER, FILLER],
+                        },
+                    }));
+                    s.play(GIRLFRIEND, json!({ "zone": 1 }));
+                    // No open unit zone: it stays a backrow card, and the kept guard finds its
+                    // forced attacks no target.
+                    let back = s.backrow(P1, 1).expect("in the backrow");
+                    assert_eq!(back.def_id, GIRLFRIEND);
+                    s.start_turn();
+                    assert!(forced(&s).is_empty());
+                    assert!(nerfed(&s).is_empty());
+                });
             }
         }
     }
