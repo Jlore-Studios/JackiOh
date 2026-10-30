@@ -163,7 +163,7 @@ fn foreseen(s: &Scenario, lucky: i32) -> (Vec<(String, i32)>, u32) {
         .collect();
     targets.push("hero-p2".to_string());
     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
-    let hits = targets
+    let hits: Vec<(String, i32)> = targets
         .into_iter()
         .map(|target| (target, rng.lucky(lucky, read_roll, Ord::max)))
         .collect();
@@ -332,7 +332,7 @@ mod r2521001_without_odds_nothing_changes {
     #[test]
     fn r2521001_the_args_without_odds_write_no_new_key_so_old_states_read_and_write_the_same() {
         let plain: DamageAllArgs = json_as(json!({ "amount": PLAIN_AMOUNT, "side": "enemy" }));
-        assert_eq!((plain.odds.clone(), plain.lucky), (None, None));
+        assert!(plain.odds.is_none() && plain.lucky.is_none());
         assert_eq!(json_of(&plain), json!({ "amount": PLAIN_AMOUNT, "side": "enemy" }));
     }
 

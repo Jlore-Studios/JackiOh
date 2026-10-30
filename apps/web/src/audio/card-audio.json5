@@ -1865,6 +1865,9 @@
     "meditativeplus-001-4": { // Leg Day
       cast: { voice: "robot", text: "Never skip it. Your Units thank you." },
     },
+    "meditativeplus-001-5": { // Star Chart
+      cast: { voice: "robot", text: "Course plotted. Two jumps to the edge." },
+    },
     "meditativeplus-002": { // NA Tech
       cast: { voice: "robot", text: "Best and worst, together. Balance achieved." },
     },
@@ -2426,7 +2429,7 @@
       attack: { voice: "hero", text: "Next!" },
       death: { voice: "hero", text: "One more round..." },
     },
-    "stinkyscape-095": { // Vanguard Coalition
+    "stinkyscape-095": { // Faction: Vanguard Coalition
       cast: { voice: "hero", text: "The vanguard answers the call!" },
     },
     "stinkyscape-096": { // Ocean Tsunami
@@ -2610,7 +2613,7 @@
       attack: { voice: "sapi-wizard", text: "Spellfire!" },
       death: { voice: "sapi-wizard", text: "The magic fizzles." },
     },
-    "stinkyscape-137": { // Firststrike Capability
+    "stinkyscape-137": { // Starfleet Commander
       play: { voice: "sapi-hero", text: "Strike package authorized." },
       attack: { voice: "sapi-hero", text: "Hit them first!" },
       death: { voice: "sapi-hero", text: "We were too slow." },
@@ -2716,16 +2719,16 @@
     "stinkyscape-158": { // Stratos Swarm
       cast: { voice: "robot", text: "Squadron launch. All wings, go!" },
     },
-    "stinkyscape-159": { // ETHICS
+    "stinkyscape-159": { // Faction: ETHICS
       cast: { voice: "sapi-bureaucrat", text: "The committee will see you now." },
     },
-    "stinkyscape-160": { // Golden Accord
+    "stinkyscape-160": { // Faction: Golden Accord
       cast: { voice: "posh", text: "Signed, sealed and golden." },
     },
-    "stinkyscape-161": { // Pegasus
+    "stinkyscape-161": { // Faction: Pegasus
       cast: { voice: "diva", text: "Spread your wings, darlings!" },
     },
-    "stinkyscape-162": { // Star-jumper Core
+    "stinkyscape-162": { // Faction: Star-Jumper Core
       cast: { voice: "robot", text: "Core online. Prepare to jump." },
     },
     "stinkyscape-163": { // Swear Loyalities
@@ -2778,6 +2781,14 @@
       play: { voice: "robot", text: "Cryo module online." },
       attack: { voice: "robot", text: "Chill out." },
       death: { voice: "robot", text: "Thawed for good." },
+    },
+    "stinkyscape-176": { // Preemptive Strike
+      cast: { voice: "sapi-hero", text: "Launch the ship. We strike first." },
+    },
+    "stinkyscape-177": { // Cloaking Module
+      play: { voice: "sapi-synth", text: "Cloak engaged. You never saw me." },
+      attack: { voice: "sapi-synth", text: "Decloaking!" },
+      death: { voice: "sapi-synth", text: "Cloak failing. Visible." },
     },
     "stinkyscape-t-dormant-starship": { // Dormant Starship
       play: { voice: "sapi-synth-deep", text: "Hull assembled. Awaiting parts." },

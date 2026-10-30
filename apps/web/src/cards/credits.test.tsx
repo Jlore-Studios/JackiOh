@@ -4,7 +4,7 @@
 // line. Every face is CardFace's, so the hand, the inspect views, the Almanac and the deck builder
 // all print it.
 
-import { act, cleanup, render } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -92,9 +92,7 @@ describe("R2521009 a Resource's face prints its Credits", () => {
   });
 
   it("R2521009 a Chinese reader reads the line in Chinese, with the same numbers", async () => {
-    await act(async () => {
-      await setLocale("zh-CN");
-    });
+    await setLocale("zh-CN");
     expect(creditsLine(faceModel({ defId: KORRELITE, def: def(KORRELITE), radiant: true }))).toBe("信用点：4–10");
   });
 });
