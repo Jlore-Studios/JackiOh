@@ -5,7 +5,8 @@
 //!            — corvettes 3
 //! Engine: "Float reduces cost" as S #34 (R1563000): a hand and a deck trigger on its owner's Float, a
 //!   `costMod` kept until a graveyard or exile (R766). Then one summon per Corvette, each into the caster's
-//!   leftmost open unit zone in turn (R64), no Cry (R1), as many as fit; the count is the declared
+//!   leftmost open unit zone in turn (R64), then the backrow's once the unit row is full, where each stands
+//!   (R2248000), no Cry (R1), as many as fit; the count is the declared
 //!   `corvettes` (R386). Each Corvette draws its own combat keywords as it arrives (R781004). Radiant:
 //!   summoned Radiant.
 
@@ -37,7 +38,7 @@ pub fn script() -> CardScripts {
 }
 
 // S #35 Drone Core IX — SPEC §8.10 row 35, BUILD M12 row S 35: "Float lowers its cost as S 34's; summons
-// 3 Drone Corvettes, as many as fit; corvettes reads through `param()`; radiant 3 Radiant ones".
+// 3 Drone Corvettes, into the backrow once the unit row is full (R2248000); corvettes reads through `param()`; radiant 3 Radiant ones".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -84,6 +85,13 @@ mod tests {
             .collect()
     }
 
+    /// p1's backrow, lane 1 to 5, read as `row` reads the unit row.
+    fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
+        (1..=5)
+            .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
+            .collect()
+    }
+
     fn corvette(radiant: bool) -> Option<(String, bool)> {
         Some((CORVETTE.to_string(), radiant))
     }
@@ -110,14 +118,16 @@ mod tests {
     }
 
     #[test]
-    fn r64_summons_three_corvettes_as_many_as_fit() {
+    fn r64_r2248000_summons_three_corvettes_the_unit_row_first_then_the_backrow() {
         let mut s = setup(false, json!([]));
         s.play(CORE, json!({}));
         assert_eq!(row(&s), vec![corvette(false), corvette(false), corvette(false), None, None]);
+        assert_eq!(backrow(&s), vec![None; 5]);
 
         let mut s = setup(false, json!(vec![VANILLA; 4]));
         s.play(CORE, json!({}));
         assert_eq!(row(&s)[4], corvette(false), "one zone, one Corvette");
+        assert_eq!(backrow(&s), vec![corvette(false), corvette(false), None, None, None]);
     }
 
     #[test]

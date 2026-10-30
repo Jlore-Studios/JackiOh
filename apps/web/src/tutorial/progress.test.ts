@@ -17,9 +17,11 @@ import {
   adoptTutorialProgress,
   fieldGuideOf,
   isTutorialHidden,
+  lessonLost,
   lessonStatus,
   markFound,
   markLessonComplete,
+  markLessonLost,
   mergeTutorialProgress,
   nextLessonToPlay,
   parseTutorialProgress,
@@ -308,15 +310,66 @@ describe("R321 the device's copy merges with the account's, and never steps back
   });
 });
 
-describe("R2205003 the remade tutorial keeps the old lessons' ids", () => {
-  it("R2205003 a player who won the four Core lessons sees them won and the fifth open", () => {
+describe("R2205003 R2434000 a lesson id from before keeps what the player won", () => {
+  it("R2205003 R2434000 a player who won the four lessons before #2434 sees the first four won and the fifth open", () => {
     window.localStorage.setItem(
       TUTORIAL_PROGRESS_KEY,
       JSON.stringify({ v: TUTORIAL_PROGRESS_VERSION, completed: ["basics", "spells", "traps", "advanced"] }),
     );
     const progress = readTutorialProgress();
+    expect(progress.completed).toEqual(["basics", "keywords", "casting", "backrow"]);
     expect(TUTORIAL_LESSONS.map((each) => lessonStatus(progress, each))).toEqual(["completed", "completed", "completed", "completed", "unlocked"]);
     expect(nextLessonToPlay(progress)?.id).toBe("finale");
+  });
+
+  it("R2434000 each earlier id reads as the lesson in its place on the path, so nothing won is un-won", () => {
+    const places: [string[], string[]][] = [
+      [["basics", "spells"], ["basics", "keywords"]],
+      [["basics", "spells", "traps"], ["basics", "keywords", "casting"]],
+      [["advanced"], ["backrow"]],
+    ];
+    for (const [old, now] of places) {
+      expect(parseTutorialProgress({ v: TUTORIAL_PROGRESS_VERSION, completed: old }).completed, old.join()).toEqual(now);
+    }
+    // A won lesson stays won whatever the account sends back, in either spelling.
+    markLessonComplete("keywords");
+    adoptTutorialProgress({ completed: ["basics", "spells"], hiddenChoice: null });
+    expect(readTutorialProgress().completed).toEqual(["basics", "keywords"]);
+  });
+
+  it("R2434000 an account that lists a lesson under its earlier id lacks nothing the device would upload for it", () => {
+    const device = mergeTutorialProgress({ completed: ["basics", "keywords"], hiddenChoice: null }, { completed: [], hiddenChoice: null });
+    expect(accountLacks({ completed: ["basics", "spells"], hiddenChoice: null }, device)).toBe(false);
+    expect(accountLacks({ completed: ["basics"], hiddenChoice: null }, device)).toBe(true);
+  });
+});
+
+describe("R2434002 a conceded lesson is kept as lost on this device until it is won", () => {
+  it("R2434002 a loss is stored beside the lessons, read back, and shown as lost while the lesson stays open", () => {
+    markLessonComplete(lesson(1).id);
+    markLessonLost(lesson(2).id);
+    expect(readTutorialProgress().lost).toEqual([lesson(2).id]);
+    expect(stored()).toEqual({ v: TUTORIAL_PROGRESS_VERSION, completed: [lesson(1).id], lost: [lesson(2).id] });
+    __resetTutorialProgressForTests();
+    const progress = readTutorialProgress();
+    expect(lessonLost(progress, lesson(2))).toBe(true);
+    expect(lessonStatus(progress, lesson(2))).toBe("unlocked");
+    expect(lessonLost(progress, lesson(1))).toBe(false);
+  });
+
+  it("R2434002 a win clears the loss, and a loss never un-wins a lesson", () => {
+    markLessonLost(lesson(1).id);
+    markLessonComplete(lesson(1).id);
+    expect(readTutorialProgress().lost).toEqual([]);
+    markLessonLost(lesson(1).id);
+    expect(readTutorialProgress().lost).toEqual([]);
+    expect(readTutorialProgress().completed).toEqual([lesson(1).id]);
+  });
+
+  it("R2434002 the account's copy never carries it: adopting the account's keeps the device's loss", () => {
+    markLessonLost(lesson(1).id);
+    adoptTutorialProgress({ completed: [], hiddenChoice: null });
+    expect(readTutorialProgress().lost).toEqual([lesson(1).id]);
   });
 });
 

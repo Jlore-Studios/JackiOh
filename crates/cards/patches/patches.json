@@ -18155,5 +18155,103 @@
       "traininggrounds-054"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.5.10b",
+    "date": "2026-10-30",
+    "title": "Every summon of a Flying Unit may land in the backrow",
+    "source": "#2453",
+    "notes": "R2248000 made every summon's: \"fill your board\" with a Flying Unit fills the backrow after the unit row, each standing there (Drone Core VIII, stinkyscape-034; Stratos Swarm, stinkyscape-158, R1860008), and the Recruit of every permanent, the random summon from hand (R1083) and the attack summons (R1202, R1203), which looked only at the unit row before they drew or moved, read a Flying Unit's backrow too. The classifier's stage 2 against main shows those two, the Drone Interceptor token (stinkyscape-t-drone-interceptor) the fill summons, and Jogg's Box (classicplus-047), whose random Spells include them, playing differently.",
+    "player": {
+      "title": "Flying Units fill your backrow",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Filling your board with a Flying Unit fills your backrow too, after your unit row: Drone Core VIII and Stratos Swarm now fill both rows.",
+        "Pile On, Skull of J'Nari, Windfast and Windfurious Prime put a Flying Unit in your backrow when your unit row is full."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "5756e8e578e4e102b9c11e1c04ebb0f8d823ad5c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-047",
+      "stinkyscape-034",
+      "stinkyscape-158",
+      "stinkyscape-t-drone-interceptor"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10c",
+    "date": "2026-10-30",
+    "title": "A Buff may give a Field Spell Immutable",
+    "source": "#2436",
+    "notes": "R2436000, R1748001: a Buff's keyword row offers a Field Spell Immutable after Indestructible, so a Field Spell that deals damage draws among four, and a Field Spell made Immutable takes no later Buff or Nerf. The classifier shows the 43 cards in `plays` playing differently.",
+    "player": {
+      "title": "Field Spells can be Buffed to Immutable",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Buff can now give a Field Spell Immutable as well as Indestructible."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "30465612a77323e1a86ea68d16ef7adb257c06e6"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-045",
+      "classic-087",
+      "classicplus-069",
+      "classicplus-070",
+      "classicplus-071",
+      "classicplus-073",
+      "core-033",
+      "core-058",
+      "core-t-rush",
+      "meditative-034",
+      "meditative-035",
+      "meditative-082",
+      "meditative-083",
+      "meditative-087",
+      "meditative-097",
+      "stinkyscape-009",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-026",
+      "stinkyscape-027",
+      "stinkyscape-035",
+      "stinkyscape-050",
+      "stinkyscape-056",
+      "stinkyscape-057",
+      "stinkyscape-059",
+      "stinkyscape-060",
+      "stinkyscape-065",
+      "stinkyscape-068",
+      "stinkyscape-089",
+      "stinkyscape-116",
+      "stinkyscape-151",
+      "stinkyscape-161",
+      "stinkyscape-166",
+      "stinkyscape-t-ai-07",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite",
+      "traininggrounds-024"
+    ],
+    "changes": []
   }
 ]

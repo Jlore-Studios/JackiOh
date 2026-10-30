@@ -157,8 +157,8 @@ given, #1859), `launch_starship`, and `upgrade_number`, `degrade_number`, `can_u
 
 A change to a card is a patch (R388, R646). No one names its version: `patches ship` names it when it
 ships, from what it does to the cards (R1366000): a major when a set ships, a patch (the next X) when
-10 or more card families play differently, a micro (the next letter) for fewer or for wording alone;
-never reopen a shipped one. A branch claims its card changes with a pending fragment:
+50 or more card families play differently or a rule meets a quarter of the games (R2455000), a micro
+(the next letter) for anything smaller or for wording alone; never reopen a shipped one. A branch claims its card changes with a pending fragment:
 
 ```
 cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>" [--plays <ids>] [--rule]
@@ -216,10 +216,11 @@ cargo jackioh spec check
 cargo test -p jackioh-cards c006_wrong_house_attacker    # your card's own tests first
 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 cargo jackioh fuzz --seeds 200                            # CI's wave; plain `cargo jackioh fuzz` plays 1,000
+cargo jackioh fuzz --seeds 200 --cards core-006           # your card in both decks of every seed (a set's name: its cards in turn)
 pnpm --dir apps/web test                                  # the voice lines and the flavour line
 ```
 
-Replay one fuzz seed with `cargo jackioh fuzz --from <seed> --seeds 1`.
+A plain wave deals any one card in fewer than one seed in ten, so for card work run the `--cards` wave too, with `--handicap` as well. Replay one fuzz seed with `cargo jackioh fuzz --from <seed> --seeds 1`, or a `--cards` failure with its `reproduce:` line.
 
 One more card shifts every random draw from the pool (R380), so tests and games that were lucky stop being so:
 
