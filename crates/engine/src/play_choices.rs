@@ -1988,7 +1988,7 @@ pub fn listed_play_choices(
 /// Every `play` action this card could legally produce: R81's five choice kinds crossed, skipping the
 /// prices the player cannot pay. This is what `legal_actions` lists for a card in hand.
 pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
-    // R2433000: a seat that plays only Core cards lists no play of any other card.
+    // R2533000: a seat that plays only the tutorial's cards lists no play of any other card.
     if crate::state::barred_from_play(state, player, card) {
         return Vec::new();
     }
@@ -2122,7 +2122,7 @@ pub fn graveyard_play_actions_for(
 ) -> Vec<PlayAction> {
     if !crate::graveyard_play::playable_from_graveyard(state, card)
         || card.zone.player() != player
-        // R2433000: nor from the graveyard.
+        // R2533000: nor from the graveyard.
         || crate::state::barred_from_play(state, player, card)
     {
         return Vec::new();

@@ -52,7 +52,6 @@ pub mod config;
 pub mod control_change;
 pub mod control_change_property;
 pub mod copied_text;
-pub mod core_only;
 pub mod core_patches;
 pub mod cost_rules;
 pub mod counter_warning;
@@ -138,6 +137,7 @@ pub mod extra_turns;
 pub mod face_down_text;
 pub mod faces;
 pub mod feng_shui;
+pub mod tutorial_cards;
 // A fixture only the other binary's modules use is dead code in this one.
 #[allow(dead_code)]
 pub mod fixtures;

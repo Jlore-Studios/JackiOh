@@ -1,13 +1,13 @@
 //! SPEC §8.10 Stinkyscape 116 Megabase, a card of the Stinkyscape set.
-//!   Base:    "Animated, Can't attack, Immune to Spells, Immutable, Untributable, Armor 15\nCan't be in
+//!   Base:    "Can't attack, Immune to Spells, Immutable, Untributable, Armor 15\nCan't be in
 //!            Defense Position.\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath:
 //!            Both players gain 100 Credits." (0/20)
 //!   Radiant: "… Armor 30 … Activate: Choose one: You gain 5, 10 or 15 Credits, and your opponent gains
 //!            5 fewer.\nDeath: Both players gain 200 Credits." (0/40)
 //!
-//! Quickdraw (R640, `StaticFlags.quickdraw` on both faces): it starts in the opening hand. Its printed
-//! keywords are the engine's: Animated, so it steps into an open unit zone as it enters, a Unit there
-//! (§6.1, R383); Can't attack; Immune to Spells; Immutable, so nothing tunes it and its numbers are
+//! A Unit, played from hand into an open unit zone. Quickdraw (R640, `StaticFlags.quickdraw` on both
+//! faces): it starts in the opening hand. Its printed keywords are the engine's: Can't attack;
+//! Immune to Spells; Immutable, so nothing tunes it and its numbers are
 //! printed constants here rather than declared (R386); Untributable, so no Tribute takes it (R1220);
 //! Armor 15. `StaticFlags.never_defense` keeps it out of Defense Position (§4.1). Activate (§6.2, R384),
 //! once a turn, three declared modes (R81): each player `gain_market_credits` the chosen 5, 10 or 15
@@ -97,8 +97,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 116 Megabase — SPEC §8.10 row 116, BUILD M12 row S 116: "enters as a 0/20 Unit in an open unit zone
-// (Animated), never attacking or in Defense Position, no Spell targeting it; its Activate gives each
+// S 116 Megabase — SPEC §8.10 row 116, BUILD M12 row S 116: "played as a Unit from hand into an open
+// unit zone, never attacking or in Defense Position, no Spell targeting it; its Activate gives each
 // player the chosen 5, 10 or 15 Credits, once a turn; destroyed, each player gains 100; a Tribute
 // cannot take it; it starts in the opening hand (R640); radiant 0/40, Armor 30, the opponent gaining 5
 // fewer, and 200 each on its Death".
@@ -135,7 +135,7 @@ mod tests {
     }
 
     #[test]
-    fn animates_into_a_unit_zone() {
+    fn enters_as_a_unit_in_an_open_unit_zone() {
         let s = landed(false, json!({}));
         let base = s.unit_at(P1, 2);
         assert_eq!(base.def_id, ID, "in the unit zone of its lane");
@@ -143,6 +143,15 @@ mod tests {
         let stats = s.stats(&base);
         assert_eq!((stats.attack, stats.health), (0, 20));
         assert_eq!(stats.armor, 15);
+        assert!(
+            !has_keyword(&stats.keywords, KeywordKind::Animated),
+            "no Animated on the base face"
+        );
+        let def = crate::card_def(ID);
+        assert!(
+            !def.base.text.contains("Animated") && !def.radiant.text.contains("Animated"),
+            "neither face prints Animated"
+        );
     }
 
     #[test]
@@ -173,7 +182,7 @@ mod tests {
             "p1": { "hand": [FILLER], "library": filler(4) },
             "p2": { "hand": [TRUE_STRIKE, FILLER], "library": filler(4) },
         }));
-        // Summoned, it animates as it enters, into p1's open unit zone.
+        // Summoned into p1's open unit zone.
         run_as(&mut s, summon(json_as(json!({ "defId": ID }))), P1);
         let base = s.unit_at(P1, 1);
         assert_eq!(base.def_id, ID);
