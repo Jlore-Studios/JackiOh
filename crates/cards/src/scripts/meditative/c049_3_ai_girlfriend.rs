@@ -48,9 +48,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.3 the start-of-turn hook ran with the Animated backrow guard;
+/// R767000: through v0.5.8 the start-of-turn hook ran with the Animated backrow guard;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_3() -> CardScripts {
+pub fn script_v0_5_8() -> CardScripts {
     let guarded: Hook = hook(|ctx| {
         let animated = matches!(
             ctx.live_self().map(|me| &me.zone),
