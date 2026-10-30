@@ -33,6 +33,8 @@
     "Weapon": "武器",
     "War Doctrine": "战争条令",
     "Swarm": "虫群",
+    "Resource": "资源",
+    "Faction": "阵营",
     "Token": "衍生物"
   },
   "rarities": {

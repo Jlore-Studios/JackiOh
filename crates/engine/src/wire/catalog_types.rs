@@ -174,7 +174,10 @@ string_union! {
     /// Jelly Beans): family tags, not tribes, which no shipped rule or pool reads (R1837000). The
     /// Stinkyscape set adds Drone Core (its #27 to #36), Weapon (#50 to #61 and #140 to #143),
     /// War Doctrine (the four #137 tokens) and Swarm (its Swarm Units, #91 and #92): family tags that
-    /// no rule reads, which the server admits since the set's release (R1857000).
+    /// no rule reads, which the server admits since the set's release (R1857000). Issue #2521 adds
+    /// Resource (the six Stinkyscape Resources: Reknite, Korrelite, Gellium, Axnit, Narcor and Red
+    /// Narcor, tokens all) and Faction (the five Faction cards, #95 and #159 to #162), which the
+    /// server admits from migration 0068.
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -202,6 +205,8 @@ string_union! {
         Weapon = "Weapon",
         WarDoctrine = "War Doctrine",
         Swarm = "Swarm",
+        Resource = "Resource",
+        Faction = "Faction",
         Token = "Token",
     }
 }

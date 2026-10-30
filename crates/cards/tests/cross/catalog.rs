@@ -42,6 +42,13 @@
 //!                    (#57's tag ships under patch v0.3.10's claim of that card).
 //!   issue #2280    — C+ #74 Twice Forward One Step Backwards and S #16 Rod of Ages print no stats on
 //!                    either face (R2280000); the briefs keep the stats they first printed.
+//!   issue #2521    — the Stinkyscape balance patch, in §8's rows: Core #84 Going Long and
+//!                    Meditative #80 Aluneth lose Quickdraw; C+ #34 Memory Leak (2); S #11 (2), #39
+//!                    (3), #163 (0) and #164 (1); S #68 Stratos 3/1 → 6/2; the five Faction cards
+//!                    (S #95, #159 to #162) renamed "Faction: …", (2) and tagged Faction; S #137
+//!                    Starfleet Commander (was Firststrike Capability) a Legendary Human; the six
+//!                    Resources tagged Resource; and the new S #176 Preemptive Strike, S #177
+//!                    Cloaking Module and M+ #1.5 Star Chart (§8.9, §8.10, §7).
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -952,7 +959,7 @@ const CORE: &[SpecRow] = &[
         "Going Long",
         emb(2, 4),
         T::FieldSpell,
-        &[G::Quickdraw],
+        &[],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -2509,7 +2516,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "34",
         "Memory Leak",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -4128,7 +4135,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Aluneth",
         c(2),
         T::FieldSpell,
-        &[G::Quickdraw],
+        &[],
         R::Legendary,
         NO_STATS,
         NO_STATS,
@@ -4537,6 +4544,16 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
         "1.4",
         "Leg Day",
         c(3),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "1.5",
+        "Star Chart",
+        c(0),
         T::Spell,
         &[G::Ai, G::Token],
         R::Token,
@@ -4997,7 +5014,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "11",
         "Otherworldly Magic",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Otherworldly],
         R::Epic,
@@ -5358,7 +5375,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "39",
         "The Narcor Project",
-        c(4),
+        c(3),
         T::FieldSpell,
         &[],
         R::Legendary,
@@ -5627,7 +5644,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         st(0, 2),
         st(0, 4),
     ),
-    row("68", "Stratos", c(1), T::Unit, &[], R::Common, st(3, 3), st(6, 6)),
+    row("68", "Stratos", c(1), T::Unit, &[], R::Common, st(3, 1), st(6, 2)),
     row("69", "Falcon", c(2), T::Unit, &[], R::Rare, st(4, 1), st(8, 2)),
     row(
         "70",
@@ -5828,10 +5845,10 @@ const STINKYSCAPE: &[SpecRow] = &[
     ),
     row(
         "95",
-        "Vanguard Coalition",
-        c(3),
+        "Faction: Vanguard Coalition",
+        c(2),
         T::Spell,
-        &[],
+        &[G::Faction],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -6250,11 +6267,11 @@ const STINKYSCAPE: &[SpecRow] = &[
     ),
     row(
         "137",
-        "Firststrike Capability",
+        "Starfleet Commander",
         c(4),
         T::Unit,
-        &[],
-        R::Common,
+        &[G::Human],
+        R::Legendary,
         st(9, 9),
         st(18, 18),
     ),
@@ -6539,24 +6556,42 @@ const STINKYSCAPE: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("159", "ETHICS", c(3), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
     row(
-        "160",
-        "Golden Accord",
-        c(3),
+        "159",
+        "Faction: ETHICS",
+        c(2),
         T::Spell,
-        &[],
+        &[G::Faction],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
-    row("161", "Pegasus", c(3), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "160",
+        "Faction: Golden Accord",
+        c(2),
+        T::Spell,
+        &[G::Faction],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "161",
+        "Faction: Pegasus",
+        c(2),
+        T::Spell,
+        &[G::Faction],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
     row(
         "162",
-        "Star-jumper Core",
-        c(3),
+        "Faction: Star-Jumper Core",
+        c(2),
         T::Spell,
-        &[],
+        &[G::Faction],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -6564,7 +6599,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "163",
         "Swear Loyalities",
-        c(1),
+        c(0),
         T::Spell,
         &[],
         R::Rare,
@@ -6574,7 +6609,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "164",
         "The Syndicate",
-        c(2),
+        c(1),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -6683,6 +6718,26 @@ const STINKYSCAPE: &[SpecRow] = &[
         st(4, 2),
     ),
     row(
+        "176",
+        "Preemptive Strike",
+        c(2),
+        T::Spell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "177",
+        "Cloaking Module",
+        c(2),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
         "T-dormant-starship",
         "Dormant Starship",
         c(3),
@@ -6747,7 +6802,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Reknite",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6757,7 +6812,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Korrelite",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6767,7 +6822,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Gellium",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6777,7 +6832,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Axnit",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6787,7 +6842,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Narcor",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6797,7 +6852,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Red Narcor",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -7534,8 +7589,9 @@ const FIXTURES: &[(SetName, &[SpecRow])] = &[
 
 /// BUILD M4-T1 and B2.4, plus the mechanics patch's Plague, patch v0.2.Y's Catalyst, Prime and
 /// Acclaimed, the Meditative set's Wincon, the Meditative+ set's Potion, #1837's Terminus, Quest,
-/// Otherworldly, Other-Origins and Jelly Bean (R1837000) and the Stinkyscape set's Drone Core,
-/// Weapon, War Doctrine and Swarm (R1857000): the only tags any entry may carry.
+/// Otherworldly, Other-Origins and Jelly Bean (R1837000), the Stinkyscape set's Drone Core,
+/// Weapon, War Doctrine and Swarm (R1857000), and #2521's Resource and Faction: the only tags any
+/// entry may carry.
 const ALLOWED_TAGS: &[&str] = &[
     "Human",
     "Felinor",
@@ -7563,6 +7619,8 @@ const ALLOWED_TAGS: &[&str] = &[
     "Weapon",
     "War Doctrine",
     "Swarm",
+    "Resource",
+    "Faction",
     "Token",
 ];
 
@@ -7621,14 +7679,16 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
         ],
     ),
     // R1420, R1857001: docs/stinkyscape-set.md ST12's distribution over its 176 cards, the Dormant
-    // Starship one of the Legendaries, a ceiling until the set ships.
+    // Starship one of the Legendaries, a ceiling until the set shipped; since #2521 over 178: S #137
+    // Starfleet Commander, Common until then, and the new S #176 Preemptive Strike are Legendary, and
+    // the new S #177 Cloaking Module Rare.
     (
         "Stinkyscape",
         &[
-            ("Common", 42),
-            ("Rare", 50),
+            ("Common", 41),
+            ("Rare", 51),
             ("Epic", 43),
-            ("Legendary", 29),
+            ("Legendary", 31),
             ("Mythic", 12),
         ],
     ),
@@ -7684,18 +7744,20 @@ const SET_SIZES: &[SetSize] = &[
         named_cards: 0,
         tokens: 30,
     },
-    // R1420, R1178000: docs/meditative-plus-set.md MP2, a ceiling until the set ships.
+    // R1420, R1178000: docs/meditative-plus-set.md MP2, a ceiling until the set ships; #2521 adds the
+    // seventh token, #1.5 Star Chart.
     SetSize {
         set: "Meditative+",
         cards: 26,
         named_cards: 0,
-        tokens: 6,
+        tokens: 7,
     },
-    // R1420, R1857001: docs/stinkyscape-set.md ST12, a ceiling until the set ships: 175 cards, the
-    // Dormant Starship, and 52 tokens (the 30 its cards define and 22 shared).
+    // R1420, R1857001: docs/stinkyscape-set.md ST12, a ceiling until the set ships: 175 cards (177
+    // since #2521's #176 and #177), the Dormant Starship, and 52 tokens (the 30 its cards define and
+    // 22 shared).
     SetSize {
         set: "Stinkyscape",
-        cards: 175,
+        cards: 177,
         named_cards: 1,
         tokens: 52,
     },
@@ -8175,14 +8237,15 @@ mod r1178000_every_meditative_plus_entry_equals_its_fixture_row_while_the_set_is
     }
 
     #[test]
-    fn r1178000_the_set_s_census_is_26_cards_and_6_tokens_5_9_9_1_2() {
+    fn r1178000_the_set_s_census_is_26_cards_and_7_tokens_5_9_9_1_2() {
         let tokens: Vec<&str> = MEDITATIVE_PLUS
             .iter()
             .filter(|row| row.rarity == Rarity::Token)
             .map(|row| row.index)
             .collect();
-        // #1563 added Bob's Plan's #1.3 Garage Sale and #1.4 Leg Day (R1563003).
-        assert_eq!(tokens, ["1.1", "1.2", "1.3", "1.4", "16.1", "20.1"]);
+        // #1563 added Bob's Plan's #1.3 Garage Sale and #1.4 Leg Day (R1563003), and #2521 its #1.5
+        // Star Chart, Alteran Reach's plan (R2521008).
+        assert_eq!(tokens, ["1.1", "1.2", "1.3", "1.4", "1.5", "16.1", "20.1"]);
         let mut rarities: BTreeMap<&str, usize> = BTreeMap::new();
         for row in MEDITATIVE_PLUS.iter().filter(|row| row.rarity != Rarity::Token) {
             *rarities.entry(row.rarity.as_str()).or_insert(0) += 1;
@@ -8273,17 +8336,20 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
 
     #[test]
     fn r1857001_numbers_174_and_175_and_the_t_ids() {
-        // The designer's second #21 and second #122 take the numbers after the list's last.
+        // The designer's second #21 and second #122 take the numbers after the list's last, and
+        // #2521's two new cards the two after them.
         assert_eq!(row_at("174").name, "Aerelret");
         assert_eq!(row_at("175").name, "Frost Module");
-        // The plain indices are 1..=175, each once; a token is N.k after its card N, or T-name;
+        assert_eq!(row_at("176").name, "Preemptive Strike");
+        assert_eq!(row_at("177").name, "Cloaking Module");
+        // The plain indices are 1..=177, each once; a token is N.k after its card N, or T-name;
         // the AI generated cards are T-AI-1 to T-AI-10.
         let plain: Vec<usize> = STINKYSCAPE
             .iter()
             .filter(|row| is_plain_index(row.index))
             .filter_map(|row| row.index.parse().ok())
             .collect();
-        assert_eq!(plain, (1..=175).collect::<Vec<usize>>());
+        assert_eq!(plain, (1..=177).collect::<Vec<usize>>());
         for row in STINKYSCAPE.iter().filter(|row| !is_plain_index(row.index)) {
             let numbered = row
                 .index
@@ -8309,7 +8375,7 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
     }
 
     #[test]
-    fn r1857001_the_census_is_175_cards_the_dormant_starship_and_52_tokens() {
+    fn r1857001_the_census_is_177_cards_the_dormant_starship_and_52_tokens() {
         let cards: Vec<&SpecRow> = STINKYSCAPE
             .iter()
             .filter(|row| row.rarity != Rarity::Token)
@@ -8319,7 +8385,8 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
             .filter(|row| !is_plain_index(row.index))
             .map(|row| row.index)
             .collect();
-        assert_eq!(cards.len(), 176);
+        // 176 until #2521 added #176 and #177.
+        assert_eq!(cards.len(), 178);
         assert_eq!(named, ["T-dormant-starship"]);
         let tokens: Vec<&str> = STINKYSCAPE
             .iter()
@@ -8363,6 +8430,25 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
         assert_eq!(carrying(Tag::Swarm), ["91", "92"]);
         for index in carrying(Tag::Swarm) {
             assert_eq!(row_at(index).type_, CardType::Unit, "a Swarm entry is a Unit");
+        }
+        // And #2521's two: the six Resources (Resource) and the five Faction cards (Faction).
+        assert_eq!(
+            carrying(Tag::Resource),
+            [
+                "T-reknite",
+                "T-korrelite",
+                "T-gellium",
+                "T-axnit",
+                "T-narcor",
+                "T-red-narcor"
+            ]
+        );
+        for index in carrying(Tag::Resource) {
+            assert_eq!(row_at(index).rarity, Rarity::Token, "a Resource is a token");
+        }
+        assert_eq!(carrying(Tag::Faction), ["95", "159", "160", "161", "162"]);
+        for index in carrying(Tag::Faction) {
+            assert!(row_at(index).name.starts_with("Faction: "), "{index}");
         }
     }
 
@@ -8750,13 +8836,14 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     #[test]
     fn r1178000_prints_the_designer_s_rarity_on_meditative_plus_16_1_and_20_1_and_none_on_its_ai_helpers() {
         // §7: Jazakus Prime the designer's Epic, Lil' Kenny his Rare; the plan's AI generated
-        // helpers, #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, none, as the T-AI
-        // cards (B2.5).
+        // helpers, #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale, #1.4 Leg Day and #1.5 Star Chart
+        // (#2521), none, as the T-AI cards (B2.5).
         const MEDITATIVE_PLUS_PRINTED: &[(&str, Option<&str>)] = &[
             ("1.1", None),
             ("1.2", None),
             ("1.3", None),
             ("1.4", None),
+            ("1.5", None),
             ("16.1", Some("Epic")),
             ("20.1", Some("Rare")),
         ];

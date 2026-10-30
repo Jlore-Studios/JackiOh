@@ -22,7 +22,8 @@ export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
  * Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
  * Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum). The held
  * Stinkyscape set adds Drone Core, Weapon, War Doctrine and Swarm: family tags that no rule reads
- * (R1857000).
+ * (R1857000). Issue #2521 adds Resource (the six Stinkyscape Resources, Reknite to Red Narcor, every
+ * one a token) and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162).
  */
 export type Tag =
   | "Human"
@@ -51,6 +52,8 @@ export type Tag =
   | "Weapon"
   | "War Doctrine"
   | "Swarm"
+  | "Resource"
+  | "Faction"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */

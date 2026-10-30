@@ -1205,6 +1205,7 @@
   "No Trades left this turn": "本回合没有剩余交易次数",
   "Resources": "资源",
   "Credits": "信用点",
+  "Credits: {min}–{max}": "信用点：{min}–{max}",
   "Sell": "出售",
   "{cost} mana · {left} left": "{cost} 点法力 · 剩余 {left} 次",
   "Marketplace": "星际集市",

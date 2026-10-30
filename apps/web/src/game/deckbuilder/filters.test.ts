@@ -216,13 +216,16 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Drone Core",
       "Weapon",
       "Swarm",
+      "Faction",
     ]);
-    // Only the ten AI tokens carry "AI", the Prime tokens "Prime" and Otherworldly Removal's three
-    // tokens "Other-Origins" (R1837000), and the pool never offers a Token.
+    // Only the ten AI tokens carry "AI", the Prime tokens "Prime", Otherworldly Removal's three
+    // tokens "Other-Origins" (R1837000) and the six Resource tokens "Resource" (#2521), and the pool
+    // never offers a Token.
     expect(FILTER_TAGS).not.toContain("AI");
     expect(FILTER_TAGS).not.toContain("Prime");
     expect(FILTER_TAGS).not.toContain("Other-Origins");
     expect(FILTER_TAGS).not.toContain("War Doctrine");
+    expect(FILTER_TAGS).not.toContain("Resource");
     expect([...FILTER_RARITIES]).toEqual(["Common", "Rare", "Epic", "Legendary", "Mythic"]);
     expect(FILTER_TAGS).not.toContain("Token");
     expect(FILTER_RARITIES).not.toContain("Token");
@@ -862,8 +865,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
     // its tags when it ships.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
@@ -910,6 +913,30 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     // (War Doctrine is on tokens alone, which the deck builder never offers) and the Almanac's four.
     for (const tag of ["Drone Core", "Weapon", "Swarm"] as const) expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(true);
     for (const tag of four) expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(true);
+  });
+
+  it("issue #2521's Faction gets a chip in both lists and Resource, on tokens alone, in the almanac's only", () => {
+    // The five Faction cards are cards a deck may hold; the six Resources are tokens, which the deck
+    // builder never offers.
+    const shipped = Object.values(CORE_CATALOG).filter((d) => setShips(d.set));
+    const factions = shipped.filter((d) => d.tags.includes("Faction"));
+    const resources = shipped.filter((d) => d.tags.includes("Resource"));
+    expect(factions.map((d) => d.name).sort()).toEqual([
+      "Faction: ETHICS",
+      "Faction: Golden Accord",
+      "Faction: Pegasus",
+      "Faction: Star-Jumper Core",
+      "Faction: Vanguard Coalition",
+    ]);
+    expect(factions.every((d) => !d.token)).toBe(true);
+    expect(resources.map((d) => d.name).sort()).toEqual(["Axnit", "Gellium", "Korrelite", "Narcor", "Red Narcor", "Reknite"]);
+    expect(resources.every((d) => d.token && d.tags.includes("Token"))).toBe(true);
+    expect(DECK_CHIP_TAGS).toContain("Faction");
+    expect(DECK_CHIP_TAGS).not.toContain("Resource");
+    expect(ALMANAC_CHIP_TAGS).toContain("Faction");
+    expect(ALMANAC_CHIP_TAGS).toContain("Resource");
+    expect(filterTagId("Faction")).toBe("db-filter-tag-faction");
+    expect(filterTagId("Resource")).toBe("db-filter-tag-resource");
   });
 
   it("R1381 a tag chip shows while a card that ships carries it", () => {

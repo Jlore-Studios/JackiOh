@@ -4,10 +4,13 @@
 //! - **The piece.** Starship Piece is a keyword with no rule of its own until the card dies (§4.5: the
 //!   state check's collection or a Sacrifice, never a card a replacement sends elsewhere). Then, once the
 //!   death pass has returned its Reborn bodies and reported its graveyard (`state_check`'s last step), a
-//!   copy of it — the card as it lies in its graveyard: its printed face, on its Radiant face if it was
-//!   Radiant, with its tuning and a token's X/X (R57's library copy) — fuses into its owner's Dormant
-//!   Starship (R77, `subsystems::fuse`), summoning one first if they have none (R1852000, R1852002). A
-//!   discard, a mill or any other way into a graveyard fuses nothing.
+//!   copy of it fuses into its owner's Dormant Starship (R77, `subsystems::fuse`), summoning one first if
+//!   they have none (R1852000, R1852002). The copy is the piece's base version (R2521000): a fresh card
+//!   of the piece it was printed as — a fusion's last ingredient that prints the keyword, a fused
+//!   ingredient walked the same way (`base_piece_def`) — on its Radiant face if it was Radiant, with a
+//!   token's X/X and its language (R57's library copy), and without its tuning, so no Buff, Nerf or
+//!   Upgrade and no card fused into it reaches the Starship. A discard, a mill or any other way into a
+//!   graveyard fuses nothing.
 //! - **The hull.** The Dormant Starship (`DORMANT_STARSHIP_DEF_ID`) is a 0/0 Unit that prints Dormant
 //!   (`slumber.rs`) and the hull (`StaticFlags.starship_hull`); entering the field it starts a memory
 //!   (`CardInstance.starship`), the pieces it holds (R1852005). It is summoned into its owner's backrow,
@@ -167,15 +170,35 @@ pub fn piece_number(ctx: &crate::script::EffectContext<'_>, def_id: &str, radian
 // A piece dies (R1852000–R1852002)
 // ---------------------------------------------------------------------------------------------
 
-/// R1852000: the copy of a dead piece that fuses: a fresh card of its definition in no pile, owned by
-/// its owner, carrying what R57's library copy carries — its Radiant face, its tuning, a token's X/X
-/// (`statsOverride`, its printed face, R175) and its language (R1300) — read off `snapshot`, the card
-/// as it stood before it died (R89). Its id is fresh, so it can be named by no other card.
+/// R2521000: the definition a dead piece's copy is a fresh card of, the piece it was printed as. A
+/// fusion (`CardDef.ingredients`) is walked from its last ingredient to its first — an Equip's host,
+/// the card the Fuse kept and the one R1852001 reads the keyword off, is its last — a fused ingredient
+/// walked the same way where it stands, to the first definition that is no fusion and whose base face
+/// prints Starship Piece. A card that is no fusion is its own definition when its base face prints it.
+/// `None` when nothing walked prints it (a piece by a grant or a lend, R1878001, R1878003): the copy is
+/// then of the dead card's own definition, as R1852000 made it.
+fn base_piece_def(state: &GameState, def_id: &str) -> Option<String> {
+    let def = crate::catalog::find_def(Some(state), def_id)?;
+    match &def.ingredients {
+        Some(specs) => specs
+            .iter()
+            .rev()
+            .find_map(|spec| base_piece_def(state, &spec.def_id)),
+        None => has_keyword(&def.base.keywords, KeywordKind::StarshipPiece).then(|| def.id.clone()),
+    }
+}
+
+/// R1852000, R2521000: the copy of a dead piece that fuses, its base version: a fresh card in no pile,
+/// owned by its owner, of its base definition (`base_piece_def`, else its own), carrying of what R57's
+/// library copy carries its Radiant face, a token's X/X (`statsOverride`, `armorOverride`, its printed
+/// face, R175) and its language (R1300), and never its tuning — a Buff, Nerf or Upgrade (B3.4) was the
+/// dead card's, so the piece fuses with its printed numbers. Read off `snapshot`, the card as it stood
+/// before it died (R89). Its id is fresh, so it can be named by no other card.
 fn piece_copy(state: &mut GameState, snapshot: &CardInstance) -> CardInstance {
     let owner = snapshot.owner;
-    let mut copy = new_instance(state, &snapshot.def_id, owner, Zone::Gone { player: owner });
+    let def_id = base_piece_def(state, &snapshot.def_id).unwrap_or_else(|| snapshot.def_id.clone());
+    let mut copy = new_instance(state, &def_id, owner, Zone::Gone { player: owner });
     copy.radiant = snapshot.radiant;
-    copy.tuning = crate::tuning::copy_tuning(snapshot.tuning.as_ref());
     copy.stats_override = snapshot.stats_override;
     copy.armor_override = snapshot.armor_override;
     copy.chinese = snapshot.chinese;
