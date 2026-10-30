@@ -108,7 +108,7 @@ function fitted(text: HTMLElement): boolean {
   return text.style.getPropertyValue("--cf-fit") !== "";
 }
 
-/** #263: off-screen faces fit only after nearing the screen; visit each one before checking. */
+/** #263: off-screen faces fit only after nearing the screen; visit each grid row before checking. */
 function fitEveryPoolCard(): void {
   cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
   cy.document().then({ timeout: 60_000 }, async (doc) => {
@@ -121,7 +121,10 @@ function fitEveryPoolCard(): void {
         });
       });
     const items = [...doc.querySelectorAll<HTMLElement>(POOL_ITEMS)];
-    for (const item of [...items, ...items.slice(0, 1)]) {
+    // One stop per row: a row's items share its top and near the screen together (#2226: one stop per
+    // item outran the 60 s timeout once the pool passed 570 cards).
+    const rows = items.filter((item, index) => index === 0 || item.offsetTop !== items[index - 1]?.offsetTop);
+    for (const item of [...rows, ...rows.slice(0, 1)]) {
       item.scrollIntoView({ block: "center" });
       await frame();
       await frame();

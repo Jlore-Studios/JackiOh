@@ -22,7 +22,6 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::testkit::*;
 
     use crate::scenario;
     use crate::filler;
@@ -30,10 +29,6 @@ mod tests {
     const FALCON: &str = "stinkyscape-069";
     const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
-
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
 
     fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
         keywords
@@ -58,7 +53,6 @@ mod tests {
     #[test]
     fn charge_may_attack_the_hero_the_turn_it_is_played() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [FALCON, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -72,7 +66,6 @@ mod tests {
     #[test]
     fn radiant_pierce_ignores_armor() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": FALCON, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "field": [ARMORED], "library": filler(4) },

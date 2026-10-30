@@ -15,13 +15,17 @@ import { lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import { liveFace } from "../game/faces.ts";
 import { renderBoard } from "../test/board.tsx";
-import { fullBoardView } from "../test/fixtures.ts";
+import { baseView, card as cardView, emptySide, faceUpBackrow, fullBoardView, unit } from "../test/fixtures.ts";
 import { marksTestid } from "./CardMarks.tsx";
 import { StateNotes, hasStateNotes } from "./inspect/StateNotes.tsx";
 import {
+  ALLURE_MARK,
+  ALLURE_MARK_COLOR,
+  BRITTLE_LAST_COLOR,
   DEFAULT_MARK_COLOR,
   DUO_MARK,
   DUO_MARK_COLOR,
+  MARK_MOTES,
   MARK_PALETTES,
   MARK_WORDS,
   UNKNOWN_MARK_WORDS,
@@ -31,6 +35,7 @@ import {
   marksOf,
   paletteFor,
 } from "./marks.ts";
+import { BRITTLE_LAST_COUNT } from "./keywordVisuals.ts";
 
 afterEach(() => {
   cleanup();
@@ -161,6 +166,77 @@ describe("R437 the mark on the board", () => {
     cleanup();
     const { view } = markedView([]);
     expect(renderBoard(view).querySelector(".card-marks")).toBeNull();
+  });
+});
+
+describe("#2270 a card on the field at its last Brittle count wears Allure's aura in gray", () => {
+  const FIELD = ["u1", "u2", "b1"] as const;
+  /** Your lane-1 unit, the enemy's lane-1 unit and your lane-1 face-up backrow card, each given `over`. */
+  function fieldView(over: { brittle?: number; marks?: CardMark[] }): PlayerView {
+    return baseView({
+      you: emptySide("p1", {
+        units: [unit("p1", { instanceId: "u1", ...over }), null, null, null, null],
+        backrow: [faceUpBackrow("p1", { instanceId: "b1", ...over }), null, null, null, null],
+      }),
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "u2", ...over }), null, null, null, null] }),
+    });
+  }
+
+  it("#2270 Brittle 1 on a unit of either seat and a face-up backrow card draws the aura alone, gray, with no badge and no mark", () => {
+    expect(BRITTLE_LAST_COLOR).toBe("gray");
+    const root = renderBoard(fieldView({ brittle: BRITTLE_LAST_COUNT }));
+    for (const id of FIELD) {
+      const host = root.querySelector(`[data-testid="${testid.card(id)}"]`);
+      const marks = aura(root, id);
+      expect(marks, id).not.toBeNull();
+      expect(host?.contains(marks ?? null), `${id}'s aura sits on its card`).toBe(true);
+      expect(marks?.getAttribute("data-mark-color")).toBe("gray");
+      expect(marks?.style.getPropertyValue("--mark-rim")).toBe(MARK_PALETTES.gray.rim);
+      expect(marks?.querySelector(".card-marks__aura")?.getAttribute("aria-hidden")).toBe("true");
+      expect(marks?.querySelector(".card-marks__vignette")).not.toBeNull();
+      expect(marks?.querySelector(".card-marks__edge")).not.toBeNull();
+      expect(marks?.querySelectorAll(".card-marks__mote")).toHaveLength(MARK_MOTES);
+      expect(marks?.querySelector(".card-mark-badge")).toBeNull();
+      expect(marks?.hasAttribute("data-marks")).toBe(false);
+      expect(host?.hasAttribute("data-marks")).toBe(false);
+    }
+    expect(root.querySelectorAll(".card-marks")).toHaveLength(FIELD.length);
+  });
+
+  it("#2270 gray is in the palette table, in hex like every colour", () => {
+    expect(markColorOf(BRITTLE_LAST_COLOR)).toBe("gray");
+    for (const value of [MARK_PALETTES.gray.rim, MARK_PALETTES.gray.core, MARK_PALETTES.gray.glow]) {
+      expect(value).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+  });
+
+  it("#2270 Brittle 2, or no Brittle, draws no aura", () => {
+    expect(renderBoard(fieldView({ brittle: 2 })).querySelector(".card-marks")).toBeNull();
+    cleanup();
+    expect(renderBoard(fieldView({})).querySelector(".card-marks")).toBeNull();
+  });
+
+  it("#2270 a real mark outranks it: Brittle 1 under Allure draws Allure's pink aura and badge, never the gray", () => {
+    const root = renderBoard(fieldView({ brittle: BRITTLE_LAST_COUNT, marks: [{ mark: ALLURE_MARK, color: ALLURE_MARK_COLOR }] }));
+    for (const id of FIELD) {
+      const marks = aura(root, id);
+      expect(marks?.getAttribute("data-marks"), id).toBe(ALLURE_MARK);
+      expect(marks?.getAttribute("data-mark-color"), id).toBe("pink");
+      expect(marks?.querySelector('.card-mark-badge[data-mark="allure"]'), id).not.toBeNull();
+    }
+    expect(root.querySelectorAll(".card-marks")).toHaveLength(FIELD.length);
+    expect(root.querySelector('.card-marks[data-mark-color="gray"]')).toBeNull();
+  });
+
+  it("#2270 a hand card or a resolving card with Brittle 1 draws none: Brittle ticks on the field only", () => {
+    const root = renderBoard(
+      baseView({ you: emptySide("p1", { hand: [cardView({ instanceId: "h1", brittle: BRITTLE_LAST_COUNT })], resolving: [cardView({ instanceId: "r1", brittle: BRITTLE_LAST_COUNT })] }) }),
+    );
+    expect(root.querySelector(`[data-testid="${testid.handCard("h1")}"]`)).not.toBeNull();
+    expect(root.querySelector(`[data-testid="${testid.card("r1")}"]`)).not.toBeNull();
+    expect(aura(root, "h1")).toBeNull();
+    expect(aura(root, "r1")).toBeNull();
+    expect(root.querySelector(".card-marks")).toBeNull();
   });
 });
 

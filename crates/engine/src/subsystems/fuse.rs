@@ -1940,6 +1940,27 @@ pub fn compose_fused_face(state: &GameState, def: &CardDef, radiant: bool) -> Sc
     fused_script(state, &specs, radiant, &inside)
 }
 
+/// R2226000: whether `trigger_id`, a trigger of the fused definition `def_id`, is the text of a Trap or
+/// Field Trap ingredient, or of one fused inside an ingredient: `script_record` names each ingredient's
+/// trigger `<its def id>:<its own id>`, an ingredient's fused ingredients' within it. `false` for a
+/// definition that names no fusion.
+pub fn is_trap_ingredient_trigger(state: &GameState, def_id: &str, trigger_id: &str) -> bool {
+    let Some(specs) = fused_specs(state, def_id) else {
+        return false;
+    };
+    specs.iter().any(|spec| {
+        let Some(inner) = trigger_id
+            .strip_prefix(spec.def_id.as_str())
+            .and_then(|rest| rest.strip_prefix(':'))
+        else {
+            return false;
+        };
+        let is_trap = crate::catalog::find_def(Some(state), &spec.def_id)
+            .is_some_and(|def| matches!(def.type_, CardType::Trap | CardType::FieldTrap));
+        is_trap || is_trap_ingredient_trigger(state, &spec.def_id, inner)
+    })
+}
+
 /// The ingredients `compose_fused_scripts` composes a definition from: its own list (R468) with R77's
 /// minimum, else the ones its id names; `None` when it names no fusion.
 fn fused_def_specs(state: &GameState, def: &CardDef) -> Option<Vec<FusedIngredient>> {

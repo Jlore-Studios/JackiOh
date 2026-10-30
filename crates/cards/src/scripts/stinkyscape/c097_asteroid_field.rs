@@ -105,7 +105,6 @@ mod tests {
     #[test]
     fn r635_setup_never_deals_it() {
         crate::register_all();
-        let _guard = preview_sets(&[SetName::Stinkyscape]);
         let rest = [
             "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
             "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-016", "core-017",
