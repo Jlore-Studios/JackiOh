@@ -9467,9 +9467,12 @@
     "2420": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-30T00:03:45Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2387,
       "kind": "revise",
       "last_findings": [],
