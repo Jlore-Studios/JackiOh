@@ -796,6 +796,48 @@ mod r640000_bots_on_the_ladder {
             }
         }
     }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2388000_a_bot_s_seat_carries_its_recorded_move_like_a_player_s() {
+        let app = test_app().await;
+        seed_profile(&app, json!({ "id": A })).await;
+        seed_bot(&app, "bot-1", 1000.0).await;
+        let mut row = live_match("match-1", "s", true);
+        row.players.1 = String::from("bot-1");
+        q!(app, matches_create(&row));
+        let input: RecordResultInput = from(json!({
+            "matchId": "match-1",
+            "seats": [
+                { "profileId": A, "player": "p1", "deck": [] },
+                { "profileId": "bot-1", "player": "p2", "deck": [] },
+            ],
+            "outcome": { "winner": "p1", "reason": "hero-death" },
+            "turns": 4,
+            "at": 5,
+        }));
+        record_result(&app, input).await.expect("recordResult");
+        let recorded = to_json(&q!(app, ranked_game("match-1")).expect("the rated record"));
+        assert_eq!(recorded["sides"][1]["botId"], json!("bot-1"));
+        let body = to_json(
+            &match_ranks(&app, "match-1", A)
+                .await
+                .expect("matchRanks")
+                .expect("a body"),
+        );
+        assert_eq!(
+            body["seats"]["p2"]["rankBefore"],
+            recorded["sides"][1]["rankBefore"]
+        );
+        assert_eq!(
+            body["seats"]["p2"]["rankAfter"],
+            recorded["sides"][1]["rankAfter"]
+        );
+        assert_eq!(body["seats"]["p2"]["rankAfter"], raisin(1));
+        let text = body.to_string();
+        for tell in ["\"kind\"", "\"pilot", "\"bot\"", "botId", "rating"] {
+            assert!(!text.contains(tell), "{tell} in {text}");
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -976,6 +1018,59 @@ mod r612_what_the_client_reads {
         );
     }
 
+    #[tokio::test(start_paused = true)]
+    async fn r2388000_get_api_matches_id_ranks_carries_each_seat_s_recorded_move_once_the_result_is_written()
+    {
+        let Routed { app, token_a, .. } = routed().await;
+        q!(app, matches_create(&live_match("match-1", "s", true)));
+        q!(app, matches_create(&live_match("match-2", "t", false)));
+        for id in ["match-1", "match-2"] {
+            let got = get(&app, &format!("/api/matches/{id}/ranks"), &token_a).await;
+            assert_eq!(got.status, 200, "{id}");
+            for side in ["p1", "p2"] {
+                assert!(got.body["seats"][side].get("rankBefore").is_none(), "{id} {side}");
+                assert!(got.body["seats"][side].get("rankAfter").is_none(), "{id} {side}");
+            }
+        }
+        for id in ["match-1", "match-2"] {
+            let input: RecordResultInput = from(json!({
+                "matchId": id,
+                "seats": [
+                    { "profileId": A, "player": "p1", "deck": [] },
+                    { "profileId": B, "player": "p2", "deck": [] },
+                ],
+                "outcome": { "winner": "p1", "reason": "hero-death" },
+                "turns": 4,
+                "at": 5,
+            }));
+            record_result(&app, input).await.expect("recordResult");
+        }
+        let recorded = to_json(&q!(app, ranked_game("match-1")).expect("the rated record"));
+        let got = get(&app, "/api/matches/match-1/ranks", &token_a).await;
+        assert_eq!(got.status, 200, "{}", got.text);
+        for (side, index) in [("p1", 0), ("p2", 1)] {
+            assert_eq!(
+                got.body["seats"][side]["rankBefore"], recorded["sides"][index]["rankBefore"],
+                "{side}"
+            );
+            assert_eq!(
+                got.body["seats"][side]["rankAfter"], recorded["sides"][index]["rankAfter"],
+                "{side}"
+            );
+        }
+        assert_eq!(got.body["seats"]["p1"]["rankBefore"], raisin(0));
+        assert_eq!(got.body["seats"]["p1"]["rankAfter"], raisin(1));
+        assert_eq!(got.body["seats"]["p1"]["rank"], raisin(1));
+        mentions_none(&got.text, &["rating", "deviation", "volatility", "\"tag\""]);
+        let unranked = get(&app, "/api/matches/match-2/ranks", &token_a).await;
+        assert_eq!(unranked.status, 200);
+        for side in ["p1", "p2"] {
+            assert!(unranked.body["seats"][side].get("rankBefore").is_none(), "{side}");
+            assert!(unranked.body["seats"][side].get("rankAfter").is_none(), "{side}");
+        }
+        assert!(q!(app, ranked_game("match-2")).is_none());
+    }
+
     /// R2101000: both seats carry their season row's win streak, the opponent's included.
     #[tokio::test(start_paused = true)]
     async fn r2101000_get_api_matches_id_ranks_carries_each_seat_s_win_streak() {
@@ -1134,6 +1229,88 @@ mod r604_a_ranked_series_through_the_results_writer {
                 assert!(ended["ratingAfter"].is_null());
             }
         }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2388000_a_ranked_series_last_game_carries_the_series_move_and_an_earlier_game_none() {
+        let app = test_app().await;
+        seed_profile(&app, json!({ "id": A, "inMatchId": "game-1" })).await;
+        seed_profile(&app, json!({ "id": B, "inMatchId": "game-1" })).await;
+        let trio = json!({ "name": "t", "decks": [deck(0), deck(1), deck(2)] });
+        let series: SeriesRow = from(json!({
+            "id": "series-1",
+            "sides": [
+                { "profileId": A, "trio": trio, "wins": 2, "pick": null },
+                { "profileId": B, "trio": trio, "wins": 0, "pick": null },
+            ],
+            "catalogVersion": "test-1",
+            "ranked": true,
+            "seedBase": "s",
+            "status": "playing",
+            "games": [
+                { "gameNo": 1, "matchId": "g-a", "slots": [0, 0], "first": "p1", "winner": "p1", "reason": "concede" },
+                { "gameNo": 2, "matchId": "g-b", "slots": [1, 0], "first": "p2", "winner": "p1", "reason": "concede" },
+                { "gameNo": 3, "matchId": "game-1", "slots": [2, 0], "first": "p1", "winner": null, "reason": null },
+            ],
+            "nextMatchId": "game-1",
+            "pickDeadline": null,
+            "winner": null,
+            "endReason": null,
+            "ratingBefore": null,
+            "ratingAfter": null,
+            "createdAt": 0,
+            "updatedAt": 0,
+            "endedAt": null,
+            "version": 1,
+        }));
+        q!(app, series_create(&series));
+        q!(app, matches_create(&live_match("game-1", "s:3", true)));
+        q!(app, matches_create(&live_match("g-b", "s:2", true)));
+        let before = match_ranks(&app, "game-1", A)
+            .await
+            .expect("matchRanks")
+            .expect("a body");
+        assert!(to_json(&before)["seats"]["p1"].get("rankAfter").is_none());
+        let input: RecordResultInput = from(json!({
+            "matchId": "game-1",
+            "seats": [
+                { "profileId": A, "player": "p1", "deck": [] },
+                { "profileId": B, "player": "p2", "deck": [] },
+            ],
+            "outcome": { "winner": "p1", "reason": "hero-death" },
+            "turns": 4,
+            "at": 5,
+        }));
+        record_result(&app, input).await.expect("recordResult");
+        let recorded = to_json(&q!(app, ranked_game("series-1")).expect("the series' record"));
+        let after = to_json(
+            &match_ranks(&app, "game-1", A)
+                .await
+                .expect("matchRanks")
+                .expect("a body"),
+        );
+        for (side, index) in [("p1", 0), ("p2", 1)] {
+            assert_eq!(
+                after["seats"][side]["rankBefore"], recorded["sides"][index]["rankBefore"],
+                "{side}"
+            );
+            assert_eq!(
+                after["seats"][side]["rankAfter"], recorded["sides"][index]["rankAfter"],
+                "{side}"
+            );
+        }
+        assert!(after["seats"]["p1"]["rankAfter"].is_object());
+        let earlier = to_json(
+            &match_ranks(&app, "g-b", A)
+                .await
+                .expect("matchRanks")
+                .expect("a body"),
+        );
+        for side in ["p1", "p2"] {
+            assert!(earlier["seats"][side].get("rankBefore").is_none(), "{side}");
+            assert!(earlier["seats"][side].get("rankAfter").is_none(), "{side}");
+        }
+        assert!(q!(app, ranked_game("game-1")).is_none());
     }
 }
 

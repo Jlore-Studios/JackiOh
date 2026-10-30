@@ -204,8 +204,7 @@ mod tests {
             }
 
             #[test]
-            fn r1420_previewed_it_reaches_cn_peptides() {
-                let _preview = preview_sets(&[SetName::Meditative]);
+            fn r1420_it_reaches_cn_peptides_since_the_set_shipped() {
                 let found = (0..200).any(|n| {
                     let mut s = holding(&format!("gachaholic-preview-{n}"), false, 1);
                     s.play(ID, json!({}));
@@ -214,7 +213,7 @@ mod tests {
                     assert_ne!(card.def_id, ID);
                     card.def_id == PEPTIDES
                 });
-                assert!(found, "a previewed pull reaches Meditative #36 CN Peptides");
+                assert!(found, "a pull reaches Meditative #36 CN Peptides");
             }
         }
 

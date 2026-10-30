@@ -172,7 +172,6 @@ mod tests {
     #[test]
     fn summoned_on_your_turn_it_attacks_from_its_second_turn() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "p1": { "mana": 10, "hand": [PARETO, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
@@ -222,7 +221,6 @@ mod tests {
     #[test]
     fn pierce_its_hit_ignores_hero_armor() {
         crate::register_all();
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "p1": { "backrow": [ID], "hand": [FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER], "armor": 3 },

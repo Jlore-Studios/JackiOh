@@ -64,6 +64,9 @@ export const AMBIENT_MAX = 2;
  */
 export const BRITTLE_CRACK_STAGES = 3;
 
+/** #2270: the Brittle count at which a card on the field crumbles at its next tick (R385); game/Card.tsx draws it a gray aura. */
+export const BRITTLE_LAST_COUNT = 1;
+
 /** The effects layer (fx.css) draws Divine Shield's cocoon and its pulse (R200); the bubble here holds still. */
 export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
   Taunt: {

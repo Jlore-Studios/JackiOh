@@ -32,10 +32,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
         keywords
             .iter()
@@ -64,7 +60,6 @@ mod tests {
     #[test]
     fn lifesteal_heals_its_controller_s_hero_what_it_dealt() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [VAMP, ANCHOR], "mana": 10, "health": 20, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
@@ -83,7 +78,6 @@ mod tests {
     #[test]
     fn r1852001_equipped_onto_a_unit_the_host_gains_2_1_and_lifesteal_and_stays_no_piece() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [VANILLA, VAMP, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -103,7 +97,6 @@ mod tests {
     #[test]
     fn radiant_is_a_4_2_with_lifesteal() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": VAMP, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },

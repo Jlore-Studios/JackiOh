@@ -189,7 +189,6 @@ mod tests {
             #[test]
             fn r781004_r1615000_never_taunt_beside_indestructible() {
                 crate::register_all();
-                let _guard = preview_sets(&[SetName::Meditative]);
                 for n in 0..24 {
                     let mut s = scenario(json!({
                         "seed": format!("keenus-r347-{n}"),
@@ -223,7 +222,6 @@ mod tests {
             #[test]
             fn r781004_r1086_equip_onto_your_unit_fuses_and_the_host_draws_its_own() {
                 crate::register_all();
-                let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = scenario(json!({
                     "seed": "keenus-equip",
                     "p1": { "mana": 10, "hand": [VANILLA, KEENUS, FILLER], "library": filler(4) },

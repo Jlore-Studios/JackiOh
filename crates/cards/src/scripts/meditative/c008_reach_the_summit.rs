@@ -379,7 +379,6 @@ mod tests {
         #[test]
         fn r841_level_5_adds_2_radiant_cards_costing_0_never_itself() {
             crate::register_all();
-            let _preview = preview_sets(&[SetName::Meditative]);
             let mut s = scenario(json!({
                 "seed": "summit-add",
                 "p1": {

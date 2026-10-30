@@ -508,9 +508,6 @@ mod face_threat_b13 {
 mod r1224_r1225_credit_line {
     use super::*;
 
-    use jackioh_engine::SetName;
-    use jackioh_engine::testkit::preview_sets;
-
     const JLARNA: &str = "meditative-089";
 
     fn indebted(base: &GameState, owed: Vec<i32>) -> GameState {
@@ -521,7 +518,6 @@ mod r1224_r1225_credit_line {
 
     #[test]
     fn r1224_owed_instalments_lower_the_score() {
-        let _preview = preview_sets(&[SetName::Meditative]);
         let plain = board(base());
         let owed = indebted(&plain, vec![1, 1]);
         assert!(eval(&owed, AI) < eval(&plain, AI));
@@ -531,7 +527,6 @@ mod r1224_r1225_credit_line {
 
     #[test]
     fn r1225_an_unused_base_jlarna_is_worth_nothing_on_its_turn() {
-        let _preview = preview_sets(&[SetName::Meditative]);
         let bare = board(json!({ "active": "p1", "p1": {}, "p2": {} }));
         let mut held = board(json!({
             "active": "p1",

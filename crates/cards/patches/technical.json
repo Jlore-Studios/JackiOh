@@ -3123,5 +3123,87 @@
     "pr": 2413,
     "title": "patches ship: v0.5.9",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "078997f550d27658cfb88f8a02daa529e5b087ab",
+    "pr": 2418,
+    "title": "patches log: 59cec78..55b2aac",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "c29cffd6b34b45841f308c1f4ae41d41302137a2",
+    "pr": 2409,
+    "title": "leaving a practice game without saving gives its earning slot back, and a game that can't earn says so",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b955a2ab758a5d54e81a5380e2a579bd7ba76f2a",
+    "pr": 2341,
+    "title": "a Tribute hand hint showing how many Tributes a card needs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "0edbe120418dca29bb69352c5e5fef5c1b85637b",
+    "title": "Merge pull request #2416 from Jlore-Studios/bot/issue-2384",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "ae9765cc270c7cf399a48999bcf3fa36c928694a",
+    "title": "Merge pull request #2421 from Jlore-Studios/bot/issue-2385",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "df0f4c86cab104a3a9d7845ee9b81a4a4255120f",
+    "pr": 2412,
+    "title": "the AI prices a Dormant unit by the unit it wakes as",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "2d62a51037bde7b7db664758b658e9249e1dac30",
+    "pr": 2428,
+    "title": "patches ship: v0.5.9b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "f280ef8e0d074cd990db70a5f6c9b42a63f01d71",
+    "pr": 2431,
+    "title": "patches log: 55b2aac..2d62a51",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "cc1969069eb3c089eef6996833f1386e4582debb",
+    "pr": 2307,
+    "title": "daily quests for Stinkyscape, Radiant upgrades and position switches, and every set that ships keeps a set quest",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "d1b9471f05961c165c44ab01cf49b06537fbf660",
+    "pr": 2432,
+    "title": "a ranked match's result shows the rank and pips it moved you to",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "9fd1a4185f53428513b46769f46d31bf928a3d0a",
+    "pr": 2403,
+    "title": "a Trap fused into a Unit stays quiet, a gray outline on a card with 1 Brittle left, no previews of shipped sets, and the cards lib job under five minutes",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "90789d8706784a32c18b345d09ec3b293f8b4ee2",
+    "pr": 2438,
+    "title": "patches ship: v0.5.10",
+    "kind": "app"
   }
 ]

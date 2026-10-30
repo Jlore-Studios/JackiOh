@@ -103,7 +103,6 @@ mod tests {
         #[test]
         fn quickdraw_in_the_opening_hand() {
             crate::register_all();
-            let _preview = preview_sets(&[SetName::TrainingGrounds]);
             let others: Vec<String> = query(&CatalogQueryArgs::default())
                 .iter()
                 .map(|def| def.id.clone())

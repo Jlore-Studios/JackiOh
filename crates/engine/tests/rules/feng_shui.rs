@@ -4,8 +4,7 @@
 //! The units' indices end in 1–5 on purpose (R980: 水 火 木 金 土); the Trap ends in 2 (火) and the
 //! judge in 0 (土). Every pipeline test puts a judge in p1's backrow and plays two cards: the first
 //! play writes the record, the second is judged against it. The record was written only while the
-//! Meditative set was open (R982, D14); the set shipped in v0.3.5, so it is written in every game,
-//! and the tests that still preview the set preview nothing it had not opened already.
+//! Meditative set was open (R982, D14); the set shipped in v0.3.5, so it is written in every game.
 
 use jackioh_engine::subsystems::feng_shui::{element_of, element_of_index, last_element, reaction};
 use jackioh_engine::testkit::*;
@@ -150,7 +149,6 @@ mod r981_every_element_pair_through_the_pipeline {
 
     #[test]
     fn r981_every_element_pair_through_the_pipeline() {
-        let _open = preview_sets(&[SetName::Meditative]);
         for last in ELEMENTS {
             for played in ELEMENTS {
                 let mut state = game(&format!("r981-{last}-{played}"));
@@ -240,7 +238,6 @@ mod r981_every_element_pair_through_the_pipeline {
 
     #[test]
     fn r981_a_first_play_is_neutral() {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = game("r981-first");
         judge(&mut state, false);
         let first = one(&mut state, PlayerId::P1, &id_for("wood"), false);
@@ -260,7 +257,6 @@ mod r982_a_face_down_play_is_neither_judged_nor_recorded {
 
     #[test]
     fn r982_a_face_down_play_is_neither_judged_nor_recorded() {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = game("r982-trap");
         judge(&mut state, false);
         let wood = one(&mut state, PlayerId::P1, &id_for("wood"), false);
@@ -328,7 +324,6 @@ mod r983_the_damage_lands_after_card_resolved {
 
     #[test]
     fn r983_the_damage_lands_after_card_resolved() {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = game("r983-order");
         judge(&mut state, false);
         let wood = one(&mut state, PlayerId::P1, &id_for("wood"), false);
@@ -359,7 +354,6 @@ mod r984_two_judges_punish_twice {
 
     #[test]
     fn r984_two_judges_punish_twice() {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = game("r984-twice");
         let first_judge = judge(&mut state, false);
         let second_judge = put(
@@ -394,7 +388,6 @@ mod r984_the_radiant_judge_rewards_only_its_controller_and_punishes_only_the_opp
 
     #[test]
     fn r984_the_radiant_judge_rewards_only_its_controller_and_punishes_only_the_opponent_for_20() {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = game("r984-radiant");
         judge(&mut state, true);
         // p1's plays: a generating pair is rewarded, an overcoming pair is not punished.
@@ -441,7 +434,6 @@ mod r984_the_radiant_judge_rewards_only_its_controller_and_punishes_only_the_opp
 
     #[test]
     fn r984_the_base_face_judges_the_opponent() {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = game("r984-base");
         judge(&mut state, false);
         let state = reduce_ok(&state, PlayerId::P1, json!({ "type": "endTurn" })).state;
@@ -469,7 +461,6 @@ mod r985_the_hidden_numbers_are_config {
         assert_eq!(FENG_SHUI_DAMAGE.radiant, 20);
         assert_eq!(FENG_SHUI_BRITTLE, 2);
         // The play's punishment reads those same numbers: a negative pair from a base judge.
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = game("r985-config");
         judge(&mut state, false);
         let wood = one(&mut state, PlayerId::P1, &id_for("wood"), false);
