@@ -4,7 +4,8 @@
 //! imports, R768's two replay constants, R1382's `TRIBAL_TAGS`, the custom cards' and the practice
 //! sandbox's limits, R915001 and R923002, Duos co-op's six, #936 S1, R1563006's sequence clock, and
 //! R1705003's and R1705005's earlier deck size and lesson handicap, #1843's vote tally and the
-//! endings whose winner's opponent draws, R1843000 and R1843004, and R2533000's tutorial cards),
+//! endings whose winner's opponent draws, R1843000 and R1843004, §9.4's decks per loadout and the
+//! emotes' hand and rate limit, R1341 and R643, and R2533000's tutorial cards),
 //! generated from `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md
 //! rule 9).
 //!
@@ -30,11 +31,12 @@ use jackioh_engine::config::{
     CUSTOM_KEYWORDS_MAX, CUSTOM_NAME_MAX_LENGTH, CUSTOM_PARAM_KEY_MAX_LENGTH, CUSTOM_PARAM_MAX,
     CUSTOM_PARAMS_MAX, CUSTOM_RADIANT_STAT_MAX, CUSTOM_SOURCE_MAX_BYTES, CUSTOM_TEXT_MAX_LENGTH, DECK_SIZE,
     DIFFICULTIES, DRAWS_PER_TURN, DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST,
-    DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, EARLIER_DECK_SIZE, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
-    KY_COMPETITION_SECONDS, LIBRARY_CAP, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET,
-    REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX,
-    SANDBOX_MANA_MAX, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET,
-    TUTORIAL_HUMAN, VERSIONS_SCHEME, VOTE_TALLY_SIZE,
+    DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, EARLIER_DECK_SIZE, EMOTE_COOLDOWN_MS, EMOTE_HAND_SIZE,
+    EMOTE_HAND_VOICE, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
+    KY_COMPETITION_SECONDS, LIBRARY_CAP, LOADOUT_DECKS, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA,
+    RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX,
+    SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES,
+    TUTORIAL_CARD_SET, TUTORIAL_HUMAN, VERSIONS_SCHEME, VOTE_TALLY_SIZE,
 };
 use serde::Serialize;
 
@@ -148,11 +150,20 @@ fn engine_config_ts() -> String {
         constant("DUOS_POOL_HEALTH_HARD", None, &DUOS_POOL_HEALTH_HARD),
         // R1705003: the deck size a game made before #1705 holds to, which a saved draft may still have.
         constant("EARLIER_DECK_SIZE", None, &EARLIER_DECK_SIZE),
+        // R1341, R643: the emote hand's size and voice lines and the rate limit, which the web's
+        // emote menu and gate read.
+        constant("EMOTE_COOLDOWN_MS", None, &EMOTE_COOLDOWN_MS),
+        constant("EMOTE_HAND_SIZE", None, &EMOTE_HAND_SIZE),
+        constant("EMOTE_HAND_VOICE", None, &EMOTE_HAND_VOICE),
+        constant("EMOTE_WINDOW_MAX", None, &EMOTE_WINDOW_MAX),
+        constant("EMOTE_WINDOW_MS", None, &EMOTE_WINDOW_MS),
         constant("GLITCH_DEF_ID", None, GLITCH_DEF_ID),
         constant("HERO_HEALTH", None, &HERO_HEALTH),
         constant("HUMAN_HANDICAP", Some("Handicap"), &HUMAN_HANDICAP),
         constant("KY_COMPETITION_SECONDS", None, &KY_COMPETITION_SECONDS),
         constant("LIBRARY_CAP", None, &LIBRARY_CAP),
+        // §9.4 L1: the decks a trio holds, which the trio editor asks for.
+        constant("LOADOUT_DECKS", None, &LOADOUT_DECKS),
         // R1843004: the endings whose winner's opponent draws, which the result reads for each seat.
         constant(
             "LOSER_DRAWS_REASONS",
@@ -204,8 +215,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Fifty-seven constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 57, "{text}");
+    // Sixty-three constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 63, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 
@@ -220,6 +231,19 @@ fn the_constants_are_sorted_and_carry_config_rs_values() {
     let mut sorted = names.clone();
     sorted.sort();
     assert_eq!(names, sorted);
+    for (name, value) in [
+        ("EMOTE_COOLDOWN_MS", EMOTE_COOLDOWN_MS.to_string()),
+        ("EMOTE_HAND_SIZE", EMOTE_HAND_SIZE.to_string()),
+        ("EMOTE_HAND_VOICE", EMOTE_HAND_VOICE.to_string()),
+        ("EMOTE_WINDOW_MAX", EMOTE_WINDOW_MAX.to_string()),
+        ("EMOTE_WINDOW_MS", EMOTE_WINDOW_MS.to_string()),
+        ("LOADOUT_DECKS", LOADOUT_DECKS.to_string()),
+    ] {
+        assert!(
+            text.contains(&format!("export const {name} = {value};\n")),
+            "{name}: {text}"
+        );
+    }
     assert!(text.contains(&format!("export const DECK_SIZE = {DECK_SIZE};\n")));
     assert!(
         text.contains("export const DIFFICULTIES: readonly Difficulty[] = [\"easy\",\"medium\",\"hard\"];\n")
