@@ -9457,7 +9457,7 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-30T09:52:48Z",
-      "run_id": "pending:a7a9f0f1-1793353999",
+      "run_id": "41036728528",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "started_at": "2026-10-30T09:53:34Z",
