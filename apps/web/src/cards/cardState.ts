@@ -5,7 +5,8 @@
 // stage, "2/3" (Stinkyscape's staged Quests, R1854000). Each is a badge on the
 // face — a glyph with the count where there is one, its words as the tooltip and the accessible name —
 // and a line in the inspect overlays, in the words below (R373, R432: "(N) Cost" the noun, "costs (N)"
-// the verb, so a floor is "can't cost less than (2)").
+// the verb, so a floor is "can't cost less than (2)"). A Quest card's rules box prints its stage and
+// its open quests in the same words (questFace.ts, R2450000).
 //
 // `stateBadges` lists a face's badges in the order the rail draws them: the Brittle count first, then a
 // hand card's Temporary count (both end the card), then the open quests and the stage (what the card is doing), the tuned mark, the
@@ -92,19 +93,23 @@ export function currentStage(stages: readonly QuestStageView[]): { stage: QuestS
   return stage === undefined ? null : { stage, number: at + 1 };
 }
 
+/** R1854000, R1854004, R2450000: a stage named, "Stage 2 of 3, Comradery", with the turns left while the line waits to hear back with it. */
+export function stageTitle(number: number, of: number, name: string, wait?: number): string {
+  const words = { n: number, of, name };
+  if (wait === undefined) return t("Stage {n} of {of}, {name}", words);
+  if (wait <= 1) return t("Stage {n} of {of}, {name}, hearing back next turn", words);
+  return t("Stage {n} of {of}, {name}, hearing back in {turns} turns", { ...words, turns: wait });
+}
+
 /**
- * R1854000, R1854004: a staged line in words — "Stage 2 of 3: Comradery", "Stage 2 of 3: The Interview,
+ * R1854000, R1854004: a staged line in words — "Stage 2 of 3, Comradery", "Stage 2 of 3, The Interview,
  * hearing back in 2 turns", "Quest complete" — off the view's stages alone.
  */
 export function stageWords(stages: readonly QuestStageView[]): string {
   if (stages.length > 0 && stages.every((stage) => stage.state === "done")) return t("Quest complete");
   const found = currentStage(stages);
   if (found === null) return "";
-  const words = { n: found.number, of: stages.length, name: t(found.stage.name) };
-  const wait = found.stage.hearBack;
-  if (wait === undefined) return t("Stage {n} of {of}: {name}", words);
-  if (wait <= 1) return t("Stage {n} of {of}: {name}, hearing back next turn", words);
-  return t("Stage {n} of {of}: {name}, hearing back in {turns} turns", { ...words, turns: wait });
+  return stageTitle(found.number, stages.length, t(found.stage.name), found.stage.hearBack);
 }
 
 /**
