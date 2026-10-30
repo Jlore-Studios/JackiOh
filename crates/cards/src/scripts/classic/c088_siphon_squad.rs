@@ -15,6 +15,12 @@
 //!
 //! Through patch v0.3.7b the aura worked from the moment the card was set (R403's first reading);
 //! `script_v0_3_7b` keeps that for those versions' replays (R767000).
+//!
+//! Its text fused or granted onto a Unit that comes back as it is Tributed (S #112 Job Application's
+//! "Death: Resummon this at Stage 1" is the other text) would be Tributed again at every state check of
+//! a board whose opponent holds no Units. So on a body that is not Siphon Squad itself and arrived this
+//! turn the self-Tribute holds nothing (R2500000, as R2197005 ends Floodgates' sweep): the body returns
+//! once a turn and the check settles, REVIEW A3.6's terminator for a self-recursive Death.
 
 use jackioh_engine::effects::reveal;
 use jackioh_engine::prelude::*;
@@ -34,6 +40,12 @@ fn read_of(c: ConditionContext<'_>) -> Read<'_> {
 
 fn enemy_units(read: Read<'_>) -> i32 {
     active_units_of(read.state, opponent_of(read.self_.controller)).len() as i32
+}
+
+/// R2500000: a body that carries this text without being the card (a fusion, a granted text) and arrived
+/// this turn, which an earlier Tribute of it may have sent back (S #112 Job Application's Death).
+fn arrived_carrying_it(read: Read<'_>) -> bool {
+    read.self_.def_id != ID && read.self_.summoned_turn == Some(read.state.turn)
 }
 
 /// X: {multiplier} times the Units the opponent controls now.
@@ -70,7 +82,10 @@ fn siphon(
                 mod_: mod_(read),
             }]
         })),
-        tribute_when: Some(read_hook(|read| enemy_units(read) == 0)),
+        // R2500000: v0.3.7b's has no terminator (it folds its replays as it ran, R767000).
+        tribute_when: Some(read_hook(move |read| {
+            enemy_units(read) == 0 && (live_face_down || !arrived_carrying_it(read))
+        })),
         preview: Some(condition_hook(move |c| {
             let read = read_of(c);
             if !live_face_down && dormant(read) {
@@ -446,6 +461,88 @@ mod tests {
             reveal_siphon(&mut s);
 
             assert_eq!(attack_of(&s, P2, 1), 0);
+        }
+    }
+
+    /// R2500000: Siphon Squad's "When your opponent has no Units, Tribute this" and S #112 Job Application's
+    /// "Death: Resummon this at Stage 1" fused onto one Unit, the opponent holding none: the Tribute took
+    /// the Unit out at every state check and the Death put it back at once, so the board never settled
+    /// (daily fuzz seeds 7243 and, in Duos, 1231, where 饕餮 fused both).
+    mod r2500000_a_fused_tribute_meets_a_resummon_that_comes_back {
+        use super::*;
+        use jackioh_engine::effects::fuse_cards;
+        use jackioh_engine::prelude::{EngineSink, Rng};
+
+        const JOB_APPLICATION: &str = "stinkyscape-112";
+
+        /// P1's Unit with Siphon Squad's and Job Application's texts fused into it, P2 holding no Units
+        /// at all. It stood there before this turn, or (`arrived_this_turn`) was played now.
+        fn fused_unit(seed: &str, arrived_this_turn: bool) -> (Scenario, String) {
+            let library = vec![MENACE; 10];
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": if arrived_this_turn { json!([VANILLA]) } else { json!([]) },
+                    "field": if arrived_this_turn { json!([]) } else { json!([{ "def": VANILLA, "lane": 1 }]) },
+                    "library": library,
+                    "mana": 10,
+                },
+                "p2": { "library": library },
+            }));
+            if arrived_this_turn {
+                s.play(VANILLA, json!({ "zone": 1 }));
+            }
+            let id = s.unit_at(P1, 1).id;
+            let fuse = fuse_cards(json_as(json!({
+                "instanceIds": [id],
+                "defIds": [SIPHON, JOB_APPLICATION],
+                "targetInstanceId": id,
+            })));
+            crate::run_as(&mut s, fuse, P1);
+            assert!(s.card(id.as_str()).def_id.starts_with("t-"), "fused into a new definition");
+            (s, id)
+        }
+
+        /// The state check of the board as set up, its events.
+        fn settle(s: &mut Scenario) -> Vec<GameEvent> {
+            let mut events: Vec<GameEvent> = Vec::new();
+            let state = s.state_mut();
+            let mut rng = Rng::new(&state.seed, state.rng_cursor);
+            {
+                let mut sink = EngineSink::new(&mut *state, &mut events, &mut rng);
+                jackioh_engine::state_check::state_check(&mut sink);
+            }
+            state.rng_cursor = rng.cursor();
+            events
+        }
+
+        fn deaths_of(events: &[GameEvent], id: &str) -> usize {
+            events
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == id))
+                .count()
+        }
+
+        #[test]
+        fn r2500000_a_body_that_stood_there_before_is_tributed_returns_and_then_stays() {
+            let (mut s, id) = fused_unit("r2500000-older", false);
+            let events = settle(&mut s);
+            assert_eq!(deaths_of(&events, &id), 1, "Tributed once, resummoned, and the check settled");
+            s.expect_in_zone(id.as_str(), "field");
+        }
+
+        #[test]
+        fn r2500000_a_body_that_arrived_this_turn_is_not_tributed_at_all() {
+            let (mut s, id) = fused_unit("r2500000-arrived", true);
+            let events = settle(&mut s);
+            assert_eq!(deaths_of(&events, &id), 0, "it arrived this turn");
+            s.expect_in_zone(id.as_str(), "field");
+        }
+
+        #[test]
+        fn r2500000_a_printed_siphon_squad_still_tributes_the_turn_it_is_set() {
+            let mut s = set_against(&[], false, &[]);
+            s.expect_in_zone(SIPHON, "graveyard");
         }
     }
 }

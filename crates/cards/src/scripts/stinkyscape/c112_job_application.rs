@@ -25,9 +25,7 @@
 //! Paychecks (S #112.1) at each of its controller's later starts of turn while it stays; or re-apply,
 //! tripling the factor (at most ×9) and opening Stage 1 again (R1865002). Death summons it from the
 //! graveyard into its own backrow zone, else R64's, its line, its factor and its memory reset (R78); its
-//! resume, whose holder left the field, is exiled (R1865000). An exile or a bounce ends it. Fused into
-//! a Unit or granted to one, its Death resummons no Unit that arrived this turn (R2500000), the
-//! end of a loop with a Tribute that takes the Unit out each time it returns (REVIEW A3.6).
+//! resume, whose holder left the field, is exiled (R1865000). An exile or a bounce ends it.
 //! Radiant: its Lucky 1 (`lucky_on`) draws the wait again and keeps the shorter, and `buffs` is 10.
 //! Tunes: buffs 5 ↑ (Radiant 10).
 
@@ -339,13 +337,6 @@ fn resummon(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if card_type_of(&*ctx.state, me) == CardType::Unit
         && unit_view_as_it_died(&*ctx.state, me).max_health <= 0
     {
-        return vec![];
-    }
-    // R2500000: on a body that is not Job Application itself (a fusion, a granted text) and arrived this
-    // turn, the Death resummons nothing, so a Unit that a "Tribute this" of another fused text takes
-    // back out the moment it returns (Siphon Squad's, with the opponent holding no Units) ends after
-    // the one return, a self-recursive Death's terminator (REVIEW A3.6).
-    if me.def_id != ID && me.summoned_turn == Some(ctx.state.turn) {
         return vec![];
     }
     vec![summon(SummonArgs {
@@ -1128,81 +1119,5 @@ mod tests {
         s.state_mut().rng_cursor = rng.cursor();
         s.play(&fused.id, json!({ "zone": 1 }));
         s.expect_in_zone(&fused, "graveyard");
-    }
-
-    /// R2500000: Job Application's text and Classic #88 Siphon Squad's "When your opponent has no Units,
-    /// Tribute this" fused onto one Unit, the opponent holding none: the Tribute takes the Unit out at
-    /// every state check, and the Death put it back at once, so the board never settled (daily fuzz
-    /// seeds 7243 and, in Duos, 1231, where 饕餮 fused both).
-    mod r2500000_a_fused_resummon_meets_a_tribute_that_comes_back {
-        use super::*;
-        use jackioh_engine::effects::fuse_cards;
-
-        /// (3) Field Trap, "When your opponent has no Units, Tribute this".
-        const SIPHON_SQUAD: &str = "classic-088";
-
-        /// P1's Unit with Siphon Squad's and Job Application's texts fused into it, P2 holding no Units
-        /// at all. It stood there before this turn, or (`arrived_this_turn`) was played now.
-        fn fused_unit(seed: &str, arrived_this_turn: bool) -> (Scenario, String) {
-            let library = vec![MENACE; LIBRARY];
-            let mut s = scenario(json!({
-                "seed": seed,
-                "p1": {
-                    "hand": if arrived_this_turn { json!([VANILLA]) } else { json!([]) },
-                    "field": if arrived_this_turn { json!([]) } else { json!([{ "def": VANILLA, "lane": 1 }]) },
-                    "library": library,
-                    "mana": MANA,
-                },
-                "p2": { "library": library },
-            }));
-            if arrived_this_turn {
-                s.play(VANILLA, json!({ "zone": 1 }));
-            }
-            let id = s.unit_at(P1, 1).id;
-            let fuse = fuse_cards(json_as(json!({
-                "instanceIds": [id],
-                "defIds": [SIPHON_SQUAD, ID],
-                "targetInstanceId": id,
-            })));
-            crate::run_as(&mut s, fuse, P1);
-            assert!(s.card(id.as_str()).def_id.starts_with("t-"), "fused into a new definition");
-            (s, id)
-        }
-
-        /// The state check of the board as set up, its events.
-        fn settle(s: &mut Scenario) -> Vec<GameEvent> {
-            let mut events: Vec<GameEvent> = Vec::new();
-            let state = s.state_mut();
-            let mut rng = Rng::new(&state.seed, state.rng_cursor);
-            {
-                let mut sink = EngineSink::new(&mut *state, &mut events, &mut rng);
-                jackioh_engine::state_check::state_check(&mut sink);
-            }
-            state.rng_cursor = rng.cursor();
-            events
-        }
-
-        fn deaths_of(events: &[GameEvent], id: &str) -> usize {
-            events
-                .iter()
-                .filter(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == id))
-                .count()
-        }
-
-        #[test]
-        fn r2500000_a_body_that_stood_there_before_returns_once_and_then_stays_dead() {
-            let (mut s, id) = fused_unit("r2500000-older", false);
-            let events = settle(&mut s);
-            assert_eq!(deaths_of(&events, &id), 2, "Tributed, resummoned, Tributed again");
-            s.expect_in_zone(id.as_str(), "graveyard");
-        }
-
-        #[test]
-        fn r2500000_a_body_that_arrived_this_turn_is_not_resummoned() {
-            let (mut s, id) = fused_unit("r2500000-arrived", true);
-            let events = settle(&mut s);
-            assert_eq!(deaths_of(&events, &id), 1, "Tributed once, never resummoned");
-            s.expect_in_zone(id.as_str(), "graveyard");
-        }
     }
 }
