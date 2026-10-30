@@ -20,8 +20,6 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Request};
 use hmac::{Hmac, KeyInit, Mac};
 use indexmap::IndexMap;
-use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use sha2::Sha256;
 use tower::ServiceExt;
@@ -48,7 +46,7 @@ use jackioh_server::db::store::{
 use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{call, test_app};
-use crate::support::store::{store, try_store, uuid};
+use crate::support::store::{from, store, to_json, try_store, uuid};
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -107,15 +105,6 @@ fn e2e_store() -> Db {
 // ---------------------------------------------------------------------------
 // Harness (a private copy per file, SURFACE rule 5)
 // ---------------------------------------------------------------------------
-
-/// A port value built from TS's own object literal, so the test depends on the JSON shape only.
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn json_of<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
 
 /// Jest's `toMatchObject`: every key `expected` names is in `actual` with a matching value.
 fn assert_matches(actual: &Value, expected: &Value, at: &str) {
@@ -216,7 +205,7 @@ async fn grants_for(db: &Db, profile_id: &str) -> Vec<Value> {
             .await
             .grants_for(profile_id)
             .iter()
-            .map(json_of)
+            .map(to_json)
             .collect(),
         Db::Pg(_) => panic!("the API tests run on the fake store"),
     }
@@ -226,7 +215,7 @@ async fn create_profile(db: &Db, user_id: &str) -> Value {
     let input: ProfileCreateInput = from(
         json!({ "userId": user_id, "email": format!("{user_id}@example.test"), "rating": 1000, "at": 1 }),
     );
-    json_of(&store!(db, profiles_create(&input)))
+    to_json(&store!(db, profiles_create(&input)))
 }
 
 fn id_of(row: &Value) -> String {
@@ -234,7 +223,7 @@ fn id_of(row: &Value) -> String {
 }
 
 async fn collection_of(db: &Db, profile_id: &str) -> Value {
-    json_of(&store!(db, collection_get(profile_id)))
+    to_json(&store!(db, collection_get(profile_id)))
 }
 
 async fn set_status(db: &Db, profile_id: &str, status: &str) {
@@ -310,7 +299,7 @@ mod the_end_to_end_store {
             drop(t);
         }
 
-        assert!(json_of(&store!(db, profiles_get_by_id(&id)))["inMatchId"].is_null());
+        assert!(to_json(&store!(db, profiles_get_by_id(&id)))["inMatchId"].is_null());
         assert_eq!(collection_of(&db, &id).await, json!([]));
     }
 
@@ -336,7 +325,7 @@ mod the_end_to_end_store {
         t.commit().await.expect("commit");
 
         assert_eq!(
-            json_of(&store!(db, profiles_get_by_id(&id)))["inMatchId"],
+            to_json(&store!(db, profiles_get_by_id(&id)))["inMatchId"],
             json!("match-1")
         );
         assert_eq!(
@@ -362,7 +351,7 @@ mod the_end_to_end_store {
         let (first, second) = tokio::join!(claim(), claim());
         assert_eq!([first, second].iter().filter(|won| **won).count(), 1);
         assert_eq!(
-            json_of(&store!(db, codes_find_by_hash("hash-1")))["uses"],
+            to_json(&store!(db, codes_find_by_hash("hash-1")))["uses"],
             json!(1)
         );
     }
@@ -414,8 +403,8 @@ mod the_end_to_end_store {
         assert!(store!(db, tickets_claim_pair("t1", "t2", "match-1", 1)));
         // t1 is already matched, so no second matcher can pair it with anyone.
         assert!(!store!(db, tickets_claim_pair("t1", "t3", "match-2", 1)));
-        assert_eq!(json_of(&store!(db, tickets_get("t3")))["status"], json!("open"));
-        assert_eq!(json_of(&store!(db, tickets_count_open())), json!(1));
+        assert_eq!(to_json(&store!(db, tickets_get("t3")))["status"], json!("open"));
+        assert_eq!(to_json(&store!(db, tickets_count_open())), json!(1));
     }
 
     #[tokio::test(start_paused = true)]
@@ -519,7 +508,7 @@ mod r144_the_reseed_at_boot {
 
     /// The invite-code row a plaintext code hashes to, or null.
     async fn by_kind(app: &App, hashes: &Hashes, code: &str) -> Value {
-        json_of(&store!(app.db, codes_find_by_hash(&hashes.code(code))))
+        to_json(&store!(app.db, codes_find_by_hash(&hashes.code(code))))
     }
 
     #[tokio::test(start_paused = true)]
@@ -528,9 +517,9 @@ mod r144_the_reseed_at_boot {
         seed_e2e_fixtures(&app).await.expect("the reseed");
 
         for fixture in E2E_ACCOUNTS.iter() {
-            let profile = json_of(&store!(app.db, profiles_get_by_user_id(&fixture.user_id)));
+            let profile = to_json(&store!(app.db, profiles_get_by_user_id(&fixture.user_id)));
             assert!(!profile.is_null(), "{} has a profile", fixture.user_id);
-            assert_eq!(profile["status"], json_of(&fixture.status));
+            assert_eq!(profile["status"], to_json(&fixture.status));
             let owned = collection_of(&app.db, profile["id"].as_str().unwrap_or("")).await;
             // A6: `e2e-p1` and `e2e-p2` "own every card" (R1310004); `e2e-pending` and `e2e-econ` own
             // nothing until they redeem.
@@ -608,7 +597,7 @@ mod r144_the_reseed_at_boot {
         let first = seed_e2e_fixtures(&app).await.expect("the second reseed");
         assert_eq!(first.granted_cards as usize, every_card(&app));
 
-        let pending_profile = json_of(&store!(app.db, profiles_get_by_user_id(&pending().user_id)));
+        let pending_profile = to_json(&store!(app.db, profiles_get_by_user_id(&pending().user_id)));
         assert_eq!(
             pending_profile["status"],
             json!("pending"),
@@ -829,7 +818,7 @@ mod r1310000_going_live {
         let app = harness().await;
         assert!(app.economy_live, "the economy is live (§14.12)");
         seed_e2e_fixtures(&app).await.expect("the reseed");
-        let id = id_of(&json_of(&store!(
+        let id = id_of(&to_json(&store!(
             app.db,
             profiles_get_by_user_id(pending().user_id)
         )));
@@ -911,7 +900,7 @@ mod r144_the_reseed_on_demand {
     use super::*;
 
     async fn good_code_uses(app: &App) -> Value {
-        json_of(&store!(
+        to_json(&store!(
             app.db,
             codes_find_by_hash(&hashes(app).code(E2E_INVITE_CODES.good))
         ))["uses"]
@@ -919,13 +908,13 @@ mod r144_the_reseed_on_demand {
     }
 
     async fn pending_status(app: &App) -> Value {
-        json_of(&store!(app.db, profiles_get_by_user_id(pending().user_id)))["status"].clone()
+        to_json(&store!(app.db, profiles_get_by_user_id(pending().user_id)))["status"].clone()
     }
 
     /// The route answers as a path nobody serves and reseeds nothing: the pending account, which the
     /// test activates first as spec 10's redemption would, stays active.
     async fn assert_no_reseed(app: &Arc<App>) {
-        let id = id_of(&json_of(&store!(
+        let id = id_of(&to_json(&store!(
             app.db,
             profiles_get_by_user_id(pending().user_id)
         )));
@@ -1036,10 +1025,10 @@ mod r143_the_optional_seed {
         let mut decks = Vec::new();
         for (index, fixture) in E2E_ACCOUNTS
             .iter()
-            .filter(|candidate| json_of(&candidate.status) == json!("active"))
+            .filter(|candidate| to_json(&candidate.status) == json!("active"))
             .enumerate()
         {
-            let profile = json_of(&store!(app.db, profiles_get_by_user_id(&fixture.user_id)));
+            let profile = to_json(&store!(app.db, profiles_get_by_user_id(&fixture.user_id)));
             let id = profile["id"].as_str().unwrap_or("").to_string();
             // One saved deck each, owned card for card, so `{ mode: "bo1", deckId }` below is a legal
             // Best of 1 on it (R257). TS sent the legacy `{ deckIndex: 0 }`, which SURFACE §11.3 drops.

@@ -1017,9 +1017,12 @@ the lib and `server` hold tests whose path has `api::`, and only `server` ones w
 `tower`'s `oneshot`;
 `support/engine.rs` installs test cards (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`)
 through the engine testkit's override; `support/socket.rs` is an in-memory socket; `support/store.rs` holds
-the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`; one store call in its own
-transaction: `q!`, `store!`, `try_store!`; `to_json`, `uuid`); time is `tokio::time::pause()` and that
-module's steps (`advance`, `advance_and_yield`, `sleep_settled`).
+the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`, its tables `table` and
+`fake_read`, its faults `fail_on` and `stop_failing`; one store call in its own transaction: `q!`, `store!`,
+`try_store!`; `to_json`, `from`, `uuid`, `hmac_sha256_hex`); time is `tokio::time::pause()` and that
+module's steps (`advance`, `advance_and_yield`, `sleep_settled`). `support/engine.rs` also gives the
+catalog's playable ids (`playable`). `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`, #2385)
+fails a file under `actor/`, `api/`, `bots/`, `loops/` or `support/` that defines its own copy of one.
 The fake store is strict where Postgres is strict (a
 transaction restores every table when it fails, claims are single-shot). `tests/store/contract.rs`
 runs every case against `Db::Fake` always and against `Db::Pg` when `DATABASE_URL` is set, which is
