@@ -10173,14 +10173,9 @@
     "what": "build #2477 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-30T14:50:21Z",
+    "at": "2026-10-30T15:01:58Z",
     "notes": [
-      "delivered revise #2309 on claude-8 (run 41070148390): interrupted",
-      "delivered build #2479 on claude-7 (run 41066212832): interrupted",
-      "delivered build #2480 on muse (run 41064317121): interrupted",
-      "delivered build #2478 on claude-1 (run 41064215156): interrupted",
-      "delivered build #2490 on muse (run 41061609207): interrupted",
-      "delivered revise #2310 on muse (run 41051126984): interrupted"
+      "delivered build #2491 on claude-4 (run 41066313393): interrupted"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -10886,7 +10881,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T14:50:21Z",
+  "loop_tick": "2026-10-30T15:01:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
