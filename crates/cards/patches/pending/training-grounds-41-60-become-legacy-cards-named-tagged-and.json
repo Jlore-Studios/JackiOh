@@ -38,5 +38,7 @@
     "traininggrounds-058",
     "traininggrounds-059",
     "traininggrounds-060"
-  ]
+  ],
+  "rule": true,
+  "visual": true
 }
