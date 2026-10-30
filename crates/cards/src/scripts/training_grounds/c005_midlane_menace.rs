@@ -140,6 +140,36 @@ mod tests {
         }
 
         #[test]
+        fn r1_a_copy_of_it_summoned_into_lane_3_gains_nothing() {
+            // The source stands unbuffed in lane 1 (a copy keeps buffs and granted keywords, R57), so an
+            // 8/8 or a Rush on the copy could only come from a Cry it must not have.
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [FILLER],
+                    "library": [FILLER, FILLER],
+                    "field": [{ "def": MENACE, "lane": 1 }],
+                },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+            }));
+            let source = s.unit_at(P1, 1);
+            let events = crate::run_as(
+                &mut s,
+                jackioh_engine::effects::summon_copy(json_as(json!({
+                    "of": { "of": "instance", "instanceId": source.id },
+                    "lane": 3,
+                }))),
+                P1,
+            );
+            let copy = s.unit_at(P1, 3);
+            assert_eq!(copy.def_id, MENACE);
+            assert_ne!(copy.id, source.id);
+            s.expect_stats(&copy, json!({ "attack": 3, "health": 3 }));
+            assert!(s.stats(&copy).keywords.is_empty());
+            assert!(events.iter().all(|event| event.event_type() != GameEventType::Buffed));
+            assert!(events.iter().all(|event| event.event_type() != GameEventType::KeywordGranted));
+        }
+
+        #[test]
         fn r386_an_upgrade_gives_6_6_a_degrade_4_4() {
             for (step, gain) in [(1, 6), (-1, 4)] {
                 let mut s = menace(false);

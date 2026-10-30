@@ -419,6 +419,12 @@ pub static ROUTES: &[Route] = &[
         h!(api::practice::post_seed),
     ),
     (
+        "DELETE",
+        "/api/practice/seeds/:seed",
+        AuthLevel::Active,
+        h!(api::practice::delete_seed),
+    ),
+    (
         "POST",
         "/api/practice/claims",
         AuthLevel::Active,

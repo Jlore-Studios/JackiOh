@@ -37,7 +37,6 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 
 use indexmap::IndexMap;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_engine::{PlayerId, pick_portrait_from_seed};
@@ -65,16 +64,10 @@ use jackioh_server::ranked::season::season_id_of;
 use jackioh_server::seats::Seat;
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
-use crate::support::store::{fake_lock, q};
+use crate::support::engine::playable;
+use crate::support::store::{fake_lock, from, q};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
-
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    match serde_json::from_value(value.clone()) {
-        Ok(parsed) => parsed,
-        Err(error) => panic!("{error}: {value}"),
-    }
-}
 
 /// The app with the fallback switched on (or off), and no fixtures.
 async fn app_with_bots(on: bool) -> Arc<App> {
@@ -98,16 +91,6 @@ static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 
 fn next_id(prefix: &str) -> String {
     format!("{prefix}-{}", NEXT_ID.fetch_add(1, Ordering::SeqCst) + 1)
-}
-
-/// The catalog's playable ids (no tokens), in catalog order.
-fn playable() -> Vec<String> {
-    jackioh_cards::register_all();
-    jackioh_cards::CATALOG
-        .values()
-        .filter(|def| !def.token)
-        .map(|def| def.id.clone())
-        .collect()
 }
 
 fn deck(slot: usize) -> Vec<String> {
