@@ -9762,8 +9762,12 @@
     "what": "revise #2420 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-30T03:32:38Z",
-    "notes": [],
+    "at": "2026-10-30T03:39:28Z",
+    "notes": [
+      "started revise #2420 on muse (run 40998711445)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -10468,7 +10472,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T03:32:38Z",
+  "loop_tick": "2026-10-30T03:39:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
