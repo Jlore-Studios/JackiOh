@@ -7447,10 +7447,14 @@
       "votes": {
         "approvals": [],
         "builder": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "b85a5b8209cd58dc2d88ec360a206996a990f765",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "2310": {
