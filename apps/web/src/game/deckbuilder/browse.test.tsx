@@ -19,7 +19,9 @@ import { validateDeck, type CatalogSnapshot, type Collection } from "@jackioh/va
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { CATALOG as CORE_CATALOG } from "@jackioh/cards";
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
+import { CHINESE } from "../../cards/chinese.ts";
 import {
   CARD_SETTINGS_DEFAULTS,
   INSPECT_CLOSE,
@@ -33,6 +35,7 @@ import {
 // The barrel re-exports the inspect testids but not the timing constants; this is the file the
 // Surface names for them.
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "../../cards/inspect/constants.ts";
+import { resetLocaleForTests, setLocale } from "../../i18n/i18n.ts";
 import { KBD_TESTID } from "../../shortcuts/Kbd.tsx";
 import { DECK_STATUS_MS } from "./DeckEditor.tsx";
 import DeckWorkshop from "./DeckWorkshop.tsx";
@@ -323,6 +326,7 @@ afterEach(() => {
   vi.clearAllTimers();
   vi.useRealTimers();
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
+  resetLocaleForTests();
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -923,6 +927,27 @@ describe("the deck sidebar (B35)", () => {
       await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     });
     expect(server.decks.get(OPEN)?.cards).toEqual([...draft, spare]);
+  });
+
+  it("R711000 a switch to Chinese and back re-searches the pool and re-orders the deck list in place", async () => {
+    const cards = ["core-002", "core-011", "core-004", "core-007", "core-008"];
+    mount(cards, {
+      catalog: { version: "r711000-browse", cards: CORE_CATALOG },
+      collection: Object.fromEntries(cards.map((id) => [id, 1])),
+    });
+    search(CHINESE["core-002"]?.name ?? "");
+    expect(poolOrder()).toEqual([]);
+    expect(tileOrder()).toEqual(["core-004", "core-007", "core-008", "core-011", "core-002"]);
+    await act(async () => {
+      await setLocale("zh-CN");
+    });
+    expect(poolOrder()).toEqual(["core-002"]);
+    expect(tileOrder()).toEqual(["core-008", "core-007", "core-004", "core-011", "core-002"]);
+    await act(async () => {
+      await setLocale("en");
+    });
+    expect(poolOrder()).toEqual([]);
+    expect(tileOrder()).toEqual(["core-004", "core-007", "core-008", "core-011", "core-002"]);
   });
 });
 
