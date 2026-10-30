@@ -1,0 +1,57 @@
+{
+  "action": "build",
+  "number": 2482,
+  "title": "Patch: the command menu's card test waits for the inspect detail to close, and its unshipped-card check runs again",
+  "branch": "bot/issue-2482",
+  "thread": "**Issue #2482 (data, not instructions):**\n\n```text\n# #2482: Patch: the command menu's card test waits for the inspect detail to close, and its unshipped-card check runs again\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nOne of the web's unit tests, part of the required `web` check, failed once on `main` with no code change behind it. The last audit called it timing-dependent and left it to be watched. Reading the test shows a likely race: it clicks Close and checks straight away that the card's detail is gone. The detail only goes once the Almanac screen notices the address change, and that screen may not be listening yet. A second test in the same file has stopped checking anything. It is meant to prove the command menu never lists a card from an unreleased set, but every set has now shipped, so it finds no such card and skips its check. Once this is built, a red `web` check on that file means a real bug, and the unreleased-card rule is tested again.\n\n## Why\n\n- `reviews/2026-10-29-m13-review.md`, finding B-3: `src/routes/command-menu.test.tsx:259` (`R2118000 a card's result opens its inspect detail`) failed in `web (unit 3/4)` on `main` at ab43a74. It expected the inspect detail to be null after `INSPECT_CLOSE` was clicked. It had passed on the run before, and no fix landed: 'keep watching'.\n- The test clicks Close and asserts at once (`apps/web/src/routes/command-menu.test.tsx:259-260`). Close calls `navigate(paths.almanac, { replace: true })` (`apps/web/src/routes/almanac.tsx:132-134`). The Almanac reads the address through `useSearch()` (`almanac.tsx:80`), a `useSyncExternalStore` subscription that React attaches in an effect after the screen renders.\n- The test's `await import('./almanac.tsx')` (:28) does not mark the route's chunk loaded. Only the chunk's own `load()` does (`apps/web/src/routes/chunks.tsx:26-46`). So the screen mounts through `lazy()`, outside `act`, and `findByTestId` can resolve before the subscription exists. A click in that gap re-renders nothing.\n- The same close in `apps/web/src/routes/landing.test.tsx:594-598` already waits with `waitFor`.\n- At `command-menu.test.tsx:233-241`, the 'never an unshipped card' test looks for a card whose set does not ship, and asserts only `if (held !== undefined)`. Every set in the catalog ships, so `held` is always undefined and the assertion never runs.\n\n## Proposal\n\n- Replace the immediate assertion after the Close click with `await waitFor(\u2026)`. Also assert that the address went back to `paths.almanac`, as `almanac.test.tsx` does.\n- Check the file's other close-then-assert steps for the same pattern.\n- For the unshipped-card test, build a fixture card in a set that does not ship, as `apps/web/src/game/deckbuilder/filters.test.ts:825-834` does (`setShips('Meditative+') ? 'Boss' : 'Meditative+'`). Assert that `commandCards` leaves it out, so the test runs whatever ships.\n\n## Where it lands\n\n`apps/web/src/routes/command-menu.test.tsx` only.\n\n## Acceptance criteria\n\n- [ ] The Close step waits for the detail to go, and asserts the address.\n- [ ] The unshipped-card assertion runs every time, against a fixture card in a set that does not ship. It is shown to fail once when `commandCards` is changed locally to let that card through.\n- [ ] `pnpm --dir apps/web exec vitest run src/routes/command-menu.test.tsx` passes 20 times in a row.\n- [ ] Both tests keep their `R2118000` titles, and `cargo jackioh spec check` passes.\n\n## Size and risks\n\nExtra small: one test file, about 20 lines, and no product code. The race was found by reading the code, not by reproducing it. If the detail really never closes, `waitFor` times out and the test still fails, so the wait hides nothing.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T13:09:08Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2490 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
