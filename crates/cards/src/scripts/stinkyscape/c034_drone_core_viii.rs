@@ -6,8 +6,8 @@
 //!   deck trigger (R464): each Float of its owner's lowers its cost by that much, a `costMod` kept until a
 //!   graveyard or exile (R766), so at (6), past `MAX_MANA`, it is played only so or with mana gained. The
 //!   fill is §7's `fill_board` with the Drone Interceptor: one into each of the caster's empty unit zones
-//!   (R64), never the backrow, though a Flying Unit may be played there; each Interceptor draws its own
-//!   combat keyword as it arrives (R781004). Radiant: Radiant Interceptors.
+//!   (R64), then, as it flies, one into each empty backrow zone, where it stands (R2248000); each
+//!   Interceptor draws its own combat keyword as it arrives (R781004). Radiant: Radiant Interceptors.
 
 use jackioh_engine::prelude::*;
 
@@ -36,7 +36,8 @@ pub fn script() -> CardScripts {
 
 // S #34 Drone Core VIII — SPEC §8.10 row 34, BUILD M12 row S 34: "a Float of 2 at its owner's end of turn
 // makes it cost (4) in hand and deck, the opponent's Float nothing (R1563000); played, it summons an
-// Interceptor into every empty unit zone of its caster; radiant Radiant ones".
+// Interceptor into every empty unit zone of its caster, then every empty backrow zone (R2248000); radiant
+// Radiant ones".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -85,6 +86,13 @@ mod tests {
             .collect()
     }
 
+    /// p1's backrow, lane 1 to 5, read as `row` reads the unit row.
+    fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
+        (1..=5)
+            .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
+            .collect()
+    }
+
     #[test]
     fn r1563000_a_float_of_2_makes_it_cost_two_less_in_hand_and_deck() {
         for radiant in [false, true] {
@@ -109,19 +117,25 @@ mod tests {
     }
 
     #[test]
-    fn r64_fills_every_empty_unit_zone_and_never_the_backrow() {
+    fn r64_r2248000_fills_every_empty_unit_zone_then_every_empty_backrow_zone() {
         let s = cast(false, json!([{ "def": VANILLA, "lane": 2 }]));
         let drone = Some((INTERCEPTOR.to_string(), false));
         let vanilla = Some((VANILLA.to_string(), false));
-        assert_eq!(row(&s), vec![drone.clone(), vanilla, drone.clone(), drone.clone(), drone]);
-        for lane in 1..=5 {
-            assert!(s.backrow(P1, lane).is_none(), "backrow lane {lane} stays empty");
-        }
+        assert_eq!(row(&s), vec![drone.clone(), vanilla, drone.clone(), drone.clone(), drone.clone()]);
+        assert_eq!(backrow(&s), vec![drone; 5]);
+    }
+
+    #[test]
+    fn r2248000_a_full_unit_row_fills_the_backrow() {
+        let s = cast(false, json!(vec![VANILLA; 5]));
+        assert_eq!(row(&s), vec![Some((VANILLA.to_string(), false)); 5]);
+        assert_eq!(backrow(&s), vec![Some((INTERCEPTOR.to_string(), false)); 5]);
     }
 
     #[test]
     fn radiant_fills_it_with_radiant_ones() {
         let s = cast(true, json!([]));
         assert_eq!(row(&s), vec![Some((INTERCEPTOR.to_string(), true)); 5]);
+        assert_eq!(backrow(&s), vec![Some((INTERCEPTOR.to_string(), true)); 5]);
     }
 }
