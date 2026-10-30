@@ -61,8 +61,8 @@ const PEER: &str = "192.0.2.10";
 const PEPPER: &str = "client-address-test-pepper-of-32-characters-or-more";
 
 /// The test environment: `E2E=1` (the fake store and fixture auth), the compiled-in catalog
-/// version (SURFACE §11.3) and one trusted proxy hop, the deployed server behind Render's edge
-/// (`render.yaml`).
+/// version (SURFACE §11.3) and one trusted proxy hop, the deployed server behind the Cloudflare
+/// Worker, which writes `CF-Connecting-IP` as the one entry (wrangler.jsonc).
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
     for (name, value) in [

@@ -16,7 +16,7 @@ const COMMIT: &str = "0123456789abcdef0123456789abcdef01234567";
 
 fn with_commit(db: Option<Db>) -> TestAppOptions {
     TestAppOptions {
-        env: vec![("RENDER_GIT_COMMIT".into(), COMMIT.into())],
+        env: vec![("DEPLOYED_COMMIT".into(), COMMIT.into())],
         db,
         ..TestAppOptions::default()
     }
@@ -99,16 +99,4 @@ fn both_probes_are_open_get_routes() {
             .unwrap_or_else(|| panic!("ROUTES holds GET {path}"));
         assert_eq!(route.2, AuthLevel::None);
     }
-}
-
-#[test]
-fn render_yaml_s_health_check_is_the_readiness_probe() {
-    let render = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../render.yaml"))
-        .expect("render.yaml reads");
-    assert!(
-        render
-            .lines()
-            .any(|line| line.trim() == "healthCheckPath: /readyz"),
-        "render.yaml's healthCheckPath is /readyz"
-    );
 }

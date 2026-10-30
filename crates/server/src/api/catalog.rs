@@ -207,12 +207,13 @@ pub const DEPLOYED_COMMIT_HEADER: &str = "x-deployed-commit";
 ///
 /// Since #1378 no screen of the client reads it: they read the catalog the engine's module registers
 /// (`apps/web/src/game/currentCatalog.ts`). It stays for what calls it from outside (CLAUDE.md
-/// rule 13): the deploy check and Render's health check below, and the e2e runs, which wait for it
-/// before they start.
+/// rule 13): the deploy workflows' live check below, and the e2e runs, which wait for it before
+/// they start.
 ///
 /// `commit` is the git commit this deploy runs (`env.rs` deployed_commit), sent as a header so the
-/// body stays the same bytes for everybody (R163). `deploy-watch.yml` reads it, and Render's health
-/// check probes this route too.
+/// body stays the same bytes for everybody (R163). The live check after `wrangler deploy`
+/// (promote-production.yml, deploy-staging.yml) polls this route until it names the deployed
+/// commit.
 pub async fn get_catalog(app: &Arc<App>, _req: Req) -> ApiResult {
     let catalog = &app.catalog;
     let version = serde_json::to_string(&catalog.version).unwrap_or_else(|_| "\"\"".to_string());

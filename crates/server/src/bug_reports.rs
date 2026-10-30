@@ -288,7 +288,7 @@ impl Filed {
 }
 
 /// The response header `GET /api/catalog` says whether reports can be filed in
-/// (`Readiness::as_str`), beside `x-deployed-commit`, so `deploy-watch.yml` shows it after a deploy.
+/// (`Readiness::as_str`), beside `x-deployed-commit`, so the live check after a deploy shows it.
 pub const BUG_REPORTS_HEADER: &str = "x-bug-reports";
 
 /// Whether a report can be filed, as the boot's `probe` found it.

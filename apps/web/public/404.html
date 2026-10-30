@@ -7,9 +7,10 @@
     <meta name="theme-color" content="#120b07" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Page not found · JackiOh</title>
-    <!-- Vercel serves this file, with a 404 status, for any path vercel.json does not route to the
-         app. It stands alone, so its styles are inline: the tavern frame of the app's own 404 panel
-         (main.tsx NotFound, auth/tavern.css), with no script. -->
+    <!-- Cloudflare serves this file, with a 404 status, for any path that is no file and that
+         public/_redirects does not route to the app (wrangler.jsonc `not_found_handling`). It stands
+         alone, so its styles are inline: the tavern frame of the app's own 404 panel (main.tsx
+         NotFound, auth/tavern.css), with no script. -->
     <style>
       html,
       body {

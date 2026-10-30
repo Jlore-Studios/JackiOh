@@ -1,50 +1,56 @@
-// `vercel.json` must cover the route table or cold production loads return a 404.
-// Root and web copies stay byte-identical; Vercel sources are strict and case-sensitive.
+// `public/_redirects` must cover the route table, or a cold load of a screen gets the 404 page.
+// Each rule is matched the way Cloudflare's asset worker matches it: a rule with no `:name` or `*` is
+// the exact path, `:name` is one path segment and `*` anything, and case counts. A path is the app's
+// when it is `/`, a rule matches it, or it is the slashed path of a page the build writes
+// (static-pages.ts), which is that page's own file; wrangler.jsonc sends `/api/*` and `/ws/*` to the
+// Worker before any rule is read.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
+import { PUBLIC_PAGES } from "../../static-pages.ts";
 import { matchIdOf, paths, seriesIdOf } from "./navigate.ts";
+import { coopLinkPath, roomLinkPath } from "./roomLink.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const WEB_CONFIG = join(HERE, "../../vercel.json");
-const ROOT_CONFIG = join(HERE, "../../../../vercel.json");
+const ROOT = join(HERE, "../../../..");
 
-type VercelConfig = {
-  git: { deploymentEnabled: Record<string, boolean> };
-  ignoreCommand: string;
-  rewrites: { source: string; destination: string }[];
-  headers: { source: string; headers: { key: string; value: string }[] }[];
-};
+/** `_redirects`' rules, each `[from, to, status]`. */
+const rules = readFileSync(join(HERE, "../../public/_redirects"), "utf8")
+  .split("\n")
+  .map((line) => line.trim())
+  .filter((line) => line !== "" && !line.startsWith("#"))
+  .map((line) => line.split(/\s+/u));
 
-const config = JSON.parse(readFileSync(WEB_CONFIG, "utf8")) as VercelConfig;
-
-function sourceRegex(source: string): RegExp {
-  const listed = /^\/\(([a-z|-]+)\)\{\/\}\?$/u.exec(source);
-  if (listed !== null) return new RegExp(`^/(${listed[1] ?? ""})/?$`, "u");
-  const byId = /^\/\(([a-z|-]+)\)\/\(\[\^\/\]\+\)\{\/\}\?$/u.exec(source);
-  if (byId !== null) return new RegExp(`^/(${byId[1] ?? ""})/([^/]+)/?$`, "u");
-  throw new Error(`deploy-routes.test.ts cannot read this source: ${source}`);
+/** A rule's source as Cloudflare's asset worker matches it: `:name` one path segment, `*` anything, case and all. */
+function sourceRegex(from: string): RegExp {
+  const parts = from.split("*").map((part) => part.replace(/[\\^$.+?()[\]{}|]/gu, "\\$&").replace(/:[A-Za-z]\w*/gu, "[^/]+"));
+  return new RegExp(`^${parts.join(".*")}$`, "u");
 }
 
-const rewrites = config.rewrites.map((rewrite) => ({ ...rewrite, regex: sourceRegex(rewrite.source) }));
+const matchers = rules.map(([from = ""]) => ({ from, regex: sourceRegex(from) }));
+
+/** The pages the build writes as `<path>/index.html`. */
+const EMITTED = new Set(PUBLIC_PAGES.map((page) => page.path));
 
 function servedByApp(path: string): boolean {
   if (path === "/") return true;
-  return rewrites.some(({ regex }) => regex.test(path));
+  if (matchers.some(({ regex }) => regex.test(path))) return true;
+  return path.endsWith("/") && EMITTED.has(path.slice(0, -1));
 }
 
-describe("vercel.json", () => {
-  it("is the same file at the repo root and in apps/web", () => {
-    expect(readFileSync(ROOT_CONFIG, "utf8")).toBe(readFileSync(WEB_CONFIG, "utf8"));
-  });
-
-  it("sends every rewrite to index.html", () => {
-    expect(rewrites.length).toBeGreaterThan(0);
-    for (const rewrite of rewrites) expect(rewrite.destination, rewrite.source).toBe("/index.html");
+describe("public/_redirects", () => {
+  it("matches the way Cloudflare does: a whole path, `:id` as one segment, and case", () => {
+    expect(sourceRegex("/match/:id").test("/match/abc")).toBe(true);
+    expect(sourceRegex("/match/:id").test("/match/a/b")).toBe(false);
+    expect(sourceRegex("/match/:id").test("/match/")).toBe(false);
+    expect(sourceRegex("/login").test("/Login")).toBe(false);
+    expect(sourceRegex("/login").test("/loginx")).toBe(false);
+    expect(sourceRegex("/a/*").test("/a/b/c")).toBe(true);
   });
 
   it("routes every screen in the route table, with or without a trailing slash", () => {
@@ -64,10 +70,25 @@ describe("vercel.json", () => {
     }
   });
 
-  it("routes a match and a series by id, the way matchIdOf and seriesIdOf read them", () => {
+  it("rewrites nothing but the route table's screens, in either spelling", () => {
+    const screens = Object.entries(paths)
+      .filter(([name]) => name !== "hotseat" && name !== "duosDev")
+      .flatMap(([, path]) => {
+        if (typeof path === "string") return [path];
+        // A screen by id, in `_redirects`' spelling; the others are a screen with a query.
+        const byId = (path as (id: string) => string)(":id");
+        return byId.includes("?") ? [] : [byId];
+      });
+    const spellings = new Set(screens.flatMap((path) => [path, `${path}/`]));
+    expect(spellings).toContain("/match/:id");
+    for (const { from } of matchers) expect(spellings.has(from), from).toBe(true);
+  });
+
+  it("routes a match, a series, a watched game and a co-op game by id, the way matchIdOf and seriesIdOf read them", () => {
     const id = "0b9f3c1e-2d4a-4b8e-9f00-123456789abc";
-    for (const path of [paths.match(id), paths.series(id), `${paths.match(id)}/`, `${paths.series(id)}/`]) {
+    for (const path of [paths.match(id), paths.series(id), paths.watch(id), paths.duos(id)]) {
       expect(servedByApp(path), path).toBe(true);
+      expect(servedByApp(`${path}/`), `${path}/`).toBe(true);
     }
     expect(matchIdOf(paths.match(id))).toBe(id);
     expect(seriesIdOf(paths.series(id))).toBe(id);
@@ -89,91 +110,39 @@ describe("vercel.json", () => {
       "/match/",
       "/match/a/b",
       "/series",
-      "/api/auth/me",
     ]) {
       expect(servedByApp(path), path).toBe(false);
     }
   });
 
-  it("sends the security headers on every response, with an enforced CSP", () => {
-    const all = config.headers.find((block) => block.source === "/(.*)");
-    expect(all).toBeDefined();
-    const headers = new Map((all?.headers ?? []).map(({ key, value }) => [key.toLowerCase(), value]));
-    expect(headers.get("x-frame-options")).toBe("DENY");
-    expect(headers.get("x-content-type-options")).toBe("nosniff");
-    expect(headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
-    expect(headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
-    const csp = headers.get("content-security-policy") ?? "";
-    // WebAssembly compilation needs `wasm-unsafe-eval` (docs/v0.3.0/SURFACE.md §10.3).
-    expect(csp).toMatch(/script-src 'self' 'wasm-unsafe-eval'(;|$)/u);
-    expect(csp).toMatch(/frame-ancestors 'none'/u);
-    // The bundle connects only to Auth, the API and the match socket.
-    const connect = /connect-src ([^;]+)/u.exec(csp)?.[1] ?? "";
-    expect(connect.split(" ")).toEqual(
-      expect.arrayContaining([
-        "'self'",
-        "https://exmjdaswedxhnzmpzqrq.supabase.co",
-        "https://jackioh-server.onrender.com",
-        "wss://jackioh-server.onrender.com",
-      ]),
-    );
-  });
-});
-
-// Machine branches disable Vercel deployment; other branches defer to `ignoreCommand`.
-
-function branchRegex(pattern: string): RegExp {
-  const family = /^([a-z-]+)\/\*\*$/u.exec(pattern);
-  if (family !== null) return new RegExp(`^${family[1] ?? ""}/.+$`, "u");
-  if (/^[a-z-]+$/u.test(pattern)) return new RegExp(`^${pattern}$`, "u");
-  throw new Error(`deploy-routes.test.ts cannot read this branch pattern: ${pattern}`);
-}
-
-function deploys(branch: string): boolean {
-  const off = Object.entries(config.git.deploymentEnabled).some(
-    ([pattern, enabled]) => !enabled && branchRegex(pattern).test(branch),
-  );
-  return !off;
-}
-
-describe("vercel.json deployment flag", () => {
-  it("creates no deployment for the branches machines push to, and never for main", () => {
-    for (const branch of [
-      // The training lanes' branches and the improve lane's stack (training/loop.sh), pushed every
-      // 15 minutes while a session runs.
-      "ai/improve",
-      "ai/unban",
-      "ai/improve-stack",
-      "bot-state",
-      "bot/issue-63",
-      // Squishy's state and issue branches.
-      "squishy-state",
-      "squishy/issue-63",
-      "claude/stoic-tesla-837kse",
-      "copilot/fix-1",
-      "dependabot/npm_and_yarn/vite-7",
-      // The learned evaluation's parts and the night bot's own branches.
-      "learned/part-7-lane",
-      "night-bot/suspend-294",
-      "patch/v0.1.1",
-      "patches/ship-74c8823",
-      "polish/3-ai",
-      // Cloudflare's branch: Vercel staging builds main.
-      "production",
-      // Temporary head for a production merge.
-      "promote/20261005-abc1234",
-      "wt/engine",
+  it("keeps the query string: every rule is a rewrite, which leaves the address as the browser asked for it, and none spells a query", () => {
+    for (const [from = "", to = "", status] of rules) {
+      expect(status, from).toBe("200");
+      // Cloudflare matches the path alone, and a rewrite serves its target's file for the address asked.
+      expect(`${from} ${to}`, from).not.toContain("?");
+    }
+    const id = "core-001";
+    for (const link of [
+      paths.almanacCard(id),
+      paths.collectionSection("cards"),
+      roomLinkPath("QRSTUV", "bo1"),
+      coopLinkPath("QRSTUV"),
     ]) {
-      expect(deploys(branch), branch).toBe(false);
-    }
-    for (const branch of ["main", "feat/live-cards", "fix/anim-double", "machine-ids", "bot", "botany", "productions", "promotes"]) {
-      expect(deploys(branch), branch).toBe(true);
+      const url = new URL(link, "https://jackioh.com");
+      expect(url.search, link).not.toBe("");
+      expect(servedByApp(url.pathname), link).toBe(true);
     }
   });
 
-  it("hands the build decision to scripts/vercel-ignore.sh, and builds unless that exits 0", () => {
-    expect(config.ignoreCommand).toBe(
-      'sh "$(git rev-parse --show-toplevel)/scripts/vercel-ignore.sh" && exit 0; exit 1',
-    );
+  it("rewrites no path the Worker answers: wrangler.jsonc sends /api/* and /ws/* to it first", () => {
+    const config = JSON5.parse<{ assets?: { run_worker_first?: string[] } }>(readFileSync(join(ROOT, "wrangler.jsonc"), "utf8"));
+    const prefixes = (config.assets?.run_worker_first ?? []).map((route) => route.replace(/\*$/u, ""));
+    expect(prefixes).toEqual(["/api/", "/ws/"]);
+    const worker = prefixes.flatMap((prefix) => [prefix, `${prefix}x`, `${prefix}x/`, `${prefix}a/b`]);
+    worker.push("/api/auth/me", "/api/catalog", "/ws/match", "/ws/duos", "/ws/watch");
+    for (const { from, regex } of matchers) {
+      expect(from, "a rule under the Worker's paths").not.toMatch(/^\/(api|ws)(\/|$)/u);
+      for (const path of worker) expect(regex.test(path), `${from} matches ${path}`).toBe(false);
+    }
   });
 });

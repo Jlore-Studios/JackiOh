@@ -75,12 +75,14 @@ pub struct Env {
     /// own proxies wrote. 0 to `MAX_TRUSTED_PROXY_HOPS`; defaults to `DEFAULT_TRUSTED_PROXY_HOPS`; 0
     /// ignores the header and keys every request on the socket's peer address.
     pub trusted_proxy_hops: usize,
-    /// The git commit this build is running: Render's `RENDER_GIT_COMMIT`, which it sets on every
-    /// deploy and which is unset anywhere else (`None` here). `GET /api/catalog` reports it in the
-    /// `x-deployed-commit` response header so `deploy-watch.yml` can tell a server that is on the
-    /// pushed commit from one Render never redeployed, which the catalog version alone cannot show
-    /// when a push leaves the catalog as it was. Only a hex string is kept, since it is echoed into a
-    /// header.
+    /// The git commit this build is running: `DEPLOYED_COMMIT`, the full sha `wrangler deploy` hands
+    /// the Worker (`--var DEPLOYED_COMMIT:<sha>`) and the Worker hands the container
+    /// (apps/edge/src/routing.ts), unset anywhere else (`None` here). `GET /api/catalog`, `/healthz`
+    /// and `/readyz` report it in the `x-deployed-commit` response header: the Worker restarts a
+    /// container whose `/healthz` names another commit than its own, and the deploy workflows'
+    /// live checks wait for `/api/catalog` to name the deployed one, which the catalog version alone
+    /// cannot show when a push leaves the catalog as it was. Only a hex string is kept, since it is
+    /// echoed into a header.
     pub deployed_commit: Option<String>,
     /// R1453: `LADDER_BOTS=on` seats a ladder bot in a ranked match (or, for Conquest, series,
     /// R641000) whose ticket has waited past its fallback time with no person to pair with, and keeps
@@ -188,7 +190,7 @@ pub const SERVER_ONLY_ENV_VARS: &[&str] = &[
     "E2E",
     "CATALOG_VERSION",
     "TRUSTED_PROXY_HOPS",
-    "RENDER_GIT_COMMIT",
+    "DEPLOYED_COMMIT",
     "LADDER_BOTS",
     "CREATE_ISSUES_TOKEN",
     "GITHUB_ISSUES_REPO",
@@ -325,7 +327,7 @@ fn parse_trusted_proxy_hops(value: Option<&str>, problems: &mut Vec<String>) -> 
         Some(hops) if hops <= MAX_TRUSTED_PROXY_HOPS as u64 => hops as usize,
         _ => {
             problems.push(format!(
-                "TRUSTED_PROXY_HOPS: how many X-Forwarded-For entries, counted from the right, this deployment's own proxies write (R190; Render's edge is 1). Must be an integer from 0 to {MAX_TRUSTED_PROXY_HOPS} (got {}). Optional; defaults to {DEFAULT_TRUSTED_PROXY_HOPS}. 0 ignores the header and keys every request on its peer address. The api.forwarded_for log lines report the fewest entries any request carried; this must not be more than that.",
+                "TRUSTED_PROXY_HOPS: how many X-Forwarded-For entries, counted from the right, this deployment's own proxies write (R190; behind the Cloudflare Worker, 1). Must be an integer from 0 to {MAX_TRUSTED_PROXY_HOPS} (got {}). Optional; defaults to {DEFAULT_TRUSTED_PROXY_HOPS}. 0 ignores the header and keys every request on its peer address. The api.forwarded_for log lines report the fewest entries any request carried; this must not be more than that.",
                 quoted(raw)
             ));
             DEFAULT_TRUSTED_PROXY_HOPS
@@ -543,8 +545,8 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
 
     // SURFACE §11.3: the catalog is compiled in, so this build serves its own version whatever the
     // environment says. A `CATALOG_VERSION` that names another one is a value a host kept from an
-    // older deploy (Render's dashboard when its Blueprint did not sync a patch's bump): it is
-    // reported and ignored, so a card patch always ships without a hand edit anywhere (#488).
+    // older deploy (the Worker passes none, apps/edge/src/routing.ts): it is reported and ignored,
+    // so a card patch always ships without a hand edit anywhere (#488).
     let catalog_version = jackioh_cards::catalog_version().to_string();
     if let Some(raw) = read("CATALOG_VERSION").filter(|raw| is_non_empty(Some(raw)))
         && raw != catalog_version
@@ -569,7 +571,7 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         e2e,
         catalog_version,
         trusted_proxy_hops,
-        deployed_commit: parse_deployed_commit(read("RENDER_GIT_COMMIT")),
+        deployed_commit: parse_deployed_commit(read("DEPLOYED_COMMIT")),
         ladder_bots,
         github_issues_token,
         github_issues_repo,

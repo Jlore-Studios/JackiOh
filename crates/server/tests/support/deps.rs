@@ -49,8 +49,8 @@ use jackioh_server::auth::{Auth, E2eAuth};
 pub use super::test_app::{TEST_CATALOG_VERSION, TestAppOptions, test_app, test_app_with};
 
 /// The `X-Forwarded-For` entry `json_request` writes by default, as a proxy would, so the tests model
-/// the deployed server behind one proxy hop (`render.yaml`). The server's own default is 0 (R190),
-/// and the client-address tests cover it by setting `TRUSTED_PROXY_HOPS`.
+/// the deployed server behind one proxy hop (the Worker's, wrangler.jsonc). The server's own default
+/// is 0 (R190), and the client-address tests cover it by setting `TRUSTED_PROXY_HOPS`.
 pub const DEFAULT_TEST_IP: &str = "203.0.113.7";
 
 /// TS `createTestDeps()`: the test app over an empty store. R144's fixtures are the end-to-end

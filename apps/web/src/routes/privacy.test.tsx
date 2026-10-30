@@ -48,6 +48,7 @@ const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-15b": "33b0dd18c38c52456ee05a0cfaa51d881cc168411edac71c1672a9254d997e13",
   "2026-10-15b/2026-10-17": "37fbbebe49f56312ba164323c624142fa3e88a5294677e1c654c6cfc86de2774",
   "2026-10-15b/2026-10-21": "df87894475e985f8f9915b94e155f6245a841e53969765cd96dbd6d2f90f2be4",
+  "2026-10-15b/2026-10-30": "911999940283bc219199d97dc44940ecf5211fc98b987ed85e87d9b42b14f716",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -87,7 +88,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-21");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-30");
   });
 
   it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {
@@ -127,22 +128,25 @@ describe("the privacy policy", () => {
   it("names what is collected, who handles it, and how to delete an account", () => {
     render(<PrivacyRoute />);
     const page = screen.getByTestId(privacyTestid.screen);
-    for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Render/, /Cloudflare/, /Vercel/, /no cookies/i, /Do Not Track/, /Delete my account/, /card statistics/]) {
+    for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Cloudflare/, /no cookies/i, /Do Not Track/, /Delete my account/, /card statistics/]) {
       expect(page.textContent).toMatch(fact);
     }
     expect(within(page).getByRole("link", { name: CONTACT_EMAIL })).toHaveAttribute("href", CONTACT_URL);
   });
 
-    it("names Cloudflare as the website's host and Vercel as its test copy's (#770)", () => {
+    it("names the two services that run JackiOh: Supabase, and Cloudflare for the website and the game server", () => {
       render(<PrivacyRoute />);
       const page = screen.getByTestId(privacyTestid.screen);
       const section = within(page).getByRole("heading", { name: /who handles it/i }).closest("section");
       const items = [...(section?.querySelectorAll("li") ?? [])].map((item) => item.textContent ?? "");
-      expect(items).toContain("Cloudflare hosts this website at jackioh.com.");
-      expect(items).toContain("Vercel hosts a test copy of it at jackioh.vercel.app.");
-      expect(items).toHaveLength(4);
-      expect(section?.textContent).toMatch(/We use four services to run JackiOh:/);
-      expect(page.textContent).not.toMatch(/Vercel hosts this website/);
+      expect(items).toEqual([
+        "Supabase runs sign-in and our database, in the United States (Ohio). It also sends the sign-up and password-reset emails.",
+        // wrangler.jsonc places the server's container in Cloudflare's ENAM region, which is all it promises.
+        "Cloudflare hosts this website at jackioh.com. It also runs our game server, in eastern North America.",
+      ]);
+      expect(section?.textContent).toMatch(/We use two services to run JackiOh:/);
+      // Neither host is used any more (docs/deploy-cloudflare.md).
+      expect(page.textContent).not.toMatch(/Render|Vercel/);
     });
 
   it("R1442 names the play telemetry, how long it is kept, and that deleting an account deletes it", () => {

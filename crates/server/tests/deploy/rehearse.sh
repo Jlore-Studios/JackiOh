@@ -1,37 +1,40 @@
 #!/bin/sh
-# Rehearse a Render deploy of the server before it happens (CI's db job).
+# Rehearse a deploy of the server before it happens (CI's db job).
 #
 #   sh crates/server/tests/deploy/rehearse.sh
 #
-# Render builds the Docker image render.yaml names (`runtime: docker`, its dockerfilePath and
-# dockerContext) and runs the image's own command, `jackioh-server release`: migrate, then seed the
-# catalog, then serve. It keeps the previous deploy serving if that fails. The 0013 outage was a
-# migration that a superuser could apply and Supabase's migrating role could not: every other suite
-# here migrates as the superuser `postgres`, so none could see it. This one reproduces what Render
-# meets:
+# `wrangler deploy` builds the Docker image wrangler.jsonc's `containers` names (its `image` and
+# `image_build_context`), and the Worker runs it in a Cloudflare container with the image's own
+# command, `jackioh-server release`, on every boot: migrate, then seed the catalog, then serve. A
+# boot that fails leaves the site with no server, since nothing keeps an older one serving. The 0013
+# outage was a migration that a superuser could apply and Supabase's migrating role could not: every
+# other suite here migrates as the superuser `postgres`, so none could see it. This one reproduces
+# what the container meets:
 #
 #   1. A database owned by `migrator`, a login role that is NOT a superuser, as Supabase's
 #      `postgres` role is not; the Supabase-managed pieces (tests/db/bootstrap.sql: roles,
 #      auth.users, auth.uid()) are installed by the superuser, as Supabase installs them, and
 #      granted to it; and what it creates in `public` is service_role's by default, as what
 #      Supabase's `postgres` creates is.
-#   2. The image, built from render.yaml's dockerfilePath and dockerContext exactly as Render builds
-#      it, run with render.yaml's own non-secret env values (NODE_ENV, TRUSTED_PROXY_HOPS,
-#      CATALOG_VERSION), read from the file so the rehearsal cannot drift from the deploy. The
-#      secrets are placeholders: the server checks their shape at boot, and nothing here calls out.
-#      render.yaml must carry no buildCommand and no startCommand: the image is the whole deploy.
-#   3. The readiness probe Render uses, render.yaml's healthCheckPath (/readyz, which asks
-#      Postgres): it must answer within READY_SECONDS, followed by /api/catalog's version and, in
-#      its x-deployed-commit header, the commit Render hands the service in RENDER_GIT_COMMIT
-#      (deploy-watch.yml compares that header with each push); the container runs under the free
-#      instance's INSTANCE_MEMORY_MB and must use less than MEMORY_LIMIT_MB of it (headroom); and
-#      a second boot must migrate nothing. Each boot is stopped with SIGTERM (docker stop; tini
-#      forwards it) and must exit 0.
+#   2. The image, built from wrangler.jsonc's `image` and `image_build_context` as `wrangler deploy`
+#      builds it, run with no command, as the container is, and with what the Worker hands the
+#      container (apps/edge/src/routing.ts's `containerEnv`): NODE_ENV=production, production's
+#      TRUSTED_PROXY_HOPS and PUBLIC_ORIGINS, read from wrangler.jsonc's `vars` so the rehearsal
+#      cannot drift from the deploy, and a DEPLOYED_COMMIT, but no CATALOG_VERSION. The secrets are
+#      placeholders: the server checks their shape at boot, and nothing here calls out.
+#   3. The readiness probe the Worker's daily cron requests (READY_PATH, /readyz, which asks
+#      Postgres): it must answer within READY_SECONDS, followed by /api/catalog's version, the one
+#      crates/server/.env.example's CATALOG_VERSION line names (`patches ship` bumps it with
+#      patches.json, R388), and, in its x-deployed-commit header, the commit handed in
+#      DEPLOYED_COMMIT (the Worker compares /healthz's with its own, and the deploy workflows wait
+#      for /api/catalog's); the container runs under the `basic` instance's INSTANCE_MEMORY_MB and
+#      must use less than MEMORY_LIMIT_MB of it (headroom); and a second boot must migrate nothing.
+#      Each boot is stopped with SIGTERM (docker stop; tini forwards it) and must exit 0.
 #   4. CATALOG_VERSION cannot stop a deploy (docs/v0.3.0/SURFACE.md §11.3, #488): the binary
 #      compiles its catalog version in from crates/cards/patches/patches.json and serves it whatever
-#      the environment says. So a last boot with a stale value, as one left in Render's dashboard
-#      would be, must still serve render.yaml's version, warn naming the stale value, and leave the
-#      database stamped with render.yaml's version, never the stale one.
+#      the environment says. So a last boot with a stale value, as a host's setting left from an
+#      older deploy would be, must still serve .env.example's version, warn naming the stale value,
+#      and leave the database stamped with that version, never the stale one.
 #
 # CI splits the rehearsal so every job finishes under its five-minute budget (#1556): one job
 # per Dockerfile stage, then the image, then one boot shard per database shape.
@@ -67,16 +70,19 @@ REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)
 DB=jackioh_deploy_rehearsal
 PORT_UNDER_TEST=18787
 READY_SECONDS=120
-# Render's free instance, and the most of it the server may use (the rest is headroom).
-INSTANCE_MEMORY_MB=512
+# The path the Worker's daily cron requests (apps/edge/src/index.ts's `scheduled`).
+READY_PATH=/readyz
+# The `basic` container instance's memory (wrangler.jsonc's `instance_type`), and the most of it the
+# server may use once booted (the rest is headroom for live matches and the ladder bots' search).
+INSTANCE_MEMORY_MB=1024
 MEMORY_LIMIT_MB=450
 CONTAINER=jackioh-pg-deploy
 SERVER=jackioh-server-rehearsal
 IMAGE=jackioh-server:rehearsal
 NETWORK=jackioh-deploy-rehearsal
-# A catalog version nothing ships: what a dashboard that was never updated would still hold.
+# A catalog version nothing ships: what a host's setting that was never updated would still hold.
 STALE_CATALOG_VERSION=v0.0.0-stale-dashboard-value
-# What Render sets RENDER_GIT_COMMIT to is a full git SHA; this one is made up.
+# What the deploy hands the Worker as DEPLOYED_COMMIT is a full git SHA; this one is made up.
 REHEARSAL_COMMIT=0123456789abcdef0123456789abcdef01234567
 
 PGHOST_=${REHEARSAL_PGHOST:-}
@@ -131,32 +137,29 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# render.yaml, read rather than restated: the runtime, the image's Dockerfile and build context,
-# and each `- key:` whose next line is a literal `value:` (the `sync: false` secrets have none, and
-# get placeholders below).
-yaml_field() { sed -n "s/^ *$1: *//p" "$REPO/render.yaml" | head -n 1 | tr -d '"'; }
-yaml_value() {
-  awk -v key="$1" '
-    $1 == "-" && $2 == "key:" { current = $3; next }
-    current == key && $1 == "value:" { v = $2; gsub(/"/, "", v); print v; exit }
-  ' "$REPO/render.yaml"
-}
-RUNTIME=$(yaml_field runtime)
-DOCKERFILE=$(yaml_field dockerfilePath)
-CONTEXT=$(yaml_field dockerContext)
-CATALOG_VERSION=$(yaml_value CATALOG_VERSION)
-HEALTH_CHECK_PATH=$(yaml_field healthCheckPath)
-if [ "$RUNTIME" != "docker" ] || [ -z "$DOCKERFILE" ] || [ -z "$CONTEXT" ] || [ -z "$CATALOG_VERSION" ] || [ -z "$HEALTH_CHECK_PATH" ]; then
-  echo "FAIL: could not read runtime: docker, dockerfilePath, dockerContext, CATALOG_VERSION and healthCheckPath from render.yaml" >&2
+# wrangler.jsonc, read rather than restated: the first `"key": "value"` line of each key, which is
+# production's (the top level comes before `env.staging`), for the image's Dockerfile and build
+# context and the non-secret settings the Worker hands the server (the secrets get placeholders
+# below). The version main should serve is crates/server/.env.example's, which R388's test holds to
+# the newest entry of crates/cards/patches/patches.json.
+jsonc_field() { sed -n "s/^ *\"$1\": *\"\([^\"]*\)\".*/\1/p" "$REPO/wrangler.jsonc" | head -n 1; }
+DOCKERFILE=$(jsonc_field image)
+DOCKERFILE=${DOCKERFILE#./}
+CONTEXT=$(jsonc_field image_build_context)
+TRUSTED_PROXY_HOPS=$(jsonc_field TRUSTED_PROXY_HOPS)
+PUBLIC_ORIGINS=$(jsonc_field PUBLIC_ORIGINS)
+CATALOG_VERSION=$(sed -n 's/^CATALOG_VERSION=//p' "$REPO/crates/server/.env.example" | head -n 1)
+if [ -z "$DOCKERFILE" ] || [ -z "$CONTEXT" ] || [ -z "$TRUSTED_PROXY_HOPS" ] || [ -z "$PUBLIC_ORIGINS" ]; then
+  echo "FAIL: could not read image, image_build_context, TRUSTED_PROXY_HOPS and PUBLIC_ORIGINS from wrangler.jsonc" >&2
   exit 1
 fi
-if grep -Eq '^ *(buildCommand|startCommand):' "$REPO/render.yaml"; then
-  echo "FAIL: render.yaml still has a buildCommand or startCommand: the image's own command is the start" >&2
+if [ -z "$CATALOG_VERSION" ]; then
+  echo "FAIL: could not read CATALOG_VERSION from crates/server/.env.example" >&2
   exit 1
 fi
 echo "image: $DOCKERFILE (context $CONTEXT)"
 echo "catalog version: $CATALOG_VERSION"
-echo "health check: $HEALTH_CHECK_PATH"
+echo "readiness: $READY_PATH"
 
 # REHEARSAL_LOAD_IMAGE (above) skips the build: the tarball a STAGE=image job saved already
 # carries the image's tag, so the boots below need no change.
@@ -168,10 +171,10 @@ else
   # REHEARSAL_CACHE_TO, with no image to tag or load; STAGE=image builds the whole image exactly
   # as the rehearsal below does.
   if [ -n "$STAGE" ] && [ "$STAGE" != "image" ]; then
-    echo "--- the Dockerfile's $STAGE stage alone, built as Render builds it ---"
+    echo "--- the Dockerfile's $STAGE stage alone, built as wrangler builds it ---"
     set -- --target "$STAGE"
   else
-    echo "--- the image, built as Render builds it ---"
+    echo "--- the image, built as wrangler builds it ---"
     set -- -t "$IMAGE"
   fi
   # REHEARSAL_CACHE_FROM (and REHEARSAL_CACHE_TO) give buildx a layer cache to read (and write), in its
@@ -270,23 +273,24 @@ if [ "$(admin -d "$DB" -tAc "select rolsuper from pg_roles where rolname = 'migr
   exit 1
 fi
 
-# $1 is the boot's log, $2 the CATALOG_VERSION it is handed. The image's own command runs: no
-# command is given here, as render.yaml gives none.
+# $1 is the boot's log, $2 the CATALOG_VERSION it is handed, or empty for none, as the Worker hands
+# none. The image's own command runs: no command is given here, as the container is given none.
 start_server() {
   docker rm -f "$SERVER" >/dev/null 2>&1 || true
-  # shellcheck disable=SC2086 # NETWORK_ARGS is several words on purpose.
-  docker run -d --name "$SERVER" $NETWORK_ARGS \
+  CATALOG_ARGS=""
+  if [ -n "$2" ]; then CATALOG_ARGS="-e CATALOG_VERSION=$2"; fi
+  # shellcheck disable=SC2086 # NETWORK_ARGS and CATALOG_ARGS are several words on purpose.
+  docker run -d --name "$SERVER" $NETWORK_ARGS $CATALOG_ARGS \
     --memory "${INSTANCE_MEMORY_MB}m" \
     -e DATABASE_URL="$DATABASE_URL" \
-    -e CATALOG_VERSION="$2" \
-    -e NODE_ENV="$(yaml_value NODE_ENV)" \
-    -e TRUSTED_PROXY_HOPS="$(yaml_value TRUSTED_PROXY_HOPS)" \
+    -e NODE_ENV=production \
+    -e TRUSTED_PROXY_HOPS="$TRUSTED_PROXY_HOPS" \
     -e PORT="$PORT_UNDER_TEST" \
-    -e RENDER_GIT_COMMIT="$REHEARSAL_COMMIT" \
+    -e DEPLOYED_COMMIT="$REHEARSAL_COMMIT" \
     -e SUPABASE_URL=https://rehearsal.supabase.co \
     -e SUPABASE_SECRET_KEY=rehearsal-placeholder \
     -e CODE_PEPPER=rehearsal-placeholder-pepper-of-a-length-the-server-accepts-0123456789 \
-    -e PUBLIC_ORIGINS=https://jackioh.com,https://www.jackioh.com \
+    -e PUBLIC_ORIGINS="$PUBLIC_ORIGINS" \
     "$IMAGE" >/dev/null
   SERVER_UP=1
   SERVER_LOG=$1
@@ -324,37 +328,37 @@ memory_mb() {
   }'
 }
 
-# Waits for the healthCheckPath probe, then /api/catalog, and checks its version, its commit
-# header and the server's memory. $1 is the boot's log.
+# Waits for the readiness probe, then /api/catalog, and checks its version, its commit header and
+# the server's memory. $1 is the boot's log.
 check_boot() {
   i=0
-  until curl -fs -o /dev/null "http://localhost:$PORT_UNDER_TEST$HEALTH_CHECK_PATH"; do
+  until curl -fs -o /dev/null "http://localhost:$PORT_UNDER_TEST$READY_PATH"; do
     i=$((i + 1))
     if ! running || [ "$i" -ge "$READY_SECONDS" ]; then
-      echo "FAIL: $HEALTH_CHECK_PATH never answered (the server exited, or ${READY_SECONDS}s passed)"
+      echo "FAIL: $READY_PATH never answered (the server exited, or ${READY_SECONDS}s passed)"
       save_log
       cat "$1"
       exit 1
     fi
     sleep 1
   done
-  if ! curl -fs -D "$1.headers" -o "$1.catalog.json" "http://localhost:$PORT_UNDER_TEST/api/catalog"; then echo "FAIL: $HEALTH_CHECK_PATH answered but /api/catalog did not"; save_log; cat "$1"; exit 1; fi
+  if ! curl -fs -D "$1.headers" -o "$1.catalog.json" "http://localhost:$PORT_UNDER_TEST/api/catalog"; then echo "FAIL: $READY_PATH answered but /api/catalog did not"; save_log; cat "$1"; exit 1; fi
   served=$(grep -o '"version":"[^"]*"' "$1.catalog.json" | head -n 1 | sed 's/^"version":"\(.*\)"$/\1/')
   echo "ready after ${i}s; serving catalog $served"
   if [ "$served" != "$CATALOG_VERSION" ]; then
-    echo "FAIL: serving catalog $served, render.yaml says $CATALOG_VERSION"
+    echo "FAIL: serving catalog $served, crates/server/.env.example says $CATALOG_VERSION"
     exit 1
   fi
   reported=$(tr -d '\r' < "$1.headers" | awk -F': *' 'tolower($1) == "x-deployed-commit" { print $2; exit }')
   echo "reporting commit ${reported:-(none)}"
   if [ "$reported" != "$REHEARSAL_COMMIT" ]; then
-    echo "FAIL: x-deployed-commit is ${reported:-missing}, RENDER_GIT_COMMIT was $REHEARSAL_COMMIT"
+    echo "FAIL: x-deployed-commit is ${reported:-missing}, DEPLOYED_COMMIT was $REHEARSAL_COMMIT"
     exit 1
   fi
   used=$(memory_mb)
   echo "server container: ${used} MB (limit $MEMORY_LIMIT_MB of the instance's $INSTANCE_MEMORY_MB)"
   if [ "$used" -gt "$MEMORY_LIMIT_MB" ]; then
-    echo "FAIL: the server needs more memory than Render's free instance has"
+    echo "FAIL: the server needs more than $MEMORY_LIMIT_MB MB of the container's $INSTANCE_MEMORY_MB"
     exit 1
   fi
 }
@@ -371,7 +375,7 @@ LOG_DIR=${RUNNER_TEMP:-/tmp}
 case "$BOOT" in
   "" | all | migrate)
 echo "--- first boot: every migration, the reseed, then the server ---"
-start_server "$LOG_DIR/deploy-boot-1.log" "$CATALOG_VERSION"
+start_server "$LOG_DIR/deploy-boot-1.log" ""
 check_boot "$LOG_DIR/deploy-boot-1.log"
 save_log
 grep -E "^(migrate|seed-catalog):" "$LOG_DIR/deploy-boot-1.log" || true
@@ -383,7 +387,7 @@ fi
 stop_server
 
 echo "--- second boot: nothing to migrate, the same catalog ---"
-start_server "$LOG_DIR/deploy-boot-2.log" "$CATALOG_VERSION"
+start_server "$LOG_DIR/deploy-boot-2.log" ""
 check_boot "$LOG_DIR/deploy-boot-2.log"
 save_log
 if ! grep -q "migrate: nothing to do" "$LOG_DIR/deploy-boot-2.log"; then
@@ -408,7 +412,7 @@ fi
 echo "warned: $(grep "$STALE_CATALOG_VERSION" "$LOG_DIR/deploy-boot-stale.log" | head -n 1)"
 stamped=$(stamped_version)
 if [ "$stamped" != "$CATALOG_VERSION" ]; then
-  echo "FAIL: the database is stamped $stamped after the stale boot, render.yaml says $CATALOG_VERSION"
+  echo "FAIL: the database is stamped $stamped after the stale boot, crates/server/.env.example says $CATALOG_VERSION"
   exit 1
 fi
 stop_server

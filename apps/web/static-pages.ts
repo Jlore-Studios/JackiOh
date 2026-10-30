@@ -3,7 +3,8 @@
 // Reuse `net/head.ts`, `almanacShelf` (R674, R1420; no unshipped cards), `fillParams`, and `patches.json`.
 // This Vite entry uses relative imports because Vitest and Cypress do not resolve `@jackioh/*` here.
 // `<style>` hides static content until startup; `<noscript>` restores it without script.
-// Every address names the build's own host (`StaticPagesInput.origin`, #696).
+// Every address names the build's own host (`StaticPagesInput.origin`, #696), and so does the CSP the
+// build writes into `_headers` (`connectSources`).
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -274,6 +275,27 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
 /** Files Vite copies from `public/` before `writeBundle` that name `SITE_ORIGIN`. */
 export const ADDRESSED_PUBLIC_FILES = ["robots.txt", ".well-known/security.txt"] as const;
 
+/** The headers Cloudflare sends with the build's files (wrangler.jsonc `assets`), copied from `public/`. */
+export const HEADERS_FILE = "_headers";
+
+/** What `public/_headers` spells in place of its CSP's `connect-src` sources, which differ by build. */
+export const CONNECT_SRC_PLACEHOLDER = "%CONNECT_SRC%";
+
+/** Any `%NAME%` left in a written file: a placeholder the build did not fill. */
+const PLACEHOLDER = /%[A-Z][A-Z0-9_]*%/u;
+
+/**
+ * The CSP's `connect-src` for a build served from `origin`: 'self', where the server answers
+ * `/api/*` (wrangler.jsonc `run_worker_first`), Supabase's origin, which a build without
+ * `VITE_SUPABASE_URL` never signs in through, and `wss://` on the build's own host for the sockets.
+ */
+export function connectSources(origin: string, supabaseUrl: string | undefined): string {
+  const sources = ["'self'"];
+  if (supabaseUrl !== undefined && supabaseUrl.length > 0) sources.push(new URL(supabaseUrl).origin);
+  sources.push(`wss://${new URL(origin).host}`);
+  return sources.join(" ");
+}
+
 const STATIC_HEAD =
   "<style>.static-body{display:none}</style><noscript><style>.static-body{display:block}</style></noscript>";
 const ROOT_OPEN = '<div id="root">';
@@ -404,9 +426,20 @@ export type StaticPagesInput = {
   technical?: readonly TechnicalEntry[];
   outDir: string;
   origin: string;
+  /** The build's `VITE_SUPABASE_URL`, for its CSP (`connectSources`); unset, the CSP names no Supabase host. */
+  supabaseUrl?: string | undefined;
 };
 
-export function writeStaticPages({ template, pages, cards, patches, technical = [], outDir, origin }: StaticPagesInput): void {
+export function writeStaticPages({
+  template,
+  pages,
+  cards,
+  patches,
+  technical = [],
+  outDir,
+  origin,
+  supabaseUrl,
+}: StaticPagesInput): void {
   for (const page of pages) {
     const extra =
       page.path === paths.almanac
@@ -424,22 +457,33 @@ export function writeStaticPages({ template, pages, cards, patches, technical = 
     if (!text.includes(SITE_ORIGIN)) throw new Error(`static-pages.ts: ${file} does not name ${SITE_ORIGIN}`);
     writeFileSync(join(outDir, file), text.replaceAll(SITE_ORIGIN, origin));
   }
+  const headers = readFileSync(join(outDir, HEADERS_FILE), "utf8");
+  if (!headers.includes(CONNECT_SRC_PLACEHOLDER)) {
+    throw new Error(`static-pages.ts: ${HEADERS_FILE} does not spell ${CONNECT_SRC_PLACEHOLDER}`);
+  }
+  const filled = headers.replaceAll(CONNECT_SRC_PLACEHOLDER, connectSources(origin, supabaseUrl));
+  const left = PLACEHOLDER.exec(filled)?.[0];
+  if (left !== undefined) throw new Error(`static-pages.ts: ${HEADERS_FILE} still holds ${left}, which nothing fills`);
+  writeFileSync(join(outDir, HEADERS_FILE), filled);
 }
 
 export function staticPages(): Plugin {
   let root = "";
   let outDir = "";
   let origin = SITE_ORIGIN;
+  let supabaseUrl: string | undefined;
   return {
     name: "jackioh:static-pages",
     apply: "build",
     configResolved(config) {
       root = config.root;
       outDir = resolve(config.root, config.build.outDir);
-      // `config.env` is Vite's loadEnv: a variable the build's process sets (staging's, vercel.json)
-      // wins over `.env.production`'s.
+      // `config.env` is Vite's loadEnv: a variable the build's process sets (staging's, from
+      // .env.staging by `build:staging`) wins over `.env.production`'s.
       const configured: unknown = config.env.VITE_SITE_ORIGIN;
       origin = originOf(configured);
+      const supabase: unknown = config.env.VITE_SUPABASE_URL;
+      supabaseUrl = typeof supabase === "string" ? supabase : undefined;
     },
     writeBundle() {
       // Reading here avoids bundling the catalog into each config load.
@@ -453,6 +497,7 @@ export function staticPages(): Plugin {
         technical: data("patches/technical.json") as TechnicalEntry[],
         outDir,
         origin,
+        supabaseUrl,
       });
     },
   };
