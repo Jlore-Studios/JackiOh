@@ -10329,7 +10329,10 @@
       "feedback_since": "2026-10-30T05:34:09Z",
       "issue": 2450,
       "kind": "revise",
+      "queued_at": "2026-10-30T07:52:06Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
