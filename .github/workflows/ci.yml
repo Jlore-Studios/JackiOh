@@ -1074,10 +1074,12 @@ jobs:
   # bot selftest
   # ------------------------------------------------------------------------------------------------
 
-  # CI for the night bot itself (bot/): its suite on the lowest and newest Python it supports, the
-  # CLI's start under both bots' configs, and actionlint over every workflow (the bot's, this one,
-  # the pull request title check, which runs the bot's title rule `triage.pull_title_ok`, the daily
-  # super run and the deploys). One job, so
+  # CI for the night bot itself (bot/): the harness (bot/go, #467) formatted, vetted and tested
+  # (as the night bot, then as Squishy), the binary's start under both bots' configs, the Python
+  # suites of what stays Python (bot/machine's starter and credits Lambdas and scripts, and
+  # .github/hygiene's branch rule) on the lowest and newest Python they support, and actionlint over
+  # every workflow (the bot's, this one, the pull request title check, which runs the bot's title
+  # rule `harness pr-title`, the daily super run and the deploys). One job, so
   # its name is the required check's. It runs when the `changes` job says `bot`, and also whenever
   # that job did not succeed, so an empty output never skips the check into a pass.
   bot-selftest:
@@ -1093,26 +1095,56 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: bot/go/go.mod
+          cache-dependency-path: bot/go/go.mod
+
+      - name: gofmt (prints nothing)
+        working-directory: bot/go
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "${unformatted}" ]; then
+            echo "::error::gofmt -l lists files that are not formatted:"
+            echo "${unformatted}"
+            exit 1
+          fi
+
+      - name: go vet
+        working-directory: bot/go
+        run: go vet ./...
+
+      # The harness's suite (bot/go/tests and each package's own), Squishy's cases among it in a
+      # process started as Squishy (bot/go/tests/squishy_test.go).
+      - name: go test
+        working-directory: bot/go
+        run: go test ./...
+
+      # The binary the bot's workflows run, through the same action they use.
+      - uses: ./.github/actions/harness
+
+      - name: The CLI starts and the config loads
+        working-directory: bot
+        run: |
+          harness --help > /dev/null
+          harness window
+          HARNESS_HOME=.squishy harness window
+
+      # What stays Python: the machine's Lambdas and scripts (bot/machine) and the hygiene run's
+      # branch rule (.github/hygiene/branches.py), on the lowest and newest Python they support.
       - uses: actions/setup-python@v5
         with:
           python-version: |
             3.12
             3.13
 
-      - name: Tests on Python 3.12
+      - name: The machine's and hygiene's tests on Python 3.12
         working-directory: bot
         run: python3.12 -m unittest discover -s tests -t . -v
 
-      - name: Tests on Python 3.13
+      - name: The machine's and hygiene's tests on Python 3.13
         working-directory: bot
         run: python3.13 -m unittest discover -s tests -t .
-
-      - name: The CLI starts and the config loads
-        working-directory: bot
-        run: |
-          python3.13 -m harness --help > /dev/null
-          python3.13 -m harness window
-          HARNESS_HOME=.squishy python3.13 -m harness window
 
       # Every workflow, the daily super run and the deploys among them: this job runs whenever
       # anything under .github/ changes, so no workflow lands unlinted.

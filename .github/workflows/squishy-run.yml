@@ -82,11 +82,9 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - name: Set up Python
+      - name: The harness (bot/go)
         if: steps.halt.outputs.halted != 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+        uses: ./.github/actions/harness
 
       - name: Is there work? (harness peek)
         id: peek
@@ -113,7 +111,7 @@ jobs:
         run: |
           force=""
           if [ "${INPUT_FORCE}" = "true" ]; then force="--force"; fi
-          python -m harness peek --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
+          harness peek --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
 
   plan:
     name: plan
@@ -161,11 +159,9 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - name: Set up Python
+      - name: The harness (bot/go)
         if: steps.halt.outputs.halted != 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+        uses: ./.github/actions/harness
 
       - name: Plan
         id: plan
@@ -192,7 +188,7 @@ jobs:
         run: |
           force=""
           if [ "${INPUT_FORCE}" = "true" ]; then force="--force"; fi
-          python -m harness plan --out "$RUNNER_TEMP/plan/plan.json" \
+          harness plan --out "$RUNNER_TEMP/plan/plan.json" \
             --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
 
       - name: Keep the plan for the next jobs
@@ -235,9 +231,7 @@ jobs:
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
 
       - name: Install the claude CLI
         if: needs.plan.outputs.cli == 'claude'
@@ -256,7 +250,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
-        run: python3 -m harness doctor --work --plan "$RUNNER_TEMP/plan/plan.json"
+        run: harness doctor --work --plan "$RUNNER_TEMP/plan/plan.json"
 
       # Not "Build, check and review": bright-bots-harness reads a step of that name as the night
       # bot spending the shared Claude subscription (quiet.py), which Squishy never spends.
@@ -267,7 +261,7 @@ jobs:
           HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
           GITHUB_TOKEN: ${{ github.token }}   # read-only: the checkpoints read HALT and the state
         run: |
-          python3 -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
+          harness work --plan "$RUNNER_TEMP/plan/plan.json" \
             --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"
 
       - name: Keep the result, the bundle, the sealed login and the transcripts
@@ -299,9 +293,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
 
       - name: Fetch the plan
         uses: actions/download-artifact@v4
@@ -340,5 +332,5 @@ jobs:
           PLAN_PROVIDER: ${{ needs.plan.outputs.provider }}
         run: |
           mkdir -p "$RUNNER_TEMP/out"
-          python -m harness deliver --plan "$RUNNER_TEMP/plan/plan.json" --out "$RUNNER_TEMP/out" \
+          harness deliver --plan "$RUNNER_TEMP/plan/plan.json" --out "$RUNNER_TEMP/out" \
             --action "${PLAN_ACTION}" --number "${PLAN_NUMBER}" --provider "${PLAN_PROVIDER}"

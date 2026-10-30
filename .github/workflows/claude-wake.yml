@@ -34,10 +34,6 @@ concurrency:
   group: claude-wake
   cancel-in-progress: false
 
-env:
-  PYTHONUTF8: "1"
-  PYTHONDONTWRITEBYTECODE: "1"
-
 jobs:
   clock:
     name: wait for the wake time
@@ -55,10 +51,8 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - name: The harness (bot/go)
+        uses: ./.github/actions/harness
 
       - name: Sleep until the wake time
         id: wait
@@ -68,9 +62,9 @@ jobs:
           NOW: ${{ inputs.now }}
         run: |
           if [ "${NOW}" = "true" ]; then
-            python -m harness wake --wait --now
+            harness wake --wait --now
           else
-            python -m harness wake --wait
+            harness wake --wait
           fi
 
       # Which provider secrets exist, never their values (providers.SECRETS).
@@ -94,8 +88,8 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
           set -euo pipefail
-          night="$(python -m harness wake --list | tail -n 1)"
-          squishy="$(HARNESS_HOME=.squishy python -m harness wake --list | tail -n 1)"
+          night="$(harness wake --list | tail -n 1)"
+          squishy="$(HARNESS_HOME=.squishy harness wake --list | tail -n 1)"
           echo "accounts=$(jq -cn --argjson a "${night}" --argjson b "${squishy}" '$a + $b')" \
             >> "$GITHUB_OUTPUT"
 
@@ -117,10 +111,8 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - name: The harness (bot/go)
+        uses: ./.github/actions/harness
 
       - name: Install the claude CLI
         run: |
@@ -133,4 +125,4 @@ jobs:
           HARNESS_HOME: ${{ matrix.account.home }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets[matrix.account.secret] }}
           ACCOUNT: ${{ matrix.account.id }}
-        run: python -m harness wake --ping "${ACCOUNT}"
+        run: harness wake --ping "${ACCOUNT}"

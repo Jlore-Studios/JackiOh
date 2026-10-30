@@ -166,16 +166,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
       - name: the shipped patches' issues and pull requests, titled with their versions
         working-directory: bot
         env:
           GH_TOKEN: ${{ github.token }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
-        run: python3 -m harness.titles shipped --before "$BEFORE" --after "$AFTER"
+        run: harness titles shipped --before "$BEFORE" --after "$AFTER"
 
   # The header's stuck pull request, a promotion or a log: open STUCK_AFTER_SECONDS, no check still
   # running, and a check red or a conflict with main. One issue holds the escalations: the first opens
