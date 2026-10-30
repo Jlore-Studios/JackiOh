@@ -909,7 +909,7 @@ fn hook_for(script: &Script, resume: &Resume) -> Option<Hook> {
 /// reset the instance on the board by then (or a Reborn body stands under the same id), so the hook
 /// reads the snapshot taken as the unit died, which the Death pass puts in its context's data
 /// (`stateCheck.runDeathPass`) and every continuation built from that context carries on.
-fn self_snapshot_of(data: &IndexMap<String, Value>) -> Option<CardInstance> {
+pub(crate) fn self_snapshot_of(data: &IndexMap<String, Value>) -> Option<CardInstance> {
     let raw = data.get(SELF_KEY)?;
     let card = raw.as_object()?;
     let named =

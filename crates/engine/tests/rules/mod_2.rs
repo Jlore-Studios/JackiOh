@@ -95,5 +95,6 @@ pub mod view_hidden_ids;
 pub mod view_marks;
 pub mod weapon_kit;
 pub mod when_attacks;
+pub mod whenever_kills;
 pub mod windfury;
 pub mod zones;

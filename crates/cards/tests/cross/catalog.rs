@@ -75,8 +75,9 @@ use jackioh_engine::{
     CardCost, CardDef, CardFace, CardType, FaceKind, GLITCH_DEF_ID, KeywordKind, Rarity, SetName, Tag,
     fill_params, set_ships,
 };
-use serde_json::{Map, Value};
+use serde_json::Value;
 
+use super::sidecar;
 use CardType as T;
 use Rarity as R;
 use Tag as G;
@@ -9237,8 +9238,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
                 entry.id
             );
         }
-        let table: IndexMap<String, Map<String, Value>> =
-            serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is an object of objects");
+        let table = sidecar(chinese_json(), "crates/cards/chinese.json");
         for (id, entry) in &table {
             for field in ["name", "base", "radiant"] {
                 let text = entry.get(field).and_then(Value::as_str).unwrap_or("");

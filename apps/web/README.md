@@ -94,7 +94,7 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
-**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `PracticeLeave` and `ChatPanel` call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave` and `ChatPanel` call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
@@ -153,6 +153,8 @@ present for exactly that window.
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
+
+**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks nothing.
 
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
 offers, and `view.drawOffer = { by }` stands on both seats until the offer is answered or lapses at
@@ -798,9 +800,12 @@ Every card's sounds are in `src/audio/card-audio.json5` (R655), a JSON5 file edi
 header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
 `pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
 comment beside its id, where each hook (`play`, `attack`, `death`, `cast`, `trigger`; `CARD_HOOKS` in
-`constants.ts`) gives a voice line (`voice` and `text`), an `effect`, or both — a `trigger` (R1088)
-gives a voice and a non-empty `lines` list instead, one of which plays when the runner starts the
-`summoned` entry the card caused. `voiceData.ts` checks it
+`constants.ts`) gives a voice line (its `voice`), an `effect`, or both — a `trigger` (R1088) gives
+a voice for a non-empty list of lines, one of which plays when the runner starts the `summoned`
+entry the card caused, and an `emotes` section gives each portrait's voice (R644). The words the
+lines speak are not in it: they are each card's `voice` and the portraits' `emotes` in
+`crates/cards/card-text.yaml` (#2498), which `cargo test -p jackioh-tools --test export_card_text`
+writes into `src/audio/voice-text.json`. `voiceData.ts` joins the two (`withVoiceText`), checks them
 at load and names the path of any mistake. The voice files are generated from its lines and
 committed, so CI never runs a synthesizer. Each voice names its backend (R501): Core's voices are
 macOS `say` (the default), and the Classic and Classic+ voices are `backend: "sapi"`, Windows SAPI
@@ -854,7 +859,8 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `@jackioh/server-config` are the generated Rust constants, `@jackioh/validator` the validator,
   `@jackioh/cards` the catalog and its version (read from `crates/cards/patches/patches.json`), and
   `@jackioh/cards/catalog.json`, `flavour.json`, `chinese.json` and `chinese-terms.json` the files in
-  `crates/cards`.
+  `crates/cards` (the second and third generated from its `card-text.yaml`, #2498, each with a `"//"`
+  entry that `flavour.ts` and `chinese.ts` drop).
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`; among the first,
   `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
