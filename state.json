@@ -10372,15 +10372,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/engine/tests/golden/games.jsonl"
+          ],
+          "from": "a90504816741ad85c30f5b68f46dd6ecc41abc1f",
+          "main": "bc08e1c7bea3d576d571eea33e241555175fe3fa"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41009159830",
+            "run": "41022755596",
             "tier": "strong"
           }
         ],
-        "sha": "a90504816741ad85c30f5b68f46dd6ecc41abc1f",
+        "sha": "402671df4566d60d1a8cf17007bcb1e9f0aeb3af",
         "tiers": {
           "claude": "strong"
         }
