@@ -10240,6 +10240,14 @@
       "started_at": "2026-10-30T17:16:40Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2534": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-30T15:50:24Z",
+      "issue": 2498,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "10eb94bf70389cb1",
