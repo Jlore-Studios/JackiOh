@@ -9943,6 +9943,7 @@
       "provider": "claude-8",
       "queued_at": "2026-10-30T13:28:34Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "41066415581",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-30T13:49:07Z",
@@ -9951,7 +9952,8 @@
         "the run failed: the branch its parts land on, `bot/issue-2497`, could not be made: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git 0e5ae82ebc429ac0c8866cd4a2c3508ae521c1ca:re"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2498": {
       "action": "build",
