@@ -79,6 +79,7 @@ cargo jackioh spec check
 cargo jackioh fuzz
 cargo jackioh golden check
 pnpm install
+sh scripts/build-wasm.sh          # typecheck reads the WebAssembly module; test builds it itself
 pnpm --dir apps/web typecheck
 pnpm exec eslint apps/web e2e
 pnpm --dir apps/web test
