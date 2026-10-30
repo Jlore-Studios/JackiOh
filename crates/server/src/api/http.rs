@@ -31,7 +31,8 @@ use crate::app::{App, Handler, Route};
 use crate::auth::AuthUser;
 use crate::config::{
     API_MAX_BODY_BYTES, API_REJECTION_ALERT_THRESHOLD, API_REJECTION_ALERT_WINDOW_MS,
-    API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, MAX_TRUSTED_PROXY_HOPS, RATING_START,
+    API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, KNOWN_PROFILES_MAX, MAX_TRUSTED_PROXY_HOPS,
+    RATING_START,
 };
 use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
 
@@ -770,7 +771,11 @@ fn parse_query(query: &str) -> IndexMap<String, String> {
 /// Resolves the caller. A token that does not verify is 401; a verified user with no profile row
 /// gets one created lazily as `pending` (§9.4: the account exists the moment auth says so, and it
 /// stays pending until a code is redeemed).
-pub async fn resolve_caller(app: &App, headers: &HeaderMap) -> Result<Caller, ApiError> {
+///
+/// SPEC §11 R2478000: a verified user whose account `known_profiles` knows and whose budget is spent
+/// is refused with R192's 429 before the store is read (`path` names the request in the log line);
+/// every profile resolved is remembered there.
+pub async fn resolve_caller(app: &App, headers: &HeaderMap, path: &str) -> Result<Caller, ApiError> {
     let Some(token) = bearer_token(headers) else {
         return Err(ApiError::new(ApiErrorCode::Unauthorized, "sign in first"));
     };
@@ -779,9 +784,15 @@ pub async fn resolve_caller(app: &App, headers: &HeaderMap) -> Result<Caller, Ap
         Err(_) => return Err(ApiError::new(ApiErrorCode::Unauthorized, "sign in first")),
     };
 
+    let now = now_ms();
+    if let Some((key, wait)) = spent_account(app, &user.user_id, now) {
+        return Err(refuse_rate_limited(app, path, &key, now, wait));
+    }
+
     let mut tx = app.db.begin(None).await?;
     if let Some(existing) = tx.profiles_get_by_user_id(&user.user_id).await? {
         tx.commit().await?;
+        app.known_profiles.remember(&user.user_id, &existing.id);
         return Ok(Caller {
             profile: existing,
             user,
@@ -797,6 +808,7 @@ pub async fn resolve_caller(app: &App, headers: &HeaderMap) -> Result<Caller, Ap
         })
         .await?;
     tx.commit().await?;
+    app.known_profiles.remember(&user.user_id, &profile.id);
     Ok(Caller { profile, user })
 }
 
@@ -834,6 +846,94 @@ pub fn account_key(profile_id: &str) -> String {
 /// not verify. Prefixed apart from `account_key` so an IP hash can never land in a profile's bucket.
 pub fn address_key(ip_hash: &str) -> String {
     format!("address:{ip_hash}")
+}
+
+/// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, so a request
+/// from an account whose R109 budget is spent is refused before the store is read. At most `max`
+/// users, the one remembered longest ago dropped first. It only refuses early: every request it
+/// lets by still reads its profile, and a user it does not know reads the store as before. One
+/// per `App`, for the limiter's reason.
+pub struct KnownProfiles {
+    max: usize,
+    ids: Mutex<IndexMap<String, String>>,
+}
+
+impl KnownProfiles {
+    /// At most `max` users, and at least one.
+    pub fn new(max: usize) -> KnownProfiles {
+        KnownProfiles {
+            max: max.max(1),
+            ids: Mutex::new(IndexMap::new()),
+        }
+    }
+
+    /// The profile id `user_id` was last resolved to, while it is held.
+    pub fn get(&self, user_id: &str) -> Option<String> {
+        lock(&self.ids).get(user_id).cloned()
+    }
+
+    /// Remembers that `user_id` resolved to `profile_id`; a new user past the bound drops the one
+    /// remembered longest ago.
+    pub fn remember(&self, user_id: &str, profile_id: &str) {
+        let mut ids = lock(&self.ids);
+        if let Some(held) = ids.get_mut(user_id) {
+            if held.as_str() != profile_id {
+                *held = profile_id.to_string();
+            }
+            return;
+        }
+        while ids.len() >= self.max {
+            ids.shift_remove_index(0);
+        }
+        ids.insert(user_id.to_string(), profile_id.to_string());
+    }
+
+    /// How many users are held, so a test can see the bound.
+    pub fn size(&self) -> usize {
+        lock(&self.ids).len()
+    }
+}
+
+impl Default for KnownProfiles {
+    fn default() -> KnownProfiles {
+        KnownProfiles::new(KNOWN_PROFILES_MAX)
+    }
+}
+
+/// SPEC §11 R2478000: the R109 key of the account `user_id` was last resolved to, and its R192
+/// wait, when `known_profiles` knows it and its budget is spent; `None` otherwise. Only looked at,
+/// never counted: what the map lets by is counted against the profile the store answers (R157).
+fn spent_account(app: &App, user_id: &str, now: i64) -> Option<(String, i64)> {
+    let key = account_key(&app.known_profiles.get(user_id)?);
+    let wait = app.limiter.retry_after_ms(&key, now);
+    (wait > 0).then_some((key, wait))
+}
+
+/// SPEC §11 R2478000: the profile behind a socket upgrade whose token verified, the upgrade counted
+/// as one request against its account's R109 budget, the bucket `run_route` counts in. A known
+/// account whose budget is spent is refused before the store is read. Otherwise the profile is read
+/// (a socket never creates one: `Ok(None)`), remembered, and the upgrade counted, refused past the
+/// budget. A refusal is R192's `rate_limited`, logged and counted as the router's are (R1717000); a
+/// store fault is its error. `path` names the socket in the log line.
+pub async fn upgrade_profile(app: &App, user: &AuthUser, path: &str) -> Result<Option<Profile>, ApiError> {
+    let now = now_ms();
+    if let Some((key, wait)) = spent_account(app, &user.user_id, now) {
+        return Err(refuse_rate_limited(app, path, &key, now, wait));
+    }
+    let mut tx = app.db.begin(None).await?;
+    let profile = tx.profiles_get_by_user_id(&user.user_id).await?;
+    tx.commit().await?;
+    let Some(profile) = profile else {
+        return Ok(None);
+    };
+    app.known_profiles.remember(&user.user_id, &profile.id);
+    let key = account_key(&profile.id);
+    let now = now_ms();
+    if !app.limiter.allow(&key, now) {
+        let wait = app.limiter.retry_after_ms(&key, now);
+        return Err(refuse_rate_limited(app, path, &key, now, wait));
+    }
+    Ok(Some(profile))
 }
 
 /// R1717000: one key's refused requests inside `API_REJECTION_ALERT_WINDOW_MS`, at most
@@ -1144,16 +1244,20 @@ async fn run_route(
     let mut caller: Option<Caller> = None;
     let mut auth_error: Option<ApiError> = None;
     if auth != AuthLevel::None {
-        match resolve_caller(app, &parts.headers).await {
+        match resolve_caller(app, &parts.headers, path).await {
             Ok(resolved) => caller = Some(resolved),
             // A failure that is not a refusal (the store) is TS's rethrown error: a 500 at once.
             Err(error) if error.code == ApiErrorCode::Internal => return Err(error),
+            // R2478000: a known account whose budget is spent, refused before its profile was read;
+            // already logged and counted.
+            Err(error) if error.code == ApiErrorCode::RateLimited => return Err(error),
             Err(error) => auth_error = Some(error),
         }
     }
 
     // §9.8: "per-account rate limit at the API" (R109: 300 a minute). Checked before the body is
-    // read and before §9.4's gate, so a flood costs the least work this router can manage.
+    // read and before §9.4's gate, so a flood costs the least work this router can manage. A known
+    // account whose budget is spent is refused inside it, before the store (R2478000).
     let key = match &caller {
         None => address_key(&address),
         Some(resolved) => account_key(&resolved.profile.id),
