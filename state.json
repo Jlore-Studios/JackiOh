@@ -10157,8 +10157,18 @@
       "taken_asks": []
     },
     "2501": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
       "onto": "bot/issue-2497",
-      "part_of": 2497
+      "part_of": 2497,
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:34f6be37-1793375528",
+      "runs_on": "night-vm-muse-fill",
+      "started_at": "2026-10-30T15:52:38Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2502": {
       "onto": "bot/issue-2497",
@@ -10235,9 +10245,9 @@
   },
   "labels_synced": "10eb94bf70389cb1",
   "last_run": {
-    "at": "2026-10-30T15:51:52Z",
+    "at": "2026-10-30T15:52:38Z",
     "url": "",
-    "what": "build #2477 on claude-3"
+    "what": "build #2501 on muse"
   },
   "last_sweep": {
     "at": "2026-10-30T15:33:39Z",
