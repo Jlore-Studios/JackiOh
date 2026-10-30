@@ -14,7 +14,7 @@
 //
 // Nothing here is a rule (CLAUDE.md rule 7). The tones compare two numbers the view and the catalog
 // already carry — the live cost against the printed price, the live stats against the printed
-// stats — so a buffed unit reads green and a damaged one red, the way Hearthstone colours them.
+// stats — so a buffed unit reads green and a damaged one red, the way Hearthstone colors them.
 //
 // Three marks ride on the text (SPEC §10.10). A Radiant face prints its whole catalog text with the
 // stretches its base face does not have marked (`text.marks`, radiantDiff.ts, R277); the names its
@@ -690,7 +690,7 @@ function statsOf(
   grew: FaceStats["grew"],
 ): FaceStats | null {
   if (live !== undefined) {
-    // A unit nobody can name has no printed face to compare against, so nothing is coloured.
+    // A unit nobody can name has no printed face to compare against, so nothing is colored.
     if (!known) {
       return { attack: live.attack, health: live.health, maxHealth: live.maxHealth, attackTone: "base", healthTone: "base" };
     }

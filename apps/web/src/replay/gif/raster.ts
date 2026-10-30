@@ -57,7 +57,7 @@ export type RasterAnswer =
   | { type: "unsupported" }
   | { type: "failed"; message: string };
 
-// The faces' colours are cards.css's, copied: the raster has no DOM to read a custom property from.
+// The faces' colors are cards.css's, copied: the raster has no DOM to read a custom property from.
 const TYPE_FRAME: Readonly<Record<CardType, string>> = {
   Unit: "#7a6446",
   Spell: "#3e5f9a",
@@ -111,7 +111,7 @@ export function canvasContext(width: number, height: number): Ctx2D | null {
 
 const HEX = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
 
-/** `hex` with an alpha, as a CSS colour; anything that is not `#rrggbb` is returned as it came. */
+/** `hex` with an alpha, as a CSS color; anything that is not `#rrggbb` is returned as it came. */
 function rgba(hex: string, alpha: number): string {
   const match = HEX.exec(hex);
   if (match === null) return hex;
@@ -354,7 +354,7 @@ export type RasterOptions = {
 export async function rasterize(ctx: Ctx2D, plan: GifPlan, assets: GifAssets, options: RasterOptions): Promise<Uint8Array<ArrayBuffer> | null> {
   const encoder = createGifEncoder(plan.width, plan.height);
   for (const [index, frame] of plan.frames.entries()) {
-    if (options.aborted()) throw new DOMException("cancelled", "AbortError");
+    if (options.aborted()) throw new DOMException("canceled", "AbortError");
     drawFrame(ctx, frame, assets);
     encoder.add(ctx.getImageData(0, 0, plan.width, plan.height).data, frame.delayCs);
     if (encoder.size > options.maxBytes) return null;

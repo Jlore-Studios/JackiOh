@@ -213,7 +213,7 @@ function useLobbyData(token: string): [LobbyLoad, () => void] {
   const [load, setLoad] = useState<LobbyLoad>({ kind: "loading" });
   const [round, setRound] = useState(0);
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     Promise.all([
       attempt(() => getDecks(token)),
       attempt(() => getCollection(token))
@@ -221,15 +221,15 @@ function useLobbyData(token: string): [LobbyLoad, () => void] {
         .catch(() => null),
     ]).then(
       ([decks, collection]) => {
-        if (cancelled) return;
+        if (canceled) return;
         setLoad({ kind: "ready", data: { decks: decks.decks, trios: decks.trios, catalog: currentCatalog(), collection } });
       },
       (cause: unknown) => {
-        if (!cancelled) setLoad({ kind: "failed", message: messageOf(cause) });
+        if (!canceled) setLoad({ kind: "failed", message: messageOf(cause) });
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, round]);
   const retry = useCallback((): void => {
@@ -388,7 +388,7 @@ type Status =
   | { kind: "found" }
   | { kind: "left" }
   | { kind: "ticket" }
-  | { kind: "roomCancelled" }
+  | { kind: "roomCanceled" }
   | { kind: "roomGone" };
 
 // Pairing watch
@@ -435,7 +435,7 @@ function useLobbyWatch(
   const endedReads = useRef(0);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     if (!waiting) {
       // Idle again: a later wait judges its own reads from nothing.
       ended.current = false;
@@ -449,7 +449,7 @@ function useLobbyWatch(
       reading = true;
       attempt(() => getMe(token))
         .then((me) => {
-          if (cancelled || navigated.current || ended.current) return;
+          if (canceled || navigated.current || ended.current) return;
           const target = pairTargetOf(me);
           if (target !== null) {
             navigated.current = true;
@@ -480,7 +480,7 @@ function useLobbyWatch(
     check();
     if (!waiting) {
       return () => {
-        cancelled = true;
+        canceled = true;
       };
     }
     const handle = setInterval(() => {
@@ -490,7 +490,7 @@ function useLobbyWatch(
     // A throttled tab's interval stalls; waking it reads the wait again at once.
     const stopWake = pageWake(check);
     return () => {
-      cancelled = true;
+      canceled = true;
       stopWake();
       clearInterval(handle);
     };
@@ -745,8 +745,8 @@ function statusWords(status: Status): string {
       return t("Left the queue.");
     case "ticket":
       return t("Give your opponent this code. You will be taken to the game when they join.");
-    case "roomCancelled":
-      return t("Room cancelled. Its code no longer works.");
+    case "roomCanceled":
+      return t("Room canceled. Its code no longer works.");
     case "roomGone":
       return t("That room is no longer open: someone joined it or it expired.");
   }
@@ -863,15 +863,15 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
   }, [refreshPopulation]);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     attempt(() => getOwnRank(token)).then(
       (next) => {
-        if (!cancelled) setRank(next);
+        if (!canceled) setRank(next);
       },
       () => undefined,
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token]);
 
@@ -880,18 +880,18 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
   const opensIdle = rejoined === null && link === null;
   useEffect(() => {
     if (!opensIdle) return;
-    let cancelled = false;
+    let canceled = false;
     attempt(() => getOpenRooms(token))
       .then((answer) => {
         const open = answer.rooms[0];
-        if (cancelled || open === undefined) return;
+        if (canceled || open === undefined) return;
         setRoom((current) => current ?? { code: open.code, mode: open.mode });
         setWaiting(true);
         setStatus((current) => current ?? { kind: "ticket" });
       })
       .catch(() => undefined);
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, opensIdle]);
 
@@ -1010,7 +1010,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
       const answer = await cancelRoom(token, code);
       setRoom(null);
       setWaiting(false);
-      setStatus({ kind: answer.cancelled ? "roomCancelled" : "roomGone" });
+      setStatus({ kind: answer.cancelled ? "roomCanceled" : "roomGone" });
     });
   }
 

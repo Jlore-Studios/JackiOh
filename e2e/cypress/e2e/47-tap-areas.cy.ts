@@ -106,7 +106,7 @@ function hitBox(win: Window, el: Element): Box {
   for (const which of ["::before", "::after"]) {
     const p = win.getComputedStyle(el, which);
     if (p.content === "none" || p.content === "normal" || p.position !== "absolute" || style.position === "static" || p.pointerEvents === "none") continue;
-    // A centring translate (inspectable.css's pile band) shifts the box; the rest of a transform is ignored.
+    // A centering translate (inspectable.css's pile band) shifts the box; the rest of a transform is ignored.
     const shift = new DOMMatrixReadOnly(p.transform === "none" ? undefined : p.transform);
     const [x, y, w, h] = [parseFloat(p.left) + shift.e, parseFloat(p.top) + shift.f, parseFloat(p.width), parseFloat(p.height)];
     if (![x, y, w, h].every(Number.isFinite) || w <= SLACK_PX || h <= SLACK_PX || style.clipPath !== "none") continue;
@@ -154,7 +154,7 @@ function controlsOf(win: Window): Control[] {
 
 /**
  * R2122000 over the screen as it stands. A control's hit area reaches `HIT_MIN_PX / 2` past its
- * centre on each side, or halfway to a neighbour nearer than that (the split); and it covers no
+ * center on each side, or halfway to a neighbour nearer than that (the split); and it covers no
  * neighbour's shown box. A neighbour is another control, neither holding the other, whose box does
  * not overlap this one's.
  */

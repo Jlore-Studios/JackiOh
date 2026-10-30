@@ -21,7 +21,7 @@ Triggers: `push` to `main`, every `pull_request`. Concurrency `ci-${{ github.ref
 | `unit` | unit (`<projects>` `<shard>`) | changes | 10 | 7 entries: `ai` 1/2, 2/2; `web` 1/4..4/4; `server shared validator` (no shard) | `pnpm exec vitest run --project <p>... [--shard=k/K] --exclude '**/gate-*.test.ts'` (engine and cards are NOT here; they run in `coverage`) |
 | `fuzz` | fuzz (k/4) | changes | 10 | `shard: [1,2,3,4]`; `per = 1000 / job-total`; `JACKIOH_FUZZ_FROM=(k-1)*per+1`, `JACKIOH_FUZZ_SEEDS=per` | `pnpm fuzz` (= `vitest run --project cards fuzz`, runs `fuzz.test.ts` and `fuzz-handicap.test.ts`) |
 | `coverage` | coverage (k/3) | changes | 10 | `shard: [1,2,3]` | `pnpm test:coverage --shard=k/3 --coverage.thresholds.lines=0 --reporter=blob --reporter=default`; uploads `.vitest/blob/` as `coverage-blob-k` |
-| `checks` | **lint, typecheck, unit, fuzz, coverage** (REQUIRED) | changes, static, unit, fuzz, coverage | 10 | summary, `if: !cancelled()` | asserts every piece `success` (or `full == false`); downloads blobs; `pnpm exec vitest run --merge-reports --coverage --project engine --project cards` (holds the 90% floor from `vitest.config.ts`) |
+| `checks` | **lint, typecheck, unit, fuzz, coverage** (REQUIRED) | changes, static, unit, fuzz, coverage | 10 | summary, `if: !canceled()` | asserts every piece `success` (or `full == false`); downloads blobs; `pnpm exec vitest run --merge-reports --coverage --project engine --project cards` (holds the 90% floor from `vitest.config.ts`) |
 | `ai-gate-shard` | ai gates (k/12) | changes | 15 | `shard: [1..12]`; env `JACKIOH_AI_GATE_SHARD=k/12`, `JACKIOH_AI_GATE_OUT=…/ai-gate-shards` | `pnpm ai:gate` (= `JACKIOH_AI_GATE=full vitest run --project ai gate-`); uploads `ai-gate-k` |
 | `ai-gate` | **ai quality gates (full)** (REQUIRED) | changes, ai-gate-shard | 10 | summary | `pnpm ai:gate:merge ai-gate-shards` (= `tsx packages/ai/scripts/gate-merge.ts`) |
 | `sql` | **sql invariants (real Postgres)** (REQUIRED) | changes | 10 | – | `docker pull postgres:16`; `sh apps/server/test/sql/run.sh` (no Node); `docker rm -f jackioh-pg-test` |
@@ -36,7 +36,7 @@ Triggers: `push` to `main`, every `pull_request`. Concurrency `ci-${{ github.ref
 
 **Required checks.** `.harness/config.json` and `.squishy/config.json` `required_checks` list 7 names: the 6 bold names above plus `bot selftest`. (CLAUDE.md says "CI reports five required checks" and counts e2e as one; it is two.) Changing names needs a person: branch protection + `.harness/` + `.squishy/` are bot-forbidden paths.
 
-Summary-job contract: each summary runs `if: ${{ !cancelled() }}` and accepts `skipped` only when `needs.changes.outputs.full == 'false'`; a failed `changes` leaves `full` empty → every summary fails.
+Summary-job contract: each summary runs `if: ${{ !canceled() }}` and accepts `skipped` only when `needs.changes.outputs.full == 'false'`; a failed `changes` leaves `full` empty → every summary fails.
 
 **Measured durations** (main push run 37497560121 at `91cc43c`, all green; 51 jobs, **110.1 runner-minutes, 8.3 min wall**):
 
@@ -53,7 +53,7 @@ Summary-job contract: each summary runs `if: ${{ !cancelled() }}` and accepts `s
 
 Runner-minute split of that run: e2e Chrome+Electron+component ≈ 59 min (54%), AI gates ≈ 21 min (19%), coverage ≈ 6.6 min, fuzz ≈ 8 min, unit ≈ 11.5 min, static ≈ 1.8 min, sql+db ≈ 1.7 min. Install overhead alone ≈ 51 × 25 s ≈ 21 runner-minutes.
 
-Volume: 93 CI runs between 2026-10-05T20:00Z and 2026-10-06T21:00Z (57 pull_request, 36 push; 81 success, 6 failure, 6 cancelled) → on the order of 10,000 runner-minutes/day.
+Volume: 93 CI runs between 2026-10-05T20:00Z and 2026-10-06T21:00Z (57 pull_request, 36 push; 81 success, 6 failure, 6 canceled) → on the order of 10,000 runner-minutes/day.
 
 Historic numbers recorded in `ci.yml` comments (#73, #172): before the split, lint→coverage took 19 min, AI gates 15, each browser's e2e 14; web unit alone 4 min, then "7m51s per half"; ai unit alone 7m28s; one hard-vs-easy AI game can take 4–5 min (`gate:v2:hard-vs-easy:12`).
 
@@ -127,7 +127,7 @@ Other workflows (not CI gates): `bot-commands.yml`, `bot-night.yml`, `bot-status
 
 Engine groups: `effects-*.test.ts` 50 files / 632 its / 14,393 lines; `rulings*.test.ts` 4 files / 699 its / 10,171 lines (`rulings.test.ts` 4,565, `rulings-a` 1,385, `rulings-b` 1,682, `rulings-c` 2,539); combat 7/77; property/replay (`combat.property`, `control-change.property`, `hotseat.smoke`, `replay`, `replay-scripted`, `generation-replay`, `play-pipeline-b-replay`) 7/18/1,516; fuse/transform/recruit variants 5/58; `lint-ban.test.ts` 1/7 (runs ESLint on `test/fixtures/lint`); other 95/1,215/32,153.
 
-Cards groups: Core card tests `test/NNN-*.test.ts` 102 files / 1,301 its; Classic `test/classic/` 91 / 1,625; Classic+ `test/classic-plus/` 116 / 1,448; tokens `t-*.test.ts` 6 / 96; catalog data (`catalog`, `registry`, `references`, `radiant-standard`, `card-text`, `flavour`, `params`) 7 / 85; patch tooling (`patches`, `patches-ship`, `versions`, `loc`) 4 / 47; fuzz 2 / 4 (but 1,000 games each); cross-card behaviour (`paused-sequences`, `hidden-information`, `preview`, `re-entry`, …) 38 / 568 / 18,070.
+Cards groups: Core card tests `test/NNN-*.test.ts` 102 files / 1,301 its; Classic `test/classic/` 91 / 1,625; Classic+ `test/classic-plus/` 116 / 1,448; tokens `t-*.test.ts` 6 / 96; catalog data (`catalog`, `registry`, `references`, `radiant-standard`, `card-text`, `flavour`, `params`) 7 / 85; patch tooling (`patches`, `patches-ship`, `versions`, `loc`) 4 / 47; fuzz 2 / 4 (but 1,000 games each); cross-card behavior (`paused-sequences`, `hidden-information`, `preview`, `re-entry`, …) 38 / 568 / 18,070.
 
 AI: `gate-random`, `gate-greedy`, `gate-hard-easy`, `gate-perf` (+`_shard.ts`); 6 `redact-*` hidden-info tests; `decide`, `search`, `lethal`, `evaluate*`, `match*`, `observe*`, `personas`, `puzzles`, `shadowBan`, `answer-key`, `arena-bridge`, `dev-run`, `tutorial-tier`, …
 
@@ -199,7 +199,7 @@ Component specs (`e2e/cypress/component/`, 4,472 lines, no server, Chrome only, 
 | static: lint, typecheck, `validate:catalog`, `missing-tests`, `rulings:coverage` | ESSENTIAL | 1m50 total, catches the most failures (8 of 25 failing runs) |
 | engine unit tests (effects, combat, prompts, turn, viewFor, hidden info, replay determinism, `rulings-a/b/c`) | ESSENTIAL (port to Rust `cargo test`) | the core rules; run in < 3 min today inside coverage shards |
 | per-card tests (309 card files + 6 token files) | ESSENTIAL (port; BUILD's must-pass tables are the oracle) | card regressions; cheap per file |
-| cards cross-card behaviour tests (`paused-sequences`, `hidden-information`, `re-entry`, `preview`, …) | ESSENTIAL (port) | rules interactions |
+| cards cross-card behavior tests (`paused-sequences`, `hidden-information`, `re-entry`, `preview`, …) | ESSENTIAL (port) | rules interactions |
 | fuzz smoke (100 seeds both files) | ESSENTIAL | replay/termination smoke; today inside `pnpm test`/coverage |
 | fuzz full 1000 seeds × 2 (`pnpm fuzz`) | DAILY | ≈ 8 runner-min; 0 failures in the sampled window; seeds are independent so a daily sweep finds the same bugs |
 | ai decision/redaction tests (`packages/ai/test` minus `gate-*`) | ESSENTIAL (port) | hidden-info guarantees (R185) and decision correctness |
@@ -210,9 +210,9 @@ Component specs (`e2e/cypress/component/`, 4,472 lines, no server, Chrome only, 
 | `db` store contract + `test:deploy` | ESSENTIAL when server/db changes, else DAILY | 1m16; Docker |
 | web unit: game/, routes/, practice/, tutorial/, net auth, deckbuilder, settings, stats | ESSENTIAL | the only TS code left; user-facing flows |
 | web unit: audio/ (22 files, 575 its), fx/ (25, 562), cards visuals, emotes, haptics | DAILY (or ESSENTIAL only when `apps/web/src/{audio,fx}` change) | cosmetic layers; large |
-| web tests that read CSS source and regex it (28 files: `game/{countered,animations,Clock,Hand,emotes,overflow,position-switch,PromptE18,Board}.test.*`, `game/deckbuilder/browse.test.tsx`, `test/qa-v020.test.tsx`, `test/ux/{settings,board-ux}.test.tsx`, `fx/{css,sprites}.test.ts`, `cards/{CardFace,CardMarks,glitch,cardState,radiantDiff,foil,keywordVisuals,quest}.test.*`, `settings/wiring.test.tsx`, `routes/landing.test.tsx`, `patches/CardHistory.test.tsx`, `emotes/{ui,PortraitPicker}.test.tsx`) | DAILY or DELETE the CSS-text assertions | source-text pins, not behaviour; jsdom has no layout, component specs measure the real thing |
+| web tests that read CSS source and regex it (28 files: `game/{countered,animations,Clock,Hand,emotes,overflow,position-switch,PromptE18,Board}.test.*`, `game/deckbuilder/browse.test.tsx`, `test/qa-v020.test.tsx`, `test/ux/{settings,board-ux}.test.tsx`, `fx/{css,sprites}.test.ts`, `cards/{CardFace,CardMarks,glitch,cardState,radiantDiff,foil,keywordVisuals,quest}.test.*`, `settings/wiring.test.tsx`, `routes/landing.test.tsx`, `patches/CardHistory.test.tsx`, `emotes/{ui,PortraitPicker}.test.tsx`) | DAILY or DELETE the CSS-text assertions | source-text pins, not behavior; jsdom has no layout, component specs measure the real thing |
 | web tooling tests: `net/ci-scope.test.ts`, `net/vercel-ignore.test.ts` | KEEP but rewrite with the scripts | they test repo tooling that changes in the CI trim |
-| web tooling tests: `net/promote-production.test.ts` (923), `net/cloudflare-config.test.ts`, `net/cloudflare-serve.test.ts`, `net/deploy-routes.test.ts`, `net/env-production.test.ts` | DAILY or leave untouched (Cloudflare out of scope per #306) | not web behaviour |
+| web tooling tests: `net/promote-production.test.ts` (923), `net/cloudflare-config.test.ts`, `net/cloudflare-serve.test.ts`, `net/deploy-routes.test.ts`, `net/env-production.test.ts` | DAILY or leave untouched (Cloudflare out of scope per #306) | not web behavior |
 | asset tests: `audio/gen-voice.test.ts`, `audio/voice-assets.test.ts`, `audio/music-assets.test.ts`, `audio/voiceData.test.ts`, `audio/voice-lines.test.ts`, `cards/art/convention.test.ts` | DAILY (or ESSENTIAL when `apps/web/public/audio` / `card-audio.json5` / catalog change) | asset completeness; break on every new card from Linux (ADDING_CARDS §7) |
 | `apps/web/src/audio/spec-rows.test.ts` (104 lines) | DELETE | duplicates `rulings.test.ts`'s completeness test and spawns `rulings-coverage.ts` itself; pins SPEC heading order |
 | `packages/engine/test/conditionActive.test.ts:784–825` (R195 prose block) | DELETE | pins SPEC prose and the index's file list (#133 example 2) |
@@ -360,7 +360,7 @@ Counts: **561 R-rows** (`^| R(\d+) |`), unique, ascending, **R1..R762**, 201 unu
 | `SPEC.md` | 1,986 | 853,936 | rules authority (§11 = 481 KB) |
 | `docs/classic-sets.md` | 3,713 | 229,101 | Classic/Classic+ brief (B0–B9 sections, E1–E40 engine systems, CL1–CL46) |
 | `BUILD.md` | 920 | 222,729 | work order M1–M9 |
-| `docs/polish/3-ai.md` | 2,267 | 158,947 | AI polish (B-behaviours) |
+| `docs/polish/3-ai.md` | 2,267 | 158,947 | AI polish (B-behaviors) |
 | `docs/polish/4-edge-cases.md` | 1,773 | 158,043 | edge-case hunt |
 | `docs/radiant-audit.md` | 497 | 129,099 | per-card Radiant audit table (read by a test) |
 | `docs/polish/5-sign-in.md` | 1,200 | 107,273 | |
@@ -447,7 +447,7 @@ Counted over `packages/ apps/ e2e/` (`.ts .tsx .sql .mjs .css`):
 | `§n(.n)` section refs | SPEC headings (≈ 67 ids) | 67 | 11,154 | engine 3,511, cards 4,788, server 1,549, web 657, e2e 410 |
 | card ids `core-NNN`, `classic-NNN`, `classicplus-NNN`, `-k` tokens, `*-t-*` | `packages/cards/catalog.json` (268 cards + 50 tokens) | 333 | 11,372 | plus 6,389 prose card refs `#NN`, `C #NN`, `C+ #NN(.k)` |
 | `M<n>-T<k>` BUILD tasks | BUILD.md (48 task headers) | 40 | 838 | |
-| `B<n>` | **overloaded**: REVIEW.md B0–B8 (+B1.1…), each `docs/polish/*.md` B1–B75 (behaviour tables, e.g. 1-animations 75 rows, 3-ai 61, 6-cards 60), `docs/classic-sets.md` B0–B9 sections (B2.7, B6…) | 79 | 4,731 | same id means different things per doc; a graph needs doc-qualified ids |
+| `B<n>` | **overloaded**: REVIEW.md B0–B8 (+B1.1…), each `docs/polish/*.md` B1–B75 (behavior tables, e.g. 1-animations 75 rows, 3-ai 61, 6-cards 60), `docs/classic-sets.md` B0–B9 sections (B2.7, B6…) | 79 | 4,731 | same id means different things per doc; a graph needs doc-qualified ids |
 | `E<n>` engine systems | `docs/classic-sets.md` (40 distinct, table rows like `\| E18 \| **New prompt kinds** \|`) | 41 | 1,512 | E5 107, E35 103, E18 100, E39 88, E21 73 citations |
 | `CL<n>` | `docs/classic-sets.md` (46) | 0 in code | – | |
 | `L1–L6`, `D1–D4`, `T1–T3` deck/trio/queue rules | SPEC §2.6/§9.4, validator | – | L1 102, L2 97, L3 96, L4 64, L5 90, L6 123, D1 80, D2 27, D3 18, D4 38, T1 233, T2 108, T3 113 (T-counts include other uses) | |

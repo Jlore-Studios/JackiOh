@@ -112,11 +112,11 @@ fn indistinguishable(viewer: PlayerId, a: &Scenario, b: &Scenario) {
 
 /// A value as its JSON, absent fields absent.
 fn json_of(value: &impl serde::Serialize) -> Value {
-    serde_json::to_value(value).expect("a view serialises")
+    serde_json::to_value(value).expect("a view serializes")
 }
 
 fn json_text(value: &impl serde::Serialize) -> String {
-    serde_json::to_string(value).expect("a view serialises")
+    serde_json::to_string(value).expect("a view serializes")
 }
 
 /// Whether any alternative occurs in the text.
@@ -859,7 +859,7 @@ mod r177_a_number_taken_by_a_face_down_trap_owed_an_event {
         let pawn_and_sheep = pawn_game(SHEEPISH);
         let pawn_and_honeypot = pawn_game(HONEYPOT);
 
-        // Every game played the same public course: the attack cancelled, p1's turn handed over and
+        // Every game played the same public course: the attack canceled, p1's turn handed over and
         // ended, p2 on turn 10 with Lunar Eclipse's discount live, and the lane-2 card still face-down.
         for s in [&two_pawns, &pawn_and_sheep, &pawn_and_honeypot] {
             assert_eq!(s.state().turn, 10);

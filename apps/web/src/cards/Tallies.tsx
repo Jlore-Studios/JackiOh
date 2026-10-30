@@ -2,7 +2,7 @@
 // Level Up!'s attacks toward its Radiant: "▲ 2/3").
 //
 // One pill per count, at the card's top right, in the Training Grounds yard's straw and wood (R2202001),
-// the number beside a chevron so it is a shape as well as a colour. The words, "Level Up!: 2 of 3",
+// the number beside a chevron so it is a shape as well as a color. The words, "Level Up!: 2 of 3",
 // are its tooltip and its hidden text, and the inspect notes spell them out on touch
 // (inspect/StateNotes.tsx). It takes no pointer event, so a click or a drag still reaches the card.
 // It reads the counts it is given only (CLAUDE.md rule 7).

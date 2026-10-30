@@ -210,7 +210,7 @@ fn tidy(tuning: &mut Tuning) -> bool {
 }
 
 /// Drop every empty field, and the record itself once nothing is left, so a card whose changes have
-/// cancelled out stores and hashes exactly as a card never tuned (§9.3).
+/// canceled out stores and hashes exactly as a card never tuned (§9.3).
 pub fn tidy_tuning(instance: &mut CardInstance) {
     let Some(tuning) = instance.tuning.as_mut() else {
         return;

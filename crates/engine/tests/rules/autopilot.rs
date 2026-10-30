@@ -183,7 +183,7 @@ mod r1183002_the_autopilot {
     fn r1183002_the_status_is_absent_from_a_game_without_it() {
         register_outside_data();
         let s = scenario(json!({ "p1": { "hand": [FILLER] }, "p2": { "hand": [FILLER] } }));
-        let text = serde_json::to_string(s.state()).expect("serialises");
+        let text = serde_json::to_string(s.state()).expect("serializes");
         assert!(!text.contains("autopilot"), "D9: no key, no hash change");
     }
 
@@ -192,7 +192,7 @@ mod r1183002_the_autopilot {
         let mut s = board("od-auto-view", json!([offload.id]));
         s.play(offload.id.as_str(), json!({}));
         for viewer in [P1, P2] {
-            let events = serde_json::to_value(view_for(s.state(), viewer).events).expect("serialises");
+            let events = serde_json::to_value(view_for(s.state(), viewer).events).expect("serializes");
             assert!(
                 events.to_string().contains("\"autopilotEngaged\""),
                 "{viewer:?} reads it"

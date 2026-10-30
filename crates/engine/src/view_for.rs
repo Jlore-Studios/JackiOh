@@ -1831,7 +1831,7 @@ impl<'e> Shown<'e> {
         let event = self.event;
         self.map.get_or_insert_with(|| match serde_json::to_value(event) {
             Ok(Value::Object(map)) => map,
-            _ => panic!("an event serialises to an object"),
+            _ => panic!("an event serializes to an object"),
         })
     }
 
@@ -2953,7 +2953,7 @@ fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardD
     }
     match serde_json::to_value(view) {
         Ok(value) => visit(&value, state, &mut defs),
-        Err(error) => panic!("a view serialises: {error}"),
+        Err(error) => panic!("a view serializes: {error}"),
     }
     defs
 }

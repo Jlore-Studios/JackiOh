@@ -312,7 +312,7 @@ mod tests {
                 let mut picks: Vec<String> = Vec::new();
                 picks.push(offered(&open(&s)).first().cloned().unwrap_or_default());
                 s.answer(json!(picks[0]));
-                // Between the two Discovers the Fuser stands hurt and in defence, which the Fuse keeps.
+                // Between the two Discovers the Fuser stands hurt and in defense, which the Fuse keeps.
                 {
                     let live = find_instance_mut(s.state_mut(), &card.id).expect("the Fuser is in the state");
                     live.damage = 1;

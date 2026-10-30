@@ -113,17 +113,17 @@ export function ChallengeToast(): ReactElement {
       setSaved(null);
       return;
     }
-    let cancelled = false;
+    let canceled = false;
     withSession(getDecks).then(
       (answer) => {
-        if (!cancelled) setSaved({ decks: answer.decks, trios: answer.trios });
+        if (!canceled) setSaved({ decks: answer.decks, trios: answer.trios });
       },
       () => {
-        if (!cancelled) setSaved("failed");
+        if (!canceled) setSaved("failed");
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [needsDecks]);
 
@@ -139,10 +139,10 @@ export function ChallengeToast(): ReactElement {
     const watching = hadOutgoing.current || ours || followingChallenge();
     hadOutgoing.current = ours;
     if (!watching) return;
-    let cancelled = false;
+    let canceled = false;
     withSession(getMe).then(
       (me) => {
-        if (cancelled) return;
+        if (canceled) return;
         const game = liveGameOf(me);
         if (game === null) return;
         stopFollowingChallenge();
@@ -152,7 +152,7 @@ export function ChallengeToast(): ReactElement {
       () => undefined,
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [social.challengeReads, social.outgoing, social.refused]);
 

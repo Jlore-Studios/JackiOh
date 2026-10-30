@@ -177,7 +177,7 @@ mod tests {
                 s.end_turn();
                 // R682: the cast's discard is random, so no prompt opens and the turn just finishes.
                 assert!(s.state().pending.is_none());
-                let round: GameState = serde_json::from_str(&serde_json::to_string(s.state()).expect("the state serialises"))
+                let round: GameState = serde_json::from_str(&serde_json::to_string(s.state()).expect("the state serializes"))
                     .expect("the state parses back");
                 assert_eq!(&round, s.state());
                 // R70: the cast resolved as p1's play without asking.

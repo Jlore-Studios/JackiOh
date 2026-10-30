@@ -43,7 +43,7 @@ fn heal_path() -> Vec<StarscapeReward> {
     nodes
 }
 
-/// Writes p1's map as charted, standing on `at`, last travelled on no turn.
+/// Writes p1's map as charted, standing on `at`, last traveled on no turn.
 fn set_map(s: &mut Scenario, nodes: Vec<StarscapeReward>, at: i32) {
     s.state_mut().players.p1.starscape = Some(StarscapeMap {
         nodes,
@@ -67,8 +67,8 @@ fn mana(s: &Scenario) -> i32 {
     s.state().players.p1.mana.current
 }
 
-/// The nodes the given events travelled to, in order.
-fn travelled(events: &[GameEvent]) -> Vec<(PlayerId, i32, StarscapeReward)> {
+/// The nodes the given events traveled to, in order.
+fn traveled(events: &[GameEvent]) -> Vec<(PlayerId, i32, StarscapeReward)> {
     events
         .iter()
         .filter_map(|event| match event {
@@ -85,7 +85,7 @@ fn activations(s: &Scenario) -> Vec<(String, bool)> {
 
 /// p1's own view of the Reach in backrow `lane`: its abilities as (ability, usable).
 fn activations_in(s: &Scenario, lane: usize) -> Vec<(String, bool)> {
-    let view = serde_json::to_value(s.view(P1)).expect("the view serialises");
+    let view = serde_json::to_value(s.view(P1)).expect("the view serializes");
     view["you"]["backrow"][lane - 1]["activations"]
         .as_array()
         .expect("the Reach lists its abilities")
@@ -151,7 +151,7 @@ fn r1847000_the_first_travel_charts_the_map_from_the_match_rng() {
         s.state().rng_cursor > cursor,
         "the chart draws from the match rng"
     );
-    assert_eq!(travelled(s.last_events()), vec![(P1, 1, map.nodes[0])]);
+    assert_eq!(traveled(s.last_events()), vec![(P1, 1, map.nodes[0])]);
 
     let mut again = board("starscape-chart", false);
     travel(&mut again);
@@ -177,11 +177,11 @@ fn r1847000_the_map_is_the_players_whichever_card_travels_it() {
 fn r1847000_the_map_is_public_on_both_seats_and_absent_before_a_travel() {
     // D14: a game that never travels serializes, hashes and shows as before.
     let mut s = board("starscape-view", false);
-    let raw = serde_json::to_value(s.state()).expect("the state serialises");
+    let raw = serde_json::to_value(s.state()).expect("the state serializes");
     assert_eq!(raw["players"]["p1"].get("starscape"), None);
     assert_eq!(raw["players"]["p2"].get("starscape"), None);
     for viewer in [P1, P2] {
-        let view = serde_json::to_value(s.view(viewer)).expect("the view serialises");
+        let view = serde_json::to_value(s.view(viewer)).expect("the view serializes");
         assert_eq!(view["you"].get("starscape"), None);
         assert_eq!(view["opponent"].get("starscape"), None);
     }
@@ -254,7 +254,7 @@ fn r1847001_each_reward_does_what_its_node_says() {
         "Damage hits the enemy hero"
     );
     assert_eq!(
-        travelled(s.events()),
+        traveled(s.events()),
         vec![
             (P1, 1, StarscapeReward::Heal),
             (P1, 2, StarscapeReward::Draw),
@@ -271,7 +271,7 @@ fn r1847001_twenty_travels_reach_the_edge_and_no_travel_goes_past_it() {
     for _ in 0..STARSCAPE_EDGE_TRAVELS {
         travel(&mut s);
     }
-    let nodes: Vec<i32> = travelled(s.events())
+    let nodes: Vec<i32> = traveled(s.events())
         .into_iter()
         .map(|(_, node, _)| node)
         .collect();
@@ -404,7 +404,7 @@ fn r1847002_the_free_travel_is_the_players_first_by_any_card() {
     assert_eq!(
         activations_in(&s, 2),
         vec![(STARSCAPE_TRAVEL_ABILITY.to_string(), false)],
-        "the player has travelled this turn, so the Radiant Reach offers only the paid travel"
+        "the player has traveled this turn, so the Radiant Reach offers only the paid travel"
     );
     s.expect_refused_with(|s| s.activate(&radiant, json!({})), "more than your mana");
     assert_eq!(at(&s, P1), 1);

@@ -7,7 +7,7 @@
 //! to the hook as `ctx.x`, and R65 makes an X-cost card cost exactly X. R348 (`MIN_CHOSEN_X`) keeps
 //! X = 0 out of the hook; the guard below covers a run with no X. Clauses resolve in §8's order:
 //! damage before heal, draw before summon (a draw into a full hand burns, R4, before the board grows).
-//! "Heal your hero X" is `{ of: "selfHero" }`, not the target (R19's licence is #47 Fig of Life's);
+//! "Heal your hero X" is `{ of: "selfHero" }`, not the target (R19's license is #47 Fig of Life's);
 //! §3 gives a hero no maximum. The token is the Ghoul Token plus a §7 `statsOverride`, summoned on its
 //! base face on both faces (R349 would double the 3X); R64 places it in the leftmost empty unit zone.
 

@@ -15,7 +15,7 @@
  * (`position: fixed; inset: 0; overflow: hidden`). z-index 38 sits above the board and below the
  * prompt scrim (40); the cards mid-animation (40, 45, 50) stay above it.
  *
- * Colours come from the src/index.css tokens (--radiant, --opponent, --legal, --plague, --grade,
+ * Colors come from the src/index.css tokens (--radiant, --opponent, --legal, --plague, --grade,
  * --mana, --text, --bg-*, --line-*), mixed with plain white or black where a shade is needed.
  *
  * Every @keyframes here animates only what the compositor can run off the main thread: transform
@@ -202,7 +202,7 @@
 
 /* Legendary and Mythic entrances, the heal column, the radiant set and the victory / "Your turn"
    backdrop. A repeating conic gradient draws the rays; a radial mask fades them out from the
-   centre; the whole fan turns slowly while it blooms and fades. */
+   center; the whole fan turns slowly while it blooms and fades. */
 
 @keyframes fx-rays-spin {
   0% {
@@ -289,7 +289,7 @@
 
 /* Holy light: a still shaft of warm light falling from above onto the target, feathered at both
    sides, with faint streaks inside it and a bright pool of light where it lands (the foot sits on
-   the target's centre, 80% of the way down the shaft). */
+   the target's center, 80% of the way down the shaft). */
 .fx-rays[data-tone="holy"] {
   --fx-rays-turn: 0;
   width: max(96px, calc(var(--fx-w, 0px) * 1.5));
@@ -316,7 +316,7 @@
   mask-image: linear-gradient(to bottom, transparent 0%, black 34%, black 86%, transparent 100%);
 }
 
-/* Victory and "Your turn": a wide gold fan behind the centre of the screen, kept soft so the board
+/* Victory and "Your turn": a wide gold fan behind the center of the screen, kept soft so the board
    still reads through it. */
 .fx-rays[data-tone="victory"] {
   --fx-ray: color-mix(in srgb, var(--fx-gold) 85%, white);
@@ -490,7 +490,7 @@
   width: var(--fx-w);
   height: var(--fx-h);
   z-index: 3;
-  /* A dark outline and a coloured glow, so the chevrons read over any card art (review: the old
+  /* A dark outline and a colored glow, so the chevrons read over any card art (review: the old
      small, half-transparent ones were only visible in a 3x crop). Static: only transform and
      opacity animate. */
   filter: drop-shadow(0 0 1px black) drop-shadow(0 0 1px black)
@@ -1190,7 +1190,7 @@
 /* The lasting mark (fx/manaMarks.ts): each crystal the view says the next refresh will not fill is
    frosted over and cracked for as long as the rider stands. It is information, not an effect, so it
    is drawn whether or not the layer is on; only its glint moves, and under reduced motion it holds
-   still. A shape as well as a colour: the crack lines and the frost read without the tint. */
+   still. A shape as well as a color: the crack lines and the frost read without the tint. */
 
 @keyframes fx-hindered-glint {
   from {
@@ -1230,7 +1230,7 @@
 
 /* ------------------------------------------------------------ brand: a mark lands (R437) --- */
 
-/* A sigil in the mark's own colours (`--fx-mark-*`, from cards/marks.ts's palette) slams onto the
+/* A sigil in the mark's own colors (`--fx-mark-*`, from cards/marks.ts's palette) slams onto the
    card, its ring turning, then fades into the aura the card keeps (cards/marks.css). */
 
 @keyframes fx-brand-slam {
@@ -1496,7 +1496,7 @@
 
 /* ------------------------------------------- fog: a sweep rolls over a row (issue #124) --- */
 
-/* A bank of cloud rolls left to right over the whole row of units a sweep reached, in the colours of
+/* A bank of cloud rolls left to right over the whole row of units a sweep reached, in the colors of
    what cast it (`--fx-tint-*`, a family's palette, fx/looks.ts), with that family's emblem (or a flame
    for hits, a heart for heals) drifting up through it. The bank, its puffs and its icons move by
    transform and opacity alone; each puff and icon starts a little after the one to its left, so the
@@ -1614,7 +1614,7 @@
 
 /* ---------------------------- zone: a whole Deck, Graveyard or Exile reached (issue #124) --- */
 
-/* One wave over the pile instead of one flash per card: the pile's box glows in the colour of what
+/* One wave over the pile instead of one flash per card: the pile's box glows in the color of what
    happened to it, a band of light washes through it the way the change went (up for an Upgrade, down
    for a Degrade, across otherwise), and the count it reached pops in its middle. The words ride in
    `data-text` (fx/dom.ts). */

@@ -34,7 +34,7 @@ const QUICK: SearchBudget = SearchBudget {
 
 /// TS `expect(record).toMatchObject(fields)`: every field named holds its value, read as the wire writes it.
 fn assert_matches_object(record: &GameRecord, fields: serde_json::Value) {
-    let written = serde_json::to_value(record).expect("a record serialises");
+    let written = serde_json::to_value(record).expect("a record serializes");
     for (key, value) in fields.as_object().expect("an object literal") {
         assert_eq!(&written[key], value, "{key}");
     }
@@ -278,8 +278,8 @@ mod the_ais_development_run_9_11 {
             assert_eq!(record.id, format!("dev:v0.2.3:dev-test:{n}"));
             let again = dev_game_record(n, &options).expect("the same game finishes again");
             assert_eq!(
-                serde_json::to_string(&record).expect("a record serialises"),
-                serde_json::to_string(&again).expect("a record serialises"),
+                serde_json::to_string(&record).expect("a record serializes"),
+                serde_json::to_string(&again).expect("a record serializes"),
                 "game {n}"
             );
         }

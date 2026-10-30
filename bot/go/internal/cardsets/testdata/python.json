@@ -1,0 +1,609 @@
+{
+ "asked": [
+  [
+   "v0.4.2b",
+   "live"
+  ],
+  [
+   "v0.4.2",
+   "live"
+  ],
+  [
+   "v0.4.1",
+   "live"
+  ],
+  [
+   "v0.4.1",
+   "dev"
+  ],
+  [
+   "v0.4.0c",
+   "live"
+  ],
+  [
+   "v0.4.0c",
+   "dev"
+  ],
+  [
+   "v0.4.0",
+   "live"
+  ],
+  [
+   "v0.3.5",
+   "live"
+  ]
+ ],
+ "read": [
+  [
+   "v0.4.2",
+   "v0.4.2b",
+   true,
+   1200
+  ],
+  [
+   "v0.4.0",
+   "v0.4.0c",
+   false,
+   1100
+  ],
+  [
+   "v0.3.5",
+   "v0.3.5",
+   true,
+   1500
+  ]
+ ],
+ "min_sample": 20,
+ "oldest": "v0.3.5",
+ "rows": [
+  {
+   "name": "Core",
+   "cards": 1,
+   "games": 3800,
+   "wins": 2000,
+   "rates": [
+    0.5263157894736842
+   ],
+   "by_patch": {
+    "v0.4.2": 0.5833333333333334,
+    "v0.4.0": 0.5,
+    "v0.3.5": 0.5
+   },
+   "pooled": 0.5263157894736842,
+   "mean": 0.5263157894736842,
+   "median": 0.5263157894736842,
+   "error": 0.00809982909540911
+  },
+  {
+   "name": "Classic",
+   "cards": 2,
+   "games": 3810,
+   "wins": 1855,
+   "rates": [
+    0.4868421052631579
+   ],
+   "by_patch": {
+    "v0.4.2": 0.45,
+    "v0.4.0": 0.5,
+    "v0.3.5": 0.5066666666666667
+   },
+   "pooled": 0.4868766404199475,
+   "mean": 0.4868421052631579,
+   "median": 0.4868421052631579,
+   "error": 0.00809762898179825
+  }
+ ],
+ "when": "2026-09-29 12:00",
+ "draw": "<!-- jackioh-bot:card-sets -->\n### 🃏 Which set's cards win most\n\n_Read at 2026-09-29 12:00 from production's card statistics (`/api/stats/cards`), once a day: the last 3 patches with 1,000 games or more, v0.4.2 (1,200 live games), v0.4.0 (1,100 live and AI games) and v0.3.5 (1,500 live games)._\n\n| Set | Cards | Card-games | Pooled | Mean | Median | v0.4.2 | v0.4.0 | v0.3.5 |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n| Core | 1 | 3,800 | 52.6% ±0.8 | 52.6% | 52.6% | 58.3% | 50.0% | 50.0% |\n| Classic | 2 | 3,810 | 48.7% ±0.8 | 48.7% | 48.7% | 45.0% | 50.0% | 50.7% |\n\nHighest pooled: **Core**; mean: **Core**; median: **Core**.\n\n<details><summary>Cards 3 or more standard errors from 50% (1)</summary>\n\n| Card | Set | Win rate | Games | z |\n|---|---|---:|---:|---:|\n| Stockpile (`core-001`) | Core | 52.6% | 3,800 | +3.2 |\n\n</details>\n\n<sub>A card's win rate is its deck's, over the games it was in a deck (R377); a set's pooled rate is its cards' wins over their games, its mean and median over the cards with 20 games or more. Decks mix sets, so this is how a set's cards fare in mixed decks. ± is one standard error as if every card-game were independent, which they are not, so sets less than two or three ± apart are within noise.</sub>\n\n<!-- /jackioh-bot:card-sets -->",
+ "many_history": [
+  [
+   "v0.4.2",
+   {
+    "patch": "v0.4.2",
+    "previousPatch": "v0.4.1",
+    "gate": {
+     "cleared": true
+    },
+    "minSample": 20,
+    "totalGames": 1000,
+    "cards": [
+     {
+      "id": "core-000",
+      "name": "Card 0",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.6
+     },
+     {
+      "id": "core-001",
+      "name": "Card 1",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.601
+     },
+     {
+      "id": "core-002",
+      "name": "Card 2",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.602
+     },
+     {
+      "id": "core-003",
+      "name": "Card 3",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.603
+     },
+     {
+      "id": "core-004",
+      "name": "Card 4",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.604
+     },
+     {
+      "id": "core-005",
+      "name": "Card 5",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.605
+     },
+     {
+      "id": "core-006",
+      "name": "Card 6",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.606
+     },
+     {
+      "id": "core-007",
+      "name": "Card 7",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.607
+     },
+     {
+      "id": "core-008",
+      "name": "Card 8",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.608
+     },
+     {
+      "id": "core-009",
+      "name": "Card 9",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.609
+     },
+     {
+      "id": "core-010",
+      "name": "Card 10",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.61
+     },
+     {
+      "id": "core-011",
+      "name": "Card 11",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.611
+     },
+     {
+      "id": "core-012",
+      "name": "Card 12",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.612
+     },
+     {
+      "id": "core-013",
+      "name": "Card 13",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.613
+     },
+     {
+      "id": "core-014",
+      "name": "Card 14",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.614
+     },
+     {
+      "id": "core-015",
+      "name": "Card 15",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.615
+     },
+     {
+      "id": "core-016",
+      "name": "Card 16",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.616
+     },
+     {
+      "id": "core-017",
+      "name": "Card 17",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.617
+     },
+     {
+      "id": "core-018",
+      "name": "Card 18",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.618
+     },
+     {
+      "id": "core-019",
+      "name": "Card 19",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.619
+     },
+     {
+      "id": "core-020",
+      "name": "Card 20",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.62
+     },
+     {
+      "id": "core-021",
+      "name": "Card 21",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.621
+     },
+     {
+      "id": "core-022",
+      "name": "Card 22",
+      "set": "Core",
+      "games": 1000,
+      "winRate": 0.622
+     }
+    ]
+   },
+   null
+  ],
+  [
+   "v0.4.1",
+   {
+    "patch": "v0.4.1",
+    "previousPatch": null,
+    "gate": {
+     "cleared": true
+    },
+    "minSample": 20,
+    "totalGames": 10,
+    "cards": []
+   },
+   null
+  ]
+ ],
+ "draw_many": "<!-- jackioh-bot:card-sets -->\n### 🃏 Which set's cards win most\n\n_Read at 2026-09-29 12:00 from production's card statistics (`/api/stats/cards`), once a day: the one patch with 1,000 games or more, v0.4.2 (1,000 live games)._\n\n| Set | Cards | Card-games | Pooled | Mean | Median | v0.4.2 |\n|---|---:|---:|---:|---:|---:|---:|\n| Core | 23 | 23,000 | 61.1% ±0.3 | 61.1% | 61.1% | 61.1% |\n\nHighest pooled: **Core**; mean: **Core**; median: **Core**.\n\n<details><summary>Cards 3 or more standard errors from 50% (23)</summary>\n\n| Card | Set | Win rate | Games | z |\n|---|---|---:|---:|---:|\n| Card 22 (`core-022`) | Core | 62.2% | 1,000 | +7.7 |\n| Card 21 (`core-021`) | Core | 62.1% | 1,000 | +7.7 |\n| Card 20 (`core-020`) | Core | 62.0% | 1,000 | +7.6 |\n| Card 19 (`core-019`) | Core | 61.9% | 1,000 | +7.5 |\n| Card 18 (`core-018`) | Core | 61.8% | 1,000 | +7.5 |\n| Card 17 (`core-017`) | Core | 61.7% | 1,000 | +7.4 |\n| Card 16 (`core-016`) | Core | 61.6% | 1,000 | +7.3 |\n| Card 15 (`core-015`) | Core | 61.5% | 1,000 | +7.3 |\n| Card 14 (`core-014`) | Core | 61.4% | 1,000 | +7.2 |\n| Card 13 (`core-013`) | Core | 61.3% | 1,000 | +7.1 |\n| Card 12 (`core-012`) | Core | 61.2% | 1,000 | +7.1 |\n| Card 11 (`core-011`) | Core | 61.1% | 1,000 | +7.0 |\n| Card 10 (`core-010`) | Core | 61.0% | 1,000 | +7.0 |\n| Card 9 (`core-009`) | Core | 60.9% | 1,000 | +6.9 |\n| Card 8 (`core-008`) | Core | 60.8% | 1,000 | +6.8 |\n| Card 7 (`core-007`) | Core | 60.7% | 1,000 | +6.8 |\n| Card 6 (`core-006`) | Core | 60.6% | 1,000 | +6.7 |\n| Card 5 (`core-005`) | Core | 60.5% | 1,000 | +6.6 |\n| Card 4 (`core-004`) | Core | 60.4% | 1,000 | +6.6 |\n| Card 3 (`core-003`) | Core | 60.3% | 1,000 | +6.5 |\n\n_… and 3 nearer 50%, in `/api/stats/cards`._\n\n</details>\n\n<sub>A card's win rate is its deck's, over the games it was in a deck (R377); a set's pooled rate is its cards' wins over their games, its mean and median over the cards with 20 games or more. Decks mix sets, so this is how a set's cards fare in mixed decks. ± is one standard error as if every card-game were independent, which they are not, so sets less than two or three ± apart are within noise.</sub>\n\n<!-- /jackioh-bot:card-sets -->",
+ "thin_history": [
+  [
+   "v0.1.0",
+   {
+    "patch": "v0.1.0",
+    "previousPatch": null,
+    "gate": {
+     "cleared": false
+    },
+    "minSample": 20,
+    "totalGames": 10,
+    "cards": []
+   },
+   {
+    "patch": "v0.1.0",
+    "previousPatch": null,
+    "gate": {
+     "cleared": false
+    },
+    "minSample": 20,
+    "totalGames": 10,
+    "cards": []
+   }
+  ]
+ ],
+ "draw_thin": "<!-- jackioh-bot:card-sets -->\n### 🃏 Which set's cards win most\n\n_Read at 2026-09-29 12:00 from production's card statistics (`/api/stats/cards`): no patch back to v0.1.0 has 1,000 games yet. Read again once a day._\n\n<!-- /jackioh-bot:card-sets -->",
+ "history": [
+  [
+   "v0.4.2b",
+   {
+    "patch": "v0.4.2b",
+    "previousPatch": "v0.4.2",
+    "gate": {
+     "cleared": true
+    },
+    "minSample": 20,
+    "totalGames": 1200,
+    "cards": [
+     {
+      "id": "core-001",
+      "name": "Stockpile",
+      "set": "Core",
+      "games": 1200,
+      "winRate": 0.5833333333333334
+     },
+     {
+      "id": "classic-001",
+      "name": "Palantir",
+      "set": "Classic",
+      "games": 1200,
+      "winRate": 0.45
+     }
+    ]
+   },
+   null
+  ],
+  [
+   "v0.4.2",
+   {
+    "patch": "v0.4.2",
+    "previousPatch": "v0.4.1",
+    "gate": {
+     "cleared": true
+    },
+    "minSample": 20,
+    "totalGames": 1000,
+    "cards": [
+     {
+      "id": "core-001",
+      "name": "Stockpile",
+      "set": "Core",
+      "games": 1,
+      "winRate": 1.0
+     }
+    ]
+   },
+   null
+  ],
+  [
+   "v0.4.1",
+   {
+    "patch": "v0.4.1",
+    "previousPatch": "v0.4.0c",
+    "gate": {
+     "cleared": false
+    },
+    "minSample": 20,
+    "totalGames": 300,
+    "cards": [
+     {
+      "id": "core-001",
+      "name": "Stockpile",
+      "set": "Core",
+      "games": 300,
+      "winRate": 0.5
+     }
+    ]
+   },
+   {
+    "patch": "v0.4.1",
+    "previousPatch": "v0.4.0c",
+    "gate": {
+     "cleared": false
+    },
+    "minSample": 20,
+    "totalGames": 400,
+    "cards": [
+     {
+      "id": "core-001",
+      "name": "Stockpile",
+      "set": "Core",
+      "games": 400,
+      "winRate": 0.5
+     }
+    ]
+   }
+  ],
+  [
+   "v0.4.0c",
+   {
+    "patch": "v0.4.0c",
+    "previousPatch": "v0.4.0",
+    "gate": {
+     "cleared": false
+    },
+    "minSample": 20,
+    "totalGames": 200,
+    "cards": [
+     {
+      "id": "core-001",
+      "name": "Stockpile",
+      "set": "Core",
+      "games": 200,
+      "winRate": 0.5
+     },
+     {
+      "id": "classic-001",
+      "name": "Palantir",
+      "set": "Classic",
+      "games": 200,
+      "winRate": 0.45
+     }
+    ]
+   },
+   {
+    "patch": "v0.4.0c",
+    "previousPatch": "v0.4.0",
+    "gate": {
+     "cleared": false
+    },
+    "minSample": 20,
+    "totalGames": 900,
+    "cards": [
+     {
+      "id": "core-001",
+      "name": "Stockpile",
+      "set": "Core",
+      "games": 900,
+      "winRate": 0.5
+     },
+     {
+      "id": "classic-001",
+      "name": "Palantir",
+      "set": "Classic",
+      "games": 900,
+      "winRate": 0.5111111111111111
+     },
+     {
+      "id": "classic-002",
+      "name": "Rare",
+      "set": "Classic",
+      "games": 10,
+      "winRate": 0.5
+     }
+    ]
+   }
+  ],
+  [
+   "v0.4.0",
+   {
+    "patch": "v0.4.0",
+    "previousPatch": "v0.3.5",
+    "gate": {
+     "cleared": false
+    },
+    "minSample": 20,
+    "totalGames": 1,
+    "cards": []
+   },
+   null
+  ],
+  [
+   "v0.3.5",
+   {
+    "patch": "v0.3.5",
+    "previousPatch": "v0.3.4",
+    "gate": {
+     "cleared": true
+    },
+    "minSample": 20,
+    "totalGames": 1500,
+    "cards": [
+     {
+      "id": "core-001",
+      "name": "Stockpile",
+      "set": "Core",
+      "games": 1500,
+      "winRate": 0.5
+     },
+     {
+      "id": "classic-001",
+      "name": "Palantir",
+      "set": "Classic",
+      "games": 1500,
+      "winRate": 0.5066666666666667
+     }
+    ]
+   },
+   null
+  ],
+  [
+   "v0.3.4",
+   {
+    "patch": "v0.3.4",
+    "previousPatch": null,
+    "gate": {
+     "cleared": true
+    },
+    "minSample": 20,
+    "totalGames": 5000,
+    "cards": []
+   },
+   null
+  ]
+ ],
+ "fsums": [
+  {
+   "xs": [
+    -0.4523795535098186
+   ],
+   "fsum": -0.4523795535098186,
+   "mean": -0.4523795535098186,
+   "median": -0.4523795535098186
+  },
+  {
+   "xs": [
+    4.5183232059956533e-13,
+    -0.18466034385487662
+   ],
+   "fsum": -0.18466034385442479,
+   "mean": -0.09233017192721239,
+   "median": -0.09233017192721239
+  },
+  {
+   "xs": [
+    6.29882720216802e-13,
+    94123456229.21848,
+    0.14179512925945614,
+    -0.5954365058406696,
+    9.647577811255668e-13
+   ],
+   "fsum": 94123456228.76483,
+   "mean": 18824691245.752968,
+   "median": 9.647577811255668e-13
+  },
+  {
+   "xs": [
+    0.6231284515187199,
+    5.955110516885498e-14,
+    0.8795649725343511,
+    778108406543.2433,
+    4.4053111665665677e-13,
+    519124114764.0767,
+    0.49977315220679164,
+    457329881599.5577,
+    0.4067787378851786,
+    707809621497.9495,
+    757990049046.7689,
+    0.029751912282582338,
+    400399804918.491,
+    0.3865135317059345,
+    0.8473097733028044,
+    0.21350167847959256,
+    -0.4699872760136664,
+    4.197914009767647e-13,
+    778510858676.6509,
+    336892836445.15424,
+    -0.3325856254633479,
+    0.7580405169937589,
+    0.13459646885386067,
+    -0.01095501378099173,
+    7.97021511843974e-13,
+    6.820774418063099e-13,
+    4.4742487750102154e-13,
+    9.852814058355555e-13,
+    -0.4192304957189792,
+    -0.1165079876397056,
+    0.990052247143281,
+    269794977190.5983,
+    0.9979037186865889,
+    -0.2107102214344394,
+    0.9958357204077907,
+    4.210782043115569e-14,
+    213243368577.52258,
+    9575238620.412985,
+    -0.8302894778275844,
+    0.07339855338842416
+   ],
+   "fsum": 5228779157885.872,
+   "mean": 130719478947.1468,
+   "median": 0.39664613479555655
+  }
+ ],
+ "urls": [
+  "https://x/api/stats/cards?source=live",
+  "https://x/api/stats/cards?source=dev&patch=v0.4.0b",
+  "https://x/api/stats/cards?source=live&patch=a+b%26c%2F%C3%A9"
+ ]
+}

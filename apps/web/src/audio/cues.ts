@@ -11,7 +11,7 @@
 // VOICE_PRIORITY: a death or a firing trap answers something that just happened and takes the
 // channel from a play or cast line, and a summoned unit speaks only when nothing else is talking.
 //
-// A card the viewer can name may also colour its sounds from the public catalog (§5.1): a unit's
+// A card the viewer can name may also color its sounds from the public catalog (§5.1): a unit's
 // summon thud carries its family's accent and a Legendary or Mythic unit enters with a sting beside
 // the effects layer's light rays (R202's rarity entrance), and a spell's shimmer rings in its
 // family's chimes. The family is the card art's theme (cards/art/themes.ts), so a card looks and
@@ -126,7 +126,7 @@ function defIdOfInstance(view: PlayerView, instanceId: string): string | undefin
 }
 
 /**
- * The public catalog facts a cue may colour itself with (§5.1): never looked up for "hidden".
+ * The public catalog facts a cue may color itself with (§5.1): never looked up for "hidden".
  * `printedRarity` is a token's printed rarity (B2.5), for its summon sting only.
  */
 export type CueCard = {
@@ -274,7 +274,7 @@ export function hookCues(
  * A unit arriving: a thud sized by the unit (attack plus health, so a 1/1 Sheep taps the table and a
  * 7/7 shakes it) with its family's accent, a Legendary or Mythic sting as the light rays rise, a
  * golden glint when it is Radiant, and, when no play of it has sounded (a token, a Recruit, a
- * Reborn, a copy), its play line at the lowest priority. Only a unit colours its thud: the backrow
+ * Reborn, a copy), its play line at the lowest priority. Only a unit colors its thud: the backrow
  * holds face-down Traps, whose arrival must sound alike (R203).
  */
 function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueContext): readonly SoundCue[] {
@@ -374,7 +374,7 @@ export function chaosRollCues(event: Extract<GameEvent, { type: "chaosRolled" }>
 
 /**
  * R437: a mark brands its card as it lands and lets go softly as it lifts. The same whatever the
- * mark, its colour or the card, which may be the sentinel: the sound says no more than the event.
+ * mark, its color or the card, which may be the sentinel: the sound says no more than the event.
  */
 export function markCues(event: Extract<GameEvent, { type: "marked" }>): readonly SoundCue[] {
   return [event.added ? sfx("brand") : sfx("brand", { release: true })];
@@ -519,7 +519,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   keywordGranted: { sfx: "buff", cues: (event) => (event.lost === true ? [sfx("debuff")] : [sfx("buff")]) },
   counterChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   costChanged: silent("the gem ticks visually, and a cost recomputed on every read (#100) would chatter"),
-  // R506: #21 Hinder's rider landing on the victim's next refresh (added, or cancelling a rider
+  // R506: #21 Hinder's rider landing on the victim's next refresh (added, or canceling a rider
   // already there) cracks the crystal it takes; every other change notifies as it appears.
   modifierChanged: {
     sfx: "notify",
@@ -662,7 +662,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   discardPrevented: { sfx: "cancel", cues: () => [sfx("cancel")] },
 
   // ---- Patch v0.3.X (docs/meditative-set.md M8, MN05) ----
-  // R1363: the Armor took the whole hit: a bright ring from the unit's lane (a hero's is centred).
+  // R1363: the Armor took the whole hit: a bright ring from the unit's lane (a hero's is centered).
   damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },
   // R961: a Jade Counter rose; the badge ticks, the same click as every counter badge.
   jadeChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
@@ -726,7 +726,7 @@ export function soundRow(type: string): AnyCueRow | undefined {
 
 /**
  * R669: the unit an event is about, by instance id, for its pan: the one that arrives, is hit, dies,
- * attacks or is changed. An event about a hero, a hand or a player has none and stays centred.
+ * attacks or is changed. An event about a hero, a hand or a player has none and stays centered.
  */
 function unitOf(event: GameEvent): string | null {
   switch (event.type) {
@@ -762,7 +762,7 @@ function unitOf(event: GameEvent): string | null {
 }
 
 /**
- * R669: the pan of a unit in lane `index` (0-based) of `lanes`: the middle lane centred, the outer
+ * R669: the pan of a unit in lane `index` (0-based) of `lanes`: the middle lane centered, the outer
  * ones LANE_PAN_MAX either way. Both rows run left to right in the same lane order on both seats'
  * screens, so the opponent's lane 1 sits above the viewer's lane 1.
  */
@@ -781,7 +781,7 @@ function panOf(view: PlayerView, instanceId: string): number | null {
   return null;
 }
 
-/** R669: every effect about a unit on the field, panned to its lane; a centred one is left as it was. */
+/** R669: every effect about a unit on the field, panned to its lane; a centered one is left as it was. */
 function panned(event: GameEvent, ctx: CueContext, cues: readonly SoundCue[]): readonly SoundCue[] {
   const id = unitOf(event);
   if (id === null || id === HIDDEN_DEF_ID) return cues;

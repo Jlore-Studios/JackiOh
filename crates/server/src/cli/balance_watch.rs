@@ -108,7 +108,7 @@ pub fn parse_balance_watch_args(argv: &[String]) -> anyhow::Result<BalanceWatchO
     let mut files: Vec<String> = Vec::new();
     for arg in argv {
         let Some((name, raw)) = flag(arg) else {
-            bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
+            bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
         };
         match name {
             "patch" => patch = Some(raw.to_owned()),
@@ -123,7 +123,7 @@ pub fn parse_balance_watch_args(argv: &[String]) -> anyhow::Result<BalanceWatchO
                     ),
                 };
             }
-            _ => bail!("Unrecognised option --{name}.\n\n{USAGE}"),
+            _ => bail!("Unrecognized option --{name}.\n\n{USAGE}"),
         }
     }
     let Some(patch) = patch else {

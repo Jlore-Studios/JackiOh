@@ -86,20 +86,20 @@ export function ChallengeDialog({
   useModalKeys(dialog, onClose);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     withSession(getDecks).then(
       (answer) => {
-        if (cancelled) return;
+        if (canceled) return;
         setSaved({ decks: answer.decks, trios: answer.trios });
         setDeckId(pickDeck(answer.decks, initial.deckId)?.id ?? null);
         setTrioId(pickTrio(answer.trios, initial.trioId, answer.decks)?.id ?? null);
       },
       (cause: unknown) => {
-        if (!cancelled) setLoadError(messageOf(cause));
+        if (!canceled) setLoadError(messageOf(cause));
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [deckReads, initial]);
 

@@ -24,7 +24,7 @@ Contents:
 3. How the work runs: fullsend over one branch
 4. The waves and the parts
 5. The orchestrator's runbook
-6. Acceptance: the behaviours v0.3.0 is held to
+6. Acceptance: the behaviors v0.3.0 is held to
 7. CI after v0.3.0: essential per PR, everything daily
 8. The AI training lanes
 9. The spec graph
@@ -40,7 +40,7 @@ Contents:
 
 - a Cargo workspace (`crates/`) with the rules engine, the 318 card scripts, the deck validator, the
   practice AI, the HTTP/WebSocket server and every tool (fuzz, gates, sweep, stats, catalog,
-  patches, spec checks, training arena) in Rust, with behaviour identical to v0.2.11's TypeScript,
+  patches, spec checks, training arena) in Rust, with behavior identical to v0.2.11's TypeScript,
   proved by golden traces recorded from the TypeScript engine before it was deleted;
 - `apps/web` unchanged for players, running the Rust engine and AI as WebAssembly for hotseat and
   practice, and talking to the Rust server over the same wire protocol;
@@ -57,7 +57,7 @@ Contents:
   "main == staging"; #256). Nothing here changes `wrangler.jsonc`, `promote-production.yml` or
   `docs/deploy-cloudflare.md`; a file shared with them changes only as far as staging needs.
 - New rules, cards or player-visible changes. v0.3.0 ships the same game.
-- A new wire format, persistent data structures, or any optimisation the profiler has not asked for.
+- A new wire format, persistent data structures, or any optimization the profiler has not asked for.
   Rust's plain `clone()` and `serde_json` are the baseline; measure before adding anything.
 - The night bot's own code beyond the lane counts and the training box (part 39).
 
@@ -70,10 +70,10 @@ Each line is decided; a builder does not reopen it.
 | D1 | **Rust for everything below the UI; no Go.** | One language lets the server, the WASM build and the tools link the engine crate directly: no FFI, no IPC, no second implementation of the rules. #306 asked for "rust/go"; Go would put a process boundary between the server and the engine. |
 | D2 | **Six crates: `engine` (with shared types and the validator), `cards`, `ai`, `wasm`, `server`, `tools`.** | The fewest crates that keep the purity line (engine, cards, ai are pure) and give each lane its own directory. `packages/shared` and `packages/validator` are too small to be crates of their own. |
 | D3 | **The web client stays TypeScript/React and reaches the engine and AI through WASM, JSON strings in and out, behind the existing `EnginePort`.** | The client already talks to the engine through one seam (`apps/web/src/game/engine.ts`). JSON at the boundary needs no handle lifetimes; the AI's search never crosses it. |
-| D4 | **Exact behavioural parity with v0.2.11.** The RNG ports bit for bit; golden traces recorded from TypeScript (view hashes, event hashes, legal-action sets) must replay identically in Rust. | It makes the "fix the broken branch" phase mechanical: the first divergent step names the bug. It also means every stored match log still replays. |
+| D4 | **Exact behavioral parity with v0.2.11.** The RNG ports bit for bit; golden traces recorded from TypeScript (view hashes, event hashes, legal-action sets) must replay identically in Rust. | It makes the "fix the broken branch" phase mechanical: the first divergent step names the bug. It also means every stored match log still replays. |
 | D5 | **The client's TS types are generated from Rust (`ts-rs`).** | One source of truth for the wire; `packages/shared` goes. |
 | D6 | **Card data moves byte for byte to `crates/cards/` (`catalog.json`, `patches/`).** Its TS tooling becomes `cargo jackioh` subcommands. | The data's home follows its code; formats do not change, so the patch history and the database seed are untouched. |
-| D7 | **Every behavioural test is kept and ported; tests of prose, of deleted tooling and of TS internals are deleted.** Card tests live at the bottom of their card's file. | Unit tests are cheap in Rust. CI time goes on fuzz, AI gates and e2e, not on unit tests (§7). |
+| D7 | **Every behavioral test is kept and ported; tests of prose, of deleted tooling and of TS internals are deleted.** Card tests live at the bottom of their card's file. | Unit tests are cheap in Rust. CI time goes on fuzz, AI gates and e2e, not on unit tests (§7). |
 | D8 | **Server: axum, tokio, sqlx; the same routes, protocol, schema and migrations; a Docker service on Render.** | The wire and the database are the contract (#80). Docker frees Render from Node; the catalog version is compiled in from `patches.json`, which deletes the start-command workaround. |
 | D9 | **The AI is ported as is from `packages/ai` at `91cc43c` (the last and only AI that passed its gates: 94/100, 35/50, 47/50), with its 11-card shadow ban.** That port is generation 0. | #306: "port the last successful AI into rust". The ladder (`ladder/`) never produced a champion. |
 | D10 | **The training lanes run outside the night bot's harness**: two systemd services on the training box, each looping a Devin session over a standing prompt in `training/`, promoting through `cargo jackioh promote` and a pull request that CI re-verifies. | "Always running" contradicts the harness's queue, idle power-off and 330-minute job budget (research: `bot/machine/setup.sh`, `starter.py`, `.harness/config.json`). |
@@ -82,7 +82,7 @@ Each line is decided; a builder does not reopen it.
 | D13 | **Fullsend over one integration branch, `staging`**, built by Claude Code cloud sessions created with `outcome_branch: staging`, one per part. | The bots' harness can only open pull requests to `main` (`bot/harness/deliver.py:1219`, `cfg.default_branch`), and its merges wait on a green CI that a fullsend branch does not have until Wave 3. |
 | D14 | **Per-PR CI runs the essentials; a daily "super" run runs everything.** | #306: "only run the essential tests on the CI". |
 | D15 | **Maxi-tail throughout.** No abstraction with one implementation (the server's two-variant enums of D18 are the only polymorphism), no config for a value that never changes, no structural sharing or binary wire format until a profile asks. | #306 and the goal ask for it. |
-| D16 | **`loc` stays frozen data.** The catalog's `loc` (a card script's TypeScript line count) is gameplay data read by C+ #44, C+ #45 and Classic #48; it keeps its values, and a new card's count comes from `cargo jackioh catalog loc`. | Recomputing it from Rust would change three cards' behaviour (research A §8 #16). |
+| D16 | **`loc` stays frozen data.** The catalog's `loc` (a card script's TypeScript line count) is gameplay data read by C+ #44, C+ #45 and Classic #48; it keeps its values, and a new card's count comes from `cargo jackioh catalog loc`. | Recomputing it from Rust would change three cards' behavior (research A §8 #16). |
 | D17 | **No mutable globals and no registration hooks in the rules.** The catalog and script registries are set once; fused scripts are composed on lookup from the game state; per-call flags live in `EngineSink`; the ~25 import-time `register*` hooks become direct calls. | The tools run games on many threads; TS's process-global re-sync (`syncFusedScripts` on every `reduce`) would let games see each other's cards (research A §8 #7, #8, #18). |
 | D18 | **The server has no traits:** `Db`/`Tx` and `Auth` are enums with one variant per implementation, and the server calls the engine directly. | Two implementations each; enums avoid generic `App<S, A, E>` signatures and `Send`-bound async-trait puzzles for the builders. |
 | D19 | **The state hash stays TS's** (FNV-1a 32 over the UTF-16 code units of the sorted-key JSON). | Practice saves on players' devices store it and are refused if the fold disagrees; a pinned fixture and three e2e specs compare it (research A §3.2). |
@@ -95,7 +95,7 @@ one session's subagents. Every fullsend rule holds; the mapping is:
 
 | Fullsend | Here |
 |---|---|
-| `.fullsend/SPEC.md` | [SURFACE.md](SURFACE.md), plus the TS sources it names and the golden traces as the behaviours |
+| `.fullsend/SPEC.md` | [SURFACE.md](SURFACE.md), plus the TS sources it names and the golden traces as the behaviors |
 | The feature branch | `staging`, cut from `main` by part 1 |
 | Phase 0: spec and freeze | this directory, plus part 1 (which turns the type freeze into compiled Rust) |
 | Phase 1: shatter | the parts table (§4) and [PORT-MAP.md](PORT-MAP.md): every file belongs to exactly one part per wave |
@@ -125,7 +125,7 @@ does not carry `docs/v0.3.0/` until the cutover. Parts marked
 **person** touch `.github/`, `.harness/`, `.squishy/` or `bot/`, which no bot may change; a person
 builds them, or runs a session of their own to do it.
 
-The sub-issues are **unlabelled** until a person says they are ready (#306's comment: "hold off
+The sub-issues are **unlabeled** until a person says they are ready (#306's comment: "hold off
 labeling things until it's ready"). No `bot:*`, `squishy:*` or `method:*` label goes on them from
 this plan. The Plan section of each is between `<!-- jackioh-bot:plan -->` markers, so that if a
 person later queues one for a bot, it builds from that plan without planning again.
@@ -245,12 +245,12 @@ Follow its steps exactly. Push to staging with the protocol of README §3.2. Do 
 decide, and record the decision in your notes. Stop when your brief's "Done when" list holds.
 ```
 
-## 6. Acceptance: the behaviours v0.3.0 is held to
+## 6. Acceptance: the behaviors v0.3.0 is held to
 
-These are the run's numbered behaviours (fullsend's B-numbers, called V here so they do not collide
+These are the run's numbered behaviors (fullsend's B-numbers, called V here so they do not collide
 with BUILD.md's). Parts cite them; part 37's coverage check lists any V that no test cites.
 
-| V | Behaviour | Checked by |
+| V | Behavior | Checked by |
 |---|---|---|
 | V1 | `cargo build --workspace` and `cargo clippy --workspace --all-targets -- -D warnings` pass | CI `rust` job |
 | V2 | The pure crates depend on nothing but serde, serde_json, indexmap and each other | `clippy.toml` + Cargo.toml review in part 37 |
@@ -427,7 +427,7 @@ From the day part 1 starts until part 38 merges:
 - Web-only, docs and bot changes may land on `main`. The orchestrator merges `main` into `staging`
   at the start of each wave; a conflict in `apps/web` goes to part 21's (or 36's) owner.
 - A rules emergency on `main` (a crash in a live match) is fixed on `main` and in the Rust on
-  `staging` in the same day, with a new golden trace from part 23's recorder if it changes behaviour.
+  `staging` in the same day, with a new golden trace from part 23's recorder if it changes behavior.
 
 ## 12. Risks and abort criteria
 

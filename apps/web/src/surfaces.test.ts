@@ -53,7 +53,7 @@ const GRADIENT_KEEP = [
   /^linear-gradient\(\s*to top,\s*var\(--bg-sunken\) 0%,\s*var\(--bg-sunken\) 36%,/, // B45's burn front: its sunken lower part eats the card as it climbs
   /repeating-(linear|radial|conic)-gradient/, // the locked-zone and facedown hatch weaves
   /var\(--countered-bubble\)/, // R667's rising bubbles
-  /var\(--drag-reticle-colour\)/, // the drop reticle and its tick bars
+  /var\(--drag-reticle-color\)/, // the drop reticle and its tick bars
   /\/\s*(\d+px\s+100%|100%\s+\d+px)\s+no-repeat/, // R514's cell-pick crosshair bars
   /calc\(50% [-+] 1\.5px\)/, // the countered badge's struck-circle strike
 ];
@@ -73,7 +73,7 @@ function withoutTable(css: string): string {
 
 /** A box-shadow layer that is a glow or a selection ring rather than a neutral shadow. */
 const GLOW =
-  /^(inset\s+)?0\s+0(\s+(\d+px|0)){1,2}\s+(var\(--(selected|legal|locked|mana|countered-rim|tap-tint|glow-ready|glow-condition|drag-reticle-colour)\)|color-mix\(|rgba?\()/;
+  /^(inset\s+)?0\s+0(\s+(\d+px|0)){1,2}\s+(var\(--(selected|legal|locked|mana|countered-rim|tap-tint|glow-ready|glow-condition|drag-reticle-color)\)|color-mix\(|rgba?\()/;
 /** The fuse spark's thrown particles (clock.css): offset dots in ember, not a shadow with a blur. */
 const SPARK_PARTICLE = /^-?[\d.]+px -?[\d.]+px 0( -?[\d.]+(px)?)? var\(--clock-ember/;
 

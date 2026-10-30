@@ -47,7 +47,7 @@ function Inked({ d, ink, width, className }: { d: string; ink: string; width: nu
   );
 }
 
-/** A four-pointed sparkle centred on (x, y). */
+/** A four-pointed sparkle centered on (x, y). */
 function sparkle(x: number, y: number, r: number): string {
   const w = r * 0.28;
   return `M${x} ${y - r} L${x + w} ${y - w} L${x + r} ${y} L${x + w} ${y + w} L${x} ${y + r} L${x - w} ${y + w} L${x - r} ${y} L${x - w} ${y - w} Z`;

@@ -73,7 +73,7 @@ JSON helpers, the state cache and every binding's work as `Result<String, String
 `Result<bool | (), String>`) functions. `src/lib.rs` keeps only the wasm-bindgen wrappers, the
 panic hook, the clock and the custom-card refusal (R915009); `luau/src/main.rs` keeps only the C
 wrappers, the panic hook, the clock, the custom-card setup check (R915005, R915006) and
-`check_custom_card`. The exports stay identical, and behaviour does not change.
+`check_custom_card`. The exports stay identical, and behavior does not change.
 
 A binding cannot be added to one side and forgotten in the other: `tests/export_parity.rs`
 compares each module's export list to a declared allow-list (`SHARED`, the bindings both export;

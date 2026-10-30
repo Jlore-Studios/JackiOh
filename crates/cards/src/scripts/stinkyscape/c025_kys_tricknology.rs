@@ -6,7 +6,7 @@
 //!
 //! R1877000, the build's coordinates (ST9 Q14): a zone is (x, y), x its lane 1 to 5 and y its row from
 //! the caster's seat, 1 their unit row, 2 their backrow, −1 the enemy's unit row, −2 the enemy's backrow;
-//! a zone's point is its centre. The caster chooses any zone (`choose_cell`, B5 E18). The unit square
+//! a zone's point is its center. The caster chooses any zone (`choose_cell`, B5 E18). The unit square
 //! mapped through the Jacobian of F at that point, J = [[2x, −1], [y, x]], with its corner at the zone,
 //! is the parallelogram of the points (x, y) + s·(2x, y) + t·(−1, x), s and t in 0 to 1, edges included
 //! (`covers`; at (1, −2) J is singular and it is a segment). Each unit zone whose point lies in it, open

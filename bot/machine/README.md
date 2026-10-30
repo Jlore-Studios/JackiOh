@@ -29,7 +29,8 @@ bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user. Muse's fill-in runners ([The Muse box](#the-muse-box)) are `~agent-muse/actions-runner-fill` and `-fill-2`, `night-vm-muse-fill` and `night-vm-muse-fill-2`, labelled `night-vm-muse-fill` |
-| CLIs | `claude`, `codex`, `agy` and `muse`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
+| CLIs | `claude`, `codex`, `agy` and `muse`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 (for the training lanes and the commands models run; the harness no longer needs it) |
+| Harness | none installed: each job gets the `harness` binary (`bot/go/`, #467) from the workflows' own action, [`.github/actions/harness`](../../.github/actions/harness/action.yml), which restores it from the Actions cache, or on a miss builds it with the Go that `setup-go` fetches, so `setup.sh` is unchanged |
 | Browser | Google Chrome stable (`google-chrome-stable`, from Google's `.deb`, which adds Google's apt repository, so a later `setup.sh` upgrades it), for the UI walkthroughs `scripts/browse.sh` drives (`.claude/skills/ui-walkthrough/`, #816); nothing starts it but an item's UI work |
 | Rust | in each user's home: rustup, and the toolchain `rust-toolchain.toml` pins (1.97.0) on the minimal profile with `rustfmt`, `clippy` and the `wasm32-unknown-unknown` target; `~/.cargo/bin` is first on every runner's `PATH` |
 | Idle stop | a timer powers it off after 30 minutes with no job and no Session Manager session |
@@ -218,12 +219,12 @@ memory; compressed swap in memory (`setup.sh`, zram) takes the overflow before t
   `"lanes": 4`): `night-vm-muse-b2`, `night-vm-muse-2-b2` and `night-vm-muse-3-b2`.
 - **The night box** holds the fourth, `night-vm-muse`, and gpt's lane and agy's, which Muse fills
   while that subscription cannot start work: capped, off, outside its hours or backing off
-  (`fill_in` in [`providers.json`](../../.harness/providers.json); `plan.fill_in_free`). Muse's
+  (`fill_in` in [`providers.json`](../../.harness/providers.json); `plan.FillInFree`). Muse's
   two runners for that carry a label of their own, `night-vm-muse-fill`, which a Muse run takes
-  only when the planner puts it in such a lane, once its own four are held (`plan.runner_for`;
+  only when the planner puts it in such a lane, once its own four are held (`plan.RunnerFor`;
   the item's record keeps it as `runs_on`). gpt, agy and Muse's runs there share the two lanes:
   a subscription whose lane Muse holds waits for that run to end, even once its own cap resets
-  (`plan.fill_in_full`), so the night box never runs more than three of them.
+  (`plan.FillInFull`), so the night box never runs more than three of them.
 
 So Muse runs six at once at most, and the two boxes six jobs together (`machine_parallel`). A
 job for `night-vm-muse` goes to whichever of the four runners with that label is free, so the
@@ -239,7 +240,7 @@ which is why both boxes are AWS's.
 | Idle stop | after 30 minutes with no job | the same, since `setup.sh muse` ran on it |
 | Starter | `jackioh-night-vm-starter`, for every `night-vm-*` label | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
 
-The status issue draws each box as its slots (`dashboard.BOX_SLOTS` in `bot/harness/`): the night box's gpt's, agy's and Muse's lanes, and the Muse box's three of Muse's. Change it with the boxes.
+The status issue draws each box as its slots (`dashboard.BoxSlots` in `bot/go/internal/dashboard/`): the night box's gpt's, agy's and Muse's lanes, and the Muse box's three of Muse's. Change it with the boxes.
 
 Both boxes are one machine to the harness: `machine_parallel` (6) holds their jobs together, and a
 runner's `-b2` says which box a run, or its memory reading, came from. The status issue's memory
@@ -323,7 +324,7 @@ take some of the night box's own jobs while the box is busy or off.
 | How it runs | `bot/machine/local/supervisor.ps1`, started at logon by a scheduled task (`install-task.ps1`). Each runner is one ephemeral container of the image `local/Dockerfile` builds (`jackioh-pc-runner`): it registers with a single-use JIT config, takes one job and is gone. A `docker` or `gh` call that gives no answer in two minutes (`docker info`, 30 seconds) is killed and counts as failed, so a Docker engine that stops answering reads as Docker not running, not as a supervisor stuck in one call |
 | When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use and that of the `yieldingContainers` (a long-running container of the owner's that a gate of its own holds to the same rule and throttles while a runner works, so the two never read each other as the person's load) (`config.json`). A runner starts only when the PC is also quiet, CPU under 15% (`startCpuPercentBelow`) in every sample of that minute; one already up stays while it is calm. It keeps one runner Idle for the label while it is calm; when the PC gets busy the idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no export loses a shard |
 | Limits | one job at a time (`maxJobs`), 6 CPUs and 6 GB a container (`containerCpus`, `containerMemory`), swap off; and gather's slot, one job more at the same size (an entry may set its own `containerCpus` and `containerMemory`; gather's build of `jackioh-server` outgrew 3 GB, #2134). A shard and gather together ask for 12 of WSL2's 8 processors, so the shard runs on what gather leaves; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
-| Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C++ compiler (`mlua` builds Luau from source), `git`, `jq` and `gh`, Node 24, Python 3.12, and the night box's CLIs. A job installs the rest itself (the learn lane's retrain: uv, which fetches Python 3.13 and torch for the fit) |
+| Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C++ compiler (`mlua` builds Luau from source), `git`, `jq` and `gh`, Node 24, Python 3.12, and the night box's CLIs. A job installs the rest itself (the learn lane's retrain: uv, which fetches Python 3.13 and torch for the fit; a night box job, the `harness` binary, from `.github/actions/harness` as on the boxes) |
 | Heartbeat | every `heartbeatSeconds` (120, `config.json`; 0 turns it off) the supervisor writes `pc.json` to a secret gist of the account `gh` is signed in as: the PC's CPU and memory in use, as a whole and without its runners (the figures that decide whether it lends itself), the size of its memory, whether it is calm (lending itself), and each runner container with the CPUs it uses, whether it is throttled and, while it plays games, how many of how many (`Get-Progress`: the `jackioh selfplay` of a learn shard or the `jackioh stats` of gather it runs, its `--games`, `--from` and `--patch`, and the lines its `--out` holds, one a finished game), which the status issue's progress chart at its top reads. It makes the gist the first time, keeps its id in `pc-gist.txt` beside the scripts and names it to the repository as the variable `JACKIOH_PC_GIST` (`gh variable set`, which needs the admin sign-in the supervisor has anyway). `bot-status.yml` hands that variable to the status loop, whose runners section draws the PC from it, gather's job included. A heartbeat that fails is logged and tried again two minutes on; it never holds a runner up. `gh` needs its `gist` scope, which `gh auth login` gives by default (`gh auth refresh -s gist` adds it) |
 | Disk | a container's work directory goes with it, so `target/` never grows between exports; a shard runs the release `jackioh` the export's build job built, so it builds nothing. The learn lane's retrain is the biggest job: about 10 GB while it runs (the export's logs, its positions, two or three builds, the web's install). The image is about 6 GB |
 | Memory | the learn lane's retrain peaks at about 4.1 GB of the container's 6 GB on a 100,000-game export (the positions, the six seeds' fit, the AI's tests and the 800-game screen took 59 minutes here: learn run 21, 2026-10-21). Its 6 GB and gather's add up to more than WSL2's 8 GB, which the owner's own containers share too. A cap is a limit, not a reservation: a shard that plays uses well under 1 GB, and the lane nears its cap only in the retrain. Should the VM run out, the training step is the one the kernel kills (`priority`, above); raising `.wslconfig`'s `memory` is the owner's call |
@@ -414,7 +415,7 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
     `RUNNER_TEMP/tmp` (`bot-night.yml`), emptied when the job ends.
   - **The system:** the journal is capped at 200 MB (it may otherwise take a tenth of the disk),
     and the timer runs `apt-get clean`.
-  - **A model job checks before it starts** (`bot/harness/disk.py`): with under 8 GB free it runs
+  - **A model job checks before it starts** (`bot/go/internal/disk/`): with under 8 GB free it runs
     `clean.sh` first, from its checkout, and with under 3 GB still free it does no work. Its item is
     not at fault, so it stays queued with nothing counted against it, the subscription backs off
     for a while and the others take the work. A disk that fills up during the work pauses the item
@@ -471,7 +472,7 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
   it ends; the deliver job keeps the last 60 runs' figures, and the status issue says, for the
   last 24 hours, whether each box had memory to spare or ran short (a run stalled on memory for
   5 s or more), with the least memory available and how many runs swapped
-  ([`harness/memory.py`](../harness/memory.py)). After a busy day, read it beside CPU and decide
+  ([`go/internal/memory/`](../go/internal/memory/)). After a busy day, read it beside CPU and decide
   `machine_parallel`: fewer lanes if the box ran short or swapped, the same if it had memory to
   spare. Both boxes have 2 vCPUs and 8 GB.
 - **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour for the

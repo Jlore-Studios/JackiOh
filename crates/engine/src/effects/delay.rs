@@ -302,19 +302,19 @@ pub const DELAYED_DISCARD_HAND_HOOK: &str = "@delayedDiscardHand";
 pub const DELAYED_ALLURE_HOOK: &str = "@delayedAllure";
 /// R963: the mark an Allured enemy Unit carries in both views while the steal waits (R437).
 pub const ALLURE_MARK: &str = "allure";
-/// R963: that mark's colour.
+/// R963: that mark's color.
 pub const ALLURE_MARK_COLOR: &str = "pink";
 /// R1850001 (Stinkyscape #110 iKwzki's Duo and Squad): the hook a marked permanent's Make Radiant
 /// waits under.
 pub const DELAYED_RADIANT_HOOK: &str = "@delayedRadiant";
 /// R1850001: the mark a Duo'd or Squad'd permanent carries in both views while it waits (R437).
 pub const DUO_MARK: &str = "duo";
-/// R1850001: that mark's colour.
+/// R1850001: that mark's color.
 pub const DUO_MARK_COLOR: &str = "gold";
 /// R2321001: the mark a card carries in both views while a destroy at the end of this turn watches it
 /// (R437; TG #15 In a hurry's Rush Tokens, R2198002).
 pub const END_OF_TURN_MARK: &str = "endOfTurn";
-/// R2321001: that mark's colour, the client's ember of a burning fuse.
+/// R2321001: that mark's color, the client's ember of a burning fuse.
 pub const END_OF_TURN_MARK_COLOR: &str = "orange";
 
 /// A card's def id for the record an engine delayed effect keeps: the text that made it, if any — the

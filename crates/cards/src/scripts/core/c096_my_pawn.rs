@@ -43,7 +43,7 @@
 //! THE BODY (§8.5 #96 "cancel it, and an AI plays the rest of their turn with random legal actions")
 //! is the two verbs of `crates/engine/src/effects/combat.rs`, in the row's order. Neither is
 //! implemented here: a card file cannot cancel combat or drive the reducer itself (CLAUDE.md rules 4
-//! and 5). `cancel_attack` marks the open `state.declaredAttack` cancelled, so §4.2 step 5 resolves
+//! and 5). `cancel_attack` marks the open `state.declaredAttack` canceled, so §4.2 step 5 resolves
 //! no combat and `attackCancelled` is emitted in its place; `ai_plays_out_turn` sets the `aiTurn`
 //! lockout on the attacking player and hands the rest of their turn to §10.7's policy through
 //! `subsystems::ai_policy::play_out_turn` (R84: never `concede`, `offerDraw` or `answerDraw`; R152: the
@@ -51,13 +51,13 @@
 //!
 //! ORDER MATTERS, and it is the row's own. `cancel_attack` first, because `ai_plays_out_turn` drives
 //! `reduce`, which clones the state, and the AI's own actions can open and close declarations of
-//! their own — the attack this trap answers has to be cancelled while it is still the open one.
+//! their own — the attack this trap answers has to be canceled while it is still the open one.
 //! `ai_plays_out_turn` last for a second reason `effects/combat.rs` spells out: the playout replaces
 //! every instance in the state, so no effect after it may hold a `CardInstance` read before it.
 //!
 //! THE RADIANT FACE (R283) adds "destroy the attacker", after the cancel and before the AI turn. It is
 //! an ordinary §6.3 destroy — a mark the state check collects — so an Indestructible attacker is
-//! knocked down instead (R46) and a Reborn one comes back, and the attack is cancelled either way
+//! knocked down instead (R46) and a Reborn one comes back, and the attack is canceled either way
 //! (R44). It rides on the cancel (`cancel_attack({ destroyAttacker })`), which names the attacker of
 //! the declaration it cancels, on the stay it declared from (R174), and happens only where the cancel
 //! does: a Radiant My Pawn fused onto a Radiant My Pawn runs its second half once the first has played
@@ -159,7 +159,7 @@ pub fn script() -> CardScripts {
 
 // #96 My Pawn — SPEC §8.5, §4.2 step 4, §6.3 "Cancel an attack", §10.7's AI bullet, R44, R46, R84,
 // R276, R283.
-// BUILD M4-T4 row 96: "Lethal detection accounts for armor and the cap (R44); attack cancelled;
+// BUILD M4-T4 row 96: "Lethal detection accounts for armor and the cap (R44); attack canceled;
 // AI finishes the turn deterministically from the seed; opponent's actions rejected until end of
 // turn; radiant destroys the attacker with the cancel, before the AI turn, an Indestructible one
 // knocked down, and the AI turn starts from a settled board (R283)".
@@ -169,7 +169,7 @@ pub fn script() -> CardScripts {
 //            destroy the attacker, and an AI plays the rest of their turn with random legal
 //            actions" — R276 gave it this face, and R283 orders it: the destroy rides the cancel
 //            and is collected by a state check before the AI takes the turn. Those cases play real
-//            attacks through the harness (the base face's played-out behaviour is proved the same
+//            attacks through the harness (the base face's played-out behavior is proved the same
 //            way in my-pawn.test.ts).
 //
 // WHY THE CONDITION IS TESTED THROUGH `when`. The card's OWN contribution to "would be lethal to
@@ -488,7 +488,7 @@ mod tests {
         let at = all
             .iter()
             .position(|event| event["type"] == "attackCancelled")
-            .unwrap_or_else(|| panic!("no attack was cancelled"));
+            .unwrap_or_else(|| panic!("no attack was canceled"));
         all[at..]
             .iter()
             .take(count)
@@ -522,7 +522,7 @@ mod tests {
             crate::register_all();
             let (mut s, attacker) = pawn_game(json!(SORCERER), 5, "radiant");
 
-            // Cancelled: no combat, so the hero took nothing (R44).
+            // Canceled: no combat, so the hero took nothing (R44).
             s.expect_health(P2, 5);
             assert_eq!(events_json(&s).iter().filter(|event| event["type"] == "attackCancelled").count(), 1);
             assert!(!any_event(&s, "damage"));
@@ -553,12 +553,12 @@ mod tests {
         }
 
         #[test]
-        fn r283_r46_an_indestructible_attacker_is_knocked_down_instead_and_the_attack_is_cancelled_either_way() {
+        fn r283_r46_an_indestructible_attacker_is_knocked_down_instead_and_the_attack_is_canceled_either_way() {
             crate::register_all();
             // #66 The Rock: a 10/10 Indestructible, in Attack Position, with no Taunt (R347 takes any).
             let (mut s, attacker) = pawn_game(json!(ROCK), 10, "radiant");
 
-            // Cancelled: the 10 never landed.
+            // Canceled: the 10 never landed.
             s.expect_health(P2, 10);
             assert!(!events_json(&s)
                 .iter()
@@ -591,7 +591,7 @@ mod tests {
             assert!(!printed.contains(&json!("Reborn")));
             let (mut s, attacker) = pawn_game(json!({ "def": POINTMASTER, "radiant": true }), 14, "radiant");
 
-            // Cancelled: the 14 never landed.
+            // Canceled: the 14 never landed.
             s.expect_health(P2, 14);
             assert!(!any_event(&s, "damage"));
 
@@ -640,12 +640,12 @@ mod tests {
                 .iter()
                 .position(|event| event["type"] == "buffed" && event["instanceId"] == eater.id.as_str())
                 .map_or(-1, |at| at as isize);
-            let cancelled_at = index_of("attackCancelled");
+            let canceled_at = index_of("attackCancelled");
             let ai_acts = all
                 .iter()
                 .enumerate()
                 .position(|(at, event)| {
-                    (at as isize) > cancelled_at && (event["type"] == "cardPlayed" || event["type"] == "turnEnded")
+                    (at as isize) > canceled_at && (event["type"] == "cardPlayed" || event["type"] == "turnEnded")
                 })
                 .map_or(-1, |at| at as isize);
             assert!(fed > index_of("destroyed"));
@@ -722,7 +722,7 @@ mod tests {
             if radiant { "radiant" } else { "base" }
         }
 
-        /// R662 `${face}`: at 7 health it glows for its controller only, and the swing is cancelled.
+        /// R662 `${face}`: at 7 health it glows for its controller only, and the swing is canceled.
         fn glows_at_7(radiant: bool) {
             let face = face_of(radiant);
             let mut s = scenario(json!({
@@ -767,7 +767,7 @@ mod tests {
         }
 
         #[test]
-        fn r662_base_at_7_health_it_glows_for_its_controller_only_and_the_swing_is_cancelled() {
+        fn r662_base_at_7_health_it_glows_for_its_controller_only_and_the_swing_is_canceled() {
             crate::register_all();
             glows_at_7(false);
         }
@@ -785,7 +785,7 @@ mod tests {
         }
 
         #[test]
-        fn r662_radiant_at_7_health_it_glows_for_its_controller_only_and_the_swing_is_cancelled() {
+        fn r662_radiant_at_7_health_it_glows_for_its_controller_only_and_the_swing_is_canceled() {
             crate::register_all();
             glows_at_7(true);
         }

@@ -71,7 +71,7 @@ export default function ResetPasswordRoute(): ReactElement {
 
   useEffect(() => {
     if (held === null) return;
-    // Defer abandonment so StrictMode's rehearsal unmount can be cancelled by its remount.
+    // Defer abandonment so StrictMode's rehearsal unmount can be canceled by its remount.
     keepRecoverySession();
     holdRecoverySession(sessionRef.current ?? held.session, held.email);
     const onPageHide = (event: PageTransitionEvent): void => {

@@ -275,7 +275,7 @@ mod r923_granted_tags_md_b15 {
     }
 
     #[test]
-    fn r923_no_granted_tag_serialises_without_the_key() {
+    fn r923_no_granted_tag_serializes_without_the_key() {
         let mut state = game("granted-hash");
         let held = first(in_hand(&mut state, &plain.id, P1, 1));
         assert!(json_of(&held).get("grantedTags").is_none());

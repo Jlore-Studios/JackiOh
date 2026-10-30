@@ -1,6 +1,6 @@
 // A GIF89a encoder for a shared replay (#513, R513000): RGBA frames in, bytes out, the same bytes
 // for the same frames on every run. It is written by hand instead of pulled in as a dependency: a
-// fixed 6x7x6 colour cube for the palette (no per-frame palette search and no dithering, so nothing
+// fixed 6x7x6 color cube for the palette (no per-frame palette search and no dithering, so nothing
 // can differ between runs), each frame LZW-compressed with the GIF variant of the code table, and
 // the Netscape loop extension so the clip repeats. It loads on demand, with the raster (export.ts),
 // so the main bundle does not carry it.
@@ -8,16 +8,16 @@
 const RED_LEVELS = 6;
 const GREEN_LEVELS = 7;
 const BLUE_LEVELS = 6;
-const CUBE_COLOURS = RED_LEVELS * GREEN_LEVELS * BLUE_LEVELS;
+const CUBE_COLORS = RED_LEVELS * GREEN_LEVELS * BLUE_LEVELS;
 /** A GIF palette is a power of two long: the cube, then black to fill it. */
 const PALETTE_SIZE = 256;
 const CHANNEL_MAX = 255;
 const RED_STRIDE = GREEN_LEVELS * BLUE_LEVELS;
 
-/** Entry `i` of the palette is the cube's `i`th colour, red the slowest axis; entries past the cube are black. */
+/** Entry `i` of the palette is the cube's `i`th color, red the slowest axis; entries past the cube are black. */
 export const GIF_PALETTE: Uint8Array<ArrayBuffer> = (() => {
   const palette = new Uint8Array(PALETTE_SIZE * 3);
-  for (let i = 0; i < CUBE_COLOURS; i += 1) {
+  for (let i = 0; i < CUBE_COLORS; i += 1) {
     palette[i * 3] = Math.round((Math.floor(i / RED_STRIDE) * CHANNEL_MAX) / (RED_LEVELS - 1));
     palette[i * 3 + 1] = Math.round(((Math.floor(i / BLUE_LEVELS) % GREEN_LEVELS) * CHANNEL_MAX) / (GREEN_LEVELS - 1));
     palette[i * 3 + 2] = Math.round(((i % BLUE_LEVELS) * CHANNEL_MAX) / (BLUE_LEVELS - 1));
@@ -33,7 +33,7 @@ const RED_LEVEL = levels(RED_LEVELS);
 const GREEN_LEVEL = levels(GREEN_LEVELS);
 const BLUE_LEVEL = levels(BLUE_LEVELS);
 
-/** The palette entry nearest a colour: each channel snaps to its own axis. */
+/** The palette entry nearest a color: each channel snaps to its own axis. */
 export function paletteIndex(r: number, g: number, b: number): number {
   return (RED_LEVEL[r] ?? 0) * RED_STRIDE + (GREEN_LEVEL[g] ?? 0) * BLUE_LEVELS + (BLUE_LEVEL[b] ?? 0);
 }
@@ -90,7 +90,7 @@ export function createGifEncoder(width: number, height: number): GifEncoder {
   ascii("GIF89a");
   u16(width);
   u16(height);
-  // A global colour table of 256 entries (flag, then size 7 = 2^(7+1)), background 0, no aspect ratio.
+  // A global color table of 256 entries (flag, then size 7 = 2^(7+1)), background 0, no aspect ratio.
   byte(0xf7);
   byte(0);
   byte(0);

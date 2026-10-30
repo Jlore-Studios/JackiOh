@@ -272,7 +272,7 @@ mod r1181000_in_n_turns_counts_its_owners_turns_and_shows_a_countdown {
         s.play(ids[0].as_str(), json!({ "zone": 1 }));
         s.play(ids[1].as_str(), json!({ "zone": 2, "embiggen": true }));
         s.end_turn().end_turn();
-        let text = serde_json::to_string(s.state()).expect("a state serialises");
+        let text = serde_json::to_string(s.state()).expect("a state serializes");
         assert!(!text.contains("dueOwnTurn"), "D9: no counted delay, no field");
         assert!(!text.contains("embiggenCostOverride"));
         assert!(!text.contains("\"garden\""));

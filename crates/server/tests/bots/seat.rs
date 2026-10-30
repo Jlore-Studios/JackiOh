@@ -6,7 +6,7 @@
 //! R639000: the think time grows with the legal actions and on a lethal turn, a mulligan, a draw
 //! answer and a concession have priors of their own, and `play` concedes only at the bot's turn
 //! start and answers a draw offer by the bot's own roll, reading where it stands through a
-//! determinized world (a face-down enemy card included) centred on the even board.
+//! determinized world (a face-down enemy card included) centered on the even board.
 //!
 //! R747000: the strength's skill is the chance each decision follows the AI, the rest the skill miss
 //! rolled on the bot's own AI stream; a full skill takes no draw and decides as it did before the
@@ -201,8 +201,8 @@ fn r1452_the_fallback_move_answers_the_mulligan_ends_the_turn_and_never_concedes
     }
 }
 
-/// A model with one later-move play fit of no spread, centred on seven legal actions, and a
-/// concession prior centred on `prior_ln_legal_mean`, so each think time is its mean exactly.
+/// A model with one later-move play fit of no spread, centered on seven legal actions, and a
+/// concession prior centered on `prior_ln_legal_mean`, so each think time is its mean exactly.
 const FIT: [ThinkTimeFit; 1] = [ThinkTimeFit {
     rank_bucket: None,
     action_kind: "play",
@@ -255,7 +255,7 @@ fn r639000_think_time_grows_with_legal_actions_and_on_lethal() {
     assert_eq!(at(ActionType::Play, 7, true), exact(8.0 + 0.7));
     assert!(at(ActionType::Play, 20, false) > at(ActionType::Play, 7, false));
     assert!(at(ActionType::Play, 7, true) > at(ActionType::Play, 7, false));
-    // A kind with no fit takes its own prior, centred on the priors' complexity.
+    // A kind with no fit takes its own prior, centered on the priors' complexity.
     assert_eq!(at(ActionType::Concede, 1, false), exact(8.5 - 0.5 * 1.5));
     // The shipped model leans the same way.
     let shipped = |legal_count, lethal| {
@@ -616,7 +616,7 @@ fn r639000_an_even_board_reads_level_though_its_deficit_does_not() {
     let bot = state.active;
     let read = standing(&state, bot, "even", bot);
     // R1442's deficit counts the enemy hero's health against the seat, so an even board reads
-    // about that far behind on it; the standing's `behind` is centred on the even board.
+    // about that far behind on it; the standing's `behind` is centered on the even board.
     assert!(read.deficit > 20.0, "PREMISE: {read:?}");
     assert!(read.behind.abs() < 6.0, "{read:?}");
 

@@ -78,7 +78,7 @@ const POINTER_ID = 1;
 /** Twice the threshold guarantees that the first move starts a drag. */
 const LIFT_PX = DRAG_THRESHOLD_PX * 2;
 
-function centreOf(element: HTMLElement): Point {
+function centerOf(element: HTMLElement): Point {
   const win = element.ownerDocument.defaultView;
   let box = element.getBoundingClientRect();
   if (win !== null && (box.top < 0 || box.left < 0 || box.bottom > win.innerHeight || box.right > win.innerWidth)) {
@@ -118,7 +118,7 @@ export function pressAndLift(source: string): Cypress.Chainable<Point> {
     .should("be.visible")
     .then(($source) => {
       const element = $source[0] as HTMLElement;
-      const from = centreOf(element);
+      const from = centerOf(element);
       cy.wrap($source, { log: false }).trigger("pointerdown", pointer(from, "down"));
       const lifted = { x: from.x, y: from.y - LIFT_PX };
       moveTo(lifted);
@@ -135,7 +135,7 @@ export function hoverOver(target: string | "outside"): Cypress.Chainable<Point> 
     });
   }
   return cy.get(target, { timeout: timeouts.view }).then(($target) => {
-    const at = centreOf($target[0] as HTMLElement);
+    const at = centerOf($target[0] as HTMLElement);
     // Avoid teleporting directly onto the target.
     moveTo({ x: at.x - 24, y: at.y + 24 });
     moveTo(at);
@@ -151,7 +151,7 @@ export function releaseOver(target: string | "outside"): void {
     return;
   }
   cy.get(target, { timeout: timeouts.view }).then(($target) => {
-    const at = centreOf($target[0] as HTMLElement);
+    const at = centerOf($target[0] as HTMLElement);
     cy.wrap($target, { log: false }).trigger("pointerup", pointer(at, "up"));
   });
 }

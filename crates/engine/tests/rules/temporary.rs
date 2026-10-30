@@ -17,7 +17,7 @@ fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Value {
     Value::Array(
         events_of_type(events, kind)
             .into_iter()
-            .map(|event| serde_json::to_value(event).expect("an event serialises")[field].clone())
+            .map(|event| serde_json::to_value(event).expect("an event serializes")[field].clone())
             .collect(),
     )
 }

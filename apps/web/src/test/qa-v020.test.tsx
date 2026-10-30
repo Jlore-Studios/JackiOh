@@ -423,7 +423,7 @@ describe("QA v0.2.0, Card Cosmetic", () => {
     expect(document.querySelectorAll(`[data-testid="mana-opponent"] .mana-crystal[${HINDERED_ATTR}]`)).toHaveLength(2);
   });
 
-  it("item 11: K-Pop Fanatic's pending steal is a purple corruption mark on its target in both seats' views, and the mark takes any colour (R437)", () => {
+  it("item 11: K-Pop Fanatic's pending steal is a purple corruption mark on its target in both seats' views, and the mark takes any color (R437)", () => {
     const view = fullBoardView();
     const mine = view.you.units[0] as UnitView;
     const theirs = view.opponent.units[0] as UnitView;

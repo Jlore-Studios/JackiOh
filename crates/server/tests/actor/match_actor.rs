@@ -345,7 +345,7 @@ async fn match_actions(app: &App, match_id: &str) -> Vec<Value> {
     let rows = tx.matches_actions(match_id).await.expect("matches.actions");
     tx.commit().await.expect("commit");
     rows.iter()
-        .map(|row| serde_json::to_value(row).expect("MatchActionRow serialises"))
+        .map(|row| serde_json::to_value(row).expect("MatchActionRow serializes"))
         .collect()
 }
 
@@ -358,7 +358,7 @@ async fn match_row(app: &App, match_id: &str) -> Value {
         .expect("matches.get")
         .expect("the match row");
     tx.commit().await.expect("commit");
-    serde_json::to_value(&row).expect("MatchRow serialises")
+    serde_json::to_value(&row).expect("MatchRow serializes")
 }
 
 /// TS `deps.store.matches.create(...)`: a match row written as TS's object literal.
@@ -378,7 +378,7 @@ async fn result_row(app: &App, match_id: &str) -> Option<Value> {
         .await
         .expect("results.getByMatch");
     tx.commit().await.expect("commit");
-    row.map(|row| serde_json::to_value(&row).expect("ResultRow serialises"))
+    row.map(|row| serde_json::to_value(&row).expect("ResultRow serializes"))
 }
 
 /// TS `deps.store.profiles.getMany(...)`, as JSON.
@@ -388,7 +388,7 @@ async fn profiles(app: &App, ids: &[&str]) -> Vec<Value> {
     let rows = tx.profiles_get_many(&ids).await.expect("profiles.getMany");
     tx.commit().await.expect("commit");
     rows.iter()
-        .map(|row| serde_json::to_value(row).expect("Profile serialises"))
+        .map(|row| serde_json::to_value(row).expect("Profile serializes"))
         .collect()
 }
 
@@ -474,7 +474,7 @@ fn decks_that_open_on_the_mulligans(pool: &[String], seed: &str) -> (Vec<String>
 
 /// The def ids a seat holds once the deal is done, read through its own view (§10.8).
 fn dealt_def_ids(state: &jackioh_engine::GameState, player: PlayerId) -> Vec<String> {
-    let view = serde_json::to_value(jackioh_engine::view_for(state, player)).expect("PlayerView serialises");
+    let view = serde_json::to_value(jackioh_engine::view_for(state, player)).expect("PlayerView serializes");
     hand(&view).into_iter().map(|card| card.def_id).collect()
 }
 
@@ -619,7 +619,7 @@ impl Harness {
 
     /// TS `actor.clocks()`, as `MatchClocks`' JSON.
     async fn clocks(&self) -> Value {
-        serde_json::to_value(self.actor.clocks()).expect("MatchClocks serialises")
+        serde_json::to_value(self.actor.clocks()).expect("MatchClocks serializes")
     }
 
     /// TS `actor.viewFor(player)`, as JSON.
@@ -629,14 +629,14 @@ impl Harness {
 }
 
 async fn view_json(actor: &MatchActor, player: PlayerId) -> Value {
-    serde_json::to_value(actor.view_for(player)).expect("PlayerView serialises")
+    serde_json::to_value(actor.view_for(player)).expect("PlayerView serializes")
 }
 
 /// One action through `submit`, which must be acked.
 async fn submit_ok(actor: &MatchActor, player: PlayerId, nonce: &str, body: Value) {
     let body: ActionBody = serde_json::from_value(body).expect("an ActionBody");
     let reply = actor.submit(player, nonce.to_string(), body).await;
-    let reply = serde_json::to_value(&reply).expect("ServerMessage serialises");
+    let reply = serde_json::to_value(&reply).expect("ServerMessage serializes");
     assert_eq!(
         reply["type"],
         json!("ack"),
@@ -1900,7 +1900,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
     /// `body` as a client sends it back: encoded as the `legal` array carries it, given a nonce, in an
     /// `action` frame (`apps/web/src/game/net.ts`).
     fn round_trip(body: &ActionBody, nonce: &str) -> Result<ClientMessage, MalformedMessage> {
-        let mut action = serde_json::to_value(body).expect("an ActionBody serialises");
+        let mut action = serde_json::to_value(body).expect("an ActionBody serializes");
         action["nonce"] = json!(nonce);
         parse_client_message(&json!({ "type": "action", "action": action }).to_string())
     }
@@ -3027,7 +3027,7 @@ mod r642_the_portraits_frame_9_5 {
         actor.idle().await;
         settle().await;
 
-        let default = serde_json::to_value(DEFAULT_PORTRAIT).expect("PortraitId serialises");
+        let default = serde_json::to_value(DEFAULT_PORTRAIT).expect("PortraitId serializes");
         // R1341: an old row still has its seed, so its seats are dealt their hands like any other.
         let hand: Vec<&str> = deal_emote_hand("seed-legacy", P1)
             .iter()
@@ -3172,7 +3172,7 @@ mod the_legal_action_array_on_the_view_frame_build_m5_t2_10_2 {
 
 /// The same acceptance item, against the real §8 catalog.
 ///
-/// Everything above runs on `support::engine`'s scripted cards, whose behaviour this suite wrote —
+/// Everything above runs on `support::engine`'s scripted cards, whose behavior this suite wrote —
 /// so it proves that the actor and the protocol add no leak *on top of* a redaction. That is fine for
 /// the clock, the log and the flood limit, which is what the scripted cards are for, but CLAUDE.md
 /// rule 7 ("the client ... never sees hidden information") is the one property where the component
@@ -4783,7 +4783,7 @@ mod r1086_equip_over_the_socket {
         let Ok(ClientMessage::Action(ActionMessage { body, .. })) = old else {
             panic!("the old flag parses: {old:?}");
         };
-        let written = serde_json::to_value(&body).expect("a play body serialises");
+        let written = serde_json::to_value(&body).expect("a play body serializes");
         assert_eq!(written["equip"], json!(true));
         assert!(
             written.get("magnetic").is_none(),

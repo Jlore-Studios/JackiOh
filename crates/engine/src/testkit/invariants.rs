@@ -342,7 +342,7 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             }
         };
     for event in state.applied.iter().flat_map(|entry| entry.events.iter()) {
-        let value = serde_json::to_value(event).expect("a GameEvent serialises");
+        let value = serde_json::to_value(event).expect("a GameEvent serializes");
         walk_objects(&value, &mut |object| {
             let id = object.get("instanceId");
             let hidden_to = object.get("hiddenFrom").and_then(Value::as_array);
@@ -959,7 +959,7 @@ pub fn hidden_information_violations(
         if source.is_some_and(|source| readable_where_taken(source, viewer)) {
             continue;
         }
-        let mut shown = serde_json::to_value(event).expect("a GameEvent serialises");
+        let mut shown = serde_json::to_value(event).expect("a GameEvent serializes");
         if let Some(GameEvent::StarshipLaunched { pieces, .. }) = source {
             drop_launched_pieces(&mut shown, pieces);
         }
@@ -967,7 +967,7 @@ pub fn hidden_information_violations(
     }
     // `defs` (R243) is left out: a definition is copied only for an id the rest of the view names, and
     // its body names its ingredients and its `refs` (R279), the text of cards the viewer reads.
-    let mut scanned = serde_json::to_value(view).expect("a PlayerView serialises");
+    let mut scanned = serde_json::to_value(view).expect("a PlayerView serializes");
     if let Some(object) = scanned.as_object_mut() {
         object.remove("defs");
         object.insert("events".to_string(), Value::Array(events));
@@ -989,7 +989,7 @@ pub fn hidden_information_violations(
         &mut |_| {},
     );
     let mut offered: IndexMap<String, String> = IndexMap::new();
-    let legal_json = serde_json::to_value(legal).expect("ActionBodies serialise");
+    let legal_json = serde_json::to_value(legal).expect("ActionBodies serialize");
     walk(
         &legal_json,
         "legal",
@@ -2311,7 +2311,7 @@ impl InvariantMonitor {
                 } => {
                     // A Buff's keyword row (R386) is the other way a unit gains a keyword, R1160's
                     // multiplied row adding `also` beside it. Fuzz seed 7758 of the handicapped wave: My
-                    // Pawn cancelled an attack, R44's random rest of the turn Buffed the attacker into
+                    // Pawn canceled an attack, R44's random rest of the turn Buffed the attacker into
                     // Windfury, and it attacked once more inside the one action, as R636 allows.
                     let mut gained = std::iter::once(keyword).chain(also.iter().flatten());
                     if gained.any(|keyword| keyword.kind() == KeywordKind::Windfury) {

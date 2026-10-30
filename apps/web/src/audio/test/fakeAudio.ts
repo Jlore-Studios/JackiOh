@@ -5,7 +5,7 @@
 //
 // Every object is a Proxy: unsupported or invalid Web Audio calls throw and record a violation.
 //
-// Its unseen controller records calls, controls context and decode behaviour, and advances ended
+// Its unseen controller records calls, controls context and decode behavior, and advances ended
 // sources. It also provides fake speech, fetch and clock services, and a fake engine for the tests
 // that swap the singleton.
 

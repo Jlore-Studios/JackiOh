@@ -89,7 +89,7 @@ pub struct ThinkFor {
 }
 
 /// R1452, R639000: the rows a think time is drawn from: the fits, then the per-kind priors, then the
-/// first and later moves' priors; the complexity the priors are centred on; and the two shifts.
+/// first and later moves' priors; the complexity the priors are centered on; and the two shifts.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ThinkModel<'a> {
     pub fits: &'a [ThinkTimeFit],

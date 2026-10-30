@@ -46,7 +46,7 @@
   border-radius: var(--radius-lg);
 }
 
-/* Phones held upright: the field is the middle of the screen, so the card stands over it, centred,
+/* Phones held upright: the field is the middle of the screen, so the card stands over it, centered,
    a little above the middle line and a little smaller. */
 @media (max-width: 600px) {
   .showcase {
@@ -55,7 +55,7 @@
     top: 42%;
     left: 50%;
     transform: translate(-50%, -50%);
-    animation-name: showcase-in-centred, showcase-out-centred;
+    animation-name: showcase-in-centered, showcase-out-centered;
   }
 }
 
@@ -196,14 +196,14 @@
   }
 }
 
-@keyframes showcase-in-centred {
+@keyframes showcase-in-centered {
   from {
     opacity: 0;
     transform: translate(-50%, -46%) scale(0.92);
   }
 }
 
-@keyframes showcase-out-centred {
+@keyframes showcase-out-centered {
   to {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.96);

@@ -6,7 +6,7 @@ import { createAudioEngine, type MatchFeelAudioEngine } from "./engine.ts";
 import { fakeContextFactory, settle, type FakeAudio, type FakeContextFactory, type FakeNode } from "./test/fakeAudio.ts";
 import type { AudioEngine } from "./types.ts";
 
-type Scheduled = { ms: number; run: () => void; cancelled: boolean };
+type Scheduled = { ms: number; run: () => void; canceled: boolean };
 
 const engines: AudioEngine[] = [];
 
@@ -24,10 +24,10 @@ describe("issue #57 crowd director", () => {
     const crowd = createCrowdDirector({
       engine,
       later: (ms, run) => {
-        const task = { ms, run, cancelled: false };
+        const task = { ms, run, canceled: false };
         scheduled.push(task);
         return () => {
-          task.cancelled = true;
+          task.canceled = true;
         };
       },
     });
@@ -42,14 +42,14 @@ describe("issue #57 crowd director", () => {
     expect(firstPatron.ms).toBeGreaterThanOrEqual(CROWD_FEEL.patronMinMs);
     expect(firstPatron.ms).toBeLessThanOrEqual(CROWD_FEEL.patronMaxMs);
     firstPatron.run();
-    // The patron is a one-shot murmur at an independent, non-centre position, and the next one is queued.
+    // The patron is a one-shot murmur at an independent, non-center position, and the next one is queued.
     const patronPan = audio.nodesOf("stereoPanner").at(-1);
     expect(patronPan).toBeDefined();
     expect(patronPan?.param("pan").settled()).not.toBe(0);
     expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(1);
     const patrons = scheduled.filter((task) => task.ms >= CROWD_FEEL.patronMinMs);
     expect(patrons).toHaveLength(2);
-    expect(patrons.at(-1)?.cancelled).toBe(false);
+    expect(patrons.at(-1)?.canceled).toBe(false);
 
     crowd.observeDamage(1);
     crowd.observeDamage(5);
@@ -61,7 +61,7 @@ describe("issue #57 crowd director", () => {
     crowd.observeDamage(25);
     const reaction = scheduled.filter((task) => task.ms === CROWD_FEEL.reactionDebounceMs);
     // Each later hit replaces the earlier quiet-period deadline, so the last timer alone lives.
-    expect(reaction.filter((task) => !task.cancelled)).toHaveLength(1);
+    expect(reaction.filter((task) => !task.canceled)).toHaveLength(1);
     reaction.at(-1)?.run();
     expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(2);
     const filters = audio.nodes.filter((node) => node.kind === "biquad");
@@ -71,7 +71,7 @@ describe("issue #57 crowd director", () => {
     expect(reactionPan?.param("pan").settled()).not.toBe(0);
 
     // A GIGA roar carries its promised applause tail.
-    const applause = scheduled.find((task) => task.ms === CROWD_FEEL.applauseDelayMs && !task.cancelled);
+    const applause = scheduled.find((task) => task.ms === CROWD_FEEL.applauseDelayMs && !task.canceled);
     if (applause === undefined) throw new Error("GIGA roar must schedule an applause tail");
     applause.run();
     expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(3);
@@ -82,7 +82,7 @@ describe("issue #57 crowd director", () => {
     // #352: nothing to fade, so ending schedules nothing. It stops the patrons, and a hit after it
     // draws no reaction.
     expect(scheduled).toHaveLength(before);
-    expect(scheduled.filter((task) => task.ms >= CROWD_FEEL.patronMinMs).at(-1)?.cancelled).toBe(true);
+    expect(scheduled.filter((task) => task.ms >= CROWD_FEEL.patronMinMs).at(-1)?.canceled).toBe(true);
     crowd.observeDamage(25);
     expect(scheduled).toHaveLength(before);
     crowd.dispose();
@@ -114,10 +114,10 @@ describe("background: the page hides mid-game and comes back (issue #2034)", () 
     const crowd = createCrowdDirector({
       engine,
       later: (ms, run) => {
-        const task = { ms, run, cancelled: false, ran: false };
+        const task = { ms, run, canceled: false, ran: false };
         tasks.push(task);
         return () => {
-          task.cancelled = true;
+          task.canceled = true;
         };
       },
     });
@@ -127,7 +127,7 @@ describe("background: the page hides mid-game and comes back (issue #2034)", () 
 
   /** Fires every timer now due (the ones it schedules wait for the next call). */
   function due(tasks: Task[]): void {
-    for (const task of tasks.filter((t) => !t.cancelled && !t.ran)) {
+    for (const task of tasks.filter((t) => !t.canceled && !t.ran)) {
       task.ran = true;
       task.run();
     }
@@ -161,7 +161,7 @@ describe("background: the page hides mid-game and comes back (issue #2034)", () 
     }
     expect(heard(audio, bus)).toEqual([]);
     // The murmurs keep their rhythm for when sound comes back.
-    expect(r.tasks.filter((t) => t.ms >= CROWD_FEEL.patronMinMs && !t.cancelled && !t.ran)).toHaveLength(1);
+    expect(r.tasks.filter((t) => t.ms >= CROWD_FEEL.patronMinMs && !t.canceled && !t.ran)).toHaveLength(1);
 
     // The next tap resumes the context: nothing held back plays as a burst …
     r.engine.unlock();

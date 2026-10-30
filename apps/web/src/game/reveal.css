@@ -155,7 +155,7 @@
   color: var(--text-dim);
 }
 
-/* A refused offer reads as one: colour and words, never colour alone (auth.css's field error). */
+/* A refused offer reads as one: color and words, never color alone (auth.css's field error). */
 .rematch > .rematch-status[role="alert"] {
   color: color-mix(in srgb, var(--opponent) 55%, var(--text));
 }

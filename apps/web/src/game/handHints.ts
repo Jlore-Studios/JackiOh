@@ -12,7 +12,7 @@ import { t } from "../i18n/i18n.ts";
 export type HintShown = {
   /** One short number the pip prints, when the hint has one. */
   n?: number;
-  /** Lower opacity and no colour (handHints.css). */
+  /** Lower opacity and no color (handHints.css). */
   dimmed?: boolean;
   /** The pip's name for a screen reader, already through `t()`: the hint calls `t()` itself, at render, never at module scope. */
   label: string;

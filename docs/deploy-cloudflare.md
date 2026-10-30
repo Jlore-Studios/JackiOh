@@ -26,7 +26,7 @@ merging a pull request whose head is a green commit of main, so its files always
 1. A pull request merges into `main` (branch protection already requires the five CI checks).
 2. Pushes to `main` trigger three things at once: Render deploys `jackioh-server`; Vercel deploys
    staging (unless `scripts/vercel-ignore.sh` skips it); and CI runs again on main.
-3. An open issue labelled `production merge` says "Merging to production in N hours" (section 2.3).
+3. An open issue labeled `production merge` says "Merging to production in N hours" (section 2.3).
    When its time comes, 10:00 AM Central each day unless someone held or delayed it,
    `promote-production.yml` looks up the newest commit of `main` whose push-to-main CI run succeeded,
    opens a pull request from `promote/<date>-<sha>` into `production` listing the commits, and
@@ -68,7 +68,7 @@ after Render has deployed (roughly 10 to 20 minutes). Section 7 discusses closin
 These are all tested against a simulated repo before this change shipped:
 
 - The candidate must be on `main` and have a successful push-to-main CI run. A commit whose CI is
-  still running, failed, or was cancelled is never promoted; the daily run takes the newest green
+  still running, failed, or was canceled is never promoted; the daily run takes the newest green
   one instead.
 - `production` only receives merges of green main commits. Before opening anything, the run checks
   that `production`'s files equal those of the main commit it last merged
@@ -83,7 +83,7 @@ These are all tested against a simulated repo before this change shipped:
 
 ### 2.3 The countdown issue: hold, delay, fast-forward and the queue
 
-One issue labelled `production merge` stays open for good. Its title reads "Merging to production
+One issue labeled `production merge` stays open for good. Its title reads "Merging to production
 in 23 hours (2026-10-05 10:00 AM CT)", and every check (the hourly cron, every green CI run on
 `main`, every command) brings the hours up to date, so it counts down; a check in the same hour
 edits nothing. The first line of its body is a hidden state line (the time, whether
@@ -172,7 +172,7 @@ secret, `CLOUDFLARE_API_TOKEN`.
   `deploy-routes.test.ts` holds it.
 - `CLAUDE.md`: the deployment paragraph names both hosts.
 
-Two Cloudflare behaviours shaped `_redirects`, both measured under `wrangler dev` (wrangler 4.147)
+Two Cloudflare behaviors shaped `_redirects`, both measured under `wrangler dev` (wrangler 4.147)
 against the real build. A rewrite to `/index.html` is answered with a 307 redirect to `/`, which
 throws the path away, so every rewrite targets `/` instead. And a `/login` rule does not match
 `/login/`, so each path is listed both ways. With those, every case in `deploy-routes.test.ts`
@@ -366,7 +366,7 @@ past the hour.
   continues normally. The hourly check fails the same way until then.
 - **A run says "main has N newer commit(s) whose CI has not passed yet":** production has every
   green commit and `main` is ahead. The countdown stays due (a `/fast-forward` too), and the next
-  green CI run on `main` merges. CI on `main` is never cancelled by a newer push (`ci.yml`'s
+  green CI run on `main` merges. CI on `main` is never canceled by a newer push (`ci.yml`'s
   `concurrency`), so that is at most a run or two away; before that change a busy afternoon left no
   commit of `main` green for hours.
 - **A run says "Not merging … yet: main has changed .github/workflows":** only without the

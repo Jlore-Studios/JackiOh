@@ -347,7 +347,7 @@ pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)
 
 /// A value as JSON, the shape the tests compare (the TS tests' `JSON.parse(JSON.stringify(…))`).
 pub fn json_of(value: impl serde::Serialize) -> serde_json::Value {
-    serde_json::to_value(value).expect("serialises")
+    serde_json::to_value(value).expect("serializes")
 }
 
 /// A value through JSON and back, as a paused state crosses a socket or a store (§10.1).

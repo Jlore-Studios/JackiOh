@@ -121,7 +121,7 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
             },
           },
         );
-        if (controller.signal.aborted || result.kind === "cancelled") return;
+        if (controller.signal.aborted || result.kind === "canceled") return;
         setPhase(result.kind === "ready" ? { kind: "ready", file: result.file, share: gif.canShareFile(result.file) } : { kind: "tooBig" });
       } catch (cause) {
         if (controller.signal.aborted || isAbort(cause)) return;
