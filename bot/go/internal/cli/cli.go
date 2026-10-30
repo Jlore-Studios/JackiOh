@@ -315,11 +315,7 @@ func CmdPlan(cfg *config.Config, args *Args) int {
 		}()
 		if locked {
 			// `quiet_ok=None` (a run by hand) restricts nothing: plan.make reads it as ANY_QUIET.
-			quietOK := plan.AnyQuiet
-			if args.QuietOK != nil {
-				quietOK = *args.QuietOK
-			}
-			planned = plan.Make(ctx, args.Force, item, args.Mode, quietOK)
+			planned = plan.Make(ctx, args.Force, item, args.Mode, args.QuietOK)
 		} else {
 			planned = plan.Nothing("the status loop is planning; it starts the runs (#1455)")
 		}
@@ -504,7 +500,7 @@ func CmdWake(cfg *config.Config, args *Args) int {
 // stays lifted.
 //
 // The probe returns nil (None) to go on, or the reason and its kind (`work.Probe`).
-func MakeProbe(ctx *hctx.Context, number *int, provider *providers.Provider /* = None */, lastHour func() time.Time /* = lambda: None */) func(lastUsage *pyjson.Object) *[2]string {
+func MakeProbe(ctx *hctx.Context, number *int, provider *providers.Provider /* = None */, lastHour func() time.Time /* = lambda: None */) work.Probe {
 	if provider == nil {
 		provider = ctx.Cfg.Pool.Ordered()[0]
 	}
@@ -554,7 +550,12 @@ func MakeProbe(ctx *hctx.Context, number *int, provider *providers.Provider /* =
 		}
 		return nil
 	}
-	return probe
+	return func(lastUsage *pyjson.Object) (string, string, bool) {
+		if found := probe(lastUsage); found != nil {
+			return found[0], found[1], true
+		}
+		return "", "", false
+	}
 }
 
 // usagePoller is a runner that `polls_usage` (agy, Muse): its `read_usage` reads the
@@ -659,7 +660,12 @@ func orStr(v any) string { return py.Str(or(v, "")) }
 func CmdPlanFetch(cfg *config.Config, args *Args) int {
 	ctx := Ctx(cfg, false)
 	var planned *pyjson.Object
-	if exc, ok := catchIf(func() { planned = controller.Fetch(ctx, args.Ref) }, func(err error) bool {
+	if exc, ok := catchIf(func() {
+		var err error
+		if planned, err = controller.Fetch(ctx, args.Ref); err != nil {
+			herr.Raise(err)
+		}
+	}, func(err error) bool {
 		_, gh := err.(*herr.GitHubError)
 		return gh || isValueError(err)
 	}); ok {

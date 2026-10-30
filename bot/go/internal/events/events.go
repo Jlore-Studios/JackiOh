@@ -548,16 +548,8 @@ func Execute(ctx *hctx.Context, command *commands.Command, thread *pyjson.Object
 // queueBuild is `queue_build(ctx, number, by=by, force=force, label_present=label_present,
 // ask=ask, mode=mode)`, where Python's `mode=None` (leave the issue's mode labels as they are) is
 // a nil `mode` and "" a plain build (its mode labels come off).
-//
-// NOTE(#467): the generated stub of queue.QueueBuild takes `mode string`, which cannot say None.
-// Until queue's port gives the None its own value, None goes as "", which strips the mode labels:
-// this is the one line to change when it does.
 func queueBuild(ctx *hctx.Context, number int, by string, force bool, labelPresent bool, ask *asks.Ask, mode *string) string {
-	m := ""
-	if mode != nil {
-		m = *mode
-	}
-	return queue.QueueBuild(ctx, number, by, force, labelPresent, ask, m)
+	return queue.QueueBuild(ctx, number, by, force, labelPresent, ask, mode)
 }
 
 // OpenSuggestion is open_suggestion: issue `number` is one of my suggestions, still open: the one

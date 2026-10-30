@@ -498,16 +498,8 @@ func assignments(ctx *hctx.Context, since time.Time) []string {
 
 // queueBuild is `queue_build(ctx, number, by=by, mode=mode)`, where Python's `mode=None` (leave
 // the issue's mode labels as they are) is a nil `mode`.
-//
-// NOTE(#467): the generated stub of queue.QueueBuild takes `mode string`, which cannot say None.
-// Until queue's port gives the None its own value, None goes as "", which strips the mode labels:
-// this is the one line to change when it does.
 func queueBuild(ctx *hctx.Context, n int, by string, mode *string) string {
-	m := ""
-	if mode != nil {
-		m = *mode
-	}
-	return queue.QueueBuild(ctx, n, by, false, false, nil, m)
+	return queue.QueueBuild(ctx, n, by, false, false, nil, mode)
 }
 
 // failedCI is _failed_ci.
