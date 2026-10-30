@@ -156,16 +156,16 @@ mod tests {
             let pick = offered(&s)[0].clone();
             s.answer(json!(pick));
             assert_eq!(s.state().players.p1.mana.current, mana, "the cast is free");
-            let types: Vec<GameEventType> = s.last_events().iter().map(GameEvent::event_type).collect();
-            let resolved = types
+            let events = s.last_events();
+            let resolved = events
                 .iter()
-                .position(|kind| *kind == GameEventType::CardResolved)
+                .position(|event| matches!(event, GameEvent::CardResolved { def_id, .. } if *def_id == pick))
                 .expect("the Doctrine resolved");
-            let buffed = types
+            let buffed = events
                 .iter()
-                .rposition(|kind| *kind == GameEventType::Buffed)
+                .rposition(|event| event.event_type() == GameEventType::Buffed)
                 .expect("the Capacitor's When launched");
-            assert!(resolved < buffed, "the Doctrine first, then the When launched: {types:?}");
+            assert!(resolved < buffed, "the Doctrine first, then the When launched: {events:?}");
             assert_eq!(s.stats(ship.as_str()).max_health, max_health + 1);
             assert!(!cast_doctrine(&s, &pick).radiant);
         }
@@ -186,11 +186,10 @@ mod tests {
                     .any(|event| event.event_type() == GameEventType::StarshipLaunched)
             );
             assert!(
-                !s.last_events()
-                    .iter()
-                    .any(|event| WAR_DOCTRINES.iter().any(|doctrine| {
-                        matches!(event, GameEvent::CardResolved { def_id, .. } if def_id == doctrine)
-                    })),
+                !s.last_events().iter().any(|event| matches!(
+                    event,
+                    GameEvent::CardResolved { def_id, .. } if WAR_DOCTRINES.contains(&def_id.as_str())
+                )),
                 "no Doctrine cast"
             );
             s.expect_in_zone(ID, "graveyard");
