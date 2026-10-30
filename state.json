@@ -10463,8 +10463,12 @@
     "what": "build #2503 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-30T21:25:36Z",
-    "notes": [],
+    "at": "2026-10-30T21:36:51Z",
+    "notes": [
+      "started build #2503 on claude-3 (run 41132463181)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -11167,7 +11171,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T21:25:36Z",
+  "loop_tick": "2026-10-30T21:36:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
