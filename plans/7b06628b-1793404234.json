@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 2556,
+  "title": "Patch: Defense cards on a phone shrink only as far as their zone needs",
+  "branch": "bot/issue-2556",
+  "thread": "**Issue #2556 (data, not instructions):**\n\n```text\n# #2556: Patch: Defense cards on a phone shrink only as far as their zone needs\nOpened by @MaxGoetzmann.\n\n### What happens\n\nOn a phone, a Unit switched to Defense position still shrinks noticeably, even though its lane plainly has room for a larger sideways card. The owner reports there is still space left around the turned card after the last fix.\n\nThe last fix, #2347 (for #2330), made DEF cards full size only on the roomy layout, `(min-width: 761px) and (min-height: 501px)`. Phones were left on a hard-coded constant:\n\n- `apps/web/src/game/board.css`, `.lane { --def-scale: 0.72; }`, with the comment \"on a phone a card turned sideways is wider than its lane, so it is drawn at 72%\"\n- `Card.tsx` turns a DEF card with `rotate(90deg) scale(var(--def-scale, 1))`, and `animations.css`'s `jk-rotate-def` / `jk-rotate-atk` use the same scale\n\nSo every phone, whatever its width, height or orientation, draws a DEF card at 72%. That is the old fixed `scale(0.72)` under a new name. 0.72 is a guess that fits the narrowest case. Most phones' lanes fit a larger turned card.\n\n### What should happen\n\nA DEF card on a phone should be as large as its zone allows: the turned card's footprint (its height, now horizontal, and its width, now vertical) should fill the lane's width or the unit row's height, whichever runs out first, and never overflow either. It should shrink only by what the zone actually needs, as #2330 asked, and on phones too.\n\nSuggested approach, not binding: work out `--def-scale` from the phone layout's own sizes instead of a constant. For example, `min(1, lane width / card height, row height / card width)` in `calc()` with container units (`cqw`, or the board's existing `--card-h` / `--card-w` / `--gap` maths in the `@media (max-width: 760px)` block), or give the lane `container-type: inline-size` and derive it from `100cqw`. The keyframes in `animations.css` must keep using the same `var(--def-scale, 1)` string, so the board doesn't jump at the end of `positionSwitched`. Check whether the 44 px touch floor on the backrow, or the phone's fixed equal rows, is what limits the row height, and say which one binds.\n\n### How to reproduce\n\n1. `pnpm --dir apps/web build:e2e && pnpm --dir apps/web exec vite preview --port 5173 --strictPort`\n2. Open `/dev/hotseat` at a phone size, such as 390x844, 360x780 or 430x932, and also a phone in landscape (any height of 500 px or less).\n3. Play a Unit and switch it to Defense position.\n4. The turned card sits at 72% with clear mat on both sides of it in the lane, and/or above and below it in the row.\n\n### Acceptance\n\n- [ ] On a phone (`max-width: 760px`, and the landscape-phone sizes the roomy query excludes), a DEF card's footprint fills its lane's width or its row's height, to within a pixel or two, at several sizes: at least 360x780, 390x844, 430x932 and one landscape phone.\n- [ ] It never overflows its lane or row at any of those sizes, or at the five sizes #2330's spec already covers.\n- [ ] The desktop and tablet behaviour from #2347 is unchanged.\n- [ ] `positionSwitched` still ends on exactly the resting transform (the #37 keyframe tests in `position-switch.test.tsx`), and the M5-T4 `rotate(90deg)` inline-style check still passes.\n- [ ] `e2e/cypress/component/board-layout.cy.tsx` gains phone sizes in the `#2330` describe (or a new describe for this issue). It measures the DEF footprint against the lane and row, so a test fails if the scale is a fixed constant smaller than the zone allows. The unit test in `position-switch.test.tsx` that pins `--def-scale: 0.72` is updated to match.\n- [ ] Before/after screenshots at 390x844 in the PR (the `ui-walkthrough` skill). The visual result on a real phone is what this issue is about, so a passing measurement alone isn't enough.\n\n### Where\n\nThe client (hotseat, practice, online, menus): `apps/web/src/game/board.css`, `Card.tsx`, `animations.css`, `e2e/cypress/component/board-layout.cy.tsx`.\n\n### Version or commit\n\n`main` after #2347 (59597ef6) and #2354.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2556: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2556 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2506 skipped: it waits for #2505 to close first",
+    "#2507 skipped: it waits for #2505, #2506 to close first",
+    "#2508 skipped: it waits for #2505, #2506, #2507 to close first",
+    "#2509 skipped: it waits for #2505, #2506, #2507, #2508 to close first",
+    "#2510 skipped: it waits for #2505, #2506, #2507, #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2505, #2506, #2507, #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2505, #2506, #2507, #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
