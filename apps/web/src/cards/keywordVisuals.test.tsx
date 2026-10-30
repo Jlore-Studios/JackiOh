@@ -23,8 +23,10 @@ import {
   BRITTLE_CRACK_STAGES,
   KEYWORD_VISUALS,
   LAYER_CAP,
+  TEMPORARY_LAST_COUNT,
   brittleStage,
   keywordFxPlan,
+  temporaryLeft,
   treatedKinds,
   type KeywordLayer,
 } from "./keywordVisuals.ts";
@@ -516,5 +518,16 @@ describe("R438 motion is cheap, capped and stops under reduced motion", () => {
     expect(rule?.decls.get("pointer-events")).toBe("none");
     const row = css.rules.find((r) => r.selectors.some((s) => norm(s) === ".cf .kw-glyphs"));
     expect(row?.decls.get("pointer-events")).toBe("none");
+  });
+});
+
+describe("#2437 temporaryLeft: the count a card's Temporary keywords give it", () => {
+  it("#2437 no Temporary is null, a plain one is 1, Temporary 2 is 2, and two entries give the largest", () => {
+    expect(temporaryLeft([])).toBeNull();
+    expect(temporaryLeft([{ kind: "Taunt" }])).toBeNull();
+    expect(temporaryLeft([{ kind: "Temporary" }])).toBe(TEMPORARY_LAST_COUNT);
+    expect(temporaryLeft([{ kind: "Temporary" }])).toBe(1);
+    expect(temporaryLeft([{ kind: "Temporary", n: 2 }])).toBe(2);
+    expect(temporaryLeft([{ kind: "Temporary", n: 2 }, { kind: "Temporary" }, { kind: "Temporary", n: 3 }])).toBe(3);
   });
 });

@@ -46,6 +46,8 @@ export const MARK_PALETTES = {
   pink: { rim: "#ff7ac8", core: "#ffe3f3", glow: "#c2187a", preset: "arcane" },
   // #2270: Brittle's last count (`BRITTLE_LAST_COLOR`), Allure's aura in gray; no mark is drawn in it.
   gray: { rim: "#b8bec8", core: "#f0f2f5", glow: "#5f6672", preset: "smoke" },
+  // #2437: Temporary's last count in a hand (`TEMPORARY_LAST_COLOR`), Allure's aura in fuchsia; no mark is drawn in it.
+  fuchsia: { rim: "#e879f9", core: "#fae8ff", glow: "#a21caf", preset: "arcane" },
 } as const satisfies Readonly<Record<string, MarkPalette>>;
 
 export type MarkColor = keyof typeof MARK_PALETTES;
@@ -89,6 +91,9 @@ export const END_OF_TURN_MARK_COLOR: MarkColor = "orange";
 
 /** #2270: what a card on the field at its last Brittle count wears, the aura alone (no badge, no mark): Allure's, recoloured gray. */
 export const BRITTLE_LAST_COLOR: MarkColor = "gray";
+
+/** #2437: what a hand card at its last Temporary count wears (R637, R2179001), the aura alone (no badge, no mark): Allure's, recoloured fuchsia. */
+export const TEMPORARY_LAST_COLOR: MarkColor = "fuchsia";
 
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   // Meditative #76 Do or Die: "At the start of your next turn, steal each marked card" (your: the caster's).

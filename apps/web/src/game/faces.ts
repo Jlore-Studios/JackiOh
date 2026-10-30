@@ -51,6 +51,8 @@ export type LiveFacts = {
   copied?: CardDef;
   /** R2321000: the counts cards on the field keep on a unit, by their keepers' names (`useTallies`). */
   tallies?: readonly NamedTally[];
+  /** #2437: the card lies in a hand (Card.tsx's `inHandOf`), so its face carries its Temporary count. */
+  inHand?: boolean;
 };
 
 /**
@@ -83,6 +85,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (card.tuning !== undefined) inPlay.tuning = card.tuning;
   // B3.3, R385: the Brittle count; B5 E39: the enchantments riding the card.
   if (card.brittle !== undefined) inPlay.brittle = card.brittle;
+  // #2437: a hand card's face carries the count its Temporary has left (R2179001).
+  if (unit === undefined && facts.inHand === true) inPlay.inHand = true;
   // R980: the card's element, while a Feng Shui acts.
   if (card.element !== undefined) inPlay.element = card.element;
   if (card.enchantments !== undefined && card.enchantments.length > 0) inPlay.enchantments = card.enchantments;

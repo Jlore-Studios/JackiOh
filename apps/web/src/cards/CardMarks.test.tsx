@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { CATALOG } from "@jackioh/cards";
-import type { BackrowView, CardMark, PlayerView, UnitView } from "@jackioh/shared";
+import type { BackrowView, CardMark, CardView, Keyword, PlayerView, UnitView } from "@jackioh/shared";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -28,6 +28,7 @@ import {
   MARK_MOTES,
   MARK_PALETTES,
   MARK_WORDS,
+  TEMPORARY_LAST_COLOR,
   UNKNOWN_MARK_WORDS,
   markColorOf,
   markEventOf,
@@ -35,7 +36,7 @@ import {
   marksOf,
   paletteFor,
 } from "./marks.ts";
-import { BRITTLE_LAST_COUNT } from "./keywordVisuals.ts";
+import { BRITTLE_LAST_COUNT, TEMPORARY_LAST_COUNT } from "./keywordVisuals.ts";
 
 afterEach(() => {
   cleanup();
@@ -236,6 +237,86 @@ describe("#2270 a card on the field at its last Brittle count wears Allure's aur
     expect(root.querySelector(`[data-testid="${testid.card("r1")}"]`)).not.toBeNull();
     expect(aura(root, "h1")).toBeNull();
     expect(aura(root, "r1")).toBeNull();
+    expect(root.querySelector(".card-marks")).toBeNull();
+  });
+});
+
+const TEMPORARY_ONE: Keyword[] = [{ kind: "Temporary", n: TEMPORARY_LAST_COUNT }];
+
+describe("#2437 a hand card at its last Temporary count wears Allure's aura in fuchsia", () => {
+  /** The viewer's hand, each card given its view's keywords. */
+  function handView(hand: CardView[]): PlayerView {
+    return baseView({ you: emptySide("p1", { hand }) });
+  }
+
+  it("#2437 a hand card with plain Temporary, with Temporary 1, and Fortify Mind whose view lists no keywords each draw the aura alone, fuchsia, with no badge and no mark", () => {
+    expect(TEMPORARY_LAST_COLOR).toBe("fuchsia");
+    const root = renderBoard(
+      handView([
+        cardView({ instanceId: "h1", keywords: [{ kind: "Temporary" }] }),
+        cardView({ instanceId: "h2", keywords: TEMPORARY_ONE }),
+        cardView({ instanceId: "h3", defId: "meditative-022-1", cost: 0 }),
+      ]),
+    );
+    for (const id of ["h1", "h2", "h3"]) {
+      const host = root.querySelector(`[data-testid="${testid.handCard(id)}"]`);
+      const marks = aura(root, id);
+      expect(marks, id).not.toBeNull();
+      expect(host?.contains(marks ?? null), `${id}'s aura sits on its card`).toBe(true);
+      expect(marks?.getAttribute("data-mark-color"), id).toBe("fuchsia");
+      expect(marks?.style.getPropertyValue("--mark-rim")).toBe(MARK_PALETTES.fuchsia.rim);
+      expect(marks?.querySelector(".card-marks__vignette")).not.toBeNull();
+      expect(marks?.querySelector(".card-marks__edge")).not.toBeNull();
+      expect(marks?.querySelectorAll(".card-marks__mote")).toHaveLength(MARK_MOTES);
+      expect(marks?.querySelector(".card-mark-badge")).toBeNull();
+      expect(marks?.hasAttribute("data-marks")).toBe(false);
+      expect(host?.hasAttribute("data-marks")).toBe(false);
+    }
+    expect(root.querySelectorAll(".card-marks")).toHaveLength(3);
+  });
+
+  it("#2437 fuchsia is in the palette table, in hex, apart from Allure's pink", () => {
+    expect(markColorOf(TEMPORARY_LAST_COLOR)).toBe("fuchsia");
+    for (const value of [MARK_PALETTES.fuchsia.rim, MARK_PALETTES.fuchsia.core, MARK_PALETTES.fuchsia.glow]) {
+      expect(value).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+    expect(MARK_PALETTES.fuchsia.rim).not.toBe(MARK_PALETTES.pink.rim);
+    expect(MARK_PALETTES.fuchsia.glow).not.toBe(MARK_PALETTES.pink.glow);
+  });
+
+  it("#2437 Temporary 2, or no Temporary, draws no aura on a hand card", () => {
+    expect(renderBoard(handView([cardView({ instanceId: "h1", keywords: [{ kind: "Temporary", n: 2 }] })])).querySelector(".card-marks")).toBeNull();
+    cleanup();
+    expect(renderBoard(handView([cardView({ instanceId: "h1" })])).querySelector(".card-marks")).toBeNull();
+  });
+
+  it("#2437 a real mark outranks it: Temporary 1 under Allure draws Allure's pink aura and badge, never the fuchsia", () => {
+    const root = renderBoard(
+      handView([cardView({ instanceId: "h1", keywords: TEMPORARY_ONE, marks: [{ mark: ALLURE_MARK, color: ALLURE_MARK_COLOR }] })]),
+    );
+    const marks = aura(root, "h1");
+    expect(marks?.getAttribute("data-marks")).toBe(ALLURE_MARK);
+    expect(marks?.getAttribute("data-mark-color")).toBe("pink");
+    expect(marks?.querySelector('.card-mark-badge[data-mark="allure"]')).not.toBeNull();
+    expect(root.querySelector('.card-marks[data-mark-color="fuchsia"]')).toBeNull();
+  });
+
+  it("#2437 a Temporary 1 card on the field, in the resolving strip, and the opponent's hand of backs draw none", () => {
+    const root = renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          units: [unit("p1", { instanceId: "u1", keywords: TEMPORARY_ONE }), null, null, null, null],
+          backrow: [faceUpBackrow("p1", { instanceId: "b1", keywords: TEMPORARY_ONE }), null, null, null, null],
+          resolving: [cardView({ instanceId: "r1", keywords: TEMPORARY_ONE })],
+        }),
+        opponent: emptySide("p2", { hand: { count: 3 } }),
+      }),
+    );
+    for (const id of ["u1", "b1", "r1"]) {
+      expect(root.querySelector(`[data-testid="${testid.card(id)}"]`), id).not.toBeNull();
+      expect(aura(root, id), id).toBeNull();
+    }
+    expect(root.querySelectorAll('[data-testid="hand-opponent"] .card-back')).toHaveLength(3);
     expect(root.querySelector(".card-marks")).toBeNull();
   });
 });
