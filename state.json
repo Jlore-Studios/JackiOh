@@ -8732,9 +8732,7 @@
     },
     "2386": {
       "action": "build",
-      "asks": [
-        "c:6501218235"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-29T16:50:46Z",
         "difficulty": "medium",
@@ -8765,12 +8763,14 @@
       "queued_at": "2026-10-29T15:40:51Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
-      "run_id": "40944500279",
-      "runs_on": "night-vm-muse-fill",
-      "started_at": "2026-10-29T19:55:56Z",
+      "run_id": "pending:4201317a-1793323732",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-10-30T01:29:14Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6501218235"
+      ],
       "verdict_rounds": 1
     },
     "2387": {
@@ -9465,9 +9465,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-30T01:28:38Z",
+    "at": "2026-10-30T01:29:14Z",
     "url": "",
-    "what": "build #2388 on claude-7"
+    "what": "build #2386 on muse"
   },
   "last_sweep": {
     "at": "2026-10-30T01:16:59Z",
