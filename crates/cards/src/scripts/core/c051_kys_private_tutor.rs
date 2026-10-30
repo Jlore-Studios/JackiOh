@@ -505,7 +505,7 @@ mod tests {
 
             // §9.3: a mid-action choice is state, not a callback. Nothing in the pause is a closure, so a
             // round trip through JSON is the same game — the prompt, its options and its `resume` included.
-            let revived: GameState = serde_json::from_value(js(&paused)).expect("the state deserialises");
+            let revived: GameState = serde_json::from_value(js(&paused)).expect("the state deserializes");
             assert_eq!(revived, paused);
             assert_eq!(
                 revived.pending.as_ref().map(|pending| &pending.resume),
@@ -713,7 +713,7 @@ mod tests {
             // revealed out of p1's library reaches p2's view.
             let theirs = must(s.view(P2).pending, "p2's view of the prompt");
             assert_eq!(serde_json::to_value(&theirs).unwrap()["forYou"], json!(false));
-            let text = serde_json::to_string(&theirs).expect("a prompt view serialises");
+            let text = serde_json::to_string(&theirs).expect("a prompt view serializes");
             for def_id in revealed_def_ids(&s, &open(&s)) {
                 assert!(!text.contains(&def_id));
             }

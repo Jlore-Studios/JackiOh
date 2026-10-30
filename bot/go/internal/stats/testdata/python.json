@@ -1,0 +1,753 @@
+{
+ "facts": {
+  "events": [
+   {
+    "at": "2026-09-26T10:00:00Z",
+    "number": 5,
+    "kind": "start",
+    "run": "30",
+    "provider": "claude-1",
+    "model": "opus",
+    "action": "build",
+    "pr": null,
+    "approvers": [],
+    "count": 0
+   },
+   {
+    "at": "2026-09-26T10:30:00Z",
+    "number": 5,
+    "kind": "failed",
+    "run": "30",
+    "provider": "claude-1",
+    "model": "opus",
+    "action": "",
+    "pr": null,
+    "approvers": [],
+    "count": 0
+   },
+   {
+    "at": "2026-09-28T23:00:00Z",
+    "number": 4,
+    "kind": "start",
+    "run": "20",
+    "provider": "gpt",
+    "model": "gpt-5.6-terra",
+    "action": "build",
+    "pr": null,
+    "approvers": [],
+    "count": 0
+   },
+   {
+    "at": "2026-09-29T11:30:00Z",
+    "number": 3,
+    "kind": "start",
+    "run": "12",
+    "provider": "claude-3",
+    "model": "opus",
+    "action": "plan",
+    "pr": null,
+    "approvers": [],
+    "count": 0
+   },
+   {
+    "at": "2026-09-29T11:45:00Z",
+    "number": 3,
+    "kind": "planned",
+    "run": "12",
+    "provider": "claude-3",
+    "model": "opus",
+    "action": "",
+    "pr": null,
+    "approvers": [],
+    "count": 0
+   },
+   {
+    "at": "2026-09-29T11:50:00Z",
+    "number": 3,
+    "kind": "start",
+    "run": "13",
+    "provider": "lite",
+    "model": "lite-1",
+    "action": "build",
+    "pr": null,
+    "approvers": [],
+    "count": 0
+   },
+   {
+    "at": "2026-09-29T12:00:00Z",
+    "number": 3,
+    "kind": "opened",
+    "run": "",
+    "provider": "lite",
+    "model": "lite-1",
+    "action": "",
+    "pr": 9,
+    "approvers": [
+     "claude-2"
+    ],
+    "count": 0
+   },
+   {
+    "at": "2026-09-29T13:50:00Z",
+    "number": 9,
+    "kind": "start",
+    "run": "14",
+    "provider": "muse",
+    "model": "muse-spark",
+    "action": "revise",
+    "pr": null,
+    "approvers": [],
+    "count": 0
+   },
+   {
+    "at": "2026-09-29T14:00:00Z",
+    "number": 9,
+    "kind": "revised",
+    "run": "14",
+    "provider": "muse",
+    "model": "muse-spark",
+    "action": "",
+    "pr": null,
+    "approvers": [
+     "muse"
+    ],
+    "count": 0
+   },
+   {
+    "at": "2026-09-29T14:30:00Z",
+    "number": 9,
+    "kind": "start",
+    "run": "15",
+    "provider": "agy",
+    "model": "gemini-3.1-pro",
+    "action": "review",
+    "pr": null,
+    "approvers": [],
+    "count": 0
+   },
+   {
+    "at": "2026-09-29T14:40:00Z",
+    "number": 9,
+    "kind": "approved",
+    "run": "15",
+    "provider": "agy",
+    "model": "gemini-3.1-pro",
+    "action": "",
+    "pr": null,
+    "approvers": [
+     "agy"
+    ],
+    "count": 0
+   },
+   {
+    "at": "2026-09-29T16:30:00Z",
+    "number": 4,
+    "kind": "queued",
+    "run": "",
+    "provider": "",
+    "model": "",
+    "action": "",
+    "pr": null,
+    "approvers": [],
+    "count": 0
+   }
+  ],
+  "pulls": [
+   {
+    "number": 9,
+    "title": "Patch v0.2.Y: work for #3",
+    "body": "Closes #3",
+    "state": "closed",
+    "labels": [],
+    "user": {
+     "login": "jgoetzmann-bot",
+     "id": 324324626
+    },
+    "created_at": "2026-09-29T12:00:00Z",
+    "assignees": [],
+    "id": 5000009,
+    "pull_request": {},
+    "head": {
+     "ref": "bot/issue-3",
+     "sha": "abc",
+     "repo": {
+      "full_name": "jgoetzmann/JackiOh"
+     }
+    },
+    "base": {
+     "ref": "main"
+    },
+    "node_id": "PR_9",
+    "draft": false,
+    "auto_merge": null,
+    "mergeable_state": "clean",
+    "merged": false,
+    "merged_at": "2026-09-29T15:00:00Z",
+    "additions": 40,
+    "deletions": 5,
+    "changed_files": 4,
+    "commits": 3
+   },
+   {
+    "number": 10,
+    "title": "Patch v0.2.Y: work for #4",
+    "body": "Closes #4",
+    "state": "closed",
+    "labels": [],
+    "user": {
+     "login": "jgoetzmann-bot",
+     "id": 324324626
+    },
+    "created_at": "2026-09-29T00:00:00Z",
+    "assignees": [],
+    "id": 5000010,
+    "pull_request": {},
+    "head": {
+     "ref": "bot/issue-4",
+     "sha": "abc",
+     "repo": {
+      "full_name": "jgoetzmann/JackiOh"
+     }
+    },
+    "base": {
+     "ref": "main"
+    },
+    "node_id": "PR_10",
+    "draft": false,
+    "auto_merge": null,
+    "mergeable_state": "clean",
+    "merged": false,
+    "merged_at": "2026-09-29T03:00:00Z",
+    "additions": 100,
+    "deletions": 10,
+    "changed_files": 2,
+    "commits": 1
+   },
+   {
+    "number": 11,
+    "title": "Patch v0.2.Y: work for #5",
+    "body": "Closes #5",
+    "state": "closed",
+    "labels": [],
+    "user": {
+     "login": "jgoetzmann-bot",
+     "id": 324324626
+    },
+    "created_at": "2026-09-26T00:00:00Z",
+    "assignees": [],
+    "id": 5000011,
+    "pull_request": {},
+    "head": {
+     "ref": "bot/issue-5",
+     "sha": "abc",
+     "repo": {
+      "full_name": "jgoetzmann/JackiOh"
+     }
+    },
+    "base": {
+     "ref": "main"
+    },
+    "node_id": "PR_11",
+    "draft": false,
+    "auto_merge": null,
+    "mergeable_state": "clean",
+    "merged": false,
+    "merged_at": "2026-09-26T12:00:00Z",
+    "additions": 7,
+    "deletions": 1,
+    "changed_files": 1,
+    "commits": 1
+   },
+   {
+    "number": 12,
+    "title": "Patch v0.2.Y: work for #6",
+    "body": "Fixes #6",
+    "state": "closed",
+    "labels": [],
+    "user": {
+     "login": "jgoetzmann-bot",
+     "id": 324324626
+    },
+    "created_at": "2026-09-10T00:00:00Z",
+    "assignees": [],
+    "id": 5000012,
+    "pull_request": {},
+    "head": {
+     "ref": "bot/issue-6",
+     "sha": "abc",
+     "repo": {
+      "full_name": "jgoetzmann/JackiOh"
+     }
+    },
+    "base": {
+     "ref": "main"
+    },
+    "node_id": "PR_12",
+    "draft": false,
+    "auto_merge": null,
+    "mergeable_state": "clean",
+    "merged": false,
+    "merged_at": "2026-09-11T00:00:00Z",
+    "additions": 1000,
+    "deletions": 0,
+    "changed_files": 1,
+    "commits": 1
+   },
+   {
+    "number": 13,
+    "title": "Still open",
+    "body": "",
+    "state": "open",
+    "labels": [],
+    "user": {
+     "login": "jgoetzmann-bot",
+     "id": 324324626
+    },
+    "created_at": "2026-09-29T16:00:00Z",
+    "assignees": [],
+    "id": 5000013,
+    "pull_request": {},
+    "head": {
+     "ref": "bot/issue-7",
+     "sha": "abc",
+     "repo": {
+      "full_name": "jgoetzmann/JackiOh"
+     }
+    },
+    "base": {
+     "ref": "main"
+    },
+    "node_id": "PR_13",
+    "draft": false,
+    "auto_merge": null,
+    "mergeable_state": "clean",
+    "merged": false
+   }
+  ],
+  "commits_on_main": 1,
+  "runs": [
+   [
+    "2026-09-29T16:00:00Z",
+    "success"
+   ],
+   [
+    "2026-09-20T00:00:00Z",
+    "failure"
+   ],
+   [
+    "",
+    "success"
+   ]
+  ],
+  "spent": {
+   "gpt": [],
+   "lite": [
+    [
+     "2026-09-29T12:00:00Z",
+     120.0
+    ],
+    [
+     "2026-09-20T00:00:00Z",
+     60.0
+    ]
+   ]
+  },
+  "counted": {
+   "gpt": [
+    [
+     "2026-09-29T12:00:00Z",
+     1234567,
+     50,
+     200,
+     0.125
+    ],
+    [
+     "2026-09-01T12:00:00Z",
+     1,
+     2,
+     3,
+     0.1
+    ]
+   ],
+   "lite": []
+  }
+ },
+ "comments": [
+  {
+   "body": "Planning this now ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/12)), on `claude-3` (claude, `opus`, strong) (`bot:needs-plan`).",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/3",
+   "created_at": "2026-09-29T11:30:00Z"
+  },
+  {
+   "body": "Planned on `claude-3` (claude, `opus`, strong) ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/12)). The plan is in this issue's description.",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/3",
+   "created_at": "2026-09-29T11:45:00Z"
+  },
+  {
+   "body": "Starting work on this now ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/13)): it is difficulty:easy. I build it on `lite` (lite, `lite-1`, weak).",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/3",
+   "created_at": "2026-09-29T11:50:00Z"
+  },
+  {
+   "body": "Opened #9, built on `lite` (lite, `lite-1`, weak). Its adversarial reviewer, `claude-2` (claude, `opus`, strong), approved it on round 1 of 10.",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/3",
+   "created_at": "2026-09-29T12:00:00Z"
+  },
+  {
+   "body": "@MaxGoetzmann Queued #4; I will build it in the next run.",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/4",
+   "created_at": "2026-09-29T16:30:00Z"
+  },
+  {
+   "body": "Starting work on this now ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/20)): it is difficulty:medium. I build it on `gpt` (codex, `gpt-5.6-terra`, medium).",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/4",
+   "created_at": "2026-09-28T23:00:00Z"
+  },
+  {
+   "body": "Starting work on this now ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/30)): it is difficulty:medium. I build it on `claude-1` (claude, `opus`, strong).",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/5",
+   "created_at": "2026-09-26T10:00:00Z"
+  },
+  {
+   "body": "This run failed ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/30)): RuntimeError",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/5",
+   "created_at": "2026-09-26T10:30:00Z"
+  },
+  {
+   "body": "Starting a revision now ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/14)), because of: CI. I build it on `muse` (muse, `muse-spark`, medium).",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/9",
+   "created_at": "2026-09-29T13:50:00Z"
+  },
+  {
+   "body": "Revision pushed ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/14)) on `muse` (muse, `muse-spark`, medium); `muse` (muse, `muse-spark`, medium) reviewed it adversarially and approved it",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/9",
+   "created_at": "2026-09-29T14:00:00Z"
+  },
+  {
+   "body": "Starting a review now ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/15)), on `agy` (agy, `gemini-3.1-pro`, medium).",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/9",
+   "created_at": "2026-09-29T14:30:00Z"
+  },
+  {
+   "body": "Second review ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/15)): `agy` (agy, `gemini-3.1-pro`, medium) approved it. Auto-merge is on.",
+   "issue_url": "https://api.github.com/repos/jgoetzmann/JackiOh/issues/9",
+   "created_at": "2026-09-29T14:40:00Z"
+  }
+ ],
+ "parsed": [
+  {
+   "at": "2026-09-29T11:30:00Z",
+   "number": 3,
+   "kind": "start",
+   "run": "12",
+   "provider": "claude-3",
+   "model": "opus",
+   "action": "plan",
+   "pr": null,
+   "approvers": [],
+   "count": 0
+  },
+  {
+   "at": "2026-09-29T11:45:00Z",
+   "number": 3,
+   "kind": "planned",
+   "run": "12",
+   "provider": "claude-3",
+   "model": "opus",
+   "action": "",
+   "pr": null,
+   "approvers": [],
+   "count": 0
+  },
+  {
+   "at": "2026-09-29T11:50:00Z",
+   "number": 3,
+   "kind": "start",
+   "run": "13",
+   "provider": "lite",
+   "model": "lite-1",
+   "action": "build",
+   "pr": null,
+   "approvers": [],
+   "count": 0
+  },
+  {
+   "at": "2026-09-29T12:00:00Z",
+   "number": 3,
+   "kind": "opened",
+   "run": "",
+   "provider": "lite",
+   "model": "lite-1",
+   "action": "",
+   "pr": 9,
+   "approvers": [
+    "claude-2"
+   ],
+   "count": 0
+  },
+  {
+   "at": "2026-09-29T16:30:00Z",
+   "number": 4,
+   "kind": "queued",
+   "run": "",
+   "provider": "",
+   "model": "",
+   "action": "",
+   "pr": null,
+   "approvers": [],
+   "count": 0
+  },
+  {
+   "at": "2026-09-28T23:00:00Z",
+   "number": 4,
+   "kind": "start",
+   "run": "20",
+   "provider": "gpt",
+   "model": "gpt-5.6-terra",
+   "action": "build",
+   "pr": null,
+   "approvers": [],
+   "count": 0
+  },
+  {
+   "at": "2026-09-26T10:00:00Z",
+   "number": 5,
+   "kind": "start",
+   "run": "30",
+   "provider": "claude-1",
+   "model": "opus",
+   "action": "build",
+   "pr": null,
+   "approvers": [],
+   "count": 0
+  },
+  {
+   "at": "2026-09-26T10:30:00Z",
+   "number": 5,
+   "kind": "failed",
+   "run": "30",
+   "provider": "",
+   "model": "",
+   "action": "",
+   "pr": null,
+   "approvers": [],
+   "count": 0
+  },
+  {
+   "at": "2026-09-29T13:50:00Z",
+   "number": 9,
+   "kind": "start",
+   "run": "14",
+   "provider": "muse",
+   "model": "muse-spark",
+   "action": "revise",
+   "pr": null,
+   "approvers": [],
+   "count": 0
+  },
+  {
+   "at": "2026-09-29T14:00:00Z",
+   "number": 9,
+   "kind": "revised",
+   "run": "14",
+   "provider": "muse",
+   "model": "muse-spark",
+   "action": "",
+   "pr": null,
+   "approvers": [
+    "muse"
+   ],
+   "count": 0
+  },
+  {
+   "at": "2026-09-29T14:30:00Z",
+   "number": 9,
+   "kind": "start",
+   "run": "15",
+   "provider": "agy",
+   "model": "gemini-3.1-pro",
+   "action": "review",
+   "pr": null,
+   "approvers": [],
+   "count": 0
+  },
+  {
+   "at": "2026-09-29T14:40:00Z",
+   "number": 9,
+   "kind": "approved",
+   "run": "15",
+   "provider": "agy",
+   "model": "gemini-3.1-pro",
+   "action": "",
+   "pr": null,
+   "approvers": [
+    "agy"
+   ],
+   "count": 0
+  }
+ ],
+ "credits": {
+  "built": {
+   "9": "lite",
+   "10": "gpt"
+  },
+  "planned": {
+   "9": [
+    "claude-3"
+   ]
+  },
+  "revised": {
+   "9": [
+    "muse"
+   ]
+  },
+  "approved": {
+   "9": [
+    "claude-2",
+    "muse",
+    "agy"
+   ]
+  }
+ },
+ "section_all_time": "<details><summary><b>All time</b>: 6 runs, 4 pull requests merged, +1,147 / −16 lines</summary>\n\n| Subscription | Models | Runs | Plans | Builds | Revisions | Reviews | Outcomes delivered | PRs opened | Merged | Lines merged | Paused | Failed | Could not run | Model time |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n| `gpt` | `gpt-5.6-terra` | 1 | 0 | 1 | 0 | 0 | 0 of 0 | 1 | 1 | +100 / −10 | 0 | 0 | 0 | 0.0 h |\n| `lite` | `lite-1` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 | 0 | 0 | 0 | 3.0 h (its last 2 runs) |\n| `agy` | `gemini-3.1-pro` | 1 | 0 | 0 | 0 | 1 | 1 of 1 | 0 | 0 | +0 / −0 | 0 | 0 | 0 | 0.0 h |\n| `claude-1` | `opus` | 1 | 0 | 1 | 0 | 0 | 0 of 1 | 0 | 0 | +0 / −0 | 0 | 1 | 0 | 0.0 h |\n| `claude-3` | `opus` | 1 | 1 | 0 | 0 | 0 | 1 of 1 | 0 | 0 | +0 / −0 | 0 | 0 | 0 | 0.0 h |\n| `muse` | `muse-spark` | 1 | 0 | 0 | 1 | 0 | 1 of 1 | 0 | 0 | +0 / −0 | 0 | 0 | 0 | 0.0 h |\n| _not recorded_ | — | 0 | 0 | 0 | 0 | 0 | 0 of 0 | 3 | 2 | +1,007 / −1 | 0 | 0 | 0 | 0.0 h |\n\n**Tokens and cost**\n\n| Subscription | Input tokens | Output tokens | Cached tokens | Cost (USD) |\n|---|---|---|---|---|\n| `gpt` | 1,234,568 | 52 | 203 | $0.23 |\n\n```mermaid\nxychart-beta\n    title \"Runs started, by subscription (all time)\"\n    x-axis [\"gpt\", \"lite\", \"agy\", \"claude-1\", \"claude-3\", \"muse\"]\n    y-axis \"runs\"\n    bar [1, 1, 1, 1, 1, 1]\n```\n\n```mermaid\nxychart-beta\n    title \"Lines added in merged pull requests, by builder (all time)\"\n    x-axis [\"gpt\", \"lite\", \"not recorded\"]\n    y-axis \"lines\"\n    bar [100, 40, 1007]\n```\n\n```mermaid\nxychart-beta\n    title \"Model hours, by subscription (all time)\"\n    x-axis [\"lite\"]\n    y-axis \"hours\"\n    bar [3.0]\n```\n\n```mermaid\nxychart-beta\n    title \"What runs ended in (all time)\"\n    x-axis [\"opened\", \"revised\", \"planned\", \"approved\", \"split\", \"closed tree\", \"paused\", \"not approved\", \"failed\", \"infra\"]\n    y-axis \"runs\"\n    bar [1, 1, 1, 1, 0, 0, 0, 0, 1, 0]\n```\n\n</details>\n",
+ "summary_quiet": "| | All time | All time |\n|---|---|---|\n| Runs started | 6 | 6 |\n| … plans · builds · revisions · reviews | 1 · 3 · 1 · 1 | 1 · 3 · 1 · 1 |\n| Outcomes that delivered something | 4 of 5 (80%) | 4 of 5 (80%) |\n| Paused on a usage limit | 0 | 0 |\n| Failed review or failed | 1 | 1 |\n| Could not run | 0 | 0 |\n| Pull requests opened | 1 | 1 |\n| Pull requests merged | 0 | 0 |\n| Issues closed by them | 0 | 0 |\n| Lines merged (added / removed) | +0 / −0 | +0 / −0 |\n| Files changed in them | 0 | 0 |\n| Commits in them | 0 | 0 |\n| Median time from opening to merge | — | — |\n| Model hours | 3.0 | 3.0 |\n| Model tokens (in / out / cached) | 1,234,568 / 52 / 203 | 1,234,568 / 52 / 203 |\n| Model cost (USD) | $0.23 | $0.23 |\n| `bot-night.yml` workflow runs | 3 | 3 |\n| Requests answered (`Queued …`) | 1 | 1 |",
+ "modes": "| | All time |\n|---|---|\n| One-shot builds started | 0 |\n| Splits run | 0 |\n| Sub-issues they opened | 0 |\n| Trees closed, their end state holding | 0 |",
+ "lines": "+1,147 / −16",
+ "tokens": "1,234,568 / 52 / 203",
+ "pct": [
+  "12%",
+  "38%",
+  "67%",
+  "—",
+  "100%"
+ ],
+ "sums": [
+  {
+   "xs": [],
+   "sum": 0,
+   "repr": "0"
+  },
+  {
+   "xs": [
+    3.1279556900099084
+   ],
+   "sum": 3.1279556900099084,
+   "repr": "3.1279556900099084"
+  },
+  {
+   "xs": [
+    78.11213676478245,
+    0.5748920043939157
+   ],
+   "sum": 78.68702876917637,
+   "repr": "78.68702876917637"
+  },
+  {
+   "xs": [
+    0.25598224183880985,
+    0.09097040631431023,
+    -374956584419848.8
+   ],
+   "sum": -374956584419848.44,
+   "repr": "-374956584419848.44"
+  },
+  {
+   "xs": [
+    50.180658164491135,
+    -907130133438650.6,
+    7.093260729478699,
+    0.6632147904952412,
+    0.05771029486174987,
+    5.950717606772575,
+    -465826806177562.75,
+    2896092863316762.5,
+    5406858855321425.0,
+    5.602572770128128e-10
+   ],
+   "sum": 6929994779022038.0,
+   "repr": "6929994779022038.0"
+  },
+  {
+   "xs": [
+    1030557124435913.5,
+    -3723975427257312.0,
+    0.39505780519337064,
+    -4964144951134918.0,
+    93.26745299769684,
+    0.1949921005480437,
+    0.12040692452954059,
+    -7943794815224912.0,
+    -818550107957698.5,
+    5.251965038114515e-10,
+    2.407169455149418,
+    6.089590190364037e-10,
+    0.08264604477847348,
+    19.795452437228786,
+    0.5015489643796657,
+    0.14042555204075585,
+    0.5351996063489691,
+    1.1224037952309451,
+    1.9614205944465608,
+    0.02289806215248457,
+    0.6612767665755561,
+    0.2321150085863671,
+    0.0424685993180538,
+    6.471288545276688e-10,
+    0.0947703121873517,
+    106.44483506857101,
+    0.07445766258344229,
+    0.11836954847693523,
+    0.345585096189887,
+    -7682329884725208.0,
+    7383633795947941.0,
+    46.91396437598725,
+    0.02683357329964616,
+    0.13374753735932327,
+    8.833838264415125e-10,
+    103.67813636382182,
+    7.06396709496502e-10,
+    2.2529860959785903,
+    114.92774447567895,
+    829846946613320.8,
+    2319568668195357.5,
+    -120630598437988.52,
+    2627466192985379.5,
+    0.01456763924579806,
+    2.01238103634809,
+    3.145223154232814,
+    0.04566437222028748,
+    47.7683556666781,
+    12.424451245238913,
+    7.46973859424251
+   ],
+   "sum": -1.1062353056559556e+16,
+   "repr": "-1.1062353056559556e+16"
+  }
+ ],
+ "bars": [
+  "```mermaid",
+  "xychart-beta",
+  "    title \"T\"",
+  "    x-axis [\"x\", \"z\", \"w\"]",
+  "    y-axis \"a\"",
+  "    bar [1, 2.2, 0.1]",
+  "```",
+  "_T: nothing yet._",
+  "_T: none._"
+ ],
+ "line": [
+  "```mermaid",
+  "xychart-beta",
+  "    title \"L\"",
+  "    x-axis [\"09-28\", \"09-29\"]",
+  "    y-axis \"runs\"",
+  "    line [0, 3]",
+  "```",
+  "_L: nothing yet._"
+ ],
+ "titles": [
+  "a\\|b",
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+  "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé…"
+ ]
+}

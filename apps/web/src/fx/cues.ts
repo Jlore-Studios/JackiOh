@@ -22,7 +22,7 @@
 // row it swept and lands each hit as the fog reaches its lane (`sweepCues`), and a card another card
 // cast flares at its caster's hero, bigger with each cast of the burst (`castCues`). A readable card's
 // family lends its look (looks.ts) to those and, as an accent, to a play, a summon and a spell's hit:
-// the same recipe in the colours, particles and emblem of what made it.
+// the same recipe in the colors, particles and emblem of what made it.
 
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
@@ -217,7 +217,7 @@ const RESULT_TUNING = {
   smokeDelayMs: 300,
 } as const;
 
-/** The bottom centre of a box: where a landing unit kicks up dust. */
+/** The bottom center of a box: where a landing unit kicks up dust. */
 const FOOT: FxPoint = { x: 0.5, y: 1 };
 
 const HIDDEN_ID = "hidden";
@@ -812,7 +812,7 @@ const radiant: Recipe = (event, p) => {
 const smoke: Recipe = (event, p) => {
   if (event.type !== "transformed") return [];
   const at = anchor(p.tgt);
-  // Centred on the unit that changed, and light: an area of big puffs read as smoke drifting over
+  // Centered on the unit that changed, and light: an area of big puffs read as smoke drifting over
   // the neighbouring lanes on a phone (integration QA).
   return [
     burst(p.env.intensity, "smoke", at, "point", 0, "transformSmoke"),
@@ -862,7 +862,7 @@ const trap: Recipe = (event, p) => {
   const at = anchor(p.tgt);
   const delay = frac(FX_TRAP_BURST_AT, p.D);
   // #1447: the reveal names the card only when the view shows this very instance (§10.8, R33); its burst then takes the
-  // card's flavor colours and particle. An opponent's face-down trap is not in the view, so its burst stays arcane.
+  // card's flavor colors and particle. An opponent's face-down trap is not in the view, so its burst stays arcane.
   const look = FX_FLAVOR_LIVE && locateInstance(p.view, event.instanceId) !== null ? flavorLookOf(event.defId, event.instanceId, p.view) : null;
   // A tight ring on the trap's own zone, not motes over the whole area (integration QA).
   const cues: FxCue[] = [
@@ -918,7 +918,7 @@ const turnBanner: Recipe = (event, p) => {
   // R1183002: the AI plays the rest of the turn.
   if (event.type === "autopilotEngaged") return [banner(p.D, FX_TEXT.autopilot, "muted")];
   // R1843000, R1843002: the agreement that removes a player, and the escape, in the removed or the
-  // fleeing player's colours.
+  // fleeing player's colors.
   if (event.type === "votedOut") return [banner(p.D, FX_TEXT.votedOut, sideOf(p.view, event.player))];
   if (event.type === "fled") return [banner(p.D, FX_TEXT.escaped, sideOf(p.view, event.player))];
   // R676: a Glitch's banner is its own corrupted name (cards/glitch.ts), whatever it did.
@@ -1063,7 +1063,7 @@ function healthSetCues(event: Extract<GameEvent, { type: "healthSet" }>, p: Plan
   return [ring(p.D, "arcane", at, 0)];
 }
 
-/** Classic+ #35 Rollback: the whole board rewinds, a swirl of arcane at its centre and a jolt. */
+/** Classic+ #35 Rollback: the whole board rewinds, a swirl of arcane at its center and a jolt. */
 const rewind: Recipe = (event, p) => {
   if (event.type !== "rolledBack") return [];
   const cues: FxCue[] = [
@@ -1298,7 +1298,7 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   overflow,
   // R436: the slot-machine reveal of what Call to Chaos rolled (chaos.ts).
   chaos: (event, p) => chaosCues(event, p.D, p.env.intensity),
-  // R437: a mark branded onto its card in the mark's colours (brand.ts).
+  // R437: a mark branded onto its card in the mark's colors (brand.ts).
   brand: (event, p) => brandCues(event, anchor(p.tgt), p.D, p.env.intensity),
   rewind,
   // R1363: a hit the Armor took whole, a full shield over the target (shield.ts).

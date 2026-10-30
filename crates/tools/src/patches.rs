@@ -301,7 +301,7 @@ pub(crate) mod js {
         serde_json::from_str(text)
     }
 
-    /// Compact JSON for anything serde writes in field order (fields serialise in declaration order).
+    /// Compact JSON for anything serde writes in field order (fields serialize in declaration order).
     pub fn stringify<T: serde::Serialize + ?Sized>(value: &T) -> String {
         serde_json::to_string(value).unwrap_or_else(|error| panic!("JSON.stringify: {error}"))
     }
@@ -980,7 +980,7 @@ pub mod patches_io {
     /// Fills a raw entry's face text from the entry's printed values: `{key|singular|plural}` takes the
     /// singular wording at 1 and the plural at any other value; unknown keys are left as written. A
     /// private copy (the engine's `fill_params` takes a typed `CardDef`, which a snapshot entry, or a
-    /// test's partial one, need not deserialise into).
+    /// test's partial one, need not deserialize into).
     fn fill_params(def: &Object, face: &str) -> String {
         let text = def
             .get(face)
@@ -1529,8 +1529,9 @@ pub mod patches_io {
 /// - a **major** (a set reaches `SHIPPED_SETS`, unless the owner wraps it into the current line,
 ///   `classify::WRAPPED_SETS`, R2204000, when it earns its cards' tier) is `v0.(Z+1).0`: after
 ///   v0.3.17 it is v0.4.0;
-/// - a **patch** (`PATCH_MIN_CARDS` or more families play differently, or a rule every game meets,
-///   R2455000) is `v0.Z.(X+1)`: after v0.3.17 or v0.3.17c it is v0.3.18;
+/// - a **patch** (`PATCH_MIN_REPRINTS` or more families reprinted, `PATCH_MIN_CARDS` or more that play
+///   differently, or a rule every game meets, R2455000, R2499000) is `v0.Z.(X+1)`: after v0.3.17 or
+///   v0.3.17c it is v0.3.18;
 /// - a **micro** (anything smaller) is the newest version with the next letter: after v0.3.17 it is
 ///   v0.3.17b, after v0.3.17b v0.3.17c.
 ///
@@ -2620,6 +2621,28 @@ mod tests {
                 let (tier, _) = crate::patches::tier_of(&previous, &with("Classic", "classic"), &fragment);
                 assert_eq!(tier, Tier::Major);
                 assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.6.0");
+            }
+
+            // R2499000: a fragment that reprints `PATCH_MIN_REPRINTS` cards ships as a patch, one
+            // fewer as a micro, read from the two snapshots alone.
+            #[test]
+            fn r2499000_a_balance_pass_of_the_reprint_bar_ships_as_a_patch() {
+                use crate::patches::patches_io::{Catalog, PendingFragment};
+                let entry = |id: String, cost: i64| {
+                    let json = serde_json::json!({ "id": id, "name": id, "set": "Core", "cost": cost });
+                    (id, serde_json::from_value(json).expect("an entry"))
+                };
+                let bar = crate::classify::PATCH_MIN_REPRINTS;
+                let costing = |changed: usize| -> Catalog {
+                    (1..=bar)
+                        .map(|k| entry(format!("core-{k:03}"), if k <= changed { 2 } else { 1 }))
+                        .collect()
+                };
+                let fragment = PendingFragment::default();
+                let (tier, plays) = crate::patches::tier_of(&costing(0), &costing(bar), &fragment);
+                assert_eq!((tier, plays.len()), (Tier::Patch, bar));
+                let (tier, _) = crate::patches::tier_of(&costing(0), &costing(bar - 1), &fragment);
+                assert_eq!(tier, Tier::Micro);
             }
 
             #[test]

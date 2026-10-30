@@ -51,7 +51,7 @@ pub enum DuosChoice {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DuosRoom {
-    /// `ROOM_CODE_LENGTH` characters of the room-code alphabet, normalised.
+    /// `ROOM_CODE_LENGTH` characters of the room-code alphabet, normalized.
     pub code: String,
     /// The profile that made it: seat a1.
     pub host: String,
@@ -216,7 +216,7 @@ impl Tx<'_> {
         duos_dispatch!(self, rooms_create(room))
     }
 
-    /// The room under `code` (normalised), joined or not, expired or not.
+    /// The room under `code` (normalized), joined or not, expired or not.
     pub async fn duos_rooms_get(&mut self, code: &str) -> StoreResult<Option<DuosRoom>> {
         duos_dispatch!(self, rooms_get(code))
     }

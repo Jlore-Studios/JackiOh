@@ -127,7 +127,7 @@ function usePlayAgain(matchId: string, reading: boolean): DuosPlayAgain {
 
   useEffect(() => {
     if (!reading) return undefined;
-    let cancelled = false;
+    let canceled = false;
     let out = false; // one read at a time, as Rematch.tsx's
     const read = (): void => {
       if (out) return;
@@ -135,7 +135,7 @@ function usePlayAgain(matchId: string, reading: boolean): DuosPlayAgain {
       getDuosAgain(matchId)
         .then(
           (answer) => {
-            if (cancelled) return;
+            if (canceled) return;
             setStatus(answer);
             if (answer.matchId !== null) goToMatch(answer.matchId);
           },
@@ -149,7 +149,7 @@ function usePlayAgain(matchId: string, reading: boolean): DuosPlayAgain {
     const timer = window.setInterval(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
     const stopWake = pageWake(read);
     return () => {
-      cancelled = true;
+      canceled = true;
       stopWake();
       window.clearInterval(timer);
     };

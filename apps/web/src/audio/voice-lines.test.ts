@@ -1,4 +1,4 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviours B33 and B34, and R655's file: `card-audio.json5`
+// Polish task 2 (docs/polish/2-sound.md), behaviors B33 and B34, and R655's file: `card-audio.json5`
 // against the catalog it voices.
 //
 //   B33  exactly the catalog's ids (Core's 111 among them), each card's kind from its catalog type

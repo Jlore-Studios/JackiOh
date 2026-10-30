@@ -70,7 +70,7 @@ describe("savedBrowse", () => {
         types: "Unit",
         search: 7,
         ownedOnly: "yes",
-        sort: { key: "colour", dir: "asc" },
+        sort: { key: "color", dir: "asc" },
       }),
     );
     const back = loadBrowse(storage);

@@ -413,7 +413,7 @@ mod r331_the_sealed_pick {
     }
 
     #[test]
-    fn r331_a_pick_naming_another_game_is_refused_as_stale_and_a_retry_is_recognised_by_its_game() {
+    fn r331_a_pick_naming_another_game_is_refused_as_stale_and_a_retry_is_recognized_by_its_game() {
         let after_game1 = play(&fresh(), [0, 1], Winner::P2, "match-2");
         // A late duplicate of game 1's pick of slot 0 must not become game 2's.
         assert_eq!(

@@ -17,13 +17,13 @@ export type CanvasFx = {
   projectile(preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
   /** #1442: a flavor's shot (`shots.ts`) from `from` to `to`, bursting `preset` where it lands; `density` (default 1) scales its trail and that burst. */
   shot(shot: FxShot, colors: readonly string[], preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
-  /** Jagged branching polyline from the box centre, white-hot fading to dark over durationMs. */
+  /** Jagged branching polyline from the box center, white-hot fading to dark over durationMs. */
   crack(box: FxBox, durationMs: number): void;
   /** An expanding elliptical shock wave about the box (RING.scaleFrom to RING.scaleTo), fading over durationMs. */
   ring(preset: FxPreset, box: FxBox, durationMs: number): void;
   /**
    * The preset's bloom at `at`, sized against `box` and the burst's `count`; a preset without a flash paints
-   * nothing. `colors` (#1447, a burst's palette, hot first) gives it the first colour as its core and the last as its
+   * nothing. `colors` (#1447, a burst's palette, hot first) gives it the first color as its core and the last as its
    * glow; the preset still sets its size and length.
    */
   flash(preset: FxPreset, at: FxVec, box: FxBox, count: number, colors?: readonly string[]): void;
@@ -45,7 +45,7 @@ const PROJECTILE = {
   trailPower: 0.35,
   /** Each trail particle is born this far (CSS px, either way) off the path, so the trail has body. */
   trailJitter: 4,
-  /** Head glow: a radial gradient, radii in CSS px; the body colour sits at `bodyRadius`, the halo at `haloAt` of the radius. */
+  /** Head glow: a radial gradient, radii in CSS px; the body color sits at `bodyRadius`, the halo at `haloAt` of the radius. */
   haloRadius: 24,
   haloAt: 0.7,
   haloAlpha: 0.25,
@@ -78,7 +78,7 @@ const CRACK = {
   branchTurnMax: 1.1,
   maxDepth: 2,
   growFraction: 0.25,
-  /** Colour ramp points (fraction of duration): white-hot → orange by `hotUntil`, → dark by `darkAt`. */
+  /** Color ramp points (fraction of duration): white-hot → orange by `hotUntil`, → dark by `darkAt`. */
   hotUntil: 0.35,
   darkAt: 0.7,
   /** The crack fades out between these fractions of its duration, so it goes with the card. */
@@ -109,7 +109,7 @@ const RING = {
     [1.8, 0.34],
     [0.7, 0.95],
   ],
-  /** A painted (source-over) ring is dust or void: soft strokes in its pale colour, no hot core, so it reads as a cloud, not a line. */
+  /** A painted (source-over) ring is dust or void: soft strokes in its pale color, no hot core, so it reads as a cloud, not a line. */
   paintedPasses: [
     [5.2, 0.06],
     [3.4, 0.09],
@@ -167,7 +167,7 @@ type Flash = {
 };
 
 type Crack = {
-  /** Flat segments: x1, y1, x2, y2, reveal (0..1, by distance from the centre). */
+  /** Flat segments: x1, y1, x2, y2, reveal (0..1, by distance from the center). */
   segments: number[];
   durationMs: number;
   elapsed: number;

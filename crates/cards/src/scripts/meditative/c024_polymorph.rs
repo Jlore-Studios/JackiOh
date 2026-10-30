@@ -6,7 +6,7 @@
 //! (Core #41 Sheepish's verb): in place, no Cry (R691); an Immutable Unit in play is no target (R781001), and one beside the target is left alone (R23). The Radiant
 //! face first lists the Units next to the target, on the target's side and row (§3.1), and transforms
 //! each into a base Sheep, as Core #34 Collateral Damage reaches its neighbours before its target. The
-//! neighbours change whether or not the target does. A Spell's unlabelled one-time text is its Cry.
+//! neighbours change whether or not the target does. A Spell's unlabeled one-time text is its Cry.
 
 use jackioh_engine::prelude::*;
 

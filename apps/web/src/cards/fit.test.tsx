@@ -1,4 +1,4 @@
-// The rules box's reading floor (fit.ts), against a modelled layout. jsdom has no layout, so
+// The rules box's reading floor (fit.ts), against a modeled layout. jsdom has no layout, so
 // `useFitText` is a no-op there (CardFace.test.tsx B15); a rules box gets a small model instead: a
 // known box height, a font of base size × tier scale × `--cf-fit` (no tier scale in the long
 // layout, as cards.css has it) and text that needs `need × font²` px of height. The component specs
@@ -264,7 +264,7 @@ describe("the batched scheduler", () => {
     expect(many).toBe(one);
   });
 
-  it("drops a queued pass that is cancelled, and a pass's element is left as it was", () => {
+  it("drops a queued pass that is canceled, and a pass's element is left as it was", () => {
     modelLayout(model);
     const { container } = render(<Probe content="rules" />);
     const text = container.querySelector<HTMLElement>('[data-probe="text"]');
@@ -483,7 +483,7 @@ describe("a face the browser skips waits for it (#263)", () => {
     expect(loose).toHaveBeenCalledTimes(1);
   });
 
-  it("drops a parked fit that is cancelled", async () => {
+  it("drops a parked fit that is canceled", async () => {
     modelLayout(model);
     const state = { skipped: true };
     const { item, text } = skippable(state);

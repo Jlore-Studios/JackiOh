@@ -3,7 +3,7 @@
 //! only", so there is no script: both keywords are printed on the catalog faces and §10.4 layer 1
 //! reads them from the def; granting them here would double the Armor, which sums across sources.
 //!
-//! Where the behaviour lives instead:
+//! Where the behavior lives instead:
 //!   Armor 7        — §4.4 step 2 subtracts the unit's total Armor from every incoming hit, so a
 //!                    7-damage hit is reduced to 0 and the zero rule (R63) makes it a non-event.
 //!   Indestructible — §4.4 step 4 (takes no damage), §4.5 step 1 and R46 (destroy marks are

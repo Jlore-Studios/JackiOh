@@ -150,7 +150,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
   const over = received?.view.status === "over";
   useEffect(() => {
     if (over) return;
-    let cancelled = false;
+    let canceled = false;
     // A wake while a read is out would only repeat it; each effect run counts its own.
     let reading = false;
     const read = (): void => {
@@ -162,12 +162,12 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
       attempt(() => getSeries(token, seriesId))
         .then(
           (view) => {
-            if (cancelled) return;
+            if (canceled) return;
             accept(view, request);
             setLoadError(null);
           },
           (cause: unknown) => {
-            if (!cancelled) setLoadError(messageOf(cause));
+            if (!canceled) setLoadError(messageOf(cause));
           },
         )
         .finally(() => {
@@ -179,7 +179,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
     // A throttled tab's interval stalls; waking it reads the series again at once.
     const stopWake = pageWake(read);
     return () => {
-      cancelled = true;
+      canceled = true;
       stopWake();
       clearInterval(handle);
     };

@@ -156,12 +156,12 @@ mod r176_my_pawns_projection_follows_the_combat {
 
         s.attack(&panther, RIGHT_HOUSE);
 
-        let cancelled = s
+        let canceled = s
             .events()
             .iter()
             .filter(|event| matches!(event, GameEvent::AttackCancelled { attacker_id, .. } if *attacker_id == panther.id))
             .count();
-        assert_eq!(cancelled, 1);
+        assert_eq!(canceled, 1);
         assert!(s.state().result.is_none());
     }
 

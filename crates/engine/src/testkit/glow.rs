@@ -13,7 +13,7 @@ use crate::wire::PlayerId;
 
 /// `card` as its JSON, `None` for no card at all (TS `null` or `undefined`).
 fn as_json<T: Serialize>(card: Option<&T>) -> Option<Value> {
-    let value = serde_json::to_value(card?).expect("a view serialises");
+    let value = serde_json::to_value(card?).expect("a view serializes");
     if value.is_null() { None } else { Some(value) }
 }
 
@@ -35,7 +35,7 @@ pub fn glows<T: Serialize>(card: Option<&T>) -> bool {
 
 /// The viewer's own view, as its JSON.
 fn view_json(s: &Scenario, viewer: PlayerId) -> Value {
-    serde_json::to_value(s.view(viewer)).expect("a view serialises")
+    serde_json::to_value(s.view(viewer)).expect("a view serializes")
 }
 
 /// Does this hand card glow in its holder's own view right now?

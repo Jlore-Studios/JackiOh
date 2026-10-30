@@ -34,7 +34,7 @@ import {
   EVEN,
   dealLandingFan,
   fanPool,
-  favouringFullArt,
+  favoringFullArt,
   featureWeight,
   rotateFan,
   rotationPool,
@@ -64,7 +64,7 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia(REDUCED_MOTION_QUERY).matches;
 }
 
-/** `data-motion` exposes the media query or setting to tests; CSS also honours both directly. */
+/** `data-motion` exposes the media query or setting to tests; CSS also honors both directly. */
 function useMotion(): LandingMotion {
   const [reduced, setReduced] = useState(prefersReducedMotion);
   const settingReduces = useSetting("reduceMotion");
@@ -489,13 +489,13 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
   const questsToken =
     economyLive && account.kind === "ready" && account.me.profile.status === "active" ? account.token : null;
   // R374 deals once per mount; R639 uses all shipped cards after enough games; R704 rotates that pool.
-  // R1017002: from the cards that print whole on a fan card, a hero's full-art card favoured.
+  // R1017002: from the cards that print whole on a fan card, a hero's full-art card favored.
   const fullPool = usePlayerStats().games >= ROTATION_MIN_GAMES;
   const { fullArt } = useCardSettings();
   const [hand, setHand] = useState(() =>
     readPlayerStats().games >= ROTATION_MIN_GAMES
-      ? dealLandingFan(random, rotationPool(fullArt), favouringFullArt(featureWeight, fullArt))
-      : dealLandingFan(random, fanPool(fullArt), favouringFullArt(EVEN, fullArt)),
+      ? dealLandingFan(random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
+      : dealLandingFan(random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
   );
   const [open, setOpen] = useState<CardDef | null>(null);
   const [held, setHeld] = useState(false);
@@ -510,8 +510,8 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
       nextSlot.current += 1;
       setHand((current) =>
         fullPool
-          ? rotateFan(current, at, random, rotationPool(fullArt), favouringFullArt(featureWeight, fullArt))
-          : rotateFan(current, at, random, fanPool(fullArt), favouringFullArt(EVEN, fullArt)),
+          ? rotateFan(current, at, random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
+          : rotateFan(current, at, random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
       );
     }, ROTATION_INTERVAL_MS);
     return () => {

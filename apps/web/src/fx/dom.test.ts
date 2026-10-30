@@ -6,7 +6,7 @@
 // `content: attr(…)`), placement in `--fx-x/--fx-y/--fx-w/--fx-h`, flight in `--fx-dx/--fx-dy`, and
 // timing in `--fx-ms`. A cue missing a box its kind needs mounts nothing and returns null.
 //
-// The boxes are whole numbers with even sizes, so every centre is a whole number and the expected
+// The boxes are whole numbers with even sizes, so every center is a whole number and the expected
 // lengths are plain `<n>px` strings.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,8 +14,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mountDomEffect, type DomEffect } from "./dom.ts";
 import type { FxBox, FxDomCue } from "./types.ts";
 
-const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // centre (140, 260)
-const TO: FxBox = { x: 700, y: 40, width: 60, height: 60 }; // centre (730, 70)
+const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
+const TO: FxBox = { x: 700, y: 40, width: 60, height: 60 }; // center (730, 70)
 
 let root: HTMLElement;
 
@@ -56,7 +56,7 @@ function expectMounted(effect: DomEffect | null, cue: FxDomCue): HTMLElement {
   return el;
 }
 
-function expectCentredOn(el: HTMLElement, box: FxBox): void {
+function expectCenteredOn(el: HTMLElement, box: FxBox): void {
   expect(cssVar(el, "--fx-x")).toBe(`${box.x + box.width / 2}px`);
   expect(cssVar(el, "--fx-y")).toBe(`${box.y + box.height / 2}px`);
   expect(cssVar(el, "--fx-w")).toBe(`${box.width}px`);
@@ -100,13 +100,13 @@ const ZONE: FxDomCue = { kind: "zone", at: anchor, tint: TINT, text: "×12", dir
  * ------------------------------------------------------------------------------------------- */
 
 describe("B39 — mountDomEffect mounts one element per cue", () => {
-  it("B39 a damage splat carries its tone and a hyphen-minus amount, centred on its box", () => {
+  it("B39 a damage splat carries its tone and a hyphen-minus amount, centered on its box", () => {
     const el = expectMounted(mountDomEffect(root, SPLAT_DAMAGE, { at: AT }), SPLAT_DAMAGE);
     expect(el.getAttribute("data-tone")).toBe("damage");
     const amount = el.getAttribute("data-amount") ?? "";
     expect(amount).toBe("-5");
     expect(amount.charCodeAt(0)).toBe(0x2d);
-    expectCentredOn(el, AT);
+    expectCenteredOn(el, AT);
   });
 
   it("B39 a heal splat carries a plus-sign amount", () => {
@@ -115,7 +115,7 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     const amount = el.getAttribute("data-amount") ?? "";
     expect(amount).toBe("+3");
     expect(amount.charCodeAt(0)).toBe(0x2b);
-    expectCentredOn(el, AT);
+    expectCenteredOn(el, AT);
   });
 
   it("B39 a health-loss splat is signed like damage", () => {
@@ -124,10 +124,10 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(el.getAttribute("data-amount")).toBe("-2");
   });
 
-  it("B39 rays carry their tone and are centred on their box", () => {
+  it("B39 rays carry their tone and are centered on their box", () => {
     const el = expectMounted(mountDomEffect(root, RAYS, { at: AT }), RAYS);
     expect(el.getAttribute("data-tone")).toBe("mythic");
-    expectCentredOn(el, AT);
+    expectCenteredOn(el, AT);
   });
 
   it("B39 a sheen covers its box from the top-left corner", () => {
@@ -135,7 +135,7 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expectCovering(el, AT);
   });
 
-  it("B39 a ghost starts at its source's centre and flies by the offset to its destination's centre", () => {
+  it("B39 a ghost starts at its source's center and flies by the offset to its destination's center", () => {
     const el = expectMounted(mountDomEffect(root, GHOST, { from: AT, to: TO }), GHOST);
     expect(cssVar(el, "--fx-x")).toBe("140px");
     expect(cssVar(el, "--fx-y")).toBe("260px");
@@ -300,9 +300,9 @@ describe("R502 R437 R436 — the v0.2.0 DOM kinds", () => {
     expectCovering(el, AT);
   });
 
-  it("R437 a brand is centred on its card and paints in the mark's colours", () => {
+  it("R437 a brand is centered on its card and paints in the mark's colors", () => {
     const el = expectMounted(mountDomEffect(root, BRAND, { at: AT }), BRAND);
-    expectCentredOn(el, AT);
+    expectCenteredOn(el, AT);
     expect(cssVar(el, "--fx-mark-rim")).toBe("#b46bff");
     expect(cssVar(el, "--fx-mark-core")).toBe("#f2e2ff");
     expect(cssVar(el, "--fx-mark-glow")).toBe("#7a2cff");

@@ -25,7 +25,7 @@ fn apply(bench: &mut Bench, state: &mut GameState, effects: &[Effect], self_id: 
 }
 
 fn of_type(events: &[GameEvent], kind: GameEventType) -> Value {
-    serde_json::to_value(events_of_type(events, kind)).expect("events serialise")
+    serde_json::to_value(events_of_type(events, kind)).expect("events serialize")
 }
 
 mod e7_set_health {
@@ -125,7 +125,7 @@ mod e7_set_health {
                 .events
                 .iter()
                 .filter(|event| event.event_type() == GameEventType::HealthSet)
-                .map(|event| serde_json::to_value(event).expect("an event serialises"))
+                .map(|event| serde_json::to_value(event).expect("an event serializes"))
                 .collect();
             assert_eq!(
                 seen,
@@ -158,7 +158,7 @@ mod e8_convert_healing {
             &[convert_healing(Default::default())],
             Some(moon.id.as_str()),
         );
-        let mods = serde_json::to_value(&state.players[PlayerId::P2].mods).expect("mods serialise");
+        let mods = serde_json::to_value(&state.players[PlayerId::P2].mods).expect("mods serialize");
         let Value::Array(mods) = mods else {
             panic!("a list of modifiers");
         };

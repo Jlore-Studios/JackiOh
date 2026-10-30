@@ -60,13 +60,13 @@ function useRead<T>(token: string | null, read: (token: string) => Promise<T>): 
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (token === null) return;
-    let cancelled = false;
+    let canceled = false;
     read(token).then(
       (value) => {
-        if (!cancelled) setState({ kind: "ready", value });
+        if (!canceled) setState({ kind: "ready", value });
       },
       (cause: unknown) => {
-        if (cancelled) return;
+        if (canceled) return;
         setState({
           kind: "failed",
           ...readFailureOf(cause),
@@ -78,7 +78,7 @@ function useRead<T>(token: string | null, read: (token: string) => Promise<T>): 
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, read, attempt]);
   return state;

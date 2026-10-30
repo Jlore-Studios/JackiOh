@@ -59,7 +59,7 @@ fn event_types(events: &[GameEvent]) -> Vec<GameEventType> {
 }
 
 fn to_json(value: &impl serde::Serialize) -> String {
-    serde_json::to_string(value).expect("serialises")
+    serde_json::to_string(value).expect("serializes")
 }
 
 mod r79_a_timeout_acts_only_for_the_player_whose_clock_ran_out {

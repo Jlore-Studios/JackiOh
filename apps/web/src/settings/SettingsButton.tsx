@@ -6,7 +6,7 @@
 //
 // The icon is drawn, not typed: U+2699 in the system font rendered about 8 px wide at the button's
 // size and read as a dot (integration QA). The path is a gear of eight teeth with a hub, filled in
-// `currentColor` so every skin's button colour applies.
+// `currentColor` so every skin's button color applies.
 
 import { useCallback, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";

@@ -45,9 +45,9 @@ mod parse_mint_args {
 
     #[test]
     fn refuses_an_unknown_option_rather_than_silently_minting_a_default_code() {
-        assert!(refusal(&["--label=bring-up"]).contains("Unrecognised option --label"));
-        assert!(refusal(&["--max-uses"]).contains("Unrecognised argument"));
-        assert!(refusal(&["5"]).contains("Unrecognised argument"));
+        assert!(refusal(&["--label=bring-up"]).contains("Unrecognized option --label"));
+        assert!(refusal(&["--max-uses"]).contains("Unrecognized argument"));
+        assert!(refusal(&["5"]).contains("Unrecognized argument"));
     }
 
     /// A zero or negative `max_uses` violates `invite_codes_max_uses_positive` (migration 0001).

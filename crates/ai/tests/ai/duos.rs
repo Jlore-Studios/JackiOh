@@ -166,7 +166,7 @@ fn decided_alone(state: &DuosState, seat: DuosSeat, seed: &str) -> ActionBody {
 }
 
 fn json_of<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
+    serde_json::to_value(value).expect("serializes")
 }
 
 fn duel(body: ActionBody) -> DuosActionBody {

@@ -74,7 +74,7 @@ export function BackLink({
   );
 }
 
-/** Preserves modified and non-left-click anchor behaviour. */
+/** Preserves modified and non-left-click anchor behavior. */
 export function followInApp(to: string): (event: MouseEvent<HTMLAnchorElement>) => void {
   return (event) => {
     if (event.defaultPrevented) return;

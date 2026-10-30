@@ -36,10 +36,10 @@ export function useCardWinRates(sortKey: SortKey): CardWinRates {
       return undefined;
     }
     if (rates !== null || failed) return undefined;
-    let cancelled = false;
+    let canceled = false;
     getCardStats()
       .then((res) => {
-        if (cancelled) return;
+        if (canceled) return;
         const map = new Map<string, CardWinRateInfo>();
         for (const card of res.cards) {
           map.set(card.id, { winRate: card.winRate, hasEnoughGames: card.hasEnoughGames });
@@ -47,10 +47,10 @@ export function useCardWinRates(sortKey: SortKey): CardWinRates {
         setRates(map);
       })
       .catch(() => {
-        if (!cancelled) setFailed(true);
+        if (!canceled) setFailed(true);
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [wanted, rates, failed]);
 

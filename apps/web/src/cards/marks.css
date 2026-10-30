@@ -1,7 +1,7 @@
 /* R437: a marked card's corruption aura and its badge (CardMarks.tsx).
  *
- * The colours are the palette table's (marks.ts), handed in as `--mark-rim`, `--mark-core` and
- * `--mark-glow`, so this sheet names no colour of its own beyond the fallbacks. The aura lies over the
+ * The colors are the palette table's (marks.ts), handed in as `--mark-rim`, `--mark-core` and
+ * `--mark-glow`, so this sheet names no color of its own beyond the fallbacks. The aura lies over the
  * whole card and takes no pointer event. Every @keyframes moves only what the compositor runs
  * (transform and opacity); the glow is drawn once, statically, and faded. Under reduced motion (the
  * media query and `<html data-reduce-motion="true">`) nothing moves and everything stays drawn.
@@ -26,7 +26,7 @@
   pointer-events: none;
 }
 
-/* A slow shimmering vignette: the colour pools at the card's edges and breathes. */
+/* A slow shimmering vignette: the color pools at the card's edges and breathes. */
 .card-marks__vignette {
   position: absolute;
   inset: 0;
@@ -40,7 +40,7 @@
   animation: marks-shimmer 2.8s ease-in-out infinite alternate;
 }
 
-/* The crackling edge: a broken rim of the mark's colour that flickers. */
+/* The crackling edge: a broken rim of the mark's color that flickers. */
 .card-marks__edge {
   position: absolute;
   inset: 2px;
@@ -96,7 +96,7 @@
   animation-delay: -2.7s;
 }
 
-/* The badges: a sparkle in a ring of the mark's colour on the card's top-left corner. */
+/* The badges: a sparkle in a ring of the mark's color on the card's top-left corner. */
 .card-marks__badges {
   position: absolute;
   top: -6px;

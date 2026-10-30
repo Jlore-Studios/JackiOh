@@ -40,7 +40,7 @@ fn in_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstanc
 fn face_down_offered(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<Value> {
     plays_of(state, instance_id, player)
         .iter()
-        .map(|play| serde_json::to_value(play).expect("a play serialises"))
+        .map(|play| serde_json::to_value(play).expect("a play serializes"))
         .filter(|play| play.get("faceDown").is_some_and(|timing| !timing.is_null()))
         .collect()
 }
@@ -97,7 +97,7 @@ fn answer_instance(state: &mut GameState, id: &str) {
 
 /// The player's backrow zone as `view_for(viewer)` shows it, as JSON.
 fn backrow_as_seen(state: &GameState, owner: PlayerId, viewer: PlayerId, lane: i32) -> Value {
-    let view = serde_json::to_value(view_for(state, viewer)).expect("a view serialises");
+    let view = serde_json::to_value(view_for(state, viewer)).expect("a view serializes");
     let side = if owner == viewer { "you" } else { "opponent" };
     view[side]["backrow"][(lane - 1) as usize].clone()
 }

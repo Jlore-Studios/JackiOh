@@ -57,10 +57,11 @@ use crate::config::{
 use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
-    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, PlayAllowedHook, QuestBook, Script,
-    SetStat, SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
-    TriggerExtraHook, TriggerRun, TriggerWhen, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook,
-    condition_hook, hook, mode_allowed_hook, play_allowed_hook, read_hook, target_check, would_counter_hook,
+    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, PlayAllowedHook, PreviewHook,
+    QuestBook, Script, SetStat, SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck,
+    TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TriggerWhen, TuneMultiplier, WouldCounterHook,
+    attack_mod_hook, aura_hook, condition_hook, hook, mode_allowed_hook, play_allowed_hook, read_hook,
+    target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -74,7 +75,7 @@ const RESUME_KEY: &str = "resume";
 /// The script keys whose functions return something other than effects, so they combine by building
 /// every ingredient's list at once: an aura's entries are read off the field on every stat read
 /// (§10.4), and there is no "when the list reaches it" for them. `preview` (R280) is the other: the
-/// labelled numbers `view_for` shows, a pure read with nothing to resolve, so a fusion's list is its
+/// labeled numbers `view_for` shows, a pure read with nothing to resolve, so a fusion's list is its
 /// ingredients' lists in ingredient order, each asked with the fused card's own context (the fused
 /// instance as `self`, the face it runs, the zone it is asked about), as R196 asks `conditionMet` —
 /// and each label still sits in the fused face's text, which prints every ingredient's text whole.
@@ -1435,8 +1436,29 @@ fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
             .iter()
             .map(|decl| in_activation_ingredient(decl, index))
             .collect(),
+        preview: script
+            .preview
+            .clone()
+            .map(|preview| in_preview_ingredient(preview, index)),
         ..script.clone()
     }
+}
+
+/// R280, R2476000: an ingredient's `preview` asked as that ingredient's text reads the card
+/// (`as_ingredient_text`), so a number it shows from what its text remembered is its own (R102): two
+/// Carnivorous Cubes crafted into one card show two meals, each after its own "remember it".
+fn in_preview_ingredient(preview: PreviewHook, index: usize) -> PreviewHook {
+    condition_hook(move |ctx| {
+        let card = as_ingredient_text(ctx.self_, index);
+        preview(ConditionContext {
+            state: ctx.state,
+            self_: &card,
+            controller: ctx.controller,
+            radiant: ctx.radiant,
+            zone: ctx.zone,
+            your_turn: ctx.your_turn,
+        })
+    })
 }
 
 /// R102, R384: an ingredient's Activate ability in its place in the fusion. Its effect list builds

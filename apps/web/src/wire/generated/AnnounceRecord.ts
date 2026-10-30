@@ -4,7 +4,7 @@ import type { PlayerId } from "./PlayerId";
 /**
  * B5 E1, R448: one play or cast between its announce and §10.5 step 4. `faceDown` is a card that
  * will be set face-down (a Trap or Field Trap): while it waits in the resolving zone only `player`
- * reads it (`view_for`). `countered` is set by the Counter that cancelled it (`effects::move_::counter_play`).
+ * reads it (`view_for`). `countered` is set by the Counter that canceled it (`effects::move_::counter_play`).
  */
 export type AnnounceRecord = { instanceId: string, player: PlayerId, 
 /**

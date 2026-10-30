@@ -1,7 +1,7 @@
 //! Duos co-op in the engine (#936; the frozen contract is `.fullsend/SPEC.md`, Surface S1–S4 and
-//! behaviours B1–B25). Two plain 1v1 duels, A1 vs B1 and A2 vs B2, held by a `DuosState` that adds a
+//! behaviors B1–B25). Two plain 1v1 duels, A1 vs B1 and A2 vs B2, held by a `DuosState` that adds a
 //! shared life pool per team, passing between teammates and synchronised turn ends. Every test names
-//! the behaviour it proves (`b<n>_…`).
+//! the behavior it proves (`b<n>_…`).
 //!
 //! The engine does not depend on the real cards, so every game here deals vanilla fixture decks (one
 //! disjoint block of twenty ids per seat, so a card's id says whose deck it came from) and plays this

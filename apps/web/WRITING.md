@@ -48,6 +48,7 @@ not the client's to reword.
 - One character for the ellipsis, for something under way: "Loading your decks…".
 - — for an aside, – for a range or a score (A–Z, You 1 – 1 Opponent), · between parts of a dense line.
 - When something fails, say what didn't happen and what to do: "The card statistics didn't load."
+- American spelling: color, behavior, center, favorite, canceled, labeled.
 
 ## Translations
 

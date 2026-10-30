@@ -14,7 +14,7 @@ const SIPHON: &str = "classic-088";
 
 /// viewFor without its event tail, which B10 exempts.
 fn view_without_events(state: &GameState, seat: PlayerId) -> Value {
-    let mut view = serde_json::to_value(view_for(state, seat)).expect("a view serialises");
+    let mut view = serde_json::to_value(view_for(state, seat)).expect("a view serializes");
     if let Some(map) = view.as_object_mut() {
         map.remove("events");
     }

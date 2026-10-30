@@ -504,7 +504,7 @@ fn r915006_a_game_keeps_its_custom_cards_without_the_builder_and_folds_the_same(
         ..FoldArgs::default()
     })
     .state;
-    let text = serde_json::to_string(&plain).expect("a state serialises");
+    let text = serde_json::to_string(&plain).expect("a state serializes");
     assert!(!text.contains("customCards") && !text.contains("customDefs"));
 
     // The cards are part of the hash: another source is another game.
@@ -525,7 +525,7 @@ fn r915006_a_log_with_a_custom_card_s_play_folds_to_the_live_hash_under_the_same
         let mut s = scenario(board(&[DRAWER]));
         s.play(DRAWER, json!({ "zone": 1 }));
         let live = s.state().clone();
-        let roundtrip: GameState = serde_json::from_str(&serde_json::to_string(&live).expect("serialises"))
+        let roundtrip: GameState = serde_json::from_str(&serde_json::to_string(&live).expect("serializes"))
             .expect("a custom game survives JSON");
         assert_eq!(hash_state(&roundtrip), hash_state(&live));
     });

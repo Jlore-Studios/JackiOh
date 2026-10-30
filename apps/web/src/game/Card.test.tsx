@@ -1,5 +1,5 @@
 // Polish 6, slice B: `Card.tsx` after its internals became card faces (docs/polish/6-cards.md,
-// "`Card.tsx`: what survives, and what is new", behaviours B16–B20).
+// "`Card.tsx`: what survives, and what is new", behaviors B16–B20).
 //
 // The board is the only honest mount: every prop a `Card` gets here is the prop `Zone`, `Backrow`,
 // `Hand` and `Board` really pass it, from `fullBoardView()` (src/test/fixtures.ts, the only
@@ -344,7 +344,7 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
   // `draggable` is the one attribute that no longer shows on the board: polish task 7 moved drag to
   // play onto pointer events (docs/polish/7-mobile-ux.md, "In-repo prior art being retired"),
   // because HTML5 drag never fires on touch and its dragstart cancels a pointer drag, so the board
-  // stopped passing it. Card.tsx still honours it for a caller that does.
+  // stopped passing it. Card.tsx still honors it for a caller that does.
   it("B17 data-legal, aria-disabled, tabIndex, data-selected and data-animating keep their meaning, and the board drags by pointer", () => {
     const view = fullBoardView();
     const legal = yourUnit(view, 1);
