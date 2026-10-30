@@ -9504,13 +9504,13 @@
     "what": "review #2484 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-30T09:51:08Z",
+    "at": "2026-10-30T10:01:22Z",
     "notes": [
-      "delivered review #2309 on claude-6 (run 41035527957): reviewed",
-      "delivered build #2427 on muse (run 41024877261): approved",
-      "started review #2492 on claude-6 (run 41036728528)",
-      "started revise #2309 on claude-8 (run 41036788733)",
-      "started revise #2474 on claude-8 (run 41036870893)",
+      "delivered revise #2309 on claude-8 (run 41036788733): built",
+      "delivered review #2492 on claude-6 (run 41036728528): reviewed",
+      "delivered revise #2484 on muse (run 41023896762): approved",
+      "started review #2309 on claude-6 (run 41038008880)",
+      "started review #2484 on claude-8 (run 41038071811)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -10217,7 +10217,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T09:51:08Z",
+  "loop_tick": "2026-10-30T10:01:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
