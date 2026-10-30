@@ -34,6 +34,7 @@
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
+//!   issue #2278      — Megabase (Stinkyscape 116) is a Unit, without Animated.
 //!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename, and issue #1219's
 //!                    12 Attack for the Radiant Jlockeed Shredder-10.
 //!   patch v0.3.13   — issue #1194's costs: #76 Field of Dreams (2), C+ #64 Mulch Muncher (5) and
@@ -6042,7 +6043,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "116",
         "Megabase",
         c(1),
-        T::FieldSpell,
+        T::Unit,
         &[G::Quickdraw],
         R::Legendary,
         st(0, 20),
