@@ -11,7 +11,7 @@ and the next `terraform plan` shows it. Terraform 1.6 or later; OpenTofu reads t
 | --- | --- | --- | --- |
 | Cloudflare | The jackioh.com zone's DNS records; the Workers' custom domains (`jackioh.com` for `jackioh`, `staging.jackioh.com` for `jackioh-staging`, and `www.jackioh.com` once it serves); the Access application and policies that keep staging to the team | `cloudflare.tf` | `wrangler.jsonc` (both Workers, their assets, containers, settings and workers.dev routes), deployed by `promote-production.yml` and `deploy-staging.yml`; the server's secrets (`wrangler secret put`, `apps/edge/README.md`); the Access service token, whose secret would sit in the state |
 | Supabase (`exmjdaswedxhnzmpzqrq`) | Authentication's Site URL and Redirect URLs | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
-| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), and the `production` ruleset | `github.tf` | `bot/harness/config.py` `LABELS` (the labels, which the sweep restores) |
+| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), and the `production` ruleset | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores) |
 
 Not here at all: secret values (Actions secrets, the Workers' secrets, the Access service token),
 because the state would hold them. The server's `PUBLIC_ORIGINS` is in `wrangler.jsonc`'s `vars`.
@@ -114,7 +114,7 @@ from.
 ## The merge queue
 
 `main-merge-queue` is a ruleset of its own, beside the branch protection, so the five checks stay
-where the bots read them (`bot/harness/gh.py` `required_checks`). It did not exist, so its first
+where the bots read them (`bot/go/internal/gh` `RequiredChecks`). It did not exist, so its first
 `apply` creates it (`Plan: 1 to add`), and from then on nothing merges into `main` except through the
 queue: a merge button, `gh pr merge --auto` and the bots' auto-merge all put the pull request in the
 queue once its own checks pass, and the queue lands it after ci.yml's `merge_group` run passes on

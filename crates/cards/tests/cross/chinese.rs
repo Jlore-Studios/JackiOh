@@ -1,8 +1,9 @@
 //! ME-CN, R1303: the Chinese tables against the catalog. `chinese.json` holds every catalog card's and
 //! token's name and both faces in Simplified Chinese, and for a card whose script declares `preview`
-//! (R280) its preview labels; `chinese-terms.json` holds the frame's words. The client draws a Chinese
-//! card from them (`apps/web/src/cards/chinese.ts`, R1301). Like `flavour.json` (R660) they are
-//! presentation, not card data: no rule reads them, and an edit to them is no patch.
+//! (R280) its preview labels, as `crates/tools/tests/export_card_text.rs` writes them from each card's
+//! `zh` in `crates/cards/card-text.yaml`; `chinese-terms.json` holds the frame's words. The client
+//! draws a Chinese card from them (`apps/web/src/cards/chinese.ts`, R1301). Like `flavour.json` (R660)
+//! they are presentation, not card data: no rule reads them, and an edit to them is no patch.
 //!
 //! R1302: every face of the table meets the Chinese house style (`card_text::cjk_failures`), read with
 //! its params filled in, as a player reads it.
@@ -14,6 +15,7 @@ use jackioh_engine::{FaceKind, Rarity, Tag, fill_params, param_placeholders};
 use serde_json::{Map, Value};
 
 use super::card_text::{LABELS, chinese_keyword_label, chinese_terms, cjk_failures};
+use super::sidecar;
 
 /// The fields an entry may carry.
 const FIELDS: &[&str] = &["name", "base", "radiant", "previews"];
@@ -61,7 +63,7 @@ const SET_WORDS: &[(&str, &str)] = &[
 /// Every card's Chinese entry, by catalog id, each kept as raw JSON so an unknown field or a value
 /// that is not a string is seen, not refused by a typed parse.
 fn table() -> IndexMap<String, Map<String, Value>> {
-    serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is an object of objects")
+    sidecar(chinese_json(), "crates/cards/chinese.json")
 }
 
 fn text<'a>(entry: &'a Map<String, Value>, field: &str) -> &'a str {
@@ -331,8 +333,18 @@ mod r1303_the_chinese_tables {
                     problems.push(format!("{id} {face}: \"{chinese}\" is not in the Chinese face"));
                 }
             }
+            // R2476000: a label shown only in a state the plain views above never reach (Classic+ #34's
+            // chosen line, an Asteroid's pool rider) is held to the same two texts on some face: its
+            // English in the English face, its Chinese in that face's Chinese.
             for key in unused {
-                problems.push(format!("{id}: no view carries the label \"{key}\""));
+                let chinese = previews[key.as_str()].as_str().unwrap_or("");
+                let faithful = FACES.iter().any(|&face| {
+                    card.face(face).text.contains(&filled(card, key, face))
+                        && chinese_face(card, entry, face).contains(&filled(card, chinese, face))
+                });
+                if !faithful {
+                    problems.push(format!("{id}: no view carries the label \"{key}\""));
+                }
             }
             // A Chinese label may print a number its English leaves out (C+ #74's "每打出{plays}张牌" for
             // "your opponent plays"), but only one the card declares, so the client can fill it.

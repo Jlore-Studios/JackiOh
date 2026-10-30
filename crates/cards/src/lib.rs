@@ -8,7 +8,8 @@
 //! - `register_all()`: hands the catalog, its code blocks (R1183004), its card metrics (R1846000) and
 //!   every card's scripts to the engine, once.
 //! - `catalog_json()`, `flavour_json()`, `chinese_json()`, `chinese_terms_json()`, `catalog_version()`:
-//!   the data, compiled in (SURFACE §3: data reaches a pure crate only at compile time).
+//!   the data, compiled in (SURFACE §3: data reaches a pure crate only at compile time). The flavour
+//!   and Chinese sidecars are generated from `card-text.yaml` (#2498), which no pure crate parses.
 //! - `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION`, `card_def`, `card_def_by_index`: `catalog-data.ts`'s
 //!   readers of the shipped catalog, under their TS names (SURFACE §4.2).
 //!
@@ -83,13 +84,16 @@ pub fn catalog_json() -> &'static str {
 /// crates inline that function (a literal is copied into each codegen unit that inlines it).
 static CATALOG_JSON: &str = include_str!(concat!(env!("OUT_DIR"), "/catalog.json"));
 
-/// `packages/cards/flavour.json` as compiled in (the client's flavour lines and artists).
+/// R660: `crates/cards/flavour.json` as compiled in (the client's flavour lines and artists), which
+/// `crates/tools/tests/export_card_text.rs` writes from `card-text.yaml` beside it (#2498): no pure
+/// crate parses YAML (CLAUDE.md rule 4). Its `"//"` entry says so and is no card's.
 pub fn flavour_json() -> &'static str {
     include_str!("../flavour.json")
 }
 
 /// ME-CN, R1303: `crates/cards/chinese.json` as compiled in, every card's name and faces in Simplified
-/// Chinese (the client's `apps/web/src/cards/chinese.ts`). A sidecar like `flavour.json`: no rule reads it.
+/// Chinese (the client's `apps/web/src/cards/chinese.ts`). A sidecar like `flavour.json`, written from
+/// each card's `zh` in `card-text.yaml` the same way: no rule reads it.
 pub fn chinese_json() -> &'static str {
     include_str!("../chinese.json")
 }
@@ -444,6 +448,48 @@ pub(crate) fn merged(mut base: serde_json::Value, over: serde_json::Value) -> se
 #[cfg(test)]
 pub(crate) fn filler(count: usize) -> serde_json::Value {
     serde_json::json!(vec!["core-005"; count])
+}
+
+/// R2476000: the preview `viewer`'s view carries on the card `instance_id` wherever it shows it (a hand,
+/// a unit zone, the backrow), as `[(label, value, display)]`; empty when the card carries none or the
+/// view does not show it. Read off the view's JSON, the client's wire, so every place a card can show
+/// on either side is searched alike.
+#[cfg(test)]
+pub(crate) fn preview_seen(
+    s: &jackioh_engine::testkit::Scenario,
+    viewer: jackioh_engine::PlayerId,
+    instance_id: &str,
+) -> Vec<(String, i32, Option<String>)> {
+    fn find(value: &serde_json::Value, id: &str) -> Option<serde_json::Value> {
+        match value {
+            serde_json::Value::Object(map) => {
+                if map.get("instanceId").and_then(serde_json::Value::as_str) == Some(id) {
+                    return Some(map.get("preview").cloned().unwrap_or(serde_json::Value::Null));
+                }
+                map.values().find_map(|inner| find(inner, id))
+            }
+            serde_json::Value::Array(list) => list.iter().find_map(|inner| find(inner, id)),
+            _ => None,
+        }
+    }
+    // The two sides only: the view's events name cards by `instanceId` too.
+    let view = serde_json::to_value(s.view(viewer)).expect("a view serializes");
+    find(&view["you"], instance_id)
+        .or_else(|| find(&view["opponent"], instance_id))
+        .and_then(|preview| preview.as_array().cloned())
+        .unwrap_or_default()
+        .iter()
+        .map(|entry| {
+            (
+                entry["label"].as_str().unwrap_or_default().to_string(),
+                entry["value"].as_i64().unwrap_or_default() as i32,
+                entry
+                    .get("display")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string),
+            )
+        })
+        .collect()
 }
 
 /// The cards' def ids, in order.

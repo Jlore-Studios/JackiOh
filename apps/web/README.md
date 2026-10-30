@@ -806,9 +806,12 @@ Every card's sounds are in `src/audio/card-audio.json5` (R655), a JSON5 file edi
 header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
 `pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
 comment beside its id, where each hook (`play`, `attack`, `death`, `cast`, `trigger`; `CARD_HOOKS` in
-`constants.ts`) gives a voice line (`voice` and `text`), an `effect`, or both — a `trigger` (R1088)
-gives a voice and a non-empty `lines` list instead, one of which plays when the runner starts the
-`summoned` entry the card caused. `voiceData.ts` checks it
+`constants.ts`) gives a voice line (its `voice`), an `effect`, or both — a `trigger` (R1088) gives
+a voice for a non-empty list of lines, one of which plays when the runner starts the `summoned`
+entry the card caused, and an `emotes` section gives each portrait's voice (R644). The words the
+lines speak are not in it: they are each card's `voice` and the portraits' `emotes` in
+`crates/cards/card-text.yaml` (#2498), which `cargo test -p jackioh-tools --test export_card_text`
+writes into `src/audio/voice-text.json`. `voiceData.ts` joins the two (`withVoiceText`), checks them
 at load and names the path of any mistake. The voice files are generated from its lines and
 committed, so CI never runs a synthesizer. Each voice names its backend (R501): Core's voices are
 macOS `say` (the default), and the Classic and Classic+ voices are `backend: "sapi"`, Windows SAPI
@@ -862,7 +865,8 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `@jackioh/server-config` are the generated Rust constants, `@jackioh/validator` the validator,
   `@jackioh/cards` the catalog and its version (read from `crates/cards/patches/patches.json`), and
   `@jackioh/cards/catalog.json`, `flavour.json`, `chinese.json` and `chinese-terms.json` the files in
-  `crates/cards`.
+  `crates/cards` (the second and third generated from its `card-text.yaml`, #2498, each with a `"//"`
+  entry that `flavour.ts` and `chinese.ts` drop).
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`; among the first,
   `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they

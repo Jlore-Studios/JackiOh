@@ -18,12 +18,12 @@
 # and a git bundle that deliver checks for itself before pushing.
 #
 # With `controller` on (.harness/config.json, #1455), bot-status's loop plans the work and starts
-# each run with its plan made (bot/harness/controller.py): `plan_ref` names the plan, which the loop
+# each run with its plan made (bot/go/internal/controller): `plan_ref` names the plan, which the loop
 # wrote to the state branch, and `runs_on`, `cli`, `secret` and `shared` are its runner, CLI,
 # secret name and shared flag. Such a run skips gate, plan and deliver, so it waits in GitHub's
 # queue once, for its model job, not four times; work's first step holds those inputs to the plan
 # and to providers.json before any step is handed a secret. The loop delivers the run itself once
-# it ends (#1537, `controller.deliver`): it reads the plan from the state branch, where the model
+# it ends (#1537, `controller.Deliver`): it reads the plan from the state branch, where the model
 # job cannot write, and the `work` upload through the Actions API. A run started any other way
 # (the schedule, a command, a person) gates, plans and delivers itself, and its gate defers to the
 # loop while the loop is going.
@@ -129,11 +129,9 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - name: Set up Python
+      - name: The harness (bot/go)
         if: steps.halt.outputs.halted != 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+        uses: ./.github/actions/harness
 
       # Reads only. Nothing a free subscription can take means no usage reading and no wait.
       - name: Is there work? (harness peek)
@@ -142,7 +140,7 @@ jobs:
         working-directory: bot
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          # Which provider secrets exist, never their values (providers.SECRETS).
+          # Which provider secrets exist, never their values (providers.SecretNames).
           HARNESS_SECRETS_SET: >-
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
@@ -161,7 +159,7 @@ jobs:
         run: |
           force=""
           if [ "${INPUT_FORCE}" = "true" ]; then force="--force"; fi
-          python -m harness peek --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
+          harness peek --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
 
       - name: Install the claude CLI
         if: steps.peek.outputs.quiet_check == 'true'
@@ -171,7 +169,7 @@ jobs:
 
       # Skipped for forced work and for any subscription that is not shared. Usage readings ten
       # minutes apart (a one-turn Haiku call each), for up to two hours; a rise that is not the
-      # partner bot's holds that subscription back. The step's name is what plan.quiet_waiting
+      # partner bot's holds that subscription back. The step's name is what plan.QuietWaiting
       # looks for, so only one run waits at a time.
       - name: Wait until the subscription is quiet
         id: quiet
@@ -180,7 +178,7 @@ jobs:
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets[steps.peek.outputs.quiet_secret] }}
           GITHUB_TOKEN: ${{ github.token }}   # read-only: the partner's public runs
-        run: python -m harness quiet
+        run: harness quiet
 
   plan:
     name: plan
@@ -233,11 +231,9 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - name: Set up Python
+      - name: The harness (bot/go)
         if: steps.halt.outputs.halted != 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+        uses: ./.github/actions/harness
 
       - name: Plan
         id: plan
@@ -267,7 +263,7 @@ jobs:
         run: |
           force=""
           if [ "${INPUT_FORCE}" = "true" ]; then force="--force"; fi
-          python -m harness plan --out "$RUNNER_TEMP/plan/plan.json" --quiet-ok "${QUIET_OK}" \
+          harness plan --out "$RUNNER_TEMP/plan/plan.json" --quiet-ok "${QUIET_OK}" \
             --item "${INPUT_ITEM}" --mode "${INPUT_MODE:-auto}" ${force}
 
       - name: Keep the plan for the next jobs
@@ -329,6 +325,9 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # On GitHub's runners and the machines alike: the machine builds or restores it the same way.
+      - uses: ./.github/actions/harness
+
       # A run the status loop started with its plan (#1455): the plan comes from the state branch,
       # where only the bots' tokens write, and the runner, CLI, secret name and shared flag this job
       # was given must be the plan's and its subscription's in providers.json, or the job stops
@@ -339,7 +338,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PLAN_REF: ${{ inputs.plan_ref }}
-        run: python3 -m harness plan-fetch --ref "$PLAN_REF" --out "$RUNNER_TEMP/plan/plan.json" --check
+        run: harness plan-fetch --ref "$PLAN_REF" --out "$RUNNER_TEMP/plan/plan.json" --check
 
       # On GitHub's runners only: the machine has its own (bot/machine/setup.sh).
       - uses: pnpm/action-setup@v4
@@ -358,11 +357,6 @@ jobs:
         with:
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
-
-      - uses: actions/setup-python@v5
-        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
-        with:
-          python-version: "3.13"
 
       # On GitHub's runners only (#1263): every worktree of the job builds into the checkout's
       # target/, which starts from bot-cache.yml's entry, and scripts/build-wasm.sh keeps
@@ -447,11 +441,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           HARNESS_PROVIDER_SECRET: ${{ secrets[env.PLAN_SECRET] }}
-        run: python3 -m harness doctor --work --plan "$RUNNER_TEMP/plan/plan.json"
+        run: harness doctor --work --plan "$RUNNER_TEMP/plan/plan.json"
 
       # bright-bots-harness reads a step named "Build, check and review" as this bot spending the
-      # shared Claude subscription (quiet.py), so only a run on it (claude-1) has that name; a run
-      # on any other subscription must not excuse a rise on the shared one.
+      # shared Claude subscription (bot/go/internal/quiet), so only a run on it (claude-1) has that
+      # name; a run on any other subscription must not excuse a rise on the shared one.
       - name: Build, check and review
         if: env.PLAN_SHARED == 'true'
         working-directory: bot
@@ -460,7 +454,7 @@ jobs:
           HARNESS_PROVIDER_SECRET: ${{ secrets[env.PLAN_SECRET] }}
           GITHUB_TOKEN: ${{ github.token }}   # read-only: the checkpoints read HALT and the state
         run: |
-          python3 -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
+          harness work --plan "$RUNNER_TEMP/plan/plan.json" \
             --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"
 
       - name: Work on another subscription (build, check and review)
@@ -470,7 +464,7 @@ jobs:
           HARNESS_PROVIDER_SECRET: ${{ secrets[env.PLAN_SECRET] }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python3 -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
+          harness work --plan "$RUNNER_TEMP/plan/plan.json" \
             --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"
 
       - name: Keep the result, the bundle, the sealed login and the transcripts
@@ -503,9 +497,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
 
       - name: Fetch the plan
         uses: actions/download-artifact@v4
@@ -544,5 +536,5 @@ jobs:
           PLAN_PROVIDER: ${{ needs.plan.outputs.provider }}
         run: |
           mkdir -p "$RUNNER_TEMP/out"
-          python -m harness deliver --plan "$RUNNER_TEMP/plan/plan.json" --out "$RUNNER_TEMP/out" \
+          harness deliver --plan "$RUNNER_TEMP/plan/plan.json" --out "$RUNNER_TEMP/out" \
             --action "${PLAN_ACTION}" --number "${PLAN_NUMBER}" --provider "${PLAN_PROVIDER}"

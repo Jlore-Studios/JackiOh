@@ -10,7 +10,9 @@
 //!   left pending keeps the claims its own check confirmed);
 //! - when a rule every game meets (divergences no card explains in `classify`'s `RULE_MIN_GAMES` of
 //!   the unforced games, R2455000) has no fragment claiming it, or a fragment newly claims a rule and
-//!   stage 2 found none.
+//!   stage 2 found none;
+//! - R2529000: when the cards' look changed and no fragment claims `visual`, or a fragment newly
+//!   claims it and their look did not change.
 //!
 //! The catalog claims are `patches check`'s (R646): this check adds only what the catalog diff
 //! cannot see, a card whose script or whose engine rule changed. CI runs it on every pull request as
@@ -101,12 +103,23 @@ pub(crate) fn problems(
                 }
             }
         }
+        if fragment.visual && !before.is_some_and(|fragment| fragment.visual) && !classification.visual {
+            problems.push(format!(
+                "pending/{name} claims a change to how cards look, but nothing under apps/web/src/cards/ changed (R2529000)"
+            ));
+        }
         let newly_rule = fragment.rule && !before.is_some_and(|fragment| fragment.rule);
         if ran && newly_rule && !classification.rule {
             problems.push(format!(
                 "pending/{name} claims a rule every game meets, but too few games against the base build diverge without a card (R1370000, R2455000)"
             ));
         }
+    }
+    if classification.visual && !head.iter().any(|named| named.fragment.visual) {
+        problems.push(
+            "how cards look changed (apps/web/src/cards/), a micro, but no pending fragment claims it: add --visual to the fragment (R2529000)"
+                .to_string(),
+        );
     }
     if classification.rule && !head.iter().any(|named| named.fragment.rule) {
         problems.push(
@@ -132,8 +145,10 @@ mod tests {
             tier: (!cards.is_empty() || rule).then_some(Tier::Micro),
             sets: Vec::new(),
             cards: cards.iter().map(|card| (*card).to_string()).collect(),
+            reprinted: Vec::new(),
             wording: Vec::new(),
             rule,
+            visual: false,
             stage2,
             unchecked: Vec::new(),
         }
@@ -210,6 +225,31 @@ mod tests {
             problems(&none, &[named("rule.json", &[], &[], true)], &[]).len(),
             1
         );
+    }
+
+    // R2529000: a change to how cards look is claimed by `visual` exactly when one happened, and a
+    // claim an earlier change left pending is not asked again.
+    #[test]
+    fn r2529000_a_change_to_how_cards_look_is_claimed_exactly_when_one_happened() {
+        let visual = |name: &str| NamedFragment {
+            name: name.to_string(),
+            fragment: PendingFragment {
+                title: name.to_string(),
+                visual: true,
+                ..PendingFragment::default()
+            },
+        };
+        let looks = Classification {
+            kind: Kind::Cards,
+            tier: Some(Tier::Micro),
+            visual: true,
+            ..classified(&[], false, "skipped")
+        };
+        assert_eq!(problems(&looks, &[], &[]).len(), 1);
+        assert!(problems(&looks, &[visual("faces.json")], &[]).is_empty());
+        let none = classified(&[], false, "skipped");
+        assert_eq!(problems(&none, &[visual("faces.json")], &[]).len(), 1);
+        assert!(problems(&none, &[visual("faces.json")], &[visual("faces.json")]).is_empty());
     }
 
     #[test]

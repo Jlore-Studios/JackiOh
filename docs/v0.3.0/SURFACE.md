@@ -165,6 +165,7 @@ on this list during Waves 1–3.
 | unicode-script | 0.5.8 | — | server (username checks, R1432–R1434) |
 | unicode-segmentation | 1.13.3 | — | server (username checks, R1432–R1434) |
 | mlua | =0.12.2 | luau, serde (default-features = false) | luau (#442 L3; nothing depends on the crate yet) |
+| yaml_serde | 0.10.7 | — | tools (tests only: `export_card_text.rs` reads `crates/cards/card-text.yaml`, #2498; no pure crate takes it, CLAUDE.md rule 4) |
 
 Crate edges (path dependencies; every crate also takes the third-party crates its rows above name):
 

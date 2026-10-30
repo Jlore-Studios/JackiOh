@@ -12,8 +12,8 @@
 //! same thresholds on X; a Vanilla takes them and keeps X/X (R781003, X being no buff). Both faces run
 //! the same script. Declares no numbers: the thresholds are the frame.
 //!
-//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
-//! written, and the release renders it (`[gen:voice]`, R1448).
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry and
+//! its `card-text.yaml` lines are written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::prelude::*;
 
@@ -29,6 +29,18 @@ const KEYWORDS_BY_X: &[(i32, Keyword)] = &[
     (30, Keyword::Indestructible),
 ];
 
+/// R2476000: after "With X", its X as its summon fixed it (`x_of`, a Buff or Nerf of X included), the
+/// number its keywords are read from. On the field, to both seats: the summon's X/X showed it. A Kenny
+/// anywhere else has no X and shows nothing.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        vec![count_preview("With X", x_of(ctx.self_))]
+    })
+}
+
 pub fn script() -> CardScripts {
     let base = Script {
         conditional_keywords: Some(read_hook(|args| {
@@ -39,6 +51,7 @@ pub fn script() -> CardScripts {
                 .map(|(_, keyword)| keyword.clone())
                 .collect()
         })),
+        preview: Some(preview()),
         ..Script::default()
     };
     let radiant = base.clone();
@@ -229,6 +242,20 @@ mod tests {
                 json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
             );
             assert_eq!(read(&s), (16, 16, vec![]));
+        }
+    }
+
+    /// R2476000: after "With X", the X its summon fixed, to both seats, on either face: 5, though the
+    /// Radiant one stands 10/10.
+    #[test]
+    fn r2476000_it_previews_its_x() {
+        crate::register_all();
+        for radiant in [false, true] {
+            let s = kenny(5, radiant, &[FILLER], &[]);
+            let kenny = the_kenny(&s).id;
+            let x = vec![("With X".to_string(), 5, None)];
+            assert_eq!(crate::preview_seen(&s, P1, &kenny), x, "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, PlayerId::P2, &kenny), x, "radiant {radiant}");
         }
     }
 }

@@ -9,7 +9,7 @@
 # opened stay unlocked: the CI alerts (ci-duration.yml, super.yml, patches-ship.yml), the
 # production countdown (promote-production.yml) and the weekly hygiene issues post there with it.
 # patches-ship's "Shipped as" comment on a thread it did not open unlocks, comments and locks again
-# (`harness.titles.retitle_shipped`).
+# (bot/go/internal/titles, `RetitleShipped`).
 name: lock conversations
 
 on:
