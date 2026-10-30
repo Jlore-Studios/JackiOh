@@ -10271,7 +10271,7 @@
     "what": "build #2386 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-30T07:07:47Z",
+    "at": "2026-10-30T07:14:38Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -10977,7 +10977,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T07:07:47Z",
+  "loop_tick": "2026-10-30T07:14:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
