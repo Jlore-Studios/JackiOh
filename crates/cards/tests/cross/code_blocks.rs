@@ -56,7 +56,10 @@ fn r1183004_cn_techs_block_reads_its_script() {
     // R2521007: its hard-coded fallback leads, then the script that reads the table.
     let first = code.lines().next().expect("a first line");
     assert_eq!(first, "pub const FALLBACK_LEADER: &str = \"core-035\";");
-    assert!(code.lines().any(|line| line == "fn tech(radiant: bool) -> Script {"));
+    assert!(
+        code.lines()
+            .any(|line| line == "fn tech(radiant: bool) -> Script {")
+    );
     // Its own id is `ID` where the code reads it, as the script names it.
     assert!(code.contains("win_rate_leader(ID)"));
 }

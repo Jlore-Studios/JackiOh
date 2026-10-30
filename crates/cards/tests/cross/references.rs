@@ -357,8 +357,8 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             indices_of(Tag::Ai),
             strings(&[
                 "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4", "T-AI-5", "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9",
-                "T-AI-10", "1.1", "1.2", "1.3", "1.4", "1.5", "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4", "T-AI-5",
-                "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9", "T-AI-10",
+                "T-AI-10", "1.1", "1.2", "1.3", "1.4", "1.5", "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4",
+                "T-AI-5", "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9", "T-AI-10",
             ])
         );
         // The pins are the shipped sets' cards (R1857000: a held set's are pinned at its release).

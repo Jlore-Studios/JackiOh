@@ -199,7 +199,11 @@ mod r2521003_run_activation_spends_a_use {
         apply(&mut s, run_of(&academy, true));
         assert_eq!(mana(&s), before + GAIN);
         apply(&mut s, run_of(&academy, true));
-        assert_eq!(mana(&s), before + GAIN, "a card it ran is Activated once that turn");
+        assert_eq!(
+            mana(&s),
+            before + GAIN,
+            "a card it ran is Activated once that turn"
+        );
         assert_eq!(
             why_not(&s, &academy),
             Some(format!(
