@@ -10413,21 +10413,12 @@
     "what": "build #2427 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-30T07:59:51Z",
+    "at": "2026-10-30T08:10:01Z",
     "notes": [
-      "delivered suggest on claude-3 (run 41019877355): suggested",
-      "delivered build #2437 on muse (run 41010563361): approved",
-      "delivered revise #2420 on muse (run 41008414866): approved",
-      "started review #2420 on claude-8 (run 41023834326)",
-      "started revise #2484 on muse (run 41023896762)",
-      "nothing more to start: nothing is queued",
-      "#2483: typed it Task",
-      "#2482: typed it Task",
-      "#2481: typed it Feature",
-      "#2480: typed it Task",
-      "#2479: typed it Task",
-      "#2478: typed it Task",
-      "#2477: typed it Task"
+      "delivered review #2420 on claude-8 (run 41023834326): reviewed",
+      "delivered build #2427 on muse (run 40993272999): interrupted",
+      "started build #2427 on muse (run 41024877261)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -11133,7 +11124,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T07:59:51Z",
+  "loop_tick": "2026-10-30T08:10:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
