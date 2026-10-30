@@ -219,11 +219,10 @@ graveyard, that pile glows and its sheet (`cards/inspect/CardList.tsx`) puts "Pl
 (`pile-play-<instanceId>`) under the card; it reports `{ on: "graveyard" }`, closes the sheet, and the
 play is built as a hand card's.
 
-**The Resource tray and Credits** (issue #1840, R1840000, R1840003, R1840005). `ResourceTray.tsx` draws
-each seat's `resourceTray` and `marketCredits` from the view alone, in `tray-<side>`, and nothing while
-the view carries neither: the viewer's own Resources as cards (`tray-card-<instanceId>`), the
-opponent's as a count (`tray-count-<side>`), and the Credits in `market-credits-<side>`, on both seats.
-A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is built as a hand card's.
+**Credits** (issue #1840, R1840005). `Hero.tsx` draws each seat's `marketCredits` from the view alone,
+as a pill in the hero's badge row beside the Jade Counter's (`market-credits-<side>`, on both seats),
+and nothing while the view carries none; a count of 0 still shows. A Resource is a hand card since
+#2250 (R2250000), so the hand draws it and there is no Resource tray.
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
@@ -688,10 +687,12 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 
 ## The tutorial
 
-The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322, R2205000–R2205003): five
-lessons on a path, each a practice game with two fixed decks of Training Grounds cards, a fixed seed and
-seat, the tutorial handicap on the AI seat (`AI_TUTORIAL`, the tier below Easy), and `TUTORIAL_HUMAN` on
-the human's, with the pool hold in lessons 1–4 (`lessonHandicaps`). A lesson is a practice config whose `lesson` names it
+The practice lobby opens with the tutorial (SPEC §9.10, R290–R294, R320–R322, R2205000–R2205003,
+R2434000–R2434003): five lessons on a path, each about one thing and each a practice game with two fixed
+decks (the human's Training Grounds cards, the AI's Core cards), a fixed seed and seat, the tutorial
+handicap on the AI seat (`AI_TUTORIAL`, the tier below Easy), and `TUTORIAL_HUMAN` on the human's, with
+the pool hold on both in lessons 1–4 (`lessonHandicaps`). Lessons 2–4 had other ids before #2434:
+`EARLIER_LESSON_IDS` reads `spells`, `traps` and `advanced` as the lesson in their place (R2434000). A lesson is a practice config whose `lesson` names it
 (`tutorial/start.ts`), so the same worker, controller and board play it; the worker reads the
 decks from `tutorial/lessons/<id>.ts` and nothing else the page sends changes them (R291).
 
@@ -705,14 +706,16 @@ src/tutorial/
   discoveries.ts            the Field Guide's entries: each mechanic, its rule, and how the view shows it found
   steps.ts targets.ts       reads of the view and legal actions, step factories, anchors → board testids
   tracker.ts                feeds every controller snapshot to the coach and holds the AI for `holdAi`
-  Coach.tsx layout.ts       the ring, and the bubble placed clear of what it points at (a panel above the board on phones)
+  Coach.tsx layout.ts       the ring round what it points at, and the bubble docked to a corner, never the middle of the
+                            board (R2434003; a panel above the board on phones)
   TutorialPath.tsx          the lesson path at the top of the lobby (locked / open / done), with Hide / Show
                             tutorial (R322; its look in path-visibility.css)
   TutorialHud.tsx TutorialResult.tsx   the lesson's HUD (step counter, Field Guide, Exit tutorial) and its result
                             dialog, which names what the game did not show found (R314)
   FieldGuide.tsx            the Field Guide's button and dialog, from the HUD and the path's header (R2205002)
-  progress.ts               completed lessons, the Hide/Show choice and the Field Guide's found entries (the
-                            device's alone, R2205002) in localStorage `jackioh.tutorial.v1`, try/catch (R294),
+  progress.ts               completed lessons, the Hide/Show choice, and the Field Guide's found entries and the
+                            lessons lost by a concede (the device's alone, R2205002, R2434002) in localStorage
+                            `jackioh.tutorial.v1`, try/catch (R294),
                             and R321's merge with another copy (a union, the newest choice)
   accountSync.ts            an active account's copy (`GET`/`PUT /api/tutorial`, R320) kept level with the
                             device's (R321); the practice route mounts it
@@ -732,7 +735,10 @@ src/tutorial/
   and the public catalog). Its hint escalates a level per own turn it stays unfound, or per Hint
   press: the nudge, then the pointed hint with its ring; past `TUTORIAL_MOMENT_TURNS_MAX` it
   retires. It never holds the AI. Each entry found for the first time shows a discovery bubble with
-  Got it, and the tracker hands it to the device's Field Guide (`markFound`).
+  Got it, unless a later lesson holds it (R2434001), and the tracker hands it to the device's Field
+  Guide (`markFound`).
+- A concede is the one way to lose a lesson (R2434002): the result says "You conceded. That counts
+  as a loss.", and the path marks the lesson lost until it is won.
 - The bubble adopts a new step only once the board has caught up (no `data-animating`), so it never
   points at a card the board has not drawn; a step or tip with `holdAi` holds the AI through
   `setHold("coach", …)` until its "Got it".

@@ -42,4 +42,16 @@ heroFloor?: number,
  * out Legendary and Mythic cards. Absent means no hold, so every other game hashes as before.
  * Only a lesson before the last sets it (§9.10).
  */
-poolHold?: boolean, };
+poolHold?: boolean, 
+/**
+ * R2433000: this seat plays only Core cards. It never plays, sets or casts a card whose set is
+ * not Core, from its hand or its graveyard, however the card got there. Absent means no bar, so
+ * every other game hashes as before the field existed. Only the tutorial opponent sets it.
+ */
+coreOnly?: boolean, 
+/**
+ * R2433001: the most copies of one card id this seat's deck may hold, in place of MAX_COPIES.
+ * Absent means MAX_COPIES, so every other game hashes as before the field existed. Only a
+ * lesson's human sets it (`TUTORIAL_HUMAN`).
+ */
+deckCopies?: number, };
