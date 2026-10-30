@@ -19,9 +19,9 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c008_pickle, c009_income_tax, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
-    c032_felinor_feelings, c035_prep, c039_outbreak, c052_final_gambit, c064_malzahars_recycler,
-    c088_siphon_squad, c090_in_too_deep,
+    c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish,
+    c023_devils_pact, c032_felinor_feelings, c035_prep, c039_outbreak, c052_final_gambit,
+    c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c023_dropshipping, c030_felinor_fuser, c033_ivory_tower,
@@ -29,7 +29,7 @@ use crate::scripts::classic_plus::{
     c078_claudes_datacenter,
 };
 use crate::scripts::core::{
-    c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c042_eugenics,
+    c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
     c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
     c069_call_to_arms, c075_infinite_reserves, c080_zao_gao, c081_radiant_saintess, c083_transmogulate,
 };
@@ -37,8 +37,8 @@ use crate::scripts::meditative::{
     c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
     c030_fickle_e_kitten, c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer,
     c045_knowledge_breaker, c048_tranquility, c049_yilegpt_tamed, c053_prestige, c054_money_machine,
-    c074_montana_giant, c080_aluneth, c085_playtester, c094_shrinking_felinor, c097_2_wishing_well,
-    c097_8_prison, c102_catboy_maid_ssr,
+    c074_montana_giant, c080_aluneth, c085_playtester, c094_shrinking_felinor, c095_1_cn_golem,
+    c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
@@ -90,7 +90,9 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// Dropshipping gave Brittle {brittle}; The Power to Punish's damage did not pierce; Spiritually 中国 did one
 /// of its three at random (R920); Radiant Saintess's Radiant Death radiated the hand; Book of Buff's base
 /// face could take a hand card; Claude's Datacenter added at its controller's end of turn; and KY's Test
-/// asked two-digit sums (R580) from v0.5.2's bank (R2179003).
+/// asked two-digit sums (R580) from v0.5.2's bank (R2179003). #2396's three ran theirs through v0.5.11:
+/// Prem Panther drew and Boots on the Ground drew or Recruited only after an attack they survived, and CN
+/// Golem shuffled nothing when it died in the combat that killed (R2396000).
 /// A card patch before them that changed a script's behavior kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -307,6 +309,17 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c078_claudes_datacenter::script_v0_5_2,
     ),
     (c042_kys_test::ID, "v0.5.2", c042_kys_test::script_v0_5_2),
+    (
+        c032_prem_panther::ID,
+        "v0.5.11",
+        c032_prem_panther::script_v0_5_11,
+    ),
+    (
+        c013_boots_on_the_ground::ID,
+        "v0.5.11",
+        c013_boots_on_the_ground::script_v0_5_11,
+    ),
+    (c095_1_cn_golem::ID, "v0.5.11", c095_1_cn_golem::script_v0_5_11),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

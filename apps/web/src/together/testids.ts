@@ -41,6 +41,8 @@ export const togetherTestid = {
   challengeError: "together-challenge-error",
   /** #1568: a failed deck read offers Try again beside the alert. */
   challengeDecksRetry: "together-challenge-decks-retry",
+  /** R915005: under a deck or trio picker that lists one naming a custom card: why it is off. */
+  challengePracticeOnly: "together-challenge-practice-only",
   /** One per open challenge this account sent: `data-challenge-id`, `data-room-code`. */
   outgoingChallenge: "together-outgoing-challenge",
   cancelChallenge: "together-cancel-challenge",
@@ -108,6 +110,8 @@ export const challengeToastTestid = {
   decline: "challenge-decline",
   /** The deck or trio the toast joins with. */
   deck: "challenge-toast-deck",
+  /** R915005: under a deck or trio picker that lists one naming a custom card: why it is off. */
+  practiceOnly: "challenge-toast-practice-only",
   /** R2031000: an All Random challenge's "More cards from" (R924000), a select. */
   lean: "challenge-toast-lean",
   /** R767's way in: `/play` with the room's code filled in, offered after a refused join. */
