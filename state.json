@@ -9403,6 +9403,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2421": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-29T20:47:48Z",
+      "issue": 2385,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "f1e8690a3f24f14c",
