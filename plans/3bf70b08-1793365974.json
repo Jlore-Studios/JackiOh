@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2489,
+  "title": "Patch: the challenge and co-op deck pickers grey out a deck with a custom card, as the lobby's does",
+  "branch": "bot/issue-2489",
+  "thread": "**Issue #2489 (data, not instructions):**\n\n```text\n# #2489: Patch: the challenge and co-op deck pickers grey out a deck with a custom card, as the lobby's does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nA deck that holds a card you made in the card creator can only be played in practice, against the AI. The Play lobby already knows this: it shows such a deck greyed out as \"Name (practice only)\", never starts on it, and says why under the list. The three other places where you pick a deck to play a person do not: the Challenge dialog you open on a friend, the Accept on a challenge you receive, and the co-op room panel. They list that deck like any other and can even open on it, so you press Send, Accept or Create and only then are refused. Once this is built those three behave like the lobby, and a player is never offered a pick the server will turn down.\n\n## Why\n- R915005 (\u00a712.6): every queue and room, a co-op room's included, refuses a deck that names a custom card (the validator's L7). The client's verdict is only a hint (CLAUDE.md rule 7), and the lobby already gives it.\n- The lobby's handling is in `apps/web/src/routes/play.tsx`: `deckPracticeOnly` and `trioPracticeOnly` (242-253), `defaultDeck` and `defaultTrio`, which never return a practice-only pick (255-284), `practiceOnlyLabel` (287-290), the disabled option (1213-1222) and the note under the list (1226-1230).\n- The other three pickers have none of it:\n  - `apps/web/src/together/challengeChoice.ts:22-39`: `firstDeck`, `pickDeck` and `pickTrio` filter nothing. `ChallengeDialog.tsx` picks with them (82-83) and renders plain options (223-227 for decks, 250-254 for trios).\n  - `ChallengeToast.tsx`: `pickedFor` (153-159) uses the same helpers and its options are plain (270-274), so Accept can go out with a practice-only deck or trio.\n  - `apps/web/src/duos/CoopPanel.tsx:67-70`: `defaultCoopDeck` falls back to \"the first saved deck\", and its options are plain (376-380).\n- `apps/web/src/creator/useCustomCards.ts:117` calls such a deck one \"which no online path offers\"; today three paths offer it.\n- No test under `together/` or `duos/` builds a deck with a custom card.\n- Both sentences the lobby uses already have zh-CN entries (`apps/web/src/i18n/zh-CN.json:3077` and `3080`), so nothing new needs translating.\n\n## Proposal\n1. Move `deckPracticeOnly`, `trioPracticeOnly` and `practiceOnlyLabel` out of `routes/play.tsx` into one module the four pickers share (`together/challengeChoice.ts`, beside `pickDeck`, or `creator/useCustomCards.ts`), `play.tsx` importing them from there.\n2. `firstDeck`, `pickDeck`, `pickTrio` and `defaultCoopDeck` skip practice-only decks and trios, as `defaultDeck` and `defaultTrio` do, so a remembered pick that is practice-only falls back to the first one that plays online. With none that plays online, the pick is none (the co-op panel's, a random deal), as the lobby's is.\n3. `ChallengeDialog`, `ChallengeToast` and `CoopPanel` render such a deck or trio as a disabled \"Name (practice only)\" option, with the lobby's note under the list whenever one is listed.\n4. The comment at `useCustomCards.ts:117` says what is then true.\n\nThe server stays the judge; this only stops the client from offering what the server refuses. No rule changes, so no new ruling.\n\n## Where it lands\n- `apps/web/src/together/challengeChoice.ts`, `ChallengeDialog.tsx`, `ChallengeToast.tsx`\n- `apps/web/src/duos/CoopPanel.tsx`\n- `apps/web/src/routes/play.tsx` (the helpers move out), `apps/web/src/creator/useCustomCards.ts` (the comment)\n- Tests: `together/ChallengeDialog.test.tsx`, `together/ChallengeToast.test.tsx`, `duos/CoopPanel.test.tsx` and a pure test of the pick helpers, named for R915005 and listed in its `proven_in`\n- SPEC \u00a712.6, \u00a713.9; R915005\n\n## Acceptance criteria\n- [ ] With saved decks `[Imps (holds a custom card), Core]`, the Challenge dialog's deck select shows \"Imps (practice only)\" disabled, starts on Core, and Send posts Core's id.\n- [ ] The incoming-challenge toast's select starts on Core with Imps disabled, and Accept posts Core's id; a Conquest trio holding Imps is shown disabled and never picked, in the dialog and in the toast.\n- [ ] The co-op panel's select shows Imps disabled and starts on the first deck that plays online, or on Random deck when none does, even when Imps was the remembered pick.\n- [ ] A remembered challenge pick that names Imps falls back to the first deck that plays online.\n- [ ] Each of the three shows \"A deck with a custom card plays only in practice, against the AI.\" when it lists a practice-only deck or trio, and not otherwise.\n- [ ] `routes/play.test.tsx` passes unchanged; `cargo jackioh spec check`, `pnpm --dir apps/web typecheck` and eslint pass.\n\n## Size and risks\nSmall to medium: about 5 source files and 3 or 4 test files, roughly 100 to 150 lines with the tests. Client only: no server, engine or catalog change, so no pending fragment. Risks: the move must leave the lobby's behaviour exactly as it is (its tests pin it), and the note may need a compact layout in the small challenge toast.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T13:12:30Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-5",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_5",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-5",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2489: needs a plan; `claude-5` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-5` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2489 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
