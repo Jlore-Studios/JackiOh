@@ -223,7 +223,7 @@ mod tests {
                 let mut s = assistant(false, None, None);
                 s.play(ASSISTANT, json!({}));
                 assert_eq!(js(&s.view(P2))["pending"], json!({ "forYou": false, "pendingFor": "p1" }));
-                let seen = serde_json::to_string(&s.view(P2)).expect("serialises");
+                let seen = serde_json::to_string(&s.view(P2)).expect("serializes");
                 for id in [MENACE, TIMMY, RENO, HINDER] {
                     assert!(!seen.contains(id));
                 }
@@ -245,7 +245,7 @@ mod tests {
                 let mut s = assistant(false, None, None);
                 s.play(ASSISTANT, json!({}));
                 let thawed: GameState =
-                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
+                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serializes")).expect("parses");
                 let pending = s.state().pending.clone();
                 let pick = pending.as_ref().and_then(|pending| pending.options.get(1)).map(|option| js(&option.selection));
                 let action: Action = json_as(json!({

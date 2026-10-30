@@ -18,7 +18,7 @@
 --   * decks whose slot order is not their card order (slot 1 holds legacy-041..060), with the
 --     cards handed to app.save_loadout in reverse, so "cards in app.resolve_deck order" and "the
 --     trio holds them in slot order" are two different facts 04 can tell apart;
---   * a third name with padding and a double space, which 0007 must normalise the way
+--   * a third name with padding and a double space, which 0007 must normalize the way
 --     @jackioh/validator's normalizeName does.
 \set ON_ERROR_STOP on
 

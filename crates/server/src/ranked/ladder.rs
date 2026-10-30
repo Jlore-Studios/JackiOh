@@ -569,7 +569,7 @@ pub fn visible_rank(rank: Option<&SeasonRank>, jlorious_position: Option<i32>) -
 }
 
 /// A season's best, as the profile's badge shows it (R607): a Jlorious position or a Grape division.
-/// Serialised as `{ "seasonId", "tier": "jlorious", "position" }` or
+/// Serialized as `{ "seasonId", "tier": "jlorious", "position" }` or
 /// `{ "seasonId", "tier": <grape>, "division" }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(into = "VisibleRankWire", try_from = "VisibleRankWire")]

@@ -104,7 +104,7 @@ describe("R1363 the shield flash", () => {
     expect(shields(plan([whole(3, "gone")]))).toEqual([]);
   });
 
-  it("R1363 the DOM flourish is centred on its target and says its size, as data only", () => {
+  it("R1363 the DOM flourish is centered on its target and says its size, as data only", () => {
     const root = document.createElement("div");
     const box = { x: 10, y: 20, width: 80, height: 100 };
     const effect = mountDomEffect(root, { kind: "shield", size: "full", at: AT, delayMs: 0, durationMs: 750 }, { at: box });

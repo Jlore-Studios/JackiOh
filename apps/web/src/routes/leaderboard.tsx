@@ -46,20 +46,20 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     getLeaderboard(token)
       .then((next) => {
-        if (!cancelled) setBoard(next);
+        if (!canceled) setBoard(next);
       })
       .catch((cause: unknown) => {
-        if (cancelled) return;
+        if (canceled) return;
         // R2125000: a read that fails behind a kept ladder leaves it and says nothing; only a first visit says why.
         const kept = cachedRead<LeaderboardResponse>(token, keptPaths.leaderboard);
         if (kept === undefined) setError(cause instanceof Error ? cause.message : String(cause));
         else setBoard(kept);
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, attempt]);
 

@@ -348,8 +348,8 @@ mod tests {
 
                 assert_eq!(stolen_ids(&s), vec![pawn.clone()]);
                 assert_ne!(s.card(&pawn).face_up, Some(true));
-                assert!(serde_json::to_string(&s.view(P1).you.backrow).expect("a view serialises").contains(PAWN));
-                assert!(!serde_json::to_string(&s.view(P2)).expect("a view serialises").contains(PAWN));
+                assert!(serde_json::to_string(&s.view(P1).you.backrow).expect("a view serializes").contains(PAWN));
+                assert!(!serde_json::to_string(&s.view(P2)).expect("a view serializes").contains(PAWN));
             }
 
             #[test]
@@ -361,14 +361,14 @@ mod tests {
                 }));
                 let trap = s.card(UNLICENSED).id.clone();
 
-                assert!(!serde_json::to_string(&s.view(P1)).expect("a view serialises").contains(UNLICENSED));
+                assert!(!serde_json::to_string(&s.view(P1)).expect("a view serializes").contains(UNLICENSED));
                 s.play(OUTBREAK, json!({ "targets": [{ "pick": "instance", "instanceId": trap }] }));
 
                 // (2) Cost with 1 token: not stolen, so it stays theirs, face-down, and you draw 1.
                 assert!(stolen_ids(&s).is_empty());
                 assert_eq!(drawn(&s), 1);
                 assert_eq!(s.card(&trap).counters.plague, Some(1));
-                assert!(!serde_json::to_string(&s.view(P1)).expect("a view serialises").contains(UNLICENSED));
+                assert!(!serde_json::to_string(&s.view(P1)).expect("a view serializes").contains(UNLICENSED));
             }
 
             #[test]

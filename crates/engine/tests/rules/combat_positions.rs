@@ -8,7 +8,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{
-    armoured, big_dfender, deft_duelist, indestructible, plain, spikey_pillow, stacker, taunter, windfurier,
+    armored, big_dfender, deft_duelist, indestructible, plain, spikey_pillow, stacker, taunter, windfurier,
 };
 use crate::rules::fixtures::field::{flush, playing as field_playing, tower};
 use crate::rules::fixtures::harness::{
@@ -465,9 +465,9 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn defense_armor_1_stacks_with_printed_armor_and_big_d_fenders_aura_4_1() {
         let mut state = playing("defense-armor");
-        let armour = put(
+        let armor = put(
             &mut state,
-            &armoured.id,
+            &armored.id,
             slot(P1, Row::Units, 1),
             Default::default(),
         );
@@ -479,19 +479,19 @@ mod positions_and_exertion_m2_t1 {
         );
         let enemy = put(
             &mut state,
-            &armoured.id,
+            &armored.id,
             slot(P2, Row::Units, 1),
             Default::default(),
         );
 
         // In Attack Position neither the position bonus nor the aura applies.
-        assert_eq!(view_of(&state, &armour.id).armor, 7);
+        assert_eq!(view_of(&state, &armor.id).armor, 7);
         assert_eq!(view_of(&state, &dfender.id).armor, 0);
 
-        switch_by_effect(&mut state, &armour, Some(Position::Def));
-        assert_eq!(view_of(&state, &armour.id).armor, 10); // 7 printed + 1 Defense + 2 aura
+        switch_by_effect(&mut state, &armor, Some(Position::Def));
+        assert_eq!(view_of(&state, &armor.id).armor, 10); // 7 printed + 1 Defense + 2 aura
         assert_eq!(
-            view_of(&state, &armour.id)
+            view_of(&state, &armor.id)
                 .keywords
                 .iter()
                 .filter(|keyword| keyword.kind() == KeywordKind::Armor)
@@ -509,9 +509,9 @@ mod positions_and_exertion_m2_t1 {
 
         // Radiant Big D-fender gives +4 instead.
         let mut radiant_state = playing("defense-armor-radiant");
-        let radiant_armour = put(
+        let radiant_armor = put(
             &mut radiant_state,
-            &armoured.id,
+            &armored.id,
             slot(P1, Row::Units, 1),
             Default::default(),
         );
@@ -521,8 +521,8 @@ mod positions_and_exertion_m2_t1 {
             slot(P1, Row::Units, 2),
             json_as(json!({ "radiant": true })),
         );
-        switch_by_effect(&mut radiant_state, &radiant_armour, Some(Position::Def));
-        assert_eq!(view_of(&radiant_state, &radiant_armour.id).armor, 12); // 7 + 1 + 4
+        switch_by_effect(&mut radiant_state, &radiant_armor, Some(Position::Def));
+        assert_eq!(view_of(&radiant_state, &radiant_armor.id).armor, 12); // 7 + 1 + 4
     }
 
     #[test]

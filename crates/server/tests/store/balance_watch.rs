@@ -155,7 +155,7 @@ mod parse_balance_watch_args_cases {
         let error = parse_balance_watch_args(&args(&["--patch=v0.3.0b", "--bogus=1"]))
             .expect_err("an unknown flag is refused")
             .to_string();
-        assert!(error.contains("Unrecognised option --bogus"), "{error}");
+        assert!(error.contains("Unrecognized option --bogus"), "{error}");
         assert!(error.contains("Usage:"), "{error}");
     }
 }

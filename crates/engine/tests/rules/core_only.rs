@@ -228,7 +228,7 @@ mod r2433000_a_seat_that_plays_only_core_cards {
         assert_eq!(state.players[BARRED].handicap, Some(barred()));
         assert!(state::plays_only_core(&state, BARRED));
         assert!(!state::plays_only_core(&state, OTHER));
-        let json = serde_json::to_value(state.players[BARRED].handicap).expect("serialises");
+        let json = serde_json::to_value(state.players[BARRED].handicap).expect("serializes");
         assert_eq!(json["coreOnly"], json!(true));
     }
 
@@ -534,7 +534,7 @@ mod r2433000_hashes {
         assert_eq!(hash_state(&with_unset), hash_state(&plain));
         for tier in [AI_DIFFICULTY.medium, AI_DIFFICULTY.hard, TUTORIAL_HUMAN] {
             let state = created("r2433000-tier", Some(tier), None);
-            let json = serde_json::to_value(state.players.p1.handicap).expect("serialises");
+            let json = serde_json::to_value(state.players.p1.handicap).expect("serializes");
             assert!(json.get("coreOnly").is_none(), "{json}");
         }
     }

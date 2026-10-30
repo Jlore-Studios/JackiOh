@@ -208,7 +208,7 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
 | `GET`, `PUT`, `DELETE` | `/api/custom-cards/:id` | active | one of the caller's cards; a save naming the version it replaces (409 with the current one when another save came first); a delete (R915008) |
-| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
+| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is canceled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002), counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept for every caller (R1996000) |
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
@@ -525,7 +525,7 @@ folded to, a finished match keeps the result it recorded), and `bug_reports.rs` 
 alert `bug.found` and, with `CREATE_ISSUES_TOKEN` set, files one GitHub issue for the night bot
 per failure signature (`bug_reports::Signature`: where it was found, the build, the catalog and
 the first refused action's type), titled `Patch v0.3.Y: match <first id> … (<signature>)` and
-labelled `BUG_REPORT_LABELS` (`patch`, `bot:build`, `difficulty:hard`, `priority:high`). A later
+labeled `BUG_REPORT_LABELS` (`patch`, `bot:build`, `difficulty:hard`, `priority:high`). A later
 match with the signature is added to that issue's body, once per match per process, up to
 `BUG_REPORT_LISTED_MATCHES`; a process opens at most `BUG_REPORTS_PER_WINDOW` issues in
 `BUG_REPORT_WINDOW_MS`, and none when an issue whose title holds the signature exists already
@@ -647,7 +647,7 @@ series still makes its picks.
   it meets an offer, and when) and its aim's lead. Where it stands (`standing`) is read through
   `redact` on one `determinize`d world (`{seed}:bot-standing:{home}:{turn}`), since the evaluation
   cannot look up a face-down placeholder: the deficit on R1442's scale, which the concession's
-  threshold is fitted on, and how far it trails its opponent, centred on an even board, which both
+  threshold is fitted on, and how far it trails its opponent, centered on an even board, which both
   guards read.
 - `bots::aim` is the server's mirror of the web's aim (`apps/web/src/game/aim/aim.ts`): the aim a
   person's client would show for a targeted play, Activate, hero power or attack. The actor relays it

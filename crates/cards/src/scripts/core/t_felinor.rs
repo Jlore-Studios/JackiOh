@@ -27,7 +27,7 @@ pub fn script() -> CardScripts {
 // T-felinor Felinor Token (SPEC §7; §3.2, §4.1, §5.1, §6.1, R11, R64, R74, R275). BUILD M4-T4's
 // token row: "Vanish on leaving the field; … none in random pools; radiant … Felinor Token 2/2 Rush".
 // The radiant face is data only (R275: double the stats, plus Rush), so both faces prove the shared
-// behaviour and the radiant one adds Rush's. The Felinor TAG is proved as catalog data and through
+// behavior and the radiant one adds Rush's. The Felinor TAG is proved as catalog data and through
 // #43 Big Felinor, whose "destroy all non-Felinor units" must spare it (#92's `setStat` counts it, R39).
 #[cfg(test)]
 mod tests {

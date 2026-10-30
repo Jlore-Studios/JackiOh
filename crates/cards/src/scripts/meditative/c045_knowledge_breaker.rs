@@ -416,7 +416,7 @@ mod tests {
             let set = s.backrow(P1, 2).expect("set in the backrow");
             assert_eq!(set.def_id, BIGOT);
             // The opponent reads a face-down backrow card and a Trap play, never the Unit.
-            let theirs = serde_json::to_string(&s.view(P2)).expect("the view serialises");
+            let theirs = serde_json::to_string(&s.view(P2)).expect("the view serializes");
             assert!(!theirs.contains(BIGOT), "p2 never reads the set Unit");
         }
 

@@ -298,7 +298,7 @@ mod tests {
         }
 
         #[test]
-        fn r44_a_cancelled_attack_does_not_count() {
+        fn r44_a_canceled_attack_does_not_count() {
             let mut s = board(
                 false,
                 json!({ "field": [VANILLA] }),

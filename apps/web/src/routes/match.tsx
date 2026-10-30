@@ -208,12 +208,12 @@ function recorded(ranks: MatchRanksResponse): boolean {
 function useMatchRanks(token: string, matchId: string, gameOver: boolean): MatchRanksResponse | null {
   const [ranks, setRanks] = useState<MatchRanksResponse | null>(null);
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const read = (reads: number): void => {
       getMatchRanks(token, matchId).then(
         (answer) => {
-          if (cancelled) return;
+          if (canceled) return;
           const body = asMatchRanks(answer);
           setRanks(body);
           if (gameOver && body !== null && body.ranked && !recorded(body) && reads < MATCH_RANKS_READ_ATTEMPTS) {
@@ -227,7 +227,7 @@ function useMatchRanks(token: string, matchId: string, gameOver: boolean): Match
     };
     read(1);
     return () => {
-      cancelled = true;
+      canceled = true;
       if (retry !== undefined) clearTimeout(retry);
     };
   }, [token, matchId, gameOver]);

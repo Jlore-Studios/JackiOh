@@ -4,7 +4,7 @@
  * enchantments E39, the animated mark R383), the numbers a Degrade or an Upgrade moved, the tuned stat
  * pips and the tuned keyword chips, and a backrow pile's depth (E21).
  *
- * Every mark reads by shape as well as colour: a glyph (a cracked pane, ▲ ▼ ◆, a return arrow, a
+ * Every mark reads by shape as well as color: a glyph (a cracked pane, ▲ ▼ ◆, a return arrow, a
  * spark, a crosshair, a cog), a dotted box, a "+" or a struck "−". Nothing here moves, so the reduced
  * motion settings (the media query and the panel's switch) need nothing: every mark is still.
  *
@@ -24,7 +24,7 @@
 /* ------------------------------------------------------------------------------ the rail --- */
 
 /* A full or compact face: a column down the art window's top-right corner, clear of the cost gem
-   (top left), the crest (top centre), the name ribbon and the rarity gem. */
+   (top left), the crest (top center), the name ribbon and the rarity gem. */
 .cf .cf-states {
   --cf-state-size: max(11cqw, 14px);
 
@@ -201,7 +201,7 @@
   }
 }
 
-/* The board minion: a row just over its name plate, centred, the same fold. */
+/* The board minion: a row just over its name plate, centered, the same fold. */
 .cf[data-layout="minion"] .cf-states {
   --cf-state-size: max(15cqmin, 10px);
 

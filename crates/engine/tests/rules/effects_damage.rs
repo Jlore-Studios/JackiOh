@@ -12,7 +12,7 @@ use jackioh_engine::{
     Row::Units,
 };
 
-use super::fixtures::combat::{armoured, plain, shielded};
+use super::fixtures::combat::{armored, plain, shielded};
 use super::fixtures::harness::{Bench, events_of_type, new_game, put, slot};
 use crate::rules::fixtures::harness::{json_of, live};
 
@@ -161,7 +161,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     fn s4_4_step_2_ignore_armor_puts_the_whole_amount_through_on_a_unit_and_on_a_hero() {
         let mut state = game("damage-ignore-armor");
         let self_card = resolving_bolt(&mut state);
-        let armoured_unit = put(&mut state, &armoured.id, slot(P2, Units, 1), json!({})); // Armor 7
+        let armored_unit = put(&mut state, &armored.id, slot(P2, Units, 1), json!({})); // Armor 7
         state.players.p2.hero.armor = 3;
 
         // Without the flag Armor eats the hit, and a hit reduced to 0 emits nothing (R63).
@@ -170,13 +170,13 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             let mut blocked = ctx_for(
                 sink.sink(&mut state),
                 Some(&self_card),
-                on_instance(&armoured_unit),
+                on_instance(&armored_unit),
             );
             run(
                 &mut blocked,
                 vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 4 })))],
             );
-            assert_eq!(live(blocked.state, &armoured_unit).damage, 0);
+            assert_eq!(live(blocked.state, &armored_unit).damage, 0);
             assert_eq!(events_of_type(blocked.events, GameEventType::Damage).len(), 0);
         }
 
@@ -185,7 +185,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             let mut through = ctx_for(
                 sink.sink(&mut state),
                 Some(&self_card),
-                on_instance(&armoured_unit),
+                on_instance(&armored_unit),
             );
             run(
                 &mut through,
@@ -193,7 +193,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
                     json!({ "to": { "of": "chosen" }, "amount": 4, "ignoreArmor": true }),
                 ))],
             );
-            assert_eq!(live(through.state, &armoured_unit).damage, 4);
+            assert_eq!(live(through.state, &armored_unit).damage, 4);
         }
 
         let mut sink = Bench::new(&state);

@@ -170,8 +170,8 @@ describe("S8 a hand anchor is where the hand's cards are", () => {
     ]);
     // Cards from 110 to 302, and one step of 66 more for the card that is coming.
     expect(resolveAnchor({ kind: "testid", testid: "hand-you" })).toEqual({ x: 110, y: 640, width: 258, height: 82 });
-    const centre = pointIn(resolveAnchor({ kind: "testid", testid: "hand-you" })!);
-    expect(centre.x).toBeLessThan(STRIP.x + STRIP.width / 2);
+    const center = pointIn(resolveAnchor({ kind: "testid", testid: "hand-you" })!);
+    expect(center.x).toBeLessThan(STRIP.x + STRIP.width / 2);
   });
 
   it("S8 the opponent's hand of backs resolves the same way, and one card steps by its own width", () => {
@@ -197,7 +197,7 @@ describe("S8 a hand anchor is where the hand's cards are", () => {
 });
 
 describe("S8 pointIn", () => {
-  it("S8 pointIn is the box's centre by default", () => {
+  it("S8 pointIn is the box's center by default", () => {
     expect(pointIn(CARD)).toEqual({ x: 345, y: 263 });
   });
 

@@ -19,7 +19,7 @@ use jackioh_engine::effects::{
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
-use crate::rules::fixtures::combat::{armoured, indestructible, plain, shielded};
+use crate::rules::fixtures::combat::{armored, indestructible, plain, shielded};
 use crate::rules::fixtures::harness::{events_of_type, ids_of, in_hand, new_game, put, slot};
 
 // Fixture cards: one tagged body per scope filter the eight call sites use.
@@ -692,7 +692,7 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
         );
         let armor = put(
             &mut state,
-            &armoured.id,
+            &armored.id,
             slot(PlayerId::P2, Row::Units, 2),
             json!({}),
         );
@@ -735,7 +735,7 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
         );
         let armor = put(
             &mut state,
-            &armoured.id,
+            &armored.id,
             slot(PlayerId::P2, Row::Units, 1),
             json!({}),
         );

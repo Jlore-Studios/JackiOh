@@ -597,7 +597,7 @@ describe("B48 aiming the lunge in the page", () => {
     const x = Number.parseFloat(attacker.style.getPropertyValue("--fx-lunge-x"));
     const y = Number.parseFloat(attacker.style.getPropertyValue("--fx-lunge-y"));
     expect(x).toBeCloseTo(0, 5);
-    // Straight up the board: 200 px between centres, less 0.55 of the two half-heights (82).
+    // Straight up the board: 200 px between centers, less 0.55 of the two half-heights (82).
     expect(y).toBeLessThan(-FX_LUNGE_MIN_PX);
     expect(y).toBeGreaterThan(-200);
     h.director.release();
@@ -618,7 +618,7 @@ describe("B48 aiming the lunge in the page", () => {
 });
 
 describe("B46 standInCopy and landingBox", () => {
-  it("B46 the landing box is the zone's height, the source's shape, centred in the zone and never wider than it", () => {
+  it("B46 the landing box is the zone's height, the source's shape, centered in the zone and never wider than it", () => {
     const land = landingBox(ZONE_BOX, HAND_BOX);
     expect(land.height).toBe(ZONE_BOX.height - 2);
     expect(land.width).toBeCloseTo((ZONE_BOX.height - 2) * (HAND_BOX.width / HAND_BOX.height), 6);

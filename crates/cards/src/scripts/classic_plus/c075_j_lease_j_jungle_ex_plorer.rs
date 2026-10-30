@@ -108,7 +108,7 @@ mod tests {
                 );
                 let theirs = s.view(P2);
                 assert_eq!(js(&theirs)["opponent"]["libraryCount"], json!(5));
-                assert!(!serde_json::to_string(&theirs).expect("serialises").contains(PACK));
+                assert!(!serde_json::to_string(&theirs).expect("serializes").contains(PACK));
             }
 
             #[test]

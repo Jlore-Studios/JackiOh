@@ -131,7 +131,7 @@ pub(crate) mod absent_or_null {
 }
 
 /// A string-literal union as a Rust enum: one unit variant per literal,
-/// serialised as exactly that literal, with `as_str` (the text a SQL column or function holds),
+/// serialized as exactly that literal, with `as_str` (the text a SQL column or function holds),
 /// `FromStr`, `Display` and `ALL` (declaration order).
 macro_rules! store_union {
     (
@@ -595,7 +595,7 @@ store_union! {
     }
 }
 
-/// One value per mode, every mode present (as `PerPlayer` is one per seat). Serialises as
+/// One value per mode, every mode present (as `PerPlayer` is one per seat). Serializes as
 /// `{ "bo1": …, "bo3": …, "random": … }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub struct PerMode<T> {
@@ -785,7 +785,7 @@ pub struct MatchActionRow {
 
 /// #1169: a live match's checkpoint (`public.match_checkpoints`, migration 0042), the state its actor
 /// held after the log row `seq`, which a rebuild resumes from when it passes `actor::checkpoint`'s
-/// checks. `body` is the serialised `CheckpointBody` and `body_hash` its FNV-1a.
+/// checks. `body` is the serialized `CheckpointBody` and `body_hash` its FNV-1a.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct MatchCheckpointRow {
@@ -840,7 +840,7 @@ store_union! {
     pub enum TicketStatus {
         Open = "open",
         Matched = "matched",
-        Cancelled = "cancelled",
+        Canceled = "cancelled",
     }
 }
 
@@ -1078,7 +1078,7 @@ pub struct SeasonStanding {
     #[serde(flatten)]
     pub rank: SeasonRank,
     pub rating: f64,
-    /// R640000: a ladder bot's row; never serialised when false. Jlorious and the percentiles read
+    /// R640000: a ladder bot's row; never serialized when false. Jlorious and the percentiles read
     /// the rows without it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub bot: bool,
@@ -1405,7 +1405,7 @@ pub struct ConsentRow {
 /// One of `PublicPlayerSummary.favourite_cards`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct FavouriteCard {
+pub struct FavoriteCard {
     pub id: String,
     pub count: i64,
 }
@@ -1431,7 +1431,7 @@ pub struct PublicPlayerSummary {
     pub losses: i64,
     pub draws: i64,
     pub win_rate: Option<f64>,
-    pub favourite_cards: Vec<FavouriteCard>,
+    pub favourite_cards: Vec<FavoriteCard>,
     pub fun_stats: FunStats,
     pub updated_at: i64,
 }
@@ -2897,7 +2897,7 @@ store_union! {
         Open = "open",
         Accepted = "accepted",
         Declined = "declined",
-        Cancelled = "cancelled",
+        Canceled = "cancelled",
         Expired = "expired",
     }
 }
@@ -3144,7 +3144,7 @@ impl Tx<'_> {
         dispatch!(self, challenges_open_for_room(code, now))
     }
 
-    /// B49: moves an open challenge to `state` (declined or cancelled) and answers it as it now
+    /// B49: moves an open challenge to `state` (declined or canceled) and answers it as it now
     /// stands; `None`, and nothing written, when it is not open.
     pub async fn challenges_close(
         &mut self,

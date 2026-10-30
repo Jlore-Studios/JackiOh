@@ -425,7 +425,7 @@ pub(crate) fn give_flying(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
 /// An engine value as its JSON, for the card tests' comparisons with TS's object literals.
 #[cfg(test)]
 pub(crate) fn js<T: serde::Serialize + ?Sized>(value: &T) -> serde_json::Value {
-    serde_json::to_value(value).expect("an engine value serialises")
+    serde_json::to_value(value).expect("an engine value serializes")
 }
 
 /// TS `{ ...base, ...over }` on two object literals (a test's side setup over its defaults).
@@ -444,6 +444,48 @@ pub(crate) fn merged(mut base: serde_json::Value, over: serde_json::Value) -> se
 #[cfg(test)]
 pub(crate) fn filler(count: usize) -> serde_json::Value {
     serde_json::json!(vec!["core-005"; count])
+}
+
+/// R2476000: the preview `viewer`'s view carries on the card `instance_id` wherever it shows it (a hand,
+/// a unit zone, the backrow), as `[(label, value, display)]`; empty when the card carries none or the
+/// view does not show it. Read off the view's JSON, the client's wire, so every place a card can show
+/// on either side is searched alike.
+#[cfg(test)]
+pub(crate) fn preview_seen(
+    s: &jackioh_engine::testkit::Scenario,
+    viewer: jackioh_engine::PlayerId,
+    instance_id: &str,
+) -> Vec<(String, i32, Option<String>)> {
+    fn find(value: &serde_json::Value, id: &str) -> Option<serde_json::Value> {
+        match value {
+            serde_json::Value::Object(map) => {
+                if map.get("instanceId").and_then(serde_json::Value::as_str) == Some(id) {
+                    return Some(map.get("preview").cloned().unwrap_or(serde_json::Value::Null));
+                }
+                map.values().find_map(|inner| find(inner, id))
+            }
+            serde_json::Value::Array(list) => list.iter().find_map(|inner| find(inner, id)),
+            _ => None,
+        }
+    }
+    // The two sides only: the view's events name cards by `instanceId` too.
+    let view = serde_json::to_value(s.view(viewer)).expect("a view serializes");
+    find(&view["you"], instance_id)
+        .or_else(|| find(&view["opponent"], instance_id))
+        .and_then(|preview| preview.as_array().cloned())
+        .unwrap_or_default()
+        .iter()
+        .map(|entry| {
+            (
+                entry["label"].as_str().unwrap_or_default().to_string(),
+                entry["value"].as_i64().unwrap_or_default() as i32,
+                entry
+                    .get("display")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string),
+            )
+        })
+        .collect()
 }
 
 /// The cards' def ids, in order.
@@ -662,7 +704,7 @@ mod tests {
     #[test]
     fn the_catalog_round_trips_through_card_defs() {
         let raw: serde_json::Value = serde_json::from_str(catalog_json()).expect("catalog.json is JSON");
-        let typed = serde_json::to_value(&*CATALOG).expect("CardDefs serialise");
+        let typed = serde_json::to_value(&*CATALOG).expect("CardDefs serialize");
         assert_eq!(typed, raw);
         assert_eq!(CATALOG_IDS.first().map(String::as_str), Some("core-001"));
         assert_eq!(card_def("core-002").name, "Bigot");

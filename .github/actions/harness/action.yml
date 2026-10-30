@@ -1,0 +1,48 @@
+# The night bot's harness (bot/go/, #467) as one binary, `harness`, on PATH: what the bot's
+# workflows ran as `python -m harness` before. It is built once for each version of bot/go/ and
+# runner platform, then cached, so a job whose binary is cached sets up no toolchain at all; a
+# miss sets up the Go that bot/go/go.mod pins, builds (seconds: the standard library is the only
+# dependency) and saves the binary for the next job. It works the same on GitHub's runners and the
+# machines' self-hosted ones (bot/machine/README.md).
+#
+# The binary finds the repository from the directory it runs in (the first one up holding
+# .harness/config.json), so the bot's steps keep `working-directory: bot`. A job that checks out
+# only part of the repository must check out bot/go and this action.
+name: harness
+description: The night bot's harness (bot/go) built once per version and runner, cached, and put on PATH as `harness`
+runs:
+  using: composite
+  steps:
+    - name: The cached harness binary
+      id: cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ runner.temp }}/harness-bin
+        key: harness-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bot/go/**') }}
+
+    - name: Go, as bot/go/go.mod pins it
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: bot/go/go.mod
+        cache: false
+
+    - name: Build the harness
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: bot/go
+      env:
+        CGO_ENABLED: "0"
+      run: go build -trimpath -o "$RUNNER_TEMP/harness-bin/harness" ./cmd/harness
+
+    - name: Keep the binary for the next job
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      continue-on-error: true
+      with:
+        path: ${{ runner.temp }}/harness-bin
+        key: ${{ steps.cache.outputs.cache-primary-key }}
+
+    - name: Put harness on PATH
+      shell: bash
+      run: echo "$RUNNER_TEMP/harness-bin" >> "$GITHUB_PATH"

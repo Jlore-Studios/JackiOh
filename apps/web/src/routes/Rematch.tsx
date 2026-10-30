@@ -50,7 +50,7 @@ function useRematchStatus(token: string, matchId: string, onStatus: (answer: Rem
   const latest = useRef(onStatus);
   latest.current = onStatus;
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     // A wake while a read is out would only repeat it; each effect run counts its own.
     let reading = false;
     const read = (): void => {
@@ -59,7 +59,7 @@ function useRematchStatus(token: string, matchId: string, onStatus: (answer: Rem
       rematchStatus(token, matchId)
         .then(
           (answer) => {
-            if (!cancelled) latest.current(answer);
+            if (!canceled) latest.current(answer);
           },
           () => undefined,
         )
@@ -72,7 +72,7 @@ function useRematchStatus(token: string, matchId: string, onStatus: (answer: Rem
     // A throttled tab's interval stalls; waking it reads the status again at once.
     const stopWake = pageWake(read);
     return () => {
-      cancelled = true;
+      canceled = true;
       stopWake();
       window.clearInterval(handle);
     };

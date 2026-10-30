@@ -121,7 +121,7 @@ function gatedRules(css: string): { selector: string; body: string }[] {
   return gates.flatMap((gate) => rules(blockFrom(css, (gate.index ?? 0) + gate[0].length - 1)));
 }
 
-/** A hex colour's hue in degrees and saturation and lightness from 0 to 1. */
+/** A hex color's hue in degrees and saturation and lightness from 0 to 1. */
 function hsl(hex: string): { h: number; s: number; l: number } {
   const digits = hex.length <= 4 ? [...hex].map((digit) => digit + digit).join("") : hex;
   const [r, g, b] = [0, 2, 4].map((at) => parseInt(digits.slice(at, at + 2), 16) / 255) as [number, number, number];
@@ -146,7 +146,7 @@ function inRadiantGold(hex: string): boolean {
   );
 }
 
-/** Every `#…` colour in `text`, without its `#`; a length no colour has fails the test. */
+/** Every `#…` color in `text`, without its `#`; a length no color has fails the test. */
 function hexes(text: string): string[] {
   const found = [...text.matchAll(/#([0-9a-fA-F]+)\b/g)].map((match) => match[1] ?? "");
   for (const hex of found) expect([3, 4, 6, 8], `#${hex}`).toContain(hex.length);
@@ -341,8 +341,8 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
 });
 
 describe("R1295000 the cosmetics stylesheet", () => {
-  it("R1295000 no border's declared colours fall in the Radiant gold range", () => {
-    // The control: the window holds every colour the Radiant face declares.
+  it("R1295000 no border's declared colors fall in the Radiant gold range", () => {
+    // The control: the window holds every color the Radiant face declares.
     const radiant = hexes(ruleBody(cardsCss, /\.cf\[data-radiant-face="true"\]\s*\{/));
     expect(radiant.length).toBeGreaterThan(0);
     for (const hex of radiant) expect(inRadiantGold(hex), `Radiant's #${hex}`).toBe(true);
@@ -354,7 +354,7 @@ describe("R1295000 the cosmetics stylesheet", () => {
     expect(framed.length).toBeGreaterThan(0);
     for (const rule of framed) {
       for (const hex of hexes(rule.body)) expect(inRadiantGold(hex), `${rule.selector}'s #${hex}`).toBe(false);
-      // Every colour a border declares is a hex this test can read.
+      // Every color a border declares is a hex this test can read.
       for (const way of ["rgb(", "hsl(", "color-mix(", "gold"]) expect(rule.body, rule.selector).not.toContain(way);
     }
   });

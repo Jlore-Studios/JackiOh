@@ -866,12 +866,12 @@ describe("R1075000 a room's host cancels it, and a reload finds it again", () =>
       expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
     });
     expect(vi.mocked(cancelRoom)).toHaveBeenCalledWith(TOKEN, "QRST");
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Room cancelled. Its code no longer works.");
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Room canceled. Its code no longer works.");
     expect(screen.getByTestId(playTestid.createRoom)).not.toBeDisabled();
     expect(screen.queryByTestId(playTestid.error)).toBeNull();
   });
 
-  it("R1075000 a room joined or lapsed answers cancelled false: the ticket goes and the status says so", async () => {
+  it("R1075000 a room joined or lapsed answers canceled false: the ticket goes and the status says so", async () => {
     vi.mocked(cancelRoom).mockResolvedValue({ cancelled: false });
     await createRandomRoom();
 
@@ -906,7 +906,7 @@ describe("R1075000 a room's host cancels it, and a reload finds it again", () =>
       expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
     });
     expect(vi.mocked(cancelRoom)).toHaveBeenCalledWith(TOKEN, "WXYZ23");
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Room cancelled. Its code no longer works.");
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Room canceled. Its code no longer works.");
   });
 
   it("R1075000 a failed read leaves the idle lobby", async () => {

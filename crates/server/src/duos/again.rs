@@ -1,4 +1,4 @@
-//! Play again after a finished co-op match (SPEC §13.9, R2092000), modelled on the 1v1
+//! Play again after a finished co-op match (SPEC §13.9, R2092000), modeled on the 1v1
 //! rematch (`api::rematch`, R672): either human seat (`a1` or `a2`) offers, and once both have the
 //! server starts one new co-op match for the same two people against the AI team. Nothing in the
 //! client calls it yet: part 2 builds the result panel's button on it, so players see nothing new.

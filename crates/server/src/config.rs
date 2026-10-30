@@ -70,7 +70,7 @@ pub const MAX_OPEN_ROOMS_PER_HOST: i64 = 3;
 // 32-symbol set matching its exclusions. It is built from the 36 uppercase letters+digits minus
 // the 4 excluded characters (0, O, 1, I) = 32 symbols: 23456789ABCDEFGHJKLMNPQRSTUVWXYZ.
 // The alphabet is uppercase-only, so SPEC's exclusion of lowercase `l` is satisfied by
-// normalising any user-entered code to upper case before comparison, rather than by omitting a
+// normalizing any user-entered code to upper case before comparison, rather than by omitting a
 // lowercase `l` that could never appear here in the first place.
 pub const CODE_ALPHABET: &str = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
@@ -157,7 +157,7 @@ pub const AUTH_SESSION_RENEWAL_FLOOR_SECONDS: i64 = 10;
 pub const AUTH_SIGN_OUT_WAIT_SECONDS: i64 = 5;
 /// SPEC §11 R194: how long the API remembers that an access token's session is still live at the
 /// auth provider. A session the provider has ended (a sign-out, a link's session that was dropped, a
-/// password reset that signed other devices out) stops being honoured here within this many seconds,
+/// password reset that signed other devices out) stops being honored here within this many seconds,
 /// not when its access token expires.
 pub const AUTH_SESSION_LIVE_CACHE_SECONDS: i64 = 30;
 /// SPEC §11 R159: §9.4 step 1's "verified email" is read from the auth provider and only the
@@ -459,7 +459,7 @@ pub const GLICKO_MAX_ITERATIONS: u32 = 100;
 // ---------------------------------------------------------------------------------------------
 
 /// The shape of `RANK_TIER_PERCENTS` (SURFACE §4.2: a constant object becomes a const of a struct
-/// named after it). Serialises as TS's object, keys in TS order.
+/// named after it). Serializes as TS's object, keys in TS order.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RankTierPercents {
     pub rotten: i32,
@@ -521,7 +521,7 @@ pub const USERNAME_MAX_LENGTH: usize = 16;
 /// vowels and tones as marks (Devanagari, Thai) and too few for stacked "Zalgo" text.
 pub const USERNAME_MAX_MARKS: usize = 3;
 /// R1432: raw input longer than this many characters (code points) is refused as too long without
-/// being normalised, so a huge query string costs nothing to refuse. Far above any real name
+/// being normalized, so a huge query string costs nothing to refuse. Far above any real name
 /// `USERNAME_MAX_LENGTH` allows: one user-perceived character can hold many code points, a letter
 /// with its marks or an Indic conjunct (`स्त्री` is six), so sixteen of them can run past 64.
 pub const USERNAME_INPUT_MAX_CHARS: usize = 256;
@@ -656,7 +656,7 @@ pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
 /// #1169: the fewest logged actions a match must hold for the restart drain to store a checkpoint
 /// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
 /// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
-/// telemetry's replay about 0.50 ms, while a checkpoint (some 75 KB) takes about 0.3 ms to serialise
+/// telemetry's replay about 0.50 ms, while a checkpoint (some 75 KB) takes about 0.3 ms to serialize
 /// and hash, plus its write.
 pub const MATCH_CHECKPOINT_MIN_ACTIONS: i64 = 32;
 /// #1169: the shape of a checkpoint's body and of what the server folds a log to. A checkpoint
@@ -1032,7 +1032,7 @@ pub struct ScalarFit {
 /// concede before turn `min_turn`, and concede once they stand `deficit` behind (the AI's evaluation
 /// from their side, negated, R1442), a threshold distributed normally with mean `deficit_mu` and
 /// standard deviation `deficit_sigma`, and only while they trail their opponent (`Standing.behind`).
-/// That deficit is not centred on an even board: it counts the enemy hero's health against the seat,
+/// That deficit is not centered on an even board: it counts the enemy hero's health against the seat,
 /// so an even opening reads about 30 behind. `samples` is the concessions it was fitted on.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ConcedeFit {
@@ -1642,7 +1642,7 @@ pub const BOT_THINK_PRIORS: &[ThinkTimePrior] = &[
     },
 ];
 
-/// R639000: the `ln(legal_count)` the priors are centred on, as a fit's `ln_legal_mean` is.
+/// R639000: the `ln(legal_count)` the priors are centered on, as a fit's `ln_legal_mean` is.
 pub const BOT_THINK_PRIOR_LN_LEGAL_MEAN: f64 = 2.0;
 /// R639000: the shortest a bot's aim arrow shows before its targeted play or attack goes. Never
 /// under `AIM_RELAY_INTERVAL_MS`, so the relay sends the aim before the move.
@@ -2485,7 +2485,7 @@ pub struct PackUnownedWeights {
 }
 
 /// One step of `COSMETIC_TOKEN_CYCLE` (SPEC §14.5): a cosmetic token of that rarity, or a
-/// cosmetic pack. Serialised lower-camel for the client (`cosmeticPack`).
+/// cosmetic pack. Serialized lower-camel for the client (`cosmeticPack`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum CosmeticTokenStep {

@@ -55,7 +55,7 @@ fn stolen_seen_by(state: &GameState, viewer: PlayerId) -> Vec<Value> {
         .events
         .iter()
         .filter(|event| event.event_type() == GameEventType::Stolen)
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
         .collect()
 }
 
@@ -71,7 +71,7 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 }
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
-    match serde_json::to_value(events).expect("events serialise") {
+    match serde_json::to_value(events).expect("events serialize") {
         Value::Array(items) => items
             .into_iter()
             .map(|item| item.get(key).cloned().unwrap_or(Value::Null))
@@ -136,7 +136,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
                 json!({ "type": "stolen", "instanceId": HIDDEN_ID, "defId": HIDDEN_ID, "from": "p2", "to": "p1", "zone": "library" })
             ]
         );
-        let theirs = serde_json::to_string(&view_for(&state, PlayerId::P2).events).expect("events serialise");
+        let theirs = serde_json::to_string(&view_for(&state, PlayerId::P2).events).expect("events serialize");
         assert!(!theirs.contains(&taken.id));
         // R466: p2's list would have named the card by what it stopped listing; the rest is unknown now.
         assert_eq!(
@@ -421,7 +421,7 @@ mod e16_a_draw_from_the_other_player_s_deck_classic_58 {
         );
         assert_eq!(state.counters.drawn, drawn_before + 1);
         assert_eq!(
-            serde_json::to_value(events_of_type(&events, GameEventType::Drawn)).expect("events serialise"),
+            serde_json::to_value(events_of_type(&events, GameEventType::Drawn)).expect("events serialize"),
             json!([{ "type": "drawn", "player": "p1", "instanceId": bottom.id, "defId": plain.id, "turnDraw": 1 }])
         );
         // The drawer reads it; the deck's owner reads that p1 drew, never what (R466).
@@ -643,7 +643,7 @@ mod e2_e16_the_change_of_owner_itself {
         }
         // The event carries who could read the card where it was taken, and no view forwards it.
         for viewer in [PlayerId::P1, PlayerId::P2] {
-            let events = serde_json::to_string(&view_for(&state, viewer).events).expect("events serialise");
+            let events = serde_json::to_string(&view_for(&state, viewer).events).expect("events serialize");
             assert!(!events.contains("readableFrom"));
         }
         // And the other way round: p2 takes the top of p1's deck, and the rest of it turns unknown to p1.
@@ -710,7 +710,7 @@ mod e16_and_e3_a_draw_from_the_other_player_s_deck_is_the_drawer_s_draw_for_thei
         let events = run(&mut state, draw_from_opponent(Default::default()), PlayerId::P1);
         assert_eq!(
             serde_json::to_value(events_of_type(&events, GameEventType::DrawLimited))
-                .expect("events serialise"),
+                .expect("events serialize"),
             json!([{ "type": "drawLimited", "player": "p1" }])
         );
         assert_eq!(ids(&state.players[PlayerId::P2].library), ids(&library));

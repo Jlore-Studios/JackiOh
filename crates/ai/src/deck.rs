@@ -77,7 +77,7 @@ impl CostBucket {
     }
 }
 
-/// `Record<CostBucket, T>`: one value per cost bucket, serialised `{ "0-1": …, "2": …, "3": …, "4+": … }`.
+/// `Record<CostBucket, T>`: one value per cost bucket, serialized `{ "0-1": …, "2": …, "3": …, "4+": … }`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Default)]
 pub struct ByBucket<T> {
     #[serde(rename = "0-1")]

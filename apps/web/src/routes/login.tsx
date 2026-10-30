@@ -270,7 +270,7 @@ function readEntry(): Entry {
       entry.mode = "signIn";
       if (newestFlow() === "oauth") {
         // R666: the newest thing this browser asked for was an OAuth sign-in, and the provider sent
-        // it back with an error (cancelled, or refused): not an emailed link's failure.
+        // it back with an error (canceled, or refused): not an emailed link's failure.
         forgetVerifier("oauth");
         entry.oauthFailed = true;
         break;
@@ -419,7 +419,7 @@ export default function LoginRoute(): ReactElement {
   useEffect(() => {
     const pending = entry.link;
     const state = linkState.current;
-    let cancelled = false;
+    let canceled = false;
     const run = async (): Promise<void> => {
       if (pending === null) return;
       let link: SessionLink;
@@ -431,12 +431,12 @@ export default function LoginRoute(): ReactElement {
         } catch {
           // The provider could not answer. The code is still good, but this screen says what it says
           // of any link it could not check.
-          if (cancelled || acted.current) return;
+          if (canceled || acted.current) return;
           setLinkOutcome("unchecked");
           setResendOffered(true);
           return;
         }
-        if (cancelled) {
+        if (canceled) {
           // The screen went for good while the code was exchanged: nobody holds the session now.
           if (!mounted.current) revokeLink(state);
           return;
@@ -478,7 +478,7 @@ export default function LoginRoute(): ReactElement {
         link = pending;
       }
       const renewal = await renewLinkOnce(state);
-      if (cancelled) return;
+      if (canceled) return;
       const session = state.session;
       // Let go meanwhile: the player moved on, and it has been revoked.
       if (session === null) return;
@@ -489,7 +489,7 @@ export default function LoginRoute(): ReactElement {
         let factor: string | null = null;
         if (pending.kind === "code") factor = await exchangedFactor(state);
         else if (authConfig() !== null) factor = await secondFactorFor(session).catch(() => null);
-        if (cancelled) return;
+        if (canceled) return;
         if (acted.current) {
           revokeLink(state);
           return;
@@ -501,7 +501,7 @@ export default function LoginRoute(): ReactElement {
         }
       }
       const check: LinkCheck = renewal === "spent" ? { kind: "refused" } : await checkLink(session.accessToken);
-      if (cancelled) return;
+      if (canceled) return;
       if (acted.current) {
         // The player moved on before the answer came.
         revokeLink(state);
@@ -573,7 +573,7 @@ export default function LoginRoute(): ReactElement {
     };
     void run();
     return () => {
-      cancelled = true;
+      canceled = true;
       clearConsumedAuthRedirect();
     };
   }, [entry, checkRound]);

@@ -242,11 +242,11 @@ function InviteScreen({ account }: { account: Account }) {
 
   useEffect(() => {
     if (token === null) return;
-    let cancelled = false;
+    let canceled = false;
     // Status-read failure retains known status; an unauthorised read renews once (R194).
     callWithRenewal(token, getCodeStatus)
       .then((outcome) => {
-        if (cancelled) return;
+        if (canceled) return;
         if (outcome.kind === "ok") setStatusRead({ status: outcome.value, at: Date.now() });
         else if (outcome.kind === "signedOut") {
           navigate(outcome.expired ? loginPath({ reason: "expired" }) : loginPath(), { replace: true });
@@ -254,7 +254,7 @@ function InviteScreen({ account }: { account: Account }) {
       })
       .catch(() => undefined);
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, statusReads]);
 

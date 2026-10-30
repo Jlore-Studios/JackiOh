@@ -41,7 +41,7 @@ pub async fn fake_lock(app: &App) -> MutexGuard<'_, FakeData> {
 
 /// A value as its JSON.
 pub fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a serialisable value")
+    serde_json::to_value(value).expect("a serializable value")
 }
 
 /// A JSON answer as the type it holds, panicking with the error and the JSON when it is not one.

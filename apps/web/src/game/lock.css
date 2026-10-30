@@ -1,6 +1,6 @@
 /* The padlock on a Locked zone (LockIcon.tsx). Imported by LockIcon.tsx only.
  *
- * An empty locked zone shows it large and centred, where it can't be missed. A locked zone with a
+ * An empty locked zone shows it large and centered, where it can't be missed. A locked zone with a
  * card standing in it shrinks it into the corner so the card stays readable. The zone itself keeps
  * its hatched fill and border (`.zone-locked`, board.css).
  */

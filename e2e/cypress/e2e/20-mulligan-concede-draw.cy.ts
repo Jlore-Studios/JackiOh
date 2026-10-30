@@ -242,7 +242,7 @@ function openMatch(seed: string): void {
   // R257, SURFACE §11.3: fixture loadouts provide each seat's deck id.
   cy.installLoadout(seatOne, DECK_A).then((one) => {
     cy.installLoadout(seatTwo, DECK_B).then((two) => {
-      // R143: the server honours the room seed. R1989000 pins the host to p1 beside it, so the
+      // R143: the server honors the room seed. R1989000 pins the host to p1 beside it, so the
       // spec keeps the seats it was written for.
       cy.request<{ code: string }>({
         method: "POST",

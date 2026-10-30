@@ -130,15 +130,15 @@ export default function DeckHistory({
   // Each open reads the list again: a save since the last look may have kept a version.
   useEffect(() => {
     if (!open) return undefined;
-    let cancelled = false;
+    let canceled = false;
     setListing({ kind: "loading" });
     setRefusal(null);
     void store.deckVersions(deckId).then((result) => {
-      if (cancelled) return;
+      if (canceled) return;
       setListing(result.ok ? { kind: "ready", versions: result.versions } : { kind: "failed", message: result.message });
     });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [store, deckId, open]);
 

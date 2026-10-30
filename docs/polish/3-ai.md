@@ -1060,7 +1060,7 @@ export function createPracticeHost(options?: { forceInThread?: boolean; env?: Pa
 export type PracticePacing = { firstActionMs: number; actionGapMs: number; promptAnswerMs: number };
 export const PRACTICE_PACING: PracticePacing = { firstActionMs: 800, actionGapMs: 550, promptAnswerMs: 450 };
 export const PRACTICE_PACING_REDUCED: PracticePacing = { firstActionMs: 150, actionGapMs: 150, promptAnswerMs: 100 };
-/** `?pace=fast`, honoured only when MODE !== "production" (e2e). */
+/** `?pace=fast`, honored only when MODE !== "production" (e2e). */
 export const PRACTICE_PACING_FAST: PracticePacing = { firstActionMs: 0, actionGapMs: 30, promptAnswerMs: 0 };
 export const PRACTICE_AI_CLOCK_MS = 1500;
 export const PRACTICE_SETUP_KEY = "jackioh.practice.setup"; // localStorage: { difficulty, deck } (try/catch)
@@ -1270,7 +1270,7 @@ Two vitest projects and one Cypress spec. The `ai` project is new (`packages/ai/
 picked up by the root `projects: ["packages/*", …]`). Every new test file below is created by a
 tester and owned by no slice.
 
-| Behaviours | Project | File | Harness and notes |
+| Behaviors | Project | File | Harness and notes |
 |---|---|---|---|
 | B1–B8 | engine | `packages/engine/test/handicap.test.ts` | `createGame`/`beginGame`/`reduce` directly, `test/fixtures/harness.ts` (`vanillaDeck`); B6 uses an engine test-only cast-on-draw script from `test/fixtures` that opens a prompt (as `draw-pause.test.ts` does). Titles lead with the row: `it("R180 …")` (B1, B7, B8), `it("R181 …")` (B3), `it("R182 …")` (B4), `it("R183 …")` (B5, B6), `it("R184 …")` (B2) |
 | B9–B12 | ai | `packages/ai/test/observe.test.ts` | `packages/cards/test/_harness.ts` `scenario()` for fixed cases (p2 hand `core-002`/`core-011` vs `core-053`/`core-020`, backrow face-down `core-041` vs `core-060` with `faceUp: false`, different libraries, different `seed`); `fast-check` for the mutation property; random-policy states for B10. Contains `it("R185 …")` |
@@ -1332,8 +1332,8 @@ then `pnpm build:e2e && pnpm --dir apps/web exec vite preview --port 5173 --stri
 - AI opponents online, on the server, in rooms or in the ranked queue. Practice games record no
   result, no rating and no collection change.
 - Any change to the random policy of §10.7: My Pawn (R44), `timeout` (R79) and the fuzz suite keep it.
-- Behaviour that differs by tier, adaptive difficulty, AI personalities, emotes or chat.
-- Opponent modelling from history: remembering a card bounced into the human's hand, or inferring
+- Behavior that differs by tier, adaptive difficulty, AI personalities, emotes or chat.
+- Opponent modeling from history: remembering a card bounced into the human's hand, or inferring
   the human's deck list. The AI resamples every hidden card uniformly from what the opponent has
   not shown.
 - Search across turns beyond one reply (full ISMCTS, a searched or card-playing opponent turn). The
@@ -1359,7 +1359,7 @@ slice may add to a file no slice owns.
 - **Owns:** `packages/engine/src/config.ts`, `packages/engine/src/state.ts`,
   `packages/engine/src/mana.ts`, `packages/engine/src/setup.ts`, `packages/engine/src/turn.ts`,
   `packages/engine/src/replay.ts`, `SPEC.md`, `BUILD.md`.
-- **Behaviours:** B1–B8.
+- **Behaviors:** B1–B8.
 - **Additive edits:** `packages/engine/test/rulings.test.ts`: nine index `it`s (R180–R188) appended
   after R170's, in ascending order, plus path constants `AI_OBSERVE_TEST`, `AI_SHADOW_BAN_TEST`,
   `AI_DECIDE_TEST` and `WEB_PRACTICE_CORE_TEST` beside the existing ones.
@@ -1375,7 +1375,7 @@ slice may add to a file no slice owns.
   `packages/ai/src/determinize.ts`, `packages/ai/src/evaluate.ts`, `packages/ai/src/candidates.ts`,
   `packages/ai/src/simulate.ts`, `packages/ai/src/lethal.ts`, `packages/ai/src/search.ts`,
   `packages/ai/src/mulligan.ts`, `packages/ai/src/decide.ts`.
-- **Behaviours:** B9–B21.
+- **Behaviors:** B9–B21.
 - **Additive edits:** none.
 - **Brief:** pure, seeded, iterative (no recursion anywhere). Imports only `@jackioh/engine`,
   `@jackioh/engine/config` and `@jackioh/shared`. `decide` reads the true state only through
@@ -1390,7 +1390,7 @@ slice may add to a file no slice owns.
   `packages/ai/README.md`, `packages/ai/src/index.ts`, `packages/ai/src/deck.ts`,
   `packages/ai/src/shadowBan.ts`, `packages/ai/src/baselines.ts`, `packages/ai/src/match.ts`,
   `packages/ai/src/gate.ts`, `packages/ai/src/sweep.ts`, `packages/ai/scripts/sweep.ts`.
-- **Behaviours:** B22–B31.
+- **Behaviors:** B22–B31.
 - **Additive edits:** root `package.json` (the `typecheck` append, `ai:gate`, `ai:sweep`);
   `eslint.config.js` (one entry in each pure list); `apps/web/package.json`
   (`"@jackioh/ai": "workspace:*"`); `pnpm-lock.yaml` (from one `pnpm install`);
@@ -1409,7 +1409,7 @@ slice may add to a file no slice owns.
   `apps/web/src/practice/decks.ts`, `apps/web/src/practice/testids.ts`,
   `apps/web/src/practice/PracticeSetup.tsx`, `apps/web/src/practice/ThinkIndicator.tsx`,
   `apps/web/src/practice/practice.css`, `apps/web/src/routes/practice.tsx`.
-- **Behaviours:** B32–B40.
+- **Behaviors:** B32–B40.
 - **Additive edits:** `apps/web/src/main.tsx` (the lazy import and the route line);
   `apps/web/src/net/navigate.ts` (`practice: "/practice"`); `apps/web/vite.config.ts`
   (`worker: { format: "es" }`); `apps/web/README.md` (a "Practice" section on the worker boundary);
@@ -1530,7 +1530,7 @@ slice may add to a file no slice owns.
   so the sweep is a script to re-run (`pnpm ai:sweep`), and B24's `minPool` guard keeps a 30-card
   Hard deck buildable.
 - **Human legal actions carry instance ids.** `legalActions(state, human)` can name a face-down
-  backrow card's instance id as a target. This is existing behaviour, shared with hotseat and online
+  backrow card's instance id as a target. This is existing behavior, shared with hotseat and online
   play, and not new here.
 
 ## Build notes
@@ -1567,7 +1567,7 @@ are the decisions made while making them green.
   `budget`) were inlined, and guards for conditions the types rule out were deleted. The surface
   above now shows the signatures that remain.
 - **Surface tests.** Every one of B1–B40 has a test. Some contracts in §Surface sit outside the
-  numbered behaviours and are tested directly: `lineStatus`, `terminalScore`, `scoreLine`,
+  numbered behaviors and are tested directly: `lineStatus`, `terminalScore`, `scoreLine`,
   `beamSearch`, `findLethal`, decide's `"search"` and `"prompt"` reasons, `playAiTurn`'s nonces and
   sweepCard's clock are in `packages/ai/test/surface.test.ts`. What `playMatch` does with a refused,
   thrown or missing action is in `match-refusal.test.ts`. The core's `aiStep` fallback is in
@@ -1697,8 +1697,8 @@ case is a wide board, measured in "Fix pass 2".
 The first look at `/practice` the way a player sees it, at 1280×720, 390×844, 844×390 and
 768×1024, found the route working and unfinished. What changed:
 
-- **Setup.** A centred lobby with a title treatment and a warm light over the table. The three
-  tiers are cards with a crest each (a shield whose gems count the tier, coloured Easy green,
+- **Setup.** A centered lobby with a title treatment and a warm light over the table. The three
+  tiers are cards with a crest each (a shield whose gems count the tier, colored Easy green,
   Medium gold, Hard red; `practice/Tier.tsx`), a one-line flavour and the AI's resources line by
   line, read from `AI_DIFFICULTY` and marked where the AI gets more than a human. Each is still a
   real radio, drawn as a socket a gem drops into. The deck picker is a styled `<select>`, and Start
@@ -1708,7 +1708,7 @@ The first look at `/practice` the way a player sees it, at 1280×720, 390×844, 
 - **HUD.** It sticks to the top of the viewport, so the think indicator is visible wherever the
   player has scrolled (`scroll-padding-top` keeps anything scrolled into view below it). The seat
   reads "You go first" or "You go second" rather than `p1`/`p2`. While the AI thinks, the HUD
-  glows in the opponent's colour, a light runs along its lower edge, and the indicator is a pill
+  glows in the opponent's color, a light runs along its lower edge, and the indicator is a pill
   with a spinning orb.
 - **The end of a game.** `Game.tsx`'s `result-overlay` has no styles, and it renders after the
   hand, below the fold at 1280×720, so a game simply stopped. `PracticeResult.tsx` is a dialog:
