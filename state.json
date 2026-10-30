@@ -10826,7 +10826,9 @@
     },
     "41007607846": {
       "at": "2026-10-30T05:33:10Z",
+      "done": true,
       "ref": "fa3c9cad-1793337426",
+      "status": "interrupted",
       "tries": 1
     }
   },
