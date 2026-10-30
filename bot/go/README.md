@@ -1,0 +1,158 @@
+# The harness in Go (`bot/go/`)
+
+The night bot's harness and Squishy's: one Go module, one binary (`harness`), standard library
+only. It was `bot/harness/`, Python, until #467. The port changed the language and nothing the bot
+does: the same subcommands, flags, exit codes and output, the same labels, markers, comments and
+pinned issues, the same state, journal and plan files byte for byte. This file is the module's
+contract (CLAUDE.md: each crate's and app's README): how it is laid out, how to build, run and test
+it, the rules a change to it keeps, and why it is built the way it is.
+
+## Build, run, test
+
+```sh
+cd bot/go
+go build -o "$HOME/.local/bin/harness" ./cmd/harness   # the binary (seconds; no dependency to fetch)
+gofmt -l .                                             # prints nothing
+go vet ./...
+go test ./...                                          # the suite, Squishy's cases in a Squishy process
+cd .. && harness --help                                # every command; run it from bot/ or anywhere in the checkout
+```
+
+The workflows get the binary from `.github/actions/harness`, which builds it once per version of
+`bot/go/` and runner platform and caches it, so a job whose binary is cached sets up no
+toolchain at all. `bot selftest` (a job of `ci.yml`, the required check) runs `gofmt`, `go vet`,
+`go test`, then the binary under both bots' configs, actionlint, and the Python suites of what
+stays Python (`bot/machine/`'s Lambdas and scripts, `.github/hygiene/`'s branch rule).
+
+## Layout
+
+| Path | What |
+|---|---|
+| `cmd/harness/` | `main`: the binary, a few lines around `internal/cli` |
+| `internal/cli/` | the command line (`__main__.py`): every subcommand, the companion process, `$GITHUB_OUTPUT` and the step summary |
+| `internal/<module>/` | one package per Python module, named after it (`queue`, `plan`, `work`, `deliver`, `dashboard`, …), except `herr` (`errors.py`), `hctx` (`context.py`) and `reviewrule` (`review_rule.py`) |
+| `internal/pyjson/` | JSON as the Python held it, written byte for byte as `json.dumps` writes it |
+| `internal/py/` | the Python behaviours text and numbers depend on (`round` to even, floor division, `splitlines`, `fnmatch`, slicing by code point) |
+| `internal/fakes/`, `internal/testsupport/` | the tests' in-memory GitHub and git helpers (`fakes.py`), and their configs, contexts and clocks (`support.py`) |
+| `tests/` | the suite: `bot/tests/test_<file>.py` became `tests/<file>_test.go`, each Python test a Go test of the same name (`PARITY.md` lists them) |
+
+The packages keep the Python modules' boundaries, order and docstrings, so the bot's README and
+issues that name a module (`dashboard.lanes_table`, `plan.peek`, `waiting.py`) still point at the
+right code: `bot/harness/<module>.py`'s `name` is `bot/go/internal/<module>`'s `Name`.
+
+## Design decisions
+
+### Go, standard library only
+
+#467 weighed Go against Rust and strict-typed Python. The harness is I/O and process glue (GitHub's
+REST and GraphQL API, git, the model CLIs, JSON state, Markdown), not computation, and Go's standard
+library covers all of it (`net/http`, `encoding/json`'s tokenizer, `os/exec`, `regexp`,
+`text/template`'s cousins, `testing`). No third-party module means nothing to vet, pin or fetch,
+and a cold build in seconds, which is what lets every job build its own binary when the cache
+misses instead of depending on a release step.
+
+### One package per Python module, generated stubs first
+
+The port kept the Python's structure so it could be reviewed side by side and so the bot's docs
+stay true. Before any body was ported, every module's surface (its public names, and the private
+ones another module or a test reaches) was generated from the Python's type hints into
+`internal/<pkg>/api.go` stubs that compiled together. With signatures fixed up front, each module
+was ported in parallel against the same API and the pieces fitted when they met.
+
+The Python had one import cycle (`config` → `providers` → `runner` → `config`, through a lazy import
+of `runner.DEFAULT_PARK`). Go forbids cycles, so `DefaultPark` lives in `providers`, and `runner` uses
+it from there.
+
+### Ordered JSON, written as Python writes it (`pyjson`)
+
+A Python dict keeps insertion order, and the harness depends on it: the state file is read, changed
+and written back; dicts are iterated to draw the status issue; `json.dumps` output is hashed (the
+sweep's label check) and written to the state branch (`indent=2, sort_keys=True`), the plans and
+`result.json`. Go's maps have no order and `encoding/json` writes a different format (no spaces,
+HTML-escaped, no `ensure_ascii`, its own float format). So every JSON value is a `pyjson` value:
+`*pyjson.Object` keeps key order, integers stay `int` and floats `float64`, and `Dumps` writes
+`json.dumps`'s bytes exactly, including `\uXXXX` escapes, separators and Python's float `repr`.
+Its tests compare against output Python 3.13 wrote. The state branch therefore reads the same
+whichever harness wrote it last, and the cut-over changed no file on it.
+
+GitHub payloads stay dynamic (`*pyjson.Object`) rather than typed structs: the harness reads a few
+fields of each and passes the rest through, and the fake GitHub builds them freely in tests, as the
+Python did. Config, providers, plans and every dataclass are typed structs.
+
+### Python's exceptions as typed panics (`herr`)
+
+The Python raises `GitHubError`, `ConfigError` and the rest deep in a call and catches them several
+frames up, in about two hundred `try`/`except` blocks. Threading `error` results through every
+function between would have changed most signatures and made each `except` a judgement call. So a
+raise is `herr.Raise(err)` (a panic carrying a typed `error`), `except GitHubError as e` is
+`herr.Catch[*herr.GitHubError](…)`, and `except Exception` is `herr.Try(…)`: each `try`/`except`
+of the Python is one call in the Go, and the control flow is the same. Go's own errors (a file that
+will not open, a number that will not parse) are checked where they arise, as the Python's narrow
+excepts were. The command line catches what is left exactly as `__main__.main` did, and an
+uncaught error exits 1 (Python's code), not Go's 2. Goroutines standing for Python threads recover
+their own panics, since a Python thread's exception never ended the process.
+
+This is the pattern the standard library uses inside `encoding/json` and `text/template`: panics
+within a component, turned into a result at its edge. Here the edge is the command line.
+
+### Python's text and number rules (`py`)
+
+Python slices strings by code point, rounds half to even, floors integer division and splits
+lines at more characters than `\n`; Go does none of these by default. Every place the harness
+measures, slices, rounds or splits text that reaches a comment or the status issue uses `py`'s
+twin of the Python call, each tested against Python's own answers. Regular expressions are Go's
+RE2, which has no lookaround: the four Python patterns with one (`commands.py`'s mention and slash
+matching, `runner.py`'s reset time, `triage.py`'s form answers) are matched in code with the same
+results, and patterns over text people write keep Python's Unicode `\w` and `\b`.
+
+### Test seams are package variables
+
+Where a Python test replaced a module attribute with `mock.patch.object`, the Go package calls
+that function through a package-level variable the test swaps and restores (`dashboard.Update`,
+`stats.Collect`, `cli`'s `Ctx`, `Summary`, `Output`, its clock and subprocess runner, …). Nothing
+else in the design exists for the tests.
+
+### The suite is the oracle, ported test for test
+
+#467's first milestone asked for language-neutral fixtures proven against the Python. The Python
+suite was already that oracle: about a thousand tests over an in-memory GitHub, real git
+repositories and fixed clocks, asserting on every write. Each was ported one to one, with the same
+name, inputs and assertions (`tests/PARITY.md`), so the Go passes exactly the checks the Python
+passed. `test_machine.py` and `test_hygiene.py` stayed Python, beside their Python subjects.
+
+### Read the repository from disk, as the Python did
+
+The Python found the repository two directories above its own file. A binary has no source file,
+so the root is the first directory, from the working directory up, that holds
+`.harness/config.json`; the workflows keep `working-directory: bot`. The prompts in `bot/prompts/`
+are read from disk at run time as before, rather than embedded: `go:embed` cannot reach above
+the module, and reading them keeps a prompt change a text change with no rebuild. Time zones load
+from the embedded `time/tzdata`, so a runner without a zone database behaves the same.
+
+### One binary per commit, cached, for every runner
+
+`.github/actions/harness` restores the binary for this version of `bot/go/` and runner platform
+from the Actions cache; on a miss it sets up the Go that `go.mod` pins, builds with
+`CGO_ENABLED=0` (a static binary) and saves it. The bot's jobs used to spend a `setup-python` step
+each; a cached binary needs no setup at all. The machines' self-hosted runners use the same action,
+so `bot/machine/setup.sh` is unchanged: the box keeps Python for its training lanes and the
+commands models run, but the harness no longer needs it.
+
+### The whole migration in one pull request
+
+#467 planned a shadow period and a cut-over per workflow. The issue's author chose the full
+migration in one pull request instead. The Python harness and its tests are deleted in the same
+change: keeping them one line away would mean making every harness change twice or letting the
+rollback rot within days. Reverting the pull request is the rollback, restoring the Python and
+the run lines together.
+
+## Rules for a change
+
+The port's rules stay the harness's rules (`PORTING.md` has the full list):
+
+- Write and hash JSON only through `pyjson`; never `encoding/json`'s `Marshal`.
+- Raise with `herr.Raise`, catch with `herr.Catch` or `herr.Try`; a goroutine recovers its own.
+- Measure and slice text with `py.Len` and `py.Slice`, round with `py.Round`, sort stably.
+- Only `config` and `identity` read the environment.
+- A new test seam is a package variable the package calls through.
+- The bots may not change `bot/` (their `forbidden_paths`): a change here is a person's.
