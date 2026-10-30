@@ -254,7 +254,10 @@ describe("R291 the tutorial's lessons", () => {
       expect(debug.debug.seed).toBe(lesson.seed);
       expect(debug.debug.decks).toEqual(decksOf(lesson));
       const handicaps = lessonHandicaps(lesson);
-      expect(debug.debug.handicaps).toEqual({ [aiSeat]: AI_TUTORIAL, [lesson.humanSeat]: handicaps.human });
+      expect(debug.debug.handicaps).toEqual({ [aiSeat]: handicaps.ai, [lesson.humanSeat]: handicaps.human });
+      // R2433000: today's opponent decks are Training Grounds cards, so the lessons deal AI_TUTORIAL
+      // without its Core-only bar until #2434 deals Core decks.
+      expect(handicaps.ai).toEqual({ ...AI_TUTORIAL, coreOnly: undefined });
     }
   });
 

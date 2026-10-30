@@ -39,6 +39,12 @@
 //
 // R847: a side whose Temporal Rift turn is granted (`SideView.riftExtraTurn`) wears "Rift turn used"
 // on both seats; owed extra turns are the engine's own modifier badge (R846).
+//
+// R1840005: a seat's Credits, a public count on both seats, which the Marketplace spends (R1853003)
+// and a Resource played or discarded from the hand earns (R2250001), are a pill beside the Jade
+// Counter's, `market-credits-<side>`. Absent until first gained, so a seat without them draws
+// nothing; unlike the Jade Counter's, a count of 0 still shows, since a seat that spent down to 0
+// still has Credits. A Resource is a hand card since #2250 (R2250000), so the hand draws it.
 
 import type { ReactElement } from "react";
 
@@ -222,6 +228,17 @@ export default function Hero(props: HeroProps): ReactElement {
       {(seat.jade ?? 0) > 0 && (
         <span className="hero-jade" data-jade={seat.jade} title={t("Jade Counter")}>
           {seat.jade}
+        </span>
+      )}
+      {/* R1840005: the Credits, 0 included, once the view carries them. */}
+      {seat.marketCredits !== undefined && (
+        <span
+          className="hero-credits"
+          data-testid={`market-credits-${side}`}
+          data-credits={seat.marketCredits}
+          title={t("Credits")}
+        >
+          {seat.marketCredits}
         </span>
       )}
 

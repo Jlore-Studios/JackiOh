@@ -17,7 +17,7 @@ use serde_json::Value;
 
 use crate::config::{
     BACKROW_ZONES, DECK_SIZE, EARLIER_DECK_SIZE, HERO_HEALTH, HUMAN_HANDICAP, Handicap, LIBRARY_CAP,
-    SETUP_TURN, UNIT_ZONES,
+    MAX_COPIES, SETUP_TURN, UNIT_ZONES,
 };
 use crate::rng::Rng;
 use crate::wire::{
@@ -2185,6 +2185,8 @@ fn is_human_handicap(handicap: &Handicap, standard: i32) -> bool {
         && starting_hero_health(Some(handicap)) == HERO_HEALTH
         && handicap.hero_floor.is_none()
         && handicap.pool_hold != Some(true)
+        && handicap.core_only != Some(true)
+        && handicap.deck_copies.is_none_or(|copies| copies == MAX_COPIES)
 }
 
 /// R2201000: the least health `player`'s hero can fall to, when its handicap sets a floor.
@@ -2196,6 +2198,22 @@ pub fn hero_floor_of(state: &GameState, player: PlayerId) -> Option<i32> {
 /// never falls below it, and nothing the other player does ends the game as its loss.
 pub fn can_lose(state: &GameState, player: PlayerId) -> bool {
     hero_floor_of(state, player).is_none()
+}
+
+/// R2433000: whether `player` plays only Core cards (its handicap's `coreOnly`).
+pub fn plays_only_core(state: &GameState, player: PlayerId) -> bool {
+    state.players[player]
+        .handicap
+        .is_some_and(|h| h.core_only == Some(true))
+}
+
+/// R2433000: whether `player` may not play `card`: the seat plays only Core cards and the card's
+/// definition is of another set. Asked of a card in its hand or its graveyard, however it got
+/// there; a card that reaches the field another way (a summon, a steal) is not played.
+pub fn barred_from_play(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    plays_only_core(state, player)
+        && !crate::catalog::find_def(Some(state), &card.def_id)
+            .is_some_and(|def| def.set == crate::wire::SetName::Core)
 }
 
 /// R2201001: whether the game holds Legendary and Mythic cards out of its random pools: either
@@ -2234,6 +2252,14 @@ pub fn validate_handicap(handicap: &Handicap, label: &str) -> Result<(), EngineE
             "{label}: handicap heroHealth must be a positive integer (R290), got {hero_health}"
         )));
     }
+    // R2433001: optional, and when given at least one copy of a card.
+    if let Some(copies) = handicap.deck_copies
+        && copies < 1
+    {
+        return Err(EngineError::new(format!(
+            "{label}: handicap deckCopies must be a positive integer (R2433001), got {copies}"
+        )));
+    }
     // R2201000: optional, and when given a floor the hero starts at or above.
     if let Some(floor) = handicap.hero_floor {
         let start = starting_hero_health(Some(handicap));
@@ -2251,17 +2277,20 @@ pub fn validate_handicap(handicap: &Handicap, label: &str) -> Result<(), EngineE
 /// other size is the handicap's, and the message says so. (TS throws; `create_game` panics with the
 /// message.)
 pub fn validate_deck(deck: &[String], catalog: &CardDefs, label: &str, size: i32) -> Result<(), EngineError> {
-    validate_deck_with(deck, catalog, &IndexMap::new(), label, size)
+    validate_deck_with(deck, catalog, &IndexMap::new(), label, size, MAX_COPIES)
 }
 
 /// `validate_deck` for a game with custom cards (R915005): a custom id is one of `customs`, the
-/// game's own definitions, never the catalog's, and counts as one card of the deck.
+/// game's own definitions, never the catalog's, and counts as one card of the deck. `copies` is the
+/// most copies of one id the seat's deck may hold: MAX_COPIES, or its handicap's `deckCopies`
+/// (R2433001).
 pub fn validate_deck_with(
     deck: &[String],
     catalog: &CardDefs,
     customs: &IndexMap<String, CardDef>,
     label: &str,
     size: i32,
+    copies: i32,
 ) -> Result<(), EngineError> {
     if deck.len() as i32 != size {
         if size == DECK_SIZE {
@@ -2285,11 +2314,7 @@ pub fn validate_deck_with(
                     "{label}: \"{def_id}\" is a custom card the game was not given (R915005)"
                 )));
             }
-            if seen.contains(&def_id.as_str()) {
-                return Err(EngineError::new(format!(
-                    "{label}: \"{def_id}\" appears twice; no duplicate card ids (§2.6 L3)"
-                )));
-            }
+            too_many_copies(&seen, def_id, label, copies)?;
             seen.push(def_id);
             continue;
         }
@@ -2298,14 +2323,14 @@ pub fn validate_deck_with(
                 "{label}: \"{def_id}\" is not in the catalog (§9.4 L6)"
             )));
         };
-        if seen.contains(&def_id.as_str()) {
-            return Err(EngineError::new(format!(
-                "{label}: \"{def_id}\" appears twice; no duplicate card ids (§2.6 L3)"
-            )));
-        }
+        too_many_copies(&seen, def_id, label, copies)?;
         seen.push(def_id);
         let key = crate::catalog::pair_key(def);
-        if let Some((_, other)) = pairs.iter().find(|(held, _)| *held == key) {
+        // R2195000: a copy of the same id is no pair; R2433001 counts copies above.
+        if let Some((_, other)) = pairs
+            .iter()
+            .find(|(held, other)| *held == key && *other != def_id.as_str())
+        {
             return Err(EngineError::new(format!(
                 "{label}: \"{other}\" and \"{def_id}\" are a Core card and its Training Grounds snapshot; a deck holds one of the two (§2.6 L3, R2195000)"
             )));
@@ -2325,6 +2350,23 @@ pub fn validate_deck_with(
         }
     }
     Ok(())
+}
+
+/// §2.6 L3, R2433001: refuses `def_id` when the deck already holds `copies` of it. With one copy
+/// allowed, the message is L3's own.
+fn too_many_copies(seen: &[&str], def_id: &str, label: &str, copies: i32) -> Result<(), EngineError> {
+    let held = seen.iter().filter(|id| **id == def_id).count() as i32;
+    if held < copies {
+        return Ok(());
+    }
+    if copies <= MAX_COPIES {
+        return Err(EngineError::new(format!(
+            "{label}: \"{def_id}\" appears twice; no duplicate card ids (§2.6 L3)"
+        )));
+    }
+    Err(EngineError::new(format!(
+        "{label}: \"{def_id}\" appears more than {copies} times; its handicap allows {copies} copies of a card (§2.6 L3, R2433001)"
+    )))
 }
 
 /// R1705003: whether a game is being made now or built again from a record of one already made.
@@ -2371,7 +2413,19 @@ pub fn validate_setup(
     let standard = standard_deck_size(options, kind);
     for (seat, player) in PLAYER_IDS.into_iter().enumerate() {
         let size = handicaps.get(player).map_or(standard, |h| h.deck_size);
-        validate_deck_with(deck_of(options, seat), catalog, customs, player.as_str(), size)?;
+        // R2433001: the seat's own limit on copies, MAX_COPIES without one.
+        let copies = handicaps
+            .get(player)
+            .and_then(|h| h.deck_copies)
+            .unwrap_or(MAX_COPIES);
+        validate_deck_with(
+            deck_of(options, seat),
+            catalog,
+            customs,
+            player.as_str(),
+            size,
+            copies,
+        )?;
     }
     Ok(())
 }
@@ -2643,6 +2697,8 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
                 // R2201000, R2201001: each joins only when set, so no other game stores either.
                 hero_floor: handicap.hero_floor,
                 pool_hold: handicap.pool_hold.filter(|hold| *hold),
+                core_only: handicap.core_only.filter(|only| *only),
+                deck_copies: handicap.deck_copies.filter(|copies| *copies != MAX_COPIES),
             });
             side.hero.health = hero_health;
         }
