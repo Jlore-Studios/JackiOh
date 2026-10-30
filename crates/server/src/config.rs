@@ -585,6 +585,12 @@ pub const API_REJECTION_ALERT_THRESHOLD: usize = 20;
 /// and the least time between two alerts for one key. A minute, the API limit's own window, so a
 /// sustained flood alerts once a minute.
 pub const API_REJECTION_ALERT_WINDOW_MS: i64 = 60_000;
+/// SPEC §11 R2478000: how many verified auth users the router remembers the profile id of
+/// (`api::http::KnownProfiles`), so a request from an account whose `API_REQUESTS_PER_MINUTE` is
+/// spent is refused before the store is read. Ten thousand: far more accounts than one server hears
+/// from in the minute a budget lasts, in about two megabytes; past it the user remembered longest
+/// ago is dropped and reads the store once more.
+pub const KNOWN_PROFILES_MAX: usize = 10_000;
 /// SPEC §11 R835002: how many malformed frames from one seat, inside `REJECTION_ALERT_WINDOW_MS`,
 /// the actor answers before it closes that seat's socket. Ten: a stale client sends a few, never
 /// this many, so past it the peer is a flooder, not a bug.

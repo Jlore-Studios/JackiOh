@@ -74,5 +74,5 @@ export const SANDBOX_MANA_MAX = 10;
 export const TRIBAL_TAGS: readonly Tag[] = ["Human","Felinor","KY","CN","Jlockeed"];
 export const TURN_CAP_PLAYER_TURNS = 60;
 export const TUTORIAL_HUMAN: Handicap = {"deckSize":20,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0,"heroFloor":1,"deckCopies":4};
-export const VERSIONS_SCHEME = 2;
+export const VERSIONS_SCHEME = 3;
 export const VOTE_TALLY_SIZE = 3;
