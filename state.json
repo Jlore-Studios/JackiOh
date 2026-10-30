@@ -8886,7 +8886,7 @@
         "tier": "strong",
         "why": "hard's 'design across crates' was the doubtful line: one crate and one app, the design fixed here, no engine, AI or migration; a new ruling rules out easy"
       },
-      "failures": 1,
+      "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
@@ -8896,7 +8896,9 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
+      "pr": 2432,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-10-29T15:44:44Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -8910,7 +8912,7 @@
       "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
-      "verdict_rounds": 2
+      "verdict_rounds": 3
     },
     "2396": {
       "action": "build",
