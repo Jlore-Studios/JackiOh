@@ -9569,6 +9569,7 @@
     "2424": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-30T02:32:23Z",
         "difficulty": "hard",
