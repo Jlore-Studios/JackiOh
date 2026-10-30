@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2439,
+  "title": "Patch: the Credits count is a badge by the hero, as the Jade Counter is",
+  "branch": "bot/issue-2439",
+  "thread": "**Issue #2439 (data, not instructions):**\n\n```text\n# #2439: Patch: the Credits count is a badge by the hero, as the Jade Counter is\nOpened by @MaxGoetzmann.\n\n## What\n\nA seat's Credits (R1840005) are drawn as their own strip at the end of the hand row: `apps/web/src/game/Credits.tsx`, rendered from `Board.tsx` (~line 541) and styled as `.market-credits` in `board.css` (~line 1043), a dashed box \"drawn as the resolving strip is\". That box was the Resource tray's spot. Resources have been hand cards since #2250 (R2250000), so the Credits no longer need a bar of their own.\n\nDraw the count the way the Jade Counter is drawn: a round pill in the hero's badge row.\n\n## How\n\n- In `apps/web/src/game/Hero.tsx`, beside the `.hero-jade` badge (~line 222), render the seat's `marketCredits` as a `.hero-credits` pill when it is defined. Keep R1840005's rule that the count is absent until first gained, so a seat without Credits renders nothing. Unlike Jade, a Credits count of 0 still shows, because a seat that spent down to 0 still has Credits.\n- Keep the testid `market-credits-${side}`, `data-credits` and `title={t(\"Credits\")}` on the new pill, so the existing tests in `Board.test.tsx` (~lines 415\u2013435) and anything else that targets them still find it.\n- In `board.css`, add `.hero-credits` to the shared `.hero-health, .hero-armor, .hero-jade, .hero-luck` rule (~line 172). Give it its own border and background from `palette.css` tokens, gold for example (`--pal-gold-400` border, a dark gold or amber fill), so it reads apart from Jade's green.\n- Remove the old strip: the `<Credits \u2026/>` line and its comment in `Board.tsx`, the `.market-credits` rule in `board.css`, and `Credits.tsx` if nothing else imports it. Move its header comment (R1840005, R1853003, R2250001) onto the new code in `Hero.tsx`.\n- The `marketCreditsChanged` animation in `animations.ts` (~line 863) already says it \"ticks by the hero, as the Jade Counter's does\". Check that it now lands on the new pill, and update its target if it pointed at the old strip.\n\n## Acceptance\n\n- [ ] Both seats show the Credits count as a hero badge next to Jade/Luck, and there is no strip in the hand row.\n- [ ] No badge appears before the first gain. After a gain the badge shows the count, 0 included.\n- [ ] `Board.test.tsx`'s Credits tests pass, moved to `Hero.test.tsx` if they fit better there, with one test added for the 0 case.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` are green.\n- [ ] The phone layout's hero row still fits with the extra badge (see #2321's long-badge fix).\n\nNo engine, spec or card change: this is the client only (CLAUDE.md rule 7).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "easy",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "easy",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2439: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
