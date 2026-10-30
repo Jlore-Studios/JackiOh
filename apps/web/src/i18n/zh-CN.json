@@ -3739,5 +3739,8 @@
   "Mind the AI's face-down cards: they may be Traps.": "小心AI盖放的牌：它们可能是陷阱。",
   "Lesson lost": "课程失败",
   "You conceded. That counts as a loss.": "你认输了。这算作失败。",
-  "Lost: you conceded": "失败：你认输了"
+  "Lost: you conceded": "失败：你认输了",
+  "Leave the match?": "离开在线对局？",
+  "It goes on without you. Come back within {seconds} seconds or it counts as a loss.": "对局会在没有你的情况下继续。{seconds} 秒内回来，否则算作失败。",
+  "Stay": "留下"
 }
