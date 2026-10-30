@@ -7298,7 +7298,7 @@
       }
     },
     "2310": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "ci_fixed_head": "c68b83e9ce742c0bae1562ad78a96c2b4e6f95bd",
       "ci_fixes": 2,
@@ -7325,21 +7325,21 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2278,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-30T11:28:51Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "41026296989",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:fd3da417-1793359748",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-30T08:25:03Z",
+      "started_at": "2026-10-30T11:29:25Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -9542,9 +9542,9 @@
   },
   "labels_synced": "10eb94bf70389cb1",
   "last_run": {
-    "at": "2026-10-30T10:18:40Z",
+    "at": "2026-10-30T11:29:25Z",
     "url": "",
-    "what": "revise #2493 on muse"
+    "what": "review #2310 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-30T11:16:07Z",
