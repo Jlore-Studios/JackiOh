@@ -9528,12 +9528,22 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
-        "builder": "claude",
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "9cb762e59d687a3327c7cc6ab3f9d6fa56bcf485",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "41039810282",
+            "tier": "medium"
+          }
+        ],
+        "sha": "aef4f41f504a190a5d707315aa9945f5b794fffb",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     }
   },
