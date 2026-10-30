@@ -8015,11 +8015,11 @@
       "action": "revise",
       "asks": [],
       "cleared": {
-        "at": "2026-10-29T22:10:15Z",
+        "at": "2026-10-30T00:12:14Z",
         "by": "`claude` (strong)",
-        "carried_from": "ad28104201d502da798df056f73ac4023b9f2ce6",
+        "carried_from": "6002a10efc822910a74e17f62bd2db4201a69fdc",
         "resolved_by": "`claude` (strong)",
-        "sha": "6002a10efc822910a74e17f62bd2db4201a69fdc"
+        "sha": "347f837e001202392773653e1c7ab8d84facd0e4"
       },
       "died": 0,
       "difficulty": "medium",
