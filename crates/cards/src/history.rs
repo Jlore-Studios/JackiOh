@@ -332,6 +332,10 @@ struct History {
     /// R1371000: `patches/aliases.json`'s map, each old name to its new one; empty before the retcon.
     #[serde(default)]
     aliases: IndexMap<String, String>,
+    /// R2532000: `patches/aliases.json`'s `marked`: for each older scheme a marked file can name, each
+    /// of its names a later retcon renamed, to its name now.
+    #[serde(default)]
+    marked: IndexMap<String, IndexMap<String, String>>,
 }
 
 /// R2173000: a `card_metrics/<version>.json`: the BUSTED and complicated lists a version shipped with.
@@ -411,6 +415,25 @@ pub fn current_version_name(unmarked: &str) -> &str {
 /// R1371000: the new name of a version the retcon renamed, `None` for any other name.
 pub fn version_alias(old: &str) -> Option<&'static str> {
     HISTORY.aliases.get(old).map(String::as_str)
+}
+
+/// R2532000: the name a version from a file named by `scheme` goes by now (`VERSIONS_SCHEME` is
+/// today's): an unmarked file's (scheme 1) through `version_alias`, an older marked file's through
+/// `patches/aliases.json`'s `marked`, and today's as it is.
+pub fn version_name_from(scheme: u32, name: &str) -> &str {
+    version_alias_from(scheme, name).unwrap_or(name)
+}
+
+/// R2532000: the name now of a version a retcon renamed since `scheme`, `None` for any other name.
+pub fn version_alias_from(scheme: u32, name: &str) -> Option<&'static str> {
+    if scheme <= 1 {
+        return version_alias(name);
+    }
+    HISTORY
+        .marked
+        .get(&scheme.to_string())?
+        .get(name)
+        .map(String::as_str)
 }
 
 /// R388: every shipped catalog version from `patches.json`, in release order.

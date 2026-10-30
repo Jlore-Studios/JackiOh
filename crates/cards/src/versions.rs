@@ -7,6 +7,11 @@
 //! (`current_version_name`). Nothing the build holds is unmarked: the repository and the database
 //! were renamed in place.
 //!
+//! R2532000: the v0.5 retcon (#2532) renamed the v0.5 line a second time, so a scheme is now a
+//! number: an unmarked file's is 1, a marked file's the `versions` it carries, and today's
+//! `VERSIONS_SCHEME`. A file of an older scheme has its names read through `patches/aliases.json`
+//! (`version_name_from`), once.
+//!
 //! This file's tests spell old names on purpose, so the retcon's tree rewrite leaves it alone
 //! (`crates/tools/src/retcon.rs`, `SKIP_FILES`).
 
@@ -15,7 +20,7 @@ use jackioh_engine::config::VERSIONS_SCHEME;
 use jackioh_engine::wire::{GameRecord, parse_game_record};
 use serde_json::Value;
 
-pub use crate::history::{current_version_name, version_alias};
+pub use crate::history::{current_version_name, version_alias, version_alias_from, version_name_from};
 
 /// The key a marked file's object carries, holding `VERSIONS_SCHEME`.
 pub const VERSIONS_KEY: &str = "versions";
@@ -88,6 +93,21 @@ pub fn is_marked(value: &Value) -> bool {
     value.get(VERSIONS_KEY).is_some()
 }
 
+/// R2532000: the scheme a file's object names its versions by: the `versions` it carries, else 1,
+/// the names from before any retcon.
+pub fn scheme_of(value: &Value) -> u32 {
+    value
+        .get(VERSIONS_KEY)
+        .and_then(Value::as_u64)
+        .and_then(|scheme| u32::try_from(scheme).ok())
+        .unwrap_or(1)
+}
+
+/// R2532000: a text of a file named by `scheme`, its versions as they are named now.
+pub fn versions_now_in(scheme: u32, text: &str) -> String {
+    rename_versions_with(text, |name| version_alias_from(scheme, name))
+}
+
 /// R1371000: one game-record line as a file holds it, with the marker.
 pub fn game_record_line(record: &GameRecord) -> String {
     let mut value = serde_json::to_value(record).unwrap_or(Value::Null);
@@ -97,13 +117,14 @@ pub fn game_record_line(record: &GameRecord) -> String {
     value.to_string()
 }
 
-/// R1371000: `parse_game_record` for a record a file holds: one without the marker has its patch
-/// and the versions its id spells mapped to their names now.
+/// R1371000: `parse_game_record` for a record a file holds: one of an older scheme (R2532000), an
+/// unmarked one among them, has its patch and the versions its id spells mapped to their names now.
 pub fn parse_game_record_in_file(value: &Value) -> Result<GameRecord, EngineError> {
     let mut record = parse_game_record(value)?;
-    if !is_marked(value) {
-        record.patch = current_version_name(&record.patch).to_string();
-        record.id = current_versions_in(&record.id);
+    let scheme = scheme_of(value);
+    if scheme < VERSIONS_SCHEME {
+        record.patch = version_name_from(scheme, &record.patch).to_string();
+        record.id = versions_now_in(scheme, &record.id);
     }
     Ok(record)
 }
