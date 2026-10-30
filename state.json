@@ -17806,6 +17806,12 @@
         "number": 2256,
         "title": "Patch: the balance watch reads each card over its own window, as the stats page does",
         "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-30T01:54:26Z",
+        "number": 2423,
+        "title": "Patch: the deck builder counts the deck's Units, Spells and Traps",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-30T01:40:07Z",
