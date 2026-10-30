@@ -19107,9 +19107,9 @@
     ],
     "idle_since": null,
     "last_run": "2026-10-30T07:24:11Z",
-    "provider": "claude-3",
+    "provider": null,
     "requested": false,
-    "run_id": "41019877355",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
