@@ -5,7 +5,7 @@
 // reading the bars again. R1953001: no cosmetic token is picked here any more
 // (collection/TokenOffer.test.tsx holds its tier rules); the held counts stay.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -264,6 +264,23 @@ describe("#1309 the token picker", () => {
     const detail = await screen.findByTestId(INSPECT_DETAIL);
     expect(detail).toHaveTextContent(CHINESE["core-002"]!.name);
     expect(detail).not.toHaveTextContent(CATALOG["core-002"]!.name);
+  });
+
+  it("R711000 the card search reads the Chinese name live: a switch to Chinese and back re-filters the pool", async () => {
+    tokenServer();
+    render(<TokenPicker token={TOKEN} />);
+    await screen.findByTestId(T.cardBar);
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: CHINESE["core-002"]!.name } });
+    expect(screen.queryByTestId(poolCardId("core-002"))).toBeNull();
+    await act(async () => {
+      await setLocale("zh-CN");
+    });
+    expect(screen.getByTestId(poolCardId("core-002"))).toBeInTheDocument();
+    expect(screen.queryByTestId(poolCardId("core-003"))).toBeNull();
+    await act(async () => {
+      await setLocale("en");
+    });
+    expect(screen.queryByTestId(poolCardId("core-002"))).toBeNull();
   });
 
   it("#2053 a failed read says why in the reader's language", async () => {
