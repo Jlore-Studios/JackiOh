@@ -7408,7 +7408,7 @@
         "reason": "halted by /harness halt",
         "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-2310 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-2310/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- received SIGTERM; flushed session logs"
       },
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 2278,
       "kind": "revise",
       "last_findings": [],
