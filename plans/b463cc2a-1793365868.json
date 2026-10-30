@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2480,
+  "title": "Patch: spending a cosmetic token asks first, as spending a card token does",
+  "branch": "bot/issue-2480",
+  "thread": "**Issue #2480 (data, not instructions):**\n\n```text\n# #2480: Patch: spending a cosmetic token asks first, as spending a card token does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn the Collection, a locked playmat, card back or card finish shows a button such as 'Unlock with an Epic token (2 held)'. One tap spends the token on that cosmetic for good, with no question. The Shop's card token asks first: 'Unlock {name}? This spends 1 card token.' The one-tap spend matters more for two reasons. When no Rare token is held, a Rare cosmetic is offered for an Epic one. And on a tile, the button sits over the tile's own button. So a phone player tapping through locked tiles can spend an Epic token without meaning to. Once this is built, the first tap asks 'Unlock {name}? This spends 1 Epic token.' with Confirm and Cancel, and Cancel takes the focus.\n\n## Why\n\n- `apps/web/src/collection/TokenOffer.tsx:99-113` sends `redeemCosmeticToken` on the button's first click (`onClick={redeem}`, :119-121).\n- `offerTier` (:36-42) offers the cheapest held token that covers the cosmetic (R1305003, R1953001). With no Rare token held, a Rare cosmetic is offered for an Epic one.\n- `apps/web/src/collection/tokenOffer.css:1-2`: on a tile the offer 'sits above the tile's own button, which covers the whole tile'.\n- The card token's spend asks in place: `apps/web/src/shop/TokenPicker.tsx:209-221` draws an alertdialog, 'Unlock {name}? This spends 1 card token.', with Confirm and Cancel, and Cancel takes the focus.\n- A redemption cannot be undone, and cosmetic tokens come slowly (\u00a714.2's token bars).\n\n## Proposal\n\n- `TokenOffer`'s button opens an in-place question, the `token-confirm` pattern that `TokenPicker` uses.\n  - Its words: 'Unlock {cosmetic}? This spends 1 {Rare|Epic} token.'\n  - Its answers: Confirm, which sends the redemption as today, and Cancel, which spends nothing and takes the focus.\n- Escape answers Cancel. The busy, error and redeemed states stay as they are.\n- A new ruling amends R1953001's one-press offer. The strings get their zh-CN entries.\n\n## Where it lands\n\n- `apps/web/src/collection/TokenOffer.tsx` and `tokenOffer.css`. Its callers, `AccountCosmeticTiles.tsx` and `CardCosmeticsView.tsx`, pass the cosmetic's name.\n- The i18n catalog, and a ruling note with `spec/pending/<issue>.md` (\u00a714.2 if its text describes the press).\n- Tests in `apps/web/src/collection/TokenOffer.test.tsx`, whose one-click redemption test changes, and in `apps/web/src/routes/collection.test.tsx`.\n\n## Acceptance criteria\n\n- [ ] The first click on an offer sends no request and shows an alertdialog that names the cosmetic and the token tier.\n- [ ] Confirm sends exactly one `POST /api/tokens/redeem-cosmetic`. Cancel and Escape send none and put the offer back.\n- [ ] Cancel holds the focus when the question opens.\n- [ ] A refusal still shows the server's words and changes nothing.\n- [ ] The tests are named after the new ruling, and `cargo jackioh spec check` passes.\n\n## Size and risks\n\nSmall: about 80 lines plus tests. Each redemption takes one more tap. In the card view, which is a modal, the question must be drawn inside the modal or it lies under the scrim, out of Tab's reach. `TokenPicker`'s comment explains this, and the same placement applies.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T13:08:06Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2480: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
