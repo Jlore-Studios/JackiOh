@@ -17,30 +17,30 @@ export const lesson: TutorialLesson = {
   poolHold: true,
   humanDeck: [
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-006", // Chosen by the Sun, Common
     "traininggrounds-007", // Chosen by the Moon, Common
-    "traininggrounds-047", // Midrange Menace, Common
+    "traininggrounds-047", // Legacy: Midrange Menace, Common
     "traininggrounds-002", // Personal Trainer, Common
-    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
     "traininggrounds-022", // Right-Hand Felinor, Rare
     "traininggrounds-014", // Explosive Trap, Common
     "traininggrounds-013", // Explosive Runes, Common
     "traininggrounds-024", // Goliath Situation, Rare
-    "traininggrounds-060", // Rush Token Farm, Common
+    "traininggrounds-060", // Legacy: Rush Token Farm, Common
     "traininggrounds-019", // Extra Rations, Rare
     "traininggrounds-035", // Corpse Recycler, Epic
     "traininggrounds-012", // Fortify, Common
     "traininggrounds-020", // Recruitment Posters, Rare
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-046", // Hit Job, Common
+    "traininggrounds-046", // Legacy: Hit Job, Common
   ],
   aiDeck: [
-    "traininggrounds-043", // Mr. Vanilla, Common
-    "traininggrounds-044", // Duplicating Felinors, Rare
-    "traininggrounds-047", // Midrange Menace, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
+    "traininggrounds-047", // Legacy: Midrange Menace, Common
     "traininggrounds-006", // Chosen by the Sun, Common
     "traininggrounds-005", // Midlane Menace, Common
     "traininggrounds-033", // Guerilla Felinor, Epic
@@ -49,7 +49,7 @@ export const lesson: TutorialLesson = {
     "traininggrounds-014", // Explosive Trap, Common
     "traininggrounds-024", // Goliath Situation, Rare
     "traininggrounds-019", // Extra Rations, Rare
-    "traininggrounds-060", // Rush Token Farm, Common
+    "traininggrounds-060", // Legacy: Rush Token Farm, Common
   ],
   retryTip: "Set a Trap before you end your turn, and keep a Field Spell working for you every turn.",
 };

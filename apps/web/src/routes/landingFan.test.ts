@@ -107,7 +107,7 @@ describe("R639 favoring the cards that print at full size", () => {
       const face = faceModel({ defId: def.id, def, radiant: false });
       const fits = ["s", "m"].includes(nameTier(face.name)) && ["s", "m"].includes(textTier(face.text.full));
       // R1017002: a hero's card prints its art and no words in the fan, so it counts as plain; a
-      // Training Grounds snapshot of one prints its words (R2195001), so it is held to them.
+      // Training Grounds Legacy card of one prints its words (R2511000), so it is held to them.
       const plain = fits || isFullArtCard(def.id, def.name);
       expect(featureWeight(def), def.id).toBe(plain ? FEATURE_WEIGHT_PLAIN : FEATURE_WEIGHT_DENSE);
     }
@@ -241,13 +241,15 @@ describe("R704 swaps below the threshold", () => {
 });
 
 /**
- * The heroes' full-art cards. Re-pinned for the Training Grounds release (#2204): the set's snapshots
- * of Mr. Vanilla (#43), Duplicating Felinors (#44) and Jlockeed Shredder-10 (#48) share their Core
- * cards' names but not their full art (R2195001), so they are no hero's card.
+ * The heroes' full-art cards. The Training Grounds Legacy cards of Mr. Vanilla (#43), Duplicating
+ * Felinors (#44) and Jlockeed Shredder-10 (#48) are named apart (R2511000) and print no full art, so
+ * they are no hero's card.
  */
 const HEROES = ROTATION_POOL.filter((def) => isFullArtCard(def.id, def.name));
-/** The shipped cards that share a hero's name and print no full art: the Training Grounds snapshots. */
-const HERO_SNAPSHOTS = ROTATION_POOL.filter((def) => FULL_ART_NAMES.has(def.name) && !isFullArtCard(def.id, def.name));
+/** The shipped Legacy cards of a hero's card, which print no full art. */
+const HERO_LEGACY = ROTATION_POOL.filter(
+  (def) => def.tags.includes("Legacy") && FULL_ART_NAMES.has(def.name.replace(/^Legacy: /, "")) && !isFullArtCard(def.id, def.name),
+);
 const RARITIES = ["Common", "Rare", "Epic", "Legendary", "Mythic"] as const;
 
 describe("R1017002 the fan deals only cards that print whole on it", () => {
@@ -291,9 +293,9 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
       expect(fitsTheFan(def, false), def.name).toBe(words);
     }
     expect(fitsTheFan(card("core-004"), false)).toBe(false);
-    // R2195001: a snapshot of a hero's card is held to its text, full art on or off.
-    expect(HERO_SNAPSHOTS.map((def) => def.id).sort()).toEqual(["traininggrounds-043", "traininggrounds-044", "traininggrounds-048"]);
-    for (const def of HERO_SNAPSHOTS) {
+    // R2511000: a Legacy card of a hero's card is held to its text, full art on or off.
+    expect(HERO_LEGACY.map((def) => def.id).sort()).toEqual(["traininggrounds-043", "traininggrounds-044", "traininggrounds-048"]);
+    for (const def of HERO_LEGACY) {
       const words = [false, true].every((radiant) => shortFormOf(def.id, radiant) === null && !overLimit(text(def.id, radiant), FAN_TEXT_LIMIT));
       for (const fullArt of [true, false]) expect(fitsTheFan(def, fullArt), `${def.id}, full art ${fullArt ? "on" : "off"}`).toBe(words);
     }
@@ -331,8 +333,8 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
       expect(favoringFullArt(featureWeight, true)(def), def.name).toBe(FEATURE_WEIGHT_PLAIN * FULL_ART_WEIGHT_FACTOR);
     }
     expect(favoringFullArt(EVEN, true)(other)).toBe(1);
-    // R2195001: a snapshot of a hero's card prints no full art, so it weighs as any card.
-    for (const def of HERO_SNAPSHOTS) expect(favoringFullArt(EVEN, true)(def), def.id).toBe(1);
+    // R2511000: a Legacy card of a hero's card prints no full art, so it weighs as any card.
+    for (const def of HERO_LEGACY) expect(favoringFullArt(EVEN, true)(def), def.id).toBe(1);
     expect(favoringFullArt(featureWeight, true)(other)).toBe(featureWeight(other));
     // Drawn among the Core Commons that fit, the heroes' share grows by about the factor.
     const commons = fanPool(true).filter((def) => def.rarity === "Common");

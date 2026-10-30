@@ -138,7 +138,7 @@
 //! ten. `--cards` deals the named cards into both decks of every seed of the gate's wave and of the
 //! handicapped wave, so a card's own run exercises it. The forcing goes through `golden.rs`: each
 //! forced card takes a first slot in place of a card from the end, the deck keeps its size and holds
-//! no card twice, R2195000 holds (a token goes in through the card whose `refs` name it, R279), and
+//! no card twice (a Core card and its Legacy card are two, R2511001; a token goes in through the card whose `refs` name it, R279), and
 //! an unknown id is refused with a message naming it. One set's name forces a slice of
 //! `FORCED_SET_CARDS_PER_SEED` of its cards a seed, in turn, until every one has been dealt. The
 //! streams are untouched, so a wave without `--cards` is the same wave it always played. The summary,
@@ -429,21 +429,14 @@ pub fn decks_for_seed_from(seed: u32, pool: &[String]) -> (Vec<String>, Vec<Stri
     (p1, deal_deck(&mut shuffled, size))
 }
 
-/// The next `size` cards of a shuffled pool, as one deck. R2195000: a deck holds a Core card or its
-/// Training Grounds snapshot, so a card whose pair the deck already holds is passed over; over a pool
-/// with no snapshot that is the plain slice of the shuffle every deal took before.
+/// The next `size` cards of a shuffled pool, as one deck, an id the deck already holds passed over
+/// (a forced card, #2387). R2511001: a Core card and its Legacy card are two cards, so a deck may hold
+/// both; over a pool of distinct ids this is the plain slice of the shuffle.
 pub(crate) fn deal_deck(shuffled: &mut impl Iterator<Item = String>, size: usize) -> Vec<String> {
     let mut deck: Vec<String> = Vec::with_capacity(size);
-    let mut pairs: Vec<String> = Vec::with_capacity(size);
     while deck.len() < size {
         let Some(id) = shuffled.next() else { break };
-        // The shipped catalog itself, so a deal needs no registered catalog (a test may deal first).
-        let key = CATALOG
-            .get(&id)
-            .map_or(id.as_str(), jackioh_engine::catalog::pair_key)
-            .to_string();
-        if !pairs.contains(&key) {
-            pairs.push(key);
+        if !deck.contains(&id) {
             deck.push(id);
         }
     }
@@ -3129,7 +3122,6 @@ pub(crate) fn handicap_decks_for_seed_from(
         .into_iter();
     let big_size = usize::try_from(handicap.deck_size).unwrap_or(0);
     let small_size = usize::try_from(DECK_SIZE).unwrap_or(0);
-    // R2195000: one of each Core card and snapshot pair per deck (`deal_deck`).
     let big = deal_deck(&mut shuffled, big_size);
     let small = deal_deck(&mut shuffled, small_size);
     match seat {
@@ -4943,7 +4935,7 @@ pub(crate) mod tests {
         }
 
         /// The deck holds every forced id at `size` cards, and passes the checks a dealt deck does:
-        /// the size, no id twice and never both of an R2195000 pair (`validate_deck`).
+        /// the size and no id twice (`validate_deck`).
         fn assert_forced(deck: &[String], forced: &[String], size: usize) {
             assert_eq!(deck.len(), size, "{deck:?}");
             for id in forced {
@@ -4960,7 +4952,6 @@ pub(crate) mod tests {
             let _preview = preview_every_set();
             let forcing = forcing_of(&["core-090", "traininggrounds-041"]).unwrap();
             let size = usize::try_from(DECK_SIZE).unwrap_or(0);
-            let mut pair_ran = false;
             for seed in 1..=CI_SEEDS {
                 let forced = forcing.for_seed(seed);
                 assert_eq!(
@@ -4979,15 +4970,25 @@ pub(crate) mod tests {
                 let (f1, f2) = forcing.deal(seed, (h1, h2));
                 assert_forced(&f1, &forced, n1);
                 assert_forced(&f2, &forced, n2);
-                let (plain1, plain2) = decks_for_seed(seed);
-                pair_ran = pair_ran
-                    || plain1.contains(&"core-002".to_string())
-                    || plain2.contains(&"core-002".to_string());
             }
-            assert!(
-                pair_ran,
-                "no seed's plain deal held core-002, so the pair path never ran"
-            );
+        }
+
+        /// R2511001: a Core card and its Legacy card are two cards, so both are forced into one deck.
+        #[test]
+        fn r2511001_a_core_card_and_its_legacy_card_are_forced_together() {
+            register_all();
+            let forced: Vec<String> = ["core-002", "traininggrounds-041"]
+                .into_iter()
+                .map(str::to_string)
+                .collect();
+            let forcing = forcing_of(&["core-002", "traininggrounds-041"]).unwrap();
+            assert_eq!(forcing.for_seed(1), forced);
+            let size = usize::try_from(DECK_SIZE).unwrap_or(0);
+            for seed in 1..=CI_SEEDS {
+                let (p1, p2) = forcing.deal(seed, decks_for_seed(seed));
+                assert_forced(&p1, &forced, size);
+                assert_forced(&p2, &forced, size);
+            }
         }
 
         #[test]
@@ -5040,11 +5041,6 @@ pub(crate) mod tests {
             assert!(err.starts_with("--cards"), "{err}");
             assert!(err.contains("no-such-card: not in the catalog"), "{err}");
             // `{:#}` prints the whole context chain; `Display` shows only `--cards`.
-            let pair = format!(
-                "{:#}",
-                forcing_of(&["core-002", "traininggrounds-041"]).unwrap_err()
-            );
-            assert!(pair.contains("R2195000"), "{pair}");
             let set = format!("{:#}", forcing_of(&["Stinkyscape", "core-090"]).unwrap_err());
             assert!(set.contains("one set's name"), "{set}");
         }

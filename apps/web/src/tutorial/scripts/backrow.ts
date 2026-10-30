@@ -24,7 +24,7 @@ export const script: LessonScript = {
       title: "A card that stays",
       text: "A Field Spell goes in your backrow and stays there. What does it do for you?",
       discovers: ["field-spell"],
-      hints: ["Read the words Start of turn on it.", "Play Rush Token Farm or Extra Rations into your backrow."],
+      hints: ["Read the words Start of turn on it.", "Play Legacy: Rush Token Farm or Extra Rations into your backrow."],
       pick: playOf([RUSH_TOKEN_FARM, EXTRA_RATIONS, CORPSE_RECYCLER, RECRUITMENT_POSTERS]),
     }),
     momentOf({
