@@ -8717,11 +8717,8 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-10-29T17:21:31Z",
       "stop_requested": false,
-      "strike_log": [
-        "CI still failed after 1 fix(es)",
-        "CI still failed after 2 fix(es)"
-      ],
-      "strikes": 2,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
