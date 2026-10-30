@@ -4,7 +4,8 @@
 //!   Radiant: "Summon a Radiant Drone Corvette and {interceptors|Radiant Drone Interceptor|Radiant Drone
 //!            Interceptors}." — interceptors 2
 //! Engine: two kinds of summon, the Corvette first, then one per Interceptor, each into the caster's
-//!   leftmost open unit zone in turn (R64), no Cry (R1), as many as fit; the Interceptors' count is the
+//!   leftmost open unit zone in turn (R64), then the backrow's once the unit row is full, where each stands
+//!   (R2248000), no Cry (R1), as many as fit; the Interceptors' count is the
 //!   declared `interceptors` (R386). Each drone draws its own combat keywords as it arrives (R781004).
 //!   Radiant: all Radiant.
 
@@ -39,7 +40,8 @@ pub fn script() -> CardScripts {
 }
 
 // S #33 Drone Core VII — SPEC §8.10 row 33, BUILD M12 row S 33: "summons a Drone Corvette then 2 Drone
-// Interceptors, the Corvette taking the leftmost zone; with one open zone only the Corvette; interceptors
+// Interceptors, the Corvette taking the leftmost zone; with one open zone the Corvette there and the
+// Interceptors in the backrow (R2248000); interceptors
 // reads through `param()`; radiant all three Radiant".
 #[cfg(test)]
 mod tests {
@@ -70,6 +72,13 @@ mod tests {
             .collect()
     }
 
+    /// p1's backrow, lane 1 to 5, read as `row` reads the unit row.
+    fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
+        (1..=5)
+            .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
+            .collect()
+    }
+
     fn of(def_id: &str, radiant: bool) -> Option<(String, bool)> {
         Some((def_id.to_string(), radiant))
     }
@@ -91,10 +100,14 @@ mod tests {
     }
 
     #[test]
-    fn r64_with_one_open_zone_only_the_corvette() {
+    fn r64_r2248000_with_one_open_zone_the_corvette_takes_it_and_the_interceptors_fly_into_the_backrow() {
         let mut s = setup(false, json!(vec![VANILLA; 4]));
         s.play(CORE, json!({}));
         assert_eq!(row(&s)[4], of(CORVETTE, false));
+        assert_eq!(
+            backrow(&s),
+            vec![of(INTERCEPTOR, false), of(INTERCEPTOR, false), None, None, None]
+        );
     }
 
     #[test]

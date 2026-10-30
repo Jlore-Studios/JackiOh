@@ -182,6 +182,17 @@ pub static ally: LazyLock<CardDef> = LazyLock::new(|| plain_unit("ally", 9210, 1
 pub static wall: LazyLock<CardDef> = LazyLock::new(|| plain_unit("wall", 9211, 1, 20));
 /// A 1/4 only a Unit in its lane may attack (E35): a substitute landing in another lane is barred.
 pub static lane_locked: LazyLock<CardDef> = LazyLock::new(|| plain_unit("lane_locked", 9217, 1, 4));
+/// R2248000: a 1/4 Flying, which a summon into a full unit row stands in the backrow.
+pub static flier: LazyLock<CardDef> = LazyLock::new(|| {
+    unit(
+        "flier",
+        9218,
+        1,
+        4,
+        json!([{ "kind": "Flying" }]),
+        json!([{ "kind": "Flying" }]),
+    )
+});
 /// A 2/2 Divine Shield: the shield takes the hit first, so no window opens.
 pub static screen: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
@@ -249,6 +260,7 @@ pub static MB22_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         palisade.clone(),
         ram.clone(),
         lane_locked.clone(),
+        flier.clone(),
     ]
 });
 

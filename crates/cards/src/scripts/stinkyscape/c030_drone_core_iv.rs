@@ -2,7 +2,8 @@
 //!   Base:    "Summon {interceptors|Drone Interceptor|Drone Interceptors}." — interceptors 3
 //!   Radiant: "Summon {interceptors|Radiant Drone Interceptor|Radiant Drone Interceptors}." — interceptors 3
 //! Engine: as S #29, one summon per Interceptor, each into the caster's leftmost open unit zone in turn
-//!   (R64), no Cry (R1), as many as fit; the count is the declared `interceptors` (R386). Each Interceptor
+//!   (R64), no Cry (R1), then the backrow's once the unit row is full (R2248000), as many as fit; the count
+//!   is the declared `interceptors` (R386). Each Interceptor
 //!   draws its own combat keyword as it arrives (R781004). Radiant: summoned Radiant.
 
 use jackioh_engine::prelude::*;
@@ -30,8 +31,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #30 Drone Core IV — SPEC §8.10 row 30, BUILD M12 row S 30: "summons 3 Drone Interceptors, as many as
-// the unit row holds; interceptors reads through `param()`; radiant 3 Radiant ones".
+// S #30 Drone Core IV — SPEC §8.10 row 30, BUILD M12 row S 30: "summons 3 Drone Interceptors, those the
+// unit row cannot hold into the backrow (R2248000); interceptors reads through `param()`; radiant 3 Radiant ones".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -60,6 +61,13 @@ mod tests {
             .collect()
     }
 
+    /// p1's backrow, lane 1 to 5, read as `row` reads the unit row.
+    fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
+        (1..=5)
+            .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
+            .collect()
+    }
+
     fn drone(radiant: bool) -> Option<(String, bool)> {
         Some((INTERCEPTOR.to_string(), radiant))
     }
@@ -76,10 +84,11 @@ mod tests {
     }
 
     #[test]
-    fn r64_as_many_as_the_unit_row_holds() {
+    fn r64_r2248000_what_the_unit_row_cannot_hold_flies_into_the_backrow() {
         let mut s = setup(false, json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 5 }]));
         s.play(CORE, json!({}));
         assert_eq!(row(&s), vec![vanilla(), drone(false), drone(false), vanilla(), vanilla()]);
+        assert_eq!(backrow(&s), vec![drone(false), None, None, None, None]);
     }
 
     #[test]
