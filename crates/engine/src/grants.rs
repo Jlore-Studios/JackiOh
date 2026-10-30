@@ -1,14 +1,11 @@
 //! ME-GRANT (docs/meditative-set.md M5, MD-D13): granted Death abilities, held as plain data.
 //!
-//! Meditative #58 and #59 grant the Unit they summon a Death ability — #58's "Death: Add {books}
-//! random Books to your hand", #59's "Death: Fuse a random Book and a random AI generated card and
-//! add the result to your hand". The grant is a
-//! hook the granting card registers beside its faces (`Script.grants`, keyed `<key>`); the
-//! instance carries only the name, the face it was granted on and the numbers it was granted with
-//! (`CardInstance.grants`). A closure never enters state, so state stays JSON and replays exactly,
-//! and a resume rebuilds the same Death list from the snapshot alone. A grant behaves like a
-//! granted keyword (§10.4): it shows on the Unit (`grant_texts`, read by `UnitView.grants`), survives
-//! a copy (R57) and a Vanilla, and is lost when the card leaves the field (R78).
+//! Meditative #58 and #59 grant the Unit they summon a Death ability. The grant is a hook the granting
+//! card registers beside its faces (`Script.grants`, keyed `<key>`); the instance carries only the
+//! name, the face and the numbers it was granted with (`CardInstance.grants`). A closure never enters
+//! state, so state stays JSON and replays exactly, and a resume rebuilds the same Death list. A grant
+//! behaves like a granted keyword (§10.4): it shows on the Unit (`grant_texts`, `UnitView.grants`),
+//! survives a copy (R57) and a Vanilla, and is lost when the card leaves the field (R78).
 
 use indexmap::IndexMap;
 use serde_json::{Value, json};
@@ -29,11 +26,10 @@ pub fn grant_hook(state: &GameState, def_id: &str, radiant: bool, key: &str) -> 
         .cloned()
 }
 
-/// §4.5 step 3 (MD-D13): the Death hook the dying card runs — its own Death effects, then each
-/// granted Death in the order granted. Built from the snapshot alone (R78's last-known state), so
-/// a resume rebuilds the same list. Each grant's list runs with the grant's JSON inserted under
-/// `GRANT_DATA_KEY`, which `grant_param` reads; the caller's data is restored afterwards, so an own
-/// Death beside grants reads its data as before.
+/// §4.5 step 3 (MD-D13): the Death hook the dying card runs: its own Death effects, then each granted
+/// Death in the order granted, built from the snapshot alone (R78's last-known state) so a resume
+/// rebuilds the same list. Each grant runs with its JSON under `GRANT_DATA_KEY` (`grant_param`); the
+/// caller's data is restored afterwards, so an own Death beside grants reads its own data.
 pub fn death_hook_of(state: &GameState, snapshot: &CardInstance) -> Option<Hook> {
     let own = crate::scripts::script_of(state, snapshot).death.clone();
     let grants: Vec<crate::state::Grant> = snapshot.grants.clone().unwrap_or_default();

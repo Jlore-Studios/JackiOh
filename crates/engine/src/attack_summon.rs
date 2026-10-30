@@ -1,20 +1,15 @@
-//! ME-ATTACKSUMMON (Meditative #91 Windfast, #91.1 Windfurious Prime): two hooks on the
-//! attack pipeline (§4.2).
+//! ME-ATTACKSUMMON (Meditative #91 Windfast, #91.1 Windfurious Prime): two hooks on the attack
+//! pipeline (§4.2), everything parked plain JSON (R113), every draw the match rng's.
 //!
-//! A replacement (R1202; MD-E14): on every attack Windfast makes, declared or forced, a random Unit
-//! of its controller's hand (the match rng's; patch v0.3.10, R831006: their pick before) is summoned
-//! into the leftmost open unit zone (R64, no Cry, R1) and makes that attack on the same target as a
-//! forced attack (R53), with its own trap window and combat; Windfast neither strikes nor is struck. The
-//! base face bounces the substitute after its combat if it is still on the field. With no Unit in
-//! hand or no open zone Windfast attacks itself.
+//! A replacement (R1202; MD-E14): on every attack Windfast makes, declared or forced, a random Unit of
+//! its controller's hand (R831006) is summoned into the leftmost open unit zone (R64, no Cry, R1) and
+//! makes that attack as a forced attack (R53) with its own trap window and combat; Windfast neither
+//! strikes nor is struck. The base face bounces a substitute still on the field after its combat. With
+//! no Unit in hand or no open zone Windfast attacks itself.
 //!
-//! A rider (R1203; MD-E15): on every attack the Prime makes, declared or forced, `joiners` Units
-//! drawn uniformly from its controller's hand and deck together are summoned (no Cry) and attack
-//! its target first as forced attacks, in lane order, before the Prime's own combat; joiners stay.
-//! A declared attack whose target is gone is canceled, the exertion spent.
-//!
-//! Everything parked is plain JSON (R113): the owed combat or bounce runs here. Every draw is the
-//! match rng's.
+//! A rider (R1203; MD-E15): on every attack the Prime makes, `joiners` Units drawn uniformly from its
+//! controller's hand and deck together are summoned (no Cry) and attack its target first as forced
+//! attacks, in lane order; joiners stay. A declared attack whose target is gone is canceled.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -25,8 +20,7 @@ use crate::script::EngineSink;
 use crate::state::{CardInstance, DeclaredAttack, GameState, Resume, find_instance};
 use crate::wire::{CardType, PlayerId};
 
-/// R113: the `resume.hook` of the engine sequence this module parks — the rest of a Prime's combat or
-/// a substitute's bounce a question stopped.
+/// R113: the `resume.hook` of a Prime's combat or a substitute's bounce a question stopped.
 pub const ATTACK_SUMMON_HOOK: &str = "@attackSummon";
 
 /// Where the owed record sits inside the prompt's and the work item's `resume.data`.
@@ -38,10 +32,8 @@ const BOUNCE_STEP: &str = "bounce";
 /// The combat the joiners stopped (`prime_combat`).
 const COMBAT_STEP: &str = "combat";
 
-/// What a paused replacement or rider still owes, as plain JSON (R113): whose attack it was, its
-/// target, whether it was forced, whether the substitute bounces afterwards, the declaration a
-/// declared attack stands on, whose attack a resumed combat makes instead, and the stays it began
-/// on.
+/// What a paused replacement or rider still owes, as plain JSON (R113): the attack (forced, or the
+/// declaration it stands on), whether the substitute bounces, whose attack it replaces, its stays.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OwedAttackSummon {
@@ -73,7 +65,6 @@ fn is_unit(state: &GameState, card: &CardInstance) -> bool {
     crate::faces::card_type_of(state, card) == CardType::Unit
 }
 
-/// The Unit cards in a player's hand, in hand order.
 fn hand_units(state: &GameState, controller: PlayerId) -> Vec<CardInstance> {
     state.players[controller]
         .hand
@@ -137,9 +128,7 @@ fn owe_record(sink: &mut EngineSink<'_>, step: &str, owed: &OwedAttackSummon) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // The replacement (R1202)
-// ---------------------------------------------------------------------------
 
 /// R1202, R831006: what attacks when `attacker` would — a random Unit of its controller's hand
 /// instead, or itself. `No` unless the attacker carries `attack_from_hand`, its controller holds a
@@ -169,17 +158,12 @@ pub fn replace_attacker(sink: &mut EngineSink<'_>, attacker: &CardInstance) -> R
     Replaced::By(Box::new(unit))
 }
 
-// ---------------------------------------------------------------------------
 // The rider (R1203)
-// ---------------------------------------------------------------------------
 
-/// R1203: the joiners' attack first. `Fight` at once unless the attacker carries `attack_joiners`.
-/// The pool is the Unit cards in the controller's hand, then library — unit tokens included,
-/// unlike `recruit`. An empty pool or no zone for any of it (a Flying one's in the backrow included,
-/// R2248000) fights at once and draws nothing. Otherwise
-/// `joiners` cards from the shuffled pool are summoned, each while a zone is open, and attack the
-/// Prime's target first as forced attacks in lane order; then the Prime's own combat. `Paused`
-/// when a joiner's Death asked something mid-run.
+/// R1203: the joiners' attack first; `Fight` at once unless the attacker carries `attack_joiners`.
+/// The pool is the Unit cards in hand, then library (unit tokens included, unlike `recruit`); an empty
+/// pool or no zone for any of it (R2248000) fights at once and draws nothing. `Paused` when a joiner's
+/// Death asked something mid-run.
 pub fn joiners_first(
     sink: &mut EngineSink<'_>,
     prime: &CardInstance,
@@ -245,9 +229,7 @@ pub fn joiners_first(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Afterwards (R1202)
-// ---------------------------------------------------------------------------
 
 /// R1202: bounce the substitute after its combat — even when its attack was canceled — if it is
 /// still on the field on the stay it attacked from. The game over ends everything; a prompt open

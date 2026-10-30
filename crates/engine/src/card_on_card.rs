@@ -1,16 +1,12 @@
 //! The card-on-card verbs' standing rules (#1850), read by every state check (§4.5) before anything is
 //! collected for death, each a whole step after which the check starts over:
 //!
-//!  - R1850003: a card held beneath another (`effects::hold`) comes back once its holder has left the
-//!    field, summoned for whom it returns to;
-//!  - R1865000: a hand card set aside beneath another (`effects::hold::set_aside_from_hand`) is exiled
-//!    once its holder has left the field;
+//!  - R1850003: a card held beneath another (`effects::hold`) comes back once its holder has left;
+//!  - R1865000: a hand card set aside beneath another (`set_aside_from_hand`) is then exiled instead;
 //!  - R1850002: an exile aura (`Script.exile_auras`) exiles every card on the field it reaches;
-//!  - R1850005: a permanent whose text says "When this has N or more keywords, make it Radiant"
-//!    (`Script.radiant_at_keywords`) is made Radiant once its keywords reach N.
+//!  - R1850005: a `Script.radiant_at_keywords` permanent is made Radiant once its keywords reach N.
 //!
 //! Each answers true only when it changed something, so a board none of them touches settles as before.
-//! The two read off a card's text share one walk of the board (`standing_text`).
 
 use crate::config::{BACKROW_ZONES, UNIT_ZONES};
 use crate::effects::move_::matches_cost;
@@ -125,8 +121,7 @@ pub fn standing_text(sink: &mut EngineSink<'_>) -> bool {
 
 /// R1850002: the exile auras of `sources`, each exiling the cards it reaches as the walk comes to it: a
 /// source or a card already gone is passed by. A card never exiles itself, a face-down card is never
-/// reached (its cost is hidden), and a card with a keyword kind the aura spares is passed by. True when
-/// any card was exiled.
+/// reached (its cost is hidden), and a card with a keyword kind the aura spares is passed by.
 fn exile_by_auras(sink: &mut EngineSink<'_>, sources: &[String]) -> bool {
     let mut changed = false;
     for id in sources {

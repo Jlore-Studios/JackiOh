@@ -1,17 +1,15 @@
-//! Test seams for two TS test files that replaced engine code from outside (part 32's decision,
-//! `78f131c^:.fullsend/notes/reconcile-decisions.md` `# engine green`). Compiled under the `testkit` feature
-//! alone, beside SURFACE §8's registry override and in its spirit: each is a thread-local the engine
+//! Test seams that replace engine code from outside. Compiled under the `testkit` feature alone,
+//! beside SURFACE §8's registry override and in its spirit: each is a thread-local the engine
 //! consults only under that feature, and each `#[test]` is its own thread, so a seam a test sets
 //! never reaches another test.
 //!
-//! - `register_work_handler` is TS's `registerWorkHandler` (`work.ts`) for a test-made engine
-//!   sequence (`packages/engine/test/pauses.test.ts`): `work::run_work_item` and `work::can_resume`
-//!   consult the table when no built-in sequence owns the hook, before a card's own continuation, as
-//!   TS's handler map came before its default handler.
-//! - `mock_brittle_tick`, `mock_animate_at_turn_start` and `mock_return_at_cleanup` are TS's `vi.mock`
-//!   of `brittle.ts`'s and `animated.ts`'s three turn stages (`packages/engine/test/turn-wiring.test.ts`):
-//!   `turn.rs` runs the double in place of `brittle::brittle_tick`, `animated::animate_at_turn_start`
-//!   and `animated::return_at_cleanup` while one is set, and the real stage otherwise.
+//! - `register_work_handler` owns a test-made engine sequence: `work::run_work_item` and
+//!   `work::can_resume` consult the table when no built-in sequence owns the hook, before a card's own
+//!   continuation.
+//! - `mock_brittle_tick`, `mock_animate_at_turn_start` and `mock_return_at_cleanup` stand in for the
+//!   three turn stages: `turn.rs` runs the double in place of `brittle::brittle_tick`,
+//!   `animated::animate_at_turn_start` and `animated::return_at_cleanup` while one is set, and the
+//!   real stage otherwise.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -20,7 +18,7 @@ use crate::script::EngineSink;
 use crate::state::WorkItem;
 use crate::wire::PlayerId;
 
-/// TS `WorkHandler`: runs one owed item of the sequence it is registered for.
+/// Runs one owed item of the sequence it is registered for.
 pub type WorkHandler = fn(&mut EngineSink<'_>, &WorkItem);
 
 /// A stand-in for one turn stage: handed the turn's sink and the player whose turn it is.
@@ -33,8 +31,8 @@ thread_local! {
     static RETURN_AT_CLEANUP: Cell<Option<Rc<StageDouble>>> = const { Cell::new(None) };
 }
 
-/// TS `registerWorkHandler(hook, handler)` for this thread: `handler` runs every owed item whose
-/// `resume.hook` is `hook` and that no engine sequence owns. Returns the handler it replaced.
+/// For this thread, `handler` runs every owed item whose `resume.hook` is `hook` and that no engine
+/// sequence owns. Returns the handler it replaced.
 pub fn register_work_handler(hook: &str, handler: WorkHandler) -> Option<WorkHandler> {
     WORK_HANDLERS.with(|cell| {
         let mut table = cell.take();
@@ -50,7 +48,7 @@ pub fn register_work_handler(hook: &str, handler: WorkHandler) -> Option<WorkHan
     })
 }
 
-/// TS `registerWorkHandler(hook, undefined)`: this thread's handler for `hook` goes. Returns it.
+/// This thread's handler for `hook` goes. Returns it.
 pub fn unregister_work_handler(hook: &str) -> Option<WorkHandler> {
     WORK_HANDLERS.with(|cell| {
         let mut table = cell.take();
@@ -88,17 +86,17 @@ fn double_of(slot: &'static std::thread::LocalKey<Cell<Option<Rc<StageDouble>>>>
     })
 }
 
-/// `vi.mock` of `brittle::brittle_tick` for this thread: the start-of-turn Brittle stage runs `double`.
+/// For this thread, `double` runs in place of the start-of-turn Brittle stage (`brittle::brittle_tick`).
 pub fn mock_brittle_tick(double: impl Fn(&mut EngineSink<'_>, PlayerId) + 'static) {
     set_double(&BRITTLE_TICK, Rc::new(double));
 }
 
-/// `vi.mock` of `animated::animate_at_turn_start` for this thread.
+/// For this thread, `double` runs in place of `animated::animate_at_turn_start`.
 pub fn mock_animate_at_turn_start(double: impl Fn(&mut EngineSink<'_>, PlayerId) + 'static) {
     set_double(&ANIMATE_AT_TURN_START, Rc::new(double));
 }
 
-/// `vi.mock` of `animated::return_at_cleanup` for this thread.
+/// For this thread, `double` runs in place of `animated::return_at_cleanup`.
 pub fn mock_return_at_cleanup(double: impl Fn(&mut EngineSink<'_>, PlayerId) + 'static) {
     set_double(&RETURN_AT_CLEANUP, Rc::new(double));
 }

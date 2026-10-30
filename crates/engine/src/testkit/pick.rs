@@ -1,6 +1,6 @@
-//! The one-instance `Selection[]` a test hands to a play's `targets` or a prompt's `answer` (TS
-//! `[{ pick: "instance", instanceId }]`). It is not globbed in: a test writes `pick::<builder>`.
-//! crates/tools/tests/acceptance.rs refuses a test's own copy (#1826).
+//! The one-instance `Selection[]` a test hands to a play's `targets` or a prompt's `answer`. Not
+//! globbed in: a test writes `pick::<builder>`. crates/tools/tests/acceptance.rs refuses a test's own
+//! copy (#1826).
 
 use serde_json::{Value, json};
 

@@ -1,12 +1,8 @@
 //! Brittle X's count on a card instance (docs/classic-sets.md B3.3, R385, R441, R638): the readers and
-//! the writes that need no sink. The count lives on the instance (`CardInstance.brittle`) and is kept in
-//! every zone the card passes through, hand to field included, like `radiant` and `costMod` (R78), but
-//! it only ticks on the field (R638); a copy never inherits it (R57). The start-of-turn tick and the
-//! crumbling are `brittle.rs`'s.
-//!
-//! This module imports nothing heavier than the catalog, so the modules every field arrival and every
-//! stat read pass through — `zones.rs` (`start_brittle_on_field`) and `layers.rs` (`active_brittle_count`)
-//! — can read it without pulling the destroy and state-check machinery the tick needs.
+//! the writes that need no sink. The count (`CardInstance.brittle`) is kept in every zone the card
+//! passes through, like `radiant` (R78), but only ticks on the field; a copy never inherits it (R57).
+//! The tick and the crumbling are `brittle.rs`'s. This module imports nothing heavier than the catalog,
+//! so `zones.rs` and `layers.rs` read it without pulling in the destroy machinery the tick needs.
 
 use crate::faces::{card_type_of, running_face};
 use crate::state::{BrittleCounter, CardInstance, GameState};
@@ -36,13 +32,10 @@ pub fn active_brittle_count(card: &CardInstance) -> Option<i32> {
     Some(brittle.count)
 }
 
-/// B3.3 rule 1, R638: "a printed Brittle starts when the card enters the field", called where every
-/// field arrival passes (`zones::place_on_field`, `zones::replace_in_zone`). A card that has a count
-/// keeps it; with `from_off_field` (it arrives from a hand, a deck, a graveyard or the resolving zone)
-/// its turn cycle restarts now, so its first tick waits a whole round (`BRITTLE_FIRST_TICK_TURNS`).
-///
-/// R687: a backrow Trap or Field Trap that enters face-down starts no count (Classic+ #74); the count
-/// starts when it reveals: with its first activation, or by the `reveal` effect.
+/// B3.3 rule 1, R638: "a printed Brittle starts when the card enters the field", called by every field
+/// arrival. A card that has a count keeps it; `from_off_field` restarts its turn cycle now, so its first
+/// tick waits a whole round. R687: a backrow Trap or Field Trap that enters face-down starts no count
+/// (Classic+ #74) until it reveals.
 pub fn start_brittle_on_field(state: &GameState, card: &mut CardInstance, from_off_field: bool) {
     if let Some(brittle) = card.brittle {
         if from_off_field {
@@ -108,9 +101,8 @@ pub fn gain_brittle_count(state: &GameState, card: &mut CardInstance, amount: i3
     });
 }
 
-/// R441: a count that has crumbled its card is spent. R78's reset (`zones::reset_instance`) keeps a
-/// Brittle count in every zone but this one, so a crumbled card that comes back — from its graveyard,
-/// or a Reborn body — is not Brittle 0 for ever, crumbling again at every tick.
+/// R441: a count that has crumbled its card is spent, so a crumbled card that comes back is not stuck at
+/// Brittle 0, crumbling at every tick (R78's reset keeps the count everywhere else).
 pub fn drop_spent_brittle(card: &mut CardInstance) {
     if card.brittle.is_some_and(|brittle| brittle.count <= 0) {
         card.brittle = None;

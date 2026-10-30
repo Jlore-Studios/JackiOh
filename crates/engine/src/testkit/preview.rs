@@ -1,13 +1,11 @@
 //! R1420's preview seam: under the `testkit` feature, a thread may treat sets that do not ship yet as
-//! if they did, so a test, the fuzz tool or a development run can deal and generate the cards of a
-//! set while it is being built. It is a thread-local the engine's catalog consults only under this
-//! feature, in the spirit of `seams.rs` and SURFACE §8's registry override: each `#[test]` is its own
-//! thread, so a preview a test sets never reaches another test, and a production build has no such
-//! state at all (CLAUDE.md rule 4).
+//! if they did, so a test, the fuzz tool or a development run can deal and generate a set's cards
+//! while it is being built. A thread-local, as in `seams.rs` and SURFACE §8's registry override: a
+//! preview a test sets never reaches another test, and a production build has none (CLAUDE.md rule 4).
 //!
-//! What a preview opens is exactly what shipping opens: pools that name no set (R380) and the
-//! deckability check (`catalog::deckable`). It changes no card, no state and no replay: a game a
-//! previewing thread played replays the same on a thread that previews the same sets.
+//! A preview opens exactly what shipping opens (pools that name no set, R380, and `catalog::deckable`)
+//! and changes no card or state: a previewing thread's game replays the same on one previewing the same
+//! sets.
 
 use std::cell::Cell;
 

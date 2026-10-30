@@ -2,30 +2,14 @@
 //! climbs past on its way through `mana::effective_cost`, where they come from, and the plays a price
 //! rule forbids outright.
 //!
-//! A price rule comes from one of two places, and both carry the same data (`CostRule`):
-//!
-//!  - a player modifier (`kind: "costRule"`, `state.rs`) — Classic #2 The Trickster's "your next Trap
-//!    or Field Spell costs (2) less" (or "costs (0)", its Radiant face), until used; AI Alignment
-//!    Tax's "your opponent's cards cost (1) more during their next turn", R48's timing turned outward;
-//!  - an aura (`Script.cost_aura`) on a card acting on the field — Classic #6's "your Traps cost (0)",
-//!    #68's "Cost (3)+ cards cost (1) more" and its Radiant "your opponent can't play Cost (3)+ cards",
-//!    #77's "Spells cost (1) more". The aura is a hook, not a static flag, so a Degrade or Upgrade of
-//!    the card's declared numbers (B3.4, `CardDef.params`) moves the rule it lays down.
-//!
-//! The ladder itself (R455) is `mana::effective_cost`'s, which reads these through `price_rules_for`:
-//! flat changes first (R65's player discounts, then every rule with an `amount` and no threshold),
-//! then the threshold rules, each testing the one number the flat changes left (R363 reads Professor
-//! Curvature there, and #68's "(3)+" reads the same number, before its own surcharge), then "costs
-//! (N)" sets, then the floor a card carries (Classic+ #14 Forever&'s "can't cost less than (2)",
-//! `enchantments.rs`), then 0. A ban ("can't play") reads the finished price and refuses the play
-//! (`why_play_banned`); a cast pays nothing and is never refused (R70).
-//!
-//! The module imports nothing from `mana.rs`, which imports it: liveness of a modifier is the caller's
-//! question (`mana::modifier_is_live`), so the two never form a cycle.
-//!
-//! Port of `packages/engine/src/costRules.ts`. `CostRule` lives in `state.rs` (a `PlayerModifier`
-//! holds one) and `CostAura`, `CostAuraWhose` and `CostAuraArgs` in `script.rs` (a `Script` field
-//! names them); this module uses those and defines none of them again.
+//! A price rule (`CostRule`) comes from a player modifier (`kind: "costRule"`; AI Alignment Tax's is
+//! R48's timing turned outward) or an aura (`Script.cost_aura`, Classic #68, #77) on a card acting on
+//! the field; the aura is a hook, so a Degrade or Upgrade of its declared numbers (B3.4) moves it.
+//! The ladder (R455): flat changes first (R65's player discounts, then every `amount` with no
+//! threshold), then the threshold rules on the number those left (R363), then "costs (N)" sets, then a
+//! card's floor (Classic+ #14 Forever&), then 0. A ban reads the finished price (`why_play_banned`); a
+//! cast pays nothing and is never refused (R70). This module imports nothing from `mana.rs`, which
+//! imports it: a modifier's liveness is the caller's (`mana::modifier_is_live`), so they never cycle.
 
 use indexmap::IndexSet;
 
@@ -35,8 +19,7 @@ use crate::state::{CardInstance, CostRule, GameState, ModifierExpiry, ModifierKi
 use crate::wire::{CardType, Enchantment, PLAYER_IDS, PlayerId, opponent_of};
 
 /// A `costRule` modifier (`state.rs`), named so the readers here can take one: the modifier's id, its
-/// expiry and the rule it carries (TS `Extract<PlayerModifier, { kind: "costRule" }>`, whose `rule`
-/// sits beside `id` and `expiry`).
+/// expiry and the rule it carries.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CostRuleModifier {
     pub id: String,
@@ -45,7 +28,7 @@ pub struct CostRuleModifier {
 }
 
 impl CostRuleModifier {
-    /// The modifier as a `costRule` one, or `None` when it is of another kind (TS's type guard).
+    /// The modifier as a `costRule` one, or `None` when it is of another kind.
     pub fn of(modifier: &PlayerModifier) -> Option<CostRuleModifier> {
         match &modifier.kind {
             ModifierKind::CostRule { rule } => Some(CostRuleModifier {
@@ -72,9 +55,7 @@ pub struct ClimbedPrice {
     pub used: Vec<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Matching
-// ---------------------------------------------------------------------------
 
 /// Whether a rule's type list reaches this card (all types when it names none).
 pub fn rule_reaches(state: &GameState, rule: &CostRule, card: &CardInstance) -> bool {
@@ -97,11 +78,10 @@ fn whose_reaches(whose: CostAuraWhose, source: PlayerId, player: PlayerId) -> bo
     }
 }
 
-/// Every card acting on the field, both sides, in R68's walk (the active side first, units by lane,
-/// the Units its carriers hold, then the backrow by lane; `zones::acting_on`): the tops of the unit
-/// piles, a Unit a carrier holds (R446, R1824000) and the backrow cards. A card dormant under a Stack
-/// pile is not on the field for effects (§3.2, R13), so its aura is off, as §10.4 layer 5 reads, and so
-/// is a face-down card's (R1487000).
+/// Every card acting on the field, both sides, in R68's walk (`zones::acting_on`, the active side
+/// first): the tops of the unit piles, a carried Unit (R446, R1824000) and the backrow cards. A card
+/// dormant under a Stack pile is not on the field for effects (§3.2, R13), so its aura is off, as
+/// §10.4 layer 5 reads, and so is a face-down card's (R1487000).
 fn acting_permanents(state: &GameState) -> Vec<&CardInstance> {
     let order: [PlayerId; 2] = if state.active == PlayerId::P1 {
         PLAYER_IDS
@@ -236,9 +216,7 @@ pub fn climb_price_rules(price: i32, rules: &PriceRules, curvature: impl Fn(i32)
     }
 }
 
-// ---------------------------------------------------------------------------
 // The floor a card carries (E39 via E15)
-// ---------------------------------------------------------------------------
 
 /// Classic+ #14 Forever&: "This can't cost less than (N)" — the `returnAfterResolve` enchantment's
 /// floor, applied after every discount (E15, R455). Several floors: the highest holds. 0 without one.
@@ -252,9 +230,7 @@ pub fn cost_floor_of(card: &CardInstance) -> i32 {
         })
 }
 
-// ---------------------------------------------------------------------------
 // Bans (E15, R455)
-// ---------------------------------------------------------------------------
 
 /// E15, R455: why a play of this card at this price is forbidden, or `Ok` when it is not. Classic #68
 /// Radiant's "your opponent can't play Cost (3)+ cards" reads the finished price of this very play (an
@@ -284,9 +260,7 @@ pub fn why_play_banned(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // What the badge says (R169, R432's "(N) Cost" noun, "costs (N)" verb)
-// ---------------------------------------------------------------------------
 
 fn types_text(types: Option<&[CardType]>, plural: bool) -> String {
     let types = match types {

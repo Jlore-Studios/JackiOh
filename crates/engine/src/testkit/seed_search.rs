@@ -1,14 +1,12 @@
-//! The seed search (issue #848): a test that needs a random roll to land one way finds the seed or the rng
+//! The seed search (#848): a test that needs a random roll to land one way finds the seed or the rng
 //! cursor at run time, instead of pinning one that every card or keyword joining a pool moves. Both
-//! searches are deterministic (a fixed prefix or seed, tried in order), so a test replays the same
-//! position every run; each is bounded by `SEED_SEARCH_BOUND` and panics naming what it searched when
-//! nothing matches.
+//! searches are deterministic, so a test replays the same position every run; each is bounded by
+//! `SEED_SEARCH_BOUND` and panics naming what it searched when nothing matches.
 
 use crate::config::SEED_SEARCH_BOUND;
 
-/// The first seed `<prefix>-0`, `<prefix>-1`, … that `accept` takes, for a test whose position needs a
-/// roll to land one way. `accept` builds the position from the seed and reads where the roll landed; the
-/// test then builds the same position on the seed it got and runs its assertions as they are.
+/// The first seed `<prefix>-0`, `<prefix>-1`, … that `accept` takes: `accept` builds the position from
+/// the seed and reads where the roll landed, and the test then builds it on the seed it got.
 pub fn seed_where(prefix: &str, accept: impl Fn(&str) -> bool) -> String {
     (0..SEED_SEARCH_BOUND)
         .map(|i| format!("{prefix}-{i}"))

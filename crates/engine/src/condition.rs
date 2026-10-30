@@ -5,11 +5,9 @@
 //!
 //! The first rule that applies decides: game over, a field card the viewer does not control, or a hand
 //! card outside the viewer's own main phase or with a prompt open -> false, hook not called (a hook
-//! runs only for its controller, who may read all the Core hooks read, §9.1); the running face's
-//! `conditionMet` strictly true -> true (a fused def carries its ingredients' hooks, or-ed, R196);
-//! a hand card granted a condition that holds now (R662) -> true; else false. The grant is the
-//! engine's, not a card's, since the card being played takes the branch; it reads the facts §10.5
-//! steps 3 and 5 decide with (`query.rs`).
+//! runs only for its controller, §9.1); the running face's `conditionMet` true -> true (a fused def's
+//! hooks are or-ed, R196); a hand card granted a condition that holds now (R662, the facts §10.5 steps
+//! 3 and 5 decide with) -> true; else false.
 
 use crate::query::{gifted_would_make_radiant, granted_combo_live};
 use crate::script::{ConditionContext, ConditionZone};

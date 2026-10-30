@@ -1,7 +1,6 @@
 //! `duos_scenario` (#936 S4): a begun Duos game for a test, built out of the wrapper's own functions
-//! (`duos_create`, `duos_begin`, `duos_reduce`) as `scenario()` is out of the engine's. Every seat
-//! keeps its whole opening hand, so a test starts at round 1 with A1 and A2 to act. The decks are
-//! dealt from the registered catalog, the testkit's override included (`register_catalog`).
+//! (`duos_create`, `duos_begin`, `duos_reduce`) as `scenario()` is out of the engine's, with A1 and A2
+//! to act. The decks are dealt from the registered catalog, the testkit's override included.
 
 use crate::duos::{DuosState, duos_begin, duos_create, duos_reduce};
 use crate::setup::mulligan_prompt_for;

@@ -1,38 +1,28 @@
-//! The number a formula comes to now (SPEC §10.8, §10.9, R280). A card whose text computes a number
-//! from the board would leave the player the arithmetic, and the client may not (CLAUDE.md rule 7).
-//! So the card's script declares `preview`, a pure read, and `view_for` carries its answer.
+//! The number a formula comes to now (SPEC §10.8, §10.9, R280): the client may not do a card's
+//! arithmetic (CLAUDE.md rule 7), so the script declares `preview`, a pure read, and `view_for` carries
+//! its answer.
 //!
-//! It is asked only where the viewer may read the card (§10.8): their own hand in any phase (a value
-//! is information, not the playability glow R195 keeps to the main phase; §9.1), a unit on top of its
-//! pile, either seat's, and a backrow card face-up to the viewer or face-down for its controller (R33).
-//! Never the opponent's hand, a library card, a card dormant under a Stack (R13) or one in a
-//! graveyard, exile or the resolving zone: the guards below refuse those without calling the hook.
-//!
-//! The hook runs as the card does (its own face and controller, the zone, `yourTurn`; the other seat's
-//! for a public card of theirs, since the number is the card's and not the viewer's) and reads only
-//! what that controller may read (§9.1). The number is public, but the cards it counts need not be: a
-//! count of the permanents counts the controller's own face-down traps, whose backs the other seat
-//! sees. So a value's `ids` keep only the cards the viewer may read where they lie (R1447). An empty
-//! answer is no preview: no key, not `[]`.
+//! It is asked only where the viewer may read the card (§10.8): their own hand in any phase (a value is
+//! information, not R195's main-phase glow; §9.1), a unit on top of its pile (never one under a Stack,
+//! R13), and a backrow card face-up or the viewer's own (R33). The hook runs as the card does (its face,
+//! controller and zone) and reads what that controller may (§9.1), so a value's `ids` keep only the
+//! cards the viewer may read where they lie (R1447). An empty answer is no preview: no key, not `[]`.
 
 use crate::ownership::readers_where_it_lies;
 use crate::script::{ConditionContext, ConditionZone};
 use crate::state::{CardInstance, GameState, find_instance};
 use crate::wire::{CardType, PlayerId, PreviewValue, Row, TallyView, Zone};
 
-/// §10.8: "traps show as unknown, Field Spells are public". A backrow Trap or Field Trap is readable
-/// by its current controller only until it flips face-up, which is what R33 keys on `controller`.
-/// The one rule both `view_for` (what a view shows of a backrow card) and this module (what a preview
-/// may be asked about) read, so the two cannot drift apart.
+/// §10.8: "traps show as unknown, Field Spells are public": a backrow Trap or Field Trap is readable by
+/// its current controller only until it flips face-up (R33). `view_for` and this module both read it,
+/// so the two cannot drift apart.
 pub fn backrow_is_public(state: &GameState, card: &CardInstance, viewer: PlayerId) -> bool {
     !is_face_down(state, card) || card.controller == viewer
 }
 
-/// R33, R371, R686: a backrow Trap or Field Trap that has not flipped face-up, so only its
-/// controller may read it — unless it is revealed, which both players read while it stays armed.
-/// `backrow_is_public` above is this plus the controller's exception, and `view_for` marks the
-/// controller's own view of such a card `unrevealed` from the same answer, so the mark a client draws
-/// and the back the other player sees cannot disagree.
+/// R33, R371, R686: a backrow Trap or Field Trap neither flipped face-up nor revealed, so only its
+/// controller may read it. `view_for` marks the controller's own view of one `unrevealed` from the same
+/// answer, so the mark a client draws and the back the other player sees cannot disagree.
 pub fn is_face_down(state: &GameState, card: &CardInstance) -> bool {
     let card_type = crate::faces::card_type_of(state, card);
     if card_type != CardType::Trap && card_type != CardType::FieldTrap {
@@ -41,21 +31,17 @@ pub fn is_face_down(state: &GameState, card: &CardInstance) -> bool {
     card.face_up != Some(true) && card.revealed != Some(true)
 }
 
-/// R1487000: whether a card's lasting text sleeps — its auras, static flags, hero Armor, draw limits,
-/// discard guards, every text a reader takes off the board — because it is face-down
-/// (`is_face_down`). It wakes once the card is revealed or face-up. Its triggers stay live, and so
-/// does a self-Tribute (R1149000). A kept script with `Script::live_face_down` (R767000) never sleeps.
-/// A card with no definition (the AI's redacted placeholder, R185) has no text to sleep.
+/// R1487000: whether a face-down card's lasting text (every text a reader takes off the board) sleeps
+/// until it is revealed or face-up; its triggers and a self-Tribute stay live (R1149000). A
+/// `Script::live_face_down` card (R767000) and the AI's def-less placeholder (R185) never sleep.
 pub fn lasting_text_dormant(state: &GameState, card: &CardInstance) -> bool {
     crate::catalog::find_def(Some(state), &card.def_id).is_some()
         && is_face_down(state, card)
         && !crate::scripts::script_of(state, card).live_face_down
 }
 
-/// R1487000, R1839000: whether a card's lasting text is off — its auras, static flags, hero Armor,
-/// draw limits, discard guards, cost rules, permissions, every text a reader takes off the board —
-/// because it is face-down (`lasting_text_dormant`) or Dormant (`slumber.rs`): a Dormant card's text
-/// wakes only when the card awakens. What each board walk that reads lasting text asks.
+/// R1487000, R1839000: whether a card's lasting text is off, face-down (`lasting_text_dormant`) or
+/// Dormant until it awakens (`slumber.rs`): what each board walk that reads lasting text asks.
 pub fn lasting_text_off(state: &GameState, card: &CardInstance) -> bool {
     crate::slumber::is_slumbering(card) || lasting_text_dormant(state, card)
 }
@@ -122,9 +108,8 @@ pub fn preview_of(
 }
 
 /// R2321000, §10.8: the counts the cards acting on the field keep on `unit` (`Script.tallies`), as
-/// `viewer` sees them: each from a card the viewer may read where it lies (`may_preview`, so a
-/// face-down card's count stays with its controller), asked as its own preview is, in R68's order.
-/// `None` for none.
+/// `viewer` sees them: each from a card the viewer may read where it lies (`may_preview`), asked as its
+/// own preview is, in R68's order.
 pub fn tallies_on(state: &GameState, unit: &CardInstance, viewer: PlayerId) -> Option<Vec<TallyView>> {
     let holders = crate::triggers::field_holders_where(state, |card| {
         crate::subsystems::copied_text::running_script_of(state, card)

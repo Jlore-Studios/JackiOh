@@ -1,21 +1,15 @@
-//! What every play leaves behind to be counted (docs/classic-sets.md B5 E4, R451).
+//! What every play leaves behind to be counted (docs/classic-sets.md B5 E4, R451); this module only
+//! writes, and the readers are `query.rs`'s.
 //!
-//! §10.5 step 4 counts a play the moment it places the card: `turnLog.playedIds`, `cardsPlayed`,
-//! R213's `costsPaid` and the game's `played` counter (R55), and now these too —
-//!   * per player, per turn (on both players' turns): plays by the type each was played as (B2.7),
-//!     in the turn log, which `startTurn` rebuilds for both players (Classic+ #37 Wardrum);
-//!   * per player, per game: plays by tag in the player's `gameLog`, never reset (Classic+ #64 Mulch
-//!     Muncher's Fruit, AI Scaling Law's AI generated cards);
-//!   * game-wide: the last Spell anyone played (Classic #57 Echo, `state.lastSpell`), and per player
-//!     the last face-up card they played (AI Autocomplete, `gameLog.lastFaceUpPlay`). Each "last"
-//!     record is overwritten by the next play and never cleared.
+//! §10.5 step 4 counts a play as it places the card (`turnLog.playedIds`, `cardsPlayed`, R213's
+//! `costsPaid`, R55's `played` counter) and in these: per player per turn, plays by the type each was
+//! played as (B2.7), in the turn log each turn start rebuilds (Classic+ #37 Wardrum); per player per
+//! game, plays by tag in `gameLog`, never reset (Classic+ #64 Mulch Muncher's Fruit); the last Spell
+//! anyone played (Classic #57 Echo, `state.lastSpell`) and each player's last face-up play
+//! (`gameLog.lastFaceUpPlay`), each overwritten by the next play and never cleared.
 //!
 //! A cast is a play and counts (R70). A countered play never reaches step 4, so it counts for nothing
 //! (R448). An Echo repeat is the same play resolving again, not a play (§6.2).
-//!
-//! The readers are `query.rs`'s (the read half of the card-facing surface); this module only writes.
-//!
-//! Port of `packages/engine/src/playCounts.ts`.
 
 use indexmap::{IndexMap, IndexSet};
 
@@ -75,7 +69,7 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
             .as_ref()
             .map(|log| log.played_by_tag.clone())
             .unwrap_or_default();
-        // `new Set(tags)`: each tag once, in first-seen order.
+        // Each tag once, in first-seen order.
         let distinct: IndexSet<Tag> = tags.iter().copied().collect();
         for tag in distinct {
             *by_tag.entry(tag).or_insert(0) += 1;
@@ -100,11 +94,10 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
     if type_ == CardType::Spell {
         state.last_spell = Some(record.clone());
     }
-    // R451, R1121000: the last face-up card, passing over Traps (set face-down, so nothing
-    // hidden is ever recorded) and the tags `LAST_FACE_UP_SKIPPED_TAGS` names (the AI generated
-    // cards) — read off the recorded card's printed tags as well as the played card's tags as
-    // played, since a play can record another card's play (Classic #57 Echo records the Spell it
-    // copied, R399); a recorded AI card, a fused one included, leaves the previous record standing.
+    // R451, R1121000: the last face-up card, passing over Traps (so nothing hidden is recorded) and
+    // the `LAST_FACE_UP_SKIPPED_TAGS` (the AI generated cards), on the recorded card's printed tags as
+    // well as the played card's, since a play can record another's (Classic #57 Echo, R399): a recorded
+    // AI card, a fused one included, leaves the previous record standing.
     let recorded_skipped = crate::catalog::find_def(Some(&*state), &record.def_id)
         .is_some_and(|def| def.tags.iter().any(|tag| LAST_FACE_UP_SKIPPED_TAGS.contains(tag)));
     if played_face_down(type_)

@@ -1,10 +1,7 @@
-//! Player modifiers and delayed effects, with their expiry (SPEC §2.2, §10.1, R62, R68).
+//! Player modifiers and delayed effects, with their expiry (SPEC §2.2, §10.1, R62, R68; SURFACE §4).
 //!
-//! Port of `packages/engine/src/modifiers.ts` (part 3, SURFACE §4). TS's `addModifier` took the
-//! modifier without its id (`DistributiveOmit<PlayerModifier, "id">`); a `PlayerModifier` is
-//! `{ id, expiry, ...kind }` (`state.rs`), so the id-less half is its `expiry` and its `kind`, and
-//! that is what `add_modifier` takes. The readers that TS answered with the live record
-//! (`dueDelayed`, `dueStartOfTurnEffects`) answer copies, which a caller writes back by id.
+//! `add_modifier` takes a modifier's `expiry` and `kind` and gives it its id. The readers
+//! (`due_delayed`, …) answer copies, which a caller writes back by id.
 
 use crate::config::SETUP_TURN;
 use crate::script::EngineSink;
@@ -14,8 +11,7 @@ use crate::state::{
 };
 use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, ZoneName};
 
-/// `"sourceId" in mod ? mod.sourceId : undefined`: the permanent a modifier belongs to (#79
-/// Twinspell's rider is the one kind that carries one).
+/// The permanent a modifier belongs to (`sourceId`: #79 Twinspell's rider is the one kind with one).
 fn source_id_of(modifier: &PlayerModifier) -> Option<&str> {
     match &modifier.kind {
         ModifierKind::EchoNextSpell { source_id, .. } => source_id.as_deref(),
@@ -93,13 +89,10 @@ pub fn move_sourced_modifiers(sink: &mut EngineSink<'_>, source_id: &str, from: 
     }
 }
 
-/// R209: a modifier a permanent installed and still owns (`sourceId`, #79 Twinspell's "the next
-/// Spell you play gains Echo") is that permanent's lasting effect (§5.1), so it lasts while the
-/// permanent stays on the field and ends when it leaves — destroyed (#36, #88), bounced (#52's
-/// radiant crossing, a rotation onto a reserved zone, a Locked swap), exiled (#34, #100), eaten (#22), replaced (#83) or
-/// fused away (#85). A card that later stands on the field under the same id is a new arrival that
-/// installs its own (R174). The state check runs this, since it follows every action and every whole
-/// effect (§4.5, R59), and each removal is reported like any other (R169).
+/// R209: a modifier a permanent installed and still owns (`sourceId`) is its lasting effect (§5.1),
+/// ending when it leaves the field however it goes (#36, #88, #52, #34, #100, #22, #83, #85). A card
+/// later on the field under the same id installs its own (R174). The state check runs this, since it
+/// follows every action and every whole effect (§4.5, R59); each removal is reported (R169).
 pub fn end_orphaned_modifiers(sink: &mut EngineSink<'_>) {
     for player in PLAYER_IDS {
         let mods: Vec<PlayerModifier> = sink.state.players[player].mods.clone();
@@ -117,18 +110,12 @@ pub fn end_orphaned_modifiers(sink: &mut EngineSink<'_>) {
     }
 }
 
-/// R209, R169: a permanent's lasting effect is installed by the permanent standing on the field, not
-/// by its Cry — #79 Twinspell's "the next Spell you play gains Echo +1" prints no "Cry:" (§8), and a
-/// Cry fires only for a card played from hand (§6.2). So every permanent that stands on a side of the
-/// field with a `staticFlags.echoGrant` has one `echoNextSpell` rider on that side's player, owned by
-/// it (`sourceId`), however it got there: played, summoned (#22's copies, #95's backrow, #98's
-/// recruit), or holding Twinspell's text through a Fuse onto another permanent (#85, R77), in which
-/// case "you" is that permanent's controller (§8 Conventions). The state check runs this beside
-/// `endOrphanedModifiers`, which ends the rider when the permanent leaves, and `echo.grantedEcho`
-/// runs it once more before a Spell takes the grant, so a permanent that arrived since the last check
-/// is not missed. A rider that already exists is left alone, so a card that stays on the field keeps
-/// the id its badge was given (R169); one that changed sides has had its rider moved with it
-/// (`moveSourcedModifiers`), and the one it finds on its new controller's side is that same rider.
+/// R209, R169: a lasting effect is installed by the permanent standing on the field, not by a Cry
+/// (#79 Twinspell prints no "Cry:", §8, and a Cry fires only from hand, §6.2). So each permanent on a
+/// side with a `staticFlags.echoGrant` owns one `echoNextSpell` rider on that side's player, however
+/// it got there (summoned: #22, #95, #98; Twinspell's text through a Fuse: #85, R77). The state check
+/// runs this beside `end_orphaned_modifiers`, and `echo::granted_echo` once more before a Spell takes
+/// the grant. An existing rider is left alone, so its badge keeps its id (R169).
 pub fn install_lasting_modifiers(sink: &mut EngineSink<'_>) {
     for player in PLAYER_IDS {
         // R446, R1824000: a Unit a carrier holds stands there too. Copied, since the walk adds riders.
@@ -183,9 +170,9 @@ pub fn expire_modifiers(sink: &mut EngineSink<'_>, player: PlayerId) {
             .mods
             .iter()
             .map(|modifier| match &modifier.expiry {
-                // §2.2: a "this turn" effect lasts to the end of its turn. One made after its turn's cleanup
-                // had run — a trigger answering cleanup's own events, which resolve inside that turn (R62) — is
-                // over by the next cleanup, whoever's it is, and dead from the next turn on (`modifierIsLive`).
+                // §2.2: a "this turn" effect lasts to its turn's end. One made after cleanup ran (a trigger
+                // on cleanup's events, R62) ends at the next cleanup, dead from the next turn on
+                // (`modifier_is_live`).
                 ModifierExpiry::ThisTurn { turn: made } => *made > turn,
                 // R48: it covers that player's *next* turn, so it survives the turn it was created on.
                 ModifierExpiry::NextTurnOf {
@@ -237,11 +224,10 @@ pub fn schedule_delayed(
     effect
 }
 
-/// R68: delayed effects due now, in the order they were created. R458: one made for "your *next*
-/// turn" waits until that turn (`notBefore`), so the boundary of the turn it was made on passes it by.
-/// R1181000: one made "in N turns" waits until its player has started that many more (`dueOwnTurn`).
-///
-/// `phase` is `Phase::Start` or `Phase::End` (TS `"start" | "end"`).
+/// R68: delayed effects due now at `phase` (`Start` or `End`), in the order they were created. R458:
+/// one made for "your *next* turn" waits until that turn (`notBefore`), so the boundary of the turn it
+/// was made on passes it by. R1181000: one made "in N turns" waits until its player has started that
+/// many more (`dueOwnTurn`).
 pub fn due_delayed(state: &GameState, phase: Phase, player: PlayerId) -> Vec<DelayedEffect> {
     let mut due: Vec<DelayedEffect> = state
         .delayed
@@ -278,11 +264,9 @@ pub fn drop_delayed(state: &mut GameState, id: &str) {
     state.delayed.retain(|effect| effect.id != id);
 }
 
-// ---------------------------------------------------------------------------
-// ---- v0.2.0: activate and turn (B5 E10, E28) ----
-// ---------------------------------------------------------------------------
+// Activate and turn (B5 E10, E28)
 
-/// TS `Extract<PlayerModifier, { kind: "turnEnds" }>`: a `PlayerModifier` whose kind is `TurnEnds`.
+/// A `PlayerModifier` whose kind is `TurnEnds`.
 pub type TurnEndsModifier = PlayerModifier;
 
 /// B5 E10, R456: the "your turn ends" rider on `player` for the turn running now, or null.
@@ -418,9 +402,9 @@ pub fn add_death_watch(
 }
 
 /// B5 E28, R458: "For the rest of the game: at the start of your turn, …" — a `never` modifier on
-/// `player` that re-enters `resume` at each start of their turn (`turn.ts`'s delayed stage), or with
+/// `player` that re-enters `resume` at each start of their turn (`turn.rs`'s delayed stage), or with
 /// `at_end` at each end of their turn (R1861002). Its `seq` is the one its id is numbered from
-/// (`addModifier`), R68's creation order among the delayed effects.
+/// (`add_modifier`), R68's creation order among the delayed effects.
 pub fn add_start_of_turn_effect(
     sink: &mut EngineSink<'_>,
     player: PlayerId,

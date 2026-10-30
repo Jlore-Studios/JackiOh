@@ -1,16 +1,12 @@
 //! R1956001: which card generated a Created card (R943), so the client can dress the Created card as
-//! its owner's copy of the generator is dressed (the foil, finish and border of R1655000). The record
-//! is `GameState.generators`, a card's instance id to the catalog id of its root generator: the card
-//! whose script minted it, or that card's own root when it was Created too, so a token's token
+//! its owner's copy of the generator is dressed (R1655000's foil, finish and border).
+//! `GameState.generators` maps an instance id to its root generator's catalog id, so a token's token
 //! carries the first card. Presentation only (CLAUDE.md rule 7): no rule reads it, the hash leaves it
 //! out (`replay::hash_state`) and only the Created card's owner is told it (`CardView.createdBy`).
 //!
-//! The effect verbs that mint a card for a card (`add_to_hand`, `cast`, `craft`, `library_copies`,
-//! `shuffle_into`, `shuffle_random`, `summon`, `transform`, Call to Chaos's recast) record it as they
-//! mint, and so does Infinite Reserves' token (`draw`). A card a rule mints (The Coin, setup, a
-//! Resource, a Glitch reset, a Devil's Pact replacement, a Starship), a fused card and a card given to
-//! the other player record nothing, and nor does a card whose generator is no catalog card (a
-//! crafted, fused or custom card, which wears no per-card pick).
+//! The effect verbs that mint a card for a card record it as they mint. A card a rule mints (The Coin,
+//! setup, a Resource, a Starship), a fused card, a card given to the other player and a card whose
+//! generator is no catalog card (it wears no per-card pick) record nothing.
 
 use crate::script::EffectContext;
 use crate::state::{CardInstance, GameState, find_instance};
@@ -43,11 +39,10 @@ fn record(state: &mut GameState, owner: PlayerId, root: String, card: &CardInsta
 }
 
 /// R2089000: the seat running `ctx` made `card_id`, which it has just put in a hand, a library or
-/// another card's place; when that is another seat's, the event that put it there names the maker as
-/// its `creator`, so the game record credits the Created card to the seat that made it (§9.11). The
-/// last `addedToHand`, `shuffledIn` or `transformed` that names the card is that event: nothing has
-/// moved it since. A card that went elsewhere (burned by a full hand, dropped by a full library) is
-/// credited to the seat it went to. Engine bookkeeping: no rule reads it and no view forwards it.
+/// another card's place; when that is another seat's, the last event naming the card (nothing has moved
+/// it since) names the maker as its `creator`, so the game record credits the seat that made it (§9.11).
+/// A card burned or dropped by a full zone is credited to the seat it went to. Engine bookkeeping: no
+/// rule reads it and no view forwards it.
 pub fn credit_creator(ctx: &mut EffectContext<'_>, card_id: &str) {
     let creator = ctx.controller;
     let controller = find_instance(ctx.sink.state, card_id).map(|card| card.controller);
