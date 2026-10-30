@@ -39,7 +39,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-002",
@@ -72,7 +88,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.7142857142857143
     },
     {
       "card": "classic-003",
@@ -105,7 +137,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classic-004",
@@ -138,7 +186,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.625
     },
     {
       "card": "classic-005",
@@ -171,7 +235,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classic-006",
@@ -204,7 +284,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.09999999999999998
     },
     {
       "card": "classic-007",
@@ -237,7 +333,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-008",
@@ -270,7 +382,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-009",
@@ -303,7 +431,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classic-010",
@@ -336,7 +480,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.16666666666666663
     },
     {
       "card": "classic-011",
@@ -369,7 +529,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.06666666666666671
     },
     {
       "card": "classic-012",
@@ -402,7 +578,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classic-013",
@@ -435,7 +627,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.23333333333333336
     },
     {
       "card": "classic-014",
@@ -468,7 +676,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.06666666666666671
     },
     {
       "card": "classic-015",
@@ -501,7 +725,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.25
     },
     {
       "card": "classic-016",
@@ -534,7 +774,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-017",
@@ -567,7 +823,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.25
     },
     {
       "card": "classic-018",
@@ -600,7 +872,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classic-019",
@@ -633,7 +921,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-020",
@@ -666,7 +970,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.4
     },
     {
       "card": "classic-021",
@@ -699,7 +1019,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.2
     },
     {
       "card": "classic-022",
@@ -732,7 +1068,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.6666666666666666
     },
     {
       "card": "classic-023",
@@ -765,7 +1117,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classic-024",
@@ -798,7 +1166,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classic-025",
@@ -831,7 +1215,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classic-026",
@@ -864,7 +1264,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-027",
@@ -897,7 +1313,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.55
     },
     {
       "card": "classic-028",
@@ -930,7 +1362,23 @@
         "games": 3,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-029",
@@ -963,7 +1411,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.4
     },
     {
       "card": "classic-030",
@@ -996,7 +1460,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classic-031",
@@ -1029,7 +1509,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classic-032",
@@ -1062,7 +1558,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classic-033",
@@ -1095,7 +1607,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.75
     },
     {
       "card": "classic-034",
@@ -1128,7 +1656,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classic-035",
@@ -1161,7 +1705,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-036",
@@ -1194,7 +1754,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.33333333333333337
     },
     {
       "card": "classic-037",
@@ -1227,7 +1803,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-038",
@@ -1260,7 +1852,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.3333333333333333
     },
     {
       "card": "classic-039",
@@ -1293,7 +1901,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classic-040",
@@ -1326,7 +1950,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.125
     },
     {
       "card": "classic-041",
@@ -1359,7 +1999,23 @@
         "games": 3,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.4666666666666666
     },
     {
       "card": "classic-042",
@@ -1392,7 +2048,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classic-043",
@@ -1425,7 +2097,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.16666666666666663
     },
     {
       "card": "classic-044",
@@ -1458,7 +2146,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.09999999999999998
     },
     {
       "card": "classic-045",
@@ -1491,7 +2195,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "classic-046",
@@ -1524,7 +2244,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classic-047",
@@ -1557,7 +2293,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": 0.33333333333333337
     },
     {
       "card": "classic-048",
@@ -1590,7 +2342,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.2222222222222222
     },
     {
       "card": "classic-049",
@@ -1623,7 +2391,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.09999999999999998
     },
     {
       "card": "classic-050",
@@ -1656,7 +2440,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.75
     },
     {
       "card": "classic-051",
@@ -1689,7 +2489,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.16666666666666663
     },
     {
       "card": "classic-052",
@@ -1722,7 +2538,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.8
     },
     {
       "card": "classic-053",
@@ -1755,7 +2587,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.75
     },
     {
       "card": "classic-054",
@@ -1788,7 +2636,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.16666666666666669
     },
     {
       "card": "classic-055",
@@ -1821,7 +2685,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-056",
@@ -1854,7 +2734,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.6666666666666666
     },
     {
       "card": "classic-057",
@@ -1887,7 +2783,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classic-058",
@@ -1920,7 +2832,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-059",
@@ -1953,7 +2881,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classic-060",
@@ -1986,7 +2930,23 @@
         "games": 3,
         "wins": 3,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classic-061",
@@ -2019,7 +2979,23 @@
         "games": 4,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnDelta": -0.2222222222222222
     },
     {
       "card": "classic-062",
@@ -2052,7 +3028,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-063",
@@ -2085,7 +3077,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.25
     },
     {
       "card": "classic-064",
@@ -2118,7 +3126,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.25
     },
     {
       "card": "classic-065",
@@ -2151,7 +3175,23 @@
         "games": 3,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.6666666666666667
     },
     {
       "card": "classic-066",
@@ -2184,7 +3224,23 @@
         "games": 7,
         "wins": 4,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.25
     },
     {
       "card": "classic-067",
@@ -2217,7 +3273,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.09999999999999998
     },
     {
       "card": "classic-068",
@@ -2250,7 +3322,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.8
     },
     {
       "card": "classic-069",
@@ -2283,7 +3371,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.8333333333333334
     },
     {
       "card": "classic-070",
@@ -2316,7 +3420,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-071",
@@ -2349,7 +3469,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.2
     },
     {
       "card": "classic-072",
@@ -2382,7 +3518,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": 0.33333333333333337
     },
     {
       "card": "classic-073",
@@ -2415,7 +3567,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.6
     },
     {
       "card": "classic-074",
@@ -2448,7 +3616,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.16666666666666663
     },
     {
       "card": "classic-075",
@@ -2481,7 +3665,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.6666666666666666
     },
     {
       "card": "classic-076",
@@ -2514,7 +3714,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classic-077",
@@ -2547,7 +3763,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classic-078",
@@ -2580,7 +3812,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classic-079",
@@ -2613,7 +3861,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -1.0
     },
     {
       "card": "classic-080",
@@ -2646,7 +3910,23 @@
         "games": 4,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.6
     },
     {
       "card": "classic-081",
@@ -2679,7 +3959,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classic-082",
@@ -2712,7 +4008,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.23809523809523808
     },
     {
       "card": "classic-083",
@@ -2745,7 +4057,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": 0.25
     },
     {
       "card": "classic-084",
@@ -2778,7 +4106,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -1.0
     },
     {
       "card": "classic-085",
@@ -2811,7 +4155,23 @@
         "games": 3,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.25
     },
     {
       "card": "classic-086",
@@ -2844,7 +4204,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.16666666666666669
     },
     {
       "card": "classic-087",
@@ -2877,7 +4253,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": 0.2666666666666666
     },
     {
       "card": "classic-088",
@@ -2910,7 +4302,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classic-089",
@@ -2943,7 +4351,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.3
     },
     {
       "card": "classic-090",
@@ -2976,7 +4400,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-001",
@@ -3009,7 +4449,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.3333333333333333
     },
     {
       "card": "classicplus-002",
@@ -3042,7 +4498,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-003",
@@ -3075,7 +4547,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-004",
@@ -3108,7 +4596,23 @@
         "games": 3,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 10,
+        "wins": 7,
+        "draws": 0
+      },
+      "drawnDelta": -0.033333333333333326
     },
     {
       "card": "classicplus-005",
@@ -3141,7 +4645,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnDelta": -0.20833333333333337
     },
     {
       "card": "classicplus-006",
@@ -3174,7 +4694,23 @@
         "games": 3,
         "wins": 3,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.09999999999999998
     },
     {
       "card": "classicplus-007",
@@ -3207,7 +4743,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.08333333333333331
     },
     {
       "card": "classicplus-008",
@@ -3240,7 +4792,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classicplus-009",
@@ -3273,7 +4841,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.3333333333333333
     },
     {
       "card": "classicplus-010",
@@ -3306,7 +4890,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classicplus-011",
@@ -3339,7 +4939,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.3333333333333333
     },
     {
       "card": "classicplus-012",
@@ -3372,7 +4988,23 @@
         "games": 4,
         "wins": 3,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.6071428571428571
     },
     {
       "card": "classicplus-013",
@@ -3405,7 +5037,23 @@
         "games": 3,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.625
     },
     {
       "card": "classicplus-014",
@@ -3438,7 +5086,23 @@
         "games": 3,
         "wins": 3,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-015",
@@ -3471,7 +5135,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classicplus-016",
@@ -3504,7 +5184,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.33333333333333337
     },
     {
       "card": "classicplus-017",
@@ -3537,7 +5233,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-018",
@@ -3570,7 +5282,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.3333333333333333
     },
     {
       "card": "classicplus-019",
@@ -3603,7 +5331,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-020",
@@ -3636,7 +5380,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.6
     },
     {
       "card": "classicplus-021",
@@ -3669,7 +5429,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-022",
@@ -3702,7 +5478,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-023",
@@ -3735,7 +5527,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "classicplus-024",
@@ -3768,7 +5576,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-025",
@@ -3801,7 +5625,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classicplus-026",
@@ -3834,7 +5674,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 10,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classicplus-027",
@@ -3867,7 +5723,23 @@
         "games": 4,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-028",
@@ -3900,7 +5772,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.25
     },
     {
       "card": "classicplus-029",
@@ -3933,7 +5821,23 @@
         "games": 3,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.8
     },
     {
       "card": "classicplus-030",
@@ -3966,7 +5870,23 @@
         "games": 6,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnDelta": -0.5714285714285714
     },
     {
       "card": "classicplus-031",
@@ -3999,7 +5919,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classicplus-032",
@@ -4032,7 +5968,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.16666666666666663
     },
     {
       "card": "classicplus-033",
@@ -4065,7 +6017,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.4
     },
     {
       "card": "classicplus-034",
@@ -4098,7 +6066,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.26666666666666666
     },
     {
       "card": "classicplus-035",
@@ -4131,7 +6115,23 @@
         "games": 3,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.41666666666666663
     },
     {
       "card": "classicplus-036",
@@ -4164,7 +6164,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-037",
@@ -4197,7 +6213,23 @@
         "games": 4,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.3333333333333333
     },
     {
       "card": "classicplus-038",
@@ -4230,7 +6262,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.09999999999999998
     },
     {
       "card": "classicplus-039",
@@ -4263,7 +6311,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.4166666666666667
     },
     {
       "card": "classicplus-040",
@@ -4296,7 +6360,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classicplus-041",
@@ -4329,7 +6409,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "classicplus-042",
@@ -4362,7 +6458,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.06666666666666671
     },
     {
       "card": "classicplus-043",
@@ -4395,7 +6507,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "classicplus-044",
@@ -4428,7 +6556,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-045",
@@ -4461,7 +6605,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-046",
@@ -4494,7 +6654,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.11363636363636365
     },
     {
       "card": "classicplus-047",
@@ -4527,7 +6703,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classicplus-048",
@@ -4560,7 +6752,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.75
     },
     {
       "card": "classicplus-049",
@@ -4593,7 +6801,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.4444444444444444
     },
     {
       "card": "classicplus-050",
@@ -4626,7 +6850,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-051",
@@ -4659,7 +6899,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.2142857142857143
     },
     {
       "card": "classicplus-052",
@@ -4692,7 +6948,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classicplus-053",
@@ -4725,7 +6997,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-054",
@@ -4758,7 +7046,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-055",
@@ -4791,7 +7095,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classicplus-056",
@@ -4824,7 +7144,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-057",
@@ -4857,7 +7193,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "classicplus-058",
@@ -4890,7 +7242,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classicplus-059",
@@ -4923,7 +7291,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "classicplus-060",
@@ -4956,7 +7340,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-061",
@@ -4989,7 +7389,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.4
     },
     {
       "card": "classicplus-062",
@@ -5022,7 +7438,23 @@
         "games": 6,
         "wins": 3,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.42857142857142855
     },
     {
       "card": "classicplus-063",
@@ -5055,7 +7487,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-065",
@@ -5088,7 +7536,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-066",
@@ -5121,7 +7585,23 @@
         "games": 4,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-067",
@@ -5154,7 +7634,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classicplus-068",
@@ -5187,7 +7683,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "classicplus-069",
@@ -5220,7 +7732,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "classicplus-070",
@@ -5253,7 +7781,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.6666666666666666
     },
     {
       "card": "classicplus-071",
@@ -5286,7 +7830,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-072",
@@ -5319,7 +7879,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "classicplus-073",
@@ -5352,7 +7928,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -1.0
     },
     {
       "card": "classicplus-074",
@@ -5385,7 +7977,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.3333333333333333
     },
     {
       "card": "classicplus-075",
@@ -5418,7 +8026,23 @@
         "games": 4,
         "wins": 3,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.6666666666666666
     },
     {
       "card": "classicplus-076",
@@ -5451,7 +8075,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "classicplus-077",
@@ -5484,7 +8124,23 @@
         "games": 4,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "classicplus-078",
@@ -5517,7 +8173,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -1.0
     },
     {
       "card": "core-001",
@@ -5550,7 +8222,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 9,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnDelta": -0.05555555555555558
     },
     {
       "card": "core-002",
@@ -5583,7 +8271,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnDelta": 0.16666666666666663
     },
     {
       "card": "core-003",
@@ -5616,7 +8320,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-004",
@@ -5649,7 +8369,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.6
     },
     {
       "card": "core-005",
@@ -5682,7 +8418,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-006",
@@ -5715,7 +8467,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.275
     },
     {
       "card": "core-007",
@@ -5748,7 +8516,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-008",
@@ -5781,7 +8565,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "core-009",
@@ -5814,7 +8614,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.375
     },
     {
       "card": "core-010",
@@ -5847,7 +8663,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-011",
@@ -5880,7 +8712,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "core-012",
@@ -5913,7 +8761,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 7,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnDelta": -0.2142857142857143
     },
     {
       "card": "core-013",
@@ -5946,7 +8810,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": 0.13888888888888884
     },
     {
       "card": "core-014",
@@ -5979,7 +8859,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "core-015",
@@ -6012,7 +8908,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.3333333333333333
     },
     {
       "card": "core-016",
@@ -6045,7 +8957,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.16666666666666663
     },
     {
       "card": "core-017",
@@ -6078,7 +9006,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "core-018",
@@ -6111,7 +9055,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "core-019",
@@ -6144,7 +9104,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.7142857142857143
     },
     {
       "card": "core-020",
@@ -6177,7 +9153,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.16666666666666663
     },
     {
       "card": "core-021",
@@ -6210,7 +9202,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-022",
@@ -6243,7 +9251,23 @@
         "games": 3,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.2777777777777778
     },
     {
       "card": "core-023",
@@ -6276,7 +9300,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.3333333333333333
     },
     {
       "card": "core-024",
@@ -6309,7 +9349,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.5
     },
     {
       "card": "core-025",
@@ -6342,7 +9398,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.1333333333333333
     },
     {
       "card": "core-026",
@@ -6375,7 +9447,23 @@
         "games": 5,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.6
     },
     {
       "card": "core-027",
@@ -6408,7 +9496,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-028",
@@ -6441,7 +9545,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.6
     },
     {
       "card": "core-030",
@@ -6474,7 +9594,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnDelta": -0.30000000000000004
     },
     {
       "card": "core-031",
@@ -6507,7 +9643,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.6
     },
     {
       "card": "core-032",
@@ -6540,7 +9692,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "core-033",
@@ -6573,7 +9741,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-034",
@@ -6606,7 +9790,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-035",
@@ -6639,7 +9839,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-036",
@@ -6672,7 +9888,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.75
     },
     {
       "card": "core-037",
@@ -6705,7 +9937,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.6666666666666667
     },
     {
       "card": "core-038",
@@ -6738,7 +9986,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.16666666666666663
     },
     {
       "card": "core-039",
@@ -6771,7 +10035,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "core-040",
@@ -6804,7 +10084,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -1.0
     },
     {
       "card": "core-041",
@@ -6837,7 +10133,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-042",
@@ -6870,7 +10182,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.16666666666666669
     },
     {
       "card": "core-043",
@@ -6903,7 +10231,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-044",
@@ -6936,7 +10280,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.33333333333333337
     },
     {
       "card": "core-045",
@@ -6969,7 +10329,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.2666666666666666
     },
     {
       "card": "core-046",
@@ -7002,7 +10378,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.33333333333333337
     },
     {
       "card": "core-047",
@@ -7035,7 +10427,23 @@
         "games": 3,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.25
     },
     {
       "card": "core-048",
@@ -7068,7 +10476,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-049",
@@ -7101,7 +10525,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.33333333333333337
     },
     {
       "card": "core-050",
@@ -7134,7 +10574,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-051",
@@ -7167,7 +10623,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-052",
@@ -7200,7 +10672,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-053",
@@ -7233,7 +10721,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.4545454545454546
     },
     {
       "card": "core-054",
@@ -7266,7 +10770,23 @@
         "games": 3,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": 0.2666666666666666
     },
     {
       "card": "core-055",
@@ -7299,7 +10819,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": 0.047619047619047616
     },
     {
       "card": "core-056",
@@ -7332,7 +10868,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-057",
@@ -7365,7 +10917,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.45
     },
     {
       "card": "core-058",
@@ -7398,7 +10966,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-059",
@@ -7431,7 +11015,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-060",
@@ -7464,7 +11064,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "core-061",
@@ -7497,7 +11113,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.04999999999999999
     },
     {
       "card": "core-062",
@@ -7530,7 +11162,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-063",
@@ -7563,7 +11211,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-064",
@@ -7596,7 +11260,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "core-065",
@@ -7629,7 +11309,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-066",
@@ -7662,7 +11358,23 @@
         "games": 3,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.3
     },
     {
       "card": "core-067",
@@ -7695,7 +11407,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.25
     },
     {
       "card": "core-068",
@@ -7728,7 +11456,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.3333333333333333
     },
     {
       "card": "core-069",
@@ -7761,7 +11505,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.6666666666666667
     },
     {
       "card": "core-070",
@@ -7794,7 +11554,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.4
     },
     {
       "card": "core-071",
@@ -7827,7 +11603,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-072",
@@ -7860,7 +11652,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.75
     },
     {
       "card": "core-073",
@@ -7893,7 +11701,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.33333333333333337
     },
     {
       "card": "core-074",
@@ -7926,7 +11750,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-075",
@@ -7959,7 +11799,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "core-076",
@@ -7992,7 +11848,23 @@
         "games": 2,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "core-077",
@@ -8025,7 +11897,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.6
     },
     {
       "card": "core-078",
@@ -8058,7 +11946,23 @@
         "games": 2,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 6,
+        "wins": 6,
+        "draws": 0
+      },
+      "drawnDelta": -0.33333333333333337
     },
     {
       "card": "core-079",
@@ -8091,7 +11995,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.25
     },
     {
       "card": "core-080",
@@ -8124,7 +12044,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.3333333333333333
     },
     {
       "card": "core-081",
@@ -8157,7 +12093,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.625
     },
     {
       "card": "core-082",
@@ -8190,7 +12142,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.6
     },
     {
       "card": "core-083",
@@ -8223,7 +12191,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.6666666666666666
     },
     {
       "card": "core-084",
@@ -8256,7 +12240,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-085",
@@ -8289,7 +12289,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     },
     {
       "card": "core-086",
@@ -8322,7 +12338,23 @@
         "games": 3,
         "wins": 2,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.29166666666666663
     },
     {
       "card": "core-087",
@@ -8355,7 +12387,23 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnDelta": -0.5
     },
     {
       "card": "core-088",
@@ -8388,7 +12436,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-089",
@@ -8421,7 +12485,23 @@
         "games": 1,
         "wins": 1,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": 0.32142857142857145
     },
     {
       "card": "core-090",
@@ -8454,7 +12534,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnDelta": -0.75
     },
     {
       "card": "core-091",
@@ -8487,7 +12583,23 @@
         "games": 2,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnDelta": -0.6666666666666667
     },
     {
       "card": "core-092",
@@ -8520,7 +12632,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-093",
@@ -8553,7 +12681,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 1.0
     },
     {
       "card": "core-094",
@@ -8586,7 +12730,23 @@
         "games": 4,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-095",
@@ -8619,7 +12779,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnDelta": -0.41666666666666663
     },
     {
       "card": "core-096",
@@ -8652,7 +12828,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-097",
@@ -8685,7 +12877,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-098",
@@ -8718,7 +12926,23 @@
         "games": 0,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": null
     },
     {
       "card": "core-099",
@@ -8751,7 +12975,24 @@
         "games": 1,
         "wins": 0,
         "draws": 0
-      }
+      },
+      "playedRadiant": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "playedNormal": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "notDrawn": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnDelta": 0.0
     }
-  ]
+  ],
+  "created": []
 }

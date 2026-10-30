@@ -76,6 +76,7 @@ import { isZhCn, t } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, chineseDef, chineseKeyword, chinesePreviewLabel, drawnInChinese } from "./chinese.ts";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
+import { temporaryLeft } from "./keywordVisuals.ts";
 import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
 import type { NamedTally } from "./tallies.ts";
 
@@ -195,6 +196,8 @@ export type FaceModel = {
    * null elsewhere, and on a card with none. Optional, as every field below is, for a face built by hand.
    */
   brittle?: number | null;
+  /** #2437, R637, R2179001: in a hand, the count the card's Temporary X has left as its keywords give it (`temporaryLeft`); null elsewhere and on a card with none. */
+  temporary?: number | null;
   /** R980: the card's element, while a Feng Shui acts (`CardView.element`); null otherwise. */
   element?: string | null;
   /** B3.4, R386: in play, what Degrade, Upgrade and KY's Constant changed on the card; null when nothing did. */
@@ -280,6 +283,8 @@ export type InPlay = {
   params?: Readonly<Record<string, number>>;
   /** B3.3, R385: the card's Brittle count (`CardView.brittle`). */
   brittle?: number;
+  /** #2437: the card lies in a hand (game/Card.tsx's `inHandOf`), the one zone its Temporary counts in (R637). */
+  inHand?: true;
   /** R980: the card's element, while a Feng Shui acts (`CardView.element`). */
   element?: string;
   /** B3.4, R386: what Degrade and Upgrade changed on the card (`CardView.tuning`). */
@@ -433,6 +438,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     grants: inPlay?.grants ?? [],
     printed: inPlay === undefined || sameText(text, printedText) || concealed(def) ? null : printedText,
     brittle: inPlay?.brittle ?? null,
+    temporary: inPlay?.inHand === true ? temporaryLeft(keywords) : null,
     element: inPlay?.element ?? null,
     tuning,
     enchantments: inPlay?.enchantments ?? [],
