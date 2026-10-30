@@ -1790,7 +1790,6 @@
   "Stage {n} of {of}, {name}, hearing back in {turns} turns": "第{n}/{of}阶段，{name}，{turns}个回合后收到回复",
   "Quest complete": "任务完成",
   "{quest}. Rewards: {rewards}.": "{quest}。奖励：{rewards}。",
-  "; ": "；",
   "Reward": "奖励",
   "done": "已完成",
   "now": "进行中",

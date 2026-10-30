@@ -26,6 +26,7 @@ import type { QuestView, Tag } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 import { currentStage, questWords, stageTitle, stageWords } from "./cardState.ts";
+import { listSeparator } from "./chinese.ts";
 import type { FaceModel, FaceText } from "./model.ts";
 import type { TextRange } from "./radiantDiff.ts";
 import type { TunedRange } from "./tuning.ts";
@@ -143,7 +144,7 @@ function treeWords(quest: QuestView): string {
   const quests = quest.open.map((one) =>
     one.rewards.length === 0
       ? questWords(one)
-      : t("{quest}. Rewards: {rewards}.", { quest: questWords(one), rewards: one.rewards.map((reward) => t(reward.text)).join(t("; ")) }),
+      : t("{quest}. Rewards: {rewards}.", { quest: questWords(one), rewards: one.rewards.map((reward) => t(reward.text)).join(listSeparator()) }),
   );
   const lines = [...(quests.length === 0 ? [t("Quest complete")] : quests), ...quest.auras.map((aura) => t(aura.text))];
   return lines.map((line) => `\n${line}`).join("");

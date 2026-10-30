@@ -22,6 +22,7 @@ import { testid } from "../game/contract.ts";
 import { listedFace } from "../game/faces.ts";
 import Log from "../game/Log.tsx";
 import Prompt from "../game/Prompt.tsx";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { withCatalog } from "../test/board.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
@@ -613,6 +614,22 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
     const box = must(container.querySelector<HTMLElement>(".card-text"), "the rules box");
     expect(box.getAttribute("data-short")).toBe("true");
     expect(box.getAttribute("data-less")).toBe("true");
+  });
+
+  it("R2450000 a reader of Chinese reads the stage in the Chinese face's layout", async () => {
+    try {
+      await setLocale("zh-CN");
+      const death = "亡语：重新召唤这张牌，回到第1阶段。";
+      expect(printed(JOB, false)).toBe(`${death}\n第1/3阶段，上传简历。任务：激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：2到6个回合后收到回复。`);
+      expect(printed(JOB, true, INTERVIEW)).toBe(
+        `幸运1\n${death}\n第2/3阶段，面试。任务：Play 3 cards of different costs in one turn（1/3）。奖励：将你的简历置入你的手牌并将其强化10次。其法力值消耗为(0)。`,
+      );
+      expect(printed(JOB, false, HEARING)).toContain("\n第2/3阶段，面试，2个回合后收到回复。任务：从三个任务中随机抽取一个：");
+      expect(printed(HEIST, false, done(STAGED))).toBe("战吼：发现一个赞誉单位或一张软糖豆牌。\n任务完成");
+      expect(printed(ITD, false, FIRST)).toContain("\n任务：抽2张牌（1/2）。奖励：为你的英雄恢复6点生命值；对一个目标造成3点伤害。");
+    } finally {
+      resetLocaleForTests();
+    }
   });
 
   it("R2450000 the hover preview's face prints the stage on either seat, its whole text and every stage beside it", () => {
