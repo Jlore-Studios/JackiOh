@@ -9922,7 +9922,7 @@
       "failures": 0,
       "feedback_since": "2026-10-30T21:45:49Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 2386,
       "kind": "revise",
       "last_findings": [],
