@@ -44,6 +44,12 @@ export const patchTestid = {
   removed: "patch-removed",
   /** Any control that opens a card's history, `data-card` its id. */
   openCard: "patch-open-card",
+  /** #2052: the dialog in the detail's place while a card opened from a patch loads, or after it failed. */
+  opening: "patch-opening",
+  openingLoading: "patch-opening-loading",
+  openingError: "patch-opening-error",
+  openingRetry: "patch-opening-retry",
+  openingClose: "patch-opening-close",
   /** One changed field, `data-field` the field. */
   change: "patch-change",
   /** The History section in the card detail view. */
