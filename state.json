@@ -9454,11 +9454,8 @@
     "what": "revise #2307 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-30T00:55:47Z",
-    "notes": [
-      "started revise #2307 on claude-4 (run 40982880998)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-30T01:04:01Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -10163,7 +10160,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T00:55:47Z",
+  "loop_tick": "2026-10-30T01:04:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
