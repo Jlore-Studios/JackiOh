@@ -9455,11 +9455,16 @@
     "what": "revise #2475 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-30T09:26:40Z",
+    "at": "2026-10-30T09:39:51Z",
     "notes": [
-      "delivered revise #2415 on claude-3 (run 41015787062): interrupted",
-      "started revise #2415 on claude-4 (run 41033693511)",
-      "nothing more to start: nothing is queued"
+      "delivered suggest on claude-8 (run 41031838841): suggested",
+      "delivered revise #2309 on claude-1 (run 41022816100): built",
+      "started review #2309 on claude-6 (run 41035527957)",
+      "started revise #2475 on claude-1 (run 41035605452)",
+      "nothing more to start: nothing is queued",
+      "#2491: typed it Feature",
+      "#2490: typed it Task",
+      "#2489: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -10165,7 +10170,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T09:26:40Z",
+  "loop_tick": "2026-10-30T09:39:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
