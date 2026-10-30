@@ -203,9 +203,12 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
 - `dealsDamage: true`: a Spell or a Field Spell that deals damage, which a Buff may give Pierce or
   Lifesteal (R1748001). `usesPlague: true`: a Field Spell that uses the Plague Counters on itself, on
   which a Buff places one and from which a Nerf removes one on the field (R1748002).
-- `snapshotOf`: on a Training Grounds snapshot (#41–#60) only, the Core card it copies. The two
-  share a name (R2195001) and a deck holds one of them (R2195000); the snapshot's script is a copy of
-  the Core card's code, not a re-export (R2195003).
+- `snapshotOf`: set on no card since issue #2511 (R2511001). The catalogs shipped from v0.5.5 to
+  v0.5.7 set it on Training Grounds #41–#60, the Core card each copies, and a replay folded under
+  one still reads it (one Discover offers one of the pair, R2204001); `catalog check` refuses it now.
+  Those twenty are the Legacy cards, named `Legacy: <Core name>` and tagged Legacy (R2511000), each
+  its own card beside its Core card; its script is a copy of the Core card's code, not a re-export
+  (R2195003).
 - `loc`: the lines of code of the card's script. Frozen data since v0.3.0: nothing recomputes it, C
   #48 and C+ #44, #45 read it, and a card added since takes its number from
   `cargo jackioh catalog loc <script path>`.

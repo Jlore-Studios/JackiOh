@@ -44,8 +44,7 @@ const ANCHOR = { left: 600, top: 200, width: 100, height: 140 };
 const PAST_ANY_INSPECT_DELAY_MS = 2_000;
 
 const DEFS = Object.values(CATALOG);
-// R2195001: a Training Grounds snapshot shares its Core card's name, not its full art.
-const HEROES = DEFS.filter((def) => FULL_ART_NAMES.has(def.name) && def.snapshotOf === undefined);
+const HEROES = DEFS.filter((def) => FULL_ART_NAMES.has(def.name));
 const HERO_IDS = HEROES.map((def) => def.id);
 /** The ownership of the full art of each card in `ids`, as `GET /api/cosmetics` reads once mapped. */
 function owningFullArt(ids: Iterable<string>): OwnedByCard {

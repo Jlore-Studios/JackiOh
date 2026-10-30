@@ -186,14 +186,13 @@ fn names(text: &str, name: &str) -> bool {
 /// Every catalog id a card's base or Radiant text names, in catalog order. R1249: a card of a set that
 /// ships names no card of a set that has not (R1420), so its shipped `refs` stay as they are until
 /// that set ships ("Call to Chaos" on Core #95 and C+ #73 reached Meditative #95 when it shipped, in
-/// v0.3.5). R2195002: a name a Core card shares with its Training Grounds snapshot names the Core card
-/// alone (S #88 Siva 2's Bigots, C+ #61's Stockpile, Core #76's Reminisce), so no text names a snapshot.
+/// v0.3.5). R2195002, R2511000: a Core card's name names the Core card alone (S #88 Siva 2's Bigots, C+
+/// #61's Stockpile, Core #76's Reminisce), since its Legacy card is named `Legacy: <name>`.
 fn named_by(card: &CardDef) -> Vec<String> {
     let texts = [&card.base.text, &card.radiant.text];
     entries()
         .into_iter()
         .filter(|other| !set_ships(card.set) || set_ships(other.set))
-        .filter(|other| other.snapshot_of.is_none())
         .filter(|other| {
             names_of(other)
                 .iter()
@@ -265,21 +264,21 @@ mod r279_the_reference_map_spec_5_7_10_10 {
     }
 
     #[test]
-    fn r2195002_a_name_a_core_card_shares_with_its_snapshot_names_the_core_card_alone() {
-        for (card, core, snapshot) in [
+    fn r2195002_r2511000_a_core_card_s_name_names_the_core_card_and_not_its_legacy_card() {
+        for (card, core, legacy) in [
             ("stinkyscape-088", "core-002", "traininggrounds-041"),
             ("classicplus-061", "core-005", "traininggrounds-042"),
             ("core-076", "core-072", "traininggrounds-055"),
         ] {
-            assert_eq!(CATALOG[snapshot].name, CATALOG[core].name);
+            assert_eq!(CATALOG[legacy].name, format!("Legacy: {}", CATALOG[core].name));
             let named = named_by(&CATALOG[card]);
             assert!(
                 named.contains(&core.to_string()),
                 "{card} names {core}: {named:?}"
             );
             assert!(
-                !named.contains(&snapshot.to_string()),
-                "{card} names {snapshot}: {named:?}"
+                !named.contains(&legacy.to_string()),
+                "{card} names {legacy}: {named:?}"
             );
         }
     }

@@ -6803,184 +6803,184 @@ traininggrounds-040: # Goetzmann Game Design
     name: 高兹曼游戏设计
     base: 将一张随机牌置入你的手牌。
     radiant: 将一张随机光辉牌置入你的手牌。
-traininggrounds-041: # Bigot
+traininggrounds-041: # Legacy: Bigot
   flavour: He has a strong opinion about everyone who isn't him, and none of them are good.
   voice:
     play: Ugh. Not your kind again.
     attack: Begone, riffraff!
     death: Tolerance wins. Again.
   zh:
-    name: 偏执者
+    name: 传统：偏执者
     base: 战吼：消灭一个敌方非人类单位。
     radiant: 战吼：消灭所有敌方非人类单位。
-traininggrounds-042: # Stockpile
+traininggrounds-042: # Legacy: Stockpile
   flavour: Two cards, a snack, and a nap. Planning at its finest.
   voice:
     cast: Hoarding is self care.
   zh:
-    name: 囤积
+    name: 传统：囤积
     base: 抽{draw}张牌。为你的英雄恢复{heal}点生命值。
     radiant: 抽{draw}张牌。为你的英雄恢复{heal}点生命值。
-traininggrounds-043: # Mr. Vanilla
+traininggrounds-043: # Legacy: Mr. Vanilla
   flavour: No tricks, no text, no regrets.
   voice:
     play: Hello. I am very normal.
     attack: Excuse me. Attacking.
     death: Plain. Simple. Gone.
   zh:
-    name: 白板先生
+    name: 传统：白板先生
     base: ""
     radiant: ""
-traininggrounds-044: # Duplicating Felinors
+traininggrounds-044: # Legacy: Duplicating Felinors
   flavour: One was cute. Two was a choice. Nobody agreed to three.
   voice:
     play: Meow. Meow again.
     attack: Double pounce!
     death: Both of us?
   zh:
-    name: 复制猫族
+    name: 传统：复制猫族
     base: 战吼：召唤一个此单位的复制。
     radiant: 战吼：召唤一个此单位的复制。
-traininggrounds-045: # Jlockeed's Weapons
+traininggrounds-045: # Legacy: Jlockeed's Weapons
   flavour: Every gun ships with a brochure and a smaller gun.
   voice:
     cast: Defense contract approved.
   zh:
-    name: Jlockeed军火
+    name: 传统：Jlockeed军火
     base: 光环：你的单位拥有+{attack}攻击力、突袭和先攻。
     radiant: 光环：你的单位拥有+{attack}攻击力、突袭和先攻。
-traininggrounds-046: # Hit Job
+traininggrounds-046: # Legacy: Hit Job
   flavour: Clean, quiet, and billed by the hour.
   voice:
     cast: Nothing personal, pal.
   zh:
-    name: 雇凶刺杀
+    name: 传统：雇凶刺杀
     base: 消灭一个单位。
     radiant: 消灭一个单位及其相邻的单位。
-traininggrounds-047: # Midrange Menace
+traininggrounds-047: # Legacy: Midrange Menace
   flavour: Not too early, not too late. Just annoyingly in the middle.
   voice:
     play: Not too big. Not too small.
     attack: Medium smash.
     death: Should have gone aggro.
   zh:
-    name: 中速恶霸
+    name: 传统：中速恶霸
     base: "嘲讽\n回合结束时：为此单位恢复所有生命值。"
     radiant: "嘲讽，不可变\n回合结束时：为此单位恢复所有生命值。"
-traininggrounds-048: # Jlockeed Shredder-10
+traininggrounds-048: # Legacy: Jlockeed Shredder-10
   flavour: Model 10. Models 1 through 9 are not discussed at the factory.
   voice:
     play: Shredder online. Paperwork offline.
     attack: Shredding commenced.
     death: Warranty void.
   zh:
-    name: Jlockeed收割机-10
+    name: 传统：Jlockeed收割机-10
     base: 回合结束时：对每个敌人造成{damage}点伤害。
     radiant: 回合结束时：对每个敌人造成{damage}点伤害。
-traininggrounds-049: # Reoccurring Dream
+traininggrounds-049: # Legacy: Reoccurring Dream
   flavour: You were here last night. You'll be here again tonight.
   voice:
     cast: Wait. Haven't we done this?
   zh:
-    name: 反复梦境
+    name: 传统：反复梦境
     base: "你手牌中的一张随机牌有{chance}%的几率变为光辉。\n回合结束时：将这张牌移回手牌。"
     radiant: "幸运1\n你手牌中的一张随机牌有{chance}%的几率变为光辉。\n回合结束时：将这张牌移回手牌。"
-traininggrounds-050: # Glowy Jelly Bean
+traininggrounds-050: # Legacy: Glowy Jelly Bean
   flavour: Tastes like lemon and destiny.
   voice:
     cast: Taste the glow!
   zh:
-    name: 发光软糖豆
+    name: 传统：发光软糖豆
     base: 使你手牌中的一张牌变为光辉。
     radiant: 使你手牌中的2张牌变为光辉。
-traininggrounds-051: # Big Felinor
+traininggrounds-051: # Legacy: Big Felinor
   flavour: He loves every cat. He has opinions about everything else.
   voice:
     play: Big cat. Bigger problems.
     attack: Big cat pounce!
     death: Landed on my back?
   zh:
-    name: 大猫族
+    name: 传统：大猫族
     base: 战吼：消灭所有非猫族单位。
     radiant: 战吼：消灭所有敌方非猫族单位。
-traininggrounds-052: # Snom Bunny Mind Control
+traininggrounds-052: # Legacy: Snom Bunny Mind Control
   flavour: It's very soft. It's very persuasive. It's very yours now.
   voice:
     cast: Hop along. You're mine now.
   zh:
-    name: Snom兔精神控制
+    name: 传统：Snom兔精神控制
     base: 夺取一个敌方单位。
     radiant: 夺取一个敌方单位。使其变为光辉。
-traininggrounds-053: # Prejudiced Postdoc
+traininggrounds-053: # Legacy: Prejudiced Postdoc
   flavour: Six years of research and one strongly held belief about who counts.
   voice:
     play: Peer review? Rejected.
     attack: Your thesis is wrong.
     death: My grant... expired.
   zh:
-    name: 偏见博士后
+    name: 传统：偏见博士后
     base: 战吼：选择场上的一个人类单位。召唤一个该单位的白板化复制。
     radiant: 战吼：选择场上的任意一个单位。召唤一个该单位的白板化复制。
-traininggrounds-054: # The Rock
+traininggrounds-054: # Legacy: The Rock
   flavour: Can you smell what he is cooking? It's nothing. He's a rock.
   voice:
     play: Rock solid. Rock steady.
     attack: Rock bottom!
     death: Just gravel now.
   zh:
-    name: 巨石强森
+    name: 传统：巨石强森
     base: 献祭1，不可摧毁
     radiant: 献祭1，不可摧毁，不可变
-traininggrounds-055: # Reminisce
+traininggrounds-055: # Legacy: Reminisce
   flavour: The good old days, slightly marked down.
   voice:
     cast: Ah, the good old days.
   zh:
-    name: 追忆
+    name: 传统：追忆
     base: 从你的墓地中发现一张牌。其法力值消耗减少({discount})点。放逐这张牌。
     radiant: 从你的墓地中发现一张牌。其法力值消耗为({setCost})。放逐这张牌。
-traininggrounds-056: # Corpse Eater
+traininggrounds-056: # Legacy: Corpse Eater
   flavour: He doesn't wait for dinner. Dinner comes to him.
   voice:
     play: Anyone gonna finish that?
     attack: Fresh meat.
     death: Finally... full.
   zh:
-    name: 噬尸者
+    name: 传统：噬尸者
     base: "突袭\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。"
     radiant: "突袭，圣盾\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。"
-traininggrounds-057: # Recycling Initiative
+traininggrounds-057: # Legacy: Recycling Initiative
   flavour: Reduce, reuse, recast.
   voice:
     cast: Reduce, reuse, replay!
   zh:
-    name: 回收计划
+    name: 传统：回收计划
     base: "放逐这张牌。\n回合结束时：将你在本回合中打出的其他每张牌的复制置入你的手牌。"
     radiant: "放逐这张牌。\n回合结束时：将你在本回合中打出的其他每张牌的光辉复制置入你的手牌。它们的法力值消耗减少({discount})点。"
     previews:
       each other card you played this turn: 你在本回合中打出的其他每张牌
-traininggrounds-058: # True Strike
+traininggrounds-058: # Legacy: True Strike
   flavour: Aim once. Hit once. Leave.
   voice:
     cast: Bullseye, baby.
   zh:
-    name: 精准打击
+    name: 传统：精准打击
     base: "穿透\n造成{damage}点伤害。放逐这张牌。"
     radiant: "穿透\n造成{damage}点伤害。放逐这张牌。"
-traininggrounds-059: # Fig of Life
+traininggrounds-059: # Legacy: Fig of Life
   flavour: One fig a day keeps the healer away.
   voice:
     cast: A fig a day!
   zh:
-    name: 生命无花果
+    name: 传统：生命无花果
     base: 为一个目标恢复{heal}点生命值。
     radiant: 为一个目标恢复{heal}点生命值。
-traininggrounds-060: # Rush Token Farm
+traininggrounds-060: # Legacy: Rush Token Farm
   flavour: Locally grown, freshly sprinted.
   voice:
     cast: Fresh tokens, farm to table!
   zh:
-    name: 突袭衍生物农场
+    name: 传统：突袭衍生物农场
     base: 回合开始时：召唤一个突袭衍生物。
     radiant: "回合开始时：召唤一个突袭衍生物。\n光环：你的突袭衍生物拥有+{buff}/+{buff}。"
 emotes:

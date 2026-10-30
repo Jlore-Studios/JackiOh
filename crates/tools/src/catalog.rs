@@ -269,7 +269,7 @@ fn sets() -> Vec<SetExpectation> {
             ],
         },
         // R1420, R2194000: the Training Grounds set (issue #2193, docs/training-grounds-set.md TG2): 60
-        // cards (#1 to #40 and the Core snapshots #41 to #60, part 2's) and the one token #39 defines,
+        // cards (#1 to #40 and the Legacy cards #41 to #60, part 2's) and the one token #39 defines,
         // #39.1. Its rarities over its 60 cards: 26 Common, 19 Rare, 11 Epic, 3 Legendary and 1 Mythic.
         // It does not ship yet, so its entries are checked for their shape alone until its release
         // (#2204).
@@ -313,12 +313,12 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
         // Stinkyscape #6, #14, #15, #17, #26, #37, #42, #45, #88, #94, #96, #103, #109, #110, #111, #113,
         // #114, #115, #147 and #147.1.
-        // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the snapshots #41, #43,
+        // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the Legacy cards #41, #43,
         // #53 and #54.
         Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(20) + training_grounds(15),
         // Core #62 Friend of Felinors and Classic #32 Felinor Feelings lost it in #1837 (R1837000).
         // Stinkyscape #87.
-        // Training Grounds #17, #22, #23 and #33, and the snapshots #44 and #51.
+        // Training Grounds #17, #22, #23 and #33, and the Legacy cards #44 and #51.
         Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6),
         // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
         // Stinkyscape #4.2 and #25.
@@ -331,7 +331,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         // patch v0.3.10 (#831), and Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field
         // Spells that make Fruit, in #1837 (R1837000). Meditative+ #23 Enormous Elderberry.
         // Stinkyscape #21.
-        // Training Grounds' snapshot #59 Fig of Life.
+        // Training Grounds' Legacy card #59 Legacy: Fig of Life.
         Tag::Fruit => 12 + meditative(2) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
         // Meditative #95 Call to Chaos (Meditative Edition).
         // Stinkyscape #150 and #151.
@@ -344,7 +344,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
         // Jlockeed's Supply Drop (the designer's "Jlockheed").
         // Stinkyscape #124 to #130.
-        // Training Grounds' snapshots #45 and #48.
+        // Training Grounds' Legacy cards #45 and #48.
         Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1) + stinkyscape(7) + training_grounds(2),
         // Meditative+ #15 Book of Potions.
         // Stinkyscape #102.
@@ -379,7 +379,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Quest => 1 + stinkyscape(2),
         Tag::Otherworldly => 1 + stinkyscape(3),
         Tag::OtherOrigins => 3 + stinkyscape(9),
-        // Training Grounds #27 Hopeful Jelly Bean and the snapshot #50 Glowy Jelly Bean.
+        // Training Grounds #27 Hopeful Jelly Bean and the Legacy card #50 Legacy: Glowy Jelly Bean.
         Tag::JellyBean => 4 + training_grounds(2),
         // R1857000, the Stinkyscape set's four: #27 to #36 (Drone Core); #50 to #61 and #140 to #143
         // (Weapon); the four #137 tokens (War Doctrine); #91 and #92, its Swarm Units (Swarm).
@@ -387,6 +387,8 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Weapon => stinkyscape(16),
         Tag::WarDoctrine => stinkyscape(4),
         Tag::Swarm => stinkyscape(2),
+        // R2511000: Training Grounds #41 to #60, its twenty Legacy cards.
+        Tag::Legacy => training_grounds(20),
         // Training Grounds #39.1.
         Tag::Token => 50 + meditative(30) + meditative_plus(6) + stinkyscape(52) + training_grounds(1),
     }
@@ -1528,35 +1530,6 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             refs_by_card.insert(key.as_str(), refs);
         }
 
-        // R2195000: a snapshot (Training Grounds #41–#60) names the Core card it copies, and keeps its
-        // name (R2195001).
-        if let Some(of) = value.get("snapshotOf") {
-            let original = of
-                .as_str()
-                .and_then(|id| catalog.get(id))
-                .and_then(Json::as_object);
-            let is_core_card = original.is_some_and(|o| {
-                o.get("set").and_then(Json::as_str) == Some("Core")
-                    && o.get("token") == Some(&Json::Bool(false))
-            });
-            if value.get("set").and_then(Json::as_str) != Some("Training Grounds") || !is_core_card {
-                fail(
-                    &mut failures,
-                    &at,
-                    &format!(
-                        "`snapshotOf` marks a Training Grounds card and names a Core card (got {})",
-                        describe(Some(of))
-                    ),
-                );
-            } else if original.and_then(|o| o.get("name")) != value.get("name") {
-                fail(
-                    &mut failures,
-                    &at,
-                    "a snapshot keeps its Core card's name (R2195001)",
-                );
-            }
-        }
-
         // R349: a card that prints no Radiant form carries `radiantFallback: true`, and its `radiant`
         // face is exactly the fallback the rule gives it: the base face with its attack and health
         // doubled, the same keywords and the same text.
@@ -1587,8 +1560,6 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             "resource",
             "loc",
             "radiantFallback",
-            // R2195000: the Core card a Training Grounds snapshot copies (`CardDef.snapshot_of`).
-            "snapshotOf",
             "base",
             "radiant",
         ];
