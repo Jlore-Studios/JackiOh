@@ -2533,7 +2533,9 @@
       death: { voice: "snob" },
     },
     "stinkyscape-116": { // Megabase
-      cast: { voice: "sapi-announcer" },
+      play: { voice: "sapi-announcer" },
+      attack: { voice: "sapi-announcer" },
+      death: { voice: "sapi-announcer" },
     },
     "stinkyscape-117": { // Core System
       cast: { voice: "robot" },
