@@ -42,7 +42,7 @@ pub fn ai_options(seed: &str, budget: SearchBudget) -> AiOptions<'static> {
 
 /// A value as its JSON, for comparisons that pin the wire shape rather than a Rust type's name.
 pub fn js<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
+    serde_json::to_value(value).expect("serializable")
 }
 
 /// The real catalog and card scripts, once per process.

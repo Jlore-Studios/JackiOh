@@ -15,7 +15,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::{
-    armoured, big_body, big_dfender, charger, cleaver, deft_duelist, first_striker, indestructible,
+    armored, big_body, big_dfender, charger, cleaver, deft_duelist, first_striker, indestructible,
     lifestealer, moths, pacifist, plain, poisonous, rusher, shielded, spikey_pillow, stacker, taunter,
     trample_lifesteal, trampler, zero_attack,
 };
@@ -35,7 +35,7 @@ fn bodies() -> Vec<CardDef> {
         charger.clone(),
         first_striker.clone(),
         shielded.clone(),
-        armoured.clone(),
+        armored.clone(),
         indestructible.clone(),
         poisonous.clone(),
         lifestealer.clone(),
@@ -574,7 +574,7 @@ mod r69_and_r46_the_exception_invariant_2_carves_out {
         );
         assert_eq!(
             serde_json::to_value(events_of_type(&events, GameEventType::PositionSwitched))
-                .expect("serialises"),
+                .expect("serializes"),
             json!([{ "type": "positionSwitched", "instanceId": unit.id, "position": "ATK" }])
         );
 

@@ -15,7 +15,7 @@
 //! `Db::Pg` too when `DATABASE_URL` is set (`tests/db/run.sh`, one case at a time per database).
 //!
 //! Every call is started before any is awaited (`join_all`), so the stores see them overlap. The fake
-//! serialises them on its one lock; Postgres runs them on separate connections under
+//! serializes them on its one lock; Postgres runs them on separate connections under
 //! `app.redeem_invite_code`'s row and advisory locks.
 
 use std::future::Future;
@@ -215,7 +215,7 @@ fn de<T: DeserializeOwned>(value: Value) -> T {
 }
 
 fn js<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a store row serialises")
+    serde_json::to_value(value).expect("a store row serializes")
 }
 
 /// The wall clock in epoch ms.

@@ -247,7 +247,7 @@ mod tests {
             assert_ne!(s.card(SIPHON).face_up, Some(true));
             assert!(!s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
             // The opponent reads its face now, and the aura works.
-            assert!(serde_json::to_string(&s.view(P2)).expect("serialisable").contains(SIPHON));
+            assert!(serde_json::to_string(&s.view(P2)).expect("serializable").contains(SIPHON));
             assert_eq!(attack_of(&s, P2, 1), 0);
             assert_eq!(attack_of(&s, P2, 2), 5);
         }
@@ -312,7 +312,7 @@ mod tests {
             let mut s = set_against(&[VANILLA, MENACE], false, &[]);
             let theirs = js(&s.view(P2));
 
-            let text = serde_json::to_string(&theirs).expect("serialisable");
+            let text = serde_json::to_string(&theirs).expect("serializable");
             assert!(!text.contains(SIPHON));
             assert!(!text.contains("Siphon Squad"));
             let menace = &theirs["you"]["units"][1];
@@ -320,7 +320,7 @@ mod tests {
 
             reveal_siphon(&mut s);
             let theirs = js(&s.view(P2));
-            assert!(serde_json::to_string(&theirs).expect("serialisable").contains(SIPHON));
+            assert!(serde_json::to_string(&theirs).expect("serializable").contains(SIPHON));
             let menace = &theirs["you"]["units"][1];
             assert!(matches_object(menace, &json!({ "defId": MENACE, "attack": 5 })));
         }

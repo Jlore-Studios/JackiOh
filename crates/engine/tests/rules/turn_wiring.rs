@@ -299,7 +299,7 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
         let last = paused
             .work
             .last()
-            .map(|item| serde_json::to_value(&item.resume).expect("serialises"));
+            .map(|item| serde_json::to_value(&item.resume).expect("serializes"));
         assert!(last.is_some_and(|resume| matches_object(
             &resume,
             &json!({ "hook": START_OF_TURN_WORK, "step": "brittle" })

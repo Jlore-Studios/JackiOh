@@ -75,7 +75,7 @@ fn constant<T: Serialize + ?Sized>(
     value: &T,
 ) -> Constant {
     let json =
-        serde_json::to_string(value).unwrap_or_else(|error| panic!("{name} does not serialise: {error}"));
+        serde_json::to_string(value).unwrap_or_else(|error| panic!("{name} does not serialize: {error}"));
     Constant {
         name,
         annotation,

@@ -212,7 +212,7 @@ describe("B15 the field's DOM", () => {
     expect(input).toHaveValue("");
   });
 
-  it("B15 is labelled through its id, and sits inside div.code-field", () => {
+  it("B15 is labeled through its id, and sits inside div.code-field", () => {
     render(<Harness />);
     expect(screen.getByLabelText("Invite code")).toBe(field());
     const host = root();
@@ -298,7 +298,7 @@ describe("B15 the field's DOM", () => {
     expect(log.at(-1)).toEqual({ formatted: grouped(FULL), complete: true });
   });
 
-  it("B15 honours testId, disabled and describedBy", () => {
+  it("B15 honors testId, disabled and describedBy", () => {
     render(<Harness testId="room-code-input" disabled describedBy="extra-help" />);
     expect(screen.queryByTestId(inviteTestid.input)).toBeNull();
     const input = screen.getByTestId("room-code-input");

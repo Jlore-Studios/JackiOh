@@ -302,9 +302,9 @@ mod tests {
                     })
                     .collect();
                 assert_eq!(hidden_from, vec![Some(vec![P1]), Some(vec![P1])]);
-                let theirs = serde_json::to_string(&s.view(P1).events).expect("events serialise");
+                let theirs = serde_json::to_string(&s.view(P1).events).expect("events serialize");
                 assert!(!theirs.contains(&trap), "p1's cue never names the card");
-                let owners = serde_json::to_string(&s.view(P2).events).expect("events serialise");
+                let owners = serde_json::to_string(&s.view(P2).events).expect("events serialize");
                 assert!(owners.contains(&trap), "p2 reads its own card's Buffs");
             }
         }

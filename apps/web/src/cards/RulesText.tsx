@@ -6,7 +6,7 @@
 // - glossary terms ("Cry:", keywords, verbs) in bold (`.cf-term`, rules.ts's tokenizer), each
 //   showing its glossary rule on hover, a long press or focus where its surface allows (TermTip.tsx, R2098000);
 // - on a Radiant face, the stretches its base face's text does not have (`marks`, radiantDiff.ts,
-//   R277): gold, bold and underlined (`.cf-mark`), so the mark does not rest on colour alone;
+//   R277): gold, bold and underlined (`.cf-mark`), so the mark does not rest on color alone;
 // - the names the card's `refs` link (refs.ts, R279): a reference (`CardRef`), marked everywhere
 //   and a control where the surface allows one (refContext.tsx); a term inside a name is not bolded,
 //   since the name is the card, not the keyword ("Rush Token");

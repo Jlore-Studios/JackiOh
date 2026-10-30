@@ -1,6 +1,6 @@
 // The two bars of an opening (#1658, part of #1651, SPEC §14.5, R1305000, R1953000): the card token
 // bar and the cosmetic token bar, pinned across the top of the viewport (the HUD) while the opening is
-// on screen. Each slot's points (R1999000) fly from the slot into the HUD, labelled and tinted by the slot's
+// on screen. Each slot's points (R1999000) fly from the slot into the HUD, labeled and tinted by the slot's
 // rarity, a bigger rarity landing in a bigger burst; once the last has landed each bar fills from where
 // the opening found it to where it left it, a full one pulsing and glowing as it bursts, and the reward
 // of every fill is revealed as it does. The pack-opening scene and the cosmetic packs mount it with the
@@ -47,11 +47,11 @@ export type OpeningBarsProps = {
 /** Where an opening is: held back, its points in flight, or its bars filling. */
 type Phase = "waiting" | "flights" | "fill";
 
-/** Where a flight takes off and how far it travels to the HUD's centre, in viewport pixels. */
+/** Where a flight takes off and how far it travels to the HUD's center, in viewport pixels. */
 type Course = { x: number; y: number; dx: number; dy: number };
 
-/** The centre of an element's box on the viewport. */
-function centreOf(element: Element): { x: number; y: number } {
+/** The center of an element's box on the viewport. */
+function centerOf(element: Element): { x: number; y: number } {
   const box = element.getBoundingClientRect();
   return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
 }
@@ -90,14 +90,14 @@ function Opening({ bars, flights = [], play = true, testid }: OpeningBarsProps):
     };
   }, [phase, moving, flights.length]);
 
-  // Each flight takes off from its slot's centre (the HUD's, when the slot is not on the page) for the HUD's.
+  // Each flight takes off from its slot's center (the HUD's, when the slot is not on the page) for the HUD's.
   useLayoutEffect(() => {
     if (phase !== "flights" || hud.current === null) return;
-    const to = centreOf(hud.current);
+    const to = centerOf(hud.current);
     const measured: Record<string, Course> = {};
     for (const flight of flights) {
       const source = document.querySelector(`[data-testid="${flight.source}"]`);
-      const from = source === null ? to : centreOf(source);
+      const from = source === null ? to : centerOf(source);
       measured[flight.key] = { x: from.x, y: from.y, dx: to.x - from.x, dy: to.y - from.y };
     }
     setCourses(measured);

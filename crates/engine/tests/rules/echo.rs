@@ -337,7 +337,7 @@ fn pending_echo(state: &mut GameState, player: PlayerId, amount: i32) {
 fn pluck(events: &[GameEvent], kind: GameEventType, key: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises")[key].clone())
+        .map(|event| serde_json::to_value(event).expect("an event serializes")[key].clone())
         .collect()
 }
 
@@ -429,7 +429,7 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         // `src/playSteps.ts` works around it with a lazily-created `echoQueueOf`, and
         // `replay-scripted.test.ts` reads `state.echoQueue.length` expecting the field to be there.
         let state = playing("echo-queue-field");
-        let json = serde_json::to_value(&state).expect("a state serialises");
+        let json = serde_json::to_value(&state).expect("a state serializes");
         assert!(json.get("echoQueue").is_some());
         assert_eq!(echo_queue(&state), Vec::<EchoItem>::new());
         assert!(json.get("triggerQueue").is_some());
@@ -451,7 +451,7 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
         // The repeats are state, not a loop variable, so they survive a JSON round trip (§9.3, §10.1).
         let round: GameState =
-            serde_json::from_value(serde_json::to_value(&played.state).expect("a state serialises"))
+            serde_json::from_value(serde_json::to_value(&played.state).expect("a state serializes"))
                 .expect("and parses");
         assert_eq!(echo_queue(&round), echo_queue(&played.state));
         // And by the time the action returns the loop has drained them (§10.3).

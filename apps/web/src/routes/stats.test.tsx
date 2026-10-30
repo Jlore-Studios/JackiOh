@@ -1036,7 +1036,7 @@ describe("R377 public statistics match type", () => {
 });
 
 describe("card statistics requests", () => {
-  it("a filter changed while the table loads ends on the newer figures, never on the cancelled request's failure", async () => {
+  it("a filter changed while the table loads ends on the newer figures, never on the canceled request's failure", async () => {
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
 

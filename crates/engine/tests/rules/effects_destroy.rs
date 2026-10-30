@@ -191,7 +191,7 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 
 /// One field of each event.
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
-    match serde_json::to_value(events).expect("events serialise") {
+    match serde_json::to_value(events).expect("events serialize") {
         Value::Array(items) => items
             .into_iter()
             .map(|item| item.get(key).cloned().unwrap_or(Value::Null))

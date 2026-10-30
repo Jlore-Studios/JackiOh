@@ -217,7 +217,7 @@ mod r783010_crater_arrivals {
         // Offered into the other zones, never onto the Crater Unit's.
         let offered: Vec<Value> = plays_of(&state, &stack.id, P1)
             .iter()
-            .map(|play| serde_json::to_value(play).expect("a play serialises"))
+            .map(|play| serde_json::to_value(play).expect("a play serializes"))
             .collect();
         assert!(!offered.is_empty());
         assert!(

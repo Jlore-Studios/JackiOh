@@ -44,7 +44,7 @@ export type FxOutcome = "victory" | "defeat" | "draw";
 /**
  * `scale` multiplies every particle's size, as `power` does its speed. Absent: 1. `colors` (#1447) is a palette
  * that replaces the preset's own, hot first: the particles' shape and physics still come from `preset`. Absent:
- * the preset's colours.
+ * the preset's colors.
  */
 export type FxBurstCue = {
   kind: "burst";
@@ -110,7 +110,7 @@ export type FxFractureCue = { kind: "fracture"; at: FxAnchor; delayMs: number; d
 /** Classic+ #24 Crushing Walls: two walls close in from the left and right edges of `at`'s box, each `reach` of its width deep. */
 export type FxWallsCue = { kind: "walls"; at: FxAnchor; reach: number; delayMs: number; durationMs: number };
 export type FxTint = { rim: string; core: string; glow: string };
-/** R437: a mark branded onto a card: a sigil in the mark's colours slams on and fades into the aura. */
+/** R437: a mark branded onto a card: a sigil in the mark's colors slams on and fades into the aura. */
 export type FxBrandCue = { kind: "brand"; at: FxAnchor; tint: FxTint; delayMs: number; durationMs: number };
 /** R1363 (MN05): a shield flashing over a hero or unit as its Armor takes a hit: `small` for half or more of a hit that still landed, `full` for the whole hit. */
 export type FxShieldCue = { kind: "shield"; size: "small" | "full"; at: FxAnchor; delayMs: number; durationMs: number };

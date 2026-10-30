@@ -209,7 +209,7 @@ mod tests {
                 s.play(GUILD, json!({}));
 
                 assert!(!s.last_events().iter().any(|event| js(event).get("position").is_some()));
-                let theirs = serde_json::to_string(&s.view(P2)).expect("views serialise");
+                let theirs = serde_json::to_string(&s.view(P2)).expect("views serialize");
                 assert!(theirs.contains(TEMPO));
                 assert!(!theirs.contains(MENACE));
                 assert!(!theirs.contains(BIG_D));

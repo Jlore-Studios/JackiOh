@@ -281,7 +281,7 @@ pub enum PublicStatsMode {
 }
 
 impl PublicStatsMode {
-    /// `?mode=`: one match type, or every mode when missing, `all`, or unrecognised.
+    /// `?mode=`: one match type, or every mode when missing, `all`, or unrecognized.
     pub fn parse(raw: Option<&str>) -> PublicStatsMode {
         match raw.map(|value| value.trim().to_lowercase()).as_deref() {
             Some("bo1") => PublicStatsMode::Bo1,
@@ -851,7 +851,7 @@ async fn kept_report(
 /// R1451, amended by R807000: a ladder bot's game counts toward the gate like any live game, and
 /// the figures count every counted seat, human and bot alike (`?pilot=human` reads the people's
 /// sides only, `?pilot=ai` the bots'). R377: `?mode=` scopes the figures to one match type
-/// (`bo1`, `bo3`, `random`), or every mode when missing, `all`, or unrecognised. A bot game adds
+/// (`bo1`, `bo3`, `random`), or every mode when missing, `all`, or unrecognized. A bot game adds
 /// two decks like any game, so the per-game deck tell R1452 recorded is gone.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;

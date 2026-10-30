@@ -7,7 +7,7 @@
 //! Each injection below breaks exactly one rule. That is the point of the file: a careless
 //! mutation trips several rules at once (a second copy of a card is also a copy you may not own),
 //! so the collection grants 2 of the two ids the L3-copies and L4 injections duplicate, and grants
-//! the token, the banned card and the uncatalogued id so those injections do not also trip L5.
+//! the token, the banned card and the uncataloged id so those injections do not also trip L5.
 //!
 //! Port of `packages/validator/test/fixtures/loadouts.ts` (SURFACE §4.1). The rule tests
 //! (`validator.rs`, `validator_drafts.rs`) reach it as `crate::rules::fixtures::validator_loadouts`.
@@ -32,9 +32,9 @@ pub const HIT_JOB: &str = "core-012";
 pub const ARCHIVIST: &str = "core-030";
 /// In Deck 2 of the legal loadout, owned twice: the L3-copies injection duplicates it there.
 pub const JELLY_BEAN: &str = "core-051";
-/// Catalogued and owned, but Token-tagged, so L3 refuses it in a deck.
+/// Cataloged and owned, but Token-tagged, so L3 refuses it in a deck.
 pub const SHEEP_TOKEN: &str = "core-051.1";
-/// Catalogued and owned, but on the snapshot's banned list, so L6 refuses it.
+/// Cataloged and owned, but on the snapshot's banned list, so L6 refuses it.
 pub const CEASELESS_VOID: &str = "core-100";
 /// Owned, and absent from the snapshot, so L6 refuses it by id alone.
 pub const NOT_IN_CATALOG: &str = "core-999";
@@ -126,7 +126,7 @@ pub fn catalog() -> CatalogSnapshot {
 }
 
 /// One of every deckable card, two of the pair the L3-copies and L4 injections duplicate, and one
-/// each of the token, the banned card and the uncatalogued id, so only their own rule fires.
+/// each of the token, the banned card and the uncataloged id, so only their own rule fires.
 pub fn collection() -> Collection {
     let mut owned: Collection = Collection::new();
     for id in POOL_IDS.iter() {
@@ -228,7 +228,7 @@ fn deck_holding(input: &LoadoutInput, card_id: &str) -> usize {
     }
 }
 
-/// Owned, catalogued, deckable ids no deck of this loadout uses.
+/// Owned, cataloged, deckable ids no deck of this loadout uses.
 fn unused_ids(input: &LoadoutInput) -> Vec<CardId> {
     let used: IndexSet<&CardId> = input.decks.iter().flat_map(|deck| deck.cards.iter()).collect();
     POOL_IDS.iter().filter(|id| !used.contains(id)).cloned().collect()
@@ -279,7 +279,7 @@ pub fn duplicate_in_deck(input: &LoadoutInput) -> LoadoutInput {
     })
 }
 
-/// L3: a Token card in the last deck. It is catalogued and owned, so only the token rule fires.
+/// L3: a Token card in the last deck. It is cataloged and owned, so only the token rule fires.
 pub fn insert_token(input: &LoadoutInput) -> LoadoutInput {
     match input.decks.len().checked_sub(1) {
         Some(last) => map_deck(input, last, |cards| substitute(cards, SHEEP_TOKEN)),
@@ -313,7 +313,7 @@ pub fn unknown_card(input: &LoadoutInput) -> LoadoutInput {
     map_deck(input, 0, |cards| substitute(cards, NOT_IN_CATALOG))
 }
 
-/// L6: a banned card. Catalogued and owned, so only the ban fires.
+/// L6: a banned card. Cataloged and owned, so only the ban fires.
 pub fn banned_card(input: &LoadoutInput) -> LoadoutInput {
     map_deck(input, 0, |cards| substitute(cards, CEASELESS_VOID))
 }

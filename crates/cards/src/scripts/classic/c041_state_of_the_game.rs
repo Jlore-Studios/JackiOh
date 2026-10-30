@@ -6,7 +6,7 @@
 //!
 //! Nothing to script: both faces' keywords are printed on the catalog entry and §10.4 layer 1 reads
 //! them from there (Immutable since issue #2179, catalog data, so no script is kept). Where the
-//! behaviour lives instead:
+//! behavior lives instead:
 //!   Indestructible — §4.4 step 4 (it takes no damage), §4.5 step 1 and R46 (a destroy mark is
 //!                    ignored), R69 (it still dies if its max health falls to 0), §6.1 (exile, bounce
 //!                    and a Tribute still remove it), R347 (§10.4 drops Taunt whenever it holds

@@ -338,7 +338,7 @@ mod r451_the_last_face_up_card_each_player_played_ai_autocomplete {
         state = play(&state, PlayerId::P1, &PA.apple.id, false);
         state = play(&state, PlayerId::P1, &PA.crier.id, false);
         let round: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
+            serde_json::from_value(serde_json::to_value(&state).expect("the state serializes"))
                 .expect("the state parses back");
         assert_eq!(round, state);
         assert_eq!(

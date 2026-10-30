@@ -2,7 +2,7 @@
 // fixture scripts: R2205000. A moment poses a question with nothing pointed at, and is done once the
 // player finds what it sets up, however they found it; its hints escalate only while the player
 // stalls, or when they ask; it never holds the AI; past its turns it retires and the lesson's end
-// names what it set up (R314). Each Field Guide entry is recognised from the human's view alone
+// names what it set up (R314). Each Field Guide entry is recognized from the human's view alone
 // (R292): the fresh events, the view and the public catalog.
 
 import { describe, expect, it } from "vitest";
@@ -314,7 +314,7 @@ describe("R2205000 the Field Guide", () => {
     expect(missing).toEqual([]);
   });
 
-  it("R2205000 recognises each entry from the human's view and its fresh events alone", () => {
+  it("R2205000 recognizes each entry from the human's view and its fresh events alone", () => {
     resetIds();
     const mine = unit("p1", { instanceId: "u1", defId: "rusher", keywords: [{ kind: "Rush" }] });
     const enemy = unit("p2", { instanceId: "e1", defId: "wall", keywords: [{ kind: "Taunt" }], position: "DEF" });

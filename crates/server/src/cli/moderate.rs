@@ -130,7 +130,7 @@ pub fn parse_moderate_args(argv: &[String]) -> anyhow::Result<ModerateCommand> {
             }
             Ok(ModerateCommand::ChatReports)
         }
-        _ => bail!("Unrecognised moderate command {}.\n\n{USAGE}", quoted(verb)),
+        _ => bail!("Unrecognized moderate command {}.\n\n{USAGE}", quoted(verb)),
     }
 }
 

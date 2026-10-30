@@ -6,7 +6,7 @@
 // newer ticket has waited 50 s.
 //
 // The poll ends by itself once the server stops naming the ticket (`queued` is not `true`: paired,
-// cancelled or expired), so a spec never has to stop it, and `before:spec`/`after:spec` clear
+// canceled or expired), so a spec never has to stop it, and `before:spec`/`after:spec` clear
 // whatever is left.
 
 export type StayQueuedCommand = {
@@ -18,7 +18,7 @@ export type StayQueuedCommand = {
 };
 
 /**
- * A bound on the loop, not a rule: a ticket that is never paired or cancelled (a spec that failed
+ * A bound on the loop, not a rule: a ticket that is never paired or canceled (a spec that failed
  * half-way) does not keep a poll running for the rest of the run.
  */
 const GIVE_UP_AFTER_MS = 180_000;

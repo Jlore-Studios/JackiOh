@@ -337,7 +337,7 @@ mod tests {
         }));
         let marked = s.pile(P1, "library")[0].id.clone();
         let round_trip = |state: &GameState| -> GameState {
-            let text = serde_json::to_string(state).expect("the state serialises");
+            let text = serde_json::to_string(state).expect("the state serializes");
             serde_json::from_str(&text).expect("the state parses")
         };
         let is_marked =

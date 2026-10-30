@@ -32,7 +32,7 @@
 #      same answer whenever this runs (a plain redeploy of a skipped commit is skipped again).
 #
 # Rules 3 and 4 diff against VERCEL_GIT_PREVIOUS_SHA, the last commit Vercel built, and only when
-# that commit is an ancestor of HEAD. A commit whose build was cancelled or failed (the daily
+# that commit is an ancestor of HEAD. A commit whose build was canceled or failed (the daily
 # deployment cap does that) is therefore never skipped past: the next push still diffs against what
 # is really live. Anything that goes wrong, and any doubt (no previous sha, a shallow clone without
 # it, an empty diff, a commit date that cannot be read or that comes before the last build's, a path

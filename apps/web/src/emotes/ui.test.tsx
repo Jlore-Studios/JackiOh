@@ -78,7 +78,7 @@ describe("R643 R1343 the emote picker", () => {
     const row = screen.getByTestId("emote-menu").querySelector(".emote-emoji-row");
     expect(arc?.querySelectorAll(".emote-item")).toHaveLength(EMOTE_HAND_VOICE);
     expect(row?.querySelectorAll(".emote-item")).toHaveLength(EMOTE_HAND_SIZE - EMOTE_HAND_VOICE);
-    // The voice items are labelled by name; the emoji carry their title/aria label and a sticker.
+    // The voice items are labeled by name; the emoji carry their title/aria label and a sticker.
     for (const label of ["Greetings", "Thanks", "Threaten"]) {
       expect(screen.getByRole("menuitem", { name: label })).toBeInTheDocument();
     }
@@ -185,7 +185,7 @@ describe("R643 the Mute emotes menu", () => {
 describe("#219 menuShift, the slide that keeps a menu on the screen", () => {
   it("#219 shifts right by what pokes out on the left, left by what pokes out on the right, nothing when it fits", () => {
     // The fixture board at 360px puts your portrait at the screen's left edge: a 320px menu
-    // centred on it starts at x=-131 and must come right to the margin.
+    // centered on it starts at x=-131 and must come right to the margin.
     expect(menuShift({ left: -131, right: 189 }, 360, EMOTE_MENU_EDGE_PX)).toBe(139);
     expect(menuShift({ left: 300, right: 420 }, 360, EMOTE_MENU_EDGE_PX)).toBe(-68);
     expect(menuShift({ left: 20, right: 300 }, 360, EMOTE_MENU_EDGE_PX)).toBe(0);
@@ -222,17 +222,17 @@ describe("#219 an open menu measures itself and slides back on screen", () => {
     expect(screen.getByTestId("emote-mute-menu").style.getPropertyValue("--emote-menu-shift")).toBe("-68px");
   });
 
-  it("#219 with nothing to measure (jsdom's zero rects) the menu stays centred — no property", () => {
+  it("#219 with nothing to measure (jsdom's zero rects) the menu stays centered — no property", () => {
     render(<EmoteMenu side="you" hand={HAND} gate={() => OPEN} onPick={noop} onClose={noop} />);
 
     expect(screen.getByTestId("emote-menu").style.getPropertyValue("--emote-menu-shift")).toBe("");
   });
 
   it("#219 a StrictMode replay — dev's second layout-effect run — keeps the shift, it does not cancel it", () => {
-    // jsdom has no layout, so the stub plays the layout engine: the centred rect plus whatever
+    // jsdom has no layout, so the stub plays the layout engine: the centered rect plus whatever
     // --emote-menu-shift the element already carries, what a real getBoundingClientRect reports
     // once the transform applies. main.tsx mounts the app under StrictMode, so in dev the hook's
-    // effect runs twice — a second run that took the slid rect for centred would write 0 back.
+    // effect runs twice — a second run that took the slid rect for centered would write 0 back.
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
       const applied = Number.parseFloat(this.style.getPropertyValue("--emote-menu-shift")) || 0;
       return rect(-131 + applied, 189 + applied, 320);

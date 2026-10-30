@@ -157,7 +157,7 @@ mod r921_transform_riders_md_b10 {
                 "token": true,
             }),
         ))
-        .expect("serialisable");
+        .expect("serializable");
         if let Some(card) = card.as_object_mut() {
             card.insert("cost".to_string(), json!(0));
             card.insert(

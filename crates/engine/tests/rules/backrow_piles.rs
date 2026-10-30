@@ -351,7 +351,7 @@ mod r447_b5_e21_backrow_piles {
             json!({ "faceDown": false, "defId": cover.id, "buried": 1 }),
         );
         expect_match(&mine.you.backrow[0], json!({ "defId": cover.id, "buried": 1 }));
-        let text = serde_json::to_string(&theirs).expect("serialises");
+        let text = serde_json::to_string(&theirs).expect("serializes");
         assert!(!text.contains(&trap.id));
         assert!(!text.contains(&watcher.id));
         // A face-down top shows its back and the count.

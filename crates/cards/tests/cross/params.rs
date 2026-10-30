@@ -40,7 +40,7 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
 fn first_param(id: &str) -> Value {
     let def = card_def(id);
     let first = def.params.as_ref().and_then(|params| params.first());
-    serde_json::to_value(first).expect("a Param serialises")
+    serde_json::to_value(first).expect("a Param serializes")
 }
 
 fn is_word(byte: u8) -> bool {
@@ -191,7 +191,7 @@ mod b3_4_params_the_numbers_a_card_declares {
         // A Radiant-only number: Cloaked Toe Cracker's "gain 1 mana" exists on its Radiant face only, so it
         // is tuned there alone (R824000).
         assert_eq!(
-            serde_json::to_value(&card_def("classic-006").params).expect("params serialise"),
+            serde_json::to_value(&card_def("classic-006").params).expect("params serialize"),
             json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
         );
         assert!(!card_def("classic-006").base.text.contains("{mana}"));
@@ -225,7 +225,7 @@ mod b3_4_params_the_numbers_a_card_declares {
         // Solarius prints Spell Damage +2; its Cry (which drew 1) is gone on both faces (balance
         // patch 1), so no number is a param.
         assert_eq!(
-            serde_json::to_value(&card_def("classicplus-038").base.keywords).expect("keywords serialise"),
+            serde_json::to_value(&card_def("classicplus-038").base.keywords).expect("keywords serialize"),
             json!([{ "kind": "Spell Damage", "n": 2 }])
         );
         assert_eq!(keys("classicplus-038"), Vec::<String>::new());
@@ -262,7 +262,7 @@ mod b3_4_params_the_numbers_a_card_declares {
         assert!(filled_with(&pickle, FaceKind::Base, "discard", 3).contains("they discard 3 random cards,"));
         assert_eq!(
             serde_json::to_value(param_placeholders("Draw {draw|card|cards}, then {damage}."))
-                .expect("placeholders serialise"),
+                .expect("placeholders serialize"),
             json!([{ "key": "draw", "one": "card", "many": "cards" }, { "key": "damage" }])
         );
         // No filled face leaves a count disagreeing with its noun ("1 cards", "2 card").

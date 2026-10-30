@@ -346,7 +346,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r247_offers_three_numbers_each_option_is_a_card_s_index_labelled_with_it_and_keyed_by_it() {
+        fn r247_offers_three_numbers_each_option_is_a_card_s_index_labeled_with_it_and_keyed_by_it() {
             crate::register_all();
             let s = trial_scenario(false, "Core");
             let options = s.state().pending.as_ref().map(|p| p.options.clone()).unwrap_or_default();
@@ -358,7 +358,7 @@ mod tests {
                 assert_eq!(option.label, index);
                 assert_eq!(option.key, format!("mode:{index}"));
                 // Nothing in the option names a card: neither its key, its label nor its selection.
-                assert!(!serde_json::to_string(option).expect("serialises").contains("core-"));
+                assert!(!serde_json::to_string(option).expect("serializes").contains("core-"));
             }
         }
 

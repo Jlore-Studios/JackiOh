@@ -84,7 +84,7 @@ function SpeedSlider(props: { speed: number; onChange: (speed: number) => void }
   );
 }
 
-/** A labelled native select: the platform's own picker on a phone, a 44 px row everywhere. */
+/** A labeled native select: the platform's own picker on a phone, a 44 px row everywhere. */
 export function SelectRow(props: {
   label: string;
   hint: string;

@@ -259,7 +259,7 @@ fn stormed<T>(
 fn event_json(events: &[GameEvent]) -> Vec<Value> {
     events
         .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
         .collect()
 }
 
@@ -301,7 +301,7 @@ fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInsta
 }
 
 fn thaw(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).expect("a state serialises")).expect("a state parses")
+    serde_json::from_value(serde_json::to_value(state).expect("a state serializes")).expect("a state parses")
 }
 
 mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_after_a_round_in_which_a_unit_died {
@@ -591,7 +591,7 @@ mod r23_choose_from_hands_where_only_the_cards_it_admits_are_offered {
                 .collect::<Vec<_>>()
         );
         let theirs =
-            serde_json::to_string(&view_for(&state, PlayerId::P2).pending).expect("a view serialises");
+            serde_json::to_string(&view_for(&state, PlayerId::P2).pending).expect("a view serializes");
         assert!(!theirs.contains(held.get(1).map_or("none", |card| card.id.as_str())));
     }
 

@@ -42,7 +42,7 @@ fn live_row(seed: &str, decks: &(Vec<String>, Vec<String>)) -> MatchRow {
         "status": "live",
         "createdAt": created_at,
         "finishedAt": null,
-        "clocks": serde_json::to_value(initial_clocks(created_at)).expect("serialises"),
+        "clocks": serde_json::to_value(initial_clocks(created_at)).expect("serializes"),
     }))
 }
 
