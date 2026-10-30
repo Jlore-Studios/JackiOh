@@ -360,7 +360,7 @@ fn campus(seed: &str, zolars: &[bool]) -> Campus {
     field.push(json!(UNIVERSITY));
     let s = board(seed, json!({ "field": field }), json!({}));
     let lanes = zolars.len() as i32;
-    let zolars = (1..=lanes).map(|lane| s.unit_at(P1, lane)).collect();
+    let zolars: Vec<CardInstance> = (1..=lanes).map(|lane| s.unit_at(P1, lane)).collect();
     let first = s.unit_at(P1, lanes + 1);
     let second = s.unit_at(P1, lanes + 2);
     assert_eq!((first.def_id.as_str(), second.def_id.as_str()), (UNIVERSITY, UNIVERSITY));
@@ -1022,10 +1022,12 @@ fn b31_reach_the_summit_keeps_its_base_camp_and_gets_no_star_chart() {
 
 #[test]
 fn b31_aestheticize_the_game_keeps_its_discover_and_gets_no_star_chart() {
-    let neither = |s: &Scenario| hand_of(s, ALTERAN_REACH).is_empty() && hand_of(s, REACH_THE_SUMMIT).is_empty();
-    let seed = seed_where("b31-aestheticize", |seed| neither(&bobs_plan(seed, false)));
+    // The one plan that asks: neither of the other two Wincons came, and a Discover is open.
+    let discovering = |s: &Scenario| {
+        hand_of(s, ALTERAN_REACH).is_empty() && hand_of(s, REACH_THE_SUMMIT).is_empty() && s.state().pending.is_some()
+    };
+    let seed = seed_where("b31-aestheticize", |seed| discovering(&bobs_plan(seed, false)));
     let mut s = bobs_plan(&seed, false);
-    assert!(s.state().pending.is_some(), "Aestheticize the Game's plan is a Discover");
     answer_first(&mut s, P1);
     assert_eq!(hand_of(&s, AESTHETICIZE_THE_GAME).len(), 1);
     assert!(hand_of(&s, STAR_CHART).is_empty());
