@@ -178,7 +178,7 @@ fn r2250000_the_other_player_sees_a_hand_card_gained_not_which() {
 
     // A game without a Credit carries the key nowhere.
     let fresh = board("r2250000-fresh", "p1", json!({}), json!({}));
-    let state_json = serde_json::to_value(fresh.state()).expect("a state serialises");
+    let state_json = serde_json::to_value(fresh.state()).expect("a state serializes");
     for player in ["p1", "p2"] {
         assert!(
             state_json["players"][player].get("marketCredits").is_none(),
@@ -186,7 +186,7 @@ fn r2250000_the_other_player_sees_a_hand_card_gained_not_which() {
         );
     }
     for viewer in [P1, P2] {
-        let view = serde_json::to_value(view_for(fresh.state(), viewer)).expect("a view serialises");
+        let view = serde_json::to_value(view_for(fresh.state(), viewer)).expect("a view serializes");
         for seat in ["you", "opponent"] {
             assert!(view[seat].get("marketCredits").is_none(), "{viewer:?}'s {seat}");
         }

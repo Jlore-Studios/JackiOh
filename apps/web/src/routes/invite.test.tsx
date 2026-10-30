@@ -77,8 +77,8 @@ async function mount(): Promise<void> {
 // §9.4 format from config
 
 describe("the code format is §9.4's, read from crates/server/src/config.rs", () => {
-  it("R104 normalises to upper case, and refuses an excluded character rather than dropping it", async () => {
-    // R104 normalises lowercase `l` to `L`; R191 refuses ambiguous look-alikes rather than mapping them.
+  it("R104 normalizes to upper case, and refuses an excluded character rather than dropping it", async () => {
+    // R104 normalizes lowercase `l` to `L`; R191 refuses ambiguous look-alikes rather than mapping them.
     // Refusal stops reading rather than dropping a character and shifting the submitted code.
     expect(formatInviteCode("abcd")).toBe("ABCD");
     expect(formatInviteCode("l")).toBe("L");

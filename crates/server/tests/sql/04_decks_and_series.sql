@@ -54,7 +54,7 @@ begin
     raise exception 'FAIL (R254): % legacy card rows left, expected all 60', n;
   end if;
 
-  -- Three decks, named as the loadout's decks were (the third normalised as normalizeName would),
+  -- Three decks, named as the loadout's decks were (the third normalized as normalizeName would),
   -- listed in slot order by the (created_at, id) order every deck list reads.
   select array_agg(name order by created_at, id), array_agg(id order by created_at, id)
     into v_names, v_ids

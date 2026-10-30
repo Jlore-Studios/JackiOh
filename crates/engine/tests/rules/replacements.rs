@@ -124,7 +124,7 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         ));
         let after = game.state().clone();
 
-        // The hit is cancelled: neither hero takes it, and nothing is redirected or damaged.
+        // The hit is canceled: neither hero takes it, and nothing is redirected or damaged.
         assert_eq!(hero(&after, P1), 30);
         assert_eq!(hero(&after, P2), 2 + 10);
         assert_eq!(after.players.p2.hand.len(), hand_before + 3);

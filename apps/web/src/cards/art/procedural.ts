@@ -1305,7 +1305,7 @@ function motifPlacements(
   }
 }
 
-// Colour
+// Color
 
 type Colors = {
   sky: readonly [string, string];

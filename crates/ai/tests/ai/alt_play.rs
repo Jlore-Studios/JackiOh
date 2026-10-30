@@ -78,7 +78,7 @@ fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_the_breake
     let public = redact(&state, HUMAN);
     let hidden = public.players[AI].backrow[0].as_ref().expect("the placeholder");
     assert_eq!(hidden.set_as, None);
-    let js = serde_json::to_value(hidden).expect("a placeholder serialises");
+    let js = serde_json::to_value(hidden).expect("a placeholder serializes");
     assert!(js.get("setAs").is_none());
 
     // Determinized worlds may hold a Unit while the Breaker acts, stamped `cloaked`...

@@ -81,7 +81,7 @@ mod redact_keeps_what_the_play_records_name_r185 {
         // What panicked: the seat's own legal actions read the X of the text its Echo copies (R545).
         let echo = s.card(ECHO).id.clone();
         assert_eq!(plays_of(&public, AI, &echo).len(), 1);
-        let view = serde_json::to_value(view_for(&public, AI)).expect("a view serialises");
+        let view = serde_json::to_value(view_for(&public, AI)).expect("a view serializes");
         let held = view["you"]["hand"]
             .as_array()
             .and_then(|hand| {

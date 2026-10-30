@@ -133,7 +133,7 @@ mod r1843003_the_ai_answers_the_fleers_choice {
             },
         )
         .expect("a decision");
-        // Both answers end the game in the AI's favour, so its lethal finder may take the answer before
+        // Both answers end the game in the AI's favor, so its lethal finder may take the answer before
         // the prompt search does; either way it answers the prompt.
         assert!(
             matches!(decision.reason, DecisionReason::Prompt | DecisionReason::Lethal),
@@ -245,7 +245,7 @@ mod r1843003_the_ai_answers_edge_of_the_universe {
             },
         )
         .expect("a decision");
-        // Both answers end the game in the AI's favour, so its lethal finder may take the answer before
+        // Both answers end the game in the AI's favor, so its lethal finder may take the answer before
         // the prompt search does; either way it answers the prompt.
         assert!(
             matches!(decision.reason, DecisionReason::Prompt | DecisionReason::Lethal),

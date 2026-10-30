@@ -68,7 +68,7 @@ const CREST = `<svg xmlns='${SVG_NS}' viewBox='0 0 120 40'>
 </svg>`;
 
 // R371: an eye struck through, the mark of a face-down card the other player cannot see. A pale
-// outline on a dark disc, so it reads by shape on any frame and to a colour-blind player alike.
+// outline on a dark disc, so it reads by shape on any frame and to a color-blind player alike.
 const EYE_OFF = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
 <path d='M10 32 C18 20 26 16 32 16 C38 16 46 20 54 32 C46 44 38 48 32 48 C26 48 18 44 10 32 Z' fill='none' stroke='#e8ecf8' stroke-width='4' stroke-linejoin='round'/>
@@ -78,7 +78,7 @@ const EYE_OFF = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 </svg>`;
 
 // Patch v0.2.0's state badges (cardState.ts). Each is a pale outline on a dark plate, so it reads by
-// shape on any frame and to a colour-blind player alike, as the struck eye does.
+// shape on any frame and to a color-blind player alike, as the struck eye does.
 
 // B3.3, R385: a pane of glass with a crack running through it (Brittle); the count sits over it.
 const BRITTLE = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
@@ -118,7 +118,7 @@ const COG = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 </svg>`;
 
 // #2269: two opposing horizontal arrows, the Tradable swap mark (R1838000). A pale outline on a
-// dark disc, so it reads by shape on any frame and to a colour-blind player alike, as the struck
+// dark disc, so it reads by shape on any frame and to a color-blind player alike, as the struck
 // eye does.
 const TRADE = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>

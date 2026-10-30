@@ -1118,7 +1118,7 @@ pub struct DiscoverNumberArgs {
 /// Classic+ #41 KY's Constant's Radiant: "Discover a number on it" — up to `count` different numbers
 /// on the card that are not `value` already, drawn uniformly (R60; all of them, with no draw, when
 /// there are no more than `count`, R129), offered to the card's controller in a `discover` prompt whose
-/// options are the numbers' ids (`number_ref_id`) labelled with what each is now. The answer re-enters
+/// options are the numbers' ids (`number_ref_id`) labeled with what each is now. The answer re-enters
 /// the card's own step `step`, whose data carries the card's id under `NUMBER_CARD_KEY`; the step
 /// reads the pick with `chosen_tuning_number` (not E18's `number` prompt reader: this answer names a
 /// number on a card) and sets it with `set_number`. The options name the caster's own card's numbers

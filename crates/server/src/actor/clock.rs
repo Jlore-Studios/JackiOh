@@ -45,7 +45,7 @@ const MS_PER_MINUTE: i64 = 60 * MS_PER_SECOND;
 static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 
 /// One scheduled callback. Dropping it cancels it. The callback is handed its timer's id, so a
-/// callback already running when it was cancelled can see that it is stale.
+/// callback already running when it was canceled can see that it is stale.
 pub(crate) struct Timer {
     id: u64,
     handle: Option<tokio::task::JoinHandle<()>>,
@@ -135,7 +135,7 @@ impl Countdown {
         self.timer.as_ref().map(Timer::id) == Some(id)
     }
 
-    /// Its timer has run: `timer = null` without cancelling the running callback.
+    /// Its timer has run: `timer = null` without canceling the running callback.
     fn take_fired(&mut self) {
         if let Some(timer) = self.timer.take() {
             timer.fired();

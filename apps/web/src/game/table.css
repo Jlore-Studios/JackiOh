@@ -24,7 +24,7 @@
  * R1834004: an online board's other half wears its seat's frozen loadout the same way: a second
  * backdrop behind the upper half (`data-their-backdrop` on the board, `data-half="theirs"` on the
  * layer) and a second mat under the opponent's rows (`data-their-table` on the field, drawn by
- * `.field-their-mat`, the viewer's mat mirrored, since `.field::after` is the centre line), whose
+ * `.field-their-mat`, the viewer's mat mirrored, since `.field::after` is the center line), whose
  * custom properties the opponent's zones read as the viewer's read theirs.
  */
 
@@ -107,7 +107,7 @@
 }
 
 /* The new fields' washes reach every corner of the layer, never fading to nothing, for the same
-   painted-share gate. Each field varies its particles by `:nth-child()`: size, colour, pace. */
+   painted-share gate. Each field varies its particles by `:nth-child()`: size, color, pace. */
 
 /* Snow: a cold haze, whiter near the ground, and flakes of three sizes. */
 .board-backdrop[data-backdrop="field-snow"] {
@@ -161,7 +161,7 @@
   background: linear-gradient(135deg, #ffc2d8, #e0668f);
 }
 
-/* Autumn leaves: an amber light and leaves in four colours of the season. */
+/* Autumn leaves: an amber light and leaves in four colors of the season. */
 .board-backdrop[data-backdrop="field-autumn-leaves"] {
   background:
     radial-gradient(90% 80% at 80% 0%, rgb(255 170 60 / 14%), transparent 70%),
@@ -303,7 +303,7 @@
 
 /* The surface sits in the field's lower half, behind the lanes (a positioned, later sibling
    paints over it) and is never a hit target. The other seat's is the same surface turned over the
-   centre line into the upper half. */
+   center line into the upper half. */
 .field-their-mat,
 .field[data-table]::before {
   position: absolute;

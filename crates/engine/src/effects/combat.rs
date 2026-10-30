@@ -243,16 +243,16 @@ pub struct CancelAttackArgs {
 }
 
 /// §6.3 Cancel an attack and R44: inside §4.2 step 4's trap window, mark the open `declaredAttack`
-/// cancelled so no combat resolves, and emit `attackCancelled` in its place. The attacker's
+/// canceled so no combat resolves, and emit `attackCancelled` in its place. The attacker's
 /// exertion was spent on the declaration, so the attack is gone either way — which is why nothing
-/// here gives it back. The event names the card that cancelled, so a call with no `self` (nothing
+/// here gives it back. The event names the card that canceled, so a call with no `self` (nothing
 /// for `byInstanceId` to be) fizzles silently rather than inventing a source.
 ///
 /// Marking the record is the whole of the verb: `combat::declare_attack` reads it back when the window
 /// closes and skips step 5 (`resolve_declared_attack`). The window is the only moment there is
 /// anything to mark — §6.3 says so, "call off an attack already declared, before any damage" — so
 /// outside one this fizzles, which is also what keeps a trap that fires on some later dispatch of
-/// the same declaration from cancelling a combat that has already happened.
+/// the same declaration from canceling a combat that has already happened.
 ///
 /// R121: a forced attack opens no window and writes no `declaredAttack`, so this can never cancel
 /// one. That is the rule, not an omission (see `combat::force_attack`).
@@ -261,7 +261,7 @@ pub struct CancelAttackArgs {
 /// the cancel: an ordinary §6.3 destroy of the unit the declaration names, on the stay it declared
 /// from (R174), so an Indestructible attacker is knocked down at the next check (R46) and a Reborn
 /// one comes back. Tied to the cancel, it happens only where the cancel does — inside the window, on
-/// an attack not yet cancelled — so a My Pawn fused onto a My Pawn, whose second half runs once the
+/// an attack not yet canceled — so a My Pawn fused onto a My Pawn, whose second half runs once the
 /// first has played the turn out and the window has closed (R102), destroys nothing a second time.
 pub fn cancel_attack(args: CancelAttackArgs) -> Effect {
     Effect::new("cancelAttack", move |ctx| {
@@ -313,7 +313,7 @@ pub struct RedirectAttackArgs {
 /// `targeting_point.rs`'s; this is the same verb for attacks, setting `declared_attack.target_id`
 /// inside the window the way `cancel_attack` marks it.
 ///
-/// On an open, uncancelled declaration only: outside a window, or on one already cancelled, this
+/// On an open, uncanceled declaration only: outside a window, or on one already canceled, this
 /// fizzles, which is also what keeps a trap that fires on some later dispatch of the same
 /// declaration from re-aiming a combat that has already happened.
 pub fn redirect_attack(args: RedirectAttackArgs) -> Effect {

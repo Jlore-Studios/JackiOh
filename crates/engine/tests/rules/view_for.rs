@@ -1,6 +1,6 @@
 //! `viewFor(state, playerId)` — the one window a player has onto a match (SPEC §10.8, BUILD M3-T6).
 //!
-//! The centrepiece is the hidden-information proof: a board where p2 holds a full hand, a full
+//! The centerpiece is the hidden-information proof: a board where p2 holds a full hand, a full
 //! library and face-down traps, serialized for p1, must name none of it. The forbidden list is
 //! derived from the state itself, so the proof cannot quietly stop proving when fixtures change.
 //!
@@ -166,7 +166,7 @@ fn run(state: &mut GameState, effect: &Effect, options: HookOptions) {
 }
 
 fn serialized(view: &PlayerView) -> String {
-    serde_json::to_string(view).expect("a view serialises")
+    serde_json::to_string(view).expect("a view serializes")
 }
 
 fn quoted(id: &str) -> String {
@@ -180,7 +180,7 @@ fn expect_match(actual: &Value, expected: Value) {
     );
 }
 
-/// The keys of a serialised object (an absent field is an absent key).
+/// The keys of a serialized object (an absent field is an absent key).
 fn keys_of(value: &Value) -> Vec<String> {
     value
         .as_object()
@@ -989,7 +989,7 @@ mod view_for_10_8_m3_t6 {
         );
     }
 
-    /// `drawnFor`: the one `drawn` naming `player` in `viewer`'s events, serialised.
+    /// `drawnFor`: the one `drawn` naming `player` in `viewer`'s events, serialized.
     fn drawn_for(state: &GameState, viewer: PlayerId, player: PlayerId) -> Value {
         let events = view_for(state, viewer).events;
         // Redacted, not truncated: both draws are still in the stream for both viewers.

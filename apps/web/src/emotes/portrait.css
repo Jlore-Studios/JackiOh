@@ -1,7 +1,7 @@
 /* The hero portraits' vivid art, their reaction and the hero's inspect view (issue #544, R1330–R1332).
 
    `.portrait-art` is `PortraitArt.tsx`'s oval: the `CardArt` oval under a ground of the portrait's
-   own, a light that breathes, a few drifting motes and a rim light. The colours are inline custom
+   own, a light that breathes, a few drifting motes and a rim light. The colors are inline custom
    properties from `portraitLook.ts`; the idle's timings are `config.ts`'s. Reduce Motion stills the
    idle and the reaction, by the media query and by the app's `data-reduce-motion` root flag, as
    emotes.css does for the emotes. */

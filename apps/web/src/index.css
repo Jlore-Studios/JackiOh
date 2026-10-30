@@ -295,14 +295,14 @@ h3,
   gap: 12px;
 }
 
-/* An auth screen is one column, centred, and should not drift to the left edge of a wide page. */
+/* An auth screen is one column, centered, and should not drift to the left edge of a wide page. */
 .panel--auth {
   max-width: 400px;
   width: 100%;
   margin: 4vh auto 0;
 }
 
-/* An even brass hairline all round, the tavern's frame, not a coloured stripe down one side. */
+/* An even brass hairline all round, the tavern's frame, not a colored stripe down one side. */
 .notice {
   border: 1px solid var(--line-bright);
   background: var(--bg-raised);
@@ -434,7 +434,7 @@ h3,
 }
 
 /* The hit area (#2122, R2122000): on a phone or under a finger, a control shorter than --hit-min
-   takes a tap across --hit-min each way round its centre through a transparent ::before, so nothing
+   takes a tap across --hit-min each way round its center through a transparent ::before, so nothing
    in the layout moves: top and bottom reach out by half the shortfall, and left and right by half
    what the width falls short, if it does. A control as tall as --hit-min gets no band from here: top
    and bottom meet at 50%, the clamp's middle term (the shortfall times a thousand) choosing, since a
@@ -578,7 +578,7 @@ h3,
 }
 
 /*
- * The value wears a TEXT token, not an accent: nothing here encodes a series, so a coloured
+ * The value wears a TEXT token, not an accent: nothing here encodes a series, so a colored
  * number would imply a meaning it does not have. Proportional figures on purpose — `tabular-nums`
  * gives every digit the width of a `0`, which reads loose on a large standalone number; it is for
  * columns that must align, which these tiles are not.

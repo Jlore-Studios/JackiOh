@@ -63,14 +63,14 @@ describe("R702 the crowd answers a landing through #57's quiet period, and stays
     const engine = createAudioEngine({ createContext: factory.create });
     engines.push(engine);
     engine.unlock();
-    const scheduled: { ms: number; run: () => void; cancelled: boolean }[] = [];
+    const scheduled: { ms: number; run: () => void; canceled: boolean }[] = [];
     const crowd = createCrowdDirector({
       engine,
       later: (ms, run) => {
-        const task = { ms, run, cancelled: false };
+        const task = { ms, run, canceled: false };
         scheduled.push(task);
         return () => {
-          task.cancelled = true;
+          task.canceled = true;
         };
       },
     });
@@ -85,7 +85,7 @@ describe("R702 the crowd answers a landing through #57's quiet period, and stays
     crowd.observeSlam("large");
     crowd.observeSlam("massive");
     crowd.observeSlam("huge");
-    const due = scheduled.filter((task) => task.ms === CROWD_FEEL.reactionDebounceMs && !task.cancelled);
+    const due = scheduled.filter((task) => task.ms === CROWD_FEEL.reactionDebounceMs && !task.canceled);
     expect(due).toHaveLength(1);
     const before = scheduled.length;
     due[0]?.run();
@@ -98,6 +98,6 @@ describe("R702 the crowd answers a landing through #57's quiet period, and stays
     const { crowd, scheduled } = setup();
     crowd.observeDamage(25);
     crowd.observeSlam("large");
-    expect(scheduled.filter((task) => task.ms === CROWD_FEEL.reactionDebounceMs && !task.cancelled)).toHaveLength(1);
+    expect(scheduled.filter((task) => task.ms === CROWD_FEEL.reactionDebounceMs && !task.canceled)).toHaveLength(1);
   });
 });

@@ -64,7 +64,7 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
     label: "End turn automatically",
     hint: "Ends the turn by itself when there is nothing left to play or attack with. Off: press End turn yourself.",
   },
-  // One switch controls both hover behaviours.
+  // One switch controls both hover behaviors.
   hoverPreviews: {
     label: "Hover previews",
     hint: "Lift a card in your hand, and show any card enlarged, when the mouse rests on it.",

@@ -25,7 +25,7 @@ pub fn script() -> CardScripts {
 
 // T-rush Rush Token (SPEC §7; R11, R74; §3.2, §5.1, §10.4). BUILD M4-T4's token row: "Vanish on
 // leaving the field; … none in random pools". The radiant face is data only (R275: double the
-// stats, plus Cleave), so each face proves the shared behaviour and the radiant one adds Cleave.
+// stats, plus Cleave), so each face proves the shared behavior and the radiant one adds Cleave.
 // R11 has two halves, each its own case: a unit token leaving the FIELD, and a unit-token CARD
 // leaving a hand or library other than by being drawn or played (#75 Infinite Reserves).
 #[cfg(test)]

@@ -277,7 +277,7 @@ fn equip_actions(state: &GameState, instance_id: &str) -> Vec<Value> {
     legal_actions(state, PlayerId::P1)
         .iter()
         .filter_map(|action| {
-            let value = serde_json::to_value(action).expect("an action serialises");
+            let value = serde_json::to_value(action).expect("an action serializes");
             (value.get("instanceId").and_then(|id| id.as_str()) == Some(instance_id)
                 && value.get("equip").and_then(|flag| flag.as_bool()) == Some(true))
             .then(|| value.clone())
@@ -469,7 +469,7 @@ fn r1086_stack_and_equip_are_two_plays() {
     // The occupied zone is offered both ways: plain (Stack) and Equip.
     let actions = legal_actions(&state, PlayerId::P1);
     let plain = actions.iter().any(|action| {
-        let value = serde_json::to_value(action).expect("an action serialises");
+        let value = serde_json::to_value(action).expect("an action serializes");
         value.get("instanceId").and_then(|id| id.as_str()) == Some(both.id.as_str())
             && value
                 .get("zone")

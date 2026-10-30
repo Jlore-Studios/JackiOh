@@ -1,6 +1,6 @@
 // A line an inspect overlay prints over the face it shows, in words the caller took from the view
 // (R371: your own face-down trap's "Face down — your opponent can't see this card"). It sits on
-// the face's top edge with the struck-through eye, so the mark does not rest on colour alone.
+// the face's top edge with the struck-through eye, so the mark does not rest on color alone.
 
 import type { ReactElement } from "react";
 import { Icon } from "../icons.tsx";

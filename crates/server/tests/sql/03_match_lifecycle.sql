@@ -1115,7 +1115,7 @@ end $$;
 --
 -- NOT PROVED HERE, and deliberately so: R107 (the constant-time response
 -- floor), R108 (sweeper and reaper cadence) and R109 (action-flooding limits)
--- are `apps/server/src/config.ts` values with no database behaviour to assert.
+-- are `apps/server/src/config.ts` values with no database behavior to assert.
 -- They are proved at the server level by BUILD M6-T1 (the 5 ms timing test),
 -- M7-T1 and M7-T3. Those three ids appear in this comment as exclusions, never
 -- as headings, so nothing below claims them.

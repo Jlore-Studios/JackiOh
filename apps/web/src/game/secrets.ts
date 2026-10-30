@@ -15,7 +15,7 @@ export const SECRET_WORDS: Record<SecretChoice, string> = {
 
 /** What a prediction's outcome means for the reward and the penalty. */
 export const PREDICTED_WORDS: Record<PredictOutcome, string> = {
-  won: "the reward is cancelled",
+  won: "the reward is canceled",
   same: "the same, nothing happens",
   lost: "the penalty lands",
 };

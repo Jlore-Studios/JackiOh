@@ -193,7 +193,7 @@ function renderPanel(ranked = true) {
 }
 
 describe("RematchButtons in the result panel (#477)", () => {
-  it("is the panel's first way on, its two offers plain buttons for the panel to size and colour", async () => {
+  it("is the panel's first way on, its two offers plain buttons for the panel to size and color", async () => {
     renderPanel();
     const offer = await screen.findByTestId(rematchTestid.offer);
     const double = screen.getByTestId(rematchTestid.double);

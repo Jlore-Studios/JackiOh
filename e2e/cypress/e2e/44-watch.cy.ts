@@ -8,7 +8,7 @@
 // good code for it, which leaves nothing for a spec after this one: only spec 10 reads that account
 // and it reseeds first.
 //
-// What it asserts, by behaviour (every frame read is one the watch screen's own socket received;
+// What it asserts, by behavior (every frame read is one the watch screen's own socket received;
 // an account is one watcher and a newer socket replaces the older, so the spec opens none itself):
 // - B56: a friend's row in a live unranked match offers Watch, and the click opens `/watch/:matchId`
 //   with the friend in the query;

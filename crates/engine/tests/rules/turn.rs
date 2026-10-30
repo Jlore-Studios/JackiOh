@@ -27,7 +27,7 @@ fn says(error: &Option<String>, text: &str) -> bool {
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .into_iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises")[field].clone())
+        .map(|event| serde_json::to_value(event).expect("an event serializes")[field].clone())
         .collect()
 }
 
@@ -63,7 +63,7 @@ fn end_turns(state: &GameState, count: i32) -> GameState {
 }
 
 fn kind_of(modifier: &PlayerModifier) -> Value {
-    serde_json::to_value(modifier).expect("a modifier serialises")["kind"].clone()
+    serde_json::to_value(modifier).expect("a modifier serializes")["kind"].clone()
 }
 
 mod turn_loop_and_mana_m1_t6 {

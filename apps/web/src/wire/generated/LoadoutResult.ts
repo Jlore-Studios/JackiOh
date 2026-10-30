@@ -3,6 +3,6 @@ import type { LoadoutError } from "./LoadoutError";
 
 /**
  * TS `{ ok: true } | { ok: false; errors: readonly LoadoutError[] }`: `ok` with no `errors` key,
- * or not `ok` with at least one error. Serialised exactly so.
+ * or not `ok` with at least one error. Serialized exactly so.
  */
 export type LoadoutResult = { ok: boolean, errors?: Array<LoadoutError>, };

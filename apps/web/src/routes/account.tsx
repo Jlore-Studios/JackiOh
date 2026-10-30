@@ -250,23 +250,23 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
 
   useEffect(() => {
     if (pending) return;
-    let cancelled = false;
+    let canceled = false;
     getProfile(token)
       .then((next) => {
-        if (!cancelled) setProfile(next);
+        if (!canceled) setProfile(next);
       })
       .catch((cause: unknown) => {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+        if (!canceled) setError(cause instanceof Error ? cause.message : String(cause));
       });
     // R612: the visible rank, read beside the record. A failure here never hides the record:
     // the screen shows what it has and says nothing about the rest.
     getOwnRank(token)
       .then((next) => {
-        if (!cancelled) setRank(next);
+        if (!canceled) setRank(next);
       })
       .catch(() => undefined);
     return () => {
-      cancelled = true;
+      canceled = true;
     };
     // The name too: a rename read back by the gate shows on the rank line at once (R1436).
   }, [token, pending, username?.name, attempt]);
@@ -337,7 +337,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                     {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
                     <StreakFlame streak={rank.streak} size="large" />
                   </p>
-                  {/* R2255000: the season's ranked record, labelled apart from the all-time Record below; none at 0 games. */}
+                  {/* R2255000: the season's ranked record, labeled apart from the all-time Record below; none at 0 games. */}
                   {rank.record.games > 0 ? (
                     <p data-testid={accountTestid.seasonRecord}>
                       {t("This season (ranked): {wins}–{losses}–{draws}", {

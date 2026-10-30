@@ -102,7 +102,7 @@ const PAINTED_SHARE_MIN = 0.25;
 /**
  * The points of the viewer's half of the board where the pointer meets the board itself: the gaps
  * between its regions, where the board's own surface shows. The backdrop takes no pointer, so it is
- * never what `elementFromPoint` returns; whatever colour a screenshot has there is either the
+ * never what `elementFromPoint` returns; whatever color a screenshot has there is either the
  * board's surface or the backdrop drawn over it.
  */
 function barePoints(doc: Document): Point[] {
@@ -148,7 +148,7 @@ function pixelAt(shot: Shot, { x, y }: Point): [number, number, number] {
   return [shot.data[at] ?? -1, shot.data[at + 1] ?? -1, shot.data[at + 2] ?? -1];
 }
 
-/** The share of the `points` both screenshots hold whose colour differs between them. */
+/** The share of the `points` both screenshots hold whose color differs between them. */
 function changedShare(before: Shot, after: Shot, points: readonly Point[]): number {
   const shown = points.filter(({ x, y }) => Math.round(x * before.scale) < before.width && Math.round(y * before.scale) < before.height);
   expect(shown.length, "the screenshot holds the board's surface in the viewer's half").to.be.greaterThan(20);
@@ -245,7 +245,7 @@ describe("R1297000 the backdrops", () => {
         expect(getComputedStyle(backdrop).backgroundImage, "its tint").to.not.equal("none");
         expect(running(backdrop), "its particles move").to.equal(true);
 
-        // It sits behind the board and lets every pointer through: the point at its centre is not its own.
+        // It sits behind the board and lets every pointer through: the point at its center is not its own.
         const box = backdrop.getBoundingClientRect();
         expect(box.width, "it has a size").to.be.greaterThan(0);
         expect(box.height, "it has a size").to.be.greaterThan(0);

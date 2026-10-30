@@ -2,7 +2,7 @@
 //
 // A press on an open picker's option (`prompt-option-<key>`) that travels DRAG_THRESHOLD_PX lifts it:
 // a ghost with its name follows the pointer. Released outside the picker's panel the option is
-// clicked, so the drop does exactly what a click does; released over the panel, or cancelled
+// clicked, so the drop does exactly what a click does; released over the panel, or canceled
 // (Escape, the context menu, a lost pointer), it does nothing. Nothing here reads a rule or an
 // option's meaning (CLAUDE.md rule 7): what the click does is Prompt.tsx's.
 //

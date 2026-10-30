@@ -20,7 +20,7 @@ use crate::state::{CardInstance, GameState};
 use crate::wire::{CardType, Enchantment, Keyword, Tag, Tuning, keyword_key};
 
 /// TS `Pick<CardView, "type" | "brittle" | "params" | "tuning" | "enchantments">`: the instance-data
-/// keys of a card view, each `None` when it has nothing to say. Serialises as those keys of
+/// keys of a card view, each `None` when it has nothing to say. Serializes as those keys of
 /// `CardView` do.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]

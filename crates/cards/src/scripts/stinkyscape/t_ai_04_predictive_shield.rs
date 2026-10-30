@@ -66,7 +66,7 @@ pub fn script() -> CardScripts {
 }
 
 // S T-AI-4 Predictive Shield — SPEC §8.10 row T-AI-4, BUILD M12 row S T-AI-4: "an enemy Unit's declared
-// attack on one of your Units is cancelled and the attacker Frozen, so it cannot attack on its next turn
+// attack on one of your Units is canceled and the attacker Frozen, so it cannot attack on its next turn
 // either; an attack on your hero leaves it set; radiant an attack on your hero springs it too".
 #[cfg(test)]
 mod tests {
@@ -104,16 +104,16 @@ mod tests {
         s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. }))
     }
 
-    fn cancelled(s: &Scenario) -> bool {
+    fn canceled(s: &Scenario) -> bool {
         s.events().iter().any(|event| matches!(event, GameEvent::AttackCancelled { .. }))
     }
 
     #[test]
-    fn r44_an_attack_on_one_of_your_units_is_cancelled_and_the_attacker_frozen() {
+    fn r44_an_attack_on_one_of_your_units_is_canceled_and_the_attacker_frozen() {
         let mut s = set(false);
         s.attack(ATTACKER, VANILLA);
         assert!(fired(&s));
-        assert!(cancelled(&s));
+        assert!(canceled(&s));
         s.expect_stats(VANILLA, json!({ "health": 7 }));
         s.expect_stats(ATTACKER, json!({ "health": 4 }));
         assert!(s.card(ATTACKER).frozen.is_some(), "the attacker is Frozen");
@@ -149,7 +149,7 @@ mod tests {
         let mut s = set(true);
         s.attack(ATTACKER, "hero");
         assert!(fired(&s));
-        assert!(cancelled(&s));
+        assert!(canceled(&s));
         s.expect_health("p1", 30);
         assert!(s.card(ATTACKER).frozen.is_some());
     }
@@ -191,7 +191,7 @@ mod tests {
             "the forced attack happened"
         );
         assert!(!fired(&s));
-        assert!(!cancelled(&s));
+        assert!(!canceled(&s));
         assert!(s.card(ATTACKER).frozen.is_none());
         s.expect_in_zone(SHIELD, "field");
     }

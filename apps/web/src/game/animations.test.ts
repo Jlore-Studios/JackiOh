@@ -294,7 +294,7 @@ function longStream(rounds: number): GameEvent[] {
 }
 
 /**
- * The stylesheet as text. The BUILD table's Animation column is only honoured if the keyframes
+ * The stylesheet as text. The BUILD table's Animation column is only honored if the keyframes
  * exist, so the test reads the file rather than trusting the table. Vitest stubs CSS imports
  * (`test.css` defaults to false, and `?raw` comes back empty), hence `node:fs`.
  */

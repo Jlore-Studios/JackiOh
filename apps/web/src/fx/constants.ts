@@ -19,7 +19,7 @@ export const FX_FUSE_FLIGHT_FRACTION = 0.5;
 export const FX_SLAM_AT = 0.6;
 export const FX_HOLD_MAX_MS = 6000;           // a stage effect's safety cap; it normally ends when the board shows the next view (R200)
 export const FX_CONCEAL_AT = 0.9;             // an "after" conceal is set at 0.9 D, while the card's own motion still runs
-export const FX_LUNGE_STANDOFF = 0.55;        // the lunge stops this many combined half-extents short of the target's centre (< 1: they overlap)
+export const FX_LUNGE_STANDOFF = 0.55;        // the lunge stops this many combined half-extents short of the target's center (< 1: they overlap)
 export const FX_LUNGE_MIN_PX = 26;            // = animations.css --lunge-distance (BUILD: at least 20 px)
 export const FX_LUNGE_MAX_PX = 520;
 export const FX_LUNGE_CONTACT_AT = 0.7;       // the contact beat inside attackDeclared (jk-lunge's 70% keyframe)
@@ -170,7 +170,7 @@ export const FX_SUMMON_FLAVOR_TUNING = {
 } as const;
 // #1446: a face-up death's flavor exit, on the death's beats (FX_DEATH_EMBER_AT, FX_DEATH_SMOKE_AT).
 // A Beast's streak to its graveyard flies this fraction of the entry; Hustle's bills and Clout's
-// lights-out take these colours (hot first). Every count is at least 8, as the summon's (rule 9).
+// lights-out take these colors (hot first). Every count is at least 8, as the summon's (rule 9).
 export const FX_DEATH_BOLT_FLIGHT_FRACTION = 0.5;
 export const FX_DEATH_BILL_COLORS = ["#e9f7d9", "#3fae5a", "#1f6b35"] as const;
 export const FX_DEATH_LIGHTS_OUT_COLORS = ["#4a4a57", "#26262e", "#0b0b0f"] as const;

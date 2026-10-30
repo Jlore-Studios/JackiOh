@@ -1,7 +1,7 @@
-//! R171 and R172 at the verb level (SPEC §4.1, §11; docs/polish/4-edge-cases.md behaviours 7, 8 and
+//! R171 and R172 at the verb level (SPEC §4.1, §11; docs/polish/4-edge-cases.md behaviors 7, 8 and
 //! 10 to 14). A change of control on the field is an entry: the card takes the current turn as its
 //! `summonedTurn` and a fresh exertion, on every path that changes control — Steal, Steal all, the
-//! board swap and a rotation across the centre line — and on nothing else. R172 is the other half:
+//! board swap and a rotation across the center line — and on nothing else. R172 is the other half:
 //! a stolen unit dies as its controller's.
 //!
 //! Engine fixtures only (the engine never depends on `crates/cards`); `control_change_property.rs`
@@ -9,7 +9,7 @@
 //!
 //! Every game is past both mulligans, in p1's main phase, so `legal_actions` and `reduce` answer as
 //! in a match. Verbs go straight through `effect.apply` with the actor as the context's controller,
-//! which is also how an effect on the opponent's turn is written (behaviour 12).
+//! which is also how an effect on the opponent's turn is written (behavior 12).
 
 use std::collections::BTreeSet;
 
@@ -412,7 +412,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_a_rotation_marks_the_cards_that_cross_the_centre_line_and_nothing_that_moves_along_its_own_side()
+    fn r171_a_rotation_marks_the_cards_that_cross_the_center_line_and_nothing_that_moves_along_its_own_side()
     {
         let mut state = playing("cc-rotate");
         let turn = state.turn;
@@ -652,7 +652,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         }
 
         assert_eq!(
-            serde_json::to_value(events_of_type(&events, GameEventType::AttackDeclared)).expect("serialises"),
+            serde_json::to_value(events_of_type(&events, GameEventType::AttackDeclared)).expect("serializes"),
             json!([{ "type": "attackDeclared", "attackerId": victim.id, "targetId": target.id, "forced": true }])
         );
         let victim = live(&state, &victim);

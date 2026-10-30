@@ -321,7 +321,7 @@ function counting(): World {
 const DUE = at("2026-10-05T15:00:00Z");
 
 describe("the countdown issue", () => {
-  it("opens one, labelled, saying how many hours are left, and merges nothing yet", () => {
+  it("opens one, labeled, saying how many hours are left, and merges nothing yet", () => {
     const w = world();
     const before = production(w);
     ok(run(w, "schedule", "2026-10-04T16:00:00Z"));
@@ -382,7 +382,7 @@ describe("the countdown issue", () => {
   });
 
   it("stays due, rather than close as nothing to merge, while main is ahead but not green yet", () => {
-    // 2026-10-04: every push to main cancelled the CI run before it, the newest green commit was the
+    // 2026-10-04: every push to main canceled the CI run before it, the newest green commit was the
     // one production had, and /fast-forward closed the countdown with nothing merged.
     const w = counting();
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));

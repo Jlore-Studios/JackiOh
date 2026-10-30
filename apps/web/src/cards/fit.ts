@@ -215,7 +215,7 @@ type Job = {
   /** The last read's answer, passed to the next step. */
   reading: unknown;
   onDone: ((box: string) => void) | undefined;
-  cancelled: boolean;
+  canceled: boolean;
 };
 
 const queue = new Set<Job>();
@@ -267,7 +267,7 @@ export function flushFits(): void {
   while (live.length > 0) {
     const reading: Array<[Job, Probe]> = [];
     for (const job of live) {
-      if (job.cancelled) continue;
+      if (job.canceled) continue;
       try {
         const step = job.steps.next(job.reading);
         if (step.done === true) job.onDone?.(step.value);
@@ -292,12 +292,12 @@ export function flushFits(): void {
 
 /** Queues a fitting pass before paint; returns its cancellation function. */
 export function scheduleFit(element: HTMLElement, options: FitOptions, onDone?: (box: string) => void): () => void {
-  const job: Job = { element, steps: fitThenMeasure(element, options), reading: undefined, onDone, cancelled: false };
+  const job: Job = { element, steps: fitThenMeasure(element, options), reading: undefined, onDone, canceled: false };
   queue.add(job);
   listen();
   queueFlush();
   return () => {
-    job.cancelled = true;
+    job.canceled = true;
     queue.delete(job);
     parked.delete(job);
   };

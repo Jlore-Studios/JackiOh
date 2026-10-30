@@ -14,7 +14,7 @@
 //! it at the next state check, where R46 lets an Indestructible unit ignore the mark. Both destroys
 //! are in one effect list, so the target and its neighbours die together (R59).
 //!
-//! §3.1: "Adjacent means index N-1 and N+1 on the same side and same row", never across the centre
+//! §3.1: "Adjacent means index N-1 and N+1 on the same side and same row", never across the center
 //! line. The target is picked with the play (R81), so it arrives in `ctx.targets` as
 //! `{ of: "chosen" }`. `destroy_adjacent_to` (engine/src/effects/destroy.rs) only marks, like
 //! `destroy`, and fizzles silently when the target is off the field or has no neighbour.
@@ -161,7 +161,7 @@ mod tests {
         }
 
         #[test]
-        fn s3_1_never_reaches_across_the_centre_line() {
+        fn s3_1_never_reaches_across_the_center_line() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["traininggrounds-046"], "field": ["core-011", "core-025", "core-012"], "mana": 4 },

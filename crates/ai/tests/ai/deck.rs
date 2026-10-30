@@ -72,7 +72,7 @@ fn per_bucket(record: Value) -> IndexMap<String, f64> {
 }
 
 fn targets_of(size: i32, mana_cap: i32) -> Value {
-    serde_json::to_value(curve_targets(size, mana_cap)).expect("curve_targets serialises")
+    serde_json::to_value(curve_targets(size, mana_cap)).expect("curve_targets serializes")
 }
 
 /// Mean share per bucket over a set of decks.
@@ -251,7 +251,7 @@ mod build_ai_deck_b22 {
     }
 
     #[test]
-    fn b22_an_explicit_ban_list_is_honoured_instead_of_the_default() {
+    fn b22_an_explicit_ban_list_is_honored_instead_of_the_default() {
         let banned: Vec<String> = ai_pool().into_iter().take(15).collect();
         for (at, deck) in decks(30, &options(json!({ "banned": banned })), "banned")
             .iter()
@@ -376,7 +376,7 @@ mod the_curve_and_the_theme_b23 {
 
     #[test]
     fn b23_curve_targets_are_whole_numbers_summing_to_the_deck_size_each_within_one_card_of_its_share() {
-        let curve = per_bucket(serde_json::to_value(AI_DECK.curve).expect("AI_DECK.curve serialises"));
+        let curve = per_bucket(serde_json::to_value(AI_DECK.curve).expect("AI_DECK.curve serializes"));
         for size in SIZES {
             for mana_cap in [MAX_MANA, 5, 7] {
                 let targets = targets_of(size, mana_cap);

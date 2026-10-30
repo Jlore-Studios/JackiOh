@@ -1,5 +1,5 @@
 /* The board's motion vocabulary (#2110), checked by src/motion.test.ts (MOTION_DURATIONS,
-   MOTION_CURVES). instant: a press, a pointer-following ghost; fast: a hover, a colour, a scrim;
+   MOTION_CURVES). instant: a press, a pointer-following ghost; fast: a hover, a color, a scrim;
    base: a lift, a tick, a deal; slow: a reveal, a settling pop, a toast leaving (fast, base and
    slow are BUILD M5-T4's own figures). standard: a change between two rests; out: arriving; in:
    leaving; in-out: back and forth; overshoot: a pop past its mark. A @keyframes stop cannot read

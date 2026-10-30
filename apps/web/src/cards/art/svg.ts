@@ -31,18 +31,18 @@ const ART_CACHE_MAX = 512;
 
 /** The accent glyph is quieter than the emblem. */
 export const ACCENT_OPACITY = 0.8;
-/** An ink-drop mote (Book): its tail rises this many radii above its centre. */
+/** An ink-drop mote (Book): its tail rises this many radii above its center. */
 export const DROP_TAIL = 2.2;
 
 /** One glyph from EMBLEMS, placed, turned and scaled into the box. */
 function glyphMarkup(placed: NonNullable<ArtSpec["accent"]>, opacity: number): string {
   const glyph = EMBLEMS[placed.glyph];
   const scale = placed.size / EMBLEM_BOX;
-  const centre = EMBLEM_BOX / 2;
+  const center = EMBLEM_BOX / 2;
   const fade = opacity === 1 ? "" : ` opacity="${fmt(opacity)}"`;
   return (
     `<g transform="translate(${fmt(placed.x)} ${fmt(placed.y)}) rotate(${fmt(placed.rotate)}) ` +
-    `scale(${fmt(scale)}) translate(-${centre} -${centre})"${fade}>` +
+    `scale(${fmt(scale)}) translate(-${center} -${center})"${fade}>` +
     `<path d="${glyph.d}" fill="${placed.fill}" stroke="${placed.stroke}" stroke-width="${EMBLEM_STROKE_WIDTH}" ` +
     `stroke-linejoin="round" fill-rule="${glyph.rule}"/></g>`
   );
