@@ -68,7 +68,8 @@ jackioh/
       tests/export_config.rs   writes apps/web/src/wire/engineConfig.ts
     cards/                     jackioh-cards
       catalog.json             632 cards + 139 tokens over Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape and Training Grounds (schema in M4-T1, M9-T1)
-      flavour.json             flavour lines and artist credits (R660)
+      card-text.yaml           every card's words but its rules, edited by hand (#2498): flavour, voice lines, Chinese, emotes
+      flavour.json             flavour lines and artist credits (R660), written from card-text.yaml
       patches/                 patches.json and one whole-catalog snapshot per card patch (M9-T2, R388); pending/ fragments (R646)
       build.rs                 the registry, generated from src/scripts/**; the compiled-in catalog version
       src/lib.rs               CATALOG, CATALOG_VERSION, card_def, register_all, REGISTRY
