@@ -14,9 +14,8 @@
 //! Without `PlayerState.duos` — every 1v1 game — each helper is exactly the arithmetic it replaced,
 //! so no 1v1 state, hash, golden trace or fuzz seed moves (B3).
 //!
-//! R2201000: a seat whose handicap sets `heroFloor` never reads below it after any write here. The
-//! damage pipeline and life loss already stop at the floor; this holds set health, the swap and
-//! anything else that writes, so no path takes a floored hero to 0.
+//! R2201000: a seat whose handicap sets `heroFloor` never reads below it after any write here (set
+//! health and the swap included, past the pipeline's own stop), so no path takes a floored hero to 0.
 
 use crate::state::{GameState, PlayerState};
 use crate::wire::PlayerId;

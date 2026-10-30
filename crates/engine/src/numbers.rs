@@ -138,8 +138,8 @@ pub fn current_stats(state: &GameState, card: &CardInstance) -> Option<AttackHea
 
 /// B3.4 rule 3's numbered keywords on the card, with their values now: Armor, Lucky and Spell Damage
 /// its running face prints (and no Degrade removed); its Brittle (the count in force, else the printed
-/// one); and the Echo, Activate and Tribute its text declares. A Vanilla card prints and declares none
-/// of them (§6.3), though a Brittle count it was given stays (B3.3 rule 5).
+/// one that has not started); and the Echo, Activate and Tribute its text declares. A Vanilla card
+/// prints and declares none of them (§6.3), though a Brittle count it was given stays (B3.3 rule 5).
 pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<NumberedKeyword> {
     let mut out: Vec<NumberedKeyword> = Vec::new();
     let add = |out: &mut Vec<NumberedKeyword>, key: NumberedKey, printed: i32, better: ParamBetter| {

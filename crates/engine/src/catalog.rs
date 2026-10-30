@@ -9,7 +9,7 @@
 //! R1329000: so does every compiled table the engine reads while it folds, or a ruling says why not;
 //! the code blocks (no final hash holds them) and code lines (no card reads a count) stay the build's.
 //! R2173000 (R1846003's obligation): the BUSTED and complicated lists (R1846000) answer from the shipped
-//! catalog when its version kept lists of its own, else from the build's.
+//! catalog when its version kept lists of its own, else from the build's, which no game on it could read.
 
 use std::cell::Cell;
 use std::cmp::Ordering;

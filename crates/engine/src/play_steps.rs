@@ -126,6 +126,7 @@ pub enum PlayStepName {
     Pay,
     GiftedHook,
     // R70, R452: a cast's choices, once step 3 settled their face (R214), so the announce (E1) names them.
+    // A play made its choices at step 1, and this step does nothing for it.
     CastChoices,
     Announce,
     Place,

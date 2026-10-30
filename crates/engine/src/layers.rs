@@ -98,7 +98,7 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
 
 /// R2280000: whether the card has a stat line its definition gives it: its own printed one or a fused
 /// definition's (R77, R102), a summon's `statsOverride` or X stats. Buffs, auras and `tuning` never
-/// make one.
+/// make one, and a Field Spell, Trap or Field Trap animates only with one (`animated::animated_with_stats`).
 pub fn has_stat_line(state: &GameState, instance: &CardInstance) -> bool {
     let def = def_of(Some(state), &instance.def_id);
     let face = if instance.radiant { &def.radiant } else { &def.base };

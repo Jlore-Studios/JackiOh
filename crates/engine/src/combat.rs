@@ -183,7 +183,8 @@ pub fn is_asleep(state: &GameState, unit: &CardInstance, keywords: &[Keyword]) -
 
 /// R171: a card whose controller changes has entered its new controller's side on this turn (§4.1, for
 /// `is_sick`), with a fresh exertion. Every path that changes control on the field calls this as it
-/// emits `controlChanged`, for every card that changes sides (dormant and backrow cards included).
+/// emits `controlChanged`, for every card that changes sides (dormant and backrow cards included) and
+/// for nothing else: a card moving along its own side has not entered anything.
 ///
 /// A player modifier a permanent installed and still owns (#79 Twinspell, `sourceId`) is its lasting
 /// effect (§5.1) whose "you" is the controller (§8), so it follows the card from `from` to its new side.

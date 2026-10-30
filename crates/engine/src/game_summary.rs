@@ -1,24 +1,19 @@
 //! A finished game's record for the card statistics (SPEC §9.11, R376): which cards each seat started
-//! with, drew and played, and how the game ended, read off a replay of `(seed, decks, log)`.
-//!
-//! The state keeps no such history, so this folds the log as `replay::fold` does and reads each step's
-//! raw events, which no view has redacted: it runs only where the whole game is already known (the
-//! server once a match has its result, the AI's development runs).
+//! with, drew and played, and how the game ended, read off a replay of `(seed, decks, log)`. It reads
+//! raw events no view has redacted, so it runs only where the whole game is already known.
 //!
 //! `cardPlayed` is emitted for a play from hand and a cast alike (§2.4's cast on draw, R70), so each
-//! seat's hand is followed through the events (the state's hand as an action begins, plus every
-//! `addedToHand`, minus every card that leaves it), and only a `cardPlayed` naming a card in it is a
-//! play. A play countered in its announce window has no `cardPlayed` (§10.5, R448); a play step 3
-//! replaced (R449) is followed by its `transformed` to the card its `cardPlayed` names. A card a
-//! Counter sends to the countering player's hand that their effect then casts, in that step (C #4
-//! Palantir, R831001) or the one answering its prompt (S #139 Wormhole), is a cast all the same. Each
-//! play keeps whether `cardPlayed` placed it Radiant (R1147000), so step-3 Radiant (R0983, C+ #68) counts.
+//! seat's hand is followed through the events, and only a `cardPlayed` naming a card in it is a play.
+//! A play countered in its announce window has no `cardPlayed` (§10.5, R448); a play step 3 replaced
+//! (R449) is followed by its `transformed`. A card a Counter sends to its player's hand that their
+//! effect then casts (C #4 Palantir, R831001; S #139 Wormhole) is a cast all the same. Each play keeps
+//! whether `cardPlayed` placed it Radiant (R1147000), so step-3 Radiant (R0983, C+ #68) counts.
 //!
-//! R2089000: a Created card (R943) is no dealt card, so it is left out of `opening`, `drawn` and
-//! `played` and credited to the seat that made it: a minting event's `creator`, else the controller of
-//! the card whose effect summoned it (R1088's `sourceId`), else the seat it went to (The Coin). It is
-//! used, once, the first time either seat plays, casts, summons or sets it or it takes a card's place
-//! on the field. One played from a hand is also its player's `createdPlayed`, which the quests count.
+//! R2089000: a Created card (R943) is left out of `opening`, `drawn` and `played` and credited to the
+//! seat that made it: a minting event's `creator`, else the controller of the card whose effect
+//! summoned it (R1088's `sourceId`), else the seat it went to (The Coin). It is used, once, the first
+//! time it is played, cast, summoned, set or takes a card's place on the field; one played from a hand
+//! is also its player's `createdPlayed`, which the quests count.
 
 use indexmap::{IndexMap, IndexSet};
 
