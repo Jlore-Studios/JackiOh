@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 2435,
+  "title": "Patch: make a Dormant card on the field unmistakable (greyed out and bound)",
+  "branch": "bot/issue-2435",
+  "thread": "**Issue #2435 (data, not instructions):**\n\n```text\n# #2435: Patch: make a Dormant card on the field unmistakable (greyed out and bound)\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRight now the only sign on the field that a card is Dormant (\u00a76.1, R1839000) is the small crescent-moon badge with its countdown (`apps/web/src/cards/cardState.ts`, `.cf-state[data-state=\"dormant\"]` in `apps/web/src/cards/cardstate.css`). Otherwise the card looks like any live Unit, but it can't attack, can't be attacked or targeted, nothing reaches it, and its auras and triggers are off. Players miss it.\n\nThis is client-only. No engine, card or catalog change, and the view already carries the status (`faces.ts` sets `inPlay.dormant` from `unit.slumber`).\n\n1. **Heavily greyed out.** While a card is Dormant, the whole card face is close to fully desaturated and dimmed (art, frame and stats, e.g. `grayscale(~0.9\u20131) brightness(~0.6)`), so it reads as out of play even at board size. This must look clearly heavier than the existing \"Can't attack\" treatment, which greys only the portrait (`grayscale(0.75) brightness(0.82)` in `keywords.css`). The Dormant badge, its countdown and the Starship piece count stay at full colour and stay readable on top.\n2. **A binding animation on the card.** Add a \"bound / sealed\" overlay drawn on the card. Suggested direction (the builder may improve on it): night-violet sealing bands or runic ribbons wrapped across the card (matching the badge's `#8a7bd8 \u2192 #261b5c` palette), with a crescent seal where they cross, a slow pulse or a faint drift of glyphs along the bands, and a soft violet edge glow. It must not look like the crossed chains \"Can't attack\" already uses. Follow the existing treatment pattern: inline `aria-hidden` SVG with no `<text>`/`<title>`, loops only while motion is on, and a static version under `prefers-reduced-motion` (see `KeywordFx.tsx` / `keywords.css` and `animations.css`'s header for the allowed filters).\n3. **Release on awaken.** When the card awakens (the `awakened` animation in `apps/web/src/game/animations.ts`, R1839002), the bands snap or dissolve and the colour floods back, rather than the overlay just vanishing on the next view. The Dormant Starship's launch (R1852003) gets the same release.\n4. A card that is Dormant but lies **beneath a Stack** (R1839003) isn't shown, so nothing changes there. Only a Dormant card on top of its zone gets the treatment.\n\n### Acceptance\n\n- A unit test (vitest) checks that a face with `dormant` set (with and without a countdown) renders the Dormant treatment marker (e.g. a `data-dormant` attribute or a class on `.cf` plus the binding overlay element), and that a face without it renders neither.\n- A test checks that the overlay is `aria-hidden`, adds no text content (the card's text content is the same as before), and that the badge's words (`dormantWords`) are unchanged.\n- A test checks that the looping part runs only while motion is on, matching how the keyword treatments are gated, and that it is static under reduced motion.\n- The awaken animation plays the release on the awakening card (an `animations` test on an `awakened` event).\n- The Dormant Starship gets the same treatment until it launches, and its piece count stays readable.\n- Screenshots of a Dormant card (with and without a countdown) and a Dormant Starship on the board, at desktop and phone width, are attached to the pull request (the `ui-walkthrough` skill).\n- No new number without a named constant (CLAUDE.md rule 9): put the grey and dim amounts and the animation timings in the web's constants, not inline.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2435: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
