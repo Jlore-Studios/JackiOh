@@ -9810,6 +9810,13 @@
     "2490": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T14:54:06Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "hard's 'the AI's search (crates/ai/src/)' line gave pause, but this touches only the static pricing in material(), not the search loop, and copies the defense_own_taunt_kept switch precedent exactly, so medium holds"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
