@@ -1,0 +1,66 @@
+{
+  "action": "plan",
+  "number": 2500,
+  "title": "CI: daily super run failed",
+  "branch": "bot/issue-2500",
+  "thread": "**Issue #2500 (data, not instructions):**\n\n```text\n# #2500: CI: daily super run failed\nOpened by @github-actions[bot].\n\n[super run 41068815706](https://github.com/Jlore-Studios/JackiOh/actions/runs/41068815706) on `main` (`0e5ae82`, schedule) failed:\n\n| Job | Result |\n|---|---|\n| [fuzz (3/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41068815706/job/124111217944) | failure |\n| [e2e (6/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41068815706/job/124111999534) | failure |\n| [e2e (3/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41068815706/job/124111999599) | failure |\n| [e2e (5/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41068815706/job/124112000025) | failure |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nNight bot: this run is on `main`, so it is yours. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked `#[ignore = \"daily: \u2026\"]` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change `.github/`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2500: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "requeued #2477 from a dead run"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2502 skipped: it waits for #2501 to close first",
+    "#2503 skipped: it waits for #2501, #2502 to close first",
+    "#2504 skipped: it waits for #2501, #2502, #2503 to close first",
+    "#2505 skipped: it waits for #2501, #2502, #2503, #2504 to close first",
+    "#2506 skipped: it waits for #2501, #2502, #2503, #2504, #2505 to close first",
+    "#2507 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506 to close first",
+    "#2508 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507 to close first",
+    "#2509 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508 to close first",
+    "#2510 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2501, #2502, #2503, #2504, #2505, #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
