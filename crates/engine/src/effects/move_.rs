@@ -230,9 +230,7 @@ pub fn exile_adjacent_to(args: ExileAdjacentToArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Exile out of the off-field zones, by cost (§6.3, R26, R66, R135)
-// ---------------------------------------------------------------------------
 
 /// The three zones a card can be exiled out of by a sweep; the exile pile is where they go.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -549,9 +547,7 @@ pub fn exile_hand(args: ExileHandArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Counter (B5 E1, E2; R448)
-// ---------------------------------------------------------------------------
 
 /// Where a countered card goes: its owner's graveyard, exile when the text says so (Classic #10), or
 /// the hand of the player whose effect countered it, as their own (E2's steal off the stack: Classic

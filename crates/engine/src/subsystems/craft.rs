@@ -59,9 +59,7 @@ use crate::wire::{
 };
 use crate::zones::active_units_of;
 
-// ---------------------------------------------------------------------------
 // The id (R882)
-// ---------------------------------------------------------------------------
 
 /// A crafted definition's id: `craft:` plus the digest of the recipe's canonical JSON (R179,
 /// R468's form), so the id names the recipe and the def keeps the recipe itself (`CardDef.craft`),
@@ -71,9 +69,7 @@ pub fn craft_id(recipe: &CraftRecipe) -> String {
     format!("{CRAFT_ID_PREFIX}{FUSED_DIGEST_MARK}{}", fused_digest(&json))
 }
 
-// ---------------------------------------------------------------------------
 // The potion frame (R1182000, R1182001)
-// ---------------------------------------------------------------------------
 
 /// A frame's fixed cost: (1) for a Potion, (3) for a HUGE Potion.
 pub fn frame_cost(frame: CraftFrame) -> i32 {
@@ -108,9 +104,7 @@ fn frame_label(frame: CraftFrame) -> &'static str {
 const POTION_ABILITY: &str = "tribute";
 const POTION_ABILITY_LABEL: &str = "Tribute this";
 
-// ---------------------------------------------------------------------------
 // Prices (R883)
-// ---------------------------------------------------------------------------
 
 fn verb_price(verb: CraftVerb) -> &'static CraftVerbPrice {
     CRAFT_VERB_PRICES
@@ -178,9 +172,7 @@ pub fn recipe_loc(recipe: &CraftRecipe) -> i32 {
     loc
 }
 
-// ---------------------------------------------------------------------------
 // The validator (R880)
-// ---------------------------------------------------------------------------
 
 fn is_reveal_hat(hat: CraftHatKind) -> bool {
     matches!(
@@ -490,9 +482,7 @@ fn hat_label(hat: CraftHatKind) -> &'static str {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The definition compiler (R882)
-// ---------------------------------------------------------------------------
 
 /// The effects that declare numbers, in hat-then-effect order, with their `bK` keys: the one
 /// walk the definition and the scripts number params through, so `param` never misses a key.
@@ -762,9 +752,7 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The script compiler (R882)
-// ---------------------------------------------------------------------------
 
 /// One effect ready to compile: the block, its param key and its play-time target declaration.
 #[derive(Clone)]
@@ -1040,9 +1028,7 @@ pub fn compile_crafted_scripts(recipe: &CraftRecipe) -> CardScripts {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The presets (R881)
-// ---------------------------------------------------------------------------
 
 /// A 2-point Unit keyword for the Unit preset, drawn from the palette.
 const UNIT_PRESET_KEYWORDS: &[KeywordKind] = &[
@@ -1370,9 +1356,7 @@ pub fn whole_palette() -> CraftOffer {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The preview (R880)
-// ---------------------------------------------------------------------------
 
 /// The engine's own verdict on a recipe at the chosen cost: validity, one sentence per problem,
 /// the points and lines used against their budgets, and the card it would make. The editor shows

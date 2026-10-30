@@ -176,9 +176,7 @@ pub fn consume_plague(args: ConsumePlagueArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------
 // "Place N Plague Counters": N placements, each a prompt (R471, R113, R122).
-// ---------------------------------------------------------------------------
 
 /// The hook every placement prompt names, answered by `answer_placement` below (R122).
 pub const PLAGUE_PLACEMENT_HOOK: &str = "plague:placement";

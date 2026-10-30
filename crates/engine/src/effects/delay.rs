@@ -288,9 +288,7 @@ fn ends_other_players_turn(ctx: &EffectContext<'_>, at: &DelayAt) -> bool {
         && !is_turn_of(ctx.sink.state, ctx.controller)
 }
 
-// ---------------------------------------------------------------------------
 // ---- v0.2.0 verbs: activate and turn (B5 E27 delayed kinds, E28 rest of the game) ----
-// ---------------------------------------------------------------------------
 
 /// B5 E27: the delayed effects the engine itself resolves, by the `Resume.hook` they are stored under —
 /// a verb, not a card's step, so any card can say "destroyed at the start of your next turn" without a

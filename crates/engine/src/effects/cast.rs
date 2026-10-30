@@ -484,9 +484,7 @@ fn cast_random_with(args: CastRandomArgs, aim_at: Option<String>) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Price rules on a player (E15, E39, R455)
-// ---------------------------------------------------------------------------
 
 /// How long a price rule lasts: until the play it prices is made ("your next …"), this turn, through the
 /// named player's next turn (R48: "during their next turn", AI Alignment Tax), or for the rest of the

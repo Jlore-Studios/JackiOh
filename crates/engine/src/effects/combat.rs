@@ -468,9 +468,7 @@ fn settle_before_playout(ctx: &mut EffectContext<'_>) {
     panic!("the board before the AI turn did not settle in {SETTLE_PASS_CAP} passes (R283)");
 }
 
-// ---------------------------------------------------------------------------
 // B5 E35: forced attacks on "a random enemy" and on the unit's own hero
-// ---------------------------------------------------------------------------
 
 /// `forced_attack_random`'s arguments (TS's inline object). `among` is TS's `"enemies" | "enemyUnits"`,
 /// the type `combat::force_attacks_random` takes.

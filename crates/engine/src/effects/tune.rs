@@ -129,9 +129,7 @@ pub struct TuneArgs {
     pub times: Option<i32>,
 }
 
-// ---------------------------------------------------------------------------
 // The menu (B3.4 rule 3)
-// ---------------------------------------------------------------------------
 
 /// One applicable row: `apply` makes the change (drawing within the row as it must) and reports it.
 struct MenuRow {
@@ -750,9 +748,7 @@ pub fn applicable_changes(state: &GameState, card: &CardInstance, direction: Tun
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // One application, and the cards a verb reaches
-// ---------------------------------------------------------------------------
 
 /// B3.4 rule 1: one Degrade or Upgrade of one card — a row drawn among those that can change it, then
 /// the change. `matches` is false for a card of a hidden pile the scope's filters left out, which is
@@ -929,9 +925,7 @@ pub fn upgrade(args: TuneArgs) -> Effect {
     tune_effect("upgrade", TuneDirection::Upgrade, args)
 }
 
-// ---------------------------------------------------------------------------
 // KY's Constant: a number set outright (Classic+ #41)
-// ---------------------------------------------------------------------------
 
 /// Classic+ #41: set one number on a card to `value`. It is `tuning` (B3.4 rule 4), so it stays with
 /// the card: the cost by `costMod`, attack and health by the stats delta that makes them read `value`

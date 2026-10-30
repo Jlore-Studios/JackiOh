@@ -229,9 +229,7 @@ pub fn instance_by_id_or_spec(
     instance_of(ctx, target.unwrap_or(&TargetSpec::Chosen { index: None }))
 }
 
-// ---------------------------------------------------------------------------
 // Board scope: how a verb names cards nobody chose
-// ---------------------------------------------------------------------------
 
 /// `BoardScope["side"]`: sides, relative to `ctx.controller` (also `ZoneScope.side` and
 /// `CardScope.side`).

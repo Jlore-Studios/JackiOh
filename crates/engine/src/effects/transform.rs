@@ -370,9 +370,7 @@ pub fn vanilla(args: TransformTarget) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // Patch v0.2.0: the Transform variants (docs/classic-sets.md B5 E24; §6.3 Transform, R23, R35).
-// ---------------------------------------------------------------------------------------------
 
 /// Whether `def` could take `old`'s place: on the field only a definition of the same row, as R35
 /// keeps a board card's type (a Unit for a Unit); in a graveyard or exile never a unit token (R11).

@@ -150,9 +150,7 @@ pub fn mana_price(state: &GameState, card: &CardInstance, cost: ActivationCost) 
     cost.mana.unwrap_or(0).max(0)
 }
 
-// ---------------------------------------------------------------------------
 // The card and its abilities
-// ---------------------------------------------------------------------------
 
 /// B3.2 rule 2: the card acts on the field — it is the top of its pile (a card dormant under a Stack
 /// pile is not on the field for effects, R13, and the same holds under a backrow pile), and a backrow
@@ -290,9 +288,7 @@ fn hand_picks(targets: &[Selection]) -> Vec<String> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // Uses (B3.2 rules 1, 3, 7, 9)
-// ---------------------------------------------------------------------------
 
 /// R384, SPEC §6.2: where an instance counts its uses — `{ turn, count }` for the turn it names.
 pub const ACTIVATIONS_MEMORY_KEY: &str = "activations";
@@ -463,9 +459,7 @@ pub fn uses_record_after_refund(
     }))
 }
 
-// ---------------------------------------------------------------------------
 // The refusal, which is also the list (B3.2 rules 2, 4, 8)
-// ---------------------------------------------------------------------------
 
 /// B3.2 rule 4: the units a Tribute cost may take — the controller's acting units, the card too.
 fn tribute_units_for(
@@ -791,9 +785,7 @@ pub fn activate_actions_for(state: &GameState, player: PlayerId, card: &CardInst
     out
 }
 
-// ---------------------------------------------------------------------------
 // Activating (B3.2 rules 3, 4, 6)
-// ---------------------------------------------------------------------------
 
 /// R384, R78: a unit a Tribute cost took, as it stood before it died — Classic #21 Turtinator deals
 /// damage equal to its Attack "as it stood" (last-known information, as a Death hook reads, R89).
@@ -1156,9 +1148,7 @@ pub fn activate_ability(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // The view (§10.8)
-// ---------------------------------------------------------------------------
 
 /// R384: the card's abilities as a client needs them — on the controller's own view of a card
 /// acting on the field, and nowhere else (the other player reads the card's text; whether it could

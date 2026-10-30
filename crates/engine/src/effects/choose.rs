@@ -398,9 +398,7 @@ pub fn choose_from_hand(args: ChooseFromHandArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------
 // B5 E17, E18: the new prompt kinds (docs/classic-sets.md B5)
-// ---------------------------------------------------------------------------
 
 /// `choose_cost_in_hand`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]

@@ -728,9 +728,7 @@ pub fn power_by_name(name: &str) -> Option<&'static HeroPower> {
     HERO_POWERS.iter().find(|power| power.name.as_str() == name)
 }
 
-// ---------------------------------------------------------------------------
 // The power on the instance (R43).
-// ---------------------------------------------------------------------------
 
 /// The power this card rolled, or null for a card that has not rolled one yet.
 pub fn power_of(instance: &CardInstance) -> Option<&'static HeroPower> {

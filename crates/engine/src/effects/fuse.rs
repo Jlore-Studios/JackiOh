@@ -269,9 +269,7 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // Patch v0.2.0: the Fuse variants (docs/classic-sets.md B5 E23; R77, R102, R468–R470).
-// ---------------------------------------------------------------------------------------------
 
 /// B4.1, R387: a random pool never offers the card generating from it — nor, for a fused card, any of
 /// its ingredients (`catalog.selfDefIds`).
@@ -499,9 +497,7 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // The weapon kit: Equip from a pick (#1841, R1841002; SPEC §6.1 Equip).
-// ---------------------------------------------------------------------------------------------
 
 /// `equipPicks`' `pick`: how each card is picked.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]

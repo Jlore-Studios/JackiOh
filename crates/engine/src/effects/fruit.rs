@@ -28,9 +28,7 @@ use crate::zones::{OffFieldZone, move_to_zone, report_graveyard_landing};
 // still exported here, so `@jackioh/engine/effects` keeps one name for it.
 pub use crate::catalog::{roll_grape, roll_weighted};
 
-// ---------------------------------------------------------------------------------------------
 // Grapes (C+ #65, #66)
-// ---------------------------------------------------------------------------------------------
 
 /// §6.1: the Lucky X the card running the script has now — its running face's printed Lucky, as a
 /// Degrade or an Upgrade has moved it (B3.4's X change), plus any it was given (R1438), 0 without one.
@@ -164,9 +162,7 @@ fn add_rolled_from(
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // A hit on an enemy, a heal on a friend (C+ #65.2, #65.3)
-// ---------------------------------------------------------------------------------------------
 
 /// `damageEnemyOrHealFriend`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -212,9 +208,7 @@ pub fn damage_enemy_or_heal_friend(args: DamageEnemyOrHealFriendArgs) -> Effect 
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // A draw whose card takes a price (C+ #65.2, #65.3)
-// ---------------------------------------------------------------------------------------------
 
 /// R596: the card one draw put in a hand, by the `drawn` event that draw made: the first `drawn` of
 /// that player after `from` — a draw's own event comes before anything its card's cast draws (R58) —
@@ -346,9 +340,7 @@ fn fill_hand_with_copies(ctx: &mut EffectContext<'_>, player: PlayerId, source: 
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // A hand replaced card for card (C+ #65.5)
-// ---------------------------------------------------------------------------------------------
 
 /// `replaceHandWithRandom`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]

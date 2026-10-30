@@ -273,9 +273,7 @@ fn draw_value(def: &CardDef, face: &CardFace) -> f64 {
     value
 }
 
-// ---------------------------------------------------------------------------
 // The dry run (§10.7: "for each candidate, simulate a dry-run score")
-// ---------------------------------------------------------------------------
 
 /// What playing a candidate now did, read off a copy of the state it was played in.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
