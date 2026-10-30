@@ -1,4 +1,4 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviours B35, B36 and B37: the pre-rendered voice set
+// Polish task 2 (docs/polish/2-sound.md), behaviors B35, B36 and B37: the pre-rendered voice set
 // on disk, its manifest, its size budget and `gen-voice.mjs --check`.
 //
 //   B35  the expected files (one `<defId>-<hook>` per hook in card-audio.json5 that names a voice,

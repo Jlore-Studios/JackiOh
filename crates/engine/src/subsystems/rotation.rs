@@ -5,7 +5,7 @@
 //! rings turn together, one step, in the direction the play declared (R81).
 //!
 //! A rotation never takes a card off the field, so R78's reset never runs: its instance, damage, buffs,
-//! counters and position come along (R14). Only `controller` changes, and only across the centre line;
+//! counters and position come along (R14). Only `controller` changes, and only across the center line;
 //! that crossing is an entry (R171), so the card takes this turn as its `summoned_turn` and a fresh
 //! exertion and is summoning sick on its new side. A card that moves along its own side has entered
 //! nothing and keeps both. The owner never changes on a crossing (R12); a later leave goes to the

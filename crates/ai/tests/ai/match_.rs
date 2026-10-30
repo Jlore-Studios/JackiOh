@@ -42,7 +42,7 @@ fn random_vs_random(seed: &str) -> MatchConfig {
 fn fold_args(seed: &str, config: &MatchConfig, record: &MatchRecord, with_handicaps: bool) -> FoldArgs {
     let mut args = json!({ "seed": seed, "decks": config.decks, "log": record.log });
     if with_handicaps && let Some(handicaps) = &config.handicaps {
-        args["handicaps"] = serde_json::to_value(handicaps).expect("handicaps serialise");
+        args["handicaps"] = serde_json::to_value(handicaps).expect("handicaps serialize");
     }
     json_as(args)
 }

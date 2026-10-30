@@ -4,7 +4,7 @@
 //!            Radiant Training Grounds cards} to your hand." — cards 1
 //!   Radiant: "Death: Add {cards|…} to your hand." — cards 2
 //! Engine: C+ #48 Jlockeed's Lobbyist line for line. The restriction is C+ #65.1's `neverDefense` flag,
-//!   which the switch action, `legalActions` and a switch made as an effect all honour (R20); the Radiant
+//!   which the switch action, `legalActions` and a switch made as an effect all honor (R20); the Radiant
 //!   face drops it. The Death's pool names the set (`{ "set": "Training Grounds" }`), so it works while
 //!   the set is held (R2194001): every non-token card of the set but this one (R387), each Radiant, one
 //!   draw of the match rng per card (R60); a full hand burns the rest (§2.4). Tunes: cards 1 ↑.
@@ -134,7 +134,7 @@ mod tests {
             let mut s = board(false, "training-dummy", json!([HIT_JOB, FILLER]));
             let added = kill_dummy(&mut s);
             let theirs = s.view(P2);
-            assert!(!serde_json::to_string(&theirs).expect("serialises").contains(&format!("\"{}\"", added[0].id)));
+            assert!(!serde_json::to_string(&theirs).expect("serializes").contains(&format!("\"{}\"", added[0].id)));
             assert!(theirs.events.iter().any(|event| matches!(
                 event,
                 GameEvent::AddedToHand { player, instance_id, def_id, .. }

@@ -70,15 +70,15 @@ mod parse_invite_clusters_args_cases {
         let error = parse_invite_clusters_args(&args(&["--bogus=1"]))
             .expect_err("unknown")
             .to_string();
-        assert!(error.contains("Unrecognised option --bogus"), "{error}");
+        assert!(error.contains("Unrecognized option --bogus"), "{error}");
         let error = parse_invite_clusters_args(&args(&["window"]))
             .expect_err("bare")
             .to_string();
-        assert!(error.contains("Unrecognised argument \"window\""), "{error}");
+        assert!(error.contains("Unrecognized argument \"window\""), "{error}");
         let error = parse_invite_clusters_args(&args(&["--window="]))
             .expect_err("empty")
             .to_string();
-        assert!(error.contains("Unrecognised argument"), "{error}");
+        assert!(error.contains("Unrecognized argument"), "{error}");
     }
 }
 

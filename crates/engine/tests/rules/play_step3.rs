@@ -207,7 +207,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         let theirs = view_for(&asked, PlayerId::P2).events;
         assert_eq!(first_field(&theirs, "transformed", "fromDefId"), json!(HIDDEN_ID));
         let text =
-            serde_json::to_string(&view_for(&asked, PlayerId::P2).events).expect("the events serialise");
+            serde_json::to_string(&view_for(&asked, PlayerId::P2).events).expect("the events serialize");
         assert!(!text.contains(PA.crier.id.as_str()), "{text}");
     }
 
@@ -357,7 +357,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
                 "nonce": "pause-answer",
             }));
             let round: GameState =
-                serde_json::from_value(serde_json::to_value(&asked).expect("the state serialises"))
+                serde_json::from_value(serde_json::to_value(&asked).expect("the state serializes"))
                     .expect("the state parses back");
             let live = reduce(&asked, &action);
             let revived = reduce(&round, &action);

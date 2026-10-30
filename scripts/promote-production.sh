@@ -5,7 +5,7 @@
 # runbook. apps/web/src/net/promote-production.test.ts holds it in place, against a throwaway
 # repository and a stand-in for `gh`.
 #
-# The countdown issue. One issue labelled RELEASE_LABEL stays open for good. It says "Merging to
+# The countdown issue. One issue labeled RELEASE_LABEL stays open for good. It says "Merging to
 # production in N hours", lists what main has that is not live yet (the queue, below), and carries,
 # in a hidden comment, the time (`due`), whether it is on hold (`held`), the last comment it has read
 # (`last`), and Vercel's hold (`vercel_held`) and delay (`vercel_until`). When a merge goes out it

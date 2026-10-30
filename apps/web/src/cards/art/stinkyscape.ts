@@ -238,8 +238,8 @@ export const FAMILY_PAINTS: Readonly<Record<StinkyFamily, Paint>> = {
   space: { space: ["#151a3a", "#03040a"], nebula: ["#5a3ad8", "#d83a8a"], light: "#e8ecff", hull: "#4a6ac8", dark: "#141c3a", accent: "#ffd25a", glow: "#bfd2ff", line: OUTLINE },
 };
 
-/** A colour a kind gives its family's glow or accent: a weapon's energy, a resource's ore, a module's core. */
-const KIND_COLOURS: Readonly<Record<string, string>> = {
+/** A color a kind gives its family's glow or accent: a weapon's energy, a resource's ore, a module's core. */
+const KIND_COLORS: Readonly<Record<string, string>> = {
   beam: "#4ff0ff",
   ray: "#9af0ff",
   rail: "#b48aff",
@@ -262,8 +262,8 @@ const DISINTEGREX_GREEN = "#7aff5a";
 const VAMP_RED = "#d0142a";
 const AP_STEEL = "#3a3f48";
 const BRASS = "#d4a24c";
-const POD_COLOURS: Readonly<Record<string, string>> = { poison: "#8aff3a", healing: "#ff6a9a", felinor: "#c08aff" };
-const MODULE_COLOURS: Readonly<Record<string, string>> = {
+const POD_COLORS: Readonly<Record<string, string>> = { poison: "#8aff3a", healing: "#ff6a9a", felinor: "#c08aff" };
+const MODULE_COLORS: Readonly<Record<string, string>> = {
   magic: "#c86aff",
   frost: "#9ae8ff",
   overdrive: "#ff4a3a",
@@ -272,7 +272,7 @@ const MODULE_COLOURS: Readonly<Record<string, string>> = {
   nanobots: "#6aff9a",
   stimulus: "#ff9a3a",
 };
-const PLANET_COLOURS: readonly (readonly [string, string])[] = [
+const PLANET_COLORS: readonly (readonly [string, string])[] = [
   ["#7fd06a", "#1a3a12"],
   ["#d08a5a", "#3a1a0a"],
   ["#6aa8e8", "#0a1a3a"],
@@ -303,18 +303,18 @@ function gild(paint: Paint): Paint {
 function kindPaint(base: Paint, subject: StinkySubject, lower: string): Paint {
   const kind = subject.kind;
   if (subject.family === "jlockeed") return base;
-  const colour = KIND_COLOURS[kind];
-  if (subject.family === "resource" && colour !== undefined) return { ...base, accent: colour };
+  const color = KIND_COLORS[kind];
+  if (subject.family === "resource" && color !== undefined) return { ...base, accent: color };
   if (subject.family === "fleet" && kind === "pod") {
-    const fluid = Object.entries(POD_COLOURS).find(([word]) => lower.includes(word))?.[1];
+    const fluid = Object.entries(POD_COLORS).find(([word]) => lower.includes(word))?.[1];
     return fluid === undefined ? base : { ...base, glow: fluid };
   }
   if (subject.family === "fleet" && kind === "module") {
-    const core = Object.entries(MODULE_COLOURS).find(([word]) => lower.includes(word))?.[1];
+    const core = Object.entries(MODULE_COLORS).find(([word]) => lower.includes(word))?.[1];
     return core === undefined ? base : { ...base, glow: core };
   }
   if (subject.family === "weapon" && kind === "ray" && lower.includes("disintegrex")) return { ...base, glow: DISINTEGREX_GREEN };
-  if (colour !== undefined) return { ...base, glow: colour };
+  if (color !== undefined) return { ...base, glow: color };
   return base;
 }
 
@@ -431,13 +431,13 @@ function twinkle(x: number, y: number, r: number, fill: string, opacity: number)
   );
 }
 
-/** One of EMBLEMS' glyphs, centred at (x, y), `size` across. */
+/** One of EMBLEMS' glyphs, centered at (x, y), `size` across. */
 function glyph(name: EmblemGlyph, x: number, y: number, size: number, fill: string, stroke: string): string {
   const drawn = EMBLEMS[name];
   const scale = size / EMBLEM_BOX;
-  const centre = EMBLEM_BOX / 2;
+  const center = EMBLEM_BOX / 2;
   return group(
-    `translate(${fmt(x)} ${fmt(y)}) scale(${fmt(scale)}) translate(-${centre} -${centre})`,
+    `translate(${fmt(x)} ${fmt(y)}) scale(${fmt(scale)}) translate(-${center} -${center})`,
     path(drawn.d, fill, { stroke, "stroke-width": 1.1, "stroke-linejoin": "round", "fill-rule": drawn.rule }),
   );
 }
@@ -471,11 +471,11 @@ function backdrop(rng: Rng, p: Paint, family: StinkyFamily, planet: boolean, def
   }
   const nebulae = whole(rng, NEBULAE_MIN, NEBULAE_MAX);
   for (let i = 0; i < nebulae; i += 1) {
-    const colour = turnHue(i % 2 === 0 ? p.nebula[0] : p.nebula[1], drift);
+    const color = turnHue(i % 2 === 0 ? p.nebula[0] : p.nebula[1], drift);
     defs.push(
-      `<radialGradient id="n${i}"><stop offset="0" stop-color="${colour}" stop-opacity="0.75"/>` +
-        `<stop offset="0.5" stop-color="${colour}" stop-opacity="0.28"/>` +
-        `<stop offset="1" stop-color="${colour}" stop-opacity="0"/></radialGradient>`,
+      `<radialGradient id="n${i}"><stop offset="0" stop-color="${color}" stop-opacity="0.75"/>` +
+        `<stop offset="0.5" stop-color="${color}" stop-opacity="0.28"/>` +
+        `<stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`,
     );
     const cx = between(rng, 10, 90);
     const cy = between(rng, 10, 90);
@@ -496,15 +496,15 @@ function backdrop(rng: Rng, p: Paint, family: StinkyFamily, planet: boolean, def
   const planetRoll = rng();
   const corner = whole(rng, 0, 3);
   const r = between(rng, 6, 13);
-  const colours = PLANET_COLOURS[whole(rng, 0, PLANET_COLOURS.length - 1)] ?? PLANET_COLOURS[0] ?? ["#888888", "#222222"];
+  const colors = PLANET_COLORS[whole(rng, 0, PLANET_COLORS.length - 1)] ?? PLANET_COLORS[0] ?? ["#888888", "#222222"];
   const ringed = rng() < RING_CHANCE;
   const ringTurn = between(rng, -30, 30);
   if (planet && planetRoll < PLANET_CHANCE) {
     const cx = corner % 2 === 0 ? between(rng, 10, 24) : between(rng, 76, 90);
     const cy = corner < 2 ? between(rng, 10, 24) : between(rng, 76, 90);
     defs.push(
-      `<radialGradient id="pl" cx="0.35" cy="0.35" r="0.75"><stop offset="0" stop-color="${colours[0]}"/>` +
-        `<stop offset="1" stop-color="${colours[1]}"/></radialGradient>`,
+      `<radialGradient id="pl" cx="0.35" cy="0.35" r="0.75"><stop offset="0" stop-color="${colors[0]}"/>` +
+        `<stop offset="1" stop-color="${colors[1]}"/></radialGradient>`,
     );
     const ring = (half: "back" | "front"): string =>
       ringed
@@ -515,7 +515,7 @@ function backdrop(rng: Rng, p: Paint, family: StinkyFamily, planet: boolean, def
                 ? `M${fmt(-r * 1.7)} 0A${fmt(r * 1.7)} ${fmt(r * 0.45)} 0 0 1 ${fmt(r * 1.7)} 0`
                 : `M${fmt(-r * 1.7)} 0A${fmt(r * 1.7)} ${fmt(r * 0.45)} 0 0 0 ${fmt(r * 1.7)} 0`,
               "none",
-              { stroke: colours[0], "stroke-width": 1.1, opacity: 0.75 },
+              { stroke: colors[0], "stroke-width": 1.1, opacity: 0.75 },
             ),
           )
         : "";
@@ -962,7 +962,7 @@ function drone(p: Paint, kind: string, tier: number): string {
       out.push(droneBody(p, 14, 4));
       break;
     default: {
-      // The battleships: a drone's eye in a wide hull, each layer its own colour.
+      // The battleships: a drone's eye in a wide hull, each layer its own color.
       if (kind === "shield") out.push(path("M-40 6A40 30 0 0 1 40 6Z", p.glow, { opacity: 0.18, stroke: p.glow, "stroke-width": 1 }));
       out.push(ellipse(0, 6, 40, 14, "url(#hl)", inked(p)));
       out.push(ellipse(0, 3, 30, 9, p.light, { opacity: 0.25 }));
@@ -1315,7 +1315,7 @@ function drift(seed: number, family: StinkyFamily, paint: Paint): Paint {
     return { ...paint, hull: turnHue(paint.hull, between(rng, -suit, suit)), glow: turnHue(paint.glow, between(rng, -VISOR_DRIFT, VISOR_DRIFT)) };
   }
   if (family === "space") {
-    const [lit, shade] = PLANET_COLOURS[whole(rng, 0, PLANET_COLOURS.length - 1)] ?? PLANET_COLOURS[0] ?? [paint.glow, paint.dark];
+    const [lit, shade] = PLANET_COLORS[whole(rng, 0, PLANET_COLORS.length - 1)] ?? PLANET_COLORS[0] ?? [paint.glow, paint.dark];
     return { ...paint, glow: lit, hull: mixHex(lit, shade, 0.5), dark: shade };
   }
   return paint;

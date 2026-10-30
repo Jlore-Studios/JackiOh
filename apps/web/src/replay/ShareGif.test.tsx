@@ -196,7 +196,7 @@ describe("Share as GIF", () => {
       signal = hooks.signal;
       return new Promise((_resolve, reject) => {
         hooks.signal.addEventListener("abort", () => {
-          reject(new DOMException("cancelled", "AbortError"));
+          reject(new DOMException("canceled", "AbortError"));
         });
       });
     });

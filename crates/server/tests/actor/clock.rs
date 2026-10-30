@@ -55,7 +55,7 @@ impl Harness {
 
     /// `clock.snapshot()` as its JSON (`MatchClocks`' shape, the one `matches.clocks` stores).
     fn snapshot(&self) -> Value {
-        serde_json::to_value(self.clock.snapshot()).expect("MatchClocks serialises")
+        serde_json::to_value(self.clock.snapshot()).expect("MatchClocks serializes")
     }
 
     /// One deadline of the snapshot (`turnDeadline`, `promptDeadline`), null as `None`.
@@ -558,7 +558,7 @@ mod match_clock {
     async fn gives_a_fresh_match_row_only_the_ceiling_9_5() {
         let h = harness(0);
         assert_eq!(
-            serde_json::to_value(initial_clocks(h.started_at)).expect("MatchClocks serialises"),
+            serde_json::to_value(initial_clocks(h.started_at)).expect("MatchClocks serializes"),
             json!({
                 "turnDeadline": null,
                 "promptDeadline": null,

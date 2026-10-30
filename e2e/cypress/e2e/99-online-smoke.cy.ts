@@ -65,7 +65,7 @@ function secondDeckId(token: string): Cypress.Chainable<string> {
 /**
  * Clears queue AND match state, so the spec is re-runnable.
  *
- * Cancelling the queue is not enough and the second run proved it: the first run left both
+ * Canceling the queue is not enough and the second run proved it: the first run left both
  * accounts in a live match and every later `POST /api/rooms` came back `409 Conflict`, because
  * `assertNotInMatch` guards both room endpoints and the queue. There is no HTTP route out of a
  * match — only the socket's `concede`, R79's clocks, or the reaper — and `/api/auth/me` does not

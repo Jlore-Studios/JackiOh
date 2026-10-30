@@ -22,7 +22,7 @@
 //!   has deleted it (below), after which it is the 404 of an id no challenge holds.
 //! - A challenge lapses `CHALLENGE_TTL_MS` after it was made, its room with it. The sweeper
 //!   (`run_sweeper`, every `CHALLENGE_SWEEP_INTERVAL_SECONDS`) then deletes its row, whatever became
-//!   of it (accepted, declined, cancelled or never answered): no challenge row outlives its TTL by
+//!   of it (accepted, declined, canceled or never answered): no challenge row outlives its TTL by
 //!   more than one sweep.
 
 use std::sync::Arc;
@@ -186,7 +186,7 @@ pub async fn decline(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `DELETE /api/challenges/:id` (B49): its challenger cancels it. 204, or 404.
 pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
-    close(app, req, ChallengeState::Cancelled, |row, me| {
+    close(app, req, ChallengeState::Canceled, |row, me| {
         row.from_profile == me
     })
     .await

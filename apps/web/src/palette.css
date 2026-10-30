@@ -1,5 +1,5 @@
-/* The client's one colour palette (#2105): every board stylesheet names these (src/palette.test.ts).
-   A name is a hue and a step, lighter as the number falls. A new colour raises PALETTE_MAX there. */
+/* The client's one color palette (#2105): every board stylesheet names these (src/palette.test.ts).
+   A name is a hue and a step, lighter as the number falls. A new color raises PALETTE_MAX there. */
 
 :root {
   --pal-black: #000000;

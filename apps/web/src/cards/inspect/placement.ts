@@ -29,7 +29,7 @@ function clamp(start: number, size: number, extent: number): number {
 /**
  * The first side of the anchor the preview fits on, in the order `prefer` names (B27's left,
  * right, above, below by default), and the preview's top-left corner there. Beside the anchor the
- * preview is centred on it vertically, above or below it is centred horizontally, and the cross
+ * preview is centered on it vertically, above or below it is centered horizontally, and the cross
  * axis is clamped into the viewport. When no side fits, it goes below, clamped.
  */
 export function placePreview(
@@ -38,8 +38,8 @@ export function placePreview(
   size: { width: number; height: number },
   prefer: PreviewPrefer = "beside",
 ): { left: number; top: number; side: PreviewSide } {
-  const centredTop = clamp(anchor.top + anchor.height / 2 - size.height / 2, size.height, viewport.height);
-  const centredLeft = clamp(anchor.left + anchor.width / 2 - size.width / 2, size.width, viewport.width);
+  const centeredTop = clamp(anchor.top + anchor.height / 2 - size.height / 2, size.height, viewport.height);
+  const centeredLeft = clamp(anchor.left + anchor.width / 2 - size.width / 2, size.width, viewport.width);
 
   const right = anchor.left + anchor.width + PREVIEW_GAP_PX;
   const left = anchor.left - PREVIEW_GAP_PX - size.width;
@@ -48,18 +48,18 @@ export function placePreview(
 
   for (const side of ORDER[prefer]) {
     if (side === "right" && right + size.width <= viewport.width - PREVIEW_MARGIN_PX) {
-      return { left: right, top: centredTop, side };
+      return { left: right, top: centeredTop, side };
     }
     if (side === "left" && left >= PREVIEW_MARGIN_PX) {
-      return { left, top: centredTop, side };
+      return { left, top: centeredTop, side };
     }
     if (side === "above" && above >= PREVIEW_MARGIN_PX) {
-      return { left: centredLeft, top: above, side };
+      return { left: centeredLeft, top: above, side };
     }
     if (side === "below" && below + size.height <= viewport.height - PREVIEW_MARGIN_PX) {
-      return { left: centredLeft, top: below, side };
+      return { left: centeredLeft, top: below, side };
     }
   }
 
-  return { left: centredLeft, top: clamp(below, size.height, viewport.height), side: "below" };
+  return { left: centeredLeft, top: clamp(below, size.height, viewport.height), side: "below" };
 }

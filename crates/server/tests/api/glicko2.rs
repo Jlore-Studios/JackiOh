@@ -101,7 +101,7 @@ mod r603_glicko_2_matches_glickmans_worked_example {
     }
 
     #[test]
-    fn r603_the_update_depends_only_on_rating_differences_so_the_scales_centre_is_any_number() {
+    fn r603_the_update_depends_only_on_rating_differences_so_the_scales_center_is_any_number() {
         // RATING_START is R79's 1000, not Glickman's 1500: the same example moved by 500 moves by 500.
         let games = |shift: f64| {
             [
@@ -153,7 +153,7 @@ mod r603_draws_count_as_half_a_win {
     }
 
     #[test]
-    fn r603_a_draw_pulls_an_underdog_up_and_a_favourite_down_reference() {
+    fn r603_a_draw_pulls_an_underdog_up_and_a_favorite_down_reference() {
         let (under, over) = rate(glicko(1400.0, 80.0), glicko(1600.0, 120.0), 0.5);
         expect_reference(
             under,
@@ -190,13 +190,13 @@ mod r603_one_rated_game_is_one_rating_period {
 
     #[test]
     fn r603_an_upset_moves_both_sides_by_their_own_deviations_each_from_the_others_rating_before_reference() {
-        let (underdog, favourite) = rate(glicko(1350.0, 60.0), glicko(1720.0, 45.0), 1.0);
+        let (underdog, favorite) = rate(glicko(1350.0, 60.0), glicko(1720.0, 45.0), 1.0);
         expect_reference(
             underdog,
             glicko_with(1368.629463000698, 60.547858911524, 0.06000902052519),
         );
         expect_reference(
-            favourite,
+            favorite,
             glicko_with(1709.330958947476, 46.03837643654, 0.06000892422778),
         );
     }

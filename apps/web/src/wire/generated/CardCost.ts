@@ -3,7 +3,7 @@
 /**
  * §5: 0 to 6, 100 (Ceaseless Void), X, or "A embiggen B".
  *
- * TS `number | "X" | { base: number; embiggen: number }`, serialised exactly so (a number, the
+ * TS `number | "X" | { base: number; embiggen: number }`, serialized exactly so (a number, the
  * string `"X"`, or the object).
  */
 export type CardCost = number | "X" | { base: number, embiggen: number, };

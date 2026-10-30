@@ -15,7 +15,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::{
-    armoured, indestructible, lifestealer, plain, poisonous, shielded, trampler,
+    armored, indestructible, lifestealer, plain, poisonous, shielded, trampler,
 };
 use crate::rules::fixtures::damage_combat::{argus, gambit, playing};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, live, new_game, put, slot};
@@ -75,7 +75,7 @@ fn hit_alone(
 fn wire(events: &[GameEvent]) -> Vec<Value> {
     events
         .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
         .collect()
 }
 
@@ -94,7 +94,7 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
      {
         let mut state = game("r1360-partial");
         let source = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
-        let wall = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
+        let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
 
         let (dealt, events) = hit_alone(
             &mut state,
@@ -159,7 +159,7 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
         let mut state = game("r1360-pierce");
         let piercer = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         grant(&mut state, &piercer.id, Keyword::Pierce);
-        let wall = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
+        let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
 
         // A unit's Pierce, read through the layers (R346): the 5 lands whole, and no `absorbed` rides it.
         let (dealt, events) = hit_alone(&mut state, Some(&piercer.id), Aim::Unit(&wall.id), 5, None);
@@ -274,7 +274,7 @@ mod r1361_a_hit_armor_takes_whole_is_reported_and_answered_by_nothing {
     fn r1361_r63_the_report_replaces_no_step_lifesteal_poisonous_trample_and_kill_credit_never_run() {
         let mut state = game("r1361-whole");
         state.players.p1.hero.health = 20;
-        let wall = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({})); // 7/7, Armor 7
+        let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // 7/7, Armor 7
         let leech = put(&mut state, &lifestealer.id, slot(P1, Row::Units, 1), json!({}));
         let viper = put(&mut state, &poisonous.id, slot(P1, Row::Units, 2), json!({}));
         let tramp = put(&mut state, &trampler.id, slot(P1, Row::Units, 3), json!({}));
@@ -480,7 +480,7 @@ mod r1361_a_hit_armor_takes_whole_is_reported_and_answered_by_nothing {
      {
         let mut state = playing("r1361-combat");
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({})); // 3/3
-        let wall = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({})); // 7/7, Armor 7
+        let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // 7/7, Armor 7
         let action = json_as::<ActionInput>(
             json!({ "type": "attack", "attackerId": attacker.id, "targetId": wall.id, "playerId": "p1" }),
         )
@@ -510,7 +510,7 @@ mod r1361_a_hit_armor_takes_whole_is_reported_and_answered_by_nothing {
         let mut state = game("r1361-view");
         // A card in p1's hand dealt the hits: p1 reads it, p2 may not (R97).
         let source = in_hand(&mut state, &plain.id, P1, 1).remove(0);
-        let wall = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({}));
+        let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({}));
         state.applied.push(AppliedAction {
             nonce: "r1361-view".into(),
             events: vec![
@@ -599,7 +599,7 @@ mod r1360_r1361_r1362_the_reports_leave_the_state_as_it_was {
     #[test]
     fn r1361_r1362_a_report_takes_no_number_in_r68_s_order_and_an_absorbed_fatigue_draw_keeps_r240_s_one() {
         let mut state = game("r1361-seq");
-        let wall = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
+        let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
         let seq = state.next_seq;
         with_sink(&mut state, |sink| {
             // A hit the Armor takes whole: reported, and the frontier takes nothing.

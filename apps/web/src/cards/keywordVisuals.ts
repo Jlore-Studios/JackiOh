@@ -44,7 +44,7 @@ export type KeywordVisual = {
   layer: KeywordLayer;
   /** 1 is drawn first and wins a capped slot over 2. Unique across the map. */
   priority: number;
-  /** The shape it reads by, in words (it never rests on colour alone). */
+  /** The shape it reads by, in words (it never rests on color alone). */
   shape: string;
   /** The loop, or `null` for a mark that holds still (Taunt's shield, the Divine Shield bubble, Armor's plate). */
   motion: KeywordMotion | null;
@@ -187,7 +187,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
   "Spell Damage": {
     layer: "veil",
     priority: 17,
-    shape: "an arcane rune circle with the bonus at its centre",
+    shape: "an arcane rune circle with the bonus at its center",
     motion: { keyframes: "kw-rune-turn", when: "always" },
     numbered: true,
   },

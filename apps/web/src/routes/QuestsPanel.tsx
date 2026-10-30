@@ -200,19 +200,19 @@ export function useQuests(token: string): {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     getQuests(token)
       .then((next) => {
-        if (!cancelled) setQuests(next);
+        if (!canceled) setQuests(next);
       })
       .catch((cause: unknown) => {
-        if (cancelled) return;
+        if (canceled) return;
         const kept = cachedRead<QuestsResponse>(token, keptPaths.quests);
         if (kept === undefined) setError(cause instanceof Error ? cause.message : String(cause));
         else setQuests(kept);
       });
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, attempt]);
 

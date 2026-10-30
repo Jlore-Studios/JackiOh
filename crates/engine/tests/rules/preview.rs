@@ -120,7 +120,7 @@ fn value(label: &str, value: i32) -> PreviewValue {
     }
 }
 
-/// One labelled number per question, naming the card, the face and the zone it was asked about, so
+/// One labeled number per question, naming the card, the face and the zone it was asked about, so
 /// a test can tell from the view alone which card's hook answered — and so an id never seen in a
 /// view proves the hook's answer for that card did not leak into it.
 fn answer(ctx: &ConditionContext<'_>) -> Vec<PreviewValue> {
@@ -411,13 +411,13 @@ fn open_mode_prompt(state: &mut GameState, player: PlayerId) {
 }
 
 fn to_json(value: &impl serde::Serialize) -> String {
-    serde_json::to_string(value).expect("serialises")
+    serde_json::to_string(value).expect("serializes")
 }
 
-/// Whether the serialised object holds `key`.
+/// Whether the serialized object holds `key`.
 fn has_key(value: &impl serde::Serialize, key: &str) -> bool {
     serde_json::to_value(value)
-        .expect("serialises")
+        .expect("serializes")
         .as_object()
         .is_some_and(|object| object.contains_key(key))
 }

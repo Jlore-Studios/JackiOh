@@ -100,14 +100,14 @@ export default function DevTools({ token }: { token: string }): ReactElement {
   // The held quests, listed again each time a request ends, so the pick follows a give or a complete.
   useEffect(() => {
     if (working) return;
-    let cancelled = false;
+    let canceled = false;
     getQuests(token)
       .then((answer) => {
-        if (!cancelled) setHeld(answer.quests);
+        if (!canceled) setHeld(answer.quests);
       })
       .catch(() => undefined);
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, working]);
 

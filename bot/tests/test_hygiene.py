@@ -8,11 +8,13 @@ import importlib.util
 import unittest
 from unittest import mock
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
-from harness import config
+#: The repository's root, two directories above this file (bot/tests/).
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _spec = importlib.util.spec_from_file_location(
-    "hygiene_branches", config.REPO_ROOT / ".github" / "hygiene" / "branches.py")
+    "hygiene_branches", REPO_ROOT / ".github" / "hygiene" / "branches.py")
 branches = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(branches)
 
@@ -137,10 +139,10 @@ class IssueTests(unittest.TestCase):
                       self.open("instructions", open_audit))
 
     def test_the_code_audits_template_is_whole(self):
-        text = (config.REPO_ROOT / ".github" / "hygiene" / "code.md").read_text(encoding="utf-8")
+        text = (REPO_ROOT / ".github" / "hygiene" / "code.md").read_text(encoding="utf-8")
         self.assertIn("<!-- run -->", text)
         self.assertIn("CLAUDE.md rule 13", text)
-        workflow = (config.REPO_ROOT / ".github" / "workflows" / "code-audit.yml").read_text(encoding="utf-8")
+        workflow = (REPO_ROOT / ".github" / "workflows" / "code-audit.yml").read_text(encoding="utf-8")
         self.assertIn("branches.py issue code .github/hygiene/code.md", workflow)
 
 

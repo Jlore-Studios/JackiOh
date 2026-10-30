@@ -1,7 +1,7 @@
 //! The AI's board evaluation (SPEC §9.9 "Evaluation"; docs/polish/3-ai.md B13).
 //!
 //! The weights in AI_EVAL are tuning defaults the builder may change, so nothing here pins a number
-//! `evaluate` returns. What is pinned is the ordering the behaviour states: a won game over any
+//! `evaluate` returns. What is pinned is the ordering the behavior states: a won game over any
 //! unfinished one over a lost one; more own health, a bigger own board and a smaller enemy board
 //! each strictly better; and a Taunt blocker that absorbs a lethal board strictly better than none.
 //! `face_threat` is pinned exactly where its surface text fixes the arithmetic.

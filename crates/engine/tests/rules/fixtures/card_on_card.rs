@@ -226,7 +226,7 @@ pub fn wormhole() -> CardDef {
     def(18517, "wormhole", "Trap", 2, json!([]))
 }
 
-/// A (1) Spell: "Give a Unit +{boost}/+{boost}", aimed in its caster's favour.
+/// A (1) Spell: "Give a Unit +{boost}/+{boost}", aimed in its caster's favor.
 pub fn boost() -> CardDef {
     def_with(
         18518,

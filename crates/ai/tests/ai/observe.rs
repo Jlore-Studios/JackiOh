@@ -264,9 +264,9 @@ mod redact_b9 {
     #[test]
     fn r185_b9_redact_does_not_mutate_its_input() {
         let (a, _) = pair();
-        let before = serde_json::to_string(&a).expect("serialisable");
+        let before = serde_json::to_string(&a).expect("serializable");
         let _ = redact(&a, AI);
-        assert_eq!(serde_json::to_string(&a).expect("serialisable"), before);
+        assert_eq!(serde_json::to_string(&a).expect("serializable"), before);
     }
 
     /// R1956001: the opponent's Created cards' generators, a hidden hand card's among them, are no
@@ -283,8 +283,8 @@ mod redact_b9 {
         let public = redact(&dressed, AI);
         assert_eq!(public.generators.keys().collect::<Vec<_>>(), vec![&own]);
         assert_eq!(
-            serde_json::to_value(&public).expect("serialisable"),
-            serde_json::to_value(redact(&own_only, AI)).expect("serialisable")
+            serde_json::to_value(&public).expect("serializable"),
+            serde_json::to_value(redact(&own_only, AI)).expect("serializable")
         );
     }
 
@@ -1179,11 +1179,11 @@ mod determinize_b12 {
     fn b12_determinize_is_pure_given_its_rng_and_different_rngs_give_different_worlds() {
         let (a, _) = pair();
         let public = redact(&a, AI);
-        let before = serde_json::to_string(&public).expect("serialisable");
+        let before = serde_json::to_string(&public).expect("serializable");
         let one = det(&public, AI, &mut create_rng("observe-b12-pure", 0));
         let two = det(&public, AI, &mut create_rng("observe-b12-pure", 0));
         assert_eq!(two, one);
-        assert_eq!(serde_json::to_string(&public).expect("serialisable"), before);
+        assert_eq!(serde_json::to_string(&public).expect("serializable"), before);
 
         let mut hands: IndexSet<String> = IndexSet::new();
         for k in 0..10 {

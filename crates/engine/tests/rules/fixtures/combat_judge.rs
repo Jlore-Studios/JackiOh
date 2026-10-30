@@ -1,4 +1,4 @@
-//! Fixtures for the Meditative batch 18 engine tests (R1120–R1127): one card per behaviour the
+//! Fixtures for the Meditative batch 18 engine tests (R1120–R1127): one card per behavior the
 //! batch's systems add — a combat-only attack modifier, a Poisonous one, an exile-on-damage unit and
 //! the two judge faces — each on both faces alike, so `{ radiant: true }` never silently changes what
 //! the fixture means.

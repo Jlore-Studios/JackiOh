@@ -72,7 +72,7 @@ mod e35_go_berserk {
             assert_eq!(events_json(&*sink.events, "marked").len(), 1);
         }
         for viewer in [PlayerId::P1, PlayerId::P2] {
-            let view = serde_json::to_value(view_for(&state, viewer)).expect("a view serialises");
+            let view = serde_json::to_value(view_for(&state, viewer)).expect("a view serializes");
             let side = if viewer == PlayerId::P1 {
                 &view["you"]
             } else {
@@ -139,7 +139,7 @@ mod e35_may_attack_again {
 
     fn has_attack(now: &GameState, id: &str) -> bool {
         legal_actions(now, PlayerId::P1).iter().any(|action| {
-            let action = serde_json::to_value(action).expect("an action serialises");
+            let action = serde_json::to_value(action).expect("an action serializes");
             action["type"] == "attack" && action["attackerId"] == id
         })
     }

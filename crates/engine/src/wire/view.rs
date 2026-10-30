@@ -3,7 +3,7 @@
 //! Port of `packages/shared/src/view.ts` (part 1's type freeze, SURFACE §6.4). Two TS unions are
 //! discriminated on a boolean, which serde cannot tag on: `BackrowView` (`faceDown`) and
 //! `PendingView` (`forYou`). Each is an enum of two structs that carry the boolean themselves;
-//! deserialisation reads the boolean first, so a malformed member is an error, never the other member.
+//! deserialization reads the boolean first, so a malformed member is an error, never the other member.
 //! TS's `BackrowView` includes `null`; here an empty backrow zone is `Option::<BackrowView>::None`.
 
 use indexmap::IndexMap;
@@ -140,7 +140,7 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub choices_truncated: Option<bool>,
-    /// R280, §10.8: what the card's formula comes to now, one entry per labelled number its script's
+    /// R280, §10.8: what the card's formula comes to now, one entry per labeled number its script's
     /// `preview` hook returns — the label the formula as the running face prints it, the value what it
     /// would come to if the card resolved now. Only on a card view the viewer may read: its own hand, a
     /// unit on top of its pile, a face-up backrow card, a face-down one for its controller. Absent when
@@ -375,7 +375,7 @@ pub enum Enchantment {
     },
 }
 
-/// R437: a mark on a card, and the colour key the client draws it with ("purple").
+/// R437: a mark on a card, and the color key the client draws it with ("purple").
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -843,7 +843,7 @@ pub struct FaceDownBackrowView {
 #[serde(untagged)]
 #[allow(
     clippy::large_enum_variant,
-    reason = "a view is built, serialised and dropped; a Box buys nothing"
+    reason = "a view is built, serialized and dropped; a Box buys nothing"
 )]
 pub enum BackrowView {
     Public(PublicBackrowView),
@@ -1171,7 +1171,7 @@ pub struct SideView {
     #[cfg_attr(feature = "ts", ts(optional))]
     pub market_credits: Option<i32>,
     /// R846 (Meditative #19.1): extra turns owed to this player. Absent while none is owed, so a
-    /// game without one serialises as before.
+    /// game without one serializes as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub extra_turns: Option<i32>,

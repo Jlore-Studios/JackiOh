@@ -3,7 +3,7 @@
 Design notes for `polish/1-animations` (brief: `docs/polish/reference.md`, section "1."). Other agents
 build from this document without talking to each other, so the **Surface** section is the contract:
 every exported name, type, file path, `data-*` hook and constant value below is binding. Anything this
-document leaves open is the owning slice's choice, as long as the behaviours and the Surface hold.
+document leaves open is the owning slice's choice, as long as the behaviors and the Surface hold.
 
 Throughout, **D** is the duration the runner actually gave an entry (`entry.durationMs`, after the
 speed setting and the burst budget), and **T** is `FX_MAX_TAIL_MS` (900 ms).
@@ -29,7 +29,7 @@ the redacted stream (R202). No image assets, no new runtime dependency, 60 fps o
 
 ### What Hearthstone does
 
-| Hearthstone behaviour | Source |
+| Hearthstone behavior | Source |
 |---|---|
 | The board is meant to feel **physical**: "whenever the screen shakes when those 8/8 minions hit the board". Weight is sold by a shake proportional to the minion. | Ben Thompson (art director) in [Inven Global](https://www.invenglobal.com/articles/1554/how-hearthstones-art-director-ben-thompson-breathed-life-into-hearthstone); GDC 2014 [The Art of Hearthstone](https://www.gdcvault.com/play/1020615/The-Art-of-Hearthstone-Playing) |
 | Effects are UI. They are "somewhat 'flashy' because it is a piece of user interface" that signals new information, but they must be "telling a story but not getting in the way of the game itself". | Same Inven Global interview |
@@ -37,9 +37,9 @@ the redacted stream (R202). No image assets, no new runtime dependency, 60 fps o
 | Players complain that "animations playing out repeatedly would block later actions", yet "all cool Legendaries lose their coolness factor without animations". Keep the flourish, drop the wait. | [HearthstoneTopDecks, turning animations off](https://www.hearthstonetopdecks.com/should-we-finally-be-allowed-to-turn-off-animations-in-hearthstone/) |
 | Legendary cards get **grand entrances**: VFX artists abstract elements from the card art into a whimsical entrance, consistent across hundreds of legendaries. | GDC 2025 session [VFX Storytelling: How Hearthstone Breathes Life into Hundreds of Cards](https://schedule.gdconf.com/session/vfx-storytelling-how-hearthstone-breathes-life-into-hundreds-of-cards/908026) (session abstract, seen through search; the page itself returns 403) |
 | Divine Shield is "a translucent yellow cocoon" around the minion, and losing it is called **popping** it. | [Hearthstone Wiki: Divine Shield](https://hearthstone.wiki.gg/wiki/Divine_Shield), [Fandom: Divine Shield](https://hearthstone.fandom.com/wiki/Divine_Shield) |
-| Secrets sit face-down, are revealed only when their condition fires, and each class's secret has its own colour. The reveal is a moment on its own: the card shows, with a coloured flash. | [Hearthstone Wiki: Secret](https://hearthstone.wiki.gg/wiki/Secret) |
-| Golden cards are the premium face: animated and recoloured, most likely shader-driven sheens and glints rather than baked video. | [Austin Curzon, Golden Card Animations](https://austincurzon.com/hearthstone-golden-card-animations) |
-| Observed in play (no written source): damage shows as a red starburst **splat** with a white "−N" that pops and holds about a second, and healing as a green "+N". Spells such as Fireball fly from the caster to the target with a trail and burst on impact. A dying minion cracks, falls apart and goes up in smoke. "YOUR TURN" is a large glowing centre banner. Mana crystals light up one by one. A drawn card flies from the deck to the hand. At game end the loser's portrait cracks and explodes, and a Victory or Defeat banner follows. | Gameplay observation |
+| Secrets sit face-down, are revealed only when their condition fires, and each class's secret has its own color. The reveal is a moment on its own: the card shows, with a colored flash. | [Hearthstone Wiki: Secret](https://hearthstone.wiki.gg/wiki/Secret) |
+| Golden cards are the premium face: animated and recolored, most likely shader-driven sheens and glints rather than baked video. | [Austin Curzon, Golden Card Animations](https://austincurzon.com/hearthstone-golden-card-animations) |
+| Observed in play (no written source): damage shows as a red starburst **splat** with a white "−N" that pops and holds about a second, and healing as a green "+N". Spells such as Fireball fly from the caster to the target with a trail and burst on impact. A dying minion cracks, falls apart and goes up in smoke. "YOUR TURN" is a large glowing center banner. Mana crystals light up one by one. A drawn card flies from the deck to the hand. At game end the loser's portrait cracks and explodes, and a Victory or Defeat banner follows. | Gameplay observation |
 
 ### Game-feel references we borrow the maths from
 
@@ -61,14 +61,14 @@ the redacted stream (R202). No image assets, no new runtime dependency, 60 fps o
 | Legendary grand entrance (GDC 2025) | `summoned` of a readable Legendary or Mythic unit | `summon` | Rotating light rays behind the zone (gold for Legendary, prismatic for Mythic) plus a gold or prismatic burst and extra trauma. |
 | Damage splat and impact flash (play; Juice it or lose it) | `damage` | `impact` | A white-orange spark burst and a big red starburst "−N" over the target. Trauma is `0.1 × amount` from 3 damage up, capped at 0.8, and ×1.25 on a hero. |
 | Spell projectile with a trail (play) | `damage` with `combat: false` and a locatable source | `impact` | A fire, arcane or poison head flies source → target over 55% of D leaving trail particles. The impact, splat and shake land on arrival. |
-| Poison (Juice: debris colour codes the cause) | `damage` from a Poisonous unit; `counterChanged` plague; `keywordGranted` Poisonous | `impact`, `counter`, `keyword` | A green-violet cloud puff. |
+| Poison (Juice: debris color codes the cause) | `damage` from a Poisonous unit; `counterChanged` plague; `keywordGranted` Poisonous | `impact`, `counter`, `keyword` | A green-violet cloud puff. |
 | Healing splat and holy light (play) | `healed` | `heal` | A holy light column (rays), rising gold-white sparkles and a green "+N" splat. |
 | Health loss (play: purple number) | `healthLost` | `drain` | Violet void wisps sink into the hero, with a violet "−N" splat. |
 | Divine Shield pop (wiki) | `divineShieldLost`; `keywordGranted` Divine Shield; a persistent bubble | `shieldBreak`, `keyword`, CSS | Golden shards burst outward and a gold ring expands. A persistent translucent golden cocoon sits on every card that shows the Divine Shield keyword. |
 | Death that leaves a mark (Berbece) | `destroyed` | `death` | A canvas crack across the card, embers burning away across its box, then smoke. The existing `jk-dissolve` keyframes gain a brightness flash. |
 | Burn (brief: fire and burn-away) | `burned` | `burn` | Fire and embers rise from the hand region while the board's own burn notice (R318: the card rising under "Hand full") scorches and burns away, and embers land at the graveyard. |
 | An empty deck, a full library (R318, added 2026-09-25) | `fatigue`, `libraryOverflow` | `fatigue`, `overflow` | Dust and smoke puff out of an empty library and void wisps streak to its hero; a refusal ring flares on a full library, and the card it turned away fizzles or flies to the graveyard as a back. The "Fatigue N" and "Library full" notices are the board's own (`OverflowNotices.tsx`), not effects. |
-| Secret reveal flash (wiki: class colour) | `trapFired` | `trap` | An arcane (violet) shock ring and mote burst at the trap's card or zone (R154), with a small punch shake. The flip keyframes gain a violet glow. |
+| Secret reveal flash (wiki: class color) | `trapFired` | `trap` | An arcane (violet) shock ring and mote burst at the trap's card or zone (R154), with a small punch shake. The flip keyframes gain a violet glow. |
 | Golden sheen (Curzon) | `radiantSet` | `radiant` | A gold sheen sweeps across the card, with gold sparkles and soft rays on a field card. |
 | Smoke puff (brief: transform and fuse) | `transformed`, `fused`, `bounced`, `attackCancelled` | `smoke`, `fuse`, `bounce`, `fizzle` | A grey smoke puff. Fuse also streams arcane motes from each ingredient into the survivor. |
 | Card draw flight (play) | `drawn`, `shuffledIn`, `bounced`, `discarded` | `draw`, `shuffle`, `bounce`, `discard` | A card-back ghost flies between the piles and the hand region over D. |
@@ -80,7 +80,7 @@ the redacted stream (R202). No image assets, no new runtime dependency, 60 fps o
 | Portrait explodes, Victory or Defeat (play) | the shown view's `result` turning non-null (`gameOver` is a zero-duration row the runner never plays) | `planResult` | The loser's hero cracks and bursts into shards and smoke. A full-screen Victory (rays and confetti), Defeat (dark vignette and embers) or Draw banner, gone within 3.2 s. |
 | Fast triggers (HSTopDecks 0.8→0.2 s) | every row | the runner | Effects never extend an entry. The existing burst budget still squeezes long bursts, the CSS keyframes now follow the squeeze (`--anim-squeeze`), and a speed setting (R201) scales the whole table. |
 | Trauma shake maths (Eiserloh) | `damage`, `summoned`, `trapFired`, the result | `fx/shake.ts` | trauma² with 1D value noise on x, y and angle, linear decay, applied through CSS `translate`/`rotate` on the board. |
-| Canvas performance (MDN) | all | `fx/*` | Sprites cached per preset, colour and DPR; DPR clamped to 2; no `shadowBlur`; a rAF loop that stops when idle and while hidden; a particle cap that halves when frames run slow. |
+| Canvas performance (MDN) | all | `fx/*` | Sprites cached per preset, color and DPR; DPR clamped to 2; no `shadowBlur`; a rAF loop that stops when idle and while hidden; a particle cap that halves when frames run slow. |
 
 ## Surface
 
@@ -93,7 +93,7 @@ Every path is relative to the repo root. Relative imports inside `apps/web/src` 
 import type { GameEvent, PlayerId, Rarity, Row } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
 
-/** A point inside a box as fractions of its width and height; {x:0.5,y:0.5} is the centre. */
+/** A point inside a box as fractions of its width and height; {x:0.5,y:0.5} is the center. */
 export type FxPoint = { x: number; y: number };
 
 /** A position in viewport CSS pixels. */
@@ -242,7 +242,7 @@ export const FX_FUSE_FLIGHT_FRACTION = 0.5;
 export const FX_SLAM_AT = 0.6;
 export const FX_HOLD_MAX_MS = 6000;           // a stage effect's safety cap; it normally ends when the board shows the next view (R200)
 export const FX_CONCEAL_AT = 0.9;             // an "after" conceal is set at 0.9 D, while the card's own motion still runs
-export const FX_LUNGE_STANDOFF = 0.55;        // the lunge stops this many combined half-extents short of the target's centre
+export const FX_LUNGE_STANDOFF = 0.55;        // the lunge stops this many combined half-extents short of the target's center
 export const FX_LUNGE_MIN_PX = 26;            // = animations.css --lunge-distance (BUILD: at least 20 px)
 export const FX_LUNGE_MAX_PX = 520;
 export const FX_LUNGE_CONTACT_AT = 0.7;       // the contact beat inside attackDeclared (jk-lunge's 70% keyframe)
@@ -328,7 +328,7 @@ memory when storage is unavailable.
 
 ### S4. `apps/web/src/game/animations.ts` changes (slice B)
 
-All existing exports keep their names, signatures and behaviour at default settings. The additions:
+All existing exports keep their names, signatures and behavior at default settings. The additions:
 
 ```ts
 import type { FxDescriptor } from "../fx/types.ts";
@@ -427,7 +427,7 @@ export type ParticlePresetSpec = {
   drag: number;                         // fraction of velocity lost per second, 0..1
   spin: number;                         // max radians per second
   blend: "lighter" | "source-over";
-  colors: readonly string[];            // CSS colours the sprites are drawn in
+  colors: readonly string[];            // CSS colors the sprites are drawn in
   shrink: boolean;                      // size eases to 0 over life
   stretch?: number;                     // streak length per 1000 px/s of speed (sparks, shards, embers)
   twirl?: boolean;                      // drawn turned by its rotation (confetti)
@@ -443,7 +443,7 @@ export type SpriteCanvasFactory = (sizePx: number) => SpriteSurface | null;
 /** Real document canvases; returns a factory that yields null under jsdom (isHeadlessDom). */
 export function domSpriteCanvas(doc?: Document): SpriteCanvasFactory;
 export type SpriteCache = {
-  /** A radial-gradient disc for (preset, colour index, dpr), drawn once and cached; null without a 2D context. */
+  /** A radial-gradient disc for (preset, color index, dpr), drawn once and cached; null without a 2D context. */
   get(preset: FxPreset, colorIndex: number, dpr: number): CanvasImageSource | null;
   size(): number;
   clear(): void;
@@ -457,7 +457,7 @@ export type ParticleSystem = {
   emit(preset: FxPreset, x: number, y: number, options: EmitOptions): number;
   /** Moves by `dtMs` (clamped) and ages by `ageMs` (the real time that passed, default `dtMs`). */
   step(dtMs: number, ageMs?: number): void;
-  /** Draws every live particle; a null sprite falls back to a filled arc in the preset colour. */
+  /** Draws every live particle; a null sprite falls back to a filled arc in the preset color. */
   draw(ctx: CanvasRenderingContext2D, dpr: number): void;
   alive(): number;
   capacity(): number;
@@ -477,7 +477,7 @@ export type CanvasFx = {
   /** A glowing head along a shallow quadratic arc, emitting `preset` trail particles each step; ends at flightMs.
    *  `density` (default 1, the intensity scale) multiplies the trail and the arrival burst. */
   projectile(preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
-  /** Jagged branching polyline from the box centre, white-hot fading to dark over durationMs. */
+  /** Jagged branching polyline from the box center, white-hot fading to dark over durationMs. */
   crack(box: FxBox, durationMs: number): void;
   /** Expanding ellipse stroke from 0.6× to 1.4× the box, fading over durationMs. */
   ring(preset: FxPreset, box: FxBox, durationMs: number): void;
@@ -537,7 +537,7 @@ export function createShake(options?: { seed?: number; maxOffsetPx?: number; max
 
 `wake()` requests a frame only if none is pending and the page is not hidden. The first frame after a
 wake gets `raw` measured from the wake time. When the page turns hidden, the pending frame is
-cancelled. When it turns visible, `onResume` runs and nothing is requested until the next `wake()`.
+canceled. When it turns visible, `onResume` runs and nothing is requested until the next `wake()`.
 
 ### S6. `apps/web/src/fx/memory.ts` and `apps/web/src/fx/cues.ts` (slice C)
 
@@ -638,7 +638,7 @@ defeat otherwise. The loser's side is `opponent` for a victory and `you` for a d
  *  the tray's box); viewport → a zero-size box at (innerWidth·at.x, innerHeight·at.y). An element with a
  *  0×0 rect (not laid out, or jsdom) resolves to null. */
 export function resolveAnchor(anchor: FxAnchor, doc?: Document, win?: Window): FxBox | null;
-export function pointIn(box: FxBox, at?: FxPoint): FxVec;        // default at = centre
+export function pointIn(box: FxBox, at?: FxPoint): FxVec;        // default at = center
 /** CSS `translate`/`rotate` on [data-testid="board"] while shaking; restores the prior inline values on clear(). */
 export function boardShakeSink(doc?: Document): FxShakeSink;
 
@@ -777,12 +777,12 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
 
 | `cue.kind` | Needs | Element contract (all: `class="fx-<kind>"`, `data-fx="<kind>"`, `aria-hidden="true"`, no child text node) |
 |---|---|---|
-| `splat` | `at` | `data-tone`, `data-amount` = `` `-${amount}` `` for damage and loss, `` `+${amount}` `` for heal (ASCII hyphen-minus and plus); `--fx-x/--fx-y` = box centre, `--fx-w/--fx-h` = box size |
-| `rays` | `at` | `data-tone`; centre and size as for splat |
+| `splat` | `at` | `data-tone`, `data-amount` = `` `-${amount}` `` for damage and loss, `` `+${amount}` `` for heal (ASCII hyphen-minus and plus); `--fx-x/--fx-y` = box center, `--fx-w/--fx-h` = box size |
+| `rays` | `at` | `data-tone`; center and size as for splat |
 | `sheen` | `at` | covers the box: `--fx-x/--fx-y` = top-left, `--fx-w/--fx-h` = size |
-| `ghost` | `from`, `to` | `--fx-x/--fx-y` = from centre, `--fx-dx/--fx-dy` = to centre − from centre; a card back only |
+| `ghost` | `from`, `to` | `--fx-x/--fx-y` = from center, `--fx-dx/--fx-dy` = to center − from center; a card back only |
 | `arrows` | `at` | `data-direction`; covers the box |
-| `banner` | none | `data-tone`, `data-text`; CSS centres it in the viewport |
+| `banner` | none | `data-tone`, `data-text`; CSS centers it in the viewport |
 | `result` | none | `data-outcome`, `data-text`; CSS fills the viewport |
 
 Stand-ins (B46) mount through `mountHold(root, cue, { source, from, land, font })`: a `div.fx-hold`
@@ -865,7 +865,7 @@ Planner (slice C):
 - **B14** `summoned` into units plans a dust `ring` and a `dust` burst at the zone. A readable Legendary or Mythic def adds `rays` in its tone, a `gold` or `prismatic` burst and `FX_LEGENDARY_TRAUMA`. Attack + health ≥ `FX_SLAM_STATS_MIN` adds slam trauma. A backrow set, or an unknown or `"hidden"` def, plans only the dust burst. *Observed:* `env.card` stubs per rarity.
 - **B15** A `cardPlayed` paired with its own `summoned` in the same entry plans nothing itself. An unpaired `cardPlayed` plans an `arcane` burst at the played card for the viewer, or at `hand-opponent`. *Observed:* `cues.test.ts`.
 - **B16** Each of `healed`, `healthLost`, `divineShieldLost`, `destroyed`, `exiled`, `burned`, `radiantSet`, `transformed`, `fused`, `trapFired`, `locked`, `attackDeclared`, `attackCancelled`, `keywordGranted` (per keyword), `counterChanged` (per counter), `costChanged`, `modifierChanged` (added and removed), `addedToHand` and `controlChanged` plans exactly the cue kinds, presets, anchors and delays that S7 lists. *Observed:* one `it` per row.
-- **B17** `drawn` plans a `ghost` from `library-<side>` to `hand-<side>`. `bounced` plans smoke and a `ghost` from the card to the owner's hand. `discarded` plans a `ghost` from the hand card to `graveyard-<owner side>`. `shuffledIn` plans a `ghost` from the viewport centre to `library-<side>`. *Observed:* `cues.test.ts`.
+- **B17** `drawn` plans a `ghost` from `library-<side>` to `hand-<side>`. `bounced` plans smoke and a `ghost` from the card to the owner's hand. `discarded` plans a `ghost` from the hand card to `graveyard-<owner side>`. `shuffledIn` plans a `ghost` from the viewport center to `library-<side>`. *Observed:* `cues.test.ts`.
 - **B18** `buffed` plans `arrows` "up" when attack + health > 0, "down" when < 0, and nothing when 0. *Observed:* `cues.test.ts`.
 - **B19** `manaChanged` plans one `sparkle` burst per crystal anchor, at indices from the planning view's current mana up to the event's current mana (at most `FX_MANA_MAX_SPARKS`), with delays that increase and stay ≤ D. It plans nothing when mana does not rise. *Observed:* `cues.test.ts`.
 - **B20** `turnStarted` plans a `banner` "Your turn" (tone you) plus `rays` when the player is the viewer, and "Opponent's turn" (tone opponent) with no rays otherwise. `turnAutoEnded` plans a muted "No moves left" banner. *Observed:* `cues.test.ts`.
@@ -878,7 +878,7 @@ Canvas engine (slice A):
 - **B24** Particles are pooled: 10,000 emit and step cycles leave `stats().allocations === 1`. *Observed:* `particles.test.ts`.
 - **B25** Every particle dies within `FX_MAX_PARTICLE_LIFE_MS`: after emitting every preset and stepping 900 ms, `alive() === 0`, and every preset's `life[1]` is ≤ `FX_MAX_PARTICLE_LIFE_MS`. *Observed:* `particles.test.ts`.
 - **B26** The same seed, emits and steps give identical `inspect()` output, and a different seed gives different output. *Observed:* `particles.test.ts`.
-- **B27** `SpriteCache.get` calls its factory once per (preset, colour, dpr) and returns the cached object afterwards. It returns null when the factory does. No file under `apps/web/src/fx` contains `new Image`, `url(` or an image file extension. *Observed:* `sprites.test.ts` with a counting factory, plus a source scan.
+- **B27** `SpriteCache.get` calls its factory once per (preset, color, dpr) and returns the cached object afterwards. It returns null when the factory does. No file under `apps/web/src/fx` contains `new Image`, `url(` or an image file extension. *Observed:* `sprites.test.ts` with a counting factory, plus a source scan.
 - **B28** `createSurface` sizes the backing store to CSS size × `effectiveDpr`, with `effectiveDpr` clamped to [1, 2], and reallocates only when size or DPR changes. It returns null under jsdom without calling `getContext`. *Observed:* `surface.test.ts` with a stub canvas and a `getContext` spy.
 - **B29** The frame loop requests frames only while `onFrame` returns true, passes `dt` clamped to `FX_MAX_DT_MS`, requests nothing while hidden, and calls `onResume` when the page turns visible. *Observed:* `loop.test.ts` with fake frames and visibility.
 - **B30** Shake: `add` clamps trauma to 1, and trauma decays linearly at `FX_TRAUMA_DECAY` per second. Each sample has `|x|, |y| ≤ FX_SHAKE_MAX_PX · trauma²` and `|angle| ≤ FX_SHAKE_MAX_DEG · trauma²`. Samples 1 ms apart differ by less than 10% of the maximum, and the output is deterministic per seed. *Observed:* `shake.test.ts`.
@@ -897,7 +897,7 @@ Director and layer (slice D):
 DOM effects and CSS (slice E):
 
 - **B39** `mountDomEffect` appends one `aria-hidden` element with `data-fx="<kind>"`, placed by `--fx-x/--fx-y/--fx-w/--fx-h`, timed by `--fx-ms` and flown by `--fx-dx/--fx-dy`. It contains no text node: numbers and words sit in `data-amount`/`data-text`. A cue that lacks a required box mounts nothing. *Observed:* `dom.test.ts`.
-- **B40** `fx.css` makes `.fx-layer` and its descendants `pointer-events: none`, fixed at `inset: 0` with z-index 38. It defines one keyframe per DOM kind, the Divine Shield cocoon selector, the pop-hiding `:has` rule and a reduced-motion block. Every `animation-duration` in `animations.css` multiplies by `var(--anim-squeeze, 1)`, and every existing keyframe name survives. In a real browser, `elementFromPoint` at a damaged card's centre during its effect returns the card, a canvas pixel near the card lights up, and the board still fits the viewport. *Observed:* `css.test.ts` text checks and `fx-layer.cy.tsx`.
+- **B40** `fx.css` makes `.fx-layer` and its descendants `pointer-events: none`, fixed at `inset: 0` with z-index 38. It defines one keyframe per DOM kind, the Divine Shield cocoon selector, the pop-hiding `:has` rule and a reduced-motion block. Every `animation-duration` in `animations.css` multiplies by `var(--anim-squeeze, 1)`, and every existing keyframe name survives. In a real browser, `elementFromPoint` at a damaged card's center during its effect returns the card, a canvas pixel near the card lights up, and the board still fits the viewport. *Observed:* `css.test.ts` text checks and `fx-layer.cy.tsx`.
 
 Visual pass 1 (added after looking at the running board at 1280×720, 390×844, 844×390 and 768×1024):
 
@@ -913,7 +913,7 @@ Visual pass 1 (added after looking at the running board at 1280×720, 390×844, 
   sprite, under a rotation transform that is reset after the pass); a `twirl` preset (confetti) is
   drawn turned by its own rotation. *Observed:* `particles.test.ts`.
 - **B44** A ring is a shock wave, not an outline: three strokes of one ellipse, widest and faintest
-  first, in the preset's deep colour then its hot core (a painted ring such as dust keeps only the
+  first, in the preset's deep color then its hot core (a painted ring such as dust keeps only the
   soft outer strokes). Its horizontal radius is clamped to `maxAspect` × its vertical one, so a
   ring about a wide lane zone circles the card in it. *Observed:* `canvasFx.test.ts`.
 - **B45** A summon into an empty zone (the board still shows the view from before it) no longer
@@ -941,7 +941,7 @@ Visual pass 2 (stage effects), and the review that followed it:
   play. A concealed card is transparent and takes no pointer event until `release()`. *Observed:*
   `stage.test.tsx`.
 - **B48** Aimed lunges. `attackDeclared` writes `--fx-lunge-x/y` on the attacker, along the line to the
-  defending card or hero, `FX_LUNGE_STANDOFF` of the combined half-extents short of its centre,
+  defending card or hero, `FX_LUNGE_STANDOFF` of the combined half-extents short of its center,
   clamped to [`FX_LUNGE_MIN_PX`, `FX_LUNGE_MAX_PX`], and throws a spark burst at the target at
   `FX_LUNGE_CONTACT_AT·D`. Without the layer, jk-lunge falls back to BUILD's straight lunge.
   *Observed:* `stage.test.tsx`.
@@ -963,7 +963,7 @@ Visual pass 2 (stage effects), and the review that followed it:
   with its `density`. *Observed:* `particles.test.ts`, `canvasFx.test.ts`, `director.test.ts`.
 - **B55** Every keyframe runs on the compositor (S10). *Observed:* `css.test.ts`.
 
-Other look changes in the same pass, with no new behaviour: the ray fans are soft-edged, uneven
+Other look changes in the same pass, with no new behavior: the ray fans are soft-edged, uneven
 double fans (the victory and turn fans peak at 0.6 opacity so the board reads through them); the
 holy light is a feathered shaft with a pool of light where it lands; splats are larger with a darker
 rim; the turn banner and result word also cap by viewport height, so they fit a landscape phone;
@@ -977,7 +977,7 @@ setup `src/test/setup.ts`, include `src/**/*.test.{ts,tsx}`), except the rulings
 the **engine** project. There is no engine or card change, so `packages/cards/test/_harness.ts`
 `scenario()` is not used.
 
-| Behaviours | New test file | Harness |
+| Behaviors | New test file | Harness |
 |---|---|---|
 | B1–B5 | `apps/web/src/game/animations.fx.test.ts` | `fullBoardView()` from `src/test/fixtures.ts`; a local copy of `animations.test.ts`'s `fakeClock()` pattern (it is not exported); `setReducedMotion` from `src/test/setup.ts`; `settings` injected through the queue option. Names one test `it("R201 …")`. |
 | B6–B7 | `apps/web/src/fx/settings.test.ts` | jsdom `localStorage` (cleared in `afterEach`), a throwing `Storage` stub, `resetFxSettingsForTests()`, `@testing-library/react` for the hook. |
@@ -998,7 +998,7 @@ the **engine** project. There is no engine or card change, so `packages/cards/te
 | B45 | `apps/web/src/fx/css.test.ts` | The same sheet parser. |
 | B46–B48 | `apps/web/src/fx/stage.test.tsx` | `planStage` over `fullBoardView()`; the director with jsdom elements whose rects are stubbed, a fake frame source and a viewport seam the test fires; `FxLayer` over a fake-scheduled queue. Names tests `it("R200 …")`. |
 | B49–B55 | `cues.test.ts`, `FxLayer.test.tsx`, `director.test.ts`, `css.test.ts`, `anchors.test.ts`, `particles.test.ts`, `canvasFx.test.ts`, `constants.test.ts` | As above. Names tests `it("R200 …")`. |
-| B35, B40 (browser), B28 (real DPR) | `e2e/cypress/component/fx-layer.cy.tsx` | Cypress component, no server. It mounts `Game` inside `.app-shell.app-shell--wide`, as `board-layout.cy.tsx` does, with `fullBoardView()`, then rerenders with the same view plus appended events (a non-combat `damage` on an enemy unit, a `summoned`, a `turnStarted`). Assertions: the canvas's backing width equals CSS width × `min(devicePixelRatio, 2)`; a non-transparent canvas pixel near the target, retried by `should` with no `cy.wait`; `elementFromPoint` at the card centre is inside the card; `[data-fx="splat"]` exists; `[data-animating]` clears; the `fx-dom` root is empty afterwards; the board's inline `translate` is set during the shake and restored after; `documentElement.scrollWidth ≤ innerWidth` throughout. Run with `E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-layer.cy.tsx`. |
+| B35, B40 (browser), B28 (real DPR) | `e2e/cypress/component/fx-layer.cy.tsx` | Cypress component, no server. It mounts `Game` inside `.app-shell.app-shell--wide`, as `board-layout.cy.tsx` does, with `fullBoardView()`, then rerenders with the same view plus appended events (a non-combat `damage` on an enemy unit, a `summoned`, a `turnStarted`). Assertions: the canvas's backing width equals CSS width × `min(devicePixelRatio, 2)`; a non-transparent canvas pixel near the target, retried by `should` with no `cy.wait`; `elementFromPoint` at the card center is inside the card; `[data-fx="splat"]` exists; `[data-animating]` clears; the `fx-dom` root is empty afterwards; the board's inline `translate` is set during the shake and restored after; `documentElement.scrollWidth ≤ innerWidth` throughout. Run with `E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-layer.cy.tsx`. |
 | R200–R202 index | `packages/engine/test/rulings.test.ts` (existing, edited by slice D) | `provenIn` pointing at the files above. |
 
 Targeted runs: `pnpm vitest run --project web apps/web/src/fx`,
@@ -1030,12 +1030,12 @@ file. Slices build blind against the Surface.
 ### Slice A: `canvas-engine`
 
 - **Owns:** `apps/web/src/fx/rng.ts`, `apps/web/src/fx/presets.ts`, `apps/web/src/fx/sprites.ts`, `apps/web/src/fx/particles.ts`, `apps/web/src/fx/canvasFx.ts`, `apps/web/src/fx/surface.ts`, `apps/web/src/fx/loop.ts`, `apps/web/src/fx/shake.ts`
-- **Behaviours:** B23–B31
+- **Behaviors:** B23–B31
 - **Imports from other slices:** `fx/types.ts` and `fx/constants.ts` (slice B)
 - **Shared-file edits:** none
 - **Brief:** Build the canvas side exactly to S5.
   - A struct-of-arrays pool (`Float32Array` fields sized to capacity, plus a ring cursor that overwrites the oldest slot when full) and no per-particle objects.
-  - Radial-gradient sprites drawn once per (preset, colour, dpr), with `lighter` blending for fire, holy, arcane, sparkle, gold, prismatic, spark and confetti, and `source-over` for the rest.
+  - Radial-gradient sprites drawn once per (preset, color, dpr), with `lighter` blending for fire, holy, arcane, sparkle, gold, prismatic, spark and confetti, and `source-over` for the rest.
   - No `shadowBlur`, no text drawing and no `Math.random`: every random draw comes from an `FxRng`.
   - Projectiles on a quadratic arc with trails, branching cracks and expanding rings.
   - A DPR-aware surface that returns null under jsdom.
@@ -1045,7 +1045,7 @@ file. Slices build blind against the Surface.
 ### Slice B: `runner-settings-contract`
 
 - **Owns:** `apps/web/src/fx/types.ts`, `apps/web/src/fx/constants.ts`, `apps/web/src/fx/settings.ts`, `apps/web/src/game/animations.ts`
-- **Behaviours:** B1–B7
+- **Behaviors:** B1–B7
 - **Shared-file edits:** none
 - **Brief:** Write `types.ts` and `constants.ts` verbatim from S1 and S2. They are the contract every other slice compiles against.
   - Build `settings.ts` to S3: `useSyncExternalStore`, with `localStorage` only inside `try/catch`.
@@ -1055,7 +1055,7 @@ file. Slices build blind against the Surface.
 ### Slice C: `cue-planner`
 
 - **Owns:** `apps/web/src/fx/cues.ts`, `apps/web/src/fx/memory.ts`
-- **Behaviours:** B8–B22
+- **Behaviors:** B8–B22
 - **Imports from other slices:** `ANIMATIONS`, `targetFor`, `locateInstance` and `AnimationEntry` from `animations.ts`; `sideOf` and `testid` from `contract.ts`; `hasKeyword` from `@jackioh/shared`; `fx/types.ts` and `fx/constants.ts`
 - **Shared-file edits:** none
 - **Brief:** Implement S6 and every row of S7 as pure functions over `(entry, view, env)`.
@@ -1066,7 +1066,7 @@ file. Slices build blind against the Surface.
 ### Slice D: `director-and-layer`
 
 - **Owns:** `apps/web/src/fx/director.ts`, `apps/web/src/fx/anchors.ts`, `apps/web/src/fx/FxLayer.tsx`, `apps/web/src/fx/index.ts`
-- **Behaviours:** B32–B38
+- **Behaviors:** B32–B38
 - **Imports from other slices:** slices A, B and C; `mountDomEffect` from `fx/dom.ts` (slice E); `import "./fx.css"` in `FxLayer.tsx` (the file is slice E's)
 - **Shared-file edits** (additive only, as S11 lists them): `apps/web/src/game/Game.tsx` (one import and one mount line), `apps/web/src/game/catalog.ts` (optional `rarity`), `SPEC.md` (§10.10 paragraph and R200–R202), `BUILD.md` (M5-T4 `FX` column and a paragraph), `packages/engine/test/rulings.test.ts` (R200–R202 index rows and four path constants), `apps/web/README.md` (layout lines)
 - **Brief:** Build the director to S8 and the layer to S9.
@@ -1077,12 +1077,12 @@ file. Slices build blind against the Surface.
 ### Slice E: `dom-effects-and-css`
 
 - **Owns:** `apps/web/src/fx/dom.ts`, `apps/web/src/fx/fx.css`, `apps/web/src/game/animations.css`
-- **Behaviours:** B39–B40
+- **Behaviors:** B39–B40
 - **Imports from other slices:** `fx/types.ts` (slice B)
 - **Shared-file edits:** none
 - **Brief:** Build `mountDomEffect` to S10 and the whole look in CSS.
   - The starburst splats, conic light rays, the sheen sweep, card-back ghosts, the chevron arrows, the "Your turn" banner (gold gradient text via `attr(data-text)`), the Victory/Defeat/Draw full-screen treatments and the Divine Shield cocoon.
-  - Text only through `content: attr(…)`, and colours from the `index.css` tokens where they exist (`--radiant`, `--plague`, `--legal`, `--opponent`).
+  - Text only through `content: attr(…)`, and colors from the `index.css` tokens where they exist (`--radiant`, `--plague`, `--legal`, `--opponent`).
   - In `animations.css`, add `* var(--anim-squeeze, 1)` to every duration and enrich the existing keyframes without renaming any.
 
 ### Testers (in parallel with the builders)

@@ -1,4 +1,4 @@
-// docs/polish/1-animations.md, behaviour B31: projectiles, cracks and rings (S5 `canvasFx.ts`).
+// docs/polish/1-animations.md, behavior B31: projectiles, cracks and rings (S5 `canvasFx.ts`).
 //
 // A projectile's head is observed through the trail it leaves in a real `ParticleSystem`: clearing
 // the system and stepping a few frames leaves only particles emitted near the head at that moment.
@@ -297,7 +297,7 @@ describe("B41 flashes", () => {
       const spec = PARTICLE_PRESETS.spark.flash;
       const ms = spec?.ms ?? 0;
       fx.flash("spark", { x: 445, y: 263 }, BOX, 24, colors);
-      // The bloom lives as long as its preset says, whatever its colours.
+      // The bloom lives as long as its preset says, whatever its colors.
       stepFor(fx, ms - 10);
       expect(fx.alive()).toBe(1);
       const stops: string[] = [];
@@ -314,18 +314,18 @@ describe("B41 flashes", () => {
       return stops;
     };
 
-    // Hot first: the first colour is the core, the last the glow (the halo), the middle one is not used.
+    // Hot first: the first color is the core, the last the glow (the halo), the middle one is not used.
     const tinted = stopsOf(["#102030", "#778899", "#ff00aa"]);
     expect(tinted[0]).toBe("rgba(16, 32, 48, 1)");
     expect(tinted.some((c) => c.startsWith("rgba(16, 32, 48"))).toBe(true);
     expect(tinted.some((c) => c.startsWith("rgba(255, 0, 170"))).toBe(true);
     expect(tinted.some((c) => c.startsWith("rgba(119, 136, 153"))).toBe(false);
 
-    // One colour is both the core and the glow.
+    // One color is both the core and the glow.
     const single = stopsOf(["#112233"]);
     expect(single.every((c) => c.startsWith("rgba(17, 34, 51"))).toBe(true);
 
-    // The preset's own bloom (spark's core #ffffff, glow #ffa347), with no colours or none in the list.
+    // The preset's own bloom (spark's core #ffffff, glow #ffa347), with no colors or none in the list.
     expect(PARTICLE_PRESETS.spark.flash).toMatchObject({ core: "#ffffff", color: "#ffa347" });
     for (const plain of [stopsOf(), stopsOf([])]) {
       expect(plain[0]).toBe("rgba(255, 255, 255, 1)");
@@ -359,8 +359,8 @@ describe("B42 projectile arrival", () => {
     const burst = particles.inspect();
     expect(burst.length).toBeGreaterThanOrEqual(10);
     expect(burst.every((p) => p.preset === "fire")).toBe(true);
-    const centre = centroid(burst);
-    expect(distance(centre, to)).toBeLessThan(20);
+    const center = centroid(burst);
+    expect(distance(center, to)).toBeLessThan(20);
   });
 
   it("B42 the head is drawn with a comet tail behind it", () => {

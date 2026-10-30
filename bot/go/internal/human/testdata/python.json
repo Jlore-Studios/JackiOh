@@ -1,0 +1,49 @@
+{
+ "plan_needs": [
+  [
+   "**Human required:** set the secret FOO.\n\n## Goal\nx",
+   "set the secret FOO."
+  ],
+  [
+   "Human required: none\n\n## Goal\nx",
+   ""
+  ],
+  [
+   "> _Human required_: \n\n## Goal\n",
+   "Its planner says only a person can do it."
+  ],
+  [
+   "## Goal\nHuman required: do it",
+   ""
+  ],
+  [
+   "a\nb\nc\nd\nHuman required: fifth line",
+   "fifth line"
+  ],
+  [
+   "a\nb\nc\nd\ne\nHuman required: sixth line",
+   ""
+  ],
+  [
+   "**Human Required:**   N/A.  \n## Goal",
+   ""
+  ],
+  [
+   "human required:\n  spans   lines\n## Goal",
+   "spans lines"
+  ],
+  [
+   "",
+   ""
+  ],
+  [
+   "Human required: x\n\n## Goals\nmore\n### Goal",
+   "x"
+  ]
+ ],
+ "people": "@MaxGoetzmann @jgoetzmann",
+ "ask": [
+  "@MaxGoetzmann @jgoetzmann this needs a person: I cannot build this myself.\n\nSet it up.\n\nSo it is yours now: I took my labels off, unassigned myself, assigned you and labelled it `human required`, and I do not touch it while that label is on. If the rest is mine once a person has done their part, take the label off and `/harness build` (or `@jgoetzmann-bot <notes>`) queues it; if you build it all yourselves, close it.",
+  "@MaxGoetzmann @jgoetzmann this needs a person: I cannot merge this myself. I kept the branch.\n\nIt needs something only a person can do.\n\nSo it is yours now: I took my labels off, unassigned myself, assigned you and labelled it `human required`, and I do not touch it while that label is on. If the rest is mine once a person has done their part, take the label off and ask again; if you build it all yourselves, close it."
+ ]
+}

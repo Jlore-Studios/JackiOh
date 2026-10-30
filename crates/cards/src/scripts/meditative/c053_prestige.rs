@@ -348,7 +348,7 @@ mod tests {
             let mut s = casting("prestige-badge", false);
             let unit = must_unit(&s, "p1", 1);
             s.play(PRESTIGE, pick(&unit.id));
-            let mine = serde_json::to_string(&s.view(PlayerId::P1)).expect("the view serialises");
+            let mine = serde_json::to_string(&s.view(PlayerId::P1)).expect("the view serializes");
             assert!(mine.contains("The next card you play becomes Radiant"));
         }
 

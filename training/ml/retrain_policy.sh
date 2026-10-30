@@ -8,7 +8,7 @@
 #
 #   1. the logs: `--logs` reuses an export (selfplay.yml's artifacts, or a local run), else `jackioh
 #      selfplay --games <n> --seed <base>` plays one here (R1006001, R1006002);
-#   2. `jackioh positions --every decision --policy` over them: every main-phase decision labelled with
+#   2. `jackioh positions --every decision --policy` over them: every main-phase decision labeled with
 #      the AI's candidates there and the move played (R1171000; games that no longer replay are dropped
 #      and counted, R1006003);
 #   3. the fit (`python -m jackioh_ml.policy_fit`) and its report; it stops here unless the prior puts

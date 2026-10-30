@@ -842,7 +842,7 @@ pub struct ConditionContext<'a> {
 
 pub type ConditionHook = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> bool + Send + Sync>;
 
-/// R280, §10.9: the labelled numbers a card's formula comes to now — #31's Fib(cost+1), #70's sum
+/// R280, §10.9: the labeled numbers a card's formula comes to now — #31's Fib(cost+1), #70's sum
 /// over missing health and exile. Each `label` is the formula as the running face prints it, an
 /// exact substring of that face's catalog text (the client prints the value in braces right after
 /// the label's first occurrence, §10.10), and each `value` what it would come to if the card resolved
@@ -1706,7 +1706,7 @@ pub struct ReplacementInstead {
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interpose: Option<bool>,
-    /// R1704001 (on `lethalHit`): only ever `Some(true)`, the hit is cancelled.
+    /// R1704001 (on `lethalHit`): only ever `Some(true)`, the hit is canceled.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cancel: Option<bool>,
     /// R1875006 (on `wouldDie`): only ever `Some(true)`. Nothing is flickered: the card's `then`
@@ -1720,7 +1720,7 @@ pub struct ReplacementInstead {
 ///    the same source, through that hero's Armor and caps (E9). Answers only for its own hero.
 ///    `redirect: "self"` — the hit moves to the replacing card itself as a new instance from the
 ///    same source, through its own pipeline (ME-LETHALGUARD, R1204). Answers for its controller's
-///    hero and other Units, once each per hit. `cancel: true` — the hit is cancelled and deals
+///    hero and other Units, once each per hit. `cancel: true` — the hit is canceled and deals
 ///    nothing (Classic #52 Final Gambit, R1704001). Answers only for its own hero.
 ///  - `healed`: `damage: "pierce"` — the heal becomes that much Pierce damage from this card (E8);
 ///    `lasting: "thisTurn"` also converts every later heal on its enemies this turn (a player

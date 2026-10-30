@@ -1,7 +1,7 @@
 /* Emotes (issue §2–§5, R643–R644): the picker on your portrait, the mute menu on the opponent's,
    and the bubble/sticker that pops out of a hero. Everything mounts inside `.hero` (position:
    relative), so the pieces hang off the portrait without knowing board geometry. The animations
-   honour Reduce Motion exactly like board.css does: media query plus the app's
+   honor Reduce Motion exactly like board.css does: media query plus the app's
    `data-reduce-motion` root flag — a fade instead of the bounce/slide. */
 
 /* ---- the portrait (issue §1) ------------------------------------------------- */
@@ -59,9 +59,9 @@
 
 /* ---- the picker ------------------------------------------------------------ */
 
-/* Centred on the portrait, then slid sideways by `--emote-menu-shift`, which ui.tsx's
+/* Centered on the portrait, then slid sideways by `--emote-menu-shift`, which ui.tsx's
    `useKeepOnScreen` measures once the menu is laid out: a seat puts the portrait anywhere from the
-   screen's left edge (a phone) to its middle, and a centred menu hung half off a phone (#219).
+   screen's left edge (a phone) to its middle, and a centered menu hung half off a phone (#219).
    `width: max-content` because the containing block is the 44px portrait: without it the menu
    would shrink to its narrowest content and wrap every row it can. */
 .emote-menu {

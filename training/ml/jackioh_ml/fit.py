@@ -57,7 +57,7 @@ CALIBRATION_BINS = 10
 #: (c)'s TD(lambda): a row's target is (1 - lambda) of the seat's next row's prediction and lambda of
 #: that row's own target, the last row's being the outcome; 1 fits the outcome alone. On the
 #: 36,000-game export, 0.7 took held-out turns 4-10 from 0.6092 to 0.6059 (#466, 2026-10-18). On
-#: the 100,000-game export, 0.3 relabelled twice won more in play than 0.7 relabelled once
+#: the 100,000-game export, 0.3 relabeled twice won more in play than 0.7 relabeled once
 #: (docs/learned-eval.md D4, D6).
 TD_LAMBDA = 0.3
 #: How many times (c) is refitted on TD targets, each from the predictions of the fit before it.
@@ -430,7 +430,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
         seed_nets.append((seed, net))
         if fitted["validation"] < best_loss:
             best_model, best_loss, best_p = net, fitted["validation"], p_net
-    targets = "the outcomes" if td_lambda >= 1.0 else f"TD({td_lambda:g}) targets, relabelled {td_relabels} times"
+    targets = "the outcomes" if td_lambda >= 1.0 else f"TD({td_lambda:g}) targets, relabeled {td_relabels} times"
     report["models"]["c"] = {"name": f"the network: {width} wide, head {list(head)}, skip connection to the hand eval, on {targets}",
                              "weights": best_model.weight_count(), "heldOut": metrics(best_p, y_held, positions.turn[held]),
                              "calibration": calibration(best_p, y_held)}

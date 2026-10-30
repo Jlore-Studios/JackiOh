@@ -1,5 +1,5 @@
 // The emblem at the heart of every procedural picture: one small original glyph per art theme
-// (docs/polish/6-cards.md, Surface A). Each is drawn for this project in a 24×24 box centred on
+// (docs/polish/6-cards.md, Surface A). Each is drawn for this project in a 24×24 box centered on
 // (12, 12), as plain path data with no text, no external references and no borrowed artwork.
 // `svg.ts` places a glyph with a transform, so the paths here never move. The glyphs v0.2.0 adds
 // for the Book, Pancake and AI families and for the cards' motifs live in motifGlyphs.ts (R503).
@@ -18,27 +18,27 @@ type EmblemPath = GlyphPath;
 
 /** The glyphs' drawing box: 24 units wide and tall. */
 export const EMBLEM_BOX = 24;
-const CENTRE = EMBLEM_BOX / 2;
+const CENTER = EMBLEM_BOX / 2;
 
 function circle(cx: number, cy: number, r: number): string {
   return `M${fmt(cx - r)} ${fmt(cy)}A${fmt(r)} ${fmt(r)} 0 1 0 ${fmt(cx + r)} ${fmt(cy)}A${fmt(r)} ${fmt(r)} 0 1 0 ${fmt(cx - r)} ${fmt(cy)}Z`;
 }
 
-/** Rotates a point about the glyph's centre, in degrees, and prints it. */
+/** Rotates a point about the glyph's center, in degrees, and prints it. */
 function turned(x: number, y: number, degrees: number): string {
   const radians = (degrees * Math.PI) / 180;
-  const dx = x - CENTRE;
-  const dy = y - CENTRE;
-  const rx = CENTRE + dx * Math.cos(radians) - dy * Math.sin(radians);
-  const ry = CENTRE + dx * Math.sin(radians) + dy * Math.cos(radians);
+  const dx = x - CENTER;
+  const dy = y - CENTER;
+  const rx = CENTER + dx * Math.cos(radians) - dy * Math.sin(radians);
+  const ry = CENTER + dx * Math.sin(radians) + dy * Math.cos(radians);
   return `${fmt(rx)} ${fmt(ry)}`;
 }
 
-/** A point at `radius` from the centre along `degrees` (0 = right, clockwise on screen). */
+/** A point at `radius` from the center along `degrees` (0 = right, clockwise on screen). */
 function polar(radius: number, degrees: number, sideways = 0): [number, number] {
   const radians = (degrees * Math.PI) / 180;
-  const x = CENTRE + radius * Math.cos(radians) - sideways * Math.sin(radians);
-  const y = CENTRE + radius * Math.sin(radians) + sideways * Math.cos(radians);
+  const x = CENTER + radius * Math.cos(radians) - sideways * Math.sin(radians);
+  const y = CENTER + radius * Math.sin(radians) + sideways * Math.cos(radians);
   return [x, y];
 }
 
@@ -49,7 +49,7 @@ function virusPath(): string {
   const KNOB_AT = 10;
   const KNOB = 1.5;
   const SPIKES = 8;
-  const parts: string[] = [circle(CENTRE, CENTRE, CORE)];
+  const parts: string[] = [circle(CENTER, CENTER, CORE)];
   // Three pits in the core, so the glyph reads as a cell rather than a sun.
   parts.push(circle(10.2, 10.6, 1.2), circle(14, 11.4, 0.9), circle(11.6, 14.2, 1));
   for (let k = 0; k < SPIKES; k += 1) {
@@ -66,7 +66,7 @@ function virusPath(): string {
 }
 
 function vortexPath(): string {
-  // One swirling arm, repeated three times about the centre.
+  // One swirling arm, repeated three times about the center.
   const arm: readonly (readonly [number, number])[] = [
     [12, 10.6],
     [12.8, 6.6], [16, 3.8], [21, 4.6],
@@ -117,13 +117,13 @@ const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
       "M6.6 11.8C6.9 10.1 8.1 9 9.6 8.8C8.6 9.8 8 10.9 7.9 12.3Z",
     rule: "evenodd",
   },
-  // Three arms swirling about the centre.
+  // Three arms swirling about the center.
   vortex: { d: vortexPath(), rule: "nonzero" },
   // A lightning bolt.
   bolt: { d: "M13.6 1.8L4.8 13.6H10.9L9.4 22.2L19.2 9.4H13L15.8 1.8Z", rule: "nonzero" },
   // A rimmed coin with a lozenge struck in the middle.
   coin: {
-    d: circle(CENTRE, CENTRE, 9.6) + circle(CENTRE, CENTRE, 7.4) + "M12 6.6L15.8 12L12 17.4L8.2 12Z",
+    d: circle(CENTER, CENTER, 9.6) + circle(CENTER, CENTER, 7.4) + "M12 6.6L15.8 12L12 17.4L8.2 12Z",
     rule: "evenodd",
   },
   // An upright sword: fullered blade, crossguard, grip and pommel.
@@ -150,7 +150,7 @@ const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
   },
   // An open eye: almond, iris ring and pupil.
   eye: {
-    d: "M1.4 12C5 5.8 19 5.8 22.6 12C19 18.2 5 18.2 1.4 12Z" + circle(CENTRE, CENTRE, 4.8) + circle(CENTRE, CENTRE, 2.1),
+    d: "M1.4 12C5 5.8 19 5.8 22.6 12C19 18.2 5 18.2 1.4 12Z" + circle(CENTER, CENTER, 4.8) + circle(CENTER, CENTER, 2.1),
     rule: "evenodd",
   },
   // A flame with a hollow heart.

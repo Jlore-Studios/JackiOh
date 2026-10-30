@@ -84,7 +84,7 @@ fn pool(args: Value) -> Vec<String> {
 }
 
 fn as_json(args: &CatalogQueryArgs) -> Value {
-    serde_json::to_value(args).expect("serialises")
+    serde_json::to_value(args).expect("serializes")
 }
 
 /// TS `beforeEach`.
@@ -500,7 +500,7 @@ mod r1178001_the_embiggen_pool_is_the_cards_that_print_two_prices {
         assert_eq!(pool(json!({ "embiggen": true, "cost": 0 })), vec!["classic-304"]);
         // Unasked, the field filters nothing.
         assert_eq!(pool(json!({})).len(), 6);
-        // And it serialises under its own name.
+        // And it serializes under its own name.
         assert_eq!(
             as_json(&q(json!({ "embiggen": true }))),
             json!({ "embiggen": true })
@@ -522,7 +522,7 @@ mod r1859005_a_deals_damage_pool {
         let without = pool(json!({ "dealsDamage": false }));
         assert!(!without.contains(&"core-024".to_string()));
         assert_eq!(without.len(), pool(json!({})).len() - 1);
-        // It serialises under its own name.
+        // It serializes under its own name.
         assert_eq!(
             as_json(&q(json!({ "dealsDamage": true }))),
             json!({ "dealsDamage": true })
@@ -589,7 +589,7 @@ mod r1878000_the_keywords_filter_reads_the_printed_base_face {
             pool(json!({ "keywords": ["Starship Piece"], "set": "Boss" })),
             vec!["boss-406"]
         );
-        // Unasked, the field filters nothing, and it serialises under its own name.
+        // Unasked, the field filters nothing, and it serializes under its own name.
         assert_eq!(pool(json!({})).len(), 4);
         assert_eq!(
             as_json(&q(json!({ "keywords": ["Starship Piece"] }))),

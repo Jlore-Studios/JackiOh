@@ -1,4 +1,4 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviours B41 to B43 and R655: the lookups in
+// Polish task 2 (docs/polish/2-sound.md), behaviors B41 to B43 and R655: the lookups in
 // `voiceData.ts` that the engine, the cue table and the hook read, its parser of `card-audio.json5`,
 // and the file's layout.
 //

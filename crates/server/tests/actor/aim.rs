@@ -140,7 +140,7 @@ async fn match_actions(app: &App, match_id: &str) -> Vec<Value> {
     let rows = tx.matches_actions(match_id).await.expect("matches.actions");
     tx.commit().await.expect("commit");
     rows.iter()
-        .map(|row| serde_json::to_value(row).expect("MatchActionRow serialises"))
+        .map(|row| serde_json::to_value(row).expect("MatchActionRow serializes"))
         .collect()
 }
 
@@ -245,7 +245,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
             panic!("the frame did not parse as an aim")
         };
         assert_eq!(
-            serde_json::to_value(aim).expect("Aim serialises"),
+            serde_json::to_value(aim).expect("Aim serializes"),
             json!({
                 "source": { "at": "hand", "player": "p1", "index": 0 },
                 "target": { "at": "zone", "player": "p2", "row": "backrow", "lane": 1 },
@@ -297,7 +297,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
     #[tokio::test(start_paused = true)]
     async fn r738_drops_an_aim_that_names_a_hand_card_past_the_senders_hand_or_the_opponents_hand_at_all() {
         let h = harness().await;
-        let p2_view = serde_json::to_value(h.actor.view_for(PlayerId::P2)).expect("PlayerView serialises");
+        let p2_view = serde_json::to_value(h.actor.view_for(PlayerId::P2)).expect("PlayerView serializes");
         let count = hand_count(&p2_view, "opponent");
         assert!(count > 0);
 
@@ -341,7 +341,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         });
         let begun = jackioh_engine::begin_game(&state).state;
         let mut view =
-            serde_json::to_value(jackioh_engine::view_for(&begun, viewer)).expect("PlayerView serialises");
+            serde_json::to_value(jackioh_engine::view_for(&begun, viewer)).expect("PlayerView serializes");
         let locks = json!({ "units": [false, false], "backrow": [false] });
         view["viewer"] = json!(viewer.as_str());
         view["you"]["hand"] = json!([]);
