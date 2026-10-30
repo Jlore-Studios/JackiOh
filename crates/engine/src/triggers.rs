@@ -1267,7 +1267,7 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     if !def.on.contains(&event.event_type()) {
         return;
     }
-    // B5 E1, R448: a response to an announce whose play a Counter has already cancelled, or that step 4
+    // B5 E1, R448: a response to an announce whose play a Counter has already canceled, or that step 4
     // has already moved, finds no card and fizzles (`play_steps::run_announce_window` pops these itself).
     if let GameEvent::CardAnnounced { instance_id, .. } = &event
         && !crate::announce::is_announce_live(sink.state, instance_id)

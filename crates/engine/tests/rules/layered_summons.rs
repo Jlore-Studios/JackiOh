@@ -313,7 +313,7 @@ mod r1842000_a_layered_summon_stacks_its_units_in_one_zone_bottom_first {
         assert_eq!(pile_defs(&s, P1, 1), vec![asker.id.clone()]);
         // §9.3: the paused pile is data.
         let round: GameState =
-            serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
+            serde_json::from_str(&serde_json::to_string(s.state()).expect("serializes")).expect("parses");
         assert_eq!(&round, s.state());
 
         s.answer(json!("left"));

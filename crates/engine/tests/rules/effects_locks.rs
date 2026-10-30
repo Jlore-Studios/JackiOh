@@ -86,7 +86,7 @@ fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
 }
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
-    match serde_json::to_value(events).expect("events serialise") {
+    match serde_json::to_value(events).expect("events serialize") {
         Value::Array(items) => items
             .into_iter()
             .map(|item| item.get(key).cloned().unwrap_or(Value::Null))
@@ -131,7 +131,7 @@ mod b5_e20_lock_a_lane {
         assert_eq!(locked_zones(&out.state), vec!["p2:units:2", "p2:backrow:2"]);
         assert_eq!(
             serde_json::to_value(events_of_type(&out.events, GameEventType::Locked))
-                .expect("events serialise"),
+                .expect("events serialize"),
             json!([{ "type": "locked", "player": "p2", "row": "units", "lane": 2 }])
         );
     }
@@ -351,7 +351,7 @@ mod b5_e20_unlock {
         assert_eq!(locked_zones(&out.state), Vec::<String>::new());
         assert_eq!(
             serde_json::to_value(events_of_type(&out.events, GameEventType::Unlocked))
-                .expect("events serialise"),
+                .expect("events serialize"),
             json!([
                 { "type": "unlocked", "player": "p1", "row": "units", "lane": 2 },
                 { "type": "unlocked", "player": "p2", "row": "backrow", "lane": 5 },
@@ -440,7 +440,7 @@ mod r900_unlock_a_random_locked_zone_meditative_27 {
             assert_eq!(open.len(), 1);
             let parts: Vec<&str> = open[0].split(':').collect();
             assert_eq!(
-                serde_json::to_value(&events).expect("events serialise"),
+                serde_json::to_value(&events).expect("events serialize"),
                 json!([{ "type": "unlocked", "player": parts[0], "row": parts[1], "lane": parts[2].parse::<i32>().expect("a lane") }])
             );
             assert_eq!(unlock_once(&seed, json!({})).0, locked);

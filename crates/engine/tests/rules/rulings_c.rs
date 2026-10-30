@@ -1,7 +1,7 @@
 //! Port of `packages/engine/test/rulings-c.test.ts`.
 //!
 //! The M3 gate's third rulings file (BUILD.md): one `it("R<n> …")` per SPEC §11 row from R91 to
-//! R113 whose behaviour no other test names. R97 (event redaction) and R98 (a card that asks a
+//! R113 whose behavior no other test names. R97 (event redaction) and R98 (a card that asks a
 //! question while it resolves) are already proved by `viewFor.test.ts` and `prompts.test.ts`, and
 //! R104 to R112 are server rulings, so neither kind is repeated here; `rulings.test.ts` is the index
 //! that points at whichever file proves each row.
@@ -1236,7 +1236,7 @@ fn played(player: PlayerId) -> GameEvent {
 
 /// A wire value as JSON, so a name compares the same whatever enum or string carries it.
 fn as_json<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
+    serde_json::to_value(value).expect("serializable")
 }
 
 // ---------------------------------------------------------------------------
@@ -3241,19 +3241,19 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         // step 2 applies: draws 1 to 3 are absorbed entirely, and R63's zero rule makes each no damage
         // instance. Each is still a draw that happened, so it is reported (R240), by the pipeline's
         // `damageAbsorbed` with the whole hit (R1362), and by no `damage`.
-        let mut armoured = game("r125-armour");
-        armoured.players.p1.library = vec![];
-        armoured.players.p1.hero.armor = 3;
-        let mut sink = Bench::new(&armoured);
+        let mut armored = game("r125-armour");
+        armored.players.p1.library = vec![];
+        armored.players.p1.hero.armor = 3;
+        let mut sink = Bench::new(&armored);
         let full = HERO_HEALTH;
 
         for n in [1, 2, 3] {
             assert!(matches!(
-                sink.run(&mut armoured, |engine| draw::draw_one(engine, P1, None)),
+                sink.run(&mut armored, |engine| draw::draw_one(engine, P1, None)),
                 DrawOutcome::Fatigue
             ));
-            assert_eq!(armoured.players.p1.fatigue_count, n);
-            assert_eq!(armoured.players.p1.hero.health, full);
+            assert_eq!(armored.players.p1.fatigue_count, n);
+            assert_eq!(armored.players.p1.hero.health, full);
         }
         assert!(hits(&sink.events).is_empty());
         assert_eq!(absorbed_whole(&sink.events), vec![1, 2, 3]);
@@ -3261,15 +3261,15 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         // The escalating Nth-draw damage is what eventually beats the Armor: the 4th draw is 4, so 1
         // gets through, and the 5th lets 2 through.
         assert!(matches!(
-            sink.run(&mut armoured, |engine| draw::draw_one(engine, P1, None)),
+            sink.run(&mut armored, |engine| draw::draw_one(engine, P1, None)),
             DrawOutcome::Fatigue
         ));
-        assert_eq!(armoured.players.p1.hero.health, full - 1);
+        assert_eq!(armored.players.p1.hero.health, full - 1);
         assert!(matches!(
-            sink.run(&mut armoured, |engine| draw::draw_one(engine, P1, None)),
+            sink.run(&mut armored, |engine| draw::draw_one(engine, P1, None)),
             DrawOutcome::Fatigue
         ));
-        assert_eq!(armoured.players.p1.hero.health, full - 1 - 2);
+        assert_eq!(armored.players.p1.hero.health, full - 1 - 2);
         assert_eq!(
             hits(&sink.events),
             [1, 2]

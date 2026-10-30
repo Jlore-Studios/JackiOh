@@ -126,7 +126,7 @@ pub struct LoadoutError {
 }
 
 /// TS `{ ok: true } | { ok: false; errors: readonly LoadoutError[] }`: `ok` with no `errors` key,
-/// or not `ok` with at least one error. Serialised exactly so.
+/// or not `ok` with at least one error. Serialized exactly so.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -151,7 +151,7 @@ fn deck_label(deck: &LoadoutDeck, index: usize) -> String {
     }
 }
 
-/// §9.4: a failure names the card. `"Name" (id)` when catalogued, else the bare id.
+/// §9.4: a failure names the card. `"Name" (id)` when cataloged, else the bare id.
 fn card_label(card_id: &str, cards: &CardDefs) -> String {
     match cards.get(card_id) {
         None => format!("\"{card_id}\""),

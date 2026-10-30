@@ -23,7 +23,7 @@ toggle sits on the game HUD, and a full `AudioControls` panel is exported for ta
 
 **What Hearthstone does.**
 
-- **Every minion has its own set of sounds and lines.** HearthSFX catalogues "every play, attack,
+- **Every minion has its own set of sounds and lines.** HearthSFX catalogs "every play, attack,
   death, trigger, and entrance sound for each minion where applicable, including tokens and other
   non-collectible cards" ([Out of Games on HearthSFX](https://outof.games/realms/hearthstone/3xh/a-site-for-hearthstone-sounds-hearthsfx/),
   [HearthSFX](https://hearthsfx.github.io/), [Hearthstone Wiki: Minion sounds](https://hearthstone.fandom.com/wiki/Category:Minion_sounds)).
@@ -385,7 +385,7 @@ Engine semantics, all observable through `state()`, `log()`, `contextsCreated()`
 - **Voice.** One channel with priorities (review fix, B47–B49): `playVoice(defId, line, delayMs,
   priority = VOICE_PRIORITY.play)`. A request more important than the line holding the channel cuts
   in (a line still loading is logged `"dropped"`, one speaking fades out over `VOICE_FADE_S` or has
-  its speech cancelled). Otherwise it waits in a queue of at most `VOICE_QUEUE_MAX` (displacing a
+  its speech canceled). Otherwise it waits in a queue of at most `VOICE_QUEUE_MAX` (displacing a
   less important waiting line, or refused); when the channel frees, the most important waiting line
   starts (oldest on a tie), and one that has waited over `VOICE_QUEUE_WAIT_MS` is logged `"late"`.
   An accepted request is logged with `outcome: "pending"`, and the entry is later replaced with its
@@ -598,7 +598,7 @@ export function exposeAudioDebug(engine: AudioEngine): () => void;
 
 ### Components (slice 2)
 
-| Component | Props | Root | data-testids | Behaviour |
+| Component | Props | Root | data-testids | Behavior |
 |---|---|---|---|---|
 | `AudioToggle` (default export of `AudioToggle.tsx`) | `{ className?: string }` | `<button type="button" class="audio-toggle">` | `audio-toggle` | `aria-pressed={muted}`, `aria-label` "Mute sound" / "Unmute sound", `title` the same; inline SVG speaker (with waves / with a cross); click → `writeAudioSettings({ muted: !muted })` |
 | `AudioControls` (default export of `AudioControls.tsx`) | `{ className?: string }` | `<fieldset class="audio-controls">` with `<legend>Audio</legend>` | `audio-controls`, `audio-master`, `audio-sfx`, `audio-voice` (`<input type="range" min=0 max=100 step=5>`, value = round(x×100)), `audio-mute`, `audio-voice-on` (`<input type="checkbox">`) | each input's `onChange` writes `value / 100` or the checked flag through `writeAudioSettings`; every input has a `<label>` |
@@ -954,7 +954,7 @@ Added after three independent reviews of the built branch. Each one is a finding
 against the code and fixed, and each has a test.
 
 46. **B46**: While the context is not running (`suspended`, or Safari's `interrupted`), `playSfx` and `playVoice` still accept and log (an sfx entry carries `suspended: true`, a line the outcome `"suspended"`), but build no node, fetch nothing and hold no voice channel; once it runs, new cues schedule and nothing requested while suspended ever starts (engine.test.ts).
-47. **B47**: A line of higher priority than the one holding the channel cuts in: a line still loading is logged `"dropped"` and never starts, a playing file line's gain is faded to 0 and its source stopped within `VOICE_FADE_S`, a spoken line is cancelled; the new line then plays. A line of equal or lower priority never cuts in. With the real director and engine, #11 Tempo Timmy played into #41 Sheepish on its controller's seat logs Timmy's line cut short and Sheepish's heard (engine.test.ts, director.test.ts).
+47. **B47**: A line of higher priority than the one holding the channel cuts in: a line still loading is logged `"dropped"` and never starts, a playing file line's gain is faded to 0 and its source stopped within `VOICE_FADE_S`, a spoken line is canceled; the new line then plays. A line of equal or lower priority never cuts in. With the real director and engine, #11 Tempo Timmy played into #41 Sheepish on its controller's seat logs Timmy's line cut short and Sheepish's heard (engine.test.ts, director.test.ts).
 48. **B48**: When the channel frees, the most important waiting line starts, the oldest on a tie; one that has waited over `VOICE_QUEUE_WAIT_MS` is logged `"late"`; with the queue full, a more important request displaces the least important waiting line (`"dropped"`) (engine.test.ts).
 49. **B49**: A rendered line plays `start(at, offset, duration)` over its audible span (samples above `VOICE_TRIM_THRESHOLD`, less `VOICE_TRIM_LEAD_S` before and plus `VOICE_TRIM_TAIL_S` after) and holds the channel for that span only; a buffer with no audible sample plays whole (engine.test.ts).
 50. **B50**: Muting cancels a spoken fallback line and drops every waiting line; turning voice lines off stops a playing file line, and the voice bus is 0 while they are off (engine.test.ts).
@@ -1047,7 +1047,7 @@ charged to the burst, and that holds for a slow phone as much as for Cypress.
   later added all three.)
 - The full settings panel and gear: task 7 mounts `AudioControls` at integration. This branch only
   mounts `AudioToggle`.
-- Bypassing the iOS ringer or silent switch (Web Audio honours it), and haptics. (R669 later added
+- Bypassing the iOS ringer or silent switch (Web Audio honors it), and haptics. (R669 later added
   haptics, `apps/web/src/haptics/`, behind a Vibration switch.)
 - Localized lines, recorded human voice actors, and any server or engine change.
 - Any new `GameEvent` type, `PlayerView` field or rule. Audio reads the view as it is.
@@ -1061,7 +1061,7 @@ below), and no slice creates anything under `apps/web/src/audio/test/` or any `*
 
 - **Owns (all new):** `apps/web/src/audio/types.ts`, `constants.ts`, `settings.ts`, `sfx.ts`,
   `engine.ts`, `unlock.ts`, `voiceData.ts`.
-- **Behaviours:** B1–B16.
+- **Behaviors:** B1–B16.
 - **Shared-file edits:** none. It imports `voice-lines.json` and `voice-manifest.json` (slice 3)
   with the shapes in Surface. Until slice 3 lands, a builder may keep a local stub, but it must not
   commit one.
@@ -1072,7 +1072,7 @@ below), and no slice creates anything under `apps/web/src/audio/test/` or any `*
   `uiSounds.ts`, `debug.ts`, `AudioToggle.tsx`, `AudioControls.tsx`, `audio.css`, `index.ts`.
 - **Owns (existing):** `apps/web/src/game/Game.tsx`, limited to the three additive lines in Surface
   ("The `Game.tsx` edit").
-- **Behaviours:** B17–B32, B38, B39.
+- **Behaviors:** B17–B32, B38, B39.
 - **Shared-file edits:** only `Game.tsx` as specified. It reads `apps/web/src/game/animations.ts`
   (task 1's) and never edits it.
 
@@ -1082,7 +1082,7 @@ below), and no slice creates anything under `apps/web/src/audio/test/` or any `*
   `apps/web/scripts/gen-voice.mjs`, and `apps/web/public/audio/voice/` (the 152 `.m4a` files).
 - **Owns (existing):** `apps/web/package.json`, limited to one added script line:
   `"gen:voice": "node scripts/gen-voice.mjs"`. No dependency changes.
-- **Behaviours:** B33–B37.
+- **Behaviors:** B33–B37.
 - **Shared-file edits:** only that `package.json` line. It transcribes the Surface tables verbatim,
   runs the script on macOS, and commits the generated manifest and files.
 
@@ -1098,20 +1098,20 @@ below), and no slice creates anything under `apps/web/src/audio/test/` or any `*
   - `apps/web/README.md`: the Layout block gains `audio/` and `scripts/gen-voice.mjs`, plus one
     paragraph on regenerating voices.
   - `e2e/README.md`: one line each for `15-audio.cy.ts` and `audio-recipes.cy.tsx`.
-- **Behaviours:** B40.
+- **Behaviors:** B40.
 - **Shared-file edits:** exactly those. Rows go in numeric position; see Risks for the merge with
   the other tasks' rows.
 
 ### Testers
 
 - **Tester A (runtime, jsdom).**
-  - Behaviours: B1–B14, B17–B32, and B40, which it verifies by running the existing
+  - Behaviors: B1–B14, B17–B32, and B40, which it verifies by running the existing
     `rulings.test.ts` and `pnpm rulings:coverage` after slice 4.
   - New files: `apps/web/src/audio/test/fakeAudio.ts`, `engine.test.ts`, `unlock.test.ts`,
     `settings.test.ts`, `sfx.test.ts`, `cues.test.ts`, `director.test.ts` and `ui.test.tsx`, all
     under `apps/web/src/audio/`.
 - **Tester B (content and browser).**
-  - Behaviours: B15, B16 and B33–B39.
+  - Behaviors: B15, B16 and B33–B39.
   - New files: `apps/web/src/audio/voice-lines.test.ts`, `apps/web/src/audio/voice-assets.test.ts`,
     `e2e/cypress/component/audio-recipes.cy.tsx` and `e2e/cypress/e2e/15-audio.cy.ts`.
 
@@ -1211,7 +1211,7 @@ the board's `CatalogContext` (`useGameAudio` hands `createSoundDirector` a `card
 for what this branch could not reach:
 
 - **Families.** `timbreFor` maps a card to the card art's theme (`cards/art/themes.ts`: tags first,
-  then Token, then a Field Spell's type), and `SfxParams.timbre` colours the summon thud with a short
+  then Token, then a Field Spell's type), and `SfxParams.timbre` colors the summon thud with a short
   accent and the spell shimmer with its own four chimes. Levels are the plain recipe's; the component
   spec holds every family in the routine band.
 - **The entrance.** A Legendary or Mythic Unit's `summoned` adds the new `entrance` sting (the

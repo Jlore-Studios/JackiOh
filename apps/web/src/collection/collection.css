@@ -247,7 +247,7 @@
   gap: 8px;
 }
 
-/* The rarity each item and tile names itself by: the faces' own colours (cards.css). */
+/* The rarity each item and tile names itself by: the faces' own colors (cards.css). */
 .tavern.app-shell .collection-strip__item[data-rarity="Common"],
 .tavern.app-shell .collection-tile[data-rarity="Common"] {
   --collection-rarity: var(--rarity-common);
@@ -366,7 +366,7 @@
   height: 100%;
 }
 
-/* A locked item: the picture dimmed and without colour, its rarity and lock still readable. */
+/* A locked item: the picture dimmed and without color, its rarity and lock still readable. */
 .tavern.app-shell .collection-strip__item[data-owned="false"] .collection-strip__picture,
 .tavern.app-shell .collection-tile[data-owned="false"] .collection-miniboard,
 .tavern.app-shell .collection-tile[data-owned="false"] .collection-tile__back {

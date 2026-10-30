@@ -579,7 +579,7 @@ fn deck_where(wanted: impl Fn(&Value) -> bool) -> Vec<String> {
     let size = count(DECK_SIZE);
     let cards: Vec<String> = jackioh_cards::CATALOG
         .values()
-        .map(|def| serde_json::to_value(def).expect("a card serialises"))
+        .map(|def| serde_json::to_value(def).expect("a card serializes"))
         .filter(|def| {
             def["token"] != json!(true)
                 && !def["tags"]
@@ -2440,7 +2440,7 @@ mod r1253000_a_live_coop_action_the_engine_panics_on {
                 serde_json::from_value(play).expect("a legal action is an action"),
             )
             .await;
-        let answer = serde_json::to_value(&answer).expect("an answer serialises");
+        let answer = serde_json::to_value(&answer).expect("an answer serializes");
         assert_eq!(answer["type"], "error", "{answer}");
         assert_eq!(answer["code"], "internal", "{answer}");
 

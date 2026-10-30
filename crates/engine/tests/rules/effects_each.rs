@@ -150,7 +150,7 @@ mod for_each_card_r113_r66 {
 
         // The continuation is data, so it survives the round trip a stored game makes (§9.3).
         let mut stored: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
+            serde_json::from_value(serde_json::to_value(&state).expect("the state serializes"))
                 .expect("and parses");
         let mut answered = Bench::new(&stored);
         let refused = answer_prompt(

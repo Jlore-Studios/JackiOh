@@ -129,7 +129,7 @@ async fn open(app: &Arc<App>, token: &str, pack: &str) -> OpenedPack {
 
 /// A store value as JSON.
 fn to<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a store value serialises")
+    serde_json::to_value(value).expect("a store value serializes")
 }
 
 /// Everything `p1` holds and every ledger row it has, the collection's included, as one value.

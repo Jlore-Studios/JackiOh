@@ -329,7 +329,7 @@ mod tests {
             }
             assert_eq!(js(&theirs.opponent.backrow[at]), back);
             // Nowhere in their view — the board, the events, a prompt — is the card named or its face shown.
-            let serialized = serde_json::to_string(&theirs).expect("a view serialises");
+            let serialized = serde_json::to_string(&theirs).expect("a view serializes");
             assert!(!serialized.contains(&format!("\"{}\"", trap.id)));
             assert!(!serialized.contains(&format!("\"{}\"", trap.def_id)));
 

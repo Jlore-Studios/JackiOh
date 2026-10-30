@@ -3,7 +3,7 @@
 // apps/web's vitest suite proves the DOM: which words a Radiant face marks, which names are
 // references, where a value's braces go. What only a layout and style engine can say is measured
 // here: the gold mark is really gold, bold and underlined, and readable on the Radiant parchment
-// (contrast from the computed colours); a reference in the collection's detail view opens a tooltip
+// (contrast from the computed colors); a reference in the collection's detail view opens a tooltip
 // holding the named card's face, inside the viewport; and a computed value sits inside the rules
 // box without pushing it out.
 
@@ -18,7 +18,7 @@ function def(id: string): CardDef {
   return found;
 }
 
-/** WCAG relative luminance of a computed `rgb(…)`/`rgba(…)` colour. */
+/** WCAG relative luminance of a computed `rgb(…)`/`rgba(…)` color. */
 function luminance(css: string): number {
   const [r = 0, g = 0, b = 0] = (css.match(/[\d.]+/g) ?? []).map(Number);
   const channel = (value: number): number => {

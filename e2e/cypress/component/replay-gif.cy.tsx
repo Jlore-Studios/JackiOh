@@ -1,12 +1,12 @@
 // Sharing a replay as a GIF (#513, R513000): the raster draws a frame plan's known view and the
-// encoder's GIF decodes back, in a browser, to the colours the plan names. jsdom draws nothing, so
+// encoder's GIF decodes back, in a browser, to the colors the plan names. jsdom draws nothing, so
 // the unit tests (apps/web/src/replay/gif/) hold the plan and the bytes, and this holds the pixels.
 //
-// The golden is the plan itself: each filled rectangle's colour is sampled where nothing drawn after
+// The golden is the plan itself: each filled rectangle's color is sampled where nothing drawn after
 // it lies over it and compared with the palette entry the encoder quantises that fill to, within
-// COLOUR_SLACK per channel (the specs compare colours exactly; 1 is rounding in the browser's GIF
+// COLOR_SLACK per channel (the specs compare colors exactly; 1 is rounding in the browser's GIF
 // decoder). No stored image is compared, since text depends on the machine's fonts. Each card's art
-// window must also show several colours, so a blank or missing picture fails.
+// window must also show several colors, so a blank or missing picture fails.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/replay-gif.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -24,10 +24,10 @@ import { baseView, fullBoardView } from "../../../apps/web/src/test/fixtures.ts"
 const EDGE_SLACK_PX = 1;
 /** Fewer samples than this and the golden proves nothing. */
 const MIN_SAMPLES = 5;
-/** Per channel; the palette's own colours decode exactly, so this is only rounding. */
-const COLOUR_SLACK = 1;
-/** A card's art window shows at least this many palette colours on the grid below. */
-const MIN_ART_COLOURS = 3;
+/** Per channel; the palette's own colors decode exactly, so this is only rounding. */
+const COLOR_SLACK = 1;
+/** A card's art window shows at least this many palette colors on the grid below. */
+const MIN_ART_COLORS = 3;
 /** The art window is sampled on a grid this many points across. */
 const ART_GRID = 5;
 /** Where in a rectangle a sample may be taken, as fractions of its width and height: its middle first, then outwards. */
@@ -62,7 +62,7 @@ function rgbOf(hex: string): [number, number, number] {
   return [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16)) as [number, number, number];
 }
 
-/** The palette's colour for a fill. */
+/** The palette's color for a fill. */
 function quantised(hex: string): [number, number, number] {
   const [r, g, b] = rgbOf(hex);
   const at = paletteIndex(r, g, b) * 3;
@@ -112,7 +112,7 @@ describe("a replay clip drawn as a GIF (R513000)", () => {
   for (const { label, view } of VIEWS) {
     for (const preset of Object.keys(REPLAY_GIF_SIZES) as ReplayGifPreset[]) {
       for (const via of ["worker", "thread"] as const) {
-        it(`${label} in the ${preset} shape, drawn in a ${via}, decodes to the plan's colours`, () => {
+        it(`${label} in the ${preset} shape, drawn in a ${via}, decodes to the plan's colors`, () => {
           const shown = view();
           const clip = [{ step: 0, turn: shown.turn, view: shown }];
           const plan = planFrames(clip, { ...REPLAY_GIF_SIZES[preset], fps: REPLAY_GIF_FPS, catalogVersion: "v0.0.0", portraits: PORTRAITS });
@@ -131,24 +131,24 @@ describe("a replay clip drawn as a GIF (R513000)", () => {
             expect([image.width, image.height]).to.deep.equal([plan.width, plan.height]);
             const off = samples.flatMap((sample) => {
               const got = pixel(image, sample.x, sample.y);
-              return got.every((channel, i) => Math.abs(channel - (sample.expected[i] ?? 0)) <= COLOUR_SLACK) ? [] : [`${sample.label}: ${got.join(",")} is not ${sample.expected.join(",")}`];
+              return got.every((channel, i) => Math.abs(channel - (sample.expected[i] ?? 0)) <= COLOR_SLACK) ? [] : [`${sample.label}: ${got.join(",")} is not ${sample.expected.join(",")}`];
             });
-            expect(off, "samples off the plan's colours").to.deep.equal([]);
+            expect(off, "samples off the plan's colors").to.deep.equal([]);
 
-            // Every card's art window shows a picture, not one flat colour.
+            // Every card's art window shows a picture, not one flat color.
             for (const item of frame.items) {
               if (item.kind !== "card" || assets.faces[faceKey(item.defId, item.radiant)]?.art === null) continue;
               const edge = Math.max(2, Math.round(item.h * 0.06));
               const window = { x: item.x + edge, y: item.y + edge, w: item.w - 2 * edge, h: item.h * 0.5 };
-              const colours = new Set<string>();
+              const colors = new Set<string>();
               for (let row = 0; row < ART_GRID; row += 1) {
                 for (let col = 0; col < ART_GRID; col += 1) {
                   const x = Math.round(window.x + ((col + 0.5) * window.w) / ART_GRID);
                   const y = Math.round(window.y + ((row + 0.5) * window.h) / ART_GRID);
-                  colours.add(pixel(image, x, y).join(","));
+                  colors.add(pixel(image, x, y).join(","));
                 }
               }
-              expect(colours.size, `${item.defId}'s art colours`).to.be.at.least(MIN_ART_COLOURS);
+              expect(colors.size, `${item.defId}'s art colors`).to.be.at.least(MIN_ART_COLORS);
             }
           });
         });

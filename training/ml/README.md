@@ -82,7 +82,7 @@ run, one after another (`training/learn.md`).
 The policy prior (`crates/ai/src/policy.rs`, R1171000, R1171001) re-sorts the moves the beam expands
 before it takes its first `root_branching` or `branching`, so a move the heuristic tiers rank past
 that prefix can still be searched. Its data is `cargo jackioh positions --every decision --policy`:
-each decision row labelled with the keys of every candidate the AI considered there, in the heuristic
+each decision row labeled with the keys of every candidate the AI considered there, in the heuristic
 order, and the move it played.
 
 `python -m jackioh_ml.policy_fit <positions>… --out <dir>` (`jackioh_ml/policy_fit.py`) refuses a file
@@ -98,7 +98,7 @@ heuristic order's. That is a precondition only: the moves played are the heurist
 prior can merely imitate them, and only the screen and the gate judge the strength.
 `<dir>/weights.json` is the table `crates/ai/build.rs` compiles in.
 
-`training/ml/retrain_policy.sh` is the same loop as `retrain.sh` for the prior: the logs, the labelled
+`training/ml/retrain_policy.sh` is the same loop as `retrain.sh` for the prior: the logs, the labeled
 positions, the fit (stopping unless the decision is go), the table into
 `crates/ai/src/policy/weights.json` with `AI_MOVE_ORDER` set to `Learned`, the parent, the candidate
 and the 800-game screen on `improve-dev`, printing the learn lane's gate only when the screen's

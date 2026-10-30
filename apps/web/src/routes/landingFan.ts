@@ -1,6 +1,6 @@
 // R374 deals real, non-token Core cards into four rarities in random order, with the middle Radiant.
 // Randomness is client-owned (CLAUDE.md rule 4) and injected so tests can deal deterministically.
-// R1017002 deals only the cards that print whole on a fan card, a hero's full-art card favoured.
+// R1017002 deals only the cards that print whole on a fan card, a hero's full-art card favored.
 
 import { SHIPPED_SETS, type CardDef, type CardDefs, type Rarity } from "@jackioh/shared";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -105,7 +105,7 @@ export const EVEN: CardWeight = () => 1;
 const TIER_RANK: Readonly<Record<LengthTier, number>> = { s: 0, m: 1, l: 2, xl: 3, xxl: 4 };
 
 /**
- * R639 favours faces whose name and rules text print at the largest size, but never excludes dense
+ * R639 favors faces whose name and rules text print at the largest size, but never excludes dense
  * cards. A hero's card counts as one (R1017002): in the fan it prints its art and no words, and with
  * full art off it is dealt only when its text fits the fan. A Training Grounds snapshot of one prints
  * its words, so it does not (R2195001).
@@ -126,7 +126,7 @@ export function featureWeight(def: CardDef): number {
 const WEIGHTS = new Map<string, number>();
 
 /** R1017002: `weigh`, with a hero's full-art card FULL_ART_WEIGHT_FACTOR times as likely while full art is on. */
-export function favouringFullArt(weigh: CardWeight, fullArtOn: boolean): CardWeight {
+export function favoringFullArt(weigh: CardWeight, fullArtOn: boolean): CardWeight {
   return (def) => weigh(def) * (fullArtOn && isFullArtCard(def.id, def.name) ? FULL_ART_WEIGHT_FACTOR : 1);
 }
 

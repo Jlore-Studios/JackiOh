@@ -195,7 +195,7 @@ describe("card options are card faces", () => {
 });
 
 describe("R831004: #82 KY's Trial's first Discover offers sets", () => {
-  /** The chooser's view as `viewFor` builds it: each option a set, keyed `mode:<set>`, labelled with it. */
+  /** The chooser's view as `viewFor` builds it: each option a set, keyed `mode:<set>`, labeled with it. */
   const SETS = ["Core", "Classic+", "Meditative"] as const;
 
   function setView(): PlayerView {
@@ -244,7 +244,7 @@ describe("R247: #82 KY's Trial's Discover offers numbers", () => {
   /**
    * The chooser's view exactly as `viewFor` builds it for #82 (the "R247 …" test beside its script,
    * crates/cards/src/scripts/core/c082_kys_trial.rs): each option is the number, keyed `mode:<n>`
-   * and labelled `<n>`, with no definition.
+   * and labeled `<n>`, with no definition.
    */
   const NUMBERS = ["17", "42", "88"] as const;
 
@@ -307,7 +307,7 @@ describe("R247: #82 KY's Trial's Discover offers numbers", () => {
 describe("R1183005: Meditative+ #25 KY's Intuition's Discover offers code", () => {
   /**
    * The chooser's view as `viewFor` builds it for M+ #25 (crates/engine's `option_view`): each option
-   * is a place in the offer, keyed `mode:code-<n>`, labelled with a card's code block and marked
+   * is a place in the offer, keyed `mode:code-<n>`, labeled with a card's code block and marked
    * `code`, with no definition.
    */
   const CODES = [
@@ -356,7 +356,7 @@ describe("R1183005: Meditative+ #25 KY's Intuition's Discover offers code", () =
   });
 });
 
-describe("#492 one card picker, front and centre, for every short choice", () => {
+describe("#492 one card picker, front and center, for every short choice", () => {
   const AURA = "core-046"; // Suppressive Aura, "2 embiggen 4"
   const APPROPRIATIONS = "classicplus-040"; // an X Spell with a "Choose one" of four
 

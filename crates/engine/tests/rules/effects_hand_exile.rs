@@ -11,7 +11,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::harness::{events_of_type, hand_ids, in_hand, new_game, run_effect};
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
-    match serde_json::to_value(events).expect("events serialise") {
+    match serde_json::to_value(events).expect("events serialize") {
         Value::Array(items) => items
             .into_iter()
             .map(|item| item.get(key).cloned().unwrap_or(Value::Null))

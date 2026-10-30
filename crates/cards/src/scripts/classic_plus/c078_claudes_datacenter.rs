@@ -155,7 +155,7 @@ mod tests {
     }
 
     fn view_text(s: &Scenario, player: PlayerId) -> String {
-        serde_json::to_string(&s.view(player)).expect("serialises")
+        serde_json::to_string(&s.view(player)).expect("serializes")
     }
 
     /// Its Activate (R384).

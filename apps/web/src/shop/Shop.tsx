@@ -83,11 +83,11 @@ export default function Shop({
   const spendOut = useSpendOut();
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     setReading(true);
     Promise.all([getPacks(token), getWallet(token)]).then(
       ([packs, balance]) => {
-        if (!cancelled) {
+        if (!canceled) {
           setInfo(packs);
           setWallet(balance);
           setLoadError(null);
@@ -95,7 +95,7 @@ export default function Shop({
         }
       },
       (cause: unknown) => {
-        if (!cancelled) {
+        if (!canceled) {
           setReading(false);
           // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
           const keptInfo = cachedRead<PacksResponse>(token, keptPaths.packs);
@@ -111,7 +111,7 @@ export default function Shop({
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, revision, attempt]);
 

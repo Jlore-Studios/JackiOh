@@ -126,7 +126,7 @@ describe("R502 the cast on draw is held up", () => {
     expect(screen.queryByTestId(T.root)).toBeNull();
   });
 
-  it("R502 bursts out of the drawer's Deck pile: the card starts on the pile's centre, measured before the first paint", () => {
+  it("R502 bursts out of the drawer's Deck pile: the card starts on the pile's center, measured before the first paint", () => {
     const pile = document.createElement("div");
     pile.setAttribute("data-testid", "library-opponent");
     document.body.appendChild(pile);

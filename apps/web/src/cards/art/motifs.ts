@@ -7,7 +7,7 @@
 // abstract (chaos, time), so "Plague Doctor" is spores rather than a cross.
 //
 // Drawn in procedural.ts: a card of a type theme wears the motif's glyph as its emblem, in the motif's
-// own colours; a tribe or family keeps its emblem and carries the motif by its `arrangement`.
+// own colors; a tribe or family keeps its emblem and carries the motif by its `arrangement`.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import type { ArtThemeId } from "./themes.ts";
@@ -29,7 +29,7 @@ export type MotifHeadgear = "ears" | "crown" | "horns";
 export type Motif = {
   glyph: EmblemGlyph;
   arrangement: MotifArrangement;
-  /** The motif's own colours, which read whatever the theme's hue. */
+  /** The motif's own colors, which read whatever the theme's hue. */
   fill: string;
   stroke: string;
   /** A pattern drawn behind everything as well. */

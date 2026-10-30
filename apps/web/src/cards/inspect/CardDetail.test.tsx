@@ -1,6 +1,6 @@
 // Polish 6, slice C: the detail view (docs/polish/6-cards.md, B29).
 //
-// `<CardDetail def onClose actions? meta?>` is a centred dialog: both faces side by side, a meta
+// `<CardDetail def onClose actions? meta?>` is a centered dialog: both faces side by side, a meta
 // line `#<index> · <set> · <rarity> · <type>` plus ` · <tags>` and ` · N lines of code` (E36), the
 // glossary of both faces, then the caller's meta and actions, then inspect-close. Its close paths and
 // focus return are B25, in inspect.test.tsx. Real catalog throughout.

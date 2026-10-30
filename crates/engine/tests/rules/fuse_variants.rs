@@ -902,7 +902,7 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
         );
         assert!(
             !serde_json::to_string(&view_for(&run1.state, P2))
-                .expect("a view serialises")
+                .expect("a view serializes")
                 .contains(&felinor_a_in_deck.id)
         );
         let mine = json_of(view_for(&run1.state, P1))["pending"].clone();

@@ -44,7 +44,7 @@ fn emptied(state: &GameState, player: PlayerId) -> GameState {
 
 fn names(action: &ActionBody, id: &str) -> bool {
     serde_json::to_string(action)
-        .expect("serialises")
+        .expect("serializes")
         .contains(&format!("\"{id}\""))
 }
 

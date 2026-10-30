@@ -290,7 +290,7 @@ mod tests {
         #[test]
         fn r1107_the_grant_survives_a_json_round_trip() {
             let (mut s, unit) = summoned("underclassman-json");
-            let round: GameState = serde_json::from_value(js(s.state())).expect("deserialises");
+            let round: GameState = serde_json::from_value(js(s.state())).expect("deserializes");
             assert_eq!(
                 find_instance(&round, &unit.id).and_then(|card| card.grants.clone()),
                 unit.grants

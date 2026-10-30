@@ -13,7 +13,7 @@
 //! resolution prompt over any Unit or hero (§10.6, R81), picked at random under a random cast (R843).
 //! The return is Core #31's `end_of_turn` hook without the cost raise: from the graveyard, only on
 //! the turn it was played (R153, R155), a `bounce` that a full hand burns back (§2.4). A `preview`
-//! (R280) labelled "Ascent level" shows the count in play.
+//! (R280) labeled "Ascent level" shows the count in play.
 
 use jackioh_engine::prelude::*;
 
@@ -120,7 +120,7 @@ fn cost_of(radiant: bool) -> CostHook {
     })
 }
 
-/// R280: the Ascent level as the card stands, labelled with the catalog text's own words.
+/// R280: the Ascent level as the card stands, labeled with the catalog text's own words.
 fn preview() -> PreviewHook {
     condition_hook(move |ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
         vec![PreviewValue {

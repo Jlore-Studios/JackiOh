@@ -8,7 +8,7 @@
 //! Allured as it arrives (R963, R1045000): the engine's delayed steal at the start of this card's
 //! controller's next turn, destroyed with no room, aimed at its stay and carrying the public pink
 //! `allure` mark while it waits (R1876004). Death (§6.2): `remove_allures` (R1876002): every Allure mark
-//! on the field, both sides' and whoever made it, comes off and its steal is cancelled. Divine Shield on
+//! on the field, both sides' and whoever made it, comes off and its steal is canceled. Divine Shield on
 //! the Radiant face is catalog data.
 
 use jackioh_engine::prelude::*;
@@ -172,9 +172,9 @@ mod tests {
         assert!(s.unit(P1, 1).is_none(), "Kwzka died");
         assert!(!allured(&s, &fanatic) && !allured(&s, &vanilla));
         s.end_turn();
-        assert_eq!(s.card(&fanatic).controller, P2, "Kwzka's steal cancelled");
+        assert_eq!(s.card(&fanatic).controller, P2, "Kwzka's steal canceled");
         s.end_turn();
-        assert_eq!(s.card(&vanilla).controller, P1, "the Fanatic's steal cancelled too");
+        assert_eq!(s.card(&vanilla).controller, P1, "the Fanatic's steal canceled too");
     }
 
     #[test]

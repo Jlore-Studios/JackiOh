@@ -1,6 +1,6 @@
 /* The patch history (R388, R507): the Patch notes page (routes/patch-notes.tsx, inside `.tavern`)
    and the History section of the card detail view (patches/CardHistory.tsx, inside the inspect
-   dialog, which is portalled outside `.tavern`). The change marks are shared, so their colours are
+   dialog, which is portalled outside `.tavern`). The change marks are shared, so their colors are
    tokens of their own that read on both dark panels. Nothing here moves: no animation and no
    transition, so reduced motion has nothing to stop. */
 
@@ -17,7 +17,7 @@
 
 /* ---- the marks ------------------------------------------------------------------------------ */
 
-/* R507: bold, a double underline and the teal, so the mark does not rest on colour alone. */
+/* R507: bold, a double underline and the teal, so the mark does not rest on color alone. */
 .patch-mark {
   color: var(--patch-mark-ink);
   font-weight: 800;

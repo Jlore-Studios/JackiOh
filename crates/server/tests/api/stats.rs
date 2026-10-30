@@ -977,7 +977,7 @@ mod r654_public_card_and_player_stats {
         assert!(bob.get("rating").is_none());
         assert!(alice.get("rating").is_none());
 
-        // Alice's favourite cards and fun stats
+        // Alice's favorite cards and fun stats
         assert_eq!(
             alice["favouriteCards"],
             json!([{ "id": "core-001", "count": 25 }, { "id": "core-002", "count": 15 }])

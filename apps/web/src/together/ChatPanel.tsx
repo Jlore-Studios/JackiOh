@@ -97,12 +97,12 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
 
   // The newest page now and every CHAT_POLL_MS while open (B58).
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     let first = true;
     const read = (): void => {
       attempt(() => getChat(friendId)).then(
         (page) => {
-          if (cancelled) return;
+          if (canceled) return;
           // R2120000: while a send is open the player's own messages wait for the sends' answers, so a message a
           // read brings back before its send has answered is not drawn beside its pending copy.
           const fresh = sendsOpen.current === 0 ? page.messages : page.messages.filter((message) => message.from === friendId);
@@ -113,7 +113,7 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
           setReadFailure(null);
         },
         (cause: unknown) => {
-          if (cancelled) return;
+          if (canceled) return;
           // The failure first shown stays until a read answers, so a wait it stated is counted once.
           setReadFailure((shown) => shown ?? readFailureOf(cause));
         },
@@ -123,7 +123,7 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
     read();
     const handle = window.setInterval(read, CHAT_POLL_MS);
     return () => {
-      cancelled = true;
+      canceled = true;
       window.clearInterval(handle);
     };
   }, [friendId]);

@@ -61,8 +61,8 @@ pub fn can_travel_starscape(state: &GameState, player: PlayerId) -> bool {
         .is_none_or(|map| map.at < map.nodes.len() as i32)
 }
 
-/// R1847002: whether `player` has travelled their map this turn.
-pub fn starscape_travelled_this_turn(state: &GameState, player: PlayerId) -> bool {
+/// R1847002: whether `player` has traveled their map this turn.
+pub fn starscape_traveled_this_turn(state: &GameState, player: PlayerId) -> bool {
     state.players[player]
         .starscape
         .as_ref()
@@ -94,7 +94,7 @@ fn travel_ability(
 
 /// R1847002: the abilities a card declares to travel its controller's map, the edge giving
 /// `edge_def_id`. The base face has one, a travel for `STARSCAPE_TRAVEL_MANA`. The Radiant face has
-/// two that `has` switches between (R752): a free travel while the player has not travelled this
+/// two that `has` switches between (R752): a free travel while the player has not traveled this
 /// turn, and the paid one once they have.
 pub fn starscape_abilities(radiant: bool, edge_def_id: &'static str) -> Vec<ActivationDecl> {
     let paid = Some(ActivationCost {
@@ -116,7 +116,7 @@ pub fn starscape_abilities(radiant: bool, edge_def_id: &'static str) -> Vec<Acti
             "Travel one node (free)",
             None,
             Some(read_hook(|a| {
-                !starscape_travelled_this_turn(a.state, a.self_.controller)
+                !starscape_traveled_this_turn(a.state, a.self_.controller)
             })),
             edge_def_id,
         ),
@@ -125,7 +125,7 @@ pub fn starscape_abilities(radiant: bool, edge_def_id: &'static str) -> Vec<Acti
             "Travel one node",
             paid,
             Some(read_hook(|a| {
-                starscape_travelled_this_turn(a.state, a.self_.controller)
+                starscape_traveled_this_turn(a.state, a.self_.controller)
             })),
             edge_def_id,
         ),

@@ -563,7 +563,7 @@ mod r1423_give_control_hands_a_card_to_the_other_player {
         let given = events_json(&events, "controlChanged");
         assert_eq!(given.len(), 1);
         assert_eq!(given[0]["how"], json!("give"));
-        let read = serde_json::to_value(events[0].as_rules_read()).expect("an event serialises");
+        let read = serde_json::to_value(events[0].as_rules_read()).expect("an event serializes");
         assert_eq!(read.get("how"), None);
         assert_eq!(read["controller"], json!("p2"));
     }

@@ -430,7 +430,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       return event.forced ? t("{attacker} attacked {target} (forced)", attack) : t("{attacker} attacked {target}", attack);
     }
     case "attackCancelled":
-      return t("{attacker}'s attack was cancelled", { attacker: capitalised(name.instance(event.attackerId)) });
+      return t("{attacker}'s attack was canceled", { attacker: capitalised(name.instance(event.attackerId)) });
     case "manaChanged": {
       const mana = { seat: name.seat(event.player), current: event.current, max: event.max };
       return sideOf(view, event.player) === "you" ? t("{seat} have {current}/{max} mana", mana) : t("{seat} has {current}/{max} mana", mana);

@@ -191,7 +191,7 @@ pub fn portrait_or_default(portrait: Option<&str>) -> PortraitId {
 }
 
 /// One entry of the launch roster (TS's anonymous `{ cardName: string; flavour: string }`). A
-/// constant table, so it serialises but is never read back.
+/// constant table, so it serializes but is never read back.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PortraitEntry {

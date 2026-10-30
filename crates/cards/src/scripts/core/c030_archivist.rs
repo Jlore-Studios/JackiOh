@@ -121,7 +121,7 @@ mod tests {
 
             s.play("core-030", json!({ "modes": ["highest"] }));
 
-            // R81: the mode travelled in the play action, so resolution never paused.
+            // R81: the mode traveled in the play action, so resolution never paused.
             assert!(s.state().pending.is_none());
             assert_eq!(def_ids(&s.hand(P1)), strings(&["core-025"])); // #25 at 4 is the dearest
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id.clone()).as_deref(), Some("core-030"));

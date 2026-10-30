@@ -8,7 +8,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::{
-    armoured, big_body, big_dfender, cleaver, indestructible, lifestealer, plain, poisonous, shielded,
+    armored, big_body, big_dfender, cleaver, indestructible, lifestealer, plain, poisonous, shielded,
     trample_lifesteal, trampler,
 };
 use crate::rules::fixtures::damage_combat::{
@@ -166,7 +166,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     #[test]
     fn step_2_armor_7_turns_a_7_into_0_defense_adds_1_big_d_fender_adds_2_more_true_strike_ignores_it() {
         let mut state = game();
-        let target = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({}));
+        let target = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({}));
         with_sink(&mut state, |sink| {
             assert_eq!(unit_view(sink.state, &live(sink.state, &target.id)).armor, 7);
             assert_eq!(hit(sink, None, on_unit(&target.id), 7, None), 0);
@@ -204,7 +204,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     #[test]
     fn r346_step_2_a_source_with_pierce_skips_armor_on_a_unit_and_a_hero_and_nothing_else() {
         let mut state = game();
-        let target = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
+        let target = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
         let shielded_target = put(&mut state, &shielded.id, slot(P2, Row::Units, 2), json!({}));
         let wall = put(&mut state, &indestructible.id, slot(P2, Row::Units, 3), json!({}));
         let source = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
@@ -373,7 +373,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     fn step_5_the_damage_event_carries_the_amount_actually_dealt() {
         let mut state = game();
         let source = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
-        let target = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({}));
+        let target = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({}));
         with_sink(&mut state, |sink| {
             assert_eq!(
                 hit(
@@ -411,15 +411,15 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         // on-damage trigger such as Fed Fauci's Plague Counter would fire from: one per instance dealt,
         // none at all for an instance stopped before step 5.
         let mut state = game();
-        let armour = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({}));
+        let armor = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({}));
         let shield = put(&mut state, &shielded.id, slot(P2, Row::Units, 2), json!({}));
         with_sink(&mut state, |sink| {
-            assert_eq!(hit(sink, None, on_unit(&armour.id), 7, None), 0);
-            assert_eq!(live(sink.state, &armour.id).damage, 0);
+            assert_eq!(hit(sink, None, on_unit(&armor.id), 7, None), 0);
+            assert_eq!(live(sink.state, &armor.id).damage, 0);
             // R1361: the Armor took it whole, which is reported, and is no `damage`.
             assert_eq!(
                 json_of(&*sink.events),
-                json!([{ "type": "damageAbsorbed", "sourceId": null, "targetId": armour.id, "absorbed": 7, "combat": false }])
+                json!([{ "type": "damageAbsorbed", "sourceId": null, "targetId": armor.id, "absorbed": 7, "combat": false }])
             );
             sink.events.clear();
 
@@ -431,8 +431,8 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             assert_eq!(sink.events.len(), 0);
 
             // Two instances that do land emit exactly one `damage` event each.
-            assert_eq!(hit(sink, None, on_unit(&armour.id), 9, None), 2);
-            assert_eq!(hit(sink, None, on_unit(&armour.id), 9, None), 2);
+            assert_eq!(hit(sink, None, on_unit(&armor.id), 9, None), 2);
+            assert_eq!(hit(sink, None, on_unit(&armor.id), 9, None), 2);
             assert_eq!(amounts(sink.events, GameEventType::Damage), vec![2, 2]);
         });
     }
@@ -442,7 +442,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         let mut state = game();
         // A plain 3/3 source: no Lifesteal anywhere on it (§6.1).
         let source = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
-        let armour = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
+        let armor = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
         state.players[P1].hero.health = 20;
         with_sink(&mut state, |sink| {
             assert!(!unit_has(
@@ -470,7 +470,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
                 hit(
                     sink,
                     Some(&source.id),
-                    on_unit(&armour.id),
+                    on_unit(&armor.id),
                     9,
                     Some(json!({ "lifesteal": true }))
                 ),
@@ -482,7 +482,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
                 hit(
                     sink,
                     Some(&source.id),
-                    on_unit(&armour.id),
+                    on_unit(&armor.id),
                     7,
                     Some(json!({ "lifesteal": true }))
                 ),
@@ -497,7 +497,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         let mut state = game();
         let source = put(&mut state, &poisonous.id, slot(P1, Row::Units, 1), json!({}));
         let victim = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), json!({}));
-        let armour = put(&mut state, &armoured.id, slot(P2, Row::Units, 2), json!({}));
+        let armor = put(&mut state, &armored.id, slot(P2, Row::Units, 2), json!({}));
         with_sink(&mut state, |sink| {
             assert_eq!(hit(sink, Some(&source.id), on_unit(&victim.id), 1, None), 1);
             let now = live(sink.state, &victim.id);
@@ -505,8 +505,8 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             assert_eq!(unit_view(sink.state, &now).health, 9);
 
             // Armor 7 leaves 0 dealt, so steps 5 to 9 never run and nothing is marked.
-            assert_eq!(hit(sink, Some(&source.id), on_unit(&armour.id), 1, None), 0);
-            assert_eq!(live(sink.state, &armour.id).marked_destroyed, None);
+            assert_eq!(hit(sink, Some(&source.id), on_unit(&armor.id), 1, None), 0);
+            assert_eq!(live(sink.state, &armor.id).marked_destroyed, None);
 
             // Poisonous only affects units: the hero just takes the damage.
             assert_eq!(hit(sink, Some(&source.id), on_hero(P2), 1, None), 1);
@@ -521,7 +521,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         let mut state = game();
         state.players[P1].hero.health = 20;
         let source = put(&mut state, &lifestealer.id, slot(P1, Row::Units, 1), json!({}));
-        let target = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({}));
+        let target = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({}));
         with_sink(&mut state, |sink| {
             assert_eq!(hit(sink, Some(&source.id), on_unit(&target.id), 10, None), 3);
             assert_eq!(sink.state.players[P1].hero.health, 23);

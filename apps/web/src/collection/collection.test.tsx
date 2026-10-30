@@ -210,7 +210,7 @@ describe("#2053 card names in the reader's language", () => {
     expect(cardNameOf("not-a-card")).toBe("not-a-card");
   });
 
-  it("#2053 in English a tile, its view and its detail are labelled with the catalog's name", () => {
+  it("#2053 in English a tile, its view and its detail are labeled with the catalog's name", () => {
     const opened = openLocked();
 
     expect(opened.tile).toBe(defOf("core-001").name);
@@ -220,7 +220,7 @@ describe("#2053 card names in the reader's language", () => {
     expect(opened.detail).toBe(defOf("core-002").name);
   });
 
-  it("#2053 for a reader of Chinese they are labelled with the Chinese table's name", async () => {
+  it("#2053 for a reader of Chinese they are labeled with the Chinese table's name", async () => {
     await setLocale("zh-CN");
     const opened = openLocked();
 

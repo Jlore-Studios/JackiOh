@@ -4,7 +4,7 @@
 
    A green film over the face says "don't play this": bubbles rise through it (its ::before and
    ::after, two layers of radial-gradient bubbles moved by transform alone) and a badge with a struck
-   circle sits in the top-right corner, so it reads by shape as well as by colour. The film takes no
+   circle sits in the top-right corner, so it reads by shape as well as by color. The film takes no
    pointer event; the badge does, for its tooltip, and a click or drag on it reaches the card it sits
    in. Under reduced motion (the media query or the settings switch, index.css) the bubbles are gone
    and the film holds still as a plain green tint with its badge. */

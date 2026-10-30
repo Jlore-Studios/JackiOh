@@ -509,7 +509,7 @@ mod tests {
 
     /// R1171000: `--policy` labels every decision row with the label the live game gives there, the
     /// same on every fold, its keys naming no instance and no hero; without it the rows are the same
-    /// less their labels, and only a labelled file's header names the key layout.
+    /// less their labels, and only a labeled file's header names the key layout.
     #[test]
     fn r1171000_policy_labels_over_a_log_are_deterministic_and_name_no_instance() {
         // Game 4 reaches In Too Deep's graveyard reward with two (0) Cost Spells there that change
@@ -559,10 +559,10 @@ mod tests {
             .collect();
         assert_eq!(plain, cleared);
 
-        let labelled = serde_json::to_value(header(Every::Decision, build, true)).unwrap();
-        assert_eq!(labelled["policyKeysVersion"], POLICY_KEYS_VERSION);
-        let unlabelled = serde_json::to_value(header(Every::Decision, build, false)).unwrap();
-        assert!(unlabelled.get("policyKeysVersion").is_none(), "{unlabelled}");
+        let labeled = serde_json::to_value(header(Every::Decision, build, true)).unwrap();
+        assert_eq!(labeled["policyKeysVersion"], POLICY_KEYS_VERSION);
+        let unlabeled = serde_json::to_value(header(Every::Decision, build, false)).unwrap();
+        assert!(unlabeled.get("policyKeysVersion").is_none(), "{unlabeled}");
     }
 
     #[test]

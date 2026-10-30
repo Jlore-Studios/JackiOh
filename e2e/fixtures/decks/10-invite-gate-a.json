@@ -1,7 +1,7 @@
 {
   "id": "10-invite-gate-a",
   "spec": "10-invite-gate.cy.ts",
-  "description": "The deck spec 10 saves and queues Best of 1 once the pending account has been activated. It exists to prove R111 end to end: since the economy went live the launch grant is one copy of each starter card (R1310000, STARTER_CARDS in crates/server/src/config.rs), so a freshly activated account must be able to queue a deck of them, L5 included. These are the first DECK_SIZE ids of STARTER_CARDS, in its order, and spec 10 checks that each is still a starter card. Nothing here is chosen for its behaviour: spec 10 never starts a game.",
+  "description": "The deck spec 10 saves and queues Best of 1 once the pending account has been activated. It exists to prove R111 end to end: since the economy went live the launch grant is one copy of each starter card (R1310000, STARTER_CARDS in crates/server/src/config.rs), so a freshly activated account must be able to queue a deck of them, L5 included. These are the first DECK_SIZE ids of STARTER_CARDS, in its order, and spec 10 checks that each is still a starter card. Nothing here is chosen for its behavior: spec 10 never starts a game.",
   "cards": [
     "core-001",
     "core-002",

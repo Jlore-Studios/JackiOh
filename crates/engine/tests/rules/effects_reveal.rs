@@ -31,7 +31,7 @@ fn reveal_as(state: &mut GameState, card: &CardInstance) {
 
 /// The opponent's view of `owner`'s backrow zone `lane`, as JSON.
 fn backrow_seen_by(state: &GameState, viewer: PlayerId, lane: usize) -> Value {
-    let view = serde_json::to_value(view_for(state, viewer)).expect("a view serialises");
+    let view = serde_json::to_value(view_for(state, viewer)).expect("a view serializes");
     view["opponent"]["backrow"][lane].clone()
 }
 

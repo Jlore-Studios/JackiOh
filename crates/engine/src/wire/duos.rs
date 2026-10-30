@@ -141,7 +141,7 @@ impl DuosSeat {
     }
 }
 
-/// `Record<Team, T>`: one value per team, serialised `{ "a": …, "b": … }`, as `PerPlayer` is per seat.
+/// `Record<Team, T>`: one value per team, serialized `{ "a": …, "b": … }`, as `PerPlayer` is per seat.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(
     feature = "ts",
@@ -451,7 +451,7 @@ mod tests {
     }
 
     #[test]
-    fn actions_and_events_serialise_as_s2_writes_them() {
+    fn actions_and_events_serialize_as_s2_writes_them() {
         let pass = DuosActionBody::Pass {
             instance_id: "c12".into(),
         };

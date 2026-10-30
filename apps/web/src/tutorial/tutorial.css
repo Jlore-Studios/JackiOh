@@ -4,7 +4,7 @@
    which the coach's panel stands in for; the HUD and the dialog wear practice.css's look and
    change only what a lesson needs.
 
-   The coach has a colour of its own, lavender (`--coach`), because every colour the board already
+   The coach has a color of its own, lavender (`--coach`), because every color the board already
    uses means something there: green "can act", yellow "condition met", ice blue "selected", blue
    you, red the opponent, gold the primary action. A ring the player could mistake for a glow would
    say the wrong thing. Motion is scaled by `--anim-scale` and stops under reduced motion, the OS
@@ -877,7 +877,7 @@
 
 /* ---- the end of a lesson ------------------------------------------------------------------- */
 
-/* A lesson lost is a lesson to try again, not a defeat: the coach's colour, not the opponent's. */
+/* A lesson lost is a lesson to try again, not a defeat: the coach's color, not the opponent's. */
 .practice-result.tutorial-result[data-outcome="loss"],
 .practice-result.tutorial-result[data-outcome="draw"] {
   --glow: var(--coach);
@@ -1132,7 +1132,7 @@
   white-space: nowrap;
 }
 
-/* A discovery names a rule the player found themselves: its eyebrow is the coach's colour on a pill. */
+/* A discovery names a rule the player found themselves: its eyebrow is the coach's color on a pill. */
 .coach[data-coach-mode="discovery"] .coach__eyebrow {
   padding: 0 8px;
   border-radius: 999px;
