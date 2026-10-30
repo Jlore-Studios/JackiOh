@@ -9557,8 +9557,12 @@
     "what": "revise #2493 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-30T12:16:42Z",
-    "notes": [],
+    "at": "2026-10-30T12:23:11Z",
+    "notes": [
+      "delivered revise #2493 on muse (run 41039810282): approved",
+      "started revise #2493 on muse (run 41055154943)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -10263,7 +10267,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T12:16:42Z",
+  "loop_tick": "2026-10-30T12:23:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
