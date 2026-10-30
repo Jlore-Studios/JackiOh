@@ -3,7 +3,7 @@
 //! face-down set), and the search tries each through `reduce`, so a card whose Cry reads its lane is
 //! placed by the evaluation of what each lane's play leaves. These tests hold the AI to answering each
 //! one legally, the random policy and the timeout (R79) too, and to the placements and targets a card
-//! asks judgment of. The set is held (R1420), so every test previews it.
+//! asks judgment of.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -111,7 +111,6 @@ fn random_and_timeout_answer(state: &GameState, seed: &str) {
 
 #[test]
 fn r2203001_the_ai_plays_midlane_menace_into_the_midlane() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-midlane",
         json!([MIDLANE_MENACE]),
@@ -134,7 +133,6 @@ fn r2203001_the_ai_plays_midlane_menace_into_the_midlane() {
 
 #[test]
 fn r2203001_the_ai_plays_right_hand_felinor_to_the_right_of_its_unit() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-right-hand",
         json!([RIGHT_HAND_FELINOR]),
@@ -155,7 +153,6 @@ fn r2203001_the_ai_plays_right_hand_felinor_to_the_right_of_its_unit() {
 
 #[test]
 fn r2203001_the_ai_plays_celestial_caller_where_both_its_summons_land() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board("ai-tg-caller", json!([CELESTIAL_CALLER]), 4, json!([]), json!([]));
     let caller = in_hand(&state, CELESTIAL_CALLER);
     let decision = decide_at(&state, "ai-tg-caller");
@@ -175,7 +172,6 @@ fn r2203001_the_ai_plays_celestial_caller_where_both_its_summons_land() {
 
 #[test]
 fn r2203001_the_ai_plays_occidental_outside_the_lane_it_sweeps() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     for (card, swept) in [(OCCIDENTAL, 5), (ORIENTAL, 1)] {
         let seed = format!("ai-tg-sweep-{swept}");
         let state = board(
@@ -204,7 +200,6 @@ fn r2203001_the_ai_plays_occidental_outside_the_lane_it_sweeps() {
 
 #[test]
 fn r2203001_the_ai_aims_personal_trainer_at_its_own_human() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-trainer",
         json!([PERSONAL_TRAINER]),
@@ -256,7 +251,6 @@ fn r2203001_the_ai_aims_personal_trainer_at_its_own_human() {
 
 #[test]
 fn r2203001_the_ai_sets_goliath_situation_and_plays_the_hand_it_makes_cheap() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     register_cards();
     let state = board(
         "ai-tg-goliath-set",
@@ -306,7 +300,6 @@ fn r2203001_the_ai_sets_goliath_situation_and_plays_the_hand_it_makes_cheap() {
 
 #[test]
 fn r2203001_after_each_call_to_chaos_entry_the_ai_finishes_its_turn_cleanly() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     register_cards();
     for entry in subsystems::CHAOS_TG_EFFECTS {
         let seed = format!("ai-tg-chaos-{}", entry.name);
@@ -351,7 +344,6 @@ fn r2203001_after_each_call_to_chaos_entry_the_ai_finishes_its_turn_cleanly() {
 
 #[test]
 fn r2203001_the_ai_plays_flame_tongue_totem_beside_its_unit() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-totem",
         json!([FLAME_TONGUE_TOTEM]),
@@ -374,7 +366,6 @@ fn r2203001_the_ai_plays_flame_tongue_totem_beside_its_unit() {
 
 #[test]
 fn r2203001_the_ai_kills_an_enemy_floodgates_so_its_death_destroys_their_units() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-floodgates",
         json!([HIT_JOB]),
@@ -452,7 +443,6 @@ fn aims(state: &GameState, seed: &str, card: &str, target: &str) {
 
 #[test]
 fn r2203001_the_ai_spends_thwomp_on_the_unit_it_most_needs_gone() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-thwomp",
         json!([THWOMP]),
@@ -465,7 +455,6 @@ fn r2203001_the_ai_spends_thwomp_on_the_unit_it_most_needs_gone() {
 
 #[test]
 fn r2203001_the_ai_exiles_the_big_unit_with_path_of_exile() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-path",
         json!([PATH_OF_EXILE]),
@@ -478,7 +467,6 @@ fn r2203001_the_ai_exiles_the_big_unit_with_path_of_exile() {
 
 #[test]
 fn r2203001_the_ai_dino_sizes_its_own_small_unit_not_the_enemys() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-dino",
         json!([DINO_SIZE]),
@@ -491,7 +479,6 @@ fn r2203001_the_ai_dino_sizes_its_own_small_unit_not_the_enemys() {
 
 #[test]
 fn r2203001_the_ai_fortifies_its_own_unit() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-fortify",
         json!([FORTIFY]),
@@ -504,7 +491,6 @@ fn r2203001_the_ai_fortifies_its_own_unit() {
 
 #[test]
 fn r2203001_the_ai_makes_its_own_unit_radiant_with_hopeful_jelly_bean() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-jelly-bean",
         json!([HOPEFUL_JELLY_BEAN]),
@@ -522,7 +508,6 @@ fn r2203001_the_ai_makes_its_own_unit_radiant_with_hopeful_jelly_bean() {
 
 #[test]
 fn r2203001_the_ai_copies_a_permanent_with_seance() {
-    let _preview = preview_sets(&[SetName::TrainingGrounds]);
     let state = board(
         "ai-tg-seance",
         json!([SEANCE, VANILLA]),

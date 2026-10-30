@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::catalog::pair_key;
-use jackioh_engine::wire::{CardType, SHIPPED_SETS};
+use jackioh_engine::wire::{CardType, SHIPPED_SETS, SeatSummary};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, DECK_SIZE, FoldArgs, PlayerId, Tag, begin_game, create_game,
     create_rng, deckable, reduce, seat_to_act, subsystems, summarize_game,
@@ -155,7 +155,7 @@ fn won_game(profile: &str, match_id: &str, tally: GameTally, at: i64) -> GameSum
 }
 
 /// A game that moves every goal kind the pool has: a Unit, a Spell and a Trap of every shipped
-/// set, each Radiant, a Trap that fired and an attack.
+/// set, each Radiant, a Trap that fired, an attack, a position switch and a Radiant upgrade.
 fn tally_of_everything() -> GameTally {
     let played = SHIPPED_SETS
         .iter()
@@ -171,6 +171,8 @@ fn tally_of_everything() -> GameTally {
         played,
         traps_fired: 1,
         attacks: 1,
+        position_switches: 1,
+        radiant_upgrades: 1,
     }
 }
 
@@ -442,6 +444,38 @@ async fn r1304001_progress_stops_at_the_target() {
             (QuestChange::Completed, 0)
         ]
     );
+}
+
+#[tokio::test]
+async fn r2253000_a_finished_game_moves_held_switch_and_upgrade_quests() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    let now = now_ms();
+    set_due(&app, &p1, now + 10 * interval()).await;
+    let switches = easiest(&QuestGoal::PositionSwitches);
+    let upgrades = easiest(&QuestGoal::RadiantUpgrades);
+    hold(&app, &p1, switches, 0, now - 1).await;
+    hold(&app, &p1, upgrades, 0, now).await;
+
+    // The seat's record as the ladder's payout reads it (`tally_seat`).
+    let seat = SeatSummary {
+        position_switches: Some(3),
+        radiant_upgrades: Some(1),
+        ..SeatSummary::default()
+    };
+    let tally = tally_seat(Some(&seat), 0, &CATALOG);
+    store!(app, |t| pay_game_rewards(
+        &mut t,
+        &won_game(&p1, "match-1", tally, now)
+    ));
+    let moved: Vec<(String, i64)> = ledger_of(&app, &p1)
+        .await
+        .quests
+        .into_iter()
+        .filter(|row| row.change == QuestChange::Progressed && row.reference.as_deref() == Some("match-1"))
+        .map(|row| (row.quest_id, row.progress))
+        .collect();
+    assert_eq!(moved, vec![(switches.id.clone(), 3), (upgrades.id.clone(), 1)]);
 }
 
 #[tokio::test]

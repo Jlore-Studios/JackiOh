@@ -73,7 +73,6 @@ mod tests {
 
     #[test]
     fn r60_adds_two_drone_cores() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let s = played("sympathizer", false, 1);
         let added = cores(&s);
         assert_eq!(added.len(), 2, "{added:?}");
@@ -85,7 +84,6 @@ mod tests {
 
     #[test]
     fn r60_every_tier_is_seen_over_the_seeds() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut seen: Vec<String> = (0..60)
             .flat_map(|n| cores(&played(&format!("sympathizer-{n}"), false, 1)))
             .map(|(def_id, _, _)| def_id)
@@ -105,7 +103,6 @@ mod tests {
 
     #[test]
     fn a_full_hand_burns_the_second() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let s = played("sympathizer-full", false, HAND_CAP as usize - 1);
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
         assert_eq!(cores(&s).len(), 1);
@@ -123,7 +120,6 @@ mod tests {
 
     #[test]
     fn cards_reads_through_param() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let mut s = scenario(json!({
             "p1": { "hand": [SYMPATHIZER, FILLER], "library": filler(4) },
             "p2": { "hand": [FILLER], "library": filler(4) },
@@ -135,7 +131,6 @@ mod tests {
 
     #[test]
     fn radiant_both_radiant() {
-        let _p = preview_sets(&[SetName::Stinkyscape]);
         let s = played("sympathizer-radiant", true, 1);
         let added = cores(&s);
         assert_eq!(added.len(), 2);

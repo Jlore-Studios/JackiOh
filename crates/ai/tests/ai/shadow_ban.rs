@@ -171,13 +171,19 @@ mod the_shadow_ban_b24 {
 // ---------------------------------------------------------------------------------------------
 
 /// TS's `stats(overrides)`: a clean `SweepStats` over seedsPerCard games, as JSON.
+/// R2425000: a turn the overrides call affordable is playable too, unless they give `playableTurns`.
 fn stats(overrides: Value) -> Value {
+    let playable = overrides
+        .get("affordableTurns")
+        .cloned()
+        .unwrap_or_else(|| json!(0));
     spread(
         json!({
             "defId": "core-011",
             "games": AI_SWEEP.seeds_per_card,
             "drawnGames": AI_SWEEP.seeds_per_card,
             "affordableTurns": 0,
+            "playableTurns": playable,
             "plays": 0,
             "errors": 0,
             "timeouts": 0,
@@ -459,11 +465,13 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         let reason = reason_of(&judged).unwrap_or_default();
         assert!(matches_reason(&reason), "{reason}");
         assert!(reason.contains(&format!(
-            "easy: affordable in hand on {} turns over 24 pass-2 games, never played",
+            "easy: affordable in hand on {} turns and playable on {} over 24 pass-2 games, never played",
+            at + 2,
             at + 2
         )));
         assert!(reason.contains(&format!(
-            "hard: affordable in hand on {} turns over 24 pass-2 games, never played",
+            "hard: affordable in hand on {} turns and playable on {} over 24 pass-2 games, never played",
+            at + 5,
             at + 5
         )));
 
@@ -816,7 +824,7 @@ mod the_two_pass_sweep_r390 {
         assert_eq!(
             reason(vec![own.clone(), filler.clone()]),
             Some(format!(
-                "neverPlayed: easy: affordable in hand on {at} turns over 29 pass-2 games, never played"
+                "neverPlayed: easy: affordable in hand on {at} turns and playable on {at} over 29 pass-2 games, never played"
             ))
         );
         // A play in any pass-2 game at that tier clears it, a forced one or a filler one.
@@ -958,7 +966,7 @@ mod the_two_pass_sweep_r390 {
         assert_eq!(
             cleared["watch"],
             json!(
-                "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 0.0"
+                "at risk: easy: pass 1 affordable on 4 turns and playable on 4 over 8 games, played 1 time(s), mean evaluate change 0.0"
             )
         );
         // At risk only because it was banned or watched before, and clean in both passes now: off the list.
@@ -988,7 +996,7 @@ mod the_two_pass_sweep_r390 {
         );
         let watch = second["watch"].as_str().unwrap_or_default();
         assert!(
-            watch.starts_with("at risk: easy: pass 2 affordable on 5 turns over 24 games, played 1 time(s)"),
+            watch.starts_with("at risk: easy: pass 2 affordable on 5 turns and playable on 5 over 24 games, played 1 time(s)"),
             "{watch}"
         );
         // Banned: never watched.
@@ -1482,9 +1490,112 @@ mod a_game_ending_play_r390 {
         assert_eq!(
             watched["watch"],
             json!(
-                "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 5 time(s), mean evaluate change 2.5, lost the game on 1 play(s)"
+                "at risk: easy: pass 1 affordable on 9 turns and playable on 9 over 8 games, played 5 time(s), mean evaluate change 2.5, lost the game on 1 play(s)"
             )
         );
+    }
+}
+
+/// R2425000: the sweep counts a turn playable only when the rules let the AI play the card.
+mod playable_turns_r2425000 {
+    use super::*;
+    /// TG #25 Trigor: (3) Unit, Tribute 3.
+    const TRIGOR: &str = "traininggrounds-025";
+    /// #8 Mr. Vanilla: (1) 4/4 Unit, no text.
+    const VANILLA: &str = "core-008";
+    /// p1's main phase with 3 mana, Trigor in hand and `units` Mr. Vanillas on its field.
+    fn trigor_turn(units: usize) -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({ "seed": "r2425000-trigor", "p1": { "hand": [TRIGOR], "field": vec![VANILLA; units], "mana": 3 } }))
+            .state()
+            .clone()
+    }
+    /// (affordable, playable) of Trigor and of Tempo Timmy (not in hand) after one turn start.
+    fn counted(state: &GameState) -> Vec<(i32, i32)> {
+        let mut cards = vec![
+            json_as::<SweepStats>(stats(json!({ "defId": TRIGOR }))),
+            json_as::<SweepStats>(stats(json!({ "defId": "core-011" }))),
+        ];
+        record_sweep_turn(&mut cards, state, AI);
+        cards
+            .iter()
+            .map(|card| (card.affordable_turns, card.playable_turns))
+            .collect()
+    }
+
+    /// R2425000 a Tribute 3 card with two units to tribute is affordable but not playable, and with three is both
+    #[test]
+    fn r2425000_a_tribute_3_card_with_two_units_to_tribute_is_affordable_but_not_playable_and_with_three_is_both()
+     {
+        assert_eq!(counted(&trigor_turn(2)), vec![(1, 0), (0, 0)]);
+        assert_eq!(counted(&trigor_turn(3)), vec![(1, 1), (0, 0)]);
+    }
+
+    /// R2425000 neverPlayed, its at-risk form and its ban need playable turns, not merely affordable ones
+    #[test]
+    fn r2425000_never_played_its_at_risk_form_and_its_ban_need_playable_turns_not_merely_affordable_ones() {
+        let at = AI_SWEEP.min_affordable_turns;
+        assert_eq!(
+            flags_of(&stats(
+                json!({ "affordableTurns": at * 10, "playableTurns": at - 1, "plays": 0 })
+            )),
+            json!([])
+        );
+        assert_eq!(
+            half_of(&stats(
+                json!({ "affordableTurns": at * 10, "playableTurns": at - 1, "plays": 0 })
+            )),
+            json!([])
+        );
+        assert_eq!(
+            flags_of(&stats(
+                json!({ "affordableTurns": at, "playableTurns": at, "plays": 0 })
+            )),
+            json!(["neverPlayed"])
+        );
+        assert_eq!(
+            half_of(&stats(
+                json!({ "affordableTurns": at, "playableTurns": at, "plays": 0 })
+            )),
+            json!(["neverPlayed"])
+        );
+        let p1 = vec![result(
+            json!({ "defId": TRIGOR, "affordableTurns": 30, "playableTurns": 0 }),
+        )];
+        assert!(at_risk_ids(&results(&p1), &[], &[]).is_empty());
+        let ban_at = AI_SWEEP.ban_affordable_turns;
+        let pass2 = |playable: i32| {
+            pass2_of(
+                TRIGOR,
+                "easy",
+                vec![json!({ "affordableTurns": 184, "playableTurns": playable })],
+                json!([]),
+            )
+        };
+        assert_match_object(
+            &verdict(&p1, &[pass2(ban_at - 1)]),
+            &json!({ "flags": [], "reason": null, "unswept": false }),
+        );
+        assert_eq!(
+            reason_of(&verdict(&p1, &[pass2(ban_at)])),
+            Some(format!(
+                "neverPlayed: easy: affordable in hand on 184 turns and playable on {ban_at} over 24 pass-2 games, never played"
+            ))
+        );
+    }
+
+    /// R2425000 a slice written before the playable count reads it as 0
+    #[test]
+    fn r2425000_a_slice_written_before_the_playable_count_reads_it_as_0() {
+        let old: SweepResult = serde_json::from_value(json!({
+            "defId": TRIGOR, "games": 8, "drawnGames": 6, "affordableTurns": 18, "plays": 0, "errors": 0,
+            "timeouts": 0, "evalDeltaSum": 0, "evalDeltaCount": 0, "tier": "easy", "flags": [], "unswept": false,
+        }))
+        .expect("an old pass-1 line reads");
+        assert_eq!(old.playable_turns, 0);
+        assert_eq!(js(&old)["playableTurns"], json!(0));
+        assert!(half_flags(&old).is_empty());
+        assert!(at_risk_ids(&[old], &[], &[]).is_empty());
     }
 }
 
@@ -1633,12 +1744,11 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
     #[test]
     fn r2203000_the_shadow_ban_holds_at_most_half_the_training_grounds_set() {
         jackioh_cards::register_all();
-        let _preview = preview_sets(&[SetName::TrainingGrounds]);
         let cards = ai_pool()
             .iter()
             .filter(|id| def_of(None, id).set == SetName::TrainingGrounds)
             .count();
-        assert!(cards > 0, "the previewed set deals its cards");
+        assert!(cards > 0, "the set deals its cards");
         let banned = SHADOW_BAN
             .iter()
             .filter(|(def_id, _)| def_of(None, def_id).set == SetName::TrainingGrounds)

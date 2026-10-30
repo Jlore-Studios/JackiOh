@@ -34,7 +34,6 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::testkit::*;
 
     use crate::scenario;
     use crate::filler;
@@ -42,17 +41,12 @@ mod tests {
     const RR: &str = "stinkyscape-107";
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     mod base {
         use super::*;
 
         #[test]
         fn r1860005_start_of_turn_gains_4_attack_lasting_and_stacking() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [RR], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -71,7 +65,6 @@ mod tests {
         #[test]
         fn r1860005_the_opponent_s_turn_start_gains_nothing() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [RR], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -85,7 +78,6 @@ mod tests {
         #[test]
         fn attack_gain_reads_through_param() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [RR], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -105,7 +97,6 @@ mod tests {
         #[test]
         fn r1860005_radiant_start_of_turn_gains_8_attack() {
             crate::register_all();
-            let _preview = open();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [{ "def": RR, "radiant": true }], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },

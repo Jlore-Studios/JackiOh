@@ -296,10 +296,14 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
         }
         assert!(!set_is_open(SetName::Boss));
         assert_eq!(unshipped(&pool(json!({}))), Vec::<String>::new());
-        // A preview of a set that ships changes nothing: it was open already.
+        // A preview of a set that ships changes nothing: it was open already, so it adds nothing to
+        // a preview of a set that has not shipped.
         {
-            let before = pool(json!({}));
-            let _preview = preview_sets(&[SetName::Meditative]);
+            let before = {
+                let _boss = preview_sets(&[SetName::Boss]);
+                pool(json!({}))
+            };
+            let _preview = preview_sets(&[SetName::Meditative, SetName::Boss]);
             assert_eq!(pool(json!({})), before);
         }
 
@@ -458,8 +462,8 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
             vec!["meditativeplus-016-1"]
         );
         // In its catalog place, after Meditative and before Stinkyscape and Training Grounds, the
-        // sets that ship after it (R1857000, R2194000); a preview of it changes nothing, since it is
-        // open already.
+        // sets that ship after it (R1857000, R2194000); a preview of it adds nothing to one of a set
+        // that has not shipped, since it is open already.
         let all = pool(json!({}));
         assert_eq!(
             &all[all.len() - 9..],
@@ -475,8 +479,12 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
                 "traininggrounds-039"
             ]
         );
-        let _preview = preview_sets(&[SetName::MeditativePlus]);
-        assert_eq!(pool(json!({})), all);
+        let before = {
+            let _boss = preview_sets(&[SetName::Boss]);
+            pool(json!({}))
+        };
+        let _preview = preview_sets(&[SetName::MeditativePlus, SetName::Boss]);
+        assert_eq!(pool(json!({})), before);
     }
 
     #[test]
@@ -1078,7 +1086,6 @@ mod r2195000_a_deck_holds_a_core_card_or_its_snapshot_never_both {
     fn r2195000_both_are_refused_either_alone_is_taken() {
         register_catalog(with_snapshot());
         let catalog = with_snapshot();
-        let _preview = preview_sets(&[SetName::TrainingGrounds]);
         assert_eq!(pair_key(&catalog["traininggrounds-041"]), "core-002");
         assert_eq!(pair_key(&catalog["core-002"]), "core-002");
         assert_eq!(pair_key(&catalog["core-003"]), "core-003");

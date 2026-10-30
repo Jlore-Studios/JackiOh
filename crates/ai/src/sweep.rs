@@ -33,7 +33,7 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
     AI_DIFFICULTY, ActionBody, CostOptions, Difficulty, GameState, OffFieldZone, PerPlayer, PerPlayerOpt,
-    Phase, PlayerId, Rng, create_rng, effective_cost, opponent_of, zone_cards,
+    Phase, PlayerId, Rng, create_rng, effective_cost, legal_actions, opponent_of, zone_cards,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -83,6 +83,7 @@ pub struct AiSweep {
     pub seeds_per_card: i32,
     pub decision_ms: i32,
     pub max_actions: i32,
+    /// R2425000: pass 1's neverPlayed needs this many playable turns (the name is from when it counted affordable ones).
     pub min_affordable_turns: i32,
     pub self_harm_delta: f64,
     /// selfHarm needs at least this many plays, so one play into a trap does not ban a card.
@@ -92,7 +93,7 @@ pub struct AiSweep {
     /// R390: pass 2's filler draw multiplies every at-risk card's weight by this (as AI_DECK.themeBoost).
     /// A whole number, so `AiDeckOptions.boost.by` reads it whatever its number type.
     pub at_risk_boost: i32,
-    /// R390: a neverPlayed ban needs this many affordable turns over pass 2's games, and no play.
+    /// R390, R2425000: a neverPlayed ban needs this many playable turns over pass 2's games, and no play.
     pub ban_affordable_turns: i32,
     /// R390: a selfHarm ban needs this many plays over pass 2's games.
     pub ban_harm_plays: i32,
@@ -126,6 +127,10 @@ pub struct SweepStats {
     pub games: i32,
     pub drawn_games: i32,
     pub affordable_turns: i32,
+    /// R2425000: the AI's turn starts on which `legal_actions` listed a play of the card from its
+    /// hand, the count `neverPlayed` reads. 0 in older slices.
+    #[serde(default)]
+    pub playable_turns: i32,
     pub plays: i32,
     pub errors: i32,
     pub timeouts: i32,
@@ -277,7 +282,7 @@ fn to_fixed_1(x: f64) -> String {
     format!("{x:.1}")
 }
 
-/// error: errors > 0; timeout: timeouts > 0; neverPlayed: affordableTurns >= minAffordableTurns && plays === 0;
+/// error: errors > 0; timeout: timeouts > 0; neverPlayed: playableTurns >= minAffordableTurns && plays === 0 (R2425000);
 /// selfHarm: evalDeltaCount >= minHarmPlays && evalDeltaSum / evalDeltaCount < selfHarmDelta;
 /// selfKill: losingPlays >= minLosingPlays. In that order.
 pub fn sweep_flags(stats: &SweepStats) -> Vec<SweepFlag> {
@@ -288,7 +293,7 @@ pub fn sweep_flags(stats: &SweepStats) -> Vec<SweepFlag> {
     if stats.timeouts > 0 {
         flags.push(SweepFlag::Timeout);
     }
-    if stats.affordable_turns >= AI_SWEEP.min_affordable_turns && stats.plays == 0 {
+    if stats.playable_turns >= AI_SWEEP.min_affordable_turns && stats.plays == 0 {
         flags.push(SweepFlag::NeverPlayed);
     }
     if stats.eval_delta_count >= AI_SWEEP.min_harm_plays && mean(stats) < AI_SWEEP.self_harm_delta {
@@ -300,13 +305,12 @@ pub fn sweep_flags(stats: &SweepStats) -> Vec<SweepFlag> {
     flags
 }
 
-/// R390: the judgement flags at half strength, which put a card at risk: `neverPlayed` when it sat
-/// affordable on minAffordableTurns turns and was played at most once, `selfHarm` when its plays'
+/// R390: the judgement flags at half strength, which put a card at risk: `neverPlayed` when it was playable on minAffordableTurns turns (R2425000) and was played at most once, `selfHarm` when its plays'
 /// mean evaluation change is below half of selfHarmDelta, `selfKill` on half of minLosingPlays lost
 /// games (one).
 pub fn half_flags(stats: &SweepStats) -> Vec<SweepFlag> {
     let mut flags = Vec::new();
-    if stats.affordable_turns >= AI_SWEEP.min_affordable_turns && stats.plays <= 1 {
+    if stats.playable_turns >= AI_SWEEP.min_affordable_turns && stats.plays <= 1 {
         flags.push(SweepFlag::NeverPlayed);
     }
     if stats.eval_delta_count > 0 && mean(stats) < AI_SWEEP.self_harm_delta / 2.0 {
@@ -478,6 +482,7 @@ fn empty_stats(def_id: &str) -> SweepStats {
         games: 0,
         drawn_games: 0,
         affordable_turns: 0,
+        playable_turns: 0,
         plays: 0,
         errors: 0,
         timeouts: 0,
@@ -494,6 +499,7 @@ fn add_stats(into: &mut SweepStats, from: &SweepStats) {
     into.games += from.games;
     into.drawn_games += from.drawn_games;
     into.affordable_turns += from.affordable_turns;
+    into.playable_turns += from.playable_turns;
     into.plays += from.plays;
     into.errors += from.errors;
     into.timeouts += from.timeouts;
@@ -539,8 +545,44 @@ pub fn record_sweep_play(stats: &mut SweepStats, before: &GameState, after: &Gam
     }
 }
 
+/// R2425000: one AI turn start, counted into each of `cards`. A card `seat` holds an instance of at
+/// an `effective_cost` within its mana counts an affordable turn; a card one of whose instances in
+/// hand `legal_actions` lists a `Play` of (the action `play_sweep_game` counts as a play) counts a
+/// playable turn, so a Tribute it cannot pay, a target that is not there or an unmet play condition
+/// counts none. `legal_actions` runs only when one of `cards` is in hand.
+pub fn record_sweep_turn(cards: &mut [SweepStats], state: &GameState, seat: PlayerId) {
+    let mana = state.players[seat].mana.current;
+    let hand = zone_cards(state, seat, OffFieldZone::Hand);
+    if !cards
+        .iter()
+        .any(|stats| hand.iter().any(|card| card.def_id == stats.def_id))
+    {
+        return;
+    }
+    let playable: Vec<&str> = legal_actions(state, seat)
+        .iter()
+        .filter_map(|action| match action {
+            ActionBody::Play { instance_id, .. } => hand
+                .iter()
+                .find(|card| card.id == *instance_id)
+                .map(|card| card.def_id.as_str()),
+            _ => None,
+        })
+        .collect();
+    for stats in cards.iter_mut() {
+        if hand.iter().any(|card| {
+            card.def_id == stats.def_id && effective_cost(state, card, CostOptions::default()) <= mana
+        }) {
+            stats.affordable_turns += 1;
+        }
+        if playable.contains(&stats.def_id.as_str()) {
+            stats.playable_turns += 1;
+        }
+    }
+}
+
 /// One sweep game, counted for each `tracked` card the AI's deck holds (games 1): drawn (drawnGames
-/// 1), the turns it sat in hand affordable (effectiveCost <= mana at the AI's turn start), and its
+/// 1), the turns it sat in hand affordable and the turns it was playable at the AI's turn start (`record_sweep_turn`, R2425000), and its
 /// plays (`record_sweep_play`). The game's errors (throws, rejected or "fallback" AI actions, panics
 /// the AI's search caught (#1429); a game that cannot even be dealt is one) and timeouts (a decision
 /// whose `now()` duration > decisionMs, or maxActions hit) come back beside them. A decision the clock
@@ -617,16 +659,7 @@ fn play_sweep_game(
                         && counted_turn != Some(after.turn)
                     {
                         counted_turn = Some(after.turn);
-                        let mana = after.players[ai_seat].mana.current;
-                        let hand = zone_cards(after, ai_seat, OffFieldZone::Hand);
-                        for stats in cards.iter_mut() {
-                            if hand.iter().any(|card| {
-                                card.def_id == stats.def_id
-                                    && effective_cost(after, card, CostOptions::default()) <= mana
-                            }) {
-                                stats.affordable_turns += 1;
-                            }
-                        }
+                        record_sweep_turn(&mut cards, after, ai_seat);
                     }
 
                     if seat == ai_seat
@@ -847,8 +880,8 @@ fn flag_detail(stats: &SweepStats, flag: SweepFlag, pass2: bool) -> String {
             stats.timeouts, AI_SWEEP.decision_ms, AI_SWEEP.max_actions
         ),
         SweepFlag::NeverPlayed => format!(
-            "affordable in hand on {} turns{over}, never played",
-            stats.affordable_turns
+            "affordable in hand on {} turns and playable on {}{over}, never played",
+            stats.affordable_turns, stats.playable_turns
         ),
         SweepFlag::SelfHarm => format!(
             "mean evaluate change {} over {} play(s) that did not end the game{over}",
@@ -880,15 +913,15 @@ fn numbers_of(stats: &SweepStats) -> String {
         format!(", lost the game on {} play(s)", stats.losing_plays)
     };
     format!(
-        "affordable on {} turns over {} games, {played}{harm}{lost}",
-        stats.affordable_turns, stats.games
+        "affordable on {} turns and playable on {} over {} games, {played}{harm}{lost}",
+        stats.affordable_turns, stats.playable_turns, stats.games
     )
 }
 
 /// One card's verdict over its tiers and passes (R186, R390). `pass1` is the card's own pass-1
 /// results; `pass2` may be every pass-2 result of the sweep, since the card's numbers are read out of
 /// each, forced or filler. Per tier: `error` and `timeout` from the card's own games of either pass;
-/// `neverPlayed` from pass 2's numbers alone, banAffordableTurns affordable turns and no play;
+/// `neverPlayed` from pass 2's numbers alone, banAffordableTurns playable turns (R2425000) and no play;
 /// `selfHarm` from pass 2's, at least banHarmPlays plays averaging below selfHarmDelta; `selfKill` from
 /// pass 2's, at least banLosingPlays lost games. A flag at any tier bans the card, every flagging
 /// tier named. Unswept when no tier of either pass ever saw it affordable. Watched (R600) when it is
@@ -933,7 +966,7 @@ pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdic
             flagged.insert(flag);
             parts.push(flag_detail(&both, flag, false));
         }
-        if second.affordable_turns >= AI_SWEEP.ban_affordable_turns && second.plays == 0 {
+        if second.playable_turns >= AI_SWEEP.ban_affordable_turns && second.plays == 0 {
             flagged.insert(SweepFlag::NeverPlayed);
             parts.push(flag_detail(&second, SweepFlag::NeverPlayed, true));
         }

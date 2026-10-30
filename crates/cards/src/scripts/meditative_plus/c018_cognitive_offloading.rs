@@ -240,7 +240,6 @@ mod tests {
         #[test]
         fn r635_never_dealt_at_setup_and_a_game_it_plays_replays_from_its_log() {
             crate::register_all();
-            let _preview = preview_sets(&[SetName::MeditativePlus]);
             let deck: Vec<String> = DECK.iter().map(|id| id.to_string()).collect();
             // A seed whose shuffle-in puts it on top of p1's library, so turn 1's draw casts it.
             let mut found: Option<(String, GameState, Vec<Action>)> = None;

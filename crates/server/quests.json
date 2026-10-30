@@ -12,12 +12,16 @@
     { "id": "traps-3", "title": "Play 3 Traps", "goal": { "kind": "playTraps" }, "target": 3, "jlore": 60 },
     { "id": "traps-fire-2", "title": "Have 2 of your Traps fire", "goal": { "kind": "fireTraps" }, "target": 2, "jlore": 70 },
     { "id": "radiant-2", "title": "Play 2 Radiant cards", "goal": { "kind": "playRadiant" }, "target": 2, "jlore": 80 },
+    { "id": "radiant-upgrade-2", "title": "Make 2 of your cards Radiant", "goal": { "kind": "radiantUpgrades" }, "target": 2, "jlore": 80 },
     { "id": "attack-10", "title": "Attack 10 times with Units", "goal": { "kind": "attackWithUnits" }, "target": 10, "jlore": 60 },
     { "id": "attack-25", "title": "Attack 25 times with Units", "goal": { "kind": "attackWithUnits" }, "target": 25, "jlore": 90 },
+    { "id": "switch-5", "title": "Switch position 5 times with Units", "goal": { "kind": "positionSwitches" }, "target": 5, "jlore": 60 },
     { "id": "core-8", "title": "Play 8 Core cards", "goal": { "kind": "playSetCards", "set": "Core" }, "target": 8, "jlore": 60 },
     { "id": "classic-8", "title": "Play 8 Classic cards", "goal": { "kind": "playSetCards", "set": "Classic" }, "target": 8, "jlore": 60 },
     { "id": "classic-plus-8", "title": "Play 8 Classic+ cards", "goal": { "kind": "playSetCards", "set": "Classic+" }, "target": 8, "jlore": 60 },
     { "id": "meditative-8", "title": "Play 8 Meditative cards", "goal": { "kind": "playSetCards", "set": "Meditative" }, "target": 8, "jlore": 60 },
-    { "id": "meditative-plus-8", "title": "Play 8 Meditative+ cards", "goal": { "kind": "playSetCards", "set": "Meditative+" }, "target": 8, "jlore": 60 }
+    { "id": "meditative-plus-8", "title": "Play 8 Meditative+ cards", "goal": { "kind": "playSetCards", "set": "Meditative+" }, "target": 8, "jlore": 60 },
+    { "id": "stinkyscape-8", "title": "Play 8 Stinkyscape cards", "goal": { "kind": "playSetCards", "set": "Stinkyscape" }, "target": 8, "jlore": 60 },
+    { "id": "training-grounds-8", "title": "Play 8 Training Grounds cards", "goal": { "kind": "playSetCards", "set": "Training Grounds" }, "target": 8, "jlore": 60 }
   ]
 }

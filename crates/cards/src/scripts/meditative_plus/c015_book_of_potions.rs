@@ -50,7 +50,6 @@ mod tests {
     }
 
     fn booked(seed: &str, radiant: bool) -> Scenario {
-        let _preview = preview_sets(&[SetName::MeditativePlus]);
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": BOOK, "radiant": radiant }, FILLER] },
@@ -74,7 +73,6 @@ mod tests {
     #[test]
     fn r386_cards_reads_through_param() {
         crate::register_all();
-        let _preview = preview_sets(&[SetName::MeditativePlus]);
         let mut s = scenario(json!({
             "seed": "m+015-param",
             "p1": { "hand": [BOOK, FILLER] },
