@@ -52,6 +52,35 @@ fn mine(radiant: bool) -> ActivationDecl {
     }
 }
 
+/// R1855002, R2476000: on the field, to both seats, the pool an Anomaly board wrote on it (its rider,
+/// `RESOURCE_POOL_KEY`), which its Death's Resources come from in place of every Stinkyscape one: by
+/// name after "random Stinkyscape Resource" (Radiant: "random Radiant Stinkyscape Resource"), its value
+/// the pool's size. Nothing for an Asteroid with no rider, which gains what its text says. The board
+/// that wrote it laid its cards in public. S #170, #171 and #172 show the same.
+pub fn pool_preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let Some(pool) = ctx
+            .self_
+            .memory
+            .get(RESOURCE_POOL_KEY)
+            .and_then(|value| serde_json::from_value::<Vec<String>>(value.clone()).ok())
+        else {
+            return vec![];
+        };
+        let names: Vec<String> = pool.iter().map(|def_id| def_of(Some(ctx.state), def_id).name.clone()).collect();
+        let label = if ctx.radiant { "random Radiant Stinkyscape Resource" } else { "random Stinkyscape Resource" };
+        vec![PreviewValue {
+            label: label.to_string(),
+            value: names.len() as i32,
+            display: Some(names.join(" or ")),
+            ids: None,
+        }]
+    })
+}
+
 fn face(radiant: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -64,6 +93,7 @@ fn face(radiant: bool) -> Script {
                 json!({ "count": param(&*ctx, "resources"), "radiant": radiant }),
             ))]
         })),
+        preview: Some(pool_preview()),
         ..Script::default()
     }
 }
@@ -169,5 +199,27 @@ mod tests {
         let in_hand = crate::resources_in_hand(&s, P1);
         assert_eq!(in_hand.len(), RESOURCES);
         assert!(in_hand.iter().all(|card| card.radiant));
+    }
+
+    /// R2476000, R1855002: with no rider it previews nothing; with an Anomaly board's rider it names the
+    /// pool after "random Stinkyscape Resource" (Radiant: "random Radiant Stinkyscape Resource"), to
+    /// both seats, and its Death's Resources come from that pool alone.
+    #[test]
+    fn r2476000_it_names_the_resource_pool_its_rider_holds() {
+        for radiant in [false, true] {
+            let mut s = node(radiant);
+            let rock = s.unit_at(P1, 1).id;
+            assert!(crate::preview_seen(&s, P1, &rock).is_empty(), "radiant {radiant}: no rider");
+            let pool = ["stinkyscape-t-narcor", "stinkyscape-t-red-narcor"];
+            s.card_mut(&rock).memory.insert(jackioh_engine::effects::RESOURCE_POOL_KEY.to_string(), json!(pool));
+            let label = if radiant { "random Radiant Stinkyscape Resource" } else { "random Stinkyscape Resource" };
+            let named = vec![(label.to_string(), 2, Some("Narcor or Red Narcor".to_string()))];
+            assert_eq!(crate::preview_seen(&s, P1, &rock), named, "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, P2, &rock), named, "radiant {radiant}");
+            mined(&mut s);
+            let gained = crate::resources_in_hand(&s, P1);
+            assert!(!gained.is_empty(), "radiant {radiant}");
+            assert!(gained.iter().all(|card| pool.contains(&card.def_id.as_str())), "radiant {radiant}");
+        }
     }
 }
