@@ -424,18 +424,18 @@ export default function PackOpening({
   const spendOut = useSpendOut();
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     setReading(true);
     getPacks(token).then(
       (response) => {
-        if (!cancelled) {
+        if (!canceled) {
           setInfo(response);
           setLoadError(null);
           setReading(false);
         }
       },
       (cause: unknown) => {
-        if (!cancelled) {
+        if (!canceled) {
           setReading(false);
           // R2125000: a read that fails behind kept packs leaves them and says nothing; only a first visit says why.
           const kept = cachedRead<PacksResponse>(token, keptPaths.packs);
@@ -449,7 +449,7 @@ export default function PackOpening({
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, revision, attempt]);
 

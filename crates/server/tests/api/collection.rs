@@ -140,7 +140,7 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
     rows.iter()
-        .map(|row| serde_json::to_value(row).expect("a row serialises"))
+        .map(|row| serde_json::to_value(row).expect("a row serializes"))
         .collect()
 }
 

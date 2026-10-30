@@ -133,7 +133,7 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
         monitor.after(&events, g.state())
     }
 
-    /// Fuzz seed 7758 of the handicapped wave (#874): My Pawn cancelled an attack (R44), the random rest
+    /// Fuzz seed 7758 of the handicapped wave (#874): My Pawn canceled an attack (R44), the random rest
     /// of the turn cast CN Peptides on the attacker, whose Buffs gave it Windfury, and it attacked again,
     /// all inside the one outer action. A unit that gains Windfury after one attack may attack once more
     /// (R636), and a Buff's keyword row is a gain like a grant.
@@ -404,7 +404,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
             ],
         }];
         let sent =
-            serde_json::to_string(&view_for(g.state(), PlayerId::P1).events).expect("events serialise");
+            serde_json::to_string(&view_for(g.state(), PlayerId::P1).events).expect("events serialize");
         assert!(sent.contains("c-old"), "{sent}");
         assert_eq!(violations(&g, PlayerId::P1, &[]), no_violations());
     }
@@ -637,7 +637,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
             }))],
         }];
         let sent =
-            serde_json::to_string(&view_for(g.state(), PlayerId::P1).events).expect("events serialise");
+            serde_json::to_string(&view_for(g.state(), PlayerId::P1).events).expect("events serialize");
         assert!(sent.contains(&secret.id), "{sent}");
         assert_eq!(violations(&g, PlayerId::P1, &[]), no_violations());
     }
@@ -675,7 +675,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
             .iter()
             .flat_map(|entry| entry.events.iter())
             .filter_map(|event| {
-                let value = serde_json::to_value(event).expect("events serialise");
+                let value = serde_json::to_value(event).expect("events serialize");
                 match (
                     value.get("instanceId").and_then(Value::as_str),
                     value.get("defId").and_then(Value::as_str),
@@ -784,7 +784,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
             .iter()
             .flat_map(|entry| entry.events.iter().cloned())
             .collect();
-        let sent = serde_json::to_string(&view.events).expect("events serialise");
+        let sent = serde_json::to_string(&view.events).expect("events serialize");
         assert!(sent.contains(&gone.id), "{sent}");
         assert_eq!(
             hidden_information_violations(
@@ -821,7 +821,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         // 2X − 1 Books at X = 2 (#1704).
         assert_eq!(refused.len(), 3);
         for seat in [PlayerId::P1, PlayerId::P2] {
-            let sent = serde_json::to_string(&view_for(g.state(), seat).events).expect("events serialise");
+            let sent = serde_json::to_string(&view_for(g.state(), seat).events).expect("events serialize");
             for id in &refused {
                 assert!(sent.contains(id.as_str()), "{seat}: {sent}");
             }

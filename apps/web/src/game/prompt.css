@@ -221,7 +221,7 @@
 }
 
 /* Confirm is the one primary action: filled in End turn's amber (index.css --primary-*), so the
-   game has a single "go" colour rather than a blue one beside a gold one. */
+   game has a single "go" color rather than a blue one beside a gold one. */
 .prompt [data-testid="prompt-submit"]:not([aria-disabled="true"]) {
   border-color: var(--primary-edge);
   background: var(--primary-face);
@@ -723,7 +723,7 @@
    a desktop, low on a tablet, as the usual short sheet on a phone held upright, and down the right
    edge of a phone on its side. The scrim does not dim the board for them, because the board is the
    thing to look at. The card pickers (mulligan, discover, a card from your hand) need the room and
-   keep the centred modal and the sheet above, and so does a play's price and an X of a few values
+   keep the centered modal and the sheet above, and so does a play's price and an X of a few values
    (#492): docked as two small buttons, the embiggen choice went unseen, so both are cards in the
    middle (`data-prompt-layout="cards"`). Selected by `data-prompt-kind`, the M5-T4 contract,
    because `.prompt-direction` is also the name of the direction picker's own row of arrows. */
@@ -963,8 +963,8 @@
   }
 
   /* A card picker's sheet is the phone's whole width, and its two buttons sharing that width were
-     400px slabs under three small cards. Centred under the cards at a thumb's width, with the title
-     centred over them, the sheet reads as one group, as the desktop modal does. */
+     400px slabs under three small cards. Centered under the cards at a thumb's width, with the title
+     centered over them, the sheet reads as one group, as the desktop modal does. */
   .prompt:has(> .prompt-cards) > .prompt-title,
   .prompt:has(> .prompt-cards) > .prompt-count {
     text-align: center;

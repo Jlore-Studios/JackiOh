@@ -104,17 +104,17 @@ function useSavedDecks(): { decks: readonly SavedDeck[]; loadError: string | nul
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     withSession(getDecks).then(
       (answer) => {
-        if (!cancelled) setDecks(answer.decks);
+        if (!canceled) setDecks(answer.decks);
       },
       (cause: unknown) => {
-        if (!cancelled) setLoadError(messageOf(cause));
+        if (!canceled) setLoadError(messageOf(cause));
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [attempt]);
   const retry = (): void => {
@@ -130,17 +130,17 @@ function useLiveCoop(): { live: string | null; liveError: string | null; retryLi
   const [liveError, setLiveError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     getDuosLive().then(
       (answer) => {
-        if (!cancelled) setLive(answer.matchId);
+        if (!canceled) setLive(answer.matchId);
       },
       (cause: unknown) => {
-        if (!cancelled) setLiveError(messageOf(cause));
+        if (!canceled) setLiveError(messageOf(cause));
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [attempt]);
   const retryLive = (): void => {
@@ -184,7 +184,7 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   // The host's wait: the room names its match once the guest joins (B33), or is gone (B34).
   useEffect(() => {
     if (room === null) return undefined;
-    let cancelled = false;
+    let canceled = false;
     // A wake while a read is out would only repeat it; each effect run counts its own.
     let reading = false;
     const check = (): void => {
@@ -193,13 +193,13 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
       getDuosRoom(room)
         .then(
           (answer) => {
-            if (cancelled || answer.matchId === null) return;
+            if (canceled || answer.matchId === null) return;
             storeRoom(null);
             setRoom(null);
             navigate(paths.duos(answer.matchId));
           },
           (cause: unknown) => {
-            if (cancelled || !(cause instanceof ApiRequestError) || cause.status !== 404) return;
+            if (canceled || !(cause instanceof ApiRequestError) || cause.status !== 404) return;
             storeRoom(null);
             setRoom(null);
             setError(t("Your co-op room closed before anyone joined."));
@@ -214,7 +214,7 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
     // A throttled tab's interval stalls; waking it reads the room again at once.
     const stopWake = pageWake(check);
     return () => {
-      cancelled = true;
+      canceled = true;
       stopWake();
       window.clearInterval(timer);
     };

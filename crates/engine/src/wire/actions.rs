@@ -439,7 +439,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn actions_serialise_as_ts_writes_them() {
+    fn actions_serialize_as_ts_writes_them() {
         let action = Action::new(
             ActionBody::Play {
                 instance_id: "c12".into(),

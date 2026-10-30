@@ -16,7 +16,7 @@ use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::subsystems::fuse::FuseArgs;
 use jackioh_engine::testkit::*;
 
-const GAMBIT: &str = "classic-052"; // (2) Trap: a lethal hit is cancelled; then heal {heal} 10 and draw {draw} 3 (resume step).
+const GAMBIT: &str = "classic-052"; // (2) Trap: a lethal hit is canceled; then heal {heal} 10 and draw {draw} 3 (resume step).
 const INCOME_TAX: &str = "classic-009"; // (2) Trap with a table of steps of its own, and no "heal".
 const COUNTERSPELL: &str = "classic-017"; // (2) Trap with no table of steps: the outer ingredient of the fusion.
 const FILLER: &str = "core-005";
@@ -67,7 +67,7 @@ mod r102_a_final_gambit_under_a_fusion_whose_other_ingredients_hold_no_table_of_
     use super::*;
 
     #[test]
-    fn r102_resumes_its_own_step_the_hit_is_cancelled_the_hero_heals_10_and_draws_3_as_a_final_gambit_standing_alone_does()
+    fn r102_resumes_its_own_step_the_hit_is_canceled_the_hero_heals_10_and_draws_3_as_a_final_gambit_standing_alone_does()
      {
         let mut s = lethal_against_nested();
 

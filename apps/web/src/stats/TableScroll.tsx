@@ -5,9 +5,9 @@
 
 import type { ReactElement, ReactNode } from "react";
 
-export function TableScroll({ labelledBy, children }: { labelledBy: string; children: ReactNode }): ReactElement {
+export function TableScroll({ labeledBy, children }: { labeledBy: string; children: ReactNode }): ReactElement {
   return (
-    <div className="stats-table-wrapper" role="region" aria-labelledby={labelledBy} tabIndex={0}>
+    <div className="stats-table-wrapper" role="region" aria-labelledby={labeledBy} tabIndex={0}>
       {children}
     </div>
   );

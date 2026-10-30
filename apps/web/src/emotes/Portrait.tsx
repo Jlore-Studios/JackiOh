@@ -56,7 +56,7 @@ export function HeroPortrait({
   luck?: number;
   /**
    * R1449: the hold's pointer handlers, on the whole oval: its badges sit over the open button (the
-   * health badge covers the oval's centre at some sizes), so a press on one is a press on the portrait.
+   * health badge covers the oval's center at some sizes), so a press on one is a press on the portrait.
    */
   press?: DOMAttributes<HTMLElement>;
   /** The emote bubble/sticker and the portrait's open button mount here, hung off the oval. */

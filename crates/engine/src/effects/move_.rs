@@ -582,7 +582,7 @@ pub struct CounterPlayArgs {
 /// and it counts for nothing that counts plays, because §10.5 step 4, where every count is made, never
 /// runs for it. Its mana and Tributes stay spent. `target` names the announced card (a response reads
 /// it off its `cardAnnounced`); with none it is the innermost announce still live. The first Counter to
-/// resolve cancels the play, and a later one finds no card and does nothing (a trap on a cancelled
+/// resolve cancels the play, and a later one finds no card and does nothing (a trap on a canceled
 /// announce is not even offered it, and stays set).
 ///
 /// `to: "thief"` is E2: the card moves to the countering player's hand and its owner becomes that

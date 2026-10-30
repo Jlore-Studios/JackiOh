@@ -65,7 +65,7 @@ mod tests {
 
     /// Written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
-        let text = serde_json::to_string(state).expect("the state serialises");
+        let text = serde_json::to_string(state).expect("the state serializes");
         serde_json::from_str(&text).expect("the state parses back")
     }
 

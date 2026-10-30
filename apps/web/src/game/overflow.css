@@ -27,7 +27,7 @@
 /* Above the viewer's own pile, rising into the field; below the opponent's, hanging into it.
    `--pile-dir` is 1 where the pile is below the notice and -1 where it is above (animations.css
    aims the badge's rise and the card's bounce by it). It starts at the pile's own left edge and
-   runs right, over the graveyard and exile piles beside it: centred on a phone's narrow pile, it
+   runs right, over the graveyard and exile piles beside it: centered on a phone's narrow pile, it
    reached past the edge of the screen when the seat sat against it (844x390). */
 .pile > .pile-notice {
   --pile-dir: 1;
@@ -75,14 +75,14 @@
   white-space: nowrap;
 }
 
-/* Fatigue is the void's colour, as the drain it deals is (index.css `--plague`). */
+/* Fatigue is the void's color, as the drain it deals is (index.css `--plague`). */
 .pile-notice[data-kind="fatigue"] > .pile-notice-tag {
   border-color: color-mix(in srgb, var(--plague) 70%, var(--pal-white));
   background: color-mix(in srgb, var(--plague) 34%, var(--bg-sunken));
   color: var(--pal-slate-100);
 }
 
-/* A refusal is the opponent's red, the colour of "no". */
+/* A refusal is the opponent's red, the color of "no". */
 .pile-notice[data-kind="libraryFull"] > .pile-notice-tag {
   border-color: color-mix(in srgb, var(--opponent) 70%, var(--pal-white));
   background: color-mix(in srgb, var(--opponent) 34%, var(--bg-sunken));
@@ -97,7 +97,7 @@
 }
 
 /* R1639000: an empty deck that has dealt fatigue wears its count at rest, in the pile's own row (in
-   flow, so it covers nothing on the field), in the fatigue notice's colours. R318's notice takes its
+   flow, so it covers nothing on the field), in the fatigue notice's colors. R318's notice takes its
    place while it is up. */
 .pile > .pile-fatigue {
   padding: 0 6px;
@@ -134,7 +134,7 @@
   z-index: var(--z-overflow);
 }
 
-/* Centred on the hand and standing up from its lower edge, so the card rises over the fan. The
+/* Centered on the hand and standing up from its lower edge, so the card rises over the fan. The
    card burns off toward its owner's graveyard: up into the viewer's own seat, and across to the
    opponent's, which sits beside their hand in every layout. */
 .hand > .burn-notice {

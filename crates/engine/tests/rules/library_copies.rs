@@ -77,7 +77,7 @@ mod add_library_copies_t_ai_3 {
             copies(json!({ "of": "enemy", "count": 1, "brittle": 2 })),
         );
         let copy = state.players.p1.hand.last().cloned().expect("a copy in hand");
-        let copy_json = serde_json::to_value(&copy).expect("serialises");
+        let copy_json = serde_json::to_value(&copy).expect("serializes");
         assert!(
             matches_object(
                 &copy_json,
@@ -250,7 +250,7 @@ mod add_library_copies_t_ai_3 {
         }
         assert_eq!(events_of_type(&theirs, GameEventType::AddedToHand).len(), 1);
         assert!(!names_a_source(
-            &serde_json::to_string(&theirs).expect("serialises")
+            &serde_json::to_string(&theirs).expect("serializes")
         ));
         assert_eq!(
             state

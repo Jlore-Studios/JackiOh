@@ -244,7 +244,7 @@ fn drawn_by(events: &[GameEvent], player: PlayerId) -> Vec<String> {
     events_of_type(events, GameEventType::Drawn)
         .iter()
         .filter_map(
-            |event| match serde_json::to_value(event).expect("an event serialises") {
+            |event| match serde_json::to_value(event).expect("an event serializes") {
                 drawn if drawn["player"] == json!(player) => drawn["defId"].as_str().map(str::to_string),
                 _ => None,
             },
@@ -324,7 +324,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         assert_eq!(owed.chain, 2);
         assert!(owed.owns);
         let reparsed: WorkItem =
-            serde_json::from_value(serde_json::to_value(&parked).expect("a work item serialises"))
+            serde_json::from_value(serde_json::to_value(&parked).expect("a work item serializes"))
                 .expect("and parses");
         assert_eq!(reparsed, parked);
         // R113's order, innermost first: the effects of the Cry after the one that asked, then the
@@ -478,7 +478,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         assert_eq!(done.state.players.p1.hero.health, HERO_HEALTH - 1);
         let amounts: Vec<Value> = events_of_type(&done.events, GameEventType::Damage)
             .iter()
-            .map(|event| serde_json::to_value(event).expect("an event serialises")["amount"].clone())
+            .map(|event| serde_json::to_value(event).expect("an event serializes")["amount"].clone())
             .collect();
         assert_eq!(amounts, vec![json!(1)]);
         // No card was drawn by the owed draw — there was none to draw — so nothing reached p1's hand.
@@ -550,7 +550,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_draw_n_loop {
         assert_eq!(owed.player, PlayerId::P1);
         assert_eq!(owed.count, 2);
         let reparsed: WorkItem =
-            serde_json::from_value(serde_json::to_value(&parked).expect("a work item serialises"))
+            serde_json::from_value(serde_json::to_value(&parked).expect("a work item serializes"))
                 .expect("and parses");
         assert_eq!(reparsed, parked);
 

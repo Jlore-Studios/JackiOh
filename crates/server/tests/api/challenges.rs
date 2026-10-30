@@ -458,7 +458,7 @@ mod b49_accept_decline_cancel_and_expiry {
         assert_eq!(status, 204, "{body}");
         assert!(p.none_listed().await);
         let (status, body) = join_room(&p.app, &p.friend, &room_code, random_room()).await;
-        assert_eq!(status, 404, "the cancelled challenge's room is gone: {body}");
+        assert_eq!(status, 404, "the canceled challenge's room is gone: {body}");
     }
 
     #[tokio::test(start_paused = true)]
@@ -492,7 +492,7 @@ mod b49_accept_decline_cancel_and_expiry {
         let third = account(&p.app, 3, "Tess").await;
         befriend(&p.app, &p.challenger, &third).await;
         heartbeat(&p.app, &third).await;
-        // One declined, one cancelled, one never answered, one accepted by joining (last: the match
+        // One declined, one canceled, one never answered, one accepted by joining (last: the match
         // it starts holds the challenger).
         let (declined, _) = p.challenged().await;
         let (status, _) = api(
@@ -504,11 +504,11 @@ mod b49_accept_decline_cancel_and_expiry {
         )
         .await;
         assert_eq!(status, 204);
-        let (cancelled, _) = p.challenged().await;
+        let (canceled, _) = p.challenged().await;
         let (status, _) = api(
             &p.app,
             "DELETE",
-            &format!("/api/challenges/{cancelled}"),
+            &format!("/api/challenges/{canceled}"),
             &p.challenger.token,
             Value::Null,
         )
@@ -578,7 +578,7 @@ mod b49_accept_decline_cancel_and_expiry {
                 .social
                 .challenges
                 .iter()
-                .all(|row| row.state == ChallengeState::Cancelled)
+                .all(|row| row.state == ChallengeState::Canceled)
         );
         let (status, body) = join_room(&p.app, &p.friend, &code, random_room()).await;
         assert_eq!((status, &body), (404, &unknown));
@@ -637,7 +637,7 @@ mod r1689000_a_challenge_lives_only_as_long_as_its_friendship {
                 .social
                 .challenges
                 .iter()
-                .all(|row| row.state == ChallengeState::Cancelled)
+                .all(|row| row.state == ChallengeState::Canceled)
         );
         assert!(!room_open(&p.app, &sent).await);
         assert!(!room_open(&p.app, &received).await);

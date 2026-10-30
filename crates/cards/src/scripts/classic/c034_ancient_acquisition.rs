@@ -221,12 +221,12 @@ mod tests {
                     .map(|card| (card.id.clone(), card.def_id.clone()))
                     .collect();
                 assert_eq!(returned.len(), 2);
-                let theirs = serde_json::to_string(&s.view(PlayerId::P2)).expect("a view serialises");
+                let theirs = serde_json::to_string(&s.view(PlayerId::P2)).expect("a view serializes");
                 for (id, def_id) in &returned {
                     assert!(!theirs.contains(&format!("\"{id}\"")));
                     assert!(!theirs.contains(def_id.as_str()));
                 }
-                let mine = serde_json::to_string(&s.view(PlayerId::P1)).expect("a view serialises");
+                let mine = serde_json::to_string(&s.view(PlayerId::P1)).expect("a view serializes");
                 assert!(mine.contains(&format!("\"{}\"", returned[0].0)));
             }
 
@@ -367,7 +367,7 @@ mod tests {
                 assert!(s.state().pending.is_none());
                 let well = s.card(MANA_WELL).id.clone();
                 s.expect_in_zone(&well, "hand");
-                let theirs = serde_json::to_string(&s.view(PlayerId::P2)).expect("a view serialises");
+                let theirs = serde_json::to_string(&s.view(PlayerId::P2)).expect("a view serializes");
                 assert!(!theirs.contains(&format!("\"{well}\"")));
                 assert!(!theirs.contains(MANA_WELL));
             }

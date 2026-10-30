@@ -238,7 +238,7 @@ mod m_plus_20_the_sequence_r1184000 {
                 "an answer",
             );
             assert!(legal.contains(&pick));
-            seen.insert(serde_json::to_string(&pick).expect("an action serialises"));
+            seen.insert(serde_json::to_string(&pick).expect("an action serializes"));
         }
         assert_eq!(seen.len(), 5, "every answer and Stop come up");
         let mut playing = state;
@@ -374,7 +374,7 @@ mod m_plus_20_the_sequence_r1184000 {
                 json_of(view_for(&twin, viewer)),
                 json_of(view_for(&state, viewer))
             );
-            let text = serde_json::to_string(&view_for(&state, viewer)).expect("a view serialises");
+            let text = serde_json::to_string(&view_for(&state, viewer)).expect("a view serializes");
             assert!(!text.contains(ANSWER_KEY));
             assert!(!text.contains(KY_COMPETITION_STREAK));
         }

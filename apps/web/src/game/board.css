@@ -1,4 +1,4 @@
-/* Board layout and look (BUILD M5-T1, polish task 7). Colour tokens live in src/index.css; this
+/* Board layout and look (BUILD M5-T1, polish task 7). Color tokens live in src/index.css; this
    file owns geometry and the board's own surfaces. The whole board must fit 1280x720, 844x390,
    768x1024 and 390x844 with nothing clipped (e2e/cypress/component/board-layout.cy.tsx), so every
    column is `minmax(0, …)`, no element carries a width or min-width wider than a phone, and the
@@ -9,7 +9,7 @@
    your seat, your hand, controls, log); only their grid placement changes per screen
    (docs/polish/7-mobile-ux.md S11):
      - desktop (1025px and up, and a tablet held landscape): the play area on the left, and a
-       sidebar on the right holding the opponent's hand (top), End turn at the height of the centre
+       sidebar on the right holding the opponent's hand (top), End turn at the height of the center
        line, and the log (bottom);
      - tablet portrait: one column, with the controls and the log sharing the last row;
      - phone portrait: one column, the opponent's hand beside the opponent's seat;
@@ -23,7 +23,7 @@
    so a match bar, a turn banner or a phone's browser toolbar shrinks the cards instead of pushing
    End turn or your hand off the screen. Whatever height is spare goes to the field, the one row
    that is `1fr`: on a desktop or a tablet its four rows grow into it (`.lane`), and on a phone
-   its lanes stay centred in it.
+   its lanes stay centered in it.
 
    Green is not painted here. `data-legal="true"` only means "clickable" (a pointer and full
    opacity); the green glow is `data-glow="ready"`, styled by highlights.css, which Board.tsx
@@ -98,7 +98,7 @@
   background: var(--bg-raised);
 }
 
-/* Whose turn it is, at a glance: the active seat's plate lights up in its colour. */
+/* Whose turn it is, at a glance: the active seat's plate lights up in its color. */
 .board[data-active="you"] .seat-you {
   border-color: color-mix(in srgb, var(--you) 80%, var(--pal-white));
   box-shadow:
@@ -399,7 +399,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 /* A small drawn icon per pile, so the count still says what it counts once the words are gone
-   on a phone. Masked, so it takes the text colour. */
+   on a phone. Masked, so it takes the text color. */
 .pile::before {
   content: "";
   /* In the row whatever index.css's hit area says (R2122000); a browsable pile's band is its ::after (inspectable.css). */
@@ -653,7 +653,7 @@ button.modifier-badge[data-open="true"] {
 
 /* Once the opponent's backs run out of room they overlap, and each back but the last shows only
    its left strip, `min(slot, (available - slot) / (n - 1))` wide: the fan's step, capped at the
-   card. A centred diamond there was cut in half into a "<", which read as a glyph rather than a
+   card. A centered diamond there was cut in half into a "<", which read as a glyph rather than a
    card. So on a covered back the diamond moves to the middle of the strip and shrinks to fit it.
    `.hand-cards` is a size container here so `100cqi` is the available width in any layout. */
 .hand-opponent .hand-cards {
@@ -679,7 +679,7 @@ button.modifier-badge[data-open="true"] {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   /* The field's row is the board's `1fr`, so it may be taller than its lanes: on a phone they stay
-     centred, with the spare height as mat above and below them; on a desktop or a tablet they fill
+     centered, with the spare height as mat above and below them; on a desktop or a tablet they fill
      it (the media query after `.lane`). */
   align-content: center;
   gap: var(--gap);
@@ -698,7 +698,7 @@ button.modifier-badge[data-open="true"] {
     0 8px 22px color-mix(in srgb, var(--pal-black) 35%, transparent);
 }
 
-/* The centre line. The padding and the gaps are symmetric, so 50% is the middle gap exactly. */
+/* The center line. The padding and the gaps are symmetric, so 50% is the middle gap exactly. */
 .field::after {
   content: "";
   position: absolute;
@@ -902,7 +902,7 @@ button.modifier-badge[data-open="true"] {
    more than four card heights) and splits it into four equal rows, none under a card height, so
    an empty zone still holds its row open. A row grows to at most `--row-max`, so a DEF card at
    full size (`--def-scale: 1`) still fits across the narrowest lane (136 px at 761 px wide);
-   past that the lanes stay centred. A card's width follows its row through `aspect-ratio`. A
+   past that the lanes stay centered. A card's width follows its row through `aspect-ratio`. A
    phone keeps fixed equal rows: its backrow is already at the 44 px touch floor. */
 @media (min-width: 761px) and (min-height: 501px) {
   .field {
@@ -1415,7 +1415,7 @@ button.modifier-badge[data-open="true"] {
 /* The switch (⟳), #258: out of the card, a sibling of it in its zone (Card.tsx), so a finger gets a
    full 44 px target at the zone's top-right corner and a DEF card's rotation never turns it. The
    button is the transparent target; `.switch-glyph` is the small round badge drawn in its corner.
-   The target takes at most the zone's top-right quarter, `--switch-clear` short of its centre
+   The target takes at most the zone's top-right quarter, `--switch-clear` short of its center
    lines, so the middle of a tile is always the card's tap (attack, or pick it as a target) and
    drag: 44x44 wherever the zone has the room, smaller only on a tile under 2 × (44 + 6) px, where
    a fixed 44 px would reach the middle (a phone's 64x87, 72x59 held sideways, 45x59 under a
@@ -1720,7 +1720,7 @@ button.modifier-badge[data-open="true"] {
   text-align: center;
 }
 
-/* R2102000: "You have lethal", the lethal hint's line, ringed in its outlines' colour (highlights.css). */
+/* R2102000: "You have lethal", the lethal hint's line, ringed in its outlines' color (highlights.css). */
 .board .lethal-hint {
   border-color: var(--glow-lethal);
 }
@@ -1939,7 +1939,7 @@ button.modifier-badge[data-open="true"] {
    above the board, taking height a phone does not have. Where the turn plate shows, the banner
    leaves the layout but stays in the accessibility tree (the visually-hidden pattern, not
    `display: none`, so its animation still runs and ends); on a phone held upright it is a slim pill
-   over the board in the colour of the side whose turn it is. */
+   over the board in the color of the side whose turn it is. */
 .game > .turn-banner {
   width: fit-content;
   max-width: 100%;
@@ -2025,7 +2025,7 @@ button.modifier-badge[data-open="true"] {
 
 /* Desktop, 1025px and up, and a tablet held landscape (900px and up): the play area on the left
    and a sidebar on the right, so the four rows, both seats and a big hand fit 720px of height. The
-   opponent's hand sits top right beside their seat, End turn at the height of the centre line
+   opponent's hand sits top right beside their seat, End turn at the height of the center line
    (where Hearthstone puts it), and the log below it beside your seat and hand. A landscape tablet
    got the one-column portrait board before, which is 1024px wide and 768px tall: End turn ended up
    below the screen. */
@@ -2780,7 +2780,7 @@ button.modifier-badge[data-open="true"] {
     --hand-card-h: calc(var(--card-h) * 1.4);
     --hand-card-w: calc(var(--hand-card-h) * 0.8);
     grid-template-columns: minmax(0, 224px) minmax(0, 1fr) minmax(0, 176px);
-    /* Two equal rows beside the field, one per side of its centre line, and the hand's row. */
+    /* Two equal rows beside the field, one per side of its center line, and the hand's row. */
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto;
     row-gap: 6px;
     overflow: clip;

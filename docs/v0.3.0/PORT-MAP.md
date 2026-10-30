@@ -1363,7 +1363,7 @@ Paths follow [SURFACE.md](SURFACE.md) §4.1. Line counts are the TypeScript's.
 | `packages/engine/test/combat-resolution.test.ts` | 303 | port | `crates/engine/tests/rules/combat_resolution.rs` |  |
 | `packages/engine/test/combat-validation.test.ts` | 428 | port | `crates/engine/tests/rules/combat_validation.rs` |  |
 | `packages/engine/test/combat.property.test.ts` | 465 | port | `crates/engine/tests/rules/combat_property.rs` |  |
-| `packages/engine/test/conditionActive.test.ts` | 825 | port | `crates/engine/tests/rules/condition_active.rs` | drop l.770–825 (the R195 prose block, #133); keep the behaviour tests |
+| `packages/engine/test/conditionActive.test.ts` | 825 | port | `crates/engine/tests/rules/condition_active.rs` | drop l.770–825 (the R195 prose block, #133); keep the behavior tests |
 | `packages/engine/test/config.test.ts` | 54 | port | `crates/engine/tests/rules/config.rs` |  |
 | `packages/engine/test/control-change.property.test.ts` | 309 | port | `crates/engine/tests/rules/control_change_property.rs` |  |
 | `packages/engine/test/control-change.test.ts` | 477 | port | `crates/engine/tests/rules/control_change.rs` |  |

@@ -65,18 +65,18 @@ export function usePolled<T>(
   const shown = useRef(0);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const tick = (): void => {
       asked.current += 1;
       const ticket = asked.current;
       attempt(() => reader.current()).then(
         (value) => {
-          if (cancelled || ticket < shown.current) return;
+          if (canceled || ticket < shown.current) return;
           shown.current = ticket;
           setState({ kind: "ready", value });
         },
         (cause: unknown) => {
-          if (cancelled || ticket < shown.current) return;
+          if (canceled || ticket < shown.current) return;
           setState((previous) => (previous.kind === "loading" ? { kind: "failed", ...readFailureOf(cause) } : previous));
         },
       );
@@ -84,12 +84,12 @@ export function usePolled<T>(
     tick();
     if (everyMs === null) {
       return () => {
-        cancelled = true;
+        canceled = true;
       };
     }
     const handle = window.setInterval(tick, everyMs);
     return () => {
-      cancelled = true;
+      canceled = true;
       window.clearInterval(handle);
     };
   }, [everyMs, round]);

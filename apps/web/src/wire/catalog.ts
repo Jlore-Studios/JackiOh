@@ -110,7 +110,7 @@ export const LEAN_NEWEST = "newest";
  * R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): `"newest"`,
  * the newest set that ships when the deck is dealt (R1371), or one shipped set. No lean is the pick's
  * absence. The engine's `LeanPick`, which no generated type carries, mirrored as the string it is
- * serialised as.
+ * serialized as.
  */
 export type LeanPick = typeof LEAN_NEWEST | SetName;
 

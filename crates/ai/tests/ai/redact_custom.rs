@@ -58,7 +58,7 @@ fn r915007_a_custom_card_the_ai_has_not_seen_leaves_its_state_and_one_it_has_sta
         "the one in the human's hand is not"
     );
     assert!(!seen.custom_cards.contains_key(IN_HAND));
-    let text = serde_json::to_string(&seen).expect("a state serialises");
+    let text = serde_json::to_string(&seen).expect("a state serializes");
     assert!(
         !text.contains(IN_HAND),
         "the hidden card's id appears nowhere in what the AI reads"

@@ -53,11 +53,11 @@ export function useMatchSeries(token: string, matchId: string, gameOver: boolean
 
   useEffect(() => {
     if (notSeries) return;
-    let cancelled = false;
+    let canceled = false;
     const read = (): void => {
       attempt(() => getSeriesForMatch(token, matchId)).then(
         (answer) => {
-          if (cancelled) return;
+          if (canceled) return;
           const found = seriesOf(answer);
           if (found === null) setNotSeries(true);
           else setSeries(found);
@@ -68,12 +68,12 @@ export function useMatchSeries(token: string, matchId: string, gameOver: boolean
     read();
     if (!poll) {
       return () => {
-        cancelled = true;
+        canceled = true;
       };
     }
     const handle = setInterval(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
     return () => {
-      cancelled = true;
+      canceled = true;
       clearInterval(handle);
     };
   }, [token, matchId, gameOver, poll, notSeries]);

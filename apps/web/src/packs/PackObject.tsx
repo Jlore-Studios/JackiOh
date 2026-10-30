@@ -1,5 +1,5 @@
 // The pack as a physical object (#1663, part of #1651, SPEC §14.3, §14.6): a foil wrapper with a
-// crimped seal at each end, the set's emblem and colours, a sheen that follows the pointer, a slight
+// crimped seal at each end, the set's emblem and colors, a sheen that follows the pointer, a slight
 // tilt toward it, a press, and a tear that bursts it open. The store's shelf and the pack-opening
 // scene draw the same object, at `shelf` and `scene` size.
 //

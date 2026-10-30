@@ -1,5 +1,5 @@
 /* The replay player's controls (#511), in the board's notice slot: buttons, scrubber and readout wrap
-   as one centred row, so a phone puts the scrubber on a row of its own. */
+   as one centered row, so a phone puts the scrubber on a row of its own. */
 .replay-controls {
   display: flex;
   flex-wrap: wrap;
@@ -23,7 +23,7 @@
   opacity: 1;
 }
 
-/* "Share as GIF" (#513), under the toolbar: its buttons, shape and progress wrap as one centred row. */
+/* "Share as GIF" (#513), under the toolbar: its buttons, shape and progress wrap as one centered row. */
 .replay-gif-panel {
   display: flex;
   flex: 1 1 100%;

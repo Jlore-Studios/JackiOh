@@ -24,7 +24,7 @@ export type ParticleSystem = {
    * `dtMs`): a stalled frame never flings a particle nor keeps one alive past its wall-clock life (R200).
    */
   step(dtMs: number, ageMs?: number): void;
-  /** Draws every live particle; a null sprite falls back to a filled arc in the preset colour. */
+  /** Draws every live particle; a null sprite falls back to a filled arc in the preset color. */
   draw(ctx: CanvasRenderingContext2D, dpr: number): void;
   alive(): number;
   capacity(): number;
@@ -135,9 +135,9 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
   let aliveCount = 0;
 
   const dragFactor = new Float64Array(SPECS.length);
-  /** Sprites resolved for the current dpr, indexed preset × colour, so drawing builds no cache keys. */
+  /** Sprites resolved for the current dpr, indexed preset × color, so drawing builds no cache keys. */
   const spriteTable: Array<CanvasImageSource | null | undefined> = new Array(SPECS.length * MAX_COLORS);
-  /** The same for an emit's own palette, by the palette array itself, indexed preset × palette length + colour. */
+  /** The same for an emit's own palette, by the palette array itself, indexed preset × palette length + color. */
   let paletteTables = new WeakMap<readonly string[], Array<CanvasImageSource | null | undefined>>();
   let spriteDpr = Number.NaN;
 

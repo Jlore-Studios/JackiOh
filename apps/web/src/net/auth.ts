@@ -225,7 +225,7 @@ export class AuthError extends Error {
 
 // Classifying a refusal
 
-/** A refresh token or access token the provider no longer honours. */
+/** A refresh token or access token the provider no longer honors. */
 const SESSION_CODES: ReadonlySet<string> = new Set([
   "bad_jwt",
   "session_expired",

@@ -384,7 +384,7 @@ mod tests {
 
                 s.play(TECH, json!({ "zone": 5 }));
 
-                // An absent prompt serialises as `null`.
+                // An absent prompt serializes as `null`.
                 let prompt = js(&s.view(PlayerId::P1).pending).to_string();
                 assert_ne!(prompt, "null");
                 for trap in [PAWN, BREAD, STIMMY, UNLICENSED] {
@@ -417,7 +417,7 @@ mod tests {
                 }));
                 s.play(TECH, json!({ "zone": 5 }));
                 let revived: GameState =
-                    serde_json::from_str(&serde_json::to_string(s.state()).expect("the state serialises"))
+                    serde_json::from_str(&serde_json::to_string(s.state()).expect("the state serializes"))
                         .expect("the state parses back");
                 assert_eq!(&revived, s.state());
                 let tempo = s.card(TEMPO).id.clone();

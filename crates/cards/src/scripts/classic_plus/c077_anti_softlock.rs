@@ -293,7 +293,7 @@ mod tests {
                     assert!(!hidden.iter().any(|card| card == id));
                 }
                 let first = s.hand(P2).first().map(|card| card.id.clone()).unwrap_or_else(|| "-".to_string());
-                assert!(!serde_json::to_string(&s.view(P1)).expect("serialises").contains(&first));
+                assert!(!serde_json::to_string(&s.view(P1)).expect("serializes").contains(&first));
             }
 
             #[test]

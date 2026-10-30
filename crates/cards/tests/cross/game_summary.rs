@@ -1328,7 +1328,7 @@ mod r2089000_created_cards {
             GameEvent::ShuffledIn { player: P2, def_id, creator: Some(P1), .. } if def_id == CURSE
         )));
         for seat in [P1, P2] {
-            let events = serde_json::to_string(&s.view(seat).events).expect("a view serialises");
+            let events = serde_json::to_string(&s.view(seat).events).expect("a view serializes");
             assert!(!events.contains("creator"), "{}'s view", seat.as_str());
         }
 
@@ -1383,7 +1383,7 @@ mod r2089000_created_cards {
             GameEvent::Summoned { player: P2, def_id, creator: Some(P1), .. } if def_id == WELL
         )));
         for seat in [P1, P2] {
-            let events = serde_json::to_string(&s.view(seat).events).expect("a view serialises");
+            let events = serde_json::to_string(&s.view(seat).events).expect("a view serializes");
             assert!(!events.contains("creator"), "{}'s view", seat.as_str());
         }
         let p1 = reader.seat(P1, Vec::new());

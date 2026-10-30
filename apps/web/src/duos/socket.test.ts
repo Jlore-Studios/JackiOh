@@ -221,7 +221,7 @@ describe("a quiet co-op socket on a woken page", () => {
     h.wake();
     current.deliver(view(3));
 
-    // The answer cancelled the probe: nothing is left to run, and the socket stays.
+    // The answer canceled the probe: nothing is left to run, and the socket stays.
     expect(h.pending()).toBe(0);
     h.runTimers();
     expect(h.sockets).toHaveLength(1);

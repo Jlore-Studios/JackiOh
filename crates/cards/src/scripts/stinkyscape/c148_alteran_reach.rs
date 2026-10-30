@@ -91,7 +91,7 @@ mod tests {
         nodes
     }
 
-    /// Writes p1's map as charted, standing on `at`, last travelled on no turn.
+    /// Writes p1's map as charted, standing on `at`, last traveled on no turn.
     fn set_map(s: &mut Scenario, nodes: Vec<StarscapeReward>, at: i32) {
         s.state_mut().players.p1.starscape = Some(StarscapeMap {
             nodes,
@@ -115,8 +115,8 @@ mod tests {
         s.state().players.p1.mana.current
     }
 
-    /// The nodes the given events travelled to, in order.
-    fn travelled(events: &[GameEvent]) -> Vec<(PlayerId, i32, StarscapeReward)> {
+    /// The nodes the given events traveled to, in order.
+    fn traveled(events: &[GameEvent]) -> Vec<(PlayerId, i32, StarscapeReward)> {
         events
             .iter()
             .filter_map(|event| match event {
@@ -240,7 +240,7 @@ mod tests {
                 }
                 assert_eq!(map.at, 1);
                 assert!(s.state().rng_cursor > cursor, "the chart draws from the match rng");
-                assert_eq!(travelled(s.last_events()), vec![(P1, 1, map.nodes[0])]);
+                assert_eq!(traveled(s.last_events()), vec![(P1, 1, map.nodes[0])]);
 
                 let mut again = board("s148-chart", false);
                 travel(&mut again);
@@ -298,7 +298,7 @@ mod tests {
                     "Damage hits the enemy hero"
                 );
                 assert_eq!(
-                    travelled(s.events()),
+                    traveled(s.events()),
                     vec![
                         (P1, 1, StarscapeReward::Heal),
                         (P1, 2, StarscapeReward::Draw),
@@ -430,7 +430,7 @@ mod tests {
                 set_map(&mut s, heal_path(), STARSCAPE_EDGE_TRAVELS - 1);
                 travel(&mut s);
                 let edge = edge_in_hand(&s).expect("the edge adds an Edge of the Universe");
-                assert!(!edge.radiant, "on its base face, whichever face travelled");
+                assert!(!edge.radiant, "on its base face, whichever face traveled");
             }
         }
     }

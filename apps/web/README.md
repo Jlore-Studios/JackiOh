@@ -26,13 +26,13 @@ enforces rules and never sees hidden information.** In practice:
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
-variable over weight, Latin subset, self-hosted in `public/fonts` with their licences. Each is
+variable over weight, Latin subset, self-hosted in `public/fonts` with their licenses. Each is
 `font-display: swap` behind a metric-matched local fallback, so text measures the same before and
 after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
 (`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
 
-The colours are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette colour, or `color-mix()`es one, and never states a colour of its own. Meaning stays in tokens that name palette colours: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
 The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s three families: `--font-display`, `--font-text` and `--font-mono`. A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
@@ -53,7 +53,7 @@ sizes and fails when the page is taller or wider than its allowance.
 
 On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
 `(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
-`tabindex="0"` shorter than that a transparent `::before` centred on it; one as tall but narrower
+`tabindex="0"` shorter than that a transparent `::before` centered on it; one as tall but narrower
 takes its band in its own stylesheet, since a band over a tall control's box would take the taps of
 what it holds. The rule has zero specificity, so a control's own `::before` or `position` wins: the
 switch draws none, and a browsable pile's band is its `::after`. An input or a select draws no
@@ -442,7 +442,7 @@ routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlo
                         its account secret ID, hidden until asked for, with a copy button
 packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, §14.4; `PackOpening.tsx`, imported
                         by routes/shop.tsx): the packs held, each a physical pack (`PackObject.tsx`, #1663: a
-                        foil wrapper with crimped seals, its set's emblem and colours, a sheen and a tilt
+                        foil wrapper with crimped seals, its set's emblem and colors, a sheen and a tilt
                         that follow the pointer, a press and a tear, the shelf and the scene drawing the
                         same object), and the scene that opens one (`POST /api/packs/open`), its token bars
                         pinned at the top from the answer and played once every card shows
@@ -790,7 +790,7 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   accompaniment and modes from the family; the set's glint; a Mythic's shimmer). It renders as a sting of a few bars
   with a one-second faded tail (`tail`, `post.fadeOutS`), its loudness measured over the file it keeps
   (`post.loudnessOverFile`); a track without those fields renders exactly as before. A Legendary or Mythic added to a
-  set that ships needs its `INTRO_CARDS` row, its `intro` in `music-cards.json`, a render and a licence row:
+  set that ships needs its `INTRO_CARDS` row, its `intro` in `music-cards.json`, a render and a license row:
   `music-assets.test.ts` refuses a shipped one without them.
 
 ## Regenerating the voice lines
@@ -806,7 +806,7 @@ at load and names the path of any mistake. The voice files are generated from it
 committed, so CI never runs a synthesizer. Each voice names its backend (R501): Core's voices are
 macOS `say` (the default), and the Classic and Classic+ voices are `backend: "sapi"`, Windows SAPI
 (`System.Speech`, the "Microsoft David Desktop" and "Microsoft Zira Desktop" voices) shaped by
-`ffmpeg`: trimmed, pitched by the voice's `semitones`, coloured by its `filter` chain, peak-normalised
+`ffmpeg`: trimmed, pitched by the voice's `semitones`, colored by its `filter` chain, peak-normalized
 and encoded to the same mono AAC at 22050 Hz and about 32 kbps. After editing a line or a voice, run
 `pnpm --filter @jackioh/web gen:voice` on a Mac for `say` voices, or on Windows or WSL (it finds
 `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`) with `ffmpeg` and `ffprobe` on the

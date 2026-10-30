@@ -1,5 +1,5 @@
 // The Field Guide's entries (SPEC §9.10, R2205000): each mechanic a lesson lets the player find, its
-// one-line rule, and how the coach recognises it from the human's view alone (R292): the fresh events,
+// one-line rule, and how the coach recognizes it from the human's view alone (R292): the fresh events,
 // the view, the legal actions and the public catalog (§5.1). A predicate decides nothing; it reads what
 // the board already shows (CLAUDE.md rule 7).
 

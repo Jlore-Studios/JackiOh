@@ -81,7 +81,7 @@ fn refused_dormant(s: &Scenario, body: ActionBody, player: PlayerId, nonce: &str
 /// activation or a play's pick.
 fn acts_through(s: &Scenario, player: PlayerId, id: &str) -> bool {
     legal_actions(s.state(), player).iter().any(|action| {
-        let json = serde_json::to_string(action).expect("serialises");
+        let json = serde_json::to_string(action).expect("serializes");
         json.contains(&format!("\"{id}\""))
     })
 }

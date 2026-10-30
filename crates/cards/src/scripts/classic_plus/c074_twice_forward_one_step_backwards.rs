@@ -143,7 +143,7 @@ mod tests {
     }
 
     fn view_text(s: &Scenario, player: PlayerId) -> String {
-        serde_json::to_string(&s.view(player)).expect("serialises")
+        serde_json::to_string(&s.view(player)).expect("serializes")
     }
 
     fn id_or_empty(card: Option<CardInstance>) -> String {
@@ -541,7 +541,7 @@ mod tests {
                 );
                 s.play(RAPID, json!({})).play(VANILLA, json!({ "zone": 1 }));
                 let revived: GameState =
-                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
+                    serde_json::from_str(&serde_json::to_string(s.state()).expect("serializes")).expect("parses");
                 assert_eq!(&revived, s.state());
                 assert!(revived.transient_defs.contains_key(&trap_of(&s).def_id));
                 let next = s.hand(P2).into_iter().find(|card| card.def_id == RAPID);

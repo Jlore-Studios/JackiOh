@@ -10,7 +10,7 @@
 //! iteration runs a fixed rule to a fixed tolerance. `tests/api/glicko2.rs` checks it against
 //! Glickman's worked example and reference values computed at 50 digits.
 //!
-//! The update depends only on rating differences, so the scale's centre is any fixed number; this
+//! The update depends only on rating differences, so the scale's center is any fixed number; this
 //! file uses `RATING_START`, and an Elo rating carries over as it is (R603).
 
 use serde::{Deserialize, Serialize};

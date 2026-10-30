@@ -561,7 +561,7 @@ mod r385_b3_3_rule_6_who_sees_the_count {
         );
         assert!(
             !serde_json::to_string(&theirs.opponent.backrow)
-                .expect("serialises")
+                .expect("serializes")
                 .contains("brittle")
         );
     }

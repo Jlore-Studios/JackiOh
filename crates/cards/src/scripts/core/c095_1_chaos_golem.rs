@@ -7,7 +7,7 @@
 //! stats of each face are printed on the catalog and §10.4 layer 1 reads them off the face the
 //! radiant flag picks, so a script never restates them.
 //!
-//! The behaviour lives in the engine: Rush §4.1 (unit targets only), Charge in its place on the
+//! The behavior lives in the engine: Rush §4.1 (unit targets only), Charge in its place on the
 //! radiant face (§5.2), Lifesteal §4.4 step 8 (nothing when R63 zeroes the hit), Divine Shield §4.4
 //! step 1, First Strike §4.3. R11 and §7 are data too: `token: true` with `type: "Unit"` makes it
 //! cease to exist off the field, so it never feeds #89 Corpse Eater.

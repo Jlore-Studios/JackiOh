@@ -1,7 +1,7 @@
 //! SPEC §14.7: one account's overlapping payouts, against both stores.
 //!
 //! §14.7 says "a level pays once, as ledger rows, when its track reaches it", and [[R1301003]]
-//! serialises one account's economy writes under its lock. [`pay_game_rewards`] takes that lock
+//! serializes one account's economy writes under its lock. [`pay_game_rewards`] takes that lock
 //! before reading the account's tracks and quests; these prove two payouts that overlap still pay
 //! each level exactly once:
 //!
@@ -20,7 +20,7 @@
 //! `for update`, every game paying nonzero Jlore), so on both stores they run one after the other;
 //! the account lock these tests exercise is the intended mechanism, and it is what a future
 //! zero-Jlore payout — or a lock-free reader like the dev tools — would rely on. The fake
-//! serialises transactions on its one lock (its `lock_account` is only the seams).
+//! serializes transactions on its one lock (its `lock_account` is only the seams).
 
 use jackioh_engine::PlayerId;
 use jackioh_engine::wire::{SHIPPED_SETS, newest_shipped_set};

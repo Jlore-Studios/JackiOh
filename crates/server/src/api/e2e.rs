@@ -1,6 +1,6 @@
 //! BUILD M8's `E2E=1` test server: the fixture accounts, the fixture invite codes and R144's reseed,
 //! at boot and on demand (`POST /api/e2e/reseed`). Port of `apps/server/src/api/e2e.ts`; the auth
-//! provider that honours the fixture tokens is `crate::auth::E2eAuth` (SURFACE §11.1), built from
+//! provider that honors the fixture tokens is `crate::auth::E2eAuth` (SURFACE §11.1), built from
 //! `E2E_ACCOUNTS` here.
 //!
 //! BUILD M8's preamble: "Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test
@@ -358,7 +358,7 @@ pub async fn post_reseed(app: &Arc<App>, _req: Req) -> ApiResult {
 }
 
 fn invite_code_for(app: &App, kind: E2EInviteCodeKind, plain: &str, now: i64) -> InviteCode {
-    // §9.4: "stored hashed". `Hashes::code` normalises (upper case, separators dropped) before
+    // §9.4: "stored hashed". `Hashes::code` normalizes (upper case, separators dropped) before
     // hashing, exactly as redemption in codes.rs does on the way in, so a typed
     // `abcd efgh jkmn pqrs` finds the same row as `ABCD-EFGH-JKMN-PQRS`.
     let base = InviteCode {

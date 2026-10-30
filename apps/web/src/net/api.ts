@@ -347,7 +347,7 @@ export function getMe(token: string): Promise<MeResponse> {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Usernames (R1435, R1436). The server validates, normalises and tags a name; the client proposes
+// Usernames (R1435, R1436). The server validates, normalizes and tags a name; the client proposes
 // one, shows the server's verdict as it stands, and saves exactly the username that verdict named,
 // so a player never gets a tag they were not shown.
 // ---------------------------------------------------------------------------------------------

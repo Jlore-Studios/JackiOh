@@ -1,6 +1,6 @@
 // The glyphs v0.2.0 adds to the procedural art (R503): the Book, Pancake and AI families' emblems and
 // the small pictures a card's motif is drawn with (motifs.ts). Each is drawn for this project in the
-// same 24×24 box as emblems.ts, centred on (12, 12), as plain path data with no text, no external
+// same 24×24 box as emblems.ts, centered on (12, 12), as plain path data with no text, no external
 // reference and no borrowed artwork, and `svg.ts` places it with a transform exactly as it places an
 // emblem.
 //

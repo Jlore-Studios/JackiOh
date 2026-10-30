@@ -13,8 +13,8 @@
  * The contract the component spec measures: a glowing element's FIRST box-shadow layer is
  * `0 0 0 2px <token>`, unmixed, so its computed value contains rgb(74, 222, 128) or
  * rgb(250, 204, 21) exactly. The halo after it is mixed with transparent and never serializes as
- * either plain colour. Nothing here keys off `data-legal`: a legal element without glow gets no
- * colour. A selected element (`data-selected="true"`) is left to board.css's own selection styling,
+ * either plain color. Nothing here keys off `data-legal`: a legal element without glow gets no
+ * color. A selected element (`data-selected="true"`) is left to board.css's own selection styling,
  * which stays on top of both glows.
  *
  * A third mark, the counted ring (`data-counted="true"`, #991), is an outline, so it never touches the
@@ -77,7 +77,7 @@
 
 /* A glowing card breathes, so a playable hand is noticed without being stared at. The pulse is
    the halo's size only; the first layer, the 2px ring the component spec reads, is the same in
-   every frame. An animated box-shadow outranks every plain declaration, so each colour has its own
+   every frame. An animated box-shadow outranks every plain declaration, so each color has its own
    keyframes and the green ones never run on a card whose condition is met. */
 .card[data-glow="ready"]:not([data-selected="true"]):not([data-condition-active="true"]) {
   animation: glow-breathe-ready calc(1.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite alternate;
