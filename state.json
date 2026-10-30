@@ -7276,9 +7276,7 @@
     },
     "2307": {
       "action": "revise",
-      "asks": [
-        "c:6512139246"
-      ],
+      "asks": [],
       "ci_fixed_head": "db143b0cea3b3ef4ae8e922f6eb2d751559fb206",
       "ci_fixes": 3,
       "ci_reruns": {
@@ -7313,20 +7311,22 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-4",
       "question": "placeholder - awaiting test result, do not hand to people",
       "queued_at": "2026-10-30T00:51:52Z",
       "requested_by": "MaxGoetzmann",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
-      "run_id": "40910591796",
-      "runs_on": "night-vm-muse-fill",
+      "run_id": "pending:d66f8088-1793321805",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-10-29T16:20:21Z",
+      "started_at": "2026-10-30T00:57:09Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6512139246"
+      ],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
@@ -9449,9 +9449,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-30T00:48:52Z",
+    "at": "2026-10-30T00:57:09Z",
     "url": "",
-    "what": "suggestions on claude-3"
+    "what": "revise #2307 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-30T00:47:21Z",
