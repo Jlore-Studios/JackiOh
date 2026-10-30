@@ -1583,6 +1583,13 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub field_exits: Option<FieldExits>,
+    /// R2396000: the killers that answer "Whenever this destroys a Unit" even once gone, each as it
+    /// stood when it killed, by the id of the Unit it killed: written as the state check reports the
+    /// death (`state_check::collect`), taken as that `destroyed` is dispatched
+    /// (`triggers::dispatch_event_at`). Absent while none waits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub kill_snapshots: Option<IndexMap<String, CardInstance>>,
     // ---- v0.2.0 game fields, by workstream: field (B3.1 home zones, E21) ----
     /// B3.1 rule 6, R383: the backrow zone each animated "Animated on your turn" card goes back to at
     /// its controller's cleanup, held for it meanwhile as R64 holds a dying Reborn unit's zone
@@ -2621,6 +2628,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         applied: Vec::new(),
         cast_chain: None,
         field_exits: None,
+        kill_snapshots: None,
         homes: None,
         casts_resolving: None,
         announcing: None,
@@ -2824,6 +2832,14 @@ pub fn forget_hidden_nerfs(state: &mut GameState) {
     }
     for held in state.held.iter_mut().flatten() {
         held.card.hidden_nerfs = None;
+    }
+    // R2396000: nor a gone killer's snapshot, waiting for its kill's dispatch.
+    for killer in state
+        .kill_snapshots
+        .iter_mut()
+        .flat_map(|snapshots| snapshots.values_mut())
+    {
+        killer.hidden_nerfs = None;
     }
     for snapshot in state.board_history.iter_mut().flatten() {
         for player in PLAYER_IDS {

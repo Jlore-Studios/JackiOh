@@ -38,8 +38,8 @@ use crate::catalog::set_is_open;
 use crate::config::{DECK_SIZE, MAX_COPIES};
 use crate::wire::{CardDefs, is_js_space, string_union};
 
-/// §9.4: exactly 3 decks per loadout. Not in engine config, so it lives here.
-pub const LOADOUT_DECKS: usize = 3;
+// §9.4's decks per loadout is the engine config's (CLAUDE.md rule 9), named here as it always was.
+pub use crate::config::LOADOUT_DECKS;
 
 /// R252: a trio is §9.4's loadout of three decks, so it holds `LOADOUT_DECKS` of them.
 pub const TRIO_DECKS: usize = LOADOUT_DECKS;

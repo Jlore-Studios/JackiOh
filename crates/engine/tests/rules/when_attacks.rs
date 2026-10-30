@@ -2,8 +2,9 @@
 //! each attack it makes — a declared attack's once its trap window has closed (§4.2 step 4), a forced
 //! one's before its combat (R53) — as a whole effect list followed by its state check, parkable like any
 //! hook (R113). An attack whose attacker left the field in it does not fight (R220), and one whose
-//! target it transformed fights the Unit that took the target's place (R2285002). Classic #45 Nature
-//! Titan, Classic+ #73.1 Classic Golem and Stinkyscape #75 Badger are its users.
+//! target it transformed fights the Unit that took the target's place (R2285002). Classic #13 Boots on
+//! the Ground (R2396000), Classic #45 Nature Titan, Classic+ #73.1 Classic Golem and Stinkyscape #75
+//! Badger are its users.
 
 use jackioh_engine::effects::forced_attacks_on;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
