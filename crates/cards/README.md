@@ -115,7 +115,10 @@ mod tests {
 - **`preview`** is R280's number a formula comes to now: `{ label, value }` pairs, each label an
   exact substring of the running face's text, each value what the card's own resolution would deal
   or gain. It reads only public facts and the card's own face and counters, never a library's
-  contents or a hand's cards. A declared number (`params`) is not a preview.
+  contents or a hand's cards. A declared number (`params`) is not a preview. R2476000: a card that
+  remembers something shows it the same way, a count through `count_preview`, a remembered card by
+  name through `card_preview` (the dash, `NOTHING_REMEMBERED`, before there is one), read with the
+  same function its resolution reads it with; what only its owner may know stays in their hand.
 
 **Purity (CLAUDE.md rules 4 and 5).** A hook reads its `EffectContext` and returns `Vec<Effect>`;
 it never assigns to the state, never calls an engine mutator and never reaches for a clock or the
@@ -272,7 +275,7 @@ A card's tests are the `#[cfg(test)] mod tests` at the bottom of its file, built
 what each does). `expect_refused` and `expect_refused_with` pass only on a refusal, `reduce`'s or an
 answer the open prompt does not offer: any other panic in the step (a reference that matches nothing,
 `answer` with no prompt open) fails the test, so refuse the step while the board still holds what the
-rule needs (#1247). For **base and radiant separately**: one test per behaviour in the card's spec §8 row
+rule needs (#1247). For **base and radiant separately**: one test per behavior in the card's spec §8 row
 and every must-pass case in its BUILD table row (M4-T4 for Core, M9 for Classic and Classic+). A
 test that proves a ruling is named after it: `fn r64_the_copy_lands_in_the_leftmost_free_zone`
 (CLAUDE.md rule 3). A test that only reads printed data back with no action (cost, stats, type, tags

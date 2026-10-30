@@ -63,7 +63,7 @@ fn damage_events_on(s: &Scenario, target_id: &str) -> usize {
     s.events()
         .iter()
         .filter(|event| {
-            let event = serde_json::to_value(event).expect("an event serialises");
+            let event = serde_json::to_value(event).expect("an event serializes");
             event["type"] == "damage" && event["targetId"] == target_id
         })
         .count()
@@ -202,7 +202,7 @@ fn r823_a_cry_that_asks_survives_a_json_round_trip() {
     let mut s = game(json!({ "backrow": [DOUBLE], "hand": [ASKER] }), json!({}));
     s.play(ASKER, json!({}));
     s.answer(json!("left"));
-    let saved = serde_json::to_string(s.state()).expect("a paused state serialises");
+    let saved = serde_json::to_string(s.state()).expect("a paused state serializes");
     *s.state_mut() = serde_json::from_str(&saved).expect("and reads back");
     s.answer(json!("right"));
     assert!(s.state().pending.is_none());

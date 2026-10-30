@@ -24,9 +24,9 @@
 //   ?try=<custom id>      #921, the creator's "Try it" (`tryPath`): once the account's custom cards are
 //                         read, a game on a random deck around that card (R915005), on the remembered
 //                         difficulty; a card the account does not have shows the setup, saying so
-//   ?pace=fast            e2e pacing, honoured only outside a production build
+//   ?pace=fast            e2e pacing, honored only outside a production build
 //   ?aipool=fixture      issue #1113, e2e only: the seeded fixtures deal the AI from the frozen
-//                         fixture pool instead of the live shadow ban, honoured only outside a
+//                         fixture pool instead of the live shadow ban, honored only outside a
 //                         production build
 //
 // With none of the params that start a game, a free game left in progress on this device (a reload,
@@ -322,7 +322,7 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
 
   useEffect(() => {
     if (token === null) return;
-    let cancelled = false;
+    let canceled = false;
     let pending: Promise<DecksResponse>;
     try {
       pending = load.current(token);
@@ -331,7 +331,7 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
     }
     pending.then(
       (response) => {
-        if (cancelled) return;
+        if (canceled) return;
         const decks = response.decks;
         const saved: SavedDecks =
           Array.isArray(decks) && decks.length > 0
@@ -353,7 +353,7 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
       },
       (cause: unknown) => {
         // A failed read offers no saved decks, and says so; Try again reads them again (#1691).
-        if (cancelled) return;
+        if (canceled) return;
         const { retryAfterMs } = readFailureOf(cause);
         setLoaded({
           token,
@@ -362,7 +362,7 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [token, attempt]);
 
@@ -406,7 +406,7 @@ function useLobbyCatalog(
   useEffect(() => {
     if (!wanted || have !== null || failed) return;
     let opened: PracticeHost;
-    let cancelled = false;
+    let canceled = false;
     try {
       opened = make.current();
     } catch {
@@ -416,17 +416,17 @@ function useLobbyCatalog(
     opened.request({ type: "catalog" }).then(
       (response) => {
         opened.dispose();
-        if (cancelled) return;
+        if (canceled) return;
         if (response.type === "catalog") setFetched(response.defs);
         else setFailed(true);
       },
       () => {
         opened.dispose();
-        if (!cancelled) setFailed(true);
+        if (!canceled) setFailed(true);
       },
     );
     return () => {
-      cancelled = true;
+      canceled = true;
       opened.dispose();
     };
   }, [wanted, have, failed]);
@@ -588,7 +588,7 @@ function defaultHostFactory(): PracticeHost {
 }
 
 /**
- * The setup, loading and failure screens are a centred reading column in the tavern
+ * The setup, loading and failure screens are a centered reading column in the tavern
  * (`app-shell tavern`, auth/tavern.css), like the landing and `/play` the player came from; the game
  * is the full-width board (`app-shell--wide`), like `/dev/hotseat` and `/match/<id>`.
  */

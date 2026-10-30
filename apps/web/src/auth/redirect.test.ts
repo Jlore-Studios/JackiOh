@@ -260,7 +260,7 @@ describe("R193 consumeAuthRedirect", () => {
     expect(window.location.href).not.toContain("otp_expired");
   });
 
-  it("R193 a lone recognised parameter is scrubbed even when it forms no redirect", () => {
+  it("R193 a lone recognized parameter is scrubbed even when it forms no redirect", () => {
     window.history.replaceState(null, "", `/login#${params({ error_description: "stray" })}`);
     expect(consumeAuthRedirect()).toEqual({ kind: "none" });
     expect(window.location.hash).toBe("");

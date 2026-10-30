@@ -191,7 +191,7 @@ fn activations_in(value: &Value, card: &str) -> Option<Vec<Value>> {
 
 /// R384, §10.8: the abilities p1's own view lists on the card.
 fn viewed(s: &Scenario, card: &str) -> Vec<Value> {
-    let view = serde_json::to_value(s.view(P1)).expect("PlayerView serialises");
+    let view = serde_json::to_value(s.view(P1)).expect("PlayerView serializes");
     activations_in(&view["you"], card).unwrap_or_default()
 }
 

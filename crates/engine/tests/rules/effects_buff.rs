@@ -15,7 +15,7 @@ use crate::rules::fixtures::harness::{Bench, events_of_type, live, live_mut, new
 /// A unit holding every keyword in R21's pool, so the pool can run dry.
 fn pool_keywords() -> Value {
     // R781005: the combat keyword pool as the engine holds it, so the fixture never restates it.
-    serde_json::to_value(random_pool_keywords()).expect("keywords serialise")
+    serde_json::to_value(random_pool_keywords()).expect("keywords serialize")
 }
 
 const EVERY_KEYWORD: &str = "bf-every-keyword";

@@ -115,7 +115,7 @@ mod tests {
             assert!(s.backrow("p2", 3).is_none());
             // §3.2: the lock lives on the zone and outlives its occupant.
             assert!(s.state().players.p2.locks.backrow[2]);
-            // R81: the target travelled with the play, so resolution never paused.
+            // R81: the target traveled with the play, so resolution never paused.
             assert!(s.state().pending.is_none());
         }
 

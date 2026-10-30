@@ -220,7 +220,7 @@ mod tests {
             fn the_opponent_sees_only_the_arrival() {
                 let s = skull_with("skull-hidden", false, json!([VANILLA, FIELD_SPELL]));
                 let view = s.view(PlayerId::P2);
-                let seen = serde_json::to_string(&view).expect("the view serialises");
+                let seen = serde_json::to_string(&view).expect("the view serializes");
                 // The arrival is public…
                 assert!(
                     view.opponent

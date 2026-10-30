@@ -85,7 +85,7 @@ pub struct FuseCardsArgs {
     pub target_instance_ids: Option<Vec<String>>,
     /// #85 base is "a random permanent of yours of that type", so the draw is one `ctx.rng.pick` over
     /// the candidates INSIDE apply — never at construction time, or the draw escapes the reducer
-    /// (§9.3, §10.7). Default "all", which is also the only behaviour a single target can have.
+    /// (§9.3, §10.7). Default "all", which is also the only behavior a single target can have.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pick: Option<FuseCardsPick>,
     /// R77's Craft a Card path: whose hand the fresh `costOverride` 0 result goes to.
@@ -133,7 +133,7 @@ pub struct FuseCardsArgs {
 /// it, so every later call would see one ingredient, fall below `FUSE_MIN_INGREDIENTS` and answer
 /// `null`. The subsystem anticipates exactly this ("an ingredient that already ceased to exist in an
 /// earlier fusion still fuses", because an ingredient only ever contributes its DEFINITION), and the
-/// way to honour it is to resolve the ingredients ONCE and reuse those same objects across the
+/// way to honor it is to resolve the ingredients ONCE and reuse those same objects across the
 /// fusions — which only something holding them can do. Hence `targetInstanceIds` and the loop here.
 ///
 /// R86 is about POOLS, not about this: it drops ids whose cards are gone when the card said "a

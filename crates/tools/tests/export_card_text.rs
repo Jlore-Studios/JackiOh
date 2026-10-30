@@ -32,7 +32,7 @@ const HEADER: &str = "Generated from crates/cards/card-text.yaml by crates/tools
 /// The YAML key of the portraits' section; every other top-level key is a catalog id.
 const EMOTES: &str = "emotes";
 
-/// One card's entry. A field the struct does not name is refused, so a misspelt one is never dropped.
+/// One card's entry. A field the struct does not name is refused, so a misspelled one is never dropped.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CardText {
@@ -246,7 +246,7 @@ fn r660_r1303_every_catalog_card_and_token_has_an_entry_in_catalog_order_with_it
 }
 
 #[test]
-fn a_misspelt_field_fails_naming_its_card() {
+fn a_misspelled_field_fails_naming_its_card() {
     let error = parse("core-001: # Big D-fender\n  flavor: x\nemotes: {}\n")
         .err()
         .unwrap_or_default();

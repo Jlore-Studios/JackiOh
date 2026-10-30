@@ -208,13 +208,13 @@ mod tests {
             let stall = stall(&s);
             let theirs = s.view(P2);
             assert!(matches!(theirs.pending, Some(PendingView::Elsewhere(_))));
-            let text = serde_json::to_string(&theirs).expect("a view serialises");
+            let text = serde_json::to_string(&theirs).expect("a view serializes");
             assert!(
                 !stall.iter().any(|id| text.contains(id.as_str())),
                 "no lot reaches p2"
             );
             s.answer(json!([format!("mode:{ROCK}")]));
-            let text = serde_json::to_string(&s.view(P2)).expect("a view serialises");
+            let text = serde_json::to_string(&s.view(P2)).expect("a view serializes");
             assert!(!text.contains(ROCK), "the bought Rock arrives hidden");
         }
 
@@ -367,7 +367,7 @@ mod tests {
             expected.remove(sold);
             assert_eq!(after, expected);
             // Every simulation of the same answer sees the same lots.
-            let text = serde_json::to_string(s.state()).expect("the state serialises");
+            let text = serde_json::to_string(s.state()).expect("the state serializes");
             let copy: GameState = serde_json::from_str(&text).expect("the state parses");
             assert_eq!(
                 copy.pending

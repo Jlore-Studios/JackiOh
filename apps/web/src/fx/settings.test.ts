@@ -1,4 +1,4 @@
-// docs/polish/1-animations.md, behaviours B6 and B7: the effects settings store (S3).
+// docs/polish/1-animations.md, behaviors B6 and B7: the effects settings store (S3).
 //
 // `localStorage` must only ever be touched inside try/catch: a missing, throwing or full storage and
 // unparsable JSON all fall back to the defaults without throwing, and `setFxSettings` keeps working

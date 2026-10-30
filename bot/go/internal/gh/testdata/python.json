@@ -1,0 +1,48 @@
+{
+ "quote": [
+  ["bot:build", "", "bot%3Abuild"],
+  ["bot:build", "/", "bot%3Abuild"],
+  ["human required", "", "human%20required"],
+  ["human required", "/", "human%20required"],
+  ["a/b c", "", "a%2Fb%20c"],
+  ["a/b c", "/", "a/b%20c"],
+  ["x~y_z.-", "", "x~y_z.-"],
+  ["x~y_z.-", "/", "x~y_z.-"],
+  ["é漢😀", "", "%C3%A9%E6%BC%A2%F0%9F%98%80"],
+  ["é漢😀", "/", "%C3%A9%E6%BC%A2%F0%9F%98%80"],
+  ["+&=?#%", "", "%2B%26%3D%3F%23%25"],
+  ["+&=?#%", "/", "%2B%26%3D%3F%23%25"],
+  ["", "", ""],
+  ["", "/", ""],
+  [" ", "", "%20"],
+  [" ", "/", "%20"],
+  ["difficulty:hard", "", "difficulty%3Ahard"],
+  ["difficulty:hard", "/", "difficulty%3Ahard"],
+  ["feature/x", "", "feature%2Fx"],
+  ["feature/x", "/", "feature/x"],
+  ["refs/heads/main", "", "refs%2Fheads%2Fmain"],
+  ["refs/heads/main", "/", "refs/heads/main"],
+  ["a\nb", "", "a%0Ab"],
+  ["a\nb", "/", "a%0Ab"],
+  ["!*'();:@&=+$,/?#[]", "", "%21%2A%27%28%29%3B%3A%40%26%3D%2B%24%2C%2F%3F%23%5B%5D"],
+  ["!*'();:@&=+$,/?#[]", "/", "%21%2A%27%28%29%3B%3A%40%26%3D%2B%24%2C/%3F%23%5B%5D"]
+ ],
+ "quote_plus": [
+  ["bot:build", "bot%3Abuild"],
+  ["human required", "human+required"],
+  ["a/b c", "a%2Fb+c"],
+  ["x~y_z.-", "x~y_z.-"],
+  ["é漢😀", "%C3%A9%E6%BC%A2%F0%9F%98%80"],
+  ["+&=?#%", "%2B%26%3D%3F%23%25"],
+  ["", ""],
+  [" ", "+"],
+  ["difficulty:hard", "difficulty%3Ahard"],
+  ["feature/x", "feature%2Fx"],
+  ["refs/heads/main", "refs%2Fheads%2Fmain"],
+  ["a\nb", "a%0Ab"],
+  ["!*'();:@&=+$,/?#[]", "%21%2A%27%28%29%3B%3A%40%26%3D%2B%24%2C%2F%3F%23%5B%5D"]
+ ],
+ "urlencode": [
+  "state=open&labels=bot%3Abuild%2Chuman&since=2026-10-30T01%3A02%3A03Z&head=o%3Abot%2Fissue+5&per_page=100&page=2"
+ ]
+}

@@ -193,7 +193,7 @@ mod tests {
             fn r97_the_opponent_sees_the_draws_under_the_sentinel() {
                 let mut s = chain(json!([TIMMY, D_FENDER]), false, None);
                 s.play(CHAIN, json!({}));
-                let theirs = serde_json::to_string(&s.view(P2)).expect("serialises");
+                let theirs = serde_json::to_string(&s.view(P2)).expect("serializes");
                 assert!(!theirs.contains(&s.card(D_FENDER).id));
                 assert_eq!(js(&s.view(P2))["opponent"]["hand"], json!({ "count": 3 }));
             }

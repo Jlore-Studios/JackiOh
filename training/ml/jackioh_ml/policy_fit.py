@@ -49,7 +49,7 @@ END_TURN = ["kind:endTurn"]
 
 @dataclass
 class Decisions:
-    """The labelled decisions of positions files, as CSR: decision `i`'s candidates are
+    """The labeled decisions of positions files, as CSR: decision `i`'s candidates are
     `cand_ptr[i]:cand_ptr[i + 1]`, candidate `c`'s keys `key_idx[key_ptr[c]:key_ptr[c + 1]]`."""
 
     keys_version: int
@@ -69,7 +69,7 @@ class Decisions:
 
 
 def load_decisions(paths: Iterable[str | Path]) -> Decisions:
-    """Every labelled decision of `paths`, in order. A row with no label, or whose move was none of
+    """Every labeled decision of `paths`, in order. A row with no label, or whose move was none of
     its candidates, is counted in `skipped`."""
     version: int | None = None
     catalog = ""

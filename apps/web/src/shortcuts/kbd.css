@@ -1,4 +1,4 @@
-/* R2126000: a key drawn as a keycap, and the sentence around some. No colour literal and no size
+/* R2126000: a key drawn as a keycap, and the sentence around some. No color literal and no size
    off the scale: palette.test.ts and typescale.test.ts allow this sheet none. */
 .kbd {
   display: inline-block;

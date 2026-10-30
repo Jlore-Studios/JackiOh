@@ -96,7 +96,7 @@ fn playing(seed: &str, mana: i32) -> GameState {
 
 /// TS `{ ...body, playerId }`: an action body with its sender, as the JSON the fixtures take.
 fn with_player(body: &ActionBody, player: PlayerId) -> Value {
-    let mut value = serde_json::to_value(body).expect("an action body serialises");
+    let mut value = serde_json::to_value(body).expect("an action body serializes");
     value["playerId"] = json!(player);
     value
 }

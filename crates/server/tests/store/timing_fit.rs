@@ -136,7 +136,7 @@ async fn timing_commands_refuse_an_unknown_option() {
         timing_backfill::run(vec!["--all".to_string()]).await,
     ] {
         let message = refusal.expect_err("an option neither command takes").to_string();
-        assert!(message.contains("Unrecognised argument \"--"), "{message}");
+        assert!(message.contains("Unrecognized argument \"--"), "{message}");
         assert!(message.contains("Usage: jackioh-server timing-"), "{message}");
     }
 }

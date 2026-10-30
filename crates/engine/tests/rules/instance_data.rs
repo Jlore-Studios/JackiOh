@@ -67,7 +67,7 @@ fn play_of(
 fn targets_name(action: &ActionBody, id: &str) -> bool {
     match action {
         ActionBody::Play { targets, .. } => serde_json::to_string(targets)
-            .expect("targets serialise")
+            .expect("targets serialize")
             .contains(id),
         _ => false,
     }
@@ -268,7 +268,7 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         assert_eq!(tuning::numbered_sum(&shown, KeywordKind::Lucky), Some(2));
         let count = state.players.p1.hand.len();
         assert_eq!(
-            serde_json::to_value(&view_for(&state, PlayerId::P2).opponent.hand).expect("a view serialises"),
+            serde_json::to_value(&view_for(&state, PlayerId::P2).opponent.hand).expect("a view serializes"),
             json!({ "count": count })
         );
 
@@ -417,7 +417,7 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
         }
         let other = view_for(&state, PlayerId::P2);
         assert_eq!(
-            serde_json::to_value(&other.pending).expect("a view serialises"),
+            serde_json::to_value(&other.pending).expect("a view serializes"),
             json!({ "forYou": false, "pendingFor": "p1" })
         );
 

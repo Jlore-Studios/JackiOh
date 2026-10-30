@@ -1,5 +1,5 @@
 // Polish 6, slice B: `faceModel`, tested pure against the real catalog (docs/polish/6-cards.md,
-// Surface B `model.ts` and "Tone rules", behaviours B7–B9).
+// Surface B `model.ts` and "Tone rules", behaviors B7–B9).
 //
 // "Printed" is the face being shown: `def.radiant` when radiant, else `def.base`, and an embiggen
 // card's base price counts as its printed cost. A missing printed value always gives "base".

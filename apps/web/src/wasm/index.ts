@@ -140,7 +140,7 @@ export function whenWasmLoaded(run: () => void): void {
 export function loadWasm(): Promise<void> {
   if (loaded) return Promise.resolve();
   if (loading === null) {
-    // The literal `new URL(…, import.meta.url)` is what Vite recognises and emits as an asset, in
+    // The literal `new URL(…, import.meta.url)` is what Vite recognizes and emits as an asset, in
     // the page's bundle and in the practice worker's alike.
     loading = initWasm({ module_or_path: new URL("./pkg/jackioh_wasm_bg.wasm", import.meta.url) })
       .then(() => {

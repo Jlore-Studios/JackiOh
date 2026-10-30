@@ -147,12 +147,12 @@ function closingBrace(src: string, open: number): number {
   return src.length;
 }
 
-describe("#1663 every pack's colours", () => {
-  it("each pack the store shelves, and the cosmetic pack, has a colour block of its own in pack-object.css", () => {
+describe("#1663 every pack's colors", () => {
+  it("each pack the store shelves, and the cosmetic pack, has a color block of its own in pack-object.css", () => {
     const sheet = readSheet("pack-object.css");
     for (const pack of [...shopPacks(), COSMETIC_PACK]) {
       const at = sheet.indexOf(`.pack-object[data-pack="${pack}"] {`);
-      expect(at, `${pack} has its colours`).toBeGreaterThanOrEqual(0);
+      expect(at, `${pack} has its colors`).toBeGreaterThanOrEqual(0);
       expect(sheet.slice(at, closingBrace(sheet, sheet.indexOf("{", at))), pack).toContain("--pack-foil-a:");
     }
   });

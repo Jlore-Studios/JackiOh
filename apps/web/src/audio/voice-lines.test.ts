@@ -1,4 +1,4 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviours B33 and B34, and R655's file: `card-audio.json5`,
+// Polish task 2 (docs/polish/2-sound.md), behaviors B33 and B34, and R655's file: `card-audio.json5`,
 // with its words from `voice-text.json` (written from crates/cards/card-text.yaml, #2498), against
 // the catalog it voices.
 //

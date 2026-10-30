@@ -14,7 +14,7 @@ import type { FxCardFacts, FxIcon, FxPreset, FxTint } from "./types.ts";
 /** One family's look: the particles it throws, the ring it flares with, its tint and its emblem. */
 export type FxLook = { preset: FxPreset; ring: FxPreset; tint: FxTint; icon: FxIcon };
 
-/** Each family's particles and ring (the canvas half of its look); its colours come from its palette. */
+/** Each family's particles and ring (the canvas half of its look); its colors come from its palette. */
 const THEME_PARTICLES: Readonly<Record<ArtThemeId, { preset: FxPreset; ring: FxPreset }>> = {
   human: { preset: "holy", ring: "gold" },
   felinor: { preset: "sparkle", ring: "prismatic" },

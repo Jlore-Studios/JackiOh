@@ -1,6 +1,6 @@
 // State badges: Brittle (R385), Temporary's count in a hand (#2437), tuned (R386), enchantments (B5 E39), and Animated (R383).
 // The board minion draws Brittle and Animated itself (keywordVisuals.ts, R438); `PileDepth` shows E21.
-// Shape plus accessible words, not colour, lets faces fit inside buttons (B12).
+// Shape plus accessible words, not color, lets faces fit inside buttons (B12).
 
 import { useState, type CSSProperties, type ReactElement } from "react";
 

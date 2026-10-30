@@ -47,7 +47,7 @@ board still fits 1280×720 and 390×844.
   portrait, a title and a main panel with card text. A minion shows Attack on a yellow sword at the
   bottom left and Health on a red blood drop at the bottom right.
   ([Card](https://hearthstone.wiki.gg/wiki/Card), [Minion](https://hearthstone.wiki.gg/wiki/Minion))
-- **Rarity.** A gem at the bottom centre of the art is white for Common, blue for Rare, purple for
+- **Rarity.** A gem at the bottom center of the art is white for Common, blue for Rare, purple for
   Epic and orange for Legendary. Legendary cards add "the elite dragon around the portrait". Free
   and Core cards have no gem. ([Rarity](https://hearthstone.wiki.gg/wiki/Rarity))
 - **Golden cards.** "Golden cards feature a golden frame" and "each has a unique animation". They
@@ -79,8 +79,8 @@ board still fits 1280×720 and 390×844.
 | Blue mana crystal, top left | `.cost-gem`, top left. Green when cheaper than printed, red when dearer (`data-tone`). |
 | Portrait: oval for minions, framed window for spells | `CardArt` shapes: `portrait` (Unit), `window` (Spell), `arch` (Field Spell), `notched` (Trap, Field Trap), `oval` (board minion), `strip` (deck tile) |
 | Name banner across the art | `.card-name` ribbon, auto-shrunk to fit |
-| Tribe banner at the bottom centre | `.cf-tag` badges at the bottom centre, plus the `.card-type` line |
-| Rarity gem below the art: white, blue, purple, orange | `.cf-gem[data-rarity]` in those colours. Mythic, which Hearthstone lacks, gets a prismatic gem. Token cards get no gem, like Free/Core cards in Hearthstone. |
+| Tribe banner at the bottom center | `.cf-tag` badges at the bottom center, plus the `.card-type` line |
+| Rarity gem below the art: white, blue, purple, orange | `.cf-gem[data-rarity]` in those colors. Mythic, which Hearthstone lacks, gets a prismatic gem. Token cards get no gem, like Free/Core cards in Hearthstone. |
 | Legendary dragon crest | An original crest (laurel and wings, CSS/SVG) over the art for Legendary and Mythic |
 | Golden frame and animation | The Radiant face: a gold-foil frame, gold-shifted art and a shimmer. Radiant changes the card's game state (§5.2); it is not a cosmetic like Hearthstone's golden cards. |
 | Yellow sword and red drop | `.cf-atk` and `.cf-hp` on full cards; `.stat-attack` and `.stat-health` on minions. Damaged health is red and buffed stats are green (`data-tone`). |
@@ -180,7 +180,7 @@ export type ArtShape = "portrait" | "window" | "arch" | "notched" | "oval" | "st
 export type Backdrop = "none" | "moon" | "rings" | "pillars" | "beams" | "clouds" | "stars" | "arches" | "waves" | "grid";
 export type SkyScheme = "dusk" | "night" | "dawn" | "split";
 export const LAYOUTS: Readonly<Record<Composition, readonly string[]>>;
-  // figure: centre, left, right, close; burst: star, spiral, orbit, shatter;
+  // figure: center, left, right, close; burst: star, spiral, orbit, shatter;
   // landscape: range, sea, towers, dunes; sigil: ring, diamond, eye, wheel
 export type ArtSpec = {
   theme: ArtThemeId;
@@ -234,7 +234,7 @@ export function CardArt(props: CardArtProps): ReactElement;
   `field-spell`, `trap`, `field-trap`). The theme sets the palette, the emblem and the motes.
 - **Per-card variety.** A theme sets the palette and the kind of picture only. Each card draws,
   from a stream salted off its seed (`VARIETY_SALT`), its own:
-  - layout (`LAYOUTS[composition]`: a figure centred, left, right or close up; a spell as a
+  - layout (`LAYOUTS[composition]`: a figure centered, left, right or close up; a spell as a
     starburst, spiral, orbit or shatter; a field as a range, sea, towers or dunes; a trap sigil as a
     ring, diamond, eye or wheel);
   - backdrop motif (`BACKDROPS`), drawn faint behind the composition;
@@ -469,7 +469,7 @@ names.
 ```
 span.cf[data-layout="minion"][data-card-type][data-rarity?][data-foil][data-radiant-face?][data-taunt?]
   span.cf-scale
-    span.cf-portrait > CardArt shape="oval"  (ring coloured by rarity; .cf-crest for Legendary/Mythic)
+    span.cf-portrait > CardArt shape="oval"  (ring colored by rarity; .cf-crest for Legendary/Mythic)
     span.cost-gem[data-cost][data-tone]      small, top left
     span.card-name                           name plate under the portrait, one text node
     span.stats
@@ -654,7 +654,7 @@ so the other cards do not re-render.
 - `inspect-sheet` is a bottom sheet with `role="dialog"`, `aria-modal="true"` and
   `aria-label={name}`. It holds the face, the glossary and `inspect-close`, with an
   `inspect-scrim` backdrop.
-- `CardDetail` is a centred `role="dialog"` holding:
+- `CardDetail` is a centered `role="dialog"` holding:
   - `inspect-face-base` and `inspect-face-radiant`, side by side at every width;
   - a meta line: `#<index> · <set> · <rarity> · <type>` plus ` · <tags>` when there are any;
   - `.inspect-rules`, the base text and the radiant clause again at reading size, shown on screens
@@ -947,7 +947,7 @@ The deck builder does the same for its own buttons by scoping every button rule 
 - **B14.** A radiant face sets `data-radiant-face="true"` on `.cf` and renders its art with
   `data-art-variant="radiant"`. Whenever `text.radiant` is not null, it prints `.cf-text-base`
   followed by `.cf-text-radiant` under a gold rule; an empty `.cf-text-base` (the cell replaced
-  the only base clause) is not drawn. The radiant panel is the type's colour gilded and the gold
+  the only base clause) is not drawn. The radiant panel is the type's color gilded and the gold
   edge keeps a tint of the rarity, so a radiant Trap and Field Trap, or Common and Rare, never
   share a frame; a Field Trap's art window is a hexagon, a Trap's a chamfered box (jsdom +
   Cypress component).
@@ -1162,9 +1162,9 @@ typecheck it with `pnpm --dir e2e typecheck:component`.
 - Fit is measured as `scrollHeight <= clientHeight + 1 && scrollWidth <= clientWidth + 1` inside
   `.should()`, so it retries while `useFitText` settles.
 
-**Files and behaviours**
+**Files and behaviors**
 
-| Behaviours | File | Kind |
+| Behaviors | File | Kind |
 | --- | --- | --- |
 | B1–B5 | `apps/web/src/cards/art/art.test.ts` | vitest, pure |
 | B6 | `apps/web/src/cards/art/CardArt.test.tsx` | vitest, jsdom, `manifest` prop injected |
@@ -1202,7 +1202,7 @@ typecheck it with `pnpm --dir e2e typecheck:component`.
 - Real card art. The manifest ships empty; artists drop `apps/web/public/art/<id>.webp` and
   `<id>-radiant.webp` files in later and list them in `manifest.ts`, under the convention in
   `cards/art/ART.md` (R660).
-- The hand fan, tap-to-lift, drag to play, highlight colours and touch-target sizing (task 7), and
+- The hand fan, tap-to-lift, drag to play, highlight colors and touch-target sizing (task 7), and
   anything else in `Board.tsx`, `Zone.tsx`, `Hand.tsx`, `Backrow.tsx`, `board.css`, `prompt.css`
   or `Game.tsx`.
 - Event-driven effects: summon slam, the Radiant shimmer burst on `radiantSet`, death dissolve,
@@ -1226,7 +1226,7 @@ snapshot. Slice builders code against the Surface above, not against each other'
 
 - **Owns:** `apps/web/src/cards/art/` (`index.ts`, `hash.ts`, `themes.ts`, `emblems.ts`,
   `procedural.ts`, `svg.ts`, `manifest.ts`, `CardArt.tsx`, `art.css`), excluding tests.
-- **Behaviours:** B1–B6.
+- **Behaviors:** B1–B6.
 - **Shared edits:** none.
 
 ### Slice B: faces and `Card.tsx`
@@ -1235,7 +1235,7 @@ snapshot. Slice builders code against the Surface above, not against each other'
   `constants.ts`, `icons.tsx`, `RulesText.tsx`, `CardFace.tsx`, `MinionFace.tsx`, `CardBack.tsx`,
   `cards.css`; `apps/web/src/game/Card.tsx`; and `apps/web/src/game/__snapshots__/Board.test.tsx.snap`
   (regenerated with `vitest -u` only).
-- **Behaviours:** B7–B21.
+- **Behaviors:** B7–B21.
 - **Minimal additive edits:**
   - `apps/web/src/game/catalog.ts`: add `def?: CardDef` to `CardInfo`, and `def` in
     `lookupFromDefs`'s return.
@@ -1247,7 +1247,7 @@ snapshot. Slice builders code against the Surface above, not against each other'
   `useInspectTrigger.tsx`, `placement.ts`, `HoverPreview.tsx`, `InspectSheet.tsx`,
   `CardDetail.tsx`, `Glossary.tsx`, `inspect.css`), excluding tests; and
   `apps/web/src/cards/settings.ts`.
-- **Behaviours:** B22–B29.
+- **Behaviors:** B22–B29.
 - **Shared edits:** none.
 
 ### Slice D: deck builder
@@ -1257,7 +1257,7 @@ snapshot. Slice builders code against the Surface above, not against each other'
   needed, and existing exports are never changed); the new `filters.ts`, `FilterBar.tsx`,
   `PoolGrid.tsx`, `DeckSidebar.tsx` and `ManaCurve.tsx`; and `apps/web/src/routes/decks.tsx` (no
   change expected).
-- **Behaviours:** B30–B39.
+- **Behaviors:** B30–B39.
 - **Minimal additive edit:** `e2e/support/testids.ts`, the new A14 block only.
 
 ### Testers
@@ -1357,7 +1357,7 @@ Redraw stamp across the foot of the art window.
 ## Addendum: the Radiant pass (2026-09-24, R277, R279, R280)
 
 The Radiant pass (`docs/radiant-audit.md`) supersedes this note's reading of a Radiant face in three
-places; the behaviours above that name `radiantText.ts`, `.cf-text-radiant` or a gold rule under the
+places; the behaviors above that name `radiantText.ts`, `.cf-text-radiant` or a gold rule under the
 base text (B7, B14, and the model's `text: { base, radiant }`) describe the code before it.
 
 - **The catalog prints each Radiant face whole.** `radiant.text` is SPEC §8's Radiant cell read by
@@ -1368,7 +1368,7 @@ base text (B7, B14, and the model's `text: { base, radiant }`) describe the code
   texts word by word (case aside; a fused text line by line) and `RulesText` draws each marked
   stretch as `.cf-mark`: a dark gold ink with a gold underline and highlighter band on the
   parchment (4.4:1 or better on every stop of the Radiant rules box), the bright `--radiant` gold on
-  the dark inspect panels, bold and underlined everywhere so colour is not the only cue. A printed
+  the dark inspect panels, bold and underlined everywhere so color is not the only cue. A printed
   Radiant unit's raised attack and health carry `data-grew`.
 - **References** (R279). `cards/refs.ts` finds the names a card's `refs` list in its text, with the
   rule `packages/cards/test/references.test.ts` proves the catalog against, and `CardRef` wraps each
@@ -1407,7 +1407,7 @@ card layer alone; no rule changed.
   window's background, which the browser parses when the window is first styled and laid out (about
   1.3 ms a card). `CardArt` takes a `lazy` prop, which `CardFace` passes on as `lazyArt` and the pool
   grid (the deck builder's and the Almanac's) sets: the window shows a flat gradient of its theme's
-  two sky colours (`data-art-pending="true"`, painted by `art.css` from custom properties — no SVG
+  two sky colors (`data-art-pending="true"`, painted by `art.css` from custom properties — no SVG
   to parse) until it has stayed within `ART_NEAR_MARGIN_PX` of the box that scrolls it for
   `ART_DWELL_MS` — a card flicked straight past never pays the parse — then draws and keeps its
   picture (`art/near.ts`: one `IntersectionObserver` per scrolling box,
@@ -1448,7 +1448,7 @@ rule changed, and the motion still moves by `transform` only, on a layer about a
   loop ended and a gold one appeared top-left when it restarted, every 5.5 s.
 - **A hard vertical line crossed tall faces.** Where a 115° gradient sits along its line depends on
   the layer's height, so on a face taller than 5:7 (a hand card squeezed narrow, a minion filling
-  its zone) the band's colour reached the layer's left edge, and that edge crossed the card as a
+  its zone) the band's color reached the layer's left edge, and that edge crossed the card as a
   hard line.
 - **The band is now horizontal and clear at both ends.** The sweep is a 90° gradient, transparent
   at 0% and 100%, on a layer 170% of the card wide (the still band's width), leaned by

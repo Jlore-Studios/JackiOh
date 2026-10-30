@@ -347,7 +347,7 @@ mod tests {
             kill(&mut s, &unit);
             let made = fused(&s);
             let before = def_of(Some(s.state()), &made[0].def_id).clone();
-            let round: GameState = serde_json::from_value(js(s.state())).expect("deserialises");
+            let round: GameState = serde_json::from_value(js(s.state())).expect("deserializes");
             let after = def_of(Some(&round), &made[0].def_id).clone();
             assert_eq!(after, before);
             assert_eq!(cost_now(&round, &made[0]), cost_now(s.state(), &made[0]));

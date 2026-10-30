@@ -59,7 +59,7 @@ export type SfxParams = {
   tier?: StingTier;
   /**
    * R669: where on the board the sound comes from, -1 (the leftmost lane) to 1 (the rightmost), read
-   * off the lane of the unit it is about. Absent: centred. The engine pans; no recipe reads it.
+   * off the lane of the unit it is about. Absent: centered. The engine pans; no recipe reads it.
    */
   pan?: number;
   /** #185: a landing Unit's size tier; the summon thud is weighed by it rather than by `amount`. */
@@ -120,7 +120,7 @@ export type SapiPersona = PersonaCommon & {
   rate: number;
   /** ffmpeg pitch shift in semitones, -12 to 12, tempo kept. */
   semitones: number;
-  /** An ffmpeg audio filter chain that colours the voice ("" for none). */
+  /** An ffmpeg audio filter chain that colors the voice ("" for none). */
   filter: string;
 };
 

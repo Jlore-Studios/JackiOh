@@ -11,7 +11,7 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::subsystems::lethal::{defending_hero, is_lethal, projected_damage};
 
-use crate::rules::fixtures::combat::{armoured, big_body, indestructible, plain, shielded, trampler};
+use crate::rules::fixtures::combat::{armored, big_body, indestructible, plain, shielded, trampler};
 use crate::rules::fixtures::harness::{live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
@@ -91,7 +91,7 @@ mod r44_lethal_projection_m3_t7 {
         // Through a unit's Armor too: at 12 attack against a 7/7 with Armor 7, all 12 land on the unit,
         // 5 of them past its health trample on, and the hero's Armor 3 takes none of that either.
         edit(&mut state, &attacker, |card| card.buffs.attack = 7);
-        let wall = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({}));
+        let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({}));
         assert_eq!(unit_view(&state, &live(&state, &wall)).armor, 7);
         let on_wall = unit_now(&state, &wall);
         assert_eq!(projected(&state, &attacker, &on_wall), 5);
@@ -227,17 +227,17 @@ mod r44_lethal_projection_m3_t7 {
         let mut state = board("trample-stopped");
         let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({})); // 6/4 Trample
         let shield = put(&mut state, &shielded.id, slot(P2, Row::Units, 1), json!({})); // 2/2 Divine Shield
-        let armour = put(&mut state, &armoured.id, slot(P2, Row::Units, 2), json!({})); // 7/7 Armor 7
+        let armor = put(&mut state, &armored.id, slot(P2, Row::Units, 2), json!({})); // 7/7 Armor 7
         let immortal = put(&mut state, &indestructible.id, slot(P2, Row::Units, 3), json!({})); // 4/4 Indestructible
         state.players.p2.hero.health = 1;
 
         // Step 1: Divine Shield negates the whole hit, so nothing tramples through.
         assert_eq!(projected(&state, &attacker, &unit_now(&state, &shield)), 0);
         // Step 2: Armor 7 leaves 0 of a 6, so there is no excess either.
-        assert_eq!(projected(&state, &attacker, &unit_now(&state, &armour)), 0);
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &armor)), 0);
         // Step 4: an Indestructible unit takes nothing at all.
         assert_eq!(projected(&state, &attacker, &unit_now(&state, &immortal)), 0);
-        for target in [&shield, &armour, &immortal] {
+        for target in [&shield, &armor, &immortal] {
             assert!(!lethal(&state, &attacker, &unit_now(&state, target)));
         }
 
@@ -262,7 +262,7 @@ mod r44_lethal_projection_m3_t7 {
         state.players.p2.hero.armor = 1;
         state.players.p2.hero.health = 3;
 
-        let before = serde_json::to_string(&state).expect("serialises");
+        let before = serde_json::to_string(&state).expect("serializes");
         let targets: Vec<AttackTarget> =
             vec![on_hero(), unit_now(&state, &blocker), unit_now(&state, &shield)];
         let now = live(&state, &attacker);
@@ -271,7 +271,7 @@ mod r44_lethal_projection_m3_t7 {
             is_lethal(&state, &now, target);
         }
 
-        assert_eq!(serde_json::to_string(&state).expect("serialises"), before);
+        assert_eq!(serde_json::to_string(&state).expect("serializes"), before);
         assert_eq!(state.players.p2.hero.health, 3);
         assert_eq!(live(&state, &blocker).damage, 0);
         assert_eq!(live(&state, &shield).divine_shield_spent, None);

@@ -108,7 +108,7 @@ mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
         assert!(!ids(&state.players.p2.exile).contains(&newest.id));
         assert!(ids(&state.players.p2.exile).contains(&older.id));
         let summoned =
-            serde_json::to_value(events_of_type(&events, GameEventType::Summoned)).expect("serialises");
+            serde_json::to_value(events_of_type(&events, GameEventType::Summoned)).expect("serializes");
         assert!(
             matches_object(&summoned, &json!([{ "player": "p1", "instanceId": newest.id }])),
             "{summoned}"
@@ -315,7 +315,7 @@ mod e25_recruit_your_entire_deck_classic_c60 {
         assert_eq!(pending.player_id, P1);
         assert!(run1.state.players.p1.units.iter().all(Option::is_none));
         let round: GameState =
-            serde_json::from_str(&serde_json::to_string(&run1.state).expect("serialises")).expect("parses");
+            serde_json::from_str(&serde_json::to_string(&run1.state).expect("serializes")).expect("parses");
         assert_eq!(round, run1.state);
 
         let right = || Selection::Mode {

@@ -1,6 +1,6 @@
 // The raster of a shared GIF (#513, R513000), over a recording stand-in for the 2D context, since jsdom
 // draws nothing: every item of a plan is drawn in order, a card the assets lack is a blank face, and the
-// loop reports its frames, stops when cancelled and gives up past the byte cap. What the pixels look like
+// loop reports its frames, stops when canceled and gives up past the byte cap. What the pixels look like
 // is the component spec's (`e2e/cypress/component/replay-gif.cy.tsx`).
 
 import { CATALOG } from "@jackioh/cards";
@@ -101,7 +101,7 @@ describe("the GIF raster", () => {
     expect(bytes?.at(-1)).toBe(0x3b);
   });
 
-  it("rasterize stops with an AbortError when cancelled and gives up past the byte cap", async () => {
+  it("rasterize stops with an AbortError when canceled and gives up past the byte cap", async () => {
     const two = planFrames([...clip, { step: 1, turn: view.turn, view }], SQUARE);
     expect(two.frames.length).toBeGreaterThan(1);
     const assets = assetsFor(two, clip, lookup);

@@ -168,7 +168,7 @@ mod tests {
                 ActionBody::Play { instance_id, .. } if *instance_id == top.id
             )));
             // The view of the deck and of the graveyard carries no keyword: the lent one shows nowhere.
-            assert!(!serde_json::to_string(&s.view(P1)).expect("serialises").contains("Flashback"));
+            assert!(!serde_json::to_string(&s.view(P1)).expect("serializes").contains("Flashback"));
         }
 
         #[test]

@@ -299,9 +299,9 @@ describe("B37 dragging an attacker shows the arrow and attacks where it is relea
   });
 });
 
-// B38: every way a drag is cancelled
+// B38: every way a drag is canceled
 
-describe("B38 a cancelled drag goes back to idle, sends nothing, and swallows the click after the release", () => {
+describe("B38 a canceled drag goes back to idle, sends nothing, and swallows the click after the release", () => {
   const CANCELS: [string, () => void][] = [
     ["Escape", () => fireEvent.keyDown(window, { key: "Escape" })],
     ["contextmenu", () => fireEvent.contextMenu(el("board"))],

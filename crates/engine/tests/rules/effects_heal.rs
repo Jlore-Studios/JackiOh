@@ -67,7 +67,7 @@ fn health_of(state: &GameState, id: &str) -> i32 {
 }
 
 fn healed(sink: &Bench) -> Value {
-    serde_json::to_value(events_of_type(&sink.events, GameEventType::Healed)).expect("events serialise")
+    serde_json::to_value(events_of_type(&sink.events, GameEventType::Healed)).expect("events serialize")
 }
 
 fn healed_count(sink: &Bench) -> usize {
@@ -190,7 +190,7 @@ mod heal_x_r19_m3_t1 {
         let pairs: Vec<(Value, Value)> = events_of_type(&sink.events, GameEventType::Healed)
             .iter()
             .map(|event| {
-                let event = serde_json::to_value(event).expect("an event serialises");
+                let event = serde_json::to_value(event).expect("an event serializes");
                 (event["targetId"].clone(), event["amount"].clone())
             })
             .collect();
@@ -388,7 +388,7 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
         assert_eq!(live(&state, &other.id).damage, 2);
         let amounts: Vec<Value> = events_of_type(&sink.events, GameEventType::Healed)
             .iter()
-            .map(|event| serde_json::to_value(event).expect("an event serialises")["amount"].clone())
+            .map(|event| serde_json::to_value(event).expect("an event serializes")["amount"].clone())
             .collect();
         assert_eq!(amounts, vec![json!(4), json!(4)]);
     }

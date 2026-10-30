@@ -63,7 +63,7 @@ mod r1143_a_hand_size_for_the_rest_of_the_game {
         assert_eq!(hand_cap_of(&state, P1), HAND_CAP);
         assert_eq!(hand_cap_of(&state, P2), HAND_CAP);
         // D14: no key at all, so a game that never sets one hashes as it did.
-        let side = serde_json::to_value(&state.players[P1]).expect("a player serialises");
+        let side = serde_json::to_value(&state.players[P1]).expect("a player serializes");
         assert!(side.get("handCap").is_none());
         assert_eq!(view_for(&state, P1).you.hand_cap, None);
     }
@@ -80,7 +80,7 @@ mod r1143_a_hand_size_for_the_rest_of_the_game {
         assert_eq!(HAND_CAP_MAX, 14);
         // The other player's is their own.
         assert_eq!(hand_cap_of(&state, P2), HAND_CAP);
-        let side = serde_json::to_value(&state.players[P1]).expect("a player serialises");
+        let side = serde_json::to_value(&state.players[P1]).expect("a player serializes");
         assert_eq!(side["handCap"], json!(14));
     }
 
@@ -152,7 +152,7 @@ mod r1143_a_hand_size_for_the_rest_of_the_game {
         let mut state = board("hand-size-round-trip");
         run(&mut state, sets(13), P2);
         let round_tripped: GameState =
-            serde_json::from_value(serde_json::to_value(&state).expect("a state serialises"))
+            serde_json::from_value(serde_json::to_value(&state).expect("a state serializes"))
                 .expect("a state parses");
         assert_eq!(round_tripped, state);
         assert_eq!(hand_cap_of(&round_tripped, P2), 13);

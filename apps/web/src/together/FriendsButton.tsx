@@ -248,7 +248,7 @@ function FriendsPanel({
   );
 }
 
-/** Two figures, side by side, on a 24-unit square, filled in `currentColor` so every skin's button colour applies. */
+/** Two figures, side by side, on a 24-unit square, filled in `currentColor` so every skin's button color applies. */
 function FriendsIcon(): ReactElement {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" focusable="false">

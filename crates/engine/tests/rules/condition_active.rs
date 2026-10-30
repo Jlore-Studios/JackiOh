@@ -340,7 +340,7 @@ fn glows<T: serde::Serialize>(card: Option<&T>) -> bool {
 }
 
 fn view_json_mentions(view: &PlayerView, needle: &str) -> bool {
-    serde_json::to_string(view).expect("serialises").contains(needle)
+    serde_json::to_string(view).expect("serializes").contains(needle)
 }
 
 /// A fresh sink over `state`, its rng at the state's cursor as reduce builds it.
@@ -780,7 +780,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
         {
             assert!(!has_key(card, "conditionActive"), "{}", card.instance_id);
         }
-        // Not vacuous: all three piles really travelled.
+        // Not vacuous: all three piles really traveled.
         assert!(
             view.you
                 .graveyard

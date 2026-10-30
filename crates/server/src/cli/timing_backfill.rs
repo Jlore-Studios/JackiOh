@@ -92,7 +92,7 @@ pub async fn backfill(db: &Db) -> Result<BackfillOutcome, StoreError> {
 /// `timing-backfill`'s arguments after the subcommand (`main.rs`): none.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     if let Some(arg) = args.first() {
-        bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
+        bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
     }
     let connection_string = database_url()?;
     // One connection: this process folds one match at a time and exits.

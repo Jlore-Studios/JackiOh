@@ -130,7 +130,7 @@ pub fn open_as(state: &GameState, kind: PromptKind, player: PlayerId) -> Pending
 
 /// §9.3: a paused state survives JSON, and the copy answers exactly as the original does.
 pub fn round_trip(state: &GameState) -> GameState {
-    let text = serde_json::to_string(state).expect("a state serialises");
+    let text = serde_json::to_string(state).expect("a state serializes");
     serde_json::from_str(&text).expect("a state parses back")
 }
 

@@ -80,7 +80,7 @@ The user's words, then the decisions made for them.
 ### 3. AI opponent — `polish/3-ai`
 
 > A well defined and capable AI … randomized decks … smart … able to execute complex ideas. Cards too
-> complicated for it go on a shadow ban list. Three difficulties that don't change behaviour, only
+> complicated for it go on a shadow ban list. Three difficulties that don't change behavior, only
 > resources.
 
 **Difficulty table** (AI seat only; the human always has SPEC's resources):
@@ -91,7 +91,7 @@ The user's words, then the decisions made for them.
 | Max mana | `min(turns, 4)` (as a human) | `min(turns + 1, 5)` | `min(turns + 1, 7)` |
 | Opening hand | as a human | +1 card | +1 card |
 | Draws per turn | 1 | 1 | 2 |
-| Behaviour | identical | identical | identical |
+| Behavior | identical | identical | identical |
 
 - "+1 mana always" means one more crystal than a human has on every turn, up to the tier's cap.
   Persistent and temporary mana modifiers apply on top, exactly as for a human.
@@ -149,7 +149,7 @@ The user's words, then the decisions made for them.
 > have summoning sickness. Test to find these.
 
 - Known gap: `isSick` is `summonedTurn === state.turn`, and a control change never touches
-  `summonedTurn`. So a unit that is stolen, swapped or rotated across the centre line can attack at
+  `summonedTurn`. So a unit that is stolen, swapped or rotated across the center line can attack at
   once.
 - **Ruling (Hearthstone semantics, first new row R171):** a unit whose controller changes has
   *entered its new controller's side* on that turn. It is summoning sick exactly like a unit summoned
@@ -394,7 +394,7 @@ Plus the e2e specs the change can affect, and `pnpm --dir e2e test:component` fo
     `e2e/artifacts/`); known limits; and merge notes (which other polish PRs it touches).
   - Every PR links this file.
 - **Design notes** for each task are committed at `docs/polish/<n>-<slug>.md` (the design brief,
-  its behaviours and its decisions), so a reviewer can read why before what.
+  its behaviors and its decisions), so a reviewer can read why before what.
 - **Merge order** for the integration branch: 4 → 3 → 5 → 6 → 2 → 1 → 7 (engine first, then the web
   foundations the later tasks build on). `polish/integration` merges all seven, wires the
   cross-task seams (settings panel ↔ audio/fx/drag, landing CTA ↔ `/practice`, card faces in
@@ -404,11 +404,11 @@ Plus the e2e specs the change can affect, and `pnpm --dir e2e test:component` fo
 ## How the work is orchestrated
 
 1. **Design** (one agent per task, in parallel). Each reads its area, researches Hearthstone where
-   the task is visual, and writes `docs/polish/<n>-<slug>.md`: goal, surface, numbered behaviours,
+   the task is visual, and writes `docs/polish/<n>-<slug>.md`: goal, surface, numbered behaviors,
    out of scope, and slices with disjoint file ownership.
 2. **Build.**
    - Greenfield modules (fx, audio, ai, cards, settings) use the fullsend pattern: slice builders
-     that write blind, with no compiler; spec-testers writing tests from the behaviours at the same
+     that write blind, with no compiler; spec-testers writing tests from the behaviors at the same
      time; then reconcile, green and cull.
    - Edits to existing code use implement, then verify.
    - Task 4 is a find-and-fix loop. Task 5 is build, then an adversarial panel.

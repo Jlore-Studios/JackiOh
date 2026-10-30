@@ -53,7 +53,7 @@ function useCountedTo(target: number | null): number | null {
   return shown;
 }
 
-/** Jlore's coin: a brass disc with a stamped J, drawn so every skin's colour applies. */
+/** Jlore's coin: a brass disc with a stamped J, drawn so every skin's color applies. */
 function Coin(): ReactElement {
   return (
     <svg className="jlore-pill__coin" viewBox="0 0 24 24" width="20" height="20" focusable="false" aria-hidden="true">

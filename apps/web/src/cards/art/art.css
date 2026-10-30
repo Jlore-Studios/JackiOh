@@ -26,7 +26,7 @@
 }
 
 /*
- * A lazy window that has not drawn yet (CardArt `lazy`, near.ts): its theme's two sky colours as
+ * A lazy window that has not drawn yet (CardArt `lazy`, near.ts): its theme's two sky colors as
  * a flat gradient — no SVG to parse — under a vignette that reads like the finished picture's
  * shading. CardArt sets --art-sky-* inline; the fallback is the ground .cf-art already paints.
  */

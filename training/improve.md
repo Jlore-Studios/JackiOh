@@ -124,7 +124,7 @@ kept on its own.
 Two fixed sets of deals measure a change, each deal played twice with the seats swapped: the
 candidate on p1 in a deal's first game and on p2 in its second, with the same decks and shuffles.
 That cancels most of the deal's luck, the first seat's edge and the god-hand alike, since a deal
-that favours one seat gives each AI one game of it (R850000, R850001).
+that favors one seat gives each AI one game of it (R850000, R850001).
 
 - **The dev set** is for screens: deals `improve-dev:1` to `:200`, the same in every session,
   played by `cargo jackioh arena … --set improve-dev`.

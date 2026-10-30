@@ -94,7 +94,7 @@ pub fn parse_calibrate_args(argv: &[String]) -> anyhow::Result<CalibrateOptions>
     };
     for arg in argv {
         let Some((name, raw)) = flag(arg) else {
-            bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
+            bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
         };
         match name {
             "games" => {
@@ -122,7 +122,7 @@ pub fn parse_calibrate_args(argv: &[String]) -> anyhow::Result<CalibrateOptions>
                 }
                 options.threads = Some(threads);
             }
-            _ => bail!("Unrecognised option --{name}.\n\n{USAGE}"),
+            _ => bail!("Unrecognized option --{name}.\n\n{USAGE}"),
         }
     }
     Ok(options)
@@ -133,11 +133,11 @@ pub fn parse_live_args(argv: &[String]) -> anyhow::Result<i64> {
     let mut since = 0;
     for arg in argv {
         let Some((name, raw)) = flag(arg) else {
-            bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
+            bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
         };
         match name {
             "since" => since = number(name, raw)?,
-            _ => bail!("Unrecognised option --{name}.\n\n{USAGE}"),
+            _ => bail!("Unrecognized option --{name}.\n\n{USAGE}"),
         }
     }
     Ok(since)

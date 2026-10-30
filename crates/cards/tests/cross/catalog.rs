@@ -53,7 +53,7 @@
 //!                    Plague Counters), and patch v0.2.Y's Catalyst, Prime and Acclaimed.
 //!
 //! Not asserted here: `keywords`, `text`, `params`, `refs` and `loc` (the per-card tests prove the
-//! behaviour `keywords`, `text` and `params` describe, references.rs proves `refs`, and `loc` is
+//! behavior `keywords`, `text` and `params` describe, references.rs proves `refs`, and `loc` is
 //! frozen data since v0.3.0, SURFACE §7.5), and id shape (`cargo jackioh catalog check` owns the
 //! schema).
 //!
@@ -7812,7 +7812,7 @@ fn label(entry: &CardDef, field: &str, expected: &Value, actual: &Value) -> Stri
 }
 
 fn json<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("catalog values serialise")
+    serde_json::to_value(value).expect("catalog values serialize")
 }
 
 fn strings(values: &[&str]) -> Vec<String> {

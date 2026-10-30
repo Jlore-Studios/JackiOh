@@ -738,7 +738,7 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         );
         assert!(
             !serde_json::to_string(&theirs)
-                .expect("a view serialises")
+                .expect("a view serializes")
                 .contains(&echo.id)
         );
     }

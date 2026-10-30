@@ -288,7 +288,7 @@ mod r1224_repayment {
     #[test]
     fn r1224_a_game_without_credit_serializes_as_before() {
         let state = playing("credit-absent");
-        let json = serde_json::to_value(&state).expect("a game serialises");
+        let json = serde_json::to_value(&state).expect("a game serializes");
         let p1 = &json["players"]["p1"];
         assert_eq!(p1.get("owedInstalments"), None);
         assert_eq!(p1["turnLog"].get("manaBorrowed"), None);

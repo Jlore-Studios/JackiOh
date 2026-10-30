@@ -52,7 +52,7 @@ function boxShadowOf(element: Element): string {
   return win === null ? "" : win.getComputedStyle(element).boxShadow;
 }
 
-// B18: glow colours
+// B18: glow colors
 
 /** Fixture separates ready, condition, unavailable, and switch-only cards for glow assertions. */
 function glowView(): View {
@@ -123,7 +123,7 @@ describe("B18 the green and yellow glows in a real browser", () => {
     });
   });
 
-  it("B18 a hand card whose condition holds but which cannot be played has neither colour", () => {
+  it("B18 a hand card whose condition holds but which cannot be played has neither color", () => {
     cy.get(ts("hand-card-q1"))
       .should("have.attr", "data-condition-active", "true")
       .and("not.have.attr", "data-glow");
@@ -161,7 +161,7 @@ describe("B18 the green and yellow glows in a real browser", () => {
       for (const layer of shadowLayers(shadow).filter((one) => !one.includes("inset"))) {
         // #2164 writes the shadow as a `color-mix` of the palette's black, which Chrome computes as
         // `color(srgb 0 0 0 / 0.45)` rather than `rgba(0, 0, 0, 0.45)`: both are the same plain black.
-        // Any coloured glow (the yellow, the green, gold) still fails either spelling.
+        // Any colored glow (the yellow, the green, gold) still fails either spelling.
         expect(layer, "an outer shadow layer of a Radiant card is a plain dark shadow").to.match(
           /^(rgba\(0, 0, 0, |color\(srgb 0 0 0 \/ )/,
         );
@@ -169,7 +169,7 @@ describe("B18 the green and yellow glows in a real browser", () => {
     });
   });
 
-  it("B18 a legal card without data-glow has neither colour", () => {
+  it("B18 a legal card without data-glow has neither color", () => {
     cy.get(ts("card-sw"))
       .should("have.attr", "data-legal", "true")
       .and("not.have.attr", "data-glow");
@@ -557,7 +557,7 @@ function promptView(kind: PromptKindUnderTest): View {
   });
 }
 
-describe("B32 a prompt is a bottom sheet on a phone and a centred modal on a desktop", () => {
+describe("B32 a prompt is a bottom sheet on a phone and a centered modal on a desktop", () => {
   for (const kind of ["discover", "target", "mode"] as const) {
     it(`B32 at 390x844 a ${kind} prompt spans the width, sits on the bottom edge, and its buttons are at least 44 px tall`, () => {
       cy.viewport(390, 844);
@@ -587,14 +587,14 @@ describe("B32 a prompt is a bottom sheet on a phone and a centred modal on a des
     });
   }
 
-  it("B32 at 1280x720 the prompt is a centred modal narrower than the viewport, not a sheet on the bottom edge", () => {
+  it("B32 at 1280x720 the prompt is a centered modal narrower than the viewport, not a sheet on the bottom edge", () => {
     cy.viewport(1280, 720);
     mountGame(promptView("discover"));
 
     cy.get(ts("prompt-modal")).should(($modal) => {
       const box = rectOf($modal[0] as Element);
       expect(box.width, "narrower than the viewport").to.be.below(1280);
-      expect(Math.abs((box.left + box.right) / 2 - 640), "centred horizontally").to.be.at.most(2);
+      expect(Math.abs((box.left + box.right) / 2 - 640), "centered horizontally").to.be.at.most(2);
       expect(box.bottom, "not resting on the bottom edge").to.be.below(720 - 1);
     });
   });

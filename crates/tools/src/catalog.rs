@@ -2572,14 +2572,14 @@ mod tests {
                 r#"{"key":"amount","base":1,"radiant":2,"better":"up"}"#,
             ))]),
         );
-        entry.insert("colour".to_string(), Json::from("red"));
+        entry.insert("color".to_string(), Json::from("red"));
         catalog.insert("core-002".to_string(), Json::Object(entry));
         let failures = check_catalog(&catalog).failures;
         let at = "catalog[\"core-002\"]";
         for expected in [
             format!("{at}.base: Unit face must carry an integer `attack` (got undefined)"),
             format!("{at}.params[0]: amount: no face's text writes {{amount}}"),
-            format!("{at}: unknown field(s) colour"),
+            format!("{at}: unknown field(s) color"),
         ] {
             assert!(failures.contains(&expected), "{expected} in {failures:#?}");
         }

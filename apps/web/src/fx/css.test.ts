@@ -136,7 +136,7 @@ function isReduced(rule: Rule): boolean {
   return rule.media !== null && REDUCED.test(rule.media);
 }
 
-/** Rules outside the reduced-motion block that list `selector` (compared normalised). */
+/** Rules outside the reduced-motion block that list `selector` (compared normalized). */
 function rulesListing(sheet: Sheet, selector: string): Rule[] {
   const wanted = normSelector(selector);
   return sheet.rules.filter((rule) => !isReduced(rule) && rule.selectors.some((s) => normSelector(s) === wanted));
@@ -171,7 +171,7 @@ const EXISTING_KEYFRAMES = [
   "jk-heal-pop", "jk-loss-pop", "jk-shield-shatter", "jk-dissolve", "jk-pile-pulse", "jk-card-resolved",
   "jk-exile-fade", "jk-bounce-to-hand", "jk-burn-away", "jk-discard-drop", "jk-draw-slide", "jk-hand-edge",
   "jk-shuffle-in", "jk-stat-tick", "jk-icon-pop", "jk-badge-tick", "jk-gem-tick", "jk-badge-fade",
-  "jk-radiant-pulse", "jk-spin-face", "jk-fuse-merge", "jk-rotate-def", "jk-cross-centre", "jk-lane-slide",
+  "jk-radiant-pulse", "jk-spin-face", "jk-fuse-merge", "jk-rotate-def", "jk-cross-center", "jk-lane-slide",
   "jk-swap-cross", "jk-chain-close", "jk-trap-flip", "jk-trap-flip-hold", "jk-crystal-fill", "jk-banner",
   "jk-grey-out", "jk-fade-in", "jk-fade-out", "jk-toast-in", "jk-toast-resolve", "jk-result-overlay",
 ];

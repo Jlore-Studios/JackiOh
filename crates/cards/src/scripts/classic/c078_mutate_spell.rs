@@ -217,7 +217,7 @@ mod tests {
             let pawn = s.card(PAWN).clone();
 
             assert_eq!(offered(&s), vec![pawn.id.clone()]);
-            assert!(!serde_json::to_string(&s.view(P1)).expect("serialisable").contains(PAWN));
+            assert!(!serde_json::to_string(&s.view(P1)).expect("serializable").contains(PAWN));
             s.activate(MUTATE, json!({ "targets": pick::instance(&pawn) }));
 
             s.expect_in_zone(&pawn, "exile");
@@ -333,7 +333,7 @@ mod tests {
             let menace = s.card(MENACE).clone();
             s.expect_refused(|s| s.activate(MUTATE, json!({ "targets": pick::instance(&menace) })));
             let view = js(&s.view(P1))["you"]["backrow"][0].clone();
-            assert!(serde_json::to_string(&view).expect("serialisable").contains("\"usable\":false"));
+            assert!(serde_json::to_string(&view).expect("serializable").contains("\"usable\":false"));
 
             let mut t = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }], "backrow": [MUTATE] },

@@ -1,7 +1,7 @@
 //! The search's building blocks, each against its contract in docs/polish/3-ai.md §Surface: `lineStatus`
 //! and `terminalScore` (simulate.ts), `scoreLine` and `beamSearch` (search.ts), `findLethal`
 //! (lethal.ts), decide's "search" and "prompt" reasons and its planned line, `playAiTurn`'s loop and
-//! nonces, and sweepCard's clock. The numbered behaviours reach these only through `decide` and the
+//! nonces, and sweepCard's clock. The numbered behaviors reach these only through `decide` and the
 //! puzzles; here each one is held to its own sentence in the design, so a change that keeps the
 //! puzzles green but breaks a contract still fails.
 //!

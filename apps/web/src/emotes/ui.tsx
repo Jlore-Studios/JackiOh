@@ -74,7 +74,7 @@ function useMenuLifetime(open: boolean, onClose: () => void, menu: RefObject<HTM
 }
 
 /**
- * How far to slide a menu centred on its portrait so it stays `margin` px inside a viewport
+ * How far to slide a menu centered on its portrait so it stays `margin` px inside a viewport
  * `viewportWidth` wide (#219): right by what pokes out on the left, left by what pokes out on the
  * right, nothing when it fits. A menu too wide for both keeps its left edge on the screen.
  */
@@ -85,13 +85,13 @@ export function menuShift(rect: { left: number; right: number }, viewportWidth: 
 }
 
 /**
- * Keeps an open menu on the screen (#219). emotes.css centres the menu on the portrait, and a seat
+ * Keeps an open menu on the screen (#219). emotes.css centers the menu on the portrait, and a seat
  * puts the portrait anywhere from the screen's left edge (a phone) to its middle, so once laid out
  * the menu measures itself and slides sideways by `menuShift` through `--emote-menu-shift`, which
- * the CSS adds to its centring transform. A layout effect, so the menu never paints off the screen.
+ * the CSS adds to its centering transform. A layout effect, so the menu never paints off the screen.
  * The measure first puts the variable back to 0: StrictMode replays this effect in dev (main.tsx
  * mounts the app under it), and a re-run that read the shift the first run applied would take the
- * slid menu for centred and write 0 back — the rect carries the transform.
+ * slid menu for centered and write 0 back — the rect carries the transform.
  */
 function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>, enabled: boolean): void {
   useLayoutEffect(() => {
@@ -101,7 +101,7 @@ function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>, enabled: boolean
     menu.style.setProperty("--emote-menu-shift", "0px");
     const rect = menu.getBoundingClientRect();
     const viewportWidth = document.documentElement.clientWidth;
-    // No layout (jsdom, or a hidden board): nothing to measure, so the menu stays centred.
+    // No layout (jsdom, or a hidden board): nothing to measure, so the menu stays centered.
     if (rect.width === 0 || viewportWidth === 0) {
       menu.style.removeProperty("--emote-menu-shift");
       return;
