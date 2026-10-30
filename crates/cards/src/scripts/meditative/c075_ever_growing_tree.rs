@@ -392,7 +392,6 @@ mod tests {
             fn r1087_a_fused_keyword_applies_at_once() {
                 // Fiery Waraxe (3/2): "Animated on your turn". Fused in, the Tree animates at
                 // its controller's next start of turn with the summed stats (MD-D34).
-                let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = narrowed("tree-keyword", &[WARAXE]);
                 let tree = s.card(TREE).id.clone();
                 grow(&mut s, tree.as_str());

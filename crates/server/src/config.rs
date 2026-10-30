@@ -857,7 +857,7 @@ pub const REMATCH_OFFER_TTL_MS: i64 = 600_000;
 // bound what one account can hold.
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R320: the most completed-lesson ids one account keeps. The path has four lessons; this
+/// SPEC §11 R320: the most completed-lesson ids one account keeps. The path has five lessons (R2205003); this
 /// leaves room for the path to grow without a server change, and bounds a body of junk ids.
 /// Mirrored in `app.settings` (0011).
 pub const TUTORIAL_LESSONS_MAX: usize = 32;

@@ -225,7 +225,6 @@ mod i2_a_windfury_unit_that_enters_inside_one_action {
     fn r636_a_windfury_unit_made_inside_the_action_is_read_where_the_action_left_it() {
         // No state before the action holds it (a copy a Cry made, or a card no `before` saw): the
         // action leaves it on the field with its printed Windfury.
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut g = scenario(json!({ "p1": { "field": [{ "def": RHINO, "lane": 1 }] } }));
         let rhino = g.unit_at(PlayerId::P1, 1);
         let turn = g.state().turn;
@@ -840,9 +839,6 @@ mod r1062_fiery_waraxe_reanimated {
 
     #[test]
     fn r1062_i1_and_i4_stay_clean_as_fiery_waraxe_animates_again_and_attacks_the_hero() {
-        // R1062 is live only while the Meditative set is open (R1420), in the engine and in the
-        // monitor alike.
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut g = scenario(json!({
             "p1": { "hand": ["meditative-066", "core-005"] },
             "p2": { "hand": ["core-005"] },
@@ -871,7 +867,6 @@ mod r1062_fiery_waraxe_reanimated {
     #[test]
     fn r1062_i4_reads_animated_on_your_turn_as_the_animation_had_it_though_a_nerf_later_in_the_action_takes_it()
      {
-        let _open = preview_sets(&[SetName::Meditative]);
         let nerfed = |announced: bool| {
             let mut g = scenario(json!({
                 "p1": { "hand": ["meditative-066", "core-005"] },
@@ -914,7 +909,6 @@ mod r1062_fiery_waraxe_reanimated {
     /// R1062 makes none.
     #[test]
     fn r1062_r383_a_card_that_fires_as_a_trap_on_its_controllers_turn_enters_as_it_animates() {
-        let _open = preview_sets(&[SetName::Meditative]);
         let mut g = scenario(json!({ "p1": { "backrow": [{ "def": "meditative-066", "lane": 1 }] } }));
         let card = backrow_at(&g, PlayerId::P1, 1, "p1 should hold the card in backrow zone 1");
         let set_on = g.state().turn;
@@ -961,7 +955,6 @@ mod r1126_the_canes_pareto_animation {
 
     #[test]
     fn r1126_r1062_the_cane_animating_on_the_other_players_turn_enters_and_i4_stays_clean() {
-        let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
         let mut g = scenario(json!({
             // p1's (0) Spell, never played, keeps its turn from ending by itself (R82) once the Cane, which
             // may not switch to Defense (R2179000), is all it has on the field.
@@ -1401,7 +1394,6 @@ mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
     #[test]
     fn r1122_r2285002_i4_reads_a_golem_that_killed_the_unit_its_redirected_attack_was_transformed_into_as_readied()
      {
-        let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
         let seed = seed_where("redirected-golem", |seed| {
             let mut g = board(seed);
             let golem = g.unit(PlayerId::P1, 2).expect("p1's Golem").id;

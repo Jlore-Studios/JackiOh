@@ -32,10 +32,6 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn open() -> PreviewGuard {
-        preview_sets(&[SetName::Stinkyscape])
-    }
-
     fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
         keywords
             .iter()
@@ -70,7 +66,6 @@ mod tests {
     #[test]
     fn divine_shield_takes_the_first_hit_then_ranged_takes_no_strike_back() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [ANCHOR], "field": [PARAGON], "library": filler(4) },
@@ -97,7 +92,6 @@ mod tests {
     #[test]
     fn radiant_is_a_14_2_with_pierce() {
         crate::register_all();
-        let _preview = open();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": PARAGON, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },

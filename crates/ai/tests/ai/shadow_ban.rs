@@ -527,11 +527,14 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
 
     // One test per tier, each with its own 300 s. The two shared one test and ran 267 s on a developer
     // sandbox and 313 s on the night bot's, past its limit; the time is all Easy's (251 s of the 267
-    // for two seeds, Hard's two take 12 s). Easy's check plays one game: game 1 ends on turn 11, before
-    // the Floats of R1563000 ("Float reduces cost") bring the card down to four crystals. A longer game
-    // can: dealt with every Meditative ban lifted (#1675), game 1 ran 21 turns, the card affordable on
-    // two of them. So both checks deal from the frozen fixture pool (issue #1113), and a shadow-ban
-    // change re-deals neither.
+    // for two seeds, Hard's two take 12 s). Easy's check plays one game. It was GIGA Glowy Jelly Bean's
+    // until #2380, and its game 1 had to end before the Floats of R1563000 ("Float reduces cost", in the
+    // deck too) brought the card down to four crystals: dealt with every Meditative ban lifted (#1675),
+    // game 1 ran 21 turns, the card affordable on two of them, and once the AI priced a Dormant card it
+    // ran 36, the card drawn on turn 30 at 0. Pile On (5) has no discount of its own, so only another
+    // card's could bring it to Easy's four crystals: in game 1 it is in hand from turn 7, unaffordable,
+    // until the game ends on turn 9. Both checks deal from the frozen fixture pool (issue #1113), so a
+    // shadow-ban change re-deals neither.
     //
     // Hard's check plays five: re-pinned for v0.3.5, the Meditative set joins the greedy seat's deck (a
     // player's, which the AI's soft gate leaves whole, R1390), and the AI wins games 1 and 2 on turns 7
@@ -541,12 +544,12 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // Re-pinned for the Stinkyscape release (#1884), whose cards join the greedy seat's deck too: games
     // 1–7 hold the card affordable on no turn and game 8 does, so the check plays eight.
 
-    /// R186 GIGA Glowy Jelly Bean (6 mana) is unswept at Easy's four crystals
+    /// R186 Pile On (5 mana) is unswept at Easy's four crystals
     #[test]
-    fn r186_giga_glowy_jelly_bean_6_mana_is_unswept_at_easys_four_crystals() {
+    fn r186_pile_on_5_mana_is_unswept_at_easys_four_crystals() {
         jackioh_cards::register_all();
         let easy = js(sweep_card(
-            "core-029",
+            "classic-060",
             &SweepOptions {
                 seeds: Some(1),
                 now: None,
@@ -557,6 +560,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
             },
         ));
         assert_eq!(easy["tier"], json!("easy"));
+        assert_eq!(easy["drawnGames"], json!(1));
         assert_eq!(easy["affordableTurns"], json!(0));
         assert_eq!(easy["unswept"], json!(true));
         assert_eq!(easy["flags"], json!([]));
@@ -1629,12 +1633,11 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
     #[test]
     fn r2203000_the_shadow_ban_holds_at_most_half_the_training_grounds_set() {
         jackioh_cards::register_all();
-        let _preview = preview_sets(&[SetName::TrainingGrounds]);
         let cards = ai_pool()
             .iter()
             .filter(|id| def_of(None, id).set == SetName::TrainingGrounds)
             .count();
-        assert!(cards > 0, "the previewed set deals its cards");
+        assert!(cards > 0, "the set deals its cards");
         let banned = SHADOW_BAN
             .iter()
             .filter(|(def_id, _)| def_of(None, def_id).set == SetName::TrainingGrounds)
