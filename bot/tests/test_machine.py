@@ -12,8 +12,10 @@ import unittest
 from pathlib import Path
 from datetime import datetime, timezone
 
-from harness.config import REPO_ROOT
 from machine import credits, starter
+
+#: The repository's root, two directories above this file (bot/tests/).
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 NOW = datetime(2026, 10, 2, 18, 0, tzinfo=timezone.utc)
 

@@ -1,0 +1,2534 @@
+{
+ "labels_dump": "[[[\"architecture\", [\"0e8a16\", \"The repository, tooling, CI, deploys and agent setup\"]], [\"bot:blocked\", [\"b60205\", \"The night bot needs a person before it can go on\"]], [\"bot:build\", [\"1d76db\", \"Queued for the night bot to build\"]], [\"bot:cross-review\", [\"0052cc\", \"A night bot pull request waiting for its review: one strong model, or a second medium one\"]], [\"bot:fullsend\", [\"b60205\", \"Queued for the night bot to split into parts that land on one branch, then reconcile into one PR\"]], [\"bot:needs-plan\", [\"1d76db\", \"Queued for the night bot: a strong model plans it first, into the description\"]], [\"bot:planned\", [\"0075ca\", \"It has a plan: in its description, which the builder starts from\"]], [\"bot:pr\", [\"c5def5\", \"A pull request the night bot opened\"]], [\"bot:pr-open\", [\"0e8a16\", \"The night bot opened a PR for this\"]], [\"bot:revise\", [\"5319e7\", \"Queued for the night bot to revise this PR\"]], [\"bot:stuck\", [\"d93f0b\", \"It failed every review round it had: a comment says why, for a person to review\"]], [\"bot:suggestion\", [\"d4c5f9\", \"An improvement the night bot suggests; add bot:build to have it built\"]], [\"bot:tree\", [\"c5def5\", \"A parent whose sub-issues the night bot made and watches; it closes once their work is on main\"]], [\"bot:working\", [\"fbca04\", \"The night bot is working on this now\"]], [\"difficulty:easy\", [\"c2e0c6\", \"Any model may build it, the weakest first\"]], [\"difficulty:hard\", [\"b60205\", \"Only a strong model (Opus) plans, builds and reviews it\"]], [\"difficulty:medium\", [\"fef2c0\", \"A medium model or stronger builds it (the default with no difficulty label)\"]], [\"human\", [\"ededed\", \"People do this: the night bot never queues, plans, builds or labels it\"]], [\"human required\", [\"e99695\", \"The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it\"]], [\"kind:ai\", [\"5319e7\", \"It changes the practice and ladder AI's decisions; no version (#1360)\"]], [\"kind:app\", [\"1d76db\", \"It changes the client or the server, what players see and use; no version (#1360)\"]], [\"kind:cards\", [\"d93f0b\", \"It changes how a card plays, or its words: a patch version (#1360)\"]], [\"kind:internal\", [\"c5def5\", \"CI, bots, tooling, docs, tests or a refactor; no version (#1360)\"]], [\"major version\", [\"0052cc\", \"A vX.Y.0 release that changes the game or the codebase broadly, and each of its parts\"]], [\"night bot\", [\"5319e7\", \"The night bot and Squishy themselves: bot/, .harness/, .squishy/ and their workflows\"]], [\"patch\", [\"fbca04\", \"A numbered release of the game: cards, rules, the client, the server's features\"]], [\"person merges\", [\"1d76db\", \"The bot builds it, but a person reviews and merges its pull request\"]], [\"priority:high\", [\"d73a4a\", \"The night bot picks this up first\"]], [\"priority:low\", [\"0e8a16\", \"The night bot picks this up last, after unlabelled work\"]], [\"priority:medium\", [\"fbca04\", \"The night bot picks this up after priority:high\"]], [\"production merge\", [\"5319e7\", \"The merge of main into production (promote-production.yml)\"]], [\"ready for merge\", [\"0e8a16\", \"The night bot's reviews approved it, but auto-merge could not turn on: a person merges it\"]], [\"tier:major\", [\"b60205\", \"A set ships: the next v0.Z.0 (#1360)\"]], [\"tier:micro\", [\"fef2c0\", \"Fewer cards, or their words alone: the next letter (#1360)\"]], [\"tier:patch\", [\"fbca04\", \"15 reprinted, 50 that play differently, or a rule every game meets: the next v0.Z.X (#1360, #2499)\"]]], [\"method:manual\", \"method:use-bot\", \"bot:approved\", \"bot:needs-review\", \"large patch\", \"Info\"]]",
+ "said": [
+  "The night bot builds",
+  "the night bot and the night bot's",
+  "a night bot PR"
+ ],
+ "cases": {
+  "easy": [
+   [
+    {},
+    {
+     "ok": [
+      10,
+      400,
+      [],
+      []
+     ]
+    }
+   ],
+   [
+    {
+     "max_files": "x"
+    },
+    {
+     "error": "ConfigError: easy: invalid literal for int() with base 10: 'x'"
+    }
+   ],
+   [
+    {
+     "max_files": 0
+    },
+    {
+     "error": "ConfigError: easy: max_files and max_lines must be at least 1"
+    }
+   ],
+   [
+    {
+     "bogus": 1,
+     "aa": 2
+    },
+    {
+     "error": "ConfigError: easy: unknown keys aa, bogus"
+    }
+   ],
+   [
+    {
+     "off_limits": 5
+    },
+    {
+     "error": "ConfigError: easy: 'int' object is not iterable"
+    }
+   ],
+   [
+    {
+     "max_files": "7",
+     "max_lines": 9.9,
+     "off_limits": "ab",
+     "generated": [
+      "g/",
+      3
+     ]
+    },
+    {
+     "ok": [
+      7,
+      9,
+      [
+       "a",
+       "b"
+      ],
+      [
+       "g/",
+       "3"
+      ]
+     ]
+    }
+   ],
+   [
+    [],
+    {
+     "error": "ConfigError: easy: expected an object"
+    }
+   ],
+   [
+    {
+     "max_files": null
+    },
+    {
+     "error": "ConfigError: easy: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"
+    }
+   ]
+  ],
+  "gate": [
+   [
+    {
+     "name": "a",
+     "run": "b",
+     "timeout_minutes": 3
+    },
+    {
+     "ok": [
+      "a",
+      "b",
+      3,
+      true
+     ]
+    }
+   ],
+   [
+    {
+     "run": "b"
+    },
+    {
+     "error": "ConfigError: gates[0]: needs name, run and timeout_minutes ('name')"
+    }
+   ],
+   [
+    {
+     "name": "a",
+     "run": "b"
+    },
+    {
+     "error": "ConfigError: gates[0]: needs name, run and timeout_minutes ('timeout_minutes')"
+    }
+   ],
+   [
+    {
+     "name": "a",
+     "run": "b",
+     "timeout_minutes": "x"
+    },
+    {
+     "error": "ConfigError: gates[0]: needs name, run and timeout_minutes (invalid literal for int() with base 10: 'x')"
+    }
+   ],
+   [
+    {
+     "name": 1,
+     "run": null,
+     "timeout_minutes": "4",
+     "machine": 0
+    },
+    {
+     "ok": [
+      "1",
+      "None",
+      4,
+      false
+     ]
+    }
+   ],
+   [
+    "nope",
+    {
+     "error": "ConfigError: gates[0]: expected an object"
+    }
+   ]
+  ],
+  "resolvers": [
+   [
+    [],
+    {
+     "ok": []
+    }
+   ],
+   [
+    {},
+    {
+     "error": "ConfigError: resolvers: expected a list"
+    }
+   ],
+   [
+    [
+     1
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: expected an object"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "take": "main"
+     }
+    ],
+    {
+     "ok": [
+      [
+       "a",
+       "main",
+       "",
+       10
+      ]
+     ]
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "bogus": 1
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: unknown keys bogus"
+    }
+   ],
+   [
+    [
+     {
+      "path": 3
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: `path`, `take` and `run` are strings"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a/*.md",
+      "take": "main"
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: `path` must name one file by its plain repository path, with no glob"
+    }
+   ],
+   [
+    [
+     {
+      "path": "/a",
+      "take": "main"
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: `path` must name one file by its plain repository path, with no glob"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a//b",
+      "take": "main"
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: `path` must name one file by its plain repository path, with no glob"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "take": "main",
+      "run": "x"
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: give exactly one of `take` and `run`"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a"
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: give exactly one of `take` and `run`"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "take": "theirs"
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: `take` is one of main"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "take": "main",
+      "timeout_minutes": 3
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: `timeout_minutes` is for a `run` resolver"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "run": "x",
+      "timeout_minutes": true
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: timeout_minutes must be a whole number of at least 1"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "run": "x",
+      "timeout_minutes": 2.0
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: timeout_minutes must be a whole number of at least 1"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "run": "x",
+      "timeout_minutes": 0
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[0]: timeout_minutes must be a whole number of at least 1"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "take": "main"
+     },
+     {
+      "path": "a",
+      "run": "x"
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[1]: a has a resolver already"
+    }
+   ],
+   [
+    [
+     {
+      "path": "a",
+      "run": "x"
+     },
+     {
+      "path": "b",
+      "run": "y"
+     }
+    ],
+    {
+     "error": "ConfigError: resolvers[1]: one `run` resolver at most"
+    }
+   ],
+   [
+    [
+     {
+      "path": " a/b ",
+      "run": " x ",
+      "timeout_minutes": 4
+     },
+     {
+      "path": "c",
+      "take": "main"
+     }
+    ],
+    {
+     "ok": [
+      [
+       "a/b",
+       "",
+       "x",
+       4
+      ],
+      [
+       "c",
+       "main",
+       "",
+       10
+      ]
+     ]
+    }
+   ]
+  ],
+  "priorities": [
+   [
+    {},
+    {
+     "ok": {}
+    }
+   ],
+   [
+    [],
+    {
+     "error": "ConfigError: suggestions.priorities: expected an object"
+    }
+   ],
+   [
+    {
+     "fuzz": "low"
+    },
+    {
+     "ok": {
+      "fuzz": "low"
+     }
+    }
+   ],
+   [
+    {
+     "zzz": "low",
+     "aaa": "high"
+    },
+    {
+     "error": "ConfigError: suggestions.priorities: unknown classes aaa, zzz (known: fuzz, checks, telemetry, refactor, ai, fairness, security, data, polish, feature)"
+    }
+   ],
+   [
+    {
+     "fuzz": "urgent",
+     "data": null,
+     "ai": 1.0
+    },
+    {
+     "error": "ConfigError: suggestions.priorities: ai: 1.0; data: None; fuzz: 'urgent' is not one of high, medium, low"
+    }
+   ]
+  ],
+  "quiet": [
+   [
+    {},
+    {
+     "ok": [
+      true,
+      10,
+      120,
+      "haiku",
+      []
+     ]
+    }
+   ],
+   [
+    [],
+    {
+     "error": "ConfigError: quiet: expected an object"
+    }
+   ],
+   [
+    {
+     "interval_minutes": 0
+    },
+    {
+     "error": "ConfigError: quiet.interval_minutes: must be at least 1"
+    }
+   ],
+   [
+    {
+     "partners": [
+      {
+       "repo": "o/r",
+       "workflows": {
+        "w.yml": [
+         "a",
+         "b"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "ok": [
+      true,
+      10,
+      120,
+      "haiku",
+      [
+       [
+        "o/r",
+        {
+         "w.yml": [
+          "a",
+          "b"
+         ]
+        }
+       ]
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "partners": [
+      {
+       "repo": "o/r"
+      }
+     ]
+    },
+    {
+     "error": "ConfigError: quiet.partners[0]: needs repo and workflows ('workflows')"
+    }
+   ],
+   [
+    {
+     "partners": [
+      {
+       "workflows": {}
+      }
+     ]
+    },
+    {
+     "error": "ConfigError: quiet.partners[0]: needs repo and workflows ('repo')"
+    }
+   ],
+   [
+    {
+     "partners": [
+      5
+     ]
+    },
+    {
+     "error": "ConfigError: quiet.partners[0]: needs repo and workflows ('int' object is not subscriptable)"
+    }
+   ],
+   [
+    {
+     "partners": [
+      "ab"
+     ]
+    },
+    {
+     "error": "ConfigError: quiet.partners[0]: needs repo and workflows (string indices must be integers, not 'str')"
+    }
+   ],
+   [
+    {
+     "partners": [
+      {
+       "repo": "x",
+       "workflows": [
+        [
+         "w",
+         "ab"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "ok": [
+      true,
+      10,
+      120,
+      "haiku",
+      [
+       [
+        "x",
+        {
+         "w": [
+          "a",
+          "b"
+         ]
+        }
+       ]
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "partners": [
+      {
+       "repo": "x",
+       "workflows": {
+        "w": 3
+       }
+      }
+     ]
+    },
+    {
+     "error": "ConfigError: quiet.partners[0]: needs repo and workflows ('int' object is not iterable)"
+    }
+   ],
+   [
+    {
+     "partners": 5
+    },
+    {
+     "error": "TypeError: 'int' object is not iterable"
+    }
+   ],
+   [
+    {
+     "enabled": null,
+     "interval_minutes": "5",
+     "max_wait_minutes": 7.5,
+     "ping_model": 3
+    },
+    {
+     "ok": [
+      false,
+      5,
+      7,
+      "3",
+      []
+     ]
+    }
+   ]
+  ],
+  "review_cycles": [
+   [
+    3,
+    {
+     "ok": [
+      [
+       "hard",
+       3
+      ],
+      [
+       "medium",
+       3
+      ],
+      [
+       "easy",
+       3
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "hard": 1,
+     "medium": 2,
+     "easy": 3
+    },
+    {
+     "ok": [
+      [
+       "hard",
+       1
+      ],
+      [
+       "medium",
+       2
+      ],
+      [
+       "easy",
+       3
+      ]
+     ]
+    }
+   ],
+   [
+    {
+     "hard": 1
+    },
+    {
+     "error": "ConfigError: max_review_cycles: missing medium, easy"
+    }
+   ],
+   [
+    "4",
+    {
+     "ok": [
+      [
+       "hard",
+       4
+      ],
+      [
+       "medium",
+       4
+      ],
+      [
+       "easy",
+       4
+      ]
+     ]
+    }
+   ],
+   [
+    null,
+    {
+     "error": "TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"
+    }
+   ],
+   [
+    {
+     "hard": "x",
+     "medium": 1,
+     "easy": 1
+    },
+    {
+     "error": "ValueError: invalid literal for int() with base 10: 'x'"
+    }
+   ]
+  ]
+ },
+ "parse_errors": [
+  [
+   {
+    "default_branch": "main",
+    "bot_login": "jgoetzmann-bot",
+    "bot_user_id": 324324626,
+    "operator": "jgoetzmann",
+    "timezone": "America/Chicago",
+    "identity": {
+     "modes": [
+      "fullsend"
+     ],
+     "others": [
+      {
+       "name": "Squishy",
+       "login": "squishy-squooby",
+       "label_prefix": "squishy:",
+       "home": ".squishy",
+       "token_env": "SQUISHY_GITHUB_TOKEN",
+       "workflow": "squishy-run.yml"
+      }
+     ]
+    },
+    "max_turns": {
+     "plan": 150,
+     "build": 400,
+     "fix": 300,
+     "revise": 300,
+     "review": 100,
+     "suggest": 120
+    },
+    "call_timeout_minutes": 150,
+    "job_budget_minutes": 330,
+    "min_minutes_for_a_call": 25,
+    "max_review_cycles": {
+     "hard": 10,
+     "medium": 3,
+     "easy": 3
+    },
+    "max_self_check_rounds": 3,
+    "controller": true,
+    "easy": {
+     "max_files": 10,
+     "max_lines": 400,
+     "off_limits": [
+      "SPEC.md",
+      "spec/",
+      "BUILD.md",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
+      "e2e/"
+     ],
+     "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+     ]
+    },
+    "max_failures": 3,
+    "auto_merge": true,
+    "merge_method": "squash",
+    "ci_workflow": "CI",
+    "required_checks": [
+     "rust",
+     "web",
+     "e2e smoke",
+     "db",
+     "bot selftest"
+    ],
+    "ci_reruns": 1,
+    "suggestions": {
+     "enabled": true,
+     "max_open": 10,
+     "idle_minutes": 30,
+     "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+     }
+    },
+    "quiet": {
+     "enabled": true,
+     "interval_minutes": 10,
+     "max_wait_minutes": 120,
+     "ping_model": "haiku",
+     "partners": [
+      {
+       "repo": "jgoetzmann/bright-bots-harness",
+       "workflows": {
+        "implement.yml": [
+         "Run planned items"
+        ],
+        "discover.yml": [
+         "Discover and propose"
+        ],
+        "feedback.yml": [
+         "Sweep keywords",
+         "Reconcile stale"
+        ]
+       }
+      }
+     ]
+    },
+    "forbidden_paths": [
+     ".github/",
+     ".harness/",
+     ".squishy/",
+     "bot/",
+     ".claude/",
+     ".mcp.json",
+     ".vscode/",
+     ".devcontainer/",
+     ".husky/",
+     ".gitattributes",
+     ".gitmodules"
+    ],
+    "review_paths": [
+     "package.json",
+     "pnpm-lock.yaml",
+     "pnpm-workspace.yaml",
+     ".npmrc",
+     ".nvmrc",
+     "Cargo.toml",
+     "Cargo.lock",
+     "rust-toolchain.toml",
+     "rustfmt.toml",
+     "clippy.toml",
+     "build.rs",
+     ".cargo/",
+     "vitest.config.*",
+     "vitest.workspace.*",
+     "vite.config.*",
+     "eslint.config.*",
+     "tsconfig*.json",
+     "cypress.config.*",
+     "scripts/",
+     "vercel.json",
+     "render.yaml",
+     "crates/server/Dockerfile",
+     "crates/server/migrations/"
+    ],
+    "upload_transcripts": false,
+    "install": {
+     "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+     "timeout_minutes": 20
+    },
+    "gates": [
+     {
+      "name": "rustfmt",
+      "run": "cargo fmt --check",
+      "timeout_minutes": 5
+     },
+     {
+      "name": "catalog",
+      "run": "cargo jackioh catalog check",
+      "timeout_minutes": 20
+     },
+     {
+      "name": "patches",
+      "run": "cargo jackioh patches check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "rulings",
+      "run": "cargo jackioh spec check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "clippy",
+      "run": "cargo clippy --workspace --all-targets -- -D warnings",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "cargo tests",
+      "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "web tests",
+      "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+      "timeout_minutes": 20,
+      "machine": false
+     }
+    ],
+    "resolvers": [
+     {
+      "path": "spec/INDEX.md",
+      "take": "main"
+     },
+     {
+      "path": "crates/engine/tests/golden/games.jsonl",
+      "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl",
+      "timeout_minutes": 20
+     }
+    ]
+   },
+   "ConfigError: .harness/config.json: missing keys repo"
+  ],
+  [
+   {
+    "repo": "jgoetzmann/JackiOh",
+    "default_branch": "main",
+    "bot_login": "jgoetzmann-bot",
+    "bot_user_id": 324324626,
+    "operator": "jgoetzmann",
+    "timezone": "America/Chicago",
+    "identity": {
+     "modes": [
+      "fullsend"
+     ],
+     "others": [
+      {
+       "name": "Squishy",
+       "login": "squishy-squooby",
+       "label_prefix": "squishy:",
+       "home": ".squishy",
+       "token_env": "SQUISHY_GITHUB_TOKEN",
+       "workflow": "squishy-run.yml"
+      }
+     ]
+    },
+    "max_turns": {
+     "plan": 150,
+     "build": 400,
+     "fix": 300,
+     "revise": 300,
+     "review": 100,
+     "suggest": 120
+    },
+    "call_timeout_minutes": 150,
+    "job_budget_minutes": 330,
+    "min_minutes_for_a_call": 25,
+    "max_review_cycles": {
+     "hard": 10,
+     "medium": 3,
+     "easy": 3
+    },
+    "max_self_check_rounds": 3,
+    "controller": true,
+    "easy": {
+     "max_files": 10,
+     "max_lines": 400,
+     "off_limits": [
+      "SPEC.md",
+      "spec/",
+      "BUILD.md",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
+      "e2e/"
+     ],
+     "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+     ]
+    },
+    "max_failures": 3,
+    "auto_merge": true,
+    "merge_method": "squash",
+    "ci_workflow": "CI",
+    "required_checks": [
+     "rust",
+     "web",
+     "e2e smoke",
+     "db",
+     "bot selftest"
+    ],
+    "ci_reruns": 1,
+    "suggestions": {
+     "enabled": true,
+     "max_open": 10,
+     "idle_minutes": 30,
+     "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+     }
+    },
+    "quiet": {
+     "enabled": true,
+     "interval_minutes": 10,
+     "max_wait_minutes": 120,
+     "ping_model": "haiku",
+     "partners": [
+      {
+       "repo": "jgoetzmann/bright-bots-harness",
+       "workflows": {
+        "implement.yml": [
+         "Run planned items"
+        ],
+        "discover.yml": [
+         "Discover and propose"
+        ],
+        "feedback.yml": [
+         "Sweep keywords",
+         "Reconcile stale"
+        ]
+       }
+      }
+     ]
+    },
+    "forbidden_paths": [
+     ".github/",
+     ".harness/",
+     ".squishy/",
+     "bot/",
+     ".claude/",
+     ".mcp.json",
+     ".vscode/",
+     ".devcontainer/",
+     ".husky/",
+     ".gitattributes",
+     ".gitmodules"
+    ],
+    "review_paths": [
+     "package.json",
+     "pnpm-lock.yaml",
+     "pnpm-workspace.yaml",
+     ".npmrc",
+     ".nvmrc",
+     "Cargo.toml",
+     "Cargo.lock",
+     "rust-toolchain.toml",
+     "rustfmt.toml",
+     "clippy.toml",
+     "build.rs",
+     ".cargo/",
+     "vitest.config.*",
+     "vitest.workspace.*",
+     "vite.config.*",
+     "eslint.config.*",
+     "tsconfig*.json",
+     "cypress.config.*",
+     "scripts/",
+     "vercel.json",
+     "render.yaml",
+     "crates/server/Dockerfile",
+     "crates/server/migrations/"
+    ],
+    "upload_transcripts": false,
+    "install": {
+     "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+     "timeout_minutes": 20
+    },
+    "gates": [
+     {
+      "name": "rustfmt",
+      "run": "cargo fmt --check",
+      "timeout_minutes": 5
+     },
+     {
+      "name": "catalog",
+      "run": "cargo jackioh catalog check",
+      "timeout_minutes": 20
+     },
+     {
+      "name": "patches",
+      "run": "cargo jackioh patches check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "rulings",
+      "run": "cargo jackioh spec check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "clippy",
+      "run": "cargo clippy --workspace --all-targets -- -D warnings",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "cargo tests",
+      "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "web tests",
+      "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+      "timeout_minutes": 20,
+      "machine": false
+     }
+    ],
+    "resolvers": [
+     {
+      "path": "spec/INDEX.md",
+      "take": "main"
+     },
+     {
+      "path": "crates/engine/tests/golden/games.jsonl",
+      "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl",
+      "timeout_minutes": 20
+     }
+    ],
+    "bogus": 1
+   },
+   "ConfigError: .harness/config.json: unknown keys bogus"
+  ],
+  [
+   {
+    "repo": "jgoetzmann/JackiOh",
+    "default_branch": "main",
+    "bot_login": "jgoetzmann-bot",
+    "bot_user_id": 324324626,
+    "operator": "jgoetzmann",
+    "timezone": "America/Chicago",
+    "identity": {
+     "modes": [
+      "fullsend"
+     ],
+     "others": [
+      {
+       "name": "Squishy",
+       "login": "squishy-squooby",
+       "label_prefix": "squishy:",
+       "home": ".squishy",
+       "token_env": "SQUISHY_GITHUB_TOKEN",
+       "workflow": "squishy-run.yml"
+      }
+     ]
+    },
+    "max_turns": {
+     "plan": 1
+    },
+    "call_timeout_minutes": 150,
+    "job_budget_minutes": 330,
+    "min_minutes_for_a_call": 25,
+    "max_review_cycles": {
+     "hard": 10,
+     "medium": 3,
+     "easy": 3
+    },
+    "max_self_check_rounds": 3,
+    "controller": true,
+    "easy": {
+     "max_files": 10,
+     "max_lines": 400,
+     "off_limits": [
+      "SPEC.md",
+      "spec/",
+      "BUILD.md",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
+      "e2e/"
+     ],
+     "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+     ]
+    },
+    "max_failures": 3,
+    "auto_merge": true,
+    "merge_method": "squash",
+    "ci_workflow": "CI",
+    "required_checks": [
+     "rust",
+     "web",
+     "e2e smoke",
+     "db",
+     "bot selftest"
+    ],
+    "ci_reruns": 1,
+    "suggestions": {
+     "enabled": true,
+     "max_open": 10,
+     "idle_minutes": 30,
+     "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+     }
+    },
+    "quiet": {
+     "enabled": true,
+     "interval_minutes": 10,
+     "max_wait_minutes": 120,
+     "ping_model": "haiku",
+     "partners": [
+      {
+       "repo": "jgoetzmann/bright-bots-harness",
+       "workflows": {
+        "implement.yml": [
+         "Run planned items"
+        ],
+        "discover.yml": [
+         "Discover and propose"
+        ],
+        "feedback.yml": [
+         "Sweep keywords",
+         "Reconcile stale"
+        ]
+       }
+      }
+     ]
+    },
+    "forbidden_paths": [
+     ".github/",
+     ".harness/",
+     ".squishy/",
+     "bot/",
+     ".claude/",
+     ".mcp.json",
+     ".vscode/",
+     ".devcontainer/",
+     ".husky/",
+     ".gitattributes",
+     ".gitmodules"
+    ],
+    "review_paths": [
+     "package.json",
+     "pnpm-lock.yaml",
+     "pnpm-workspace.yaml",
+     ".npmrc",
+     ".nvmrc",
+     "Cargo.toml",
+     "Cargo.lock",
+     "rust-toolchain.toml",
+     "rustfmt.toml",
+     "clippy.toml",
+     "build.rs",
+     ".cargo/",
+     "vitest.config.*",
+     "vitest.workspace.*",
+     "vite.config.*",
+     "eslint.config.*",
+     "tsconfig*.json",
+     "cypress.config.*",
+     "scripts/",
+     "vercel.json",
+     "render.yaml",
+     "crates/server/Dockerfile",
+     "crates/server/migrations/"
+    ],
+    "upload_transcripts": false,
+    "install": {
+     "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+     "timeout_minutes": 20
+    },
+    "gates": [
+     {
+      "name": "rustfmt",
+      "run": "cargo fmt --check",
+      "timeout_minutes": 5
+     },
+     {
+      "name": "catalog",
+      "run": "cargo jackioh catalog check",
+      "timeout_minutes": 20
+     },
+     {
+      "name": "patches",
+      "run": "cargo jackioh patches check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "rulings",
+      "run": "cargo jackioh spec check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "clippy",
+      "run": "cargo clippy --workspace --all-targets -- -D warnings",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "cargo tests",
+      "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "web tests",
+      "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+      "timeout_minutes": 20,
+      "machine": false
+     }
+    ],
+    "resolvers": [
+     {
+      "path": "spec/INDEX.md",
+      "take": "main"
+     },
+     {
+      "path": "crates/engine/tests/golden/games.jsonl",
+      "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl",
+      "timeout_minutes": 20
+     }
+    ]
+   },
+   "ConfigError: max_turns: missing build, fix, revise, review, suggest"
+  ],
+  [
+   {
+    "repo": "jgoetzmann/JackiOh",
+    "default_branch": "main",
+    "bot_login": "jgoetzmann-bot",
+    "bot_user_id": 324324626,
+    "operator": "jgoetzmann",
+    "timezone": "America/Chicago",
+    "identity": {
+     "modes": [
+      "fullsend"
+     ],
+     "others": [
+      {
+       "name": "Squishy",
+       "login": "squishy-squooby",
+       "label_prefix": "squishy:",
+       "home": ".squishy",
+       "token_env": "SQUISHY_GITHUB_TOKEN",
+       "workflow": "squishy-run.yml"
+      }
+     ]
+    },
+    "max_turns": {
+     "plan": 150,
+     "build": 400,
+     "fix": 300,
+     "revise": 300,
+     "review": 100,
+     "suggest": 120
+    },
+    "call_timeout_minutes": 150,
+    "job_budget_minutes": 330,
+    "min_minutes_for_a_call": 25,
+    "max_review_cycles": {
+     "hard": 10,
+     "medium": 3,
+     "easy": 3
+    },
+    "max_self_check_rounds": 3,
+    "controller": true,
+    "easy": {
+     "max_files": 10,
+     "max_lines": 400,
+     "off_limits": [
+      "SPEC.md",
+      "spec/",
+      "BUILD.md",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
+      "e2e/"
+     ],
+     "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+     ]
+    },
+    "max_failures": 3,
+    "auto_merge": true,
+    "merge_method": "ff",
+    "ci_workflow": "CI",
+    "required_checks": [
+     "rust",
+     "web",
+     "e2e smoke",
+     "db",
+     "bot selftest"
+    ],
+    "ci_reruns": 1,
+    "suggestions": {
+     "enabled": true,
+     "max_open": 10,
+     "idle_minutes": 30,
+     "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+     }
+    },
+    "quiet": {
+     "enabled": true,
+     "interval_minutes": 10,
+     "max_wait_minutes": 120,
+     "ping_model": "haiku",
+     "partners": [
+      {
+       "repo": "jgoetzmann/bright-bots-harness",
+       "workflows": {
+        "implement.yml": [
+         "Run planned items"
+        ],
+        "discover.yml": [
+         "Discover and propose"
+        ],
+        "feedback.yml": [
+         "Sweep keywords",
+         "Reconcile stale"
+        ]
+       }
+      }
+     ]
+    },
+    "forbidden_paths": [
+     ".github/",
+     ".harness/",
+     ".squishy/",
+     "bot/",
+     ".claude/",
+     ".mcp.json",
+     ".vscode/",
+     ".devcontainer/",
+     ".husky/",
+     ".gitattributes",
+     ".gitmodules"
+    ],
+    "review_paths": [
+     "package.json",
+     "pnpm-lock.yaml",
+     "pnpm-workspace.yaml",
+     ".npmrc",
+     ".nvmrc",
+     "Cargo.toml",
+     "Cargo.lock",
+     "rust-toolchain.toml",
+     "rustfmt.toml",
+     "clippy.toml",
+     "build.rs",
+     ".cargo/",
+     "vitest.config.*",
+     "vitest.workspace.*",
+     "vite.config.*",
+     "eslint.config.*",
+     "tsconfig*.json",
+     "cypress.config.*",
+     "scripts/",
+     "vercel.json",
+     "render.yaml",
+     "crates/server/Dockerfile",
+     "crates/server/migrations/"
+    ],
+    "upload_transcripts": false,
+    "install": {
+     "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+     "timeout_minutes": 20
+    },
+    "gates": [
+     {
+      "name": "rustfmt",
+      "run": "cargo fmt --check",
+      "timeout_minutes": 5
+     },
+     {
+      "name": "catalog",
+      "run": "cargo jackioh catalog check",
+      "timeout_minutes": 20
+     },
+     {
+      "name": "patches",
+      "run": "cargo jackioh patches check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "rulings",
+      "run": "cargo jackioh spec check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "clippy",
+      "run": "cargo clippy --workspace --all-targets -- -D warnings",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "cargo tests",
+      "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "web tests",
+      "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+      "timeout_minutes": 20,
+      "machine": false
+     }
+    ],
+    "resolvers": [
+     {
+      "path": "spec/INDEX.md",
+      "take": "main"
+     },
+     {
+      "path": "crates/engine/tests/golden/games.jsonl",
+      "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl",
+      "timeout_minutes": 20
+     }
+    ]
+   },
+   "ConfigError: merge_method: 'ff' is not squash, merge or rebase"
+  ],
+  [
+   {
+    "repo": "jgoetzmann/JackiOh",
+    "default_branch": "main",
+    "bot_login": "jgoetzmann-bot",
+    "bot_user_id": 324324626,
+    "operator": "jgoetzmann",
+    "timezone": "America/Chicago",
+    "identity": {
+     "modes": [
+      "fullsend"
+     ],
+     "others": [
+      {
+       "name": "Squishy",
+       "login": "squishy-squooby",
+       "label_prefix": "squishy:",
+       "home": ".squishy",
+       "token_env": "SQUISHY_GITHUB_TOKEN",
+       "workflow": "squishy-run.yml"
+      }
+     ]
+    },
+    "max_turns": {
+     "plan": 150,
+     "build": 400,
+     "fix": 300,
+     "revise": 300,
+     "review": 100,
+     "suggest": 120
+    },
+    "call_timeout_minutes": 150,
+    "job_budget_minutes": 330,
+    "min_minutes_for_a_call": 25,
+    "max_review_cycles": {
+     "hard": 10,
+     "medium": 3,
+     "easy": 3
+    },
+    "max_self_check_rounds": 3,
+    "controller": true,
+    "easy": {
+     "max_files": 10,
+     "max_lines": 400,
+     "off_limits": [
+      "SPEC.md",
+      "spec/",
+      "BUILD.md",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
+      "e2e/"
+     ],
+     "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+     ]
+    },
+    "max_failures": 3,
+    "auto_merge": true,
+    "merge_method": 3,
+    "ci_workflow": "CI",
+    "required_checks": [
+     "rust",
+     "web",
+     "e2e smoke",
+     "db",
+     "bot selftest"
+    ],
+    "ci_reruns": 1,
+    "suggestions": {
+     "enabled": true,
+     "max_open": 10,
+     "idle_minutes": 30,
+     "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+     }
+    },
+    "quiet": {
+     "enabled": true,
+     "interval_minutes": 10,
+     "max_wait_minutes": 120,
+     "ping_model": "haiku",
+     "partners": [
+      {
+       "repo": "jgoetzmann/bright-bots-harness",
+       "workflows": {
+        "implement.yml": [
+         "Run planned items"
+        ],
+        "discover.yml": [
+         "Discover and propose"
+        ],
+        "feedback.yml": [
+         "Sweep keywords",
+         "Reconcile stale"
+        ]
+       }
+      }
+     ]
+    },
+    "forbidden_paths": [
+     ".github/",
+     ".harness/",
+     ".squishy/",
+     "bot/",
+     ".claude/",
+     ".mcp.json",
+     ".vscode/",
+     ".devcontainer/",
+     ".husky/",
+     ".gitattributes",
+     ".gitmodules"
+    ],
+    "review_paths": [
+     "package.json",
+     "pnpm-lock.yaml",
+     "pnpm-workspace.yaml",
+     ".npmrc",
+     ".nvmrc",
+     "Cargo.toml",
+     "Cargo.lock",
+     "rust-toolchain.toml",
+     "rustfmt.toml",
+     "clippy.toml",
+     "build.rs",
+     ".cargo/",
+     "vitest.config.*",
+     "vitest.workspace.*",
+     "vite.config.*",
+     "eslint.config.*",
+     "tsconfig*.json",
+     "cypress.config.*",
+     "scripts/",
+     "vercel.json",
+     "render.yaml",
+     "crates/server/Dockerfile",
+     "crates/server/migrations/"
+    ],
+    "upload_transcripts": false,
+    "install": {
+     "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+     "timeout_minutes": 20
+    },
+    "gates": [
+     {
+      "name": "rustfmt",
+      "run": "cargo fmt --check",
+      "timeout_minutes": 5
+     },
+     {
+      "name": "catalog",
+      "run": "cargo jackioh catalog check",
+      "timeout_minutes": 20
+     },
+     {
+      "name": "patches",
+      "run": "cargo jackioh patches check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "rulings",
+      "run": "cargo jackioh spec check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "clippy",
+      "run": "cargo clippy --workspace --all-targets -- -D warnings",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "cargo tests",
+      "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "web tests",
+      "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+      "timeout_minutes": 20,
+      "machine": false
+     }
+    ],
+    "resolvers": [
+     {
+      "path": "spec/INDEX.md",
+      "take": "main"
+     },
+     {
+      "path": "crates/engine/tests/golden/games.jsonl",
+      "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl",
+      "timeout_minutes": 20
+     }
+    ]
+   },
+   "ConfigError: merge_method: 3 is not squash, merge or rebase"
+  ],
+  [
+   {
+    "repo": "jgoetzmann/JackiOh",
+    "default_branch": "main",
+    "bot_login": "jgoetzmann-bot",
+    "bot_user_id": 324324626,
+    "operator": "jgoetzmann",
+    "timezone": "America/Chicago",
+    "identity": {
+     "modes": [
+      "fullsend"
+     ],
+     "others": [
+      {
+       "name": "Squishy",
+       "login": "squishy-squooby",
+       "label_prefix": "squishy:",
+       "home": ".squishy",
+       "token_env": "SQUISHY_GITHUB_TOKEN",
+       "workflow": "squishy-run.yml"
+      }
+     ]
+    },
+    "max_turns": {
+     "plan": 150,
+     "build": 400,
+     "fix": 300,
+     "revise": 300,
+     "review": 100,
+     "suggest": 120
+    },
+    "call_timeout_minutes": 150,
+    "job_budget_minutes": 330,
+    "min_minutes_for_a_call": 25,
+    "max_review_cycles": {
+     "hard": 10,
+     "medium": 3,
+     "easy": 3
+    },
+    "max_self_check_rounds": 3,
+    "controller": true,
+    "easy": {
+     "max_files": 10,
+     "max_lines": 400,
+     "off_limits": [
+      "SPEC.md",
+      "spec/",
+      "BUILD.md",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
+      "e2e/"
+     ],
+     "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+     ]
+    },
+    "max_failures": 3,
+    "auto_merge": true,
+    "merge_method": "squash",
+    "ci_workflow": "CI",
+    "required_checks": [
+     "rust",
+     "web",
+     "e2e smoke",
+     "db",
+     "bot selftest"
+    ],
+    "ci_reruns": 1,
+    "suggestions": {
+     "enabled": true,
+     "max_open": 10,
+     "idle_minutes": 30,
+     "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+     }
+    },
+    "quiet": {
+     "enabled": true,
+     "interval_minutes": 10,
+     "max_wait_minutes": 120,
+     "ping_model": "haiku",
+     "partners": [
+      {
+       "repo": "jgoetzmann/bright-bots-harness",
+       "workflows": {
+        "implement.yml": [
+         "Run planned items"
+        ],
+        "discover.yml": [
+         "Discover and propose"
+        ],
+        "feedback.yml": [
+         "Sweep keywords",
+         "Reconcile stale"
+        ]
+       }
+      }
+     ]
+    },
+    "forbidden_paths": [
+     ".github/",
+     ".harness/",
+     ".squishy/",
+     "bot/",
+     ".claude/",
+     ".mcp.json",
+     ".vscode/",
+     ".devcontainer/",
+     ".husky/",
+     ".gitattributes",
+     ".gitmodules"
+    ],
+    "review_paths": [
+     "package.json",
+     "pnpm-lock.yaml",
+     "pnpm-workspace.yaml",
+     ".npmrc",
+     ".nvmrc",
+     "Cargo.toml",
+     "Cargo.lock",
+     "rust-toolchain.toml",
+     "rustfmt.toml",
+     "clippy.toml",
+     "build.rs",
+     ".cargo/",
+     "vitest.config.*",
+     "vitest.workspace.*",
+     "vite.config.*",
+     "eslint.config.*",
+     "tsconfig*.json",
+     "cypress.config.*",
+     "scripts/",
+     "vercel.json",
+     "render.yaml",
+     "crates/server/Dockerfile",
+     "crates/server/migrations/"
+    ],
+    "upload_transcripts": false,
+    "install": {
+     "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+     "timeout_minutes": 20
+    },
+    "gates": [],
+    "resolvers": [
+     {
+      "path": "spec/INDEX.md",
+      "take": "main"
+     },
+     {
+      "path": "crates/engine/tests/golden/games.jsonl",
+      "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl",
+      "timeout_minutes": 20
+     }
+    ]
+   },
+   "ConfigError: gates: at least one gate is required"
+  ],
+  [
+   {
+    "repo": "jgoetzmann/JackiOh",
+    "default_branch": "main",
+    "bot_login": "jgoetzmann-bot",
+    "bot_user_id": 324324626,
+    "operator": "jgoetzmann",
+    "timezone": "America/Chicago",
+    "identity": {
+     "modes": [
+      "fullsend"
+     ],
+     "others": [
+      {
+       "name": "Squishy",
+       "login": "squishy-squooby",
+       "label_prefix": "squishy:",
+       "home": ".squishy",
+       "token_env": "SQUISHY_GITHUB_TOKEN",
+       "workflow": "squishy-run.yml"
+      }
+     ]
+    },
+    "max_turns": {
+     "plan": 150,
+     "build": 400,
+     "fix": 300,
+     "revise": 300,
+     "review": 100,
+     "suggest": 120
+    },
+    "call_timeout_minutes": 150,
+    "job_budget_minutes": 330,
+    "min_minutes_for_a_call": 25,
+    "max_review_cycles": {
+     "hard": 10,
+     "medium": 3,
+     "easy": 3
+    },
+    "max_self_check_rounds": 0,
+    "controller": true,
+    "easy": {
+     "max_files": 10,
+     "max_lines": 400,
+     "off_limits": [
+      "SPEC.md",
+      "spec/",
+      "BUILD.md",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
+      "e2e/"
+     ],
+     "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+     ]
+    },
+    "max_failures": 3,
+    "auto_merge": true,
+    "merge_method": "squash",
+    "ci_workflow": "CI",
+    "required_checks": [
+     "rust",
+     "web",
+     "e2e smoke",
+     "db",
+     "bot selftest"
+    ],
+    "ci_reruns": 1,
+    "suggestions": {
+     "enabled": true,
+     "max_open": 10,
+     "idle_minutes": 30,
+     "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+     }
+    },
+    "quiet": {
+     "enabled": true,
+     "interval_minutes": 10,
+     "max_wait_minutes": 120,
+     "ping_model": "haiku",
+     "partners": [
+      {
+       "repo": "jgoetzmann/bright-bots-harness",
+       "workflows": {
+        "implement.yml": [
+         "Run planned items"
+        ],
+        "discover.yml": [
+         "Discover and propose"
+        ],
+        "feedback.yml": [
+         "Sweep keywords",
+         "Reconcile stale"
+        ]
+       }
+      }
+     ]
+    },
+    "forbidden_paths": [
+     ".github/",
+     ".harness/",
+     ".squishy/",
+     "bot/",
+     ".claude/",
+     ".mcp.json",
+     ".vscode/",
+     ".devcontainer/",
+     ".husky/",
+     ".gitattributes",
+     ".gitmodules"
+    ],
+    "review_paths": [
+     "package.json",
+     "pnpm-lock.yaml",
+     "pnpm-workspace.yaml",
+     ".npmrc",
+     ".nvmrc",
+     "Cargo.toml",
+     "Cargo.lock",
+     "rust-toolchain.toml",
+     "rustfmt.toml",
+     "clippy.toml",
+     "build.rs",
+     ".cargo/",
+     "vitest.config.*",
+     "vitest.workspace.*",
+     "vite.config.*",
+     "eslint.config.*",
+     "tsconfig*.json",
+     "cypress.config.*",
+     "scripts/",
+     "vercel.json",
+     "render.yaml",
+     "crates/server/Dockerfile",
+     "crates/server/migrations/"
+    ],
+    "upload_transcripts": false,
+    "install": {
+     "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+     "timeout_minutes": 20
+    },
+    "gates": [
+     {
+      "name": "rustfmt",
+      "run": "cargo fmt --check",
+      "timeout_minutes": 5
+     },
+     {
+      "name": "catalog",
+      "run": "cargo jackioh catalog check",
+      "timeout_minutes": 20
+     },
+     {
+      "name": "patches",
+      "run": "cargo jackioh patches check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "rulings",
+      "run": "cargo jackioh spec check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "clippy",
+      "run": "cargo clippy --workspace --all-targets -- -D warnings",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "cargo tests",
+      "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "web tests",
+      "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+      "timeout_minutes": 20,
+      "machine": false
+     }
+    ],
+    "resolvers": [
+     {
+      "path": "spec/INDEX.md",
+      "take": "main"
+     },
+     {
+      "path": "crates/engine/tests/golden/games.jsonl",
+      "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl",
+      "timeout_minutes": 20
+     }
+    ]
+   },
+   "ConfigError: max_self_check_rounds: must be at least 1"
+  ],
+  [
+   {
+    "repo": "jgoetzmann/JackiOh",
+    "default_branch": "main",
+    "bot_login": "jgoetzmann-bot",
+    "bot_user_id": 324324626,
+    "operator": "jgoetzmann",
+    "timezone": "America/Chicago",
+    "identity": {
+     "modes": [
+      "fullsend"
+     ],
+     "others": [
+      {
+       "name": "Squishy",
+       "login": "squishy-squooby",
+       "label_prefix": "squishy:",
+       "home": ".squishy",
+       "token_env": "SQUISHY_GITHUB_TOKEN",
+       "workflow": "squishy-run.yml"
+      }
+     ]
+    },
+    "max_turns": 5,
+    "call_timeout_minutes": 150,
+    "job_budget_minutes": 330,
+    "min_minutes_for_a_call": 25,
+    "max_review_cycles": {
+     "hard": 10,
+     "medium": 3,
+     "easy": 3
+    },
+    "max_self_check_rounds": 3,
+    "controller": true,
+    "easy": {
+     "max_files": 10,
+     "max_lines": 400,
+     "off_limits": [
+      "SPEC.md",
+      "spec/",
+      "BUILD.md",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
+      "e2e/"
+     ],
+     "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+     ]
+    },
+    "max_failures": 3,
+    "auto_merge": true,
+    "merge_method": "squash",
+    "ci_workflow": "CI",
+    "required_checks": [
+     "rust",
+     "web",
+     "e2e smoke",
+     "db",
+     "bot selftest"
+    ],
+    "ci_reruns": 1,
+    "suggestions": {
+     "enabled": true,
+     "max_open": 10,
+     "idle_minutes": 30,
+     "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+     }
+    },
+    "quiet": {
+     "enabled": true,
+     "interval_minutes": 10,
+     "max_wait_minutes": 120,
+     "ping_model": "haiku",
+     "partners": [
+      {
+       "repo": "jgoetzmann/bright-bots-harness",
+       "workflows": {
+        "implement.yml": [
+         "Run planned items"
+        ],
+        "discover.yml": [
+         "Discover and propose"
+        ],
+        "feedback.yml": [
+         "Sweep keywords",
+         "Reconcile stale"
+        ]
+       }
+      }
+     ]
+    },
+    "forbidden_paths": [
+     ".github/",
+     ".harness/",
+     ".squishy/",
+     "bot/",
+     ".claude/",
+     ".mcp.json",
+     ".vscode/",
+     ".devcontainer/",
+     ".husky/",
+     ".gitattributes",
+     ".gitmodules"
+    ],
+    "review_paths": [
+     "package.json",
+     "pnpm-lock.yaml",
+     "pnpm-workspace.yaml",
+     ".npmrc",
+     ".nvmrc",
+     "Cargo.toml",
+     "Cargo.lock",
+     "rust-toolchain.toml",
+     "rustfmt.toml",
+     "clippy.toml",
+     "build.rs",
+     ".cargo/",
+     "vitest.config.*",
+     "vitest.workspace.*",
+     "vite.config.*",
+     "eslint.config.*",
+     "tsconfig*.json",
+     "cypress.config.*",
+     "scripts/",
+     "vercel.json",
+     "render.yaml",
+     "crates/server/Dockerfile",
+     "crates/server/migrations/"
+    ],
+    "upload_transcripts": false,
+    "install": {
+     "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+     "timeout_minutes": 20
+    },
+    "gates": [
+     {
+      "name": "rustfmt",
+      "run": "cargo fmt --check",
+      "timeout_minutes": 5
+     },
+     {
+      "name": "catalog",
+      "run": "cargo jackioh catalog check",
+      "timeout_minutes": 20
+     },
+     {
+      "name": "patches",
+      "run": "cargo jackioh patches check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "rulings",
+      "run": "cargo jackioh spec check",
+      "timeout_minutes": 10
+     },
+     {
+      "name": "clippy",
+      "run": "cargo clippy --workspace --all-targets -- -D warnings",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "cargo tests",
+      "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+      "timeout_minutes": 30,
+      "machine": false
+     },
+     {
+      "name": "web tests",
+      "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+      "timeout_minutes": 20,
+      "machine": false
+     }
+    ],
+    "resolvers": [
+     {
+      "path": "spec/INDEX.md",
+      "take": "main"
+     },
+     {
+      "path": "crates/engine/tests/golden/games.jsonl",
+      "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl",
+      "timeout_minutes": 20
+     }
+    ]
+   },
+   "TypeError: 'int' object is not iterable"
+  ],
+  [
+   {
+    "repo": "jgoetzmann/JackiOh",
+    "default_branch": "main",
+    "bot_login": "jgoetzmann-bot",
+    "bot_user_id": 324324626,
+    "operator": "jgoetzmann",
+    "timezone": "America/Chicago",
+    "identity": {
+     "modes": [
+      "fullsend"
+     ],
+     "others": [
+      {
+       "name": "Squishy",
+       "login": "squishy-squooby",
+       "label_prefix": "squishy:",
+       "home": ".squishy",
+       "token_env": "SQUISHY_GITHUB_TOKEN",
+       "workflow": "squishy-run.yml"
+      }
+     ]
+    },
+    "max_turns": {
+     "plan": 150,
+     "build": 400,
+     "fix": 300,
+     "revise": 300,
+     "review": 100,
+     "suggest": 120
+    },
+    "call_timeout_minutes": 150,
+    "job_budget_minutes": 330,
+    "min_minutes_for_a_call": 25,
+    "max_review_cycles": {
+     "hard": 10,
+     "medium": 3,
+     "easy": 3
+    },
+    "max_self_check_rounds": 3,
+    "controller": true,
+    "easy": {
+     "max_files": 10,
+     "max_lines": 400,
+     "off_limits": [
+      "SPEC.md",
+      "spec/",
+      "BUILD.md",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
+      "e2e/"
+     ],
+     "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+     ]
+    },
+    "max_failures": 3,
+    "auto_merge": true,
+    "merge_method": "squash",
+    "ci_workflow": "CI",
+    "required_checks": [
+     "rust",
+     "web",
+     "e2e smoke",
+     "db",
+     "bot selftest"
+    ],
+    "ci_reruns": 1,
+    "suggestions": {
+     "enabled": true,
+     "max_open": 10,
+     "idle_minutes": 30,
+     "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+     }
+    },
+    "quiet": {
+     "enabled": true,
+     "interval_minutes": 10,
+     "max_wait_minutes": 120,
+     "ping_model": "haiku",
+     "partners": [
+      {
+       "repo": "jgoetzmann/bright-bots-harness",
+       "workflows": {
+        "implement.yml": [
+         "Run planned items"
+        ],
+        "discover.yml": [
+         "Discover and propose"
+        ],
+        "feedback.yml": [
+         "Sweep keywords",
+         "Reconcile stale"
+        ]
+       }
+      }
+     ]
+    },
+    "forbidden_paths": [
+     ".github/",
+     ".harness/",
+     ".squishy/",
+     "bot/",
+     ".claude/",
+     ".mcp.json",
+     ".vscode/",
+     ".devcontainer/",
+     ".husky/",
+     ".gitattributes",
+     ".gitmodules"
+    ],
+    "review_paths": [
+     "package.json",
+     "pnpm-lock.yaml",
+     "pnpm-workspace.yaml",
+     ".npmrc",
+     ".nvmrc",
+     "Cargo.toml",
+     "Cargo.lock",
+     "rust-toolchain.toml",
+     "rustfmt.toml",
+     "clippy.toml",
+     "build.rs",
+     ".cargo/",
+     "vitest.config.*",
+     "vitest.workspace.*",
+     "vite.config.*",
+     "eslint.config.*",
+     "tsconfig*.json",
+     "cypress.config.*",
+     "scripts/",
+     "vercel.json",
+     "render.yaml",
+     "crates/server/Dockerfile",
+     "crates/server/migrations/"
+    ],
+    "upload_transcripts": false,
+    "install": {
+     "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+     "timeout_minutes": 20
+    },
+    "gates": 5,
+    "resolvers": [
+     {
+      "path": "spec/INDEX.md",
+      "take": "main"
+     },
+     {
+      "path": "crates/engine/tests/golden/games.jsonl",
+      "run": "cargo jackioh golden bless --file crates/engine/tests/golden/games.jsonl",
+      "timeout_minutes": 20
+     }
+    ]
+   },
+   "TypeError: 'int' object is not iterable"
+  ]
+ ],
+ "secret_keys": [
+  "BOT_GITHUB_TOKEN",
+  "SQUISHY_GITHUB_TOKEN",
+  "GITHUB_TOKEN",
+  "GH_TOKEN",
+  "HARNESS_PROVIDER_SECRET",
+  "CLAUDE_CODE_OAUTH_TOKEN",
+  "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "CLAUDE_CODE_OAUTH_TOKEN_5",
+  "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "CODEX_AUTH_JSON",
+  "MUSE_AUTH",
+  "CLAUDE_CODE_OAUTH_TOKEN_SQUISHY",
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
+  "OPENAI_API_KEY",
+  "CODEX_API_KEY",
+  "GEMINI_API_KEY",
+  "GOOGLE_API_KEY",
+  "META_API_KEY",
+  "ACTIONS_RUNTIME_TOKEN",
+  "ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+ ]
+}

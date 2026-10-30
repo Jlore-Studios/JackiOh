@@ -18,7 +18,7 @@ Keep:
 
 Aim to keep `CLAUDE.md` under 200 lines. A skill keeps a description that leads with the words a
 request would use. Its `SKILL.md` stays Markdown with only the frontmatter keys
-`bot/tests/test_skills.py` allows. Squishy may change `.claude/skills/`, but nothing else under
+`bot/go/tests/skills_test.go` allows. Squishy may change `.claude/skills/`, but nothing else under
 `.claude/`.
 
 ## Never
