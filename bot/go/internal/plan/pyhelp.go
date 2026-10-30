@@ -317,13 +317,8 @@ func priorityName(priority int) string {
 // difficultyIndex is DIFFICULTIES.index(difficulty).
 func difficultyIndex(difficulty string) int { return slices.Index(config.Difficulties, difficulty) }
 
-// candidates is queue.candidates(ctx, state, skipped). The Python extends `skipped` in place
-// with a line for each item it passes over; queue's stub takes a plain slice, which cannot, so
-// this is the one call to change once queue's port says how it hands the lines back.
+// candidates is queue.candidates(ctx, state, skipped): queue extends `skipped` in place with a
+// line for each item it passes over, as the Python does.
 func candidates(ctx *hctx.Context, state *pyjson.Object, skipped *[]string) []*queue.Candidate {
-	var given []string
-	if skipped != nil {
-		given = *skipped
-	}
-	return queue.Candidates(ctx, state, given, nil)
+	return queue.Candidates(ctx, state, skipped, nil)
 }
