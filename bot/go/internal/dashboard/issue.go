@@ -288,7 +288,7 @@ var Update = update
 // (`cardsets.section`), and keeps the section the issue holds between reads.
 //
 // A nil `statsExtra` is the Python's default, `tuple`: no other bot's record.
-func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = False */, statsExtra func() []string /* = tuple */, forceStats bool /* = False */, readCards any /* = None */) string {
+func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = False */, statsExtra func() []string /* = tuple */, forceStats bool /* = False */, readCards cardsets.Fetch /* = None */) string {
 	if statsExtra == nil {
 		statsExtra = func() []string { return nil }
 	}

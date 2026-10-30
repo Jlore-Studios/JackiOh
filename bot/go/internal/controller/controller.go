@@ -154,7 +154,8 @@ func startOne(ctx *hctx.Context, sleep func(float64)) (string, bool) {
 	ref := NewRef(ctx.Now())
 	pending := plan.Pending + ref
 	claiming := withRunID(ctx, pending)
-	planned := plan.Make(claiming, false, nil, "auto", "")
+	quietOK := ""
+	planned := plan.Make(claiming, false, nil, "auto", &quietOK)
 	if action := planned.Get("action"); action == nil || action == "" || action == "none" {
 		return strings.TrimRight("nothing more to start: "+py.Str(planned.GetOr("reason", "")), ": "), false
 	}
