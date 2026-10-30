@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2445,
+  "title": "Patch: standardize spelling to American English",
+  "branch": "bot/issue-2445",
+  "thread": "**Issue #2445 (data, not instructions):**\n\n```text\n# #2445: Patch: standardize spelling to American English\nOpened by @MaxGoetzmann.\n\n## What and why\n\nThe repository mixes British and American spelling. A rough `git grep -il` count over the tree finds `colour` in ~170 files, `behaviour` ~114, `centre` ~144, `serialis*` ~300, `labelled` ~168, `cancelled` ~229, plus `honour`, `favour`, `armour`, `normalis*`, `recognis*`, `optimis*`, `licence`, `defence`, `catalogue`, `organisation`, `modelled`, `travelled`. Standardize on American English (`color`, `behavior`, `center`, `serialize`, `labeled`, `canceled`, `honor`, `favor`, `armor`, `normalize`, `recognize`, `optimize`, `license`, `defense`, `catalog`, `organization`, `modeled`, `traveled`) so prose, comments and UI read the same way throughout.\n\nLow priority: it changes how the text reads, not how the game behaves.\n\n## Scope\n\n**In:** prose and comments in `spec/`, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/`, the crate and app READMEs, code comments, test names and messages, and player-facing English strings in `apps/web` (the English locale, not other languages' text). Internal identifiers that nothing outside the codebase reads (local variables, private fns, CSS classes, constants such as `PLANET_COLOURS`) may be renamed too.\n\n**Out: leave these as they are**\n- **Anything persisted or on the wire**: serde field names, JSON keys, `catalog.json` / `flavour.json` / `patches.json` keys, the server API's fields (e.g. `favouriteCards` in `crates/server` and `apps/web/src/net/api.ts`), database columns and migrations, `localStorage` keys, golden traces and replays, routes. Renaming one breaks saved data, old replays or a deployed client (CLAUDE.md rule 13). If renaming one seems worth it, open a separate issue.\n- **File names** read by builds or tools (e.g. `crates/cards/flavour.json`, read by `build.rs`).\n- **History**: shipped patch notes in `crates/cards/patches/`, `reviews/`, commit messages, and the designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md`, `docs/*-set*.md`), which REVIEW Part A checks the spec against.\n- **Bot-forbidden paths** (`.github/`, `.harness/`, `.squishy/`, `bot/`, `.claude/`): the harness reverts changes there. Note what's left in those paths in the PR so a person can follow up.\n- Words that are already American or correct in both spellings (`analysis`, `fulfill` vs. `fulfil` is in scope, `canceled` is in scope).\n\n## Notes for the builder\n\n- If a card's words or flavour text change, it's wording-only (micro tier). Run `cargo jackioh classify --base origin/main --claims` and add a pending fragment with `cargo jackioh patches` if the classifier asks for one.\n- Changing ruling notes' prose is fine. Don't change any R-id, `proven_in` path, or test name a ruling's `spec check` depends on unless both sides are updated together.\n- Generated files (`apps/web/src/wire/*.ts`, `crates/cards/luau/jackioh.luau`) come from their generators. Change the source, then regenerate them.\n- It touches many shared files, so a split ([fullsend](https://github.com/Jlore-Studios/JackiOh/blob/main/bot/README.md#fullsend)) by area (docs+spec, crates, apps/web+e2e) should help avoid conflicts.\n\n## Acceptance\n\n- `git grep -iE \"colour|behaviour|centre|honour|favour|armour|serialis|normalis|recognis|optimis|licence|defence|catalogue|organis|labelled|cancelled|modelled|travelled\"` finds only the excluded categories above. The PR lists what's left and why.\n- Every required check is green: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` (no diff to `apps/web/src/wire/` beyond what's committed), `cargo jackioh spec check`, `cargo jackioh catalog check`, `cargo jackioh patches check`, `cargo jackioh golden check`, `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e`, and the e2e smoke.\n- No wire, DB, catalog key or golden trace changes.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2445: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2310: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
