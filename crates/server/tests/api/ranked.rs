@@ -816,9 +816,9 @@ mod r640000_bots_on_the_ladder {
             "at": 5,
         }));
         record_result(&app, input).await.expect("recordResult");
-        let recorded = json_of(&q!(app, ranked_game("match-1")).expect("the rated record"));
+        let recorded = to_json(&q!(app, ranked_game("match-1")).expect("the rated record"));
         assert_eq!(recorded["sides"][1]["botId"], json!("bot-1"));
-        let body = json_of(
+        let body = to_json(
             &match_ranks(&app, "match-1", A)
                 .await
                 .expect("matchRanks")
@@ -1045,7 +1045,7 @@ mod r612_what_the_client_reads {
             }));
             record_result(&app, input).await.expect("recordResult");
         }
-        let recorded = json_of(&q!(app, ranked_game("match-1")).expect("the rated record"));
+        let recorded = to_json(&q!(app, ranked_game("match-1")).expect("the rated record"));
         let got = get(&app, "/api/matches/match-1/ranks", &token_a).await;
         assert_eq!(got.status, 200, "{}", got.text);
         for (side, index) in [("p1", 0), ("p2", 1)] {
@@ -1270,7 +1270,7 @@ mod r604_a_ranked_series_through_the_results_writer {
             .await
             .expect("matchRanks")
             .expect("a body");
-        assert!(json_of(&before)["seats"]["p1"].get("rankAfter").is_none());
+        assert!(to_json(&before)["seats"]["p1"].get("rankAfter").is_none());
         let input: RecordResultInput = from(json!({
             "matchId": "game-1",
             "seats": [
@@ -1282,8 +1282,8 @@ mod r604_a_ranked_series_through_the_results_writer {
             "at": 5,
         }));
         record_result(&app, input).await.expect("recordResult");
-        let recorded = json_of(&q!(app, ranked_game("series-1")).expect("the series' record"));
-        let after = json_of(
+        let recorded = to_json(&q!(app, ranked_game("series-1")).expect("the series' record"));
+        let after = to_json(
             &match_ranks(&app, "game-1", A)
                 .await
                 .expect("matchRanks")
@@ -1300,7 +1300,7 @@ mod r604_a_ranked_series_through_the_results_writer {
             );
         }
         assert!(after["seats"]["p1"]["rankAfter"].is_object());
-        let earlier = json_of(
+        let earlier = to_json(
             &match_ranks(&app, "g-b", A)
                 .await
                 .expect("matchRanks")
