@@ -426,7 +426,9 @@ func NewWorker(cfg *config.Config, plan *pyjson.Object, runner any, repoDir stri
 	x.Deadline = x.Started.Add(time.Duration(cfg.JobBudgetMinutes) * time.Minute)
 	x.Templates = map[string]string{}
 	for _, name := range prompts.Names {
-		x.Templates[name] = templateText(prompts.Load(name, promptsDir()))
+		template, err := prompts.Load(name, promptsDir())
+		herr.Must(err)
+		x.Templates[name] = template.Template
 	}
 	name := py.Str(config.Name)
 	who := name + ", a bot"

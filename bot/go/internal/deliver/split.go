@@ -152,10 +152,10 @@ func (x *Deliverer) SplitOut(number int) {
 	if !x.Labels(number)[labelTree()] {
 		x.GH.AddLabels(number, []string{labelTree()})
 	}
-	pairs := make([][]any, len(made))
+	pairs := make([]splitmod.Made, len(made))
 	children := make([]int, len(made))
 	for i, m := range made {
-		pairs[i] = []any{m.issue, m.child}
+		pairs[i] = splitmod.Made{Issue: m.issue, Number: m.child}
 		children[i] = m.child
 	}
 	x.GH.CreateComment(number, splitmod.Checklist(number, pairs, builder, tree.Summary, x.link(), onto))

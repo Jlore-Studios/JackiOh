@@ -55,7 +55,12 @@ func schedule(raw any, where string) *Schedule {
 		if exc == "" {
 			start, end = py.Str(obj.Get("start")), py.Str(obj.Get("end"))
 			// clock.parse_hhmm raises ValueError, whose text goes into the message.
-			if err := herr.Try(func() { clock.ParseHhmm(start); clock.ParseHhmm(end) }); err != nil {
+			if err := herr.Try(func() {
+				for _, text := range []string{start, end} {
+					_, perr := clock.ParseHhmm(text)
+					herr.Must(perr)
+				}
+			}); err != nil {
 				exc = err.Error()
 			}
 		}
@@ -229,7 +234,11 @@ func lateWeek(raw any, where string) *LateWeek {
 		configError(`%s.from: %s is not a weekday and a time ("Sun 17:00")`, where, py.Repr(obj.Get("from")))
 	}
 	var start clock.TimeOfDay
-	if err := herr.Try(func() { start = clock.ParseHhmm(found[2]) }); err != nil {
+	if err := herr.Try(func() {
+		var perr error
+		start, perr = clock.ParseHhmm(found[2])
+		herr.Must(perr)
+	}); err != nil {
 		configError("%s.from: %s: %s", where, py.Repr(obj.Get("from")), err.Error())
 	}
 	return &LateWeek{

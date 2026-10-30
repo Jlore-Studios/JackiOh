@@ -1117,7 +1117,7 @@ func CmdDoctor(cfg *config.Config, args *Args) int {
 	for _, p := range ctx.Trust.Problems {
 		errs = append(errs, "trust: "+p)
 	}
-	if ctx.Trust.Entries.Len() == 0 {
+	if len(ctx.Trust.Entries) == 0 {
 		errs = append(errs, "trust: nobody is on .harness/trust.txt")
 	} else {
 		ok = append(ok, "trust: "+strings.Join(ctx.Trust.Logins(), ", "))

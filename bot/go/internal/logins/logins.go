@@ -288,8 +288,10 @@ func Seal(login *Login) string {
 		return true
 	})
 	redact.Remember(found)
-	return vault.Seal(pyjson.New("provider", login.Provider, "at", clock.ISO(clock.Now("")),
+	sealed, err := vault.Seal(pyjson.New("provider", login.Provider, "at", clock.ISO(clock.Now("")),
 		"files", current), login.Secret)
+	herr.Must(err)
+	return sealed
 }
 
 // same is `current == initial` between two dicts of text.

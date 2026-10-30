@@ -205,8 +205,12 @@ func finding(raw any) *verdicts.Finding {
 func CheckTemplates() []string {
 	problems := []string{}
 	for _, name := range prompts.Names {
-		var template any
-		if err := herr.Try(func() { template = prompts.Load(name, promptsDir()) }); err != nil {
+		var template *prompts.Template
+		if err := herr.Try(func() {
+			var perr error
+			template, perr = prompts.Load(name, promptsDir())
+			herr.Must(perr)
+		}); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				problems = append(problems, "prompts/"+name+".md is missing")
 				continue
@@ -214,10 +218,12 @@ func CheckTemplates() []string {
 			herr.Raise(err)
 		}
 		values := map[string]string{}
-		for key := range prompts.Placeholders(name, promptsDir()) {
+		keys, err := prompts.Placeholders(name, promptsDir())
+		herr.Must(err)
+		for key := range keys {
 			values[key] = "x"
 		}
-		if _, err := pyTemplate(templateText(template)).substitute(values); err != nil {
+		if _, err := pyTemplate(template.Template).substitute(values); err != nil {
 			problems = append(problems, "prompts/"+name+".md: "+err.Error())
 		}
 	}

@@ -344,7 +344,10 @@ func reviewCycles(raw any) *pyjson.Object {
 // value it raises stands for the ValueError; a runtime fault or a panic that is not an error goes
 // on up, as any other exception did.
 func parseIdentity(raw any) {
-	err := herr.Try(func() { _ = identity.Parse(raw, true) })
+	err := herr.Try(func() {
+		_, perr := identity.Parse(raw, true)
+		herr.Must(perr)
+	})
 	if err == nil {
 		return
 	}
