@@ -9868,21 +9868,28 @@
       "stop_requested": false
     },
     "2498": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-10-30T13:30:59Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:e90522e8-1793367089",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-30T13:31:53Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "10eb94bf70389cb1",
   "last_run": {
-    "at": "2026-10-30T13:14:34Z",
+    "at": "2026-10-30T13:31:53Z",
     "url": "",
-    "what": "build #2490 on muse"
+    "what": "plan #2498 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-30T13:08:59Z",
