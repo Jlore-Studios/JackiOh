@@ -5602,11 +5602,13 @@ stinkyscape-115: # Scornboi
 stinkyscape-116: # Megabase
   flavour: Twenty decks of steel, a lobby the size of a moon, and a gift shop.
   voice:
-    cast: Megabase online. Credits for everyone!
+    play: Megabase online. Credits for everyone!
+    attack: Launch the fleet!
+    death: The base has fallen.
   zh:
     name: 巨型基地
-    base: "活化，无法攻击，法术免疫，不可变，不可献祭，护甲15\n无法成为守备表示。\n激活：抉择：双方玩家各获得5、10或15信用点。\n亡语：双方玩家各获得100信用点。"
-    radiant: "活化，无法攻击，法术免疫，不可变，不可献祭，护甲30\n无法成为守备表示。\n激活：抉择：你获得5、10或15信用点，你的对手获得的信用点比你少5。\n亡语：双方玩家各获得200信用点。"
+    base: "无法攻击，法术免疫，不可变，不可献祭，护甲15\n无法成为守备表示。\n激活：抉择：双方玩家各获得5、10或15信用点。\n亡语：双方玩家各获得100信用点。"
+    radiant: "无法攻击，法术免疫，不可变，不可献祭，护甲30\n无法成为守备表示。\n激活：抉择：你获得5、10或15信用点，你的对手获得的信用点比你少5。\n亡语：双方玩家各获得200信用点。"
 stinkyscape-117: # Core System
   flavour: Full system reset. Please save your work. You didn't.
   voice:

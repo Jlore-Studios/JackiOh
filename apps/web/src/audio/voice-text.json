@@ -2383,7 +2383,9 @@
       "death": "Typical."
     },
     "stinkyscape-116": {
-      "cast": "Megabase online. Credits for everyone!"
+      "play": "Megabase online. Credits for everyone!",
+      "attack": "Launch the fleet!",
+      "death": "The base has fallen."
     },
     "stinkyscape-117": {
       "cast": "Rebooting all systems."
