@@ -9525,6 +9525,13 @@
     "2481": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T13:29:23Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule 5 fails: the change edits crates/engine/src (config.rs, validator.rs, wire/emotes.rs) and spans the engine and apps/web, though no value or rule moves"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
