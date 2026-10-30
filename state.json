@@ -9654,6 +9654,13 @@
     "2427": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T02:40:41Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "fails easy on several lines (a new ruling, crates/engine/src, four crates and apps); not hard: crates/engine/src/wire/stats.rs is stats arithmetic, not rules or the resolution loop, and the design is settled here, about 23 files"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
