@@ -1782,6 +1782,8 @@
   "Vanilla": "白板化",
   "{label}: currently {value}": "{label}：当前为{value}",
   "Brittle {n}: crumbles at 0": "易碎{n}：降至0时碎裂",
+  "Temporary 1: discarded at the end of its owner's turn": "临时1：在其拥有者的回合结束时弃掉",
+  "Temporary {n}: discarded after {n} of its owner's ends of turn": "临时{n}：在其拥有者的{n}次回合结束后弃掉",
   "Quest: {text} ({progress})": "任务：{text}（{progress}）",
   "Quest: {text}, a card that costs ({cost}) ({progress})": "任务：{text}，一张费用为({cost})的牌（{progress}）",
   "Stage {n} of {of}: {name}": "第{n}/{of}阶段：{name}",
