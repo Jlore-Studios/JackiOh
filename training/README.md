@@ -97,8 +97,7 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
    its stack and going to the gate only with a stack that screened above its parent
    ([`improve.md`](improve.md)). A session ends after a promotion or after four hours. Meanwhile,
    every 15 minutes (`TRAIN_PROGRESS_SECONDS`), the loop pushes the checkout as it is to `ai/<lane>`
-   as one `[skip ci]` commit when it changed (`[skip ci]` stops CI, not Vercel: `vercel.json` switches
-   Vercel off for `ai/**`, or each push would spend one of its 100 daily deployments), rewrites the
+   as one `[skip ci]` commit when it changed, rewrites the
    session's comment on the draft, and rewrites the draft's description when a new pass of the gate
    changed it. When the session ends, the loop stops any `jackioh` process it left running as the
    lane's user (an arena or a gate cut off by the time limit, and the parent agents it spawned), so

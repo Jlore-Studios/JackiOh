@@ -97,8 +97,7 @@
     "tsconfig*.json",
     "cypress.config.*",
     "scripts/",
-    "vercel.json",
-    "render.yaml",
+    "wrangler.jsonc",
     "crates/server/Dockerfile",
     "crates/server/migrations/"
   ],

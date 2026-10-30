@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
-import { SERVER_ROUTES, SERVER_SECRETS, SERVER_VARS } from "./routing.ts";
+import { HEALTH_PATH, READY_PATH, SERVER_ROUTES, SERVER_SECRETS, SERVER_VARS } from "./routing.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -69,5 +69,14 @@ describe("wrangler.jsonc, staging behind Access", () => {
 
   it("names its container apart from production's", () => {
     expect(config.env.staging.containers[0]?.name).not.toBe(config.containers[0]?.name);
+  });
+});
+
+describe("the server's probes the Worker calls", () => {
+  // scripts/ci-scope.sh runs the web job, which runs these, for crates/server/src/app.rs.
+  const routes = readFileSync(join(ROOT, "crates/server/src/app.rs"), "utf8");
+
+  it.each([HEALTH_PATH, READY_PATH])("the server routes %s, unauthenticated", (path) => {
+    expect(routes).toContain(`("GET", "${path}", AuthLevel::None,`);
   });
 });

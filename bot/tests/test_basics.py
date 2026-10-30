@@ -452,7 +452,7 @@ class PathTests(unittest.TestCase):
                      "Cargo.toml", "crates/engine/Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
                      "rustfmt.toml", "crates/engine/clippy.toml", "crates/cards/build.rs",
                      ".cargo/config.toml", "vitest.config.ts", "apps/web/tsconfig.json",
-                     "eslint.config.js", "scripts/build-wasm.sh", "render.yaml",
+                     "eslint.config.js", "scripts/build-wasm.sh", "wrangler.jsonc",
                      "crates/server/Dockerfile", "crates/server/migrations/0005_x.sql",
                      "e2e/cypress.config.ts"):
             self.assertTrue(matches(path, review), path)

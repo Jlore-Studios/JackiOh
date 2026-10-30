@@ -59,7 +59,7 @@ tell, it is **medium** at least.
    `crates/cards/catalog.json`, `crates/cards/patches/` or the catalog version, no card script
    (`crates/cards/src/scripts/`), no database migration (`crates/server/migrations/`).
 6. **No review-only or forbidden path** (every `package.json` and `Cargo.toml`, the lockfiles,
-   `rust-toolchain.toml`, the build and test configs, `scripts/`, `vercel.json`, `render.yaml`;
+   `rust-toolchain.toml`, the build and test configs, `scripts/`, `wrangler.jsonc`;
    `.github/`, `.harness/`, `bot/`), and no new dependency.
 7. **Checked by a unit test** in the same crate or app, which the plan names; no Cypress or e2e
    spec change, and no judging by eye (animation, layout, sound or art tuning).

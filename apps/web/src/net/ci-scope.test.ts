@@ -396,6 +396,8 @@ describe("scripts/ci-scope.sh", () => {
         "crates/tools/Cargo.toml",
         "crates/luau/Cargo.toml",
         "crates/server/src/env.rs",
+        // apps/edge's config test holds the probe routes the Worker calls.
+        "crates/server/src/app.rs",
         "crates/server/Dockerfile",
         "crates/server/tests/deploy/rehearse.sh",
         "crates/engine/tests/fixtures/code-input-cases.json",

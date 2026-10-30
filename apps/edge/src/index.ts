@@ -7,7 +7,15 @@
 
 import { Container } from "@cloudflare/containers";
 
-import { SERVER_PORT, containerEnv, forServer, isServerPath, type ServerSettings } from "./routing.ts";
+import {
+  HEALTH_PATH,
+  READY_PATH,
+  SERVER_PORT,
+  containerEnv,
+  forServer,
+  isServerPath,
+  type ServerSettings,
+} from "./routing.ts";
 
 /** How long the server runs with no request before it is stopped; the next request starts it again. */
 const SLEEP_AFTER = "10m";
@@ -47,7 +55,7 @@ export class Server extends Container<Env> {
     if (!this.ctx.container?.running) return;
     let running: string | null;
     try {
-      const health = await this.containerFetch("http://container/healthz", {}, SERVER_PORT);
+      const health = await this.containerFetch(`http://container${HEALTH_PATH}`, {}, SERVER_PORT);
       running = health.headers.get("x-deployed-commit");
     } catch (error) {
       // A server that cannot answer is left to the request that follows, which reports it.
@@ -77,7 +85,7 @@ export default {
 
   /** wrangler.jsonc's daily cron: wakes the server so its hourly loops run and Supabase sees the project in use. */
   async scheduled(_controller, env): Promise<void> {
-    const ready = await server(env).fetch(new Request("http://container/readyz"));
-    if (!ready.ok) throw new Error(`the server's /readyz answered ${ready.status}`);
+    const ready = await server(env).fetch(new Request(`http://container${READY_PATH}`));
+    if (!ready.ok) throw new Error(`the server's ${READY_PATH} answered ${ready.status}`);
   },
 } satisfies ExportedHandler<Env>;

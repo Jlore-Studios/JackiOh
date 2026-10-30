@@ -103,7 +103,8 @@
 #    `preview_sets(` runs tools, wasm.
 #  - web runs for everything but what no web test, build or typecheck reads: the server's, the
 #    tools' and luau's crates (except each manifest, which every cargo command loads, and the files
-#    the web's tests read there: env.rs, the Dockerfile, tests/deploy/, the practice claim fixture,
+#    the web's tests read there: env.rs, app.rs (whose probe routes apps/edge's config test holds),
+#    the Dockerfile, tests/deploy/, the practice claim fixture,
 #    tests/fixtures/practice-claim.json, which the worker's claim test plays, and the quest pool,
 #    quests.json, whose titles the quests panel's test holds to zh-CN), every crate's README, the
 #    engine's, the cards', the AI's and the WASM crate's tests (except the engine's tests/fixtures/,
@@ -265,7 +266,7 @@ for file in $files; do
 
   case "$file" in
     crates/server/Cargo.toml | crates/tools/Cargo.toml | crates/luau/Cargo.toml) on web ;;
-    crates/server/src/env.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
+    crates/server/src/env.rs | crates/server/src/app.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
     crates/ai/tests/fixtures/learned-parity.json | crates/server/tests/fixtures/practice-claim.json | crates/server/quests.json) on web ;;
     crates/server/* | crates/tools/* | crates/luau/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;

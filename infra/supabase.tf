@@ -1,6 +1,6 @@
 # Supabase: Authentication's Site URL and Redirect URLs of the production project, and nothing else.
 # The schema belongs to the migrations, which `jackioh-server release` applies, and the keys are
-# secrets (render.yaml's `sync: false` values).
+# secrets (the Workers' `wrangler secret put` values, apps/edge/README.md).
 #
 # The token is SUPABASE_ACCESS_TOKEN (README.md, Tokens).
 provider "supabase" {}

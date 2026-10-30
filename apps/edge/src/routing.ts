@@ -27,6 +27,10 @@ export function forServer(request: Request): Request {
 /** The port the server listens on in the container (its `PORT`). */
 export const SERVER_PORT = 8080;
 
+/** The server's probes (crates/server/src/api/health.rs): the image check reads liveness's `x-deployed-commit`, the daily cron asks for readiness. */
+export const HEALTH_PATH = "/healthz";
+export const READY_PATH = "/readyz";
+
 /** The server's settings that wrangler.jsonc's `vars` hold, one set per environment. */
 export const SERVER_VARS = ["PUBLIC_ORIGINS", "SUPABASE_URL", "TRUSTED_PROXY_HOPS", "LADDER_BOTS"] as const;
 

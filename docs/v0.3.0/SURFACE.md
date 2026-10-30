@@ -945,7 +945,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `crates/cards/patches/patches.json`. `CATALOG_VERSION` in the environment is still read, but only
   to warn when it disagrees: the compiled-in version is served either way, so a stale dashboard value
   never stops a deploy (#488; it first refused to boot, which made every card patch a hand edit).
-  `GET /api/catalog` keeps `x-deployed-commit` from `RENDER_GIT_COMMIT`.
+  `GET /api/catalog` keeps `x-deployed-commit`, from `RENDER_GIT_COMMIT` then and `DEPLOYED_COMMIT` now.
 - **Routes dropped** (unused): `POST /api/auth/signup` (503 in production), `GET /api/catalog/:version`.
   `POST /api/auth/signin` stays under `E2E=1` only. The legacy queue body (`deckIndex`, no `mode`)
   goes; `e2e/cypress/e2e/99-online-smoke.cy.ts` moves to `{ mode: "bo1", deckId }` (part 21).
