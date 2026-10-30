@@ -179,21 +179,21 @@ func TestParseArgsAsArgparse(t *testing.T) {
 		lastErr string
 		want    *arguments
 	}{
-		{nil, 2, false, "python3 -m harness.titles: error: the following arguments are required: command\n", nil},
-		{[]string{"shipped"}, 2, false, "python3 -m harness.titles shipped: error: the following arguments are required: --before, --after\n", nil},
-		{[]string{"shipped", "--before"}, 2, false, "python3 -m harness.titles shipped: error: argument --before: expected one argument\n", nil},
-		{[]string{"foo"}, 2, false, "python3 -m harness.titles: error: argument command: invalid choice: 'foo' (choose from 'shipped', 'retcon')\n", nil},
-		{[]string{"retcon", "--limit", "x"}, 2, false, "python3 -m harness.titles retcon: error: argument --limit: invalid int value: 'x'\n", nil},
-		{[]string{"retcon", "--pause", "0x10"}, 2, false, "python3 -m harness.titles retcon: error: argument --pause: invalid float value: '0x10'\n", nil},
-		{[]string{"retcon", "extra"}, 2, false, "python3 -m harness.titles: error: unrecognized arguments: extra\n", nil},
-		{[]string{"--x", "shipped", "--before", "a", "--after", "b", "--zz"}, 2, false, "python3 -m harness.titles: error: unrecognized arguments: --x --zz\n", nil},
-		{[]string{"shipped", "--before", "a", "--after", "b", "--", "x"}, 2, false, "python3 -m harness.titles: error: unrecognized arguments: -- x\n", nil},
-		{[]string{"shipped", "--", "--before", "a"}, 2, false, "python3 -m harness.titles shipped: error: the following arguments are required: --before, --after\n", nil},
-		{[]string{"retcon", "--write=1"}, 2, false, "python3 -m harness.titles retcon: error: argument --write: ignored explicit argument '1'\n", nil},
-		{[]string{"retcon", "--numbers", "-x"}, 2, false, "python3 -m harness.titles retcon: error: argument --numbers: expected one argument\n", nil},
-		{[]string{"shipped", "--zz", "--before"}, 2, false, "python3 -m harness.titles shipped: error: argument --before: expected one argument\n", nil},
-		{[]string{"-x"}, 2, false, "python3 -m harness.titles: error: the following arguments are required: command\n", nil},
-		{[]string{"shipped", "--before=", "x"}, 2, false, "python3 -m harness.titles shipped: error: the following arguments are required: --after\n", nil},
+		{nil, 2, false, "harness titles: error: the following arguments are required: command\n", nil},
+		{[]string{"shipped"}, 2, false, "harness titles shipped: error: the following arguments are required: --before, --after\n", nil},
+		{[]string{"shipped", "--before"}, 2, false, "harness titles shipped: error: argument --before: expected one argument\n", nil},
+		{[]string{"foo"}, 2, false, "harness titles: error: argument command: invalid choice: 'foo' (choose from 'shipped', 'retcon')\n", nil},
+		{[]string{"retcon", "--limit", "x"}, 2, false, "harness titles retcon: error: argument --limit: invalid int value: 'x'\n", nil},
+		{[]string{"retcon", "--pause", "0x10"}, 2, false, "harness titles retcon: error: argument --pause: invalid float value: '0x10'\n", nil},
+		{[]string{"retcon", "extra"}, 2, false, "harness titles: error: unrecognized arguments: extra\n", nil},
+		{[]string{"--x", "shipped", "--before", "a", "--after", "b", "--zz"}, 2, false, "harness titles: error: unrecognized arguments: --x --zz\n", nil},
+		{[]string{"shipped", "--before", "a", "--after", "b", "--", "x"}, 2, false, "harness titles: error: unrecognized arguments: -- x\n", nil},
+		{[]string{"shipped", "--", "--before", "a"}, 2, false, "harness titles shipped: error: the following arguments are required: --before, --after\n", nil},
+		{[]string{"retcon", "--write=1"}, 2, false, "harness titles retcon: error: argument --write: ignored explicit argument '1'\n", nil},
+		{[]string{"retcon", "--numbers", "-x"}, 2, false, "harness titles retcon: error: argument --numbers: expected one argument\n", nil},
+		{[]string{"shipped", "--zz", "--before"}, 2, false, "harness titles shipped: error: argument --before: expected one argument\n", nil},
+		{[]string{"-x"}, 2, false, "harness titles: error: the following arguments are required: command\n", nil},
+		{[]string{"shipped", "--before=", "x"}, 2, false, "harness titles shipped: error: the following arguments are required: --after\n", nil},
 		{[]string{"retcon", "--wr", "--num", "1,2", "--lim", "-3", "--pa", "1e3"}, 0, true, "",
 			&arguments{command: "retcon", write: true, numbers: "1,2", limit: -3, pause: 1000, csv: "title-retcon.csv"}},
 		{[]string{"retcon", "--limit", " 7 ", "--pause", "1_0.5", "--numbers", "-x y", "--csv="}, 0, true, "",
@@ -228,9 +228,9 @@ func TestHelpAsArgparse(t *testing.T) {
 	if _, code, ok := parseArgs([]string{"retcon", "-hx"}); code != 0 || ok {
 		t.Fatal("help exits 0")
 	}
-	want := "usage: python3 -m harness.titles retcon [-h] [--write] [--numbers NUMBERS]\n" +
-		"                                        [--limit LIMIT] [--csv CSV]\n" +
-		"                                        [--pause PAUSE]\n\noptions:\n" +
+	// Python 3.13's argparse, with prog "harness titles".
+	want := "usage: harness titles retcon [-h] [--write] [--numbers NUMBERS]\n" +
+		"                             [--limit LIMIT] [--csv CSV] [--pause PAUSE]\n\noptions:\n" +
 		"  -h, --help         show this help message and exit\n" +
 		"  --write            write the titles; without it, only the CSV\n" +
 		"  --numbers NUMBERS  only these threads, comma-separated\n" +

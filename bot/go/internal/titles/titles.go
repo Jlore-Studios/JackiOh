@@ -10,13 +10,13 @@
 //   - `new_title(title, version)` is the title in the new form: `Patch: …`, or `Patch v<version>: …`
 //     for a shipped card change, its part kept.
 //
-//   - `python3 -m harness.titles shipped --before <sha> --after <sha>` (`patches-ship.yml`, once a
+//   - `harness titles shipped --before <sha> --after <sha>` (`patches-ship.yml`, once a
 //     promotion merges, #1370) retitles each patch the push shipped: the pull request whose commit
 //     added its fragment and the issues that pull request closes become `Patch v<version>: …`, and each
 //     gets a comment naming the version. A version is read from `patches.json` at the two commits,
 //     never parsed (R105).
 //
-//   - `python3 -m harness.titles retcon [--write] [--numbers 1,2] [--limit N] [--csv path]` (#1372)
+//   - `harness titles retcon [--write] [--numbers 1,2] [--limit N] [--csv path]` (#1372)
 //     retitles every issue and pull request, closed ones included, from a reviewed dry run: a shipped
 //     card change's threads become `Patch v<version>: …` (the version from `patches.json`, linked by its
 //     `source` and by the issues its fragment's pull request closes), every other thread `Patch: …`.

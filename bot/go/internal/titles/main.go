@@ -1,6 +1,6 @@
 package titles
 
-// The command line, `python3 -m harness.titles shipped|retcon …` (patches-ship.yml,
+// The command line, `harness titles shipped|retcon …` (patches-ship.yml,
 // title-retcon.yml): `main`, with what its argparse parser does (usage, help, errors and exit
 // codes, as Python 3.13's prints them at 80 columns, as on a runner).
 
@@ -213,9 +213,9 @@ type arguments struct {
 	pause         float64
 }
 
-const prog = "python3 -m harness.titles"
+const prog = "harness titles"
 
-const topUsage = "usage: python3 -m harness.titles [-h] {shipped,retcon} ...\n"
+const topUsage = "usage: harness titles [-h] {shipped,retcon} ...\n"
 
 const topHelp = topUsage + `
 positional arguments:
@@ -241,7 +241,7 @@ type parser struct {
 var subparsers = map[string]*parser{
 	"shipped": {
 		prog:  prog + " shipped",
-		usage: "usage: python3 -m harness.titles shipped [-h] --before BEFORE --after AFTER\n",
+		usage: "usage: harness titles shipped [-h] --before BEFORE --after AFTER\n",
 		help: `
 options:
   -h, --help       show this help message and exit
@@ -252,9 +252,8 @@ options:
 	},
 	"retcon": {
 		prog: prog + " retcon",
-		usage: "usage: python3 -m harness.titles retcon [-h] [--write] [--numbers NUMBERS]\n" +
-			"                                        [--limit LIMIT] [--csv CSV]\n" +
-			"                                        [--pause PAUSE]\n",
+		usage: "usage: harness titles retcon [-h] [--write] [--numbers NUMBERS]\n" +
+			"                             [--limit LIMIT] [--csv CSV] [--pause PAUSE]\n",
 		help: `
 options:
   -h, --help         show this help message and exit
