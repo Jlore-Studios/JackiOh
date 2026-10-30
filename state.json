@@ -9454,6 +9454,13 @@
     "2477": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T14:13:22Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the hard line 'the AI's search (crates/ai/src/)': it changes the AI's evaluation and its decision root (evaluate.rs, decide.rs) and drives the engine's trigger queue from the AI; a new ruling and spec edit on top"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
