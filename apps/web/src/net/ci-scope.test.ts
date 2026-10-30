@@ -678,8 +678,8 @@ function namedPaths(roots: string[], keep: (file: string) => boolean): Map<strin
 }
 
 /** What the web's typecheck, lint and unit tests read. ci-scope.test.ts and build-wasm-cache.test.ts
- * name paths only as data for their throwaway repos (the latter reads only scripts/build-wasm.sh and
- * Cargo.toml for real, which run web anyway). */
+ * name paths only as data for their throwaway repos (the latter reads only scripts/build-wasm.sh for
+ * real, which runs web anyway). */
 const DATA_ONLY = ["apps/web/src/net/ci-scope.test.ts", "apps/web/src/net/build-wasm-cache.test.ts"];
 const WEB = namedPaths(
   ["apps/web/src", "apps/web/scripts", "apps/web/vite.config.ts", "apps/web/vitest.config.ts", "apps/web/static-pages.ts"],
