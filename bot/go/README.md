@@ -146,6 +146,55 @@ change: keeping them one line away would mean making every harness change twice 
 rollback rot within days. Reverting the pull request is the rollback, restoring the Python and
 the run lines together.
 
+## What it gained
+
+Measured on one machine with the same checkout, each command run 20 times, the output of each pair
+identical:
+
+| Command | Python 3.13 | Go |
+|---|--:|--:|
+| `harness --help` (start-up alone) | 208 ms | 15 ms |
+| `harness providers --offline` (config, providers, the table) | 175 ms | 17 ms |
+
+Every bot job also drops its `setup-python` step: a job whose binary is cached restores one 17 MB
+file and sets up no toolchain, and every call of the harness gains the start-up (`bot-commands.yml`
+runs on every comment and review; a night run calls it in each of its jobs). A cold miss (a new
+version of `bot/go/` on a runner platform) costs `setup-go` and a build of a few tens of seconds,
+once.
+
+## Where it differs from the Python
+
+The port kept every behaviour the suite checks, and every one it could see. These are the
+differences it knowingly left, all outside what the bot writes to GitHub:
+
+- **The command's name.** argparse's `prog` was `python -m harness` and is `harness`, the command
+  a person types (usage lines and `error:` lines say `harness …`). `python -m harness.titles` is
+  `harness titles`, and `pr-title.yml`'s inline Python is `harness pr-title`.
+- **Error texts from Go's libraries.** Where the Python put an exception's own text into a
+  message (a `config.json` that is not JSON, a plan file that will not parse, a socket error in a
+  note), the text after the Python's prefix is Go's decoder's or network library's wording. An
+  uncaught error prints its last line (`Type: message`) rather than a full Python traceback, and
+  still exits 1.
+- **Daylight-saving edges.** Python's aware datetimes do wall-clock arithmetic within one zone;
+  Go's are instants. On the spring-forward night a wake set for 02:00, which does not exist, prints
+  as 03:00 (the same instant), and in the autumn's repeated hour the status issue's timeline can
+  place a bar an hour apart.
+- **Unicode tables.** Go 1.24 has Unicode 15.0, Python 3.13 has 15.1: 622 newer CJK ideographs
+  count as `\w` in Python and not in Go, which matters only to a slash command or mention written
+  next to one.
+- **Set order.** Where the Python walked a set (label names to drop, bundle excludes), whose order
+  is a hash's and changed between processes, the Go walks it sorted.
+- **Signals.** The model job's stop on SIGTERM raised inside whatever Python was doing; Go raises
+  it at the job's next check. The model's own processes get the signal as before.
+- **Values the Python crashed on.** A few inputs that raised in the Python (a superscript digit in
+  a usage text, a list item that is not an object, NaN in `providers.json`) are skipped or refused
+  with a message instead; integers beyond 64 bits overflow.
+- **Help width.** argparse wrapped help to the terminal; the Go wraps it at 78 columns.
+
+Python bugs the port found are kept, each with a comment (for example `Context.window` reading
+fields `Config` no longer has, and `plan.ranked` keeping the last index of a repeated name where
+`builder_seat` keeps the first): fixing them is a change of behaviour for its own pull request.
+
 ## Rules for a change
 
 The port's rules stay the harness's rules (`PORTING.md` has the full list):
