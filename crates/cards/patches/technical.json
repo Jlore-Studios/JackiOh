@@ -3367,5 +3367,19 @@
     "pr": 2494,
     "title": "patches ship: v0.5.10d",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "0e5ae82ebc429ac0c8866cd4a2c3508ae521c1ca",
+    "pr": 2496,
+    "title": "patches log: 0a37003..c99a942",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "9c9bcbd99ad3e395f5e98cd62309f5993e6f438a",
+    "pr": 2474,
+    "title": "standardize spelling to American English",
+    "kind": "app"
   }
 ]
