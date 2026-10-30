@@ -8,7 +8,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
-	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -44,15 +43,13 @@ var controllerStatus = ".github/workflows/bot-status.yml"
 // controllerNightYML is the repository's .github/workflows/bot-night.yml.
 var controllerNightYML = filepath.Join(testsupport.Root, ".github", "workflows", "bot-night.yml")
 
-func controllerNoSleep(float64) {}
-
 // controllerLoopCtx is loop_ctx(gh, at=DAY, loop=True).
 func controllerLoopCtx(gh *fakes.FakeGitHub, loop bool, at ...time.Time) *hctx.Context {
 	when := testsupport.Day
 	if len(at) > 0 {
 		when = at[0]
 	}
-	cfg := testsupport.MakeConfig(testsupport.Config{Env: difficultySecrets(providers.SecretNames...),
+	cfg := testsupport.MakeConfig(testsupport.Config{Env: providersSecrets(providers.SecretNames...),
 		Machine: []string{"muse"}, Overrides: pyjson.New("controller", true)})
 	replaced := *cfg
 	replaced.ControllerLoop, replaced.RunID = loop, "777"
@@ -94,24 +91,6 @@ func controllerAny(notes []string, prefix string) bool {
 	return slices.ContainsFunc(notes, func(n string) bool { return strings.HasPrefix(n, prefix) })
 }
 
-// controllerSwap sets *target to value until the test ends (mock.patch.object).
-func controllerSwap[T any](t *testing.T, target *T, value T) {
-	saved := *target
-	*target = value
-	t.Cleanup(func() { *target = saved })
-}
-
-// controllerCapture points *stream (cli.Stdout or cli.Stderr) at a buffer, as redirect_stdout
-// does, until restore is called or the test ends.
-func controllerCapture(t *testing.T, stream *io.Writer) (*bytes.Buffer, func()) {
-	saved := *stream
-	var buffer bytes.Buffer
-	*stream = &buffer
-	restore := func() { *stream = saved }
-	t.Cleanup(restore)
-	return &buffer, restore
-}
-
 func controllerFetch(t *testing.T, ctx *hctx.Context, ref string) *pyjson.Object {
 	t.Helper()
 	planned, err := controller.Fetch(ctx, ref)
@@ -124,96 +103,91 @@ func controllerFetch(t *testing.T, ctx *hctx.Context, ref string) *pyjson.Object
 // ---------------------------------------------------------------------------- StartTests
 
 func TestController_TheLoopClaimsWritesThePlanAndStartsTheRunWithIt(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	controllerListing(c)
 	ctx := controllerLoopCtx(c, true)
-	notes := controller.Start(ctx, controllerNoSleep)
-	is.In("started build #3 on muse (run 5002)", notes)
+	notes := controller.Start(ctx, noSleep)
+	assertIn(t, "started build #3 on muse (run 5002)", notes)
 	var planned []fakes.Dispatch
 	for _, d := range c.Dispatches {
 		if d.Inputs["plan_ref"] != "" {
 			planned = append(planned, d)
 		}
 	}
-	is.Equal(len(planned), 1)
+	assertEqual(t, len(planned), 1)
 	inputs := planned[0].Inputs
-	is.Equal([]string{inputs["runs_on"], inputs["cli"], inputs["secret"], inputs["shared"]},
+	assertEqual(t, []string{inputs["runs_on"], inputs["cli"], inputs["secret"], inputs["shared"]},
 		[]string{"night-vm-muse", "muse", "", "false"})
-	is.True(controller.Ref.MatchString(inputs["plan_ref"]), inputs["plan_ref"])
+	assertTrue(t, controller.Ref.MatchString(inputs["plan_ref"]), inputs["plan_ref"])
 	text, _ := c.GetFile(fmt.Sprintf("plans/%s.json", inputs["plan_ref"]), config.StateBranch)
-	written := difficultyLoads(t, []byte(text))
-	is.Equal([]any{written.Get("number"), written.Get("provider")}, []any{3, "muse"})
+	written := loadsObject(t, string([]byte(text)))
+	assertEqual(t, []any{written.Get("number"), written.Get("provider")}, []any{3, "muse"})
 	record := ctx.Store.Load().Obj("items").Obj("3")
-	is.Equal([]any{record.Get("run_id"), record.Get("provider")}, []any{"5002", "muse"})
-	is.In(config.LabelWorking, c.LabelNames(3))
+	assertEqual(t, []any{record.Get("run_id"), record.Get("provider")}, []any{"5002", "muse"})
+	assertIn(t, config.LabelWorking, c.LabelNames(3))
 	// The lock is the loop's only while it plans.
-	is.Equal(ctx.Store.Load().Get("planning"), nil)
+	assertEqual(t, ctx.Store.Load().Get("planning"), nil)
 }
 
 func TestController_ItPlansAgainUntilNothingMoreCanStart(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	for n := 3; n < 10; n++ {
 		c.AddIssue(n, fakes.Issue{Labels: []string{config.LabelBuild}})
 	}
 	controllerListing(c)
 	ctx := controllerLoopCtx(c, true)
-	notes := controller.Start(ctx, controllerNoSleep)
+	notes := controller.Start(ctx, noSleep)
 	started := controllerStarted(notes)
 	// Muse has four lanes of its own (one runner on the night box, three on the Muse box), and
 	// fills gpt's and agy's on the night box while they are off (`fill_in`): six at most; the
 	// seventh item waits (by day no Claude account works).
-	is.Equal(len(started), 6, notes)
-	is.True(strings.HasPrefix(notes[len(notes)-1], "nothing more to start"), notes)
+	assertEqual(t, len(started), 6, notes)
+	assertTrue(t, strings.HasPrefix(notes[len(notes)-1], "nothing more to start"), notes)
 	// Each plan run is the loop's: none of them started another run as a plan job's `fill_lanes`
 	// does.
 	runners := []string{}
 	for _, d := range c.Dispatches {
 		runners = append(runners, d.Inputs["runs_on"])
 	}
-	is.Equal(runners, []string{"night-vm-muse", "night-vm-muse", "night-vm-muse", "night-vm-muse",
+	assertEqual(t, runners, []string{"night-vm-muse", "night-vm-muse", "night-vm-muse", "night-vm-muse",
 		"night-vm-muse-fill", "night-vm-muse-fill"})
 }
 
 func TestController_ARunNotListedYetKeepsItsClaimPendingUntilFound(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	ctx := controllerLoopCtx(c, true)
-	notes := controller.Start(ctx, controllerNoSleep)
-	is.In("started build #3 on muse (its run is not listed yet)", notes)
+	notes := controller.Start(ctx, noSleep)
+	assertIn(t, "started build #3 on muse (its run is not listed yet)", notes)
 	runID := pyjson.Str(ctx.Store.Load().Obj("items").Obj("3").Get("run_id"))
-	is.True(strings.HasPrefix(runID, plan.Pending), runID)
+	assertTrue(t, strings.HasPrefix(runID, plan.Pending), runID)
 	// Pending holds the lane for a while, then counts as dead.
-	is.Equal(plan.RunStatus(ctx, runID), "alive")
+	assertEqual(t, plan.RunStatus(ctx, runID), "alive")
 	later := testsupport.MakeCtx(c, testsupport.Ctx{At: testsupport.Day.Add(plan.PendingGrace + time.Minute),
 		Cfg: ctx.Cfg})
-	is.Equal(plan.RunStatus(later, runID), "dead")
+	assertEqual(t, plan.RunStatus(later, runID), "dead")
 	// Once GitHub lists it, the next tick puts its id on the claim.
 	ref := runID[len(plan.Pending):]
 	c.Runs.Set("6001", pyjson.New("id", 6001, "status", "in_progress",
 		"display_title", fmt.Sprintf("bot-night %s on night-vm-muse", ref)))
-	is.Equal(plan.RunStatus(ctx, runID), "alive")
-	is.Equal(controller.Resolve(ctx), []string{"found the run of #3: 6001"})
-	is.Equal(ctx.Store.Load().Obj("items").Obj("3").Get("run_id"), "6001")
+	assertEqual(t, plan.RunStatus(ctx, runID), "alive")
+	assertEqual(t, controller.Resolve(ctx), []string{"found the run of #3: 6001"})
+	assertEqual(t, ctx.Store.Load().Obj("items").Obj("3").Get("run_id"), "6001")
 }
 
 func TestController_ADispatchGithubRefusesLeavesTheClaimDeadForHousekeeping(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	ctx := controllerLoopCtx(c, true)
 	c.Patch.DispatchWorkflow = func(string, string, map[string]string) { controllerRefuse() }
-	notes := controller.Start(ctx, controllerNoSleep)
-	is.True(controllerAny(notes, "could not start build #3"), notes)
-	is.Equal(ctx.Store.Load().Obj("items").Obj("3").Get("run_id"), "")
-	is.Equal(plan.RunStatus(ctx, ""), "dead")
+	notes := controller.Start(ctx, noSleep)
+	assertTrue(t, controllerAny(notes, "could not start build #3"), notes)
+	assertEqual(t, ctx.Store.Load().Obj("items").Obj("3").Get("run_id"), "")
+	assertEqual(t, plan.RunStatus(ctx, ""), "dead")
 }
 
 func TestController_AnotherPlannerHoldingTheLockWaitsTheLoopATick(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	ctx := controllerLoopCtx(c, true)
@@ -221,9 +195,9 @@ func TestController_AnotherPlannerHoldingTheLockWaitsTheLoopATick(t *testing.T) 
 		s.Set("planning", pyjson.New("owner", "run 42", "at", clock.ISO(testsupport.Day)))
 		return nil
 	}, "state")
-	notes := controller.Start(ctx, controllerNoSleep)
-	is.Equal(notes, []string{"another planner holds the planning lock: the next tick plans"})
-	is.Equal(c.Dispatches, []fakes.Dispatch{})
+	notes := controller.Start(ctx, noSleep)
+	assertEqual(t, notes, []string{"another planner holds the planning lock: the next tick plans"})
+	assertEqual(t, c.Dispatches, []fakes.Dispatch{})
 	// A lock older than its TTL was left by a planner that died.
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		s.Set("planning", pyjson.New("owner", "run 42",
@@ -231,13 +205,12 @@ func TestController_AnotherPlannerHoldingTheLockWaitsTheLoopATick(t *testing.T) 
 		return nil
 	}, "state")
 	controllerListing(c)
-	is.True(controllerAny(controller.Start(ctx, controllerNoSleep), "started"))
+	assertTrue(t, controllerAny(controller.Start(ctx, noSleep), "started"))
 }
 
 // ---------------------------------------------------------------------------- LockTests
 
 func TestController_TheLoopRenewsTheLockBeforeEachStart(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	for _, n := range []int{3, 4} {
 		c.AddIssue(n, fakes.Issue{Labels: []string{config.LabelBuild}})
@@ -252,11 +225,11 @@ func TestController_TheLoopRenewsTheLockBeforeEachStart(t *testing.T) {
 			taken = append(taken, owner)
 			return real(c, owner)
 		}
-		controller.Start(ctx, controllerNoSleep)
+		controller.Start(ctx, noSleep)
 	}()
 	// Once to start, then again before every later start (two runs, then the last plan).
-	is.Equal(taken, []string{"loop 777", "loop 777", "loop 777"})
-	is.Equal(ctx.Store.Load().Get("planning"), nil)
+	assertEqual(t, taken, []string{"loop 777", "loop 777", "loop 777"})
+	assertEqual(t, ctx.Store.Load().Get("planning"), nil)
 }
 
 // ---------------------------------------------------------------------------- CheckTests
@@ -276,60 +249,56 @@ func controllerGiven(changes ...string) map[string]string {
 }
 
 func TestController_TheDispatchMustNameTheSubscriptionsOwnRunnerCLIAndSecret(t *testing.T) {
-	is := difficultyCheckOf(t)
 	ctx := controllerLoopCtx(fakes.NewFakeGitHub(), true)
-	is.Equal(controller.Check(ctx, controllerPlanned(), controllerGiven()), []string{})
+	assertEqual(t, controller.Check(ctx, controllerPlanned(), controllerGiven()), []string{})
 	// Another subscription's secret, or the bot's own token, never reaches a model job.
 	for _, bad := range [][2]string{{"secret", "CLAUDE_CODE_OAUTH_TOKEN"}, {"secret", "BOT_GITHUB_TOKEN"},
 		{"runs_on", "night-vm-gpt"}, {"cli", "codex"}, {"shared", "true"}} {
-		is.True(len(controller.Check(ctx, controllerPlanned(), controllerGiven(bad[0], bad[1]))) > 0, bad)
+		assertTrue(t, len(controller.Check(ctx, controllerPlanned(), controllerGiven(bad[0], bad[1]))) > 0, bad)
 	}
-	is.True(len(controller.Check(ctx, controllerPlanned("secret", "BOT_GITHUB_TOKEN"),
+	assertTrue(t, len(controller.Check(ctx, controllerPlanned("secret", "BOT_GITHUB_TOKEN"),
 		controllerGiven("secret", "BOT_GITHUB_TOKEN"))) > 0)
-	is.True(len(controller.Check(ctx, controllerPlanned("provider", "nobody"), controllerGiven())) > 0)
+	assertTrue(t, len(controller.Check(ctx, controllerPlanned("provider", "nobody"), controllerGiven())) > 0)
 }
 
 func TestController_FetchReadsOnlyAPlanReference(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	ctx := controllerLoopCtx(c, true)
 	for _, ref := range []string{"../state", "plans/x", "abcd-1", ""} {
 		_, err := controller.Fetch(ctx, ref)
 		_, value := err.(*controller.ValueError)
-		is.True(value, ref, err)
+		assertTrue(t, value, ref, err)
 	}
 	_, err := controller.Fetch(ctx, "0123abcd-1760000000") // no such file
 	_, value := err.(*controller.ValueError)
-	is.True(value, err)
+	assertTrue(t, value, err)
 }
 
 func TestController_PlanFetchStopsTheJobOnAMismatch(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	controllerListing(c)
 	ctx := controllerLoopCtx(c, true)
-	controller.Start(ctx, controllerNoSleep)
+	controller.Start(ctx, noSleep)
 	ref := c.Dispatches[len(c.Dispatches)-1].Inputs["plan_ref"]
 	args, _, ok := cli.Parser().ParseArgs([]string{"plan-fetch", "--ref", ref, "--out", "/dev/null", "--check"})
-	is.True(ok)
+	assertTrue(t, ok)
 	env := map[string]string{"PLAN_RUNS_ON": "night-vm-muse", "PLAN_CLI": "muse", "PLAN_SECRET": "",
 		"PLAN_SHARED": "false"}
-	controllerSwap(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
-	controllerSwap(t, &cli.GithubEnv, func() map[string]string { return env })
-	_, restore := controllerCapture(t, &cli.Stdout)
-	is.Equal(cli.CmdPlanFetch(ctx.Cfg, args), 0)
+	patch(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
+	patch(t, &cli.GithubEnv, func() map[string]string { return env })
+	_, restore := capture(t, &cli.Stdout)
+	assertEqual(t, cli.CmdPlanFetch(ctx.Cfg, args), 0)
 	restore()
 	env["PLAN_SECRET"] = "CLAUDE_CODE_OAUTH_TOKEN_3"
-	_, restore = controllerCapture(t, &cli.Stderr)
-	is.Equal(cli.CmdPlanFetch(ctx.Cfg, args), 2)
+	_, restore = capture(t, &cli.Stderr)
+	assertEqual(t, cli.CmdPlanFetch(ctx.Cfg, args), 2)
 	restore()
 }
 
 // ---------------------------------------------------------------------------- PruneTests
 
 func TestController_PlanFilesOlderThanAWeekGo(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	ctx := controllerLoopCtx(c, true)
 	c.CreateOrphanBranch(config.StateBranch, "state.json", "{}", "state", nil)
@@ -339,14 +308,14 @@ func TestController_PlanFilesOlderThanAWeekGo(t *testing.T) {
 		c.PutFile(fmt.Sprintf("plans/%s.json", ref), "{}", config.StateBranch, "", "plan")
 	}
 	c.PutFile("plans/notes.txt", "x", config.StateBranch, "", "other")
-	is.Equal(controller.Prune(ctx), []string{"pruned 1 plan file(s) older than 7 days"})
+	assertEqual(t, controller.Prune(ctx), []string{"pruned 1 plan file(s) older than 7 days"})
 	// get_file's text is None for a missing file: the Go client says so with an empty sha.
 	_, sha := c.GetFile(fmt.Sprintf("plans/%s.json", old), config.StateBranch)
-	is.Equal(sha, "")
+	assertEqual(t, sha, "")
 	_, sha = c.GetFile(fmt.Sprintf("plans/%s.json", young), config.StateBranch)
-	is.NotEqual(sha, "")
+	assertNotEqual(t, sha, "")
 	_, sha = c.GetFile("plans/notes.txt", config.StateBranch)
-	is.NotEqual(sha, "")
+	assertNotEqual(t, sha, "")
 }
 
 // ---------------------------------------------------------------------------- WhileTheLoopGoesTests
@@ -367,79 +336,73 @@ func controllerAlive(c *fakes.FakeGitHub, ctx *hctx.Context) {
 }
 
 func TestController_ALoopWhoseTicksStoppedCountsAsGone(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	ctx := controllerLoopCtx(c, false)
 	controllerAlive(c, ctx)
-	is.True(plan.LoopAlive(ctx))
+	assertTrue(t, plan.LoopAlive(ctx))
 	later := testsupport.MakeCtx(c, testsupport.Ctx{At: testsupport.Day.Add(plan.LoopStale + time.Minute), Cfg: ctx.Cfg})
-	is.False(plan.LoopAlive(later))
+	assertFalse(t, plan.LoopAlive(later))
 	// Without `controller` nothing defers to a loop.
 	off := *ctx.Cfg
 	off.Controller = false
-	is.False(plan.LoopAlive(testsupport.MakeCtx(c, testsupport.Ctx{At: testsupport.Day, Cfg: &off})))
+	assertFalse(t, plan.LoopAlive(testsupport.MakeCtx(c, testsupport.Ctx{At: testsupport.Day, Cfg: &off})))
 }
 
 func TestController_TheLoopsSweepRecordsItsTick(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	ctx := controllerLoopCtx(c, true)
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		s.Set("last_sweep", pyjson.New("at", clock.ISO(testsupport.Day), "since", clock.ISO(testsupport.Day)))
 		return nil
 	}, "state")
-	controllerSwap(t, &controller.Sleep, controllerNoSleep)
+	patch(t, &controller.Sleep, noSleep)
 	sweep.Sweep(ctx)
-	is.Equal(ctx.Store.Load().Get("loop_tick"), clock.ISO(testsupport.Day))
+	assertEqual(t, ctx.Store.Load().Get("loop_tick"), clock.ISO(testsupport.Day))
 }
 
 func TestController_AnotherSweepStartsNoRun(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	ctx := controllerLoopCtx(c, false)
 	controllerAlive(c, ctx)
-	is.Equal(sweep.NightRun(ctx, testsupport.Day), []string{})
-	is.Equal(c.Dispatches, []fakes.Dispatch{})
+	assertEqual(t, sweep.NightRun(ctx, testsupport.Day), []string{})
+	assertEqual(t, c.Dispatches, []fakes.Dispatch{})
 	// With no loop going it starts a plain run, as before.
 	c.Runs.Delete("900")
-	is.Equal(len(sweep.NightRun(ctx, testsupport.Day)), 1)
+	assertEqual(t, len(sweep.NightRun(ctx, testsupport.Day)), 1)
 	_, given := c.Dispatches[0].Inputs["plan_ref"]
-	is.False(given)
+	assertFalse(t, given)
 }
 
 func TestController_TheLoopsSweepPlansAndStartsTheRun(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	controllerListing(c)
 	ctx := controllerLoopCtx(c, true)
-	controllerSwap(t, &controller.Sleep, controllerNoSleep)
+	patch(t, &controller.Sleep, noSleep)
 	notes := sweep.NightRun(ctx, testsupport.Day)
-	is.In("started build #3 on muse (run 5002)", notes)
+	assertIn(t, "started build #3 on muse (run 5002)", notes)
 }
 
 func TestController_TheGateDefersUnlessAPersonAskedForAnItem(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	ctx := controllerLoopCtx(c, false)
 	controllerAlive(c, ctx)
 	outputs := pyjson.New()
-	controllerSwap(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
-	controllerSwap(t, &cli.Output, func(pairs *pyjson.Object) { outputs.Update(pairs) })
-	controllerSwap(t, &cli.Summary, func(text string) {})
-	controllerCapture(t, &cli.Stdout)
+	patch(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
+	patch(t, &cli.Output, func(pairs *pyjson.Object) { outputs.Update(pairs) })
+	patch(t, &cli.Summary, func(text string) {})
+	capture(t, &cli.Stdout)
 	args, _, _ := cli.Parser().ParseArgs([]string{"peek"})
 	cli.CmdPeek(ctx.Cfg, args)
-	is.Equal(outputs.Get("work"), "false")
+	assertEqual(t, outputs.Get("work"), "false")
 	args, _, _ = cli.Parser().ParseArgs([]string{"peek", "--item", "3"})
 	cli.CmdPeek(ctx.Cfg, args)
-	is.Equal(outputs.Get("work"), "true")
+	assertEqual(t, outputs.Get("work"), "true")
 }
 
 func TestController_APlanJobWaitsForTheLockThenPlansNothing(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	c.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	ctx := controllerLoopCtx(c, false)
@@ -448,28 +411,27 @@ func TestController_APlanJobWaitsForTheLockThenPlansNothing(t *testing.T) {
 		return nil
 	}, "state")
 	args, _, _ := cli.Parser().ParseArgs([]string{"plan", "--out", "/dev/null"})
-	controllerSwap(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
-	controllerSwap(t, &cli.LockTries, 1)
-	controllerSwap(t, &cli.Output, func(pairs *pyjson.Object) {})
-	controllerSwap(t, &cli.Summary, func(text string) {})
+	patch(t, &cli.Ctx, func(cfg *config.Config, write bool) *hctx.Context { return ctx })
+	patch(t, &cli.LockTries, 1)
+	patch(t, &cli.Output, func(pairs *pyjson.Object) {})
+	patch(t, &cli.Summary, func(text string) {})
 	// (The Python also replaced Path.write_text, so the plan went nowhere: it goes to /dev/null.)
-	out, restore := controllerCapture(t, &cli.Stdout)
+	out, restore := capture(t, &cli.Stdout)
 	cli.CmdPlan(ctx.Cfg, args)
 	restore()
-	is.In("the status loop is planning", out.String())
-	is.NotIn(config.LabelWorking, c.LabelNames(3))
+	assertIn(t, "the status loop is planning", out.String())
+	assertNotIn(t, config.LabelWorking, c.LabelNames(3))
 }
 
 func TestController_DeliveryLeavesTheNextRunToTheLoop(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	ctx := controllerLoopCtx(c, false)
 	controllerAlive(c, ctx)
 	deliverer := &deliver.Deliverer{}
 	deliverer.Ctx, deliverer.Chain, deliverer.Log = ctx, true, []string{}
 	deliverer.Chain_()
-	is.Equal(deliverer.Log, []string{"the status loop starts the next run (#1455)"})
-	is.Equal(c.Dispatches, []fakes.Dispatch{})
+	assertEqual(t, deliverer.Log, []string{"the status loop starts the next run (#1455)"})
+	assertEqual(t, c.Dispatches, []fakes.Dispatch{})
 }
 
 // controllerZipped is `folder` as GitHub hands back an upload of it: a zip of its files, by
@@ -536,15 +498,15 @@ func controllerEnded(c *fakes.FakeGitHub, runID string, at time.Time) {
 
 // controllerStartedBuild is DeliveryTests.started: a build of #12 the loop started at night, its
 // model job done: (harness, ctx, run id).
-func controllerStartedBuild(t *testing.T) (*difficultyHarness, *hctx.Context, string) {
+func controllerStartedBuild(t *testing.T) (*flowHarness, *hctx.Context, string) {
 	t.Helper()
-	h := newDifficultyHarness(t, difficultyHarnessOpts{Overrides: pyjson.New("controller", true)})
+	h := newFlowHarness(t, flowHarnessOpts{Overrides: pyjson.New("controller", true)})
 	cfg := *h.cfg
 	cfg.ControllerLoop, cfg.RunID = true, "777"
 	ctx := testsupport.MakeCtx(h.gh, testsupport.Ctx{At: testsupport.Night, Cfg: &cfg})
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
 	controllerListing(h.gh)
-	notes := controller.Start(ctx, controllerNoSleep)
+	notes := controller.Start(ctx, noSleep)
 	started := controllerStarted(notes)
 	if len(started) != 1 {
 		t.Fatalf("not one start: %q", notes)
@@ -555,8 +517,8 @@ func controllerStartedBuild(t *testing.T) (*difficultyHarness, *hctx.Context, st
 	planned := controllerFetch(t, ctx, ref)
 	out := filepath.Join(h.root, "out")
 	r := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build":  {difficultyBuilder(map[string]string{"src/game.txt": "rules v2\n"})},
-		"review": {difficultyReviewer(difficultyApprove)}})
+		"build":  {workBuilder(map[string]string{"src/game.txt": "rules v2\n"})},
+		"review": {workReviewer(workApprove)}})
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	h.gh.Artifacts[runID] = []*pyjson.Object{pyjson.New("id", 1, "name", "work", "expired", false)}
 	h.gh.ArtifactZips[1] = controllerZipped(t, out)
@@ -565,46 +527,44 @@ func controllerStartedBuild(t *testing.T) (*difficultyHarness, *hctx.Context, st
 }
 
 func TestController_TheLoopDeliversARunItStartedWithinATickOfItsWorkEnding(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h, ctx, runID := controllerStartedBuild(t)
 	// Until it is delivered the run holds its lane and housekeeping leaves its item alone.
-	is.Equal(plan.RunStatus(ctx, runID), "alive")
-	is.NotIn("requeued #12 from a dead run", plan.Housekeeping(ctx, ctx.Store.Load()))
+	assertEqual(t, plan.RunStatus(ctx, runID), "alive")
+	assertNotIn(t, "requeued #12 from a dead run", plan.Housekeeping(ctx, ctx.Store.Load()))
 	scratch := filepath.Join(h.root, "scratch")
 	notes := controller.Deliver(ctx, scratch)
-	is.Equal(notes, []string{fmt.Sprintf("delivered build #12 on claude-1 (run %s): approved", runID)})
+	assertEqual(t, notes, []string{fmt.Sprintf("delivered build #12 on claude-1 (run %s): approved", runID)})
 	// The same delivery the run's own deliver job made: the branch and an auto-merging pull
 	// request.
 	result := switchResult(t, filepath.Join(h.root, "out"))
-	is.Equal(h.originSHA("bot/issue-12"), result.Get("head"))
+	assertEqual(t, h.originSHA("bot/issue-12"), result.Get("head"))
 	pulls := h.gh.ListPulls("open", "bot/issue-12", 200)
-	is.Equal(len(pulls), 1)
+	assertEqual(t, len(pulls), 1)
 	pull := pulls[0]
 	_, merging := h.gh.AutoMerge[pyjson.Str(pull.Get("node_id"))]
-	is.True(merging, pull.Get("node_id"))
+	assertTrue(t, merging, pull.Get("node_id"))
 	number, _ := pyjson.AsInt(pull.Get("number"))
-	is.In(config.LabelPR, h.gh.LabelNames(number))
+	assertIn(t, config.LabelPR, h.gh.LabelNames(number))
 	record := ctx.Store.Load().Obj(plan.Deliveries).Obj(runID)
-	is.Equal([]any{record.Get("done"), record.Get("tries"), record.Get("status")}, []any{true, 1, "approved"})
+	assertEqual(t, []any{record.Get("done"), record.Get("tries"), record.Get("status")}, []any{true, 1, "approved"})
 	// Delivered once only; the scratch clone is gone; the run is over.
-	is.Equal(controller.Deliver(ctx, scratch), []string{})
+	assertEqual(t, controller.Deliver(ctx, scratch), []string{})
 	left, err := os.ReadDir(scratch)
 	if err != nil {
 		t.Fatal(err)
 	}
-	is.Equal(len(left), 0)
-	is.Equal(plan.RunStatus(ctx, runID), "dead")
+	assertEqual(t, len(left), 0)
+	assertEqual(t, plan.RunStatus(ctx, runID), "dead")
 	// The loop plans the next run itself, so the delivery started none.
-	is.Equal(len(h.gh.Dispatches), 1)
+	assertEqual(t, len(h.gh.Dispatches), 1)
 }
 
 func TestController_ARunWhoseModelJobLeftNoUploadIsDeliveredAsOneWithNoResult(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h, ctx, runID := controllerStartedBuild(t)
 	h.gh.Artifacts[runID] = []*pyjson.Object{}
 	notes := controller.Deliver(ctx, filepath.Join(h.root, "scratch"))
-	is.Equal(len(notes), 1, notes)
-	is.Equal(notes[0], fmt.Sprintf("delivered build #12 on claude-1 (run %s): infra "+
+	assertEqual(t, len(notes), 1, notes)
+	assertEqual(t, notes[0], fmt.Sprintf("delivered build #12 on claude-1 (run %s): infra "+
 		"(its model job left no upload)", runID))
 	var said []string
 	for _, comment := range h.gh.BotComments(12) {
@@ -612,10 +572,10 @@ func TestController_ARunWhoseModelJobLeftNoUploadIsDeliveredAsOneWithNoResult(t 
 			said = append(said, comment)
 		}
 	}
-	is.Equal(len(said), 1, said)
+	assertEqual(t, len(said), 1, said)
 	// Its link names the night run, not the loop's.
-	is.In(fmt.Sprintf("actions/runs/%s)", runID), said[0])
-	is.NotIn("actions/runs/777", said[0])
+	assertIn(t, fmt.Sprintf("actions/runs/%s)", runID), said[0])
+	assertNotIn(t, "actions/runs/777", said[0])
 }
 
 // controllerFailing is DeliveryTests.failing: a run the loop started for #3, ended, whose plan
@@ -634,66 +594,61 @@ func controllerFailing() (*fakes.FakeGitHub, *hctx.Context) {
 }
 
 func TestController_AFailingDeliveryIsTriedEachTickThenLeftToHousekeeping(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c, ctx := controllerFailing()
 	for _, attempt := range []int{1, 2} {
 		// Path(self.id()).parent / "unused": the id is one dotted name, so its parent is ".".
 		notes := controller.Deliver(ctx, "unused")
-		is.Equal(len(notes), 1, notes)
+		assertEqual(t, len(notes), 1, notes)
 		note := notes[0]
-		is.True(strings.HasPrefix(note, fmt.Sprintf("could not deliver run 5002, try %d of 3 "+
+		assertTrue(t, strings.HasPrefix(note, fmt.Sprintf("could not deliver run 5002, try %d of 3 "+
 			"(ValueError: no plan", attempt)), note)
-		is.True(strings.HasSuffix(note, fmt.Sprintf("it is tried again next tick (%d more)", 3-attempt)), note)
+		assertTrue(t, strings.HasSuffix(note, fmt.Sprintf("it is tried again next tick (%d more)", 3-attempt)), note)
 		// Meanwhile the item is not requeued.
-		is.Equal(plan.RunStatus(ctx, "5002"), "alive")
+		assertEqual(t, plan.RunStatus(ctx, "5002"), "alive")
 	}
 	notes := controller.Deliver(ctx, "")
-	is.Equal(len(notes), 1, notes)
-	is.True(strings.HasSuffix(notes[0], "its item is left to housekeeping, as a dead run's"), notes[0])
-	is.Equal(controller.Deliver(ctx, ""), []string{})
-	is.Equal(plan.RunStatus(ctx, "5002"), "dead")
-	is.In("requeued #3 from a dead run", plan.Housekeeping(ctx, ctx.Store.Load()))
-	is.Equal(c.LabelNames(3), map[string]bool{config.LabelBuild: true})
+	assertEqual(t, len(notes), 1, notes)
+	assertTrue(t, strings.HasSuffix(notes[0], "its item is left to housekeeping, as a dead run's"), notes[0])
+	assertEqual(t, controller.Deliver(ctx, ""), []string{})
+	assertEqual(t, plan.RunStatus(ctx, "5002"), "dead")
+	assertIn(t, "requeued #3 from a dead run", plan.Housekeeping(ctx, ctx.Store.Load()))
+	assertEqual(t, c.LabelNames(3), map[string]bool{config.LabelBuild: true})
 }
 
 func TestController_ARunTheLoopNeverDeliveredIsHousekeepingsAfterTheWindow(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c, ctx := controllerFailing()
-	is.Equal(plan.RunStatus(ctx, "5002"), "alive")
+	assertEqual(t, plan.RunStatus(ctx, "5002"), "alive")
 	later := testsupport.MakeCtx(c, testsupport.Ctx{At: testsupport.Day.Add(plan.DeliverWithin), Cfg: ctx.Cfg})
-	is.Equal(plan.RunStatus(later, "5002"), "dead")
-	is.Equal(controller.Deliver(later, ""), []string{})
+	assertEqual(t, plan.RunStatus(later, "5002"), "dead")
+	assertEqual(t, controller.Deliver(later, ""), []string{})
 	// A run nobody started with a plan never waits for the loop.
 	c.Runs.Set("5003", pyjson.New("id", 5003, "status", "completed", "updated_at", clock.ISO(testsupport.Day),
 		"display_title", "bot-night"))
-	is.Equal(plan.RunStatus(ctx, "5003"), "dead")
+	assertEqual(t, plan.RunStatus(ctx, "5003"), "dead")
 }
 
 func TestController_NothingInADeliveryEndsTheTick(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c, ctx := controllerFailing()
 	c.Patch.ListRuns = func(string, string, int, bool) []*pyjson.Object {
 		controllerRefuse()
 		return nil
 	}
-	is.Equal(controller.Deliver(ctx, ""), []string{"could not list the night runs to deliver: no"})
+	assertEqual(t, controller.Deliver(ctx, ""), []string{"could not list the night runs to deliver: no"})
 }
 
 func TestController_AnUploadHoldingAPathOutsideItIsRefused(t *testing.T) {
-	is := difficultyCheckOf(t)
 	h, ctx, _ := controllerStartedBuild(t)
 	h.gh.ArtifactZips[1] = controllerZipped(t, filepath.Join(h.root, "out"), "../escaped.txt", "x")
 	scratch := filepath.Join(h.root, "scratch")
 	notes := controller.Deliver(ctx, scratch)
-	is.Equal(len(notes), 1, notes)
-	is.In("the upload holds a path outside it", notes[0])
+	assertEqual(t, len(notes), 1, notes)
+	assertIn(t, "the upload holds a path outside it", notes[0])
 	_, err := os.Stat(filepath.Join(scratch, "escaped.txt"))
-	is.True(os.IsNotExist(err), err)
-	is.Equal(h.originSHA("bot/issue-12"), "")
+	assertTrue(t, os.IsNotExist(err), err)
+	assertEqual(t, h.originSHA("bot/issue-12"), "")
 }
 
 func TestController_TheLoopsSweepDeliversBeforeItPlans(t *testing.T) {
-	is := difficultyCheckOf(t)
 	c := fakes.NewFakeGitHub()
 	ctx := controllerLoopCtx(c, true)
 	ctx.Store.Update(func(s *pyjson.Object) any {
@@ -714,20 +669,19 @@ func TestController_TheLoopsSweepDeliversBeforeItPlans(t *testing.T) {
 		}
 		sweep.Sweep(ctx)
 	}()
-	is.Equal(order, []string{"deliver", "plan"})
+	assertEqual(t, order, []string{"deliver", "plan"})
 	// Any other sweep leaves the delivering to the loop.
 	cfg := *ctx.Cfg
 	cfg.ControllerLoop = false
 	other := testsupport.MakeCtx(c, testsupport.Ctx{At: testsupport.Day, Cfg: &cfg})
-	controllerSwap(t, &controller.Deliver, func(c *hctx.Context, workspace string) []string {
+	patch(t, &controller.Deliver, func(c *hctx.Context, workspace string) []string {
 		t.Fatal("delivered")
 		return nil
 	})
-	is.Equal(sweep.Deliveries(other, testsupport.Day), []string{})
+	assertEqual(t, sweep.Deliveries(other, testsupport.Day), []string{})
 }
 
 func TestController_BotNightGivesARunTheLoopStartedNoDeliverJob(t *testing.T) {
-	is := difficultyCheckOf(t)
 	data, err := os.ReadFile(controllerNightYML)
 	if err != nil {
 		t.Fatal(err)
@@ -738,18 +692,17 @@ func TestController_BotNightGivesARunTheLoopStartedNoDeliverJob(t *testing.T) {
 		t.Fatal("ValueError: substring not found")
 	}
 	job := text[at:]
-	is.In("if: ${{ always() && !inputs.plan_ref && contains(", job)
+	assertIn(t, "if: ${{ always() && !inputs.plan_ref && contains(", job)
 	// The model job's upload keeps the name the loop downloads.
-	is.In(fmt.Sprintf("name: %s\n", controller.WorkArtifact), text[:at])
+	assertIn(t, fmt.Sprintf("name: %s\n", controller.WorkArtifact), text[:at])
 }
 
 // ---------------------------------------------------------------------------- DownloadTests
 
 func TestController_AnArtifactIsFetchedFromItsRedirectWithoutTheToken(t *testing.T) {
-	is := difficultyCheckOf(t)
 	client := gh.NewGitHub("jgoetzmann/JackiOh", "secret-token", false, nil, nil, "")
 	var asked []*gh.Request
-	controllerSwap(t, &gh.BuildOpener, func() gh.Opener {
+	patch(t, &gh.BuildOpener, func() gh.Opener {
 		return func(request *gh.Request, timeout time.Duration) (*gh.Response, error) {
 			asked = append(asked, request)
 			header := http.Header{}
@@ -757,14 +710,14 @@ func TestController_AnArtifactIsFetchedFromItsRedirectWithoutTheToken(t *testing
 			return nil, &gh.HTTPError{URL: request.URL, Code: 302, Msg: "Found", Header: header}
 		}
 	})
-	controllerSwap(t, &gh.Urlopen, gh.Opener(func(request *gh.Request, timeout time.Duration) (*gh.Response, error) {
+	patch(t, &gh.Urlopen, gh.Opener(func(request *gh.Request, timeout time.Duration) (*gh.Response, error) {
 		asked = append(asked, request)
 		return &gh.Response{Body: []byte("zip bytes")}, nil
 	}))
-	is.Equal(string(client.DownloadArtifact(7)), "zip bytes")
-	is.True(strings.HasSuffix(asked[0].URL, "/repos/jgoetzmann/JackiOh/actions/artifacts/7/zip"), asked[0].URL)
-	is.Equal(asked[0].Header.Get("Authorization"), "Bearer secret-token")
+	assertEqual(t, string(client.DownloadArtifact(7)), "zip bytes")
+	assertTrue(t, strings.HasSuffix(asked[0].URL, "/repos/jgoetzmann/JackiOh/actions/artifacts/7/zip"), asked[0].URL)
+	assertEqual(t, asked[0].Header.Get("Authorization"), "Bearer secret-token")
 	// The storage URL is a plain string: no header, so no token, goes with it.
-	is.Equal(asked[1].URL, "https://blob.example/work.zip")
-	is.Equal(len(asked[1].Header), 0)
+	assertEqual(t, asked[1].URL, "https://blob.example/work.zip")
+	assertEqual(t, len(asked[1].Header), 0)
 }

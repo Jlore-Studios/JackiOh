@@ -60,44 +60,44 @@ func (e *diskOSError) Unwrap() error { return e.errno }
 // ---------------------------------------------------------------------------- RulesTests
 
 func TestDisk_TooFullIsTheShareUsedOrTheFloor(t *testing.T) {
-	workflowsTrue(t, disk.TooFull(diskFound(80, 6)))
-	workflowsTrue(t, disk.TooFull(diskFound(60, 2.9))) // a big disk with little left
-	wasteFalse(t, disk.TooFull(diskFound(79, 6)))
-	workflowsTrue(t, disk.Recovered(diskFound(70, 9)))
-	wasteFalse(t, disk.Recovered(diskFound(75, 7))) // between the lines: neither
-	wasteFalse(t, disk.TooFull(diskFound(75, 7)))
+	assertTrue(t, disk.TooFull(diskFound(80, 6)))
+	assertTrue(t, disk.TooFull(diskFound(60, 2.9))) // a big disk with little left
+	assertFalse(t, disk.TooFull(diskFound(79, 6)))
+	assertTrue(t, disk.Recovered(diskFound(70, 9)))
+	assertFalse(t, disk.Recovered(diskFound(75, 7))) // between the lines: neither
+	assertFalse(t, disk.TooFull(diskFound(75, 7)))
 }
 
 func TestDisk_AFullDiskInAnyError(t *testing.T) {
-	workflowsTrue(t, disk.IsFull(&diskOSError{syscall.ENOSPC, "No space left on device"}))
-	workflowsTrue(t, disk.IsFull(errors.New("git commit: fatal: No space left on device"))) // RuntimeError
-	wasteFalse(t, disk.IsFull(&diskOSError{syscall.ENOENT, "missing"}))
+	assertTrue(t, disk.IsFull(&diskOSError{syscall.ENOSPC, "No space left on device"}))
+	assertTrue(t, disk.IsFull(errors.New("git commit: fatal: No space left on device"))) // RuntimeError
+	assertFalse(t, disk.IsFull(&diskOSError{syscall.ENOENT, "missing"}))
 }
 
 func TestDisk_AReadingIsDfsShare(t *testing.T) {
 	got := disk.Reading(os.TempDir(), time.Now().UTC())
 	percent, total, free := got.Int("percent"), got.Int("total"), got.Int("free")
-	workflowsTrue(t, 0 <= percent && percent <= 100, percent)
-	workflowsLessEqual(t, free, total)
+	assertTrue(t, 0 <= percent && percent <= 100, percent)
+	assertLessEqual(t, free, total)
 }
 
 func TestDisk_OnlyValidReadingsFromAResultCountAndTheNewestWins(t *testing.T) {
 	result := pyjson.New("disk", pyjson.New("start", diskFound(95, 1), "after_clean", diskFound(60, 12),
 		"end", pyjson.New("total", "lots", "free", 1, "percent", 50)))
-	wasteEq(t, disk.Newest(result).Get("percent"), 60)
-	workflowsTrue(t, disk.Newest(pyjson.New("disk", pyjson.New("start",
+	assertEqual(t, disk.Newest(result).Get("percent"), 60)
+	assertTrue(t, disk.Newest(pyjson.New("disk", pyjson.New("start",
 		pyjson.New("total", 1, "free", 5, "percent", 3)))) == nil)
-	workflowsTrue(t, disk.Newest(pyjson.New("disk", "full")) == nil)
-	workflowsTrue(t, disk.Newest(pyjson.New()) == nil)
+	assertTrue(t, disk.Newest(pyjson.New("disk", "full")) == nil)
+	assertTrue(t, disk.Newest(pyjson.New()) == nil)
 }
 
 func TestDisk_AnOlderReadingNeverReplacesANewerOne(t *testing.T) {
 	st := pyjson.New()
 	disk.Note(st, diskFound(50, 15, "2026-10-04T21:00:00Z"), "night-vm-gpt", "")
 	disk.Note(st, diskFound(90, 3, "2026-10-04T20:00:00Z"), "night-vm-muse", "")
-	wasteEq(t, st.Obj("machine_disk").Obj("reading").Get("percent"), 50)
+	assertEqual(t, st.Obj("machine_disk").Obj("reading").Get("percent"), 50)
 	disk.Note(st, diskFound(85, 4, "2026-10-04T22:00:00Z"), "night-vm-muse-2", "u")
-	wasteEq(t, st.Obj("machine_disk").Get("runner"), "night-vm-muse-2")
+	assertEqual(t, st.Obj("machine_disk").Get("runner"), "night-vm-muse-2")
 }
 
 // ---------------------------------------------------------------------------- AlertTests
@@ -151,30 +151,30 @@ func diskNumber(issue *pyjson.Object) int {
 func TestDisk_ItOpensOnceRewritesWithNewReadingsAndClosesWhenBackUnder(t *testing.T) {
 	a := newDiskAlert()
 	a.keep(diskFound(55, 13))
-	workflowsEqual(t, disk.Alert(a.ctx), "")
-	workflowsEqual(t, len(a.issues()), 0)
+	assertEqual(t, disk.Alert(a.ctx), "")
+	assertEqual(t, len(a.issues()), 0)
 
 	a.keep(diskFound(97, 0.06, "2026-10-04T20:44:00Z"))
-	workflowsIn(t, "opened", disk.Alert(a.ctx))
+	assertIn(t, "opened", disk.Alert(a.ctx))
 	issue := a.one(t)
-	workflowsEqualMaps(t, a.gh.LabelNames(diskNumber(issue)), workflowsSet("night bot", config.LabelHuman))
-	workflowsIn(t, "97% full, 0.1 GB free of 30.0 GB", wasteStr(issue, "body"))
-	workflowsIn(t, "bot/machine/on-machine.sh bot/machine/disk-report.sh", wasteStr(issue, "body"))
-	workflowsEqual(t, disk.Alert(a.ctx), "") // the same reading again: nothing to say
+	assertEqual(t, a.gh.LabelNames(diskNumber(issue)), setOf("night bot", config.LabelHuman))
+	assertIn(t, "97% full, 0.1 GB free of 30.0 GB", wasteStr(issue, "body"))
+	assertIn(t, "bot/machine/on-machine.sh bot/machine/disk-report.sh", wasteStr(issue, "body"))
+	assertEqual(t, disk.Alert(a.ctx), "") // the same reading again: nothing to say
 
 	a.keep(diskFound(91, 2.7, "2026-10-04T20:55:00Z"))
-	workflowsIn(t, "rewrote", disk.Alert(a.ctx))
-	workflowsEqual(t, len(a.issues()), 1)
-	workflowsIn(t, "91% full", wasteStr(a.gh.GetIssue(diskNumber(issue)), "body"))
+	assertIn(t, "rewrote", disk.Alert(a.ctx))
+	assertEqual(t, len(a.issues()), 1)
+	assertIn(t, "91% full", wasteStr(a.gh.GetIssue(diskNumber(issue)), "body"))
 
 	a.keep(diskFound(75, 7, "2026-10-04T21:05:00Z")) // better, not yet back under
-	workflowsEqual(t, disk.Alert(a.ctx), "")
-	wasteEq(t, a.gh.GetIssue(diskNumber(issue)).Get("state"), "open")
+	assertEqual(t, disk.Alert(a.ctx), "")
+	assertEqual(t, a.gh.GetIssue(diskNumber(issue)).Get("state"), "open")
 
 	a.keep(diskFound(42, 17, "2026-10-04T21:15:00Z"))
-	workflowsIn(t, "closed", disk.Alert(a.ctx))
-	wasteEq(t, a.gh.GetIssue(diskNumber(issue)).Get("state"), "closed")
-	workflowsIn(t, "back to 42% full", wasteLast(t, a.gh.BotComments(diskNumber(issue))))
+	assertIn(t, "closed", disk.Alert(a.ctx))
+	assertEqual(t, a.gh.GetIssue(diskNumber(issue)).Get("state"), "closed")
+	assertIn(t, "back to 42% full", lastOf(t, a.gh.BotComments(diskNumber(issue))))
 	machineDisk := a.ctx.Store.Load().Obj("machine_disk")
 	if v, ok := machineDisk.Lookup("issue"); !ok || v != nil {
 		t.Fatalf("%v is not None", v)
@@ -187,18 +187,18 @@ func TestDisk_APersonWhoClosedItIsNotOverruledByTheSameReading(t *testing.T) {
 	disk.Alert(a.ctx)
 	issue := a.one(t)
 	a.gh.UpdateIssue(diskNumber(issue), pyjson.New("state", "closed", "closed_at", "2026-10-04T20:30:00Z"))
-	workflowsEqual(t, disk.Alert(a.ctx), "")
-	workflowsEqual(t, len(a.issues()), 1)
+	assertEqual(t, disk.Alert(a.ctx), "")
+	assertEqual(t, len(a.issues()), 1)
 	a.keep(diskFound(92, 2.5, "2026-10-04T21:00:00Z")) // a newer reading, still too full
-	workflowsIn(t, "opened", disk.Alert(a.ctx))
-	workflowsEqual(t, len(a.issues()), 2)
+	assertIn(t, "opened", disk.Alert(a.ctx))
+	assertEqual(t, len(a.issues()), 2)
 }
 
 func TestDisk_TheStatusIssueShowsTheReading(t *testing.T) {
 	a := newDiskAlert()
-	workflowsEqual(t, disk.Line(a.ctx.Store.Load()), "")
+	assertEqual(t, disk.Line(a.ctx.Store.Load()), "")
 	a.keep(diskFound(40, 18))
-	workflowsIn(t, "🟢 **The machine's disk:** 40% full, 18.0 GB free of 30.0 GB", disk.Line(a.ctx.Store.Load()))
+	assertIn(t, "🟢 **The machine's disk:** 40% full, 18.0 GB free of 30.0 GB", disk.Line(a.ctx.Store.Load()))
 }
 
 // ---------------------------------------------------------------------------- WorkerTests
@@ -214,8 +214,8 @@ type diskWorkerSetup struct {
 func newDiskWorkerSetup(t *testing.T) *diskWorkerSetup {
 	s := &diskWorkerSetup{root: t.TempDir()}
 	s.origin, s.clone = fakes.MakeOrigin(s.root)
-	s.cfg = testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", wasteGates(),
-		"install", wasteInstall())})
+	s.cfg = testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", workGates,
+		"install", workInstall())})
 	return s
 }
 
@@ -258,42 +258,42 @@ func diskPatchClean(t *testing.T, value string) (*int, func()) {
 
 func TestDisk_UnderTheFloorAfterCleaningItDoesNoWorkAndBlamesTheMachine(t *testing.T) {
 	s := newDiskWorkerSetup(t)
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "v2\n"})})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"})})
 	clean, done := diskPatchClean(t, "cleaned")
 	result := s.worker(r, []*pyjson.Object{diskFound(99, 0.06), diskFound(97, 1)}).Run()
 	done()
-	workflowsEqual(t, *clean, 1) // assert_called_once
-	workflowsEqual(t, len(r.Calls), 0)
-	wasteEq(t, result.Get("status"), "infra")
-	wasteEq(t, result.Get("infra_scope"), "machine")
-	workflowsIn(t, "97% full, 1.0 GB free", wasteStr(result, "reason"))
-	wasteEq(t, result.Obj("disk").Get("cleaned"), "cleaned")
-	keys := workflowsSet(result.Obj("disk").Keys()...)
+	assertEqual(t, *clean, 1) // assert_called_once
+	assertEqual(t, len(r.Calls), 0)
+	assertEqual(t, result.Get("status"), "infra")
+	assertEqual(t, result.Get("infra_scope"), "machine")
+	assertIn(t, "97% full, 1.0 GB free", wasteStr(result, "reason"))
+	assertEqual(t, result.Obj("disk").Get("cleaned"), "cleaned")
+	keys := setOf(result.Obj("disk").Keys()...)
 	delete(keys, "runner")
-	workflowsEqualMaps(t, keys, workflowsSet("start", "after_clean", "cleaned", "end"))
+	assertEqual(t, keys, setOf("start", "after_clean", "cleaned", "end"))
 }
 
 func TestDisk_RoomEnoughNeedsNoCleanAndTheWorkGoesOn(t *testing.T) {
 	s := newDiskWorkerSetup(t)
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
-		"review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
+		"review": workReviewer(workApprove)})
 	clean, done := diskPatchClean(t, "")
 	result := s.worker(r, []*pyjson.Object{diskFound(40, 18)}).Run()
 	done()
-	workflowsEqual(t, *clean, 0) // assert_not_called
-	wasteEq(t, result.Get("status"), "approved")
-	wasteEq(t, result.Obj("disk").Obj("start").Get("percent"), 40)
-	workflowsTrue(t, result.Obj("disk").Has("end"))
+	assertEqual(t, *clean, 0) // assert_not_called
+	assertEqual(t, result.Get("status"), "approved")
+	assertEqual(t, result.Obj("disk").Obj("start").Get("percent"), 40)
+	assertTrue(t, result.Obj("disk").Has("end"))
 }
 
 func TestDisk_CleaningThatMakesRoomLetsItStart(t *testing.T) {
 	s := newDiskWorkerSetup(t)
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
-		"review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
+		"review": workReviewer(workApprove)})
 	_, done := diskPatchClean(t, "ok")
 	result := s.worker(r, []*pyjson.Object{diskFound(85, 4), diskFound(60, 12)}).Run()
 	done()
-	wasteEq(t, result.Get("status"), "approved")
+	assertEqual(t, result.Get("status"), "approved")
 }
 
 func TestDisk_ADiskThatFillsUpMidRunPausesAndKeepsTheWork(t *testing.T) {
@@ -302,25 +302,25 @@ func TestDisk_ADiskThatFillsUpMidRunPausesAndKeepsTheWork(t *testing.T) {
 		herr.Must(os.WriteFile(filepath.Join(request.Cwd, "src", "game.txt"), []byte("half of v2\n"), 0o666))
 		panic(&diskOSError{syscall.ENOSPC, "No space left on device"})
 	}
-	result := s.worker(wasteRunner(map[string]runner.Handler{"build": fillsUp}), []*pyjson.Object{diskFound(50, 15)}).Run()
-	wasteEq(t, result.Get("status"), "interrupted")
-	wasteEq(t, result.Get("interrupt"), "disk")
-	workflowsIn(t, "the machine's disk filled up", wasteStr(result, "reason"))
+	result := s.worker(workFake(map[string]runner.Handler{"build": fillsUp}), []*pyjson.Object{diskFound(50, 15)}).Run()
+	assertEqual(t, result.Get("status"), "interrupted")
+	assertEqual(t, result.Get("interrupt"), "disk")
+	assertIn(t, "the machine's disk filled up", wasteStr(result, "reason"))
 }
 
 func TestDisk_GithubsRunnersReadNoDisk(t *testing.T) {
 	s := newDiskWorkerSetup(t)
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
-		"review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
+		"review": workReviewer(workApprove)})
 	result := s.worker(r, []*pyjson.Object{diskFound(99, 0.01)}, "ubuntu-latest").Run()
-	wasteEq(t, result.Get("status"), "approved")
-	workflowsTrue(t, !result.Has("disk"))
+	assertEqual(t, result.Get("status"), "approved")
+	assertTrue(t, !result.Has("disk"))
 }
 
 // ---------------------------------------------------------------------------- DeliverTests
 
 func TestDisk_ARefusalKeepsTheItemQueuedUncountedAndOpensTheIssue(t *testing.T) {
-	h := newWasteHarness(t, wasteHarnessOpts{Machine: []string{"muse"}})
+	h := newFlowHarness(t, flowHarnessOpts{Machine: []string{"muse"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, "out-full")
@@ -334,32 +334,32 @@ func TestDisk_ARefusalKeepsTheItemQueuedUncountedAndOpensTheIssue(t *testing.T) 
 	twelve := 12
 	deliver.NewDeliverer(h.ctx, planned.Copy().Set("provider", "muse"), out, h.deliverRepo,
 		"build", &twelve, "muse").Run()
-	workflowsEqualMaps(t, h.gh.LabelNames(12), workflowsSet(config.LabelBuild))
-	workflowsIn(t, "not this item's fault", wasteLast(t, h.gh.BotComments(12)))
+	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelBuild))
+	assertIn(t, "not this item's fault", lastOf(t, h.gh.BotComments(12)))
 	st := h.ctx.Store.Load()
-	wasteEq(t, st.Obj("items").Obj("12").GetOr("failures", 0), 0)
-	wasteEq(t, st.Obj("machine_disk").Get("runner"), "night-vm-muse-2")
-	wasteEq(t, st.Obj("machine_disk").Obj("reading").Get("percent"), 97)
+	assertEqual(t, st.Obj("items").Obj("12").GetOr("failures", 0), 0)
+	assertEqual(t, st.Obj("machine_disk").Get("runner"), "night-vm-muse-2")
+	assertEqual(t, st.Obj("machine_disk").Obj("reading").Get("percent"), 97)
 	opened := []*pyjson.Object{}
 	for _, issue := range h.gh.ListIssues("", "open", 300, "") {
 		if pyjson.Equal(issue.Get("title"), disk.Title) {
 			opened = append(opened, issue)
 		}
 	}
-	workflowsEqual(t, len(opened), 1)
-	wasteEq(t, st.Obj("machine_disk").Get("issue"), opened[0].Get("number"))
+	assertEqual(t, len(opened), 1)
+	assertEqual(t, st.Obj("machine_disk").Get("issue"), opened[0].Get("number"))
 }
 
 func TestDisk_AJobOnGithubsRunnersReportsNothing(t *testing.T) {
-	h := newWasteHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, "out-hosted")
-	r := wasteRunner(map[string]runner.Handler{"build": wasteBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": wasteReviewer(wasteApprove)})
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)})
 	wasteWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out).Run()
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	workflowsTrue(t, !h.ctx.Store.Load().Has("machine_disk"))
+	assertTrue(t, !h.ctx.Store.Load().Has("machine_disk"))
 }
 
 // ---------------------------------------------------------------------------- CleanScriptTests
@@ -403,7 +403,7 @@ func (c *diskClean) make(path string, hoursOld float64, content ...string) strin
 		if err := os.Mkdir(path, 0o777); err != nil && !errors.Is(err, os.ErrExist) {
 			c.t.Fatal(err)
 		}
-	} else if !diskExists(path) {
+	} else if !exists(path) {
 		herr.Must(os.WriteFile(path, []byte(text), 0o666))
 	}
 	when := time.Now().Add(-time.Duration(hoursOld * float64(time.Hour)))
@@ -475,12 +475,6 @@ func (c *diskClean) layOutARunner(runnerDir string) {
 	c.make(filepath.Join(runnerDir, "_work", "_temp", "left-by-a-dead-job"), 3, "dir")
 }
 
-// diskExists is Path.exists(): through a symbolic link.
-func diskExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
 // diskIsSymlink is Path.is_symlink().
 func diskIsSymlink(path string) bool {
 	info, err := os.Lstat(path)
@@ -494,20 +488,20 @@ func TestDisk_ItGivesBackOldRunnerVersionsLogsLeftoversAndIdleCaches(t *testing.
 	oldTmp := c.make(filepath.Join(c.tmp, "vitest-old"), 7)
 	newTmp := c.make(filepath.Join(c.tmp, "vitest-new"), 1)
 	said := c.runScript("")
-	workflowsIn(t, "night-vm-clean:", said)
+	assertIn(t, "night-vm-clean:", said)
 	for _, kind := range []string{"bin", "externals"} {
-		workflowsTrue(t, diskExists(filepath.Join(c.runnerDir, kind+".2.337.0")), "the current version stays")
-		workflowsTrue(t, diskExists(filepath.Join(c.runnerDir, kind+".2.338.0")), "an update's stays")
-		wasteFalse(t, diskExists(filepath.Join(c.runnerDir, kind+".2.336.0")), "the replaced one goes")
-		workflowsTrue(t, diskIsSymlink(filepath.Join(c.runnerDir, kind)))
+		assertTrue(t, exists(filepath.Join(c.runnerDir, kind+".2.337.0")), "the current version stays")
+		assertTrue(t, exists(filepath.Join(c.runnerDir, kind+".2.338.0")), "an update's stays")
+		assertFalse(t, exists(filepath.Join(c.runnerDir, kind+".2.336.0")), "the replaced one goes")
+		assertTrue(t, diskIsSymlink(filepath.Join(c.runnerDir, kind)))
 	}
-	wasteFalse(t, diskExists(filepath.Join(c.runnerDir, "_diag", "Worker_20261001.log")))
-	workflowsTrue(t, diskExists(filepath.Join(c.runnerDir, "_diag", "Worker_20261004.log")))
-	wasteFalse(t, diskExists(filepath.Join(c.runnerDir, "_work", "_update")))
-	wasteFalse(t, diskExists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
-	wasteFalse(t, diskExists(store), "no job is running, so the package store goes")
-	wasteFalse(t, diskExists(oldTmp))
-	workflowsTrue(t, diskExists(newTmp))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "_diag", "Worker_20261001.log")))
+	assertTrue(t, exists(filepath.Join(c.runnerDir, "_diag", "Worker_20261004.log")))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "_work", "_update")))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
+	assertFalse(t, exists(store), "no job is running, so the package store goes")
+	assertFalse(t, exists(oldTmp))
+	assertTrue(t, exists(newTmp))
 }
 
 func TestDisk_ARunningJobKeepsItsRunnerTempAndTheSharedStore(t *testing.T) {
@@ -518,9 +512,9 @@ func TestDisk_ARunningJobKeepsItsRunnerTempAndTheSharedStore(t *testing.T) {
 	// Lane 2 is running a job; this run is no job of its own (the disk timer).
 	c.workers = "4242 " + c.lane2 + "/bin.2.337.0/Runner.Worker spawnclient 1 2"
 	c.runScript("")
-	workflowsTrue(t, diskExists(store), "another job's install reads the store")
-	workflowsTrue(t, diskExists(filepath.Join(c.lane2, "_work", "_temp", "left-by-a-dead-job")))
-	wasteFalse(t, diskExists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
+	assertTrue(t, exists(store), "another job's install reads the store")
+	assertTrue(t, exists(filepath.Join(c.lane2, "_work", "_temp", "left-by-a-dead-job")))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
 }
 
 func TestDisk_AfterAJobItsOwnFilesGoAndTheStoreGoesOnlyWithTheLastJob(t *testing.T) {
@@ -535,11 +529,11 @@ func TestDisk_AfterAJobItsOwnFilesGoAndTheStoreGoesOnlyWithTheLastJob(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	workflowsEqual(t, len(entries), 0)
-	workflowsTrue(t, diskExists(store), "lane 2 still has a job going")
+	assertEqual(t, len(entries), 0)
+	assertTrue(t, exists(store), "lane 2 still has a job going")
 	c.workers = "11 " + c.runnerDir + "/bin/Runner.Worker spawnclient 1 2"
 	c.runScript(temp, "--job")
-	wasteFalse(t, diskExists(store), "the user's last job takes the store with it")
+	assertFalse(t, exists(store), "the user's last job takes the store with it")
 }
 
 func TestDisk_WhenItCannotTellWhichJobsRunItLeavesTheirFilesAlone(t *testing.T) {
@@ -549,18 +543,18 @@ func TestDisk_WhenItCannotTellWhichJobsRunItLeavesTheirFilesAlone(t *testing.T) 
 	two := 2
 	c.pgrepStatus = &two
 	c.runScript("")
-	workflowsTrue(t, diskExists(store))
-	workflowsTrue(t, diskExists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
-	wasteFalse(t, diskExists(filepath.Join(c.runnerDir, "bin.2.336.0")), "no job uses a replaced version")
+	assertTrue(t, exists(store))
+	assertTrue(t, exists(filepath.Join(c.runnerDir, "_work", "_temp", "left-by-a-dead-job")))
+	assertFalse(t, exists(filepath.Join(c.runnerDir, "bin.2.336.0")), "no job uses a replaced version")
 }
 
 func TestDisk_SetupInstallsItAsTheHookAndTheTimer(t *testing.T) {
 	newDiskClean(t) // the class's skip
-	setup := workflowsFile(t, filepath.Join(testsupport.Root, "bot", "machine", "setup.sh"))
-	workflowsIn(t, `install -m 755 "$here/clean.sh" /usr/local/bin/night-vm-clean.sh`, setup)
-	workflowsIn(t, "/usr/local/bin/night-vm-clean.sh --job || true", setup)
-	workflowsIn(t, "night-vm-disk.timer", setup)
-	workflowsIn(t, "OnUnitActiveSec=10min", setup)
-	onMachine := workflowsFile(t, filepath.Join(testsupport.Root, "bot", "machine", "on-machine.sh"))
-	workflowsIn(t, `tar czf - -C "$(dirname "$script")"`, onMachine)
+	setup := readText(t, filepath.Join(testsupport.Root, "bot", "machine", "setup.sh"))
+	assertIn(t, `install -m 755 "$here/clean.sh" /usr/local/bin/night-vm-clean.sh`, setup)
+	assertIn(t, "/usr/local/bin/night-vm-clean.sh --job || true", setup)
+	assertIn(t, "night-vm-disk.timer", setup)
+	assertIn(t, "OnUnitActiveSec=10min", setup)
+	onMachine := readText(t, filepath.Join(testsupport.Root, "bot", "machine", "on-machine.sh"))
+	assertIn(t, `tar czf - -C "$(dirname "$script")"`, onMachine)
 }

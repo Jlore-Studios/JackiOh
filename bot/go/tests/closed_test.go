@@ -12,19 +12,12 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 )
-
-// closedAll is test_cross's ALL, which test_closed imports: every subscription's secret set.
-// (cross_test.go holds the twin of test_cross itself.)
-func closedAll() map[string]string {
-	return map[string]string{"HARNESS_SECRETS_SET": strings.Join(providers.SecretNames, " ")}
-}
 
 // closedRuns is RUNS: runs holding every lane of the machine's subscriptions (Muse has four);
 // someone closed #5 while its run went on.
@@ -47,37 +40,37 @@ func TestClosed_ItsRunKeepsItsLane(t *testing.T) {
 	}
 	gh.AddIssue(8, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, Cfg: testsupport.MakeConfig(
-		testsupport.Config{Env: closedAll(), Machine: testsupport.Machine})})
+		testsupport.Config{Env: crossAll, Machine: testsupport.Machine})})
 	flowUpdate(ctx, func(s *pyjson.Object) {
 		for _, run := range closedRuns {
 			state.Item(s, run.number).Update(pyjson.New("run_id", run.runID, "provider", run.provider))
 		}
 	})
 	planned := flowMake(ctx)
-	flowEq(t, planned.Get("action"), "none")
-	flowIn(t, "`gpt` is busy", planned.Str("reason")) // its lane is still the closed #5's
+	assertEqual(t, planned.Get("action"), "none")
+	assertIn(t, "`gpt` is busy", planned.Str("reason")) // its lane is still the closed #5's
 	text := status.Report(ctx)
 	// Its six runs are on the machine, whose slots are apart from GitHub's lanes.
-	flowIn(t, "0 of 8 lanes on GitHub's runners, 8 free; 6 of "+
+	assertIn(t, "0 of 8 lanes on GitHub's runners, 8 free; 6 of "+
 		fmt.Sprintf("%d on the night box", ctx.Cfg.Pool.MachineParallel), text)
-	flowIn(t, "`gpt` (codex", text)
+	assertIn(t, "`gpt` (codex", text)
 }
 
 func TestClosed_ItsWorkIsNotDelivered(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Env: closedAll()})
-	h.GH.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: flowLabels(config.LabelBuild)})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
+	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: flowLabels(config.LabelBuild)})
 	build := workBuilder(map[string]any{"src/game.txt": "rules v2\n"})
 	closedMeanwhile := func(request *runner.RunRequest) *runner.RunResult {
-		h.GH.Threads.Item(12).Set("state", "closed")
+		h.gh.Threads.Item(12).Set("state", "closed")
 		return build(request)
 	}
-	_, result := h.Night(workFake(map[string]any{"build": closedMeanwhile, "review": workReviewer(workApprove)}))
-	flowEq(t, result.Get("status"), "approved") // the run itself finished its work
-	flowEq(t, len(h.GH.ListPulls("open", "bot/issue-12", 200)), 0)
-	flowEq(t, h.OriginSHA("bot/issue-12"), "")
-	labels := h.GH.LabelNames(12)
-	flowFalse(t, labels[config.LabelWorking] || labels[config.LabelBuild], labels)
-	flowIn(t, "was closed while a run was working on it", flowLast(t, h.GH.BotComments(12)))
+	_, result := h.night(workFake(map[string]any{"build": closedMeanwhile, "review": workReviewer(workApprove)}))
+	assertEqual(t, result.Get("status"), "approved") // the run itself finished its work
+	assertEqual(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)), 0)
+	assertEqual(t, h.originSHA("bot/issue-12"), "")
+	labels := h.gh.LabelNames(12)
+	assertFalse(t, labels[config.LabelWorking] || labels[config.LabelBuild], labels)
+	assertIn(t, "was closed while a run was working on it", lastOf(t, h.gh.BotComments(12)))
 }
 
 func TestClosed_ADeadRunsLabelIsClearedNotRequeued(t *testing.T) {
@@ -85,17 +78,17 @@ func TestClosed_ADeadRunsLabelIsClearedNotRequeued(t *testing.T) {
 	gh.AddIssue(5, fakes.Issue{Labels: flowLabels(config.LabelWorking), State: "closed"})
 	gh.Runs.Set("51", pyjson.New("status", "completed", "conclusion", "cancelled"))
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{Cfg: testsupport.MakeConfig(
-		testsupport.Config{Env: closedAll(), Machine: testsupport.Machine})})
+		testsupport.Config{Env: crossAll, Machine: testsupport.Machine})})
 	flowUpdate(ctx, func(s *pyjson.Object) {
 		state.Item(s, 5).Update(pyjson.New("run_id", "51", "provider", "gpt"))
 	})
-	flowIn(t, "#5", plan.HousekeepingDue(ctx, ctx.Store.Load()))
+	assertIn(t, "#5", plan.HousekeepingDue(ctx, ctx.Store.Load()))
 	notes := plan.Housekeeping(ctx, ctx.Store.Load())
-	flowEq(t, gh.LabelNames(5), flowSet())
-	flowEq(t, gh.BotComments(5), []string{}) // no "back in the queue"
+	assertEqual(t, gh.LabelNames(5), setOf())
+	assertEqual(t, gh.BotComments(5), []string{}) // no "back in the queue"
 	found := false
 	for _, note := range notes {
 		found = found || strings.Contains(note, "#5 was closed")
 	}
-	flowTrue(t, found, notes)
+	assertTrue(t, found, notes)
 }

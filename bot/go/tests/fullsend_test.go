@@ -85,7 +85,7 @@ func fullsendBuilder(edits map[string]string, prompts *[]string) runner.Handler 
 
 // A runner whose builder writes `edits`: a part's run calls nothing else.
 func fullsendBuilds(edits map[string]string) *runner.FakeRunner {
-	return crossRunner(map[string]runner.Handler{"build": fullsendBuilder(edits, nil)})
+	return workFake(map[string]runner.Handler{"build": fullsendBuilder(edits, nil)})
 }
 
 // fullsendWorld is World: a repository, a fake GitHub and the night bot's three jobs (plan,
@@ -129,7 +129,7 @@ func newFullsendWorld(t *testing.T, opts ...fullsendWorldOpts) *fullsendWorld {
 	overrides.Update(o.Overrides)
 	w.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine, Overrides: overrides})
 	w.ctx = testsupport.MakeCtx(w.gh, testsupport.Ctx{Cfg: w.cfg, At: testsupport.Night})
-	w.gh.BranchChecks = crossSet(w.cfg.RequiredChecks...)
+	w.gh.BranchChecks = setOf(w.cfg.RequiredChecks...)
 	w.deliverRepo = filepath.Join(w.root, "deliver")
 	fakes.Git(w.root, "clone", "-q", w.origin, w.deliverRepo)
 	w.gh.EnsureLabel("patch", "ededed", "patch")
@@ -151,7 +151,7 @@ func (w *fullsendWorld) work(planned *pyjson.Object, r *runner.FakeRunner) strin
 func (w *fullsendWorld) deliver(planned *pyjson.Object, out string) *pyjson.Object {
 	w.t.Helper()
 	deliver.NewDeliverer(w.ctx, planned, out, w.deliverRepo, "", nil, "").Run()
-	return crossLoad(w.t, filepath.Join(out, "result.json"))
+	return loadJSON(w.t, filepath.Join(out, "result.json"))
 }
 
 func (w *fullsendWorld) run(r *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
@@ -167,7 +167,7 @@ func (w *fullsendWorld) split() *pyjson.Object {
 	w.t.Helper()
 	w.gh.AddIssue(fullsendParent, fakes.Issue{Title: "A big project", Body: "Do it all.\n\nDone when: it works.",
 		Labels: []string{config.LabelBuild, fullsendLabel}})
-	_, result := w.run(crossRunner(map[string]runner.Handler{"plan": crossAnswer(fullsendAnswer(fullsendTree()))}))
+	_, result := w.run(workFake(map[string]runner.Handler{"plan": crossAnswer(fullsendAnswer(fullsendTree()))}))
 	return result
 }
 
@@ -183,26 +183,26 @@ func (w *fullsendWorld) has(branch, path string) bool {
 // ---------------------------------------------------------------------------- ModeTests
 
 func TestFullsend_FullsendIsANightBotMode(t *testing.T) {
-	crossEq(t, config.Modes, []string{"fullsend"})
-	crossEq(t, config.ModeLabels, pyjson.New(fullsendLabel, "fullsend"))
+	assertEqual(t, config.Modes, []string{"fullsend"})
+	assertEqual(t, config.ModeLabels, pyjson.New(fullsendLabel, "fullsend"))
 	for _, name := range []string{fullsendLabel, config.LabelTree} {
-		crossIn(t, name, config.Labels)
-		text := pyjson.Str(crossKey(t, config.Labels.Get(name), 1))
-		crossIn(t, "the night bot", text)
-		crossTrue(t, py.Len(text) <= config.LabelDescriptionMax)
+		assertIn(t, name, config.Labels)
+		text := pyjson.Str(dig(t, config.Labels.Get(name), 1))
+		assertIn(t, "the night bot", text)
+		assertTrue(t, py.Len(text) <= config.LabelDescriptionMax)
 	}
-	crossTrue(t, commands.Offered("fullsend"))
-	crossFalse(t, commands.Offered("oneshot"))
-	crossFalse(t, commands.Offered("split"))
+	assertTrue(t, commands.Offered("fullsend"))
+	assertFalse(t, commands.Offered("oneshot"))
+	assertFalse(t, commands.Offered("split"))
 	text := commands.HelpText("jgoetzmann-bot", "")
-	crossIn(t, "`fullsend [notes]`", text)
-	crossIn(t, "`build`, `fullsend`, `revise` or `suggest`", text)
-	crossIn(t, "`/harness fullsend`", commands.HelpText("jgoetzmann-bot", "fullsend"))
+	assertIn(t, "`fullsend [notes]`", text)
+	assertIn(t, "`build`, `fullsend`, `revise` or `suggest`", text)
+	assertIn(t, "`/harness fullsend`", commands.HelpText("jgoetzmann-bot", "fullsend"))
 	got := [][2]string{}
 	for _, c := range commands.Parse("/harness fullsend\n@jgoetzmann-bot fullsend", "jgoetzmann-bot") {
 		got = append(got, [2]string{c.Verb, c.Args})
 	}
-	crossEq(t, got, [][2]string{{"fullsend", ""}, {"fullsend", ""}})
+	assertEqual(t, got, [][2]string{{"fullsend", ""}, {"fullsend", ""}})
 }
 
 func TestFullsend_TheLabelQueuesItInFullsendModeAtHard(t *testing.T) {
@@ -210,19 +210,19 @@ func TestFullsend_TheLabelQueuesItInFullsendModeAtHard(t *testing.T) {
 	world.gh.AddIssue(fullsendParent, fakes.Issue{Labels: []string{fullsendLabel}})
 	events.OnIssueChange(world.ctx, pyjson.New("action", "labeled", "issue", world.gh.GetIssue(fullsendParent),
 		"label", pyjson.New("name", fullsendLabel), "sender", fakes.Operator), false)
-	crossEq(t, world.gh.LabelNames(fullsendParent), crossSet(config.LabelBuild, fullsendLabel))
-	crossIn(t, "split it into parts that land on one branch", crossLast(t, world.gh.BotComments(fullsendParent)))
+	assertEqual(t, world.gh.LabelNames(fullsendParent), setOf(config.LabelBuild, fullsendLabel))
+	assertIn(t, "split it into parts that land on one branch", lastOf(t, world.gh.BotComments(fullsendParent)))
 	found := queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil)
 	got := []any{}
 	for _, c := range found {
 		got = append(got, []any{c.Number, c.Mode, c.Difficulty, c.Planned})
 	}
-	crossEq(t, got, []any{[]any{fullsendParent, "fullsend", "hard", true}})
+	assertEqual(t, got, []any{[]any{fullsendParent, "fullsend", "hard", true}})
 	planned := world.claim()
-	crossEq(t, []any{planned.Get("action"), planned.Get("mode"), planned.Get("difficulty")},
+	assertEqual(t, []any{planned.Get("action"), planned.Get("mode"), planned.Get("difficulty")},
 		[]any{"build", "fullsend", "hard"})
-	crossEq(t, crossKey(t, planned, "seats", "build", "tier"), "strong")
-	crossIn(t, "Splitting this now for fullsend", crossLast(t, world.gh.BotComments(fullsendParent)))
+	assertEqual(t, dig(t, planned, "seats", "build", "tier"), "strong")
+	assertIn(t, "Splitting this now for fullsend", lastOf(t, world.gh.BotComments(fullsendParent)))
 }
 
 func TestFullsend_TheCommandQueuesItAndSquishysFullsendIsLeftAlone(t *testing.T) {
@@ -230,13 +230,13 @@ func TestFullsend_TheCommandQueuesItAndSquishysFullsendIsLeftAlone(t *testing.T)
 	world.gh.AddIssue(3)
 	asked := commands.Parse("/harness fullsend", "jgoetzmann-bot")
 	replies := events.RunCommands(world.ctx, asked, world.gh.GetIssue(3), fakes.Operator, 3, nil)
-	crossIn(t, "Queued #3", replies[0])
-	crossEq(t, world.gh.LabelNames(3), crossSet(config.LabelBuild, fullsendLabel))
+	assertIn(t, "Queued #3", replies[0])
+	assertEqual(t, world.gh.LabelNames(3), setOf(config.LabelBuild, fullsendLabel))
 	world.gh.AddIssue(4, fakes.Issue{Labels: []string{"squishy:fullsend"}})
 	mode := "fullsend"
-	crossIn(t, "is Squishy's (@squishy-squooby)",
+	assertIn(t, "is Squishy's (@squishy-squooby)",
 		queue.QueueBuild(world.ctx, 4, "jgoetzmann", false, false, nil, &mode))
-	crossEq(t, world.gh.LabelNames(4), crossSet("squishy:fullsend"))
+	assertEqual(t, world.gh.LabelNames(4), setOf("squishy:fullsend"))
 }
 
 // ---------------------------------------------------------------------------- SplitTests
@@ -250,24 +250,24 @@ func TestFullsend_TheSplitSetsUpTheBranchAndOpensParts(t *testing.T) {
 	}
 	world.gh.AddIssue(fullsendParent, fakes.Issue{Title: "A big project", Body: "Do it all.",
 		Labels: []string{config.LabelBuild, fullsendLabel, "priority:high"}})
-	_, result := world.run(crossRunner(map[string]runner.Handler{"plan": split}))
-	crossEq(t, result.Get("status"), "split")
-	crossIn(t, "## This is a fullsend split", prompts[0])
-	crossIn(t, "Each part lands on `"+fullsendOnto+"`", prompts[0])
+	_, result := world.run(workFake(map[string]runner.Handler{"plan": split}))
+	assertEqual(t, result.Get("status"), "split")
+	assertIn(t, "## This is a fullsend split", prompts[0])
+	assertIn(t, "Each part lands on `"+fullsendOnto+"`", prompts[0])
 	// The branch the parts land on, made from main's head.
-	crossEq(t, world.tip(fullsendOnto), world.tip("main"))
+	assertEqual(t, world.tip(fullsendOnto), world.tip("main"))
 	for _, part := range []int{fullsendRules, fullsendClient} {
-		crossEq(t, world.gh.LabelNames(part), crossSet("patch", "difficulty:medium", "priority:high", config.LabelBuild))
-		crossIn(t, "Its build lands on `"+fullsendOnto+"`, not `main` (fullsend).",
+		assertEqual(t, world.gh.LabelNames(part), setOf("patch", "difficulty:medium", "priority:high", config.LabelBuild))
+		assertIn(t, "Its build lands on `"+fullsendOnto+"`, not `main` (fullsend).",
 			crossStr(t, world.gh.GetIssue(part), "body"))
 		record := crossObj(t, world.ctx.Store.Load(), "items", strconv.Itoa(part))
-		crossEq(t, []any{record.Get("onto"), record.Get("part_of")}, []any{fullsendOnto, fullsendParent})
+		assertEqual(t, []any{record.Get("onto"), record.Get("part_of")}, []any{fullsendOnto, fullsendParent})
 	}
-	crossEq(t, world.gh.LabelNames(fullsendParent), crossSet("priority:high", config.LabelTree))
-	crossIn(t, "This is a fullsend tree: each part lands on `"+fullsendOnto+"`",
-		crossLast(t, world.gh.BotComments(fullsendParent)))
+	assertEqual(t, world.gh.LabelNames(fullsendParent), setOf("priority:high", config.LabelTree))
+	assertIn(t, "This is a fullsend tree: each part lands on `"+fullsendOnto+"`",
+		lastOf(t, world.gh.BotComments(fullsendParent)))
 	tree := crossObj(t, world.ctx.Store.Load(), "items", strconv.Itoa(fullsendParent), "tree")
-	crossEq(t, []any{tree.Get("mode"), tree.Get("children"), tree.Get("onto")},
+	assertEqual(t, []any{tree.Get("mode"), tree.Get("children"), tree.Get("onto")},
 		[]any{"fullsend", []any{fullsendRules, fullsendClient}, fullsendOnto})
 }
 
@@ -276,8 +276,8 @@ func TestFullsend_FullsendWaitsWhilePartsAreOpen(t *testing.T) {
 	world.split()
 	mode := "fullsend"
 	reply := queue.QueueBuild(world.ctx, fullsendParent, "jgoetzmann", false, false, nil, &mode)
-	crossIn(t, fmt.Sprintf("#%d's parts are still open (#%d, #%d)", fullsendParent, fullsendRules, fullsendClient), reply)
-	crossNotIn(t, config.LabelBuild, world.gh.LabelNames(fullsendParent))
+	assertIn(t, fmt.Sprintf("#%d's parts are still open (#%d, #%d)", fullsendParent, fullsendRules, fullsendClient), reply)
+	assertNotIn(t, config.LabelBuild, world.gh.LabelNames(fullsendParent))
 	// A queue label put on by hand does not build it either.
 	world.gh.AddLabels(fullsendParent, []string{config.LabelBuild})
 	skipped := []string{}
@@ -286,12 +286,12 @@ func TestFullsend_FullsendWaitsWhilePartsAreOpen(t *testing.T) {
 	for _, c := range found {
 		numbers = append(numbers, c.Number)
 	}
-	crossNotIn(t, fullsendParent, numbers)
-	crossIn(t, fmt.Sprintf("#%d skipped: its fullsend parts #%d, #%d are still open", fullsendParent, fullsendRules,
+	assertNotIn(t, fullsendParent, numbers)
+	assertIn(t, fmt.Sprintf("#%d skipped: its fullsend parts #%d, #%d are still open", fullsendParent, fullsendRules,
 		fullsendClient), skipped)
 	reply = queue.QueueBuild(world.ctx, fullsendParent, "jgoetzmann", false, true, nil, nil)
-	crossIn(t, "parts are still open", reply)
-	crossNotIn(t, config.LabelBuild, world.gh.LabelNames(fullsendParent))
+	assertIn(t, "parts are still open", reply)
+	assertNotIn(t, config.LabelBuild, world.gh.LabelNames(fullsendParent))
 }
 
 // ---------------------------------------------------------------------------- PartTests
@@ -305,47 +305,47 @@ func fullsendPartWorld(t *testing.T) *fullsendWorld {
 func TestFullsend_APartLandsOnTheBranchWithoutAPullRequest(t *testing.T) {
 	world := fullsendPartWorld(t)
 	prompts := []string{}
-	r := crossRunner(map[string]runner.Handler{"build": fullsendBuilder(map[string]string{"src/rules.txt": "the rules\n"}, &prompts)})
+	r := workFake(map[string]runner.Handler{"build": fullsendBuilder(map[string]string{"src/rules.txt": "the rules\n"}, &prompts)})
 	planned, result := world.run(r)
-	crossEq(t, []any{planned.Get("number"), planned.Get("onto"), planned.Get("part_of")},
+	assertEqual(t, []any{planned.Get("number"), planned.Get("onto"), planned.Get("part_of")},
 		[]any{fullsendRules, fullsendOnto, fullsendParent})
-	crossEq(t, result.Get("status"), "part")
-	crossEq(t, crossRoles(r), []string{"build"}) // no checks, no review
-	crossIn(t, fmt.Sprintf("This is part of fullsend tree #%d. Your change lands on `%s`", fullsendParent, fullsendOnto),
+	assertEqual(t, result.Get("status"), "part")
+	assertEqual(t, workRoles(r), []string{"build"}) // no checks, no review
+	assertIn(t, fmt.Sprintf("This is part of fullsend tree #%d. Your change lands on `%s`", fullsendParent, fullsendOnto),
 		prompts[0])
-	crossEq(t, len(world.gh.ListPulls("all", "", 200)), 0)
-	crossTrue(t, world.has(fullsendOnto, "src/rules.txt"))
-	crossFalse(t, world.has("main", "src/rules.txt"))
+	assertEqual(t, len(world.gh.ListPulls("all", "", 200)), 0)
+	assertTrue(t, world.has(fullsendOnto, "src/rules.txt"))
+	assertFalse(t, world.has("main", "src/rules.txt"))
 	issue := world.gh.GetIssue(fullsendRules)
-	crossEq(t, []any{issue.Get("state"), issue.Get("state_reason")}, []any{"closed", "completed"})
-	crossEq(t, crossAnd(world.gh.LabelNames(fullsendRules), crossSet(config.LabelBuild, config.LabelWorking)), crossSet())
-	crossIn(t, fmt.Sprintf("It landed on `%s` at `%s`.", fullsendOnto, world.tip(fullsendOnto)[:12]),
-		crossLast(t, world.gh.BotComments(fullsendRules)))
-	crossEq(t, crossKey(t, world.ctx.Store.Load(), "items", strconv.Itoa(fullsendRules), "landed"), world.tip(fullsendOnto))
+	assertEqual(t, []any{issue.Get("state"), issue.Get("state_reason")}, []any{"closed", "completed"})
+	assertEqual(t, crossAnd(world.gh.LabelNames(fullsendRules), setOf(config.LabelBuild, config.LabelWorking)), setOf())
+	assertIn(t, fmt.Sprintf("It landed on `%s` at `%s`.", fullsendOnto, world.tip(fullsendOnto)[:12]),
+		lastOf(t, world.gh.BotComments(fullsendRules)))
+	assertEqual(t, dig(t, world.ctx.Store.Load(), "items", strconv.Itoa(fullsendRules), "landed"), world.tip(fullsendOnto))
 }
 
 func TestFullsend_TwoPartsLandSideBySide(t *testing.T) {
 	world := fullsendPartWorld(t)
 	first := world.claim()
 	second := world.claim() // the second starts before the first lands
-	crossEq(t, []any{first.Get("number"), second.Get("number")}, []any{fullsendRules, fullsendClient})
+	assertEqual(t, []any{first.Get("number"), second.Get("number")}, []any{fullsendRules, fullsendClient})
 	outFirst := world.work(first, fullsendBuilds(map[string]string{"src/rules.txt": "rules\n"}))
 	outSecond := world.work(second, fullsendBuilds(map[string]string{"src/client.txt": "ui\n"}))
 	main := world.tip("main")
-	crossEq(t, world.deliver(first, outFirst).Get("status"), "part")
+	assertEqual(t, world.deliver(first, outFirst).Get("status"), "part")
 	landed := world.tip(fullsendOnto)
-	crossEq(t, fakes.Git(world.origin, "rev-list", "--count", main+".."+landed), "1")
-	crossEq(t, world.deliver(second, outSecond).Get("status"), "part")
+	assertEqual(t, fakes.Git(world.origin, "rev-list", "--count", main+".."+landed), "1")
+	assertEqual(t, world.deliver(second, outSecond).Get("status"), "part")
 	tip := world.tip(fullsendOnto)
-	crossTrue(t, world.has(fullsendOnto, "src/rules.txt"))
-	crossTrue(t, world.has(fullsendOnto, "src/client.txt"))
+	assertTrue(t, world.has(fullsendOnto, "src/rules.txt"))
+	assertTrue(t, world.has(fullsendOnto, "src/client.txt"))
 	parents := strings.Fields(fakes.Git(world.origin, "rev-list", "--parents", "-n", "1", tip))[1:]
-	crossEq(t, len(parents), 2) // joined by a merge commit, never pushed with force
-	crossEq(t, parents[0], landed)
-	crossIn(t, fmt.Sprintf("land #%d on %s", fullsendClient, fullsendOnto),
+	assertEqual(t, len(parents), 2) // joined by a merge commit, never pushed with force
+	assertEqual(t, parents[0], landed)
+	assertIn(t, fmt.Sprintf("land #%d on %s", fullsendClient, fullsendOnto),
 		fakes.Git(world.origin, "log", "-1", "--format=%s", tip))
 	for _, part := range []int{fullsendRules, fullsendClient} {
-		crossEq(t, world.gh.GetIssue(part).Get("state"), "closed")
+		assertEqual(t, world.gh.GetIssue(part).Get("state"), "closed")
 	}
 }
 
@@ -358,13 +358,13 @@ func TestFullsend_AConflictingPartIsParked(t *testing.T) {
 	world.deliver(first, outFirst)
 	landed := world.tip(fullsendOnto)
 	result := world.deliver(second, outSecond)
-	crossEq(t, world.tip(fullsendOnto), landed) // the branch keeps the part that landed first
-	crossEq(t, world.tip(fmt.Sprintf("bot/issue-%d", fullsendClient)), result.Get("head"))
-	crossEq(t, crossKey(t, world.ctx.Store.Load(), "items", strconv.Itoa(fullsendParent), "parked"),
+	assertEqual(t, world.tip(fullsendOnto), landed) // the branch keeps the part that landed first
+	assertEqual(t, world.tip(fmt.Sprintf("bot/issue-%d", fullsendClient)), result.Get("head"))
+	assertEqual(t, dig(t, world.ctx.Store.Load(), "items", strconv.Itoa(fullsendParent), "parked"),
 		[]any{fmt.Sprintf("bot/issue-%d", fullsendClient)})
-	crossEq(t, world.gh.GetIssue(fullsendClient).Get("state"), "closed")
-	crossIn(t, fmt.Sprintf("kept on `bot/issue-%d` instead, for #%d's reconcile to merge", fullsendClient, fullsendParent),
-		crossLast(t, world.gh.BotComments(fullsendClient)))
+	assertEqual(t, world.gh.GetIssue(fullsendClient).Get("state"), "closed")
+	assertIn(t, fmt.Sprintf("kept on `bot/issue-%d` instead, for #%d's reconcile to merge", fullsendClient, fullsendParent),
+		lastOf(t, world.gh.BotComments(fullsendClient)))
 }
 
 func TestFullsend_ALaterPartStartsFromThePartsBeforeIt(t *testing.T) {
@@ -373,15 +373,15 @@ func TestFullsend_ALaterPartStartsFromThePartsBeforeIt(t *testing.T) {
 	landed := world.tip(fullsendOnto)
 	seen := []bool{}
 	client := func(request *runner.RunRequest) *runner.RunResult {
-		seen = append(seen, crossIsFile(filepath.Join(request.Cwd, "src", "rules.txt")))
+		seen = append(seen, isFile(filepath.Join(request.Cwd, "src", "rules.txt")))
 		return fullsendBuilder(map[string]string{"src/client.txt": "ui\n"}, nil)(request)
 	}
-	planned, result := world.run(crossRunner(map[string]runner.Handler{"build": client}))
-	crossEq(t, []any{planned.Get("number"), result.Get("status")}, []any{fullsendClient, "part"})
-	crossEq(t, seen, []bool{true})
-	crossEq(t, result.Get("start"), landed)
-	crossEq(t, result.Get("changed_paths"), []any{"src/client.txt"}) // measured against the branch
-	crossEq(t, fakes.Git(world.origin, "rev-parse", world.tip(fullsendOnto)+"^"), landed)
+	planned, result := world.run(workFake(map[string]runner.Handler{"build": client}))
+	assertEqual(t, []any{planned.Get("number"), result.Get("status")}, []any{fullsendClient, "part"})
+	assertEqual(t, seen, []bool{true})
+	assertEqual(t, result.Get("start"), landed)
+	assertEqual(t, result.Get("changed_paths"), []any{"src/client.txt"}) // measured against the branch
+	assertEqual(t, fakes.Git(world.origin, "rev-parse", world.tip(fullsendOnto)+"^"), landed)
 }
 
 func TestFullsend_AHaltBeforeDeliveryLandsNothing(t *testing.T) {
@@ -389,11 +389,11 @@ func TestFullsend_AHaltBeforeDeliveryLandsNothing(t *testing.T) {
 	planned := world.claim()
 	out := world.work(planned, fullsendBuilds(map[string]string{"src/rules.txt": "rules\n"}))
 	world.ctx.Store.Update(func(s *pyjson.Object) any { s.Set("halted", true); return nil }, "state")
-	crossEq(t, world.deliver(planned, out).Get("status"), "part")
-	crossEq(t, world.tip(fullsendOnto), world.tip("main"))
-	crossEq(t, world.gh.GetIssue(fullsendRules).Get("state"), "open")
-	crossIn(t, config.LabelBuild, world.gh.LabelNames(fullsendRules))
-	crossTrue(t, world.has(fmt.Sprintf("bot/issue-%d", fullsendRules), "src/rules.txt")) // kept for the next run
+	assertEqual(t, world.deliver(planned, out).Get("status"), "part")
+	assertEqual(t, world.tip(fullsendOnto), world.tip("main"))
+	assertEqual(t, world.gh.GetIssue(fullsendRules).Get("state"), "open")
+	assertIn(t, config.LabelBuild, world.gh.LabelNames(fullsendRules))
+	assertTrue(t, world.has(fmt.Sprintf("bot/issue-%d", fullsendRules), "src/rules.txt")) // kept for the next run
 }
 
 func TestFullsend_APartTouchingAForbiddenPathLandsNothing(t *testing.T) {
@@ -407,12 +407,12 @@ func TestFullsend_APartTouchingAForbiddenPathLandsNothing(t *testing.T) {
 		defer func() { work.Guard = guard }()
 		return world.work(planned, r)
 	}()
-	crossEq(t, world.deliver(planned, out).Get("status"), "part")
-	crossEq(t, world.tip(fullsendOnto), world.tip("main"))
-	crossIn(t, "the change touches paths the bot may not change: .harness/HALT",
-		crossLast(t, world.gh.BotComments(fullsendRules)))
-	crossEq(t, world.gh.GetIssue(fullsendRules).Get("state"), "open")
-	crossIn(t, config.LabelBuild, world.gh.LabelNames(fullsendRules))
+	assertEqual(t, world.deliver(planned, out).Get("status"), "part")
+	assertEqual(t, world.tip(fullsendOnto), world.tip("main"))
+	assertIn(t, "the change touches paths the bot may not change: .harness/HALT",
+		lastOf(t, world.gh.BotComments(fullsendRules)))
+	assertEqual(t, world.gh.GetIssue(fullsendRules).Get("state"), "open")
+	assertIn(t, config.LabelBuild, world.gh.LabelNames(fullsendRules))
 }
 
 // ---------------------------------------------------------------------------- EasyPartTests
@@ -437,21 +437,21 @@ func TestFullsend_AWeakBuildersPartIsMeasuredAgainstTheBranch(t *testing.T) {
 	partOf(strconv.Itoa(fullsendClient))
 	r := fullsendBuilds(map[string]string{"src/client.txt": "ui\n"})
 	planned, result := world.run(r)
-	crossEq(t, []any{planned.Get("provider"), result.Get("status")}, []any{"lite", "part"})
-	crossEq(t, crossRoles(r), []string{"build"}) // no self check
-	crossTrue(t, world.has(fullsendOnto, "src/client.txt"))
-	crossEq(t, world.gh.GetIssue(fullsendClient).Get("state"), "closed")
+	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"lite", "part"})
+	assertEqual(t, workRoles(r), []string{"build"}) // no self check
+	assertTrue(t, world.has(fullsendOnto, "src/client.txt"))
+	assertEqual(t, world.gh.GetIssue(fullsendClient).Get("state"), "closed")
 	// A part of its own that breaks the rule lands nothing, and a stronger model takes it.
 	world.gh.AddIssue(43, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"},
 		Body: issueplan.WithPlan("Write two files.", "1. Write them.", "a person", "")})
 	partOf("43")
 	landed := world.tip(fullsendOnto)
 	_, result = world.run(fullsendBuilds(map[string]string{"src/a.txt": "a\n", "src/b.txt": "b\n"}))
-	crossEq(t, result.Get("status"), "part")
-	crossEq(t, world.tip(fullsendOnto), landed)
-	crossIn(t, "breaks the easy rule (line 1: it changes 2 files, over 1)", crossLast(t, world.gh.BotComments(43)))
-	crossEq(t, world.gh.GetIssue(43).Get("state"), "open")
-	crossIn(t, config.LabelBuild, world.gh.LabelNames(43))
+	assertEqual(t, result.Get("status"), "part")
+	assertEqual(t, world.tip(fullsendOnto), landed)
+	assertIn(t, "breaks the easy rule (line 1: it changes 2 files, over 1)", lastOf(t, world.gh.BotComments(43)))
+	assertEqual(t, world.gh.GetIssue(43).Get("state"), "open")
+	assertIn(t, config.LabelBuild, world.gh.LabelNames(43))
 }
 
 // ---------------------------------------------------------------------------- AdoptTests
@@ -501,26 +501,26 @@ func fullsendAdopt(world *fullsendWorld) string {
 func TestFullsend_TheSubIssuesSomeoneOpenedBecomeItsParts(t *testing.T) {
 	world := fullsendAdoptWorld(t)
 	reply := fullsendAdopt(world)
-	crossIn(t, fmt.Sprintf("#%d's sub-issues are its fullsend parts now, with no split: #%d, #%d land on `%s`",
+	assertIn(t, fmt.Sprintf("#%d's sub-issues are its fullsend parts now, with no split: #%d, #%d land on `%s`",
 		fullsendTracker, fullsendPlanned, fullsendUnqueued, fullsendTrackerOnto), reply)
-	crossIn(t, fmt.Sprintf("#%d (labelled `human`), #%d (a run holds it now)", fullsendPeoples, fullsendRunning), reply)
-	crossEq(t, world.gh.CreatedBranches, [][2]string{{fullsendTrackerOnto, "head-of-main"}})
+	assertIn(t, fmt.Sprintf("#%d (labelled `human`), #%d (a run holds it now)", fullsendPeoples, fullsendRunning), reply)
+	assertEqual(t, world.gh.CreatedBranches, [][2]string{{fullsendTrackerOnto, "head-of-main"}})
 	items := crossItems(t, world.ctx)
 	for _, part := range []int{fullsendPlanned, fullsendUnqueued} {
 		record := crossObj(t, items, strconv.Itoa(part))
-		crossEq(t, []any{crossKey(t, record, "onto"), crossKey(t, record, "part_of")},
+		assertEqual(t, []any{dig(t, record, "onto"), dig(t, record, "part_of")},
 			[]any{fullsendTrackerOnto, fullsendTracker})
 	}
 	for _, kept := range []int{fullsendPeoples, fullsendRunning, fullsendDoneAlready} {
-		crossNotIn(t, "onto", items.Obj(strconv.Itoa(kept)))
+		assertNotIn(t, "onto", items.Obj(strconv.Itoa(kept)))
 	}
-	crossEq(t, world.gh.LabelNames(fullsendUnqueued), crossSet("difficulty:medium", config.LabelBuild))
-	crossEq(t, world.gh.LabelNames(fullsendTracker), crossSet(config.LabelTree))
+	assertEqual(t, world.gh.LabelNames(fullsendUnqueued), setOf("difficulty:medium", config.LabelBuild))
+	assertEqual(t, world.gh.LabelNames(fullsendTracker), setOf(config.LabelTree))
 	tree := crossObj(t, items, strconv.Itoa(fullsendTracker), "tree")
-	crossEq(t, []any{tree.Get("mode"), tree.Get("onto"), tree.Get("adopted")},
+	assertEqual(t, []any{tree.Get("mode"), tree.Get("onto"), tree.Get("adopted")},
 		[]any{"fullsend", fullsendTrackerOnto, true})
 	// Asked again, it waits for its parts as any fullsend tree does, and builds nothing.
-	crossIn(t, fmt.Sprintf("#%d's parts are still open (#%d, #%d, #%d, #%d)", fullsendTracker, fullsendPlanned,
+	assertIn(t, fmt.Sprintf("#%d's parts are still open (#%d, #%d, #%d, #%d)", fullsendTracker, fullsendPlanned,
 		fullsendUnqueued, fullsendPeoples, fullsendRunning), fullsendAdopt(world))
 	found := map[int]*queue.Candidate{}
 	for _, c := range queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil) {
@@ -531,15 +531,15 @@ func TestFullsend_TheSubIssuesSomeoneOpenedBecomeItsParts(t *testing.T) {
 		numbers = append(numbers, n)
 	}
 	sort.Ints(numbers)
-	crossEq(t, numbers, []int{fullsendPlanned, fullsendUnqueued})
-	crossTrue(t, found[fullsendPlanned].Part && found[fullsendUnqueued].Part)
+	assertEqual(t, numbers, []int{fullsendPlanned, fullsendUnqueued})
+	assertTrue(t, found[fullsendPlanned].Part && found[fullsendUnqueued].Part)
 	// Once every sub-issue has closed, the sweep queues its reconcile.
 	for _, child := range []int{fullsendPlanned, fullsendUnqueued, fullsendPeoples, fullsendRunning} {
 		world.gh.UpdateIssue(child, pyjson.New("state", "closed"))
 	}
-	crossEq(t, sweep.Trees(world.ctx, testsupport.Night),
+	assertEqual(t, sweep.Trees(world.ctx, testsupport.Night),
 		[]string{fmt.Sprintf("#%d: its parts have all closed; queued its reconcile", fullsendTracker)})
-	crossEq(t, world.gh.LabelNames(fullsendTracker), crossSet(config.LabelTree, config.LabelBuild, fullsendLabel))
+	assertEqual(t, world.gh.LabelNames(fullsendTracker), setOf(config.LabelTree, config.LabelBuild, fullsendLabel))
 }
 
 func TestFullsend_MuseBuildsAHardPartFromItsPlanAndLandsIt(t *testing.T) {
@@ -547,20 +547,20 @@ func TestFullsend_MuseBuildsAHardPartFromItsPlanAndLandsIt(t *testing.T) {
 	fullsendAdopt(world)
 	fakes.Git(world.origin, "branch", fullsendTrackerOnto, "main") // what the adoption made on GitHub
 	planned := world.claim()
-	crossEq(t, []any{planned.Get("number"), planned.Get("provider"), planned.Get("onto")},
+	assertEqual(t, []any{planned.Get("number"), planned.Get("provider"), planned.Get("onto")},
 		[]any{fullsendPlanned, "muse", fullsendTrackerOnto})
-	crossEq(t, crossKey(t, planned, "seats", "build", "tier"), "medium")
-	crossEq(t, crossKey(t, planned, "seats", "plan"), nil) // built from the strong plan on record
+	assertEqual(t, dig(t, planned, "seats", "build", "tier"), "medium")
+	assertEqual(t, dig(t, planned, "seats", "plan"), nil) // built from the strong plan on record
 	result := world.deliver(planned, world.work(planned, fullsendBuilds(map[string]string{"src/batch1.txt": "one\n"})))
-	crossEq(t, result.Get("status"), "part")
-	crossTrue(t, world.has(fullsendTrackerOnto, "src/batch1.txt"))
-	crossFalse(t, world.has("main", "src/batch1.txt"))
-	crossEq(t, world.gh.GetIssue(fullsendPlanned).Get("state"), "closed")
+	assertEqual(t, result.Get("status"), "part")
+	assertTrue(t, world.has(fullsendTrackerOnto, "src/batch1.txt"))
+	assertFalse(t, world.has("main", "src/batch1.txt"))
+	assertEqual(t, world.gh.GetIssue(fullsendPlanned).Get("state"), "closed")
 	// The unplanned medium part goes to the lane's weakest seat that meets its floor:
 	// Muse plans it first in its own run (#695).
 	planned = world.claim()
-	crossEq(t, []any{planned.Get("number"), planned.Get("provider")}, []any{fullsendUnqueued, "muse"})
-	crossEq(t, crossKey(t, planned, "seats", "plan", "tier"), "medium")
+	assertEqual(t, []any{planned.Get("number"), planned.Get("provider")}, []any{fullsendUnqueued, "muse"})
+	assertEqual(t, dig(t, planned, "seats", "plan", "tier"), "medium")
 }
 
 // ---------------------------------------------------------------------------- PartBuilderTests
@@ -576,13 +576,13 @@ func TestFullsend_APartGoesToTheMediumSubscriptionsFirstAndNeverToSonnetAtHard(t
 		return []any{nil, note}
 	}
 	p := func(xs ...*providers.Provider) []*providers.Provider { return xs }
-	crossEq(t, who(p(claude, muse), "hard", false), []any{[]any{"claude-3", "strong"}, ""})
-	crossEq(t, who(p(claude, muse), "hard", true), []any{[]any{"muse", "medium"},
+	assertEqual(t, who(p(claude, muse), "hard", false), []any{[]any{"claude-3", "strong"}, ""})
+	assertEqual(t, who(p(claude, muse), "hard", true), []any{[]any{"muse", "medium"},
 		"a fullsend part, built on medium from its plan: its tree's reconcile checks and reviews it"})
-	crossEq(t, who(p(claude), "hard", true), []any{[]any{"claude-3", "strong"}, ""})
-	crossEq(t, who(p(claude, muse), "medium", false)[0], []any{"muse", "medium"})
-	crossEq(t, who(p(claude, muse), "medium", true), []any{[]any{"muse", "medium"}, ""})
-	crossEq(t, who(p(lite), "hard", true), []any{nil, ""}) // never under PART_FLOOR
+	assertEqual(t, who(p(claude), "hard", true), []any{[]any{"claude-3", "strong"}, ""})
+	assertEqual(t, who(p(claude, muse), "medium", false)[0], []any{"muse", "medium"})
+	assertEqual(t, who(p(claude, muse), "medium", true), []any{[]any{"muse", "medium"}, ""})
+	assertEqual(t, who(p(lite), "hard", true), []any{nil, ""}) // never under PART_FLOOR
 }
 
 // ---------------------------------------------------------------------------- ReconcileTests
@@ -601,10 +601,10 @@ func TestFullsend_TheReconcileOpensOnePullIntoMain(t *testing.T) {
 		return nil
 	}, "state")
 	notes := sweep.Trees(world.ctx, testsupport.Night)
-	crossEq(t, notes, []string{fmt.Sprintf("#%d: its parts have all closed; queued its reconcile", fullsendParent)})
-	crossEq(t, world.gh.LabelNames(fullsendParent), crossSet(config.LabelTree, config.LabelBuild, fullsendLabel))
-	crossIn(t, "one run merges the parts on `"+fullsendOnto+"`", crossLast(t, world.gh.BotComments(fullsendParent)))
-	crossIn(t, "I will reconcile its parts into one pull request", crossLast(t, world.gh.BotComments(fullsendParent)))
+	assertEqual(t, notes, []string{fmt.Sprintf("#%d: its parts have all closed; queued its reconcile", fullsendParent)})
+	assertEqual(t, world.gh.LabelNames(fullsendParent), setOf(config.LabelTree, config.LabelBuild, fullsendLabel))
+	assertIn(t, "one run merges the parts on `"+fullsendOnto+"`", lastOf(t, world.gh.BotComments(fullsendParent)))
+	assertIn(t, "I will reconcile its parts into one pull request", lastOf(t, world.gh.BotComments(fullsendParent)))
 	prompts := []string{}
 	created := []*pyjson.Object{}
 	world.gh.Patch.CreatePull = func(title, head, base, body string, draft bool) *pyjson.Object {
@@ -613,22 +613,22 @@ func TestFullsend_TheReconcileOpensOnePullIntoMain(t *testing.T) {
 	}
 	planned, result := func() (*pyjson.Object, *pyjson.Object) {
 		defer func() { world.gh.Patch.CreatePull = nil }()
-		return world.run(crossRunner(map[string]runner.Handler{
+		return world.run(workFake(map[string]runner.Handler{
 			"build":  fullsendBuilder(map[string]string{"src/game.txt": "rules A and B\n"}, &prompts),
 			"review": crossAnswer(fullsendApprove)}))
 	}()
-	crossEq(t, []any{planned.Get("number"), planned.Get("mode"), planned.Get("difficulty")},
+	assertEqual(t, []any{planned.Get("number"), planned.Get("mode"), planned.Get("difficulty")},
 		[]any{fullsendParent, "fullsend", "hard"})
-	crossIn(t, fmt.Sprintf("#%d [closed] Part 1: the rules", fullsendRules), crossStr(t, planned, "children"))
-	crossEq(t, planned.Get("parked"), []any{fmt.Sprintf("bot/issue-%d", fullsendClient)})
-	crossNotIn(t, "onto", planned)
-	crossIn(t, fmt.Sprintf("# Reconcile fullsend tree #%d", fullsendParent), prompts[0])
-	crossIn(t, fmt.Sprintf("`origin/bot/issue-%d`", fullsendClient), prompts[0])
-	crossIn(t, ".claude/skills/fullsend/SKILL.md", prompts[0])
-	crossEq(t, result.Get("status"), "approved")
-	crossEq(t, len(created), 1)
-	crossEq(t, []any{created[0].Get("head"), created[0].Get("base")}, []any{fullsendOnto, "main"})
-	crossIn(t, fmt.Sprintf("Closes #%d", fullsendParent), crossStr(t, created[0], "body"))
+	assertIn(t, fmt.Sprintf("#%d [closed] Part 1: the rules", fullsendRules), crossStr(t, planned, "children"))
+	assertEqual(t, planned.Get("parked"), []any{fmt.Sprintf("bot/issue-%d", fullsendClient)})
+	assertNotIn(t, "onto", planned)
+	assertIn(t, fmt.Sprintf("# Reconcile fullsend tree #%d", fullsendParent), prompts[0])
+	assertIn(t, fmt.Sprintf("`origin/bot/issue-%d`", fullsendClient), prompts[0])
+	assertIn(t, ".claude/skills/fullsend/SKILL.md", prompts[0])
+	assertEqual(t, result.Get("status"), "approved")
+	assertEqual(t, len(created), 1)
+	assertEqual(t, []any{created[0].Get("head"), created[0].Get("base")}, []any{fullsendOnto, "main"})
+	assertIn(t, fmt.Sprintf("Closes #%d", fullsendParent), crossStr(t, created[0], "body"))
 	// The pull request holds the parts that landed and the reconcile's own change.
-	crossEq(t, fakes.Git(world.origin, "show", "refs/heads/"+fullsendOnto+":src/game.txt"), "rules A and B")
+	assertEqual(t, fakes.Git(world.origin, "show", "refs/heads/"+fullsendOnto+":src/game.txt"), "rules A and B")
 }

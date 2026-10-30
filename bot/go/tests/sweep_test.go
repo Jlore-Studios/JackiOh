@@ -41,7 +41,7 @@ type sweepBase struct {
 func newSweepBase(t *testing.T) *sweepBase {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(5, fakes.Issue{Title: "Make the Coin shiny"}).Set("type", pyjson.New("name", "Task")) // typed already
-	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: eventsStr(sweepTrust)})
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: ptr(sweepTrust)})
 	// The repository has every label the bot uses, as it does once the sweep made them.
 	for _, name := range config.Labels.Keys() {
 		gh.Labels.Set(name, pyjson.New("name", name))
@@ -55,7 +55,7 @@ func (w *sweepBase) replies(number int) []string { return w.gh.BotComments(numbe
 
 func (w *sweepBase) lastReply(number int) string {
 	w.t.Helper()
-	return eventsLast(w.t, w.replies(number))
+	return lastOf(w.t, w.replies(number))
 }
 
 // sweepComment is add_comment(number, body, user, association="OWNER", created_at=...).
@@ -72,11 +72,11 @@ func TestSweep_ACommandNobodyAnsweredIsAnsweredByTheSweep(t *testing.T) {
 	w := newSweepBase(t)
 	comment := sweepComment(w.gh, 5, "/harness build", fakes.Operator, "", sweepAnHourAgo)
 	notes := sweep.Sweep(w.ctx)
-	eventsEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
-	eventsIn(t, "Queued #5", w.lastReply(5))
-	eventsIn(t, fakes.Reaction{ID: comment.Int("id"), Content: "rocket"}, w.gh.Reacted)
-	eventsIn(t, "answered a comment on #5", notes[0])
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{}) // answered once, never twice
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
+	assertIn(t, "Queued #5", w.lastReply(5))
+	assertIn(t, fakes.Reaction{ID: comment.Int("id"), Content: "rocket"}, w.gh.Reacted)
+	assertIn(t, "answered a comment on #5", notes[0])
+	assertEqual(t, sweep.Sweep(w.ctx), []string{}) // answered once, never twice
 }
 
 func TestSweep_ABareApproveVoteIsAnsweredByTheSweep(t *testing.T) {
@@ -85,10 +85,10 @@ func TestSweep_ABareApproveVoteIsAnsweredByTheSweep(t *testing.T) {
 	w.gh.AddIssue(6, fakes.Issue{Title: "A suggestion", Labels: []string{config.LabelSuggestion}})
 	sweepComment(w.gh, 6, "approve", fakes.Operator, "", sweepAnHourAgo)
 	notes := sweep.Sweep(w.ctx)
-	eventsEqual(t, w.gh.LabelNames(6), eventsSet(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
-	eventsIn(t, "Queued #6", w.lastReply(6))
-	eventsIn(t, "answered a comment on #6", notes[0])
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{}) // answered once, never twice
+	assertEqual(t, w.gh.LabelNames(6), setOf(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
+	assertIn(t, "Queued #6", w.lastReply(6))
+	assertIn(t, "answered a comment on #6", notes[0])
+	assertEqual(t, sweep.Sweep(w.ctx), []string{}) // answered once, never twice
 }
 
 func TestSweep_ABareRejectVoteIsAnsweredByTheSweep(t *testing.T) {
@@ -97,10 +97,10 @@ func TestSweep_ABareRejectVoteIsAnsweredByTheSweep(t *testing.T) {
 	sweepComment(w.gh, 6, "reject", fakes.Operator, "", sweepAnHourAgo)
 	notes := sweep.Sweep(w.ctx)
 	issue := w.gh.GetIssue(6)
-	eventsEqual(t, []any{eventsDig(t, issue, "state"), eventsDig(t, issue, "state_reason")}, []any{"closed", "not_planned"})
-	eventsIn(t, "Rejected: I closed #6", w.lastReply(6))
-	eventsIn(t, "answered a comment on #6", notes[0])
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
+	assertEqual(t, []any{dig(t, issue, "state"), dig(t, issue, "state_reason")}, []any{"closed", "not_planned"})
+	assertIn(t, "Rejected: I closed #6", w.lastReply(6))
+	assertIn(t, "answered a comment on #6", notes[0])
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 }
 
 func TestSweep_WhatTheSweepLeavesAlone(t *testing.T) {
@@ -113,9 +113,9 @@ func TestSweep_WhatTheSweepLeavesAlone(t *testing.T) {
 	answered := sweepComment(w.gh, 5, "/harness status", fakes.Operator, "", sweepAnHourAgo)
 	w.gh.React(answered.Int("id"), "rocket", false)
 	before := len(w.replies(5))
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
-	eventsEqual(t, len(w.replies(5)), before)
-	eventsFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
+	assertEqual(t, len(w.replies(5)), before)
+	assertFalse(t, dig(t, w.ctx.Store.Load(), "halted"))
 }
 
 func TestSweep_TheOtherBotsWordsAreNeverReportedAsAnswered(t *testing.T) {
@@ -128,9 +128,9 @@ func TestSweep_TheOtherBotsWordsAreNeverReportedAsAnswered(t *testing.T) {
 		"/harness revised. Just pushed the rust patch in, see if this is still needed"} {
 		sweepComment(w.gh, 5, body, sweepSquishy, "COLLABORATOR", sweepAnHourAgo)
 	}
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
-	eventsEqual(t, w.replies(5), []string{})
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
+	assertEqual(t, w.replies(5), []string{})
 }
 
 func TestSweep_ALineCommentOnADiffIsAnsweredToo(t *testing.T) {
@@ -138,7 +138,7 @@ func TestSweep_ALineCommentOnADiffIsAnsweredToo(t *testing.T) {
 	w.gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR}})
 	w.gh.AddReviewComment(9, "@jgoetzmann-bot rename this", fakes.Comment{User: fakes.Operator, CreatedAt: sweepAnHourAgo})
 	sweep.Sweep(w.ctx)
-	eventsIn(t, config.LabelRevise, w.gh.LabelNames(9))
+	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
 }
 
 // ---------------------------------------------------------------------------- HandlerTests
@@ -150,8 +150,8 @@ func TestSweep_ALineCommentEventQueuesARevisionAndReactsOnTheRightEndpoint(t *te
 		"comment", pyjson.New("id", 77, "body", "@jgoetzmann-bot use a constant here",
 			"user", fakes.Operator, "author_association", "OWNER"))
 	events.Handle(w.ctx, "pull_request_review_comment", payload)
-	eventsIn(t, config.LabelRevise, w.gh.LabelNames(9))
-	eventsIn(t, fakes.Reaction{ID: 77, Content: "rocket"}, w.gh.Reacted)
+	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
+	assertIn(t, fakes.Reaction{ID: 77, Content: "rocket"}, w.gh.Reacted)
 }
 
 func TestSweep_AnEditThatAddsACommandIsHeardOnce(t *testing.T) {
@@ -160,10 +160,10 @@ func TestSweep_AnEditThatAddsACommandIsHeardOnce(t *testing.T) {
 		"comment", pyjson.New("id", 88, "body", "on second thought\n/harness build",
 			"user", fakes.Operator, "author_association", "OWNER"))
 	events.Handle(w.ctx, "issue_comment", payload)
-	eventsEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild))
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild))
 	count := len(w.replies(5))
 	events.Handle(w.ctx, "issue_comment", payload) // edited again: already answered
-	eventsEqual(t, len(w.replies(5)), count)
+	assertEqual(t, len(w.replies(5)), count)
 }
 
 func TestSweep_NamingTheBotMidSentenceGetsAnAnswerNotSilence(t *testing.T) {
@@ -172,9 +172,9 @@ func TestSweep_NamingTheBotMidSentenceGetsAnAnswerNotSilence(t *testing.T) {
 		"comment", pyjson.New("id", 90, "body", "thanks, @jgoetzmann-bot could you also add sound?",
 			"user", fakes.Operator, "author_association", "OWNER"))
 	events.Handle(w.ctx, "issue_comment", payload)
-	eventsIn(t, "I saw my name", w.lastReply(5))
-	eventsIn(t, fakes.Reaction{ID: 90, Content: "rocket"}, w.gh.Reacted)
-	eventsEqual(t, w.gh.LabelNames(5), eventsSet()) // a hint, never a guessed build
+	assertIn(t, "I saw my name", w.lastReply(5))
+	assertIn(t, fakes.Reaction{ID: 90, Content: "rocket"}, w.gh.Reacted)
+	assertEqual(t, w.gh.LabelNames(5), setOf()) // a hint, never a guessed build
 }
 
 func TestSweep_AFailingCommandIsAnsweredAndItsNeighboursStillRun(t *testing.T) {
@@ -196,9 +196,9 @@ func TestSweep_AFailingCommandIsAnsweredAndItsNeighboursStillRun(t *testing.T) {
 			"user", fakes.Operator, "author_association", "OWNER"))
 	events.Handle(w.ctx, "issue_comment", payload)
 	reply := w.lastReply(5)
-	eventsIn(t, "That failed (StateConflict", reply)
-	eventsIn(t, "Night bot status", reply)
-	eventsIn(t, fakes.Reaction{ID: 91, Content: "rocket"}, w.gh.Reacted)
+	assertIn(t, "That failed (StateConflict", reply)
+	assertIn(t, "Night bot status", reply)
+	assertIn(t, fakes.Reaction{ID: 91, Content: "rocket"}, w.gh.Reacted)
 }
 
 func TestSweep_AForceThatCannotStartARunStillQueuesIt(t *testing.T) {
@@ -212,9 +212,9 @@ func TestSweep_AForceThatCannotStartARunStillQueuesIt(t *testing.T) {
 		"comment", pyjson.New("id", 92, "body", "/harness build --force", "user", fakes.Operator,
 			"author_association", "OWNER"))
 	events.Handle(w.ctx, "issue_comment", payload)
-	eventsEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild))
-	eventsTrue(t, eventsDig(t, w.ctx.Store.Load(), "items", "5", "forced"))
-	eventsIn(t, "the next hourly run starts it", w.lastReply(5))
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild))
+	assertTrue(t, dig(t, w.ctx.Store.Load(), "items", "5", "forced"))
+	assertIn(t, "the next hourly run starts it", w.lastReply(5))
 }
 
 // ---------------------------------------------------------------------------- LostEventTests
@@ -223,31 +223,31 @@ func TestSweep_AnAssignmentNothingAnsweredIsQueued(t *testing.T) {
 	w := newSweepBase(t)
 	w.gh.Threads.Item(5).Set("assignees", []any{fakes.Bot})
 	notes := sweep.Sweep(w.ctx)
-	eventsEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
-	eventsIn(t, "assigned here but never queued", w.lastReply(5))
-	eventsIn(t, "from an assignment", notes[0])
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
+	assertIn(t, "assigned here but never queued", w.lastReply(5))
+	assertIn(t, "from an assignment", notes[0])
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 }
 
 func TestSweep_AnAssignmentAlreadyHandledOrStoppedIsLeftAlone(t *testing.T) {
 	w := newSweepBase(t)
 	w.gh.Threads.Item(5).Set("assignees", []any{fakes.Bot})
-	eventsUpdateItem(w.ctx, 5, "queued_at", sweepAnHourAgo)
+	flowUpdateItem(w.ctx, 5, pyjson.New("queued_at", sweepAnHourAgo))
 	sweepAsTask(w.gh.AddIssue(6))
 	w.gh.Threads.Item(6).Set("assignees", []any{fakes.Bot})
-	eventsUpdateItem(w.ctx, 6, "stop_requested", true)
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
+	flowUpdateItem(w.ctx, 6, pyjson.New("stop_requested", true))
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 }
 
 func TestSweep_AReviewAskingForChangesThatNothingAnswered(t *testing.T) {
 	w := newSweepBase(t)
 	w.gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR}})
-	eventsUpdateItem(w.ctx, 9, "feedback_since", sweepLastWeek)
+	flowUpdateItem(w.ctx, 9, pyjson.New("feedback_since", sweepLastWeek))
 	w.gh.Reviews.Set(9, []*pyjson.Object{pyjson.New("id", 61, "state", "CHANGES_REQUESTED", "body", "No.", "user", fakes.Operator,
 		"author_association", "OWNER", "submitted_at", sweepAnHourAgo)})
 	sweep.Sweep(w.ctx)
-	eventsIn(t, config.LabelRevise, w.gh.LabelNames(9))
-	eventsIn(t, "Queued a revision of #9", w.lastReply(9))
+	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
+	assertIn(t, "Queued a revision of #9", w.lastReply(9))
 }
 
 func TestSweep_AReviewTheBotAlreadyAnsweredIsNotRedone(t *testing.T) {
@@ -260,7 +260,7 @@ func TestSweep_AReviewTheBotAlreadyAnsweredIsNotRedone(t *testing.T) {
 		"review", review,
 		"pull_request", w.gh.GetPull(9)))
 	w.gh.Threads.Item(9).Set("labels", eventsLabels(config.LabelPR, "difficulty:medium")) // landed
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 }
 
 func TestSweep_AFailedCIRunNothingAnsweredIsRerunThenFixed(t *testing.T) {
@@ -270,11 +270,11 @@ func TestSweep_AFailedCIRunNothingAnsweredIsRerunThenFixed(t *testing.T) {
 		"status", "completed", "conclusion", "failure", "run_attempt", 1,
 		"created_at", sweepAnHourAgo, "html_url", "u", "pull_requests", []any{}))
 	sweep.Sweep(w.ctx)
-	eventsEqual(t, w.gh.Reruns, []any{99})
+	assertEqual(t, w.gh.Reruns, []any{99})
 	w.gh.Runs.Obj("99").Set("run_attempt", 2)
 	sweep.Sweep(w.ctx)
-	eventsIn(t, config.LabelRevise, w.gh.LabelNames(9))
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{}) // queued: nothing more to do
+	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
+	assertEqual(t, sweep.Sweep(w.ctx), []string{}) // queued: nothing more to do
 }
 
 func TestSweep_ABlockedOrGreenPRIsLeftAlone(t *testing.T) {
@@ -286,13 +286,13 @@ func TestSweep_ABlockedOrGreenPRIsLeftAlone(t *testing.T) {
 		"conclusion", "failure", "created_at", sweepAnHourAgo))
 	w.gh.Runs.Set("2", pyjson.New("id", 2, "name", "CI", "head_sha", "s2", "status", "completed",
 		"conclusion", "success", "created_at", sweepAnHourAgo))
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 }
 
 func TestSweep_TheSweepRecordsWhenItRan(t *testing.T) {
 	w := newSweepBase(t)
 	sweep.Sweep(w.ctx)
-	eventsIn(t, "at", eventsDig(t, w.ctx.Store.Load(), "last_sweep"))
+	assertIn(t, "at", dig(t, w.ctx.Store.Load(), "last_sweep"))
 }
 
 func TestSweep_TheFirstSweepReplaysNothing(t *testing.T) {
@@ -300,21 +300,21 @@ func TestSweep_TheFirstSweepReplaysNothing(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(5)
 	sweepComment(gh, 5, "/harness build", fakes.Operator, "", sweepAnHourAgo)
-	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: eventsStr(sweepTrust)})
-	eventsIn(t, "first sweep", sweep.Sweep(ctx)[0])
-	eventsEqual(t, gh.LabelNames(5), eventsSet())
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, TrustText: ptr(sweepTrust)})
+	assertIn(t, "first sweep", sweep.Sweep(ctx)[0])
+	assertEqual(t, gh.LabelNames(5), setOf())
 	testsupport.ClockOf(ctx).At = testsupport.Day.Add(30 * time.Minute)
 	sweepComment(gh, 5, "/harness build", fakes.Operator, "", clock.ISO(testsupport.Day.Add(5*time.Minute)))
 	sweep.Sweep(ctx)
-	eventsEqual(t, gh.LabelNames(5), eventsSet(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
+	assertEqual(t, gh.LabelNames(5), setOf(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
 }
 
 func TestSweep_AnEditedCommentIsLeftToItsEditEvent(t *testing.T) {
 	w := newSweepBase(t)
 	comment := sweepComment(w.gh, 5, "/harness halt", fakes.Operator, "", sweepAnHourAgo)
 	comment.Set("updated_at", clock.ISO(testsupport.Day.Add(-30*time.Minute)))
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
-	eventsFalse(t, eventsDig(t, w.ctx.Store.Load(), "halted"))
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
+	assertFalse(t, dig(t, w.ctx.Store.Load(), "halted"))
 }
 
 func TestSweep_OneBadCommentDoesNotStopTheRest(t *testing.T) {
@@ -324,8 +324,8 @@ func TestSweep_OneBadCommentDoesNotStopTheRest(t *testing.T) {
 		"issue_url", "https://api.github.com/repos/x/y/issues/404")})
 	sweepComment(w.gh, 5, "/harness build", fakes.Operator, "", sweepAnHourAgo)
 	notes := sweep.Sweep(w.ctx)
-	eventsEqual(t, w.gh.LabelNames(5), eventsSet(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
-	eventsTrue(t, slices.ContainsFunc(notes, func(n string) bool { return strings.Contains(n, "skipped one") }))
+	assertEqual(t, w.gh.LabelNames(5), setOf(config.LabelBuild, config.LabelNeedsPlan)) // queued, then planned first
+	assertTrue(t, slices.ContainsFunc(notes, func(n string) bool { return strings.Contains(n, "skipped one") }))
 }
 
 func TestSweep_AReviewBodyCommandNobodyAnswered(t *testing.T) {
@@ -335,8 +335,8 @@ func TestSweep_AReviewBodyCommandNobodyAnswered(t *testing.T) {
 		"user", fakes.Operator, "author_association", "OWNER",
 		"submitted_at", sweepAnHourAgo)})
 	sweep.Sweep(w.ctx)
-	eventsIn(t, config.LabelRevise, w.gh.LabelNames(9))
-	eventsEqual(t, sweep.Sweep(w.ctx), []string{})
+	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 }
 
 // ---------------------------------------------------------------------------- NightRunTests
@@ -355,14 +355,14 @@ func TestSweep_ADueSurveyCountsAsWorkToo(t *testing.T) {
 	w := newSweepBase(t)
 	w.atNight()
 	sweep.Sweep(w.ctx)
-	eventsEqual(t, eventsDig(t, w.ctx.Store.Load(), "suggest", "idle_since"), clock.ISO(testsupport.Night))
-	eventsEqual(t, len(w.gh.Dispatches), 0)
+	assertEqual(t, dig(t, w.ctx.Store.Load(), "suggest", "idle_since"), clock.ISO(testsupport.Night))
+	assertEqual(t, len(w.gh.Dispatches), 0)
 	testsupport.ClockOf(w.ctx).At = testsupport.Night.Add(29 * time.Minute)
 	sweep.Sweep(w.ctx)
-	eventsEqual(t, len(w.gh.Dispatches), 0)
+	assertEqual(t, len(w.gh.Dispatches), 0)
 	testsupport.ClockOf(w.ctx).At = testsupport.Night.Add(30 * time.Minute)
 	sweep.Sweep(w.ctx)
-	eventsEqual(t, len(w.gh.Dispatches), 1)
+	assertEqual(t, len(w.gh.Dispatches), 1)
 }
 
 func TestSweep_QueuedWorkForAFreeLaneStopsTheSurveyClock(t *testing.T) {
@@ -371,7 +371,7 @@ func TestSweep_QueuedWorkForAFreeLaneStopsTheSurveyClock(t *testing.T) {
 	sweep.Sweep(w.ctx)
 	w.gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
 	sweep.Sweep(w.ctx)
-	eventsNone(t, eventsDig(t, w.ctx.Store.Load(), "suggest", "idle_since"))
+	assertIsNone(t, dig(t, w.ctx.Store.Load(), "suggest", "idle_since"))
 }
 
 func TestSweep_QueuedWorkInTheWindowWithNoRunGoingStartsOne(t *testing.T) {
@@ -379,9 +379,9 @@ func TestSweep_QueuedWorkInTheWindowWithNoRunGoingStartsOne(t *testing.T) {
 	w.atNight()
 	w.gh.Threads.Item(5).Set("labels", eventsLabels(config.LabelBuild))
 	notes := sweep.Sweep(w.ctx)
-	eventsEqual(t, len(w.gh.Dispatches), 1)
-	eventsEqual(t, w.gh.Dispatches[0].Workflow, "bot-night.yml")
-	eventsIn(t, "started a night run", eventsLast(t, notes))
+	assertEqual(t, len(w.gh.Dispatches), 1)
+	assertEqual(t, w.gh.Dispatches[0].Workflow, "bot-night.yml")
+	assertIn(t, "started a night run", lastOf(t, notes))
 }
 
 func TestSweep_ARunAlreadyQueuedOrGoingIsLeftToIt(t *testing.T) {
@@ -391,7 +391,7 @@ func TestSweep_ARunAlreadyQueuedOrGoingIsLeftToIt(t *testing.T) {
 	for _, status := range []string{"queued", "in_progress", "waiting", "pending"} {
 		w.gh.Runs = pyjson.New("1", pyjson.New("status", "completed"), "2", pyjson.New("status", status))
 		sweep.Sweep(w.ctx)
-		eventsEqual(t, w.gh.Dispatches, []fakes.Dispatch{}, status)
+		assertEqual(t, w.gh.Dispatches, []fakes.Dispatch{}, status)
 	}
 }
 
@@ -406,19 +406,19 @@ func TestSweep_NoRunWithoutWorkOrOutsideTheWindow(t *testing.T) {
 	testsupport.ClockOf(w.ctx).At = testsupport.Day
 	w.gh.Threads.Item(5).Set("labels", eventsLabels(config.LabelBuild))
 	sweep.Sweep(w.ctx) // queued, but the window is closed
-	eventsEqual(t, w.gh.Dispatches, []fakes.Dispatch{})
+	assertEqual(t, w.gh.Dispatches, []fakes.Dispatch{})
 }
 
 func TestSweep_ForcedWorkStartsARunOutsideTheWindowButNeverWhileHalted(t *testing.T) {
 	w := newSweepBase(t)
 	w.gh.Threads.Item(5).Set("labels", eventsLabels(config.LabelBuild))
-	eventsUpdateItem(w.ctx, 5, "forced", true)
+	flowUpdateItem(w.ctx, 5, pyjson.New("forced", true))
 	eventsUpdateState(w.ctx, "halted", true)
 	sweep.Sweep(w.ctx)
-	eventsEqual(t, w.gh.Dispatches, []fakes.Dispatch{})
+	assertEqual(t, w.gh.Dispatches, []fakes.Dispatch{})
 	eventsUpdateState(w.ctx, "halted", false)
 	sweep.Sweep(w.ctx)
-	eventsEqual(t, len(w.gh.Dispatches), 1)
+	assertEqual(t, len(w.gh.Dispatches), 1)
 }
 
 func TestSweep_ARunThatCannotBeStartedIsNotedAndTriedAgainNextSweep(t *testing.T) {
@@ -429,7 +429,7 @@ func TestSweep_ARunThatCannotBeStartedIsNotedAndTriedAgainNextSweep(t *testing.T
 		herr.Raise(&herr.GitHubError{Msg: "workflow dispatch refused", Status: 422})
 	}
 	notes := sweep.Sweep(w.ctx)
-	eventsIn(t, "night_run: could not finish", eventsLast(t, notes))
+	assertIn(t, "night_run: could not finish", lastOf(t, notes))
 }
 
 // ---------------------------------------------------------------------------- IssueTypeTests
@@ -450,10 +450,10 @@ func TestSweep_EveryUntypedIssueIsTypedAtOnce(t *testing.T) {
 	w.gh.AddIssue(23, fakes.Issue{Title: "Patch v0.2.X: Animated pass on Field Spells"}).Update(pyjson.New("type", pyjson.New("name", "Task")))
 	w.gh.AddIssue(24, fakes.Issue{Title: "Easter egg: Glitch", Labels: []string{"bot:pr"}}).Update(pyjson.New("pull_request", pyjson.New()))
 	notes := sweep.Sweep(w.ctx)
-	eventsEqual(t, w.typeOf(20), "Task")
-	eventsEqual(t, w.typeOf(21), "Bug")
-	eventsEqual(t, w.typeOf(22), "Feature")
-	eventsEqual(t, w.typeOf(23), pyjson.New("name", "Task")) // a type someone set stays
+	assertEqual(t, w.typeOf(20), "Task")
+	assertEqual(t, w.typeOf(21), "Bug")
+	assertEqual(t, w.typeOf(22), "Feature")
+	assertEqual(t, w.typeOf(23), pyjson.New("name", "Task")) // a type someone set stays
 	truthy := map[string]bool{}
 	w.gh.Threads.Item(24).Items(func(k string, v any) bool {
 		if pyjson.Truthy(v) {
@@ -461,11 +461,11 @@ func TestSweep_EveryUntypedIssueIsTypedAtOnce(t *testing.T) {
 		}
 		return true
 	})
-	eventsNotIn(t, "type", truthy) // a PR has none
-	eventsIn(t, "#20: typed it Task", notes)
+	assertNotIn(t, "type", truthy) // a PR has none
+	assertIn(t, "#20: typed it Task", notes)
 	w.gh.AddIssue(25, fakes.Issue{Title: "Make the Coin shiny"})
 	sweep.Sweep(w.ctx)
-	eventsEqual(t, w.typeOf(25), "Task") // nothing else fits
+	assertEqual(t, w.typeOf(25), "Task") // nothing else fits
 }
 
 func TestSweep_TheFallbackRules(t *testing.T) {
@@ -474,13 +474,13 @@ func TestSweep_TheFallbackRules(t *testing.T) {
 	kind := func(title string, labels ...string) string {
 		return triage.FallbackType(pyjson.New("title", title, "labels", eventsLabels(labels...)), types)
 	}
-	eventsEqual(t, kind("Patch v0.2.X: Rendering lag with large Radiant hands"), "Bug")
-	eventsEqual(t, kind("CI: the Postgres test runners wait for the real server"), "Task")
-	eventsEqual(t, kind("Night bot: a help command"), "Task")
-	eventsEqual(t, kind("Patch v0.2.X: Music improvements"), "Task")
-	eventsEqual(t, kind("Ranked: a new leaderboard page"), "Feature")
-	eventsEqual(t, kind("Patch v0.2.X: a settings page", "architecture"), "Task")
-	eventsEqual(t, triage.FallbackType(pyjson.New("title", "x"), map[string]string{"Chore": "upkeep"}), "")
+	assertEqual(t, kind("Patch v0.2.X: Rendering lag with large Radiant hands"), "Bug")
+	assertEqual(t, kind("CI: the Postgres test runners wait for the real server"), "Task")
+	assertEqual(t, kind("Night bot: a help command"), "Task")
+	assertEqual(t, kind("Patch v0.2.X: Music improvements"), "Task")
+	assertEqual(t, kind("Ranked: a new leaderboard page"), "Feature")
+	assertEqual(t, kind("Patch v0.2.X: a settings page", "architecture"), "Task")
+	assertEqual(t, triage.FallbackType(pyjson.New("title", "x"), map[string]string{"Chore": "upkeep"}), "")
 }
 
 // ---------------------------------------------------------------------------- LabelTests
@@ -488,12 +488,6 @@ func TestSweep_TheFallbackRules(t *testing.T) {
 // The sweep creates the labels the bot uses that the repository lacks (the method labels, #307,
 // shipped in #328 without existing, waiting for a person to run `python3 -m harness setup`, so no
 // issue could be triaged) and deletes the ones it retired (#664).
-
-func sweepSorted(xs []string) []string {
-	out := slices.Clone(xs)
-	slices.Sort(out)
-	return out
-}
 
 func TestSweep_MissingLabelsAreCreatedOncePerChangeToTheList(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
@@ -505,9 +499,9 @@ func TestSweep_MissingLabelsAreCreatedOncePerChangeToTheList(t *testing.T) {
 	}
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
 	notes := sweep.Labels(ctx, testsupport.Day)
-	eventsEqual(t, sweepSorted(notes), []string{"created the label `bot:build`",
+	assertEqual(t, sortedOf(notes), []string{"created the label `bot:build`",
 		"created the label `human`"})
-	eventsEqual(t, eventsDig(t, gh.Labels, "human", "color"), pyjson.List(config.Labels.Get("human"))[0])
+	assertEqual(t, dig(t, gh.Labels, "human", "color"), pyjson.List(config.Labels.Get("human"))[0])
 	// The list has not changed since: the next tick reads nothing.
 	calls := [][]string{}
 	gh.Patch.EnsureLabel = func(name, color, description string) bool {
@@ -518,8 +512,8 @@ func TestSweep_MissingLabelsAreCreatedOncePerChangeToTheList(t *testing.T) {
 		calls = append(calls, []string{name})
 		return false
 	}
-	eventsEqual(t, sweep.Labels(ctx, testsupport.Day), []string{})
-	eventsEqual(t, calls, [][]string{})
+	assertEqual(t, sweep.Labels(ctx, testsupport.Day), []string{})
+	assertEqual(t, calls, [][]string{})
 }
 
 func TestSweep_ARetiredLabelIsDeletedFromEveryThread(t *testing.T) {
@@ -530,10 +524,10 @@ func TestSweep_ARetiredLabelIsDeletedFromEveryThread(t *testing.T) {
 	}
 	gh.AddIssue(647, fakes.Issue{Labels: []string{"method:use-bot", "priority:low"}})
 	notes := sweep.Labels(testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day}), testsupport.Day)
-	eventsEqual(t, sweepSorted(notes), []string{"deleted the retired label `large patch`",
+	assertEqual(t, sortedOf(notes), []string{"deleted the retired label `large patch`",
 		"deleted the retired label `method:use-bot`"})
-	eventsNotIn(t, "method:use-bot", gh.Labels)
-	eventsEqual(t, gh.LabelNames(647), eventsSet("priority:low"))
+	assertNotIn(t, "method:use-bot", gh.Labels)
+	assertEqual(t, gh.LabelNames(647), setOf("priority:low"))
 }
 
 func TestSweep_EverySweepRunsIt(t *testing.T) {
@@ -541,8 +535,8 @@ func TestSweep_EverySweepRunsIt(t *testing.T) {
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
 	eventsUpdateState(ctx, "last_sweep", pyjson.New("at", clock.ISO(testsupport.Day), "since", clock.ISO(testsupport.Day)))
 	notes := sweep.Sweep(ctx)
-	eventsIn(t, "created the label `human`", notes)
-	eventsIn(t, "bot:build", gh.Labels)
+	assertIn(t, "created the label `human`", notes)
+	assertIn(t, "bot:build", gh.Labels)
 }
 
 // GitHub refuses a longer one, so the label could never be created (#307's two).
@@ -555,7 +549,7 @@ func TestSweep_EveryDescriptionFitsGithubsLimit(t *testing.T) {
 		}
 		return true
 	})
-	eventsEqual(t, tooLong, map[string]int{})
+	assertEqual(t, tooLong, map[string]int{})
 }
 
 func TestSweep_ALabelGithubRefusesNeverStopsTheRestAndIsTriedAgain(t *testing.T) {
@@ -569,13 +563,13 @@ func TestSweep_ALabelGithubRefusesNeverStopsTheRestAndIsTriedAgain(t *testing.T)
 	gh.Patch.EnsureLabel = refusing
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
 	notes := sweep.Labels(ctx, testsupport.Day)
-	eventsIn(t, "bot:build", gh.Labels)
-	eventsTrue(t, slices.ContainsFunc(notes, func(n string) bool { return strings.Contains(n, "could not create the label `human`") }))
-	eventsNotIn(t, "labels_synced", ctx.Store.Load()) // so the next tick tries again
+	assertIn(t, "bot:build", gh.Labels)
+	assertTrue(t, slices.ContainsFunc(notes, func(n string) bool { return strings.Contains(n, "could not create the label `human`") }))
+	assertNotIn(t, "labels_synced", ctx.Store.Load()) // so the next tick tries again
 	gh.Patch.EnsureLabel = nil
 	sweep.Labels(ctx, testsupport.Day)
-	eventsIn(t, "human", gh.Labels)
-	eventsIn(t, "labels_synced", ctx.Store.Load())
+	assertIn(t, "human", gh.Labels)
+	assertIn(t, "labels_synced", ctx.Store.Load())
 }
 
 // ---------------------------------------------------------------------------- DifficultyLabelTests
@@ -602,15 +596,15 @@ func TestSweep_PlannedIssuesAndBotPullsGetADifficulty(t *testing.T) {
 	w.gh.AddPull(35, "bot/issue-30", fakes.Pull{Labels: []string{config.LabelPR}}) // its issue had none
 	w.gh.AddPull(36, "feature/x")                                                  // not the bot's
 	notes := sweep.Sweep(w.ctx)
-	eventsEqual(t, w.difficulties(30), eventsSet("difficulty:medium"))
-	eventsEqual(t, w.difficulties(31), eventsSet()) // the planner may still rate it easy
-	eventsEqual(t, w.difficulties(32), eventsSet())
-	eventsEqual(t, w.difficulties(33), eventsSet("difficulty:easy"))
-	eventsEqual(t, w.difficulties(34), eventsSet("difficulty:easy"))
-	eventsEqual(t, w.difficulties(35), eventsSet("difficulty:medium"))
-	eventsEqual(t, w.difficulties(36), eventsSet())
-	eventsIn(t, "#30: planned with no difficulty, so `difficulty:medium`", notes)
+	assertEqual(t, w.difficulties(30), setOf("difficulty:medium"))
+	assertEqual(t, w.difficulties(31), setOf()) // the planner may still rate it easy
+	assertEqual(t, w.difficulties(32), setOf())
+	assertEqual(t, w.difficulties(33), setOf("difficulty:easy"))
+	assertEqual(t, w.difficulties(34), setOf("difficulty:easy"))
+	assertEqual(t, w.difficulties(35), setOf("difficulty:medium"))
+	assertEqual(t, w.difficulties(36), setOf())
+	assertIn(t, "#30: planned with no difficulty, so `difficulty:medium`", notes)
 	// It is the bot's own rating, so a later planner may raise it.
-	record := eventsDig(t, w.ctx.Store.Load(), "items", "30")
-	eventsEqual(t, eventsDig(t, record, "difficulty_by", "difficulty"), "medium")
+	record := dig(t, w.ctx.Store.Load(), "items", "30")
+	assertEqual(t, dig(t, record, "difficulty_by", "difficulty"), "medium")
 }

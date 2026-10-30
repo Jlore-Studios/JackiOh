@@ -23,11 +23,9 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/journal"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
@@ -40,162 +38,10 @@ const journalNotes = "## State\n\nRules v2 is half written; the Coin is next. Tr
 	"slow, dropped.\n\n## Log\n\n- about to write the rules: the issue asks for v2\n" +
 	"- wrote half of them\n"
 
-// ------------------------------------------------------------------ what test_journal imports
-//
-// From test_cross (ALL), test_work (DONE, APPROVE, GATES, builder, reviewer), test_wip (capped)
-// and test_flow (Harness), as this file's own: each test file of package tests keeps its helpers.
-
-// ALL (test_cross): every provider secret set.
-var journalAll = map[string]string{"HARNESS_SECRETS_SET": strings.Join(providers.SecretNames, " ")}
-
-// DONE (test_work)
-const journalDone = "<!-- bot: {\"status\": \"done\", \"title\": \"Make the rules v2\"} -->\n## What changed\nRules v2."
-
-// APPROVE (test_work)
-const journalApprove = "<!-- review: {\"verdict\": \"approve\", \"findings\": []} -->\nLooked hard; fine."
-
-// GATES (test_work)
-func journalGates() []any {
-	return []any{
-		pyjson.New("name", "rules exist", "run", "test -f src/game.txt", "timeout_minutes", 1),
-		pyjson.New("name", "no broken file", "run", "test ! -f broken.txt", "timeout_minutes", 1),
-	}
-}
-
-// journalBuilder is builder(edits) (test_work): a builder that writes `edits` and reports DONE.
-func journalBuilder(edits map[string]string) runner.Handler {
-	return func(request *runner.RunRequest) *runner.RunResult {
-		for name, content := range edits {
-			target := filepath.Join(request.Cwd, name)
-			if err := os.MkdirAll(filepath.Dir(target), 0o777); err != nil {
-				panic(err)
-			}
-			if err := os.WriteFile(target, []byte(content), 0o666); err != nil {
-				panic(err)
-			}
-		}
-		result := runner.NewRunResult(true, journalDone)
-		result.Usage = pyjson.New("five_hour", pyjson.New("utilization", 0.3, "resets_at", nil))
-		return result
-	}
-}
-
-// journalReviewer is reviewer(text) (test_work).
-func journalReviewer(text string) runner.Handler {
-	return func(request *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, text) }
-}
-
-// journalCapped is capped (test_wip): the subscription's usage crossed its cap mid-call
-// (`usage_stop`): a pause, no parking.
-func journalCapped(request *runner.RunRequest) *runner.RunResult {
-	result := runner.NewRunResult(false, "")
-	result.ExitCode, result.DurationS, result.Error = 1, 1800, "stopped mid-call"
-	result.Extra = pyjson.New("usage_stop", "5-hour usage is 91%, at or over its 90% cap")
-	return result
-}
-
-// journalRunner is FakeRunner(handlers): each role's one handler.
-func journalRunner(handlers map[string]runner.Handler) *runner.FakeRunner {
-	queues := map[string][]runner.Handler{}
-	for role, h := range handlers {
-		queues[role] = []runner.Handler{h}
-	}
-	return runner.NewFakeRunner(queues)
-}
-
-// journalHarness is Harness (test_flow): one repository, one fake GitHub, and the three jobs of a
-// night run.
-type journalHarness struct {
-	t           *testing.T
-	root        string
-	origin      string
-	clone       string
-	gh          *fakes.FakeGitHub
-	cfg         *config.Config
-	ctx         *hctx.Context
-	deliverRepo string
-}
-
-// journalHarnessOpts is Harness's keyword arguments; a zero field is the default.
-type journalHarnessOpts struct {
-	Env     map[string]string
-	At      time.Time // = NIGHT
-	Machine []string
-}
-
-func newJournalHarness(t *testing.T, opts ...journalHarnessOpts) *journalHarness {
-	t.Helper()
-	var o journalHarnessOpts
-	if len(opts) > 0 {
-		o = opts[0]
-	}
-	h := &journalHarness{t: t, root: t.TempDir(), gh: fakes.NewFakeGitHub()}
-	h.origin, h.clone = fakes.MakeOrigin(h.root)
-	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
-		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
-	for k, v := range o.Env {
-		env[k] = v
-	}
-	overrides := pyjson.New("gates", journalGates(), "install", pyjson.New("run", "true", "timeout_minutes", 1),
-		"max_review_cycles", 2)
-	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine, Overrides: overrides})
-	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: o.At})
-	h.gh.BranchChecks = basicsSet(h.cfg.RequiredChecks...)
-	h.deliverRepo = filepath.Join(h.root, "deliver")
-	fakes.Git(h.root, "clone", "-q", h.origin, h.deliverRepo)
-	return h
-}
-
-// journalOuts is len(list(root.glob("out-*"))).
-func journalOuts(root string) int {
-	found, err := filepath.Glob(filepath.Join(root, "out-*"))
-	if err != nil {
-		panic(err)
-	}
-	return len(found)
-}
-
-// journalLoad is json.loads(path.read_text()), a JSON object.
-func journalLoad(t *testing.T, path string) *pyjson.Object {
-	t.Helper()
-	return basicsLoadObject(t, basicsReadFile(t, path))
-}
-
-// journalExists is path.exists().
-func journalExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-// night is Harness.night: plan, work and deliver one run.
-func (h *journalHarness) night(r *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
-	h.t.Helper()
-	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	out := filepath.Join(h.root, fmt.Sprintf("out-%d", journalOuts(h.root)))
-	if planned.Str("action") != "none" {
-		work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
-		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	}
-	result := pyjson.New()
-	if journalExists(filepath.Join(out, "result.json")) {
-		result = journalLoad(h.t, filepath.Join(out, "result.json"))
-	}
-	return planned, result
-}
-
-// originSHA is Harness.origin_sha: the branch's sha on origin, or "" (None).
-func (h *journalHarness) originSHA(branch string) string {
-	sha := ""
-	if _, failed := herr.Catch[*fakes.PyError](func() {
-		sha = fakes.Git(h.origin, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
-	}); failed {
-		return ""
-	}
-	return sha
-}
+// ------------------------------------------------------------------ the file's helpers
 
 // journalText is journal_text(h, number=12).
-func journalText(h *journalHarness, number ...int) string {
+func journalText(h *flowHarness, number ...int) string {
 	n := 12
 	if len(number) > 0 {
 		n = number[0]
@@ -215,9 +61,6 @@ func journalCalls(r *runner.FakeRunner, role string) []*runner.RunRequest {
 	return out
 }
 
-// journalNoSleep is `sleep=lambda _: None`.
-func journalNoSleep(float64) {}
-
 // journalStep is next(s for s in result["steps"] if pick(s)).
 func journalStep(t *testing.T, result *pyjson.Object, pick func(*pyjson.Object) bool) *pyjson.Object {
 	t.Helper()
@@ -230,18 +73,10 @@ func journalStep(t *testing.T, result *pyjson.Object, pick func(*pyjson.Object) 
 	return nil
 }
 
-// journalWrite is path.write_text(text).
-func journalWrite(t *testing.T, path, text string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte(text), 0o666); err != nil {
-		t.Fatal(err)
-	}
-}
-
 // ------------------------------------------------------------------ CompactTests
 
 func TestJournal_ShortNotesStayWhole(t *testing.T) {
-	basicsEqual(t, journal.Compact(journalNotes, 8000), journalNotes)
+	assertEqual(t, journal.Compact(journalNotes, 8000), journalNotes)
 }
 
 func TestJournal_TheStateStaysWholeAndTheLogKeepsItsEnd(t *testing.T) {
@@ -251,24 +86,24 @@ func TestJournal_TheStateStaysWholeAndTheLogKeepsItsEnd(t *testing.T) {
 	}
 	notes := "# Plan\n\nDo the rules.\n\n## State\n\nHalf done.\n\n## Log\n\n" + log.String()
 	cut := journal.Compact(notes, 4000)
-	basicsTrue(t, py.Len(cut) <= 4000)
-	basicsTrue(t, strings.HasPrefix(cut, "# Plan\n\nDo the rules.\n\n## State\n\nHalf done."))
-	basicsIn(t, journal.Cut, cut)
-	basicsTrue(t, strings.HasSuffix(strings.TrimRight(cut, " \t\n\r\v\f"), "- step 1999: did a thing for a reason"))
-	basicsNotIn(t, "- step 0:", cut)
+	assertTrue(t, py.Len(cut) <= 4000)
+	assertTrue(t, strings.HasPrefix(cut, "# Plan\n\nDo the rules.\n\n## State\n\nHalf done."))
+	assertIn(t, journal.Cut, cut)
+	assertTrue(t, strings.HasSuffix(strings.TrimRight(cut, " \t\n\r\v\f"), "- step 1999: did a thing for a reason"))
+	assertNotIn(t, "- step 0:", cut)
 }
 
 func TestJournal_AStateTooLongKeepsItsStart(t *testing.T) {
 	notes := "## State\n\n" + strings.Repeat("s", 10_000) + "\n\n## Log\n\n" + "- the last line\n"
 	cut := journal.Compact(notes, 4000)
-	basicsTrue(t, py.Len(cut) <= 4000)
-	basicsIn(t, "(the rest of the state was cut here)", cut)
-	basicsTrue(t, strings.HasSuffix(strings.TrimRight(cut, " \t\n\r\v\f"), "- the last line"))
+	assertTrue(t, py.Len(cut) <= 4000)
+	assertIn(t, "(the rest of the state was cut here)", cut)
+	assertTrue(t, strings.HasSuffix(strings.TrimRight(cut, " \t\n\r\v\f"), "- the last line"))
 }
 
 func TestJournal_NotesWithoutALogKeepTheirEndAsBefore(t *testing.T) {
 	notes := strings.Repeat("x", 5000) + "the end"
-	basicsEqual(t, journal.Compact(notes, 100), py.SliceFrom(notes, py.Len(notes)-100))
+	assertEqual(t, journal.Compact(notes, 100), py.SliceFrom(notes, py.Len(notes)-100))
 }
 
 // ------------------------------------------------------------------ FileTests
@@ -290,37 +125,37 @@ func journalSection(n int, notes ...string) string {
 
 func TestJournal_ASectionSaysWhatTheRunDidAndWhy(t *testing.T) {
 	text := journalSection(1, "## State\nhalf\n")
-	basicsTrue(t, strings.HasPrefix(text, journal.RunMarker+"\n## 2026-10-06 01:00 UTC · build #12"))
-	basicsIn(t, "[run](https://example/runs/1) on `claude-3` (`opus`). It ended "+
+	assertTrue(t, strings.HasPrefix(text, journal.RunMarker+"\n## 2026-10-06 01:00 UTC · build #12"))
+	assertIn(t, "[run](https://example/runs/1) on `claude-3` (`opus`). It ended "+
 		"**approved**: run 1", text)
-	basicsIn(t, "| 1 | 01:02 | build (`opus`) | build \\| the issue | 4.2 min | done |", text)
-	basicsIn(t, "<summary>The builder's notes when it stopped</summary>", text)
-	basicsIn(t, "## State\nhalf", text)
+	assertIn(t, "| 1 | 01:02 | build (`opus`) | build \\| the issue | 4.2 min | done |", text)
+	assertIn(t, "<summary>The builder's notes when it stopped</summary>", text)
+	assertIn(t, "## State\nhalf", text)
 }
 
 func TestJournal_AKilledRunReadsAsDied(t *testing.T) {
 	text := journal.Section(pyjson.New("status", "interrupted", "interrupt", "died", "reason", "killed"),
 		"muse", "`muse`", "revise", 40, "2026-10-06T01:00:00Z", "")
-	basicsIn(t, "· revise #40 · `muse` · died", text)
+	assertIn(t, "· revise #40 · `muse` · died", text)
 }
 
 func TestJournal_AppendsMakeTheBranchThenAddToTheFile(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	journal.Append(gh, 12, journalSection(1), journalNoSleep)
-	basicsIn(t, journal.Branch, gh.Branches)
+	journal.Append(gh, 12, journalSection(1), noSleep)
+	assertIn(t, journal.Branch, gh.Branches)
 	// Vercel reads the pushed commit's settings: the branch must say "no deployments".
 	vercel, _ := gh.GetFile("vercel.json", journal.Branch)
-	basicsIn(t, `"deploymentEnabled": false`, vercel)
-	journal.Append(gh, 12, journalSection(2), journalNoSleep)
+	assertIn(t, `"deploymentEnabled": false`, vercel)
+	journal.Append(gh, 12, journalSection(2), noSleep)
 	text, _ := gh.GetFile("12.md", journal.Branch)
-	basicsTrue(t, strings.HasPrefix(text, "# Journal of #12"))
-	basicsEqual(t, len(journal.RunsIn(text)), 2)
-	basicsTrue(t, strings.Index(text, "run 1") < strings.Index(text, "run 2"))
+	assertTrue(t, strings.HasPrefix(text, "# Journal of #12"))
+	assertEqual(t, len(journal.RunsIn(text)), 2)
+	assertTrue(t, strings.Index(text, "run 1") < strings.Index(text, "run 2"))
 }
 
 func TestJournal_AWriteThatLostARaceReadsAgain(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	journal.Append(gh, 12, journalSection(1), journalNoSleep)
+	journal.Append(gh, 12, journalSection(1), noSleep)
 	realPut := gh.Own().PutFile
 	raced := []bool{}
 	gh.Patch.PutFile = func(path, text, branch, sha, message string) {
@@ -332,10 +167,10 @@ func TestJournal_AWriteThatLostARaceReadsAgain(t *testing.T) {
 		}
 		realPut(path, text, branch, sha, message)
 	}
-	journal.Append(gh, 12, journalSection(2), journalNoSleep)
+	journal.Append(gh, 12, journalSection(2), noSleep)
 	text, _ := gh.GetFile("12.md", journal.Branch)
-	basicsIn(t, "run 3", text)
-	basicsIn(t, "run 2", text)
+	assertIn(t, "run 3", text)
+	assertIn(t, "run 2", text)
 }
 
 func TestJournal_ALongFileDropsOldNotesThenOldRuns(t *testing.T) {
@@ -345,29 +180,29 @@ func TestJournal_ALongFileDropsOldNotesThenOldRuns(t *testing.T) {
 	}
 	text := journal.Header(12) + "\n" + strings.Join(sections, "\n")
 	trimmed := journal.Trim(text, 60_000)
-	basicsTrue(t, py.Len(trimmed) <= 60_000)
-	basicsEqual(t, len(journal.RunsIn(trimmed)), 20) // every run's lines stay
+	assertTrue(t, py.Len(trimmed) <= 60_000)
+	assertEqual(t, len(journal.RunsIn(trimmed)), 20) // every run's lines stay
 	parts := strings.Split(trimmed, journal.RunMarker)
-	basicsNotIn(t, strings.Repeat("n", 5000), parts[1])
-	basicsIn(t, strings.Repeat("n", 5000), parts[len(parts)-1]) // the newest keep them
+	assertNotIn(t, strings.Repeat("n", 5000), parts[1])
+	assertIn(t, strings.Repeat("n", 5000), parts[len(parts)-1]) // the newest keep them
 	tiny := journal.Trim(text, 2_000)
-	basicsTrue(t, len(journal.RunsIn(tiny)) < 20)
-	basicsIn(t, "older run(s) dropped from this file", tiny)
+	assertTrue(t, len(journal.RunsIn(tiny)) < 20)
+	assertIn(t, "older run(s) dropped from this file", tiny)
 }
 
 func TestJournal_ReadingKeepsTheEndFromARun(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	for n := range 30 {
-		journal.Append(gh, 12, journalSection(n, strings.Repeat("n", 3000)), journalNoSleep)
+		journal.Append(gh, 12, journalSection(n, strings.Repeat("n", 3000)), noSleep)
 	}
 	whole, _ := gh.GetFile("12.md", journal.Branch)
 	read := journal.Read(gh, 12, 20_000)
-	basicsTrue(t, py.Len(read) < py.Len(whole))
-	basicsIn(t, "earlier runs are on the branch", read)
-	basicsIn(t, "run 29", read)
+	assertTrue(t, py.Len(read) < py.Len(whole))
+	assertIn(t, "earlier runs are on the branch", read)
+	assertIn(t, "run 29", read)
 	after := strings.TrimLeft(strings.SplitN(read, journal.RunMarker, 2)[1], " \t\n\r\v\f")
-	basicsEqual(t, py.SliceTo(after, 3), "## ")
-	basicsEqual(t, journal.Read(gh, 99, journal.ReadChars), "")
+	assertEqual(t, py.SliceTo(after, 3), "## ")
+	assertEqual(t, journal.Read(gh, 99, journal.ReadChars), "")
 }
 
 // ------------------------------------------------------------------ OpusLaneTests
@@ -376,69 +211,69 @@ func TestJournal_ReadingKeepsTheEndFromARun(t *testing.T) {
 // journal, and the next one starts from it.
 
 func TestJournal_ACutOffRunJournalsAndTheNextPicksUp(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: journalAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
-	first := journalRunner(map[string]runner.Handler{
-		"build":  journalBuilder(map[string]string{"src/game.txt": "half\n", work.NotesFile: journalNotes}),
-		"review": journalCapped})
+	first := workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "half\n", work.NotesFile: journalNotes}),
+		"review": wipCapped})
 	planned, result := h.night(first)
-	basicsEqual(t, []any{planned.Get("provider"), planned.Get("runs_on"), result.Get("status")},
+	assertEqual(t, []any{planned.Get("provider"), planned.Get("runs_on"), result.Get("status")},
 		[]any{"claude-3", "ubuntu-latest", "interrupted"})
 	build := journalStep(t, result, func(s *pyjson.Object) bool { return pyjson.Equal(s.Get("role"), "build") })
-	basicsEqual(t, build.Get("model"), "opus")
-	basicsTrue(t, strings.HasPrefix(build.Str("why"), "build the issue"))
-	basicsIn(t, "committed", build.Str("outcome"))
+	assertEqual(t, build.Get("model"), "opus")
+	assertTrue(t, strings.HasPrefix(build.Str("why"), "build the issue"))
+	assertIn(t, "committed", build.Str("outcome"))
 	review := journalStep(t, result, func(s *pyjson.Object) bool { return pyjson.Equal(s.Get("role"), "review") })
-	basicsIn(t, "cut off at its usage cap", review.Str("outcome"))
+	assertIn(t, "cut off at its usage cap", review.Str("outcome"))
 	checks := journalStep(t, result, func(s *pyjson.Object) bool { return pyjson.Equal(s.Get("step"), "checks") })
-	basicsIn(t, "green", checks.Str("outcome"))
+	assertIn(t, "green", checks.Str("outcome"))
 	steps := pyjson.Objs(result.Get("steps"))
-	basicsEqual(t, steps[len(steps)-1].Get("step"), "stop")
+	assertEqual(t, steps[len(steps)-1].Get("step"), "stop")
 
 	text := journalText(h)
-	basicsEqual(t, len(journal.RunsIn(text)), 1)
-	basicsIn(t, "build #12 · `claude-3` · interrupted", text)
-	basicsIn(t, "| review (`opus`) | review of round 1", text)
-	basicsIn(t, "Tried a table of rules: too slow, dropped.", text)
+	assertEqual(t, len(journal.RunsIn(text)), 1)
+	assertIn(t, "build #12 · `claude-3` · interrupted", text)
+	assertIn(t, "| review (`opus`) | review of round 1", text)
+	assertIn(t, "Tried a table of rules: too slow, dropped.", text)
 	comments := h.gh.BotComments(12)
-	basicsIn(t, "blob/bot-journal/12.md", comments[len(comments)-1]) // the pause links it
+	assertIn(t, "blob/bot-journal/12.md", comments[len(comments)-1]) // the pause links it
 
 	seen := map[string]string{}
 	pickingUp := func(request *runner.RunRequest) *runner.RunResult {
-		seen["journal"] = basicsReadFile(t, filepath.Join(request.Cwd, journal.JournalFile))
-		seen["file"] = basicsReadFile(t, filepath.Join(request.Cwd, "src", "game.txt"))
-		return journalBuilder(map[string]string{"src/game.txt": "whole\n"})(request)
+		seen["journal"] = readText(t, filepath.Join(request.Cwd, journal.JournalFile))
+		seen["file"] = readText(t, filepath.Join(request.Cwd, "src", "game.txt"))
+		return workBuilder(map[string]string{"src/game.txt": "whole\n"})(request)
 	}
-	second := journalRunner(map[string]runner.Handler{"build": pickingUp, "review": journalReviewer(journalApprove)})
+	second := workFake(map[string]runner.Handler{"build": pickingUp, "review": workReviewer(workApprove)})
 	planned, result = h.night(second)
-	basicsIn(t, "Tried a table of rules", planned.Str("journal"))
-	basicsIn(t, "Tried a table of rules", seen["journal"])
-	basicsEqual(t, seen["file"], "half\n") // and its code
+	assertIn(t, "Tried a table of rules", planned.Str("journal"))
+	assertIn(t, "Tried a table of rules", seen["journal"])
+	assertEqual(t, seen["file"], "half\n") // and its code
 	prompt := journalCalls(second, "build")[0].Prompt
-	basicsIn(t, "## The journal of earlier runs", prompt)
-	basicsIn(t, "build #12 · `claude-3` · interrupted", prompt)
+	assertIn(t, "## The journal of earlier runs", prompt)
+	assertIn(t, "build #12 · `claude-3` · interrupted", prompt)
 	// A resume reads the short State first, the whole journal only for detail (#695).
-	basicsIn(t, "Read the `## State` section of `.bot-notes.md` first", prompt)
-	basicsIn(t, "not the whole file up front", prompt)
-	basicsNotIn(t, "Read it before anything else", prompt)
-	basicsIn(t, "bring the `## State` part of `.bot-notes.md` up to date", prompt)
-	basicsIn(t, "`## State`, rewritten in place", prompt) // the two-part notes ask
-	basicsEqual(t, result.Get("status"), "approved")
+	assertIn(t, "Read the `## State` section of `.bot-notes.md` first", prompt)
+	assertIn(t, "not the whole file up front", prompt)
+	assertNotIn(t, "Read it before anything else", prompt)
+	assertIn(t, "bring the `## State` part of `.bot-notes.md` up to date", prompt)
+	assertIn(t, "`## State`, rewritten in place", prompt) // the two-part notes ask
+	assertEqual(t, result.Get("status"), "approved")
 	tree := fakes.Git(h.origin, "ls-tree", "-r", "--name-only", result.Str("head"))
-	basicsNotIn(t, journal.JournalFile, tree)
-	basicsNotIn(t, work.NotesFile, tree)
+	assertNotIn(t, journal.JournalFile, tree)
+	assertNotIn(t, work.NotesFile, tree)
 
 	text = journalText(h)
-	basicsEqual(t, len(journal.RunsIn(text)), 2)
-	basicsIn(t, "· approved", journal.RunsIn(text)[1])
+	assertEqual(t, len(journal.RunsIn(text)), 2)
+	assertIn(t, "· approved", journal.RunsIn(text)[1])
 	pr := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
-	basicsIn(t, "blob/bot-journal/12.md", pr.Str("body"))
+	assertIn(t, "blob/bot-journal/12.md", pr.Str("body"))
 }
 
 // The journal is a record, never a gate: a read that fails in the claim and a write that fails
 // in deliver leave the run as it would have been.
 func TestJournal_AJournalThatFailsNeverStopsTheRun(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: journalAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	real := h.gh.Own().GetFile
 	h.gh.Patch.GetFile = func(path, ref string) (string, string) {
@@ -447,32 +282,32 @@ func TestJournal_AJournalThatFailsNeverStopsTheRun(t *testing.T) {
 		}
 		return real(path, ref)
 	}
-	planned, result := h.night(journalRunner(map[string]runner.Handler{
-		"build":  journalBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": journalReviewer(journalApprove)}))
-	basicsNotIn(t, "journal", planned)
-	basicsEqual(t, result.Get("status"), "approved")
-	basicsTrue(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)) > 0)
+	planned, result := h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}))
+	assertNotIn(t, "journal", planned)
+	assertEqual(t, result.Get("status"), "approved")
+	assertTrue(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)) > 0)
 }
 
 func TestJournal_APullRequestsRunsGoToItsIssuesJournal(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: journalAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
-	h.night(journalRunner(map[string]runner.Handler{
-		"build":  journalBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": journalReviewer(journalApprove)}))
+	h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}))
 	pr := h.gh.ListPulls("open", "bot/issue-12", 200)[0].Int("number")
 	h.gh.AddLabels(pr, []string{config.LabelRevise}) // a person asked for another pass
-	planned, _ := h.night(journalRunner(map[string]runner.Handler{
-		"revise": journalBuilder(map[string]string{"src/game.txt": "v3\n"}),
-		"review": journalReviewer(journalApprove)}))
-	basicsEqual(t, []any{planned.Get("action"), planned.Get("issue_number")}, []any{"revise", 12})
-	basicsIn(t, "build #12", planned.Str("journal"))
+	planned, _ := h.night(workFake(map[string]runner.Handler{
+		"revise": workBuilder(map[string]string{"src/game.txt": "v3\n"}),
+		"review": workReviewer(workApprove)}))
+	assertEqual(t, []any{planned.Get("action"), planned.Get("issue_number")}, []any{"revise", 12})
+	assertIn(t, "build #12", planned.Str("journal"))
 	runs := journal.RunsIn(journalText(h))
-	basicsEqual(t, len(runs), 2)
-	basicsIn(t, fmt.Sprintf("revise #%d", pr), runs[1])
+	assertEqual(t, len(runs), 2)
+	assertIn(t, fmt.Sprintf("revise #%d", pr), runs[1])
 	other, _ := h.gh.GetFile(journal.PathFor(pr), journal.Branch)
-	basicsEqual(t, other, "") // None
+	assertEqual(t, other, "") // None
 }
 
 // ------------------------------------------------------------------ MachineLaneTests
@@ -481,66 +316,66 @@ func TestJournal_APullRequestsRunsGoToItsIssuesJournal(t *testing.T) {
 // the machine holds no GitHub credential, and ignored in the clone it keeps.
 
 func TestJournal_AMachineRunReadsAndWritesTheJournal(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: journalAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	earlier := journal.Section(
 		pyjson.New("status", "interrupted", "interrupt", "usage", "reason", "claude-5 stops mid-call",
 			"handoff", pyjson.New("notes", journalNotes)),
 		"claude-5", "`opus`", "build", 12, "2026-09-29T09:00:00Z", "")
-	journal.Append(h.gh, 12, earlier, journalNoSleep)
+	journal.Append(h.gh, 12, earlier, noSleep)
 	seen := map[string]string{}
 	building := func(request *runner.RunRequest) *runner.RunResult {
-		seen["journal"] = basicsReadFile(t, filepath.Join(request.Cwd, journal.JournalFile))
-		return journalBuilder(map[string]string{"src/game.txt": "v2\n"})(request)
+		seen["journal"] = readText(t, filepath.Join(request.Cwd, journal.JournalFile))
+		return workBuilder(map[string]string{"src/game.txt": "v2\n"})(request)
 	}
-	r := journalRunner(map[string]runner.Handler{"build": building, "review": journalReviewer(journalApprove)})
+	r := workFake(map[string]runner.Handler{"build": building, "review": workReviewer(workApprove)})
 	planned, _ := h.night(r)
-	basicsEqual(t, []any{planned.Get("provider"), planned.Get("runs_on")}, []any{"muse", "night-vm-muse"})
-	basicsIn(t, "claude-5 stops mid-call", seen["journal"])
+	assertEqual(t, []any{planned.Get("provider"), planned.Get("runs_on")}, []any{"muse", "night-vm-muse"})
+	assertIn(t, "claude-5 stops mid-call", seen["journal"])
 	prompt := journalCalls(r, "build")[0].Prompt
-	basicsIn(t, "1 earlier run(s) worked on this", prompt)
-	basicsIn(t, "`## Log`, added to", prompt) // the notes ask reaches every CLI's prompt
+	assertIn(t, "1 earlier run(s) worked on this", prompt)
+	assertIn(t, "`## Log`, added to", prompt) // the notes ask reaches every CLI's prompt
 	exclude := fakes.Git(h.clone, "rev-parse", "--git-common-dir")
 	if !filepath.IsAbs(exclude) {
 		exclude = filepath.Join(h.clone, exclude)
 	}
-	ignored := py.Splitlines(basicsReadFile(t, filepath.Join(exclude, "info", "exclude")))
-	basicsIn(t, "/"+journal.JournalFile, ignored)
-	basicsIn(t, "/"+work.NotesFile, ignored)
+	ignored := py.Splitlines(readText(t, filepath.Join(exclude, "info", "exclude")))
+	assertIn(t, "/"+journal.JournalFile, ignored)
+	assertIn(t, "/"+work.NotesFile, ignored)
 	runs := journal.RunsIn(journalText(h))
-	basicsEqual(t, len(runs), 2)
-	basicsIn(t, "`muse`", runs[1])
+	assertEqual(t, len(runs), 2)
+	assertIn(t, "`muse`", runs[1])
 }
 
 // ------------------------------------------------------------------ KilledJobTests
 
 // GitHub cancels with SIGINT: the run commits and bundles what it has and pauses.
 func TestJournal_ACancelledJobIsAPauseThatKeepsItsWork(t *testing.T) {
-	h := newJournalHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	cancelled := func(request *runner.RunRequest) *runner.RunResult {
-		journalWrite(t, filepath.Join(request.Cwd, "src", "game.txt"), "half\n")
+		writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "half\n")
 		if err := syscall.Kill(os.Getpid(), syscall.SIGINT); err != nil {
 			t.Fatal(err)
 		}
 		time.Sleep(5 * time.Second) // the handler stops the call before this ends
-		return runner.NewRunResult(true, journalDone)
+		return runner.NewRunResult(true, workDone)
 	}
-	_, result := h.night(journalRunner(map[string]runner.Handler{"build": cancelled}))
+	_, result := h.night(workFake(map[string]runner.Handler{"build": cancelled}))
 	// Put back: Python's handler is signal.default_int_handler again; Go relays SIGINT to no one
 	// and no longer ignores it.
-	basicsFalse(t, signal.Ignored(syscall.SIGINT))
-	basicsEqual(t, []any{result.Get("status"), result.Get("interrupt")}, []any{"interrupted", "died"})
-	basicsIn(t, "SIGINT", result.Str("reason"))
-	basicsEqual(t, fakes.Git(h.origin, "show", h.originSHA("bot/issue-12")+":src/game.txt"), "half")
+	assertFalse(t, signal.Ignored(syscall.SIGINT))
+	assertEqual(t, []any{result.Get("status"), result.Get("interrupt")}, []any{"interrupted", "died"})
+	assertIn(t, "SIGINT", result.Str("reason"))
+	assertEqual(t, fakes.Git(h.origin, "show", h.originSHA("bot/issue-12")+":src/game.txt"), "half")
 	record := h.ctx.Store.Load().Obj("items").Obj("12")
-	basicsFalse(t, record.Truthy("failures"))
-	basicsFalse(t, record.Truthy("strikes"))
-	basicsIn(t, config.LabelBuild, h.gh.LabelNames(12)) // queued again
-	basicsNotIn(t, config.LabelWorking, h.gh.LabelNames(12))
+	assertFalse(t, record.Truthy("failures"))
+	assertFalse(t, record.Truthy("strikes"))
+	assertIn(t, config.LabelBuild, h.gh.LabelNames(12)) // queued again
+	assertNotIn(t, config.LabelWorking, h.gh.LabelNames(12))
 	comments := h.gh.BotComments(12)
-	basicsIn(t, "Paused: the job was stopped (SIGINT)", comments[len(comments)-1])
-	basicsIn(t, "· died", journal.RunsIn(journalText(h))[0])
+	assertIn(t, "Paused: the job was stopped (SIGINT)", comments[len(comments)-1])
+	assertIn(t, "· died", journal.RunsIn(journalText(h))[0])
 }
 
 // journalCopyTree is shutil.copytree(src, dst): dst must not exist.
@@ -578,71 +413,71 @@ func journalCopyTree(src, dst string) {
 // A job killed outright never reaches its own end: deliver gets the checkpoint the work job wrote
 // after its last step, and keeps the work.
 func TestJournal_AKilledJobLeavesItsLastCheckpoint(t *testing.T) {
-	h := newJournalHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out, killed := filepath.Join(h.root, "out-0"), filepath.Join(h.root, "killed")
 	killedDuringReview := func(request *runner.RunRequest) *runner.RunResult {
 		journalCopyTree(out, killed) // what the upload step finds if the job dies now
-		return runner.NewRunResult(true, journalApprove)
+		return runner.NewRunResult(true, workApprove)
 	}
-	r := journalRunner(map[string]runner.Handler{"build": journalBuilder(map[string]string{"src/game.txt": "v2\n"}),
+	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": killedDuringReview})
 	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
-	checkpoint := journalLoad(t, filepath.Join(killed, "result.json"))
-	basicsEqual(t, []any{checkpoint.Get("status"), checkpoint.Get("interrupt"), checkpoint.Get("checkpoint")},
+	checkpoint := loadJSON(t, filepath.Join(killed, "result.json"))
+	assertEqual(t, []any{checkpoint.Get("status"), checkpoint.Get("interrupt"), checkpoint.Get("checkpoint")},
 		[]any{"interrupted", "died", true})
-	basicsIn(t, "its last checkpoint, after 2 model call(s)", checkpoint.Str("reason"))
+	assertIn(t, "its last checkpoint, after 2 model call(s)", checkpoint.Str("reason"))
 	info, err := os.Stat(filepath.Join(killed, checkpoint.Str("bundle")))
-	basicsTrue(t, err == nil && info.Mode().IsRegular())
+	assertTrue(t, err == nil && info.Mode().IsRegular())
 	steps := pyjson.Objs(checkpoint.Get("steps"))
-	basicsEqual(t, steps[len(steps)-1].Get("step"), "checks")
-	final := journalLoad(t, filepath.Join(out, "result.json"))
-	basicsEqual(t, final.Get("status"), "approved") // the run's own end writes over it
-	basicsNotIn(t, "checkpoint", final)
+	assertEqual(t, steps[len(steps)-1].Get("step"), "checks")
+	final := loadJSON(t, filepath.Join(out, "result.json"))
+	assertEqual(t, final.Get("status"), "approved") // the run's own end writes over it
+	assertNotIn(t, "checkpoint", final)
 
 	deliver.NewDeliverer(h.ctx, planned, killed, h.deliverRepo, "", nil, "").Run()
-	basicsEqual(t, fakes.Git(h.origin, "show", h.originSHA("bot/issue-12")+":src/game.txt"), "v2")
-	basicsIn(t, config.LabelBuild, h.gh.LabelNames(12)) // queued again
-	basicsNotIn(t, config.LabelWorking, h.gh.LabelNames(12))
-	basicsFalse(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)) > 0) // no pull request from it
+	assertEqual(t, fakes.Git(h.origin, "show", h.originSHA("bot/issue-12")+":src/game.txt"), "v2")
+	assertIn(t, config.LabelBuild, h.gh.LabelNames(12)) // queued again
+	assertNotIn(t, config.LabelWorking, h.gh.LabelNames(12))
+	assertFalse(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)) > 0) // no pull request from it
 	record := h.ctx.Store.Load().Obj("items").Obj("12")
-	basicsFalse(t, record.Truthy("failures"))
+	assertFalse(t, record.Truthy("failures"))
 	interruptions, _ := pyjson.AsInt(record.GetOr("interruptions", 0))
-	basicsEqual(t, interruptions, 0) // its work moved on
+	assertEqual(t, interruptions, 0) // its work moved on
 	comments := h.gh.BotComments(12)
-	basicsIn(t, "Paused: the model job stopped before it finished", comments[len(comments)-1])
+	assertIn(t, "Paused: the model job stopped before it finished", comments[len(comments)-1])
 }
 
 // The stop a signal raises can land inside a reading's `except Exception` (memory, the disk): it
 // is kept, and the next checkpoint or call raises it again.
 func TestJournal_ACancelSomethingSwallowedStillStopsTheRun(t *testing.T) {
-	h := newJournalHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	worker := work.NewWorker(h.cfg, plan.Make(h.ctx, false, nil, "auto", nil), journalRunner(nil), h.clone,
+	worker := work.NewWorker(h.cfg, plan.Make(h.ctx, false, nil, "auto", nil), workFake[runner.Handler](nil), h.clone,
 		filepath.Join(h.root, "work"), filepath.Join(h.root, "out-0"), nil, nil, nil, nil, nil, nil)
 	worker.Signalled = "the job was stopped (SIGTERM): cancelled, or past its time limit"
-	stopped := basicsRaises[*work.Interrupt](t, func() { worker.Check() })
+	stopped := assertRaises[*work.Interrupt](t, func() { worker.Check() })
 	if stopped != nil {
-		basicsEqual(t, stopped.Kind, "died")
+		assertEqual(t, stopped.Kind, "died")
 	}
-	basicsRaises[*work.Interrupt](t, func() { worker.Call("build", "go", h.clone, false, "", false) })
-	basicsEqual(t, worker.Calls, 0) // no call started after the cancel
+	assertRaises[*work.Interrupt](t, func() { worker.Call("build", "go", h.clone, false, "", false) })
+	assertEqual(t, worker.Calls, 0) // no call started after the cancel
 }
 
 func TestJournal_AKilledJobThatGotNowhereCounts(t *testing.T) {
-	h := newJournalHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, "out-0")
-	work.NewWorker(h.cfg, planned, journalRunner(map[string]runner.Handler{
-		"build": journalBuilder(map[string]string{}), "review": journalReviewer(journalApprove)}),
+	work.NewWorker(h.cfg, planned, workFake(map[string]runner.Handler{
+		"build": workBuilder(map[string]string{}), "review": workReviewer(workApprove)}),
 		h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
-	result := journalLoad(t, filepath.Join(out, "result.json"))
+	result := loadJSON(t, filepath.Join(out, "result.json"))
 	result.Update(pyjson.New("status", "interrupted", "interrupt", "died", "reason", "killed", "head", nil))
-	journalWrite(t, filepath.Join(out, "result.json"), pyjson.Dumps(result))
+	writeText(t, filepath.Join(out, "result.json"), pyjson.Dumps(result))
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	interruptions, _ := pyjson.AsInt(h.ctx.Store.Load().Obj("items").Obj("12").Get("interruptions"))
-	basicsEqual(t, interruptions, 1)
-	basicsNotIn(t, config.LabelPR, h.gh.LabelNames(12))
+	assertEqual(t, interruptions, 1)
+	assertNotIn(t, config.LabelPR, h.gh.LabelNames(12))
 }

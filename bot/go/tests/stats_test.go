@@ -134,8 +134,8 @@ func statsWorld() (*fakes.FakeGitHub, *hctx.Context) {
 // statsSection is section: one window's folded section of the block.
 func statsSection(t *testing.T, body, name string) string {
 	t.Helper()
-	start := dashboardIndex(t, body, "<details><summary><b>"+name+"</b>")
-	return body[start : start+dashboardIndex(t, body[start:], "</details>")]
+	start := strIndex(t, body, "<details><summary><b>"+name+"</b>")
+	return body[start : start+strIndex(t, body[start:], "</details>")]
 }
 
 // statsBlock is stats.block(ctx, facts) with its defaults.
@@ -150,13 +150,13 @@ func TestStats_ACommentSaysWhatHappenedInWhichRunOnWhichSubscription(t *testing.
 		"build it on `muse` (muse, `muse-spark-1.3-contributor`, medium).",
 		"issue_url", "https://api.github.com/repos/o/r/issues/12",
 		"created_at", "2026-09-28T01:00:00Z"))
-	dashboardEq(t, []any{event.Kind, event.Action, event.Run, event.Provider, event.Model, event.Number},
+	assertEqual(t, []any{event.Kind, event.Action, event.Run, event.Provider, event.Model, event.Number},
 		[]any{"start", "revise", "7", "muse", "muse-spark-1.3-contributor", 12})
 	opened := stats.Parse(pyjson.New("body", "Opened #44, built on `gpt` (codex, gpt-5.6-terra).",
 		"issue_url", "x/issues/3"))
-	dashboardTrue(t, opened.PR != nil, "opened.pr is None")
+	assertTrue(t, opened.PR != nil, "opened.pr is None")
 	if opened.PR != nil {
-		dashboardEq(t, []any{opened.Kind, *opened.PR, opened.Provider, opened.Model},
+		assertEqual(t, []any{opened.Kind, *opened.PR, opened.Provider, opened.Model},
 			[]any{"opened", 44, "gpt", "gpt-5.6-terra"})
 	}
 	for _, c := range [][2]string{{"Revision pushed on `lite` …", "revised"},
@@ -165,7 +165,7 @@ func TestStats_ACommentSaysWhatHappenedInWhichRunOnWhichSubscription(t *testing.
 		{"The run could not work on this on `claude-3`: 401", "infra"},
 		{"This run failed: RuntimeError", "failed"},
 		{"Queued #4; I will build it", "queued"}} {
-		dashboardEq(t, stats.Classify(c[0]), c[1], c[0])
+		assertEqual(t, stats.Classify(c[0]), c[1], c[0])
 	}
 }
 
@@ -180,13 +180,13 @@ func TestStats_ItReadsWhoApprovedAChangeInEachWayTheBotSaysIt(t *testing.T) {
 		}
 	}
 
-	dashboardEq(t, approvers("Opened #9, built on `lite` (lite, `lite-1`, weak). Its "+
+	assertEqual(t, approvers("Opened #9, built on `lite` (lite, `lite-1`, weak). Its "+
 		"adversarial reviewer, `claude-2` (claude, `opus`, strong), "+
 		"approved it on round 2 of 10."), []string{"claude-2"})
-	dashboardEq(t, approvers("Revision pushed (run) on `muse` (muse, `m`, medium); `agy` "+
+	assertEqual(t, approvers("Revision pushed (run) on `muse` (muse, `m`, medium); `agy` "+
 		"(agy, `g`, medium) reviewed it adversarially and approved it"),
 		[]string{"agy"})
-	dashboardEq(t, approvers("Second review (run): `gpt` (codex, `gpt-5.6-terra`, medium) "+
+	assertEqual(t, approvers("Second review (run): `gpt` (codex, `gpt-5.6-terra`, medium) "+
 		"approved it. Auto-merge is on."), []string{"gpt"})
 	// A vote tally names families, not seats, and a builder is not an approver.
 	none("`claude-opus` (strong) approved it, so it waits")
@@ -204,7 +204,7 @@ func TestStats_AnOutcomeTakesItsRunsSubscription(t *testing.T) {
 	for _, e := range events {
 		got = append(got, [2]string{e.Provider, e.Model})
 	}
-	dashboardEq(t, got, [][2]string{{"agy", "g"}, {"agy", "g"}, {"", ""}})
+	assertEqual(t, got, [][2]string{{"agy", "g"}, {"agy", "g"}, {"", ""}})
 }
 
 // ---------------------------------------------------------------------------- CreditTests
@@ -213,21 +213,21 @@ func TestStats_EachPullRequestNamesWhoPlannedBuiltRevisedAndApprovedIt(t *testin
 	_, ctx := statsWorld()
 	facts := stats.Collect(ctx)
 	who := stats.Credits_(facts.Events, facts.Pulls)
-	dashboardEq(t, who.Planned[9], []string{"claude-3"})
-	dashboardEq(t, who.Built[9], "lite")
-	dashboardEq(t, who.Revised[9], []string{"muse"})
-	dashboardEq(t, who.Approved[9], []string{"claude-2", "muse", "agy"})
+	assertEqual(t, who.Planned[9], []string{"claude-3"})
+	assertEqual(t, who.Built[9], "lite")
+	assertEqual(t, who.Revised[9], []string{"muse"})
+	assertEqual(t, who.Approved[9], []string{"claude-2", "muse", "agy"})
 	// No "Opened" comment: the last build started on its issue before it was opened.
-	dashboardEq(t, who.Built[10], "gpt")
+	assertEqual(t, who.Built[10], "gpt")
 	// The only build on its issue started after it was opened.
 	_, built := who.Built[11]
-	dashboardTrue(t, !built, "11 in who.built")
-	dashboardEq(t, who.Builder(pyjson.New("number", 11)), stats.Unrecorded)
+	assertTrue(t, !built, "11 in who.built")
+	assertEqual(t, who.Builder(pyjson.New("number", 11)), stats.Unrecorded)
 	var numbers []any
 	for _, p := range facts.Pulls {
 		numbers = append(numbers, p.Get("number"))
 	}
-	dashboardEq(t, numbers, []any{9, 10, 11, 12, 13})
+	assertEqual(t, numbers, []any{9, 10, 11, 12, 13})
 }
 
 // ---------------------------------------------------------------------------- IssueTests
@@ -235,7 +235,7 @@ func TestStats_EachPullRequestNamesWhoPlannedBuiltRevisedAndApprovedIt(t *testin
 func TestStats_TheFourWindowsSitSideBySideInOneTable(t *testing.T) {
 	_, ctx := statsWorld()
 	body := statsBlock(ctx, stats.Collect(ctx))
-	dashboardIn(t, "| | Last 6 hours | Last 24 hours | Last 7 days | All time |", body)
+	assertIn(t, "| | Last 6 hours | Last 24 hours | Last 7 days | All time |", body)
 	for _, line := range []string{"| Runs started | 4 | 5 | 6 | 6 |",
 		"| … plans · builds · revisions · reviews | 1 · 1 · 1 · 1 | 1 · 2 · 1 · 1 " +
 			"| 1 · 3 · 1 · 1 | 1 · 3 · 1 · 1 |",
@@ -253,9 +253,9 @@ func TestStats_TheFourWindowsSitSideBySideInOneTable(t *testing.T) {
 		"| Model hours | 2.0 | 2.0 | 2.0 | 3.0 |",
 		"| `bot-night.yml` workflow runs | 1 | 1 | 1 | 3 |",
 		"| Requests answered (`Queued …`) | 1 | 1 | 1 | 1 |"} {
-		dashboardIn(t, line, body)
+		assertIn(t, line, body)
 	}
-	dashboardIn(t, "Now: 1 of its pull requests open, 0 closed without merging, 1 commits on "+
+	assertIn(t, "Now: 1 of its pull requests open, 0 closed without merging, 1 commits on "+
 		"`main` by the bot itself. `bot-night.yml` runs ended: success 2, failure 1",
 		body)
 	var headings []string
@@ -264,65 +264,65 @@ func TestStats_TheFourWindowsSitSideBySideInOneTable(t *testing.T) {
 			headings = append(headings, line)
 		}
 	}
-	dashboardEq(t, headings, []string{"## 📊 What it has done", "### The four windows",
+	assertEqual(t, headings, []string{"## 📊 What it has done", "### The four windows",
 		"### The last two weeks", "### Per window"})
-	dashboardTrue(t, strings.HasPrefix(body, stats.BlockStart))
-	dashboardTrue(t, strings.HasSuffix(body, stats.BlockEnd))
-	dashboardEq(t, stats.Kept("before\n"+body+"\nafter"), body)
-	dashboardEq(t, stats.Kept("no block here"), "") // None
+	assertTrue(t, strings.HasPrefix(body, stats.BlockStart))
+	assertTrue(t, strings.HasSuffix(body, stats.BlockEnd))
+	assertEqual(t, stats.Kept("before\n"+body+"\nafter"), body)
+	assertEqual(t, stats.Kept("no block here"), "") // None
 }
 
 func TestStats_EachWindowSaysWhoDidWhatAndEveryMergeIsListedOnce(t *testing.T) {
 	_, ctx := statsWorld()
 	body := statsBlock(ctx, stats.Collect(ctx))
 	six := statsSection(t, body, "Last 6 hours")
-	dashboardIn(t, "<b>Last 6 hours</b>: 4 runs, 1 pull requests merged, +40 / −5 lines", six)
-	dashboardIn(t, "| `lite` | `lite-1` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "+
+	assertIn(t, "<b>Last 6 hours</b>: 4 runs, 1 pull requests merged, +40 / −5 lines", six)
+	assertIn(t, "| `lite` | `lite-1` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "+
 		"| 0 | 0 | 0 | 2.0 h |", six)
-	dashboardIn(t, "| `agy` | `gemini-3.1-pro` | 1 | 0 | 0 | 0 | 1 | 1 of 1 | 0 | 0 | +0 / −0 "+
+	assertIn(t, "| `agy` | `gemini-3.1-pro` | 1 | 0 | 0 | 0 | 1 | 1 of 1 | 0 | 0 | +0 / −0 "+
 		"| 0 | 0 | 0 | 0.0 h |", six)
-	dashboardNotIn(t, "#10 ", six)
-	dashboardNotIn(t, "`gpt`", six)
+	assertNotIn(t, "#10 ", six)
+	assertNotIn(t, "`gpt`", six)
 
 	week := statsSection(t, body, "Last 7 days")
 	// #11 and the open #13: no comment names who built either.
-	dashboardIn(t, "| _not recorded_ | — | 0 | 0 | 0 | 0 | 0 | 0 of 0 | 2 | 1 | +7 / −1 |",
+	assertIn(t, "| _not recorded_ | — | 0 | 0 | 0 | 0 | 0 | 0 of 0 | 2 | 1 | +7 / −1 |",
 		week)
-	dashboardIn(t, "| `claude-1` | `opus` | 1 | 0 | 1 | 0 | 0 | 0 of 1 | 0 | 0 | +0 / −0 "+
+	assertIn(t, "| `claude-1` | `opus` | 1 | 0 | 1 | 0 | 0 | 0 of 1 | 0 | 0 | +0 / −0 "+
 		"| 0 | 1 | 0 | 0.0 h |", week)
 
 	ever := statsSection(t, body, "All time")
-	dashboardIn(t, "| `lite` | `lite-1` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "+
+	assertIn(t, "| `lite` | `lite-1` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "+
 		"| 0 | 0 | 0 | 3.0 h (its last 2 runs) |", ever)
 	// One list of every merge, newest first, with when it merged and who did what.
-	merged := body[dashboardIndex(t, body, "<b>Pull requests merged</b>"):]
-	dashboardIn(t, "<b>Pull requests merged</b>: the newest 4 of 4", merged)
+	merged := body[strIndex(t, body, "<b>Pull requests merged</b>"):]
+	assertIn(t, "<b>Pull requests merged</b>: the newest 4 of 4", merged)
 	var numbers []string
 	for _, line := range py.Splitlines(merged) {
 		if strings.HasPrefix(line, "| #") {
 			numbers = append(numbers, strings.Fields(line)[1])
 		}
 	}
-	dashboardEq(t, numbers, []string{"#9", "#10", "#11", "#12"})
-	dashboardIn(t, "| #9 Patch v0.2.Y: work for #3 | Tue 09-29 10:00 | `claude-3` | `lite` "+
+	assertEqual(t, numbers, []string{"#9", "#10", "#11", "#12"})
+	assertIn(t, "| #9 Patch v0.2.Y: work for #3 | Tue 09-29 10:00 | `claude-3` | `lite` "+
 		"| `muse` | `claude-2`, `muse`, `agy` | 3h 00m | +40 / −5 | 4 |", merged)
-	dashboardIn(t, "| #10 Patch v0.2.Y: work for #4 | Mon 09-28 22:00 | — | `gpt` | — | — "+
+	assertIn(t, "| #10 Patch v0.2.Y: work for #4 | Mon 09-28 22:00 | — | `gpt` | — | — "+
 		"| 3h 00m | +100 / −10 | 2 |", merged)
-	dashboardIn(t, "| #11 Patch v0.2.Y: work for #5 | Sat 09-26 07:00 | — | not recorded | — "+
+	assertIn(t, "| #11 Patch v0.2.Y: work for #5 | Sat 09-26 07:00 | — | not recorded | — "+
 		"| — | 12h 00m | +7 / −1 | 1 |", merged)
-	dashboardEq(t, strings.Count(body, "| #9 Patch"), 1)
+	assertEqual(t, strings.Count(body, "| #9 Patch"), 1)
 	// A person's pull request is not the bot's work.
-	dashboardNotIn(t, "#20 ", body)
-	dashboardNotIn(t, "+5,000", body)
+	assertNotIn(t, "#20 ", body)
+	assertNotIn(t, "+5,000", body)
 }
 
 func TestStats_TheChartsAreBarsAndLinesNeverPies(t *testing.T) {
 	_, ctx := statsWorld()
 	body := statsBlock(ctx, stats.Collect(ctx))
-	dashboardNotIn(t, "pie", body)
-	dashboardEq(t, strings.Count(body, "```mermaid"), strings.Count(body, "xychart-beta"))
-	dashboardIn(t, `title "Runs started, by subscription (last 6 hours)"`, body)
-	dashboardIn(t, `title "Lines added in merged pull requests, by builder (last 24 hours)"`,
+	assertNotIn(t, "pie", body)
+	assertEqual(t, strings.Count(body, "```mermaid"), strings.Count(body, "xychart-beta"))
+	assertIn(t, `title "Runs started, by subscription (last 6 hours)"`, body)
+	assertIn(t, `title "Lines added in merged pull requests, by builder (last 24 hours)"`,
 		body)
 	lines := py.Splitlines(statsSection(t, body, "Last 24 hours"))
 	at := slices.Index(lines, `    title "Lines added in merged pull requests, by builder `+
@@ -330,19 +330,19 @@ func TestStats_TheChartsAreBarsAndLinesNeverPies(t *testing.T) {
 	if at < 0 {
 		t.Fatalf("the chart's title is not a line of the section")
 	}
-	dashboardEq(t, lines[at+1:at+4], []string{`    x-axis ["gpt", "lite"]`, `    y-axis "lines"`,
+	assertEqual(t, lines[at+1:at+4], []string{`    x-axis ["gpt", "lite"]`, `    y-axis "lines"`,
 		`    bar [100, 40]`})
-	dashboardIn(t, `title "What runs ended in (all time)"`, body)
-	dashboardEq(t, strings.Count(body, `title "Runs started per day (last 14 days)"`), 1)
+	assertIn(t, `title "What runs ended in (all time)"`, body)
+	assertEqual(t, strings.Count(body, `title "Runs started per day (last 14 days)"`), 1)
 }
 
 func TestStats_AQuietWindowSaysSo(t *testing.T) {
 	gh, _ := statsWorld()
 	later := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(48 * time.Hour)})
 	body := statsBlock(later, stats.Collect(later))
-	dashboardIn(t, "<details><summary><b>Last 6 hours</b>: nothing happened</summary>", body)
-	dashboardIn(t, "<details><summary><b>Last 24 hours</b>: nothing happened</summary>", body)
-	dashboardIn(t, "| Pull requests merged | 0 | 0 | 3 | 4 |", body)
+	assertIn(t, "<details><summary><b>Last 6 hours</b>: nothing happened</summary>", body)
+	assertIn(t, "<details><summary><b>Last 24 hours</b>: nothing happened</summary>", body)
+	assertIn(t, "| Pull requests merged | 0 | 0 | 3 | 4 |", body)
 }
 
 func TestStats_TheMergeListIsCutToItsNewest(t *testing.T) {
@@ -353,9 +353,9 @@ func TestStats_TheMergeListIsCutToItsNewest(t *testing.T) {
 	}
 	facts := stats.Collect(ctx)
 	// 64 merged in all: the block lists its newest MERGES_SHOWN, or none at all.
-	dashboardIn(t, fmt.Sprintf("_… and %d older ones._", 64-stats.MergesShown), statsBlock(ctx, facts))
-	dashboardIn(t, "_… and 54 older ones._", stats.Block(ctx, facts, 10, nil, ""))
+	assertIn(t, fmt.Sprintf("_… and %d older ones._", 64-stats.MergesShown), statsBlock(ctx, facts))
+	assertIn(t, "_… and 54 older ones._", stats.Block(ctx, facts, 10, nil, ""))
 	none := stats.Block(ctx, facts, 0, nil, "")
-	dashboardIn(t, "_64 pull requests merged; the list is left out", none)
-	dashboardNotIn(t, "| #100 ", none)
+	assertIn(t, "_64 pull requests merged; the list is left out", none)
+	assertNotIn(t, "| #100 ", none)
 }

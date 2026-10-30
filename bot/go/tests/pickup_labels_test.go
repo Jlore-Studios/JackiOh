@@ -20,9 +20,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 )
 
-// Harness, builder, changes, reviewer and APPROVE are waste_test.go's copies of test_flow.py's and
-// test_work.py's.
-
 // pickupLabelsAll is ALL: every provider secret set.
 var pickupLabelsAll = map[string]string{"HARNESS_SECRETS_SET": strings.Join(providers.SecretNames, " ")}
 
@@ -98,18 +95,18 @@ func pickupLabelsSkipped(t *testing.T, planned *pyjson.Object) string {
 // #90: `priority:high`, `priority:medium`, none, then `priority:low`.
 
 func TestPickupLabels_TheTierOfASetOfLabels(t *testing.T) {
-	tier := func(names ...string) int { return queue.PriorityTier(workflowsSet(names...)) }
-	workflowsEqual(t, tier(pickupLabelsHigh), 0)
-	workflowsEqual(t, tier(pickupLabelsMedium, "bot:build"), 1)
-	workflowsEqual(t, tier(), 2)
-	workflowsEqual(t, tier(pickupLabelsLow), 3)
+	tier := func(names ...string) int { return queue.PriorityTier(setOf(names...)) }
+	assertEqual(t, tier(pickupLabelsHigh), 0)
+	assertEqual(t, tier(pickupLabelsMedium, "bot:build"), 1)
+	assertEqual(t, tier(), 2)
+	assertEqual(t, tier(pickupLabelsLow), 3)
 	// The highest label wins, names match whatever their case, and any other `priority:*` label is
 	// no priority at all.
-	workflowsEqual(t, tier(pickupLabelsHigh, pickupLabelsLow), 0)
-	workflowsEqual(t, tier(pickupLabelsMedium, pickupLabelsLow), 1)
-	workflowsEqual(t, tier("Priority:HIGH"), 0)
-	workflowsEqual(t, tier("priority:urgent", "priority: high", "priority:highest"), 2)
-	workflowsEqual(t, tier("priority:urgent", pickupLabelsLow), 3)
+	assertEqual(t, tier(pickupLabelsHigh, pickupLabelsLow), 0)
+	assertEqual(t, tier(pickupLabelsMedium, pickupLabelsLow), 1)
+	assertEqual(t, tier("Priority:HIGH"), 0)
+	assertEqual(t, tier("priority:urgent", "priority: high", "priority:highest"), 2)
+	assertEqual(t, tier("priority:urgent", pickupLabelsLow), 3)
 }
 
 func TestPickupLabels_AMixOfTiersIsPickedHighMediumNoneLow(t *testing.T) {
@@ -127,7 +124,7 @@ func TestPickupLabels_AMixOfTiersIsPickedHighMediumNoneLow(t *testing.T) {
 		pickupLabelsIssue(gh, c.number, labels...)
 		pickupLabelsQueued(ctx, c.number, fmt.Sprintf("2026-09-2%dT00:00:00Z", c.number))
 	}
-	workflowsEqualSlices(t, pickupLabelsPicks(gh, ctx), []int{6, 5, 4, 3})
+	assertEqual(t, pickupLabelsPicks(gh, ctx), []int{6, 5, 4, 3})
 }
 
 func TestPickupLabels_TheChosenItemsTierIsInThePlan(t *testing.T) {
@@ -138,7 +135,7 @@ func TestPickupLabels_TheChosenItemsTierIsInThePlan(t *testing.T) {
 	planned := plan.Make(ctx, false, nil, "auto", nil)
 	needsPlanIs(t, planned, []string{"number", "priority"}, 3, "medium")
 	gh.Threads.Item(3).Set("state", "closed")
-	wasteEq(t, plan.Make(ctx, false, nil, "auto", nil).Get("priority"), "none")
+	assertEqual(t, plan.Make(ctx, false, nil, "auto", nil).Get("priority"), "none")
 }
 
 func TestPickupLabels_WithinATierTheOrderIsTheOneBefore(t *testing.T) {
@@ -157,7 +154,7 @@ func TestPickupLabels_WithinATierTheOrderIsTheOneBefore(t *testing.T) {
 	}
 	// Revisions before builds, then the oldest build first, as before; the unlabelled one, oldest
 	// of all, after every `priority:high` one.
-	workflowsEqualSlices(t, pickupLabelsPicks(gh, ctx), []int{9, 4, 3, 5, 6})
+	assertEqual(t, pickupLabelsPicks(gh, ctx), []int{9, 4, 3, 5, 6})
 }
 
 func TestPickupLabels_HighAndLowTogetherCountAsHigh(t *testing.T) {
@@ -167,7 +164,7 @@ func TestPickupLabels_HighAndLowTogetherCountAsHigh(t *testing.T) {
 	pickupLabelsIssue(gh, 4, config.LabelBuild, pickupLabelsLow, pickupLabelsHigh)
 	pickupLabelsQueued(ctx, 3, "2026-09-20T00:00:00Z")
 	pickupLabelsQueued(ctx, 4, "2026-09-28T00:00:00Z")
-	workflowsEqualSlices(t, pickupLabelsPicks(gh, ctx), []int{4, 3})
+	assertEqual(t, pickupLabelsPicks(gh, ctx), []int{4, 3})
 }
 
 func TestPickupLabels_AForcedItemStillComesFirst(t *testing.T) {
@@ -176,7 +173,7 @@ func TestPickupLabels_AForcedItemStillComesFirst(t *testing.T) {
 	pickupLabelsIssue(gh, 3, config.LabelBuild, pickupLabelsHigh)
 	pickupLabelsIssue(gh, 4, config.LabelBuild, pickupLabelsLow)
 	pickupLabelsQueued(ctx, 4, "2026-09-28T00:00:00Z", "forced", true)
-	workflowsEqualSlices(t, pickupLabelsPicks(gh, ctx), []int{4, 3})
+	assertEqual(t, pickupLabelsPicks(gh, ctx), []int{4, 3})
 }
 
 func TestPickupLabels_ALabelChangedBetweenRunsCountsAtTheNextPickup(t *testing.T) {
@@ -186,10 +183,10 @@ func TestPickupLabels_ALabelChangedBetweenRunsCountsAtTheNextPickup(t *testing.T
 		pickupLabelsIssue(gh, number, config.LabelBuild)
 		pickupLabelsQueued(ctx, number, fmt.Sprintf("2026-09-2%dT00:00:00Z", number))
 	}
-	wasteEq(t, plan.Make(ctx, false, nil, "auto", nil).Get("number"), 3)
+	assertEqual(t, plan.Make(ctx, false, nil, "auto", nil).Get("number"), 3)
 	gh.Threads.Item(3).Set("state", "closed")
 	gh.AddLabels(5, []string{pickupLabelsHigh})
-	wasteEq(t, plan.Make(ctx, false, nil, "auto", nil).Get("number"), 5)
+	assertEqual(t, plan.Make(ctx, false, nil, "auto", nil).Get("number"), 5)
 }
 
 func TestPickupLabels_WithNoPriorityLabelsTheOrderIsForcedReviewsRevisionsHarderBuilds(t *testing.T) {
@@ -218,7 +215,7 @@ func TestPickupLabels_WithNoPriorityLabelsTheOrderIsForcedReviewsRevisionsHarder
 	}
 	// Forced first, then the review and the revision (work already begun), then the builds: the
 	// hard one first (only the strongest can take it), the rest oldest first.
-	workflowsEqualSlices(t, order, []int{6, 10, 9, 7, 8, 4, 5, 3})
+	assertEqual(t, order, []int{6, 10, 9, 7, 8, 4, 5, 3})
 }
 
 // ---------------------------------------------------------------------------- HumanTests
@@ -232,15 +229,15 @@ func TestPickupLabels_HumanIsNeverSelectedWhateverTheModel(t *testing.T) {
 		ctx := pickupLabelsCtx(gh, provider)
 		pickupLabelsIssue(gh, 5, config.LabelBuild, "human", pickupLabelsHigh, "difficulty:easy")
 		pickupLabelsIssue(gh, 6, config.LabelBuild, "difficulty:easy")
-		needsPlanSetItem(ctx, 6, pyjson.New("planned_at", "2026-09-20T00:00:00Z"))
+		flowUpdateItem(ctx, 6, pyjson.New("planned_at", "2026-09-20T00:00:00Z"))
 		pickupLabelsQueued(ctx, 5, "2026-09-20T00:00:00Z", "forced", true)
 		planned := plan.Make(ctx, true, nil, "auto", nil)
-		wasteEq(t, planned.Get("number"), 6, provider.ID)
-		workflowsIn(t, "#5 skipped: labelled `human`, so no model takes it", pickupLabelsSkipped(t, planned))
+		assertEqual(t, planned.Get("number"), 6, provider.ID)
+		assertIn(t, "#5 skipped: labelled `human`, so no model takes it", pickupLabelsSkipped(t, planned))
 		gh.Threads.Item(6).Set("state", "closed")
 		planned = plan.Make(ctx, true, &five, "auto", nil)
-		wasteEq(t, planned.Get("action"), "none", provider.ID)
-		workflowsIn(t, "#5 is not queued", py.Str(planned.Get("reason")))
+		assertEqual(t, planned.Get("action"), "none", provider.ID)
+		assertIn(t, "#5 is not queued", py.Str(planned.Get("reason")))
 	}
 }
 
@@ -249,12 +246,12 @@ func TestPickupLabels_AHumanPullRequestIsNotRevisedEither(t *testing.T) {
 	gh.AddPull(9, "bot/issue-1", fakes.Pull{Labels: []string{config.LabelPR, config.LabelRevise, "Human"}})
 	pickupLabelsIssue(gh, 3, config.LabelBuild)
 	ctx := pickupLabelsCtx(gh, nil)
-	workflowsEqualSlices(t, pickupLabelsPicks(gh, ctx), []int{3})
+	assertEqual(t, pickupLabelsPicks(gh, ctx), []int{3})
 	skipped := plan.Peek_(ctx, false, nil, "auto").Skipped
 	if len(skipped) == 0 {
 		t.Fatal("IndexError: nothing skipped")
 	}
-	workflowsIn(t, "#9 skipped: labelled `human`", skipped[0])
+	assertIn(t, "#9 skipped: labelled `human`", skipped[0])
 }
 
 // `human`: people do it. A request to build it gets a reply and nothing else, and it is never a
@@ -267,17 +264,17 @@ func TestPickupLabels_HumanIsNeverQueuedPlannedLabelledOrBuilt(t *testing.T) {
 	pickupLabelsIssue(gh, 6, "human")
 	pickupLabelsIssue(gh, 3, config.LabelBuild)
 	reply := queue.QueueBuild(ctx, 6, "MaxGoetzmann", false, false, nil, nil)
-	workflowsIn(t, "#6 is labelled `human`: people do it, so I leave it alone", reply)
-	workflowsEqualMaps(t, gh.LabelNames(6), workflowsSet("human"))
+	assertIn(t, "#6 is labelled `human`: people do it, so I leave it alone", reply)
+	assertEqual(t, gh.LabelNames(6), setOf("human"))
 	planned := plan.Make(ctx, true, nil, "auto", nil)
-	wasteEq(t, planned.Get("number"), 3)
-	workflowsIn(t, "#5 skipped: labelled `human`", pickupLabelsSkipped(t, planned))
-	workflowsEqualMaps(t, gh.LabelNames(5), workflowsSet(config.LabelBuild, "Human", pickupLabelsHigh)) // no bot:needs-plan
+	assertEqual(t, planned.Get("number"), 3)
+	assertIn(t, "#5 skipped: labelled `human`", pickupLabelsSkipped(t, planned))
+	assertEqual(t, gh.LabelNames(5), setOf(config.LabelBuild, "Human", pickupLabelsHigh)) // no bot:needs-plan
 	pull := gh.AddPull(9, "bot/issue-1", fakes.Pull{Labels: []string{config.LabelPR, "human"}})
 	pull.Set("mergeable_state", "dirty")
 	plan.Housekeeping(ctx, ctx.Store.Load())
-	workflowsTrue(t, !gh.LabelNames(9)[config.LabelRevise])
-	workflowsIn(t, "labelled `human`", queue.QueueRevise(ctx, 9, "MaxGoetzmann", false, "request", false, nil, nil))
+	assertTrue(t, !gh.LabelNames(9)[config.LabelRevise])
+	assertIn(t, "labelled `human`", queue.QueueRevise(ctx, 9, "MaxGoetzmann", false, "request", false, nil, nil))
 }
 
 func TestPickupLabels_TheReplySaysWhatTheLabelChanges(t *testing.T) {
@@ -287,9 +284,9 @@ func TestPickupLabels_TheReplySaysWhatTheLabelChanges(t *testing.T) {
 	pickupLabelsIssue(gh, 7, "Difficulty:Hard")
 	gh.AddIssue(8)
 	build := func(number int) string { return queue.QueueBuild(ctx, number, "MaxGoetzmann", false, false, nil, nil) }
-	workflowsIn(t, "#5 is labelled `human`: people do it, so I leave it alone", build(5))
-	workflowsIn(t, "labelled `difficulty:hard`, so only Opus plans, builds and reviews it", build(7))
-	workflowsNotIn(t, "labelled", build(8))
+	assertIn(t, "#5 is labelled `human`: people do it, so I leave it alone", build(5))
+	assertIn(t, "labelled `difficulty:hard`, so only Opus plans, builds and reviews it", build(7))
+	assertNotIn(t, "labelled", build(8))
 }
 
 // ---------------------------------------------------------------------------- SuggestionTests
@@ -307,30 +304,30 @@ func TestPickupLabels_ASuggestionAPersonLabelledIsACandidate(t *testing.T) {
 	for _, c := range queue.Candidates(ctx, ctx.Store.Load(), &skipped, nil) {
 		numbers = append(numbers, c.Number)
 	}
-	workflowsEqualSlices(t, numbers, []int{5})
-	workflowsEqualSlices(t, skipped, []string{})
+	assertEqual(t, numbers, []int{5})
+	assertEqual(t, skipped, []string{})
 }
 
 func TestPickupLabels_QueueingASuggestionApprovesIt(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := pickupLabelsCtx(gh, nil)
 	pickupLabelsIssue(gh, 5, config.LabelSuggestion)
-	workflowsIn(t, "Queued #5", queue.QueueBuild(ctx, 5, "MaxGoetzmann", false, false, nil, nil))
-	workflowsEqualMaps(t, gh.LabelNames(5), workflowsSet(config.LabelBuild))
+	assertIn(t, "Queued #5", queue.QueueBuild(ctx, 5, "MaxGoetzmann", false, false, nil, nil))
+	assertEqual(t, gh.LabelNames(5), setOf(config.LabelBuild))
 }
 
 // ---------------------------------------------------------------------------- LabelsTests
 
 func TestPickupLabels_SetupCreatesTheNewLabels(t *testing.T) {
 	_, humanText := repoMetaLabel(t, "human")
-	workflowsEqual(t, humanText, "People do this: the night bot never queues, plans, builds or labels it")
-	workflowsTrue(t, !config.Labels.Has("shitter"))
-	workflowsTrue(t, !config.Labels.Has("difficult"))
+	assertEqual(t, humanText, "People do this: the night bot never queues, plans, builds or labels it")
+	assertTrue(t, !config.Labels.Has("shitter"))
+	assertTrue(t, !config.Labels.Has("difficult"))
 	colors := map[string]string{}
 	for _, name := range []string{pickupLabelsHigh, pickupLabelsMedium, pickupLabelsLow} {
 		colors[name], _ = repoMetaLabel(t, name)
 	}
-	workflowsEqualMaps(t, colors, map[string]string{pickupLabelsHigh: "d73a4a", pickupLabelsMedium: "fbca04",
+	assertEqual(t, colors, map[string]string{pickupLabelsHigh: "d73a4a", pickupLabelsMedium: "fbca04",
 		pickupLabelsLow: "0e8a16"})
 	gh := fakes.NewFakeGitHub()
 	created := map[string]bool{}
@@ -342,7 +339,7 @@ func TestPickupLabels_SetupCreatesTheNewLabels(t *testing.T) {
 	}
 	for _, name := range []string{"human", "difficulty:easy", "difficulty:medium", "difficulty:hard",
 		pickupLabelsHigh, pickupLabelsMedium, pickupLabelsLow} {
-		workflowsTrue(t, created[name], name)
+		assertTrue(t, created[name], name)
 	}
 	again := false
 	for _, name := range config.Labels.Keys() {
@@ -352,36 +349,36 @@ func TestPickupLabels_SetupCreatesTheNewLabels(t *testing.T) {
 			break
 		}
 	}
-	wasteFalse(t, again)
+	assertFalse(t, again)
 }
 
 func TestPickupLabels_ThePullRequestKeepsTheIssuesDifficultyAndTier(t *testing.T) {
-	h := newWasteHarness(t, wasteHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:easy", "Priority:High")
-	planned, result := h.night(wasteRunner(map[string]runner.Handler{
-		"build": wasteBuilder(map[string]string{"src/game.txt": "v2\n"}), "review": wasteReviewer(wasteApprove)}))
-	wasteEq(t, []any{planned.Get("provider"), planned.Get("priority"), planned.Get("difficulty"), result.Get("status")},
+	planned, result := h.night(workFake(map[string]runner.Handler{
+		"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}), "review": workReviewer(workApprove)}))
+	assertEqual(t, []any{planned.Get("provider"), planned.Get("priority"), planned.Get("difficulty"), result.Get("status")},
 		[]any{"muse", "high", "easy", "approved"})
 	pr, _ := pyjson.AsInt(wastePull(t, h.gh, "bot/issue-12").Get("number"))
 	// Muse planned, built and reviewed it in the run, and a medium approval ships an easy item with
 	// no further audit (#725).
-	workflowsEqualMaps(t, h.gh.LabelNames(pr), workflowsSet(config.LabelPR, "difficulty:easy", "Priority:High"))
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, "difficulty:easy", "Priority:High"))
 	_, merging := h.gh.AutoMerge[fmt.Sprintf("PR_%d", pr)]
-	workflowsTrue(t, merging)
-	wasteEq(t, h.ctx.Store.Load().Obj("items").Obj(fmt.Sprint(pr)).Get("difficulty"), "easy")
+	assertTrue(t, merging)
+	assertEqual(t, h.ctx.Store.Load().Obj("items").Obj(fmt.Sprint(pr)).Get("difficulty"), "easy")
 }
 
 func TestPickupLabels_ADraftPullRequestKeepsThemToo(t *testing.T) {
-	h := newWasteHarness(t, wasteHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:hard", pickupLabelsLow)
-	planned, result := h.night(wasteRunner(map[string]runner.Handler{
-		"build":  wasteBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"fix":    wasteBuilder(map[string]string{"src/game.txt": "v3\n"}),
-		"review": wasteReviewer(wasteChanges("Still wrong."))}), true)
-	wasteEq(t, []any{planned.Get("provider"), result.Get("status")}, []any{"claude-3", "not_approved"})
+	planned, result := h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"fix":    workBuilder(map[string]string{"src/game.txt": "v3\n"}),
+		"review": workReviewer(workChanges("Still wrong."))}), flowPlanArgs{Force: true})
+	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"claude-3", "not_approved"})
 	pull := wastePull(t, h.gh, "bot/issue-12")
-	workflowsTrue(t, pull.Truthy("draft"))
+	assertTrue(t, pull.Truthy("draft"))
 	pr, _ := pyjson.AsInt(pull.Get("number"))
-	workflowsEqualMaps(t, h.gh.LabelNames(pr),
-		workflowsSet(config.LabelPR, "bot:blocked", "bot:stuck", "difficulty:hard", pickupLabelsLow))
+	assertEqual(t, h.gh.LabelNames(pr),
+		setOf(config.LabelPR, "bot:blocked", "bot:stuck", "difficulty:hard", pickupLabelsLow))
 }

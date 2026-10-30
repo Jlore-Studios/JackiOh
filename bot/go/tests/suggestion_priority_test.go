@@ -42,7 +42,7 @@ func suggestionPriorityIdea(title string, kind ...any) *pyjson.Object {
 // suggestionPriorityOpened is opened(h): the suggestions the bot opened, by title.
 func suggestionPriorityOpened(h *flowHarness) map[string]*pyjson.Object {
 	made := map[string]*pyjson.Object{}
-	for _, thread := range h.GH.Threads.Values() {
+	for _, thread := range h.gh.Threads.Values() {
 		if pyjson.Equal(thread.Get("user"), fakes.Bot) && flowThreadLabels(thread)[config.LabelSuggestion] {
 			made[thread.Str("title")] = thread
 		}
@@ -60,63 +60,63 @@ func suggestionPriorityWith(priorities any) *pyjson.Object {
 
 func TestSuggestionPriority_EachClassOpensWithItsPriority(t *testing.T) {
 	h := newFlowHarness(t)
-	testsupport.IdleFor(h.Ctx)
+	testsupport.IdleFor(h.ctx)
 	r := suggestionPrioritySurvey(suggestionPriorityIdea("Fuzz", "fuzz"), suggestionPriorityIdea("Security", "security"),
 		suggestionPriorityIdea("Data", "data"), suggestionPriorityIdea("Feature", "feature"),
 		suggestionPriorityIdea("Unknown", "nonsense"), suggestionPriorityIdea("None"), suggestionPriorityIdea("Odd", 7))
-	h.Night(r)
+	h.night(r)
 	made := suggestionPriorityOpened(h)
 	labels := map[string]map[string]bool{}
 	for title, thread := range made {
 		labels[title] = flowThreadLabels(thread)
 	}
-	flowEq(t, labels, map[string]map[string]bool{
-		"Fuzz":     flowSet(config.LabelSuggestion, "priority:low"),
-		"Security": flowSet(config.LabelSuggestion, "priority:medium"),
-		"Data":     flowSet(config.LabelSuggestion, "priority:high"),
-		"Feature":  flowSet(config.LabelSuggestion),
-		"Unknown":  flowSet(config.LabelSuggestion),
-		"None":     flowSet(config.LabelSuggestion),
-		"Odd":      flowSet(config.LabelSuggestion),
+	assertEqual(t, labels, map[string]map[string]bool{
+		"Fuzz":     setOf(config.LabelSuggestion, "priority:low"),
+		"Security": setOf(config.LabelSuggestion, "priority:medium"),
+		"Data":     setOf(config.LabelSuggestion, "priority:high"),
+		"Feature":  setOf(config.LabelSuggestion),
+		"Unknown":  setOf(config.LabelSuggestion),
+		"None":     setOf(config.LabelSuggestion),
+		"Odd":      setOf(config.LabelSuggestion),
 	})
 	if made["Fuzz"] == nil || made["Feature"] == nil {
 		t.Fatal("KeyError: the survey opened no Fuzz or Feature")
 	}
-	flowIn(t, "Class: `fuzz` → `priority:low`; relabel to change it.", made["Fuzz"].Str("body"))
-	flowNotIn(t, "Class:", made["Feature"].Str("body"))
+	assertIn(t, "Class: `fuzz` → `priority:low`; relabel to change it.", made["Fuzz"].Str("body"))
+	assertNotIn(t, "Class:", made["Feature"].Str("body"))
 	// The survey was told every class and the priority it sets, highest first.
 	prompt := r.Calls[0].Prompt
-	flowIn(t, "- `data`: `priority:high`\n- `security`: `priority:medium`", prompt)
+	assertIn(t, "- `data`: `priority:high`\n- `security`: `priority:medium`", prompt)
 	// In pickup order: no priority comes before low, so `feature` wins a tie with `fuzz`.
-	flowIn(t, "- `polish`: `priority:medium`\n- `feature`: no priority (the owner's call)\n"+
+	assertIn(t, "- `polish`: `priority:medium`\n- `feature`: no priority (the owner's call)\n"+
 		"- `fuzz`: `priority:low`", prompt)
 }
 
 func TestSuggestionPriority_TheConfigAloneSetsThePriority(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Overrides: pyjson.New("suggestions",
 		suggestionPriorityWith(pyjson.New("fuzz", "high")))})
-	testsupport.IdleFor(h.Ctx)
-	h.Night(suggestionPrioritySurvey(suggestionPriorityIdea("Fuzz", "fuzz"), suggestionPriorityIdea("Data", "data")))
+	testsupport.IdleFor(h.ctx)
+	h.night(suggestionPrioritySurvey(suggestionPriorityIdea("Fuzz", "fuzz"), suggestionPriorityIdea("Data", "data")))
 	made := suggestionPriorityOpened(h)
 	if made["Fuzz"] == nil || made["Data"] == nil {
 		t.Fatal("KeyError: the survey opened no Fuzz or Data")
 	}
-	flowEq(t, flowThreadLabels(made["Fuzz"]), flowSet(config.LabelSuggestion, "priority:high"))
-	flowEq(t, flowThreadLabels(made["Data"]), flowSet(config.LabelSuggestion))
+	assertEqual(t, flowThreadLabels(made["Fuzz"]), setOf(config.LabelSuggestion, "priority:high"))
+	assertEqual(t, flowThreadLabels(made["Data"]), setOf(config.LabelSuggestion))
 }
 
 func TestSuggestionPriority_ApprovingKeepsThePriority(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion, "priority:low")})
+	h.gh.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion, "priority:low")})
 	flowAsk(h, 20, "approve", 41)
-	flowEq(t, h.GH.LabelNames(20), flowSet(config.LabelBuild, "priority:low"))
+	assertEqual(t, h.gh.LabelNames(20), setOf(config.LabelBuild, "priority:low"))
 }
 
 // ---------------------------------------------------------------------------- ConfigTests
 
 func TestSuggestionPriority_TheCommittedTable(t *testing.T) {
 	cfg := config.Load("", map[string]string{})
-	flowEq(t, cfg.SuggestionPriorities, map[string]string{
+	assertEqual(t, cfg.SuggestionPriorities, map[string]string{
 		"fuzz": "low", "checks": "low", "telemetry": "low", "refactor": "low", "ai": "low",
 		"fairness": "low", "security": "medium", "polish": "medium", "data": "high"})
 }
@@ -133,10 +133,10 @@ func TestSuggestionPriority_BadTablesFailToLoad(t *testing.T) {
 		raw.Set("suggestions", suggestionPriorityWith(c.priorities))
 		err, ok := herr.Catch[*herr.ConfigError](func() { config.Parse(raw, config.RepoRoot, map[string]string{}, nil) })
 		if !ok {
-			t.Errorf("ConfigError not raised for %s", flowRepr(c.priorities))
+			t.Errorf("ConfigError not raised for %s", show(c.priorities))
 			continue
 		}
-		flowTrue(t, regexp.MustCompile(c.message).MatchString(err.Error()), c.message, err.Error())
+		assertTrue(t, regexp.MustCompile(c.message).MatchString(err.Error()), c.message, err.Error())
 	}
 }
 
@@ -146,8 +146,8 @@ func TestSuggestionPriority_NoTableSetsNoPriority(t *testing.T) {
 		t.Fatal("KeyError: 'priorities'")
 	}
 	cfg := config.Parse(raw, config.RepoRoot, map[string]string{}, nil)
-	flowEq(t, len(cfg.SuggestionPriorities), 0)
-	flowIn(t, "- `data`: no priority", work.ClassPriorities(cfg.SuggestionPriorities))
+	assertEqual(t, len(cfg.SuggestionPriorities), 0)
+	assertIn(t, "- `data`: no priority", work.ClassPriorities(cfg.SuggestionPriorities))
 }
 
 // ---------------------------------------------------------------------------- PromptTests
@@ -158,15 +158,15 @@ func TestSuggestionPriority_TheSurveyListsEveryClass(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := template.Template
-	flowTrue(t, strings.HasPrefix(text, "<!-- version: 4 -->"), text[:min(len(text), 40)])
+	assertTrue(t, strings.HasPrefix(text, "<!-- version: 4 -->"), text[:min(len(text), 40)])
 	for _, kind := range config.SuggestionClasses {
-		flowIn(t, "- `"+kind+"`: ", text)
+		assertIn(t, "- `"+kind+"`: ", text)
 	}
 	names, err := prompts.Placeholders("suggest", config.PromptsDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	flowTrue(t, names["priorities"], names)
+	assertTrue(t, names["priorities"], names)
 }
 
 func TestSuggestionPriority_TheClassIsRead(t *testing.T) {
@@ -176,5 +176,5 @@ func TestSuggestionPriority_TheClassIsRead(t *testing.T) {
 	for _, s := range verdicts.Suggestions(text, 4) {
 		kinds = append(kinds, s.Kind)
 	}
-	flowEq(t, kinds, []string{"fuzz", "", ""})
+	assertEqual(t, kinds, []string{"fuzz", "", ""})
 }

@@ -8,8 +8,6 @@
 package tests
 
 import (
-	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -31,17 +29,7 @@ var workflowsDir = filepath.Join(config.RepoRoot, ".github", "workflows")
 // workflowsRead is read(): a workflow's text.
 func workflowsRead(t *testing.T, name string) string {
 	t.Helper()
-	return workflowsFile(t, filepath.Join(workflowsDir, name))
-}
-
-// workflowsFile is `path.read_text(encoding="utf-8")`.
-func workflowsFile(t *testing.T, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(data)
+	return readText(t, filepath.Join(workflowsDir, name))
 }
 
 var workflowsNextJob = regexp.MustCompile(`(?m)^  [a-z][\w-]*:\n`)
@@ -84,13 +72,7 @@ func workflowsLinted(t *testing.T, name string) bool {
 	if !strings.Contains(workflowsSelftest(t), workflowsActionlintEveryWorkflow) {
 		return false
 	}
-	return workflowsIsFile(filepath.Join(workflowsDir, name))
-}
-
-// workflowsIsFile is Path.is_file(): a regular file, through a symbolic link too.
-func workflowsIsFile(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.Mode().IsRegular()
+	return isFile(filepath.Join(workflowsDir, name))
 }
 
 var workflowsNextStep = regexp.MustCompile(`(?m)^      - `)
@@ -191,20 +173,6 @@ func workflowsFindall(re *regexp.Regexp, text string) []string {
 	return found
 }
 
-// workflowsSet is set(xs).
-func workflowsSet(xs ...string) map[string]bool {
-	set := map[string]bool{}
-	for _, x := range xs {
-		set[x] = true
-	}
-	return set
-}
-
-// workflowsSorted is sorted(set), for a message.
-func workflowsSorted(set map[string]bool) []string {
-	return slices.Sorted(maps.Keys(set))
-}
-
 // workflowsInt is int(s), which allows the whitespace around the number.
 func workflowsInt(t *testing.T, s string) int {
 	t.Helper()
@@ -225,101 +193,11 @@ func workflowsSearch(t *testing.T, pattern, text string, n int) string {
 	return m[n]
 }
 
-// workflowsIndex is str.index: a ValueError when absent.
-func workflowsIndex(t *testing.T, text, sub string) int {
-	t.Helper()
-	i := strings.Index(text, sub)
-	if i < 0 {
-		t.Fatalf("ValueError: substring not found: %q", sub)
-	}
-	return i
-}
-
-// workflowsIn is assertIn(needle, haystack, msg).
-func workflowsIn(t *testing.T, needle, haystack string, msg ...any) {
-	t.Helper()
-	if !strings.Contains(haystack, needle) {
-		t.Fatalf("%q not found in %q %v", needle, haystack, msg)
-	}
-}
-
-// workflowsNotIn is assertNotIn(needle, haystack, msg).
-func workflowsNotIn(t *testing.T, needle, haystack string, msg ...any) {
-	t.Helper()
-	if strings.Contains(haystack, needle) {
-		t.Fatalf("%q unexpectedly found in %q %v", needle, haystack, msg)
-	}
-}
-
-// workflowsRegex is assertRegex(text, pattern, msg): re.search finds it somewhere.
-func workflowsRegex(t *testing.T, text, pattern string, msg ...any) {
-	t.Helper()
-	if !regexp.MustCompile(pattern).MatchString(text) {
-		t.Fatalf("Regex didn't match: %q not found in %q %v", pattern, text, msg)
-	}
-}
-
-// workflowsNotRegex is assertNotRegex(text, pattern, msg).
-func workflowsNotRegex(t *testing.T, text, pattern string, msg ...any) {
-	t.Helper()
-	if m := regexp.MustCompile(pattern).FindStringIndex(text); m != nil {
-		t.Fatalf("Regex matched: %q matches %q in %q %v", text[m[0]:m[1]], pattern, text, msg)
-	}
-}
-
-// workflowsTrue is assertTrue(ok, msg).
-func workflowsTrue(t *testing.T, ok bool, msg ...any) {
-	t.Helper()
-	if !ok {
-		t.Fatalf("False is not true %v", msg)
-	}
-}
-
-// workflowsEqual is assertEqual(got, want, msg) on comparable values.
-func workflowsEqual[T comparable](t *testing.T, got, want T, msg ...any) {
-	t.Helper()
-	if got != want {
-		t.Fatalf("%#v != %#v %v", got, want, msg)
-	}
-}
-
-// workflowsEqualSlices is assertEqual on two lists.
-func workflowsEqualSlices[T comparable](t *testing.T, got, want []T, msg ...any) {
-	t.Helper()
-	if !slices.Equal(got, want) {
-		t.Fatalf("%#v != %#v %v", got, want, msg)
-	}
-}
-
-// workflowsEqualMaps is assertEqual on two dicts (or sets).
-func workflowsEqualMaps[K, V comparable](t *testing.T, got, want map[K]V, msg ...any) {
-	t.Helper()
-	if !maps.Equal(got, want) {
-		t.Fatalf("%#v != %#v %v", got, want, msg)
-	}
-}
-
-// workflowsLess is assertLess(a, b, msg).
-func workflowsLess(t *testing.T, a, b int, msg ...any) {
-	t.Helper()
-	if !(a < b) {
-		t.Fatalf("%d not less than %d %v", a, b, msg)
-	}
-}
-
-// workflowsLessEqual is assertLessEqual(a, b, msg).
-func workflowsLessEqual(t *testing.T, a, b int, msg ...any) {
-	t.Helper()
-	if !(a <= b) {
-		t.Fatalf("%d not less than or equal to %d %v", a, b, msg)
-	}
-}
-
 // workflowsNextLine is `text[text.index(sub):].split("\n", 2)[1]`: the line after the one `sub`
 // is on.
 func workflowsNextLine(t *testing.T, text, sub string) string {
 	t.Helper()
-	parts := strings.SplitN(text[workflowsIndex(t, text, sub):], "\n", 3)
+	parts := strings.SplitN(text[strIndex(t, text, sub):], "\n", 3)
 	if len(parts) < 2 {
 		t.Fatalf("IndexError: nothing after %q", sub)
 	}
@@ -335,23 +213,23 @@ func workflowsNight(t *testing.T) string {
 
 func TestWorkflows_FourJobsInOrder(t *testing.T) {
 	text := workflowsNight(t)
-	workflowsIn(t, "needs: gate", workflowsJob(t, text, "plan"))
-	workflowsIn(t, "if: needs.gate.outputs.go == 'true'", workflowsJob(t, text, "plan"))
-	workflowsIn(t, "needs: plan", workflowsJob(t, text, "work"))
-	workflowsIn(t, "needs: [plan, work]", workflowsJob(t, text, "deliver"))
-	workflowsIn(t, "always()", workflowsJob(t, text, "deliver"))
+	assertIn(t, "needs: gate", workflowsJob(t, text, "plan"))
+	assertIn(t, "if: needs.gate.outputs.go == 'true'", workflowsJob(t, text, "plan"))
+	assertIn(t, "needs: plan", workflowsJob(t, text, "work"))
+	assertIn(t, "needs: [plan, work]", workflowsJob(t, text, "deliver"))
+	assertIn(t, "always()", workflowsJob(t, text, "deliver"))
 }
 
 func TestWorkflows_TheModelJobHoldsNoGithubWriteToken(t *testing.T) {
 	work := workflowsJob(t, workflowsNight(t), "work")
-	workflowsNotIn(t, "BOT_GITHUB_TOKEN", work)
-	workflowsEqualMaps(t, workflowsGrants(t, work), map[string]string{"contents": "read"})
+	assertNotIn(t, "BOT_GITHUB_TOKEN", work)
+	assertEqual(t, workflowsGrants(t, work), map[string]string{"contents": "read"})
 	// Exactly one model secret: the one plan named, picked by name. A run the status loop
 	// started names it in its inputs, which `plan-fetch --check` holds to the plan and to
 	// providers.json before any step reads it (#1455).
-	workflowsEqualMaps(t, workflowsSet(workflowsFindall(workflowsSecretUse, work)...),
-		workflowsSet("secrets[env.PLAN_SECRET]"))
-	workflowsIn(t, "PLAN_SECRET: ${{ inputs.plan_ref && inputs.secret || "+
+	assertEqual(t, setOf(workflowsFindall(workflowsSecretUse, work)...),
+		setOf("secrets[env.PLAN_SECRET]"))
+	assertIn(t, "PLAN_SECRET: ${{ inputs.plan_ref && inputs.secret || "+
 		"needs.plan.outputs.secret }}", work)
 }
 
@@ -362,25 +240,25 @@ func TestWorkflows_ModelSecretsReachOnlyJobsThatCannotWrite(t *testing.T) {
 	for _, name := range []string{"plan", "deliver"} {
 		block := workflowsJob(t, text, name)
 		for _, secret := range providers.SecretNames {
-			workflowsNotRegex(t, block, `\b`+secret+`\s*:`, name, secret)
+			assertNotRegex(t, block, `\b`+secret+`\s*:`, name, secret)
 			for _, mention := range workflowsFindall(regexp.MustCompile(`secrets\.`+secret+`\b[^}]*`), block) {
-				workflowsTrue(t, strings.HasPrefix(mention, "secrets."+secret+" != '' && '"+secret+"'"),
+				assertTrue(t, strings.HasPrefix(mention, "secrets."+secret+" != '' && '"+secret+"'"),
 					name, mention)
 			}
 		}
-		workflowsNotIn(t, "secrets[", block)
+		assertNotIn(t, "secrets[", block)
 	}
 	gate := workflowsJob(t, text, "gate")
-	workflowsRegex(t, gate, `CLAUDE_CODE_OAUTH_TOKEN:\s*\$\{\{ secrets\[steps\.peek\.outputs\.`+
+	assertRegex(t, gate, `CLAUDE_CODE_OAUTH_TOKEN:\s*\$\{\{ secrets\[steps\.peek\.outputs\.`+
 		`quiet_secret\] \}\}`)
 	for _, name := range []string{"gate", "work"} {
 		block := workflowsJob(t, text, name)
-		workflowsNotIn(t, "BOT_GITHUB_TOKEN", block)
+		assertNotIn(t, "BOT_GITHUB_TOKEN", block)
 		values := map[string]bool{}
 		for _, grant := range workflowsGrants(t, block) {
 			values[grant] = true
 		}
-		workflowsEqualMaps(t, values, workflowsSet("read"), name)
+		assertEqual(t, values, setOf("read"), name)
 	}
 }
 
@@ -395,7 +273,7 @@ func TestWorkflows_EveryProviderSecretIsKnownToEveryList(t *testing.T) {
 	for _, name := range []string{"bot-night.yml", "bot-commands.yml", "claude-wake.yml"} {
 		text := workflowsRead(t, name)
 		lists := workflowsFindall(workflowsSecretsSet, text)
-		workflowsTrue(t, len(lists) > 0, name)
+		assertTrue(t, len(lists) > 0, name)
 		for _, found := range lists {
 			named := workflowsGroups(workflowsSecretSet, found)
 			firsts := []string{}
@@ -404,8 +282,8 @@ func TestWorkflows_EveryProviderSecretIsKnownToEveryList(t *testing.T) {
 				firsts = append(firsts, pair[0])
 				same = same && pair[0] == pair[1]
 			}
-			workflowsEqualSlices(t, firsts, providers.SecretNames, name)
-			workflowsTrue(t, same, name)
+			assertEqual(t, firsts, providers.SecretNames, name)
+			assertTrue(t, same, name)
 		}
 	}
 }
@@ -413,13 +291,13 @@ func TestWorkflows_EveryProviderSecretIsKnownToEveryList(t *testing.T) {
 func TestWorkflows_OnlyTheChosenCLIIsInstalledAndOnlyOnGithubsRunners(t *testing.T) {
 	work := workflowsJob(t, workflowsNight(t), "work")
 	for _, cli := range providers.SecretClis {
-		workflowsRegex(t, work, `if: env\.PLAN_CLI == '`+cli+`' && `+
+		assertRegex(t, work, `if: env\.PLAN_CLI == '`+cli+`' && `+
 			`startsWith\(env\.PLAN_RUNS_ON, 'ubuntu-'\)`)
 	}
-	workflowsNotIn(t, "cli == 'agy'", work) // agy lives on the machine only
+	assertNotIn(t, "cli == 'agy'", work) // agy lives on the machine only
 	const hosted = "if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')"
 	for _, action := range []string{"pnpm/action-setup", "actions/setup-node", "dtolnay/rust-toolchain"} {
-		workflowsTrue(t, strings.HasPrefix(strings.TrimSpace(workflowsNextLine(t, work, action)), hosted),
+		assertTrue(t, strings.HasPrefix(strings.TrimSpace(workflowsNextLine(t, work, action)), hosted),
 			action)
 	}
 	// The workflow changed (#467): `actions/setup-python` was the fourth of these, and the harness
@@ -427,10 +305,10 @@ func TestWorkflows_OnlyTheChosenCLIIsInstalledAndOnlyOnGithubsRunners(t *testing
 	// (the machine has its own, bot/machine/setup.sh); the harness action runs on the machine too,
 	// which has no harness binary of its own, so it is never held to GitHub's runners.
 	if strings.Contains(work, "actions/setup-python") {
-		workflowsTrue(t, strings.HasPrefix(strings.TrimSpace(
+		assertTrue(t, strings.HasPrefix(strings.TrimSpace(
 			workflowsNextLine(t, work, "actions/setup-python")), hosted), "actions/setup-python")
 	}
-	workflowsTrue(t, !strings.HasPrefix(strings.TrimSpace(
+	assertTrue(t, !strings.HasPrefix(strings.TrimSpace(
 		workflowsNextLine(t, work, "uses: ./.github/actions/harness")), "if:"), "./.github/actions/harness")
 }
 
@@ -438,25 +316,25 @@ func TestWorkflows_OnlyTheChosenCLIIsInstalledAndOnlyOnGithubsRunners(t *testing
 // rust-toolchain.toml pins, with the components and target ci.yml's setup installs
 // (.github/actions/setup); the machine's users have their own (setup.sh).
 func TestWorkflows_TheModelJobsInstallTheRustCIInstalls(t *testing.T) {
-	toml := workflowsFile(t, filepath.Join(config.RepoRoot, "rust-toolchain.toml"))
+	toml := readText(t, filepath.Join(config.RepoRoot, "rust-toolchain.toml"))
 	channel := workflowsSearch(t, `(?m)^channel = "([^"]+)"`, toml, 1)
-	ci := workflowsFile(t, filepath.Join(config.RepoRoot, ".github", "actions", "setup", "action.yml"))
+	ci := readText(t, filepath.Join(config.RepoRoot, ".github", "actions", "setup", "action.yml"))
 	step := `- uses: dtolnay/rust-toolchain@` + regexp.QuoteMeta(channel) + `\n(?:\s+if: .*\n)?` +
 		`\s+with:\n\s+components: rustfmt, clippy\n` +
 		`\s+targets: wasm32-unknown-unknown\n`
-	workflowsRegex(t, ci, step)
+	assertRegex(t, ci, step)
 	for _, name := range []string{"bot-night.yml", "squishy-run.yml"} {
-		workflowsRegex(t, workflowsJob(t, workflowsRead(t, name), "work"), step, name)
+		assertRegex(t, workflowsJob(t, workflowsRead(t, name), "work"), step, name)
 	}
 }
 
 func TestWorkflows_TheModelJobRunsOnItsSubscriptionsRunner(t *testing.T) {
 	text := workflowsNight(t)
-	workflowsIn(t, "runs_on: ${{ steps.plan.outputs.runs_on }}", workflowsJob(t, text, "plan"))
-	workflowsIn(t, "runs-on: ${{ inputs.plan_ref && inputs.runs_on || needs.plan.outputs.runs_on "+
+	assertIn(t, "runs_on: ${{ steps.plan.outputs.runs_on }}", workflowsJob(t, text, "plan"))
+	assertIn(t, "runs-on: ${{ inputs.plan_ref && inputs.runs_on || needs.plan.outputs.runs_on "+
 		"|| 'ubuntu-latest' }}", workflowsJob(t, text, "work"))
 	for _, name := range []string{"gate", "plan", "deliver"} { // the jobs that hold a GitHub write token
-		workflowsIn(t, "runs-on: ubuntu-latest", workflowsJob(t, text, name), name)
+		assertIn(t, "runs-on: ubuntu-latest", workflowsJob(t, text, name), name)
 	}
 }
 
@@ -469,11 +347,11 @@ func TestWorkflows_OnlyARunOnTheSharedSubscriptionLooksLikeSpendingIt(t *testing
 	if shared == nil || other == nil {
 		t.Fatal("AttributeError: 'NoneType' object has no attribute 'group'")
 	}
-	workflowsEqual(t, shared[1], "env.PLAN_SHARED == 'true'")
-	workflowsEqual(t, other[2], "env.PLAN_SHARED != 'true'")
-	workflowsTrue(t, !strings.HasPrefix(other[1], "Build, check and review"))
+	assertEqual(t, shared[1], "env.PLAN_SHARED == 'true'")
+	assertEqual(t, other[2], "env.PLAN_SHARED != 'true'")
+	assertTrue(t, !strings.HasPrefix(other[1], "Build, check and review"))
 	// The workflow changed (#467): `python3 -m harness work --plan` is `harness work --plan`.
-	workflowsEqual(t, strings.Count(work, "harness work --plan"), 2)
+	assertEqual(t, strings.Count(work, "harness work --plan"), 2)
 }
 
 // #1455: bot-status's loop plans, and starts a run with `plan_ref`. The run skips its gate (and
@@ -482,11 +360,11 @@ func TestWorkflows_OnlyARunOnTheSharedSubscriptionLooksLikeSpendingIt(t *testing
 // step is handed a secret. #1537: it skips deliver too, which the loop does.
 func TestWorkflows_ARunTheLoopStartedSkipsGatePlanAndDeliverAndChecksBeforeAnySecret(t *testing.T) {
 	text := workflowsNight(t)
-	workflowsIn(t, "run-name: ${{ inputs.plan_ref && format('bot-night {0} on {1}', "+
+	assertIn(t, "run-name: ${{ inputs.plan_ref && format('bot-night {0} on {1}', "+
 		"inputs.plan_ref, inputs.runs_on) || 'bot-night' }}", text)
-	workflowsIn(t, "if: ${{ !inputs.plan_ref }}", workflowsJob(t, text, "gate"))
+	assertIn(t, "if: ${{ !inputs.plan_ref }}", workflowsJob(t, text, "gate"))
 	work := workflowsJob(t, text, "work")
-	workflowsIn(t, "if: ${{ !cancelled() && (inputs.plan_ref || ", work)
+	assertIn(t, "if: ${{ !cancelled() && (inputs.plan_ref || ", work)
 	afterSteps := strings.SplitN(work, "    steps:\n", 2)
 	if len(afterSteps) < 2 {
 		t.Fatal("IndexError: the work job has no steps")
@@ -505,7 +383,7 @@ func TestWorkflows_ARunTheLoopStartedSkipsGatePlanAndDeliverAndChecksBeforeAnySe
 		return i
 	}
 	check := index("name: The loop's plan, held to providers.json")
-	workflowsLess(t, check, index("name: Doctor (stops here, before any model call, if "+
+	assertLess(t, check, index("name: Doctor (stops here, before any model call, if "+
 		"something is missing)"))
 	for i, body := range steps {
 		if strings.Contains(body, "secrets[") {
@@ -515,20 +393,20 @@ func TestWorkflows_ARunTheLoopStartedSkipsGatePlanAndDeliverAndChecksBeforeAnySe
 		}
 	}
 	// The workflow changed (#467): `python3 -m harness plan-fetch` is `harness plan-fetch`.
-	workflowsIn(t, `harness plan-fetch --ref "$PLAN_REF" --out `+
+	assertIn(t, `harness plan-fetch --ref "$PLAN_REF" --out `+
 		`"$RUNNER_TEMP/plan/plan.json" --check`, work)
 	deliver := workflowsJob(t, text, "deliver")
-	workflowsIn(t, "if: ${{ always() && !inputs.plan_ref && contains(", deliver)
+	assertIn(t, "if: ${{ always() && !inputs.plan_ref && contains(", deliver)
 	// Only the plan job's artifact is left for it to read.
-	workflowsNotIn(t, "plan-fetch", deliver)
-	workflowsIn(t, "name: plan\n", deliver)
+	assertNotIn(t, "plan-fetch", deliver)
+	assertIn(t, "name: plan\n", deliver)
 }
 
 func TestWorkflows_PlansRunOneAtATimeAndRunsInParallel(t *testing.T) {
 	text := workflowsNight(t)
 	// As the Python: no re.M, so `^` is the start of the file only.
-	workflowsNotRegex(t, text, `^concurrency:`, "a workflow-wide group would serialize runs")
-	workflowsIn(t, "group: bot-night-plan", workflowsJob(t, text, "plan"))
+	assertNotRegex(t, text, `^concurrency:`, "a workflow-wide group would serialize runs")
+	assertIn(t, "group: bot-night-plan", workflowsJob(t, text, "plan"))
 }
 
 var workflowsStepName = regexp.MustCompile(`- name: (.*)`)
@@ -538,9 +416,9 @@ var workflowsStepName = regexp.MustCompile(`- name: (.*)`)
 func TestWorkflows_TheStepNamesThePartnerReads(t *testing.T) {
 	text := workflowsNight(t)
 	work := workflowsJob(t, text, "work")
-	workflowsIn(t, "- name: Build, check and review", work)
+	assertIn(t, "- name: Build, check and review", work)
 	gate := workflowsJob(t, text, "gate")
-	workflowsIn(t, "- name: Wait until the subscription is quiet", gate)
+	assertIn(t, "- name: Wait until the subscription is quiet", gate)
 	cfg := config.Load("", map[string]string{})
 	prefixes := []string{}
 	for _, partner := range cfg.Quiet.Partners {
@@ -553,7 +431,7 @@ func TestWorkflows_TheStepNamesThePartnerReads(t *testing.T) {
 		if strings.HasPrefix(name, "Build, check and review") {
 			continue
 		}
-		workflowsTrue(t, !slices.ContainsFunc(prefixes, func(p string) bool {
+		assertTrue(t, !slices.ContainsFunc(prefixes, func(p string) bool {
 			return strings.HasPrefix(name, p)
 		}), name)
 	}
@@ -568,7 +446,7 @@ func TestWorkflows_HaltIsTheFirstStepOfTheGateAndThePlan(t *testing.T) {
 		if len(steps) == 0 {
 			t.Fatalf("IndexError: the %s job has no steps", name)
 		}
-		workflowsTrue(t, strings.HasPrefix(steps[0], "HALT check"), name, steps)
+		assertTrue(t, strings.HasPrefix(steps[0], "HALT check"), name, steps)
 	}
 }
 
@@ -579,41 +457,41 @@ func TestWorkflows_NoCheckoutKeepsCredentials(t *testing.T) {
 		{"ci.yml's bot selftest", workflowsSelftest(t)},
 	} {
 		checkouts := strings.Count(c.text, "uses: actions/checkout@")
-		workflowsEqual(t, strings.Count(c.text, "persist-credentials: false"), checkouts, c.name)
+		assertEqual(t, strings.Count(c.text, "persist-credentials: false"), checkouts, c.name)
 	}
 }
 
 func TestWorkflows_EveryJobHasATimeoutAndTheGroupNeverCancels(t *testing.T) {
 	text := workflowsNight(t)
 	for _, name := range []string{"gate", "plan", "work", "deliver"} {
-		workflowsRegex(t, workflowsJob(t, text, name), `timeout-minutes: \d+`)
+		assertRegex(t, workflowsJob(t, text, name), `timeout-minutes: \d+`)
 	}
 	gate := workflowsInt(t, workflowsSearch(t, `timeout-minutes: (\d+)`, workflowsJob(t, text, "gate"), 1))
 	// No gate step waits any more (the quiet wait is retired), so a stuck gate fails fast instead
 	// of holding its run for hours.
-	workflowsLessEqual(t, gate, 30)
-	workflowsIn(t, "cancel-in-progress: false", text)
+	assertLessEqual(t, gate, 30)
+	assertIn(t, "cancel-in-progress: false", text)
 }
 
 var workflowsCron = regexp.MustCompile(`cron: "([^"]+)"`)
 
 // The gate reads the window itself, and a forced item never waits for the night.
 func TestWorkflows_ARunFiresEveryHourAllDay(t *testing.T) {
-	workflowsEqualSlices(t, workflowsFindall(workflowsCron, workflowsNight(t)), []string{"17 * * * *"})
+	assertEqual(t, workflowsFindall(workflowsCron, workflowsNight(t)), []string{"17 * * * *"})
 }
 
 func TestWorkflows_DeliverTakesTheItemFromThePlanJobsOutputs(t *testing.T) {
 	deliver := workflowsJob(t, workflowsNight(t), "deliver")
-	workflowsIn(t, "needs.plan.outputs.action", deliver)
-	workflowsIn(t, "needs.plan.outputs.number", deliver)
+	assertIn(t, "needs.plan.outputs.action", deliver)
+	assertIn(t, "needs.plan.outputs.number", deliver)
 }
 
 func TestWorkflows_TheBudgetFitsInsideTheJobTimeout(t *testing.T) {
 	work := workflowsJob(t, workflowsNight(t), "work")
 	timeout := workflowsInt(t, workflowsSearch(t, `timeout-minutes: (\d+)`, work, 1))
 	cfg := config.Load("", map[string]string{})
-	workflowsLess(t, cfg.JobBudgetMinutes+10, timeout)
-	workflowsLessEqual(t, timeout, 360)
+	assertLess(t, cfg.JobBudgetMinutes+10, timeout)
+	assertLessEqual(t, timeout, 360)
 }
 
 // ---------------------------------------------------------------------------- BuildCacheWorkflowTests
@@ -637,13 +515,13 @@ func workflowsInput1(t *testing.T, inputs map[string]string, key string) string 
 
 func TestWorkflows_MainAloneSavesItWithNoSecretAndNoPullRequestCode(t *testing.T) {
 	cache := workflowsRead(t, "bot-cache.yml")
-	workflowsNotIn(t, "secrets", cache)
-	workflowsNotRegex(t, cache, `(?m)^  pull_request`, "a pull request's code must not write it")
-	workflowsIn(t, "branches: [main]", cache)
-	workflowsRegex(t, cache, `(?m)^permissions:\n  contents: read\n`)
-	workflowsEqual(t, workflowsInput1(t, workflowsInputs(t, cache, workflowsRustCache), "save-if"),
+	assertNotIn(t, "secrets", cache)
+	assertNotRegex(t, cache, `(?m)^  pull_request`, "a pull request's code must not write it")
+	assertIn(t, "branches: [main]", cache)
+	assertRegex(t, cache, `(?m)^permissions:\n  contents: read\n`)
+	assertEqual(t, workflowsInput1(t, workflowsInputs(t, cache, workflowsRustCache), "save-if"),
 		"${{ github.ref == 'refs/heads/main' }}")
-	workflowsEqual(t, strings.Count(cache, "persist-credentials: false"),
+	assertEqual(t, strings.Count(cache, "persist-credentials: false"),
 		strings.Count(cache, "uses: actions/checkout@"))
 }
 
@@ -651,20 +529,20 @@ func TestWorkflows_MainAloneSavesItWithNoSecretAndNoPullRequestCode(t *testing.T
 // through the cache.
 func TestWorkflows_TheModelJobRestoresAndNeverSaves(t *testing.T) {
 	work := workflowsJob(t, workflowsNight(t), "work")
-	workflowsEqual(t, workflowsInput1(t, workflowsInputs(t, work, workflowsRustCache), "save-if"), "false")
-	workflowsIn(t, "uses: actions/cache/restore@", work)
-	workflowsNotRegex(t, work, `uses: actions/cache(/save)?@`)
+	assertEqual(t, workflowsInput1(t, workflowsInputs(t, work, workflowsRustCache), "save-if"), "false")
+	assertIn(t, "uses: actions/cache/restore@", work)
+	assertNotRegex(t, work, `uses: actions/cache(/save)?@`)
 	for _, head := range []string{"uses: " + workflowsRustCache, "uses: actions/cache/restore@v4",
 		"name: The night bot's build directories", "name: Only the pinned toolchain"} {
-		workflowsIn(t, "if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')",
+		assertIn(t, "if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')",
 			strings.SplitN(workflowsStep(t, work, head), "\n", 2)[0], head)
 	}
 	// The workflow changed (#467): the harness action this job uses saves the harness binary's
 	// cache (.github/actions/harness), a save the job's own text does not show. It runs before any
 	// step is handed a secret, so before any model, and nothing a model left reaches a later job
 	// that way either.
-	workflowsLess(t, workflowsIndex(t, work, "uses: ./.github/actions/harness"),
-		workflowsIndex(t, work, "secrets["))
+	assertLess(t, strIndex(t, work, "uses: ./.github/actions/harness"),
+		strIndex(t, work, "secrets["))
 }
 
 // rust-cache keys its entry on the environment, every toolchain rustup has and its own inputs, so
@@ -673,10 +551,10 @@ func TestWorkflows_BothKeyTheEntryAlike(t *testing.T) {
 	cache := workflowsRead(t, "bot-cache.yml")
 	work := workflowsJob(t, workflowsNight(t), "work")
 	for _, name := range []string{"The night bot's build directories", "Only the pinned toolchain"} {
-		workflowsEqual(t, workflowsScript(t, work, name), workflowsScript(t, cache, name), name)
+		assertEqual(t, workflowsScript(t, work, name), workflowsScript(t, cache, name), name)
 		for _, text := range []string{work, cache} {
-			workflowsLess(t, workflowsIndex(t, text, "- name: "+name),
-				workflowsIndex(t, text, workflowsRustCache), name)
+			assertLess(t, strIndex(t, text, "- name: "+name),
+				strIndex(t, text, workflowsRustCache), name)
 		}
 	}
 	ours, theirs := workflowsInputs(t, work, workflowsRustCache), workflowsInputs(t, cache, workflowsRustCache)
@@ -684,9 +562,9 @@ func TestWorkflows_BothKeyTheEntryAlike(t *testing.T) {
 	delete(ours, "save-if")
 	workflowsInput1(t, theirs, "save-if")
 	delete(theirs, "save-if")
-	workflowsEqualMaps(t, ours, theirs)
-	setup := workflowsFile(t, filepath.Join(config.RepoRoot, ".github", "actions", "setup", "action.yml"))
-	workflowsIn(t, "for toolchain in $(rustup toolchain list --quiet); do", setup)
+	assertEqual(t, ours, theirs)
+	setup := readText(t, filepath.Join(config.RepoRoot, ".github", "actions", "setup", "action.yml"))
+	assertIn(t, "for toolchain in $(rustup toolchain list --quiet); do", setup)
 }
 
 var workflowsCargo = regexp.MustCompile(`\bcargo (\w+)`)
@@ -704,20 +582,20 @@ func TestWorkflows_ItBuildsWhatTheGatesCompile(t *testing.T) {
 			used[sub] = true
 		}
 	}
-	workflowsEqualMaps(t, used, workflowsSet("fmt", "jackioh", "clippy", "test"))
-	aliases := workflowsFile(t, filepath.Join(config.RepoRoot, ".cargo", "config.toml"))
-	workflowsIn(t, `jackioh = "run --release -p jackioh-tools --"`, aliases)
-	workflowsIn(t, "run: cargo build --release -p jackioh-tools\n", cache)
-	workflowsEqual(t, workflowsInput1(t, gates, "clippy"), "cargo clippy --workspace --all-targets -- -D warnings")
-	workflowsIn(t, "run: cargo clippy --workspace --all-targets\n", cache)
+	assertEqual(t, used, setOf("fmt", "jackioh", "clippy", "test"))
+	aliases := readText(t, filepath.Join(config.RepoRoot, ".cargo", "config.toml"))
+	assertIn(t, `jackioh = "run --release -p jackioh-tools --"`, aliases)
+	assertIn(t, "run: cargo build --release -p jackioh-tools\n", cache)
+	assertEqual(t, workflowsInput1(t, gates, "clippy"), "cargo clippy --workspace --all-targets -- -D warnings")
+	assertIn(t, "run: cargo clippy --workspace --all-targets\n", cache)
 	tests := strings.Split(workflowsInput1(t, gates, "cargo tests"), " && ")[0]
-	workflowsIn(t, "run: "+tests+" --no-run\n", cache)
-	workflowsTrue(t, strings.HasPrefix(workflowsInput1(t, gates, "web tests"), "sh scripts/build-wasm.sh && "))
-	workflowsIn(t, "run: sh scripts/build-wasm.sh\n", cache)
+	assertIn(t, "run: "+tests+" --no-run\n", cache)
+	assertTrue(t, strings.HasPrefix(workflowsInput1(t, gates, "web tests"), "sh scripts/build-wasm.sh && "))
+	assertIn(t, "run: sh scripts/build-wasm.sh\n", cache)
 }
 
 func TestWorkflows_ActionlintReadsIt(t *testing.T) {
-	workflowsTrue(t, workflowsLinted(t, "bot-cache.yml"))
+	assertTrue(t, workflowsLinted(t, "bot-cache.yml"))
 }
 
 // ---------------------------------------------------------------------------- CommandsWorkflowTests
@@ -731,24 +609,24 @@ func TestWorkflows_NoModelAndNoPullRequestCode(t *testing.T) {
 	text := workflowsCommands(t)
 	// The model secrets are named only to say whether each is set, never handed over.
 	for _, secret := range providers.SecretNames {
-		workflowsNotRegex(t, text, `\b`+secret+`\s*:`)
+		assertNotRegex(t, text, `\b`+secret+`\s*:`)
 		for _, mention := range workflowsFindall(regexp.MustCompile(`secrets\.`+secret+`\b[^}]*`), text) {
-			workflowsTrue(t, strings.HasPrefix(mention, "secrets."+secret+" != '' && '"+secret+"'"), mention)
+			assertTrue(t, strings.HasPrefix(mention, "secrets."+secret+" != '' && '"+secret+"'"), mention)
 		}
 	}
-	workflowsNotIn(t, "secrets[", text)
-	workflowsNotIn(t, "claude-code", text)
-	workflowsNotIn(t, "github.event.pull_request.head", text)
-	workflowsIn(t, "ref: ${{ github.event.repository.default_branch || 'main' }}", text)
-	workflowsNotIn(t, "concurrency:", text)
+	assertNotIn(t, "secrets[", text)
+	assertNotIn(t, "claude-code", text)
+	assertNotIn(t, "github.event.pull_request.head", text)
+	assertIn(t, "ref: ${{ github.event.repository.default_branch || 'main' }}", text)
+	assertNotIn(t, "concurrency:", text)
 }
 
 func TestWorkflows_TheBotDoesNotWakeItself(t *testing.T) {
 	text := workflowsCommands(t)
 	cfg := config.Load("", map[string]string{})
-	workflowsIn(t, "github.actor != '"+cfg.BotLogin+"'", text)
-	workflowsIn(t, "'@"+cfg.BotLogin+"'", text)
-	workflowsIn(t, "workflows: ["+cfg.CIWorkflow+"]", text)
+	assertIn(t, "github.actor != '"+cfg.BotLogin+"'", text)
+	assertIn(t, "'@"+cfg.BotLogin+"'", text)
+	assertIn(t, "workflows: ["+cfg.CIWorkflow+"]", text)
 }
 
 func TestWorkflows_EveryWayARequestArrivesIsHeard(t *testing.T) {
@@ -757,22 +635,22 @@ func TestWorkflows_EveryWayARequestArrivesIsHeard(t *testing.T) {
 		"pull_request_review_comment:\n    types: [created, edited]",
 		"pull_request_review:", "issues:", "pull_request_target:", "workflow_run:",
 		"workflow_dispatch:"} {
-		workflowsIn(t, trigger, text)
+		assertIn(t, trigger, text)
 	}
 	// The workflow changed (#467): `python -m harness sweep` is `harness sweep`.
-	workflowsIn(t, "harness sweep", text)
+	assertIn(t, "harness sweep", text)
 }
 
 // It is also the fallback that starts a dropped night run (harness/sweep.py).
 func TestWorkflows_TheSweepLeavesNoGapLongerThanTenMinutes(t *testing.T) {
 	crons := workflowsFindall(workflowsCron, workflowsCommands(t))
-	workflowsEqual(t, len(crons), 1)
+	assertEqual(t, len(crons), 1)
 	parts := strings.SplitN(crons[0], " ", 2)
 	if len(parts) != 2 {
 		t.Fatalf("ValueError: not enough values to unpack: %q", crons[0])
 	}
 	minutes, rest := parts[0], parts[1]
-	workflowsEqual(t, rest, "* * * *")
+	assertEqual(t, rest, "* * * *")
 	marks := []int{}
 	for _, m := range strings.Split(minutes, ",") {
 		marks = append(marks, workflowsInt(t, m))
@@ -785,15 +663,15 @@ func TestWorkflows_TheSweepLeavesNoGapLongerThanTenMinutes(t *testing.T) {
 			most = gap
 		}
 	}
-	workflowsLessEqual(t, most, 10, marks)
-	workflowsTrue(t, !slices.Contains(marks, 0), marks) // the top of the hour is when GitHub drops the most
+	assertLessEqual(t, most, 10, marks)
+	assertTrue(t, !slices.Contains(marks, 0), marks) // the top of the hour is when GitHub drops the most
 }
 
 func TestWorkflows_PullRequestEventsUseTarget(t *testing.T) {
 	text := workflowsCommands(t)
-	workflowsIn(t, "pull_request_target:", text)
+	assertIn(t, "pull_request_target:", text)
 	// As the Python: no re.M, so `^` is the start of the file only.
-	workflowsNotRegex(t, text, `^  pull_request:`)
+	assertNotRegex(t, text, `^  pull_request:`)
 }
 
 // ---------------------------------------------------------------------------- StatusIssueStepTests
@@ -802,16 +680,16 @@ func TestWorkflows_PullRequestEventsUseTarget(t *testing.T) {
 
 func TestWorkflows_AfterTheSweepOnTheSweepsScheduleOnly(t *testing.T) {
 	text := workflowsCommands(t)
-	step := text[workflowsIndex(t, text, "- name: Rewrite the pinned status issue"):]
+	step := text[strIndex(t, text, "- name: Rewrite the pinned status issue"):]
 	// The workflow changed (#467): `python -m harness sweep` and `python -m harness dashboard` are
 	// `harness sweep` and `harness dashboard`.
-	workflowsLess(t, workflowsIndex(t, text, "harness sweep"),
-		workflowsIndex(t, text, "- name: Rewrite the pinned status issue"))
-	workflowsIn(t, "if: github.event_name == 'schedule' || github.event_name == "+
+	assertLess(t, strIndex(t, text, "harness sweep"),
+		strIndex(t, text, "- name: Rewrite the pinned status issue"))
+	assertIn(t, "if: github.event_name == 'schedule' || github.event_name == "+
 		"'workflow_dispatch'", step)
-	workflowsIn(t, "continue-on-error: true", step)
-	workflowsIn(t, "run: harness dashboard", step)
-	workflowsIn(t, "BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}", step)
+	assertIn(t, "continue-on-error: true", step)
+	assertIn(t, "run: harness dashboard", step)
+	assertIn(t, "BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}", step)
 }
 
 // ---------------------------------------------------------------------------- StatusLoopWorkflowTests
@@ -827,39 +705,39 @@ func workflowsStatus(t *testing.T) string {
 func TestWorkflows_OneJobRewritesItEveryFiveMinutes(t *testing.T) {
 	text := workflowsStatus(t)
 	refresh := workflowsJob(t, text, "refresh")
-	workflowsIn(t, "runs-on: ubuntu-latest", refresh)
-	workflowsIn(t, `EVERY_SECONDS: "300"`, text)
-	workflowsEqual(t, dashboard.EveryMinutes*60, 300) // what the issue says it does
+	assertIn(t, "runs-on: ubuntu-latest", refresh)
+	assertIn(t, `EVERY_SECONDS: "300"`, text)
+	assertEqual(t, dashboard.EveryMinutes*60, 300) // what the issue says it does
 	// The workflow changed (#467): `python -m harness dashboard` is `harness dashboard`.
-	workflowsIn(t, "harness dashboard --sweep --stats --companions --controller \\\n"+
+	assertIn(t, "harness dashboard --sweep --stats --companions --controller \\\n"+
 		`            --every "${EVERY_SECONDS}" --runners-every `+
 		`"${RUNNERS_EVERY_SECONDS}" \`+"\n"+`            --for "${LOOP_SECONDS}"`, refresh)
 	// Its runners section is redrawn alone between the rewrites, as often as the issue says.
-	workflowsIn(t, `RUNNERS_EVERY_SECONDS: "120"`, text)
-	workflowsEqual(t, dashboard.RunnersMinutes*60, 120)
+	assertIn(t, `RUNNERS_EVERY_SECONDS: "120"`, text)
+	assertEqual(t, dashboard.RunnersMinutes*60, 120)
 	// The loop ends inside GitHub's six-hour cap, ahead of its own timeout.
 	loop := workflowsInt(t, workflowsSearch(t, `LOOP_SECONDS: "(\d+)"`, text, 1))
 	timeout := workflowsInt(t, workflowsSearch(t, `timeout-minutes: (\d+)`, refresh, 1))
-	workflowsLess(t, loop, timeout*60)
-	workflowsLessEqual(t, timeout, 360)
+	assertLess(t, loop, timeout*60)
+	assertLessEqual(t, timeout, 360)
 }
 
 func TestWorkflows_ItStartsTheNextLoopAndAScheduleRestartsAStoppedOne(t *testing.T) {
 	text := workflowsStatus(t)
-	workflowsRegex(t, text, `schedule:\n\s+- cron: `)
-	workflowsIn(t, "workflow_dispatch: {}", text)
-	workflowsIn(t, "group: bot-status\n  cancel-in-progress: false", text)
-	nxt := text[workflowsIndex(t, text, "- name: Start the next loop"):]
-	workflowsIn(t, "if: success() || failure()", nxt) // not after a cancellation
-	workflowsIn(t, `gh workflow run bot-status.yml --repo "${REPO}" --ref "${REF}"`, nxt)
-	workflowsIn(t, "actions: write", workflowsJob(t, text, "refresh"))
+	assertRegex(t, text, `schedule:\n\s+- cron: `)
+	assertIn(t, "workflow_dispatch: {}", text)
+	assertIn(t, "group: bot-status\n  cancel-in-progress: false", text)
+	nxt := text[strIndex(t, text, "- name: Start the next loop"):]
+	assertIn(t, "if: success() || failure()", nxt) // not after a cancellation
+	assertIn(t, `gh workflow run bot-status.yml --repo "${REPO}" --ref "${REF}"`, nxt)
+	assertIn(t, "actions: write", workflowsJob(t, text, "refresh"))
 }
 
 func TestWorkflows_NoModelSecret(t *testing.T) {
 	text := workflowsStatus(t)
-	workflowsNotIn(t, "HARNESS_PROVIDER_SECRET", text)
-	workflowsNotIn(t, "secrets[", text)
-	workflowsNotIn(t, "harness work", text)
+	assertNotIn(t, "HARNESS_PROVIDER_SECRET", text)
+	assertNotIn(t, "secrets[", text)
+	assertNotIn(t, "harness work", text)
 }
 
 // ---------------------------------------------------------------------------- TriageWorkflowTests
@@ -878,17 +756,17 @@ var (
 
 func TestWorkflows_IssuesAndPullRequestsWhenOpenedNeverTheirCode(t *testing.T) {
 	text := workflowsTriage(t)
-	workflowsRegex(t, text, `issues:\n\s+types: \[opened, labeled\]`)
-	workflowsRegex(t, text, `pull_request_target:\n\s+types: \[opened\]`)
+	assertRegex(t, text, `issues:\n\s+types: \[opened, labeled\]`)
+	assertRegex(t, text, `pull_request_target:\n\s+types: \[opened\]`)
 	// A person can call it on any thread by number.
-	workflowsRegex(t, text, `workflow_dispatch:\n\s+inputs:\n\s+number:`)
+	assertRegex(t, text, `workflow_dispatch:\n\s+inputs:\n\s+number:`)
 	// As the Python: no re.M, so `^` is the start of the file only.
-	workflowsNotRegex(t, text, `^  pull_request:`, "would run the pull request's code")
+	assertNotRegex(t, text, `^  pull_request:`, "would run the pull request's code")
 	refs := workflowsFindall(workflowsRef, text)
-	workflowsEqual(t, len(refs), 1)
-	workflowsIn(t, "default_branch", refs[0])
-	workflowsIn(t, "persist-credentials: false", text)
-	workflowsNotIn(t, "secrets.", text)
+	assertEqual(t, len(refs), 1)
+	assertIn(t, "default_branch", refs[0])
+	assertIn(t, "persist-credentials: false", text)
+	assertNotIn(t, "secrets.", text)
 }
 
 func TestWorkflows_OneJobOnGithubsRunnerThatRunsNoModel(t *testing.T) {
@@ -897,21 +775,21 @@ func TestWorkflows_OneJobOnGithubsRunnerThatRunsNoModel(t *testing.T) {
 	if len(jobs) < 2 {
 		t.Fatal("IndexError: no jobs")
 	}
-	workflowsEqualSlices(t, workflowsFindall(workflowsJobName, jobs[1]), []string{"triage"})
+	assertEqual(t, workflowsFindall(workflowsJobName, jobs[1]), []string{"triage"})
 	triageJob := workflowsJob(t, text, "triage")
-	workflowsIn(t, "runs-on: ubuntu-latest", triageJob)
-	workflowsNotIn(t, "night-vm", text)
-	workflowsNotIn(t, "muse", strings.ToLower(text))
-	workflowsEqualMaps(t, workflowsGrants(t, workflowsJob(t, text, "triage")),
+	assertIn(t, "runs-on: ubuntu-latest", triageJob)
+	assertNotIn(t, "night-vm", text)
+	assertNotIn(t, "muse", strings.ToLower(text))
+	assertEqual(t, workflowsGrants(t, workflowsJob(t, text, "triage")),
 		map[string]string{"contents": "read", "issues": "write", "pull-requests": "write"})
 	// The workflow changed (#467): `python3 -m harness triage` is `harness triage`.
-	workflowsIn(t, `harness triage --payload "$GITHUB_EVENT_PATH"`, triageJob)
-	workflowsIn(t, "timeout-minutes:", triageJob)
-	workflowsTrue(t, workflowsLinted(t, "triage.yml"))
+	assertIn(t, `harness triage --payload "$GITHUB_EVENT_PATH"`, triageJob)
+	assertIn(t, "timeout-minutes:", triageJob)
+	assertTrue(t, workflowsLinted(t, "triage.yml"))
 }
 
 func TestWorkflows_OnlyHumanOfTheLabelsStartsIt(t *testing.T) {
-	workflowsIn(t, "if: github.event_name != 'issues' || github.event.action == 'opened' || "+
+	assertIn(t, "if: github.event_name != 'issues' || github.event.action == 'opened' || "+
 		"github.event.label.name == 'human'", workflowsJob(t, workflowsTriage(t), "triage"))
 }
 
@@ -924,24 +802,24 @@ func workflowsWake(t *testing.T) string {
 
 func TestWorkflows_EachWakeHoldsOneSecretAndNoWriteToken(t *testing.T) {
 	ping := workflowsJob(t, workflowsWake(t), "ping")
-	workflowsIn(t, "permissions: {}", ping)
-	workflowsEqualMaps(t, workflowsSet(workflowsFindall(workflowsSecretUse, ping)...),
-		workflowsSet("secrets[matrix.account.secret]"))
+	assertIn(t, "permissions: {}", ping)
+	assertEqual(t, setOf(workflowsFindall(workflowsSecretUse, ping)...),
+		setOf("secrets[matrix.account.secret]"))
 }
 
 var workflowsSecretMention = regexp.MustCompile(`secrets\.(\w+)[^}]*`)
 
 func TestWorkflows_TheClockReadsOnlyAndLearnsOnlyWhichSecretsAreSet(t *testing.T) {
 	clock := workflowsJob(t, workflowsWake(t), "clock")
-	workflowsEqualMaps(t, workflowsGrants(t, clock), map[string]string{"contents": "read", "actions": "read"})
+	assertEqual(t, workflowsGrants(t, clock), map[string]string{"contents": "read", "actions": "read"})
 	for _, mention := range workflowsFindall(workflowsSecretMention, clock) {
-		workflowsIn(t, "secrets."+mention+" != '' && '"+mention+"'", clock)
+		assertIn(t, "secrets."+mention+" != '' && '"+mention+"'", clock)
 	}
-	workflowsNotIn(t, "secrets[", clock)
+	assertNotIn(t, "secrets[", clock)
 }
 
 func TestWorkflows_ItIsLinted(t *testing.T) {
-	workflowsTrue(t, workflowsLinted(t, "claude-wake.yml"))
+	assertTrue(t, workflowsLinted(t, "claude-wake.yml"))
 }
 
 // ---------------------------------------------------------------------------- LearnSetWorkflowTests
@@ -951,35 +829,35 @@ func TestWorkflows_ItIsLinted(t *testing.T) {
 
 func TestWorkflows_AShippedPatchOnMainStartsItOnGithubsRunner(t *testing.T) {
 	text := workflowsRead(t, "learn-set.yml")
-	workflowsIn(t, "  push:\n    branches: [main]\n    paths: [\"crates/cards/patches/patches.json\"]\n", text)
-	workflowsNotIn(t, "schedule:", text)
+	assertIn(t, "  push:\n    branches: [main]\n    paths: [\"crates/cards/patches/patches.json\"]\n", text)
+	assertNotIn(t, "schedule:", text)
 	stop := workflowsJob(t, text, "stop")
-	workflowsIn(t, "runs-on: ubuntu-latest", stop)
-	workflowsIn(t, "timeout-minutes:", stop)
-	workflowsIn(t, "cancel-in-progress: false", text)
-	workflowsTrue(t, workflowsLinted(t, "learn-set.yml"))
+	assertIn(t, "runs-on: ubuntu-latest", stop)
+	assertIn(t, "timeout-minutes:", stop)
+	assertIn(t, "cancel-in-progress: false", text)
+	assertTrue(t, workflowsLinted(t, "learn-set.yml"))
 }
 
 func TestWorkflows_OnlyASetStopsARunAndOnlyBeforeHalfItsShards(t *testing.T) {
 	text := workflowsRead(t, "learn-set.yml")
 	learn := workflowsRead(t, "learn.yml")
-	workflowsIn(t, `select(.tier == "major")`, text)
+	assertIn(t, `select(.tier == "major")`, text)
 	keep := regexp.MustCompile(`LEARN_SET_KEEP_SHARDS: "(\d+)"`).FindStringSubmatch(text)
 	shards := regexp.MustCompile(`shards: \$\{\{ inputs\.shards \|\| '(\d+)' \}\}`).FindStringSubmatch(learn)
-	workflowsTrue(t, keep != nil, "unexpectedly None")
-	workflowsTrue(t, shards != nil, "unexpectedly None")
-	workflowsEqual(t, workflowsInt(t, keep[1])*2, workflowsInt(t, shards[1]))
-	workflowsIn(t, `[ "$finished" -ge "$LEARN_SET_KEEP_SHARDS" ]`, text)
+	assertTrue(t, keep != nil, "unexpectedly None")
+	assertTrue(t, shards != nil, "unexpectedly None")
+	assertEqual(t, workflowsInt(t, keep[1])*2, workflowsInt(t, shards[1]))
+	assertIn(t, `[ "$finished" -ge "$LEARN_SET_KEEP_SHARDS" ]`, text)
 }
 
 func TestWorkflows_ALearnRunPlansAndBuildsMainAsItIsWhenItStarts(t *testing.T) {
 	learn := workflowsRead(t, "learn.yml")
 	plan := workflowsJob(t, learn, "plan")
-	workflowsIn(t, "- uses: actions/checkout@v4\n        with:\n          ref: main\n", plan)
-	workflowsIn(t, `echo "sha=$(git rev-parse HEAD)"`, plan)
-	workflowsIn(t, "ref: ${{ needs.plan.outputs.sha }}", workflowsJob(t, learn, "export"))
+	assertIn(t, "- uses: actions/checkout@v4\n        with:\n          ref: main\n", plan)
+	assertIn(t, `echo "sha=$(git rev-parse HEAD)"`, plan)
+	assertIn(t, "ref: ${{ needs.plan.outputs.sha }}", workflowsJob(t, learn, "export"))
 	build := workflowsJob(t, workflowsRead(t, "selfplay.yml"), "build")
-	workflowsIn(t, "- uses: actions/checkout@v4\n        with:\n          ref: ${{ inputs.ref }}\n", build)
+	assertIn(t, "- uses: actions/checkout@v4\n        with:\n          ref: ${{ inputs.ref }}\n", build)
 }
 
 // ---------------------------------------------------------------------------- RequiredChecksTests
@@ -999,7 +877,7 @@ func TestWorkflows_EveryRequiredCheckIsAJobThatRunsOnEveryPullRequest(t *testing
 		t.Fatal(err)
 	}
 	for _, path := range paths {
-		text := workflowsFile(t, path)
+		text := readText(t, path)
 		// A `pull_request_target` workflow that runs again on every push counts too: the title
 		// check (`pr-title.yml`, #187), should it be made required.
 		if !workflowsOnPullRequest.MatchString(text) {
@@ -1025,7 +903,7 @@ func TestWorkflows_EveryRequiredCheckIsAJobThatRunsOnEveryPullRequest(t *testing
 			missing = append(missing, check)
 		}
 	}
-	workflowsEqualSlices(t, missing, []string{}, "required checks with no job", missing, "jobs", workflowsSorted(names))
+	assertEqual(t, missing, []string{}, "required checks with no job", missing, "jobs", sortedKeys(names))
 }
 
 // `main`'s merge queue (infra/github.tf) waits for the same checks on its own builds: a workflow
@@ -1033,11 +911,11 @@ func TestWorkflows_EveryRequiredCheckIsAJobThatRunsOnEveryPullRequest(t *testing
 // The `changes` job scopes a group's diff as a pull request's.
 func TestWorkflows_TheRequiredChecksRunInTheMergeQueueToo(t *testing.T) {
 	text := workflowsRead(t, "ci.yml")
-	workflowsRegex(t, text, `(?m)^  merge_group:`)
+	assertRegex(t, text, `(?m)^  merge_group:`)
 	scope := workflowsJob(t, text, "changes")
-	workflowsIn(t, "HEAD: ${{ github.event.pull_request.head.sha"+
+	assertIn(t, "HEAD: ${{ github.event.pull_request.head.sha"+
 		" || github.event.merge_group.head_sha }}", scope)
-	workflowsIn(t, `if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then`, scope)
+	assertIn(t, `if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then`, scope)
 }
 
 // Each required check's own job cancels the rest of a merge-queue build that it failed. A cancel
@@ -1051,12 +929,12 @@ func TestWorkflows_AFailedQueueBuildIsCancelledOnlyAfterItsCheckReported(t *test
 	for _, j := range jobs {
 		values[j[1]] = true
 	}
-	workflowsEqualMaps(t, values, workflowsSet(config.Load("", map[string]string{}).RequiredChecks...))
+	assertEqual(t, values, setOf(config.Load("", map[string]string{}).RequiredChecks...))
 	for _, j := range jobs {
 		summary := j[0]
 		cancel := workflowsJob(t, text, "queue-cancel-"+summary)
-		workflowsIn(t, "needs: "+summary+"\n", cancel)
-		workflowsIn(t, "if: ${{ failure() && github.event_name == 'merge_group' }}", cancel)
-		workflowsIn(t, `gh run cancel "$RUN"`, cancel)
+		assertIn(t, "needs: "+summary+"\n", cancel)
+		assertIn(t, "if: ${{ failure() && github.event_name == 'merge_group' }}", cancel)
+		assertIn(t, `gh run cancel "$RUN"`, cancel)
 	}
 }

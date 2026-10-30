@@ -5,7 +5,6 @@ package tests
 
 import (
 	"bytes"
-	"fmt"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -32,7 +31,7 @@ var repoMetaForms = filepath.Join(repoMetaRoot, ".github", "ISSUE_TEMPLATE")
 // repoMetaRead is `(ROOT / path).read_text(encoding="utf-8")`.
 func repoMetaRead(t *testing.T, parts ...string) string {
 	t.Helper()
-	return workflowsFile(t, filepath.Join(append([]string{repoMetaRoot}, parts...)...))
+	return readText(t, filepath.Join(append([]string{repoMetaRoot}, parts...)...))
 }
 
 // repoMetaLabel is `config.LABELS[name]`: its (color, description).
@@ -112,41 +111,41 @@ var repoMetaBad = []string{
 
 func TestRepoMeta_ConventionalAndAutomatedTitlesPass(t *testing.T) {
 	for _, title := range append(append([]string{}, repoMetaConventional...), repoMetaAutomated...) {
-		workflowsTrue(t, triage.PullTitleOK(title), title)
+		assertTrue(t, triage.PullTitleOK(title), title)
 	}
 }
 
 func TestRepoMeta_EveryOtherTitleFails(t *testing.T) {
 	for _, title := range repoMetaBad {
-		workflowsTrue(t, !triage.PullTitleOK(title), title)
+		assertTrue(t, !triage.PullTitleOK(title), title)
 	}
 }
 
 // Each tool's title, as its source writes it, so a change to one fails here first.
 func TestRepoMeta_TheAutomatedTitlesAreTheOnesTheirToolsWrite(t *testing.T) {
-	workflowsIn(t, `--title "patches ship: $versions"`, workflowsRead(t, "patches-ship.yml"))
-	workflowsIn(t, `versions=$(sed -n 's/^patches ship: shipped //p'`, workflowsRead(t, "patches-ship.yml"))
-	workflowsIn(t, `--title "patches log: $range"`, workflowsRead(t, "promote-production.yml"))
-	workflowsIn(t, `range="${OLD:0:7}..${NEW:0:7}"`, workflowsRead(t, "promote-production.yml"))
+	assertIn(t, `--title "patches ship: $versions"`, workflowsRead(t, "patches-ship.yml"))
+	assertIn(t, `versions=$(sed -n 's/^patches ship: shipped //p'`, workflowsRead(t, "patches-ship.yml"))
+	assertIn(t, `--title "patches log: $range"`, workflowsRead(t, "promote-production.yml"))
+	assertIn(t, `range="${OLD:0:7}..${NEW:0:7}"`, workflowsRead(t, "promote-production.yml"))
 	promote := repoMetaRead(t, "scripts", "promote-production.sh")
-	workflowsIn(t, `--title "Promote main to production: $COUNT commit(s) up to ${cand:0:7}"`, promote)
+	assertIn(t, `--title "Promote main to production: $COUNT commit(s) up to ${cand:0:7}"`, promote)
 	loop := repoMetaRead(t, "training", "loop.sh")
-	workflowsIn(t, "title=$(git log -1 --format=%s)", loop)
-	workflowsIn(t, `gh pr create --base main --head "$branch" --title "$title"`, loop)
+	assertIn(t, "title=$(git log -1 --format=%s)", loop)
+	assertIn(t, `gh pr create --base main --head "$branch" --title "$title"`, loop)
 	// The lane's draft, while a session works (training/README.md, How a lane runs).
-	workflowsIn(t, `title="AI gen $((generation + 1)) ($lane): in training, nothing promoted yet"`, loop)
-	workflowsTrue(t, triage.PullTitleOK("AI gen 2 (unban): in training, nothing promoted yet"))
+	assertIn(t, `title="AI gen $((generation + 1)) ($lane): in training, nothing promoted yet"`, loop)
+	assertTrue(t, triage.PullTitleOK("AI gen 2 (unban): in training, nothing promoted yet"))
 	for _, lane := range []string{"improve", "unban"} {
 		text := repoMetaRead(t, "training", lane+".md")
-		workflowsIn(t, `git commit -m "AI gen <N> (`+lane+`): <what changed>"`, text)
+		assertIn(t, `git commit -m "AI gen <N> (`+lane+`): <what changed>"`, text)
 	}
 }
 
 func TestRepoMeta_ABotTakesItsBuildersTitleWhenItPassesElseItsIssues(t *testing.T) {
-	workflowsEqual(t, triage.PullTitle("Patch v0.3.2: the rules, v2", "Patch: the rules"),
+	assertEqual(t, triage.PullTitle("Patch v0.3.2: the rules, v2", "Patch: the rules"),
 		"Patch v0.3.2: the rules, v2")
-	workflowsEqual(t, triage.PullTitle("Make the rules v2", "Patch: the rules"), "Patch: the rules")
-	workflowsEqual(t, triage.PullTitle("", ""), "")
+	assertEqual(t, triage.PullTitle("Make the rules v2", "Patch: the rules"), "Patch: the rules")
+	assertEqual(t, triage.PullTitle("", ""), "")
 }
 
 // A workflow's alert keeps its old prefix (`titles.LEFT_ALONE`), so the fix of one, as #1548 and
@@ -163,8 +162,8 @@ func TestRepoMeta_ABotThatHasNoPassingTitleWritesOne(t *testing.T) {
 			"Patch: weekly hygiene, dead files, 2026-10-21"},
 	} {
 		title := triage.PullTitle(c[0], c[1])
-		workflowsEqual(t, title, c[2])
-		workflowsTrue(t, triage.PullTitleOK(title), title)
+		assertEqual(t, title, c[2])
+		assertTrue(t, triage.PullTitleOK(title), title)
 	}
 }
 
@@ -172,27 +171,27 @@ func TestRepoMeta_ABotThatHasNoPassingTitleWritesOne(t *testing.T) {
 
 func TestRepoMeta_EveryTitleAndHeadIsCheckedNeverWithThePullRequestsCode(t *testing.T) {
 	text := workflowsRead(t, "pr-title.yml")
-	workflowsRegex(t, text, `pull_request_target:\n\s+types: \[opened, edited, reopened, `+
+	assertRegex(t, text, `pull_request_target:\n\s+types: \[opened, edited, reopened, `+
 		`synchronize\]`)
-	workflowsNotRegex(t, text, `(?m)^  pull_request:`, "would run the pull request's code")
-	workflowsEqualSlices(t, workflowsFindall(workflowsRef, text),
+	assertNotRegex(t, text, `(?m)^  pull_request:`, "would run the pull request's code")
+	assertEqual(t, workflowsFindall(workflowsRef, text),
 		[]string{"${{ github.event.repository.default_branch }}"})
-	workflowsIn(t, "persist-credentials: false", text)
-	workflowsNotIn(t, "secrets.", text)
-	workflowsRegex(t, text, `(?m)^permissions: \{\}$`)
+	assertIn(t, "persist-credentials: false", text)
+	assertNotIn(t, "secrets.", text)
+	assertRegex(t, text, `(?m)^permissions: \{\}$`)
 	block := workflowsJob(t, text, "title")
-	workflowsEqualMaps(t, workflowsGrants(t, block), map[string]string{"contents": "read"})
-	workflowsIn(t, "timeout-minutes:", block)
+	assertEqual(t, workflowsGrants(t, block), map[string]string{"contents": "read"})
+	assertIn(t, "timeout-minutes:", block)
 }
 
 func TestRepoMeta_TheTitleReachesTheBotsRuleThroughTheEnvironment(t *testing.T) {
 	text := workflowsRead(t, "pr-title.yml")
-	workflowsIn(t, "TITLE: ${{ github.event.pull_request.title }}", text)
-	workflowsEqual(t, strings.Count(text, "github.event.pull_request.title"), 1)
+	assertIn(t, "TITLE: ${{ github.event.pull_request.title }}", text)
+	assertEqual(t, strings.Count(text, "github.event.pull_request.title"), 1)
 	// The workflow changed (#467): the inline Python that imported `harness.triage.pull_title_ok`
 	// is the binary's `harness pr-title`, which takes the title from the step's environment.
-	workflowsIn(t, `harness pr-title --title="$TITLE"`, text)
-	workflowsTrue(t, workflowsLinted(t, "pr-title.yml"))
+	assertIn(t, `harness pr-title --title="$TITLE"`, text)
+	assertTrue(t, workflowsLinted(t, "pr-title.yml"))
 }
 
 // ---------------------------------------------------------------------------- IssueFormTests
@@ -211,7 +210,7 @@ func repoMetaFormsRead(t *testing.T) []repoMetaForm {
 	forms := []repoMetaForm{}
 	for _, path := range paths {
 		if filepath.Base(path) != "config.yml" {
-			forms = append(forms, repoMetaForm{filepath.Base(path), workflowsFile(t, path)})
+			forms = append(forms, repoMetaForm{filepath.Base(path), readText(t, path)})
 		}
 	}
 	return forms
@@ -229,20 +228,20 @@ func TestRepoMeta_OneFormPerKind(t *testing.T) {
 		names = append(names, form.name)
 	}
 	sort.Strings(names)
-	workflowsEqualSlices(t, names, []string{"architecture.yml", "bug.yml", "night-bot.yml", "patch.yml"})
+	assertEqual(t, names, []string{"architecture.yml", "bug.yml", "night-bot.yml", "patch.yml"})
 }
 
 func TestRepoMeta_EveryFormTitlesItsIssuePatchWithNoVersion(t *testing.T) {
 	for _, form := range repoMetaFormsRead(t) {
-		workflowsEqual(t, workflowsSearch(t, repoMetaFormTitle, form.text, 1), "Patch: ", form.name)
-		workflowsNotRegex(t, form.text, `v0\.\d+\.[XY]\b`, form.name)
+		assertEqual(t, workflowsSearch(t, repoMetaFormTitle, form.text, 1), "Patch: ", form.name)
+		assertNotRegex(t, form.text, `v0\.\d+\.[XY]\b`, form.name)
 	}
 }
 
 func TestRepoMeta_EachFormTitlesAndLabelsItsIssueAndLeavesItsTypeToTriage(t *testing.T) {
 	for _, form := range repoMetaFormsRead(t) {
 		title := workflowsSearch(t, repoMetaFormTitle, form.text, 1)
-		workflowsTrue(t, triage.FollowsConvention(title+"what it does"), form.name)
+		assertTrue(t, triage.FollowsConvention(title+"what it does"), form.name)
 		raw, err := pyjson.LoadsString(workflowsSearch(t, repoMetaFormLabels, form.text, 1))
 		if err != nil {
 			t.Fatal(err)
@@ -251,15 +250,15 @@ func TestRepoMeta_EachFormTitlesAndLabelsItsIssueAndLeavesItsTypeToTriage(t *tes
 		// The sync creates every one, and every issue carries a type label.
 		typed := false
 		for _, label := range labels {
-			workflowsTrue(t, config.Labels.Has(label), form.name, label)
-			typed = typed || workflowsSet(config.TypeLabels...)[label]
+			assertTrue(t, config.Labels.Has(label), form.name, label)
+			typed = typed || setOf(config.TypeLabels...)[label]
 		}
-		workflowsTrue(t, typed, form.name)
+		assertTrue(t, typed, form.name)
 		// Triage types it (Task, Bug, Feature) and only types an untyped issue; who does it is the
 		// dropdown's answer, so no form puts `human` on by itself.
-		workflowsNotRegex(t, form.text, `(?m)^type:`, form.name)
-		workflowsTrue(t, !workflowsSet(labels...)[config.LabelHuman], form.name)
-		workflowsIn(t, "docs/issues-and-patches.md", form.text, form.name)
+		assertNotRegex(t, form.text, `(?m)^type:`, form.name)
+		assertTrue(t, !setOf(labels...)[config.LabelHuman], form.name)
+		assertIn(t, "docs/issues-and-patches.md", form.text, form.name)
 	}
 }
 
@@ -304,14 +303,6 @@ func repoMetaDropdowns(t *testing.T, text string) []repoMetaDropdown {
 	return found
 }
 
-// repoMetaLists is assertEqual on two lists of lists.
-func repoMetaLists(t *testing.T, got, want [][]string, msg ...any) {
-	t.Helper()
-	if fmt.Sprintf("%q", got) != fmt.Sprintf("%q", want) {
-		t.Fatalf("%q != %q %v", got, want, msg)
-	}
-}
-
 // Triage turns the dropdowns into the labels a person would set by hand: who does it is `human`
 // or `bot:build`, and "Decide later", "Not sure" or "No priority" is nothing.
 func TestRepoMeta_EveryFormAsksWhoDoesItAndEachAnswerIsItsLabel(t *testing.T) {
@@ -321,8 +312,8 @@ func TestRepoMeta_EveryFormAsksWhoDoesItAndEachAnswerIsItsLabel(t *testing.T) {
 		for _, d := range dropdowns {
 			ids[d.id] = true
 		}
-		workflowsTrue(t, ids["method"], form.name, "method")
-		workflowsTrue(t, ids["difficulty"], form.name, "difficulty")
+		assertTrue(t, ids["method"], form.name, "method")
+		assertTrue(t, ids["difficulty"], form.name, "difficulty")
 		for _, d := range dropdowns {
 			answers := [][]string{}
 			for _, option := range d.options {
@@ -330,15 +321,15 @@ func TestRepoMeta_EveryFormAsksWhoDoesItAndEachAnswerIsItsLabel(t *testing.T) {
 			}
 			switch d.id {
 			case "method":
-				repoMetaLists(t, answers, [][]string{{}, {config.LabelHuman}, {config.LabelBuild}}, form.name)
+				assertEqual(t, answers, [][]string{{}, {config.LabelHuman}, {config.LabelBuild}}, form.name)
 			case "difficulty":
 				want := [][]string{{}}
 				for _, label := range config.DifficultyLabels.Keys() {
 					want = append(want, []string{label})
 				}
-				repoMetaLists(t, answers, want, form.name)
+				assertEqual(t, answers, want, form.name)
 			case "priority":
-				repoMetaLists(t, answers, [][]string{{}, {config.LabelPriorityHigh},
+				assertEqual(t, answers, [][]string{{}, {config.LabelPriorityHigh},
 					{config.LabelPriorityMedium}, {config.LabelPriorityLow}}, form.name)
 			}
 		}
@@ -346,10 +337,10 @@ func TestRepoMeta_EveryFormAsksWhoDoesItAndEachAnswerIsItsLabel(t *testing.T) {
 }
 
 func TestRepoMeta_NoBlankIssuesAndALinkToTheConventions(t *testing.T) {
-	text := workflowsFile(t, filepath.Join(repoMetaForms, "config.yml"))
-	workflowsIn(t, "blank_issues_enabled: false", text)
-	workflowsIn(t, "/blob/main/docs/issues-and-patches.md", text)
-	workflowsTrue(t, workflowsIsFile(filepath.Join(repoMetaRoot, "docs", "issues-and-patches.md")))
+	text := readText(t, filepath.Join(repoMetaForms, "config.yml"))
+	assertIn(t, "blank_issues_enabled: false", text)
+	assertIn(t, "/blob/main/docs/issues-and-patches.md", text)
+	assertTrue(t, isFile(filepath.Join(repoMetaRoot, "docs", "issues-and-patches.md")))
 }
 
 // ---------------------------------------------------------------------------- FormLabelsTests
@@ -361,20 +352,20 @@ const repoMetaBody = "### What it does\n\nA thing.\r\n\r\n### Difficulty (a gues
 	"### Priority\n\nlow\n\n### Who does it\n\nThe night bot (bot:build)\n"
 
 func TestRepoMeta_TheAnswersInOrder(t *testing.T) {
-	workflowsEqualSlices(t, triage.FormLabels(repoMetaBody),
+	assertEqual(t, triage.FormLabels(repoMetaBody),
 		[]string{"difficulty:hard", config.LabelPriorityLow, config.LabelBuild})
 }
 
 func TestRepoMeta_NothingFromABodyNoFormWroteOrUnansweredFields(t *testing.T) {
-	workflowsEqualSlices(t, triage.FormLabels(""), []string{})
-	workflowsEqualSlices(t, triage.FormLabels("Please fix the (bot:build) thing"), []string{})
-	workflowsEqualSlices(t, triage.FormLabels("### Priority\n\n_No response_\n\n### Who does it\n\n"+
+	assertEqual(t, triage.FormLabels(""), []string{})
+	assertEqual(t, triage.FormLabels("Please fix the (bot:build) thing"), []string{})
+	assertEqual(t, triage.FormLabels("### Priority\n\n_No response_\n\n### Who does it\n\n"+
 		"Decide later"), []string{})
 }
 
 func TestRepoMeta_TextAPersonWroteIsNotAnAnswer(t *testing.T) {
 	body := "### What it does\n\nUse (human) here, and priority high\n"
-	workflowsEqualSlices(t, triage.FormLabels(body), []string{})
+	assertEqual(t, triage.FormLabels(body), []string{})
 }
 
 // ---------------------------------------------------------------------------- LabelListTests
@@ -394,8 +385,8 @@ func TestRepoMeta_EveryLabelInUseIsOnTheList(t *testing.T) {
 	if len(named) < 4 {
 		t.Fatalf("%q != the four type labels", named)
 	}
-	workflowsEqualSlices(t, named[:4], []string{"patch", "major version", "architecture", "night bot"})
-	used := workflowsSet(named...)
+	assertEqual(t, named[:4], []string{"patch", "major version", "architecture", "night bot"})
+	used := setOf(named...)
 	for _, group := range [][]string{dashboard.Labels, disk.Labels, triage.TypeLabels,
 		{config.LabelHuman, config.LabelReady}, config.DifficultyLabels.Keys(),
 		{config.LabelPriorityHigh, config.LabelPriorityMedium, config.LabelPriorityLow}} {
@@ -413,7 +404,7 @@ func TestRepoMeta_EveryLabelInUseIsOnTheList(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, path := range append(workflowsPaths, scripts...) {
-		for _, name := range workflowsFindall(repoMetaPutsOn, workflowsFile(t, path)) {
+		for _, name := range workflowsFindall(repoMetaPutsOn, readText(t, path)) {
 			used[name] = true
 		}
 	}
@@ -424,7 +415,7 @@ func TestRepoMeta_EveryLabelInUseIsOnTheList(t *testing.T) {
 		}
 	}
 	sort.Strings(missing)
-	workflowsEqualSlices(t, missing, []string{})
+	assertEqual(t, missing, []string{})
 }
 
 // #664: the sweep deletes the retired labels, so none may come back through the list, the
@@ -440,20 +431,20 @@ func TestRepoMeta_NoRetiredLabelIsInUse(t *testing.T) {
 			both[strings.ToLower(name)] = true
 		}
 	}
-	workflowsEqualMaps(t, both, map[string]bool{})
+	assertEqual(t, both, map[string]bool{})
 	forms, err := filepath.Glob(filepath.Join(repoMetaForms, "*.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, path := range append([]string{filepath.Join(repoMetaRoot, "docs", "issues-and-patches.md")}, forms...) {
-		text := strings.ToLower(workflowsFile(t, path))
+		text := strings.ToLower(readText(t, path))
 		found := []string{}
-		for _, name := range workflowsSorted(retired) {
+		for _, name := range sortedKeys(retired) {
 			if strings.Contains(text, "`"+name+"`") {
 				found = append(found, name)
 			}
 		}
-		workflowsEqualSlices(t, found, []string{}, filepath.Base(path))
+		assertEqual(t, found, []string{}, filepath.Base(path))
 	}
 }
 
@@ -461,9 +452,9 @@ func TestRepoMeta_NoRetiredLabelIsInUse(t *testing.T) {
 func TestRepoMeta_TheProductionMergeLabelIsAsItsScriptWritesIt(t *testing.T) {
 	script := repoMetaRead(t, "scripts", "promote-production.sh")
 	color, description := repoMetaLabel(t, "production merge")
-	workflowsIn(t, `: "${RELEASE_LABEL:=production merge}"`, script)
-	workflowsIn(t, `gh label create "$RELEASE_LABEL" --color `+color+` --force`, script)
-	workflowsIn(t, `--description "`+description+`"`, script)
+	assertIn(t, `: "${RELEASE_LABEL:=production merge}"`, script)
+	assertIn(t, `gh label create "$RELEASE_LABEL" --color `+color+` --force`, script)
+	assertIn(t, `--description "`+description+`"`, script)
 }
 
 // ci.yml's `rust (classify)` creates its labels with `--force`, which would undo any other colour
@@ -472,8 +463,8 @@ func TestRepoMeta_TheKindAndTierLabelsAreAsCIWritesThem(t *testing.T) {
 	block := workflowsJob(t, workflowsRead(t, "ci.yml"), "rust-classify")
 	for _, name := range append(append([]string{}, config.KindLabels...), config.TierLabels...) {
 		color, description := repoMetaLabel(t, name)
-		workflowsIn(t, "["+name+"]="+color, block, name)
-		workflowsIn(t, "["+name+`]="`+description+`"`, block, name)
+		assertIn(t, "["+name+"]="+color, block, name)
+		assertIn(t, "["+name+`]="`+description+`"`, block, name)
 	}
 }
 
@@ -491,16 +482,16 @@ func TestRepoMeta_SetupCreatesTheMissingAndBringsBackTheHandChanged(t *testing.T
 		return testsupport.MakeCtx(gh, testsupport.Ctx{Cfg: cfg})
 	}
 	cli.Stdout = &out
-	workflowsEqual(t, cli.CmdSetup(cfg, &cli.Args{RepoSettings: false}), 0)
+	assertEqual(t, cli.CmdSetup(cfg, &cli.Args{RepoSettings: false}), 0)
 	cli.Ctx, cli.Stdout = ctx, stdout
 	said := out.String()
-	workflowsIn(t, "updated label human", said)
-	workflowsIn(t, "created label production merge", said)
-	workflowsNotIn(t, "label patch", said) // it matched, whatever the colour's case
+	assertIn(t, "updated label human", said)
+	assertIn(t, "created label production merge", said)
+	assertNotIn(t, "label patch", said) // it matched, whatever the colour's case
 	for _, name := range config.Labels.Keys() {
 		color, description := repoMetaLabel(t, name)
 		label := gh.Labels.Obj(name)
-		workflowsEqual(t, [2]string{strings.ToLower(label.Str("color")), label.Str("description")},
+		assertEqual(t, [2]string{strings.ToLower(label.Str("color")), label.Str("description")},
 			[2]string{color, description}, name)
 	}
 }
@@ -516,6 +507,6 @@ func TestRepoMeta_ThePathsTheBotsMayNotChangeAskAPerson(t *testing.T) {
 		owners[pair[0]] = pair[1]
 	}
 	for _, path := range []string{"/.github/", "/bot/", "/.harness/", "/.squishy/"} {
-		workflowsEqualSlices(t, strings.Fields(owners[path]), []string{"@jgoetzmann", "@MaxGoetzmann"}, path)
+		assertEqual(t, strings.Fields(owners[path]), []string{"@jgoetzmann", "@MaxGoetzmann"}, path)
 	}
 }

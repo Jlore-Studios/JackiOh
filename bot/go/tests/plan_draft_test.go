@@ -35,8 +35,8 @@ var planDraftPlan = "1. **Goal.** Rules v2.\n2. **Steps.** Edit src/game.txt; ru
 // planDraftCutOffPlanner is cut_off_planner: a planner that writes its draft, strays into a
 // tracked file, and is stopped at its cap.
 func planDraftCutOffPlanner(request *runner.RunRequest) *runner.RunResult {
-	crossWriteRaise(filepath.Join(request.Cwd, work.PlanDraftFile), planDraftDraft+"\n")
-	crossWriteRaise(filepath.Join(request.Cwd, "src", "game.txt"), "a planner's edit\n")
+	mustWriteText(filepath.Join(request.Cwd, work.PlanDraftFile), planDraftDraft+"\n")
+	mustWriteText(filepath.Join(request.Cwd, "src", "game.txt"), "a planner's edit\n")
 	r := runner.NewRunResult(false, "")
 	r.ExitCode, r.DurationS, r.Error = 1, 1200, "stopped mid-call"
 	r.Extra = pyjson.New("usage_stop", "5-hour usage is 70%, at or over its 70% cap")
@@ -50,14 +50,14 @@ type planDraftTrailRunner struct {
 }
 
 func newPlanDraftTrailRunner(handlers map[string]runner.Handler) *planDraftTrailRunner {
-	return &planDraftTrailRunner{crossRunner(handlers)}
+	return &planDraftTrailRunner{workFake(handlers)}
 }
 
 func (x *planDraftTrailRunner) Run(request *runner.RunRequest) *runner.RunResult {
 	if err := os.MkdirAll(filepath.Dir(request.Transcript), 0o777); err != nil {
 		panic(err)
 	}
-	crossWriteRaise(request.Transcript, "{}\n")
+	mustWriteText(request.Transcript, "{}\n")
 	return x.FakeRunner.Run(request)
 }
 
@@ -66,8 +66,8 @@ func (x *planDraftTrailRunner) Trail(transcript string) string {
 }
 
 // planDraftHarness is planning_harness.
-func planDraftHarness(t *testing.T) *crossHarness {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine,
+func planDraftHarness(t *testing.T) *flowHarness {
+	h := newFlowHarness(t, flowHarnessOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine,
 		At: testsupport.Day, CommittedPlanLanes: true})
 	h.committedHours()
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
@@ -78,73 +78,73 @@ func TestPlanDraft_ACutOffPlanKeepsItsDraftAndTheNextPlannerGoesOnFromIt(t *test
 	h := planDraftHarness(t)
 	r := newPlanDraftTrailRunner(map[string]runner.Handler{"plan": planDraftCutOffPlanner})
 	planned, first := h.night(r)
-	crossEq(t, []any{planned.Get("action"), first.Get("status"), first.Get("interrupt")},
+	assertEqual(t, []any{planned.Get("action"), first.Get("status"), first.Get("interrupt")},
 		[]any{"plan", "interrupted", "usage"})
 	call := r.Calls[0]
-	crossEq(t, call.AllowedTools, work.PlannerTools)
-	crossIn(t, "Write", call.AllowedTools)
-	crossNotIn(t, "Write", call.DisallowedTools)
-	crossIn(t, "Bash(git commit:*)", call.DisallowedTools)
-	crossIn(t, strings.TrimSpace(work.DraftAsk), call.Prompt)
-	crossIn(t, "The one file you write is your draft, `"+work.PlanDraftFile+"`", call.Prompt)
-	crossEq(t, crossKey(t, first, "handoff", "draft"), planDraftDraft)
+	assertEqual(t, call.AllowedTools, work.PlannerTools)
+	assertIn(t, "Write", call.AllowedTools)
+	assertNotIn(t, "Write", call.DisallowedTools)
+	assertIn(t, "Bash(git commit:*)", call.DisallowedTools)
+	assertIn(t, strings.TrimSpace(work.DraftAsk), call.Prompt)
+	assertIn(t, "The one file you write is your draft, `"+work.PlanDraftFile+"`", call.Prompt)
+	assertEqual(t, dig(t, first, "handoff", "draft"), planDraftDraft)
 	// The draft is kept for the next run, with the end of the planner's session.
 	record := crossObj(t, h.ctx.Store.Load(), "items", "12")
-	crossEq(t, crossKey(t, record, "handoff", "kind"), "draft")
-	crossEq(t, crossKey(t, record, "handoff", "draft"), planDraftDraft)
-	crossIn(t, "the change is in src/game.txt", crossStr(t, record, "handoff", "trail"))
-	crossIn(t, "Its draft so far is kept, and the next planning run goes on from it.", crossLast(t, h.gh.BotComments(12)))
+	assertEqual(t, dig(t, record, "handoff", "kind"), "draft")
+	assertEqual(t, dig(t, record, "handoff", "draft"), planDraftDraft)
+	assertIn(t, "the change is in src/game.txt", crossStr(t, record, "handoff", "trail"))
+	assertIn(t, "Its draft so far is kept, and the next planning run goes on from it.", lastOf(t, h.gh.BotComments(12)))
 	journalText, _ := h.gh.GetFile("12.md", journal.Branch)
-	crossIn(t, "The planner's draft when it stopped", journalText)
-	crossIn(t, "Rules v2.", journalText)
+	assertIn(t, "The planner's draft when it stopped", journalText)
+	assertIn(t, "Rules v2.", journalText)
 	// Nothing was built, and the planner's stray edit went nowhere.
-	crossEq(t, h.originSHA("bot/issue-12"), "")
-	crossNotIn(t, "a planner's edit", fakes.Git(h.origin, "show", "main:src/game.txt"))
-	crossIn(t, config.LabelBuild, h.gh.LabelNames(12))
+	assertEqual(t, h.originSHA("bot/issue-12"), "")
+	assertNotIn(t, "a planner's edit", fakes.Git(h.origin, "show", "main:src/game.txt"))
+	assertIn(t, config.LabelBuild, h.gh.LabelNames(12))
 
 	seen := map[string]string{}
 
 	finishing := func(request *runner.RunRequest) *runner.RunResult {
-		seen["draft"] = crossMustRead(filepath.Join(request.Cwd, work.PlanDraftFile))
+		seen["draft"] = mustReadText(filepath.Join(request.Cwd, work.PlanDraftFile))
 		seen["prompt"] = request.Prompt
 		return runner.NewRunResult(true, planDraftPlan)
 	}
-	planned, second := h.night(crossRunner(map[string]runner.Handler{"plan": finishing}))
-	crossEq(t, []any{planned.Get("action"), second.Get("status")}, []any{"plan", "planned"})
-	crossEq(t, crossKey(t, planned, "handoff", "kind"), "draft")
-	crossEq(t, strings.TrimSpace(seen["draft"]), planDraftDraft)
-	crossIn(t, "## An unfinished plan from an earlier run", seen["prompt"])
+	planned, second := h.night(workFake(map[string]runner.Handler{"plan": finishing}))
+	assertEqual(t, []any{planned.Get("action"), second.Get("status")}, []any{"plan", "planned"})
+	assertEqual(t, dig(t, planned, "handoff", "kind"), "draft")
+	assertEqual(t, strings.TrimSpace(seen["draft"]), planDraftDraft)
+	assertIn(t, "## An unfinished plan from an earlier run", seen["prompt"])
 	// The lane's weakest planner meeting the floor plans first (#695): Muse, not claude-2.
-	crossIn(t, "`muse` (muse) was cut off before it finished", seen["prompt"])
-	crossIn(t, "which is now `"+work.PlanDraftFile+"` at the top of your worktree", seen["prompt"])
-	crossIn(t, "the change is in src/game.txt", seen["prompt"])
+	assertIn(t, "`muse` (muse) was cut off before it finished", seen["prompt"])
+	assertIn(t, "which is now `"+work.PlanDraftFile+"` at the top of your worktree", seen["prompt"])
+	assertIn(t, "the change is in src/game.txt", seen["prompt"])
 	// The finished plan supersedes the draft everywhere.
-	crossNotIn(t, "draft", crossObj(t, second, "handoff"))
-	crossFalse(t, crossExists(filepath.Join(h.root, "work", "item-12", work.PlanDraftFile)))
+	assertNotIn(t, "draft", crossObj(t, second, "handoff"))
+	assertFalse(t, exists(filepath.Join(h.root, "work", "item-12", work.PlanDraftFile)))
 	record = crossObj(t, h.ctx.Store.Load(), "items", "12")
-	crossEq(t, crossKey(t, record, "handoff", "kind"), "plan")
-	crossNotIn(t, "draft", crossObj(t, record, "handoff"))
-	crossIn(t, "Edit src/game.txt", issueplan.PlanOf(crossStr(t, h.gh.Threads.Item(12), "body")))
+	assertEqual(t, dig(t, record, "handoff", "kind"), "plan")
+	assertNotIn(t, "draft", crossObj(t, record, "handoff"))
+	assertIn(t, "Edit src/game.txt", issueplan.PlanOf(crossStr(t, h.gh.Threads.Item(12), "body")))
 }
 
 // #37's third planning run (`claude-5`) stopped before any model call: the draft the run before
 // left stays for the one after.
 func TestPlanDraft_ARunStoppedBeforeItStartsKeepsTheLastDraft(t *testing.T) {
 	h := planDraftHarness(t)
-	h.night(crossRunner(map[string]runner.Handler{"plan": planDraftCutOffPlanner}))
+	h.night(workFake(map[string]runner.Handler{"plan": planDraftCutOffPlanner}))
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	crossEq(t, planned.Get("action"), "plan")
+	assertEqual(t, planned.Get("action"), "plan")
 	out := filepath.Join(h.root, "out-stopped")
 	worker := work.NewWorker(h.cfg, planned, runner.NewFakeRunner(nil), h.clone, filepath.Join(h.root, "work"), out,
 		nil, nil, nil, nil, nil, nil)
 	worker.StartUsage = pyjson.New("status", "allowed", "five_hour", pyjson.New(
 		"utilization", 0.95, "resets_at", "2099-01-01T00:00:00Z"))
 	result := worker.Run()
-	crossEq(t, []any{result.Get("status"), result.Get("model_calls")}, []any{"interrupted", 0})
+	assertEqual(t, []any{result.Get("status"), result.Get("model_calls")}, []any{"interrupted", 0})
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	handoff := crossObj(t, h.ctx.Store.Load(), "items", "12", "handoff")
-	crossEq(t, []any{crossKey(t, handoff, "kind"), crossKey(t, handoff, "draft")}, []any{"draft", planDraftDraft})
-	crossNotIn(t, "draft so far is kept", crossLast(t, h.gh.BotComments(12)))
+	assertEqual(t, []any{dig(t, handoff, "kind"), dig(t, handoff, "draft")}, []any{"draft", planDraftDraft})
+	assertNotIn(t, "draft so far is kept", lastOf(t, h.gh.BotComments(12)))
 }
 
 // No draft yet, only the end of the session: still a planner's handoff, never one a builder is
@@ -157,39 +157,39 @@ func TestPlanDraft_APlannerCutOffBeforeAnyDraftStillHandsOnWhatItFound(t *testin
 	h.night(newPlanDraftTrailRunner(map[string]runner.Handler{
 		"plan": func(*runner.RunRequest) *runner.RunResult { return stopped }}))
 	handoff := crossObj(t, h.ctx.Store.Load(), "items", "12", "handoff")
-	crossEq(t, crossKey(t, handoff, "kind"), "draft")
-	crossNotIn(t, "draft", handoff)
-	crossIn(t, "the change is in src/game.txt", crossStr(t, handoff, "trail"))
-	crossIn(t, "The end of its session is kept for the next planning run.", crossLast(t, h.gh.BotComments(12)))
+	assertEqual(t, dig(t, handoff, "kind"), "draft")
+	assertNotIn(t, "draft", handoff)
+	assertIn(t, "the change is in src/game.txt", crossStr(t, handoff, "trail"))
+	assertIn(t, "The end of its session is kept for the next planning run.", lastOf(t, h.gh.BotComments(12)))
 	seen := map[string]string{}
 
 	finishing := func(request *runner.RunRequest) *runner.RunResult {
 		seen["prompt"] = request.Prompt
 		return runner.NewRunResult(true, planDraftPlan)
 	}
-	h.night(crossRunner(map[string]runner.Handler{"plan": finishing}))
-	crossIn(t, "It left no draft, only the end of its session below", seen["prompt"])
-	crossNotIn(t, "Picking up from another agent", seen["prompt"])
+	h.night(workFake(map[string]runner.Handler{"plan": finishing}))
+	assertIn(t, "It left no draft, only the end of its session below", seen["prompt"])
+	assertNotIn(t, "Picking up from another agent", seen["prompt"])
 }
 
 func TestPlanDraft_AFinishedPlanHandsOnNoDraft(t *testing.T) {
 	root := crossMkdtemp(t)
 	_, clone := fakes.MakeOrigin(root)
-	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", crossWorkGates(),
+	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", workGates,
 		"install", pyjson.New("run", "true", "timeout_minutes", 1))})
 
 	drafting := func(request *runner.RunRequest) *runner.RunResult {
-		crossWriteRaise(filepath.Join(request.Cwd, work.PlanDraftFile), planDraftDraft)
+		mustWriteText(filepath.Join(request.Cwd, work.PlanDraftFile), planDraftDraft)
 		return runner.NewRunResult(true, planDraftPlan)
 	}
 	p := pyjson.New("action", "plan", "number", 12, "title", "Rules v2", "branch", "bot/issue-12",
 		"thread", "Please make the rules v2.")
-	result := work.NewWorker(cfg, p, crossRunner(map[string]runner.Handler{"plan": drafting}), clone,
+	result := work.NewWorker(cfg, p, workFake(map[string]runner.Handler{"plan": drafting}), clone,
 		filepath.Join(root, "work"), filepath.Join(root, "out"), nil, nil, nil, nil, nil, nil).Run()
-	crossEq(t, result.Get("status"), "planned")
-	crossNotIn(t, "draft", crossObj(t, result, "handoff"))
-	crossTrue(t, strings.HasPrefix(crossStr(t, result, "handoff", "notes"), "# Plan"))
-	crossNotIn(t, "## Files to touch", crossStr(t, result, "handoff", "notes"))
+	assertEqual(t, result.Get("status"), "planned")
+	assertNotIn(t, "draft", crossObj(t, result, "handoff"))
+	assertTrue(t, strings.HasPrefix(crossStr(t, result, "handoff", "notes"), "# Plan"))
+	assertNotIn(t, "## Files to touch", crossStr(t, result, "handoff", "notes"))
 }
 
 // A build run that plans first gives its planner the draft; its builder starts from the plan
@@ -197,7 +197,7 @@ func TestPlanDraft_AFinishedPlanHandsOnNoDraft(t *testing.T) {
 func TestPlanDraft_ABuilderNeverStartsFromADraft(t *testing.T) {
 	root := crossMkdtemp(t)
 	_, clone := fakes.MakeOrigin(root)
-	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", crossWorkGates(),
+	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", workGates,
 		"install", pyjson.New("run", "true", "timeout_minutes", 1))})
 	handoff := pyjson.New("kind", "draft", "provider", "claude-4", "family", "claude",
 		"reason", "`claude-4` stops mid-call", "notes", "", "trail", "", "draft", planDraftDraft)
@@ -208,12 +208,12 @@ func TestPlanDraft_ABuilderNeverStartsFromADraft(t *testing.T) {
 	worker := work.NewWorker(cfg, p, runner.NewFakeRunner(nil), clone, filepath.Join(root, "work"),
 		filepath.Join(root, "out"), nil, nil, nil, nil, nil, nil)
 	planner := worker.HandoffText(false)
-	crossIn(t, "## An unfinished plan from an earlier run", planner)
-	crossIn(t, planDraftDraft, planner)
+	assertIn(t, "## An unfinished plan from an earlier run", planner)
+	assertIn(t, planDraftDraft, planner)
 	builder := worker.HandoffText(true)
-	crossNotIn(t, "unfinished plan", builder)
-	crossNotIn(t, "Picking up from another agent", builder)
-	crossNotIn(t, "picking up", worker.FirstWhy("build", []string{}))
+	assertNotIn(t, "unfinished plan", builder)
+	assertNotIn(t, "Picking up from another agent", builder)
+	assertNotIn(t, "picking up", worker.FirstWhy("build", []string{}))
 }
 
 // A person writes the plan after a planner was cut off: the builder starts from theirs, and the
@@ -221,7 +221,7 @@ func TestPlanDraft_ABuilderNeverStartsFromADraft(t *testing.T) {
 func TestPlanDraft_APlanInTheDescriptionReplacesADraft(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, Cfg: testsupport.MakeConfig(testsupport.Config{
-		Env: crossSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine, CommittedPlanLanes: true})})
+		Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine, CommittedPlanLanes: true})})
 	body := issueplan.WithPlan("Make the rules v2.", planDraftPlan, "a person", "")
 	gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: body})
 	ctx.Store.Update(func(s *pyjson.Object) any {
@@ -231,10 +231,10 @@ func TestPlanDraft_APlanInTheDescriptionReplacesADraft(t *testing.T) {
 		return nil
 	}, "state")
 	planned := plan.Make(ctx, true, nil, "auto", nil)
-	crossEq(t, planned.Get("action"), "build")
-	crossEq(t, crossKey(t, planned, "handoff", "kind"), "plan")
-	crossNotIn(t, "draft", crossObj(t, planned, "handoff"))
-	crossNotIn(t, "trail", crossObj(t, planned, "handoff"))
-	crossIn(t, "Edit src/game.txt", crossStr(t, planned, "handoff", "notes"))
-	crossEq(t, crossKey(t, planned, "handoff", "provider"), "the issue's description")
+	assertEqual(t, planned.Get("action"), "build")
+	assertEqual(t, dig(t, planned, "handoff", "kind"), "plan")
+	assertNotIn(t, "draft", crossObj(t, planned, "handoff"))
+	assertNotIn(t, "trail", crossObj(t, planned, "handoff"))
+	assertIn(t, "Edit src/game.txt", crossStr(t, planned, "handoff", "notes"))
+	assertEqual(t, dig(t, planned, "handoff", "provider"), "the issue's description")
 }

@@ -33,7 +33,7 @@ var markersPlan = "<!-- jackioh-bot:plan -->\n## Plan\n1. Edit src/game.txt.\n" 
 func markersWeakHarness(t *testing.T) *flowHarness {
 	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"lite"}})
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild, "difficulty:easy"), Body: markersPlan})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild, "difficulty:easy"), Body: markersPlan})
 	return h
 }
 
@@ -44,14 +44,14 @@ func TestMarkers_MarkersThatSurviveTheSelfChecksAndOneFixEndUnapproved(t *testin
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": markersMarked}),
 		"self_check": workReviewer(workApprove),
 		"fix":        workBuilder(map[string]any{"src/game.txt": markersMarked + "again\n"})})
-	planned, result := h.Night(r)
-	flowEq(t, planned.Get("provider"), "lite")
-	flowEq(t, result.Get("status"), "not_approved")
-	flowIn(t, "conflict markers are still in src/game.txt", result.Str("reason"))
-	flowTrue(t, pyjson.Obj(flowPath(result, "cycles", 0)).Has("marker_fix"))
-	flowEq(t, h.OriginSHA("bot/issue-12"), "")
-	flowEq(t, len(h.GH.ListPulls("open", "", 200)), 0)
-	flowIn(t, "conflict markers are still in `src/game.txt`", flowLast(t, h.GH.BotComments(12)))
+	planned, result := h.night(r)
+	assertEqual(t, planned.Get("provider"), "lite")
+	assertEqual(t, result.Get("status"), "not_approved")
+	assertIn(t, "conflict markers are still in src/game.txt", result.Str("reason"))
+	assertTrue(t, pyjson.Obj(dig(t, result, "cycles", 0)).Has("marker_fix"))
+	assertEqual(t, h.originSHA("bot/issue-12"), "")
+	assertEqual(t, len(h.gh.ListPulls("open", "", 200)), 0)
+	assertIn(t, "conflict markers are still in `src/game.txt`", lastOf(t, h.gh.BotComments(12)))
 }
 
 func TestMarkers_AFixThatClearsThemLetsItGoToReview(t *testing.T) {
@@ -59,9 +59,9 @@ func TestMarkers_AFixThatClearsThemLetsItGoToReview(t *testing.T) {
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": markersMarked}),
 		"self_check": workReviewer(workApprove),
 		"fix":        workBuilder(map[string]any{"src/game.txt": "rules v2, with main's\n"})})
-	_, result := h.Night(r)
-	flowEq(t, result.Get("status"), "built")
-	flowEq(t, fakes.Git(h.Origin, "show", result.Str("head")+":src/game.txt"), "rules v2, with main's")
+	_, result := h.night(r)
+	assertEqual(t, result.Get("status"), "built")
+	assertEqual(t, fakes.Git(h.origin, "show", result.Str("head")+":src/game.txt"), "rules v2, with main's")
 }
 
 // ---------------------------------------------------------------------------- DeliverTests
@@ -70,25 +70,25 @@ func TestMarkers_AFixThatClearsThemLetsItGoToReview(t *testing.T) {
 // and the result that names it.
 func markersBundle(t *testing.T, h *flowHarness, files map[string]string) (*pyjson.Object, string) {
 	t.Helper()
-	planned := flowMake(h.Ctx)
-	outs, _ := filepath.Glob(filepath.Join(h.Root, "out-*"))
-	out := filepath.Join(h.Root, fmt.Sprintf("out-%d", len(outs)))
-	dir := filepath.Join(h.Root, "hand-"+filepath.Base(out))
-	fakes.Git(h.Root, "clone", "-q", h.Origin, dir)
+	planned := flowMake(h.ctx)
+	outs, _ := filepath.Glob(filepath.Join(h.root, "out-*"))
+	out := filepath.Join(h.root, fmt.Sprintf("out-%d", len(outs)))
+	dir := filepath.Join(h.root, "hand-"+filepath.Base(out))
+	fakes.Git(h.root, "clone", "-q", h.origin, dir)
 	fakes.Git(dir, "checkout", "-q", "-b", "bot/issue-12")
 	for _, name := range slices.Sorted(maps.Keys(files)) {
 		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o777); err != nil {
 			t.Fatal(err)
 		}
-		flowWrite(filepath.Join(dir, name), files[name])
+		mustWriteText(filepath.Join(dir, name), files[name])
 	}
 	fakes.Git(dir, "add", "-A")
 	fakes.Git(dir, "commit", "-q", "-m", "a change")
-	flowMkdir(t, out)
+	mkdir(t, out)
 	base := fakes.Git(dir, "rev-parse", "origin/main")
 	fakes.Git(dir, "bundle", "create", filepath.Join(out, "branch.bundle"), "refs/heads/bot/issue-12",
 		"^"+base)
-	flowWrite(filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New(
+	mustWriteText(filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New(
 		"status", "approved", "head", fakes.Git(dir, "rev-parse", "HEAD"), "start", base,
 		"bundle", "branch.bundle", "cycles", []any{}, "title", "t")))
 	return planned, out
@@ -96,19 +96,19 @@ func markersBundle(t *testing.T, h *flowHarness, files map[string]string) (*pyjs
 
 func TestMarkers_DeliverRefusesMarkersInAFileTheChangeTouched(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	planned, out := markersBundle(t, h, map[string]string{"src/game.txt": markersMarked})
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	flowEq(t, h.OriginSHA("bot/issue-12"), "")
-	flowEq(t, h.GH.LabelNames(12), flowSet(config.LabelBlocked))
-	flowIn(t, "conflict markers are still in `src/game.txt`", flowLast(t, h.GH.BotComments(12)))
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	assertEqual(t, h.originSHA("bot/issue-12"), "")
+	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelBlocked))
+	assertIn(t, "conflict markers are still in `src/game.txt`", lastOf(t, h.gh.BotComments(12)))
 }
 
 func TestMarkers_AMarkerLineInAFileTheChangeLeftAloneIsNotItsFault(t *testing.T) {
 	h := newFlowHarness(t)
-	fakes.PushBranch(h.Origin, h.Root, "main", map[string]string{"docs/merging.md": markersMarked})
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	fakes.PushBranch(h.origin, h.root, "main", map[string]string{"docs/merging.md": markersMarked})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	planned, out := markersBundle(t, h, map[string]string{"src/game.txt": "rules v2\n"})
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	flowTrue(t, h.OriginSHA("bot/issue-12") != "", "origin_sha is not None")
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	assertTrue(t, h.originSHA("bot/issue-12") != "", "origin_sha is not None")
 }

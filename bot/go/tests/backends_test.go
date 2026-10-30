@@ -423,7 +423,7 @@ func (w *backendsWorld) runFake(backend runner.Runner, mode string, readOnly boo
 
 // seen is Base.seen(): what the fake dumped.
 func (w *backendsWorld) seen() *pyjson.Object {
-	return loginsJSON(w.t, loginsReadText(w.t, w.dump))
+	return loadsObject(w.t, readText(w.t, w.dump))
 }
 
 // seenArgv is seen()["argv"].
@@ -437,7 +437,7 @@ func (w *backendsWorld) assertOnlyItsOwnLogin(keep ...string) {
 	env := w.seen().Obj("env")
 	for key := range backendsOtherSecrets {
 		if !slices.Contains(keep, key) {
-			providersNotIn(w.t, key, env)
+			assertNotIn(w.t, key, env)
 		}
 	}
 }
@@ -445,7 +445,7 @@ func (w *backendsWorld) assertOnlyItsOwnLogin(keep ...string) {
 // backendsOK is assertTrue(result.ok, result.error).
 func backendsOK(t *testing.T, result *runner.RunResult) {
 	t.Helper()
-	providersTrue(t, result.OK, result.Error)
+	assertTrue(t, result.OK, result.Error)
 }
 
 // backendsUtilization is usage[window]["utilization"].
@@ -466,35 +466,35 @@ func TestBackends_SuccessUsageAndArgv(t *testing.T) {
 	w := newBackendsWorld(t, "codex", "codex")
 	result := w.runFake(w.backendsCodex(), "ok", false)
 	backendsOK(t, result)
-	providersTrue(t, strings.HasPrefix(result.Text, "<!-- bot:"))
-	providersEq(t, backendsUtilization(result.Usage, "five_hour"), 0.42)
-	providersEq(t, result.Usage.Obj("seven_day").Get("resets_at"), "2026-10-05T09:00:00Z")
+	assertTrue(t, strings.HasPrefix(result.Text, "<!-- bot:"))
+	assertEqual(t, backendsUtilization(result.Usage, "five_hour"), 0.42)
+	assertEqual(t, result.Usage.Obj("seven_day").Get("resets_at"), "2026-10-05T09:00:00Z")
 	seen := w.seen()
 	argvList := pyjson.Strings(seen.Get("argv"))
 	argv := strings.Join(argvList, " ")
 	for _, part := range []string{"exec --json", "--sandbox workspace-write",
 		"sandbox_workspace_write.network_access=false", "--model the-model",
 		`model_reasoning_effort="high"`, "--add-dir /repo/.git"} {
-		providersIn(t, part, argv)
+		assertIn(t, part, argv)
 	}
-	providersEq(t, argvList[len(argvList)-1], "-")
+	assertEqual(t, argvList[len(argvList)-1], "-")
 	prompt := seen.Str("prompt")
-	providersTrue(t, strings.HasPrefix(prompt, "SYSTEM TEXT"))
-	providersIn(t, "You are running in the codex CLI", prompt)
-	providersTrue(t, strings.HasSuffix(prompt, "THE TASK"))
+	assertTrue(t, strings.HasPrefix(prompt, "SYSTEM TEXT"))
+	assertIn(t, "You are running in the codex CLI", prompt)
+	assertTrue(t, strings.HasSuffix(prompt, "THE TASK"))
 	w.assertOnlyItsOwnLogin()
-	providersTrue(t, strings.HasSuffix(seen.Obj("env").Str("CODEX_HOME"), "codex"))
-	transcript := loginsReadText(t, filepath.Join(w.tmp, "t", "01.jsonl"))
-	providersIn(t, "thread.started", transcript)
-	providersIn(t, "ran `pnpm test`", w.backendsCodex().Trail(filepath.Join(w.tmp, "t", "01.jsonl")))
+	assertTrue(t, strings.HasSuffix(seen.Obj("env").Str("CODEX_HOME"), "codex"))
+	transcript := readText(t, filepath.Join(w.tmp, "t", "01.jsonl"))
+	assertIn(t, "thread.started", transcript)
+	assertIn(t, "ran `pnpm test`", w.backendsCodex().Trail(filepath.Join(w.tmp, "t", "01.jsonl")))
 }
 
 func TestBackends_AUsageLimitParksItUntilTheFullWindowResets(t *testing.T) {
 	w := newBackendsWorld(t, "codex", "codex")
 	result := w.runFake(w.backendsCodex(), "limit", false)
-	providersFalse(t, result.OK)
-	providersTrue(t, result.RateLimited())
-	providersEq(t, result.ResetAt, "2026-10-05T09:00:00Z")
+	assertFalse(t, result.OK)
+	assertTrue(t, result.RateLimited())
+	assertEqual(t, result.ResetAt, "2026-10-05T09:00:00Z")
 }
 
 func TestBackends_AMachineLoginUsesTheClisOwnHome(t *testing.T) {
@@ -505,17 +505,17 @@ func TestBackends_AMachineLoginUsesTheClisOwnHome(t *testing.T) {
 	result := w.runFake(runner.NewCodexCli(w.bin, login, nil), "ok", false)
 	restore()
 	backendsOK(t, result)
-	providersNotIn(t, "CODEX_HOME", w.seen().Obj("env"))
-	providersEq(t, w.seen().Obj("env").Get("HOME"), machineHome)
-	providersEq(t, backendsUtilization(result.Usage, "five_hour"), 0.42) // read from ~/.codex
+	assertNotIn(t, "CODEX_HOME", w.seen().Obj("env"))
+	assertEqual(t, w.seen().Obj("env").Get("HOME"), machineHome)
+	assertEqual(t, backendsUtilization(result.Usage, "five_hour"), 0.42) // read from ~/.codex
 	w.assertOnlyItsOwnLogin()
 }
 
 func TestBackends_AUsedRefreshTokenIsInfrastructure(t *testing.T) {
 	w := newBackendsWorld(t, "codex", "codex")
 	result := w.runFake(w.backendsCodex(), "auth", false)
-	providersTrue(t, result.Infra())
-	providersFalse(t, result.RateLimited())
+	assertTrue(t, result.Infra())
+	assertFalse(t, result.RateLimited())
 }
 
 // ---------------------------------------------------------------------------- AgyTests
@@ -539,33 +539,33 @@ func TestBackends_TheAnswerSuccessAndArgv(t *testing.T) {
 	backend := w.backendsAgy()
 	result := w.runFake(backend, "ok", true)
 	backendsOK(t, result)
-	providersEq(t, result.Text, `<!-- review: {"verdict": "approve", "findings": []} -->`)
-	providersTrue(t, result.Turns != nil)
-	providersEq(t, *result.Turns, 3)
+	assertEqual(t, result.Text, `<!-- review: {"verdict": "approve", "findings": []} -->`)
+	assertTrue(t, result.Turns != nil)
+	assertEqual(t, *result.Turns, 3)
 	seen := w.seen()
 	argv := pyjson.Strings(seen.Get("argv"))
 	for _, flag := range []string{"--dangerously-skip-permissions", "--disable-slash-commands"} {
-		providersIn(t, flag, argv)
+		assertIn(t, flag, argv)
 	}
-	providersEq(t, backendsAfter(argv, "--output-format"), "stream-json")
-	providersEq(t, backendsAfter(argv, "--model"), "the-model")
-	providersEq(t, backendsAfter(argv, "--effort"), "high")
-	providersEq(t, backendsAfter(argv, "--add-dir"), "/repo/.git")
-	providersTrue(t, strings.HasPrefix(seen.Str("prompt"), "SYSTEM TEXT"))
-	providersTrue(t, strings.HasSuffix(seen.Str("prompt"), "THE TASK"))
+	assertEqual(t, backendsAfter(argv, "--output-format"), "stream-json")
+	assertEqual(t, backendsAfter(argv, "--model"), "the-model")
+	assertEqual(t, backendsAfter(argv, "--effort"), "high")
+	assertEqual(t, backendsAfter(argv, "--add-dir"), "/repo/.git")
+	assertTrue(t, strings.HasPrefix(seen.Str("prompt"), "SYSTEM TEXT"))
+	assertTrue(t, strings.HasSuffix(seen.Str("prompt"), "THE TASK"))
 	w.assertOnlyItsOwnLogin()
 	trail := backend.Trail(filepath.Join(w.tmp, "t", "01.jsonl"))
-	providersIn(t, "said: Let me look.", trail)
-	providersIn(t, "run_command: pnpm test", trail)
+	assertIn(t, "said: Let me look.", trail)
+	assertIn(t, "run_command: pnpm test", trail)
 }
 
 func TestBackends_AMissingLoginIsInfrastructure(t *testing.T) {
 	w := newBackendsWorld(t, "agy", "agy")
 	result := w.runFake(w.backendsAgy(), "auth", false)
-	providersFalse(t, result.OK)
-	providersTrue(t, result.Infra())
-	providersIn(t, "authentication required", result.Error)
-	providersTrue(t, result.Usage == nil) // no reading is tried with a login that failed
+	assertFalse(t, result.OK)
+	assertTrue(t, result.Infra())
+	assertIn(t, "authentication required", result.Error)
+	assertTrue(t, result.Usage == nil) // no reading is tried with a login that failed
 }
 
 // agy's stream carries no usage, so its own `/usage` is read after the call: the Gemini pool's
@@ -574,9 +574,9 @@ func TestBackends_EachCallEndsWithAReadingOfItsUsage(t *testing.T) {
 	w := newBackendsWorld(t, "agy", "agy")
 	result := w.gemini("ok", nil)
 	backendsOK(t, result)
-	providersEq(t, result.Usage.Get("seven_day"), pyjson.New("utilization", 0.6, "resets_at", "2026-10-09T17:47:52Z"))
-	providersEq(t, backendsUtilization(result.Usage, "five_hour"), 0.67)
-	providersEq(t, strings.HasSuffix(w.seen().Str("prompt"), "THE TASK"), true) // the call's, not /usage's
+	assertEqual(t, result.Usage.Get("seven_day"), pyjson.New("utilization", 0.6, "resets_at", "2026-10-09T17:47:52Z"))
+	assertEqual(t, backendsUtilization(result.Usage, "five_hour"), 0.67)
+	assertEqual(t, strings.HasSuffix(w.seen().Str("prompt"), "THE TASK"), true) // the call's, not /usage's
 }
 
 // The call streams nothing, so the watcher reads `/usage` every POLL_SECONDS and stops the call
@@ -594,18 +594,18 @@ func TestBackends_ACallPastItsCapStopsAtTheNextReading(t *testing.T) {
 	t.Cleanup(func() { runner.WatchSeconds, runner.PollSeconds = watch, poll })
 	result := w.gemini("slow", stop)
 	runner.WatchSeconds, runner.PollSeconds = watch, poll
-	providersFalse(t, result.OK)
-	providersEq(t, result.Extra.Get("usage_stop"), "week at 96%")
-	providersTrue(t, result.DurationS < 20)
-	providersEq(t, backendsUtilization(result.Usage, "seven_day"), 0.96)
+	assertFalse(t, result.OK)
+	assertEqual(t, result.Extra.Get("usage_stop"), "week at 96%")
+	assertTrue(t, result.DurationS < 20)
+	assertEqual(t, backendsUtilization(result.Usage, "seven_day"), 0.96)
 }
 
 func TestBackends_ASpentQuotaParksIt(t *testing.T) {
 	w := newBackendsWorld(t, "agy", "agy")
 	result := w.runFake(w.backendsAgy(), "quota", false)
-	providersTrue(t, result.RateLimited())
-	providersEq(t, result.ResetAt, "+PT60M")
-	providersIn(t, "exhausted your quota", result.Error)
+	assertTrue(t, result.RateLimited())
+	assertEqual(t, result.ResetAt, "+PT60M")
+	assertIn(t, "exhausted your quota", result.Error)
 }
 
 // agy's answer once the plan's allowance is spent. Unread, every run went on to the checks and a
@@ -613,29 +613,29 @@ func TestBackends_ASpentQuotaParksIt(t *testing.T) {
 func TestBackends_ItsPlansIndividualQuotaParksItUntilTheResetItNames(t *testing.T) {
 	w := newBackendsWorld(t, "agy", "agy")
 	result := w.runFake(w.backendsAgy(), "individual", false)
-	providersTrue(t, result.RateLimited())
-	providersFalse(t, result.Infra())
-	providersEq(t, result.ResetAt, "+PT106M") // 1h44m44s, rounded up, plus a minute
+	assertTrue(t, result.RateLimited())
+	assertFalse(t, result.Infra())
+	assertEqual(t, result.ResetAt, "+PT106M") // 1h44m44s, rounded up, plus a minute
 }
 
 func TestBackends_ANamedResetIsHowLongItStaysParked(t *testing.T) {
-	providersEq(t, runner.ParkFor("Resets in 1h44m44s."), "+PT106M")
-	providersEq(t, runner.ParkFor("Your limit resets in 3h"), "+PT181M")
-	providersEq(t, runner.ParkFor("resets in 12m"), "+PT13M")
-	providersEq(t, runner.ParkFor("Usage limit reached."), "+PT60M")
-	providersEq(t, runner.ParkFor("Your usage window resets at 2026-10-26T00:00:00Z."), "2026-10-26T00:00:00Z")
-	providersEq(t, runner.ParkFor("resets at 2026-10-25T19:00:00-05:00"), "2026-10-26T00:00:00Z")
+	assertEqual(t, runner.ParkFor("Resets in 1h44m44s."), "+PT106M")
+	assertEqual(t, runner.ParkFor("Your limit resets in 3h"), "+PT181M")
+	assertEqual(t, runner.ParkFor("resets in 12m"), "+PT13M")
+	assertEqual(t, runner.ParkFor("Usage limit reached."), "+PT60M")
+	assertEqual(t, runner.ParkFor("Your usage window resets at 2026-10-26T00:00:00Z."), "2026-10-26T00:00:00Z")
+	assertEqual(t, runner.ParkFor("resets at 2026-10-25T19:00:00-05:00"), "2026-10-26T00:00:00Z")
 	at := time.Date(2026, 10, 3, 23, 33, 0, 0, time.UTC)
 	st := pyjson.New("providers", pyjson.New())
 	providers.NoteUsage(st, "agy", nil, "+PT106M", at, 0, nil, nil)
-	providersEq(t, st.Obj("providers").Obj("agy").Get("refused_until"), "2026-10-04T01:19:00Z")
+	assertEqual(t, st.Obj("providers").Obj("agy").Get("refused_until"), "2026-10-04T01:19:00Z")
 	providers.NoteUsage(st, "agy", nil, "+PT1H30M", at, 0, nil, nil)
-	providersEq(t, st.Obj("providers").Obj("agy").Get("refused_until"), "2026-10-04T01:03:00Z")
+	assertEqual(t, st.Obj("providers").Obj("agy").Get("refused_until"), "2026-10-04T01:03:00Z")
 	providers.NoteUsage(st, "muse", nil, "2026-10-05T00:00:00Z", at, 0, nil, nil)
-	providersEq(t, st.Obj("providers").Obj("muse").Get("refused_until"), "2026-10-05T00:00:00Z")
-	providersEq(t, providers.Duration("+PT2H"), 2*time.Hour)
+	assertEqual(t, st.Obj("providers").Obj("muse").Get("refused_until"), "2026-10-05T00:00:00Z")
+	assertEqual(t, providers.Duration("+PT2H"), 2*time.Hour)
 	// Codex names days: gpt's weekly limit holds it until the week resets, not an hour.
-	providersEq(t, runner.ParkFor("You've hit your usage limit. Upgrade to Pro or try again in "+
+	assertEqual(t, runner.ParkFor("You've hit your usage limit. Upgrade to Pro or try again in "+
 		"5 days 2 hours 22 minutes."), "+PT7343M")
 }
 
@@ -651,14 +651,14 @@ func TestBackends_ARefusalThatNamesNoResetWaitsForTheNearlyFullWindow(t *testing
 	}
 	st := gpt(week())
 	providers.NoteUsage(st, "gpt", nil, providers.DefaultPark, at, 0, nil, nil)
-	providersEq(t, st.Obj("providers").Obj("gpt").Get("refused_until"), "2026-10-09T23:47:06Z")
+	assertEqual(t, st.Obj("providers").Obj("gpt").Get("refused_until"), "2026-10-09T23:47:06Z")
 	// A window with room left, or a reset the refusal named, keeps the shorter park.
 	st = gpt(week().Set("utilization", 0.4))
 	providers.NoteUsage(st, "gpt", nil, providers.DefaultPark, at, 0, nil, nil)
-	providersEq(t, st.Obj("providers").Obj("gpt").Get("refused_until"), "2026-10-04T00:47:00Z")
+	assertEqual(t, st.Obj("providers").Obj("gpt").Get("refused_until"), "2026-10-04T00:47:00Z")
 	st = gpt(week())
 	providers.NoteUsage(st, "gpt", nil, "+PT90M", at, 0, nil, nil)
-	providersEq(t, st.Obj("providers").Obj("gpt").Get("refused_until"), "2026-10-04T01:17:00Z")
+	assertEqual(t, st.Obj("providers").Obj("gpt").Get("refused_until"), "2026-10-04T01:17:00Z")
 }
 
 // ---------------------------------------------------------------------------- MuseTests
@@ -678,24 +678,24 @@ func TestBackends_ThePromptGoesInAFileAndTheAnswerComesOnStdout(t *testing.T) {
 	w := newBackendsWorld(t, "muse", "muse")
 	result := w.runFake(w.backendsMuse(""), "ok", false)
 	backendsOK(t, result)
-	providersTrue(t, strings.HasPrefix(result.Text, `<!-- bot: {"status": "done"`))
+	assertTrue(t, strings.HasPrefix(result.Text, `<!-- bot: {"status": "done"`))
 	seen := w.seen()
 	argv := pyjson.Strings(seen.Get("argv"))
-	providersIn(t, "--yolo", argv)
-	providersIn(t, "--disable-web-tools", argv)
-	providersEq(t, backendsAfter(argv, "--max-model-steps"), "42")
-	providersIn(t, "THE TASK", seen.Str("prompt"))
+	assertIn(t, "--yolo", argv)
+	assertIn(t, "--disable-web-tools", argv)
+	assertEqual(t, backendsAfter(argv, "--max-model-steps"), "42")
+	assertIn(t, "THE TASK", seen.Str("prompt"))
 	w.assertOnlyItsOwnLogin()
-	providersIn(t, "muse", seen.Obj("env").Str("XDG_CONFIG_HOME"))
-	transcript := loginsReadText(t, filepath.Join(w.tmp, "t", "01.jsonl"))
-	providersIn(t, "step 1: reading", transcript)
+	assertIn(t, "muse", seen.Obj("env").Str("XDG_CONFIG_HOME"))
+	transcript := readText(t, filepath.Join(w.tmp, "t", "01.jsonl"))
+	assertIn(t, "step 1: reading", transcript)
 }
 
 func TestBackends_AUsageLimitIsARateLimit(t *testing.T) {
 	w := newBackendsWorld(t, "muse", "muse")
 	result := w.runFake(w.backendsMuse(""), "limit", false)
-	providersTrue(t, result.RateLimited())
-	providersIn(t, "usage limit reached", result.Error)
+	assertTrue(t, result.RateLimited())
+	assertIn(t, "usage limit reached", result.Error)
 }
 
 // Muse's own words once its week is spent (2026-10-25). Unread, they ended six runs as infra,
@@ -703,15 +703,15 @@ func TestBackends_AUsageLimitIsARateLimit(t *testing.T) {
 func TestBackends_ItsSpentWeekParksItUntilTheResetItNames(t *testing.T) {
 	w := newBackendsWorld(t, "muse", "muse")
 	result := w.runFake(w.backendsMuse(""), "quota", false)
-	providersTrue(t, result.RateLimited())
-	providersFalse(t, result.Infra())
-	providersEq(t, result.ResetAt, "2026-10-26T00:00:00Z")
+	assertTrue(t, result.RateLimited())
+	assertFalse(t, result.Infra())
+	assertEqual(t, result.ResetAt, "2026-10-26T00:00:00Z")
 }
 
 func TestBackends_AnAPIKeySecretIsHandedOverAsOne(t *testing.T) {
 	w := newBackendsWorld(t, "muse", "muse")
 	w.runFake(w.backendsMuse("meta-key-"+strings.Repeat("k", 30)), "ok", false)
-	providersEq(t, w.seen().Obj("env").Get("META_API_KEY"), "meta-key-"+strings.Repeat("k", 30))
+	assertEqual(t, w.seen().Obj("env").Get("META_API_KEY"), "meta-key-"+strings.Repeat("k", 30))
 }
 
 // `muse exec` runs no slash commands, so the TUI is started in a pseudo-terminal of its own: the
@@ -722,25 +722,25 @@ func TestBackends_EachCallEndsWithAReadingOfItsUsagePanel(t *testing.T) {
 	backend := w.backendsMuse("")
 	result := w.runFake(backend, "ok", false)
 	backendsOK(t, result)
-	providersEq(t, backendsUtilization(result.Usage, "seven_day"), 0.35)
-	providersEq(t, backendsUtilization(result.Usage, "five_hour"), 0.05)
+	assertEqual(t, backendsUtilization(result.Usage, "seven_day"), 0.35)
+	assertEqual(t, backendsUtilization(result.Usage, "five_hour"), 0.05)
 	again := backend.ReadUsage("the-model")
-	providersEq(t, backendsUtilization(again, "seven_day"), 0.35)
-	typed := strings.Fields(loginsReadText(t, filepath.Join(w.tmp, "usage", "typed.log")))
-	providersEq(t, typed, []string{"1", "/usage", "/usage"}) // trusted once, then only /usage
-	providersTrue(t, strings.HasSuffix(w.seen().Str("prompt"), "THE TASK"))
+	assertEqual(t, backendsUtilization(again, "seven_day"), 0.35)
+	typed := strings.Fields(readText(t, filepath.Join(w.tmp, "usage", "typed.log")))
+	assertEqual(t, typed, []string{"1", "/usage", "/usage"}) // trusted once, then only /usage
+	assertTrue(t, strings.HasSuffix(w.seen().Str("prompt"), "THE TASK"))
 }
 
 func TestBackends_ARefusalThatNamesNoResetWaitsForTheFullWindow(t *testing.T) {
 	w := newBackendsWorld(t, "muse", "muse")
 	result := w.runFake(w.backendsMuse(""), "limit", false)
-	providersTrue(t, result.RateLimited())
-	providersEq(t, backendsUtilization(result.Usage, "seven_day"), 0.35)
-	providersEq(t, result.ResetAt, "+PT60M") // nothing is full: the hour stands
+	assertTrue(t, result.RateLimited())
+	assertEqual(t, backendsUtilization(result.Usage, "seven_day"), 0.35)
+	assertEqual(t, result.ResetAt, "+PT60M") // nothing is full: the hour stands
 	restore := backendsPatchEnv(t, map[string]string{"FAKE_MODE": "spent", "FAKE_DUMP": w.dump})
 	usage := w.backendsMuse("").ReadUsage("the-model")
 	restore()
-	providersEq(t, backendsUtilization(usage, "seven_day"), 0.97)
+	assertEqual(t, backendsUtilization(usage, "seven_day"), 0.97)
 }
 
 // Muse's caps are 100% (#798), so its own limit ends a call that runs a window out, in words the
@@ -749,22 +749,22 @@ func TestBackends_ARefusalThatNamesNoResetWaitsForTheFullWindow(t *testing.T) {
 func TestBackends_AFailedCallThatRanAWindowOutIsItsRefusal(t *testing.T) {
 	w := newBackendsWorld(t, "muse", "muse")
 	result := w.runFake(w.backendsMuse(""), "full", false)
-	providersFalse(t, result.OK)
-	providersEq(t, backendsUtilization(result.Usage, "five_hour"), 1.0)
-	providersTrue(t, result.RateLimited())
-	providersEq(t, result.ResetAt, result.Usage.Obj("five_hour").Get("resets_at"))
+	assertFalse(t, result.OK)
+	assertEqual(t, backendsUtilization(result.Usage, "five_hour"), 1.0)
+	assertTrue(t, result.RateLimited())
+	assertEqual(t, result.ResetAt, result.Usage.Obj("five_hour").Get("resets_at"))
 	broken := w.runFake(w.backendsMuse(""), "broken", false)
-	providersFalse(t, broken.OK)
-	providersEq(t, backendsUtilization(broken.Usage, "five_hour"), 0.05)
-	providersFalse(t, broken.RateLimited())
-	providersNone(t, broken.ResetAt)
+	assertFalse(t, broken.OK)
+	assertEqual(t, backendsUtilization(broken.Usage, "five_hour"), 0.05)
+	assertFalse(t, broken.RateLimited())
+	assertIsNone(t, broken.ResetAt)
 }
 
 func TestBackends_NoPanelIsNoReading(t *testing.T) {
 	w := newBackendsWorld(t, "muse", "muse")
 	missing := runner.NewMuseCli(filepath.Join(w.tmp, "no-such-muse"), nil, nil)
 	missing.UsageDir = filepath.Join(w.tmp, "usage")
-	providersTrue(t, missing.ReadUsage("the-model") == nil)
+	assertTrue(t, missing.ReadUsage("the-model") == nil)
 }
 
 // ---------------------------------------------------------------------------- UsageTextTests
@@ -786,30 +786,30 @@ const backendsMusePanel = "│ Turns 3 │ │ Subagents none │ │ │ │ Su
 
 func TestBackends_AgyReadsThePoolItsModelDrawsOn(t *testing.T) {
 	gemini := runner.ParseAgyUsage(backendsAgyTable, "gemini-3.8-flash-high")
-	providersEq(t, gemini.Get("seven_day"), pyjson.New("utilization", 0.98, "resets_at", "2026-10-09T17:47:52Z"))
-	providersEq(t, backendsUtilization(gemini, "five_hour"), 0.67)
+	assertEqual(t, gemini.Get("seven_day"), pyjson.New("utilization", 0.98, "resets_at", "2026-10-09T17:47:52Z"))
+	assertEqual(t, backendsUtilization(gemini, "five_hour"), 0.67)
 	claude := runner.ParseAgyUsage(backendsAgyTable, "claude-opus-4-6-thinking")
-	providersEq(t, []any{backendsUtilization(claude, "seven_day"), backendsUtilization(claude, "five_hour")},
+	assertEqual(t, []any{backendsUtilization(claude, "seven_day"), backendsUtilization(claude, "five_hour")},
 		[]any{0.0, 0.0})
-	providersTrue(t, runner.ParseAgyUsage("Fetching usage...\nerror: offline\n", "gemini-3.8") == nil)
+	assertTrue(t, runner.ParseAgyUsage("Fetching usage...\nerror: offline\n", "gemini-3.8") == nil)
 }
 
 func TestBackends_MuseReadsThe5HourWindowAndTheWeekWithTheirResets(t *testing.T) {
 	now := time.Date(2026, 10, 4, 15, 30, 0, 0, time.UTC)
 	usage := runner.ParseMuseUsage(backendsMusePanel, now)
-	providersEq(t, usage.Get("five_hour"), pyjson.New("utilization", 0.05, "resets_at", "2026-10-04T18:42:00Z"))
-	providersEq(t, usage.Get("seven_day"), pyjson.New("utilization", 0.35, "resets_at", "2026-10-05T00:00:00Z"))
-	providersTrue(t, runner.ParseMuseUsage("│ Session usage │ Turns 3", now) == nil)
+	assertEqual(t, usage.Get("five_hour"), pyjson.New("utilization", 0.05, "resets_at", "2026-10-04T18:42:00Z"))
+	assertEqual(t, usage.Get("seven_day"), pyjson.New("utilization", 0.35, "resets_at", "2026-10-05T00:00:00Z"))
+	assertTrue(t, runner.ParseMuseUsage("│ Session usage │ Turns 3", now) == nil)
 }
 
 func TestBackends_MusePrintsTheMachinesOwnTime(t *testing.T) {
 	central := time.FixedZone("UTC-05:00", -5*60*60)
 	now := time.Date(2026, 10, 4, 10, 30, 0, 0, central)
-	providersEq(t, runner.MuseReset("at 6:42 PM", now), "2026-10-04T23:42:00Z")
-	providersEq(t, runner.MuseReset("at 9:15 AM", now), "2026-10-05T14:15:00Z") // tomorrow's
-	providersEq(t, runner.MuseReset("Oct 5 at 12:00 AM", now), "2026-10-05T05:00:00Z")
-	providersEq(t, runner.MuseReset("Jan 2 at 12:30 PM", now), "2027-01-02T17:30:00Z")
-	providersEq(t, runner.MuseReset("in 3h 5m", now), "2026-10-04T18:35:00Z")
-	providersNone(t, runner.MuseReset("soon", now))
-	providersNone(t, runner.MuseReset("Feb 30 at 1:00 AM", now))
+	assertEqual(t, runner.MuseReset("at 6:42 PM", now), "2026-10-04T23:42:00Z")
+	assertEqual(t, runner.MuseReset("at 9:15 AM", now), "2026-10-05T14:15:00Z") // tomorrow's
+	assertEqual(t, runner.MuseReset("Oct 5 at 12:00 AM", now), "2026-10-05T05:00:00Z")
+	assertEqual(t, runner.MuseReset("Jan 2 at 12:30 PM", now), "2027-01-02T17:30:00Z")
+	assertEqual(t, runner.MuseReset("in 3h 5m", now), "2026-10-04T18:35:00Z")
+	assertIsNone(t, runner.MuseReset("soon", now))
+	assertIsNone(t, runner.MuseReset("Feb 30 at 1:00 AM", now))
 }

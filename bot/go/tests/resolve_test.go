@@ -167,24 +167,24 @@ func TestResolve_TakeMainTakesMainsVersionAndStagesIt(t *testing.T) {
 	root := crossMkdtemp(t)
 	repo := resolveConflicted(root, map[string]string{resolveIndex: "| R1 |\n| R2 branch |\n"},
 		map[string]string{resolveIndex: "| R1 |\n| R3 main |\n"})
-	crossEq(t, resolveUnmerged(repo), []string{resolveIndex})
+	assertEqual(t, resolveUnmerged(repo), []string{resolveIndex})
 	left, done := resolveRunResolve(repo, nil)
-	crossEq(t, left, []string{})
-	crossEq(t, resolvePathsOK(done), []any{[]any{resolveIndex, true}})
-	crossEq(t, crossRead(t, filepath.Join(repo.Cwd, resolveIndex)), "| R1 |\n| R3 main |\n")
-	crossEq(t, resolveUnmerged(repo), []string{})
+	assertEqual(t, left, []string{})
+	assertEqual(t, resolvePathsOK(done), []any{[]any{resolveIndex, true}})
+	assertEqual(t, readText(t, filepath.Join(repo.Cwd, resolveIndex)), "| R1 |\n| R3 main |\n")
+	assertEqual(t, resolveUnmerged(repo), []string{})
 }
 
 func TestResolve_TakeMainFollowsMainWhenItDeletedTheFile(t *testing.T) {
 	root := crossMkdtemp(t)
 	repo := resolveConflicted(root, map[string]string{resolveIndex: "| R1 |\n| R2 branch |\n"},
 		map[string]string{resolveIndex: resolveNone})
-	crossEq(t, resolveUnmerged(repo), []string{resolveIndex})
+	assertEqual(t, resolveUnmerged(repo), []string{resolveIndex})
 	left, done := resolveRunResolve(repo, nil)
-	crossEq(t, left, []string{})
-	crossIn(t, "deleted", done[0].How)
-	crossFalse(t, crossExists(filepath.Join(repo.Cwd, resolveIndex)))
-	crossEq(t, resolveUnmerged(repo), []string{})
+	assertEqual(t, left, []string{})
+	assertIn(t, "deleted", done[0].How)
+	assertFalse(t, exists(filepath.Join(repo.Cwd, resolveIndex)))
+	assertEqual(t, resolveUnmerged(repo), []string{})
 }
 
 func TestResolve_ACommandRewritesTheFileOnceNothingElseIsConflicted(t *testing.T) {
@@ -193,14 +193,14 @@ func TestResolve_ACommandRewritesTheFileOnceNothingElseIsConflicted(t *testing.T
 		map[string]string{resolveIndex: "| R3 |\n", resolveGolden: "game 1 main\n"})
 	unmerged := resolveUnmerged(repo)
 	sort.Strings(unmerged)
-	crossEq(t, unmerged, []string{resolveGolden, resolveIndex})
+	assertEqual(t, unmerged, []string{resolveGolden, resolveIndex})
 	left, done := resolveRunResolve(repo, nil)
-	crossEq(t, left, []string{})
+	assertEqual(t, left, []string{})
 	for _, r := range done {
-		crossTrue(t, r.OK, fmt.Sprintf("%+v", done))
+		assertTrue(t, r.OK, fmt.Sprintf("%+v", done))
 	}
-	crossEq(t, crossRead(t, filepath.Join(repo.Cwd, resolveGolden)), "blessed\n")
-	crossEq(t, resolveUnmerged(repo), []string{})
+	assertEqual(t, readText(t, filepath.Join(repo.Cwd, resolveGolden)), "blessed\n")
+	assertEqual(t, resolveUnmerged(repo), []string{})
 }
 
 // It builds the merged tree, which a code file full of markers breaks: the builder resolves the
@@ -212,12 +212,12 @@ func TestResolve_ACommandNeverRunsWhileAFileNoResolverNamesIsConflicted(t *testi
 	before := resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden))
 	left, done := resolveRunResolve(repo, []*config.Resolver{resolveTakeIndex(), resolveRun(resolveGolden, "touch ran")})
 	sort.Strings(left)
-	crossEq(t, left, []string{resolveGolden, resolveGame})
-	crossFalse(t, crossExists(filepath.Join(repo.Cwd, "ran")))
-	crossEq(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
-	crossEq(t, len(done), 1)
-	crossFalse(t, done[0].OK)
-	crossIn(t, "`"+resolveGame+"`", done[0].WhyNot)
+	assertEqual(t, left, []string{resolveGolden, resolveGame})
+	assertFalse(t, exists(filepath.Join(repo.Cwd, "ran")))
+	assertEqual(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
+	assertEqual(t, len(done), 1)
+	assertFalse(t, done[0].OK)
+	assertIn(t, "`"+resolveGame+"`", done[0].WhyNot)
 }
 
 func TestResolve_ATakeResolverStillTakesWhileCodeIsConflicted(t *testing.T) {
@@ -225,10 +225,10 @@ func TestResolve_ATakeResolverStillTakesWhileCodeIsConflicted(t *testing.T) {
 	repo := resolveConflicted(root, map[string]string{resolveGame: "rules branch\n", resolveIndex: "| R2 |\n"},
 		map[string]string{resolveGame: "rules main\n", resolveIndex: "| R3 |\n"})
 	left, done := resolveRunResolve(repo, nil)
-	crossEq(t, left, []string{resolveGame})
-	crossEq(t, resolvePathsOK(done), []any{[]any{resolveIndex, true}})
-	crossIn(t, "<<<<<<<", crossRead(t, filepath.Join(repo.Cwd, resolveGame)))
-	crossEq(t, resolveUnmerged(repo), []string{resolveGame})
+	assertEqual(t, left, []string{resolveGame})
+	assertEqual(t, resolvePathsOK(done), []any{[]any{resolveIndex, true}})
+	assertIn(t, "<<<<<<<", readText(t, filepath.Join(repo.Cwd, resolveGame)))
+	assertEqual(t, resolveUnmerged(repo), []string{resolveGame})
 }
 
 func TestResolve_AFailingCommandPutsTheConflictBackByteForByte(t *testing.T) {
@@ -236,15 +236,15 @@ func TestResolve_AFailingCommandPutsTheConflictBackByteForByte(t *testing.T) {
 	repo := resolveConflicted(root, map[string]string{resolveGolden: "game 1 branch\n"},
 		map[string]string{resolveGolden: "game 1 main\n"})
 	before := resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden))
-	crossIn(t, "<<<<<<<", string(before))
+	assertIn(t, "<<<<<<<", string(before))
 	failing := resolveRun(resolveGolden, "printf 'half' > "+resolveGolden+"; echo boom >&2; exit 3")
 	left, done := resolveRunResolve(repo, []*config.Resolver{failing})
-	crossEq(t, left, []string{resolveGolden})
-	crossEq(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
-	crossEq(t, resolveUnmerged(repo), []string{resolveGolden})
-	crossFalse(t, done[0].OK)
-	crossIn(t, "exited 3", done[0].WhyNot)
-	crossIn(t, "boom", done[0].WhyNot)
+	assertEqual(t, left, []string{resolveGolden})
+	assertEqual(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
+	assertEqual(t, resolveUnmerged(repo), []string{resolveGolden})
+	assertFalse(t, done[0].OK)
+	assertIn(t, "exited 3", done[0].WhyNot)
+	assertIn(t, "boom", done[0].WhyNot)
 }
 
 func TestResolve_ACommandThatLeavesAMarkerResolvesNothing(t *testing.T) {
@@ -253,14 +253,14 @@ func TestResolve_ACommandThatLeavesAMarkerResolvesNothing(t *testing.T) {
 		map[string]string{resolveGolden: "game 1 main\n"})
 	before := resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden))
 	left, done := resolveRunResolve(repo, []*config.Resolver{resolveRun(resolveGolden, "true")})
-	crossEq(t, left, []string{resolveGolden})
-	crossIn(t, "as the merge left it", done[0].WhyNot)
-	crossEq(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
+	assertEqual(t, left, []string{resolveGolden})
+	assertIn(t, "as the merge left it", done[0].WhyNot)
+	assertEqual(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
 	sneaky := resolveRun(resolveGolden, "printf '<<<<<<< ours\\nx\\n>>>>>>> theirs\\n' > "+resolveGolden)
 	left, done = resolveRunResolve(repo, []*config.Resolver{sneaky})
-	crossEq(t, left, []string{resolveGolden})
-	crossIn(t, "marker", done[0].WhyNot)
-	crossEq(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
+	assertEqual(t, left, []string{resolveGolden})
+	assertIn(t, "marker", done[0].WhyNot)
+	assertEqual(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
 }
 
 // resolveStopped is the test's Stopped exception.
@@ -287,10 +287,10 @@ func TestResolve_ARunCutOffMidCommandStillPutsTheConflictBack(t *testing.T) {
 		_, raised := herr.Catch[*resolveStopped](func() {
 			resolveRunResolve(repo, []*config.Resolver{resolveRun(resolveGolden, "anything")})
 		})
-		crossTrue(t, raised, "Stopped not raised")
+		assertTrue(t, raised, "Stopped not raised")
 	}()
-	crossEq(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
-	crossEq(t, resolveUnmerged(repo), []string{resolveGolden})
+	assertEqual(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
+	assertEqual(t, resolveUnmerged(repo), []string{resolveGolden})
 }
 
 func TestResolve_ACommandNeverDecidesADeletion(t *testing.T) {
@@ -301,11 +301,11 @@ func TestResolve_ACommandNeverDecidesADeletion(t *testing.T) {
 		branch, main := c[0], c[1]
 		t.Run(fmt.Sprintf("main_deleted=%v", main[resolveGolden] == resolveNone), func(t *testing.T) {
 			repo := resolveConflicted(crossMkdtemp(t), branch, main)
-			crossEq(t, resolveUnmerged(repo), []string{resolveGolden})
+			assertEqual(t, resolveUnmerged(repo), []string{resolveGolden})
 			left, done := resolveRunResolve(repo, []*config.Resolver{resolveRun(resolveGolden, "touch ran")})
-			crossEq(t, left, []string{resolveGolden})
-			crossIn(t, "deleted", done[0].WhyNot)
-			crossFalse(t, crossExists(filepath.Join(repo.Cwd, "ran")))
+			assertEqual(t, left, []string{resolveGolden})
+			assertIn(t, "deleted", done[0].WhyNot)
+			assertFalse(t, exists(filepath.Join(repo.Cwd, "ran")))
 		})
 	}
 }
@@ -316,16 +316,16 @@ func TestResolve_ACommandWaitsForTimeBeyondTheReserve(t *testing.T) {
 		map[string]string{resolveGolden: "game 1 main\n"})
 	left, done := resolveRunResolve(repo, []*config.Resolver{resolveRun(resolveGolden, "touch ran")},
 		resolveOpts{SecondsLeft: func() float64 { return 1000.0 }, ReserveSeconds: 900.0})
-	crossEq(t, left, []string{resolveGolden})
-	crossIn(t, "too little", done[0].WhyNot)
-	crossFalse(t, crossExists(filepath.Join(repo.Cwd, "ran")))
+	assertEqual(t, left, []string{resolveGolden})
+	assertIn(t, "too little", done[0].WhyNot)
+	assertFalse(t, exists(filepath.Join(repo.Cwd, "ran")))
 }
 
 func TestResolve_TakeNamesTheBranchItTookFrom(t *testing.T) {
 	root := crossMkdtemp(t)
 	repo := resolveConflicted(root, map[string]string{resolveIndex: "| R2 |\n"}, map[string]string{resolveIndex: "| R3 |\n"})
 	_, done := resolveRunResolve(repo, nil, resolveOpts{Base: "bot/tree-5"})
-	crossEq(t, done[0].How, "took `bot/tree-5`'s version")
+	assertEqual(t, done[0].How, "took `bot/tree-5`'s version")
 }
 
 func TestResolve_ACommandThatDeletesTheFileResolvesNothing(t *testing.T) {
@@ -334,9 +334,9 @@ func TestResolve_ACommandThatDeletesTheFileResolvesNothing(t *testing.T) {
 		map[string]string{resolveGolden: "game 1 main\n"})
 	before := resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden))
 	left, done := resolveRunResolve(repo, []*config.Resolver{resolveRun(resolveGolden, "rm "+resolveGolden)})
-	crossEq(t, left, []string{resolveGolden})
-	crossIn(t, "no file", done[0].WhyNot)
-	crossEq(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
+	assertEqual(t, left, []string{resolveGolden})
+	assertIn(t, "no file", done[0].WhyNot)
+	assertEqual(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGolden)), before)
 }
 
 func TestResolve_NoCommandRunsWithoutTheDependenciesOrTheTime(t *testing.T) {
@@ -352,9 +352,9 @@ func TestResolve_NoCommandRunsWithoutTheDependenciesOrTheTime(t *testing.T) {
 			repo := resolveConflicted(root, map[string]string{resolveGolden: "game 1 branch\n"},
 				map[string]string{resolveGolden: "game 1 main\n"})
 			left, done := resolveRunResolve(repo, []*config.Resolver{resolveRun(resolveGolden, "touch ran")}, c.opts)
-			crossEq(t, left, []string{resolveGolden})
-			crossFalse(t, crossExists(filepath.Join(repo.Cwd, "ran")))
-			crossIn(t, c.why, done[0].WhyNot)
+			assertEqual(t, left, []string{resolveGolden})
+			assertFalse(t, exists(filepath.Join(repo.Cwd, "ran")))
+			assertIn(t, c.why, done[0].WhyNot)
 		})
 	}
 }
@@ -364,8 +364,8 @@ func TestResolve_AFileNoResolverNamesIsLeftExactlyAsGitLeftIt(t *testing.T) {
 	repo := resolveConflicted(root, map[string]string{resolveGame: "rules branch\n"}, map[string]string{resolveGame: "rules main\n"})
 	before := resolveBytes(t, filepath.Join(repo.Cwd, resolveGame))
 	left, done := resolveRunResolve(repo, nil)
-	crossEq(t, []any{pyjson.ListOf(left), len(done)}, []any{[]any{resolveGame}, 0})
-	crossEq(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGame)), before)
+	assertEqual(t, []any{pyjson.ListOf(left), len(done)}, []any{[]any{resolveGame}, 0})
+	assertEqual(t, resolveBytes(t, filepath.Join(repo.Cwd, resolveGame)), before)
 }
 
 func TestResolve_TheSummarySaysWhatWasDoneAndWhatIsLeft(t *testing.T) {
@@ -374,9 +374,9 @@ func TestResolve_TheSummarySaysWhatWasDoneAndWhatIsLeft(t *testing.T) {
 		{Path: resolveGolden, How: "ran `x`", OK: false, WhyNot: "it exited 1: no"},
 	}
 	line := resolve.Summary(done, []string{resolveGolden, resolveGame})
-	crossIn(t, "`"+resolveIndex+"`: took `main`'s version", line)
-	crossIn(t, "`"+resolveGolden+"`: ran `x`, not resolved: it exited 1: no", line)
-	crossIn(t, "2 file(s) left for the builder", line)
+	assertIn(t, "`"+resolveIndex+"`: took `main`'s version", line)
+	assertIn(t, "`"+resolveGolden+"`: ran `x`, not resolved: it exited 1: no", line)
+	assertIn(t, "2 file(s) left for the builder", line)
 }
 
 // ---------------------------------------------------------------------------- ConfigTests
@@ -397,18 +397,18 @@ func TestResolve_TheCommittedResolvers(t *testing.T) {
 	for p := range resolvers {
 		paths[p] = true
 	}
-	crossEq(t, paths, crossSet(resolveIndex, resolveGolden))
-	crossEq(t, resolvers[resolveIndex].Take, "main")
-	crossEq(t, resolvers[resolveGolden].Run, "cargo jackioh golden bless --file "+resolveGolden)
-	crossTrue(t, resolvers[resolveGolden].TimeoutMinutes >= 10)
+	assertEqual(t, paths, setOf(resolveIndex, resolveGolden))
+	assertEqual(t, resolvers[resolveIndex].Take, "main")
+	assertEqual(t, resolvers[resolveGolden].Run, "cargo jackioh golden bless --file "+resolveGolden)
+	assertTrue(t, resolvers[resolveGolden].TimeoutMinutes >= 10)
 	squishy := filepath.Join(testsupport.Root, ".squishy", "config.json")
-	crossEq(t, crossKey(t, crossLoad(t, squishy), "resolvers"), crossKey(t, testsupport.RawConfig(), "resolvers"))
+	assertEqual(t, dig(t, loadJSON(t, squishy), "resolvers"), dig(t, testsupport.RawConfig(), "resolvers"))
 }
 
 func TestResolve_NoneIsNone(t *testing.T) {
 	raw := testsupport.RawConfig()
 	raw.Pop("resolvers")
-	crossEq(t, len(config.Parse(raw, testsupport.Root, testsupport.TestEnv, testsupport.TestPool()).Resolvers), 0)
+	assertEqual(t, len(config.Parse(raw, testsupport.Root, testsupport.TestEnv, testsupport.TestPool()).Resolvers), 0)
 }
 
 func TestResolve_AResolverNamesOneFileAndOneWay(t *testing.T) {
@@ -442,8 +442,8 @@ func TestResolve_AResolverNamesOneFileAndOneWay(t *testing.T) {
 	} {
 		t.Run("bad="+pyjson.Dumps(c.bad), func(t *testing.T) {
 			caught, ok := herr.Catch[*herr.ConfigError](func() { resolveParse(c.bad) })
-			crossTrue(t, ok, "ConfigError not raised")
-			crossIn(t, c.why, caught.Error())
+			assertTrue(t, ok, "ConfigError not raised")
+			assertIn(t, c.why, caught.Error())
 		})
 	}
 }
@@ -514,68 +514,64 @@ func (w *resolveWorld) runWorker(r *runner.FakeRunner, plan *pyjson.Object, cfg 
 
 func (w *resolveWorld) head() (string, string) {
 	check := filepath.Join(w.root, "check")
-	if !crossExists(check) {
+	if !exists(check) {
 		fakes.Git(w.root, "clone", "-q", w.origin, check)
 	}
 	fakes.Git(check, "fetch", "-q", filepath.Join(w.root, "out", "branch.bundle"), "+refs/heads/feature/x:refs/heads/got")
 	return check, fakes.Git(check, "rev-parse", "got")
 }
 
-func resolveRunner(handlers map[string][]runner.Handler) *runner.FakeRunner {
-	return runner.NewFakeRunner(handlers)
-}
-
 func TestResolve_AConflictOnlyInResolverFilesSpendsNoBuilderSession(t *testing.T) {
 	w := newResolveWorld(t)
 	start := w.diverge(map[string]string{resolveIndex: "| R1 |\n| R2 |\n", resolveGolden: "game 1 branch\n", resolveGame: "rules v2\n"},
 		map[string]string{resolveIndex: "| R1 |\n| R3 |\n", resolveGolden: "game 1 main\n"})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""))
-	crossEq(t, result.Get("status"), "approved", result.Get("reason"))
-	crossEq(t, crossRoles(r), []string{"review"})
+	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
+	assertEqual(t, workRoles(r), []string{"review"})
 	check, head := w.head()
 	parents := strings.Fields(fakes.Git(check, "rev-list", "--parents", "-n", "1", head))
-	crossEq(t, parents[1], start)
-	crossEq(t, fakes.Git(check, "show", head+":"+resolveIndex), "| R1 |\n| R3 |")
-	crossEq(t, fakes.Git(check, "show", head+":"+resolveGolden), "blessed")
-	crossEq(t, fakes.Git(check, "show", head+":"+resolveGame), "rules v2")
+	assertEqual(t, parents[1], start)
+	assertEqual(t, fakes.Git(check, "show", head+":"+resolveIndex), "| R1 |\n| R3 |")
+	assertEqual(t, fakes.Git(check, "show", head+":"+resolveGolden), "blessed")
+	assertEqual(t, fakes.Git(check, "show", head+":"+resolveGame), "rules v2")
 	builder := crossObj(t, result, "cycles", 0, "builder")
-	crossEq(t, []any{builder.Get("role"), builder.Get("model"), builder.Get("ok")}, []any{"merge", "the harness", true})
-	for _, g := range pyjson.Objs(crossKey(t, result, "cycles", 0, "gates")) {
-		crossTrue(t, pyjson.Truthy(crossKey(t, g, "ok")))
+	assertEqual(t, []any{builder.Get("role"), builder.Get("model"), builder.Get("ok")}, []any{"merge", "the harness", true})
+	for _, g := range pyjson.Objs(dig(t, result, "cycles", 0, "gates")) {
+		assertTrue(t, pyjson.Truthy(dig(t, g, "ok")))
 	}
 	// The take resolvers go first, then the command once nothing else is conflicted.
 	got := []any{}
-	for _, r := range pyjson.Objs(crossKey(t, result, "resolved")) {
-		got = append(got, []any{crossKey(t, r, "path"), crossKey(t, r, "ok")})
+	for _, r := range pyjson.Objs(dig(t, result, "resolved")) {
+		got = append(got, []any{dig(t, r, "path"), dig(t, r, "ok")})
 	}
-	crossEq(t, got, []any{[]any{resolveIndex, true}, []any{resolveGolden, true}})
-	crossIn(t, "no builder ran", crossStr(t, result, "report"))
-	crossIn(t, "`"+resolveGolden+"`: ran `"+resolveBless+"`", crossStr(t, result, "report"))
+	assertEqual(t, got, []any{[]any{resolveIndex, true}, []any{resolveGolden, true}})
+	assertIn(t, "no builder ran", crossStr(t, result, "report"))
+	assertIn(t, "`"+resolveGolden+"`: ran `"+resolveBless+"`", crossStr(t, result, "report"))
 }
 
 func TestResolve_ACommentThatQuotesTheEmptyFeedbackIsStillFeedback(t *testing.T) {
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveIndex: "| R2 |\n"}, map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
 	quoting := prompts.Data("Comment by @jgoetzmann:\n\nYou said "+threads.NoFeedback+"; rename rules to laws.",
 		"Feedback on #30")
 	w.runWorker(r, w.plan(quoting))
-	crossEq(t, r.Calls[0].Role, "revise")
+	assertEqual(t, r.Calls[0].Role, "revise")
 }
 
 func TestResolve_EveryReviewerHearsTheHarnessResolvedByARule(t *testing.T) {
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveIndex: "| R2 |\n", resolveGame: "rules v2\n"}, map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""))
-	crossEq(t, result.Get("status"), "approved", result.Get("reason"))
+	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
 	review := r.Calls[0].Prompt
-	crossIn(t, "a file it took from `main` keeps `main`'s version on purpose", review)
-	crossIn(t, "- `"+resolveIndex+"`: took `main`'s version", review)
+	assertIn(t, "a file it took from `main` keeps `main`'s version on purpose", review)
+	assertIn(t, "- `"+resolveIndex+"`: took `main`'s version", review)
 	var step *pyjson.Object
-	for _, s := range pyjson.Objs(crossKey(t, result, "steps")) {
-		if pyjson.Equal(crossKey(t, s, "step"), "resolve") {
+	for _, s := range pyjson.Objs(dig(t, result, "steps")) {
+		if pyjson.Equal(dig(t, s, "step"), "resolve") {
 			step = s
 			break
 		}
@@ -583,8 +579,8 @@ func TestResolve_EveryReviewerHearsTheHarnessResolvedByARule(t *testing.T) {
 	if step == nil {
 		t.Fatal("StopIteration: no resolve step")
 	}
-	crossIn(t, "minutes", step)
-	crossIn(t, "`"+resolveIndex+"`: took `main`'s version", crossStr(t, step, "outcome"))
+	assertIn(t, "minutes", step)
+	assertIn(t, "`"+resolveIndex+"`: took `main`'s version", crossStr(t, step, "outcome"))
 }
 
 // `main` changed only the traces, and blessing the merged tree gives the branch's own: the merged
@@ -598,13 +594,13 @@ func TestResolve_AMergeWhoseTreeIsTheBranchsStillRecordsMain(t *testing.T) {
 		"install", pyjson.New("run", "true", "timeout_minutes", 1), "max_review_cycles", 3,
 		"resolvers", []any{pyjson.New("path", resolveGolden, "run", "printf 'game branch\\n' > "+resolveGolden,
 			"timeout_minutes", 1)})})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""), cfg)
-	crossEq(t, result.Get("status"), "approved", result.Get("reason"))
-	crossEq(t, crossRoles(r), []string{"review"})
+	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
+	assertEqual(t, workRoles(r), []string{"review"})
 	check, head := w.head()
-	crossIn(t, main, strings.Fields(fakes.Git(check, "rev-list", "--parents", "-n", "1", head))[1:])
-	crossEq(t, fakes.Git(check, "show", head+":"+resolveGolden), "game branch")
+	assertIn(t, main, strings.Fields(fakes.Git(check, "rev-list", "--parents", "-n", "1", head))[1:])
+	assertEqual(t, fakes.Git(check, "show", head+":"+resolveGolden), "game branch")
 }
 
 func TestResolve_TheReviewStillJudgesTheHarnessMergeAndSendsFindingsToTheBuilder(t *testing.T) {
@@ -615,16 +611,16 @@ func TestResolve_TheReviewStillJudgesTheHarnessMergeAndSendsFindingsToTheBuilder
 		crossPut(filepath.Join(request.Cwd, resolveGame), "rules v3\n")
 		return runner.NewRunResult(true, resolveDone)
 	}
-	r := resolveRunner(map[string][]runner.Handler{
+	r := workFake(map[string][]runner.Handler{
 		"review": {crossAnswer(resolveChanges), crossAnswer(resolveApprove)},
 		"fix":    {fix}})
 	result := w.runWorker(r, w.plan(""))
-	crossEq(t, result.Get("status"), "approved", result.Get("reason"))
-	crossEq(t, crossRoles(r), []string{"review", "fix", "review"})
-	crossIn(t, "say v3", r.Calls[1].Prompt)
-	crossIn(t, "- `"+resolveIndex+"`: took `main`'s version; leave it as it is", r.Calls[1].Prompt)
+	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
+	assertEqual(t, workRoles(r), []string{"review", "fix", "review"})
+	assertIn(t, "say v3", r.Calls[1].Prompt)
+	assertIn(t, "- `"+resolveIndex+"`: took `main`'s version; leave it as it is", r.Calls[1].Prompt)
 	check, head := w.head()
-	crossEq(t, fakes.Git(check, "show", head+":"+resolveGame), "rules v3")
+	assertEqual(t, fakes.Git(check, "show", head+":"+resolveGame), "rules v3")
 }
 
 // The traces the harness blessed are the merged tree's: a fix pass that then changes what they
@@ -633,14 +629,14 @@ func TestResolve_AFixAfterARegeneratedFileIsToldToRunItsCommandAgain(t *testing.
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveGolden: "game 1 branch\n", resolveGame: "rules v2\n"},
 		map[string]string{resolveGolden: "game 1 main\n"})
-	r := resolveRunner(map[string][]runner.Handler{
+	r := workFake(map[string][]runner.Handler{
 		"review": {crossAnswer(resolveChanges), crossAnswer(resolveApprove)},
 		"fix":    {crossAnswer(resolveDone)}})
 	w.runWorker(r, w.plan(""))
 	fix := r.Calls[1].Prompt
-	crossIn(t, "- `"+resolveGolden+"`: ran `"+resolveBless+"`; it is that command's output from the merged "+
+	assertIn(t, "- `"+resolveGolden+"`: ran `"+resolveBless+"`; it is that command's output from the merged "+
 		"tree, so run `"+resolveBless+"` again if you change anything it reads", fix)
-	crossNotIn(t, "leave it as it is", fix)
+	assertNotIn(t, "leave it as it is", fix)
 }
 
 // A harness merge the checks turn red is not approved, whatever its reviewer says: the red goes
@@ -653,10 +649,10 @@ func TestResolve_RedChecksOnTheHarnessMergeAreNotApproved(t *testing.T) {
 	cfg := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("gates", []any{red},
 		"install", pyjson.New("run", "true", "timeout_minutes", 1), "max_review_cycles", 1,
 		"resolvers", []any{pyjson.New("path", resolveIndex, "take", "main")})})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove), "fix": crossAnswer(resolveDone)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove), "fix": crossAnswer(resolveDone)})
 	result := w.runWorker(r, w.plan(""), cfg)
-	crossNe(t, result.Get("status"), "approved")
-	crossEq(t, r.Calls[0].Role, "review")
+	assertNotEqual(t, result.Get("status"), "approved")
+	assertEqual(t, r.Calls[0].Role, "review")
 }
 
 func TestResolve_NewFeedbackStillGoesToTheBuilderToldWhatTheHarnessDid(t *testing.T) {
@@ -665,21 +661,21 @@ func TestResolve_NewFeedbackStillGoesToTheBuilderToldWhatTheHarnessDid(t *testin
 	seen := map[string]string{}
 
 	revise := func(request *runner.RunRequest) *runner.RunResult {
-		seen["index"] = crossMustRead(filepath.Join(request.Cwd, resolveIndex))
+		seen["index"] = mustReadText(filepath.Join(request.Cwd, resolveIndex))
 		return runner.NewRunResult(true, resolveDone)
 	}
-	r := crossRunner(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
 	feedback := prompts.Data("Comment by @jgoetzmann:\n\nPlease also rename it.", "Feedback on #30")
 	result := w.runWorker(r, w.plan(feedback))
-	crossEq(t, result.Get("status"), "approved", result.Get("reason"))
-	crossEq(t, crossRoles(r), []string{"revise", "review"})
-	crossEq(t, seen["index"], "| R3 |\n")
+	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
+	assertEqual(t, workRoles(r), []string{"revise", "review"})
+	assertEqual(t, seen["index"], "| R3 |\n")
 	prompt := r.Calls[0].Prompt
-	crossIn(t, "The harness resolved these conflicts itself", prompt)
-	crossIn(t, "- `"+resolveIndex+"`: took `main`'s version", prompt)
+	assertIn(t, "The harness resolved these conflicts itself", prompt)
+	assertIn(t, "- `"+resolveIndex+"`: took `main`'s version", prompt)
 	// Never "clean": the merge is still open, staged, for the harness to commit.
-	crossNotIn(t, "was clean", prompt)
-	crossIn(t, "the harness resolved every one (below). The merge is staged, not committed", prompt)
+	assertNotIn(t, "was clean", prompt)
+	assertIn(t, "the harness resolved every one (below). The merge is staged, not committed", prompt)
 }
 
 func TestResolve_ACodeConflictReachesTheBuilderWithOnlyWhatIsLeft(t *testing.T) {
@@ -689,54 +685,54 @@ func TestResolve_ACodeConflictReachesTheBuilderWithOnlyWhatIsLeft(t *testing.T) 
 	seen := map[string]string{}
 
 	revise := func(request *runner.RunRequest) *runner.RunResult {
-		seen["index"] = crossMustRead(filepath.Join(request.Cwd, resolveIndex))
-		seen["golden"] = crossMustRead(filepath.Join(request.Cwd, resolveGolden))
+		seen["index"] = mustReadText(filepath.Join(request.Cwd, resolveIndex))
+		seen["golden"] = mustReadText(filepath.Join(request.Cwd, resolveGolden))
 		crossPut(filepath.Join(request.Cwd, resolveGame), "rules main and branch\n")
 		crossPut(filepath.Join(request.Cwd, resolveGolden), "game main and branch\n")
 		return runner.NewRunResult(true, resolveDone)
 	}
-	r := crossRunner(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""))
-	crossEq(t, result.Get("status"), "approved", result.Get("reason"))
-	crossEq(t, crossRoles(r), []string{"revise", "review"})
-	crossEq(t, seen["index"], "| R3 |\n")
-	crossIn(t, "<<<<<<<", seen["golden"]) // the traces wait for the code: the builder's
+	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
+	assertEqual(t, workRoles(r), []string{"revise", "review"})
+	assertEqual(t, seen["index"], "| R3 |\n")
+	assertIn(t, "<<<<<<<", seen["golden"]) // the traces wait for the code: the builder's
 	prompt := r.Calls[0].Prompt
 	parts := strings.Split(prompt, "Files merged with conflict markers")
 	if len(parts) < 2 {
 		t.Fatalf("IndexError: no conflict list in the prompt")
 	}
 	listed := strings.Split(parts[1], "The harness resolved")[0]
-	crossIn(t, resolveGame, listed)
-	crossIn(t, resolveGolden, listed)
-	crossNotIn(t, resolveIndex, listed)
-	crossIn(t, "- `"+resolveIndex+"`: took `main`'s version", prompt)
+	assertIn(t, resolveGame, listed)
+	assertIn(t, resolveGolden, listed)
+	assertNotIn(t, resolveIndex, listed)
+	assertIn(t, "- `"+resolveIndex+"`: took `main`'s version", prompt)
 	unresolved := []any{}
-	for _, r := range pyjson.Objs(crossKey(t, result, "resolved")) {
-		if !pyjson.Truthy(crossKey(t, r, "ok")) {
-			unresolved = append(unresolved, crossKey(t, r, "path"))
+	for _, r := range pyjson.Objs(dig(t, result, "resolved")) {
+		if !pyjson.Truthy(dig(t, r, "ok")) {
+			unresolved = append(unresolved, dig(t, r, "path"))
 		}
 	}
-	crossEq(t, unresolved, []any{resolveGolden})
+	assertEqual(t, unresolved, []any{resolveGolden})
 }
 
 func TestResolve_EarlierFindingsStillGoToTheBuilder(t *testing.T) {
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveIndex: "| R2 |\n"}, map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
 	findings := []any{pyjson.New("severity", "blocking", "where", resolveGame, "claim", "still open", "evidence", "e")}
 	w.runWorker(r, w.plan("", "previous_findings", findings))
-	crossEq(t, r.Calls[0].Role, "revise")
+	assertEqual(t, r.Calls[0].Role, "revise")
 }
 
 func TestResolve_ACIRevisionIsNeverMergeOnly(t *testing.T) {
 	w := newResolveWorld(t)
 	w.diverge(map[string]string{resolveIndex: "| R2 |\n"}, map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": crossAnswer(resolveDone), "review": crossAnswer(resolveApprove)})
 	p := w.plan("")
 	p.Set("source", "ci")
 	w.runWorker(r, p)
-	crossEq(t, r.Calls[0].Role, "revise")
+	assertEqual(t, r.Calls[0].Role, "revise")
 }
 
 func TestResolve_WithoutResolversTheBuilderGetsEveryConflictAsBefore(t *testing.T) {
@@ -747,30 +743,30 @@ func TestResolve_WithoutResolversTheBuilderGetsEveryConflictAsBefore(t *testing.
 	seen := map[string]string{}
 
 	revise := func(request *runner.RunRequest) *runner.RunResult {
-		seen["index"] = crossMustRead(filepath.Join(request.Cwd, resolveIndex))
+		seen["index"] = mustReadText(filepath.Join(request.Cwd, resolveIndex))
 		crossPut(filepath.Join(request.Cwd, resolveIndex), "| R2 |\n| R3 |\n")
 		return runner.NewRunResult(true, resolveDone)
 	}
-	r := crossRunner(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"revise": revise, "review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan(""), cfg)
-	crossEq(t, result.Get("status"), "approved", result.Get("reason"))
-	crossIn(t, "<<<<<<<", seen["index"])
-	crossNotIn(t, "resolved", result)
-	crossNotIn(t, "The harness resolved", r.Calls[0].Prompt)
+	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
+	assertIn(t, "<<<<<<<", seen["index"])
+	assertNotIn(t, "resolved", result)
+	assertNotIn(t, "The harness resolved", r.Calls[0].Prompt)
 	// The standing guidance is true with no resolvers too: the builder takes `main`'s index.
-	crossIn(t, "`spec/INDEX.md` or the end of `spec/11-rulings.md`", r.Calls[0].Prompt)
-	crossIn(t, "takes\n  `main`'s side", r.Calls[0].Prompt)
+	assertIn(t, "`spec/INDEX.md` or the end of `spec/11-rulings.md`", r.Calls[0].Prompt)
+	assertIn(t, "takes\n  `main`'s side", r.Calls[0].Prompt)
 }
 
 func TestResolve_AClearedChangesReviewerHearsTheHarnessResolvedIt(t *testing.T) {
 	w := newResolveWorld(t)
 	start := w.diverge(map[string]string{resolveIndex: "| R2 |\n", resolveGame: "rules v2\n"},
 		map[string]string{resolveIndex: "| R3 |\n"})
-	r := crossRunner(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
+	r := workFake(map[string]runner.Handler{"review": crossAnswer(resolveApprove)})
 	result := w.runWorker(r, w.plan("", "cleared", pyjson.New("sha", start, "by", "Opus")))
-	crossEq(t, result.Get("status"), "approved", result.Get("reason"))
-	crossEq(t, crossRoles(r), []string{"review"})
+	assertEqual(t, result.Get("status"), "approved", result.Get("reason"))
+	assertEqual(t, workRoles(r), []string{"review"})
 	review := r.Calls[0].Prompt
-	crossIn(t, "the harness resolved `"+resolveIndex+"` itself (took `main`'s version)", review)
-	crossIn(t, "the files the harness resolved follow its rule", review)
+	assertIn(t, "the harness resolved `"+resolveIndex+"` itself (took `main`'s version)", review)
+	assertIn(t, "the files the harness resolved follow its rule", review)
 }

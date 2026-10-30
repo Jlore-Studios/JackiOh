@@ -180,16 +180,16 @@ func TestRunner_ACallPastItsCapIsStoppedWhileItRuns(t *testing.T) {
 	runner.WatchSeconds = 0.1
 	t.Cleanup(func() { runner.WatchSeconds = old })
 	result := runner.NewClaudeCli(w.bin, nil, nil).Run(request)
-	flowFalse(t, result.OK)
-	flowEq(t, result.Extra.Get("usage_stop"), "5-hour usage is 60%, at or over its 50% cap")
-	flowIn(t, "stopped mid-call", result.Error)
-	flowTrue(t, result.DurationS < 20, result.DurationS) // the fake would sleep 30 seconds more
-	flowTrue(t, len(seen) > 0)
+	assertFalse(t, result.OK)
+	assertEqual(t, result.Extra.Get("usage_stop"), "5-hour usage is 60%, at or over its 50% cap")
+	assertIn(t, "stopped mid-call", result.Error)
+	assertTrue(t, result.DurationS < 20, result.DurationS) // the fake would sleep 30 seconds more
+	assertTrue(t, len(seen) > 0)
 	if len(seen) > 0 {
-		flowEq(t, seen[len(seen)-1], 0.6)
+		assertEqual(t, seen[len(seen)-1], 0.6)
 	}
-	flowEq(t, flowPath(result.Usage, "five_hour", "utilization"), 0.6)
-	flowFalse(t, result.RateLimited())
+	assertEqual(t, dig(t, result.Usage, "five_hour", "utilization"), 0.6)
+	assertFalse(t, result.RateLimited())
 }
 
 func TestRunner_Argv(t *testing.T) {
@@ -200,45 +200,45 @@ func TestRunner_Argv(t *testing.T) {
 		"--max-turns 42", "--permission-mode acceptEdits", "--allowed-tools Bash,Read",
 		"--disallowed-tools WebFetch", "--append-system-prompt-file /tmp/s.md",
 		"--strict-mcp-config"} {
-		flowIn(t, part, joined)
+		assertIn(t, part, joined)
 	}
-	flowNotIn(t, "build the thing", joined) // the prompt goes on stdin
+	assertNotIn(t, "build the thing", joined) // the prompt goes on stdin
 }
 
 func TestRunner_SuccessAndEnvironment(t *testing.T) {
 	w := newRunnerWorld(t)
 	result := w.runFake("ok")
-	flowTrue(t, result.OK, result.Error)
-	flowTrue(t, result.Turns != nil && *result.Turns == 7, result.Turns)
-	flowEq(t, result.Text, "done: build the thing plea")
-	flowAlmostEqual(t, flowPath(result.Usage, "five_hour", "utilization"), 0.25)
-	flowFalse(t, result.RateLimited())
-	dumped := flowLoadJSON(t, w.dump)
+	assertTrue(t, result.OK, result.Error)
+	assertTrue(t, result.Turns != nil && *result.Turns == 7, result.Turns)
+	assertEqual(t, result.Text, "done: build the thing plea")
+	assertAlmostEqual(t, dig(t, result.Usage, "five_hour", "utilization"), 0.25)
+	assertFalse(t, result.RateLimited())
+	dumped := loadJSON(t, w.dump)
 	keys := dumped.List("keys")
-	flowTrue(t, flowListHas(keys, "CLAUDE_CODE_OAUTH_TOKEN"), keys)
-	flowTrue(t, flowListHas(keys, "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"), keys)
+	assertIn(t, "CLAUDE_CODE_OAUTH_TOKEN", keys)
+	assertIn(t, "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", keys)
 	for _, secret := range []string{"BOT_GITHUB_TOKEN", "GITHUB_TOKEN", "ANTHROPIC_API_KEY"} {
-		flowFalse(t, flowListHas(keys, secret), secret)
+		assertNotIn(t, secret, keys)
 	}
-	flowEq(t, dumped.Get("prompt"), "build the thing please")
-	transcript := flowRead(t, filepath.Join(w.tmp, "t", "01-build.jsonl"))
-	flowIn(t, `"type": "result"`, transcript)
-	flowFalse(t, flowExists(filepath.Join(w.tmp, "t", "01-build.raw")))
+	assertEqual(t, dumped.Get("prompt"), "build the thing please")
+	transcript := readText(t, filepath.Join(w.tmp, "t", "01-build.jsonl"))
+	assertIn(t, `"type": "result"`, transcript)
+	assertFalse(t, exists(filepath.Join(w.tmp, "t", "01-build.raw")))
 }
 
 func TestRunner_RefusalIsARateLimitWithItsReset(t *testing.T) {
 	w := newRunnerWorld(t)
 	result := w.runFake("limit")
-	flowFalse(t, result.OK)
-	flowTrue(t, result.RateLimited())
-	flowEq(t, result.ResetAt, "2026-09-29T20:00:00Z")
+	assertFalse(t, result.OK)
+	assertTrue(t, result.RateLimited())
+	assertEqual(t, result.ResetAt, "2026-09-29T20:00:00Z")
 }
 
 func TestRunner_TimeoutKillsTheProcess(t *testing.T) {
 	w := newRunnerWorld(t)
 	result := w.runFake("sleep", 2)
-	flowTrue(t, result.TimedOut)
-	flowFalse(t, result.OK)
+	assertTrue(t, result.TimedOut)
+	assertFalse(t, result.OK)
 }
 
 func TestRunner_WhatTheCallLeavesRunningIsKilledAndNothingElse(t *testing.T) {
@@ -252,8 +252,8 @@ func TestRunner_WhatTheCallLeavesRunningIsKilledAndNothingElse(t *testing.T) {
 		bystander.Wait()
 	}()
 	result := w.runFake("daemon")
-	flowTrue(t, result.OK, result.Error)
-	pid, err := strconv.Atoi(strings.TrimSpace(flowRead(t, w.dump+".pid")))
+	assertTrue(t, result.OK, result.Error)
+	pid, err := strconv.Atoi(strings.TrimSpace(readText(t, w.dump+".pid")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,11 +270,11 @@ func TestRunner_WhatTheCallLeavesRunningIsKilledAndNothingElse(t *testing.T) {
 	for i := 0; i < 50 && alive(); i++ {
 		time.Sleep(50 * time.Millisecond)
 	}
-	flowFalse(t, alive(), "the daemon the call started is still running")
+	assertFalse(t, alive(), "the daemon the call started is still running")
 	// bystander.poll() is None: it has not exited.
 	var status syscall.WaitStatus
 	reaped, _ := syscall.Wait4(bystander.Process.Pid, &status, syscall.WNOHANG, nil)
-	flowEq(t, reaped, 0, "an unrelated process was killed")
+	assertEqual(t, reaped, 0, "an unrelated process was killed")
 }
 
 func TestRunner_AnAuthFailureIsInfrastructureNotARateLimit(t *testing.T) {
@@ -285,34 +285,34 @@ func TestRunner_AnAuthFailureIsInfrastructureNotARateLimit(t *testing.T) {
 		return result
 	}
 	result := failed("Invalid API key · Please run /login")
-	flowTrue(t, result.Infra())
-	flowFalse(t, result.RateLimited())
-	flowFalse(t, failed("max turns reached").Infra())
+	assertTrue(t, result.Infra())
+	assertFalse(t, result.RateLimited())
+	assertFalse(t, failed("max turns reached").Infra())
 	// Claude Code with a revoked or mistyped token (CLAUDE_CODE_OAUTH_TOKEN_3, 2026-10-03): it
 	// ran a whole revision's checks and a review on it before this counted as a login.
 	revoked := "Failed to authenticate. API Error: 401 OAuth access token is invalid."
-	flowTrue(t, failed(revoked).Infra())
-	flowFalse(t, failed(revoked).RateLimited())
+	assertTrue(t, failed(revoked).Infra())
+	assertFalse(t, failed(revoked).RateLimited())
 }
 
 func TestRunner_MissingBinary(t *testing.T) {
 	w := newRunnerWorld(t)
 	result := runner.NewClaudeCli(filepath.Join(w.tmp, "nope"), nil, nil).Run(w.request())
-	flowFalse(t, result.OK)
-	flowEq(t, result.ExitCode, 127)
+	assertFalse(t, result.OK)
+	assertEqual(t, result.ExitCode, 127)
 }
 
 func TestRunner_ParseStreamIgnoresNoise(t *testing.T) {
 	newRunnerWorld(t) // setUp
 	lines := []string{"not json", "", pyjson.Dumps(pyjson.New("type", "result", "result", "x")), "[1,2]"}
 	result, usage := runner.ParseStream(lines)
-	flowEq(t, flowPath(result, "result"), "x")
-	flowTrue(t, usage == nil, "usage is None")
+	assertEqual(t, dig(t, result, "result"), "x")
+	assertTrue(t, usage == nil, "usage is None")
 }
 
 func TestRunner_OverageIsNotARefusal(t *testing.T) {
 	newRunnerWorld(t) // setUp
 	usage := runner.UsageFromEvent(pyjson.New("rate_limit_info", pyjson.New("status", "rejected",
 		"isUsingOverage", true, "unifiedWindows", pyjson.New())))
-	flowEq(t, flowPath(usage, "status"), "allowed_overage")
+	assertEqual(t, dig(t, usage, "status"), "allowed_overage")
 }
