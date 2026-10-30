@@ -9,7 +9,7 @@
 # bots title theirs from their issue when the builder's title breaks it, and when both do (a
 # workflow's `CI: …` alert) write `Patch: <what it does>` (`triage.pull_title`).
 #
-# _target: this repository's workflow and its default branch's Python run, never code from the pull
+# _target: this repository's workflow and its default branch's harness run, never code from the pull
 # request, and the job reads nothing but the title, from the event, through the environment. It
 # runs again on every edit and push, so the result always belongs to the newest title and head.
 #
@@ -25,10 +25,6 @@ permissions: {}
 concurrency:
   group: pr-title-${{ github.event.pull_request.number }}
   cancel-in-progress: true
-
-env:
-  PYTHONUTF8: "1"
-  PYTHONDONTWRITEBYTECODE: "1"
 
 jobs:
   title:
@@ -46,34 +42,12 @@ jobs:
           sparse-checkout: |
             bot
             .harness
+            .github/actions/harness
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
 
       - name: The title follows docs/issues-and-patches.md
         working-directory: bot
         env:
           TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          python3 - <<'PY'
-          import os
-          import sys
-
-          from harness.triage import pull_title_ok
-
-          title = os.environ["TITLE"]
-          if pull_title_ok(title):
-              print(f"The title follows the convention: {title}")
-              sys.exit(0)
-          print(f"::error title=Pull request title::{title!r} breaks docs/issues-and-patches.md (Titles). "
-                "Retitle it, usually as its issue is: Patch: <what it does>, or Patch (part n of m): <...> "
-                "for a part. No title names a version before it ships.")
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
-              summary.write(f"### The title breaks the convention\n\n`{title}`\n\n"
-                            f"Titles follow [docs/issues-and-patches.md]({os.environ['GITHUB_SERVER_URL']}/"
-                            f"{os.environ['GITHUB_REPOSITORY']}/blob/HEAD/docs/issues-and-patches.md#titles): "
-                            "`Patch: <what it does>`, or `Patch (part n of m): …` for a part; `patches ship` "
-                            "names the version of a card change when it ships. Edit the title and this check runs again.\n")
-          sys.exit(1)
-          PY
+        run: harness pr-title --title="$TITLE" --server-url="$GITHUB_SERVER_URL" --repository="$GITHUB_REPOSITORY"
