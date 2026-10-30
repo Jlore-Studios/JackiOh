@@ -21,7 +21,7 @@ import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { DECK_NAME_MAX_LENGTH, ECONOMY_LIVE, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { ApiRequestError, type DecksResponse, type TutorialAccountProgress } from "../net/api.ts";
 import { practiceDeckPath } from "../net/navigate.ts";
-import type { PracticeClaimAnswer, PracticeEarningApi, PracticeSeedIssued } from "../net/practice.ts";
+import type { PracticeClaimAnswer, PracticeEarningApi, PracticeSeedIssued, PracticeSeedReleased } from "../net/practice.ts";
 import type { Account } from "../net/gate.ts";
 import {
   PRACTICE_PACING,
@@ -2031,16 +2031,24 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     api: PracticeEarningApi;
     requestSeed: Mock<PracticeEarningApi["requestSeed"]>;
     claim: Mock<PracticeEarningApi["claim"]>;
+    release: Mock<PracticeEarningApi["release"]>;
   };
 
-  function fakeEarning(answers: { claim?: () => Promise<PracticeClaimAnswer>; seed?: () => Promise<PracticeSeedIssued> } = {}): FakeEarning {
+  function fakeEarning(
+    answers: {
+      claim?: () => Promise<PracticeClaimAnswer>;
+      seed?: () => Promise<PracticeSeedIssued>;
+      release?: () => Promise<PracticeSeedReleased>;
+    } = {},
+  ): FakeEarning {
     let issued = 0;
     const requestSeed = vi.fn<PracticeEarningApi["requestSeed"]>(() => {
       issued += 1;
       return answers.seed?.() ?? Promise.resolve({ ...ISSUED, seed: `server-seed-${String(issued)}` });
     });
     const claim = vi.fn<PracticeEarningApi["claim"]>(() => answers.claim?.() ?? Promise.resolve({ paid: true, jlore: 5, xp: 7, jloreCapped: false, tracks: [], quests: [] }));
-    return { api: { requestSeed, claim }, requestSeed, claim };
+    const release = vi.fn<PracticeEarningApi["release"]>(() => answers.release?.() ?? Promise.resolve({ released: true as const }));
+    return { api: { requestSeed, claim, release }, requestSeed, claim, release };
   }
 
   function renderEarning(host: RouteHost, earning: FakeEarning, account: Account = readyAccount("active")): void {
@@ -2281,7 +2289,8 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     expect(unpaid?.seed).toMatch(/^[0-9a-fA-F]{8}$/);
     concedeOnBoard();
     await screen.findByTestId(T.result);
-    expect(screen.queryByTestId(practiceTestid.resultEarning)).toBeNull();
+    expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "unearned");
+    expect(screen.getByTestId(practiceTestid.unearned)).toHaveTextContent("This game won't earn anything.");
     cleanup();
 
     const waiting = routeHost();
@@ -2294,6 +2303,87 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     fireEvent.click(screen.getByTestId(navTestid.back));
     expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
     expect(waiting.starts()).toEqual([]);
+  });
+
+  it("R2379000 Leave without saving an earning game gives its seed back, and leaving a game that earns nothing sends nothing", async () => {
+    const host = routeHost();
+    const earning = fakeEarning();
+    renderEarning(host, earning);
+    await startFromSetup();
+
+    fireEvent.click(screen.getByTestId(T.newGame));
+    await screen.findByTestId(T.leave);
+    fireEvent.click(screen.getByTestId(T.leaveConfirm));
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(earning.release).toHaveBeenCalledTimes(1);
+    expect(earning.release).toHaveBeenCalledWith("tok-1", "server-seed-1");
+
+    await startFromSetup();
+    fireEvent.click(screen.getByTestId(T.menu));
+    await screen.findByTestId(T.leave);
+    fireEvent.click(screen.getByTestId(T.leaveConfirm));
+    expect(earning.release).toHaveBeenCalledTimes(2);
+    expect(earning.release).toHaveBeenLastCalledWith("tok-1", "server-seed-2");
+    cleanup();
+
+    visit("");
+    const unpaid = routeHost();
+    const none = fakeEarning({ seed: () => Promise.reject(new Error("offline")) });
+    renderEarning(unpaid, none);
+    await startFromSetup();
+    fireEvent.click(screen.getByTestId(T.newGame));
+    await screen.findByTestId(T.leave);
+    fireEvent.click(screen.getByTestId(T.leaveConfirm));
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(none.release).not.toHaveBeenCalled();
+  });
+
+  it("R2379000 Save and leave keeps the seed, and a new game over the saved one gives it back before asking for its own", async () => {
+    let resolveRelease: () => void = () => undefined;
+    const released = new Promise<PracticeSeedReleased>((resolve) => {
+      resolveRelease = () => resolve({ released: true });
+    });
+    const host = routeHost();
+    const earning = fakeEarning({ release: () => released });
+    renderEarning(host, earning);
+    await startFromSetup();
+
+    fireEvent.click(screen.getByTestId(T.newGame));
+    await screen.findByTestId(T.leave);
+    fireEvent.click(screen.getByTestId(T.leaveSave));
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(earning.release).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(T.start));
+    await settle({ ticks: 10 });
+    expect(earning.release).toHaveBeenCalledWith("tok-1", "server-seed-1");
+    expect(earning.requestSeed).toHaveBeenCalledTimes(1);
+    resolveRelease();
+    await waitFor(() => {
+      expect(host.starts()).toHaveLength(2);
+    });
+    expect(earning.requestSeed).toHaveBeenCalledTimes(2);
+  });
+
+  it("R2379000 a seed the server refuses starts the game with a line that it won't earn, and why", async () => {
+    const host = routeHost();
+    renderEarning(
+      host,
+      fakeEarning({
+        seed: () =>
+          Promise.reject(
+            new ApiRequestError(409, { code: "conflict", message: "Claim one of your open practice games before starting another." }),
+          ),
+      }),
+    );
+    await startFromSetup();
+    expect(screen.getByTestId(practiceTestid.unearned)).toHaveTextContent(
+      "This game won't earn anything: Claim one of your open practice games before starting another.",
+    );
+    expect(host.starts()[0]?.earning).toBeUndefined();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "unearned");
   });
 
   it("R1303000 an anonymous player, a URL seed and a lesson ask for nothing", async () => {

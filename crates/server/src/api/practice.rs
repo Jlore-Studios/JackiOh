@@ -9,6 +9,7 @@
 //!   refuses the request, issuing nothing, while the account already holds
 //!   `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds ([[R1483000]]), counted under the account's economy
 //!   lock so requests made at once cannot pass it together.
+//! - **A release** (DELETE /api/practice/seeds/:seed) deletes the caller's unclaimed seed under the economy lock, so a game left without saving gives its place back ([[R2379000]]).
 //! - **A claim** (`POST /api/practice/claims`) sends the seed, the result and the game's log once
 //!   it is over. Its seed is burned first, in a transaction of its own, so it pays once whatever
 //!   the check answers ([[R1303001]]); then `economy::practice::verify` folds the log and re-runs
@@ -22,8 +23,8 @@
 //!   No transaction stays open across a check.
 //!   Every refusal answers 200 with `paid: false` and why, so the result screen can say it.
 //!
-//! Both answer only while the economy is on ([[R1302006]]): an issue is a 409, a claim
-//! `economy_off`. The page asks for a seed only for a game that can pay ([[R1303000]]).
+//! The issue and the claim answer only while the economy is on ([[R1302006]]): an issue is a 409, a claim
+//! `economy_off`. A release answers whatever the switch says: it pays nothing. The page asks for a seed only for a game that can pay ([[R1303000]]).
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -143,6 +144,25 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
         CREATED,
         json!({ "seed": seed, "lastBoard": last_board, "expiresAt": now + SEED_TTL_MS }),
     ))
+}
+
+/// `DELETE /api/practice/seeds/:seed` (`AuthLevel::Active`, [[R2379000]]): the caller's unclaimed seed
+/// given back, deleted under the account's economy lock (R1483000's count takes it too), so its
+/// place is free for the next issue. 200 `{ released: true }`; a 404, changing nothing, for a seed
+/// that is not the caller's, was claimed, or was never issued.
+pub async fn delete_seed(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = caller_profile(&req)?;
+    let seed = req.params.get("seed").cloned().unwrap_or_default();
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    tx.economy_lock_account(&profile.id).await?;
+    if !tx.economy_practice_seed_release(&profile.id, &seed).await? {
+        return Err(ApiError::new(
+            ApiErrorCode::NotFound,
+            "There is no such open practice game.",
+        ));
+    }
+    tx.commit().await?;
+    Ok(json_response(200, json!({ "released": true })))
 }
 
 /// `POST /api/practice/claims` with `{ seed, result, log }` (`AuthLevel::Active`). 200

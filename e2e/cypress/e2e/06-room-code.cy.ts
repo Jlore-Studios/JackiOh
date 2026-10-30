@@ -131,7 +131,9 @@ function renderedHandCards(): Cypress.Chainable<number> {
 
 describe("06 room code — a networked match between a browser and a Node client", () => {
   it("opens a room, plays it out and leaves both players queue-eligible", () => {
-    const seed = seedFor("06-room-code");
+    // Re-pinned for R2368000's three-card opening hand: "06-room-code" no longer deals seat 1 a card it
+    // can play on its first turn, so R82 would end that turn by itself.
+    const seed = seedFor("06-room-code-1");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
     let roomCode = "";

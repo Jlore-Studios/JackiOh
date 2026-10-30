@@ -51,7 +51,8 @@ export type PracticeEarning =
       /** R2208000: this device's clock cut one of the game's AI decisions short, which an `ai_mismatch` may then be. */
       clockCut?: true;
     }
-  | { kind: "unreachable" };
+  | { kind: "unreachable" }
+  | { kind: "unearned"; /** R2379000: the server's reason for issuing no seed, or the page's unreachable sentence; null when neither. */ reason: string | null };
 
 /**
  * Why the server paid nothing, in words: `economy::practice`'s `ClaimRefusal` by its wire name,
@@ -101,5 +102,9 @@ export function earningText(earning: PracticeEarning): string {
     }
     case "unreachable":
       return t("The server could not check this game.");
+    case "unearned":
+      return earning.reason === null
+        ? t("This game won't earn anything.")
+        : t("This game won't earn anything: {reason}", { reason: t(earning.reason) });
   }
 }

@@ -16,6 +16,7 @@ mod classify;
 mod dealt_fit;
 mod duos_fuzz;
 mod duos_gate;
+mod fused_pairs;
 mod fuzz;
 mod gate;
 mod golden;
@@ -50,6 +51,8 @@ struct Cli {
 enum Command {
     /// Random-policy games as `fuzz.test.ts` deals them, I1–I4 each step, replay hash checked (part 22).
     Fuzz(fuzz::Args),
+    /// Each triggered card's text fused onto each fusable Unit and played until the board settles; a daily sample, or one pair (#2381).
+    FusedPairs(fused_pairs::Args),
     /// Fold `{seed, decks, log, …}` from stdin; print `{"hash", "errors"}` (part 22).
     Replay(replay::Args),
     /// Print one gate game turn by turn (part 22).
@@ -94,6 +97,7 @@ fn main() -> ExitCode {
     let parsed = Cli::parse();
     let result = match parsed.command {
         Command::Fuzz(args) => fuzz::run(args),
+        Command::FusedPairs(args) => fused_pairs::run(args),
         Command::Replay(args) => replay::run(args),
         Command::Trace(args) => trace::run(args),
         Command::Think(args) => think::run(args),
