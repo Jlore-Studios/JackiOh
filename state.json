@@ -8829,13 +8829,13 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
-      "provider": "muse",
+      "provider": "claude-7",
       "queued_at": "2026-10-29T15:44:44Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
-      "run_id": "40959311057",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-10-29T21:37:04Z",
+      "run_id": "pending:59e2ef8d-1793323695",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-30T01:28:38Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: no builder session in the run worked: the reviewer approved and every check passed"
@@ -9465,9 +9465,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-30T00:57:09Z",
+    "at": "2026-10-30T01:28:38Z",
     "url": "",
-    "what": "revise #2307 on claude-4"
+    "what": "build #2388 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-30T01:16:59Z",
