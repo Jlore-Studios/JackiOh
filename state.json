@@ -7453,15 +7453,11 @@
       "verdict_rounds": 3,
       "votes": {
         "approvals": [],
-        "builder": "muse",
-        "rejections": [
-          "claude"
-        ],
+        "builder": "claude",
+        "rejections": [],
         "reviews": [],
-        "sha": "b85a5b8209cd58dc2d88ec360a206996a990f765",
-        "tiers": {
-          "claude": "strong"
-        }
+        "sha": "1b8cfb4d766dfc8c1a0ce0538a3e177a8bd396ec",
+        "tiers": {}
       }
     },
     "2310": {
