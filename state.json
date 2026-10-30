@@ -9042,7 +9042,7 @@
       }
     },
     "2407": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixed_head": "ef40928e4cd183fe3f9e25d114cac5941bd5fb76",
       "ci_fixes": 2,
@@ -9068,18 +9068,18 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "muse",
       "question": "",
       "queued_at": "2026-10-29T23:52:04Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "40973645355",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:d842c22b-1793318547",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-29T23:30:46Z",
+      "started_at": "2026-10-30T00:03:06Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -9391,9 +9391,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-29T23:31:36Z",
+    "at": "2026-10-30T00:03:06Z",
     "url": "",
-    "what": "revise #2412 on claude-5"
+    "what": "revise #2407 on muse"
   },
   "last_sweep": {
     "at": "2026-10-29T23:46:35Z",
