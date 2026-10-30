@@ -25,14 +25,13 @@ use jackioh_server::api::series::{ensure_series_game, start_series};
 use jackioh_server::api::series_rules::{NewSeriesInput, pick_deck};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MATCH_CEILING_MINUTES, RATING_DEVIATION_START, RATING_VOLATILITY_START};
-use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
+use jackioh_server::db::fake::{CallOutcome, FakeTables};
 use jackioh_server::db::store::{
     MatchActionRow, MatchClocks, MatchRow, MatchSeat, ProfileKind, ResultRow, SeriesRow, StartMatchInput,
     StoreError, Ticket,
 };
 use jackioh_server::ranked::glicko2::{Glicko, rate_game, rate_game_scored};
 use jackioh_server::ranked::season::season_id_of;
-use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::support::deps::test_app;
@@ -40,7 +39,7 @@ use crate::support::engine::{
     FOLD_GATE_WAIT, FoldGate, TEST_FLEE, TEST_FOLD_GATE, TEST_GLITCH_SWAP, TEST_GLITCH_VOID, begun_game,
     fake_deck, hand_card, hand_ids, install_gated_test_cards, install_test_cards,
 };
-use crate::support::store::{fake_ref, store};
+use crate::support::store::{fake_read, fake_ref, store, to_json};
 
 const MINUTE: i64 = 60 * 1000;
 /// A minute past the ceiling (R79, R389), whatever it is.
@@ -50,11 +49,6 @@ const A: &str = "profile-a";
 const B: &str = "profile-b";
 
 // The harness's small reads (private copies, CLAUDE.md's fullsend rule 5)
-
-/// The JSON a row or any port value serialises to.
-fn j<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("the value serialises")
-}
 
 /// Every key `expected` names holds the same value in `actual` (objects
 /// partially, arrays element for element), and nothing else is compared.
@@ -101,18 +95,12 @@ async fn seed_profile(app: &App, input: Value) {
     let _ = fake_ref(app).lock().await.seed_profile(input);
 }
 
-/// One read of the fake's raw tables, as JSON.
-async fn table(app: &App, read: impl Fn(&FakeData) -> Value) -> Value {
-    let data = fake_ref(app).lock().await;
-    read(&data)
-}
-
 async fn profile(app: &App, id: &str) -> Value {
-    j(&store!(app, |t| t.profiles_get_by_id(id)))
+    to_json(&store!(app, |t| t.profiles_get_by_id(id)))
 }
 
 async fn match_row(app: &App, id: &str) -> Value {
-    j(&store!(app, |t| t.matches_get(id)))
+    to_json(&store!(app, |t| t.matches_get(id)))
 }
 
 async fn reap(app: &Arc<App>) -> Vec<String> {
@@ -317,13 +305,13 @@ async fn scenario(options: ScenarioOptions) -> Arc<App> {
                 "id": MATCH_ID,
                 "seed": "seed-1",
                 "players": [A, B],
-                "decks": [j(&first)["deck"], j(&second)["deck"]],
+                "decks": [to_json(&first)["deck"], to_json(&second)["deck"]],
                 "catalogVersion": catalog_version(),
                 "ranked": ranked,
                 "status": "live",
                 "createdAt": started_at,
                 "finishedAt": null,
-                "clocks": j(&initial_clocks(started_at)),
+                "clocks": to_json(&initial_clocks(started_at)),
             }))
             .expect("a MatchRow");
             store!(&app, |t| t.matches_create(&row));
@@ -336,7 +324,7 @@ async fn scenario(options: ScenarioOptions) -> Arc<App> {
                     "seed": "seed-1",
                     "catalogVersion": catalog_version(),
                     "ranked": ranked,
-                    "seats": [j(&first), j(&second)],
+                    "seats": [to_json(&first), to_json(&second)],
                 }),
             )
             .await;
@@ -441,7 +429,7 @@ struct Ending {
 
 /// §9.5: "Every ending records a result and clears both players' in-match state."
 async fn expect_one_ending(app: &App, expected: Ending) {
-    let results = table(app, |data| j(&data.tables.results)).await;
+    let results = fake_read(app, |data| to_json(&data.tables.results)).await;
     assert_eq!(results.as_array().map(Vec::len), Some(1));
     let row = &results[0];
     assert_eq!(row["matchId"], MATCH_ID);
@@ -478,11 +466,13 @@ mod results_m7_t2 {
         install_test_cards();
         let (win, loss) = win_loss();
         let app = scenario(ScenarioOptions::default()).await;
-        let row = j(&record(
-            &app,
-            &[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })],
-        )
-        .await);
+        let row = to_json(
+            &record(
+                &app,
+                &[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })],
+            )
+            .await,
+        );
         assert_eq!(row["reason"], "hero-death");
         assert_eq!(row["turns"], json!(1));
         assert_eq!(row["ratingBefore"], json!([1000.0, 1000.0]));
@@ -510,11 +500,13 @@ mod results_m7_t2 {
             ..Default::default()
         })
         .await;
-        let row = j(&record(
-            &app,
-            &[json!({ "type": "play", "card": "test-mutual-lethal", "playerId": "p1" })],
-        )
-        .await);
+        let row = to_json(
+            &record(
+                &app,
+                &[json!({ "type": "play", "card": "test-mutual-lethal", "playerId": "p1" })],
+            )
+            .await,
+        );
 
         // PREMISE: the scripted engine really produced this reason, so the assertions below are about
         // the writer and not about a string this file typed out.
@@ -562,14 +554,16 @@ mod results_m7_t2 {
             ..Default::default()
         })
         .await;
-        let row = j(&record(
-            &app,
-            &[
-                json!({ "type": "offerDraw", "playerId": "p1" }),
-                json!({ "type": "answerDraw", "accept": true, "playerId": "p2" }),
-            ],
-        )
-        .await);
+        let row = to_json(
+            &record(
+                &app,
+                &[
+                    json!({ "type": "offerDraw", "playerId": "p1" }),
+                    json!({ "type": "answerDraw", "accept": true, "playerId": "p2" }),
+                ],
+            )
+            .await,
+        );
         let expected = rating_move(1200.0, 1000.0, 0.5);
         assert_eq!(row["ratingBefore"], json!([1200.0, 1000.0]));
         // The favourite gives points away on a draw; the underdog takes them.
@@ -591,20 +585,22 @@ mod results_m7_t2 {
         install_test_cards();
         let app = scenario(ScenarioOptions::default()).await;
         let (outcome, turns) = play_from(TURN_CAP_PLAYER_TURNS - 1, &to_the_turn_cap());
-        let row = j(&record_result(
-            &app,
-            RecordResultInput {
-                match_id: MATCH_ID.to_owned(),
-                seats: seats(),
-                outcome,
-                turns,
-                at: now_ms(),
-                last_boards: None,
-                final_hash: None,
-            },
-        )
-        .await
-        .expect("the result is written"));
+        let row = to_json(
+            &record_result(
+                &app,
+                RecordResultInput {
+                    match_id: MATCH_ID.to_owned(),
+                    seats: seats(),
+                    outcome,
+                    turns,
+                    at: now_ms(),
+                    last_boards: None,
+                    final_hash: None,
+                },
+            )
+            .await
+            .expect("the result is written"),
+        );
         assert!(row["turns"].as_i64().unwrap_or(0) >= i64::from(TURN_CAP_PLAYER_TURNS));
         expect_one_ending(
             &app,
@@ -646,7 +642,7 @@ mod results_m7_t2 {
             ..Default::default()
         })
         .await;
-        let row = j(&record(&app, &[json!({ "type": "ceilingReached", "playerId": "p1" })]).await);
+        let row = to_json(&record(&app, &[json!({ "type": "ceilingReached", "playerId": "p1" })]).await);
         let expected = rating_move(1200.0, 1000.0, 0.5);
         assert_eq!(row["turns"], json!(1));
         expect_one_ending(
@@ -671,11 +667,13 @@ mod results_m7_t2 {
             ..Default::default()
         })
         .await;
-        let row = j(&record(
-            &app,
-            &[json!({ "type": "play", "card": TEST_FLEE, "playerId": "p1" })],
-        )
-        .await);
+        let row = to_json(
+            &record(
+                &app,
+                &[json!({ "type": "play", "card": TEST_FLEE, "playerId": "p1" })],
+            )
+            .await,
+        );
         assert_eq!(row["reason"], "fled");
         let fresh = |rating: f64| Glicko {
             rating,
@@ -697,7 +695,7 @@ mod results_m7_t2 {
         assert_eq!(rated.a.rating, won);
         assert!(rated.b.rating > lost, "a draw costs less than a loss");
         assert_eq!(rated.b.rating, rating_move(1000.0, 1200.0, 0.5).1);
-        let ranks = table(&app, |data| j(&data.tables.season_ranks)).await;
+        let ranks = fake_read(&app, |data| to_json(&data.tables.season_ranks)).await;
         assert_eq!(
             map(&ranks, |rank| json!([
                 rank["profileId"],
@@ -707,14 +705,14 @@ mod results_m7_t2 {
             ])),
             json!([[A, 1, 0, 0], [B, 0, 0, 1]]),
         );
-        let games = table(&app, |data| j(&data.tables.rated_games)).await;
+        let games = fake_read(&app, |data| to_json(&data.tables.rated_games)).await;
         assert_match(&games[0], &json!({ "winnerSide": 0, "reason": "fled" }));
         assert_eq!(
-            j(&store!(&app, |t| t.results_record_for(B))),
+            to_json(&store!(&app, |t| t.results_record_for(B))),
             json!({ "wins": 0, "losses": 0, "draws": 1 })
         );
         assert_eq!(
-            j(&store!(&app, |t| t.results_record_for(A))),
+            to_json(&store!(&app, |t| t.results_record_for(A))),
             json!({ "wins": 1, "losses": 0, "draws": 0 })
         );
     }
@@ -743,7 +741,7 @@ mod results_m7_t2 {
         )
         .await
         .expect("the result is written");
-        assert_eq!(j(&again), j(&first));
+        assert_eq!(to_json(&again), to_json(&first));
         expect_one_ending(
             &app,
             Ending {
@@ -788,7 +786,7 @@ mod results_m7_t2 {
             .expect("the second write answers the first row");
         assert_eq!(match_row(&app, MATCH_ID).await["finalHash"], "hash-1");
         assert_eq!(
-            table(&app, |data| json!(data.tables.results.len())).await,
+            fake_read(&app, |data| json!(data.tables.results.len())).await,
             json!(1)
         );
     }
@@ -809,7 +807,7 @@ mod results_m7_t2 {
         fake_ref(&app).lock().await.on_call = None;
 
         assert_eq!(
-            table(&app, |data| json!(data.tables.results.len())).await,
+            fake_read(&app, |data| json!(data.tables.results.len())).await,
             json!(0)
         );
         let row = match_row(&app, MATCH_ID).await;
@@ -884,17 +882,23 @@ mod results_m7_t2 {
         .await
         .expect("the result is written");
         assert!(collided.load(Ordering::SeqCst), "the first insert collided");
-        assert_eq!(j(&row), j(&winner_row));
+        assert_eq!(to_json(&row), to_json(&winner_row));
         // One effective write: the winner's row, and the loser added nothing — no second row, no
         // rating move of its own, and the match still finished exactly once.
         assert_eq!(
-            table(&app, |data| json!(data.tables.results.len())).await,
+            fake_read(&app, |data| json!(data.tables.results.len())).await,
             json!(1)
         );
         assert_eq!(profile(&app, A).await["rating"].as_f64(), Some(1000.0));
         assert_eq!(profile(&app, B).await["rating"].as_f64(), Some(1000.0));
-        assert_eq!(table(&app, |data| j(&data.tables.season_ranks)).await, json!([]));
-        assert_eq!(table(&app, |data| j(&data.tables.rated_games)).await, json!([]));
+        assert_eq!(
+            fake_read(&app, |data| to_json(&data.tables.season_ranks)).await,
+            json!([])
+        );
+        assert_eq!(
+            fake_read(&app, |data| to_json(&data.tables.rated_games)).await,
+            json!([])
+        );
     }
 
     #[tokio::test]
@@ -906,7 +910,7 @@ mod results_m7_t2 {
             "profileId": A,
             "rating": 1000.0,
             "mode": "bo1",
-            "deck": j(&seats().0)["deck"],
+            "deck": to_json(&seats().0)["deck"],
             "trio": null,
             "catalogVersion": catalog_version(),
             "enqueuedAt": now_ms(),
@@ -932,7 +936,7 @@ mod results_m7_t2 {
         assert!(profile(&app, A).await["inMatchId"].is_null());
         assert_eq!(profile(&app, B).await["inMatchId"], "match-2");
         assert_eq!(
-            table(&app, |data| json!(data.tables.results.len())).await,
+            fake_read(&app, |data| json!(data.tables.results.len())).await,
             json!(1)
         );
         assert_eq!(match_row(&app, MATCH_ID).await["status"], "finished");
@@ -950,7 +954,7 @@ mod results_m7_t2 {
                 ..Default::default()
             })
             .await;
-            let row = j(&record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await);
+            let row = to_json(&record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await);
             assert_match(
                 &row,
                 &json!({ "winnerProfileId": A, "ratingBefore": [1200.0, 1000.0], "ratingAfter": [1200.0, 1000.0] }),
@@ -964,8 +968,14 @@ mod results_m7_t2 {
                 },
             )
             .await;
-            assert_eq!(table(&app, |data| j(&data.tables.season_ranks)).await, json!([]));
-            assert_eq!(table(&app, |data| j(&data.tables.rated_games)).await, json!([]));
+            assert_eq!(
+                fake_read(&app, |data| to_json(&data.tables.season_ranks)).await,
+                json!([])
+            );
+            assert_eq!(
+                fake_read(&app, |data| to_json(&data.tables.rated_games)).await,
+                json!([])
+            );
             // Deviation and volatility do not move either.
             assert_eq!(
                 profile(&app, A).await["ratingDeviation"].as_f64(),
@@ -980,7 +990,7 @@ mod results_m7_t2 {
             record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
             let profile_a = profile(&app, A).await;
             assert!(profile_a["ratingDeviation"].as_f64().unwrap_or(f64::INFINITY) < RATING_DEVIATION_START);
-            let ranks = table(&app, |data| j(&data.tables.season_ranks)).await;
+            let ranks = fake_read(&app, |data| to_json(&data.tables.season_ranks)).await;
             assert_eq!(
                 map(&ranks, |rank| json!([
                     rank["profileId"],
@@ -1007,7 +1017,7 @@ mod results_m7_t2 {
             )
             .await;
             let expected = rating_move(1200.0, 1000.0, 0.0);
-            let games = table(&app, |data| j(&data.tables.rated_games)).await;
+            let games = fake_read(&app, |data| to_json(&data.tables.rated_games)).await;
             assert_eq!(games.as_array().map(Vec::len), Some(1));
             let game = &games[0];
             // The server rates in the season of the patch it was built at.
@@ -1064,7 +1074,7 @@ mod results_m7_t2 {
 
             assert_eq!(reap(&app).await, vec![MATCH_ID.to_owned()]);
 
-            let results = table(&app, |data| j(&data.tables.results)).await;
+            let results = fake_read(&app, |data| to_json(&data.tables.results)).await;
             let row = &results[0];
             // R112: "records `turns = 0` and leaves both ratings unchanged".
             assert_eq!(row["turns"], json!(0));
@@ -1127,12 +1137,12 @@ mod results_m7_t2 {
                 },
             )
             .await;
-            let results = table(&app, |data| j(&data.tables.results)).await;
+            let results = fake_read(&app, |data| to_json(&data.tables.results)).await;
             // R112's ceiling draw records 0; the log's own game ended on turn 1.
             assert_eq!(results[0]["turns"], json!(turns));
             assert_eq!(results[0]["ratingBefore"], json!([1200.0, 1000.0]));
             assert!(match_row(&app, MATCH_ID).await["finalHash"].is_string());
-            let records = table(&app, |data| j(&data.tables.game_records)).await;
+            let records = fake_read(&app, |data| to_json(&data.tables.game_records)).await;
             assert_eq!(records.as_array().map(Vec::len), Some(1));
             assert_eq!(records[0]["id"], MATCH_ID);
             assert!(!app.matches.has(MATCH_ID));
@@ -1170,10 +1180,13 @@ mod results_m7_t2 {
                 },
             )
             .await;
-            let results = table(&app, |data| j(&data.tables.results)).await;
+            let results = fake_read(&app, |data| to_json(&data.tables.results)).await;
             assert_eq!(results[0]["turns"], json!(0));
             assert!(match_row(&app, MATCH_ID).await.get("finalHash").is_none());
-            assert_eq!(table(&app, |data| j(&data.tables.game_records)).await, json!([]));
+            assert_eq!(
+                fake_read(&app, |data| to_json(&data.tables.game_records)).await,
+                json!([])
+            );
         }
 
         /// R833000, R677: credited by who plays each seat as the log ends, as the actor's write is: a
@@ -1194,7 +1207,7 @@ mod results_m7_t2 {
 
             assert_eq!(reap(&app).await, vec![MATCH_ID.to_owned()]);
 
-            let results = table(&app, |data| j(&data.tables.results)).await;
+            let results = fake_read(&app, |data| to_json(&data.tables.results)).await;
             assert_eq!(results.as_array().map(Vec::len), Some(1));
             assert_eq!(results[0]["reason"], "concede");
             assert_eq!(results[0]["winnerProfileId"], A);
@@ -1266,7 +1279,7 @@ mod results_m7_t2 {
             let app = scenario(ScenarioOptions::default()).await;
             assert_eq!(reap(&app).await, Vec::<String>::new());
             assert_eq!(
-                table(&app, |data| json!(data.tables.results.len())).await,
+                fake_read(&app, |data| json!(data.tables.results.len())).await,
                 json!(0)
             );
             assert!(app.matches.has(MATCH_ID));
@@ -1304,7 +1317,7 @@ mod results_m7_t2 {
             })
             .await;
             reap(&app).await;
-            let late = j(&record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await);
+            let late = to_json(&record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await);
             assert_eq!(late["reason"], "match-ceiling");
             expect_one_ending(
                 &app,
@@ -1343,7 +1356,7 @@ mod results_m7_t2 {
             let now = now_ms();
             let mut row = series_row(app).await;
             for (index, seat) in [PlayerId::P1, PlayerId::P2].into_iter().enumerate() {
-                let view = j(&row);
+                let view = to_json(&row);
                 if view["status"] != "picking" || !view["sides"][index]["pick"].is_null() {
                     continue;
                 }
@@ -1358,7 +1371,10 @@ mod results_m7_t2 {
         /// The game in play ends with `winner` (a profile, or "draw"), reported with the match's own seats.
         async fn finish(app: &Arc<App>, winner: &str) {
             let series = series_row(app).await;
-            let match_id = j(&series)["nextMatchId"].as_str().unwrap_or_default().to_owned();
+            let match_id = to_json(&series)["nextMatchId"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned();
             let started = started_seats(app, &match_id).await;
             let outcome = if winner == "draw" {
                 TerminalOutcome {
@@ -1368,7 +1384,7 @@ mod results_m7_t2 {
             } else {
                 let player = [&started.0, &started.1]
                     .into_iter()
-                    .map(j)
+                    .map(to_json)
                     .find(|seat| seat["profileId"] == winner)
                     .map(|seat| seat["player"].clone())
                     .unwrap_or(json!("p1"));
@@ -1432,7 +1448,7 @@ mod results_m7_t2 {
             let (logs, _logging) = Logs::capture();
             let app = series_scenario().await;
             // Game 1: series p1 (A) goes first, so the match's p1 is A, as in `seats`.
-            let row = j(&record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await);
+            let row = to_json(&record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await);
 
             assert_match(
                 &row,
@@ -1444,7 +1460,7 @@ mod results_m7_t2 {
                 }),
             );
             assert_eq!(ratings(&app).await, json!([1200.0, 1000.0]));
-            let series = j(&series_row(&app).await);
+            let series = to_json(&series_row(&app).await);
             assert_eq!(series["status"], "picking");
             assert_match(
                 &series["games"][0],
@@ -1472,7 +1488,7 @@ mod results_m7_t2 {
             play_next(&app, [2, 1]).await;
             finish(&app, B).await;
             // Two wins each: game 5 began by itself, on each side's last deck.
-            let game5 = j(&series_row(&app).await);
+            let game5 = to_json(&series_row(&app).await);
             assert_eq!(game5["status"], "playing");
             let game5_id = game5["nextMatchId"].as_str().unwrap_or_default().to_owned();
             assert_match(&game5["games"][4], &json!({ "gameNo": 5, "slots": [2, 2] }));
@@ -1487,7 +1503,7 @@ mod results_m7_t2 {
             };
             store!(&app, |t| t.matches_set_clocks(&game5_id, &clocks));
             assert_eq!(reap(&app).await, vec![game5_id.clone()]);
-            let results = table(&app, |data| j(&data.tables.results)).await;
+            let results = fake_read(&app, |data| to_json(&data.tables.results)).await;
             let reaped = results
                 .as_array()
                 .and_then(|rows| rows.iter().find(|result| result["matchId"] == game5_id.as_str()))
@@ -1503,7 +1519,7 @@ mod results_m7_t2 {
                 }),
             );
 
-            let series = j(&series_row(&app).await);
+            let series = to_json(&series_row(&app).await);
             assert_eq!(map(&series["sides"], |side| side["wins"].clone()), json!([2, 2]));
             assert_match(
                 &series["games"][4],
@@ -1532,13 +1548,13 @@ mod results_m7_t2 {
             // Game 2: B is the match's p1. A wins it.
             finish(&app, A).await;
             // Game 3: A's last deck is picked for A (R332); B picks, and A wins with every deck.
-            let game3 = j(&play_next(&app, [2, 2]).await);
+            let game3 = to_json(&play_next(&app, [2, 2]).await);
             assert_eq!(game3["games"][2]["slots"], json!([2, 2]));
             finish(&app, A).await;
             let expected = rating_move(1200.0, 1000.0, 1.0);
             assert_eq!(ratings(&app).await, json!([expected.0, expected.1]));
             assert_match(
-                &j(&series_row(&app).await),
+                &to_json(&series_row(&app).await),
                 &json!({
                     "status": "over",
                     "winner": "p1",
@@ -1548,7 +1564,7 @@ mod results_m7_t2 {
                 }),
             );
             // Every game row is unrated.
-            let results = table(&app, |data| j(&data.tables.results)).await;
+            let results = fake_read(&app, |data| to_json(&data.tables.results)).await;
             assert_eq!(results.as_array().map(Vec::len), Some(3));
             for result in results.as_array().into_iter().flatten() {
                 assert_eq!(result["ratingAfter"], result["ratingBefore"]);
@@ -1666,7 +1682,7 @@ mod one_fold_per_result {
             let folds = folds_of(&gate, &app, conceded(MATCH_ID, seats, Winner::P1)).await;
             assert_eq!(folds, 1, "a match {kind} was folded {folds} times");
 
-            let records = table(&app, |data| j(&data.tables.game_records)).await;
+            let records = fake_read(&app, |data| to_json(&data.tables.game_records)).await;
             let records = records.as_array().expect("a list");
             assert_eq!(records.len(), 1, "a match {kind} files its game");
             assert_eq!(records[0]["game"]["reason"], "concede");
@@ -1695,7 +1711,7 @@ mod one_fold_per_result {
         let folds = folds_of(&gate, &app, conceded(MATCH_ID, seats, Winner::P2)).await;
         assert_eq!(folds, 1, "the match was folded {folds} times");
 
-        let records = table(&app, |data| j(&data.tables.game_records)).await;
+        let records = fake_read(&app, |data| to_json(&data.tables.game_records)).await;
         let records = records.as_array().expect("a list");
         assert_eq!(records.len(), 1);
         assert_eq!(records[0]["pilots"], json!({ "p1": "ai", "p2": "human" }));
@@ -1723,7 +1739,7 @@ mod one_fold_per_result {
         assert!(collided.load(Ordering::SeqCst), "the first insert collided");
         assert_eq!(folds, 1, "the retry folded the log again: {folds} folds");
         assert_eq!(
-            table(&app, |data| json!(data.tables.results.len())).await,
+            fake_read(&app, |data| json!(data.tables.results.len())).await,
             json!(1)
         );
     }
@@ -1742,10 +1758,13 @@ mod one_fold_per_result {
             .expect("the result is written all the same");
 
         assert_eq!(
-            table(&app, |data| json!(data.tables.results.len())).await,
+            fake_read(&app, |data| json!(data.tables.results.len())).await,
             json!(1)
         );
-        assert_eq!(table(&app, |data| j(&data.tables.game_records)).await, json!([]));
+        assert_eq!(
+            fake_read(&app, |data| to_json(&data.tables.game_records)).await,
+            json!([])
+        );
         assert!(
             logs.find("quests.game.unread").is_some(),
             "the quests count the attacks alone"
@@ -1784,7 +1803,7 @@ mod one_fold_per_result {
             "status": "live",
             "createdAt": started_at,
             "finishedAt": null,
-            "clocks": j(&initial_clocks(started_at)),
+            "clocks": to_json(&initial_clocks(started_at)),
         }))
         .expect("a MatchRow");
         store!(&app, |t| t.matches_create(&second));
@@ -1814,7 +1833,7 @@ mod one_fold_per_result {
         first.expect("the first result is written");
         second.expect("the second result is written");
         assert_eq!(
-            table(&app, |data| json!(data.tables.results.len())).await,
+            fake_read(&app, |data| json!(data.tables.results.len())).await,
             json!(2)
         );
     }

@@ -42,7 +42,7 @@ use jackioh_server::economy::store::CardPicks;
 use crate::support::deps::{TestAppOptions, test_app_with};
 use crate::support::engine::{TEST_HEARS_EMOTES, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
-use crate::support::store::{fake, q, to_json};
+use crate::support::store::{fake, from, q, to_json};
 
 const MATCH_ID: &str = "match-bot-seat";
 const PERSON: &str = "profile-person";
@@ -51,10 +51,6 @@ const BOT: &str = "profile-bot";
 /// How many quarter-second steps `wait_until` takes before it gives up: far longer than any turn.
 const WAIT_STEPS: usize = 4_000;
 const WAIT_STEP_MS: u64 = 250;
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
 
 /// The catalog's playable ids (no tokens), sliced into two disjoint decks.
 fn decks() -> (Vec<String>, Vec<String>) {

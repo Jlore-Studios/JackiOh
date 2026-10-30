@@ -241,7 +241,9 @@ or `{ n?, dimmed?, label }`, its label through `t()`.
 No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
 hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
 The list ships the Tradable hint (#2269): a small swap-mark pip on each of the viewer's own
-hand cards with the Tradable keyword, dimmed once the turn's Trade is spent.
+hand cards with the Tradable keyword, dimmed once the turn's Trade is spent. It also ships
+`tribute` (#2268, R2268000): the Tributes a play of the card asks now, the view's `tribute`,
+which the engine sets on the viewer's own hand cards only and never at 0.
 
 ## Commands
 

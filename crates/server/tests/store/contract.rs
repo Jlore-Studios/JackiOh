@@ -10268,6 +10268,51 @@ mod economy {
         assert_eq!(open(&other.id, now - 100).await, 1);
     }
 
+    /// R2379000: a release deletes the owner's unclaimed seed alone: another profile's release
+    /// of it, the owner's of a claimed one and of one never issued answer false and change
+    /// nothing, and a second release of a gone seed answers false.
+    async fn r2379000_a_practice_seed_release_deletes_only_the_owners_unclaimed_seed(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let card_id = must(harness.playable_ids.first().cloned(), "a card");
+        let now = harness.now();
+        let seed = |name: &str| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": owner.id, "issuedAt": now, "claimedAt": null,
+                "setup": {
+                    "difficulty": "hard", "humanSeat": "p2", "deck": { "kind": "random", "lean": "newest" },
+                    "lastBoard": [{ "defId": card_id, "radiant": true }], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        let (open, claimed) = (seed("seed-open"), seed("seed-claimed"));
+        q!(harness, t => t.economy_practice_seed_insert(&open));
+        q!(harness, t => t.economy_practice_seed_insert(&claimed));
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-claimed", now + 1)));
+
+        assert!(!q!(harness, t => t.economy_practice_seed_release(&other.id, "seed-open")));
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-open")),
+            Some(open.clone())
+        );
+        assert!(!q!(harness, t => t.economy_practice_seed_release(&owner.id, "seed-claimed")));
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-claimed")),
+            Some(PracticeSeed {
+                claimed_at: Some(now + 1),
+                ..claimed.clone()
+            })
+        );
+        assert!(!q!(harness, t => t.economy_practice_seed_release(&owner.id, "seed-never")));
+
+        assert!(q!(harness, t => t.economy_practice_seed_release(&owner.id, "seed-open")));
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-open")),
+            None
+        );
+        assert!(!q!(harness, t => t.economy_practice_seed_release(&owner.id, "seed-open")));
+    }
+
     /// R1301003: a pack opening takes the account's economy lock for its transaction. Taken in
     /// turn, each transaction gets it, a rolled-back one lets it go, and the lock writes no row.
     async fn r1301003_the_economy_lock_is_taken_per_transaction(harness: &StoreHarness) {
@@ -10420,6 +10465,7 @@ mod economy {
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
         r2210000_removed_quest_count_uses_one_window_change_and_reason,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
+        r2379000_a_practice_seed_release_deletes_only_the_owners_unclaimed_seed,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
     );
