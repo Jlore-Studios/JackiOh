@@ -10159,6 +10159,7 @@
     "2501": {
       "action": "build",
       "asks": [],
+      "interruptions": 0,
       "kind": "build",
       "onto": "bot/issue-2497",
       "part_of": 2497,
