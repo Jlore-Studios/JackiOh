@@ -240,9 +240,9 @@ func TestHardening_ACachedGetSendsItsEtagAndKeepsTheAnswerGithubSaysIsUnchanged(
 // ---------------------------------------------------------------------------- DeliverTests
 
 // hardeningApprovedRun is DeliverTests.approved_run(h, number=12).
-func hardeningApprovedRun(h *ratingHarness) (*pyjson.Object, string) {
+func hardeningApprovedRun(h *flowHarness) (*pyjson.Object, string) {
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	out := filepath.Join(h.root, fmt.Sprintf("out-%d-%d", 12, h.outs()))
+	out := filepath.Join(h.root, fmt.Sprintf("out-%d-%d", 12, flowOuts(h.root)))
 	work.NewWorker(h.cfg, planned, workFake(map[string]runner.Handler{
 		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}),
@@ -250,12 +250,12 @@ func hardeningApprovedRun(h *ratingHarness) (*pyjson.Object, string) {
 	return planned, out
 }
 
-func hardeningDeliver(h *ratingHarness, planned *pyjson.Object, out string) {
+func hardeningDeliver(h *flowHarness, planned *pyjson.Object, out string) {
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 }
 
 func TestHardening_AStopAfterTheLastCheckpointPublishesNoPullRequest(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned, out := hardeningApprovedRun(h)
 	eventsUpdateItem(h.ctx, 12,
@@ -267,7 +267,7 @@ func TestHardening_AStopAfterTheLastCheckpointPublishesNoPullRequest(t *testing.
 }
 
 func TestHardening_AHaltAfterTheLastCheckpointKeepsTheWorkQueued(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned, out := hardeningApprovedRun(h)
 	eventsUpdateState(h.ctx, "halted", true)
@@ -278,7 +278,7 @@ func TestHardening_AHaltAfterTheLastCheckpointKeepsTheWorkQueued(t *testing.T) {
 }
 
 func TestHardening_TheModelJobItselfStopsAfterTheLastReview(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	calls := 0
@@ -298,7 +298,7 @@ func TestHardening_TheModelJobItselfStopsAfterTheLastReview(t *testing.T) {
 }
 
 func TestHardening_StopThenANewRequestIsAnsweredAfterTheStop(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned, out := hardeningApprovedRun(h)
 	events.Handle(h.ctx, "issue_comment", hardeningComment(12, "/harness stop", hardeningCommentOpts{CID: 21}))
@@ -314,7 +314,7 @@ func TestHardening_StopThenANewRequestIsAnsweredAfterTheStop(t *testing.T) {
 }
 
 func TestHardening_ARevisionAskedForDuringTheBuildIsKept(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v1b\n"})
 	fakes.Git(h.clone, "fetch", "-q", "origin")
 	fakes.Git(h.deliverRepo, "fetch", "-q", "origin")
@@ -347,7 +347,7 @@ func hardeningWriteResult(t *testing.T, out string, result *pyjson.Object) {
 }
 
 func TestHardening_AFailedSurveyGivesBackTheRequest(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.ctx.Store.Update(func(s *pyjson.Object) any {
 		s.Obj("suggest").Update(pyjson.New("requested", true))
 		return nil
@@ -361,7 +361,7 @@ func TestHardening_AFailedSurveyGivesBackTheRequest(t *testing.T) {
 }
 
 func TestHardening_AnUnfinishedSurveyIsDueAgain(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	eventsUpdateState(h.ctx, "suggest", pyjson.New("last_run", nil, "requested", false))
 	testsupport.IdleFor(h.ctx)
 	planned := plan.Make(h.ctx, true, nil, "suggest", nil)

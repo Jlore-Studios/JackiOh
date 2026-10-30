@@ -42,7 +42,7 @@ func suggestionPriorityIdea(title string, kind ...any) *pyjson.Object {
 // suggestionPriorityOpened is opened(h): the suggestions the bot opened, by title.
 func suggestionPriorityOpened(h *flowHarness) map[string]*pyjson.Object {
 	made := map[string]*pyjson.Object{}
-	for _, thread := range h.GH.Threads.Values() {
+	for _, thread := range h.gh.Threads.Values() {
 		if pyjson.Equal(thread.Get("user"), fakes.Bot) && flowThreadLabels(thread)[config.LabelSuggestion] {
 			made[thread.Str("title")] = thread
 		}
@@ -60,11 +60,11 @@ func suggestionPriorityWith(priorities any) *pyjson.Object {
 
 func TestSuggestionPriority_EachClassOpensWithItsPriority(t *testing.T) {
 	h := newFlowHarness(t)
-	testsupport.IdleFor(h.Ctx)
+	testsupport.IdleFor(h.ctx)
 	r := suggestionPrioritySurvey(suggestionPriorityIdea("Fuzz", "fuzz"), suggestionPriorityIdea("Security", "security"),
 		suggestionPriorityIdea("Data", "data"), suggestionPriorityIdea("Feature", "feature"),
 		suggestionPriorityIdea("Unknown", "nonsense"), suggestionPriorityIdea("None"), suggestionPriorityIdea("Odd", 7))
-	h.Night(r)
+	h.night(r)
 	made := suggestionPriorityOpened(h)
 	labels := map[string]map[string]bool{}
 	for title, thread := range made {
@@ -95,8 +95,8 @@ func TestSuggestionPriority_EachClassOpensWithItsPriority(t *testing.T) {
 func TestSuggestionPriority_TheConfigAloneSetsThePriority(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Overrides: pyjson.New("suggestions",
 		suggestionPriorityWith(pyjson.New("fuzz", "high")))})
-	testsupport.IdleFor(h.Ctx)
-	h.Night(suggestionPrioritySurvey(suggestionPriorityIdea("Fuzz", "fuzz"), suggestionPriorityIdea("Data", "data")))
+	testsupport.IdleFor(h.ctx)
+	h.night(suggestionPrioritySurvey(suggestionPriorityIdea("Fuzz", "fuzz"), suggestionPriorityIdea("Data", "data")))
 	made := suggestionPriorityOpened(h)
 	if made["Fuzz"] == nil || made["Data"] == nil {
 		t.Fatal("KeyError: the survey opened no Fuzz or Data")
@@ -107,9 +107,9 @@ func TestSuggestionPriority_TheConfigAloneSetsThePriority(t *testing.T) {
 
 func TestSuggestionPriority_ApprovingKeepsThePriority(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion, "priority:low")})
+	h.gh.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion, "priority:low")})
 	flowAsk(h, 20, "approve", 41)
-	assertEqual(t, h.GH.LabelNames(20), flowSet(config.LabelBuild, "priority:low"))
+	assertEqual(t, h.gh.LabelNames(20), flowSet(config.LabelBuild, "priority:low"))
 }
 
 // ---------------------------------------------------------------------------- ConfigTests

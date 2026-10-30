@@ -66,8 +66,8 @@ func (x *planDraftTrailRunner) Trail(transcript string) string {
 }
 
 // planDraftHarness is planning_harness.
-func planDraftHarness(t *testing.T) *crossHarness {
-	h := newCrossHarness(t, crossHarnessOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine,
+func planDraftHarness(t *testing.T) *flowHarness {
+	h := newFlowHarness(t, flowHarnessOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: testsupport.Machine,
 		At: testsupport.Day, CommittedPlanLanes: true})
 	h.committedHours()
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})

@@ -519,9 +519,9 @@ func controllerEnded(c *fakes.FakeGitHub, runID string, at time.Time) {
 
 // controllerStartedBuild is DeliveryTests.started: a build of #12 the loop started at night, its
 // model job done: (harness, ctx, run id).
-func controllerStartedBuild(t *testing.T) (*difficultyHarness, *hctx.Context, string) {
+func controllerStartedBuild(t *testing.T) (*flowHarness, *hctx.Context, string) {
 	t.Helper()
-	h := newDifficultyHarness(t, difficultyHarnessOpts{Overrides: pyjson.New("controller", true)})
+	h := newFlowHarness(t, flowHarnessOpts{Overrides: pyjson.New("controller", true)})
 	cfg := *h.cfg
 	cfg.ControllerLoop, cfg.RunID = true, "777"
 	ctx := testsupport.MakeCtx(h.gh, testsupport.Ctx{At: testsupport.Night, Cfg: &cfg})

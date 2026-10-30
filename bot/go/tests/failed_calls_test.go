@@ -10,136 +10,15 @@ package tests
 
 import (
 	"fmt"
-	"maps"
-	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	ts "github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
-
-// ---------------------------------------------------------------------------- from test_cross
-
-// failedCallsBuildOnMedium is test_cross.ReviewRuleTests.build_on_medium(h) (provider="muse",
-// edits=None): by day the Claude accounts are closed: Muse, first of the medium models (#317 part
-// 9), plans, builds and reviews it in one run, and its own approval is one medium vote.
-func failedCallsBuildOnMedium(t *testing.T, h *failedCallsHarness) (int, *pyjson.Object) {
-	t.Helper()
-	provider := "muse"
-	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
-	fake := runner.NewFakeRunner(map[string][]runner.Handler{
-		"build":  {crossTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}, 10.0)},
-		"review": {workReviewer(workApprove)}})
-	planned, result := h.night(fake, false)
-	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{provider, "approved"})
-	roles, models := []string{}, map[string]bool{}
-	for _, c := range fake.Calls {
-		roles = append(roles, c.Role)
-		models[c.Model] = true
-	}
-	assertEqual(t, roles, []string{"plan", "build", "review"})
-	assertEqual(t, models, map[string]bool{crossMedium[provider][0]: true})
-	pr := h.gh.ListPulls("open", "bot/issue-12", 200)[0].Int("number")
-	return pr, result
-}
-
-// ---------------------------------------------------------------------------- from test_flow
-
-// failedCallsHarness is test_flow.Harness: one repository, one fake GitHub, and the three jobs of
-// a night run.
-type failedCallsHarness struct {
-	root        string
-	origin      string
-	clone       string
-	gh          *fakes.FakeGitHub
-	env         map[string]string
-	machine     []string
-	overrides   *pyjson.Object
-	at          time.Time
-	cfg         *config.Config
-	ctx         *hctx.Context
-	deliverRepo string
-}
-
-// newFailedCallsHarness is Harness(test, env, at, machine) with no config overrides.
-func newFailedCallsHarness(t *testing.T, env map[string]string, at time.Time, machine []string) *failedCallsHarness {
-	h := &failedCallsHarness{root: t.TempDir()}
-	h.origin, h.clone = fakes.MakeOrigin(h.root)
-	h.gh = fakes.NewFakeGitHub()
-	h.env = map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
-		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
-	maps.Copy(h.env, env)
-	h.overrides = pyjson.New("gates", workGates,
-		"install", pyjson.New("run", "true", "timeout_minutes", 1), "max_review_cycles", 2)
-	h.machine, h.at = machine, at
-	h.cfg = ts.MakeConfig(ts.Config{Env: h.env, Machine: machine, Overrides: h.overrides.Copy()})
-	h.ctx = ts.MakeCtx(h.gh, ts.Ctx{Cfg: h.cfg, At: at})
-	h.gh.BranchChecks = map[string]bool{}
-	for _, check := range h.cfg.RequiredChecks {
-		h.gh.BranchChecks[check] = true
-	}
-	h.deliverRepo = filepath.Join(h.root, "deliver")
-	fakes.Git(h.root, "clone", "-q", h.origin, h.deliverRepo)
-	return h
-}
-
-// committedHours is Harness.committed_hours: from now on, the subscriptions keep the hours
-// providers.json commits (claude-2 and claude-3 all day), with the same GitHub and state.
-func (h *failedCallsHarness) committedHours() {
-	h.cfg = ts.MakeConfig(ts.Config{Env: h.env, Machine: h.machine, CommittedHours: true,
-		Overrides: h.overrides.Copy()})
-	h.ctx = ts.MakeCtx(h.gh, ts.Ctx{Cfg: h.cfg, At: h.at})
-}
-
-// night is Harness.night(runner, force=force): plan, work and deliver.
-func (h *failedCallsHarness) night(fake *runner.FakeRunner, force bool) (*pyjson.Object, *pyjson.Object) {
-	planned := plan.Make(h.ctx, force, nil, "auto", nil)
-	outs, err := filepath.Glob(filepath.Join(h.root, "out-*"))
-	if err != nil {
-		panic(err)
-	}
-	out := filepath.Join(h.root, "out-"+strconv.Itoa(len(outs)))
-	if !pyjson.Equal(planned.Get("action"), "none") {
-		work.NewWorker(h.cfg, planned, fake, h.clone, filepath.Join(h.root, "work"), out,
-			nil, nil, nil, nil, nil, nil).Run()
-		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	}
-	result := pyjson.New()
-	if text, err := os.ReadFile(filepath.Join(out, "result.json")); err == nil {
-		v, err := pyjson.Loads(text)
-		if err != nil {
-			panic(err)
-		}
-		result = v.(*pyjson.Object)
-	}
-	return planned, result
-}
-
-// originSHA is Harness.origin_sha(branch): "" (None) when origin has no such branch.
-func (h *failedCallsHarness) originSHA(branch string) string {
-	sha := ""
-	if caught, ok := herr.Catch[*fakes.PyError](func() {
-		sha = fakes.Git(h.origin, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
-	}); ok {
-		if caught.Type != "AssertionError" {
-			panic(caught)
-		}
-		return ""
-	}
-	return sha
-}
 
 // ---------------------------------------------------------------------------- the file's own
 
@@ -156,9 +35,9 @@ func failedCallsFailing(seconds float64, error_ string) runner.Handler {
 // ---------------------------------------------------------------------------- InstantFailureTests
 
 func TestFailedCalls_ACallThatFailsInSecondsBacksTheSubscriptionOffAndSparesTheItem(t *testing.T) {
-	h := newFailedCallsHarness(t, crossAll, ts.Day, ts.Machine)
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, At: ts.Day, Machine: ts.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	planned, result := h.night(workFake(map[string]runner.Handler{"plan": failedCallsFailing(2, "}")}), false)
+	planned, result := h.night(workFake(map[string]runner.Handler{"plan": failedCallsFailing(2, "}")}))
 	provider := planned.Str("provider")
 	assertEqual(t, result.Get("status"), "infra")
 	assertIn(t, "CLI failed at once: }", result.Get("reason"))
@@ -176,16 +55,15 @@ func TestFailedCalls_ACallThatFailsInSecondsBacksTheSubscriptionOffAndSparesTheI
 	// The subscription is left alone: the next run goes elsewhere.
 	planned, _ = h.night(workFake(map[string]runner.Handler{
 		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"review": workReviewer(workApprove)}), false)
+		"review": workReviewer(workApprove)}))
 	assertNotEqual(t, planned.Get("provider"), provider)
 }
 
 func TestFailedCalls_ThreeInARowAskAPerson(t *testing.T) {
-	h := newFailedCallsHarness(t, map[string]string{"HARNESS_SECRETS_SET": ""}, ts.Day, []string{"muse"})
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""}, At: ts.Day, Machine: []string{"muse"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	for range 3 {
-		h.night(workFake(map[string]runner.Handler{"plan": failedCallsFailing(3, "Error: model unavailable")}),
-			true)
+		h.night(workFake(map[string]runner.Handler{"plan": failedCallsFailing(3, "Error: model unavailable")}), flowPlanArgs{Force: true})
 	}
 	issues := []*pyjson.Object{}
 	for _, thread := range h.gh.Threads.Values() {
@@ -216,10 +94,9 @@ func failedCallsPyStr(v any) string {
 }
 
 func TestFailedCalls_ABuilderThatFailsAfterWorkingAWhileButChangedNothingFailsTheRun(t *testing.T) {
-	h := newFailedCallsHarness(t, crossAll, ts.Day, ts.Machine)
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, At: ts.Day, Machine: ts.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	_, result := h.night(workFake(map[string]runner.Handler{"build": failedCallsFailing(600, "the session crashed")}),
-		false)
+	_, result := h.night(workFake(map[string]runner.Handler{"build": failedCallsFailing(600, "the session crashed")}))
 	assertEqual(t, result.Get("status"), "failed")
 	assertIn(t, "the builder's session failed and changed nothing: the session crashed", result.Get("reason"))
 	cycles := pyjson.List(result.Get("cycles"))
@@ -231,7 +108,7 @@ func TestFailedCalls_ABuilderThatFailsAfterWorkingAWhileButChangedNothingFailsTh
 
 // Claude's turn limit ends a long session `ok: false`: its work is still a pass.
 func TestFailedCalls_ABuilderThatFailedAfterDoingWorkKeepsIt(t *testing.T) {
-	h := newFailedCallsHarness(t, crossAll, ts.Day, ts.Machine)
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, At: ts.Day, Machine: ts.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	inner := workBuilder(map[string]string{"src/game.txt": "v2\n"})
 
@@ -242,18 +119,18 @@ func TestFailedCalls_ABuilderThatFailedAfterDoingWorkKeepsIt(t *testing.T) {
 		return result
 	}
 	_, result := h.night(workFake(map[string]runner.Handler{"build": turnLimit,
-		"review": workReviewer(workApprove)}), false)
+		"review": workReviewer(workApprove)}))
 	assertEqual(t, result.Get("status"), "approved")
 	cycles := pyjson.List(result.Get("cycles"))
 	assertEqual(t, pyjson.Obj(cycles[0]).Obj("builder").Get("changed"), true)
 }
 
 func TestFailedCalls_AReviewCallThatFailsNamesItsError(t *testing.T) {
-	h := newFailedCallsHarness(t, crossAll, ts.Day, ts.Machine)
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, At: ts.Day, Machine: ts.Machine})
 	h.committedHours() // claude-3 works all day: the Strong final can audit
-	pr, _ := failedCallsBuildOnMedium(t, h)
+	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	assertEqual(t, h.gh.LabelNames(pr), providersSetOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
-	_, review := h.night(workFake(map[string]runner.Handler{"review": failedCallsFailing(900, "overloaded")}), false)
+	_, review := h.night(workFake(map[string]runner.Handler{"review": failedCallsFailing(900, "overloaded")}))
 	assertEqual(t, review.Get("status"), "failed")
 	assertEqual(t, review.Get("reason"), "the reviewer's call failed: overloaded")
 	comments := h.gh.BotComments(pr)

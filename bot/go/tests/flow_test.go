@@ -37,7 +37,7 @@ import (
 // flowPRNode is pr_node(h, number): the pull request's node id.
 func flowPRNode(h *flowHarness, number any) string {
 	n, _ := pyjson.AsInt(number)
-	return h.GH.GetPull(n).Str("node_id")
+	return h.gh.GetPull(n).Str("node_id")
 }
 
 // flowHarnessOpts is Harness's keyword arguments; a zero field is the default.
@@ -45,7 +45,10 @@ type flowHarnessOpts struct {
 	Env     map[string]string // env = None
 	At      time.Time         // at = NIGHT (the zero time is Night)
 	Machine []string          // machine = ()
-	// Overrides is **cfg_overrides: config.json keys, in order.
+	// CommittedPlanLanes is plan_lanes=None among **cfg_overrides: make_config's keyword for the
+	// committed planning lanes.
+	CommittedPlanLanes bool
+	// Overrides is the rest of **cfg_overrides: config.json keys, in order.
 	Overrides *pyjson.Object
 }
 
@@ -73,19 +76,20 @@ func flowMake(ctx *hctx.Context, args ...flowPlanArgs) *pyjson.Object {
 
 // flowHarness is Harness: one repository, one fake GitHub, and the three jobs of a night run.
 type flowHarness struct {
-	Root        string
-	Origin      string
-	Clone       string
-	GH          *fakes.FakeGitHub
-	Cfg         *config.Config
-	Ctx         *hctx.Context
-	DeliverRepo string
-	// setup is self._setup: (env, machine, overrides, at).
+	root        string
+	origin      string
+	clone       string
+	gh          *fakes.FakeGitHub
+	cfg         *config.Config
+	ctx         *hctx.Context
+	deliverRepo string
+	// setup is self._setup: (env, machine, overrides, at), plan_lanes among the overrides.
 	setup struct {
-		env       map[string]string
-		machine   []string
-		overrides *pyjson.Object
-		at        time.Time
+		env                map[string]string
+		machine            []string
+		overrides          *pyjson.Object
+		committedPlanLanes bool
+		at                 time.Time
 	}
 }
 
@@ -100,47 +104,48 @@ func newFlowHarness(t *testing.T, opts ...flowHarnessOpts) *flowHarness {
 	if at.IsZero() {
 		at = testsupport.Night
 	}
-	h := &flowHarness{Root: t.TempDir()}
-	h.Origin, h.Clone = fakes.MakeOrigin(h.Root)
-	h.GH = fakes.NewFakeGitHub()
-	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.Root, "remote"),
+	h := &flowHarness{root: t.TempDir()}
+	h.origin, h.clone = fakes.MakeOrigin(h.root)
+	h.gh = fakes.NewFakeGitHub()
+	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
 		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
 	maps.Copy(env, o.Env)
-	overrides := pyjson.New("gates", workGates, "install", pyjson.New("run", "true", "timeout_minutes", 1),
-		"max_review_cycles", 2)
+	overrides := pyjson.New("gates", workGates, "install", workInstall(), "max_review_cycles", 2)
 	if o.Overrides != nil {
 		overrides.Update(o.Overrides)
 	}
-	h.setup.env, h.setup.machine, h.setup.overrides, h.setup.at = env, o.Machine, overrides, at
-	h.Cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine, Overrides: overrides})
-	h.Ctx = testsupport.MakeCtx(h.GH, testsupport.Ctx{Cfg: h.Cfg, At: at})
-	h.GH.BranchChecks = map[string]bool{}
-	for _, check := range h.Cfg.RequiredChecks {
-		h.GH.BranchChecks[check] = true
+	h.setup.env, h.setup.machine, h.setup.overrides = env, o.Machine, overrides
+	h.setup.committedPlanLanes, h.setup.at = o.CommittedPlanLanes, at
+	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine,
+		CommittedPlanLanes: o.CommittedPlanLanes, Overrides: overrides})
+	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: at})
+	h.gh.BranchChecks = map[string]bool{}
+	for _, check := range h.cfg.RequiredChecks {
+		h.gh.BranchChecks[check] = true
 	}
-	h.DeliverRepo = filepath.Join(h.Root, "deliver")
-	fakes.Git(h.Root, "clone", "-q", h.Origin, h.DeliverRepo)
+	h.deliverRepo = filepath.Join(h.root, "deliver")
+	fakes.Git(h.root, "clone", "-q", h.origin, h.deliverRepo)
 	return h
 }
 
-// CommittedHours is committed_hours: from now on, the subscriptions keep the hours
+// committedHours is committed_hours: from now on, the subscriptions keep the hours
 // providers.json commits (claude-2 and claude-3 all day), with the same GitHub and state.
-func (h *flowHarness) CommittedHours() {
-	h.Cfg = testsupport.MakeConfig(testsupport.Config{Env: h.setup.env, Machine: h.setup.machine,
-		CommittedHours: true, Overrides: h.setup.overrides})
-	h.Ctx = testsupport.MakeCtx(h.GH, testsupport.Ctx{Cfg: h.Cfg, At: h.setup.at})
+func (h *flowHarness) committedHours() {
+	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: h.setup.env, Machine: h.setup.machine,
+		CommittedHours: true, CommittedPlanLanes: h.setup.committedPlanLanes, Overrides: h.setup.overrides})
+	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: h.setup.at})
 }
 
-// Night is night(runner, **plan_args): plan, then work and deliver what it planned. Returns
-// the plan and the run's result ({} when it left none).
-func (h *flowHarness) Night(r any, args ...flowPlanArgs) (*pyjson.Object, *pyjson.Object) {
-	planned := flowMake(h.Ctx, args...)
-	outs, _ := filepath.Glob(filepath.Join(h.Root, "out-*"))
-	out := filepath.Join(h.Root, fmt.Sprintf("out-%d", len(outs)))
+// night is night(runner, **plan_args): plan, then work and deliver what it planned. `r` is any
+// runner the work job takes (a FakeRunner, or test_plan_draft's TrailRunner). Returns the plan
+// and the run's result ({} when it left none).
+func (h *flowHarness) night(r any, args ...flowPlanArgs) (*pyjson.Object, *pyjson.Object) {
+	planned := flowMake(h.ctx, args...)
+	out := filepath.Join(h.root, fmt.Sprintf("out-%d", flowOuts(h.root)))
 	if !pyjson.Equal(planned.Get("action"), "none") {
-		work.NewWorker(h.Cfg, planned, r, h.Clone, filepath.Join(h.Root, "work"), out, nil, nil, nil,
+		work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil,
 			nil, nil, nil).Run()
-		deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
+		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	}
 	result := pyjson.New()
 	if text, err := os.ReadFile(filepath.Join(out, "result.json")); err == nil {
@@ -149,11 +154,11 @@ func (h *flowHarness) Night(r any, args ...flowPlanArgs) (*pyjson.Object, *pyjso
 	return planned, result
 }
 
-// OriginSHA is origin_sha(branch): the branch's sha on origin, or "" (None) when it has none.
-func (h *flowHarness) OriginSHA(branch string) string {
+// originSHA is origin_sha(branch): the branch's sha on origin, or "" (None) when it has none.
+func (h *flowHarness) originSHA(branch string) string {
 	sha := ""
 	err, ok := herr.Catch[*fakes.PyError](func() {
-		sha = fakes.Git(h.Origin, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
+		sha = fakes.Git(h.origin, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
 	})
 	if ok {
 		if err.Type != "AssertionError" {
@@ -162,6 +167,16 @@ func (h *flowHarness) OriginSHA(branch string) string {
 		return ""
 	}
 	return sha
+}
+
+// flowOuts is len(list(root.glob("out-*"))): how many runs left their out folder in `root`, which
+// numbers the next one.
+func flowOuts(root string) int {
+	found, err := filepath.Glob(filepath.Join(root, "out-*"))
+	if err != nil {
+		panic(err)
+	}
+	return len(found)
 }
 
 // flowUpdate is ctx.store.update(lambda s: ...), for a change that returns nothing.
@@ -345,99 +360,99 @@ func TestFlow_SuggestionsWhenIdleUpToTheCap(t *testing.T) {
 
 func TestFlow_AnApprovedBuildBecomesAnAutoMergingPullRequest(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "rules v2\n"}),
 		"review": workReviewer(workApprove)})
-	_, result := h.Night(r)
+	_, result := h.night(r)
 	assertEqual(t, result.Get("status"), "approved")
-	assertEqual(t, h.OriginSHA("bot/issue-12"), result.Get("head"))
-	pulls := h.GH.ListPulls("open", "bot/issue-12", 200)
+	assertEqual(t, h.originSHA("bot/issue-12"), result.Get("head"))
+	pulls := h.gh.ListPulls("open", "bot/issue-12", 200)
 	assertEqual(t, len(pulls), 1)
 	pull := pulls[0]
 	assertTrue(t, strings.HasPrefix(pull.Str("body"), "Closes #12"), pull.Get("body"))
 	assertIn(t, "Approved on round 1", pull.Str("body"))
 	assertFalse(t, pull.Truthy("draft"))
-	assertIn(t, pull.Str("node_id"), h.GH.AutoMerge)
-	assertEqual(t, h.GH.LabelNames(pull.Int("number")), flowSet(config.LabelPR, "difficulty:medium"))
-	assertEqual(t, h.GH.LabelNames(12), flowSet(config.LabelPROpen, "bot:planned", "difficulty:medium"))
-	assertIn(t, "Auto-merge is on", flowLast(t, h.GH.BotComments(12)))
-	usage := flowPath(h.Ctx.Store.Load(), "providers", "claude-1", "usage")
+	assertIn(t, pull.Str("node_id"), h.gh.AutoMerge)
+	assertEqual(t, h.gh.LabelNames(pull.Int("number")), flowSet(config.LabelPR, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(12), flowSet(config.LabelPROpen, "bot:planned", "difficulty:medium"))
+	assertIn(t, "Auto-merge is on", flowLast(t, h.gh.BotComments(12)))
+	usage := flowPath(h.ctx.Store.Load(), "providers", "claude-1", "usage")
 	assertEqual(t, flowPath(usage, "five_hour", "utilization"), 0.3)
 }
 
 func TestFlow_AChangeToAReviewPathWaitsForAPerson(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n", "package.json": "{}\n"}),
 		"review": workReviewer(workApprove)})
-	_, result := h.Night(r)
+	_, result := h.night(r)
 	assertEqual(t, result.Get("status"), "approved")
-	pull := h.GH.ListPulls("open", "bot/issue-12", 200)[0]
-	assertNotIn(t, pull.Str("node_id"), h.GH.AutoMerge)
-	assertTrue(t, h.GH.LabelNames(pull.Int("number"))["ready for merge"])
-	assertEqual(t, h.GH.ReviewRequests, []fakes.ReviewRequest{{Number: pull.Int("number"), Logins: []string{"jgoetzmann"}}})
-	said := flowLast(t, h.GH.BotComments(12))
+	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
+	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
+	assertTrue(t, h.gh.LabelNames(pull.Int("number"))["ready for merge"])
+	assertEqual(t, h.gh.ReviewRequests, []fakes.ReviewRequest{{Number: pull.Int("number"), Logins: []string{"jgoetzmann"}}})
+	said := flowLast(t, h.gh.BotComments(12))
 	assertIn(t, "package.json", said)
 	assertIn(t, "labelled `ready for merge`: @jgoetzmann, it waits for you to merge it", said)
 	// Back in the queue it is no longer ready: a revision takes the label off.
-	queue.QueueRevise(h.Ctx, pull.Int("number"), "jgoetzmann", false, "request", false, nil, nil)
-	assertFalse(t, h.GH.LabelNames(pull.Int("number"))["ready for merge"])
+	queue.QueueRevise(h.ctx, pull.Int("number"), "jgoetzmann", false, "request", false, nil, nil)
+	assertFalse(t, h.gh.LabelNames(pull.Int("number"))["ready for merge"])
 }
 
 func TestFlow_AnIssueLabelledPersonMergesWaitsForAPerson(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild, "person merges")})
-	_, result := h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild, "person merges")})
+	_, result := h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, result.Get("status"), "approved")
-	pull := h.GH.ListPulls("open", "bot/issue-12", 200)[0]
-	assertNotIn(t, pull.Str("node_id"), h.GH.AutoMerge)
-	assertEqual(t, h.GH.LabelNames(pull.Int("number")),
+	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
+	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
+	assertEqual(t, h.gh.LabelNames(pull.Int("number")),
 		flowSet(config.LabelPR, "person merges", "ready for merge", "difficulty:medium"))
-	assertIn(t, "it is labelled `person merges`", flowLast(t, h.GH.BotComments(12)))
+	assertIn(t, "it is labelled `person merges`", flowLast(t, h.gh.BotComments(12)))
 }
 
 func TestFlow_AnApprovedPullRequestWithAutoMergeOffIsReadyForMerge(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Overrides: pyjson.New("auto_merge", false)})
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
-	pull := h.GH.ListPulls("open", "bot/issue-12", 200)[0]
-	assertNotIn(t, pull.Str("node_id"), h.GH.AutoMerge)
-	assertEqual(t, h.GH.LabelNames(pull.Int("number")), flowSet(config.LabelPR, "ready for merge", "difficulty:medium"))
+	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
+	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
+	assertEqual(t, h.gh.LabelNames(pull.Int("number")), flowSet(config.LabelPR, "ready for merge", "difficulty:medium"))
 }
 
 func TestFlow_NoAutoMergeWhileMainIsUnprotected(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.BranchChecks = nil
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.BranchChecks = nil
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
-	h.Night(r)
-	pull := h.GH.ListPulls("open", "bot/issue-12", 200)[0]
-	assertNotIn(t, pull.Str("node_id"), h.GH.AutoMerge)
-	assertIn(t, "is not protected", flowLast(t, h.GH.BotComments(12)))
+	h.night(r)
+	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
+	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
+	assertIn(t, "is not protected", flowLast(t, h.gh.BotComments(12)))
 	h2 := newFlowHarness(t)
-	h2.GH.BranchChecks = map[string]bool{"rust": true}
-	h2.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	h2.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
+	h2.gh.BranchChecks = map[string]bool{"rust": true}
+	h2.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h2.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
-	assertEqual(t, h2.GH.AutoMerge, map[string]string{})
-	assertIn(t, "does not require", flowLast(t, h2.GH.BotComments(12)))
+	assertEqual(t, h2.gh.AutoMerge, map[string]string{})
+	assertIn(t, "does not require", flowLast(t, h2.gh.BotComments(12)))
 }
 
 func TestFlow_TheNextRunIsChainedWhileWorkRemains(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	h.GH.AddIssue(13, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(13, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
-	h.Night(r)
+	h.night(r)
 	// One lane free on the taker (#695) means one chained run: it claims one item, and a run
 	// that finds nothing ends cheaply at its gate.
-	assertEqual(t, len(h.GH.Dispatches), 1)
+	assertEqual(t, len(h.gh.Dispatches), 1)
 	workflows := []string{}
-	for _, d := range h.GH.Dispatches {
+	for _, d := range h.gh.Dispatches {
 		workflows = append(workflows, d.Workflow)
 	}
 	assertEqual(t, workflows, []string{"bot-night.yml"})
@@ -447,19 +462,19 @@ func TestFlow_ARejectedBuildGoesToItsFinalAudit(t *testing.T) {
 	// Twice rejected in the run, the lane's rounds (2 here) are used: the kept work opens a
 	// ready pull request for its Strong final audit instead of drafting for a person.
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"fix":    workBuilder(map[string]any{"src/game.txt": "v3\n"}),
 		"review": workReviewer(workChanges("It breaks replay."))})
-	_, result := h.Night(r)
+	_, result := h.night(r)
 	assertEqual(t, result.Get("status"), "built")
 	assertIn(t, "Strong final audit", result.Str("reason"))
-	pull := h.GH.ListPulls("open", "bot/issue-12", 200)[0]
+	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
 	assertFalse(t, pull.Truthy("draft"))
-	assertNotIn(t, pull.Str("node_id"), h.GH.AutoMerge)
-	assertEqual(t, h.GH.LabelNames(pull.Int("number")), flowSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
-	assertEqual(t, h.GH.LabelNames(12), flowSet(config.LabelPROpen, "bot:planned", "difficulty:medium"))
-	said := flowLast(t, h.GH.BotComments(12))
+	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
+	assertEqual(t, h.gh.LabelNames(pull.Int("number")), flowSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, h.gh.LabelNames(12), flowSet(config.LabelPROpen, "bot:planned", "difficulty:medium"))
+	said := flowLast(t, h.gh.BotComments(12))
 	assertIn(t, "Its own reviewer read it 2 time(s) in the run", said)
 	assertIn(t, "one strong model's final audit (Opus)", said)
 }
@@ -475,19 +490,19 @@ func flowLimited(resetAt string) runner.Handler {
 
 func TestFlow_AnInterruptedBuildKeepsItsBranchAndResumes(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "half\n"}),
 		"review": flowLimited("2026-09-30T04:00:00Z")})
-	_, first := h.Night(r)
+	_, first := h.night(r)
 	assertEqual(t, first.Get("status"), "interrupted")
-	assertEqual(t, h.OriginSHA("bot/issue-12"), first.Get("head"))
-	assertEqual(t, h.GH.LabelNames(12), flowSet(config.LabelBuild, "bot:planned", "difficulty:medium"))
-	assertEqual(t, flowPath(h.Ctx.Store.Load(), "providers", "claude-1", "refused_until"), "2026-09-30T04:00:00Z")
-	assertEqual(t, h.GH.Dispatches, []fakes.Dispatch{}) // no chaining into a refusal
-	flowAtHour(h.Ctx, 5)
+	assertEqual(t, h.originSHA("bot/issue-12"), first.Get("head"))
+	assertEqual(t, h.gh.LabelNames(12), flowSet(config.LabelBuild, "bot:planned", "difficulty:medium"))
+	assertEqual(t, flowPath(h.ctx.Store.Load(), "providers", "claude-1", "refused_until"), "2026-09-30T04:00:00Z")
+	assertEqual(t, h.gh.Dispatches, []fakes.Dispatch{}) // no chaining into a refusal
+	flowAtHour(h.ctx, 5)
 	r = workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "whole\n"}),
 		"review": workReviewer(workApprove)})
-	_, second := h.Night(r)
+	_, second := h.night(r)
 	assertEqual(t, second.Get("status"), "approved")
 	assertEqual(t, second.Get("start"), first.Get("head"))
 	assertIn(t, "rules v1", r.Calls[0].Prompt+"rules v1") // the prompt rendered
@@ -496,11 +511,11 @@ func TestFlow_AnInterruptedBuildKeepsItsBranchAndResumes(t *testing.T) {
 
 func TestFlow_DeliverRefusesABundleThatTouchesAForbiddenPath(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	planned := flowMake(h.Ctx)
-	out := filepath.Join(h.Root, "out-evil")
-	dir := filepath.Join(h.Root, "evil")
-	fakes.Git(h.Root, "clone", "-q", h.Origin, dir)
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	planned := flowMake(h.ctx)
+	out := filepath.Join(h.root, "out-evil")
+	dir := filepath.Join(h.root, "evil")
+	fakes.Git(h.root, "clone", "-q", h.origin, dir)
 	fakes.Git(dir, "checkout", "-q", "-b", "bot/issue-12")
 	flowMkdir(t, filepath.Join(dir, ".github"))
 	flowWrite(filepath.Join(dir, ".github", "evil.yml"), "on: push\n")
@@ -512,132 +527,132 @@ func TestFlow_DeliverRefusesABundleThatTouchesAForbiddenPath(t *testing.T) {
 	flowWrite(filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New(
 		"status", "approved", "head", fakes.Git(dir, "rev-parse", "HEAD"), "start", base,
 		"bundle", "branch.bundle", "cycles", []any{}, "title", "t")))
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	assertEqual(t, h.OriginSHA("bot/issue-12"), "")
-	assertEqual(t, h.GH.LabelNames(12), flowSet(config.LabelBlocked))
-	assertIn(t, ".github/evil.yml", flowLast(t, h.GH.BotComments(12)))
-	assertEqual(t, len(h.GH.ListPulls("open", "", 200)), 0)
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	assertEqual(t, h.originSHA("bot/issue-12"), "")
+	assertEqual(t, h.gh.LabelNames(12), flowSet(config.LabelBlocked))
+	assertIn(t, ".github/evil.yml", flowLast(t, h.gh.BotComments(12)))
+	assertEqual(t, len(h.gh.ListPulls("open", "", 200)), 0)
 }
 
 func TestFlow_DeliverNeverOverwritesABranchThatMoved(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	planned := flowMake(h.Ctx)
-	out := filepath.Join(h.Root, "out-x")
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	planned := flowMake(h.ctx)
+	out := filepath.Join(h.root, "out-x")
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
-	work.NewWorker(h.Cfg, planned, r, h.Clone, filepath.Join(h.Root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
-	someone := fakes.PushBranch(h.Origin, h.Root, "bot/issue-12", map[string]string{"other.txt": "a person's commit\n"})
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	assertEqual(t, h.OriginSHA("bot/issue-12"), someone)
-	assertIn(t, "moved on GitHub", flowLast(t, h.GH.BotComments(12)))
+	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
+	someone := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"other.txt": "a person's commit\n"})
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	assertEqual(t, h.originSHA("bot/issue-12"), someone)
+	assertIn(t, "moved on GitHub", flowLast(t, h.gh.BotComments(12)))
 }
 
 func TestFlow_ARunThatDiesGoesToTheBackAndIsBlockedAfterTwo(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	h.GH.AddIssue(13, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	planned := flowMake(h.Ctx)
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(13, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	planned := flowMake(h.ctx)
 	assertEqual(t, planned.Get("number"), 12)
-	out := filepath.Join(h.Root, "empty-1")
+	out := filepath.Join(h.root, "empty-1")
 	flowMkdir(t, out)
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	assertEqual(t, h.GH.LabelNames(12), flowSet(config.LabelBuild))
-	assertIn(t, "behind the others", flowLast(t, h.GH.BotComments(12)))
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	assertEqual(t, h.gh.LabelNames(12), flowSet(config.LabelBuild))
+	assertIn(t, "behind the others", flowLast(t, h.gh.BotComments(12)))
 	// One lane (#695): the taker holds its run, so the died run chains nothing; the died item
 	// itself waits out its backoff below.
-	assertEqual(t, len(h.GH.Dispatches), 0)
+	assertEqual(t, len(h.gh.Dispatches), 0)
 	// Its subscription is left alone a while; then #12, at the back, waits behind #13.
-	assertIn(t, "could not work", flowMake(h.Ctx).Str("reason"))
-	flowAtHour(h.Ctx, 4)
-	assertEqual(t, flowMake(h.Ctx).Get("number"), 13)
-	h.GH.Threads.Item(13).Set("labels", []any{})
-	planned = flowMake(h.Ctx)
-	out = filepath.Join(h.Root, "empty-2")
+	assertIn(t, "could not work", flowMake(h.ctx).Str("reason"))
+	flowAtHour(h.ctx, 4)
+	assertEqual(t, flowMake(h.ctx).Get("number"), 13)
+	h.gh.Threads.Item(13).Set("labels", []any{})
+	planned = flowMake(h.ctx)
+	out = filepath.Join(h.root, "empty-2")
 	flowMkdir(t, out)
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	assertEqual(t, h.GH.LabelNames(12), flowSet(config.LabelBlocked))
-	assertIn(t, "died 2 times", flowLast(t, h.GH.BotComments(12)))
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	assertEqual(t, h.gh.LabelNames(12), flowSet(config.LabelBlocked))
+	assertIn(t, "died 2 times", flowLast(t, h.gh.BotComments(12)))
 }
 
 func TestFlow_AnEnvironmentFailureIsNotTheItemsFault(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	planned := flowMake(h.Ctx)
-	out := filepath.Join(h.Root, "infra")
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	planned := flowMake(h.ctx)
+	out := filepath.Join(h.root, "infra")
 	flowMkdir(t, out)
 	flowWrite(filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New("status", "infra",
 		"reason", "the claude CLI could not run")))
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	assertEqual(t, h.GH.LabelNames(12), flowSet(config.LabelBuild))
-	assertFalse(t, pyjson.Obj(flowPath(h.Ctx.Store.Load(), "items", "12")).Has("died"))
-	assertIn(t, "`claude-1` its last run could not work", flowMake(h.Ctx).Str("reason"))
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	assertEqual(t, h.gh.LabelNames(12), flowSet(config.LabelBuild))
+	assertFalse(t, pyjson.Obj(flowPath(h.ctx.Store.Load(), "items", "12")).Has("died"))
+	assertIn(t, "`claude-1` its last run could not work", flowMake(h.ctx).Str("reason"))
 }
 
 func TestFlow_AFailedRunIsRequeuedThenBlocked(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Overrides: pyjson.New("max_failures", 2)})
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	for _, attempt := range []int{1, 2} {
-		planned := flowMake(h.Ctx)
+		planned := flowMake(h.ctx)
 		assertEqual(t, planned.Get("number"), 12)
-		out := filepath.Join(h.Root, fmt.Sprintf("failed-%d", attempt))
+		out := filepath.Join(h.root, fmt.Sprintf("failed-%d", attempt))
 		flowMkdir(t, out)
 		flowWrite(filepath.Join(out, "result.json"), pyjson.Dumps(pyjson.New("status", "failed", "reason", "boom")))
-		deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
+		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	}
-	assertEqual(t, h.GH.LabelNames(12), flowSet(config.LabelBlocked))
-	assertIn(t, "failed 2 times", flowLast(t, h.GH.BotComments(12)))
+	assertEqual(t, h.gh.LabelNames(12), flowSet(config.LabelBlocked))
+	assertIn(t, "failed 2 times", flowLast(t, h.gh.BotComments(12)))
 }
 
 func TestFlow_TheItemComesFromThePlanJobsOutputs(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	planned := flowMake(h.Ctx)
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	planned := flowMake(h.ctx)
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
-	out := filepath.Join(h.Root, "out-trust")
-	work.NewWorker(h.Cfg, planned, r, h.Clone, filepath.Join(h.Root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
+	out := filepath.Join(h.root, "out-trust")
+	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 	forged := planned.Copy().Set("number", 99).Set("branch", "main")
 	twelve := 12
-	deliver.NewDeliverer(h.Ctx, forged, out, h.DeliverRepo, "build", &twelve, "").Run()
-	assertTrue(t, h.OriginSHA("bot/issue-12") != "", "origin_sha is not None")
-	assertEqual(t, len(h.GH.ListPulls("open", "bot/issue-12", 200)), 1)
+	deliver.NewDeliverer(h.ctx, forged, out, h.deliverRepo, "build", &twelve, "").Run()
+	assertTrue(t, h.originSHA("bot/issue-12") != "", "origin_sha is not None")
+	assertEqual(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)), 1)
 }
 
 func TestFlow_ACommentDuringARunGetsAnotherPass(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	planned := flowMake(h.Ctx)
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	planned := flowMake(h.ctx)
 	payload := pyjson.New("action", "created", "sender", fakes.Operator.Copy(), "issue", pyjson.New("number", 12),
 		"comment", pyjson.New("id", 9, "body", "@jgoetzmann-bot also add a test for the Coin",
 			"user", fakes.Operator.Copy(), "author_association", "OWNER"))
-	events.Handle(h.Ctx, "issue_comment", payload)
-	assertIn(t, "once more", flowLast(t, h.GH.BotComments(12)))
+	events.Handle(h.ctx, "issue_comment", payload)
+	assertIn(t, "once more", flowLast(t, h.gh.BotComments(12)))
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
-	out := filepath.Join(h.Root, "out-pending")
-	work.NewWorker(h.Cfg, planned, r, h.Clone, filepath.Join(h.Root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	pr := h.GH.ListPulls("open", "bot/issue-12", 200)[0].Get("number")
+	out := filepath.Join(h.root, "out-pending")
+	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	pr := h.gh.ListPulls("open", "bot/issue-12", 200)[0].Get("number")
 	n, _ := pyjson.AsInt(pr)
-	assertTrue(t, h.GH.LabelNames(n)[config.LabelRevise], h.GH.LabelNames(n))
-	assertNotIn(t, flowPRNode(h, pr), h.GH.AutoMerge) // held until the revision lands
+	assertTrue(t, h.gh.LabelNames(n)[config.LabelRevise], h.gh.LabelNames(n))
+	assertNotIn(t, flowPRNode(h, pr), h.gh.AutoMerge) // held until the revision lands
 }
 
 func TestFlow_UnapprovedWorkNeverLandsOnAPRWithAutoMerge(t *testing.T) {
 	h := newFlowHarness(t)
-	start := fakes.PushBranch(h.Origin, h.Root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
-	fakes.Git(h.Clone, "fetch", "-q", "origin")
-	fakes.Git(h.DeliverRepo, "fetch", "-q", "origin")
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	pull := h.GH.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: flowLabels(config.LabelPR), SHA: start})
+	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
+	fakes.Git(h.clone, "fetch", "-q", "origin")
+	fakes.Git(h.deliverRepo, "fetch", "-q", "origin")
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	pull := h.gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: flowLabels(config.LabelPR), SHA: start})
 	pull.Set("auto_merge", pyjson.New("merge_method", "squash"))
-	h.GH.AutoMerge["PR_40"] = "squash"
-	_, result := h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "wip\n"}),
+	h.gh.AutoMerge["PR_40"] = "squash"
+	_, result := h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "wip\n"}),
 		"review": flowLimited("2026-09-30T06:00:00Z")}))
 	assertEqual(t, result.Get("status"), "interrupted")
-	assertEqual(t, h.OriginSHA("bot/issue-12"), result.Get("head"))
-	assertNotIn(t, "PR_40", h.GH.AutoMerge)
+	assertEqual(t, h.originSHA("bot/issue-12"), result.Get("head"))
+	assertNotIn(t, "PR_40", h.gh.AutoMerge)
 }
 
 func TestFlow_AForcedItemRunsOutsideTheWindowAndOthersDoNot(t *testing.T) {
@@ -664,54 +679,54 @@ func TestFlow_AForcedRunWithNothingQueuedSurveysOnlyWhenDue(t *testing.T) {
 
 func TestFlow_ARevisionRequestIsPushedToThePullRequest(t *testing.T) {
 	h := newFlowHarness(t)
-	start := fakes.PushBranch(h.Origin, h.Root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
-	fakes.Git(h.Clone, "fetch", "-q", "origin")
-	fakes.Git(h.DeliverRepo, "fetch", "-q", "origin")
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelPROpen)})
-	h.GH.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: flowLabels(config.LabelPR, config.LabelRevise), SHA: start})
-	h.GH.AddComment(40, "@jgoetzmann-bot rename it to rules v2.1", fakes.Comment{User: fakes.Operator})
+	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
+	fakes.Git(h.clone, "fetch", "-q", "origin")
+	fakes.Git(h.deliverRepo, "fetch", "-q", "origin")
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelPROpen)})
+	h.gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: flowLabels(config.LabelPR, config.LabelRevise), SHA: start})
+	h.gh.AddComment(40, "@jgoetzmann-bot rename it to rules v2.1", fakes.Comment{User: fakes.Operator})
 	r := workFake(map[string]any{"revise": workBuilder(map[string]any{"src/game.txt": "v2.1\n"}),
 		"review": workReviewer(workApprove)})
-	planned, result := h.Night(r)
+	planned, result := h.night(r)
 	assertEqual(t, []any{planned.Get("action"), result.Get("status")}, []any{"revise", "approved"})
 	assertIn(t, "rename it to rules v2.1", r.Calls[0].Prompt)
-	assertEqual(t, h.OriginSHA("bot/issue-12"), result.Get("head"))
-	assertEqual(t, fakes.Git(h.Origin, "show", result.Str("head")+":src/game.txt"), "v2.1")
-	assertEqual(t, h.GH.LabelNames(40), flowSet(config.LabelPR))
-	assertIn(t, "PR_40", h.GH.AutoMerge)
+	assertEqual(t, h.originSHA("bot/issue-12"), result.Get("head"))
+	assertEqual(t, fakes.Git(h.origin, "show", result.Str("head")+":src/game.txt"), "v2.1")
+	assertEqual(t, h.gh.LabelNames(40), flowSet(config.LabelPR))
+	assertIn(t, "PR_40", h.gh.AutoMerge)
 }
 
 func TestFlow_ARevisionTheReviewerRejectsGoesToItsFinal(t *testing.T) {
 	// Twice rejected, the lane's rounds (2 here) are used: the kept revision is pushed for its
 	// Strong final audit, merging nothing by itself (#725).
 	h := newFlowHarness(t)
-	start := fakes.PushBranch(h.Origin, h.Root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
-	fakes.Git(h.Clone, "fetch", "-q", "origin")
-	h.GH.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: flowLabels(config.LabelPR, config.LabelRevise), SHA: start})
+	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
+	fakes.Git(h.clone, "fetch", "-q", "origin")
+	h.gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: flowLabels(config.LabelPR, config.LabelRevise), SHA: start})
 	r := workFake(map[string]any{"revise": workBuilder(map[string]any{"src/game.txt": "bad\n"}),
 		"fix":    workBuilder(map[string]any{"src/game.txt": "worse\n"}),
 		"review": workReviewer(workChanges("No."))})
-	_, result := h.Night(r)
+	_, result := h.night(r)
 	assertEqual(t, result.Get("status"), "built")
-	assertTrue(t, h.OriginSHA("bot/issue-12") != start, "the branch moved")
-	assertEqual(t, h.GH.LabelNames(40), flowSet(config.LabelPR, config.LabelCross))
-	assertEqual(t, h.GH.AutoMerge, map[string]string{})
+	assertTrue(t, h.originSHA("bot/issue-12") != start, "the branch moved")
+	assertEqual(t, h.gh.LabelNames(40), flowSet(config.LabelPR, config.LabelCross))
+	assertEqual(t, h.gh.AutoMerge, map[string]string{})
 }
 
 func TestFlow_SuggestionsOpenIssuesUpToTheCap(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
+	h.gh.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	ideas := []string{}
 	for i := 0; i < 11; i++ {
 		ideas = append(ideas, pyjson.Dumps(pyjson.New("title", fmt.Sprintf("Idea %d", i), "body", "## Why\nx")))
 	}
 	text := "<!-- suggestions: [" + strings.Join(ideas, ",") + "] -->"
-	testsupport.IdleFor(h.Ctx)
-	planned, result := h.Night(workFake(map[string]any{"suggest": workReviewer(text)}))
+	testsupport.IdleFor(h.ctx)
+	planned, result := h.night(workFake(map[string]any{"suggest": workReviewer(text)}))
 	assertEqual(t, planned.Get("count"), 9)
 	assertEqual(t, len(result.List("suggestions")), 9)
 	made := []*pyjson.Object{}
-	for _, thread := range h.GH.Threads.Values() {
+	for _, thread := range h.gh.Threads.Values() {
 		if flowThreadLabels(thread)[config.LabelSuggestion] && pyjson.Equal(thread.Get("user"), fakes.Bot) {
 			made = append(made, thread)
 		}
@@ -734,7 +749,7 @@ func flowThreadLabels(thread *pyjson.Object) map[string]bool {
 
 // flowAsk is ask(h, number, body, cid): a comment from the operator, through the event handler.
 func flowAsk(h *flowHarness, number int, body string, cid int) []string {
-	return events.Handle(h.Ctx, "issue_comment", pyjson.New(
+	return events.Handle(h.ctx, "issue_comment", pyjson.New(
 		"action", "created", "sender", fakes.Operator.Copy(), "issue", pyjson.New("number", number),
 		"comment", pyjson.New("id", cid, "body", body, "user", fakes.Operator.Copy(), "author_association", "OWNER")))
 }
@@ -742,7 +757,7 @@ func flowAsk(h *flowHarness, number int, body string, cid int) []string {
 // flowReacted is reacted(h, cid): the reactions put on comment `cid`, in order.
 func flowReacted(h *flowHarness, cid int) []string {
 	out := []string{}
-	for _, r := range h.GH.Reacted {
+	for _, r := range h.gh.Reacted {
 		if r.ID == cid {
 			out = append(out, r.Content)
 		}
@@ -753,7 +768,7 @@ func flowReacted(h *flowHarness, cid int) []string {
 // flowBotReplies is ReactionTests.bot_replies: the bodies of the bot's comments on `number`.
 func flowBotReplies(h *flowHarness, number int) []string {
 	out := []string{}
-	for _, c := range h.GH.Comments.Get(number) {
+	for _, c := range h.gh.Comments.Get(number) {
 		if pyjson.Equal(c.Get("user"), fakes.Bot) {
 			out = append(out, c.Str("body"))
 		}
@@ -765,13 +780,13 @@ func flowBotReplies(h *flowHarness, number int) []string {
 
 func TestFlow_ABuildRequestIsAnsweredWithItsPullRequest(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Title: "Make the rules v2"})
+	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2"})
 	flowAsk(h, 12, "/harness build", 31)
 	assertEqual(t, flowReacted(h, 31), []string{"eyes", "+1", "rocket"})
-	h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "rules v2\n"}),
+	h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "rules v2\n"}),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, flowReacted(h, 31), []string{"eyes", "+1", "rocket", "heart", "hooray"})
-	record := pyjson.Obj(flowPath(h.Ctx.Store.Load(), "items", "12"))
+	record := pyjson.Obj(flowPath(h.ctx.Store.Load(), "items", "12"))
 	assertEqual(t, []any{flowPath(record, "asks"), flowPath(record, "taken_asks")}, []any{[]any{}, []any{}})
 }
 
@@ -779,9 +794,9 @@ func TestFlow_ABuildTheReviewerWillNotPassGoesToItsFinal(t *testing.T) {
 	// The lane's rounds run out without an approval, so the kept work goes to its final audit
 	// (#725): the run finished with an answer, not without one.
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12)
+	h.gh.AddIssue(12)
 	flowAsk(h, 12, "@jgoetzmann-bot make the rules v2", 32)
-	h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
+	h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"fix":    workBuilder(map[string]any{"src/game.txt": "v3\n"}),
 		"review": workReviewer(workChanges("It breaks replay."))}))
 	got := flowReacted(h, 32)
@@ -790,15 +805,15 @@ func TestFlow_ABuildTheReviewerWillNotPassGoesToItsFinal(t *testing.T) {
 
 func TestFlow_AnInterruptedRunGivesItsAsksBackForTheNext(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12)
+	h.gh.AddIssue(12)
 	flowAsk(h, 12, "/harness build", 33)
-	h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "half\n"}),
+	h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "half\n"}),
 		"review": flowLimited("2026-09-30T04:00:00Z")}))
-	record := pyjson.Obj(flowPath(h.Ctx.Store.Load(), "items", "12"))
+	record := pyjson.Obj(flowPath(h.ctx.Store.Load(), "items", "12"))
 	assertEqual(t, []any{flowPath(record, "asks"), flowPath(record, "taken_asks")}, []any{[]any{"c:33"}, []any{}})
 	assertEqual(t, flowLast(t, flowReacted(h, 33)), "heart")
-	flowAtHour(h.Ctx, 5)
-	h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "whole\n"}),
+	flowAtHour(h.ctx, 5)
+	h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "whole\n"}),
 		"review": workReviewer(workApprove)}))
 	got := flowReacted(h, 33)
 	assertEqual(t, got[max(0, len(got)-2):], []string{"heart", "hooray"})
@@ -806,131 +821,131 @@ func TestFlow_AnInterruptedRunGivesItsAsksBackForTheNext(t *testing.T) {
 
 func TestFlow_ANoteLeftDuringABuildWaitsOnItsPullRequest(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	planned := flowMake(h.Ctx)
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	planned := flowMake(h.ctx)
 	flowAsk(h, 12, "@jgoetzmann-bot also add a test for the Coin", 34)
 	assertEqual(t, flowReacted(h, 34), []string{"eyes", "+1", "rocket"})
-	out := filepath.Join(h.Root, "out-note")
+	out := filepath.Join(h.root, "out-note")
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
-	work.NewWorker(h.Cfg, planned, r, h.Clone, filepath.Join(h.Root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
-	pr := h.GH.ListPulls("open", "bot/issue-12", 200)[0].Int("number")
-	items := h.Ctx.Store.Load().Obj("items")
+	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
+	pr := h.gh.ListPulls("open", "bot/issue-12", 200)[0].Int("number")
+	items := h.ctx.Store.Load().Obj("items")
 	assertEqual(t, []any{flowPath(items, "12", "asks"), flowPath(items, fmt.Sprint(pr), "asks")},
 		[]any{[]any{}, []any{"c:34"}})
 	assertFalse(t, slices.Contains(flowReacted(h, 34), "hooray")) // this run never read it
-	number := flowMake(h.Ctx).Get("number")
+	number := flowMake(h.ctx).Get("number")
 	assertEqual(t, []any{number, flowLast(t, flowReacted(h, 34))}, []any{pr, "heart"})
 }
 
 func TestFlow_ASuggestRequestIsAnsweredByTheSurvey(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
+	h.gh.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	flowAsk(h, 20, "/harness suggest", 35)
 	text := "<!-- suggestions: [" + pyjson.Dumps(pyjson.New("title", "Idea", "body", "## Why\nx")) + "] -->"
-	planned, _ := h.Night(workFake(map[string]any{"suggest": workReviewer(text)}))
+	planned, _ := h.night(workFake(map[string]any{"suggest": workReviewer(text)}))
 	assertEqual(t, planned.Get("action"), "suggest")
 	assertEqual(t, flowReacted(h, 35), []string{"eyes", "+1", "rocket", "heart", "hooray"})
-	assertEqual(t, flowPath(h.Ctx.Store.Load(), "suggest", "taken_asks"), []any{})
+	assertEqual(t, flowPath(h.ctx.Store.Load(), "suggest", "taken_asks"), []any{})
 }
 
 func TestFlow_AnApproveCommentQueuesASuggestionForBuild(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
+	h.gh.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	flowAsk(h, 20, "approve", 41)
-	assertFalse(t, h.GH.LabelNames(20)[config.LabelSuggestion], h.GH.LabelNames(20))
-	assertTrue(t, h.GH.LabelNames(20)[config.LabelBuild], h.GH.LabelNames(20))
+	assertFalse(t, h.gh.LabelNames(20)[config.LabelSuggestion], h.gh.LabelNames(20))
+	assertTrue(t, h.gh.LabelNames(20)[config.LabelBuild], h.gh.LabelNames(20))
 	assertIn(t, "Queued #20", flowFirst(t, flowBotReplies(h, 20)))
 	assertEqual(t, flowReacted(h, 41), []string{"eyes", "+1", "rocket"})
-	planned := flowMake(h.Ctx)
+	planned := flowMake(h.ctx)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("number")}, []any{"build", 20})
 }
 
 func TestFlow_ARejectCommentClosesASuggestion(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(21, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
+	h.gh.AddIssue(21, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	flowAsk(h, 21, "Reject.", 42)
-	issue := h.GH.GetIssue(21)
+	issue := h.gh.GetIssue(21)
 	assertEqual(t, []any{issue.Get("state"), issue.Get("state_reason")}, []any{"closed", "not_planned"})
 	// It stays a suggestion on record, so the survey sees it was one and does not offer it again.
-	assertEqual(t, h.GH.LabelNames(21), flowSet(config.LabelSuggestion))
+	assertEqual(t, h.gh.LabelNames(21), flowSet(config.LabelSuggestion))
 	assertIn(t, "Rejected: I closed #21", flowFirst(t, flowBotReplies(h, 21)))
 	assertEqual(t, flowReacted(h, 42), []string{"eyes", "rocket"}) // no model work, so no +1
 }
 
 func TestFlow_ARejectAfterTheBotsNameClosesItInsteadOfBuildingIt(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(24, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
+	h.gh.AddIssue(24, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	flowAsk(h, 24, "@jgoetzmann-bot reject", 45)
-	assertEqual(t, h.GH.GetIssue(24).Get("state"), "closed")
-	assertFalse(t, h.GH.LabelNames(24)[config.LabelBuild], h.GH.LabelNames(24))
+	assertEqual(t, h.gh.GetIssue(24).Get("state"), "closed")
+	assertFalse(t, h.gh.LabelNames(24)[config.LabelBuild], h.gh.LabelNames(24))
 	assertEqual(t, len(flowBotReplies(h, 24)), 1)
 }
 
 func TestFlow_AVoteOnANonSuggestionIssueIsIgnored(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(22)
-	out := events.Handle(h.Ctx, "issue_comment", pyjson.New(
+	h.gh.AddIssue(22)
+	out := events.Handle(h.ctx, "issue_comment", pyjson.New(
 		"action", "created", "sender", fakes.Operator.Copy(), "issue", pyjson.New("number", 22),
 		"comment", pyjson.New("id", 43, "body", "approve", "user", fakes.Operator.Copy(),
 			"author_association", "OWNER")))
 	assertEqual(t, out, []string{"no command"})
 	assertEqual(t, [][]string{flowBotReplies(h, 22), flowReacted(h, 43)}, [][]string{{}, {}})
-	assertEqual(t, h.GH.LabelNames(22), flowSet())
+	assertEqual(t, h.gh.LabelNames(22), flowSet())
 }
 
 func TestFlow_AQuotedVoteCastsNothing(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(25, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
+	h.gh.AddIssue(25, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	flowAsk(h, 25, "> reject\n\nWhy would anyone reject this?", 46)
-	assertEqual(t, h.GH.GetIssue(25).Get("state"), "open")
+	assertEqual(t, h.gh.GetIssue(25).Get("state"), "open")
 	assertEqual(t, flowReacted(h, 46), []string{})
 }
 
 func TestFlow_AVoteFromSomeoneOffTheTrustListDoesNothing(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(26, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
-	out := events.Handle(h.Ctx, "issue_comment", pyjson.New(
+	h.gh.AddIssue(26, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
+	out := events.Handle(h.ctx, "issue_comment", pyjson.New(
 		"action", "created", "sender", fakes.Stranger.Copy(), "issue", pyjson.New("number", 26),
 		"comment", pyjson.New("id", 47, "body", "reject", "user", fakes.Stranger.Copy(),
 			"author_association", "NONE")))
 	assertEqual(t, out, []string{"ignored: @someone-else is not on the trust list"})
-	assertEqual(t, h.GH.GetIssue(26).Get("state"), "open")
-	assertEqual(t, h.GH.LabelNames(26), flowSet(config.LabelSuggestion))
+	assertEqual(t, h.gh.GetIssue(26).Get("state"), "open")
+	assertEqual(t, h.gh.LabelNames(26), flowSet(config.LabelSuggestion))
 }
 
 func TestFlow_AnEditedVoteCommentIsAnsweredOnce(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(23, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
+	h.gh.AddIssue(23, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	payload := func(action string) *pyjson.Object {
 		return pyjson.New("sender", fakes.Operator.Copy(), "issue", pyjson.New("number", 23),
 			"comment", pyjson.New("id", 44, "body", "approve", "user", fakes.Operator.Copy(),
 				"author_association", "OWNER"), "action", action)
 	}
-	events.Handle(h.Ctx, "issue_comment", payload("created"))
+	events.Handle(h.ctx, "issue_comment", payload("created"))
 	// The first vote queued it, which took `bot:suggestion` off: the edit votes on nothing.
-	out := events.Handle(h.Ctx, "issue_comment", payload("edited"))
+	out := events.Handle(h.ctx, "issue_comment", payload("edited"))
 	assertEqual(t, out, []string{"no command"})
 	assertEqual(t, len(flowBotReplies(h, 23)), 1)
 	// And a vote line claimed already is never answered twice, suggestion or not.
-	h.GH.AddLabels(23, []string{config.LabelSuggestion})
-	out = events.Handle(h.Ctx, "issue_comment", payload("edited"))
+	h.gh.AddLabels(23, []string{config.LabelSuggestion})
+	out = events.Handle(h.ctx, "issue_comment", payload("edited"))
 	assertEqual(t, out, []string{"ignored: already answered"})
 	assertEqual(t, len(flowBotReplies(h, 23)), 1)
 }
 
 func TestFlow_AStoppedRunEndsWithoutAnAnswer(t *testing.T) {
 	h := newFlowHarness(t)
-	h.GH.AddIssue(12)
+	h.gh.AddIssue(12)
 	flowAsk(h, 12, "/harness build", 36)
-	planned := flowMake(h.Ctx)
+	planned := flowMake(h.ctx)
 	flowAsk(h, 12, "/harness stop", 37)
-	out := filepath.Join(h.Root, "out-stopped")
+	out := filepath.Join(h.root, "out-stopped")
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
-	work.NewWorker(h.Cfg, planned, r, h.Clone, filepath.Join(h.Root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
-	deliver.NewDeliverer(h.Ctx, planned, out, h.DeliverRepo, "", nil, "").Run()
+	work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
+	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	got := flowReacted(h, 36)
 	assertEqual(t, got[max(0, len(got)-2):], []string{"heart", "confused"})
 	assertEqual(t, flowReacted(h, 37), []string{"eyes", "rocket"})

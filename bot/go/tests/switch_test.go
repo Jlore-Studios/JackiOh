@@ -57,8 +57,8 @@ func switchRated(difficulty string) runner.Handler {
 }
 
 // switchHarness is SwitchTests.harness.
-func switchHarness(t *testing.T) *difficultyHarness {
-	return newDifficultyHarness(t, difficultyHarnessOpts{Env: crossAll,
+func switchHarness(t *testing.T) *flowHarness {
+	return newFlowHarness(t, flowHarnessOpts{Env: crossAll,
 		Overrides: pyjson.New("max_review_cycles", 4)})
 }
 
@@ -269,7 +269,7 @@ func TestSwitch_TheBuilderIsToldItMaySwitch(t *testing.T) {
 }
 
 func TestSwitch_ALaneWithOneModelNeverSwitches(t *testing.T) {
-	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"muse"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}}) // unrated, so a medium model may plan it
 	r := runner.NewFakeRunner(map[string][]runner.Handler{

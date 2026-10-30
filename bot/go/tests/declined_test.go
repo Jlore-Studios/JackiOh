@@ -11,21 +11,12 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/declined"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 )
-
-// declinedAsk is test_flow.ask: a comment from the operator, through the event handler.
-func declinedAsk(h *difficultyHarness, number int, body string, cid int) {
-	events.Handle(h.ctx, "issue_comment", pyjson.New(
-		"action", "created", "sender", fakes.Operator.Copy(), "issue", pyjson.New("number", number),
-		"comment", pyjson.New("id", cid, "body", body, "user", fakes.Operator.Copy(),
-			"author_association", "OWNER")))
-}
 
 // declinedSurvey is survey(*titles): a survey call that suggests `titles`.
 func declinedSurvey(titles ...string) *runner.FakeRunner {
@@ -47,7 +38,7 @@ func declinedPlanRunner(text string) *runner.FakeRunner {
 func TestDeclined_QueuedWorkThatWaitsForAnotherSubscriptionNoLongerStopsASurvey(t *testing.T) {
 	// By day only Muse is free, and a hard item needs a strong model: Muse has nothing it can
 	// start, so after 30 minutes it surveys, though the queue is not empty.
-	h := mediumBiasDayHarness(t, "muse")
+	h := ratingDayHarness(t, "muse")
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	look := plan.Peek_(h.ctx, false, nil, "auto")
 	assertEqual(t, []bool{look.Work, look.Idle}, []bool{false, true})
@@ -60,7 +51,7 @@ func TestDeclined_QueuedWorkThatWaitsForAnotherSubscriptionNoLongerStopsASurvey(
 }
 
 func TestDeclined_NoSecondSurveyWhileOneRuns(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	testsupport.IdleFor(h.ctx, 45)
 	h.ctx.Store.Update(func(s *pyjson.Object) any {
 		s.Obj("suggest").Update(pyjson.New("provider", "claude-3", "run_id", "9"))
@@ -71,7 +62,7 @@ func TestDeclined_NoSecondSurveyWhileOneRuns(t *testing.T) {
 }
 
 func TestDeclined_TheCapStillHolds(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	for n := 20; n < 30; n++ {
 		h.gh.AddIssue(n, fakes.Issue{Labels: []string{config.LabelSuggestion}})
 	}
@@ -80,7 +71,7 @@ func TestDeclined_TheCapStillHolds(t *testing.T) {
 }
 
 func TestDeclined_AnUnfinishedSurveyGivesTheClockBack(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	testsupport.IdleFor(h.ctx, 45)
 	before := h.ctx.Store.Load().Obj("suggest").Get("idle_since")
 	planned, _ := h.night(runner.NewFakeRunner(map[string][]runner.Handler{"suggest": {
@@ -96,9 +87,9 @@ func TestDeclined_AnUnfinishedSurveyGivesTheClockBack(t *testing.T) {
 // ---------------------------------------------------------------------------- LogTests
 
 func TestDeclined_ARejectVoteIsLogged(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(21, fakes.Issue{Title: "Patch v0.3.Y: shinier coins", Labels: []string{config.LabelSuggestion}})
-	declinedAsk(h, 21, "reject", 61)
+	flowAsk(h, 21, "reject", 61)
 	entries := declined.Entries(h.ctx.Store.Load())
 	assertEqual(t, len(entries), 1)
 	entry := entries[0]
@@ -107,13 +98,13 @@ func TestDeclined_ARejectVoteIsLogged(t *testing.T) {
 }
 
 func TestDeclined_TheSurveyReadsEveryOneAndARepeatIsNotOpened(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	// Closed by hand long ago (#777's way), and rejected by a vote.
 	h.gh.AddIssue(30, fakes.Issue{Title: "Architecture: a fuzz monitor for piles", State: "closed",
 		Labels: []string{config.LabelSuggestion}})
 	h.gh.Threads.Item(30).Set("state_reason", "not_planned")
 	h.gh.AddIssue(31, fakes.Issue{Title: "Patch v0.3.Y: shinier coins", Labels: []string{config.LabelSuggestion}})
-	declinedAsk(h, 31, "reject", 62)
+	flowAsk(h, 31, "reject", 62)
 	testsupport.IdleFor(h.ctx)
 	r := declinedSurvey("Patch v0.3.Y: Shinier coins!", "Patch v0.3.Y: a new idea")
 	h.night(r)
@@ -138,10 +129,10 @@ func TestDeclined_TheSurveyReadsEveryOneAndARepeatIsNotOpened(t *testing.T) {
 }
 
 func TestDeclined_AnApprovedSuggestionTheBotCannotBuildIsLogged(t *testing.T) {
-	h := mediumBiasDayHarness(t)
+	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Title: "Night bot: tune the sweep", Labels: []string{config.LabelSuggestion}})
-	declinedAsk(h, 12, "approve", 63)
-	h.night(declinedPlanRunner(mediumBiasRatedPlan("medium", []string{"bot/harness/sweep.py"}, "")))
+	flowAsk(h, 12, "approve", 63)
+	h.night(declinedPlanRunner(ratingRatedPlan("medium", []string{"bot/harness/sweep.py"}, "")))
 	assertIn(t, config.LabelHumanRequired, h.gh.LabelNames(12))
 	entries := declined.Entries(h.ctx.Store.Load())
 	assertEqual(t, len(entries), 1)
@@ -152,9 +143,9 @@ func TestDeclined_AnApprovedSuggestionTheBotCannotBuildIsLogged(t *testing.T) {
 }
 
 func TestDeclined_APlainIssueHandedToPeopleIsNotADeclinedSuggestion(t *testing.T) {
-	h := mediumBiasDayHarness(t)
+	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Title: "Night bot: tune the sweep", Labels: []string{config.LabelBuild}})
-	h.night(declinedPlanRunner(mediumBiasRatedPlan("medium", []string{"bot/harness/sweep.py"}, "")))
+	h.night(declinedPlanRunner(ratingRatedPlan("medium", []string{"bot/harness/sweep.py"}, "")))
 	assertIn(t, config.LabelHumanRequired, h.gh.LabelNames(12))
 	assertEqual(t, declined.Entries(h.ctx.Store.Load()), []*pyjson.Object{})
 }

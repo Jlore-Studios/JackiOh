@@ -131,11 +131,11 @@ func TestMemory_DeliverKeepsAMachineRunsMemory(t *testing.T) {
 	memorySkipUnlessLinux(t)
 	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"muse"}, At: testsupport.Day})
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	planned, _ := h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	planned, _ := h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, planned.Get("provider"), "muse")
-	kept := pyjson.Objs(h.Ctx.Store.Load().Get("machine_memory"))
+	kept := pyjson.Objs(h.ctx.Store.Load().Get("machine_memory"))
 	assertEqual(t, len(kept), 1)
 	total, _ := pyjson.AsFloat(flowPath(kept[0], "total"))
 	assertTrue(t, total > 0, kept[0].Get("total"))
@@ -147,11 +147,11 @@ func TestMemory_ARunOnTheSecondBoxKeepsItsBox(t *testing.T) {
 	memorySkipUnlessLinux(t)
 	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"muse"}, At: testsupport.Day})
-	h.GH.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	t.Setenv("RUNNER_NAME", "night-vm-muse-b2")
-	h.Night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
+	h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
-	kept := pyjson.Objs(h.Ctx.Store.Load().Get("machine_memory"))
+	kept := pyjson.Objs(h.ctx.Store.Load().Get("machine_memory"))
 	if len(kept) == 0 {
 		t.Fatal("IndexError: no machine_memory kept")
 	}

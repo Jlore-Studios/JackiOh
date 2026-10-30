@@ -120,7 +120,7 @@ func (w *squishyCasesWorld) ask(number int, body string) []string {
 func (w *squishyCasesWorld) run(r *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
 	w.t.Helper()
 	planned := plan.Make(w.ctx, false, nil, "auto", nil)
-	out := filepath.Join(w.root, fmt.Sprintf("out-%d", journalOuts(w.root)))
+	out := filepath.Join(w.root, fmt.Sprintf("out-%d", flowOuts(w.root)))
 	if planned.Str("action") != "none" {
 		work.NewWorker(w.cfg, planned, r, w.clone, filepath.Join(w.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
 		deliver.NewDeliverer(w.ctx, planned, out, w.deliverRepo, "", nil, "").Run()

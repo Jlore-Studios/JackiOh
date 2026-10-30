@@ -4,7 +4,6 @@ package tests
 
 import (
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -31,91 +30,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
 
-// ---------------------------------------------------------------------------- borrowed helpers
-//
-// What test_waste.py imports from test_flow.py (Harness), test_work.py (DONE, APPROVE, changes,
-// builder, reviewer, GATES) and test_cross.py (ALL), copied here under this file's prefix until
-// flow_test.go, work_test.go and cross_test.go hold theirs; disk_test.go, needs_plan_test.go and
-// pickup_labels_test.go, which import the same, use these too. Only what those tests call is here.
-
-// wasteHarnessOpts is test_flow.Harness's keyword arguments; a zero field is the default.
-type wasteHarnessOpts struct {
-	Env       map[string]string // env = None
-	At        time.Time         // at = NIGHT (the zero time is Night)
-	Machine   []string          // machine = ()
-	Overrides *pyjson.Object    // **cfg_overrides
-}
-
-// wasteHarness is test_flow.Harness: one repository, one fake GitHub, and the three jobs of a
-// night run.
-type wasteHarness struct {
-	root, origin, clone string
-	gh                  *fakes.FakeGitHub
-	cfg                 *config.Config
-	ctx                 *hctx.Context
-	deliverRepo         string
-}
-
-func newWasteHarness(t *testing.T, opts ...wasteHarnessOpts) *wasteHarness {
-	t.Helper()
-	var o wasteHarnessOpts
-	if len(opts) > 0 {
-		o = opts[0]
-	}
-	h := &wasteHarness{root: t.TempDir()}
-	h.origin, h.clone = fakes.MakeOrigin(h.root)
-	h.gh = fakes.NewFakeGitHub()
-	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
-		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
-	maps.Copy(env, o.Env)
-	overrides := pyjson.New("gates", workGates, "install", workInstall(), "max_review_cycles", 2)
-	overrides.Update(o.Overrides)
-	at := o.At
-	if at.IsZero() {
-		at = testsupport.Night
-	}
-	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine, Overrides: overrides})
-	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{At: at, Cfg: h.cfg})
-	h.gh.BranchChecks = workflowsSet(h.cfg.RequiredChecks...)
-	h.deliverRepo = filepath.Join(h.root, "deliver")
-	fakes.Git(h.root, "clone", "-q", h.origin, h.deliverRepo)
-	return h
-}
-
-// nextOut is `self.root / f"out-{len(list(self.root.glob('out-*')))}"`.
-func (h *wasteHarness) nextOut() string {
-	found, err := filepath.Glob(filepath.Join(h.root, "out-*"))
-	herr.Must(err)
-	return filepath.Join(h.root, fmt.Sprintf("out-%d", len(found)))
-}
-
-// night is Harness.night(runner, force=...): plan, work and deliver; the plan and the result.
-func (h *wasteHarness) night(r *runner.FakeRunner, force ...bool) (*pyjson.Object, *pyjson.Object) {
-	planned := plan.Make(h.ctx, len(force) > 0 && force[0], nil, "auto", nil)
-	out := h.nextOut()
-	if !pyjson.Equal(planned.Get("action"), "none") {
-		wasteWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out).Run()
-		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	}
-	result := pyjson.New()
-	if data, err := os.ReadFile(filepath.Join(out, "result.json")); err == nil {
-		loaded, err := pyjson.Loads(data)
-		herr.Must(err)
-		result = pyjson.Obj(loaded)
-	}
-	return planned, result
-}
-
-// originSHA is Harness.origin_sha: the branch's head on origin, or false for None.
-func (h *wasteHarness) originSHA(branch string) (string, bool) {
-	sha := ""
-	if _, failed := herr.Catch[*fakes.PyError](func() {
-		sha = fakes.Git(h.origin, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
-	}); failed {
-		return "", false
-	}
-	return sha, true
-}
+// ---------------------------------------------------------------------------- the file's helpers
 
 // wasteWorker is Worker(cfg, plan, runner, repo_dir, work_dir, out_dir) with no keyword argument.
 func wasteWorker(cfg *config.Config, planned *pyjson.Object, r any, repo, workDir, out string) *work.Worker {
@@ -253,7 +168,7 @@ func TestWaste_ThePlanPromptStatesItsBudget(t *testing.T) {
 }
 
 func TestWaste_APlanTheDescriptionRefusedGoesWholeIntoItsComment(t *testing.T) {
-	h := newWasteHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	h.gh.Patch.SetIssueBody = func(int, string) *pyjson.Object {
 		herr.Raise(&herr.GitHubError{Msg: "body is too long", Status: 422})
@@ -278,7 +193,7 @@ func TestWaste_APlanTheDescriptionRefusedGoesWholeIntoItsComment(t *testing.T) {
 // Muse built #160 for 73 minutes; every path was in `bot/`, so delivery refused it all.
 
 func TestWaste_ABuildThatOnlyChangesForbiddenPathsStopsAndAsksAPerson(t *testing.T) {
-	h := newWasteHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Title: "Tune the bot", Labels: []string{config.LabelBuild}})
 	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"bot/harness/tuned.py": "x = 1\n"}),
 		"review": workReviewer(workApprove)})
@@ -286,8 +201,7 @@ func TestWaste_ABuildThatOnlyChangesForbiddenPathsStopsAndAsksAPerson(t *testing
 	assertEqual(t, result.Get("status"), "blocked", result.Get("reason"))
 	assertTrue(t, !slices.Contains(workRoles(r), "review")) // no rounds spent on it
 	assertTrue(t, !result.Has("bundle"))
-	_, found := h.originSHA("bot/issue-12")
-	assertFalse(t, found)
+	assertIsNone(t, h.originSHA("bot/issue-12"))
 	// Handed to people (#793): `human required` in place of the bot's own `bot:blocked`.
 	assertTrue(t, h.gh.LabelNames(12)[config.LabelHumanRequired])
 	assertTrue(t, !h.gh.LabelNames(12)[config.LabelBlocked])
@@ -297,7 +211,7 @@ func TestWaste_ABuildThatOnlyChangesForbiddenPathsStopsAndAsksAPerson(t *testing
 }
 
 func TestWaste_ABuildWithWorkOutsideThemGoesOn(t *testing.T) {
-	h := newWasteHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	r := workFake(map[string]runner.Handler{
 		"build": workBuilder(map[string]string{"bot/x.py": "1\n", "src/game.txt": "v2\n"}),
@@ -360,13 +274,13 @@ func TestWaste_AFailureThatIsNotTheProvidersKeepsTheStreak(t *testing.T) {
 }
 
 func TestWaste_AStreakAsksAPersonOnceAndAWorkingRunEndsIt(t *testing.T) {
-	h := newWasteHarness(t, wasteHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: wasteAt})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: wasteAt})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	provider := wasteStr(planned, "provider")
 
 	deliverResult := func(result *pyjson.Object) {
-		out := h.nextOut()
+		out := filepath.Join(h.root, fmt.Sprintf("out-%d", flowOuts(h.root)))
 		herr.Must(os.Mkdir(out, 0o777))
 		herr.Must(os.WriteFile(filepath.Join(out, "result.json"), []byte(pyjson.Dumps(result)), 0o666))
 		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
@@ -409,7 +323,7 @@ func wastePull(t *testing.T, gh *fakes.FakeGitHub, branch string) *pyjson.Object
 }
 
 func TestWaste_AnUnapprovedPullRequestSaysHowManyRoundsItTookAndWhy(t *testing.T) {
-	h := newWasteHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer("LGTM")}))
@@ -421,7 +335,7 @@ func TestWaste_AnUnapprovedPullRequestSaysHowManyRoundsItTookAndWhy(t *testing.T
 
 func TestWaste_TheSquashCommitTakesThePullRequestsTitle(t *testing.T) {
 	// claude-3 alone, so its Opus review meets the rule (#695) and auto-merge turns on.
-	h := newWasteHarness(t, wasteHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
@@ -442,7 +356,7 @@ func TestWaste_ATitleThatBreaksTheConventionGivesWayToTheIssues(t *testing.T) {
 	} {
 		text, want := c[0], c[1]
 		// claude-3 alone, so its Opus review meets the rule (#695) and auto-merge turns on.
-		h := newWasteHarness(t, wasteHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
+		h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 		h.gh.AddIssue(12, fakes.Issue{Title: issue, Labels: []string{config.LabelBuild}})
 		h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}, text),
 			"review": workReviewer(workApprove)}))

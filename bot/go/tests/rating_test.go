@@ -2,26 +2,21 @@
 // rule; three failures of an item's own raise it a step and rebuild its pull request from `main`;
 // `/harness rebuild` and `/harness review [strong|medium]`.
 //
-// bot/tests/test_rating.py. Its file also holds, under the `rating` prefix, what the Python
-// imports from test_flow.py (Harness, ask), test_work.py (APPROVE, GATES, DONE, builder,
-// reviewer) and test_difficulty.py (seats) for the files ported with it: those files are ported
-// apart, so these are their code again under names of this file's, to fold into theirs once both
-// are in.
+// bot/tests/test_rating.py. Its rated_plan, planner, day_harness, EASY and MEDIUM are
+// ratingRatedPlan, ratingPlanner, ratingDayHarness, ratingEasy and ratingMedium, which other files
+// import.
 package tests
 
 import (
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/commands"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
@@ -31,86 +26,9 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stepup"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
 
-// ---------------------------------------------------------------------------- from test_flow.py
-
-// ratingHarness is test_flow.Harness: one repository, one fake GitHub, and the three jobs of a
-// night run.
-type ratingHarness struct {
-	t           *testing.T
-	root        string
-	origin      string
-	clone       string
-	gh          *fakes.FakeGitHub
-	cfg         *config.Config
-	ctx         *hctx.Context
-	deliverRepo string
-}
-
-// ratingHarnessOpts is Harness's keyword arguments; a zero field is the default.
-type ratingHarnessOpts struct {
-	Env     map[string]string // env = None
-	At      time.Time         // at = NIGHT (the zero time is Night)
-	Machine []string          // machine = ()
-	// PlanLanesNone is the cfg override plan_lanes=None: the committed planning lanes.
-	PlanLanesNone bool
-	Overrides     *pyjson.Object // **cfg_overrides that are config.json keys, in order
-}
-
-func newRatingHarness(t *testing.T, opts ...ratingHarnessOpts) *ratingHarness {
-	t.Helper()
-	var o ratingHarnessOpts
-	if len(opts) > 0 {
-		o = opts[0]
-	}
-	h := &ratingHarness{t: t, root: t.TempDir()}
-	h.origin, h.clone = fakes.MakeOrigin(h.root)
-	h.gh = fakes.NewFakeGitHub()
-	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
-		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
-	maps.Copy(env, o.Env)
-	overrides := pyjson.New("gates", workGates, "install", pyjson.New("run", "true", "timeout_minutes", 1),
-		"max_review_cycles", 2)
-	overrides.Update(o.Overrides)
-	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine,
-		CommittedPlanLanes: o.PlanLanesNone, Overrides: overrides})
-	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: o.At})
-	h.gh.BranchChecks = map[string]bool{}
-	for _, name := range h.cfg.RequiredChecks {
-		h.gh.BranchChecks[name] = true
-	}
-	h.deliverRepo = filepath.Join(h.root, "deliver")
-	fakes.Git(h.root, "clone", "-q", h.origin, h.deliverRepo)
-	return h
-}
-
-// outs is len(list(self.root.glob('out-*'))).
-func (h *ratingHarness) outs() int {
-	found, err := filepath.Glob(filepath.Join(h.root, "out-*"))
-	if err != nil {
-		panic(err)
-	}
-	return len(found)
-}
-
-// night is Harness.night(runner, **plan_args): plan, work and deliver; the plan and the model
-// job's result.json ({} when it left none).
-func (h *ratingHarness) night(fake *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
-	return h.nightWith(fake, false, "auto")
-}
-
-func (h *ratingHarness) nightWith(fake *runner.FakeRunner, force bool, mode string) (*pyjson.Object, *pyjson.Object) {
-	planned := plan.Make(h.ctx, force, nil, mode, nil)
-	out := filepath.Join(h.root, fmt.Sprintf("out-%d", h.outs()))
-	if pyjson.Str(planned.Get("action")) != "none" {
-		work.NewWorker(h.cfg, planned, fake, h.clone, filepath.Join(h.root, "work"), out,
-			nil, nil, nil, nil, nil, nil).Run()
-		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	}
-	return planned, ratingReadResult(h.t, out)
-}
+// ---------------------------------------------------------------------------- the file's helpers
 
 // ratingReadResult is json.loads((out / "result.json").read_text()), or {} when it is not there.
 func ratingReadResult(t *testing.T, out string) *pyjson.Object {
@@ -127,28 +45,6 @@ func ratingReadResult(t *testing.T, out string) *pyjson.Object {
 		t.Fatal(err)
 	}
 	return v.(*pyjson.Object)
-}
-
-// originSHA is Harness.origin_sha: the branch's sha on origin, or nil (None) when it has none.
-func (h *ratingHarness) originSHA(branch string) (sha *string) {
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(*fakes.PyError); ok && e.Type == "AssertionError" {
-				sha = nil
-				return
-			}
-			panic(r)
-		}
-	}()
-	found := fakes.Git(h.origin, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
-	return &found
-}
-
-// ratingAsk is test_flow.ask: a comment from the operator, through the event handler.
-func ratingAsk(h *ratingHarness, number int, body string, cid int) {
-	events.Handle(h.ctx, "issue_comment", pyjson.New(
-		"action", "created", "sender", fakes.Operator, "issue", pyjson.New("number", number),
-		"comment", pyjson.New("id", cid, "body", body, "user", fakes.Operator, "author_association", "OWNER")))
 }
 
 // ---------------------------------------------------------------------------- test_rating.py
@@ -188,12 +84,12 @@ func ratingPlanner(text string) *runner.FakeRunner {
 // ratingDayHarness is day_harness(test, machine=("muse", "lite")): by day, no Claude account
 // (they keep to the night in tests), Muse and the weak one on the machine, and the planning lane
 // on.
-func ratingDayHarness(t *testing.T, machine ...string) *ratingHarness {
+func ratingDayHarness(t *testing.T, machine ...string) *flowHarness {
 	if machine == nil {
 		machine = []string{"muse", "lite"}
 	}
-	return newRatingHarness(t, ratingHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
-		Machine: machine, At: testsupport.Day, PlanLanesNone: true})
+	return newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
+		Machine: machine, At: testsupport.Day, CommittedPlanLanes: true})
 }
 
 // ratingDifficulties is {n for n in labels if n.startswith("difficulty:")}.
@@ -268,7 +164,7 @@ func TestRating_AMediumRatingByAMediumPlannerStands(t *testing.T) {
 func TestRating_ARatingIsNeverLoweredAndAPersonsLabelNeverReplaced(t *testing.T) {
 	// A hard item with only a medium plan still needs a strong one: by night claude-1, strong,
 	// plans it, and its easy rating does not lower it.
-	h := newRatingHarness(t, ratingHarnessOpts{Machine: []string{"muse"}, PlanLanesNone: true})
+	h := newFlowHarness(t, flowHarnessOpts{Machine: []string{"muse"}, CommittedPlanLanes: true})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, ratingHard}, Body: "Make the rules v2."})
 	eventsUpdateItem(h.ctx, 12,
 		"difficulty_by", pyjson.New("difficulty", "hard", "provider", "muse", "tier", "medium"),
@@ -311,7 +207,7 @@ func TestRating_AnEasyPlanThatBreaksTheRuleIsMedium(t *testing.T) {
 // With the planning lane off, Muse plans the unrated item in its own build run; it rates it hard,
 // which Muse may not build, so the run stops after planning.
 func TestRating_ABuildRunThatRatesItsItemOutOfReachStopsAfterPlanning(t *testing.T) {
-	h := newRatingHarness(t, ratingHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"muse"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	planned, result := h.night(workFake(map[string]runner.Handler{
@@ -327,7 +223,7 @@ func TestRating_ABuildRunThatRatesItsItemOutOfReachStopsAfterPlanning(t *testing
 }
 
 func TestRating_AWeakBuildersChangeThatBreaksTheRuleIsNotPushed(t *testing.T) {
-	h := newRatingHarness(t, ratingHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"lite"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, ratingEasy}, Body: issueplan.WithPlan(
 		"Make it.", "1. Edit src/game.txt.", "a person", "")})

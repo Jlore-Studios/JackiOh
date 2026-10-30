@@ -29,7 +29,7 @@ func wipCapped(request *runner.RunRequest) *runner.RunResult {
 }
 
 // wipPull is pull(h, number=40): a bot pull request asked to revise, its branch on origin.
-func wipPull(h *difficultyHarness) string {
+func wipPull(h *flowHarness) string {
 	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
 	fakes.Git(h.clone, "fetch", "-q", "origin")
 	h.gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: []string{config.LabelPR,
@@ -38,7 +38,7 @@ func wipPull(h *difficultyHarness) string {
 }
 
 // wipRecord is h.ctx.store.load()["items"]["40"].
-func wipRecord(h *difficultyHarness) *pyjson.Object {
+func wipRecord(h *flowHarness) *pyjson.Object {
 	return h.ctx.Store.Load().Obj("items").Obj("40")
 }
 
@@ -65,7 +65,7 @@ func wipRead(path string) string {
 }
 
 func TestWip_ACutOffRevisionKeepsItsWorkBesideThePullRequest(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	start := wipPull(h)
 	_, first := h.night(workFake(map[string]runner.Handler{
 		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
@@ -97,7 +97,7 @@ func TestWip_ACutOffRevisionKeepsItsWorkBesideThePullRequest(t *testing.T) {
 }
 
 func TestWip_ABranchThatMovedSinceStartsAfresh(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	wipPull(h)
 	h.night(workFake(map[string]runner.Handler{
 		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
@@ -117,7 +117,7 @@ func TestWip_ABranchThatMovedSinceStartsAfresh(t *testing.T) {
 }
 
 func TestWip_PausesThatGetNowhereBlockItAfterThree(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	wipPull(h)
 	for n := range 3 {
 		_, result := h.night(workFake(map[string]runner.Handler{"revise": wipCapped}))
@@ -134,7 +134,7 @@ func TestWip_PausesThatGetNowhereBlockItAfterThree(t *testing.T) {
 // A revision that resumes from `bot/wip/<pr>` pushes it again every time; only a commit of its own
 // past the kept head is progress, so pauses with none still add up.
 func TestWip_AResumedRevisionThatGetsNowhereStillCounts(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	wipPull(h)
 	_, first := h.night(workFake(map[string]runner.Handler{
 		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
@@ -150,7 +150,7 @@ func TestWip_AResumedRevisionThatGetsNowhereStillCounts(t *testing.T) {
 // Every revision merges `main` in; its squash commits are no merges, but they are not the run's
 // work, so a cut-off run that did nothing else still counts.
 func TestWip_MainsCommitsMergedInAreNoProgress(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	wipPull(h)
 	h.night(workFake(map[string]runner.Handler{
 		"revise": workBuilder(map[string]string{"src/game.txt": "half\n"}), "review": wipCapped}))
@@ -164,7 +164,7 @@ func TestWip_MainsCommitsMergedInAreNoProgress(t *testing.T) {
 }
 
 func TestWip_APauseThatMovesTheWorkOnResetsTheCount(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	wipPull(h)
 	h.night(workFake(map[string]runner.Handler{"revise": wipCapped}))
 	h.night(workFake(map[string]runner.Handler{"revise": wipCapped}))
@@ -177,7 +177,7 @@ func TestWip_APauseThatMovesTheWorkOnResetsTheCount(t *testing.T) {
 }
 
 func TestWip_ClosingThePullRequestDropsItsWip(t *testing.T) {
-	h := newDifficultyHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12)
 	wipPull(h)
 	h.night(workFake(map[string]runner.Handler{

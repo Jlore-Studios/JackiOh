@@ -23,7 +23,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/journal"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
@@ -39,62 +38,7 @@ const journalNotes = "## State\n\nRules v2 is half written; the Coin is next. Tr
 	"slow, dropped.\n\n## Log\n\n- about to write the rules: the issue asks for v2\n" +
 	"- wrote half of them\n"
 
-// ------------------------------------------------------------------ what test_journal imports
-//
-// From test_cross (ALL), test_work (DONE, APPROVE, GATES, builder, reviewer), test_wip (capped)
-// and test_flow (Harness), as this file's own: each test file of package tests keeps its helpers.
-
-// journalHarness is Harness (test_flow): one repository, one fake GitHub, and the three jobs of a
-// night run.
-type journalHarness struct {
-	t           *testing.T
-	root        string
-	origin      string
-	clone       string
-	gh          *fakes.FakeGitHub
-	cfg         *config.Config
-	ctx         *hctx.Context
-	deliverRepo string
-}
-
-// journalHarnessOpts is Harness's keyword arguments; a zero field is the default.
-type journalHarnessOpts struct {
-	Env     map[string]string
-	At      time.Time // = NIGHT
-	Machine []string
-}
-
-func newJournalHarness(t *testing.T, opts ...journalHarnessOpts) *journalHarness {
-	t.Helper()
-	var o journalHarnessOpts
-	if len(opts) > 0 {
-		o = opts[0]
-	}
-	h := &journalHarness{t: t, root: t.TempDir(), gh: fakes.NewFakeGitHub()}
-	h.origin, h.clone = fakes.MakeOrigin(h.root)
-	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
-		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
-	for k, v := range o.Env {
-		env[k] = v
-	}
-	overrides := pyjson.New("gates", workGates, "install", pyjson.New("run", "true", "timeout_minutes", 1),
-		"max_review_cycles", 2)
-	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine, Overrides: overrides})
-	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: o.At})
-	h.gh.BranchChecks = basicsSet(h.cfg.RequiredChecks...)
-	h.deliverRepo = filepath.Join(h.root, "deliver")
-	fakes.Git(h.root, "clone", "-q", h.origin, h.deliverRepo)
-	return h
-}
-
-// journalOuts is len(list(root.glob("out-*"))).
-func journalOuts(root string) int {
-	found, err := filepath.Glob(filepath.Join(root, "out-*"))
-	if err != nil {
-		panic(err)
-	}
-	return len(found)
-}
+// ------------------------------------------------------------------ the file's helpers
 
 // journalLoad is json.loads(path.read_text()), a JSON object.
 func journalLoad(t *testing.T, path string) *pyjson.Object {
@@ -108,35 +52,8 @@ func journalExists(path string) bool {
 	return err == nil
 }
 
-// night is Harness.night: plan, work and deliver one run.
-func (h *journalHarness) night(r *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
-	h.t.Helper()
-	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	out := filepath.Join(h.root, fmt.Sprintf("out-%d", journalOuts(h.root)))
-	if planned.Str("action") != "none" {
-		work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
-		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	}
-	result := pyjson.New()
-	if journalExists(filepath.Join(out, "result.json")) {
-		result = journalLoad(h.t, filepath.Join(out, "result.json"))
-	}
-	return planned, result
-}
-
-// originSHA is Harness.origin_sha: the branch's sha on origin, or "" (None).
-func (h *journalHarness) originSHA(branch string) string {
-	sha := ""
-	if _, failed := herr.Catch[*fakes.PyError](func() {
-		sha = fakes.Git(h.origin, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
-	}); failed {
-		return ""
-	}
-	return sha
-}
-
 // journalText is journal_text(h, number=12).
-func journalText(h *journalHarness, number ...int) string {
+func journalText(h *flowHarness, number ...int) string {
 	n := 12
 	if len(number) > 0 {
 		n = number[0]
@@ -317,7 +234,7 @@ func TestJournal_ReadingKeepsTheEndFromARun(t *testing.T) {
 // journal, and the next one starts from it.
 
 func TestJournal_ACutOffRunJournalsAndTheNextPicksUp(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	first := workFake(map[string]runner.Handler{
 		"build":  workBuilder(map[string]string{"src/game.txt": "half\n", work.NotesFile: journalNotes}),
@@ -379,7 +296,7 @@ func TestJournal_ACutOffRunJournalsAndTheNextPicksUp(t *testing.T) {
 // The journal is a record, never a gate: a read that fails in the claim and a write that fails
 // in deliver leave the run as it would have been.
 func TestJournal_AJournalThatFailsNeverStopsTheRun(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	real := h.gh.Own().GetFile
 	h.gh.Patch.GetFile = func(path, ref string) (string, string) {
@@ -397,7 +314,7 @@ func TestJournal_AJournalThatFailsNeverStopsTheRun(t *testing.T) {
 }
 
 func TestJournal_APullRequestsRunsGoToItsIssuesJournal(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	h.night(workFake(map[string]runner.Handler{
 		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
@@ -422,7 +339,7 @@ func TestJournal_APullRequestsRunsGoToItsIssuesJournal(t *testing.T) {
 // the machine holds no GitHub credential, and ignored in the clone it keeps.
 
 func TestJournal_AMachineRunReadsAndWritesTheJournal(t *testing.T) {
-	h := newJournalHarness(t, journalHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	earlier := journal.Section(
 		pyjson.New("status", "interrupted", "interrupt", "usage", "reason", "claude-5 stops mid-call",
@@ -457,7 +374,7 @@ func TestJournal_AMachineRunReadsAndWritesTheJournal(t *testing.T) {
 
 // GitHub cancels with SIGINT: the run commits and bundles what it has and pauses.
 func TestJournal_ACancelledJobIsAPauseThatKeepsItsWork(t *testing.T) {
-	h := newJournalHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	cancelled := func(request *runner.RunRequest) *runner.RunResult {
 		journalWrite(t, filepath.Join(request.Cwd, "src", "game.txt"), "half\n")
@@ -519,7 +436,7 @@ func journalCopyTree(src, dst string) {
 // A job killed outright never reaches its own end: deliver gets the checkpoint the work job wrote
 // after its last step, and keeps the work.
 func TestJournal_AKilledJobLeavesItsLastCheckpoint(t *testing.T) {
-	h := newJournalHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out, killed := filepath.Join(h.root, "out-0"), filepath.Join(h.root, "killed")
@@ -558,7 +475,7 @@ func TestJournal_AKilledJobLeavesItsLastCheckpoint(t *testing.T) {
 // The stop a signal raises can land inside a reading's `except Exception` (memory, the disk): it
 // is kept, and the next checkpoint or call raises it again.
 func TestJournal_ACancelSomethingSwallowedStillStopsTheRun(t *testing.T) {
-	h := newJournalHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	worker := work.NewWorker(h.cfg, plan.Make(h.ctx, false, nil, "auto", nil), workFake[runner.Handler](nil), h.clone,
 		filepath.Join(h.root, "work"), filepath.Join(h.root, "out-0"), nil, nil, nil, nil, nil, nil)
@@ -572,7 +489,7 @@ func TestJournal_ACancelSomethingSwallowedStillStopsTheRun(t *testing.T) {
 }
 
 func TestJournal_AKilledJobThatGotNowhereCounts(t *testing.T) {
-	h := newJournalHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, "out-0")

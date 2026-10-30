@@ -58,19 +58,19 @@ func TestClosed_ItsRunKeepsItsLane(t *testing.T) {
 
 func TestClosed_ItsWorkIsNotDelivered(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
-	h.GH.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: flowLabels(config.LabelBuild)})
+	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: flowLabels(config.LabelBuild)})
 	build := workBuilder(map[string]any{"src/game.txt": "rules v2\n"})
 	closedMeanwhile := func(request *runner.RunRequest) *runner.RunResult {
-		h.GH.Threads.Item(12).Set("state", "closed")
+		h.gh.Threads.Item(12).Set("state", "closed")
 		return build(request)
 	}
-	_, result := h.Night(workFake(map[string]any{"build": closedMeanwhile, "review": workReviewer(workApprove)}))
+	_, result := h.night(workFake(map[string]any{"build": closedMeanwhile, "review": workReviewer(workApprove)}))
 	assertEqual(t, result.Get("status"), "approved") // the run itself finished its work
-	assertEqual(t, len(h.GH.ListPulls("open", "bot/issue-12", 200)), 0)
-	assertEqual(t, h.OriginSHA("bot/issue-12"), "")
-	labels := h.GH.LabelNames(12)
+	assertEqual(t, len(h.gh.ListPulls("open", "bot/issue-12", 200)), 0)
+	assertEqual(t, h.originSHA("bot/issue-12"), "")
+	labels := h.gh.LabelNames(12)
 	assertFalse(t, labels[config.LabelWorking] || labels[config.LabelBuild], labels)
-	assertIn(t, "was closed while a run was working on it", flowLast(t, h.GH.BotComments(12)))
+	assertIn(t, "was closed while a run was working on it", flowLast(t, h.gh.BotComments(12)))
 }
 
 func TestClosed_ADeadRunsLabelIsClearedNotRequeued(t *testing.T) {

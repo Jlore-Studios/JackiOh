@@ -114,7 +114,7 @@ func TestHuman_OnlyABlockedReportWithATrueFlagCounts(t *testing.T) {
 // `human required` on, none of the bot's labels that say it has the item (`bot:blocked`
 // included), the bot unassigned and both people assigned, and its last comment names them.
 // Returns that comment.
-func humanHandedToPeople(t *testing.T, h *ratingHarness, number int) string {
+func humanHandedToPeople(t *testing.T, h *flowHarness, number int) string {
 	t.Helper()
 	labels := h.gh.LabelNames(number)
 	assertIn(t, config.LabelHumanRequired, labels)
@@ -166,7 +166,7 @@ func TestHuman_APlannerThatSaysOnlyAPersonCanDoItIsBelieved(t *testing.T) {
 }
 
 func TestHuman_ABuilderThatSaysOnlyAPersonCanDoItHandsItOn(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	// #796: GitHub had made the label grey and bare when it was first put on.
 	h.gh.Labels.Set(config.LabelHumanRequired, pyjson.New("name", config.LabelHumanRequired, "color", "ededed",
@@ -186,7 +186,7 @@ func TestHuman_ABuilderThatSaysOnlyAPersonCanDoItHandsItOn(t *testing.T) {
 }
 
 func TestHuman_ABuildWhoseWholeChangeThePathGuardPutBackHandsItOn(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	_, result := h.night(workFake(map[string]runner.Handler{
 		"build":  workBuilder(map[string]string{"bot/harness/new.py": "x = 1\n"}),
@@ -196,7 +196,7 @@ func TestHuman_ABuildWhoseWholeChangeThePathGuardPutBackHandsItOn(t *testing.T) 
 }
 
 func TestHuman_AQuestionAPersonCanAnswerIsStillOnlyAQuestion(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{
 		"build":  workBuilder(map[string]string{}, humanBlocked("Option A or B?", false)),
@@ -210,7 +210,7 @@ func TestHuman_AQuestionAPersonCanAnswerIsStillOnlyAQuestion(t *testing.T) {
 }
 
 func TestHuman_ARevisionOnlyAPersonCanMakeHandsThePullRequestOn(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
 	fakes.Git(h.clone, "fetch", "-q", "origin")
 	fakes.Git(h.deliverRepo, "fetch", "-q", "origin")
@@ -230,9 +230,9 @@ func TestHuman_ARevisionOnlyAPersonCanMakeHandsThePullRequestOn(t *testing.T) {
 }
 
 func TestHuman_TheBotLeavesItAloneUntilTheLabelComesOff(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelHumanRequired}})
-	ratingAsk(h, 12, "@jgoetzmann-bot exception for this issue", 51)
+	flowAsk(h, 12, "@jgoetzmann-bot exception for this issue", 51)
 	assertIn(t, "#12 is labelled `"+config.LabelHumanRequired+"`", eventsLast(t, h.gh.BotComments(12)))
 	assertNotIn(t, config.LabelBuild, h.gh.LabelNames(12))
 	// A queue label put on by hand is not picked up while it is on.
@@ -242,7 +242,7 @@ func TestHuman_TheBotLeavesItAloneUntilTheLabelComesOff(t *testing.T) {
 	assertIn(t, "#12 skipped: labelled `"+config.LabelHumanRequired+"`", skipped[0])
 	// A person did their part and took it off: the next request queues it.
 	h.gh.RemoveLabel(12, config.LabelHumanRequired)
-	ratingAsk(h, 12, "/harness build", 52)
+	flowAsk(h, 12, "/harness build", 52)
 	assertIn(t, "Queued #12", eventsLast(t, h.gh.BotComments(12)))
 	assertEqual(t, eventsDig(t, plan.Make(h.ctx, false, nil, "auto", nil), "number"), 12)
 }

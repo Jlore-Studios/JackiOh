@@ -255,7 +255,7 @@ func TestSuspend_TheStatusIssueShowsASuspendedAccountAsOff(t *testing.T) {
 // ---------------------------------------------------------------------------- RunTests
 
 // suspendRunWithProbe is RunTests.run_with_probe.
-func suspendRunWithProbe(t *testing.T, h *ratingHarness, fake *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
+func suspendRunWithProbe(t *testing.T, h *flowHarness, fake *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
 	t.Helper()
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	assertEqual(t, eventsDig(t, planned, "provider"), "claude-1")
@@ -281,7 +281,7 @@ func suspendCount(t *testing.T, record *pyjson.Object, key string) int {
 }
 
 func TestSuspend_ARunGoingWhenItsSubscriptionIsSuspendedPausesUncharged(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	building := func(request *runner.RunRequest) *runner.RunResult {
 		suspendSuspend(h.ctx, "claude-1")
@@ -304,7 +304,7 @@ func TestSuspend_ARunGoingWhenItsSubscriptionIsSuspendedPausesUncharged(t *testi
 }
 
 func TestSuspend_AFinishedChangeIsStillHandedOn(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	reviewing := func(request *runner.RunRequest) *runner.RunResult {
 		suspendSuspend(h.ctx, "claude-1")

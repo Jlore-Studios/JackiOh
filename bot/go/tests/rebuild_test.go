@@ -7,13 +7,10 @@
 // at three the pull request is closed and its issue built again, its last findings kept for the
 // new build.
 //
-// bot/tests/test_rebuild.py. rebuildBundle is test_markers.DeliverTests.bundle, which the Python
-// borrows, under this file's name until markers_test.go's is in.
+// bot/tests/test_rebuild.py.
 package tests
 
 import (
-	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -41,38 +38,6 @@ func rebuildFinding() *pyjson.Object {
 		"evidence", "grep")
 }
 
-// rebuildBundle is test_markers.DeliverTests.bundle: a bundle of `bot/issue-12` changing
-// `files`, and the result that names it.
-func rebuildBundle(t *testing.T, h *ratingHarness, files map[string]string) (*pyjson.Object, string) {
-	t.Helper()
-	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	out := filepath.Join(h.root, fmt.Sprintf("out-%d", h.outs()))
-	work := filepath.Join(h.root, "hand-"+filepath.Base(out))
-	fakes.Git(h.root, "clone", "-q", h.origin, work)
-	fakes.Git(work, "checkout", "-q", "-b", "bot/issue-12")
-	for _, name := range slices.Sorted(maps.Keys(files)) {
-		target := filepath.Join(work, name)
-		if err := os.MkdirAll(filepath.Dir(target), 0o777); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(target, []byte(files[name]), 0o666); err != nil {
-			t.Fatal(err)
-		}
-	}
-	fakes.Git(work, "add", "-A")
-	fakes.Git(work, "commit", "-q", "-m", "a change")
-	if err := os.Mkdir(out, 0o777); err != nil {
-		t.Fatal(err)
-	}
-	base := fakes.Git(work, "rev-parse", "origin/main")
-	fakes.Git(work, "bundle", "create", filepath.Join(out, "branch.bundle"), "refs/heads/bot/issue-12",
-		"^"+base)
-	rebuildWriteJSON(t, filepath.Join(out, "result.json"), pyjson.New(
-		"status", "approved", "head", fakes.Git(work, "rev-parse", "HEAD"), "start", base,
-		"bundle", "branch.bundle", "cycles", []any{}, "title", "t"))
-	return planned, out
-}
-
 // rebuildWriteJSON is path.write_text(json.dumps(v)).
 func rebuildWriteJSON(t *testing.T, path string, v any) {
 	t.Helper()
@@ -82,9 +47,9 @@ func rebuildWriteJSON(t *testing.T, path string, v any) {
 }
 
 func TestRebuild_DeliverOpensNoPullRequestWhenNoBuilderSessionWorked(t *testing.T) {
-	h := newRatingHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
-	planned, out := rebuildBundle(t, h, map[string]string{"src/game.txt": "left by an earlier run\n"})
+	planned, out := markersBundle(t, h, map[string]string{"src/game.txt": "left by an earlier run\n"})
 	result := ratingReadResult(t, out)
 	result.Update(pyjson.New("status", "not_approved", "reason", "the reviewer's answer could not be read",
 		"cycles", []any{pyjson.New("n", 1, "builder", pyjson.New("role", "build", "ok", false, "changed", false,

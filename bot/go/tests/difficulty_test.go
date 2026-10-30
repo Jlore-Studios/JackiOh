@@ -2,10 +2,8 @@
 // who may plan, build and review it, in the owner's usage order; and a self-checking builder's
 // loop. (bot/tests/test_difficulty.py)
 //
-// This file also holds what the seven files ported with it share: the helpers they import from
-// test files ported elsewhere (test_flow's Harness, test_work's builder and reviewer,
-// test_providers' secrets, test_cross's ALL), each under this file's prefix so it cannot clash
-// with the port of its own file.
+// Its EASY, MEDIUM and HARD, queue, busy and seats are difficultyEasy, difficultyMedium,
+// difficultyHard, difficultyQueue, difficultyBusy and difficultySeats, which other files import.
 package tests
 
 import (
@@ -37,114 +35,12 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
 
-// ---------------------------------------------------------------------------- test_work.py's
+// ---------------------------------------------------------------------------- this file's helpers
 
-// one is a role's single handler, as FakeRunner takes it.
+// difficultyOne is a role's single handler, as FakeRunner takes it.
 func difficultyOne(h runner.Handler) []runner.Handler { return []runner.Handler{h} }
 
-// ---------------------------------------------------------------------------- test_flow.py's Harness
-
-// difficultyHarnessOpts is Harness's keyword arguments; a zero field is the default.
-type difficultyHarnessOpts struct {
-	Env     map[string]string // env = None
-	At      time.Time         // at = NIGHT
-	Machine []string          // machine = ()
-	// PlanLanes is plan_lanes=None among the overrides: the committed planning lanes.
-	PlanLanes bool
-	Overrides *pyjson.Object // **cfg_overrides: config.json keys, in order
-}
-
-// difficultyHarness is test_flow.Harness: one repository, one fake GitHub, and the three jobs of a
-// night run.
-type difficultyHarness struct {
-	t           *testing.T
-	root        string
-	origin      string
-	clone       string
-	gh          *fakes.FakeGitHub
-	cfg         *config.Config
-	ctx         *hctx.Context
-	deliverRepo string
-
-	setupEnv       map[string]string
-	setupMachine   []string
-	setupOverrides *pyjson.Object
-	setupPlanLanes bool
-	setupAt        time.Time
-}
-
-func newDifficultyHarness(t *testing.T, opts ...difficultyHarnessOpts) *difficultyHarness {
-	t.Helper()
-	var o difficultyHarnessOpts
-	if len(opts) > 0 {
-		o = opts[0]
-	}
-	h := &difficultyHarness{t: t, root: t.TempDir()}
-	h.origin, h.clone = fakes.MakeOrigin(h.root)
-	h.gh = fakes.NewFakeGitHub()
-	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
-		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
-	for k, v := range o.Env {
-		env[k] = v
-	}
-	overrides := pyjson.New("gates", workGates,
-		"install", pyjson.New("run", "true", "timeout_minutes", 1), "max_review_cycles", 2)
-	overrides.Update(o.Overrides)
-	at := o.At
-	if at.IsZero() {
-		at = testsupport.Night
-	}
-	h.setupEnv, h.setupMachine, h.setupOverrides, h.setupPlanLanes, h.setupAt = env, o.Machine,
-		overrides, o.PlanLanes, at
-	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine,
-		CommittedPlanLanes: o.PlanLanes, Overrides: overrides.Copy()})
-	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: at})
-	h.gh.BranchChecks = map[string]bool{}
-	for _, check := range h.cfg.RequiredChecks {
-		h.gh.BranchChecks[check] = true
-	}
-	h.deliverRepo = filepath.Join(h.root, "deliver")
-	fakes.Git(h.root, "clone", "-q", h.origin, h.deliverRepo)
-	return h
-}
-
-// committedHours is Harness.committed_hours: from now on, the subscriptions keep the hours
-// providers.json commits, with the same GitHub and state.
-func (h *difficultyHarness) committedHours() {
-	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: h.setupEnv, Machine: h.setupMachine,
-		CommittedHours: true, CommittedPlanLanes: h.setupPlanLanes, Overrides: h.setupOverrides.Copy()})
-	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: h.setupAt})
-}
-
-// night is Harness.night: plan, work and deliver one run. (planned, result)
-func (h *difficultyHarness) night(r *runner.FakeRunner) (*pyjson.Object, *pyjson.Object) {
-	h.t.Helper()
-	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	matches, _ := filepath.Glob(filepath.Join(h.root, "out-*"))
-	out := filepath.Join(h.root, fmt.Sprintf("out-%d", len(matches)))
-	if pyjson.Str(planned.Get("action")) != "none" {
-		work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil,
-			nil, nil, nil).Run()
-		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	}
-	result := pyjson.New()
-	if text, err := os.ReadFile(filepath.Join(out, "result.json")); err == nil {
-		result = difficultyLoads(h.t, text)
-	}
-	return planned, result
-}
-
-// originSHA is Harness.origin_sha: the branch's head on origin, or "" (None) when there is none.
-func (h *difficultyHarness) originSHA(branch string) string {
-	sha := ""
-	if _, ok := herr.Catch[*fakes.PyError](func() {
-		sha = fakes.Git(h.origin, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
-	}); ok {
-		return ""
-	}
-	return sha
-}
-
+// difficultyLoads is json.loads(text), a JSON object.
 func difficultyLoads(t *testing.T, text []byte) *pyjson.Object {
 	t.Helper()
 	v, err := pyjson.Loads(text)
@@ -153,8 +49,6 @@ func difficultyLoads(t *testing.T, text []byte) *pyjson.Object {
 	}
 	return pyjson.Obj(v)
 }
-
-// ---------------------------------------------------------------------------- this file's helpers
 
 var (
 	difficultyEasy   = "difficulty:easy"
@@ -664,8 +558,8 @@ func TestDifficulty_WithNoPlannerFreeNothingIsBuilt(t *testing.T) {
 }
 
 func TestDifficulty_APlanningRunHandsItsPlanToTheBuilder(t *testing.T) {
-	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"),
-		Machine: testsupport.Machine, At: testsupport.Day, PlanLanes: true})
+	h := newFlowHarness(t, flowHarnessOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2"),
+		Machine: testsupport.Machine, At: testsupport.Day, CommittedPlanLanes: true})
 	h.committedHours()
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	planText := "1. **Goal.** Rules v2.\n2. **Steps.** Edit src/game.txt; run the checks."
@@ -833,7 +727,7 @@ func TestDifficulty_WhetherTheReviewersSetUpCouldStillShipIt(t *testing.T) {
 }
 
 func TestDifficulty_TheRule(t *testing.T) {
-	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	out := filepath.Join(h.root, "o")
 	if err := os.Mkdir(out, 0o777); err != nil {
 		t.Fatal(err)
@@ -1037,7 +931,7 @@ func TestDifficulty_ARevisionChecksItselfToo(t *testing.T) {
 }
 
 func TestDifficulty_ASelfCheckedBuildWaitsForAReviewRun(t *testing.T) {
-	h := newDifficultyHarness(t, difficultyHarnessOpts{Env: providersSecrets(), Machine: []string{"lite"},
+	h := newFlowHarness(t, flowHarnessOpts{Env: providersSecrets(), Machine: []string{"lite"},
 		At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, difficultyEasy}})
 	h.ctx.Store.Update(func(s *pyjson.Object) any {

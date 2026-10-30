@@ -27,7 +27,7 @@ import (
 
 // reviewFixesMediumPR is medium_pr: a pull request a medium model (Muse, the first of them)
 // built and approved by day, waiting for its review run.
-func reviewFixesMediumPR(t *testing.T, h *crossHarness) int {
+func reviewFixesMediumPR(t *testing.T, h *flowHarness) int {
 	t.Helper()
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{"build": crossTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
@@ -38,14 +38,14 @@ func reviewFixesMediumPR(t *testing.T, h *crossHarness) int {
 }
 
 // reviewFixesEmptyOut is empty_out.
-func reviewFixesEmptyOut(t *testing.T, h *crossHarness, name string) string {
+func reviewFixesEmptyOut(t *testing.T, h *flowHarness, name string) string {
 	out := filepath.Join(h.root, name)
 	crossMkdir(t, out)
 	return out
 }
 
 // reviewFixesUpdate is ctx.store.update(lambda s: state_item(s, number).update(**fields)).
-func reviewFixesUpdate(h *crossHarness, number int, fields *pyjson.Object) {
+func reviewFixesUpdate(h *flowHarness, number int, fields *pyjson.Object) {
 	h.ctx.Store.Update(func(s *pyjson.Object) any { state.Item(s, number).Update(fields); return nil }, "state")
 }
 
@@ -56,7 +56,7 @@ func TestReviewFixes_ARevisionByAnotherModelTurnsStrongAutoMergeOff(t *testing.T
 	// approval waits for a Strong final; the Strong audit turns auto-merge on. Then Muse
 	// revises by day, whose medium approval alone never ships a medium item, so the strong
 	// approval of the old head is gone.
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: []string{"muse"}})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: []string{"muse"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	reviewFixesUpdate(h, 12, pyjson.New("planned_at", clock.ISO(testsupport.Day), "planned_tier", "medium",
 		"planned_by_id", "muse"))
@@ -81,7 +81,7 @@ func TestReviewFixes_ARevisionByAnotherModelTurnsStrongAutoMergeOff(t *testing.T
 }
 
 func TestReviewFixes_AutoMergeIsPinnedToTheApprovedCommit(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr := reviewFixesMediumPR(t, h)
 	// By day no Strong seat is free; at night claude-3 reviews, and its one strong
 	// approval pins auto-merge to the head (#695).
@@ -93,7 +93,7 @@ func TestReviewFixes_AutoMergeIsPinnedToTheApprovedCommit(t *testing.T) {
 }
 
 func TestReviewFixes_ARejectionStandsUntilItsModelApprovesOrTheHeadMoves(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	d := deliver.NewDeliverer(h.ctx, pyjson.New("action", "review", "provider", "agy"), reviewFixesEmptyOut(t, h, "o"),
 		h.deliverRepo, "", nil, "")
 	medium := func() *pyjson.Object { return pyjson.New("gpt", "medium", "muse", "medium", "gemini", "medium") }
@@ -112,13 +112,13 @@ func TestReviewFixes_ARejectionStandsUntilItsModelApprovesOrTheHeadMoves(t *test
 }
 
 func TestReviewFixes_OnlyTheBotsOwnPullRequestsGetASecondReview(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddPull(30, "feature/someone", fakes.Pull{Labels: []string{config.LabelCross}})
 	assertNotEqual(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("number"), 30)
 }
 
 func TestReviewFixes_WithOnlyItsBuilderSetUpItWaitsForAStrongReviewer(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: providersSecrets(), Machine: []string{"agy"}, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: providersSecrets(), Machine: []string{"agy"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
@@ -132,7 +132,7 @@ func TestReviewFixes_WithOnlyItsBuilderSetUpItWaitsForAStrongReviewer(t *testing
 // ---------------------------------------------------------------------------- SecondReviewTests
 
 func TestReviewFixes_ACommentDuringTheReviewGetsItsRevisionBeforeAnyMerge(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr := reviewFixesMediumPR(t, h)
 	h.committedHours() // claude-3 works all day: the Strong final can audit
 
@@ -148,7 +148,7 @@ func TestReviewFixes_ACommentDuringTheReviewGetsItsRevisionBeforeAnyMerge(t *tes
 }
 
 func TestReviewFixes_AReviewWhoseRunDiesBacksOffItsSubscriptionAndIsCounted(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Night})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Night})
 	pr := reviewFixesMediumPR(t, h)
 	seen := []string{}
 	for _, attempt := range []int{1, 2} {
@@ -165,7 +165,7 @@ func TestReviewFixes_AReviewWhoseRunDiesBacksOffItsSubscriptionAndIsCounted(t *t
 }
 
 func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.committedHours() // claude-3 works all day: the Strong final can audit
 	log := filepath.Join(h.root, "installs.log")
 	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
@@ -191,7 +191,7 @@ func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
 // ---------------------------------------------------------------------------- InfraTests
 
 func TestReviewFixes_ABrokenSubscriptionBacksOffAlone(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	assertEqual(t, planned.Get("provider"), "muse")
@@ -291,7 +291,7 @@ func TestReviewFixes_GithubSRunnersAndTheMachineHaveLanesOfTheirOwn(t *testing.T
 // ---------------------------------------------------------------------------- VaultAndLoginTests
 
 func TestReviewFixes_AVaultWriteThatRacesAnotherWriterIsTriedAgain(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := reviewFixesEmptyOut(t, h, "vault")
@@ -310,7 +310,7 @@ func TestReviewFixes_AVaultWriteThatRacesAnotherWriterIsTriedAgain(t *testing.T)
 
 func TestReviewFixes_EveryModelCallHandsARefreshedLoginOnAtOnce(t *testing.T) {
 	calls := []int{}
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),

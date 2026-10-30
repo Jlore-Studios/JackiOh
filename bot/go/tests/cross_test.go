@@ -5,11 +5,10 @@ package tests
 // review runs, `difficulty:hard`, handoff and the vault, through plan, work and deliver against a
 // real repository and the fake GitHub.
 //
-// What test_cross.py, test_fullsend.py, test_resolve.py, test_review_fixes.py and test_plan_draft.py
-// share: small helpers, and the helpers they import from test_flow.py (Harness),
-// test_work.py (builder, reviewer, changes, APPROVE, DONE, GATES) and test_providers.py
-// (raw_providers, secrets), each named after the file that uses it first so the files porting
-// those modules keep their own names.
+// It also holds test_cross.py's ALL, timed_builder, next_run, MEDIUM and
+// ReviewRuleTests.build_on_medium, which other files import (crossAll, crossTimedBuilder,
+// crossNextRun, crossMedium, crossBuildOnMedium), and small helpers that test_fullsend.py,
+// test_resolve.py, test_review_fixes.py and test_plan_draft.py's ports share.
 
 import (
 	"fmt"
@@ -19,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
@@ -268,105 +266,7 @@ func crossGitOK(cwd string, args ...string) (string, bool) {
 	return out, true
 }
 
-// ---------------------------------------------------------------------------- test_flow.py
-
-// crossHarnessOpts is Harness's keyword arguments: env, at (zero: NIGHT), machine, and the
-// config overrides (`**cfg_overrides`, in order; plan_lanes=None is CommittedPlanLanes).
-type crossHarnessOpts struct {
-	Env                map[string]string
-	At                 time.Time
-	Machine            []string
-	Overrides          *pyjson.Object
-	CommittedPlanLanes bool
-}
-
-// crossHarness is test_flow.Harness: one repository, one fake GitHub, and the three jobs of a
-// night run.
-type crossHarness struct {
-	t           *testing.T
-	root        string
-	origin      string
-	clone       string
-	gh          *fakes.FakeGitHub
-	cfg         *config.Config
-	ctx         *hctx.Context
-	deliverRepo string
-	setup       crossHarnessSetup
-}
-
-type crossHarnessSetup struct {
-	env                map[string]string
-	machine            []string
-	overrides          *pyjson.Object
-	committedPlanLanes bool
-	at                 time.Time
-}
-
-func newCrossHarness(t *testing.T, opts ...crossHarnessOpts) *crossHarness {
-	t.Helper()
-	var o crossHarnessOpts
-	if len(opts) > 0 {
-		o = opts[0]
-	}
-	h := &crossHarness{t: t}
-	h.root = crossMkdtemp(t)
-	h.origin, h.clone = fakes.MakeOrigin(h.root)
-	h.gh = fakes.NewFakeGitHub()
-	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
-		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
-	for k, v := range o.Env {
-		env[k] = v
-	}
-	overrides := pyjson.New("gates", workGates, "install", pyjson.New("run", "true", "timeout_minutes", 1),
-		"max_review_cycles", 2)
-	overrides.Update(o.Overrides)
-	at := o.At
-	if at.IsZero() {
-		at = testsupport.Night
-	}
-	h.setup = crossHarnessSetup{env: env, machine: o.Machine, overrides: overrides,
-		committedPlanLanes: o.CommittedPlanLanes, at: at}
-	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: env, Machine: o.Machine,
-		CommittedPlanLanes: o.CommittedPlanLanes, Overrides: pyjson.DeepCopy(overrides).(*pyjson.Object)})
-	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: at})
-	h.gh.BranchChecks = crossSet(h.cfg.RequiredChecks...)
-	h.deliverRepo = filepath.Join(h.root, "deliver")
-	fakes.Git(h.root, "clone", "-q", h.origin, h.deliverRepo)
-	return h
-}
-
-// committedHours: from now on, the subscriptions keep the hours providers.json commits
-// (claude-2 and claude-3 all day), with the same GitHub and state.
-func (h *crossHarness) committedHours() {
-	s := h.setup
-	h.cfg = testsupport.MakeConfig(testsupport.Config{Env: s.env, Machine: s.machine, CommittedHours: true,
-		CommittedPlanLanes: s.committedPlanLanes, Overrides: pyjson.DeepCopy(s.overrides).(*pyjson.Object)})
-	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: s.at})
-}
-
-// night is Harness.night(runner): plan, work and deliver; the plan and the run's result. `r` is
-// any runner the work job takes (a FakeRunner, or test_plan_draft's TrailRunner).
-func (h *crossHarness) night(r any) (*pyjson.Object, *pyjson.Object) {
-	h.t.Helper()
-	planned := plan.Make(h.ctx, false, nil, "auto", nil)
-	matches, _ := filepath.Glob(filepath.Join(h.root, "out-*"))
-	out := filepath.Join(h.root, fmt.Sprintf("out-%d", len(matches)))
-	if planned.Str("action") != "none" {
-		work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil, nil, nil, nil).Run()
-		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	}
-	result := pyjson.New()
-	if crossExists(filepath.Join(out, "result.json")) {
-		result = crossLoad(h.t, filepath.Join(out, "result.json"))
-	}
-	return planned, result
-}
-
-// originSHA is Harness.origin_sha: "" for None.
-func (h *crossHarness) originSHA(branch string) string {
-	sha, _ := crossGitOK(h.origin, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
-	return sha
-}
+// ---------------------------------------------------------------------------- test_cross.py's
 
 // crossPullOf is int(h.gh.list_pulls(head=branch)[0]["number"]).
 func crossPullOf(t *testing.T, gh *fakes.FakeGitHub, branch string) int {
@@ -403,7 +303,7 @@ func crossTimedBuilder(edits map[string]string, minutes ...float64) runner.Handl
 
 // crossNextRun is next_run: the next night is another workflow run: its votes count apart from
 // the last one's.
-func crossNextRun(h *crossHarness, runID string) {
+func crossNextRun(h *flowHarness, runID string) {
 	cfg := *h.cfg
 	cfg.RunID = runID
 	h.cfg = &cfg
@@ -420,7 +320,7 @@ var crossMedium = map[string][2]string{"muse": {"muse-spark-1.3-contributor", "m
 // crossBuildOnMedium is ReviewRuleTests.build_on_medium: by day the Claude accounts are closed:
 // Muse, first of the medium models (#317 part 9), or `provider` when it is the only one, plans,
 // builds and reviews it in one run, and its own approval is one medium vote.
-func crossBuildOnMedium(t *testing.T, h *crossHarness, provider string, edits map[string]string) (int, *pyjson.Object) {
+func crossBuildOnMedium(t *testing.T, h *flowHarness, provider string, edits map[string]string) (int, *pyjson.Object) {
 	t.Helper()
 	if provider == "" {
 		provider = "muse"
@@ -445,7 +345,7 @@ func crossBuildOnMedium(t *testing.T, h *crossHarness, provider string, edits ma
 // Muse's in-run approval never ships a medium item (#725 keeps Strong-only): the head waits for
 // its Strong final audit, and no medium review run goes out meanwhile.
 func TestCross_AMediumItemWaitsForItsStrongFinal(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, result := crossBuildOnMedium(t, h, "", nil)
 	assertEqual(t, h.gh.LabelNames(pr), crossSet(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
@@ -476,7 +376,7 @@ func TestCross_AMediumItemWaitsForItsStrongFinal(t *testing.T) {
 // it to the rule, so the head waits for a person to merge it (#725: no medium review runs go out
 // for a medium item).
 func TestCross_WithNoStrongSeatSetUpItWaitsForAPerson(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"agy"}, At: testsupport.Day})
 	pr, _ := crossBuildOnMedium(t, h, "agy", nil)
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
@@ -489,7 +389,7 @@ func TestCross_WithNoStrongSeatSetUpItWaitsForAPerson(t *testing.T) {
 }
 
 func TestCross_ADeliverJobRunAgainDoesNotCountItsReviewTwice(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"agy"}, At: testsupport.Day})
 	pr, result := crossBuildOnMedium(t, h, "agy", nil)
 	d := deliver.NewDeliverer(h.ctx, pyjson.New("action", "review", "provider", "agy"),
@@ -503,7 +403,7 @@ func TestCross_ADeliverJobRunAgainDoesNotCountItsReviewTwice(t *testing.T) {
 // The weak one builds an easy item and checks itself, which is no review; the lane's Medium
 // final audit then ships it, with no Opus gate (#725). No weak review run goes out.
 func TestCross_AnEasyItemShipsOnItsMediumAudit(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"lite", "agy"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"},
 		Body: "<!-- jackioh-bot:plan -->\n## Plan\n1. Edit src/game.txt.\n<!-- /jackioh-bot:plan -->"})
@@ -530,7 +430,7 @@ func TestCross_AnEasyItemShipsOnItsMediumAudit(t *testing.T) {
 func TestCross_OneStrongReviewIsEnough(t *testing.T) {
 	// Only claude-3 is set up: it plans, builds and reviews the item, and its one strong
 	// review ships it (#695).
-	h := newCrossHarness(t, crossHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
@@ -548,7 +448,7 @@ func TestCross_OneStrongReviewIsEnough(t *testing.T) {
 }
 
 func TestCross_AReviewRunPrefersAStrongModel(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	h.committedHours() // claude-3 works all day: a strong model is free
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
@@ -561,7 +461,7 @@ func TestCross_AReviewRunPrefersAStrongModel(t *testing.T) {
 // Usage pauses never reach a verdict, so they never spend one (#725): two rejections, then a
 // pause, then one more rejection uses up the lane's 3 rounds across the two runs.
 func TestCross_APauseDoesNotSpendAVerdictRound(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day,
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day,
 		Overrides: pyjson.New("max_review_cycles", 3)})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 
@@ -596,7 +496,7 @@ func TestCross_APauseDoesNotSpendAVerdictRound(t *testing.T) {
 // A Strong audit's rejection is answered at its own tier (#725): Opus fixes the medium item in
 // its own run, its own reviewer approves, and that ships it.
 func TestCross_AStrongReviseAfterRejectionShips(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.committedHours() // claude-3 works all day: the Strong final can audit
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	h.night(workFake(map[string]runner.Handler{"review": workReviewer(workChanges("It skips the replay check."))}))
@@ -613,7 +513,7 @@ func TestCross_AStrongReviseAfterRejectionShips(t *testing.T) {
 }
 
 func TestCross_FindingsSendItBackAndItStopsAfterThree(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.committedHours() // claude-3 works all day: the Strong final can audit
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	h.night(workFake(map[string]runner.Handler{"review": workReviewer(workChanges("It skips the replay check."))}))
@@ -653,7 +553,7 @@ func TestCross_FindingsSendItBackAndItStopsAfterThree(t *testing.T) {
 }
 
 func TestCross_AReviewOfAHeadThatMovedDoesNotCount(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.committedHours() // claude-3 works all day: the Strong final can audit
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	moved := func(request *runner.RunRequest) *runner.RunResult {
@@ -668,7 +568,7 @@ func TestCross_AReviewOfAHeadThatMovedDoesNotCount(t *testing.T) {
 }
 
 func TestCross_AHardItemIsPlannedAndBuiltByOpus(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
@@ -689,7 +589,7 @@ func TestCross_AHardItemIsPlannedAndBuiltByOpus(t *testing.T) {
 // ---------------------------------------------------------------------------- HandoffTests
 
 func TestCross_TheNextAgentGetsTheNotesAndTheBranch(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 
 	limited := func(*runner.RunRequest) *runner.RunResult {
@@ -725,7 +625,7 @@ func TestCross_TheNextAgentGetsTheNotesAndTheBranch(t *testing.T) {
 // ---------------------------------------------------------------------------- VaultDeliveryTests
 
 func TestCross_DeliverKeepsASealedLoginAndRefusesAnythingElse(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	assertEqual(t, planned.Get("provider"), "muse")
@@ -769,7 +669,7 @@ func crossResolve(extra map[string]string) runner.Handler {
 
 // crossConflicted is ConflictCarryTests.conflicted: `main` moves on and the branch no longer
 // merges.
-func crossConflicted(h *crossHarness, pr int, main map[string]string) {
+func crossConflicted(h *flowHarness, pr int, main map[string]string) {
 	if len(main) == 0 {
 		main = map[string]string{"src/game.txt": "rules from main\n"}
 	}
@@ -779,7 +679,7 @@ func crossConflicted(h *crossHarness, pr int, main map[string]string) {
 
 // crossClearedPR is ConflictCarryTests.cleared_pr: Muse builds and approves it by day; at night
 // a Strong seat reviews it: the rule is met (#695), and then `main` conflicts with it.
-func crossClearedPR(t *testing.T, h *crossHarness, edits, main map[string]string) (int, string) {
+func crossClearedPR(t *testing.T, h *flowHarness, edits, main map[string]string) (int, string) {
 	t.Helper()
 	pr, built := crossBuildOnMedium(t, h, "", edits)
 	crossNextRun(h, "778")
@@ -800,7 +700,7 @@ func crossClearedPR(t *testing.T, h *crossHarness, edits, main map[string]string
 // resolvers take from `main` (`resolve.py`): the revision spends no builder session, its own
 // reviewer approves the merge, and the clearance carries as for a builder's resolution.
 func TestCross_AConflictTheHarnessResolvesCarriesWithNoBuilder(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, clearedSHA := crossClearedPR(t, h,
 		map[string]string{"src/game.txt": "rules v2\n", "spec/INDEX.md": "| R12 |\n"},
 		map[string]string{"spec/INDEX.md": "| R13 |\n"})
@@ -826,7 +726,7 @@ func TestCross_AConflictTheHarnessResolvesCarriesWithNoBuilder(t *testing.T) {
 }
 
 func TestCross_AConflictOnAClearedChangeShipsOnItsOwnReview(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, clearedSHA := crossClearedPR(t, h, nil, nil)
 	r := workFake(map[string]runner.Handler{"revise": crossResolve(nil), "review": workReviewer(workApprove)})
 	planned, result := h.night(r)
@@ -864,7 +764,7 @@ func TestCross_AConflictOnAClearedChangeShipsOnItsOwnReview(t *testing.T) {
 }
 
 func TestCross_AResolutionThatChangesMoreGoesBackToReview(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, clearedSHA := crossClearedPR(t, h, nil, nil)
 	_, result := h.night(workFake(map[string]runner.Handler{
 		"revise": crossResolve(map[string]string{"src/extra.txt": "more\n"}),
@@ -881,7 +781,7 @@ func TestCross_AResolutionThatChangesMoreGoesBackToReview(t *testing.T) {
 }
 
 func TestCross_ABranchThatMovedAfterTheReviewsDoesNotCarry(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, _ := crossClearedPR(t, h, nil, nil)
 	// Someone pushed to the branch after the reviews cleared it; nobody reviewed that.
 	fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/other.txt": "unreviewed\n"}, "bot/issue-12")
@@ -897,7 +797,7 @@ func TestCross_ABranchThatMovedAfterTheReviewsDoesNotCarry(t *testing.T) {
 // One medium approval, short of the Strong one: the change was never cleared, so its resolution
 // waits for the review run like any revision.
 func TestCross_AChangeShortOfTheRuleHasNothingToCarry(t *testing.T) {
-	h := newCrossHarness(t, crossHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	assertNotIn(t, "cleared", crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr)))
 	crossConflicted(h, pr, nil)

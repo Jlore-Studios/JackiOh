@@ -4,9 +4,6 @@
 // `difficulty:medium`; clear-easy work still rates easy. The weak tier still builds only easy
 // items (`MIN_TIER`, `easy_first`) and the review rule still counts a weak approval only toward an
 // easy item (`review_rule.py`, untouched). (bot/tests/test_medium_bias.py)
-//
-// It also holds the helpers it and test_declined.py import from test_rating.py, under this file's
-// prefix (see difficulty_test.go).
 package tests
 
 import (
@@ -19,55 +16,8 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/reviewrule"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 )
-
-// ---------------------------------------------------------------------------- test_rating.py's
-
-// test_rating.EASY, MEDIUM
-var (
-	mediumBiasEasy   = "difficulty:easy"
-	mediumBiasMedium = "difficulty:medium"
-)
-
-// mediumBiasRatedPlan is test_rating.rated_plan(difficulty, files=("src/game.txt",),
-// why="one file, one test").
-func mediumBiasRatedPlan(difficulty string, files []string, why string) string {
-	if files == nil {
-		files = []string{"src/game.txt"}
-	}
-	if why == "" {
-		why = "one file, one test"
-	}
-	rows := []string{}
-	for _, path := range files {
-		rows = append(rows, fmt.Sprintf("| `%s` | change | the change |", path))
-	}
-	return fmt.Sprintf("<!-- bot: {\"difficulty\": \"%s\", \"why\": \"%s\"} -->\n", difficulty, why) +
-		"## 1. Goal\n\nRules v2.\n\n## 2. Files to touch\n\n| Path | new/change | What |\n" +
-		fmt.Sprintf("|---|---|---|\n%s\n\n## 3. Steps\n\n1. Edit it.\n", strings.Join(rows, "\n"))
-}
-
-// mediumBiasPlanner is test_rating.planner(text): a planning call that answers `text`.
-func mediumBiasPlanner(text string) *runner.FakeRunner {
-	return runner.NewFakeRunner(map[string][]runner.Handler{"plan": {func(request *runner.RunRequest) *runner.RunResult {
-		result := runner.NewRunResult(true, text)
-		result.DurationS = 300
-		return result
-	}}})
-}
-
-// mediumBiasDayHarness is test_rating.day_harness(test, machine=("muse", "lite")): by day, no
-// Claude account (they keep to the night in tests), Muse and the weak one on the machine, and the
-// planning lane on.
-func mediumBiasDayHarness(t *testing.T, machine ...string) *difficultyHarness {
-	if machine == nil {
-		machine = []string{"muse", "lite"}
-	}
-	return newDifficultyHarness(t, difficultyHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
-		Machine: machine, At: testsupport.Day, PlanLanes: true})
-}
 
 // ---------------------------------------------------------------------------- this file's helpers
 
@@ -154,34 +104,34 @@ func TestMediumBias_AnUnsureWhyIsDoubtAndAConfidentOneIsNot(t *testing.T) {
 // ---------------------------------------------------------------------------- RatingBiasTests
 
 func TestMediumBias_AClearEasyItemStillRatesEasy(t *testing.T) {
-	h := mediumBiasDayHarness(t)
+	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
-	r := mediumBiasPlanner(mediumBiasRatedPlan("easy", nil, ""))
+	r := ratingPlanner(ratingRatedPlan("easy", nil, ""))
 	h.night(r)
-	assertIn(t, mediumBiasEasy, h.gh.LabelNames(12))
+	assertIn(t, ratingEasy, h.gh.LabelNames(12))
 	assertIn(t, "Rated `difficulty:easy`", mediumBiasLast(h.gh.BotComments(12)))
 }
 
 func TestMediumBias_APlanCloseToTheLimitRatesMedium(t *testing.T) {
-	h := mediumBiasDayHarness(t)
+	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
-	h.night(mediumBiasPlanner(mediumBiasRatedPlan("easy", mediumBiasFiles(9), "")))
-	assertIn(t, mediumBiasMedium, h.gh.LabelNames(12))
+	h.night(ratingPlanner(ratingRatedPlan("easy", mediumBiasFiles(9), "")))
+	assertIn(t, ratingMedium, h.gh.LabelNames(12))
 	assertIn(t, "borderline easy is medium", mediumBiasLast(h.gh.BotComments(12)))
 }
 
 func TestMediumBias_AnUnsureRatingRatesMedium(t *testing.T) {
-	h := mediumBiasDayHarness(t)
+	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
-	h.night(mediumBiasPlanner(mediumBiasRatedPlan("easy", nil, "torn between easy and medium")))
-	assertIn(t, mediumBiasMedium, h.gh.LabelNames(12))
+	h.night(ratingPlanner(ratingRatedPlan("easy", nil, "torn between easy and medium")))
+	assertIn(t, ratingMedium, h.gh.LabelNames(12))
 	assertIn(t, "was unsure", mediumBiasLast(h.gh.BotComments(12)))
 }
 
 func TestMediumBias_ThePlannerIsToldToPreferMediumWhenInDoubt(t *testing.T) {
-	h := mediumBiasDayHarness(t)
+	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{"bot:build"}, Body: "Make the rules v2."})
-	r := mediumBiasPlanner(mediumBiasRatedPlan("easy", nil, ""))
+	r := ratingPlanner(ratingRatedPlan("easy", nil, ""))
 	h.night(r)
 	assertIn(t, "When in doubt", r.Calls[0].Prompt)
 	assertIn(t, "At most 10 files changed", r.Calls[0].Prompt)

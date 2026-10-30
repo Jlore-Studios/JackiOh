@@ -371,7 +371,7 @@ func TestNeedsPlan_AMediumModelRatesAndPlansAnUnratedItemOnTheLane(t *testing.T)
 }
 
 func TestNeedsPlan_APlanWrittenInABuildRunGoesIntoTheDescriptionToo(t *testing.T) {
-	h := newWasteHarness(t, wasteHarnessOpts{Env: providersSecrets(), Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: providersSecrets(), Machine: testsupport.Machine, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
 	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
 		"review": workReviewer(workApprove)})

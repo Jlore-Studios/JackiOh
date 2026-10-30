@@ -20,9 +20,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 )
 
-// Harness, builder, changes, reviewer and APPROVE are waste_test.go's copies of test_flow.py's and
-// test_work.py's.
-
 // pickupLabelsAll is ALL: every provider secret set.
 var pickupLabelsAll = map[string]string{"HARNESS_SECRETS_SET": strings.Join(providers.SecretNames, " ")}
 
@@ -356,7 +353,7 @@ func TestPickupLabels_SetupCreatesTheNewLabels(t *testing.T) {
 }
 
 func TestPickupLabels_ThePullRequestKeepsTheIssuesDifficultyAndTier(t *testing.T) {
-	h := newWasteHarness(t, wasteHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:easy", "Priority:High")
 	planned, result := h.night(workFake(map[string]runner.Handler{
 		"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}), "review": workReviewer(workApprove)}))
@@ -372,12 +369,12 @@ func TestPickupLabels_ThePullRequestKeepsTheIssuesDifficultyAndTier(t *testing.T
 }
 
 func TestPickupLabels_ADraftPullRequestKeepsThemToo(t *testing.T) {
-	h := newWasteHarness(t, wasteHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
+	h := newFlowHarness(t, flowHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:hard", pickupLabelsLow)
 	planned, result := h.night(workFake(map[string]runner.Handler{
 		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"fix":    workBuilder(map[string]string{"src/game.txt": "v3\n"}),
-		"review": workReviewer(workChanges("Still wrong."))}), true)
+		"review": workReviewer(workChanges("Still wrong."))}), flowPlanArgs{Force: true})
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"claude-3", "not_approved"})
 	pull := wastePull(t, h.gh, "bot/issue-12")
 	assertTrue(t, pull.Truthy("draft"))

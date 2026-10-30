@@ -320,7 +320,7 @@ func TestDisk_GithubsRunnersReadNoDisk(t *testing.T) {
 // ---------------------------------------------------------------------------- DeliverTests
 
 func TestDisk_ARefusalKeepsTheItemQueuedUncountedAndOpensTheIssue(t *testing.T) {
-	h := newWasteHarness(t, wasteHarnessOpts{Machine: []string{"muse"}})
+	h := newFlowHarness(t, flowHarnessOpts{Machine: []string{"muse"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, "out-full")
@@ -351,7 +351,7 @@ func TestDisk_ARefusalKeepsTheItemQueuedUncountedAndOpensTheIssue(t *testing.T) 
 }
 
 func TestDisk_AJobOnGithubsRunnersReportsNothing(t *testing.T) {
-	h := newWasteHarness(t)
+	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	out := filepath.Join(h.root, "out-hosted")
