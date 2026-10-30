@@ -232,6 +232,65 @@ describe("R388 the Patch notes page", () => {
     expect(await screen.findByTestId(patchTestid.cards)).toBeInTheDocument();
     quiet.mockRestore();
   });
+
+  it("#2052 a card still loading shows its loading line where its detail opens, then the detail", async () => {
+    const source = fixtureSource();
+    const index = source.index;
+    let release = (): void => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = () => {
+        resolve();
+      };
+    });
+    renderPage({ ...source, index: () => held.then(() => index()) });
+    await screen.findByTestId(patchTestid.cards);
+    fireEvent.click(within(byCard(patchTestid.changedCard, "core-002")).getByTestId(patchTestid.openCard));
+    expect(screen.queryByTestId(patchTestid.opening)).toBeNull();
+    const loading = await screen.findByTestId(patchTestid.openingLoading);
+    expect(loading).toHaveTextContent("Loading this card…");
+    expect(loading).toHaveAttribute("role", "status");
+    expect(screen.getByTestId(patchTestid.opening)).toHaveAttribute("role", "dialog");
+    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    release();
+    const detail = await screen.findByTestId(INSPECT_DETAIL);
+    expect(detail).toHaveAttribute("data-card", "core-002");
+    expect(screen.queryByTestId(patchTestid.opening)).toBeNull();
+  });
+
+  it("#2052 a card that fails to open says so where its detail would be, and Try again opens it", async () => {
+    const source = fixtureSource();
+    let failures = 1;
+    const index = source.index;
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderPage({ ...source, index: () => (failures-- > 0 ? Promise.reject(new Error("offline")) : index()) });
+    await screen.findByTestId(patchTestid.cards);
+    fireEvent.click(within(byCard(patchTestid.changedCard, "core-002")).getByTestId(patchTestid.openCard));
+    const error = await screen.findByTestId(patchTestid.openingError);
+    expect(error).toHaveTextContent("This card didn't load.");
+    expect(error).toHaveAttribute("role", "alert");
+    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    fireEvent.click(screen.getByTestId(patchTestid.openingRetry));
+    const detail = await screen.findByTestId(INSPECT_DETAIL);
+    expect(detail).toHaveAttribute("data-card", "core-002");
+    expect(screen.queryByTestId(patchTestid.opening)).toBeNull();
+    quiet.mockRestore();
+  });
+
+  it("#2052 a card that fails to open closes on Close and gives focus back to its name", async () => {
+    const source = fixtureSource();
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderPage({ ...source, index: () => Promise.reject(new Error("offline")) });
+    await screen.findByTestId(patchTestid.cards);
+    const name = within(byCard(patchTestid.changedCard, "core-002")).getByTestId(patchTestid.openCard);
+    name.focus();
+    fireEvent.click(name);
+    await screen.findByTestId(patchTestid.openingError);
+    expect(screen.getByTestId(patchTestid.openingClose)).toHaveFocus();
+    fireEvent.click(screen.getByTestId(patchTestid.openingClose));
+    expect(screen.queryByTestId(patchTestid.opening)).toBeNull();
+    expect(name).toHaveFocus();
+    quiet.mockRestore();
+  });
 });
 
 describe("R388 the Patch notes page over the real history", () => {

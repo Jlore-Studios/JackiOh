@@ -8,8 +8,9 @@
 //! - when a fragment claims, through `plays`, a family the base build shows playing as before (only
 //!   once stage 2 ran, and only for the claims this change adds: a fragment an earlier pull request
 //!   left pending keeps the claims its own check confirmed);
-//! - when a divergence no card explains has no fragment claiming a rule, or a fragment newly claims
-//!   a rule and stage 2 found none.
+//! - when a rule every game meets (divergences no card explains in `classify`'s `RULE_MIN_GAMES` of
+//!   the unforced games, R2455000) has no fragment claiming it, or a fragment newly claims a rule and
+//!   stage 2 found none.
 //!
 //! The catalog claims are `patches check`'s (R646): this check adds only what the catalog diff
 //! cannot see, a card whose script or whose engine rule changed. CI runs it on every pull request as
@@ -103,13 +104,13 @@ pub(crate) fn problems(
         let newly_rule = fragment.rule && !before.is_some_and(|fragment| fragment.rule);
         if ran && newly_rule && !classification.rule {
             problems.push(format!(
-                "pending/{name} claims a rule every game meets, but no divergence against the base build is left without a card (R1370000)"
+                "pending/{name} claims a rule every game meets, but too few games against the base build diverge without a card (R1370000, R2455000)"
             ));
         }
     }
     if classification.rule && !head.iter().any(|named| named.fragment.rule) {
         problems.push(
-            "a divergence against the base build touches no card, a rule every game meets, but no pending fragment claims it: add --rule to the fragment (R1370000)"
+            "divergences against the base build touch no card in enough games to be a rule every game meets, but no pending fragment claims it: add --rule to the fragment (R1370000, R2455000)"
                 .to_string(),
         );
     }

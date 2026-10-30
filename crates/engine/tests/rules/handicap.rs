@@ -422,6 +422,8 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
                 hero_floor: None,
                 pool_hold: None,
+                core_only: None,
+                deck_copies: None,
             }
         );
         assert_eq!(AI_DIFFICULTY.easy, HUMAN_HANDICAP);
@@ -436,6 +438,8 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
                 hero_floor: None,
                 pool_hold: None,
+                core_only: None,
+                deck_copies: None,
             }
         );
         assert_eq!(
@@ -449,6 +453,8 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
                 hero_floor: None,
                 pool_hold: None,
+                core_only: None,
+                deck_copies: None,
             }
         );
         assert_eq!(
@@ -1582,6 +1588,8 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 hero_health: Some(20),
                 hero_floor: None,
                 pool_hold: None,
+                core_only: Some(true),
+                deck_copies: None,
             }
         );
         assert_eq!(tutorial_health(), 20);
@@ -2222,6 +2230,8 @@ mod r1705005_a_lessons_human_seat_under_tutorial_human {
                 deck_size: EARLIER_DECK_SIZE,
                 // R2201000: a lesson cannot be lost.
                 hero_floor: Some(TUTORIAL_HERO_FLOOR),
+                // R2433001: and its deck may hold copies.
+                deck_copies: Some(TUTORIAL_DECK_COPIES),
                 ..HUMAN_HANDICAP
             }
         );
@@ -2265,5 +2275,122 @@ mod r1866002_starting_health_of {
         hit.players.p1.hero.health -= 5;
         assert_eq!(query::starting_health_of(&hit, PlayerId::P2), tutorial_health());
         assert_eq!(query::starting_health_of(&hit, PlayerId::P1), HERO_HEALTH);
+    }
+}
+
+mod r2433001_a_lessons_human_deck_may_hold_copies {
+    use super::*;
+
+    /// A 20-card deck: `copies` of `fx-1`, then distinct vanilla Units.
+    fn deck_with(copies: usize) -> Vec<String> {
+        let mut deck = vec!["fx-1".to_string(); copies];
+        deck.extend(vanilla_deck(EARLIER_DECK_SIZE - copies as i32, 2));
+        deck
+    }
+
+    #[test]
+    fn r2433001_tutorial_human_allows_tutorial_deck_copies_and_no_other_handicap_sets_it() {
+        assert_eq!(TUTORIAL_DECK_COPIES, 4);
+        assert_eq!(TUTORIAL_HUMAN.deck_copies, Some(TUTORIAL_DECK_COPIES));
+        for handicap in [
+            HUMAN_HANDICAP,
+            AI_DIFFICULTY.medium,
+            AI_DIFFICULTY.hard,
+            AI_TUTORIAL,
+        ] {
+            assert_eq!(handicap.deck_copies, None);
+        }
+        assert!(state::validate_handicap(&TUTORIAL_HUMAN, "p1").is_ok());
+        for bad in [0, -1] {
+            let handicap = Handicap {
+                deck_copies: Some(bad),
+                ..HUMAN_HANDICAP
+            };
+            let refused = state::validate_handicap(&handicap, "p1").expect_err("refused");
+            assert!(refused.to_string().contains("R2433001"), "{refused}");
+        }
+    }
+
+    #[test]
+    fn r2433001_a_deck_at_the_cap_is_dealt_one_over_it_is_refused_and_a_seat_without_it_refuses_duplicates() {
+        register_all();
+        let other = vanilla_deck(DECK_SIZE, 1);
+        // At the cap: four copies of fx-1.
+        let at_cap = game(
+            "r2433001-at-cap",
+            Some(on_p1(TUTORIAL_HUMAN)),
+            Some((deck_with(TUTORIAL_DECK_COPIES as usize), other.clone())),
+        );
+        assert_eq!(
+            at_cap
+                .players
+                .p1
+                .library
+                .iter()
+                .filter(|card| card.def_id == "fx-1")
+                .count(),
+            TUTORIAL_DECK_COPIES as usize
+        );
+        assert_eq!(at_cap.players.p1.handicap, Some(TUTORIAL_HUMAN));
+
+        // One over: five copies.
+        let over = create_refusal(options(
+            "r2433001-over",
+            (deck_with(TUTORIAL_DECK_COPIES as usize + 1), other.clone()),
+            on_p1(TUTORIAL_HUMAN),
+        ));
+        assert!(
+            over.as_deref()
+                .is_some_and(|message| message.contains("R2433001")),
+            "{over:?}"
+        );
+
+        // A seat without the field still refuses a duplicate, with L3's own message: a 20-card seat
+        // under TUTORIAL_HUMAN's resources but without its copies, and a plain 25-card seat.
+        let one_copy = Handicap {
+            deck_copies: None,
+            ..TUTORIAL_HUMAN
+        };
+        let refused = create_refusal(options(
+            "r2433001-l3",
+            (deck_with(2), other.clone()),
+            on_p1(one_copy),
+        ));
+        assert!(
+            refused
+                .as_deref()
+                .is_some_and(|message| message.contains("no duplicate card ids (§2.6 L3)")),
+            "{refused:?}"
+        );
+        let mut plain = vec!["fx-1".to_string(); 2];
+        plain.extend(vanilla_deck(DECK_SIZE - 2, 2));
+        let refused = create_refusal(CreateGameOptions {
+            seed: "r2433001-plain".to_string(),
+            decks: (plain, other),
+            ..Default::default()
+        });
+        assert!(
+            refused
+                .as_deref()
+                .is_some_and(|message| message.contains("§2.6 L3")),
+            "{refused:?}"
+        );
+    }
+
+    #[test]
+    fn r2433001_a_copies_limit_of_max_copies_stores_nothing_and_hashes_like_the_plain_game() {
+        register_all();
+        let decks = decks_for(None);
+        let plain = game("r2433001-hash", None, Some(decks.clone()));
+        let same = game(
+            "r2433001-hash",
+            Some(on_p1(Handicap {
+                deck_copies: Some(MAX_COPIES),
+                ..HUMAN_HANDICAP
+            })),
+            Some(decks),
+        );
+        assert!(same.players.p1.handicap.is_none());
+        assert_eq!(hash_state(&same), hash_state(&plain));
     }
 }

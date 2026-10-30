@@ -3,7 +3,8 @@
 // player note, never its record's source or notes (R724001). They read public patch data only (CLAUDE.md
 // rule 7).
 
-import { useId, useState, type ReactElement } from "react";
+import { useId, useRef, useState, type ReactElement } from "react";
+import { createPortal } from "react-dom";
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
 
@@ -11,9 +12,10 @@ import { listSeparator, readerName } from "../cards/chinese.ts";
 import { isGlitch } from "../cards/glitch.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
+import { OVERLAY_ROOT_PROPS, useModalOverlay } from "../cards/inspect/store.ts";
 import { CardDefsProvider } from "../cards/refContext.tsx";
 import { formatDay, t } from "../i18n/i18n.ts";
-import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { Skeleton, useShownAfterDelay } from "../skeleton/Skeleton.tsx";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
 import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
@@ -327,11 +329,51 @@ function PatchEntry({
   );
 }
 
+/**
+ * #2052: the detail's place while a card opened from a patch loads, or after it failed: its status line,
+ * Try again when it failed, and Close. A dialog as the detail is (`useModalOverlay`), so Escape, the
+ * scrim and Back close it too; a dialog's wait stays text (R2108000).
+ */
+function OpeningCard({ read, onClose }: { read: Exclude<Loaded<CardDef | null>, { status: "ready" }>; onClose: () => void }): ReactElement {
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const modal = useModalOverlay(onClose, closeButton);
+  return createPortal(
+    <div className="inspect-layer inspect-layer--detail" {...OVERLAY_ROOT_PROPS}>
+      <div className="inspect-scrim" aria-hidden="true" {...modal.dismissProps} />
+      <div className="inspect-detail" data-testid={patchTestid.opening} role="dialog" aria-modal="true" aria-label={t("Card")}>
+        {read.status === "loading" ? (
+          <p className="patch-status" role="status" data-testid={patchTestid.openingLoading}>
+            {t("Loading this card…")}
+          </p>
+        ) : (
+          <div className="patch-status">
+            <p role="alert" data-testid={patchTestid.openingError}>
+              {t("This card didn't load.")}
+            </p>
+            <button type="button" className="patch-retry" data-testid={patchTestid.openingRetry} onClick={read.retry}>
+              {t("Try again")}
+            </button>
+          </div>
+        )}
+        <div className="inspect-actions">
+          <button ref={closeButton} type="button" className="inspect-close" data-testid={patchTestid.openingClose} {...modal.dismissProps}>
+            {t("Close")}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Patch[]; onClose: () => void }): ReactElement | null {
   const source = usePatchSource();
   const read = useLoaded<CardDef | null>(`open:${id}`, async () => currentDef(id, patches, await source.index(), (version) => source.snapshot(version)));
-  if (read.status !== "ready" || read.value === null) return null;
-  return <CardDetail def={read.value} onClose={onClose} historyOpen />;
+  // #2052, R2108000: a card that answers within SKELETON_DELAY_MS opens as it always did, with no wait shown.
+  const waited = useShownAfterDelay();
+  if (read.status === "ready") return read.value === null ? null : <CardDetail def={read.value} onClose={onClose} historyOpen />;
+  if (read.status === "loading" && !waited) return null;
+  return <OpeningCard read={read} onClose={onClose} />;
 }
 
 /** R724000: one release line as a bubble: its name, span and count, and, opened, its summary, technical changes and patches. */
