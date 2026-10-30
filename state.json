@@ -9119,7 +9119,7 @@
       }
     },
     "2407": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixed_head": "9734c2770e7a1bbc1da96e54d97e56af90ba153d",
       "ci_fixes": 3,
@@ -9146,18 +9146,18 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "muse",
       "question": "",
       "queued_at": "2026-10-30T02:57:39Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "40993222664",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:9422e2c4-1793329078",
+      "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-30T02:42:08Z",
+      "started_at": "2026-10-30T02:58:25Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -9695,9 +9695,9 @@
   },
   "labels_synced": "f1e8690a3f24f14c",
   "last_run": {
-    "at": "2026-10-30T02:42:39Z",
+    "at": "2026-10-30T02:58:25Z",
     "url": "",
-    "what": "build #2427 on muse"
+    "what": "revise #2407 on muse"
   },
   "last_sweep": {
     "at": "2026-10-30T02:49:16Z",
