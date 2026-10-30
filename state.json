@@ -9534,6 +9534,13 @@
     "2424": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-30T02:32:23Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "the change is the AI's evaluation and decide's root in crates/ai/src/, which the rule names hard; nothing about it is in doubt"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
