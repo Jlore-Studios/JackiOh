@@ -21344,11 +21344,11 @@
     "loc": 40,
     "base": {
       "keywords": [],
-      "text": "Can be sold from your hand at the Marketplace, like a Resource.\nDiscover a Stinkyscape card."
+      "text": "Can be sold from your hand at the Marketplace.\nDiscover a Stinkyscape card."
     },
     "radiant": {
       "keywords": [],
-      "text": "Can be sold from your hand at the Marketplace, like a Resource.\nDiscover a Radiant Stinkyscape card."
+      "text": "Can be sold from your hand at the Marketplace.\nDiscover a Radiant Stinkyscape card."
     }
   },
   "stinkyscape-090": {
@@ -21583,13 +21583,13 @@
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Discard your hand. Fill your Resource tray with random Stinkyscape Resources."
+      "text": "Cry: Discard your hand. Fill your hand with random Stinkyscape Resources."
     },
     "radiant": {
       "attack": 12,
       "health": 12,
       "keywords": [],
-      "text": "Cry: Discard your hand. Fill your Resource tray with random Radiant Stinkyscape Resources."
+      "text": "Cry: Discard your hand. Fill your hand with random Radiant Stinkyscape Resources."
     }
   },
   "stinkyscape-097": {
@@ -23912,11 +23912,11 @@
     "loc": 77,
     "base": {
       "keywords": [],
-      "text": "One random effect: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle; cast a random Call to Chaos."
+      "text": "One random effect: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each turn; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each cycle; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Replace your side of the field with a random Anomaly, any of the ten; summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones, on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each turn; cast a random Call to Chaos."
     }
   },
   "stinkyscape-152": {

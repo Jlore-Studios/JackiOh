@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 68 tables of migrations 0001-0068 ==='
+\echo '=== CHECK 2: the 68 tables of migrations 0001-0069 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -88,7 +88,7 @@ declare
   -- R2100000), and a spend's idempotency_keys (0067, R2124000).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
-  -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065 and 0068 add no table.
+  -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068 and 0069 add no table.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -940,7 +940,7 @@ end $$;
 -- mechanics patch's Plague, 0026 with patch v0.2.Y's Catalyst, Prime and Acclaimed, 0030 with
 -- the Meditative set's Wincon (R1411), 0043 with the Meditative+ set's Potion (R1178000), 0058
 -- with #1837's Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean (R1837000), and 0065
--- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000), and 0068 with
+-- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000), and 0069 with
 -- #2521's Resource and Faction. Each probe
 -- row is removed before the next, and each probe runs in a block of its own, so later checks see
 -- only the cards CHECK 10 seeded.

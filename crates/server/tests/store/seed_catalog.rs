@@ -10,7 +10,7 @@
 //! from 0020, Catalyst, Prime and Acclaimed from 0026, the Meditative set's Wincon (R1411) from 0030,
 //! the Meditative+ set's Potion (R1178000) from 0043, #1837's Terminus, Quest, Otherworldly,
 //! Other-Origins and Jelly Bean (R1837000) from 0058, the Stinkyscape set's Drone Core, Weapon,
-//! War Doctrine and Swarm (R1857000) from 0065, and #2521's Resource and Faction from 0068. The
+//! War Doctrine and Swarm (R1857000) from 0065, and #2521's Resource and Faction from 0069. The
 //! seed runs in one transaction, so one such row fails the whole catalog. The first half compares the tags with the migrations' text; the
 //! second checks that the database really accepts them. Both count the catalog of the sets that ship
 //! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set, the
@@ -293,8 +293,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0068_resource_and_faction_tags.sql",
-            "0068 re-adds the check with #2521's Resource and Faction, after 0065's four (R1857000)"
+            file, "0069_resource_and_faction_tags.sql",
+            "0069 re-adds the check with #2521's Resource and Faction, after 0065's four (R1857000)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -351,7 +351,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
 
     /// R1411: the migration that ships the Meditative set, 0043 after it, which ships the
     /// Meditative+ set (R1178000), 0058, which admits #1837's five tags (R1837000), 0065, which
-    /// ships the Stinkyscape set (R1857000), and 0068, which admits #2521's Resource and Faction.
+    /// ships the Stinkyscape set (R1857000), and 0069, which admits #2521's Resource and Faction.
     /// The check admits exactly the tags the engine names, in its order, Wincon, Potion, the five,
     /// the four and the two among them, so every entry of every set the catalog holds seeds the day
     /// its set ships, the Meditative, Meditative+ and Stinkyscape sets' included.
@@ -359,7 +359,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0068_resource_and_faction_tags.sql");
+        assert_eq!(file, "0069_resource_and_faction_tags.sql");
         for tag in [
             "Wincon",
             "Potion",
@@ -658,7 +658,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(tagged(tag), stinkyscape(count), "{tag}");
         }
-        // #2521: the two tags 0068 admits, the Stinkyscape set's alone: its six Resources, Reknite,
+        // #2521: the two tags 0069 admits, the Stinkyscape set's alone: its six Resources, Reknite,
         // Korrelite, Gellium, Axnit, Narcor and Red Narcor, every one a token (Resource), and its
         // five Faction cards, #95 and #159 to #162 (Faction).
         for (tag, count) in [("Resource", 6), ("Faction", 5)] {

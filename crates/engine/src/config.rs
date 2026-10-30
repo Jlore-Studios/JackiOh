@@ -1494,8 +1494,10 @@ pub const REPLAY_PAGE_STEPS: usize = 16;
 
 /// R1371000: the scheme a file's catalog versions are named by, its `versions` marker. A replay,
 /// game-record or self-play file that carries no marker names them as they were before the version
-/// retcon (#1371), and its reader maps each through `patches/aliases.json`.
-pub const VERSIONS_SCHEME: u32 = 2;
+/// retcon (#1371), and its reader maps each through `patches/aliases.json`. R2532000: 3 since the
+/// v0.5 retcon (#2532); a file marked 2 names the v0.5 line as it was before it, and its reader maps
+/// those names through the same file's `marked`.
+pub const VERSIONS_SCHEME: u32 = 3;
 
 // ---------------------------------------------------------------------------------------------
 // The testkit's seed search (issue #848).

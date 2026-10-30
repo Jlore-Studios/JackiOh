@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0068: the Resource and Faction tags (SPEC §5, §8.10, issue #2521)
+-- Migration 0069: the Resource and Faction tags (SPEC §5, §8.10, issue #2521)
 -- ============================================================================
 -- Serves SPEC.md §5 (tags) and the Stinkyscape balance patch (issue #2521),
 -- which adds two tags to cards of a set that already ships: Resource (the six
@@ -27,7 +27,7 @@
 -- point at (0002's comment on the table). No existing row is rewritten. Every
 -- row 0065 admitted, this check admits too.
 --
--- Apply order: 0002 (`public.cards`) -> ... -> 0065 -> ... -> 0067 -> 0068 (this
+-- Apply order: 0002 (`public.cards`) -> ... -> 0065 -> ... -> 0068 -> 0069 (this
 -- file). Safe to re-apply: drop-constraint-if-exists-then-add, as 0065 does.
 -- ============================================================================
 
@@ -55,7 +55,7 @@ comment on constraint cards_tags_check on public.cards is
   re-added it with Jlockeed, 0015 with Book, Pancake and AI, 0020 with Plague,
   0026 with Catalyst, Prime and Acclaimed, 0030 with Wincon, 0043 with Potion,
   0058 with Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean, 0065
-  with Drone Core, Weapon, War Doctrine and Swarm, 0068 with Resource and
+  with Drone Core, Weapon, War Doctrine and Swarm, 0069 with Resource and
   Faction.$$;
 
 -- ----------------------------------------------------------------------------
