@@ -9941,12 +9941,31 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
-        "builder": "claude",
+        "approvals": [
+          "gemini"
+        ],
+        "builder": "gemini",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/engine/tests/golden/games.jsonl",
+            "spec/08-catalog.md"
+          ],
+          "from": "bcd0af623c830fd4bf1cc50e4016fa7b4369bf65",
+          "main": "f61b0336e4128f45f049a5077a84e8a4b4dcf573"
+        },
         "rejections": [],
-        "reviews": [],
-        "sha": "bcd0af623c830fd4bf1cc50e4016fa7b4369bf65",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "gemini",
+            "run": "41136767122",
+            "tier": "medium"
+          }
+        ],
+        "sha": "aedd3cb54548a496a1d906b593444309c3abbb5a",
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     },
     "2497": {
