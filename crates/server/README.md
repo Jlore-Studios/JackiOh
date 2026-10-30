@@ -293,8 +293,8 @@ A profile opens it onto the match it is in, or onto a finished match it held a s
 `REMATCH_OFFER_TTL_MS` after that match ended; past that it is refused as a stranger is (4403), and a
 finished match whose log the retention purge took is not found (4404, R1285000).
 An upgrade whose token verifies counts as one request against its account's `API_REQUESTS_PER_MINUTE`;
-one past it gets the `forbidden` frame and close 4429, which the client retries on its backoff
-(R2478000), and `/ws/duos` and `/ws/watch` count the same way.
+one past it gets the `forbidden` frame and close 4429, which the match and co-op clients retry on their backoff
+(the watch page takes the frame as a refusal; R2478000), and `/ws/duos` and `/ws/watch` count the same way.
 The pump pings every `WS_PING_INTERVAL_SECONDS` and drops a socket that has sent no frame for
 `WS_IDLE_TIMEOUT_SECONDS`, which starts its seat's grace; a socket's outgoing queue holds
 `WS_OUTBOX_MAX_FRAMES` frames, and the one that overflows it is closed (R1441).
