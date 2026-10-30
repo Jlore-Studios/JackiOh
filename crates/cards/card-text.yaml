@@ -3408,11 +3408,13 @@ meditative-049-2: # Yile's Virus
 meditative-049-3: # AI Girlfriend
   flavour: She only wants a sparring partner.
   voice:
-    cast: Fight for my amusement, darlings.
+    play: Fight for my amusement, darlings.
+    attack: For me? You shouldn't.
+    death: We are so over.
   zh:
     name: AI女友
-    base: "活化，无法攻击\n回合开始时：每个敌方单位都攻击本牌。\n当本牌受到攻击后：削弱攻击者。"
-    radiant: "活化，无法攻击\n回合开始时：每个敌方单位都攻击本牌。\n当本牌受到攻击后：削弱攻击者{times}次。"
+    base: "无法攻击\n回合开始时：每个敌方单位都攻击本牌。\n当本牌受到攻击后：削弱攻击者。"
+    radiant: "无法攻击\n回合开始时：每个敌方单位都攻击本牌。\n当本牌受到攻击后：削弱攻击者{times}次。"
 meditative-050: # CN Tech
   flavour: The algorithm has already decided. It likes your odds.
   voice:

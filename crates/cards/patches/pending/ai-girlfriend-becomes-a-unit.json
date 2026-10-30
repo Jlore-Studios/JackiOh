@@ -1,0 +1,23 @@
+{
+  "title": "AI Girlfriend becomes a Unit",
+  "sources": "Issue #2279",
+  "notes": "Meditative #49.3 AI Girlfriend becomes a plain Unit and drops Animated from both faces; YileGPT Prime's Cry summons it straight into a unit zone (R64), fizzling with every unit zone full. Stats, cost, Can't attack, the start-of-turn forced attacks (R53) and the after-attacked Nerf (R1026, MD-C26) are unchanged.",
+  "player": {
+    "title": "AI Girlfriend becomes a Unit",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "AI Girlfriend is a Unit instead of an Animated Field Spell"
+    ],
+    "text": [
+      "Its printed text drops Animated on both faces"
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "meditative-049-3"
+  ],
+  "plays": [
+    "meditative-049-3"
+  ]
+}
