@@ -9480,12 +9480,8 @@
     "what": "revise #2310 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-30T01:31:16Z",
-    "notes": [
-      "delivered revise #2310 on muse (run 40962645882): approved",
-      "started revise #2310 on muse (run 40986511356)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-30T01:39:29Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -10190,7 +10186,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-30T01:31:16Z",
+  "loop_tick": "2026-10-30T01:39:29Z",
   "machine_disk": {
     "issue": null,
     "reading": {
