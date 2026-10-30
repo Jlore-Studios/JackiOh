@@ -70,8 +70,10 @@ evaluation prefers) on every determinization, and plays the first action of the 
 leaving a countdown waiting (an effect "in N turns" with its public badge, R1181000) is replied to again
 on a copy whose countdowns come due at the seat's next turn start, and the scores are blended at
 `AI_REPLY.countdown_share` per turn the farthest still waits past its owner's next turn start (#1995);
-with none waiting, nothing changes. It
-re-plans after every action, so a lethal the solver proves is played trimmed to the actions it needs
+with none waiting, nothing changes. A Dormant card (R1839000) acts in no line and threatens no face until
+it wakes, but the evaluation counts it as the unit it wakes as, `slumber_turn_share` of it per turn left
+on its countdown, or `slumber_waiting_share` with none (R2380000). It re-plans after every action, so a
+lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
 it still wins without, R1965000; none, when the budget or the clock stops the trim before it has that
 suffix). A free play (a (0) Spell back from the graveyard under In Too Deep's reward L, R454, or The Coin)

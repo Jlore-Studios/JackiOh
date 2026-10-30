@@ -27,7 +27,6 @@ use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MATCH_RECORD_RESULT_ATTEMPTS,
     MATCH_SERVER_ACTION_RETRY_MS, PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
 };
-use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{MatchActionRow, StoreError};
 
 use crate::support::deps::empty_test_app;
@@ -36,26 +35,12 @@ use crate::support::engine::{
     install_test_cards,
 };
 use crate::support::socket::{FakeSocket, create_fake_socket};
-use crate::support::store::{advance_and_yield, fake, store, to_json};
+use crate::support::store::{advance_and_yield, fake, from, store, table, to_json};
 
 const MATCH_ID: &str = "match-recovery";
 
 /// How many seeds `seed_dealing` tries before it gives up.
 const SEED_SEARCH: usize = 5_000;
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-/// One table of the fake store: rows as JSON.
-async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
-    let data = fake(app);
-    let data = data.lock().await;
-    match pick(&data) {
-        Value::Array(rows) => rows,
-        other => panic!("not a table: {other}"),
-    }
-}
 
 // Time and logs
 

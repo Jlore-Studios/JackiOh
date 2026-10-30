@@ -15,6 +15,7 @@ import { createPracticeCore } from "../practice/core.ts";
 import type { PracticeResponse } from "../practice/protocol.ts";
 import zhCN from "../i18n/zh-CN.json";
 import { FIELD_GUIDE } from "./discoveries.ts";
+import { LESSON_GAME_TIMEOUT_MS, playLesson } from "./harness.ts";
 import { TUTORIAL_LESSONS, lessonById, lessonHandicaps, nextLessonOf, type TutorialLesson } from "./lessons.ts";
 import { lessonStartConfig } from "./start.ts";
 import { scriptFor } from "./scripts/index.ts";
@@ -50,6 +51,38 @@ const COMBAT_KEYWORDS: readonly string[] = [
   "Can't attack",
 ];
 
+/**
+ * R2205003 (§9.10): the lesson that teaches each ability a card can show on its face, so an AI deck
+ * holds "nothing the lessons before it have not taught": its type, a keyword, or an ability its text
+ * names. A keyword no lesson teaches is not listed (TG #14's Trample).
+ */
+const TYPE_LESSON: Readonly<Record<string, number>> = { Unit: 1, Spell: 2, Trap: 3, "Field Trap": 3, "Field Spell": 3 };
+const KEYWORD_LESSON: Readonly<Record<string, number>> = { Taunt: 2, Armor: 2, "Divine Shield": 2, Rush: 2, Pierce: 2 };
+const TEXT_LESSON: readonly (readonly [string, number])[] = [
+  ["Cry:", 2],
+  ["Aura:", 3],
+  ["Death:", 4],
+  ["Tribute", 4],
+  ["Defense Position", 2],
+];
+/**
+ * Lesson 1's AI deck is 12 distinct Training Grounds units, and the set has only three with no
+ * ability (#1, #8, #43), so its other nine carry a Cry, one lesson early. Nothing else comes early.
+ */
+const EARLY_IN_LESSON_1: readonly string[] = ["Cry:"];
+/** R2201000: all the idle human ever sends, the mulligan and a prompt's answer aside. */
+const IDLE_MOVES: readonly string[] = ["mulligan", "answer", "endTurn"];
+
+/** Every ability of a card's face with the lesson that teaches it. */
+function abilitiesOf(card: CardDef): { ability: string; lesson: number }[] {
+  const found: { ability: string; lesson: number }[] = [{ ability: card.type, lesson: TYPE_LESSON[card.type] ?? Infinity }];
+  for (const keyword of card.base.keywords) {
+    const lesson = KEYWORD_LESSON[keyword.kind];
+    if (lesson !== undefined) found.push({ ability: keyword.kind, lesson });
+  }
+  for (const [words, lesson] of TEXT_LESSON) if (card.base.text.includes(words)) found.push({ ability: words, lesson });
+  return found;
+}
 
 function def(id: string): CardDef {
   const found = catalog[id];
@@ -136,6 +169,45 @@ describe("R291 the tutorial's lessons", () => {
       }
     }
   });
+
+  it("R2205003 R2206001 give the AI only what this lesson or an earlier one teaches, lesson 1's Cry units aside: no Aura before lesson 3, no Death before lesson 4", () => {
+    const early: string[] = [];
+    const untaught: string[] = [];
+    for (const lesson of TUTORIAL_LESSONS) {
+      for (const id of lesson.aiDeck) {
+        const card = def(id);
+        for (const { ability, lesson: teaches } of abilitiesOf(card)) {
+          if (teaches <= lesson.number) continue;
+          if (lesson.number === 1 && teaches === SPELL_LESSON && EARLY_IN_LESSON_1.includes(ability)) early.push(id);
+          else untaught.push(`${lesson.id}: ${id} ${card.name} shows ${ability}, taught in lesson ${String(teaches)}`);
+        }
+      }
+    }
+    expect(untaught).toEqual([]);
+    // Only the units lesson 1 must hold for want of vanilla ones come early.
+    const vanilla = Object.values(catalog).filter(
+      (card) => card.set === LESSON_SET && !card.token && card.type === "Unit" && abilitiesOf(card).length === 1 && card.base.text === "",
+    );
+    const [basics] = TUTORIAL_LESSONS;
+    if (basics === undefined) throw new Error("no lessons");
+    for (const card of vanilla) expect(basics.aiDeck, `basics holds every vanilla unit first: ${card.id}`).toContain(card.id);
+    expect(early.length, "the Cry units of lesson 1").toBe(AI_TUTORIAL.deckSize - vanilla.length);
+  });
+
+  for (const lesson of TUTORIAL_LESSONS) {
+    it(
+      `R2201000 ${lesson.id}: a human who only ends the turn still wins on its own seed and decks, once the AI's deck runs out, before the turn cap`,
+      () => {
+        const run = playLesson(lesson.id, { policy: "idle" });
+        expect(run.winner, `${lesson.id}: the human wins`).toBe(lesson.humanSeat);
+        expect(run.view.result?.reason, lesson.id).not.toBe("turn-cap");
+        const moves = new Set(run.humanActions.map(({ action }) => action.type));
+        for (const type of moves) expect(IDLE_MOVES, `${lesson.id}: the idle human only ends the turn`).toContain(type);
+        expect(run.humanActions.filter((entry) => entry.refused !== null), lesson.id).toEqual([]);
+      },
+      LESSON_GAME_TIMEOUT_MS,
+    );
+  }
 
   it("R291 name every shadow-banned card of an AI deck with its reason, and name no other", () => {
     for (const lesson of TUTORIAL_LESSONS) {

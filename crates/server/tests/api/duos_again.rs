@@ -37,13 +37,10 @@ use jackioh_server::duos::store::DuosMatch;
 use jackioh_server::seats::Seat;
 
 use crate::support::deps::{add_user, call, empty_test_app};
-use crate::support::store::{advance, fake, store, to_json, uuid};
+use crate::support::engine::playable;
+use crate::support::store::{advance, fake, from, store, to_json, uuid};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
-
-fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
 
 fn millis<T>(value: T) -> u64
 where
@@ -92,22 +89,6 @@ async fn app_with_pair() -> (Arc<App>, Account, Account) {
     let a1 = account(&app, 1, "Hana").await;
     let a2 = account(&app, 2, "Gus").await;
     (app, a1, a2)
-}
-
-/// Every playable catalog id, in `catalog.json` order.
-fn playable() -> Vec<String> {
-    jackioh_cards::register_all();
-    jackioh_cards::CATALOG
-        .iter()
-        .filter(|(_, def)| {
-            !def.token
-                && !serde_json::to_value(&def.tags)
-                    .expect("tags")
-                    .as_array()
-                    .is_some_and(|tags| tags.contains(&json!("Token")))
-        })
-        .map(|(id, _)| id.clone())
-        .collect()
 }
 
 /// The first `DECK_SIZE` playable ids: a legal deck.

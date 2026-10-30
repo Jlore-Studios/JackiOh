@@ -27,8 +27,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use indexmap::IndexMap;
-use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_engine::config::DECK_SIZE;
@@ -48,20 +46,12 @@ use jackioh_server::db::store::{CollectionEntry, DeckVersion, SavedDeck, SavedTr
 use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 
 use crate::support::deps::{add_user, call, test_app};
-use crate::support::store::{fake_lock, q, uuid};
+use crate::support::store::{fake_lock, from, q, to_json, uuid};
 
 const PROFILE: &str = "p1";
 const OTHER: &str = "p2";
 
 // Harness (a private copy per file, SURFACE rule 5)
-
-fn from<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn json_of<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
 
 /// `{ ...base, ...extra }` on JSON objects.
 fn merged(mut base: Value, extra: Value) -> Value {
@@ -126,7 +116,7 @@ fn is_deckable(card_id: &str) -> bool {
 /// The shared module's verdict for a deck draft, exactly as the route must pass it on.
 fn draft_issues(name: &str, deck: &[String]) -> Value {
     let deckable = |card_id: &str| is_deckable(card_id);
-    json_of(&check_deck_draft(&DeckDraftInput {
+    to_json(&check_deck_draft(&DeckDraftInput {
         name: normalize_name(name),
         cards: deck.to_vec(),
         is_deckable: &deckable,
@@ -138,7 +128,7 @@ fn draft_issues(name: &str, deck: &[String]) -> Value {
 
 /// The shared module's verdict for a trio draft.
 fn trio_issues(name: &str, deck_ids: Value) -> Value {
-    json_of(&check_trio_draft(&from(json!({
+    to_json(&check_trio_draft(&from(json!({
         "name": normalize_name(name),
         "deckIds": deck_ids,
         "nameMaxLength": DECK_NAME_MAX_LENGTH,
@@ -234,7 +224,7 @@ impl Ctx {
             .tables
             .decks
             .iter()
-            .map(json_of)
+            .map(to_json)
             .collect()
     }
 
@@ -244,7 +234,7 @@ impl Ctx {
             .tables
             .trios
             .iter()
-            .map(json_of)
+            .map(to_json)
             .collect()
     }
 
@@ -274,7 +264,7 @@ impl Ctx {
             .tables
             .deck_versions
             .iter()
-            .map(json_of)
+            .map(to_json)
             .collect()
     }
 }
@@ -386,7 +376,7 @@ mod saved_decks_9_4_r250_r256 {
             .put_deck(deck_body(json!({ "cards": cards(1, 0) })), &uuid(1), &ctx.token)
             .await;
         assert_eq!(status, 200);
-        assert_eq!(json_of(&q!(ctx.app, collection_get(PROFILE))), json!([]));
+        assert_eq!(to_json(&q!(ctx.app, collection_get(PROFILE))), json!([]));
         assert_eq!(ctx.decks_table().await.len(), 1);
     }
 
@@ -527,7 +517,7 @@ mod saved_decks_9_4_r250_r256 {
             .await;
         assert_eq!(status, 404);
         assert_eq!(*error_code(&body), json!("not_found"));
-        assert_eq!(json_of(&q!(ctx.app, decks_get(&uuid(1))))["name"], json!("Mine"));
+        assert_eq!(to_json(&q!(ctx.app, decks_get(&uuid(1))))["name"], json!("Mine"));
 
         // DELETE of it is "nothing to delete", exactly as for an id nobody has.
         let (_, removed) = ctx.delete(&format!("/api/decks/{}", uuid(1)), &ctx.token).await;
@@ -790,7 +780,7 @@ mod the_deck_s_portrait_r641_d5 {
         // here against the same `is_portrait_id` the route passes, never a sentence typed out.
         let deckable = |card_id: &str| is_deckable(card_id);
         let portrait = |value: &str| is_portrait_id(&Value::from(value));
-        let expected = json_of(&check_deck_draft(&DeckDraftInput {
+        let expected = to_json(&check_deck_draft(&DeckDraftInput {
             name: normalize_name("Aggro"),
             cards: cards(4, 0),
             is_deckable: &deckable,
@@ -1352,7 +1342,7 @@ mod r2100000_a_deck_keeps_its_earlier_versions {
         assert_eq!((status, error_code(&theirs)), (404, &json!("not_found")));
         assert_eq!(theirs, missing);
         assert_eq!(ctx.versions(&uuid(1), &ctx.token).await.len(), 1);
-        assert_eq!(json_of(&q!(ctx.app, decks_get(&uuid(1))))["name"], json!("Aggro"));
+        assert_eq!(to_json(&q!(ctx.app, decks_get(&uuid(1))))["name"], json!("Aggro"));
     }
 
     #[tokio::test(start_paused = true)]
@@ -1546,7 +1536,7 @@ mod saved_trios_9_4_r252 {
             .await;
         assert_eq!(status, 404);
         assert_eq!(
-            json_of(&q!(ctx.app, trios_get(&uuid(101))))["name"],
+            to_json(&q!(ctx.app, trios_get(&uuid(101))))["name"],
             json!("Theirs")
         );
         let (_, removed) = ctx.delete(&format!("/api/trios/{}", uuid(101)), &ctx.token).await;
@@ -1752,7 +1742,7 @@ mod a_trio_import_9_4_r340_r341 {
         }
         let (status, body) = ctx.post_import(import_body(500, json!({})), &ctx.token).await;
         assert_eq!(status, 409);
-        let room = json_of(&check_import_room(&from(json!({
+        let room = to_json(&check_import_room(&from(json!({
             "saved": { "decks": MAX_SAVED_DECKS - 1, "trios": 0 },
             "limits": { "decks": MAX_SAVED_DECKS, "trios": MAX_SAVED_TRIOS },
             "adding": { "decks": 3, "trios": 1 },
@@ -2004,7 +1994,7 @@ mod read_mode_choice_r257 {
     use super::*;
 
     fn read(body: Value) -> Result<Value, ApiError> {
-        read_mode_choice(&body).map(|choice| json_of(&choice))
+        read_mode_choice(&body).map(|choice| to_json(&choice))
     }
 
     #[test]
@@ -2149,7 +2139,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         let choice = read_mode_choice(&choice).expect("a well-formed choice");
         freeze_choice(app, profile_id, &choice)
             .await
-            .map(|frozen| json_of(&frozen))
+            .map(|frozen| to_json(&frozen))
     }
 
     fn rules_of(error: &ApiError) -> Vec<Value> {
@@ -2221,7 +2211,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         let deck = legal(0);
         own(&ctx.app, PROFILE, &deck).await;
         let gary_deck = merged(
-            json_of(&saved_deck(&uuid(1), "Gary's", &deck, PROFILE, 0)),
+            to_json(&saved_deck(&uuid(1), "Gary's", &deck, PROFILE, 0)),
             json!({ "portrait": "gary" }),
         );
         save(&ctx.app, from(gary_deck.clone())).await;
@@ -2248,7 +2238,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         assert!(!matches!(error.code, ApiErrorCode::NotFound));
         assert!(error.message.to_lowercase().contains("deck"), "{}", error.message);
         // The premise: this profile really has saved nothing.
-        assert_eq!(json_of(&q!(ctx.app, decks_list(PROFILE))), json!([]));
+        assert_eq!(to_json(&q!(ctx.app, decks_list(PROFILE))), json!([]));
     }
 
     #[tokio::test(start_paused = true)]
@@ -2276,7 +2266,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         save(&ctx.app, saved_deck(&uuid(1), "Aggro", &deck, PROFILE, 0)).await;
         let collection: IndexMap<String, i32> = deck[1..].iter().map(|card| (card.clone(), 1)).collect();
         let catalog: Value = serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json");
-        let verdict = json_of(&validate_deck(&from(json!({
+        let verdict = to_json(&validate_deck(&from(json!({
             "deck": { "name": "Aggro", "cards": deck },
             "catalog": { "version": catalog_version(), "cards": catalog, "banned": [] },
             "collection": collection,

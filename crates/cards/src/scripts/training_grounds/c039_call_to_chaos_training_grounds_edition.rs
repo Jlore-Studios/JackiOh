@@ -471,16 +471,59 @@ mod tests {
             }
         }
 
+        /// BUILD M13 TG 39: "a cast of another edition at chain depth 1". The other editions' Cries are
+        /// replaced, on this thread only, by one that reports the chain depth its cast card carries (R28,
+        /// `chaos_chain_of`) and does nothing else, so the depth is read while the cast resolves (it is
+        /// gone once the card lands, R215). The edition is a later draw than the roll, so the first
+        /// cursor whose roll is the recast and whose cast is another edition is taken.
         #[test]
         fn r2200004_entry_recast_casts_a_shipped_edition_at_chain_depth_one() {
-            let s = chaos("recast", side(false, json!([])), json!({ "hand": [VANILLA] }));
-            let cast: Vec<Value> = events_of(&s, "cardPlayed").into_iter().skip(1).collect();
-            assert!(!cast.is_empty());
-            assert_eq!(cast[0]["costPaid"], json!(0));
-            let def_id = cast[0]["defId"].as_str().unwrap_or("");
-            assert!(SHIPPED_EDITIONS.contains(&def_id), "{def_id}");
-            // The cast card is a base form (R28).
-            assert_ne!(cast[0]["radiant"], json!(true));
+            crate::register_all();
+            let saved = jackioh_engine::scripts::registered_scripts();
+            let (runs_in, runs) = std::sync::mpsc::channel::<(String, i32)>();
+            let report: Hook = hook(move |ctx| {
+                let id = ctx.self_.as_ref().map(|card| card.id.clone()).unwrap_or_default();
+                let _ = runs_in.send((id, subsystems::chaos_chain_of(ctx.self_.as_ref())));
+                vec![]
+            });
+            let mut scripts = saved.clone();
+            for edition in SHIPPED_EDITIONS.iter().filter(|edition| **edition != ID) {
+                let face = Script {
+                    cry: Some(report.clone()),
+                    ..Script::default()
+                };
+                scripts.insert(edition.to_string(), CardScripts { base: face.clone(), radiant: face });
+            }
+            jackioh_engine::testkit::register_scripts(scripts);
+            struct Restore(Option<IndexMap<String, CardScripts>>);
+            impl Drop for Restore {
+                fn drop(&mut self) {
+                    if let Some(saved) = self.0.take() {
+                        jackioh_engine::testkit::register_scripts(saved);
+                    }
+                }
+            }
+            let _restore = Restore(Some(saved));
+
+            for cursor in (0..SWEEP).filter(|at| rolled_names(SEED, *at, false).first() == Some(&"recast")) {
+                let s = chaos_in(SEED, cursor, side(false, json!([])), json!({ "hand": [VANILLA] }));
+                let cast: Vec<Value> = events_of(&s, "cardPlayed").into_iter().skip(1).collect();
+                assert!(!cast.is_empty(), "cursor {cursor}: the recast cast a card");
+                let def_id = cast[0]["defId"].as_str().unwrap_or("").to_string();
+                let depths: Vec<(String, i32)> = runs.try_iter().collect();
+                if def_id == ID {
+                    continue;
+                }
+                assert!(SHIPPED_EDITIONS.contains(&def_id.as_str()), "{def_id}");
+                assert_eq!(cast[0]["costPaid"], json!(0));
+                // The cast card is a base form (R28).
+                assert_ne!(cast[0]["radiant"], json!(true));
+                // R28: the played card is depth 0, so the card it casts is the chain's first cast.
+                let cast_id = cast[0]["instanceId"].as_str().unwrap_or("").to_string();
+                assert_eq!(depths, vec![(cast_id, 1)], "{def_id}");
+                return;
+            }
+            panic!("no cursor below {SWEEP} rolls the recast into another edition");
         }
 
         /// Re-pinned for the Training Grounds release (#2204): while the set was held no pool held this
