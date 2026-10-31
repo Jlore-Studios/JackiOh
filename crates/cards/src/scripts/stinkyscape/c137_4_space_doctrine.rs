@@ -10,7 +10,7 @@
 //! game: every Unit its caster controls has Flying, those that arrive later too, but a Vanilla one
 //! (R1859007). Then, once, as it is cast: one copy of each piece its caster's launched Starship
 //! remembers (`starship_pieces_of`, R1852005), each on the face it fused on, oldest first, added until
-//! the hand is full (`room_in`), none burned and none repeated (§2.4, R1859011); no launched
+//! the hand is full (`hand_cap_of`), none burned and none repeated (§2.4, R1859011); no launched
 //! Starship, nothing. Radiant: each copy's `costOverride` setCost (R65). Tunes: setCost 1 ↓, the
 //! Radiant face only (R824000).
 
@@ -28,7 +28,8 @@ fn space_doctrine(radiant: bool) -> Script {
             let Some(ship) = launched_starship_of(state, ctx.controller) else {
                 return effects;
             };
-            let room = usize::try_from(room_in(state, ctx.controller, OffFieldZone::Hand)).unwrap_or(0);
+            let room = (hand_cap_of(state, ctx.controller) - zone_count(state, ctx.controller, OffFieldZone::Hand)).max(0);
+            let room = usize::try_from(room).unwrap_or(0);
             let set_cost = radiant.then(|| param(&*ctx, "setCost"));
             for piece in starship_pieces_of(ship).into_iter().take(room) {
                 let mut copy = json!({ "defId": piece.def_id, "radiant": piece.radiant == Some(true) });
