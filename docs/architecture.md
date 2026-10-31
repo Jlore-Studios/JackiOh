@@ -813,11 +813,10 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
-   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 774
-   (634 cards + 140 tokens over Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape and Training
-   Grounds: patch v0.2.0, Glitch, issue #170, the Meditative set, issue #553, the Meditative+ set, issue
-   #1187, the Stinkyscape set, issue #1884, the Training Grounds set, issue #2204, and #2521's three new cards) and
-   `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
+   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → the entries
+   `cargo jackioh catalog check` counts on its second line (`<n> entries (<cards> cards + <tokens> tokens)`:
+   every card and token of the seven shipped sets, spec §8) and `select app.catalog_version();` → your
+   `CATALOG_VERSION`, the latest card patch's version (R388).
    In the same transaction it writes the cosmetics registry compiled in, `crates/server/cosmetics.json`
    (R1295000), into `public.cosmetics`: `select count(*) from public.cosmetics;` → 12. Before its
    stamp it writes the starter cards (`STARTER_CARDS`, R1310000) into `app.settings`:

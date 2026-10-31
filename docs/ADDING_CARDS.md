@@ -18,24 +18,20 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 | 1 | `spec/08-catalog.md` §8.7 (§8.1 Core, §8.6 Classic; `spec/07-tokens.md` for a token) | the card's row: the only source of card text (CLAUDE.md) | none |
 | 2 | `crates/cards/catalog.json` | the entry, after the set's highest card index and before its shared tokens (`T-AI-…`); a token follows its card; it carries a `flavor`, chosen by [docs/polish/8-flavor.md](polish/8-flavor.md) (a change to a flavor alone needs no fragment, R1437000) | `catalog check`, `tests/cross/catalog.rs` |
 | 3 | `crates/cards/src/scripts/classic_plus/cNNN_slug.rs` | the script and its tests in one file ([§2](#2-templates)) | the build: `build.rs` refuses a catalog id with no file |
-| 4 | `crates/cards/tests/cross/catalog.rs` | the card's fixture row in `CLASSIC_PLUS`; `RARITY_COUNTS` and `SET_SIZES` (the totals and row counts are their sums) | itself |
-| 5 | `crates/tools/src/catalog.rs` | the set's `cards` and `rarities` in `sets()`, `expected_tag_count` for each tag the card has, and the totals `the_shipped_catalog_passes_every_check` pins | `catalog check`, `cargo test -p jackioh-tools` |
-| 6 | `docs/radiant-audit.md` | one row `\| <index> \| <name> \| …`; the Radiant face must meet R275 (about twice the base face; doubling stats alone is not enough for a unit with text) | `tests/cross/radiant_standard.rs` |
-| 7 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
-| 8 | `apps/web/src/audio/card-audio.json5` | the card's entry in catalog order, its name in a comment beside its id: the voice of a Unit's play, attack and death lines (R1448), of anything else's cast line, and any effects (R655; the file's header says how). The lines' words are row 9's | `voice-lines.test.ts`, `voiceData.test.ts` |
-| 9 | `crates/cards/card-text.yaml` | the card's entry in catalog order, its name in a comment beside its id (#2498; the file's header says how): its `flavour`, one short line in the source notes' voice, no rules words, at most 120 characters (R660); its `voice` lines, one for each hook row 8 gives a voice; and its `zh` (row 13). Then run `cargo test -p jackioh-tools --test export_card_text`, which writes `crates/cards/flavour.json`, `crates/cards/chinese.json` and `apps/web/src/audio/voice-text.json` from it, and commit them. It is not card data, so no fragment claims it | `crates/tools/tests/export_card_text.rs`, `tests/cross/flavour.rs`, `apps/web/src/cards/flavour.test.tsx`, `voice-lines.test.ts` |
-| 10 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …) | `tests/cross/query.rs` |
-| 11 | `crates/cards/patches/pending/<slug>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)), which also claims the win-rate table (`"winRates": true`) when the patch refreshes `crates/cards/data/win_rates.json` (R1329000); the shipped history, the tables under `patches/win_rates/` and the version sites move at promotion, not here | `patches check` |
-| 12 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its license row | `music-assets.test.ts` (the daily audio run) |
-| 13 | `crates/cards/card-text.yaml` (the entry's `zh`, row 9) | the card's Chinese (R1303): `name`, `base` and `radiant` in Simplified Chinese, each face keeping exactly its English face's `{key}`s, plus `previews` exactly where the script declares `preview`; it is not card data, so no fragment claims it | `tests/cross/chinese.rs` |
+| 4 | `crates/cards/tests/cross/catalog.rs` and `crates/cards/src/census.rs` | the card's fixture row in `CLASSIC_PLUS`; in `CENSUS` its set's `cards` (a token: its index in `card_defined_tokens` or `shared_tokens`) and its rarity's count, and in `tag_count` each tag it carries but Token. Every total and each set's fixture-row count is the census's sum | `tests/cross/catalog.rs`, `catalog check`, `cargo test -p jackioh-tools` |
+| 5 | `docs/radiant-audit.md` | one row `\| <index> \| <name> \| …`; the Radiant face must meet R275 (about twice the base face; doubling stats alone is not enough for a unit with text) | `tests/cross/radiant_standard.rs` |
+| 6 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
+| 7 | `apps/web/src/audio/card-audio.json5` | the card's entry in catalog order, its name in a comment beside its id: the voice of a Unit's play, attack and death lines (R1448), of anything else's cast line, and any effects (R655; the file's header says how). The lines' words are row 8's | `voice-lines.test.ts`, `voiceData.test.ts` |
+| 8 | `crates/cards/card-text.yaml` | the card's entry in catalog order, its name in a comment beside its id (#2498; the file's header says how): its `flavour`, one short line in the source notes' voice, no rules words, at most 120 characters (R660); its `voice` lines, one for each hook row 7 gives a voice; and its `zh` (row 12). Then run `cargo test -p jackioh-tools --test export_card_text`, which writes `crates/cards/flavour.json`, `crates/cards/chinese.json` and `apps/web/src/audio/voice-text.json` from it, and commit them. It is not card data, so no fragment claims it | `crates/tools/tests/export_card_text.rs`, `tests/cross/flavour.rs`, `apps/web/src/cards/flavour.test.tsx`, `voice-lines.test.ts` |
+| 9 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …) | `tests/cross/query.rs` |
+| 10 | `crates/cards/patches/pending/<slug>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)), which also claims the win-rate table (`"winRates": true`) when the patch refreshes `crates/cards/data/win_rates.json` (R1329000); the shipped history, the tables under `patches/win_rates/` and the version sites move at promotion, not here | `patches check` |
+| 11 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its license row | `music-assets.test.ts` (the daily audio run) |
+| 12 | `crates/cards/card-text.yaml` (the entry's `zh`, row 8) | the card's Chinese (R1303): `name`, `base` and `radiant` in Simplified Chinese, each face keeping exactly its English face's `{key}`s, plus `previews` exactly where the script declares `preview`; it is not card data, so no fragment claims it | `tests/cross/chinese.rs` |
 
 The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch tests, the e2e component specs) count
 `catalog.json` and `patches.json` themselves and need no edit for a new card. The patch-list tests pin only the history shipped
-before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `catalog.rs`'s rows,
-`RARITY_COUNTS` and `SET_SIZES`, and the tools' `sets()` and tag counts.
-
-Also grep the Markdown for the stated totals (`634 cards`, `140 tokens`, `774`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
-`spec/`, `docs/architecture.md`.
+before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `tests/cross/catalog.rs`'s rows and
+`src/census.rs`, each set's counts, rarities, tokens and tag counts written once and never computed from `catalog.json` (#108, #2581).
 
 **A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; and the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; no set is held now) differs in five places, the Training Grounds paths below standing for any held set's:
 - Its script goes in `src/scripts/training_grounds/` (id `traininggrounds-NNN`, a token's `traininggrounds-NNN-k`; Stinkyscape's
@@ -43,19 +39,19 @@ Also grep the Markdown for the stated totals (`634 cards`, `140 tokens`, `774`) 
   `STUB (#2194):` in its header (the snapshots #41–#60 are part 2's, #2195, which adds their entries and scripts): a card
   part **replaces its stub** with the script and its tests, and updates its own entry's `loc` in `catalog.json` (`cargo jackioh
   catalog loc <path>`), the one line of the catalog it touches.
-- Rows 1, 2, 4, 5, 6, 7, 8, 9 and 13 are already written. §8.11, §7's held table, the `TRAINING_GROUNDS` fixture, the census in
-  `crates/tools/src/catalog.rs`, `docs/radiant-audit.md`, BUILD M13, `card-audio.json5` and `card-text.yaml` list
+- Rows 1, 2, 4, 5, 6, 7, 8 and 12 are already written. §8.11, §7's held table, the `TRAINING_GROUNDS` fixture, the census
+  (`crates/cards/src/census.rs`), `docs/radiant-audit.md`, BUILD M13, `card-audio.json5` and `card-text.yaml` list
   every card of the set (`docs/training-grounds-set.md` is its brief), so a card part corrects its rows only where its build decided
   otherwise.
-- There is no row 11. The patches tool reads the catalog without the set, so its cards need no fragment until the release
-  claims the whole set at once. The stated totals above don't move either: they count the shipped sets.
+- There is no row 10. The patches tool reads the catalog without the set, so its cards need no fragment until the release
+  claims the whole set at once. The census's totals don't move either: they sum the sets that ship.
 - The set's cards are in no pool that names no set, in no deck and in no random deck. A test that needs them there opens the set
   with the engine testkit's `preview_sets(&[SetName::TrainingGrounds])` (one thread, until its guard drops).
 - `cargo jackioh fuzz` previews every set, so the card is fuzzed from the day it lands, while the golden traces deal from the
   shipped sets and must not move.
 - Its `card-audio.json5` and `card-text.yaml` entries are written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
-  Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
+  Its intro (row 11) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
   came early, with its look-and-sound part, issue #1883, R1883000, so its release owes none.)
 - Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry, and a
   test that pins a list of cards reads the shipped sets or the held set's entries that have landed (`landed()` in
@@ -250,7 +246,7 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   it, or file it and list the pair in `KNOWN_OPEN` (`crates/tools/src/fused_pairs.rs`) with its open issue; never skip it any other way.
 - **A renamed card** (a patch that changes a `name`) fails `voice-lines.test.ts` until its comment in `card-audio.json5`, the name on the
   line of its id, says the new name (R655), and `export_card_text.rs` until its comment in `card-text.yaml` does too (#2498).
-- **A card patched to Legendary or Mythic** (or a token's `printedRarity`) fails `music-assets.test.ts` until it has row 12's intro, and one
+- **A card patched to Legendary or Mythic** (or a token's `printedRarity`) fails `music-assets.test.ts` until it has row 11's intro, and one
   patched down from either until its `intro` is taken out (R1352).
 
 ## 5. Do not read
@@ -275,7 +271,7 @@ No escalation step.
 Every card needs its voice lines **rendered**: `apps/web/src/audio/voice-assets.test.ts` (B35, B36, B37, R501) expects an `.m4a` per line in
 `apps/web/public/audio/voice/` and a manifest entry. `pnpm --filter @jackioh/web gen:voice` renders them with macOS `say` and `afconvert` or
 Windows SAPI and ffmpeg, and has no Linux backend. From Linux, write the `card-audio.json5` entry and the `card-text.yaml` lines
-(the text needs no tool but the export, row 9; a Unit has a play, an attack and a death line, R1448) and push a commit whose message
+(the text needs no tool but the export, row 8; a Unit has a play, an attack and a death line, R1448) and push a commit whose message
 holds `[gen:voice]`: the `voice` workflow renders the lines on GitHub's
 macOS and Windows runners, commits them back to the branch, and runs `node apps/web/scripts/gen-voice.mjs --check` (R1448). Its commits start
 no CI, so push once more afterwards. Without it, say in the PR that the audio is owed. A hook that is only an effect renders nothing, so it is never owed. The asset tests run in the daily super run, not
