@@ -1,8 +1,6 @@
 // R1956000: the deck builder's pool and deck list, and the Almanac's read-only grid, draw the
-// viewer's own copies wearing their picks (R1655000's foil, finish and border), behind ownership:
-// below the deck builder's `OwnCopy` every card the collection does not say is unowned, and in a
-// read-only grid only the cards `own` names, owning what its ledger lists. Every other card draws the
-// defaults. The browse pane's rules are browse.test.tsx's; the Almanac's own route is almanac.test.tsx's.
+// viewer's own copies wearing their picks (R1655000's foil, finish and border), behind ownership.
+// The browse pane's rules are browse.test.tsx's; the Almanac's own route is almanac.test.tsx's.
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";

@@ -1,9 +1,40 @@
-// Card pool grid (docs/polish/6-cards.md, Surface D).
-// Pool entry: `card-pool-<id>` (card details/inspect trigger, R251 trio uniqueness, issue #1017 full text preview,
-// R1383 "New" ribbon) and `db-add-<id>` quick-add button.
-// Read-only Almanac mode (R630): omits add/drag/legality badges; inspect remains accessible.
-// Cosmetics: R1956000 / R1655000 owned cards render user cosmetics via `OwnCopy`.
-// Performance: #2266 memoized `PoolCard` + deferred rendering; #2334 virtualized windowing (poolWindow.ts).
+// The card pool as a grid of full cards (docs/polish/6-cards.md, Surface D).
+//
+// Every pool entry is a `div.db-item` holding two buttons:
+//   - `card-pool-<id>`, the card itself: `data-card`, `data-legal` ("false" when the open deck will
+//     not take it), `data-in-deck="true"` when the open deck holds it, `data-unavailable="true"` and
+//     `data-held-by="<deck name>"` when a deck it is being compared with holds it (R251: a card is
+//     its catalog id, so one copy per trio), `data-refused`, `data-owned`, `aria-disabled` and
+//     `draggable`.
+//   - `db-add-<id>`, the "+" that puts the card in the open deck in one tap.
+//
+// A click on the card opens its detail view, as the brief asks, and the detail's "Add to <deck>"
+// adds it. So does a right-click, or a touch long-press. Adding takes one gesture still: the "+",
+// or a drag onto the deck. A resting mouse opens no preview, but on a card whose face prints less
+// than its whole text (issue #1017).
+//
+// A card of the newest shipped set wears a small "New" ribbon (`.db-new`) for the patch that ships
+// the set and the one after (R1383, patches/ribbon.ts). The face inside is decoration to a screen
+// reader (it repeats the name), and the detail view reads the rules out in full.
+//
+// READ-ONLY, for the Card Almanac (R630): given none of the deck editor's props, the grid has no
+// "+", no card is draggable, and no card carries `data-legal`, `data-in-deck`, `data-unavailable`,
+// `data-held-by`, `data-refused`, `data-owned` or `aria-disabled`, since there is no deck to put
+// it in.
+//
+// R1956000: a card the viewer owns is drawn as their own copy and wears their picks for it (the
+// foil, finish, border and full art of R1655000): below the deck builder's `OwnCopy` every card
+// the collection does not say is unowned, and in a read-only grid the cards `own` names, behind the
+// ownership it carries (the signed-in Almanac's).
+//
+// #2266: the Almanac draws about 700 cards, so each card is memoized (`PoolCard`) and gets the grid's
+// own handlers, which never change and call the screen's latest.
+//
+// #2334: the Almanac's grid is `virtual`: it mounts only the rows of cards near what is in view
+// (poolWindow.ts, usePoolWindow.ts). The grid's own rows keep the height of the rows left out, so the
+// scrollbar and each card's place are the whole pool's. A card that has focus stays mounted, and the
+// cards just past the view are mounted before the keyboard reaches them, so every card is reachable
+// by Tab. A page with no layout to read (a test's jsdom) draws every card.
 
 import {
   memo,
@@ -33,7 +64,11 @@ import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import { usePoolWindow } from "./usePoolWindow.ts";
 import type { Holder } from "./workshop.ts";
 
-/** #2266: Initial chunk of pool cards drawn on first render. */
+/**
+ * How many of the pool's cards a grid's first render draws (#2266): more than any screen shows at
+ * once. The rest follow in a render that yields to the pointer and the keyboard; in a virtual grid,
+ * they are the rows its layout puts near the view, read before the first paint.
+ */
 export const POOL_FIRST_CARDS = 48;
 
 /** Where a pool card already is: in the open deck, in a compared deck, or nowhere that matters. */
@@ -42,7 +77,11 @@ export type PoolPlace = "deck" | Holder | null;
 /** R1956000: the cards that are the viewer's own copies, and the cosmetics they own on them. */
 export type OwnCopies = { cards: ReadonlySet<string>; owned: CardOwnership };
 
-/** R1956000: renders card with viewer's cosmetics. */
+/**
+ * R1956000: `children` drawn as the viewer's own copy of `cardId`, owning what `own.owned` holds,
+ * when `own` names the card; as the providers above say otherwise. It always renders both
+ * providers, so a face below it keeps its place in the tree when `own` arrives.
+ */
 export function AsOwnCopy({
   own,
   cardId,
@@ -128,7 +167,11 @@ export function placeWords(place: PoolPlace): string | null {
   return place === "deck" ? t("In deck") : t("In {name}", { name: place.name });
 }
 
-/** Pool card accessible name (R432; printed rarity for tokens R503, R1177001). */
+/**
+ * The pool card's accessible name: "Bigot, Unit, (2) Cost, Common, in Control, unavailable. Show details" (R432).
+ * A token that prints a rarity (R503) is named by both, as its face shows both (R1177001):
+ * "Top Loser, Unit, (2) Cost, Token, printed Legendary. Show details".
+ */
 export function poolCardLabel(
   def: CardDef,
   place: PoolPlace = null,
@@ -153,7 +196,12 @@ export function poolCardLabel(
 const SEES_NEAR =
   typeof HTMLElement !== "undefined" && "oncontentvisibilityautostatechange" in HTMLElement.prototype;
 
-/** Pool card face, mounted on content-visibility unskip to avoid layout costs. */
+/**
+ * A pool card's face, drawn the first time the browser un-skips its holder and kept after. A face
+ * still skipped holds nothing: reading the style of anything inside a skipped face forces a layout
+ * of the whole page, so a pool of skipped faces, each built at once, cost a page layout per face to
+ * whatever reads them all. A browser without the event draws every face at once.
+ */
 function PoolFace({ children }: { children: ReactNode }): ReactElement {
   const holder = useRef<HTMLSpanElement>(null);
   const [near, setNear] = useState(!SEES_NEAR);
@@ -210,7 +258,9 @@ function PoolItem({ cardId, def, deck, fresh, area, onInspect }: PoolItemProps):
         className="db-card"
         data-testid={poolCardId(cardId)}
         data-card={cardId}
-        // data-legal false when already in deck or held by compared deck.
+        // `e2e/support/testids.ts` already exports this as ILLEGAL (M5-T2's vocabulary): a card the
+        // builder will not put in the open deck, because it is there already or a compared deck
+        // holds it.
         data-legal={deck === null ? undefined : place === null ? "true" : "false"}
         data-in-deck={place === "deck" ? "true" : undefined}
         data-unavailable={place !== null && place !== "deck" ? "true" : undefined}
@@ -320,7 +370,10 @@ function itemDeck(props: PoolGridProps, cardId: string, handlers: PoolHandlers):
   };
 }
 
-/** Stable handler references delegating to latest props. */
+/**
+ * The screen's handlers change more often than its cards do (DeckEditor's `add` with every card the
+ * deck takes), so the cards get these, which never change and call the latest.
+ */
 function usePoolHandlers(props: PoolGridProps): PoolHandlers {
   const latest = useRef(props);
   useLayoutEffect(() => {
@@ -372,7 +425,10 @@ export default function PoolGrid(props: PoolGridProps): ReactElement {
 function StagedPool(props: PoolGridProps): ReactElement {
   const { ids } = props;
   const handlers = usePoolHandlers(props);
-  // Deferred rendering prevents displaying cards no longer in pool.
+  // A pool that grows draws only as many of its own cards as the last render drew, until the
+  // background render has drawn the rest, so the grid never shows a card the pool no longer holds;
+  // one that shrinks or reorders is drawn at once (a plain deferred list made a narrowing search
+  // slower).
   const deferred = useDeferredValue(ids, ids.slice(0, POOL_FIRST_CARDS));
   const shown = ids.length > deferred.length ? ids.slice(0, deferred.length) : ids;
 
@@ -396,7 +452,8 @@ function WindowedPool(props: PoolGridProps): ReactElement {
   const handlers = usePoolHandlers(props);
   const section = useRef<HTMLElement>(null);
   const view = usePoolWindow(section, ids.length);
-  // Keeps focused card mounted when scrolled out of view.
+  // The card that has focus stays mounted where the pool scrolls away from it (a page down on the
+  // keyboard), or the focus would fall to the page.
   const [held, setHeld] = useState<string | null>(null);
 
   const rows = view === null || view === "all" ? null : view;

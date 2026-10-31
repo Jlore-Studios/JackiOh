@@ -1,6 +1,5 @@
-// The opponent's-play showcase as the player sees it (CardShowcase.tsx): held up for about a second
-// from the redacted view alone, click-through, never for the viewer's own play, a back for a card
-// the view hides (R97, R227), per viewer on a hotseat device, and gone on Escape or a pointer down.
+// The opponent's-play showcase as the player sees it (CardShowcase.tsx): from the redacted view
+// alone, with a back for a card the view hides (R97, R227).
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";

@@ -31,7 +31,6 @@ export function useCardWinRates(sortKey: SortKey): CardWinRates {
 
   useEffect(() => {
     if (!wanted) {
-      // Leaving the sort forgets a failure, so coming back to it asks again, as it always has.
       setFailed(false);
       return undefined;
     }

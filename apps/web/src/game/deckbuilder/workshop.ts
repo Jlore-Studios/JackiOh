@@ -1,5 +1,14 @@
-// SPEC §9.4, R250, R253 (CLAUDE.md rule 7): workshop pure helpers.
-// No rules enforcement; validateDeck, validateTrio, trioConflicts (R251) decide.
+// The deck workshop's pure facts (SPEC §9.4, R250–R253): a deck row's status chip, the validator's
+// verdicts on a deck and a trio, which cards the compared decks hold, the editor's two moves on a
+// deck's cards, and the names a new deck or trio starts with.
+//
+// No rule lives here (CLAUDE.md rule 7): `validateDeck`, `validateTrio` and `trioConflicts` (R251: a
+// card is its catalog id) decide. This module hands them the decks under their saved names and never
+// writes one of their sentences.
+//
+// The two refusals it does make decline a state a save would refuse: a second copy (D4, `MAX_COPIES`),
+// a card past `DECK_SIZE` (D2), or a card a compared deck holds (R251's "unavailable, used in
+// <deck>"). None is a verdict: a deck that already breaks one keeps its cards and the verdict says why.
 
 import {
   trioConflicts,
@@ -56,7 +65,10 @@ export function trioLabel(trio: TrioItem, nameLength: number): string {
   return trioNameForSave(trio.name, nameLength);
 }
 
-/** Next available name candidate prefix(n) or prefix n (R711000). */
+/**
+ * `Deck 1`, `Deck 2`, …: the first `<prefix> <n>` no existing name uses. Given a function instead of
+ * a prefix, each candidate is `prefix(n)` (the reader's words for "Deck {n}", R711000).
+ */
 export function nextName(prefix: string | ((number: number) => string), taken: readonly string[]): string {
   const used = new Set(taken.map((name) => name.trim().toLowerCase()));
   for (let number = 1; ; number += 1) {
@@ -71,7 +83,11 @@ function fitName(name: string, make: (name: string) => string, max: number): str
   return over <= 0 ? make(name) : make(clampName(name, Math.max(0, [...name].length - over)).trimEnd());
 }
 
-/** #2096: generates duplicate name "<name> (copy n)" within nameLength. */
+/**
+ * #2096: a duplicate's name, `<name> (copy)`, then `<name> (copy 2)`, `(copy 3)`, …: the first no name
+ * in `taken` uses (trimmed, any case, as `nextName` compares). `name` is cut so the whole fits in
+ * `nameLength`, or the save's own cut (D1) would take the "(copy)" off again.
+ */
 export function copyName(name: string, taken: readonly string[], nameLength: number): string {
   const used = new Set(taken.map((other) => other.trim().toLowerCase()));
   for (let number = 1; ; number += 1) {
@@ -86,7 +102,11 @@ export function copyName(name: string, taken: readonly string[], nameLength: num
 
 // Verdicts (R253), and the status chip
 
-/** Fallback collection when GET /api/collection is unread: treats cards as owned so L5 does not fire. */
+/**
+ * The collection to judge with when `GET /api/collection` could not be read: every card owned as
+ * often as the decks use it, so L5 never fires and nothing is claimed unowned on a guess.
+ * The server checks L5 at queue anyway.
+ */
 export function ownershipUnknown(cardLists: readonly (readonly string[])[]): Collection {
   const counts: Record<string, number> = {};
   for (const cards of cardLists) for (const cardId of cards) counts[cardId] = (counts[cardId] ?? 0) + 1;
@@ -110,7 +130,12 @@ export function deckVerdict(
 export type DeckStatusKind = "ready" | "complete" | "incomplete" | "unowned" | "invalid";
 export type DeckStatus = { kind: DeckStatusKind; label: string };
 
-/** Deck row chip: Ready, Incomplete, N not owned, or Needs a fix. R915005 L7 decks badge as Complete. */
+/**
+ * The deck row's chip: "Ready" (may queue), "Incomplete" (L2), "N not owned" (L5 only) or "Needs a
+ * fix" (anything else). With no collection a legal deck is "Complete", not "Ready". R915005's L7 says
+ * where a deck plays, not what it lacks (`practiceOnly` badges it), so a deck that breaks only L7 is
+ * "Complete", never "Ready". The label is in the reader's language, so call it at render time.
+ */
 export function deckStatus(verdict: LoadoutResult, collectionKnown: boolean): DeckStatus {
   if (verdict.ok) return collectionKnown ? { kind: "ready", label: t("Ready") } : { kind: "complete", label: t("Complete") };
   const rules = verdict.errors.map((issue) => issue.rule).filter((rule) => rule !== "L7");
@@ -131,7 +156,10 @@ export function trioSlots(trio: TrioItem, decks: readonly DeckItem[]): readonly 
   return trio.deckIds.map((id) => (id === null ? null : (decks.find((deck) => deck.id === id) ?? null)));
 }
 
-/** R253 Conquest verdict: validateTrio over filled slots using saved deck names. */
+/**
+ * R253's Conquest verdict: `validateTrio` over the filled slots only, so an empty slot is L1's
+ * "this one has 2" in the validator's own words, and every sentence names the decks as saved.
+ */
 export function trioVerdict(
   trio: TrioItem,
   decks: readonly DeckItem[],
@@ -147,7 +175,10 @@ export function trioVerdict(
   });
 }
 
-/** Maps slot card id to names of other slots' decks holding it (via trioConflicts). */
+/**
+ * For each slot (trio order): card id → the names of the OTHER slots' decks that hold it too, which
+ * the compare marks ("Also in <deck>"). `trioConflicts` decides what is shared.
+ */
 export function trioSharedCards(
   slots: readonly (DeckItem | null)[],
   nameLength: number,
@@ -182,7 +213,6 @@ export type Compare =
 
 export const NO_COMPARE: Compare = { kind: "none" };
 
-/** The trios that hold `deckId` in a slot. */
 export function triosHolding(deckId: string, trios: readonly TrioItem[]): readonly TrioItem[] {
   return trios.filter((trio) => trio.deckIds.includes(deckId));
 }
@@ -238,7 +268,11 @@ export function holdersOf(compared: readonly DeckItem[], nameLength: number): Re
   return holders;
 }
 
-/** R2195000 (§2.6 L3): deck holds Core card or Training Grounds snapshot, never both; marks paired card unavailable. */
+/**
+ * R2195000: a deck holds a Core card or its Training Grounds snapshot, never both (§2.6 L3). For each
+ * card the deck holds, the other of its pair, held by this deck under words that say which of the two
+ * is here: the editor shows that card unavailable and refuses it as it does a compared deck's.
+ */
 export function pairHolders(deckId: string, cards: readonly string[], catalog: CatalogSnapshot): ReadonlyMap<string, Holder> {
   const holders = new Map<string, Holder>();
   const defs = Object.values(catalog.cards);

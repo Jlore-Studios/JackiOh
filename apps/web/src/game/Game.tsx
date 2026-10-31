@@ -1,11 +1,28 @@
-// The client board shell: board (Board.tsx), pickers (Prompt.tsx), animation runner (animations.ts).
-// Layers: audio (audio/useGameAudio.ts), effects (fx), drag (drag/DragLayer.tsx), cards (faces.ts), settings (settings/).
-// State holds no rules (CLAUDE.md rule 7):
-//  - `interaction` (actions.ts): candidate filters from engine `legal`.
-//  - `queue` (animations.ts): event animation runner (BUILD M5-T4).
-//  - `shown`: held-back view matched to animation queue; `legal` suppressed until board catches up.
-// Chrome: Concede (ConfirmConcede.tsx), DrawOffer.tsx, R915004 (ScriptFailedNotice.tsx),
-// R1838000 Trade (TradeControl.tsx), and R1853003 Marketplace (Marketplace.tsx).
+// The whole client in one component: board (M5-T1), pickers (M5-T2), animation runner (M5-T4).
+//
+// It holds exactly three pieces of state, and none of them is a rule:
+//  - `interaction` — the play or attack the player is halfway through building. `actions.ts` is
+//    the only thing that advances it, and it advances it by filtering the `legal` array the
+//    engine handed us. Nothing here asks whether a card is affordable or a target is reachable.
+//  - `queue` — the animation runner. BUILD M5-T4 says the view updates after the animation for an
+//    event completes, so the view this component renders is the one the events were planned
+//    against; it swaps to the newest view when the queue settles.
+//  - `shown` — that held-back view.
+//
+// Everything else is `props.view` and `props.legal`. `onAction` goes straight out to the caller,
+// which is the only thing that talks to the engine (CLAUDE.md rule 7). Two pieces of chrome sit
+// beside the board and hold no rule either: the Concede control asks "Concede this game?" before it
+// sends anything (ConfirmConcede.tsx), and the draw offer's notices come from the view
+// (DrawOffer.tsx). So does R915004's notice that a custom card's script failed
+// (ScriptFailedNotice.tsx), R1838000's Trade control, live exactly when `legal` lists its `trade`
+// (TradeControl.tsx), and R1853003's Marketplace shop, its buys and sales live exactly as `legal`
+// lists them (Marketplace.tsx).
+//
+// `legal` belongs to `props.view`, so it only reaches the board once the board SHOWS that view.
+// While the runner holds it back, the board draws the older position, and the newer position's
+// moves on it lit End turn and glowed the hand before the player could see the turn was theirs: a
+// click there ended a turn they had not seen. So until the board catches up, every consumer of
+// `legal` gets none.
 
 import {
   useCallback,
@@ -65,7 +82,10 @@ import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.t
 import { useGameStats } from "../stats/useGameStats.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 
-/** Turn start/auto-end banner owned by the shell (M5-T4, BANNER). */
+/**
+ * The `turnStarted` / `turnAutoEnded` banner. `Board` deliberately does not render it — one
+ * `turn-banner` in the tree, and the shell owns it (M5-T4, `e2e/support/testids.ts` BANNER).
+ */
 function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" }> {
   return event.type === "turnStarted" || event.type === "turnAutoEnded";
 }
@@ -99,7 +119,10 @@ export type GameProps = {
   resultActions?: ReactNode;
   /** `chip` when the route draws its own result dialog (practice); `panel` otherwise. */
   resultForm?: ResultForm;
-  /** R345: pins R82 auto-end preference (tutorial pins on). */
+  /**
+   * R345: pins the R82 preference this board sends, whatever the player's "End turn automatically"
+   * setting says. The tutorial pins it on, since its lessons are written around R82.
+   */
   autoEndTurn?: boolean;
   /** Server-synchronised route clock, rendered by Board beside End Turn rather than as floating HUD. */
   turnClock?: ReactNode;
@@ -109,36 +132,87 @@ export type GameProps = {
   boardRail?: ReactNode;
   /** A route warning mounted in the board rail. */
   boardNotice?: ReactNode;
-  /** Route emote session (R643–R644): portraits, emotes, and mutes for both seats. */
+  /**
+   * The route's emote session (R643–R644). Absent, the heroes still draw their default portraits
+   * and simply open no menus.
+   */
   emotes?: GameEmotes;
-  /** R639: log game in statistics when it ends (set by online/practice routes). */
+  /**
+   * R639: log this game in the device's statistics when it ends. The routes that play the player's
+   * own game (an online match, a practice game) set it; a tutorial lesson, a hotseat game on one
+   * screen and a test fixture leave it off.
+   */
   trackStats?: boolean;
-  /** R1295000: viewer cards wear device card cosmetics (game/wearer.ts). */
+  /**
+   * R1295000: the viewer's own cards wear the device's card cosmetics (game/wearer.ts). The routes
+   * that play the player's own game (an online match, a practice game, a hotseat game, a co-op
+   * seat's own duel) set it; a replay never wears them, and a watched game and a teammate's duel
+   * leave it off.
+   */
   wearCosmetics?: boolean;
-  /** R1297000: deck cosmetics override device picks on viewer's side (R1834004). */
+  /**
+   * R1297000: the picks of the deck the viewer plays (cards/cosmetics.ts), which beat the account's
+   * on the viewer's own side. The practice route sets it from the saved deck it plays, and an online
+   * match from its own seat's frozen loadout (R1834004); hotseat and Duos leave it off and wear the
+   * account's choice.
+   */
   deckCosmetics?: DeckCosmetics | null;
-  /** R1834004: frozen loadouts (R1834002) for seats not wearing device picks. */
+  /**
+   * R1834004: both seats' frozen loadouts (R1834002) on an online board, a live match's, a watched
+   * game's or a replay's: every seat whose cards do not wear the device's picks wears its own.
+   * Absent, every such seat draws the defaults.
+   */
   loadouts?: SeatLoadouts | null;
-  /** R738: opponent aim and local aim emitter for online play. */
+  /**
+   * R738: the opponent's aim. `emit` sends this seat's own as it changes; `opponent` is the
+   * opponent's as last relayed, drawn as its arrow. Online play sets it; hotseat and tests do not.
+   */
   aim?: GameAim;
-  /** #511: replay board (no drag, glow, or R345 preference; read-only prompt). */
+  /**
+   * #511: the board is a replay's, a view to look at: no drag, glow or R345 preference, and no prompt
+   * but `replayPrompt`'s read-only one. The route passes no legal actions either, so no control is
+   * offered. Absent, off.
+   */
   replay?: boolean;
-  /** R2211000: read-only prompt for replays (Prompt readOnly). */
+  /**
+   * R2211000: on a `replay` board, the open prompt is drawn read-only (Prompt's `readOnly`). Only the
+   * replay player sets it; a watched game and the Duos boards leave it off. Absent, off.
+   */
   replayPrompt?: boolean;
-  /** Tutorial lesson board: mulligan picker displays lesson instruction and count. */
+  /**
+   * The board is a tutorial lesson's: its mulligan picker keeps the engine's instruction and its
+   * count, which the lesson teaches, where every other game's says only who goes first (Prompt.tsx).
+   * Absent, off.
+   */
   lesson?: boolean;
-  /** R2102000: practice AI lethal hint (outlines opponent hero and End turn). */
+  /**
+   * R2102000: the human has a sure win this turn by what they can see, the practice AI's
+   * lethal hint: it outlines the opponent's hero and End turn and says "You have lethal", never how.
+   * Only the practice route sets it. Absent, off.
+   */
   lethalHint?: boolean;
-  /** R1838000: board Trade bar over Tradable hand cards (off in Duos). */
+  /**
+   * R1838000: the board's own Trade bar over a Tradable hand card. The Duos board turns it off and
+   * puts the Trade button in its card bar beside the pass control instead. Absent, on.
+   */
   tradeBar?: boolean;
-  /** R2095000: disables audio, effects layer, and showcase for teammate's board in Duos. */
+  /**
+   * R2095000: the board feeds no audio and draws no effects layer or showcase. The Duos both-boards
+   * view sets it on the teammate's read-only board: the audio hook and the effects find their anchors
+   * on the whole page (the first `[data-testid="board"]`, the first hand), so a second board would
+   * play the other duel's cues and shake, spark and mark the own board. Absent, off.
+   */
   silent?: boolean;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
 export type GameAim = { emit: (aim: Aim | null) => void; opponent: Aim | null };
 
-/** Route emote state and handlers (emotes/useEmotes.ts), keyed by PlayerId. */
+/**
+ * What Game needs of a route's `useEmotes` (emotes/useEmotes.ts): the pure reads plus the two
+ * verbs the portraits report. Every method takes a PlayerId, not a Side — the session keys on
+ * seats so a hotseat hand-over moves no bubble.
+ */
 export type GameEmotes = {
   portraitOf: (player: PlayerId) => PortraitId;
   /** R1341, R1343: the seat's dealt emote hand, which its menu shows. */
@@ -189,11 +263,22 @@ export default function Game({
     root.current = element;
     setHost(element);
   }, []);
-  /** Seat whose Concede control opened confirm dialog (closes on hand-over or game end). */
+  /**
+   * The seat whose Concede control asked "Concede this game?". The question is that seat's alone: a
+   * hotseat hand-over, or a game that ends while it is open, closes it without a word.
+   */
   const [concedeFor, setConcedeFor] = useState<PlayerId | null>(null);
-  /** R849000: unit attack refusal reason (`UnitView.attackReason`), cleared on new view or click. */
+  /**
+   * R849000: the engine's reason a click on your own unit offered no attack (`UnitView.attackReason`),
+   * held with the view it was read from so it disappears when the board shows another view.
+   */
   const [notice, setNotice] = useState<{ text: string; view: PlayerView } | null>(null);
-  /** Open emote menu (`side`, `viewer`, `place`; R1449). */
+  /**
+   * Which portrait's menu is open (`emoteMenu.side`), bound to the viewer that opened it so a
+   * hotseat hand-over closes it, and where: hung off the portrait (`panel`, a click) or in the
+   * hero's inspect view (`inspect`, a hold; R1449). Issue §2's other closes — outside press,
+   * Escape, picking — live in the menus themselves; the board-state ones are the render-adjust below.
+   */
   const [emoteMenu, setEmoteMenu] = useState<{
     side: "you" | "opponent";
     viewer: PlayerId;
@@ -207,7 +292,16 @@ export default function Game({
   latest.current = view;
 
   const [animating, setAnimating] = useState(() => new Map<string, never>());
-  /** The event in flight (BUILD M5-T4); exposed on hidden `animation-queue` when target has no DOM node. */
+  /**
+   * The event the runner has in flight, which is NOT the same thing as `animating.size > 0`.
+   * BUILD M5-T4 puts `data-animating="<eventType>"` on the element that animates an event, and
+   * several rows of its table resolve to an element the current view does not render at all — a
+   * destroyed card, a face-down trap the viewer may not identify. While such an entry is in flight
+   * the runner is still holding the newest view back and yet nothing carries the attribute, so "no
+   * element is animating" reads as "the board has caught up" when it has not. `animation-queue`
+   * below is that missing element: it carries the in-flight event for exactly as long as the runner
+   * has one, and it is `hidden`, so it animates nothing itself.
+   */
   const [inFlight, setInFlight] = useState<AnimationEntry | null>(null);
   const inFlightDamage = inFlight?.events.find(
     (event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage",
@@ -221,7 +315,14 @@ export default function Game({
   const impactTier: DamageTier | undefined = visibleDamage === undefined ? undefined : damageTier(visibleDamage.amount);
   const impactFeel = visibleDamage === undefined ? undefined : damageFeel(visibleDamage.amount);
   const [hitStop, setHitStop] = useState(false);
-  /** Entries started since board last caught up (BUILD M5-T4); keeps floating pops visible across burst. */
+  /**
+   * Every entry the runner has started since the board last caught up. A `.damage-pop` /
+   * `.heal-pop` / `.loss-pop` shows the amount from the event being animated (BUILD M5-T4), and one
+   * action routinely deals several. Reading only the entry in flight would make each pop vanish the
+   * instant the next entry starts. The burst is kept whole instead — every pop it produced stays up
+   * until the board catches up, which is also when `shown` swaps and the numbers become the card's
+   * own stats.
+   */
   const [burst, setBurst] = useState<readonly AnimationEntry[]>([]);
   const queue = useRef<AnimationQueue | null>(null);
   // #258: the OS preference is followed live, as the queue below follows the setting.
@@ -266,8 +367,12 @@ export default function Game({
     onAction({ type: "setAutoEndTurn", enabled: autoEndTurn });
   }, [replay, view.viewer, view.result, autoEndTurn, engineAutoEndTurn, onAction]);
 
-  // Reduce motion sets durations to 0 (BUILD M5-T4). Hit-stop is visual pause only,
-  // never delaying queue, network, engine, or clock.
+  // Polish task 7: the "Reduce motion" setting does what the OS preference does, so every duration
+  // is 0 and the queue drains synchronously (BUILD M5-T4). The queue reads it once, when it is
+  // built, so a change of setting builds a new queue; the subscription effect below tears the old
+  // one down and shows the newest view.
+  // Hit-stop is a visual pause only. It never delays the queue, network, engine or turn clock;
+  // reduced-motion suppresses shake/wobble but intentionally leaves this tactile pause in place.
   useEffect(() => {
     if (!reducedMotion && inFlightDamage !== undefined) triggerHitStop(inFlightDamage.amount);
   }, [inFlightDamage, reducedMotion, triggerHitStop]);
@@ -352,21 +457,33 @@ export default function Game({
     };
   }, [runner]);
 
-  // Layout effect ensures `data-animating` marks DOM before browser paint (BUILD M5-T4).
+  // A LAYOUT effect, not a passive one: `data-animating` has to be on the DOM by the time the
+  // click that caused the action has returned. A passive effect runs a scheduler tick later, and
+  // in that gap the board says "nothing is animating" while still showing the previous view — so
+  // anything that treats a drained queue as "the board is up to date" (BUILD M5-T4, and
+  // `cy.settled()` in e2e/support) would read a view the engine has already moved past.
   const seen = useRef<PlayerView | null>(null);
   useLayoutEffect(() => {
     if (seen.current === view) return;
     const previous = seen.current;
     seen.current = view;
 
-    // §10.8 sliding window: enqueues only unseen events (`newEventsSince`); seat changes restart fresh.
+    // `view.events` is §10.8's sliding window over the whole match, not this action's delta, so
+    // only the part of it the runner has not seen is enqueued (`newEventsSince`). Two views are
+    // comparable only when they belong to the same seat: `viewFor` redacts per viewer, so after a
+    // hotseat hand-over the windows have nothing in common and replaying them would mean the
+    // arriving player watching the whole recent history. The first view of all is the same case.
     const fresh =
       previous === null || previous.viewer !== view.viewer
         ? []
         : newEventsSince(previous.events, view.events);
 
     if (previous !== null && previous.viewer !== view.viewer) runner.drain();
-    // BUILD M5-T4: events animate over current view before `shown` swaps to newly arrived view.
+    // Planned against the view the board is STILL SHOWING, not the one that has just arrived: an
+    // event animates over the board as it was before it happened — which is the only board that
+    // still has the card it destroys. Planning against the new view leaves `damage` and
+    // `destroyed` with no element for the unit that just died, so nothing shakes and no number
+    // pops on the very card the event is about.
     if (fresh.length > 0 && previous !== null) {
       if (reducedMotion) {
         const largest = fresh
@@ -444,7 +561,10 @@ export default function Game({
   // rendering" pattern: no effect, so the dialog never shows for one frame on the wrong seat).
   if (concedeFor !== null && (concedeFor !== view.viewer || view.result !== null)) setConcedeFor(null);
 
-  // Issue §2: closes emote menu on targeting/drag, hand-over, or match end.
+  // Issue §2's board-state closes for an open emote menu: a pick or drag starting (interaction
+  // leaving IDLE — targeting always wins over the portrait), and the hotseat hand-over that made
+  // the open menu another seat's. Match end also closes it, as an effect so the result screen can
+  // still send (emotes are live "through the results screen", issue §2).
   if (emoteMenu !== null && (interaction !== IDLE || emoteMenu.viewer !== shown.viewer)) {
     setEmoteMenu(null);
   }
@@ -480,7 +600,12 @@ export default function Game({
     [burst, lingering],
   );
 
-  /** Emote surface per side (R643, R644); hold opens inspect view (R1449). */
+  /**
+   * One hero's emote surface, built per side (R643–R644). The picker opens only on your own
+   * portrait — in hotseat "you" is always the seat on move, which is the issue's "only the active
+   * seat's portrait opens a menu" for free — and only while nothing is being targeted: `onPortrait`
+   * is the click Hero took when its hero was NOT legal, and a selection in flight still wins.
+   */
   const heroEmotes = useCallback(
     (side: "you" | "opponent"): HeroEmotes | undefined => {
       if (emotes === undefined) return undefined;
@@ -631,8 +756,7 @@ export default function Game({
           // R2211000: a replay's prompt is drawn as offered and sends nothing.
           readOnly={replay}
           // Cancel backs out of a play still being built (R81). An engine prompt has paused the game
-          // and must be answered, so it offers none: the button would do nothing (the mulligan, a
-          // Discover, a trigger's choice).
+          // and must be answered, so it offers none: the button would do nothing.
           onCancel={shown.pending === null ? () => setInteraction(IDLE) : undefined}
         />
       )}

@@ -1,4 +1,4 @@
-// v0.1.1 on the board (SPEC §10.10): a face-down trap's cost on its back (R370), your own face-down
+// On the board (SPEC §10.10): a face-down trap's cost on its back (R370), your own face-down
 // trap marked as one the other player cannot see (R371), and #93 Combo-Index's grade by its letter
 // (R372). Each reads the view and nothing else (CLAUDE.md rule 7): the fixtures below are
 // `PlayerView`s, and the component is the board that renders them.

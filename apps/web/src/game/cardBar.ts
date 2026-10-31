@@ -1,5 +1,15 @@
-// Floating contextual action bar overlay (#936 B62, R1838000; Duos pass/ping and TradeControl.tsx).
-// Positions control bar over focused/hovered board element with graceMs debounce; re-measures on animation frames.
+// A small bar of controls over the board spot the pointer or the focus is on (#936 B62, R1838000):
+// what the Duos card bar (duos/CardActions.tsx, its ping wheel and pass control) and the Trade
+// control (game/TradeControl.tsx) share. Nothing here is a rule: it says which spot is pointed at and
+// where its element sits, and the caller decides what the bar offers from the view and `legal`.
+//
+// THE FOCUS. Pointing at a hero, a zone or a hand card (a mouse over it, a tap on it, the keyboard's
+// focus on it) puts the bar on it. It stays `graceMs` after the pointer leaves its card, so the
+// pointer can reach it, and goes on Escape and on a press elsewhere; `close` takes it off after a pick.
+//
+// THE BOXES. The bar and anything else laid over the board sits at the box of the element the board
+// draws for a spot (`duos/spots.ts`), re-measured every frame while any is up, since cards move as the
+// board animates.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -125,7 +135,7 @@ export function useCardBarFocus(
       if (spot !== null) point(spot);
       else if (!touch) clearSoon();
     };
-    // A press (a tap on a phone, where nothing hovers) moves the bar to its spot, or closes it.
+    // A press moves the bar to its spot, or closes it.
     const down = (event: Event): void => {
       noteKind(event);
       if (onBar(event.target, barClass)) return;

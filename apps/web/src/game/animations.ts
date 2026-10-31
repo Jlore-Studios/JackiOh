@@ -1,7 +1,18 @@
-// Animation table and event-queue runner (BUILD M5-T4, SPEC §10.10; SPEC §10.3 GameEventType map).
-// Timing/presentation only, no rules (CLAUDE.md rule 7); emits AnimatingMap for data-animating.
-// Effects layer (apps/web/src/fx, docs/polish/1-animations.md, R200) decorates without pacing;
-// speed scales burst budget (R201); reduced motion collapses durations.
+// The animation table and its event-queue runner (BUILD M5-T4, SPEC §10.10).
+//
+// One row per member of `GameEvent["type"]` (SPEC §10.3). `ANIMATIONS` is typed as a total map over
+// `GameEventType`, so a missing row is a compile error and not merely a red test.
+//
+// No rule lives here (CLAUDE.md rule 7). The table reads event payloads and `PlayerView` and
+// emits presentation vocabulary from `contract.ts`; it never decides what is legal or what
+// happened. The runner owns timing only: it holds the event stream at one entry at a time so the
+// board can swap to the next view once the motion for that event has finished, and publishes the
+// `AnimatingMap` the board turns into `data-animating="<eventType>"`.
+//
+// The effects layer (`apps/web/src/fx`, docs/polish/1-animations.md) decorates this stream and
+// paces nothing (R200). The viewer's effects speed scales the table and the burst budget (R201), and
+// the viewer's "reduce" motion setting collapses every duration exactly as
+// `prefers-reduced-motion` does.
 
 import type { GameEvent, GameEventType, PlayerId, PlayerView, Zone } from "@jackioh/shared";
 
@@ -15,9 +26,13 @@ import { FX_FLAVOR_LIVE } from "../fx/constants.ts";
 import { isRecord } from "../wire/json.ts";
 import { prefersReducedMotion } from "../settings/motion.ts";
 
-// Testids this table needs that `contract.ts` does not define
+/* Testids this table needs that `contract.ts` does not define */
 
-/** Animation DOM hooks not named in contract.ts testids (BUILD M5-T1). */
+/**
+ * BUILD M5-T1 fixes seven testids and `contract.ts` adds the controls and the two overlays. Rows
+ * that animate something none of those name — a pile, a tray, a toast, a region — declare it here,
+ * as DOM hooks the owning components must render.
+ */
 export const animTestid = {
   /** The hand as a region: an opponent hand is a `count` only (§10.8), so it has no card ids. */
   hand: (side: Side): string => `hand-${side}`,
@@ -36,16 +51,17 @@ export const animTestid = {
   drawToast: "draw-toast",
 } as const;
 
-/* ------------------------------------------------------------------------------------------- *
- * Row types
- * ------------------------------------------------------------------------------------------- */
+/* Row types */
 
 export type AnimationSpec = {
   /** The CSS animation name defined in `animations.css`, applied via `[data-animating="…"]`. */
   animation: string;
   /** The BUILD M5-T4 duration in milliseconds. */
   durationMs: number;
-  /** The data-testid template (<…> payload field, <side> viewer-relative side). */
+  /**
+   * The `data-testid` the animation plays on, as a template: `<…>` names a payload field and
+   * `<side>` the viewer-relative side. `target` resolves it against a real event and view.
+   */
   testid: string;
   /** The effect recipe that decorates this row (docs/polish/1-animations.md, S7). Absent: no effect. */
   fx?: FxDescriptor;
@@ -61,9 +77,7 @@ export type AnimationRow<K extends GameEventType = GameEventType> = AnimationSpe
   target: TargetResolver<K>;
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * Payload → testid helpers
- * ------------------------------------------------------------------------------------------- */
+/* Payload → testid helpers */
 
 /** The engine writes a hero damage/heal target as `hero-<playerId>` (`crates/engine/src/damage.rs`). */
 const HERO_TARGET_ID = /^hero-(p1|p2)$/;
@@ -75,7 +89,10 @@ function heroSide(view: PlayerView, targetId: string): Side | null {
   return sideOf(view, player as PlayerId);
 }
 
-/** Where an instance is rendered right now, or null if nowhere (omits face-down cards). */
+/**
+ * Where an instance is rendered right now, or `null` if nowhere. Face-down backrow cards are
+ * skipped on purpose: they have no `instanceId` in the view, so they cannot be matched.
+ */
 export function locateInstance(view: PlayerView, instanceId: string): string | null {
   for (const side of ["you", "opponent"] as const) {
     const sv = view[side];
@@ -118,11 +135,11 @@ function zoneOfCard(view: PlayerView, zone: Zone, instanceId: string): string {
   return testid.board;
 }
 
-// The table
+/* The table */
 
 /**
- * `eventType → { animation, durationMs, testid }` with one row per `GameEvent["type"]` (BUILD M5-T4).
- * `animations.test.ts` pins durations literally.
+ * Every duration is the BUILD M5-T4 table's; `animations.test.ts` pins them literally so a drift
+ * in either direction fails.
  */
 export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   // Card lifts from hand and lands in the zone (unit) or flashes center then to GY (spell).
@@ -195,7 +212,10 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     target: (e, view) =>
       instanceOrPile(view, e.instanceId, animTestid.graveyard(sideOf(view, e.owner))),
   },
-  // §3.4, §10.5 step 7: brief settle on card in play or on graveyard pile (R17).
+  // GY pile pulses. `owner` is the pile this card lands in (§3.4: a card goes to its owner's GY).
+  // §10.5 step 7: the card has finished resolving. A brief settle on the card itself when it is
+  // still in play, and on its graveyard pile when it has already left (R17 keys the
+  // post-resolution traps on this moment, so the cue has to be visible for both outcomes).
   cardResolved: {
     animation: "jk-card-resolved",
     durationMs: 150,
@@ -227,7 +247,9 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "bounce" },
     target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.hand(sideOf(view, e.owner))),
   },
-  // R317, R318: burned card catches fire over owner's hand toward graveyard (OverflowNotices.tsx).
+  // R317, R318: the full hand's event. A burned card never enters the hand, so it is never rendered
+  // as a card there: the hand region carries the motion, which the board draws as its `burn-notice`
+  // (OverflowNotices.tsx).
   burned: {
     animation: "jk-hand-full",
     durationMs: 700,
@@ -401,8 +423,11 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "lock" },
     target: (e, view) => zoneTestid(view, e.player, e.row, e.lane),
   },
-  // Backrow trap flips face-up. R154 provides row/lane for seat lacking card instanceId (§10.8, R33).
-  // Visible card is preferred over zone fallback (BUILD M5-T4).
+  // Backrow card flips face-up, holds, then dissolves (or stays, for a Field Trap). R154 gives the
+  // event its `row` and `lane`, so the zone the trap stands in is the element even on the seat that
+  // may not identify the card: an opponent's face-down trap has no `instanceId` in the view (§10.8,
+  // R33). The card itself is preferred when the viewer can see it, which is the "trap name visible
+  // during the hold" the BUILD M5-T4 acceptance asks for.
   trapFired: {
     animation: "jk-trap-flip",
     durationMs: 700,
@@ -512,7 +537,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     target: () => testid.result,
   },
 
-  // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
+  // Patch v0.2.0 (docs/classic-sets.md B3, B5)
 
   // B5 E1: the card lifts and hangs at its hand edge while the window for a Counter is open. A card
   // set face-down is announced by its zone only (R97), so the other seat's hand region lifts.
@@ -905,14 +930,16 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
 };
 
 /**
- * Table's row for `type`, or `undefined` if unseen by this build (issue #769).
- * Total map over `GameEventType`.
+ * The table's row for `type`, or `undefined` for an event type this build has never seen: a tab
+ * left open on an older bundle can receive one a newer patch added, when the server already runs
+ * it (issue #769). The table stays a total map over `GameEventType` — a missing row for a known
+ * type is still a compile error, so the widening cast lives at this lookup and nowhere else.
  */
 export function animationRow(type: string): AnimationRow | undefined {
   return (ANIMATIONS as unknown as Partial<Record<string, AnimationRow>>)[type];
 }
 
-// Durations and reduced motion
+/* Durations and reduced motion */
 
 // settings/motion.ts holds these three so the router can read them (R2117000); this file's importers keep them.
 export { REDUCED_MOTION_QUERY, prefersReducedMotion, reducedMotionNow } from "../settings/motion.ts";
@@ -930,11 +957,13 @@ export function targetFor(event: GameEvent, view: PlayerView): string | null {
   return resolve(event, view);
 }
 
-// Planning: events → entries
+/* Planning: events → entries */
 
 /**
- * Issue #124: cast duration holding the board (C+ #47 Jogg's Box).
- * Each cast gets `CAST_BUDGET_MS` to prevent excessive burst compression.
+ * Issue #124: how long a cast holds the board (a card another card cast, `runs.ts`), long enough for
+ * the showcase to put the cast card up and the player to read it. Each cast also gets a burst budget
+ * of its own (`CAST_BUDGET_MS`), so ten casts in one action (C+ #47 Jogg's Box) play one after another
+ * at a pace that can be followed, instead of seventy entries squeezed into one `BURST_BUDGET_MS`.
  */
 export const CAST_ENTRY_MS = 800;
 export const CAST_BUDGET_MS = 2200;
@@ -944,18 +973,29 @@ export const ZONE_IMPACT_MS = 700;
 export const SWEEP_MS = 600;
 
 /**
- * One unit of motion: single event, collapsed pair (BUILD M5-T4), or cast/pile/sweep shapes (issue #124).
+ * One unit of motion. Usually one event; two for the collapsed `cardPlayed` + `summoned` pair, which
+ * BUILD M5-T4 requires the client to play "as one motion". Issue #124 adds three more shapes, each
+ * marked so the effects layer, the showcase and the sound director can tell (`runs.ts`).
  */
 export type AnimationEntry = {
   events: readonly GameEvent[];
   /** The type `data-animating` reports for this entry's leading element. */
   type: GameEventType;
   durationMs: number;
-  /** Element testid → `data-animating` type. Collapsed pair carries hand card and landing zone. */
+  /**
+   * Every element this entry marks, testid → the type to write into `data-animating`. The
+   * collapsed pair carries two: the hand card as `cardPlayed` and the landing zone as
+   * `summoned`, because the card leaving the hand and scaling into the zone are one motion in
+   * one span of time. Empty when this seat renders nothing for the event.
+   */
   frames: ReadonlyMap<string, GameEventType>;
   /** The view this entry was planned against: the board as it stood before its events. */
   view: PlayerView;
-  /** Cast card metadata (§6.3 Cast, R97): casting card defId and 1-based ordinal. */
+  /**
+   * A card another card cast (§6.3 Cast): its `cardPlayed` and the announce before it. `by` is the
+   * casting card's definition (R97's sentinel when the view hides it) and `ordinal` which of its
+   * casts this is, 1 on.
+   */
   cast?: { by: string; ordinal: number };
   /** A run of events that reached every card of one pile, played once on that pile. */
   zone?: ZoneImpact;
@@ -965,7 +1005,10 @@ export type AnimationEntry = {
   slam?: EntrySlam;
 };
 
-/** #185: one landing's share of its action's slam (SLAM_BURST). */
+/**
+ * #185: one landing's share of its action's slam (SLAM_BURST): the tier sets the look and the sound,
+ * and the hit-stop, shake and anticipation are what is left of the action's totals when it lands.
+ */
 export type EntrySlam = {
   instanceId: string;
   side: Side;
@@ -993,7 +1036,9 @@ export function landingOf(event: GameEvent): LandingEvent | null {
 }
 
 /**
- * #185: assigns landing slam from SLAM_BURST totals. Reduced motion drops anticipation and shake; hit-stop stays (#57).
+ * #185: gives each entry that lands a visible Unit its slam, out of one action's SLAM_BURST totals
+ * (the entries play one after another, so several Units landing together stagger by themselves).
+ * Under reduced motion there is no anticipation and no shake; the hit-stop stays (#57).
  */
 export function slamEntries(entries: readonly AnimationEntry[], slamOf: SlamResolver, reducedMotion: boolean): AnimationEntry[] {
   const left: { hitStopMs: number; shakePx: number; anticipationMs: number } = { ...SLAM_BURST };
@@ -1058,7 +1103,10 @@ function sameCard(a: string, b: string): boolean {
   return a === b || a === HIDDEN_ID || b === HIDDEN_ID;
 }
 
-/** Where an event plays: its row's element or pile (runs.ts). */
+/**
+ * Where an event plays: its row's element, else, for a card the board does not draw (a library card a
+ * Degrade reached, a card in a graveyard), the pile it lies in (`runs.ts`).
+ */
 function frameFor(event: GameEvent, view: PlayerView, plays: PlayTracker): string | null {
   const own = targetFor(event, view);
   if (own !== null) return own;
@@ -1067,7 +1115,9 @@ function frameFor(event: GameEvent, view: PlayerView, plays: PlayTracker): strin
 }
 
 /**
- * What a cast's events mark: zone for summoned unit, and cast card only if drawn on board (never hand region).
+ * What a cast's events mark: the zone a cast Unit lands in, and the cast card itself only where the
+ * board draws it (a card cast out of the viewer's hand). Never the hand region: the card did not come
+ * from a hand, and lifting one for each of ten casts would say it did.
  */
 function castFrame(event: GameEvent, view: PlayerView): string | null {
   if (event.type === "summoned") return targetFor(event, view);
@@ -1075,8 +1125,10 @@ function castFrame(event: GameEvent, view: PlayerView): string | null {
 }
 
 /**
- * Turns event stream into entries, collapsing `cardPlayed` + `summoned` pairs (reduced motion zeroes durations).
- * Issue #124: sweeps, pile runs, and casts collapse into single entries.
+ * Turns an event stream into entries, collapsing each `cardPlayed` + `summoned` pair and reading
+ * every duration through `durationFor`, so `reducedMotion` zeroes all of them. `plays` remembers the
+ * plays still resolving from one batch to the next; the runner keeps one for its whole life, and a
+ * caller without one gets a fresh tracker, which reads casts inside this batch alone.
  */
 export function planEntries(
   events: readonly GameEvent[],
@@ -1211,9 +1263,7 @@ export function planEntries(
   return out;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * The runner
- * ------------------------------------------------------------------------------------------- */
+/* The runner */
 
 export type AnimationQueue = {
   /** Plans `events` against `view` and appends them; starts the pump if it is idle. */
@@ -1225,7 +1275,10 @@ export type AnimationQueue = {
   /** Entries still waiting behind the one in flight. */
   pending(): number;
   idle(): boolean;
-  /** Finishes remaining entries immediately and fires onSettled. */
+  /**
+   * Finishes every remaining entry at once: nothing is left animating and `onSettled` fires, so
+   * the caller swaps straight to the latest view (seat switch, reconnect, or a skip click).
+   */
   drain(): void;
   /** Same as `drain`, without firing `onSettled` — for tearing the queue down. */
   reset(): void;
@@ -1235,11 +1288,17 @@ export type AnimationQueue = {
   subscribeSignals(listener: (signal: RunnerSignal) => void): () => void;
 };
 
-/** Effects layer signals from the runner (docs/polish/1-animations.md, S4, R200). */
+/**
+ * What the effects layer hears from the runner (docs/polish/1-animations.md, S4). It listens and
+ * never answers: no signal listener can hold, extend or reschedule an entry (R200).
+ */
 export type RunnerSignal =
   | { kind: "start"; entry: AnimationEntry } // an entry went in flight (durationMs > 0 only)
   | { kind: "idle" } // emitted each time the pump fires onSettled
-  /** drain() ran; entries cut short in order. */
+  /**
+   * drain() ran. `entries` are the ones it cut short, in order: the entry in flight, then every one
+   * still waiting. A drained game over never plays its killing blow, so the effects layer replays it.
+   */
   | { kind: "drain"; entries: readonly AnimationEntry[] }
   | { kind: "reset" }; // reset() ran
 
@@ -1265,14 +1324,21 @@ export type AnimationQueueOptions = {
 const EMPTY_ANIMATING: AnimatingMap = new Map<string, GameEventType>();
 
 /**
- * Action animation budget and floor (R82). Bursts past the budget play proportionally faster
- * so clicks do not freeze the game.
+ * How long one action's animations may hold the board back, and the shortest an entry may be
+ * squeezed to. BUILD M5-T4 fixes a duration per event, and an attack that kills a unit and hands
+ * the turn on (R82 ends a dead turn by itself) is fifteen rows of the table back to back — five
+ * seconds in which the board shows a stale view and the player cannot do anything. So a burst that
+ * would run past the budget is played proportionally faster, with a floor so no event flashes past
+ * unseen. A burst inside the budget keeps the table's exact durations, which is every burst the
+ * M5-T4 acceptance rows describe.
  */
 export const BURST_BUDGET_MS = 2_400;
 export const MIN_ENTRY_MS = 120;
 
 /**
- * R201: effects speed divides non-zero duration (floored at `MIN_ENTRY_MS`), clamped to speed bounds.
+ * R201: the viewer's effects speed divides every non-zero duration, never below `MIN_ENTRY_MS`.
+ * 0 stays 0 (reduced motion, `gameOver`), and a speed of 1 returns the table value untouched, so
+ * the default setting schedules exactly BUILD M5-T4's durations.
  */
 export function scaleForSpeed(durationMs: number, speed: number): number {
   const s = normalizeSpeed(speed);
@@ -1284,8 +1350,15 @@ export function scaleForSpeed(durationMs: number, speed: number): number {
 export const HIDDEN_ID = "hidden";
 
 /**
- * Fields rewritten with card identity when hidden (R97, R227, R177, R385, R386, R448, R316, R1853003, R317, R315).
- * Missing types cause mismatch in `newEventsSince`, re-animating the whole window.
+ * The fields R97 rewrites together with a card's identity when the card turns unreadable, besides
+ * the ids that become the sentinel (engine `viewFor.ts` `redactEvent`): `costChanged` blanks its
+ * `cost` (R177), `cardAnnounced` reads a face-down card as a Trap whatever its `cardType` (R448),
+ * and `radiantSet` moves its `zone` to the owner's hand. Every one of them is rewritten only when the
+ * event's own `instanceId` is the one hidden. `burned` (R317) changes nothing but its ids, and
+ * `fatigue` (R315) is public.
+ *
+ * An event type missing here makes its two copies stop matching, `newEventsSince` finds no overlap,
+ * and the runner animates the whole window again.
  */
 const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>> = {
   cardResolved: ["radiant"],
@@ -1308,8 +1381,12 @@ const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>>
 const NOTHING_REWRITTEN: readonly string[] = [];
 
 /**
- * Whether two copies of an event are the same occurrence (R97 redaction).
- * Sentinel matches any ID; fields rewritten with identity are ignored when comparing redacted copies.
+ * Whether two copies of an event, from two views, are the same occurrence: every field agrees,
+ * except where R97 redacted one copy and not the other. R97 judges a card by where it sits NOW, so
+ * an event still in the window can change between two views. The sentinel therefore matches any
+ * id, in either direction, and on an event whose `instanceId` either copy hides, the fields R97
+ * rewrites with it (`REWRITTEN_WITH_IDENTITY`) are not compared. A field that is `undefined` counts
+ * as absent, as it does on the wire.
  */
 export function sameOccurrence(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -1331,8 +1408,21 @@ export function sameOccurrence(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Events in `next` not yet given to runner. SPEC §10.8 sliding window of last N events.
- * Compares shared events with `sameOccurrence` (R97 redaction).
+ * The events in `next` that the runner has not been given yet.
+ *
+ * SPEC §10.8 gives a view "the last N events" (`VIEW_EVENT_LIMIT`, 32, in
+ * `crates/engine/src/view_for.rs`) — a sliding WINDOW over the whole match, not the delta one
+ * action produced. Handing the whole window to the runner on every view would re-animate
+ * everything it has already played. The window only ever moves forward by whole actions, so the
+ * events the two views share are the longest suffix of `prev` that is also a prefix of `next`.
+ * The two copies of a shared event are compared with `sameOccurrence`, not byte for byte, because
+ * R97 re-redacts the whole window for every view.
+ *
+ * No rule lives here: it is bookkeeping over an array the engine handed over. When the two windows
+ * have nothing in common — a reload, or more than N events since the last view — the whole of
+ * `next` is new, the answer that animates too much rather than too little. It returns the very
+ * objects `next` holds, so the sound director, which diffs views with this same function, can match
+ * the runner's entries by identity.
  */
 export function newEventsSince(prev: readonly GameEvent[], next: readonly GameEvent[]): GameEvent[] {
   if (prev.length === 0 || next.length === 0) return [...next];
@@ -1388,7 +1478,10 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
     return true;
   }
 
-  /** Squeezes queue[from..to) so its entries fit budgetMs (pinned entries keep time). */
+  /**
+   * Squeezes `queue[from..to)` so its entries fit `budgetMs`. A pinned entry (a cast, a whole-pile
+   * impact, a sweep) keeps its time and takes it out of the budget first.
+   */
   function squeeze(from: number, to: number, budgetMs: number): void {
     let fixed = 0;
     let total = 0;
@@ -1408,7 +1501,12 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
     }
   }
 
-  /** Squeeze waiting backlog to burst budget (#124: casts get castBudgetMs). */
+  /**
+   * Squeeze what is still waiting so the backlog fits the burst budget. Issue #124: each cast starts
+   * a segment of its own, the cast and what it does, with `castBudgetMs`; what comes before the
+   * first cast waiting (or all of it, with none) keeps `budgetMs`, or what is left of the cast's own
+   * segment when a cast is in flight.
+   */
   function fitBudget(budgetMs: number, castBudgetMs: number): void {
     let start = 0;
     let budget = budgetMs;
@@ -1513,7 +1611,25 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
   };
 }
 
-/**
- * Findings against SPEC §10.3 / §10.8: payloads that cannot name their own element fall back
- * to region targets (e.g. backrow, board) or parse target prefixes.
+/* FINDINGS against SPEC §10.3 / §10.8 — payloads that cannot name their own element
+ *
+ * 1. `damage`/`healed` carry `targetId: string` with no discriminator; a hero is encoded as the
+ *    string `hero-<playerId>` by `crates/engine/src/damage.rs` and nothing in §10.3 says so. A
+ *    typed target (`{ kind: "unit" | "hero" }`, as `Selection` already does for actions) would
+ *    remove the string convention from the client.
+ *
+ * 2. Nothing in §10.3 says which view an animation is resolved against. §10.8 sends "the last N
+ *    events" alongside the state *after* those events, while BUILD M5-T4 says "the state view
+ *    updates after the animation for that event completes". `viewFor` never sends a pre-event
+ *    view, so rows here prefer elements that exist in either view (zones, piles, heroes, the
+ *    banner) and fall back to a region whenever the card element may already be gone.
+ *
+ * 3. `attackDeclared` must "translate >= 20 px toward target", but neither the event nor
+ *    `PlayerView` says which way that is. The keyframes translate along `--lunge-dir` (see
+ *    `animations.css`), which the component rendering the attacker must set to `1` when the
+ *    attacker is the opponent's.
+ *
+ * 4. `rotated { direction }` and `swapped { what }` name no element at all, so they animate the
+ *    whole `board`; the BUILD acceptance "every card's zone testid changed by one step" is a
+ *    post-update assertion the animation itself cannot carry.
  */

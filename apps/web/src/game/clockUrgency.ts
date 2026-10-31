@@ -1,5 +1,8 @@
-// R439 (CLAUDE.md rule 7): presentation for turn clock's final 30s.
-// Server controls clock (R79); paused, prompt, and mulligan (§2.1, R268) clocks are never urgent.
+// The last 30 seconds of a turn clock (R439), as pure functions of the readout `Clock.tsx` already
+// computes. Presentation only: the server runs every clock (R79), and nothing here decides or
+// predicts a timeout (CLAUDE.md rule 7). A paused turn clock, a prompt's clock and the mulligan's
+// clock are never urgent: the stretch belongs to the turn clock. A prompt clock is short and already
+// its own countdown, and the mulligan is nobody's turn (§2.1, R268).
 
 import type { ClockLine, ClockReadout, ClockSide } from "./Clock.tsx";
 import { FUSE_EDGES, MS_PER_SECOND, PERCENT, TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "./clockConstants.ts";
@@ -8,7 +11,10 @@ import { t } from "../i18n/i18n.ts";
 /** R439: none, the final 30 seconds, or the last 10 of them. */
 export type TurnClockUrgencyLevel = "none" | "final" | "last10";
 
-/** R439: data attributes and audio parameters for urgent clock state. */
+/**
+ * R439: what the clock root carries as `data-clock-urgency` and `data-clock-side`, and what a sound
+ * hook is handed: the level, whose turn clock it is, and the whole seconds left (null when none).
+ */
 export type TurnClockUrgency = {
   level: TurnClockUrgencyLevel;
   side: ClockSide | null;
@@ -17,7 +23,9 @@ export type TurnClockUrgency = {
 
 export const NO_URGENCY: TurnClockUrgency = { level: "none", side: null, secondsLeft: null };
 
-/** R439: urgency level ("final" <= 30s, "last10" <= 10s, else "none"; R79). */
+/**
+ * R439: a running turn clock at or under 30 seconds is "final", at or under 10 it is "last10".
+ */
 export function turnClockUrgency(line: ClockLine | null): TurnClockUrgencyLevel {
   if (line === null || line.kind !== "turn" || line.paused || line.remainingMs === null) return "none";
   if (line.remainingMs > TURN_CLOCK_FINAL_MS) return "none";
@@ -46,7 +54,11 @@ export function finalFraction(remainingMs: number): number {
   return Math.min(1, Math.max(0, remainingMs / TURN_CLOCK_FINAL_MS));
 }
 
-/** Fuse geometry at fraction left: edge coverage and burning head position (clockwise from top-left). */
+/**
+ * The fuse at `fraction` of the final stretch left: how much of each edge (top, right, bottom,
+ * left, 0 to 1) is still unburnt, and where the burning head is, in percent of the screen. It burns
+ * clockwise from the top-left corner, so an edge's unburnt part is always at its far end.
+ */
 export type FuseGeometry = {
   edges: readonly [number, number, number, number];
   spark: { x: number; y: number };

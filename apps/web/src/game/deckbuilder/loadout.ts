@@ -1,11 +1,18 @@
-// Collection adapter and deck pool shelf (SPEC §9.4, R253; CLAUDE.md rule 7).
+// The collection as the builder reads it, and the shelf of cards the pool offers.
+//
+// NO RULE LIVES HERE (CLAUDE.md rule 7). Whether a deck or a trio is legal is
+// `@jackioh/validator`'s alone (SPEC §9.4, R253), called from workshop.ts; this module only turns
+// `GET /api/collection` into the validator's `Collection` and lists the cards a deck could hold.
 
 import { setShips, type SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { isGlitch } from "../../cards/glitch.ts";
 
-/** §12.1, R915000: custom card set (R915005: valid only in practice). */
+/**
+ * §12.1, R915000: a custom card's set, which never ships. The deck builder shelves the account's own
+ * custom cards beside the catalog (R915005: a deck may hold them, and then plays only in practice).
+ */
 export const CUSTOM_SET: SetName = "Custom";
 
 /** `GET /api/collection`'s entries, as the validator wants them. */
@@ -18,8 +25,11 @@ export function collectionFrom(
 }
 
 /**
- * Pool cards: owned non-token catalog cards in catalog order. Excludes tokens (R251, L3),
- * unshipped sets (R1420), but includes player custom cards (R915005).
+ * The cards offered in the pool: everything the profile owns that the catalog knows about, in
+ * catalog order (every non-token card when `collection` is null). Tokens are left out because
+ * R251 and L3 keep them out of every deck, and so are the cards of a set that has not shipped
+ * (R1420) — the pool is a shelf of cards a deck can hold, and the validator still has the last word
+ * on anything that reaches a deck by another route (an import).
  */
 export function poolFrom(catalog: CatalogSnapshot, collection: Collection | null): readonly string[] {
   const ids = Object.keys(catalog.cards).filter((id) => {

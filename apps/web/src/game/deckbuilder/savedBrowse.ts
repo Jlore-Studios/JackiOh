@@ -1,13 +1,12 @@
 // The deck builder's filter and sort, remembered per device (#263). One localStorage key; every
 // storage access sits in try/catch, as in the settings stores, because storage can be missing, full
-// or throw on access (private mode, sandboxed frames). When it refuses, the workshop's own state
-// still holds the choice for this page.
+// or throw on access (private mode, sandboxed frames).
 //
 // What is read back is checked chip by chip against the lists `filters.ts` offers, so a saved copy
-// from an older build (a tag since renamed, a sort key since dropped) loses only what no longer
-// exists. "Clear filters" resets the filter, and the saved copy with it: when filter and sort are
-// both back at their defaults the key is removed, so nothing a reload restores can hide a card the
-// player did not ask to hide. The almanac (R630) browses without one and starts clean every visit.
+// from an older build loses only what no longer exists. "Clear filters" resets the filter, and the
+// saved copy with it: when filter and sort are both back at their defaults the key is removed, so
+// nothing a reload restores can hide a card the player did not ask to hide. The almanac (R630)
+// browses without one and starts clean every visit.
 
 import type { CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 

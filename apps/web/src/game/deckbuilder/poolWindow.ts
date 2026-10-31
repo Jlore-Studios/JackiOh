@@ -1,7 +1,15 @@
-// Virtualized pool row mounting (#2145, #2334, CLAUDE.md rule 7).
-// Calculates visible row window and grid tracks as pool scrolls without affecting rules.
+// Which rows of a long pool to mount (#2334). The Almanac's pool holds about 700 cards, and mounting
+// them all cost more than the 481 it held before #2145 whatever staged the mount, so a virtual grid
+// (`PoolGrid`'s `virtual`) mounts only the rows near what the player sees, and leaves the rest of
+// its height to the grid's own rows, so the scrollbar and every card's place are those of the whole
+// pool. This file is the arithmetic and the reads of the page that feed it; `usePoolWindow.ts` is
+// what reads them as the pool scrolls. Nothing here is a rule (CLAUDE.md rule 7): it is where cards
+// are drawn, never which.
 
-/** Multiplier for mounting rows past visible band on each side. */
+/**
+ * How far the window reaches past the part of the pool in view, in heights of that part, on each
+ * side: the rows a scroll brings into view are mounted, and their faces drawn, before they arrive.
+ */
 export const POOL_OVERSCAN = 2;
 
 /**
@@ -30,7 +38,11 @@ function clamp(value: number, low: number, high: number): number {
   return Math.min(Math.max(value, low), high);
 }
 
-/** Rows to mount for card count within visible band; clamps to edges for focus navigation. */
+/**
+ * The rows to mount for `count` cards (at least one) when `band` is in view. A view off the pool is
+ * held at its nearest edge, so the first row, or the last, is always mounted: Tab from the filters,
+ * or Shift+Tab from what follows the pool, lands on a card.
+ */
 export function poolWindow(count: number, shape: PoolShape, band: PoolBand): PoolWindow {
   const { columns, rowHeight, rowGap } = shape;
   const rows = Math.ceil(count / columns);
@@ -51,7 +63,6 @@ export function fitWindow(mounted: PoolWindow, count: number): PoolWindow {
   return { ...mounted, firstRow: Math.min(mounted.firstRow, lastRow), lastRow: Math.min(mounted.lastRow, lastRow) };
 }
 
-/** The same rows. */
 export function sameWindow(before: PoolWindow, after: PoolWindow): boolean {
   return (
     before.columns === after.columns &&
@@ -61,12 +72,20 @@ export function sameWindow(before: PoolWindow, after: PoolWindow): boolean {
   );
 }
 
-/** Grid row track definitions sized by card height to stabilize layout during scroll. */
+/**
+ * The grid's row tracks for `count` cards: every row the height of a card, so that a scroll, which
+ * changes only which cards are mounted, leaves the tracks as they are and the grid relays out none
+ * of the cards that stay (a track sized by what it holds had every card measured again).
+ */
 export function poolRowTracks(count: number, mounted: PoolWindow): string {
   return `repeat(${String(Math.ceil(count / mounted.columns))}, ${String(mounted.rowHeight)}px)`;
 }
 
-/** Clipped intersection between grid and containing viewport elements. */
+/**
+ * The grid and what holds it that clip it: whatever of the pool they hide is not in view, so the
+ * view is what they all leave (the grid itself on a desktop, the page's one region on a phone),
+ * and the page's own edges (`readBand`).
+ */
 export function clippingBoxes(grid: HTMLElement): HTMLElement[] {
   const boxes: HTMLElement[] = [];
   for (let box: HTMLElement | null = grid; box !== null && box !== document.body; box = box.parentElement) {

@@ -1,5 +1,19 @@
-// B34, B35 (CLAUDE.md rule 7): drag-to-play unsettled interactions and drops.
-// R384, R510, R658: activation drag and in-flight pick re-lifting.
+// Drag to play, as data (docs/polish/7-mobile-ux.md S9, B34, B35).
+//
+// A drag is two clicks with the pointer held down between them: the press is the click that
+// picks the source up, the release is the click that puts it down. So this module adds no rule
+// and asks no question about a card. It builds the interaction the source click would build
+// (without settling it), asks `highlightFor` where that interaction may land, and on the drop
+// hands the landing spot to the same `onClickTarget` a click would reach (CLAUDE.md rule 7).
+//
+// R384, R510: an activation is dragged the same way. An activation with no target to aim at has
+// nothing to drag to: its press stays a click, except on a backrow card of yours, which is dragged
+// onto the board as a spell with no target is (R658).
+//
+// R658: a play or an activation that a drop (or a click) has narrowed but not finished is lifted
+// again from what it has picked so far, with everything picked kept.
+//
+// Pure: no DOM, no React, no state of its own.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
@@ -38,13 +52,16 @@ export type DragPlan = {
   sourceTestid: string;
   /** What the drag holds while in flight: every candidate for the source, NOT settled. */
   lifted: Playing | Attacking | Activating;
-  /** `highlightFor(view, legal, lifted).glow ?? new Set()`: the testids a drop may land on. */
+  /** The testids a drop may land on. */
   dropTestids: ReadonlySet<string>;
-  /** kind "play" and (dropTestids is empty, or outstandingNeed(lifted) === null): a drop anywhere on the board commits. */
+  /** A drop anywhere on the board commits. */
   freeDrop: boolean;
   /** kind "attack" or "activate", or a play where no remaining candidate has a zone and some has targets. Otherwise a card ghost. */
   arrow: boolean;
-  /** R658: fallback interaction on missed drop or cancel so picks are preserved. */
+  /**
+   * R658: what a release on nothing (or a canceled drag) leaves, when it is not IDLE: a build lifted
+   * again from its picks goes back to that build, so a missed drop never throws the picks away.
+   */
   missed?: Interaction;
 };
 
@@ -134,7 +151,12 @@ function aims(candidates: readonly ActivationBody[]): boolean {
   return candidates.some((body) => (body.targets?.length ?? 0) > 0);
 }
 
-/** R384, R658: lift activation candidates; aimed uses arrow, unaimed backrow drops on board. */
+/**
+ * R384: an activation lifted from its control: every listed activation the control stands for
+ * (`activationsFor`), unsettled, with the arrow. R658: with `unaimed` (a backrow card of yours), an
+ * activation that aims at nothing is lifted as a card ghost and dropped anywhere on the board, as a
+ * spell with no target is.
+ */
 function planActivation(
   view: PlayerView,
   legal: readonly ActionBody[],
@@ -167,7 +189,10 @@ function planActivation(
   };
 }
 
-/** R384: single Activate ability on a card dragged when it cannot attack. */
+/**
+ * R384: a card you control pressed with nothing to attack with: the activation its one Activate
+ * control would build. A card listing several abilities is dragged from the control of the one meant.
+ */
 function planCardActivation(
   view: PlayerView,
   legal: readonly ActionBody[],
@@ -179,7 +204,12 @@ function planCardActivation(
   return planActivation(view, legal, source, source.instanceId, undefined, testid.card(source.instanceId), unaimed);
 }
 
-/** R658: re-lift an in-flight build from a selected pick without dropping existing choices. */
+/**
+ * R658: a build in flight lifted again from one of its picks. `pressed` is the testid pressed; it
+ * must be a pick the board shows as selected, not the hand card of the play, whose press lifts it
+ * afresh. Null when nothing is picked yet or nothing is left to aim at on the board (a picker's
+ * choice is next).
+ */
 function planContinue(
   view: PlayerView,
   legal: readonly ActionBody[],
@@ -214,7 +244,10 @@ function planContinue(
   };
 }
 
-/** R384, R658: resolve drag source (hand play, unit attack/activate, backrow, or pick re-lift). */
+/**
+ * R658: with `pressed` (the testid pressed) one of the picks of a build in flight, the build itself,
+ * lifted again with its picks kept; this comes before the source's own plan.
+ */
 export function planDrag(
   view: PlayerView,
   legal: readonly ActionBody[],
@@ -242,7 +275,6 @@ export function planDrag(
   return null;
 }
 
-/** Resolves drop onto a target testid or free-drop board location. */
 export function resolveDrop(
   view: PlayerView,
   legal: readonly ActionBody[],

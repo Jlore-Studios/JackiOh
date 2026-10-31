@@ -1,7 +1,7 @@
 // Issue #124: a burst of casts outlasts one burst budget (Jogg's Box casts ten, each with its own
 // CAST_BUDGET_MS), so the showcase's gate must not time out while the runner is still reaching casts:
 // every entry the runner starts restarts the gate's wait, and each cast still replaces in as its own
-// entry starts. With no runner progress at all, the gate still lets go after SHOWCASE_GATE_MAX_MS.
+// entry starts.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -115,7 +115,6 @@ describe("issue #1493 trap reveals wait for their runner entry", () => {
     const { next } = mountThen([first, second], { queue });
     // Both reveals are gated to their `trapFired` entry: nothing is up before the runner reaches them.
     expect(screen.queryByTestId(T.root)).toBeNull();
-    // Game feeds the runner the same objects the view holds.
     act(() => queue.enqueue(next.events.slice(1), next));
     // The first entry starts as it is enqueued: the first trap replaces in at once.
     expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase", "trap");

@@ -1,5 +1,8 @@
-// R738: client opponent aim: seat aim reporting (public handles only) and rendered arrow.
-// Hover tests stub `document.elementsFromPoint` for jsdom.
+// R738: the opponent's aim on the client — what this seat sends while it aims, that it names only
+// public handles, and the opponent's arrow drawn and cleared.
+//
+// jsdom has no layout and no `document.elementsFromPoint`; each test that hovers stubs it to return
+// the element the pointer is "over", as the drag layer's own tests do.
 
 import type { ActionBody, Aim, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";

@@ -4,9 +4,6 @@
 //
 // A trio is saved loose (R252): an empty slot or a shared card (R251: a card is its catalog id)
 // stops it from queueing Conquest, not from saving. Slots refuse T3's "the same deck twice".
-//
-// R2119000: Delete trio asks nothing. The workshop takes the trio off at once and holds its DELETE
-// behind an undo toast.
 
 import { useCallback, useId, useMemo, useState, type ReactElement } from "react";
 

@@ -1,4 +1,9 @@
-// B1, B2, B3, B4, B5 (R201): animation table fx column, runner lifecycle signals, speed/reduce settings.
+// docs/polish/1-animations.md, behaviors B1 to B5: the animation table's `fx` column, the runner's
+// lifecycle signals, and the viewer's effects-speed and reduce settings (R201).
+//
+// `animations.test.ts` is B3's real proof. Settings are injected through the queue's `settings`
+// option, never by mutating the global store, and `fakeClock` is a local copy of
+// `animations.test.ts`'s (not exported).
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -40,7 +45,7 @@ afterEach(() => {
   resetFxSettingsForTests();
 });
 
-// Fixtures
+/* Fixtures */
 
 /** A `schedule` spy that records its calls and lets the test run the callbacks by hand. */
 function fakeClock() {
@@ -88,7 +93,7 @@ const TURN_AUTO_ENDED: GameEvent = { type: "turnAutoEnded", player: "p1", turn: 
 const TURN_ENDED: GameEvent = { type: "turnEnded", player: "p1", turn: 4, unspentMana: 0 };
 const GAME_OVER: GameEvent = { type: "gameOver", winner: "p1", reason: "hero-death" };
 
-/** One event of every type, copied in spirit from `animations.test.ts` (inline, per the brief). */
+/** One event of every type, copied in spirit from `animations.test.ts`. */
 const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   cardPlayed: { type: "cardPlayed", player: "p1", instanceId: "c1", defId: "core-002", costPaid: 1 },
   cardResolved: { type: "cardResolved", player: "p1", instanceId: "c1", defId: "core-002", permanent: true, costPaid: 1 },
@@ -136,7 +141,6 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
   emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
-  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
   countered: { type: "countered", player: "p1", instanceId: "c1", defId: "core-035", byInstanceId: "b5", to: "graveyard" },
   stolen: { type: "stolen", instanceId: "c1", defId: "core-035", from: "p2", to: "p1", zone: "hand" },
@@ -174,7 +178,6 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   traded: { type: "traded", player: "p1" },
   // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
-  // Issue #1853 (the Marketplace, R1853003).
   marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
   marketSold: { type: "marketSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
@@ -184,7 +187,6 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   fled: { type: "fled", player: "p1", opponent: "draw" },
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
-  // Issue #1855 (R1855000).
   boardReplaced: { type: "boardReplaced", player: "p1" },
 };
 
@@ -221,8 +223,9 @@ function startOf(signal: RunnerSignal | undefined) {
   return signal.entry;
 }
 
-// B1: fx column
-// S4 table and patch v0.2.0 rows: type -> recipe, null for rows with no effect.
+/* B1: the fx column */
+
+/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the rows that carry no effect. */
 const S4_RECIPES: Record<GameEventType, string | null> = {
   cardPlayed: "cast",
   summoned: "summon",
@@ -425,7 +428,6 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   drawAnswered: ["jk-toast-resolve", 300, "draw-toast"],
   emoted: ["jk-loss-pop", 0, "hero-<side>"],
   gameOver: ["jk-result-overlay", 0, "result-overlay"],
-  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: ["jk-card-played", 300, "hand-card-<instanceId> | hand-<side>"],
   countered: ["jk-exile-fade", 450, "hand-card-<instanceId> | graveyard-<side> | exile-<side> | hand-<side>"],
   stolen: ["jk-cross-center", 450, "hand-<side>"],
@@ -539,7 +541,7 @@ describe("B1 the fx column of ANIMATIONS", () => {
   });
 });
 
-// B2: runner signals
+/* B2: runner signals */
 
 describe("B2 subscribeSignals", () => {
   it("B2 planEntries sets entry.view to the view it planned against", () => {
@@ -719,7 +721,7 @@ describe("B2 subscribeSignals", () => {
   });
 });
 
-// B3: default settings change nothing
+/* B3: default settings change nothing */
 
 describe("B3 default settings", () => {
   it("B3 the default settings schedule exactly what a queue with no settings option schedules", () => {
@@ -752,7 +754,7 @@ describe("B3 default settings", () => {
   });
 });
 
-// B4: R201 speed setting
+/* B4: R201, the speed setting */
 
 describe("B4 the effects speed scales the table", () => {
   it("R201 R435 the effects speed divides every non-zero duration and the burst budget, clamped to [0.25, 3]", () => {
@@ -871,7 +873,7 @@ describe("B4 the effects speed scales the table", () => {
   });
 });
 
-// B5: reduce setting
+/* B5: the reduce setting */
 
 describe("B5 the motion reduce setting", () => {
   it("B5 motion reduce drains a long stream synchronously: no timer and one onSettled", () => {

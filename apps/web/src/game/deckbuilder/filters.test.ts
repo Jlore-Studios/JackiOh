@@ -1,4 +1,10 @@
-// Filter and sort semantics (docs/polish/6-cards.md, B31–B36; DOM half is browse.test.tsx).
+// Polish 6, slice D: the deck builder's filter and sort semantics, pure (docs/polish/6-cards.md,
+// B31–B36; the DOM half is browse.test.tsx).
+//
+// `filters.ts` is the only place these semantics live. The catalog below is built inline on
+// purpose: it has every cost shape the Surface names (0, 1, 6, 100, "X" and two embiggen cards),
+// all five types, several tags and rarities, a card with no text, a card nobody owns, a token, and
+// two cards that tie on cost and name so the index tie-break is visible.
 
 import type { CardCost, CardDef, CardFace, CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
@@ -72,8 +78,8 @@ function def(input: DefInput): CardDef {
 }
 
 const DEFS: CardDef[] = [
-  // Cost 0, no text on either face. Its radiant stats are the biggest in the set, so a sort that
-  // read the radiant face instead of the base one would move it.
+  // Its radiant stats are the biggest in the set, so a sort that read the radiant face instead of
+  // the base one would move it.
   def({ id: "x-01", index: "1", name: "Acorn Scout", type: "Unit", tags: ["Human"], rarity: "Common", cost: 0,
     base: { attack: 1, health: 1 }, radiant: { attack: 20, health: 20 } }),
   def({ id: "x-02", index: "2", name: "Bramble Cat", type: "Unit", tags: ["Felinor"], rarity: "Rare", cost: 1,
@@ -137,7 +143,11 @@ function owned(ids: readonly string[]): string[] {
   return ids.filter((id) => id !== UNOWNED);
 }
 
-/** Expected card order for each sort key and direction. */
+/**
+ * Every non-token card under each sort, worked out by hand from the rules the Surface states:
+ * the primary key flips with `dir`; ties break ascending by cost, then name (case-insensitive),
+ * then numeric index; for attack and health the three cards with no stats go last either way.
+ */
 const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
   cost: {
     asc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
@@ -665,7 +675,6 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    // Re-pinned for the Training Grounds release (#2204): the set ships, so its chip follows Stinkyscape's.
     expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
@@ -697,8 +706,8 @@ describe("the set chips (R380: one format, every set)", () => {
     expect(new Set(pool(["Meditative+"]).map(setOf))).toEqual(new Set(["Meditative+"]));
     expect(pool(["Stinkyscape"])).toHaveLength(deckableIn(["Stinkyscape"]));
     expect(new Set(pool(["Stinkyscape"]).map(setOf))).toEqual(new Set(["Stinkyscape"]));
-    // Re-pinned for the Training Grounds release (#2204): its 60 cards, the twenty Core snapshots
-    // (#41 to #60) among them, join the pool; its token never does.
+    // Training Grounds (#2204): its 60 cards, the twenty Core snapshots (#41 to #60) among them, join
+    // the pool; its token never does.
     expect(pool(["Training Grounds"])).toHaveLength(deckableIn(["Training Grounds"]));
     expect(new Set(pool(["Training Grounds"]).map(setOf))).toEqual(new Set(["Training Grounds"]));
     expect(pool([])).toHaveLength(
@@ -718,15 +727,14 @@ describe("the Jlockeed tag (R278)", () => {
     // and once the Meditative set ships (R1420), its #87 Tatches the Totem and #97 Jlockeed's Evil Blueprints
     // (#97.9 Jlockeed's Headquarters is a token, which the pool never offers).
     const meditative = setShips("Meditative") ? ["meditative-087", "meditative-097"] : [];
-    // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the pool gains Meditative+ #4 Supply Drop, the
-    // set's one Jlockeed card.
+    // Meditative+ (#1187): its #4 Supply Drop, the set's one Jlockeed card.
     const meditativePlus = setShips("Meditative+") ? ["meditativeplus-004"] : [];
-    // And for the Stinkyscape release (#1884): its #124 to #130, Jlockeed's space program.
+    // Stinkyscape (#1884): its #124 to #130, Jlockeed's space program.
     const stinkyscape = setShips("Stinkyscape")
       ? ["124", "125", "126", "127", "128", "129", "130"].map((n) => `stinkyscape-${n}`)
       : [];
-    // Re-pinned for the Training Grounds release (#2204): its snapshots of Core #14 and #13, #45
-    // Jlockeed's Weapons and #48 Jlockeed Shredder-10, carry the tag as their Core cards do (R2195000).
+    // Training Grounds (#2204): its snapshots of Core #14 and #13, #45 Jlockeed's Weapons and #48
+    // Jlockeed Shredder-10, carry the tag as their Core cards do (R2195000).
     const trainingGrounds = setShips("Training Grounds") ? ["traininggrounds-045", "traininggrounds-048"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
@@ -862,7 +870,7 @@ describe("the chips follow what ships (R1380, R1381)", () => {
   });
 
   it("R1857000 the Stinkyscape set has a chip and lends its tags, its four own included, once it ships", () => {
-    // The third held set (issue #1836), sixth in the catalog order, shipped by its release (#1884).
+    // The third held set (issue #1836), sixth in the catalog order.
     expect(setShips("Stinkyscape")).toBe(true);
     expect(FILTER_SETS.includes("Stinkyscape")).toBe(true);
     expect(filterSetId("Stinkyscape")).toBe("db-filter-set-stinkyscape");

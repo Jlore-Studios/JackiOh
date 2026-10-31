@@ -21,9 +21,9 @@ const CORE = deckable("Core").slice(0, DECK_SIZE);
 const SIZES: readonly [number, number] = [DECK_SIZE, DECK_SIZE];
 
 /**
- * Since v0.3.5 the catalog holds no set that has not shipped (the Meditative set shipped, R1420), so
- * the readable pre-check's preview is proven on a fixture: Core's first cards copied into the reserved
- * Boss set, which `SHIPPED_SETS` does not list, and a Boss token beside them.
+ * The catalog holds no set that has not shipped, so the readable pre-check's preview is proven on a
+ * fixture: Core's first cards copied into the reserved Boss set, which `SHIPPED_SETS` does not list,
+ * and a Boss token beside them.
  */
 const BOSS_CATALOG: CardDefs = {
   ...CATALOG,

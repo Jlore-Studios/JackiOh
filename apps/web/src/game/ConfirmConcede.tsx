@@ -5,9 +5,8 @@
 //
 // It decides nothing (CLAUDE.md rule 7): the caller dispatches `{ type: "concede" }`.
 //
-// An `alertdialog`, modal, labeled by its question and described by its line of consequence. Focus
-// moves in on open, Tab and Shift+Tab stay between the two buttons, and the caller puts the focus
-// back on the Concede control once it closes.
+// Focus moves in on open, Tab and Shift+Tab stay between the two buttons, and the caller puts the
+// focus back on the Concede control once it closes.
 
 import { useEffect, useId, useRef, type ReactElement } from "react";
 

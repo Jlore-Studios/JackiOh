@@ -1,5 +1,8 @@
-// R738: opponent's aim drawn on this board using only public handles (`aim.ts`).
-// Marks source when over nothing; non-interactive so board underneath stays clickable.
+// R738: the opponent's aim, drawn on this board — Hearthstone's targeting arrow in the opponent's
+// color. It draws only what the relay names, and the relay names only public handles: a hand card is
+// the card back at that position, a field card its zone, a hero its portrait (`aim.ts`).
+// Under Reduce Motion the arrow stands still (opponentAim.css). It never takes a hit, so the board
+// under it stays clickable.
 
 import { useLayoutEffect, useState, type ReactElement } from "react";
 

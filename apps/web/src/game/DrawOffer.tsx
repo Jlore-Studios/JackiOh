@@ -1,6 +1,15 @@
-// Draw offer display (SPEC §2.5, R36, R269; CLAUDE.md rule 7).
-// Renders `draw-toast` (animations.ts) for waiting status, accept/decline buttons, and outcome banners.
-// Governed by `view.drawOffer` (R269) and `view.drawOfferBlockedTurns` cooldowns (R36).
+// The draw offer on the table (SPEC §2.5, R36, R269), as each seat sees it.
+//
+// Only the active player offers, once per turn, and the other seat answers. The offer stands, on
+// both seats' views, as `PlayerView.drawOffer` until it is answered or lapses at the end of the
+// offerer's turn; what became of it is in the view's event window (`drawAnswered`). The other
+// seat's Accept and Decline are a notice beside the board rather than a modal. The buttons are live
+// exactly when `legal` lists the matching `answerDraw`, and each sends that listed body: no rule is
+// applied here (CLAUDE.md rule 7).
+//
+// All of it sits in one element, `draw-toast`, which the animation table's `drawOffered` and
+// `drawAnswered` rows play on (animations.ts). It is drawn from the NEWEST view, not the one the
+// board still shows, so the entry that animates its arrival has the element there.
 
 import { useId, type ReactElement } from "react";
 

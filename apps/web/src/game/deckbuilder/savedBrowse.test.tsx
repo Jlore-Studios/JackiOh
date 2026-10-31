@@ -1,6 +1,4 @@
-// The deck builder's filter and sort, kept per device (#263, savedBrowse.ts): what is saved, what a
-// damaged or stale copy reads back as, and the workshop restoring it on the next visit, with
-// "Clear filters" clearing the saved copy too.
+// The deck builder's filter and sort, kept per device (#263, savedBrowse.ts).
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

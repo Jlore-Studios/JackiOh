@@ -1,4 +1,11 @@
-// B16, B17, B18, B19, B20: Card component tests mounted in board context with and without catalog.
+// `Card.tsx` (docs/polish/6-cards.md, "`Card.tsx`: what survives, and what is new", behaviors
+// B16–B20).
+//
+// The board is the only honest mount: every prop a `Card` gets here is the prop `Zone`, `Backrow`,
+// `Hand` and `Board` really pass it, from `fullBoardView()` (src/test/fixtures.ts, the only
+// `PlayerView` source). The view is rendered twice over: with the real catalog in `CatalogContext`,
+// as the hotseat and match routes do once `GET /api/catalog` answers, and with none, which is the
+// state before it does.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -34,7 +41,8 @@ afterEach(() => {
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
 });
 
-// helpers
+/* helpers */
+
 /** Longer than any inspect delay (hover or long-press), so "nothing opened" is not "not yet". */
 const PAST_ANY_INSPECT_DELAY_MS = 2_000;
 
@@ -95,7 +103,8 @@ function backs(container: Element): HTMLElement[] {
   return [...container.querySelectorAll<HTMLElement>(".card-back")];
 }
 
-// B16
+/* B16 */
+
 describe("B16: a face-down card is a back and nothing else", () => {
   it("B16 a face-down backrow card is one .card.card-back with no text, def id, testid or name", () => {
     const container = renderBoard(fullBoardView());
@@ -207,7 +216,8 @@ describe("B16: a face-down card is a back and nothing else", () => {
   });
 });
 
-// B17
+/* B17 */
+
 describe("B17: everything Card.tsx rendered before, it still renders", () => {
   it("B17 Card.tsx keeps every export", () => {
     expect(typeof CardModule.default).toBe("function");
@@ -331,7 +341,9 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
     for (const back of backs(container)) expect(back.getAttribute("style")).toBeNull();
   });
 
-  // Card honors draggable prop for callers passing it.
+  // `draggable` does not show on the board: drag to play is on pointer events
+  // (docs/polish/7-mobile-ux.md), because HTML5 drag never fires on touch and its dragstart cancels a
+  // pointer drag. Card.tsx still honors it for a caller that does.
   it("B17 data-legal, aria-disabled, tabIndex, data-selected and data-animating keep their meaning, and the board drags by pointer", () => {
     const view = fullBoardView();
     const legal = yourUnit(view, 1);
@@ -553,7 +565,8 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
   });
 });
 
-// B18
+/* B18 */
+
 describe("B18: Card picks its form from its props", () => {
   it("B18 a unit is the minion form, with an oval CardArt in .cf-portrait", () => {
     const view = fullBoardView();
@@ -646,7 +659,8 @@ describe("B18: Card picks its form from its props", () => {
   });
 });
 
-// B19
+/* B19 */
+
 describe("B19: what a face-up root adds", () => {
   it("B19 cf-host and cf-host--<form> on every face-up root", () => {
     const base = fullBoardView();
@@ -731,7 +745,8 @@ describe("B19: what a face-up root adds", () => {
   });
 
   it("B19 no unit draws an asleep or exhausted mark from canAct, which is false for every enemy unit on your turn", () => {
-    // canAct reflects active controller with exertion; summoning-sick unit may still switch (§4.1).
+    // canAct is "the controller is active and has an exertion left", and a
+    // summoning-sick unit may still switch (§4.1): it says neither "asleep" nor "can attack".
     const view = fullBoardView();
     const container = renderBoard(view);
     const enemy = { ...enemyUnit(view, 1), canAct: false };
@@ -796,7 +811,7 @@ describe("B19: what a face-up root adds", () => {
     };
     // Gary the Gambler prints 1/1; the view has 2 attack and 1 of 3 health.
     expect(tones(yourUnit(view, 1))).toEqual(["buffed", "damaged"]);
-    // Mr. Vanilla prints 4/4 (patch v0.1.1); the view has 4/4.
+    // Mr. Vanilla prints 4/4; the view has 4/4.
     expect(tones(enemyUnit(view, 1))).toEqual(["base", "base"]);
     // Radiant Carnivorous Cube prints 8/12 radiant; the view has 6 attack and 2 of 2.
     expect(tones(enemyUnit(view, 3))).toEqual(["reduced", "reduced"]);
@@ -817,7 +832,8 @@ describe("B19: what a face-up root adds", () => {
   });
 });
 
-// B20
+/* B20 */
+
 describe("B20: one .card per card, and the name lookups still land", () => {
   it("B20 no element inside a card carries the card class token", () => {
     const base = fullBoardView();
@@ -859,7 +875,8 @@ describe("B20: one .card per card, and the name lookups still land", () => {
     const view = fullBoardView();
     const container = renderBoard(view);
 
-    // Verifies Cypress selection by matching first root containing card name.
+    // support/commands.ts: get the prefixed roots, `.contains(name)`, `.closest(prefix)`. The first
+    // root in document order whose text holds the name is the one Cypress would land on.
     const resolve = (prefix: string, name: string): Element | undefined =>
       [...container.querySelectorAll(`[data-testid^="${prefix}"]`)].find((root) => (root.textContent ?? "").includes(name));
 

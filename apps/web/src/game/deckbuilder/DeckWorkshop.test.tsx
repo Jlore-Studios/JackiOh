@@ -1170,7 +1170,6 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     expect(server.decks.get("a")?.tableCosmetic).toBeUndefined();
     expect(server.decks.get("a")).toMatchObject({ fieldCosmetic: "field-rain" });
 
-    // Escape closes the picker again.
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByTestId("deck-cosmetic-table")).toBeNull();
   });

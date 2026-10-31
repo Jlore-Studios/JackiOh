@@ -175,7 +175,6 @@ export function stepKeywordN(recipe: CraftRecipe, kind: Keyword["kind"], delta: 
   };
 }
 
-/** Snap a hat onto the canvas, unless it is already there. */
 export function addHat(recipe: CraftRecipe, hat: CraftHatKind): CraftRecipe {
   if (recipe.hats.some((block) => block.hat === hat)) return recipe;
   const block: CraftHat = { hat, effects: [] };
@@ -227,12 +226,10 @@ export function setEffectSlot(
   return { ...recipe, hats };
 }
 
-/** Lift a hat (and the effects under it) off the canvas. */
 export function removeHat(recipe: CraftRecipe, hatIndex: number): CraftRecipe {
   return { ...recipe, hats: recipe.hats.filter((_, index) => index !== hatIndex) };
 }
 
-/** Lift an effect block off its hat. */
 export function removeEffect(recipe: CraftRecipe, hatIndex: number, effectIndex: number): CraftRecipe {
   const hats = recipe.hats.map((hat, hi) => {
     if (hi !== hatIndex) return hat;

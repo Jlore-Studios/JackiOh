@@ -58,7 +58,6 @@ export function remainingMs(
   return Math.max(0, deadline - clock.now - elapsed);
 }
 
-/** The tab's monotonic clock in ms: `performance.now()`, or `Date.now()` where there is none. */
 export function defaultMonotonic(): number {
   if (typeof performance !== "undefined" && typeof performance.now === "function") {
     return performance.now();
@@ -86,7 +85,6 @@ export type SocketFactory = (url: string, protocols: string[]) => SocketLike;
 /** `WebSocket.OPEN`, spelled out so this module needs no DOM constant at runtime. */
 const OPEN = 1;
 
-/** A real browser `WebSocket`, the default `SocketFactory`. */
 export function browserSocket(url: string, protocols: string[]): SocketLike {
   return new WebSocket(url, protocols) as unknown as SocketLike;
 }
@@ -101,23 +99,33 @@ export const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
  */
 export const VOIDED_CLOSE_CODE = 4410;
 
-/** R1115000: refusal sent when handshake token fails verification (R148). */
+/**
+ * R1115000: the refusal the server sends when the handshake's token does not verify (R148). It
+ * settles only for that token: a different one opens one more socket.
+ */
 export const UNAUTHORIZED_CLOSE_CODE = 4401;
 
 /** A short backoff; the last entry repeats. Spec 05 reloads the page, so a resume is a fresh boot. */
 export const RECONNECT_DELAYS_MS: readonly number[] = [250, 500, 1000, 2000, 5000];
 
 /**
- * R1441: backoff jitter fraction drawn at random to avoid thundering herds; only adds time.
+ * R1441: each backoff gains up to this fraction of itself, drawn at random, so every client a
+ * server restart or a network blip dropped at once does not come back on the same beat. It only
+ * adds time, so the first retry never comes before its 250 ms.
  */
 export const RECONNECT_JITTER = 0.25;
 
 /**
- * R1441: how long socket may be silent before woken page probes it (matches server ping interval).
+ * R1441: how long a socket may have said nothing before a woken page doubts it: the server's ping
+ * interval, since the server pings that often and the browser answers without telling the page. A
+ * socket that is still there but quiet (a long turn) is no reason to drop it.
  */
 export const SILENT_SOCKET_MS = WS_PING_INTERVAL_SECONDS * 1000;
 
-/** R1441: probe timeout after wake before replacing socket. */
+/**
+ * R1441: how long a woken page waits for the answer to its probe (a `hello`, which the actor
+ * answers with a full view) before it replaces the socket.
+ */
 export const WAKE_PROBE_MS = 5000;
 
 export type Timers = {
@@ -133,7 +141,9 @@ export const defaultTimers: Timers = {
 };
 
 /**
- * R1441: calls `handler` on page wake/reconnect (tab visible or network online). Returns unlisten.
+ * R1441: calls `handler` when the page may have been asleep or offline: its tab turns visible or the
+ * network comes back (as `settings/accountSync.ts` listens for). Returns the function that stops
+ * listening.
  */
 export function pageWake(handler: () => void): () => void {
   if (typeof window === "undefined" || typeof document === "undefined") return () => undefined;
@@ -148,9 +158,6 @@ export function pageWake(handler: () => void): () => void {
   };
 }
 
-/**
- * A socket object with a readyState, such as `SocketLike` or the browser's `WebSocket`.
- */
 export type WakeProbeTarget = {
   readonly readyState: number;
 };
@@ -177,7 +184,8 @@ export type WakeProbe = {
 };
 
 /**
- * R1441: coordinates probing a quiet socket on wake; sends probe (`hello`) and replaces if unresponsive.
+ * R1441: if the socket has been quiet past `silentMs` when the page wakes, sends a probe (`hello`).
+ * If it does not answer within `probeMs`, replaces it.
  */
 export function createWakeProbe<S extends WakeProbeTarget>(options: WakeProbeOptions<S>): WakeProbe {
   const {
@@ -283,8 +291,10 @@ function parseClocks(value: unknown): MatchClocks | null {
 /** Every server frame this client understands, after parsing. */
 export type ServerFrame =
   /**
-   * R1483000: `jloreCapped` reports daily cap status.
-   * #1664: `economy` is match write payout to this account (`economy/xp.ts`).
+   * R1483000: `jloreCapped` is true once the match is over and the daily Jlore cap held back some or
+   * all of this account's Jlore for it; the server leaves it off a frame that has nothing to say.
+   * #1664: `economy` is what the result's write paid this account (`economy/xp.ts`), on every view of
+   * its seat from then on; absent when the frame carries none (or not a whole one).
    */
   | {
       type: "view";
@@ -331,7 +341,6 @@ export function parseServerFrame(text: string): ServerFrame | null {
       return {
         type: "view",
         view: parsed.view as unknown as PlayerView,
-        // `legal` riding alongside the view, which is what the actor sends (see the header).
         legal: parsed.legal === undefined ? null : parseLegal(parsed.legal),
         jloreCapped: parsed.jloreCapped === true,
         ...economyField(parsed.economy),
@@ -448,9 +457,15 @@ export type MatchSnapshot = {
   /** Empty until a server sends one; never computed here (CLAUDE.md rule 7, BUILD M5-T2). */
   legal: readonly ActionBody[];
   legalSource: LegalSource;
-  /** R1483000: whether daily Jlore cap held back Jlore for the finished match. */
+  /**
+   * R1483000: whether the last view said the daily Jlore cap held back this account's Jlore for the
+   * finished match, as the server read it off its ledger; the page never works it out.
+   */
   jloreCapped: boolean;
-  /** #1664: match payout (tracks, levels, rewards, quests) from last view carrying it. */
+  /**
+   * #1664: what the finished match paid this account, from the last view that carried it. Null
+   * before the result is written, for a seat the server paid nothing and after a view without it.
+   */
   economy: GameEconomy | null;
   /** The last `error` frame's message, relayed verbatim (§9.3), or null. */
   error: string | null;
@@ -472,7 +487,10 @@ export type MatchSnapshot = {
   aim: { from: PlayerId; aim: Aim } | null;
   /** #936 B51: the last `watchers` frame's count; 0 until one arrives. */
   watchers: number;
-  /** R1834003: merged frozen loadouts for both seats (null until first frame). */
+  /**
+   * R1834003: both seats' frozen loadouts, the card picks every `cardLoadouts` frame sent merged in;
+   * null until the first `loadouts` frame.
+   */
   loadouts: SeatLoadouts | null;
 };
 
@@ -506,7 +524,10 @@ export type MatchClientOptions = {
   timers?: Timers;
   /** Test seam for the monotonic reading stamped on every `clock` frame. */
   monotonic?: () => number;
-  /** Test seam for page wake events (R1441); defaults to visibility and online events. */
+  /**
+   * Test seam for what wakes a sleeping page (R1441). Defaults to the tab turning visible and the
+   * `online` event.
+   */
   wake?: (handler: () => void) => () => void;
   /** Test seam for the reconnect jitter (R1441), a draw in [0, 1). Defaults to `Math.random`. */
   random?: () => number;
@@ -534,7 +555,10 @@ const INITIAL: MatchSnapshot = {
   loadouts: null,
 };
 
-/** WebSocket URL with token in subprotocol (R1379000) to keep token out of server URL logs. */
+/**
+ * The address names the match only; the token is offered as a subprotocol (R1379000), since a
+ * browser cannot set a WebSocket's authorization header and an address is kept by logs.
+ */
 export function socketUrlFor(baseUrl: string, matchId: string): string {
   try {
     const url = new URL(baseUrl);
@@ -612,8 +636,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   function handleFrame(frame: ServerFrame): void {
     switch (frame.type) {
       case "view": {
-        // A new socket's first view proves the server answered its `hello` (§9.5): an error from
-        // before it (a send while the socket was down) no longer describes the match.
         const fresh = awaitingFirstView;
         awaitingFirstView = false;
         patch({
@@ -731,7 +753,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
           return;
         }
         refusedToken = event.code === UNAUTHORIZED_CLOSE_CODE ? handshake : null;
-        // Retrying a settled refusal would loop.
         patch({
           connection: "refused",
           error: event.reason.length > 0 ? event.reason : "the server refused this match socket",
@@ -745,7 +766,9 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   }
 
   /**
-   * R1441: opens successor socket and drops dead connection without waiting for close handshake.
+   * R1441: lets go of `live` without waiting for it (a dead peer never answers a close) and opens
+   * its successor, which sends `hello` as any new socket does. The new socket opens before the old
+   * one is closed, so the server meets the successor first when both reach it.
    */
   function replace(live: SocketLike): void {
     socket = null;
@@ -785,7 +808,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         patch({ error: "not connected to the match", errorCode: "offline" });
         return;
       }
-      // The actor stamps the seat; never send `playerId`.
       const frame = JSON.stringify({ type: "action", action: { ...body, nonce: nextNonce() } });
       patch({ error: null, errorCode: null });
       try {
@@ -836,7 +858,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     url: () => socketUrlFor(base, options.matchId),
     setToken: (next) => {
       token = next;
-      // R1115000: after a 4401, a token other than the one it refused opens one more socket.
       if (refusedToken === null || next === refusedToken) return;
       refusedToken = null;
       open();
@@ -847,7 +868,10 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
 // What waits on the viewer (#1792)
 
 /**
- * #1792: whether game waits on viewer (active prompt with `forYou`, or viewer's turn; R265, R266, §13.3).
+ * #1792: whether the game waits on the viewer, for the tab's title. Never once the game is over;
+ * while a prompt is open, only when it is the viewer's (`pending.forYou`), the mulligan's included
+ * (R265, R266: a seat that has answered sees the other seat's as `forYou: false`); otherwise on
+ * `yourTurn`, the viewer's own turn unless the caller says what its turn is (the co-op round, §13.3).
  */
 export function awaitsYou(view: PlayerView, yourTurn: boolean = view.active === view.viewer): boolean {
   if (view.result !== null) return false;
@@ -928,13 +952,11 @@ export type UseMatchOptions = {
 };
 
 export type UseMatchResult = MatchSnapshot & {
-  /** Send one action to the actor. */
   send: (body: ActionBody) => void;
   /** R643: send one emote; the local board shows it at once and the server relays it on. */
   sendEmote: (emote: EmoteId) => void;
   /** R738: send this seat's aim (null: the aim ended); the server relays it to the opponent. */
   sendAim: (aim: Aim | null) => void;
-  /** Open a socket now rather than at the end of the backoff (the match bar's Reconnect now). */
   connect: () => void;
   /** The handshake URL, for the diagnostic line on the match route. */
   url: string;

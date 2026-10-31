@@ -1,6 +1,17 @@
-// BUILD M5-T4: verifies that every animation table row resolves to an element rendered in the client.
-// Tests whole Game client against sample events; catches unrendered testids like modifierChanged (#77, #78, R169).
-// Asserts that only promptOpened, promptAnswered and drawOffered resolve to null (§10.6).
+// BUILD M5-T4, the assertion that matters: **every row of the animation table names an element the
+// client actually renders.**
+//
+// `animations.test.ts` already pins the table's durations, its keyframes and the testid each row
+// resolves to. What it could not do is check that the testid is a real element, because it renders
+// nothing. A row can therefore point at a name no component has ever rendered and stay green
+// forever, which is exactly what `modifierChanged` did: a player could not see that #77 Professor
+// Curvature or #78 /fullsend was active on them. R169 put the list in the view and `Hero.tsx`
+// renders it; this file is the test that would have caught the gap.
+//
+// The proof is the whole client (`Game`, so the shell's banner, toast, overlay and modal are in the
+// tree alongside the board) rendered from one `PlayerView`, and then, for every member of
+// `GameEvent["type"]`, one sample event built against THAT view: the target must resolve, and the
+// element must be in the document.
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerView } from "@jackioh/shared";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -13,9 +24,7 @@ import { must } from "../test/stubServer.ts";
 
 afterEach(cleanup);
 
-/* --------------------------------------------------------------------------------------------- *
- * The view: a full board, plus the three pieces of chrome that only appear on a condition.
- * --------------------------------------------------------------------------------------------- */
+/* The view: a full board, plus the three pieces of chrome that only appear on a condition. */
 
 function handIds(view: PlayerView): string[] {
   const hand = view.you.hand;
@@ -43,9 +52,7 @@ function chromeView(): PlayerView {
   });
 }
 
-/* --------------------------------------------------------------------------------------------- *
- * One sample per event type, every id taken from the view above.
- * --------------------------------------------------------------------------------------------- */
+/* One sample per event type, every id taken from the view above. */
 
 function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent, { type: K }> } {
   const unit = must(view.you.units[0], "your unit in lane 1").instanceId;

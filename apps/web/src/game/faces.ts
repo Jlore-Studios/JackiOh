@@ -1,7 +1,14 @@
-// Face of card in play across board, showcase, log, piles and prompts (SPEC §10.10, R243; CLAUDE.md rule 7).
-// View state only: hand keywords (E38, R1438), previews (R280), Brittle (R385), Degrade/Upgrade (R386), enchantments (E39),
-// backrow units (R383), custom type (B2.7), quests (E33, R404), copied spells (E14, R399), Chinese text (ME-CN, R1301).
-// Catalog lookup (§5.1, R243 match-made cards); hidden cards use R97 sentinel.
+// The face of a card in play: the one the board draws for a card the view lists, and the one the
+// showcase, a log line, a pile and a prompt draw for a card the view names (SPEC §10.10).
+//
+// A face in play is the card as the view says it stands (R243). Everything is read off the view —
+// never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's faces, the card as
+// printed, are the deck builder's own (`faceModel` with no `inPlay`).
+//
+// The definition comes from the public catalog (§5.1, `CatalogContext`), else from the match-made
+// definitions the view carries beside the cards it names (R243), else from nothing: the card is
+// drawn by its id, as `Card.tsx` draws one before the catalog has loaded. The R97 sentinel names no
+// card, so it has no face, and the callers draw a back instead.
 
 import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -40,7 +47,10 @@ export type LiveFacts = {
   inHand?: boolean;
 };
 
-/** Live face in play with stats, keywords, power, and temporary modifiers. */
+/**
+ * The face in play of a card the view lists: its live cost, and whatever else the view says about
+ * it.
+ */
 export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}): FaceModel {
   const unit = isUnitView(card) ? card : undefined;
   const inPlay: InPlay = {};
@@ -103,7 +113,7 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   // R2321000: and the counts the field keeps on the unit.
   if (facts.tallies !== undefined && facts.tallies.length > 0) inPlay.tallies = facts.tallies;
   // R979000: a card in hand that cannot be played says why. Only a hand card or
-  // (R1571000) a card in the viewer's own graveyard carries it, so every other card reads as before.
+  // (R1571000) a card in the viewer's own graveyard carries it.
   if (unit === undefined && card.playReason !== undefined) inPlay.playReason = card.playReason;
   // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
   if (card.quest !== undefined) inPlay.quest = card.quest;
@@ -170,7 +180,11 @@ export type NamedCard = {
   cost?: number;
 };
 
-/** Face in play for event-named card, or null for sentinel. Uses listedFace or fallback definition. */
+/**
+ * The face in play of a card an event names, or null for the sentinel. A card the view still lists
+ * is drawn as it stands there (`listedFace`); one it no longer lists — gone to a pile it cannot
+ * name, or ceased to exist — is its definition as the game shows it, at `cost` when one is given.
+ */
 export function namedFace(lookup: CardLookup | null, view: PlayerView, named: NamedCard): FaceModel | null {
   if (named.defId === HIDDEN_CARD || named.defId === "") return null;
   const listed = named.instanceId === undefined ? null : cardInView(view, named.instanceId);
@@ -187,7 +201,11 @@ export function namedFace(lookup: CardLookup | null, view: PlayerView, named: Na
   });
 }
 
-/** CardView for face-up instance on field, backrow, piles, resolving, or hand; null if hidden. */
+/**
+ * The `CardView` for an instance anywhere the view shows cards face up: the field, a face-up
+ * backrow card, both piles, the resolving strip, and the viewer's own hand. Null when the view
+ * shows it nowhere, which is also what a hidden card gives.
+ */
 export function cardInView(view: PlayerView, instanceId: string): CardView | null {
   if (instanceId === HIDDEN_CARD) return null;
   for (const seat of [view.you, view.opponent]) {

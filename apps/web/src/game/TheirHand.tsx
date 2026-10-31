@@ -1,5 +1,13 @@
-// "Their hand" game-over display (R434, reveal.ts; CLAUDE.md rule 7).
-// R1834004: cards wear opponent loadout (game/wearer.ts).
+// "Their hand" on the game-over screen (R434): the opponent's hand as the finished game shows it
+// (`reveal.ts`), each card a face that opens large. Nothing here reads anything but the view's own
+// cards and the public catalog (CLAUDE.md rule 7).
+//
+// - `TheirHand`: the result panel's section.
+// - `TheirHandButton`: the result chip's "Their hand", which opens the whole hand in the list dialog
+//   (`CardListSheet`). Practice keeps the chip from the start, so this is its way in.
+//
+// R1834004: the cards are the opponent's, so they wear that seat's loadout where the board carries one
+// (game/wearer.ts), faces and backs alike, as they did in their hand.
 
 import { useContext, useState, type CSSProperties, type ReactElement } from "react";
 

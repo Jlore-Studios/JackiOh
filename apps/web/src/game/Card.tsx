@@ -1,11 +1,47 @@
-// Card presentation (BUILD M5-T1, apps/web/src/cards, docs/polish/6-cards.md).
-// Renders CardView / UnitView only; no rules enforced and no hidden info shown (CLAUDE.md rule 7, SPEC §10.8).
-// Dynamic face in play (faces.ts, SPEC §10.10; #89 stats; MatchCardsContext R243 fuse defs).
-// Controls and badges: R384/R510 activations (ActivateControl.tsx); R667 Classic #87 counter warning;
-// R90 (#992) truncated choices; R471 plague counters; #991 counted glow; R437 marks (#50, R33 face-down marks);
-// #2270 brittle last count (R385, R638, R963, R1045000 aura); #2435 awakening (R1839002, R1852003);
-// #2437 temporary last count (R637, R2179001); R2321000 tallies (Tallies.tsx); #2267 hand hints (HandHints.tsx).
-// Cosmetics (game/wearer.ts): R1295000 / R1655000 own cosmetics, R1834004 opponent loadouts, B16 backOf.
+// The face of a card, and the interaction vocabulary every other board component shares
+// (BUILD M5-T1).
+//
+// A card renders `CardView` / `UnitView` and nothing else (CLAUDE.md rule 7, SPEC §10.8). When
+// `card` is `null` it draws a back: `BackrowView { faceDown: true }` and the opponent's hand
+// carry no identity at all, so there is nothing to leak and nothing to key a testid off.
+//
+// No rule lives here. `legal` is "is my testid in `props.highlight.legal`", which came from the
+// engine's `legalActions`; the card never asks whether an attack is possible, whether a cost is
+// affordable, or whether `canAct` / `usedThisTurn` permits anything. Those fields are drawn as
+// state, never consulted as permission.
+//
+// What it draws is the card presentation module's (apps/web/src/cards, docs/polish/6-cards.md).
+// This file keeps the root element and everything the tests, the e2e specs and the animation table
+// read off it; the face inside is `.cf`, which ignores the pointer, so the root and the badges drawn
+// beside it take every click.
+//
+// The face is the card in play (faces.ts, SPEC §10.10): what the view says it is now — a hand
+// Unit's grown stats (#89) — and a match-made card (a Fuse's) reads its definition from the view
+// (`MatchCardsContext`, R243) where the catalog has none.
+//
+// R667: the viewer's own hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice
+// would counter it) wears a green, bubbling warning film and says why in its tooltip and inspect note.
+//
+// R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them. A face-down
+// backrow card's back carries the marks its view entry lists (R33: the player who cannot read the
+// card still sees it is marked); the opponent's hand of backs carries none.
+//
+// #2270: a card on the field whose view gives it Brittle `BRITTLE_LAST_COUNT` crumbles at its next
+// tick (R385, R638), so it wears Allure's aura (R963, R1045000) in gray, the aura alone (CardMarks'
+// `bareAura`); a mark of its own outranks it.
+//
+// #2435: a card the burst has awakened (an `awakened` event in flight on it) wears `data-awakening`,
+// which breaks its Dormant seal until the board catches up (game/awakening.ts, R1839002, R1852003).
+//
+// #2437: a face-up card in a hand whose face gives it Temporary `TEMPORARY_LAST_COUNT` (the view's
+// count left, R637, R2179001) is discarded at its owner's next end of turn, so it wears Allure's aura
+// in fuchsia, as #2270 draws Brittle's last count. Only a hand card's face carries the count
+// (faces.ts `inHand`).
+//
+// R1295000: on a board that wears cosmetics (game/wearer.ts) the viewer's own card, by its owner,
+// wears the device's card cosmetics: its face is `worn`. A stolen unit keeps its owner's look; a
+// card in the resolving strip, which names no owner, wears the defaults. R1655000: it wears the
+// picks of its own card (cards/cosmetics.ts) over the account's.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 
@@ -83,8 +119,12 @@ export function legalAttr(legal: boolean): "true" | "false" {
   return legal ? "true" : "false";
 }
 
-// Drag-to-attack reports source and target clicks through single path (BUILD M5-T2).
-// Source gates on `data-legal` at `dragstart`; drop target delegated to `onClickTarget`.
+// Drag-to-attack. A drop reports two clicks — the dragged source, then what it landed on — so
+// click-click and drag reach `actions.ts` through one path (BUILD M5-T2).
+//
+// The source is gated on its own `data-legal` at `dragstart`. The drop target is not: no click
+// has been dispatched yet when `drop` runs, so the target's `data-legal` still describes the
+// board *before* the source was picked up and would refuse every drag-attack.
 
 export const DRAG_MIME = "application/x-jackioh-target";
 
@@ -166,17 +206,36 @@ export type CardProps = {
   inOwnHand?: boolean;
   /** R1834004: the seat whose hand the card lies in, whose loadout it wears where it is not `worn`: `CardView` names no owner. */
   inHandOf?: PlayerId;
-  /** R1297000, R1834004: seat card back (viewer pick or seat loadout; B16 names no card). */
+  /**
+   * R1297000, R1834004: the seat whose card back a back wears: the viewer's own pick on the wearer's
+   * side, the seat's loadout elsewhere. The look depends on the seat alone, so every back of a seat
+   * is the same (a back names no card, B16). Absent: the default back.
+   */
   backOf?: PlayerId;
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
   counters?: { plague?: number; grade?: number; gradeLetter?: string };
-  /** R370: backrow face-down trap; R437 marks on back (R33); R471 plague counters. */
+  /**
+   * R370: a back in the backrow, a face-down trap. `cost` is what the view says it costs, drawn on
+   * the back as a gem; `at` names its zone ("opponent-3"), which keys its inspect overlay since a
+   * back has no instance id. Absent for every other back (the opponent's hand). R437: `marks` are
+   * the marks the view puts on the face-down card, which its back carries (R33). R471: `plague` is
+   * the Plague Counters on it, public to both players.
+   */
   faceDown?: { cost?: number; at: string; marks?: readonly CardMark[]; plague?: number };
-  /** R371: viewer's own face-down trap (BackrowView.unrevealed), veiled with "Face down" tag. */
+  /**
+   * R371: the viewer's own face-down trap (`BackrowView.unrevealed`): its face, under a veil and a
+   * "Face down" tag, because the other player sees only its back.
+   */
   unrevealed?: boolean;
-  /** R1046: viewer's face-down trap reveal timing (BackrowView.revealAt). */
+  /**
+   * R1046: when the viewer's own face-down play reveals (`BackrowView.revealAt`). Shown beside the
+   * "Face down" tag; the opponent's view never carries it, so their card shows no badge.
+   */
   revealAt?: RevealAt;
-  /** #165: touch hold mode (inspect sheet or hover preview). */
+  /**
+   * #165: what a touch hold opens — the inspect sheet (default), or the hover preview while the
+   * finger stays down. The board hands it `touchHoldMode(view)` (contract.ts).
+   */
   touchHold?: "sheet" | "preview";
   /** What a click reports. Absent means the element is not clickable and clicks bubble. */
   target?: ClickTarget | null;
@@ -244,7 +303,10 @@ export default function Card(props: CardProps): ReactElement {
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
   const face: FaceModel = props.type === undefined ? model : { ...model, type: props.type };
 
-  // Back in backrow (R370) inspects face-down trap and cost. Own face-down trap overlay (R371).
+  // Hooks run on every render, backs included. A back in the backrow (R370) opens what the view
+  // says of it, a face-down trap and its cost; any other back has no subject and opens nothing. A
+  // full face sits in a row (the hand, the resolving strip), so its preview rises over it rather
+  // than covering the neighbour the pointer is heading for.
   const faceDown = props.faceDown;
   const subject: InspectSubject | InspectRenderSubject | null =
     card !== null
@@ -302,7 +364,10 @@ export default function Card(props: CardProps): ReactElement {
     fire(event);
   }
 
-  // #258: inspect keys (I, context-menu, Shift+F10) open inspect sheet (cards/inspect/keys.ts).
+  // #258: I, the context-menu key or Shift+F10 opens the inspect sheet, as on the deck builder's
+  // tiles (cards/inspect/keys.ts). Every card with something to inspect takes focus for it, legal or
+  // not; Enter and Space still play or pick only a legal one. A right-click stays the board's drag
+  // cancel, so only the keys open it.
   const keyInspect = subject !== null;
   function onInspectKey(event: KeyboardEvent<HTMLElement>): void {
     if (isInspectKey(event)) {
@@ -439,7 +504,10 @@ export default function Card(props: CardProps): ReactElement {
       data-can-act={unit === undefined || unit === null ? undefined : unit.canAct ? "true" : "false"}
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
       data-spent={spent ? "true" : undefined}
-      // DEF sideways rotation (BUILD M5-T4 positionSwitched) scaled to lane --def-scale.
+      // DEF is a sideways card: the rotation is inline so a test can read `rotate(90deg)` off the
+      // style attribute (BUILD M5-T4 `positionSwitched`), and the scale is the lane's `--def-scale`
+      // (board.css): 1 where a lane is wider than a row is tall, less on a phone, so the turned card
+      // stays inside its lane. It is the root's only inline style; the faces put theirs on inner elements.
       style={position === "DEF" ? { transform: "rotate(90deg) scale(var(--def-scale, 1))" } : undefined}
       // The hover preview replaces the native tooltip; with previews off, the name comes back, and
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
@@ -462,7 +530,10 @@ export default function Card(props: CardProps): ReactElement {
       {/* R2321000: the counts cards on the field keep on the unit (Level Up!'s attacks). */}
       <Tallies tallies={tallies} instanceId={card.instanceId} />
       {card.counteredOnPlay === true && (
-        // R667: countered warning badge over the face (countered.css).
+        // R667: a green, bubbling "don't play this" over the face, by shape (bubbles and a crossed
+        // cup) as well as color. The film takes no pointer, and a click or drag on the badge still
+        // reaches the card it sits in; under reduced motion it holds still as a plain green tint
+        // (countered.css).
         <span className="countered-warning" data-testid={testid.countered(card.instanceId)}>
           <span className="countered-warning-badge" aria-hidden="true" title={t(COUNTERED_NOTE)} />
           <span className="countered-warning-sr">{t(COUNTERED_NOTE)}</span>
@@ -536,8 +607,12 @@ export default function Card(props: CardProps): ReactElement {
     </div>
   );
 
-  // Overlay and switch button (#258) are siblings of root.
-  // R1313000, R1655000: viewer cosmetics. R1834004: opponent loadout.
+  // The overlay is a sibling of the root, never its child, so the root's own click and drag
+  // handlers never see an event from inside a preview or a sheet.
+  // #258: the switch (⟳) is a sibling of the root too, outside the card, so its zone can give it a
+  // full 44 px target at its corner (board.css) and a DEF card's rotation never turns it.
+  // R1313000, R1655000: the viewer's own card's overlay prints the full art the card does and wears its cosmetics.
+  // R1834004: another seat's card, its face and its overlay alike, wears that seat's loadout.
   return (
     <TheirCopy loadout={theirs}>
       {root}

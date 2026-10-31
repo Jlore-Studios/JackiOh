@@ -1098,7 +1098,6 @@ describe("the deck's portrait (R641)", () => {
 
   it("R641 a mirror row written before the portrait column reads back `null`", () => {
     const storage = memoryStorage();
-    // Missing portrait data must preserve the mirror row as null.
     storage.setItem(
       mirrorKey(PROFILE),
       JSON.stringify({

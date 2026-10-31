@@ -1,7 +1,22 @@
-// Deck builder browse semantics: pool filtering, sorting, and mana curve (docs/polish/6-cards.md, Surface D).
-// Pure helpers; validator enforces rules. Hides tokens per L3; persists preferences (#263).
-// Card Almanac (R630): browses `almanacPool` including tokens.
-// Set/tag chips follow shipped catalog (R1380, R1381; R1883000 Stinkyscape tags).
+// The deck builder's browse semantics: which pool cards a filter keeps, the order a sort puts them
+// in, the mana curve of a deck and the order its list tiles are drawn in.
+//
+// PURE, AND THE ONLY PLACE THESE LIVE. The components render what this module returns and decide
+// nothing themselves, so a filter or a sort is proved here without mounting anything
+// (docs/polish/6-cards.md, Surface D).
+//
+// NO RULE LIVES HERE EITHER. Ownership comes from `poolFrom` (which already drops Tokens, since L3
+// bans them from a deck), and whether a deck is legal is `@jackioh/validator`'s alone. A filter only
+// hides cards from view; it never refuses one. The workshop keeps its filter and sort per device
+// (`savedBrowse.ts`, #263).
+//
+// The Card Almanac (R630) browses with the same filter and sort. Its shelf is `almanacPool`: every
+// catalog card, tokens included, since L3's reason for hiding them is a deck's and the almanac
+// builds none.
+//
+// Both lists of chips follow what ships (R1380, R1381): a tag chip shows only while a card of a
+// shipped set carries its tag (`shippedTags`), so a set's chip and its tags' arrive with the set and
+// never before.
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -48,25 +63,24 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Quickdraw",
   // R278: Core #13 and #14's, and Classic+ #48, #51 and #52's.
   "Jlockeed",
-  // Patch v0.2.0: every "Book of …" card, and Classic+ #12 and #13. "AI" is left out with "Token":
-  // only the ten AI tokens carry it, and the pool never offers a Token.
+  // Every "Book of …" card, and Classic+ #12 and #13. "AI" is left out with "Token": only the ten
+  // AI tokens carry it, and the pool never offers a Token.
   "Book",
   "Pancake",
-  // The mechanics patch: every card that uses Plague Counters.
   "Plague",
-  // Patch v0.2.Y: Classic+ #38 Solarius and #46 Felinor Flagbearer, and Classic #80 BOOM! Big Max
-  // and Classic+ #37 Wardrum. "Prime" is left out with "AI": only the Prime tokens carry it.
+  // Classic+ #38 Solarius and #46 Felinor Flagbearer, and Classic #80 BOOM! Big Max and Classic+
+  // #37 Wardrum. "Prime" is left out with "AI": only the Prime tokens carry it.
   "Catalyst",
   "Acclaimed",
   // The Meditative set's (R1381): #8 Reach the Summit and #20 Aestheticize the Game, which win the
-  // game another way (R1420's set). The chip shows once a shipped card carries it.
+  // game another way (R1420's set).
   "Wincon",
-  // The Meditative+ set's (R1178000), shipped in v0.3.15: M+ #11, #12 and #13, the Living Potions,
-  // and the potions M+ #16 Jazakus and #16.1 Jazakus Prime craft.
+  // The Meditative+ set's (R1178000): M+ #11, #12 and #13, the Living Potions, and the potions M+
+  // #16 Jazakus and #16.1 Jazakus Prime craft.
   "Potion",
-  // R1837000, ahead of the Stinkyscape set: Core #100 Ceaseless Void, Classic #90 In Too Deep,
-  // Classic+ #32 Otherworldly Removal and Core #26 to #29, the Glowy Jelly Beans. "Other-Origins" is
-  // left out with "Prime": only Otherworldly Removal's three tokens carry it.
+  // R1837000: Core #100 Ceaseless Void, Classic #90 In Too Deep, Classic+ #32 Otherworldly Removal
+  // and Core #26 to #29, the Glowy Jelly Beans. "Other-Origins" is left out with "Prime": only
+  // Otherworldly Removal's three tokens carry it.
   "Terminus",
   "Quest",
   "Otherworldly",
@@ -79,7 +93,11 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Swarm",
 ];
 
-/** Almanac tag chips (R630): deck builder tags plus token tags (R1421, R1837000, #137, R1883000). */
+/**
+ * The almanac's tag chips (R630): the deck builder's, then the five only tokens carry, "Prime" (the
+ * Prime tokens, R1421), "AI" (the ten AI tokens), "Other-Origins" (Classic+ #32.1 to #32.3, R1837000),
+ * "War Doctrine" (Stinkyscape #137.1 to #137.4, R1883000) and "Token", since the almanac shows tokens.
+ */
 export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
@@ -115,7 +133,6 @@ export type PoolFilter = {
   ownedOnly: boolean;
 };
 
-/** Every group empty (no constraint), no search, and only the cards the profile owns. */
 export const DEFAULT_FILTER: PoolFilter = {
   sets: new Set<SetName>(),
   costs: new Set<CostBucket>(),
@@ -163,9 +180,8 @@ export function costOrder(cost: CardCost): number {
   return price === "X" ? Number.POSITIVE_INFINITY : price;
 }
 
-/** R711000: a card's words as a reader with a card table reads them (none for English): its name, its
- *  type, tags, rarity and keywords as the frame prints them, and each face's text with its numbers
- *  filled in. Read at each call, never cached across a language switch. */
+/** R711000: a card's words as a reader with a card table reads them (none for English). Read at each
+ *  call, never cached across a language switch. */
 function readerWords(def: CardDef): string[] {
   const terms = readerTerms();
   if (terms === undefined) return [];
@@ -187,8 +203,7 @@ function keywordKindsOf(def: CardDef): KeywordKind[] {
 }
 
 /** Everything a search term may match, lower-cased. Fields are newline-separated, and a term never
- *  holds whitespace, so no term can match across two fields. For a reader of Chinese it also holds
- *  the card's words in Chinese (readerWords, R711000), and the English still matches. */
+ *  holds whitespace, so no term can match across two fields. */
 function haystackOf(def: CardDef): string {
   return [
     def.name,
@@ -205,7 +220,12 @@ function haystackOf(def: CardDef): string {
     .toLowerCase();
 }
 
-/** Case-insensitive term search across card fields and Chinese tables (R711000). */
+/**
+ * The query is trimmed and split on whitespace; every term has to occur, case-insensitively, in the
+ * card's name, type, tags, rarity, base or radiant text, or the keyword kinds printed on either face,
+ * or, for a reader of Chinese, any of these in the Chinese card tables (R711000).
+ * An empty query keeps everything.
+ */
 export function searchMatches(def: CardDef, query: string): boolean {
   const terms = query
     .trim()
@@ -217,7 +237,10 @@ export function searchMatches(def: CardDef, query: string): boolean {
   return terms.every((term) => haystack.includes(term));
 }
 
-/** Chips OR within a group and AND across groups; empty group is unconstrained. */
+/**
+ * Set, cost, type, tag, rarity and search. Chips OR within a group and AND across groups, and an
+ * empty group is no constraint. Ownership is `visiblePool`'s job, not this function's.
+ */
 export function matchesFilter(def: CardDef, filter: PoolFilter): boolean {
   if (filter.sets.size > 0 && !filter.sets.has(def.set)) return false;
   if (filter.costs.size > 0 && !filter.costs.has(costBucket(def.cost))) return false;
@@ -234,8 +257,8 @@ function compareNumbers(left: number, right: number): number {
   return 0;
 }
 
-/** R711000: the language names are compared in: the reader's, or for English the browser's own, as
- *  before (stats.tsx compares its names the same way). */
+/** R711000: the language names are compared in: the reader's, or for English the browser's own
+ *  (stats.tsx compares its names the same way). */
 function collationTag(): string | undefined {
   const locale = getLocale();
   return locale === DEFAULT_LOCALE ? undefined : locale;
@@ -275,7 +298,10 @@ function statOf(def: CardDef, key: "attack" | "health"): number | undefined {
   return key === "attack" ? def.base.attack : def.base.health;
 }
 
-/** Sorts pool ids; ties break ascending by cost, name and index. Cards without stats go last. */
+/**
+ * Sorts pool ids. `dir` flips only the primary key; ties then break ascending by cost, name and
+ * catalog index. For attack and health, a card with no stats goes last in both directions.
+ */
 export function sortPool(
   ids: readonly string[],
   catalog: CatalogSnapshot,
@@ -321,7 +347,10 @@ export function sortPool(
   });
 }
 
-/** Pool grid cards: filtered then sorted (excludes tokens). */
+/**
+ * What the pool grid shows: `poolFrom(catalog, filter.ownedOnly ? collection : null)` (so Tokens
+ * never appear, and unchecking "owned" shows every other catalog card), filtered, then sorted.
+ */
 export function visiblePool(
   catalog: CatalogSnapshot,
   collection: Collection | null,
@@ -332,14 +361,17 @@ export function visiblePool(
   return filteredAndSorted(poolFrom(catalog, filter.ownedOnly ? collection : null), catalog, filter, sort, winRates);
 }
 
-/** Almanac grid (R630): shipped catalog cards (R1420) including tokens, excluding Glitch (R674). */
+/**
+ * What the almanac's grid shows (R630): every catalog card, tokens included, Glitch excepted (R674)
+ * and the cards of a set that has not shipped (R1420), filtered, then sorted.
+ * There is no collection, so `filter.ownedOnly` is not read.
+ */
 export function almanacPool(
   catalog: CatalogSnapshot,
   filter: PoolFilter,
   sort: PoolSort,
   winRates?: ReadonlyMap<string, CardWinRateInfo>,
 ): readonly string[] {
-  // R674: every card but Glitch, which the almanac never shows; R1420: none of a set not shipped yet.
   return filteredAndSorted(almanacShelf(catalog.cards), catalog, filter, sort, winRates);
 }
 
@@ -380,7 +412,11 @@ export function manaCurve(
   return counts;
 }
 
-/** Display order for deck list tiles: cost, then name, then id; unknown ids last. */
+/**
+ * The order a deck's list tiles are drawn in: cost, then name as the reader reads it, then id;
+ * unknown ids last. Display only. What `save` sends is the draft in the order the player built it,
+ * never this.
+ */
 export function deckListOrder(cardIds: readonly string[], catalog: CatalogSnapshot): string[] {
   return [...cardIds].sort((leftId, rightId) => {
     const left = catalog.cards[leftId];

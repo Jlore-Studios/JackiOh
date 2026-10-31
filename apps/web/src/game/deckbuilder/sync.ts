@@ -1,7 +1,23 @@
-// Deck workshop store and autosave (SPEC §9.4, R250, R252, R256; CLAUDE.md rule 7).
-// Client mints UUIDs for idempotent PUTs; edits mirror to localStorage before merging over server copies (R256).
-// Server enforces caps, D1-D4 and T1-T3; save order is decks, trios, then deletions.
-// R2100000: version history restoration. R2119000: deletion held behind undo toast before DELETE.
+// The deck workshop's store: saved decks and trios as this device holds them, and the autosave
+// that keeps the server in step (SPEC §9.4, R250, R252, R256).
+//
+// The client mints each id (`crypto.randomUUID()`), so every save is `PUT /api/decks/:id`, an
+// idempotent upsert: a save that timed out may be sent again and never makes a second deck.
+//
+// Every edit goes to a `localStorage` mirror (`jackioh.decks.v1.<profile>`) first; the next visit
+// merges it over the server's copy, and what the server never confirmed wins (R256). `localStorage`
+// is untrusted and may throw or be missing, so every access sits in try/catch.
+//
+// The server is law (rule 7): the caps, D1–D4 and T1–T3 are its to enforce. This store checks the
+// caps only so the UI can say so early, and cleans a name (`deckNameForSave`) so it saves as
+// "Untitled deck" rather than bouncing off D1.
+//
+// Order of a save: decks, then trios, then deletions. A trio refused for naming an unsaved deck
+// (409 `details.unknownDeck`) waits for that deck and goes again in the same flush.
+//
+// R2119000: a deletion is held behind the workshop's undo toast before it happens here. When the
+// hold ends, the workshop calls `deleteDeck` or `deleteTrio` and then `flush`, with `keepalive` when
+// the page is going away.
 
 import { checkDeckDraft, checkImportRoom, checkTrioDraft, normalizeName } from "@jackioh/validator";
 
@@ -115,17 +131,34 @@ export type DeckStore = {
   createTrio(init: { name: string; deckIds?: TrioSlots }): string | null;
   updateTrio(id: string, patch: { name?: string; deckIds?: TrioSlots }): void;
   deleteTrio(id: string): void;
-  /** R340, R341: imports trio code decks and trio atomically, checking caps and reusing ids on retry. */
+  /**
+   * R340, R341: imports a trio code's decks and the trio, all or nothing, in one request, never
+   * through the autosave (which would leave half an import behind a refusal). The ids are minted
+   * once per import and reused on a retry, so a lost answer never makes it twice.
+   */
   importTrio(init: TrioImport): Promise<TrioImportResult>;
-  /** R2100000: deck's kept versions; unsaved changes flush first. */
+  /**
+   * R2100000: the deck's kept versions, as the server lists them. What is unsaved goes first, so the
+   * newest is the deck the editor shows.
+   */
   deckVersions(deckId: string): Promise<DeckHistoryResult>;
-  /** R2100000: restores kept version as current in one request; flushes unsaved edits first. */
+  /**
+   * R2100000: makes a kept version the deck's current one, in one request and never through the
+   * autosave (whose window would fold it into the newest version). What is unsaved goes first; a
+   * deck still unsaved after that restores nothing, since the restore would save over its edit.
+   */
   restoreDeckVersion(deckId: string, versionId: string): Promise<DeckHistoryResult>;
-  /** R2119000: hides deck or trio during undo window. */
+  /**
+   * R2119000: takes a deck or trio off the snapshot and out of every save while its deletion is held.
+   * One at a time: hiding another shows the first again.
+   */
   hide(kind: HeldItem["kind"], id: string): void;
   /** R2119000: Undo; the hidden item is listed and saved again. */
   unhide(): void;
-  /** Flushes unsaved edits immediately. keepalive (R2119000) for page exit. */
+  /**
+   * Saves now (the debounce is skipped); settles once this flush and any re-run it caused have.
+   * `keepalive` (R2119000): the page is going away, so its deletions go as `keepalive` requests.
+   */
   flush(options?: SendOptions): Promise<void>;
   /** Saves on `pagehide`, on the page going hidden and on coming back online. Idempotent. */
   start(): void;
@@ -144,7 +177,11 @@ function truncateCodePoints(value: string, max: number): string {
   return points.length <= max ? value : points.slice(0, max).join("");
 }
 
-/** Cleaned deck name for save: normalized, truncated, fallback "Untitled deck". */
+/**
+ * The name a deck PUT sends: `normalizeName`, cut to `nameLength` characters, and "Untitled deck"
+ * whenever the validator's D1 would refuse what is left (empty, or a control character). The field
+ * keeps what the player typed; only the save is cleaned, so D1 is met gently rather than refused.
+ */
 export function deckNameForSave(raw: string, nameLength: number): string {
   const name = truncateCodePoints(normalizeName(raw), nameLength);
   const refused = checkDeckDraft({ name, cards: [], isDeckable: () => true, nameMaxLength: nameLength }).some(
@@ -367,7 +404,12 @@ function sameSlots(left: TrioSlots, right: TrioSlots): boolean {
   return left[0] === right[0] && left[1] === right[1] && left[2] === right[2];
 }
 
-/** R256 merge: unsynced local edits win, synced items absent on server are dropped. */
+/**
+ * R256's merge. Unsynced local edits win over the server's copy; server items the mirror does not
+ * know are taken; local items the server lacks survive only while unsynced (new work made here),
+ * since a synced one missing from the server was deleted elsewhere. A pending deletion stays
+ * pending while the server still has the id.
+ */
 function merge<T extends { id: string; createdAt: number }>(
   serverItems: readonly T[],
   local: readonly MirrorEntry<T>[],
@@ -382,7 +424,8 @@ function merge<T extends { id: string; createdAt: number }>(
     const mine = localById.get(item.id);
     items.push(mine?.dirty === true ? tracked(mine.item, true) : tracked(item, false));
   }
-  // Deduplicates duplicate mirror ids.
+  // The mirror is untrusted text: one id listed twice is restored once, or the workshop would list
+  // it twice and send it twice.
   const restored = new Set<string>();
   for (const entry of local) {
     const { id } = entry.item;
@@ -400,7 +443,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
   const clock = options.clock ?? browserClock();
   const newId = options.newId ?? randomId;
   const key = mirrorKey(options.profileId);
-  // R250 limits fallback from shared config.
+  // A server from before R250's limits would not send them; the shared config says the same.
   const serverLimits: Partial<WorkshopLimits> = (options.server.limits as Partial<WorkshopLimits> | undefined) ?? {};
   const limits: WorkshopLimits = {
     decks: serverLimits.decks ?? MAX_SAVED_DECKS,
@@ -425,7 +468,8 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
   const deletingDecks = mergedDecks.deleting;
   const deletingTrios = mergedTrios.deleting;
 
-  // Empties trio slot naming missing deck and resends.
+  // A slot naming a deck that is not here (deleted on this device, or elsewhere) empties, as the
+  // server's foreign key empties it, and the trio is sent again so both sides agree.
   {
     const known = new Set(decks.map((deck) => deck.item.id));
     for (const trio of trios) {
@@ -455,7 +499,10 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
   let hidden: HeldItem | null = null;
   /** R2119000: the flush under way was asked for as the page goes away. */
   let keepalive = false;
-  /** R2119000: deleted items kept until DELETE answers to restore on refusal. */
+  /**
+   * R2119000: what this visit deleted, kept until its DELETE has an answer, so a refusal can put it
+   * back. A deletion the mirror brought from an earlier visit is not here.
+   */
   const removed = new Map<string, { kind: "deck"; entry: Tracked<DeckItem> } | { kind: "trio"; entry: Tracked<TrioItem> }>();
 
   function isHidden(id: string): boolean {
@@ -632,7 +679,8 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
         } catch (cause: unknown) {
           const failure = failureOf(cause);
           if (failure.kind !== "refused") return { end: halt(failure), deckLanded };
-          // Refused deletion returns to list (R2119000).
+          // A refused deletion has nothing to try again. One made on this visit comes back in the
+          // server's words (R2119000); one only the mirror knew about is forgotten.
           putBack(id, failure.message);
         }
         removed.delete(id);
@@ -730,7 +778,8 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
         : { key, trioId: newId(), deckIds: init.slots.map(() => newId()) };
     lastImport = ids;
 
-    // Timestamped in slot order (R341).
+    // One millisecond apart, in slot order, as the server stamps them (R341), so the list shows
+    // them in their slots' order before and after the server's answer.
     const now = clock.now();
     let order = 0;
     const deckItems = init.slots.map((slot, at): DeckItem | null => {
@@ -741,7 +790,8 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
         id: ids.deckIds[at] ?? newId(),
         name: deckNameForSave(slot.name, limits.nameLength),
         cards: [...slot.cards],
-        // D5: no portrait; R1297000: no cosmetics.
+        // D5: an import carries no portrait; the deck reads `vanilla` until the player picks one.
+        // R1297000: nor any playmat, backdrop or card back.
         portrait: null,
         catalogVersion,
         createdAt: stamped,
@@ -902,7 +952,8 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
       const name = patch.name ?? entry.item.name;
       const cards = patch.cards ?? entry.item.cards;
       const portrait = patch.portrait === undefined ? entry.item.portrait : patch.portrait;
-      // R1297000: merges cosmetic slots.
+      // R1297000: each deck slot merges as the portrait does; null clears a pick, and an absent
+      // key and a null are the same pick, none.
       const picks = {
         tableCosmetic: patch.tableCosmetic === undefined ? (entry.item.tableCosmetic ?? null) : patch.tableCosmetic,
         fieldCosmetic: patch.fieldCosmetic === undefined ? (entry.item.fieldCosmetic ?? null) : patch.fieldCosmetic,

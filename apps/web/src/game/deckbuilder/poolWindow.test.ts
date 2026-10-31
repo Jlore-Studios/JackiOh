@@ -16,7 +16,6 @@ import {
   type PoolShape,
 } from "./poolWindow.ts";
 
-/** Four cards to a row, each row 100 px tall with a 10 px gap under it. */
 const SHAPE: PoolShape = { columns: 4, rowHeight: 100, rowGap: 10, paddingTop: 10 };
 const PITCH = SHAPE.rowHeight + SHAPE.rowGap;
 /** 100 cards fill 25 rows. */

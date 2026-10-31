@@ -1,5 +1,12 @@
-// Presentation for "Choose one" card options (§8, CLAUDE.md rule 7).
-// Maps card id and option key to label and detail, localized via t().
+// What a "Choose one" option says to the player (presentation only, CLAUDE.md rule 7).
+//
+// A card script's mode options are its public interface (`crates/cards` owns them, e2e answers
+// with them): short machine words such as Pocket Chaos's "health", "board" and "library". This map
+// gives each one a label and a line of detail, written from the card's §8 text, keyed by the card's
+// id and the option string. The option string stays the key the answer sends; an option this map
+// does not know is printed with a capital letter and no detail. The words are English here and read
+// in the reader's language where they are handed out (`modeText`, through `t()`): the Chinese card
+// table has each card's text, not its options' words.
 
 import { t } from "../i18n/i18n.ts";
 
@@ -50,31 +57,39 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 7X% chance to become Radiant." },
     Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(2X−1) Health and Armor X." },
   },
-  // C+ #7 The House: Activate mode selects summoned twin (R1704002).
+  // C+ #7 The House: "Activate: Spend a Plague Counter from this to summon a Right-house defender or a
+  // Wrong-House Attacker" — the twin is the Activate's mode (R1704002).
   "classicplus-007": {
     defender: { label: "Right-house defender", detail: "Spend a Plague Counter to summon a Right-house defender." },
     attacker: { label: "Wrong-House Attacker", detail: "Spend a Plague Counter to summon a Wrong-House Attacker." },
   },
-  // M #22 Mind Games (R861): rewards wait until caster's next turn.
+  // M #22 Mind Games: "Choose one in secret: Greed, Attack or Defend." The detail names no
+  // numbers — the reward waits until the start of the caster's next turn (R861).
   "meditative-022": {
     greed: { label: "Greed", detail: "In secret: at the start of your next turn, gain mana and draw cards." },
     attack: { label: "Attack", detail: "In secret: at the start of your next turn, deal damage to each enemy." },
     defend: { label: "Defend", detail: "In secret: at the start of your next turn, heal your side and grant Armor." },
   },
-  // M #22.1 Fortify Mind: guess opponent's choice; rock-paper-scissors resolution.
+  // M #22.1 Fortify Mind: "Choose one: Greed, Attack or Defend, to guess your opponent's Mind
+  // Games." Rock beats scissors here: Attack beats Greed, Greed beats Defend, Defend beats Attack.
   "meditative-022-1": {
     greed: { label: "Guess Greed", detail: "Beats Defend; loses to Attack." },
     attack: { label: "Guess Attack", detail: "Beats Greed; loses to Defend." },
     defend: { label: "Guess Defend", detail: "Beats Attack; loses to Greed." },
   },
-  // M #98 Showdown: locks other four lanes; options describe lane positions.
+  // M #98 Showdown: "Choose a lane. Lock every other lane until the start of your next turn." The
+  // board draws lane 1 on the left for both seats (Board.tsx), so each option says where it is.
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn."),
-  // M+ #4 Supply Drop: numbers are on card and Embiggened version.
+  // M+ #4 Supply Drop: "Choose one: In 3 turns, deal 4 damage to each enemy, with Pierce and Lifesteal;
+  // or in 3 turns, add 1 random Radiant Jlockeed card to your hand, and each costs (2)." The wait and
+  // the numbers are the card's and its Embiggened version's, so the detail names none.
   "meditativeplus-004": {
     combat: { label: "Combat", detail: "In a few turns, deal damage to each enemy, with Pierce and Lifesteal." },
     supplies: { label: "Supplies", detail: "In a few turns, add Radiant Jlockeed cards to your hand." },
   },
-  // M+ #24 Bob, Wisconsin's Strongest Soldier: card text gives coin count.
+  // M+ #24 Bob, Wisconsin's Strongest Soldier: "Cry: Choose one: Freeze all enemy Units; put an enemy
+  // Unit into your hand, and your opponent gets 3 Coins; Discover a Unit and make it Radiant; or draw 1
+  // and fill your hand with copies of it." The Coins' count is the card's, so the detail names none.
   "meditativeplus-024": {
     freeze: { label: "Freeze", detail: "Freeze every enemy Unit." },
     take: { label: "Take a Unit", detail: "Put the enemy Unit you choose into your hand. Your opponent gets Coins." },
@@ -108,7 +123,8 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   },
   // M #98 Showdown, radiant: "This turn, after you put a card into that lane, cast Book of Buff on it."
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),
-  // #24 Efficiency Dividend, radiant (§8 #24, R275).
+  // #24 Efficiency Dividend, radiant: "Deal 2X damage, heal a target 8X, or gain X+1 mana next turn"
+  // (§8 #24, R275).
   "core-024": {
     damage: { label: "Deal 2X damage", detail: "Deal twice X damage." },
     heal: { label: "Heal 8X", detail: "Heal a target by eight times X." },

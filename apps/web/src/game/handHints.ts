@@ -2,7 +2,7 @@
 // the `PlayerView` and the card's face the way `Card.tsx` reads it (`liveFace`: `card.keywords`
 // where the view gives them, else the printed face's keywords, B5 E38, R243 — exactly what the
 // card shows) and nothing else (CLAUDE.md rule 7, SPEC §10.8). Adding a hint is
-// one entry here plus its icon in `cards/icons.tsx`. The list ships the Tradable pip (#2269) and the Tribute pip (#2268).
+// one entry here plus its icon in `cards/icons.tsx`.
 
 import { hasKeyword, type CardView, type PlayerView } from "@jackioh/shared";
 

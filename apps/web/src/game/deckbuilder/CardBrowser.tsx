@@ -1,5 +1,12 @@
-// Browse pane: filter bar, pool grid, empty state, detail view (DeckEditor and Card Almanac, R630).
-// Controlled component. R1956000: owned copies show own cosmetics in grid and detail view.
+// The browse pane: the filter bar, the pool grid in its frame, the empty state and a card's detail
+// view. The deck editor (DeckEditor.tsx) and the Card Almanac (routes/almanac.tsx, R630) both render
+// it, so the two screens share one browse UI and one look (deckbuilder.css).
+//
+// The pane decides nothing. The screen hands it the pool (`visiblePool` or `almanacPool`), the
+// filter and the sort it holds, and the card whose detail is open. What only a deck has comes in
+// through props. Without the grid's deck half the grid is read-only (PoolGrid.tsx). R1956000: the
+// cards the screen names as the viewer's own (`own`, the signed-in Almanac's) are drawn as their own
+// copies, in the grid and in the detail view.
 
 import type { ReactElement, ReactNode } from "react";
 

@@ -32,7 +32,7 @@ afterEach(() => {
   setReducedMotion(false);
 });
 
-// The BUILD M5-T4 duration column.
+/* The BUILD M5-T4 duration column, copied literally. A drift in either direction fails. */
 
 const BUILD_DURATIONS: Record<GameEventType, number> = {
   cardPlayed: 400,
@@ -80,7 +80,6 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   emoted: 0,
   costChanged: 200,
   modifierChanged: 200,
-  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: 300,
   countered: 450,
   stolen: 450,
@@ -107,20 +106,17 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   translated: 400,
   // R800: a discard a discard guard stopped shakes the hand once.
   discardPrevented: 300,
-  // Patch v0.3.X (MN05).
   damageAbsorbed: 300,
-  // Patch v0.3.X (Meditative #39.2, R961).
+  // Meditative #39.2, R961.
   jadeChanged: 200,
-  // Meditative MB05 (ME-SECRET).
   secretChosen: 300,
   secretRevealed: 400,
   predicted: 400,
   // #915 (R915004).
   scriptFailed: 400,
-  // Meditative batch 17 (MB17).
   deradianted: 400,
   manaSpent: 150,
-  // Patch v0.3.10 (C+ #62 KY's Papaya, R831003).
+  // C+ #62 KY's Papaya, R831003.
   curveDrawn: 700,
   autopilotEngaged: 600,
   // Stinkyscape's Dormant (R1839002).
@@ -129,7 +125,6 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   traded: 300,
   // Issue #1840 (Resources and Credits).
   marketCreditsChanged: 200,
-  // Issue #1853 (the Marketplace, R1853003).
   marketBought: 250,
   marketSold: 250,
   // Stinkyscape's Starship (R1852000, R1852003).
@@ -147,7 +142,7 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   boardReplaced: 500,
 };
 
-// One event of every type for testing.
+/* One event of every type, so the table can be exercised end to end. */
 
 const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   cardPlayed: { type: "cardPlayed", player: "p1", instanceId: "c1", defId: "core-002", costPaid: 1 },
@@ -221,7 +216,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
   emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
-  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
+  // docs/classic-sets.md B3, B5.
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
   countered: { type: "countered", player: "p1", instanceId: "c1", defId: "core-035", byInstanceId: "b5", to: "graveyard" },
   stolen: { type: "stolen", instanceId: "c1", defId: "core-035", from: "p2", to: "p1", zone: "hand" },
@@ -289,7 +284,11 @@ function longStream(rounds: number): GameEvent[] {
   return out;
 }
 
-/** Reads stylesheet from disk to verify keyframes exist. */
+/**
+ * The stylesheet as text. The BUILD table's Animation column is only honored if the keyframes
+ * exist, so the test reads the file rather than trusting the table. Vitest stubs CSS imports
+ * (`test.css` defaults to false, and `?raw` comes back empty), hence `node:fs`.
+ */
 const animationsCss: string = (() => {
   for (const candidate of ["src/game/animations.css", "apps/web/src/game/animations.css"]) {
     const path = resolve(process.cwd(), candidate);
@@ -326,7 +325,7 @@ function fakeClock() {
   };
 }
 
-// The table is total
+/* The table is total */
 
 describe("ANIMATIONS covers every event type", () => {
   it("has exactly one row per GameEvent[\"type\"]", () => {
@@ -382,7 +381,7 @@ describe("ANIMATIONS covers every event type", () => {
   });
 });
 
-// Durations
+/* Durations */
 
 describe("durations", () => {
   it("matches the BUILD M5-T4 table exactly", () => {
@@ -419,7 +418,7 @@ describe("durations", () => {
   });
 });
 
-// Payload-dependent targets
+/* Payload-dependent targets */
 
 function handIds(view: PlayerView): string[] {
   const hand = view.you.hand;
@@ -694,9 +693,15 @@ describe("target resolution", () => {
     expect(locateInstance(baseView(), HAND_CARD)).toBeNull();
   });
 
-  // Proves row returns a string. Full DOM render assertion is in animation-targets.test.tsx (#77, #78).
+  // NOT THE ASSERTION THAT MATTERS. This only proves a row returns a string; it cannot prove the
+  // string names an element, because nothing here renders. A row that points at a testid no
+  // component draws passed this test for the whole of M5 — `modifierChanged` did, and #77
+  // Professor Curvature and #78 /fullsend were invisible to the player because of it. The real
+  // assertion lives in `animation-targets.test.tsx`, which renders the client and checks the
+  // element is in the document.
   it("resolves a target for every event type without throwing, and only the documented rows go dark", () => {
-    // Empty seat rows (§10.6) or samples not rendered in fixture may resolve to empty.
+    // Rows that resolve to nothing on a seat that shows nothing (§10.6), plus the rows whose
+    // `SAMPLES` entry names a card this fixture does not render at all.
     const mayBeNull = new Set<GameEventType>([
       "promptOpened",
       "promptAnswered",
@@ -723,7 +728,7 @@ describe("target resolution", () => {
   });
 });
 
-// Planning and cardPlayed + summoned collapse
+/* Planning and the cardPlayed + summoned collapse */
 
 describe("planEntries", () => {
   const view: PlayerView = fullBoardView();
@@ -792,7 +797,7 @@ describe("planEntries", () => {
   });
 });
 
-// The runner
+/* The runner */
 
 describe("createAnimationQueue", () => {
   const view: PlayerView = fullBoardView();
@@ -1090,7 +1095,11 @@ describe("createAnimationQueue", () => {
   });
 });
 
-// newEventsSince: parts of view window not yet processed (R97 redaction).
+/* newEventsSince: the part of a view's window the runner has not been given
+ *
+ * R97 redacts the whole window again for every view, judging each card by where it sits now, so an
+ * event two successive views share can read differently in each.
+ */
 
 describe("newEventsSince", () => {
   const turn: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };

@@ -88,7 +88,7 @@ describe("R849000 a summoning-sick unit wears a zzz, and your own unit says why 
     expect(attacker.interaction.stage).toBe("attacking");
     expect(attacker.notice).toBeUndefined();
 
-    // A unit with no reason and no attack stays silent, as it always did.
+    // A unit with no reason and no attack stays silent.
     expect(click("u3", 3)).toEqual({ interaction: IDLE });
 
     // `legal` decides: the same unit with an attack on offer is picked up, with no notice.

@@ -1,7 +1,6 @@
-// R502: a card cast the moment it was drawn is held up on both seats, under a "Cast on draw!" ribbon,
-// longer than a play, bursting out of its drawer's Deck pile; with Game's runner it appears as the
-// runner reaches its `cardPlayed`. R436: a Call to Chaos roll is said in words on both seats, and
-// shown still where the effects layer draws nothing (CardShowcase.tsx, ChaosBanner.tsx).
+// R502: a card cast the moment it was drawn is held up on both seats; with Game's runner it appears
+// as the runner reaches its `cardPlayed`. R436: a Call to Chaos roll is said in words on both seats,
+// and shown still where the effects layer draws nothing (CardShowcase.tsx, ChaosBanner.tsx).
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";

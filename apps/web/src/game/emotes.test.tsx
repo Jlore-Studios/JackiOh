@@ -1,5 +1,16 @@
-// Hero portraits and emote menus (#75, SPEC §10.10, R641, R643, R644, R1343).
-// Hero inspect view (#544, R1330, R1331, MN02); portrait press vs hold gestures (R1449).
+// The hero portraits and the emote menus (issue #75, SPEC §10.10, R641–R644, R1343): a portrait's art
+// on each seat's hero with the health and armor badges, your portrait's menu of your dealt hand, the
+// opponent's one-item mute, and every way the menu must leave — a pick, a press on the dim around
+// it, Escape, the start of a play or attack, a hotseat seat change and the end of the match.
+//
+// Issue #544 (R1330–R1331) added the hero's inspect view: the portrait large with its words, health
+// and Armor, with the same menu in it. Since R1449 a click (or Enter) on a portrait hangs its menu
+// off the portrait and a hold opens the view. The `MN02` block tests the view and the `R1449` block
+// the two presses.
+//
+// The harness is the route's own wiring: `useEmotes` is the same api `MatchHotseatRoute` and
+// `PracticeRoute` hand `Game` (an `engine: null` sink, the peer's relay left to the test through
+// `api.receive`).
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -41,7 +52,8 @@ function EmoteGame(props: {
     globalMute: props.globalMute,
   });
   props.apiRef.current = emotes;
-  // Wrap `emotes.send` so the test sees the (player, emote) pair while local echo still runs.
+  // The wire's seam: the route sends `emotes.send`'s admitted emote off to the server. Wrap it so
+  // the test sees the (player, emote) pair while the local echo still runs the real session.
   const send = (player: PlayerId, emote: EmoteId): boolean => {
     props.onSend?.(player, emote);
     return emotes.send(player, emote);
@@ -98,7 +110,6 @@ describe("the hero portraits (R641)", () => {
         expect(frame).toHaveAttribute("data-portrait", portrait);
         // CardArt's oval is the shape R641 fixes.
         expect(frame?.querySelector(".cf-art--oval")).not.toBeNull();
-        // …and the hero element is the same testid and drop target it always was.
         expect(hero).toHaveAttribute("data-legal", "false");
       }
     },
@@ -121,7 +132,6 @@ describe("the hero portraits (R641)", () => {
 
     const opponent = screen.getByTestId("hero-opponent");
     expect(opponent.querySelector(".hero-health")?.textContent).toBe("30");
-    // The armor badge shows only above zero (Portrait.tsx guards on it).
     expect(opponent.querySelector(".hero-armor")).toBeNull();
   });
 
@@ -208,7 +218,11 @@ describe("your portrait's emote menu (R643)", () => {
     expect(sticker).toHaveAttribute("data-emoji", "laugh");
   });
 
-  /** SPEC §10.10, issue §2: menu closes on pick; bubbling stopped to prevent reopening. */
+  /**
+   * SPEC §10.10 / issue §2: the menu "closes on a pick". The item's click is stopped inside
+   * `[data-emote-menu]` (ui.tsx) so it never reaches the hero's own onClick — which would read the
+   * hero as not-legal and reopen the just-closed menu through `emotes.onPortrait()`.
+   */
   it("R643 the emote menu closes on a pick", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
@@ -251,7 +265,6 @@ describe("your portrait's emote menu (R643)", () => {
     fireEvent.click(open);
     expect(screen.queryByTestId("emote-menu")).toBeNull();
 
-    // The opponent's portrait toggles its mute item the same way.
     fireEvent.click(screen.getByTestId("hero-opponent"));
     expect(within(screen.getByTestId("hero-opponent")).getByTestId("emote-mute-menu")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("hero-opponent"));
@@ -335,7 +348,6 @@ describe("your portrait's emote menu (R643)", () => {
     // The device handed to p2: p1's open menu is another seat's now and must be gone.
     rerender(<EmoteGame view={p2View} legal={[END_TURN]} onAction={onAction} apiRef={api} />);
     expect(screen.queryByTestId("emote-menu")).toBeNull();
-    // The new seat's own portrait still opens its own.
     fireEvent.click(screen.getByTestId("hero-you"));
     expect(screen.getByTestId("emote-menu")).toBeInTheDocument();
   });
@@ -372,8 +384,6 @@ describe("targeting wins over the menus (R643)", () => {
     render(<EmoteGame view={BOARD} legal={FACE_ATTACK} onAction={onAction} apiRef={api} />);
     fireEvent.click(screen.getByTestId("card-u1"));
 
-    // Your own hero is a legal attack target (the candidate's targetId is hero-p1): the click
-    // lands on it as a target and the emote menu never opens.
     const you = screen.getByTestId("hero-you");
     expect(you).toHaveAttribute("data-legal", "true");
     fireEvent.click(you);
@@ -404,8 +414,6 @@ describe("targeting wins over the menus (R643)", () => {
   });
 
   it("R643 a hero click while an attacker's targets are lit still wins over the menu", () => {
-    // The mirror of the close-on-targeting test: the menu was open in idle, the attacker's
-    // selection closed it, and now the legal hero click is the target pick.
     const api = { current: null as EmotesApi | null };
     const onAction = vi.fn();
     render(<EmoteGame view={BOARD} legal={FACE_ATTACK} onAction={onAction} apiRef={api} />);
@@ -432,14 +440,12 @@ describe("the opponent's mute (R643)", () => {
     const menu = within(screen.getByTestId("hero-opponent")).getByTestId("emote-mute-menu");
     expect(within(menu).getAllByRole("menuitem")).toHaveLength(1);
     expect(within(menu).getByTestId("emote-mute").textContent).toContain("Mute emotes");
-    // Their hero never gets your picker.
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 
   it("R643 muting the opponent hides their emotes for the rest of the match", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
-    // Their emote is showing on their hero…
     act(() => {
       expect(api.current?.receive("p2", "greetings")).toBe(true);
     });
@@ -451,22 +457,22 @@ describe("the opponent's mute (R643)", () => {
     fireEvent.click(screen.getByTestId("emote-mute"));
 
     expect(api.current?.muted("p2")).toBe(true);
-    // …the shown one hides at once…
     expect(
       screen.getByTestId("hero-opponent").querySelector('[data-testid="emote-bubble"]'),
     ).toBeNull();
-    // …and the muted player's never arrive (R643).
     act(() => {
       expect(api.current?.receive("p2", "laugh")).toBe(false);
     });
     expect(
       screen.getByTestId("hero-opponent").querySelector('[data-testid="emote-bubble"]'),
     ).toBeNull();
-    // Your own seat is untouched.
     expect(api.current?.muted("p1")).toBe(false);
   });
 
-  /** Mute click stops propagation inside `[data-emote-menu]` so onPortrait does not reopen it. */
+  /**
+   * Same bubbling guard as the picker's pick: the "Mute emotes" item's click is stopped inside
+   * `[data-emote-menu]`, so `onPortrait` never reopens the just-closed mute menu.
+   */
   it("R643 the mute menu closes once the mute is set — and shows it as done next time", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
@@ -568,7 +574,6 @@ describe("MN02 the hero's inspect view (R1330)", () => {
     expect(within(view).getByTestId("hero-inspect-name")).toHaveTextContent("Mr. Vanilla");
     expect(within(view).getByTestId("hero-inspect-title")).toHaveTextContent("Flat, polite, unbothered");
     expect(within(view).getByTestId("hero-inspect-flavour")).toHaveTextContent("No tricks, no text, no regrets.");
-    // The full board's heroes: yours carries 21 health and 3 Armor (the badges' own numbers).
     expect(within(view).getByTestId("hero-inspect-health")).toHaveAttribute("data-health", "21");
     expect(within(view).getByTestId("hero-inspect-health")).toHaveTextContent("21");
     expect(within(view).getByTestId("hero-inspect-armor")).toHaveAttribute("data-armor", "3");
@@ -594,7 +599,6 @@ describe("MN02 the hero's inspect view (R1330)", () => {
     expect(within(view).getByTestId("hero-inspect-health")).toHaveAttribute("data-health", "30");
     expect(within(view).getByTestId("hero-inspect-armor")).toHaveAttribute("data-armor", "0");
     expect(within(view).getByTestId("hero-inspect-armor")).toHaveTextContent("0");
-    // Their view holds the mute item and never your emote hand.
     expect(within(view).getByTestId("emote-mute-menu")).toBeInTheDocument();
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
@@ -634,7 +638,6 @@ describe("MN02 the hero's inspect view (R1330)", () => {
   it("R1330 Close and Escape close the view, and a press inside it does not", () => {
     renderVG();
     inspectHero("you");
-    // Focus goes to Close when the view opens.
     expect(screen.getByTestId("hero-inspect-close")).toHaveFocus();
 
     const name = screen.getByTestId("hero-inspect-name");
@@ -650,7 +653,6 @@ describe("MN02 the hero's inspect view (R1330)", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByTestId("hero-inspect")).toBeNull();
 
-    // The dim around it closes it too.
     inspectHero("you");
     const scrim = screen.getByTestId("hero-inspect-scrim");
     fireEvent.pointerDown(scrim);
@@ -848,7 +850,6 @@ describe("R1449 a click opens the portrait's menu, a hold its inspect view", () 
     expect(open).toHaveAttribute("aria-expanded", "true");
     expect(screen.queryByTestId("hero-inspect")).toBeNull();
 
-    // Shift+F10: the view, the menu now in it.
     expect(fireEvent.keyDown(open, { key: "F10", shiftKey: true })).toBe(false);
     expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
     expect(open).toHaveAttribute("aria-expanded", "true");
@@ -890,7 +891,6 @@ describe("MN02 the portrait's reaction (R1331)", () => {
 
     expect(frameOf("you")).toHaveAttribute("data-reacting", "true");
     expect(frameOf("you").querySelector(".hero-portrait-glint")).not.toBeNull();
-    // Only the portrait whose view opened reacts.
     expect(frameOf("opponent")).not.toHaveAttribute("data-reacting");
     act(() => {
       vi.advanceTimersByTime(PORTRAIT_REACT_MS - 1);

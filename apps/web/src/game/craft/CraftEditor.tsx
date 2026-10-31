@@ -51,9 +51,17 @@ import {
 import { codeWord, parseRecipeText, recipeText } from "./recipeText.ts";
 import "./craft.css";
 
-/** ME-CRAFT (Meditative #17, R880–R883): block card craft editor; engine craftPreview provides meters and preview (CLAUDE.md rule 7).
- * Turn clock continues (R79). craftMode (#1182): potion/hugePotion pin Spell When cast (R1182000, R1182001, R1563008);
- * scratch text editor (R1563010, Scratch Pad R1182002); palette restricted to offer (R1563007). */
+/** ME-CRAFT (Meditative #17, R880–R883): the Scratch-style block editor. The meters and the face
+ * are the engine's own `craftPreview`, so the client decides nothing (CLAUDE.md rule 7). The turn
+ * clock keeps running while the player crafts (R79): this is an answer like any other, and the
+ * opponent sees only that a prompt is open. Every drag has a click, tap and keyboard equivalent, so
+ * nothing needs a drag.
+ *
+ * The prompt's `craftMode` (Meditative+, #1182) changes the frame, never the rules: `potion` and
+ * `hugePotion` pin a Spell whose one hat is its When cast (Jazakus and Jazakus Prime, R1182000,
+ * R1182001, R1563008), with no type or hat palette; `scratch` opens a code editor, the recipe typed
+ * as text (R1563010, Scratch Pad, R1182002). The verdict is the engine's on the answer, its frame
+ * and offer included. */
 
 const TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap"];
 
@@ -114,7 +122,6 @@ function effectText(effect: CraftEffect): string {
   return label;
 }
 
-/** The editor's title for the prompt's mode. */
 function titleOf(mode: CraftMode | undefined): string {
   if (mode === "scratch") return t("Code a card from scratch");
   if (mode === "potion") return t("Craft a Potion");
@@ -229,7 +236,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
 
   // Pointer drag, as Scratch does: press and hold still is a click (or a tap); moving past
   // 8px is a drag whose ghost follows the pointer until release. `dragMoved` is a ref because the
-  // release handler reads it, not the render. Every drag has a click, tap and keyboard equivalent.
+  // release handler reads it, not the render.
   useEffect(() => {
     if (dragStart.current === null) return;
     const start = dragStart.current;
@@ -280,10 +287,9 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
 
   const def = preview.def;
   const face = faceModel({ defId: def.id, def, radiant });
-  // #552: the card being crafted is read as any card is, a hover preview with its glossary and, on a
-  // phone, the long-press sheet, so the words its blocks print are a press away. Lines of code is a
-  // hidden stat in matches (the meters above say this card's). From scratch the glossary is a hint,
-  // so the face is shown and nothing more (R1182002).
+  // #552: the card being crafted is read as any card is, so the words its blocks print are a press
+  // away. Lines of code is a hidden stat in matches (the meters above say this card's). From scratch
+  // the glossary is a hint, so the face is shown and nothing more (R1182002).
   const inspect = useInspectTrigger({ key: "craft-preview", face }, { prefer: "above", showLoc: false });
   /** A price or a refusal, shown except from scratch (R1182002). */
   const hint = (text: string): string | undefined => (scratch ? undefined : text);

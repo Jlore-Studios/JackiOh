@@ -66,7 +66,6 @@ export const DECK_CODE_MESSAGES = Object.freeze({
 
 // Byte format
 
-/** The name's byte length is one byte. */
 const NAME_LENGTH_BYTES = 1;
 /** The most name bytes one length byte can say. */
 const NAME_BYTES_MAX = 0xff;
@@ -231,7 +230,6 @@ export function pushChecksum(out: number[]): void {
   out.push((checksum >>> BYTE_BITS) & BYTE_MASK, checksum & BYTE_MASK);
 }
 
-/** The code for a deck. */
 export function encodeDeckCode(name: string, cardIds: readonly string[], catalog: CatalogSnapshot): string {
   const payload: number[] = [];
   writeDeckBody(payload, name, cardIds, catalog);
@@ -325,7 +323,10 @@ function parsePayload(bytes: Uint8Array): Parsed {
   return { ok: true, body };
 }
 
-/** Decodes name from bytes with fallback if invalid or non-UTF-8. */
+/**
+ * A name as a code carried it, or `fallback` when its bytes are not UTF-8 or `valid` refuses it
+ * (D1 for a deck, T1 for a trio).
+ */
 export function decodeName(
   nameBytes: Uint8Array,
   fallback: string,
@@ -344,7 +345,11 @@ export function decodeName(
 /** What a deck's body becomes: its name, the cards kept, what was dropped and what is unowned. */
 export type ResolvedDeck = Omit<Extract<DecodedDeck, { ok: true }>, "ok">;
 
-/** R255: resolves deck body against catalog and collection, dropping excess/unknown/tokens. */
+/**
+ * R255: a deck body against this catalog and collection — numbers the catalog does not know,
+ * Tokens, copies past `MAX_COPIES` and cards past `DECK_SIZE` dropped and listed; cards the player
+ * does not own kept and flagged. `version` is the code's: a version 1 code's numbers are Core's.
+ */
 export function resolveDeck(
   body: DeckBody,
   catalog: CatalogSnapshot,
@@ -405,7 +410,11 @@ export type HeaderMessages = {
   damaged: string;
 };
 
-/** Validates header, prefix, version (R255, R339), and extracts base64url payload bytes. */
+/**
+ * The text of a pasted code, read as far as its payload's bytes. `other` is the prefix of the other
+ * kind of code, answered with `otherMessage` so a trio code pasted as a deck (or the reverse) is sent
+ * where it belongs. `alsoReads` is the older version still read (R255, R339).
+ */
 export function readCodeText(
   text: unknown,
   format: {

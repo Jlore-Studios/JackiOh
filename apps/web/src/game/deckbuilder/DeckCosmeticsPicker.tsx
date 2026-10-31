@@ -1,7 +1,6 @@
 // R1297000: the open deck's own playmat, backdrop and card back, behind a top-bar button. Three
 // inline selects in the sidebar push the verdict and the pool's first row off the first screen
-// (BUILD M5-T1), so the picks live in a popover like the settings gear's (SettingsButton.tsx):
-// a button in the header row, an absolutely-positioned panel, outside-press and Escape close.
+// (BUILD M5-T1), so the picks live in a popover like the settings gear's (SettingsButton.tsx).
 // R1833000: each select offers the starters and the account cosmetics the account owns while
 // ownership decides (`useOwnsAccountCosmetic`), and a stored pick it does not own shows as the
 // kind's default, which is what the board draws.

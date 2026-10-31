@@ -67,7 +67,7 @@ describe("R979000 a card in hand that cannot be played says why", () => {
     const playable = click("c2");
     expect(playable).toEqual({ interaction: IDLE, action: { type: "play", instanceId: "c2" } });
 
-    // A hand card with no reason and no play stays silent, as it always did.
+    // A hand card with no reason and no play stays silent.
     const bare = reasonView();
     bare.you.hand = Array.isArray(bare.you.hand)
       ? bare.you.hand.map((entry) =>
