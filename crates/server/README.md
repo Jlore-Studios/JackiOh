@@ -252,10 +252,12 @@ which the browser's preflight refuses every spend; `apps/web/src/net/api.ts` min
 sends it again on that press's retries.
 
 **One spend at a time** (SPEC §14.11, R2378000). The six economy spends above (not the invite code's
-redemption) claim the account's turn before they read the store (`economy/spend_slots.rs`, `App::spends`)
-and hold it until they answer. `ECONOMY_SPENDS_RUNNING_MAX` run at once; the next ones wait their turn in
-the process, in the order sent, holding no database connection, so a burst never holds the pool's
-connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
+redemption), and the other routes that write under the account's economy lock for a press (`PUT /api/card-picks`,
+`POST /api/card-picks/upload`, `POST /api/practice/seeds`, `DELETE /api/practice/seeds/:seed`,
+`POST /api/quests/:questId/replace`; issue #2610), claim the account's turn before they read the store
+(`economy/spend_slots.rs`, `App::spends`) and hold it until they answer. `ECONOMY_SPENDS_RUNNING_MAX` run at
+once; the next ones wait their turn in the process, in the order sent, holding no database connection, so a
+burst never holds the pool's connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
 `rate_limited` with `SPEND_BUSY_RETRY_AFTER_MS`, and writes and keeps nothing.
 
 **Custom cards** (SPEC §12.9, R915008, migration 0037). An active account keeps up to

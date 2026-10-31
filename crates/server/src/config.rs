@@ -2688,14 +2688,16 @@ pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
 /// retention loop sweeps them. A day outlasts any retry a player makes after a slow answer
 /// (`API_REQUEST_TIMEOUT_SECONDS`) while keeping the table to a day of spends.
 pub const IDEMPOTENCY_KEY_TTL_HOURS: i64 = 24;
-/// SPEC §14.11, R2378000: how many spends (a pack bought or opened, a token redeemed, a cosmetic
-/// pack opened, a chase bought) one account runs at once. A spend sent while they run waits its
-/// turn in this process, holding no database connection, so a burst of presses cannot hold the
-/// pool's connections waiting on the account's economy lock (issue #2378).
+/// SPEC §14.11, R2378000: how many of one account's economy requests run at once: its spends (a
+/// pack bought or opened, a token redeemed, a cosmetic pack opened, a chase bought) and the other
+/// routes that write under its economy lock (a card's picks saved or uploaded, a practice seed
+/// asked for or given back, a quest replaced; issue #2610). One sent while they run waits its turn
+/// in this process, holding no database connection, so a burst of presses cannot hold the pool's
+/// connections waiting on the account's economy lock (issue #2378).
 pub const ECONOMY_SPENDS_RUNNING_MAX: usize = 1;
-/// SPEC §14.11, R2378000: how many spends of one account may wait their turn behind the ones
-/// running. One sent past it is refused at once with 429 and spends nothing. Four cover a person's
-/// tabs and devices pressing together; a script's burst is refused past them.
+/// SPEC §14.11, R2378000: how many of one account's economy requests may wait their turn behind
+/// the ones running. One sent past it is refused at once with 429 and writes nothing. Four cover a
+/// person's tabs and devices pressing together; a script's burst is refused past them.
 pub const ECONOMY_SPENDS_WAITING_MAX: usize = 4;
 /// SPEC §14.11, R2378000: the wait the refusal of a spend sent past `ECONOMY_SPENDS_WAITING_MAX`
 /// states (`retryAfterMs`, R192).

@@ -1,11 +1,13 @@
-//! One spend at a time per account (SPEC §14.11, R2378000, issue #2378). Each of the economy's
-//! spend routes (a pack bought or opened, a token redeemed, a cosmetic pack opened, a chase bought)
-//! claims its account's turn before it reads the store and holds it until it answers.
-//! `ECONOMY_SPENDS_RUNNING_MAX` run at once; a spend sent while they run waits its turn here, in the
-//! order sent, holding no database connection, so a burst of presses no longer holds the pool's
+//! One turn at a time per account on its economy (SPEC §14.11, R2378000, issues #2378 and #2610).
+//! Each of the economy's spend routes (a pack bought or opened, a token redeemed, a cosmetic pack
+//! opened, a chase bought) and each other route that writes under the account's economy lock for a
+//! press (a card's picks saved or uploaded, a practice seed asked for or given back, a quest
+//! replaced) claims its account's turn before it reads the store and holds it until it answers.
+//! `ECONOMY_SPENDS_RUNNING_MAX` run at once; a request sent while they run waits its turn here, in
+//! the order sent, holding no database connection, so a burst of presses no longer holds the pool's
 //! connections waiting on the account's economy lock (R1301003) until every checkout times out. Up
 //! to `ECONOMY_SPENDS_WAITING_MAX` wait; one sent past them is refused at once, 429 `rate_limited`
-//! stating `SPEND_BUSY_RETRY_AFTER_MS` (R192), and spends nothing.
+//! stating `SPEND_BUSY_RETRY_AFTER_MS` (R192), and writes nothing.
 //!
 //! The turns live in this process, one set per `App` (`App::spends`), so parallel tests never share
 //! them; while a deploy hands over, two processes keep their own, and the economy lock still orders

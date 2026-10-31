@@ -24,6 +24,7 @@ pub mod dev;
 pub mod duos_again;
 pub mod duos_rooms;
 pub mod e2e;
+pub mod economy_turns;
 pub mod env_deployed_commit;
 pub mod env_github_issues;
 pub mod es256_test_only;

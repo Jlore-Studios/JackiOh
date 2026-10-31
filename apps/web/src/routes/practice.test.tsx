@@ -2359,6 +2359,23 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "unearned");
   });
 
+  it("R2378000 a seed refused past the account's waiting turns starts the game unearned, in the server's words", async () => {
+    const busy = "your last purchase or opening is still going through; try again in a moment";
+    const host = routeHost();
+    renderEarning(
+      host,
+      fakeEarning({
+        seed: () =>
+          Promise.reject(
+            new ApiRequestError(429, { code: "rate_limited", message: busy, details: { retryAfterMs: 1_000 } }),
+          ),
+      }),
+    );
+    await startFromSetup();
+    expect(screen.getByTestId(practiceTestid.unearned)).toHaveTextContent(`This game won't earn anything: ${busy}`);
+    expect(host.starts()[0]?.earning).toBeUndefined();
+  });
+
   it("R1303000 an anonymous player, a URL seed and a lesson ask for nothing", async () => {
     const anonymous = routeHost();
     const unasked = fakeEarning();
