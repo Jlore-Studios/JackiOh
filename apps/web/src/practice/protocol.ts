@@ -216,13 +216,7 @@ export type PracticeResponse =
   | { id: number; type: "replays"; replays: PracticeReplayListing[] }
   | { id: number; type: "replay"; game: number; from: number; steps: ReplayStep[]; total: number }
   | { id: number; type: "debug"; debug: PracticeDebug }
-  | {
-      id: number;
-      type: "claim";
-      claim: PracticeClaim;
-      /** R2208000: present, and true, when this device's clock cut one of the game's AI decisions short; never sent to the server. */
-      clockCut?: true;
-    }
+  | { id: number; type: "claim"; claim: PracticeClaim }
   | { id: number; type: "failed"; message: string };
 
 export type PracticeRequestBody = DistributiveOmit<PracticeRequest, "id">;

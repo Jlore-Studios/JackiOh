@@ -15,8 +15,6 @@ export type PracticeSave = {
   log: Action[];
   aiCursor: number;
   hash: string;
-  /** R2208000: present, and true, once this device's clock cut an AI decision of a game on a server seed. */
-  clockCut?: true;
 };
 
 /** R768: a finished free game kept for its replay. Worker-side only: the log names the AI's hidden cards. */
