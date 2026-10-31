@@ -11370,6 +11370,14 @@
           "claude": "strong"
         }
       }
+    },
+    "2601": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-31T09:01:42Z",
+      "issue": 2567,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
