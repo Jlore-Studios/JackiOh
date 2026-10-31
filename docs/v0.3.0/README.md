@@ -113,7 +113,7 @@ with BUILD.md's). Parts cite them; part 37's coverage check lists any V that no 
 | V1 | `cargo build --workspace` and `cargo clippy --workspace --all-targets -- -D warnings` pass | CI `rust` job |
 | V2 | The pure crates depend on nothing but serde, serde_json, indexmap and each other | `clippy.toml` + Cargo.toml review in part 37 |
 | V3 | `Rng::new("golden", 0)`'s first ten draws equal TS's | `crates/engine/src/rng.rs` unit test |
-| V4 | Every game in `games.jsonl` replays with identical view hashes, event hashes and legal sets | `crates/engine/tests/golden.rs` |
+| V4 | Every golden trace (the 240 games, retired in #2578) replays with identical view hashes, event hashes and legal sets | `crates/engine/tests/golden.rs` |
 | V5 | Every TS card test, ported, passes | `cargo test -p jackioh-cards` |
 | V6 | Every §11 ruling has a proving Rust test named `r<n>_…`, and every cited R-id exists | `cargo jackioh spec check` |
 | V7 | `cargo jackioh fuzz --seeds 1000` finds no invariant breach and every game folds back to its hash | daily super run (CI: 200 seeds) |
