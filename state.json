@@ -14298,6 +14298,10 @@
         {
           "at": "2026-10-31T05:54:46Z",
           "minutes": 9.1
+        },
+        {
+          "at": "2026-10-31T05:55:12Z",
+          "minutes": 12.7
         }
       ],
       "tokens_spent": [
@@ -15322,14 +15326,21 @@
           "cost": 3.7254,
           "input": 133,
           "output": 53826
+        },
+        {
+          "at": "2026-10-31T05:55:12Z",
+          "cache": 10271524,
+          "cost": 4.647,
+          "input": 139,
+          "output": 56758
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-31T07:50:00Z",
-          "utilization": 0.75
+          "utilization": 0.76
         },
-        "observed_at": "2026-10-31T05:54:46Z",
+        "observed_at": "2026-10-31T05:55:12Z",
         "status": "allowed"
       }
     },
