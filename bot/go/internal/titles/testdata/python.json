@@ -734,29 +734,5 @@
   ["Fix٣_٣ ", []],
   ["#resolves -éresolves٣", []],
   [" \n-", []]
- ],
- "left_alone": [
-  ["CI: a job ran over 7 minutes", true],
-  ["CI: daily super run failed", true],
-  ["Render: the live server is not serving main's catalog", true],
-  ["patches ship refused to promote the pending patches", true],
-  ["CI: a patches promotion or log is stuck", true],
-  ["Night bot: the machine's disk is filling up", true],
-  ["Architecture: weekly hygiene, dead files and archives, 2026-10-19", true],
-  ["Architecture: weekly hygiene", true],
-  ["Architecture: weekly hygienes", false],
-  ["Architecture: weekly hygiene_x", false],
-  ["Night bot status", true],
-  ["Squishy status", true],
-  ["patches ship: v0.3.17", true],
-  ["AI gen 13 (improve): in training", true],
-  ["Promote main to production: 3 commit(s) up to abc1234", true],
-  ["Revert \"Patch v0.3.X: a fix\"", true],
-  ["Merging to production in 3 hours", true],
-  ["Merging to productions", false],
-  ["CI: the learn lane folds an export", false],
-  ["CI: a job ran over 7 minutes later", false],
-  ["  CI:  daily super   run failed ", true],
-  ["AI gen ١ x", true]
  ]
 }

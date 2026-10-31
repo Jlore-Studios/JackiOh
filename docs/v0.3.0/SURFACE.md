@@ -7,8 +7,8 @@ what you like. At an edge, this file is law. It does not change during Waves 1�
 contact part (part 31) records the hole in `.fullsend/notes/spec-gaps.md` and the orchestrator
 patches this file between waves, never a builder in the middle of one.
 
-The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: A-engine, B-ai and C-server (removed in #832, in git history) and [D-ci-spec](research/D-ci-spec.md); they give file:line facts the rules below lean on. Every TypeScript file's fate is in
-[PORT-MAP.md](PORT-MAP.md). The briefs of the parts are #306's sub-issues.
+The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: A-engine, B-ai and C-server (removed in #832) and D-ci-spec (removed later), all in git history; they give file:line facts the rules below lean on. Every TypeScript file's fate was in
+`PORT-MAP.md`, removed once that layout was gone (`git show 3c5c7a81:docs/v0.3.0/PORT-MAP.md`). The briefs of the parts are #306's sub-issues.
 
 Contents:
 
@@ -111,7 +111,7 @@ Rules that follow from the tree:
 
 - `match` is a Rust keyword, so the server's match actor lives in `crates/server/src/actor/`.
 - **Every `lib.rs`, `mod.rs`, `main.rs` and `Cargo.toml` is written once, by part 1**, and declares
-  every module listed in [PORT-MAP.md](PORT-MAP.md) for its crate. A Wave 1 part fills module files;
+  every module listed in `PORT-MAP.md` for its crate. A Wave 1 part fills module files;
   it never edits those files. A dependency or module it wishes existed goes under `GAPS` in its notes
   (§16) and part 31 adds it.
 - Integration tests are one binary per crate (`tests/rules.rs`, `tests/cards.rs`, `tests/ai.rs`,
@@ -246,7 +246,7 @@ both need `zones.activeUnitsOf` write the same call without ever seeing each oth
 
 Slugs: every `-` and `.` becomes `_`, and a name that would start with a digit gets a `c` prefix
 (`012-1-devour.ts` → `c012_1_devour.rs`). A module named after a Rust keyword takes a trailing
-underscore (`type.ts` → `type_.rs`, `match` → `actor`). [PORT-MAP.md](PORT-MAP.md) lists every
+underscore (`type.ts` → `type_.rs`, `match` → `actor`). `PORT-MAP.md` listed every
 resulting path, so nobody has to apply these by hand.
 
 ### 4.2 Names

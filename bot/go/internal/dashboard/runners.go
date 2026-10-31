@@ -92,7 +92,6 @@ var Workflows = map[string]string{
 	"squishy-run.yml":        "Squishy: gate, plan, `work` on its own Claude account, deliver",
 	"super.yml":              "the daily super run: 10,000 fuzz seeds, the full gates, every e2e spec, the db",
 	"sweep.yml":              "sweeps the shadow bans again when the AI's generation moves",
-	"title-retcon.yml":       "the title retcon, by hand only",
 	"triage.yml":             "labels each new issue and pull request from fixed rules",
 	"voice.yml":              "renders a branch's voice lines (macOS `say`, Windows SAPI), checked on Linux",
 	"winrates-refresh.yml":   "daily: the Tech decks' win-rate table, once a patch",
