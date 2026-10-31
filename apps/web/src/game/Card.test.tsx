@@ -25,6 +25,7 @@ import {
   writeCardSettings,
 } from "../cards/index.ts";
 import { TERM_HOVER_DELAY_MS } from "../cards/constants.ts";
+import { KEYWORD_VISUALS } from "../cards/keywordVisuals.ts";
 import { INSPECT_LOC } from "../cards/inspect/testids.ts";
 import Board from "./Board.tsx";
 import Card, * as CardModule from "./Card.tsx";
@@ -772,7 +773,8 @@ describe("B19: what a face-up root adds", () => {
       const visible = [...root.querySelectorAll<HTMLElement>(".keywords > [data-keyword]:not([data-chip='hidden'])")];
       const more = root.querySelector<HTMLElement>(".keywords > .cf-kw-more");
       const chips = u.keywords.filter(
-        (k) => k.kind !== "Taunt" && k.kind !== "Divine Shield" && !(k.kind === "Armor" && u.armor > 0),
+        // R2577000: a keyword that does nothing on the field gets no chip either.
+        (k) => k.kind !== "Taunt" && k.kind !== "Divine Shield" && !(k.kind === "Armor" && u.armor > 0) && KEYWORD_VISUALS[k.kind].onField,
       );
       // Every keyword keeps its badge in the DOM (e2e reads [data-keyword]).
       expect(root.querySelectorAll("[data-keyword]"), u.defId).toHaveLength(u.keywords.length);

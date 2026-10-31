@@ -19538,5 +19538,29 @@
       "classic-088"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.5.9c",
+    "date": "2026-10-31",
+    "title": "Patch: hide keywords that do nothing on the field from units on the board",
+    "source": "#2577",
+    "notes": "A unit on the board no longer draws a chip or a treatment for Equip, Tradable, Cloaked, Crater, Flashback, Stack or Temporary, keywords that do nothing once it is on the field (R2577000, amending R438); its hover preview and inspect sheet still list every keyword. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Units on the board show only the keywords that work there",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Unit on the board no longer shows Equip, Tradable, Cloaked, Crater, Flashback, Stack or Temporary, which do nothing once it is in play. Its preview still lists every keyword."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "3a620e806108dd0adb8da49fb271ecc1d024256a"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
