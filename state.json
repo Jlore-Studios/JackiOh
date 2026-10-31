@@ -11520,6 +11520,7 @@
       "planned_by_id": "claude-8",
       "planned_tier": "strong",
       "provider": "claude-8",
+      "question": "a person runs the `voice` workflow (Actions \u2192 voice \u2192 Run workflow, or `gh workflow run voice.yml --ref <branch>`) on a branch cut from `main`, then opens that branch's pull request. The six missing voice lines need macOS `say` (voice `diva`) and Windows SAPI (voice `sapi-announcer`). No Linux builder has either (`docs/ADDING_CARDS.md` \u00a77), and the bot cannot push a `[gen:voice]` commit or dispatch a workflow.",
       "run_id": "41209641700",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T14:20:03Z",
