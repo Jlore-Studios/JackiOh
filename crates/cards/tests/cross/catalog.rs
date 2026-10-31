@@ -7324,200 +7324,200 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     ),
     row(
         "41",
-        "Bigot",
+        "Legacy: Bigot",
         c(2),
         T::Unit,
-        &[G::Human],
+        &[G::Human, G::Legacy],
         R::Common,
         st(4, 1),
         st(8, 2),
     ),
     row(
         "42",
-        "Stockpile",
+        "Legacy: Stockpile",
         c(1),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "43",
-        "Mr. Vanilla",
+        "Legacy: Mr. Vanilla",
         c(1),
         T::Unit,
-        &[G::Human],
+        &[G::Human, G::Legacy],
         R::Common,
         st(4, 4),
         st(12, 12),
     ),
     row(
         "44",
-        "Duplicating Felinors",
+        "Legacy: Duplicating Felinors",
         c(2),
         T::Unit,
-        &[G::Felinor],
+        &[G::Felinor, G::Legacy],
         R::Rare,
         st(3, 4),
         st(6, 8),
     ),
     row(
         "45",
-        "Jlockeed's Weapons",
+        "Legacy: Jlockeed's Weapons",
         c(4),
         T::FieldSpell,
-        &[G::Jlockeed],
+        &[G::Jlockeed, G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "46",
-        "Hit Job",
+        "Legacy: Hit Job",
         c(3),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "47",
-        "Midrange Menace",
+        "Legacy: Midrange Menace",
         c(3),
         T::Unit,
-        &[],
+        &[G::Legacy],
         R::Common,
         st(9, 9),
         st(18, 18),
     ),
     row(
         "48",
-        "Jlockeed Shredder-10",
+        "Legacy: Jlockeed Shredder-10",
         c(3),
         T::Unit,
-        &[G::Jlockeed],
+        &[G::Jlockeed, G::Legacy],
         R::Common,
         st(6, 10),
         st(12, 20),
     ),
     row(
         "49",
-        "Reoccurring Dream",
+        "Legacy: Reoccurring Dream",
         c(1),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "50",
-        "Glowy Jelly Bean",
+        "Legacy: Glowy Jelly Bean",
         c(3),
         T::Spell,
-        &[G::JellyBean],
+        &[G::JellyBean, G::Legacy],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "51",
-        "Big Felinor",
+        "Legacy: Big Felinor",
         c(4),
         T::Unit,
-        &[G::Felinor],
+        &[G::Felinor, G::Legacy],
         R::Rare,
         st(3, 10),
         st(6, 20),
     ),
     row(
         "52",
-        "Snom Bunny Mind Control",
+        "Legacy: Snom Bunny Mind Control",
         c(4),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "53",
-        "Prejudiced Postdoc",
+        "Legacy: Prejudiced Postdoc",
         c(2),
         T::Unit,
-        &[G::Human],
+        &[G::Human, G::Legacy],
         R::Rare,
         st(2, 4),
         st(4, 8),
     ),
     row(
         "54",
-        "The Rock",
+        "Legacy: The Rock",
         c(4),
         T::Unit,
-        &[G::Human],
+        &[G::Human, G::Legacy],
         R::Common,
         st(10, 10),
         st(20, 20),
     ),
     row(
         "55",
-        "Reminisce",
+        "Legacy: Reminisce",
         c(1),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "56",
-        "Corpse Eater",
+        "Legacy: Corpse Eater",
         c(4),
         T::Unit,
-        &[],
+        &[G::Legacy],
         R::Epic,
         st(2, 2),
         st(4, 4),
     ),
     row(
         "57",
-        "Recycling Initiative",
+        "Legacy: Recycling Initiative",
         c(0),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Epic,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "58",
-        "True Strike",
+        "Legacy: True Strike",
         c(1),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "59",
-        "Fig of Life",
+        "Legacy: Fig of Life",
         c(3),
         T::Spell,
-        &[G::Fruit],
+        &[G::Fruit, G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "60",
-        "Rush Token Farm",
+        "Legacy: Rush Token Farm",
         c(2),
         T::FieldSpell,
-        &[],
+        &[G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
@@ -7565,6 +7565,7 @@ const ALLOWED_TAGS: &[&str] = &[
     "Weapon",
     "War Doctrine",
     "Swarm",
+    "Legacy",
     "Token",
 ];
 
@@ -8607,29 +8608,16 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         assert!(position("classic-060") >= position("core-069"));
     }
 
-    /// R739, R2195001: the names two non-token cards share, as "name (first, second)", but a Training
-    /// Grounds snapshot (#41–#60) and the Core card its `snapshotOf` names, which share the Core
-    /// card's name by the owner's decision (#2195).
+    /// R739: the names two non-token cards share, as "name (first, second)".
     fn shared_names(cards: &[&CardDef]) -> Vec<String> {
-        let snapshot_pair = |a: &CardDef, b: &CardDef| {
-            let is_snapshot = |card: &CardDef| {
-                card.set == SetName::TrainingGrounds
-                    && card.index.parse::<u32>().is_ok_and(|n| (41..=60).contains(&n))
-            };
-            [(a, b), (b, a)].into_iter().any(|(snapshot, core)| {
-                is_snapshot(snapshot)
-                    && core.set == SetName::Core
-                    && snapshot.snapshot_of.as_deref() == Some(core.id.as_str())
-            })
-        };
-        let mut seen: IndexMap<&str, Vec<&CardDef>> = IndexMap::new();
+        let mut seen: IndexMap<&str, &CardDef> = IndexMap::new();
         let mut dupes: Vec<String> = Vec::new();
         for card in cards.iter().copied().filter(|card| !card.token) {
-            let named = seen.entry(card.name.as_str()).or_default();
-            if let Some(first) = named.iter().find(|first| !snapshot_pair(first, card)) {
+            if let Some(first) = seen.get(card.name.as_str()) {
                 dupes.push(format!("{} ({}, {})", card.name, first.id, card.id));
+            } else {
+                seen.insert(card.name.as_str(), card);
             }
-            named.push(card);
         }
         dupes
     }
@@ -8643,54 +8631,46 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         );
     }
 
+    /// R2195001, R2511000: a Legacy card (Training Grounds #41–#60) is named `Legacy: <its Core card's
+    /// name>` and carries the Legacy tag beside its Core card's tags, so it shares no name with its
+    /// Core card or any other; it keeps everything else.
     #[test]
-    fn r2195001_a_snapshot_shares_its_core_card_s_name_and_no_other_two_cards_do() {
-        let core = &CATALOG["core-002"];
-        let snapshot = CardDef {
-            id: "traininggrounds-041".to_string(),
-            index: "41".to_string(),
-            set: SetName::TrainingGrounds,
-            snapshot_of: Some(core.id.clone()),
-            ..core.clone()
-        };
-        assert_eq!(shared_names(&[core, &snapshot]), Vec::<String>::new());
-
-        // A Training Grounds card that names no Core card, or another one, or sits outside #41–#60.
-        let unmarked = CardDef {
-            snapshot_of: None,
-            ..snapshot.clone()
-        };
-        let wrong_core = CardDef {
-            snapshot_of: Some("core-005".to_string()),
-            ..snapshot.clone()
-        };
-        let outside = CardDef {
-            index: "40".to_string(),
-            ..snapshot.clone()
-        };
-        for card in [&unmarked, &wrong_core, &outside] {
-            assert_eq!(
-                shared_names(&[core, card]),
-                [format!("Bigot (core-002, {})", card.id)]
-            );
+    fn r2195001_r2511000_a_legacy_card_is_its_core_card_s_name_after_legacy_and_tagged_legacy() {
+        let legacy: Vec<&CardDef> = entries()
+            .into_iter()
+            .filter(|card| card.tags.contains(&Tag::Legacy))
+            .collect();
+        assert_eq!(
+            legacy.iter().map(|card| card.id.as_str()).collect::<Vec<_>>(),
+            (41..=60)
+                .map(|n| format!("traininggrounds-{n:03}"))
+                .collect::<Vec<_>>()
+        );
+        for card in &legacy {
+            assert_eq!(card.set, SetName::TrainingGrounds, "{}", card.id);
+            assert_eq!(card.tags.last(), Some(&Tag::Legacy), "{}", card.id);
+            assert!(card.name.starts_with("Legacy: "), "{}", card.name);
         }
-        // Two snapshots of one Core card, and two cards of other sets.
+        let core = &CATALOG["core-002"];
+        let bigot = &CATALOG["traininggrounds-041"];
+        assert_eq!(bigot.name, format!("Legacy: {}", core.name));
+        assert_eq!(bigot.tags, [Tag::Human, Tag::Legacy]);
+        assert_eq!(
+            (bigot.cost, bigot.rarity, &bigot.base, &bigot.radiant),
+            (core.cost, core.rarity, &core.base, &core.radiant)
+        );
+        assert_eq!(CATALOG["traininggrounds-060"].name, "Legacy: Rush Token Farm");
+        // No name is shared, the Core card's and its Legacy card's included.
         let twin = CardDef {
-            id: "traininggrounds-042".to_string(),
-            index: "42".to_string(),
-            ..snapshot.clone()
+            id: "traininggrounds-041".to_string(),
+            set: SetName::TrainingGrounds,
+            ..core.clone()
         };
         assert_eq!(
-            shared_names(&[core, &snapshot, &twin]),
-            ["Bigot (traininggrounds-041, traininggrounds-042)"]
+            shared_names(&[core, &twin]),
+            ["Bigot (core-002, traininggrounds-041)"]
         );
-        let classic = CardDef {
-            id: "classic-002".to_string(),
-            set: SetName::Classic,
-            snapshot_of: None,
-            ..core.clone()
-        };
-        assert_eq!(shared_names(&[core, &classic]), ["Bigot (core-002, classic-002)"]);
+        assert_eq!(shared_names(&[core, bigot]), Vec::<String>::new());
     }
 
     #[test]
@@ -9011,14 +8991,7 @@ mod names_r381_b2_8 {
                 .or_default()
                 .push(entry.id.clone());
         }
-        // R2195001: a Training Grounds snapshot and the Core card it copies share a name.
-        let snapshot_pair = |ids: &[String]| {
-            ids.len() == 2 && CATALOG[ids[1].as_str()].snapshot_of.as_deref() == Some(ids[0].as_str())
-        };
-        let shared: Vec<(String, Vec<String>)> = names
-            .into_iter()
-            .filter(|(_, ids)| ids.len() > 1 && !snapshot_pair(ids))
-            .collect();
+        let shared: Vec<(String, Vec<String>)> = names.into_iter().filter(|(_, ids)| ids.len() > 1).collect();
         assert_eq!(shared, Vec::<(String, Vec<String>)>::new());
         assert_eq!(name_of("classic-016").as_deref(), Some("Book of Flame"));
         assert_eq!(name_of("classic-055").as_deref(), Some("Book of Wildfire"));

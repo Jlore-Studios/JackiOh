@@ -1,9 +1,11 @@
-//! SPEC §8.11 Training Grounds #44 Duplicating Felinors, the snapshot of Core #12 Duplicating Felinors (`core-012`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
+//! SPEC §8.11 Training Grounds #44 Legacy: Duplicating Felinors,
+//! the Legacy card of Core #12 Duplicating Felinors (`core-012`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
 //!
 //! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
 //!
 //! #12 Duplicating Felinors (SPEC §8.1): 3/4 → 6/8 Unit, Felinor, cost 2, Rare. Base "Cry: summon a
 //! copy of this unit"; the radiant cell says "Same", so the radiant face runs the same text (§8
