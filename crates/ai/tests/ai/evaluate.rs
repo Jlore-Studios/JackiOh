@@ -10,7 +10,7 @@
 //! out (`NextSwing::Enemy`, `AI_EVAL`) by `eval`.
 
 use jackioh_ai::{
-    AI_EVAL, AI_EXTRA_TURN_CARDS, GREEDY_EVAL, HIDDEN_DEF_ID, NextSwing, evaluate, face_threat,
+    AI_EVAL, AI_EXTRA_TURN_CARDS, GREEDY_EVAL, HIDDEN_DEF_ID, NextSwing, Prices, evaluate, face_threat,
     face_threat_with, redact, unit_worth,
 };
 use jackioh_engine::testkit::{
@@ -247,7 +247,8 @@ mod evaluate_the_strength_passs_terms {
         let lost = (1.0 - AI_EVAL.defense_attack_share) * AI_EVAL.attack * 4.0;
         let kept = AI_EVAL.position_grants * (AI_EVAL.keyword.taunt + AI_EVAL.armor_point);
         assert_close(
-            unit_worth(&attack, &atk, &AI_EVAL) - unit_worth(&defense, &def, &AI_EVAL),
+            unit_worth(&attack, &atk, &AI_EVAL, Prices::NONE)
+                - unit_worth(&defense, &def, &AI_EVAL, Prices::NONE),
             lost - kept,
             10,
         );
@@ -273,7 +274,8 @@ mod evaluate_the_strength_passs_terms {
         let lost = (1.0 - AI_EVAL.defense_attack_share) * AI_EVAL.attack * 9.0;
         let kept = AI_EVAL.position_grants * AI_EVAL.armor_point;
         assert_close(
-            unit_worth(&attack, &atk, &AI_EVAL) - unit_worth(&defense, &def, &AI_EVAL),
+            unit_worth(&attack, &atk, &AI_EVAL, Prices::NONE)
+                - unit_worth(&defense, &def, &AI_EVAL, Prices::NONE),
             lost - kept,
             10,
         );
@@ -281,7 +283,8 @@ mod evaluate_the_strength_passs_terms {
         // less the share of that Taunt the position grants the body anyway.
         let mut vanilla = def.clone();
         vanilla.vanilla = true;
-        let diff = unit_worth(&defense, &def, &AI_EVAL) - unit_worth(&defense, &vanilla, &AI_EVAL);
+        let diff = unit_worth(&defense, &def, &AI_EVAL, Prices::NONE)
+            - unit_worth(&defense, &vanilla, &AI_EVAL, Prices::NONE);
         assert_close(diff, (1.0 - AI_EVAL.position_grants) * AI_EVAL.keyword.taunt, 10);
         assert!(diff > 0.0);
     }
@@ -298,7 +301,7 @@ mod evaluate_the_strength_passs_terms {
             let body =
                 w.health * 4.0 + w.armor_point + w.attack * 4.0 * w.defense_attack_share + w.keyword.taunt;
             assert_close(
-                unit_worth(&vanilla_def, &v_unit, &w),
+                unit_worth(&vanilla_def, &v_unit, &w, Prices::NONE),
                 body - (1.0 - share) * (w.keyword.taunt + w.armor_point),
                 10,
             );
@@ -306,7 +309,7 @@ mod evaluate_the_strength_passs_terms {
             let body =
                 w.health * 9.0 + w.armor_point + w.attack * 9.0 * w.defense_attack_share + w.keyword.taunt;
             assert_close(
-                unit_worth(&taunt_def, &t_unit, &w),
+                unit_worth(&taunt_def, &t_unit, &w, Prices::NONE),
                 body - (1.0 - share) * w.armor_point,
                 10,
             );
@@ -321,7 +324,7 @@ mod evaluate_the_strength_passs_terms {
         let w = GREEDY_EVAL;
         let body = w.health * 9.0 + w.armor_point + w.attack * 9.0 * w.defense_attack_share + w.keyword.taunt;
         assert_close(
-            unit_worth(&defense, &unit, &w),
+            unit_worth(&defense, &unit, &w, Prices::NONE),
             body - (1.0 - w.position_grants) * (w.keyword.taunt + w.armor_point),
             10,
         );
@@ -333,7 +336,8 @@ mod evaluate_the_strength_passs_terms {
         let plain = first_unit(&defense);
         let mut granted = plain.clone();
         granted.granted_keywords.push(Keyword::Taunt);
-        let diff = unit_worth(&defense, &granted, &AI_EVAL) - unit_worth(&defense, &plain, &AI_EVAL);
+        let diff = unit_worth(&defense, &granted, &AI_EVAL, Prices::NONE)
+            - unit_worth(&defense, &plain, &AI_EVAL, Prices::NONE);
         assert_close(diff, (1.0 - AI_EVAL.position_grants) * AI_EVAL.keyword.taunt, 10);
         assert!(diff > 0.0);
     }
@@ -357,7 +361,8 @@ mod evaluate_the_strength_passs_terms {
         // R49: its switch back to Attack spends no attack, so Defense Position costs it no attack share.
         let ((attack, atk), (defense, def)) = duelist();
         assert_close(
-            unit_worth(&defense, &def, &AI_EVAL) - unit_worth(&attack, &atk, &AI_EVAL),
+            unit_worth(&defense, &def, &AI_EVAL, Prices::NONE)
+                - unit_worth(&attack, &atk, &AI_EVAL, Prices::NONE),
             AI_EVAL.position_grants * (AI_EVAL.keyword.taunt + AI_EVAL.armor_point),
             10,
         );
@@ -370,7 +375,7 @@ mod evaluate_the_strength_passs_terms {
         let ((attack, atk), (defense, def)) = duelist();
         let w = GREEDY_EVAL;
         assert_close(
-            unit_worth(&attack, &atk, &w) - unit_worth(&defense, &def, &w),
+            unit_worth(&attack, &atk, &w, Prices::NONE) - unit_worth(&defense, &def, &w, Prices::NONE),
             (1.0 - w.defense_attack_share) * w.attack * 4.0
                 - w.position_grants * (w.keyword.taunt + w.armor_point),
             10,
@@ -796,7 +801,7 @@ mod banked_state_1086 {
         let live = s.unit(HUMAN, 2).expect("the 4/4 is still p2's until the steal");
         assert_close(
             eval(&armed, AI) - eval(&bare, AI),
-            AI_EVAL.marked_share * unit_worth(&armed, &live, &AI_EVAL),
+            AI_EVAL.marked_share * unit_worth(&armed, &live, &AI_EVAL, Prices::NONE),
             9,
         );
         // The marked unit's controller reads the same mark as a loss.
@@ -841,7 +846,7 @@ mod banked_state_1086 {
         let (armed, bare, live) = punished(VANILLA);
         assert_close(
             eval(&armed, AI) - eval(&bare, AI),
-            AI_EVAL.marked_share * unit_worth(&armed, &live, &AI_EVAL),
+            AI_EVAL.marked_share * unit_worth(&armed, &live, &AI_EVAL, Prices::NONE),
             9,
         );
         assert!(eval(&armed, HUMAN) < eval(&bare, HUMAN));
@@ -1310,12 +1315,12 @@ mod dormant_cards_1506 {
         assert!(scored(&two, &DORMANT) > scored(&one, &DORMANT));
         assert_close(
             scored(&two, &DORMANT) - scored(&one, &DORMANT),
-            DORMANT.dormant_share * unit_worth(&two, &pile[1], &DORMANT),
+            DORMANT.dormant_share * unit_worth(&two, &pile[1], &DORMANT, Prices::NONE),
             9,
         );
         assert_close(
             scored(&three, &DORMANT) - scored(&two, &DORMANT),
-            DORMANT.dormant_share * unit_worth(&three, &pile[2], &DORMANT),
+            DORMANT.dormant_share * unit_worth(&three, &pile[2], &DORMANT, Prices::NONE),
             9,
         );
     }
@@ -1562,8 +1567,8 @@ mod shown_cost_fatigue_windfury_1602 {
         let own = windfurious(&state, AI);
         let enemy = windfurious(&state, HUMAN);
         assert_close(
-            unit_worth(&own, &lane_one(&own, AI), &PRICED)
-                - unit_worth(&state, &lane_one(&state, AI), &PRICED),
+            unit_worth(&own, &lane_one(&own, AI), &PRICED, Prices::NONE)
+                - unit_worth(&state, &lane_one(&state, AI), &PRICED, Prices::NONE),
             PRICED.keyword.windfury,
             9,
         );
@@ -1584,8 +1589,8 @@ mod shown_cost_fatigue_windfury_1602 {
         // A printed Windfury reads the same.
         let prime = board(json!({ "p1": { "field": [PRIME] }, "p2": { "field": [VANILLA] } }));
         assert_close(
-            unit_worth(&prime, &lane_one(&prime, AI), &PRICED)
-                - unit_worth(&prime, &lane_one(&prime, AI), &UNPRICED),
+            unit_worth(&prime, &lane_one(&prime, AI), &PRICED, Prices::NONE)
+                - unit_worth(&prime, &lane_one(&prime, AI), &UNPRICED, Prices::NONE),
             PRICED.keyword.windfury,
             9,
         );
@@ -1604,8 +1609,8 @@ mod shown_cost_fatigue_windfury_1602 {
         );
         let own = windfurious(&state, AI);
         assert_eq!(
-            unit_worth(&own, &lane_one(&own, AI), &GREEDY_EVAL),
-            unit_worth(&state, &lane_one(&state, AI), &GREEDY_EVAL)
+            unit_worth(&own, &lane_one(&own, AI), &GREEDY_EVAL, Prices::NONE),
+            unit_worth(&state, &lane_one(&state, AI), &GREEDY_EVAL, Prices::NONE)
         );
     }
 }
@@ -1992,7 +1997,7 @@ mod r2490000_backrow_unit_priced_once {
         let ship = find_instance(&state, &id).expect("the ship");
         let mut awake = ship.clone();
         awake.slumber = None;
-        let worth = unit_worth(&state, &awake, &AI_EVAL);
+        let worth = unit_worth(&state, &awake, &AI_EVAL, Prices::NONE);
         let mut emptied = clone(&state);
         emptied.players[AI].backrow[0] = None;
         assert_close(

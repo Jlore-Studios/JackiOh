@@ -3,7 +3,7 @@
 //! evaluation after the sandbox's destroy less after its remove (R923003); `unit_worth` adds
 //! `AI_EVAL.death` of the price and `kill_worth` takes the whole of it off a kill, so a unit that comes
 //! back bigger is worth more alive and less to kill, and one whose Death hurts its owner is worth less.
-//! The frozen baseline reads no price, and none is held outside a decision.
+//! The frozen baseline reads no price, and a call not passed a decision's prices reads none.
 //!
 //! The cards: Trigor (traininggrounds-025), (3) 3/3 Tribute 3, "Death: Summon a Trigor with this one's
 //! base stats +3/+3"; Floodgates (traininggrounds-030), (3) 0/12 Armor 3, "Death: Destroy all your
@@ -15,8 +15,6 @@
 //! a piece with no Death of its own is priced too, after every Death. The cards: After Burner
 //! (stinkyscape-090), (2) 4/8 Starship Piece, whose one hook is a "When launched" that only a Starship
 //! fires; and Hit Job (core-016), (3) "Destroy a Unit".
-
-use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -50,6 +48,14 @@ fn priced(state: &GameState) -> (Vec<DeathPrice>, usize) {
     (prices, counter.used())
 }
 
+/// `deaths` as a decision passes them, with no turn-hook price.
+fn prices_of(deaths: Vec<DeathPrice>) -> Prices {
+    Prices {
+        deaths,
+        ..Prices::default()
+    }
+}
+
 /// `player`'s unit of `def_id` on the field.
 fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardInstance {
     active_units_of(state, player)
@@ -76,7 +82,7 @@ fn vanilla_three_three() -> f64 {
 fn r2424000_a_trigor_on_the_ai_board_is_worth_more_than_a_vanilla_3_3() {
     let state = board("ai-death-trigor", json!([]), json!([TRIGOR]), json!([]));
     let trigor = unit(&state, AI, TRIGOR);
-    let body = unit_worth(&state, trigor, &AI_EVAL);
+    let body = unit_worth(&state, trigor, &AI_EVAL, Prices::NONE);
     assert!(
         (body - vanilla_three_three()).abs() < 1e-9,
         "unpriced, a Trigor is its 3/3 body: {body}"
@@ -87,7 +93,7 @@ fn r2424000_a_trigor_on_the_ai_board_is_worth_more_than_a_vanilla_3_3() {
         price > vanilla_three_three(),
         "its Death leaves a 6/6, more than a 3/3: {price}"
     );
-    let worth = with_death_prices(prices, || unit_worth(&state, trigor, &AI_EVAL));
+    let worth = unit_worth(&state, trigor, &AI_EVAL, &prices_of(prices));
     assert!((worth - (body + AI_EVAL.death * price)).abs() < 1e-9, "{worth}");
     assert!(worth > vanilla_three_three(), "{worth}");
 }
@@ -96,7 +102,7 @@ fn r2424000_a_trigor_on_the_ai_board_is_worth_more_than_a_vanilla_3_3() {
 fn r2424000_killing_an_enemy_trigor_is_worth_less_than_killing_a_vanilla_3_3() {
     let state = board("ai-death-kill", json!([]), json!([VANILLA]), json!([TRIGOR]));
     let trigor = unit(&state, HUMAN, TRIGOR);
-    let unpriced_kill = kill_worth(&state, trigor, &AI_EVAL);
+    let unpriced_kill = kill_worth(&state, trigor, &AI_EVAL, Prices::NONE);
     assert!(
         (unpriced_kill - vanilla_three_three()).abs() < 1e-9,
         "unpriced, killing a Trigor takes its 3/3 body: {unpriced_kill}"
@@ -104,12 +110,9 @@ fn r2424000_killing_an_enemy_trigor_is_worth_less_than_killing_a_vanilla_3_3() {
     let unpriced_eval = evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL);
     let (prices, _) = priced(&state);
     assert!(price_of(&prices, TRIGOR) > 0.0);
-    let (kill, eval) = with_death_prices(prices, || {
-        (
-            kill_worth(&state, trigor, &AI_EVAL),
-            evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
-        )
-    });
+    let prices = prices_of(prices);
+    let kill = kill_worth(&state, trigor, &AI_EVAL, &prices);
+    let eval = evaluate_priced(&state, AI, NextSwing::Enemy, &AI_EVAL, &prices);
     assert!(
         kill < vanilla_three_three(),
         "the 6/6 it leaves its owner comes off the kill: {kill}"
@@ -129,11 +132,11 @@ fn r2424000_a_death_that_harms_its_owner_prices_below_a_vanilla_body() {
         json!([]),
     );
     let floodgates = unit(&state, AI, FLOODGATES);
-    let body = unit_worth(&state, floodgates, &AI_EVAL);
+    let body = unit_worth(&state, floodgates, &AI_EVAL, Prices::NONE);
     let (prices, _) = priced(&state);
     let price = price_of(&prices, FLOODGATES);
     assert!(price < 0.0, "its Death destroys its owner's two 4/4s: {price}");
-    let worth = with_death_prices(prices, || unit_worth(&state, floodgates, &AI_EVAL));
+    let worth = unit_worth(&state, floodgates, &AI_EVAL, &prices_of(prices));
     assert!(worth < body, "{worth} against its body's {body}");
 }
 
@@ -193,25 +196,20 @@ fn r2424000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
     );
     let trigor = unit(&state, AI, TRIGOR);
     let (prices, _) = priced(&state);
-    let greedy = unit_worth(&state, trigor, &GREEDY_EVAL);
-    let held = with_death_prices(prices.clone(), || unit_worth(&state, trigor, &GREEDY_EVAL));
+    let greedy = unit_worth(&state, trigor, &GREEDY_EVAL, Prices::NONE);
+    let held = unit_worth(&state, trigor, &GREEDY_EVAL, &prices_of(prices));
     assert_eq!(held, greedy, "the frozen baseline reads no price");
 
-    let before = unit_worth(&state, trigor, &AI_EVAL);
+    let before = unit_worth(&state, trigor, &AI_EVAL, Prices::NONE);
+    assert!(
+        (before - vanilla_three_three()).abs() < 1e-9,
+        "unpriced, a Trigor is its 3/3 body: {before}"
+    );
     decide(&state, AI, &mut AiOptions::new(create_rng("ai-death-decide", 0))).expect("the AI acts");
     assert_eq!(
-        unit_worth(&state, trigor, &AI_EVAL),
+        unit_worth(&state, trigor, &AI_EVAL, Prices::NONE),
         before,
-        "the decision put its prices back"
-    );
-    let unwound = catch_unwind(AssertUnwindSafe(|| {
-        with_death_prices(prices, || panic!("a panic inside the decision"))
-    }));
-    assert!(unwound.is_err());
-    assert_eq!(
-        unit_worth(&state, trigor, &AI_EVAL),
-        before,
-        "a panic put the prices back too"
+        "a decision leaves no price behind"
     );
 }
 
@@ -229,7 +227,7 @@ fn r2566000_a_starship_piece_with_no_death_is_priced_by_the_copy_it_fuses() {
         "After Burner has no Death"
     );
     assert!(is_starship_piece(&state, piece));
-    let body = unit_worth(&state, piece, &AI_EVAL);
+    let body = unit_worth(&state, piece, &AI_EVAL, Prices::NONE);
     let (prices, used) = priced(&state);
     let price = price_of(&prices, AFTER_BURNER);
     assert!(
@@ -241,7 +239,7 @@ fn r2566000_a_starship_piece_with_no_death_is_priced_by_the_copy_it_fuses() {
         (2..=AI_DEATH_PROBE_NODES).contains(&used),
         "a destroy and a remove at least: {used}"
     );
-    let worth = with_death_prices(prices, || unit_worth(&state, piece, &AI_EVAL));
+    let worth = unit_worth(&state, piece, &AI_EVAL, &prices_of(prices));
     assert!((worth - (body + AI_EVAL.death * price)).abs() < 1e-9, "{worth}");
 }
 
@@ -256,18 +254,17 @@ fn r2566000_killing_an_enemy_piece_is_worth_less_than_killing_a_vanilla_of_its_s
     let piece = unit(&state, HUMAN, AFTER_BURNER);
     let vanilla = unit(&state, HUMAN, VANILLA);
     assert_eq!(
-        unit_worth(&state, piece, &AI_EVAL),
-        unit_worth(&state, vanilla, &AI_EVAL),
+        unit_worth(&state, piece, &AI_EVAL, Prices::NONE),
+        unit_worth(&state, vanilla, &AI_EVAL, Prices::NONE),
         "unpriced, the two 4/8s are worth the same"
     );
     let (prices, _) = priced(&state);
     assert!(price_of(&prices, AFTER_BURNER) > 0.0, "{prices:?}");
-    let (piece_kill, vanilla_kill) = with_death_prices(prices, || {
-        (
-            kill_worth(&state, piece, &AI_EVAL),
-            kill_worth(&state, vanilla, &AI_EVAL),
-        )
-    });
+    let prices = prices_of(prices);
+    let (piece_kill, vanilla_kill) = (
+        kill_worth(&state, piece, &AI_EVAL, &prices),
+        kill_worth(&state, vanilla, &AI_EVAL, &prices),
+    );
     assert!(
         piece_kill < vanilla_kill,
         "the copy it fuses into its owner's Starship comes off the kill: {piece_kill} against {vanilla_kill}"

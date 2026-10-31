@@ -9,7 +9,7 @@ use jackioh_engine::{ActionBody, GameState, PlayerId, Rng, mulligan_prompt_for, 
 use crate::candidates::candidate_actions;
 use crate::config::{AI_SEARCH, GREEDY_EVAL, GREEDY_MULLIGAN};
 use crate::determinize::{DeterminizeOptions, determinize};
-use crate::evaluate::{NextSwing, evaluate};
+use crate::evaluate::{NextSwing, Prices, evaluate};
 use crate::mulligan::mulligan_keep;
 use crate::observe::{ai_to_act, redact, unanswered_draw_offer};
 use crate::simulate::{create_node_counter, simulate_first_answers};
@@ -49,7 +49,7 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
             match_shown_cost: Some(false),
         },
     );
-    let candidates = candidate_actions(&det, seat);
+    let candidates = candidate_actions(&det, seat, Prices::NONE);
     if candidates.is_empty() {
         return None;
     }

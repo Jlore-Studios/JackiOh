@@ -4,7 +4,7 @@
 //! crystal of mana gained at `AI_EVAL.next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of the price
 //! for each own readable backrow card, so a Field Spell that pays every turn is worth more than its
 //! cost. A hook that prompts is not priced, the enemy's backrow is priced as before, the frozen
-//! baseline reads no price, and none is held outside a decision.
+//! baseline reads no price, and a call not passed a decision's prices reads none.
 //!
 //! R2565000 prices the same hooks for a Unit on either field and for a Field Spell the seat can read in
 //! the enemy's backrow too: Gatling Pea (meditative-013), (2) 2/6 Armor 2, "End of turn: Deal 1 damage to
@@ -19,8 +19,6 @@
 //! a prompt; Ace in the Hole (classic-065), (2) a Trap, "End of turn: Flip a coin. …"; the Field Spells
 //! with no turn hook The Power to Thrive (classic-081, 2), Level Up! (traininggrounds-031, 3) and Mutate
 //! Spell (classic-078, 1); and Mr. Vanilla (core-008), a (1) 4/4 with no text.
-
-use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -72,12 +70,24 @@ fn price_of(prices: &[TurnHookPrice], def_id: &str, radiant: bool) -> f64 {
         .unwrap_or_else(|| panic!("{def_id}'s turn hooks are priced: {prices:?}"))
 }
 
-/// The AI's evaluation of `state` with `prices` held.
-fn eval_with(state: &GameState, prices: Vec<TurnHookPrice>) -> f64 {
-    with_turn_hook_prices(prices, || evaluate(state, AI, NextSwing::Enemy, &AI_EVAL))
+/// `turn_hooks` as a decision's prices, with no other price.
+fn prices_of(turn_hooks: Vec<TurnHookPrice>) -> Prices {
+    Prices {
+        turn_hooks,
+        ..Prices::default()
+    }
 }
 
-/// The AI's evaluation of `state` with the prices its own root would hold.
+/// The AI's evaluation of `state` passed `prices`, as a decision passes them.
+fn eval_with(state: &GameState, prices: Vec<TurnHookPrice>) -> f64 {
+    let prices = Prices {
+        turn_hooks: prices,
+        ..Prices::default()
+    };
+    evaluate_priced(state, AI, NextSwing::Enemy, &AI_EVAL, &prices)
+}
+
+/// The AI's evaluation of `state` with the prices its own root would pass.
 fn held_eval(state: &GameState) -> f64 {
     eval_with(state, priced(state).0)
 }
@@ -255,9 +265,11 @@ fn r2477000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
     let (prices, _) = priced(&state);
     assert!(price_of(&prices, RUSH_TOKEN_FARM, false) > 0.0);
     let greedy = evaluate(&state, AI, NextSwing::Enemy, &GREEDY_EVAL);
-    let held = with_turn_hook_prices(prices.clone(), || {
-        evaluate(&state, AI, NextSwing::Enemy, &GREEDY_EVAL)
-    });
+    let prices = Prices {
+        turn_hooks: prices,
+        ..Prices::default()
+    };
+    let held = evaluate_priced(&state, AI, NextSwing::Enemy, &GREEDY_EVAL, &prices);
     assert_eq!(held, greedy, "the frozen baseline reads no price");
 
     let before = evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL);
@@ -265,16 +277,7 @@ fn r2477000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
     assert_eq!(
         evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
         before,
-        "the decision put its prices back"
-    );
-    let unwound = catch_unwind(AssertUnwindSafe(|| {
-        with_turn_hook_prices(prices, || panic!("a panic inside the decision"))
-    }));
-    assert!(unwound.is_err());
-    assert_eq!(
-        evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
-        before,
-        "a panic put the prices back too"
+        "a decision leaves no price behind"
     );
 }
 
@@ -345,14 +348,15 @@ fn r2565000_unit_worth_carries_the_price_for_the_unit_s_controller() {
         let pea = unit(&state, owner, GATLING_PEA);
         let (prices, _) = priced(&state);
         let price = price_of(&prices, GATLING_PEA, false);
-        let bare = unit_worth(&state, pea, &AI_EVAL);
-        let held = with_turn_hook_prices(prices.clone(), || unit_worth(&state, pea, &AI_EVAL));
+        let prices = prices_of(prices);
+        let bare = unit_worth(&state, pea, &AI_EVAL, Prices::NONE);
+        let held = unit_worth(&state, pea, &AI_EVAL, &prices);
         close(held - bare, AI_EVAL.turn_hook * price);
-        let kill_bare = kill_worth(&state, pea, &AI_EVAL);
-        let kill_held = with_turn_hook_prices(prices.clone(), || kill_worth(&state, pea, &AI_EVAL));
+        let kill_bare = kill_worth(&state, pea, &AI_EVAL, Prices::NONE);
+        let kill_held = kill_worth(&state, pea, &AI_EVAL, &prices);
         close(kill_held - kill_bare, AI_EVAL.turn_hook * price);
-        let greedy = with_turn_hook_prices(prices, || unit_worth(&state, pea, &GREEDY_EVAL));
-        close(greedy, unit_worth(&state, pea, &GREEDY_EVAL));
+        let greedy = unit_worth(&state, pea, &GREEDY_EVAL, &prices);
+        close(greedy, unit_worth(&state, pea, &GREEDY_EVAL, Prices::NONE));
     }
 }
 
@@ -440,10 +444,8 @@ fn r2565000_a_turn_hook_that_harms_its_holder_prices_below_zero() {
         price_of(&prices, MELTDOWN_LAYER, false) < 0.0,
         "its end of turn costs it health: {prices:?}"
     );
-    let worth = unit_worth(&own, unit(&own, AI, MELTDOWN_LAYER), &AI_EVAL);
-    let held = with_turn_hook_prices(prices, || {
-        unit_worth(&own, unit(&own, AI, MELTDOWN_LAYER), &AI_EVAL)
-    });
+    let worth = unit_worth(&own, unit(&own, AI, MELTDOWN_LAYER), &AI_EVAL, Prices::NONE);
+    let held = unit_worth(&own, unit(&own, AI, MELTDOWN_LAYER), &AI_EVAL, &prices_of(prices));
     assert!(held < worth, "{held} against {worth}");
 
     let enemy = sides("ai-hook-harm", json!({}), json!({ "field": [MELTDOWN_LAYER] }));

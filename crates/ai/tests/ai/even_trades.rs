@@ -107,6 +107,7 @@ fn wrong_house_attackers_trade_into_the_taunt_is_within_branching_after_its_play
         AI_BUDGET.branching,
         MoveOrder::Heuristic,
         &POLICY_PRIOR,
+        Prices::NONE,
     );
     assert!(
         expanded.contains(&trade),
@@ -128,7 +129,7 @@ fn decide_trades_into_the_taunt_rather_than_cast_hit_job_on_a_hand_that_fills_th
         },
         "p2": menace_side(),
     }));
-    let root = root_candidate_actions(&state, AI);
+    let root = root_candidate_actions(&state, AI, Prices::NONE);
     assert!(
         root.len() > AI_BUDGET.root_branching + 1,
         "the hand fills the root: {:?}",
@@ -169,7 +170,7 @@ fn an_even_trade_mr_vanilla_for_mr_vanilla_is_tried_ahead_of_the_plays() {
         "p1": { "hand": [VANILLA], "field": [VANILLA] },
         "p2": { "field": [VANILLA] },
     }));
-    let actions = candidate_actions(&state, AI);
+    let actions = candidate_actions(&state, AI, Prices::NONE);
     let trade = place(
         &actions,
         &attack(&unit_id(&state, AI, VANILLA), &unit_id(&state, HUMAN, VANILLA)),
@@ -184,7 +185,7 @@ fn each_attackers_best_even_trade_goes_ahead_and_its_other_ones_stay_behind_the_
         "p1": { "hand": [VANILLA], "field": [WRONG_HOUSE] },
         "p2": { "field": [VANILLA, RENO] },
     }));
-    let actions = candidate_actions(&state, AI);
+    let actions = candidate_actions(&state, AI, Prices::NONE);
     let attacker = unit_id(&state, AI, WRONG_HOUSE);
     let on_reno = place(&actions, &attack(&attacker, &unit_id(&state, HUMAN, RENO)));
     let on_vanilla = place(&actions, &attack(&attacker, &unit_id(&state, HUMAN, VANILLA)));
@@ -204,7 +205,7 @@ fn a_losing_trade_stays_behind_the_plays() {
         "p1": { "hand": [VANILLA], "field": [MENACE] },
         "p2": { "field": [WRONG_HOUSE] },
     }));
-    let actions = candidate_actions(&state, AI);
+    let actions = candidate_actions(&state, AI, Prices::NONE);
     let trade = place(
         &actions,
         &attack(&unit_id(&state, AI, MENACE), &unit_id(&state, HUMAN, WRONG_HOUSE)),
@@ -221,7 +222,7 @@ fn of_two_targets_with_equal_stats_the_even_trade_goes_into_the_one_without_rebo
         "p1": { "hand": [VANILLA], "field": [VANILLA] },
         "p2": { "field": [{ "def": BARKER, "radiant": true }, VANILLA] },
     }));
-    let actions = candidate_actions(&state, AI);
+    let actions = candidate_actions(&state, AI, Prices::NONE);
     let attacker = unit_id(&state, AI, VANILLA);
     let on_vanilla = place(&actions, &attack(&attacker, &unit_id(&state, HUMAN, VANILLA)));
     let on_barker = place(&actions, &attack(&attacker, &unit_id(&state, HUMAN, BARKER)));
@@ -246,7 +247,7 @@ fn a_cleave_attack_whose_only_kills_are_its_splash_is_tried_ahead_of_the_plays()
             { "def": OOMEN, "lane": 3 },
         ] },
     }));
-    let actions = candidate_actions(&state, AI);
+    let actions = candidate_actions(&state, AI, Prices::NONE);
     let trade = place(
         &actions,
         &attack(&unit_id(&state, AI, CLEAVER), &unit_id(&state, HUMAN, RENO)),

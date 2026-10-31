@@ -131,7 +131,7 @@ fn apply(state: &GameState, body: ActionBody, player: PlayerId, nonce: &str) -> 
 fn r1852003_the_launch_is_a_candidate_the_random_policy_takes_and_the_ai_answers_its_cry() {
     let (state, ship) = built();
     assert!(
-        candidate_actions(&state, AI)
+        candidate_actions(&state, AI, Prices::NONE)
             .iter()
             .any(|action| is_launch(action, &ship)),
         "the launch is among the AI's candidates"

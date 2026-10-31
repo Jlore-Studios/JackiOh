@@ -4,7 +4,7 @@
 //! after it less before it; `unit_worth` adds `AI_EVAL.activation` of the price for the seat's units
 //! and the enemy's alike, so a Cannon that destroys a Unit every turn is worth more than its body to
 //! keep and to remove. A face-down or hand card is never probed, hidden cards change no decision
-//! (R185), the frozen baseline reads no price, and none is held outside a decision.
+//! (R185), the frozen baseline reads no price, and a call not passed a decision's prices reads none.
 //!
 //! Cannon v3 is a Starship Piece: when it dies, a copy of it fuses into its owner's Dormant Starship
 //! (R1852000), which can launch and fire it again. So the removal below is a transform, which is no
@@ -18,8 +18,6 @@
 //! Cry; Voidwalker (classic-050), (2) 6/3, "Aura: Cards that would go to a graveyard are exiled
 //! instead"; Midrange Menace (core-019), (3) 9/9 Taunt; Mr. Vanilla (core-008), a (1) 4/4 with no
 //! text; and the (1) Traps Sheepish (core-041) and My Pawn (core-096).
-
-use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -53,6 +51,14 @@ fn priced(state: &GameState) -> (Vec<ActivationPrice>, usize) {
     let counter = create_node_counter(AI_BUDGET.nodes, None);
     let prices = activation_prices(state, AI, &counter);
     (prices, counter.used())
+}
+
+/// `activations` as a decision passes them, with no Death or turn-hook price.
+fn prices_of(activations: Vec<ActivationPrice>) -> Prices {
+    Prices {
+        activations,
+        ..Prices::default()
+    }
 }
 
 /// `player`'s unit of `def_id` on the field.
@@ -100,8 +106,8 @@ fn r2564000_an_own_cannon_is_priced_by_the_unit_its_shot_destroys() {
         json!({ "field": [SORCERER] }),
     );
     let cannon = unit(&state, AI, CANNON);
-    let sorcerer = unit_worth(&state, unit(&state, HUMAN, SORCERER), &AI_EVAL);
-    let body = unit_worth(&state, cannon, &AI_EVAL);
+    let sorcerer = unit_worth(&state, unit(&state, HUMAN, SORCERER), &AI_EVAL, Prices::NONE);
+    let body = unit_worth(&state, cannon, &AI_EVAL, Prices::NONE);
     let (prices, used) = priced(&state);
     let price = price_of(&prices, CANNON, AI);
     assert!(
@@ -112,7 +118,7 @@ fn r2564000_an_own_cannon_is_priced_by_the_unit_its_shot_destroys() {
         (3..=AI_ACTIVATION_PROBE_NODES).contains(&used),
         "two turn ends and a use at least: {used}"
     );
-    let worth = with_activation_prices(prices, || unit_worth(&state, cannon, &AI_EVAL));
+    let worth = unit_worth(&state, cannon, &AI_EVAL, &prices_of(prices));
     assert!(
         (worth - (body + AI_EVAL.activation * price)).abs() < 1e-9,
         "{worth} against {body} and {price}"
@@ -124,8 +130,8 @@ fn r2564000_an_enemy_cannon_is_worth_more_to_destroy_than_a_bigger_vanilla() {
     let state = cannon_against_vanilla("ai-activation-enemy", json!([]), json!([]));
     let (cannon, vanilla) = (unit(&state, HUMAN, CANNON), unit(&state, HUMAN, VANILLA));
     let (unpriced_cannon, unpriced_vanilla) = (
-        kill_worth(&state, cannon, &AI_EVAL),
-        kill_worth(&state, vanilla, &AI_EVAL),
+        kill_worth(&state, cannon, &AI_EVAL, Prices::NONE),
+        kill_worth(&state, vanilla, &AI_EVAL, Prices::NONE),
     );
     assert!(
         unpriced_cannon < unpriced_vanilla,
@@ -134,13 +140,10 @@ fn r2564000_an_enemy_cannon_is_worth_more_to_destroy_than_a_bigger_vanilla() {
     let unpriced_eval = evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL);
     let (prices, _) = priced(&state);
     assert!(price_of(&prices, CANNON, HUMAN) > 0.0);
-    let (cannon_kill, vanilla_kill, eval) = with_activation_prices(prices, || {
-        (
-            kill_worth(&state, cannon, &AI_EVAL),
-            kill_worth(&state, vanilla, &AI_EVAL),
-            evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
-        )
-    });
+    let prices = prices_of(prices);
+    let cannon_kill = kill_worth(&state, cannon, &AI_EVAL, &prices);
+    let vanilla_kill = kill_worth(&state, vanilla, &AI_EVAL, &prices);
+    let eval = evaluate_priced(&state, AI, NextSwing::Enemy, &AI_EVAL, &prices);
     assert!(
         cannon_kill > vanilla_kill,
         "the shot it fires each turn counts: {cannon_kill} against {vanilla_kill}"
@@ -300,11 +303,16 @@ fn r2564000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
     let cannon = unit(&state, AI, CANNON);
     let (prices, _) = priced(&state);
     assert!(price_of(&prices, CANNON, AI) > 0.0);
-    let greedy = unit_worth(&state, cannon, &GREEDY_EVAL);
-    let held = with_activation_prices(prices.clone(), || unit_worth(&state, cannon, &GREEDY_EVAL));
+    let prices = prices_of(prices);
+    let greedy = unit_worth(&state, cannon, &GREEDY_EVAL, Prices::NONE);
+    let held = unit_worth(&state, cannon, &GREEDY_EVAL, &prices);
     assert_eq!(held, greedy, "the frozen baseline reads no price");
 
-    let before = unit_worth(&state, cannon, &AI_EVAL);
+    let before = unit_worth(&state, cannon, &AI_EVAL, Prices::NONE);
+    assert!(
+        unit_worth(&state, cannon, &AI_EVAL, &prices) > before,
+        "passed the prices, a Cannon counts its Activate over its unpriced {before}"
+    );
     decide(
         &state,
         AI,
@@ -312,17 +320,8 @@ fn r2564000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
     )
     .expect("the AI acts");
     assert_eq!(
-        unit_worth(&state, cannon, &AI_EVAL),
+        unit_worth(&state, cannon, &AI_EVAL, Prices::NONE),
         before,
-        "the decision put its prices back"
-    );
-    let unwound = catch_unwind(AssertUnwindSafe(|| {
-        with_activation_prices(prices, || panic!("a panic inside the decision"))
-    }));
-    assert!(unwound.is_err());
-    assert_eq!(
-        unit_worth(&state, cannon, &AI_EVAL),
-        before,
-        "a panic put the prices back too"
+        "a decision leaves no price behind"
     );
 }

@@ -37,7 +37,7 @@ fn states() -> Vec<(GameState, PlayerId)> {
 /// `AI_SEARCH.position_switches` stand-downs among those the cut left out (R1759000), then End Turn when
 /// it is one.
 fn todays(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
-    let candidates = candidate_actions(state, seat);
+    let candidates = candidate_actions(state, seat, Prices::NONE);
     let mut moves: Vec<ActionBody> = candidates
         .iter()
         .filter(|action| **action != ActionBody::EndTurn)
@@ -129,8 +129,8 @@ fn r1171000_r185_two_states_differing_only_in_hidden_cards_label_alike() {
     b.players[PlayerId::P1].library.reverse();
     assert_ne!(hash_state(&a), hash_state(&b));
 
-    let moves = candidate_actions(&a, AI);
-    assert_eq!(moves, candidate_actions(&b, AI));
+    let moves = candidate_actions(&a, AI, Prices::NONE);
+    assert_eq!(moves, candidate_actions(&b, AI, Prices::NONE));
     assert_eq!(moves.len(), 6, "{moves:?}");
     for action in &moves {
         let label = policy_label(&a, AI, action);
@@ -176,7 +176,7 @@ fn r1171000_no_key_names_an_instance_a_hero_or_a_prompt() {
         if let Some(pending) = &state.pending {
             ids.push(pending.id.clone());
         }
-        for (rank, action) in candidate_actions(state, *seat).iter().enumerate() {
+        for (rank, action) in candidate_actions(state, *seat, Prices::NONE).iter().enumerate() {
             let keys = policy_keys(&view, *seat, action, Some(rank));
             assert!(keys.windows(2).all(|pair| pair[0] < pair[1]), "{keys:?}");
             assert_eq!(keys, policy_keys(&view, *seat, action, Some(rank)));
@@ -208,8 +208,14 @@ fn r1171001_off_or_null_the_order_is_today_s() {
     for (state, seat) in &states {
         for width in [1, 6, 20] {
             let today = todays(state, *seat, width);
-            assert_eq!(expansion(state, *seat, width, MoveOrder::Heuristic, &TEST), today);
-            assert_eq!(expansion(state, *seat, width, MoveOrder::Learned, &NULL), today);
+            assert_eq!(
+                expansion(state, *seat, width, MoveOrder::Heuristic, &TEST, Prices::NONE),
+                today
+            );
+            assert_eq!(
+                expansion(state, *seat, width, MoveOrder::Learned, &NULL, Prices::NONE),
+                today
+            );
         }
     }
 
@@ -229,6 +235,7 @@ fn r1171001_off_or_null_the_order_is_today_s() {
             budget,
             MoveOrder::Heuristic,
             &TEST,
+            Prices::NONE,
         );
         let null = beam_search_with(
             state,
@@ -237,6 +244,7 @@ fn r1171001_off_or_null_the_order_is_today_s() {
             budget,
             MoveOrder::Learned,
             &NULL,
+            Prices::NONE,
         );
         assert!(!off.is_empty());
         assert_eq!(null, off);
@@ -250,7 +258,7 @@ fn r1171001_off_or_null_the_order_is_today_s() {
 fn r1171001_the_prior_reorders_and_never_adds_drops_or_changes_a_move() {
     let mut reordered = 0;
     for (state, seat) in &states() {
-        let moves: Vec<ActionBody> = candidate_actions(state, *seat)
+        let moves: Vec<ActionBody> = candidate_actions(state, *seat, Prices::NONE)
             .into_iter()
             .filter(|action| *action != ActionBody::EndTurn)
             .collect();
@@ -288,8 +296,8 @@ fn r1171001_the_prior_reorders_and_never_adds_drops_or_changes_a_move() {
             reordered += 1;
         }
 
-        let expanded = expansion(state, *seat, 20, MoveOrder::Learned, &TEST);
-        let ends = candidate_actions(state, *seat).contains(&ActionBody::EndTurn);
+        let expanded = expansion(state, *seat, 20, MoveOrder::Learned, &TEST, Prices::NONE);
+        let ends = candidate_actions(state, *seat, Prices::NONE).contains(&ActionBody::EndTurn);
         assert_eq!(expanded.last() == Some(&ActionBody::EndTurn), ends);
         assert_eq!(
             expanded
@@ -315,7 +323,7 @@ fn r1171001_the_prior_reorders_and_never_adds_drops_or_changes_a_move() {
 #[test]
 fn r1171001_a_move_past_the_prefix_is_searched_once_the_prior_ranks_it_first() {
     let state = prefix_fixture();
-    let moves = candidate_actions(&state, AI);
+    let moves = candidate_actions(&state, AI, Prices::NONE);
     assert_eq!(played_def(&state, &moves[0]), Some("core-086"), "{moves:?}");
     assert_eq!(played_def(&state, &moves[1]), Some("core-008"), "{moves:?}");
 
@@ -339,6 +347,7 @@ fn r1171001_a_move_past_the_prefix_is_searched_once_the_prior_ranks_it_first() {
         budget,
         MoveOrder::Heuristic,
         &prior,
+        Prices::NONE,
     );
     assert!(!heuristic.is_empty());
     assert!(
@@ -353,6 +362,7 @@ fn r1171001_a_move_past_the_prefix_is_searched_once_the_prior_ranks_it_first() {
         budget,
         MoveOrder::Learned,
         &prior,
+        Prices::NONE,
     );
     let best = learned
         .first()
