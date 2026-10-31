@@ -8,7 +8,10 @@
 //! so does one whose caller stops waiting. A paid game moves the account's quests by what it did,
 //! as a ladder game does (R1304001). The day's Jlore cap holds a game's Jlore back and says so,
 //! and an account holds only `PRACTICE_SEEDS_OPEN_MAX` open seeds (R1483000). A pay the store fails is
-//! tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and pays once or not at all (R1688000).
+//! tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and pays once or not at all (R1688000). A
+//! claim whose pay never landed (every try failed, or a crash took the settle) is paid once by the
+//! retention loop's sweep past `PRACTICE_SETTLE_GRACE_SECONDS`, a refused one is marked so and never
+//! swept, and a shutdown waits for a claim whose caller has gone (R2422000).
 //!
 //! The games are played for real, on the shipped catalog (no `install_test_cards`), through
 //! `economy::practice`'s own `opening` and `ai_action`, so each AI move in a log is the one the
@@ -25,11 +28,13 @@ use serde_json::{Value, json};
 use jackioh_engine::wire::newest_shipped_set;
 use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, PlayerId, Rng, SandboxOp};
 use jackioh_server::actor::engine::{self, Pinned};
-use jackioh_server::app::{App, now_ms};
+use jackioh_server::api::practice::{Swept, sweep_unsettled};
+use jackioh_server::app::{App, now_ms, serve_until};
 use jackioh_server::config::{
     JLORE_GAMES_DAILY_CAP, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_PAY_ATTEMPTS,
-    PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX, PRACTICE_VERIFY_CONCURRENCY, SET_TRACK_FIRST_LEVEL,
-    SET_TRACK_LEVELS, STARTER_CARDS,
+    PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX, PRACTICE_SETTLE_GRACE_SECONDS,
+    PRACTICE_VERIFY_CONCURRENCY, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SHUTDOWN_DRAIN_SECONDS,
+    STARTER_CARDS,
 };
 use jackioh_server::db::fake::{E2eStoreOptions, FakeCatalog, create_e2e_store};
 use jackioh_server::db::store::{LastBoardKind, ProfileStatus, StoreError};
@@ -38,8 +43,8 @@ use jackioh_server::economy::practice::{self, ClaimedResult};
 use jackioh_server::economy::quests::{QuestDef, QuestGoal, pool, quest_interval_ms};
 use jackioh_server::economy::rewards::{GameMode, game_xp, is_player_action, track_level};
 use jackioh_server::economy::store::{
-    EconomyLedger, EconomyReason, JloreGrant, JloreReason, PracticeDeck, PracticeSeed, PracticeSetup,
-    QuestChange, QuestGrant,
+    EconomyLedger, EconomyReason, JloreGrant, JloreReason, PracticeClaim, PracticeDeck, PracticeOutcome,
+    PracticeSeed, PracticeSetup, QuestChange, QuestGrant,
 };
 use jackioh_server::economy::track_rewards::reward_for_level;
 
@@ -54,6 +59,8 @@ const MOVE_CAP: usize = 4000;
 const WIN_SEEDS: usize = 32;
 /// A seed's lifetime in milliseconds, through its constant.
 const TTL_MS: i64 = PRACTICE_SEED_TTL_SECONDS * 1000;
+/// How long a claim waits unsettled before the sweep takes it, in milliseconds (R2422000).
+const GRACE_MS: i64 = PRACTICE_SETTLE_GRACE_SECONDS * 1000;
 
 /// The test app with the economy on (§14.12, R1302006), as `ECONOMY_LIVE` builds it since the
 /// economy went live (R1310000); set here, so a payout test holds whatever the build's switch says.
@@ -150,6 +157,8 @@ async fn insert(app: &Arc<App>, seed: &str, setup: &PracticeSetup, issued_at: i6
         setup: setup.clone(),
         issued_at,
         claimed_at: None,
+        claim: None,
+        settled: None,
     }));
 }
 
@@ -830,6 +839,8 @@ async fn r1303001_another_accounts_seed_is_unknown() {
         setup: setup.clone(),
         issued_at: now_ms(),
         claimed_at: None,
+        claim: None,
+        settled: None,
     }));
     let (log, _, _) = play("practice-theirs", &setup, Human::Concede);
     assert_eq!(
@@ -1175,6 +1186,8 @@ async fn r1483000_another_accounts_open_seeds_do_not_count() {
             setup: setup(Difficulty::Easy, Vec::new()),
             issued_at: now_ms(),
             claimed_at: None,
+            claim: None,
+            settled: None,
         }));
     }
     let (status, body) = request_seed(&app, &token).await;
@@ -1247,6 +1260,8 @@ async fn r2379000_another_accounts_claimed_or_unknown_seed_is_a_404_that_changes
         setup: setup.clone(),
         issued_at: now_ms(),
         claimed_at: None,
+        claim: None,
+        settled: None,
     }));
 
     let (seed, _) = issue(&app, &token).await;
@@ -1328,7 +1343,7 @@ async fn r1688000_a_pay_the_store_fails_once_is_tried_again_and_pays_once() {
 }
 
 #[tokio::test]
-async fn r1688000_a_pay_the_store_never_takes_pays_nothing_and_leaves_the_seed_claimed() {
+async fn r1688000_r2422000_a_pay_the_store_never_takes_answers_an_error_and_the_sweep_pays_it_once() {
     let logs = record_logs();
     let (app, token) = authed().await;
     let (seed, _) = issue(&app, &token).await;
@@ -1357,11 +1372,46 @@ async fn r1688000_a_pay_the_store_never_takes_pays_nothing_and_leaves_the_seed_c
     );
     let held = store!(app, |t| t.economy_practice_seed_get(A, &seed)).expect("the seed is held");
     assert!(held.claimed_at.is_some(), "the seed stays burned");
+    // R2422000: and keeps its claim, unsettled, for the sweep.
+    assert_eq!(
+        held.claim,
+        Some(PracticeClaim {
+            result: ClaimedResult::Loss,
+            log: log.clone(),
+        })
+    );
+    assert_eq!(held.settled, None);
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
         refusal("already_claimed")
     );
     assert_unpaid(&app).await;
+
+    // Inside the grace the sweep leaves the claim alone.
+    assert_eq!(sweep(&app).await, Swept::default());
+    assert_unpaid(&app).await;
+    // Past it, one sweep pays the claim, at practice rates, and keeps no board.
+    age_claim(&app, &seed).await;
+    assert_eq!(sweep(&app).await, Swept { paid: 1, refused: 0 });
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
+    let held = store!(app, |t| t.economy_practice_seed_get(A, &seed)).expect("the seed is held");
+    assert_eq!(
+        held.settled.map(|settled| settled.outcome),
+        Some(PracticeOutcome::Paid)
+    );
+    assert_eq!(held.claim, None, "a settled claim's log goes");
+    assert_eq!(
+        store!(app, |t| t.last_boards_get(A, LastBoardKind::Practice)),
+        None
+    );
+    // A second sweep pays nothing, and the seed stays claimed.
+    assert_eq!(sweep(&app).await, Swept::default());
+    assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
+    assert_eq!(
+        claim(&app, &token, &seed, "loss", &log).await,
+        refusal("already_claimed")
+    );
 }
 
 #[tokio::test]
@@ -1389,6 +1439,168 @@ async fn r1688000_a_refused_claim_is_not_tried_again() {
         refusal("already_claimed")
     );
     assert_unpaid(&app).await;
+}
+
+// ---------------------------------------------------------------------------
+// A claim settled once, after a restart or a failed pay (R2422000).
+// ---------------------------------------------------------------------------
+
+/// One sweep of the unsettled claims, as the retention loop runs it.
+async fn sweep(app: &Arc<App>) -> Swept {
+    sweep_unsettled(app).await.expect("the sweep runs")
+}
+
+/// A's claim of `seed` made just past `PRACTICE_SETTLE_GRACE_SECONDS` ago, so the sweep takes it.
+async fn age_claim(app: &Arc<App>, seed: &str) {
+    let mut data = fake_ref(app).lock().await;
+    let held = data
+        .tables
+        .economy
+        .practice_seeds
+        .iter_mut()
+        .find(|held| held.seed == seed)
+        .expect("the seed is held");
+    held.claimed_at = Some(now_ms() - GRACE_MS - 1);
+}
+
+#[tokio::test]
+async fn r2422000_a_refused_claim_is_marked_refused_and_never_swept() {
+    let logs = record_logs();
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    assert_eq!(
+        claim(&app, &token, &seed, "win", &log).await,
+        refusal("result_mismatch")
+    );
+    let held = store!(app, |t| t.economy_practice_seed_get(A, &seed)).expect("the seed is held");
+    assert_eq!(
+        held.settled.map(|settled| settled.outcome),
+        Some(PracticeOutcome::Refused)
+    );
+    assert_eq!(held.claim, None);
+
+    age_claim(&app, &seed).await;
+    assert_eq!(sweep(&app).await, Swept::default());
+    assert_unpaid(&app).await;
+    assert_eq!(
+        logs.named("practice.claim.verified").len(),
+        1,
+        "the claim's own check ran, and no sweep checked it again"
+    );
+}
+
+#[tokio::test]
+async fn r2422000_a_claim_a_crash_left_unsettled_is_paid_once_by_the_sweep() {
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    // The burn committed and the server died before its settle ran: the burn is all there is.
+    let kept = PracticeClaim {
+        result: ClaimedResult::Loss,
+        log: log.clone(),
+    };
+    assert!(store!(app, |t| t.economy_practice_seed_claim(
+        A,
+        &seed,
+        now_ms() - GRACE_MS - 1,
+        &kept
+    )));
+
+    assert_eq!(sweep(&app).await, Swept { paid: 1, refused: 0 });
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
+    assert_eq!(
+        store!(app, |t| t.last_boards_get(A, LastBoardKind::Practice)),
+        None
+    );
+    assert_eq!(sweep(&app).await, Swept::default());
+    assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
+}
+
+#[tokio::test]
+async fn r2422000_the_sweep_pays_nothing_while_the_economy_is_off() {
+    let (app, _) = authed_with(economy_app(false).await).await;
+    let seed = "practice-off-swept";
+    let setup = setup(Difficulty::Easy, Vec::new());
+    insert(&app, seed, &setup, now_ms()).await;
+    let (log, _, _) = play(seed, &setup, Human::Concede);
+    let kept = PracticeClaim {
+        result: ClaimedResult::Loss,
+        log,
+    };
+    assert!(store!(app, |t| t.economy_practice_seed_claim(
+        A,
+        seed,
+        now_ms() - GRACE_MS - 1,
+        &kept
+    )));
+
+    assert_eq!(sweep(&app).await, Swept::default());
+    assert_unpaid(&app).await;
+    let held = store!(app, |t| t.economy_practice_seed_get(A, seed)).expect("the seed is held");
+    assert_eq!(
+        (held.claim, held.settled),
+        (Some(kept), None),
+        "the claim waits for the economy"
+    );
+}
+
+#[tokio::test]
+async fn r2422000_a_shutdown_waits_for_the_pay_of_a_claim_whose_caller_has_gone() {
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    let held = app
+        .practice_verifications
+        .acquire_many(PRACTICE_VERIFY_CONCURRENCY as u32)
+        .await
+        .expect("the permits are open");
+    let waiting = {
+        let (app, token, seed) = (app.clone(), token.clone(), seed.clone());
+        tokio::spawn(async move { claim(&app, &token, &seed, "loss", &log).await })
+    };
+    while store!(app, |t| t.economy_practice_seed_get(A, &seed))
+        .expect("the seed is held")
+        .claimed_at
+        .is_none()
+    {
+        tokio::task::yield_now().await;
+    }
+    // The page gives up while the claim waits in the queue, as a closed connection drops its request.
+    waiting.abort();
+    assert!(waiting.await.is_err(), "the request was dropped");
+
+    // A deploy stops the server while the claim still waits for its check.
+    let drain = Duration::from_secs(u64::try_from(SHUTDOWN_DRAIN_SECONDS).expect("a drain"));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("a free port");
+    let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
+    let server = tokio::spawn(serve_until(
+        Arc::clone(&app),
+        listener,
+        async move {
+            let _ = stopped.await;
+        },
+        drain,
+    ));
+    stop.send(()).expect("the server waits for its stop");
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert!(
+        !server.is_finished(),
+        "the drain waits for the claim, so the store stays open under its pay"
+    );
+    assert_unpaid(&app).await;
+
+    drop(held);
+    tokio::time::timeout(drain, server)
+        .await
+        .expect("serve_until ends inside the drain")
+        .expect("serve_until's task ends")
+        .expect("serve_until answers Ok");
+    assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
 }
 
 /// The browser's worker's game (`apps/web/src/practice/claim.test.ts` records it).
