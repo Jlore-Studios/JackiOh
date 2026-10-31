@@ -11025,6 +11025,13 @@
     "2571": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T05:54:49Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 7: the fix is provable only on Postgres (the contract test's postgres half runs in Docker, `crates/server/tests/db/run.sh`), which a weak builder may be unable to run; four files in one crate otherwise"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
