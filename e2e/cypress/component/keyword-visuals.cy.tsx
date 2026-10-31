@@ -4,7 +4,7 @@
 import { CATALOG } from "@jackioh/cards";
 import { KEYWORD_KINDS, type Keyword, type KeywordKind, type UnitView } from "@jackioh/shared";
 import { MinionFace, faceModel } from "../../../apps/web/src/cards/index.ts";
-import { AMBIENT_MAX } from "../../../apps/web/src/cards/keywordVisuals.ts";
+import { AMBIENT_MAX, KEYWORD_VISUALS } from "../../../apps/web/src/cards/keywordVisuals.ts";
 import { writeSettings, __resetSettingsForTests } from "../../../apps/web/src/settings/index.ts";
 import { unit } from "../../../apps/web/src/test/fixtures.ts";
 
@@ -27,6 +27,9 @@ const SWITCH = { min: 14, share: 0.28, max: 18, inset: 2 } as const;
 const EDGE_SLACK_PX = 1;
 
 const DEF_ID = "core-004";
+
+/** R2577000: the kinds a unit on the field draws; the rest have no treatment there. */
+const FIELD_KINDS = KEYWORD_KINDS.filter((kind) => KEYWORD_VISUALS[kind].onField);
 
 function keywordOf(kind: KeywordKind): Keyword {
   switch (kind) {
@@ -116,7 +119,7 @@ describe("R438 keyword visuals on the board minion", () => {
     cy.get("[data-row] .cf").should("have.length", ROWS.length * SIZES.length);
     cy.document().should((doc) => {
       const problems: string[] = [];
-      for (const kind of KEYWORD_KINDS) {
+      for (const kind of FIELD_KINDS) {
         for (const size of SIZES) {
           const cell = doc.querySelector<HTMLElement>(`[data-row="${kind}"][data-size="${size.width}x${size.height}"]`);
           const fx = cell?.querySelector<HTMLElement>(`[data-keyword-fx="${kind}"]`) ?? null;
@@ -210,7 +213,7 @@ describe("R438 keyword visuals on the board minion", () => {
         fx.getAnimations({ subtree: true }).some((animation) => animation.playState === "running"),
       );
       expect(moving.map((fx) => fx.getAttribute("data-keyword-fx"))).to.deep.equal([]);
-      for (const kind of KEYWORD_KINDS) {
+      for (const kind of FIELD_KINDS) {
         expect(doc.querySelector(`[data-row="${kind}"] [data-keyword-fx="${kind}"]`), kind).to.not.equal(null);
       }
     });
