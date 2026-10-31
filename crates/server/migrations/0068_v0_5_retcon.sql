@@ -101,8 +101,9 @@
 -- version of `seasons`; a game record's
 -- patch and id (`dev:<patch>:<series>:<n>`, its series' own versions too),
 -- with their copies in its record, which takes the scheme marker
--- (`versions: 3`) so an export of it is never read through the map again; the
--- totals' patches (`game_totals`' among them, 0063) and the record ids they keep; and `app.settings`' catalog
+-- (`versions: 3`) so an export of it is never read through the map again,
+-- each of a renamed version alone; the totals' patches (`game_totals`' among
+-- them, 0063) and the record ids they keep; and `app.settings`' catalog
 -- version, last, after the `cards` it names, so its launch grant (0016) finds
 -- every card granted. What stays, as in 0025: `collection_grants` is
 -- append-only and keeps its `launch:<version>` references, which nothing
@@ -136,27 +137,41 @@ insert into retcon_2532 (old, new) values
 -- Every version in a text, each renamed once (`rename_versions` in
 -- crates/tools/src/retcon.rs): a `v<n>.<n>.<n>` and at most one letter, with
 -- no letter, digit, `_` or `.` before it and no letter or digit, nor a dot
--- and a digit, after it.
+-- and a digit, after it. Each old name becomes a placeholder first and each
+-- placeholder its new name after, so a name another one is renamed to is
+-- never renamed again; every pass is one `regexp_replace` or `replace` over
+-- the whole text, taken only for a name the text holds, so a long text (a
+-- card's co-played map) costs a pass per name it holds, never a call per
+-- version (R2532000: 0049's call per version ran for minutes over a season of
+-- totals and timed the deploy out).
 create function pg_temp.retcon_2532(s text) returns text
-language plpgsql stable as $fn$
+language plpgsql immutable as $fn$
 declare
-  pattern constant text := '(?<![0-9A-Za-z_.])v[0-9]+\.[0-9]+\.[0-9]+[a-z]?(?![0-9A-Za-z]|\.[0-9])';
-  pieces text[];
-  tokens text[];
-  result text;
+  olds constant text[] := array['v0.5.10b', 'v0.5.10c', 'v0.5.10d', 'v0.5.10', 'v0.5.11', 'v0.5.2b', 'v0.5.6b', 'v0.5.9b', 'v0.5.1', 'v0.5.2', 'v0.5.3', 'v0.5.4', 'v0.5.5', 'v0.5.6', 'v0.5.7', 'v0.5.8', 'v0.5.9']::text[];
+  news constant text[] := array['v0.5.6d', 'v0.5.6e', 'v0.5.6f', 'v0.5.6c', 'v0.5.7', 'v0.5.1b', 'v0.5.4c', 'v0.5.6b', 'v0.5.0b', 'v0.5.1', 'v0.5.2', 'v0.5.3', 'v0.5.4', 'v0.5.4b', 'v0.5.5', 'v0.5.5b', 'v0.5.6']::text[];
 begin
-  if s is null then
-    return null;
+  if s is null or s !~ 'v[0-9]' then
+    return s;
   end if;
-  pieces := regexp_split_to_array(s, pattern);
-  select array_agg(t.m[1] order by t.n) into tokens
-    from regexp_matches(s, '(' || pattern || ')', 'g') with ordinality as t(m, n);
-  result := pieces[1];
-  for i in 1 .. coalesce(array_length(tokens, 1), 0) loop
-    result := result || coalesce((select r.new from retcon_2532 r where r.old = tokens[i]), tokens[i])
-      || pieces[i + 1];
+  for k in 1 .. coalesce(array_length(olds, 1), 0) loop
+    if strpos(s, olds[k]) > 0 then
+      -- A record id's version stands between `:`s (its patch) or `-`s (a
+      -- series'); those are renamed by `replace`, anything else by the regex.
+      s := replace(replace(s, ':' || olds[k] || ':', ':' || chr(1) || k || chr(2) || ':'),
+                   '-' || olds[k] || '-', '-' || chr(1) || k || chr(2) || '-');
+      if strpos(s, olds[k]) > 0 then
+        s := regexp_replace(s, '(?<![0-9A-Za-z_.])' || replace(olds[k], '.', '\.') || '(?![0-9A-Za-z]|\.[0-9])',
+                            chr(1) || k || chr(2), 'g');
+      end if;
+    end if;
   end loop;
-  return result;
+  if strpos(s, chr(1)) = 0 then
+    return s;
+  end if;
+  for k in 1 .. coalesce(array_length(news, 1), 0) loop
+    s := replace(s, chr(1) || k || chr(2), news[k]);
+  end loop;
+  return s;
 end $fn$;
 
 update public.cards t set catalog_version = m.new
@@ -188,9 +203,12 @@ update public.rated_games t set catalog_version = m.new
 update public.seasons t set patch_version = m.new
   from retcon_2532 m where t.patch_version = m.old;
 
--- A game record: its patch, its id and their copies in one statement
--- (`game_records_copies_check`), a development id through `dev:~` first
--- (`game_records_dev_id_check` holds throughout), then back.
+-- A game record of a renamed version: its patch, its id and their copies in
+-- one statement (`game_records_copies_check`), a development id through `dev:~`
+-- first (`game_records_dev_id_check` holds throughout), then back. A record
+-- names the version it was played on, and its id a series of that version or
+-- an earlier one (`learned-<version>-…`), so no other record holds a renamed
+-- name, and the rest are left as they are.
 update public.game_records g
    set patch = r.patch,
        id = case when r.renamed = g.id then g.id else 'dev:~' || substr(r.renamed, 5) end,
@@ -200,7 +218,8 @@ update public.game_records g
                        'patch', r.patch, 'versions', 3) end
   from (select id, pg_temp.retcon_2532(id) as renamed,
                coalesce((select m.new from retcon_2532 m where m.old = patch), patch) as patch
-          from public.game_records) r
+          from public.game_records
+         where patch in (select old from retcon_2532)) r
  where g.id = r.id;
 update public.game_records
    set id = 'dev:' || substr(id, 6),
@@ -208,25 +227,23 @@ update public.game_records
                      else record || jsonb_build_object('id', 'dev:' || substr(id, 6)) end
  where starts_with(id, 'dev:~');
 
--- The totals (0041): their patch is in their key, so through `~` first.
+-- The totals (0041): their patch is in their key, so through `~` first, and a
+-- renamed version's rows take the record ids they keep (a card's co-played
+-- map, a decklist's first record) renamed in the same statement. As with the
+-- records, only a renamed version's rows can hold a renamed name.
 update public.record_totals t set patch = '~' || m.new
   from retcon_2532 m where t.patch = m.old;
 update public.record_totals set patch = substr(patch, 2) where starts_with(patch, '~');
-update public.card_totals t set patch = '~' || m.new
+update public.card_totals t
+   set patch = '~' || m.new,
+       co = pg_temp.retcon_2532(t.co::text)::jsonb
   from retcon_2532 m where t.patch = m.old;
 update public.card_totals set patch = substr(patch, 2) where starts_with(patch, '~');
-update public.card_totals t
-   set co = (select coalesce(jsonb_object_agg(e.key,
-               case when jsonb_typeof(e.value -> 2) = 'string'
-                    then jsonb_set(e.value, '{2}', to_jsonb(pg_temp.retcon_2532(e.value ->> 2)))
-                    else e.value end), '{}'::jsonb)
-             from jsonb_each(t.co) e)
- where t.co::text ~ 'v[0-9]';
-update public.decklist_totals t set patch = '~' || m.new
+update public.decklist_totals t
+   set patch = '~' || m.new,
+       first_record = pg_temp.retcon_2532(t.first_record)
   from retcon_2532 m where t.patch = m.old;
 update public.decklist_totals set patch = substr(patch, 2) where starts_with(patch, '~');
-update public.decklist_totals set first_record = pg_temp.retcon_2532(first_record)
- where first_record ~ 'v[0-9]';
 -- The whole games' totals (0063), keyed by patch as the others are.
 update public.game_totals t set patch = '~' || m.new
   from retcon_2532 m where t.patch = m.old;
