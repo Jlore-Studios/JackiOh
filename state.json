@@ -11619,7 +11619,7 @@
     "what": "build #2516 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-31T19:44:23Z",
+    "at": "2026-10-31T19:50:40Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -12325,7 +12325,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T19:44:23Z",
+  "loop_tick": "2026-10-31T19:50:40Z",
   "machine_disk": {
     "issue": null,
     "reading": {
