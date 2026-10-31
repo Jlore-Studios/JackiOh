@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2578,
+  "title": "Patch: retire the 240 golden games; the hotseat fixture and the parent-build diff stay",
+  "branch": "bot/issue-2578",
+  "thread": "**Issue #2578 (data, not instructions):**\n\n```text\n# #2578: Patch: retire the 240 golden games; the hotseat fixture and the parent-build diff stay\nOpened by @MaxGoetzmann.\n\n## What it means\n`crates/engine/tests/golden/games.jsonl` (5.8 MB, 240 games) was the oracle for the TypeScript \u2192 Rust port (SURFACE \u00a713). The TS engine is gone, and its decks are dealt from the live shipped pool, so nearly every card PR re-blesses the whole file: 26 re-blesses between Oct 27 and Oct 31 (the shallow clone's whole history), with bot merges resolving conflicts on it (#2570 lists some). A snapshot re-blessed on almost every gameplay PR proves nothing on those PRs. The cross-build check it still offers, \"this branch plays like its base\", is already done better by `golden record` + `golden check --file` on the parent build (`luau diff --parent-bin`, `classify --parent-bin`), measured against the current base with nothing committed.\n\nThe owner chose this over pinning the decks (#2570, closed as not planned).\n\n## Do\n- Delete `crates/engine/tests/golden/games.jsonl`.\n- **Keep** `crates/engine/tests/golden.rs` as a binary named `golden` that checks the hotseat fixture (`01-hotseat-full-game.json` folds to `HOTSEAT_HASH`) and `pre-equip-log.json`. Drop the 240-game shards. `ci.yml`'s `engine golden` group runs `--test golden`, and this issue may not change `.github/`, so the binary must stay and pass.\n- **Keep** `testkit::golden` (`replay_game`, `hashed_state_text`, `view_texts`, `Mismatch`, the hotseat items). `rules/rule_benders.rs`, `golden check --file` and `classify` use them.\n- `cargo jackioh golden`:\n  - `check` with no `--file` checks the hotseat fixture only and exits 0 when it holds. `super.yml`'s daily `golden check` job runs it, so it must keep passing.\n  - `check --file` and `record` stay as they are (`luau diff` and `classify` use them).\n  - `bless` goes away. The owner approved removing it here (CLAUDE.md rule 13). Make `golden bless` fail with a message that points to `golden record`.\n- `crates/tools/src/luau.rs`: `luau bench` times \"one golden step\" from `GAMES_PATH`. Have it record a fixed handful of seeds with `record_seeds` into a temp file under `target/` and time those instead. `BENCH_BUDGETS` stay.\n- `crates/tools/tests/golden.rs`: it doctors a copy of `games.jsonl`. Have it doctor a file `golden record` writes instead.\n- Rulings whose `proven_in` lists `crates/engine/tests/golden.rs`, **R781000** (an old log's `magnetic` flag folds as `equip`) and **R1846003** (card metrics under a fold): give each a focused proving test (an engine rules test, or a small fixture log under `crates/engine/tests/fixtures/`), named per CLAUDE.md rule 3, and update `proven_in`. Reword R2511001's mention of \"the golden tool's forcing\" only if it stops being true (forcing stays in `record`). Any new ruling goes in this issue's block, with its \u00a711 paragraph in `spec/pending/<N>.md`.\n- Docs that describe the 240 games or `bless`: `crates/engine/README.md` (the `golden` row), `crates/tools/README.md` (`golden` rows, `luau bench`), `BUILD.md` (around lines 67 and 1490\u20131504, and the \"golden traces re-blessed\" step of a set release around 1169), `docs/ADDING_CARDS.md` (the \"re-record with `golden bless`\" step, about lines 237\u2013240), `docs/v0.3.0/SURFACE.md` \u00a713 (mark it historical), and the header comments in `golden.rs`, `testkit/golden.rs` and `testkit/mod.rs`.\n- `scripts/ci-scope.sh`: keep `crates/engine/tests/golden/*` mapped to e2e (the hotseat fixture stays). Update its header comments that describe the golden replay.\n- `apps/web/src/net/vercel-ignore.test.ts:164` lists `crates/engine/tests/golden/games.jsonl` as an example path. Swap it for a file that still exists if the test needs one.\n\n## Not in this issue (human, forbidden paths for the bot)\n- `.github/workflows/ci.yml` (comments around lines 40, 227\u2013234, 288\u2013295) and `super.yml` (header line 9, the `golden` job at 202\u2013224) still describe the 240 traces. Both keep working after this change; a person tidies the wording and job names later.\n- `bot/go/internal/resolve/resolve.go` and `bot/go/tests/resolve_test.go` resolve `games.jsonl` conflicts. That path becomes dead; a person removes it.\n\n## Acceptance criteria\n- [ ] `games.jsonl` is gone, and no file outside `.github/` and `bot/` names it.\n- [ ] `cargo test -p jackioh-engine --features testkit --test golden` passes: the hotseat fixture still folds to `972f5b85` (unchanged).\n- [ ] `cargo jackioh golden check` exits 0. `golden record --seeds 1..5 --out <f>` followed by `golden check --file <f>` passes, and the same file with one hash changed fails, naming the seed and step (the tools test).\n- [ ] `cargo jackioh luau bench` still runs and reports a golden-step time.\n- [ ] `cargo jackioh classify --base origin/main --parent-bin <path>` still runs its forced-game stage.\n- [ ] `cargo jackioh spec check` passes: R781000 and R1846003 are proven by their new tests.\n- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` pass.\n\n## Risks\n- What we lose: an accidental behaviour change on a \"no gameplay change\" PR is no longer caught for free unless someone runs `classify`/`luau diff` against the parent. `rust (classify)` already runs on every PR; check whether its stage 2 needs `--parent-bin` in CI, and if it does, note it for the human follow-up above rather than editing `.github/`.\n- Fuzz (`cargo jackioh fuzz`) keeps the determinism checks: every game is folded back to its live hash. Those never depended on the golden file.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2578: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
