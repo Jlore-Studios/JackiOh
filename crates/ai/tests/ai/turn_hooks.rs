@@ -4,7 +4,7 @@
 //! crystal of mana gained at `AI_EVAL.next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of the price
 //! for each own readable backrow card, so a Field Spell that pays every turn is worth more than its
 //! cost. A hook that prompts is not priced, the enemy's backrow is priced as before, the frozen
-//! baseline reads no price, and none is held outside a decision.
+//! baseline reads no price, and a call not passed a decision's prices reads none.
 //!
 //! The cards: Mana Well (core-006), (3) "Start of turn: gain 1 mana", Radiant 2; Rush Token Farm
 //! (core-058), (2) "Start of turn: summon a Rush Token"; Unbiased Immigration (core-059), (2) "Start of
@@ -12,8 +12,6 @@
 //! a prompt; Ace in the Hole (classic-065), (2) a Trap, "End of turn: Flip a coin. …"; the Field Spells
 //! with no turn hook The Power to Thrive (classic-081, 2), Level Up! (traininggrounds-031, 3) and Mutate
 //! Spell (classic-078, 1); and Mr. Vanilla (core-008), a (1) 4/4 with no text.
-
-use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -60,12 +58,16 @@ fn price_of(prices: &[TurnHookPrice], def_id: &str, radiant: bool) -> f64 {
         .unwrap_or_else(|| panic!("{def_id}'s turn hooks are priced: {prices:?}"))
 }
 
-/// The AI's evaluation of `state` with `prices` held.
+/// The AI's evaluation of `state` passed `prices`, as a decision passes them.
 fn eval_with(state: &GameState, prices: Vec<TurnHookPrice>) -> f64 {
-    with_turn_hook_prices(prices, || evaluate(state, AI, NextSwing::Enemy, &AI_EVAL))
+    let prices = Prices {
+        turn_hooks: prices,
+        ..Prices::default()
+    };
+    evaluate_priced(state, AI, NextSwing::Enemy, &AI_EVAL, &prices)
 }
 
-/// The AI's evaluation of `state` with the prices its own root would hold.
+/// The AI's evaluation of `state` with the prices its own root would pass.
 fn held_eval(state: &GameState) -> f64 {
     eval_with(state, priced(state).0)
 }
@@ -244,9 +246,11 @@ fn r2477000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
     let (prices, _) = priced(&state);
     assert!(price_of(&prices, RUSH_TOKEN_FARM, false) > 0.0);
     let greedy = evaluate(&state, AI, NextSwing::Enemy, &GREEDY_EVAL);
-    let held = with_turn_hook_prices(prices.clone(), || {
-        evaluate(&state, AI, NextSwing::Enemy, &GREEDY_EVAL)
-    });
+    let prices = Prices {
+        turn_hooks: prices,
+        ..Prices::default()
+    };
+    let held = evaluate_priced(&state, AI, NextSwing::Enemy, &GREEDY_EVAL, &prices);
     assert_eq!(held, greedy, "the frozen baseline reads no price");
 
     let before = evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL);
@@ -254,15 +258,6 @@ fn r2477000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
     assert_eq!(
         evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
         before,
-        "the decision put its prices back"
-    );
-    let unwound = catch_unwind(AssertUnwindSafe(|| {
-        with_turn_hook_prices(prices, || panic!("a panic inside the decision"))
-    }));
-    assert!(unwound.is_err());
-    assert_eq!(
-        evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
-        before,
-        "a panic put the prices back too"
+        "a decision leaves no price behind"
     );
 }

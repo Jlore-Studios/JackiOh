@@ -38,7 +38,7 @@ use jackioh_engine::{
 use crate::candidates::candidate_actions;
 use crate::config::{AI_SEARCH, LETHAL_HINT_DETERMINIZATIONS, LETHAL_HINT_NODES, LETHAL_HINT_SEED};
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
-use crate::evaluate::{damage_past_taunts, deft_in_defense};
+use crate::evaluate::{Prices, damage_past_taunts, deft_in_defense};
 use crate::observe::redact;
 use crate::simulate::{
     LineStatus, create_node_counter, create_sub_counter, line_status, search_signature, simulate,
@@ -76,8 +76,8 @@ enum Verdict {
 
 /// The actions the solver tries from a position: never ending the turn, and no position switch but
 /// a Deft unit's to Attack while its attack is unspent (`deft_ready_switch`).
-fn lethal_moves(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
-    candidate_actions(state, seat)
+fn lethal_moves(state: &GameState, seat: PlayerId, prices: &Prices) -> Vec<ActionBody> {
+    candidate_actions(state, seat, prices)
         .into_iter()
         .filter(|action| match action {
             ActionBody::EndTurn => false,
@@ -95,8 +95,14 @@ pub(crate) fn deft_ready_switch(state: &GameState, instance_id: &str) -> bool {
     })
 }
 
-fn push_moves(stack: &mut Vec<Frame>, state: Rc<GameState>, line: Rc<Vec<ActionBody>>, seat: PlayerId) {
-    let moves = lethal_moves(&state, seat);
+fn push_moves(
+    stack: &mut Vec<Frame>,
+    state: Rc<GameState>,
+    line: Rc<Vec<ActionBody>>,
+    seat: PlayerId,
+    prices: &Prices,
+) {
+    let moves = lethal_moves(&state, seat, prices);
     // Reversed, so the first move in move order is the first one popped.
     for action in moves.into_iter().rev() {
         stack.push(Frame {
@@ -116,6 +122,7 @@ fn wins_on(
     seat: PlayerId,
     line: &[ActionBody],
     counter: &dyn NodeCounter,
+    prices: &Prices,
 ) -> Option<bool> {
     for det in worlds {
         let mut state = det.clone();
@@ -126,7 +133,7 @@ fn wins_on(
             if !legal_actions(&state, seat).iter().any(|legal| legal == action) {
                 return Some(false);
             }
-            match simulate(&state, seat, action, counter) {
+            match simulate(&state, seat, action, counter, prices) {
                 None => return None,
                 Some(Err(_)) => return Some(false),
                 Some(Ok(next)) => state = next,
@@ -242,12 +249,13 @@ fn judge(
     root_turn: i32,
     visited: &mut IndexSet<String>,
     counter: &dyn NodeCounter,
+    prices: &Prices,
 ) -> Option<Verdict> {
     if let Some(result) = &next.result {
         if result.winner.player() != Some(seat) {
             return Some(Verdict::Dead);
         }
-        let verdict = wins_on(dets.get(1..).unwrap_or_default(), seat, line, counter)?;
+        let verdict = wins_on(dets.get(1..).unwrap_or_default(), seat, line, counter, prices)?;
         return Some(if verdict { Verdict::Lethal } else { Verdict::Dead });
     }
     if line.len() as i32 >= AI_SEARCH.lethal_max_depth {
@@ -265,29 +273,35 @@ fn judge(
 }
 
 /// Stage 1: depth-first in move order, with a visited set on `search_signature`.
-fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> Walk {
+fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
     let Some(root) = dets.first() else {
         return Walk::Exhausted;
     };
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(search_signature(root, seat));
     let mut stack: Vec<Frame> = Vec::new();
-    push_moves(&mut stack, Rc::new(root.clone()), Rc::new(Vec::new()), seat);
+    push_moves(
+        &mut stack,
+        Rc::new(root.clone()),
+        Rc::new(Vec::new()),
+        seat,
+        prices,
+    );
 
     while let Some(frame) = stack.pop() {
-        let next = match simulate(&frame.state, seat, &frame.action, counter) {
+        let next = match simulate(&frame.state, seat, &frame.action, counter, prices) {
             None => return Walk::Cut,
             Some(Err(_)) => continue,
             Some(Ok(next)) => next,
         };
         let mut line: Vec<ActionBody> = frame.line.as_ref().clone();
         line.push(frame.action.clone());
-        let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter) else {
+        let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter, prices) else {
             return Walk::Cut;
         };
         match verdict {
             Verdict::Lethal => return Walk::Line(line),
-            Verdict::Deeper => push_moves(&mut stack, Rc::new(next), Rc::new(line), seat),
+            Verdict::Deeper => push_moves(&mut stack, Rc::new(next), Rc::new(line), seat, prices),
             Verdict::Dead => {}
         }
     }
@@ -312,7 +326,7 @@ fn next_open(open: &[Open]) -> usize {
 }
 
 /// Stage 2: best-first by `ready_gap`, each expansion simulating its first AI_SEARCH.lethalWidth moves.
-fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> Walk {
+fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
     let Some(root) = dets.first() else {
         return Walk::Exhausted;
     };
@@ -329,15 +343,16 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> 
     while !open.is_empty() {
         let node = open.remove(next_open(&open));
         let width = AI_SEARCH.lethal_width.max(0) as usize;
-        for action in lethal_moves(&node.state, seat).into_iter().take(width) {
-            let next = match simulate(&node.state, seat, &action, counter) {
+        for action in lethal_moves(&node.state, seat, prices).into_iter().take(width) {
+            let next = match simulate(&node.state, seat, &action, counter, prices) {
                 None => return Walk::Cut,
                 Some(Err(_)) => continue,
                 Some(Ok(next)) => next,
             };
             let mut line = node.line.clone();
             line.push(action);
-            let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter) else {
+            let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter, prices)
+            else {
                 return Walk::Cut;
             };
             match verdict {
@@ -372,8 +387,16 @@ pub fn find_lethal(
     seat: PlayerId,
     counter: &dyn NodeCounter,
     limit: usize,
+    prices: &Prices,
 ) -> Option<Vec<ActionBody>> {
-    find_lethal_with_quick_nodes(dets, seat, counter, limit, AI_SEARCH.lethal_quick_nodes as usize)
+    find_lethal_with_quick_nodes(
+        dets,
+        seat,
+        counter,
+        limit,
+        AI_SEARCH.lethal_quick_nodes as usize,
+        prices,
+    )
 }
 
 /// `find_lethal` with the depth-first walk's share given: TS's test set `AI_SEARCH.lethalQuickNodes`
@@ -384,6 +407,7 @@ pub fn find_lethal_with_quick_nodes(
     counter: &dyn NodeCounter,
     limit: usize,
     quick_nodes: usize,
+    prices: &Prices,
 ) -> Option<Vec<ActionBody>> {
     let root = dets.first()?;
     // R2201000: there is no lethal on a seat that cannot lose, so nothing is searched for one.
@@ -397,7 +421,7 @@ pub fn find_lethal_with_quick_nodes(
     let start = counter.used();
     let first = {
         let quick = create_sub_counter(counter, limit.min(quick_nodes));
-        depth_first(dets, seat, &quick)
+        depth_first(dets, seat, &quick, prices)
     };
     match first {
         Walk::Line(line) => return Some(line),
@@ -414,7 +438,7 @@ pub fn find_lethal_with_quick_nodes(
     }
     let second = {
         let rest = create_sub_counter(counter, left);
-        best_first(dets, seat, &rest)
+        best_first(dets, seat, &rest, prices)
     };
     match second {
         Walk::Line(line) => Some(line),
@@ -441,9 +465,10 @@ pub fn trim_lethal(
     seat: PlayerId,
     mut line: Vec<ActionBody>,
     counter: &dyn NodeCounter,
+    prices: &Prices,
 ) -> Option<Vec<ActionBody>> {
     for start in (1..line.len()).rev() {
-        if wins_on(dets, seat, &line[start..], counter)? {
+        if wins_on(dets, seat, &line[start..], counter, prices)? {
             line.drain(..start);
             break;
         }
@@ -453,7 +478,7 @@ pub fn trim_lethal(
     while at < line.len() {
         let mut without = line.clone();
         without.remove(at);
-        match wins_on(dets, seat, &without, counter) {
+        match wins_on(dets, seat, &without, counter, prices) {
             None => break,
             Some(true) => {
                 line = without;
@@ -487,7 +512,7 @@ pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn F
             .map(|_| determinize_on(&public, seat, &mut rng, DeterminizeOptions::default(), &ground))
             .collect();
         let counter = create_node_counter(LETHAL_HINT_NODES, should_stop);
-        find_lethal(&worlds, seat, &counter, LETHAL_HINT_NODES).is_some()
+        find_lethal(&worlds, seat, &counter, LETHAL_HINT_NODES, Prices::NONE).is_some()
     }))
     .unwrap_or(false)
 }

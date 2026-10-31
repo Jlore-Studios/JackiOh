@@ -25,8 +25,8 @@
 //! hidden cards (R185).
 
 use jackioh_ai::{
-    AI_BUDGET, AI_SEARCH, AiOptions, Decision, create_node_counter, decide, hidden_instance_ids, redact,
-    simulate, surcharge_nodes,
+    AI_BUDGET, AI_SEARCH, AiOptions, Decision, Prices, create_node_counter, decide, hidden_instance_ids,
+    redact, simulate, surcharge_nodes,
 };
 use jackioh_engine::testkit::{
     ActionBody, GameState, PlayerId, Value, create_rng, find_instance, hash_state, legal_actions, subsystems,
@@ -174,6 +174,7 @@ fn an_end_turn_into_the_hidden_cognitive_offloading_leaves_its_autopilot_turn_ow
         seat,
         &ActionBody::EndTurn,
         &create_node_counter(AI_BUDGET.nodes, None),
+        Prices::NONE,
     )
     .expect("the counter gives the step a node")
     .expect("End turn is accepted");

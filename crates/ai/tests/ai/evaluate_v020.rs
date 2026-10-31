@@ -10,7 +10,7 @@
 //! (`install_idle`). A TS helper that changed a live card (`giveBrittleCount`, `tuningOf`) changes the
 //! state's copy of it here, found by id.
 
-use jackioh_ai::{AI_EVAL, EvalWeights, GREEDY_EVAL, NextSwing, evaluate, face_threat, unit_worth};
+use jackioh_ai::{AI_EVAL, EvalWeights, GREEDY_EVAL, NextSwing, Prices, evaluate, face_threat, unit_worth};
 use jackioh_engine::testkit::{
     AnimateOptions, CardDef, CardInstance, CardScripts, EngineSink, GameEvent, GameState, Keyword,
     KeywordKind, PlayerId, Position, Script, StaticFlags, Value, active_units_of, animate_card,
@@ -141,7 +141,7 @@ fn eval(state: &GameState, seat: PlayerId) -> f64 {
 }
 
 fn worth(state: &GameState, unit: &CardInstance) -> f64 {
-    unit_worth(state, unit, &AI_EVAL)
+    unit_worth(state, unit, &AI_EVAL, Prices::NONE)
 }
 
 /// Jest's `toBeCloseTo(expected, digits)`: within half a unit of the last digit.
@@ -266,13 +266,13 @@ mod evaluate_patch_v0_2_0s_mechanics {
         none.spell_damage = 0.0;
         const { assert!(AI_EVAL.spell_damage > 0.0) };
         assert_close(
-            worth(&state, base) - unit_worth(&state, base, &none),
+            worth(&state, base) - unit_worth(&state, base, &none, Prices::NONE),
             2.0 * AI_EVAL.spell_damage,
             10,
             "base",
         );
         assert_close(
-            worth(&state, radiant) - unit_worth(&state, radiant, &none),
+            worth(&state, radiant) - unit_worth(&state, radiant, &none, Prices::NONE),
             4.0 * AI_EVAL.spell_damage,
             10,
             "radiant",
@@ -291,13 +291,13 @@ mod evaluate_patch_v0_2_0s_mechanics {
         none.keyword.immune_to_spells = 0.0;
         assert!(weight > 0.0);
         assert_close(
-            worth(&state, radiant) - unit_worth(&state, radiant, &none),
+            worth(&state, radiant) - unit_worth(&state, radiant, &none, Prices::NONE),
             weight,
             10,
             "radiant",
         );
         // The base face prints no immunity.
-        assert_eq!(worth(&state, base), unit_worth(&state, base, &none));
+        assert_eq!(worth(&state, base), unit_worth(&state, base, &none, Prices::NONE));
     }
 
     #[test]

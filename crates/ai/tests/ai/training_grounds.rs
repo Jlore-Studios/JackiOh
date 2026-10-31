@@ -220,7 +220,7 @@ fn r2203001_the_ai_aims_personal_trainer_at_its_own_human() {
     let mine = [Selection::Instance {
         instance_id: own_human,
     }];
-    let aims: Vec<Vec<Selection>> = candidate_actions(&state, AI)
+    let aims: Vec<Vec<Selection>> = candidate_actions(&state, AI, Prices::NONE)
         .into_iter()
         .filter_map(|action| match action {
             ActionBody::Play {
@@ -261,7 +261,7 @@ fn r2203001_the_ai_sets_goliath_situation_and_plays_the_hand_it_makes_cheap() {
     );
     let goliath = in_hand(&state, GOLIATH_SITUATION);
     assert!(
-        candidate_actions(&state, AI)
+        candidate_actions(&state, AI, Prices::NONE)
             .iter()
             .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == goliath)),
         "setting it is a candidate"
@@ -521,7 +521,7 @@ fn r2203001_the_ai_copies_a_permanent_with_seance() {
     random_and_timeout_answer(&state, "ai-tg-seance");
     // Played, the copy is the AI's: a Clobberer in its hand.
     let clobberer = unit_in(&state, HUMAN, 3);
-    let play = candidate_actions(&state, AI)
+    let play = candidate_actions(&state, AI, Prices::NONE)
         .into_iter()
         .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == seance))
         .expect("Seance is a candidate");

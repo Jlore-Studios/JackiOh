@@ -111,6 +111,7 @@ mod reply_cleave {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(state, AI),
+            Prices::NONE,
         )
         .expect("a reply")
     }

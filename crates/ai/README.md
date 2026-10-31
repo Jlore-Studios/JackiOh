@@ -14,10 +14,10 @@ environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes fr
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
 `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
-Its two thread-locals, the Death and the turn-hook prices of the decision in flight
-(`evaluate::with_death_prices`, R2424000; `evaluate::with_turn_hook_prices`, R2477000), are set for one
-decision and put back after it, a panic included (CLAUDE.md rule 4); outside a decision they price
-nothing.
+The Death and the turn-hook prices of a decision (R2424000, R2477000) travel with it as one value,
+`evaluate::Prices`, passed by reference from `decide` through the search to the scorers that read them; a
+call outside a decision passes `Prices::NONE` (plain `evaluate`, the probes, the baselines, the tools) and
+prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
@@ -320,7 +320,7 @@ finally scores a line (`docs/learned-eval.md` D4, D6, D7, D9):
 pub enum EvalKind { Hand, Learned }
 pub const AI_EVAL_KIND: EvalKind;                 // config.rs: Hand, unless a promotion turns it on
 pub const LEARNED: Network<'static>;              // compiled in from src/learned/weights.json by build.rs
-pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64;
+pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64;
 ```
 
 - With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
@@ -354,7 +354,7 @@ pub const POLICY_PRIOR: PolicyPrior<'static>;     // compiled in from src/policy
 pub fn policy_keys(view: &GameState, seat: PlayerId, action: &ActionBody, rank: Option<usize>) -> Vec<String>;
 pub fn policy_label(state: &GameState, seat: PlayerId, played: &ActionBody) -> PolicyLabel;
 pub fn prior_order(state: &GameState, seat: PlayerId, moves: Vec<ActionBody>, prior: &PolicyPrior<'_>) -> Vec<ActionBody>;
-pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &PolicyPrior<'_>) -> Vec<Line>;
+pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &PolicyPrior<'_>, prices: &Prices) -> Vec<Line>;
 ```
 
 - With `Heuristic` nothing changes. With `Learned`, `search::expansion` sorts each line's candidates
