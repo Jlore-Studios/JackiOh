@@ -1,0 +1,23 @@
+{
+  "title": "Patch: CN Tech and NA Tech read a win-rate table that covers every set that ships",
+  "sources": "cargo jackioh winrates --refresh (#2386)",
+  "notes": "R2386000: the win-rate table CN Tech and NA Tech read held no row either could pick for Stinkyscape, Training Grounds, so it is refilled from each card's in-deck wins and games over its window at v0.5.10b, development games padding a window short of PUBLIC_STATS_MIN_LIVE_GAMES live games (provisional). R1368000's refresh from live games follows in a later patch. Every shipped version keeps the table it shipped with. It also claims meditative-019 (plays): classify finds it playing differently in a game where a CN Tech cast resolves with its Temporal Rift's play (R1370000). A game that holds its pools ranks the table without Legendary and Mythic cards (R2386001).",
+  "player": {
+    "title": "CN Tech and NA Tech read new win rates",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "CN Tech and NA Tech can now pick cards of every set: Stinkyscape and Training Grounds had no win rates before.",
+      "Their win rates come from AI test games until enough live games are played."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "meditative-050",
+    "meditativeplus-002",
+    "meditative-019"
+  ],
+  "winRates": true
+}
