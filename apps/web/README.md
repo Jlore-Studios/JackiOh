@@ -554,15 +554,16 @@ The landing page offers three doors — Play (to the `/play` hub, R1578000), Col
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
 snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321) and whose second tap, a tap elsewhere or focus leaving it closes it, with no key handler (R2126000). Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
 
-- the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
-  only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §13.5);
+- the pass control on an inspected hand card sends `Pass` only when `legal` holds it, with the pass
+  cost and the passes left beside it (SPEC §13.5); it is the only way to pass, and a hand card
+  dragged onto the portal or the teammate's board passes nothing (#2619);
 - the portal flips the board to the teammate's duel, read-only (`legal` empty, a no-op `onAction`),
   where cards can be hovered and inspected; the teammate strip always shows their own HP, mana, hand
   count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
 - the Both boards toggle (`duos-both`, `aria-pressed`) shows the teammate's duel beside the own one
   (R2095000): the second board is the portal's read-only board in `duos-board-teammate` next to
   `duos-board-own`, silent so it feeds no audio and draws no effects layer, with pings and inspection working on it and a hand
-  card dragged onto it passing when `legal` lists it. The choice is kept per device in
+  card dragged onto it doing nothing. The choice is kept per device in
   `localStorage` (off until pressed); the portal stays mounted and CSS hides it on a wide
   screen while both boards show, and below 600px the toggle hides and the board falls back to one
   with the portal flipping: the rail rides whichever board the portal names, so the one drawn

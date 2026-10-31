@@ -4,8 +4,8 @@
 //! §9.4's gate) and then takes one frame, the hello:
 //! `{"type":"hello","matchId":"…","friendId":"…"}`. It is let in when the two accounts are friends
 //! with neither blocking the other, the friend holds a seat in the live match it names, a 1v1, ranked
-//! or unranked, in which the watcher holds no seat (a player never sees the other seat), and the
-//! friend allows spectators (`allowSpectators`, `api/settings.rs`).
+//! or unranked, in which the watcher holds no seat (a player never sees the other seat). No setting
+//! turns watching off (R2615000): the friendship is the way out.
 //! The actor then judges room (SPECTATORS_PER_MATCH) and from there sends the friend's seat's views,
 //! each SPECTATE_DELAY_MS after the state it shows, with `legal: []` (`MatchActor::attach_watcher`).
 //!
@@ -20,8 +20,7 @@
 //! `MALFORMED_FRAMES_PER_WINDOW` of them the socket is closed, and a hello that does not come within
 //! `WS_IDLE_TIMEOUT_SECONDS` is refused like any other.
 //!
-//! Being let in is no standing leave (§9.8, "the friend can turn it off"; B46): when the friend turns
-//! `allowSpectators` off (`revoke_all_of`), or the two unfriend or either blocks the other
+//! Being let in is no standing leave (§9.8; B46): when the two unfriend or either blocks the other
 //! (`revoke_between`), the watcher's socket gets the same `forbidden` and close at once
 //! (`MatchActor::revoke_watchers`). A hello that passed its checks just before such a change is
 //! judged again once its socket is in (`admit`), so the change never misses it.
@@ -219,13 +218,6 @@ pub fn watcher_count(app: &App, match_id: &str) -> usize {
     app.matches.watcher_count(match_id)
 }
 
-/// B50: `friend_id` turned watching off: every socket watching their seat is let go. Answers how
-/// many went.
-pub fn revoke_all_of(app: &App, friend_id: &str) -> usize {
-    app.matches
-        .revoke_watchers(|_watcher, friend| friend == friend_id)
-}
-
 /// B50, B46: `x` and `y` are no longer friends, or one blocked the other: a socket of either
 /// watching the other's seat is let go. Answers how many went.
 pub fn revoke_between(app: &App, x: &str, y: &str) -> usize {
@@ -235,8 +227,8 @@ pub fn revoke_between(app: &App, x: &str, y: &str) -> usize {
 
 /// B50's store checks, in one transaction: `viewer_id` and `friend_id` are two accounts that are
 /// friends with neither blocking the other; `match_id` is live, ranked or unranked, seats
-/// `friend_id` and not `viewer_id`; and `friend_id` allows spectators. A Duos match is no row of
-/// `matches`, so it is never one.
+/// `friend_id` and not `viewer_id`. No setting of the friend's refuses it (R2615000). A Duos match is
+/// no row of `matches`, so it is never one.
 async fn watchable_in(
     tx: &mut Tx<'_>,
     viewer_id: &str,
@@ -258,10 +250,7 @@ async fn watchable_in(
         return Ok(false);
     };
     let seated = |id: &str| row.players.0 == id || row.players.1 == id;
-    if row.status != MatchStatus::Live || !seated(friend_id) || seated(viewer_id) {
-        return Ok(false);
-    }
-    tx.profiles_allows_spectators(friend_id).await
+    Ok(row.status == MatchStatus::Live && seated(friend_id) && !seated(viewer_id))
 }
 
 #[cfg(test)]

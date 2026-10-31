@@ -8347,7 +8347,7 @@ mod bots {
 // Play together (#936): migration 0038's social rows and 0039's co-op rows
 // ---------------------------------------------------------------------------
 
-/// SPEC S7 (migration 0038): friend requests, friendships, blocks, presence, the spectator setting,
+/// SPEC S7 (migration 0038): friend requests, friendships, blocks, presence,
 /// challenges, rooms freed by a challenge, chat and replay shares, as `social/*` reads and writes
 /// them.
 mod social {
@@ -8520,8 +8520,8 @@ mod social {
     }
 
     /// B47: a heartbeat never moves back; profiles that never beat are left out. The client's id is
-    /// found only when a profile holds it, and the spectator setting is on until turned off.
-    async fn s7_presence_profiles_find_and_the_spectator_setting(harness: &StoreHarness) {
+    /// found only when a profile holds it.
+    async fn s7_presence_and_profiles_find(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let c = active_profile(harness, None).await;
@@ -8541,18 +8541,6 @@ mod social {
         );
         assert!(q!(harness, t => t.profiles_find("not-a-uuid")).is_none());
         assert!(q!(harness, t => t.profiles_find(&id())).is_none());
-
-        assert!(q!(harness, t => t.profiles_allows_spectators(&a.id)));
-        q!(harness, t => t.profiles_set_allow_spectators(&a.id, false));
-        assert!(!q!(harness, t => t.profiles_allows_spectators(&a.id)));
-        assert!(q!(harness, t => t.profiles_allows_spectators(&b.id)));
-        q!(harness, t => t.profiles_set_allow_spectators(&a.id, true));
-        assert!(q!(harness, t => t.profiles_allows_spectators(&a.id)));
-        assert!(
-            !q!(harness, t => t.profiles_allows_spectators(&id())),
-            "no profile allows nothing"
-        );
-        assert!(call!(harness, t => t.profiles_set_allow_spectators(&id(), false)).is_err());
     }
 
     /// B48, B49: one open, unlapsed challenge per challenger and friend; a lapsed one is expired by
@@ -8946,24 +8934,23 @@ mod social {
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
     /// profiles are named: whom a series that is not over holds, each one's newest live co-op match,
     /// and whose live 1v1 the viewer may watch (friends, unblocked, live, ranked or unranked, seating
-    /// the friend and not the viewer, the friend allowing it). Each answers in the order named.
+    /// the friend and not the viewer; no setting of the friend's refuses it, R2615000). Each answers in
+    /// the order named.
     async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
         let viewer = active_profile(harness, None).await;
         let rival = active_profile(harness, None).await;
         let watched = active_profile(harness, None).await;
         let ranked = active_profile(harness, None).await;
-        let shy = active_profile(harness, None).await;
         let blocked = active_profile(harness, None).await;
         let stranger = active_profile(harness, None).await;
         let picking = active_profile(harness, None).await;
         let coop = active_profile(harness, None).await;
         let idle = active_profile(harness, None).await;
         let now = harness.now();
-        for friend in [&watched, &ranked, &shy, &blocked, &picking, &coop, &idle] {
+        for friend in [&watched, &ranked, &blocked, &picking, &coop, &idle] {
             q!(harness, t => t.friends_make(&viewer.id, &friend.id, now));
         }
         q!(harness, t => t.blocks_add(&blocked.id, &viewer.id, now));
-        q!(harness, t => t.profiles_set_allow_spectators(&shy.id, false));
         let live = |p1: &str, ranked: bool| -> MatchRow {
             from(spread(
                 j(&match_row(&id(), p1, &rival.id, harness, now)),
@@ -8973,7 +8960,6 @@ mod social {
         for (player, is_ranked) in [
             (&watched, false),
             (&ranked, true),
-            (&shy, false),
             (&blocked, false),
             (&stranger, false),
         ] {
@@ -8986,12 +8972,10 @@ mod social {
         q!(harness, t => t.matches_create(&against));
         q!(harness, t => t.profiles_set_in_match(&idle.id, Some(against.id.as_str())));
 
-        let named: Vec<String> = [
-            &idle, &shy, &watched, &ranked, &blocked, &stranger, &picking, &coop,
-        ]
-        .iter()
-        .map(|profile| profile.id.clone())
-        .collect();
+        let named: Vec<String> = [&idle, &watched, &ranked, &blocked, &stranger, &picking, &coop]
+            .iter()
+            .map(|profile| profile.id.clone())
+            .collect();
         assert_eq!(
             q!(harness, t => t.presence_watchable(&viewer.id, &named)),
             vec![watched.id.clone(), ranked.id.clone()]
@@ -9234,7 +9218,7 @@ mod social {
         s7_friend_requests_are_one_per_direction_and_go_between_a_pair,
         s7_friendships_are_one_per_pair_and_take_the_requests_with_them,
         s7_blocks_are_directed_and_judged_either_way,
-        s7_presence_profiles_find_and_the_spectator_setting,
+        s7_presence_and_profiles_find,
         s7_challenges_open_close_accept_and_lapse,
         s7_a_freed_room_goes_only_while_unjoined,
         s7_chat_pages_reads_reports_and_purges,

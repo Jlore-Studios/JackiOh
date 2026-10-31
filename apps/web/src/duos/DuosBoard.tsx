@@ -21,10 +21,10 @@
 // asks for it. Draw offers are refused in Duos (B10): `legal` never lists one, so those controls stay
 // dark, and duos.css hides them with the board's own Concede, which the rail's offer stands in for.
 //
-// PASSING (B62; R2095000): the pass control on a hand card of the seat's own (`CardActions.tsx`),
-// or a hand card dragged onto the portal — onto the teammate's board while both boards show — sends
-// that card's listed `pass`; anything not listed sends nothing. The Trade control (R1838000) rides
-// the same bar on a Tradable one, in place of Game's own Trade bar.
+// PASSING (B62; R2095000, #2619): the pass control on a hand card of the seat's own (`CardActions.tsx`)
+// sends that card's listed `pass`; anything not listed sends nothing. It is the only way to pass: a
+// hand card dropped on the portal or the teammate's board passes nothing. The Trade control
+// (R1838000) rides the same bar on a Tradable one, in place of Game's own Trade bar.
 //
 // PINGS (B64): the ping wheel on a hero, zone or hand card of either board sends a ping (`onPing`); a
 // ping marks its place (`duos-ping-marker`) for PING_SHOW_MS on whichever board shows its duel, the
@@ -66,7 +66,6 @@ import XpReveal from "../economy/XpReveal.tsx";
 import type { GameEconomy } from "../economy/xp.ts";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
-import { DRAG_THRESHOLD_PX } from "../game/drag/model.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
 import { useBoardBusy } from "../replay/ReplayPlayer.tsx";
@@ -78,7 +77,7 @@ import { LifeStrip, TeammateStrip } from "./LifeStrip.tsx";
 import { PING_LABEL } from "./pings.ts";
 import { duelOf, seatLabel, teamOf, teammateOf } from "./seats.ts";
 import { playPingSound } from "./sounds.ts";
-import { spotOfElement, spotOfTarget } from "./spots.ts";
+import { spotOfTarget } from "./spots.ts";
 import { duosTestid } from "./testids.ts";
 import "./duos.css";
 
@@ -343,25 +342,14 @@ export function DuosBoard({
     if (paid) announceWallet();
   }, [paid]);
   const chrome = useContext(DuosChromeContext);
-  const container = useRef<HTMLDivElement>(null);
-  // The same element as state, for the card bar: set as it mounts, so a ping already up is marked on
-  // the first render rather than a frame later (CardActions.tsx).
+  // The board's element as state, for the card bar: set as it mounts, so a ping already up is marked
+  // on the first render rather than a frame later (CardActions.tsx).
   const [host, setHost] = useState<HTMLDivElement | null>(null);
-  const attach = useCallback((element: HTMLDivElement | null) => {
-    container.current = element;
-    setHost(element);
-  }, []);
-  // R2095000: the teammate board's own wrapper and host, a copy of the pair above, so its card bar
-  // and ping markers are laid over its own board, not the seat's.
-  const mateWrap = useRef<HTMLDivElement>(null);
+  // R2095000: the teammate board's own host, a copy of the one above, so its card bar and ping
+  // markers are laid over its own board, not the seat's.
   const [mateHost, setMateHost] = useState<HTMLDivElement | null>(null);
-  const mateAttach = useCallback((element: HTMLDivElement | null) => {
-    mateWrap.current = element;
-    setMateHost(element);
-  }, []);
   // The team's result waits for the duel's last burst to play, as the 1v1 result does (Game.tsx).
   const boardBusy = useBoardBusy(host);
-  const portal = useRef<HTMLButtonElement>(null);
   const [showing, setShowing] = useState<Showing>("own");
   // R2095000: Both boards, off until the player presses it, never in a replay.
   const [both, setBoth] = useState<boolean>(readBoth);
@@ -416,51 +404,6 @@ export function DuosBoard({
     [duelLegal, sendDuel],
   );
 
-  // B62 (R2095000: onto the teammate's board while both boards show): a hand card of the seat's
-  // own dropped on the portal is passed, when `legal` lists it.
-  const passLatest = useRef(sendPass);
-  passLatest.current = sendPass;
-  useEffect(() => {
-    if (replay || (!showBoth && showing !== "own")) return undefined;
-    let press: { pointerId: number; instanceId: string; x: number; y: number } | null = null;
-    const onDown = (event: PointerEvent): void => {
-      press = null;
-      const host = container.current;
-      const target = event.target;
-      if (host === null || !(target instanceof Element) || !host.contains(target)) return;
-      const spot = spotOfElement(target);
-      if (spot?.at !== "hand") return;
-      press = { pointerId: event.pointerId, instanceId: spot.instanceId, x: event.clientX, y: event.clientY };
-    };
-    const onUp = (event: PointerEvent): void => {
-      const held = press;
-      press = null;
-      if (held === null || held.pointerId !== event.pointerId) return;
-      if (Math.hypot(event.clientX - held.x, event.clientY - held.y) < DRAG_THRESHOLD_PX) return;
-      if (typeof document.elementFromPoint !== "function") return;
-      // The dragged card holds the pointer's capture, so the drop is read from where it was let go.
-      // R2095000: while both boards show the drop lands on the teammate's board; the portal
-      // stays a drop target too, so a narrowed screen (teammate board hidden by CSS, portal
-      // shown) passes the same way as today's single board.
-      const under = document.elementFromPoint(event.clientX, event.clientY);
-      if (under === null) return;
-      const drops: readonly (Element | null)[] = showBoth ? [mateWrap.current, portal.current] : [portal.current];
-      if (!drops.some((drop) => drop !== null && drop.contains(under))) return;
-      passLatest.current(held.instanceId);
-    };
-    const onCancel = (): void => {
-      press = null;
-    };
-    window.addEventListener("pointerdown", onDown, true);
-    window.addEventListener("pointerup", onUp, true);
-    window.addEventListener("pointercancel", onCancel, true);
-    return () => {
-      window.removeEventListener("pointerdown", onDown, true);
-      window.removeEventListener("pointerup", onUp, true);
-      window.removeEventListener("pointercancel", onCancel, true);
-    };
-  }, [showing, both, replay]);
-
   // B64: the pings still up, marked on the board that shows their duel.
   usePingSounds(pings, seat);
   const now = usePingNow(pings);
@@ -502,7 +445,6 @@ export function DuosBoard({
       <TeammateStrip view={view} link={chrome?.teammate ?? null} />
       <div className="duos-rail__row">
         <button
-          ref={portal}
           type="button"
           className="duos-portal"
           data-testid={duosTestid.portal}
@@ -559,7 +501,7 @@ export function DuosBoard({
   return (
     <div
       className="duos-board"
-      ref={showBoth ? undefined : attach}
+      ref={showBoth ? undefined : setHost}
       data-testid={duosTestid.board}
       data-seat={seat}
       data-showing={showing}
@@ -571,7 +513,7 @@ export function DuosBoard({
           portal to flip back. */}
       {showBoth ? (
         <div className="duos-both">
-          <div className="duos-board-own" data-testid={duosTestid.boardOwn} ref={attach}>
+          <div className="duos-board-own" data-testid={duosTestid.boardOwn} ref={setHost}>
             <Game
               key="board-own"
               view={view.own}
@@ -601,7 +543,7 @@ export function DuosBoard({
               markers={markersOwn}
             />
           </div>
-          <div className="duos-board-teammate" data-testid={duosTestid.boardTeammate} ref={mateAttach}>
+          <div className="duos-board-teammate" data-testid={duosTestid.boardTeammate} ref={setMateHost}>
             <Game
               key="board-teammate"
               view={view.teammate}
