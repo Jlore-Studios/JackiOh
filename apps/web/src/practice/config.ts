@@ -33,8 +33,8 @@ export const PRACTICE_PACING_REDUCED: PracticePacing = { firstActionMs: 150, act
 /** E2E-only fast pacing, guarded outside production. */
 export const PRACTICE_PACING_FAST: PracticePacing = { firstActionMs: 0, actionGapMs: 30, promptAnswerMs: 0 };
 
-/** Wall-clock safety cap for one worker decision (`AiOptions.shouldStop`). */
-export const PRACTICE_AI_CLOCK_MS = 1500;
+/** Wall-clock safety cap for one worker decision (`AiOptions.shouldStop`): 3 s since the budget doubled (R2575000). */
+export const PRACTICE_AI_CLOCK_MS = 3000;
 
 /**
  * R2102000: wall-clock cap for the lethal hint's check, which every snapshot of the human's turn

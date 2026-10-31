@@ -38,10 +38,14 @@ pub const AI_SKILL_MAX: f64 = 1.0;
 /// can play under half as often as the random policy (0.038 to 0.096).
 pub const AI_SKILL_MISS_TEMPERATURE: f64 = 4.0;
 
-/// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180).
+/// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180). R2575000: 1200 nodes
+/// and 300 lethal nodes since the owner doubled them (issue #2575), in the search shape of before; a
+/// fat state still scales its allowance from at most `AI_SEARCH.fat_budget_nodes`, and the server's
+/// ladder bots' middle strengths and its Duos seats keep the 600 and 150 of before
+/// (`BOT_MID_STRENGTH_BUDGET`, `DUOS_AI_BUDGET` in `crates/server/src/config.rs`).
 pub const AI_BUDGET: SearchBudget = SearchBudget {
-    nodes: 600,
-    lethal_nodes: 150,
+    nodes: 1200,
+    lethal_nodes: 300,
     determinizations: 3,
     beam_width: 4,
     root_branching: 20,
@@ -157,6 +161,9 @@ pub struct AiSearch {
     pub fat_min_nodes: i32,
     /// The least of the scaled budget the lethal solver's allowance shrinks to.
     pub fat_min_lethal: i32,
+    /// R2575000: the most nodes a fat state's allowance is scaled from: the practice budget before
+    /// issue #2575 doubled it, so a state whose every step costs the most spends what it did.
+    pub fat_budget_nodes: i32,
     /// The cards a simulated Play of which `simulate` charges `expensive_def_nodes` for (its
     /// `surcharge_nodes`): resolving one ranks every shipped card for the state (the §10.7 scorer,
     /// R29's Zephyrs faces), about a hundred ordinary reduces, so a hand that holds one is budgeted
@@ -198,6 +205,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     fat_reference: 30,
     fat_min_nodes: 150,
     fat_min_lethal: 60,
+    fat_budget_nodes: 600,
     expensive_def_ids: &["core-097", "classicplus-027"],
     expensive_def_nodes: 100,
     ai_turn_trap_ids: &["core-096"],

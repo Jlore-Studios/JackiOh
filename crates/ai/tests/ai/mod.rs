@@ -7,6 +7,7 @@ pub mod activate;
 pub mod activations;
 pub mod alt_play;
 pub mod answer_key;
+pub mod budget;
 pub mod cleave;
 pub mod combat_mods;
 pub mod deaths;
