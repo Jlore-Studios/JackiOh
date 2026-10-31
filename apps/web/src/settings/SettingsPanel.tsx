@@ -22,7 +22,6 @@ import {
 import { readRememberedTab, rememberTab } from "./tabs.ts";
 import { retrySettingsSync, useSettingsSyncState } from "./accountSync.ts";
 import { TryAgainButton } from "../auth/AccountError.tsx";
-import { SpectatorSwitch } from "../together/SpectatorSwitch.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
 import "./settings.css";
@@ -297,11 +296,6 @@ export default function SettingsPanel({
                     {slot.render()}
                   </div>
                 ))}
-                {/*
-                  #936 B50: "Let friends watch my games" is the account's, not this device's, so it is
-                  no slot: no tab reset touches it, and it draws nothing until the account's value is in.
-                */}
-                {section.id === "gameplay" ? <SpectatorSwitch /> : null}
               </section>
             );
           })}

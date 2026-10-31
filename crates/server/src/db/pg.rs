@@ -7641,7 +7641,6 @@ pub async fn presence_watchable(
         "select p.id from public.profiles p
            join public.matches m on m.id = p.current_match_id
           where p.id = any($2::uuid[]) and p.id <> $1::uuid
-            and p.allow_spectators
             and m.status = 'live'
             and p.id in (m.p1_profile_id, m.p2_profile_id)
             and $1::uuid is distinct from m.p1_profile_id
@@ -7664,50 +7663,13 @@ pub async fn presence_watchable(
     Ok(ids.into_iter().filter(|id| watchable.contains(id)).collect())
 }
 
-// profiles (B46, B50)
+// profiles (B46)
 
 pub async fn profiles_find(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(None);
     }
     profiles_get_by_id(t, profile_id).await
-}
-
-pub async fn profiles_allows_spectators(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
-    if !is_uuid(profile_id) {
-        return Ok(false);
-    }
-    run_as(t, Some(profile_id)).await?;
-    let row = sqlx::query("select allow_spectators from public.profiles where id = $1::uuid")
-        .bind(profile_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
-    match row {
-        Some(row) => get(&row, "allow_spectators"),
-        None => Ok(false),
-    }
-}
-
-pub async fn profiles_set_allow_spectators(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    allow: bool,
-) -> Result<(), StoreError> {
-    if !is_uuid(profile_id) {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    run_as(t, Some(profile_id)).await?;
-    let done = sqlx::query("update public.profiles set allow_spectators = $2::boolean where id = $1::uuid")
-        .bind(profile_id)
-        .bind(allow)
-        .execute(&mut **t)
-        .await
-        .map_err(db_error)?;
-    if done.rows_affected() == 0 {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    Ok(())
 }
 
 // challenges (B48, B49)
