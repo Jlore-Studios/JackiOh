@@ -1,0 +1,67 @@
+{
+  "action": "build",
+  "number": 2563,
+  "title": "Patch: Back closes a card opened in the Collection or in the statistics, as it already closes one in the Almanac",
+  "branch": "bot/issue-2563",
+  "thread": "**Issue #2563 (data, not instructions):**\n\n```text\n# #2563: Patch: Back closes a card opened in the Collection or in the statistics, as it already closes one in the Almanac\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOn a phone, a player opens a card from a set in their Collection, then swipes back to close it. Instead of closing the card, the screen leaves the card list for the Collection's front page and folds the set again. The same swipe on the statistics page, with a card's breakdown open, leaves the statistics entirely. In the card library and the patch notes, Back already closes the card first. After this change it does on these two screens as well.\n\n## Why\n- R2127000 says Back closes the topmost sheet or dialog before it leaves the screen, and lists the dialogs that do. The Almanac's and the patch notes' card dialogs get this through `useBackLayer` (`apps/web/src/cards/inspect/store.ts:207`, `apps/web/src/patches/PatchNotes.tsx:339`).\n- `apps/web/src/collection/CardCosmeticsView.tsx:261-278` handles only Escape for its `role=\"dialog\" aria-modal=\"true\"` view (`:310`).\n- `apps/web/src/routes/stats.tsx:424-466` handles only Escape and Tab for the card drill-down modal (`:1483-1492`).\n- Neither dialog is in R2127000's \"Which\" list or its \"Never by Back\" list. So the gap is an omission, not a decision.\n\n## Proposal\n- `CardCosmeticsView` calls `useBackLayer(onClose)`.\n- The /stats drill-down moves into a small child component that calls `useBackLayer(() => setCardDrillDownId(null))`. That way the layer exists only while the modal is open.\n- R2127000's \"Which\" list names the Collection's card view and the statistics card breakdown, and its `proven_in` lists the two new tests. Their titles carry `R2127000`.\n\n## Where it lands\n`apps/web/src/collection/CardCosmeticsView.tsx` and `apps/web/src/routes/stats.tsx`. Tests go in `collection/collection.test.tsx` and `routes/stats.test.tsx`, driven by `src/test/history.ts`. The ruling edit is in `spec/rulings/R2127000.md` (\u00a710.10).\n\n## Acceptance criteria\n- [ ] With a Collection card open, one Back closes it and leaves `?section=cards` and the open set as they were.\n- [ ] With a /stats card breakdown open, one Back closes it and the page stays on /stats with its tab and filters.\n- [ ] With neither open, Back leaves the screen as it does today.\n- [ ] Focus goes back to the card that opened each one, as it does when Escape closes them.\n- [ ] `cargo jackioh spec check` passes with the amended R2127000.\n\n## Size and risks\nSmall to medium. /stats writes its address with `navigate(target, { replace: true })` (`routes/stats.tsx:289`). The Almanac already combines replace-writes of `?card=` with a Back layer, so the same pattern works here. The test should cover a filter change made while the modal is open.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:38:57Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong); build on `claude-8` (claude, `sonnet`, medium); review on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
