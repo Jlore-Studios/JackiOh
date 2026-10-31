@@ -10862,7 +10862,7 @@
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-7",
-      "run_id": "pending:b771bbd6-1793424516",
+      "run_id": "41172749180",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T05:28:44Z",
       "stop_requested": false,
