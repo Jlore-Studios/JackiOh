@@ -10069,8 +10069,18 @@
       "taken_asks": []
     },
     "2514": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
       "onto": "bot/issue-2497",
-      "part_of": 2497
+      "part_of": 2497,
+      "pending_request": false,
+      "provider": "agy",
+      "run_id": "pending:4235b904-1793460304",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-10-31T15:25:18Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2515": {
       "onto": "bot/issue-2497",
@@ -11568,9 +11578,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T14:53:26Z",
+    "at": "2026-10-31T15:25:18Z",
     "url": "",
-    "what": "suggestions on claude-7"
+    "what": "build #2514 on agy"
   },
   "last_sweep": {
     "at": "2026-10-31T15:17:09Z",
