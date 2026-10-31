@@ -4,13 +4,9 @@
 //! this to hand". Radiant: "Deal 2X damage, heal a target 6X, or gain X+1 mana next turn" (4X and 8X
 //! through v0.5.2, declared numbers, so no script is kept, issue #2179), the modes,
 //! target and return to hand kept (§8 Conventions). Patch v0.3.14 (#1220) dropped the +1s that v0.3.10
-//! (#831) set. The price is still X, bounded by the play validator, so nothing here re-checks it (R65).
-//!
-//! R81: X, the mode and the target all travel in the `play` action and never pause resolution, so the
-//! hook reads `ctx.x`, `ctx.modes` (through `chosenOptions`) and `{ of: "chosen" }`. "Gain X mana next
-//! turn" is a positive `mana.nextTurnMod` (§2.3), the one-shot modifier Hinder makes negative.
-//! §5.1 and R68: the spell returns from the graveyard at the end of its turn. No verb sets
-//! `returnToHandAtEndOfTurn` yet, so the hook gates on the flag OR this turn's play log (see #23).
+//! (#831) set. The price is still X, bounded by the play validator, so nothing here re-checks it (R65; #23).
+//! X, mode, and target travel in play action (R81; chosenOptions, R65; #2179, #1220, #831).
+//! End of turn return to hand (§6.2, R68; graveyard_triggers, §2.2, §5.1).
 
 use jackioh_engine::prelude::*;
 

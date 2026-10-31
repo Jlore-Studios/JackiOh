@@ -1,16 +1,8 @@
 //! #57 Conjure KY (SPEC §8.3): Spell, cost 2, tag KY. "Add 3 random KY cards to your hand" /
 //! radiant "2 random plus 2 random Radiant KY cards". Engine cell: "KY pool = #31, #51, #82 (no
-//! tokens, not #57); repeats allowed" — and every set's KY cards (R380), Classic+'s and, since
-//! v0.3.5, Meditative's.
-//!
-//! The pool is §5.1's one query: `{ tags: ["KY"] }` already leaves out the Token-tagged KY card
-//! ("random pools never include Token-tagged cards"), and `excludeDefId` is §5.1's other half: never
-//! the generating card's own definition (R387).
-//! R60: generated cards may repeat unless the card says "different"; this one does not.
-//! R4: the hand caps at 10 and extra adds are burned; the add-to-hand pipeline owns that (§2.4).
-//! R74/§5.2: a card generated "Radiant" is Radiant — an instance flag, so the radiant face is two calls.
-//! A hook may not roll dice itself (`ctx.rng.*` advances state), so the picks happen inside
-//! `add_random_from_catalog` (engine/src/effects/add_to_hand.rs), shared with #54 Straaza and #59.
+//! tokens, not #57); repeats allowed" — and every set's KY cards (R380; #54, #59).
+//! Uses §5.1 catalog query excluding tokens (R382) and own def (R387).
+//! Match RNG draws from pool (R60; repeats allowed); full hand burns cards (R4, §2.4).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;

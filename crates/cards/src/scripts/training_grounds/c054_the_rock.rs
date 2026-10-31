@@ -1,20 +1,7 @@
 //! SPEC §8.11 Training Grounds #54 The Rock, the snapshot of Core #66 The Rock (`core-066`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #66 The Rock (SPEC §8.3, §6.3 Tribute, §3.2, R23, R46, R69, R81, R90).
-//! Base "Tribute 1, Indestructible"; radiant "Plus Immutable" (§8 Conventions: the base list plus X).
-//! Both lists are on the catalog faces and §10.4 layer 1 reads them off the def, so this file grants
-//! no keyword. It carries only the Tribute cost (§6.3: "an additional cost of playing a card"), which
-//! `play_choices.rs` validates (a Sheep Token is worth 2, §3.2; only #55 Lava Golem sets
-//! `tribute_enemies`). Chosen units travel in the `play` action's `tributes` (R81, R90), so no hook.
-//!
-//! Engine-side: Indestructible takes no damage (§4.4 step 4) and ignores a destroy mark (R46, §4.5 step
-//! 1), but dies at 0 max health (R69) and to Sacrifice or Exile (§6.1). Immutable (R23) blocks Vanilla,
-//! Transform and Fuse-onto; Radiant is still allowed and #41 Sheepish still fires, for nothing (R17).
+//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #66 (SPEC §8.3): Indestructible; R81, R90 target checks; R17, §4.5, §6.1.
 
 use jackioh_engine::prelude::*;
 

@@ -30,11 +30,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12): "Copy lands in the leftmost free zone
-// (R64), its Cry does not fire, buffs copied, damage not (R57); board full → no copy".
-//
-// HARNESS GAP: a played card's buffs and damage can only be seeded on its hand instance: a Cry fires
-// the instant the unit enters, R78 resets both on leaving the field, and entering resets neither.
+// #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12, R64, R57, R78).
+// Copy lands in leftmost free zone; buffs copied, damage not.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -3,17 +3,8 @@
 //!            Embiggened (4): Your board too."
 //!   Radiant: "... with a random Radiant Legendary." — the same zones with `radiant: true` on every
 //!            replacement (§8 Conventions).
-//!
-//! R35 is the whole card; the hand is an "other zone" like the rest (R365). The pool is §5.1's one
-//! query with this card's index excluded, never listed by hand. A board card takes a same-type
-//! Legendary in place (Field Trap counts as Trap, so it becomes #85); Immutable cards stay (R23).
-//! Cards under a Stack are dormant, so "your board" is each pile's top (R13, §3.2). The pool holds no
-//! tokens, so no replacement vanishes on arrival and thins a zone. Picks draw from `ctx.rng` while the
-//! list is built (CLAUDE.md rule 4, §9.3): deterministic, since the hook runs once and opens no prompt.
-//!
-//! Issue #2179 made it an embiggen card (§6.3 Embiggen, R81): played at (2) it replaces the hand and
-//! the deck, Embiggened at (4) the board too, and neither touches the graveyard or the exile pile.
-//! Through v0.5.2 it replaced all five at (2), which `script_v0_5_2` keeps (R767000).
+//! Embiggened (4) in play action (R81, R65, §10.6). Replaces cards with random Legendaries (R35; §5.1, R387, R60; CLAUDE.md rule 4, §9.3).
+//! Board replacement transforms units (R57, §6.3, §10.4; traps/field spells replaced in place).
 
 use jackioh_engine::prelude::*;
 
@@ -56,10 +47,8 @@ fn same_type_legendaries(type_: CardType) -> Vec<&'static CardDef> {
     }))
 }
 
-/// §3.2 and R13: "your board" is the card acting in each zone — the top of a pile, not the pile.
-/// R35 and R23: an Immutable board card stays, since on the field a Replace is a Transform, so it is
-/// left out here rather than handed to `transform` to refuse: R129 has an effect that finds nothing
-/// to do draw no random number, and a pick rolled for a card that stays would be exactly that.
+/// §3.2, R13: "your board" is top of each zone pile.
+/// R35, R23, R129: Immutable board card stays and draws no random number.
 fn board_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
     [Row::Units, Row::Backrow]
         .into_iter()
@@ -79,15 +68,10 @@ fn board_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
         .collect()
 }
 
-/// One off-field pile of the controller's, read only (CLAUDE.md rule 5). `zone_cards` hands back a
-/// copy, which matters: the `transform`s built replace every card in the pile being walked, so
-/// iterating the live array would be iterating a list the effects are rewriting.
+/// Controller's off-field pile (CLAUDE.md rule 5).
 fn pile_cards(ctx: &EffectContext<'_>, zone: OffFieldZone) -> Vec<CardInstance> {
     let cards: Vec<CardInstance> = zone_cards(ctx.state, ctx.controller, zone).to_vec();
-    // R223: each replacement takes a new id, and walked top down the library's would be one run of
-    // numbers in library order, so any of them the owner is later shown (#51's reveal, a Recruit)
-    // would say where it lies. The library is walked in an order of the seed's own instead; each
-    // replacement still takes its card's place (R35).
+    // R223, R35, #51: library walked in seed order for new IDs; takes card's place.
     if zone == OffFieldZone::Library {
         numbering_order(ctx.state, &cards)
     } else {
@@ -152,10 +136,8 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// #83 Transmogulate (SPEC §8.4 row 83; R11, R23, R35, R365, R380). BUILD M4-T4's row: zone counts kept,
-// same-type Legendaries in place, a Field Trap becoming Unlicensed Experimentation (R35), the hand
-// replaced too (R365), radiant giving radiant cards; the pool is every set's non-token Legendaries
-// but #83 (R380). A Spell reaches the graveyard after its script (§10.5), so that zone ends one larger.
+// #83 Transmogulate (SPEC §8.4 row 83; R11, R23, R35, R365, R380; BUILD M4-T4; §10.5).
+// Zone counts kept; replacements by type; hand and board replaced.
 #[cfg(test)]
 mod tests {
     use super::*;

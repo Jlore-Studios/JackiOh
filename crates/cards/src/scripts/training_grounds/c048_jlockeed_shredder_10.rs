@@ -1,22 +1,7 @@
 //! SPEC §8.11 Training Grounds #48 Jlockeed Shredder-10, the snapshot of Core #13 Jlockeed Shredder-10 (`core-013`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/10 → 12/20 Unit, cost 3. Base "End of turn: deal 2 damage
-//! to each enemy unit and the enemy hero", radiant "4 damage" — a radiant cell that changes only a
-//! number changes only that number (§8 Conventions). §8's Engine cell: "One damage instance per
-//! target, controller's end of turn".
-//!
-//! R51: every enemy unit plus the enemy hero, ONE damage instance each, so each hit goes through
-//! §4.4's pipeline alone and meets that target's Armor, Divine Shield and Anti-oneshot cap.
-//!
-//! R59: the state check never runs between the hits of one effect, so a unit the first hit kills is
-//! still on the field while the rest land. `damage_all` (engine/src/effects/damage.rs) is one effect
-//! and `end_turn` runs `state_check` after each end-of-turn hook. The scan for `endOfTurn` hooks is
-//! narrowed to the player whose turn is ending, so this card needs no check of its own.
+//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #13 (SPEC §8.1, §8): damage_all on controller's end of turn. One damage instance each (§4.4, R51; §2.4, §2.5, R386); state check runs after all hits (R59).
 
 use jackioh_engine::effects::damage_all;
 use jackioh_engine::prelude::*;
@@ -38,15 +23,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #13 Jlockeed Shredder-10 (SPEC §8.1, BUILD M4-T4 row 13): "Controller's end of turn: 2 to every
-// enemy unit and hero as separate instances; units it kills die after all hits land (R59); not on
-// the opponent's end; radiant 4 (R51)".
-//
-// The board: p2 lane 1 is Pointmaster (7/1), which 2 damage kills, and lane 2 is Mr. Vanilla (4/4),
-// which survives at 2. A lane-1 death makes R59 observable: the later hits must still land.
-//
-// Both sides get a library, so nobody takes §2.4 fatigue damage when the opponent draws, and a spare
-// hand card, so the fresh turn has an action and cannot auto-end onwards (§2.5).
+// #13 Jlockeed Shredder-10 (SPEC §8.1, BUILD M4-T4 row 13, R59, R51, §2.4, §2.5).
+// End of turn damage to enemy units and hero; deaths collected after all hits (R59).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

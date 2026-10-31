@@ -1,21 +1,7 @@
 //! SPEC §8.11 Training Grounds #53 Prejudiced Postdoc, the snapshot of Core #61 Prejudiced Postdoc (`core-061`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #61 Prejudiced Postdoc (SPEC §8.3, R23, R57, R64, R81, R90).
-//! Base: "Cry: choose a Human unit on the field; summon a Vanilla copy". The radiant cell is "Any
-//! unit", which per §8's Conventions restates only which units the pick may name.
-//!
-//! The copy is R57's (form and radiant flag carried; damage, exertion and counters reset) plus two
-//! `summon_copy` arguments only #61 asks for (CLAUDE.md rule 5): Vanilla, so printed stats and no buffs
-//! (R781003), and no granted keywords (BUILD M4-T4 #8). R23: Immutable blocks Vanilla on the Immutable
-//! card ITSELF, so an Immutable target is legal. Auras (§10.4) are computed on read.
-//!
-//! R81/R90: the pick travels in the `play` action. The Postdoc is still in hand when the play's choices
-//! are validated (§10.5 step 1), so it needs no `excludeSelf`.
+//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #61 (SPEC §8.3): pick in play action (R81, CLAUDE.md rule 5, §10.5).
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;

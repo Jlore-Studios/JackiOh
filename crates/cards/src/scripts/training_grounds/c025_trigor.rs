@@ -2,15 +2,9 @@
 //! Training Grounds set (R1420, R2194000).
 //!   Base and Radiant: "Tribute 3 / Death: Summon a Trigor with this one's base stats +{grow}/+{grow}." —
 //!   grow 3, Radiant 6
-//! Engine:
-//! - **Tribute 3** is the play's price (§6.3, R101), paid at §10.5 step 2, as C #61 Plague Bringer
-//!   Goliath's; a zone its Tribute empties counts (R391).
-//! - **The Death** (M #94 Shrinking Felinor's mirror) reads `base_stats_of` (§10.4 layer 1, R1181) off the
-//!   card as it died, `statsOverride` still on (R78), and summons a fresh base Trigor (not a copy, R57;
-//!   R1828003) at those +{grow}/+{grow} into the leftmost open zone (R64): no Cry, no Tribute (§6.3).
-//! - **The end** (REVIEW A3.6, R2197004): growth alone (R2197002) ends no chain (a Poisonous hit, S #24 Warp
-//!   Disruptor II), so a Trigor a Trigor's Death marked this turn (`CHAIN_MARK`, R2206000) summons nothing.
-//!   A stat override is no mark: TG #34 Dino-size and a Seance copy wear one (R2198000, R2198001).
+//! Engine (§6.3, R101, §10.5 step 2, C #61, R391): Tribute 3 play cost.
+//! Death (M #94, §10.4 layer 1, R1181, R78) summons fresh Trigor (R57, R1828003) in leftmost zone (R64, §6.3).
+//! REVIEW A3.6, R2197004, R2197002: chain mark (R2206000, S #24) prevents same-turn loop; TG #34, R2198000, R2198001.
 
 use jackioh_engine::prelude::*;
 
@@ -59,14 +53,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #25 Trigor — SPEC §8.11 row 25, BUILD M13 row TG 25: "can't be played without 3 Units to Tribute;
-// destroyed at 3/3: a base Trigor 6/6 arrives in the leftmost open zone; that one destroyed on a later turn:
-// a 9/9; buffs on the dying one are not carried (base stats only); the new one fires no Cry and pays no
-// Tribute; a full row: none summoned; a Trigor its Death summoned this turn summons nothing when it dies this
-// turn (R2197004): under an aura that takes 7 Health the 6/6 dies and none follows, and seeds 1543 and 9463's
-// endless chains (a Poisonous forced attacker; two Trigors forced into each other) end; exiled or bounced: no
-// Death, no summon; the growth reads through `param()`. radiant 6/6; its Death summons a base 12/12, whose
-// Death on a later turn summons 15/15".
+// TG #25 Trigor — SPEC §8.11 row 25, BUILD M13 row TG 25 (R2197004).
+// Tribute 3; Death summons base Trigor with +grow/+grow; chain mark prevents same-turn looping.
 #[cfg(test)]
 mod tests {
     use super::ID;

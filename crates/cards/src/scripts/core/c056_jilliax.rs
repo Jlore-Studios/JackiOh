@@ -1,22 +1,8 @@
 //! #56 Jilliax (SPEC §8.3): (2), Embiggened (3); 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield /
 //! Embiggened (3): Equip." / radiant "Rush, Taunt, Lifesteal, Divine Shield, Reborn / Embiggened (3):
 //! Equip." (R1175000).
-//!
-//! Patch v0.3.10 (#831) gave it an embiggen price of (3), at which it is also Equip (ME-EQUIP, R1086):
-//! the script's `conditionalKeywords` returns Equip on a card stamped embiggened, so `legalActions`
-//! offers the Equip play only at that price and the refusal reads the same stamp (R831013).
-//!
-//! Its four printed keywords need no script. §10.4's keyword layer reads the printed keywords off the
-//! running face of the def (`face_of` in engine/src/layers.rs), and each keyword is a rule the engine
-//! owns (§6.1): Rush (`why_cannot_declare`, §4.1, §4.2 step 1), Taunt (`taunt_wall`, §4.2 step 3),
-//! Lifesteal (§4.4 step 8), Divine Shield (damage pipeline step 1), Reborn. Re-stating any would be a
-//! second implementation (CLAUDE.md rule 5, BUILD M4-T4).
-//!
-//! §8 Conventions: a keyword cell with no "Plus" "gives the radiant form's complete keyword list", so it
-//! REPLACES the base list; `tests/cross/catalog.rs` (M4-T1) pins `catalog.json`'s data.
-//! R46/R69 (Indestructible, pipeline step 4 and §4.5 step 1), which neither face prints now: a marked
-//! Indestructible unit goes to Attack Position and loses Taunt for the turn instead of dying, and is
-//! still collected at 0 max health; Sacrifice and Exile go around it (§6.3).
+//! Embiggen price (3) gives Equip (ME-EQUIP, R1086, #831; conditionalKeywords; R831013; §8).
+//! Printed keywords (§6.1, §10.4, §4.1; CLAUDE.md rule 5). Damage pipeline (§4.4, §4.5, §6.3, R46, R69). Play-time Equip target chosen when embiggened (R81, R90).
 
 use jackioh_engine::prelude::*;
 

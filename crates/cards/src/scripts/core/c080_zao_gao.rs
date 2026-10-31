@@ -1,17 +1,8 @@
 //! #80 Zao Gao (SPEC §8.3, §5.2, §7; R11, R16, R21, R64, R215, R275, R276, R354). Spell, CN, cost 2.
 //!   Base:    "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random combat keywords."
-//!   Radiant: "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random combat keywords."
-//!
-//! R354: the discard is random (so R682's default, never a prompt) and the Radiant tokens' third
-//! keyword is added on top of the face the Radiant pass gave them (R276). `discardRandom` picks off
-//! the match rng, and fewer than 2 in hand discards what there is (§8's Engine cell); a discarded
-//! card is the printed card again, keeping only `costMod`, `costOverride` and radiant (R215), and a
-//! unit-token card ceases to exist (R11). R21: each token rolls DISTINCT keywords from the pool
-//! (thirteen with R346's Pierce and R636's Windfury), never one it has (§10.4), and "each token is
-//! summoned Radiant and then rolls its keywords" (§8). R64: with no free zone a summon fizzles.
-//! `summon` rolls them (`randomKeywords`), after the discards and next to its own summon (§9.3).
-//! Tunes: discard 2 ↓; keywords 2 ↑ (Radiant 3); tokens 2 ↑ (R1748003). Through v0.4.4b the token
-//! count was printed, not declared; `script_v0_4_4b` keeps that (R767000).
+//!   Radiant: "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random combat keywords." (§8).
+//! Random discard from hand (R354, R682). Summons tokens leftmost open zones (R64; §7, R11, R16, R275).
+//! Grants distinct random combat keywords from R21 pool (§5.2, R276, §9.3; Radiant adds 3rd, R215; R636, R346).
 
 use jackioh_engine::effects::{discard_random, summon};
 use jackioh_engine::prelude::*;

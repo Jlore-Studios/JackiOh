@@ -1,18 +1,7 @@
 //! SPEC §8.11 Training Grounds #41 Bigot, the snapshot of Core #2 Bigot (`core-002`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! SPEC §8.1 #2 Bigot — 4/1 → 8/2 Unit, Human, cost 2.
-//! Base: "Cry: destroy target enemy non-Human unit". Radiant: "Cry: destroy all enemy non-Human
-//! units" — the radiant cell restates the clause, so it replaces the base one (§8 Conventions) and
-//! the radiant form declares no target at all.
-//!
-//! The pick travels in the `play` action, never a prompt (R81), checked against this declaration and
-//! the board (R90); with no legal target the unit still enters and the Cry fizzles (§8 Conventions).
-//! `destroy_all` marks every match as `destroy` does, so all die in one state check (R59).
+//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #2 (SPEC §8, §8.1): Cry destroy target non-Human (R81, R90); radiant destroy all in one state check (R59).
 
 use jackioh_engine::effects::{destroy, destroy_all};
 use jackioh_engine::prelude::*;
@@ -42,10 +31,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M4-T4 row 2: "Destroys chosen enemy non-Human, Human not targetable, no target → enters
-// anyway; radiant clears every enemy non-Human, Humans survive".
-// Non-Human: #25 (no tags, no hooks) and #12 Duplicating Felinors (its Cry never fires on a board
-// the harness placed). Human: #8 Mr. Vanilla and #20 Pointmaster.
+// BUILD M4-T4 row 2: destroys enemy non-Human (#25, #12); Humans (#8, #20) not targetable / survive.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -91,13 +91,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #30 Floodgates — SPEC §8.11 row 30, BUILD M13 row TG 30: "0/12 with Armor 3: a 5-damage hit deals 2;
-// a Unit you play: +1 Armor (Armor 4); an enemy's played Unit: +1; a token summon, a Recruit and a copy:
-// +1 each; a Field Spell or Trap placed: nothing; its own arrival: nothing; destroyed: every other Unit you
-// control is destroyed, an Indestructible one staying, the enemy's untouched; bounced or exiled: no Death;
-// fused with S #112 Job Application, its body resummons and stays, and two such bodies on one side end
-// (R2197005); the gain reads through `param()`. radiant 0/24, Armor 6, +2 per arrival, the same Death". The copy is
-// Core #12 Duplicating Felinors' (TG #23 being another part's, #2196): played, it and its copy give +2.
+// TG #30 Floodgates — SPEC §8.11 row 30, BUILD M13 row TG 30 (S #112, R2197005, Core #12, TG #23, #2196).
+// Armor gain on unit summons; Death destroys all own units.
 #[cfg(test)]
 mod tests {
     use super::ID;

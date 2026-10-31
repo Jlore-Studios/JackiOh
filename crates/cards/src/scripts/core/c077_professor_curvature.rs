@@ -1,18 +1,7 @@
 //! #77 Professor Curvature (SPEC §8.3, R48, R65, R363, §2.2, §10.1).
-//!
-//! Base: "Cry: (4)+ Cost cards cost (1) less on your next turn."; radiant "... cost (2) less ...".
-//!
-//! §8's Engine cell: "Delayed player modifier, checked against current cost at play; expires at that
-//! turn's cleanup." That is one `PlayerModifier`, not a delayed effect:
-//!
-//!   R363 "Cost (4)+" → `minCurrentCost: 4`, which `mana::effective_cost` reads AFTER `cost_mod` and the
-//!        flat discounts, where R65 puts it: "add player discounts; apply Professor Curvature if the
-//!        result is then 4 or more; floor at 0".
-//!   R48  "on your NEXT turn" → `{ until: "nextTurnOf", player, fromTurn }`. `mana::modifier_is_live`
-//!        is false while `state.turn == from_turn`, and `modifiers::expire_modifiers` drops it at the
-//!        cleanup of that player's next turn (§2.2: "Cleanup expires … Professor Curvature's discount").
-//!
-//! The modifier sits on the controller's own `mods`, so the opponent's cards are never costed by it.
+//! Base: "Cry: (4)+ Cost cards cost (1) less on your next turn."; radiant "... cost (2) less ..." (§8).
+//! Delayed player modifier checked against cost at play (R48; expires at cleanup, §2.2, §10.1; R65, R363).
+//! Threshold checked after discounts and embiggen (§10.4, R169).
 
 use jackioh_engine::effects::add_player_modifier;
 use jackioh_engine::prelude::*;

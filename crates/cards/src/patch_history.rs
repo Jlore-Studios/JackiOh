@@ -1,13 +1,5 @@
-//! R1367000: the card patch history (`patches/patches.json`, compiled in) as a card's stats window
-//! reads it: each shipped version in the file's order, with its tier and the card families that play
-//! differently in it (`jackioh_engine::wire::stats::window`).
-//!
-//! `patches ship` records both (`tier`, `plays`) from #1366 on. A version shipped before that recorded
-//! neither, and is read from its `changes`: a family plays differently when a line adds or removes
-//! one of its cards, or changes a field of one that is not wording (`WORDING_FIELDS`). With no tier,
-//! the first version of each release line (`PRE_TIER_MAJORS`) is a major, a version in which
-//! `PATCH_MIN_CARDS` families or more play is a patch, and any other a micro. #1371's retcon writes
-//! every old entry's real tier, so this reading only has to be sensible.
+//! R1367000: card patch history (`patches/patches.json`) for stats window (`jackioh_engine::wire::stats::window`).
+//! Recorded (`tier`, `plays`) from #1366 on. Prior versions read from changes (`PRE_TIER_MAJORS`, `PATCH_MIN_CARDS`). #1371 retcon.
 
 use jackioh_engine::config::PATCH_MIN_CARDS;
 use jackioh_engine::wire::stats::{PatchStep, PatchTier, card_family};
@@ -24,9 +16,7 @@ pub const WORDING_FIELDS: &[&str] = &[
     "flavor",
 ];
 
-/// R1367000: the first version of each release line shipped before tiers were recorded, as the
-/// Patch notes page's release lines name them (`apps/web/src/patches/releases.ts`'s `first`). Read
-/// only for a version that records no tier.
+/// R1367000: first version of each release line shipped before tiers were recorded.
 pub const PRE_TIER_MAJORS: &[&str] = &["v0.1.0", "v0.2.0", "v0.2.5f", "v0.4.0"];
 
 /// The fields of a `patches.json` entry the window reads.

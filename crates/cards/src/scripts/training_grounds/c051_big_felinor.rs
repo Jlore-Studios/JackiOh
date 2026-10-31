@@ -1,22 +1,8 @@
 //! SPEC §8.11 Training Grounds #51 Big Felinor, the snapshot of Core #43 Big Felinor (`core-043`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #43 Big Felinor (SPEC §8.2). Unit 3/10 → 6/20, Felinor, cost 3, Rare.
-//!   Base:    "Cry: destroy all non-Felinor units on both sides"
-//!   Radiant: "Enemy non-Felinor units only" (§8 Conventions: a restated clause replaces the base one).
-//!   Engine:  "Simultaneous destroy, one state check."
-//!
-//! R59 IS WHY THIS IS ONE EFFECT: `destroy` only MARKS a card (`markedDestroyed`) and §4.5 step 1
-//! "collects" every mark "at once"; the state check runs after the Cry's whole list (§10.3), never
-//! between its effects, so nothing dies early while the rest of the board is still being marked.
-//! `destroy_all` marks every active unit its `BoardScope` matches (`side` is relative to `ctx.controller`,
-//! `tags`/`notTags` read the def's §5 tags), so a card dormant under a Stack is not hit (R13).
-//! Indestructible is §4.5's business, not the filter's (R46, R69). Big Felinor is Felinor-tagged, so
-//! `notTags: ["Felinor"]` already spares it; the tests prove that.
+//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #43 (SPEC §8.2, §8): destroy_all non-Felinor units; marks collected in one state check (§10.3, R59; §6.3, §4.5).
+//! Dormant under Stack spared (R13); Indestructible spares (R46, R69; #12, #20, #21, #25, #66, R11, R82, §5).
 
 use jackioh_engine::effects::destroy_all;
 use jackioh_engine::prelude::*;
@@ -40,17 +26,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #43 Big Felinor (SPEC §8.2, §4.5, §6.3 Destroy; R11, R46, R59, R69).
-// Must-pass row (BUILD M4-T4 #43): "Non-Felinors on both sides destroyed, Felinors and itself
-// survive; radiant enemy side only."
-// One play producing two `destroyed` events, one per side, is R59's single state check.
-// The board keeps one def per slot so a string reference is never ambiguous:
-//   p1  lane 2  #20 Pointmaster   7/2 Human            non-Felinor, dies (base) / lives (radiant)
-//   p1  lane 4  Felinor Token     1/1 Felinor, Token   survives both faces
-//   p2  lane 1  #12 Duplicating Felinors 3/4 Felinor   survives both faces
-//   p2  lane 2  #25 4-mana 7/7    7/7 Armor 7          non-Felinor, dies on both faces
-// Nothing on that board has a Cry that could fire (units placed by the builder are not played), and
-// Armor is irrelevant to a destroy, which is not damage (§6.3).
+// #43 Big Felinor (SPEC §8.2, §4.5, §6.3 Destroy; R11, R46, R59, R69; BUILD M4-T4 #43).
+// Non-Felinors (#20, #25) destroyed in single state check (R59); Felinors (#12, Felinor Token) survive.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

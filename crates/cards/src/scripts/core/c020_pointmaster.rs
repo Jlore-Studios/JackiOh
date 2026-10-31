@@ -1,12 +1,6 @@
 //! #20 Pointmaster (SPEC §8.1): Unit, Human, "First Strike", radiant "First Strike, Divine Shield".
 //! Engine cell: "Keywords only".
-//!
-//! The radiant cell lists keywords without "Plus", so `[First Strike, Divine Shield]` is the radiant
-//! form's complete list (§8 Conventions), which is also the base list plus Divine Shield.
-//!
-//! Both keyword lists are PRINTED in the catalog and supplied by §10.4's layer system: First Strike
-//! gives §4.3 step 1 alone and Divine Shield is spent on the first hit. An empty Script is the whole
-//! card; a hook that re-granted a printed keyword would be a second source of it (§10.4 layer 4).
+//! Printed keywords supplied by §10.4 layer system (§8 Conventions, §4.3 step 1). Empty Script.
 
 use jackioh_engine::prelude::*;
 

@@ -1,22 +1,7 @@
 //! SPEC §8.11 Training Grounds #44 Duplicating Felinors, the snapshot of Core #12 Duplicating Felinors (`core-012`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #12 Duplicating Felinors (SPEC §8.1): 3/4 → 6/8 Unit, Felinor, cost 2, Rare. Base "Cry: summon a
-//! copy of this unit"; the radiant cell says "Same", so the radiant face runs the same text (§8
-//! Conventions) on the 6/8 body, and its copy is a Radiant 6/8 too (R275). §8's Engine cell: "Copy
-//! per R57, placed per R64; the copy's Cry does not fire (§6.2)".
-//!
-//! R57: the copy keeps the radiant flag, buffs, granted keywords, Vanilla state and `statsOverride`
-//! and resets damage, exertion and counters; as a new instance it takes the current turn as its
-//! `summonedTurn` (§4.1). R64: with no zone named it takes the leftmost free zone and fizzles
-//! silently when the row has none. R1 / §6.2: copies fire no Cry, so the chain ends after one copy.
-//!
-//! The clone is the engine's `summon_copy` (engine/src/effects/summon.rs). A card file may not
-//! rebuild buffs, keywords and Vanilla state off the instance (CLAUDE.md rule 5), hence a verb.
+//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #12 (SPEC §8.1, §8): 3/4 → 6/8 Felinor. Summons copy into leftmost open zone (R57, R64, §4.1; CLAUDE.md rule 5). Copies fire no Cry (R1, §6.2, R275; §3.1, R78).
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;
@@ -41,15 +26,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12): "Copy lands in the leftmost free zone
-// (R64), its Cry does not fire, buffs copied, damage not (R57); board full → no copy".
-//
-// Radiant (R275): the cell is "Same", so the copy keeps the radiant flag (R57): a Radiant 6/8 (6/9 before
-// patch v0.3.10).
-//
-// HARNESS GAP: layer-4 buffs and damage cannot be seeded, nor reached through play (a Cry fires the
-// instant the unit enters). R78 resets both on leaving the field and the play path resets neither on
-// entering, so seeding the hand instance is the one route to "buffs copied, damage not".
+// #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12, R64, R57, R275, R78).
+// Copy lands in leftmost free zone; buffs copied, damage not.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

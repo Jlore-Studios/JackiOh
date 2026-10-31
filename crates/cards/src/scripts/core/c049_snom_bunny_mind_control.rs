@@ -57,12 +57,8 @@ fn scripts_with(targets: fn() -> Vec<TargetDecl>) -> CardScripts {
     }
 }
 
-// #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4: "Steal placement per R15; radiant sets the
-// flag on the stolen card".
-//
-// Props: #25, #20, #45 (4/3 → 8/6, the damage-and-radiant case), #11, #8, #15 (its Cry would summon a
-// Rush Token, for "no Cry re-fires"), #41 Sheepish, a face-down Trap, and #14 Jlockeed's Weapons, a
-// Field Spell: neither is a Unit, so neither is on offer.
+// #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4, R15.
+// Props: #25, #20, #45, #11, #8, #15, #41, and #14 Jlockeed's Weapons.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -2,16 +2,8 @@
 //! Spell, Common, a card of the held Training Grounds set (R1420, R2194000).
 //!   Base:    "Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them." — 3.
 //!   Radiant: "Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}. …" — 3.
-//!
-//! Engine: C+ #15 Conjure Rush Token's summon (`core-t-rush`, 3/3 Rush; Radiant 6/6 Rush, Cleave), one
-//! `summon` per token into the leftmost open unit zones (R64), fewer on a full row (§3.2), each
-//! remembered on this Spell under its own key (`rememberAs`, R1126). Then R2198002's "die at the end of
-//! this turn": one `delay` per token that arrived, at §2.2's end-of-turn delayed-effect point of the turn
-//! it resolves on, whoever's (R350), under the engine's destroy hook and watching the token, so one that
-//! left the field is forgotten (R174; a token ceases to exist off it, R11) and one the opponent stole
-//! is still destroyed (a change of control is no leaving). The tokens print no Brittle: Brittle 1 would
-//! keep them through the opponent's turn (TG6 row 10). Each delay marks its token in both views while it
-//! waits (`END_OF_TURN_MARK`, R437, R2321001), so a player sees which tokens go at the end of the turn.
+//! C+ #15 summon leftmost open zones (R64; fewer if full, §3.2; rememberAs, R1126; §4.2, §7).
+//! End-of-turn delay destroys at §2.2 (R2198002, R350; off field forgotten, R11, R174; stolen still destroyed; END_OF_TURN_MARK, R437, R2321001; TG6 row 10).
 
 use jackioh_engine::prelude::*;
 

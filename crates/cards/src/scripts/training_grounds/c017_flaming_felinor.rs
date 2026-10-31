@@ -1,11 +1,8 @@
 //! SPEC §8.11 Training Grounds 17 Flaming Felinor: (2) Unit, Felinor, Rare, 3/6 → 6/12, a card of the
 //! held Training Grounds set (R1420, R2194000).
-//!
 //! Base:    "Cry: Deal 3 damage to all other Units."
 //! Radiant: "Cry: Deal 6 damage to all enemy Units."
-//! Engine: `damage_all` over every other Unit on the field, both sides (Hearthstone's "all other
-//! minions"; MP #21 Harmony Spirit's `excludeSelf`), no hero; the Radiant face over the enemy's Units
-//! only. One hit each, snapshotted, one state check after (R59). The source is this Unit.
+//! damage_all over other units (MP #21 Harmony Spirit excludeSelf); radiant enemy units only. Hits snapshotted before one state check (R59).
 
 use jackioh_engine::prelude::*;
 
@@ -31,10 +28,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #17 Flaming Felinor — SPEC §8.11 row 17, BUILD M13 row TG 17: "Cry: 3 damage to each other Unit on
-// both sides; not to itself; no hero takes damage; Units it brings to 0 die together at one state check;
-// `damage` reads through `param()`; radiant 6/12; 6 damage to each enemy Unit; your other Units are
-// untouched".
+// TG #17 Flaming Felinor — SPEC §8.11 row 17, BUILD M13 row TG 17.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

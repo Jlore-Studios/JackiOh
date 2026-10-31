@@ -1,35 +1,7 @@
 //! SPEC §8.11 Training Grounds #57 Recycling Initiative, the snapshot of Core #39 Recycling Initiative (`core-039`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #39 Recycling Initiative (SPEC §8.2; R4, R57, R65, R71, R78, R86, R126, R127, R133, R215, R275).
-//! Spell, cost 0.
-//!   Base:    "Exile this on play. End of turn: add a copy of every other card you played this
-//!            turn to your hand"
-//!   Radiant: "Exile this on play. End of turn: add a Radiant copy of every other card you played
-//!            this turn to your hand; the copies cost 1 less" — §8's cell "Copies are Radiant and
-//!            cost 1 less" (R275's raise: the copies' face and their price). The cell restates only
-//!            what a copy is and costs, so the exile and the end-of-turn clause are kept unchanged
-//!            (§8 Conventions).
-//!
-//! §8.2's Engine cell spells the mechanism out: "End-of-turn delayed effect: a fresh copy (radiant
-//! flag kept) of every card in `turnLog.playedIds` except this one, including cards played after it
-//! (R71); instances that no longer exist are skipped rather than fizzling (R86)."
-//!
-//! A delayed effect and not an `endOfTurn` hook: the card is in exile by then, and end-of-turn hooks
-//! walk only units and the backrow. `delay` stores a `Resume` (script id, step and captured data, never
-//! a closure) that names its script by stored def id, so it re-enters this script with the card gone
-//! from play (R127, the shape R76 gives #50 K-Pop Fanatic): the id it needs travels in `data`. R126:
-//! the continuation is registered ONCE, in the `resume` table, so `delay` is passed `hook: RESUME_HOOK`.
-//! The radiant face's copies are Radiant whatever the played card was: the flag is only ever set (§5.2).
-//!
-//! THE DISCOUNT is R65's `costMod`, not a `costOverride`, which would make an X-cost copy free outright
-//! and erase an embiggen card's price choice. The copy does not exist until `addToHand` creates it, so
-//! the −1 is `addToHand`'s `costMod`, which R78 keeps in every zone; a copy a full hand burns reaches
-//! the graveyard with its radiant flag and without the discount (§2.4, R4, R215).
+//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #39 (SPEC §8, §8.2): delayed effect re-entry (R126, R76, #50; §2.4, R4; §5.2, R215, R275).
 
 use indexmap::IndexSet;
 use jackioh_engine::effects::{add_to_hand, delay, exile};
@@ -150,11 +122,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #39 Recycling Initiative — SPEC §8.2 row 39, BUILD M4-T4 row 39: "Exiled on play; end of turn
-// adds copies of every other card played this turn, including later ones (R71); radiant copies
-// cost 1 less".
-// R62: end-of-turn triggers → the trap window → delayed effects → cleanup. `turnEnded` is emitted
-// before the window, so the tests key on `turnStarted`, the first event after cleanup.
+// #39 Recycling Initiative — SPEC §8.2 row 39, BUILD M4-T4 row 39, R71, R62.
+// Exiled on play; end-of-turn adds copies of cards played this turn; radiant copies cost 1 less.
 #[cfg(test)]
 mod tests {
     use crate::js;

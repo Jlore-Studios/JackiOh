@@ -1,15 +1,8 @@
 //! #59 Unbiased Immigration (SPEC §8.3): Field Spell, cost 2 embiggen 4, Rare. "Start of turn: add a
 //! random card to your hand (Embiggened (4): it costs (0))" / radiant "A random Radiant card
-//! (Embiggened (4): it costs (0))". Engine cell: "Non-token pool excluding #59", every set's (R380). §8 Conventions: the radiant
-//! cell restates the whole clause, so it replaces it: one card per start of turn either way.
-//!
-//! The embiggen price is not a prompt (R81, §10.6): it travels in the `play` action, so the card
-//! declares no `targets` or `modes`; `make_context` hands it to every hook as `ctx.embiggened`, so a
-//! trigger turns later still knows what was paid. R65 is why the discount is a `cost_override`, not a
-//! `cost_mod`: 0 makes the card free whatever its printed cost, in every zone (R78).
-//!
-//! R60: the pool may repeat; §5.1 and R387 keep Tokens and #59 out of it; R4 burns an eleventh card.
-//! A hook may not roll dice (`ctx.rng.*` advances state), so `add_random_from_catalog` picks.
+//! (Embiggened (4): it costs (0))". Engine cell: "Non-token pool excluding #59", every set's (R380; §8).
+//! Embiggen travels in play action (R81, §10.6). Pool query excludes def (#59, §5.1, R387).
+//! Drawn via RNG (R60; Radiant R74); embiggened discounts costMod (R766, R65; burns if full, R4, §2.4, R78).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;

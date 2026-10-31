@@ -1,6 +1,5 @@
 //! SPEC §8.11 Training Grounds 1 Spikey Steven: (1) Unit, Human, Common, 5/2 → 15/6, a card of the
-//! held Training Grounds set (R1420, R2194000). A vanilla Unit, as Core #8 Mr. Vanilla and C #86 Genn:
-//! no text on either face, its tripled body its whole upgrade (R275, `docs/radiant-audit.md`).
+//! held Training Grounds set (R1420, R2194000). Vanilla Unit (as Core #8 Mr. Vanilla, C #86 Genn; R275, `docs/radiant-audit.md`).
 
 use jackioh_engine::prelude::*;
 

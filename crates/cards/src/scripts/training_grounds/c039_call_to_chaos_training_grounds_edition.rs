@@ -465,10 +465,7 @@ mod tests {
             }
         }
 
-        /// BUILD M13 TG 39: "a cast of another edition at chain depth 1". The other editions' Cries are
-        /// swapped, on this thread only, for one reporting its card's chain depth (R28, `chaos_chain_of`),
-        /// read while the cast resolves (gone once it lands, R215). The first recast cursor that casts
-        /// another edition is taken.
+        /// BUILD M13 TG 39, R28, R215: tests cast of another edition at chain depth 1.
         #[test]
         fn r2200004_entry_recast_casts_a_shipped_edition_at_chain_depth_one() {
             crate::register_all();

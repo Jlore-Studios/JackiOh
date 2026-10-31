@@ -1,22 +1,7 @@
 //! SPEC §8.11 Training Grounds #45 Jlockeed's Weapons, the snapshot of Core #14 Jlockeed's Weapons (`core-014`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #14 Jlockeed's Weapons (SPEC §8.1): Field Spell, cost 4. Base "Aura: your units have +3 attack,
-//! Rush, First Strike", radiant "+6 attack": only the number changes (§8 Conventions).
-//!
-//! An aura is §10.4 layer 5, gathered from every permanent in play by `aura_mods` in
-//! `engine/src/layers.rs` and recomputed on every read, so it covers units summoned later (BUILD
-//! M3-T2) and vanishes the instant the card stops being an aura source. `applies` reads instance data
-//! only and never calls back into `unit_view`, or the layers would recurse.
-//!
-//! "Your units": the controller's units in the `units` row or standing in the backrow (R1081000), so the
-//! aura skips its own backrow card and a stolen unit stops matching because `controller` is compared
-//! (R78 resets it on the way out). Rush from this aura is what R83's "a Reborn body the board has
-//! granted Rush may attack again" refers to.
+//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #14 (SPEC §8.1, §8): Field Spell (§4.1, §4.3). Ongoing aura (§10.4 layer 5, R83; standing backrow included, R1081000; not permanent R78). Params read via catalog (R1, R386; #15, #36).
 
 use jackioh_engine::prelude::*;
 
@@ -52,12 +37,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14): "Allies +3 attack, Rush, First Strike
-// while present; later summons get it; gone when destroyed; radiant +6". The keywords are tested
-// through the rules: Rush (§4.1) as a fresh unit attacking, First Strike (§4.3 step 1) as the ally
-// killing Bigot (4/1) unharmed. Bigot is seeded on the field, so its Cry never fires (R1).
-// CROSS-CARD DEPENDENCY: the removal test plays #36 Magic Jammed on the ally Field Spell (its target
-// is unnarrowed, §8 Conventions), the only in-game way a test can take a Field Spell off the board.
+// #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14, §4.1, §4.3 step 1, R1, #36, §8 Conventions).
+// Allies gain attack, Rush, First Strike while present; removed via #36 Magic Jammed.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -1,15 +1,7 @@
 //! #26 Glowy Jelly Bean (SPEC §8.2): "Choose a card in your hand; it becomes Radiant", radiant
 //! "Choose 2" — a Radiant cell that changes only a number changes only that number (§8 Conventions),
 //! so the radiant face is the same effect, taken twice.
-//!
-//! The pick is a DECLARED `hand` choice: it travels in the play action's `targets` and never pauses
-//! resolution (R81). R90: a hand declaration offers only the chooser's own hand (§9.1), never the bean
-//! itself, and never the same card twice. A play stays legal with the answers that exist, so with one
-//! other card in hand ("Radiant takes both cards it can", §8.2 Engine) the second `setRadiant`
-//! fizzles (§8 Conventions) and the spell still counts as played.
-//!
-//! R74 makes the radiant flag the whole model, so the chosen card's stats and text swap while it sits
-//! in hand (§5.2); a card that is already Radiant is untouched (§6.3 Make Radiant).
+//! Declared hand choice in play action (R81, R90, §9.1; R177, #13, R97). Radiant flag swaps stats/text in hand (§5.2, R74; §6.3).
 
 use jackioh_engine::prelude::*;
 

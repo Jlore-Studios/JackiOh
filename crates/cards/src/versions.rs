@@ -1,14 +1,6 @@
-//! R1371000: the two schemes a catalog version can be named by. The version retcon (#1371) renamed
-//! every shipped version to what the classifier calls it, and old and new names overlap (the old
-//! v0.3.4 is the new v0.2.7b, while the new v0.3.4 is the old v0.3.12), so a name alone cannot say
-//! which it means. A file says: a replay, game-record or self-play file the build writes carries the
-//! `versions` marker (`VERSIONS_SCHEME`, or its format's own bumped version), and one without it
-//! names its versions the old way, which its reader maps once through `patches/aliases.json`
-//! (`current_version_name`). Nothing the build holds is unmarked: the repository and the database
-//! were renamed in place.
-//!
-//! This file's tests spell old names on purpose, so the retcon's tree rewrite leaves it alone
-//! (`crates/tools/src/retcon.rs`, `SKIP_FILES`).
+//! R1371000: catalog version naming schemes. Version retcon (#1371) mapped old names to classifier names.
+//! Marked files carry `VERSIONS_SCHEME`; unmarked files map via `patches/aliases.json` (`current_version_name`).
+//! Tests intentionally spell old names (`crates/tools/src/retcon.rs`, `SKIP_FILES`).
 
 use jackioh_engine::EngineError;
 use jackioh_engine::config::VERSIONS_SCHEME;
@@ -20,9 +12,7 @@ pub use crate::history::{current_version_name, version_alias};
 /// The key a marked file's object carries, holding `VERSIONS_SCHEME`.
 pub const VERSIONS_KEY: &str = "versions";
 
-/// The end of a version at `at` (`v<digits>.<digits>.<digits>` and at most one lower-case letter)
-/// when one starts there and stands alone: no letter, digit, `_` or `.` before it, and no letter or
-/// digit, nor a dot and a digit, after it.
+/// End of an isolated version string (`v<digits>.<digits>.<digits>[<letter>]`) starting at `at`.
 fn version_at(bytes: &[u8], at: usize) -> Option<usize> {
     if bytes.get(at) != Some(&b'v') {
         return None;

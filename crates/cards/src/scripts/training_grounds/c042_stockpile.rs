@@ -1,16 +1,7 @@
 //! SPEC §8.11 Training Grounds #42 Stockpile, the snapshot of Core #5 Stockpile (`core-005`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! SPEC §8.1 #5 Stockpile — Spell, cost 1.
-//! Base: "Draw 2; heal your hero 2". Radiant: "Draw 4; heal 4" — the cell changes only the numbers
-//! of the base clause (§8 Conventions), and "heal 4" is still the hero.
-//!
-//! The hand cap is the draw pipeline's (§2.4, R4: a draw into a full hand of 10 burns), and a hero
-//! has no maximum health (§3), so the heal may pass 30. A Spell's script hangs off `cry` (§10.5 step 5).
+//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #5 (SPEC §8, §8.1): Draw 2, heal 2; radiant Draw 4, heal 4 (§2.4, R4 full hand burn; §3, §10.5).
 
 use jackioh_engine::effects::{draw, heal};
 use jackioh_engine::prelude::*;
@@ -33,11 +24,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.1 #5 Stockpile. BUILD M4-T4 row 5: "Draw 2, heal 2 (hero may exceed 30); hand cap burns;
-// radiant 4/4".
-//
-// §3 gives a hero no maximum health, so the heal runs past 30; R4 caps a hand at 10 and burns what
-// a draw cannot fit to the graveyard. `library[0]` is the top of the library (the next card drawn).
+// BUILD M4-T4 row 5: Draw 2 heal 2, Radiant draw 4 heal 4 (§3, R4).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

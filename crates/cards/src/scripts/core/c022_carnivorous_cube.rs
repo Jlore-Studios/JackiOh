@@ -2,15 +2,8 @@
 //!
 //! Base: "Cry: Tribute one of your other Units and remember it. Death: Summon 2 copies of it."
 //! Radiant: the same Cry, "Death: Fill your board with copies of it" (§8 Conventions).
-//!
-//! R428: the Cry eats one of your other UNITS only, never a backrow card. §6.3 Tribute: a tribute
-//! written into a card's script is an ordinary Sacrifice of what it names, where the Sheep Token's 2
-//! never applies. So the meal is picked with the play (R81, a `tribute` target, never a prompt) and
-//! eaten with `sacrifice`, which bypasses Indestructible and counts as a death.
-//!
-//! `memory.eaten = { defId, radiant, statsOverride?, armorOverride? }` (§10.1) gives every copy the
-//! meal's radiant flag and §7 stats (R41). Nothing to tribute: the Cry fizzles; nothing eaten: Death
-//! does nothing. It can never eat itself: the declared target excludes it and the hook re-checks.
+//! Tribute chosen unit on play (R81, R428, §6.3 sacrifice; bypasses Indestructible). Remembers target under key.
+//! Death trigger summons copies of remembered unit (R57, R64, R41; Radiant fills board).
 
 use jackioh_engine::prelude::*;
 

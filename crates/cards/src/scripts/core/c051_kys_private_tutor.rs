@@ -321,8 +321,7 @@ mod tests {
     /// the Tutor leaves (clearing `turn_log`, dealing fatigue); no library fixture, so no copy is ambiguous.
     const ANCHOR: &str = "core-010";
 
-    // The library fixture, chosen so each of the four type options has a match and each type offers a
-    // different set of brackets. Costs are the printed ones; R65's out-of-play reading is its own case.
+    // Library fixture matching each type option (R65).
     const SPELL_0A: &str = "core-039"; // Recycling Initiative — Spell, 0
     const SPELL_0B: &str = "core-048"; // 5pek Controller      — Spell, 0
     const SPELL_1A: &str = "core-005"; // Stockpile            — Spell, 1
@@ -611,8 +610,7 @@ mod tests {
             let mut s = tutor_with(&[FIELD_TRAP_1]);
             s.play(TUTOR, json!({}));
 
-            // A `type` filter matches the field exactly, so "Trap" has to name both or #18 Bread and Butter
-            // and #71 Intern Stimmy would silently vanish from this card (the same reading as R35 and R61).
+            // R35, R61: Trap filter matches Traps and Field Traps (#18, #71).
             assert_eq!(mode_options(&open(&s)), vec!["Trap"]);
 
             s.answer(json!("Trap"));
@@ -783,9 +781,7 @@ mod tests {
         #[test]
         fn r218_a_unit_token_card_in_the_library_never_reaches_a_hand_through_the_tutor_s3_2_r11() {
             crate::register_all();
-            // #33 copies of a played Rush Token card (R34) are how one gets into a library. R11: it ceases
-            // to exist leaving it other than by being drawn or played, and "choose one to hand" is neither
-            // (R218). Passed over or ceasing on the way, it never lands in the hand.
+            // #33, R34, R11, R218: token ceasing leaving library does not land in hand.
             let mut g = scenario(json!({
                 "p1": { "hand": ["core-051", "core-010"], "library": ["core-t-rush", "core-005"] },
                 "p2": { "hand": ["core-008"], "library": LIBRARY },

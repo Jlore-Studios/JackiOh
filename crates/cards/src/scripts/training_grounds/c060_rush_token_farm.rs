@@ -1,18 +1,7 @@
 //! SPEC §8.11 Training Grounds #60 Rush Token Farm, the snapshot of Core #58 Rush Token Farm (`core-058`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #58 Rush Token Farm (SPEC §8.3): Field Spell, cost 2. "Start of turn: summon a Rush Token" /
-//! radiant "Aura: your Rush Tokens +3/+3; same". Engine cell: "Aura keyed on def T-rush".
-//!
-//! §8 Conventions: "'same' says so explicitly", so the radiant face ADDS the aura and KEEPS the summon.
-//! R62/§6.2: "Start of turn" is the CONTROLLER's turn start (after the mana refresh, before the draw).
-//! R64 places the token in the leftmost empty, unlocked, unreserved unit zone; a full board summons
-//! nothing and the trigger still resolves (§3.2). The aura is §10.4 layer 5, recomputed on every read,
-//! so it vanishes with this Field Spell; §7 names this card as why `stats_override` is not the mechanism.
+//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #58 (SPEC §8, §8.3, §3.2, §6.2): start of turn token summon (R62, R64).
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;

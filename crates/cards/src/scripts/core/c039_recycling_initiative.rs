@@ -138,12 +138,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #39 Recycling Initiative — SPEC §8.2 row 39, BUILD M4-T4 row 39: "Exiled on play; end of turn
-// adds copies of every other card played this turn, including later ones (R71); radiant copies
-// cost 1 less".
-// R62: end-of-turn triggers → the trap window → delayed effects → cleanup. `turnEnded` is emitted
-// BEFORE the window, so these tests key on `turnStarted`, the first event after cleanup. R65: the
-// copy's `costMod` is in what `effectiveCost` reports in `viewFor` and what the player pays.
+// #39 Recycling Initiative — SPEC §8.2 row 39, BUILD M4-T4 row 39, R71, R62, R65.
+// Exiled on play; end-of-turn adds copies of cards played this turn; radiant copies cost 1 less.
 #[cfg(test)]
 mod tests {
     use crate::js;

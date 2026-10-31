@@ -1,25 +1,7 @@
 //! SPEC §8.11 Training Grounds #58 True Strike, the snapshot of Core #44 True Strike (`core-044`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #44 True Strike (SPEC §8.2, R346). Spell, cost 1, Common.
-//!   Base:    "Pierce / Deal 4 damage. Exile this."
-//!   Radiant: "Pierce / Deal 8 damage. Exile this." (the faces differ only in the number.)
-//!   Engine:  "Pierce: skips pipeline step 2; Divine Shield still applies."
-//!
-//! PIERCE ON A SPELL (R346): its damage ignores Armor. §4.4 step 2 reads Pierce off the source, and the
-//! effect states it too (`ignoreArmor`, as R85's `lifesteal` is Lifesteal), so an Echo repeat pierces
-//! even once R98 has left its source empty. It skips step 2 and NOTHING else: Divine Shield,
-//! Anti-oneshot Armor and Indestructible (steps 1, 3 and 4) still apply.
-//! "Deal 4 damage" takes a DECLARED play-time target (R81, §8 Conventions: any unit or hero), never a
-//! prompt; R90 validates it against the declaration.
-//! "Exile this" (§5.1, §6.3): the spell is in the `resolving` zone while its script runs (§10.1, §10.5
-//! step 4), so `exile` moves it from there and step 7 must not send it to the graveyard. `exile` bumps
-//! the exile counter (R55), which #40 Echoes of the Forgotten and #100 Ceaseless Void read; the state
-//! check runs after both effects (R59).
+//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #44 (SPEC §8, §8.2): deals damage; R55, R59, R85, R98, §10.1, §10.5, #40, #100.
 
 use jackioh_engine::effects::{damage, exile};
 use jackioh_engine::prelude::*;

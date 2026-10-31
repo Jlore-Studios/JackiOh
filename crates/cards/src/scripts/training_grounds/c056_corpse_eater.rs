@@ -1,20 +1,7 @@
 //! SPEC §8.11 Training Grounds #56 Corpse Eater, the snapshot of Core #89 Corpse Eater (`core-089`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89).
-//!
-//! Base: "Rush. While in your hand: whenever a unit on either side dies, this gains its attack and
-//! max health". Radiant: "Rush, Divine Shield; gains double". §8's Conventions: both keyword lists
-//! are printed in `catalog.json` (§10.4 layer 1), so no script grants them and only the gain doubles.
-//!
-//! A hand-zone trigger: "while in your hand" and "stops once on the field" are the registry's
-//! doing (§10.3, R68). It reads the event, not the instance: R78 resets an instance leaving the
-//! field, and R89's `destroyed` event carries the layers' numbers at death (R38's "current" numbers).
-//! A death is field to graveyard (§4.5 step 1, §6.2); `def_of` includes a transient Fuse def (R77).
+//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #89 (SPEC §8.5, §6.2): hand trigger on unit death (R68, R77).
 
 use jackioh_engine::prelude::*;
 

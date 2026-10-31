@@ -1,10 +1,7 @@
 //! TG #9 Ravager (SPEC §8.11 row 9): (4) Unit, Human, Common, 7/7 → 14/17, a card of the held Training
 //! Grounds set (R1420, R2194000).
 //!   Base and Radiant: "Rush / Whenever this destroys a Unit, it gains +{buff}/+{buff}." — buff 5, Radiant 10
-//! Engine: C+ #19.5 Bot Loser's kill trigger: a `destroyed` whose `killer_id` is this card, R42's killer
-//!   (the hit, or Poisonous hit, that first dooms the victim, on any turn, a defending kill included); a
-//!   destroy effect credits nobody. A field trigger, so a Ravager that dies in the same combat gains
-//!   nothing (R1245). The gain is a permanent buff to both stats; the damage it took stays. Tunes: buff 5 ↑.
+//! Kill trigger: `destroyed` with `killer_id` of this card (R42; C+ #19.5). Dies in same combat gains nothing (R1245). Permanent stat buff. Tunes: buff 5 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -35,11 +32,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #9 Ravager — SPEC §8.11 row 9, BUILD M13 row TG 9: "base: 7/7 with Rush, may attack a Unit the turn
-// it is played, not the hero; attacking and killing a Unit it survives: 12/12 (the damage taken stays); a
-// Unit that attacks it and dies: +5/+5; if it dies in the same combat it gains nothing (R1245); a hit that
-// does not kill: no gain; a hit on a Divine Shield: no gain; two kills: +10/+10; the buff reads
-// `param("buff")`. radiant 14/17 with Rush; each kill +10/+10".
+// TG #9 Ravager — SPEC §8.11 row 9, BUILD M13 row TG 9 (R1245).
 #[cfg(test)]
 mod tests {
     use super::ID;

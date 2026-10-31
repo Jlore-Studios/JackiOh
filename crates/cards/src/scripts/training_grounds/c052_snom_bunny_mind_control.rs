@@ -1,33 +1,8 @@
 //! SPEC §8.11 Training Grounds #52 Snom Bunny Mind Control, the snapshot of Core #49 Snom Bunny Mind Control (`core-049`),
 //! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//!
-//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
-//!
-//! #49 Snom Bunny Mind Control (SPEC §8.2): "Steal an enemy Unit.", radiant "Steal an enemy Unit.
-//! Make it Radiant."
-//!
-//! Reading the radiant cell (§8 Conventions): the second sentence adds an effect and keeps the base
-//! clause, so the radiant face steals the same Unit and then sets its flag.
-//!
-//! Unit only since patch v0.3.12 (#1149): the declaration offers the enemy's Units and no Field Spell,
-//! Trap or Field Trap. It is a DECLARED play-time target in the play action's `targets` (R81),
-//! validated by R90, and only the top card of a Stack pile is on offer (R13). An enemy board with no
-//! Unit fizzles and the spell still counts as played (§8 Conventions). Through v0.3.7b it stole any
-//! enemy permanent, a face-down Trap included; `script_v0_3_7b` keeps that for those versions'
-//! replays (R767000).
-//!
-//! Where the card lands is §6.3 Steal and R15 (`effects/steal.rs`). Control is field-only (R12), so
-//! the steal moves `controller` and nothing else: the card keeps its owner, damage, buffs, counters
-//! and position (R78 is about leaving).
-//!
-//! The radiant clause is `set_radiant`, the flag and nothing else (R74): the base stat layer swaps at
-//! once, damage and buffs stay and no Cry re-fires (R22). It resolves the selection by instance id,
-//! so the steal having moved the card between zones cannot make it miss.
-//!
-//! The snapshot has no shipped history, so it copies neither `script_v0_3_7b` nor its declaration
-//! (R2195003): it steals an enemy Unit only.
+//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
+//! Core #49 (SPEC §8.2, §8): steals enemy Unit (patch v0.3.12 #1149). Play-time target (R81, R90); top of Stack only (R13; §6.3, §5.2, R74).
+//! Kept script `script_v0_3_7b` preserves pre-v0.3.12 permanent stealing for replays (R767000; #11, #14, #15, #20, #25, #40, #41, #45, R12, R15, R22, R78).
 
 use jackioh_engine::prelude::*;
 
@@ -62,17 +37,8 @@ fn scripts_with(targets: fn() -> Vec<TargetDecl>) -> CardScripts {
     }
 }
 
-// #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4: "Steal placement per R15; radiant sets the
-// flag on the stolen card".
-//
-// R15 has three clauses, one case each: the same lane when free, the first free zone of the row,
-// and "excess remain with the opponent" when the row is full. R12 is asserted alongside every steal:
-// `controller` moves and `owner` never does.
-//
-// The radiant clause is R22/R74; an already Radiant card is untouched (§6.3 Make Radiant). The
-// props are #25, #20, #45 (4/3 → 8/6, the damage-and-radiant case), #11, #8, #15 (its Cry would
-// summon a Rush Token, which checks "no Cry re-fires"), #41 Sheepish, a face-down Trap, and #14
-// Jlockeed's Weapons, a Field Spell: neither is a Unit, so neither is on offer.
+// #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4, R15, R12, R22, R74, §6.3.
+// Steal placement per R15; radiant sets flag on stolen card; props (#25, #20, #45, #11, #8, #15, #41, #14).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

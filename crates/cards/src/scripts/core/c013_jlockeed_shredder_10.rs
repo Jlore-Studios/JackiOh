@@ -28,13 +28,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #13 Jlockeed Shredder-10 (SPEC §8.1, BUILD M4-T4 row 13): "Controller's end of turn: 2 to every
-// enemy unit and hero as separate instances; units it kills die after all hits land (R59); not on
-// the opponent's end; radiant 4 (R51)".
-//
-// p2's Pointmaster (lane 1, 7/1) dies to 2 and Mr. Vanilla (4/4) survives at 2, so R59 is observable:
-// the later hits must still land. Each side's library and spare hand card spare it §2.4 fatigue and
-// keep the fresh turn from auto-ending (§2.5).
+// #13 Jlockeed Shredder-10 (SPEC §8.1, BUILD M4-T4 row 13, R59, R51, §2.4, §2.5).
+// End of turn damage to enemy units and hero; deaths collected after all hits (R59).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -1,16 +1,8 @@
 //! #78 /fullsend (SPEC §8.3, R62, R65, R364, §2.2, §2.3, §10.5 step 5, §10.1).
-//!
 //! Base: "Refresh 3 mana. Your cards cost (1) less this turn. End of turn: Exile your hand." Radiant adds
 //! "gain 'Combo: Draw 1'" to the discount. §8's Engine cell: "Turn-scoped player modifiers plus an
-//! end-of-turn delayed exile": `refreshMana` (§6.3 Refresh, R364: spent mana back, never past max); a
-//! `costDiscount` for this turn ("your CARDS", so no `onlyType`), flat before Curvature and leaving an
-//! X-cost card at exactly X (R65); on Radiant a PLAYER-scoped `comboDraw` rider read once per card
-//! played (§10.5 step 5); and a delayed effect at the controller's end phase that exiles the hand, after
-//! the end-of-turn trap window (R68 order) and before cleanup, so the modifiers are still live (R62).
-//! Its `resume` step is the one registration (R126); the stored `Resume` names the script and the face
-//! (`radiant` persists in every zone, R78) and re-enters even with no instance left (R127). R662: the
-//! Radiant rider lights every hand card once a card was played this turn; the base face grants a
-//! discount, not a condition (cost is on the faces, R280).
+//! end-of-turn delayed exile": refresh mana (§6.3, R364, §2.3); turn cost discount (R65, R78, R280).
+//! End-of-turn delayed exile (§10.1, §10.5 step 5, §2.2, R62, §8, R241, R155, R127, R68).
 
 use jackioh_engine::effects::{add_player_modifier, delay, exile_hand, refresh_mana};
 use jackioh_engine::prelude::*;
