@@ -98,7 +98,7 @@ measured list.
 | Deeper search (ISMCTS) | failed at the browser's budget (s53, s55) | |
 | A learned leaf evaluation | this note | needs the data pipeline first |
 | A learned move ordering (a policy prior over the root's candidates) | built behind a switch, off (#1171) | `positions --policy` labels each decision with the AI's candidates and the move played; `policy_fit.py` fits a table that re-sorts each line's moves before the beam's prefix (`crates/ai/src/policy.rs`, R1171000, R1171001); `retrain_policy.sh` screens it |
-| A bigger `AI_BUDGET` | doubled to 1,200 nodes by the owner's call (#2575, R2575000); more is still a person's call, and no lane may raise it | duel `msP95` read about 690 ms on the loaded box (s63a) at 600 nodes against `AI_GATE.max_decision_ms` 1500, but generation 9's bans are all `timeout`; at 1,200 a fat state still scales from 600 nodes, since improve-dev:200's pinned decision took about 1.42 s without that cap |
+| A bigger `AI_BUDGET` | doubled to 1,200 nodes by the owner's call (#2575, R2575000); more is still a person's call, and no lane may raise it | duel `msP95` read about 690 ms on the loaded box (s63a) at 600 nodes against `AI_GATE.max_decision_ms` 1500, but generation 9's bans are all `timeout`; at 1,200 a fat state still scales from 600 nodes, since improve-dev:200's pinned decision took about 1.42 s without that cap; at 1,200 the timing gate's slowest decision read 105 ms, and its 800-game screen 406-394, edge +0.015 (-0.007 to +0.037), worst msP95 2,683 ms |
 
 ## How much data and compute
 
