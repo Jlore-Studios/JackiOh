@@ -10895,6 +10895,13 @@
     "2562": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T06:10:43Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Line 8 (no decisions left) is the doubtful one: the scan test needs a TypeScript-AST walk, an exemption list for two deliberate full page loads the issue doesn't mention, and a mutation check. All of it is web-only and spelled out below, but that is too much room for the weakest builder."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
