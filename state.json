@@ -10869,21 +10869,28 @@
       "taken_asks": []
     },
     "2574": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-10-31T05:23:12Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:4290fdc1-1793424493",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-10-31T05:28:24Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T04:58:08Z",
+    "at": "2026-10-31T05:28:24Z",
     "url": "",
-    "what": "revise #2572 on claude-1"
+    "what": "plan #2574 on agy"
   },
   "last_sweep": {
     "at": "2026-10-31T05:21:07Z",
