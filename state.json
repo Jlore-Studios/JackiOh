@@ -10967,6 +10967,13 @@
     "2564": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T07:13:10Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "the hard line 'the AI's search (crates/ai/src/)' applies: it adds a root probe and an evaluation term in crates/ai/src/evaluate.rs and decide.rs, plus a ruling"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
