@@ -11712,7 +11712,7 @@
       "provider": "claude-4",
       "queued_at": "2026-10-31T20:04:36Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:5bbf2374-1793477406",
+      "run_id": "41237643144",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T20:10:19Z",
       "stop_requested": false,
