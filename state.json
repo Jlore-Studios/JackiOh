@@ -10113,8 +10113,18 @@
       "taken_asks": []
     },
     "2516": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
       "onto": "bot/issue-2497",
-      "part_of": 2497
+      "part_of": 2497,
+      "pending_request": false,
+      "provider": "agy",
+      "run_id": "pending:c9574961-1793474100",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-10-31T19:15:13Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2517": {
       "onto": "bot/issue-2497",
@@ -11604,9 +11614,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T17:16:01Z",
+    "at": "2026-10-31T19:15:13Z",
     "url": "",
-    "what": "build #2515 on agy"
+    "what": "build #2516 on agy"
   },
   "last_sweep": {
     "at": "2026-10-31T19:07:49Z",
