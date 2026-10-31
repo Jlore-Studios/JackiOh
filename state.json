@@ -10047,8 +10047,18 @@
       "verdict_rounds": 0
     },
     "2513": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
       "onto": "bot/issue-2497",
-      "part_of": 2497
+      "part_of": 2497,
+      "pending_request": false,
+      "provider": "agy",
+      "run_id": "pending:b030129d-1793453692",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-10-31T13:35:05Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2514": {
       "onto": "bot/issue-2497",
@@ -11496,9 +11506,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T13:34:39Z",
+    "at": "2026-10-31T13:35:05Z",
     "url": "",
-    "what": "revise #2590 on claude-6"
+    "what": "build #2513 on agy"
   },
   "last_sweep": {
     "at": "2026-10-31T13:26:41Z",
