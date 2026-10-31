@@ -11594,6 +11594,13 @@
     "2603": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T20:47:10Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "a new ruling and a change in crates/ai/src/evaluate.rs rule out easy; not hard, since it widens one walk of the root's price probes and not the search, and a prototype of this exact code passed jackioh-ai's whole suite and the smoke gate"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
