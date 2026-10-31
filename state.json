@@ -11011,10 +11011,8 @@
       ]
     },
     "2565": {
-      "action": "plan",
-      "asks": [
-        "c:6539650507"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-31T07:04:41Z",
         "difficulty": "medium",
@@ -11040,15 +11038,17 @@
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
       "planned_tier": "medium",
-      "provider": "agy",
+      "provider": "claude-8",
       "queued_at": "2026-10-31T05:38:46Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41177482845",
-      "runs_on": "night-vm-agy",
-      "started_at": "2026-10-31T06:39:03Z",
+      "run_id": "pending:c52d7c41-1793438864",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-10-31T09:27:58Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6539650507"
+      ]
     },
     "2566": {
       "action": "build",
@@ -11927,9 +11927,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T09:01:42Z",
+    "at": "2026-10-31T09:27:58Z",
     "url": "",
-    "what": "build #2567 on claude-3"
+    "what": "build #2565 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-31T09:20:28Z",
