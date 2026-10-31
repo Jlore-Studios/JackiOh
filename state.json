@@ -11176,6 +11176,7 @@
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
       "provider": "claude-4",
+      "question": "a person with a GitHub login and a few free hours on a machine (the owner's PC, the learn lane's runner, plays about 2,500 games an hour) runs `training/ml/retrain_policy.sh`, and the gate if it passes, by the steps below. The bot cannot do it. The newest learn export's artifacts need a token to download (`gh run download`), and the bot holds none. Its fallback, 5,000 self-play games, takes 3\u20134 h on four vCPUs before the 800-game screen and a gate of up to 2,000 games. That is past the bot's 150-minute builder call and 330-minute job (`.harness/config.json`: `call_timeout_minutes`, `job_budget_minutes`), and nothing is kept between its jobs. Measured on this planner's runner (four vCPUs): one release build of `jackioh-tools` took 3 min 50 s; `selfplay --games 24` took 2 min 8 s (one game alone took 78 s); `positions --every decision --policy` over those 24 games took 1.4 s and wrote 1,674 rows (2.9 MB).",
       "queued_at": "2026-10-31T05:29:43Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "41172816064",
