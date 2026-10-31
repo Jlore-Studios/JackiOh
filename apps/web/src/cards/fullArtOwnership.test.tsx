@@ -40,9 +40,6 @@ import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 
 const ANCHOR = { left: 600, top: 200, width: 100, height: 140 };
 
-/** Longer than any inspect delay (hover or long-press), as in game/Card.test.tsx. */
-const PAST_ANY_INSPECT_DELAY_MS = 2_000;
-
 const DEFS = Object.values(CATALOG);
 const HEROES = DEFS.filter((def) => FULL_ART_NAMES.has(def.name));
 const HERO_IDS = HEROES.map((def) => def.id);
@@ -231,10 +228,8 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
 
     const root = handFace(OWNED).closest<HTMLElement>(".card");
     if (root === null) throw new Error("no card root");
-    fireEvent.pointerDown(root, { pointerType: "touch", clientX: 10, clientY: 10 });
-    act(() => {
-      vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
-    });
+    // The I key opens the sheet (a touch hold shows the preview, R2617000).
+    fireEvent.keyDown(root, { key: "i" });
     expect(screen.getByTestId(INSPECT_SHEET).querySelector(".cf")?.getAttribute("data-full-art")).toBe("true");
     cleanup();
     closeInspect();

@@ -160,7 +160,7 @@ mod tests {
         duos_legal_actions, duos_reduce, duos_seats_to_act,
     };
 
-    /// The hotseat game e2e spec 01 recorded (SURFACE §13), committed beside the golden traces.
+    /// The hotseat game e2e spec 01 recorded (SURFACE §13), committed under `crates/engine/tests/golden/`.
     const HOTSEAT: &str = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../engine/tests/golden/01-hotseat-full-game.json"

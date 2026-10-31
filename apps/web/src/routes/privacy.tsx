@@ -15,7 +15,8 @@
 // and replay shares (migration 0038, #936; chat purged after `CHAT_RETENTION_DAYS`, B53; a challenge
 // deleted once `CHALLENGE_TTL_MS` has passed, B49; the shares between two players deleted when either
 // unfriends or blocks the other, B46, B52), who may watch a game you play (B50: your friends, and your
-// opponent's) and Duos co-op (migrations 0039 and 0051, SPEC S6: the teammate's view, B23; its moves
+// opponent's, with no setting to stop it, R2615000), the public player statistics (R639, R1142000,
+// R2000000), that online play's data has no opt-out (R2615001) and Duos co-op (migrations 0039 and 0051, SPEC S6: the teammate's view, B23; its moves
 // kept `MATCH_ACTION_RETENTION_DAYS`; a finished co-op game stays for the teammate when one account
 // is deleted, R1497000, and the deletion is refused while one is live), custom cards (migration 0037,
 // R915008: private to their owner, gone with the account)
@@ -60,7 +61,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-10-21";
+export const PRIVACY_LAST_UPDATED = "2026-10-31";
 
 export default function PrivacyRoute(): ReactElement {
   const locale = useLocale();
@@ -139,8 +140,13 @@ export default function PrivacyRoute(): ReactElement {
             <li>
               If you use Play together: the friends you add, the friend requests you send and receive, the
               players you block, the challenges you send and receive, your chat messages with friends and any
-              you report (with the reason you give), the replays you share with a friend, and whether you let
-              friends watch your games.
+              you report (with the reason you give), and the replays you share with a friend.
+            </li>
+            <li>
+              Your player statistics: how many games you have finished, won, lost and drawn, and for each card
+              how often you played it, saw it played against you, lost a copy of it and destroyed an
+              opponent&rsquo;s. Your browser counts them from the online and practice games you finish, and
+              sends them to your account while you are signed in.
             </li>
             <li>
               If you play co-op (Duos) with a friend: the co-op rooms you make or join (the room&rsquo;s code, who
@@ -154,7 +160,8 @@ export default function PrivacyRoute(): ReactElement {
             </li>
           </ul>
           <p>
-            A practice game against the AI runs in your browser. Its moves are not sent to us.
+            A practice game against the AI runs in your browser. Its moves are not sent to us; only what it
+            adds to your player statistics is, while you are signed in.
           </p>
         </section>
 
@@ -167,9 +174,15 @@ export default function PrivacyRoute(): ReactElement {
             <li>To make the computer opponents play at a human pace.</li>
             <li>To save your decks, custom cards and tutorial progress so they follow your account.</li>
             <li>To show your friends when you are online.</li>
+            <li>To show your player statistics on the statistics page.</li>
             <li>To stop invite-code guessing and other abuse.</li>
             <li>To keep the site running and fix problems.</li>
           </ul>
+          <p>
+            Playing online means your games are recorded as described above. There&rsquo;s no setting to turn
+            that off: the records are how matches are run, the cards are balanced and the computer opponents
+            play at a person&rsquo;s pace.
+          </p>
         </section>
 
         <section aria-labelledby="privacy-who-gets">
@@ -188,18 +201,22 @@ export default function PrivacyRoute(): ReactElement {
           <p>
             Your friends see your username and whether you are online or in a game: you count as online for{" "}
             {PRESENCE_TTL_MS / MS_PER_SECOND} seconds after your browser last told us. A friend you chat with sees
-            your messages, and a friend you share a replay with can watch that game from your seat. If you let
-            friends watch your games (the &ldquo;Let friends watch my games&rdquo; setting, on unless you turn it
-            off), a friend can watch your ranked and unranked online games from your seat,{" "}
-            {SPECTATE_DELAY_MS / MS_PER_SECOND} seconds behind.
+            your messages, and a friend you share a replay with can watch that game from your seat. Any friend
+            can watch your ranked and unranked online games from your seat, {SPECTATE_DELAY_MS / MS_PER_SECOND}{" "}
+            seconds behind. There&rsquo;s no setting to turn this off: to stop someone watching, remove them as a
+            friend or block them.
           </p>
           <p>
-            Your opponent&rsquo;s friends can see your moves too. If your opponent lets friends watch their games,
-            their friends can watch a ranked or unranked game you play against them from your opponent&rsquo;s
-            seat, which shows your moves as your opponent sees them, {SPECTATE_DELAY_MS / MS_PER_SECOND} seconds
-            behind. And
+            Your opponent&rsquo;s friends can see your moves too: they can watch a ranked or unranked game you
+            play against your opponent from your opponent&rsquo;s seat, which shows your moves as your opponent
+            sees them, {SPECTATE_DELAY_MS / MS_PER_SECOND} seconds behind. And
             either player of a finished game may share its replay with their own friends: a replay your opponent
             shares shows the game from their seat, your moves included.
+          </p>
+          <p>
+            Your player statistics are public: anyone can see them, with your username, on the Players tab of
+            the statistics page. There&rsquo;s no setting to hide them, though an account that hid them while
+            that setting existed keeps them hidden.
           </p>
           <p>
             In a co-op game, your teammate sees your hand, your face-down cards and the choices in front of you,
@@ -297,8 +314,8 @@ export default function PrivacyRoute(): ReactElement {
           <p>
             You can delete your account yourself: sign in, open your Account page, and choose &ldquo;Delete my
             account&rdquo;. That deletes your sign-in, your decks, trios and cards, your custom cards, your
-            tutorial progress, the records of how you played, and the record of your age check and of the terms
-            you agreed to.
+            tutorial progress, your player statistics, the records of how you played, and the record of your age
+            check and of the terms you agreed to.
             Finished matches and their results stay in the other player&rsquo;s history, with your account
             removed from them, and so does a finished co-op game in your teammate&rsquo;s, its moves and its
             result included. You can&rsquo;t delete your account during a match, a co-op game or a Conquest
