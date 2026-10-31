@@ -52,10 +52,10 @@
 //!                    Cloaking Module and M+ #1.5 Star Chart (§8.9, §8.10, §7).
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
-//!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
-//!                    Classic (35/26/18/10/1) and Classic+ (13/24/25/13/3), as patch v0.2.9
-//!                    (issue #44) left them; B2.1's totals, 268 cards and 50 tokens in 318
-//!                    entries (Glitch, issue #170, the fiftieth).
+//!   census         — each set's cards, tokens and rarities (SPEC §8's rarity paragraph for Core,
+//!                    B2.5's table for Classic and Classic+, each later set's brief), read from
+//!                    `jackioh_cards::census`, where they are written once (#2581); the totals are
+//!                    its sums.
 //!   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, B2.4's Book,
 //!                    Pancake and AI, the mechanics patch's Plague (every card that uses
 //!                    Plague Counters), and patch v0.2.Y's Catalyst, Prime and Acclaimed.
@@ -71,6 +71,7 @@
 use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
+use jackioh_cards::census::{CENSUS, SetCensus};
 use jackioh_cards::{CATALOG, chinese_json};
 use jackioh_engine::{
     CardCost, CardDef, CardFace, CardType, FaceKind, GLITCH_DEF_ID, KeywordKind, Rarity, SetName, Tag,
@@ -7627,152 +7628,23 @@ const ALLOWED_TAGS: &[&str] = &[
     "Token",
 ];
 
-/// SPEC §8's and B2.5's distributions. Tokens carry rarity "Token" and are counted apart.
-const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
-    (
-        "Core",
-        &[
-            ("Common", 32),
-            ("Rare", 40),
-            ("Epic", 16),
-            ("Legendary", 7),
-            ("Mythic", 5),
-        ],
-    ),
-    (
-        "Classic",
-        &[
-            ("Common", 35),
-            ("Rare", 26),
-            ("Epic", 18),
-            ("Legendary", 10),
-            ("Mythic", 1),
-        ],
-    ),
-    (
-        "Classic+",
-        &[
-            ("Common", 13),
-            ("Rare", 24),
-            ("Epic", 25),
-            ("Legendary", 13),
-            ("Mythic", 3),
-        ],
-    ),
-    // R1420: docs/meditative-set.md M2's distribution, a ceiling until the set ships.
-    (
-        "Meditative",
-        &[
-            ("Common", 29),
-            ("Rare", 29),
-            ("Epic", 22),
-            ("Legendary", 16),
-            ("Mythic", 6),
-        ],
-    ),
-    // R1420, R1178000: docs/meditative-plus-set.md MP2's distribution, a ceiling until the set ships.
-    (
-        "Meditative+",
-        &[
-            ("Common", 5),
-            ("Rare", 9),
-            ("Epic", 9),
-            ("Legendary", 1),
-            ("Mythic", 2),
-        ],
-    ),
-    // R1420, R1857001: docs/stinkyscape-set.md ST12's distribution over its 176 cards, the Dormant
-    // Starship one of the Legendaries, a ceiling until the set shipped; since #2521 over 178: S #137
-    // Starfleet Commander, Common until then, and the new S #176 Preemptive Strike are Legendary, and
-    // the new S #177 Cloaking Module Rare.
-    (
-        "Stinkyscape",
-        &[
-            ("Common", 41),
-            ("Rare", 51),
-            ("Epic", 43),
-            ("Legendary", 31),
-            ("Mythic", 12),
-        ],
-    ),
-    // R1420, R2194000: docs/training-grounds-set.md TG2's distribution over its 60 cards (#1 to #40
-    // by the designer's bands, the snapshots #41 to #60 at their Core rarities), a ceiling until the
-    // set ships.
-    (
-        "Training Grounds",
-        &[
-            ("Common", 26),
-            ("Rare", 19),
-            ("Epic", 11),
-            ("Legendary", 3),
-            ("Mythic", 1),
-        ],
-    ),
-];
-
-/// B2.1: cards and tokens per set.
-struct SetSize {
-    set: &'static str,
-    /// The cards indexed 1..cards.
-    cards: usize,
-    /// The cards outside the set's numbers, at a `T-` index (R1857001: Stinkyscape's Dormant
-    /// Starship), counted with `cards` but not among its 1..N indices.
-    named_cards: usize,
-    tokens: usize,
+/// A set's census (`jackioh_cards::census`, where each set's counts are written once, #2581).
+fn census_of(set: &str) -> &'static SetCensus {
+    CENSUS
+        .iter()
+        .find(|census| census.set == set)
+        .unwrap_or_else(|| panic!("the census has no {set}"))
 }
 
-const SET_SIZES: &[SetSize] = &[
-    SetSize {
-        set: "Core",
-        cards: 100,
-        named_cards: 0,
-        tokens: 11,
-    },
-    SetSize {
-        set: "Classic",
-        cards: 90,
-        named_cards: 0,
-        tokens: 1,
-    },
-    SetSize {
-        set: "Classic+",
-        cards: 78,
-        named_cards: 0,
-        tokens: 38,
-    },
-    // R1420: docs/meditative-set.md M2, a ceiling until the set ships.
-    SetSize {
-        set: "Meditative",
-        cards: 102,
-        named_cards: 0,
-        tokens: 30,
-    },
-    // R1420, R1178000: docs/meditative-plus-set.md MP2, a ceiling until the set ships; #2521 adds the
-    // seventh token, #1.5 Star Chart.
-    SetSize {
-        set: "Meditative+",
-        cards: 26,
-        named_cards: 0,
-        tokens: 7,
-    },
-    // R1420, R1857001: docs/stinkyscape-set.md ST12, a ceiling until the set ships: 175 cards (177
-    // since #2521's #176 and #177), the Dormant Starship, and 52 tokens (the 30 its cards define and
-    // 22 shared).
-    SetSize {
-        set: "Stinkyscape",
-        cards: 177,
-        named_cards: 1,
-        tokens: 52,
-    },
-    // R1420, R2194000: docs/training-grounds-set.md TG2, a ceiling until the set ships: 60 cards (the
-    // snapshots #41 to #60 among them, part 2's) and the token #39.1.
-    SetSize {
-        set: "Training Grounds",
-        cards: 60,
-        named_cards: 0,
-        tokens: 1,
-    },
-];
+/// A set's tokens in the census's order: those its cards define, then those they share.
+fn census_tokens(census: &SetCensus) -> Vec<&'static str> {
+    census
+        .card_defined_tokens
+        .iter()
+        .chain(census.shared_tokens)
+        .copied()
+        .collect()
+}
 
 /// R1420: whether a set ships. A set that does not may hold fewer entries than its fixture and its
 /// counts, never more, and none of them counts toward the catalog's totals.
@@ -7783,21 +7655,21 @@ fn ships(set: &str) -> bool {
         .is_some_and(|known| set_ships(*known))
 }
 
-/// B2.1's totals, as SET_SIZES sums them over the sets that ship: the only count of the whole
+/// B2.1's totals, as the census sums them over the sets that ship: the only count of the whole
 /// catalog this file keeps.
 fn total_cards() -> usize {
-    SET_SIZES
+    CENSUS
         .iter()
-        .filter(|size| ships(size.set))
-        .map(|size| size.cards + size.named_cards)
+        .filter(|census| ships(census.set))
+        .map(SetCensus::card_count)
         .sum()
 }
 
 fn total_tokens() -> usize {
-    SET_SIZES
+    CENSUS
         .iter()
-        .filter(|size| ships(size.set))
-        .map(|size| size.tokens)
+        .filter(|census| ships(census.set))
+        .map(SetCensus::token_count)
         .sum()
 }
 
@@ -7809,13 +7681,12 @@ fn shipped_entries() -> Vec<&'static CardDef> {
         .collect()
 }
 
-/// A set's SET_SIZES row as one number (cards, named cards and tokens), for the fixture-row counts
-/// below.
+/// A set's census as one number (cards, named cards and tokens), for the fixture-row counts below.
 fn set_size(set: &str) -> usize {
-    SET_SIZES
+    CENSUS
         .iter()
-        .find(|size| size.set == set)
-        .map_or(0, |size| size.cards + size.named_cards + size.tokens)
+        .find(|census| census.set == set)
+        .map_or(0, |census| census.card_count() + census.token_count())
 }
 
 fn entries() -> Vec<&'static CardDef> {
@@ -8013,32 +7884,32 @@ mod catalog_membership_build_m4_t1_b2_1 {
             total_cards() + total_tokens(),
             "shipped catalog entries"
         );
-        for size in SET_SIZES {
+        for census in CENSUS {
             let in_set: Vec<&CardDef> = entries()
                 .into_iter()
-                .filter(|entry| entry.set.as_str() == size.set)
+                .filter(|entry| entry.set.as_str() == census.set)
                 .collect();
             let (cards, tokens) = (
                 in_set.iter().filter(|entry| !entry.token).count(),
                 in_set.iter().filter(|entry| entry.token).count(),
             );
             // R1857001: a set's cards are its numbered ones and those outside its numbers.
-            let most_cards = size.cards + size.named_cards;
-            if ships(size.set) {
-                assert_eq!(cards, most_cards, "{} cards", size.set);
-                assert_eq!(tokens, size.tokens, "{} tokens", size.set);
+            let most_cards = census.card_count();
+            if ships(census.set) {
+                assert_eq!(cards, most_cards, "{} cards", census.set);
+                assert_eq!(tokens, census.token_count(), "{} tokens", census.set);
             } else {
                 // R1420: a set being built holds no more than its brief lists.
                 assert!(
                     cards <= most_cards,
                     "{} cards: {cards} of at most {most_cards}",
-                    size.set
+                    census.set
                 );
                 assert!(
-                    tokens <= size.tokens,
+                    tokens <= census.token_count(),
                     "{} tokens: {tokens} of at most {}",
-                    size.set,
-                    size.tokens
+                    census.set,
+                    census.token_count()
                 );
             }
         }
@@ -8048,14 +7919,17 @@ mod catalog_membership_build_m4_t1_b2_1 {
     fn has_each_set_s_indices_1_n_present_exactly_once_none_of_them_a_token() {
         let by_key = by_key();
         let mut missing: Vec<String> = Vec::new();
-        for size in SET_SIZES {
-            for n in 1..=size.cards {
-                match by_key.get(&key_of(size.set, &n.to_string())) {
+        for census in CENSUS {
+            for n in 1..=census.cards {
+                match by_key.get(&key_of(census.set, &n.to_string())) {
                     // R1420: a set that has not shipped need not hold every card yet.
-                    None if !ships(size.set) => {}
-                    None => missing.push(format!("{} #{n} missing", size.set)),
+                    None if !ships(census.set) => {}
+                    None => missing.push(format!("{} #{n} missing", census.set)),
                     Some(entry) if entry.token => {
-                        missing.push(format!("{} #{n} ({}) is flagged token: true", size.set, entry.id));
+                        missing.push(format!(
+                            "{} #{n} ({}) is flagged token: true",
+                            census.set, entry.id
+                        ));
                     }
                     Some(_) => {}
                 }
@@ -8063,12 +7937,12 @@ mod catalog_membership_build_m4_t1_b2_1 {
             // by_key() is built with a duplicate guard, so one entry per index is already proved.
             let plain = entries()
                 .into_iter()
-                .filter(|entry| entry.set.as_str() == size.set && is_plain_index(&entry.index))
+                .filter(|entry| entry.set.as_str() == census.set && is_plain_index(&entry.index))
                 .count();
-            if ships(size.set) {
-                assert_eq!(plain, size.cards, "{} plain numeric indices", size.set);
+            if ships(census.set) {
+                assert_eq!(plain, census.cards, "{} plain numeric indices", census.set);
             } else {
-                assert!(plain <= size.cards, "{} plain numeric indices", size.set);
+                assert!(plain <= census.cards, "{} plain numeric indices", census.set);
             }
         }
         assert_eq!(missing, Vec::<String>::new(), "indices");
@@ -8077,20 +7951,8 @@ mod catalog_membership_build_m4_t1_b2_1 {
     #[test]
     fn has_core_s_five_card_defined_tokens_the_four_shared_tokens_the_coin_and_the_ghoul_token() {
         let by_key = by_key();
-        let expected = [
-            "51.1",
-            "65.1",
-            "90.1",
-            "93.1",
-            "95.1",
-            "T-rush",
-            "T-sheep",
-            "T-felinor",
-            "T-bread",
-            "T-coin",
-            "T-ghoul",
-        ];
-        for index in expected {
+        let expected = census_tokens(census_of("Core"));
+        for index in expected.iter().copied() {
             let entry = by_key.get(&key_of("Core", index));
             assert_eq!(
                 entry.map(|entry| entry.index.as_str()),
@@ -8121,13 +7983,7 @@ mod catalog_membership_build_m4_t1_b2_1 {
             .filter(|row| row.rarity == Rarity::Token)
             .map(|row| row.index.to_string())
             .collect();
-        assert_eq!(
-            Some(tokens.len()),
-            SET_SIZES
-                .iter()
-                .find(|size| size.set == "Classic+")
-                .map(|size| size.tokens)
-        );
+        assert_eq!(tokens.len(), census_of("Classic+").token_count());
         assert_eq!(
             tokens.iter().filter(|index| index.starts_with("T-AI-")).count(),
             10
@@ -8248,16 +8104,12 @@ mod r1178000_every_meditative_plus_entry_equals_its_fixture_row_while_the_set_is
             .collect();
         // #1563 added Bob's Plan's #1.3 Garage Sale and #1.4 Leg Day (R1563003), and #2521 its #1.5
         // Star Chart, Alteran Reach's plan (R2521008).
-        assert_eq!(tokens, ["1.1", "1.2", "1.3", "1.4", "1.5", "16.1", "20.1"]);
+        assert_eq!(tokens, census_tokens(census_of("Meditative+")));
         let mut rarities: BTreeMap<&str, usize> = BTreeMap::new();
         for row in MEDITATIVE_PLUS.iter().filter(|row| row.rarity != Rarity::Token) {
             *rarities.entry(row.rarity.as_str()).or_insert(0) += 1;
         }
-        let expected: BTreeMap<&str, usize> = RARITY_COUNTS
-            .iter()
-            .find(|(set, _)| *set == "Meditative+")
-            .map(|(_, counts)| counts.iter().copied().collect())
-            .unwrap_or_default();
+        let expected: BTreeMap<&str, usize> = census_of("Meditative+").rarities.iter().copied().collect();
         assert_eq!(rarities, expected);
         assert_eq!(MEDITATIVE_PLUS.len(), set_size("Meditative+"));
         // The Potion tag is the set's, on #11, #12 and #13 (#16's crafted potions are transient).
@@ -8345,14 +8197,17 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
         assert_eq!(row_at("175").name, "Frost Module");
         assert_eq!(row_at("176").name, "Preemptive Strike");
         assert_eq!(row_at("177").name, "Cloaking Module");
-        // The plain indices are 1..=177, each once; a token is N.k after its card N, or T-name;
-        // the AI generated cards are T-AI-1 to T-AI-10.
+        // The plain indices are 1 to the census's count, each once; a token is N.k after its card N,
+        // or T-name; the AI generated cards are T-AI-1 to T-AI-10.
         let plain: Vec<usize> = STINKYSCAPE
             .iter()
             .filter(|row| is_plain_index(row.index))
             .filter_map(|row| row.index.parse().ok())
             .collect();
-        assert_eq!(plain, (1..=177).collect::<Vec<usize>>());
+        assert_eq!(
+            plain,
+            (1..=census_of("Stinkyscape").cards).collect::<Vec<usize>>()
+        );
         for row in STINKYSCAPE.iter().filter(|row| !is_plain_index(row.index)) {
             let numbered = row
                 .index
@@ -8388,18 +8243,18 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
             .filter(|row| !is_plain_index(row.index))
             .map(|row| row.index)
             .collect();
-        // 176 until #2521 added #176 and #177.
-        assert_eq!(cards.len(), 178);
-        assert_eq!(named, ["T-dormant-starship"]);
+        let census = census_of("Stinkyscape");
+        assert_eq!(cards.len(), census.card_count());
+        assert_eq!(named, census.shared_cards);
         let tokens: Vec<&str> = STINKYSCAPE
             .iter()
             .filter(|row| row.rarity == Rarity::Token)
             .map(|row| row.index)
             .collect();
-        assert_eq!(tokens.len(), 52);
+        assert_eq!(tokens.len(), census.token_count());
         assert_eq!(
             tokens.iter().filter(|index| index.starts_with("T-")).count(),
-            22,
+            census.shared_tokens.len(),
             "shared tokens"
         );
         assert_eq!(STINKYSCAPE.len(), set_size("Stinkyscape"));
@@ -8407,11 +8262,7 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
         for row in &cards {
             *rarities.entry(row.rarity.as_str()).or_insert(0) += 1;
         }
-        let expected: BTreeMap<&str, usize> = RARITY_COUNTS
-            .iter()
-            .find(|(set, _)| *set == "Stinkyscape")
-            .map(|(_, counts)| counts.iter().copied().collect())
-            .unwrap_or_default();
+        let expected: BTreeMap<&str, usize> = census.rarities.iter().copied().collect();
         assert_eq!(rarities, expected);
         // Its four tags are its own (R1857000): #27 to #36 Drone Core, #50 to #61 and #140 to #143
         // Weapon, the four #137 tokens War Doctrine, and the Swarm Units #91 and #92.
@@ -8526,13 +8377,16 @@ mod r2194000_every_training_grounds_entry_equals_its_fixture_row_while_the_set_i
             .filter(|row| is_plain_index(row.index))
             .filter_map(|row| row.index.parse().ok())
             .collect();
-        assert_eq!(plain, (1..=60).collect::<Vec<usize>>());
+        assert_eq!(
+            plain,
+            (1..=census_of("Training Grounds").cards).collect::<Vec<usize>>()
+        );
         let tokens: Vec<&str> = TRAINING_GROUNDS
             .iter()
             .filter(|row| !is_plain_index(row.index))
             .map(|row| row.index)
             .collect();
-        assert_eq!(tokens, vec!["39.1"]);
+        assert_eq!(tokens, census_tokens(census_of("Training Grounds")));
         // #1-#15 Common, #16-#27 Rare, #28-#36 Epic, #37-#39 Legendary, #40 Mythic; the snapshots
         // keep their Core rarities, none Legendary or Mythic.
         for row in TRAINING_GROUNDS.iter().filter(|row| is_plain_index(row.index)) {
@@ -8574,7 +8428,12 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     #[test]
     fn is_core_32_40_16_7_5_classic_35_26_18_10_1_and_classic_plus_13_24_25_13_3_common_rare_epic_legendary_mythic()
      {
-        for (set, expected) in RARITY_COUNTS {
+        for SetCensus {
+            set,
+            rarities: expected,
+            ..
+        } in CENSUS
+        {
             let mut counted: BTreeMap<String, usize> = BTreeMap::new();
             for entry in entries()
                 .into_iter()
