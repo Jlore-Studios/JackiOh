@@ -49,18 +49,11 @@ pub fn script() -> CardScripts {
         cry: Some(hook(cry)),
         ..Script::default()
     };
-    // The Radiant face's 90s and draw are its declared numbers; the modes are both faces'.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-// Meditative #20 Aestheticize the Game — SPEC §8.8 row 20, BUILD M10 row M 20: Quickdraw; the
-// declared mode installs a public rest-of-game condition shown with its progress, and reaching it
-// wins at the state check's game-end point (`AltWin`): the hero at 100 health; 100 cards in the own
-// graveyard; 100 total attack and 100 total current health over the acting Units, dormant cards not
-// counted, both needed; a hero at 0 loses even with a win held, and two winners draw; a second copy
-// adds a second condition, either one winning; nothing removes it; the thresholds read through
-// `param()`; radiant 90 each, and it draws a card.
+// Meditative #20 Aestheticize the Game — SPEC §8.8 row 20, BUILD M10 row M 20.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,11 +111,9 @@ mod tests {
         fn r848_graveyard() {
             crate::register_all();
             let mut s = board(json!([GAME, FILLER]));
-            // Not met at once: the game goes on with the condition kept.
             play_mode(&mut s, GRAVEYARD_MODE);
             assert!(s.state().result.is_none());
             assert_eq!(conditions(&s), vec![("graveyard".to_string(), 100)]);
-            // Met with 100 cards there: it wins.
             let filler = s.card(FILLER).clone();
             for _ in 0..100 {
                 s.state_mut().players.p1.graveyard.push(filler.clone());
@@ -137,7 +128,6 @@ mod tests {
         #[test]
         fn r849_board_needs_both_and_skips_dormant() {
             crate::register_all();
-            // One 4/4: attack short of 100 and health short of 100.
             let mut s = board(json!([GAME]));
             play_mode(&mut s, BOARD_MODE);
             assert!(s.state().result.is_none(), "a 4/4 is short of 100/100");
@@ -259,7 +249,6 @@ mod tests {
 
         #[test]
         fn r849_current_health_and_dormant_cards_not_counted() {
-            // A damaged 100/100 counts its current health.
             let mut s = board_of(json!([{ "def": VANILLA, "statsOverride": { "attack": 100, "health": 100 }, "damage": 1 }]));
             s.play(GAME, json!({ "modes": [BOARD_MODE] }));
             assert!(s.state().result.is_none(), "99 current health is short");
@@ -305,7 +294,6 @@ mod tests {
             play_mode(&mut s, HEALTH_MODE);
             play_mode(&mut s, GRAVEYARD_MODE);
             assert!(s.state().result.is_none());
-            // The second one met, the first still unmet: it wins.
             let filler = s.card(FILLER).clone();
             for _ in 0..100 {
                 s.state_mut().players.p1.graveyard.push(filler.clone());
@@ -323,7 +311,6 @@ mod tests {
             play_mode(&mut s, HEALTH_MODE);
             let card = s.card(GAME).id.clone();
             s.expect_in_zone(&card, "graveyard");
-            // The card leaves its graveyard and turns go by: the condition stays.
             s.state_mut().players.p1.graveyard.retain(|held| held.id != card);
             for _ in 0..4 {
                 s.end_turn();
@@ -358,7 +345,6 @@ mod tests {
             let hand = s.hand(P1).len();
             play_mode(&mut s, HEALTH_MODE);
             assert_eq!(conditions(&s), vec![("health".to_string(), 90)]);
-            // Drew a card, the game itself leaving the hand.
             assert_eq!(s.hand(P1).len(), hand + 1 - 1);
         }
     }

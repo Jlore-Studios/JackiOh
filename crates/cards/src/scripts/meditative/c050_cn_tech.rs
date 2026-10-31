@@ -31,10 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #50 CN Tech — SPEC §8.8 row 50, BUILD M10 row M 50: "Add the highest win rate card (the
-// compiled table's pick, R377's in-deck rate) to your hand (MD-D1), never itself (R387), the Radiant
-// face's Radiant (MD-D3); a random card when the table names none, hidden from the opponent (R440),
-// burned by a full hand".
+// M #50 CN Tech — SPEC §8.8 row 50, BUILD M10 row M 50, MD-D3.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -102,9 +99,8 @@ mod tests {
             deck
         }
 
-        /// R1266000: a game of two `tech_deck`s played on `PLAYED_ON`, casting CN Tech or NA Tech
-        /// whenever either can be and any other legal action at random otherwise: its input and its
-        /// final hash.
+        /// R1266000: a game of two `tech_deck`s on `PLAYED_ON`, casting a Tech whenever one can be and a
+        /// random legal action otherwise: its input and final hash.
         fn played_on_before(seed: &str) -> (ReplayInput, String) {
             let shipped = shipped_catalog(PLAYED_ON).expect("the test carries PLAYED_ON");
             with_shipped(Some(shipped), || {
@@ -153,7 +149,7 @@ mod tests {
                 crate::CATALOG.clone(),
                 IndexMap::new(),
             )]);
-            // Played on a version that shipped with the empty table, as every one through v0.3.7b did.
+            // Played on a version that shipped with the empty table.
             register_win_rates(table(vec![]));
             let (game, hash) = played_on_before("r1266000-fold");
             assert_eq!(
@@ -161,7 +157,6 @@ mod tests {
                 hash,
                 "the build folds it alike while its table is empty too"
             );
-            // The build's table is filled since.
             register_win_rates(table(vec![(LEADER, 30, 40), ("core-008", 10, 40)]));
             assert_ne!(
                 hash_state(&fold(&game).state),
@@ -251,8 +246,7 @@ mod tests {
 
         #[test]
         fn r1101_the_same_table_and_seed_give_the_same_card() {
-            // The fallback draws from the match rng: the same seed makes the same card, whoever
-            // runs the engine (the server natively, the client through WASM).
+            // The fallback draws from the match rng: the same seed makes the same card, server or client.
             let one = picked(vec![], "cn-tech-same");
             let two = picked(vec![], "cn-tech-same");
             assert_eq!(one, two);
@@ -368,7 +362,6 @@ mod tests {
                 leader.id
             );
             assert_eq!(win_rate_leader(TECH).as_deref(), Some(leader.id.as_str()));
-            // And the card adds it.
             let mut s = casting("cn-tech-compiled", false);
             let before = s.hand(PlayerId::P1).len();
             s.play(TECH, json!({}));

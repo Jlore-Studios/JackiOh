@@ -6,8 +6,8 @@
 //!            targeted by effects and hit by "all" effects. A Taunt it gains binds nobody, since it
 //!            cannot be attacked. The Defense restriction is a position validator flag. Tunes: none."
 //!
-//! Both restrictions are static flags the engine reads everywhere (`restrictions.cannotBeAttacked`,
-//! #65.1's `neverDefense`); the keywords are the catalog's. Nothing else to do.
+//! Both restrictions are static flags the engine reads everywhere (#65.1's `neverDefense`); the keywords
+//! are the catalog's.
 
 use jackioh_engine::prelude::*;
 
@@ -27,10 +27,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51: "First Strike, Rush;
-// cannot be in Defense Position; can't be attacked: never the target of a declared or forced attack (a
-// random-enemy forced attack never draws it), while effects still target it and "all" effects hit it;
-// a Taunt given to it binds no attacker; radiant 14/4 with Divine Shield too".
+// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -52,7 +49,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `s.unit(p, lane) ?? ""`: the unit's instance id, or "" (which no card answers to).
+    /// The unit's instance id, or "" (which no card answers to).
     fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|card| card.id).unwrap_or_default()
     }

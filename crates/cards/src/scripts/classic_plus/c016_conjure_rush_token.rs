@@ -34,11 +34,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #16 Conjure Rush Token+ — SPEC §8.7 row 16, BUILD M9 Classic+ row C+ 16: "As C+ #15 with 3 different random
-// keywords the token lacks; the keyword count reads through `param()`; radiant 3 tokens
-// with 3 each".
-
-/// `describe("C+ #16 Conjure Rush Token+")`.
+// C+ #16 Conjure Rush Token+ — SPEC §8.7 row 16, BUILD M9 Classic+ row C+ 16: as C+ #15, with 3 keywords.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,16 +77,14 @@ mod tests {
         keys
     }
 
-    /// TS `tokens(s)[0] ?? ""`: the id of p1's first Rush Token, or "".
+    /// The id of p1's first Rush Token, or "".
     fn first_token(s: &Scenario) -> String {
         tokens(s).into_iter().next().map(|token| token.id).unwrap_or_default()
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
-        /// R21 summons one Rush Token, 3/3 Rush, with 3 different random keywords it lacks, never Rush again
         #[test]
         fn r21_summons_one_rush_token_3_3_rush_with_3_different_random_keywords_it_lacks_never_rush_again() {
             let mut seen: IndexSet<String> = IndexSet::new();
@@ -110,7 +104,6 @@ mod tests {
             assert!(seen.len() > KEYWORDS);
         }
 
-        /// R64 R129 a full board summons nothing and draws nothing from the rng
         #[test]
         fn r64_r129_a_full_board_summons_nothing_and_draws_nothing_from_the_rng() {
             let mut s = scenario(json!({ "p1": { "hand": [CARD, FILLER], "field": [BODY, BODY, BODY, BODY, BODY] }, "p2": { "hand": [FILLER] } }));
@@ -121,7 +114,6 @@ mod tests {
             s.expect_in_zone(CARD, "graveyard");
         }
 
-        /// R386 the keyword count reads through param: an Upgrade gives one more, a Degrade one fewer
         #[test]
         fn r386_the_keyword_count_reads_through_param_an_upgrade_gives_one_more_a_degrade_one_fewer() {
             let mut up = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
@@ -136,11 +128,9 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 
-        /// summons three Rush Tokens into the leftmost open zones, each with its own 3 random keywords
         #[test]
         fn summons_three_rush_tokens_into_the_leftmost_open_zones_each_with_its_own_3_random_keywords() {
             let mut s = scenario(json!({

@@ -51,8 +51,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #42 CN Flea Market — SPEC §8.8 row 42, ME-MARKET, R97, R113, R387, R1000–R1002, BUILD M10
-// row M 42.
+// Meditative #42 CN Flea Market — SPEC §8.8 row 42, ME-MARKET, R97, R113, R387, R1000–R1002 (the barter
+// R1001), BUILD M10 row M 42.
 #[cfg(test)]
 mod tests {
     use super::*;

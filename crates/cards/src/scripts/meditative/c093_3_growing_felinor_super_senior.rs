@@ -25,9 +25,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #93.3 Growing Felinor Super Senior — SPEC §8.8 row 93.3, BUILD M10 row M 93.3: "It can't switch
-// to Defense; it summons nothing when it dies, ending the chain (MD-E19); radiant 8/8, Divine Shield,
-// Rush".
+// M #93.3 Growing Felinor Super Senior — SPEC §8.8 row 93.3, BUILD M10 row M 93.3 (MD-E19).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

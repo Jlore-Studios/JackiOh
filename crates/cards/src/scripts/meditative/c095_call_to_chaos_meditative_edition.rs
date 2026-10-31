@@ -240,8 +240,6 @@ mod tests {
                 json!({ "hand": [VANILLA] }),
             );
             let hand = s.hand(P1);
-            // The Immutable Menace stays where it was, at its own cost; the Vanilla and Timmy became one
-            // fresh card, and two copies of it follow, all three at (0).
             assert_eq!(events_of(&s, "fused").len(), 1);
             assert_eq!(hand.len(), 1 + 1 + CHAOS_MED_FUSE_COPIES as usize);
             assert_eq!(hand[0].def_id, MENACE);
@@ -400,11 +398,9 @@ mod tests {
             assert_eq!(casts(&s), vec![ID.to_string()]);
             s.state_mut().players.p1.auto_end_turn = Some(false);
             s.state_mut().players.p2.auto_end_turn = Some(false);
-            // The opponent's start of turn casts nothing.
             s.end_turn();
             assert!(casts(&s).is_empty());
-            // The caster's next start of turn casts one Call to Chaos of a set that ships (R1420),
-            // this edition among them now its set ships.
+            // The caster's next start of turn casts one Call to Chaos of a set that ships (R1420).
             s.end_turn();
             let cast = casts(&s);
             assert!(!cast.is_empty());
@@ -476,8 +472,7 @@ mod tests {
                 assert_eq!(cast[0]["costPaid"], json!(0));
                 editions.push(cast[0]["defId"].as_str().unwrap_or("").to_string());
             }
-            // R1240, R1420: the Meditative set ships, so the pool holds all three editions, and
-            // the games cast this one too.
+            // R1240, R1420: the pool holds every shipped edition, and the games cast this one too.
             assert!(editions.iter().all(|id| EDITIONS.contains(&id.as_str())), "{editions:?}");
             assert!(editions.iter().any(|id| id == ID), "{editions:?}");
         }

@@ -6,10 +6,9 @@
 //! Radiant: "Tribute 1, Rush, Windfury\nA random hand Unit is summoned to make each of its attacks.\nDeath:
 //!            Shuffle a Radiant Windfurious Prime into your deck."
 //! Engine: `tribute` 1, `attack_from_hand` on both faces, `bounce_attacker` on the base face only
-//! (ME-ATTACKSUMMON, R1202, R831006: the Unit the match rng's since patch v0.3.10, the controller's
-//! pick before); a `death` hook shuffling in `meditative-091-1` — Radiant on the Radiant face. Tribute,
-//! Rush and Windfury are catalog data; the aura it brings ("a declared attack keeps its window; a
-//! forced one stays forced") is the engine's.
+//! (ME-ATTACKSUMMON, R1202; R831006: the match rng picks the Unit); a `death` hook shuffling in
+//! `meditative-091-1` — Radiant on the Radiant face. Tribute, Rush and Windfury are catalog data; the
+//! aura it brings ("a declared attack keeps its window; a forced one stays forced") is the engine's.
 
 use jackioh_engine::effects::shuffle_into;
 use jackioh_engine::prelude::*;
@@ -22,7 +21,6 @@ fn windfast(radiant_prime: bool) -> Script {
         static_flags: Some(StaticFlags {
             tribute: Some(1),
             attack_from_hand: Some(true),
-            // The base face bounces the substitute afterwards if it survives; the Radiant face keeps it.
             bounce_attacker: if radiant_prime { None } else { Some(true) },
             ..Default::default()
         }),
@@ -44,17 +42,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #91 Windfast — SPEC §8.8 row 91, BUILD M10 row M 91: "Tribute 1 and melee only, Windfury on both
-// faces, Rush since patch v0.3.10; whenever it would attack, declared or forced, a random Unit of its
-// controller's hand is summoned and makes that attack on the same target as a forced attack (Covers
-// R1202, R831006), with its own
-// trap window (a declared attack keeps its window; a forced one stays forced); the base face
-// bounces the summoned Unit if it survives the attack; with no Unit in hand or no open zone
-// Windfast attacks itself; each of Windfury's two attacks summons its own; Death shuffles a
-// Windfurious Prime (Radiant on the Radiant face) into its owner's deck".
-//
-// The replacement is proved in `crates/engine/tests/rules/mb22.rs` (R1202); these tests prove the
-// card's own faces carry it.
+// M #91 Windfast — SPEC §8.8 row 91, BUILD M10 row M 91. The replacement is proved in
+// `crates/engine/tests/rules/mb22.rs` (R1202); these tests prove the card's own faces carry it.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,9 +98,8 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 s.attack(WINDFAST, "hero");
-                // The 3/3 fought, not the 1/1: the hero took 3.
                 s.expect_health(P2, HERO_HEALTH - 3);
-                // …and went home afterwards, if it survived (it did: heroes strike nothing back).
+                // The 3/3 survived (heroes strike nothing back), so it went home.
                 s.expect_in_zone(UNIT, "hand");
                 // Windfast spent its exertion without emitting its own declaration.
                 let windfast = s.card(WINDFAST).id.clone();
@@ -160,7 +148,6 @@ mod tests {
                 }));
                 s.attack(WINDFAST, "hero");
                 assert!(s.state().pending.is_none(), "no hand pick opens");
-                // One of the two made the attack and went home: both are in hand again.
                 assert!(s.state().players[P2].hero.health < HERO_HEALTH);
                 s.expect_in_zone(UNIT, "hand");
                 s.expect_in_zone(OTHER, "hand");

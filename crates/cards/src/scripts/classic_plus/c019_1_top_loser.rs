@@ -20,9 +20,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.7 row 19.1: lane-only attacks (§4.2 step 2), never Defense, radiant Spell-immune.
-// Its Armor is a numbered keyword, which B3.4's X change tunes rather than a declared param (R386):
-// the "reads through param()" clause is proved by an Upgrade of that number.
+// SPEC §8.7 row 19.1: lane-only attacks (§4.2 step 2), never Defense, radiant Spell-immune. Its Armor is
+// a numbered keyword that B3.4's X change tunes (R386): an Upgrade of it proves "reads through param()".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -240,7 +239,6 @@ mod tests {
                     }
                     made += attacks.len();
                 }
-                // The roll came up on some of the seeds, so a forced attack was drawn, and never on it.
                 assert!(made > 0);
             }
 
@@ -313,7 +311,6 @@ mod tests {
 
             #[test]
             fn s6_1_a_unit_still_reaches_it_a_cry_targets_it_and_a_unit_s_sweep_destroys_it() {
-                // Radiant Twisted Sorcerer's 8 through the Radiant Top Loser's Armor 6 leaves 2.
                 let mut s = top_loser(json!({ "hand": [{ "def": SORCERER, "radiant": true }, FILLER] }), true, json!({}));
                 let loser = top(&s);
                 s.play(

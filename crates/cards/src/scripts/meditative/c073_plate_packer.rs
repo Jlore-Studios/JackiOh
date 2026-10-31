@@ -1,6 +1,6 @@
 //! M #73 Plate Packer (SPEC §8.8 row 73): (2) Unit, Human, Common, 6/6 → 12/12.
 //!   Both faces: "Cry: Gain +{per}/+{per} for each Armor on the field, heroes' included." — per 1 (Radiant 2).
-//! Engine: reads NEW helper `armor_on_field` (R1064, MD-D32) as the Cry resolves, then a permanent
+//! Engine: reads `armor_on_field` (R1064, MD-D32) as the Cry resolves, then a permanent
 //!   buff of +X/+X on itself.
 
 use jackioh_engine::prelude::*;

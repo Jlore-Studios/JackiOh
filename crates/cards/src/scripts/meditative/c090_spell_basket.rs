@@ -32,9 +32,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #90 Spell Basket — SPEC §8.8 row 90, BUILD M10 row M 90: "Adds three random non-token Spells (the
-// Spell type only, never a Field Spell) of any set, never itself, at their printed costs, hidden; the
-// hand cap burns the rest; cards reads through `param()`; radiant they are Radiant".
+// M #90 Spell Basket — SPEC §8.8 row 90, BUILD M10 row M 90.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -78,7 +76,6 @@ mod tests {
                         assert!(!def.token, "{}", card.def_id);
                         assert_ne!(card.def_id, ID);
                         assert!(!card.radiant);
-                        // At its printed cost.
                         assert_eq!((card.cost_mod, card.cost_override), (0, None));
                     }
                 }

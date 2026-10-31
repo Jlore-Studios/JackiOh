@@ -2,15 +2,11 @@
 //!   Base:    "Lose ({loss}) mana next turn. Make a card in your hand Radiant."
 //!   Radiant: "Cleave. Lose ({loss}) mana next turn. Make a card in your hand Radiant."
 //!
-//! The loss is a next-turn rider (§6.3 Mana, `next_turn_mana`): your next refresh gives `loss` less,
-//! never below 0, as #21 Hinder's does to the opponent's (#1563; it was ME-TURN's lost refresh, R844,
-//! "Lose all mana next turn", until then). The pick is a declared hand pick (R81, as C+ #41's): your
-//! other non-Radiant hand cards, made Radiant (§5.2). With no other non-Radiant hand card the pick has
-//! nothing and the Spell still resolves (§8 Conventions). The Radiant face's Cleave (R1563001), Echo 1
-//! until #1563, also makes the cards beside the pick in your hand Radiant: the one before it and the one
-//! after it, in hand order as the Spell resolves.
-//!
-//! `script_v0_4_0f` keeps the card as it ran through v0.4.0f for its replays (R767000).
+//! The loss is a next-turn rider (§6.3 Mana, `next_turn_mana`, #1563): your next refresh gives `loss`
+//! less, never below 0, as #21 Hinder's does to the opponent's. The pick is a declared hand pick (R81,
+//! as C+ #41's): your other non-Radiant hand cards, made Radiant (§5.2). With no other non-Radiant hand
+//! card the pick has nothing and the Spell still resolves (§8 Conventions). The Radiant face's Cleave
+//! (R1563001) also makes the cards beside the pick in your hand Radiant.
 
 use jackioh_engine::prelude::*;
 
@@ -31,7 +27,6 @@ fn target_checks() -> IndexMap<&'static str, TargetCheck> {
     )])
 }
 
-/// The picked hand card's id, off the play's declared targets.
 fn picked(ctx: &EffectContext<'_>) -> Option<String> {
     ctx.targets.iter().find_map(|selection| match selection {
         Selection::Instance { instance_id } => Some(instance_id.clone()),
@@ -122,11 +117,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// Meditative #18 Expedition12 — SPEC §8.8 row 18, BUILD M10 row M 18: Quickdraw; your next turn's
-// refresh gives 2 less, never below 0, while mana gained during that turn still adds; the turn after
-// is normal; an extra turn taken next is the one that loses it; the loss reads through `param()`; the
-// declared pick is another non-Radiant card in your hand, made Radiant; with none it still resolves;
-// radiant Cleave: the cards beside the pick in your hand become Radiant too (R1563001).
+// Meditative #18 Expedition12 — SPEC §8.8 row 18, BUILD M10 row M 18.
 #[cfg(test)]
 mod tests {
     use super::*;

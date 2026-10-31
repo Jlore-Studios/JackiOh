@@ -7,8 +7,7 @@
 //! Baron Rivendare in one card: while this acts on its controller's field, the Cry of a permanent they
 //! play or cast (§10.5 step 5) or trigger (C #54 Rewind) runs extra more times with the same choices,
 //! and the Death of a card that died under their control runs extra more times on its snapshot (§4.5
-//! step 3). A Spell's resolution is no Cry (R822). Several multipliers do not add: the highest holds
-//! (R820). Both faces run one script; `param` reads the face's `extra`.
+//! step 3). A Spell's resolution is no Cry (R822). Several multipliers do not add: the highest holds (R820).
 
 use jackioh_engine::prelude::*;
 
@@ -25,18 +24,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #10 Double Counting — SPEC §8.8 row 10, BUILD M10 row M 10: "While it acts, the Cry of
-// a Unit or Field Spell you play or cast runs twice with the same declared targets and modes
-// (R823), each run closed by its own state check, a target gone since fizzling that part; a
-// Spell's resolution is not repeated (R822); the Death of a Unit that died under your control
-// runs twice on its snapshot; the opponent's Cries and Deaths run once; a Cry C #54 Rewind triggers
-// reuses its prompt answers (R467); two Double Countings give one extra (R820); extra reads
-// through `param()`; radiant three runs".
-//
-// Core #68 Twisted Sorcerer (Cry: 4 damage to a declared target) is the aimed Cry it doubles;
-// Core #43 Big Felinor (3/10) survives both hits, Core #11 Tempo Timmy (3/3) does not. Core #73
-// Anti-oneshot Armor (a Field Spell with "Cry: Draw 1") is the Field Spell Cry; Core #5 Stockpile
-// is the Spell whose resolution runs once. C+ #76 Brother Lar (Death: a Brother Ping) is the Death.
+// Meditative #10 Double Counting — SPEC §8.8 row 10, BUILD M10 row M 10.
+// Fixtures: Core #68, #43, #11 and #73 and C+ #76, as their consts say.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -59,8 +48,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // a (1) 4/4 with no text.
     const FILLER: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
 
-    /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues;
-    /// `extra` replaces its own entries.
+    /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues.
     fn side(extra: Value) -> Value {
         crate::merged(
             json!({ "mana": 10, "hand": [FILLER], "library": [FILLER, FILLER, FILLER] }),
@@ -68,7 +56,6 @@ mod tests {
         )
     }
 
-    /// How many `damage` events hit one instance.
     fn damage_events(s: &Scenario, target_id: &str) -> usize {
         s.events()
             .iter()
@@ -124,7 +111,6 @@ mod tests {
                 "p2": side(json!({})),
             }));
             s.play(ARMOR, json!({}));
-            // The filler plus the two drawn Vanillas.
             assert_eq!(s.hand(P1).len(), 3);
             assert_eq!(
                 s.hand(P1).iter().filter(|card| card.def_id == VANILLA).count(),

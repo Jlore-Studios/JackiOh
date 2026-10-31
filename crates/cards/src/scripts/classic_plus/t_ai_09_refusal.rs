@@ -90,12 +90,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-9 Refusal — SPEC §8.7 row T-AI-9, BUILD M9 Classic+ row T-AI-9: in §10.5's announce window a Spell
-// whose declared targets include one of your Units is Countered and treated as never played (no count,
-// no Echo repeats; mana and Tributes stay spent); with two Refusals the first cancels and the second
-// stays set; hidden until it fires (R33); radiant also for you or any card of yours, and you draw 1.
-//
-// Every case sets the trap face-down in p1's backrow and makes p2 the active player.
+// T-AI-9 Refusal — SPEC §8.7 row T-AI-9, BUILD M9 Classic+ row T-AI-9 (R33).
 #[cfg(test)]
 mod tests {
     use crate::merged;

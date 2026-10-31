@@ -4,11 +4,9 @@
 //!   Radiant: "Taunt, Reborn, Divine Shield / Death: Heal your hero {heal}." — heal 6
 //!   Engine:  "Death fires on both deaths of a Reborn unit (§4.5), so it heals twice. Tunes: heal 3 ↑."
 //!
-//! The keywords are the catalog's (Taunt, Reborn; Divine Shield on the Radiant face), which the layers
-//! read off the face. The Death is §4.5 step 3's hook, which runs on every death, the first one that
-//! Reborn answers included (R8), and never on an exile or a bounce, which are not deaths. A hero's heal
-//! has no cap (R19). The amount is the declared number `heal` (R386), read off the dying card's own
-//! face and tuning through `param`, so both faces run one script.
+//! The Death is §4.5 step 3's hook, run on every death, the first one that Reborn answers included
+//! (R8), never on an exile or a bounce. A hero's heal has no cap (R19). The amount is the declared
+//! `heal` (R386), read off the dying card's face and tuning through `param`, so both faces run one script.
 
 use jackioh_engine::effects::heal;
 use jackioh_engine::prelude::*;
@@ -27,9 +25,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #28 Nuestro hogar, nuestras tumbas — SPEC §8.7 row 28, BUILD M9 Classic+ row C+ 28: "Taunt,
-// Reborn; Death heals your hero 3 on both deaths (R8), past 30 allowed; exile or a bounce heals
-// nothing; the heal reads through `param()`; radiant Divine Shield too, heal 6".
+// C+ #28 Nuestro hogar, nuestras tumbas — SPEC §8.7 row 28, BUILD M9 Classic+ row C+ 28.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -93,7 +89,6 @@ mod tests {
             assert_eq!(ID, HOGAR);
             assert_eq!(crate::card_def(ID).id, HOGAR);
             let scripts = script();
-            // The Radiant face is the base script itself.
             assert!(std::sync::Arc::ptr_eq(
                 scripts.base.death.as_ref().unwrap(),
                 scripts.radiant.death.as_ref().unwrap()

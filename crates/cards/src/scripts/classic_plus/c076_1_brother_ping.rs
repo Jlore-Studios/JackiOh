@@ -8,9 +8,8 @@
 //!            targets }`, §10.2). Tunes: Activate 1 ↑ (its X); damage 1 ↑."
 //!
 //! The activate subsystem counts the uses per turn on the instance and reads the count through B3.4's X
-//! change: an Upgrade makes it Activate 2, a Degrade never takes it below 1. The hit is one §4.4 instance
-//! sourced by this Unit, so its Pierce skips Armor (R346); it is not a Spell's hit, so Spell Damage never
-//! raises it.
+//! change. The hit is one §4.4 instance sourced by this Unit, so its Pierce skips Armor (R346); it is not
+//! a Spell's hit, so Spell Damage never raises it.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;

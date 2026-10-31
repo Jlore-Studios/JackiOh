@@ -8,9 +8,9 @@
 //!            adds that many random Books. The pool is the non-token Books of every set (R380, R60);
 //!            a full hand burns what doesn't fit (§2.4). Tunes: none."
 //!
-//! The Death's count is the snapshot's own counters (`plagueOn(ctx.self)`), so a bounced worm keeps
-//! nothing (R78) and a worm that died with none adds none. Since issue #1828 it carries the Plague tag,
-//! which §5 puts on every card that uses Plague Counters, so a Plague pool holds it.
+//! The Death's count is the snapshot's own counters, so a bounced worm keeps nothing (R78) and a worm that
+//! died with none adds none. It carries the Plague tag (#1828), which §5 puts on every card that uses Plague
+//! Counters, so a Plague pool holds it.
 
 use jackioh_engine::effects::{add_random_from_catalog, place_plague};
 use jackioh_engine::prelude::*;
@@ -60,12 +60,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #39 Book Worm — SPEC §8.7 row 39, BUILD M9 Classic+ row C+ 39: "It carries the Plague tag (§5: every
-// card that uses Plague Counters), so a Plague pool holds it; it starts with no Plague Counters and places
-// one on itself at each start of its controller's turn (balance patch 1: no N counter); Death adds that many
-// random non-token Books of any set (R380, repeats allowed), reading the tokens last-known (R78, R89), a full
-// hand burning the rest; bounced and played again it starts at 0; no tuned numbers; radiant the Books are
-// Radiant".
+// C+ #39 Book Worm — SPEC §8.7 row 39, BUILD M9 Classic+ row C+ 39.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -90,7 +85,7 @@ mod tests {
         }))
     }
 
-    /// Two `endTurn`s: the opponent's turn and back to the start of ours.
+    /// The opponent's turn and back to the start of ours.
     fn next_own_turn(s: &mut Scenario) -> &mut Scenario {
         s.end_turn().end_turn()
     }
@@ -244,7 +239,6 @@ mod tests {
             };
             let worm_in_hand = cards.iter().find(|card| card["defId"] == WORM);
             assert!(worm_in_hand.is_none_or(|card| card.get("counters").is_none()));
-            // The text names what the counters are.
             assert!(def_of(Some(s.state()), WORM).base.text.contains("Plague Counter"));
             // What the counters say is what the Death then adds.
             let before = hand_ids(&s);

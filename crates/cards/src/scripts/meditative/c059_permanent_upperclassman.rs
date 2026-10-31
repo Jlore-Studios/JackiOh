@@ -8,7 +8,7 @@
 //! Engine: ME-GRANT (docs/meditative-set.md M5, MD-D13) plus multi-pool fusion (MD-D14) — the
 //! summoned Unit is granted `meditative-059#fusedBookDeath` as plain data; the hook fuses one pick
 //! from each pool, the Book first so the fused type falls back to it, into the controller's hand at
-//! (min(sum,4)) (R469). The Radiant face's fused card is Radiant.
+//! (min(sum,4)) (R469).
 
 use jackioh_engine::prelude::*;
 
@@ -233,7 +233,6 @@ mod tests {
             assert_eq!(ingredients.len(), 2);
             assert!(crate::card_def(&ingredients[0]).tags.contains(&Tag::Book));
             assert!(crate::card_def(&ingredients[1]).tags.contains(&Tag::Ai));
-            // (min(sum,4)): the fused card costs no more than 4.
             assert!(
                 cost_now(s.state(), &made[0]) <= 4,
                 "{}",
@@ -376,8 +375,7 @@ mod tests {
         fn the_radiant_face_summons_radiant_and_fuses_radiant() {
             crate::register_all();
             use jackioh_engine::prelude::keywords_of;
-            // Re-pinned for the Stinkyscape release (#1884): the seed's summon became Core #66 The Rock,
-            // which is Indestructible and never dies, so the test takes the first seed whose summon can.
+            // The first seed whose summon can die: Core #66 The Rock is Indestructible (#1884).
             let (mut s, summoned) = (0..20)
                 .map(|n| {
                     let mut s = casting(&format!("upperclassman-radiant-{n}"), true);

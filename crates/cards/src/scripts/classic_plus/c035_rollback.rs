@@ -55,10 +55,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #35 Rollback (SPEC §8.7, R419, R562, R563, R566).
-// The harness starts mid-game on turn 9 without running a turn start, so tests begin history with
-// `endTurn()`; two reach turn 11 with snapshots of turns 10 and 11. Libraries hold fillers and each
-// side keeps a Unit so no turn auto-ends (R82).
+// C+ #35 Rollback (SPEC §8.7).
+// The harness starts on turn 9 without a turn start, so tests begin history with `end_turn()`. Libraries
+// hold fillers and each side keeps a Unit so no turn auto-ends (R82).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -154,7 +153,7 @@ mod tests {
             .collect()
     }
 
-    /// The ids of a unit pile, top first (`players[p].units[lane - 1]`).
+    /// The ids of a unit pile, top first.
     fn pile_ids(state: &GameState, seat: PlayerId, lane: usize) -> Option<Vec<String>> {
         state.players[seat].units.get(lane - 1).and_then(|pile| pile.as_ref()).map(|pile| ids(pile))
     }
@@ -163,12 +162,10 @@ mod tests {
         ids(&s.hand(seat))
     }
 
-    /// TS `types.indexOf(type)`: -1 when absent.
     fn index_of(events: &[GameEvent], want: GameEventType) -> i64 {
         events.iter().position(|event| event.event_type() == want).map(|at| at as i64).unwrap_or(-1)
     }
 
-    /// The `play` action on p1's Rollback with these modes, as JSON.
     fn play_rollback(s: &mut Scenario, modes: &[&str]) {
         s.play(ROLLBACK, json!({ "modes": modes }));
     }
@@ -462,7 +459,6 @@ mod tests {
             let seen = serde_json::to_string(&s.view(P2)).unwrap();
             assert!(!seen.contains(SHEEPISH));
             assert!(!seen.contains(&format!("\"{}\"", trap.id)));
-            // Its owner reads it.
             assert_eq!(
                 js(&of_type(&s.view(P1).events, GameEventType::Bounced)),
                 json!([{ "type": "bounced", "instanceId": trap.id, "defId": SHEEPISH, "owner": "p1" }])
@@ -852,7 +848,7 @@ mod tests {
             s.expect_in_zone(&timmy, "hand");
         }
 
-        /// TS's `act`: one action, its nonce numbered by the actions so far.
+        /// One action, its nonce numbered by the actions so far.
         fn act(state: &mut GameState, n: &mut i32, body: Value) {
             *n += 1;
             let mut with_nonce = body;
@@ -997,7 +993,7 @@ mod tests {
     mod c_n35_rollback_a_whole_game_s9_3 {
         use super::*;
 
-        /// TS's `act`: one action of the log, its nonce numbered by the log so far.
+        /// One action of the log, its nonce numbered by the log so far.
         fn act(state: &mut GameState, log: &mut Vec<Action>, body: Value, nonce: String) {
             let mut with_nonce = body;
             with_nonce["nonce"] = json!(nonce);
@@ -1080,7 +1076,6 @@ mod tests {
             assert_eq!(replayed.state.board_history, state.board_history);
         }
 
-        /// TS ran this with `{ timeout: 120_000 }`; cargo test has no per-test timeout.
         #[test]
         fn r419_random_policy_games_with_rollback_in_both_decks_keep_the_fuzz_invariants_and_replay_s9_3_r171() {
             crate::register_all();

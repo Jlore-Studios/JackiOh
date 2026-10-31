@@ -1,16 +1,15 @@
 //! C+ #26 Tommy Tempo (SPEC §8.7 row 26): (3) Unit, Human, Common, 5/5 → 10/10. Taunt, cast on draw;
 //! that cast ends your turn (Radiant: after {actions} more action, R415). No open zone: to the hand
-//! uncast (R560). Patch v0.3.10 (#831): 5/5 (9/9 before), and "Cry: Lose all your mana. Gain
-//! +{per}/+{per} for each mana lost": played or cast on draw (R1), it loses the mana left once its price
-//! is paid, all of it on a free cast, and grows by it (R831010; Radiant +2/+2 a mana).
+//! uncast (R560). "Cry: Lose all your mana. Gain +{per}/+{per} for each mana lost" (#831): played or
+//! cast on draw (R1), it loses the mana left once its price is paid, all of it on a free cast, and grows
+//! by it (R831010; Radiant +2/+2 a mana).
 
 use jackioh_engine::effects::{buff, gain_mana};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-026";
 
-/// Patch v0.3.10 (#831): "Lose all your mana. Gain +{per}/+{per} for each mana lost", the mana left
-/// once the play's price is paid, on a cast on draw too (R831010).
+/// The Cry: the mana left once the play's price is paid, on a cast on draw too (R831010).
 fn tempo(ctx: &EffectContext<'_>) -> Vec<Effect> {
     let lost = unspent_mana_of(&*ctx.state, ctx.controller);
     if lost <= 0 {
@@ -61,11 +60,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #26 Tommy Tempo (SPEC §8.7 row 26): Taunt; cast on draw (R70: free, counts as played) into
-// leftmost open unit zone, then your turn ends once the drawing effect's list resolves, as if you had
-// pressed End turn. Drawn on the opponent's turn only the summon (and its Cry) happens; played from a
-// hand it ends nothing. Its Cry eats the mana left and grows by it (R831010). With no open zone it goes to hand uncast (R560), as R58's cap sends one. Radiant allows
-// one more main-phase action before the turn ends (R415).
+// C+ #26 Tommy Tempo — SPEC §8.7 row 26: cast on draw (R70: free, counts as played), your turn ends once
+// the drawing effect's list resolves, as if you had pressed End turn; with no open zone it goes to hand
+// uncast, as R58's cap sends one.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,7 +173,6 @@ mod tests {
                     &js(&cut),
                     &json!({ "player": "p1", "byInstanceId": tommy_id }),
                 ));
-                // p1 never reached a main phase: the turn ended and p2's began.
                 assert_eq!(s.state().active, P2);
                 let tommy = tommy_id.unwrap_or_default();
                 assert!(s.stats(&tommy).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Taunt));
@@ -288,7 +284,6 @@ mod tests {
                     played_event(&s, tommy_id.as_ref()),
                     Some(GameEvent::CardPlayed { cost_paid: 0, .. })
                 ));
-                // No rider on anybody, nothing cut short, and p2's turn goes on: p2 still plays.
                 assert!(!cut_short(&s));
                 assert!(!has_turn_ends(&s, P1));
                 assert!(!has_turn_ends(&s, P2));
@@ -362,7 +357,6 @@ mod tests {
                 let mut s = drawn_at_start(true, json!({ "hand": [FREE] }));
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
-                // A 10/10 that ate the 4 refreshed mana at +2/+2 each.
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
                 s.expect_stats(&tommy, json!({ "attack": 18, "health": 18 }));
                 s.expect_mana(P1, 0);
@@ -381,7 +375,6 @@ mod tests {
                     "p2": { "hand": [FILLER, FILLER], "library": DECK, "field": [{ "def": MOTHS, "lane": 3, "damage": 10 }] },
                 }));
                 s.end_turn();
-                // A 10/10 that ate p1's 4 unspent mana at +2/+2 each.
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
                 s.expect_stats(&tommy, json!({ "attack": 18, "health": 18 }));
                 assert!(!has_turn_ends(&s, P1));

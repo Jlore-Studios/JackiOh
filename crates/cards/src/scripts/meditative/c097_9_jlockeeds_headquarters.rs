@@ -67,16 +67,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M 97.9 Jlockeed's Headquarters — SPEC §8.8 row 97.9, BUILD M10 row M 97.9: "Tribute 5, Indestructible,
-// Can't attack; Activate, once a turn: each empty unit zone of yours, a Locked one included (R1136000),
-// left to right, gets a random non-token Jlockeed Unit (MD-F17, R1261), with no Cry; a full board
-// summons nothing and draws nothing; radiant 0/40 (0/50 before patch v0.3.10), Activate 2 (a second use
-// fills what the first left empty), and the Units are Radiant".
-//
-// The Jlockeed Units of the sets that ship are Jlockeed Shredder-10 (Core #13), Jlockeed's Lobbyist
-// (C+ #48), Jlockeed's J15 Fighter (C+ #51) and Tatches the Totem (M #87, every tribe), the Meditative
-// set shipping (R1420); the Headquarters is a token and never its own pick (§5.1, R387).
-// Every scenario keeps spare cards in each hand and library, so R82 does not end the turn after a use.
+// M 97.9 Jlockeed's Headquarters — SPEC §8.8 row 97.9, BUILD M10 row M 97.9 (MD-F17). Every scenario keeps
+// spare cards in each hand and library, so R82 does not end the turn after a use.
 #[cfg(test)]
 mod tests {
     use super::{BASE_USES, ID, RADIANT_USES, TRIBUTE_COST, script};
@@ -88,10 +80,9 @@ mod tests {
     const FILLER: &str = "core-010"; // (0) Spell.
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    /// Every non-token Jlockeed Unit of the sets that ship, in catalog order (R380, R1420). Re-pinned
-    /// for the Stinkyscape release (#1884): its #127 Siege Tank, #128 Yamato Cannon and #129 Missile Pod
-    /// join them; and for the Training Grounds release (#2204): its #48 Jlockeed Shredder-10, the
-    /// snapshot of Core #13.
+    /// Every non-token Jlockeed Unit of the sets that ship, in catalog order (R380, R1420): Core #13, C+ #48
+    /// and #51, M #87 (every tribe), Stinkyscape's #127, #128 and #129 (#1884) and Training Grounds' #48,
+    /// Core #13's snapshot (#2204).
     const JLOCKEED_UNITS: [&str; 8] = [
         "core-013",
         "classicplus-048",

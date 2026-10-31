@@ -3,27 +3,23 @@
 //!   Radiant: "Lucky 1 / Summon 1-2 Radiant Rush Tokens."
 //!   Engine:  "Rush Tokens (§7) placed per R64; a full board takes fewer. Tunes: none."
 //!
-//! One laneless `summon` per token: each takes the leftmost empty, unlocked, unreserved unit zone (R64)
-//! and fizzles silently on a full row (§3.2), as Core #15's do. The token's stats are its own (§7).
-//! The count is one draw from the match rng (1 or 2), so the curve stays near a single 1-cost token
-//! summon; a tuned count would be a param, and there is none. Lucky X (§6.1) rolls X more times and
-//! keeps the most tokens: the Radiant face prints Lucky 1, and the Lucky read is the running card's
-//! own, so a Degrade or an Upgrade of that number moves it (B3.4), as Two Grapes reads its Lucky.
+//! One laneless `summon` per token, as Core #15's: a full row fizzles it silently (§3.2). The count is
+//! one draw from the match rng (1 or 2), so the curve stays near a single 1-cost token summon; it is no
+//! param. Lucky X (§6.1) rolls X more times and keeps the most tokens; the Lucky read is the running
+//! card's own, so a Degrade or an Upgrade of that number moves it (B3.4).
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-053";
 
-/// TS `cardDef("core-t-rush").id`.
 const RUSH_TOKEN: &str = "core-t-rush";
 
 /// The printed "1-2": the fewest and most tokens one cast summons.
 const MIN_TOKENS: i32 = 1;
 const MAX_TOKENS: i32 = 2;
 
-/// §6.1: the Lucky X the running card has now, printed plus given (R1438; its Radiant face prints
-/// Lucky 1).
+/// §6.1: the Lucky X the running card has now, printed plus given (R1438).
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
     ctx.live_self().map_or(0, |card| lucky_on(&*ctx.state, card))
 }
@@ -54,10 +50,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #53 Book of Tokens — SPEC §8.7 row 53, BUILD M9 Classic+ row C+ 53: "Summons 1-2 Rush Tokens (3/3
-// Rush), the count random, into your leftmost open zones, one on a nearly full board, none on a full
-// one; the count is no declared number, so tuning moves nothing; radiant 1-2 Radiant Rush Tokens
-// (6/6 Rush, Cleave)".
+// C+ #53 Book of Tokens — SPEC §8.7 row 53, BUILD M9 Classic+ row C+ 53.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -69,7 +62,6 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `book({ radiant?, field?, seed? })`.
     fn book(radiant: bool, field: Value, seed: Option<&str>) -> Scenario {
         let mut opts = json!({
             "p1": { "hand": [{ "def": BOOK, "radiant": radiant }, FILLER], "field": field },
@@ -125,8 +117,7 @@ mod tests {
                 }
                 found
             };
-            // The base face rolls once for 1–2; with Luck 1 it keeps the better of two, so 2 comes
-            // up strictly more often across the same seeds.
+            // With Luck 1 it keeps the better of two rolls, so 2 comes up more often on the same seeds.
             assert!(twos(true) > twos(false));
         }
 
@@ -155,7 +146,6 @@ mod tests {
                 assert_eq!(kinds(&s, &first), vec!["Rush".to_string()]);
                 counts.insert(found.len());
             }
-            // Both faces of the roll come up across seeds: genuinely 1-2, never 3.
             let mut both: Vec<usize> = counts.into_iter().collect();
             both.sort();
             assert_eq!(both, vec![1, 2]);
@@ -187,8 +177,7 @@ mod tests {
     }
 
     /// R1438: given Lucky 1, the base face rolls its count twice and keeps the most: its first roll is
-    /// the plain face's, so it never summons fewer, at more seeds it summons 2, and each cast takes
-    /// one more draw.
+    /// the plain face's, so it never summons fewer, and each cast takes one more draw.
     #[test]
     fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
         crate::register_all();

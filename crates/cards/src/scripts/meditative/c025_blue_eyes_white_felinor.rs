@@ -5,11 +5,10 @@
 //! Engine:
 //! - **Tribute 2** is `static_flags.tribute: 2`, paid at play time through the play validator
 //!   (§6.3 Tribute X). R391 lets the zone the Tribute empties take the card.
-//! - **"Immune to tribal tag based hate"** is the ME-TRIBAL ability (MD-B1, R940): read through
-//!   static flags, protecting the card only while it acts on the field. A
-//!   harmful effect whose card filter names a tribal tag in `tags` or `notTags` can neither pick
-//!   it (a declaration or prompt of `aim: harm`, R656) nor reach it through a board or card scope.
-//!   Helpful tag-filtered effects still reach it. The Radiant face adds Immutable (R23, R386).
+//! - **"Immune to tribal tag based hate"** is the ME-TRIBAL ability (MD-B1, R940), only while it acts
+//!   on the field: a harmful effect whose card filter names a tribal tag in `tags` or `notTags` can
+//!   neither pick it (a declaration or prompt of `aim: harm`, R656) nor reach it through a board or card
+//!   scope; helpful ones still reach it. The Radiant face adds Immutable (R23, R386).
 
 use jackioh_engine::prelude::*;
 
@@ -133,12 +132,10 @@ mod tests {
 
     #[test]
     fn r940_gaokaos_destroy_and_occidentless_mandates_exile_pass_it_by() {
-        // Gaokao destroys neither-CN-nor-KY; the Felinor (Felinor) would die but is immune.
         let mut s = hunting("felinor-gaokao", GAOKAO, false, json!([{ "def": VANILLA }]));
         s.play(GAOKAO, json!({}));
         assert_eq!(s.unit(P2, 1).expect("stands").def_id, FELINOR);
         assert!(s.unit(P2, 2).is_none(), "the Vanilla is destroyed");
-        // Occidentless Mandate exiles non-CN; same passing-by.
         let mut s = hunting("felinor-mandate", MANDATE, false, json!([{ "def": VANILLA }]));
         s.play(MANDATE, json!({}));
         assert_eq!(s.unit(P2, 1).expect("stands").def_id, FELINOR);
@@ -223,7 +220,6 @@ mod tests {
 
     #[test]
     fn r940_a_plain_destroy_still_hits_it() {
-        // Hit Job names no tag: the immunity does not apply.
         let mut s = hunting("felinor-hitjob", HIT_JOB, false, json!([]));
         let felinor = felinor_id(&s);
         s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": felinor }] }));
@@ -232,7 +228,6 @@ mod tests {
 
     #[test]
     fn r940_a_vanilla_takes_the_immunity() {
-        // A Vanilla removes the ability with the rest of the text: Bigot's sweep then hits it.
         let mut s = hunting("felinor-vanilla", BIGOT, true, json!([]));
         let felinor = felinor_id(&s);
         s.card_mut(felinor).vanilla = true;
@@ -293,11 +288,9 @@ mod tests {
 
     #[test]
     fn r940_helpful_tag_filtered_effects_reach_it() {
-        // Felinor Flagbearer's aura: "Your other Felinors have +1/+1".
         let mut s = hunting("felinor-flagbearer", FILLER, false, json!([{ "def": FLAGBEARER }]));
         let felinor = felinor_id(&s);
         s.expect_stats(&felinor, json!({ "attack": 13, "health": 10 }));
-        // Felinor Fiender's sum: "Also has the stats of all your Felinors".
         let s = hunting("felinor-fiender", FILLER, false, json!([{ "def": FIENDER }]));
         let fiender = s.unit(P2, 2).expect("the Fiender").id.clone();
         let printed = crate::card_def(FIENDER).base.attack.expect("an attack");

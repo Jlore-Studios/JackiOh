@@ -44,9 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #93.2 Growing Felinor Sr Sr — SPEC §8.8 row 93.2, BUILD M10 row M 93.2: "It can't switch to
-// Defense; its Death summons a base Growing Felinor Super Senior (M 93.3) (MD-E19); radiant 6/6,
-// Divine Shield, Rush, and the Super Senior is Radiant".
+// M #93.2 Growing Felinor Sr Sr — SPEC §8.8 row 93.2, BUILD M10 row M 93.2 (MD-E19).
 #[cfg(test)]
 mod tests {
     use super::{ID, NEXT, script};

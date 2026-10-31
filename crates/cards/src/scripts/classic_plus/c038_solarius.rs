@@ -27,11 +27,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #38 Solarius (SPEC §8.7): Spell Damage +2 on field adds to each hit of a Spell you play or cast
-// (§4.4 step 0), never a Field Spell's, a Trap's, a Unit's or an activation's, never the opponent's;
-// Death shuffles Solarius Prime (C+ #38.1) into deck up to cap (R80).
-// Numbered keyword (§6.1), so B3.4 X change tunes it rather than a param (R482).
-// A Trap's hit, which Spell Damage never raises, is proved in C+ #22 Blood Moon's test.
+// C+ #38 Solarius (SPEC §8.7): Spell Damage is a numbered keyword (§6.1), so a B3.4 X change tunes it, not a
+// param (R482). A Trap's hit, which Spell Damage never raises, is proved in C+ #22 Blood Moon's test.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -195,8 +192,7 @@ mod tests {
             assert_eq!(primes.len(), 1);
             assert!(!primes[0].radiant);
             assert_eq!(library.len(), 13);
-            // The Prime is effect-made, so R943 marks it Created. Re-pinned for v0.3.5: the Meditative
-            // set ships, so R943's Created mark is live.
+            // The Prime is effect-made, so R943 marks it Created.
             assert!(own_library_cards(&s).contains(&json!({ "defId": PRIME, "radiant": false, "count": 1, "created": true })));
             assert!(events_json(&s).iter().any(|event| event["type"] == "shuffledIn" && event["defId"] == PRIME));
         }
@@ -284,7 +280,6 @@ mod tests {
             let primes: Vec<bool> =
                 s.pile(P1, "library").into_iter().filter(|card| card.def_id == PRIME).map(|card| card.radiant).collect();
             assert_eq!(primes, vec![true]);
-            // R943: Created (re-pinned for v0.3.5: the Meditative set ships, so the mark is live).
             assert!(own_library_cards(&s).contains(&json!({ "defId": PRIME, "radiant": true, "count": 1, "created": true })));
         }
     }

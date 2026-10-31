@@ -3,9 +3,8 @@
 //!   Radiant: "Buff a card {times|time|times}. It may be a card in your hand." — times 8
 //!
 //! A declared target (R81): a permanent on either side, and on the Radiant face also a card in your own
-//! hand (a broader scope, R275, as C+ #72 Book of Nerf's). Through v0.5.2 the base face could take a
-//! hand card too, which `script_v0_5_2` keeps (R767000, issue #2179). `times` separate Upgrades, each
-//! its own draw (R386); an Immutable card is left alone. The Radiant eight is the declared `times`.
+//! hand (a broader scope, R275, as C+ #72 Book of Nerf's). `times` separate Upgrades, each its own draw
+//! (R386); an Immutable card is left alone. The Radiant eight is the declared `times`.
 
 use jackioh_engine::effects::upgrade;
 use jackioh_engine::prelude::*;
@@ -33,7 +32,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.2 both faces could take a card in your hand; `KEPT_SCRIPTS` folds those
+/// R767000 (#2179): through v0.5.2 both faces could take a card in your hand; `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
@@ -42,11 +41,7 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// C+ #71 Book of Buff — SPEC §8.7 row 71, BUILD M9 row C+ 71: Upgrades one permanent 4 times, the
-// target chosen with the play (R81) — a permanent on either side (an enemy face-down trap offered by id
-// only, R177); each Upgrade its own draw (R386); an Immutable target is unchanged; the count reads
-// through `param()`; radiant 8 times, on a permanent or a card in your hand, whose changes are hidden
-// from the opponent (R97).
+// C+ #71 Book of Buff — SPEC §8.7 row 71, BUILD M9 row C+ 71 (R177, R97).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -69,7 +64,6 @@ mod tests {
         events.iter().filter(|event| matches!(event, GameEvent::Upgraded { .. })).map(js).collect()
     }
 
-    /// TS `book({ radiant? })`.
     fn book(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": { "hand": [{ "def": BOOK, "radiant": radiant }, UNIT, FILLER], "field": [UNIT], "backrow": [FIELD] },
@@ -221,8 +215,7 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.2 and before, whose base face could take a
-    /// card in your hand.
+    /// R767000: the script kept for the replays of v0.5.2 and before.
     mod v0_5_2 {
         use super::*;
 

@@ -7,8 +7,8 @@
 //!            piles). Permanent buffs (§10.4 layer 4); −2/−2 lowers max health, so units at 0 die at
 //!            the state check. Tunes: buff 2 ↑ (Radiant 3); debuff 2 ↑ (Radiant 3)."
 //!
-//! Played from a hand it does the same (§6.2: Cast on draw is a cast, R70, and the card stays playable).
-//! `conditionMet` (R195) is the same `fewer` the Cry branches on, so the glow and the branch agree.
+//! Played from a hand it does the same (R70: Cast on draw is a cast). `conditionMet` (R195) is the
+//! same `fewer` the Cry branches on, so the glow and the branch agree.
 
 use jackioh_engine::effects::buff_all_units;
 use jackioh_engine::prelude::*;
@@ -60,9 +60,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #50, BUILD M9 row C+ 50: equal counts take the second branch; −2/−2 on both sides kills a unit at
-// 0 max health, an Indestructible one too (R69); played from a hand it does the same; `conditionMet` in
-// hand says whether you control fewer Units now (R195); its proofs live where README §5 says.
+// C+ #50 Adaptive Growth — SPEC §8.7 row 50, BUILD M9 row C+ 50 (R69; proofs where README §5 says).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -90,7 +88,6 @@ mod tests {
         }))
     }
 
-    /// Adaptive Growth in p1's hand, to play.
     fn held(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({
             "p1": { "field": mine, "hand": [{ "def": GROWTH, "radiant": radiant }, FILLER] },

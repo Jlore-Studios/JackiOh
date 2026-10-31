@@ -31,10 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-10 Fine-Tuning — SPEC §8.7 row T-AI-10, BUILD M9 row T-AI-10: a Field Spell that, at each end of
-// its controller's turn, Upgrades one random card in their hand (R386: one draw; an Immutable card or one
-// nothing fits unchanged); an empty hand, nothing and no random draw (R129); the `upgraded` event names
-// nothing to the opponent (R97); nothing at the opponent's end; radiant 2 different random cards.
+// T-AI-10 Fine-Tuning — SPEC §8.7 row T-AI-10, BUILD M9 row T-AI-10.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -49,12 +46,10 @@ mod tests {
 
     use crate::js;
 
-    /// The `upgraded` events of a list, as JSON.
     fn upgrades(events: &[GameEvent]) -> Vec<Value> {
         events.iter().map(js).filter(|event| event["type"] == "upgraded").collect()
     }
 
-    /// The `upgraded` events a view carries.
     fn view_upgrades(s: &Scenario, player: PlayerId) -> Vec<Value> {
         js(&s.view(player))["events"]
             .as_array()
@@ -118,7 +113,6 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
-                // p2's end and p1's start: no Upgrade.
                 assert!(upgrades(s.last_events()).is_empty());
             }
 

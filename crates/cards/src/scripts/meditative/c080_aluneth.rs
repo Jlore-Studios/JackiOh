@@ -4,11 +4,13 @@
 //! Radiant: "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3. They cost ({discount})
 //!          less."
 //! Engine:  "Quickdraw (R640) deals it in the opening hand. An Indestructible Field Spell that draws
-//!          3 at its controller's end of turn. Immutable blocks Transform, Vanilla, Fuse-onto, Buff,
-//!          Nerf and KY's Constant (R23, R386). Untributable (R1220): no Tribute cost may take it, and
-//!          every Sacrifice of it does nothing; it is not in R21's pool, and a Nerf never removes it.
-//!          The Radiant face drops Untributable and adds an Activate (R384) that exiles it, with no
-//!          Death. Voice: \"Come, child. Let us wreak havoc.\" (R204). Tunes: none."
+//!          3 at its controller's end of turn, each draw its own (burning past the cap, fatigue past
+//!          the deck), and each card a draw puts in the hand costs (1) less. Immutable blocks
+//!          Transform, Vanilla, Fuse-onto, Buff, Nerf and KY's Constant (R23, R386). NEW: the keyword
+//!          Untributable (R1220): no Tribute cost may take it, and every Sacrifice of it does nothing;
+//!          it is not in R21's pool, and a Nerf never removes it. The Radiant face drops Untributable
+//!          and adds an Activate (R384) that exiles it, with no Death.
+//!          Voice: \"Come, child. Let us wreak havoc.\" (R204). Tunes: none."
 //!
 //! Indestructible, Untributable and Immutable are catalog keywords (§10.4 layers, R1220); each draw
 //! burns past the cap and takes fatigue past the deck (§2.4), and a card cast on draw, a burned card

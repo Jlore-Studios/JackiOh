@@ -7,7 +7,7 @@
 //! into its lane's unit zone (else R64's), a Unit for every rule from then on; with no open unit
 //! zone it stays a backrow card. Start of turn is Moths to the Flame's `forced_attacks_on` self
 //! (R53): every enemy Unit attacks in lane order, each its own combat with its own state check,
-//! Can't attack and 0-attack Units included, the run stopping once this leaves the field.
+//! the run stopping once this leaves the field.
 //! ME-AFTER-ATTACKED (MD-C26): after each combat it was the target of, declared or forced, the
 //! attacker still on the field is Nerfed (a Cleave splash is no attack on it).
 
@@ -40,7 +40,6 @@ fn girlfriend() -> Script {
             let Some(facts) = after_attacked_of(&*ctx) else {
                 return vec![];
             };
-            // MD-C26: Nerf the attacker only if it is still on the field.
             if !facts.attacker_survived {
                 return vec![];
             }
@@ -110,7 +109,6 @@ mod tests {
         s
     }
 
-    /// The ids the game Nerfed, in order.
     fn nerfed(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -130,7 +128,6 @@ mod tests {
             #[test]
             fn r1025_it_animates_into_a_unit_zone_or_stays_in_the_backrow() {
                 let s = played("girlfriend-animates", false, 2);
-                // Into its lane's unit zone: a Unit for every rule from then on.
                 let unit = s.unit(P1, 2).expect("animated");
                 assert_eq!(unit.def_id, GIRLFRIEND);
                 assert!(
@@ -231,7 +228,6 @@ mod tests {
 
                 s.start_turn();
 
-                // One forced combat each, lane order, the 0-attack Can't attack Virus included.
                 let expected: Vec<(String, String)> =
                     order.into_iter().map(|id| (id, girlfriend.clone())).collect();
                 assert_eq!(forced(&s), expected);
@@ -341,8 +337,6 @@ mod tests {
 
                 s.start_turn();
 
-                // Both attacked; the survivor is Nerfed once, the one that died to the
-                // strike-back is not.
                 assert_eq!(nerfed(&s), vec![tough.id]);
                 assert!(s.unit(P2, 2).is_none());
                 let _ = weak;

@@ -2,28 +2,20 @@
 //!   Base:    "Craft a card and add it to your hand. Exile this."
 //!   Radiant: "Craft a Radiant card and add it to your hand. Exile this."
 //!
-//! THE CHAIN (§10.6). The Spell resolves and opens a `number` prompt (Classic #18's kind) for the
-//! crafted card's cost, 0 to `CRAFT_MAX_COST` (4); its answer re-enters `resume.cost`, which opens
-//! the `craft` prompt at that budget; its answer re-enters `resume.craft`, which compiles the
-//! recipe and adds a fresh card of it to the caster's hand. The picks travel in `ctx.targets`,
-//! read with `chosen_number` and `chosen_recipe` — never `ctx.targets` by hand.
+//! THE CHAIN (§10.6). The Spell opens a `number` prompt (Classic #18's kind) for the crafted card's
+//! cost; `resume.cost` opens the `craft` prompt at that budget; `resume.craft` compiles the recipe and
+//! adds a fresh card of it to the caster's hand. Read the picks with `chosen_number` and
+//! `chosen_recipe`, never `ctx.targets` by hand.
 //!
-//! THE PROMPT (R880, `subsystems/craft.rs`). The `craft` prompt's options are the four seeded
-//! presets (a Unit, a Spell, a Field Spell and a Trap); its answer is one `Selection::Craft`, a
-//! preset or the player's own recipe, which the reducer validates against the block table, the
-//! point budget (`2 + 5 × cost`), the line budget (24) and the type's rules. An invalid recipe is
-//! refused with the state unchanged and the prompt still open. A valid one is compiled into a
-//! transient definition whose id names the recipe (R882), of the Meditative set, not a token,
-//! Mythic, its `loc` the counted lines, every number a param — and the card reaches the hand at
-//! its cost, Radiant on the Radiant face, or burns on a full one (§2.4).
+//! THE PROMPT (R880, `subsystems/craft.rs`). The `craft` prompt offers four seeded presets; the reducer
+//! validates a preset or the player's own recipe and refuses an invalid one with the state unchanged. A
+//! valid one becomes a transient definition whose id names the recipe (R882); a full hand burns it (§2.4).
 //!
 //! THE FACES differ only in `radiant`: the Radiant face crafts the card Radiant, whose face
 //! doubles every number and stat (`CRAFT_RADIANT_MULTIPLIER` 2, R275 by construction).
 //!
-//! "EXILE THIS" since patch v0.3.12 (#1149), as #97 Zephyrs and #72 Reminisce: the cry parks the
-//! exile behind its prompts, so it runs once the card is minted, and the Spell ends in its owner's
-//! exile, not the graveyard. Through v0.3.7b it went to the graveyard; `script_v0_3_7b` keeps that
-//! for those versions' replays (R767000).
+//! "EXILE THIS" (#1149), as #97 Zephyrs and #72 Reminisce: the cry parks the exile behind its prompts,
+//! so it runs once the card is minted, and the Spell ends in its owner's exile.
 //!
 //! THE CLOCK runs while crafting, as for Classic+ #42 KY's Test (R420, R79): no prompt of its own.
 //! The opponent sees only that a prompt is open, then a hidden card (R97).
@@ -94,20 +86,8 @@ pub fn script_v0_3_7b() -> CardScripts {
     }
 }
 
-// Meditative #17 True Craft a Card — SPEC §8.8, ME-CRAFT, §10.6, R79, R97, R420, R739, R880–R883.
-//
-// BUILD M10 row M 17: "Opens a `number` prompt for the cost (0 to 4), then a `craft` prompt whose
-// 4 presets (a Unit, a Spell, a Field Spell, a Trap) are rolled from the match rng within the
-// budget (MD-A30); a recipe over the points (2 + 5 × the cost), the lines of code (24) or 8
-// effects, or one breaking its type's rules (a Spell with no effect, a Trap without its reveal
-// hat), is refused with the state unchanged and the prompt open; a valid one adds a fresh card of
-// a transient definition whose id names the recipe and whose script rebuilds after a JSON round
-// trip and a replay (R179, R468), of the Meditative set, not a token, Mythic, its `loc` the
-// counted lines, every number a param that a Nerf or Buff moves (MD-A32); the hand cap burns it;
-// the Spell is exiled once the card is minted, on both faces (#1149);
-// the AI and a timeout answer only with presets (MD-A31); the opponent sees only that a prompt is
-// open, then a hidden card (R97); the editor's preview reports the same validity as the reducer;
-// radiant the card is Radiant, its face doubling every number and stat".
+// Meditative #17 True Craft a Card — SPEC §8.8, ME-CRAFT, BUILD M10 row M 17, R179, R468, R739, R880–R883,
+// MD-A30, MD-A31, MD-A32.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -331,7 +311,6 @@ mod tests {
             );
         }
 
-        /// The open craft prompt's presets, in order.
         fn presets(s: &Scenario) -> Vec<CraftRecipe> {
             s.state()
                 .pending
@@ -367,7 +346,6 @@ mod tests {
             })
         }
 
-        /// Craft `recipe` at its cost and hand back the scenario and the crafted card.
         fn minted(recipe: Value) -> (Scenario, CardInstance) {
             let cost = recipe["cost"].as_i64().expect("a cost") as i32;
             let mut s = any_block_at(cost);
@@ -480,7 +458,6 @@ mod tests {
             assert_eq!(card.def_id, craft_id(&parsed));
             assert_eq!(def.id, craft_id(&parsed));
             assert_eq!(def.craft.as_ref(), Some(&parsed));
-            // The same recipe always names the same id.
             let (_, again) = minted(unit_recipe(1, 3, 4));
             assert_eq!(again.def_id, card.def_id);
         }
@@ -660,9 +637,7 @@ mod tests {
             if let Some(pending) = s.state_mut().pending.as_mut() {
                 pending.craft_offer = Some(whole_palette());
             }
-            // A 4/5 Unit with Armor 2 and a Cry dealing N=3: 4+5-1+4+3 = 15 points, over 12 —
-            // so a 3/4 with Armor 2 and N=3: 3+4-1+4+3 = 13, still over — a 3/4 with Armor 1
-            // and N=3: 3+4-1+2+3 = 11, within 12.
+            // A 3/4 with Armor 1 and a Cry dealing N=3: 3+4-1+2+3 = 11 points, within 12.
             s.answer(json!([{ "pick": "craft", "recipe": {
                 "cost": 2, "type": "Unit", "adjective": "Pure", "noun": "Closure",
                 "attack": 3, "health": 4,

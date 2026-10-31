@@ -31,10 +31,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #14 Forever& — SPEC §8.7 row 14, R410: leaves a waiting modifier that stamps the next
-// Spell (never Forever& itself) with "After this resolves, return it to hand. This can't cost
-// less than (2)". The enchantment rides the card; discarded or countered does not return (R410);
-// full hand burns the returning card (R4); radiant floor is (1) with no draw.
+// C+ #14 Forever& — SPEC §8.7 row 14, R4, R410.
 
 #[cfg(test)]
 mod tests {
@@ -93,11 +90,9 @@ mod tests {
         effective_cost(s.state(), s.card(id), Default::default())
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
-        /// R410 never stamps itself: Forever& goes to the graveyard and a modifier waits
         #[test]
         fn r410_never_stamps_itself_forever_goes_to_the_graveyard_and_a_modifier_waits() {
             let mut s = forever(false, &[LUNAR], json!({}), json!({}));
@@ -105,7 +100,6 @@ mod tests {
             assert!(!s.view(P1).you.modifiers.is_empty());
         }
 
-        /// R410 the next Spell resolves and comes back to your hand, and again after every later play
         #[test]
         fn r410_the_next_spell_resolves_and_comes_back_to_your_hand_and_again_after_every_later_play() {
             let mut s = forever(false, &[LUNAR], json!({}), json!({}));
@@ -119,7 +113,6 @@ mod tests {
             assert!(stamped_with(&s, &id, 2));
         }
 
-        /// only the next Spell: the one after is not stamped
         #[test]
         fn only_the_next_spell_the_one_after_is_not_stamped() {
             let mut s = forever(false, &[LUNAR, STOCKPILE], json!({}), json!({}));
@@ -135,7 +128,6 @@ mod tests {
             assert_eq!(s.card(&stockpile).zone.z(), ZoneName::Graveyard);
         }
 
-        /// the modifier waits across turns: it survives cleanup
         #[test]
         fn the_modifier_waits_across_turns_it_survives_cleanup() {
             let mut s = forever(false, &[LUNAR, MENACE], json!({}), json!({}));
@@ -145,7 +137,6 @@ mod tests {
             assert_eq!(s.card(&id).zone.z(), ZoneName::Hand);
         }
 
-        /// R70 a cast is a play: a Spell cast as the next one is stamped and comes back to your hand
         #[test]
         fn r70_a_cast_is_a_play_a_spell_cast_as_the_next_one_is_stamped_and_comes_back_to_your_hand() {
             // No Spell is played: the turn's draw takes the Jelly Bean, which casts itself (R70).
@@ -157,7 +148,6 @@ mod tests {
             assert!(stamped_with(&s, &jelly, 2));
         }
 
-        /// a Unit, Field Spell or Trap play leaves the modifier waiting
         #[test]
         fn a_unit_field_spell_or_trap_play_leaves_the_modifier_waiting() {
             let mut s = forever(false, &[MENACE, MANA_WELL, SHEEPISH, LUNAR], json!({}), json!({}));
@@ -190,7 +180,6 @@ mod tests {
             assert_eq!(cost_of(&s, &first), 2);
         }
 
-        /// R410 a discarded stamped Spell does not come back
         #[test]
         fn r410_a_discarded_stamped_spell_does_not_come_back() {
             // Only two cards come back from the library: all three in hand go, the stamped Lunar among them.
@@ -205,7 +194,6 @@ mod tests {
             assert_eq!(s.card(&id).zone.z(), ZoneName::Graveyard);
         }
 
-        /// R410 a countered stamped Spell does not come back
         #[test]
         fn r410_a_countered_stamped_spell_does_not_come_back() {
             let mut s = forever(false, &[LUNAR, MENACE], json!({}), json!({ "hand": [COUNTERSPELL, STOCKPILE] }));
@@ -223,7 +211,6 @@ mod tests {
             s.expect_health(P2, HERO_HEALTH);
         }
 
-        /// R4 a full hand burns the returning card
         #[test]
         fn r4_a_full_hand_burns_the_returning_card() {
             // Stockpile is the stamped Spell: with ten cards in hand, its own draws fill the hand again.
@@ -246,7 +233,6 @@ mod tests {
             );
         }
 
-        /// R386 the floor reads through param() and never drops below 1
         #[test]
         fn r386_the_floor_reads_through_param_and_never_drops_below_1() {
             let mut s = scenario(json!({ "p1": { "hand": [FOREVER, LUNAR, FILLER], "mana": 10 }, "p2": { "hand": [STOCKPILE] } }));
@@ -259,15 +245,12 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 
-        /// the floor is (1), with no draw
         #[test]
         fn the_floor_is_1_with_no_draw() {
             let mut s = forever(true, &[LUNAR], json!({}), json!({}));
-            // Balance patch 1: the Radiant face draws nothing.
             let held = def_ids(&s.hand(P1));
             assert_eq!(held, vec![LUNAR]);
             let id = lunar_in(&s);

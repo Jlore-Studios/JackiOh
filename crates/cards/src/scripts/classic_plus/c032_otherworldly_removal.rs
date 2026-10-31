@@ -13,9 +13,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-032";
 
-/// §8.7 C+ #32: Execute, Brawl, Blade Storm — the order they are added in. TS read each id off its
-/// catalog definition (`cardDef(id).id`), which only proved the three exist; the tests below add all
-/// three by these ids.
+/// §8.7 C+ #32: Execute, Brawl, Blade Storm — the order they are added in.
 const TOKENS: [&str; 3] = ["classicplus-032-1", "classicplus-032-2", "classicplus-032-3"];
 
 fn otherworldly_removal(radiant: bool) -> Script {
@@ -43,10 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #32 Otherworldly Removal — SPEC §8.7 row 32, BUILD M9 Classic+ row C+ 32: "Adds Execute, Brawl
-// and Blade Storm (C+ #32.1–#32.3) to your hand in that order, a full hand burning what doesn't fit
-// (with 8 other cards in hand, Blade Storm burns); they are Spell tokens and go to the graveyard when
-// played (R11); hidden from the opponent (R97); radiant all three Radiant".
+// C+ #32 Otherworldly Removal — SPEC §8.7 row 32, BUILD M9 Classic+ row C+ 32.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

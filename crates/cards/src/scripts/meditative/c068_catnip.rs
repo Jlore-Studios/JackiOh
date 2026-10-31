@@ -136,7 +136,6 @@ mod tests {
                 "p1": { "hand": [FILLER], "backrow": [set_catnip(false, 2)] },
                 "p2": { "hand": [def, FILLER] },
             }));
-            // Units need a zone; Field Spells/Traps play to the backrow.
             if def == VANILLA {
                 s.play(def, json!({ "zone": 1 }));
             } else {
@@ -144,7 +143,6 @@ mod tests {
             }
             assert_eq!(s.card(CATNIP).face_up, Some(false));
         }
-        // Your own Spell leaves it set.
         let mut s = scenario(json!({
             "p1": { "hand": [STOCKPILE, FILLER], "backrow": [set_catnip(false, 2)] },
             "p2": { "hand": [FILLER] },

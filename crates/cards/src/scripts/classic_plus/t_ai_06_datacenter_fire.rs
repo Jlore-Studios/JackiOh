@@ -27,8 +27,7 @@ const DAMAGE_PER: ByFaceDamage = ByFaceDamage { base: 1, radiant: 2 };
 
 /// R280: the formula as each face prints it, read off the catalog text so it is always a substring.
 /// Matches `/Deal \d+ damage to [^.]+ for each one destroyed/` by hand (no regex crate in a pure crate,
-/// SURFACE §8): the leftmost "Deal <digits> damage to ", then the longest non-"." run ending in
-/// " for each one destroyed".
+/// SURFACE §8).
 fn formula_in(text: &str) -> String {
     const HEAD: &str = "Deal ";
     const MIDDLE: &str = " damage to ";

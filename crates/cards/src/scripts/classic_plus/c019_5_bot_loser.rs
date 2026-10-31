@@ -56,9 +56,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.7 row 19.5: kills grant permanent Attack (R42); while Berserk (lost on leave, R78)
-// it forced-attacks its hero at start/end of turn (R53); conditionMet reflects Berserk (R195);
-// radiant can't go Berserk (R412).
+// SPEC §8.7 row 19.5: Berserk is lost on leave (R78); its attacks on its hero are forced (R53).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,7 +171,6 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [{ "def": BOT, "lane": 2 }], "library": DECK },
                     "p2": { "hand": [FILLER], "field": [{ "def": MOTHS, "lane": 1, "damage": 10 }], "library": DECK },
                 }));
-                // p2's start of turn: every enemy Unit attacks Moths.
                 s.start_turn();
                 assert!(s.unit(P2, 1).is_none());
                 let me = bot(&s, P1);
@@ -201,12 +198,10 @@ mod tests {
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
                 s.end_turn();
-                // The end of p1's turn: 4 to p1's own hero.
                 s.expect_health(P1, 26);
                 let me = bot(&s, P1);
                 s.expect_stats(&me, json!({ "health": 4 }));
                 s.end_turn();
-                // The start of p1's next turn: 4 more.
                 s.expect_health(P1, 22);
                 let own: Vec<bool> = s
                     .events()
@@ -235,7 +230,6 @@ mod tests {
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
                 s.end_turn();
-                // 10 attack, 2 Armor, then the cap of 5.
                 s.expect_health(P1, 25);
             }
 

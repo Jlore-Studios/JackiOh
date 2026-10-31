@@ -6,7 +6,7 @@
 //!            floors at 0 (§2.3). Tunes: discount 2 ↑."
 //!
 //! "End of turn" is its controller's (§6.2), so the opponent's turn end does nothing. The pick and the
-//! R129 rule that an empty choice draws nothing are `discountRandomInHand`'s (effects/perks.ts).
+//! R129 rule that an empty choice draws nothing are `discount_random_in_hand`'s.
 
 use jackioh_engine::effects::discount_random_in_hand;
 use jackioh_engine::prelude::*;
@@ -27,10 +27,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #49 Jay Fungus — SPEC §8.7 row 49, BUILD M9 Classic+ row C+ 49: "Taunt; at the end of your turn
-// one random hand card whose cost is above 0 and not X gets `costMod` −2 (R65), the cost flooring at
-// 0; no such card, nothing and no random draw (R129); the opponent's `costChanged` reads the sentinel
-// and −1 (R177); the discount reads through `param()`; radiant −20, taking any such card to (0)".
+// C+ #49 Jay Fungus — SPEC §8.7 row 49, BUILD M9 Classic+ row C+ 49, R177.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -45,7 +42,6 @@ mod tests {
     const THREE: &str = "core-016"; // Hit Job, (3)
     const ONE: &str = "core-005"; // Stockpile, (1)
 
-    /// TS `grown({ radiant?, hand?, fungus?, seed? })`'s options.
     struct Grown {
         radiant: bool,
         hand: Option<Vec<&'static str>>,
@@ -54,7 +50,6 @@ mod tests {
     }
 
     impl Default for Grown {
-        /// TS `fungus` is on unless it is `false`.
         fn default() -> Grown {
             Grown {
                 radiant: false,
@@ -101,7 +96,7 @@ mod tests {
         let mut s = grown(Grown::default());
         assert!(s.stats(FUNGUS).keywords.contains(&Keyword::Taunt));
         s.expect_stats(FUNGUS, json!({ "attack": 3, "health": 6 }));
-        // TS `expect(radiant).toBe(base)`: both faces hold the very same hook.
+        // Both faces hold the very same hook.
         let scripts = script();
         assert!(Arc::ptr_eq(
             scripts.radiant.end_of_turn.as_ref().unwrap(),

@@ -2,12 +2,10 @@
 //!
 //! Base:    "Get ready to learn Chinese! Transform every card in your hand into the same random CN
 //!           card, which costs (0). Summon {units} random CN Units."
-//! Radiant: "… the same random Radiant CN card … Summon {units} random Radiant CN Units." Printed in
-//!           English since issue #2179 (in Chinese before, MD-B13).
+//! Radiant: "… the same random Radiant CN card … Summon {units} random Radiant CN Units."
 //! Engine:
-//! - **All three, in order** since #2179: the learning, then the hand, then the summon. Through
-//!   v0.5.2 one uniform pick of the three by the match rng as the Spell resolved (MD-B9, R920),
-//!   Call to Chaos's single-effect shape, which `script_v0_5_2` keeps (R767000).
+//! - **All three, in order** (#2179, which also printed the Radiant face in English, MD-B13): the
+//!   learning, then the hand, then the summon.
 //! - **Get ready to learn Chinese** (ME-CN) sets `chinese` on every card in both hands and both
 //!   libraries, silently (R440); on the Radiant face only the opponent's. As the designer asked,
 //!   the printed text never says what it does.
@@ -22,22 +20,18 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-032";
 
-/// The three effects, in the order the text prints them; v0.5.2's match rng picked among them as
-/// the Spell resolved (MD-B9, R920).
+/// The three effects, in the order the text prints them.
 const EFFECTS: i32 = 3;
 
 /// One of the three: 0 the learning, 1 the hand, 2 the summon.
 fn effect(ctx: &mut EffectContext<'_>, radiant: bool, which: i32) -> Vec<Effect> {
     match which {
-        // Get ready to learn Chinese: the flag on every card of both hands and both libraries (the
-        // Radiant face: the opponent's only), silently (R440).
         0 => vec![translate(json_as(json!({
             "scope": {
                 "side": if radiant { "enemy" } else { "any" },
                 "zones": ["hand", "library"],
             },
         })))],
-        // Transform the hand into the same random CN card, each costing (0).
         1 => {
             let mut args = json!({
                 "scope": { "side": "self", "zones": ["hand"] },
@@ -50,7 +44,6 @@ fn effect(ctx: &mut EffectContext<'_>, radiant: bool, which: i32) -> Vec<Effect>
             }
             vec![transform_random(json_as(args))]
         }
-        // Summon `units` random CN Units, Radiant on the Radiant face.
         _ => (0..param(&*ctx, "units"))
             .map(|_| {
                 let mut args = json!({ "query": { "type": "Unit", "tags": ["CN"] } });
@@ -82,8 +75,6 @@ fn spiritually_v0_5_2(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // The Radiant face learns only the opponent's cards and makes Radiant cards and Units; the
-    // numbers are the same on both faces.
     let base = spiritually(false);
     let radiant = spiritually(true);
     CardScripts { base, radiant }
@@ -98,13 +89,7 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// M #32 Spiritually 中国 — SPEC §8.8 row 32, BUILD M10 row M 32: "All three in order as it resolves:
-// (1) every card of both hands and both decks gains the `chinese` flag, silently in hands and decks
-// (R440); (2) one random non-token CN definition (never this card, R387) replaces every card in your
-// hand in place, Immutable ones too, each costing (0), each a generated card for R673's roll (MD-B10);
-// (3) 5 random CN Units summoned per R64, a full row taking fewer and drawing nothing for the rest
-// (R129); units reads through `param()`; radiant the learning reaches only the opponent's hand and
-// deck, and the new hand cards and the Units are Radiant".
+// M #32 Spiritually 中国 — SPEC §8.8 row 32, BUILD M10 row M 32.
 
 #[cfg(test)]
 mod tests {
@@ -119,7 +104,7 @@ mod tests {
     const SPIRITUALLY: &str = "meditative-032";
     const FILLER: &str = "core-005";
     /// Shipped non-token CN cards the pools may draw (R387 keeps this card out): SPEC §8's CN rows of
-    /// every set that ships, the Meditative set's among them since it ships (R380, R1420).
+    /// every set that ships (R380, R1420).
     const CN_IDS: [&str; 26] = [
         "core-080",
         "core-090",
@@ -170,7 +155,6 @@ mod tests {
         rng.int(EFFECTS)
     }
 
-    /// The units p1 has, lane by lane.
     fn units_of(s: &Scenario) -> Vec<CardInstance> {
         (1..=5).filter_map(|lane| s.unit(P1, lane)).collect()
     }
@@ -185,7 +169,6 @@ mod tests {
             fn all_three_in_order_the_learning_the_hand_and_five_cn_units() {
                 let mut s = casting("spiritually-all", false);
                 s.play(SPIRITUALLY, json!({}));
-                // The learning: the opponent's hand and both decks are Chinese.
                 for card in s.hand(P2) {
                     assert_eq!(card.chinese, Some(true));
                 }
@@ -196,12 +179,10 @@ mod tests {
                         assert_eq!(card.chinese, Some(true), "{}", card.id);
                     }
                 }
-                // The hand: one CN definition, each costing (0).
                 let defs = def_ids(&s.hand(P1));
                 assert_eq!(defs.len(), 2);
                 assert!(defs.iter().all(|def| *def == defs[0]));
                 assert!(CN_IDS.contains(&defs[0].as_str()));
-                // The summon: 5 CN Units take the empty row.
                 let units = units_of(&s);
                 assert_eq!(units.len(), 5);
                 for unit in &units {
@@ -210,7 +191,6 @@ mod tests {
                     assert!(def.tags.contains(&Tag::Cn));
                     assert!(!unit.radiant);
                 }
-                // In the text's order: the translation, then the transform, then the summons.
                 let order: Vec<GameEventType> = s
                     .events()
                     .iter()
@@ -304,8 +284,6 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.2 and before, which did one of the three
-        /// at random (MD-B9, R920).
         mod v0_5_2 {
             use super::*;
 

@@ -32,12 +32,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #36 Conjure Bones — SPEC §8.7 row 36, BUILD M9 Classic+ row C+ 36: "Shuffles 7 Bone Storms
-// (C+ #36.1) into your deck, each at a uniformly random position; the embiggen price (4) chosen with
-// the play (R81) shuffles 14 (17 through v0.5.2); a deck at `LIBRARY_CAP` (60) turns the rest away with `libraryOverflow`
-// (R80); your library list shows them (R311) and `shuffledIn` positions are blank for both players
-// (R97); count and paid count read through `param()` (steps 2 and 4); radiant the Bone Storms are
-// Radiant".
+// C+ #36 Conjure Bones — SPEC §8.7 row 36, BUILD M9 Classic+ row C+ 36, R311, R97.
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -128,8 +123,7 @@ mod tests {
             let s = cast(false, false, None);
             let own = view(&s, P1)["you"]["ownLibrary"].clone();
             let cards = own["cards"].as_array().cloned().unwrap_or_default();
-            // The Bone Storms are effect-made, so R943 marks them Created. Re-pinned for v0.3.5: the
-            // Meditative set ships, so R943's Created mark is live.
+            // The Bone Storms are effect-made, so R943 marks them Created.
             assert!(cards.contains(&json!({ "defId": BONE_STORM, "radiant": false, "count": 7, "created": true })));
             assert_eq!(own["unknown"], 0);
         }
@@ -183,7 +177,6 @@ mod tests {
             assert_eq!(storms.len(), 7);
             assert!(storms.iter().all(|card| card.radiant));
             let listed = view(&s, P1)["you"]["ownLibrary"]["cards"].as_array().cloned().unwrap_or_default();
-            // R943: Created (re-pinned for v0.3.5: the Meditative set ships, so the mark is live).
             assert!(listed.contains(&json!({ "defId": BONE_STORM, "radiant": true, "count": 7, "created": true })));
         }
 

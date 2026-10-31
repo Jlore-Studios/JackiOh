@@ -5,7 +5,7 @@
 //!
 //! The Cry's pool is the Fruit pool (R382: the non-token Fruits and the five Grapes), never Organic
 //! Produce itself (R387: `addRandomFromCatalog` leaves out the running card's id), repeats allowed
-//! (R60); since #1837 neither it nor C+ #63 Fruit Tree is a Fruit, so the pool holds neither (R1837000).
+//! (R60); neither it nor C+ #63 Fruit Tree is a Fruit (R1837000).
 //! The aura is Core #64 Gifted Program's static flag at §10.5 step 3 by tag (R213, R214): every Fruit
 //! its controller plays, casts included, resolves on its Radiant face.
 
@@ -47,12 +47,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #68 Organic Produce — SPEC §8.7 row 68, BUILD M9 row C+ 68: a Field Spell whose Cry adds a random
-// card of the Fruit pool (R382), never Organic Produce (R387) nor Fruit Tree, the two no Fruits since
-// #1837 (R1837000), so the aura leaves both on their base faces; its aura makes every Fruit-tagged card its
-// controller plays Radiant at §10.5 step 3 (R213, R214), so it resolves on its Radiant face; the
-// opponent's Fruits are untouched; a Fruit Trap set face-down is made Radiant unread by the opponent
-// (R177); the count reads through `param()`; radiant its Cry adds 2 Fruits that cost (0).
+// C+ #68 Organic Produce — SPEC §8.7 row 68, BUILD M9 row C+ 68 (R177).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,7 +62,7 @@ mod tests {
     const TRAP: &str = "core-041"; // Sheepish, a Trap with no Fruit tag.
     const FILLER: &str = "core-005";
 
-    /// TS `FRUIT_POOL`: the Fruit query's ids, Organic Produce left out.
+    /// The Fruit query's ids, Organic Produce left out.
     fn fruit_pool() -> Vec<String> {
         jackioh_engine::catalog::query(&json_as(json!({ "tags": ["Fruit"] })))
             .iter()
@@ -166,7 +161,6 @@ mod tests {
                 "p2": { "hand": [FILLER] }
             }));
             heal_hero(&mut s, P1);
-            // Fig of Life's Radiant face heals 40, not 20.
             s.expect_health(P1, 50);
             assert!(s.card(FIG).radiant);
             s.expect_events(json!(["radiantSet", "cardPlayed"]));
@@ -233,7 +227,6 @@ mod tests {
             assert!(!s.card(&first).radiant);
             let before = hand_ids(&s);
             s.play(&second, json!({ "zone": 2 }));
-            // Until #1837 the second was a Fruit, made Radiant, and added two that cost (0).
             assert!(!s.card(&second).radiant);
             let fruits: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
             assert_eq!(fruits.len(), 1);

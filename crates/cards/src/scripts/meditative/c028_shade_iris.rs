@@ -32,7 +32,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #28 Shade-iris — SPEC §8.8 row 28, BUILD M10 row M 28.
+// M #28 Shade-iris — SPEC §8.8 row 28, BUILD M10 row M 28, R311.
 #[cfg(test)]
 mod tests {
     use super::*;

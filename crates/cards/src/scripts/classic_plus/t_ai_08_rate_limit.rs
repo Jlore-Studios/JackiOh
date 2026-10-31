@@ -227,7 +227,6 @@ mod tests {
                 assert_eq!(hash_state(&frozen.state), hash_state(&live.state));
                 s.answer(json!([selection]));
                 s.expect_in_zone(RATE_LIMIT, "graveyard");
-                // Scarab resolved after the answer: its Discover added the offered (2) Cost card to their hand.
                 assert!(s.hand(P2).iter().any(|card| card.def_id == offered_id));
                 assert_eq!(s.state().active, P1);
                 s.expect_events(json!(["cardResolved", "turnCutShort", "turnEnded"]));

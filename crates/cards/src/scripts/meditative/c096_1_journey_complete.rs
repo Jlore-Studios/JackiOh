@@ -134,8 +134,6 @@ mod tests {
             let me = s.card(ID).id.clone();
             s.start_turn();
 
-            // Cast as it was drawn: it never sat in the hand and has landed in the graveyard, and the
-            // draw repeated onto the FILLER beneath it (§2.4).
             assert!(s.hand(P1).iter().all(|card| card.id != me));
             s.expect_in_zone(me.as_str(), "graveyard");
             assert_eq!(s.hand(P1).len(), 2);
@@ -162,7 +160,6 @@ mod tests {
                 let card = s.card(id.as_str());
                 assert!(card.radiant, "{id} came back Radiant");
                 assert_eq!(card.owner, P1);
-                // The base face gives no discount: the printed cost.
                 assert_eq!(cost(&s, id), printed(&s, id));
             }
             let added: Vec<String> = s
@@ -210,7 +207,6 @@ mod tests {
 
             s.start_turn();
 
-            // It was cast and nothing moved: the exile pile is as it was, the hand only has the repeat.
             s.expect_in_zone(me.as_str(), "graveyard");
             assert_eq!(ids(&s.pile(P1, "exile")), exiled);
             assert!(s.pile(P1, "exile").iter().all(|card| !card.radiant));
