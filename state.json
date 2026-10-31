@@ -11506,6 +11506,13 @@
     "2602": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T14:38:03Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule line 7/8: the six missing files can only be rendered by the voice workflow on GitHub's macOS and Windows runners, which no builder can run, so it is human required whatever the size"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-8",
