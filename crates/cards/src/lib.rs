@@ -12,6 +12,7 @@
 //!   and Chinese sidecars are generated from `card-text.yaml` (#2498), which no pure crate parses.
 //! - `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION`, `card_def`, `card_def_by_index`: `catalog-data.ts`'s
 //!   readers of the shipped catalog, under their TS names (SURFACE §4.2).
+//! - `census`: each set's cards, tokens, rarities and tag counts, written once (#2581).
 //!
 //! The engine gets the WHOLE catalog and only the scripts that exist. A catalog id with no script is
 //! a playable card with no text: `scripts::script_of` falls back to an empty script, so a missing card
@@ -55,6 +56,10 @@ pub mod ky_test_bank;
 
 /// Stinkyscape #4.2 KY's Last Exam's bank of impossible problems (R1870002).
 pub mod ky_last_exam_bank;
+
+/// #2581: each set's counts, written once, which tests/cross/catalog.rs and catalog check hold the
+/// catalog to.
+pub mod census;
 
 /// R767000: the shipped catalog versions a replay folds under.
 mod history;
