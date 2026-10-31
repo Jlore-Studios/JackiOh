@@ -114,8 +114,8 @@
 #    workspace, .nvmrc, both vitest configs and apps/web/src/test/). It turns `web` on too, so the
 #    job that runs it runs.
 #  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (whose
-#    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's golden
-#    traces, which tools' `replay` includes) and README, the web's unit tests, the docs, spec/,
+#    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's tests/golden/,
+#    whose hotseat fixture tools' `replay` includes) and README, the web's unit tests, the docs, spec/,
 #    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (render.yaml, the
 #    Dockerfile, vercel.json, wrangler.jsonc), the lint and unit-test configs, and the scripts no
 #    build runs.

@@ -63,7 +63,7 @@ crates/
     tests/rules/<x>.rs     one per ported packages/engine/test/<x>.test.ts
     tests/rules/fixtures/  ← packages/engine/test/fixtures/*.ts (test-only scripts and catalogs)
     tests/golden.rs        golden trace replay (§13)
-    tests/golden/games.jsonl
+    tests/golden/          the 240 recorded games (§13.3), retired in #2578
     tests/golden/01-hotseat-full-game.json
     tests/fixtures/code-input-cases.json  shared with apps/web (§10.4)
   cards/                   package jackioh-cards (lib)    ← packages/cards/src, catalog.json, flavour.json, patches/
@@ -1017,11 +1017,16 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 | `gate [--full] [--shard k/K] [--out dir]`, `gate merge <dir>` | `gate.rs` | 22 | `pnpm ai:gate`, `gate-*.test.ts`, `gate-merge.ts` | the three matchups against `gateNeeded`, plus the perf gate |
 | `sweep [ids…] [--pass2 …] [--report …]` | `sweep.rs` | 22 | `pnpm ai:sweep` | R186's two-pass sweep; prints `SHADOW_BAN` rows |
 | `stats [--games N] [--patch v] [--out file]` | `stats.rs` | 22 | `pnpm ai:stats` | R378's development run |
-| `golden check`, `golden bless [--seeds N]` | `golden.rs` | 23 | — | §13 |
+| `golden check`, `golden bless [--seeds N]` (retired in #2578), `golden record` | `golden.rs` | 23 | — | §13 |
 | `spec check`, `spec index` | `spec.rs` | 28 | `pnpm rulings:coverage`, `rulings.test.ts` | §15 |
 | `arena …`, `agent`, `promote …` | `arena.rs`, `agent.rs`, `promote.rs` | 29 | `ladder/`, `duel.ts` | §14 |
 
 ## 13. Golden traces
+
+> **Historical (#2578).** The 240 games below, the oracle of the TypeScript → Rust port, are retired, and `golden bless` with them. The
+> format lives on: `golden record --seeds A..B [--force ids] --out <path>` writes §13.3's lines from the build it runs on, and
+> `golden check --file <path>` replays them with §13.2's hashes on any build; `golden check` alone folds the hotseat fixture to
+> `HOTSEAT_HASH` (now `972f5b85`).
 
 The oracle the rewrite is held to, recorded from the TypeScript engine **before** any Rust runs
 (part 23), and replayed by the Rust engine.
@@ -1051,7 +1056,8 @@ With §5.2's `canonical` and `fnv1a32_utf16` (TS: copy `replay.ts`'s `canonical`
 
 ### 13.3 File format
 
-`crates/engine/tests/golden/games.jsonl`, one game per line, written with keys in this order:
+The traces file (committed under `crates/engine/tests/golden/` until #2578, now what `golden record --out` writes), one game per line,
+written with keys in this order:
 
 ```json
 {"v":1,"seed":"jackioh-fuzz-1","args":{"seed":"jackioh-fuzz-1","decks":[[…],[…]],"handicaps":null},
@@ -1247,5 +1253,5 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§11.2, handlers:** `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult` (a handler that starts a match needs the `Arc` for `Registry::start`); `app::Handler`, `h!` and `api::http::dispatch` follow.
 - **§14.2, the arena's records:** `pilots` are both `"ai"` (R376's `Pilot` allows only `human`/`ai`); the two agents are named in the record's `id`, `dev:<patch>:arena:<a>-vs-<b>:<seed>`.
 - **§11.3, the Docker build stage** (part 35): `rust:1.97-slim-bookworm`, not `rust:1.97-slim` (that tag is Debian trixie, whose glibc 2.38 the bookworm runtime lacks; the binary would not start).
-- **§6.1 / §13.2, the unit view (#849, R849000):** `UnitView` carries `sick` (`combat::is_asleep`) and `attackReason` (`combat::why_cannot_declare`, now `pub`); a view field moves only the golden `v` hashes, so `golden bless` rewrote those alone.
+- **§6.1 / §13.2, the unit view (#849, R849000):** `UnitView` carries `sick` (`combat::is_asleep`) and `attackReason` (`combat::why_cannot_declare`, now `pub`); a view field moves only the golden `v` hashes, so `golden bless` (retired in #2578) rewrote those alone.
 - **§6.1 / §6.6, counts kept on a unit (#2321, R2321000):** `Script` gains `tallies: Option<TallyHook>`, a pure read of `ConditionContext` returning `Vec<UnitTally>` (`{ instance_id, value, goal }`), combined across a Fuse's ingredients in order as `preview` is; `UnitView` carries `tallies: Option<Vec<TallyView>>` (`{ defId, value, goal }`, `preview::tallies_on`), absent when no card counts the unit, so no golden hash moves for a game without one.
