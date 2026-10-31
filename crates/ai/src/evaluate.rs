@@ -42,10 +42,11 @@ use jackioh_engine::{
     active_units_of, animated_with_stats, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
     board_totals, cannot_attack, card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of,
     effective_cost, effective_life, find_def, find_instance, first_entry_zone, frozen_next_turn, has_keyword,
-    heal_multiplier_of, hero_armor_of, is_temporary_card, lost_refreshes_left, modifier_is_live, outcome_for,
-    owed_mana_of, own_cost, pierces, pile_at, query_cost, queue_hook, reset_instance, script_of, settle,
-    slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook,
-    unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    heal_multiplier_of, hero_armor_of, is_standing_unit, is_temporary_card, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, query_cost, queue_hook,
+    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
+    takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -664,8 +665,8 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
 /// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
 /// banked (a debt, Jade steps, extra turns, the enemy units it has marked, its start-of-turn effects and
 /// closest alternative win), what its coming refreshes
-/// will or will not give, the backrow (an enemy face-down card by the cost it shows), the hand, the
-/// library and the fatigue draws it has taken.
+/// will or will not give, the backrow (an enemy face-down card by the cost it shows, never a Unit
+/// standing there (R2490000)), the hand, the library and the fatigue draws it has taken.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -711,6 +712,12 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     };
 
     for card in side.backrow.iter().flatten() {
+        // R2490000: a Unit standing in the backrow is priced once, as the Unit the unit walk above
+        // priced, never again as a backrow card (R1081000: it is a Unit for every rule, and a count
+        // of permanents counts it once).
+        if w.standing_unit_priced_once && is_standing_unit(state, card) {
+            continue;
+        }
         if lapsing.iter().any(|id| id == &card.id) {
             continue;
         }
