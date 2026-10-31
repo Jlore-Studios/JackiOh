@@ -29,9 +29,7 @@ use crate::config::SET_TRACK_FIRST_LEVEL;
 use crate::cosmetics::CosmeticRarity;
 use crate::db::store::{StoreError, StoreResult, Tx};
 
-// ---------------------------------------------------------------------------
 // The literals
-// ---------------------------------------------------------------------------
 
 /// Why a Jlore row was written (§14.11; `jlore_grants.reason`): a game's, a quest's or a track
 /// level's pay (§14.7–§14.9), a pack bought (§14.3), a dev account's own grant or clear (§14.10),
@@ -130,9 +128,7 @@ fn from_literal<T: DeserializeOwned>(text: String) -> Result<T, StoreError> {
     Ok(serde_json::from_value(serde_json::Value::String(text))?)
 }
 
-// ---------------------------------------------------------------------------
 // The rows
-// ---------------------------------------------------------------------------
 
 /// One row of `public.inventory`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -292,10 +288,8 @@ pub struct IdempotencyRow {
     pub created_at: i64,
 }
 
-// ---------------------------------------------------------------------------
 // The ledgers' rows. Each says why (`reason`), what it was for (`reference`, the `ref` column), and
 // whether a dev tool wrote it (`dev`, §14.10).
-// ---------------------------------------------------------------------------
 
 /// One row of `public.jlore_grants`: `delta` Jlore.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -429,9 +423,7 @@ pub struct EconomyTables {
     pub idempotency_keys: Vec<IdempotencyRow>,
 }
 
-// ---------------------------------------------------------------------------
 // What both stores refuse alike: migration 0045's checks
-// ---------------------------------------------------------------------------
 
 fn refused(why: String) -> StoreError {
     StoreError::Other(format!("economy: {why}"))
@@ -575,9 +567,7 @@ fn count_after(held: Option<i64>, delta: i64) -> Option<i64> {
     held.unwrap_or(0).checked_add(delta).filter(|count| *count >= 0)
 }
 
-// ---------------------------------------------------------------------------
 // The store methods
-// ---------------------------------------------------------------------------
 
 /// `economy_dispatch!(self, name(args))`: the same call against whichever store this transaction
 /// is on.
@@ -849,9 +839,7 @@ pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
     tables.idempotency_keys.retain(|row| row.profile_id != profile_id);
 }
 
-// ---------------------------------------------------------------------------
 // Postgres (migration 0045)
-// ---------------------------------------------------------------------------
 
 mod pg {
     use sqlx::Row;
@@ -1903,9 +1891,7 @@ mod pg {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The in-memory fake (`FakeTables::economy`)
-// ---------------------------------------------------------------------------
 
 mod fake {
     use super::{

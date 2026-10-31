@@ -104,9 +104,7 @@ pub struct App {
     pub spends: crate::economy::spend_slots::SpendSlots,
 }
 
-// ---------------------------------------------------------------------------
 // The clock
-// ---------------------------------------------------------------------------
 
 /// TS `systemTimers.now()`: epoch milliseconds. Anchored once to the wall clock and advanced by
 /// tokio's clock, so a test that calls `tokio::time::pause()` and `advance()` moves every deadline
@@ -137,9 +135,7 @@ pub fn now_ms() -> i64 {
     epoch_ms + nanos.div_euclid(1_000_000) as i64
 }
 
-// ---------------------------------------------------------------------------
 // BUILD M8's `E2E=1` mode
-// ---------------------------------------------------------------------------
 
 /// Not in SPEC, and no R-row: boot ergonomics for the test mode, not a rule. These are placeholders
 /// so `E2E=1 jackioh-server` — the command `e2e/README.md` documents — boots in a checkout with no
@@ -216,9 +212,7 @@ pub fn browser_origins(env: &Env) -> Vec<String> {
     origins
 }
 
-// ---------------------------------------------------------------------------
 // The route table
-// ---------------------------------------------------------------------------
 
 /// What a handler returns before it is awaited: boxed, so every route fits one table.
 pub type HandlerFuture<'a> = Pin<Box<dyn Future<Output = ApiResult> + Send + 'a>>;
@@ -941,9 +935,7 @@ pub static ROUTES: &[Route] = &[
     ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),
 ];
 
-// ---------------------------------------------------------------------------
 // Boot
-// ---------------------------------------------------------------------------
 
 /// Unit conversion, not configuration: R109 states its API allowance *per minute*, and
 /// `API_REQUESTS_PER_MINUTE` is the number itself (TS `http.ts`'s `API_RATE_WINDOW_MS`).

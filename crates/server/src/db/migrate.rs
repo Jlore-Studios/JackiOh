@@ -1,25 +1,12 @@
-//! Migration runner (← `apps/server/src/db/migrate.ts`, SURFACE §11.3). Applies every file in
+//! Migration runner (SURFACE §11.3). Applies every file in
 //! `crates/server/migrations` in lexical order over DATABASE_URL and records what it applied in
-//! `app.migrations`, so bring-up is one command against a fresh Supabase project
-//! (docs/architecture.md, step 4 of the bring-up checklist).
-//!
-//! Why not the Supabase CLI: `supabase db push` only reads `supabase/migrations/<timestamp>_<name>.sql`,
-//! and the canonical SQL lives at `crates/server/migrations/` (copied byte for byte from
-//! `apps/server/src/db/migrations/` by part 1). The SQL is plain Postgres, so either path works; this
-//! runner is the one the checklist uses because it needs nothing but a connection string. See
-//! docs/architecture.md for the CLI variant.
-//!
-//! The files are compiled into the binary with `include_str!` (SURFACE §11.3), so the Docker image
-//! needs no migrations directory at run time. `tests/store/migrations_pinned.rs` proves that every
-//! `.sql` file in the directory is in [`MIGRATIONS`] and that none of them changed.
+//! `app.migrations`. The files are compiled in with `include_str!`.
 
 use anyhow::{anyhow, bail};
 use sqlx::{Connection, PgConnection, Postgres, Transaction};
 
-/// Every migration, `(filename, contents)`, in lexical order of the filename: the directory listing
-/// TS read at run time (`listMigrations`), embedded at compile time. A new migration adds its line
-/// here and its checksum to `tests/store/migrations_pinned.rs`; that test fails on a file in the
-/// directory that this list does not name.
+/// Every migration, `(filename, contents)`, in lexical order of the filename.
+/// Embedded at compile time.
 pub const MIGRATIONS: &[(&str, &str)] = &[
     (
         "0001_profiles_and_invites.sql",
@@ -288,16 +275,11 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     ),
 ];
 
-/// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is
-/// taken with `pg_advisory_xact_lock` inside each transaction, never as a session lock: Render's
-/// release runs this runner on every deploy (render.yaml), over whatever `DATABASE_URL` the
-/// server uses, and behind a transaction-mode pooler a session lock stays held on whichever pooled
-/// backend took it, so the next deploy's lock could wait forever and the server never boot.
+/// Advisory lock id taken with `pg_advisory_xact_lock` inside each transaction.
+/// Transaction-scoped so behind a connection pooler the lock cannot leak across deploys.
 pub const LOCK_ID: i64 = 0x6a61636b; // "jack"
 
-/// The ledger, created (if missing) under the lock before any file runs. Its table comment names
-/// the Rust paths; `comment on` re-runs every time, so an older database's comment is brought up to
-/// date and nothing else about the ledger changes.
+/// The ledger, created under the lock before any file runs.
 pub const LEDGER: &str = "
 create schema if not exists app;
 create table if not exists app.migrations (
@@ -309,17 +291,11 @@ comment on table app.migrations is
   'Which files in crates/server/migrations have been applied. Written by crates/server/src/db/migrate.rs.';
 ";
 
-/// Files rewritten after some database had applied them, each with the checksums of its earlier
-/// versions. A database that applied an earlier version keeps it (the ledger is not rewritten); any
-/// other edit to an applied file is still refused. Add an entry only when the earlier version can
-/// stay where it was applied and the new one is what every database that has not applied it needs.
-///
-/// 0013_retention_purge.sql: its first version gave app.purge_expired_rows a `set
-/// jackioh.retention_purge` clause, which only a superuser may create since Postgres 15, so it failed
-/// on Supabase, whose migrating role is not one. Where a superuser applied it, it works as written.
+/// Files rewritten after some database had applied them, each with checksums of earlier versions.
+/// 0013_retention_purge.sql: first version used a superuser-only clause that failed on Supabase.
 pub const REWRITTEN: &[(&str, &[&str])] = &[("0013_retention_purge.sql", &["16b93e4d"])];
 
-/// `REWRITTEN[filename] ?? []`: the earlier checksums a database may hold for `filename`.
+/// Earlier checksums a database may hold for `filename`.
 pub fn rewritten(filename: &str) -> &'static [&'static str] {
     REWRITTEN
         .iter()
@@ -328,15 +304,12 @@ pub fn rewritten(filename: &str) -> &'static [&'static str] {
         .unwrap_or(&[])
 }
 
-/// FNV-1a, so a changed file that was already applied is reported instead of silently skipped.
-/// Over the UTF-16 code units of the text (TS `charCodeAt`), as 8 lower-case hex digits: the same
-/// function as the state hash's (SURFACE §5.2), so every checksum an existing ledger holds matches.
+/// FNV-1a checksum over UTF-16 code units (SURFACE §5.2).
 pub fn checksum(text: &str) -> String {
     jackioh_engine::replay::fnv1a32_utf16(text)
 }
 
-/// TS `listMigrations()`: the `.sql` files, sorted by name (`a < b`, UTF-16 order; every name is
-/// ASCII, so `str::cmp` equals it). The list is embedded, so this only filters and sorts it.
+/// The `.sql` files, sorted by name.
 fn list_migrations() -> Vec<(&'static str, &'static str)> {
     let mut entries: Vec<(&'static str, &'static str)> = MIGRATIONS
         .iter()
@@ -347,8 +320,7 @@ fn list_migrations() -> Vec<(&'static str, &'static str)> {
     entries
 }
 
-/// The message of a database error as `pg` reported it (`error.message`), without sqlx's
-/// "error returned from database: " prefix; any other error as it displays.
+/// Strips sqlx's database error prefix; any other error as it displays.
 fn error_message(error: &sqlx::Error) -> String {
     match error {
         sqlx::Error::Database(db) => db.message().to_string(),
@@ -356,9 +328,7 @@ fn error_message(error: &sqlx::Error) -> String {
     }
 }
 
-/// TS `locked`'s opening half: one transaction under the lock. The caller commits it; a `?` that
-/// leaves before the commit drops the transaction, and sqlx rolls a dropped transaction back
-/// (TS: `rollback().catch(() => undefined)` then rethrow).
+/// One transaction under the advisory lock.
 async fn locked(client: &mut PgConnection) -> anyhow::Result<Transaction<'_, Postgres>> {
     let mut tx = client.begin().await.map_err(|e| anyhow!(error_message(&e)))?;
     sqlx::query("select pg_advisory_xact_lock($1)")
@@ -377,14 +347,13 @@ pub async fn migrate(connection_string: &str) -> anyhow::Result<Vec<String>> {
     let mut applied: Vec<String> = Vec::new();
 
     let result = run_migrations(&mut client, &mut applied).await;
-    // TS `finally { await client.end() }`: the connection closes whether or not a file failed.
     let _ = client.close().await;
     result?;
 
     Ok(applied)
 }
 
-/// The body of TS `migrate`'s `try`: the ledger, then one locked transaction per file.
+/// Applies the ledger, then one locked transaction per file.
 async fn run_migrations(client: &mut PgConnection, applied: &mut Vec<String>) -> anyhow::Result<()> {
     {
         let mut tx = locked(client).await?;
@@ -398,8 +367,7 @@ async fn run_migrations(client: &mut PgConnection, applied: &mut Vec<String>) ->
     for (filename, sql) in list_migrations() {
         let sum = checksum(sql);
 
-        // One transaction per file: a migration either lands whole or not at all. The ledger is
-        // read under the lock, so a runner that waited on another sees what that one applied.
+        // One transaction per file: a migration either lands whole or not at all.
         let mut tx = locked(client).await?;
         let previous: Option<String> =
             sqlx::query_scalar("select checksum from app.migrations where filename = $1")
@@ -433,8 +401,7 @@ async fn run_migrations(client: &mut PgConnection, applied: &mut Vec<String>) ->
     Ok(())
 }
 
-/// TS `main()` (`pnpm db:migrate`; `jackioh-server migrate`, and the first step of `release`).
-/// The arguments are unused, as TS read none.
+/// CLI entry point for `jackioh-server migrate`.
 pub async fn run(_args: Vec<String>) -> anyhow::Result<()> {
     let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
     if connection_string.is_empty() {

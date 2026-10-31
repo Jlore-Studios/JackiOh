@@ -189,9 +189,7 @@ pub fn quest_xp(def: &QuestDef) -> i64 {
     i64::from(def.jlore) * i64::from(QUEST_XP_PER_JLORE)
 }
 
-// ---------------------------------------------------------------------------
 // What a game did, as the quests read it
-// ---------------------------------------------------------------------------
 
 /// One card a seat played from its hand.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -283,9 +281,7 @@ pub fn progress_of(goal: &QuestGoal, won: Option<bool>, tally: &GameTally) -> i6
     }
 }
 
-// ---------------------------------------------------------------------------
 // The rhythm (R1304000)
-// ---------------------------------------------------------------------------
 
 /// `QUEST_INTERVAL_HOURS` in milliseconds, the store's unit of time.
 pub fn quest_interval_ms() -> i64 {

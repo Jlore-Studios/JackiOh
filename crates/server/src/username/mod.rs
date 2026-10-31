@@ -300,9 +300,7 @@ fn check_scripts(name: &str) -> Result<(), UsernameRefusal> {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The light filter (R1433)
-// ---------------------------------------------------------------------------------------------
 
 /// Words refused wherever they appear (slurs and the strongest profanity).
 const BLOCKLIST_ANYWHERE: &str = include_str!("blocklist_anywhere.txt");
