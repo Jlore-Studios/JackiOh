@@ -12052,13 +12052,8 @@
     "what": "build #2517 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-31T23:29:50Z",
-    "notes": [
-      "delivered build #2517 on claude-8 (run 41251599267): interrupted",
-      "started build #2517 on claude-4 (run 41252859017)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
-    ],
+    "at": "2026-10-31T23:37:20Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -12763,7 +12758,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T23:29:50Z",
+  "loop_tick": "2026-10-31T23:37:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
