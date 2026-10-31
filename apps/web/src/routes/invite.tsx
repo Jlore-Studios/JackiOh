@@ -1,7 +1,7 @@
 // `/invite` — the pending-account code screen (SPEC §9.4, BUILD M6-T1).
 // R145/§9.8: render code and account refusals as received; identical code errors are a security property.
-// R192/R109/R194: server-provided waits/messages, renew/retry once, and retain known status after other failures.
-// R191 reads input without guessing; waits recheck after expiry or wake; config is R79/R104 (CLAUDE.md rule 9).
+// R192/R109/R194: waits and messages come from the server; renew or retry once.
+// R191 reads input without guessing; config is R79/R104 (CLAUDE.md rule 9).
 
 import { useEffect, useRef, useState } from "react";
 
@@ -66,7 +66,7 @@ function isPausedRefusal(cause: unknown): boolean {
   return cause instanceof ApiRequestError && cause.status === 503 && cause.code === "unavailable";
 }
 
-/** Names both account and network without revealing which limit refused; the server error says what happened. */
+/** Never says which limit (account or network) refused; the server's error says what happened. */
 function waitText(leftMs: number | null): string {
   if (leftMs === null) return t("This account or network can try again in a few minutes.");
   return t("This account or network can try again in {wait}.", { wait: waitInWords(leftMs) });
@@ -86,7 +86,6 @@ function statusDeadlines(read: StatusRead | null): { pausedUntil: number | null;
   return { pausedUntil, triesBackAt };
 }
 
-/** The status's soonest stated deadline, but never sooner than the recheck floor after the read. */
 function recheckAt(read: StatusRead | null): number | null {
   const { pausedUntil, triesBackAt } = statusDeadlines(read);
   const due = [pausedUntil, triesBackAt].filter((deadline): deadline is number => deadline !== null);
@@ -192,7 +191,6 @@ function InviteScreen({ account }: { account: Account }) {
   const [statusReads, setStatusReads] = useState(0);
   /** The code R145's error just refused: Redeem stays off while the field still holds it. */
   const [refusedCode, setRefusedCode] = useState<string | null>(null);
-  /** §9.4 step 1 refused a redemption for this account's unconfirmed email. */
   const [unverifiedRefusal, setUnverifiedRefusal] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
   const [resendNotice, setResendNotice] = useState<string | null>(null);
@@ -203,7 +201,7 @@ function InviteScreen({ account }: { account: Account }) {
   const [confirmedHere, setConfirmedHere] = useState(false);
   const codeRef = useRef(code);
   codeRef.current = code;
-  /** Set when a refusal should put the caret back in the field once it is unlocked. */
+  /** A refusal puts the caret back in the field once it unlocks. */
   const focusField = useRef(false);
   const [redeemed, setRedeemed] = useState(false);
   const redeemedRef = useRef<HTMLDivElement>(null);
@@ -252,7 +250,6 @@ function InviteScreen({ account }: { account: Account }) {
     };
   }, [token, statusReads]);
 
-  // Re-read status when its stated wait expires.
   useWhenDue(recheckAt(statusRead), () => {
     setStatusReads((count) => count + 1);
   });
@@ -392,8 +389,7 @@ function InviteScreen({ account }: { account: Account }) {
 
   const helpId = `${INVITE_CODE_INPUT}-help`;
 
-  // Sentences with an address or a link inside: one entry each, split around what is inserted, so
-  // English keeps the text it always had.
+  // A sentence with an address or a link inside is one entry, split around what is inserted.
   const [confirmBefore = "", confirmAfter = ""] = t(
     "Confirm your email address first: open the link we emailed to {address}, then check again here. If you already have, check again in a moment.",
   ).split("{address}");
@@ -558,8 +554,7 @@ function InviteScreen({ account }: { account: Account }) {
                   setCode(next.formatted);
                   // The refusal was about the code as it was; a rate limit's wait still stands.
                   if (rateLimit === null) setError(null);
-                  // A rate limit with no stated wait lasts until the code changes, so the button
-                  // never looks dead forever; the server still decides.
+                  // A waitless rate limit ends at a code change, so the button never looks dead; the server decides.
                   if (rateLimit !== null && rateLimit.retryAfterMs === null) {
                     setRateLimit(null);
                     setError(null);
@@ -598,7 +593,6 @@ function InviteScreen({ account }: { account: Account }) {
           )}
 
           {error === null && rateLimit === null ? null : (
-            // One message: what the server said, then (for a rate limit) how long to wait.
             <div className="invite-screen__refusal">
               {error === null ? null : (
                 <p className="notice" data-testid={INVITE_ERROR} role="alert">

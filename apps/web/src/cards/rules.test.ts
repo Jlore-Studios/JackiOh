@@ -171,22 +171,19 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Trade offer",
     // R1847000: the starscape map; Stinkyscape #148 (S23) may move it into the glossary.
     "Starscape map",
-    // R1850000–R1850005: #1850's card-on-card verbs; Stinkyscape's cards (#1836) may make a term of
-    // one (Duo, Squad).
+    // R1850000–R1850005: #1850's card-on-card verbs; Stinkyscape's cards (#1836) may make a term of one (Duo, Squad).
     "Copy a Unit's text",
     "Duo / Squad",
     "Exile aura",
     "Hold beneath",
     "Cast it for yourself",
     "Radiant at N keywords",
-    // R1855000–R1855003: engine primitives that Anomaly Found! and Scanning Probes (S20) explain on
-    // their own faces.
+    // R1855000–R1855003: engine primitives that Anomaly Found! and Scanning Probes (S20) explain on their own faces.
     "Replace your board",
     "Scan for an Anomaly",
     // R1859007: the War Doctrines' "your Units have X", plain as Hearthstone prints it.
     "Units have keyword",
-    // R1870000, R1870001, R1870002, R1870004, R1870007: Stinkyscape's Terminus texts (S22), in plain
-    // words.
+    // R1870000, R1870001, R1870002, R1870004, R1870007: Stinkyscape's Terminus texts (S22), in plain words.
     "Win on play",
     "Exile all, piles whole",
     "Gain Echo",
@@ -496,7 +493,6 @@ describe("B10: tokenizeRules and termsIn", () => {
   });
 
   it("R1563000 Float bolds as one term: Floats, the Float and Float reduces cost", () => {
-    // Distinct terms in order: "Floats" and "the Float" are one term.
     expect(termsIn("Reveals when any player Floats: Summon an X/X Bread Token for you. X = the Float.")).toEqual([
       "Float",
     ]);
@@ -722,8 +718,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Freeze: ["freeze", "freezes"],
       // R1563000: Bread and Butter prints "Reveals when any player Floats".
       Float: ["Floats", "Floated"],
-      // R1857000: the Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated"
-      // above.
+      // R1857000: the Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated" above.
       "End the turn": ["end the turn"],
       Allure: ["Allured"],
       Launch: ["launch", "launches"],

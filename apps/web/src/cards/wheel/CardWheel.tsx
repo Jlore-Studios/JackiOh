@@ -1,10 +1,7 @@
-// A Marvel Snap-style card wheel (issue #124): the top card stands forward as the primary one, the
-// card under it peeks out to the right, the bottom card peeks out to the left, and the viewer
-// shuffles through by buttons, scroll, tap, swipe or keyboard.
-//
-// Generic over what the cards are — a Stack pile (a face over backs), related cards, anything with
-// a face or a back — so other displays can reuse it. It enforces nothing and knows no rules: items
-// in, an index out.
+// A Marvel Snap-style card wheel (issue #124): the top card stands forward, the card under it peeks
+// out right and the bottom card left; the viewer shuffles by buttons, scroll, tap, swipe or keyboard.
+// Generic over what the cards are (anything with a face or a back), so other displays can reuse it:
+// it enforces nothing and knows no rules, items in, an index out.
 
 import { useCallback, useRef, useState, type ReactElement } from "react";
 
@@ -31,7 +28,7 @@ export type CardWheelProps = {
   items: readonly WheelItem[];
   /** The card standing forward at first. */
   defaultIndex?: number;
-  /** What the wheel is, in words: "Stack pile". Names the dialog for assistive tech. */
+  /** Names the wheel for assistive tech: "Stack pile". */
   ariaLabel: string;
   /** Reports the primary card's index as the viewer shuffles. */
   onIndex?: (index: number) => void;
@@ -55,9 +52,8 @@ function wrap(index: number, length: number): number {
 }
 
 /**
- * Where an item stands beside the primary: 0 under it, -1 peeking left, +1 peeking right, and
- * anything else off the wheel. Past the ends the wheel wraps, so at the top the bottom card peeks
- * left and at the bottom the top card peeks right.
+ * Where an item stands beside the primary: 0 under it, -1 peeking left, +1 peeking right, anything
+ * else off the wheel. Past the ends the wheel wraps.
  */
 function displayOffset(at: number, index: number, length: number): number {
   const raw = at - index;

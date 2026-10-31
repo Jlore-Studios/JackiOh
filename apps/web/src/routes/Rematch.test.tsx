@@ -1,5 +1,4 @@
 // Rematch offers after an online match (SPEC §9.5, R672).
-// Buttons require both sockets; matching an offer navigates to the server-made game.
 // Browser component specs read stylesheets as text because jsdom has no layout.
 
 import { readFileSync } from "node:fs";

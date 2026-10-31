@@ -1,7 +1,5 @@
 // `/login`'s sign-up form and the age screen and terms box on it (R757000, R757001). The form asks;
-// the server decides and records at the first sign-in (`auth/ConsentPrompt.tsx`). What is asserted
-// here is that nothing is chosen for the player, nothing names an age, and the provider is never
-// called for an answer under the minimum, for a missing answer or for an unticked box.
+// the server decides and records at the first sign-in (`auth/ConsentPrompt.tsx`).
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

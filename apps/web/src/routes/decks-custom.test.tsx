@@ -106,7 +106,6 @@ describe("R915005 the deck builder shelves the account's custom cards", () => {
 
     const chip = await screen.findByTestId(filterSetId("Custom"));
     expect(chip).toHaveTextContent("Custom");
-    // Owned once, as the account's own: it is on the shelf beside the catalog's cards.
     const imp = screen.getByTestId(poolCardId(IMP.id));
     expect(imp).toHaveAttribute("data-owned", "true");
     expect(imp).toHaveAccessibleName(/Ember Imp/);
@@ -159,7 +158,7 @@ describe("R915005 a deck with a custom card is marked practice only", () => {
     expect(plain).toHaveAttribute("data-status", "ready");
     expect(within(plain).queryByTestId(DECK_PRACTICE_ONLY)).toBeNull();
 
-    // The first deck is open: its verdict says why it cannot queue, in the validator's own L7.
+    // The first deck is open: its verdict is the validator's own L7.
     const editor = screen.getByTestId("deck-editor");
     expect(editor).toHaveAttribute("data-deck", "d-custom");
     expect(within(editor).getByTestId(DECK_PRACTICE_ONLY)).toBeInTheDocument();

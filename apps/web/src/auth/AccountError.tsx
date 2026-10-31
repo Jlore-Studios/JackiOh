@@ -6,7 +6,6 @@ import type { ReactElement, ReactNode } from "react";
 import { t } from "../i18n/i18n.ts";
 import { useCountdown } from "./cooldown.ts";
 
-/** Try again, off while `wait` seconds of a stated wait are left. */
 function RetryButton({
   wait,
   onRetry,
@@ -25,10 +24,7 @@ function RetryButton({
   );
 }
 
-/**
- * Try again beside a failure said elsewhere. Render it only while that failure shows, so each
- * failure counts its own wait.
- */
+/** Try again beside a failure said elsewhere; render it only while that failure shows, so each counts its own wait. */
 export function TryAgainButton({
   retryAfterMs,
   onRetry,

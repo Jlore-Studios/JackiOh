@@ -66,7 +66,7 @@ function shopRead(call: Call): Reply | undefined {
   }
 }
 
-/** The gate's read, the account screen's profile and the Shop's six reads, answered from the fixtures. */
+/** The gate's read, the account's profile and the Shop's six reads, from the fixtures. */
 function serveShop(status: "active" | "pending" = "active"): StubServer {
   return stubServer((call) => {
     if (call.path === "/api/auth/me") {
@@ -233,7 +233,6 @@ describe("#1577 the shop screen", () => {
     let owned = before;
     stubServer((call) => {
       if (call.method === "POST" && call.path === "/api/cosmetic-packs/open") {
-        // The server settled the grant: the ledger lists both cosmetics from now on.
         owned = {
           cards: [...before.cards, { cardId: "core-001", cosmeticId: "border-stone" }],
           account: [...before.account, "table-marble"],
@@ -270,7 +269,6 @@ describe("#1577 the shop screen", () => {
         </ViewerAccountCosmetics>
       </ViewerFullArt>,
     );
-    // The first read landed: the chessboard is owned and the marble is not, yet.
     await waitFor(() => {
       expect(screen.getByTestId(collectionTestid.tile("table-chessboard"))).toHaveAttribute("data-owned", "true");
     }, SLOW);
@@ -295,7 +293,7 @@ describe("#1577 the shop screen", () => {
     serveShop();
     render(<ShopRoute token={TOKEN} />);
 
-    // Wait for every panel to read, so an element a panel draws only once it has its answer would be here.
+    // Every panel has read, so anything drawn only on an answer would be here.
     await screen.findByTestId(packTestid.open("Core"), undefined, SLOW);
     await screen.findByTestId(shopTestid.unopened, undefined, SLOW);
     await screen.findByTestId(shopTestid.cardBar, undefined, SLOW);

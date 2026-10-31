@@ -1,7 +1,5 @@
 // Landing's front door (B37-B39): a fan of real cards and one call to action; CSS stays scoped to
-// `.landing` so it cannot affect the board layout. After `GATE_SLOW_NOTICE_SECONDS`, local session
-// state avoids flashing Sign in while the account read is slow. R765 shows an active online game.
-// R2035000 hangs the account's quests off the doors' box.
+// `.landing` so it cannot affect the board layout. R765 shows an active online game.
 
 import { Suspense, lazy, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -329,7 +327,7 @@ function QuestGlyph(): ReactElement {
   );
 }
 
-/** R2035000: how long the quests' parchment takes to unroll from its bookmark, and to roll back up. */
+/** R2035000: how long the quests' parchment takes to unroll, and to roll back up. */
 export const QUESTS_UNROLL_MS = 220;
 
 type QuestsPhase = "closed" | "open" | "closing";
@@ -470,7 +468,7 @@ function Actions({ questsToken, motion }: { questsToken: string | null; motion: 
 // The page
 
 export type LandingRouteProps = {
-  /** R374: where the fan's deal draws its randomness; `Math.random` on the page, a seeded source in tests. */
+  /** R374: where the fan's deal draws its randomness; a seeded source in tests. */
   random?: RandomSource;
   /** R2035000: whether the economy is live, for the quests bookmark. */
   economyLive?: boolean;

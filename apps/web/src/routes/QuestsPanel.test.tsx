@@ -1,5 +1,5 @@
-// `/collection`'s quests (§14.9, #1304; #1307): what the panel shows of `GET /api/quests`, and the countdown
-// to the next quest read from the clock.
+// `/collection`'s quests (§14.9, #1304; #1307): what the panel shows of `GET /api/quests`, and the
+// countdown to the next quest.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -125,7 +125,7 @@ describe("QuestsList", () => {
     expect(onArrived).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/reopen this page/)).toBeNull();
 
-    // The same due time arriving again asks nothing more: one read per due time.
+    // One read per due time.
     view.rerender(<QuestsList quests={book({ nextDueAt: NOW + 1_000 })} onArrived={onArrived} />);
     expect(onArrived).toHaveBeenCalledTimes(1);
   });

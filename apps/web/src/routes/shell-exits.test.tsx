@@ -1,7 +1,6 @@
 // B40: gate errors offer retry, home and sign-out; banned and 404 panels offer home.
 // Tests import self-mounting `main.tsx`, stub `fetch`, and assert URL and storage outcomes.
 // Fixture sessions omit refresh tokens, so R194 renewal cannot determine these panels.
-// `expectLeadsTo` handles links and navigation buttons because jsdom follows neither.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -112,8 +111,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
-
-// The gate's error panel
 
 describe("B40 the gate's error panel", () => {
   it.each([
@@ -237,8 +234,6 @@ describe("B40 the gate's error panel", () => {
   });
 });
 
-// The banned panel
-
 describe("B40 the banned panel", () => {
   it("B40 offers gate-home and gate-sign-out, and never opens the gate", async () => {
     signIn(TOKEN);
@@ -273,8 +268,6 @@ describe("B40 the banned panel", () => {
     }, SLOW);
   });
 });
-
-// The 404 panel
 
 describe("B40 the 404 panel", () => {
   it.each(["/nope", "/decks/extra", "/login/again"])(
@@ -315,8 +308,6 @@ describe("B40 the 404 panel", () => {
     expect(screen.queryByTestId(shellTestid.notFound)).toBeNull();
   });
 });
-
-// The IDs
 
 describe("B40 test ids", () => {
   it("B40 main.tsx re-exports shellTestid exactly as auth/testids.ts defines it", () => {

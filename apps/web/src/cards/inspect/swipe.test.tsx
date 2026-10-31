@@ -1,6 +1,5 @@
 // Issue #2121 (R2121000): a card or pile sheet closes on a touch swipe down, exactly as Close
-// does; a prompt and the mulligan never do. Gestures are pointer events. jsdom has no layout,
-// so each sheet is given an offsetHeight of 600 before the press.
+// does; a prompt and the mulligan never do. Gestures are pointer events.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

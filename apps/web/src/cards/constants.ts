@@ -3,7 +3,7 @@
 
 import type { LengthTier } from "./fit.ts";
 
-/** A full card is a tall 5:7 rectangle, like a Hearthstone card. */
+/** A full card is a tall 5:7 rectangle. */
 export const FACE_ASPECT = 5 / 7;
 
 /** Name length ceilings for each tier: `nameTier` returns the first tier whose ceiling holds. */
@@ -22,24 +22,21 @@ export const FIT_MIN = 0.55;
 export const FIT_STEPS = 6;
 
 /**
- * The rules text's reading floor, in CSS pixels. Text that would shrink below it first takes the
- * long layout (`data-long` on the face), then clamps with an ellipsis at this size instead of
- * shrinking further. The detail view and the hover preview print it whole.
+ * The rules text's reading floor, in CSS pixels: text that would shrink below it takes the long
+ * layout (`data-long`), then clamps with an ellipsis. The detail view and hover preview print it whole.
  */
 export const FIT_FLOOR_PX = 9;
 
 /**
- * Issue #1017: the most text a face may print, measured in Chromium on every catalog face at the
- * reading floor. The Almanac's and the deck builder's tiles are 164 to 220 px wide, and a 170 px
- * face's rules box holds 6 lines of about 28 characters before the art would give way; every
- * catalog face fits this but the short forms (shortText.ts). `faceLines` wraps by words to count.
+ * Issue #1017: the most text a face may print, measured in Chromium at the reading floor on a 170 px
+ * face (the Almanac's and deck builder's tiles are 164 to 220 px) before the art would give way.
+ * Every catalog face fits it but the short forms (shortText.ts). `faceLines` counts by words.
  */
 export const FACE_TEXT_LIMIT = { charsPerLine: 28, lines: 6 } as const;
 
 /**
- * The same for the hover preview's face (271 px wide, PREVIEW_HEIGHT_PX tall): 10 lines of about 45
- * characters. A face in play prints only there, so a Summit's next Ascent line and a fused or
- * Buffed card are held to it.
+ * The same for the hover preview's face (271 px wide, PREVIEW_HEIGHT_PX tall). A face in play prints
+ * only there, so a Summit's next Ascent line and a fused or Buffed card are held to it.
  */
 export const PREVIEW_TEXT_LIMIT = { charsPerLine: 45, lines: 10 } as const;
 
@@ -59,8 +56,8 @@ export const REF_TOOLTIP_HEIGHT_PX = 300;
 export const REF_PANEL_FACE_HEIGHT_PX = 190;
 
 /**
- * The state rail (CardStates.tsx): on a small face (below FACE_TEXT_MIN_HEIGHT_PX, a hand card)
- * this many badges show and the rest fold into a "+n" chip. Mirrored in cardstate.css.
+ * The state rail (CardStates.tsx): the badges a small face (below FACE_TEXT_MIN_HEIGHT_PX) shows, the
+ * rest folded into a "+n" chip. Mirrored in cardstate.css.
  */
 export const STATE_BADGES_SMALL_MAX = 2;
 
@@ -74,33 +71,32 @@ export const ART_NEAR_MARGIN_PX = 600;
 export const ART_DWELL_MS = 150;
 
 /**
- * R1295000: the most faces whose cosmetic foil moves at once (cosmetics.ts). A face past it wears
- * its foil's still version until a moving one leaves, so a full hand and board never animate a
- * dozen sheens together.
+ * R1295000: the most faces whose cosmetic foil moves at once (cosmetics.ts); a face past it wears its
+ * still version until a moving one leaves, so a full hand and board never animate a dozen sheens.
  */
 export const COSMETIC_FOIL_ANIMATED_MAX = 6;
 
 /**
  * R1295000: the Radiant gold, as a window in HSL that holds every color cards.css's Radiant face
  * declares. No border's colors may fall inside it (cosmetics.test.tsx), so no border passes for
- * a Radiant trim. The hue's two ends, in degrees.
+ * a Radiant trim.
  */
 export const RADIANT_GOLD_HUE_MIN_DEG = 38;
-/** R1295000: the Radiant gold window's upper hue (RADIANT_GOLD_HUE_MIN_DEG). */
+/** The Radiant gold window's upper hue (RADIANT_GOLD_HUE_MIN_DEG). */
 export const RADIANT_GOLD_HUE_MAX_DEG = 56;
-/** R1295000: the Radiant gold window's least saturation, 0 to 1: a greyer color reads as no gold. */
+/** The Radiant gold window's least saturation, 0 to 1: a greyer color reads as no gold. */
 export const RADIANT_GOLD_SATURATION_MIN = 0.5;
-/** R1295000: the Radiant gold window's darkest lightness, 0 to 1: below it a gold reads as brown. */
+/** The Radiant gold window's darkest lightness, 0 to 1: below it a gold reads as brown. */
 export const RADIANT_GOLD_LIGHTNESS_MIN = 0.3;
-/** R1295000: the Radiant gold window's lightest lightness, 0 to 1: above it a gold reads as cream. */
+/** The Radiant gold window's lightest lightness, 0 to 1: above it a gold reads as cream. */
 export const RADIANT_GOLD_LIGHTNESS_MAX = 0.9;
 
 /**
  * #2435, R1839000: how far a Dormant card on the field is greyed and dimmed (the veil's grayscale() and
- * brightness(), dormant.css), well past the "Can't attack" portrait's grayscale(0.75) brightness(0.82) (keywords.css).
+ * brightness(), dormant.css), well past the "Can't attack" portrait's (keywords.css).
  */
 export const DORMANT_GREY = 0.92;
 export const DORMANT_DIM = 0.6;
 
-/** #2435: one beat of the Dormant seal's pulse, its runes and its crescent, in milliseconds (dormant.css). */
+/** #2435: one beat of the Dormant seal's pulse, runes and crescent (dormant.css). */
 export const DORMANT_PULSE_MS = 3200;

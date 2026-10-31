@@ -305,7 +305,6 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
   const copies = viewCopies === undefined || !chinese ? viewCopies : { ...viewCopies, def: chineseDef(viewCopies.def) };
   const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
   const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay, chinese);
-  // B5 E38, R1438: a hand card's keywords are the view's where it gives them (a Lucky given in hand).
   const keywords = source.live?.keywords ?? inPlay?.handKeywords ?? printed?.keywords ?? [];
   // The values belong to the card's own words, its numbers as they stand included: a formula play
   // does not print (Vanilla, "???", a rolled power) has no value to show.
@@ -320,13 +319,11 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     chinese && filled !== undefined
       ? preview.map((entry) => ({ ...entry, label: chinesePreviewLabel(filled, source.radiant, entry.label, inPlay?.params) }))
       : preview;
-  // R1301: the same card's English face, for what is read off its words and never printed.
   const english = chinese ? faceIn(source, false) : null;
 
   return {
     defId: source.defId,
     known: def !== undefined,
-    // R1852004: a launched Starship prints the name it took.
     name: inPlay?.starship?.name ?? def?.name ?? source.name ?? source.defId,
     type,
     // MD-B15, R923: in play a face lists the view's tags; outside play the definition's.
@@ -462,7 +459,6 @@ function sameText(a: FaceText, b: FaceText): boolean {
   return a.full === b.full;
 }
 
-/** R277: which stats a printed Radiant face raised over its base face's; none in play or on a base face. */
 function grewOf(def: CardDef | undefined, source: FaceSource): FaceStats["grew"] {
   if (def === undefined || !source.radiant || source.live !== undefined || source.inPlay?.handStats !== undefined) {
     return undefined;
@@ -636,7 +632,6 @@ function textOf(
   values?: Readonly<Record<string, number>>,
 ): FaceText {
   if (def === undefined) return { full: "", marks: [] };
-  // B3.4, R386: in play, the numbers that moved off their printed values are marked where they stand.
   const { text: full, tuned } = filledText(def, radiant ? "radiant" : "base", values);
   const moved = tuned.length === 0 ? {} : { tuned };
   if (!radiant) return { full, marks: [], ...moved };

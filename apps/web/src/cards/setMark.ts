@@ -1,8 +1,8 @@
 // The set mark on a card's frame (R503), as a printed card carries its expansion symbol: Core a ringed
 // orb, Classic a columned temple (Classic+ with a plus), Meditative an ensō with a red seal,
 // Stinkyscape a green planet with stink lines (R1883000), Training Grounds a straw target over two
-// crossed practice swords (R2202000); a set with no glyph of its own (the reserved Boss sets, or one
-// this client does not know yet) gets a plain diamond, so every card still shows one.
+// crossed practice swords (R2202000); any other set (the reserved Boss sets, one this client does not
+// know yet) a plain diamond, so every card shows one.
 //
 // Presentation only: the set is public catalog data (§5.1) and no rule reads the mark (CLAUDE.md
 // rule 7). Each glyph is an original SVG drawn as an `<img>` of a `data:` URI with no <text> and no
@@ -99,7 +99,7 @@ const KINDS: Readonly<Record<string, SetMarkKind>> = {
   "Training Grounds": "training-grounds",
 };
 
-/** The mark a card of `set` wears. A set name this client has no glyph for gets the diamond. */
+/** The mark a card of `set` wears, the diamond for a set with no glyph. */
 export function setMarkOf(set: string): SetMark {
   const kind = Object.hasOwn(KINDS, set) ? (KINDS[set] ?? "unknown") : "unknown";
   return { kind, label: t("{set} set", { set: t(set) }), src: SRC[kind] };

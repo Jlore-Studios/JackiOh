@@ -13,10 +13,7 @@ import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
 
 export const TRAINING_GROUNDS_PREFIX = "traininggrounds-";
 
-/**
- * The snapshots (docs/training-grounds-set.md TG2): each draws the picture of the Core card it
- * freezes, so a snapshot and its Core card look the same (R503).
- */
+/** The snapshots (docs/training-grounds-set.md TG2): each wears the picture of the Core card it freezes. */
 export const SNAPSHOT_ART: Readonly<Record<string, string>> = {
   "traininggrounds-041": "core-002",
   "traininggrounds-042": "core-005",

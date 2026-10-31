@@ -1,7 +1,6 @@
 // `/login`'s further ways in (issue #267): the email sign-in link and code (R664), the second step
 // for an account with an authenticator app (R665), a username in place of the email (R1443, issue
-// #645) and the OAuth providers (R666). The provider and our server are a stubbed `fetch`; nothing
-// leaves the process.
+// #645) and the OAuth providers (R666), against a stubbed `fetch`.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,10 +36,7 @@ const VERIFIED_APP = [{ id: "factor-1", factor_type: "totp", status: "verified" 
 type Call = { url: URL; method: string; body: unknown; auth: string | null };
 type Answer = { status: number; body?: unknown };
 
-/**
- * Answers by `METHOD /path` (or `/path` for any method); anything else is a 404. `/api/auth/me`
- * answers 200 for a token in `accounts`, 401 for any other, as the real server verifies.
- */
+/** Answers by `METHOD /path` (or `/path`), else 404; `/api/auth/me` is 200 only for a token in `accounts`. */
 function serve(answers: Record<string, Answer>, accounts: Record<string, string> = {}): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal(
@@ -137,7 +133,6 @@ describe("R664 signing in with an email code", () => {
     const calls = serve({ "/auth/v1/otp": { status: 200, body: {} }, "/auth/v1/verify": tokens(AAL1) });
     render(<LoginRoute />);
     toEmailCode();
-    // No password on this form, and nothing to type a code into before one was asked for.
     expect(screen.queryByTestId(loginTestid.password)).toBeNull();
     expect(screen.queryByTestId(loginTestid.code)).toBeNull();
 

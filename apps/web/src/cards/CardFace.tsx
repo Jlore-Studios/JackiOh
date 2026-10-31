@@ -24,10 +24,6 @@
 // row can cut the word, or where the type line hides, in a token mark (TokenMark, which the board
 // minion wears too). Glitch stays blank (R674): its every word is corrupted, so it wears neither.
 //
-// Issue #814: a Summit face given its Ascent level prints only the next Ascent line. Issue #1017:
-// a text past the limit prints a short form or clamps, never shrinking the art; its whole text
-// stands in the hover preview, or with previews off in the rules box's tooltip (#912). R2450000: a
-// Quest card (R1837000) prints only the stage it stands at (questFace.ts), as a short form.
 // R1017001: a hero portrait's card (fullArt.ts) prints only its art on its full face; the Full-art
 // cards setting turns it off, and so does a tutorial lesson's board (R1108000).
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics (cosmetics.ts);
@@ -190,15 +186,14 @@ export type RulesBox = {
 
 /**
  * What the rules box prints. A Summit in play given its level prints its header and the next Ascent
- * line; a Quest card the stage it stands at (questFace.ts, R2450000); a face printing its catalog
- * text takes its short form (shortText.ts SHORT_FORMS); a face in play past the hover preview's
- * limit (a fused card, a heavily Buffed one) clamps. Each of these
- * prints less than its whole text, which the hover preview prints on the face's left.
+ * line; a Quest card (R1837000) the stage it stands at (questFace.ts, R2450000); a face printing its
+ * catalog text takes its short form (shortText.ts SHORT_FORMS); a face in play past the hover
+ * preview's limit (a fused card, a heavily Buffed one) clamps. Each of these prints less than its
+ * whole text, which the hover preview prints on the face's left.
  * `fullArtOn` is the caller's `useFullArt(defId)` (R1108000, R1313000); without it, the setting decides.
  */
 export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn?: boolean): RulesBox {
   const full = face.text.full;
-  // R1017001: a full-art face prints none of its words.
   if (showsFullArt(face, fullArtOn)) return { shown: "", short: null, less: printedText(face, full) !== "" };
   // R2450000: a staged Quest prints one stage, a short form of its own; In Too Deep in play adds its
   // open quests, and clamps as any face in play does past the hover preview's limit.

@@ -52,8 +52,7 @@ const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
 
-/** R674: every card the almanac shows: the catalog's, Glitch excepted. */
-// The cards of the sets that ship (R1420): a set the catalog holds before it ships is not on the shelf.
+/** R674, R1420: every card the almanac shows: the catalog's from the sets that ship, Glitch excepted. */
 const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter(
   (def) => def.id !== GLITCH_DEF_ID && setShips(def.set),
 );
@@ -95,7 +94,6 @@ describe("R630 the /almanac route", SLOW_GRID, () => {
     expect(await screen.findByTestId(almanacTestid.screen, undefined, SLOW)).toBeInTheDocument();
     expect(window.location.pathname).toBe(paths.almanac);
     expect(document.title).toBe("Almanac · JackiOh");
-    // Not behind the gate, and no catalog, collection, deck or account read.
     expect(vi.mocked(fetch)).not.toHaveBeenCalled();
   });
 
@@ -163,7 +161,6 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     expect(browse).not.toBeNull();
     expect(within(browse as HTMLElement).getByTestId(DB_FILTERS)).toBeInTheDocument();
     expect(within(browse as HTMLElement).getByTestId(CARD_POOL).closest(".db-pool-frame")).not.toBeNull();
-    // No deck sidebar beside it.
     expect(root.querySelector(".db-layout, .db-sidebar")).toBeNull();
   });
 
@@ -188,8 +185,7 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     }
   });
 
-  // A long-press reaches `onInspect` through the same `useInspectTrigger` as the right-click, which
-  // the deck builder's browse.test.tsx holds to it; the read-only grid wires both the same way.
+  // A long-press goes through the same `useInspectTrigger` as the right-click, held by browse.test.tsx.
   it("R630 a click or a right-click opens the card's detail, with its rarity and no add action", () => {
     render(<AlmanacRoute />);
     const unit = CARDS.find((def) => !def.token && def.set === "Core");
@@ -199,7 +195,6 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     expect(detail).toHaveAttribute("data-card", unit.id);
     expect(within(detail).getByText(unit.rarity, { selector: ".db-detail-meta" })).toBeInTheDocument();
     expect(screen.queryByTestId(DB_DETAIL_ADD)).toBeNull();
-    // Close is the only action.
     expect(within(detail).getAllByRole("button", { name: "Close" })).toHaveLength(1);
     fireEvent.click(within(detail).getByTestId(INSPECT_CLOSE));
     expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
@@ -220,7 +215,6 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     expect(`${window.location.pathname}${window.location.search}`).toBe(paths.almanacCard("core-001"));
     cleanup();
 
-    // A link naming no card opens nothing.
     at(paths.almanacCard("no-such-card"));
     render(<AlmanacRoute />);
     expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
@@ -264,8 +258,7 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     expect(poolCardLabel(cardOf("core-t-rush"))).toBe("Rush Token, Unit, (1) Cost, Token. Show details");
   });
 
-  // One filter per test: a full pool is 317 cards, and every render of all of them costs about as
-  // much as the rest of a test does.
+  // One filter per test: each render of a full pool (317 cards) costs about as much as a whole test.
   it("R630 the search narrows the pool, and a search nothing matches shows the empty state", () => {
     render(<AlmanacRoute />);
     const named = cardOf("core-001");
@@ -397,8 +390,7 @@ describe("R654 the almanac's card statistics block", SLOW_GRID, () => {
     render(<AlmanacRoute />);
     fireEvent.click(screen.getByTestId(poolCardId(unit.id)));
     const stats = await screen.findByTestId(INSPECT_STATS, undefined, SLOW);
-    // The block keeps its test id while the public aggregates load, so the first find resolves on
-    // the skeleton under load: wait for the read to land before asserting on its figures.
+    // The skeleton already wears the block's test id: wait for the figures to land.
     await waitFor(() => expect(screen.getByTestId(INSPECT_STATS)).toHaveTextContent("60%"), SLOW);
     expect(stats).toHaveTextContent("60%");
     // R661: the response still names its source, but the block never shows it.

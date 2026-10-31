@@ -1,8 +1,7 @@
-// The site footer: privacy, terms, purchases (R1665000), accessibility, copyright, patch notes (R388),
-// the Card Almanac (R630), replays (R768000), the contact and, on a keyboard device, the command menu's
-// key (R2126000). On the landing and sign-in screens, where a visitor decides whether to hand over an
-// email address; kept off the board. The contact is the owner's email address, the one the Terms,
-// the Privacy Policy, the Copyright and Accessibility pages and `security.txt` name too.
+// The site footer, on the landing and sign-in screens (where a visitor decides whether to hand over an
+// email address), kept off the board: purchases (R1665000), patch notes (R388), the Card Almanac (R630),
+// replays (R768000), the command menu's key (R2126000). The contact is the owner's address, the one the
+// Terms, the Privacy Policy, the Copyright and Accessibility pages and `security.txt` name too.
 
 import type { ReactElement } from "react";
 
@@ -16,7 +15,6 @@ import "./site-footer.css";
 
 /** Where a player reaches the people who run JackiOh, for questions, legal notices and data requests. */
 export const CONTACT_EMAIL = "jmgoetzmann6@gmail.com";
-/** `CONTACT_EMAIL` as a link. */
 export const CONTACT_URL = `mailto:${CONTACT_EMAIL}`;
 
 export const siteFooterTestid = {

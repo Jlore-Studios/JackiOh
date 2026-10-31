@@ -83,24 +83,23 @@ describe("R1303 the frame's words", () => {
 
 describe("R1301 a Chinese card in a match", () => {
   it("R1301 a Chinese card in play draws its Chinese name, text, type line and tags", () => {
-    // Core #2 Bigot: a Human Unit.
     const root = draw(inPlay(card({ defId: "core-002", cost: 3, chinese: true })));
     expect(text(root, ".card-name")).toBe(zh("core-002").name);
     expect(text(root, ".cf-text-base")).toBe(zh("core-002").base);
     expect(text(root, ".card-type")).toBe(CHINESE_TERMS.types.Unit);
     expect([...root.querySelectorAll(".cf-tag")].map((tag) => tag.textContent)).toEqual([CHINESE_TERMS.tags.Human]);
-    // The English is nowhere on it; the machine-read attributes keep the catalog's words.
+    // No English shows; the machine-read attributes keep the catalog's words.
     expect(root.textContent).not.toContain(def("core-002").name);
     expect(root.textContent).not.toContain("Unit");
     expect(root.querySelector(".cf-tag")).toHaveAttribute("data-tag", "Human");
-    // Its Radiant face is the Chinese Radiant text, its gold marks read off the two Chinese faces (R1302).
+    // The Radiant face's gold marks are read off the two Chinese faces (R1302).
     const radiant = inPlay(card({ defId: "core-002", cost: 3, radiant: true, chinese: true }));
     expect(radiant.text.full).toBe(zh("core-002").radiant);
     expect(markedText(radiant.text.full, radiant.text.marks)).toEqual(["所有"]);
   });
 
   it("R1301 the same card outside a match is English", () => {
-    // The collection's face prints the catalog's words, and so does the card in play without the flag.
+    // The collection's face, and the card in play without the flag.
     for (const face of [faceModel({ defId: "core-002", def: def("core-002"), radiant: false }), inPlay(card({ defId: "core-002", cost: 3 }))]) {
       const root = draw(face);
       expect(face.chinese).toBeUndefined();
@@ -113,7 +112,7 @@ describe("R1301 a Chinese card in a match", () => {
   });
 
   it("R1301 its params are the view's numbers", () => {
-    // Core #1 Big D-fender prints +{armor} Armor, 2 on its base face; the view says it has 5 now.
+    // Core #1 Big D-fender prints +{armor} Armor, 2 on its base face; the view says 5.
     const face = inPlay(card({ defId: "core-001", cost: 2, chinese: true, params: { armor: 5 } }));
     expect(face.text.full).toBe(zh("core-001").base.replace("{armor}", "5"));
     expect(face.text.full).not.toContain("{");
@@ -123,10 +122,9 @@ describe("R1301 a Chinese card in a match", () => {
   });
 
   it("R1301 its glossary entries are Chinese", () => {
-    // Core #3 Right-house defender: Taunt, Divine Shield, Reborn, and on its Radiant face Death.
     const english = glossaryFor(inPlay(card({ defId: "core-003", cost: 4, radiant: true })));
     const chinese = glossaryFor(inPlay(card({ defId: "core-003", cost: 4, radiant: true, chinese: true })));
-    // The same terms, found in the English text, each in the Chinese table's words.
+    // The terms are found in the English text.
     expect(chinese.map((entry) => entry.id)).toEqual(english.map((entry) => entry.id));
     expect(chinese.map((entry) => entry.id)).toEqual(["Taunt", "Divine Shield", "Reborn", "Death"]);
     for (const entry of chinese) {
@@ -213,7 +211,7 @@ describe("R1301 a Chinese card in a match", () => {
   it("R1301 keywords read in Chinese", () => {
     expect(chineseKeyword({ kind: "Armor", n: 7 })).toBe("护甲7");
     expect(chineseKeyword({ kind: "Taunt" })).toBe("嘲讽");
-    // Core #2 Bigot on the field, which has gained Taunt and Armor 3 since it was printed.
+    // Core #2 Bigot, which has gained Taunt and Armor 3.
     const view = unit("p1", { defId: "core-002", attack: 2, maxHealth: 2, health: 2, keywords: [{ kind: "Taunt" }, { kind: "Armor", n: 3 }], chinese: true });
     const face = inPlay(view);
     const root = draw(face);

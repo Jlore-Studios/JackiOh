@@ -1,8 +1,6 @@
 // The foil sweep (issue #200): the animated sheen (Mythic and every Radiant face) must loop
 // without a jump or a hard line, moving by `transform` only. Vitest stubs CSS imports, hence
-// `node:fs`. #1700: the sweep composites with no blend mode, since a blend drew a dark wedge past a
-// rotated face's rounded corner (the home screen's fan), and lights its band at a share of the
-// still band's alpha.
+// `node:fs`. #1700: a blend drew a dark wedge past a rotated face's corner (the home screen's fan).
 //
 // Presentation only: no ruling, so these tests carry no R number.
 

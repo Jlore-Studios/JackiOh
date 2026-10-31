@@ -1,6 +1,5 @@
-// Where on Play together another screen links to (#936 B59): `/replays`' "Shared with me" opens the
-// page at its list of the replays friends shared. Apart from `TogetherRoute.tsx`, so the link does
-// not load the page's code.
+// Where on Play together another screen links to (#936 B59): `/replays`' "Shared with me" opens its
+// list of shared replays. Apart from `TogetherRoute.tsx`, so the link does not load the page's code.
 
 import { paths } from "../net/navigate.ts";
 

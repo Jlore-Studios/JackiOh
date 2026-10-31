@@ -34,9 +34,8 @@ export type InspectOptions = {
   onLongPress?: () => void;
   /** Without `onLongPress`, a hold opens the default sheet or a settings-gated preview; disabled previews leave a plain tap. */
   touchHold?: "sheet" | "preview";
-  /** A mouse right-click calls it and prevents the native menu. The deck builder's, and the hero
-      portrait's, which acts only while nothing is targeted (R1449): the board's cards leave
-      right-click to the drag cancel. */
+  /** A mouse right-click calls it and prevents the native menu (the deck builder's, the hero portrait's
+      while nothing is targeted): the board's cards leave right-click to the drag cancel. */
   onContextMenu?: () => void;
   /** Which side the hover preview tries first (placement.ts, B27). */
   prefer?: PreviewPrefer;
@@ -233,7 +232,7 @@ export function useInspectTrigger(
         const dx = event.clientX - start.x;
         const dy = event.clientY - start.y;
         if (Math.hypot(dx, dy) <= LONG_PRESS_SLOP_PX) return;
-        // Past the slop is a drag: cancel the press and its open preview.
+        // Past the slop is a drag.
         closeHoldPreview();
         clearPress();
       },

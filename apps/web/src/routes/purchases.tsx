@@ -43,7 +43,6 @@ export const purchasesTestid = {
 /** Where a read's wait or failure shows: the card packs' and the pity's both read `GET /api/packs`. */
 export type PurchasesPlace = "card-packs" | "cosmetic-packs" | "pity";
 
-/** A read as the page shows it: waiting, answered, or refused with the words to show and Try again. */
 type Read<T> =
   | { kind: "loading" }
   | { kind: "ready"; value: T }
@@ -79,7 +78,7 @@ function useRead<T>(token: string | null, read: (token: string) => Promise<T>): 
   return state;
 }
 
-/** `ready` where the read answered, else what it is waiting for, or why it failed with Try again, in the same place. */
+/** The read's answer, or its wait or its failure with Try again, in the same place. */
 function Answered<T>({
   read,
   place,
@@ -203,7 +202,7 @@ function Pity({ info }: { info: PacksResponse }): ReactElement {
   );
 }
 
-/** The odds and the counters, for a session: the page's two reads, each answering the sections it holds. */
+/** The odds and the counters, for a session. */
 function Published({ token }: { token: string }): ReactElement {
   const packs = useRead(token, getPacks);
   const cosmetic = useRead(token, getCosmeticPacks);

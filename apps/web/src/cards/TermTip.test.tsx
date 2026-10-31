@@ -101,7 +101,6 @@ describe("R2098000 a term in a card's text shows its glossary line", () => {
     expect(term).toHaveAttribute("data-tip", "pointer");
     expect(term).not.toHaveAttribute("tabindex");
 
-    // An ordinary tap reaches the card and opens nothing.
     fireEvent.pointerDown(term, TOUCH);
     advance(TAP_MS);
     fireEvent.pointerUp(term, TOUCH);

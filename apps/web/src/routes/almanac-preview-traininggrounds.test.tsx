@@ -18,8 +18,8 @@ vi.mock("@jackioh/shared", async (importOriginal) => {
     newestShippedSet: (): SetName => "Training Grounds",
   };
 });
-// The Almanac's shelf (`shelf.ts`) reads the wire module itself, without the client's aliases, so the
-// static `/almanac` page can import it: the same preview goes there too.
+// The shelf (`shelf.ts`) reads the wire module without the client's aliases, for the static `/almanac`
+// page, so the same preview goes there too.
 vi.mock("../wire/catalog.ts", async (importOriginal) => {
   const real = await importOriginal<typeof import("../wire/catalog.ts")>();
   const shipped: readonly SetName[] = [...new Set<SetName>([...real.SHIPPED_SETS, "Training Grounds"])];

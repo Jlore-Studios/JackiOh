@@ -1,5 +1,5 @@
-// `/account`'s two-step sign-in (R665): enrol an authenticator app, confirm it with a code (which
-// raises this session to aal2 and stores it), and remove it. The provider is a stubbed `fetch`.
+// `/account`'s two-step sign-in (R665): enrol an authenticator app, confirm it with a code and
+// remove it, against a stubbed `fetch`.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

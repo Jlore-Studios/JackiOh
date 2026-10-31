@@ -1,9 +1,7 @@
 // `/patch-notes`: the public Patch notes page (brief B4.2 item 5, R388, R507, R724000). Public, like the
 // landing page and the privacy policy: the catalog and its history are public (§5.1), the data is
 // static files in the bundle's own chunks (patches/source.ts), and no account or server is needed.
-//
-// The page is read-only and decides nothing (CLAUDE.md rule 7). It sits in the tavern like the other
-// screens on the way in (auth/tavern.css), with the corner's Back and the settings gear.
+// The page is read-only and decides nothing (CLAUDE.md rule 7).
 
 import type { ReactElement } from "react";
 

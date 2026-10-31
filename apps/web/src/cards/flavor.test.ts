@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 import { CATALOG } from "../wire/cards.ts";
 import { FLAVOR_FALLBACK, flavorOf, flavorOfId } from "./flavor.ts";
 
-/** A fused definition: it carries no flavor of its own, only the ingredients it was made of. */
 function fused(...ingredients: string[]): Pick<CardDef, "flavor" | "ingredients"> {
   return { ingredients: ingredients.map((defId) => ({ defId })) };
 }

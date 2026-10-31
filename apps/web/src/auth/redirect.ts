@@ -92,7 +92,6 @@ function readParams(params: URLSearchParams): AuthRedirect {
     refreshToken: refreshToken !== null && refreshToken.length > 0 ? refreshToken : null,
     expiresAt: null,
   };
-  // Use this device's clock for `expires_in`; `expires_at` is the fallback.
   const expiresAt = positiveNumber(params.get("expires_at"));
   const expiresIn = positiveNumber(params.get("expires_in"));
   if (expiresIn !== null) {

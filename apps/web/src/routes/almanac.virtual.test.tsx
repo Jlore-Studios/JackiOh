@@ -1,7 +1,6 @@
 // #2334: the Almanac's grid is virtual, so its first paint is the rows near the view and not the
 // 700 cards of the pool: the pool is still the filters', counted whole, and a scroll mounts the cards
-// it brings near. Every card that is mounted is as almanac.test.tsx has it; there the page has no
-// layout to read, so every card is drawn. Here the page's layout is a shape and a view a test moves.
+// it brings near. almanac.test.tsx has no layout, so it draws every card; here the layout is mocked.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

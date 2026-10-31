@@ -301,7 +301,7 @@ describe("R404 In Too Deep through the real engine", () => {
       const [badge] = badges(screen.getByTestId(testid.card(entry.instanceId)));
       expect(must(badge, "the quest badge").textContent).toBe("0/2");
       expect(badge?.getAttribute("aria-label")).toBe("Quest: Draw 2 cards (0/2)");
-      // R2450000: the face prints the quest the view has open and the rewards it offers, on either seat.
+      // R2450000: on either seat the face prints the open quest and its rewards.
       expect(questFaceText(must(listedFace(catalog, view, entry), "the face"))?.full).toContain(
         "\nQuest: Draw 2 cards (0/2). Rewards: Heal your hero 6; Deal 3 damage to a target.",
       );
@@ -511,12 +511,10 @@ const OFFER: QuestView = {
   stages: (INTERVIEW.stages ?? []).map((stage, at) => (at < 2 ? { ...stage, state: "done" as const } : { ...stage, state: "current" as const })),
 };
 
-/** A staged line with every stage done. */
 function done(quest: QuestView): QuestView {
   return { open: [], auras: [], stages: (quest.stages ?? []).map((stage) => ({ ...stage, state: "done" as const })) };
 }
 
-/** A catalog face, in play holding `quest` when one is given. */
 function questFace(defId: string, radiant: boolean, quest?: QuestView) {
   return faceModel({ defId, def: must(CATALOG[defId], defId), radiant, ...(quest === undefined ? {} : { inPlay: { quest } }) });
 }

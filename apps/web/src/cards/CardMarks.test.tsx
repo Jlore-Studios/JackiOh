@@ -154,7 +154,6 @@ describe("R437 the mark on the board", () => {
     expect(back).not.toBeNull();
     expect(back?.querySelector(".card-marks .card-mark-badge")?.getAttribute("title")).toBe(MARK_WORDS.steal?.text);
     expect(back?.innerHTML).not.toMatch(/core-\d+/);
-    // The unmarked backs carry none.
     expect(root.querySelectorAll('[data-face-down="true"] .card-marks')).toHaveLength(1);
   });
 
@@ -398,7 +397,6 @@ describe("R437 a mark in words, where no tooltip can be read", () => {
     expect(note).toHaveAttribute("data-mark", "steal");
     expect(note).toHaveAttribute("data-mark-color", "purple");
     expect(note).toHaveTextContent(MARK_WORDS.steal?.text ?? "");
-    // An unmarked card has no mark note.
     expect(liveFace(lookup(unit.defId, unit.radiant) ?? { name: unit.defId, type: "Unit", text: "", tags: [] }, unit).marks).toEqual([]);
   });
 });

@@ -1,6 +1,5 @@
 // R374 deals real, non-token Core cards into four rarities in random order, with the middle Radiant.
 // Randomness is client-owned (CLAUDE.md rule 4) and injected so tests can deal deterministically.
-// R1017002 deals only the cards that print whole on a fan card, a hero's full-art card favored.
 
 import { SHIPPED_SETS, type CardDef, type CardDefs, type Rarity } from "@jackioh/shared";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -28,9 +27,9 @@ export const FAN_RADIANT_AT = 2;
 export const FAN_CARD_MAX_PX = 158;
 
 /**
- * R1017002: the most text a fan card prints whole, measured in Chromium on every catalog face: at
- * FAN_CARD_MAX_PX the rules box holds 5 lines of about 25 characters at the reading floor before the
- * art would give way (issue #1017's long layout); a narrower fan card only shrinks its text.
+ * R1017002: the most text a fan card prints whole at FAN_CARD_MAX_PX and the reading floor before the art
+ * gives way (issue #1017's long layout), measured in Chromium on every catalog face; a narrower card only
+ * shrinks its text.
  */
 export const FAN_TEXT_LIMIT: TextLimit = { charsPerLine: 25, lines: 5 };
 

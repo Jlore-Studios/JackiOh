@@ -942,8 +942,6 @@ describe("a touch hold as the mouse-over (#165)", () => {
   });
 });
 
-// B25: closing the sheet and the detail, focus, and events that must not escape an overlay
-
 describe("closing the sheet and the detail (B25)", () => {
   function openSheet(key: string): HTMLElement {
     render(

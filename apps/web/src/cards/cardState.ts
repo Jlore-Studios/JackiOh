@@ -1,13 +1,10 @@
-// The per-card states a face draws beside its printed text (SPEC §10.8): a Brittle count (B3.3,
-// R385), a hand card's Temporary count (#2437, R637, R2179001), the enchantments riding the card
-// (B5 E39), a card standing in a unit zone as a Unit (B3.1, R383), a card Degrade or Upgrade changed
-// (B3.4, R386, tuning.ts), each open quest of a quest line (Classic #90 In Too Deep, B5 E33, R404)
-// and a staged quest's stage (R1854000). Each is a badge on the face and a line in the inspect
-// overlays, in the words below (R373, R432: "(N) Cost" the noun, "costs (N)" the verb), which a
-// Quest card's rules box prints too (questFace.ts, R2450000).
-// The rail draws Brittle, then Temporary (both end the card), then the quests (what the card is
-// doing), the tuned mark, the enchantments and the animated mark, all read off the FaceModel, which
-// read them off the view (CLAUDE.md rule 7).
+// The per-card states a face draws beside its printed text (SPEC §10.8): Brittle (B3.3, R385),
+// Temporary (#2437), enchantments (B5 E39), a card in a unit zone as a Unit (B3.1, R383), a card
+// Degrade or Upgrade changed (B3.4, R386, tuning.ts), open quests (Classic #90, B5 E33, R404) and a
+// staged quest's stage (R1854000). Each is a badge and an inspect-overlay line in the words below
+// (R373, R432: "(N) Cost" the noun, "costs (N)" the verb), as in a Quest card's rules box (questFace.ts,
+// R2450000). The rail draws what ends the card (Brittle, Temporary) first, then what it is doing (the
+// quests), then the rest, all read off the FaceModel (CLAUDE.md rule 7).
 
 import type { CardType, Enchantment, QuestView } from "@jackioh/shared";
 
@@ -96,10 +93,7 @@ export function stageTitle(number: number, of: number, name: string, wait?: numb
   return t("Stage {n} of {of}, {name}, hearing back in {turns} turns", { ...words, turns: wait });
 }
 
-/**
- * R1854000, R1854004: a staged line in words — "Stage 2 of 3, Comradery", "Stage 2 of 3, The Interview,
- * hearing back in 2 turns", "Quest complete" — off the view's stages alone.
- */
+/** R1854000, R1854004: a staged line in words, off the view's stages alone. */
 export function stageWords(stages: readonly QuestStageView[]): string {
   if (stages.length > 0 && stages.every((stage) => stage.state === "done")) return t("Quest complete");
   const found = currentStage(stages);
@@ -226,7 +220,6 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       data: { "data-quest": quest.id, "data-progress": String(quest.progress), "data-goal": String(quest.goal) },
     });
   }
-  // R1854000: a staged quest's stage, "2/3", and the turns left while it waits to hear back (R1854004).
   const stages = face.quest?.stages ?? [];
   const staged = currentStage(stages);
   if (staged !== null) {
@@ -276,17 +269,13 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       data: { "data-animated": animated.home === undefined ? "true" : String(animated.home) },
     });
   }
-  // B5 E35: a Berserk unit, in its glossary row's words (§6.1).
   if (face.berserk === true) {
     badges.push({ kind: "berserk", text: null, icon: "sword", words: t(BERSERK_WORDS), data: { "data-berserk": "true" } });
   }
-  // R1174000: a Frozen unit, the frost badge.
   if (face.frozen === true) {
-    // R1848000: one Frozen forever says it never thaws.
     const words = face.frozenForever === true ? FROZEN_FOREVER_WORDS : FROZEN_WORDS;
     badges.push({ kind: "frozen", text: FROZEN_GLYPH, icon: null, words: t(words), data: { "data-frozen": face.frozenForever === true ? "forever" : "true" } });
   }
-  // R1839000, R1839001: a Dormant card, its countdown beside the moon when it has one.
   const dormant = face.dormant;
   if (dormant !== undefined && dormant !== null) {
     badges.push({
@@ -297,7 +286,6 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       data: { "data-dormant": dormant.turns === null ? "true" : String(dormant.turns) },
     });
   }
-  // R1852000, R1852005: a Starship, the count of the pieces fused into it beside the comet.
   const starship = face.starship;
   if (starship !== undefined && starship !== null) {
     badges.push({

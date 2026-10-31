@@ -1,6 +1,5 @@
-// #936 S8 B54: since #1577 the landing page offers no Play together call to action (the three
-// doors hold no link to `/together`); Play together lives at `/together` behind the gate.
-// Also the S8 route table: /together, /watch/:matchId, /duos/:matchId and /dev/duos.
+// #936 S8 B54: the landing page offers no Play together call to action and its doors no link to
+// `/together` (#1577); Play together lives there behind the gate. Also the S8 route table.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -55,7 +54,6 @@ afterEach(() => {
 });
 
 describe("B54 the landing offers no Play together call to action", () => {
-  // #1577: the three doors replaced every play call to action; Play together lives at `/together`.
   it("B54 the landing offers no Play together call to action", () => {
     render(<LandingRoute />);
     expect(within(landing()).queryByTestId(PLAY_TOGETHER)).toBeNull();
@@ -93,8 +91,7 @@ describe("B54 the landing offers no Play together call to action", () => {
     expect(screen.queryByTestId(loginTestid.form)).toBeNull();
   });
 
-  // #1577: no door leads to /together anymore, so the signed-out bounce is visited directly:
-  // Play together keeps the gate Play online asks for.
+  // No door leads to /together, so its signed-out bounce is visited directly: it keeps Play online's gate.
   it("B54 /together while signed out ends at sign-in, as Play together always did", async () => {
     at(paths.together);
     render(<App />);

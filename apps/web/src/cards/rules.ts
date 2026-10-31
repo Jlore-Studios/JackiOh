@@ -1,12 +1,9 @@
-// Rules text as tokens: plain text, and glossary terms the face prints in bold
-// (docs/polish/6-cards.md, Surface B "Tokenizer").
-//
-// - Matching is case-sensitive and longest-first over every GLOSSARY label and alias, and over
-//   PLAIN_SPELLINGS, which match like terms but print plain (R910000: "your exile" is the pile).
-// - A term matches only at a word boundary: the characters either side are not [A-Za-z0-9], so
-//   "Locking" and "taunt" stay plain text.
-// - A match extends over a following ` <digits|X|♾️>` and then a `:`, so "Cry:", "Armor 2",
-//   "Combo 2:" and "Activate ♾️:" (R384) are each one term.
+// Rules text as tokens: plain text, and glossary terms the face prints in bold (docs/polish/6-cards.md,
+// Surface B "Tokenizer"). Matching is case-sensitive and longest-first over every GLOSSARY label and
+// alias, and over PLAIN_SPELLINGS, which match like terms but print plain (R910000: "your exile" is
+// the pile), only at a word boundary (so "Locking" and "taunt" stay plain). A match extends over a
+// following ` <digits|X|♾️>` and then a `:`, so "Cry:", "Armor 2", "Combo 2:" and "Activate ♾️:" (R384)
+// are each one term.
 
 import { CHINESE_TERMS } from "./chinese.ts";
 import { GLOSSARY, PLAIN_SPELLINGS, type GlossaryEntry, type GlossaryTermId } from "./glossary.ts";
@@ -19,7 +16,6 @@ type Pattern = { text: string; term: GlossaryTermId | null };
 
 const ENTRIES: readonly GlossaryEntry[] = Object.values(GLOSSARY);
 
-/** Every spelling, longest first, so longer terms are tried before shorter ones. */
 const PATTERNS: readonly Pattern[] = [
   ...ENTRIES.flatMap((entry) => [entry.label, ...entry.aliases].map((text) => ({ text, term: entry.id }))),
   ...PLAIN_SPELLINGS.map((text) => ({ text, term: null })),
@@ -107,9 +103,8 @@ function stateTerms(face: FaceModel): GlossaryTermId[] {
 }
 
 /**
- * termsIn(the face's text), then face.keywords' kinds, then the terms its states name; distinct; mapped
- * to entries. ME-CN, R1301: a Chinese face's terms are found in its English text, the words the
- * tokenizer reads, and each entry reads in Chinese (R1303's table).
+ * The entries a face names: its text's terms, then its keywords, then its states'. ME-CN, R1301: a
+ * Chinese face's terms are found in its English text, and each entry reads in Chinese (R1303's table).
  */
 export function glossaryFor(face: FaceModel): GlossaryEntry[] {
   const ids: GlossaryTermId[] = [];

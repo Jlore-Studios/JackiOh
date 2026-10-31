@@ -1,7 +1,6 @@
-// Fits card text in its box (docs/polish/6-cards.md, Surface B): tiers start smaller and `useFitText` sets `--cf-fit`, which cards.css applies.
-// Rules text retries full size, then `data-long`, then `data-longest`, before clamping at FIT_FLOOR_PX;
-// a face that prints less than its text (`long: false`, shortText.ts) clamps without the art giving way.
-// Fits batch layout reads and park while `content-visibility: auto` skips a holder.
+// Fits card text in its box (docs/polish/6-cards.md, Surface B): tiers start smaller and `useFitText`
+// sets `--cf-fit`, which cards.css applies. Rules text clamps at FIT_FLOOR_PX only after full size and
+// the long layouts fail. Fits batch layout reads and park while `content-visibility: auto` skips a holder.
 
 import { useLayoutEffect, type RefObject } from "react";
 
@@ -37,7 +36,6 @@ const CLAMPED = "data-clamped";
 export const LONG_ATTRIBUTE = "data-long";
 /** On the face, with `data-long`: the long layout still printed under the floor, so the art gives up more (#617). */
 export const LONGEST_ATTRIBUTE = "data-longest";
-/** The face element a rules box asks for the long layout. */
 const FACE_SELECTOR = ".cf";
 /** CardFace's base text and radiant-clause halves of a rules box. */
 const BASE_SELECTOR = ".cf-text-base";

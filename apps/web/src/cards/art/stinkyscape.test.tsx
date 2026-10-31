@@ -1,6 +1,6 @@
-// R2170000: the Stinkyscape set's own art (issue #2170, stinkyscape.ts). Each family draws one look,
-// each weapon the weapon it names, both faces share their geometry, and no other set's card reaches
-// any of it, so every picture R503 pinned stays as it was.
+// R2170000: the Stinkyscape set's own art (#2170, stinkyscape.ts). Each family draws one look, each
+// weapon the weapon it names, both faces share their geometry, and no other set's card reaches any of
+// it, so every picture R503 pinned stays.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -197,7 +197,7 @@ describe("R2170000: CardArt draws the set's art and leaves every other card's", 
 
 describe("R503: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it with", () => {
   // The hash of `stinkyscapeSvg`'s output on each face, recorded as the set shipped (v0.5.0, #1884),
-  // as `core-art-v0.1.json` records Core's: a change to the set's art fails here, entry by entry.
+  // as `core-art-v0.1.json` records Core's: a change to the set's art fails here.
   const recorded = STINKYSCAPE_V050 as unknown as Readonly<Record<string, readonly [number, number]>>;
 
   it("R503 the fixture covers every Stinkyscape entry", () => {

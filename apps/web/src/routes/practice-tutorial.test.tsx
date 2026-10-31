@@ -1,9 +1,7 @@
 // `/practice` with the tutorial (SPEC §9.10): the lesson path tops the lobby, a lesson starts as a
 // practice game that names it, and plays under the tutorial's HUD with the coach over the board.
-//
-// Every seam is injected as in practice.test.tsx — the account, the host that would start a worker,
-// the e2e pacing — plus the lesson's coach script, so these tests use a small fake script rather
-// than the real lessons', and the fake host decides the game's outcome.
+// Seams are injected as in practice.test.tsx, plus a small fake coach script; the fake host decides
+// the game's outcome.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -363,7 +361,7 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
 
   it("R2434002 a concede is a loss: it says so, offers the lesson's tip and Retry, which plays the same lesson on the same seed", async () => {
     const host = await startLesson(1);
-    // Concede asks first now (ConfirmConcede): the dialog's own Concede concedes.
+    // Concede asks first (ConfirmConcede): the dialog's own Concede concedes.
     fireEvent.click(screen.getByTestId("concede"));
     fireEvent.click(screen.getByTestId("concede-confirm"));
     const dialog = await screen.findByTestId(tutorialTestid.result);
@@ -419,7 +417,6 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
   });
 });
 
-// R1108000: a lesson's board (practice.tsx) prints no full art; a practice game's still does.
 describe("R1108000 a lesson's board prints no full art", () => {
   /** Mr. Vanilla, the card `snapshotFor` holds in hand, and a hero's card, so full art when allowed. */
   function heroDefs(): CardDefs {

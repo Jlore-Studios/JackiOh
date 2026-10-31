@@ -1,10 +1,8 @@
 // DRAFT — needs owner and legal review
-//
 // `/terms`. `TERMS_LAST_UPDATED` and the privacy policy's date make up `TERMS_VERSION`
-// (crates/server/src/config.rs), the version each account agrees to (R757001), so a change to the
-// text changes the date, and the version with it, and every account is asked to agree again. A
-// second change on a day the page already changed keeps the date and gives the version a letter
-// (R970001); `privacy.test.tsx` fails on any change to the words until the version moves.
+// (crates/server/src/config.rs), the version each account agrees to (R757001): a change to the text
+// changes the date and the version, and every account agrees again; a second change that day gives the
+// version a letter (R970001). `privacy.test.tsx` fails on any change to the words until it moves.
 
 import type { ReactElement } from "react";
 

@@ -1,6 +1,6 @@
-// R2249000: a Starship's face in play (issue #2249). It wears the Starship's own art, drawn from its pieces
-// and its launch, whatever definition its fusions gave it; its rules box prints no text, only the Starship
-// term and the pieces fused into it, each a reference that opens the piece's card.
+// R2249000: a Starship's face in play (#2249) wears the Starship's own art, drawn from its pieces and its
+// launch, whatever definition its fusions gave it; its rules box prints only the Starship term and the
+// pieces fused into it, each a reference that opens the piece's card.
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -42,7 +42,7 @@ describe("R2249000: a Starship's face", () => {
     expect(hull.getAttribute("data-art-family")).toBe("starship");
     const hullArt = hull.style.backgroundImage;
     cleanup();
-    // A fused Starship's definition is no longer the hull's; its art stays the Starship's.
+    // Fused, its definition is not the hull's; its art stays the Starship's.
     const fused = art("core-008", { pieces: 3, launched: false });
     expect(fused.getAttribute("data-art-family")).toBe("starship");
     expect(fused.style.backgroundImage).toBe(hullArt);
@@ -54,7 +54,6 @@ describe("R2249000: a Starship's face", () => {
     expect(starshipSvg(5, false, false)).not.toBe(dormant);
     expect(starshipSvg(2, true, false)).not.toBe(dormant);
     expect(starshipSvg(2, false, true)).not.toBe(dormant);
-    // Deterministic: the same ship draws the same picture.
     expect(starshipSvg(2, false, false)).toBe(dormant);
   });
 
