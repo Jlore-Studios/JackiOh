@@ -40,7 +40,6 @@ import {
   sideOf,
   sideView,
   testid,
-  touchHoldMode,
   type AnimatingMap,
   type AnimationFrames,
   type BoardControl,
@@ -340,7 +339,6 @@ function Pile({
   animating,
   browse,
   plays,
-  touchHold,
   back,
   children,
 }: {
@@ -353,8 +351,6 @@ function Pile({
   browse?: PileBrowse;
   /** B5 E11: the viewer's graveyard offers "Play" on the cards `legalActions` lists, and glows then. */
   plays?: PilePlays;
-  /** #165: what a touch hold on the pile opens (contract.ts's `touchHoldMode`). */
-  touchHold?: "sheet" | "preview";
   /** R1297000: the viewer's card back on their own deck pile; absent where it wears the default. */
   back?: string;
   /** R318: the pile's overflow notice (OverflowNotices.tsx), drawn inside it. */
@@ -381,7 +377,6 @@ function Pile({
             ),
         }
       : null,
-    { touchHold },
   );
 
   const open = (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>): void => {
@@ -451,8 +446,6 @@ function Seat({
   emotes?: BoardProps["emotes"];
 }): ReactElement {
   const seat = sideView(view, side);
-  // #165: on the opponent's turn a touch hold is the mouse-over the screen lacks.
-  const touchHold = touchHoldMode(view);
   // R1297000: the viewer's deck wears their card back; R1834004: the other seat's its loadout's, else
   // the default. A default back adds no attribute, so a board wearing nothing is the board it was before.
   const { cardBack } = useSeatDeckCosmetics(seat.player);
@@ -488,7 +481,6 @@ function Seat({
           {...(side === "you" && seat.ownLibrary !== undefined
             ? { browse: { kind: "library" as const, title: t("Your deck"), library: seat.ownLibrary, view, ...(back === undefined ? {} : { back }) } }
             : {})}
-          touchHold={touchHold}
           back={back}
         >
           <PileNotice key={notices.pile.get(side)?.entry} notice={notices.pile.get(side)} side={side} view={view} />
@@ -506,7 +498,6 @@ function Seat({
           animating={animating}
           browse={{ kind: "pile", title: side === "you" ? t("Your graveyard") : t("Opponent's graveyard"), cards: seat.graveyard, view }}
           {...(side === "you" ? { plays: { highlight, onClick } } : {})}
-          touchHold={touchHold}
         />
         <Pile
           label={t("Exile")}
@@ -515,7 +506,6 @@ function Seat({
           count={seat.exile.length}
           animating={animating}
           browse={{ kind: "pile", title: side === "you" ? t("Your exile") : t("Opponent's exile"), cards: seat.exile, view }}
-          touchHold={touchHold}
         />
       </span>
       {/* R98: a card mid-resolution is public and still itself, so it is shown rather than
@@ -529,7 +519,6 @@ function Seat({
               testId={testid.card(card.instanceId)}
               card={card}
               className="card-resolving"
-              touchHold={touchHold}
               highlight={highlight}
               animating={animating}
             />
@@ -625,8 +614,6 @@ export default function Board({
   const yourHand: CardView[] | { count: number } = view.you.hand;
   const dragToPlay = useSetting("dragToPlay");
   const confirmEndTurn = useSetting("confirmEndTurn");
-  // #165: on the opponent's turn a touch hold on a card is the mouse-over the screen lacks.
-  const touchHold = touchHoldMode(view);
   const field = useRef<HTMLDivElement>(null);
   // "Turn 3": split around the number, so English keeps the two text nodes it always had.
   const [turnBefore = "", turnAfter = ""] = t("Turn {n}").split("{n}");
@@ -711,7 +698,7 @@ export default function Board({
           emotes={emotes}
         />
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
-        <Hand side="opponent" seat={view.opponent.player} hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
+        <Hand side="opponent" seat={view.opponent.player} hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
         <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
           {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
@@ -736,7 +723,7 @@ export default function Board({
         </div>
 
         <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
-        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
+        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}

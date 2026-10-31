@@ -1,0 +1,17 @@
+{
+  "title": "Patch: holding a card on a touch screen acts as its hover, on every screen and either turn",
+  "sources": "#2617",
+  "notes": "On a touch screen a finger held on a card opens its hover preview while it stays down, on either turn and on every screen (R2617000); #165 had kept the inspect sheet on your own turn and off the board. With Hover previews off a hold opens the sheet as before. How cards are read only: nothing plays differently.",
+  "player": {
+    "title": "Hold a card on a phone to see it up close",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "On a touch screen, holding a card shows it enlarged until you let go, on either turn and on every screen. The hold never plays or picks the card."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}
