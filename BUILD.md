@@ -67,13 +67,14 @@ jackioh/
       tests/golden.rs, golden/ the golden traces recorded from the TypeScript engine before it was deleted
       tests/export_config.rs   writes apps/web/src/wire/engineConfig.ts
     cards/                     jackioh-cards
-      catalog.json             634 cards + 140 tokens over Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape and Training Grounds (schema in M4-T1, M9-T1)
+      catalog.json             every card and token of the seven shipped sets, spec §8 (schema in M4-T1, M9-T1)
       card-text.yaml           every card's words but its rules, edited by hand (#2498): flavour, voice lines, Chinese, emotes
       flavour.json             flavour lines and artist credits (R660), written from card-text.yaml
       patches/                 patches.json and one whole-catalog snapshot per card patch (M9-T2, R388); pending/ fragments (R646)
       build.rs                 the registry, generated from src/scripts/**; the compiled-in catalog version
       src/lib.rs               CATALOG, CATALOG_VERSION, card_def, register_all, REGISTRY
       src/query.rs             catalog.query, the only random-pool source (§5.1)
+      src/census.rs            each set's cards, tokens, rarities and tag counts, written once (#2581)
       src/scripts/core/cNNN_slug.rs          one file per Core card (NNN = zero-padded index) with its tests; tokens cNNN_k_slug.rs, t_slug.rs
       src/scripts/classic/cNNN_slug.rs       Classic cards
       src/scripts/classic_plus/cNNN_slug.rs  Classic+ cards, tokens cNNN_k_slug.rs, AI cards t_ai_NN_slug.rs
@@ -1497,7 +1498,7 @@ SPEC §8.11 and §7's Training Grounds row. The set is built on main behind R142
 ## 5. Definition of done
 
 - CI green on the pull request, its four checks (`rust`, `web`, `e2e smoke`, `db`) and `bot selftest`: `cargo fmt --check`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` with no change to `apps/web/src/wire/`; `cargo jackioh catalog check`, `patches check`, `spec check` and `fuzz --seeds 200`; the web's typecheck, eslint and unit tests; the e2e smoke specs; the db suites when the change touches what they test. The daily super run (`super.yml`) green on the result.
-- `crates/cards/tests/cross/catalog.rs` passes: 634 cards and 140 tokens; Core 100 and 11 with rarity counts 32/40/16/7/5, Classic 90 and 1 with 35/26/18/10/1, Classic+ 78 and 38 with 13/24/25/13/3, Meditative 102 and 30 with 29/29/22/16/6, Meditative+ 26 and 7 with 5/9/9/1/2, Stinkyscape 178 and 52 with 41/51/43/31/12, Training Grounds 60 and 1 with 26/19/11/3/1 (§8).
+- `crates/cards/tests/cross/catalog.rs` passes: every set's cards, tokens and rarity counts are the census's (`crates/cards/src/census.rs`, §8), and the catalog's totals its sums (`catalog_membership_build_m4_t1_b2_1`, `rarity_distribution_spec_8_b2_5_build_m4_t1`).
 - Every catalog id has its script file and every script file names a catalog id (`crates/cards/build.rs` refuses to build otherwise).
 - `cargo jackioh spec check` is clean: every SPEC §11 row, R1–R439 and the blocks the workstreams used, has a ruling note with a proving test.
 - Fuzz gate: `cargo jackioh fuzz` runs 1,000 seeds with the full card pool and prints its own counts (seeds, panics, games over the action bound, replay mismatches, invariant violations, endings). CI plays seeds 1–200 on every pull request and the daily run 10,000, plain and with `--handicap`. The card pool is never reduced, and any exclusion must be a named entry in `POOL_EXCLUSIONS` (`crates/tools/src/fuzz.rs`) with a reason, printed on every run so a narrowing cannot be hidden.

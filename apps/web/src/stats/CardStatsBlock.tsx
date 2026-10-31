@@ -4,8 +4,11 @@ import { useEffect, useState, type ReactElement } from "react";
 import { INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getCardStats, type PublicCardStat } from "../net/api.ts";
+import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
+import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { CARD_STATS_MIN_SAMPLE } from "./config.ts";
 import { formatPlayedDelta, winPercent } from "./model.ts";
 import { usePlayerStats } from "./store.ts";
 
@@ -16,7 +19,7 @@ export type CardStatsBlockProps = {
 export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   const [loading, setLoading] = useState(true);
   const [stat, setStat] = useState<PublicCardStat | null>(null);
-  const [minSample, setMinSample] = useState<number>(20);
+  const [minSample, setMinSample] = useState<number>(CARD_STATS_MIN_SAMPLE);
   const [error, setError] = useState(false);
   /** Bumped by Try again, which loads the card's statistics again. */
   const [attempt, setAttempt] = useState(0);
@@ -150,8 +153,9 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
 
       <div className="inspect-stats-footer">
         <a
-          href={`/stats?tab=cards&card=${encodeURIComponent(cardId)}`}
+          href={paths.statsCard(cardId)}
           className="inspect-stats-link"
+          onClick={followInApp(paths.statsCard(cardId))}
         >
           {t("View full stats →")}
         </a>

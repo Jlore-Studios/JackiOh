@@ -3536,7 +3536,8 @@ fn keep_only<T>(rows: &mut Vec<T>, wanted: impl FnMut(&T) -> bool) -> usize {
 /// its invite-code attempts lose their link to it, a room it opened that nobody joined goes too,
 /// and (0029, R1442) so does the play telemetry of every seat it held.
 /// Finished matches, results and series stay for the other player. Postgres empties this profile's
-/// seat on them; here the id stays, since no port read of a finished match looks the seat up.
+/// seat on them and reads it back as the empty id; here the id stays (`db/pg.rs`, KNOWN
+/// DIVERGENCES, deleted accounts), and a read of it finds no profile.
 pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     if keep_only(&mut tables.profiles, |row| row.id != profile_id) == 0 {
         return false;
