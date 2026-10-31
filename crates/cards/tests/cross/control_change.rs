@@ -536,7 +536,7 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
     use super::*;
 
     #[test]
-    fn r172_c81_a_stolen_saintess_dies_for_the_thief_radiating_the_thiefs_units_and_goes_to_her_owners_graveyard()
+    fn r172_r2618000_c81_a_stolen_saintess_dies_for_the_thief_radiating_the_thiefs_units_and_goes_to_the_thiefs_graveyard()
      {
         let mut g = setup(json!({
             "p1": { "hand": [MIND_CONTROL, SORCERER], "mana": 10, "field": [{ "def": POINTMASTER, "lane": 5 }] },
@@ -559,20 +559,25 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
             matches!(
                 died[0],
                 GameEvent::Destroyed {
-                    owner: PlayerId::P2,
+                    owner: PlayerId::P1,
                     ..
                 }
             ),
-            "{:?} should match {{ owner: \"p2\" }}",
+            "{:?} should match {{ owner: \"p1\" }}",
             died[0]
         );
         // Death: "Make your other Units Radiant" — "your" is the thief.
         assert!(g.card(&mine).radiant);
         assert!(!g.card(&theirs).radiant);
-        // Off the field she is her owner's again (R12).
+        // She died on the thief's side, so she is the thief's card in the thief's graveyard (R2618000).
         assert!(g.unit("p1", 2).is_none());
         assert!(
-            g.pile("p2", "graveyard")
+            g.pile("p1", "graveyard")
+                .iter()
+                .any(|card| card.id == saintess.id)
+        );
+        assert!(
+            !g.pile("p2", "graveyard")
                 .iter()
                 .any(|card| card.id == saintess.id)
         );

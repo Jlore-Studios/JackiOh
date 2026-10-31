@@ -1008,7 +1008,8 @@ pub struct RecruitArgs {
 /// B5 E25 extends where and how often: `from: "exile"` scans an exile newest first, and `whose` names
 /// whose pile it is (default the recruiting side's) — "Recruit a card from their exile" (Classic #1
 /// Radiant) summons the opponent's card on the recruiting side, under its control, its owner unchanged,
-/// so it goes back to its owner's piles when it leaves the field (§3.2, R12). `count` is "Recruit N"
+/// so it goes back to its owner's piles when it leaves the field (§3.2, R12), but for a graveyard, where it
+/// lands as its controller's (R2618000). `count` is "Recruit N"
 /// (Classic #31 Radiant, #65 Radiant): N scans, one after another, each the whole of a single Recruit,
 /// so a scan whose card finds no zone fizzles and the next scan finds that card again (Core #69's
 /// "three top-down scans; stops when the board is full"). Every scan skips (X)-cost cards unless they

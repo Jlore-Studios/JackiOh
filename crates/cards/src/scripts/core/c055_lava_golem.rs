@@ -235,7 +235,7 @@ mod tests {
             s.play("core-055", json!({ "tributes": tributes }));
 
             s.expect_in_zone("core-055", "field");
-            // R12: off the field a card is always its OWNER's, so The Rock lands in p2's graveyard.
+            // R2618000: The Rock stood on p2's side, so it lands in p2's graveyard.
             s.expect_in_zone(&theirs, "graveyard");
             let p2_graveyard: Vec<String> = s.pile(P2, "graveyard").iter().map(|card| card.id.clone()).collect();
             assert!(p2_graveyard.contains(&theirs));
