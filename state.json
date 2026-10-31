@@ -11412,6 +11412,14 @@
       "started_at": "2026-10-31T06:19:41Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2584": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-31T04:42:41Z",
+      "issue": 2422,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
