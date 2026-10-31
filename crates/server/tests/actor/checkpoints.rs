@@ -1,13 +1,5 @@
-//! #1169: a live match's checkpoint (SPEC §9.3, §9.5). The restart drain (`Registry::stop_all`)
-//! stores one for a live match of at least `MATCH_CHECKPOINT_MIN_ACTIONS` actions, and the next
-//! rebuild resumes from it, folding only the rows after it, to exactly what a whole log's fold gives:
-//! the state and its hash, the open prompt, the seq counter and the nonce map, the clocks, both views
-//! and the play telemetry. A checkpoint that fails any check is refused, with nothing but its reason
-//! logged, and the whole log is folded. Ending the match drops it; the log keeps every row, and the
-//! replay (R768) folds them all to the recorded final hash.
-//!
-//! The log is a real-card game the engine's random policy plays (§10.7), written straight into the
-//! fake store as a crashed process would have left it.
+//! #1169: live match checkpoints (SPEC §9.3, §9.5, R768, §10.7).
+//! Match rebuilds resume from checkpoint and fold remaining rows to match full log fold.
 
 use serde_json::{Value, json};
 
@@ -492,9 +484,7 @@ async fn bot_turns_carried_on_from_a_checkpoint_equal_the_whole_logs() {
     assert!(whole.p2.is_some());
 }
 
-/// Every state a game passes through, with its recorder and bot turns, is written as a checkpoint
-/// that reads back to its own text, so `verify` passes it: a body this build cannot write back
-/// byte for byte would be refused as `shape` on every rebuild.
+/// Every state written as checkpoint verifying byte for byte on rebuild.
 #[tokio::test(start_paused = true)]
 async fn every_state_of_a_whole_game_checkpoints_and_passes_its_checks() {
     install_test_cards();

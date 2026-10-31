@@ -1,21 +1,6 @@
-//! R1454 (SPEC §9.12): the bot pool. Its size is `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE ×
-//! weekly active people, BOT_POOL_MAX)`; an excess retires the youngest accounts and a shortfall puts
-//! the most recently retired back before it makes new ones. A new bot is drawn like a player (a
-//! strength whose rating seeds its R610 row, a speed, a persona, a schedule, an account age, a name or
-//! the default `Player#n`), and its Best-of-1 decks are the patch's human decklists first, then the
-//! AI's own, each legal, dealt again whenever the catalog version changes. A bot whose claimed match
-//! never started is let go (`release_stale_starts`, which the queue's sweeper runs).
-//!
-//! R641000: each active bot also holds a Conquest trio, three decks a player could queue as a trio
-//! sharing no card (R253): its own Best-of-1 decks first, then decks dealt with the cards already
-//! taken left out, dealt again whenever the catalog version changes.
-//!
-//! R1555000: when the season's `BOT_GRIND_REFERENCE_RANK`-th placed person is more than
-//! `BOT_GRIND_GAP` above every active bot, a refresh sets the top `BOT_GRINDERS` grinding, and clears
-//! them once a bot is within the gap less `BOT_GRIND_HYSTERESIS`; a grinder is on more hours, and
-//! the queue's sweep pairs it with another bot while nobody is queued (`choose_bot_pair`).
-//!
-//! `jackioh_server::bots::pool`, against the fake store and the real catalog.
+//! R1454 (SPEC §9.12): the bot pool. Sizing, retirement, and deck generation (R610).
+//! R641000: Conquest trios with no shared cards (R253).
+//! R1555000: grinder bots above top human rankings.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -430,9 +415,7 @@ async fn r1454_new_catalog_redraws_decks() {
     }
 }
 
-/// R1705001: a bot holding decks of `EARLIER_DECK_SIZE` cards for this very catalog, as every bot did
-/// before the deck grew, is dealt again, its Best-of-1 decks and its Conquest trio alike, so no bot
-/// queues a deck L2 refuses.
+/// R1705001: bot holding EARLIER_DECK_SIZE cards redealt to avoid L2 refusal.
 #[tokio::test(start_paused = true)]
 async fn r1705001_a_bot_holding_a_twenty_card_deck_is_dealt_again() {
     let app = empty_test_app().await;

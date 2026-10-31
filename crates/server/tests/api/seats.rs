@@ -1,13 +1,5 @@
-//! R1523000: one seat ledger in the server holds every profile's game, so no two doors seat one
-//! profile twice (`src/seats.rs`).
-//!
-//! #1498's three interleavings, each over every pair of a 1v1 room, a Conquest room and a co-op
-//! room: two guests joining one host's two rooms, one person joining two rooms at once, and the
-//! queue sweep pairing a ticket while its owner joins a room. The fake store runs one transaction at
-//! a time, so the rival door is the ledger call a second door would make, run from the store's race
-//! seam (`before_call`) while the first door is in flight: it is refused there, the first door's
-//! game stands alone, and the rival's own request is then refused with R1065000's 409 and writes
-//! nothing. Then the ledger after a restart, the reaper's reconcile, and the epoch's fence.
+//! R1523000: single seat ledger per profile in server (`src/seats.rs`, #1498, R1065000).
+//! Prevents duplicate seatings across 1v1, Conquest, and co-op doors under concurrency.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -63,9 +55,7 @@ fn rival_seat(kind: Kind) -> Seat {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Accounts, decks and trios (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// The `n`th run of `DECK_SIZE` playable ids: legal, and disjoint from every other `n`.
 fn deck_at(n: usize) -> Vec<String> {
@@ -302,9 +292,7 @@ fn refused_on<T>(answer: &Arc<Mutex<Option<Result<T, Taken>>>>, profile: &str) -
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // #1498's interleavings
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1523000_two_guests_join_one_hosts_two_rooms() {
@@ -515,9 +503,7 @@ async fn r1523000_the_sweep_pair_start_refuses_when_a_seat_was_taken_mid_flight(
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Boot, reconcile and the fence
-// ---------------------------------------------------------------------------------------------
 
 /// A new process over `app`'s store, its ledger booted as `serve` boots it.
 async fn restart(app: &Arc<App>) -> Arc<App> {

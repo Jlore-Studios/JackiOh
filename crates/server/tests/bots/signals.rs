@@ -1,7 +1,4 @@
-//! R639000 (SPEC §9.12): a ladder bot's concessions, draw answers, idle turns, rematch plans and aim
-//! leads, each drawn on its own stream from a fitted row (`bots::signals`). These are the pure
-//! draws; `tests/actor/bot_seat.rs` and `tests/api/bots.rs` prove the actor and the rematch route
-//! act on them.
+//! Ladder bot signal generation (`src/bots/signals.rs`, SPEC §9.12, R639000, R1442).
 
 use jackioh_engine::PlayerId;
 use jackioh_server::bots::signals::{

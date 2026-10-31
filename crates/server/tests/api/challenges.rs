@@ -1,11 +1,4 @@
-//! B48–B49 (#936, `.fullsend/SPEC.md` S7): challenging a friend to a 1v1. A challenge makes a room
-//! exactly as `POST /api/rooms` would (same body, same mode rules) and an open challenge; the friend
-//! accepts by joining the room with its code on the existing join route; decline, cancel and expiry
-//! free the room.
-//!
-//! The whole router over the fake store, from accounts seeded active with a tagged username; the
-//! rooms are All Random (`{"mode":"random"}`), which needs no saved deck. A refusal's code is read
-//! wherever the body carries it (`code_is`): S7's `{code}` or the repo's `{error: {code, …}}`.
+//! 1v1 friend challenges (B48–B49, #936, .fullsend/SPEC.md S7).
 
 use std::sync::Arc;
 
@@ -21,10 +14,6 @@ use jackioh_server::social::challenges::sweep;
 use crate::support::deps::{TEST_CATALOG_VERSION, add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::store::{advance, fake, q, uuid};
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// A config duration as milliseconds, whichever integer type `config.rs` gives it.
 fn millis<T>(value: T) -> u64
@@ -212,9 +201,7 @@ async fn live_match(app: &Arc<App>, match_id: &str, p1: &Account, p2: &Account) 
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B48 — a challenge makes a room for an online, idle friend
-// ---------------------------------------------------------------------------------------------
 
 mod b48_a_challenge_to_an_online_idle_friend {
     use super::*;
@@ -390,9 +377,7 @@ mod b48_a_challenge_to_an_online_idle_friend {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B49 — accept by joining, decline, cancel, expiry
-// ---------------------------------------------------------------------------------------------
 
 mod b49_accept_decline_cancel_and_expiry {
     use super::*;
@@ -585,9 +570,7 @@ mod b49_accept_decline_cancel_and_expiry {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1689000 — a challenge lives only as long as its friendship
-// ---------------------------------------------------------------------------------------------
 
 mod r1689000_a_challenge_lives_only_as_long_as_its_friendship {
     use super::*;
@@ -659,8 +642,7 @@ mod r1689000_a_challenge_lives_only_as_long_as_its_friendship {
         let (status, body) = join_room(&p.app, &outsider, &code, random_room()).await;
         assert_eq!((status, &body), (404, &unknown));
 
-        // The friendship ends behind the routes' backs, leaving the challenge and its room open the
-        // way a missed cleanup would: the join itself checks it.
+        // Friendship removed before join; join verifies friendship validity.
         assert!(q!(p.app, friends_remove(&p.challenger.id, &p.friend.id)));
         let (status, body) = join_room(&p.app, &p.friend, &code, random_room()).await;
         assert_eq!((status, &body), (404, &unknown));
@@ -687,8 +669,7 @@ mod r1689000_a_challenge_lives_only_as_long_as_its_friendship {
     {
         let p = pair().await;
 
-        // The unfriend lands after the friendship was read and before the challenge is written: hooked
-        // on the room's insert, whose transaction commits.
+        // Unfriend lands between read and write hooked on rooms.create.
         fake(&p.app).lock().await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
             if method == "rooms.create" {
                 tables.social.friendships.clear();

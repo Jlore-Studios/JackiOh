@@ -1,7 +1,4 @@
-//! `cli/cosmetics_fit.rs` (cosmetics-fit), SPEC §14.2, R1834006: what people's seats wore, bucketed
-//! by account age, as the ladder bots' fits to paste into config, a bucket under the minimum
-//! keeping the prior and no person named in what it prints. The store's read (people's seats only)
-//! is `tests/store/contract.rs`'s; what a fit draws is `tests/bots/cosmetics.rs`'s.
+//! Cosmetic fit estimation for bots (`src/cli/cosmetics_fit.rs`, SPEC §14.2, R1834006).
 
 use std::collections::BTreeMap;
 
@@ -57,17 +54,7 @@ fn sample(
     }
 }
 
-/// Four people's seats, oldest match first, as `matches_loadout_samples` reads them:
-///
-///  - Anna, two days old: the felt playmat, two cards of her own (a foil on core-002, a border on
-///    core-005; core-001's printed full art is no pick of a slot), and Big D-fender's full art,
-///    which she owns, printed;
-///  - Boris, five days old: the default playmat, the rain backdrop and the rainbow foil, one card
-///    of his own (the Glitter foil he earned on core-003), and Big D-fender's full art, which he
-///    owns, not printed;
-///  - Anna again at ten days old, every default, playing Gary's card without printing the full art
-///    she owns: her later match puts her, for ownership, in the 30-day bucket;
-///  - Cleo, 211 days old, every default, owning nothing.
+/// Four seats across varying account ages and cosmetic loadouts as read by `matches_loadout_samples`.
 fn samples() -> Vec<LoadoutSample> {
     vec![
         sample(
@@ -125,9 +112,7 @@ fn samples() -> Vec<LoadoutSample> {
     ]
 }
 
-/// What each person owns now: Anna both full arts she plays, the Glitter foil on core-005 (worn on
-/// no seat) and a portrait (an account cosmetic no loadout slot wears, so no ownership share),
-/// Boris Big D-fender's and the Glitter foil on core-003; Cleo is missing, so owns none.
+/// Owned cosmetics map for Anna and Boris across full arts and foils.
 fn owned() -> BTreeMap<String, OwnedCosmetics> {
     let on = |cosmetic_id: &str, card_id: &str| CardCosmetic {
         card_id: card_id.to_string(),

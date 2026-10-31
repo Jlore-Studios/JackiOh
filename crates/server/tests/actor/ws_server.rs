@@ -1,20 +1,6 @@
-//! `/ws/match` over a real listener and a real WebSocket client: what one client can cost the
-//! process before its token is even checked (§9.8), and how a client hands over its token.
-//!
-//!  - a frame over `MAX_FRAME_BYTES` is refused with 1009, so it is never buffered whole (the
-//!    library's default ceiling is far larger);
-//!  - one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes
-//!    included;
-//!  - the token travels as an offered `jackioh.bearer.` subprotocol (R1379000), and only
-//!    `WS_SUBPROTOCOL` is echoed.
-//!
-//! The whole app is served (`app::router`, which mounts `/ws/match`) and the registry is the real
-//! one, so the actor's first `view` frame names the seat (`viewer: "p1"`). The client is a small
-//! hand-rolled RFC 6455 client over a `TcpStream`.
+//! `/ws/match` over a real listener (§9.8, R1379000, #861).
+//! Enforces `MAX_FRAME_BYTES`, `WS_MAX_CONNECTIONS_PER_ADDRESS`, and bearer subprotocol.
 //! Surface contract: docs/v0.3.0/SURFACE.md §2, §11.2, §11.3.
-//!
-//! `the_graceful_shutdown` serves through `app::serve_until` instead: SIGTERM (and Ctrl-C) drains
-//! instead of cutting (#861).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -66,9 +52,7 @@ impl Drop for Listening {
     }
 }
 
-/// One active player per seat of `matches` live matches, `profile-<k>` (user `user-<k>`) in
-/// `match-<m>` with `k` = 2m − 1 and 2m, every match started on the real registry. Returns the app
-/// and each profile's token, in profile order.
+/// Seeds live matches with active players and returns app with profile tokens.
 pub(super) async fn seed_matches(matches: usize) -> (Arc<App>, Vec<String>) {
     let app = test_app().await;
     let pool = playable();
@@ -438,11 +422,8 @@ mod sockets_per_client_address {
 }
 
 mod r1379000_the_credential_on_the_handshake {
-    //! R1379000, SURFACE §11.3: the token is offered as a `jackioh.bearer.` subprotocol beside
-    //! `jackioh.v1`, never put in the address, and only `jackioh.v1` is echoed. A missing,
-    //! undecodable or refused credential is R148's one 4401, and a renewed token opens what the
-    //! refused one could not (R1115000). The previous day's client's `?token=` is read only when no
-    //! credential is offered.
+    //! R1379000, SURFACE §11.3: token offered via `jackioh.bearer.` subprotocol.
+    //! Missing or refused credential yields R148 4401; renewed token opens (R1115000).
     use super::*;
 
     /// The refusal a socket with no usable credential gets: the one `forbidden` frame, "sign in
@@ -535,11 +516,8 @@ mod r1379000_the_credential_on_the_handshake {
 }
 
 mod a_finished_matchs_seats_may_reopen_its_socket {
-    //! §9.5: every ending clears both seats' in-match state, but the rematch window keeps a
-    //! finished match's seats coming back — presence is the opponent's socket being open, so a
-    //! seat that left may reopen its socket and read as here again. Anyone else is still
-    //! refused (§9.1). R1285000: only for `REMATCH_OFFER_TTL_MS` after the match ended, and
-    //! never onto a log the retention purge has taken.
+    //! §9.5: rematch window allows finished match seats to return; outsiders refused (§9.1).
+    //! Open for `REMATCH_OFFER_TTL_MS` until retention purge (R1285000).
     use super::*;
 
     use jackioh_server::app::now_ms;
@@ -693,9 +671,7 @@ mod banned_profiles_are_refused_the_match_socket {
     use crate::support::deps::empty_test_app;
     use jackioh_server::db::store::ProfileStatus;
 
-    /// One live match between profile-1 and profile-2, served: `seed_matches`' first match, but
-    /// over an app without R144's fixtures, whose `profiles_create` ids (`profile-1`, …) collide
-    /// with the seats' — banning by id would land on the fixture's row instead of the seat's.
+    /// R144: live match over app without fixtures to avoid profile-1 id collision.
     async fn listen_bannable() -> (Arc<App>, Listening, String) {
         let app = empty_test_app().await;
         let pool = playable();
@@ -752,9 +728,7 @@ mod banned_profiles_are_refused_the_match_socket {
         let _serial = SERIAL.lock().await;
         let (app, listening, token) = listen_bannable().await;
 
-        // Banned through the store: the handshake completes, then the socket is refused with an
-        // error frame and the forbidden close — `assert_active` runs after the upgrade
-        // (`upgrade_socket`), so there is no HTTP status to read here, only no socket and no view.
+        // Banned status closes socket with error frame after upgrade.
         set_status(&app, "profile-1", ProfileStatus::Banned).await;
         let mut refused = open_as(listening.port, "match-1", &token).await.open();
         let refusal = refused
@@ -772,10 +746,7 @@ mod banned_profiles_are_refused_the_match_socket {
 }
 
 mod the_graceful_shutdown {
-    //! SIGTERM (and Ctrl-C) drains instead of cutting (#861): an in-flight request finishes, every
-    //! match socket gets close frame 1001, the background loops stop, and the process exits 0
-    //! inside the drain bound — or the drain stops waiting at the bound for a socket that never
-    //! answers the close.
+    //! SIGTERM graceful shutdown (#861): in-flight requests complete, sockets close with 1001, and tasks drain.
     use super::*;
 
     use jackioh_server::app::{serve_until, shutdown_signal};

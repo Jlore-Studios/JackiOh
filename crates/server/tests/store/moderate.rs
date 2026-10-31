@@ -1,9 +1,4 @@
-//! `cli/moderate.rs` (issue #887), the operator's abuse levers, against the fake store: what
-//! each subcommand parses to, that ban/unban round-trip a profile and refuse unknown and pending
-//! accounts, that revoke round-trips a minted code and refuses malformed and unknown ones, and
-//! that the redemption switch round-trips with prior-state lines, and that `chat-reports` (#970)
-//! lists every report with its message, oldest first, and writes nothing. The store methods' own
-//! agreement between the fake and Postgres is `contract.rs`'s.
+//! Abuse moderation tooling (`src/cli/moderate.rs`, #887, #970).
 
 use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
 use jackioh_server::api::crypto::canonical_invite_code;

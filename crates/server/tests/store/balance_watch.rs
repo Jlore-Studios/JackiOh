@@ -1,11 +1,5 @@
-//! `cli/balance_watch.rs` (balance-watch), SPEC §9.11's advisory outlier watch for #699,
-//! against the fake store: what the options read, that a planted 80% card flags high and a 50%
-//! card is silent, that a 20% card flags low, that a large played delta flags whatever the in-deck
-//! rate, that a card under the sample is never flagged, that the report says provisional below the
-//! gate and counts live-only when forced, and that bot seats count like the public endpoint
-//! (R1451), and that `--file` prints the store path's report off record files with no store. The
-//! arithmetic is the engine's `wire::stats`; the store's own filtering is
-//! `tests/store/contract.rs`'s.
+//! `cli/balance_watch.rs` (balance-watch) advisory outlier watch (SPEC §9.11, #699, R1451).
+//! Verifies high/low win rate flagging, played delta alerts, sample gating, and `--file` reports.
 
 use std::path::PathBuf;
 
@@ -63,9 +57,7 @@ fn record_of(value: Value) -> GameRecord {
     serde_json::from_value(value).expect("a well-formed game record")
 }
 
-/// One game with fixed seats: p1 holds `p1_card` in its deck and played it, p2 holds `p2_card`
-/// in its deck and never played it (its hand holds it, so it counts drawn-but-not-played). Only
-/// the winner varies, so a card's win rate is the share of games its seat won.
+/// One game with fixed seats and variable winner to isolate card win rate.
 fn fixed(
     id: &str,
     source: &str,
@@ -249,9 +241,7 @@ mod balance_watch_report_cases {
 
     #[tokio::test]
     async fn flags_a_large_played_delta_at_a_flat_in_deck_rate() {
-        // p1 always plays bw-tricky and wins 28 of 40 (played 70%); p2 always holds it unplayed
-        // and wins 12 (drawn-but-not-played 30%). In-deck is 40 of 80 (50%, z 0): only the delta
-        // flags.
+        // Delta flags when played rate diverges from in-deck baseline.
         let mut records = Vec::new();
         for n in 0..40 {
             records.push(dev_game(

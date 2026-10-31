@@ -1,18 +1,4 @@
-//! R191, docs/polish/5-sign-in.md B5 and B6: the server redeems exactly what the shared reading
-//! says a typed or pasted code is.
-//!
-//! B5 runs every row of the shared table (`crates/engine/tests/fixtures/code-input-cases.json`,
-//! SURFACE §10.4) through the real router. A row with a canonical code redeems a code minted as that
-//! canonical; a row without one gets R145's identical error byte for byte, and the code the row was
-//! mangled from (the table's base code, minted beside it) is left untouched. The web's code field is
-//! tested against the same rows, so the two ends cannot drift apart.
-//!
-//! B6 is the input cap: a code longer than `CODE_INPUT_MAX_LENGTH` is refused unread, logged as
-//! malformed, and padded to the redemption floor (R107) like every other outcome.
-//!
-//! Every test runs on tokio's paused clock (`start_paused`) with the production floor; the B5 rows
-//! each run on a fresh server with their own profile and address, so §9.4 steps 2 and 3 never refuse.
-//! Each half of B5 is one test that names the failing row.
+//! R191, docs/polish/5-sign-in.md B5, B6: code input parity (SURFACE §10.4, R145, R107, §9.4).
 
 use std::sync::Arc;
 
@@ -36,8 +22,6 @@ use jackioh_server::db::store::Db;
 
 use crate::support::deps;
 use crate::support::store::hmac_sha256_hex;
-
-// Fixtures
 
 /// The table's base code: every malformed row is a mangled spelling of it.
 const BASE_CODE: &str = "ABCDEFGHJKMNPQRS";
@@ -177,9 +161,7 @@ fn formatted(raw: &str) -> String {
         .join(INVITE_CODE_SEPARATOR)
 }
 
-/// Mints exactly `code`, so the test decides which code exists. The row is written as the mint
-/// writes it: hashed (`${CODE_PEPPER}:code` over the canonical code), unused,
-/// `DEFAULT_INVITE_CODE_MAX_USES` uses, no expiry. Answers the code as `formatCode` shows it.
+/// Mints exactly `code`, hashing with pepper and setting default max uses.
 async fn mint_exactly(server: &Server, code: &str) -> String {
     let mut tx = server.app.db.begin(None).await.expect("a transaction opens");
     tx.codes_insert(&from_json(json!({

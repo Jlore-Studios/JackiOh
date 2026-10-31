@@ -1,12 +1,4 @@
-//! The cosmetics an account owns (`src/api/cosmetics.rs`, SPEC §14.2, R1313000).
-//!
-//! The questions here are the route's own: that it is one active `GET`, that it answers the
-//! caller's own cosmetics and nobody else's, keyed on the verified token, and that a caller with no
-//! token is refused. What the store holds is granted straight into it, as the ledger's tests in
-//! `tests/store/contract.rs` do; no route writes a cosmetic yet.
-//!
-//! Every request goes through the whole app (`support::deps::test_app`, the E2E fixtures): the
-//! caller is `e2e-p1`, the other account `e2e-p2` and the pending one `e2e-pending`.
+//! Cosmetics owned by account (`src/api/cosmetics.rs`, SPEC §14.2, R1313000, R1833000, #1833).
 
 use std::sync::Arc;
 

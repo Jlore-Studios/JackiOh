@@ -1,21 +1,4 @@
-//! SPEC §11 R162 — the CORS contract for the REST surface (`src/api/cors.rs`).
-//!
-//! R162 fixes four things, each a *negative* that a broken layer would satisfy by accident:
-//!
-//!  - an allowed origin is echoed back **as itself**, never `*`;
-//!  - `Access-Control-Allow-Credentials` is never sent, because §9.1's client carries a bearer
-//!    token in a header and a credentialed response would let every allowed origin act as the
-//!    player;
-//!  - `Vary: Origin`, because the answer depends on the request's origin;
-//!  - an unlisted origin gets **the ordinary response with no CORS headers**, not a 403 — CORS is
-//!    never load-bearing for a refusal, since §9.1 puts the rules in the server.
-//!
-//! "No CORS headers" is also what a middleware that never ran produces, and "not a 403" is what a
-//! handler that answered 500 produces. So each negative is paired with the allowed request that
-//! proves the layer is awake, and with a count of how many times the wrapped handler was entered.
-//!
-//! `with_cors` wraps an `axum::Router` with no clock, no store and no network, so nothing here needs
-//! a timer; its `log` is `tracing`'s (SURFACE §11.3).
+//! SPEC §11 R162: CORS contract for REST surface (SURFACE §11.3, §9.1).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -364,9 +347,7 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         assert!(is_origin_allowed(&[format!("{OTHER}/")], Some(OTHER)));
     }
 
-    // R162's remaining clause: "every response the layer touches carries `Vary: Origin`". The CORS
-    // headers go on only the two ALLOWED paths, so a refused preflight or an unlisted origin's
-    // answer must still vary, or a shared cache could hand the no-CORS answer to an allowed origin.
+    // R162: every response layer touches carries Vary: Origin.
     #[tokio::test]
     async fn r162_carries_vary_origin_on_every_response_the_layer_touches_refusals_included() {
         let layer = wrapped(&ALLOWED);

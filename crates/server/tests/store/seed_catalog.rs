@@ -1,20 +1,8 @@
-//! `cli/seed_catalog.rs` (`seed-catalog`), in two halves.
-//!
-//! The first (every `cargo test`): `read_catalog` against the file it actually has to read. The
-//! catalog (`crates/cards/catalog.json`) is a record keyed by card id — the `CardDefs` shape the API
-//! parses.
-//!
-//! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real
-//! catalog into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002)
-//! admits 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake and AI (B2.4) from 0015, Plague
-//! from 0020, Catalyst, Prime and Acclaimed from 0026, the Meditative set's Wincon (R1411) from 0030,
-//! the Meditative+ set's Potion (R1178000) from 0043, #1837's Terminus, Quest, Otherworldly,
-//! Other-Origins and Jelly Bean (R1837000) from 0058, and the Stinkyscape set's Drone Core, Weapon,
-//! War Doctrine and Swarm (R1857000) from 0065. The seed runs in one transaction, so one
-//! such row fails the whole catalog. The first half compares the tags with the migrations' text; the
-//! second checks that the database really accepts them. Both count the catalog of the sets that ship
-//! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set, the
-//! Meditative+ set and the Stinkyscape set (R1420).
+//! `cli/seed_catalog.rs` tests. First: `read_catalog` parses `crates/cards/catalog.json`.
+//! Second (`test:db`): `seed_catalog` seeds database under migration constraints (0002).
+//! Admits Jlockeed (R278, #13, #14), Book/Pancake/AI (B2.4), Plague, Catalyst/Prime/Acclaimed,
+//! Wincon (R1411), Potion (R1178000), #1837 tags (R1837000), and Stinkyscape tags (R1857000).
+//! Counts catalog for sets that ship (`SHIPPED_SETS`, R1420).
 
 use std::path::{Path, PathBuf};
 
@@ -26,10 +14,7 @@ use jackioh_server::cli::seed_catalog::read_catalog;
 
 const REAL_CATALOG: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/catalog.json");
 
-/// R1178000: a tag that only a held set's cards carry waits for that set's release migration
-/// (Meditative+'s Potion, #1187's 0043): until the set ships the latest check need not admit it, and
-/// only the entries of that set may carry it. Once the set ships the check must admit it like any tag.
-/// R1857000: the Stinkyscape set's four waited for its release (#1884, 0065) the same way.
+/// R1178000, R1857000: tags carried by held sets wait for release migration (#1187, #1884).
 const AWAITING_RELEASE: &[(Tag, SetName)] = &[
     (Tag::Potion, SetName::MeditativePlus),
     (Tag::DroneCore, SetName::Stinkyscape),
@@ -278,10 +263,7 @@ mod read_catalog_ {
     }
 }
 
-/// The seed writes the whole catalog in one transaction, so one tag the schema refuses fails every
-/// row. This reads the migrations instead of a database, so `cargo test` catches a tag that reaches
-/// the catalog before the schema. `test:sql` CHECK 18 and `test:db` (the second half of this file)
-/// prove the same against Postgres.
+/// Tag validation: reads migrations to catch catalog tags reaching schema before migrations.
 mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     use super::*;
 
@@ -341,12 +323,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         );
     }
 
-    /// R1411: the migration that ships the Meditative set, 0043 after it, which ships the
-    /// Meditative+ set (R1178000), 0058, which admits #1837's five tags (R1837000), and 0065, which
-    /// ships the Stinkyscape set (R1857000). The check admits exactly the tags the engine names, in
-    /// its order, Wincon, Potion, the five and the four among them, so every entry of every set the
-    /// catalog holds seeds the day its set ships, the Meditative, Meditative+ and Stinkyscape sets'
-    /// included.
+    /// R1411: tag check admits engine tags across Meditative, Meditative+ (R1178000), #1837 (R1837000), and Stinkyscape (R1857000).
     #[tokio::test]
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {

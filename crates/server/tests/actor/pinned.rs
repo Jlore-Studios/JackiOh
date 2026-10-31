@@ -243,13 +243,12 @@ async fn r388_r767000_a_rebuilt_match_folds_under_the_catalog_it_started_on_as_i
         ),
         "the replay opens under the started-on catalog"
     );
-    // What the rebuild folded before this change: under this build's own catalog.
+    // Rebuild under build's own catalog.
     assert_ne!(hash_state(&fold(Pinned::default(), &args).state), live);
     clear_overrides();
 }
 
-// R1266000, R1329000: a match that began on a version shipped with one win-rate table, on a build whose
-// own table leads with another card, plays and rebuilds against the table its version shipped with.
+// R1266000, R1329000: rebuilt match folds against the win-rate table of started-on version.
 #[tokio::test(start_paused = true)]
 async fn r1266000_r1329000_a_rebuilt_match_folds_against_the_win_rate_table_of_the_version_it_started_on() {
     /// The leader of the table `PLAYED_ON` shipped with.
@@ -327,7 +326,7 @@ async fn r388_a_start_on_a_catalog_this_build_does_not_carry_is_refused_and_a_re
         .await
         .expect("the match starts");
     app.matches.stop(MATCH_ID).await;
-    // The next build no longer carries the started-on catalog.
+    // Next build does not carry started-on catalog.
     register_shipped(Vec::new());
     let rebuilt = app
         .matches

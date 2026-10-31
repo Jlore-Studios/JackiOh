@@ -1,11 +1,4 @@
-//! B52 (#936, `.fullsend/SPEC.md` S7): sharing a finished replay with a friend. A seat holder shares
-//! `POST /api/replays/:matchId/shares {friendId}`; the friend's `GET /api/replays/:matchId` then
-//! answers the sharer's seat's steps; unshare, unfriend or a block ends it; anyone else still gets
-//! the unknown-id answer; `GET /api/replays/shared` lists what was shared with the caller.
-//!
-//! A finished match is written straight to the store as the actor and `api/results.rs` leave one
-//! (as `tests/api/replays.rs` does): its row, its log, its results row, then the final hash. A, B
-//! held the seats; C is A's (and B's) friend; D is nobody's.
+//! Replay sharing with friends (B52, #936): share, access, unshare, unfriend, and block behavior.
 
 use std::sync::Arc;
 
@@ -26,10 +19,6 @@ use crate::support::store::{fake, from, q, to_json, uuid};
 const PLAYED_ACTIONS: usize = 8;
 /// An hour, in milliseconds: how long before its end a seeded match began.
 const HOUR_MS: i64 = 3_600_000;
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 struct Account {
     id: String,
@@ -84,9 +73,7 @@ async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
     assert_eq!(status, 200, "{body}");
 }
 
-// ---------------------------------------------------------------------------------------------
 // A finished match (as `tests/api/replays.rs` writes one)
-// ---------------------------------------------------------------------------------------------
 
 struct Played {
     seed: String,
@@ -276,9 +263,7 @@ impl World {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B52
-// ---------------------------------------------------------------------------------------------
 
 mod b52_sharing_a_replay {
     use super::*;
@@ -624,9 +609,7 @@ mod b52_sharing_a_replay {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1435000: the sharer reads back who it shared a replay with
-// ---------------------------------------------------------------------------------------------
 
 mod r1435000_the_sharer_reads_its_shares {
     use super::*;

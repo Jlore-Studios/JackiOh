@@ -1,14 +1,5 @@
-//! In-memory `Socket`s over mpsc channels. Surface contract: docs/v0.3.0/SURFACE.md §11.2.
-//!
-//! `create_fake_socket` makes a fake client. The server half (`FakeSocket::socket`) is the same
-//! `Socket` the real `/ws/match` upgrade hands to `Registry::attach`, so the actor behaves as on
-//! the wire.
-//!
-//! The actor is a task, so every read first drains what has arrived on the channel. A test that
-//! waits awaits `settle`; one that asserts nothing happened reads `sent` after `settle`, never by
-//! waiting (tokio's paused clock would auto-advance and fire the match's timers).
-//!
-//! Every method takes `&self`, as every test holds its sockets (part 31); the state sits behind locks.
+//! In-memory `Socket`s over mpsc channels (SURFACE §11.2).
+//! Fake socket feeds actor via same `Socket` struct as `/ws/match` upgrade.
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 

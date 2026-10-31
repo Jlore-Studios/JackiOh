@@ -1,8 +1,4 @@
-//! Writes `apps/web/src/wire/generated/cosmetics.ts` from `crates/server/cosmetics.json` (#1295,
-//! SPEC §11 R1295000): the kinds, the rarities, the longest id a settings text carries (R633) and
-//! every entry, each on its own line in the registry's order, so the client draws the ids the
-//! server will roll and own without importing the server. CI runs this test and fails on a diff,
-//! as it does for `export_config.rs`'s `serverConfig.ts`.
+//! Generates `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json` (#1295, SPEC §11, R1295000, R633).
 
 use jackioh_server::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
 use jackioh_server::cosmetics::{CosmeticKind, CosmeticRarity, shipped};

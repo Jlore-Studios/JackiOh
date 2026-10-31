@@ -1,14 +1,5 @@
-//! SPEC §9.8's second flood limit: "per-account rate limit at the API", with R109's number: 300
-//! requests per minute per account.
-//!
-//! The per-match half is covered by `tests/actor/match_actor.rs`; this is the API half, enforced in
-//! the router for every route at once so a new endpoint cannot forget it. The number under test is
-//! the real `API_REQUESTS_PER_MINUTE`, read from `config.rs`.
-//!
-//! Stand-in routes, one per auth level: `/api/open` (none) is `GET /api/stats/players`, `/api/mine`
-//! (user) is `GET /api/auth/me`, `/api/gated` (active) is `GET /api/tutorial`. The limiter lives in
-//! `App`, so "per router" is "per App". Time is tokio's paused clock.
-//! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
+//! API per-account rate limit (SPEC §9.8, §9.4, R109, R1717000, SURFACE §11.2, §11.3).
+//! Enforces router-wide rate limiting across all auth levels.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};

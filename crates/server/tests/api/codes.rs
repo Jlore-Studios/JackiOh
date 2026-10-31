@@ -1,15 +1,4 @@
-//! BUILD M6-T1: "integration tests for each rejection step" of SPEC §9.4's six-step redemption
-//! transaction, plus the identical-error requirement and the global circuit breaker. Each test
-//! names the step it covers.
-//!
-//! Every test drives real HTTP through `app::router`, so the route's auth declaration, the §9.4
-//! gate, the constant-time padding and the handler all take part.
-//!
-//! Every test runs on tokio's paused clock (`start_paused`), where §9.4's production floor
-//! (`REDEMPTION_RESPONSE_FLOOR_MS`) costs nothing to sit through. A test that wants the breaker near
-//! its threshold logs the failures that bring it there (`near_threshold`), against the production
-//! `REDEMPTION_CIRCUIT_FAILURE_THRESHOLD`. `mint_invite_code` draws its codes from the OS, so a test
-//! finds a minted code by the id or the formatted text it answered.
+//! BUILD M6-T1: integration tests for SPEC §9.4's redemption transaction and circuit breaker.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -36,8 +25,6 @@ use jackioh_server::db::store::{Db, StoreError, TermsSource};
 
 use crate::support::deps;
 use crate::support::store::hmac_sha256_hex;
-
-// Fixtures
 
 /// A well-formed code (16 symbols, all inside the alphabet) that was never minted.
 const UNMINTED_CODE: &str = "ABCD-EFGH-JKLM-NPQR";
@@ -443,10 +430,7 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
         assert_eq!(attempts(&server).await.len(), 0);
     }
 
-    /// R757000, R757001: a pending account that has not answered the age screen or agreed to the
-    /// terms in force is sent back to the consent screen before the attempt log: the good code is
-    /// not spent and the refusal costs none of the account's tries. Once both are recorded the same
-    /// code redeems.
+    /// R757000, R757001: pending account with owed consent refused without logging attempt.
     #[tokio::test(start_paused = true)]
     async fn r757001_redeem_refuses_consent_owed_without_an_attempt() {
         let server = code_server().await;
@@ -484,11 +468,7 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
         assert_eq!(attempts(&server).await.len(), 1);
     }
 
-    /// R170. The row can go between `resolve_caller`'s read of the profile and `Tx::redeem`'s. The
-    /// store cannot say which of §9.4 step 1's refusals it hit (`app.redeem_invite_code` answers
-    /// `not_pending` for a missing row, a banned one and an active one alike), so the server reports
-    /// the conflict. The test queues behind `resolve_caller`'s transaction on the fake's FIFO mutex
-    /// and removes the row in the gap before the redemption's own.
+    /// R170: profile deleted mid-redemption returns conflict error (§9.4 step 1).
     #[tokio::test(start_paused = true)]
     async fn r170_answers_a_profile_that_vanishes_mid_redemption_with_a_conflict_not_a_401() {
         let server = code_server().await;
@@ -520,9 +500,7 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
         )
         .await;
 
-        // 409: the token verified and the caller was resolved, so nothing about their authorization
-        // failed; the state changed underneath the request. "No such identity" is a 401 from
-        // `Auth::verify`, one layer earlier, never from this handler.
+        // 409: state changed underneath request; authorization succeeded.
         assert_eq!(response.status, 409);
         assert_eq!(response.error_code(), "conflict");
         // R145: a refusal about the caller's own account never borrows the code's identical error.
@@ -917,17 +895,11 @@ mod r145_the_identical_error_for_every_code_dependent_refusal_section_9_4 {
 const TIMING_SAMPLES: usize = 50;
 const TIMING_SPREAD_MS: u64 = 5;
 
-/// The cost model this test *injects*, so the padding has something real to hide.
-///
-/// `STORE_CALL_MS` is a round trip to Postgres and `ROW_FETCH_MS` the extra cost of a lookup that
-/// found its row. A missing code does strictly less work than an expired or exhausted one, and
-/// without a floor the difference is readable from outside (§9.4). The numbers are the test's own.
+/// Timing cost model simulating database round trip and row fetch latency (§9.4, M6-T1).
 const STORE_CALL_MS: u64 = 3;
 const ROW_FETCH_MS: u64 = 11;
 
-/// `code_server()` with every store call counted (`FakeData::on_call`). The fake's hook is
-/// synchronous and cannot move tokio's clock, so the cost model is tallied rather than slept: the
-/// elapsed times below are tokio's paused clock, and the tally proves the work was lopsided.
+/// code_server() with counted store calls for paused clock testing.
 struct Timed {
     server: Server,
     calls: Arc<AtomicU64>,
@@ -1161,10 +1133,7 @@ mod section_9_4_the_global_circuit_breaker {
 
 // R161 — "How many accounts one invite code activates: one, unless its mint says otherwise"
 
-/// Every other test in this file passes `max_uses` explicitly, which is exactly what R161's default
-/// cannot be proved from: a code that was *told* to allow one use says nothing about what a code
-/// that was told nothing allows. Both tests below mint through `mint_invite_code` with no
-/// `max_uses` at all.
+/// R161 default: mint through `mint_invite_code` with no explicit `max_uses`.
 mod r161_how_many_accounts_one_invite_code_activates_section_9_4_section_9_8 {
     use super::*;
 
@@ -1474,9 +1443,7 @@ mod moderate_levers {
             .await
             .expect("the revoke lands");
 
-        // Each redeems with a fresh pending caller: equal status and byte-equal bodies. Timing
-        // equality holds by construction (one `identical_code_error` plus the shared `pad_to`
-        // floor, sampled by the `r107` test).
+        // r107: equal status and byte-equal bodies across fresh pending callers.
         let second = pending_caller(&server, "lever-second").await;
         let third = pending_caller(&server, "lever-third").await;
         let from_exhausted = redeem(&server, &second.token, &exhausted.formatted, DEFAULT_IP).await;

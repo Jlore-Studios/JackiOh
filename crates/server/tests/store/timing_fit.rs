@@ -141,9 +141,7 @@ async fn timing_commands_refuse_an_unknown_option() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R639000: the rest of a person's habits
-// ---------------------------------------------------------------------------------------------
 
 /// One seat's signals beside its match's outcome, with nothing signalled.
 fn outcome(

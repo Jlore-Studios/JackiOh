@@ -1,10 +1,4 @@
-//! R641000 (SPEC §9.5): a ladder bot's sealed picks in a Conquest series, against `series_rules.rs`'s
-//! own transitions. Its rule takes the fastest deck that has not won on the play and the slowest on
-//! the draw, `BOT_PICK_RULE_SHARE` of the time, and a uniform deck that has not won otherwise; its
-//! pick goes through `pick_deck`, sealed as a person's is (R331); and it comes a person's delay after
-//! the pick phase opens, well inside the clock (R333), never when R332 already picked for it.
-//!
-//! `jackioh_server::bots::pick`, pure, on series made by `new_series` and the real catalog's costs.
+//! Bot series deck picks (`src/bots/pick.rs`, SPEC §9.5, R641000, R331, R332, R333).
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{CardDefs, GameOverReason, PlayerId, Winner, query_cost};

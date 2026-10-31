@@ -1,8 +1,4 @@
-//! A test-only ES256 key pair for tier-1 (JWKS) tests (R1144000).
-//!
-//! Generated fresh for this suite, never from a real project: it signs test tokens only, so every
-//! name carries `TEST_ONLY`. The coordinates are the public half served in the scripted JWKS; the
-//! private half signs the tokens `verify` checks.
+//! Test-only ES256 key pair for tier-1 JWKS tests (R1144000, §9.2).
 
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use serde_json::{Value, json};

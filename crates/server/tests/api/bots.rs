@@ -1,36 +1,8 @@
-//! R1453 (SPEC §9.5): the empty-queue fallback. With `LADDER_BOTS=on`, a ranked ticket that has
-//! waited past its own fallback time (15–40 s, from its id) with no person to pair with is paired with
-//! a ladder bot: free, on its schedule, the closest in rating, and not one the player faced in their
-//! last games. A player rated above every bot never gets one but a grinder (R1555000), and a person
-//! inside the window always pairs first.
-//!
-//! R641000 (SPEC §9.5): a Conquest ticket's bot holds a trio, and the two play a ranked series. The
-//! bot is held by the series between games, so nothing else seats it until the series ends; it makes
-//! its picks from the series sweeper after a person's delay; the series is rated once, as it ends,
-//! its side as the bot it is; and a series game draws it no rematch plan.
-//!
-//! R1451 (SPEC §9.11): the person's side of a bot game counts toward the card statistics and R654's
-//! gate like any live game; the bot's side is recorded as `ai` and read only when a query asks.
-//!
-//! R1452 (SPEC §9.12): nothing a client reads tells a bot's seat from a person's. R640000: the match
-//! screen shows a bot's own season row, as the leaderboard does, and Jlorious is people's alone.
-//!
-//! R640001 (SPEC §9.5): the rating window stops at `MAX_FAIR_GAP`, so past it the fallback seats a
-//! bot rather than pairing two people that far apart.
-//!
-//! R639000: once a ranked match ends a bot stays on it a while, as a person on the death screen
-//! does, and offers or meets a rematch as its plan says, a rematch that claims it as the fallback
-//! does and that it then plays.
-//!
-//! R1555000: while the top bots grind, a player rated above every bot may meet a grinder within
-//! `MAX_FAIR_GAP` and no other bot; a grinder is on its widened hours; it steps up a strength every
-//! `BOT_GRIND_STEP_GAMES` rated wins; and a sweep that finds nobody queued kicks off one ranked
-//! Best-of-1 match between a grinder and the closest bot, which the two play out alone, rated as any
-//! bot's game is, with no rematch between them.
-//!
-//! Everything runs through `try_pair` on tokio's paused clock, on the fake store, the real catalog and
-//! the real registry (a started match is a real game). Bots are written through the store, as the pool
-//! writes them (`bots_create`, `bots_set_decks`).
+//! Ladder bots in queue (SPEC §9.5, §9.11, §9.12, §11):
+//! - R1453 (empty-queue fallback), R1555000 (grinder bots).
+//! - R641000 (Conquest bot trios), R1451 (bot telemetry vs card stats, R654).
+//! - R1452 (client indistinguishability), R640000 (season row/leaderboard).
+//! - R640001 (MAX_FAIR_GAP fallback), R639000 (bot rematch behavior).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -66,8 +38,6 @@ use jackioh_server::seats::Seat;
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
 use crate::support::engine::playable;
 use crate::support::store::{fake_lock, from, q};
-
-// Plumbing (private copies: each test file of this binary keeps its own)
 
 /// The app with the fallback switched on (or off), and no fixtures.
 async fn app_with_bots(on: bool) -> Arc<App> {
@@ -228,9 +198,7 @@ async fn series_post(app: &Arc<App>, series_id: &str, action: &str, token: &str,
     view
 }
 
-/// R641000: a person and a bot paired into a Conquest series by the fallback, and game 1 begun: the
-/// person picks their first deck, and the sweeper makes the bot's pick once its delay has passed.
-/// Answers `(person, their token, bot, series id)`.
+/// R641000: person and bot paired into Conquest series by fallback, game 1 begun.
 async fn series_in_game_1(app: &Arc<App>) -> (String, String, String, String) {
     let (person, token) = new_person(app, 1000.0).await;
     let bot = new_bot(app, BotSpec::rated(1000.0)).await;
@@ -402,8 +370,7 @@ fn r1453_fallback_time_is_15_to_40_s_and_stable() {
 
 #[test]
 fn r1453_no_client_can_work_out_the_fallback_time() {
-    // What a client holds: its ticket's id (`ticketId`), the range, and the engine's `Rng`, which runs
-    // in its browser. A time drawn from those alone would tell it the moment a bot would come.
+    // Fallback time cannot be derived from ticket id and range alone.
     let span = i32::try_from(BOT_FALLBACK_MAX_SECONDS - BOT_FALLBACK_MIN_SECONDS + 1).expect("a small range");
     let from_the_id_alone = |id: &str| {
         BOT_FALLBACK_MIN_SECONDS
@@ -1277,8 +1244,7 @@ async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
         q!(app, ranked_put_rank(&mythic_row(&id)));
         people.push(id);
     }
-    // Tied on rating, Jlorious lists them by profile id as text (`ladder.rs`), so `mythic-100`
-    // comes before `mythic-98`: the ids come from a counter every test in the binary shares.
+    // Tied on rating, profiles listed by profile id as text.
     people.sort();
     let (person, token) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(3000.0)).await;
@@ -1315,9 +1281,7 @@ async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
 
 #[tokio::test(start_paused = true)]
 async fn r640001_past_the_gap_a_far_person_is_not_paired_and_the_near_one_gets_a_bot() {
-    // Two people 500 apart who have both waited 120 s: once the window went uncapped at 60 s they
-    // paired; it stops at MAX_FAIR_GAP now, so the one a bot is near gets the bot and the other
-    // (rated above every bot, R1453) waits on.
+    // Stops at MAX_FAIR_GAP: near gets bot, other (rated above every bot, R1453) waits.
     const WAITED_MS: i64 = 120 * MS_PER_SECOND;
     const {
         assert!(1500 - 1000 > MAX_FAIR_GAP);
@@ -1496,8 +1460,7 @@ async fn r639000_a_bot_offers_a_rematch_when_its_plan_says() {
 
 #[tokio::test(start_paused = true)]
 async fn r639000_a_bot_stays_on_the_match_while_its_result_is_written() {
-    // A person's socket stays open from the end of the game on, so a bot that read as gone while
-    // the result is written, then as present for its linger, would flicker where a person never does.
+    // Bot stays present while result written to prevent presence flicker.
     let app = app_with_bots(true).await;
     let (person, token) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
@@ -1533,8 +1496,7 @@ async fn r639000_a_bot_stays_on_the_match_while_its_result_is_written() {
 
 #[tokio::test(start_paused = true)]
 async fn r639000_a_bot_that_means_to_answer_stays_until_its_answer_lands() {
-    // A person who reaches for the button as their linger runs out does not read as gone first: a
-    // bot meeting an offer made late in its linger stays on the match until its answer lands.
+    // Bot stays on match until answer lands for late linger offer.
     let app = app_with_bots(true).await;
     let (person, token) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
@@ -2259,10 +2221,7 @@ async fn r1523000_a_bot_another_door_holds_or_an_old_epoch_starts_no_bot_match()
 
 // R1989000 — the match seed's coin seats the person and the bot
 
-/// R1989000, the bot half: a fixed seed set seats both orders at the bot door, the same seed seats
-/// the same way twice, and an end-to-end `seat` pin skips the coin. The person queues through the
-/// queue endpoint, so the seeds and pins ride the end-to-end maps; the module holds the queue
-/// tests' `SEED_MAP` while it does, as the queue's own seed tests do.
+/// R1989000: bot door match seed coin seats person and bot deterministically.
 mod r1989000_the_seed_coin_seats_the_bot {
     use super::*;
     use crate::api::queue::SEED_MAP;
@@ -2283,9 +2242,7 @@ mod r1989000_the_seed_coin_seats_the_bot {
         "bot-coin-hotel",
     ];
 
-    /// A person with a saved Best-of-1 deck, queued with `seed` (and maybe `seat`) against the
-    /// fallback: the match the sweeper makes once the ticket is past its fallback time, with the
-    /// person's id beside it.
+    /// Person queued against fallback: the match made once past fallback time.
     async fn bot_pair_on(
         app: &Arc<App>,
         name: &str,
@@ -2322,10 +2279,7 @@ mod r1989000_the_seed_coin_seats_the_bot {
         let (status, _, queued) = call(app, "POST", "/api/queue", Some(&token), body).await;
         assert_eq!(status, 200, "{queued}");
         assert_eq!(queued["status"], "open", "{queued}");
-        // Past every fallback time the ticket could have drawn, as `past_any_fallback` backdates a
-        // stored ticket, then heard from again: R897000 cancels a ticket unheard from for longer
-        // than the stale window, and a lone queuer past its fallback is past that too, so the
-        // client re-touches presence with any signed-in request before the sweep runs.
+        // Advance past fallback; signed-in request refreshes presence before sweep (R897000).
         tokio::time::advance(Duration::from_secs((BOT_FALLBACK_MAX_SECONDS + 1) as u64)).await;
         let (status, _, _) = call(app, "GET", "/api/queue/population", Some(&token), json!({})).await;
         assert_eq!(status, 200);

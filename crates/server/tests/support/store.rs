@@ -1,10 +1,4 @@
-//! The helpers every server test file carried its own copy of (#1491, #2385): the fake store behind the
-//! test app (`fake`, `fake_ref`, `fake_lock`), its tables (`table`, `fake_read`) and its injected faults
-//! (`fail_on`, `stop_failing`), one store call in a transaction of its own (`q!`, `store!`,
-//! `try_store!`), a value as JSON and back (`to_json`, `from`), a client-minted id (`uuid`), an
-//! HMAC-SHA256 as hex (`hmac_sha256_hex`) and three steps of tokio's paused clock (`advance`,
-//! `advance_and_yield`, `sleep_settled`). A copy that behaved differently keeps a name of its own;
-//! `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`) refuses a new copy.
+//! Shared test store helpers (#1491, #2385): fake store access, transactions, JSON conversion, and time advancement.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -153,9 +147,7 @@ macro_rules! q {
 }
 pub(crate) use q;
 
-/// One store call in its own transaction: `store!(app, t => expr)` answers `expr` as it stands;
-/// `store!(app, |t| call)` awaits `call` and insists on `Ok`; `store!(db, method(args…))` is `q!` on a
-/// bare `Db` (the e2e tests' fixture store has no `App`).
+/// Runs store call in own transaction, evaluating expr or awaiting call.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
         let mut $t = $app

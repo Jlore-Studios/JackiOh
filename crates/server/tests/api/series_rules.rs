@@ -1,15 +1,5 @@
-//! The Conquest series' pure rules (`src/api/series_rules.rs`, SPEC §9.5, R330–R337, R259–R263).
-//!
-//! No store, no clock and no router: every transition is a function of a row and a time, checked
-//! here on hand-built rows; `series.rs` and `tests/actor/series_recovery.rs` check the same rulings
-//! through the server.
-//!
-//! The trios are built from the owners' names ("alice", "bob"), so "the projection never carries
-//! the opponent's deck names or cards" is a substring search: nothing in bob's view may contain
-//! "alice".
-//!
-//! Rows and views are read as camelCase JSON, so cases depend on the wire shape, not the Rust field
-//! types. A refused transition returns `Result<_, SeriesRefusal>`; `refusal_of` reads its `reason`.
+//! Conquest series pure rules (`src/api/series_rules.rs`, SPEC §9.5, R330–R337, R259–R263).
+//! Verifies state transitions, secret deck privacy in projections, and refusal reasons.
 
 use jackioh_engine::validator::TRIO_DECKS;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};

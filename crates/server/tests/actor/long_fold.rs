@@ -1,11 +1,4 @@
-//! #1035: a whole log's fold runs on tokio's blocking pool, not on the async runtime (SPEC §9.3,
-//! §9.5), as Duos's rebuild and the bot seat already run theirs.
-//!
-//! `TEST_FOLD_GATE`'s play parks the fold that replays it on a channel (`FoldGate`), and the test
-//! asks `GET /healthz` while it is parked. `#[tokio::test]` is a current-thread runtime, so a fold
-//! that held it could not answer: the probe only runs once the fold has ended, and the recorded order
-//! says so. The card waits with a bounded `recv_timeout`, so that failure is an order and not a hang.
-//! A fold that panics is still the rebuild's internal error.
+//! #1035: whole log's fold runs on tokio's blocking pool (SPEC §9.3, §9.5).
 
 use std::sync::Arc;
 

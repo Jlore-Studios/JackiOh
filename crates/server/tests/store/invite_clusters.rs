@@ -1,8 +1,4 @@
-//! `cli/invite_clusters.rs` (invite-clusters), SPEC §9.8's watch for clusters of accounts sharing an
-//! IP hash, against the fake store: what the options read, that one hash behind six accounts is
-//! listed and six hashes behind one account each are not, that the window is respected, and that
-//! the printed report holds counts and a hash's prefix and nothing else. The store query's own
-//! agreement between the fake and Postgres is `tests/store/contract.rs`'s.
+//! IP-cluster invite abuse monitoring (`src/cli/invite_clusters.rs`, SPEC §9.8).
 
 use serde_json::json;
 
@@ -226,9 +222,7 @@ mod invite_clusters_report_cases {
 mod render_invite_clusters_cases {
     use super::*;
 
-    /// Nothing but counts and a hash's prefix reaches the page: the full hash, the profile ids and
-    /// the emails the accounts signed up with are in no `ClusterRow`, and the report is built from
-    /// `ClusterRow`s alone.
+    /// Report built from ClusterRows contains only counts and hash prefix.
     #[tokio::test]
     async fn prints_a_hashs_prefix_and_counts_and_nothing_else() {
         let db = Db::fake();

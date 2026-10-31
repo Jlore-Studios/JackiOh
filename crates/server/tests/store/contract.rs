@@ -1,33 +1,5 @@
-//! ONE suite, TWO stores. Every assertion here runs against both `crates/server/src/db/fake.rs` (the
-//! in-memory fixture the rest of the server suite already trusts) and `crates/server/src/db/pg.rs`
-//! (the real Postgres implementation), so "the fake and the real one agree" is a test result rather
-//! than a hope. Port of `apps/server/test/db/contract.ts`, with its harness (`test/db/harness.ts`,
-//! `contract.memory.test.ts`, `contract.postgres.spec.ts`) folded in below.
-//!
-//! It exists because of what went wrong without it: `src/db/store.ts` did not exist at all, the
-//! server booted only in `E2E=1` mode, and nothing in `pnpm test` could notice — every server test
-//! passed against a fake that nothing was ever compared to.
-//!
-//! What is asserted is the list in `e2e-store.ts`'s own header: the invariants SPEC §9.4 and §9.5
-//! lean on, the ones "a laxer fixture would let a real bug pass the suite" past. Where the schema
-//! and the port genuinely cannot hold the same information, the divergence is named in
-//! `db/pg.rs`'s KNOWN DIVERGENCES block and the assertion here is written to the weaker of the two
-//! (deck order, action timestamps) rather than deleted.
-//!
-//!   cargo test -p jackioh-server --test server_store store::contract   -> `<case>::memory::*` always;
-//!                                                                      `<case>::postgres::*` skip
-//!   test:db (crates/server/tests/db/run.sh, DATABASE_URL set)          -> `<case>::postgres::*` run too
-//!
-//! How the TS reads in Rust:
-//!
-//! - A TS call on `store` outside `store.tx` is one transaction of its own: `q!(h, t => t.<method>(…))`
-//!   begins it, makes the call, commits it when the call succeeded and answers the value (it panics,
-//!   naming the store and the call, on an error). `call!` is the same and answers the `Result`, for
-//!   the cases TS wrote as `rejects.toThrow()`.
-//! - Every port value is built from TS's own object literal with `from(json!({ … }))` and read back
-//!   through `j(&value)` (its JSON), so the cases lean on the wire shape SURFACE §5.1 fixes (TS's
-//!   keys, camelCase) and not on how the Rust structs spell their fields.
-//! - `beforeEach(harness.reset)` is the first line of every generated test (`both_stores!`).
+//! Store contract tests: runs against both in-memory `Db::Fake` and real Postgres `db::pg::PgDb`.
+//! Asserts SPEC §9.4 and §9.5 invariants; wire shapes per SURFACE §5.1.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -68,13 +40,9 @@ use jackioh_server::ranked::ladder::{
 use jackioh_server::ranked::season::ResetChange;
 use jackioh_server::username::{normalize_username, username_key};
 
-// ---------------------------------------------------------------------------
 // One store call, one transaction
-// ---------------------------------------------------------------------------
 
-/// One store call in a transaction of its own, committed when it succeeds and rolled back (the
-/// transaction dropped) when it fails: what a TS call on `store` outside `store.tx` is. Answers
-/// the call's `Result`.
+/// One store call in a transaction of its own, answering `Result`.
 macro_rules! call {
     ($h:expr, $t:ident => $body:expr) => {{
         let mut $t = $h
@@ -138,9 +106,7 @@ macro_rules! both_stores {
     };
 }
 
-// ---------------------------------------------------------------------------
 // A fixture catalog big enough for a legal loadout (← test/db/harness.ts)
-// ---------------------------------------------------------------------------
 
 /// SPEC §9.4 L2: `DECK_SIZE` is 25, and L1 says three decks, so 75 ids is the floor.
 pub const CATALOG_VERSION: &str = "core-1";
@@ -168,9 +134,7 @@ pub fn fixture_catalog() -> FakeCatalog {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The harness the contract drives (← test/db/harness.ts)
-// ---------------------------------------------------------------------------
 
 /// The Postgres runs of every suite in this binary share one database; they take this first.
 pub static PG_SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -214,9 +178,7 @@ impl StoreHarness {
             .collect()
     }
 
-    // -----------------------------------------------------------------------
     // In-memory
-    // -----------------------------------------------------------------------
 
     pub fn memory() -> StoreHarness {
         let unverified = Arc::new(std::sync::Mutex::new(IndexSet::<String>::new()));
@@ -255,9 +217,7 @@ impl StoreHarness {
         }
     }
 
-    // -----------------------------------------------------------------------
     // Postgres
-    // -----------------------------------------------------------------------
 
     /// None when `DATABASE_URL` is unset: the Postgres half of the suite is skipped.
     pub async fn postgres() -> Option<StoreHarness> {
@@ -615,9 +575,7 @@ fn now_ms() -> i64 {
     i64::try_from(since.as_millis()).expect("epoch milliseconds fit an i64")
 }
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
@@ -796,9 +754,7 @@ fn saved_trio(harness: &StoreHarness, profile_id: &str, deck_ids: Value, over: V
     ))
 }
 
-// ---------------------------------------------------------------------------
 // Profiles (SPEC §9.4)
-// ---------------------------------------------------------------------------
 
 mod profiles {
     use super::*;
@@ -1018,9 +974,7 @@ mod profiles {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Usernames (SPEC §9.4, R1434, R1435)
-// ---------------------------------------------------------------------------
 
 mod r1434_usernames {
     use super::*;
@@ -1316,9 +1270,7 @@ mod r1434_usernames {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Invite codes (SPEC §9.4)
-// ---------------------------------------------------------------------------
 
 mod codes {
     use super::*;
@@ -1539,9 +1491,7 @@ mod codes {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Redemption (SPEC §9.4's one server-side transaction)
-// ---------------------------------------------------------------------------
 
 /// `Store.redeem` is the whole of §9.4's six steps, and the two implementations of it are as far
 /// apart as this port gets: one `select app.redeem_invite_code(...)` against migration 0001's
@@ -1862,9 +1812,7 @@ mod redeem {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Collection (SPEC §9.4's entitlement ledger)
-// ---------------------------------------------------------------------------
 
 mod collection {
     use super::*;
@@ -1995,9 +1943,7 @@ mod collection {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250, R252, R256)
-// ---------------------------------------------------------------------------
 
 mod decks {
     use super::*;
@@ -2332,9 +2278,7 @@ mod trios {
     );
 }
 
-// ---------------------------------------------------------------------------
 // A deck's earlier versions (R2100000; migration 0066)
-// ---------------------------------------------------------------------------
 
 mod deck_versions {
     use super::*;
@@ -2524,9 +2468,7 @@ mod deck_versions {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Custom cards on the account (SPEC §12.9, R915008; migration 0037)
-// ---------------------------------------------------------------------------
 
 mod custom_cards {
     use super::*;
@@ -2814,9 +2756,7 @@ mod custom_cards {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Tutorial progress on the account (SPEC §9.10, R320)
-// ---------------------------------------------------------------------------
 
 mod tutorial {
     use super::*;
@@ -3276,9 +3216,7 @@ mod player_settings {
     );
 }
 
-// ---------------------------------------------------------------------------
 // The Best-of-3 series (SPEC §9.5, R259–R263)
-// ---------------------------------------------------------------------------
 
 mod last_boards {
     use super::*;
@@ -3810,9 +3748,7 @@ mod series {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Matches (SPEC §9.3's log, §9.5's lifecycle)
-// ---------------------------------------------------------------------------
 
 mod matches {
     use super::*;
@@ -4299,9 +4235,7 @@ mod matches {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Rooms (SPEC §9.5's direct challenge)
-// ---------------------------------------------------------------------------
 
 mod rooms {
     use super::*;
@@ -4641,9 +4575,7 @@ mod rooms {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Tickets (SPEC §9.5's ranked queue)
-// ---------------------------------------------------------------------------
 
 mod tickets {
     use super::*;
@@ -4967,9 +4899,7 @@ mod tickets {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Game records for the card statistics (SPEC §9.11, R376–R378)
-// ---------------------------------------------------------------------------
 
 mod game_records {
     use super::*;
@@ -5805,9 +5735,7 @@ mod game_records {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Results (SPEC §2.5, §9.5)
-// ---------------------------------------------------------------------------
 
 mod results {
     use super::*;
@@ -5921,9 +5849,7 @@ mod results {
     );
 }
 
-// ---------------------------------------------------------------------------
 // The ranked ladder (SPEC §9.12, R603–R612)
-// ---------------------------------------------------------------------------
 
 mod ranked {
     use super::*;
@@ -6611,9 +6537,7 @@ mod profiles_remove {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Online replays (SPEC §9.3, R768)
-// ---------------------------------------------------------------------------
 
 mod replays {
     use super::*;
@@ -7443,9 +7367,7 @@ mod r1442_play_telemetry {
     );
 }
 
-// ---------------------------------------------------------------------------
 // The ladder bots (R1453, R1454, R1452, migration 0032)
-// ---------------------------------------------------------------------------
 
 mod bots {
     use super::*;
@@ -8277,9 +8199,7 @@ mod bots {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Play together (#936): migration 0038's social rows and 0039's co-op rows
-// ---------------------------------------------------------------------------
 
 /// SPEC S7 (migration 0038): friend requests, friendships, blocks, presence, the spectator setting,
 /// challenges, rooms freed by a challenge, chat and replay shares, as `social/*` reads and writes
@@ -9546,9 +9466,7 @@ mod duos {
     );
 }
 
-// ---------------------------------------------------------------------------
 // The economy (SPEC §14.11; migration 0045)
-// ---------------------------------------------------------------------------
 
 mod economy {
     use super::*;
@@ -10471,9 +10389,7 @@ mod economy {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Cosmetic loadouts (SPEC §14.2, #1834; migration 0061)
-// ---------------------------------------------------------------------------
 
 /// Migration 0061: an account's own picks for its cards (R1834000), the slots and loadouts a ticket,
 /// a room, a trio and a match freeze (R1834002), a ladder bot's wardrobe and picks and what people

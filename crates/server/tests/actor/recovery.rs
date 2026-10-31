@@ -1,15 +1,5 @@
-//! BUILD M6-T4 acceptance, item 2: "killing the actor mid-game and reconnecting yields the same
-//! `viewFor` for both players" (V15, a match survives a restart by folding `(seed, log)`; V9, the fold
-//! equals the live state; docs/v0.3.0/README.md §6).
-//!
-//! SPEC §9.5: "A crashed actor rebuilds its state by folding `(seed, log)`", and §9.3: "`(seed, log)`
-//! reconstructs any match". Dropping the actor from the registry and leaving the log alone is what a
-//! crash looks like from outside (`registry.stop`).
-//!
-//! The real clock (`actor/clock.rs`) runs on tokio's paused clock: the view carries `clockMs` (R79). No
-//! time passes across the crash; re-arming clocks from stored deadlines is M7-T1's (`docs/architecture.md` §5.2).
-//! The first block runs scripted cards; the last deals real ones, which "the same `viewFor`" needs.
-//! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
+//! BUILD M6-T4 acceptance 2, SPEC §9.3, §9.5: crashed actor rebuilds via `(seed, log)` (V9, V15, §6).
+//! Clocks (R79, M7-T1, §5.2) and surface contracts: SURFACE §11.2, §11.3.
 
 use std::any::Any;
 use std::sync::Arc;
@@ -374,10 +364,7 @@ mod m6_t4_crash_recovery {
 
     #[tokio::test(start_paused = true)]
     async fn a_start_the_engine_refuses_writes_no_match_row_and_registers_no_actor() {
-        // The opening draw runs before the row is written, so a game the engine cannot build (a deck a
-        // catalog change stranded, say) fails the start cleanly. Written the other way round the row went
-        // `live` first: a match no socket could ever build an actor for, which only the ceiling reaper
-        // could end.
+        // Engine refusal fails start cleanly before row written as live.
         let (logs, _recording) = Logs::record();
         let app = empty_test_app().await;
         let refused = app
@@ -420,9 +407,7 @@ mod m6_t4_crash_recovery {
         actor.attach(PlayerId::P2, p2.socket());
         actor.idle().await;
 
-        // Mid-game, and deliberately mid-*prompt*: p1 plays and answers its own prompt, ends the turn,
-        // and p2 then opens a prompt p1 still owes an answer to (a trap firing on your turn, R79). A
-        // rebuild has to bring back the open choice, not just the board (§10.6, e2e `05`).
+        // R79, §10.6: rebuild mid-prompt restores open prompt choices.
         send(
             &actor,
             &p1,
@@ -547,9 +532,7 @@ mod m6_t4_crash_recovery {
         );
     }
 
-    /// A rebuild whose fold refuses a logged action keeps the match going and files one report for
-    /// the night bot (`bug_reports.rs`), however often the match is rebuilt, showing the row's seq,
-    /// seat and type and nothing of what the refusal named.
+    /// Rebuild refusing logged action keeps match going and reports seq/seat/type.
     #[tokio::test(start_paused = true)]
     async fn a_rebuild_that_refuses_a_logged_action_keeps_the_match_and_files_one_report() {
         let h = start_match(StartOptions::default()).await;
@@ -608,13 +591,7 @@ mod m6_t4_crash_recovery {
     }
 }
 
-/// The same acceptance item against the engine itself.
-///
-/// §9.5 and §9.3 promise that the *real* engine is deterministic enough for `(seed, decks, log)` to be
-/// the whole truth. This deals two decks of real §8 card ids, walks the real opening through the
-/// socket protocol, kills the actor and folds the log back: the shuffle is the match rng replayed from
-/// `seed` (`setup.rs`), the opening draw is §2.1's table, and the mulligan answers in the log must land
-/// on the same instances or the two views come back different.
+/// Deterministic crash recovery through real engine fold (SPEC §9.3, §9.5, §8, §2.1).
 mod m6_t4_crash_recovery_with_the_real_engine {
     use super::*;
 
@@ -692,10 +669,7 @@ mod m6_t4_crash_recovery_with_the_real_engine {
                 PlayerId::P1
             };
 
-            // §2.1, R265: both mulligans open at once; `first` keeps everything and `second` keeps nothing,
-            // so the fold has to replay R9's "draw the replacements, then shuffle the returned cards back"
-            // in seat order whichever order the answers were logged in: the one step in setup where the rng
-            // is consulted *after* an action in the log.
+            // §2.1, R265: both mulligans open at once; fold replays R9 in seat order.
             let snapshot = actor.snapshot();
             assert_eq!(snapshot.phase, Phase::Mulligan);
             assert_eq!(snapshot.mulligan_owed, vec![PlayerId::P1, PlayerId::P2]);
@@ -768,8 +742,7 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         revived.attach(PlayerId::P1, back_p1.socket());
         revived.attach(PlayerId::P2, back_p2.socket());
         revived.idle().await;
-        // A rebuilt clock arms a fresh mulligan window (the NOT IN SPEC note in `clock.rs`), so `clockMs`
-        // is the one field that could differ — and no time passed across this crash, so it does not.
+        // Rebuilt clock arms fresh mulligan window; clockMs identical when no time passed.
         assert_eq!(last_view(&back_p1), before_p1);
         assert_eq!(last_view(&back_p2), before_p2);
 
@@ -876,10 +849,8 @@ mod m6_t4_crash_recovery_with_the_real_engine {
     }
 }
 
-/// R744: a seat that is not there when the first socket reaches its match's actor starts its
-/// disconnect grace then (§2.5, §9.5). `registry.stop` is the restart: the log and the match row stay,
-/// the actor and every clock in memory go, and the next socket rebuilds both (docs/architecture.md
-/// §5.2). The scripted cards are enough: grace is the clock and the actor's, not a rule.
+/// R744: missing seat starts disconnect grace on first socket attach (§2.5, §9.5).
+/// `registry.stop` simulates restart; next socket rebuilds actor and clocks (§5.2).
 mod r744_disconnect_grace_for_a_seat_that_is_not_there {
     use super::*;
 
@@ -1136,10 +1107,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
     }
 }
 
-/// R1437: the actor's write of a finished game's result is the whole ending (§9.5), and a store that
-/// fails it is tried again; one that never takes it leaves the match `live`, with both players still
-/// in it, for the next socket's rebuild to record. The fake store's `on_call` seam fails the
-/// transaction's `results.insert`, which rolls the whole write back.
+/// R1437: result write is the whole ending (§9.5). Failed store write retries; persistent failure leaves match live.
 mod r1437_a_result_the_store_fails_to_take {
     use super::*;
 
@@ -1283,10 +1251,7 @@ mod r1437_a_result_the_store_fails_to_take {
     }
 }
 
-/// R776000: an action a clock's expiry becomes, whose row the store fails to write, is tried again
-/// when the clock runs out once more, a retry interval later; a row the log holds at the seq the actor
-/// is about to write means the actor is behind its log, so it lets go and the next socket folds the
-/// log it missed. The fake store's `on_call` seam fails the append before it writes anything.
+/// R776000: failed clock expiry action retry. If actor is behind its log, next socket rebuild folds missed log.
 mod r776000_a_server_action_the_store_fails_to_take {
     use super::*;
 
@@ -1439,9 +1404,7 @@ mod r776000_a_server_action_the_store_fails_to_take {
     }
 }
 
-/// R1253000: a live `reduce` that panics (a settle cap's `panic!`) changes nothing, is answered
-/// `internal` once and kept under its nonce, and is filed for the night bot; a clock's action that
-/// panics ends the match at once as the reaper's ceiling draw (R112), never retried (R776000).
+/// R1253000, R112, R776000: live reduce panic answers internal; clock panic ends match.
 mod r1253000_a_live_action_the_engine_panics_on {
     use super::*;
 
