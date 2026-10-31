@@ -83,11 +83,13 @@ R2490000; off in `GREEDY_EVAL`). A unit's Death counts by what it
 leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
-`kill_worth` takes all of it off a kill. An own backrow card's start-of-turn and end-of-turn hooks count
-by one firing (R2477000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
-such hook of the seat's backrow and of its hand's Field Spells (set first, R923001) through the engine's
-trigger queue, and prices it as its controller's evaluation after less before, each crystal gained at
-`next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it, and the enemy's backrow counts as before.
+`kill_worth` takes all of it off a kill. A card's start-of-turn and end-of-turn hooks count
+by one firing (R2477000, R2565000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
+such hook of the units on either field, of the backrow cards the seat can read on either side (a face-down
+enemy card is never probed) and of the seat's hand's Field Spells and Units (set or placed first,
+R923001) through the engine's trigger queue, and prices it as its controller's evaluation after less
+before, each crystal gained at `next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it for a readable
+backrow card, and `unit_worth` for a unit, so an enemy engine is worth more to answer and an own one more to keep.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
@@ -150,7 +152,7 @@ when `should_stop` (the browser's clock, as the AI's) stops the search before it
 ## Budgets
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's
-included, or one turn hook its root fires (R2477000). A step whose `reduce` does far more work than most is charged extra nodes up front
+included, or one turn hook its root fires (R2477000, R2565000). A step whose `reduce` does far more work than most is charged extra nodes up front
 (`surcharge_nodes`: a play that ranks every shipped card, an attack into an armed My Pawn, a fused
 card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
