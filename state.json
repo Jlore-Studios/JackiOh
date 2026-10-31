@@ -10696,12 +10696,8 @@
     "what": "suggestions on claude-5"
   },
   "last_sweep": {
-    "at": "2026-10-31T00:57:44Z",
-    "notes": [
-      "started suggest on claude-5 (run 41153030025)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-31T02:40:00Z; `claude-7` 5-hour usage is 51%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-31T04:30:00Z; it can start a build or a plan again in 2h 30m; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-10-31T03:50:00Z; it can start a build or a plan again in 1h 50m; `claude-1` is busy; `claude-4` 5-hour usage is 51%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-31T02:00:00Z; it can start a build or a plan again in now; `claude-6` 5-hour usage is 51%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-31T04:00:00Z; it can start a build or a plan again in 2h 00m; `claude-5` is busy; `muse` it refused a call; its limit resets at 2026-11-02T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 7-day usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-31T05:00:00Z; it can start a build or a plan again in 4h 00m",
-      "pruned 1 plan file(s) older than 7 days"
-    ],
+    "at": "2026-10-31T01:01:23Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
