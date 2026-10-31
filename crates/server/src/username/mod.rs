@@ -10,12 +10,8 @@
 //!
 //! - [`normalize_username`] checks a proposed base name (R1432, R1433) and answers its stored form,
 //!   NFKC, so fullwidth `ＭＡＸ` is stored and previewed as `MAX`.
-//! - [`username_key`] is the NFKC case fold two names clash on (R1434): `Max`, `max` and `ＭＡＸ` are
-//!   one name, and so are `Straße` and `STRASSE`. Both stores call it, and Postgres collation never
-//!   decides.
-//! - [`render_username`] and [`parse_username`] go between `(base, tag)` and `Max#3`.
-//! - [`sign_in_name`] reads a username typed at sign-in as the key and tag of the one profile that
-//!   holds it (R1443).
+//! - [`username_key`] is the NFKC case fold two names clash on (R1434). Both stores call it, and
+//!   Postgres collation never decides.
 
 use caseless::default_case_fold_str;
 use unicode_normalization::UnicodeNormalization;
@@ -78,11 +74,8 @@ impl UsernameRefusal {
 /// 3. Every character is a letter (`L*`), a decimal digit (`Nd`), `_`, or a combining mark (`M*`)
 ///    that follows a letter, at most `USERNAME_MAX_MARKS` in a row, and in the BMP.
 /// 4. One script: digits, `_` and a mark that takes its letter's script go with any script;
-///    otherwise every character shares one (by its `Script_Extensions`, so the kana length mark `ー`
-///    goes with either kana and an Arabic vowel sign with Arabic only), except Han with Hiragana and
-///    Katakana (Japanese) and Han with Hangul (Korean). A letter Unicode files under no script, not
-///    even by extension (`Common`: modifier letters such as `ˈ` and `ː`), is a script of its own, so
-///    it joins no other.
+///    otherwise every character shares one (by its `Script_Extensions`), except Han with Hiragana
+///    and Katakana (Japanese) and Han with Hangul (Korean).
 /// 5. `USERNAME_MIN_LENGTH` to `USERNAME_MAX_LENGTH` extended grapheme clusters.
 /// 6. The light filter.
 pub fn normalize_username(raw: &str) -> Result<String, UsernameRefusal> {
@@ -118,7 +111,6 @@ pub fn username_key(display: &str) -> String {
     default_case_fold_str(display).nfkc().collect()
 }
 
-/// A username as it is shown: `Max`, or `Max#3` when it carries a tag.
 pub fn render_username(base: &str, tag: Option<i64>) -> String {
     match tag {
         Some(tag) => format!("{base}#{tag}"),
@@ -126,9 +118,9 @@ pub fn render_username(base: &str, tag: Option<i64>) -> String {
     }
 }
 
-/// A username as shown, split back into its base and tag: `Max#3` is `("Max", Some(3))`, `Max` is
-/// `("Max", None)`. None when the part after the last `#` is not a whole number of at least 1. The
-/// base is not checked here; a base never holds a `#` (R1432), so the last one starts the tag.
+/// A username as shown, split back into its base and tag. None when the part after the last `#` is
+/// not a whole number of at least 1. The base is not checked here; a base never holds a `#` (R1432),
+/// so the last one starts the tag.
 pub fn parse_username(shown: &str) -> Option<(&str, Option<i64>)> {
     match shown.rsplit_once('#') {
         None => Some((shown, None)),
@@ -143,12 +135,10 @@ pub fn parse_username(shown: &str) -> Option<(&str, Option<i64>)> {
 }
 
 /// R1443: the key and tag of the username typed at sign-in, which name its one holder (R1434's
-/// unique key and tag): `Max#3`, `max#3` and fullwidth `ＭＡＸ＃３` all name `("max", Some(3))`. The
-/// text is trimmed and read in NFKC, split as [`parse_username`] splits a shown name, and its base
-/// keyed as a claim's is ([`username_key`]). None when nothing was typed, when the text is longer
-/// than `USERNAME_INPUT_MAX_CHARS` (refused before it is normalized, as a claim's is), or when the
-/// part after the last `#` is not a tag. The base is not checked against R1432 on purpose: it only
-/// has to match a name someone holds, and a name a later filter would refuse still names its holder.
+/// unique key and tag). None when nothing was typed, when the text is longer than
+/// `USERNAME_INPUT_MAX_CHARS` (refused before it is normalized, as a claim's is), or when the part
+/// after the last `#` is not a tag. The base is not checked against R1432 on purpose: it only has to
+/// match a name someone holds, and a name a later filter would refuse still names its holder.
 pub fn sign_in_name(typed: &str) -> Option<(String, Option<i64>)> {
     let trimmed = typed.trim();
     if trimmed.is_empty() || trimmed.chars().count() > USERNAME_INPUT_MAX_CHARS {
@@ -390,9 +380,9 @@ enum ReadBack {
 /// letters (all of them, or only the inner ones: [`ReadBack`]), before it is split into tokens. A
 /// run is the letters, marks and substitution digits between underscores and other digits; a run
 /// with no letter in it keeps its digits, so they still split off as a token of digits alone and the
-/// `455` of `Bob_455` is never read as `ass`. `Bob455` reads as the one token `Bobass`. A letter read
-/// back takes the case of the nearest letter before it in the run, or else after it, so it never
-/// makes a camelCase split of its own: `C0CK` reads `COCK`, not `CoCK`.
+/// `455` of `Bob_455` is never read as `ass`. A letter read back takes the case of the nearest letter
+/// before it in the run, or else after it, so it never makes a camelCase split of its own: `C0CK`
+/// reads `COCK`, not `CoCK`.
 fn read_back_digits(name: &str, digits: ReadBack) -> String {
     fn flush(run: &mut Vec<char>, out: &mut String, digits: ReadBack) {
         if !run.iter().copied().any(is_letter) {
@@ -472,10 +462,9 @@ fn tokens(name: &str) -> Vec<String> {
 }
 
 /// R1433: whether the light filter refuses an NFKC name. The token list is matched against the
-/// tokens of the name with its digits read back both ways ([`read_back_digits`], [`ReadBack`]), so
-/// `a55`, `d1ck` and `Dick1` are each refused and `Tit4n` is not. A token without a letter is never
-/// matched against it: its digits would read back as letters (`455` as `ass`) and refuse an
-/// innocent `Bob_455`.
+/// tokens of the name with its digits read back both ways ([`read_back_digits`], [`ReadBack`]). A
+/// token without a letter is never matched against it: its digits would read back as letters (`455`
+/// as `ass`) and refuse an innocent `Bob_455`.
 fn is_blocked(name: &str) -> bool {
     let folded = fold(name);
     if words(BLOCKLIST_ANYWHERE).any(|word| folded.contains(word)) {

@@ -1,9 +1,7 @@
 //! The cosmetics registry (#1295, SPEC §11 R1295000): every cosmetic a player can pick, in
-//! `crates/server/cosmetics.json`, with its id, kind, name, rarity, whether it is its kind's
-//! default and whether it is a starter (§14.2). The server reads it here, so the pack roll
-//! ([`pack_cosmetics`], R1301002) and ownership name the same ids, and
-//! `tests/export_cosmetics.rs` writes it into `apps/web/src/wire/generated/cosmetics.ts` for the
-//! client, which draws them. No I/O: the file is compiled in.
+//! `crates/server/cosmetics.json`. The server reads it here, so the pack roll ([`pack_cosmetics`],
+//! R1301002) and ownership name the same ids, and `tests/export_cosmetics.rs` writes it into
+//! `apps/web/src/wire/generated/cosmetics.ts` for the client, which draws them.
 //!
 //! [`problems`] is the registry's check: no id twice, every id a lower-case slug short enough to
 //! travel as a settings text (R633, the client keeps a player's picks in a settings group), and
@@ -11,35 +9,18 @@
 //! (R1333000). A cosmetic never enters `PlayerView`, an action, the log or a replay hash: none of
 //! it is a rule (CLAUDE.md rule 7).
 //!
-//! R1333000: a cosmetic's rarity is [`CosmeticRarity`], its own scale, never its card's: nothing
-//! here converts it to or from the catalog's `PrintedRarity`, so no code can tie one to the other.
-//!
-//! R1313000: the full-art faces of the hero portraits' cards (R1017001) are cosmetics too, one per
-//! card, each naming its card. A player owns one on its card and never picks one, so the kind has
-//! no default, and the check refuses a full art with no card, a card with two, a default one and a
-//! card named by any other kind.
-//!
-//! R1661000: every account cosmetic (a playmat, a backdrop, a card back, a hero portrait) but its
-//! kind's default is `GLOBAL_COSMETIC_FLOOR_RARITY` or better, the floor of a duplicate's global
-//! roll ([`global_cosmetics`], R1661001), and the check refuses one below it.
-//!
 //! R1827000: the hero portraits (R641) are account cosmetics, one `portrait-<id>` entry per
 //! `PortraitId`, `portrait-vanilla` the kind's default and a starter and the other five owned, so
-//! they are what the global roll drops. The check refuses a portrait entry missing, extra or a
-//! default other than vanilla, and a deck's save refuses a portrait its account does not own
-//! ([`owns_portrait`]).
+//! they are what the global roll drops.
 //!
 //! R1833000: #1833 appends 36 cosmetics, six of each kind a player picks, none a default or a
-//! starter, so every account earns them (§14.12) and none is granted to an account that exists. Its
-//! fifteen Legendary and Mythic ones are the first chases and Mythics that can drop: a duplicate's
-//! global roll, a cosmetic pack slot and the Chase Shard bar reach them, and no token does. A deck's
-//! save refuses a playmat, backdrop or card back its account does not own
-//! ([`owns_account_cosmetic`]), as it does a portrait.
+//! starter, so every account earns them (§14.12) and none is granted to an account that exists. A
+//! deck's save refuses a playmat, backdrop or card back its account does not own
+//! ([`owns_account_cosmetic`]), as it does a portrait ([`owns_portrait`]).
 //!
 //! R1834001: every write of a pick (a deck's slots, the `cosmetics` settings group, a card's own
-//! picks) is held to [`check_pick`]: an id of the registry of the slot's kind that the account
-//! owns ([`owns`]: its kind's default, a starter, or a ledger row on the card or the account), and
-//! a loadout freezes nothing else (`loadout::freeze_loadout`, R1834002).
+//! picks) is held to [`check_pick`], and a loadout freezes nothing else (`loadout::freeze_loadout`,
+//! R1834002).
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -98,8 +79,8 @@ impl CosmeticKind {
         Self::Portrait,
     ];
 
-    /// A per-card kind, owned for one card (§14.2): a foil, a finish, a border or a full art
-    /// (R1313000). The deck slots' kinds and the hero portrait are account cosmetics (R1827000).
+    /// A per-card kind, owned for one card (§14.2). The deck slots' kinds and the hero portrait are
+    /// account cosmetics (R1827000).
     pub fn is_per_card(self) -> bool {
         matches!(self, Self::Foil | Self::Finish | Self::Border | Self::FullArt)
     }
@@ -118,7 +99,6 @@ pub enum CosmeticRarity {
 }
 
 impl CosmeticRarity {
-    /// Every rarity, commonest first.
     pub const ALL: [Self; 5] = [
         Self::Common,
         Self::Rare,
@@ -158,9 +138,8 @@ impl CosmeticRarity {
     }
 
     /// [`Self::fallback_order`] with every rarity at or above `floor` ahead of those below it
-    /// (R1306001): a floored roll falls to its floor, then up, and below it last. A cosmetic pack
-    /// slot reads it, and so does a duplicate's global roll (R1661001); one with no floor passes
-    /// `Common`.
+    /// (R1306001). A cosmetic pack slot reads it, and so does a duplicate's global roll (R1661001);
+    /// one with no floor passes `Common`.
     pub fn floored_fallback_order(self, floor: Self) -> Vec<Self> {
         let mut order = self.fallback_order();
         // Stable, so each side keeps `fallback_order`'s order.
@@ -198,18 +177,16 @@ pub struct Cosmetic {
     pub name: String,
     pub rarity: CosmeticRarity,
     /// The kind's default: what a card wears when nothing else is picked, and what an id a client
-    /// does not know draws as. Exactly one per kind a player picks, and never a full art.
+    /// does not know draws as.
     pub default: bool,
     /// §14.2: owned by every account on every card without a ledger row, so no pack drops it
-    /// (R1301002). Every entry #1295 and #1297 shipped is one; a cosmetic added later leaves it
-    /// false and must be owned (§14.12), as #1827's portraits but vanilla and #1833's 36 do
-    /// (R1833000).
+    /// (R1301002). A cosmetic added later leaves it false and must be owned (§14.12), as #1827's
+    /// portraits but vanilla and #1833's 36 do (R1833000).
     #[serde(default)]
     pub starter: bool,
     /// §14.2: a chase cosmetic. The mark agrees with the rarity, true exactly for a Legendary or
-    /// Mythic one, and [`problems`] refuses a registry where it does not (R1333000). No token pays
-    /// for one; the Chase Shard bar buys one, and one drops when a duplicate's roll or a cosmetic
-    /// pack slot lands on its tier (§14.6).
+    /// Mythic one (R1333000). No token pays for one; the Chase Shard bar buys one, and one drops
+    /// when a duplicate's roll or a cosmetic pack slot lands on its tier (§14.6).
     #[serde(default)]
     pub chase: bool,
     /// The card a full art belongs to, by catalog id; no other kind names one (R1313000).
@@ -263,8 +240,7 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
         if cosmetic.kind == CosmeticKind::FullArt && cosmetic.default {
             out.push(format!("the full art {id:?} is a default, which no full art is"));
         }
-        // R1661000: an account cosmetic but its kind's default is at the global roll's floor or
-        // above.
+        // R1661000: an account cosmetic but its kind's default is at the global roll's floor or above.
         if !cosmetic.kind.is_per_card() && !cosmetic.default && cosmetic.rarity < GLOBAL_COSMETIC_FLOOR_RARITY
         {
             out.push(format!(
@@ -429,10 +405,7 @@ pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
 
 /// The account cosmetics a duplicate's global roll may drop (R1661001): the playmats, backdrops,
 /// card backs and hero portraits that are neither a default nor a starter, in the registry's order.
-/// Every one is `GLOBAL_COSMETIC_FLOOR_RARITY` or better ([`problems`], R1661000); on the shipped
-/// registry they are the five portraits but vanilla (R1827000), then #1833's six playmats, six
-/// backdrops and six card backs (R1833000), its first Legendary and Mythic account cosmetics among
-/// them.
+/// Every one is `GLOBAL_COSMETIC_FLOOR_RARITY` or better ([`problems`], R1661000).
 pub fn global_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
@@ -442,8 +415,8 @@ pub fn global_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
 }
 
 /// The cosmetics a cosmetic pack may drop (R1306000): every entry, per-card or account, that is
-/// not a default or a starter, in the registry's order. A chase drops when a slot lands on its
-/// tier (R1333000), and one that names a card, a full art, drops on that card alone (R1313000).
+/// not a default or a starter, in the registry's order. One that names a card, a full art, drops
+/// on that card alone (R1313000).
 pub fn cosmetic_pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
@@ -480,8 +453,7 @@ pub fn portrait_of(id: &str) -> Option<PortraitId> {
 }
 
 /// R1827000: whether an account whose owned account cosmetics are `account` (its ledger's rows)
-/// owns `portrait`: it holds the portrait's id, or the shipped registry makes it a starter, as it
-/// does vanilla, which every account owns with no row (§14.2).
+/// owns `portrait`.
 pub fn owns_portrait(portrait: PortraitId, account: &[String]) -> bool {
     owns_account_cosmetic(&portrait_cosmetic_id(portrait), account)
 }
@@ -695,7 +667,6 @@ mod tests {
             assert_eq!(cosmetic.rarity, CosmeticRarity::Epic, "{}", cosmetic.id);
             assert!(!cosmetic.default, "{}", cosmetic.id);
         }
-        // No other kind names a card.
         assert!(
             cosmetics
                 .iter()
@@ -887,7 +858,6 @@ mod tests {
             chase: rarity.is_chase(),
             ..entry(id, kind, false)
         };
-        // A Rare playmat is refused, and so is a Common backdrop or a Rare card back.
         for (id, kind, rarity) in [
             ("table-rare", CosmeticKind::Table, CosmeticRarity::Rare),
             ("field-common", CosmeticKind::Field, CosmeticRarity::Common),
@@ -914,9 +884,6 @@ mod tests {
         ]);
         assert!(problems(&fine).is_empty(), "{:?}", problems(&fine));
 
-        // The shipped file passes: each deck slot kind's default is Common and its items are Epic
-        // or better, and what the global roll drops is no starter and no per-card cosmetic: the
-        // portraits but vanilla (R1827000) and #1833's 18 (R1833000).
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         for kind in [CosmeticKind::Table, CosmeticKind::Field, CosmeticKind::CardBack] {
             for cosmetic in cosmetics.iter().filter(|cosmetic| cosmetic.kind == kind) {
@@ -1281,7 +1248,6 @@ mod tests {
                 assert!(cosmetic.rarity >= GLOBAL_COSMETIC_FLOOR_RARITY, "{}", cosmetic.id);
             }
         }
-        // Six of each kind a player picks, one of them Mythic.
         for kind in CosmeticKind::PICKED {
             let of_kind: Vec<&Cosmetic> = new.iter().filter(|cosmetic| cosmetic.kind == kind).collect();
             assert_eq!(of_kind.len(), 6, "{kind:?}");
@@ -1300,8 +1266,6 @@ mod tests {
         ));
         assert_eq!(new.iter().filter(|cosmetic| cosmetic.chase).count(), 15);
 
-        // The global roll drops the five portraits but vanilla, then the 18 account cosmetics, all
-        // Epic or better; a cosmetic pack drops every one of the 36.
         let ids = |list: Vec<Cosmetic>| list.into_iter().map(|cosmetic| cosmetic.id).collect::<Vec<_>>();
         let mut global = vec![
             "portrait-gary".to_owned(),

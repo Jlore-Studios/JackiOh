@@ -1,20 +1,9 @@
 //! The card pack roll (SPEC §14.3, §14.4; #1301, #1339): pure, from a pack's pool, the account's
 //! holdings and a seed to what each slot grants and the next pity counters. No store, no clock,
 //! no I/O: `economy::packs` reads the holdings, draws the seed and writes the grants, and a
-//! replay is [`roll_opening`] over the same holdings and seed (R1301003, R1339002).
-//!
-//! - [`slot_tiers`]: each slot's card rarity, a tiered roll on `CARD_TIER_WEIGHTS`, the floored
-//!   slot's at `PACK_FLOOR_RARITY` (R1339000); pity forces on top of them (`math::apply_pity`,
-//!   R1339001).
-//! - [`draw_card`]: a slot's card from the pool, leaning toward the cards the account does not
-//!   own, from the nearest rarity the pool holds when it lacks the slot's (R1301001).
-//! - [`global_grant`]: a duplicate's global roll before its per-card one, while an account
-//!   cosmetic is left unowned: one draw, and on a hit an unowned account cosmetic of a tiered roll
-//!   floored at `GLOBAL_COSMETIC_FLOOR_RARITY` (R1661001).
-//! - [`duplicate_grant`]: the dupe chain past an unlock, a duplicate's cosmetic, its rarity its
-//!   own tiered roll on `COSMETIC_TIER_WEIGHTS`, or the bars (R1301002).
-//! - [`roll_opening`]: the whole opening, in R1339002's draw order. Every list it walks is a
-//!   `Vec` or an `IndexMap` in catalog or registry order, so the same inputs draw the same.
+//! replay is [`roll_opening`] over the same holdings and seed (R1301003, R1339002). Every list it
+//! walks is a `Vec` or an `IndexMap` in catalog or registry order, so the same inputs draw the same.
+//! A slot's card leans toward the cards the account does not own (R1301001).
 
 use indexmap::IndexMap;
 use jackioh_engine::config::MAX_COPIES;
@@ -61,7 +50,6 @@ impl PackKind {
     }
 }
 
-/// A card a pack can hold, with its printed rarity.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PoolCard {
     pub id: String,
@@ -133,10 +121,9 @@ pub struct Opening {
 }
 
 /// What every economy row of an opening logs in its `ref` (R1301003, §14.11): everything the roll
-/// read but the holdings before it (the pack, the catalog version its pool came from, the cosmetics
-/// it could drop and the seed) and its result (the slots, the pity counters after it and the draws
-/// taken). [`roll_opening`] over that catalog's pool, the holdings before it and `cosmetics`, with
-/// `seed`, replays it however the live catalog or registry has moved since.
+/// read but the holdings before it, and its result. [`roll_opening`] over that catalog's pool, the
+/// holdings before it and `cosmetics`, with `seed`, replays it however the live catalog or registry
+/// has moved since.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OpeningLog {
@@ -155,8 +142,6 @@ pub struct OpeningLog {
 }
 
 impl OpeningLog {
-    /// The log of `opening`, rolled from `pack`'s pool in catalog `catalog`, over `registry`, with
-    /// `seed`.
     pub fn of(
         pack: PackKind,
         catalog: &str,
@@ -178,8 +163,8 @@ impl OpeningLog {
 
 /// Each slot's card rarity (R1339000): a tiered roll on `CARD_TIER_WEIGHTS`, one draw each in slot
 /// order, the slot at `PACK_FLOORED_SLOT` floored at `PACK_FLOOR_RARITY`, so it never rolls Common
-/// and every pack holds a Rare or better. These are the opening's first draws (R1339002); pity
-/// forces on top of them (`math::apply_pity`, R1339001).
+/// and every pack holds a Rare or better. Pity forces on top of them (`math::apply_pity`,
+/// R1339001).
 pub fn slot_tiers(rng: &mut Rng) -> Vec<PrintedRarity> {
     (0..PACK_SLOTS)
         .map(|at| card_tier((at == PACK_FLOORED_SLOT).then_some(PACK_FLOOR_RARITY), rng))
@@ -188,8 +173,7 @@ pub fn slot_tiers(rng: &mut Rng) -> Vec<PrintedRarity> {
 
 /// The rarities a slot of `rolled` takes its card from, in order (R1301001): its own, then each
 /// lower one from the nearest down, then each higher one from the nearest up, with every rarity at
-/// or above `floor` ahead of those below it: a floored slot falls to its floor, then up, and below
-/// it only when nothing above is held. A slot with no floor passes `Common`.
+/// or above `floor` ahead of those below it. A slot with no floor passes `Common`.
 pub fn fallback_order(rolled: PrintedRarity, floor: PrintedRarity) -> Vec<PrintedRarity> {
     let mut order = vec![rolled];
     order.extend(
@@ -210,8 +194,6 @@ pub fn fallback_order(rolled: PrintedRarity, floor: PrintedRarity) -> Vec<Printe
     order
 }
 
-/// A card's weight in a slot's draw (§14.3): `PACK_UNOWNED_WEIGHTS.unowned` while the account
-/// owns fewer than `MAX_COPIES` of it, else `.owned`.
 fn weight(owned: &IndexMap<String, i64>, card_id: &str) -> f64 {
     if owned.get(card_id).copied().unwrap_or(0) < i64::from(MAX_COPIES) {
         PACK_UNOWNED_WEIGHTS.unowned
@@ -250,9 +232,8 @@ pub fn draw_card<'p>(
 /// roll on `COSMETIC_TIER_WEIGHTS` on its own scale, whatever the card's rarity (R1339000,
 /// R1333000): one of `droppable` of that rarity the account does not own on that card, picked
 /// uniformly (one draw), or, with none, points to the bars (no draw); a duplicate does not fall to
-/// another tier. `droppable` is `cosmetics::pack_cosmetics`'s; one that names a card, a full art,
-/// is of that card alone (R1313000), and a Legendary or Mythic one is a chase that drops like any
-/// other (R1333000).
+/// another tier. One that names a card, a full art, is of that card alone (R1313000), and a
+/// Legendary or Mythic one is a chase that drops like any other (R1333000).
 pub fn duplicate_grant(
     card_id: &str,
     cosmetic_rarity: CosmeticRarity,
@@ -279,15 +260,14 @@ pub fn duplicate_grant(
     }
 }
 
-/// A duplicate's global roll (R1661001), taken before its per-card one. With none of `global`
-/// (`cosmetics::global_cosmetics`'s) at or above `GLOBAL_COSMETIC_FLOOR_RARITY` left unowned
-/// (`owned`, the account's) it is `None` and draws nothing. Else one draw below
-/// `TIER_WEIGHT_TOTAL`, and one at or past `GLOBAL_COSMETIC_ROLL_WEIGHT` is a miss, `None`. A hit
-/// is a tiered roll on `COSMETIC_TIER_WEIGHTS` floored at `GLOBAL_COSMETIC_FLOOR_RARITY` (one
-/// draw), falling as a cosmetic pack's floored slot does (`CosmeticRarity::floored_fallback_order`,
-/// as `cosmetic_packs::slot_grant` reads it, R1306001) to the first tier with one unowned, every
-/// tier at or above the floor first, then one of that
-/// tier's picked uniformly in registry order (one draw): a `SlotGrant::Cosmetic` for the account.
+/// A duplicate's global roll (R1661001), taken before its per-card one. With none of `global` at
+/// or above `GLOBAL_COSMETIC_FLOOR_RARITY` left unowned it is `None` and draws nothing. Else one
+/// draw below `TIER_WEIGHT_TOTAL`, and one at or past `GLOBAL_COSMETIC_ROLL_WEIGHT` is a miss,
+/// `None`. A hit is a tiered roll on `COSMETIC_TIER_WEIGHTS` floored at
+/// `GLOBAL_COSMETIC_FLOOR_RARITY` (one draw), falling as a cosmetic pack's floored slot does
+/// (`CosmeticRarity::floored_fallback_order`, as `cosmetic_packs::slot_grant` reads it, R1306001)
+/// to the first tier with one unowned, then one of that tier's picked uniformly in registry order
+/// (one draw): a `SlotGrant::Cosmetic` for the account.
 pub fn global_grant(global: &[Cosmetic], owned: &[String], rng: &mut Rng) -> Option<SlotGrant> {
     let unowned: Vec<&Cosmetic> = global
         .iter()
@@ -313,15 +293,14 @@ pub fn global_grant(global: &[Cosmetic], owned: &[String], rng: &mut Rng) -> Opt
     })
 }
 
-/// The whole opening (R1301003, R1339002), pure from the pack's pool, the account's holdings
-/// before it, the cosmetics registry and the opening's seed. Its draws, in this order and no other:
-/// [`slot_tiers`]' one per slot, which pity forces on top of with no draw of its own, then slot by
-/// slot the card's one and, for a duplicate, the global roll's when an account cosmetic is left
-/// unowned ([`global_grant`], R1661001), its tier's and its pick's on a hit, or else its
-/// cosmetic tier's one and the pick's one when there is something to pick. A slot keeps its rarity
-/// after pity when its card comes from another (R1301001). Ownership is read slot by slot, so a
-/// card unlocked earlier in the pack is a duplicate later in it (R1301002), and an account
-/// cosmetic dropped earlier is owned later (R1661001). `None` for an empty pool.
+/// The whole opening (R1301003, R1339002). Its draws, in this order and no other: [`slot_tiers`]'
+/// one per slot, which pity forces on top of with no draw of its own, then slot by slot the card's
+/// one and, for a duplicate, the global roll's when an account cosmetic is left unowned
+/// ([`global_grant`], R1661001), its tier's and its pick's on a hit, or else its cosmetic tier's
+/// one and the pick's one when there is something to pick. A slot keeps its rarity after pity when
+/// its card comes from another (R1301001). Ownership is read slot by slot, so a card unlocked
+/// earlier in the pack is a duplicate later in it (R1301002), and an account cosmetic dropped
+/// earlier is owned later (R1661001). `None` for an empty pool.
 pub fn roll_opening(
     pool: &[PoolCard],
     holdings: &Holdings,
@@ -528,7 +507,6 @@ mod tests {
             card_odds(None),
             "the other slots",
         );
-        // One draw per slot.
         assert_eq!(rng.cursor() as usize, DRAWS * PACK_SLOTS);
     }
 
@@ -685,7 +663,6 @@ mod tests {
             Some("r")
         );
         assert_eq!(rng.cursor(), 2);
-        // An empty pool has no card and takes no draw.
         assert_eq!(draw_card(&[], Rare, Common, &owned, &mut rng), None);
         assert_eq!(rng.cursor(), 2);
     }
@@ -963,7 +940,6 @@ mod tests {
         assert!(first.is_some());
         assert_eq!(roll_opening(&pool, &holdings, &foils, "r1301003"), first);
         assert_ne!(roll_opening(&pool, &holdings, &foils, "r1301003-other"), first);
-        // An empty pool rolls nothing.
         assert_eq!(roll_opening(&[], &holdings, &foils, "r1301003"), None);
     }
 

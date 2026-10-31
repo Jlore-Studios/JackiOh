@@ -72,7 +72,7 @@ pub enum ClaimedResult {
 }
 
 impl ClaimedResult {
-    /// As `GameSummary::won` reads a result: `Some(true)` a win, `Some(false)` a loss, `None` a draw.
+    /// As `GameSummary::won` reads a result.
     pub fn won(self) -> Option<bool> {
         match self {
             ClaimedResult::Win => Some(true),
@@ -145,7 +145,6 @@ fn opening_args(pinned: Pinned, seed: &str, setup: &PracticeSetup) -> CreateGame
     })
 }
 
-/// The game `args` creates, begun: `DoesNotFold` when the engine refuses to begin it.
 fn begin(pinned: Pinned, args: &CreateGameArgs) -> Result<GameState, ClaimRefusal> {
     let begun = engine::begin_game(pinned, &engine::create_game(pinned, args));
     match begun.error {

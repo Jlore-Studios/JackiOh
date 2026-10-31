@@ -7,8 +7,7 @@
 //! load-bearing method. Its one password path is R1443's sign-in by username (`password_grant`),
 //! which asks the provider for the session with the address only the server may read, behind the
 //! route's own limits. It never signs anyone up: a service-role sign-up would bypass the provider's
-//! rate limits and email confirmation, which §9.4's invite gate relies on. `sign_in_with_password`
-//! (`/api/auth/signin`) still answers unavailable on Supabase.
+//! rate limits and email confirmation, which §9.4's invite gate relies on.
 //!
 //! Security notes (§9.8's "Invite code brute force" row lists "verified email"):
 //!  - `email_verified` NEVER comes from the token's `user_metadata` (users can edit it, which would
@@ -17,9 +16,7 @@
 //!  - Deleting a user does not invalidate issued tokens: the admin lookup turns "no such user" into a
 //!    failed verification, and `profiles.status` (§9.4) stays the authority on what an account may do.
 //!  - Nor does ending a SESSION (R194): a token naming its session (`session_id`) is checked against
-//!    `GET /auth/v1/user`, and only a live answer is remembered, per session, for
-//!    `AUTH_SESSION_LIVE_CACHE_SECONDS`. That answer is also the authoritative user, so it stands in
-//!    for the admin lookup while fresh.
+//!    `GET /auth/v1/user` (`check_session`).
 //!  - TWO-STEP SIGN-IN (R665): an account with a verified TOTP factor is honored only with an `aal2`
 //!    token. Whether it has a factor comes from the provider's user, never the token, and the last
 //!    answer is remembered per user so an outage cannot lower the bar (`mfa_enrolled`).
@@ -37,8 +34,6 @@ use crate::config::{
     AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS, EMAIL_CONFIRMED_CACHE_TTL_MS,
     JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS, JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS,
 };
-
-// The identity a verified token names
 
 /// Who a verified bearer token belongs to.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -92,7 +87,6 @@ pub enum PasswordGrantOutcome {
 
 /// Why a provider call did not produce what was asked.
 ///
-/// - `Invalid`: the token is not currently valid.
 /// - `Rejected`: a provider's plain error (a wrong password). The routes turn it into the one
 ///   identical 401 (`api::auth::call_provider`); its text is logged, never sent.
 /// - `Unavailable`: passed through to the client as 503 with this message.
@@ -127,8 +121,6 @@ const MS_PER_SECOND: i64 = 1000;
 /// The level a token claims to be (`aal`): `aal2` once a second factor was proved (R665).
 const SECOND_FACTOR_LEVEL: &str = "aal2";
 
-// The slice of the provider's shapes this file reads
-
 /// GoTrue's user object, narrowed to the fields §9.4 needs. `user_metadata` is deliberately absent:
 /// it is user-editable, so this file has no way to read it by accident.
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -161,8 +153,6 @@ pub enum AdminDeletion {
     Missing,
     Unavailable,
 }
-
-// Helpers
 
 fn as_record(value: Option<&Value>) -> IndexMap<String, Value> {
     match value {
@@ -197,7 +187,6 @@ fn as_auth_api_user(value: &Value) -> Option<AuthApiUser> {
     })
 }
 
-/// R665: GoTrue's `factors` list holds a verified TOTP factor.
 fn has_verified_totp(factors: Option<&Value>) -> bool {
     let Some(Value::Array(factors)) = factors else {
         return false;
@@ -288,8 +277,6 @@ fn signed_with_shared_secret(token: &str) -> bool {
 pub(crate) fn is_uuid(id: &str) -> bool {
     uuid::Uuid::parse_str(id).is_ok()
 }
-
-// The real Supabase clients
 
 /// The admin half (secret key only): §9.4 step 1's authoritative `email_confirmed_at`, and
 /// `DELETE /api/account`'s last step.
@@ -404,8 +391,6 @@ pub fn create_real_clients(input: &SupabaseAuthClientInput, http: &reqwest::Clie
     }
 }
 
-// The provider
-
 /// No `Debug`: it holds the secret key and the shared secret.
 #[derive(Clone, Default)]
 pub struct SupabaseAuthInput {
@@ -420,11 +405,10 @@ pub struct SupabaseAuthInput {
     /// Not in SPEC, and no R-row: test seam for the JWKS. Production leaves it unset and fetches
     /// `jwks_url`; a test hands it a local key set instead.
     pub key_set: Option<JwkSet>,
-    /// Not in SPEC, and no R-row: test seam for the clock behind the provider's caches
-    /// (`EMAIL_CONFIRMED_CACHE_TTL_MS`, R194's live sessions, the key set's age); defaults to the
-    /// server's clock (`app::now_ms`). A test drives the caches with it
-    /// while the provider's requests run in real time: tokio's paused clock would jump to their
-    /// timeouts whenever the runtime waits on the socket.
+    /// Not in SPEC, and no R-row: test seam for the clock behind the provider's caches; defaults to
+    /// the server's clock (`app::now_ms`). A test drives the caches with it while the provider's
+    /// requests run in real time: tokio's paused clock would jump to their timeouts whenever the
+    /// runtime waits on the socket.
     pub now: Option<ProviderClock>,
 }
 
@@ -505,9 +489,7 @@ impl Drop for FetchGuard<'_> {
 enum JwksFetchError {
     /// The request never answered (the fetch timeout included).
     Transport,
-    /// The endpoint answered with this status.
     Status(u16),
-    /// The body was not a key set.
     Body,
 }
 
@@ -720,12 +702,11 @@ impl SupabaseAuth {
             .collect()
     }
 
-    /// The key set: fetched on first use, refetched once it is old, and refetched (at most once
-    /// per cooldown) when no key in it matches the token. The mutex is never held across a fetch:
-    /// one request fetches while the others wait on its `Notify`. A failed refetch keeps serving
-    /// the last good set for at most `JWKS_STALE_MAX_MS` past its age (R1144000), so a key
-    /// endpoint that is down signs nobody out. A successful fetch replaces the set whole, so a key
-    /// the endpoint dropped is refused at once.
+    /// The key set: fetched on first use, refetched once it is old, and refetched (at most once per
+    /// cooldown) when no key in it matches the token. The mutex is never held across a fetch: one
+    /// request fetches while the others wait on its `Notify`. A failed refetch keeps serving the last
+    /// good set for at most `JWKS_STALE_MAX_MS` past its age (R1144000), so a key endpoint that is
+    /// down signs nobody out.
     async fn keys_for(&self, header: &Header) -> Vec<DecodingKey> {
         loop {
             let now = (self.now)();
@@ -825,9 +806,8 @@ impl SupabaseAuth {
     }
 
     // Both verifiers swallow their error: it covers a forged or expired token, a project that
-    // signs symmetrically (the JWKS then publishes no matching key) and a key set past
-    // R1144000's stale cap while the endpoint is down (`keys_for` still serves the last good set
-    // inside it). The caller falls through to the next tier.
+    // signs symmetrically (the JWKS then publishes no matching key) and a key set past R1144000's
+    // stale cap while the endpoint is down. The caller falls through to the next tier.
     async fn verify_against_jwks(&self, token: &str) -> Option<LocalClaims> {
         let header = jsonwebtoken::decode_header(token).ok()?;
         if header.alg.family() == AlgorithmFamily::Hmac {
@@ -848,10 +828,8 @@ impl SupabaseAuth {
         Self::claims_from(&data.claims)
     }
 
-    /// Ask the auth server who a token belongs to. Two callers: tier 3, the last-resort verification
-    /// for a project still signing with a symmetric secret this server has not been given, and
-    /// `check_session` (R194), since the provider refuses a token whose session it has ended. The
-    /// `apikey` header is the secret key, Supabase's own credential, never echoed back to a caller.
+    /// Ask the auth server who a token belongs to (tier 3 and `check_session`). The `apikey` header
+    /// is the secret key, Supabase's own credential, never echoed back to a caller.
     async fn fetch_user_by_token(&self, token: &str) -> AdminLookup {
         let response = match self
             .http
@@ -910,8 +888,7 @@ impl SupabaseAuth {
                 id: user_id.to_string(),
                 email: cached.email,
                 mfa_enrolled,
-                // Only confirmed emails are cached, so a hit means confirmed. The timestamp's value is
-                // never shown to anyone; `is_email_confirmed` only asks whether it is set.
+                // Only confirmed emails are cached, so a hit means confirmed.
                 email_confirmed_at: Some(iso_of(cached.at)),
                 app_metadata: IndexMap::new(),
             });
@@ -1150,8 +1127,6 @@ impl SupabaseAuth {
     }
 }
 
-// BUILD M8's fixture provider (`E2E=1`) and the test double, one struct
-
 /// One fixture account (`e2e/support/config.ts`, `accounts`): user id, email, password, token.
 /// A private copy of `api::e2e::E2E_ACCOUNTS`' identity half; `api::e2e` owns the reseed.
 const E2E_FIXTURE_ACCOUNTS: &[(&str, &str, &str, &str)] = &[
@@ -1201,10 +1176,8 @@ struct E2eState {
     deletion: E2eDeletion,
 }
 
-/// The provider BUILD M8's fixture accounts sign in with. `verify` maps each static token in
-/// `e2e/support/config.ts` to its account and everything else to `Invalid`; `sign_in` accepts the
-/// fixture email/password pairs. The test support (`tests/support/deps.rs`) also registers users on
-/// it (`add_user`).
+/// The provider BUILD M8's fixture accounts sign in with, and the test double: the test support
+/// (`tests/support/deps.rs`) also registers users on it (`add_user`).
 ///
 /// §9.4 makes a verified email a precondition of redemption, and spec 10 asserts
 /// `emailVerified === true` on the *pending* account before it redeems. So every fixture is
@@ -1293,7 +1266,6 @@ impl E2eAuth {
         let found = state.users.values().find(|entry| {
             entry.user.email.as_deref().map(str::to_lowercase).as_deref() == Some(wanted.as_str())
         });
-        // A plain error, not an unavailable one: the route turns it into the one 401.
         let Some(entry) = found else {
             return Err(AuthError::Rejected(INVALID_LOGIN_CREDENTIALS.to_string()));
         };
@@ -1345,8 +1317,6 @@ impl E2eAuth {
         }
     }
 }
-
-// The enum
 
 /// The auth provider: Supabase in production, the fixtures under `E2E=1` and in the tests.
 ///

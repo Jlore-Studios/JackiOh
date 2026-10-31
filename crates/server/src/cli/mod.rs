@@ -1,10 +1,8 @@
-//! The server's command-line tools (SURFACE §11.1): `apps/server/src/db/{seed-catalog,mint-code,
-//! seed-accounts,season-start,card-stats,import-dev-records}.ts`, part 20, and `export_records`, which
-//! the TS never had (the records out, where `import_dev_records` reads them in), and the play
-//! telemetry's `timing_backfill` and `timing_fit` (R1442), §9.8's `invite_clusters` and the ladder bots'
-//! `bot_calibrate` (R748000) and `cosmetics_fit` (R1834006), which it never had either. Each module's
-//! `pub async fn run(args: Vec<String>) -> anyhow::Result<()>` is its TS `main()`, handed the
-//! arguments after the subcommand (`main.rs`).
+//! The server's command-line tools (SURFACE §11.1), among them the play telemetry's
+//! `timing_backfill` and `timing_fit` (R1442), §9.8's `invite_clusters` and the ladder bots'
+//! `bot_calibrate` (R748000) and `cosmetics_fit` (R1834006). Each module's
+//! `pub async fn run(args: Vec<String>) -> anyhow::Result<()>` is handed the arguments after the
+//! subcommand (`main.rs`).
 //! Written once by part 1 (SURFACE §1).
 
 pub mod balance_watch;

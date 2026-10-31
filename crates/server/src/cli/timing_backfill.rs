@@ -11,11 +11,12 @@
 //! path writes them, one transaction per match. The log's `at` stamps stand in for the pushes, so a
 //! think time runs from one logged action to the next, and the rows carry no clock and no rank
 //! bucket, which the log does not hold. The store leaves out the moves of an account deleted since
-//! (R1442: a deletion is never undone), and lists no match with neither account left. Nothing else is backfilled: emotes and a match's signals
-//! never reached the log. A match today's engine no longer folds whole (a logged action it refuses,
-//! or a deck it no longer builds) is skipped, since its rows would describe another game; a second
-//! run folds it again and skips it again. So is a match in which no person made a move (every action
-//! the clock's): it leaves no row, and the next run folds it again.
+//! (R1442: a deletion is never undone), and lists no match with neither account left. Nothing else
+//! is backfilled: emotes and a match's signals never reached the log. A match today's engine no
+//! longer folds whole (a logged action it refuses, or a deck it no longer builds) is skipped, since
+//! its rows would describe another game; a second run folds it again and skips it again. So is a
+//! match in which no person made a move (every action the clock's): it leaves no row, and the next
+//! run folds it again.
 
 use anyhow::bail;
 
@@ -31,7 +32,6 @@ const USAGE: &str = "Usage: jackioh-server timing-backfill
   Folds every finished match's action log still held into the play telemetry's action timings
   (R1442), skipping a match that already has them. Takes no options; reads DATABASE_URL.";
 
-/// What one run folded.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BackfillOutcome {
     /// Matches folded and written (one no person made a move in writes no row).
@@ -42,7 +42,6 @@ pub struct BackfillOutcome {
     pub skipped: usize,
 }
 
-/// R1442: folds every unfolded match (`play_telemetry_unfolded`) into its action timings.
 pub async fn backfill(db: &Db) -> Result<BackfillOutcome, StoreError> {
     let mut tx = db.begin(None).await?;
     let unfolded = tx.play_telemetry_unfolded().await?;
@@ -89,13 +88,11 @@ pub async fn backfill(db: &Db) -> Result<BackfillOutcome, StoreError> {
     Ok(outcome)
 }
 
-/// `timing-backfill`'s arguments after the subcommand (`main.rs`): none.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     if let Some(arg) = args.first() {
         bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
     }
     let connection_string = database_url()?;
-    // One connection: this process folds one match at a time and exits.
     let db = connect_one(&connection_string).await?;
     let outcome = backfill(&db).await;
     db.close().await;

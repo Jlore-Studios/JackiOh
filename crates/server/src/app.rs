@@ -1,10 +1,9 @@
 //! The composition root (SURFACE §11.2): the only file that knows about the host, the framework and
-//! the driver. Port of `apps/server/src/index.ts`.
+//! the driver.
 //!
 //! Everything below it depends on `App`, so this is where the abstract runtime becomes a concrete
 //! one — Supabase Auth for identity, Postgres for the store, axum for HTTP and the WebSocket on the
-//! same port, and the real engine for the rules. Hand it a Supabase project's URL and keys and it
-//! runs (see README.md).
+//! same port, and the real engine for the rules.
 //!
 //! Nothing here decides a rule or states a constant: every number is `crate::config`'s (R79).
 //!
@@ -13,11 +12,6 @@
 //! `auth.rs` (`E2eAuth`) — and runs R144's reseed before the port opens. Everything else, the
 //! route table included, is the same server. `env.rs` refuses `E2E` together with
 //! `NODE_ENV=production`, so none of it is reachable in a production deployment.
-//!
-//! Not ported (SURFACE §11.3): `loadStore`, `STORE_EXPORT_CANDIDATES` and `StoreUnavailableError`
-//! (the store is `db::store::Db`, chosen here), `createRuntime`'s port overrides and the `Runtime`
-//! type (tests build an `App` through `build`, `tests/support/deps.rs`), and `RunningServer.close`
-//! (the process serves until SIGTERM or Ctrl-C, then drains: `serve_until`).
 
 use std::future::Future;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
@@ -41,13 +35,13 @@ use crate::db;
 use crate::env::{self, Env};
 use crate::loops;
 
-/// The server: every port bound exactly once (TS `ServerDeps` + the registry, SURFACE §11.2).
+/// The server: every port bound exactly once (SURFACE §11.2).
 pub struct App {
     pub env: Env,
     pub db: db::store::Db,
     pub auth: Auth,
-    /// The live match actors (part 19). Queue, rooms and series start matches through it while the
-    /// actor inside it reduces them.
+    /// The live match actors. Queue, rooms and series start matches through it while the actor
+    /// inside it reduces them.
     pub matches: actor::registry::Registry,
     /// §9.8's per-account rate limit at the API (R109, R157), one per app: a fresh app starts with an
     /// empty window, so one test's flood cannot leak into the next.
@@ -57,8 +51,7 @@ pub struct App {
     pub sign_in_limiter: api::http::RateLimiter,
     /// The catalog this build ships, its version and the deployed commit.
     pub catalog: api::catalog::Catalog,
-    /// §9.4's redemption circuit breaker (R106), held here for the same reason as the limiter
-    /// (TS kept it in `createCodesRoutes()`'s closure).
+    /// §9.4's redemption circuit breaker (R106), held here for the same reason as the limiter.
     pub breaker: Mutex<api::codes::BreakerState>,
     /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
     pub replays: api::replays::Replays,
@@ -106,10 +99,9 @@ pub struct App {
 
 // The clock
 
-/// TS `systemTimers.now()`: epoch milliseconds. Anchored once to the wall clock and advanced by
-/// tokio's clock, so a test that calls `tokio::time::pause()` and `advance()` moves every deadline
-/// the server reads (SURFACE §11.2: they replace TS's manual timers), while a deployment reads the
-/// wall clock as TS did.
+/// Epoch milliseconds. Anchored once to the wall clock and advanced by tokio's clock, so a test that
+/// calls `tokio::time::pause()` and `advance()` moves every deadline the server reads, while a
+/// deployment reads the wall clock.
 ///
 /// The anchor is a `std` instant, the same in every runtime, and the reading is the calling
 /// runtime's tokio instant measured from it, either side: a paused runtime's clock starts where
@@ -147,8 +139,7 @@ pub fn now_ms() -> i64 {
 /// Supabase (the fixture provider replaces it) nor Postgres (the in-memory store replaces it), so
 /// demanding a project URL and a connection string would only be a puzzle for whoever runs the
 /// suite. Every value below is filled in ONLY when the variable is unset, so a deployment that does
-/// configure one keeps it, and none of this is reachable outside end-to-end mode — `env.rs` refuses
-/// `E2E` together with `NODE_ENV=production`.
+/// configure one keeps it.
 ///
 /// `CODE_PEPPER` is a throwaway: the fixture invite codes are checked into `e2e/support/config.ts`,
 /// so their hashes protect nothing. The specs read the catalog version back from the server rather
@@ -217,13 +208,11 @@ pub fn browser_origins(env: &Env) -> Vec<String> {
 /// What a handler returns before it is awaited: boxed, so every route fits one table.
 pub type HandlerFuture<'a> = Pin<Box<dyn Future<Output = ApiResult> + Send + 'a>>;
 
-/// Every handler, boxed by `h!`: `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`. SURFACE
-/// §11.2 writes `&App`, but a handler that starts a match hands `Registry::start` the `&Arc<App>` its
-/// actor keeps, so every handler takes the `Arc` (part 31; `78f131c^:.fullsend/notes/spec-gaps.md`).
+/// Every handler, boxed by `h!`. SURFACE §11.2 writes `&App`, but a handler that starts a match hands
+/// `Registry::start` the `&Arc<App>` its actor keeps, so every handler takes the `Arc`.
 pub type Handler = for<'a> fn(&'a Arc<App>, Req) -> HandlerFuture<'a>;
 
-/// One route: method, path (`:name` segments land in `req.params`), auth level, handler — TS's
-/// `route(method, path, auth, handler)`.
+/// One route: method, path (`:name` segments land in `req.params`), auth level, handler.
 pub type Route = (&'static str, &'static str, AuthLevel, Handler);
 
 /// Wraps `pub async fn name(app: &Arc<App>, req: Req) -> ApiResult` into a `Handler`.
@@ -236,10 +225,9 @@ macro_rules! h {
     }};
 }
 
-/// Every route the server serves, in one table, in TS `allRoutes()`'s order: the order the router
-/// tries them in (`api::http::dispatch`), which tests assert. `GET /api/catalog` reports the
-/// deployed commit in a header (`api::catalog`). Not ported (SURFACE §11.3): `POST
-/// /api/auth/signup`.
+/// Every route the server serves, in one table, in the order the router tries them in
+/// (`api::http::dispatch`), which tests assert. `GET /api/catalog` reports the deployed commit in a
+/// header (`api::catalog`).
 ///
 /// Auth levels (§9.4): `None` is open; `User` is a verified token and a profile of any status (the
 /// code screen); `Active` also needs `status = 'active'`.
@@ -535,7 +523,7 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::User,
         h!(api::queue::population),
     ),
-    // actor/rooms.rs (TS `match/rooms.ts`'s `create` and `join`; R1075000's `mine` and `cancel`)
+    // actor/rooms.rs (R1075000's `mine` and `cancel`)
     ("GET", "/api/rooms", AuthLevel::Active, h!(actor::rooms::mine)),
     ("POST", "/api/rooms", AuthLevel::Active, h!(actor::rooms::create)),
     (
@@ -938,12 +926,10 @@ pub static ROUTES: &[Route] = &[
 // Boot
 
 /// Unit conversion, not configuration: R109 states its API allowance *per minute*, and
-/// `API_REQUESTS_PER_MINUTE` is the number itself (TS `http.ts`'s `API_RATE_WINDOW_MS`).
+/// `API_REQUESTS_PER_MINUTE` is the number itself.
 const API_RATE_WINDOW_MS: i64 = 60_000;
 
-/// TS `createRuntime(env)` plus `start()`'s E2E half: assembles the app from the environment. Every
-/// port is bound exactly once, here. Under `E2E=1`: the fake store, the fixture provider and R144's
-/// reseed.
+/// Assembles the app from the environment. Every port is bound exactly once, here.
 pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     let mut catalog = api::catalog::load_catalog(api::catalog::LoadCatalogOptions {
         version: Some(env.catalog_version.to_string()),
@@ -955,7 +941,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     // BUILD M8, R144: end-to-end mode swaps exactly two things — the store and the auth provider —
     // and nothing else about this file changes.
     let (db, auth) = if env.e2e {
-        // TS `createE2EStore({ catalog, now: timers.now })`: R111's launch grant reads the catalog.
+        // R111's launch grant reads the catalog.
         let (tokens, bans) = (catalog.clone(), catalog.clone());
         let store = db::fake::create_e2e_store(db::fake::E2eStoreOptions {
             catalog: db::fake::FakeCatalog {
@@ -968,9 +954,9 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         });
         (store, Auth::E2e(E2eAuth::new()))
     } else {
-        // The pool connects lazily, as `pg`'s did: a store that cannot be reached fails the first
-        // request that needs it, loudly, rather than the boot. `create_postgres_store` is TS's
-        // `createPostgresStore`: its idle timeout closes a connection before Supavisor drops it.
+        // The pool connects lazily: a store that cannot be reached fails the first request that
+        // needs it, loudly, rather than the boot. Its idle timeout closes a connection before
+        // Supavisor drops it.
         let pool = db::pg::create_postgres_store(&db::pg::PostgresStoreOptions {
             connection_string: env.database_url.to_string(),
             max: None,
@@ -1039,8 +1025,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
 }
 
 /// A WebSocket handshake (`Upgrade: websocket`), which `actor::ws_server::handle` answers; anything
-/// else on the same path is an ordinary request for the API router (TS's `ws` server only ever saw
-/// upgrades).
+/// else on the same path is an ordinary request for the API router.
 fn is_websocket_upgrade(request: &Request) -> bool {
     request
         .headers()
@@ -1049,7 +1034,7 @@ fn is_websocket_upgrade(request: &Request) -> bool {
         .is_some_and(|value| value.eq_ignore_ascii_case("websocket"))
 }
 
-/// The API: CORS first (preflights never reach the router), then TS's own router over `ROUTES`.
+/// The API: CORS first (preflights never reach the router), then the server's own router over `ROUTES`.
 /// The browser and the API are separate origins (§9.2); without CORS every `fetch` from `apps/web`
 /// is blocked before a handler runs.
 async fn serve_api(app: Arc<App>, cors: Arc<CorsOptions>, request: Request) -> Response {
@@ -1060,7 +1045,7 @@ async fn serve_api(app: Arc<App>, cors: Arc<CorsOptions>, request: Request) -> R
 }
 
 /// SURFACE §11.2: `/ws/match` for the match socket (SPEC §9.2: one WebSocket per player, upgraded on
-/// the same listener the API serves) and one fallback that runs `api::http::dispatch`, so TS's
+/// the same listener the API serves) and one fallback that runs `api::http::dispatch`, so its
 /// matcher — its order and its 404 for a wrong method — decides every API answer, never axum's.
 ///
 /// R190: the socket's peer address travels with the request (`ConnectInfo<SocketAddr>`, which
@@ -1135,8 +1120,8 @@ pub fn router(app: Arc<App>) -> Router {
         .fallback(fallback)
 }
 
-/// One line of JSON per event on stdout (TS `consoleLogger`): enough for a hosted log drain,
-/// nothing to configure. `RUST_LOG` narrows it; the default is `info`.
+/// One line of JSON per event on stdout: enough for a hosted log drain, nothing to configure.
+/// `RUST_LOG` narrows it; the default is `info`.
 fn init_logging() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
@@ -1158,9 +1143,7 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
     // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
     // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
     // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
-    // once now and then hourly. Each starts through `loops::spawn_supervised`, so a panic that
-    // unwinds out of a loop (`loop.crashed`, #842) or a loop that returns (`loop.returned`, #1093)
-    // is logged as an alert and the loop starts again (`loop.restarted`) instead of dying silently.
+    // once now and then hourly.
     let mut running = vec![
         (
             "matchmaker",
@@ -1246,9 +1229,9 @@ pub fn shutdown_signal() -> std::io::Result<impl Future<Output = ()> + Send + 's
 ///
 /// NOT IN SPEC (#861): probes and shutdown are operational, like `loops.rs` (#842). The drain runs
 /// at most `drain` long and does five things, in this order: it stops accepting new connections,
-/// aborts the background loops, lets in-flight HTTP requests finish, stops every match and co-op actor (open
-/// sockets get close frame 1001 and queues drain so result writes land), waits for every socket to
-/// finish, and closes the store.
+/// aborts the background loops, lets in-flight HTTP requests finish, stops every match and co-op
+/// actor (open sockets get close frame 1001 and queues drain so result writes land), waits for every
+/// socket to finish, and closes the store.
 ///
 /// axum's graceful shutdown waits only for HTTP requests, because an upgraded socket leaves its
 /// count. That is why the actors are stopped and `all_closed` is awaited. `pg::close` waits for
@@ -1322,8 +1305,8 @@ async fn bind_listener(port: u16) -> std::io::Result<tokio::net::TcpListener> {
     }
 }
 
-/// TS `start(env)`: build, open the season, listen on `$PORT`, spawn the background loops, serve
-/// until SIGTERM or Ctrl-C, drain.
+/// Build, open the season, listen on `$PORT`, spawn the background loops, serve until SIGTERM or
+/// Ctrl-C, drain.
 pub async fn serve(env: Env) -> anyhow::Result<()> {
     init_logging();
     let app = build(env).await?;

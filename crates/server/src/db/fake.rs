@@ -1,10 +1,68 @@
-//! In-memory store (SURFACE §11.1, §11.2) behind `Db::Fake` for unit tests and `E2E=1`.
-//! R144 reseeds fixture accounts and codes at boot. Strict where Postgres is strict (§9.4, §9.5):
-//! snapshot/rollback per tx, single-shot claims, append-only seq checks (§9.3, R776000),
-//! deck/trio caps (R250, R252, R263), tutorial progress (R320), game records (R376, R378),
-//! deck versions (R2100000), custom cards (R915008), player settings (R633, R634), ranked (R608, R609, R611).
-//! R111 trigger (SPEC §11) grants starter cards on `pending → active` (R1310000).
-//! Methods match `<substore>_<method>`, dispatched from `db::store::Tx`.
+//! The in-memory store (SURFACE §11.1, §11.2): one `FakeData` behind `Db::Fake` for the unit tests
+//! and for `E2E=1` (BUILD M8's end-to-end mode). R111's launch grant runs when the store is built
+//! with a catalog (`E2E=1`, [`create_e2e_store`]) and not otherwise (`FakeData::default()`, the unit
+//! tests' store, which "carries no launch grant, so the existing tests keep seeing the store their
+//! assertions were written against").
+//!
+//! R144 makes the server reseed its fixture accounts and invite codes at boot, which needs somewhere
+//! to seed *into*, and the e2e suite has no Postgres. The real implementation of this port is
+//! `src/db/pg.rs`; this one is a test fixture that happens to live in `src/` because `src/app.rs` has
+//! to be able to choose it at boot. It is reachable only when `env.E2E` is true, and `src/env.rs`
+//! refuses `E2E` together with `NODE_ENV=production`.
+//!
+//! It is deliberately strict everywhere Postgres is strict, because those are the invariants
+//! SPEC §9.4 and §9.5 lean on and a laxer fixture would let a real bug pass the suite:
+//!
+//!  - a transaction snapshots every table at `begin` and restores it unless it is committed, so
+//!    §9.4's "writes `collection` and `collection_grants` in one transaction" is really
+//!    all-or-nothing, and runs one transaction at a time (the `tokio::sync::Mutex` behind
+//!    `Db::Fake`, which hands itself out first come, first served), so a transaction that rolls
+//!    back never takes another request's committed writes with it;
+//!  - `redeem` runs §9.4's six steps in SPEC's order inside one transaction and answers the same
+//!    seven result codes `app.redeem_invite_code` does, so the redemption the server calls here is
+//!    the redemption it calls in Postgres;
+//!  - `codes_claim`, `rooms_claim` and `tickets_claim_pair` are single-shot, so the second of two
+//!    racing callers loses (§9.4 step 6, §9.5);
+//!  - `matches_append_actions` answers a nonce already logged at its seq with that row and refuses any
+//!    other clash as `StoreError::SeqClash` (append-only, §9.3, R776000);
+//!  - `results_insert` refuses a second row for the same match (§9.5);
+//!  - `tickets_insert` refuses a second open ticket for one profile (`tickets_profile_queued_key`,
+//!    which `queue.rs` relies on as the race-proof half of "not already queued").
+//!
+//! The saved decks, saved trios and Conquest series R250–R263 added, R320's tutorial progress and
+//! R376's game records are strict where Postgres is strict too (migrations 0007, 0008, 0011):
+//!  - `decks_upsert` / `trios_upsert` refuse an id owned by another profile (`not_owner`) and a
+//!    create past the cap (`limit`), exactly as `app.upsert_deck` / `app.upsert_trio` do;
+//!  - `trios_upsert` refuses a slot naming a deck that is not this profile's (`unknown_deck`, the
+//!    composite foreign key) and one deck in two slots (the check constraint);
+//!  - `decks_remove` empties every trio slot that named the deck (`on delete set null`);
+//!  - `deck_versions_keep` answers `missing` for a deck that is not the profile's (the composite
+//!    foreign key), and a deck's delete and its account's take its versions (`on delete cascade`;
+//!    0066, R2100000);
+//!  - `custom_cards_create` refuses a create past the cap (`limit`) and an id already held, and
+//!    `custom_cards_update` is compare-and-set on the card's version (`stale`) and the owner's
+//!    alone (`missing`), as `app.create_custom_card` / `app.update_custom_card` are (0037, R915008);
+//!  - `series_update` is compare-and-set on `version`;
+//!  - `tutorial_merge` only ever grows the lessons and keeps the newest choice (0011, R320);
+//!  - `player_settings_merge` replaces a group only with a strictly later one and caps the result's
+//!    groups and bytes (0018, R633, R634);
+//!  - `ranked_create_season` refuses an id that exists, `ranked_record_game` a second row for one
+//!    game, and `ranked_note_peak_jlorious` only ever lowers a peak (R608, R609, R611; migration
+//!    0022 carries the same tables on Postgres),
+//!  - `game_records_insert` writes one record per id and refuses a second, and refuses a
+//!    development record without a `dev:` id or a live one with one (0014, R376, R378).
+//!
+//! R111 IS A DATABASE TRIGGER, so it is implemented here rather than in a handler. SPEC §11 R111:
+//! becoming `active` grants one copy of each starter card (R1310000, `config::STARTER_CARDS`, which
+//! Postgres reads from `app.settings.starter_cards` as `seed-catalog` writes it), "written by a
+//! trigger on the `pending → active` transition and idempotent, so a repeated redemption cannot
+//! double a collection." `profiles_set_status` carries the trigger, writing both tables exactly as
+//! `grant_cards` in `collection.rs` does and reading the same `LAUNCH_COPIES` and
+//! `LAUNCH_GRANT_REASON` so the two can never drift.
+//!
+//! Each store method is a free function here of the same name (`db::store`'s `Tx` dispatches to it),
+//! taking the transaction first, and synchronous: the transaction already holds the one lock, so
+//! nothing here awaits.
 
 use std::sync::Arc;
 
@@ -132,7 +190,7 @@ pub struct ReservedMatch {
     pub claimed_at: i64,
 }
 
-/// In-memory tables, public so tests can assert on raw rows.
+/// Every table. Public, so a test can assert on the raw rows.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FakeTables {
     pub profiles: Vec<Profile>,
@@ -140,12 +198,11 @@ pub struct FakeTables {
     pub attempts: Vec<CodeAttempt>,
     pub collection: Vec<CollectionRow>,
     pub grants: Vec<CollectionGrant>,
-    // DeckTables
     pub decks: Vec<SavedDeck>,
     pub trios: Vec<SavedTrio>,
     // R2100000: migration 0066's `public.deck_versions`, a deck's earlier versions.
     pub deck_versions: Vec<DeckVersion>,
-    // CustomCardTables: the table R915008 adds (`public.custom_cards`, migration 0037): one row per card.
+    // The table R915008 adds (`public.custom_cards`, migration 0037): one row per card.
     pub custom_cards: Vec<SavedCustomCard>,
     pub series: Vec<SeriesRow>,
     pub matches: Vec<MatchRow>,
@@ -153,21 +210,18 @@ pub struct FakeTables {
     // #1169: migration 0042's `public.match_checkpoints`, one row per live match at most.
     pub match_checkpoints: Vec<MatchCheckpointRow>,
     pub rooms: Vec<Room>,
-    // R1450: the reservations Postgres holds as open rows.
     pub reserved: Vec<ReservedMatch>,
     pub tickets: Vec<Ticket>,
     /// R640002: `tickets.claimed_at`, by ticket id.
     pub ticket_claims: IndexMap<String, i64>,
     pub results: Vec<ResultRow>,
-    // TutorialTables: the table R320 adds (`public.tutorial_progress`, migration 0011): one row per profile.
+    // The table R320 adds (`public.tutorial_progress`, migration 0011): one row per profile.
     pub tutorial: Vec<TutorialProgressRow>,
-    // PlayerSettingsTables: the table R633 adds (`public.player_settings`, migration 0018): one row per profile.
+    // The table R633 adds (`public.player_settings`, migration 0018): one row per profile.
     pub player_settings: Vec<PlayerSettingsRow>,
-    // LastBoardTables: the table R565 adds (`public.last_boards`, migration 0017): one row per profile and kind.
     pub last_boards: Vec<LastBoardRow>,
-    // PlayerStatsTables
     pub player_stats: Vec<PlayerStatsTableRow>,
-    // GameRecordTables: the table R376 adds (`public.game_records`, migration 0014): one row per recorded game.
+    // The table R376 adds (`public.game_records`, migration 0014): one row per recorded game.
     // R1044001: a record whose detail the purge has emptied leaves `game_records`; its ledger row stays.
     pub game_records: Vec<GameRecord>,
     // R1044000, R1044001 (migration 0041): each record id ever written, when, and whether it is folded.
@@ -181,42 +235,49 @@ pub struct FakeTables {
     // R1976000 (`public.game_record_batches`, migration 0060): each file folded as totals only, by the
     // SHA-256 of its contents, with how many of its records it folded.
     pub game_record_batches: IndexMap<String, usize>,
-    // RankedTables
     pub seasons: Vec<Season>,
     pub season_ranks: Vec<SeasonRank>,
     pub bots: Vec<BotRating>,
     pub rated_games: Vec<RatedGameRow>,
-    // PlayTelemetryTables: the three tables R1442 adds (migration 0029), keyed by match and seat.
+    // The three tables R1442 adds (migration 0029), keyed by match and seat.
     pub action_timings: Vec<ActionTimingRow>,
     pub emote_events: Vec<EmoteEventRow>,
     pub match_signals: Vec<MatchSignalRow>,
-    // The ladder bots' table (`public.bots`, migration 0032): one row per bot's profile.
     pub ladder_bots: Vec<BotTableRow>,
     // The two tables R757000 and R757001 add (migration 0034): one age check per profile, one
     // acceptance per profile and terms version.
     pub age_checks: Vec<AgeCheckTableRow>,
     pub terms_acceptances: Vec<TermsAcceptanceTableRow>,
-    // Social: friends, presence, challenges, chat (#937, #938, #941).
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- migration 0038's tables.
     pub social: SocialTables,
-    // Social: watching and shared replays (#939, #940) (migration 0038's replay_shares).
+    // ---- Social: watching and shared replays (#939, #940) ----
+    // Migration 0038's `replay_shares` (friendships, blocks and the spectators setting are `social`'s).
     pub replay_shares: Vec<ReplayShare>,
-    /// Fullsend SPEC S6: co-op rooms, matches and log (migration 0039, #946).
+    // ---- end Social: watching and shared replays ----
+    // ---- Duos co-op (#946) ----
+    /// Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0039). Their store methods
+    /// are `crate::duos::store`'s.
     pub duos: crate::duos::store::DuosTables,
-    /// Economy holdings and ledgers (SPEC §14, §14.11, #1299; migration 0045).
+    // ---- end Duos co-op (#946) ----
+    // ---- Economy (SPEC §14, #1299) ----
+    /// §14.11: migration 0045's holdings and their ledgers. Their store methods are
+    /// `crate::economy::store`'s.
     pub economy: crate::economy::store::EconomyTables,
+    // ---- end Economy ----
     /// R1523000: migration 0054's `app.seat_epoch`, its one row's epoch (0 in an empty store).
     pub seat_epoch: i64,
 }
 
-/// Empty tables with all stores initialized empty.
 pub fn empty_tables() -> FakeTables {
     FakeTables::default()
 }
 
-/// The clock a fake reads (epoch milliseconds).
+/// The clock a fake reads, in epoch milliseconds. A test on a virtual clock hands its own.
 pub type Clock = Arc<dyn Fn() -> i64 + Send + Sync>;
 
-/// Fault-injection seam: called with port method name; an `Err` fails and rolls back.
+/// The unit fake's fault-injection seam: called with the port method's name (`"decks.list"`,
+/// `"redeem"`, …) before each operation; an `Err` fails that method, and the transaction it ran in
+/// rolls back when it is dropped.
 pub type OnCall = Arc<dyn Fn(&str) -> Result<(), StoreError> + Send + Sync>;
 
 /// What a `before_call` hook tells the method it ran before.
@@ -224,14 +285,17 @@ pub type OnCall = Arc<dyn Fn(&str) -> Result<(), StoreError> + Send + Sync>;
 pub enum CallOutcome {
     /// The method runs on the tables as the hook left them.
     Proceed,
-    /// A compare-and-set (`series.update`) loses: writes nothing and answers `false`.
+    /// A compare-and-set (`series.update`) loses: it writes nothing and answers `false`. Any other
+    /// method proceeds.
     Lose,
 }
 
-/// Race seam: called with port method name and tables before each operation; may mutate tables.
+/// The unit fake's race seam, beside `OnCall`: called with the port method's name and the tables it
+/// is about to read, before each operation, inside its transaction. It may change them (a rival
+/// writer landing between a read and a write) and may make a compare-and-set lose.
 pub type BeforeCall = Arc<dyn Fn(&str, &mut FakeTables) -> CallOutcome + Send + Sync>;
 
-/// Wall clock in epoch milliseconds.
+/// The wall clock in epoch milliseconds: the default `now` of a store built without one.
 pub fn system_now() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -239,7 +303,8 @@ pub fn system_now() -> i64 {
         .unwrap_or(0)
 }
 
-/// What R111's launch grant reads from the catalog (non-token and unbanned ids; §9.4 L3, L6).
+/// What R111's launch grant reads from the catalog: R111 needs to know which ids are non-token and
+/// unbanned; §9.4 L3 and L6 define both.
 #[derive(Clone)]
 pub struct FakeCatalog {
     pub card_ids: Vec<String>,
@@ -247,14 +312,15 @@ pub struct FakeCatalog {
     pub is_banned: Arc<dyn Fn(&str) -> bool + Send + Sync>,
 }
 
-/// Everything the fake holds: tables and configuration.
+/// Everything the fake holds: the tables, which a transaction snapshots, and what it was built with,
+/// which a rollback leaves alone.
 pub struct FakeData {
     pub tables: FakeTables,
     /// `profile-<n>`'s next `n`.
     pub next_profile: u32,
     /// The clock `redeem` and R111's grant read.
     pub now: Clock,
-    /// What the database would answer for §9.4's limits, kill switch and email verification.
+    /// Public, so a test can flip it between calls.
     pub redemption: RedemptionSettings,
     /// R111's launch grant runs on `pending → active` only when this is set (`E2E=1`).
     pub catalog: Option<FakeCatalog>,
@@ -264,18 +330,14 @@ pub struct FakeData {
     pub before_call: Option<BeforeCall>,
 }
 
-/// Options for building an end-to-end fake store.
 pub struct E2eStoreOptions {
-    /// R111 needs to know which ids are non-token and unbanned; §9.4 L3 and L6 define both.
     pub catalog: FakeCatalog,
-    /// Clock for this store.
+    /// The clock of the runtime this store belongs to.
     pub now: Clock,
-    /// §9.4 limits, kill switch and email verification.
     pub redemption: Option<RedemptionSettings>,
 }
 
 impl std::fmt::Debug for FakeData {
-    /// The rows and the profile counter; the hooks have nothing to print.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FakeData")
             .field("tables", &self.tables)
@@ -290,7 +352,8 @@ impl std::fmt::Debug for FakeData {
     }
 }
 
-/// The unit tests' empty store on the wall clock with default redemption settings and no launch grant.
+/// The unit tests' empty store, on the wall clock, with the default redemption settings and no
+/// launch grant (`Db::fake()` wraps it).
 impl Default for FakeData {
     fn default() -> FakeData {
         FakeData::new(Arc::new(system_now), default_redemption_settings(), None)
@@ -298,7 +361,6 @@ impl Default for FakeData {
 }
 
 impl FakeData {
-    /// An empty store with the given clock, redemption settings and (for `E2E=1`) catalog.
     pub fn new(now: Clock, redemption: RedemptionSettings, catalog: Option<FakeCatalog>) -> FakeData {
         FakeData {
             tables: empty_tables(),
@@ -311,10 +373,9 @@ impl FakeData {
         }
     }
 
-    /// R144: "the server reseeds its fixture accounts and invite codes at boot". The reseed is a
-    /// wipe and rewrite rather than a merge, so a second run starts from the same rows as the first.
-    /// The seat epoch stays, as `app.seat_epoch` stays through the Postgres harness's truncate: a
-    /// server's ledger fences on it from boot on (R1523000).
+    /// R144's reseed is a wipe and rewrite rather than a merge, so a second run starts from the same
+    /// rows as the first. The seat epoch stays, as `app.seat_epoch` stays through the Postgres
+    /// harness's truncate: a server's ledger fences on it from boot on (R1523000).
     pub fn reset(&mut self) {
         let seat_epoch = self.tables.seat_epoch;
         self.tables = empty_tables();
@@ -349,9 +410,13 @@ impl FakeData {
         true
     }
 
-    /// Seeds a profile without going through the API with defaults for rating, status,
-    /// and lowest free `Player#n` username prompt (R1434).
-    /// `consent` defaults to agreed age check and terms at sign-up (R757000, R757001).
+    /// Seeds a profile without going through the API: `input` is a JSON object of `Profile`'s
+    /// fields, camelCase, every one but `id` optional. Without `username` it gets the username a new
+    /// account gets, the lowest free `Player#n` (R1434); `username` names a base instead (stored as
+    /// given, so a caller passes a stored form), with `usernameTag` as its tag or else the tag a claim
+    /// of it would carry now. `consent` (default true) seeds the age check and agreement to
+    /// `TERMS_VERSION` at sign-up, dated `createdAt`, as an account that signed up through the age
+    /// screen and the terms box has (R757000, R757001); false seeds neither.
     pub fn seed_profile(&mut self, input: Value) -> Profile {
         let id = input
             .get("id")
@@ -418,8 +483,8 @@ impl FakeData {
     }
 }
 
-/// TS `createE2EStore(options)`: the `E2E=1` server's store, with R111's launch grant. The app keeps
-/// the `Db::Fake` handle and reaches [`FakeData::reset`] and [`FakeData::grants_for`] through it.
+/// The `E2E=1` server's store, with R111's launch grant. The app keeps the `Db::Fake` handle and
+/// reaches [`FakeData::reset`] and [`FakeData::grants_for`] through it.
 pub fn create_e2e_store(options: E2eStoreOptions) -> Db {
     let redemption = options.redemption.unwrap_or_else(default_redemption_settings);
     Db::Fake(Arc::new(Mutex::new(FakeData::new(
@@ -431,9 +496,9 @@ pub fn create_e2e_store(options: E2eStoreOptions) -> Db {
 
 // Transactions
 
-/// One transaction over the fake: the lock, held until it ends (so transactions run one at a time,
-/// first come first served), and the snapshot taken when it began. Dropped without [`commit`], it
-/// puts the snapshot back: a rolled-back transaction leaves nothing behind.
+/// One transaction over the fake: the lock, held until it ends, and the snapshot taken when it
+/// began. Dropped without [`commit`], it puts the snapshot back: a rolled-back transaction leaves
+/// nothing behind.
 pub struct FakeTx<'a> {
     guard: MutexGuard<'a, FakeData>,
     snapshot: Option<Box<FakeTables>>,
@@ -451,7 +516,6 @@ impl<'a> FakeTx<'a> {
         &mut self.guard
     }
 
-    /// The tables as this transaction sees them.
     pub fn tables(&mut self) -> &mut FakeTables {
         &mut self.guard.tables
     }
@@ -473,7 +537,7 @@ impl Drop for FakeTx<'_> {
     }
 }
 
-/// `Db::begin` for the fake: acquires the store lock and snapshots all tables.
+/// `Db::begin` for the fake: wait for the lock, then snapshot every table.
 pub async fn begin(data: &Arc<Mutex<FakeData>>) -> FakeTx<'_> {
     FakeTx::new(data.lock().await)
 }
@@ -499,30 +563,37 @@ fn call_cas(f: &mut FakeTx<'_>, method: &str) -> Result<CallOutcome, StoreError>
     })
 }
 
-/// `results_insert` refusal of a second row for one match.
+/// `results_insert`'s refusal of a second row for one match.
 fn duplicate_result(match_id: &str) -> StoreError {
     StoreError::Duplicate(match_id.to_string())
 }
 
-// Redemption in memory (`redeem`, §9.4).
+// SPEC §9.4's redemption, in memory (`redeem`)
 
-/// In-memory redemption configuration and limits (§9.4).
+/// The database state `app.redeem_invite_code` reads that no other port method can reach, and the
+/// three numbers §9.4 writes into the function's body. Defaults come from `src/config.rs` — the
+/// same constants `default_limits()` copies into `ApiLimits` — so the fixture and the deployment
+/// agree without either restating a value.
 #[derive(Clone)]
 pub struct RedemptionSettings {
-    /// §9.4 step 2: attempts per profile per hour.
+    /// §9.4 step 2: "more than 5 attempts in the last hour".
     pub attempts_per_profile_per_hour: i64,
-    /// §9.4 step 3: attempts per IP per hour.
+    /// §9.4 step 3: "more than 20".
     pub attempts_per_ip_per_hour: i64,
     /// The window both counters are taken over.
     pub attempt_window_ms: i64,
-    /// Database kill switch hook.
+    /// `app.settings.redemption_enabled` — the database-side kill switch the SQL function checks
+    /// before the lookup and answers `circuit_open` from. A hook rather than a value so a caller can
+    /// flip it between calls, which is how the store contract drives it against both stores.
     pub enabled: Arc<dyn Fn() -> bool + Send + Sync>,
-    /// `auth.users.email_confirmed_at is not null` for this profile (§9.4 step 1).
-    /// Defaults to true; unverified callers are refused before reaching this port (R159).
+    /// `auth.users.email_confirmed_at is not null` for this profile (§9.4 step 1). `public.profiles`
+    /// has no such column and neither does `Profile`, so the SQL function joins `auth.users` for it
+    /// and the fixture asks here. True by default: BUILD M8's three fixture accounts are all verified
+    /// (`src/api/e2e.rs`), and the server refuses an unverified caller from the access token (R159)
+    /// before this port is reached.
     pub email_verified: Arc<dyn Fn(&str) -> bool + Send + Sync>,
 }
 
-/// Default redemption settings.
 pub fn default_redemption_settings() -> RedemptionSettings {
     RedemptionSettings {
         attempts_per_profile_per_hour: CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
@@ -533,7 +604,7 @@ pub fn default_redemption_settings() -> RedemptionSettings {
     }
 }
 
-/// §9.4 step 4 attempt row written through the port.
+/// §9.4 step 4's attempt row, written through the port.
 fn log_redeem_attempt(
     f: &mut FakeTx<'_>,
     input: &RedeemInviteCodeInput,
@@ -553,7 +624,7 @@ fn log_redeem_attempt(
     )
 }
 
-/// Steps 4 and 5 refusal: log attempt and answer `invalid_code`.
+/// Steps 4 and 5's refusal: log the attempt, answer `invalid_code`.
 fn reject_redeem(
     f: &mut FakeTx<'_>,
     input: &RedeemInviteCodeInput,
@@ -564,10 +635,18 @@ fn reject_redeem(
     Ok(RedeemResult::InvalidCode)
 }
 
-/// SPEC §9.4's redemption, whole.
-/// Runs the six steps in SPEC order, returning result codes. Rejections are values;
-/// all reads/writes go through the port so R111's trigger fires.
-/// In-memory transactions serialize redemptions completely under the store mutex.
+/// SPEC §9.4's redemption, whole, over this store's own methods: every read and write goes back
+/// through the port, so the fake's own invariants (`codes_claim` is single-shot, `profiles_set_status`
+/// carries R111's launch grant) hold here exactly as they do for any other caller.
+///
+/// CALLS RUN ONE AT A TIME, or two redemptions by one pending profile could both pass step 1 and one
+/// account use up two codes. A redemption runs inside a transaction, which holds the store's one
+/// lock, so two of them cannot interleave at all.
+///
+/// That is STRICTER than Postgres, not the same. `app.redeem_invite_code` serializes two redemptions
+/// only where they share something it locks: the profile row (step 1), the caller's IP hash (an
+/// advisory lock before step 3's count, migration 0006) and the code row (step 5). So a race this
+/// fixture cannot lose still needs `tests/store/redeem_race.rs` against Postgres (`tests/db/run.sh`).
 pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<RedeemResult, StoreError> {
     call(f, "redeem")?;
     let settings = f.guard.redemption.clone();
@@ -575,8 +654,13 @@ pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<Redee
     let now = (f.guard.now)();
     let profile_id = input.profile_id.as_str();
 
-    // §9.4: "Redemption is one server-side transaction."
-    // Step 1: reject unless the account is pending with a verified email.
+    // §9.4: "Redemption is one server-side transaction." In Postgres the whole of this is one
+    // `select app.redeem_invite_code(...)`; here it is the caller's transaction, so a fault leaves
+    // nothing behind.
+
+    // ---- Step 1: "reject unless the account is pending with a verified email" --------------
+    // One result for "no such profile", "banned" and "already active", exactly as the SQL's
+    // `if not found or v_status is distinct from 'pending'` decides them together.
     let profile = profiles_get_by_id(f, profile_id)?;
     match profile {
         Some(profile) if profile.status == ProfileStatus::Pending => {}
@@ -634,7 +718,9 @@ pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<Redee
         return reject_redeem(f, input, now, "exhausted");
     }
 
-    // Step 6: increment uses and set the account active, atomically.
+    // ---- Step 6: "increment uses and set the account active, atomically" --------------------
+    // `claim` is the atomic increment, so a false return is a code that ran out between the
+    // check above and here.
     if !codes_claim(f, &code.id, now)? {
         return reject_redeem(f, input, now, "exhausted");
     }
@@ -688,8 +774,10 @@ fn collection_row<'t>(
 }
 
 /// One copy of each non-token, unbanned starter card (R1310000, `STARTER_CARDS`), idempotent.
-/// Written as delta against owned cards so repeated transition writes nothing.
-/// Migration 0002 checks delta <> 0.
+/// Written as a delta against what the profile already owns, as `grant_cards` does, so a second
+/// `pending → active` transition computes zero for everything and writes no row at all:
+/// `collection_grants.delta` carries `check (delta <> 0)` in migration `0002_collection.sql`, and an
+/// empty audit row would be a lie in the ledger. A store built without a catalog grants nothing.
 fn apply_launch_grant(f: &mut FakeTx<'_>, profile_id: &str) {
     let Some(catalog) = f.guard.catalog.clone() else {
         return;
@@ -743,7 +831,7 @@ fn apply_launch_grant(f: &mut FakeTx<'_>, profile_id: &str) {
     tables.grants.extend(grants);
 }
 
-/// Migration 0013's retention purge (`src/api/retention.rs`), `Store.purgeExpired`.
+/// Migration 0013's retention purge (`src/api/retention.rs`).
 pub fn purge_expired(
     f: &mut FakeTx<'_>,
     input: &RetentionPurgeInput,
@@ -852,7 +940,6 @@ pub fn profiles_set_status(
     Ok(())
 }
 
-/// R603: one profile's hidden rating after a rated game.
 pub fn profiles_set_glicko(f: &mut FakeTx<'_>, profile_id: &str, glicko: &Glicko) -> Result<(), StoreError> {
     call(f, "profiles.setGlicko")?;
     let Some(row) = profile_of(f.tables(), profile_id) else {
@@ -913,10 +1000,9 @@ pub fn profiles_answer_username_prompt(f: &mut FakeTx<'_>, profile_id: &str) -> 
     Ok(())
 }
 
-/// Clearing with `None` is unconditional. Setting `Some` is the same
-/// compare-and-set as Postgres's (R890000): only a free seat is written, and a taken one answers
-/// `Ok(false)` without writing. Goes through `call_cas` like `series.update`, so a race hook
-/// answering `CallOutcome::Lose` loses, as the store's other compare-and-sets do.
+/// Setting `Some` is the same compare-and-set as Postgres's (R890000). Goes through `call_cas` like
+/// `series.update`, so a race hook answering `CallOutcome::Lose` loses, as the store's other
+/// compare-and-sets do.
 pub fn profiles_set_in_match(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -950,7 +1036,6 @@ pub fn profiles_clear_in_match(
     Ok(())
 }
 
-/// R1523000: every profile whose in-match flag is set, with its match, by profile id.
 pub fn profiles_seated(f: &mut FakeTx<'_>) -> Result<Vec<SeatedProfile>, StoreError> {
     call(f, "profiles.seated")?;
     let mut rows: Vec<SeatedProfile> = f
@@ -980,7 +1065,6 @@ pub fn seats_fence(f: &mut FakeTx<'_>, epoch: i64) -> Result<(), StoreError> {
     }
 }
 
-/// R1523000: a booting process's bump.
 pub fn seats_bump_epoch(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
     call(f, "seats.bumpEpoch")?;
     let tables = f.tables();
@@ -1019,7 +1103,6 @@ pub fn codes_find_by_hash(f: &mut FakeTx<'_>, code_hash: &str) -> Result<Option<
         .cloned())
 }
 
-/// §9.4 step 6: one atomic statement. Two callers cannot both win the last use.
 pub fn codes_claim(f: &mut FakeTx<'_>, code_id: &str, now: i64) -> Result<bool, StoreError> {
     call(f, "codes.claim")?;
     let Some(row) = f.tables().codes.iter_mut().find(|code| code.id == code_id) else {
@@ -1038,9 +1121,6 @@ pub fn codes_claim(f: &mut FakeTx<'_>, code_id: &str, now: i64) -> Result<bool, 
     Ok(true)
 }
 
-/// The operator's lever onto §9.4 step 5: marks the code carrying `code_hash` revoked, so the
-/// next redemption rejects it exactly as an exhausted one. True when a live row was newly
-/// revoked; false for an unknown hash or a row already revoked.
 pub fn codes_revoke_by_hash(f: &mut FakeTx<'_>, code_hash: &str) -> Result<bool, StoreError> {
     call(f, "codes.revokeByHash")?;
     let Some(row) = f
@@ -1058,7 +1138,6 @@ pub fn codes_revoke_by_hash(f: &mut FakeTx<'_>, code_hash: &str) -> Result<bool,
     Ok(true)
 }
 
-/// §9.4 step 4: the attempt is logged either way. Written by `redeem`.
 pub fn codes_log_attempt(f: &mut FakeTx<'_>, attempt: &CodeAttempt) -> Result<(), StoreError> {
     call(f, "codes.logAttempt")?;
     f.tables().attempts.push(attempt.clone());
@@ -1107,9 +1186,8 @@ pub fn codes_count_attempts_by_ip(f: &mut FakeTx<'_>, ip_hash: &str, since: i64)
     Ok(count as i64)
 }
 
-/// §9.8: one row per IP hash with an attempt at or after `since`, ordered by `ip_hash`. `accounts`
-/// counts distinct profiles, an attempt with no profile adding to `attempts` only, as
-/// `count(distinct profile_id)` does.
+/// §9.8: `accounts` counts distinct profiles, an attempt with no profile adding to `attempts` only,
+/// as `count(distinct profile_id)` does.
 pub fn codes_invite_clusters(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<InviteCluster>, StoreError> {
     call(f, "codes.inviteClusters")?;
     let mut by_hash: IndexMap<&str, (IndexSet<&str>, i64)> = IndexMap::new();
@@ -1131,9 +1209,8 @@ pub fn codes_invite_clusters(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Invit
         .collect())
 }
 
-/// The operator's lever onto §9.4's database-side kill switch: flips the `enabled` hook the
-/// SQL function's `app.settings.redemption_enabled` read stands in for, and answers the previous
-/// value, so the caller prints what changed.
+/// Flips the `enabled` hook the SQL function's `app.settings.redemption_enabled` read stands in
+/// for, and answers the previous value.
 pub fn redemption_set_enabled(f: &mut FakeTx<'_>, enabled: bool) -> Result<bool, StoreError> {
     call(f, "redemption.setEnabled")?;
     let previous = (f.guard.redemption.enabled)();
@@ -1189,7 +1266,6 @@ pub fn collection_upsert_quantities(
     Ok(())
 }
 
-/// Append-only (§9.4). Each row's `delta` is the change, so the ledger sums to the total.
 pub fn collection_append_grants(f: &mut FakeTx<'_>, grants: &[CollectionGrant]) -> Result<(), StoreError> {
     call(f, "collection.appendGrants")?;
     for grant in grants {
@@ -1330,8 +1406,6 @@ pub fn matches_has_actions(f: &mut FakeTx<'_>, match_id: &str) -> Result<bool, S
         .any(|row| row.match_id == match_id))
 }
 
-/// #1169: as Postgres's one statement: stored only while the match is live and its log holds `seq`
-/// under `nonce`, and in place of an earlier seq's only.
 pub fn matches_put_checkpoint(f: &mut FakeTx<'_>, row: &MatchCheckpointRow) -> Result<bool, StoreError> {
     call(f, "matches.putCheckpoint")?;
     let tables = f.tables();
@@ -1394,7 +1468,6 @@ pub fn matches_finish(f: &mut FakeTx<'_>, match_id: &str, at: i64) -> Result<(),
     Ok(())
 }
 
-/// For the reaper (§9.5).
 pub fn matches_live(f: &mut FakeTx<'_>) -> Result<Vec<MatchRow>, StoreError> {
     call(f, "matches.live")?;
     Ok(f.tables()
@@ -1405,15 +1478,15 @@ pub fn matches_live(f: &mut FakeTx<'_>) -> Result<Vec<MatchRow>, StoreError> {
         .collect())
 }
 
-/// R257, R376: the mode a match was made in ([`match_mode_in`]).
 pub fn matches_mode_of(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<QueueMode>, StoreError> {
     call(f, "matches.modeOf")?;
     Ok(match_mode_in(f.tables(), match_id))
 }
 
-/// No `open` rows here: a reserved match id is only an id until the registry creates it (R263); discarding it forgets its claim time (R1450). A room claimed for that id whose match
-/// never started goes with it (R890000): Postgres deletes the claimed `open` row, which frees
-/// its code, so the fake drops the room row too. A started room's row stays, still joined.
+/// No `open` rows here: a reserved match id is only an id until the registry creates it (R263);
+/// discarding it forgets its claim time (R1450). A room claimed for that id whose match never
+/// started goes with it (R890000): Postgres deletes the claimed `open` row, which frees its code, so
+/// the fake drops the room row too. A started room's row stays, still joined.
 pub fn matches_discard_open(f: &mut FakeTx<'_>, match_id: &str) -> Result<(), StoreError> {
     call(f, "matches.discardOpen")?;
     keep_only(&mut f.tables().reserved, |reserved| reserved.match_id != match_id);
@@ -1425,7 +1498,6 @@ pub fn matches_discard_open(f: &mut FakeTx<'_>, match_id: &str) -> Result<(), St
     Ok(())
 }
 
-/// R679: the voided match goes as if it never existed.
 pub fn matches_forget_voided(f: &mut FakeTx<'_>, match_id: &str) -> Result<(), StoreError> {
     call(f, "matches.forgetVoided")?;
     forget_voided_rows(f.tables(), match_id);
@@ -1434,7 +1506,7 @@ pub fn matches_forget_voided(f: &mut FakeTx<'_>, match_id: &str) -> Result<(), S
 
 /// R1450: what Postgres's `matches_reap_open` deletes, as the fake holds it: every room expired
 /// before `before` whose match never started, claimed or not, and every reservation claimed before
-/// it whose match never started; then what `on delete set null` (0004) does there. Answers how many went.
+/// it whose match never started; then what `on delete set null` (0004) does there.
 pub fn matches_reap_open(f: &mut FakeTx<'_>, before: i64) -> Result<u64, StoreError> {
     call(f, "matches.reapOpen")?;
     let tables = f.tables();
@@ -1476,7 +1548,6 @@ pub fn matches_reap_open(f: &mut FakeTx<'_>, before: i64) -> Result<u64, StoreEr
     Ok(reaped as u64)
 }
 
-/// R768: written once; a no-op on a match that has a hash already, and on an unknown id.
 pub fn matches_record_final_hash(
     f: &mut FakeTx<'_>,
     match_id: &str,
@@ -1555,7 +1626,6 @@ fn replay_row_in(tables: &FakeTables, row: &MatchRow) -> Option<ReplayRow> {
     })
 }
 
-/// R768: newest ended first, the id breaking a tie, as Postgres orders them.
 pub fn replays_list(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -1584,8 +1654,6 @@ pub fn replays_list(
         .collect())
 }
 
-/// R768: the rows `replays_list` answers, each paired with what `matches_mode_of` answers for its
-/// match: one call, however many rows the page holds.
 pub fn replays_list_with_modes(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -1619,7 +1687,6 @@ pub fn replays_list_with_modes(
         .collect())
 }
 
-/// R768: one finished match with a result.
 pub fn replays_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<ReplayRow>, StoreError> {
     call(f, "replays.get")?;
     let tables: &FakeTables = f.tables();
@@ -1632,7 +1699,6 @@ pub fn replays_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<ReplayRo
 
 // Rooms (§9.5)
 
-/// False when the code is already taken.
 pub fn rooms_create(f: &mut FakeTx<'_>, room: &Room) -> Result<bool, StoreError> {
     call(f, "rooms.create")?;
     if f.tables().rooms.iter().any(|existing| existing.code == room.code) {
@@ -1647,7 +1713,6 @@ pub fn rooms_get(f: &mut FakeTx<'_>, code: &str) -> Result<Option<Room>, StoreEr
     Ok(f.tables().rooms.iter().find(|room| room.code == code).cloned())
 }
 
-/// The atomic single-claim: the loser of a join race gets `None`, never a second match.
 pub fn rooms_claim(
     f: &mut FakeTx<'_>,
     code: &str,
@@ -1670,8 +1735,6 @@ pub fn rooms_claim(
     Ok(Some(row.clone()))
 }
 
-/// R890000: the host's rooms nobody has joined and whose expiry has not passed — the advisory
-/// half of `MAX_OPEN_ROOMS_PER_HOST`.
 pub fn rooms_count_open_by_host(
     f: &mut FakeTx<'_>,
     host_profile_id: &str,
@@ -1765,7 +1828,7 @@ pub fn tickets_count_open(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
         .count() as i64)
 }
 
-/// R257: open tickets per mode (`bo1`, `bo3`, `random`).
+/// R257: open tickets per mode. Every mode is present, in the order `bo1`, `bo3`, `random`.
 pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, StoreError> {
     call(f, "tickets.countOpenByMode")?;
     let mut counts: PerMode<i64> = PerMode::default();
@@ -1777,7 +1840,6 @@ pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, St
     Ok(counts)
 }
 
-/// R640002: the waits of the tickets claimed at or after `since`, oldest claim first, ties on id.
 pub fn tickets_recent_waits(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
     call(f, "tickets.recentWaits")?;
     let tables = f.tables();
@@ -1800,7 +1862,6 @@ pub fn tickets_recent_waits(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Ticket
         .collect())
 }
 
-/// §9.5: "both tickets are claimed in one atomic statement".
 pub fn tickets_claim_pair(
     f: &mut FakeTx<'_>,
     a_id: &str,
@@ -1855,7 +1916,6 @@ pub fn tickets_cancel(f: &mut FakeTx<'_>, ticket_id: &str, _at: i64) -> Result<(
 
 // Results (§9.5)
 
-/// One row per match (§9.5). Rejects a second row for the same match with `StoreError::Duplicate`.
 pub fn results_insert(f: &mut FakeTx<'_>, row: &ResultRow) -> Result<(), StoreError> {
     call(f, "results.insert")?;
     if f.tables()
@@ -1910,8 +1970,6 @@ pub fn results_record_for(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Profil
     })
 }
 
-// memory-stores.ts: the halves both in-memory stores shared
-
 // Saved decks, trios and the Conquest series (R250–R263)
 
 /// Oldest first, ties on id: the order `decks_list` and `trios_list` promise.
@@ -1919,7 +1977,6 @@ fn by_creation(a_created: i64, a_id: &str, b_created: i64, b_id: &str) -> std::c
     a_created.cmp(&b_created).then_with(|| a_id.cmp(b_id))
 }
 
-/// A profile's decks, oldest first: `created_at`, then `id`.
 pub fn decks_list(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<SavedDeck>, StoreError> {
     call(f, "decks.list")?;
     let mut rows: Vec<SavedDeck> = f
@@ -1933,7 +1990,6 @@ pub fn decks_list(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<SavedDeck>
     Ok(rows)
 }
 
-/// One deck by id, whoever owns it; the caller checks `profile_id`.
 pub fn decks_get(f: &mut FakeTx<'_>, deck_id: &str) -> Result<Option<SavedDeck>, StoreError> {
     call(f, "decks.get")?;
     Ok(f.tables().decks.iter().find(|deck| deck.id == deck_id).cloned())
@@ -2003,7 +2059,6 @@ pub fn decks_remove(f: &mut FakeTx<'_>, profile_id: &str, deck_id: &str) -> Resu
     Ok(true)
 }
 
-/// A profile's trios, oldest first: `created_at`, then `id`.
 pub fn trios_list(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<SavedTrio>, StoreError> {
     call(f, "trios.list")?;
     let mut rows: Vec<SavedTrio> = f
@@ -2022,8 +2077,6 @@ pub fn trios_get(f: &mut FakeTx<'_>, trio_id: &str) -> Result<Option<SavedTrio>,
     Ok(f.tables().trios.iter().find(|trio| trio.id == trio_id).cloned())
 }
 
-/// As `decks_upsert`, plus `unknown_deck` when a non-null slot names a deck that is not this
-/// profile's; one deck in two slots is refused by constraint.
 pub fn trios_upsert(
     f: &mut FakeTx<'_>,
     trio: &SavedTrio,
@@ -2098,7 +2151,6 @@ fn newest_first(a: &DeckVersion, b: &DeckVersion) -> std::cmp::Ordering {
     b.saved_at.cmp(&a.saved_at).then_with(|| b.id.cmp(&a.id))
 }
 
-/// The profile's own deck's versions, newest first.
 pub fn deck_versions_list(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -2116,8 +2168,6 @@ pub fn deck_versions_list(
     Ok(rows)
 }
 
-/// Keeps `save` as its deck's newest version, by `deck_version_step`; `missing` when the profile
-/// has no such deck (the composite foreign key).
 pub fn deck_versions_keep(
     f: &mut FakeTx<'_>,
     save: &DeckVersion,
@@ -2178,7 +2228,6 @@ pub fn deck_versions_keep(
 
 // Custom cards on the account (R915008, migration 0037)
 
-/// A profile's custom cards, oldest first: `created_at`, then `id`.
 pub fn custom_cards_list(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<SavedCustomCard>, StoreError> {
     call(f, "customCards.list")?;
     let mut rows: Vec<SavedCustomCard> = f
@@ -2192,7 +2241,6 @@ pub fn custom_cards_list(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<Sav
     Ok(rows)
 }
 
-/// The profile's own card with this id, or none.
 pub fn custom_cards_get(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -2244,8 +2292,6 @@ pub fn custom_cards_create(
     Ok(CustomCardCreateOutcome::Created)
 }
 
-/// Replaces the profile's own card whole when its version is still `replaces`, as
-/// `app.update_custom_card` (0037) does: the version counted, `created_at` kept.
 pub fn custom_cards_update(
     f: &mut FakeTx<'_>,
     card: &CustomCardWrite,
@@ -2274,7 +2320,6 @@ pub fn custom_cards_update(
     Ok(CustomCardUpdateOutcome::Updated)
 }
 
-/// Deletes the profile's own card. False when it has none with this id.
 pub fn custom_cards_remove(f: &mut FakeTx<'_>, profile_id: &str, card_id: &str) -> Result<bool, StoreError> {
     call(f, "customCards.remove")?;
     Ok(keep_only(&mut f.tables().custom_cards, |row| {
@@ -2300,7 +2345,6 @@ pub fn series_get(f: &mut FakeTx<'_>, series_id: &str) -> Result<Option<SeriesRo
         .cloned())
 }
 
-/// Compare-and-set: writes `next` only when the stored row's `version` is `next.version - 1`.
 pub fn series_update(f: &mut FakeTx<'_>, next: &SeriesRow) -> Result<bool, StoreError> {
     if call_cas(f, "series.update")? == CallOutcome::Lose {
         return Ok(false);
@@ -2316,7 +2360,6 @@ pub fn series_update(f: &mut FakeTx<'_>, next: &SeriesRow) -> Result<bool, Store
     Ok(true)
 }
 
-/// The series whose game in play is this match (`status = 'playing'` and `next_match_id`).
 pub fn series_by_match(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<SeriesRow>, StoreError> {
     call(f, "series.byMatch")?;
     Ok(f.tables()
@@ -2326,7 +2369,6 @@ pub fn series_by_match(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<Seri
         .cloned())
 }
 
-/// The series one of whose games was played (or is being played) as this match, whatever its status.
 pub fn series_with_game(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<SeriesRow>, StoreError> {
     call(f, "series.withGame")?;
     Ok(f.tables()
@@ -2336,7 +2378,6 @@ pub fn series_with_game(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<Ser
         .cloned())
 }
 
-/// The profile's series that is not over. A profile is in at most one.
 pub fn series_active_for(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<SeriesRow>, StoreError> {
     call(f, "series.activeFor")?;
     Ok(f.tables()
@@ -2349,7 +2390,6 @@ pub fn series_active_for(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<
         .cloned())
 }
 
-/// Every series that is not over: the sweeper's input (R263), oldest first.
 pub fn series_active(f: &mut FakeTx<'_>) -> Result<Vec<SeriesRow>, StoreError> {
     call(f, "series.active")?;
     let mut rows: Vec<SeriesRow> = f
@@ -2365,8 +2405,10 @@ pub fn series_active(f: &mut FakeTx<'_>) -> Result<Vec<SeriesRow>, StoreError> {
 
 // Tutorial progress on the account (SPEC §9.10, R320)
 
-/// R320 merge (0011): lessons become union in code-point order, choices strictly newer.
-/// `None` when union exceeds `max_lessons`.
+/// R320's merge, exactly as `app.merge_tutorial_progress` (0011) makes it: the lessons become the
+/// union of the stored and the sent, each once in code-point order (`collate "C"` in Postgres), and
+/// the stored choice is replaced only by a strictly newer one. `None` when the union would pass
+/// `max_lessons`; nothing changes then.
 pub fn merge_tutorial_row(
     existing: Option<&TutorialProgressRow>,
     input: &TutorialMergeInput,
@@ -2398,9 +2440,8 @@ pub fn merge_tutorial_row(
     })
 }
 
-/// The profile's row, or `None` before its first write. Laxer than Postgres in two places, both
-/// listed in `src/db/pg.rs`'s KNOWN DIVERGENCES: it writes a row for a profile that is not active,
-/// and it does not re-check an id's shape (the handler has).
+/// Laxer than Postgres in two places, both listed in `src/db/pg.rs`'s KNOWN DIVERGENCES: it writes a
+/// row for a profile that is not active, and it does not re-check an id's shape (the handler has).
 pub fn tutorial_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<TutorialProgressRow>, StoreError> {
     call(f, "tutorial.get")?;
     Ok(f.tables()
@@ -2410,7 +2451,6 @@ pub fn tutorial_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<Tutor
         .cloned())
 }
 
-/// R320: one atomic merge ([`merge_tutorial_row`]). A profile with no row gets one.
 pub fn tutorial_merge(
     f: &mut FakeTx<'_>,
     input: &TutorialMergeInput,
@@ -2434,7 +2474,8 @@ pub fn tutorial_merge(
 
 // Player settings on the account (SPEC §9.1, R633, R634)
 
-/// Serializes a JSON scalar without fractional parts on whole numbers.
+/// `JSON.stringify` of a JSON scalar, numbers as JavaScript prints them: an integral number without
+/// a fraction (`1`, never serde's `1.0`).
 fn js_scalar(node: &Value) -> String {
     match node {
         Value::Number(number) => {
@@ -2457,7 +2498,9 @@ fn js_scalar(node: &Value) -> String {
     }
 }
 
-/// Matches Postgres `octet_length(groups::text)` formatting for byte cap calculations.
+/// The size Postgres measures for the byte cap: `octet_length(groups::text)`. jsonb prints an object
+/// with its keys shorter first and then bytewise, a space after each colon and comma, so the
+/// in-memory store prints the same text to count the same bytes.
 pub fn jsonb_text_bytes(value: &Value) -> usize {
     fn text(node: &Value) -> String {
         match node {
@@ -2485,8 +2528,9 @@ pub fn jsonb_text_bytes(value: &Value) -> usize {
     text(value).len()
 }
 
-/// R634 merge (0018): replaces stored group when strictly later; omitted groups stay.
-/// `None` when result would exceed limits.
+/// R634's merge, exactly as `app.merge_player_settings` (0018) makes it: each group sent replaces
+/// the stored group only when its time is strictly later (the stored one on a tie), and a group the
+/// write does not name stays. `None` when the result would pass a cap; nothing changes then.
 pub fn merge_player_settings_row(
     existing: Option<&PlayerSettingsRow>,
     input: &PlayerSettingsMergeInput,
@@ -2512,9 +2556,8 @@ pub fn merge_player_settings_row(
     })
 }
 
-/// The profile's row, or `None` before its first write. Laxer than Postgres in two places, both
-/// listed in `src/db/pg.rs`'s KNOWN DIVERGENCES: it writes a row for a profile that is not active,
-/// and it does not re-check a group's shape (the handler has).
+/// Laxer than Postgres in two places, both listed in `src/db/pg.rs`'s KNOWN DIVERGENCES: it writes a
+/// row for a profile that is not active, and it does not re-check a group's shape (the handler has).
 pub fn player_settings_get(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -2527,7 +2570,6 @@ pub fn player_settings_get(
         .cloned())
 }
 
-/// R634: one atomic merge ([`merge_player_settings_row`]). A profile with no row gets one.
 pub fn player_settings_merge(
     f: &mut FakeTx<'_>,
     input: &PlayerSettingsMergeInput,
@@ -2550,7 +2592,6 @@ pub fn player_settings_merge(
 
 // Last boards (C+ #29 Portal to the Past, R417, R565)
 
-/// The profile's last board of this kind, or `None` before its first finished game of it.
 pub fn last_boards_get(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -2564,7 +2605,6 @@ pub fn last_boards_get(
         .map(|row| row.board.clone()))
 }
 
-/// R565: replace it, or write the first one, as a game of that kind ends.
 pub fn last_boards_put(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -2611,8 +2651,7 @@ pub fn last_boards_sample_others(
 
 // Game records for the card statistics (SPEC §9.11, R376)
 
-/// The match store's `modeOf` for the in-memory store, as Postgres answers it: a game of a Conquest
-/// series is `bo3`, a room's match has the room's mode, and a queue match its tickets' mode.
+/// `matches_mode_of` for the in-memory store, as Postgres answers it.
 pub fn match_mode_in(tables: &FakeTables, match_id: &str) -> Option<QueueMode> {
     if tables
         .series
@@ -2733,8 +2772,7 @@ pub fn game_record_batch_fold(
     }))
 }
 
-/// The records of the query's sources, mode and patch whose detail is still held (R1044001), in id
-/// order (code points), filtered exactly as `card_stats` does.
+/// Filtered exactly as `card_stats` does.
 pub fn game_records_list(f: &mut FakeTx<'_>, query: &GameRecordQuery) -> Result<Vec<GameRecord>, StoreError> {
     call(f, "gameRecords.list")?;
     let filter = CardStatsFilter {
@@ -2834,7 +2872,6 @@ pub fn game_records_unfiled(
     Ok(unfiled.into_iter().map(|(_, id)| id).collect())
 }
 
-/// R1044000: the totals the query reads.
 pub fn stats_totals_load(f: &mut FakeTx<'_>, query: &StatsTotalsQuery) -> Result<StatsTotals, StoreError> {
     call(f, "statsTotals.load")?;
     Ok(f.tables().stats_totals.select(
@@ -2869,9 +2906,6 @@ fn telemetry_seat_held(tables: &FakeTables, match_id: &str, seat: PlayerId) -> b
     })
 }
 
-/// R1442: refused, with nothing written, when a row names a match the store does not hold (the
-/// foreign key on `matches`); otherwise every row whose key is not held yet goes in, except a row of
-/// a seat whose account has been deleted, so no write after a deletion puts back what it removed.
 pub fn play_telemetry_insert(f: &mut FakeTx<'_>, telemetry: &PlayTelemetry) -> Result<(), StoreError> {
     call(f, "playTelemetry.insert")?;
     let tables = f.tables();
@@ -3061,7 +3095,7 @@ pub fn play_telemetry_unfolded(f: &mut FakeTx<'_>) -> Result<Vec<String>, StoreE
 
 // Player statistics on the account (SPEC §9.11, R639, R654)
 
-/// A counter as the summary counts it: positive safe integer, or 0.
+/// A counter as the summary counts it: a positive safe integer, or 0.
 fn count_number(value: Option<&Value>) -> i64 {
     const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
     match value.and_then(Value::as_f64) {
@@ -3070,7 +3104,8 @@ fn count_number(value: Option<&Value>) -> i64 {
     }
 }
 
-/// Key-value entries for object or array members.
+/// `Object.entries` of a stats bag's member: an object's members, an array's items under their
+/// index, anything else nothing.
 fn object_entries(value: Option<&Value>) -> Vec<(String, &Value)> {
     match value {
         Some(Value::Object(map)) => map.iter().map(|(key, item)| (key.clone(), item)).collect(),
@@ -3322,8 +3357,11 @@ fn keep_only<T>(rows: &mut Vec<T>, wanted: impl FnMut(&T) -> bool) -> usize {
     before - rows.len()
 }
 
-/// Profile store `remove` (0012, R1442): removes the profile's rows and telemetry.
-/// Finished matches and series stay for the other player.
+/// The profile store's `remove`, as migration 0012 makes Postgres do it: the profile's own rows go,
+/// its invite-code attempts lose their link to it, a room it opened that nobody joined goes too,
+/// and (0029, R1442) so does the play telemetry of every seat it held.
+/// Finished matches, results and series stay for the other player. Postgres empties this profile's
+/// seat on them; here the id stays, since no port read of a finished match looks the seat up.
 pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     if keep_only(&mut tables.profiles, |row| row.id != profile_id) == 0 {
         return false;
@@ -3398,10 +3436,9 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     true
 }
 
-/// The match store's `forgetVoided` (R679), as migration 0024's `app.forget_voided_match` makes
-/// Postgres do it: a live match with no result goes with its log, a profile pointed at it is let go
-/// and a ticket that paired it loses the link (`on delete set null`, 0004). Anything else is left
-/// alone.
+/// `matches_forget_voided` (R679), as migration 0024's `app.forget_voided_match` makes Postgres do
+/// it: a live match with no result goes with its log, a profile pointed at it is let go and a ticket
+/// that paired it loses the link (`on delete set null`, 0004). Anything else is left alone.
 pub fn forget_voided_rows(tables: &mut FakeTables, match_id: &str) {
     let Some(row) = tables.matches.iter().find(|row| row.id == match_id) else {
         return;
@@ -3428,7 +3465,7 @@ pub fn forget_voided_rows(tables: &mut FakeTables, match_id: &str) {
     }
 }
 
-/// The root `purgeExpired`: old attempts, the logs of matches that ended before the cutoff, and the
+/// The root `purge_expired`: old attempts, the logs of matches that ended before the cutoff, and the
 /// play telemetry of matches that ended before its own (R1442).
 pub fn purge_expired_rows(tables: &mut FakeTables, input: &RetentionPurgeInput) -> RetentionPurgeResult {
     let code_attempts = keep_only(&mut tables.attempts, |row| row.at >= input.code_attempts_before);
@@ -3492,7 +3529,6 @@ pub fn ranked_lock_seasons(f: &mut FakeTx<'_>) -> Result<(), StoreError> {
     Ok(())
 }
 
-/// Every season, oldest first.
 pub fn ranked_seasons(f: &mut FakeTx<'_>) -> Result<Vec<Season>, StoreError> {
     call(f, "ranked.seasons")?;
     let mut rows = f.tables().seasons.clone();
@@ -3500,7 +3536,6 @@ pub fn ranked_seasons(f: &mut FakeTx<'_>) -> Result<Vec<Season>, StoreError> {
     Ok(rows)
 }
 
-/// False, writing nothing, when a season of that id exists already.
 pub fn ranked_create_season(f: &mut FakeTx<'_>, season: &Season) -> Result<bool, StoreError> {
     call(f, "ranked.createSeason")?;
     if f.tables().seasons.iter().any(|row| row.id == season.id) {
@@ -3510,8 +3545,6 @@ pub fn ranked_create_season(f: &mut FakeTx<'_>, season: &Season) -> Result<bool,
     Ok(true)
 }
 
-/// R609: every profile that has played a rated game, with its hidden rating: the soft reset's
-/// input. Bots are not profiles and are never in it.
 pub fn ranked_rated_players(f: &mut FakeTx<'_>) -> Result<Vec<ResetPlayer>, StoreError> {
     call(f, "ranked.ratedPlayers")?;
     let tables = f.tables();
@@ -3541,7 +3574,6 @@ pub fn ranked_rated_players(f: &mut FakeTx<'_>) -> Result<Vec<ResetPlayer>, Stor
     Ok(players)
 }
 
-/// R609: writes a soft reset's ratings.
 pub fn ranked_reset_ratings(f: &mut FakeTx<'_>, changes: &[ResetChange]) -> Result<(), StoreError> {
     call(f, "ranked.resetRatings")?;
     let tables = f.tables();
@@ -3556,9 +3588,8 @@ pub fn ranked_reset_ratings(f: &mut FakeTx<'_>, changes: &[ResetChange]) -> Resu
     Ok(())
 }
 
-/// Every row of a season, each with the player's current rating, in profile-id order. R640000: a
-/// ladder bot's row carries the bot's own rating (R610), as Postgres's join reads it, and is
-/// marked `bot`.
+/// R640000: a ladder bot's row carries the bot's own rating (R610), as Postgres's join reads it,
+/// and is marked `bot`.
 pub fn ranked_standings(f: &mut FakeTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
     call(f, "ranked.standings")?;
     Ok(season_standings(f.tables(), season_id, |_| true))
@@ -3640,7 +3671,6 @@ pub fn ranked_ranks_of(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<Seaso
     Ok(rows)
 }
 
-/// Insert or replace one player's season row; `peak_jlorious` merges, keeping the better (lower).
 pub fn ranked_put_rank(f: &mut FakeTx<'_>, row: &SeasonRank) -> Result<(), StoreError> {
     call(f, "ranked.putRank")?;
     let rows = &mut f.tables().season_ranks;
@@ -3664,7 +3694,6 @@ pub fn ranked_put_rank(f: &mut FakeTx<'_>, row: &SeasonRank) -> Result<(), Store
     Ok(())
 }
 
-/// R608: records that a player has held this Jlorious position, keeping the best.
 pub fn ranked_note_peak_jlorious(
     f: &mut FakeTx<'_>,
     season_id: &str,
@@ -3688,7 +3717,6 @@ pub fn ranked_note_peak_jlorious(
     Ok(())
 }
 
-/// R610: a bot's rating, or `None` before its first rated game.
 pub fn ranked_bot(f: &mut FakeTx<'_>, bot_id: &str) -> Result<Option<BotRating>, StoreError> {
     call(f, "ranked.bot")?;
     Ok(f.tables().bots.iter().find(|bot| bot.bot_id == bot_id).cloned())
@@ -3706,8 +3734,6 @@ pub fn ranked_put_bot(f: &mut FakeTx<'_>, bot: &BotRating) -> Result<(), StoreEr
 
 // The ladder bots (R1453, R1454, R1451, R1452, migration 0032)
 
-/// R1454: every bot, its profile's `created_at` and match and its R610 rating beside its row,
-/// oldest profile first (ties on id).
 pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     call(f, "bots.list")?;
     let tables = f.tables();
@@ -3750,8 +3776,7 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     Ok(rows)
 }
 
-/// R1454: the bot's profile (kind `bot`, `active`, the default username, no auth user), its row and
-/// its R610 rating, in one write; an id that is taken is refused, as the primary key would.
+/// R1454: an id that is taken is refused, as the primary key would.
 pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
     call(f, "bots.create")?;
     let now = (f.guard.now)();
@@ -3886,7 +3911,6 @@ fn in_open_series(tables: &FakeTables, profile_id: &str) -> bool {
     })
 }
 
-/// R1453: single-shot, as `tickets_claim_pair`: the bot free and the ticket open, or nothing changes.
 /// The fake writes no `open` skeleton (`matches_discard_open`), so the bot points at the reserved id.
 pub fn tickets_claim_for_bot(
     f: &mut FakeTx<'_>,
@@ -3920,8 +3944,6 @@ pub fn tickets_claim_for_bot(
     Ok(true)
 }
 
-/// R641000: `tickets_claim_for_bot` for a Conquest ticket: the bot free and the ticket open and
-/// `bo3`, or nothing changes; the bot is put in no match, since the series holds it.
 pub fn tickets_claim_for_bot_series(
     f: &mut FakeTx<'_>,
     ticket_id: &str,
@@ -3974,8 +3996,6 @@ pub fn bots_claim_for_rematch(
     Ok(true)
 }
 
-/// R1555000: the flag, and the grind's count of wins back to 0; an unknown bot errs, as Postgres's
-/// row count does.
 pub fn bots_set_grinding(f: &mut FakeTx<'_>, profile_id: &str, grinding: bool) -> Result<(), StoreError> {
     call(f, "bots.setGrinding")?;
     let row = bot_row_of(f.tables(), profile_id)?;
@@ -3984,8 +4004,6 @@ pub fn bots_set_grinding(f: &mut FakeTx<'_>, profile_id: &str, grinding: bool) -
     Ok(())
 }
 
-/// R1555000: as Postgres's statement: a grinding bot counts the win, and at `step_games` steps up
-/// one strength (to `strongest` at most) with its count back to 0; anything else changes nothing.
 pub fn bots_note_grind_win(
     f: &mut FakeTx<'_>,
     bot_id: &str,
@@ -4010,8 +4028,8 @@ pub fn bots_note_grind_win(
     Ok(())
 }
 
-/// R1555000: single-shot, as `bots_claim_for_rematch` for two bots: two different bots, both free,
-/// or nothing changes. As there, the fake writes no skeleton, so both point at the reserved id.
+/// R1555000: as in `bots_claim_for_rematch`, the fake writes no skeleton, so both bots point at the
+/// reserved id.
 pub fn bots_claim_pair(
     f: &mut FakeTx<'_>,
     players: &(String, String),
@@ -4075,7 +4093,6 @@ pub fn bots_release_stale_starts(f: &mut FakeTx<'_>, before: i64) -> Result<Vec<
     Ok(stale.into_iter().map(|(bot_id, _)| bot_id).collect())
 }
 
-/// R1453: the other seat of the profile's last `limit` results, newest first (ties on match id).
 pub fn results_recent_opponents(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -4126,7 +4143,6 @@ pub fn results_count_active_humans(f: &mut FakeTx<'_>, since: i64) -> Result<i64
     Ok(active.len() as i64)
 }
 
-/// R640002: the results that ended at or after `since`, games against a bot included.
 pub fn results_count_since(f: &mut FakeTx<'_>, since: i64) -> Result<i64, StoreError> {
     call(f, "results.countSince")?;
     Ok(f.tables()
@@ -4136,7 +4152,6 @@ pub fn results_count_since(f: &mut FakeTx<'_>, since: i64) -> Result<i64, StoreE
         .count() as i64)
 }
 
-/// R611: one row per rated game. Rejects a second row for the same id.
 pub fn ranked_record_game(f: &mut FakeTx<'_>, row: &RatedGameRow) -> Result<(), StoreError> {
     call(f, "ranked.recordGame")?;
     if f.tables().rated_games.iter().any(|game| game.id == row.id) {
@@ -4169,8 +4184,12 @@ pub fn ranked_bot_games_since(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Rate
     Ok(games)
 }
 
-// Social: friends, presence, challenges, chat (#937, #938, #941).
-// SPEC S7 (migration 0038) in memory, matching Postgres constraints and cascades.
+// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+// SPEC S7 (migration 0038), in memory. Strict where Postgres is strict: one request per direction
+// and pair and never to oneself, one friendship per pair, one block per pair and direction, one open
+// challenge per challenger and friend (`challenges_open_pair_key`), a message of 1 to
+// `CHAT_MAX_CHARS` characters, one report per message and reporter; and every row goes with either
+// profile it names (`remove_social_rows`, the foreign keys' cascade).
 
 use crate::config::CHAT_MAX_CHARS;
 use crate::db::store::{

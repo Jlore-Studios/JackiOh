@@ -13,10 +13,6 @@
 //! is seeded without a hand edit anywhere. With a path, it seeds that file instead (a fixture
 //! catalog), at `CATALOG_VERSION`, which is then required.
 //!
-//! In the same transaction it copies the cosmetics registry compiled in (`crate::cosmetics`,
-//! R1295000) into `public.cosmetics` (migration 0045, SPEC §14.2), which the owned cosmetics
-//! reference as `collection` references `public.cards`.
-//!
 //! R1310000: before the stamp it writes the starter cards (`config::STARTER_CARDS`) to
 //! `app.settings.starter_cards`, which a new account's activation grant reads (R111, migration
 //! 0050), so the list has one source. The stamp grants no account anything (R1310001): migration
@@ -33,7 +29,6 @@ use sqlx::postgres::PgConnection;
 
 use crate::env::quoted;
 
-/// Where the compiled-in catalog came from, for the messages that name it.
 const COMPILED_CATALOG: &str = "crates/cards/catalog.json";
 
 /// The subset of BUILD M4-T1's per-card schema that `public.cards` stores.
@@ -273,7 +268,6 @@ async fn write_catalog(
     Ok(entries.len())
 }
 
-/// The connection string, the version, the catalog, one transaction, one line.
 pub async fn run(args: Vec<String>) -> Result<()> {
     let connection_string = super::database_url()?;
     let configured = std::env::var("CATALOG_VERSION").unwrap_or_default();

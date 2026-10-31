@@ -4,17 +4,15 @@
 //! Every spend route (`POST /api/packs/buy`, `/api/packs/open`, `/api/tokens/redeem-card`,
 //! `/api/tokens/redeem-cosmetic`, `/api/cosmetic-packs/open`, `/api/cosmetic-packs/chase` and
 //! `/api/codes/redeem`) takes an optional `Idempotency-Key` header holding a UUID ([`RequestKey`]);
-//! anything else there is 400, and a request without one runs as it always did. A key belongs to
-//! its account. Under the account's economy lock (R1301003), in the spend's own transaction:
+//! anything else there is 400. A key belongs to its account. Under the account's economy lock
+//! (R1301003), in the spend's own transaction:
 //!
-//! - [`replayed`]: a key the account sent before with the same route and body answers the status
-//!   and body it committed with, and spends nothing; with another route or body it is 422
-//!   `idempotency_key_reused`, and spends nothing either.
-//! - [`keep`]: an unknown key runs the spend and writes its answer beside the grant, so the two
-//!   commit together or not at all. Only a committed spend is kept: a refusal writes nothing, so
-//!   the same key may run again once the refusal no longer holds.
-//! - [`sweep_expired`]: the retention loop deletes a key `IDEMPOTENCY_KEY_TTL_HOURS` after it was
-//!   written (`api::retention::run_purge`), and an account's deletion takes its keys with it.
+//! - [`replayed`]: a key the account sent before answers as it committed, or with another route or
+//!   body is 422, and either way spends nothing.
+//! - [`keep`]: only a committed spend is kept: a refusal writes nothing, so the same key may run
+//!   again once the refusal no longer holds.
+//! - [`sweep_expired`]: run by the retention loop (`api::retention::run_purge`); an account's
+//!   deletion takes its keys with it.
 //!
 //! The body is kept only as a keyed hash ([`RequestKey::of`]), under `CODE_PEPPER`'s `:body`
 //! domain, so no invite code a redemption sent is kept, even hashed under the code's own domain.

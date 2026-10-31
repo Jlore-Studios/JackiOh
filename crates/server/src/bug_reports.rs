@@ -18,9 +18,8 @@
 //! could show a hand to the opponent. A maintainer reads the rest from the database (crates/server/README.md, "A match its
 //! log does not reproduce").
 //!
-//! How often. Findings group by `Signature`: where found, the build, the catalog, and the first
-//! refused action's type. A signature files one issue, titled with its first match and the
-//! signature, whose body lists each match the process sees with it, up to
+//! How often. Findings group by `Signature`. A signature files one issue, titled with its first
+//! match and the signature, whose body lists each match the process sees with it, up to
 //! `BUG_REPORT_LISTED_MATCHES`, edited in as each arrives. A match is listed once per process. At
 //! most `BUG_REPORTS_PER_WINDOW` issues are opened in `BUG_REPORT_WINDOW_MS`, and no issue is
 //! opened when one whose title holds the signature exists already, open or closed, so a restart

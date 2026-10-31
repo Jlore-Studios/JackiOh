@@ -3,11 +3,6 @@
 //! I/O: the pack roll calls [`apply_pity`] with the slots it rolled from its own seeded, logged
 //! draws, and the tracks call the level curve with the account's total XP. The numbers live in
 //! [`crate::config`]; this module only computes with them (CLAUDE.md rule 9).
-//!
-//! - [`PityCounters`] is one rarity counter set per account, shared by every card pack it opens
-//!   (R1298000): each counts card packs, not slots, since its rarity last dropped.
-//! - [`apply_pity`] is pity, pure from the counters and the slots' rolled rarities to the slots
-//!   after any force and the next counters.
 
 use jackioh_engine::wire::PrintedRarity;
 use serde::{Deserialize, Serialize};
@@ -38,12 +33,11 @@ pub struct PityCounters {
     pub mythic: usize,
 }
 
-/// Pity (SPEC §14.4, R1339001): from the pack's pity counters and its slots' rolled rarities to
-/// the slots after pity and the next counters. Pity changes no roll: a pack in which a counter
-/// would reach its threshold, without its rarity, forces one slot to that rarity, Mythic first,
-/// then Legendary, then Epic, each into `forced_slot`'s slot. Then each counter resets when the
-/// pack holds its rarity and adds one when it does not, so a Mythic leaves the Epic and Legendary
-/// counters running, and a Legendary the Epic one.
+/// Pity (SPEC §14.4, R1339001) changes no roll: a pack in which a counter would reach its
+/// threshold, without its rarity, forces one slot to that rarity, Mythic first, then Legendary,
+/// then Epic, each into `forced_slot`'s slot. Then each counter resets when the pack holds its
+/// rarity and adds one when it does not, so a Mythic leaves the Epic and Legendary counters
+/// running, and a Legendary the Epic one.
 pub fn apply_pity(
     counters: PityCounters,
     mut slots: Vec<PrintedRarity>,
@@ -176,8 +170,6 @@ mod tests {
 
     #[test]
     fn level_for_xp_huge_xp_ends() {
-        // `total_xp_for_level` saturates to `i64::MAX` past level 429,496,730; comparing the
-        // correction loops against it walked that plateau to `u32::MAX` at `i64::MAX`.
         assert_eq!(total_xp_for_level(429_496_730), 9_223_372_032_559_808_500);
         assert_eq!(total_xp_for_level(429_496_731), i64::MAX);
         assert_eq!(level_for_xp(i64::MAX), 429_496_730);
@@ -352,12 +344,11 @@ mod tests {
         assert_eq!(next.epic, 0);
     }
 
-    /// The seeded simulation (SPEC §14.4, R1339001): 200,000 card packs, each `slot_tiers` from
-    /// `Rng::new("jackioh-economy-1339", 0)` with `apply_pity` on top. It reports each tracked
-    /// rarity's share of packs holding it with pity and before it, `1 − (1 − w/TIER_WEIGHT_TOTAL)^
-    /// PACK_SLOTS` (30.4%, 9.6% and 4.9%), and tunes nothing to them: the rate with pity is at
-    /// least the rate before it, within `RATE_TOLERANCE`, and no counter ever reaches its threshold
-    /// (pity fires on the threshold pack, so the largest counter seen stays one below it).
+    /// The seeded simulation (SPEC §14.4, R1339001) reports each tracked rarity's share of packs
+    /// holding it with pity and before it, `1 − (1 − w/TIER_WEIGHT_TOTAL)^PACK_SLOTS` (30.4%, 9.6%
+    /// and 4.9%), and tunes nothing to them: the rate with pity is at least the rate before it,
+    /// within `RATE_TOLERANCE`, and no counter ever reaches its threshold (pity fires on the
+    /// threshold pack, so the largest counter seen stays one below it).
     #[test]
     fn r1339001_the_simulation_reports_pity_on_top_and_caps_every_counter() {
         const PACKS: usize = 200_000;

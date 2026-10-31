@@ -1,10 +1,35 @@
-//! Production Postgres store (SPEC §9.2; SURFACE §11.1, §11.2) over migrations with sqlx.
-//! Dispatches `<substore>_<method>` taking `Tx::Pg`.
+//! The production store (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
+//! migrations in `crates/server/migrations` (0001-0037) with sqlx (SURFACE §11.1, §11.2). One free
+//! async fn per store method, named `<substore>_<method>` (the root `redeem` and `purge_expired`
+//! keep their names), each taking the open transaction `Tx::Pg` holds; `db::store` dispatches to
+//! them.
 //!
-//! Core invariants (§9.4, §9.5):
-//! 1. Call `app.*` functions directly rather than re-deriving business logic in Rust.
-//! 2. Transactions run as `service_role` with `request.jwt.claim.sub` stamped via `SET LOCAL`.
-//! 3. `fake.rs` is behavioral spec; divergences noted in `KNOWN DIVERGENCES` below.
+//! THREE RULES THIS FILE LIVES BY
+//!
+//! 1. CALL THE `app.*` FUNCTIONS, DO NOT RE-DERIVE THEM. The migrations put the rules SPEC §9.4/§9.5
+//!    call "one transaction", "one atomic statement" and "append-only" inside SECURITY DEFINER
+//!    functions. Wherever the port's shape admits it, a method here is one call to one of them and
+//!    the SQL stays the authority. Each method that does NOT reach an `app.*` function says why.
+//!
+//! 2. THE SERVER IS `service_role`, AND NEVER THE OWNER. The connection may be made as the migration
+//!    owner (Supabase hands out `postgres` in `DATABASE_URL`), but no statement in this file ever RUNS
+//!    as it: every transaction begins by switching to `service_role` and stamping
+//!    `request.jwt.claim.sub` — the GUC `auth.uid()` reads — with the profile the call is about.
+//!    `SET LOCAL` is a silent no-op outside a transaction, which is exactly how a driver ends up
+//!    quietly running as a superuser with RLS bypassed, so no path here executes SQL outside one:
+//!    every method takes the transaction `begin` opened and re-stamps its own subject first
+//!    (`run_as`), and `SESSION_SQL` is the only statement that sets either GUC.
+//!    `tests/store/postgres.rs` asserts both from inside the store's own transaction.
+//!
+//! 3. `src/db/fake.rs` IS THE BEHAVIORAL SPECIFICATION. It implements the same methods, the server
+//!    suite runs against it, and its header lists the invariants §9.4 and §9.5 lean on.
+//!    `tests/store/contract.rs` is those invariants as one suite, run against BOTH stores (the fake
+//!    in `cargo test`, this one in `test:db`). Where the two cannot agree, the divergence is written
+//!    down in `KNOWN DIVERGENCES` at the bottom of this file and asserted, not hidden.
+//!
+//! The SQL goes through `sqlx::query` with binds, never the compile-time `query!` macros (they need
+//! a live database at build time); `ts!`, `nullable_ts!` and `*_columns!` expand by `concat!`, so
+//! every statement is a `&'static str`.
 
 use std::time::Duration;
 
@@ -52,14 +77,10 @@ use crate::username::{render_username, username_key};
 /// The open transaction every method here runs in: what `Tx::Pg` holds.
 pub type PgTx<'a> = Transaction<'a, Postgres>;
 
-/// The endings that always have a winner (`GameOverReason`, `crates/engine/src/wire/events.rs`): one
-/// hero died, a player conceded, a player's disconnect grace ran out, an effect won the game for
-/// one player (`won-by-effect`, R1412), a player was voted out (`voted-out`, R1843000), or a player
-/// fled and chose a loss for the other (`fled-decisive`, R1843002). The others (`both-heroes-dead`,
-/// `draw-accepted`, `turn-cap`, `match-ceiling`, `both-voted-out`) are draws, `alt-win` is either: two
-/// players holding an alternative win draw (R850), and `fled` is a win for its winner and a draw for
-/// the other player, or a draw for both when two fled (`LOSER_DRAWS_REASONS`, R1843004).
-/// `results_record_for` reads a winnerless decisive row as the deleted winner's (migration 0012).
+/// The endings that always have a winner (`GameOverReason`, `crates/engine/src/wire/events.rs`;
+/// `won-by-effect` R1412, `voted-out` R1843000, `fled-decisive` R1843002). The others are draws, but
+/// `alt-win` is either (two players holding an alternative win draw, R850), and `fled` is a win for
+/// its winner and a draw for the other player, or a draw for both when two fled (R1843004).
 const DECISIVE_REASONS: &[&str] = &[
     "hero-death",
     "concede",
@@ -81,10 +102,9 @@ fn loser_draws_reasons() -> Vec<String> {
 // The role the server acts as
 
 /// Migration 0001 §8, and the same closing note in 0002-0009: `service_role` is the role the API
-/// server and the match actor hold. It is the only role granted EXECUTE on `app.redeem_invite_code`,
-/// `app.upsert_deck`, `app.append_match_action`, `app.claim_ticket_pair` and the rest, so running
-/// as it is not a formality — a call this file gets wrong fails with `insufficient_privilege`
-/// instead of succeeding because the connection happened to own the table.
+/// server and the match actor hold. It is the only role granted EXECUTE on the `app.*` functions, so
+/// a call this file gets wrong fails with `insufficient_privilege` instead of succeeding because the
+/// connection happened to own the table.
 const ACTING_ROLE: &str = "service_role";
 
 /// Postgres's `unique_violation`, the SQLSTATE `results_insert` translates on `results_pkey`.
@@ -93,9 +113,8 @@ const UNIQUE_VIOLATION: &str = "23505";
 /// The primary key whose violation is the port's `StoreError::Duplicate`.
 const RESULTS_PKEY: &str = "results_pkey";
 
-/// `unique_violation` (23505) on `results_pkey` — the shape `results_insert` translates into the
-/// port's `StoreError::Duplicate` (TS's `DuplicateResultError`). Checked structurally, on the
-/// database error's code and constraint, so it holds however the driver wrapped the error.
+/// Checked structurally, on the database error's code and constraint, so it holds however the
+/// driver wrapped the error.
 fn is_results_key_conflict(error: &sqlx::Error) -> bool {
     match error {
         sqlx::Error::Database(held) => {
@@ -105,24 +124,18 @@ fn is_results_key_conflict(error: &sqlx::Error) -> bool {
     }
 }
 
-/// One statement, two `SET LOCAL`s. `set_config(name, value, true)` is `SET LOCAL name = value`,
-/// and unlike `SET LOCAL` it takes parameters, so the profile id is bound rather than interpolated.
-///
-/// `request.jwt.claim.sub` is the GUC Supabase's `auth.uid()` reads (see
-/// `tests/sql/00_supabase_stub.sql`, which stands the same function up for a plain Postgres). Every
-/// RLS policy in 0002-0007 is `profile_id = app.current_profile_id()`, and `app.profile_is_active()`
-/// reads `auth.uid()` directly, so a transaction that leaves it unset is a transaction where those
-/// expressions silently see NULL. `service_role` carries BYPASSRLS, which means this cannot change
-/// the result of anything here today; it is set anyway so that the day a policy, a trigger or a
-/// SECURITY INVOKER helper does consult the caller, it sees the profile the call is about rather
-/// than nobody.
+/// One statement, two `SET LOCAL`s: unlike `SET LOCAL`, `set_config(name, value, true)` takes
+/// parameters, so the profile id is bound rather than interpolated. `service_role` carries
+/// BYPASSRLS, so the subject changes no result here today; it is set anyway so that the day a
+/// policy, a trigger or a SECURITY INVOKER helper consults `auth.uid()`
+/// (`tests/sql/00_supabase_stub.sql` stands it up for a plain Postgres), it sees the profile the
+/// call is about.
 const SESSION_SQL: &str =
     "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
 
 // Errors. Every failure leaves this file through these two, so the `StoreError` variants they
 // name are the only thing about `db::store`'s error type this file depends on.
 
-/// A driver or database failure, as the port's error.
 fn db_error(error: sqlx::Error) -> StoreError {
     StoreError::Db(error)
 }
@@ -130,11 +143,9 @@ fn db_error(error: sqlx::Error) -> StoreError {
 // Value conversions. The port speaks epoch milliseconds and plain JSON; Postgres speaks
 // timestamptz, jsonb, uuid and int8.
 
-/// Nanoseconds in a millisecond: `OffsetDateTime` counts the one, the port the other.
 const NANOS_PER_MS: i128 = 1_000_000;
 
-/// `timestamptz` -> epoch ms. sqlx decodes it into an `OffsetDateTime` (TS: node-pg's `Date`, whose
-/// `getTime()` drops the microseconds the same way).
+/// `timestamptz` -> epoch ms, the microseconds dropped.
 fn ms_of(value: OffsetDateTime) -> i64 {
     (value.unix_timestamp_nanos() / NANOS_PER_MS) as i64
 }
@@ -143,17 +154,15 @@ fn ms_or_null(value: Option<OffsetDateTime>) -> Option<i64> {
     value.map(ms_of)
 }
 
-/// Written as `to_timestamp($n / 1000.0)`; the SQL half of an epoch-ms parameter. TS's `ts(param)`,
-/// expanded at compile time.
+/// Written as `to_timestamp($n / 1000.0)`; the SQL half of an epoch-ms parameter.
 macro_rules! ts {
     ($param:literal) => {
         concat!("to_timestamp(", $param, "::double precision / 1000.0)")
     };
 }
 
-/// `to_timestamp` of a nullable epoch-ms parameter, which SQL cannot express inline. TS's
-/// `nullableTs(param)` (one of its small helpers at the bottom), expanded at compile time; a macro
-/// is defined before its first use, hence here.
+/// `to_timestamp` of a nullable epoch-ms parameter, which SQL cannot express inline. A macro is
+/// defined before its first use, hence here.
 macro_rules! nullable_ts {
     ($param:literal) => {
         concat!(
@@ -166,8 +175,7 @@ macro_rules! nullable_ts {
     };
 }
 
-/// An int8 that arrives as text (`seq::text`, the `::text` of `app.append_match_action`), because
-/// TS read it so: it does not fit a JS number in general.
+/// An int8 that arrives as text (`seq::text`, the `::text` of `app.append_match_action`).
 fn int_of(value: &str) -> Result<i64, StoreError> {
     value
         .trim()
@@ -205,8 +213,7 @@ fn card_list_of(value: &Value) -> Result<Vec<String>, StoreError> {
 /// this file wrote it, and checked just far enough that a row from some other writer fails here, by
 /// name, rather than as a missing field deep inside a series transition.
 fn frozen_trio_of(value: &Value) -> Result<FrozenTrio, StoreError> {
-    // JS's `typeof value !== "object" || value === null`: an array is an object there, and fails
-    // one check later, at its missing `decks`.
+    // An array passes this check and fails the next, at its missing `decks`.
     if !(value.is_object() || value.is_array()) {
         return Err(StoreError::from("expected a frozen trio object"));
     }
@@ -216,13 +223,11 @@ fn frozen_trio_of(value: &Value) -> Result<FrozenTrio, StoreError> {
     let empty = Value::Object(serde_json::Map::new());
     let mut frozen: Vec<FrozenDeck> = Vec::with_capacity(decks.len());
     for deck in decks {
-        // `deck ?? {}`.
         let entry = if deck.is_null() { &empty } else { deck };
         let name = text_of(entry.get("name"))?;
         let cards = card_list_of(entry.get("cards").unwrap_or(&Value::Null))?;
-        // R642: the portrait freezes with the deck (ports.ts). Absent on rows frozen before
-        // portraits existed, so absence stays absent and reads as `vanilla` downstream.
-        // R642: absent stays absent, null stays null (ports.ts's `portrait?: string | null`).
+        // R642: the portrait freezes with the deck. Absent on rows frozen before portraits existed,
+        // so absent stays absent (and reads as `vanilla` downstream), and null stays null.
         let portrait = match entry.get("portrait") {
             None => None,
             Some(Value::Null) => Some(None),
@@ -311,7 +316,7 @@ fn queue_mode_of(value: &str) -> Result<QueueMode, StoreError> {
 const STAKES: &[i16] = &[1, 2];
 
 /// `matches.stake` carries `check (stake is null or stake in (1, 2))` (migration 0023, R672). Read
-/// into whatever `MatchRow.stake` holds, through its serde form (TS's `1 | 2`).
+/// into whatever `MatchRow.stake` holds, through its serde form.
 fn stake_of<T: DeserializeOwned>(value: i16) -> Result<T, StoreError> {
     if STAKES.contains(&value) {
         return from_json(json!(value));
@@ -322,23 +327,22 @@ fn stake_of<T: DeserializeOwned>(value: i16) -> Result<T, StoreError> {
     )))
 }
 
-/// TS's `json(value)`: `JSON.stringify`, the text a `$n::jsonb` parameter is bound as.
+/// The JSON text a `$n::jsonb` parameter is bound as.
 fn json<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
     serde_json::to_string(value).map_err(|error| StoreError::from(error.to_string()))
 }
 
-/// `value === null ? null : json(value)`.
 fn json_or_null<T: Serialize>(value: &Option<T>) -> Result<Option<String>, StoreError> {
     value.as_ref().map(json).transpose()
 }
 
-/// `JSON.stringify` for an error message, which never fails.
+/// JSON text for an error message, which never fails.
 fn stringify<T: Serialize + ?Sized>(value: &T) -> String {
     serde_json::to_string(value).unwrap_or_else(|_| String::from("undefined"))
 }
 
 /// A string union's literal, as its serde form writes it (SURFACE §4.3: every union serializes as
-/// TS's literal), so the column holds exactly the text TS bound.
+/// TS's literal), which is the text the column holds.
 fn literal<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
     match serde_json::to_value(value) {
         Ok(Value::String(text)) => Ok(text),
@@ -361,13 +365,10 @@ fn literal_or_null<T: Serialize + ?Sized>(value: &T) -> Result<Option<String>, S
     }
 }
 
-/// A column's text read back as the string union it holds (TS's `value as T` after its check).
 fn from_literal<T: DeserializeOwned>(text: &str) -> Result<T, StoreError> {
     from_json(Value::String(text.to_string()))
 }
 
-/// A jsonb value read back as the port type TS cast it to (`row.action as Action`, `state.games`,
-/// a `VisibleRank`).
 fn from_json<T: DeserializeOwned>(value: Value) -> Result<T, StoreError> {
     serde_json::from_value(value).map_err(|error| StoreError::from(error.to_string()))
 }
@@ -388,8 +389,8 @@ fn int_or_null<T: Serialize + ?Sized>(value: &T) -> Result<Option<i64>, StoreErr
     }
 }
 
-// Reading a row. sqlx decodes by the column's own type, strictly: a uuid column is a `Uuid`, a
-// timestamptz an `OffsetDateTime`, a jsonb a `serde_json::Value`, an int4 an `i32`, an int8 an `i64`.
+// Reading a row. sqlx decodes by the column's own type, strictly: a uuid column is a `Uuid`, an
+// int4 an `i32`, an int8 an `i64`.
 
 fn get<'r, T>(row: &'r PgRow, column: &str) -> Result<T, StoreError>
 where
@@ -407,28 +408,31 @@ fn uuid_text_or_null(row: &PgRow, column: &str) -> Result<Option<String>, StoreE
     Ok(get::<Option<Uuid>>(row, column)?.map(|id| id.to_string()))
 }
 
-/// Deserializes a jsonb column into a port type preserving object key order.
+/// A jsonb column read straight into a port type, so an object keeps the key order Postgres printed
+/// it in; `serde_json::Value` would sort the keys.
 fn json_col<T: DeserializeOwned>(row: &PgRow, column: &str) -> Result<T, StoreError> {
     Ok(get::<Json<T>>(row, column)?.0)
 }
 
 // Sessions: one transaction per call, the role switched inside it
 
-/// `Db::begin`'s Postgres half: opens a transaction scoped to one connection.
-/// Executes §9.4 and R263 invariants under one transaction; a dropped `Tx` rolls back.
-/// Stamps `claim_sub` on the session via `run_as`.
+/// `Db::begin`'s Postgres half. Every statement between `begin` and `commit` lands on the one
+/// connection the transaction holds, which is what makes SPEC §9.4's "Redemption is one server-side
+/// transaction" and R263's one-transaction result, series record and rating move true of the calls
+/// `src/api/**` makes. A failed statement aborts the transaction in Postgres, so a caller that
+/// catches a store error and goes on (`api/queue.rs`'s duplicate-ticket insert, `api/results.rs`'s
+/// retry after a duplicate result) begins a fresh `Tx` for what follows.
 pub async fn begin(pool: &PgPool, claim_sub: Option<&str>) -> Result<PgTx<'static>, StoreError> {
     let mut t = pool.begin().await.map_err(db_error)?;
     run_as(&mut t, claim_sub).await?;
     Ok(t)
 }
 
-/// `Tx::commit`'s Postgres half: commits the transaction.
 pub async fn commit(t: PgTx<'_>) -> Result<(), StoreError> {
     t.commit().await.map_err(db_error)
 }
 
-/// Re-stamps the subject profile on the open transaction via `SESSION_SQL`.
+/// Re-stamps the subject; the role is already `service_role` and stays so until commit.
 async fn run_as(t: &mut PgTx<'_>, subject: Option<&str>) -> Result<(), StoreError> {
     sqlx::query(SESSION_SQL)
         .bind(ACTING_ROLE)
@@ -479,7 +483,6 @@ impl ProfileRow {
     }
 }
 
-/// TS's `PROFILE_COLUMNS`.
 macro_rules! profile_columns {
     () => {
         "p.id, p.kind, p.status, p.rating, p.rating_deviation, p.rating_volatility,
@@ -488,14 +491,12 @@ macro_rules! profile_columns {
     };
 }
 
-/// TS's `PROFILE_FROM`.
 macro_rules! profile_from {
     () => {
         "from public.profiles p left join auth.users u on u.id = p.id"
     };
 }
 
-/// The three `profiles.status` values.
 const PROFILE_STATUSES: &[&str] = &["pending", "active", "banned"];
 
 fn to_profile(row: ProfileRow) -> Result<Profile, StoreError> {
@@ -510,9 +511,7 @@ fn to_profile(row: ProfileRow) -> Result<Profile, StoreError> {
     Ok(Profile {
         kind,
         // SPEC §9.4's managed auth provider owns identity, and migration 0001 keys `profiles.id`
-        // 1:1 to `auth.users(id)`. There is no second column: in this schema the profile id IS the
-        // managed-auth user id, so `profiles_get_by_id` and `profiles_get_by_user_id` are the same
-        // lookup.
+        // 1:1 to `auth.users(id)`: the profile id IS the managed-auth user id.
         user_id: row.id.clone(),
         id: row.id,
         email: row.email.unwrap_or_default(),
@@ -598,7 +597,6 @@ impl MatchDbRow {
     }
 }
 
-/// TS's `MATCH_COLUMNS`.
 macro_rules! match_columns {
     () => {
         "id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
@@ -609,7 +607,7 @@ macro_rules! match_columns {
 }
 
 /// R417: a stored board (`last_boards.board`, `matches.p*_last_board`), as migration 0017's CHECK
-/// admits it. Each entry is taken as TS took it, field by field and unchecked.
+/// admits it. Each entry is taken field by field and unchecked.
 fn last_board_of(value: &Value) -> Result<Vec<LastBoardEntry>, StoreError> {
     let Some(entries) = value.as_array() else {
         return Err(StoreError::from(format!(
@@ -707,11 +705,8 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
     })
 }
 
-/// `public.matches` holds one `grace_deadline_at` plus `p1_disconnected_at` / `p2_disconnected_at`,
-/// while `MatchClocks` (ports.ts) holds a deadline per player and no disconnect instant. The two
-/// per-player columns therefore carry the deadline, and `grace_deadline_at` — the column migration
-/// 0004 documents as "the grace countdown ... so both clients show it" — carries the nearer of the
-/// two, so a SQL reader still finds the grace deadline where the migration says it is.
+/// The nearer per-player deadline, which `grace_deadline_at` carries so a SQL reader still finds the
+/// grace deadline where migration 0004 says it is (KNOWN DIVERGENCES, clocks).
 fn nearest_grace(clocks: &MatchClocks) -> Option<i64> {
     [clocks.grace_deadline.p1, clocks.grace_deadline.p2]
         .into_iter()
@@ -755,7 +750,6 @@ impl TicketRow {
     }
 }
 
-/// TS's `TICKET_COLUMNS`.
 macro_rules! ticket_columns {
     () => {
         "id, profile_id, rating, mode, frozen_deck, portrait, deck_cosmetics, frozen_trio, lean_set,
@@ -882,7 +876,6 @@ impl RoomRow {
     }
 }
 
-/// TS's `ROOM_COLUMNS`.
 macro_rules! room_columns {
     () => {
         "id, room_code, room_mode, room_trio, p1_profile_id, p2_profile_id, p1_deck,
@@ -900,8 +893,7 @@ fn to_room(row: RoomRow) -> Result<Room, StoreError> {
     Ok(Room {
         code: row.room_code,
         host_profile_id: row.p1_profile_id,
-        // R264. A room written before migration 0008, or by 0004's `app.create_room`, has no mode;
-        // it could only ever have been a Best-of-1 room. See KNOWN DIVERGENCES (rooms).
+        // R264: a room with no mode could only ever have been Best-of-1 (KNOWN DIVERGENCES, rooms).
         mode: match row.room_mode.as_deref() {
             None => from_literal("bo1")?,
             Some(mode) => queue_mode_of(mode)?,
@@ -916,8 +908,7 @@ fn to_room(row: RoomRow) -> Result<Room, StoreError> {
         host_lean: lean_or_none(row.room_lean_set.as_deref())?,
         catalog_version: row.catalog_version,
         created_at: ms_of(row.created_at),
-        // See KNOWN DIVERGENCES (rooms): an unclaimed room keeps its joinable-until instant in
-        // `ceiling_at`, the one column migration 0004 documents as meaningless while `status = 'open'`.
+        // An unclaimed room keeps its joinable-until instant in `ceiling_at` (KNOWN DIVERGENCES, rooms).
         expires_at: ms_of(row.ceiling_at),
         guest_profile_id: row.p2_profile_id,
         match_id,
@@ -956,7 +947,6 @@ impl DeckRow {
     }
 }
 
-/// TS's `DECK_COLUMNS`.
 macro_rules! deck_columns {
     () => {
         "id, profile_id, name, cards, portrait, table_cosmetic, field_cosmetic, card_back_cosmetic,
@@ -1029,7 +1019,6 @@ impl TrioRow {
     }
 }
 
-/// TS's `TRIO_COLUMNS`.
 macro_rules! trio_columns {
     () => {
         "id, profile_id, name, deck1_id, deck2_id, deck3_id, created_at, updated_at"
@@ -1047,8 +1036,7 @@ fn to_trio(row: TrioRow) -> SavedTrio {
     }
 }
 
-/// Exactly what `app.upsert_deck` returns (migration 0007); anything else is a schema this was not
-/// built against.
+/// Exactly what `app.upsert_deck` returns (migration 0007).
 const UPSERT_OUTCOMES: &[&str] = &["created", "updated", "limit", "not_owner"];
 const TRIO_UPSERT_OUTCOMES: &[&str] = &["created", "updated", "limit", "not_owner", "unknown_deck"];
 
@@ -1127,7 +1115,6 @@ impl TutorialDbRow {
     }
 }
 
-/// TS's `TUTORIAL_COLUMNS`.
 macro_rules! tutorial_columns {
     () => {
         "profile_id, completed, hidden, hidden_at"
@@ -1164,7 +1151,6 @@ impl PlayerSettingsDbRow {
     }
 }
 
-/// TS's `PLAYER_SETTINGS_COLUMNS`.
 macro_rules! player_settings_columns {
     () => {
         "profile_id, groups"
@@ -1181,14 +1167,12 @@ fn to_player_settings(row: PlayerSettingsDbRow) -> PlayerSettingsRow {
 /// `public.player_stats` (migration 0021, R654): player stats and privacy flag.
 struct PlayerStatsDbRow {
     profile_id: String,
-    /// `(typeof stats === "object" && stats !== null ? stats : {})`: anything but an object reads
-    /// as an empty one.
     stats: IndexMap<String, Value>,
     is_private: bool,
     updated_at: OffsetDateTime,
 }
 
-/// A `stats` column as an object, or `{}` when it is anything else (TS's typeof guard).
+/// A `stats` column as an object, or `{}` when it is anything else.
 fn stats_col(row: &PgRow, column: &str) -> IndexMap<String, Value> {
     get::<Json<IndexMap<String, Value>>>(row, column)
         .map(|stats| stats.0)
@@ -1206,7 +1190,6 @@ impl PlayerStatsDbRow {
     }
 }
 
-/// TS's `PLAYER_STATS_COLUMNS`.
 macro_rules! player_stats_columns {
     () => {
         "profile_id, stats, is_private, updated_at"
@@ -1222,15 +1205,10 @@ fn to_player_stats(row: PlayerStatsDbRow) -> PlayerStatsRow {
     }
 }
 
-/// `public.series` (migration 0009) keeps as columns what is queried or constrained — the two
-/// players, the status, the next match id, the pick deadline, the version, the winner and the
-/// timestamps — and everything a series only ever reads back whole in `state`. The players live in
-/// the columns alone, so `state.sides` carries each side minus its `profileId` and the two cannot
-/// drift apart.
-///
-/// TS's `SeriesState`: `{ sides: [SeriesSideState, SeriesSideState], games, seedBase, endReason,
-/// ratingBefore, ratingAfter }`, with `SeriesSideState = { trio, wins, pick }`. Written by
-/// `series_state_of` and read back by `to_series`.
+/// `public.series` (migration 0009) keeps as columns what is queried or constrained, and everything
+/// a series only ever reads back whole in `state`. The players live in the columns alone, so
+/// `state.sides` carries each side minus its `profileId` and the two cannot drift apart.
+/// `to_series` reads back what this writes.
 fn series_state_of(row: &SeriesRow) -> Value {
     let side = |s: &SeriesSide| json!({ "trio": s.trio, "wins": s.wins, "pick": s.pick });
     json!({
@@ -1281,7 +1259,6 @@ impl SeriesDbRow {
     }
 }
 
-/// TS's `SERIES_COLUMNS`.
 macro_rules! series_columns {
     () => {
         "id, p1_profile_id, p2_profile_id, status, next_match_id, pick_deadline_at, version,
@@ -1314,7 +1291,7 @@ fn series_winner_of<T: DeserializeOwned>(value: Option<&str>) -> Result<T, Store
     }
 }
 
-/// A key of the series state as the port type it holds, `null` when absent (TS's `state.x ?? null`).
+/// A key of the series state as the port type it holds, `null` when absent.
 fn state_field<T: DeserializeOwned>(state: &Value, key: &str) -> Result<T, StoreError> {
     from_json(state.get(key).cloned().unwrap_or(Value::Null))
 }
@@ -1538,7 +1515,6 @@ impl RatedGameDbRow {
     }
 }
 
-/// TS's `RATED_GAME_COLUMNS`.
 macro_rules! rated_game_columns {
     () => {
         "id, kind, season_id, patch_version, catalog_version,
@@ -1548,9 +1524,7 @@ macro_rules! rated_game_columns {
     };
 }
 
-/// Advisory lock id for `ranked_lock_seasons` — every season open takes it, so two opens racing
-/// in different transactions (even for different season ids) serialize instead of both
-/// soft-resetting off a seasons list that lacks the other's row. Distinct from migrate.rs's
+/// Advisory lock id for `ranked_lock_seasons`, transaction-scoped. Distinct from migrate.rs's
 /// "jack" id so a deploy and a season open never wait on each other.
 const SEASON_LOCK_ID: i64 = 0x7365_6173; // "seas"
 
@@ -1582,7 +1556,6 @@ fn visible_rank_of<T: DeserializeOwned>(value: Option<Value>) -> Result<T, Store
     }
 }
 
-/// The two pilots a rated side may have.
 const PILOTS: &[&str] = &["human", "ai"];
 
 fn pilot_of<T: DeserializeOwned>(value: &str) -> Result<T, StoreError> {
@@ -1679,18 +1652,16 @@ const POOL_IDLE_TIMEOUT_MS: u64 = 10_000;
 /// Fail a checkout that cannot get a connection rather than hanging the request forever.
 const POOL_ACQUIRE_TIMEOUT_MS: u64 = 10_000;
 
-/// TS's `PostgresStoreOptions`.
 #[derive(Clone, Debug)]
 pub struct PostgresStoreOptions {
     /// A direct Postgres connection string (`DATABASE_URL`; SPEC §9.2's Postgres edge).
     pub connection_string: String,
-    /// Maximum pooled connections. Small by default: every call is one short transaction.
+    /// Maximum pooled connections, `POOL_MAX_DEFAULT` when `None`.
     pub max: Option<u32>,
 }
 
 /// Exactly the strings `app.redeem_invite_code` returns (migration 0001 §6) — defined by the port,
-/// because both stores answer with them. Anything else out of the function is a schema this store
-/// was not built against.
+/// because both stores answer with them.
 const REDEEM_RESULTS: &[&str] = &[
     "ok",
     "not_pending",
@@ -1714,20 +1685,10 @@ fn to_redeem_result(value: Option<String>) -> Result<RedeemResult, StoreError> {
     )))
 }
 
-/// The pool `Db::Pg` holds. `app.rs` calls this with `{ connection_string: env.DATABASE_URL }`.
-///
-/// The connection string is checked here rather than on first use so that a misconfigured
-/// deployment fails at boot with a sentence naming the variable, and so that end-to-end mode's
-/// `DATABASE_URL=memory://e2e-fixture-store` placeholder can never be mistaken for a database. The
-/// pool connects lazily, as `pg`'s did: the first transaction opens the first connection.
-///
-/// An idle connection in the pool can be closed by the *server* at any time — Supabase's Supavisor
-/// does it on its own idle timeout, and any network blip does it too. TS needed a `pool.on("error")`
-/// handler (and its `onError` option) so that Node would not re-throw that event and kill the
-/// process; sqlx retires a broken connection itself, the next checkout opens a fresh one, and no
-/// query is lost — a query that was in flight fails at its own call site, which is where the caller
-/// can do something about it. `pg`'s `keepAlive: true` has no sqlx option; the idle timeout below
-/// is what keeps a quiet connection from going stale.
+/// The pool `Db::Pg` holds. The connection string is checked here rather than on first use so that
+/// a misconfigured deployment fails at boot with a sentence naming the variable, and so that
+/// end-to-end mode's `DATABASE_URL=memory://e2e-fixture-store` placeholder can never be mistaken for
+/// a database. The pool connects lazily: the first transaction opens the first connection.
 pub fn create_postgres_store(options: &PostgresStoreOptions) -> Result<PgPool, StoreError> {
     assert_postgres_url(&options.connection_string)?;
     PgPoolOptions::new()
@@ -1738,7 +1699,6 @@ pub fn create_postgres_store(options: &PostgresStoreOptions) -> Result<PgPool, S
         .map_err(db_error)
 }
 
-/// Closes the pool: `Db::close` calls it, for the CLIs and for `app::serve_until`'s drain.
 pub async fn close(pool: &PgPool) {
     pool.close().await;
 }
@@ -1760,11 +1720,14 @@ pub(crate) fn assert_postgres_url(connection_string: &str) -> Result<(), StoreEr
     Ok(())
 }
 
-// Redemption (SPEC §9.4).
+// Redemption (SPEC §9.4): the whole six-step transaction is one `app.*` call.
 
-/// SPEC §9.4 redemption via `app.redeem_invite_code` (0001 §6).
-/// Runs all six steps under profile and code locks, returning result codes without raising.
-/// A `None` `code_hash` binds NULL, rejected after logging attempt.
+/// `app.redeem_invite_code` (migration 0001 §6) holds all six steps under one profile row lock and
+/// one code row lock, and never raises for an expected rejection.
+///
+/// A `None` `code_hash` is passed through as SQL NULL on purpose: `where code_hash = null` matches
+/// no row, so a code that could never exist is refused by the same lookup that refuses one that
+/// was simply never minted — after the attempt has been logged.
 pub async fn redeem(t: &mut PgTx<'_>, input: &RedeemInviteCodeInput) -> Result<RedeemResult, StoreError> {
     run_as(t, Some(input.profile_id.as_str())).await?;
     let row = sqlx::query("select app.redeem_invite_code($1::uuid, $2::text, $3::text)")
@@ -1836,8 +1799,7 @@ pub async fn profiles_get_by_id(t: &mut PgTx<'_>, profile_id: &str) -> Result<Op
         .transpose()
 }
 
-/// The same lookup as `profiles_get_by_id`: migration 0001 keys `profiles.id` to `auth.users(id)`,
-/// so the managed-auth user id and the profile id are one value (see `to_profile`).
+/// The same lookup as `profiles_get_by_id`: the user id is the profile id (see `to_profile`).
 pub async fn profiles_get_by_user_id(t: &mut PgTx<'_>, user_id: &str) -> Result<Option<Profile>, StoreError> {
     run_as(t, Some(user_id)).await?;
     let row = sqlx::query(concat!(
@@ -1905,14 +1867,9 @@ pub async fn profiles_get_by_username(
 
 /// §9.4: "the account exists the moment auth says so and stays pending until a code is
 /// redeemed" (`resolve_caller` in http.rs). In a real Supabase project migration 0001's
-/// `on_auth_user_created` trigger has usually made this row already, in which case
-/// `profiles_get_by_user_id` finds it and this is never called; the insert is the path for a
-/// project whose trigger has not run (a user created before the migration, say).
-///
-/// `email` is accepted and ignored: `public.profiles` has no email column — §9.4's managed auth
-/// provider owns it on `auth.users`, which is where every read here takes it from. The insert
-/// fails with a foreign-key violation if that user does not exist, which is the honest answer:
-/// a profile without a managed-auth identity is not a thing this schema can hold.
+/// `on_auth_user_created` trigger has usually made this row already; the insert is the path for a
+/// project whose trigger has not run. `email` is ignored and the `auth.users` row must exist
+/// (KNOWN DIVERGENCES, profile email).
 pub async fn profiles_create(t: &mut PgTx<'_>, input: &ProfileCreateInput) -> Result<Profile, StoreError> {
     let user_id = input.user_id.as_str();
     let (rating, at) = (input.rating, input.at);
@@ -1954,8 +1911,7 @@ pub async fn profiles_create(t: &mut PgTx<'_>, input: &ProfileCreateInput) -> Re
 /// R111 rides on this write. Migration 0002 attaches `profiles_grant_launch_collection` to the
 /// `pending -> active` transition, so becoming active grants one copy of every non-token card
 /// in the current catalog version through `app.grant_cards` — both ledger tables, one
-/// transaction, idempotent. Nothing here grants anything: the trigger is the implementation,
-/// exactly as the fake says it is ("R111 IS A DATABASE TRIGGER").
+/// transaction, idempotent. Nothing here grants anything: the trigger is the implementation.
 pub async fn profiles_set_status(
     t: &mut PgTx<'_>,
     profile_id: &str,
@@ -2083,10 +2039,6 @@ pub async fn profiles_answer_username_prompt(t: &mut PgTx<'_>, profile_id: &str)
     Ok(())
 }
 
-// TS's `profiles.setRating` — migration 0004's write, which rated a match by moving `rating` alone
-// — is not ported (SURFACE §11.2: no caller). R603's rated path writes the whole triple through
-// `profiles_set_glicko`.
-
 /// R603: a rated game's whole Glicko triple, one statement.
 pub async fn profiles_set_glicko(
     t: &mut PgTx<'_>,
@@ -2114,10 +2066,8 @@ pub async fn profiles_set_glicko(
     Ok(())
 }
 
-/// §9.5: set when a match starts. Setting `Some` is a compare-and-set (R890000): one statement
-/// seats only a free profile, so a queue pair, room join, rematch or series game racing for one
-/// seat leaves exactly one winner. `true` seated, `false` seat taken, `Err` only when the profile
-/// is missing; clearing with `None` is unconditional.
+/// R890000: one statement seats only a free profile, so of the writers racing for one seat exactly
+/// one wins.
 pub async fn profiles_set_in_match(
     t: &mut PgTx<'_>,
     profile_id: &str,
@@ -2138,7 +2088,7 @@ pub async fn profiles_set_in_match(
     }
     // No row moved: a profile that was never there is an error, as `matches_finish` re-reads its
     // id; a profile that is there is held by another match. (A free profile pointed at a match
-    // that does not exist raises the foreign key above, as before.)
+    // that does not exist raises the foreign key above.)
     let rows = sqlx::query("select id from public.profiles where id = $1::uuid")
         .bind(profile_id)
         .fetch_all(&mut **t)
@@ -2150,8 +2100,7 @@ pub async fn profiles_set_in_match(
     Ok(false)
 }
 
-/// R890000, R1896000: clears the seat only while it points at `match_id`, so neither a start-failure
-/// cleanup nor an ending (§9.5) ever wipes a rival match's flag. Always `Ok`.
+/// R890000, R1896000: clears the seat only while it points at `match_id`.
 pub async fn profiles_clear_in_match(
     t: &mut PgTx<'_>,
     profile_id: &str,
@@ -2170,7 +2119,6 @@ pub async fn profiles_clear_in_match(
     Ok(())
 }
 
-/// R1523000: every profile whose in-match flag is set, with its match, by profile id.
 pub async fn profiles_seated(t: &mut PgTx<'_>) -> Result<Vec<SeatedProfile>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -2192,9 +2140,8 @@ pub async fn profiles_seated(t: &mut PgTx<'_>) -> Result<Vec<SeatedProfile>, Sto
 
 // The seat ledger's epoch (R1523000, migration 0054)
 
-/// The claim's fence: the one row `for share` while it still holds `epoch`, `Fenced` when it does
-/// not. Shared locks never wait on each other, so claims run side by side; a newer process's bump
-/// waits for every claim that took one, and a claim that reads after the bump finds no row.
+/// Shared locks never wait on each other, so claims run side by side; a newer process's bump waits
+/// for every claim that took one, and a claim that reads after the bump finds no row.
 pub async fn seats_fence(t: &mut PgTx<'_>, epoch: i64) -> Result<(), StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query("select 1 from app.seat_epoch where epoch = $1 for share")
@@ -2208,7 +2155,6 @@ pub async fn seats_fence(t: &mut PgTx<'_>, epoch: i64) -> Result<(), StoreError>
     }
 }
 
-/// A booting process's bump: one more than the epoch every older process fences on.
 pub async fn seats_bump_epoch(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query("update app.seat_epoch set epoch = epoch + 1 returning epoch")
@@ -2219,13 +2165,10 @@ pub async fn seats_bump_epoch(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
 }
 
 /// `DELETE /api/account`'s store half: one delete, and migration 0012's foreign keys do the
-/// rest. Rows only this profile owns cascade; its invite-code attempts, the codes it minted and
-/// the finished matches, results, series and logged actions it played in keep their rows with
-/// its seat set to null; `profiles_release_open_matches` removes a room it opened that nobody
-/// joined. A profile still seated in a live match, an unfinished series or a live co-op match
-/// (migration 0051, R1497000) makes the delete raise, by constraint; `src/api/auth.rs` refuses
-/// that case first. No `app.*` function: the schema is the rule here, and the statement is the
-/// whole of it.
+/// rest; `profiles_release_open_matches` removes a room it opened that nobody joined. A profile
+/// still seated in a live match, an unfinished series or a live co-op match (migration 0051,
+/// R1497000) makes the delete raise, by constraint; `src/api/auth.rs` refuses that case first. No
+/// `app.*` function: the schema is the rule here, and the statement is the whole of it.
 pub async fn profiles_remove(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(false);
@@ -2315,9 +2258,6 @@ pub async fn codes_claim(t: &mut PgTx<'_>, code_id: &str, now: i64) -> Result<bo
     Ok(done.rows_affected() == 1)
 }
 
-/// The operator's lever onto §9.4 step 5: marks the code carrying `code_hash` revoked, so the
-/// next redemption rejects it exactly as an exhausted one. True when a live row was newly
-/// revoked; false for an unknown hash or a row already revoked.
 pub async fn codes_revoke_by_hash(t: &mut PgTx<'_>, code_hash: &str) -> Result<bool, StoreError> {
     run_as(t, None).await?;
     let done = sqlx::query(
@@ -2330,8 +2270,7 @@ pub async fn codes_revoke_by_hash(t: &mut PgTx<'_>, code_hash: &str) -> Result<b
     Ok(done.rows_affected() == 1)
 }
 
-/// §9.4 step 4: "log the attempt either way". `CodeAttempt.reason` has no column in
-/// `public.code_attempts` — see KNOWN DIVERGENCES (attempt reason).
+/// `CodeAttempt.reason` has no column: see KNOWN DIVERGENCES (attempt reason).
 pub async fn codes_log_attempt(t: &mut PgTx<'_>, attempt: &CodeAttempt) -> Result<(), StoreError> {
     run_as(t, attempt.profile_id.as_deref()).await?;
     sqlx::query(concat!(
@@ -2410,8 +2349,8 @@ pub async fn codes_count_attempts_by_ip(
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
-/// §9.8: one row per IP hash with an attempt at or after `since`. `count(distinct profile_id)` skips
-/// the null profile of an attempt nobody was signed in for, as the fake does.
+/// §9.8: `count(distinct profile_id)` skips the null profile of an attempt nobody was signed in
+/// for, as the fake does.
 pub async fn codes_invite_clusters(t: &mut PgTx<'_>, since: i64) -> Result<Vec<InviteCluster>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
@@ -2452,10 +2391,8 @@ pub async fn codes_count_failures(t: &mut PgTx<'_>, since: i64) -> Result<i64, S
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
-/// The operator's lever onto §9.4's database-side kill switch: flips
-/// `app.settings.redemption_enabled` and answers the previous value, so the caller prints what
-/// changed. A missing row is a store error: migration 0001 seeds it, so its absence means the
-/// database was never migrated.
+/// A missing `app.settings` row is a store error: migration 0001 seeds it, so its absence means
+/// the database was never migrated.
 pub async fn redemption_set_enabled(t: &mut PgTx<'_>, enabled: bool) -> Result<bool, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query("select value from app.settings where key = 'redemption_enabled'")
@@ -2496,15 +2433,11 @@ pub async fn collection_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<Co
         .collect()
 }
 
-/// ports.ts is explicit, and it is the opposite of `app.grant_cards`: "SETS each card's quantity
-/// to the absolute value given; it does not add to it ... a Postgres adapter must
-/// `set quantity = excluded.quantity`, never `quantity + excluded`." `grant_cards` in
+/// Not `app.grant_cards`, which takes deltas and writes both ledger tables itself: `grant_cards` in
 /// `src/api/collection.rs` has already read the current total inside this transaction and added
-/// its delta, so adding again here would double every grant.
-///
-/// That is why this pair does not call `app.grant_cards`, which takes deltas and writes both
-/// tables itself: the port splits the ledger's two writes and puts them in one transaction
-/// instead, which is the same §9.4 guarantee reached the other way round.
+/// its delta, so this sets `quantity = excluded.quantity`, and adding again would double every
+/// grant. The port splits the ledger's two writes and puts them in one transaction instead, which
+/// is the same §9.4 guarantee reached the other way round.
 pub async fn collection_upsert_quantities(
     t: &mut PgTx<'_>,
     profile_id: &str,
@@ -2572,8 +2505,8 @@ pub async fn collection_append_grants(
 
 // Saved decks (SPEC §9.4, R250, R256)
 //
-// Migration 0007. The loadout tables of 0003 are no longer read or written (R254): the migration
-// turned each loadout into three of these decks and one trio.
+// Migration 0007 turned each loadout of 0003 into three of these decks and one trio (R254); this
+// file never reads or writes the loadout tables.
 
 /// Oldest first, ties on id: the order R257's legacy `deckIndex` counts in.
 pub async fn decks_list(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<SavedDeck>, StoreError> {
@@ -2610,13 +2543,10 @@ pub async fn decks_get(t: &mut PgTx<'_>, deck_id: &str) -> Result<Option<SavedDe
 }
 
 /// R250, R256: one call to `app.upsert_deck`, which takes the profile row lock, re-checks the
-/// draft's shape (D1, D2, D4), refuses another profile's id and counts the cap under the lock,
-/// then inserts or updates. Its answer is the port's `UpsertOutcome` verbatim.
-///
-/// The function takes one instant, `p_at`: `updated_at` always, and `created_at` when the row is
-/// new. It is handed `updated_at`, which is the save being made; see KNOWN DIVERGENCES (deck and
-/// trio timestamps). The cap passed is the caller's, and the function applies the smaller of it
-/// and `app.settings.max_saved_decks` (KNOWN DIVERGENCES, caps).
+/// draft's shape (D1, D2, D4), refuses another profile's id and counts the cap under the lock; its
+/// answer is the port's `UpsertOutcome` verbatim. Its one instant, `p_at`, is handed `updated_at`
+/// (KNOWN DIVERGENCES, deck and trio timestamps), and it applies the smaller of the caller's cap and
+/// `app.settings.max_saved_decks` (KNOWN DIVERGENCES, caps).
 pub async fn decks_upsert(
     t: &mut PgTx<'_>,
     deck: &SavedDeck,
@@ -2700,9 +2630,6 @@ pub async fn deck_versions_list(
     rows.iter().map(deck_version_of).collect()
 }
 
-/// R2100000: locks the profile's deck row (`missing` without one), reads its newest version, and
-/// does what `deck_version_step` says: replaces the newest, or adds `save` and drops every version
-/// past `max_versions`, or nothing.
 pub async fn deck_versions_keep(
     t: &mut PgTx<'_>,
     save: &DeckVersion,
@@ -2820,13 +2747,9 @@ pub async fn trios_get(t: &mut PgTx<'_>, trio_id: &str) -> Result<Option<SavedTr
     row.map(|row| TrioRow::read(&row).map(to_trio)).transpose()
 }
 
-/// R252, R256: one call to `app.upsert_trio`, as `decks_upsert`, plus `unknown_deck` for a slot
-/// that is not one of this profile's decks. A deck in two slots raises `trios_decks_distinct`
-/// (R252 T3), which the caller has already refused with `check_trio_draft`, so it errors here as it
-/// does in the in-memory store.
-///
-/// A slot holding something that is not a uuid cannot name any deck; it is answered here, as
-/// `unknown_deck`, because Postgres would refuse the cast before the function could say so.
+/// R252, R256: one call to `app.upsert_trio`, as `decks_upsert`. A deck in two slots raises
+/// `trios_decks_distinct` (R252 T3). A slot that is not a uuid cannot name any deck; it is answered
+/// here, as `unknown_deck`, because Postgres would refuse the cast before the function could say so.
 pub async fn trios_upsert(
     t: &mut PgTx<'_>,
     trio: &SavedTrio,
@@ -2925,9 +2848,8 @@ pub async fn custom_cards_get(
     row.as_ref().map(to_custom_card).transpose()
 }
 
-/// R915008: one call to `app.create_custom_card`, which takes the profile row lock, refuses an
-/// inactive profile, counts the cap under the lock (the smaller of `max_cards` and
-/// `app.settings.max_custom_cards`, KNOWN DIVERGENCES, caps) and writes the card at version 1.
+/// The cap is the smaller of `max_cards` and `app.settings.max_custom_cards` (KNOWN DIVERGENCES,
+/// caps).
 pub async fn custom_cards_create(
     t: &mut PgTx<'_>,
     card: &CustomCardWrite,
@@ -2962,8 +2884,6 @@ pub async fn custom_cards_create(
     )
 }
 
-/// R915008: one call to `app.update_custom_card`, which refuses an inactive profile and, under the
-/// card's row lock, replaces the profile's own card when its version is still `replaces`.
 pub async fn custom_cards_update(
     t: &mut PgTx<'_>,
     card: &CustomCardWrite,
@@ -3016,7 +2936,7 @@ pub async fn custom_cards_remove(
 
 // Matches (SPEC §9.3's log, §9.5's lifecycle)
 
-/// The 21 values `matches_create`'s insert and update share after `$1` (TS's `values`).
+/// The 21 values `matches_create`'s insert and update share after `$1`.
 macro_rules! match_values {
     () => {
         concat!(
@@ -3045,20 +2965,11 @@ macro_rules! match_values {
     };
 }
 
-/// Writes the match row for both entry points §9.5 has — a paired queue match and a claimed
-/// room — which is why it is an insert OR a completion rather than only an insert.
-///
-/// `public.matches` is one table for both: a room is a row with `status = 'open'` and no second
-/// player, and `rooms_claim` / `tickets_claim_pair` below have already written that row under the
-/// id the caller minted (they must: `tickets.match_id` and `profiles.current_match_id` are
-/// foreign keys into this table, and both are written before the actor starts). So this method
-/// finds one of two states under `id`:
-///
-///  - nothing      -> insert the live match;
-///  - an `open` row -> fill in the seed, the decks, the clocks and flip it `live`;
-///  - anything else -> the id is taken, which ports.ts and the fake both make an error.
-///
-/// The `for update` is what makes the read-then-write safe against a second caller.
+/// An insert OR a completion: for both entry points §9.5 has (a paired queue match and a claimed
+/// room) `tickets_claim_pair` / `rooms_claim` have already written an `open` row under the id the
+/// caller minted (they must: `tickets.match_id` and `profiles.current_match_id` are foreign keys
+/// into this table, written before the actor starts). Any other row under `id` means the id is
+/// taken, an error as in the fake. The `for update` is what makes the read-then-write safe.
 pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreError> {
     run_as(t, Some(m.players.0.as_str())).await?;
     let existing = sqlx::query("select status from public.matches where id = $1::uuid for update")
@@ -3238,10 +3149,8 @@ pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Matc
 /// §9.3's append-only log, written by `app.append_match_action` (migration 0004) and by nothing
 /// else: it assigns `seq` from `matches.last_seq` under a row lock and returns the original
 /// `seq` for a repeated nonce, which is BUILD M6-T4's "a reused nonce returns the original ack".
-///
-/// The port hands in the `seq` the actor already used, so the two must agree: a mismatch means
-/// the log and the actor have diverged (a replayed nonce, a gap, a second writer), and it is
-/// raised rather than swallowed — ports.ts: "Rejects a seq that already exists." It is
+/// The port hands in the `seq` the actor already used, so a mismatch means the log and the actor
+/// have diverged (a replayed nonce, a gap, a second writer); it is raised as
 /// `StoreError::SeqClash` (R776000), which the actor answers by letting go of the match.
 pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -> Result<(), StoreError> {
     run_as(t, None).await?;
@@ -3322,8 +3231,7 @@ pub async fn matches_has_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<boo
     get(&row, "logged")
 }
 
-/// #1169: one statement, so the guards and the write cannot come apart: the row goes in only while
-/// the match is live and its log holds `seq` under `nonce`, and replaces only an earlier seq's.
+/// #1169: one statement, so the guards and the write cannot come apart.
 pub async fn matches_put_checkpoint(t: &mut PgTx<'_>, row: &MatchCheckpointRow) -> Result<bool, StoreError> {
     run_as(t, None).await?;
     let done = sqlx::query(concat!(
@@ -3426,12 +3334,10 @@ pub async fn matches_set_clocks(
     Ok(())
 }
 
-/// Not `app.end_match`. That function ends a match AND writes the results row AND moves both
-/// ratings AND clears both `current_match_id`s AND cancels stray tickets — every one of which
-/// `src/api/results.rs` already does through `results_insert`, `profiles_set_glicko`,
-/// `profiles_clear_in_match` and `tickets_cancel`, inside the one transaction this call runs in. So
-/// the ending is still one transaction with the same five writes; calling `app.end_match` here
-/// would do the other four a second time.
+/// Not `app.end_match`, which also writes the results row, moves both ratings, clears both
+/// `current_match_id`s and cancels stray tickets: `src/api/results.rs` already does each through
+/// `results_insert`, `profiles_set_glicko`, `profiles_clear_in_match` and `tickets_cancel` inside
+/// the one transaction this call runs in, so calling it here would do those four a second time.
 pub async fn matches_finish(t: &mut PgTx<'_>, match_id: &str, at: i64) -> Result<(), StoreError> {
     run_as(t, None).await?;
     let done = sqlx::query(concat!(
@@ -3525,17 +3431,11 @@ pub async fn matches_mode_of(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<
     ticket_mode.as_deref().map(queue_mode_of).transpose()
 }
 
-/// R263: "A series that ends before its first game releases the id it reserved." In this schema
-/// a reserved id is a row — the `open` skeleton `tickets_claim_pair` writes, or a room
-/// `rooms_claim` renamed to it — so releasing it is deleting that row, and only while it is still
-/// `open`: the `status` guard is what makes this a no-op on a live or finished match however it
-/// is called.
-///
-/// Nothing is left pointing at the deleted id: an `open` row has no actions and no result (both
-/// would cascade anyway), `tickets.match_id` and `profiles.current_match_id` are `on delete set
-/// null` (0004), and `series.next_match_id` deliberately has no foreign key (0009). Deleting a
-/// claimed room's row also frees its code at once (R110's partial unique index covers only the
-/// rows that exist). See KNOWN DIVERGENCES (reserved match ids).
+/// R263: a reserved id is an `open` row, so releasing it is deleting that row, only while it is
+/// still `open` (KNOWN DIVERGENCES, reserved match ids). Nothing is left pointing at it: an `open`
+/// row has no actions and no result, `tickets.match_id` and `profiles.current_match_id` are `on
+/// delete set null` (0004), and `series.next_match_id` deliberately has no foreign key (0009).
+/// R110's partial unique index covers only the rows that exist, so a room's code is free at once.
 pub async fn matches_discard_open(t: &mut PgTx<'_>, match_id: &str) -> Result<(), StoreError> {
     if !is_uuid(match_id) {
         return Ok(());
@@ -3565,7 +3465,7 @@ pub async fn matches_forget_voided(t: &mut PgTx<'_>, match_id: &str) -> Result<(
     Ok(())
 }
 
-/// R1450: `Tx::matches_reap_open`. One delete; `on delete set null` (0004) lets go of
+/// R1450: one delete; `on delete set null` (0004) lets go of
 /// `profiles.current_match_id` and `tickets.match_id`, and the room code is free again (R110). An
 /// `open` row has no actions and no result. `before` is the server's clock less the grace, the clock
 /// `rooms_create` and `tickets_claim_pair` stamped `ceiling_at` with.
@@ -3695,10 +3595,8 @@ pub async fn replays_list(
     Ok(replays)
 }
 
-/// R768: what `replays_list` answers, each row already paired with what `matches_mode_of` answers
-/// for it, in one query: the matches, their results and their action counts joined, with the mode
-/// derived in Rust by the same precedence `matches_mode_of` uses (a series' game is `bo3`, else a
-/// rematch's own mode, else its room's mode or `bo1`, else its tickets' mode).
+/// R768: one query, the matches, their results and their action counts joined, with the mode
+/// derived in Rust by the same precedence `matches_mode_of` uses.
 pub async fn replays_list_with_modes(
     t: &mut PgTx<'_>,
     profile_id: &str,
@@ -3802,20 +3700,13 @@ pub async fn replays_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Repl
 
 // Rooms (SPEC §9.5's direct challenge)
 
-/// A room is a `public.matches` row with `status = 'open'`, which is what migrations 0004's
-/// `app.create_room` / `app.join_room` make it; there is no `rooms` table and this file may not
-/// add one (the migrations are append-only and checksum-locked).
-///
-/// `app.create_room` is not called for two reasons: it mints the match id itself while the port
-/// has `rooms_claim` receive an id the server minted, and it sets the host's
-/// `current_match_id` while `src/api/rooms.rs` sets both players' only after the claim (§9.5
-/// "not in a match" would otherwise refuse the host their own room). Everything else it does is
-/// done here, including `matches_room_code_open_key` — the partial unique index is inferred in
-/// the `on conflict` clause, so a taken code returns `false` instead of raising, which is the
-/// port's contract.
-///
-/// R264: the room's mode goes in `room_mode` and a Conquest host's frozen trio in `room_trio`
-/// (migration 0008); `p1_deck` holds the Best-of-1 deck, `[]` in the other two modes.
+/// A room is a `public.matches` row with `status = 'open'` (KNOWN DIVERGENCES, rooms). 0004's
+/// `app.create_room` is not called: it mints the match id itself while `rooms_claim` receives an
+/// id the server minted, and it sets the host's `current_match_id` while `src/api/rooms.rs` sets
+/// both players' only after the claim (§9.5 "not in a match" would otherwise refuse the host their
+/// own room). The partial unique index `matches_room_code_open_key` is inferred in `on conflict`,
+/// so a taken code returns `false` instead of raising. R264: `p1_deck` holds the Best-of-1 deck,
+/// `[]` in the other two modes.
 pub async fn rooms_create(t: &mut PgTx<'_>, room: &Room) -> Result<bool, StoreError> {
     run_as(t, Some(room.host_profile_id.as_str())).await?;
     let host_trio = json_or_null(&room.host_trio)?;
@@ -3863,15 +3754,11 @@ pub async fn rooms_get(t: &mut PgTx<'_>, code: &str) -> Result<Option<Room>, Sto
     row.map(|row| RoomRow::read(&row).and_then(to_room)).transpose()
 }
 
-/// §9.5's atomic single-claim, as one statement: the loser of a join race updates no row and
-/// gets `None`. The row keeps `status = 'open'` until `matches_create` completes it, so a
-/// half-claimed room is never visible to `matches_get`, `matches_live` or the reaper.
-///
-/// `id = $3` is the one place this file rewrites a primary key. It is deliberate: the port mints
-/// the match id at join time, `matches_create` will be called with it moments later, and a room
-/// that is not yet a match has nothing pointing at it — no actions, no result, no ticket, and
-/// `src/api/rooms.rs` sets `current_match_id` only after this call returns. Renaming the row
-/// is what keeps "a room is the match it becomes" true of the schema.
+/// §9.5's atomic single-claim, as one statement. The row keeps `status = 'open'` until
+/// `matches_create` completes it, so a half-claimed room is never visible to `matches_get`,
+/// `matches_live` or the reaper. `id = $3` is the one place this file rewrites a primary key, on
+/// purpose: a room that is not yet a match has nothing pointing at it (`current_match_id` is set
+/// only after this returns), and renaming the row keeps "a room is the match it becomes" true.
 pub async fn rooms_claim(
     t: &mut PgTx<'_>,
     code: &str,
@@ -3902,9 +3789,6 @@ pub async fn rooms_claim(
     row.map(|row| RoomRow::read(&row).and_then(to_room)).transpose()
 }
 
-/// R890000: how many of the host's rooms are still open, unclaimed and unexpired — the advisory
-/// half of `MAX_OPEN_ROOMS_PER_HOST`. A claimed row has its guest set, a started one is `live`,
-/// and an expired one fails the ceiling, so none of them count.
 pub async fn rooms_count_open_by_host(
     t: &mut PgTx<'_>,
     host_profile_id: &str,
@@ -3931,7 +3815,7 @@ pub async fn rooms_count_open_by_host(
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
-/// R1075000: the rows `rooms_count_open_by_host` counts, newest first, the code breaking a tie.
+/// R1075000: newest first, the code breaking a tie.
 pub async fn rooms_open_by_host(
     t: &mut PgTx<'_>,
     host_profile_id: &str,
@@ -3969,12 +3853,9 @@ pub async fn rooms_open_by_host(
 /// `tickets_profile_queued_key` (migration 0004) is the race-proof half of §9.5's "not already
 /// queued", and `src/api/queue.rs` relies on the insert RAISING for the second one — it catches
 /// the error and re-reads the open ticket (in a fresh transaction: see `begin`). So this is a plain
-/// insert with no `on conflict`.
-///
-/// R257, R259: the mode, and a Conquest ticket's frozen trio (migration 0008, whose
-/// `tickets_frozen_trio_check` holds "a trio exactly when the mode is bo3"). `slot` — 0004's
-/// loadout slot — is left NULL: a ticket now freezes a saved deck or a trio, not a slot, and 0008
-/// dropped the column's `not null` for exactly that.
+/// insert with no `on conflict`. R257, R259: migration 0008's `tickets_frozen_trio_check` holds "a
+/// trio exactly when the mode is bo3"; `slot` (0004's loadout slot) is left NULL, since a ticket
+/// freezes a saved deck or a trio, and 0008 dropped the column's `not null` for that.
 pub async fn tickets_insert(t: &mut PgTx<'_>, ticket: &Ticket) -> Result<(), StoreError> {
     run_as(t, Some(ticket.profile_id.as_str())).await?;
     let trio = json_or_null(&ticket.trio)?;
@@ -4064,7 +3945,6 @@ pub async fn tickets_count_open(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
-/// R257: "the queue population is reported per mode". Every mode is present, at 0 if empty.
 pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -4081,8 +3961,6 @@ pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>
     Ok(counts)
 }
 
-/// R640002: the waits of the tickets claimed at or after `since`, a pair's or a bot's claim, oldest
-/// claim first, ties on id.
 pub async fn tickets_recent_waits(t: &mut PgTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
@@ -4107,20 +3985,15 @@ pub async fn tickets_recent_waits(t: &mut PgTx<'_>, since: i64) -> Result<Vec<Ti
         .collect()
 }
 
-/// §9.5: "both tickets are claimed in one atomic statement." That statement is
-/// `app.claim_ticket_pair` (migration 0004), which returns true only when it moved exactly two
-/// still-queued rows, so two matchers racing over one ticket cannot both win.
+/// §9.5: "both tickets are claimed in one atomic statement": `app.claim_ticket_pair` (migration
+/// 0004), true only when it moved exactly two still-queued rows. It is called with a NULL match id
+/// and the link is written right after, in the same transaction, because `tickets.match_id` is a
+/// foreign key into `public.matches` and the match does not exist yet; the skeleton written here is
+/// the `open` row `matches_create` then completes, carrying the tickets' two frozen decks.
 ///
-/// It is called with a NULL match id and the link is written immediately after, inside the same
-/// transaction, because `tickets.match_id` is a foreign key into `public.matches` and the match
-/// does not exist yet — `src/api/queue.rs` claims first and creates the match second. The skeleton
-/// row written here is the `open` row `matches_create` then completes (see its comment); it
-/// carries the two frozen decks the tickets already hold, so nothing is invented.
-///
-/// A claim that loses changes nothing, as the fake store's never does. The function flips
-/// whichever of the two is still queued before it answers false, so a pair that lost one ticket to
-/// another matcher, or to a bot's claim (R1453), would leave the other claimed with no match and
-/// out of every sweep. The savepoint takes that flip back.
+/// The function flips whichever of the two is still queued before it answers false, so a pair that
+/// lost one ticket to another matcher, or to a bot's claim (R1453), would leave the other claimed
+/// with no match and out of every sweep. The savepoint takes that flip back.
 pub async fn tickets_claim_pair(
     t: &mut PgTx<'_>,
     a_id: &str,
@@ -4207,19 +4080,16 @@ pub async fn tickets_cancel(t: &mut PgTx<'_>, ticket_id: &str, _at: i64) -> Resu
 
 // Results (SPEC §2.5, §9.5)
 
-/// A profile's finished-match record, counted in one pass over `results`.
-///
-/// A draw is a row with no winner — §9.5 makes the ceiling, a mutual hero death and an
-/// accepted draw all winnerless — so the three counts partition every finished match and no
-/// separate "played" column can drift from them. The profile may sit on either side, hence
-/// the `in (p1, p2)` rather than a join.
+/// A profile's finished-match record, counted in one pass over `results`. A draw is a row with no
+/// winner (§9.5), so the three counts partition every finished match and no separate "played"
+/// column can drift from them. The profile may sit on either side, hence the `in (p1, p2)` rather
+/// than a join.
 ///
 /// Since migration 0012 a row also has no winner when the winner deleted their account. The
 /// reason tells the two apart: a `DECISIVE_REASONS` ending always had a winner, so for the
-/// player who is left it is still a loss, not a draw.
-///
-/// R1843004: a `fled` row (`LOSER_DRAWS_REASONS`) is the winner's win and the other player's draw,
-/// whether its winner is still there or not.
+/// player who is left it is still a loss, not a draw. R1843004: a `fled` row
+/// (`LOSER_DRAWS_REASONS`) is the winner's win and the other player's draw, whether its winner is
+/// still there or not.
 pub async fn results_record_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<ProfileRecord, StoreError> {
     run_as(t, Some(profile_id)).await?;
     let decisive: Vec<String> = DECISIVE_REASONS.iter().map(|reason| reason.to_string()).collect();
@@ -4316,7 +4186,7 @@ pub async fn results_get_by_match(t: &mut PgTx<'_>, match_id: &str) -> Result<Op
 // lookups are single selects, and the transitions themselves are the server's pure functions
 // (`src/api/series_rules.rs`), written back whole.
 
-/// TS's `seriesParams(row)`: the fourteen values `series_create` and `series_update` bind, in order.
+/// The fourteen values `series_create` and `series_update` bind, in order.
 struct SeriesParams {
     id: String,
     p1_profile_id: String,
@@ -4411,10 +4281,8 @@ pub async fn series_get(t: &mut PgTx<'_>, series_id: &str) -> Result<Option<Seri
         .transpose()
 }
 
-/// R263: "written only by compare-and-set on its version". The guard is the `where`: the row is
-/// replaced only while it still holds the version this transition was computed from, so of two
-/// writers that read the same version exactly one updates a row and the other gets `false`, re-
-/// reads and re-applies. One statement, so there is no window between the check and the write.
+/// R263: "written only by compare-and-set on its version". The guard is the `where` of one
+/// statement, so there is no window between the check and the write.
 pub async fn series_update(t: &mut PgTx<'_>, next: &SeriesRow) -> Result<bool, StoreError> {
     let p = series_params(next)?;
     run_as(t, Some(p.p1_profile_id.as_str())).await?;
@@ -4555,9 +4423,8 @@ pub async fn tutorial_get(
         .transpose()
 }
 
-/// R320: one call to `app.merge_tutorial_progress` (0011), which takes the profile row lock,
-/// re-checks the shape, unions the lessons and keeps the strictly newer choice; then the row as
-/// it now stands, read in the same transaction so the answer is exactly what this write left.
+/// R320: one call to `app.merge_tutorial_progress` (0011), under the profile row lock; then the row
+/// as it now stands, read in the same transaction so the answer is exactly what this write left.
 pub async fn tutorial_merge(
     t: &mut PgTx<'_>,
     input: &TutorialMergeInput,
@@ -4639,10 +4506,9 @@ pub async fn player_settings_get(
         .transpose()
 }
 
-/// R634: one call to `app.merge_player_settings` (0018), which takes the profile row lock,
-/// re-checks the shape, replaces each group only with a strictly later one and caps the result;
-/// then the row as it now stands, read in the same transaction so the answer is exactly what
-/// this write left.
+/// R634: one call to `app.merge_player_settings` (0018), under the profile row lock, which also
+/// caps the result; then the row as it now stands, read in the same transaction so the answer is
+/// exactly what this write left.
 pub async fn player_settings_merge(
     t: &mut PgTx<'_>,
     input: &PlayerSettingsMergeInput,
@@ -4816,12 +4682,11 @@ pub async fn game_records_insert_batch(
     Ok(written)
 }
 
-/// R1976000: the ids `game_records` holds are read first and left out, then the batch is claimed
-/// with the count it will fold (`on conflict do nothing`: a batch held already answers `None`
-/// before anything is added), then the rest are added to the totals. One transaction, so a claim
-/// is never left without its counts, nor counts without their claim; a second import of the same
-/// file waits on the first's claim and then finds it held. No `app.*` function: the fold is the
-/// engine's, in Rust, as `game_records_insert_batch`'s is.
+/// R1976000: the ids `game_records` holds are left out, the batch is claimed with the count it will
+/// fold (`on conflict do nothing`: a batch held already answers `None` before anything is added),
+/// and the rest are added to the totals. One transaction, so a claim is never left without its
+/// counts, nor counts without their claim; a second import of the same file waits on the first's
+/// claim and then finds it held. No `app.*` function: the fold is the engine's, in Rust.
 pub async fn game_record_batch_fold(
     t: &mut PgTx<'_>,
     batch: &str,
@@ -4897,10 +4762,9 @@ pub async fn game_records_list(
         .collect()
 }
 
-/// R1044000: folds up to `limit` records written unfolded (before migration 0041), the first in id
-/// order, and marks them folded. `skip locked`, so two folds running at once take different records
-/// and none is folded twice. R1715000: a record whose detail does not read is marked folded with its
-/// detail emptied, counted nowhere and answered, so it never holds back the records behind it.
+/// R1044000: `skip locked`, so two folds running at once take different records and none is folded
+/// twice. R1715000: a record whose detail does not read is marked folded with its detail emptied,
+/// so it never holds back the records behind it.
 pub async fn game_records_fold_pending(t: &mut PgTx<'_>, limit: usize) -> Result<FoldedRecords, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -5003,7 +4867,6 @@ fn co_json(co: &IndexMap<String, CoCount>) -> Value {
     )
 }
 
-/// `card_totals.co` read back.
 fn co_of(value: Value) -> Result<IndexMap<String, CoCount>, StoreError> {
     let bad = || {
         StoreError::from("card_totals.co: expected { card: [games, wins, record, seat, index] }".to_string())
@@ -5038,7 +4901,6 @@ fn turns_json(turns: &IndexMap<i32, DrillCount>) -> Value {
     )
 }
 
-/// `card_totals.turns` read back.
 fn turns_of(value: Value) -> Result<IndexMap<i32, DrillCount>, StoreError> {
     let bad = || StoreError::from("card_totals.turns: expected { turn: [games, wins] }".to_string());
     let Value::Object(entries) = value else {
@@ -5054,11 +4916,10 @@ fn turns_of(value: Value) -> Result<IndexMap<i32, DrillCount>, StoreError> {
         .collect()
 }
 
-/// R1044000: adds `delta` into the stored totals. The record counts are added in SQL; each card row,
-/// decklist and (R1994000) key's whole games the delta touches is read, added to in Rust
+/// R1044000, R1994000: the record counts are added in SQL, the rest read, added to in Rust
 /// (`StatsTotals::add`, the engine's counting) and written back. A transaction-level advisory lock
 /// on each patch and source the delta touches, taken in order, keeps two folds into the same rows
-/// from interleaving; the lock ends with the transaction.
+/// from interleaving.
 async fn stats_totals_add(t: &mut PgTx<'_>, delta: &StatsTotals) -> Result<(), StoreError> {
     if delta.records.is_empty() {
         return Ok(());
@@ -5614,7 +5475,6 @@ pub async fn play_telemetry_note_rematch(
     Ok(())
 }
 
-/// The columns `action_timing_of` reads.
 macro_rules! action_timing_columns {
     () => {
         "match_id, seq, seat, action_kind, legal_count, turn, think_ms, clock_left_ms, first_in_turn, \
@@ -5640,7 +5500,6 @@ fn action_timing_of(row: &PgRow) -> Result<ActionTimingRow, StoreError> {
     })
 }
 
-/// The columns `emote_event_of` reads.
 macro_rules! emote_event_columns {
     () => {
         "match_id, ordinal, seat, emote_id, turn, trigger_event, ms_since_trigger, reply_to_opponent_ms, \
@@ -5679,7 +5538,6 @@ fn match_signal_of(row: &PgRow) -> Result<MatchSignalRow, StoreError> {
     })
 }
 
-/// Three selects, one per table, in the orders the port names.
 pub async fn play_telemetry_of(t: &mut PgTx<'_>, match_id: &str) -> Result<PlayTelemetry, StoreError> {
     if !is_uuid(match_id) {
         return Ok(PlayTelemetry::default());
@@ -5719,7 +5577,6 @@ pub async fn play_telemetry_of(t: &mut PgTx<'_>, match_id: &str) -> Result<PlayT
     })
 }
 
-/// Every row of `action_timings`, for `timing-fit`.
 pub async fn play_telemetry_timings(t: &mut PgTx<'_>) -> Result<Vec<ActionTimingRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
@@ -5733,7 +5590,6 @@ pub async fn play_telemetry_timings(t: &mut PgTx<'_>) -> Result<Vec<ActionTiming
     rows.iter().map(action_timing_of).collect()
 }
 
-/// R639000: every row of `emote_events`, for `timing-fit`.
 pub async fn play_telemetry_emotes(t: &mut PgTx<'_>) -> Result<Vec<EmoteEventRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
@@ -5747,11 +5603,10 @@ pub async fn play_telemetry_emotes(t: &mut PgTx<'_>) -> Result<Vec<EmoteEventRow
     rows.iter().map(emote_event_of).collect()
 }
 
-/// R639000: every row of `match_signals` whose match has a result, beside it, for `timing-fit`.
-/// `won` is null for a draw, and otherwise whether the winner is the account that began in the
-/// row's seat: the match's own seats, since the result's are the seats as credited after a Glitch's
-/// swap (R677). A match is rematchable when it was ranked and no series lists it among its games
-/// (`state.games[].matchId`).
+/// R639000: `won` is null for a draw, and otherwise whether the winner is the account that began in
+/// the row's seat: the match's own seats, since the result's are the seats as credited after a
+/// Glitch's swap (R677). A match is rematchable when it was ranked and no series lists it among its
+/// games (`state.games[].matchId`).
 pub async fn play_telemetry_outcomes(t: &mut PgTx<'_>) -> Result<Vec<SignalOutcomeRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -5789,7 +5644,6 @@ pub async fn play_telemetry_outcomes(t: &mut PgTx<'_>) -> Result<Vec<SignalOutco
         .collect()
 }
 
-/// The finished matches (`over`) with a log, no timing and an account still held, oldest ending first.
 pub async fn play_telemetry_unfolded(t: &mut PgTx<'_>) -> Result<Vec<String>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -5806,16 +5660,13 @@ pub async fn play_telemetry_unfolded(t: &mut PgTx<'_>) -> Result<Vec<String>, St
     rows.iter().map(|row| uuid_text(row, "id")).collect()
 }
 
-// Ranked ladder (SPEC §9.12): migration 0022's four tables — `seasons`, `season_ranks`,
-// `bot_ratings` and `rated_games` — plus the Glicko triple on `profiles`. None of these reaches
-// an `app.*` function, because none has a rule to hold that one statement does not already hold:
-// `put_rank`/`put_bot` are upserts, `create_season`/`record_game` are one-statement idempotent
-// writes, `reset_ratings` is one `unnest` update, and the lookups are single selects.
+// Ranked ladder (SPEC §9.12): migration 0022's four tables plus the Glicko triple on `profiles`.
+// None of these reaches an `app.*` function, because none has a rule to hold that one statement
+// does not already hold: the writes are upserts or one-statement idempotent writes, and the
+// lookups are single selects.
 
-/// One advisory lock for every season open, transaction-scoped like migrate.rs's lock id: two
-/// opens — same season or different seasons — run one after the other, so the second reads a
-/// seasons list that already holds the first's row. TS interpolated the id into the statement; it
-/// is bound here, the same number either way.
+/// One lock for every season open, so two opens run one after the other and the second reads the
+/// first's row.
 pub async fn ranked_lock_seasons(t: &mut PgTx<'_>) -> Result<(), StoreError> {
     run_as(t, None).await?;
     sqlx::query("select pg_advisory_xact_lock($1::bigint)")
@@ -5826,7 +5677,6 @@ pub async fn ranked_lock_seasons(t: &mut PgTx<'_>) -> Result<(), StoreError> {
     Ok(())
 }
 
-/// Every season, oldest first, as the fake's ranked store answers it.
 pub async fn ranked_seasons(t: &mut PgTx<'_>) -> Result<Vec<Season>, StoreError> {
     run_as(t, None).await?;
     let rows =
@@ -5858,9 +5708,8 @@ pub async fn ranked_create_season(t: &mut PgTx<'_>, season: &Season) -> Result<b
     Ok(done.rows_affected() == 1)
 }
 
-/// R609's input: every profile a rated game has touched, with its Glicko triple. The memory
-/// store derives the same set by scanning `ratedGames`; here it is one EXISTS per side, over
-/// `rated_games_p1_profile_idx` / `p2`, and a deleted profile is already gone from
+/// R609's input: every profile a rated game has touched, with its Glicko triple. One EXISTS per
+/// side, over `rated_games_p1_profile_idx` / `p2`; a deleted profile is already gone from
 /// `public.profiles`, so the join needs no liveness check.
 pub async fn ranked_rated_players(t: &mut PgTx<'_>) -> Result<Vec<ResetPlayer>, StoreError> {
     run_as(t, None).await?;
@@ -5945,8 +5794,8 @@ macro_rules! standings_from {
     };
 }
 
-/// One `standings_from!` row. TS's `{ ...toSeasonRank(row), rating }`: the rank's own fields plus the
-/// rating, through their serde form, marked `bot` for a ladder bot's row (R640000).
+/// One `standings_from!` row: the rank's own fields plus the rating, through their serde form,
+/// marked `bot` for a ladder bot's row (R640000).
 fn standing_of(row: &PgRow) -> Result<SeasonStanding, StoreError> {
     let rank = to_season_rank(SeasonRankDbRow::read(row)?);
     let rating: f64 = get(row, "rating")?;
@@ -5959,8 +5808,6 @@ fn standing_of(row: &PgRow) -> Result<SeasonStanding, StoreError> {
     from_json(standing)
 }
 
-/// A season's rows joined to each player's CURRENT rating — what percentiles and Jlorious read.
-/// R640000: a ladder bot's row reads the bot's own rating (R610) and is marked `bot`.
 pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
@@ -5975,10 +5822,9 @@ pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<S
     rows.iter().map(standing_of).collect()
 }
 
-/// `ranked_standings` cut to `profile_ids`' rows and every row from `min_ladder` up (#2022), joined
-/// and read as it is, so a ladder bot's row reads its own rating (R640000). An id that is no uuid (a
-/// deleted account's empty seat) names no row and is not bound. Migration 0064's
-/// `season_ranks_season_ladder_idx` serves the ladder range (tests/sql CHECK 21).
+/// `ranked_standings` cut (#2022). An id that is no uuid (a deleted account's empty seat) names no
+/// row and is not bound. Migration 0064's `season_ranks_season_ladder_idx` serves the ladder range
+/// (tests/sql CHECK 21).
 pub async fn ranked_standings_subset(
     t: &mut PgTx<'_>,
     season_id: &str,
@@ -6169,7 +6015,6 @@ fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
     })
 }
 
-/// R1454: every bot with its profile's `created_at` and match and its R610 rating.
 pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -6187,7 +6032,6 @@ pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     rows.iter().map(to_bot_row).collect()
 }
 
-/// A bot's small integer as the `smallint` its column holds.
 fn small(value: i64, what: &str) -> Result<i16, StoreError> {
     i16::try_from(value).map_err(|_| StoreError::from(format!("a bot's {what} is out of range: {value}")))
 }
@@ -6332,13 +6176,13 @@ pub async fn bots_set_trio(
     Ok(())
 }
 
-/// R1453, R641000: locks the bot when it is free, answering whether it is: in no match, not
-/// retired (the row lock on its profile and its `bots` row, which every claim of a bot takes first)
-/// and a side of no series that is not over. The series check is a statement of its own, run after
-/// the lock is held: under READ COMMITTED each statement reads a fresh snapshot, so it sees the
-/// series a claim that held the lock first committed (`tickets_claim_for_bot_series` puts the bot
-/// in no match, so the profile's row alone cannot say it is taken). One statement doing both would
-/// read the series as they stood before it waited for the lock.
+/// R1453, R641000: locks the bot's profile and `bots` rows (every claim of a bot takes them first)
+/// and answers whether it is free: in no match, not retired and a side of no series that is not
+/// over. The series check is a statement of its own, run after the lock is held: under READ
+/// COMMITTED each statement reads a fresh snapshot, so it sees the series a claim that held the
+/// lock first committed (`tickets_claim_for_bot_series` puts the bot in no match, so the profile's
+/// row alone cannot say it is taken). One statement doing both would read the series as they
+/// stood before it waited for the lock.
 async fn lock_free_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<bool, StoreError> {
     let bot = sqlx::query(
         "select p.id
@@ -6370,9 +6214,8 @@ async fn lock_free_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<bool, StoreErro
 
 /// R1453: the bot is locked first (free: `lock_free_bot`), then the ticket claimed
 /// (`status = 'queued'`, as `app.claim_ticket_pair` claims), and only then is the `open` skeleton
-/// written, the ticket linked to it and the bot put in it. Either step finding nothing answers
-/// false and writes nothing. The skeleton's bot deck is empty until `matches_create` writes the
-/// match.
+/// written, the ticket linked to it and the bot put in it. The skeleton's bot deck is empty until
+/// `matches_create` writes the match.
 pub async fn tickets_claim_for_bot(
     t: &mut PgTx<'_>,
     ticket_id: &str,
@@ -6435,12 +6278,10 @@ pub async fn tickets_claim_for_bot(
     Ok(true)
 }
 
-/// R641000: `tickets_claim_for_bot` for a `bo3` ticket: the bot locked first (free:
-/// `lock_free_bot`), then the ticket claimed, then game 1's `open` skeleton written and the ticket
-/// linked to it, but the bot put in no match. The series the caller writes in this transaction is
-/// what holds it: `lock_free_bot`'s series check keeps every other claim off it, and with no
-/// `current_match_id` to find it by, `bots_release_stale_starts` leaves game 1's skeleton alone
-/// through the pick phase.
+/// R641000: as `tickets_claim_for_bot`, but the bot is put in no match. The series the caller
+/// writes in this transaction is what holds it: `lock_free_bot`'s series check keeps every other
+/// claim off it, and with no `current_match_id` to find it by, `bots_release_stale_starts` leaves
+/// game 1's skeleton alone through the pick phase.
 pub async fn tickets_claim_for_bot_series(
     t: &mut PgTx<'_>,
     ticket_id: &str,
@@ -6497,10 +6338,8 @@ pub async fn tickets_claim_for_bot_series(
     Ok(true)
 }
 
-/// R639000: `tickets_claim_for_bot` with no ticket: the bot is locked (free: `lock_free_bot`),
-/// then the `open` skeleton written for the finished match's two players and the bot put
-/// in it. A bot that is not free answers false and writes nothing. The skeleton's decks are empty
-/// until `matches_create` writes the match; a start that never comes leaves it to
+/// R639000: the bot is locked (free: `lock_free_bot`) before the `open` skeleton is written. Its
+/// decks are empty until `matches_create` writes the match; a start that never comes leaves it to
 /// `bots_release_stale_starts`.
 pub async fn bots_claim_for_rematch(
     t: &mut PgTx<'_>,
@@ -6541,7 +6380,6 @@ pub async fn bots_claim_for_rematch(
     Ok(true)
 }
 
-/// R1555000: the flag, and the grind's count of wins back to 0.
 pub async fn bots_set_grinding(t: &mut PgTx<'_>, profile_id: &str, grinding: bool) -> Result<(), StoreError> {
     run_as(t, None).await?;
     let done = sqlx::query(
@@ -6584,10 +6422,9 @@ pub async fn bots_note_grind_win(
     Ok(())
 }
 
-/// R1555000: `bots_claim_for_rematch` for two bots: both locked (free: `lock_free_bot`) in id
-/// order, so two claims that share a bot cannot deadlock, then the `open` skeleton written for the
-/// two and both put in it. The same id twice, or a bot that is not free, answers false and writes
-/// nothing; as there, a start that never comes leaves the skeleton to `bots_release_stale_starts`.
+/// R1555000: both bots are locked (free: `lock_free_bot`) in id order, so two claims that share a
+/// bot cannot deadlock, before the `open` skeleton is written; a start that never comes leaves it
+/// to `bots_release_stale_starts`.
 pub async fn bots_claim_pair(
     t: &mut PgTx<'_>,
     players: &(String, String),
@@ -6635,12 +6472,12 @@ pub async fn bots_claim_pair(
     Ok(true)
 }
 
-/// R1454: the `open` skeletons bots were claimed into before `before` and that no start completed,
-/// deleted; `profiles.current_match_id` and `tickets.match_id` are `on delete set null`, so the bot
-/// and the ticket's owner are let go with them, and the ticket stays claimed. A room is an `open`
-/// row too, but never a bot's. R1555000: a skeleton two bots were claimed into answers both. Each
-/// skeleton is locked once, so a second bot's row never meets a skeleton this statement already
-/// deleted (which a lock skips), and the bots are read from `profiles` as they stood before it.
+/// R1454: `profiles.current_match_id` and `tickets.match_id` are `on delete set null`, so deleting
+/// a skeleton lets the bot and the ticket's owner go, and the ticket stays claimed. A room is an
+/// `open` row too, but never a bot's. R1555000: a skeleton two bots were claimed into answers both.
+/// Each skeleton is locked once, so a second bot's row never meets a skeleton this statement
+/// already deleted (which a lock skips), and the bots are read from `profiles` as they stood
+/// before it.
 pub async fn bots_release_stale_starts(t: &mut PgTx<'_>, before: i64) -> Result<Vec<String>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
@@ -6669,7 +6506,6 @@ pub async fn bots_release_stale_starts(t: &mut PgTx<'_>, before: i64) -> Result<
     rows.iter().map(|row| uuid_text(row, "bot_id")).collect()
 }
 
-/// R1453: the other seat of the profile's last `limit` results, newest first (ties on match id).
 pub async fn results_recent_opponents(
     t: &mut PgTx<'_>,
     profile_id: &str,
@@ -6711,7 +6547,6 @@ pub async fn results_count_active_humans(t: &mut PgTx<'_>, since: i64) -> Result
     get(&row, "active")
 }
 
-/// R640002: the results that ended at or after `since`, games against a bot included.
 pub async fn results_count_since(t: &mut PgTx<'_>, since: i64) -> Result<i64, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
@@ -6973,7 +6808,7 @@ pub async fn player_stats_list_public(
         .as_deref()
         .map(str::trim)
         .filter(|term| !term.is_empty());
-    // The SQL keeps TS's `$2::int`/`$3::int`, so the binds are `int4`.
+    // The SQL casts `$2::int`/`$3::int`, so the binds are `int4`.
     let limit = i32::try_from(options.limit).unwrap_or(i32::MAX);
     let offset = i32::try_from(options.offset).unwrap_or(i32::MAX);
     // R1436: the search matches the username by the key it clashes on (R1434), the NFKC case fold
@@ -7016,10 +6851,8 @@ pub async fn player_stats_list_public(
 
 // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
 // SPEC S7 over migration 0038's tables. No `app.*` function: each method is one or two plain
-// statements on its own table, and the schema's keys and checks are the rule (one request per
-// direction and pair, `a < b`, one open challenge per pair and direction through the partial
-// unique index `challenges_open_pair_key`, a body of 1 to 500 characters, one report per message
-// and reporter). An id that is not a UUID names no row, as everywhere in this file.
+// statements on its own table, and the schema's keys and checks are the rule. An id that is not
+// a UUID names no row, as everywhere in this file.
 
 use crate::db::store::{
     BlockRow, ChallengeRow, ChallengeState, ChatCursor, ChatMessageRow, ChatReportListing, ChatReportRow,
@@ -8181,23 +8014,97 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
     .map_err(db_error)?;
     rows.iter().map(|row| uuid_text(row, "friend")).collect()
 }
-// KNOWN DIVERGENCES from `src/db/fake.rs` asserted in `tests/store/contract.rs`:
-//  * redemption limits: §9.4 limits written into `app.redeem_invite_code`, breaker in `app.settings`. Fake takes limits as options defaulting to `src/config.rs`.
-//  * attempt reason: `CodeAttempt.reason` has no column in `public.code_attempts` (`succeeded` only).
-//  * redemption email check: `app.redeem_invite_code` checks `auth.users.email_confirmed_at`; fake uses `email_verified`. Access token check (R159) precedes both.
-//  * redemption circuit breaker: SQL function checks `app.settings.redemption_enabled` or failure threshold (R106). Fake implements switch only.
-//  * profile email: `public.profiles` has no email column (owned by `auth.users`, §9.4).
-//  * foreign keys: `results`, `tickets`, `decks`, `trios`, `series` have FKs to `matches`/`profiles`. `series.next_match_id` has no FK (R263).
-//  * deck and trio strictness: `app.upsert_deck`/`app.upsert_trio` (0007) check active profile, name constraints (D1, T1), deck size (D2), copy limits (D4); defense in depth (§9.4).
-//  * tutorial strictness (R320): `app.merge_tutorial_progress` (0011) enforces active profile, valid slug, timestamped choices. Caps match `app.settings.tutorial_lessons_max`.
-//  * player settings strictness (R633): `app.merge_player_settings` (0018) enforces active profile, structure, timestamp precedence, group and byte caps.
-//  * custom card strictness (R915008): `app.create_custom_card`/`app.update_custom_card` (0037) check active profile, id format, frame, size (R915001).
-//  * caps: SQL applies smaller of port cap and `app.settings` (0007, 0037).
-//  * deck and trio timestamps: SQL sets `updated_at` (and `created_at` on new rows). Fake stores `created_at` as given.
-//  * R254 decks: Migration 0007 saved loadouts in `app.resolve_deck` id order. Saved decks preserve save order.
-//  * launch grant: Trigger grants non-token cards; fake also skips banned cards (§9.4 L6).
-//  * action timestamps: `app.append_match_action` stamps db clock; order (`seq`) matches. Read by `timing-backfill` (R1442).
-//  * rooms: Rooms stored in `public.matches` with `status = 'open'`; `Room.expires_at` in `ceiling_at` (0004, 0008).
-//  * reserved match ids: Reserved tickets/rooms create `open` rows in Postgres; `matches_discard_open` (R263) deletes them. Fake uses `reserved` map (R1450, R1454).
-//  * deleted accounts: Migrations 0012/0022 nullify profile seats; deleted seat reads as empty string (`replay_row`, R768).
-//  * clocks: Postgres matches table stores `grace_deadline_at` plus two `*_disconnected_at`.
+// ---- end Social: watching and shared replays ----
+
+// KNOWN DIVERGENCES from `src/db/fake.rs`
+//
+// Every one of these is a place where the port and the schema (which this file may not change:
+// the migrations are append-only and checksum-locked) do not hold the same information. They are
+// listed here and asserted in `tests/store/contract.rs` where they are observable.
+//
+//  * redemption limits. §9.4's "more than 5 attempts", "more than 20" and "the last hour" are
+//    written into `app.redeem_invite_code`'s body, and the breaker's knobs into `app.settings`, so
+//    neither can be made to read `ApiLimits`. The fake takes all three as options defaulting to the
+//    same `src/config.rs` constants, so a test can shrink them on the fake path only. Changing a
+//    number for a real deployment means `app.settings` and a new migration, not `src/config.rs`.
+//  * attempt reason. `CodeAttempt.reason` has no column in `public.code_attempts`, which stores
+//    only `succeeded`, so it is dropped on write and a round-trip cannot return it. Nothing reads it
+//    back, and `redeem` returns a result code rather than a reason for the same reason.
+//  * redemption's email check. `app.redeem_invite_code` reads `auth.users.email_confirmed_at`
+//    itself; the fake answers through `RedemptionSettings.email_verified`. The server refuses an
+//    unverified caller from the access token (R159) before either store is reached, so this only
+//    shows up in a test that calls the port directly, as `tests/store/contract.rs` does.
+//  * redemption's circuit breaker. The SQL function refuses when `app.settings.redemption_enabled`
+//    is false OR when its own count of recent failures crosses R106's threshold. The fake
+//    implements the switch and not the counter, because the server's own R106 breaker
+//    (`src/api/codes.rs`) is checked first with the same numbers, and a fake that counted as well
+//    would open during BUILD M6-T1's timing test, whose whole point is 150 uninterrupted failures.
+//  * profile email. `public.profiles` has no email column, so `Profile.email` is read from
+//    `auth.users` (`service_role` needs SELECT on it, which Supabase grants), the `email` argument
+//    to `profiles_create` is ignored, and the `auth.users` row must exist, because `profiles.id`
+//    references it; the fake has no such requirement.
+//  * foreign keys. A result, a ticket or an in-match pointer for a match that was never created, or
+//    a deck, a trio or a series for a profile that does not exist, raises here and is accepted by
+//    the fake. Every caller in `src/api/**` writes the match or has the profile first.
+//    `series.next_match_id` is the one match id with NO foreign key, on purpose (R263: it is
+//    reserved before its match exists).
+//  * deck and trio strictness. `app.upsert_deck` and `app.upsert_trio` (0007) refuse — by raising —
+//    a profile that is not active, a blank name, a name past `deck_name_max_length` or holding a
+//    control character (D1, T1), more than `deck_size` cards (D2), more than `max_copies` of one id
+//    (D4) and a cards value that is not an array of strings; the fake checks none of these, because
+//    `check_deck_draft` / `check_trio_draft` refuse them first with a sentence a player reads. This
+//    is §9.4's "defense in depth" by design. D3 (a deckable card) is checked by neither: see 0007.
+//  * tutorial strictness (R320). `app.merge_tutorial_progress` (0011) refuses — by raising — a
+//    profile that is not active, a lesson id that is not a lower-case slug of at most
+//    `tutorial_lesson_id_max_length` characters and a choice with no time; the fake checks none of
+//    these, because `src/api/tutorial.rs` refuses a malformed body first and its route is `active`.
+//    Its cap is the smaller of the caller's and `app.settings.tutorial_lessons_max`, as for caps.
+//  * player settings strictness (R633). `app.merge_player_settings` (0018) refuses — by raising — a
+//    profile that is not active and a group that is not `{ at: whole milliseconds, values: an
+//    object }`; the fake checks neither, because `src/api/settings.rs` refuses a malformed body
+//    first. Its caps are the smaller of the caller's and `app.settings`' `player_settings_groups_max`
+//    / `player_settings_bytes_max`; the byte cap counts the text jsonb prints, which the fake
+//    reproduces (`jsonb_text_bytes`) for ordinary values.
+//  * custom card strictness (R915008). `app.create_custom_card` and `app.update_custom_card` (0037)
+//    refuse, by raising, a profile that is missing or not active, and `public.custom_cards`' checks
+//    refuse a malformed id, a version under 1, a frame that is not an object and an oversized source
+//    or builder. The fake checks none of these, because `src/api/custom_cards.rs` refuses a card the
+//    engine's validator refuses first (R915001). jsonb also reorders a builder's object keys and
+//    keeps one of a doubled key; neither changes the value the port reads back.
+//  * caps. The SQL applies the smaller of the port's cap and `app.settings.max_saved_decks` /
+//    `max_saved_trios` (0007, mirroring `MAX_SAVED_DECKS` and `MAX_SAVED_TRIOS`) / `max_custom_cards`
+//    (0037, mirroring `CUSTOM_CARDS_PER_ACCOUNT`); equal today. Raising a cap in `src/config.rs`
+//    alone raises it only in memory; the database needs a migration updating its row.
+//  * deck and trio timestamps. `app.upsert_deck` / `app.upsert_trio` take one instant, for
+//    `updated_at` and, on a new row, `created_at`, and this store hands them `updated_at`; the fake
+//    stores a new deck's `created_at` as given. The two agree for a caller that stamps both from one
+//    clock read, which is what a save is.
+//  * R254's decks. A deck migration 0007 made from a loadout holds its cards in `app.resolve_deck`
+//    order, which is card-id order; every deck saved since keeps the order it was saved in.
+//  * launch grant. Migration 0002's trigger grants every NON-TOKEN card of the current catalog
+//    version; the fake also skips BANNED ids (§9.4 L6), so with a banned card in the catalog the
+//    database grants a card the fake does not.
+//  * action timestamps. `app.append_match_action` stamps `at` with the database clock and
+//    `match_actions` is append-only, so `MatchActionRow.at` cannot be written by the caller. `seq`
+//    is unaffected, and only a replay tool and `timing-backfill` (R1442) read `at` back, whose think
+//    times therefore run from one commit to the next.
+//  * rooms. There is no `rooms` table: a room is a `public.matches` row with `status = 'open'`,
+//    `Room.expires_at` is kept in `ceiling_at` (which migration 0004 documents as meaningless while a
+//    room is open), and `rooms_claim` rewrites the row's id to the match id the server minted. A
+//    row with no `room_mode` (0008) — written before 0008, or by 0004's `app.create_room` — reads as
+//    `bo1`, which is all a room could be then.
+//  * reserved match ids. Here the id `tickets_claim_pair`, `tickets_claim_for_bot` or `rooms_claim`
+//    reserves is an `open` row, so `matches_discard_open` (R263) deletes a row: the claimed tickets'
+//    `match_id` goes back to null and a claimed room's code is free again. The fake keeps only the
+//    time a pair or a bot was claimed (`FakeTables.reserved`, R1450, R1454), which its
+//    `discard_open` drops; there a matched ticket keeps the discarded id. `matches_reap_open`
+//    (R1450) does the same in both stores.
+//  * deleted accounts. Migrations 0012 and 0022 set a deleted profile's seat on its finished
+//    matches, results, series and `rated_games` sides to NULL (cascading its `season_ranks` away).
+//    A Rust `String` cannot hold that null, so a deleted seat reads back as the empty string (a
+//    match's second seat excepted: `to_match` refuses a row with no `p2_profile_id`, except for a
+//    replay's read, `replay_row`, R768). The fake keeps the id (it has no foreign keys).
+//  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one
+//    `grace_deadline_at` plus two `*_disconnected_at`, which carry the per-player deadlines while
+//    `grace_deadline_at` keeps the nearer of them. A migration adding `p1_grace_deadline_at` /
+//    `p2_grace_deadline_at` would retire this.

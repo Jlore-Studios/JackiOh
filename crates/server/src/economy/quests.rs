@@ -1,26 +1,11 @@
 //! Daily quests (SPEC §14.9, #1304): the pool, the rhythm quests arrive on, and what a finished
 //! game moves.
 //!
-//! - The pool is data, `crates/server/quests.json`, compiled in like the cosmetics registry: each
-//!   entry names a goal read from a finished game's public facts ([`QuestGoal`]), its target and
-//!   its Jlore, from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry of the same goal paying
-//!   more. [`problems`] is its check. A shipped id is never renamed or removed: a held quest and
-//!   its ledger rows name it. Every set that ships has a `playSetCards` entry, so the release
+//! - The pool is data, `crates/server/quests.json`, compiled in like the cosmetics registry, and
+//!   [`problems`] is its check. Every set that ships has a `playSetCards` entry, so the release
 //!   that ships a set adds its quest ([[R2253000]]); a unit test holds it.
 //! - Arrivals ([`top_up`], [[R1304000]]): an account's first visit starts its clock, and one quest
-//!   falls due every `QUEST_INTERVAL_HOURS` from then. A top-up brings every quest that fell due
-//!   while there was room, each dated when it fell due, so a long absence returns exactly
-//!   `QUEST_MAX_HELD`; one that fell due with no room is skipped, never banked. Each is drawn
-//!   uniformly from the entries not held, its fresh seed logged in its row's `ref`.
-//! - Progress ([`move_quests`], [[R1304001]]): the reward hook (`rewards`) tops the account up at
-//!   the game's end, then moves every held quest by what the game did, never past its target.
-//! - Payout ([`complete_quest`]): a quest that reaches its target leaves the held quests and pays
-//!   its Jlore and `QUEST_XP_PER_JLORE` XP for each Jlore, onto every active track (§14.7), as
-//!   ledger rows. The store lets a held quest go once, and only that pays, so it pays once.
-//!
-//! - Replace ([`replace_quest`], [[R2210000]]): `QUEST_REPLACES_PER_DAY` times a UTC day, a held
-//!   quest leaves with its progress and one drawn as an arrival is, never held nor the one
-//!   replaced, takes its slot at once; the schedule is untouched.
+//!   falls due every `QUEST_INTERVAL_HOURS` from then.
 //!
 //! Nothing here checks `ECONOMY_LIVE` (§14.12): its callers top up and pay only while it is on
 //! ([[R1304002]]). Every number is read through its [`crate::config`] constant (CLAUDE.md rule 9).
@@ -40,12 +25,9 @@ use crate::config::{
 use crate::cosmetics::is_slug;
 use crate::db::store::{StoreResult, Tx};
 
-/// The pool's text, compiled in.
 pub const QUESTS_JSON: &str = include_str!("../../quests.json");
 
-/// What a quest counts, read from a finished game's public facts: its result, the cards a seat
-/// played from its hand, its Traps that fired, its attacks, its Units' position switches and its
-/// Radiant upgrades.
+/// What a quest counts, read from a finished game's public facts.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum QuestGoal {
@@ -79,7 +61,8 @@ pub enum QuestGoal {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct QuestDef {
-    /// A lower-case slug, unique in the pool and never renamed.
+    /// A lower-case slug, unique in the pool and, once shipped, never renamed or removed: a held
+    /// quest and its ledger rows name it.
     pub id: String,
     /// The English sentence the client shows, and translates.
     pub title: String,
@@ -168,7 +151,6 @@ pub fn parse(json: &str) -> Result<Vec<QuestDef>, String> {
     }
 }
 
-/// The pool this build ships.
 pub fn shipped() -> Result<Vec<QuestDef>, String> {
     parse(QUESTS_JSON)
 }
@@ -179,7 +161,6 @@ pub fn pool() -> &'static [QuestDef] {
     POOL.get_or_init(|| shipped().expect("quests.json passes quests::problems"))
 }
 
-/// The pool's entry `id`, if the pool has one.
 pub fn quest_def(id: &str) -> Option<&'static QuestDef> {
     pool().iter().find(|quest| quest.id == id)
 }
@@ -202,8 +183,6 @@ pub struct PlayedCard {
 
 /// What one seat did in a finished game, as the quests count it: the public facts of the game
 /// the engine's `summarize_game` reads off its log (R376), and the attacks its log holds.
-/// R2253000: its `positionSwitches` and `radiantUpgrades` count as the record holds them, 0 when
-/// it holds neither.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct GameTally {
     pub played: Vec<PlayedCard>,
@@ -470,11 +449,9 @@ pub async fn replaces_left(tx: &mut Tx<'_>, profile_id: &str, now: i64) -> Store
 /// [[R2210000]]: replaces the held quest `quest_id` at `now`, in the caller's transaction. The
 /// account is locked first (R1301003) and topped up, so a second replace at once waits and then
 /// reads what this one wrote: at most `QUEST_REPLACES_PER_DAY` land in a UTC day. The quest leaves
-/// with its progress, a `removed` row, and one drawn as an arrival is (uniformly among the entries
-/// not held, the replaced one excluded, its fresh seed in the row's `ref`) takes its slot, dated
-/// `now`; the schedule is untouched. A refusal (the day's replaces spent, the quest not held, no
-/// other entry to draw) writes nothing but the top-up's own arrivals, which a quests read writes
-/// too, and the caller drops the transaction. It does not check `ECONOMY_LIVE`: its caller does.
+/// with its progress, a `removed` row, and one drawn as an arrival is takes its slot, dated `now`;
+/// the schedule is untouched. A refusal writes nothing but the top-up's own arrivals, which a
+/// quests read writes too, and the caller drops the transaction.
 pub async fn replace_quest(
     tx: &mut Tx<'_>,
     profile_id: &str,

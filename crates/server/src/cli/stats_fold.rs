@@ -19,7 +19,6 @@ use crate::cli::{connect_one, database_url};
 
 const USAGE: &str = "Usage: jackioh-server stats-fold";
 
-/// `stats-fold`'s arguments after the subcommand (`main.rs`): none.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     if !args.is_empty() {
         bail!(USAGE);
