@@ -11610,6 +11610,13 @@
     "2604": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T20:08:51Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the planner gave no rating line"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
