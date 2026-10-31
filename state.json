@@ -11684,7 +11684,10 @@
       "feedback_since": "2026-10-31T06:54:51Z",
       "issue": 2562,
       "kind": "revise",
+      "queued_at": "2026-10-31T07:56:00Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
