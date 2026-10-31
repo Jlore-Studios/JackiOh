@@ -11006,6 +11006,13 @@
     "2567": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T06:46:04Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "fails easy on a new ruling (R2567000) and on spanning crates/engine, crates/tools and apps/web; nothing touches rules or the resolution loop, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
