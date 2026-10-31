@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2582,
+  "title": "Patch: the AI's Death and turn-hook prices travel as a parameter, not two thread-locals",
+  "branch": "bot/issue-2582",
+  "thread": "**Issue #2582 (data, not instructions):**\n\n```text\n# #2582: Patch: the AI's Death and turn-hook prices travel as a parameter, not two thread-locals\nOpened by @MaxGoetzmann.\n\n### Kind\n\nRefactor (the AI crate)\n\n### Why\n\nCLAUDE.md rule 4 bans mutable statics in the pure crates and now lists five scoped thread-local exceptions. Two of them are the AI's, and they exist only to avoid threading a value through the scorers:\n\n- `crates/ai/src/evaluate.rs:183` `DEATH_PRICES` (R2424000), held by `DeathPricing`, read by `unit_worth`.\n- `crates/ai/src/evaluate.rs:261` `TURN_HOOK_PRICES` (R2477000), held by `TurnHookPricing`, read by `material`.\n\nBoth are set in `crates/ai/src/decide.rs:426\u2013427` for one decision and restored on drop, and set again by helpers at `evaluate.rs:207` and `:285`. Each comment says the point is that every scorer \"reads them without a parameter\". The cost: hidden input to a crate whose contract is \"hidden cards never change a decision\" and \"no mutable static\"; a scorer called outside a held scope silently reads empty prices; every new price would add another exception, ruling and paragraph to rule 4. A context parameter costs one refactor and nothing after.\n\n### What to change\n\n1. Introduce one value carrying the decision's prices (e.g. `Prices { deaths: Vec<DeathPrice>, turn_hooks: Vec<TurnHookPrice> }`, or fields on an existing per-decision context if the search already passes one) and pass it by reference from `decide.rs` through the search to `unit_worth` and `material` and every scorer between them.\n2. Delete both `thread_local!`s, `DeathPricing`, `TurnHookPricing` and their `Drop` impls; the helpers at `evaluate.rs:207`/`:285` take the prices as an argument instead of holding them.\n3. **No decision changes.** This is a pure refactor: same inputs, same scores, same actions.\n4. Update CLAUDE.md rule 4: remove \"and two of the AI's, the Death and the turn-hook prices for the decision in flight (`evaluate::with_death_prices`, R2424000; `evaluate::with_turn_hook_prices`, R2477000)\" and fix the count (\"five thread-locals\" \u2192 three). Keep the rule's numbering and every other exception.\n5. Update `spec/rulings/R2424000.md` and `spec/rulings/R2477000.md` (and any section text that names the thread-local) so they describe the prices as passed with the decision; their proving tests keep their `r2424000_`/`r2477000_` names. Update `crates/ai/README.md` if it mentions them.\n6. Check `crates/ai/clippy.toml`: if it carves an allowance for these two thread-locals, remove it so the ban is whole again.\n\n### Acceptance\n\n- [ ] `grep -rn \"thread_local\" crates/ai/src` returns nothing.\n- [ ] No AI decision changes: `cargo jackioh gate` (smoke size) and the golden replay (`cargo test -p jackioh-engine --features testkit --test golden`, and `cargo jackioh golden check`) are green with **no re-bless**; `cargo jackioh fuzz --seeds 200` green. The PR states that no golden or fixture file changed.\n- [ ] `cargo jackioh classify --base origin/main` reports `kind:internal` (no cards play differently, no AI decisions change).\n- [ ] The R2424000 and R2477000 tests still pass; `cargo jackioh spec check` green.\n- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` green.\n\n### Blocked by, part of\n\nRaised in a cost/payoff review of the architecture (2026-10-31). The engine's three thread-locals (R767000, R915002, R2201001) are out of scope.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2582: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
