@@ -485,7 +485,10 @@ span.cf[data-layout="minion"][data-card-type][data-rarity?][data-foil][data-radi
 Keyword chips run down the left edge under the cost gem at an 8px floor. Every keyword keeps its
 `[data-keyword]` badge in the DOM, but Taunt (the frame), Divine Shield (the bubble) and Armor while
 the armor plate shows are drawn as states and their badge is `data-chip="hidden"`; past three chips
-the rest fold into a `.cf-kw-more` "+n" whose title lists them. There is no exhausted mark.
+the rest fold into a `.cf-kw-more` "+n" whose title lists them. The keywords that do nothing on the
+field (R2577000: Equip, Tradable, Cloaked, Crater, Flashback, Stack, Temporary) are `data-chip="hidden"`
+too and leave the "+n" count; the hover preview and the inspect sheet list every keyword. There is no
+exhausted mark.
 
 `.stat-health`'s `textContent` stays `"{health}/{maxHealth}"`, which BUILD M5-T1's "current over
 max" requires. `.cf` fills its zone (`width: 100%; height: 100%; aspect-ratio: auto`).
@@ -994,7 +997,8 @@ The deck builder does the same for its own buttons by scoping every button rule 
   the view marks `sick` wears `.cf-sick[data-sick]` (R849000). Taunt,
   Divine Shield and plated Armor are drawn as states (`data-chip="hidden"` on their badge); the
   other keywords show as at most `KEYWORD_CHIPS_MAX` (3) chips, the last becoming a `.cf-kw-more`
-  "+n" whose title lists the rest. Every keyword keeps its `[data-keyword]` badge.
+  "+n" whose title lists the rest. A keyword that does nothing on the field gets no chip and leaves
+  the count (R2577000). Every keyword keeps its `[data-keyword]` badge.
 - **B20.** No element inside a card carries the `card` class token, and no new testid starts with
   `card-` or `hand-card-`. So a stacked-pile zone holds one `.card`, the fixture board holds 20,
   and `cy.fieldCardByName` and `cy.handCardByName` resolve to the named card (jsdom query over
