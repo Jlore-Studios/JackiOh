@@ -11611,8 +11611,15 @@
     "what": "plan #2603 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-31T19:50:40Z",
-    "notes": [],
+    "at": "2026-10-31T19:56:55Z",
+    "notes": [
+      "#2603 needs a plan",
+      "#2604 needs a plan",
+      "started plan #2604 on claude-3 (run 41236626351)",
+      "started plan #2603 on claude-8 (run 41236654739)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -12317,7 +12324,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T19:50:40Z",
+  "loop_tick": "2026-10-31T19:56:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
