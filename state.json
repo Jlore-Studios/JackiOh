@@ -10726,6 +10726,14 @@
       "started_at": "2026-10-31T02:28:18Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2561": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-31T00:16:14Z",
+      "issue": 2556,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
