@@ -426,7 +426,8 @@ pub struct EvalWeights {
     pub turn_hook: f64,
     /// R2564000: the share of what one use of a unit's Activate gives its controller
     /// (`evaluate::activation_price`) that `unit_worth` adds, inside the Brittle share, the seat's units
-    /// and the enemy's alike.
+    /// and the enemy's alike. R2603000: `material` adds it, inside the card's Brittle share, for each
+    /// backrow card the seat can read, on either side.
     pub activation: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
@@ -623,8 +624,9 @@ pub const AI_DEATH_PROBE_NODES: usize = 24;
 /// probes', for a board with a few engines on both sides and the hand's.
 pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
 
-/// R2564000: the most nodes a decision's activation probes (`evaluate::activation_prices`) spend: two
-/// turn ends and `AI_REPLY.visible_activations` uses for each of about four units.
+/// R2564000, R2603000: the most nodes a decision's activation probes (`evaluate::activation_prices`)
+/// spend: two turn ends and `AI_REPLY.visible_activations` uses for each of about four cards, units and
+/// face-up backrow cards together.
 pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
 
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
