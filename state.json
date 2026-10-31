@@ -10537,11 +10537,9 @@
       "ci_run_id": 41149102745,
       "ci_sha": "90a4445c77348e51f044fd4e4492d4fda56a395e",
       "cleared": {
-        "at": "2026-10-31T00:14:52Z",
-        "by": "`claude` (strong)",
-        "carried_from": "9750284e764168dda5f84156e7c3f2699014120b",
-        "resolved_by": "`claude` (strong)",
-        "sha": "90a4445c77348e51f044fd4e4492d4fda56a395e"
+        "at": "2026-10-31T02:27:39Z",
+        "by": "`gemini` (medium), `claude` (strong)",
+        "sha": "d6a7728eaf93c1f3a8eed260d9d71391f7c2aa31"
       },
       "cross_rounds": 0,
       "died": 0,
