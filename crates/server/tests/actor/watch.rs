@@ -20,11 +20,12 @@ use serde_json::{Value, json};
 use tokio::time::Instant;
 
 use jackioh_engine::EMOTE_WINDOW_MS;
+use jackioh_server::actor::guard::CLOSE_POLICY_VIOLATED;
 use jackioh_server::actor::ws_server::{WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH,
-    WS_IDLE_TIMEOUT_SECONDS,
+    MALFORMED_FRAMES_PER_WINDOW, PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, SPECTATE_DELAY_MS,
+    SPECTATORS_PER_MATCH, WATCH_HELLO_INTERVAL_MS, WS_IDLE_TIMEOUT_SECONDS,
 };
 use jackioh_server::db::store::{PlayerSettingsLimits, PlayerSettingsMergeInput, StartMatchInput};
 use jackioh_server::economy::store::CardPicks;
@@ -906,6 +907,116 @@ mod r1103000_a_watchers_later_hello {
             .await;
         settle().await;
         assert_eq!(watcher.received(), received, "{:?}", watcher.frames());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R2609000 — a watcher's socket keeps a seat's limits
+// ---------------------------------------------------------------------------------------------
+
+mod r2609000_a_watcher_keeps_a_seats_limits {
+    use super::*;
+
+    /// The acceptance's burst of hellos.
+    const HELLO_BURST: usize = 50;
+
+    #[tokio::test(start_paused = true)]
+    async fn r2609000_a_burst_of_hellos_is_answered_once_per_interval_and_the_players_play_on() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        let hello = json!({ "type": "hello", "matchId": w.match_id, "friendId": w.friend.id });
+
+        w.keep_both().await;
+        assert!(
+            watcher
+                .wait_for(0, ms(SPECTATE_DELAY_MS) + DELAY_SLACK, |frame| {
+                    frame["type"] == "view" && frame["view"]["phase"] == "main"
+                })
+                .await
+                .is_some(),
+            "the watcher never saw the turn begin: {:?}",
+            watcher.frames()
+        );
+        settle().await;
+        let last = watcher
+            .of_type("view")
+            .last()
+            .cloned()
+            .expect("the watcher was sent its views");
+        assert_eq!(last["view"]["active"], "p1", "{last}");
+        let received = watcher.received();
+        let started = Instant::now();
+
+        for _ in 0..HELLO_BURST / 2 {
+            watcher.send_json(hello.clone()).await;
+        }
+        // Mid-burst the friend plays: the action lands as it would with no watcher.
+        w.p1.receive_json(json!({ "type": "action", "action": { "type": "endTurn", "nonce": "f-end" } }));
+        settle().await;
+        for _ in 0..HELLO_BURST / 2 {
+            watcher.send_json(hello.clone()).await;
+        }
+        settle().await;
+
+        assert!(
+            started.elapsed() < ms(WATCH_HELLO_INTERVAL_MS),
+            "the burst outlasted one interval"
+        );
+        assert_eq!(
+            watcher.frames().split_off(received),
+            vec![last.clone()],
+            "one view for the whole burst"
+        );
+        assert_eq!(last_view_of(&w.p2)["active"], "p2", "the friend's action landed");
+
+        // An interval later a hello is answered again, with the same view: the end of the turn is
+        // not due yet.
+        tokio::time::sleep(ms(WATCH_HELLO_INTERVAL_MS)).await;
+        let received = watcher.received();
+        watcher.send_json(hello).await;
+        settle().await;
+        assert_eq!(watcher.frames().split_off(received), vec![last]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2609000_junk_past_the_malformed_budget_closes_the_watchers_socket_with_1008_and_the_players_hear_the_count()
+     {
+        let w = world(false).await;
+        w.keep_both().await;
+        let watcher = w.watch(&w.watcher).await;
+        settle().await;
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 1);
+        w.p1.clear();
+        w.p2.clear();
+        let received = watcher.received();
+
+        for _ in 0..MALFORMED_FRAMES_PER_WINDOW {
+            watcher.send_text("not json").await;
+        }
+        settle().await;
+        assert_eq!(watcher.close_code(), None, "the budget itself is allowed");
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 1);
+
+        watcher.send_text("not json").await;
+        assert_eq!(watcher.wait_closed(PROMPTLY).await, Some(CLOSE_POLICY_VIOLATED));
+        settle().await;
+        assert!(
+            watcher.of_type_since(received, "error").is_empty(),
+            "junk gets no reply: {:?}",
+            watcher.frames()
+        );
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(watcher_counts(socket), vec![json!(0)]);
+            assert!(socket.of_type("view").is_empty(), "{:?}", socket.messages());
+            assert_eq!(socket.close_code(), None);
+        }
+        let presence = w.app.matches.presence_of(&w.match_id).expect("the match is live");
+        assert!(presence.p1 && presence.p2, "both players are still there");
+        w.p1.receive_json(json!({ "type": "action", "action": { "type": "endTurn", "nonce": "f-end" } }));
+        settle().await;
+        assert_eq!(last_view_of(&w.p2)["active"], "p2", "the friend's action landed");
     }
 }
 
