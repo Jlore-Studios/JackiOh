@@ -9939,21 +9939,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "crates/engine/tests/golden/games.jsonl",
-            "spec/08-catalog.md"
+            "crates/engine/tests/golden/games.jsonl"
           ],
-          "from": "bcd0af623c830fd4bf1cc50e4016fa7b4369bf65",
-          "main": "f61b0336e4128f45f049a5077a84e8a4b4dcf573"
+          "from": "aedd3cb54548a496a1d906b593444309c3abbb5a",
+          "main": "b804337036fc9214dd163516a906f3748882cdbd"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "gemini",
-            "run": "41136767122",
+            "run": "41144349844",
             "tier": "medium"
           }
         ],
-        "sha": "aedd3cb54548a496a1d906b593444309c3abbb5a",
+        "sha": "9b37750de910b0ac0e047a68ab471875b96747e5",
         "tiers": {
           "gemini": "medium"
         }
