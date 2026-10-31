@@ -11735,14 +11735,19 @@
     "what": "build #2604 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-31T19:56:55Z",
+    "at": "2026-10-31T20:08:11Z",
     "notes": [
-      "#2603 needs a plan",
-      "#2604 needs a plan",
-      "started plan #2604 on claude-3 (run 41236626351)",
-      "started plan #2603 on claude-8 (run 41236654739)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "#2607 needs a plan",
+      "#2609 needs a plan",
+      "#2610 needs a plan",
+      "#2611 needs a plan",
+      "delivered plan #2604 on claude-3 (run 41236626351): planned",
+      "started plan #2609 on claude-3 (run 41237572198)",
+      "started plan #2610 on claude-1 (run 41237605327)",
+      "started plan #2611 on claude-4 (run 41237643144)",
+      "started plan #2607 on claude-6 (run 41237678508)",
+      "started build #2604 on claude-3 (run 41237712296)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -12448,7 +12453,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T19:56:55Z",
+  "loop_tick": "2026-10-31T20:08:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
