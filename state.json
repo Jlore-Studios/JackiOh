@@ -10450,14 +10450,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T07:04:43Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
       "planned_tier": "medium",
+      "pr": 2600,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-10-31T05:38:46Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "41188803114",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T09:27:58Z",
@@ -10465,7 +10469,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:6539650507"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "2566": {
       "action": "build",
