@@ -11408,15 +11408,26 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/ai/README.md",
+            "crates/ai/src/decide.rs",
+            "crates/ai/src/evaluate.rs",
+            "spec/09-architecture.md"
+          ],
+          "from": "b72cd26ebf37fb4717d03fda9c562d0af7930d47",
+          "main": "7ba82b660484d0837bfcd9b61c12079349cdc9c4"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41188803114",
+            "run": "41195009097",
             "tier": "strong"
           }
         ],
-        "sha": "b72cd26ebf37fb4717d03fda9c562d0af7930d47",
+        "sha": "ff8dc3e300921cc53557a17269df00ee0fa3a3bc",
         "tiers": {
           "claude": "strong"
         }
