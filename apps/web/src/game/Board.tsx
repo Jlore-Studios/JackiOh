@@ -9,10 +9,10 @@
 // Polish task 7 (docs/polish/7-mobile-ux.md S6, S11): the glow is `data-glow`, a subset of `legal`;
 // `data-legal` stays the only click gate. `dragToPlay` becomes `data-drag` on the root (drag.css keys
 // touch-action off it); `confirmEndTurn` makes End turn ask twice while something is still playable.
-// board.css's grid keeps the children below in this order, and on a phone hides the log for
-// `log-toggle`. While a hand card of yours is hovered or selected, the field rings the cards its
-// preview names (#991, SPEC §10.10). R1297000: the viewer's half wears the playmat and backdrop the
-// wearer picked; R1834004: an online board's other half wears its seat's frozen loadout.
+// board.css's grid keeps the children below in this order. While a hand card of yours is hovered or
+// selected, the field rings the cards its preview names (#991, SPEC §10.10). R1297000: the viewer's
+// half wears the playmat and backdrop the wearer picked; R1834004: an online board's other half wears
+// its seat's frozen loadout.
 
 import { useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
@@ -265,7 +265,6 @@ function pileLabel(title: string, count: number, order: string | undefined): str
     : t("{title}: {count} cards, {order}. Show them", { title, count, order: lower });
 }
 
-/** The list a pile opens: its entries in the order to show them, and what that order is. */
 function browseEntries(
   lookup: CardLookup | null,
   browse: PileBrowse,

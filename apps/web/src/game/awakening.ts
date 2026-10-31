@@ -1,9 +1,7 @@
-// #2435: which cards the burst has awakened, their Dormant seal broken.
-//
-// The board shows the pre-burst view until the burst ends, so an awakened card is still drawn
-// Dormant; its `awakened` entry breaks the seal (animations.css) and `data-awakening` keeps it
-// broken until the board catches up (R1839002, R1852003). It is drawn state only, never a rule
-// (CLAUDE.md rule 7).
+// #2435: which cards the burst has awakened, their Dormant seal broken. The board shows the
+// pre-burst view until the burst ends, so an awakened card is still drawn Dormant; its `awakened`
+// entry breaks the seal (animations.css) and `data-awakening` keeps it broken until the board
+// catches up (R1839002, R1852003). It is drawn state only, never a rule (CLAUDE.md rule 7).
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
@@ -38,7 +36,6 @@ export function AwakeningProvider({ awake, children }: { awake: ReadonlySet<stri
   return createElement(AwakeningContext.Provider, { value: awake }, children);
 }
 
-/** Whether the card under this testid is one the burst has awakened. */
 export function useAwakening(testId: string | undefined): boolean {
   const awake = useContext(AwakeningContext);
   return testId !== undefined && awake.has(testId);

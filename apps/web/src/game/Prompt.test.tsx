@@ -1,9 +1,8 @@
-// M5-T2 acceptance: one test per `PromptKind` (all ten), each rendering the picker, clicking an
-// option and asserting the exact action. R81 splits them in two: `discover`, `target`, `mode`,
-// `mulligan` and `hand` answer a `PendingChoice` that has paused resolution, so they submit an
-// `answer` (or, for the mulligan, §10.2's `mulligan` action); `zone`, `tribute`, `direction`, `x` and
-// `embiggen` are the card's own play choices, driven by the in-flight `Interaction` with
-// `view.pending` null, and submit a `play`.
+// M5-T2 acceptance: one test per `PromptKind` (all ten), each asserting the exact action. R81 splits
+// them in two: `discover`, `target`, `mode`, `mulligan` and `hand` answer a `PendingChoice` that has
+// paused resolution, so they submit an `answer` (or, for the mulligan, §10.2's `mulligan` action);
+// `zone`, `tribute`, `direction`, `x` and `embiggen` are the card's own play choices, driven by the
+// in-flight `Interaction` with `view.pending` null, and submit a `play`.
 
 import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";

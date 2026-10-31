@@ -27,7 +27,6 @@ function flyer(position: "ATK" | "DEF"): UnitView {
   });
 }
 
-/** The Flying Unit standing in your backrow lane 1, in `position`. */
 function backrowFlyerView(position: "ATK" | "DEF"): PlayerView {
   const bird = flyer(position);
   return baseView({

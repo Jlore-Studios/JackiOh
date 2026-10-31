@@ -436,7 +436,6 @@ export function readCodeText(
   return { ok: true, bytes, version };
 }
 
-/** The trio code's prefix (R339). */
 const TRIO_CODE_PREFIX_SEEN = "JKT";
 
 function decodeUnsafe(text: unknown, catalog: CatalogSnapshot, collection: Collection | null): DecodedDeck {

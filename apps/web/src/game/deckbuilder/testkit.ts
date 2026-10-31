@@ -130,7 +130,6 @@ export function fakeDeckServer() {
   const calls: ServerCall[] = [];
   const state = {
     offline: false,
-    /** A refusal per id, thrown until removed. */
     refusals: new Map<string, ApiRequestError>(),
   };
 

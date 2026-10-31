@@ -825,8 +825,6 @@ describe("the name a save sends", () => {
   });
 });
 
-// A trio import (R340, R341)
-
 describe("a trio import", () => {
   const code = {
     name: "Shared trio",
@@ -940,8 +938,6 @@ describe("a trio import", () => {
   });
 });
 
-// The deck's playmat, backdrop and card back (R1297000)
-
 describe("the deck's playmat, backdrop and card back (R1297000)", () => {
   it("R1297000 a deck's picks ride the snapshot, the mirror and the PUT, and null clears one", async () => {
     const server = fakeServer();
@@ -1027,8 +1023,6 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     }
   });
 });
-
-// The deck's portrait (R641)
 
 describe("the deck's portrait (R641)", () => {
   it("R641 a created deck's portrait rides the snapshot, the mirror and the PUT", async () => {
@@ -1141,8 +1135,6 @@ describe("the deck's portrait (R641)", () => {
     expect(store.getSnapshot().decks[0]?.portrait).toBeNull();
   });
 });
-
-// A deck's kept versions (R2100000)
 
 describe("a deck's kept versions (R2100000)", () => {
   const AGGRO = [fixtureCardId(1), fixtureCardId(2)];

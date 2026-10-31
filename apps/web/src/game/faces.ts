@@ -143,7 +143,6 @@ function backrowType(card: CardView): CardType | undefined {
   return "faceDown" in card && card.faceDown === false && "type" in card ? (card.type as CardType) : undefined;
 }
 
-/** A card the view lists: its face in play. */
 export function listedFace(lookup: CardLookup | null, view: PlayerView, card: CardView): FaceModel | null {
   if (card.defId === HIDDEN_CARD || card.defId === "") return null;
   const info = infoFor(lookup, view, card.defId, card.radiant);
@@ -162,7 +161,6 @@ function copiedDefOf(lookup: CardLookup | null, view: PlayerView, card: CardView
   return copies === undefined ? undefined : infoFor(lookup, view, copies.defId, copies.radiant).def;
 }
 
-/** A card named by an event or a log line: the definition, the face, and the instance when there is one. */
 export type NamedCard = {
   defId: string;
   radiant: boolean;
@@ -173,9 +171,8 @@ export type NamedCard = {
 };
 
 /**
- * The face in play of a card an event names, or null for the sentinel. A card the view still lists
- * is drawn as it stands there (`listedFace`); one it no longer lists is its definition as the game
- * shows it, at `cost` when one is given.
+ * The face in play of a card an event names, or null for the sentinel. A card the view still lists is
+ * drawn as it stands there (`listedFace`); one it no longer lists is its definition as the game shows it.
  */
 export function namedFace(lookup: CardLookup | null, view: PlayerView, named: NamedCard): FaceModel | null {
   if (named.defId === HIDDEN_CARD || named.defId === "") return null;
@@ -194,9 +191,8 @@ export function namedFace(lookup: CardLookup | null, view: PlayerView, named: Na
 }
 
 /**
- * The `CardView` for an instance anywhere the view shows cards face up: the field, a face-up
- * backrow card, both piles, the resolving strip, and the viewer's own hand. Null when the view
- * shows it nowhere, which is also what a hidden card gives.
+ * The `CardView` for an instance anywhere the view shows cards face up. Null when the view shows it
+ * nowhere, which is also what a hidden card gives.
  */
 export function cardInView(view: PlayerView, instanceId: string): CardView | null {
   if (instanceId === HIDDEN_CARD) return null;

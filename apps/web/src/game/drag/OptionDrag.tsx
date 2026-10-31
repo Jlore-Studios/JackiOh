@@ -43,7 +43,6 @@ function overPanel(option: HTMLElement, point: Point): boolean {
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
 }
 
-/** What the ghost reads: the option's accessible name, else its text. */
 function nameOf(option: HTMLElement): string {
   const label = option.getAttribute("aria-label");
   if (label !== null && label !== "") return label;

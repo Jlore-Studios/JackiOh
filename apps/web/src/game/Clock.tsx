@@ -4,7 +4,7 @@
 // monotonic: each frame is anchored to `performance.now()` on arrival and every repaint adds the delta
 // to the server's `now`, as `protocol.rs`'s `clock` message says, never `Date.now()`.
 // The last 30 seconds of a running turn clock (R439): the running side's line turns urgent and the
-// viewer's own turn adds an ember fuse; reduced motion keeps the static readout, no fuse.
+// viewer's own turn adds an ember fuse.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -116,7 +116,6 @@ export function readClock(props: ClockProps, elapsedMs: number): ClockReadout {
   const clocks = frame?.clocks ?? null;
   const serverNow = frame === null ? null : frame.now + elapsedMs;
   const mulligan = props.mulligan === true;
-  /** R268: the one mulligan deadline, when a frame reports it. */
   const mulliganMs =
     mulligan && clocks !== null && serverNow !== null && clocks.promptDeadline !== null
       ? clocks.promptDeadline - serverNow

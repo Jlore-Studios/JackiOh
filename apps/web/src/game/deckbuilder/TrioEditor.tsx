@@ -1,6 +1,5 @@
 // The trio editor: a name, three slots over the saved decks, R253's Conquest verdict, the three
-// decks side by side with every shared card marked (SPEC §9.4, R251–R253), and the trio's code
-// (R339).
+// decks side by side with every shared card marked (SPEC §9.4, R251–R253).
 //
 // A trio is saved loose (R252): an empty slot or a shared card (R251: a card is its catalog id)
 // stops it from queueing Conquest, not from saving. Slots refuse T3's "the same deck twice".

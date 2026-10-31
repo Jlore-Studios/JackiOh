@@ -106,8 +106,7 @@ function zoneLabel(row: string, lane: number): string {
 
 /**
  * Instance → definition, from the window's events about public zones, so a unit that has since left
- * the board is still named. The hand's own events (`drawn`, `addedToHand`, `shuffledIn`) are not
- * read, as above, and neither is the sentinel.
+ * the board is still named. The hand's own events (`drawn`, `addedToHand`, `shuffledIn`) are not read.
  */
 function publicNames(events: readonly GameEvent[]): Map<string, string> {
   const names = new Map<string, string>();

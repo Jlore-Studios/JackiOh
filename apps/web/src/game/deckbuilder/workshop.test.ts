@@ -1,7 +1,6 @@
-// The workshop's pure facts: every verdict is the shared validator's own (R253), handed the decks
-// under the names they are saved with; the comparison marks exactly what `trioConflicts` finds
-// (R251); and the editor's moves refuse only what a save would refuse or a comparison forbids.
-//
+// The workshop's pure facts: every verdict is the shared validator's own (R253); the comparison
+// marks exactly what `trioConflicts` finds (R251); and the editor's moves refuse only what a save
+// would refuse or a comparison forbids.
 // No validator sentence is typed here: each expectation is computed with the validator itself
 // (messages.test.ts fails any client source that spells one out).
 

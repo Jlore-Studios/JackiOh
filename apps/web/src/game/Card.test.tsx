@@ -1,11 +1,8 @@
-// `Card.tsx` (docs/polish/6-cards.md, "`Card.tsx`: what survives, and what is new", behaviors
-// B16–B20).
-//
+// `Card.tsx` (docs/polish/6-cards.md, "`Card.tsx`: what survives, and what is new", behaviors B16–B20).
 // The board is the only honest mount: every prop a `Card` gets here is the prop `Zone`, `Backrow`,
 // `Hand` and `Board` really pass it, from `fullBoardView()` (src/test/fixtures.ts, the only
-// `PlayerView` source). The view is rendered twice over: with the real catalog in `CatalogContext`,
-// as the hotseat and match routes do once `GET /api/catalog` answers, and with none, which is the
-// state before it does.
+// `PlayerView` source), rendered with the real catalog in `CatalogContext`, as the routes do once
+// `GET /api/catalog` answers, and with none, the state before it does.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -193,7 +190,6 @@ describe("B16: a face-down card is a back and nothing else", () => {
       vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
     });
     const preview = screen.getByTestId(INSPECT_HOVER);
-    // The overlay is a sibling of the root (a portal), never inside it.
     expect(bigot.contains(preview)).toBe(false);
     fireEvent.pointerLeave(bigot, { pointerType: "mouse" });
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
@@ -300,7 +296,6 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
       expect(root.hasAttribute("data-controller"), u.instanceId).toBe(true);
     }
 
-    // Different seats read differently; a seat reads the same as owner and as controller.
     const mine = cardRoot(yourUnit(view, 1).instanceId);
     const theirs = cardRoot(enemyUnit(view, 1).instanceId);
     expect(mine.getAttribute("data-owner")).not.toBe(theirs.getAttribute("data-owner"));
@@ -530,7 +525,6 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
       expect(el.closest(".card"), `${what} belongs to its own card`).toBe(root);
     }
 
-    // No badge where the view has none.
     expect(cardRoot(first.instanceId).querySelector(".buried-badge")).toBeNull();
     expect(cardRoot(first.instanceId).querySelector(".counter")).toBeNull();
   });
@@ -627,7 +621,6 @@ describe("B18: Card picks its form from its props", () => {
       const cf = inside(root, ".cf");
       expect(cf.getAttribute("data-card-type"), slot.defId).toBe(slot.type);
       expect(inside(cf, ".card-type").textContent, slot.defId).toBe(slot.type);
-      // The rest of the face still comes from the def.
       expect(inside(cf, ".card-name").textContent, slot.defId).toBe(nameOf(slot.defId));
     }
   });
@@ -687,7 +680,6 @@ describe("B19: what a face-up root adds", () => {
     expect(curvature.getAttribute("data-rarity")).toBe("Rare");
     expect(curvature.getAttribute("data-card-type")).toBe("Unit");
 
-    // The backrow's `type` prop wins over the def's type on the root.
     for (const lane of [1, 2, 5]) {
       const slot = yourBackrow(view, lane);
       expect(cardRoot(slot.instanceId).getAttribute("data-card-type"), slot.defId).toBe(slot.type);
@@ -900,7 +892,6 @@ describe("R693: lines of code is a hidden stat in matches", () => {
     vi.useFakeTimers();
     const view = fullBoardView();
     renderBoard(view);
-    // A hand card and a unit on the field: both open a preview, neither ends with its lines of code.
     for (const root of [
       handRoot(must(handOf(view)[0], "a hand card").instanceId),
       cardRoot(yourUnit(view, 1).instanceId),
@@ -945,7 +936,6 @@ describe("R2098000 a hand card's term shows its rule on hover and on a long pres
     expect(term).toHaveAttribute("data-tip", "pointer");
     expect(term).not.toHaveAttribute("tabindex");
 
-    // Hover shows the glossary line; leaving hides it.
     fireEvent.pointerEnter(term, { pointerType: "mouse" });
     expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
     act(() => {
@@ -955,11 +945,9 @@ describe("R2098000 a hand card's term shows its rule on hover and on a long pres
     fireEvent.pointerLeave(term, { pointerType: "mouse" });
     expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
 
-    // A tap on the term still reports the card.
     fireEvent.click(term);
     expect(onClick).toHaveBeenLastCalledWith({ on: "hand", instanceId: bigot.instanceId });
 
-    // A held touch shows the rule and opens no sheet; the lift's click goes nowhere.
     fireEvent.pointerDown(term, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
     act(() => {
       vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);

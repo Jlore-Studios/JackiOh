@@ -38,9 +38,7 @@ describe("R1371 the newest set that ships", () => {
   it("R1371 newestShippedSet is SHIPPED_SETS' last entry, Training Grounds since the patch that ships it", () => {
     expect(newestShippedSet()).toBe(SHIPPED_SETS[SHIPPED_SETS.length - 1]);
     expect(setShips(newestShippedSet())).toBe(true);
-    // Meditative from the patch that shipped it (issue #553), Meditative+ from the one that shipped it
-    // (v0.3.15, issue #1187), Stinkyscape from its release (issue #1884) and Training Grounds from its
-    // release (issue #2204), with no other line to change.
+    // Each set's release (issues #553, #1187, #1884, #2204) changed this line and no other.
     expect(newestShippedSet()).toBe("Training Grounds");
   });
 
@@ -74,7 +72,6 @@ describe("R924000 the picker's choices", () => {
       ...SHIPPED_SETS.map((set) => [set, set]),
     ]);
     expect(picker.value).toBe("");
-    // No pick, no note.
     expect(picker).not.toHaveAccessibleDescription();
 
     fireEvent.change(picker, { target: { value: "Classic" } });

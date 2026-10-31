@@ -38,7 +38,6 @@ type Stored = {
   sort: PoolSort;
 };
 
-/** The members of `value` that `allowed` offers, in `allowed`'s order. */
 function pick<T extends string>(value: unknown, allowed: readonly T[]): ReadonlySet<T> {
   if (!Array.isArray(value)) return new Set<T>();
   return new Set(allowed.filter((item) => value.includes(item)));

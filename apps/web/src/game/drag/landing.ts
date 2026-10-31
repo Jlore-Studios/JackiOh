@@ -13,7 +13,6 @@ import { useSyncExternalStore } from "react";
 let landing: string | null = null;
 const listeners = new Set<() => void>();
 
-/** The instance id of the card a drop has just played, or null. */
 export function currentLanding(): string | null {
   return landing;
 }
@@ -32,7 +31,6 @@ export function subscribeLanding(listener: () => void): () => void {
   };
 }
 
-/** The card a drop has just played, re-rendering the caller when it changes. */
 export function useLanding(): string | null {
   return useSyncExternalStore(subscribeLanding, currentLanding, currentLanding);
 }

@@ -125,7 +125,6 @@ export function pileCount(view: PlayerView, pile: Pile): number {
   return pile.pile === "graveyard" ? sv.graveyard.length : sv.exile.length;
 }
 
-/** The public pile (a graveyard or an exile) `view` lists the card in, or null. */
 function publicPileOf(view: PlayerView, instanceId: string): Pile | null {
   for (const side of SIDES) {
     const sv = seat(view, side);
@@ -135,7 +134,6 @@ function publicPileOf(view: PlayerView, instanceId: string): Pile | null {
   return null;
 }
 
-/** Whether `view` shows the card anywhere. */
 function shown(view: PlayerView, instanceId: string): boolean {
   if (publicPileOf(view, instanceId) !== null) return true;
   for (const side of SIDES) {

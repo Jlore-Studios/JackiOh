@@ -12,7 +12,6 @@ import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_COSMETICS_BUTTON } from "./testids.ts";
 import type { DeckItem } from "./sync.ts";
 
-/** R1297000: the deck's three slots, the deck field each is saved in and its label. */
 const DECK_COSMETIC_FIELDS: readonly { kind: DeckSlotKind; key: "tableCosmetic" | "fieldCosmetic" | "cardBackCosmetic"; label: string }[] = [
   { kind: "table", key: "tableCosmetic", label: "Playmat" },
   { kind: "field", key: "fieldCosmetic", label: "Backdrop" },

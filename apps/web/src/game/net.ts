@@ -124,8 +124,8 @@ export const defaultTimers: Timers = {
 };
 
 /**
- * R1441: calls `handler` when the page may have been asleep or offline: its tab turns visible or the
- * network comes back (as `settings/accountSync.ts` listens for).
+ * R1441: calls `handler` when the page may have been asleep or offline (as `settings/accountSync.ts`
+ * listens for).
  */
 export function pageWake(handler: () => void): () => void {
   if (typeof window === "undefined" || typeof document === "undefined") return () => undefined;

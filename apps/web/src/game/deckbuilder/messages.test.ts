@@ -20,7 +20,6 @@ function unescaped(text: string): string {
   return text.replace(/\\(["'\\])/g, "$1");
 }
 
-/** Extracts readable validator fragments, splitting format holes to detect client copies. */
 function validatorFragments(): string[] {
   const source = readFileSync(VALIDATOR, "utf8");
   const literals = [...source.matchAll(RUST_TOKENS)].flatMap((match) => (match[1] === undefined ? [] : [unescaped(match[1])]));

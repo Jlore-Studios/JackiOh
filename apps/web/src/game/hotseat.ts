@@ -1,8 +1,6 @@
 // The hotseat session (BUILD M5-T3): one device, two seats, one engine.
-//
 // Framework-free and deterministic: M5-T3 requires the same seed and actions to reproduce the same
 // state hash, so a random or clock-derived nonce cannot enter the recorded `Action`.
-//
 // `dispatch` hands actions to `reduce` (CLAUDE.md rule 7); opaque `EngineState` cannot leak hidden data.
 
 import { opponentOf } from "@jackioh/shared";

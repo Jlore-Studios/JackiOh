@@ -1,12 +1,12 @@
 // The two glows as DOM attributes (docs/polish/7-mobile-ux.md S5, S6), and Plague Chalice's warning
 // beside them (R667).
 //
-// Green is `data-glow="ready"`: the element's testid is in `Highlight.glow`, which `highlightFor`
-// derived from `legalActions` alone. Yellow is `data-condition-active="true"`: the engine put
-// `conditionActive: true` on the card's view (R195, CLAUDE.md rule 7). Neither is decided here;
-// these helpers only turn a set membership or a view flag into an attribute value, and return
-// `undefined` so React omits the attribute rather than writing "false". A third mark, `data-counted="true"`, rings the cards a hand card's preview names (#991, R583),
-// read off the view like the yellow.
+// Green is `data-glow="ready"`: the element's testid is in `Highlight.glow`, which `highlightFor` derived
+// from `legalActions` alone. Yellow is `data-condition-active="true"`: the engine put
+// `conditionActive: true` on the card's view (R195, CLAUDE.md rule 7). Neither is decided here; these
+// helpers return `undefined` so React omits the attribute rather than writing "false". `highlights.css`
+// paints them. A third mark, `data-counted="true"`, rings the cards a hand card's preview names
+// (#991, R583), read off the view like the yellow.
 
 import type { CardView, PlayerView } from "@jackioh/shared";
 

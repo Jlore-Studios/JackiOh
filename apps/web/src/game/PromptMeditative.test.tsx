@@ -1,6 +1,6 @@
 // #617 (MN09): the play-time choices the Meditative set adds read on any screen. A "Choose one" is
-// words, not faces, so the card being played is read from its name in the title (a hover preview,
-// or a long-press sheet on a phone); and #98 Showdown's five lanes say which lane each one is.
+// words, not faces, so the card being played is read from its name in the title; and #98 Showdown's
+// five lanes say which lane each one is.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";

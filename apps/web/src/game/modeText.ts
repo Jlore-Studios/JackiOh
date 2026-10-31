@@ -1,11 +1,9 @@
 // What a "Choose one" option says to the player (presentation only, CLAUDE.md rule 7).
 //
 // A card script's mode options are its public interface (`crates/cards` owns them, e2e answers
-// with them): short machine words such as Pocket Chaos's "health", "board" and "library". This map
-// gives each one a label and a line of detail, written from the card's §8 text. The option string
-// stays the key the answer sends; an option this map does not know is printed with a capital letter
-// and no detail. The words are English here and read in the reader's language through `t()`: the
-// Chinese card table has each card's text, not its options' words.
+// with them). This map gives each one a label and a line of detail, written from the card's §8 text.
+// The option string stays the key the answer sends. The words are English here and read in the
+// reader's language through `t()`: the Chinese card table has each card's text, not its options' words.
 
 import { t } from "../i18n/i18n.ts";
 

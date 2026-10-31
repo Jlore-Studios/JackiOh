@@ -3,7 +3,6 @@
 // While a game runs, `SideView.hand` is the privacy boundary (§10.8): the viewer's own hand is full
 // cards, the opponent's is `{ count }`. This is the one place the client reads the opponent's
 // `hand` arriving as cards once the view says the game is over (`phase: "over"`, or a `result`).
-// Everything that shows the revealed hand (Hand.tsx, TheirHand.tsx) asks here.
 
 import type { CardView, PlayerView } from "@jackioh/shared";
 

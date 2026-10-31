@@ -1,8 +1,7 @@
-// #2267: the hand hints, one list in drawing order. A hint reads the card's `CardView`,
-// the `PlayerView` and the card's face the way `Card.tsx` reads it (`liveFace`: `card.keywords`
-// where the view gives them, else the printed face's keywords, B5 E38, R243 — exactly what the
-// card shows) and nothing else (CLAUDE.md rule 7, SPEC §10.8). Adding a hint is
-// one entry here plus its icon in `cards/icons.tsx`.
+// #2267: the hand hints, one list in drawing order. A hint reads the card's `CardView`, the `PlayerView`
+// and the card's face the way `Card.tsx` reads it (`liveFace`: `card.keywords` where the view gives them,
+// else the printed face's keywords, B5 E38, R243) and nothing else (CLAUDE.md rule 7, SPEC §10.8). Adding a
+// hint is one entry here plus its icon in `cards/icons.tsx`.
 
 import { hasKeyword, type CardView, type PlayerView } from "@jackioh/shared";
 
@@ -27,11 +26,10 @@ export type HandHint = {
 };
 
 /**
- * #2269: the Tradable pip (R1838000). A passive mark, no number and no motion, so a player can
- * see which cards in a big hand are Tradable without pointing at each one. Dimmed once the
- * turn's Trade is spent (`PlayerView.trades.left === 0`): only an explicit `left === 0` dims,
- * so a view that simply carries no trade state never dims the pip. Never counts trades and never
- * reads a rule here; the Trade bar stays the way to Trade.
+ * #2269: the Tradable pip (R1838000). A passive mark, no number and no motion, so a player can see which
+ * cards in a big hand are Tradable without pointing at each one. Dimmed once the turn's Trade is spent:
+ * only an explicit `PlayerView.trades.left === 0` dims, so a view that simply carries no trade state never
+ * dims the pip. Never counts trades and never reads a rule here; the Trade bar stays the way to Trade.
  */
 const TRADABLE: HandHint = {
   id: "tradable",
@@ -54,7 +52,6 @@ export const TRIBUTE_HINT: HandHint = {
 /** The shipped hints, in drawing order. */
 export const HAND_HINTS: readonly HandHint[] = [TRADABLE, TRIBUTE_HINT];
 
-/** The hints that apply to `card`, in the list's order, each with what it shows. */
 export function hintsFor(
   card: CardView,
   view: PlayerView,

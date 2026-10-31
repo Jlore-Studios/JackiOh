@@ -1,8 +1,6 @@
 // R2102000: the board's side of the practice AI's lethal hint (Game.tsx `lethalHint`). Told
 // the human has lethal, the board marks itself (`data-lethal-hint`, which highlights.css turns into
-// rings on the enemy hero and End turn) and says "You have lethal" in its notices, never how. It shows
-// nothing without the prop (online, hotseat), on a replay or once the game is over, and waits, as
-// the board's moves do, until it shows the newest view.
+// rings on the enemy hero and End turn) and says "You have lethal" in its notices, never how.
 
 import type { GameEvent } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";

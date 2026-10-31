@@ -1,7 +1,6 @@
 // The animation table and its event-queue runner (BUILD M5-T4, SPEC §10.10). One row per member of
-// `GameEvent["type"]` (SPEC §10.3), typed as a total map so a missing row is a compile error.
-//
-// No rule lives here (CLAUDE.md rule 7): the table reads event payloads and `PlayerView` and emits
+// `GameEvent["type"]` (SPEC §10.3), typed as a total map so a missing row is a compile error. No rule
+// lives here (CLAUDE.md rule 7): the table reads event payloads and `PlayerView` and emits
 // presentation vocabulary from `contract.ts`; it never decides what is legal or what happened. The
 // runner owns timing only: it holds the stream at one entry at a time so the board can swap to the
 // next view once that motion has finished, and publishes the `AnimatingMap` the board turns into
@@ -1322,11 +1321,10 @@ export function sameOccurrence(a: unknown, b: unknown): boolean {
  * The events in `next` that the runner has not been given yet. SPEC §10.8 gives a view "the last N
  * events" (`VIEW_EVENT_LIMIT` in `crates/engine/src/view_for.rs`), a sliding WINDOW over the match,
  * so passing it whole would re-animate what already played. The window moves by whole actions, so the
- * shared events are the longest suffix of `prev` that is a prefix of `next`, compared with
- * `sameOccurrence` because R97 re-redacts the window for every view. Windows with nothing in common
- * make all of `next` new: too much animation rather than too little. It returns the very objects
- * `next` holds, so the sound director, which diffs views with this same function, can match the
- * runner's entries by identity.
+ * shared events are the longest suffix of `prev` that is a prefix of `next`. Windows with nothing in
+ * common make all of `next` new: too much animation rather than too little. It returns the very
+ * objects `next` holds, so the sound director, which diffs views with this same function, can match
+ * the runner's entries by identity.
  */
 export function newEventsSince(prev: readonly GameEvent[], next: readonly GameEvent[]): GameEvent[] {
   if (prev.length === 0 || next.length === 0) return [...next];
@@ -1511,10 +1509,9 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
 }
 
 /* FINDINGS against SPEC §10.3 / §10.8 — payloads that cannot name their own element
- *
  * 1. §10.8 sends the events with the state *after* them, while BUILD M5-T4 updates the view after
- *    each animation completes, so rows prefer elements that exist in either view (zones, piles,
- *    heroes, the banner) and fall back to a region whenever the card element may already be gone.
+ *    each animation completes, so rows prefer elements that exist in either view and fall back to a
+ *    region whenever the card element may already be gone.
  * 2. `attackDeclared` must "translate >= 20 px toward target", but nothing says which way. The
  *    keyframes translate along `--lunge-dir` (`animations.css`), which the component rendering the
  *    attacker must set to `1` when the attacker is the opponent's.

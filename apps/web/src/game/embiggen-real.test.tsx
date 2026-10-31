@@ -49,10 +49,7 @@ function fillerDeck(): string[] {
 /** A cost change on the board: the card's own `costMod` (R65), and p1's player modifiers (§10.1). */
 type CostChange = { costMod?: number; mods?: unknown[] };
 
-/**
- * p1's main phase with `defId` the only card in hand and `mana` to spend, under `change`. The card is
- * a copy of one the engine dealt, so it carries every field a new card has.
- */
+/** The card is a copy of one the engine dealt, so it carries every field a new card has. */
 function board(defId: string, radiant: boolean, mana: number, change: CostChange = {}): { state: GameState; cardId: string } {
   const deck = fillerDeck();
   const state = createGame({ seed: SEED, decks: [deck, deck] });
@@ -91,7 +88,6 @@ function plays(legal: readonly ActionBody[], cardId: string): Extract<ActionBody
   return legal.flatMap((body) => (body.type === "play" && body.instanceId === cardId ? [body] : []));
 }
 
-/** The one body the board sent: one the engine listed, and one it accepts. */
 function sent(
   state: GameState,
   legal: readonly ActionBody[],
@@ -128,7 +124,6 @@ function chooseFirstMode(press: (target: Element) => void): void {
   if (first !== null) press(first);
 }
 
-/** Finishes a play whose price is picked: its mode, if it asks one, and a permanent still takes its zone, clicked on the board. */
 function placeIfAsked(def: CardDef): void {
   chooseFirstMode((target) => {
     fireEvent.click(target);

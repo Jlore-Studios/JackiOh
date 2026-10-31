@@ -110,9 +110,8 @@ export const SLAM_LAND_AT = 0.55;
 export const SLAM_PITCH_SPREAD = 0.05;
 
 /**
- * R1363 (MN05): whether a hit's target's Armor took half or more of it — `absorbed` of the whole
- * `absorbed + amount` the hit came in with (R1360). The sound's clank and the effects layer's shield
- * flash both key on this test; a hit Armor took whole is `damageAbsorbed`.
+ * R1363 (MN05): whether a hit's target's Armor took half or more of it (R1360). The sound's clank and
+ * the effects layer's shield flash both key on this test; a hit Armor took whole is `damageAbsorbed`.
  */
 export function armorTookHalf(absorbed: number | undefined, amount: number): boolean {
   const took = absorbed ?? 0;

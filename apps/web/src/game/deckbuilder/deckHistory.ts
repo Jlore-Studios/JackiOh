@@ -5,7 +5,6 @@
 import type { DeckVersion } from "../../net/api.ts";
 import { isRecord } from "../../wire/json.ts";
 
-/** What a version changed since the one kept before it: the cards in and out, and the old name. */
 export type VersionChange = { added: string[]; removed: string[]; renamedFrom: string | null };
 
 function versionFrom(value: unknown): DeckVersion | null {

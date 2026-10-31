@@ -5,8 +5,7 @@
 // opaque on purpose: it carries both hands and both libraries, so a client that could read a field
 // could leak hidden information.
 //
-// The real port is the Rust engine compiled to WebAssembly (`../wasm`, docs/v0.3.0/SURFACE.md
-// §10.3).
+// The real port is the Rust engine compiled to WebAssembly (`../wasm`, docs/v0.3.0/SURFACE.md §10.3).
 
 import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "@jackioh/shared";
 import type { Handicap } from "@jackioh/engine/config";

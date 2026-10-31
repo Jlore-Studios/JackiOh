@@ -88,7 +88,6 @@ export default function DeckHistory({
   onRestored,
 }: {
   deckId: string;
-  /** The workshop's store, which reads the list and asks for a restore (sync.ts). */
   store: Pick<DeckStore, "deckVersions" | "restoreDeckVersion">;
   catalog: CatalogSnapshot;
   /** A restore stood: the workshop ends the deck's Undo and Redo (#2099). */

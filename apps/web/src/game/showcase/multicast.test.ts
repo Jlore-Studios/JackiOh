@@ -1,5 +1,5 @@
 // The showcase's issue-#124 trigger rule (showcase/plan.ts): every card another card casts is held
-// up on both seats, with the card that cast it and which of its casts it is.
+// up on both seats.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";

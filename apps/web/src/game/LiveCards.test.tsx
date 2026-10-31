@@ -2,9 +2,7 @@
 //
 // Every view here is a fixture shaped as `viewFor` builds it (src/test/fixtures.ts): the hand's
 // `attack`, `health` and `power`, `UnitView.vanilla`, `HeroView.powers` and `PlayerView.defs` are
-// what hidden-information.test.ts and vanilla-and-positions.test.ts pin the engine to carrying. The
-// board, a prompt, the showcase and the log render them; the deck builder's detail view renders
-// the catalog alone.
+// what hidden-information.test.ts and vanilla-and-positions.test.ts pin the engine to carrying.
 
 import { CATALOG } from "@jackioh/cards";
 import { fillParams, type BackrowView, type CardDef, type GameEvent, type HeroPowerView, type PlayerView } from "@jackioh/shared";

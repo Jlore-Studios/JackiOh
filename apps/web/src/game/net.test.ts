@@ -88,10 +88,8 @@ type Harness = {
   client: MatchClient;
   sockets: FakeSocket[];
   socket: () => FakeSocket;
-  /** Run every pending backoff callback, in order. */
   runTimers: () => void;
   pending: () => number;
-  /** Every delay a timer was set for, in order. */
   delays: () => number[];
   now: (value: number) => void;
   /** R1441: the page wakes (its tab turns visible, the network comes back). */
@@ -186,8 +184,6 @@ function connected(options: HarnessOptions = {}): Harness {
   return h;
 }
 
-// The handshake
-
 describe("the handshake", () => {
   it("R1379000 the address names the match and never the token, which is offered as a subprotocol", () => {
     // `ws_server.rs` reads the match from `?matchId=` and the token from the offered protocols (SURFACE §11.3).
@@ -222,8 +218,6 @@ describe("the handshake", () => {
     expect(h.client.snapshot().connection).toBe("open");
   });
 });
-
-// The frames
 
 describe("server frames", () => {
   it("a `view` frame becomes the rendered view", () => {
@@ -453,8 +447,6 @@ describe("actions", () => {
   });
 });
 
-// Portraits and emotes (R642, R643)
-
 describe("portraits and emotes", () => {
   it("R642 a `portraits` frame names both seats' heroes, on join and again on reconnect", () => {
     const h = connected();
@@ -550,8 +542,6 @@ describe("portraits and emotes", () => {
     expect(h.client.snapshot().error).toBeNull();
   });
 });
-
-// Loadouts (R1834003)
 
 describe("loadouts", () => {
   const item = (kind: CosmeticKind): string => cosmeticsOf(kind).find((cosmetic) => !cosmetic.default)?.id ?? "";
@@ -725,8 +715,6 @@ describe("reconnect", () => {
   });
 });
 
-// a socket that went quiet (R1441)
-
 const HELLO = { type: "hello", token: "tok", matchId: "m-1" };
 
 describe("a silent socket", () => {
@@ -739,7 +727,6 @@ describe("a silent socket", () => {
     expect(old.frames()).toEqual([HELLO, HELLO]);
     expect(h.sockets).toHaveLength(1);
 
-    // Nothing came back, so it is let go and a new socket takes its place.
     h.runTimers();
     expect(old.closedWith).not.toBeNull();
     expect(h.sockets).toHaveLength(2);
@@ -748,7 +735,6 @@ describe("a silent socket", () => {
     expect(h.socket().frames()).toEqual([HELLO]);
     expect(h.client.snapshot().connection).toBe("open");
 
-    // Whatever the old socket still says is no longer the match's.
     old.deliver({ type: "view", view: baseView({ turn: 9 }) });
     expect(h.client.snapshot().view).toBeNull();
     h.socket().deliver({ type: "view", view: baseView({ turn: 3 }) });
@@ -835,7 +821,6 @@ describe("a silent socket", () => {
   });
 });
 
-/** The token a socket's handshake offered (R1379000). */
 function handshakeToken(socket: FakeSocket): string | null {
   return tokenFromProtocols(socket.protocols);
 }

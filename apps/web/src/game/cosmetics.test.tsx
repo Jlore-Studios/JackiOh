@@ -1,7 +1,6 @@
-// R1295000: on the board, only the viewer's own cards wear the device's card cosmetics, a unit the
-// opponent has taken included, and only on a board that wears them (`wearCosmetics`). R1953001: what
-// a card wears is its own picks, never the account's synced foil, finish and border, which every
-// test here holds non-default.
+// R1295000: on the board, only the viewer's own cards wear the device's card cosmetics, a unit the opponent
+// has taken included, and only on a board that wears them (`wearCosmetics`). R1953001: what a card wears is
+// its own picks, never the account's synced foil, finish and border, which every test here holds non-default.
 //
 // R1297000: the same holds for the deck slots (playmat, backdrop, card back); a saved deck's picks
 // beat the account's.
@@ -46,7 +45,6 @@ import { revealTestid } from "./reveal.ts";
 import { TheirHand } from "./TheirHand.tsx";
 import { WearerProvider } from "./wearer.ts";
 
-/** The registry's first entry of `kind` that is not its default. */
 function item(kind: CosmeticKind): CosmeticId {
   const found = cosmeticsOf(kind).find((cosmetic) => !cosmetic.default);
   if (found === undefined) throw new Error(`no ${kind} item`);
@@ -73,7 +71,6 @@ function view(): PlayerView {
   });
 }
 
-/** The face inside each card the board draws with this owner. */
 function facesOwnedBy(owner: string): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>(`.card[data-owner="${owner}"] > .cf`)];
 }
@@ -416,7 +413,6 @@ describe("R1956001 the board's Created cards and their generator's picks", () =>
 });
 
 describe("R1834004 the other seat wears its frozen loadout", () => {
-  /** The registry's second and third entries of `kind` that are not its default (`item` is the first). */
   function others(kind: CosmeticKind): [CosmeticId, CosmeticId] {
     const [, second, third] = cosmeticsOf(kind).filter((cosmetic) => !cosmetic.default);
     if (second === undefined || third === undefined) throw new Error(`fewer than three ${kind} items`);

@@ -1,7 +1,7 @@
 // A small bar of controls over the board spot the pointer or the focus is on (#936 B62, R1838000):
-// what the Duos card bar (duos/CardActions.tsx, its ping wheel and pass control) and the Trade
-// control (game/TradeControl.tsx) share. Nothing here is a rule: it says which spot is pointed at and
-// where its element sits, and the caller decides what the bar offers from the view and `legal`.
+// what the Duos card bar (duos/CardActions.tsx) and the Trade control (game/TradeControl.tsx) share.
+// Nothing here is a rule: it says which spot is pointed at and where its element sits, and the caller
+// decides what the bar offers from the view and `legal`.
 //
 // THE FOCUS. Pointing at a hero, a zone or a hand card (a mouse over it, a tap on it, the keyboard's
 // focus on it) puts the bar on it. It stays `graceMs` after the pointer leaves its card, so the

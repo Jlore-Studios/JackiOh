@@ -6,8 +6,8 @@
 //
 // R81: zone, X, embiggen, Tribute, a card's declared targets and modes, and the `plague` payment
 // (Classic #74) are NOT prompts: they travel inside the `play` action. A targeting cost's discards
-// (Classic #89) are random at pay time (R682) and travel nowhere. R384: an activation is built the
-// same way (`BuildBody`). Everything chosen during resolution arrives as a `PendingChoice`.
+// (Classic #89) are random at pay time (R682) and travel nowhere. Everything chosen during resolution
+// arrives as a `PendingChoice`.
 //
 // R391 (B4.5): a Tribute may pay for its own zone. Narrowing keeps whole candidates, never a field on
 // its own, so a zone and a Tribute picked in either order only ever finish a pair the engine listed.

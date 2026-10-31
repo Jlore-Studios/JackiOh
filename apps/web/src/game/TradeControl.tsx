@@ -15,7 +15,6 @@ import { useBoxes, useCardBarFocus } from "./cardBar.ts";
 import { testid } from "./contract.ts";
 import "./trade.css";
 
-/** What the Trade control shows on the viewer's own hand cards (R1838000). */
 export type TradeOffer = {
   /** The hand cards `legal` lists a `trade` for, by instance id: only these are live. */
   legal: ReadonlySet<string>;

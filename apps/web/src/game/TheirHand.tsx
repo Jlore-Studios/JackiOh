@@ -27,7 +27,6 @@ export const THEIR_HAND_TITLE = "Their hand";
 /** What the list says of its order: the hand's own, left to right. */
 const THEIR_HAND_ORDER = "As held";
 
-/** R434: the revealed hand and the view its cards are read in. */
 export type TheirHandProps = { view: PlayerView; cards: readonly CardView[] };
 
 /** Each card's face in play (faces.ts), or a back (`back`) for a card the view names by the sentinel alone. */

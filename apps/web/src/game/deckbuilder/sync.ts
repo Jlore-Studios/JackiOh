@@ -75,7 +75,7 @@ export type DeckSyncApi = {
   restoreDeckVersion(id: string, versionId: string, catalogVersion: string): Promise<unknown>;
 };
 
-/** What a trio import makes (R339): the trio's name, and each slot's deck or nothing. */
+/** What a trio import makes (R339). */
 export type TrioImport = {
   name: string;
   slots: readonly ({ name: string; cards: readonly string[] } | null)[];

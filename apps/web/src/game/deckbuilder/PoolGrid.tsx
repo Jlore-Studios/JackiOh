@@ -1,19 +1,14 @@
 // The card pool as a grid of full cards (docs/polish/6-cards.md, Surface D). Every pool entry is a
 // `div.db-item` holding the card, `card-pool-<id>` (`data-held-by` when a compared deck holds it, R251:
 // a card is its catalog id, so one copy per trio), and `db-add-<id>`, the "+" that adds it in one tap.
-//
 // A click, a right-click or a touch long-press opens the card's detail view, whose "Add to <deck>"
-// adds it. Adding takes one gesture still: the "+", or a drag onto the deck. A resting mouse opens a
-// preview only on a card whose face prints less than its whole text (#1017). The face is decoration
-// to a screen reader (it repeats the name); the detail view reads the rules out in full.
-//
-// READ-ONLY, for the Card Almanac (R630): given none of the deck editor's props, the grid has no
-// "+", no drag and none of the deck's `data-*` or `aria-disabled`, since there is no deck.
-//
+// adds it. A resting mouse opens a preview only on a card whose face prints less than its whole text
+// (#1017). The face is decoration to a screen reader (it repeats the name); the detail view reads the
+// rules out in full. READ-ONLY, for the Card Almanac (R630): given none of the deck editor's props, the
+// grid has no "+", no drag and none of the deck's `data-*` or `aria-disabled`.
 // R1956000: a card the viewer owns is drawn as their own copy and wears their picks for it (the
 // foil, finish, border and full art of R1655000): below the deck builder's `OwnCopy` every card
 // the collection does not say is unowned, and in a read-only grid the cards `own` names.
-//
 // #2266: the Almanac draws about 700 cards, so each card is memoized (`PoolCard`). #2334: its grid
 // is `virtual`, mounting only the rows near the view (poolWindow.ts, usePoolWindow.ts); its row tracks
 // keep the height of the rest, so the scrollbar and each card's place are the whole pool's. The cards

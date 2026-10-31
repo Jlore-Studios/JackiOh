@@ -3,10 +3,8 @@
 // them; a replay, a watched game, a teammate's duel and a bare board name nobody. Drawn state only
 // (CLAUDE.md rule 7): nothing here reaches the engine or the view. R1655000: that own card wears the
 // picks of its own card first, where the viewer owns them.
-//
 // R1297000: the same seat wears the deck slots (the playmat, the backdrop and the card back), and
 // the provider also carries the picks of the deck the viewer plays, which beat the account's.
-//
 // R1834004: an online board also carries both seats' frozen loadouts (cards/loadouts.ts, R1834002).
 // Every seat but the wearer wears its own (keyed on each card's owner, never its controller, so a
 // stolen unit keeps its owner's look); on a watched or replayed game both seats do. Practice,

@@ -6,12 +6,7 @@
 // (without settling it), asks `highlightFor` where that interaction may land, and on the drop
 // hands the landing spot to the same `onClickTarget` a click would reach (CLAUDE.md rule 7).
 //
-// R384, R510: an activation is dragged the same way. An activation with no target to aim at has
-// nothing to drag to: its press stays a click, except on a backrow card of yours, which is dragged
-// onto the board as a spell with no target is (R658).
-//
-// R658: a play or an activation that a drop (or a click) has narrowed but not finished is lifted
-// again from what it has picked so far, with everything picked kept.
+// R384, R510: an activation is dragged the same way.
 //
 // Pure: no DOM, no React, no state of its own.
 
@@ -205,10 +200,9 @@ function planCardActivation(
 }
 
 /**
- * R658: a build in flight lifted again from one of its picks. `pressed` is the testid pressed; it
- * must be a pick the board shows as selected, not the hand card of the play, whose press lifts it
- * afresh. Null when nothing is picked yet or nothing is left to aim at on the board (a picker's
- * choice is next).
+ * R658: a build in flight lifted again from one of its picks. `pressed` must be a pick the board shows
+ * as selected, not the hand card of the play, whose press lifts it afresh. Null when nothing is picked
+ * yet or nothing is left to aim at on the board (a picker's choice is next).
  */
 function planContinue(
   view: PlayerView,

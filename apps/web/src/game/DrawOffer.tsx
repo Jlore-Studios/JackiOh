@@ -92,9 +92,8 @@ export function drawNoticeText(notice: DrawNotice): string {
 
 /**
  * R36: what the Offer draw control reads. While a declined offer still blocks the viewer, the view
- * counts the turns of theirs it covers (`drawOfferBlockedTurns`, on their own view only), and the
- * control names them, with the full sentence as its tooltip. Whether it is live is still `legal`'s
- * alone (CLAUDE.md rule 7): this only says why it is dark.
+ * counts the turns of theirs it covers (`drawOfferBlockedTurns`, on their own view only). Whether it
+ * is live is still `legal`'s alone (CLAUDE.md rule 7): this only says why it is dark.
  */
 export function offerDrawControlText(view: PlayerView): { label: string; title?: string } {
   const left = view.drawOfferBlockedTurns;

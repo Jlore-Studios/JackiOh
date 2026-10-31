@@ -1,5 +1,4 @@
 // #185: which tier a landing Unit slams at, for the animation queue (animations.ts `slamOf`).
-//
 // A landing animates over the board as it stood before the Unit arrived (BUILD M5-T4), so its
 // numbers come from the newest view, where the Unit stands as it landed (R97: only what the
 // viewer's view shows). A Unit that has already left the field by the end of the burst is read off

@@ -2,10 +2,9 @@
 // client actually renders.** `animations.test.ts` renders nothing, so a row can point at a name no
 // component has ever rendered and stay green forever, as `modifierChanged` did: a player could not
 // see that #77 Professor Curvature or #78 /fullsend was active on them (R169 put the list in the view).
-//
 // The proof is the whole client (`Game`, so the shell's banner, toast, overlay and modal are in the
 // tree) rendered from one `PlayerView`, and for every `GameEvent["type"]` one sample event built
-// against THAT view: the target must resolve, and the element must be in the document.
+// against THAT view.
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerView } from "@jackioh/shared";
 import { cleanup, render, screen } from "@testing-library/react";

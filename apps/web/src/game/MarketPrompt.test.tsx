@@ -121,8 +121,7 @@ describe("R1000 the night market's stall", () => {
   });
 });
 
-// #552 (MN09, mobile): a lot is read before it is bought, as a Discover's card is (Prompt.tsx): a
-// long-press opens its card's sheet and buys nothing, and a plain tap still buys it.
+// #552 (MN09, mobile): a lot is read before it is bought, as a Discover's card is (Prompt.tsx).
 describe("#552 a lot opens its card on a long-press, and only a tap buys it", () => {
   afterEach(() => {
     vi.useRealTimers();

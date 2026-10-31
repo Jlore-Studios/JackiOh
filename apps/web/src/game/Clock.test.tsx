@@ -257,7 +257,6 @@ describe("the rendered clock", () => {
     expect(opponent).toHaveTextContent(formatClock(half));
     expect(screen.getByRole("timer", { name: `Opponent reconnecting, ${String(half / 1000)} seconds left` })).toBe(opponent);
 
-    // Words, name and digits tick together with the monotonic clock, down to the last second.
     at.ms = half - 1_000;
     view.rerender(<Clock {...pinned} />);
     expect(screen.getByTestId("grace-opponent")).toHaveAttribute("aria-label", "Opponent reconnecting, 1 second left");
@@ -291,7 +290,6 @@ describe("the rendered clock", () => {
 // R268: the mulligan window runs one clock for both seats
 
 describe("R268 — while both mulligans are open, one mulligan clock for both seats", () => {
-  /** The server's frame in the window: the turn clock paused, the mulligan deadline as the prompt's. */
   function mulliganFrame(): ClockFrame {
     return frame({ turnDeadline: null, promptDeadline: NOW + MULLIGAN_CLOCK_MS });
   }

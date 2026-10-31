@@ -1,6 +1,5 @@
 // R667 on the board: Classic #87 Plague Chalice's warning on the viewer's own hand card. The engine
-// puts `counteredOnPlay: true` on the card's view and the board only draws it (CLAUDE.md rule 7): the
-// fixtures below are `PlayerView`s, and the component is the board that renders them.
+// puts `counteredOnPlay: true` on the card's view and the board only draws it (CLAUDE.md rule 7).
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";

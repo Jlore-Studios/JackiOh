@@ -35,7 +35,6 @@ afterEach(() => {
 
 const PAST_ANY_INSPECT_DELAY_MS = 2_000;
 
-/** The back in one backrow zone. */
 function backIn(side: "you" | "opponent", lane: number): HTMLElement {
   const zone = screen.getByTestId(testid.zone(side, "backrow", lane));
   const back = zone.querySelector<HTMLElement>(".card-back");
@@ -230,7 +229,6 @@ describe("R372 Combo-Index shows its grade by its letter", () => {
 });
 
 describe("R471 a face-down card's Plague Counters are public", () => {
-  /** Your own face-down trap with 3 Plague Counters, and the opponent's backs: one with 3, one with none. */
   function plagueView(): PlayerView {
     return baseView({
       you: emptySide("p1", {

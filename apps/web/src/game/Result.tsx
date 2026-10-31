@@ -1,9 +1,8 @@
-// The board's game-over state (BUILD M5-T4 `gameOver`: "overlay text Win / Loss / Draw"), in two forms:
+// The board's game-over state (BUILD M5-T4 `gameOver`), in two forms:
 //  - `panel`: a dimmed board and a panel with the outcome, why, and the route's own ways on
 //    (`actions`), plus "View the board", which folds it to the chip;
 //  - `chip`: one line at the foot of the screen, with "Result" to open the panel again. Practice asks
 //    for this form from the start, because its own result dialog (PracticeResult) is the panel there.
-//
 // Both wait for the effects layer's Victory / Defeat sequence (`revealMs`) instead of sitting under
 // its word, and neither is a rule (CLAUDE.md rule 7): it reads `PlayerView.result`, and the
 // opponent's hand once the view reveals it. `data-reason` keeps the engine's own reason for tests.
@@ -135,8 +134,7 @@ type GameResultProps = {
 export function GameResult({ result, viewer, form, actions, animating, theirHand = null }: GameResultProps): ReactElement {
   useLocale();
   const outcome = outcomeFor(result, viewer);
-  // The panel folds to the chip ("View the board") and opens again ("Result"). Only the first
-  // appearance waits for the effects layer; a fold or an unfold is immediate.
+  // Only the first appearance waits for the effects layer; a fold or an unfold is immediate.
   const [open, setOpen] = useState(form === "panel");
   const [toggled, setToggled] = useState(false);
   const [revealMs] = useState(resultRevealMs);

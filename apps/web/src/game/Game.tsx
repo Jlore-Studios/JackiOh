@@ -4,8 +4,8 @@
 // that talks to the engine (CLAUDE.md rule 7). The chrome beside the board holds no rule either:
 // Concede asks before it sends anything; the draw offer and R915004's failed-script notice come from
 // the view; R1838000's Trade control and R1853003's Marketplace shop are live exactly as `legal` lists.
-// `legal` belongs to `props.view`, so it reaches the board only once the board SHOWS that view: on the
-// older board, a click ended a turn the player had not seen.
+// `legal` belongs to `props.view`, so it reaches the board only once the board SHOWS that view, lest a
+// click end a turn the player has not seen.
 
 import {
   useCallback,

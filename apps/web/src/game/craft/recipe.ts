@@ -53,7 +53,6 @@ export const VERB_LABELS: Record<CraftVerb, string> = {
   lockRandomZone: "Lock a random enemy zone",
 };
 
-/** What the palette calls each hat. */
 export const HAT_LABELS: Record<CraftHatKind, string> = {
   cry: "Cry",
   death: "Death",
@@ -161,7 +160,6 @@ export function toggleKeyword(recipe: CraftRecipe, kind: Keyword["kind"], n?: nu
   return { ...recipe, keywords: [...recipe.keywords, block] };
 }
 
-/** Step Armor's N, 1 to `CRAFT_MAX_N`. */
 export function stepKeywordN(recipe: CraftRecipe, kind: Keyword["kind"], delta: number): CraftRecipe {
   return {
     ...recipe,
@@ -189,7 +187,6 @@ export function addEffect(recipe: CraftRecipe, hatIndex: number, verb: CraftVerb
   return { ...recipe, hats };
 }
 
-/** Step an effect's N, 1 to `CRAFT_MAX_N`. */
 export function stepN(recipe: CraftRecipe, hatIndex: number, effectIndex: number, delta: number): CraftRecipe {
   const hats = recipe.hats.map((hat, hi) => {
     if (hi !== hatIndex) return hat;

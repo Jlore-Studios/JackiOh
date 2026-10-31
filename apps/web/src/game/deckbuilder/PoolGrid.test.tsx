@@ -36,7 +36,7 @@ const ATTRIBUTES = ["data-cosmetic-foil", "data-cosmetic-motion", "data-finish",
 
 function noop(): void {}
 
-/** The deck editor's half of the grid, with `collection` as the collection. */
+/** The deck editor's half of the grid. */
 function deckProps(collection: Collection | null) {
   return {
     deckName: "Deck",
@@ -54,7 +54,6 @@ function owning(...ids: string[]): Collection {
   return Object.fromEntries(ids.map((id) => [id, 1]));
 }
 
-/** The face a pool tile draws. */
 function poolFace(cardId: string): Element {
   const face = screen.getByTestId(poolCardId(cardId)).querySelector(".cf");
   if (face === null) throw new Error(`${cardId}'s tile draws no face`);
@@ -228,7 +227,6 @@ describe("R2098000 a pool tile's term shows its rule", () => {
     );
     expect(term).not.toHaveAttribute("tabindex");
 
-    // Hover shows the glossary line; leaving hides it.
     fireEvent.pointerEnter(term, { pointerType: "mouse" });
     expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
     act(() => {
@@ -238,7 +236,6 @@ describe("R2098000 a pool tile's term shows its rule", () => {
     fireEvent.pointerLeave(term, { pointerType: "mouse" });
     expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
 
-    // A tap on the term still opens the card.
     fireEvent.click(term);
     expect(onInspect).toHaveBeenCalledTimes(1);
     expect(onInspect).toHaveBeenLastCalledWith(PICKED);

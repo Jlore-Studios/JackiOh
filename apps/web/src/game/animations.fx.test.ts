@@ -1,9 +1,8 @@
 // docs/polish/1-animations.md, behaviors B1 to B5: the animation table's `fx` column, the runner's
 // lifecycle signals, and the viewer's effects-speed and reduce settings (R201).
 //
-// `animations.test.ts` is B3's real proof. Settings are injected through the queue's `settings`
-// option, never by mutating the global store, and `fakeClock` is a local copy of
-// `animations.test.ts`'s (not exported).
+// `animations.test.ts` is B3's real proof. Settings are injected through the queue's `settings` option, never
+// by mutating the global store, and `fakeClock` is a local copy of `animations.test.ts`'s (not exported).
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

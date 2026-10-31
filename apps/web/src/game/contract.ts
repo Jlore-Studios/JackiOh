@@ -1,9 +1,7 @@
 // The integration contract between the board (M5-T1), the action builders and prompts (M5-T2),
-// the hotseat loop (M5-T3) and the animation runner (M5-T4).
-//
-// Everything here is presentation vocabulary. No rule lives in this file: the board reports what
-// was clicked, `actions.ts` turns that into an `ActionBody` chosen from `legalActions`, and the
-// engine decides. `Highlight` is a set of `data-testid`s the engine has already blessed.
+// the hotseat loop (M5-T3) and the animation runner (M5-T4). No rule lives in this file: the board
+// reports what was clicked, `actions.ts` turns that into an `ActionBody` chosen from `legalActions`,
+// and the engine decides.
 
 import type { ReactNode } from "react";
 
@@ -81,9 +79,9 @@ export const testid = {
   concedeConfirm: "concede-confirm",
   /** In that dialog: close it and carry on (also Escape and a click outside). */
   concedeCancel: "concede-cancel",
-  /** The offerer's line while its draw offer stands: "Draw offered — waiting for reply". */
+  /** The offerer's line while its draw offer stands. */
   drawOfferStatus: "draw-offer-status",
-  /** The other seat's notice while an offer stands: "Your opponent offers a draw", with the two answers. */
+  /** The other seat's notice while an offer stands, with the two answers. */
   drawOffer: "draw-offer",
   drawAccept: "draw-accept",
   drawDecline: "draw-decline",
@@ -91,14 +89,13 @@ export const testid = {
   drawOutcome: "draw-outcome",
   /** In the mulligan picker: `data-ready="true|false"`, whether the opponent has answered its own. */
   mulliganOpponentStatus: "mulligan-opponent-status",
-  /** Inside that status, only once the opponent has answered: "Opponent is ready". */
+  /** Inside that status, only once the opponent has answered. */
   mulliganOpponentReady: "mulligan-opponent-ready",
   /** After the viewer's own answer, until both are in: the hand with the cards going back marked. */
   mulliganWaiting: "mulligan-waiting",
   /**
    * R384, R510: the Activate control on a card the viewer controls (ActivateControl.tsx). `ability`
-   * is named only when the card lists several (`CardView.activations`), so a card with one ability
-   * is always `activate-<instanceId>`.
+   * is named only when the card lists several (`CardView.activations`).
    */
   activate: (instanceId: string, ability?: string): string =>
     ability === undefined ? `activate-${instanceId}` : `activate-${instanceId}-${ability}`,
@@ -239,10 +236,9 @@ export type BoardProps = {
   highlight?: Highlight;
   animating?: AnimatingMap;
   /**
-   * The animation entries the runner has started since the board last caught up (M5-T4), each one
-   * the elements it marks paired with the events it is playing. The number pops read these, not
-   * `view`: the runner is still holding `view` back, so it lacks the event being animated; and one
-   * action's several numbers must stay on screen together, not vanish as the next entry starts.
+   * The animation entries the runner has started since the board last caught up (M5-T4). The number pops
+   * read these, not `view`: the runner is still holding `view` back, so it lacks the event being animated;
+   * and one action's several numbers must stay on screen together, not vanish as the next entry starts.
    */
   animated?: readonly AnimationFrames[];
   /** A route's server-synchronised clock, mounted in the physical End Turn housing. */

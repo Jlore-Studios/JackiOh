@@ -1,7 +1,6 @@
 // R265, R266: the concurrent mulligan as the picker shows it. Both seats' mulligans are open at once;
 // the view says whether the opponent has answered (`view.mulligan.opponentReady`) and, once the
-// viewer has, what it kept (`view.mulligan.kept`). The picker's confirm reads "Ready"; after it, the
-// picker gives way to `mulligan-waiting` until the game begins. Everything is read off the view.
+// viewer has, what it kept (`view.mulligan.kept`). Everything is read off the view.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -72,8 +71,7 @@ describe("R265 the mulligan picker, while the viewer still owes its answer", () 
 
   it("R635, R748 a seat dealt an empty hand still has a mulligan to answer: Ready keeps nothing and returns nothing", () => {
     // Setup deals no fatigue (R635) and fills a hand from the cast-on-draw cards when nothing else is
-    // left (R748), so only an empty library deals no opening hand. The picker has no cards, and the
-    // viewer still answers it.
+    // left (R748), so only an empty library deals no opening hand.
     const onAction = vi.fn();
     const view = baseView({
       turn: 0,

@@ -28,7 +28,6 @@ vi.mock("./poolWindow.ts", async (importOriginal) => ({
 }));
 
 const CATALOG_HERE: CatalogSnapshot = { version: "test", cards: CATALOG };
-/** Four cards to a row, each row 100 px tall with a gap of 10 under it. */
 const SHAPE: PoolShape = { columns: 4, rowHeight: 100, rowGap: 10, paddingTop: 10 };
 /** 100 cards fill 25 rows of four. */
 const IDS = Object.keys(CATALOG).slice(0, 100);
@@ -40,12 +39,10 @@ function grid(ids: readonly string[]): ReactElement {
   return <PoolGrid ids={ids} catalog={CATALOG_HERE} onInspect={noop} virtual />;
 }
 
-/** The ids of the cards mounted, in the grid's order. */
 function mounted(container: HTMLElement): string[] {
   return [...container.querySelectorAll<HTMLElement>(".db-card")].map((card) => card.dataset.card ?? "");
 }
 
-/** The ids of the rows `first` to `last` of the pool, which hold four cards each. */
 function rows(first: number, last: number): string[] {
   return IDS.slice(first * SHAPE.columns, (last + 1) * SHAPE.columns);
 }
@@ -101,7 +98,6 @@ describe("#2334 a virtual grid mounts the rows near the view", () => {
     for (const id of inView) expect(getByTestId(poolCardId(id))).toBeTruthy();
     expect(container.querySelector(`[data-card="${IDS[0] ?? ""}"]`)).toBeNull();
 
-    // And back to the top, where the first row is mounted again.
     act(() => {
       scrollTo(container, TOP);
     });

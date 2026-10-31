@@ -16,8 +16,7 @@
 // The portrait has two presses (R1449). A click on a hero that is not a legal target, or Enter or
 // Space on the portrait's own button (laid over the art with no testid, so a drag or a click still
 // resolves to `hero-<side>`), toggles the emote menu on the portrait: your picker, or the opponent's
-// one-item mute (R643). A hold opens the hero's inspect view (`emotes/HeroInspect.tsx`, R1330). A
-// target is still a target first.
+// one-item mute (R643). A hold opens the hero's inspect view (`emotes/HeroInspect.tsx`, R1330).
 //
 // R847: a side whose Temporal Rift turn is granted (`SideView.riftExtraTurn`) wears "Rift turn used"
 // on both seats; owed extra turns are the engine's own modifier badge (R846).
@@ -346,9 +345,9 @@ function usedTitle(power: HeroPowerView): string {
 }
 
 /**
- * One of the viewer's Heroic Powers. A press reports the power's instance as an activation
- * (`{ on: "activate" }`), never the `power` board control, so a power with targets is built like any
- * activation; `data-instance-id` is also what a drag from it reads (game/drag/targets.ts).
+ * One of the viewer's Heroic Powers. A press reports the power's instance as an activation, never the
+ * `power` board control, so a power with targets is built like any activation; `data-instance-id` is
+ * also what a drag from it reads (game/drag/targets.ts).
  */
 function PowerButton({
   power,

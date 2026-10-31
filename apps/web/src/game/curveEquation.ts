@@ -5,7 +5,7 @@
 // The grid is the engine's (crates/engine/src/subsystems/papaya.rs, R422), from the caster's seat,
 // x the lane less one. The event names every cell the curve meets, so the lowest-degree polynomial
 // through the named cells is the curve itself, worked out by Lagrange interpolation in exact
-// fractions, never floating point. It prints as "y = −¹⁄₂x² + ⁵⁄₂x", with the minus sign (U+2212) for a negative.
+// fractions, never floating point. It prints with the minus sign (U+2212) for a negative.
 
 import type { PlayerId, Row, ZoneRef } from "@jackioh/shared";
 
@@ -69,20 +69,18 @@ function digits(n: number, set: string): string {
   return [...String(n)].map((digit) => set[Number(digit)] ?? digit).join("");
 }
 
-/** A coefficient's size: a whole number, or a fraction as ¹⁄₂. */
 function magnitude(f: Fraction): string {
   const num = Math.abs(f.num);
   return f.den === 1 ? String(num) : `${digits(num, SUPERSCRIPT_DIGITS)}${FRACTION_SLASH}${digits(f.den, SUBSCRIPT_DIGITS)}`;
 }
 
-/** One term without its sign: "¹⁄₂x²", "x", "3". */
+/** One term without its sign. */
 function term(f: Fraction, power: number): string {
   if (power === 0) return magnitude(f);
   const coefficient = Math.abs(f.num) === 1 && f.den === 1 ? "" : magnitude(f);
   return `${coefficient}x${power === 1 ? "" : digits(power, SUPERSCRIPT_DIGITS)}`;
 }
 
-/** The sign before a term: "−" or nothing for the first, " − " or " + " after it. */
 function signed(f: Fraction, first: boolean): string {
   if (first) return f.num < 0 ? MINUS : "";
   return f.num < 0 ? ` ${MINUS} ` : " + ";

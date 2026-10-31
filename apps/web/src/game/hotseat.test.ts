@@ -23,19 +23,15 @@ type FakeState = { turn: number; active: PlayerId; pendingFor: PlayerId | null; 
 
 type FakeEngine = {
   port: EnginePort;
-  /** Every port call, in order. */
   calls: string[];
   createGameArgs: CreateGameArgs[];
-  /** Every action handed to `reduce`, accepted or rejected. */
   reduced: Action[];
-  /** The player argument of every `viewFor` / `legalActions` call. */
   viewedBy: PlayerId[];
   askedBy: PlayerId[];
   /** Set to make the next `reduce` refuse; cleared once it has. */
   nextError: string | null;
   /** Mutates the state the next accepted `reduce` returns. Consumed once. */
   nextEffect: ((state: FakeState) => void) | null;
-  /** Whose prompt `beginGame` leaves open. */
   pendingAfterBegin: PlayerId | null;
   current(): FakeState;
 };

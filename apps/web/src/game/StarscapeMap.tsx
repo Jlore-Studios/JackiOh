@@ -1,7 +1,6 @@
-// A seat's starscape map (Stinkyscape #148 Alteran Reach, R1847000): its nodes in order, the edge last,
-// those traveled dimmed and the one the player stands on lit. It renders the seat's view alone, which
-// carries the map for both seats once its player has first traveled (CLAUDE.md rule 7); the travel is
-// the card's Activate ability, offered and refused by the engine.
+// A seat's starscape map (Stinkyscape #148 Alteran Reach, R1847000). It renders the seat's view alone, which
+// carries the map for both seats once its player has first traveled (CLAUDE.md rule 7); the travel is the card's
+// Activate ability, offered and refused by the engine.
 
 import type { ReactElement } from "react";
 
@@ -11,7 +10,6 @@ import { t } from "../i18n/i18n.ts";
 import type { Side } from "./contract.ts";
 import "./starscape.css";
 
-/** What a node gives, in the words its tooltip reads. */
 function rewardWords(node: StarscapeNodeView): string {
   const amount = node.amount ?? 0;
   switch (node.reward) {

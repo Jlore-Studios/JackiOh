@@ -2,23 +2,13 @@
 //
 // Game hands the runner only the events a new view's window adds to the last one's (SPEC §10.8's
 // window slides over the whole match). R97 redacts that window afresh for every view, judging each
-// card by where it sits now, so an event both windows carry can read differently in each: the
-// opponent's `drawn` names the card once they play it, a spell back in its owner's hand hides its
-// `cardPlayed` from the other seat again. The diff used to compare the two copies byte for byte,
-// found no overlap, and handed the runner the whole window, so every animation already played ran
-// again before the new ones. Measured over real games before the fix: one seat-view in eight, nearly
-// all of them the seat watching the other player act, which is every view practice and online play
-// show during the opponent's turn.
+// card by where it sits now, so an event both windows carry can read differently in each.
 //
 // The games are real (`audio/test/realGame.ts`, through `engine.real.ts` as the client reaches the
-// engine), the policy is a seeded random pick over `legalActions`, and every action is checked on
-// both seats: the runner must be handed exactly the events that action produced, as the very
-// objects the new view carries, and nothing it has already been given.
-//
+// engine), and every action is checked on both seats: the runner must be handed exactly the events that
+// action produced, as the very objects the new view carries, and nothing it has already been given.
 // R318's sweep does the same over games built to reach §2.4's three overflows, which the dev decks
-// rarely do: a seat with a short deck fatigues, a seat with extra draws fills its hand and burns, and
-// a seat whose deck is R80's cap plays #33 Unstable Clone Machine until its library turns copies
-// away. Each of `fatigue`, `burned` and `libraryOverflow` must reach both seats' runners, once each.
+// rarely do.
 
 import { describe, expect, it } from "vitest";
 
@@ -102,10 +92,9 @@ const CLONE_MACHINE = "core-033";
 const VIRAL_INJECTION = "core-090";
 
 /** `n` distinct deckable ids, cheapest first (as `cheap20` picks them), after the ones a game needs.
- * Deckable is `cheap20`'s rule: no token, and only a set that ships (R1420). Re-pinned for the
- * Training Grounds release (#2204): a deck holds a Core card or its snapshot, never both (R2195000),
- * so a card whose pair (its `snapshotOf`, or its own id) the deck holds is skipped, as the Rust
- * tests' `deal()` does. */
+ * Deckable is `cheap20`'s rule: no token, and only a set that ships (R1420). A deck holds a Core card
+ * or its snapshot, never both (R2195000, #2204), so a card whose pair (its `snapshotOf`, or its own
+ * id) the deck holds is skipped, as the Rust tests' `deal()` does. */
 function cheapest(n: number, needs: readonly string[] = []): string[] {
   const catalog = realPort().catalog?.() ?? {};
   const pool = Object.values(catalog)
@@ -126,11 +115,10 @@ function cheapest(n: number, needs: readonly string[] = []): string[] {
 type OverflowGame = { label: string; game: () => RealGame; seed: number; prefer: readonly string[]; maxActions: number };
 
 /**
- * The games (R180 handicaps, validated by the engine): p1 draws three a turn from 30 cards with a
- * nine-card opening hand, so its hand fills and burns, while p2's 6-card deck runs dry and fatigues;
- * and p1's 60-card deck (R80's cap, #33 and #90 in it) plays #33 whenever it can, so its library
- * reaches the cap and refuses the copies. The seeds were picked to reach them within the caps; v0.3.5's
- * cheaper Meditative cards let p1 empty its hand in seeds 1 and 2, so seed 3 joins them for the burn.
+ * The games (R180 handicaps, validated by the engine): p1's extra draws fill its hand and burn, while
+ * p2's 6-card deck runs dry and fatigues; and p1's 60-card deck (R80's cap, #33 and #90 in it) plays #33
+ * whenever it can, so its library reaches the cap and refuses the copies. The seeds were picked to reach
+ * them within the caps; p1 empties its hand in seeds 1 and 2, so seed 3 joins them for the burn.
  */
 function overflowGames(): OverflowGame[] {
   const burner: Handicap = { ...HUMAN_HANDICAP, deckSize: 30, extraOpeningCards: 6, extraDrawsPerTurn: 2 };

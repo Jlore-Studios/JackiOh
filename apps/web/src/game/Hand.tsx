@@ -5,13 +5,12 @@
 // drawn as that many identical backs with nothing to read or click. The narrowing is
 // `Array.isArray`, so there is no branch where a count could be rendered as cards.
 //
-// The fan (docs/polish/7-mobile-ux.md S6, S11, B26, B27): each `.hand-slot` carries its index as
-// `--i` and `.hand-cards` the hand size as `--n`, so board.css lays it out without measuring. On the
-// viewer's own hand a tap lifts a card (`data-lifted`) so it can be read, legal or not: a
-// capture-phase click, so it happens even when the card refuses the click. It is local view state,
-// not a game action. Drag to play is game/drag/DragLayer.tsx, and the card a drop has just played is
-// marked `data-landing` (drag/landing.ts), which board.css takes out of the fan while the board
-// catches up with the play.
+// The fan (docs/polish/7-mobile-ux.md S6, S11, B26, B27): each `.hand-slot` carries its index as `--i` and
+// `.hand-cards` the hand size as `--n`, so board.css lays it out without measuring. On the viewer's own
+// hand a tap lifts a card (`data-lifted`) so it can be read, legal or not: a capture-phase click, so it
+// happens even when the card refuses the click. It is local view state, not a game action. Drag to play is
+// game/drag/DragLayer.tsx, and the card a drop has just played is marked `data-landing` (drag/landing.ts),
+// which board.css takes out of the fan while the board catches up with the play.
 //
 // A pointer on the viewer's own hand card is reported upward (`onHover`, #991) so the board can ring
 // what its preview counts. It is view state, never an action.
@@ -76,10 +75,7 @@ export function handEmptyTestid(side: Side): string {
   return `hand-empty-${side}`;
 }
 
-/**
- * R504: the outline an empty hand holds in place of its cards: one card's size (board.css, per
- * layout), dashed, with the words for a reader.
- */
+/** R504: the outline an empty hand holds in place of its cards: one card's size (board.css, per layout). */
 function EmptyHand({ side }: { side: Side }): ReactElement {
   return (
     <div className="hand-empty" data-testid={handEmptyTestid(side)}>

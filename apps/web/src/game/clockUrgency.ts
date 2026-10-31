@@ -64,7 +64,6 @@ export type FuseGeometry = {
 
 export function fuseGeometry(fraction: number): FuseGeometry {
   const left = Math.min(1, Math.max(0, fraction));
-  /** How far round the burn has come, in edges: 0 at the start, FUSE_EDGES at the end. */
   const burnt = (1 - left) * FUSE_EDGES;
   const edge = (index: number): number => Math.min(1, Math.max(0, index + 1 - burnt));
   const edges = [edge(0), edge(1), edge(2), edge(3)] as const;

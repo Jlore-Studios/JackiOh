@@ -17,8 +17,8 @@ import { setShips, type CardCost, type CardDef, type CardDefs, type SetName } fr
  * says nothing else spells the numbers. `@jackioh/engine/config` (`src/wire/engineConfig.ts`)
  * reaches them without loading the engine's barrel, which drags in modules the client excludes.
  */
-// Imported and then re-exported, not `export … from`: this module uses both constants itself
-// (`resolveDeck`, the dev decks), and a bare re-export creates no local binding.
+// Imported and then re-exported, not `export … from`: this module uses both constants itself, and a bare
+// re-export creates no local binding.
 import { DECK_SIZE, MAX_COPIES } from "@jackioh/engine/config";
 
 export { DECK_SIZE, MAX_COPIES };
@@ -45,7 +45,7 @@ export function printedCost(cost: CardCost): number {
 /**
  * `validateDeck`'s L3, mirrored: not a Token and not a card of a set that has not shipped (R1420),
  * unless the engine was told to preview that set (`preview`, the E2E injection's,
- * `EnginePort.previewSets`). A deck built from anything else is refused.
+ * `EnginePort.previewSets`).
  */
 function deckable(def: CardDef, preview: readonly SetName[] = []): boolean {
   return !def.token && !def.tags.includes("Token") && (setShips(def.set) || preview.includes(def.set));

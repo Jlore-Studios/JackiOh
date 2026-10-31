@@ -1,8 +1,4 @@
-// Field zone view (SPEC §3; BUILD M5-T1).
-//
-// It reads `locks[row][laneIndex(lane)]` for `data-locked` (BUILD M5-T4); play legality comes from
-// the engine's `legalActions`.
-//
+// Field zone view (SPEC §3; BUILD M5-T1). Play legality comes from the engine's `legalActions`.
 // DragLayer hit-tests zones by testid; no drag handler belongs here.
 
 import { useContext, type ReactElement } from "react";
@@ -45,7 +41,6 @@ export type ZoneProps = {
   pops?: ReadonlyMap<string, Pops>;
 };
 
-/** A zone's accessible name: "Your units, lane 3". */
 function zoneLabel(side: Side, row: Row, lane: number): string {
   if (side === "you") return row === "units" ? t("Your units, lane {lane}", { lane }) : t("Your backrow, lane {lane}", { lane });
   return row === "units" ? t("Enemy units, lane {lane}", { lane }) : t("Enemy backrow, lane {lane}", { lane });

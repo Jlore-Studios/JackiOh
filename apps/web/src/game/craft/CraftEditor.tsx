@@ -54,8 +54,7 @@ import "./craft.css";
 /** ME-CRAFT (Meditative #17, R880–R883): the Scratch-style block editor. The meters and the face
  * are the engine's own `craftPreview`, so the client decides nothing (CLAUDE.md rule 7). The turn
  * clock keeps running while the player crafts (R79): this is an answer like any other, and the
- * opponent sees only that a prompt is open. Every drag has a click, tap and keyboard equivalent, so
- * nothing needs a drag.
+ * opponent sees only that a prompt is open. Every drag has a click, tap and keyboard equivalent.
  *
  * The prompt's `craftMode` (Meditative+, #1182) changes the frame, never the rules: `potion` and
  * `hugePotion` pin a Spell whose one hat is its When cast (Jazakus and Jazakus Prime, R1182000,
@@ -88,7 +87,6 @@ function typeName(type: CardType): string {
   return readerTerms()?.types[type] ?? type;
 }
 
-/** A keyword in the card frame's own words in the reader's language. */
 function keywordName(kind: Keyword["kind"]): string {
   return readerTerms()?.keywords[kind] ?? kind;
 }
@@ -188,7 +186,6 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
     if (read.ok) setCodeRecipe(read.recipe);
   }
 
-  /** A block's name typed at the caret, as a code editor's completion would. */
   function insertCode(snippet: string): void {
     const area = codeArea.current;
     const start = area?.selectionStart ?? code.length;

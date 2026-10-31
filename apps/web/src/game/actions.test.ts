@@ -1,6 +1,5 @@
 // M5-T2: the client asks `legalActions` and narrows. These tests exist to prove that it never
-// computes legality itself — every one of them feeds a hand-built `ActionBody[]` and checks that
-// what comes out was derived from that array and nothing else.
+// computes legality itself.
 
 import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView, RevealAt, Selection } from "@jackioh/shared";
 import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
@@ -27,7 +26,6 @@ import {
 import { testid } from "./contract.ts";
 import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
-/** A seat with three cards in hand, two of your units and one of theirs. */
 function seatedView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -89,8 +87,7 @@ describe("highlightFor: every lit testid came out of the legal array (M5-T2)", (
   });
 
   it("greys out a card the player cannot afford, because the engine did not list it", () => {
-    // The 6-cost card is missing from `legalActions` for exactly one reason — the engine decided
-    // it. The client holds no cost arithmetic; it just fails to find a `play` naming it.
+    // The client holds no cost arithmetic; it just fails to find a `play` naming it.
     const view = seatedView({
       you: emptySide("p1", {
         mana: { current: 1, max: 6 },
@@ -943,8 +940,7 @@ describe("answerAction: one case per PromptKind (§10.6)", () => {
 
 describe("an empty legal array offers nothing", () => {
   it("lights nothing when the engine lists nothing — the client never reads view.result itself", () => {
-    // `legalActions` returns [] once `state.result` is set, or when it is not your turn. The
-    // client does not repeat either test; it just gets an empty array.
+    // `legalActions` returns [] once `state.result` is set, or when it is not your turn.
     const view = seatedView({ result: { winner: "p1", reason: "hero-death" } });
     const idle = highlightFor(view, [], IDLE);
     expect(idle.legal.size).toBe(0);
@@ -1127,7 +1123,6 @@ describe("R1086 Equip plays (issue #532)", () => {
     ];
     const playing = onClickTarget(seatedView(), legal, IDLE, { on: "hand", instanceId: "h1" });
 
-    // Two zones first, then which way onto the shared one.
     expect(outstandingNeed(playing.interaction)).toEqual({
       kind: "zone",
       min: 1,
@@ -1181,7 +1176,6 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
   it("is recognized by the engine's two sentences and the shape of its options, and nothing else", () => {
     expect(isPlaguePlacementPrompt(placement)).toBe(true);
     expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: ONE }))).toBe(true);
-    // Another target prompt over the same cards, a pick of several, another kind, a prompt not for you.
     expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: "Choose a target" }))).toBe(false);
     expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: MANY, min: 1, max: 2 }))).toBe(false);
     expect(isPlaguePlacementPrompt(pendingFor("pick", options, { prompt: MANY }))).toBe(false);
@@ -1195,7 +1189,6 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
 
   it("selects an option by its id even when it names its zone too (R177)", () => {
     expect(selectionForOption(options[2]!)).toEqual({ pick: "instance", instanceId: "t1" });
-    // A zone option, which has no id, still selects its zone.
     expect(selectionForOption({ key: "zone:p1:units:2", label: "Lane 2", player: "p1", row: "units", lane: 2 })).toEqual({
       pick: "zone",
       player: "p1",

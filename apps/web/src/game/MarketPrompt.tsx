@@ -34,8 +34,7 @@ function yuan(amount: number): string {
 }
 
 /**
- * One lot on the stall: the card as it will arrive (on the face it is sold on), its name and its
- * price. Like a Discover's card option (Prompt.tsx), the face opens the hover preview and, on a phone, the
+ * Like a Discover's card option (Prompt.tsx), the face opens the hover preview and, on a phone, the
  * long-press sheet, so a lot can be read before it is bought: the click a long-press ends with is
  * swallowed (`useInspectTrigger`), and only a tap buys (#552).
  */
@@ -70,7 +69,6 @@ function Lot(props: { option: PendingOption; onPick: () => void }) {
   );
 }
 
-/** One barter: a hand card traded to the merchant for its price. */
 function Barter(props: { option: PendingOption; onPick: () => void }) {
   useLocale();
   const defId = props.option.defId ?? "";

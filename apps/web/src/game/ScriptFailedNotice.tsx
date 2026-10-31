@@ -18,7 +18,6 @@ import { newEventsSince } from "./animations.ts";
 import { CatalogContext, withMatchDefs } from "./catalog.ts";
 import "./notices.css";
 
-/** The notice and its dismiss button. */
 export const scriptFailedTestid = {
   notice: "script-failed-notice",
   dismiss: "script-failed-dismiss",

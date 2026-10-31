@@ -1,5 +1,4 @@
 // How a finished game went for one seat: a win, a loss or a draw (R1843004).
-//
 // Presentation only (CLAUDE.md rule 7): it reads the view's `result` and the engine's own list of
 // the endings whose winner's opponent draws (`LOSER_DRAWS_REASONS`, generated from config.rs into
 // `engineConfig.ts`), the same list the engine's `seat_outcome`, the ladder and the record read, so

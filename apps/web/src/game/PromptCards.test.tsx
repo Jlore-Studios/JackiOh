@@ -78,7 +78,6 @@ describe("card options are card faces", () => {
       expect(face?.querySelector(".card-name")?.textContent, defId).toBe(nameOf(defId));
       expect(face?.querySelector(".cf-art"), defId).not.toBeNull();
       expect(option.querySelector(".prompt-card-name"), defId).toBeNull();
-      // The name, then the cost its gem shows (integration: the cost is read out, not only drawn).
       expect(option.getAttribute("aria-label"), defId).toBe(`${nameOf(defId)}, costs (${costOf(defId)})`);
     }
   });

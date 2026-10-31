@@ -1081,8 +1081,7 @@ describe("createAnimationQueue", () => {
   });
 });
 
-/* newEventsSince: the part of a view's window the runner has not been given
- *
+/* newEventsSince: the part of a view's window the runner has not been given.
  * R97 redacts the whole window again for every view, judging each card by where it sits now, so an
  * event two successive views share can read differently in each.
  */

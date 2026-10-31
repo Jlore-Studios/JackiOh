@@ -35,7 +35,6 @@ describe("#2334 the rows a virtual pool mounts", () => {
 
     expect(mounted.firstRow).toBe(Math.floor((band.top - reach) / PITCH));
     expect(mounted.lastRow).toBe(Math.floor((band.bottom + reach) / PITCH));
-    // Every row the view touches is in it, and a pool of 25 rows is not mounted whole.
     expect(mounted.firstRow).toBeLessThanOrEqual(Math.floor(band.top / PITCH));
     expect(mounted.lastRow).toBeGreaterThanOrEqual(Math.floor(band.bottom / PITCH));
     expect(mounted.lastRow - mounted.firstRow + 1).toBeLessThan(LAST_ROW);

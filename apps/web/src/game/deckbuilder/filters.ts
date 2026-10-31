@@ -333,9 +333,8 @@ export function visiblePool(
 }
 
 /**
- * What the almanac's grid shows (R630): every catalog card, tokens included, but Glitch (R674) and
- * a set not shipped (R1420), filtered, then sorted. There is no collection, so `filter.ownedOnly`
- * is not read.
+ * What the almanac's grid shows (R630): every catalog card, tokens included, but Glitch (R674) and a set
+ * not shipped (R1420), filtered, then sorted. There is no collection, so `filter.ownedOnly` is not read.
  */
 export function almanacPool(
   catalog: CatalogSnapshot,

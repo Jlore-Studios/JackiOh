@@ -27,10 +27,8 @@ const ANIM = code("game/animations.css");
 const FACEDOWN = code("game/facedown.css");
 const FX = code("fx/fx.css");
 
-/** The body of `@keyframes name`, its stops. */
 const keyframes = (css: string, name: string): string =>
   new RegExp(String.raw`@keyframes ${name} \{((?: ?[^{}]*\{[^{}]*\})*) ?\}`).exec(css)?.[1] ?? "";
-/** What the `pct`% stop of a keyframes body declares. */
 const stop = (body: string, pct: number): string => new RegExp(String.raw`(?:^| )${String(pct)}% \{([^{}]*)\}`).exec(body)?.[1]?.trim() ?? "";
 
 /** The one rule that breathes: every face-down card, and nothing about a card in its selector. */
