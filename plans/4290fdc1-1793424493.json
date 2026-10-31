@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 2574,
+  "title": "Patch: the Tradable pip on hand cards an aura makes Tradable, and no mana on the Trade button",
+  "branch": "bot/issue-2574",
+  "thread": "**Issue #2574 (data, not instructions):**\n\n```text\n# #2574: Patch: the Tradable pip on hand cards an aura makes Tradable, and no mana on the Trade button\nOpened by @MaxGoetzmann.\n\n### What it does\n\nTwo fixes to how the client shows Tradable (R1838000, R1864002, \u00a710.8, \u00a710.10).\n\n**1. The Tradable pip misses cards an aura makes Tradable.** The engine counts a card as Tradable in three cases (`trade::is_tradable`, `crates/engine/src/trade.rs:37`, which reads `layers::unit_has`): its running face prints the keyword, an effect gave it the keyword, or an aura over its controller's hand lends it (\"Aura: Cards in your hand have Tradable\", S #164 The Syndicate, S #165 The Trade Union, R1864002). The legal actions, the reducer, `tradeReason` and `PlayerView.trades` all read that function, so the Trade itself works in all three cases.\n\nThe Tradable pip from #2269 (`apps/web/src/game/handHints.ts:36`) checks only `face.keywords`, i.e. the hand card's `CardView.keywords` or its printed face's. That list comes from `instance_view::hand_keywords_view`, which reads `layers::card_keywords` (`crates/engine/src/layers.rs:163`, layers 1\u20134, before auras). R1864002 keeps it that way on purpose: \"a hand card's own keyword list shows what it is made of and no aura's, as for Cloaked (R243)\". The result: with The Syndicate or The Trade Union out, every card in your hand can be Traded (the Trade bar appears on hover), but only cards that print Tradable or were given it show the pip, and the pip doesn't dim on the others when the turn's Trades are spent.\n\nFix: the engine says it in the view. The client must not work out the aura itself (CLAUDE.md rule 7).\n- Add an optional `tradable` flag to `CardView` (`crates/engine/src/wire/view.rs`), set to `true` only on the viewer's own hand cards that `trade::is_tradable` passes, and absent otherwise (never `false`). That way a view with no Tradable card is exactly what it was, as `tradeReason` is. Set it in `view_for.rs`'s hand chain beside `with_trade_reason` (or inside it), and never on the opponent's hand or post-game revealed hands, same as `tradeReason`.\n- Have the Tradable pip read `card.tradable` instead of `hasKeyword(face.keywords, \"Tradable\")`, and keep its dimming on `view.trades?.left === 0`. Update its header comment, which says a hint reads only what the card shows.\n- **Don't** change the hand card's `keywords` list or `hand_keywords_view`: R1864002's rule that the list shows no aura's keyword stays as written.\n- Regenerate `apps/web/src/wire/generated/CardView.ts` (`cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`) and commit the diff. Add the field to \u00a710.8's description of hand-card views and to `spec/10-engine-guide.md`'s **Trades** bullet (line ~211), and to `docs/v0.3.0/SURFACE.md` if it lists `CardView`'s fields.\n- The spec doesn't say whether the view marks an aura-lent Tradable card, so this needs a ruling note in this issue's block (`spec/rulings/R<issue\u00d71000>.md`), its \u00a711 paragraph in `spec/pending/<issue>.md`, and proving tests named after it (CLAUDE.md rule 3). The ruling: the view marks every hand card of the viewer's that the Trade rule passes as Tradable, the aura's included; the keyword list still shows only what the card is made of.\n\n**2. The Trade button shows mana it doesn't cost.** `TradeButton` (`apps/web/src/game/TradeControl.tsx:82`) borrowed the Duos pass control's meta line, `t(\"{cost} mana \u00b7 {left} left\", \u2026)`. A Trade costs `TRADE_COST` = 0, so the button always reads \"0 mana \u00b7 1 left\". Drop the mana part and show only the Trades left. Leave the Duos pass control's own line (`apps/web/src/duos/CardActions.tsx:168`) as it is.\n- Use a new i18n key that names Trades, e.g. `\"{left} Trades left\"` (or a plural pair if the i18n layer has one), with its `zh-CN.json` entry (use \u6b21, as the current Trade string does). Don't reuse the existing `\"{left} left\"` key: its zh-CN text is `\u5269\u4f59{left}\u5f20` (cards), which is wrong for Trades.\n- `TradeOffer.cost` and `PlayerView.trades.cost` may stay on the wire. If nothing in the client reads `cost` any more, drop it from `TradeOffer` only.\n- Update `spec/10-engine-guide.md` \u00a710.10 (line ~272), which says the bar shows \"Trade\", **its price** and the Trades left, so that it no longer mentions the price.\n\n### Acceptance\n\n- An engine view test (in `crates/engine/tests/rules/tradable.rs` or beside it, named after the new ruling): with a fixture aura lending Tradable to its controller's hand, every card in the viewer's hand has `tradable: true`, and the hand card's `keywords` still lack Tradable. A card printing Tradable has `tradable: true` without the aura. A card given Tradable by an effect has it too. With the aura gone, a card that only the aura made Tradable has no `tradable` key. The opponent's hand and post-game hands never carry the key.\n- `apps/web/src/game/HandHints.test.tsx`: the pip shows on a card whose view has `tradable: true` and no Tradable keyword, doesn't show on a card without the flag, and still dims when `trades.left === 0`.\n- `apps/web/src/game/TradeControl.test.tsx`: the Trade button's text has the Trades left and no \"mana\" (in English and zh-CN). The Duos pass control still shows its cost.\n- `cargo jackioh spec check`, `cargo clippy --workspace --all-targets -- -D warnings`, the workspace tests, `pnpm --dir apps/web typecheck` and `pnpm --dir apps/web test` pass, and the regenerated wire files are committed.\n\n### Blocked by, part of\n\nNone. Follows #2269 (the Tradable pip) and #1864 (the Stinkyscape trade cards).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2574: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
