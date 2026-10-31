@@ -11822,14 +11822,10 @@
     "what": "build #2610 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-31T20:25:20Z",
+    "at": "2026-10-31T20:35:06Z",
     "notes": [
-      "delivered plan #2607 on claude-6 (run 41237678508): planned",
-      "delivered plan #2610 on claude-1 (run 41237605327): planned",
-      "delivered plan #2609 on claude-3 (run 41237572198): planned",
-      "started build #2609 on claude-3 (run 41239014321)",
-      "started build #2610 on claude-1 (run 41239044080)",
-      "started build #2607 on claude-6 (run 41239077644)",
+      "delivered build #2610 on claude-1 (run 41239044080): interrupted",
+      "started build #2610 on claude-8 (run 41239684498)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -12536,7 +12532,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T20:25:20Z",
+  "loop_tick": "2026-10-31T20:35:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
