@@ -10531,7 +10531,7 @@
       }
     },
     "2551": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixed_head": "d6a7728eaf93c1f3a8eed260d9d71391f7c2aa31",
       "ci_fixes": 2,
@@ -10557,18 +10557,18 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-31T02:44:33Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "41159480426",
+      "run_id": "pending:f5a67c0b-1793415009",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-31T02:19:31Z",
+      "started_at": "2026-10-31T02:50:37Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -10758,9 +10758,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T02:49:54Z",
+    "at": "2026-10-31T02:50:37Z",
     "url": "",
-    "what": "build #2560 on claude-4"
+    "what": "revise #2551 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-31T02:35:03Z",
