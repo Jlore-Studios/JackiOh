@@ -56,7 +56,7 @@ pub enum ClaimRefusal {
 }
 
 /// The result a claim says the human had, read from the seat they ended in (R677).
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ClaimedResult {
     Win,
