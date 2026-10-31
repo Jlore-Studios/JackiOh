@@ -11041,6 +11041,13 @@
     "2569": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T06:18:16Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Line 7 fails: the plan changes a Cypress spec (06-room-code, in the smoke list) and e2e/support/types.ts, so the work spans two apps (apps/web and e2e)."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
