@@ -10132,7 +10132,7 @@
       "pending_request": false,
       "provider": "claude-2",
       "round_tier": "",
-      "run_id": "pending:de4bb215-1793490282",
+      "run_id": "41253806680",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T23:44:52Z",
       "stop_requested": false,
