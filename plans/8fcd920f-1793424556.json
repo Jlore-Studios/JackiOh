@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 2575,
+  "title": "Patch: double the practice AI's thinking budget",
+  "branch": "bot/issue-2575",
+  "thread": "**Issue #2575 (data, not instructions):**\n\n```text\n# #2575: Patch: double the practice AI's thinking budget\nOpened by @MaxGoetzmann.\n\n## What it does\n\nThe practice AI plays too weakly. Every tier (Easy, Medium, Hard) runs the same search at the same `AI_BUDGET` (R180), which is 600 nodes and 150 lethal nodes (`crates/ai/src/config.rs`). Natively a decision averages about 140 ms (`training/history/improve-cycle-2026-10-16.md`), well under the 1.5 s the timing gate allows. `docs/learned-eval.md` lists \"a bigger `AI_BUDGET`\" as \"a person's call; no lane may raise it\". **This issue is that call: the owner asks for the budget to be doubled.**\n\n### Changes\n\n- **`crates/ai/src/config.rs`, `AI_BUDGET`:** `nodes` 600 \u2192 1200 and `lethal_nodes` 150 \u2192 300. The search's shape stays as it is (`determinizations`, `beam_width`, `root_branching`, `branching`, `max_depth`, `finalists`).\n  - `AI_GATE_BUDGET` and `LETHAL_HINT_NODES` follow it, as they are defined to.\n  - Update the constant's doc to cite this issue's ruling.\n- **`apps/web/src/practice/config.ts`, `PRACTICE_AI_CLOCK_MS`:** 1500 \u2192 3000.\n  - In the browser, 600 nodes take 0.6\u20130.9 s (`docs/polish/3-ai.md`). At 1200 nodes the 1.5 s cap would cut many decisions short, and the doubling would mostly not happen.\n  - If #2560 (practice claims stop re-running the AI's moves) has landed by then, `PRACTICE_EARNING_AI_CLOCK_MS` is gone and nothing else changes. If not, leave that constant as it is.\n- **The server's two other users of `AI_BUDGET` keep today's budget.** Pin each as a named constant in `crates/server/src/config.rs` holding today's values (600 / 150 / 3 / 4 / 20 / 6 / 8 / 3), per CLAUDE.md rule 9:\n  - the ladder bots' two `BotStrength` rows that use `jackioh_ai::AI_BUDGET`, so that their calibrated ratings (`BOT_SEED_RATINGS`) still hold;\n  - Duos (`crates/server/src/duos/actor.rs`), so that the server's CPU per AI step does not double.\n\n  Raising either is a later call for a person.\n- **Spec and docs:**\n  - Add a ruling note in this issue's block (`docs/issues-and-patches.md`, Ruling numbers) recording the owner's call, the new numbers, the pinned server budgets and the screen's tally, with a proving test.\n  - Put its \u00a711 paragraph in `spec/pending/<this issue>.md`.\n  - Edit \u00a79.9 (`spec/09-architecture.md`) wherever it describes the budget or the browser cap.\n  - Update `docs/learned-eval.md`'s \"A bigger `AI_BUDGET`\" row and `docs/polish/3-ai.md`'s quoted `AI_BUDGET`, and `crates/ai/README.md` and `apps/web/README.md` if they cite the numbers.\n- **Fixtures that pin the AI's own play:**\n  - Re-record the practice-claim fixture (`JACKIOH_RECORD_PRACTICE_CLAIM=1`, `training/README.md`, Beyond the gate).\n  - Re-record any other test or fixture that pins a decision at `AI_BUDGET`. A puzzle or behaviour test that now fails is a finding to report: do not loosen it to pass.\n\n### Measure it\n\nBefore opening the pull request:\n\n1. **The screen.** Build the parent from `origin/main` and run `jackioh arena --a self --b bin:<parent> --set improve-dev --games 800`. Paste the tally line (games, wins, edge and interval) and the worst `msP95` into the PR. The count is decided now: never extend the screen or play it again (`training/improve.md`, How you measure).\n2. **The timing gate.** Run `cargo jackioh gate`. The perf gate (`AI_GATE.max_decision_ms` 1500, `pinned_decision_ms` 1000) must pass at the new budget.\n\n**Stop and report on this issue, without opening a pull request, in either of these cases:**\n\n- the timing gate fails at 1200 nodes (do not raise `AI_GATE`'s limits; those are a person's call too);\n- the screen's interval lies wholly below zero (`edgeHigh < 0`): the doubled AI is measurably weaker, which means something is wrong.\n\nA screen inside noise is fine to ship. SPEC \u00a79.9 notes that a 4\u00d7 search earlier did not move the win rate against greedy past noise, and the owner wants the budget raised anyway.\n\n## Acceptance\n\n- `AI_BUDGET` is 1200 / 300 with the rest unchanged, and `PRACTICE_AI_CLOCK_MS` is 3000. The regenerated `apps/web/src/wire/` config is committed if it changed.\n- The ladder bots' rows and Duos play exactly as before, each on a named constant equal to today's budget.\n- The new ruling's note, its test and its pending paragraph are in place, and `cargo jackioh spec check` passes.\n- The PR body carries the 800-game screen's tally and the timing gate's output.\n- Every check passes:\n  - `cargo fmt --check`\n  - `cargo clippy --workspace --all-targets -- -D warnings`\n  - `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`\n  - `cargo jackioh gate`\n  - `cargo jackioh classify --base origin/main --claims`\n  - `pnpm --dir apps/web typecheck`\n  - `pnpm --dir apps/web test`\n  - `pnpm exec eslint apps/web e2e`\n  - every required CI check (CLAUDE.md rule 12)\n\n## Blocked by, part of\n\nNothing blocks it.\n\n- **#2560** touches the earning clock: see the clock bullet above.\n- **The move-ordering issue filed beside this one:** whichever lands second screens against `main` with the other in it.\n- **Risk:** the next shadow-ban sweep of record times decisions against `AI_SWEEP.decisionMs` (2 s), so watch it for new `timeout` bans.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2575: needs a plan; `claude-2` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2575 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
