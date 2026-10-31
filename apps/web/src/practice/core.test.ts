@@ -35,6 +35,7 @@ import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 import { PRACTICE_PRESETS } from "./decks.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { lessonStartConfig } from "../tutorial/start.ts";
+import { seedWhere } from "../test/seedSearch.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
 import type {
   PracticeDebug,
@@ -587,19 +588,45 @@ function handOf(snapshot: PracticeSnapshot): string[] {
   return Array.isArray(hand) ? hand.map((card) => card.instanceId) : [];
 }
 
+/** R345: the human turns R82's automatic turn end off for itself; the core accepts it at once and logs it. */
+function holdTurns(d: Driver): void {
+  expect(snapshotOf(d.send({ type: "act", action: { type: "setAutoEndTurn", enabled: false } })).error).toBeNull();
+}
+
+/** The AI-first run's two answers: the AI's step, then the human keeps its whole hand. */
+function aiAnswersFirst(d: Driver, started: PracticeSnapshot): PracticeSnapshot {
+  d.send({ type: "aiStep" });
+  const keep = keepAll(started);
+  if (keep === null) throw new Error("the human's own mulligan is open from the start (R265)");
+  return snapshotOf(d.send({ type: "act", action: keep }));
+}
+
+/** The human-first run's two answers: the human returns its first card, then the AI's step. */
+function humanAnswersFirst(d: Driver, started: PracticeSnapshot): PracticeSnapshot {
+  d.send({ type: "act", action: { type: "mulligan", keep: handOf(started).slice(1) } });
+  return snapshotOf(d.send({ type: "aiStep" }));
+}
+
 /**
- * The seeds deal player 1 a play on turn 1 in all four runs, so R82 does not end that turn before the
- * view is read. The Radiant pass's shadow ban (R186) changed the AI's random deck and moved them, and
- * patch v0.1.1 (its shadow ban of Zao Gao and CN-Viral Injection, then its card patches) moved the
- * AI-first pair twice more; #2278 moved seated p1 to `-h2` for the same reason, and #2454's
- * re-deal moved it back onto `-h`. #2521's cards re-deal it again, so seated p1 is on `-h2` once more
- * and seated p2 stays on `-h`.
+ * The seed an R265 run plays. Turn 1 is p1's, and R82 ends it at once when p1 has nothing to play on it.
+ * Seated p1, the human turns that off (`holdTurns`, R345), so the run plays `prefix` itself. Seated p2,
+ * the AI holds turn 1 and keeps R82 on, so the run plays the first seed under `prefix` on which `begin`,
+ * the run's own two answers, reaches turn 1 (#2569).
  */
+function r265Seed(prefix: string, human: PlayerId, begin: (d: Driver, started: PracticeSnapshot) => PracticeSnapshot): string {
+  if (human === "p1") return prefix;
+  return seedWhere(prefix, (seed) => {
+    const d = driver();
+    const started = snapshotOf(d.send({ type: "start", config: config({ seed, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }) }));
+    return begin(d, started).view.turn === 1;
+  });
+}
+
 describe("R265 the practice mulligan: the AI answers its own at once, and the human answers before or after it", () => {
   for (const human of ["p1", "p2"] as const) {
     it(`R265 seated ${human}: the AI answers first without waiting, the human's picker stays open, and the human's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);
-      const seed = `r265-ai-first-${human}-${human === "p1" ? "h2" : "h"}`;
+      const seed = r265Seed(`r265-ai-first-${human}`, human, aiAnswersFirst);
       const d = driver();
       const started = snapshotOf(
         d.send({
@@ -613,6 +640,7 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
       expect(keep, "and so does the human").not.toBeNull();
       if (keep === null) return;
       const choiceId = started.view.pending?.forYou === true ? started.view.pending.choiceId : null;
+      if (human === "p1") holdTurns(d);
 
       const aiAnswered = snapshotOf(d.send({ type: "aiStep" }));
       expect(debugOf(d).log.at(-1)).toEqual(expect.objectContaining({ type: "mulligan", playerId: ai, nonce: "a0" }));
@@ -634,18 +662,17 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
       expect(begun.aiToAct, "turn 1 is p1's").toBe(ai === "p1");
     });
 
-    // Re-pinned for the Training Grounds release (#2204): the AI's random deck draws from the set now,
-    // and seed `-d` dealt the AI (p1) a hand with nothing to play on turn 1, so its turn auto-ended
-    // (turnAutoEnded) before the snapshot read turn 1.
     it(`R265 seated ${human}: the human answers first and waits with its answer sealed, and the AI's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);
+      const seed = r265Seed(`r265-human-first-${human}`, human, humanAnswersFirst);
       const d = driver();
       const started = snapshotOf(
         d.send({
           type: "start",
-          config: config({ seed: `r265-human-first-${human}-e`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
+          config: config({ seed, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
         }),
       );
+      if (human === "p1") holdTurns(d);
       const hand = handOf(started);
       const kept = hand.slice(1);
       const sealed = snapshotOf(d.send({ type: "act", action: { type: "mulligan", keep: kept } }));
