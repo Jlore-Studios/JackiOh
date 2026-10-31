@@ -215,7 +215,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-10-15b/2026-10-21";
+pub const TERMS_VERSION: &str = "2026-10-31/2026-10-31";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
