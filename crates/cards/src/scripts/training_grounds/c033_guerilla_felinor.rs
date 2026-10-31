@@ -3,11 +3,10 @@
 //!
 //! Base:    "Cry: Deal 7 damage randomly split among enemy Units."
 //! Radiant: "Pierce / Cry: Deal 14 damage randomly split among enemy Units."
-//! Engine: `damage_split` among the enemy Units: {damage} hits of 1, each drawn from the match rng among
-//! the enemy Units still standing as it lands (R60), no state check between the hits (R59), no hero;
-//! with no enemy Unit standing the rest are lost. Each hit's source is this Unit, so on the Radiant face
-//! each pierces Armor (R346), as S #19 Imprisoned Cosmality's do. The designer's "repeat 7 times" is 7
-//! hits in all.
+//! Engine: `damage_split`: {damage} hits of 1, each drawn from the match rng among the enemy Units still
+//! standing as it lands (R60), no state check between hits (R59), no hero; with none standing the rest
+//! are lost. Each hit's source is this Unit, so on the Radiant face each pierces Armor (R346), as S #19
+//! Imprisoned Cosmality's do. The designer's "repeat 7 times" is 7 hits in all.
 
 use jackioh_engine::prelude::*;
 
@@ -95,7 +94,6 @@ mod tests {
             s.play(GUERILLA, json!({}));
             let hits = hits(&s);
             assert_eq!(hits.len(), 7);
-            // Spikey Steven has 2 Health: once dead it is drawn no more, so it takes at most 2.
             let on_frail = hits.iter().filter(|(target, _)| *target == frail).count();
             assert!(on_frail <= 2, "{on_frail} hits on a 2-Health Unit");
             let big = s.unit_at(P2, 2);

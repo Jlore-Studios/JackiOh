@@ -3,20 +3,17 @@
 //!   Base:    "Set a Unit's Attack and Health to 10/10."
 //!   Radiant: "Set a Unit's Attack and Health to 20/20."
 //!
-//! Engine: R2198000's `set_stats` on one declared target, any Unit on either side (R81): M+ #21
-//! Harmony Spirit's set (R1185002), so the Unit's layer 1 is 10/10, its buffs and the stat half of
-//! its tuning go and its damage is healed, auras still adding on top (§10.4), and R78's reset takes it
-//! off with the card leaving the field. An Immutable Unit is never offered to a Spell (R781001), so it
-//! is never set (R23). The 10/10 is the text's frame, not a param: which way is better hangs on whose
+//! Engine: R2198000's `set_stats` on any Unit on either side (R81), M+ #21 Harmony Spirit's set
+//! (R1185002): layer 1 is 10/10, buffs and the stat half of its tuning go, damage healed, auras still
+//! add (§10.4); R78's reset takes it off as the card leaves the field. An Immutable Unit is never offered
+//! to a Spell (R781001), so never set (R23). The 10/10 is no param: which way is better hangs on whose
 //! Unit is picked (R1748003).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-034";
 
-/// The base face's 10/10.
 const SET_TO: i32 = 10;
-/// The Radiant face's 20/20.
 const RADIANT_SET_TO: i32 = 20;
 
 fn dino(to: i32) -> Script {

@@ -1,29 +1,21 @@
 //! #29 GIGA Glowy Jelly Bean (SPEC §8.2): "Every card in your hand becomes Radiant", radiant "Hand
 //! and all your permanents", and on both faces "Float reduces cost" (#1563). The radiant cell restates
 //! the whole scope, so it replaces the base clause and adds the permanents (§8 Conventions).
-//!
 //! Not `setRadiantRandom`: "every card" would burn rng draws on a foregone result and shift the
-//! cursor for every later roll (§9.3). The hook READS `ctx.state` to name the cards and returns one
-//! `setRadiant` per card, a no-op on a card already Radiant (§6.3 Make Radiant).
-//!
-//! "All your permanents" is §6.3's: units and backrow. `activeUnitsOf` gives only the top of each
-//! pile, since cards under a Stack are not on the field (R13, §3.2); control, not ownership, decides
-//! what is yours (R12). A permanent converts in place, the Cry not re-firing (§5.2, R22).
-//!
-//! Cost 7 is catalog data (6 until #1563). MAX_MANA is 4, so the card needs temporary mana (#6, #94, #95)
-//! or Floats; §2.3 lets current mana exceed max.
-//!
+//! cursor for every later roll (§9.3). One `setRadiant` per card, a no-op on one already Radiant (§6.3).
+//! "All your permanents" is §6.3's: units (the top of each pile only, R13, §3.2) and backrow, by
+//! control, not ownership (R12). A permanent converts in place, the Cry not re-firing (§5.2, R22).
+//! Cost 7 is catalog data; MAX_MANA is 4, so it needs temporary mana (#6, #94, #95) or Floats (§2.3).
 //! "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger and a deck
-//! trigger (R464): each Float of its owner's lowers its cost by that much, kept until a graveyard or
-//! exile (R766). Until #1563 it had no such trigger (`script_v0_4_0f`, kept for the replays of v0.4.0f
-//! and before, R767000).
+//! trigger (R464), kept until a graveyard or exile (R766). `script_v0_4_0f`, without it, is kept for
+//! the replays of v0.4.0f and before (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-029";
 
-/// Your hand, through the read-only `zoneCards`, which hands back a copy. The card itself sits in
-/// the `resolving` zone while its script runs (§10.5), so it does not flag itself.
+/// Your hand. The card itself sits in the `resolving` zone while its script runs (§10.5), so it does
+/// not flag itself.
 fn hand_of(ctx: &EffectContext<'_>) -> Vec<String> {
     zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand)
         .iter()
@@ -45,7 +37,6 @@ fn permanents_of(ctx: &EffectContext<'_>) -> Vec<String> {
     ids
 }
 
-/// One `setRadiant` per card the hook named by id: the hook reads, never writes.
 fn make_radiant(cards: &[String]) -> Vec<Effect> {
     cards
         .iter()
@@ -103,7 +94,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// Your permanents as §6.3 means them: units (top of each pile only, R13) and backrow.
     fn permanents_of(state: &GameState) -> Vec<CardInstance> {
         let side = &state.players.p1;
         let mut cards: Vec<CardInstance> = side.units.iter().flatten().filter_map(|pile| pile.first().cloned()).collect();
@@ -145,7 +135,6 @@ mod tests {
             let mut s = giga(4, false);
 
             s.expect_refused_with(|s| s.play("core-029", json!({})), "7");
-            // Nothing happened: no card played, no flag set.
             assert!(!s.state().players.p1.hand.iter().any(|card| card.radiant));
             assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
         }
@@ -178,7 +167,6 @@ mod tests {
             for id in &hand_ids {
                 assert!(s.card(id).radiant);
             }
-            // The base cell is the hand only: permanents, library and the opponent are untouched.
             for id in &permanent_ids {
                 assert!(!s.card(id).radiant);
             }
@@ -231,7 +219,6 @@ mod tests {
                 assert!(!card.radiant);
             }
             assert_eq!(s.unit(P2, 1).map(|card| card.radiant), Some(false));
-            // The library is in neither cell.
             for card in &s.state().players.p1.library {
                 assert!(!card.radiant);
             }
@@ -246,8 +233,8 @@ mod tests {
 
             s.play("core-029", json!({}));
 
-            // #13 Jlockeed Shredder-10 is 6/10 → 12/20; the 2 damage stays, so health is 18 and no Cry
-            // re-fires, because setting a flag is not an entry to the field.
+            // #13 Jlockeed Shredder-10 is 6/10 → 12/20; the 2 damage stays, and no Cry re-fires: setting
+            // a flag is not an entry to the field.
             s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 20, "health": 18 }));
             assert_eq!(
                 s.last_events()

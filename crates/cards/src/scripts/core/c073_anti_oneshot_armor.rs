@@ -3,10 +3,7 @@
 //! cell "Cap 3; Cry: draw 2", R275: the cap is tightened AND the Cry draws twice as many).
 //!
 //! The cap is not an effect or an aura: it is step 3 of the §4.4 damage pipeline, so the card only
-//! contributes a static flag. `damage.rs hero_damage_cap` reads `static_flags.anti_oneshot` on the
-//! player's side, takes `ANTI_ONESHOT_CAP.radiant` for a radiant instance (else `.base`) and clamps with
-//! the smallest. It is per damage instance and hero-only; the radiant number comes from
-//! `jackioh_engine::config`, so "Cap 3" needs no radiant-specific code here.
+//! contributes a static flag, which `damage.rs hero_damage_cap` reads per instance and hero-only.
 //!
 //! R18: "lose health" is not damage, and `lose_health` never calls `hero_damage_cap`, so #27 Blood
 //! Ridden Glowy Jelly Bean's "you lose 7 health" goes through in full past this card.
@@ -18,9 +15,8 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-073";
 
-/// The cap is read by the pipeline (`damage::hero_damage_cap`) as the card's declared number `cap`
-/// (R386), 5 and 3 on the Radiant face, and the Cry's "draw 1" (radiant "draw 2") is the declared
-/// number `draw`: both faces run this one script.
+/// The pipeline reads the cap as the declared number `cap` (R386) and the Cry draws the declared
+/// `draw`, so both faces run this one script.
 fn anti_oneshot_armor() -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -40,9 +36,9 @@ pub fn script() -> CardScripts {
 
 // #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4: "A 12 hit becomes 5 (radiant 3), per instance,
 // hero only; Cry draws 1 (radiant 2, R275)", plus R18's "lose health bypasses the cap".
-// The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`; it prints 8/2 since patch
-// v0.3.10): a `field` setup fires no Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 7 health" is read against both caps:
-// 7 is over the base cap of 5 and the radiant cap of 3, so either face tells a clamp from a bypass.
+// The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`; it prints 8/2): a
+// `field` setup fires no Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 7 health"
+// is over both caps, so either face tells a clamp from a bypass.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -51,7 +47,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -184,7 +179,6 @@ mod tests {
 
             // Were the cap to apply, this would be 25. R18 says it does not.
             s.expect_health(P1, 23).expect_events(json!(["healthLost"]));
-            // Not a damage instance at all: nothing for the pipeline to clamp.
             assert!(damage_to(&s, "hero-p1").is_empty());
         }
     }

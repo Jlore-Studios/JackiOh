@@ -9,13 +9,10 @@
 //! radiant "Aura: your Rush Tokens +3/+3; same". Engine cell: "Aura keyed on def T-rush".
 //!
 //! §8 Conventions: "'same' says so explicitly", so the radiant face ADDS the aura and KEEPS the summon.
-//! R62/§6.2: "Start of turn" is the CONTROLLER's turn start (after the mana refresh, before the draw), so
-//! this fires on its controller's turns only (`run_hooks_in_trigger_order` in engine/src/triggers.rs).
+//! R62/§6.2: "Start of turn" is the CONTROLLER's turn start (after the mana refresh, before the draw).
 //! R64 places the token in the leftmost empty, unlocked, unreserved unit zone; a full board summons
-//! nothing and the trigger still resolves (§3.2).
-//! The aura is §10.4 layer 5, recomputed on every read by `unit_view`, so it vanishes with this Field Spell
-//! and lowers nothing permanently; §7 names this card as why `stats_override` is not the mechanism. Keyed
-//! on the def id, so it touches only Rush Tokens (`core-t-rush`) this card's controller controls.
+//! nothing and the trigger still resolves (§3.2). The aura is §10.4 layer 5, recomputed on every read,
+//! so it vanishes with this Field Spell; §7 names this card as why `stats_override` is not the mechanism.
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -64,9 +61,7 @@ pub fn script() -> CardScripts {
 }
 
 // #58 Rush Token Farm (SPEC §8.3, BUILD M4-T4 row 58: token each start of turn; radiant +3/+3 aura only on
-// Rush Tokens). Proved here: R62 and §6.2 (start of turn fires on the controller's turn only, after the
-// mana refresh, before the draw), R64 (leftmost empty unlocked zone; a full row summons nothing), §10.4
-// layer 5 (the aura is a computed layer, not a buff), §7, §8 Conventions ("same": the face summons AND pumps).
+// Rush Tokens).
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -130,7 +125,6 @@ mod tests {
             assert_eq!(units_of(&g, P1).len(), 1);
             assert_eq!(units_of(&g, P2).len(), 0);
 
-            // Back to p1: a second token.
             g.end_turn();
             assert_eq!(units_of(&g, P1), ["core-t-rush", "core-t-rush"]);
         }
@@ -320,7 +314,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-058, on both faces: a Rush Token at the start of turn, buffed on the Radiant face.
+    /// R2195003: the snapshot plays exactly as core-058, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_058() {
         for radiant in [false, true] {

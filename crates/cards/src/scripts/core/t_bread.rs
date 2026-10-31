@@ -172,7 +172,6 @@ mod tests {
                 let token = summon_bread_token(&mut s, json!({ "statsOverride": { "attack": 4, "health": 4 } }));
 
                 assert_eq!(token.def_id, ID);
-                // §10.4 layer 1 reads the override ahead of the printed face, and no later layer touches it.
                 s.expect_stats(&token, json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
                 let face = face_of(s.state(), &token);
                 assert_eq!((face.attack, face.health), (4, 4));

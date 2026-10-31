@@ -3,7 +3,7 @@
 //! Base: "Deal 2 damage to a target, +1 per full 5 health your hero is below 30, +1 per card in your
 //! exile". Radiant (R275): 4, per full 3, +2 per card; the target and the 30 baseline are kept.
 //! R72: "'Cards in exile' means your own exile pile; missing health counts from 30 even when the hero
-//! has more" (§2's 30, BUILD §2): the controller's own pile (§3), never the game-wide `counters.exiled` (R55).
+//! has more" (§2's 30, BUILD §2): the controller's own pile (§3), never `counters.exiled` (R55).
 //! R280: the `preview` is each face's text, its value the damage now, from public facts (§10.8).
 //! §8 Conventions: a bare `target` is a unit only (R90), so the heroes are named. R81: the pick travels
 //! in the `play` action. §4.4: one damage instance (R63). R662: glows in hand once a scaling term adds.
@@ -96,7 +96,7 @@ mod tests {
     /// The refusal's word, lower-case (a hand check: no regex crate).
     const TARGET_TEXT: &str = "target";
 
-    /// `scenario(opts)` with ANCHOR appended to p1's hand, the shipped cards registered first.
+    /// `scenario(opts)` with ANCHOR appended to p1's hand.
     fn board(opts: Value) -> Scenario {
         crate::register_all();
         let mut opts = opts;
@@ -196,8 +196,7 @@ mod tests {
 
         #[test]
         fn s4_4_the_whole_amount_is_one_pipeline_instance_so_armor_absorbs_it_once() {
-            // #25 4-mana 7/7 prints Armor 7; 2 + floor(10/5) = 4 is fully absorbed and R63 makes it a
-            // non-event rather than four separate hits.
+            // #25 prints Armor 7: 2 + floor(10/5) = 4 is absorbed whole, a non-event (R63), not four hits.
             let mut s = board(json!({ "p1": { "hand": [STAB], "health": 20 }, "p2": { "field": ["core-025"] } }));
             let targets = pick::unit_at(&s, P2, 1);
             s.play(STAB, json!({ "targets": targets }));

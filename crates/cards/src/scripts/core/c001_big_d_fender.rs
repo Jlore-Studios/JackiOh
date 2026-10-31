@@ -98,7 +98,6 @@ mod tests {
             }));
             s.expect_refused(|s| s.attack("core-001", "hero"));
             s.expect_refused(|s| s.attack("core-001", "core-025"));
-            // The board is untouched: no exertion was spent and nothing was damaged.
             s.expect_stats("core-025", json!({ "health": 7 }));
         }
 
@@ -135,7 +134,6 @@ mod tests {
         }
     }
 
-    /// R1081000: a Unit standing in the backrow in Defense Position takes the aura's Armor too.
     #[test]
     fn r1081000_a_defense_position_unit_standing_in_the_backrow_takes_the_armor() {
         crate::register_all();

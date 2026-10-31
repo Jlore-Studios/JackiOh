@@ -3,10 +3,9 @@
 //!
 //! Base:    "Cry: Summon 3 copies of this."
 //! Radiant: "Cry: Summon 3 copies of this."
-//! Engine: Core #12 Duplicating Felinors' `summon_copy` of itself, made `copies` times: each copy is
-//! R57's (the Radiant flag and buffs kept, damage reset) and lands in the leftmost free zone (R64), one
-//! failing silently per missing zone (§3.2). Copies are summons and fire no Cry (R1), so the chain ends
-//! after one round.
+//! Engine: Core #12 Duplicating Felinors' `summon_copy` of itself, `copies` times: each copy is R57's
+//! (Radiant flag and buffs kept, damage reset), in the leftmost free zone (R64) or silently none (§3.2).
+//! Copies are summons and fire no Cry (R1), so the chain ends after one round.
 
 use jackioh_engine::prelude::*;
 

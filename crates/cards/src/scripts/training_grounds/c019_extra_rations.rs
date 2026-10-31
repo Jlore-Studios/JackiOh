@@ -1,10 +1,8 @@
 //! TG #19 Extra Rations (SPEC §8.11 row 19). (1) Field Spell, Rare. "Start of turn: Draw {draw|card|cards}."
 //! (Radiant: "Draw {draw|card|cards}. They cost ({discount}) less.")
-//! Core #6 Mana Well's `start_of_turn` hook: its controller's start of turn, before the turn's draw
-//! (§2.2, R62, R68). The base face draws through `draw`; the Radiant face makes M #80 Aluneth's
-//! `draw_priced { costMod }` once per card, so each discount lands only on the card that draw put in
-//! the hand: a burned card or one cast on draw is not discounted (§2.4, R58). The discount is a
-//! `costMod`, never below (0) (R65), kept until the card leaves the hand (R766).
+//! Core #6 Mana Well's `start_of_turn` hook, before the turn's draw (§2.2, R62, R68). The Radiant face
+//! makes one M #80 Aluneth `draw_priced { costMod }` per card, so a burned card or one cast on draw is not
+//! discounted (§2.4, R58); the `costMod` floors at (0) (R65) and lasts until the card leaves the hand (R766).
 
 use jackioh_engine::prelude::*;
 
@@ -34,8 +32,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #19 Extra Rations — SPEC §8.11 row 19, BUILD M13 row TG 19. `start_turn()` runs the active
-// side's start of turn, the turn's own draw included.
+// TG #19 Extra Rations — SPEC §8.11 row 19, BUILD M13 row TG 19. `start_turn()` includes the turn's draw.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};

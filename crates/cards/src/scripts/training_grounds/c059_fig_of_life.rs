@@ -8,12 +8,8 @@
 //! #47 Fig of Life (SPEC §8.2): "Heal a target 20", radiant "40" — a radiant cell that changes only
 //! a number changes only that number (§8 Conventions), so the two faces are one effect at two sizes.
 //!
-//! R19 is the whole of the §8.2 Engine cell ("any unit or hero"): `side: "any"` with
-//! `of: ["unit", "hero"]`, so either side's units and both heroes are offered.
-//!
 //! The pick is a DECLARED play-time target: it travels in the play action's `targets` and never
-//! pauses resolution (R81), and R90 validates what the play carried. It arrives as `{ of: "chosen" }`.
-//! An empty target set fizzles and the spell still counts as played (§8 Conventions).
+//! pauses resolution (R81), and R90 validates what the play carried.
 //!
 //! "Heal 20" is §6.3's Heal row, not this card's: a unit loses up to 20 damage and never rises past
 //! its max health, while a hero gains 20 with no cap, since §3 gives a hero no maximum.
@@ -51,13 +47,8 @@ pub fn script() -> CardScripts {
 
 // #47 Fig of Life — SPEC §8.2, BUILD M4-T4: "Heals a unit up to max or the hero without cap (R19);
 // radiant 40".
-//
-// R19 is the §8.2 Engine cell in full ("Fig of Life may target any unit or hero"): the tests heal
-// an ally unit, an enemy unit, an own hero and an enemy hero.
-//
-// §8's "an empty target set fizzles" cannot arise: both heroes are always legal targets. What is
-// asserted instead is the §6.3 Heal split: a unit never rises past its max health, while a hero
-// has no maximum (§3) and goes straight past 30. The props have no script beyond printed keywords.
+// §8's "an empty target set fizzles" cannot arise: both heroes are always legal targets. The props
+// have no script beyond printed keywords.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -100,11 +91,9 @@ mod tests {
         json!({ "targets": [{ "pick": "hero", "player": player }] })
     }
 
-    /// "#47 Fig of Life"
     mod fig_of_life {
         use super::*;
 
-        /// "R19 base: heals an ally unit, and never past its max health (§6.3)"
         #[test]
         fn r19_base_heals_an_ally_unit_and_never_past_its_max_health() {
             let mut g = scenario(json!({
@@ -122,7 +111,6 @@ mod tests {
             g.expect_mana(PlayerId::P1, 1);
         }
 
-        /// "R19 base: heals an ENEMY unit — the target set is either side"
         #[test]
         fn r19_base_heals_an_enemy_unit_the_target_set_is_either_side() {
             let mut g = scenario(json!({
@@ -137,7 +125,6 @@ mod tests {
             g.expect_stats(&theirs, json!({ "health": 3, "maxHealth": 3 }));
         }
 
-        /// "R19 base: heals your own hero with no cap — 30 becomes 50 (§3, §6.3)"
         #[test]
         fn r19_base_heals_your_own_hero_with_no_cap_30_becomes_50() {
             // Both sides keep a unit on the board: a turn with nothing meaningful left auto-ends (R82),
@@ -154,7 +141,6 @@ mod tests {
             g.expect_events(json!(["healed"]));
         }
 
-        /// "R19 base: an enemy hero is a legal target too, and is healed the same way"
         #[test]
         fn r19_base_an_enemy_hero_is_a_legal_target_too_and_is_healed_the_same_way() {
             let mut g = scenario(json!({
@@ -168,7 +154,6 @@ mod tests {
             g.expect_health(PlayerId::P1, 30);
         }
 
-        /// "radiant: 40 onto a unit is still capped by its max health (§8 Conventions: only the number)"
         #[test]
         fn radiant_40_onto_a_unit_is_still_capped_by_its_max_health() {
             let mut g = scenario(json!({
@@ -182,7 +167,6 @@ mod tests {
             g.expect_stats(&ally, json!({ "health": 7, "maxHealth": 7 }));
         }
 
-        /// "radiant: 40 onto a hero has no cap — 30 becomes 70"
         #[test]
         fn radiant_40_onto_a_hero_has_no_cap_30_becomes_70() {
             let mut g = scenario(json!({
@@ -195,7 +179,6 @@ mod tests {
             g.expect_health(PlayerId::P1, 70);
         }
 
-        /// "radiant: an undamaged unit is healed for nothing and the spell still resolves"
         #[test]
         fn radiant_an_undamaged_unit_is_healed_for_nothing_and_the_spell_still_resolves() {
             let mut g = scenario(json!({
@@ -209,7 +192,6 @@ mod tests {
             g.expect_in_zone(FIG, "graveyard");
         }
 
-        /// "R19, R81: both faces declare one play-time target — any unit or hero, either side"
         #[test]
         fn r19_r81_both_faces_declare_one_play_time_target_any_unit_or_hero_either_side() {
             let def = def();
@@ -252,7 +234,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-047, on both faces: the heal.
+    /// R2195003: the snapshot plays exactly as core-047, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_047() {
         for radiant in [false, true] {

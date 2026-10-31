@@ -3,10 +3,9 @@
 //!   Base:    "Cry: Add {cards|random Training Grounds card|random Training Grounds cards} to your hand.
 //!            They cost ({discount}) less. / Death: the same." — cards 3, discount 1
 //!   Radiant: the same with Radiant cards — cards 3, discount 1
-//! Engine: S #45 Drone Commander's add, as a Cry and as a Death. The pool names the set (`{ "set":
-//!   "Training Grounds" }`), so it works while the set is held (R2194001): every non-token card of the set
-//!   but this one (R387), one draw of the match rng per card, repeats allowed (R60), each with a `costMod`
-//!   of minus `discount` that floors at (0) (R65); a full hand burns the rest (§2.4). `cards` and
+//! Engine: S #45 Drone Commander's add, as a Cry and as a Death. The pool names the set (R2194001): its
+//!   non-token cards but this one (R387), one match-rng draw per card, repeats allowed (R60), each with a
+//!   `costMod` of minus `discount` flooring at (0) (R65); a full hand burns the rest (§2.4). `cards` and
 //!   `discount` are read by both hooks. Radiant: added Radiant.
 
 use jackioh_engine::prelude::*;
@@ -47,7 +46,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
 
-    /// p1, active with 30 mana, holds the Tutorial Master (`radiant` its face) and a Hit Job.
     fn game(radiant: bool, seed: &str) -> Scenario {
         crate::scenario(json!({
             "seed": seed,

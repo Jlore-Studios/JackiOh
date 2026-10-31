@@ -4,24 +4,18 @@
 //!            Units." — armorGain 1
 //!   Radiant: the same with Armor 6 — armorGain 2
 //! Engine: Armor 3 and Armor 6 are printed keywords (§6.1, R1360). The trigger is S #23 Warp Disruptor's
-//!   arrival (R1875003) on either side (R2197003): a Unit summoned (a Recruit, a token, a copy, Reborn) at
-//!   once, a played one once it resolves, each once, never Floodgates' own; a Field Spell or a Trap is no
-//!   Unit. Each grants Armor {armorGain} (`grant_keyword`; Armor stacks), kept until it leaves the field
-//!   (R78). Death: every Unit its controller has as it died is destroyed (`destroy_all`, R89), an
-//!   Indestructible one staying, the opponent's untouched. Tunes: armorGain 1 ↑.
-//! The end (REVIEW A3.6, R2197005): the Death never takes the body it dies on, so a fused self-resummon
-//!   (S #112 Job Application's, the same card) stays; and run on a body that is not Floodgates itself (a
-//!   fusion, a granted text) that arrived this turn it destroys nothing, so two such bodies on one side
-//!   cannot destroy each other's return forever. A printed Floodgates is never such a body: it plays
-//!   as before.
+//!   arrival (R1875003) on either side (R2197003), never Floodgates' own; each grants Armor {armorGain}
+//!   (`grant_keyword`; Armor stacks), kept until it leaves the field (R78). Death: `destroy_all` of its
+//!   controller's Units as it died (R89). Tunes: armorGain 1 ↑.
+//! The end (REVIEW A3.6, R2197005): a fused self-resummon (S #112 Job Application's) stays, and two such
+//!   bodies on one side cannot destroy each other's return forever.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-030";
 
-/// R2197003: the Unit this event brings onto either side, or None: a summon of a Unit (Recruit, a token,
-/// a copy, Reborn), or a played one once it resolves — its play's own placement (§10.5 step 4, which
-/// carries `exitsFrom`) waits for that. Never this card itself.
+/// R2197003: the Unit this event brings onto either side: a summon, or a played one once it resolves (its
+/// own placement, §10.5 step 4, carries `exitsFrom` and waits for that). Never this card itself.
 fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     let state: &GameState = &*ctx.state;
     let me = ctx.self_.as_ref()?;
@@ -78,13 +72,11 @@ fn floodgates() -> Script {
             let Some(this) = ctx.self_.as_ref() else {
                 return vec![];
             };
-            // R2197005: on a body that is not Floodgates itself (a fusion, a granted text) and arrived
-            // this turn, the Death destroys nothing, so a body that resummons itself ends.
+            // R2197005: a fused or granted body that arrived this turn destroys nothing.
             if this.def_id != ID && this.summoned_turn == Some(ctx.state.turn) {
                 return vec![];
             }
-            // R2197005: the body it dies on is not among them, so its own resummon (S #112 Job
-            // Application's, the same card) stays.
+            // R2197005: not the body it dies on, so its own resummon (S #112 Job Application's) stays.
             vec![destroy_all(json_as(json!({ "side": "self", "excludeSelf": true })))]
         })),
         ..Script::default()
@@ -124,8 +116,7 @@ mod tests {
     const COLLATERAL: &str = "core-034"; // (4) Spell: Exile a permanent and a random card from the enemy deck.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
 
-    /// p1, active with 30 mana, has Floodgates (`radiant` its face) in lane 5, `mine` and `hand`; p2 has
-    /// `theirs` and a hand of Mr. Vanillas.
+    /// Floodgates stands in p1's lane 5; p2 holds a Mr. Vanilla to play on its turn.
     fn board(radiant: bool, mine: Value, hand: Value, theirs: Value) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant, "lane": 5 })];
         field.extend(mine.as_array().cloned().unwrap_or_default());
@@ -265,20 +256,19 @@ mod tests {
         }
     }
 
-    /// R2197005: Floodgates' Death on a body that resummons itself (S #112 Job Application's "Death:
-    /// Resummon this at Stage 1", fused in, as the AI sweep's `sweep:hard:traininggrounds-014:6` found).
+    /// R2197005: Floodgates' Death on a body that resummons itself (S #112 Job Application fused in), as
+    /// the AI sweep's `sweep:hard:traininggrounds-014:6` found.
     mod r2197005_a_fused_self_resummon_ends {
         use super::*;
 
         const JOB_APPLICATION: &str = "stinkyscape-112";
 
-        /// Fuses Job Application into the Unit `id` on the field, as `fuseCards` does (R77).
+        /// Fuses Job Application into the Unit `id`, as `fuseCards` does.
         fn fuse_job_application(s: &mut Scenario, id: &str, controller: PlayerId) -> String {
             fuse_into(s, id, &[JOB_APPLICATION], controller)
         }
 
-        /// Fuses `defs`, in that order, into the Unit `id` on the field (R77): their scripts run after
-        /// the Unit's own, in this order.
+        /// Fuses `defs` into the Unit `id` (R77): their scripts run after the Unit's own, in this order.
         fn fuse_into(s: &mut Scenario, id: &str, defs: &[&str], controller: PlayerId) -> String {
             let effect = jackioh_engine::effects::fuse_cards(json_as(json!({
                 "instanceIds": [id],

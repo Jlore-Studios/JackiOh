@@ -41,7 +41,6 @@ mod tests {
         out
     }
 
-    /// p2 holds the Golem in lane 1 and a Mr. Vanilla in lane 2; p1 has two heavy hitters (12/99).
     fn defending(radiant: bool, attack: i32) -> Scenario {
         let hitter = json!({ "def": BODY, "statsOverride": { "attack": attack, "health": 99 } });
         scenario(json!({

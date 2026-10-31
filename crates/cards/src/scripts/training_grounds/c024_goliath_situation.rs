@@ -1,14 +1,12 @@
 //! TG #24 Goliath Situation (SPEC §8.11 row 24). (1) Field Trap, Rare. "Reveals when your opponent plays
 //! a Unit: Cards in your hand that cost less than that Unit cost ({setCost})." (Radiant: a ({minCost})
 //! Cost or more Unit, and cards that cost no more than that Unit.)
-//! A Field Trap stays after firing and fires again (§5.1, R33), so every Unit the opponent plays while
-//! it is set fires it, face-down the first time and face-up after; each firing is the "reveal" the
-//! designer's "On reveal" names (R2199005). C #10 Exile's trigger: §10.5's announce (`cardAnnounced`),
-//! the condition in `when` (R99, R61), and "that Unit's cost" is the cost paid (R56, R70). Then M+ #3
-//! Wondrous Wand's `set_cost_override` on each hand card whose cost as it stands (R65, R396: an X card
+//! A Field Trap stays after firing (§5.1, R33), so each Unit the opponent plays fires it, each firing the
+//! designer's "On reveal" (R2199005). C #10 Exile's trigger: §10.5's announce, the condition in `when`
+//! (R99, R61), "that Unit's cost" the cost paid (R56, R70). Then M+ #3 Wondrous Wand's `set_cost_override`
+//! on each hand card whose cost now (R65, R396: an X card
 //! in hand costs 0) is under it (Radiant: at or under it). A later discount adds to the override and
-//! never takes it below (0), a raise still adds (R65); a card added to the hand later is untouched.
-//! The opponent never reads the new costs (R97).
+//! never takes it below (0) (R65). The opponent never reads the new costs (R97).
 
 use jackioh_engine::prelude::*;
 
@@ -63,8 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #24 Goliath Situation — SPEC §8.11 row 24, BUILD M13 row TG 24. p1 sets it in backrow lane 1 and
-// holds a (1) to (5) hand; p2 is active and plays.
+// TG #24 Goliath Situation — SPEC §8.11 row 24, BUILD M13 row TG 24.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};

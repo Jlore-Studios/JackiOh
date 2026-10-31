@@ -3,12 +3,10 @@
 //!   Base:    "Exile a permanent. Draw {draw|card|cards}." — 1.
 //!   Radiant: "Cleave / Exile a permanent. Draw {draw|card|cards}." — 2.
 //!
-//! Engine: Core #34 Collateral Damage's verbs: one declared target, any permanent on either side's
-//! field (a Unit or a backrow card, R81), exiled past Indestructible, a unit token ceasing to exist
-//! (R11, R55); then a `draw`. The Radiant face prints Cleave: on a Spell's board pick, R2198003 reads it
-//! as the permanents beside the pick, lanes N−1 and N+1 in its row on its side, exiled FIRST while the
-//! pick still stands in its lane (`exile_adjacent_to`, Core #34 Radiant's), a neighbour Immune to Spells
-//! passed by.
+//! Engine: Core #34 Collateral Damage's verbs: any permanent on either side's field (R81), exiled past
+//! Indestructible, a unit token ceasing to exist (R11, R55); then a `draw`. Radiant's Cleave on a Spell's
+//! pick (R2198003) is lanes N−1 and N+1 in its row and side, exiled FIRST while the pick still stands
+//! (`exile_adjacent_to`, Core #34 Radiant's); a neighbour Immune to Spells is passed by.
 
 use jackioh_engine::prelude::*;
 

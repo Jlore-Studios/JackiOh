@@ -66,9 +66,8 @@ mod tests {
     /// Three ordinary library cards, top first, so a draw is visible as an id moving to the hand.
     const LIBRARY: [&str; 3] = ["core-005", "core-016", "core-010"];
 
-    /// §2.5/R82 TURN ANCHOR. #10 Rapid Replenish is a 0-cost Spell and therefore always an affordable
-    /// play, so one in hand keeps a side's turn from auto-ending underneath the assertions. It is a
-    /// Spell, so it adds no body to the board and nothing to a draw or a hand-size count but its own.
+    /// §2.5/R82 TURN ANCHOR. #10 Rapid Replenish, a 0-cost Spell, is always an affordable play, so one in
+    /// hand keeps a side's turn from auto-ending; it adds no body and nothing to a count but its own.
     const ANCHOR: &str = "core-010";
 
     /// The ids a query answers, in its order.
@@ -118,7 +117,6 @@ mod tests {
                 assert!(ky_pool().contains(&card.def_id), "{} is no non-token KY card", card.def_id);
                 assert!(!card.radiant);
             }
-            // Nothing is drawn: the hand holds the anchor and nothing else.
             assert_eq!(def_ids(&s.pile(P1, "hand")), vec![ANCHOR.to_string()]);
             s.expect_in_zone("core-051-1", "graveyard");
         }

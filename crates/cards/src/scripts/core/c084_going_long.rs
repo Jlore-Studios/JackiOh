@@ -3,22 +3,17 @@
 //!   Radiant: "Armor 4 (Embiggened (4): 8)" — the cell changes only the two numbers (§8 Conventions).
 //!   Engine:  "Hero armor in pipeline step 2".
 //!
-//! Four numbers: normal 2, Embiggened 4; radiant normal 4, Embiggened 8 (`config.HERO_ARMOR`). The embiggen choice
-//! lands on the instance (R81) and Radiant is its flag, so the engine reads both off the card in the
-//! backrow and no card-side code is needed. Quickdraw is §6.2's static flag: setup moves the card into
-//! the opening hand on either face. The Armor is the `heroArmor` static flag, #73's shape: the pipeline
-//! sums every backrow grant (R124: sources add, unlike step 3's cap), and §4.4 step 2, lethal, the
-//! scorer and §10.8's hero block all read that one function. Nothing is stored, so the Armor stops when
-//! the Field Spell leaves, and "Ignores armor" skips step 2 whole.
+//! The embiggen choice lands on the instance (R81) and Radiant is its flag, so the engine reads both
+//! (`config.HERO_ARMOR`) off the card in the backrow. Quickdraw is §6.2's static flag. The Armor is the
+//! `heroArmor` static flag, #73's shape: the pipeline sums every backrow grant (R124: sources add) for
+//! §4.4 step 2 and §10.8's hero block. Nothing is stored, so the Armor stops when the Field Spell leaves.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-084";
 
-/// Both faces are the same script: §6.2's Quickdraw flag and the `heroArmor` flag. The four values
-/// live in `config.HERO_ARMOR`, selected by the instance's `radiant` and `embiggened`. The card
-/// declares them as `armor` and `paidArmor` (R386), which `damage::hero_armor_of` reads through
-/// `params::declared_or`, so a Degrade or an Upgrade moves the Armor the price selects.
+/// Both faces are the same script. The card declares its Armor as `armor` and `paidArmor` (R386), which
+/// `damage::hero_armor_of` reads through `params::declared_or`, so a Degrade or an Upgrade moves it.
 fn going_long() -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -32,16 +27,13 @@ fn going_long() -> Script {
 
 pub fn script() -> CardScripts {
     let base = going_long();
-    // "Armor 4 (Embiggened (4): 8)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
     let radiant = going_long();
     CardScripts { base, radiant }
 }
 
 // #84 Going Long (SPEC §8.4 row 84). BUILD M4-T4: "In opening hand; embiggen 2 → Armor 2, 4 → Armor 4
-// on the hero; radiant 4 / 8" (patch v0.1.1: the paid-4 numbers were 5 and 10). The four numbers:
-//   base 2 / 4, radiant 4 / 8 (paid 2 / paid 4). The Armor is asserted through a real damage instance
-// on the protected hero (§4.4 step 2); attackers are placed by `field`, so no Cry fires (R1). A card placed by setup is
-// "paid 2"; "paid 4" is PLAYED with `embiggen: true`. R63: a hit that is 0 after Armor emits no `damage`.
+// on the hero; radiant 4 / 8". Attackers are placed by `field`, so no Cry fires (R1). A card placed by
+// setup is "paid 2"; "paid 4" is PLAYED with `embiggen: true`. R63: a hit of 0 after Armor emits no `damage`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,9 +116,7 @@ mod tests {
         #[test]
         fn s6_2_quickdraw_the_engine_reads_the_flag_off_a_real_instance_of_either_face() {
             crate::register_all();
-            // Setup moves every library card carrying `quickdraw` into the opening hand (the engine's own
-            // setup test). This card owes the flag; `flags_of` resolves it through the instance's face, so
-            // this asserts the radiant face carries it too.
+            // Setup's move is the engine's own test; `flags_of` resolves the flag through the face.
             let s = scenario(json!({
                 "p1": { "library": [GOING_LONG, { "def": GOING_LONG, "radiant": true }] },
             }));

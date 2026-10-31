@@ -3,11 +3,11 @@
 //!
 //! Base:    "Cry: Destroy all permanents in the leftmost lane."
 //! Radiant: "Cry: Destroy all enemy permanents in the leftmost lane."
-//! Engine: C+ #24 Crushing Walls' sweep on one lane: the top card of each zone of lane 1 (§3: a
-//! lane is a column, numbered left to right from each owner's seat, so the leftmost is lane 1,
+//! Engine: C+ #24 Crushing Walls' sweep on one lane, each zone's top card (§3: lanes run left to right
+//! from each owner's seat, so the leftmost is lane 1,
 //! never mirrored), both sides and both rows (Radiant: the enemy's alone), passing a Unit standing on an
-//! Ivory Tower as its play resolves (R446, R653). The base face destroys this Unit too when it stands
-//! there, Hearthstone's "destroy all minions" (R2196003). TG #28 Occidental is its mirror on the last lane.
+//! Ivory Tower as its play resolves (R446, R653). The base face destroys itself there too, as
+//! Hearthstone's "destroy all minions" (R2196003). TG #28 Occidental mirrors it on the last lane.
 
 use jackioh_engine::prelude::*;
 
@@ -70,8 +70,7 @@ mod tests {
     const PRIME: &str = "classicplus-046-1";
     const FILLER: &str = "core-005";
 
-    /// Each side holds a Mr. Vanilla in lanes 1 and 4 and a backrow card in lanes 1 and 4 (p1's lane-1
-    /// one a face-down Trap).
+    /// Both sides hold Mr. Vanillas and backrow cards in lanes 1 and 4, p1's lane-1 one a face-down Trap.
     fn swept(radiant: bool, zone: i32) -> Scenario {
         let mut s = scenario(json!({
             "p1": {

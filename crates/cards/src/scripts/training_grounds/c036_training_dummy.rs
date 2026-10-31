@@ -3,11 +3,10 @@
 //!   Base:    "Can't be in Defense Position. / Death: Add {cards|random Radiant Training Grounds card|random
 //!            Radiant Training Grounds cards} to your hand." — cards 1
 //!   Radiant: "Death: Add {cards|…} to your hand." — cards 2
-//! Engine: C+ #48 Jlockeed's Lobbyist line for line. The restriction is C+ #65.1's `neverDefense` flag,
-//!   which the switch action, `legalActions` and a switch made as an effect all honor (R20); the Radiant
-//!   face drops it. The Death's pool names the set (`{ "set": "Training Grounds" }`), so it works while
-//!   the set is held (R2194001): every non-token card of the set but this one (R387), each Radiant, one
-//!   draw of the match rng per card (R60); a full hand burns the rest (§2.4). Tunes: cards 1 ↑.
+//! Engine: C+ #48 Jlockeed's Lobbyist line for line: C+ #65.1's `neverDefense` flag, which the switch
+//!   action, `legalActions` and an effect's switch all honor (R20); the Radiant face drops it. The Death's
+//!   pool names the set (R2194001): its non-token cards but this one (R387), each Radiant, one match-rng
+//!   draw per card (R60); a full hand burns the rest (§2.4). Tunes: cards 1 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -52,7 +51,6 @@ mod tests {
     const SWITCH_ALL: &str = "core-048"; // (0) Spell: switch the position of every Unit.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
 
-    /// p1, active, has the Dummy (`radiant` its face) in lane 1 and a Mr. Vanilla in lane 2.
     fn board(radiant: bool, seed: &str, hand: Value) -> Scenario {
         crate::scenario(json!({
             "seed": seed,

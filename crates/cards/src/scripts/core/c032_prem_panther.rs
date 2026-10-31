@@ -1,15 +1,12 @@
 //! #32 Prem Panther (SPEC §8.2 row 32): 5/4 "Rush / After this attacks, draw 2 for each Unit that
 //! attack destroyed", radiant 10/8 "Rush, Cleave / the same"; a Panther that died in the combat draws
 //! nothing (R2285001).
-//!
 //! Rush and Cleave are printed on the catalog faces, so §10.4 layer 1 grants them. The text is the
-//! engine's `afterAttack` hook, which runs once the state check that closes each combat the Panther
-//! attacked in (declared or forced, R53, R59) has run, with the combat's facts (`afterAttackOf`): the
-//! Units whose lethal hit it dealt there (its strike and its Cleave's; a defender's strike back is the
-//! defender's, and a defending Panther runs no hook). The engine runs it only for a Panther still on the
-//! field on the stay it attacked from (R2285001), so one that traded itself away draws nothing, nor
-//! does one back through Reborn, a new stay (R83). The hook acts for the player who controlled it in
-//! that combat, though a Death in the check (#86 Mrow's) took it since.
+//! engine's `afterAttack` hook, run once the state check closing each combat the Panther attacked in
+//! (declared or forced, R53, R59) has run, with the Units its lethal hits killed (`afterAttackOf`; a
+//! defending Panther runs no hook). It runs only for a Panther still on the stay it attacked from
+//! (R2285001), so not for one back through Reborn, a new stay (R83). It acts for the player who
+//! controlled it in that combat, though a Death in the check (#86 Mrow's) took it since.
 
 use jackioh_engine::combat::after_attack_of;
 use jackioh_engine::effects::draw;
@@ -47,22 +44,15 @@ pub fn script() -> CardScripts {
 
 // #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32 (R426): "Rush / After this
 // attacks, draw 2 for each Unit that attack destroyed"; radiant "Rush, Cleave / the same".
-//
-// R426: it draws only after an attack it made, declared or forced (R53), 2 for each Unit that attack
-// destroyed (the Unit it attacked, plus the Radiant face's Cleave kills); never for a Unit it kills
-// defending. Survival is not asked: the hook is owed on the snapshot the Panther fought with, so it
-// draws even when it dies in the combat, even one back through Reborn. R42 says who killed a Unit.
-//
-// Sparring partners: #15 Me and Mr Token (1/1, no keywords; its Cry does not fire from a `field`
-// setup), #13 Jlockeed Shredder-10 (8/10, kills a 5/4 Panther on the swing back and survives), #11
-// Tempo Timmy (3/3 Rush, First Strike, dies to a Panther's strike back) and #9 Moths to the Flame
-// (1/14, makes every enemy Unit attack it at its controller's start of turn).
+// R426: never for a Unit it kills defending; R42 says who killed a Unit. Sparring partners: #15 Me and
+// Mr Token (1/1; its Cry does not fire from a `field` setup), #13 Jlockeed Shredder-10 (8/10), #11
+// Tempo Timmy (3/3 Rush, First Strike) and #9 Moths to the Flame (1/14, makes every enemy Unit attack it).
 #[cfg(test)]
 mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -117,7 +107,6 @@ mod tests {
             assert_eq!(s.hand("p1").len(), 2);
             assert_eq!(s.pile("p1", "library").len(), 1);
             s.expect_events(json!(["attackDeclared", "damage", "destroyed", "drawn", "drawn"]));
-            // The death names the Panther as its killer (R42).
             let death = destroyed_event(&s, &prey.id);
             assert_eq!(death["killerId"], json!(panther.id));
         }
@@ -132,8 +121,8 @@ mod tests {
             let panther = must(s.unit("p1", 1), "p1's Panther");
             let other = must(s.unit("p2", 1), "p2's Panther");
 
-            // 5 into a 5/4 and 5 back into a 5/4: both die. "After this attacks" runs only for a Panther
-            // that survived the combat, so the trade draws nothing (issue #2285 reverses balance patch 1).
+            // 5 into a 5/4 and 5 back: both die, so the trade draws nothing (issue #2285 reverses balance
+            // patch 1).
             s.attack(&panther, &other);
 
             s.expect_in_zone(&panther, "graveyard");
@@ -141,7 +130,6 @@ mod tests {
             assert_eq!(s.hand("p1").len(), 0);
             assert_eq!(s.pile("p1", "library").len(), 3);
             assert!(!drew(s.last_events()));
-            // The death names the Panther as its killer (R42).
             let death = destroyed_event(&s, &other.id);
             assert_eq!(death["killerId"], json!(panther.id));
         }
@@ -211,7 +199,6 @@ mod tests {
                 event,
                 GameEvent::AttackDeclared { attacker_id, forced: true, .. } if *attacker_id == panther.id
             )));
-            // p1 drew 2 on p2's turn, for the Unit its forced attack destroyed.
             assert_eq!(s.hand("p1").len(), 3);
             assert_eq!(s.pile("p1", "library").len(), 1);
         }
@@ -252,8 +239,8 @@ mod tests {
                 .granted_keywords
                 .push(json_as(json!({ "kind": "Reborn" })));
 
-            // 5 into p2's 5/4 Panther and 5 back: both die, and p1's comes back at 1 health. The Reborn body
-            // is a new arrival (R83, R174), not the Panther that attacked, so nothing is drawn.
+            // 5 into p2's 5/4 Panther and 5 back: both die, and p1's comes back at 1 health, a new arrival
+            // (R83, R174), so nothing is drawn.
             let other = must(s.unit("p2", 1), "p2's Panther");
             s.attack(&panther, &other);
 
@@ -308,7 +295,6 @@ mod tests {
             }));
             let prey = must(s.unit("p2", 1), "p2 lane 1");
 
-            // The Shredder swings, not the Panther.
             let shredder = must(s.unit("p1", 2), "p1 lane 2");
             s.attack(&shredder, &prey);
 
@@ -357,8 +343,7 @@ mod tests {
             }));
             let panther = must(s.unit("p1", 1), "the radiant Panther");
 
-            // 10 kills the 6/10 and cleaves both 1/1s; 6 back kills the 10/8, 2 damage down already. Three
-            // kills the attack destroyed, but the Panther died, so p1 draws nothing.
+            // 10 kills the 6/10 and cleaves both 1/1s; 6 back kills the 10/8, 2 damage down already.
             let shredder = must(s.unit("p2", 2), "p2's Shredder");
             s.attack(&panther, &shredder);
 

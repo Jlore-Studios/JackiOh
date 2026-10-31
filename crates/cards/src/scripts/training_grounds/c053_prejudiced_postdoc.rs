@@ -9,15 +9,13 @@
 //! Base: "Cry: choose a Human unit on the field; summon a Vanilla copy". The radiant cell is "Any
 //! unit", which per §8's Conventions restates only which units the pick may name.
 //!
-//! The copy is R57's (form and radiant flag carried; damage, exertion and counters reset) with three
-//! deviations only #61 asks for, both arguments to `summon_copy` (CLAUDE.md rule 5): its Vanilla flag is
-//! on, so it is at its printed stats with no buffs (R781003), and it has no granted keywords (BUILD
-//! M4-T4 #8). R23: Immutable blocks Vanilla on the
-//! Immutable card ITSELF, so an Immutable target is a legal pick. Auras (§10.4) are computed on read.
+//! The copy is R57's (form and radiant flag carried; damage, exertion and counters reset) plus two
+//! `summon_copy` arguments only #61 asks for (CLAUDE.md rule 5): Vanilla, so printed stats and no buffs
+//! (R781003), and no granted keywords (BUILD M4-T4 #8). R23: Immutable blocks Vanilla on the Immutable
+//! card ITSELF, so an Immutable target is legal. Auras (§10.4) are computed on read.
 //!
-//! R81/R90: the pick travels in the `play` action, so resolution never pauses. The Postdoc is still in
-//! hand when the play's choices are validated (§10.5 step 1), so it needs no `excludeSelf`. A pick the
-//! board cannot satisfy fizzles the Cry and the unit still enters (§8 Conventions, R90).
+//! R81/R90: the pick travels in the `play` action. The Postdoc is still in hand when the play's choices
+//! are validated (§10.5 step 1), so it needs no `excludeSelf`.
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;
@@ -58,7 +56,6 @@ pub fn script() -> CardScripts {
 }
 
 // #61 Prejudiced Postdoc — SPEC §8.3, BUILD M4-T4 row 61.
-//
 // Must-pass: "Vanilla copy of a Human keeps the target's form at its printed stats, no buffs (R781003), no keywords or text, no
 // damage; auras apply afresh; an Immutable target is legal (R23, R57); radiant any unit."
 #[cfg(test)]
@@ -80,8 +77,7 @@ mod tests {
         json!({ "pick": "instance", "instanceId": card.id })
     }
 
-    /// The Postdoc is a Unit, so it takes p1's leftmost free lane itself (R64) and its copy takes the
-    /// next one. With an empty p1 board that is lane 1 for the Postdoc and lane 2 for the copy.
+    /// The Postdoc takes p1's leftmost free lane itself (R64) and its copy the next one.
     const COPY_LANE: i32 = 2;
 
     /// The message a refused step panics with; the caller matches it by hand (no regex crate in a
@@ -116,8 +112,7 @@ mod tests {
 
             let copy = s.unit_at(P1, COPY_LANE);
             assert_eq!(copy.def_id, TIMMY);
-            // The target's form at its printed 3/3: a Vanilla copy is a Vanilla'd Unit like any other, so
-            // the buffs R57 would carry go (R781003), and R57 resets its damage.
+            // A Vanilla copy drops the buffs R57 would carry (R781003); R57 resets its damage.
             s.expect_stats(&copy, json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
             assert_eq!((copy.buffs.attack, copy.buffs.health), (0, 0));
             assert_eq!(copy.damage, 0);
@@ -140,10 +135,8 @@ mod tests {
             let copy = s.unit_at(P1, COPY_LANE);
             // Vanilla: §10.4 drops the printed keywords (Rush, First Strike) on the read.
             assert!(copy.vanilla);
-            // "no granted keywords": Plastic Surgery's keyword stayed on the original.
             assert!(copy.granted_keywords.is_empty());
             assert_eq!(s.card(&timmy).granted_keywords.len(), 1);
-            // The original is untouched: only the copy is Vanilla.
             assert!(!s.card(&timmy).vanilla);
         }
 
@@ -183,7 +176,6 @@ mod tests {
             // The copy is Vanilla, so neither Indestructible nor Immutable reaches it.
             assert!(s.stats(&copy).keywords.is_empty());
             assert!(copy.vanilla);
-            // R23 blocks Vanilla on the Immutable card itself, and nothing here touched it.
             assert!(!s.card(&immutable).vanilla);
         }
 
@@ -217,7 +209,6 @@ mod tests {
 
             s.expect_in_zone(POSTDOC, "field");
             assert_eq!(s.unit_at(P1, 5).def_id, POSTDOC);
-            // Every lane is taken, so the copy had nowhere to go and was never created.
             let p1_defs: Vec<String> = (1..=5).map(|lane| s.unit_at(P1, lane).def_id).collect();
             assert!(!p1_defs.iter().any(|def_id| def_id == TIMMY));
         }
@@ -262,7 +253,7 @@ mod tests {
         #[test]
         fn r81_the_base_face_declares_a_human_only_pick_and_the_radiant_face_declares_any_unit() {
             // The pick travels in the play action, so the narrowing lives in the declaration `legalActions`
-            // and R90 read — not in the hook. This is the only place the base/radiant difference exists.
+            // and R90 read, not in the hook.
             crate::register_all();
             let faces = script();
             assert_eq!(
@@ -306,7 +297,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-061, on both faces: a Vanilla copy of the chosen Unit.
+    /// R2195003: the snapshot plays exactly as core-061, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_061() {
         for radiant in [false, true] {

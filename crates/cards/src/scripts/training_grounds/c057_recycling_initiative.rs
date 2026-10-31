@@ -19,42 +19,17 @@
 //! flag kept) of every card in `turnLog.playedIds` except this one, including cards played after it
 //! (R71); instances that no longer exist are skipped rather than fizzling (R86)."
 //!
-//!   - R71 is why the log is read when the delayed effect RUNS rather than when the Cry resolves: by
-//!     end of turn it has grown, so cards played AFTER this one are copied too. That is also why the
-//!     clause is a delayed effect and not an `endOfTurn` hook: the card is in exile by then, and
-//!     `turn.triggerOrder` only walks units and the backrow, so an `endOfTurn` hook would never be
-//!     reached. A delayed continuation names its script by stored def id, so it comes back to this
-//!     script even though the card is gone from play (R127, the same shape R76 gives #50 K-Pop
-//!     Fanatic) — with `ctx.self` whatever `findInstance` makes of it, exile pile included.
-//!   - R86 is the `findInstance` skip below: an id whose instance has ceased to exist (a unit token
-//!     that left the field, R11) drops out of the pool instead of fizzling on it. An id whose card
-//!     merely changed zone is still in the pool, which is why nothing here filters on `zone`.
-//!   - R57 is `addToHand`'s contract — a fresh instance carrying only the radiant flag — which is
-//!     exactly "a fresh copy (radiant flag kept)" on the base face. The radiant face's copies are
-//!     Radiant whatever the played card was: a flag that is only ever set (§5.2), never taken away.
-//!   - "every OTHER card" excludes this card's own id, and it is the set of cards played, not the
-//!     list of plays (R133). `turnLog.playedIds` holds one entry per play, so a card played, bounced
-//!     and replayed in one turn (#24) is two entries and one card, and it is copied ONCE: the loop
-//!     below skips an id it has already seen, ahead of R86's skip.
+//! A delayed effect and not an `endOfTurn` hook: the card is in exile by then, and end-of-turn hooks
+//! walk only units and the backrow. `delay` stores a `Resume` (script id, step and captured data, never
+//! a closure) that names its script by stored def id, so it re-enters this script with the card gone
+//! from play (R127, the shape R76 gives #50 K-Pop Fanatic): the id it needs travels in `data`. R126:
+//! the continuation is registered ONCE, in the `resume` table, so `delay` is passed `hook: RESUME_HOOK`.
+//! The radiant face's copies are Radiant whatever the played card was: the flag is only ever set (§5.2).
 //!
-//! WHERE THE CONTINUATION LIVES (R126, R127). `delay` stores a `Resume` — "script id + step +
-//! captured data", never a closure — and `turn.runDelayed` re-enters it through the one reader,
-//! `prompts.runResume`, which resolves `resume.hook` against either shape: a `Hook` on the script or
-//! a step table (`resume`, where `resume.step` picks the entry). So this card registers its
-//! continuation ONCE, in the `resume` table that every other pause in the repo uses, and says so by
-//! passing `hook: RESUME_HOOK` to `delay` (whose default is the `delayed` hook). R126: "A card must
-//! never have to register one continuation under two keys". R127 covers the rest: the entry is named
-//! by stored def id, so it re-enters with `ctx.self === null` once this card is in exile, which is
-//! why the id it needs travels in `data`.
-//!
-//! THE DISCOUNT. Radiant's "the copies cost 1 less" is R65's `costMod`, not a `costOverride`: an
-//! override REPLACES the printed cost, so it would make an X-cost copy free outright (R65: "a
-//! `costOverride` makes one free while X is still chosen") and erase an embiggen card's price choice.
-//! `setCostMod` cannot stand in for it either — the fresh copy does not exist until `addToHand`
-//! creates it, and `setCostMod`'s only way to name a card is a `TargetSpec`. So the −1 is passed as
-//! `addToHand`'s `costMod`, which R78 keeps in every zone. It is a price in the hand, so it lands
-//! only on a copy that reaches one: a copy a full hand burns reaches the graveyard with its radiant
-//! flag and without the discount (§2.4, R4, R215).
+//! THE DISCOUNT is R65's `costMod`, not a `costOverride`, which would make an X-cost copy free outright
+//! and erase an embiggen card's price choice. The copy does not exist until `addToHand` creates it, so
+//! the −1 is `addToHand`'s `costMod`, which R78 keeps in every zone; a copy a full hand burns reaches
+//! the graveyard with its radiant flag and without the discount (§2.4, R4, R215).
 
 use indexmap::IndexSet;
 use jackioh_engine::effects::{add_to_hand, delay, exile};
@@ -98,12 +73,10 @@ fn excluded_id(ctx: &EffectContext<'_>) -> Option<String> {
     ctx.self_.as_ref().map(|card| card.id.clone())
 }
 
-/// R71: the log is read here, when the delayed effect runs, so later plays are in it — through the
-/// engine's read-only `playedIdsThisTurn` (engine/src/query.ts), which gives the ids in play order.
-/// R86: an id whose instance no longer exists is skipped rather than fizzled on.
-/// R133: the log holds one entry per play, so a card played, bounced and replayed is two entries and
-/// one card. "Every other card you played this turn" is the set of cards, not the list of plays, so
-/// each id yields one copy; deduping by id leaves R86's skip untouched.
+/// R71: the log is read here, when the delayed effect runs, so later plays are in it, in play order.
+/// R86: an id whose instance no longer exists is skipped rather than fizzled on; one that merely changed
+/// zone is still copied, so nothing filters on `zone`. R133: a card played, bounced and replayed (#24)
+/// is two entries and one card, and each id yields one copy; deduping by id leaves R86's skip untouched.
 fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effect> {
     let self_id = excluded_id(ctx);
     let discount = discount_of(ctx, terms);
@@ -179,20 +152,9 @@ pub fn script() -> CardScripts {
 
 // #39 Recycling Initiative — SPEC §8.2 row 39, BUILD M4-T4 row 39: "Exiled on play; end of turn
 // adds copies of every other card played this turn, including later ones (R71); radiant copies
-// cost 1 less". R275 raised the radiant face: its copies are Radiant as well as 1 cheaper, whatever
-// the played card was, where the base face's copies keep the played card's own flag (R57).
-//
-// The rulings these tests are named after:
-//   R71  the log is read at END of turn, so cards played AFTER this one are copied too;
-//   R62  end-of-turn triggers → the trap window → delayed effects → cleanup, so the copies arrive
-//        after a `turnEnded` trap has fired and before the next turn starts. `turnEnded` itself is
-//        emitted BEFORE the window (`turn.ts`), so it is no use as a "just before cleanup" marker:
-//        `turnStarted` is the first event after cleanup and that is what these tests key on;
-//   R86  an id in `turnLog.playedIds` whose instance has ceased to exist is skipped, not fizzled on;
-//   R57  a copy is a fresh instance carrying the radiant flag and nothing else;
-//   R275 the radiant face's copies are Radiant and 1 cheaper;
-//   R65  radiant's "cost 1 less" is a `costMod`, so the copy's price is what `effectiveCost`
-//        reports to the client in `viewFor` and what the player actually pays.
+// cost 1 less".
+// R62: end-of-turn triggers → the trap window → delayed effects → cleanup. `turnEnded` is emitted
+// before the window, so the tests key on `turnStarted`, the first event after cleanup.
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -216,7 +178,6 @@ mod tests {
         json!({ "hand": [STOCKPILE, TIMMY], "library": [MENACE, POSTDOC] })
     }
 
-    /// TS `{ ...side, ...SPARE }`.
     fn with_spare(mut side: Value) -> Value {
         if let Value::Object(spare) = spare() {
             for (key, value) in spare {
@@ -226,7 +187,7 @@ mod tests {
         side
     }
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// `scenario` with the shipped cards registered first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -539,7 +500,6 @@ mod tests {
                 assert_eq!(copy.cost_mod, -1);
                 assert_eq!(view_cost(&s, "p1", &copy.id), 0);
             }
-            // The originals on the field are untouched: only the copies are Radiant.
             assert_eq!(s.unit("p1", 1).map(|card| card.radiant), Some(false));
         }
 
@@ -647,7 +607,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-039, on both faces: the exile, and the copies at the end of the turn.
+    /// R2195003: the snapshot plays exactly as core-039, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_039() {
         for radiant in [false, true] {
