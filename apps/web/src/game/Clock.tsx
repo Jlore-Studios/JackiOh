@@ -4,7 +4,7 @@
 // monotonic: each frame is anchored to `performance.now()` on arrival and every repaint adds the delta
 // to the server's `now`, as `protocol.rs`'s `clock` message says, never `Date.now()`.
 // The last 30 seconds of a running turn clock (R439): the running side's line turns urgent and the
-// viewer's own turn adds an ember fuse.
+// viewer's own turn adds an ember fuse; reduced motion keeps the static readout, no fuse.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 

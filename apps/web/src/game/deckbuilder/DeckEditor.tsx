@@ -1,6 +1,7 @@
 // Deck editor: saved deck, card pool and actions (SPEC §9.4, R250–R255; docs/polish/6-cards.md, Surface D).
 // Validator messages avoid a second source of truth (messages.test.ts). `addCard` rejects duplicates,
-// full decks (D2, D4), and compared cards (R251); existing clashes stay visible. The store autosaves (R256).
+// full decks (D2, D4), and compared cards (R251); existing clashes stay visible. The store autosaves
+// (R256); completing a deck saves immediately.
 //
 // R915005: the account's custom cards come in the catalog the route hands it (set `Custom`), behind a
 // "Custom" set chip beside the way to the creator; a deck that names one is "Practice only" (L7).

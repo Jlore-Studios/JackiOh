@@ -1,5 +1,5 @@
 // The deck builder's filter bar. The Card Almanac (R630) renders the same bar with no "owned only"
-// control and its own tag chips.
+// control and its own tag chips; without those two props the bar is the deck builder's.
 //
 // Controlled and dumb: the filter and the sort live in `Deckbuilder`, and what they mean lives in
 // filters.ts. Chips are real toggle buttons (`aria-pressed`), so a keyboard and a screen reader

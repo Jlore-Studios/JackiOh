@@ -1,8 +1,8 @@
 // The rows of a virtual pool grid to mount, kept as the pool scrolls and resizes (#2334); the
 // arithmetic and the reads of the page are poolWindow.ts's. The grid's first render knows nothing of
-// its layout, so it draws POOL_FIRST_CARDS and the layout effect after it reads the page and settles
-// the rows before the first paint. Where the page has no layout to read (a test's jsdom), nothing can
-// be windowed and every card is drawn, as in a grid that is not virtual. The rows follow every scroll
+// its layout, so it draws POOL_FIRST_CARDS (the hook says null) and the layout effect after it reads
+// the page and settles the rows before the first paint. Where the page has no layout to read (a test's
+// jsdom), nothing can be windowed and every card is drawn (the hook says "all"). The rows follow every scroll
 // of the grid or of what holds it (one listener in the capture phase on the document, which sees them
 // all), and every resize.
 

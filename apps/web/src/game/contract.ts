@@ -95,7 +95,8 @@ export const testid = {
   mulliganWaiting: "mulligan-waiting",
   /**
    * R384, R510: the Activate control on a card the viewer controls (ActivateControl.tsx). `ability`
-   * is named only when the card lists several (`CardView.activations`).
+   * is named only when the card lists several (`CardView.activations`), so a card with one ability
+   * is always `activate-<instanceId>`.
    */
   activate: (instanceId: string, ability?: string): string =>
     ability === undefined ? `activate-${instanceId}` : `activate-${instanceId}-${ability}`,

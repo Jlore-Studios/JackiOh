@@ -7,7 +7,8 @@
 // engine's `legalActions`; `canAct` / `usedThisTurn` are drawn as state, never consulted as permission.
 //
 // What it draws is the card presentation module's (apps/web/src/cards, docs/polish/6-cards.md). The
-// face is the card in play (faces.ts, SPEC §10.10), a hand Unit's grown stats (#89) included; a
+// face inside is `.cf`, which ignores the pointer, so the root and the badges beside it take every
+// click. The face is the card in play (faces.ts, SPEC §10.10), a hand Unit's grown stats (#89) included; a
 // match-made card reads its definition from the view (`MatchCardsContext`, R243) where the catalog has none.
 //
 // R667: the viewer's hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice would

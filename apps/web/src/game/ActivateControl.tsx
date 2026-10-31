@@ -1,7 +1,8 @@
 // Activate control (B3.2, SPEC §6.2, R384; presentation R510, R1751000).
 // It renders view data only (CLAUDE.md rule 7): `highlight.legal` decides a press, while `usable`
-// and `reason` are displayed only. Cards with multiple abilities wear a single button opening an ability
-// picker modal (R1751000). It flashes for its `activated` animation row; reduced motion uses a static ring.
+// and `reason` are displayed only. A press reports `{ on: "activate", instanceId, ability? }`;
+// cards with multiple abilities wear a single button opening an ability picker modal (R1751000).
+// It flashes for its `activated` animation row; reduced motion uses a static ring.
 
 import type { KeyboardEvent, MouseEvent, ReactElement } from "react";
 

@@ -11,7 +11,8 @@
 // `unrevealed` so the face can say the other player sees only a back (R371).
 //
 // B5 E21: a backrow zone may hold a pile, and the view counts the cards beneath its top
-// (`buried`, a count and never an identity, on a face-up card and on a face-down one alike).
+// (`buried`, a count and never an identity, on a face-up card and on a face-down one alike). The
+// zone shows the depth beside the card, as a unit pile does.
 //
 // R471: a face-down card's Plague Counters (`plague`) ride its back; its controller reads them off
 // `counters`, as on any face-up card.

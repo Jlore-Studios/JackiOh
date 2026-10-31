@@ -172,7 +172,8 @@ export type NamedCard = {
 
 /**
  * The face in play of a card an event names, or null for the sentinel. A card the view still lists is
- * drawn as it stands there (`listedFace`); one it no longer lists is its definition as the game shows it.
+ * drawn as it stands there (`listedFace`); one it no longer lists is its definition as the game shows it,
+ * at `cost` when one is given.
  */
 export function namedFace(lookup: CardLookup | null, view: PlayerView, named: NamedCard): FaceModel | null {
   if (named.defId === HIDDEN_CARD || named.defId === "") return null;

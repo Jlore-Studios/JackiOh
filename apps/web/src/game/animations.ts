@@ -1321,7 +1321,8 @@ export function sameOccurrence(a: unknown, b: unknown): boolean {
  * The events in `next` that the runner has not been given yet. SPEC §10.8 gives a view "the last N
  * events" (`VIEW_EVENT_LIMIT` in `crates/engine/src/view_for.rs`), a sliding WINDOW over the match,
  * so passing it whole would re-animate what already played. The window moves by whole actions, so the
- * shared events are the longest suffix of `prev` that is a prefix of `next`. Windows with nothing in
+ * shared events are the longest suffix of `prev` that is a prefix of `next`, compared with
+ * `sameOccurrence` because R97 re-redacts the window for every view. Windows with nothing in
  * common make all of `next` new: too much animation rather than too little. It returns the very
  * objects `next` holds, so the sound director, which diffs views with this same function, can match
  * the runner's entries by identity.
