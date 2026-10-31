@@ -11710,6 +11710,13 @@
     "2610": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T20:26:32Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Fails 'one place' and 'no spec hot spots': it changes crates/server and apps/web tests and amends ruling R2378000 and \u00a714.11. Nothing touches engine rules or a migration, so it is not hard."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
