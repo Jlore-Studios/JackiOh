@@ -11150,12 +11150,6 @@
           "claude": "strong",
           "gemini": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-31T11:36:26Z",
-        "provider": "claude-3",
-        "sha": "5085e703297fc290c8e0878ce6a5b436b0488942",
-        "start": "07e066b4befb774908a55575ca04f6fa61a83668"
       }
     },
     "2592": {
