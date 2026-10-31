@@ -1,7 +1,6 @@
 // R2118000: the command menu's entries. Every entry is a `navigate` move, so R1754000's leave
 // guard still holds one. The labels are built per call, from a render, never cached across a
-// language switch. Presentation only (CLAUDE.md rule 7): the cards come from the public catalog
-// through `almanacShelf`, and nothing here sends an action.
+// language switch. Presentation only (CLAUDE.md rule 7).
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
@@ -43,10 +42,7 @@ export function commandMenuOn(path: string): boolean {
   return true;
 }
 
-/**
- * R2118000: the common actions, in order. Practice and Play open `/practice` and `/play`, not
- * repeated as pages, and start no game by themselves.
- */
+/** R2118000: the common actions. Practice and Play are not repeated as pages and start no game. */
 export function commandActions(): CommandEntry[] {
   return [
     { id: "action-new-deck", kind: "action", label: t("New deck"), path: newDeckPath() },
@@ -55,7 +51,7 @@ export function commandActions(): CommandEntry[] {
   ];
 }
 
-/** R2118000: every menu page the player can open. Not listed: the Collection's sections and the sign-in, reset, invite and dev screens. */
+/** Not listed: the Collection's sections and the sign-in, reset, invite and dev screens. */
 export function commandPages(): CommandEntry[] {
   return [
     { id: "page-home", kind: "page", label: t("Home"), path: paths.landing },
@@ -79,9 +75,8 @@ export function commandPages(): CommandEntry[] {
 }
 
 /**
- * R2118000: the Almanac shelf's cards by name (`almanacShelf`, R1420: no unshipped card), each
- * opening its inspect detail (`paths.almanacCard`, R630). Named in the reader's language
- * (`readerName`, R711000).
+ * The Almanac shelf's cards (R1420: no unshipped card), each opening its inspect detail (R630), named
+ * in the reader's language (R711000).
  */
 export function commandCards(cards: CardDefs = CATALOG): CommandEntry[] {
   return almanacShelf(cards).flatMap((id): CommandEntry[] => {
@@ -91,7 +86,6 @@ export function commandCards(cards: CardDefs = CATALOG): CommandEntry[] {
   });
 }
 
-/** R2118000: every word of `query` is a substring of `label`, both lower-cased; a blank query matches all. */
 export function matchesQuery(label: string, query: string): boolean {
   const words = query.toLocaleLowerCase().split(/\s+/u).filter((word) => word.length > 0);
   if (words.length === 0) return true;
@@ -99,10 +93,6 @@ export function matchesQuery(label: string, query: string): boolean {
   return words.every((word) => lowered.includes(word));
 }
 
-/**
- * R2118000: the entries a query lists: the matching actions, then the matching pages, then, once
- * the player types, the matching cards, at most COMMAND_MENU_CARDS_SHOWN of them.
- */
 export function commandEntries(query: string, cards: CardDefs = CATALOG): CommandEntry[] {
   const actions = commandActions().filter((entry) => matchesQuery(entry.label, query));
   const pages = commandPages().filter((entry) => matchesQuery(entry.label, query));

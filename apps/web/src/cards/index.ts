@@ -1,5 +1,4 @@
 // The card presentation module's one public door (docs/polish/6-cards.md, Surface).
-//
 // Everything outside `src/cards/` imports from here. Inside `src/cards/`, files import each other
 // by path and never through this barrel, so it cannot create an import cycle.
 
@@ -72,11 +71,9 @@ export {
   TIER_SCALE,
 } from "./constants.ts";
 
-// E21: a backrow pile's depth, which game/Backrow.tsx draws beside the card.
 export { PileDepth } from "./CardStates.tsx";
 
-// Issue #124: the Marvel Snap-style card wheel (a Stack pile as a wheel, reusable for related
-// cards and other displays) and the Stack pile sheet around it.
+// #124: the card wheel and the Stack pile sheet around it.
 export { default as CardWheel, wheelTestid, WHEEL_SWIPE_PX } from "./wheel/CardWheel.tsx";
 export type { CardWheelProps, WheelItem } from "./wheel/CardWheel.tsx";
 export {
@@ -100,11 +97,9 @@ export type { IconName } from "./icons.tsx";
 // R370, R371: the words a face-down backrow card is drawn with.
 export { FACE_DOWN_HINT, FACE_DOWN_TAG, FACE_DOWN_TITLE, REVEAL_AT_LABEL, REVEAL_AT_NOTE, UNREVEALED_NOTE, costPhrase, faceDownLabel } from "./faceDown.ts";
 
-// Slice A: art.
 export { ART_MANIFEST, CardArt, artUrl } from "./art/index.ts";
 export type { ArtManifest, ArtShape } from "./art/index.ts";
 
-// Slice C: inspect.
 export {
   CardDetail,
   CardListPreview,
@@ -150,7 +145,6 @@ export type {
   InspectSubject,
 } from "./inspect/index.ts";
 
-// Slice C: card settings, which task 7's panel mounts at integration.
 export {
   CARD_SETTINGS_DEFAULTS,
   CARD_SETTINGS_FIELDS,

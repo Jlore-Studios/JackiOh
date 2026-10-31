@@ -1,11 +1,8 @@
 // `/collection`: the hub of what the account owns and makes (SPEC §14, #1307, #1579, R1579000): four
-// doors. Decks and the card builder are links to their own screens; Cards and Cosmetics open in place
-// by `?section=`, so Back and Forward move between them and the hub. Cosmetics is the only place a
-// cosmetic is equipped. Gated like `/account` (main.tsx).
-// Every panel renders what the server answered and decides nothing (CLAUDE.md rule 7). Each reads for
-// itself and says why in its place when its read fails, so one refused read never blanks the others,
-// and offers Try again (#1691). Until the economy goes live everyone owns every card (§14.12). The
-// page never scrolls: a section's body does.
+// doors. Cards and Cosmetics open in place by `?section=`, so Back and Forward move between them and
+// the hub. Gated like `/account` (main.tsx). Every panel renders what the server answered and decides
+// nothing (CLAUDE.md rule 7); each reads for itself, so one refused read never blanks the others (#1691).
+// Until the economy goes live everyone owns every card (§14.12).
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -43,7 +40,6 @@ import "../auth/tavern.css";
 import "./account.css";
 import "../collection/collection.css";
 
-/** What the wallet panel shows: the balance and the two kinds of unopened pack. */
 type WalletRead = { wallet: WalletResponse; packs: PacksResponse; cosmeticPacks: CosmeticPacksResponse };
 
 async function readWallet(token: string): Promise<WalletRead> {
@@ -77,7 +73,6 @@ type Read<T> =
   | { kind: "ready"; value: T }
   | ({ kind: "error"; retry: () => void } & ReadFailure);
 
-/** A panel's first state for `token`: its kept answer, or loading. */
 function startOf<T>(kept: (token: string) => T | undefined, token: string): Read<T> {
   const value = kept(token);
   return value === undefined ? { kind: "loading" } : { kind: "ready", value };

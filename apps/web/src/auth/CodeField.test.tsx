@@ -1,6 +1,5 @@
-// The segmented invite-code field (docs/polish/5-sign-in.md, B15-B19) and R191's promise that the
-// client reads a code exactly as the server does: `CODE_INPUT_CASES` is the table the server's parity
-// test redeems, so a row the server accepts is a row this field fills, character for character.
+// The segmented invite-code field (docs/polish/5-sign-in.md, B15-B19) and R191: `CODE_INPUT_CASES` is the
+// table the server's parity test redeems, so a row the server accepts is a row this field fills.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -31,11 +30,7 @@ import { codeFieldSegmentTestid, codeFieldTestid, inviteTestid } from "./testids
 
 afterEach(cleanup);
 
-/**
- * One row of the shared table (`crates/engine/tests/fixtures/code-input-cases.json`), which the
- * server's Rust reading and `wire/codes.test.ts` read too. Every column is what the shared reading
- * gives for `INVITE_CODE_FORMAT`.
- */
+/** One row of the shared table, which the server's Rust reading and `wire/codes.test.ts` read too. */
 type CodeInputCase = {
   readonly name: string;
   readonly input: string;
@@ -59,7 +54,6 @@ const G = INVITE_CODE_GROUP_SIZE;
 /** R104's letters only, so a code built from them reads the same in any font. */
 const LETTERS = CODE_ALPHABET.replace(/[0-9]/g, "");
 
-/** A complete code: the first INVITE_CODE_LENGTH letters of the alphabet. */
 const FULL = LETTERS.slice(0, INVITE_CODE_LENGTH);
 
 /** ASCII [0-9A-Z] minus the alphabet: R104's 0, 1, I and O, computed here, not imported. */
@@ -67,7 +61,6 @@ const EXCLUDED = [..."0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"].filter(
   (character) => !CODE_ALPHABET.includes(character),
 );
 
-/** `characters` in groups of INVITE_CODE_GROUP_SIZE, joined by the separator, none trailing. */
 function grouped(characters: string): string {
   const groups: string[] = [];
   for (let index = 0; index < characters.length; index += G) {
@@ -139,7 +132,6 @@ function paste(input: HTMLElement, text: string): boolean {
   });
 }
 
-/** A raw edit with the caret where the browser would leave it. */
 function changeAt(input: HTMLElement, raw: string, caret: number): void {
   fireEvent.change(input, { target: { value: raw, selectionStart: caret, selectionEnd: caret } });
 }
@@ -156,7 +148,6 @@ function letterAndDigitCount(text: string): number {
   return [...text.normalize("NFKC")].filter((character) => /^[0-9A-Za-z]$/.test(character)).length;
 }
 
-/** The code a paste of this row fills the field with. */
 function codeFilledBy(row: CodeInputCase): string {
   const code = row.canonical ?? findCodeInText(row.input, INVITE_CODE_FORMAT);
   expect(code, `${row.name}: premise, the row names a code`).not.toBeNull();
@@ -190,8 +181,6 @@ describe("the shared table", () => {
     expect(EXCLUDED.length).toBeGreaterThan(0);
   });
 });
-
-// B15: one input, four segments, a progress line
 
 describe("B15 the field's DOM", () => {
   it("B15 is one text input with the invite testid, no maxLength, and the input attributes", () => {
@@ -307,8 +296,6 @@ describe("B15 the field's DOM", () => {
   });
 });
 
-// B16: typing upper-cases and groups; the caret follows
-
 describe("B16 typing", () => {
   it("B16 typing abcdefgh shows ABCD-EFGH with the caret at the end", async () => {
     const user = userEvent.setup();
@@ -365,8 +352,6 @@ describe("B16 typing", () => {
     });
   });
 });
-
-// B17 / R191: every row of the shared table
 
 describe("R191 B17 pasting", () => {
   it.each(FILLED_BY_PASTE.map((row) => [row.name, row] as const))(
@@ -510,8 +495,6 @@ describe("R191 B17 pasting", () => {
   });
 });
 
-// B18 / R191: an excluded character is refused and named, never dropped
-
 describe("R191 B18 excluded characters", () => {
   it.each(EXCLUDED.map((character) => [character] as const))(
     "R191 B18 typing %s leaves the value unchanged and names it and the excluded set",
@@ -599,8 +582,6 @@ describe("R191 B18 excluded characters", () => {
   });
 });
 
-// B19: Backspace never sticks on a separator
-
 describe("B19 Backspace", () => {
   it("B19 Backspace right after a separator deletes the character before it", async () => {
     const user = userEvent.setup();
@@ -659,8 +640,6 @@ describe("B19 Backspace", () => {
   });
 });
 
-// B19: nor do Delete and the arrow keys (the adversarial panel's findings)
-
 describe("B19 Delete and the arrows at a group boundary", () => {
   it("B19 Delete right before a separator deletes the character after it, and the caret stays", async () => {
     const user = userEvent.setup();
@@ -706,8 +685,6 @@ describe("B19 Delete and the arrows at a group boundary", () => {
     expect(input.selectionStart, "before the last character of the group before").toBe(G - 1);
   });
 });
-
-// B17: text that arrives without a paste event is read like a paste
 
 describe("R191 B17 text dropped or inserted by a keyboard's clipboard chip", () => {
   it("R191 B17 fills the field from an invite sentence inserted in one change", () => {
@@ -774,8 +751,6 @@ describe("R191 a keyboard that types through IME composition (Android's Gboard)"
     expect(hint()).toHaveAttribute("data-kind", "excluded");
   });
 });
-
-// A pasted message, a selection, and a letter from another keyboard
 
 describe("R191 B17 a whole chat message pasted", () => {
   it.each([

@@ -16,7 +16,6 @@ import { Named, STATUS_WORDS } from "./words.tsx";
 
 import "./together.css";
 
-/** The add form (B55): a `name#tag`, and the server's answer to it. */
 export function AddFriend({ onAdded }: { onAdded: () => void }): ReactElement {
   const inputId = useId();
   const [name, setName] = useState("");
@@ -96,7 +95,6 @@ export type FriendRowProps = {
   challengeRefusal?: string | null;
 };
 
-/** One friend (B56): status, and what can be done with them now. */
 export function FriendRow({
   friend,
   unread,
@@ -108,7 +106,6 @@ export function FriendRow({
   onWatch,
   challengeRefusal = null,
 }: FriendRowProps): ReactElement {
-  /** Block's inline question is open. */
   const [asking, setAsking] = useState(false);
   const questionId = useId();
   const canChallenge = friend.status === "online";
@@ -222,7 +219,6 @@ export function FriendRow({
   );
 }
 
-/** One request, either way (B55). */
 export function RequestRow({
   request,
   direction,

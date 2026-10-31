@@ -1,14 +1,12 @@
 // One-card hover and long-press inspect (B22–B24). The caller renders `overlay` beside its trigger
 // so the trigger's click capture cannot see it. Hover is settings-gated; long press may open a
-// sheet, callback or hold preview, and suppresses its following click. Custom subjects render their
-// overlay; `openSheet` opens a sheet directly.
+// sheet, callback or hold preview, and suppresses its following click.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactElement } from "react";
 import type { FaceModel } from "../model.ts";
 import { startsOnTermTip } from "../TermTip.tsx";
 import { readCardSettings, useCardSettings } from "../settings.ts";
-// The settings panel's "Hover previews" switch also gates the preview (with `hoverPreviews`).
 import { readSettings as readPanelSettings, useSetting as usePanelSetting } from "../../settings/store.ts";
 import type { Shortcut } from "../../shortcuts/shortcuts.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
@@ -20,10 +18,7 @@ import "./inspect.css";
 
 export type InspectOverlayState = { mode: "hover" | "sheet"; anchor: Rect; close: () => void };
 
-/**
- * A card: the preview and the sheet draw its face. `note` is a line they print above it, in words
- * the view gave the caller (R371: "Face down — your opponent can't see this card").
- */
+/** `note` is a line printed above the face, in the view's words (R371: "Face down — your opponent can't see this card"). */
 export type InspectSubject = { key: string; face: FaceModel; note?: string };
 
 /** Anything else (a pile): the caller draws the overlay for each mode. */
@@ -34,7 +29,7 @@ export type InspectOptions = {
   hover?: boolean;
   /** Default true: a touch long-press opens the sheet, or calls onLongPress when given. */
   longPress?: boolean;
-  /** Default false: only a touch long-presses. True: a mouse's or pen's main button held as long counts too (the hero portrait, R1449). */
+  /** A mouse's or pen's main button held as long counts as a long-press too (the hero portrait, R1449). */
   holdAnyPointer?: boolean;
   onLongPress?: () => void;
   /** Without `onLongPress`, a hold opens the default sheet or a settings-gated preview; disabled previews leave a plain tap. */
@@ -43,7 +38,7 @@ export type InspectOptions = {
       portrait's, which acts only while nothing is targeted (R1449): the board's cards leave
       right-click to the drag cancel. */
   onContextMenu?: () => void;
-  /** Which side of the card the hover preview tries first; "beside" (B27's order) by default. */
+  /** Which side the hover preview tries first (placement.ts, B27). */
   prefer?: PreviewPrefer;
   /** Default true: overlays show lines of code (E36); matches pass false because it is hidden. */
   showLoc?: boolean;
@@ -155,7 +150,6 @@ export function useInspectTrigger(
       suppressClick.current = true;
       t.suppress = setTimeout(disarmSuppressor, CLICK_SUPPRESS_MS);
     };
-    /** Ends the preview this hold opened (a no-op for any other preview or when none did). */
     const closeHoldPreview = (): void => {
       const opened = holdPreview.current;
       if (opened === null) return;
@@ -196,8 +190,7 @@ export function useInspectTrigger(
         clearPress();
         const holds = event.pointerType === "touch" || (opts.holdAnyPointer === true && event.button === 0);
         if (!holds || opts.longPress === false) return;
-        // R2098000: a press that starts on a glossary term showing its rule is that term's long press
-        // (cards/TermTip.tsx), never the card's sheet, callback or hold preview.
+        // R2098000: a press that starts on a glossary term showing its rule is that term's long press.
         if (startsOnTermTip(event.target)) return;
         const element = event.currentTarget;
         const pressKey = current.key;

@@ -22,14 +22,13 @@ import CommandMenu, { commandEntryTestid, commandMenuTestid } from "./CommandMen
 import { commandCards, commandMenuOn } from "./commandEntries.ts";
 
 const { App } = await import("../main.tsx");
-// A card's result opens the Almanac, a lazily-imported route: load its chunk here, as almanac.test.tsx
-// imports it, so a test waits on the screen's render and not on transforming the chunk.
+// Load the Almanac's lazy chunk here, so a test waits on its render and not on transforming the chunk.
 await import("./almanac.tsx");
 
-/** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
+/** A lazy route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
 
-/** A card's result opens the Almanac's whole grid (710 cards since #1884), past vitest's 5 s default. */
+/** A card's result opens the Almanac's whole grid (710 cards since #1884), past the 5 s default. */
 const SLOW_GRID = { timeout: 30_000 } as const;
 
 beforeEach(() => {
@@ -46,13 +45,11 @@ afterEach(() => {
   at("/");
 });
 
-/** Opens the menu from the keyboard and returns its input. */
 function openMenu(): HTMLElement {
   fireEvent.keyDown(window, { key: "k", ctrlKey: true });
   return screen.getByTestId(commandMenuTestid.input);
 }
 
-/** Types into the menu's input the way a player does. */
 function typeQuery(input: HTMLElement, value: string): void {
   fireEvent.change(input, { target: { value } });
 }

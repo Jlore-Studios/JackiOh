@@ -78,7 +78,6 @@ const PARK = Symbol("park");
 /** A fit in progress: each `yield` hands over a read and waits for it. */
 type Steps<T> = Generator<Probe | typeof PARK, T, unknown>;
 
-/** Asks for one layout read and returns the probe's result. */
 function* read<T>(probe: () => T): Steps<T> {
   return (yield probe) as T;
 }
@@ -103,7 +102,6 @@ function* search(element: HTMLElement): Steps<number | null> {
   return fits;
 }
 
-/** The search found a size, and it is at least the floor. */
 function* readable(element: HTMLElement, best: number | null, floorPx: number): Steps<boolean> {
   return best !== null && (yield* read(() => fontPx(element))) >= floorPx - FLOOR_SLACK_PX;
 }

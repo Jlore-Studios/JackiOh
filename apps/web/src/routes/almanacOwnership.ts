@@ -1,7 +1,5 @@
 // R1956000: the signed-in viewer's own cards in the Almanac (almanac.tsx), drawn as their own copies
-// wearing their picks, behind the ownership the gated screens mount (cards/ownedFullArt.ts): the
-// cosmetics ledger once ownership decides (`FULL_ART_GATED`), every cosmetic before that. Both reads
-// are the account's own (`GET /api/collection`, the session's one `GET /api/cosmetics`).
+// wearing their picks, behind the ownership the gated screens mount (cards/ownedFullArt.ts).
 // Presentation only (CLAUDE.md rule 7).
 
 import { useEffect, useState } from "react";
@@ -25,7 +23,6 @@ export type AlmanacReads = {
   readOwned?: (token: string) => Promise<OwnedByCard>;
 };
 
-/** The provider session a token belongs to (its `session_id` claim), else the token itself. */
 function sessionOf(token: string): string {
   return sessionIdFromToken(token) ?? token;
 }

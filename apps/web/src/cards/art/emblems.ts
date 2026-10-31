@@ -15,7 +15,6 @@ export type EmblemGlyph = CoreGlyph | MotifGlyph;
 
 type EmblemPath = GlyphPath;
 
-/** The glyphs' drawing box: 24 units wide and tall. */
 export const EMBLEM_BOX = 24;
 const CENTER = EMBLEM_BOX / 2;
 
@@ -65,7 +64,6 @@ function virusPath(): string {
 }
 
 function vortexPath(): string {
-  // One swirling arm, repeated three times about the center.
   const arm: readonly (readonly [number, number])[] = [
     [12, 10.6],
     [12.8, 6.6], [16, 3.8], [21, 4.6],
@@ -106,7 +104,6 @@ const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
       "M19.6 12C17.6 11.4 15.8 11.6 14.2 12.4V13.4C15.8 12.6 17.6 12.4 19.6 13Z",
     rule: "evenodd",
   },
-  // A pitted cell ringed by knobbed spikes.
   virus: { d: virusPath(), rule: "evenodd" },
   // A round fruit with a stem, a leaf and a highlight.
   fruit: {
@@ -118,7 +115,6 @@ const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
   },
   vortex: { d: vortexPath(), rule: "nonzero" },
   bolt: { d: "M13.6 1.8L4.8 13.6H10.9L9.4 22.2L19.2 9.4H13L15.8 1.8Z", rule: "nonzero" },
-  // A rimmed coin with a lozenge struck in the middle.
   coin: {
     d: circle(CENTER, CENTER, 9.6) + circle(CENTER, CENTER, 7.4) + "M12 6.6L15.8 12L12 17.4L8.2 12Z",
     rule: "evenodd",
@@ -145,7 +141,6 @@ const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
       "M11.2 10.6H12.8V13.8H11.2Z",
     rule: "evenodd",
   },
-  // An open eye: almond, iris ring and pupil.
   eye: {
     d: "M1.4 12C5 5.8 19 5.8 22.6 12C19 18.2 5 18.2 1.4 12Z" + circle(CENTER, CENTER, 4.8) + circle(CENTER, CENTER, 2.1),
     rule: "evenodd",
@@ -157,7 +152,6 @@ const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
     rule: "evenodd",
   },
   moon: { d: "M15.4 2.4A9.8 9.8 0 1 0 21.6 16.6A7.8 7.8 0 1 1 15.4 2.4Z", rule: "nonzero" },
-  // A five-pointed crown on a band.
   crown: {
     d: "M2.8 7.6L7.4 11.6L12 4.4L16.6 11.6L21.2 7.6L19.4 17.8H4.6Z" + "M4.6 19H19.4V21.6H4.6Z",
     rule: "nonzero",
@@ -173,7 +167,6 @@ const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
     d: "M12 1.4L18.6 8.2L12 22.6L5.4 8.2Z" + "M12 3.8L16.2 8.2H7.8Z",
     rule: "evenodd",
   },
-  // A stave rune with three branches.
   rune: {
     d: "M11 2H13V22H11Z" +
       "M13 4.6L19 9.1L17.8 10.7L13 7.1Z" +

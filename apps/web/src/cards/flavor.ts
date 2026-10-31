@@ -1,18 +1,14 @@
-// R1437000: which flavor a card draws. Every catalog entry carries one; a transient or custom
-// definition (fused, crafted, custom) carries none, so it draws Physical, and a fused one the
-// first ingredient's. The one lookup every flavor effect reads (docs/polish/8-flavor.md, #1436).
+// R1437000: which flavor a card draws, the one lookup every flavor effect reads (docs/polish/8-flavor.md,
+// #1436). A transient or custom definition (fused, crafted, custom) carries none, so it draws Physical,
+// and a fused one the first ingredient's.
 
 import type { CardDef, CardDefs, Flavor } from "@jackioh/shared";
 
 import { CATALOG } from "../wire/cards.ts";
 
-/** What a definition with no flavor draws (R1437000). */
 export const FLAVOR_FALLBACK = "Physical" satisfies Flavor;
 
-/**
- * `def`'s flavor; else, for a fused one, its first ingredient's in `catalog`; else Physical.
- * `undefined` is a card no catalog knows, such as a hidden one.
- */
+/** `undefined` is a card no catalog knows, such as a hidden one. */
 export function flavorOf(
   def: Pick<CardDef, "flavor" | "ingredients"> | undefined,
   catalog: Readonly<CardDefs> = CATALOG,

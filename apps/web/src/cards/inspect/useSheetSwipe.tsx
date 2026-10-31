@@ -1,7 +1,6 @@
-// Issue #2121 (R2121000): a touch swipe down closes a card or pile sheet as Close does.
-// A Prompt and the mulligan never use this hook ([[§10.6]] in spec terms: a choice the game
-// asks for never closes unanswered). Presentation only (CLAUDE.md rule 7): the hook moves the
-// sheet and fades the scrim, and calls the same `close` Close calls; it decides nothing.
+// #2121 (R2121000): a touch swipe down closes a card or pile sheet as Close does. A Prompt and the
+// mulligan never use it ([[§10.6]]: a choice the game asks for never closes unanswered). Presentation
+// only (CLAUDE.md rule 7): it moves the sheet, fades the scrim and calls Close's `close`.
 
 import { useEffect, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactElement, RefObject } from "react";

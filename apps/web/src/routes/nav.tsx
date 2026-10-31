@@ -19,19 +19,13 @@ export type BackLinkProps = {
   label?: string;
   /** Releases screen-owned state before navigation. */
   onLeave?: () => void;
-  /**
-   * Overrides the default release-and-navigate sequence for confirmation flows. Such a screen guards
-   * its way out, so its top bar has no Jlore pill, a link that would leave past the guard (R1651000).
-   */
+  /** Replaces release-and-navigate on a guarded exit; drops the Jlore pill, a way past the guard (R1651000). */
   onPress?: () => void;
   /** Extra top-bar content; settings remains the top-right control. */
   children?: ReactNode;
   /** The board supplies settings separately. */
   showSettings?: boolean;
-  /**
-   * The Jlore pill, beside settings. Off on the signed-out screens (sign-in, a password reset), where
-   * a session only lands as the screen leaves and the pill has nothing to show.
-   */
+  /** The Jlore pill; off on signed-out screens, where a session only lands as the screen leaves. */
   showWallet?: boolean;
 };
 

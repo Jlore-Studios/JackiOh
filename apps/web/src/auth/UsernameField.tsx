@@ -1,13 +1,7 @@
-// The username field (R1435): the prompt after activation and the account page both use it.
-//
-// THE SERVER JUDGES, THE FIELD ASKS (CLAUDE.md rule 7): nothing here checks a name's length,
-// characters, script or the filter (R1432, R1433). The field asks `GET /api/username/preview` what a
-// save would give and shows that answer as it stands, tag and all. The hint's numbers are only words,
-// and there is no `maxLength`: the server counts graphemes, not what a browser counts.
-//
-// A PLAYER IS NEVER GIVEN A TAG THEY WERE NOT SHOWN: Save is live only while the preview on screen is
-// a yes for the name in the box, and sends exactly that username. If the outcome moved meanwhile, the
-// server refuses with a fresh preview, shown with a line saying so, and the player saves again.
+// The username field (R1435). THE SERVER JUDGES (CLAUDE.md rule 7): nothing here checks a name's length,
+// characters, script or the filter (R1432, R1433), and there is no `maxLength`: the server counts graphemes.
+// A PLAYER IS NEVER GIVEN A TAG THEY WERE NOT SHOWN: Save is live only while the preview on screen is a yes
+// for the name in the box, and sends exactly that username.
 
 import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
 
@@ -33,13 +27,11 @@ const SECONDS_PER_HOUR = 3600;
 
 /** A preview could not be read (the network, a rate limit): said plainly, never as a verdict. */
 export const USERNAME_PREVIEW_FAILED = "Couldn't check that name just now. Try again in a moment.";
-/** A save failed for a reason that carried no preview. */
 export const USERNAME_SAVE_FAILED = "Couldn't save your username just now. Try again in a moment.";
 /** A save the server refused because the outcome changed since the preview (a 409's fresh one). */
 export const USERNAME_CHANGED = "That changed since you looked. Check the name above, then save again.";
 
-/** R1435: when the next change is allowed, in the player's own clock and locale. The preview's
- * cooldown refusal and the account page's cooldown line both say it. */
+/** R1435: when the next change is allowed, in the player's own clock and locale. */
 export function nextChangeSentence(nextChangeAt: number): string {
   return t("You can change your username again on {date}.", { date: formatDateTime(nextChangeAt) });
 }
@@ -49,9 +41,7 @@ type Shown = { name: string; preview: UsernamePreview; changed: boolean };
 
 export type UsernameFieldProps = {
   token: string;
-  /** The save went through: the caller's username as the server now holds it. */
   onSaved: (own: OwnUsername) => void;
-  /** The field's label. */
   label?: string;
   /** Locks the field while something else answers for it (the prompt's Skip). */
   disabled?: boolean;

@@ -246,8 +246,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// B22: hover
-
 describe("hover preview (B22)", () => {
   it("B22 a mouse resting HOVER_DELAY_MS opens inspect-hover in document.body, and not a moment sooner", () => {
     const { container } = render(
@@ -422,8 +420,6 @@ describe("hover preview (B22)", () => {
     expect(face.querySelector(".cost-gem")).toHaveAttribute("data-tone", "down");
   });
 });
-
-// B23: what closes the preview, and one overlay at a time
 
 describe("closing the preview, and one overlay at a time (B23)", () => {
   function openPreview(key: string): HTMLElement {
@@ -642,8 +638,6 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
   });
 });
 
-// B24: long-press
-
 describe("long-press (B24)", () => {
   it("B24 a touch held LONG_PRESS_MS opens inspect-sheet as a modal dialog named for the card, focused on inspect-close", () => {
     const { container } = render(
@@ -821,8 +815,6 @@ describe("long-press (B24)", () => {
     expect(onContextMenu).toHaveBeenCalledTimes(1);
   });
 });
-
-// A touch hold as the mouse-over: touchHold "preview" keeps the hover preview open while the finger is down
 
 describe("a touch hold as the mouse-over (#165)", () => {
   it("#165 a held touch opens the preview, not the sheet, and lifting closes it", () => {
@@ -1050,7 +1042,7 @@ describe("Tab stays inside a modal overlay (B25)", () => {
     );
     const close = screen.getByTestId(INSPECT_CLOSE);
     const action = screen.getByTestId("detail-action");
-    // R2098000: the base face's Cry term is now the detail's first control, before History (R388) and the caller's actions.
+    // R2098000: the base face's Cry term is the detail's first control, before History (R388) and the caller's actions.
     const first = must(screen.getByTestId(INSPECT_FACE_BASE).querySelector<HTMLElement>('.cf-term[data-term="Cry"]'), "the base face's Cry");
     expect(close).toHaveFocus();
 
@@ -1181,10 +1173,7 @@ describe("events inside an overlay stay inside it (B25)", () => {
   });
 });
 
-// B26: the glossary
-
 describe("the glossary (B26)", () => {
-  /** Text terms Death, Cry, Lifesteal, Cry (repeat); keywords Taunt, Lifesteal (repeat), Rush. */
   const ORDERED_FACE: FaceModel = {
     defId: "glossary-order-probe",
     known: true,

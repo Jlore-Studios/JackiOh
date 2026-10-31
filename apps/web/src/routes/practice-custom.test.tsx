@@ -1,7 +1,4 @@
-// `/practice` with custom cards (SPEC §12.6, §12.10; R915005, R915006, R915009; #921): a saved deck
-// that names custom cards starts with them, one naming a card the account no longer has does not,
-// `?try=<id>` deals a random deck around the card, and no such game records card statistics. R962000:
-// a sandbox game started with one offers it in its panel.
+// `/practice` with custom cards (SPEC §12.6, §12.10; R915005, R915006, R915009, R962000; #921).
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,7 +24,7 @@ import { expectSkeleton } from "../test/skeleton.ts";
 import PracticeRoute, { readPracticeParams } from "./practice.tsx";
 import type { PracticeRouteProps } from "./practice.tsx";
 
-/** A 1-cost 1/2 Unit with no script, as the account keeps it: with the creator's builder model. */
+/** As the account keeps it: with the creator's builder model. */
 const IMP: CustomCard = {
   id: "custom-ember-imp",
   version: 2,

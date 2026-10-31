@@ -23,10 +23,7 @@ export type ThemePalette = {
   mote: string;
 };
 
-/**
- * First match wins. AI follows Call to Chaos; Book follows KY; Pancake precedes Fruit, Quickdraw
- * and Human, so Classic+ #13 Mommy Barker (Human, Pancake) uses Pancake art.
- */
+/** First match wins: Pancake precedes Human, so Classic+ #13 Mommy Barker (Human, Pancake) uses Pancake art. */
 export const TAG_THEMES: readonly (readonly [Tag, ArtThemeId])[] = [
   ["Call to Chaos", "chaos"],
   ["AI", "ai"],
@@ -183,9 +180,7 @@ export const THEME_PALETTES: Readonly<Record<ArtThemeId, ThemePalette>> = {
   },
 };
 
-/**
- * Repeat each theme's signature glyph so it remains recognizable while a grid still varies.
- */
+/** Repeat each theme's signature glyph so it remains recognizable while a grid still varies. */
 export const EMBLEM_POOLS: Readonly<Record<ArtThemeId, readonly EmblemGlyph[]>> = {
   human: ["shield", "shield", "sword", "tower", "crown", "star", "flame"],
   felinor: ["cat", "cat", "cat", "moon", "star", "crown"],
@@ -206,9 +201,7 @@ export const EMBLEM_POOLS: Readonly<Record<ArtThemeId, readonly EmblemGlyph[]>> 
   "field-trap": ["rune", "eye", "moon", "tower", "crystal"],
 };
 
-/**
- * Drift distinguishes plain Spells and tribes; tokens stay grey.
- */
+/** Drift distinguishes plain Spells and tribes; tokens stay grey. */
 export const HUE_DRIFT: Readonly<Record<ArtThemeId, number>> = {
   human: 28,
   felinor: 26,
@@ -294,9 +287,7 @@ export function driftPalette(palette: ThemePalette, degrees: number, glyph: Embl
   };
 }
 
-/**
- * Radiant mixes base colors toward gold so the theme still shows through the foil.
- */
+/** Radiant mixes base colors toward gold so the theme still shows through the foil. */
 export const RADIANT_MIX = 0.7;
 
 export const RADIANT_PALETTE = {

@@ -2,7 +2,7 @@
 // then finds it under "Shared with me" on Play together and watches it from the sharer's seat.
 // Who may share what is the server's (a seat holder, a finished match, a friend; CLAUDE.md rule 7),
 // and its refusal is shown as it says it. Opened, it reads who the replay is already shared with
-// (R1435000), so a share made on any visit can be taken back here; unfriending or blocking ends one too.
+// (R1435000), so a share made on any visit can be taken back here.
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -23,11 +23,10 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
   useLocale();
   const [open, setOpen] = useState(false);
   const [friends, setFriends] = useState<readonly Friend[] | null>(null);
-  /** The friends this replay is shared with: as the server answered when opened (R1435000), then as changed here. */
   const [shared, setShared] = useState<ReadonlySet<string>>(() => new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** #1691: how many times Try again has asked for the first read, and the wait its failure stated (R192). */
+  /** #1691: how many times Try again has asked, and the wait its failure stated (R192). */
   const [reads, setReads] = useState(0);
   const [readWaitMs, setReadWaitMs] = useState<number | undefined>(undefined);
 

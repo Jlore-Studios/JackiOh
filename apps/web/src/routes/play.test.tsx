@@ -1,9 +1,7 @@
 // `/play`: the lobby's modes, choices and refusals (R257, R264), and its watch.
 //
-// The watch: only one side's HTTP response ever carries the match (or series) id, so the other side
-// has to read its own `currentMatchId` / `currentSeriesId`. That matters while WAITING in the lobby,
-// and again on a RELOAD after being paired — the second loses the waiting flag with the page, and
-// was a dead end until the check was moved to run on every mount.
+// The watch: only one side's HTTP response carries the match (or series) id, so the other side reads
+// its own `currentMatchId` / `currentSeriesId` on every mount: a reload after pairing loses `waiting`.
 //
 // The modes: the lobby sends intent (`ModeChoice`) and relays what the server said. Its verdict is
 // the shared validator's, as UX; a refusal is shown in the server's words.
@@ -108,7 +106,6 @@ function cardId(n: number): string {
   return `core-${String(n).padStart(3, "0")}`;
 }
 
-/** DECK_SIZE distinct ids from `from`. */
 function run(from: number): string[] {
   return Array.from({ length: DECK_SIZE }, (_, i) => cardId(from + i));
 }
@@ -147,11 +144,7 @@ function decksAnswer(decks: SavedDeck[], trios: SavedTrio[]): DecksResponse {
 /** Everyone owns one of every card here, as the collection answer below says. */
 const OWNED: Record<string, number> = Object.fromEntries(ALL_IDS.map((id) => [id, 1]));
 
-/**
- * The validator's own sentences for a verdict. They are computed, never typed out: the lobby shows
- * `@jackioh/validator`'s words verbatim, and `messages.test.ts` fails any client file that carries a
- * copy of them.
- */
+/** The validator's sentences, computed: `messages.test.ts` fails any client file that copies them. */
 function messagesOf(result: LoadoutResult): string[] {
   return result.ok ? [] : result.errors.map((error) => error.message);
 }
@@ -218,10 +211,7 @@ function pickMode(mode: QueueMode): void {
 // the watch
 
 describe("the lobby's match watch", () => {
-  /**
-   * The reload case. `waiting` is component state, so a refresh clears it; before the check ran on
-   * mount, this player sat in the lobby while their opponent was already on the board.
-   */
+  /** The reload case: `waiting` is component state, so a refresh clears it. */
   it("sends an already-paired player to the board on mount, without queueing again", async () => {
     vi.mocked(getMe).mockResolvedValue(me("match-42"));
     render(<PlayRoute token={TOKEN} />);
@@ -318,7 +308,6 @@ describe("the lobby's match watch", () => {
 });
 
 describe("R1578000 the Play hub", () => {
-  /** Document order: `first` comes before `second`. */
   function precedes(first: HTMLElement, second: HTMLElement): boolean {
     return (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
   }
@@ -336,20 +325,17 @@ describe("R1578000 the Play hub", () => {
     const ways = screen.getByTestId(playTestid.ways);
     expect(screen.getByTestId(playTestid.screen)).toContainElement(online);
     expect(precedes(online, ways)).toBe(true);
-    // The rank, the mode and deck they will queue with and Find a match are all inside the online panel.
     expect(await within(online).findByTestId(playTestid.rank)).toBeInTheDocument();
     expect(within(online).getByRole("region", { name: "How do you want to play?" })).toBeInTheDocument();
     expect(within(online).getByRole("region", { name: "Find a match" })).toBeInTheDocument();
     expect(within(online).getByTestId(playTestid.deckSelect)).toBeInTheDocument();
     expect(within(online).getByTestId(playTestid.queue)).toBeInTheDocument();
     for (const mode of QUEUE_MODES) expect(within(online).getByTestId(playModeTestid(mode))).toBeInTheDocument();
-    // The other ways are three links beside it, each to the screen that starts it, and the room is in reach.
     expect(within(ways).getAllByRole("link")).toHaveLength(WAYS.length);
     for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
     expect(paths.practice).toBe("/practice");
     expect(screen.getByTestId(playTestid.createRoom)).toBeInTheDocument();
     expect(screen.getByTestId(playTestid.joinForm)).toBeInTheDocument();
-    // Replays is one tile, no longer a second link in the rank panel.
     expect(screen.getAllByTestId(playTestid.replays)).toHaveLength(1);
   });
 
@@ -393,7 +379,6 @@ describe("R1578000 the Play hub", () => {
     expect(paths.login).toBe("/login");
     expect(screen.queryByTestId(playTestid.queue)).toBeNull();
     expect(screen.queryByTestId(playTestid.createRoom)).toBeNull();
-    // The other ways to play are all still offered.
     const ways = screen.getByTestId(playTestid.ways);
     expect(precedes(online, ways)).toBe(true);
     for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
@@ -637,7 +622,6 @@ describe("the lobby's modes", () => {
   it("R505 R640002 the queue's readout is on the mode tiles and the games line alone: the Find a match box and the queued notice repeat none of it", async () => {
     vi.mocked(enqueue).mockImplementation((_token, choice) => Promise.resolve(openTicket(choice.mode)));
     await renderLobby();
-    // Each tile says how long its mode usually takes, and the line under them the last hour's games.
     const tileOf = (mode: QueueMode): HTMLElement | null => screen.getByTestId(playModeTestid(mode)).closest("label");
     await waitFor(() => {
       expect(tileOf("bo1")).toHaveTextContent("Usually under 30 s");
@@ -830,8 +814,6 @@ describe("the lobby's answers", () => {
   });
 });
 
-// R1075000: a room's host cancels it, and a reload finds it again
-
 describe("R1075000 a room's host cancels it, and a reload finds it again", () => {
   afterEach(() => {
     window.sessionStorage.clear();
@@ -927,8 +909,6 @@ describe("R1075000 a room's host cancels it, and a reload finds it again", () =>
     expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
   });
 });
-
-// R1372, R924000: All Random's "More cards from"
 
 describe("R1372 R924000 All Random's more cards from", () => {
   it("R1372 R924000 the picker is All Random's alone, names the newest set and starts at none", async () => {
@@ -1208,8 +1188,6 @@ describe("the lobby's queue state", () => {
     );
   });
 });
-
-// R767: a room shared as a link
 
 describe("R767 a room shared as a link", () => {
   afterEach(() => {

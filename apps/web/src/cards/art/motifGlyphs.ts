@@ -39,12 +39,10 @@ function trace(points: readonly Pt[]): string {
   return `M${points.map(([x, y]) => `${fmt(x)} ${fmt(y)}`).join("L")}Z`;
 }
 
-/** A filled part: wound anticlockwise on screen. */
 function solid(points: readonly Pt[]): string {
   return trace(signedArea(points) > 0 ? [...points].reverse() : points);
 }
 
-/** A hole in a part: wound clockwise on screen. */
 function hole(points: readonly Pt[]): string {
   return trace(signedArea(points) < 0 ? [...points].reverse() : points);
 }
@@ -75,7 +73,6 @@ function rect(x: number, y: number, w: number, h: number): Pt[] {
   ];
 }
 
-/** A rectangle whose corners are rounded by `r`. */
 function roundRect(x: number, y: number, w: number, h: number, r: number): Pt[] {
   const out: Pt[] = [];
   const corners: readonly (readonly [number, number, number])[] = [
@@ -93,7 +90,6 @@ function roundRect(x: number, y: number, w: number, h: number, r: number): Pt[] 
   return out;
 }
 
-/** A straight bar `w` wide from one point to another. */
 function bar(x1: number, y1: number, x2: number, y2: number, w: number): Pt[] {
   const length = Math.hypot(x2 - x1, y2 - y1) || 1;
   const nx = (-(y2 - y1) / length) * (w / 2);
@@ -134,7 +130,6 @@ function arc(cx: number, cy: number, r: number, from: number, to: number, steps 
   return out;
 }
 
-/** Points along an arc of an ellipse, `from` to `to` degrees. */
 function ellipseArc(cx: number, cy: number, rx: number, ry: number, from: number, to: number, steps = 12): Pt[] {
   const out: Pt[] = [];
   for (let k = 0; k <= steps; k += 1) {
@@ -180,7 +175,6 @@ function glyph(...parts: string[]): GlyphPath {
   return { d: parts.join(""), rule: "nonzero" };
 }
 
-/** A four-pointed sparkle. */
 function sparkle(cx: number, cy: number, r: number): Pt[] {
   const out: Pt[] = [];
   for (let k = 0; k < 8; k += 1) {

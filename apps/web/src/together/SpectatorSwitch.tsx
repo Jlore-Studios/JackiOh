@@ -2,7 +2,7 @@
 // It is the account's, not the device's, so it is no part of the settings store or its sync
 // (`settings/accountSync.ts`) and no slot a tab reset would touch (`settings/SettingsPanel.tsx`).
 // It draws nothing until the account's value is in: signed out, a pending account and a server from
-// before #936 have no such setting. Who may actually watch is still the server's (CLAUDE.md rule 7).
+// before #936 have no such setting. Who may watch is still the server's (CLAUDE.md rule 7).
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -15,10 +15,7 @@ import { SPECTATORS_SETTING_TESTID } from "./testids.ts";
 
 import "../settings/settings.css";
 
-/**
- * `PUT /api/settings` with the account's `allowSpectators` alone: a body with no `groups` writes that
- * and nothing else, so no device group's copy is touched (`crates/server/src/api/settings.rs`).
- */
+/** With no `groups`, the server writes `allowSpectators` alone (`crates/server/src/api/settings.rs`). */
 function putAllowSpectators(token: string, allow: boolean): Promise<{ settings: PlayerSettingsAccountCopy }> {
   return apiRequest<{ settings: PlayerSettingsAccountCopy }>("/api/settings", {
     method: "PUT",

@@ -1,10 +1,8 @@
 // A card's motif: the small picture its printed name asks for (R503). Presentation only, from the
 // public catalog's name: no rule reads it (CLAUDE.md rule 7).
 //
-// The first motif in MOTIF_WORDS with a matching word wins. A pattern is a whole word (its plural
-// too), `word*` a prefix, `*word` a suffix; the table runs concrete to abstract, so "Plague Doctor"
-// is spores rather than a cross. In procedural.ts a type theme wears the motif's glyph as its
-// emblem; a tribe or family keeps its emblem and carries the motif by its `arrangement`.
+// In procedural.ts a type theme wears the motif's glyph as its emblem; a tribe or family keeps its
+// emblem and carries the motif by its `arrangement`.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import type { ArtThemeId } from "./themes.ts";
@@ -20,7 +18,6 @@ export type MotifId =
 
 export type MotifArrangement = "hero" | "scatter" | "rise" | "fall";
 
-/** What a figure wears on its head; the three a motif can put there. */
 export type MotifHeadgear = "ears" | "crown" | "horns";
 
 export type Motif = {
@@ -107,10 +104,7 @@ export const MOTIFS: Readonly<Record<MotifId, Motif>> = {
   jet: { glyph: "jet", arrangement: "hero", fill: "#c9d2dc", stroke: "#1b222c" },
 };
 
-/**
- * The words that call each motif up, in the order they are tried (first match wins). A name about
- * nothing drawable ("Guy Att", "Prep") has no motif and its theme's picture alone.
- */
+/** The words that call each motif up, in the order they are tried (first match wins). */
 export const MOTIF_WORDS: readonly (readonly [MotifId, readonly string[]])[] = [
   // Creatures and people first: the thing a card is.
   ["cat", ["felinor*", "cat", "kitten", "panther", "mrow", "lion", "tiger"]],
@@ -208,10 +202,7 @@ export const THEME_OWN_MOTIFS: Readonly<Partial<Record<ArtThemeId, readonly Moti
   ai: ["circuits"],
 };
 
-/**
- * The motif a card's name calls up for a card of `theme`, or null when it names nothing drawable
- * (or there is no name to read).
- */
+/** The motif a card's name calls up for a card of `theme`, or null when it names nothing drawable. */
 export function motifFor(name: string | null | undefined, theme?: ArtThemeId): MotifId | null {
   if (name === null || name === undefined) return null;
   const words = nameWords(name);

@@ -1,9 +1,7 @@
-// PKCE for the emailed links (R323, R324; an email change's, R663) and the two ways in that come back
-// with a code: the email sign-in link (R664) and an OAuth provider (R666). The request carries
-// `code_challenge` (S256 of a random verifier); only the browser holding the verifier can exchange the
-// returned `/login?code=…` (`net/auth.ts` `exchangeAuthCode`), so no token is in a URL. Verifiers live
-// in `localStorage` (a link usually opens in a new tab, which `sessionStorage` would not reach), one per
-// flow, newest tried first, forgotten once used; a code with no verifier here was asked for elsewhere (R324).
+// PKCE for the emailed links (R323, R324; an email change's, R663), the email sign-in link (R664) and
+// OAuth (R666): only the browser holding the verifier can exchange the returned code, so no token is in a
+// URL. Verifiers live in `localStorage`, since a link usually opens in a new tab, which `sessionStorage`
+// would not reach; a code with no verifier here was asked for elsewhere (R324).
 
 export const PKCE_STORAGE_KEY = "jackioh.auth.pkce";
 /** The stored value's shape version: anything else reads as no verifier. */
@@ -91,11 +89,7 @@ function writeStored(value: StoredValue): void {
   }
 }
 
-/**
- * The challenge to send with a request that mails a `flow` link, remembering its verifier. A new
- * verifier each time, except that a resend of the confirmation reuses the sign-up's (`reuse`), so
- * the link in the first email still works once the second has been sent.
- */
+/** A new verifier each time, but a resend of the confirmation reuses the sign-up's, so the first link still works. */
 export async function challengeForRequest(flow: PkceFlow, options: { reuse?: boolean } = {}): Promise<PkceChallenge> {
   const kept = options.reuse === true ? readStored()[flow]?.verifier : undefined;
   const verifier = kept ?? newVerifier();

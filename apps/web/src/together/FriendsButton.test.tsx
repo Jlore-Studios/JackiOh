@@ -95,7 +95,6 @@ function serve(state: World, special?: (call: Call) => Reply | undefined): StubS
   });
 }
 
-/** The shell's toast (the one poll) and a Friends button in a board's bar. */
 function shell(): void {
   render(
     <>
@@ -237,7 +236,6 @@ describe("#1831 the badge", () => {
       }, SLOW);
       expect(screen.getByTestId(friendsTestid.button)).toHaveAccessibleName("Friends, 6 waiting for you");
 
-      // Closed, the count stands as last read.
       fireEvent.click(screen.getByTestId(friendsTestid.close));
       expect(screen.getByTestId(friendsTestid.badge)).toHaveTextContent("6");
     },
@@ -278,7 +276,6 @@ describe("#1831 the panel", () => {
       expect(rows.map((row) => row.getAttribute("data-status"))).toEqual(["online", "inMatch", "offline"]);
 
       const [ann, bob, cy] = rows as [HTMLElement, HTMLElement, HTMLElement];
-      // Challenge while the friend is online; Watch while the server says their game is watchable; Chat always.
       expect(within(ann).getByTestId(togetherTestid.challenge)).toBeEnabled();
       expect(within(ann).queryByTestId(togetherTestid.watch)).toBeNull();
       expect(within(ann).getByTestId(togetherTestid.chatOpen)).toBeInTheDocument();

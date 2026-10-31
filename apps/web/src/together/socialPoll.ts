@@ -1,11 +1,8 @@
 // What a signed-in tab reads of the social layer on every screen, read once for all of them (#1831):
 // the open challenges and the unread counts, each every `SOCIAL_POLL_MS`. The shell's toast and Play
 // together poll (`useSocialPoll`); the Friends button's badge only reads what they published
-// (`useSocialReads`). Incoming friend requests are not read here: whichever screen reads the friends
-// list says how many it saw (`noteFriends`).
-// Nothing here is a rule (CLAUDE.md rule 7): a list is the server's answer, and a session it refuses
-// outright (signed out, 401, or an account that is not active, 403) is not asked again until the tab
-// holds another one.
+// (`useSocialReads`). Nothing here is a rule (CLAUDE.md rule 7): a list is the server's answer, and a
+// session it refuses outright is not asked again until the tab holds another one.
 
 import { useEffect, useSyncExternalStore } from "react";
 
@@ -15,13 +12,11 @@ import { SOCIAL_POLL_MS } from "./config.ts";
 import { isRefusedSession, unreadCountsOf } from "./session.ts";
 
 export type SocialReads = {
-  /** Challenges to this account, as the last read listed them. */
   readonly incoming: readonly Challenge[];
   /** Challenges this account sent that are still open. */
   readonly outgoing: readonly Challenge[];
   /** How many reads of the challenges have been answered: the shell's follow acts once per read. */
   readonly challengeReads: number;
-  /** Unread messages by friend. */
   readonly unread: Readonly<Record<string, number>>;
   /** Incoming friend requests, as the friends list was last read. */
   readonly requests: number;
@@ -48,7 +43,6 @@ let pollers = 0;
 let handle: number | null = null;
 /** Counts the times polling started over, so an answer to a read made before is dropped. */
 let generation = 0;
-/** The session the server refused: not asked again until the tab holds another. */
 let refusedToken: string | null = null;
 
 function publish(next: SocialReads): void {
@@ -140,11 +134,7 @@ export function useSocialReads(): SocialReads {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
-/**
- * Keeps the reads fresh while the calling screen is mounted: the first one reads at once and then
- * every `SOCIAL_POLL_MS`, the last one to leave stops it. Any number of screens may call it; there is
- * one poll.
- */
+/** Any number of screens may call it; there is one poll, started by the first and stopped by the last. */
 export function useSocialPoll(): SocialReads {
   useEffect(() => {
     pollers += 1;
@@ -168,7 +158,6 @@ export function noteFriends(answer: { incoming?: unknown }): void {
   if (requests !== reads.requests) publish({ ...reads, requests });
 }
 
-/** What needs the player, for the Friends button's badge: requests, challenges and unread messages. */
 export function friendsBadgeCount(shown: SocialReads): number {
   let count = shown.requests + shown.incoming.length;
   for (const unread of Object.values(shown.unread)) count += unread;

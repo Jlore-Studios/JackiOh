@@ -1,5 +1,4 @@
-// R503's art, tested pure (CardArt.test.tsx and CardFace.test.tsx cover the DOM): the families, the
-// motifs, a distinct picture per entry and face, and Core's kept where no motif moves them.
+// R503's art, tested pure (CardArt.test.tsx and CardFace.test.tsx cover the DOM).
 
 import { describe, expect, it } from "vitest";
 
@@ -41,7 +40,7 @@ function def(id: string): CardDef {
   return found;
 }
 
-/** One face's picture as CardFace draws it: the face's own type (B2.7), its theme and its motif. */
+/** One face's picture as CardFace draws it, from the face's own type (B2.7). */
 function faceSpec(card: CardDef, radiant: boolean): ArtSpec {
   const type: CardType = (radiant ? card.radiant.type : card.base.type) ?? card.type;
   const theme = themeFor(card.tags, type);
@@ -397,11 +396,7 @@ describe("R503 one distinct picture per catalog entry", () => {
 describe("R503 Core keeps the pictures v0.1 gave it", () => {
   type Recorded = readonly [ArtThemeId, string, number, number];
   const recorded = CORE_V01 as unknown as Readonly<Record<string, Recorded>>;
-  /**
-   * R1837000: the Core cards a later patch re-tagged, and the theme their tags give now. A theme is read
-   * off the tags, so #62 Friend of Felinors, no Felinor since #1837, wears the plain Spell's; every other
-   * Core card keeps v0.1's picture.
-   */
+  /** R1837000: the Core cards a patch re-tagged, as their tags theme them now (#62 lost Felinor in #1837). */
   const RETAGGED: Readonly<Record<string, ArtThemeId>> = { "core-062": "spell" };
   const kept = Object.entries(recorded).filter(([id]) => !(id in RETAGGED));
 

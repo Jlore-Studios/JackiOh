@@ -1,23 +1,17 @@
 // Play together's numbers (#936, SPEC S7, S8). The server's are its own (`crates/server/src/config.rs`,
-// read through `@jackioh/server-config`); only the client's pacing is stated here, as CLAUDE.md rule 9
-// asks.
+// read through `@jackioh/server-config`); only the client's pacing is stated here (CLAUDE.md rule 9).
 
 import { PRESENCE_HEARTBEAT_MS, SOCIAL_POLL_MS } from "@jackioh/server-config";
 
 /**
- * How often a screen that shows the friends list (statuses, requests, the blocked list) reads it
- * again: once a heartbeat (`PRESENCE_HEARTBEAT_MS`), the pace a friend's status changes at. A read is
- * one transaction on the server however many friends there are, but it is still the social layer's
- * dearest, so no screen asks for it faster, and off Play together a screen asks only while its friends
- * panel is open (`FriendsButton.tsx`, #1831).
+ * Once a heartbeat, the pace a friend's status changes at. The read is the social layer's dearest, so no
+ * screen asks faster, and off Play together only while the friends panel is open (`FriendsButton.tsx`).
  */
 export const FRIENDS_POLL_MS = PRESENCE_HEARTBEAT_MS;
 
 /**
- * How often the unread counts and the challenges are read again (the challenge toast, on every
- * signed-in screen, and Play together): the server's `SOCIAL_POLL_MS`, which the e2e specs wait on too.
- * One read of each per tab, however many screens show it (`socialPoll.ts`, #1831). An open
- * conversation keeps its own, faster pace (`CHAT_POLL_MS`, `ChatPanel.tsx`).
+ * The server's, which the e2e specs wait on too: one read of the unread counts and challenges per tab,
+ * however many screens show them (`socialPoll.ts`, #1831). Open chat keeps its own (`CHAT_POLL_MS`).
  */
 export { SOCIAL_POLL_MS };
 

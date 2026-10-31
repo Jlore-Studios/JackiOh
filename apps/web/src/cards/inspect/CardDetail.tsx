@@ -1,7 +1,6 @@
-// Detail shows both faces, meta (lines of code last, E36), glossary and caller actions (B29).
-// It is the sole inspect slot, closed by Close, scrim or Escape (B25).
-// Card-text refs are controls and Radiant differences are gold (R279, R277); reading-size rules and
-// pinned actions keep long faces usable. Flavour then History follow the glossary (R660, R388).
+// Detail shows both faces, meta (lines of code last, E36), glossary and caller actions (B29); it is
+// the sole inspect slot, closed by Close, scrim or Escape (B25). Card-text refs are controls and Radiant
+// differences are gold (R279, R277). Flavour then History follow the glossary (R660, R388).
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -36,20 +35,16 @@ export type CardDetailProps = {
   onClose: () => void;
   actions?: ReactNode;
   meta?: ReactNode;
-  /** R388: the History section starts open (the Patch notes page); collapsed when absent. */
+  /** R388: the History section starts open (the Patch notes page). */
   historyOpen?: boolean;
   /** SPEC §9.11, R654: render the compact card statistics block (deckbuilder and almanac). */
   showStats?: boolean;
-  /** R711000: the card is one a match flagged Chinese (R1301): its faces are Chinese, and a Chinese reader gets the easter egg line. */
+  /** R711000: a match flagged the card Chinese (R1301): Chinese faces, and a Chinese reader's easter egg line. */
   easter?: boolean;
 };
 
-/**
- * `#<index> · <set> · <rarity> · <type>`, then tags and ` · N lines of code` (E36) when present. A
- * Radiant face with a type of its own (B2.7, Classic+ #22) says so: "Trap (Radiant: Field Trap)".
- */
+/** A Radiant face with a type of its own (B2.7, Classic+ #22) says so: "Trap (Radiant: Field Trap)". */
 export function detailMetaLine(def: CardDef): string {
-  // R711000: the frame's words in the reader's language (chinese.ts), the catalog's English otherwise.
   const terms = readerTerms();
   const typeWord = (type: CardType): string => terms?.types[type] ?? type;
   const radiantType = def.radiant.type;
@@ -63,16 +58,10 @@ export function detailMetaLine(def: CardDef): string {
   return parts.join(" · ");
 }
 
-/**
- * Text tiers whose printed face shrinks far enough to want the reading-size copy on any screen; a
- * face that prints less than its whole text (issue #1017, `faceText`) wants it too.
- */
+/** Tiers whose face shrinks enough to want the reading-size copy, as does a face cut short (#1017). */
 const LONG_TEXT_TIERS: ReadonlySet<string> = new Set(["xl", "xxl"]);
 
-/**
- * The rules at reading size: the base text, then the Radiant face's whole text with what the base
- * lacks marked (R277); a Radiant text equal to the base one is not printed twice.
- */
+/** The rules at reading size, what the Radiant text adds to the base marked (R277). */
 function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel }): ReactElement | null {
   // R1313000: whether the faces beside it print full art, as they do.
   const fullArtOn = useFullArt(base.defId);

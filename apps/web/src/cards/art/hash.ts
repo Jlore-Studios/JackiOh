@@ -1,6 +1,5 @@
-// The number helpers behind the procedural card art (docs/polish/6-cards.md, Surface A). The art is
-// a pure function of the card id, so everything here is exact integer arithmetic or plain rounding,
-// never `Math.random` or the clock: one id draws the same picture everywhere.
+// The procedural card art's number helpers (docs/polish/6-cards.md, Surface A): exact integer
+// arithmetic or plain rounding, never `Math.random` or the clock, so one id draws one picture everywhere.
 
 const FNV_OFFSET_BASIS = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;

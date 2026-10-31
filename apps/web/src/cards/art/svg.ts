@@ -23,15 +23,12 @@ export const VIGNETTE_START = 0.6;
 export const VIGNETTE_OPACITY = 0.5;
 const DEGREES = Math.PI / 180;
 
-/** The procedural-art memo is cleared once it would pass this many entries. */
 const ART_CACHE_MAX = 512;
 
-/** The accent glyph is quieter than the emblem. */
 export const ACCENT_OPACITY = 0.8;
 /** An ink-drop mote (Book): its tail rises this many radii above its center. */
 export const DROP_TAIL = 2.2;
 
-/** One glyph from EMBLEMS, placed, turned and scaled into the box. */
 function glyphMarkup(placed: NonNullable<ArtSpec["accent"]>, opacity: number): string {
   const glyph = EMBLEMS[placed.glyph];
   const scale = placed.size / EMBLEM_BOX;
@@ -45,7 +42,6 @@ function glyphMarkup(placed: NonNullable<ArtSpec["accent"]>, opacity: number): s
   );
 }
 
-/** One mote: a round dot, an ink drop (Book) or a square pixel (AI). */
 function moteMarkup(mote: ArtSpec["motes"][number], shape: ArtSpec["moteShape"]): string {
   const paint = `fill="${mote.fill}" opacity="${fmt(mote.opacity)}"`;
   switch (shape) {
@@ -136,7 +132,6 @@ function encodeSvg(svg: string): string {
   return encodeURIComponent(svg).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
-/** `data:image/svg+xml,…`: one <svg viewBox="0 0 100 100">, no <text>, no <title>, no external refs. */
 export function artDataUri(spec: ArtSpec): string {
   return `${DATA_PREFIX}${encodeSvg(artSvg(spec))}`;
 }
@@ -161,10 +156,6 @@ export function proceduralArtUri(
   return uri;
 }
 
-/**
- * R2170000: a Stinkyscape face's picture (stinkyscape.ts), memoised beside the rest. Its key adds
- * the name, which picks the detail inside the card's family, as the motif does above.
- */
 /** R2249000: a Starship's art as a data URI, cached on what it draws from: its pieces, launch and face. */
 export function starshipArtUri(pieces: number, launched: boolean, radiant: boolean): string {
   const key = `starship|${pieces}|${launched}|${radiant}`;
@@ -176,6 +167,7 @@ export function starshipArtUri(pieces: number, launched: boolean, radiant: boole
   return uri;
 }
 
+/** R2170000: a Stinkyscape face's picture (stinkyscape.ts); its key adds the name, which picks its detail. */
 export function stinkyscapeArtUri(defId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
   const key = `${defId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}`;
   const hit = proceduralCache.get(key);

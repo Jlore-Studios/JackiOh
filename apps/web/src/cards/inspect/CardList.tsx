@@ -41,13 +41,13 @@ import {
 import "./inspect.css";
 import "./list-play.css";
 
-/** One face in the list, or a card back (`face: null`, R312). `key` is stable for what it shows; `count` is 1 when absent. */
+/** One face in the list, or a card back (`face: null`, R312); `key` is stable for what it shows. */
 export type CardListEntry = {
   key: string;
   face: FaceModel | null;
   count?: number;
   play?: CardListPlay;
-  /** R1297000: the card back a faceless entry wears (the viewer's own pick, board.tsx); absent: the default. */
+  /** R1297000: the card back a faceless entry wears (the viewer's own pick, board.tsx). */
   back?: string;
 };
 
@@ -56,10 +56,9 @@ export type CardListPlay = { testId: string; glow: boolean; onPlay: () => void }
 
 const PLAY_WORD = "Play";
 
-/** R1571000: the glyph of a pile card's reason for not playing, the StateNotes glyph's sibling. */
+/** R1571000: the StateNotes glyph's sibling. */
 const PLAY_REASON_GLYPH = "⊘";
 
-/** R1571000: where "Play" would be, why the card cannot be played now (`CardView.playReason`). */
 function PlayReason({ reason }: { reason: string }): ReactElement {
   return (
     <span className="inspect-list-play-reason" data-state="playReason">
@@ -73,7 +72,7 @@ export type CardListProps = {
   /** What the list is, in words: "Your graveyard". */
   title: string;
   entries: readonly CardListEntry[];
-  /** What the order of the entries is, in words; a pile's is "Newest first". */
+  /** What the order of the entries is, in words. */
   order?: string;
 };
 
@@ -118,7 +117,6 @@ function EntryFace({ entry }: { entry: CardListEntry }): ReactElement {
   );
 }
 
-/** B5 E11: "Play" under a face the viewer may play from the pile. */
 function PlayButton({ entry, play, onClose }: { entry: CardListEntry; play: CardListPlay; onClose: () => void }): ReactElement {
   return (
     <button
@@ -225,7 +223,6 @@ export function CardListPreview({
   );
 }
 
-/** B5 E11: a grid face opens large, with "Play" when permitted. */
 function FaceTile({
   entry,
   face,

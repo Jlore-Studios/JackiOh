@@ -37,7 +37,7 @@ function def(id: string): CardDef {
   return found;
 }
 
-/** A card's two pictures as its face draws them: its theme, its composition and its name's motif (R503). */
+/** A card's two pictures as its face draws them (R503). */
 function specsOf(card: CardDef): { base: ArtSpec; radiant: ArtSpec } {
   const theme = themeFor(card.tags, card.type);
   const composition = compositionFor(card.type);
@@ -56,8 +56,6 @@ function svgOf(uri: string): string {
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-// B1
 
 describe("B1: artSpec is pure and deterministic", () => {
   it("B1 equal arguments give deep-equal specs for every catalog card, and Math.random is never called", () => {
@@ -83,7 +81,6 @@ describe("B1: artSpec is pure and deterministic", () => {
     const before = specsOf(card);
     const beforeUri = artDataUri(before.base);
 
-    // Churn every other id through both functions, then ask again.
     for (const other of DEFS) {
       const specs = specsOf(other);
       artDataUri(specs.base);
@@ -140,8 +137,6 @@ describe("B1: artSpec is pure and deterministic", () => {
   });
 });
 
-// B2
-
 describe("B2: the radiant variant keeps the base geometry and gilds it", () => {
   it("B2 base and radiant share composition, every ridge path, and the emblem's glyph and position", () => {
     for (const card of DEFS) {
@@ -151,13 +146,11 @@ describe("B2: the radiant variant keeps the base geometry and gilds it", () => {
       expect(radiant.emblem.glyph, card.id).toBe(base.emblem.glyph);
       expect(radiant.emblem.x, card.id).toBe(base.emblem.x);
       expect(radiant.emblem.y, card.id).toBe(base.emblem.y);
-      // The per-card features are the card's, not the variant's.
       expect(radiant.layout, card.id).toBe(base.layout);
       expect(radiant.backdrop, card.id).toBe(base.backdrop);
       expect(radiant.skyScheme, card.id).toBe(base.skyScheme);
       expect(radiant.accent?.glyph ?? null, card.id).toBe(base.accent?.glyph ?? null);
       expect(radiant.accent?.x ?? null, card.id).toBe(base.accent?.x ?? null);
-      // The motif and where its glyphs stand are the card's too (R503).
       expect(radiant.motif, card.id).toBe(base.motif);
       expect(radiant.motifGlyphs.map((placed) => [placed.glyph, placed.x, placed.y, placed.size]), card.id).toEqual(
         base.motifGlyphs.map((placed) => [placed.glyph, placed.x, placed.y, placed.size]),
@@ -246,8 +239,7 @@ describe("per-card variety within a theme", () => {
       groups.set(key, [...(groups.get(key) ?? []), base]);
     }
     const large = [...groups].filter(([, specs]) => specs.length >= GROUP_USES_EVERY_LAYOUT);
-    // The four largest Core themes are among them, and so are the Book family's and, with the
-    // Meditative set's variety salt (R503), the CN figures' (#617).
+    // cn|figure is among them through the Meditative set's variety salt (R503, #617).
     expect(large.map(([key]) => key)).toEqual(
       expect.arrayContaining(["human|figure", "spell|burst", "unit|figure", "field-spell|landscape", "book|burst", "cn|figure"]),
     );
@@ -267,8 +259,6 @@ describe("per-card variety within a theme", () => {
     }
   });
 });
-
-// B3
 
 describe("B3: artDataUri draws a clean, self-contained SVG for every card", () => {
   it("B3 every catalog id, both variants: a data:image/svg+xml URI with no NaN, undefined, <text or <title", () => {
@@ -332,9 +322,7 @@ describe("B3: artDataUri draws a clean, self-contained SVG for every card", () =
   });
 });
 
-// B4
-
-/** Surface A's priority list, first match wins, with v0.2.0's three families in their places (R503). */
+/** Surface A's priority list, first match wins, with the families in their places (R503). */
 const PRIORITY: readonly (readonly [Tag, ArtThemeId])[] = [
   ["Call to Chaos", "chaos"],
   ["AI", "ai"],
@@ -439,8 +427,6 @@ describe("B4: themeFor and compositionFor", () => {
   });
 });
 
-// B5
-
 describe("B5: artUrl and the manifest", () => {
   const base = import.meta.env.BASE_URL;
 
@@ -454,7 +440,6 @@ describe("B5: artUrl and the manifest", () => {
     const manifest: ArtManifest = { "core-003": { base: true, radiant: true } };
     expect(artUrl("core-002", false, manifest)).toBeNull();
     expect(artUrl("core-002", true, manifest)).toBeNull();
-    // Nor does a prefix: core-00 is not core-002.
     expect(artUrl("core-00", false, { "core-002": { base: true } })).toBeNull();
   });
 

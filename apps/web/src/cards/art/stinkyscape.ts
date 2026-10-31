@@ -12,7 +12,6 @@ import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
 
 export const STINKYSCAPE_PREFIX = "stinkyscape-";
 
-/** Whether an id draws the set's own art: the set's entries and tokens, nothing else. */
 export function isStinkyscapeArt(defId: string): boolean {
   return defId.startsWith(STINKYSCAPE_PREFIX);
 }
@@ -375,7 +374,6 @@ function points(list: readonly (readonly [number, number])[]): string {
   return list.map(([x, y]) => `${fmt(x)},${fmt(y)}`).join(" ");
 }
 
-/** A filled outline in the set's ink. */
 function poly(list: readonly (readonly [number, number])[], fill: string, line: string, extra: Record<string, string | number> = {}): string {
   return shape("polygon", { points: points(list), fill, stroke: line, "stroke-width": STROKE, "stroke-linejoin": "round", ...extra });
 }
@@ -417,7 +415,6 @@ function at(x: number, y: number, rotate = 0, scale = 1): string {
   return `translate(${fmt(x)} ${fmt(y)}) rotate(${fmt(rotate)}) scale(${fmt(scale)})`;
 }
 
-/** A four-pointed glint. */
 function twinkle(x: number, y: number, r: number, fill: string, opacity: number): string {
   const w = r * 0.22;
   return path(
@@ -534,7 +531,6 @@ function hull(rng: Rng, p: Paint, cls: string): string {
   const dormant = cls === "dormant";
   const flame = dormant ? p.dark : p.glow;
   const engines = cls === "fighter" ? 1 : whole(rng, 2, 3);
-  // Engines and their flames, behind the stern.
   for (let i = 0; i < engines; i += 1) {
     const y = engines === 1 ? 0 : -W * 0.55 + (W * 1.1 * i) / (engines - 1);
     if (!dormant) {
@@ -560,14 +556,12 @@ function hull(rng: Rng, p: Paint, cls: string): string {
     out.push(poly([[-L * 0.6, -W], [-L * 0.45, -W * 1.45], [L * 0.05, -W * 1.45], [L * 0.2, -W]], "url(#hl)", p.line));
     out.push(poly([[-L * 0.6, W], [-L * 0.45, W * 1.45], [L * 0.05, W * 1.45], [L * 0.2, W]], p.hull, p.line));
   }
-  // The bridge, its lit windows dark on a dormant ship.
   const bridgeX = cls === "fighter" ? L * 0.2 : -L * 0.42;
   out.push(rect(bridgeX, -W * 0.45, L * (cls === "fighter" ? 0.3 : 0.26), W * 0.9, p.light, { ...inked(p), rx: W * 0.2 }));
   const windows = cls === "fighter" ? 2 : 3;
   for (let i = 0; i < windows; i += 1) {
     out.push(rect(bridgeX + L * 0.04 + i * L * 0.07, -W * 0.18, L * 0.04, W * 0.36, dormant ? p.dark : p.glow));
   }
-  // The turrets along the spine, barrels to the bow.
   const turrets = cls === "fighter" ? 0 : cls === "battleship" || cls === "dormant" ? whole(rng, 3, 4) : whole(rng, 2, 3);
   const slots = [L * 0.08, L * 0.32, -L * 0.62, -L * 0.1].slice(0, turrets);
   for (const x of slots) {
@@ -586,7 +580,6 @@ function hull(rng: Rng, p: Paint, cls: string): string {
   return out.join("");
 }
 
-/** A ring station: Megabase. */
 function station(p: Paint): string {
   const out: string[] = [];
   out.push(ellipse(0, 0, 34, 14, "none", { stroke: p.dark, "stroke-width": 7 }));
@@ -759,7 +752,6 @@ function weapon(rng: Rng, p: Paint, kind: string, tier: number, lower: string): 
       break;
     }
     case "ray": {
-      // A ray gun: grip, finned body, dish and its beam.
       out.push(poly([[-14, 2], [-8, 2], [-12, 18], [-19, 18]], p.dark, p.line));
       out.push(ellipse(-4, -2, 16, 7, "url(#hl)", inked(p)));
       for (const x of [-12, -6, 0]) out.push(ellipse(x, -2, 1.6, 9.5, p.accent, inked(p)));
@@ -1435,7 +1427,6 @@ const STARSHIP_STREAKS = 14;
 const STARSHIP_SCALE = 1.22;
 const STARSHIP_TILT = -14;
 
-/** A warp streak behind a launched Starship, a line of light running off to the left. */
 function streak(rng: Rng, p: Paint): string {
   const y = between(rng, 6, 94);
   const x = between(rng, 40, 100);
@@ -1445,7 +1436,6 @@ function streak(rng: Rng, p: Paint): string {
   });
 }
 
-/** One module fused onto the hull's flank: a pod on a strut, its core lit once the ship launches. */
 function module(p: Paint, x: number, y: number, side: number, lit: boolean): string {
   const strut = line(x, 0, x, y, p.dark, 1.4);
   const pod = ellipse(x, y, 4.6, 2.6, "url(#hl)", inked(p));
@@ -1454,13 +1444,7 @@ function module(p: Paint, x: number, y: number, side: number, lit: boolean): str
   return strut + fin + pod + core;
 }
 
-/**
- * R2249000: the art every Starship wears, Dormant or launched and however many pieces are fused into it:
- * a capital ship under its shield, a module on its flanks for each piece (up to `STARSHIP_MODULES_MAX`),
- * its engines cold and its scaffold up while it is Dormant, and once it launches its engines lit, its
- * shield glowing, warp streaks behind it and escorts beside it. Its seed is the hull's, never the fused
- * definition's, which changes with every piece.
- */
+/** R2249000: the art every Starship wears, Dormant or launched, however many pieces are fused into it. */
 export function starshipSvg(pieces: number, launched: boolean, radiant: boolean): string {
   const seed = hashId(STARSHIP_SEED_ID);
   const base: Paint = { ...FAMILY_PAINTS.fleet, glow: launched ? "#7fe8ff" : FAMILY_PAINTS.fleet.glow };
@@ -1482,7 +1466,6 @@ export function starshipSvg(pieces: number, launched: boolean, radiant: boolean)
   body.push(ellipse(0, 0, 52, 30, "url(#ha)", { opacity: 0.55 }));
   const shown = Math.max(0, Math.min(pieces, STARSHIP_MODULES_MAX));
   const lit = launched ? shown : 0;
-  // Its modules, one a piece, alternating flanks from the stern forward.
   const modules: string[] = [];
   for (let i = 0; i < shown; i += 1) {
     const side = i % 2 === 0 ? -1 : 1;
@@ -1491,7 +1474,6 @@ export function starshipSvg(pieces: number, launched: boolean, radiant: boolean)
   }
   body.push(modules.join(""));
   body.push(group(at(0, 0, 0, 1.18), hull(ahead, p, launched ? "battleship" : "dormant")));
-  // The shield: a faint bubble while it sleeps, a glowing one once it flies.
   body.push(ellipse(2, 0, 50, 27, "url(#sh)"));
   body.push(ellipse(2, 0, 50, 27, "none", { stroke: p.glow, "stroke-width": 0.5, opacity: launched ? 0.7 : 0.25, "stroke-dasharray": launched ? "none" : "2 2" }));
   if (launched) {

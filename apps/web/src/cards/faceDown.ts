@@ -1,9 +1,7 @@
 // The words a face-down backrow card is drawn with (SPEC §10.10, R370, R371), in one module so the
-// board, the inspect overlays, the showcase and the log say the same thing. Both cases are read off
-// the view, neither a rule (CLAUDE.md rule 7). A card face-down to the viewer (`faceDown`) is a back
-// with the cost the view carries, always a Trap or a Field Trap (§10.8 makes a Field Spell public),
-// so it is called a trap; the viewer's own trap the other player has not seen (`unrevealed`) is its
-// face, marked "Face down".
+// board, the inspect overlays, the showcase and the log say the same thing; read off the view, never
+// a rule (CLAUDE.md rule 7). A back is always a Trap or a Field Trap (§10.8 makes a Field Spell
+// public), so it is called a trap.
 
 /** R371: the tag on your own face-down trap. */
 export const FACE_DOWN_TAG = "Face down";
@@ -11,7 +9,6 @@ export const FACE_DOWN_TAG = "Face down";
 /** R371: what your own face-down trap's tag, tooltip and inspect note say. */
 export const UNREVEALED_NOTE = "Face down — your opponent can't see this card";
 
-/** R370: what a back in the backrow is. */
 export const FACE_DOWN_TITLE = "Face-down trap";
 
 /**
@@ -40,7 +37,7 @@ export function costPhrase(cost: number): string {
   return `(${String(cost)}) Cost`;
 }
 
-/** R370, R432: a back's label and tooltip, "Face-down trap, (2) Cost", or without a cost the view does not give. */
+/** R370, R432: a back's label and tooltip, without a cost the view does not give. */
 export function faceDownLabel(cost: number | undefined): string {
   return cost === undefined ? FACE_DOWN_TITLE : `${FACE_DOWN_TITLE}, ${costPhrase(cost)}`;
 }

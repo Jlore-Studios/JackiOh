@@ -138,7 +138,6 @@ function between(rng: Rng, low: number, high: number): number {
   return low + (high - low) * rng();
 }
 
-/** An integer in [low, high], inclusive. */
 function whole(rng: Rng, low: number, high: number): number {
   return low + Math.floor(rng() * (high - low + 1));
 }
@@ -1194,7 +1193,6 @@ function glitch(rng: Rng): string {
 
 type Twist = { under: Layer[]; over: Layer[] };
 
-/** R503 family twists use a stream of their own. */
 function twistLayers(rng: Rng, theme: ArtThemeId): Twist {
   switch (theme) {
     case "book":
@@ -1223,7 +1221,6 @@ const TWIST_COLORS: Readonly<Partial<Record<ArtThemeId, string>>> = {
   ai: "#39f3ff",
 };
 
-/** Plain cards and Tokens use their motif as their emblem. */
 const PLAIN_THEMES: ReadonlySet<ArtThemeId> = new Set<ArtThemeId>(["unit", "spell", "field-spell", "trap", "field-trap", "token"]);
 
 type Placed = { x: number; y: number; size: number };

@@ -1,6 +1,5 @@
-// `auth/ConsentPrompt.tsx` at the gate: the consent screen an account meets while it owes the age check
-// or the terms in force (R757000, R757001), through the real modules over a stubbed `fetch`. The server
-// decides what is owed and counts the age (CLAUDE.md rule 7).
+// `auth/ConsentPrompt.tsx` at the gate (R757000, R757001), through the real modules over a stubbed `fetch`.
+// The server decides what is owed and counts the age (CLAUDE.md rule 7).
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,10 +26,7 @@ const NOTHING: Owed = { ageCheckOwed: false, termsOwed: false };
 /** A lazily-imported route chunk plus a stubbed round trip can outrun the 1 s default. */
 const SLOW = { timeout: 5_000 } as const;
 
-/**
- * The server: `/api/auth/me` answers `me()` (read on every call, so a test can move the account
- * on), and `/api/account/consent` answers `consent`, after which the account owes nothing.
- */
+/** The server. `me` is read on every call, so a test can move the account on. */
 function serveAs(initial: Me, consent: { status: number; body: unknown } = { status: 200, body: NOTHING }): {
   calls: Call[];
   set: (next: Me) => void;

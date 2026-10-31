@@ -19,25 +19,19 @@ export function firstDeck(decks: readonly SavedDeck[]): SavedDeck | null {
   return decks.find((deck) => deck.cards.length === DECK_SIZE) ?? decks[0] ?? null;
 }
 
-/** The first trio with three decks, else the first. */
 export function firstTrio(trios: readonly SavedTrio[]): SavedTrio | null {
   return trios.find((trio) => trio.deckIds.every((id) => id !== null)) ?? trios[0] ?? null;
 }
 
-/** The deck with `id` while it is still saved, else the first (`firstDeck`). */
 export function pickDeck(decks: readonly SavedDeck[], id: string | null): SavedDeck | null {
   return decks.find((deck) => deck.id === id) ?? firstDeck(decks);
 }
 
-/** The trio with `id` while it is still saved, else the first (`firstTrio`). */
 export function pickTrio(trios: readonly SavedTrio[], id: string | null): SavedTrio | null {
   return trios.find((trio) => trio.id === id) ?? firstTrio(trios);
 }
 
-/**
- * What a room is made with for `mode`, or null while its pick is missing (`choiceFor` in `routes/play.tsx`).
- * R2031000: All Random carries `lean` as `leanSet` when there is one (R924000).
- */
+/** What a room is made with, or null while its pick is missing (`choiceFor` in `routes/play.tsx`; R924000). */
 export function choiceOf(
   mode: QueueMode,
   deckId: string | null,
@@ -54,7 +48,6 @@ export function choiceOf(
   }
 }
 
-/** The last pick made in this browser: Best of 1 and no deck or trio when there is none, or it is not readable. */
 export function readChallengeChoice(): StoredChallengeChoice {
   const none: StoredChallengeChoice = { mode: "bo1", deckId: null, trioId: null };
   try {
@@ -74,9 +67,8 @@ export function readChallengeChoice(): StoredChallengeChoice {
 }
 
 /**
- * Remembers the deck or trio `choice` was made with, keeping the other as it was. The mode is kept
- * only when `setsMode`: a challenge sent sets the dialog's next mode, while an accepted one says
- * nothing of the mode the player would challenge in.
+ * The mode is kept only when `setsMode`: a challenge sent sets the dialog's next mode, while an
+ * accepted one says nothing of the mode the player would challenge in.
  */
 export function rememberChallengeChoice(choice: ModeChoice, setsMode: boolean): void {
   const before = readChallengeChoice();

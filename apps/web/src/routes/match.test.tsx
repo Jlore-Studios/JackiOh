@@ -1,7 +1,6 @@
-// `/match/<id>`: the board specs 05 and 06 drive, with the socket faked. The load-bearing assertion
-// is what a board does with `legalActions`: a view that carries none leaves `waitForMyTurn` waiting
-// forever, so the route says so out loud. The board comes alive on the `view` frame's `legal` field
-// (SURFACE §11.3); legality is the engine's (BUILD M5-T2, CLAUDE.md rule 7).
+// `/match/<id>`: the board specs 05 and 06 drive, with the socket faked. A `view` frame with no `legal`
+// leaves `waitForMyTurn` waiting forever, so the route says so out loud (SURFACE §11.3); legality is
+// the engine's (BUILD M5-T2, CLAUDE.md rule 7).
 
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -85,7 +84,6 @@ function attach(extra: Record<string, unknown> = {}): void {
   });
 }
 
-/** A later `view` frame on the open socket, with nothing legal. */
 function pushView(view: PlayerView): void {
   act(() => {
     live().onmessage?.({ data: JSON.stringify({ type: "view", view, legal: [] }) });
@@ -379,7 +377,6 @@ describe("R268 the mulligan clock on the match bar", () => {
 });
 
 describe("R439 the turn clock's last 30 seconds on the match bar", () => {
-  /** A `clock` frame whose turn clock has `ms` left at the server's `now`. */
   function clockFrame(now: number, ms: number | null): string {
     return JSON.stringify({
       type: "clock",
@@ -427,14 +424,13 @@ describe("R439 the turn clock's last 30 seconds on the match bar", () => {
     const now = 1_000_000;
     act(() => {
       live().onopen?.({});
-      // The opponent's turn, with 5 seconds left on it.
       live().onmessage?.({ data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p2", turn: 3 }) }) });
       live().onmessage?.({ data: clockFrame(now, TURN_CLOCK_LAST_MS / 2) });
     });
     expect(clockRoot()).toHaveAttribute("data-clock-side", "opponent");
     expect(clockRoot()).toHaveAttribute("data-clock-urgency", "last10");
 
-    // The viewer's turn begins: its view first, the server's fresh frame just after (actor.ts).
+    // The viewer's turn begins: its view first, the server's fresh frame just after.
     act(() => {
       live().onmessage?.({
         data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p1", turn: 4, clockMs: TURN_CLOCK_MS }) }),
@@ -703,7 +699,6 @@ describe("the match screen's ranks (R604, R612)", () => {
     attach({ legal: [{ type: "endTurn" }] });
 
     const banner = await screen.findByTestId("match-ranks");
-    // Both the full and the compact line name the seats the same isolated way.
     for (const line of [".match-ranks__full", ".match-ranks__short"]) {
       const names = [...(banner.querySelector(line)?.querySelectorAll("bdi.username") ?? [])];
       expect(names.map((name) => name.getAttribute("title"))).toEqual(["Max#3", "שרה"]);
@@ -748,7 +743,6 @@ describe("the match screen's ranks (R604, R612)", () => {
     render(<MatchRoute matchId="m-2" token="tok" socketFactory={socketFactory} />);
     attach({ legal: [{ type: "endTurn" }] });
     await screen.findByTestId("hero-you");
-    // The ranks read has answered by now, and its body was not a ranks body: no banner, no crash.
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/ranks"), expect.anything());
     });
@@ -939,7 +933,6 @@ describe("R2388000 a ranked match's result shows the rank it moved each seat to"
 describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
   const finished = baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } });
 
-  /** One view frame, as the actor sends it after the result has landed. */
   function push(view: ReturnType<typeof baseView>, extra: Record<string, unknown> = {}): void {
     act(() => {
       live().onmessage?.({ data: JSON.stringify({ type: "view", view, ...extra }) });
@@ -953,12 +946,10 @@ describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
     push(baseView({ viewer: "p1", active: "p1" }), { jloreCapped: true });
     expect(screen.queryByTestId("result-daily-jlore")).toBeNull();
 
-    // The finished game, the server saying the cap held this account's Jlore back.
     push(finished, { jloreCapped: true });
     expect(await screen.findByTestId("result-daily-jlore")).toHaveTextContent("Daily Jlore reached");
     cleanup();
 
-    // The same game with nothing held back, or a view that says nothing about it, shows none.
     for (const extra of [{ jloreCapped: false }, {}]) {
       render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
       attach({ view: finished, ...extra });
@@ -1027,7 +1018,6 @@ describe("R169 the modifier list at the online table", () => {
 
 describe("the XP reveal on a finished match (#1664)", () => {
   const finished = baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } });
-  /** What the result's write paid the account: a track moved one level, a quest completed. */
   const economy = {
     jlore: 30,
     xp: 540,
@@ -1163,7 +1153,6 @@ describe("the death screen's rematch offers (R672)", () => {
     );
   }
 
-  /** Push a finished game, the way the actor's last view reads after the killing blow. */
   function finish(): void {
     attach({
       view: baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } }),
@@ -1196,7 +1185,6 @@ describe("the death screen's rematch offers (R672)", () => {
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
     finish();
 
-    // The banner read the series (so the hook ran), yet no rematch rendered for it.
     await screen.findByTestId("series-banner");
     await act(async () => {});
     expect(screen.queryByTestId("rematch-offer")).toBeNull();
@@ -1247,10 +1235,7 @@ describe("the death screen's rematch offers (R672)", () => {
     });
   });
 
-  /**
-   * The test above's held rematch answers, with the replay's pages served as `stubReplayFetch` below
-   * serves them and `/series` answering this series (or none). Returns the held answers' releases.
-   */
+  /** The test above's held rematch answers, plus `stubReplayFetch`'s replay pages and this `/series`. */
   function stubHeldRematchFetch(series: Record<string, unknown> | null): Array<(body: string) => void> {
     const steps = foldedReplaySteps();
     const releaseRematch: Array<(body: string) => void> = [];
@@ -1283,7 +1268,6 @@ describe("the death screen's rematch offers (R672)", () => {
     return releaseRematch;
   }
 
-  /** Both seats' matching offers, as the rematch poll answers once they have made `match-2`. */
   const AGREED = JSON.stringify({ youOffered: 1, opponentOffer: 1, opponentHere: true, matchId: "match-2" });
 
   it("takes the seat to the rematch even from the finished match's replay", async () => {
@@ -1329,7 +1313,6 @@ describe("the death screen's rematch offers (R672)", () => {
     });
     expect(vi.mocked(navigate)).not.toHaveBeenCalled();
 
-    // Back: the result panel again, still with no rematch on it.
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
     expect(screen.queryByTestId(replayTestid.player)).toBeNull();
@@ -1369,9 +1352,7 @@ describe("a match voided mid-game (#1899)", () => {
     });
     expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "closed");
     expect(screen.getByTestId("match-gone")).toHaveTextContent("This match is no longer available.");
-    // The board stays up behind the notice.
     expect(screen.getByTestId("hero-you")).toBeInTheDocument();
-    // A voided match has no socket to reopen (R679).
     expect(screen.queryByTestId("match-reconnect")).toBeNull();
     expect(sockets).toHaveLength(1);
 

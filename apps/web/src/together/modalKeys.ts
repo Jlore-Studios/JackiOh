@@ -1,26 +1,20 @@
-// The keys of a modal like the client's others (`game/ConfirmConcede.tsx`, #1569), shared by the
-// challenge dialog and the friends panel (#1831): Escape and Back (R2127000) close it and Tab stays
-// inside it.
+// The keys of a modal like `game/ConfirmConcede.tsx` (#1569), shared by the challenge dialog and the
+// friends panel (#1831): Escape and Back (R2127000) close it and Tab stays inside it.
 
 import { useEffect, type RefObject } from "react";
 
 import { useBackLayer } from "../net/backLayers.ts";
 
-/** What Tab may land on in a modal. */
 const TAB_STOPS = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])";
 
-/** The modal's tab stops in order; a radio group is one stop, its checked radio, as the browser's own Tab takes it. */
+/** A radio group is one stop, its checked radio, as the browser's own Tab takes it. */
 export function tabStops(modal: HTMLElement): HTMLElement[] {
   return [...modal.querySelectorAll<HTMLElement>(TAB_STOPS)].filter(
     (element) => !(element instanceof HTMLInputElement && element.type === "radio" && !element.checked),
   );
 }
 
-/**
- * Both keys are read at the window, in the capture phase, so they hold wherever the focus is (a
- * click on the modal's text or the dimmed page takes it off the controls): Escape closes, and Tab
- * and Shift+Tab step through the modal's stops, wrapping, never onto the page behind the scrim.
- */
+/** Both keys are read at the window, in the capture phase, so they hold wherever a click left the focus. */
 export function useModalKeys(root: RefObject<HTMLElement | null>, onClose: () => void): void {
   useBackLayer(onClose);
   useEffect(() => {

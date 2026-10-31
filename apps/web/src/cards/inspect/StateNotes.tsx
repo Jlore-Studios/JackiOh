@@ -17,9 +17,8 @@ import { INSPECT_LOC, INSPECT_STATES, INSPECT_TUNED } from "./testids.ts";
 
 /** R404: the glyphs of a quest and of an aura its line holds; R511: of a copier's note. */
 const QUEST_GLYPH = "⚑";
-/** R1854000: a stage's mark by its state — done, open now, still to come. */
 const STAGE_GLYPH: Readonly<Record<"done" | "current" | "upcoming", string>> = { done: "✓", current: "▸", upcoming: "·" };
-/** R1854000: a stage's state in words, beside its glyph for a reader that has no sight of it. */
+/** A stage's state in words, for a reader that cannot see its glyph. */
 const STAGE_STATE_WORDS: Readonly<Record<"done" | "current" | "upcoming", string>> = {
   done: "done",
   current: "now",
@@ -27,12 +26,10 @@ const STAGE_STATE_WORDS: Readonly<Record<"done" | "current" | "upcoming", string
 };
 const AURA_GLYPH = "✦";
 const COPY_GLYPH = "“";
-/** R849000: the glyph of a unit's reason for not attacking. */
 const ATTACK_REASON_GLYPH = "⊘";
-/** R979000: the glyph of a hand card's reason for not playing, the attack reason's sibling. */
+/** R979000: the attack reason's sibling. */
 const PLAY_REASON_GLYPH = "⊘";
 
-/** R511: "Copying: Book of Knowledge", "Copying: Book of Knowledge (Radiant)". */
 export function copyingWords(copying: { name: string; radiant: boolean }): string {
   return copying.radiant ? t("Copying: {name} (Radiant)", { name: copying.name }) : t("Copying: {name}", { name: copying.name });
 }

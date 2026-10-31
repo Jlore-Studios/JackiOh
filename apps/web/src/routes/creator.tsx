@@ -1,7 +1,6 @@
 // `/creator`: the card creator (#920, SPEC §12.9), behind the gate since a custom card is kept on the
 // account; this route gives `creator/Creator.tsx` the token and sends "Try it" to a practice game
-// with the saved card (R915009). Back leads to the Collection hub (R1579000). With unsaved changes,
-// every way off it within the client shows the creator's unsaved-changes note (R1484000, R1754000).
+// with the saved card (R915009). Back leads to the Collection hub (R1579000).
 
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 
@@ -19,9 +18,8 @@ export type CreatorRouteProps = {
 };
 
 export default function CreatorRoute({ token, api }: CreatorRouteProps): ReactElement {
-  /** Whether the editor holds changes not yet saved, as `Creator` reports it. */
   const [unsaved, setUnsaved] = useState(false);
-  /** A way off the page taken with unsaved changes: the note asks whether to discard them, then makes that move (R1484000, R1754000). */
+  /** A way off taken with unsaved changes, held until the note answers (R1484000, R1754000). */
   const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
   const onUnsaved = useCallback((next: boolean) => {
     setUnsaved(next);

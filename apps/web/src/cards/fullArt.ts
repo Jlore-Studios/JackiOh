@@ -8,10 +8,7 @@
 // (`FULL_ART_GATED`), a copy prints full art only where it is the viewer's own and the viewer owns it
 // (`FullArtOwned`, which ownedFullArt.ts mounts on every gated screen from `GET /api/cosmetics`):
 // the client never infers another's ownership. With no `FullArtOwned` above it (practice, hotseat,
-// the Almanac, the landing page's fan), every full art counts as owned. R1655000: `FullArtOwned`
-// holds the viewer's ownership of every per-card cosmetic, `NO_FULL_ART` the empty one; the names
-// stay. R1834004: a copy below a `TheirCopy` prints its full art where its owner's loadout says so,
-// which the server checked against the owner's account (R1834001).
+// the Almanac, the landing page's fan), every full art counts as owned.
 //
 // Presentation only (CLAUDE.md rule 7): the face is drawn differently and plays the same.
 
@@ -52,7 +49,6 @@ export function showsFullArt(face: FaceModel, fullArtOn: boolean = readCardSetti
   return fullArtOn && isFullArtCard(face.defId, face.englishName ?? face.name);
 }
 
-/** R1108000: whether the faces below it may print full art; false on a tutorial lesson's board. */
 const FullArtAllowedContext = createContext(true);
 
 /** R1108000: the faces below it print full art only when `allowed` (practice.tsx: not in a lesson). */
@@ -80,14 +76,12 @@ export const E2E_FULL_ART_GATED_KEY = "jackioh.e2e.fullArtGated";
 /**
  * R1313000: whether ownership decides full art: once the economy is `live`, in a production build.
  * A dev or e2e build (`--mode development`) and the tests treat every full art as owned. R1310004:
- * except a development build whose e2e run asks for the gate (`e2eGated`, from
- * `E2E_FULL_ART_GATED_KEY`), as the spec that walks the economy (spec 45) does.
+ * except a development build whose e2e run asks for the gate (`e2eGated`).
  */
 export function fullArtGated(live: boolean, mode: string, e2eGated: boolean = false): boolean {
   return live && (mode === "production" || (mode === "development" && e2eGated));
 }
 
-/** R1310004: whether a development build's e2e run asks for the gate; never read in another build, and false when storage throws. */
 function e2eAsksFullArtGate(): boolean {
   if (import.meta.env.MODE !== "development") return false;
   try {
@@ -106,7 +100,6 @@ export function FullArtOwned({ owned, children }: { owned: FullArtOwnership; chi
   return createElement(OwnershipContext.Provider, { value: owned }, children);
 }
 
-/** R1313000: whether the faces below it are the viewer's own copies. */
 const OwnCopyContext = createContext(false);
 
 /** R1313000: the faces below it are the viewer's own copies when `own`, or when an `OwnCopy` above it says so. */
@@ -143,13 +136,11 @@ export function FullArtShown({ defId, on, children }: { defId: string; on: boole
 }
 
 /**
- * R1108000: whether a copy of `defId` prints full art, which is off below a `FullArtAllowed` of
- * false. R1313000: and off where ownership decides and it is not the viewer's own (`worn`, or below
- * an `OwnCopy`) with its full art owned. R1655000: an own copy's own pick (`writeCardFullArt`)
- * decides first; the Full-art cards setting decides where the card has none, and for every copy
- * that is not the viewer's own. R1834004: a copy that is not, below a `TheirCopy`, prints only where
- * its owner's loadout picks the card's full art, and the setting is on. Below a `FullArtShown` of
- * `defId`, an own copy reads its pick from there.
+ * R1108000: whether a copy of `defId` prints full art: never below a `FullArtAllowed` of false.
+ * R1313000: where ownership decides, only an own copy (`worn`, or below an `OwnCopy`) whose full art
+ * is owned. R1655000: an own copy's pick (`writeCardFullArt`, or a `FullArtShown`'s) decides first,
+ * the Full-art cards setting otherwise. R1834004: a copy below a `TheirCopy` prints only where its
+ * owner's loadout picks it (the server checked, R1834001) and the setting is on.
  */
 export function useFullArt(defId: string, worn: boolean = false): boolean {
   const { fullArt } = useCardSettings();

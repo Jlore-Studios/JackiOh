@@ -1,28 +1,20 @@
 // Where a card's text names another card (SPEC §10.10, R279). The catalog lists the cards and tokens
 // a card's text names (`CardDef.refs`), and crates/cards/tests/cross/references.rs proves the list
-// with one naming rule, which this module reads the same way: a card's name, or its name before a
-// parenthesis, alone or with a plural "s", standing as whole words (not beside a letter, digit,
-// apostrophe or hyphen, so "CN-Viral" does not name "CN-Virus"). A name the text calls Radiant points
-// at that card's Radiant face, any other at its base face. Presentation only (CLAUDE.md rule 7): the
-// faces a reference shows are printed catalog faces, public by §5.1.
+// with one naming rule, which this module reads the same way. Presentation only (CLAUDE.md rule 7):
+// the faces a reference shows are printed catalog faces, public by §5.1.
 
 import type { CardDef } from "@jackioh/shared";
 
-/** A name in a text that points at a card: where it stands, which card, and which face. */
 export type RefMatch = { readonly start: number; readonly end: number; readonly id: string; readonly radiant: boolean };
 
 const WORD = /[A-Za-z0-9'-]/;
 const PLURAL = "s";
-/** The word before a name that makes it point at the Radiant face. */
 const RADIANT_WORD = "Radiant ";
 
 /** R903: one named alias — "Coin" names The Coin, which M #27's texts call by the short name. */
 const ALIASES: Readonly<Record<string, readonly string[]>> = { "The Coin": ["Coin"] };
 
-/**
- * The names a text may call a card by: its name, and its name before a parenthesis (a Chinese name's
- * full-width one too, "混沌召唤（核心版）", R1301).
- */
+/** A card's names in a text: its name, and its name before a parenthesis (full-width in Chinese, R1301). */
 export function namesOf(def: Pick<CardDef, "name">): string[] {
   const bare = def.name.replace(/\s*[(（].*[)）]\s*$/, "");
   const out = bare === def.name ? [def.name] : [def.name, bare];

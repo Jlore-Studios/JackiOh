@@ -10,7 +10,6 @@ import type { CardDef, CardDefs } from "@jackioh/shared";
 import { CatalogContext } from "../game/catalog.ts";
 import { glitchDef, isGlitch } from "./glitch.ts";
 
-/** The printed definition of a catalog card, by id, or undefined when this screen has none. */
 export type DefResolver = (id: string) => CardDef | undefined;
 
 const DefsContext = createContext<DefResolver | null>(null);
@@ -34,7 +33,6 @@ export function RefsInteractive({ enabled = true, children }: { enabled?: boolea
   return <InteractiveContext.Provider value={enabled}>{children}</InteractiveContext.Provider>;
 }
 
-/** The closest catalog: a `CardDefsProvider`'s, else the board's `CatalogContext`, else none. */
 export function useDefResolver(): DefResolver | null {
   const direct = useContext(DefsContext);
   const lookup = useContext(CatalogContext);

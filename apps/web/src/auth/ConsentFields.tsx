@@ -1,8 +1,7 @@
 // The age screen's and the terms box's fields (R757000, R757001), shared by the sign-up form and the
 // consent screen. They decide nothing: the server counts the age and records the agreement
-// (CLAUDE.md rule 7). NEUTRAL: nothing is chosen until the player chooses, nothing names an age or
-// says who may not join, and a refusal says only that an account cannot be made. THE BOX starts
-// unticked; its links open in a new tab, so reading them never loses what was typed.
+// (CLAUDE.md rule 7). Nothing names an age or says who may not join; the box's links open in a new
+// tab, so reading them never loses what was typed.
 
 import type { ReactElement } from "react";
 
@@ -19,13 +18,11 @@ export type BirthAnswer = { month: string; year: string };
 
 export const NO_BIRTH_ANSWER: BirthAnswer = { month: "", year: "" };
 
-/** The chosen month and year as numbers, or null while either is not chosen. */
 export function birthOf(answer: BirthAnswer): { birthYear: number; birthMonth: number } | null {
   if (answer.month === "" || answer.year === "") return null;
   return { birthYear: Number(answer.year), birthMonth: Number(answer.month) };
 }
 
-/** Problems the fields show, the client's own sentences. */
 export const CONSENT_MESSAGES = {
   birthMissing: "Choose the month and year you were born.",
   agreeMissing: "Tick the box to agree to the Terms and the Privacy Policy.",
@@ -47,7 +44,6 @@ export type BirthMonthYearProps = {
   idPrefix: string;
   value: BirthAnswer;
   onChange: (next: BirthAnswer) => void;
-  /** The problem to show under the fields, or null. */
   error: string | null;
   disabled?: boolean;
 };

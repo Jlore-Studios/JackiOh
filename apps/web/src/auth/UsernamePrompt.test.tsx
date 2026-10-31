@@ -1,5 +1,5 @@
-// `auth/UsernamePrompt.tsx` and its `UsernameField`: the prompt an active account meets once after
-// activation (R1435). The server judges every name; the client saves exactly the username it showed.
+// `auth/UsernamePrompt.tsx` and its `UsernameField` (R1435). The server judges every name; the client
+// saves exactly the username it showed.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -39,7 +39,6 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
-/** What the gate passes the prompt: told once the server takes a pick or a skip. */
 const onAnswered = vi.fn();
 
 function prompt(): void {

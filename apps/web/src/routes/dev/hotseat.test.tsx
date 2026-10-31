@@ -24,14 +24,11 @@ import {
   readParams,
 } from "./hotseat.tsx";
 
-// Fake engine and catalog
-
 type FakeState = { turn: number; active: PlayerId; pendingFor: PlayerId | null };
 
 type Fake = {
   port: EnginePort;
   createGameArgs: CreateGameArgs[];
-  /** Actions the route handed to `reduce`. */
   actions: Action[];
   viewedBy: PlayerId[];
   /** Next accepted `reduce` leaves this prompt open; consumed once. */
@@ -50,7 +47,7 @@ function def(index: number, over: Partial<CardDef> = {}): CardDef {
     tags: [],
     rarity: "Common",
     token: false,
-    // Non-monotonic costs ensure `first20` and `cheap20` differ.
+    // Non-monotonic, so `cheap20` is not `first20`.
     cost: (index * 3) % 7,
     base: { attack: 1, health: 1, keywords: [], text: "" },
     radiant: { attack: 2, health: 2, keywords: [], text: "" },
@@ -58,7 +55,7 @@ function def(index: number, over: Partial<CardDef> = {}): CardDef {
   };
 }
 
-/** More cards than a deck holds, so `first20` and `cheap20` (each `DECK_SIZE` long) hold different cards. */
+/** More cards than a deck holds, so `first20` and `cheap20` differ. */
 function fakeCatalog(): CardDefs {
   const defs: CardDef[] = [];
   for (let i = 1; i <= DECK_SIZE + 5; i += 1) defs.push(def(i));
@@ -128,9 +125,7 @@ function makeEngine(options: { catalog?: CardDefs | "throws"; pendingAfterBegin?
   return fake;
 }
 
-// Mounting
-
-/** Render the route and wait for the engine promise the route resolves in an effect. */
+/** Render the route and wait for the engine promise it resolves in an effect. */
 async function mount(search = "?seed=42&a=first20&b=cheap20"): Promise<void> {
   at(`/dev/hotseat${search}`);
   await act(async () => {
@@ -233,8 +228,6 @@ describe("readInjectedHandicaps (R180: a fixture deck's handicap, spec 25)", () 
     expect(readInjectedHandicaps()).toEqual({ p1: { ...FOUR_CARDS, deckSize: 61, manaBonus: -1 } });
   });
 });
-
-// Starting the game
 
 describe("the route starts one game from the URL", () => {
   it("hands the engine the seed and the two decks the a= and b= ids resolve to", async () => {

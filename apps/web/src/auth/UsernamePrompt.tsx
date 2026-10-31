@@ -1,9 +1,6 @@
-// The username prompt (R1435): what an active account that has neither picked a username nor skipped
-// sees first on the gated screens. The gate decides nothing (CLAUDE.md rule 7): the prompt is owed by
-// `/api/auth/me`'s `promptOwed`, and a pending account never gets this far. A pick is `UsernameField`;
-// "Skip for now" is `POST /api/username/skip`, which keeps `Player#n`. Either way the gate is told
-// (`onAnswered`) and the answer announced, so it reads `/api/auth/me` again; nothing waits on that
-// read, so one that fails leaves the prompt owed, and the player has answered.
+// The username prompt (R1435). The gate decides nothing (CLAUDE.md rule 7): the prompt is owed by
+// `/api/auth/me`'s `promptOwed`. After a pick or a skip nothing waits on the gate's re-read, so one that
+// fails leaves the prompt owed, and the player has answered.
 // THE GATE'S FRAME is `ShellPanel`'s markup, written out here because main.tsx imports this file.
 
 import { useState, type ReactElement } from "react";
