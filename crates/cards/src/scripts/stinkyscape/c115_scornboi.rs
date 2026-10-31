@@ -8,7 +8,9 @@
 //! an exile aura (R1850002): the Units on both sides, `notTags` Human and `notKeywords` Starship Piece
 //! and Starship, read through the layers (§10.4), so a granted tag or keyword spares a Unit; exiled at
 //! each state check, never this card, a face-down or a Dormant one (a Dormant Starship is no Unit until
-//! it launches, R1839000). Units only (ST9). The Radiant face reaches the enemy side only.
+//! it launches, R1839000). Units only (ST9). The Radiant face reaches the enemy side only. Since #2521
+//! fifteen Units are no Starship Pieces (S #68 Stratos, the Paragons, the Badgers, the Weapon hosts …),
+//! so the aura exiles them as any other Unit with neither.
 
 use jackioh_engine::prelude::*;
 
@@ -54,6 +56,8 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4, a Human: a tribute.
     const MENACE: &str = "core-019"; // (3) 9/9, no tag.
     const CHASSIS: &str = "stinkyscape-048"; // (1) 4/1, a Starship Piece.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/1 Flying, Ranged: no piece since #2521.
+    const PARAGON_MK1: &str = "stinkyscape-072"; // (3) 6/1 Charge, Flying, Ranged: no piece since #2521.
     const ARMOR: &str = "core-073"; // (2) Field Spell: no Unit.
     const FILLER: &str = "core-005";
 
@@ -112,6 +116,25 @@ mod tests {
         assert_eq!(s.unit_at(P2, 3).def_id, CHASSIS, "a Starship Piece stays");
         assert!(s.backrow(P2, 1).is_some(), "Units only: a Field Spell stays");
         s.expect_stats(ID, json!({ "attack": 12, "health": 9 }));
+    }
+
+    #[test]
+    fn r1850002_stratos_and_paragon_mk1_no_starship_pieces_since_2521_are_exiled() {
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [ID, FILLER],
+                "field": [VANILLA, VANILLA, VANILLA],
+                "library": filler(4),
+                "mana": 10,
+            },
+            "p2": { "hand": [FILLER], "field": [STRATOS, PARAGON_MK1, CHASSIS], "library": filler(4) },
+        }));
+        play_scornboi(&mut s);
+        assert_eq!(
+            exiled(&s),
+            vec![(P2, STRATOS.to_string()), (P2, PARAGON_MK1.to_string())]
+        );
+        assert_eq!(s.unit_at(P2, 3).def_id, CHASSIS, "a Starship Piece stays");
     }
 
     #[test]

@@ -108,10 +108,10 @@ mod tests {
 
     #[test]
     fn r1881004_a_dormant_card_is_passed_by() {
-        const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying.
+        const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce.
         let (mut s, ship) = crate::built_starship(
             "subroutine-dormant",
-            json!([{ "def": STRATOS, "lane": 2 }]),
+            json!([{ "def": AP_ROUNDS, "lane": 2 }]),
             json!({ "hand": [SUBROUTINE, FILLER], "field": [{ "def": VANILLA, "lane": 1 }] }),
             json!({}),
         );

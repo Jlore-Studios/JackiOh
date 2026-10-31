@@ -362,7 +362,10 @@ pub fn uses_allowed(card: &CardInstance, decl: &ActivationDecl) -> i32 {
     }
 }
 
-fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
+/// R384, R1751000: one use of `ability` counted on the card this turn (`ACTIVATIONS_MEMORY_KEY`): the
+/// `activate` action's, and each of those R2521003's run of another card's ability spends
+/// (`effects::activations::run_activation` with `spend_use`).
+pub fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
     let Some(card) = find_instance(state, card_id) else {
         return;
     };

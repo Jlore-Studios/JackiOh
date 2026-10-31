@@ -11,7 +11,8 @@
 //! like Meditative's, and the gate's tests stay on the Boss set; its Potion tag names no tribe.
 //! R1857000: the Stinkyscape set (issue #1836) was the third held set, after Meditative+ in the
 //! catalog order, and shipped with its release (#1884), so its fixture cards here now draw, deal and
-//! lean like Meditative+'s; its four tags name no tribe.
+//! lean like Meditative+'s; its four tags name no tribe, nor do the two issue #2521 adds after them
+//! (Resource and Faction).
 //! R2194000: the Training Grounds set (issue #2193) was the fourth held set, after Stinkyscape in the
 //! catalog order, and shipped with its release (#2204), so its fixture cards here now draw, deal and
 //! lean like Stinkyscape's, and it is the newest set.
@@ -697,6 +698,8 @@ mod r1424_the_tribal_tags_name_peoples_and_factions {
             Tag::WarDoctrine,
             Tag::Swarm,
             Tag::Legacy,
+            Tag::Resource,
+            Tag::Faction,
             Tag::Token,
         ] {
             assert!(!TRIBAL_TAGS.contains(&tag), "{tag} is no tribe");
@@ -863,9 +866,10 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
             assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
         }
-        // R2511000: Legacy follows them, and Token stays last.
+        // R2511000: Legacy follows them, then issue #2521's Resource and Faction, and Token stays last.
         assert_eq!(at(Tag::Legacy), Some(bean + 1 + TAGS.len()));
-        assert_eq!(at(Tag::Token), Some(bean + 2 + TAGS.len()));
+        assert_eq!(at(Tag::Resource), Some(bean + 2 + TAGS.len()));
+        assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
     }
 
     #[test]
@@ -961,6 +965,76 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             .map(|error| error.message.as_str())
             .collect();
         assert_eq!(l3, Vec::<&str>::new(), "{:?}", result.errors);
+    }
+}
+
+/// Issue #2521: Resource (the six Stinkyscape Resources, Reknite to Red Narcor, every one a token)
+/// and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162) follow Legacy (R2511000),
+/// itself after the Stinkyscape set's four, in the union, ahead of Token. Family tags that name no tribe (R1424), whose pools take
+/// no token unless they ask for tokens, as every tag outside `POOL_TOKEN_TAGS` (R382). Fixture cards
+/// only; the real cards' tags are `crates/cards/tests/cross/catalog.rs`'s.
+mod issue_2521_resource_and_faction_follow_legacy {
+    use super::*;
+
+    /// The two tags, as written, in the union's order.
+    const TAGS: [(Tag, &str); 2] = [(Tag::Resource, "Resource"), (Tag::Faction, "Faction")];
+
+    #[test]
+    fn the_two_parse_as_written_follow_legacy_and_name_no_tribe() {
+        let at = |tag: Tag| Tag::ALL.iter().position(|each| *each == tag);
+        let legacy = at(Tag::Legacy).expect("Legacy is in the union");
+        for (offset, (tag, text)) in TAGS.iter().enumerate() {
+            assert_eq!(tag.as_str(), *text);
+            assert_eq!(json_as::<Tag>(json!(text)), *tag);
+            assert_eq!(at(*tag), Some(legacy + 1 + offset), "{tag}");
+            assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
+            assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
+        }
+        assert_eq!(at(Tag::Token), Some(legacy + 1 + TAGS.len()));
+        assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
+    }
+
+    /// A Faction card is a card a deck may hold; a Resource is a token, which a pool reaches only
+    /// when it asks for tokens and no deck ever holds.
+    #[test]
+    fn a_faction_pool_holds_its_cards_and_a_resource_pool_its_tokens_only_when_it_asks_for_them() {
+        let defs: CardDefs = [
+            card("stinkyscape-095", "Stinkyscape", "95", &["Faction"], false),
+            card("stinkyscape-159", "Stinkyscape", "159", &["Faction"], false),
+            card(
+                "stinkyscape-t-korrelite",
+                "Stinkyscape",
+                "T-korrelite",
+                &["Resource"],
+                true,
+            ),
+            card(
+                "stinkyscape-t-narcor",
+                "Stinkyscape",
+                "T-narcor",
+                &["Resource"],
+                true,
+            ),
+        ]
+        .into_iter()
+        .map(|def| (def.id.clone(), def))
+        .collect();
+        assert!(deckable(&defs["stinkyscape-159"]));
+        assert!(!deckable(&defs["stinkyscape-t-korrelite"]), "a Token never is");
+        register_catalog(defs);
+        assert_eq!(
+            pool(json!({ "tags": ["Faction"] })),
+            vec!["stinkyscape-095", "stinkyscape-159"]
+        );
+        assert_eq!(pool(json!({ "tags": ["Resource"] })), Vec::<String>::new());
+        assert_eq!(
+            pool(json!({ "tags": ["Resource"], "withTokens": true })),
+            vec!["stinkyscape-t-korrelite", "stinkyscape-t-narcor"]
+        );
+        assert_eq!(
+            pool(json!({ "anyTags": ["Resource", "Faction"] })),
+            vec!["stinkyscape-095", "stinkyscape-159"]
+        );
     }
 }
 

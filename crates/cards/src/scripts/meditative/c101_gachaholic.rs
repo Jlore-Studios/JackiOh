@@ -75,8 +75,9 @@ mod tests {
     /// Eugenics with patch v0.3.10, R831014). Re-pinned for the Stinkyscape release (#1884): its #77
     /// Yuma, #112 Job Application, #145 Fortify Flesh, #153 Stimmycheck and #166 and #167, the Scanning
     /// Probes, join it; and for the Training Grounds release (#2204): its #49 Reoccurring Dream, the
-    /// snapshot of Core #23.
-    const SHIPPED_POOL: [&str; 17] = [
+    /// snapshot of Core #23; and for #2521: Stinkyscape #53, #57 and #61, the Flaks, whose Radiant faces
+    /// print Lucky 1.
+    const SHIPPED_POOL: [&str; 20] = [
         "core-004",
         "core-023",
         "classic-065",
@@ -87,6 +88,9 @@ mod tests {
         "meditative-036",
         "meditative-086",
         "meditative-102",
+        "stinkyscape-053",
+        "stinkyscape-057",
+        "stinkyscape-061",
         "stinkyscape-077",
         "stinkyscape-112",
         "stinkyscape-145",

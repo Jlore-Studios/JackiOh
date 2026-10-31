@@ -110,7 +110,8 @@ pub const POOL_TOKEN_TAGS: &[Tag] = &[Tag::Fruit, Tag::Prime, Tag::Ai];
 /// lacking one. Book, Fruit, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Call to Chaos,
 /// Quickdraw, Wincon, Potion (Meditative+, R1178000), Terminus, Quest, Otherworldly, Other-Origins,
 /// Jelly Bean (#1837, R1837000), Drone Core, Weapon, War Doctrine, Swarm (the Stinkyscape set,
-/// R1857000) and Token name families and mechanics, not tribes.
+/// R1857000), Resource and Faction (#2521: the six Resources, and the five Faction cards themselves,
+/// not their members) and Token name families and mechanics, not tribes.
 pub const TRIBAL_TAGS: &[Tag] = &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed];
 
 /// R1176000: the tag every card in Chinese has. A card instance whose `chinese` flag is set (R1300)

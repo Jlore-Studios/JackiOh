@@ -332,14 +332,15 @@ mod r279_the_reference_map_spec_5_7_10_10 {
     }
 
     #[test]
-    fn r480_names_the_eight_pancake_tokens_and_the_twenty_four_ai_generated_cards_by_their_tags_from_the_cards_that_make_them()
+    fn r480_names_the_eight_pancake_tokens_and_the_twenty_five_ai_generated_cards_by_their_tags_from_the_cards_that_make_them()
      {
         // R1178002: Meditative+ #1.1 Base Camp and #1.2 Spa Day, AI generated cards Bob's Plan names,
         // join the AI pool once their set ships (#1187), so the pool pinned here is the shipped sets'.
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the AI generated cards are twelve, the ten
         // T-AI cards and M+ #1.1 and #1.2 (§7, R1421); fourteen since #1563 added M+ #1.3 and #1.4 (R1563003);
         // twenty-four since the Stinkyscape release (#1884) added that set's T-AI-1 to T-AI-10, which
-        // #1853's Marketplace offers by its own rule, so no card of the set names them.
+        // #1853's Marketplace offers by its own rule, so no card of the set names them; twenty-five since
+        // #2521 added M+ #1.5 Star Chart, Bob's Plan's plan for Alteran Reach.
         let indices_of = |tag: Tag| -> Vec<String> {
             entries()
                 .into_iter()
@@ -355,8 +356,8 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             indices_of(Tag::Ai),
             strings(&[
                 "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4", "T-AI-5", "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9",
-                "T-AI-10", "1.1", "1.2", "1.3", "1.4", "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4", "T-AI-5",
-                "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9", "T-AI-10",
+                "T-AI-10", "1.1", "1.2", "1.3", "1.4", "1.5", "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4",
+                "T-AI-5", "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9", "T-AI-10",
             ])
         );
         // The pins are the shipped sets' cards (R1857000: a held set's are pinned at its release).
@@ -403,13 +404,17 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         assert_eq!(phrase(Tag::Terminus), Some("Terminus card"));
         assert_eq!(phrase(Tag::WarDoctrine), Some("War Doctrine"));
         // Since the release (#1884) the set's makers are shipped cards: #4 Olivian Expanse and #154
-        // Dice of Doom name the Terminus pool and #137 Firststrike Capability the War Doctrines (Core
-        // #100 Ceaseless Void, the other Terminus card, names none and is no token).
+        // Dice of Doom name the Terminus pool and #137 Starfleet Commander and #176 Preemptive Strike
+        // (#2521) the War Doctrines (Core #100 Ceaseless Void, the other Terminus card, names none and
+        // is no token).
         assert_eq!(
             shipped(naming("Terminus card")),
             strings(&["stinkyscape-004", "stinkyscape-154"])
         );
-        assert_eq!(shipped(naming("War Doctrine")), strings(&["stinkyscape-137"]));
+        assert_eq!(
+            shipped(naming("War Doctrine")),
+            strings(&["stinkyscape-137", "stinkyscape-176"])
+        );
         // A Resource is dealt by R1840002's roll, as The Coin by §2.1's setup: it needs no card to
         // name it. A plain token still does.
         let resource: CardDef = serde_json::from_value(serde_json::json!({

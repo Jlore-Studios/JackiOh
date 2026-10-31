@@ -1872,6 +1872,9 @@
     "meditativeplus-001-4": { // Leg Day
       cast: { voice: "robot" },
     },
+    "meditativeplus-001-5": { // Star Chart
+      cast: { voice: "robot" },
+    },
     "meditativeplus-002": { // NA Tech
       cast: { voice: "robot" },
     },
@@ -2433,7 +2436,7 @@
       attack: { voice: "hero" },
       death: { voice: "hero" },
     },
-    "stinkyscape-095": { // Vanguard Coalition
+    "stinkyscape-095": { // Faction: Vanguard Coalition
       cast: { voice: "hero" },
     },
     "stinkyscape-096": { // Ocean Tsunami
@@ -2619,7 +2622,7 @@
       attack: { voice: "sapi-wizard" },
       death: { voice: "sapi-wizard" },
     },
-    "stinkyscape-137": { // Firststrike Capability
+    "stinkyscape-137": { // Starfleet Commander
       play: { voice: "sapi-hero" },
       attack: { voice: "sapi-hero" },
       death: { voice: "sapi-hero" },
@@ -2725,16 +2728,16 @@
     "stinkyscape-158": { // Stratos Swarm
       cast: { voice: "robot" },
     },
-    "stinkyscape-159": { // ETHICS
+    "stinkyscape-159": { // Faction: ETHICS
       cast: { voice: "sapi-bureaucrat" },
     },
-    "stinkyscape-160": { // Golden Accord
+    "stinkyscape-160": { // Faction: Golden Accord
       cast: { voice: "posh" },
     },
-    "stinkyscape-161": { // Pegasus
+    "stinkyscape-161": { // Faction: Pegasus
       cast: { voice: "diva" },
     },
-    "stinkyscape-162": { // Star-jumper Core
+    "stinkyscape-162": { // Faction: Star-Jumper Core
       cast: { voice: "robot" },
     },
     "stinkyscape-163": { // Swear Loyalities
@@ -2787,6 +2790,14 @@
       play: { voice: "robot" },
       attack: { voice: "robot" },
       death: { voice: "robot" },
+    },
+    "stinkyscape-176": { // Preemptive Strike
+      cast: { voice: "sapi-hero" },
+    },
+    "stinkyscape-177": { // Cloaking Module
+      play: { voice: "sapi-synth" },
+      attack: { voice: "sapi-synth" },
+      death: { voice: "sapi-synth" },
     },
     "stinkyscape-t-dormant-starship": { // Dormant Starship
       play: { voice: "sapi-synth-deep" },

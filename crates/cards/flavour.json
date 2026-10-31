@@ -1365,6 +1365,9 @@
   "meditativeplus-001-4": {
     "flavour": "The plan said nothing about arms. The plan was very clear about legs."
   },
+  "meditativeplus-001-5": {
+    "flavour": "Bob drew the map himself. The edge of the universe is circled twice, in red pen."
+  },
   "meditativeplus-002": {
     "flavour": "The best and the worst of the meta, stapled together and sold as a bundle."
   },
@@ -2060,6 +2063,12 @@
   },
   "stinkyscape-175": {
     "flavour": "Keeps the drinks cold and the enemy colder."
+  },
+  "stinkyscape-176": {
+    "flavour": "The fleet's oldest rule: if they are going to shoot first, make sure they are too late."
+  },
+  "stinkyscape-177": {
+    "flavour": "Standard issue on every hull. Nobody has ever seen one installed, which is rather the point."
   },
   "stinkyscape-t-dormant-starship": {
     "flavour": "A hull of borrowed parts, dreaming of a sky it has never seen."

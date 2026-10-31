@@ -77,12 +77,12 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
     const FEELINGS: &str = "classic-032"; // (2) Spell: steal an enemy Unit in a lane with your (1) Unit.
-    const FIRSTSTRIKE: &str = "stinkyscape-137"; // (4) Unit, Cry: launch your Dormant Starship.
+    const COMMANDER: &str = "stinkyscape-137"; // (4) Unit, Cry: launch your Dormant Starship.
 
-    /// p1's Prepare For Liftoff set (Radiant if `radiant`) in backrow lane 1, and a Stratos of p1's in
+    /// p1's Prepare For Liftoff set (Radiant if `radiant`) in backrow lane 1, and an AP Rounds of p1's in
     /// lane 2 and of p2's in lane 1, p1 holding two Hit Jobs.
     fn setup(seed: &str, radiant: bool) -> Scenario {
         board(seed, radiant, "p1", json!({}), json!({}))
@@ -95,14 +95,14 @@ mod tests {
             "active": active,
             "p1": crate::merged(json!({
                 "hand": [HIT_JOB, HIT_JOB],
-                "field": [{ "def": STRATOS, "lane": 2 }],
+                "field": [{ "def": AP_ROUNDS, "lane": 2 }],
                 "backrow": [{ "def": ID, "lane": 1, "faceUp": false, "radiant": radiant }],
                 "mana": 10,
                 "library": crate::filler(4),
             }), p1),
             "p2": crate::merged(json!({
                 "hand": crate::filler(1),
-                "field": [{ "def": STRATOS, "lane": 1 }],
+                "field": [{ "def": AP_ROUNDS, "lane": 1 }],
                 "mana": 10,
                 "library": crate::filler(4),
             }), p2),
@@ -113,8 +113,8 @@ mod tests {
         s
     }
 
-    /// `player` steals the enemy Unit in `lane` with Felinor Feelings, their own Stratos standing in
-    /// that lane: the stolen card's id.
+    /// `player` steals the enemy Unit in `lane` with Felinor Feelings, their own AP Rounds, a (1) Unit,
+    /// standing in that lane: the stolen card's id.
     fn steal(s: &mut Scenario, player: PlayerId, lane: i32) -> String {
         let id = s.unit_at(opponent_of(player), lane).id;
         s.play(FEELINGS, json!({ "targets": pick::id(&id) }));
@@ -216,14 +216,14 @@ mod tests {
 
     #[test]
     fn r1859012_a_piece_it_owns_dying_under_the_enemy_fuses_into_its_starship_and_reveals_it() {
-        // p2 steals p1's Stratos and destroys it: it dies under p2's control into p1's graveyard, and
+        // p2 steals p1's AP Rounds and destroys it: it dies under p2's control into p1's graveyard, and
         // its copy fuses into p1's Starship (R1852002), so it is one of p1's Starship Pieces.
         let mut s = board(
             "r1859012-stolen-own",
             false,
             "p2",
             json!({ "hand": [] }),
-            json!({ "hand": [FEELINGS, HIT_JOB], "field": [{ "def": STRATOS, "lane": 2 }] }),
+            json!({ "hand": [FEELINGS, HIT_JOB], "field": [{ "def": AP_ROUNDS, "lane": 2 }] }),
         );
         let piece = steal(&mut s, P2, 2);
         s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
@@ -237,14 +237,14 @@ mod tests {
 
     #[test]
     fn r1859012_an_enemy_piece_dying_under_its_controller_leaves_it_set() {
-        // p1 steals p2's Stratos and destroys it: it dies under p1's control but fuses into p2's
+        // p1 steals p2's AP Rounds and destroys it: it dies under p1's control but fuses into p2's
         // Starship, so it is not one of p1's Starship Pieces.
         let mut s = board(
             "r1859012-stolen-enemy",
             false,
             "p1",
             json!({ "hand": [FEELINGS, HIT_JOB] }),
-            json!({ "field": [{ "def": STRATOS, "lane": 2 }] }),
+            json!({ "field": [{ "def": AP_ROUNDS, "lane": 2 }] }),
         );
         let piece = steal(&mut s, P1, 2);
         s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
@@ -263,14 +263,14 @@ mod tests {
             "r1859012-effect-launch",
             false,
             "p1",
-            json!({ "hand": [HIT_JOB, FIRSTSTRIKE] }),
+            json!({ "hand": [HIT_JOB, COMMANDER] }),
             json!({}),
         );
         hit(&mut s, P1, 2);
         assert_eq!(launch_cost(s.state(), P1), 0);
         let ship = dormant_starship_of(s.state(), P1).expect("p1's Starship").id.clone();
-        // Firststrike Capability's Cry awakens the Starship, a launch that spends no price (R1852006).
-        s.play(FIRSTSTRIKE, json!({ "zone": 4 }));
+        // Starfleet Commander's Cry awakens the Starship, a launch that spends no price (R1852006).
+        s.play(COMMANDER, json!({ "zone": 4 }));
         assert!(s.card(ship.as_str()).starship.as_ref().is_some_and(|memory| memory.launched.is_some()));
         assert_eq!(launch_cost(s.state(), P1), 0, "still held for the next launch by the Activate");
     }
@@ -303,7 +303,7 @@ mod tests {
             "liftoff-flashback",
             false,
             "p1",
-            json!({ "field": [{ "def": STRATOS, "lane": 2 }, { "def": STRATOS, "lane": 3 }] }),
+            json!({ "field": [{ "def": AP_ROUNDS, "lane": 2 }, { "def": AP_ROUNDS, "lane": 3 }] }),
             json!({}),
         );
         hit(&mut s, P1, 2);

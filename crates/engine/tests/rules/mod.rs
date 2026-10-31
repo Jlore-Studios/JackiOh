@@ -9,6 +9,7 @@
 //! goes in the file its name falls in.
 
 pub mod activate;
+pub mod activation_spend_use;
 pub mod adjacency_aura;
 pub mod after_attack;
 pub mod after_attacked;
@@ -61,6 +62,7 @@ pub mod crater;
 pub mod credit_line;
 pub mod custom;
 pub mod damage;
+pub mod damage_odds;
 pub mod damage_pipeline;
 pub mod death_pause;
 pub mod deck_bottom;
@@ -176,6 +178,7 @@ pub mod library_copies;
 pub mod mana;
 pub mod mana_before_play;
 pub mod marketplace;
+pub mod may_attack_again_sick;
 pub mod mb22;
 pub mod meditative_riders;
 pub mod modifiers;

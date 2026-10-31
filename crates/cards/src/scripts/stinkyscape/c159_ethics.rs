@@ -1,4 +1,4 @@
-//! S #159 ETHICS (SPEC §8.10 row S 159; §2.4, §5.2, §6.3): (3) Spell, Rare.
+//! S #159 Faction: ETHICS (SPEC §8.10 row S 159; §2.4, §5.2, §6.3): (2) Spell, Faction, Rare.
 //!   Base:    "Add an iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand."
 //!   Radiant: "Add a Radiant iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand."
 //!
@@ -7,6 +7,10 @@
 //! a new card on its own face at its own price, a full hand burning what does not fit, in that order (§2.4).
 //! Radiant: each `radiant: true` (§5.2, R1880000). The cards are named, so they reach the hand whether or
 //! not the set ships (R1420). Declares no numbers.
+//!
+//! #2521: renamed from ETHICS, tagged Faction and (2) where it was (3). It and the six cards it adds are the
+//! ETHICS faction that S #163 Swear Loyalities keeps or exiles (R2521004). Tylannt is Vanguard Coalition's
+//! too.
 
 use jackioh_engine::effects::add_to_hand;
 use jackioh_engine::prelude::*;
@@ -41,9 +45,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #159 ETHICS — SPEC §8.10 row S 159, BUILD M12 row S 159: "adds the 6 named cards in order,
-// each on its base face at its printed cost; a hand with room for fewer keeps the first and burns the
-// rest; radiant all of them Radiant".
+// S #159 Faction: ETHICS — SPEC §8.10 row S 159, BUILD M12 row S 159: "adds the 6 named cards in order, each
+// on its base face at its printed cost; a hand with room for fewer keeps the first and burns the rest;
+// radiant all of them Radiant".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
