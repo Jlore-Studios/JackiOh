@@ -182,7 +182,7 @@ table's rows differ from the newest shipped version's and no other fragment clai
 fragment may claim no card (R1329000). No one refreshes the table by hand: once per patch,
 `.github/workflows/winrates-refresh.yml` runs `cargo jackioh winrates --refresh` on production's
 windowed figures and opens the refresh as its own pull request, its fragment claiming the table and
-CN Tech and NA Tech (R1368000). `cargo jackioh patches check` must pass before the branch merges,
+CN Tech and NA Tech (R1368000). A set's release is the exception: a cards test fails while a shipped set has no row CN Tech can pick, so the release plays a development run (cargo jackioh stats --out <file>) and runs cargo jackioh winrates --refresh <file>… over it, which fills the table, provisional, with its fragment (R2386000). `cargo jackioh patches check` must pass before the branch merges,
 and fails while the note is empty or the table changed unclaimed.
 The post-merge promotion (`patches-ship.yml`) runs `cargo jackioh patches ship`: it snapshots the patch
 before it with the cards the fragment claims as the catalog holds them (R1280000), writes the version's
