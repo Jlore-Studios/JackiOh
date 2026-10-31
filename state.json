@@ -11619,13 +11619,8 @@
     "what": "build #2516 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-31T19:14:03Z",
-    "notes": [
-      "delivered build #2515 on agy (run 41223689537): part",
-      "started build #2516 on agy (run 41233334859)",
-      "nothing more to start: nothing is queued",
-      "pruned 20 plan file(s) older than 7 days"
-    ],
+    "at": "2026-10-31T19:21:43Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -12330,7 +12325,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T19:14:03Z",
+  "loop_tick": "2026-10-31T19:21:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
