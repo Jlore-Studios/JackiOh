@@ -1,11 +1,10 @@
 //! B50, B51 (#936, `.fullsend/SPEC.md` S7): watching a friend's live 1v1 game over `GET /ws/watch`.
-//! A friend's hello for a live match, ranked or unranked, that allows spectators and has room gets
-//! the friend's seat's views, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`;
-//! opted-out, full, non-friend and blocked are `forbidden` then closed; a watcher's frames never
-//! reach the reducer; a watcher leaving changes nothing in the match; the players' own match sockets
-//! hear `watchers {count}` when the count changes. A watcher already in is let go the same way
-//! (`forbidden`, then closed) once the friend turns watching off, or the two unfriend or either
-//! blocks the other. Once the match is over, a watcher that has had the view with the result is
+//! A friend's hello for a live match, ranked or unranked, that has room gets the friend's seat's
+//! views, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`, whatever the friend's
+//! settings say (R2615000); full, non-friend and blocked are `forbidden` then closed; a watcher's
+//! frames never reach the reducer; a watcher leaving changes nothing in the match; the players' own
+//! match sockets hear `watchers {count}` when the count changes. A watcher already in is let go the
+//! same way (`forbidden`, then closed) once the two unfriend or either blocks the other. Once the match is over, a watcher that has had the view with the result is
 //! closed with 1000 (R1107000). A block made mid-match also mutes the two players' emotes toward
 //! each other (R1351000).
 //!
@@ -367,8 +366,10 @@ mod b50_watching_a_friend {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn b50_a_friend_who_turned_spectators_off_is_forbidden() {
+    async fn r2615000_no_setting_of_the_friends_refuses_a_friend() {
         let w = world(false).await;
+        // What a client from before R2615000 sends to turn watching off: the groups merge, the key
+        // beside them is read as nothing.
         let (status, body) = api(
             &w.app,
             "PUT",
@@ -378,10 +379,13 @@ mod b50_watching_a_friend {
         )
         .await;
         assert_eq!(status, 200, "{body}");
+        assert!(body["settings"].get("allowSpectators").is_none(), "{body}");
 
         let watcher = w.watch(&w.watcher).await;
 
-        assert_forbidden(&watcher).await;
+        assert!(watcher.of_type("error").is_empty(), "{:?}", watcher.frames());
+        assert!(watcher.close_code().is_none(), "admitted");
+        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(1)));
     }
 
     #[tokio::test(start_paused = true)]
@@ -585,10 +589,12 @@ mod b50_b46_a_watch_ends_when_its_leave_does {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn b50_turning_watching_off_lets_every_watcher_go_and_the_players_hear_the_count() {
+    async fn r2615000_no_setting_lets_a_watcher_go_only_the_friendship_does() {
         let (w, _other, first, second) = two_watching().await;
 
-        let (status, body) = api(
+        // The body a client from before R2615000 sent alone is no body of settings now, and the one it
+        // sent beside the groups merges them and lets nobody go.
+        let (alone, body) = api(
             &w.app,
             "PUT",
             "/api/settings",
@@ -596,29 +602,8 @@ mod b50_b46_a_watch_ends_when_its_leave_does {
             json!({ "allowSpectators": false }),
         )
         .await;
-        assert_eq!(status, 200, "{body}");
-        settle().await;
-
-        assert_let_go(&first).await;
-        assert_let_go(&second).await;
-        for socket in [&w.p1, &w.p2] {
-            assert_eq!(
-                watcher_counts(socket).last(),
-                Some(&json!(0)),
-                "{:?}",
-                socket.messages()
-            );
-        }
-        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn b50_turning_watching_off_with_the_settings_groups_lets_the_watcher_go_too() {
-        let w = world(false).await;
-        let watcher = w.watch(&w.watcher).await;
-        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(1)));
-
-        let (status, body) = api(
+        assert_eq!(alone, 400, "{body}");
+        let (beside, body) = api(
             &w.app,
             "PUT",
             "/api/settings",
@@ -626,11 +611,14 @@ mod b50_b46_a_watch_ends_when_its_leave_does {
             json!({ "groups": {}, "allowSpectators": false }),
         )
         .await;
-        assert_eq!(status, 200, "{body}");
+        assert_eq!(beside, 200, "{body}");
         settle().await;
 
-        assert_let_go(&watcher).await;
-        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(0)));
+        for client in [&first, &second] {
+            assert!(client.of_type("error").is_empty(), "{:?}", client.frames());
+            assert!(client.close_code().is_none(), "still watching");
+        }
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 2);
     }
 
     #[tokio::test(start_paused = true)]

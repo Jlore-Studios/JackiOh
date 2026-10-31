@@ -149,8 +149,8 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "Deleting your account or getting a copy",
       "<p>You can delete your account yourself: sign in, open your Account page, and choose " +
         "&ldquo;Delete my account&rdquo;. That deletes your sign-in, your decks, trios and cards, your " +
-        "custom cards, your tutorial progress, the records of how you played, and the record of your age " +
-        "check and of the terms you agreed to. Finished matches and their results stay in " +
+        "custom cards, your tutorial progress, your player statistics, the records of how you played, and " +
+        "the record of your age check and of the terms you agreed to. Finished matches and their results stay in " +
         "the other player&rsquo;s history, with your account removed from them, and so does a finished " +
         "co-op game in your teammate&rsquo;s, its moves and its result included. You can&rsquo;t delete " +
         "your account during a match, a co-op game or a Conquest series that hasn&rsquo;t finished.</p>" +

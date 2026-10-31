@@ -1,5 +1,5 @@
 // Play together's chrome (#936, SPEC S8): the friends page, the chat panel and the Friends button's
-// panel, the challenge toast, the watch screen, the replay share and the spectators setting. The SPEC fixes the
+// panel, the challenge toast, the watch screen and the replay share. The SPEC fixes the
 // first ids of each group; the rest are this slice's. `e2e/support/testids.ts` mirrors the strings.
 
 export const togetherTestid = {
@@ -16,6 +16,8 @@ export const togetherTestid = {
   noFriends: "together-no-friends",
   challenge: "together-challenge",
   watch: "together-watch",
+  /** R2615000: the Watching panel's note that friends may always watch, and how to stop one. */
+  watchingNote: "together-watching-note",
   chatOpen: "together-chat-open",
   unread: "together-unread",
   remove: "together-remove",
@@ -144,5 +146,3 @@ export const shareTestid = {
   retry: "share-friend-retry",
 } as const;
 
-/** "Let friends watch my games" (`allowSpectators`), in the settings panel and on Play together. */
-export const SPECTATORS_SETTING_TESTID = "setting-allowSpectators";

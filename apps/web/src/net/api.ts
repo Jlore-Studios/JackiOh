@@ -1147,10 +1147,9 @@ export type PlayerSettingsGroup = { at: number; values: Record<string, PlayerSet
 
 /**
  * `PlayerSettingsView` in `crates/server/src/api/settings.rs`: group id to group, empty before the
- * first write. `allowSpectators` (#936 S7, B50) is the account's own "Let friends watch my games", not a
- * device group: `PUT` takes it beside `groups`. Optional because a server from before #936 omits it.
+ * first write. It carries no watching switch: friends may always watch (R2615000).
  */
-export type PlayerSettingsAccountCopy = { groups: Record<string, PlayerSettingsGroup>; allowSpectators?: boolean };
+export type PlayerSettingsAccountCopy = { groups: Record<string, PlayerSettingsGroup> };
 
 /** `GET /api/settings` (`active`): the account's copy, empty before its first write. */
 export async function getPlayerSettings(token: string): Promise<PlayerSettingsAccountCopy> {

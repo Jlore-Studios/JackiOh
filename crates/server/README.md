@@ -215,7 +215,7 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId`, `username` and win `streak` (R604, R612, R1436, R2101000), and once a ranked match's rated record is written its `rankBefore` and `rankAfter` off it, a ranked series' on its last game (R2388000) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
-| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
+| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; friends may always watch, so the settings carry no watching switch (R2615000); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
 | `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards' (R1994000) |
@@ -388,8 +388,8 @@ holds, with four seats:
 ### The watch socket (§9.5)
 
 A friend watches at `/ws/watch`, authenticated as `/ws/match` is: `hello {matchId, friendId}` for a
-friend's live match, ranked or unranked, whose player allows watching (`profiles.allow_spectators`) and has fewer
-than `SPECTATORS_PER_MATCH` watchers. The watcher gets `view {view, legal: []}`, the friend's seat's
+friend's live match, ranked or unranked, that has fewer than `SPECTATORS_PER_MATCH` watchers; no setting of the
+friend's refuses it, and unfriending or a block ends a watch already running (R2615000). The watcher gets `view {view, legal: []}`, the friend's seat's
 `view_for`, each `SPECTATE_DELAY_MS` after the state it shows; anything else is `error forbidden` and a
 close. It is sent `loadouts` as it attaches and a `cardLoadouts` after each delayed view that newly
 shows a dealt card, by the match sockets' rule (R1834003). Before its hello the socket waits behind the same `actor::guard::HelloGate` as `/ws/duos`: a
@@ -399,8 +399,8 @@ closed with 1008, and with no hello within `WS_IDLE_TIMEOUT_SECONDS` it is refus
 before its first; R1103000), so the watch screen's wake probe (R1441) hears a live socket; every other
 frame a watcher sends is ignored, and leaving changes nothing in the match.
 Both players' own match sockets get `watchers {count}` when the count changes. A watcher already in
-gets the same `error forbidden` and close the moment the friend turns watching off (`PUT
-/api/settings`), or the two unfriend or either blocks the other (`MatchActor::revoke_watchers`).
+gets the same `error forbidden` and close the moment the two unfriend or either blocks the other
+(`MatchActor::revoke_watchers`); no setting lets a watcher go (R2615000).
 Once the match is over, a watcher that has been sent the view with the result is closed with 1000, `the
 match is over`, and both players get the new count (R1107000); a void still closes every watcher at once
 with `MATCH_VOIDED_CLOSE_CODE`.
@@ -803,7 +803,8 @@ server-only.
 Migration 0038 adds Play together's tables (§9.4, §9.5): `friend_requests`, `friendships` (one row
 per pair, `a < b`), `blocks`, `presence` (server-only), `challenges`, `chat_messages` (1 to 500
 characters), `chat_reports` (one per message and reporter) and `replay_shares`, each with RLS on and a
-select policy for its own players only, and `profiles.allow_spectators` (on by default). The retention
+select policy for its own players only, and `profiles.allow_spectators` (on by default), which the server
+has read no longer since R2615000 and a later migration may drop. The retention
 loop deletes chat messages older than `CHAT_RETENTION_DAYS`. Migration 0039 adds the co-op tables
 (§13.9): `duos_rooms` (the code, host, guest, difficulty, each side's deck choice, the match once it
 starts, and its expiry), `duos_matches` (the seed, both humans, the difficulty, the create options,

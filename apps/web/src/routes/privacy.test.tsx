@@ -17,6 +17,7 @@ import {
   MATCH_ACTION_RETENTION_DAYS,
   MIN_ACCOUNT_AGE_YEARS,
   PLAY_TELEMETRY_RETENTION_DAYS,
+  SPECTATE_DELAY_MS,
   TERMS_VERSION,
 } from "@jackioh/server-config";
 
@@ -48,7 +49,7 @@ const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-15b": "33b0dd18c38c52456ee05a0cfaa51d881cc168411edac71c1672a9254d997e13",
   "2026-10-15b/2026-10-17": "37fbbebe49f56312ba164323c624142fa3e88a5294677e1c654c6cfc86de2774",
   "2026-10-15b/2026-10-21": "df87894475e985f8f9915b94e155f6245a841e53969765cd96dbd6d2f90f2be4",
-  "2026-10-31/2026-10-21": "529ada7884ffd3c61f092b5745632d46cb29ca1b18e37246ac88f7ab61d67e0d",
+  "2026-10-31/2026-10-31": "5ac8a025c4405ca53208415c1aa5af89e7c6dceae143d442c3e36d5d5b3fc0a3",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -88,7 +89,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-21");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-31");
   });
 
   it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {
@@ -210,6 +211,38 @@ describe("the privacy policy", () => {
     expect(deleting).not.toMatch(/deletes the whole co-op game/);
     expect(deleting).toMatch(/during a match, a co-op game or a Conquest series that hasn.t finished/);
     expect(deleting).toMatch(/challenges, co-op rooms and replay shares/);
+  });
+
+  it("R2615000 R2615001 says friends may always watch, that online play's data has no opt-out, and that the player statistics are public", () => {
+    render(<PrivacyRoute />);
+    const page = screen.getByTestId(privacyTestid.screen);
+    const section = (name: RegExp): string =>
+      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
+    const seconds = (ms: number): number => ms / 1_000;
+
+    // R2615000: watching has no switch; the friendship is the way out, for your friends and your opponent's.
+    const handled = section(/who handles it/i);
+    expect(handled).toContain(
+      `Any friend can watch your ranked and unranked online games from your seat, ${String(seconds(SPECTATE_DELAY_MS))} seconds behind.`,
+    );
+    expect(handled).toMatch(/There.s no setting to turn this off: to stop someone watching, remove them as a friend or block them\./);
+    expect(handled).toMatch(/Your opponent.s friends can see your moves too: they can watch a ranked or unranked game/);
+    expect(handled).not.toMatch(/Let friends watch my games|If your opponent lets friends watch/);
+    expect(section(/what we collect/i)).not.toMatch(/whether you let friends watch/);
+
+    // R2615001: online play is recorded with no opt-out, and the policy says why.
+    expect(section(/why we collect it/i)).toMatch(
+      /Playing online means your games are recorded as described above\. There.s no setting to turn that off/,
+    );
+
+    // R2000000, R639: the player statistics, practice games' counts among them, are public with no switch.
+    const collected = section(/what we collect/i);
+    expect(collected).toMatch(/Your player statistics: how many games you have finished, won, lost and drawn/);
+    expect(collected).toMatch(/from the online and practice games you finish/);
+    expect(collected).toMatch(/Its moves are not sent to us; only what it adds to your player statistics is, while you are signed in\./);
+    expect(handled).toMatch(/Your player statistics are public: anyone can see them, with your username, on the Players tab/);
+    expect(handled).toMatch(/There.s no setting to hide them/);
+    expect(section(/deleting your account/i)).toMatch(/your tutorial progress, your player statistics, the records of how you played/);
   });
 
   it("#970 names custom cards and the presence heartbeat, and deletes the custom cards with the account", () => {
