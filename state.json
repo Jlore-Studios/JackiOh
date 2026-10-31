@@ -10577,7 +10577,7 @@
     "2551": {
       "action": "revise",
       "asks": [],
-      "ci_fixed_head": "d6a7728eaf93c1f3a8eed260d9d71391f7c2aa31",
+      "ci_fixed_head": "4f658dbd14fbc444cae1d73b4e4862ee0631ff35",
       "ci_fixes": 2,
       "ci_reruns": {
         "90a4445c77348e51f044fd4e4492d4fda56a395e": 1,
@@ -10594,7 +10594,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-31T01:16:12Z",
+      "feedback_since": "2026-10-31T02:50:37Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2490,
@@ -10611,11 +10611,11 @@
       "run_id": "41161783381",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-31T02:50:37Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "gemini",
