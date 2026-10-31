@@ -11855,8 +11855,13 @@
     "what": "build #2516 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-31T21:15:19Z",
-    "notes": [],
+    "at": "2026-10-31T21:25:43Z",
+    "notes": [
+      "delivered build #2516 on claude-7 (run 41242210457): interrupted",
+      "started build #2516 on claude-1 (run 41243635781)",
+      "nothing more to start: nothing is queued",
+      "#2629: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -12561,7 +12566,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T21:15:19Z",
+  "loop_tick": "2026-10-31T21:25:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
