@@ -8827,7 +8827,7 @@
       "merged": true
     },
     "2422": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "difficulty_by": {
         "at": "2026-10-31T04:40:21Z",
@@ -8857,9 +8857,9 @@
       "provider": "claude-8",
       "queued_at": "2026-10-31T04:08:20Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41167681633",
+      "run_id": "pending:fc2a6542-1793421743",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-10-31T04:13:36Z",
+      "started_at": "2026-10-31T04:42:41Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -10827,9 +10827,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T04:13:36Z",
+    "at": "2026-10-31T04:42:41Z",
     "url": "",
-    "what": "plan #2422 on claude-8"
+    "what": "build #2422 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-31T04:27:20Z",
