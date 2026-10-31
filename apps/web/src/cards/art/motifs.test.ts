@@ -1,6 +1,5 @@
-// R503: v0.2.0's art. The Book, Pancake and AI families, the motif a card's name calls up, one
-// distinct picture for every catalog entry and face, and Core's pictures kept where no motif moves
-// them. Pure: nothing renders here (CardArt.test.tsx and CardFace.test.tsx cover the DOM).
+// R503's art, tested pure (CardArt.test.tsx and CardFace.test.tsx cover the DOM): the families, the
+// motifs, a distinct picture per entry and face, and Core's kept where no motif moves them.
 
 import { describe, expect, it } from "vitest";
 
@@ -80,9 +79,8 @@ describe("R503 the Book, Pancake and AI families", () => {
         if (card.tags.includes(tag)) expect(themeFor(card.tags, card.type), card.id).toBe(theme);
       }
     }
-    // T-AI-1 to 10, and Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day,
-    // the plans Bob's Plan offers (R1563003), and since its release the Stinkyscape set's ten AI cards
-    // (R1857000).
+    // T-AI-1 to 10, Meditative+ #1.1 to #1.4 (Bob's Plan's plans, R1563003) and the Stinkyscape set's
+    // ten AI cards (R1857000).
     expect(DEFS.filter((card) => setShips(card.set) && themeFor(card.tags, card.type) === "ai")).toHaveLength(24);
   });
 
@@ -317,7 +315,6 @@ describe("R503 how a motif is drawn", () => {
     expect(flagbearer.motifGlyphs).toHaveLength(1);
     const [hero] = flagbearer.motifGlyphs;
     expect(hero?.glyph).toBe("flag");
-    // In the upper part of the band a full face's window shows (about y 18 to 82 of the box).
     expect(hero?.y).toBeGreaterThanOrEqual(22);
     expect(hero?.y).toBeLessThanOrEqual(40);
   });

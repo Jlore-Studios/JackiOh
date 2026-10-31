@@ -52,9 +52,7 @@ const FAKE_SCRIPT: LessonScript = {
   tips: [],
 };
 
-// ---------------------------------------------------------------------------------------------
 // the scripted host: `endTurn` wins the game for the human, `concede` loses it
-// ---------------------------------------------------------------------------------------------
 
 type HostOptions = { aiToAct?: boolean; defs?: CardDefs };
 

@@ -1,13 +1,9 @@
-// The back of a card (docs/polish/6-cards.md, Surface B "CardBack DOM"): an original pattern and
-// emblem, plus the legacy `.card-back-mark`.
-//
-// A back is what SPEC §10.8 leaves of a card the viewer may not see: the opponent's hand, a
-// face-down trap (R33). So it draws nothing that could name a card — no text node, no <text>, no
-// <title>, no def id — and its textContent is "" (Card.test.tsx, B16).
-//
-// R1297000: its one prop is the viewer's pick of back (cards/cosmetics.ts), a look for every
-// back of the viewer's seat alike; it is a cosmetic id, never anything of a card, and the default
-// adds no attribute. `cosmetics.css` draws each look and no look carries text.
+// The back of a card (docs/polish/6-cards.md, Surface B "CardBack DOM"), plus the legacy `.card-back-mark`.
+// A back is what SPEC §10.8 leaves of a card the viewer may not see (R33), so it draws nothing that
+// could name a card — no text node, <text>, <title> or def id — and its textContent is ""
+// (Card.test.tsx, B16).
+// R1297000: its one prop is the viewer's pick of back (cards/cosmetics.ts), a cosmetic id, never
+// anything of a card; the default adds no attribute and no look carries text.
 
 import type { ReactElement } from "react";
 

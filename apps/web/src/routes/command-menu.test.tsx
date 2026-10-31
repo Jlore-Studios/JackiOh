@@ -1,7 +1,6 @@
-// R2118000: Ctrl+K (Cmd+K) opens a command menu on every menu screen, never over a board:
-// the common actions, every menu page and the Almanac shelf's cards by name, each a `navigate`
-// move, with the focus moving in, staying inside and going back on close. R2126000: the selected
-// entry shows Enter, and the menu's foot names its keys.
+// R2118000: Ctrl+K (Cmd+K) opens a command menu on every menu screen, never over a board: the
+// common actions, every menu page and the shelf's cards by name, each a `navigate` move, the focus
+// moving in, staying inside and going back on close. R2126000: Enter and the foot's keys shown.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -30,11 +29,7 @@ await import("./almanac.tsx");
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
 
-/**
- * A card's result opens the Almanac, whose grid renders every shipped card and token (710 since the
- * Stinkyscape release, #1884), past vitest's 5 s default under jsdom; `almanac.test.tsx` gives its
- * grid tests the same.
- */
+/** A card's result opens the Almanac's whole grid (710 cards since #1884), past vitest's 5 s default. */
 const SLOW_GRID = { timeout: 30_000 } as const;
 
 beforeEach(() => {

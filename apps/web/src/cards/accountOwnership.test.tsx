@@ -1,10 +1,8 @@
 // R1833000: the account's playmats, backdrops and card backs are earned, so while ownership decides
-// (`AccountCosmeticsOwned`, which ownedFullArt.ts mounts from `GET /api/cosmetics` on a gated screen)
-// the pickers offer only the defaults, the starters and what the account owns, and a stored pick it
-// does not own draws as its kind's default. With nothing deciding (practice, hotseat, R1310004's
-// builds), every cosmetic counts as owned, as before. R1953001: the account-wide foil, finish and
-// border have no picker left and no face wears them; a card's own earned one is worn where the
-// ledger lists it on that card.
+// (`AccountCosmeticsOwned`, which ownedFullArt.ts mounts from `GET /api/cosmetics`) the pickers offer
+// only the defaults, the starters and what the account owns. With nothing deciding (practice,
+// hotseat, R1310004's builds), every cosmetic counts as owned. R1953001: no face wears the
+// account-wide foil, finish or border.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";

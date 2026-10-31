@@ -1,10 +1,7 @@
-// A face in play's states in words, beside the face an inspect overlay shows (SPEC §10.8). A hover
-// preview takes no pointer events and a touch sheet has no hover, so the badges' tooltips cannot be
-// read there. Covers the tuned ribbon (R386, R1320), the other badges' words (R385, E39, R383), a
-// quest line (B5 E33, R404) and a staged quest's stages (R1854000), what a copier copies (B5 E14, R511), why the viewer's own unit cannot
-// attack now (R849000), why a card in hand cannot be played now (R979000) and the counts cards on the
-// field keep on a unit (R2321000). `LocLine` is E36's
-// meta line.
+// A face in play's states in words beside an inspect overlay's face (SPEC §10.8), where no badge
+// tooltip can be hovered: the tuned ribbon (R386, R1320), badges (R385, E39, R383), quests (B5 E33,
+// R404; stages R1854000), copies (B5 E14, R511), why it cannot attack (R849000) or be played
+// (R979000) now, and field counts (R2321000). `LocLine` is E36's meta line.
 
 import type { ReactElement } from "react";
 

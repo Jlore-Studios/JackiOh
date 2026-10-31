@@ -1,18 +1,10 @@
-// Where a card's text names another card (SPEC §10.10, R279).
-//
-// The catalog lists, per card, the cards and tokens its text names (`CardDef.refs`, by id), and
-// crates/cards/tests/cross/references.rs proves the list against the texts with one naming rule,
-// which this module reads the same way: a card is named by its name, or by its name before a
-// parenthesis ("Call to Chaos (Core Edition)" is named "Call to Chaos"), alone or with a plural "s",
-// standing as whole words — the characters either side are not letters, digits, an apostrophe or a
-// hyphen, so "CN-Viral" does not name "CN-Virus".
-//
-// A name the text calls Radiant ("a Radiant CN-Virus", "five Radiant Rush Tokens") points at that
-// card's Radiant face; any other points at its base face ("a base Right-house defender").
-// R903 adds one alias: "Coin" names The Coin.
-//
-// Presentation only (CLAUDE.md rule 7): the faces a reference shows are printed catalog faces,
-// public by §5.1.
+// Where a card's text names another card (SPEC §10.10, R279). The catalog lists the cards and tokens
+// a card's text names (`CardDef.refs`), and crates/cards/tests/cross/references.rs proves the list
+// with one naming rule, which this module reads the same way: a card's name, or its name before a
+// parenthesis, alone or with a plural "s", standing as whole words (not beside a letter, digit,
+// apostrophe or hyphen, so "CN-Viral" does not name "CN-Virus"). A name the text calls Radiant points
+// at that card's Radiant face, any other at its base face. Presentation only (CLAUDE.md rule 7): the
+// faces a reference shows are printed catalog faces, public by §5.1.
 
 import type { CardDef } from "@jackioh/shared";
 

@@ -1,7 +1,6 @@
 // The invite code's words while a code is typed. R191: client and server read a code through one
-// shared `readCodeInput` (`@jackioh/shared`), so the field and the server never disagree about a
-// code; this file only turns a reading into sentences. The format is config (CLAUDE.md rule 9).
-// R104 leaves out both halves of each look-alike pair (0 and O, 1 and I): a typed `0` is refused by name.
+// shared `readCodeInput` (`@jackioh/shared`); this file only turns a reading into sentences. The format
+// is config (CLAUDE.md rule 9). R104 leaves out both halves of each look-alike pair (0 and O, 1 and I).
 
 import { excludedCharacters, type CodeFormat, type CodeInputProblem, type CodeInputReading } from "@jackioh/shared";
 

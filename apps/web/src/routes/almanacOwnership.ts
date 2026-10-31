@@ -1,10 +1,8 @@
-// R1956000: the signed-in viewer's own cards in the Almanac (almanac.tsx): the cards their collection
-// holds, drawn as their own copies and wearing their picks, behind the ownership the gated screens
-// mount (cards/ownedFullArt.ts): the cosmetics ledger once ownership decides (`FULL_ART_GATED`),
-// every cosmetic before that. Both reads are the account's own, from endpoints the client already
-// reads (`GET /api/collection`, and the session's one `GET /api/cosmetics`); with no token nothing is
-// read and no card is the viewer's. While they are pending, or once either has failed, no card is,
-// and every face draws as before. Presentation only (CLAUDE.md rule 7).
+// R1956000: the signed-in viewer's own cards in the Almanac (almanac.tsx), drawn as their own copies
+// wearing their picks, behind the ownership the gated screens mount (cards/ownedFullArt.ts): the
+// cosmetics ledger once ownership decides (`FULL_ART_GATED`), every cosmetic before that. Both reads
+// are the account's own (`GET /api/collection`, the session's one `GET /api/cosmetics`).
+// Presentation only (CLAUDE.md rule 7).
 
 import { useEffect, useState } from "react";
 

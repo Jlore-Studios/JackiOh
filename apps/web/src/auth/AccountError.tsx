@@ -1,5 +1,5 @@
-// The Try again every screen offers after a failed read (#1691): the gate's and each screen's own.
-// A wait a rate limit stated (R192) is counted down first and holds the button, as the gate's does.
+// The Try again every screen offers after a failed read (#1691). A wait a rate limit stated (R192)
+// is counted down first and holds the button.
 
 import type { ReactElement, ReactNode } from "react";
 

@@ -1,12 +1,7 @@
-// `/purchases`: the odds and the pity of every pack (#1665, part of #1651, SPEC §14.4, R1665000), off
-// the Shop and the pack screen. Public like `/terms` (main.tsx serves it ungated): the disclaimer shows
-// to anyone, and the odds and the account's counters show to a session, which this page reads for
-// itself (`readSession`), so a visitor with none makes no request and is pointed at sign-in.
-//
-// The client computes nothing (CLAUDE.md rule 7): every percentage is the server's, from `GET
-// /api/packs` and `GET /api/cosmetic-packs`, only formatted (`tierPercents`), the fallback tier
-// included, and so is every counter and threshold. A read that fails says why in its place and
-// offers Try again (#1774), as the other screens' own reads do (#1691).
+// `/purchases`: the odds and the pity of every pack (#1665, part of #1651, SPEC §14.4, R1665000). Public
+// like `/terms` (main.tsx serves it ungated); it reads the session itself (`readSession`), so a visitor
+// with none makes no request. The client computes nothing (CLAUDE.md rule 7): every figure is the
+// server's, only formatted. A failed read offers Try again in its place (#1774), as elsewhere (#1691).
 
 import { useEffect, useState, type ReactElement } from "react";
 

@@ -1,12 +1,7 @@
-// `/match/<id>`: the board specs 05 and 06 drive, with the socket faked.
-//
-// The load-bearing assertion in this file is what a board does with `legalActions`. A view that
-// carries none renders `legal={[]}`, `end-turn` is `disabled`, and `waitForMyTurn` in specs 05 and
-// 06 waits forever — so the route says so out loud rather than looking merely idle. The two tests
-// after it show the board coming alive on the `legal` field of the `view` frame, which is what
-// `crates/server/src/actor/match_actor.rs` sends (a standalone `legal` frame was never sent, and the
-// client no longer reads one, SURFACE §11.3).
-// Nothing here computes legality; that is the engine's (BUILD M5-T2, CLAUDE.md rule 7).
+// `/match/<id>`: the board specs 05 and 06 drive, with the socket faked. The load-bearing assertion
+// is what a board does with `legalActions`: a view that carries none leaves `waitForMyTurn` waiting
+// forever, so the route says so out loud. The board comes alive on the `view` frame's `legal` field
+// (SURFACE §11.3); legality is the engine's (BUILD M5-T2, CLAUDE.md rule 7).
 
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -162,12 +157,7 @@ describe("the networked board", () => {
     expect(screen.getByTestId("end-turn")).not.toBeDisabled();
   });
 
-  /**
-   * #1378: the board's names are the catalog the client ships, in hand before the first view, so no
-   * request is made for them and a failed network never leaves the board naming def ids. The route
-   * still renders its provider unconditionally (it once wrapped the board only once a fetched
-   * catalog landed, which remounted it and cost spec 05 a mulligan).
-   */
+  /** A failed network never leaves the board naming def ids. */
   it("#1378 names the board's cards from the shipped catalog on the first view, asking for no catalog, while every request fails", () => {
     const requests = vi.fn((input: unknown) => Promise.reject(new TypeError(`Failed to fetch ${String(input)}`)));
     vi.stubGlobal("fetch", requests);
@@ -309,10 +299,7 @@ describe("the series banner on a series game (R259)", () => {
 });
 
 describe("withoutToken", () => {
-  /**
-   * `net.ts` puts the access token in the socket URL's query, and the connecting status line
-   * renders that URL. Printing it raw put a live bearer token on screen and in the DOM.
-   */
+  /** Printing the URL raw would put a live bearer token on screen and in the DOM. */
   it("strips the access token from the socket URL it displays", () => {
     const withToken =
       "wss://jackioh-server.onrender.com/ws/match?token=eyJhbGciOiJFUzI1NiJ9.SECRET.sig&matchId=abc";
@@ -1218,9 +1205,7 @@ describe("the death screen's rematch offers (R672)", () => {
 
   it("takes the seat to the rematch even after View the board folded the panel", async () => {
     vi.mocked(navigate).mockClear();
-    // The rematch answers are held back until the panel is folded: neither the buttons'
-    // poll nor the watcher's has answered by then, so nothing can have navigated yet. Every
-    // pending poll is released, in case the buttons polled again after mounting.
+    // The rematch answers are held back until the panel is folded, so nothing can have navigated yet.
     const releaseRematch: Array<(body: string) => void> = [];
     vi.stubGlobal(
       "fetch",

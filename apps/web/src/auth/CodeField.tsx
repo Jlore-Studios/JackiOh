@@ -1,28 +1,11 @@
-// One code, typed into one field and drawn as groups (SPEC §9.4, R191).
-//
-// ONE INPUT, NOT FOUR: one `<input>` keeps paste, autofill, undo and screen readers working. It sits
-// over four `aria-hidden` segments, its text `color: transparent` (never `opacity: 0`: Cypress reads
-// that as hidden), and the segments draw what it holds.
-//
-// NOTHING IS DROPPED. Every change goes through `readCodeInput`, as the server reads a submitted code
-// (R191). A keystroke that adds a problem (an excluded or foreign character, a 17th) is refused: the
-// value stays and `code-field-hint` names it, since dropping it would shift every later character.
-// An accepted change is re-formatted, the caret kept after the same number of code characters.
-//
-// A REFUSED PASTE STAYS IN VIEW. Several characters inserted at once (paste, drop, clipboard chip)
-// are read for a code first, the inserted text alone before the whole value. Failing that, a paste
-// that goes wrong partway keeps its good part, caret at the problem. Two exceptions keep the old
-// value and quote the paste: a good part that would already be a whole code, and a paste holding
-// more letters and digits than a code, which is a message whose "good part" is its first word.
-//
-// A SELECTION IS DRAWN: the input's highlight is transparent, so the covered cells are marked
-// (`data-selected`) and the drawn caret is hidden.
-//
-// A KEYBOARD THAT COMPOSES IS LEFT TO FINISH. Rewriting a controlled value mid-IME-composition
-// (Gboard) doubles or drops characters, so the input shows what the keyboard wrote (`draft`), a clean
-// reading still goes up to the parent, and nothing is refused until the composition ends.
-//
-// THERE IS NO `maxLength`: it would cut a padded paste before `onChange` saw it.
+// One code, typed into one field and drawn as groups (SPEC §9.4, R191). ONE INPUT, NOT FOUR keeps
+// paste, autofill, undo and screen readers working; four `aria-hidden` segments draw what it holds,
+// its text and highlight transparent (`color: transparent`, never `opacity: 0`: Cypress reads that as
+// hidden). NOTHING IS DROPPED: every change is read as the server reads it, and a keystroke that adds
+// a problem is refused and named, since dropping it would shift every later character. No `maxLength`:
+// it would cut a padded paste before `onChange` saw it. A KEYBOARD THAT COMPOSES IS LEFT TO FINISH:
+// rewriting a controlled value mid-IME-composition (Gboard) doubles or drops characters, so nothing is
+// refused until the composition ends.
 
 import {
   useLayoutEffect,
@@ -120,8 +103,8 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
   const [focused, setFocused] = useState(false);
   const [caretCharacters, setCaretCharacters] = useState(0);
   const [selectedTo, setSelectedTo] = useState(0);
-  // A change the parent turns into the value it already holds (a typed separator, a refused
-  // character) re-renders nothing upstream, so the caret would never be put back. This does.
+  // A change the parent turns into the value it already holds re-renders nothing upstream, so the
+  // caret would never be put back. This does.
   const [, rerender] = useReducer((count: number) => count + 1, 0);
   /** What an IME composition has written so far, shown as it is (A KEYBOARD THAT COMPOSES). */
   const [draft, setDraft] = useState<string | null>(null);
@@ -190,9 +173,8 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     const inserted = raw.length - value.length;
 
     if (next.problem !== null && inserted > 1) {
-      // Text that arrives without a paste event (a drop, a phone keyboard's clipboard chip) is read
-      // the way a paste is, so "Your invite: abcd-…" fills the field however it got there: the
-      // inserted text first (it replaces what the field held), then the whole value.
+      // A REFUSED PASTE STAYS IN VIEW. Text inserted at once (paste, drop, clipboard chip) is read for
+      // a code first: the inserted text (it replaces what the field held), then the whole value.
       const insertedText = raw.slice(clamp(rawCaret - inserted, 0, raw.length), rawCaret);
       const found = findCodeInText(insertedText, format) ?? findCodeInText(raw, format);
       if (found !== null) {
@@ -204,9 +186,8 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
         return;
       }
 
-      // A paste at the end that goes wrong partway keeps its good part in view, with the caret at
-      // the problem, unless that part would already be a whole code or the paste is a message
-      // (see A REFUSED PASTE).
+      // Else a paste at the end keeps its good part, unless that is already a whole code or the paste
+      // holds more letters and digits than a code (a message): then the paste is quoted instead.
       const atEnd = rawCaret === raw.length;
       const keepsPrefix =
         atEnd &&
@@ -290,8 +271,7 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
       commit(next.formatted, next.complete);
       return;
     }
-    // Either side of a separator is drawn in the same place, so an arrow that only crossed the
-    // separator would look like it did nothing. Cross it and the character beyond.
+    // Both sides of a separator draw in one place: an arrow that only crossed it would seem to do nothing.
     if (event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return;
     if (event.key === "ArrowRight" && beforeSeparator) {
       event.preventDefault();
@@ -318,8 +298,7 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     setSelectedTo(charactersBefore(input.value, end));
   }
 
-  // The input's own text is laid out in its own font, not over the segments, so a click lands the
-  // native caret somewhere unrelated to the cell that was clicked. Map the click to the cell.
+  // The input's text is not laid out over the segments, so a click is mapped to the nearest cell.
   function handleMouseUp(event: MouseEvent<HTMLInputElement>): void {
     const root = segmentsRef.current;
     const input = inputRef.current;

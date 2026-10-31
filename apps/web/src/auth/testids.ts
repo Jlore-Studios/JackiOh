@@ -1,10 +1,7 @@
-// Every `data-testid` the sign-in, reset, invite, landing and shell screens render, in one plain
-// TypeScript module so the Cypress `.ts` specs can import the same names the components use.
-//
-// PLAIN DATA ONLY. No React, no DOM, no import from the rest of `src`: `e2e/` compiles this file on
-// its own, and anything more than string literals would drag the client into the Cypress bundle.
-// The literal is fixed by docs/polish/5-sign-in.md ("Test ids"); a rename here is a rename in every
-// spec that reads it.
+// Every `data-testid` the sign-in, reset, invite, landing and shell screens render, shared with the
+// Cypress specs. PLAIN DATA ONLY, no import: `e2e/` compiles this file on its own, and anything more
+// than string literals would drag the client into its bundle. The literals are fixed by
+// docs/polish/5-sign-in.md ("Test ids"); a rename here is a rename in every spec that reads it.
 
 export const landingTestid = {
   root: "landing",

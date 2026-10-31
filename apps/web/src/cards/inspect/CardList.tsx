@@ -1,9 +1,7 @@
-// Lists display public graveyards/exile piles or the viewer's library (§10.8; R310, R313) in caller
-// order, using inspect's sole slot (B23). Entries are faces/counts or unopened backs (R312).
-// B5 E11: the board supplies `play` only for `legalActions`; this client reports it and closes the
-// sheet (CLAUDE.md rule 7). R1571000: where "Play" would be, a face the view says cannot be played
-// now (`FaceModel.playReason`) says why instead, in the grid and opened large; nothing is clickable.
-// R2121000: a swipe down closes the sheet too, as Close does (useSheetSwipe.tsx).
+// Public graveyards/exile piles or the viewer's library (§10.8; R310, R313) in caller order, in
+// inspect's sole slot (B23); entries are faces/counts or unopened backs (R312). B5 E11: the board
+// supplies `play` only for `legalActions`; this client only reports it (CLAUDE.md rule 7). R1571000:
+// where "Play" would be, an unplayable face says why, unclickable. R2121000: a swipe down closes it.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -288,7 +286,6 @@ export function CardListSheet({
   const opened: FaceModel | undefined = openedEntry?.face ?? undefined;
   // B5 E11: the face opened large keeps its "Play" while it is listed.
   const openedPlay = opened === undefined ? undefined : openedEntry?.play;
-  // R1571000: where "Play" would be, the face opened large says why it cannot be played now.
   const openedReason = openedPlay === undefined ? opened?.playReason : undefined;
   const total = totalOf(entries);
   /** The face last opened, so Back refocuses it rather than dropping focus on <body>. */

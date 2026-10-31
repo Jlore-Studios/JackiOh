@@ -1,9 +1,7 @@
-// The site footer: the privacy policy, the terms, the purchases page (R1665000), the accessibility and
-// copyright pages, the patch notes (R388), the Card Almanac (R630), the replays (R768000), a way to
-// reach the people who run JackiOh and, on a keyboard device, the command menu's key (R2126000).
-//
-// On the landing page and the sign-in screen, where a visitor decides whether to hand over an
-// email address. Kept off the board. The contact is the owner's email address, the one the Terms,
+// The site footer: privacy, terms, purchases (R1665000), accessibility, copyright, patch notes (R388),
+// the Card Almanac (R630), replays (R768000), the contact and, on a keyboard device, the command menu's
+// key (R2126000). On the landing and sign-in screens, where a visitor decides whether to hand over an
+// email address; kept off the board. The contact is the owner's email address, the one the Terms,
 // the Privacy Policy, the Copyright and Accessibility pages and `security.txt` name too.
 
 import type { ReactElement } from "react";

@@ -1,18 +1,13 @@
-// The per-card states a face draws beside its printed text (SPEC §10.8, patch v0.2.0): a Brittle count
-// (B3.3, R385), a hand card's Temporary count (#2437, R637, R2179001), the enchantments riding the card (B5 E39), a card standing in a unit zone as a Unit
-// (B3.1, R383), a card Degrade or Upgrade changed (B3.4, R386, tuning.ts) and each open quest of a
-// quest line with its progress, "1/2" (Classic #90 In Too Deep, B5 E33, R404), with a staged quest's
-// stage, "2/3" (Stinkyscape's staged Quests, R1854000). Each is a badge on the
-// face — a glyph with the count where there is one, its words as the tooltip and the accessible name —
-// and a line in the inspect overlays, in the words below (R373, R432: "(N) Cost" the noun, "costs (N)"
-// the verb, so a floor is "can't cost less than (2)"). A Quest card's rules box prints its stage and
-// its open quests in the same words (questFace.ts, R2450000).
-//
-// `stateBadges` lists a face's badges in the order the rail draws them: the Brittle count first, then a
-// hand card's Temporary count (both end the card), then the open quests and the stage (what the card is doing), the tuned mark, the
-// enchantments and the animated mark. Everything
-// is read off the FaceModel, which read it off the view (CLAUDE.md rule 7); a face with none of them
-// has no badge at all.
+// The per-card states a face draws beside its printed text (SPEC §10.8): a Brittle count (B3.3,
+// R385), a hand card's Temporary count (#2437, R637, R2179001), the enchantments riding the card
+// (B5 E39), a card standing in a unit zone as a Unit (B3.1, R383), a card Degrade or Upgrade changed
+// (B3.4, R386, tuning.ts), each open quest of a quest line (Classic #90 In Too Deep, B5 E33, R404)
+// and a staged quest's stage (R1854000). Each is a badge on the face and a line in the inspect
+// overlays, in the words below (R373, R432: "(N) Cost" the noun, "costs (N)" the verb), which a
+// Quest card's rules box prints too (questFace.ts, R2450000).
+// The rail draws Brittle, then Temporary (both end the card), then the quests (what the card is
+// doing), the tuned mark, the enchantments and the animated mark, all read off the FaceModel, which
+// read them off the view (CLAUDE.md rule 7).
 
 import type { CardType, Enchantment, QuestView } from "@jackioh/shared";
 
@@ -211,7 +206,7 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       data: { "data-brittle": String(brittle) },
     });
   }
-  // #2437: a hand card's Temporary count, beside the moon's pattern (R1839000); both it and Brittle end the card.
+  // #2437: a hand card's Temporary count, beside the moon's pattern (R1839000).
   const temporary = face.temporary;
   if (temporary !== undefined && temporary !== null) {
     badges.push({

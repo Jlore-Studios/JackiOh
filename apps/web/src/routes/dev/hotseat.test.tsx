@@ -1,5 +1,4 @@
 // `/dev/hotseat` route tests (BUILD M5-T3).
-// The session tests fake-port behavior; this route tests URL, deck injection, browser rendering, and `window.__jackioh`.
 // `apps/web/package.json` builds E2E in development: the handle exists there and never in production.
 // The fake port proves route requests and drawing only (CLAUDE.md rule 7).
 
@@ -336,7 +335,6 @@ describe("the route starts one game from the URL", () => {
 
   it("renders the missing exports when the engine cannot be loaded, and draws no board", async () => {
     // CLAUDE.md rule 7 / §10.8: an unavailable port shows its failure, never a stubbed game.
-    // The dynamic import needs the module mock and re-import.
     vi.resetModules();
     vi.doMock("../../game/engine.ts", async () => {
       const actual = await vi.importActual<typeof import("../../game/engine.ts")>("../../game/engine.ts");
@@ -424,10 +422,6 @@ describe("the seat", () => {
     expect(screen.getByTestId(testid.seatSwitch)).toHaveTextContent("Hand over to p1");
   });
 });
-
-// window.__jackioh
-
-// R1341 emote hands
 
 describe("R1341 the hotseat's emote hands", () => {
   function offered(): (string | undefined)[] {
@@ -534,7 +528,6 @@ describe("window.__jackioh outside a production build", () => {
 });
 
 describe("window.__jackioh in a production build", () => {
-  /** The E2E build uses development mode for the handle; production must never publish it. */
   it("publishes nothing: MODE=production removes the handle the twelve specs drive", async () => {
     vi.stubEnv("MODE", "production");
     vi.resetModules();

@@ -3,31 +3,18 @@
 //
 // `KEYWORD_VISUALS` is a total map over `KeywordKind`, so a new keyword kind does not compile until
 // it has a treatment here and its drawing in KeywordFx.tsx and keywords.css. A treatment sits on one
-// of four layers of the minion, each a plane of its own, so several compose without covering each
-// other or the attack, health and name:
+// of four layers of the minion (frame around the portrait, veil over its art, glyph row along the top
+// edge, Armor's stat plate), each a plane of its own, so several compose without covering each other
+// or the attack, health and name.
 //
-//   frame  around or behind the portrait: Taunt's steel shield, Divine Shield's bubble, the Reborn
-//          echo, the Immune to Spells ward, the Indestructible plating, the Stack's card edges.
-//   veil   over the portrait's art, clipped to its oval and under the name plate and the gems:
-//          chains, cracks, venom, veins, speed streaks, runes and clockwork.
-//   glyph  a small shaped emblem in the row along the top edge, after the cost gem: blade, spear,
-//          crescent, hoofprint, lock, clover.
-//   stat   Armor's steel plate beside the health gem (a number of its own).
+// Each layer holds at most `LAYER_CAP` treatments, taken in `priority` order: the keywords that decide
+// what an opponent can do first, flavour last. A keyword past its layer's cap still has its chip, so
+// nothing is lost. Charge's and Rush's streaks move only while the view's `canAct` is true, as a mark
+// of the view's state and never as a claim about legality (that is `legalActions`', CLAUDE.md rule 7).
 //
-// Each layer holds at most so many treatments (`LAYER_CAP`), taken in `priority` order (1 first):
-// the keywords that decide what an opponent can do (Taunt, Divine Shield, Can't attack, Immune to
-// Spells, Poisonous) first, flavour last. A keyword past its layer's cap still has its chip (the
-// chips' own "+n" fold and the hover preview list every keyword), so nothing is lost, only not drawn
-// twice. And at most `AMBIENT_MAX` treatments on one unit move at a time, again by priority; the rest
-// hold still. Charge's and Rush's streaks move only while the view's `canAct` is true, as a mark of
-// the view's state and never as a claim about legality (that is `legalActions`', CLAUDE.md rule 7).
-//
-// The treatments read the view and nothing else: the unit's keywords as the view lists them (a
-// Vanilla unit's list already leaves out what it lost, and a Vanilla unit shows nothing else),
-// `canAct`, `armor` (the plate's number), `brittle` (the Brittle count as it stands; the keyword's
-// number where the view has none) and `animated` (a backrow card standing in a unit zone as a Unit,
-// R383). Under reduced motion, the OS setting or the settings panel's, every loop stops and the
-// still mark stays (keywords.css).
+// The treatments read the view and nothing else (a Vanilla unit's list already leaves out what it
+// lost). Under reduced motion, the OS setting or the settings panel's, every loop stops and the still
+// mark stays (keywords.css).
 
 import type { Keyword, KeywordKind, UnitView } from "@jackioh/shared";
 
@@ -58,10 +45,7 @@ export const LAYER_CAP: Readonly<Record<KeywordLayer, number>> = { frame: 4, vei
 /** How many treatments on one unit loop at once; the rest hold their still mark. */
 export const AMBIENT_MAX = 2;
 
-/**
- * Brittle's cracks deepen as its count falls: one hairline at `BRITTLE_CRACK_STAGES` or more, and
- * one more crack for each step below, down to the full web at 1 (and 0, the moment it crumbles).
- */
+/** Brittle's cracks deepen as its count falls: one hairline at this or more, the full web at 1 (and 0). */
 export const BRITTLE_CRACK_STAGES = 3;
 
 /** #2270: the Brittle count at which a card on the field crumbles at its next tick (R385); game/Card.tsx draws it a gray aura. */
@@ -369,10 +353,9 @@ export function temporaryLeft(keywords: readonly Keyword[]): number | null {
 }
 
 /**
- * The kinds a unit's treatments come from: its keywords as the view lists them, once each; Brittle
- * for a unit the view gives a Brittle count (R385); and the Animated treatment for a backrow card the
- * view says is standing as a Unit (`animated`, R383) whose keywords do not already name it, except on
- * a Vanilla unit (R243), whose text is gone.
+ * The kinds a unit's treatments come from: its keywords once each, Brittle for a unit the view gives a
+ * Brittle count (R385), and Animated for a backrow card standing as a Unit (`animated`, R383) whose
+ * keywords do not already name it, except on a Vanilla unit (R243), whose text is gone.
  */
 export function treatedKinds(source: KeywordFxSource): KeywordKind[] {
   const kinds: KeywordKind[] = [];
@@ -387,11 +370,7 @@ export function treatedKinds(source: KeywordFxSource): KeywordKind[] {
   return kinds;
 }
 
-/**
- * The treatments one unit draws, in priority order: each layer's first `LAYER_CAP` kinds (Armor's
- * plate only while the view's `armor` is above 0, as the plate itself), the first `AMBIENT_MAX`
- * loops among them running and the rest still.
- */
+/** The treatments one unit draws, in priority order: each layer's first `LAYER_CAP` kinds, the first `AMBIENT_MAX` loops running. */
 export function keywordFxPlan(source: KeywordFxSource): KeywordFxPlan[] {
   const kinds = treatedKinds(source)
     .filter((kind) => kind !== "Armor" || source.armor > 0)

@@ -1,11 +1,7 @@
-// The shell's gate after the adversarial panel (docs/polish/5-sign-in.md, B40, R193, R194): one gate
-// per screen, so a move re-reads the account; a check that runs long offers a way out; the error
-// panel speaks plainly and waits out a stated rate limit; and an emailed link that lands on any path
-// is scrubbed and handed to `/login`.
-//
-// Asserted through the real `App` from `main.tsx` (loaded with `await import`, because main.tsx
-// mounts itself outside vitest), a session and a stubbed `fetch`. A session is seeded in
-// `localStorage` under the key an older build used (R632 moves it into the tab on the first read).
+// The shell's gate (docs/polish/5-sign-in.md, B40, R193, R194): one gate per screen, so a move re-reads
+// the account; a long check offers a way out; the error panel waits out a stated rate limit; an emailed
+// link on any path is scrubbed and handed to `/login`. `main.tsx` mounts itself outside vitest, hence
+// `await import`; a session is seeded under an older build's `localStorage` key (R632 moves it).
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -269,9 +265,8 @@ describe("B40 the gate's error panel", () => {
     );
     at(paths.account);
     render(<App />);
-    // Every step here runs on promises and faked timers (/account is in the entry chunk and the
-    // stubbed fetch answers at once), so flushing them settles the screen without waiting on the
-    // wall clock, however loaded the machine is.
+    // Promises and faked timers only (/account is in the entry chunk, the stub answers at once), so
+    // flushing them settles the screen without waiting on the wall clock.
     await flushMicrotasks();
     expect(screen.getByTestId(shellTestid.error)).toBeInTheDocument();
     expect(screen.getByTestId(shellTestid.retry)).toBeDisabled();

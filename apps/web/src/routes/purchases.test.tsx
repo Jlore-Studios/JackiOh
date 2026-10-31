@@ -1,8 +1,5 @@
-// `/purchases` (#1665, part of #1651, SPEC §14.4, R1665000): the odds and the pity of every pack, with the
-// footer's link to it. Signed in, the page shows what `GET /api/packs` and `GET /api/cosmetic-packs`
-// answer, each figure the server's; signed out it shows the disclaimer and a sign-in link and asks the
-// server for nothing. Every figure below is the fixture's, none of them the shipped tables'.
-// A read that fails offers Try again, which reads it again (#1774).
+// `/purchases` (#1665, part of #1651, SPEC §14.4, R1665000) and the footer's link to it; a failed read
+// offers Try again (#1774). Every figure below is the fixture's, none of them the shipped tables'.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -88,12 +85,10 @@ describe("R1665000 /purchases signed in", () => {
     expect(screen.getByTestId(purchasesTestid.duplicate)).toHaveTextContent(
       "A duplicate becomes a cosmetic: Common 50%, Rare 30%, Epic 15%, Legendary 4%, Mythic 1%.",
     );
-    // The global roll: its chance, then its tiers from Epic.
     expect(screen.getByTestId(purchasesTestid.globalCosmetic)).toHaveTextContent(
       "a duplicate becomes one 12.5% of the time: Epic 93%, Legendary 6%, Mythic 1%.",
     );
 
-    // A cosmetic pack's slot and its guaranteed slot.
     expect(await screen.findByTestId(purchasesTestid.cosmeticSlot, undefined, SLOW)).toHaveTextContent(
       "Each slot: Common 50%, Rare 30%, Epic 15%, Legendary 4%, Mythic 1%.",
     );
@@ -111,7 +106,6 @@ describe("R1665000 /purchases signed in", () => {
     expect(screen.getByTestId(purchasesTestid.disclaimer)).toHaveTextContent("never sold");
     expect(screen.queryByTestId(purchasesTestid.signIn)).toBeNull();
 
-    // One read of each, with the session's token.
     expect(server.to("GET", "/api/packs")).toHaveLength(1);
     expect(server.to("GET", "/api/cosmetic-packs")).toHaveLength(1);
     for (const call of oddsReads(server)) expect(call.headers.authorization, call.path).toBe(`Bearer ${TOKEN}`);
@@ -122,7 +116,7 @@ describe("R1665000 /purchases signed in", () => {
     signIn(TOKEN);
     render(<PurchasesRoute />);
 
-    // Before any await the stubbed reads have not answered: card packs a table, cosmetic packs a panel, pity rows.
+    // Before any await the stubbed reads have not answered.
     const loading = {
       "card-packs": screen.getByTestId(purchasesTestid.loading("card-packs")),
       "cosmetic-packs": screen.getByTestId(purchasesTestid.loading("cosmetic-packs")),
@@ -195,7 +189,6 @@ describe("#1774 /purchases offers Try again", () => {
     signIn(TOKEN);
     render(<PurchasesRoute />);
 
-    // Both places the packs read feeds show the failure, each with an enabled Try again.
     expect(await screen.findByTestId(purchasesTestid.loadError("card-packs"), undefined, SLOW)).toHaveTextContent(
       "the packs are closed",
     );
@@ -209,7 +202,6 @@ describe("#1774 /purchases offers Try again", () => {
 
     fireEvent.click(screen.getByTestId(purchasesTestid.retry("card-packs")));
 
-    // The one shared read ran again and both places show its answer together.
     const odds = await screen.findByTestId(purchasesTestid.odds, undefined, SLOW);
     expect(within(odds).getByTestId(purchasesTestid.oddsRow("rare"))).toHaveTextContent("Rare32%82%");
     expect(await screen.findByTestId(purchasesTestid.pityRow("epic"), undefined, SLOW)).toHaveTextContent(

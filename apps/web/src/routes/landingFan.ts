@@ -28,10 +28,9 @@ export const FAN_RADIANT_AT = 2;
 export const FAN_CARD_MAX_PX = 158;
 
 /**
- * R1017002: the most text a fan card prints whole, measured in Chromium on every catalog face. At
- * FAN_CARD_MAX_PX the rules box prints at the reading floor and holds 5 lines of about 25
- * characters before the art would give way (issue #1017's long layout); a narrower fan card only
- * shrinks its text. `faceLines` wraps by words to count, as for FACE_TEXT_LIMIT.
+ * R1017002: the most text a fan card prints whole, measured in Chromium on every catalog face: at
+ * FAN_CARD_MAX_PX the rules box holds 5 lines of about 25 characters at the reading floor before the
+ * art would give way (issue #1017's long layout); a narrower fan card only shrinks its text.
  */
 export const FAN_TEXT_LIMIT: TextLimit = { charsPerLine: 25, lines: 5 };
 
@@ -47,10 +46,8 @@ export const ROTATION_POOL: readonly CardDef[] = Object.values(CATALOG).filter(
 );
 
 /**
- * R1017002: whether both of `def`'s faces print whole on a fan card without the long layout: a
- * hero's full-art face prints no words, and any other face its whole catalog text, with no short
- * form (issue #1017), within FAN_TEXT_LIMIT. With the Full-art cards setting off, a hero's card is
- * held to its text like any card.
+ * R1017002: whether both of `def`'s faces print whole on a fan card: a hero's full-art face prints
+ * no words, any other its whole catalog text, with no short form, within FAN_TEXT_LIMIT.
  */
 export function fitsTheFan(def: CardDef, fullArtOn: boolean): boolean {
   return [false, true].every((radiant) => {
@@ -106,9 +103,8 @@ const TIER_RANK: Readonly<Record<LengthTier, number>> = { s: 0, m: 1, l: 2, xl: 
 
 /**
  * R639 favors faces whose name and rules text print at the largest size, but never excludes dense
- * cards. A hero's card counts as one (R1017002): in the fan it prints its art and no words, and with
- * full art off it is dealt only when its text fits the fan. A Training Grounds snapshot of one prints
- * its words, so it does not (R2195001).
+ * cards. A hero's card counts as one, as it prints no words in the fan (R1017002); a Training
+ * Grounds snapshot of one prints its words, so it does not (R2195001).
  */
 export function featureWeight(def: CardDef): number {
   const known = WEIGHTS.get(def.id);

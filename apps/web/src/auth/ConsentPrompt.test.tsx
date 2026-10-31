@@ -1,8 +1,6 @@
-// `auth/ConsentPrompt.tsx` at the gate (`main.tsx`): the consent screen an account meets while it owes
-// the age check or agreement to the terms in force (R757000, R757001), asserted through the real
-// modules: a session in `localStorage`, `/api/auth/me` and `/api/account/consent` over a stubbed
-// `fetch`. The server decides what is owed and counts the age (CLAUDE.md rule 7); what is asserted
-// here is where the screen stands, what it sends, and what the device keeps when the server refuses.
+// `auth/ConsentPrompt.tsx` at the gate: the consent screen an account meets while it owes the age check
+// or the terms in force (R757000, R757001), through the real modules over a stubbed `fetch`. The server
+// decides what is owed and counts the age (CLAUDE.md rule 7).
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

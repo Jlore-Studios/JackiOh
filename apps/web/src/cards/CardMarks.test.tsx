@@ -1,7 +1,5 @@
-// R437: a marked card shows its mark (#50 K-Pop Fanatic's pending steal on its target). The view's
-// `CardView.marks` is read through `marksOf` (marks.ts) and drawn by CardMarks on the board's card
-// wrapper (game/Card.tsx): units and face-up backrow cards, on either seat, rendered the way the board
-// renders them, from fixture views carrying `marks`.
+// R437: a marked card shows its mark (#50 K-Pop Fanatic's pending steal on its target), read through
+// `marksOf` (marks.ts) and drawn by CardMarks on the board's card wrapper (game/Card.tsx).
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";

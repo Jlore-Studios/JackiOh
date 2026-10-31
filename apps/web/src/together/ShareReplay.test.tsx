@@ -1,11 +1,5 @@
-// #936 S7 B52: `ShareWithFriend`, a finished online match's replay shared with a friend. It starts
-// closed and reads no friend until opened, offers one Share per friend, says so (with the way to Play
-// together) when there are none, posts a share as `POST /api/replays/:matchId/shares {friendId}` and
-// takes it back with `DELETE /api/replays/:matchId/shares/:friendId`, and shows a refusal in the
-// server's words with the friend still unshared.
-//
-// The server is a stubbed `fetch` (`test/stubServer.ts`); the signed-in session is put where
-// `net/session.ts` reads it.
+// #936 S7 B52: `ShareWithFriend`, a finished online match's replay shared with a friend. The server is
+// a stubbed `fetch` (`test/stubServer.ts`); the signed-in session is put where `net/session.ts` reads it.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,9 +1,6 @@
-// Issue #479: a successful sign-in lands on the main menu (the landing page), and a failed one keeps
-// the player on the sign-in screen, its sentence shown and the form as they left it. That holds for a
-// sign-in a protected screen sent the player to as well: it lands on the main menu, not back there.
-//
-// Asserted through the real `App` from `main.tsx` (loaded with `await import`, because main.tsx
-// mounts itself outside vitest), with the auth provider and the API answered by a stubbed `fetch`.
+// #479: a sign-in lands on the main menu, even one a protected screen sent the player to; a failed one
+// keeps the sign-in screen, its sentence shown and the form as left. `main.tsx` mounts itself outside
+// vitest, hence `await import`; the provider and the API answer through a stubbed `fetch`.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

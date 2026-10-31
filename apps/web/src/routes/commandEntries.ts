@@ -32,10 +32,9 @@ export type CommandEntry = {
 };
 
 /**
- * R2118000: whether the shell mounts the command menu on `path`. Never on a board: a match, a
- * Conquest series (its pick clock runs), a watched game, a Duos game, or the dev boards. A
- * practice game or a replay shares its path with a menu, so those stay mounted and Game.tsx marks
- * itself instead (`game/boardShown.ts`).
+ * R2118000: whether the shell mounts the command menu on `path`: never on a board (a Conquest
+ * series's pick clock runs). A practice game or a replay shares its path with a menu, so Game.tsx
+ * marks itself instead (`game/boardShown.ts`).
  */
 export function commandMenuOn(path: string): boolean {
   if (path === paths.hotseat || path === paths.duosDev) return false;
@@ -92,10 +91,7 @@ export function commandCards(cards: CardDefs = CATALOG): CommandEntry[] {
   });
 }
 
-/**
- * R2118000: whether `label` matches `query`: every word of the query is a substring of the label,
- * both in lower case. A blank query matches everything.
- */
+/** R2118000: every word of `query` is a substring of `label`, both lower-cased; a blank query matches all. */
 export function matchesQuery(label: string, query: string): boolean {
   const words = query.toLocaleLowerCase().split(/\s+/u).filter((word) => word.length > 0);
   if (words.length === 0) return true;

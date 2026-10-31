@@ -1,10 +1,5 @@
-// A conversation with one friend (#936, B53, B58): the newest page of it, read again every
-// `CHAT_POLL_MS` while the panel is open (a read marks it read), earlier pages on request, each by the
-// cursor the page after it answered (R1384000), a reply box, and a report on each of the friend's messages.
-// A read that fails says why with Try again until a read answers, and never passes for an empty conversation (#1898).
-// A message sent shows at once, marked as sending, until the server's answer replaces it; sends go to
-// the server one at a time in the order sent, and a refused or failed one is marked failed with Retry and Discard (R2120000).
-//
+// A conversation with one friend (#936, B53, B58): the newest page, read again every `CHAT_POLL_MS`
+// while the panel is open (a read marks it read), and earlier pages by cursor (R1384000).
 // CLAUDE.md rule 7: the box keeps a draft to `CHAT_MAX_CHARS` and will not send an empty one, as
 // UX; what a message may say, how many may be sent, and the word filter are the server's, and its
 // refusal is shown in its own words. A message is drawn as text, never as markup.
@@ -95,7 +90,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   const sendsOpen = useRef(0);
   const friendId = friend.profileId;
 
-  // The newest page now and every CHAT_POLL_MS while open (B58).
   useEffect(() => {
     let canceled = false;
     let first = true;
@@ -128,7 +122,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
     };
   }, [friendId]);
 
-  // The newest message in view whenever one arrives or is sent.
   const newest = messages.at(-1)?.id ?? null;
   const newestSend = outgoing.at(-1)?.key ?? null;
   useEffect(() => {

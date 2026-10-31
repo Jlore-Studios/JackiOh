@@ -2,10 +2,6 @@
 // with what can be done with them now, and one friend request. Nothing here is a rule (CLAUDE.md
 // rule 7): which friend can be challenged or watched is what the server says of them (`status`,
 // `watchable`), and every refusal is shown in the server's words.
-//
-// A friend row offers (B56): Challenge while the friend is online and not in a game; Watch while the
-// server says the game is `watchable`; Chat always; Remove, at once, and Block, asking once, where
-// the screen gives it the means to. Remove asks nothing because the screen offers Undo (R2119000).
 
 import { useId, useState, type FormEvent, type ReactElement } from "react";
 

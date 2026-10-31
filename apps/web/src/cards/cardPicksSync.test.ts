@@ -1,8 +1,6 @@
 // R1834000: each card's picks live on the account, and the device's store is their cache
-// (`cards/cardPicksSync.ts`). The account is a fake `CardPicksAccountApi` that keeps picks as the
-// server does: the upload writes only the cards it holds no row for, a change patches one card (null
-// clears a field), and every answer is all the account's picks. The device is the real store over
-// jsdom's localStorage.
+// (`cards/cardPicksSync.ts`). The fake account keeps picks as the server does: the upload writes only
+// the cards it holds no row for, a change patches one card, and every answer is all of them.
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

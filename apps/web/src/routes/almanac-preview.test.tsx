@@ -1,9 +1,8 @@
-// The Almanac and the deck builder with the Meditative set previewed (issue #550): `@jackioh/shared`
-// is mocked so that `SHIPPED_SETS` lists the set the day before its patch does, and every chip, pool
-// and mark that follows what ships (R1380, R1381) shows it. The same pieces with the set not shipped
-// are almanac.test.tsx's, filters.test.ts's and browse.test.tsx's, so a test here holds nothing the
-// release has to rewrite: the mock keeps the list free of repeats, so it stays valid once the
-// release lists the set itself.
+// The Almanac and the deck builder with the Meditative set previewed (#550): `@jackioh/shared` is
+// mocked so `SHIPPED_SETS` lists the set as its patch does, and every chip, pool and mark that follows
+// what ships (R1380, R1381) shows it. The set unshipped is almanac.test.tsx's, filters.test.ts's and
+// browse.test.tsx's; the mock keeps the list free of repeats, so it stays valid once the release lists
+// the set itself.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -76,10 +75,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/**
- * The grid renders every shipped card and token, 710 since the Stinkyscape release (#1884), past
- * vitest's 5 s default under a loaded jsdom run, as almanac.test.tsx's grid tests are.
- */
+/** The whole grid (710 cards and tokens since #1884) outruns vitest's 5 s default under jsdom. */
 const SLOW_GRID = { timeout: 30_000 } as const;
 
 describe("the Almanac with the Meditative set previewed", SLOW_GRID, () => {

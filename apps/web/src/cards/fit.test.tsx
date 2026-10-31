@@ -2,8 +2,7 @@
 // `useFitText` is a no-op there (CardFace.test.tsx B15); a rules box gets a small model instead: a
 // known box height, a font of base size × tier scale × `--cf-fit` (no tier scale in the long
 // layout, as cards.css has it) and text that needs `need × font²` px of height. The component specs
-// (card-faces B15, deckbuilder-layout) prove the same on real layout. The last describe is the
-// scheduler: fits queued together are read together, round by round.
+// (card-faces B15, deckbuilder-layout) prove the same on real layout.
 
 import { cleanup, render } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";

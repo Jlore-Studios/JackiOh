@@ -345,7 +345,6 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
     setPhase(motion === "reduced" ? "closed" : "closing");
   }, [motion]);
 
-  // The roll back up ends hidden.
   useEffect(() => {
     if (phase !== "closing") return undefined;
     const timer = window.setTimeout(() => {
@@ -356,7 +355,6 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
     };
   }, [phase]);
 
-  // While open: Escape closes it and gives the focus back; a press outside closes it.
   useEffect(() => {
     if (phase !== "open") return undefined;
     const onKey = (event: KeyboardEvent): void => {
@@ -482,7 +480,6 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
   const account = useAccount();
   // R634: the first screen most visits see keeps an active account's settings level with this device's.
   useSettingsAccountSync(account);
-  // R765: the player's live online game, for the banner at the top.
   const liveGame = useLiveGame(account);
   const motion = useMotion();
   // R2035000: GET /api/quests answers an active account alone.

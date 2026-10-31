@@ -411,7 +411,6 @@ describe("#1831 the panel", () => {
       await waitFor(() => {
         expect(within(panel).getAllByTestId(togetherTestid.friendRow).map((entry) => entry.getAttribute("data-profile-id"))).toEqual(["f-ann", "f-dee"]);
       }, SLOW);
-      // The request answered no longer counts toward the badge.
       expect(screen.queryByTestId(friendsTestid.badge)).toBeNull();
     },
     TEST_MS,
@@ -504,7 +503,6 @@ describe("#1831 the panel is a modal for the keyboard", () => {
       const panel = await openPanel();
       expect(opener).toHaveAttribute("aria-expanded", "true");
       expect(opener).toHaveAttribute("aria-controls", panel.id);
-      // The focus starts inside the panel.
       expect(panel).toContainElement(document.activeElement as HTMLElement);
 
       (document.activeElement as HTMLElement | null)?.blur();
@@ -587,7 +585,6 @@ describe("#1831 challenging from the panel", () => {
         .find((row) => row.getAttribute("data-profile-id") === "f-ann");
       fireEvent.click(within(must(annRow, "Ann's row")).getByTestId(togetherTestid.challenge));
 
-      // The dialog is over the screen, the panel gone; the decks are read and Send has the focus.
       const form = await screen.findByTestId(togetherTestid.challengeForm, undefined, SLOW);
       expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
       await waitFor(() => {

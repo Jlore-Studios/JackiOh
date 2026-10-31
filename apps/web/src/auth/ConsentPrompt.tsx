@@ -1,22 +1,12 @@
-// The consent screen (R757000, R757001): what an account that owes the age check or agreement to the
-// terms in force sees on the gated screens (main.tsx `Gated`), before the code screen and the
-// username prompt.
-//
-// The gate decides nothing here either (CLAUDE.md rule 7): what is owed is the server's
-// `ageCheckOwed` and `termsOwed` on `/api/auth/me`, and `POST /api/account/consent` counts the age,
-// deletes an account under the minimum and records the agreement. This screen asks:
-//
-// - A PENDING ACCOUNT THAT HAS NOT ANSWERED THE AGE SCREEN. The sign-up form on this device held
-//   its answer for this address (`auth/consent.ts`): it is posted without asking again. Otherwise
-//   (another device, an OAuth sign-up) the screen asks the month and year and for the box.
-// - AN ACCOUNT WHOSE TERMS CHANGED. The box alone, saying the Terms or the Privacy Policy changed.
-//
-// An answer under the minimum signs the device out and locks sign-up on it, as the sign-up form's
-// own refusal does, and says only that an account cannot be made. A device that refused a sign-up
-// before is not asked: it sees the refusal and Sign out.
-//
-// THE GATE'S FRAME is `ShellPanel`'s markup, written out as `UsernamePrompt.tsx` does, with its way
-// out, Sign out.
+// The consent screen (R757000, R757001): what an account that owes the age check or the terms in force
+// sees on the gated screens, before the code screen and the username prompt. The gate decides nothing
+// (CLAUDE.md rule 7): what is owed is `/api/auth/me`'s `ageCheckOwed` and `termsOwed`, and
+// `POST /api/account/consent` counts the age, deletes an account under the minimum and records the
+// agreement. An age answer the sign-up form on this device held for this address (`auth/consent.ts`)
+// is posted without asking again; otherwise the screen asks the month, year and box, or the box alone
+// when only the terms changed. An answer under the minimum signs the device out and locks sign-up on
+// it, as the sign-up form's refusal does; a device that refused before sees the refusal and Sign out.
+// THE GATE'S FRAME is `ShellPanel`'s markup, written out as `UsernamePrompt.tsx` does.
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 

@@ -1,9 +1,6 @@
-// Prints an `ArtSpec` as a `data:image/svg+xml,…` URI (docs/polish/6-cards.md, Surface A, B3).
-//
-// The document is one <svg viewBox="0 0 100 100"> with no <text>, no <title> and no external
-// reference: the only `url(…)`s point at gradients defined inside it, and nothing uses `href`.
-// It is percent-encoded in full, parentheses and quotes included, so it can sit inside a CSS
-// `url("…")` in any browser and in jsdom's style parser.
+// Prints an `ArtSpec` as a `data:image/svg+xml,…` URI (docs/polish/6-cards.md, Surface A, B3): no
+// <text>, <title>, `href` or external reference (its `url(…)`s are its own gradients), percent-encoded
+// in full so it sits inside a CSS `url("…")` in any browser and in jsdom's style parser.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -144,9 +141,8 @@ export function artDataUri(spec: ArtSpec): string {
   return `${DATA_PREFIX}${encodeSvg(artSvg(spec))}`;
 }
 
-// The memo behind `CardArt`: keyed `${defId}|${radiant}|${composition}`, as the Surface fixes, plus
-// the motif (R503), which a card's name fixes as its id fixes the rest. Transient `t-<n>` defs can
-// be minted without bound, so the map is cleared rather than grown.
+// The memo behind `CardArt`, keyed as the Surface fixes plus the motif (R503). Transient `t-<n>` defs
+// can be minted without bound, so the map is cleared rather than grown.
 const proceduralCache = new Map<string, string>();
 
 export function proceduralArtUri(

@@ -1,11 +1,8 @@
 // "Share with a friend" (#936, B52, B59): a finished online match's replay, shared with a friend, who
-// then finds it under "Shared with me" on Play together and watches it from the sharer's seat. Offered
-// on `/replays`' online games and in the replay player of an online match.
-//
+// then finds it under "Shared with me" on Play together and watches it from the sharer's seat.
 // Who may share what is the server's (a seat holder, a finished match, a friend; CLAUDE.md rule 7),
-// and its refusal is shown as it says it. Opened, it reads the friends and who the replay is already
-// shared with together (R1435000), so a share made on any visit shows as shared and can be taken back
-// here ("Stop sharing"); unfriending or blocking ends one too.
+// and its refusal is shown as it says it. Opened, it reads who the replay is already shared with
+// (R1435000), so a share made on any visit can be taken back here; unfriending or blocking ends one too.
 
 import { useEffect, useState, type ReactElement } from "react";
 

@@ -1,24 +1,12 @@
 // `/watch/:matchId?friend=<id>` — a friend's live game, watched from the friend's seat (#936, B50).
-//
-// The watch socket (`/ws/watch`, authenticated as `/ws/match` is: the token offered as a subprotocol,
-// R1379000) is told whom to watch in its hello, and answers the friend's `PlayerView` frames, each
-// `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`. The board is `Game.tsx` as a
-// replay draws it: nothing legal, a no-op `onAction`, no prompt, drag or glow. Nothing a watcher
-// sends after the hello reaches the game, and this screen sends nothing but the hello (CLAUDE.md
-// rule 7).
-//
-// Whether the friend may be watched (a live game, ranked or unranked; the friend allows it, room for one more) is
-// the server's: a refusal is a `forbidden` frame and a closed socket, and this screen says so with
-// the way back. An unexpected close opens the socket again, `WATCH_RECONNECT_ATTEMPTS` times
-// `WATCH_RECONNECT_MS` apart; a finished game is not reopened. A tab that wakes probes a quiet socket
-// with the hello again, which the server answers with the view it last sent, and replaces one that
-// does not answer (R1441, R1103000), within the same attempts. Once they run out on a game still
-// running, and while a reopen waits (#1691), "Reconnect now" (the match bar's, `routes/match.tsx`)
-// opens it again and starts the attempts over (#1570). Run out before the first view, the screen says
-// the game can no longer be reached rather than waiting on (#1599).
-//
-// R1834003, R1834004: the socket also sends both seats' frozen loadouts (`loadouts`, then a
-// `cardLoadouts` after each view that showed a card), kept merged as the match socket keeps them
+// The watch socket (authenticated as `/ws/match` is) is told whom to watch in its hello, and answers the
+// friend's `PlayerView` frames, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`.
+// The board is `Game.tsx` as a replay draws it. Nothing a watcher sends after the hello reaches the
+// game, and this screen sends nothing but the hello (CLAUDE.md rule 7).
+// Whether the friend may be watched is the server's: a refusal is a `forbidden` frame and a closed
+// socket. A tab that wakes probes a quiet socket with the hello again and replaces one that does not
+// answer (R1441, R1103000), within the reopen attempts.
+// R1834003, R1834004: both seats' frozen loadouts are kept merged as the match socket keeps them
 // (game/net.ts); a watched board wears nobody's device picks, so both seats wear their own.
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";

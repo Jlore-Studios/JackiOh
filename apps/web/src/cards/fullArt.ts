@@ -1,35 +1,17 @@
-// Full-art faces (R1017001, a follow-up to issue #1017): the most iconic cards print their art across
-// the whole face and no words, as Hearthstone's Signature cards do: the cost, the rarity gem opposite
-// it, the name banner at the foot and a Unit's attack and health (cards.css, "full art"). Their whole text is
-// one hover or click away (inspect/Extended.tsx, the detail view's rules). They are the cards the hero
-// portraits are drawn from (R641's roster, `PORTRAITS` in src/wire/emotes.ts): a card that becomes a
-// hero's face becomes a full-art card, by name, as the roster names them, so a portrait the roster
-// adds needs no line here. The Full-art cards setting (settings.ts `fullArt`) turns them off, and they
-// print their text like any card.
-// R1108000: a tutorial lesson's board prints no full art, whatever the setting: practice.tsx wraps it in
-// `FullArtAllowed` of false, and the faces and inspect overlays below it read `useFullArt`.
-// R1313000: each full art is a cosmetic its card's owner must own (`fullArt` in the cosmetics
-// registry). While the server's `ECONOMY_LIVE` is on, in a production build (`FULL_ART_GATED`), a copy
-// prints full art only where it is the viewer's own (`worn`, or below an `OwnCopy`: the deck builder,
-// an own card's inspect overlay) and the viewer owns its full art (`FullArtOwned`, which
-// ownedFullArt.ts mounts on every gated screen from `GET /api/cosmetics`). Every other copy, the
-// opponent's among them, prints its normal face: the client never infers another's ownership. With
-// no `FullArtOwned` above it (practice, hotseat, the Almanac, the landing page's fan), with the
-// economy off, and in a development or e2e build, every full art counts as owned, as before.
-// R1310004: a development build gates full art too when localStorage holds "1" under
-// `E2E_FULL_ART_GATED_KEY` as it loads, which the one e2e spec that walks the economy (spec 45) sets.
+// Full-art faces (R1017001, a follow-up to issue #1017): the hero portraits' cards print their art
+// across the whole face and no words, as Hearthstone's Signature cards do (cards.css, "full art");
+// their whole text is one hover or click away (inspect/Extended.tsx). A card is one by name, as
+// R641's roster (`PORTRAITS` in src/wire/emotes.ts) names it, so a portrait the roster adds needs no
+// line here. The Full-art cards setting (settings.ts `fullArt`) turns them off.
 //
-// R1655000: a full art is a per-card pick, beside the foil, finish and border a card may carry
-// (cosmetics.ts, `writeCardFullArt`): an own copy prints it by its card's pick first and by the
-// Full-art cards setting where the card has none, always behind ownership. `FullArtOwned` now holds
-// the viewer's ownership of every per-card cosmetic, `NO_FULL_ART` the empty one; the names stay.
-//
-// R1834004: a copy that is not the viewer's own, below a `TheirCopy` (an opponent's, or any seat's on a
-// watched or replayed online game), prints its full art where its owner's loadout says so for that
-// card, which the server checked against the owner's account (R1834001): the client still infers no
-// one's ownership. The viewer's own Full-art cards setting and `FullArtAllowed` hold over it.
-// R1834000: since every write of a card's pick is sent to the account, a preview writes none:
-// `FullArtShown` shows a full art on an own copy in place of the card's pick, behind the same ownership.
+// R1313000: each full art is a cosmetic its card's owner must own. Where ownership decides
+// (`FULL_ART_GATED`), a copy prints full art only where it is the viewer's own and the viewer owns it
+// (`FullArtOwned`, which ownedFullArt.ts mounts on every gated screen from `GET /api/cosmetics`):
+// the client never infers another's ownership. With no `FullArtOwned` above it (practice, hotseat,
+// the Almanac, the landing page's fan), every full art counts as owned. R1655000: `FullArtOwned`
+// holds the viewer's ownership of every per-card cosmetic, `NO_FULL_ART` the empty one; the names
+// stay. R1834004: a copy below a `TheirCopy` prints its full art where its owner's loadout says so,
+// which the server checked against the owner's account (R1834001).
 //
 // Presentation only (CLAUDE.md rule 7): the face is drawn differently and plays the same.
 

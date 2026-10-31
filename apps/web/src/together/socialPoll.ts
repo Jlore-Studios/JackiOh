@@ -1,11 +1,8 @@
-// What a signed-in tab reads of the social layer on every screen, read once for all of them (#1831): the
-// open challenges (`GET /api/challenges`) and the unread counts (`GET /api/chat/unread`), each every
-// `SOCIAL_POLL_MS`, however many screens show them. The shell's challenge toast is the poller
-// (`useSocialPoll`, `ChallengeToast.tsx`), as is Play together (`TogetherRoute.tsx`); the Friends
-// button's badge (`FriendsButton.tsx`) only reads what they published (`useSocialReads`), so it adds
-// no request of its own. The incoming friend requests are not read here: whichever screen reads the
-// friends list says how many it saw (`noteFriends`), and the badge counts those as last read.
-//
+// What a signed-in tab reads of the social layer on every screen, read once for all of them (#1831):
+// the open challenges and the unread counts, each every `SOCIAL_POLL_MS`. The shell's toast and Play
+// together poll (`useSocialPoll`); the Friends button's badge only reads what they published
+// (`useSocialReads`). Incoming friend requests are not read here: whichever screen reads the friends
+// list says how many it saw (`noteFriends`).
 // Nothing here is a rule (CLAUDE.md rule 7): a list is the server's answer, and a session it refuses
 // outright (signed out, 401, or an account that is not active, 403) is not asked again until the tab
 // holds another one.

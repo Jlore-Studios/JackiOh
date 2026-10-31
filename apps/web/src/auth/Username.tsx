@@ -1,19 +1,14 @@
-// A player's username, as every screen shows one (R1436).
+// A player's username, as every screen shows one (R1436). A profile id keys a list and names a
+// request but is never shown, nor anything made from it; a player is shown by the username the server
+// gave them (`Max`, or `Max#3` when the base was taken), always through this one component.
 //
-// IDS UNDERNEATH, USERNAMES ON SCREEN. A profile id keys a list and names a request; it is never
-// shown, nor anything made from it. A player is shown by the username the server gave them: a base
-// name and, when the base was taken, a numeric tag (`Max`, `Max#3`). Every screen that names a player
-// renders it through this one component.
+// ISOLATED: a name written right to left would reorder the text around it, or pull its own `#n` into
+// its run. So the whole name sits in a left-to-right `<bdi>`, the base in an inner `dir="auto"` one and
+// the tag apart. The full name rides on `title`, since a long one is cut with an ellipsis
+// (`username.css`) at the base's own end, never in the tag.
 //
-// ISOLATED. A username can be written right to left (Arabic, Hebrew), and an unisolated one reorders
-// the text around it ("Max is taken, so you'd be محمد#2" would scramble), or pulls its own `#n` into
-// its run. So the whole name sits in a `<bdi>` laid out left to right, the base in an inner `<bdi>`
-// whose direction is its own (`dir="auto"`), and the tag after it as an element of its own. The
-// full name rides on `title`, since a long one is cut with an ellipsis (`username.css`): the base
-// is cut at its own end, whichever way it runs, and the tag is never cut.
-//
-// A server from before usernames sends no name where this one sends `username` (the web client can
-// go out ahead of the server), and a row then shows no name rather than the screen failing to load.
+// A server from before usernames sends no `username` (the client can go out ahead of the server):
+// the row then shows no name rather than the screen failing to load.
 
 import type { ReactElement } from "react";
 

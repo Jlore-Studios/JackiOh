@@ -1,7 +1,5 @@
 // Emailed auth links (docs/polish/5-sign-in.md, B29, B30, R193; PKCE codes, R323, R324).
-//
-// `parseAuthRedirect` is pure over a URL; `consumeAuthRedirect` reads jsdom's location once, scrubs
-// the address bar when any auth parameter is present, and caches its answer until cleared. A
+// `parseAuthRedirect` is pure over a URL; `consumeAuthRedirect` reads jsdom's location once. A
 // recovery session is held for this tab only: memory and `sessionStorage`, never `localStorage`.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

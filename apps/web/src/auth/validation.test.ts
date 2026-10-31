@@ -1,6 +1,5 @@
-// Sign-up and reset validation (docs/polish/5-sign-in.md, B24). Pure functions: a problem is a
-// sentence to show, and null means the value may be sent. The bounds come from config, where they
-// mirror the auth provider's own limits (AUTH_PASSWORD_MIN_LENGTH, AUTH_PASSWORD_MAX_LENGTH).
+// Sign-up and reset validation (docs/polish/5-sign-in.md, B24): a problem is a sentence, null means
+// send. The bounds mirror the provider's limits (AUTH_PASSWORD_MIN_LENGTH, AUTH_PASSWORD_MAX_LENGTH).
 
 import { describe, expect, it } from "vitest";
 

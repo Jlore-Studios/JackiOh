@@ -1,9 +1,8 @@
-// The Almanac and the deck builder with the Stinkyscape set previewed (issue #1883, R1883000), as
-// almanac-preview.test.tsx previews the Meditative set: `@jackioh/shared` is mocked so that
-// `SHIPPED_SETS` lists the set the day before its release (#1884) does, and every chip, pool and mark
-// that follows what ships (R1380, R1381) shows it. The same pieces with the set held are
-// filters.test.ts's R1857000 test, so a test here holds nothing the release has to rewrite: the mock
-// keeps the list free of repeats, so it stays valid once the release lists the set itself.
+// The Almanac and the deck builder with the Stinkyscape set previewed (#1883, R1883000), as
+// almanac-preview.test.tsx previews Meditative: `@jackioh/shared` is mocked so `SHIPPED_SETS` lists
+// the set as its release (#1884) does, and every chip, pool and mark that follows what ships (R1380,
+// R1381) shows it. The set held is filters.test.ts's R1857000 test; the mock keeps the list free of
+// repeats, so it stays valid once the release lists the set itself.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -98,9 +97,7 @@ describe("the Almanac with the Stinkyscape set previewed (R1883000)", () => {
 
     render(<FilterBar filter={DEFAULT_FILTER} onFilter={() => {}} sort={DEFAULT_SORT} onSort={() => {}} count={pool.length} />);
     expect(chips("Set")).toEqual([...FILTER_SETS]);
-    // Re-pinned for the Training Grounds release (#2204): Stinkyscape's chip is no longer the last, the
-    // newer set's follows it, so the test asserts the chip is there, right after Meditative+'s, as
-    // almanac-preview.test.tsx asserts the Meditative set's.
+    // A newer set's chip follows it (#2204), so it is asserted right after Meditative+'s.
     expect(chips("Set")).toContain("Stinkyscape");
     expect(chips("Set").indexOf("Stinkyscape")).toBe(chips("Set").indexOf("Meditative+") + 1);
   });

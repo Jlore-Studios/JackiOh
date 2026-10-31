@@ -1,7 +1,6 @@
-// Polish 6, slice A: the procedural art module, tested pure (docs/polish/6-cards.md, Surface A,
-// behaviors B1–B5). Nothing here renders; `CardArt.test.tsx` covers the DOM (B6).
-// Where the doc names a published algorithm (FNV-1a, mulberry32) its reference outputs are pinned,
-// since a wrong hash passes any test that checks no vector.
+// The procedural art module, tested pure (docs/polish/6-cards.md, Surface A, B1–B5; the DOM is
+// `CardArt.test.tsx`'s, B6). FNV-1a's and mulberry32's reference outputs are pinned, since a wrong
+// hash passes any test that checks no vector.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -135,7 +134,6 @@ describe("B1: artSpec is pure and deterministic", () => {
         expect(x, `seed ${seed}`).toBeLessThan(1);
       }
     }
-    // Two different seeds are two different streams.
     const s1 = seededRandom(7);
     const s2 = seededRandom(8);
     expect(Array.from({ length: 5 }, () => s1())).not.toEqual(Array.from({ length: 5 }, () => s2()));
@@ -204,10 +202,8 @@ describe("B2: the radiant variant keeps the base geometry and gilds it", () => {
   });
 });
 
-// A theme only sets the palette and the kind of picture: within a theme every card draws its own
-// layout, backdrop, sky, emblem and name's motif (R503), and no two share all five, so neighbours
-// in a tribe always differ at a glance. The layout rule reads per theme and composition, since the
-// catalog mixes compositions inside a theme (a Human Field Trap, a Pancake Field Spell).
+// A theme sets only the palette and the kind of picture, so neighbours in a tribe differ at a glance.
+// The layout rule reads per theme and composition: the catalog mixes compositions inside a theme.
 
 describe("per-card variety within a theme", () => {
   function signature(spec: ArtSpec): string {

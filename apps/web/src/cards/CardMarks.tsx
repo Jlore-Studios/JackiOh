@@ -1,15 +1,9 @@
 // R437: a card's marks, drawn on the card while the view lists them (#50 K-Pop Fanatic's pending
-// steal on its target, on both seats).
-//
-// A corruption aura in the mark's colors sits over the card and takes no pointer event, so every
-// click still reaches the card. Beside it, one badge per mark carries the mark by shape as well as
-// color, its words from marks.ts; an unknown color key falls back to the default palette.
-//
-// It moves only under full motion: the media query and "Reduce motion" hold every part still, the
-// aura and badge still drawn (marks.css). It reads the marks it is given only (CLAUDE.md rule 7).
-//
-// #2270: given `bareAura` and no mark, it draws the aura alone in that color, with no badge, no words and
-// no `data-marks` (nothing is marked): the gray of a card on the field at its last Brittle count (game/Card.tsx).
+// steal on its target, on both seats). The aura takes no pointer event, so every click still reaches
+// the card; one badge per mark carries it by shape as well as color (marks.ts). It moves only under
+// full motion (marks.css) and reads only the marks it is given (CLAUDE.md rule 7).
+// #2270: given `bareAura` and no mark, it draws the aura alone, unmarked: the gray of a card on the
+// field at its last Brittle count (game/Card.tsx).
 
 import type { CSSProperties, ReactElement } from "react";
 

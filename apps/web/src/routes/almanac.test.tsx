@@ -1,9 +1,7 @@
-// `/almanac` (R630): the public Card Almanac. A route anyone reaches signed out, lazy like the
-// others, with its tab title and canonical link, linked from the site footer beside Patch notes,
-// served by vercel.json (net/deploy-routes.test.ts reads `paths`) and listed in the sitemap. It
-// shows every catalog card, tokens included, through the deck builder's own browse pane, read-only,
-// and the page itself asks no server anything (the R654 statistics block in the detail view reads
-// the public card aggregates). The pool's filter and sort semantics are filters.test.ts's.
+// `/almanac` (R630): the public Card Almanac, reached signed out, lazy, with its tab title and
+// canonical link, linked from the footer, served by vercel.json (net/deploy-routes.test.ts reads
+// `paths`) and in the sitemap: every card through the deck builder's browse pane, read-only, asking
+// no server anything but the R654 public aggregates. Filter and sort semantics are filters.test.ts's.
 
 import type { CardDef, Tag } from "@jackioh/shared";
 import { SHIPPED_SETS, setShips } from "@jackioh/shared";
@@ -87,10 +85,7 @@ afterEach(() => {
   document.head.querySelector('link[rel="canonical"]')?.remove();
 });
 
-/**
- * The grid renders every shipped card and token, 710 since the Stinkyscape release (#1884), and a test
- * that opens it and clicks through it takes up to about 8 s under jsdom, past vitest's 5 s default.
- */
+/** The whole grid (710 cards and tokens since #1884), clicked through, takes up to 8 s under jsdom. */
 const SLOW_GRID = { timeout: 30_000 } as const;
 
 describe("R630 the /almanac route", SLOW_GRID, () => {

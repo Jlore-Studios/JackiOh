@@ -1,10 +1,7 @@
-// Classic #57 Echo's copied text (B5 E14, R399, R545–R547, R511): the view carries `copies` (the
-// Spell whose text a copier has, on the face it was played on, with that definition's numbers as they
-// read on the card) on its owner's hand view and on both views while it resolves. The face prints that
-// text, filled through the face's own text path (`fillParams`), in place of its copying sentence, and
-// keeps its own name, cost, type and art; the inspect notes say what it copies.
-//
-// The fixtures are shaped as `viewFor` builds the view; the last block plays the real engine.
+// Classic #57 Echo's copied text (B5 E14, R399, R545–R547, R511): the view carries `copies` on its
+// owner's hand view and on both views while it resolves. The face prints that text, filled through
+// the face's own text path (`fillParams`), in place of its copying sentence, and keeps its own name,
+// cost, type and art. The last block plays the real engine.
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardView } from "@jackioh/shared";
@@ -111,7 +108,7 @@ describe("R399 R511 Echo prints the text it copies", () => {
     expect(rulesText(root)).toBe("Echo 1\nDraw 6.");
     const marks = Array.from(root.querySelectorAll(".cf-text-base .cf-mark")).map((mark) => mark.textContent ?? "");
     expect(marks.join(" ")).toContain("Echo 1");
-    // Book of Knowledge's Radiant face draws 6 where its base face draws 3: the copy marks it too.
+    // The copy marks the Radiant face's 6 (its base face draws 3) too.
     expect(marks).toContain("6");
   });
 

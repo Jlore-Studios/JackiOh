@@ -1,8 +1,6 @@
-// `/collection` (#1307, SPEC §14): the screen reads each panel's answers with the caller's token,
-// shows each panel's own loading message and error, and never goes blank when a read is refused.
-// R1579000: it is the hub of four doors, its Cards and Cosmetics sections open in place by
-// `?section=`, and Cosmetics is where a cosmetic is equipped. R1953001: with no defaults of every
-// card left in it.
+// `/collection` (#1307, SPEC §14): each panel reads with the caller's token, shows its own loading
+// message and error, and never goes blank when a read is refused. R1579000: the hub of four doors,
+// Cards and Cosmetics open in place by `?section=`. R1953001: no defaults of every card in it.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -309,7 +307,7 @@ describe("R1579000 the Collection hub", () => {
 
   it("R1953001 the Cosmetics tab has no Defaults for every card section", async () => {
     answerAll();
-    // The synced settings hold a foil, a finish and a border no select can change any more.
+    // The synced settings hold a foil, a finish and a border no select changes.
     writeCosmetics({ foil: "foil-rainbow", finish: "finish-linen", border: "border-wood" });
     render(<CollectionRoute token={TOKEN} />);
 

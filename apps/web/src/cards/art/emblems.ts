@@ -1,8 +1,7 @@
-// The emblem at the heart of every procedural picture: one small original glyph per art theme
-// (docs/polish/6-cards.md, Surface A). Each is drawn for this project in a 24×24 box centered on
-// (12, 12), as plain path data with no text, no external references and no borrowed artwork.
-// `svg.ts` places a glyph with a transform, so the paths here never move. The glyphs v0.2.0 adds
-// for the Book, Pancake and AI families and for the cards' motifs live in motifGlyphs.ts (R503).
+// One original glyph per art theme (docs/polish/6-cards.md, Surface A), drawn for this project in a
+// 24×24 box centered on (12, 12) as plain path data: no text, external references or borrowed art.
+// `svg.ts` places a glyph with a transform, so the paths never move. The Book, Pancake and AI
+// families' glyphs and the motifs' live in motifGlyphs.ts (R503).
 
 import { fmt } from "./hash.ts";
 import { MOTIF_GLYPHS, type GlyphPath, type MotifGlyph } from "./motifGlyphs.ts";
@@ -117,9 +116,7 @@ const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
       "M6.6 11.8C6.9 10.1 8.1 9 9.6 8.8C8.6 9.8 8 10.9 7.9 12.3Z",
     rule: "evenodd",
   },
-  // Three arms swirling about the center.
   vortex: { d: vortexPath(), rule: "nonzero" },
-  // A lightning bolt.
   bolt: { d: "M13.6 1.8L4.8 13.6H10.9L9.4 22.2L19.2 9.4H13L15.8 1.8Z", rule: "nonzero" },
   // A rimmed coin with a lozenge struck in the middle.
   coin: {
@@ -159,7 +156,6 @@ const CORE_EMBLEMS: Readonly<Record<CoreGlyph, EmblemPath>> = {
       "M12 12.8C13.3 14.5 14.4 15.6 14.4 17.3A2.4 2.4 0 0 1 9.6 17.3C9.6 15.6 10.7 14.5 12 12.8Z",
     rule: "evenodd",
   },
-  // A crescent moon.
   moon: { d: "M15.4 2.4A9.8 9.8 0 1 0 21.6 16.6A7.8 7.8 0 1 1 15.4 2.4Z", rule: "nonzero" },
   // A five-pointed crown on a band.
   crown: {

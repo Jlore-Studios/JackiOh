@@ -1,8 +1,6 @@
 // R1655000: a card's own pick of a foil, finish or border is worn only where the viewer owns it on
-// that card (cards/cosmetics.ts `useCosmeticAttributes`), as its full art is (fullArtOwnership.test.tsx);
-// where it is not, the card draws the kind's default (R1953001).
-// Every shipped foil, finish and border is a starter, which every account owns, so the registry here
-// gains one border that is not: the ledger decides it.
+// that card (cosmetics.ts `useCosmeticAttributes`), else the kind's default (R1953001). Every shipped
+// one is a starter, which every account owns, so the registry here gains one border that is not.
 
 import { CATALOG } from "@jackioh/cards";
 import { cleanup, render } from "@testing-library/react";
@@ -56,7 +54,7 @@ afterEach(() => {
 
 describe("R1655000 a card's own border is worn behind ownership", () => {
   it("R1655000 a border the ledger does not list on the card is not worn: the kind's default shows, until the ledger lists it", () => {
-    // R1953001: the account's border, which nothing sets any more, is not worn in its place.
+    // R1953001: the account's border is not worn in its place.
     writeCosmetics({ border: ACCOUNT_BORDER });
     writeCardPick(CARD, "border", OWN_BORDER);
 

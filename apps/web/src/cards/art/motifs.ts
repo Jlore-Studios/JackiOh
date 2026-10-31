@@ -1,13 +1,10 @@
-// A card's motif: the small picture its name asks for (R503), read from the words of its printed
-// name. Presentation only, from the public catalog's name: no rule reads it (CLAUDE.md rule 7).
+// A card's motif: the small picture its printed name asks for (R503). Presentation only, from the
+// public catalog's name: no rule reads it (CLAUDE.md rule 7).
 //
-// `motifFor` splits the name into lowercase words and walks MOTIF_WORDS in order; the first motif with
-// a word that matches wins. A pattern is a whole word (its plural too), `word*` a word that starts
-// so, `*word` one that ends so. The table runs from the concrete (a creature, an object) to the
-// abstract (chaos, time), so "Plague Doctor" is spores rather than a cross.
-//
-// Drawn in procedural.ts: a card of a type theme wears the motif's glyph as its emblem, in the motif's
-// own colors; a tribe or family keeps its emblem and carries the motif by its `arrangement`.
+// The first motif in MOTIF_WORDS with a matching word wins. A pattern is a whole word (its plural
+// too), `word*` a prefix, `*word` a suffix; the table runs concrete to abstract, so "Plague Doctor"
+// is spores rather than a cross. In procedural.ts a type theme wears the motif's glyph as its
+// emblem; a tribe or family keeps its emblem and carries the motif by its `arrangement`.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import type { ArtThemeId } from "./themes.ts";

@@ -167,12 +167,10 @@ describe("Conquest first-series walkthrough and onboarding", () => {
       expect(screen.getByTestId(seriesTestid.screen)).toBeInTheDocument();
     });
 
-    // Explainer is closed initially
     expect(screen.queryByTestId(seriesTestid.explainer)).toBeNull();
     const toggleButton = screen.getByTestId(seriesTestid.explainerToggle);
     expect(toggleButton).toHaveTextContent(conquestText("toggleOpen"));
 
-    // Clicking toggle opens the explainer
     fireEvent.click(toggleButton);
     expect(screen.getByTestId(seriesTestid.explainer)).toBeInTheDocument();
   });

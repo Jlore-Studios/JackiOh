@@ -1,11 +1,8 @@
 // The banner that tops a menu while the player has a game to go back to (R765): a practice game
-// they saved with Save and leave, on the practice menu (issue #476), and their live online game, on
-// the main menu and the practice menu (issue #478), a co-op game among them (R1566000). One
-// component, so the two read as one thing: a notice in the tavern's gold hairline, what the game
-// is, and the one way back into it.
-//
-// Nothing here is a rule (CLAUDE.md rule 7). The practice banner shows what the device kept
-// (`practice/resume.ts`); the online one shows what `GET /api/auth/me` said (`net/liveGame.ts`).
+// saved with Save and leave, on the practice menu (#476), and their live online game, co-op included
+// (R1566000), on the main and practice menus (#478). One component, so the two read as one thing.
+// Nothing here is a rule (CLAUDE.md rule 7): the practice banner shows what the device kept
+// (`practice/resume.ts`), the online one what `GET /api/auth/me` said (`net/liveGame.ts`).
 
 import { useId, type ReactElement, type ReactNode } from "react";
 

@@ -1,24 +1,11 @@
 // The challenge toast (#936, B57; #1831): mounted once in the shell (`main.tsx`), it reads the open
-// challenges every `SOCIAL_POLL_MS` while the tab holds a session, on every screen (`socialPoll.ts`,
-// the one read the Friends button's badge and Play together share).
-//
-// AN INCOMING CHALLENGE is a toast with the challenge's mode and, but for All Random, a picker of
-// the player's deck (or trio) that starts on the one they last used for it in this browser
-// (`challengeChoice.ts`); for All Random, "More cards from" (R924000) for the player's own dealt
-// deck, starting from the device's online pick (`readPlayLean`, R2031000), shown once the engine is in
-// (`LeanSetPickerLazy.tsx`: the shell mounts the toast on every screen, #778). Accept joins the room by
-// its code with that pick, which accepts the challenge (B49), and takes the player to the game: one
-// press (R1831000). Decline declines it.
-// Either way the toast goes. A screen holding unsaved work asks first, and the toast stays until
-// the player goes (R1754000). A join the server refuses is shown in its words, with "Open in lobby",
-// the way a room link opens `/play` with the room's code and mode filled in (R767), as it does when
-// there is no deck to join with.
-//
+// challenges on every screen while the tab holds a session (`socialPoll.ts`).
+// AN INCOMING CHALLENGE offers the deck or trio last used for its mode in this browser
+// (`challengeChoice.ts`), or for All Random "More cards from" (R924000), lazily since the shell mounts
+// the toast on every screen (#778). Accept joins the room by its code, which accepts the challenge (B49).
 // AN OUTGOING CHALLENGE is followed: a challenge is a room, so the challenger's game starts when the
-// friend joins it, wherever the challenger is. While the last read held one of theirs (or one was just
-// sent from this tab, `follow.ts`), each read also asks `/api/auth/me` for a live game, and once it
-// names one the toast announces it as a pairing is announced ("Match found!", R765) and takes them there.
-//
+// friend joins it, wherever the challenger is; the toast announces it as a pairing is ("Match found!",
+// R765) and takes them there.
 // Nothing here is a rule (CLAUDE.md rule 7): whom a player may challenge, whether a deck may be
 // played, and when a challenge lapses, are the server's. A session the server refuses outright is
 // not asked again until the tab holds another one.
@@ -137,7 +124,6 @@ export function ChallengeToast(): ReactElement {
     };
   }, [social.challengeReads, social.outgoing, social.refused]);
 
-  // The announcement holds for the pairing's beat, then the player is taken to the game.
   useEffect(() => {
     if (found === null) return;
     const timer = window.setTimeout(() => {
@@ -233,7 +219,6 @@ export function ChallengeToast(): ReactElement {
           const choice = choiceOf(challenge.mode, pick, pick, lean);
           const list = saved === null || saved === "failed" ? [] : challenge.mode === "bo3" ? saved.trios : saved.decks;
           const busy = joining === id || declining === id;
-          // Nothing to join with, or the join was refused: the lobby is the way in.
           const lobby = refusedId === id || (challenge.mode !== "random" && saved !== null && choice === null);
           return (
             <section

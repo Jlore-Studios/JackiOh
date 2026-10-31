@@ -1,11 +1,9 @@
 // Card presentation settings (B28). One localStorage key; every storage access sits in try/catch,
 // because storage can be missing, full, or throw on access (private mode, sandboxed frames). When
 // storage refuses a write the value lives on in memory, so the toggle still works for this page.
-// Task 7's settings panel mounts CARD_SETTINGS_FIELDS at integration.
 //
-// R1834004: `opponentCosmetics` is the viewer's own say over what the other seat wears: on, an
-// opponent's cards and side wear the loadout their seat froze when the match began (game/wearer.ts);
-// off, they draw the defaults, on a live, a watched and a replayed board alike.
+// R1834004: `opponentCosmetics` on, an opponent's cards and side wear the loadout their seat froze
+// when the match began (game/wearer.ts); off, the defaults, on a live, watched or replayed board alike.
 
 import { useSyncExternalStore } from "react";
 

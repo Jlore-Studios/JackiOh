@@ -125,7 +125,6 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
     setError(null);
     verifySecondFactor(sessionFor(token), factorId, code)
       .then((raised) => {
-        // The same session, raised to aal2: written over the stored one (see the header).
         writeSession(raised);
         announceAccountChange();
         setPhase({ kind: "on", factorId });

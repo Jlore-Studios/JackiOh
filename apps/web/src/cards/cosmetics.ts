@@ -1,58 +1,26 @@
-// R1295000: the card cosmetics a player's own cards wear — a foil over the art, a finish on the
-// print and a border round the frame — whose account-wide picks are kept per browser under
-// `COSMETICS_SETTINGS_KEY` and on the account as the `cosmetics` group (R633, `settings/groups.ts`).
-// R1953001: nothing sets those three any more and no face wears them; the group keeps its shape
-// (R1655000), and a card wears its own picks (below) or its kind's default. The ids are the
-// registry's (`crates/server/cosmetics.json`, generated into `wire/generated/cosmetics.ts`). The
-// server refuses a pick of the wrong kind or one the account does not own (R1834001).
-//
-// R1297000: the same store holds three deck slots beside them: the playmat (`table`), the ambient
-// backdrop (`field`) and the back of the viewer's face-down cards and deck (`cardBack`). Each saved
-// deck may carry its own picks (`DeckCosmetics`); a viewer's side wears the deck's, else the
-// account's, else the kind's default (`wornDeckCosmetics`), and an id this client does not know
-// draws as the default.
-//
-// R1833000: the account's playmats, backdrops and card backs are no longer all starters, so a pick
-// of one is worn only where the viewer owns it (`ownsAccountCosmetic`: a default or a starter counts,
-// and so does a row of `GET /api/cosmetics`' account list), or where every cosmetic counts as owned
-// (practice, hotseat, R1310004's builds: no `AccountCosmeticsOwned` above it). A stored pick the
-// account does not own, one synced from another device say, draws as its kind's default.
+// R1295000: the card cosmetics a player's own cards wear: a foil over the art, a finish on the
+// print and a border round the frame. R1953001: nothing sets the account-wide picks of those three
+// (`COSMETICS_SETTINGS_KEY`, the account's `cosmetics` group, R633) and no face wears them; the
+// group keeps its shape (R1655000). R1297000: the same store holds the deck slots, the playmat
+// (`table`), the ambient backdrop (`field`) and the card back (`cardBack`). The ids are the
+// registry's (`crates/server/cosmetics.json`, generated into `wire/generated/cosmetics.ts`); the
+// server refuses a pick of the wrong kind or one the account does not own (R1834001). An id this
+// client does not know (one a newer client wrote to the account) is kept in the store, so this
+// device never overwrites it, and drawn as its kind's default, never an error.
 //
 // The picks never reach the engine, an action, `PlayerView` or the log, and a face wears them only
 // where the board says it is the viewer's own card in a game (`worn`, game/wearer.ts). R1834004: an
 // opponent's side, and every side of a watched or replayed online game, wears instead the loadout
-// its seat froze when the match began (R1834002, `cards/loadouts.ts`), as the server sent it, below
-// a `TheirCopy`; every other face draws the defaults (CLAUDE.md rule 7). Each
-// slot is its own attribute on the face, apart from the rarity foil (`data-foil`, model.ts), so a
-// decorative foil never blurs the Mythic and Radiant signal: a Mythic face wears no cosmetic foil,
-// and a Radiant face no foil, finish or border, whoever's loadout it wears. A default adds no
-// attribute at all, so a face wearing nothing is the face it was before.
+// its seat froze when the match began (R1834002, `cards/loadouts.ts`), below a `TheirCopy`; every
+// other face draws the defaults (CLAUDE.md rule 7). Each slot is its own attribute on the face,
+// apart from the rarity foil (`data-foil`, model.ts), so a decorative foil never blurs the Mythic
+// and Radiant signal. A default adds no attribute at all, so a face wearing nothing is the face it
+// was before.
 //
-// R1655000: a card may also carry picks of its own (`jackioh.cosmetics.cards.v1`, never the
-// `cosmetics` group above, so no client overwrites another's): a foil, a finish, a border and
-// whether its full art prints. R1953001: a kind a card has no pick of wears its kind's default,
-// never the account's pick above, which nothing sets any more (full art keeps the Full-art cards
-// setting as its default). A card's pick is worn only where the viewer owns that
-// cosmetic on that card (`ownsCosmetic`: a default or a starter counts, and so does a ledger row),
-// or where every cosmetic counts as owned (practice, hotseat, R1310004's builds); the store keeps what
-// it is given, the wear path and `useCanEquip` apply ownership. The face wearing them is still only
-// the viewer's own copy (`worn`, or below an `OwnCopy`, fullArt.ts). R1834000: they live on the
-// account now, and this store is its cache on the device: `cardPicksSync.ts` sends the device's own
-// up once, then puts the account's in it and sends each later write (`subscribeCardPickWrites`).
-//
-// R1956000: from their first read, both stores listen for a window "storage" event on their key,
-// re-read and notify, so a pick another tab makes shows on every face this tab draws at once, and on
-// every face it mounts later, with no reload. R1956001: the
-// viewer's own Created card (`FaceModel.createdBy`) wears the foil, finish and border of the card
-// that generated it, as that card's own copy would, behind ownership on that card; its full art is
-// its own (fullArt.ts), and its own rarity rules hold.
-//
-// An id this client does not know (one a newer client wrote to the account) is kept in the store,
-// so this device never overwrites it, and drawn as its kind's default, never an error. A cosmetic
-// foil moves only while one of COSMETIC_FOIL_ANIMATED_MAX slots is the face's; the others wear its
-// still version, as every face does under reduced motion (cosmetics.css). R1833000: so does a moving
-// finish or border (`MOVING_FINISHES_AND_BORDERS`), which shares the foil's slot. R1953001: every
-// Legendary and Mythic one moves (`isChaseCosmetic`).
+// R1834000: a card's own picks live on the account, and this store is its cache on the device:
+// `cardPicksSync.ts` sends the device's own up once, then puts the account's in it and sends each
+// later write (`subscribeCardPickWrites`). The store keeps what it is given; the wear path and
+// `useCanEquip` apply ownership.
 
 import {
   createContext,
@@ -184,11 +152,9 @@ export function useCosmetics(): CardCosmetics {
   return useSyncExternalStore(subscribeCosmetics, readCosmetics, readCosmetics);
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1655000: the picks of each card, on the device alone. They sit in a store of their own, never in
 // the `cosmetics` group the account syncs (settings/groups.ts, R633, R634), so an old client and a
 // new one never overwrite each other's picks, and no settings reset touches them (R1579000).
-// ---------------------------------------------------------------------------------------------
 
 export const CARD_PICKS_SETTINGS_KEY = "jackioh.cosmetics.cards.v1";
 
@@ -369,7 +335,6 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
     storage?.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify(written));
     cardPicksUnsaved = storage === null;
   } catch {
-    // Quota, private mode or blocked storage: the picks still hold in memory for this page.
     cardPicksUnsaved = true;
   }
   for (const listener of [...cardPicksListeners]) listener();
@@ -420,7 +385,6 @@ export function replaceAllCardPicks(picks: Readonly<Record<string, unknown>>): v
     storage?.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify(Object.fromEntries(next.stored)));
     cardPicksUnsaved = storage === null;
   } catch {
-    // Quota, private mode or blocked storage: the picks still hold in memory for this page.
     cardPicksUnsaved = true;
   }
   for (const listener of [...cardPicksListeners]) listener();
@@ -497,10 +461,8 @@ export function wornCosmetics(
   };
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1297000: the deck slots. A saved deck carries its own picks, each a registry id or absent; the
 // board resolves them with the account's picks beneath and the kind's default under those.
-// ---------------------------------------------------------------------------------------------
 
 /** The picks a saved deck carries, as the server and the deckbuilder's mirror hold them. */
 export type DeckCosmeticFields = {
@@ -581,11 +543,9 @@ export function wornDeckCosmetics(
   };
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1833000: the account cosmetics the viewer owns. While ownership decides (`FULL_ART_GATED`),
 // ownedFullArt.ts mounts `AccountCosmeticsOwned` over every gated screen from `GET /api/cosmetics`'
 // account list; with none above it (practice, hotseat, R1310004's builds) every one counts as owned.
-// ---------------------------------------------------------------------------------------------
 
 /** What the pickers and sides below an `AccountCosmeticsOwned` own: `"every"`, or the account cosmetic ids its ledger lists. */
 export type AccountOwnership = "every" | ReadonlySet<string>;
@@ -615,11 +575,9 @@ export function useOwnsAccountCosmetic(): (id: string) => boolean {
   return useCallback((id) => ownsAccountCosmetic(owned, id), [owned]);
 }
 
-// ---------------------------------------------------------------------------------------------
 // The cap on moving foils. A face that wants its foil to move claims a slot when it mounts and
 // gives it back when it unmounts or stops wanting it; past COSMETIC_FOIL_ANIMATED_MAX it waits in
 // line, first come first served, and moves once a slot passes to it.
-// ---------------------------------------------------------------------------------------------
 
 const moving = new Set<symbol>();
 const queued: symbol[] = [];

@@ -1,10 +1,7 @@
-// R2170000: the Stinkyscape set's own procedural art (issue #2170). Every `stinkyscape-` entry draws
-// here instead of `artSpec`: a space backdrop (stars, nebulae, a planet) under one subject that its
-// family fixes and its name's word details, so the Drone Cores and their drones share one drone, the
-// Starships and their pieces one fleet, and each Weapon is the weapon it names. Presentation only
-// (CLAUDE.md rule 7): a pure function of the card's id, name, tags and type, with geometry drawn from
-// streams the Radiant face shares, so the two faces differ only in their paint and the gold rays.
-// No other set reaches this file, so no shipped card's picture moves (R503).
+// R2170000 (#2170): the Stinkyscape set's own art, drawn instead of `artSpec`: a space backdrop under
+// one subject its family fixes and its name details. Presentation only (CLAUDE.md rule 7); geometry
+// comes from streams the Radiant face shares, so the faces differ only in paint and gold rays. No
+// other set reaches this file, so no shipped card's picture moves (R503).
 
 import type { CardType, Tag } from "@jackioh/shared";
 

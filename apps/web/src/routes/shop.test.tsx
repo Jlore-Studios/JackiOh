@@ -1,10 +1,7 @@
-// `/shop` (#1577, #1580, SPEC §14.1, §14.3–§14.6, R1580000): the Shop screen holds the Jlore shop, the
-// card packs with their opening, the cosmetic packs and the token picker, each reading with the
-// caller's token and the others again when one changes the account (#1309, moved from the account
-// screen). Their odds and the pity are `/purchases`', which it links (R1665000). The route table serves
-// it behind the gate like `/collection` (the anonymous and pending bounces live in gate.test.tsx beside
-// the other routes'): an active account sees the shop, the landing's Shop door lands on it, and the
-// account screen links it no more but by the top bar's Jlore pill (R1646000, R1651000).
+// `/shop` (#1577, #1580, SPEC §14.1, §14.3–§14.6, R1580000): four panels, each reading with the caller's
+// token and the others again when one changes the account (#1309); odds and pity are `/purchases`'
+// (R1665000). Gated like `/collection` (its bounces are in gate.test.tsx); the account screen links it
+// only by the top bar's Jlore pill (R1646000, R1651000).
 
 import { CATALOG } from "@jackioh/cards";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";

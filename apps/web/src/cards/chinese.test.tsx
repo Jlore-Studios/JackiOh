@@ -1,7 +1,6 @@
-// ME-CN: a card the view marks Chinese (`CardView.chinese`) is drawn in the Chinese tables' words in a
-// match, every face of it (R1301), from the two sidecars bundled beside the catalog (R1303). The
-// flag itself, and on which views it appears, is the engine's to prove (crates/engine, R1300); here
-// every view is a fixture shaped as `viewFor` builds it.
+// ME-CN: a card the view marks Chinese (`CardView.chinese`) is drawn in the Chinese tables' words
+// (R1301, R1303). The flag itself is the engine's to prove (crates/engine, R1300); here every view is
+// a fixture shaped as `viewFor` builds it.
 
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -25,8 +24,7 @@ import { namesOf } from "./refs.ts";
 import { glossaryFor } from "./rules.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 
-// R1017001: the hero portraits' cards print full art and none of their words; these tests read the
-// rules box, so full art is off here (fullArt.test.tsx covers it).
+// R1017001: a full-art face prints none of its words, so full art is off here (fullArt.test.tsx).
 beforeEach(() => {
   writeCardSettings({ fullArt: false });
 });
@@ -190,7 +188,6 @@ describe("R1301 a Chinese card in a match", () => {
       const root = draw(face);
       const value = root.querySelector(".cf-value");
       expect(value).toHaveAttribute("data-label", label);
-      // The value stands right after its label in the Chinese text.
       expect(text(root, ".cf-text-base")).toContain(`${label} {${String(2 * mana)}}`);
       cleanup();
     }

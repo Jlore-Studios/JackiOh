@@ -1,20 +1,13 @@
 // The age screen and the terms box on this device (R757000, R757001; issue #757).
 //
-// UX, not a rule (CLAUDE.md rule 7). The server decides whether an account owes the age check or
-// agreement to the terms (`ageCheckOwed`, `termsOwed` on `/api/auth/me`), counts the age itself and
-// keeps only that the check passed (`POST /api/account/consent`, `crates/server/src/api/consent.rs`).
-// What the device keeps, each in `localStorage` inside try/catch like every other store:
-//
-// - THE REFUSAL. An answer under the minimum age refuses sign-up on this device, and the device
-//   remembers it, so going back and choosing another year does not work (`signUpRefusedHere`). It
-//   names no age, and it is not undone.
-// - THE HELD ANSWER. Sign-up asks for the month and year before the account exists, and the account
-//   cannot be told until it is signed in, after its email is confirmed. So the answer and the terms
-//   version waits here for the address it was given with, as long as this device remembers that
-//   address (`AUTH_PENDING_ADDRESS_TTL_SECONDS`), and the consent screen posts it at the first
-//   sign-in and forgets it once the server has answered (`heldSignUpConsent`, `forgetSignUpConsent`).
-//   One past its time is dropped as the app starts (`dropStaleSignUpConsent`). Another device asks
-//   again.
+// UX, not a rule (CLAUDE.md rule 7): the server decides what an account owes, counts the age itself
+// and keeps only that the check passed (`crates/server/src/api/consent.rs`). The device keeps, in
+// `localStorage` inside try/catch like every other store:
+// - THE REFUSAL: an answer under the minimum refuses sign-up here for good, so choosing another year
+//   does not work. It names no age.
+// - THE HELD ANSWER: sign-up asks before the account exists, and the account cannot be told until it
+//   signs in after confirming its email. So the answer waits for its address as long as this device
+//   remembers that address (`AUTH_PENDING_ADDRESS_TTL_SECONDS`); another device asks again.
 
 import {
   AUTH_PENDING_ADDRESS_TTL_SECONDS,

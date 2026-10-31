@@ -1,7 +1,3 @@
-// #1568: the challenge dialog's deck read offers Try again when it fails, and reads again.
-// #1831: it opens on the last mode and pick, with Send focused, and remembers what it sent.
-// R2031000: All Random offers "More cards from" on the device's online pick, sent as `leanSet`.
-
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -121,7 +117,6 @@ describe("#1831 the challenge dialog opens on the last pick", () => {
     await waitFor(() => {
       expect(screen.getByTestId(togetherTestid.challengeSend)).toHaveFocus();
     });
-    // The deck remembered for Best of 1 is waiting there too.
     fireEvent.click(screen.getByTestId(challengeModeTestid("bo1")));
     expect(((await screen.findByTestId(togetherTestid.challengeDeck)) as HTMLSelectElement).value).toBe("d-control");
   });

@@ -1,6 +1,5 @@
-// The landing fan's deal (landingFan.ts, R374): a random hand on every visit, from the real catalog,
-// in the fixed hand's shape. The source of randomness is passed in, so each case here deals from a
-// seeded one and gets the same hand every run.
+// The landing fan's deal (landingFan.ts, R374): each case deals from a seeded source of randomness,
+// so it gets the same hand every run.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -62,9 +61,7 @@ describe("R374 the landing fan is dealt at random", () => {
     const ids = (seed: number): string[] => dealLandingFan(seeded(seed)).map(({ def }) => def.id);
     expect(ids(7)).toEqual(ids(7));
     const hands = new Set(SEEDS.map((seed) => ids(seed).join(",")));
-    // Not one fixed hand any more: two hundred visits see well over a hundred different hands.
     expect(hands.size).toBeGreaterThan(SEEDS.length / 2);
-    // And the deal reaches the whole pool, not a corner of it.
     const seen = new Set(SEEDS.flatMap(ids));
     expect(seen.size).toBeGreaterThan(FAN_POOL.length / 2);
   });
@@ -88,7 +85,6 @@ describe("R374 the landing fan is dealt at random", () => {
 
 describe("R639 the rotation's pool", () => {
   it("R639 is every non-token card of the shipped sets, Meditative included since v0.3.0, Meditative+ since v0.4.0, Stinkyscape and Training Grounds since their releases, as the catalog holds it", () => {
-    // Re-pinned for the Training Grounds release (#2204): the set ships, so its 60 cards join the pool.
     const SETS: readonly string[] = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"];
     const expected = Object.values(CATALOG).filter((def) => !def.token && SETS.includes(def.set));
     expect(ROTATION_POOL).toEqual(expected);
@@ -106,8 +102,7 @@ describe("R639 favoring the cards that print at full size", () => {
     for (const def of ROTATION_POOL) {
       const face = faceModel({ defId: def.id, def, radiant: false });
       const fits = ["s", "m"].includes(nameTier(face.name)) && ["s", "m"].includes(textTier(face.text.full));
-      // R1017002: a hero's card prints its art and no words in the fan, so it counts as plain; a
-      // Training Grounds snapshot of one prints its words (R2195001), so it is held to them.
+      // R1017002: a hero's card counts as plain; its Training Grounds snapshot does not (R2195001).
       const plain = fits || isFullArtCard(def.id, def.name);
       expect(featureWeight(def), def.id).toBe(plain ? FEATURE_WEIGHT_PLAIN : FEATURE_WEIGHT_DENSE);
     }
@@ -132,7 +127,6 @@ describe("R639 favoring the cards that print at full size", () => {
     const ratio = average(plain) / average(dense);
     expect(ratio).toBeGreaterThan((FEATURE_WEIGHT_PLAIN / FEATURE_WEIGHT_DENSE) * 0.8);
     expect(ratio).toBeLessThan((FEATURE_WEIGHT_PLAIN / FEATURE_WEIGHT_DENSE) * 1.25);
-    // Less likely, not excluded: every dense card still came up.
     expect(dense.every((def) => (drawn.get(def.id) ?? 0) > 0)).toBe(true);
   });
 
@@ -201,7 +195,6 @@ describe("R639 one rotation step", () => {
       hand = rotateFan(hand, step, random);
       for (const { def } of hand) sets.add(def.set);
     }
-    // Re-pinned for the Training Grounds release (#2204): the set ships, so the steps reach it too.
     expect(sets).toEqual(new Set(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]));
   });
 });
@@ -241,9 +234,8 @@ describe("R704 swaps below the threshold", () => {
 });
 
 /**
- * The heroes' full-art cards. Re-pinned for the Training Grounds release (#2204): the set's snapshots
- * of Mr. Vanilla (#43), Duplicating Felinors (#44) and Jlockeed Shredder-10 (#48) share their Core
- * cards' names but not their full art (R2195001), so they are no hero's card.
+ * The heroes' full-art cards. Training Grounds' snapshots (#2204) of #43, #44 and #48 share their
+ * Core cards' names but not their full art (R2195001), so they are no hero's card.
  */
 const HEROES = ROTATION_POOL.filter((def) => isFullArtCard(def.id, def.name));
 /** The shipped cards that share a hero's name and print no full art: the Training Grounds snapshots. */

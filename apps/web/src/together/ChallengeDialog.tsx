@@ -1,25 +1,12 @@
-// Challenging a friend (#936, B48): the body `POST /api/rooms` takes — a mode and, for it, a saved
-// deck or trio — plus the friend, sent as `POST /api/challenges`. The server makes the room exactly
-// as `/play` would and refuses a busy, offline or already challenged friend; its refusal is shown in
-// its own words. Once sent, the challenge waits on Play together, and the shell takes the challenger
-// to the game when the friend joins (`ChallengeToast.tsx`).
-//
-// CLAUDE.md rule 7: the picks are the lobby's (`routes/play.tsx`), with no verdict of their own here;
-// whether a deck may be played is the server's, at the room.
-//
-// It opens on the last mode and deck (or trio) a challenge was sent with from this browser, else the
-// first saved deck in Best of 1 (`challengeChoice.ts`, #1831), so a repeat challenge is Challenge and
-// Enter: the focus moves to Send as soon as the picks are in.
-//
-// R2031000: All Random offers "More cards from" (R924000) for the challenger's own dealt deck, as the
-// lobby does, starting from and writing the device's online pick (`readPlayLean`). The shell mounts
-// the dialog on screens that may not have loaded the engine, so the picker comes once it is in
-// (`LeanSetPickerLazy.tsx`, #778).
-//
-// A modal like the client's others (`game/ConfirmConcede.tsx`, #1569): the focus starts on the checked
-// mode (on Send once the decks are read), Tab and Shift+Tab stay inside, Escape closes it wherever
-// the focus is, and the caller gives the focus back to the button that opened it (`TogetherRoute.tsx`,
-// `FriendsButton.tsx`).
+// Challenging a friend (#936, B48): the body `POST /api/rooms` takes plus the friend, sent as
+// `POST /api/challenges`. The server makes the room as `/play` would and refuses a busy, offline or
+// already challenged friend in its own words (`ChallengeToast.tsx` takes the challenger to the game).
+// CLAUDE.md rule 7: the picks are the lobby's (`routes/play.tsx`); whether a deck may be played is the
+// server's, at the room. It opens on the last pick sent from this browser (`challengeChoice.ts`, #1831).
+// R2031000: All Random offers "More cards from" (R924000) on the device's online pick (`readPlayLean`),
+// lazily, since the shell mounts the dialog where the engine may not be loaded (#778).
+// A modal like `game/ConfirmConcede.tsx` (#1569): the caller gives the focus back to the button that
+// opened it (`TogetherRoute.tsx`, `FriendsButton.tsx`).
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
 

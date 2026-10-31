@@ -1,6 +1,5 @@
-// Play together's chrome (#936, SPEC S8): the friends page, the chat panel and the Friends button's
-// panel, the challenge toast, the watch screen, the replay share and the spectators setting. The SPEC fixes the
-// first ids of each group; the rest are this slice's. `e2e/support/testids.ts` mirrors the strings.
+// Play together's chrome (#936, SPEC S8). The SPEC fixes the first ids of each group; the rest are
+// this slice's. `e2e/support/testids.ts` mirrors the strings.
 
 export const togetherTestid = {
   root: "together",

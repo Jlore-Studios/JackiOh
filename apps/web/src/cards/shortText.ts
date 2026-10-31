@@ -3,40 +3,26 @@
 // or its text cut at the box's last line with "…", and its whole text stands on the left of its
 // hover preview (inspect/Extended.tsx), in the touch sheet and in the detail view.
 //
-// Issue #1017 measured the limit (constants.ts FACE_TEXT_LIMIT) and cut every catalog face under it,
-// but for these. Each card's text is a list no box holds, or a face still a line over after the cut:
-// - `n` (a number): its first n lines, which its text puts first, "…" in place of the last full
-//   stop: #98 Heroic Power's thirteen powers, Meditative #8 Reach the Summit's eleven levels,
-//   Combo-Index's grades, Mind Games' and Fortify Mind's three choices, and YileGPT Prime's list
-//   of Cries; and a few faces that fit, whose last line is a reminder or the designer's flavour
-//   that the click-in carries (Tesla, Jade Beauty, Jlockeed's Evil Blueprints);
-// - "colon": up to its first colon, "…" in its place: the three Call to Chaos editions, whose list
-//   must stay whole in the catalog (each roll's label is a clause of it, R436);
-// - "clamp": its whole text, cut by the rules box at its last line with "…": seven faces still about
-//   a line over after the cut (Yile's Virus and Knowledge Breaker, and the Radiant faces of KY's Gift,
-//   Feng Shui and Windfast), which a 200 px tile prints whole, three #1563 left a line over
-//   (Devil's Pact, with its keywords, and the Radiant faces of Bob's Plan and KY's Competition),
-//   one #1704 did (The House's Radiant face, its Cry and its Activate), and #1828's Can't attack put
-//   both faces of Jungle Loser a line over.
-// The Stinkyscape set (R1857000) printed its rows before its cards were built: its two Call to
-// Chaos editions (#150 and #151) take "colon" as the other three do, and every other face its rows
-// put over the limit clamps, unless the card's part (docs/stinkyscape-set.md ST13) wrote its own.
-// Where a face just at the limit took the long layout at 170 px (#4.5 1v1 Final Destination's and
-// #26 ZolarKeth's base faces), it prints its first lines or up to its first colon instead (#2067).
-// The set's two staged Quests, #7 The Greatest Heist and #112 Job Application, print one stage (questFace.ts,
-// R2450000), measured as they print it: Heist's base face fits whole, and its Radiant face and both
-// of Job Application's, a line or two over, clamp.
-// The held Training Grounds set (R2194000) does the same while it is built: its Call to Chaos edition (#39) takes
-// "colon", and the Radiant faces of #16 Celestial Caller and #38 Tutorial Master clamp, until each
-// card's part (docs/training-grounds-set.md TG5) writes its own.
+// Issue #1017 measured the limit (constants.ts FACE_TEXT_LIMIT) and cut every catalog face under it
+// but these, each a list no box holds or a face still a line over after the cut:
+// - `n`: its first n lines, which its text puts first (#98 Heroic Power's powers, the Summit's
+//   levels), or a face that fits whose last line, a reminder or flavour, the click-in carries;
+// - "colon": up to its first colon: the Call to Chaos editions (Stinkyscape's #150 and #151, Training
+//   Grounds' #39), whose list must stay whole in the catalog (each roll's label is a clause, R436);
+// - "clamp": its whole text, cut by the box at its last line (among them faces #1563, #1704 and #1828
+//   left a line over).
+// The Stinkyscape (R1857000) and held Training Grounds (R2194000) sets printed their rows before their
+// cards were built: a face over the limit clamps (TG #16's and #38's Radiant faces) until its card's
+// part writes its own (docs/stinkyscape-set.md ST13, docs/training-grounds-set.md TG5). A face just at
+// the limit that took the long layout at 170 px (#26 ZolarKeth's base) takes `n` or "colon" (#2067); the
+// staged Quests (#112 Job Application) are measured as they print one stage (questFace.ts, R2450000).
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
 // In play the Summit prints its header and only the next Ascent line (#814): the level the engine's
-// preview carries under "Ascent level" (R280, c008_reach_the_summit.rs), which is the play count on
-// the instance. A face in play that runs past the hover preview's limit (a fused card's ingredients,
-// a heavily Buffed card's keywords) clamps rather than shrinking its art, and its whole text stands
-// on its left too.
+// preview carries under "Ascent level" (R280, c008_reach_the_summit.rs), the play count on the
+// instance. A face in play past the hover preview's limit (a fused card's ingredients, a heavily
+// Buffed card's keywords) clamps rather than shrinking its art, its whole text on its left too.
 
 import type { PreviewValue } from "@jackioh/shared";
 

@@ -1,11 +1,8 @@
-// The set mark on a card's frame (R503): a small glyph that says which set a card is from, the way a
-// printed card carries its expansion symbol. Core is a ringed orb, Classic a columned temple, and
-// Classic+ the same temple with a plus beside it, Meditative an ensō, a brushed open circle in
-// ink with a small red seal (R503), and Stinkyscape a green planet in deep space, its ring tilted, a
-// star beside it and three stink lines rising off it (R1883000), and Training Grounds a straw
-// archery target, red rings on its face, over two crossed wooden practice swords (R2202000); a set
-// with no glyph of its own (the reserved Boss sets, or one this client does not know yet) gets a plain
-// diamond, so every card still shows one.
+// The set mark on a card's frame (R503), as a printed card carries its expansion symbol: Core a ringed
+// orb, Classic a columned temple (Classic+ with a plus), Meditative an ensō with a red seal,
+// Stinkyscape a green planet with stink lines (R1883000), Training Grounds a straw target over two
+// crossed practice swords (R2202000); a set with no glyph of its own (the reserved Boss sets, or one
+// this client does not know yet) gets a plain diamond, so every card still shows one.
 //
 // Presentation only: the set is public catalog data (§5.1) and no rule reads the mark (CLAUDE.md
 // rule 7). Each glyph is an original SVG drawn as an `<img>` of a `data:` URI with no <text> and no

@@ -1,11 +1,9 @@
-// `/decks`: §9.4 workshop gate and I/O (R250–R256, R341, R2100000's history and restore).
-// Redirecting pending accounts is UX; active-only endpoints enforce the gate.
-// Reads run once per profile, and again on Try again; writes use the current token only while it remains that profile (R194, R256).
-// The collection is optional: without L5 quantities, ownership is unknown.
-// R915005: the account's custom cards join the catalog the workshop reads (set `Custom`, drawn from
-// their frames by `customDef`) and are owned once each; the validator's L7 marks a deck naming one.
-// The catalog is the one the client ships (game/currentCatalog.ts, §9.4); only the decks and the collection are read.
-// R1827000: and, while ownership decides, the account's cosmetics, for the portraits its picker offers.
+// `/decks`: §9.4 workshop gate and I/O (R250–R256, R341, R2100000's history and restore). Redirecting
+// pending accounts is UX; active-only endpoints enforce the gate. Reads run once per profile and on Try
+// again; writes use the current token only while it remains that profile (R194, R256). Without the
+// collection's L5 quantities, ownership is unknown. The catalog is the shipped one (game/currentCatalog.ts);
+// R915005: custom cards join it, owned once each, and the validator's L7 marks a deck naming one.
+// R1827000: while ownership decides, the account's cosmetics give the portraits its picker offers.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -107,9 +105,8 @@ function Shell({ children, settings = true }: { children: ReactNode; settings?: 
 }
 
 /**
- * `portraitsGated`: whether ownership decides which portraits the picker offers (R1827000). It
- * decides here as it does for full art (`FULL_ART_GATED`, R1310004): once the economy is live in a
- * production build. Elsewhere every portrait is offered and nothing is read.
+ * `portraitsGated`: whether ownership decides the picker's portraits (R1827000), as for full art
+ * (`FULL_ART_GATED`, R1310004); otherwise every portrait is offered and nothing is read.
  */
 export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portraitsGated?: boolean } = {}) {
   const account = useAccount();

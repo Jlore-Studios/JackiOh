@@ -55,10 +55,7 @@ const LONGEST_TIMER_MS = 2_147_483_647;
 /** Unit conversions, not configuration. */
 const MS_PER_SECOND = 1000;
 
-/**
- * A rate-limited refusal (R192): the wait it stated (kept for `data-retry-after-ms`), and the
- * deadline that wait makes on the clock, or null for both when it stated none.
- */
+/** A rate-limited refusal (R192): its stated wait and the deadline it makes, both null if none. */
 type RateLimit = { retryAfterMs: number | null; until: number | null };
 
 function isRateLimited(cause: unknown): cause is ApiRequestError {
@@ -89,10 +86,7 @@ function statusDeadlines(read: StatusRead | null): { pausedUntil: number | null;
   return { pausedUntil, triesBackAt };
 }
 
-/**
- * When to read the status again: the soonest deadline it stated, but never sooner than
- * `CODE_STATUS_RECHECK_FLOOR_SECONDS` after it was read, or null when it stated none that matters.
- */
+/** The status's soonest stated deadline, but never sooner than the recheck floor after the read. */
 function recheckAt(read: StatusRead | null): number | null {
   const { pausedUntil, triesBackAt } = statusDeadlines(read);
   const due = [pausedUntil, triesBackAt].filter((deadline): deadline is number => deadline !== null);
@@ -369,8 +363,7 @@ function InviteScreen({ account }: { account: Account }) {
           }));
         }
         if (cause instanceof ApiRequestError && cause.status === 409) announceAccountChange();
-        // R757000, R757001: the account owes the consent screen (the terms changed since the gate
-        // read it): the gate reads the account again and shows it.
+        // R757000, R757001: consent owed (the terms changed): the gate reads the account again.
         if (cause instanceof ApiRequestError && cause.code === "consent_owed") announceAccountChange();
         setStatusReads((count) => count + 1);
       })
@@ -565,8 +558,8 @@ function InviteScreen({ account }: { account: Account }) {
                   setCode(next.formatted);
                   // The refusal was about the code as it was; a rate limit's wait still stands.
                   if (rateLimit === null) setError(null);
-                  // A rate limit that stated no wait lasts until the player changes the code; the
-                  // server still decides, this only stops the button looking dead forever.
+                  // A rate limit with no stated wait lasts until the code changes, so the button
+                  // never looks dead forever; the server still decides.
                   if (rateLimit !== null && rateLimit.retryAfterMs === null) {
                     setRateLimit(null);
                     setError(null);
@@ -627,16 +620,14 @@ function InviteScreen({ account }: { account: Account }) {
           )}
 
           {refusedAgain ? (
-            // The client's own sentence beside R145's, the same for every refused code: it says
-            // nothing about which of the three kinds of failure this was.
+            // The same for every refused code: it says nothing about which failure this was (R145).
             <p className="invite-screen__help" data-testid={inviteTestid.refused}>
               {t("Change the code to try again.")}
             </p>
           ) : null}
 
           {done ? null : (
-            // For whoever has no code yet: under Redeem, set apart like the sign-in board's links,
-            // so it never stands between the field and the button.
+            // Under Redeem, so it never stands between the field and the button.
             <p className="invite-screen__where" data-testid={inviteTestid.whereFrom}>
               {noCodeBefore}
               <a href={paths.practice} data-testid={inviteTestid.playAi} onClick={followInApp(paths.practice)}>

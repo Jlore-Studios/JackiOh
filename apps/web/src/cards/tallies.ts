@@ -1,10 +1,7 @@
-// R2321000: the counts cards on the field keep on a Unit, as the client words them.
-//
-// The engine puts each count on the Unit it counts (`UnitView.tallies`: the keeping card's id, the
-// count and its goal; Training Grounds #31 Level Up!'s attacks toward the Unit's Radiant), on both
-// seats when the keeping card is public. The board draws it on the Unit (cards/Tallies.tsx) and the
-// inspect notes spell it out (inspect/StateNotes.tsx), by the keeping card's name the catalog gives.
-// Nothing here counts or decides anything (CLAUDE.md rule 7).
+// R2321000: the counts cards on the field keep on a Unit (`UnitView.tallies`, on both seats when the
+// keeping card is public; Training Grounds #31 Level Up!'s attacks toward its Radiant), as the client
+// words them for the board (cards/Tallies.tsx) and the inspect notes (inspect/StateNotes.tsx), by the
+// keeping card's name the catalog gives. Nothing here counts or decides anything (CLAUDE.md rule 7).
 
 import { t } from "../i18n/i18n.ts";
 

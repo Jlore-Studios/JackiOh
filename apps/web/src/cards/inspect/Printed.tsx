@@ -1,9 +1,7 @@
-// The card as printed, beside a face in play that prints something else (SPEC §10.10): a #98
-// Heroic Power's eight powers beside the one it rolled, a Vanilla unit's lost text. The collection
-// prints every card this way; in play the hover preview and the sheet show it only where the face
-// and the print differ (FaceModel.printed), and never for a card play keeps a mystery ("???"). A
-// Radiant card's printed text is marked as its face is (R277), and names its references (R279); a
-// Chinese card's is its Chinese text, naming them by their Chinese names (R1301).
+// The card as printed, beside a face in play that prints something else (SPEC §10.10), as #98 Heroic
+// Power's eight powers beside the one it rolled. It shows only where face and print differ
+// (FaceModel.printed), never for a card play keeps a mystery ("???"); it is marked as its face is
+// (R277) and names its references (R279), and a Chinese card's is its Chinese text (R1301).
 
 import type { ReactElement } from "react";
 import type { FaceModel } from "../model.ts";

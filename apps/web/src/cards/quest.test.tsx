@@ -1,9 +1,7 @@
 // Classic #90 In Too Deep's quest line on the board and in the inspect overlays (B5 E33, R404, SPEC
-// §10.8): the view carries `quest` on every view of the card, and the client draws a badge, inspect
-// notes and log lines; the reward prompt takes the reward the engine offers. The fixtures follow
-// `QuestView` (`crates/engine/src/wire/view.rs`); the last block plays the real engine, so a renamed
-// field or a reworded event breaks it. R2450000: a Quest card's face prints only the stage it stands
-// at, and In Too Deep's its open quests (questFace.ts).
+// §10.8). The fixtures follow `QuestView` (`crates/engine/src/wire/view.rs`); the last block plays the
+// real engine, so a renamed field or a reworded event breaks it. R2450000: a Quest card's face prints
+// only the stage it stands at, and In Too Deep's its open quests (questFace.ts).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

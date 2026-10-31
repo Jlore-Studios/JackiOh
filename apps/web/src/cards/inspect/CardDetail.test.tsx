@@ -1,9 +1,5 @@
-// Polish 6, slice C: the detail view (docs/polish/6-cards.md, B29).
-//
-// `<CardDetail def onClose actions? meta?>` is a centered dialog: both faces side by side, a meta
-// line `#<index> · <set> · <rarity> · <type>` plus ` · <tags>` and ` · N lines of code` (E36), the
-// glossary of both faces, then the caller's meta and actions, then inspect-close. Its close paths and
-// focus return are B25, in inspect.test.tsx. Real catalog throughout.
+// The detail view (docs/polish/6-cards.md, B29; its meta line's lines of code, E36), on the real
+// catalog. Its close paths and focus return are B25, in inspect.test.tsx.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -181,8 +177,7 @@ describe("CardDetail (B29)", () => {
   });
 
   it("B29 a card whose faces name no term and carry no keyword renders no glossary", () => {
-    // Every Core card now names a term or carries a keyword on one face (the Felinor Token's radiant
-    // face has Rush, R276), so the case is a made-up def with nothing on either face.
+    // Every Core card names a term or carries a keyword on one face (R276), so the def is made up.
     const def: CardDef = {
       ...defOf("core-t-felinor"),
       id: "x-blank",
@@ -256,7 +251,7 @@ describe("CardDetail (B29)", () => {
       expect(detail.textContent ?? "", def.id).toContain(metaOf(def));
       unmount();
     }
-    // 317 catalog entries since v0.2.0 (the default 5 s was sized for Core's 111).
+    // The whole catalog outgrows the default 5 s.
   }, 30_000);
 });
 

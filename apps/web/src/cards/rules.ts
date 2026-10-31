@@ -6,7 +6,7 @@
 // - A term matches only at a word boundary: the characters either side are not [A-Za-z0-9], so
 //   "Locking" and "taunt" stay plain text.
 // - A match extends over a following ` <digits|X|♾️>` and then a `:`, so "Cry:", "Armor 2",
-//   "Combo 2:" and "Activate ♾️:" (patch v0.2.0, R384) are each one term.
+//   "Combo 2:" and "Activate ♾️:" (R384) are each one term.
 
 import { CHINESE_TERMS } from "./chinese.ts";
 import { GLOSSARY, PLAIN_SPELLINGS, type GlossaryEntry, type GlossaryTermId } from "./glossary.ts";
@@ -87,7 +87,7 @@ export function termsIn(text: string): GlossaryTermId[] {
 }
 
 /**
- * The terms a face in play's states name (patch v0.2.0), so its badges are explained beside it: a
+ * The terms a face in play's states name, so its badges are explained beside it: a
  * Brittle count (R385), a Buff's or a Nerf's changes and the keywords they added (R386, R1320), Cast on
  * draw riding the card (E39), and a card standing as a Unit (R383).
  */

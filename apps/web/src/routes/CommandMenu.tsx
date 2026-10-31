@@ -1,10 +1,8 @@
 // R2118000: Ctrl+K (Cmd+K) opens a command menu on every menu screen, never over a board.
-// Presentation only (CLAUDE.md rule 7): every entry is a `navigate` move (`commandEntries.ts`),
-// and the menu reads only the public catalog. It needs a keyboard, so there is no touch entry
-// point, and it carries no animation. Modeled on `together/ChallengeDialog.tsx`.
-//
-// R2126000: on a keyboard device the selected entry shows Enter, and the menu's foot names its keys
-// (the arrows, Enter, Esc); the keys are R2118000's, none is added.
+// Presentation only (CLAUDE.md rule 7): every entry is a `navigate` move (`commandEntries.ts`) and
+// it reads only the public catalog. It needs a keyboard, so no touch entry point; no animation.
+// Modeled on `together/ChallengeDialog.tsx`. R2126000: on a keyboard device the selected entry
+// shows Enter and the foot names the keys; none is added.
 
 import {
   useCallback,

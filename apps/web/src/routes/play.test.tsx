@@ -102,9 +102,7 @@ function me(currentMatchId: string | null, currentSeriesId: string | null = null
   };
 }
 
-// ---------------------------------------------------------------------------------------------
 // fixtures: a catalog, a collection that owns one of everything, four decks and two trios
-// ---------------------------------------------------------------------------------------------
 
 function cardId(n: number): string {
   return `core-${String(n).padStart(3, "0")}`;
@@ -217,9 +215,7 @@ function pickMode(mode: QueueMode): void {
   fireEvent.click(screen.getByTestId(playModeTestid(mode)));
 }
 
-// ---------------------------------------------------------------------------------------------
 // the watch
-// ---------------------------------------------------------------------------------------------
 
 describe("the lobby's match watch", () => {
   /**
@@ -453,9 +449,7 @@ describe("R661 the lobby's rank", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // modes and choices (R257)
-// ---------------------------------------------------------------------------------------------
 
 describe("the lobby's modes", () => {
   it("R257 the mode picker offers Best of 1, Conquest and All Random, each with its own choice", async () => {
@@ -690,9 +684,7 @@ describe("the lobby's modes", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // answers and refusals
-// ---------------------------------------------------------------------------------------------
 
 describe("the lobby's answers", () => {
   it("R253 a 422 loadout_invalid shows the server's messages verbatim", async () => {
@@ -838,9 +830,7 @@ describe("the lobby's answers", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1075000: a room's host cancels it, and a reload finds it again
-// ---------------------------------------------------------------------------------------------
 
 describe("R1075000 a room's host cancels it, and a reload finds it again", () => {
   afterEach(() => {
@@ -938,9 +928,7 @@ describe("R1075000 a room's host cancels it, and a reload finds it again", () =>
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1372, R924000: All Random's "More cards from"
-// ---------------------------------------------------------------------------------------------
 
 describe("R1372 R924000 All Random's more cards from", () => {
   it("R1372 R924000 the picker is All Random's alone, names the newest set and starts at none", async () => {
@@ -1035,9 +1023,7 @@ describe("R1372 R924000 All Random's more cards from", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // queue state: locked while queued, announced when paired
-// ---------------------------------------------------------------------------------------------
 
 describe("the lobby's queue state", () => {
   it("pairTargetOf reads the board, the series screen, or nowhere", () => {
@@ -1223,9 +1209,7 @@ describe("the lobby's queue state", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R767: a room shared as a link
-// ---------------------------------------------------------------------------------------------
 
 describe("R767 a room shared as a link", () => {
   afterEach(() => {
@@ -1460,9 +1444,7 @@ describe("R767 a room shared as a link", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R915005: a deck naming a custom card plays only in practice
-// ---------------------------------------------------------------------------------------------
 
 describe("R915005 the lobby never offers a deck or trio that names a custom card", () => {
   const CUSTOM = deck("d-custom", "Imps", [...run(1 + DECK_SIZE).slice(1), "custom-ember-imp"]);

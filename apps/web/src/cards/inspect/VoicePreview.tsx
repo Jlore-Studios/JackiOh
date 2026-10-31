@@ -1,11 +1,7 @@
-// A card's voice lines, previewed from its detail view (SPEC §10.10, R630): a mic dropdown, one
-// option per line the card has, playing through the audio engine like the settings panel's own
-// preview does. Presentation only (CLAUDE.md rule 7): it reads the public card sound table through
-// `lineFor`, which is null for the hidden sentinel and for a fused transient definition, so R203
-// holds, and it changes none of R204's in-game speech moments. It lists the hooks that have a line,
-// in CARD_HOOKS's order (R655); a hook with only an effect has nothing to preview here. Muted or
-// voice-off refusal lives inside the engine (`playVoice` returns false), so there are no settings
-// checks here.
+// A card's voice lines, previewed from its detail view (SPEC §10.10, R630) through the audio engine.
+// Presentation only (CLAUDE.md rule 7): `lineFor` is null for the hidden sentinel and a fused
+// transient definition, so R203 holds, and none of R204's speech moments change. Hooks with a line
+// come in CARD_HOOKS's order (R655); muting is the engine's (`playVoice` returns false), not checked here.
 
 import type { ChangeEvent, ReactElement } from "react";
 

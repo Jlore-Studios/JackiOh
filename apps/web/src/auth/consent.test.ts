@@ -1,7 +1,6 @@
 // `auth/consent.ts`: the age screen's sum and what this device keeps for it (R757000, R757001). The
-// server counts the age again and decides (`crates/server/src/api/consent.rs`); what is asserted
-// here is that the client counts it the same way, keeps no age in its refusal, and hands a held
-// answer only to the address it was given with, within its time.
+// server counts the age again and decides (`crates/server/src/api/consent.rs`); the client counts it
+// the same way.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

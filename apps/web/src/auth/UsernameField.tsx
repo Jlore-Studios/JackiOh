@@ -1,18 +1,13 @@
 // The username field (R1435): the prompt after activation and the account page both use it.
 //
-// THE SERVER JUDGES, THE FIELD ASKS (CLAUDE.md rule 7). Nothing here checks a name: not its length,
-// its characters, its script or the filter (R1432, R1433). `USERNAME_PREVIEW_DEBOUNCE_MS` after the
-// last keystroke the field asks `GET /api/username/preview` what a save would give, aborting the
-// question before it, and shows the answer as it stands: the exact username, tag and all ("Max is
-// taken, so you'd be Max#3"), or the server's own sentence for a refusal. The length and cooldown
-// numbers in the hint are only words for the player, and the input carries no `maxLength`, since
-// the server counts what a player sees (graphemes), not what a browser counts.
+// THE SERVER JUDGES, THE FIELD ASKS (CLAUDE.md rule 7): nothing here checks a name's length,
+// characters, script or the filter (R1432, R1433). The field asks `GET /api/username/preview` what a
+// save would give and shows that answer as it stands, tag and all. The hint's numbers are only words,
+// and there is no `maxLength`: the server counts graphemes, not what a browser counts.
 //
-// A PLAYER IS NEVER GIVEN A TAG THEY WERE NOT SHOWN. Save is live only while the preview on screen
-// is a yes for the name in the box, and sends exactly the username that preview named. If the
-// outcome moved meanwhile (someone took `Max`, so it is `Max#1` now), the server refuses the save
-// with a fresh preview, which replaces the old one with a line saying so, and the player saves again
-// knowing what they get.
+// A PLAYER IS NEVER GIVEN A TAG THEY WERE NOT SHOWN: Save is live only while the preview on screen is
+// a yes for the name in the box, and sends exactly that username. If the outcome moved meanwhile, the
+// server refuses with a fresh preview, shown with a line saying so, and the player saves again.
 
 import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
 
@@ -102,8 +97,7 @@ export default function UsernameField({ token, onSaved, label, disabled = false 
   const [failure, setFailure] = useState<{ name: string; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // The debounced preview: one question per pause in the typing, the one before it aborted. An
-  // empty box asks nothing.
+  // One question per pause in the typing, the one before it aborted; an empty box asks nothing.
   useEffect(() => {
     if (value.trim().length === 0) return;
     const controller = new AbortController();

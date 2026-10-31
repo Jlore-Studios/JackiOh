@@ -1,6 +1,5 @@
-// R980: a card's element (Meditative #40 Feng Shui) is printed on its face while a Feng Shui
-// acts — a hand card (the tall face), a unit (the minion face) — and with no element there is no
-// chip. The views here are fixtures shaped as `viewFor` builds them (src/test/fixtures.ts).
+// R980: a card's element (Meditative #40 Feng Shui) is printed on its face, a hand card's and a
+// unit's, while a Feng Shui acts; with no element there is no chip.
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

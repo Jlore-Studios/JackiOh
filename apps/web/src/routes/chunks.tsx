@@ -1,10 +1,7 @@
-// #2116, R2116000: every lazy screen's `import()` in one map, shared by `main.tsx`'s route
-// table and `prefetchRoute(path)`, so a prefetch and the route make one request.
-//
-// `Screen` exists because a plain `lazy()` shows the fallback once, even over an import that has
-// already resolved: once a chunk's code is in, its screen draws at once with no loading panel.
-//
-// None of this is a rule (CLAUDE.md rule 7): only code is fetched, never game state.
+// #2116, R2116000: every lazy screen's `import()` in one map, shared by `main.tsx`'s route table and
+// `prefetchRoute(path)`, so a prefetch and the route make one request. `Screen` exists because a plain
+// `lazy()` shows the fallback even over a resolved import. None of this is a rule (CLAUDE.md rule 7):
+// only code is fetched, never game state.
 
 import { lazy, useState, type ComponentType, type ReactElement } from "react";
 

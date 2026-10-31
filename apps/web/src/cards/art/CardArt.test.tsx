@@ -1,6 +1,5 @@
-// Polish 6, slice A: `<CardArt>`'s DOM contract (docs/polish/6-cards.md, Surface A "DOM contract",
-// behavior B6). The `manifest` prop is injected, so real art is exercised without any file in
-// apps/web/public/art/.
+// `<CardArt>`'s DOM contract (docs/polish/6-cards.md, Surface A, B6). The injected `manifest` prop
+// exercises real art without any file in apps/web/public/art/.
 
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

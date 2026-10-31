@@ -1,9 +1,6 @@
-// Polish 6, slice B: the tall card face in jsdom (docs/polish/6-cards.md, "CardFace DOM",
-// behaviors B8's gem, B10's `RulesText`, B12–B14, and the jsdom half of B15).
-//
-// jsdom has no layout, so nothing here measures fit. What it can check is the DOM contract: which
-// elements exist, what they carry, and that `useFitText` leaves an element with no layout alone.
-// The pixel half of B15 is e2e/cypress/component/card-faces.cy.tsx.
+// Polish 6, slice B: the tall card face in jsdom (docs/polish/6-cards.md, "CardFace DOM": B8's gem,
+// B10's `RulesText`, B12–B14, the jsdom half of B15). jsdom has no layout, so this checks the DOM
+// contract only; the pixel half of B15 is e2e/cypress/component/card-faces.cy.tsx.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -39,8 +36,7 @@ import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { SUMMIT_DEF_ID, ascentLevelOf, summitShortText } from "./shortText.ts";
 import { fusedDef, unit } from "../test/fixtures.ts";
 
-// R1017001: the hero portraits' cards print full art and none of their words. These tests read every
-// face's words, so full art is off here; fullArt.test.tsx covers the full-art faces.
+// R1017001: a full-art face prints none of its words, so full art is off here (fullArt.test.tsx).
 beforeEach(() => {
   writeCardSettings({ fullArt: false });
 });
@@ -51,7 +47,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/* -------------------------------------------------------------------------------------- helpers */
+/* helpers */
 
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
 const XHTML = "http://www.w3.org/1999/xhtml";
@@ -145,7 +141,7 @@ const TYPE_CARD: readonly (readonly [CardType, string, string])[] = [
   ["Field Trap", "core-018", "notched"],
 ];
 
-/* ----------------------------------------------------------------------------------------- B12 */
+/* B12 */
 
 describe("B12: the full face's DOM", () => {
   it(
@@ -272,7 +268,7 @@ describe("B12: the full face's DOM", () => {
   });
 });
 
-/* ------------------------------------------------------------------------- B18 (compact layout) */
+/* B18 (compact layout) */
 
 describe("B18: the compact layout a face-up backrow card uses", () => {
   it("B18 compact renders cost, art, name, rarity gem and type line, but no text, tags or stats", () => {
@@ -296,7 +292,7 @@ describe("B18: the compact layout a face-up backrow card uses", () => {
   });
 });
 
-/* ----------------------------------------------------------------------------------- B8 (DOM) */
+/* B8 (DOM) */
 
 describe("B8: the cost gem renders the model's cost", () => {
   it("B8 .cost-gem shows text, with data-cost set to value and data-tone to the tone", () => {
@@ -355,7 +351,7 @@ describe("B8: the cost gem renders the model's cost", () => {
   });
 });
 
-/* ----------------------------------------------------------------------- B10 (RulesText in DOM) */
+/* B10 (RulesText in DOM) */
 
 describe("B10: RulesText marks terms in bold", () => {
   it("B10 each term renders as strong.cf-term[data-term], and the text reads back unchanged", () => {
@@ -483,7 +479,7 @@ describe("B10: RulesText marks terms in bold", () => {
   );
 });
 
-/* ----------------------------------------------------------------------------------------- B13 */
+/* B13 */
 
 describe("B13: .cf attributes, crest and foil", () => {
   it("B13 .cf carries data-layout, data-card-type, data-rarity, data-name-tier, data-text-tier and data-foil", () => {
@@ -548,7 +544,7 @@ describe("B13: .cf attributes, crest and foil", () => {
   });
 });
 
-/* ----------------------------------------------------------------------------------------- B14 */
+/* B14 */
 
 describe("B14: the radiant face", () => {
   it("B14 a radiant face sets data-radiant-face and draws radiant art", () => {
@@ -573,7 +569,7 @@ describe("B14: the radiant face", () => {
 
   it("B14 a radiant face prints its own keyword line, never the base keywords it replaced (core-056, core-025)", () => {
     const jilliax = one(catalogFace("core-056", true), ".card-text");
-    // Patch v0.3.10 adds "Embiggened (3): Equip." to both faces, below the keyword line ("Paid (3)" until R1175000).
+    // "Embiggened (3): Equip." is on both faces, below the keyword line (R1175000).
     expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip.");
     expect([...jilliax.querySelectorAll("strong.cf-term")].map((term) => term.getAttribute("data-term"))).toEqual([
       "Rush",
@@ -628,7 +624,7 @@ describe("B14: the radiant face", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------ B15 (jsdom half) */
+/* B15 (jsdom half) */
 
 function stringOf(length: number): string {
   return "x".repeat(length);
@@ -699,10 +695,8 @@ describe("B15: length tiers, and useFitText without layout", () => {
       ["core-008", true, "s"],
       ["core-t-felinor", true, "s"],
       ["core-052", false, "l"],
-      // Patch v0.3.10 shortened Silly Silas's Radiant text by a tier.
       ["core-052", true, "l"],
       ["core-051", false, "l"],
-      // #1017 cut KY's Private Tutor's Radiant text under the limit.
       ["core-051", true, "l"],
       // A short form is what the face prints: Combo-Index's two header lines, Call to Chaos's "Three
       // different random effects, resolved in the order listed…" (#1017).
@@ -780,7 +774,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
   });
 });
 
-/* ---------------------------------------------------------------------------------------- R503 */
+/* R503 */
 
 describe("R503: the set mark and a token's printed rarity", () => {
   function setMark(cf: HTMLElement): HTMLElement {
@@ -972,7 +966,7 @@ describe("R503: the set mark and a token's printed rarity", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------- R1382 */
+/* R1382 */
 
 describe("R1382: a card with every tribal tag prints All Tribes", () => {
   const withTags = (tags: readonly Tag[], chinese = false): HTMLElement => {
@@ -1003,7 +997,7 @@ describe("R1382: a card with every tribal tag prints All Tribes", () => {
   });
 });
 
-/* ----------------------------------------------------------------------------------- R1177001 */
+/* R1177001 */
 
 /** Every token a face can show: the catalog's, Glitch aside (it stays blank, R674). */
 const TOKENS: readonly CardDef[] = DEFS.filter((card) => card.token && card.id !== GLITCH_DEF_ID);
@@ -1177,7 +1171,7 @@ describe("R1107: a granted Death ability prints on its own line", () => {
   });
 });
 
-/* --------------------------------------------------------------- issue #814: short faces */
+/* issue #814: short faces */
 
 describe("issue #814: long faces truncate with an ellipsis and keep their whole text", () => {
   const SUMMIT = SUMMIT_DEF_ID;

@@ -1,8 +1,6 @@
-// The challenger's follow (#936, B48, B49): a challenge is a room, and the challenger's game starts when
-// the friend joins it. The shell's toast (`ChallengeToast.tsx`) watches for that game while the server
-// lists an open challenge of the player's; this covers the moments before its next read does, so a
-// friend who joins at once still brings the challenger along. A sent challenge is watched for until it
-// would have lapsed (`CHALLENGE_TTL_MS`), or until a game is found.
+// The challenger's follow (#936, B48, B49): the shell's toast (`ChallengeToast.tsx`) watches for the
+// game a challenge starts while the server lists it open; this covers the moments before its next read
+// does, so a friend who joins at once still brings the challenger along.
 
 import { CHALLENGE_TTL_MS } from "@jackioh/server-config";
 

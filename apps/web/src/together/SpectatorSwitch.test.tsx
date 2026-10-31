@@ -1,10 +1,5 @@
-// #936 S7 B50: `SpectatorSwitch`, "Let friends watch my games". It draws nothing until the account's
-// `allowSpectators` is in (signed out, or an account whose settings carry none), shows it as a switch,
-// writes a change with `PUT /api/settings` carrying `allowSpectators` alone and keeps the server's
-// answer, and puts the switch back with the server's words when it refuses.
-//
-// The server is a stubbed `fetch` (`test/stubServer.ts`); the signed-in session is put where
-// `net/session.ts` reads it.
+// #936 S7 B50: `SpectatorSwitch`, "Let friends watch my games". The server is a stubbed `fetch`
+// (`test/stubServer.ts`); the signed-in session is put where `net/session.ts` reads it.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,13 +1,10 @@
 // Play lobby (SPEC §9.5; R104, R253, R257, R258, R259, R264, R330, R505, R612, R661, R765, R767,
 // R1372, R640002). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
-// Room links only prefill, the queue's readout stays on the mode tiles and the games line under them,
-// and rank never exposes its hidden rating. R915005: a deck naming a custom card (or a trio holding
-// one) plays only in practice, so the pickers show it off, saying why, and never pick it themselves.
-// R1075000: the host cancels a room nobody has joined, and the lobby finds the host's open room again on mount.
-// R1578000: /play is the hub every play mode starts from, online first: the queue, its setup and the
-// rank are the primary panel, the other ways to play are three smaller links beside it, and a visitor
-// with no account sees the same screen with a sign-in where the online panel's controls would be.
-// R1646000: the Card creator is not one of them; the Collection's Card builder door leads to it.
+// Room links only prefill, and rank never exposes its hidden rating. R915005: a deck naming a custom
+// card (or a trio holding one) plays only in practice, so the pickers show it off and never pick it.
+// R1075000: the host cancels a room nobody has joined. R1578000: /play is the hub every play mode
+// starts from, online first, the other ways to play three links beside it (R1646000: not the Card
+// creator, which the Collection's Card builder door leads to).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -425,11 +422,8 @@ export function pairTargetOf(me: {
 export { MATCH_FOUND_STATUS };
 
 /**
- * Polls while waiting and reports a pairing once before navigating. R897000: while waiting in a
- * queue, and the server says the ticket is gone `QUEUE_ENDED_AFTER_READS` reads in a row,
- * reports the ended queue once instead, so an expired ticket ends the wait with a way back in.
- * A room wait never ends this way: its host holds no queue ticket, so `queued` is always false
- * there.
+ * Polls while waiting and reports a pairing once before navigating. R897000: a queue ticket the
+ * server calls gone `QUEUE_ENDED_AFTER_READS` reads in a row ends the wait once instead.
  */
 function useLobbyWatch(
   token: string,
@@ -475,9 +469,8 @@ function useLobbyWatch(
             return;
           }
           if (!waiting) return;
-          // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a
-          // wait, and a failed read leaves the count alone. Room waits never count: their host
-          // holds no ticket, so `false` there says nothing about anyone being gone.
+          // Explicit `false` only (`undefined` never ends a wait). Room waits never count: their
+          // host holds no ticket, so `false` there says nothing about anyone being gone.
           if (me.queued === false && queueWait) {
             endedReads.current += 1;
             if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
@@ -865,10 +858,8 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
       navigate(target);
     }, MATCH_FOUND_NAV_DELAY_MS);
   }, []);
-  // R897000: a queue the server no longer holds ends the wait with a way back in: the
-  // existing Find-a-match button is the rejoin path. Only a queue wait can end this way: this
-  // tab remembers exactly the waits Find-a-match started, never a room's, and a stale room from
-  // an earlier wait does not stop a later queue from ending.
+  // R897000: Find-a-match is the way back into a queue the server no longer holds. This tab
+  // remembers only the waits Find-a-match started, so a stale room cannot stop a queue from ending.
   const queueWait = useQueued() !== null;
   const onQueueEnded = useCallback((): void => {
     forgetQueued();
@@ -893,8 +884,8 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     };
   }, [token]);
 
-  // R1075000: a reload loses the ticket with the page, so a lobby that opened idle (no queue wait,
-  // no room link) asks for the host's open rooms and shows the newest again. A failed read changes nothing.
+  // R1075000: a reload loses the ticket with the page, so a lobby that opened idle asks for the
+  // host's open rooms and shows the newest again.
   const opensIdle = rejoined === null && link === null;
   useEffect(() => {
     if (!opensIdle) return;
@@ -934,8 +925,8 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
   const trioSelect = useRef<HTMLSelectElement>(null);
   const joinSubmit = useRef<HTMLButtonElement>(null);
   const focusPending = useRef(link !== null && rejoined === null);
-  // R2094000: a chat Join on a room link pressed on this very screen arrives as a new query without
-  // remounting, so it is adopted here as the opened link is above, unless the lobby is queued or found.
+  // R2094000: a chat Join pressed on this screen arrives as a new query without remounting, so it
+  // is adopted here, unless the lobby is queued or found.
   const search = useSearch();
   // Counts adopted links, so the focus below waits for the mode they chose to render.
   const [adopted, setAdopted] = useState(0);

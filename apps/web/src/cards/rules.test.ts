@@ -1,14 +1,8 @@
 // Polish 6, slice B: the rules-text tokenizer and the glossary, tested pure (docs/polish/6-cards.md,
-// Surface B `glossary.ts` / `rules.ts`, "Glossary terms", "Tokenizer", behaviors B10–B11).
-//
-// The rendered half of B10 (`RulesText` → `strong.cf-term[data-term]`) is in CardFace.test.tsx,
-// through the face that uses it.
-//
-// The glossary's rules are its own reviewed data, in a player's words (v0.3.0, #133), so nothing
-// here compares a sentence with the spec's. What ties the glossary to the spec is structure: the
-// first column of spec/06-keywords.md's three tables, the term names, read as ids and nothing else.
-// Every row is a glossary term or one of the rules-only rows below, and every term is a row of its
-// own section. A row added without a glossary entry fails; a reworded rule fails nothing.
+// behaviors B10–B11); the rendered half of B10 is in CardFace.test.tsx. The glossary's rules are its
+// own reviewed data, in a player's words (#133), so nothing here compares a sentence with the spec's:
+// the tie is structure, the term names in the first column of spec/06-keywords.md's three tables.
+// A row added without a glossary entry fails; a reworded rule fails nothing.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -34,7 +28,7 @@ import {
 } from "./glossary.ts";
 import { termsIn, tokenizeRules, type RulesToken } from "./rules.ts";
 
-/* -------------------------------------------------------------------------------------- helpers */
+/* helpers */
 
 /**
  * The spec's keyword note (§6) and its card-types note (§5), read for ids only (#133). Paths, not
@@ -70,8 +64,8 @@ function rowNames(section: TableSection): string[] {
 
 /**
  * The §6 rows that are rules vocabulary, not words a card prints as a term, so the glossary has no
- * entry for them (Make Radiant's rule is Radiant's, under §5.2). A new row goes here or into the
- * glossary, or the first B11 test fails.
+ * entry for them (Make Radiant's rule is Radiant's, under §5.2); Stinkyscape's stay here until its
+ * cards print them as terms. A new row goes here or into the glossary, or the first B11 test fails.
  */
 const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
   "§6.1": [
@@ -79,10 +73,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "A keyword while a condition holds",
     "Luck-based",
     "Luck X",
-    // R1846000: card metrics no shipped card prints yet; the Stinkyscape cards that name them bring their terms.
+    // R1846000: card metrics; the Stinkyscape cards that name them bring their terms.
     "BUSTED",
     "Complicated",
-    // R1849000, R1849005: Stinkyscape's, rules only until the set's cards print them as terms.
+    // R1849000, R1849005: Stinkyscape's.
     "Immune to Spell Damage",
     "Gauntlet lanes",
   ],
@@ -96,12 +90,12 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Fatigue",
     "Attack summon",
     "In N turns",
-    // R1849008, R1849009: Stinkyscape's, rules only until the set's cards print them as terms.
+    // R1849008, R1849009: Stinkyscape's.
     "When one of your Units is attacked",
     "Chance to reveal",
-    // R2199000: Training Grounds', rules only: TG #31 Level Up! prints no such term.
+    // R2199000: TG #31 Level Up! prints no such term.
     "After one of your Units attacks",
-    // R2285000, R2285001: the two attack timings, rules only; the cards print them in their own words.
+    // R2285000, R2285001: the two attack timings; the cards print them in their own words.
     "When this attacks",
     "After this attacks",
   ],
@@ -134,7 +128,7 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Answer questions in a row",
     "Alternative win condition",
     "Win the game",
-    // #1843 (R1843000, R1843002): no shipped card shows either until the Stinkyscape set does.
+    // #1843 (R1843000, R1843002): Stinkyscape's.
     "Vote to remove",
     "Escape the Universe",
     "Switch position",
@@ -149,8 +143,7 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1185002, R1185001: M+ #21's set and M+ #1.1's raised play count, plain as Hearthstone prints them.
     "Set stats",
     "Raise a play count",
-    // R1848001–R1848006: Stinkyscape's spell verbs, which no card prints until the set ships; its card
-    // parts make a term of any its texts bold (Inflation).
+    // R1848001–R1848006: Stinkyscape's spell verbs; its cards may make a term of one (Inflation).
     "Trample onto adjacent Units",
     "Next Spell keyword",
     "Set X",
@@ -159,54 +152,49 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1840000–R1840006: Stinkyscape's Resources and Credits, explained on the cards that use them.
     "Gain a Resource",
     "Credits",
-    // R1853000–R1853005: Stinkyscape's Marketplace, which no shipped card reaches; the board's shop
-    // (game/Marketplace.tsx) shows it once it opens.
+    // R1853000–R1853005: Stinkyscape's Marketplace, shown by the board's shop (game/Marketplace.tsx).
     "Marketplace",
-    // R1854000–R1854004: Stinkyscape's staged Quests, which no card prints until the set ships; its card
-    // parts make a term of any its texts bold.
+    // R1854000–R1854004: Stinkyscape's staged Quests.
     "Quest stages",
     "Complete the current stage",
     "Hear back",
     "Steal mana crystals",
-    // R1849001: Stinkyscape's, rules only until the set's cards print it as a term.
+    // R1849001: Stinkyscape's.
     "Evolve",
-    // R1844000, R1844001, R1844002: Stinkyscape's M10, which no card prints until the set's cards do.
+    // R1844000, R1844001, R1844002: Stinkyscape's M10.
     "Autopilot aura",
     "Pareto hint",
     "Do something helpful",
-    // R1845000, R1845002: engine primitives no shipped card prints yet; the Stinkyscape cards that print
-    // them (#123, #77) give them glossary entries.
+    // R1845000, R1845002: engine primitives; the Stinkyscape cards that print them (#123, #77) give them
+    // glossary entries.
     "Hidden Nerf",
     "Trade offer",
-    // R1847000: the starscape map, which no card prints until Stinkyscape #148 is built (S23); that
-    // card may move it into the glossary.
+    // R1847000: the starscape map; Stinkyscape #148 (S23) may move it into the glossary.
     "Starscape map",
-    // R1850000–R1850005: #1850's card-on-card verbs, rules vocabulary until Stinkyscape's cards print
-    // them (#1836), which may make a term of one (Duo, Squad).
+    // R1850000–R1850005: #1850's card-on-card verbs; Stinkyscape's cards (#1836) may make a term of
+    // one (Duo, Squad).
     "Copy a Unit's text",
     "Duo / Squad",
     "Exile aura",
     "Hold beneath",
     "Cast it for yourself",
     "Radiant at N keywords",
-    // R1855000–R1855003: engine primitives no shipped card prints yet; Stinkyscape's Anomaly Found! and
-    // Scanning Probes (S20) explain them on their own faces.
+    // R1855000–R1855003: engine primitives that Anomaly Found! and Scanning Probes (S20) explain on
+    // their own faces.
     "Replace your board",
     "Scan for an Anomaly",
     // R1859007: the War Doctrines' "your Units have X", plain as Hearthstone prints it.
     "Units have keyword",
-    // R1870000, R1870001, R1870002, R1870004, R1870007: the engine's readings of Stinkyscape's Terminus
-    // texts (S22), which print them in plain words, not as terms.
+    // R1870000, R1870001, R1870002, R1870004, R1870007: Stinkyscape's Terminus texts (S22), in plain
+    // words.
     "Win on play",
     "Exile all, piles whole",
     "Gain Echo",
     "Units keyword next turn",
     "Keyword for good",
-    // R1876000, R1876001: ZolarKeth's verbs, its own face's words ("It can't use its own Activate",
-    // "Activate your Universities"), no term of their own.
+    // R1876000, R1876001: ZolarKeth's verbs, its own face's words, no term of their own.
     "Another card's Activate",
-    // R1849003, R1869002, R1863000: the M12 audit's rows for verbs §6.3 lacked (#2176), each printed in
-    // plain words on its Stinkyscape card.
+    // R1849003, R1869002, R1863000: the M12 audit's rows for verbs §6.3 lacked (#2176), in plain words.
     "Reflect damage",
     "May attack again",
     "Watch first plays",
@@ -240,7 +228,7 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "When launched",
 ];
 
-/** R512: §6.1's statuses that are not keyword kinds, which patch v0.2.0's cards print. */
+/** R512: §6.1's statuses that are not keyword kinds. */
 const STATUSES: readonly StatusTermId[] = [
   "Can't be in Defense Position",
   "Can't be attacked",
@@ -284,11 +272,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Mark in a hand",
 ];
 
-/**
- * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
- * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.4's DE, then R1220's UT,
- * then R1086's MG, then #783's RG FL CK CR FB.
- */
+/** Each kind's mark: R346's PI, R636's WF, R637's TE, R1220's UT, R1086's MG and #783's RG FL CK CR FB among them. */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
   Rush: "RU",
@@ -346,7 +330,7 @@ const ALL_TEXTS: readonly { where: string; text: string }[] = Object.values(CATA
   { where: `${card.id} radiant`, text: card.radiant.text },
 ]);
 
-/* ----------------------------------------------------------------------------------------- B10 */
+/* B10 */
 
 describe("B10: tokenizeRules and termsIn", () => {
   it("B10 'Cry: deal 2' is the term 'Cry:' followed by plain text", () => {
@@ -381,7 +365,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     for (const word of ["Taunt", "Flying", "Ranged", "Deft", "Trample"]) {
       expect(entry.rule).toContain(word);
     }
-    // R1025000: Armor and Spell Damage are no longer in the pool; R1615000: nor are Charge and Indestructible.
+    // R1025000: Armor and Spell Damage are not in the pool; R1615000: nor are Charge and Indestructible.
     for (const word of ["Armor", "Spell Damage", "Charge", "Indestructible"]) {
       expect(entry.rule).not.toContain(word);
     }
@@ -545,7 +529,7 @@ describe("B10: tokenizeRules and termsIn", () => {
   });
 });
 
-/* ----------------------------------------------------------------------------------------- B11 */
+/* B11 */
 
 describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   it("B11 every row of the spec's §6.1–§6.3 tables is a glossary term of its section or a rules-only row, and nothing else is", () => {
@@ -614,7 +598,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     for (const id of SHORT_TERMS) {
       expect(SHORT_REMINDERS[id], id).not.toMatch(/\n|\(R\d+\)|library|sacrific/i);
     }
-    // Tribute's reminder is Units only (R428: Carnivorous Cube no longer eats the backrow).
+    // Tribute's reminder is Units only (R428).
     expect(SHORT_REMINDERS.Tribute).toContain("Units");
     expect(SHORT_REMINDERS.Tribute).not.toMatch(/permanent|backrow/i);
   });
@@ -640,12 +624,12 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY.Indestructible.rule).toContain("tributed");
     // R500: Tribute's reminder is short and says Units, not the rules' "sacrifice".
     expect(GLOSSARY.Tribute.rule).toBe("Playing this also costs X of your Units, which go to the graveyard");
-    // Patch v0.2.1: backrow zone reads backrow, and the retired turn-trigger prose reads label-style.
+    // Backrow zone reads backrow, and the retired turn-trigger prose reads label-style.
     expect(GLOSSARY["Animated on your turn"].rule).toBe("A Unit on your turn; back in its backrow on your opponent's");
     expect(GLOSSARY.Brittle.rule).toMatch(/^At the start of turn, /);
     for (const entry of Object.values(GLOSSARY)) {
       expect(entry.rule, entry.id).not.toMatch(/\blibrar(y|ies)\b|\bsacrific|\bbounce\b|\bbackrow zone\b/i);
-      // Patch v0.2.1 (issue #45): no glossary rule uses any other word the vocabulary table retired.
+      // #45: no glossary rule uses any other word the vocabulary table retired.
       expect(entry.rule, entry.id).not.toMatch(/\b(at the (start|end)( and end)? of your turn|(start|end) of your turn)\b/i);
       expect(entry.rule, entry.id).not.toMatch(/\bEnd your turn\b/);
       expect(entry.rule, entry.id).not.toMatch(/\bStart of Game\b/);
@@ -668,7 +652,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry.section, id).toBe("§6.1");
       expect(entry.rule.trim(), id).not.toBe("");
     }
-    // The catalog writes "Can't"; aliases are empty (patch v0.2.0b, issue #45).
+    // The catalog writes "Can't"; aliases are empty (#45).
     expect(GLOSSARY["Can't be in Defense Position"].aliases).toEqual([]);
   });
 
@@ -770,7 +754,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------- patch v0.2.0 */
+/* patch v0.2.0 */
 
 /** A catalog face's text as a player reads it: its `{key}`s filled with the printed numbers. */
 function played(id: string, face: "base" | "radiant" = "base"): string {
@@ -849,9 +833,8 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 every new term has at least one catalog text that prints it", () => {
-    // R1174000: Frozen was a §6.1 status no card printed (M+ #24 Bob, #1185, prints the verb, Freeze)
-    // until the Stinkyscape set shipped (#1884, R1857000), whose faces print it, so it left this list.
-    // R1839000: and Dormant likewise, the Stinkyscape set's faces printing both. No status is left unprinted.
+    // No status is left unprinted: the Stinkyscape set's faces (#1884) print Frozen and Dormant
+    // (R1839000), where M+ #24 Bob (#1185) prints only the verb, Freeze.
     const unprinted: readonly GlossaryTermId[] = [];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),

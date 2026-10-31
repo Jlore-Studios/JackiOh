@@ -37,9 +37,7 @@ afterEach(() => {
   cleanup();
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Rendering
- * ------------------------------------------------------------------------------------------- */
+/* Rendering */
 
 const DEF_ID = "core-004";
 
@@ -80,9 +78,7 @@ function fxOf(cf: HTMLElement, kind: KeywordKind): HTMLElement | null {
 
 const EVERY_KEYWORD: Keyword[] = KEYWORD_KINDS.map((kind) => keywordOf(kind));
 
-/* ------------------------------------------------------------------------------------------- *
- * keywords.css, parsed
- * ------------------------------------------------------------------------------------------- */
+/* keywords.css, parsed */
 
 function readSheet(fromWeb: string): string {
   for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
@@ -171,9 +167,7 @@ function animatedProperties(body: string): string[] {
   return out;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * The map
- * ------------------------------------------------------------------------------------------- */
+/* The map */
 
 describe("R438 the keyword visuals map", () => {
   it("R438 every KeywordKind has a visual: a total map with a layer, a shape and a unique priority", () => {
@@ -216,9 +210,7 @@ describe("R438 the keyword visuals map", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * One keyword at a time
- * ------------------------------------------------------------------------------------------- */
+/* One keyword at a time */
 
 describe("R438 a unit with each keyword renders its treatment", () => {
   for (const kind of KEYWORD_KINDS) {
@@ -310,9 +302,7 @@ describe("R438 a unit with each keyword renders its treatment", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Composition
- * ------------------------------------------------------------------------------------------- */
+/* Composition */
 
 describe("R438 several keywords compose", () => {
   it("R438 a unit with every keyword draws each layer within its cap, in priority order, with at most AMBIENT_MAX loops", () => {
@@ -419,9 +409,7 @@ describe("R438 several keywords compose", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Vanilla
- * ------------------------------------------------------------------------------------------- */
+/* Vanilla */
 
 describe("R438 a Vanilla unit shows only what its view lists", () => {
   it("R438 a Vanilla unit with no keywords draws no treatment, not even from animated", () => {
@@ -436,9 +424,7 @@ describe("R438 a Vanilla unit shows only what its view lists", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Motion and reduced motion (keywords.css)
- * ------------------------------------------------------------------------------------------- */
+/* Motion and reduced motion (keywords.css) */
 
 describe("R438 motion is cheap, capped and stops under reduced motion", () => {
   /** Every rule that starts a loop: any animation declaration but the reduced-motion blocks' `none`. */

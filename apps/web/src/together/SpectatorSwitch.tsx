@@ -1,10 +1,6 @@
-// "Let friends watch my games" (#936, S7, B50): the account's `allowSpectators`, read from
-// `GET /api/settings` and written with `PUT /api/settings`, which takes it beside the device groups
-// (sent empty here, so no group changes). It is the account's, not the device's, so it is no part of
-// the settings store or its sync (`settings/accountSync.ts`) and no slot a tab reset would touch: the
-// panel's Gameplay tab draws it after its slots (`settings/SettingsPanel.tsx`), and Play together
-// shows it too.
-//
+// "Let friends watch my games" (#936, S7, B50): the account's `allowSpectators` from `/api/settings`.
+// It is the account's, not the device's, so it is no part of the settings store or its sync
+// (`settings/accountSync.ts`) and no slot a tab reset would touch (`settings/SettingsPanel.tsx`).
 // It draws nothing until the account's value is in: signed out, a pending account and a server from
 // before #936 have no such setting. Who may actually watch is still the server's (CLAUDE.md rule 7).
 

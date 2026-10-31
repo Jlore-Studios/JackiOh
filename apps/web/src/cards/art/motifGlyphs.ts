@@ -1,12 +1,8 @@
-// The glyphs v0.2.0 adds to the procedural art (R503): the Book, Pancake and AI families' emblems and
-// the small pictures a card's motif is drawn with (motifs.ts). Each is drawn for this project in the
-// same 24×24 box as emblems.ts, centered on (12, 12), as plain path data with no text, no external
-// reference and no borrowed artwork, and `svg.ts` places it with a transform exactly as it places an
-// emblem.
+// The Book, Pancake and AI families' emblems and the pictures a card's motif is drawn with
+// (motifs.ts, R503), drawn as emblems.ts's are: original path data in its 24×24 box.
 //
-// Every glyph here is filled nonzero, so its parts may overlap (a sheep's fleece is a heap of
-// circles, crossed bones cross): a solid part is always wound one way (anticlockwise on screen) and
-// a hole the other, which `solid` and `hole` see to, so an overlap never punches a hole by accident.
+// Every glyph is filled nonzero, so its parts may overlap: `solid` winds a part anticlockwise on
+// screen and `hole` the other way, so an overlap never punches a hole by accident.
 
 import { fmt } from "./hash.ts";
 

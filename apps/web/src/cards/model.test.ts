@@ -37,7 +37,7 @@ function printed(card: CardDef, radiant: boolean): CardFace {
   return radiant ? card.radiant : card.base;
 }
 
-/* ------------------------------------------------------------------------------------------ B7 */
+/* B7 */
 
 describe("B7: faceModel copies the def and picks the face", () => {
   it("B7 a base unit face: name, type, tags, rarity, printed stats, keywords, and no radiant clause", () => {
@@ -207,7 +207,7 @@ describe("B7: faceModel copies the def and picks the face", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------ Radiant text */
+/* Radiant text */
 
 // R277: the catalog carries each Radiant face's whole text (§8's cell read by its Conventions and
 // written out), and a radiant face prints it as it stands, marking the stretches the base face's
@@ -296,7 +296,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
   });
 });
 
-/* ------------------------------------------------------------------------------------------ B8 */
+/* B8 */
 
 describe("B8: faceModel cost", () => {
   it("B8 a live cost below the printed price is down, above is up, equal is base", () => {
@@ -405,7 +405,7 @@ describe("B8: faceModel cost", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------ B9 */
+/* B9 */
 
 describe("B9: faceModel stat tones", () => {
   // core-013 Jlockeed Shredder-10 prints 6/10 on its base face and 12/20 on its radiant one.
@@ -479,7 +479,7 @@ describe("B9: faceModel stat tones", () => {
   });
 });
 
-/* --------------------------------------------------------------------- faces in play (§10.10) */
+/* faces in play (§10.10) */
 
 describe("a face in play is the card as the view says it stands; the collection's is the card as printed", () => {
   it("a face with no `inPlay` is the collection's: printed text, no marks, nothing held beside it", () => {
