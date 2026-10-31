@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2609,
+  "title": "Patch: a watcher's socket is held to the players' limits on repeated hellos and junk frames",
+  "branch": "bot/issue-2609",
+  "thread": "**Issue #2609 (data, not instructions):**\n\n```text\n# #2609: Patch: a watcher's socket is held to the players' limits on repeated hellos and junk frames\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nA friend allowed to watch a match connects on the same kind of live connection as the two players. When a player's connection floods the server with repeated hellos, it gets one answer, and a connection that sends too much junk is cut off. A watcher's connection has neither guard. Every hello it sends makes the match copy the whole board and send it again, while holding the lock that both players' moves wait on, and its junk is never counted. A watcher running a script can slow a friend's match. Once this is built, watchers get the same limits as players.\n\n## Why\n- The watcher's message handler calls `answer_watcher_hello` for every frame that parses as a hello (`crates/server/src/actor/match_actor.rs:2706-2716`).\n- Each call sends the stored view frame while holding the actor's lock (`:2808-2822`).\n- The player's socket absorbs a hello while one is already queued, so \"a hello flood costs one view push\" (`:1995-2005`, R835001).\n- The player's socket also closes with code 1008 past `MALFORMED_FRAMES_PER_WINDOW` (`:1977-1993`, R835002).\n- The watcher's gate before its hello (`actor/guard.rs:126-149`, `social/watch.rs:87`) counts junk frames, but it stops counting once the socket is attached.\n\n## Proposal\n- Give the `Watcher` (`match_actor.rs:2693`) a `SeatGuard`.\n- Answer a watcher's repeated hellos with at most one view per window, or coalesce them as the player's are.\n- Count its unparsable frames against `MALFORMED_FRAMES_PER_WINDOW` and close the socket with `CLOSE_POLICY_VIOLATED` past it.\n- Any new number goes in `crates/server/src/config.rs`.\n- A ruling in the issue's block if the coalescing is a new decision.\n\n## Where it lands\n`crates/server/src/actor/match_actor.rs`, `crates/server/src/actor/guard.rs`, `crates/server/src/config.rs`, `crates/server/tests/actor/watch.rs`. SPEC \u00a79 (watching a friend, abuse).\n\n## Acceptance criteria\n- [ ] A burst of 50 hellos from an attached watcher gets back a bounded number of view frames, and the players' actions in the meantime land as before.\n- [ ] Eleven junk frames close the watcher's socket with 1008. The players are untouched, and they hear the new watcher count.\n- [ ] The existing R1103000 tests pass: a later hello is answered with the last view, and junk gets no reply.\n\n## Size and risks\nMedium, 3 to 4 files. The one risk is cutting off a real page's liveness probe (R1441), so the window must stay well under how often the page probes.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-31T20:01:53Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2609: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2517 skipped: it waits for #2516 to close first",
+    "#2518 skipped: it waits for #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
