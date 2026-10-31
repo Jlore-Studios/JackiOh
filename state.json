@@ -11086,16 +11086,16 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-10-31T08:49:47Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "41186218777",
+      "run_id": "pending:53bf00d6-1793446611",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-10-31T08:50:18Z",
+      "started_at": "2026-10-31T11:37:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -11436,9 +11436,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T11:29:02Z",
+    "at": "2026-10-31T11:37:09Z",
     "url": "",
-    "what": "suggestions on claude-1"
+    "what": "revise #2591 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-31T11:27:43Z",
