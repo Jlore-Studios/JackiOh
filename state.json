@@ -10532,7 +10532,8 @@
       "ci_fixed_head": "d6a7728eaf93c1f3a8eed260d9d71391f7c2aa31",
       "ci_fixes": 1,
       "ci_reruns": {
-        "90a4445c77348e51f044fd4e4492d4fda56a395e": 1
+        "90a4445c77348e51f044fd4e4492d4fda56a395e": 1,
+        "d6a7728eaf93c1f3a8eed260d9d71391f7c2aa31": 1
       },
       "ci_run_id": 41149102745,
       "ci_sha": "90a4445c77348e51f044fd4e4492d4fda56a395e",
