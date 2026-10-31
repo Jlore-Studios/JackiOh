@@ -11312,6 +11312,7 @@
       "planned_by_id": "claude-2",
       "planned_tier": "strong",
       "provider": "claude-2",
+      "question": "The issue's stop rule applies, so the owner has to decide before anything is built. With `AI_BUDGET` at 1200/300, `cargo jackioh gate` fails the timing gate on the pinned position improve-dev-200: one decision takes 1,420 ms and 725 nodes, against an `AI_GATE.pinned_decision_ms` limit of 1,000. At today's 600/150 on the same machine, the same decision takes 320 ms and 317 nodes, and the gate passes. On issue #2575, pick option **A** or **B** under **Open questions** (or close the issue), then queue it again. The plan below is the build after that choice.",
       "queued_at": "2026-10-31T05:29:22Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "41172793100",
