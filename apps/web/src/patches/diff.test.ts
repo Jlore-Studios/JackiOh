@@ -117,6 +117,14 @@ describe("R388 a card's changes, from two snapshots", () => {
     expect(field(changes, "refs")).toMatchObject({ label: "Cards it names", before: "none", after: "Syrup Token" });
   });
 
+  it("R388 R2511001 a copy's Core card (snapshotOf) is data only, under the name patches ship records, the card by its name", () => {
+    const golem = fixtureDef(V3, "core-004");
+    const copy = { ...golem, snapshotOf: "core-002" };
+    const delta = diffCard(copy, golem, { before: FIXTURE_SNAPSHOTS[V3] });
+    expect(changed(delta)).toEqual([{ kind: "value", field: "snapshotOf", label: "Copy of", before: "Test Bolt", after: "none" }]);
+    expect(delta !== null && dataOnly(delta)).toBe(true);
+  });
+
   it("R388 shows a card by its Radiant face when every printed change is the Radiant face's", () => {
     const knight = fixtureDef(V2, "core-001");
     const radiantOnly = diffCard(knight, { ...knight, radiant: { ...knight.radiant, text: "Cry: Deal 3 damage to a target. Draw 2." } });
