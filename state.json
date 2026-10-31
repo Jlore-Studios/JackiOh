@@ -11374,6 +11374,10 @@
       "runs_on": "night-vm-agy",
       "started_at": "2026-10-31T07:05:59Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-3` (claude, opus) rejected it: `crates/engine/tests/golden/games.jsonl`: The new `tradable: true` key changes `view_for` output for every live hand that holds a Tradable card, so the golden re"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
