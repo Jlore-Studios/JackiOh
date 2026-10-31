@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 2560,
+  "title": "Patch: practice claims stop re-running the AI's moves",
+  "branch": "bot/issue-2560",
+  "thread": "**Issue #2560 (data, not instructions):**\n\n```text\n# #2560: Patch: practice claims stop re-running the AI's moves\nOpened by @MaxGoetzmann.\n\n## What it does\n\nBefore a practice (single-player) game pays out, the server re-runs every AI move in the claimed log and refuses the claim as `ai_mismatch` when one differs (SPEC \u00a714.8, [[R1303002]], `crates/server/src/economy/practice.rs`'s `verify` \u2192 `ai_action`). The owner's call is to remove that check:\n\n- **False positives.** A move the browser's clock cut short, or any drift between the browser's AI and the server's, refuses a game the player really played. R2208000 exists only to work around this, and it still fails on slow devices.\n- **Cost.** Every claim re-runs the AI at the full `AI_BUDGET` on the server's blocking pool, held to `PRACTICE_VERIFY_CONCURRENCY` (2) at once. That is heavy server work for each practice game.\n- **Little left to protect.** Practice pay is already held to the day's Jlore cap ([[R1483000]]), so a forged AI side can earn no more than an honest game.\n\nThe claim still folds: the log must replay from the seed's setup under the same nonces and seats to a finished, non-voided game with the claimed result. Only the comparison of AI actions with a re-run goes.\n\n## Changes\n\n**Server (`crates/server`)**\n- `economy/practice.rs`: in `verify`, check an `a<n>` action's nonce and seat as now, then reduce it like any other action; drop the `ai_action` comparison. Remove `ai_action`, `forbidden`, the `\"{seed}:ai\"` RNG and the `ClaimRefusal::AiMismatch` variant, along with any imports and helpers that nothing else uses (check `bots::seat::r188_forbidden`'s other callers before touching it). Keep `Verified::ai_moves` (as a count) only if something still reads it. Update the module header.\n- `api/practice.rs`: update the header (no more \"re-runs the AI\"). `PRACTICE_VERIFY_CONCURRENCY` and the `practice_verifications` semaphore stay, since the fold still runs on the blocking pool, unless the fold is now cheap enough that the builder shows the permit is pointless. If so, say why in the PR. Its config doc in `config.rs` should no longer mention re-running the AI.\n- `tests/api/practice.rs`: drop or rewrite the `ai_mismatch` tests. Add one where an AI action that differs from the AI's choice but is legal still pays, and keep one where an illegal AI action is refused as `does_not_fold`.\n\n**Web (`apps/web`)**\n- R2208000's long cap existed only for the server's re-run, so retire it: earning games decide under `PRACTICE_AI_CLOCK_MS` like every other practice game. Remove `PRACTICE_EARNING_AI_CLOCK_MS`, the `clockCut` mark (in the game, its save and the claim's answer), and the result dialog's \"this device ran out of time on one of the AI's moves\" wording, along with the `ai_mismatch` reason's text.\n- Update the comments that cite R1303002/R2208000 (`practice/core.ts`, `practice/config.ts`, `practice/earning.ts`, `net/practice.ts`) and their tests (`claim.test.ts`, `core-clock.test.ts`, `earning.test.ts`, `routes/practice.test.tsx`).\n- Regenerate `apps/web/src/wire/serverConfig.ts` / `engineConfig.ts` if a removed constant was exported (CLAUDE.md rule 9).\n\n**Spec**\n- \u00a714.8 (`spec/14-economy.md`): the server folds the log to the claimed result. Drop \"checks that every move of the AI's seat is the one the AI makes\" and the R1303002/R2208000 clauses. Note that the AI side is not re-checked because practice pay is capped daily (R1483000).\n- Add a ruling in this issue's block (`docs/issues-and-patches.md`, Ruling numbers) recording the reversal and its reason (false positives, server cost, daily cap), with a proving test. Retire or amend R1303002 and R2208000 the way the spec retires rulings, and fix every note that cites them (R1303000's family, `spec/09-architecture.md`, `crates/server/README.md`, `apps/web/README.md`, `docs/v0.3.0/README.md`, `training/`). The \u00a711 paragraph goes in `spec/pending/<this issue>.md`.\n\n## Out of scope\n\nThe seed flow stays as it is: issue, release, burn-once, expiry, `PRACTICE_SEEDS_OPEN_MAX` and the server-kept last board ([[R1303001]], [[R1303003]], [[R1483000]], [[R2379000]]). The fold, the result check and the daily cap stay too.\n\n## Acceptance\n\n- A practice claim whose log folds to the claimed result pays even when an AI action is not the AI's own choice. A claim that does not fold, is unfinished, is voided or has the wrong result is refused as before.\n- No `ai_mismatch` reason remains anywhere in the server or the client. Earning games use the ordinary practice AI clock.\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo jackioh spec check`, `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` all pass, along with every required CI check.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2560: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2507 skipped: it waits for #2506 to close first",
+    "#2508 skipped: it waits for #2506, #2507 to close first",
+    "#2509 skipped: it waits for #2506, #2507, #2508 to close first",
+    "#2510 skipped: it waits for #2506, #2507, #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2506, #2507, #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2506, #2507, #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2506, #2507, #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2506, #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
