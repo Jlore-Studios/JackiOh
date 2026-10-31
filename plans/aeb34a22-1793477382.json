@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2610,
+  "title": "Patch: every route that waits on an account's economy lock takes the account's turn first",
+  "branch": "bot/issue-2610",
+  "thread": "**Issue #2610 (data, not instructions):**\n\n```text\n# #2610: Patch: every route that waits on an account's economy lock takes the account's turn first\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nAfter a player spam-clicking the pack panel took the server down (#2378), buying packs, opening packs and redeeming tokens were made to queue per account without holding a database connection while they wait. Other requests that wait on the same per-account lock were left out:\n- saving a card's cosmetic choice;\n- uploading the device's picks;\n- asking for a practice game or giving one back;\n- replacing a daily quest.\n\nA player clicking quickly through cosmetics, or a script, can still hold all of the server's ten database connections on one account's lock until everyone else's requests fail. Once this is built, those requests wait in the same queue.\n\n## Why\n- R2378000's reason holds for any request that \"took a database connection first and then waited on its account's economy lock\". The fix covers only the six spend routes (`crates/server/src/economy/spend_slots.rs` header).\n- These routes open a transaction and then call `economy_lock_account` without claiming a turn:\n  - the card picks save, `crates/server/src/api/card_picks.rs:98-101`;\n  - the card picks upload, `card_picks.rs:206-217`;\n  - the practice seed request, `api/practice.rs:124-126`;\n  - the practice seed give-back, `api/practice.rs:173-174`;\n  - the quest replace, `economy/quests.rs:488`.\n- The spend routes claim before they begin: `economy/packs.rs:659`, `:675`, `tokens.rs:433`, `:453`, `cosmetic_packs.rs:649`, `:665`.\n- The pool holds `POOL_MAX_DEFAULT = 10` connections (`db/pg.rs:1753`). The per-account limit, `API_REQUESTS_PER_MINUTE = 300` (`config.rs:568`), lets ten requests in at once.\n\n## Proposal\n- Widen `SpendSlots` into the account's economy turn, and claim it in those handlers before `app.db.begin`, with the same wait and the same 429 `rate_limited` past `ECONOMY_SPENDS_WAITING_MAX`.\n- Amend R2378000 in the same pull request.\n- The web shows a 429 on these routes in the server's words, as it does for spends.\n\n## Where it lands\n- `crates/server/src/api/card_picks.rs`\n- `api/practice.rs`\n- `economy/quests.rs`, or its route\n- `economy/spend_slots.rs`\n- `crates/server/tests/api/`\n- `spec/rulings/R2378000.md`\n\nSPEC \u00a714.11.\n\n## Acceptance criteria\n- [ ] With an account's turns held (the `hold_turns` and `assert_busy` helpers in `tests/api/tokens.rs`), each of the five routes waits without a database connection. Past `ECONOMY_SPENDS_WAITING_MAX` it is refused with 429 and writes nothing.\n- [ ] Each route's normal answers are unchanged, and the existing tests pass.\n- [ ] R2378000 names the routes and lists the new proofs in `proven_in`, and `cargo jackioh spec check` passes.\n\n## Size and risks\nMedium, about 6 to 8 files. The one risk is a request that used to wait now being refused with 429 during a burst, which the client must show, not swallow.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-31T20:03:56Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2610: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2517 skipped: it waits for #2516 to close first",
+    "#2518 skipped: it waits for #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
