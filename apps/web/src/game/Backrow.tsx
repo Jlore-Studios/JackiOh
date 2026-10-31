@@ -1,24 +1,6 @@
-// One backrow occupant (BUILD M5-T1): a public card, a face-down card, or nothing.
-//
-// `BackrowView` is the union that decides it, and the narrowing on `faceDown` is the whole
-// privacy story: a `{ faceDown: true }` entry carries no `instanceId`, no `defId` and no type
-// (SPEC §10.8, R33), so the back cannot render a name even by accident and cannot carry a
-// `card-<instanceId>` testid. Such a zone is reportable only as a `zone` click, which is correct:
-// there is nothing else the viewer is allowed to know about it. Since v0.1.1 the view gives it a
-// cost, which the back shows as a gem, and its hover and sheet say what it is (R370).
-//
-// The viewer's own face-down trap is a public card to them (R33), and the view marks it
-// `unrevealed` so the face can say the other player sees only a back (R371).
-//
-// B5 E21: a backrow zone may hold a pile, and the view counts the cards beneath its top
-// (`buried`, a count and never an identity, on a face-up card and on a face-down one alike, read
-// defensively as the cost is). The zone shows the depth beside the card, as a unit pile does.
-//
-// R471: a face-down card's Plague Counters (`plague`) ride its back; its controller reads them off
-// `counters`, as on any face-up card.
-//
-// R1297000, R1834004: a face-down card's back wears the card back of the seat whose zone it lies in,
-// which is all the view says of it (B16).
+// Backrow occupant (BUILD M5-T1): public card, face-down card, or empty zone.
+// Privacy (SPEC §10.8, R33): faceDown cards omit instanceId/defId; R370 displays cost gem; R371 own trap marked unrevealed.
+// B5 E21 buried pile count; R471 plague counters; cosmetics use seat card back (R1297000, R1834004, B16).
 
 import type { ReactElement } from "react";
 

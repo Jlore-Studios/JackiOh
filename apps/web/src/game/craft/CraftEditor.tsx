@@ -51,24 +51,9 @@ import {
 import { codeWord, parseRecipeText, recipeText } from "./recipeText.ts";
 import "./craft.css";
 
-/** ME-CRAFT (Meditative #17, R880–R883): the Scratch-style block editor. Blocks snap together for
- * type, stats, keywords, hats and verbs; the meters and the face are the engine's own
- * `craftPreview`, so the client decides nothing (CLAUDE.md rule 7). The turn clock keeps running
- * while the player crafts (R79): this is an answer like any other, and the opponent sees only that
- * a prompt is open. Pointer drag moves blocks with a mouse or a finger; every drag has a click,
- * tap and keyboard equivalent, so nothing needs a drag.
- *
- * The prompt's `craftMode` (Meditative+, #1182) changes the frame, never the rules: `potion` and
- * `hugePotion` pin a Spell whose one hat is its When cast (Jazakus and Jazakus Prime, R1182000,
- * R1182001, R1563008), with no type or hat palette; `scratch` opens a code editor, the recipe typed
- * as text (R1563010), with no suggestions, no prices, no tooltips and no refusal reasons, only the
- * blocks by name, the meters and the Craft button (Scratch Pad, R1182002). The palette holds only
- * the prompt's offer, four keywords, two hats and three effects (R1563007), and the verdict is the
- * engine's on the answer, its frame and offer included.
- *
- * Layout: a header (title and meters), the body (palette, canvas and the card), and a footer whose
- * Craft button stays in reach; on a phone the body scrolls between them as one column, the card
- * first. */
+/** ME-CRAFT (Meditative #17, R880–R883): block card craft editor; engine craftPreview provides meters and preview (CLAUDE.md rule 7).
+ * Turn clock continues (R79). craftMode (#1182): potion/hugePotion pin Spell When cast (R1182000, R1182001, R1563008);
+ * scratch text editor (R1563010, Scratch Pad R1182002); palette restricted to offer (R1563007). */
 
 const TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap"];
 

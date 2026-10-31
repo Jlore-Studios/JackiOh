@@ -1,22 +1,7 @@
-// The face of a card in play: the one the board draws for a card the view lists, and the one the
-// showcase, a log line, a pile and a prompt draw for a card the view names (SPEC §10.10).
-//
-// A face in play is the card as the view says it stands (R243): the cost the view gives it, a Unit
-// card's stats in its owner's hand, a hand card's keywords where the view gives them (E38, R1438), a
-// unit's numbers, keywords and Vanilla mark on the field, the power a Heroic Power rolled, a
-// match-made definition's own name and text, and what the card's formula comes to now
-// (`CardView.preview`, R280), and patch v0.2.0's per-card states: the Brittle count (R385), what
-// Degrade and Upgrade changed (R386), the enchantments riding it (E39), a backrow card standing as a
-// Unit (R383), a face's own type (B2.7), a quest line (E33, R404) and the Spell text a copier has
-// (E14, R399: its `copies` drawn from that Spell's definition). Everything is read
-// off the view — never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's
-// faces, the card as printed, are the deck builder's own (`faceModel` with no `inPlay`). A card the
-// view says is Chinese (`CardView.chinese`, ME-CN, R1301) is drawn in the Chinese table's words.
-//
-// The definition comes from the public catalog (§5.1, `CatalogContext`), else from the match-made
-// definitions the view carries beside the cards it names (R243), else from nothing: the card is
-// drawn by its id, as `Card.tsx` draws one before the catalog has loaded. The R97 sentinel names no
-// card, so it has no face, and the callers draw a back instead.
+// Face of card in play across board, showcase, log, piles and prompts (SPEC §10.10, R243; CLAUDE.md rule 7).
+// View state only: hand keywords (E38, R1438), previews (R280), Brittle (R385), Degrade/Upgrade (R386), enchantments (E39),
+// backrow units (R383), custom type (B2.7), quests (E33, R404), copied spells (E14, R399), Chinese text (ME-CN, R1301).
+// Catalog lookup (§5.1, R243 match-made cards); hidden cards use R97 sentinel.
 
 import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -55,11 +40,7 @@ export type LiveFacts = {
   inHand?: boolean;
 };
 
-/**
- * The face in play of a card the view lists: its live cost, and whatever else the view says about
- * it — a unit's numbers and keywords, a hand Unit's stats, a hand card's keywords, a Heroic Power's
- * power, the Vanilla mark.
- */
+/** Live face in play with stats, keywords, power, and temporary modifiers. */
 export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}): FaceModel {
   const unit = isUnitView(card) ? card : undefined;
   const inPlay: InPlay = {};
@@ -189,11 +170,7 @@ export type NamedCard = {
   cost?: number;
 };
 
-/**
- * The face in play of a card an event names, or null for the sentinel. A card the view still lists
- * is drawn as it stands there (`listedFace`); one it no longer lists — gone to a pile it cannot
- * name, or ceased to exist — is its definition as the game shows it, at `cost` when one is given.
- */
+/** Face in play for event-named card, or null for sentinel. Uses listedFace or fallback definition. */
 export function namedFace(lookup: CardLookup | null, view: PlayerView, named: NamedCard): FaceModel | null {
   if (named.defId === HIDDEN_CARD || named.defId === "") return null;
   const listed = named.instanceId === undefined ? null : cardInView(view, named.instanceId);
@@ -210,11 +187,7 @@ export function namedFace(lookup: CardLookup | null, view: PlayerView, named: Na
   });
 }
 
-/**
- * The `CardView` for an instance anywhere the view shows cards face up: the field, a face-up
- * backrow card, both piles, the resolving strip, and the viewer's own hand. Null when the view
- * shows it nowhere, which is also what a hidden card gives.
- */
+/** CardView for face-up instance on field, backrow, piles, resolving, or hand; null if hidden. */
 export function cardInView(view: PlayerView, instanceId: string): CardView | null {
   if (instanceId === HIDDEN_CARD) return null;
   for (const seat of [view.you, view.opponent]) {

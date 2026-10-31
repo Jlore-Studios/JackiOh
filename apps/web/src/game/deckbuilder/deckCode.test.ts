@@ -1,7 +1,4 @@
-// R255: deck codes. Encode and decode are proved against each other (a legal deck survives the
-// round trip exactly) and decode is proved total (no input makes it throw). The byte-level cases
-// build payloads by hand with `rawCode`, which carries its own copy of the format's checksum so a
-// test can write exactly the bytes it means, including ones `encodeDeckCode` would never produce.
+// R255: deck codes round-trip and decode is total. Byte cases build raw payloads with test checksums.
 
 import { Buffer } from "node:buffer";
 
@@ -64,7 +61,7 @@ const catalogWithToken: CatalogSnapshot = {
   cards: { ...catalog.cards, [WHOLE_TOKEN_ID]: unitDef(WHOLE_TOKEN_ID, String(WHOLE_TOKEN_NUMBER), true) },
 };
 
-// --- a hand-built payload, with its own copy of the checksum -------------------------------------
+// Hand-built payload with its own checksum copy.
 
 function fnv1a16(bytes: readonly number[]): number {
   let hash = 0x811c9dc5;
@@ -131,7 +128,6 @@ const deckArb = fc.shuffledSubarray([...DECKABLE], { minLength: 0, maxLength: DE
 
 const BASE64URL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".split("");
 
-// ---------------------------------------------------------------------------------------------
 
 describe("the round trip", () => {
   it("R255 decode(encode(name, cards)) is the same name and the same cards, in order, for any legal deck", () => {
@@ -480,10 +476,7 @@ describe("R1410 the Meditative set's numbers: 3000 + n (the release, issue #553)
     },
   };
 
-  /**
-   * A version 2 code of Core, Classic and Classic+ cards, exactly as this client wrote it before
-   * the Meditative set had an offset (encoded with the offsets of patch v0.2.0 and pinned here).
-   */
+  // Version 2 code before Meditative offset (patch v0.2.0).
   const MINTED_BEFORE = "JKO2.EkJlZm9yZSB0aGUgcmVsZWFzZQUrkwieEAHpB0eO";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, fixtureCardId(1), CLASSIC_1];
 
@@ -571,10 +564,7 @@ describe("R1410 the Meditative+ set's numbers: 4000 + n (the release, v0.4.0, is
     cards: Object.fromEntries(Object.entries(fiveSets.cards).filter(([, def]) => def.set !== "Meditative+")),
   };
 
-  /**
-   * A version 2 code of Core, Classic, Classic+ and Meditative cards, exactly as this client wrote it
-   * before the Meditative+ set had an offset (encoded with the offsets of v0.3.5 and pinned here).
-   */
+  // Version 2 code before Meditative+ offset (v0.3.5).
   const MINTED_BEFORE = "JKO2.EkJlZm9yZSBNZWRpdGF0aXZlKwYrkwieELkXnhgBIfE";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, MEDITATIVE_1, MEDITATIVE_102, fixtureCardId(1)];
 
@@ -674,10 +664,7 @@ describe("R1410 the Stinkyscape set's numbers: 5000 + n (the release, issue #188
     cards: Object.fromEntries(Object.entries(sixSets.cards).filter(([, def]) => def.set !== "Stinkyscape")),
   };
 
-  /**
-   * A version 2 code of Core, Classic, Classic+, Meditative and Meditative+ cards, exactly as this
-   * client wrote it before the Stinkyscape set had an offset (encoded before the release and pinned here).
-   */
+  // Version 2 code before Stinkyscape offset.
   const MINTED_BEFORE = "JKO2.EkJlZm9yZSBTdGlua3lzY2FwZQYrkwieEJ4Yuh8BTLs";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, MEDITATIVE_102, MEDITATIVE_PLUS_26, fixtureCardId(1)];
 
@@ -776,10 +763,7 @@ describe("R1410 the Training Grounds set's numbers: 6000 + n (the release, issue
     cards: Object.fromEntries(Object.entries(sevenSets.cards).filter(([, def]) => def.set !== "Training Grounds")),
   };
 
-  /**
-   * A version 2 code of Core, Meditative+ and Stinkyscape cards, exactly as this client wrote it
-   * before the Training Grounds set had an offset (encoded before the release and pinned here).
-   */
+  // Version 2 code before Training Grounds offset.
   const MINTED_BEFORE = "JKO2.F0JlZm9yZSBUcmFpbmluZyBHcm91bmRzBCu6H7coAc7u";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), MEDITATIVE_PLUS_26, STINKYSCAPE_175, fixtureCardId(1)];
 

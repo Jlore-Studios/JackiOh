@@ -1,25 +1,6 @@
-// Trio codes (SPEC §9.4, R339): a trio and its three decks as one line of text, the way a deck code
-// (R255, `deckCode.ts`) carries one deck.
-//
-// Client-side like a deck code: the code is read here and nowhere else, and an import sends the
-// server the decks and the trio (`POST /api/trios/import`, R341), which checks them like any save.
-// Each deck is resolved as a deck code's is (`resolveDeck`): what no deck could hold is dropped and
-// listed, and cards the player does not own are kept and flagged.
-//
-// THE FORMAT. `JKT<version>.` then base64url (no padding) of:
-//
-//   [trio name length: 1 byte] [trio name: UTF-8] [slots: 1 byte] [deck body]… [checksum: 2 bytes]
-//
-// - slots byte: bit n is set when slot n holds a deck. A trio is a draft and may have an empty slot
-//   (R252), which stays empty on import. Any other bit is a damaged code.
-// - deck body: a deck code's payload without its checksum (`writeDeckBody`), one per set bit.
-// - name: stored form, cut to `DECK_NAME_MAX_LENGTH`, "Imported trio" when T1 would refuse it.
-// - checksum: FNV-1a folded to 16 bits over everything, as a deck code's.
-// - version `TRIO_CODE_VERSION` (2: each deck's numbers carry their set, B2.2); another is refused
-//   with a sentence, except `TRIO_CODE_CORE_ONLY_VERSION` (1), whose decks are read as Core (R339).
-//
-// Decoding never throws: oversize input is refused unread, a deck code is sent to the deck import,
-// and every other failure is a sentence for the player (`TRIO_CODE_MESSAGES`).
+// Trio codes (SPEC §9.4, R339; deckCode.ts R255): trio and three decks as one line.
+// Imports send POST /api/trios/import (R341); partial slots supported (R252); name normalized for T1.
+// Format: `JKT<version>.` base64url payload with FNV-1a checksum. Version 2 carries sets (B2.2); v1 reads Core (R339).
 
 import { checkTrioDraft, normalizeName, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 

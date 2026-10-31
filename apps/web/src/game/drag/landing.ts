@@ -1,13 +1,5 @@
-// The card a drop has just played, while the board catches up (docs/polish/7-mobile-ux.md S9).
-//
-// A drop sends its `play` at once, but the board keeps showing the view from before it until the
-// animation runner has played the play's events (BUILD M5-T4, Game.tsx), about three quarters of a
-// second; the card going back into the fan meanwhile read as a refused play. So DragLayer names the
-// card here, draws it where it was dropped, and clears the name once the board shows a newer view.
-// Hand.tsx reads the name to take that card out of the fan meanwhile.
-//
-// Module state, because DragLayer and Hand are siblings under Game and neither owns the other. It
-// is view state only: nothing here is sent or decides a rule.
+// Tracks dropped card in flight until animation catches up (docs/polish/7-mobile-ux.md S9, BUILD M5-T4).
+// DragLayer sets dropped instanceId so Hand.tsx removes it from the fan before arrival of the new view.
 
 import { useSyncExternalStore } from "react";
 

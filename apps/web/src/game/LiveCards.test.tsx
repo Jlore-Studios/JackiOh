@@ -61,8 +61,7 @@ function text(root: Element, selector: string): string {
   return root.querySelector(selector)?.textContent ?? "";
 }
 
-/* ------------------------------------------------------------------------------ match-made cards */
-
+// match-made cards
 describe("R243 a fused card says what it is: name, text, tags, keywords and stats, never a blank face", () => {
   // #99 Craft a Card's result in hand, and #85's fusion of a played unit onto one on the field.
   const crafted = fusedDef([def("core-011"), def("core-089")], 1);
@@ -168,8 +167,7 @@ describe("R243 a fused card says what it is: name, text, tags, keywords and stat
   });
 });
 
-/* ------------------------------------------------------------------------- stats that move in hand */
-
+// stats that move in hand
 describe("R243 a hand card shows the stats it has now", () => {
   it("a Corpse Eater that has fed in hand shows its grown attack and health, toned as a buff (#89)", () => {
     renderBoard(
@@ -190,8 +188,7 @@ describe("R243 a hand card shows the stats it has now", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------- #98 Heroic Power */
-
+// #98 Heroic Power
 describe("R752 a Heroic Power in play prints the one power it rolled", () => {
   it("in hand: only the rolled power, its name and its X, and the card's (0) on the gem", () => {
     renderBoard(
@@ -230,8 +227,7 @@ describe("R752 a Heroic Power in play prints the one power it rolled", () => {
   });
 });
 
-/* ---------------------------------------------------------------------------- #95 Call to Chaos */
-
+// #95 Call to Chaos
 describe("Call to Chaos reads ??? in play and its real text in the collection", () => {
   it("in hand its rules box is ???, and its preview holds no printed text beside it", () => {
     vi.useFakeTimers();
@@ -255,8 +251,7 @@ describe("Call to Chaos reads ??? in play and its real text in the collection", 
   });
 });
 
-/* --------------------------------------------------------------------------------------- Vanilla */
-
+// Vanilla
 describe("R243 a Vanilla unit is marked, and its preview says its text is gone", () => {
   it("the minion wears the Vanilla stamp and its preview prints the lost text only as printed", () => {
     vi.useFakeTimers();

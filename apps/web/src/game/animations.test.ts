@@ -32,9 +32,7 @@ afterEach(() => {
   setReducedMotion(false);
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The BUILD M5-T4 duration column, copied literally. A drift in either direction fails.
- * ------------------------------------------------------------------------------------------- */
+// The BUILD M5-T4 duration column.
 
 const BUILD_DURATIONS: Record<GameEventType, number> = {
   cardPlayed: 400,
@@ -149,9 +147,7 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   boardReplaced: 500,
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * One event of every type, so the table can be exercised end to end.
- * ------------------------------------------------------------------------------------------- */
+// One event of every type for testing.
 
 const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   cardPlayed: { type: "cardPlayed", player: "p1", instanceId: "c1", defId: "core-002", costPaid: 1 },
@@ -293,11 +289,7 @@ function longStream(rounds: number): GameEvent[] {
   return out;
 }
 
-/**
- * The stylesheet as text. The BUILD table's Animation column is only honored if the keyframes
- * exist, so the test reads the file rather than trusting the table. Vitest stubs CSS imports
- * (`test.css` defaults to false, and `?raw` comes back empty), hence `node:fs`.
- */
+/** Reads stylesheet from disk to verify keyframes exist. */
 const animationsCss: string = (() => {
   for (const candidate of ["src/game/animations.css", "apps/web/src/game/animations.css"]) {
     const path = resolve(process.cwd(), candidate);
@@ -334,9 +326,7 @@ function fakeClock() {
   };
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * The table is total
- * ------------------------------------------------------------------------------------------- */
+// The table is total
 
 describe("ANIMATIONS covers every event type", () => {
   it("has exactly one row per GameEvent[\"type\"]", () => {
@@ -392,9 +382,7 @@ describe("ANIMATIONS covers every event type", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Durations
- * ------------------------------------------------------------------------------------------- */
+// Durations
 
 describe("durations", () => {
   it("matches the BUILD M5-T4 table exactly", () => {
@@ -431,9 +419,7 @@ describe("durations", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Payload-dependent targets
- * ------------------------------------------------------------------------------------------- */
+// Payload-dependent targets
 
 function handIds(view: PlayerView): string[] {
   const hand = view.you.hand;
@@ -708,17 +694,9 @@ describe("target resolution", () => {
     expect(locateInstance(baseView(), HAND_CARD)).toBeNull();
   });
 
-  // NOT THE ASSERTION THAT MATTERS. This only proves a row returns a string; it cannot prove the
-  // string names an element, because nothing here renders. A row that points at a testid no
-  // component draws passed this test for the whole of M5 — `modifierChanged` did, and #77
-  // Professor Curvature and #78 /fullsend were invisible to the player because of it. The real
-  // assertion lives in `animation-targets.test.tsx`, which renders the client and checks the
-  // element is in the document; this one is kept only for the rows whose samples name cards the
-  // fixture does not hold, and it is strengthened to say WHICH rows may legitimately go dark.
+  // Proves row returns a string. Full DOM render assertion is in animation-targets.test.tsx (#77, #78).
   it("resolves a target for every event type without throwing, and only the documented rows go dark", () => {
-    // Rows that resolve to nothing on a seat that shows nothing (§10.6), plus the rows whose
-    // `SAMPLES` entry names a card this fixture does not render at all — those are a property of
-    // the sample, not of the table, which is exactly why this test cannot stand in for the real one.
+    // Empty seat rows (§10.6) or samples not rendered in fixture may resolve to empty.
     const mayBeNull = new Set<GameEventType>([
       "promptOpened",
       "promptAnswered",
@@ -745,9 +723,7 @@ describe("target resolution", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Planning and the cardPlayed + summoned collapse
- * ------------------------------------------------------------------------------------------- */
+// Planning and cardPlayed + summoned collapse
 
 describe("planEntries", () => {
   const view: PlayerView = fullBoardView();
@@ -816,9 +792,7 @@ describe("planEntries", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The runner
- * ------------------------------------------------------------------------------------------- */
+// The runner
 
 describe("createAnimationQueue", () => {
   const view: PlayerView = fullBoardView();
@@ -1116,15 +1090,7 @@ describe("createAnimationQueue", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * newEventsSince: the part of a view's window the runner has not been given
- * ------------------------------------------------------------------------------------------- *
- *
- * R97 redacts the whole window again for every view, judging each card by where it sits now, so an
- * event two successive views share can read differently in each. The diff compared them byte for
- * byte, found no overlap, and handed the runner the whole window: every animation already played
- * ran a second time before the new ones (the "animations play twice" report).
- */
+// newEventsSince: parts of view window not yet processed (R97 redaction).
 
 describe("newEventsSince", () => {
   const turn: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };

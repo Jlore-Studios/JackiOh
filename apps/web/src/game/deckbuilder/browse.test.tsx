@@ -81,9 +81,7 @@ import {
   addPoolId,
 } from "./testids.ts";
 
-// ---------------------------------------------------------------------------------------------
 // The inline catalog (the same shape as filters.test.ts's, restated so each file stands alone)
-// ---------------------------------------------------------------------------------------------
 
 type DefInput = {
   id: string;
@@ -206,9 +204,7 @@ function card(id: string): CardDef {
 }
 
 
-// ---------------------------------------------------------------------------------------------
 // Harness: one deck open in the workshop, and optionally other saved decks to compare with
-// ---------------------------------------------------------------------------------------------
 
 const OPEN = "deck-open";
 const OPEN_NAME = "Aggro";
@@ -329,9 +325,7 @@ afterEach(() => {
   resetLocaleForTests();
 });
 
-// ---------------------------------------------------------------------------------------------
 // B30: the pool
-// ---------------------------------------------------------------------------------------------
 
 describe("the pool grid (B30)", () => {
   it("B30 the pool is a grid of div.db-item, each with the card-pool button holding the base CardFace and a sibling db-add button", () => {
@@ -439,9 +433,7 @@ describe("the pool grid (B30)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B31: filters
-// ---------------------------------------------------------------------------------------------
 
 describe("filtering (B31)", () => {
   it("B31 every set, cost, type, tag and rarity chip is a toggle button with aria-pressed, inside db-filters", () => {
@@ -580,9 +572,7 @@ describe("filtering (B31)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B32: search
-// ---------------------------------------------------------------------------------------------
 
 describe("searching (B32)", () => {
   it("B32 every term must occur: 'field trap' finds the Field Trap only", () => {
@@ -647,9 +637,7 @@ describe("searching (B32)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B33: owned
-// ---------------------------------------------------------------------------------------------
 
 describe("the owned filter (B33)", () => {
   it("B33 is checked by default and limits the pool to owned cards", () => {
@@ -716,9 +704,7 @@ describe("the owned filter (B33)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B34: sorting
-// ---------------------------------------------------------------------------------------------
 
 describe("sorting (B34)", () => {
   it("B34 the default is cost ascending", () => {
@@ -853,9 +839,7 @@ describe("sorting by win rate (B34)", () => {
 });
 
 
-// ---------------------------------------------------------------------------------------------
 // B35: the sidebar
-// ---------------------------------------------------------------------------------------------
 
 describe("the deck sidebar (B35)", () => {
   it("B35 db-sidebar holds the deck's count against DECK_SIZE and its drop region", () => {
@@ -951,9 +935,7 @@ describe("the deck sidebar (B35)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B36: the mana curve
-// ---------------------------------------------------------------------------------------------
 
 describe("the mana curve (B36)", () => {
   const DECK = ["x-05", "x-08", "x-01", "x-07", "x-02", "x-04", "x-06"];
@@ -989,9 +971,7 @@ describe("the mana curve (B36)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B37: where a card already is
-// ---------------------------------------------------------------------------------------------
 
 describe("held badges (B37)", () => {
   it("B37 a pool card the open deck holds shows .db-held and data-in-deck", () => {
@@ -1017,9 +997,7 @@ describe("held badges (B37)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B38: inspect in the builder
-// ---------------------------------------------------------------------------------------------
 
 describe("inspecting in the builder (B38)", () => {
   it("B38 a right-click on a pool card opens inspect-detail for it, prevents the menu and adds nothing", () => {
@@ -1195,9 +1173,7 @@ describe("inspecting in the builder (B38)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The status toast: what the last add or removal did, where a phone deep in the pool can see it
-// ---------------------------------------------------------------------------------------------
 
 describe("the deck status line", () => {
   it("B41 names each add and removal with the deck's count, is polite, and clears after DECK_STATUS_MS", () => {

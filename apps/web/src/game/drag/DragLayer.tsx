@@ -55,11 +55,7 @@ type Flight = {
 type Landed = { instanceId: string; card: CardView | null; at: Point; view: PlayerView };
 
 const BOARD = '[data-testid="board"]';
-/**
- * The longest a landed card waits for the board to catch up. A drop only ever sends an action the
- * engine listed, so the view always moves on; this only covers a refusal the client cannot see
- * coming (a networked match whose clock ran out as the card was dropped).
- */
+/** Maximum wait for a landed card before reverting on unpredicted refusal. */
 const LANDING_TIMEOUT_MS = 4_000;
 const RETICLE_MIN_PX = 44;
 /** A hero ring hugs its health gem to avoid covering the nearby name and pile count. */
@@ -165,9 +161,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     /** jsdom lacks `elementsFromPoint`, so tests stub it on `document`. */
     function hits(x: number, y: number): readonly Element[] {
       try {
-        // R2095000: a replay board (the Duos teammate's, beside this one) is no drop target of this
-        // board's drag: its test ids repeat this board's own, and a pass dropped on it is the Duos
-        // board's to send.
+        // R2095000: replay/teammate Duos board is not a drop target for this board's drag.
         return document.elementsFromPoint(x, y).filter((element) => element.closest('[data-replay="true"]') === null);
       } catch {
         // jsdom has no elementsFromPoint: nothing is under the pointer.
@@ -195,10 +189,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       setDrawn(null);
     }
 
-    /**
-     * Back to idle with nothing sent, or (R658) to the build a drag lifted again from its picks. A
-     * press that never became a drag is simply forgotten.
-     */
+    /** Resets to idle or (R658) restores build lifted from picks; forgotten if never dragged. */
     function cancel(): void {
       if (flight === null) {
         press = null;

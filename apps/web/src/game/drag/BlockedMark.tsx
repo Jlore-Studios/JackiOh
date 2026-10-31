@@ -1,12 +1,5 @@
-// The "blocked" mark (#37): a card dropped on a Locked zone it could not go into is refused with a
-// red X where it landed, instead of silently snapping back to the hand.
-//
-// Presentation only (CLAUDE.md rule 7). DragLayer decides when a drop was onto a locked zone (it
-// reads the board's `data-locked`, which Zone.tsx writes off the view); this file draws the mark and
-// takes it down again. The mark never takes a hit, so `document.elementsFromPoint` sees through it.
-//
-// It holds for BLOCKED_MARK_MS whatever the motion setting, because that is how long a player needs
-// to read it. Reduced motion (`--anim-scale: 0`) only removes the shake, never the mark.
+// The "blocked" mark (#37): red X on drops into locked zones (CLAUDE.md rule 7).
+// Non-interactive overlay; holds for BLOCKED_MARK_MS regardless of motion settings (reduced motion removes shake only).
 
 import { useEffect, type ReactElement } from "react";
 

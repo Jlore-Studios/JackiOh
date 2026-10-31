@@ -1,10 +1,5 @@
-// The deck workshop's `data-testid` vocabulary, in one file (SPEC §9.4, R250–R256).
-//
-// BUILD M5-T1 fixes the board's testids and `e2e/support/testids.ts` mirrors them; this file is the
-// builder's half of that contract. One deck is open at a time, so its elements carry no number.
-//
-// `data-legal="false"` is not a new word: `e2e/support/testids.ts` exports it as `ILLEGAL` for the
-// board's M5-T2 highlighting, and a pool card the open deck will not take is the same statement.
+// The deck workshop's `data-testid` vocabulary (SPEC §9.4, R250–R256).
+// Builder half of the e2e/support/testids.ts contract.
 
 import type { CardType, Rarity, Tag } from "@jackioh/shared";
 import type { LoadoutRule } from "@jackioh/validator";
@@ -27,26 +22,15 @@ export const WORKSHOP_EMPTY = "workshop-empty";
 export const DECK_LIST = "deck-list";
 export const DECK_CAP = "deck-cap";
 
-/**
- * One saved deck in the list: `data-count` (its cards), `data-status` (`ready`, `complete`,
- * `incomplete`, `unowned` or `invalid`, the chip it wears), `data-practice-only="true"` when it names
- * a custom card (R915005), `data-unsynced="true"` while a save is pending, and `aria-current="true"`
- * when it is open.
- */
+/** Saved deck in list: count, status, practice-only (R915005), unsynced, aria-current. */
 export function deckRowId(deckId: string): string {
   return `deck-row-${deckId}`;
 }
 
-/**
- * R915005: "Practice only", on a deck row and in the open deck's verdict, wherever the validator's L7
- * says the deck names a custom card. One per row, so a test reads it within its row.
- */
+/** R915005: "Practice only" on deck row and verdict when custom card is present. */
 export const DECK_PRACTICE_ONLY = "deck-practice-only";
 
-/**
- * R2097000's badge, on a deck's row (beside its button, never inside it) and in its editor;
- * `data-deck`, `data-count`, `data-version`, `aria-expanded`.
- */
+/** R2097000 badge on deck row and editor. */
 export const DECK_PATCH_BADGE = "deck-patch-badge";
 
 /** R2097000's list of the cards the newest patch changed of a deck. */
@@ -86,10 +70,7 @@ export const DECK_DROP = "deck-drop";
 
 export const DECK_CARDS = "deck-cards";
 
-/**
- * One card in the open deck: a tile whose click takes it out. `data-conflict="true"` and
- * `data-conflict-with="<deck name>"` when a compared deck holds it too (shown, never removed).
- */
+/** Card tile in open deck; data-conflict when compared deck holds it. */
 export function deckCardId(cardId: string): string {
   return `deck-card-${cardId}`;
 }
@@ -110,11 +91,7 @@ export const DECK_CODE_OUTPUT = "deck-code-output";
 /** R2119000: deletes the deck at once, behind the undo toast (`undo/UndoToast.tsx`). */
 export const DECK_DELETE = "deck-delete";
 
-/**
- * #2096: Duplicate in the open deck's actions, and the reason it gives when off at the deck limit.
- * Each row in the list has its own, `deck-duplicate-<deckId>` (never `deck-row-…`, which the e2e
- * specs read as the rows).
- */
+/** #2096: Duplicate action and cap reason; per-row deck-duplicate-<deckId>. */
 export const DECK_DUPLICATE = "deck-duplicate";
 export const DECK_DUPLICATE_REASON = "deck-duplicate-reason";
 
@@ -122,30 +99,16 @@ export function deckDuplicateId(deckId: string): string {
   return `deck-duplicate-${deckId}`;
 }
 
-/**
- * #1991: "Practice with this deck", on a complete deck while the workshop is saved: it opens
- * `/practice?deck=saved:<n>` (`practiceDeckPath`), the deck picked and no game started.
- */
+/** #1991: Practice with complete saved deck. */
 export const DECK_TO_PRACTICE = "deck-to-practice";
 
-/**
- * "Compare with" (R251): a select whose options are `trio:<trioId>` (a trio this deck is in: its
- * other decks), `deck:<deckId>` (another deck, up to two at once) and `none`. Each compared deck is
- * then a chip, `deck-compare-<deckId>`, whose press stops comparing with it.
- */
+/** "Compare with" (R251): select trio/deck and chip removals. */
 export const DECK_COMPARE_SELECT = "deck-compare-select";
 
-/**
- * R1297000: the open deck's playmat, backdrop and card back live behind this top-bar button, so the
- * sidebar keeps the verdict and the pool's first row on the first screen (BUILD M5-T1).
- */
+/** R1297000: deck cosmetics button in top bar (BUILD M5-T1). */
 export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
 
-/**
- * R2100000: the open deck's History, a button in the editor's head after the name, and its panel:
- * one `deck-history-row` per kept version, newest first (`data-version`), each but the newest with
- * its Restore, `deck-history-restore-<versionId>`.
- */
+/** R2100000: open deck history button, panel, rows, and restore. */
 export const DECK_HISTORY_BUTTON = "deck-history-button";
 export const DECK_HISTORY_PANEL = "deck-history-panel";
 export const DECK_HISTORY_ROW = "deck-history-row";
@@ -169,11 +132,7 @@ export const DECK_VERDICT = "deck-verdict";
 /** The list every L1–L6 sentence is rendered into, in a deck's verdict and in a trio's. */
 export const LOADOUT_ERRORS = "loadout-errors";
 
-/**
- * One marker per failure, carrying the validator's sentence and nothing else. Several elements
- * may share a testid (the validator reports every failure), which is why each also carries
- * `data-rule` and, where the validator named them, `data-deck` and `data-card`.
- */
+/** One marker per validator failure; carries data-rule, data-deck, and data-card. */
 export function loadoutErrorId(rule: LoadoutRule): string {
   return `loadout-error-${rule}`;
 }
@@ -185,12 +144,7 @@ export const DECKBUILDER_ERROR = "deckbuilder-error";
 /** The decks read's Try again, beside `DECKBUILDER_ERROR` (#1485). */
 export const DECKBUILDER_RETRY = "deckbuilder-retry";
 
-/**
- * The MIME the pool puts a catalog id on when a drag starts, alongside a `text/plain` copy.
- * `e2e/support/testids.ts` `DECK_DRAG_MIME` is the same string. A drop reads both, and prefers the
- * id the component recorded on `dragstart`, because Cypress and jsdom synthesise drag events
- * without a `DataTransfer` at all.
- */
+/** MIME for pool catalog id on drag start; keeps parity with e2e/support/testids.ts. */
 export const DECK_DRAG_MIME = "application/x-jackioh-card";
 
 // The trio editor
@@ -216,10 +170,7 @@ export const TRIO_VERDICT = "trio-verdict";
 
 export const TRIO_COMPARE = "trio-compare";
 
-/**
- * Card `cardId` in slot `n`'s column (1-based): `data-conflict="true|false"`, and, for a card
- * another slot's deck holds too, `data-conflict-with="<deck name>"` (names joined with ", ").
- */
+/** Card in trio slot column with data-conflict status. */
 export function trioCardId(slot: number, cardId: string): string {
   return `trio-card-${String(slot)}-${cardId}`;
 }
@@ -239,14 +190,10 @@ export const DECK_IMPORT = "deck-import";
 
 export const DECK_IMPORT_INPUT = "deck-import-input";
 
-/**
- * The live read of the pasted code, `data-ok="true|false"`: the name, the count, what was left
- * out and which cards are not owned, or the reason the code cannot be read.
- */
+/** Live preview of pasted deck code. */
 export const DECK_IMPORT_PREVIEW = "deck-import-preview";
 
-/** "Import as new deck": off until the code reads, and at the deck cap (`deck-import-cap-reason`
- *  says why). */
+/** Import deck submit button. */
 export const DECK_IMPORT_SUBMIT = "deck-import-submit";
 export const DECK_IMPORT_CAP_REASON = "deck-import-cap-reason";
 export const DECK_IMPORT_CANCEL = "deck-import-cancel";
@@ -259,11 +206,7 @@ export const TRIO_IMPORT = "trio-import";
 
 export const TRIO_IMPORT_INPUT = "trio-import-input";
 
-/**
- * The live read of the pasted trio code, `data-ok="true|false"`: the trio's name, each slot's deck
- * (`trio-import-slot-<n>`), the cards the decks share (`trio-import-shared`), or the reason the
- * code cannot be read.
- */
+/** Live preview of pasted trio code. */
 export const TRIO_IMPORT_PREVIEW = "trio-import-preview";
 
 export function trioImportSlotId(slot: number): string {
@@ -272,22 +215,14 @@ export function trioImportSlotId(slot: number): string {
 
 export const TRIO_IMPORT_SHARED = "trio-import-shared";
 
-/**
- * "Import as new trio": off until the code reads, and while the caps leave too little room, with
- * `trio-import-cap-reason` saying exactly how many deck and trio slots it needs (R340;
- * `data-decks-short`, `data-trios-short`).
- */
+/** R340: Import trio submit button. */
 export const TRIO_IMPORT_SUBMIT = "trio-import-submit";
 export const TRIO_IMPORT_CAP_REASON = "trio-import-cap-reason";
 export const TRIO_IMPORT_CANCEL = "trio-import-cancel";
 
 export const TRIO_IMPORT_ERROR = "trio-import-error";
 
-// Browse: filters, sort, the pool grid and its inspect control (docs/polish/6-cards.md, Surface D).
-// `e2e/support/testids.ts` block A14 mirrors these name for name.
-//
-// No new name starts with `card-` or `hand-card-`: `cy.fieldCardByName` and `cy.handCardByName`
-// select on those prefixes, and a new id carrying one would hijack them.
+// Browse: filters, sort, pool grid and inspect control. Prefixes avoid hijacking e2e selectors.
 
 /** Lower-case, every run of characters outside `[a-z0-9]` becomes one "-", trimmed of "-". */
 export function slugOf(value: string): string {
@@ -340,9 +275,7 @@ export const DB_WINRATE_NOTICE = "db-winrate-notice";
 /** The notice's retry, shown after a failed fetch. */
 export const DB_WINRATE_RETRY = "db-winrate-retry";
 
-/** The card pool, and one entry per card in it: `card-pool-<id>` carries `data-legal`,
- *  `data-in-deck="true"` when the open deck holds it, and `data-unavailable="true"` with
- *  `data-held-by="<deck name>"` when a compared deck does (R251). */
+/** Card pool container and entries (R251). */
 export const CARD_POOL = "card-pool";
 
 export function poolCardId(cardId: string): string {

@@ -1,20 +1,5 @@
-// Deck editor: saved deck, card pool and actions (SPEC §9.4, R250–R255; docs/polish/6-cards.md, Surface D).
-//
-// Validator messages avoid a second source of truth (messages.test.ts).
-//
-// `addCard` rejects duplicates, full decks (D2, D4), and compared cards (R251); existing clashes stay visible.
-//
-// The store autosaves (R256); completing a deck saves immediately.
-//
-// R915005: the account's custom cards come in the catalog the route hands it (set `Custom`), behind a
-// "Custom" set chip beside the way to the creator; a deck that names one is "Practice only", in the
-// validator's own words (L7).
-//
-// #1991: a complete deck, while the workshop is saved, offers practice with it picked (`practicePath`,
-// worked out by DeckWorkshop).
-//
-// R2119000: Delete deck asks nothing. The workshop takes the deck off at once and holds its DELETE
-// behind an undo toast.
+// SPEC §9.4, R250, R255: deck editor component.
+// R251: compared card checks; R256: autosave; R915005: custom card chips; #1991: practice path; R2119000: deletion.
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
@@ -119,10 +104,7 @@ export type DeckEditorProps = {
   onDuplicate: () => void;
   onSaveNow: () => void;
   onBack: () => void;
-  /**
-   * R2100000: the deck's History popover (DeckHistory.tsx), in the head after the name: the top bar
-   * has no room left for another button on a phone's first screen (BUILD M5-T1).
-   */
+  /** R2100000: deck History popover after deck name. */
   history: ReactElement;
 };
 
@@ -182,8 +164,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
 
   const compared = useMemo(() => comparedDecks(compare, deck.id, decks, trios), [compare, deck.id, decks, trios]);
   const holders = useMemo(() => holdersOf(compared, limits.nameLength), [compared, limits.nameLength]);
-  // R2195000: the other of each Core card and snapshot pair the deck holds, unavailable as a compared
-  // deck's cards are; a compared deck's holder names it first.
+  // R2195000: snapshot pairs marked unavailable as compared deck cards.
   const poolHolders = useMemo(
     () => new Map([...pairHolders(deck.id, deck.cards, catalog), ...holders]),
     [deck.id, deck.cards, catalog, holders],
@@ -208,8 +189,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     () => deckVerdict(deck, catalog, collection, limits.nameLength),
     [deck, catalog, collection, limits.nameLength],
   );
-  // The verdict's first error naming each card, for that card's tile; one naming no card (L2) stays in
-  // the verdict box only. The tile shows the validator's words and checks nothing (CLAUDE.md rule 7).
+  // Tile displays validator verdict without local rules enforcement (CLAUDE.md rule 7).
   const cardIssues = useMemo(() => {
     const named = new Map<string, LoadoutError>();
     if (verdict.ok) return named;

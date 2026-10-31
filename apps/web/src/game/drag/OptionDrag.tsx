@@ -1,12 +1,6 @@
-// R658: a prompt's options are dragged as well as clicked (docs/polish/7-mobile-ux.md S9).
-//
-// A press on an open picker's option (`prompt-option-<key>`) that travels DRAG_THRESHOLD_PX lifts it:
-// a ghost with its name follows the pointer. Released outside the picker's panel the option is
-// clicked, so the drop does exactly what a click does; released over the panel, or canceled
-// (Escape, the context menu, a lost pointer), it does nothing. Nothing here reads a rule or an
-// option's meaning (CLAUDE.md rule 7): what the click does is Prompt.tsx's.
-//
-// The board's own drags are DragLayer.tsx's; the picker sits outside `[data-testid="board"]`.
+// R658: prompt options drag and drop (docs/polish/7-mobile-ux.md S9; CLAUDE.md rule 7).
+// Lifts option ghost past DRAG_THRESHOLD_PX; releasing outside modal panel clicks option, canceled drops do nothing.
+// Board drags belong to DragLayer.tsx; Prompt.tsx owns option clicks.
 
 import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 

@@ -1,42 +1,7 @@
-// A hand (BUILD M5-T1).
-//
-// `SideView.hand` is `CardView[] | { count: number }` and that union is the privacy boundary
-// (SPEC §10.8): the viewer's hand is full cards with `hand-card-<instanceId>` testids, the
-// opponent's hand is a number, so it renders exactly that many identical backs — no names, no
-// def ids, no instance ids, nothing to read and nothing to click. The narrowing is
-// `Array.isArray`, so there is no branch where a count could be rendered as cards.
-//
-// Polish task 7 (docs/polish/7-mobile-ux.md S6, S11, B26, B27): every card sits in a `.hand-slot`
-// carrying its index as `--i`, and `.hand-cards` carries the hand size as `--n`, so board.css can
-// lay the hand out as an overlapping fan without measuring anything. On the viewer's own hand a
-// tap lifts a card (`data-lifted="true"`) so it can be read, legal or not — the lift is a
-// capture-phase click, so it happens even when the card itself refuses the click. It is local
-// view state, not a game action: a second tap, a press anywhere outside this hand, or the card
-// leaving the hand lowers it. The selected hand card is always lifted. No card here is an HTML5
-// drag source any more; drag to play is pointer events in game/drag/DragLayer.tsx, and the card a
-// drop has just played is marked `data-landing` (drag/landing.ts), which board.css takes out of
-// the fan while the board catches up with the play.
-//
-// A pointer on the viewer's own hand card is reported upward (`onHover`, #991) so the board can ring
-// what its preview counts. It is view state, never an action.
-//
-// R504: an empty hand keeps its place. Either seat's hand with no cards holds one card-sized
-// outline (`hand-empty-<side>`, "Hand empty") and says `data-empty="true"`, so its row keeps the
-// height a card gives it on every layout and the board does not jump when the last card leaves.
-//
-// R434: the game's end reveals both hands. Once the view shows the opponent's hand as cards (a
-// finished game, `reveal.ts`), each back turns face up where it lay, one after another
-// (`data-revealed="true"`; board.css flips it, and under reduced motion it is simply face up). A
-// revealed card is read, never played: it has its own testid (`revealed-hand-card-<id>`), no click
-// and no drag, and a resting mouse or a long-press opens it as any face does.
-//
-// R1297000, R1834004: the opponent's backs wear their seat's card back (`seat`), and a card in a hand
-// its seat's loadout where the board carries one and the card is not the viewer's own (game/wearer.ts):
-// a revealed one, or the lower hand of a watched or replayed game.
-//
-// #2267: each of the viewer's own hand cards wears the hand hints that apply to it
-// (HandHints.tsx, the list in handHints.ts), read off the card and the view alone. The
-// opponent's backs and a revealed card (R434) wear none.
+// Hand presentation (BUILD M5-T1; SPEC §10.8 privacy boundary: own hand is cards, opponent is count/backs).
+// Fan layout and lifted cards: docs/polish/7-mobile-ux.md S6, S11, B26, B27; drag-to-play landing; #991 hover counted ring.
+// R504 empty hand placeholder maintains row height; R434 game end reveals opponent hand with `revealed-hand-card-<id>`.
+// Cosmetics (game/wearer.ts): R1297000, R1834004; #2267 hand hints (HandHints.tsx, omitted on opponent/revealed R434 cards).
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 

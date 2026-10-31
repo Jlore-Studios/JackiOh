@@ -1,24 +1,7 @@
-// The board's game-over state (BUILD M5-T4 `gameOver`: "overlay text Win / Loss / Draw").
-//
-// It used to be a small box printing `result.reason` as the engine spells it ("hero-death",
-// "concede") over an undimmed board, with no way on. Now the reason reads as a sentence from the
-// viewer's side of the table, and the overlay comes in two forms:
-//
-//  - `panel`: a dimmed board and a panel in the middle of the screen with the outcome, why, and the
-//    route's own ways on (`actions`: hotseat's Play again and Back, the match's Back to lobby),
-//    plus "View the board", which folds it to the chip;
-//  - `chip`: one line at the foot of the screen, over nothing that matters once the game is done,
-//    with "Result" to open the panel again. Practice asks for this form from the start, because
-//    its own result dialog (PracticeResult) is the panel there.
-//
-// Both wait for the effects layer's Victory / Defeat sequence (`revealMs`) instead of sitting under
-// its word, and neither is a rule (CLAUDE.md rule 7): it reads `PlayerView.result`, and the
-// opponent's hand once the view reveals it. `data-reason` keeps the engine's own reason for tests
-// and tools.
-//
-// R434: the game's end reveals both hands. When the view shows the opponent's hand (`reveal.ts`),
-// the panel lists it as "Their hand", every card a face that opens large, and the chip offers
-// "Their hand" as a button that opens the same cards in the list dialog (TheirHand.tsx).
+// Game-over state overlay (BUILD M5-T4 gameOver; CLAUDE.md rule 7).
+// Forms: `panel` (modal outcome dialog with navigation actions) and `chip` (minimized footer status).
+// Waits for effects Victory/Defeat sequence (`revealMs`).
+// R434: reveals opponent hand on game end with interactive card list (TheirHand.tsx).
 
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 

@@ -1,24 +1,6 @@
-// The runner's diff of two views (`newEventsSince`) against the real engine's redaction.
-//
-// Game hands the runner only the events a new view's window adds to the last one's (SPEC §10.8's
-// window slides over the whole match). R97 redacts that window afresh for every view, judging each
-// card by where it sits now, so an event both windows carry can read differently in each: the
-// opponent's `drawn` names the card once they play it, a spell back in its owner's hand hides its
-// `cardPlayed` from the other seat again. The diff used to compare the two copies byte for byte,
-// found no overlap, and handed the runner the whole window, so every animation already played ran
-// again before the new ones. Measured over real games before the fix: one seat-view in eight, nearly
-// all of them the seat watching the other player act, which is every view practice and online play
-// show during the opponent's turn.
-//
-// The games are real (`audio/test/realGame.ts`, through `engine.real.ts` as the client reaches the
-// engine), the policy is a seeded random pick over `legalActions`, and every action is checked on
-// both seats: the runner must be handed exactly the events that action produced, as the very
-// objects the new view carries, and nothing it has already been given.
-//
-// R318's sweep does the same over games built to reach §2.4's three overflows, which the dev decks
-// rarely do: a seat with a short deck fatigues, a seat with extra draws fills its hand and burns, and
-// a seat whose deck is R80's cap plays #33 Unstable Clone Machine until its library turns copies
-// away. Each of `fatigue`, `burned` and `libraryOverflow` must reach both seats' runners, once each.
+// Runner event diffing (`newEventsSince`) against engine redaction (SPEC §10.8, R97).
+// Validates over real random-play games that only newly added events enqueue without re-triggering previous animations.
+// R318: tests §2.4 overflows (fatigue, burned, libraryOverflow capped at R80 via #33 Unstable Clone Machine).
 
 import { describe, expect, it } from "vitest";
 

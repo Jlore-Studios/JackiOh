@@ -1,15 +1,5 @@
-// The Marketplace (R1853000–R1853003, R2250002, SPEC §10.10): Stinkyscape's shop, open for the rest of
-// the game once either player gains a Resource or Credits.
-//
-// A toggle opens a panel that draws `view.marketplace` and `legal` alone: the viewer's Credits, the
-// offers rolled for them at the start of their turn (R2250002), each on the face it is sold on with its
-// price and the copies the viewer may still buy, and each card in their hand that sells from there
-// (R1861000) with its quote. "Buy" is
-// live exactly when `legal` lists that lot's `marketBuy`, and a sale exactly when `legal` lists its
-// `marketSell`; each sends the listed body. Otherwise the button is greyed, a lot's tooltip the
-// engine's reason (`reason`), and sends nothing. Every number shown is the view's: nothing here
-// prices, filters or refuses (CLAUDE.md rule 7). The view carries nothing while the Marketplace is
-// closed, and then nothing is drawn.
+// Marketplace (R1853000, R1853003, R2250002, R1861000, SPEC §10.10, CLAUDE.md rule 7):
+// Shop panel rendering marketplace offers and hand sell quotes from view and legal actions.
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -36,12 +26,7 @@ function readerName(defId: string, english: string, def: CardDef | undefined): s
   return drawnInChinese(false) ? chineseName(defId, english, def) : english;
 }
 
-/**
- * One lot: the card as it will arrive (on the face it is sold on), its name, its price and the copies
- * left, and "Buy". Like the night market's lot (MarketPrompt.tsx), the face opens the hover preview
- * and, on a phone, the long-press sheet, so a lot can be read before it is bought; "Buy" is its own
- * button, so a greyed one never stops the face from being read.
- */
+/** One lot: card face preview, price, remaining copies, and Buy action. */
 function Offer(props: { offer: MarketOfferView; listed: MarketBuy | undefined; onAction: (action: ActionBody) => void }) {
   useLocale();
   const { offer, listed } = props;

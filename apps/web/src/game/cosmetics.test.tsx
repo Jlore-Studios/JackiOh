@@ -1,18 +1,6 @@
-// R1295000: on the board, only the viewer's own cards wear the device's card cosmetics — the hand,
-// the units and face-up backrow cards it owns, a unit the opponent has taken included — and only on
-// a board that wears them (`wearCosmetics`). The opponent's cards, and every card on a board that
-// wears none, draw the defaults whatever the device picked. R1953001: what a card wears is its own
-// picks, never the account's synced foil, finish and border, which every test here holds non-default.
-//
-// R1297000: the same holds for the deck slots: the playmat under the viewer's half of the field, the
-// backdrop behind it, and the back of the viewer's face-down cards and deck pile. A saved deck's
-// picks beat the account's; the opponent's side and a board that wears none draw as they always did.
-//
-// R1834004: an online board carries both seats' frozen loadouts (R1834002), and every seat whose cards
-// do not wear the device's picks wears its own: its half (playmat, backdrop, card back) and its cards,
-// by owner, each its card's own picks over its kinds' defaults (R1953001: never the seat's foil, finish
-// and border), under the same rarity rules. The viewer's "Show opponents' cosmetics" off leaves only
-// the seat the board is seen from dressed.
+// R1295000: viewer's cards wear device cosmetics on boards with `wearCosmetics`; R1953001 card picks override account defaults.
+// R1297000: deck cosmetics (playmat, backdrop, card backs) applied to viewer's half.
+// R1834004, R1834002: online boards apply frozen loadouts to opponents (R1953001); disabled via "Show opponents' cosmetics" setting.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";

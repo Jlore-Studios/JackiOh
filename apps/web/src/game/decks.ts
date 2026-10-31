@@ -1,28 +1,8 @@
-// Dev decks for the hotseat route (BUILD M5-T3): `?a=<deckId>&b=<deckId>` → a list of card ids.
-//
-// No card id is written down here. The definitions are `crates/cards`' (compiled into the
-// WebAssembly module), and spelling "core-001" here would be a guess at SPEC §8 that goes stale the
-// day the catalog changes. A `DeckSource` is therefore a QUERY over whatever catalog the engine hands
-// the client (`EnginePort.catalog`), and every deck in the registry is derived: whatever the catalog
-// holds, these decks follow it, with no edit here.
-//
-// This module decides nothing about legality. `validate_deck` in `crates/engine/src/state.rs`
-// is the authority and `createGame` throws when a deck breaks §2.6 — the checks below exist only
-// so the route can print a readable sentence instead of showing a thrown stack, which is the same
-// trade `e2e/support/commands.ts` makes in `asDeck`.
+// Dev decks for hotseat (BUILD §2, SPEC §8). Query over catalog; legality authority is engine (§2.6).
 
 import { setShips, type CardCost, type CardDef, type CardDefs, type SetName } from "@jackioh/shared";
 
-/**
- * SPEC §2.6 L2 / L3. Re-exported from the engine's own `config` entry point rather than restated:
- * BUILD §2 keeps every rules constant in the engine's config (`crates/engine/src/config.rs`) and
- * says nothing else spells the numbers. These used to be literals because the engine did not compile
- * and its barrel would have dragged in modules the client excludes — both now resolved, the second by
- * `@jackioh/engine/config`, the constants generated from that config (`src/wire/engineConfig.ts`),
- * which reaches them without loading the engine.
- */
-// Imported and then re-exported, not `export … from`: this module uses both constants itself
-// (`resolveDeck`, the dev decks), and a bare re-export creates no local binding.
+/** SPEC §2.6 (BUILD §2): re-exported from engine config constants. */
 import { DECK_SIZE, MAX_COPIES } from "@jackioh/engine/config";
 
 export { DECK_SIZE, MAX_COPIES };
@@ -77,11 +57,7 @@ function candidates(catalog: CardDefs): CardDef[] {
     .sort(byIndex);
 }
 
-/**
- * The dev decks. Both satisfy `DECK_SIZE` and `MAX_COPIES` by construction: they take `DECK_SIZE`
- * distinct definitions off a sorted list, so no id can repeat. Their ids (`first20`, `cheap20`) are
- * older than #1705's `DECK_SIZE` and kept, since every hotseat link and e2e spec names them.
- */
+/** Dev decks satisfying DECK_SIZE and MAX_COPIES; ids kept for #1705 compatibility. */
 export const DEV_DECKS: readonly DeckSource[] = [
   {
     id: "first20",
@@ -111,10 +87,7 @@ export function deckSource(id: string): DeckSource | undefined {
   return DEV_DECKS.find((source) => source.id === id);
 }
 
-/**
- * A readable message for a list that `validateDeck` would refuse, or `null` when it would not.
- * `size` is the seat's deck size: §2.6's DECK_SIZE, or a handicap's `deckSize` (R184).
- */
+/** Formats refusal message for invalid deck size (§2.6, R184), duplicate, missing or unreleased card (R1420). */
 function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: number, preview: readonly SetName[]): string | null {
   if (deck.length !== size) {
     return size === DECK_SIZE
@@ -136,24 +109,7 @@ function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: n
   return null;
 }
 
-/**
- * Resolve one `a=` / `b=` deck id against the catalog.
- *
- * `overrides` is the E2E injection (`window.__jackiohE2E.decks`, ASSUMPTION A1 in
- * `e2e/support/types.ts`): a spec that needs a specific scenario deck hands the exact card ids
- * over and they take precedence over the registry. They are external input, so they are checked
- * against the catalog like anything else.
- *
- * `size` is how many cards the seat's deck must hold: DECK_SIZE, unless the E2E injection gave the
- * seat a handicap, whose `deckSize` rules instead (R184). The dev decks are always DECK_SIZE long, so
- * a handicapped seat plays an injected deck of its own size or none.
- *
- * `preview` is the sets the E2E injection had the engine preview (R1420): an injected deck may hold
- * their cards. The dev decks never do; they deal from what ships.
- *
- * Never throws and never invents a card id: an unknown deck id, an empty catalog or a catalog too
- * small to fill a deck all come back as `{ error }` for the route to print.
- */
+/** Resolves deck id against catalog; supports E2E overrides, handicap deck size (R184), and preview sets (R1420). */
 export function resolveDeck(
   id: string,
   catalog: CardDefs,
@@ -195,11 +151,7 @@ export function resolveDeck(
   return bad === null ? { deck } : { error: bad };
 }
 
-/**
- * Both seats at once: `[p1, p2]`, or the first error either side produced. `sizes` is each seat's
- * deck size in the same order (see `resolveDeck`), DECK_SIZE for both when omitted, and `preview`
- * the sets an injected deck may draw from beyond what ships (R1420).
- */
+/** Resolves both seats at once: [p1, p2] or first error; supports custom sizes and preview sets (R1420). */
 export function resolveDecks(
   a: string,
   b: string,

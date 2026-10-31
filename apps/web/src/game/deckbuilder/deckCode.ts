@@ -325,10 +325,7 @@ function parsePayload(bytes: Uint8Array): Parsed {
   return { ok: true, body };
 }
 
-/**
- * A name as a code carried it, or `fallback` when its bytes are not UTF-8 or `valid` refuses it
- * (D1 for a deck, T1 for a trio).
- */
+/** Decodes name from bytes with fallback if invalid or non-UTF-8. */
 export function decodeName(
   nameBytes: Uint8Array,
   fallback: string,
@@ -347,11 +344,7 @@ export function decodeName(
 /** What a deck's body becomes: its name, the cards kept, what was dropped and what is unowned. */
 export type ResolvedDeck = Omit<Extract<DecodedDeck, { ok: true }>, "ok">;
 
-/**
- * R255: a deck body against this catalog and collection — numbers the catalog does not know,
- * Tokens, copies past `MAX_COPIES` and cards past `DECK_SIZE` dropped and listed; cards the player
- * does not own kept and flagged. `version` is the code's: a version 1 code's numbers are Core's.
- */
+/** R255: resolves deck body against catalog and collection, dropping excess/unknown/tokens. */
 export function resolveDeck(
   body: DeckBody,
   catalog: CatalogSnapshot,
@@ -412,13 +405,7 @@ export type HeaderMessages = {
   damaged: string;
 };
 
-/**
- * The text of a pasted code, read as far as its payload's bytes: the length cap first, unread
- * (`maxInputLength`), then whitespace, the prefix and version, and base64url. `other` is the prefix
- * of the other kind of code, answered with `otherMessage` so a trio code pasted as a deck (or the
- * reverse) is sent where it belongs. `alsoReads` is the older version still read (R255, R339),
- * and the version read comes back with the bytes.
- */
+/** Validates header, prefix, version (R255, R339), and extracts base64url payload bytes. */
 export function readCodeText(
   text: unknown,
   format: {

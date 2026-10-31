@@ -1,26 +1,6 @@
-// BUILD M5-T4, the assertion that matters: **every row of the animation table names an element the
-// client actually renders.**
-//
-// `animations.test.ts` already pins the table's durations, its keyframes and the testid each row
-// resolves to. What it could not do is check that the testid is a real element, because it renders
-// nothing — its "resolves a target for every event type without throwing" only ever proved that a
-// *string* came back. A row can therefore point at a name no component has ever rendered and stay
-// green forever, which is exactly what `modifierChanged` did: it animated `modifiers-<side>`, no
-// component rendered it, `SideView` carried no modifier list at all, and so a player could not see
-// that #77 Professor Curvature or #78 /fullsend was active on them. R169 put the list in the view
-// and `Hero.tsx` renders it; this file is the test that would have caught the gap.
-//
-// The proof is the whole client (`Game`, so the shell's banner, toast, overlay and modal are in the
-// tree alongside the board) rendered from one `PlayerView`, and then, for every member of
-// `GameEvent["type"]`, one sample event built against THAT view: the target must resolve, and the
-// element must be in the document.
-//
-// Three rows resolve to `null` by design, and the test knows the difference rather than excusing
-// it: `promptOpened` and `promptAnswered` on the seat that is not holding the prompt, and
-// `drawOffered` on the seat that made the offer. Each shows nothing at all — §10.6 gives the other
-// player no modal, and the offerer no toast — so `null` is the right answer and the table says so.
-// Every other row must produce an element on every sample, and the null-able set is asserted to be
-// exactly those three, so a new row cannot join them by accident.
+// BUILD M5-T4: verifies that every animation table row resolves to an element rendered in the client.
+// Tests whole Game client against sample events; catches unrendered testids like modifierChanged (#77, #78, R169).
+// Asserts that only promptOpened, promptAnswered and drawOffered resolve to null (§10.6).
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerView } from "@jackioh/shared";
 import { cleanup, render, screen } from "@testing-library/react";

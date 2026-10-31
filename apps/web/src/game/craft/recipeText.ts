@@ -1,10 +1,8 @@
 import type { CardType, CraftEffect, CraftHat, CraftHatKind, CraftKeyword, CraftRecipe, CraftVerb, Keyword } from "../../wire/index.ts";
 import { CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES, CRAFT_VERB_PRICES } from "../../wire/engineConfig.ts";
 
-/** R1563010: Meditative+ #26 Scratch Pad's code, the text a player types for a recipe. It is a
- * spelling of the recipe and nothing more: `parseRecipeText` reads the text into the recipe the
- * answer carries and the engine judges, as it judges a recipe built of blocks (CLAUDE.md rule 7);
- * `recipeText` writes a recipe back out, so the empty canvas opens as code.
+/** R1563010: Meditative+ #26 Scratch Pad recipe code. `parseRecipeText` parses text into
+ * recipes judged by the engine (CLAUDE.md rule 7); `recipeText` formats recipes back as code.
  *
  * ```text
  * card Unit "Pure Closure" {     // the type (Unit, Spell, FieldSpell, Trap) and the two name words
@@ -18,10 +16,7 @@ import { CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES, CRAFT_VERB_PRICES } from "../..
  * }
  * ```
  *
- * `//` starts a comment; `;` and line breaks are optional; names are the blocks' own, a name of two
- * words written as one (`FieldSpell`, `DivineShield`, `FirstStrike`). The cost is
- * the prompt's, chosen before. A misspelt or misplaced word is a syntax error with its line, as a
- * compiler gives one; whether the card may be crafted is the engine's verdict alone. */
+ * `//` starts a comment; `;` and line breaks optional; syntax errors include line numbers. */
 
 /** The text's word for each card type: the type's name, one word. */
 const TYPE_WORDS: Readonly<Record<string, CardType>> = {

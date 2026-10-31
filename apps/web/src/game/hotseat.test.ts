@@ -1,11 +1,4 @@
-// BUILD M5-T3, tested against a scripted `EnginePort` and, at the end, the real one for the questions
-// that move the device: the concurrent mulligan (R265) and a draw offer (R36).
-//
-// This file owns the LOOP (nonces, the log, the seat, the subscription), not the rules, so the port is
-// a fake: a turn counter with a settable pending choice. Every assertion is about what the session did
-// with the port, the whole contract between client and engine (CLAUDE.md rule 7). Nothing here speaks
-// to the engine's determinism: that half of M5-T3 is folded in `crates/engine/tests/golden.rs` and
-// checked in `e2e/cypress/e2e/01-hotseat-full-game.cy.ts`.
+// Hotseat loop tests (R36, R265, CLAUDE.md rule 7): tests session lifecycle with scripted and real EnginePort.
 
 import { describe, expect, it } from "vitest";
 
@@ -235,10 +228,7 @@ describe("nonces", () => {
     expect(custom.log()[0]?.nonce).toBe("x0");
   });
 
-  // NOT the M5-T3 replay acceptance: the port is scripted, so this shows only that the SESSION is a pure
-  // function of (seed, the bodies dispatched). It would pass against a nondeterministic engine. The
-  // real proof is `e2e/cypress/e2e/01-hotseat-full-game.cy.ts` (browser hash vs a Node fold of the
-  // log) and `crates/engine/tests/golden.rs` (the same log folded by the Rust engine).
+  // Verifies session dispatch purity against scripted port.
   it("two sessions with the same seed and the same actions agree on hash() and log()", () => {
     const bodies: ActionBody[] = [
       { type: "endTurn" },
@@ -282,9 +272,7 @@ describe("a rejected dispatch", () => {
     live.dispatch({ type: "endTurn" });
     live.dispatch({ type: "endTurn" });
 
-    // The rejected action reached `reduce` as n0 and was never remembered there, so the accepted
-    // action reuses n0. The log's nonces stay contiguous with the log, which is what lets
-    // `replay.fold(seed, log)` in vitest reproduce the browser's hash (BUILD M5-T3 acceptance).
+    // Rejected actions do not consume nonces; nonces remain contiguous.
     expect(fake.reduced.map((action) => action.nonce)).toEqual(["n0", "n0"]);
     expect(live.log().map((action) => action.nonce)).toEqual(["n0"]);
   });
@@ -566,8 +554,7 @@ describe("with the real engine", () => {
   });
 
   it("R265 p2 answers first after a manual hand-over: the device goes to p1, and p1's answer starts the game", () => {
-    // Re-pinned for v0.3.5: with the Meditative set in the random decks, the old seed dealt p1 a turn
-    // with nothing to play, which R82 ends by itself; and again for v0.3.10, whose costs did the same.
+    // Pinned seed avoids turns with no legal plays (R82).
     const seed = "hotseat-r265-p2-first-b";
     const live = real(seed);
     live.setSeat("p2");
@@ -600,8 +587,7 @@ describe("with the real engine", () => {
   });
 
   it("R180 a handicapped game starts from its handicap, fatigues on it (R315), and folds with it", () => {
-    // Spec 25's first scenario, headless: seat 1 plays a 4-card library (its handicap's deckSize,
-    // R184), holds all four cards after its turn-1 draw, and its turn-3 draw is fatigue 1.
+    // Handicap deckSize 4 fatigues on turn 3 (R184).
     const seed = "hotseat-handicap-fatigue";
     const handicaps = { p1: { deckSize: 4, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0 } };
     const short = decks[0].slice(0, 4);

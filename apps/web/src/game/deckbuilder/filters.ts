@@ -1,23 +1,7 @@
-// The deck builder's browse semantics: which pool cards a filter keeps, the order a sort puts them
-// in, the mana curve of a deck and the order its list tiles are drawn in.
-//
-// PURE, AND THE ONLY PLACE THESE LIVE. The components render what this module returns and decide
-// nothing themselves, so a filter or a sort is proved here without mounting anything
-// (docs/polish/6-cards.md, Surface D).
-//
-// NO RULE LIVES HERE EITHER. Ownership comes from `poolFrom` (which already drops Tokens, since L3
-// bans them from a deck), and whether a deck is legal is `@jackioh/validator`'s alone. A filter only
-// hides cards from view; it never refuses one. The workshop keeps its filter and sort per device
-// (`savedBrowse.ts`, #263), and "Clear filters" clears the saved copy along with the chips.
-//
-// The Card Almanac (R630) browses with the same filter and sort. Its shelf is `almanacPool`: every
-// catalog card, tokens included, since L3's reason for hiding them is a deck's and the almanac
-// builds none, and its tag chips are `ALMANAC_TAGS`.
-//
-// Both lists of chips follow what ships (R1380, R1381): the set chips are `SHIPPED_SETS`, and a tag
-// chip shows only while a card of a shipped set carries its tag (`shippedTags`), so a set's chip and
-// its tags' (the Meditative set's and Wincon's, the Meditative+ set's and Potion's, the Stinkyscape
-// set's and its four, R1883000) arrive with the set and never before.
+// Deck builder browse semantics: pool filtering, sorting, and mana curve (docs/polish/6-cards.md, Surface D).
+// Pure helpers; validator enforces rules. Hides tokens per L3; persists preferences (#263).
+// Card Almanac (R630): browses `almanacPool` including tokens.
+// Set/tag chips follow shipped catalog (R1380, R1381; R1883000 Stinkyscape tags).
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -95,12 +79,7 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Swarm",
 ];
 
-/**
- * The almanac's tag chips (R630): the deck builder's, then the five only tokens carry, "Prime" (the
- * Prime tokens, R1421), "AI" (the ten AI tokens), "Other-Origins" (Classic+ #32.1 to #32.3, R1837000),
- * "War Doctrine" (Stinkyscape #137.1 to #137.4, R1883000) and "Token", since the almanac shows tokens.
- * Every tag a catalog card carries.
- */
+/** Almanac tag chips (R630): deck builder tags plus token tags (R1421, R1837000, #137, R1883000). */
 export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
@@ -226,12 +205,7 @@ function haystackOf(def: CardDef): string {
     .toLowerCase();
 }
 
-/**
- * The query is trimmed and split on whitespace; every term has to occur, case-insensitively, in the
- * card's name, type, tags, rarity, base or radiant text, or the keyword kinds printed on either face,
- * or, for a reader of Chinese, any of these in the Chinese card tables (R711000).
- * An empty query keeps everything.
- */
+/** Case-insensitive term search across card fields and Chinese tables (R711000). */
 export function searchMatches(def: CardDef, query: string): boolean {
   const terms = query
     .trim()
@@ -243,10 +217,7 @@ export function searchMatches(def: CardDef, query: string): boolean {
   return terms.every((term) => haystack.includes(term));
 }
 
-/**
- * Set, cost, type, tag, rarity and search. Chips OR within a group and AND across groups, and an
- * empty group is no constraint. Ownership is `visiblePool`'s job, not this function's.
- */
+/** Chips OR within a group and AND across groups; empty group is unconstrained. */
 export function matchesFilter(def: CardDef, filter: PoolFilter): boolean {
   if (filter.sets.size > 0 && !filter.sets.has(def.set)) return false;
   if (filter.costs.size > 0 && !filter.costs.has(costBucket(def.cost))) return false;
@@ -304,10 +275,7 @@ function statOf(def: CardDef, key: "attack" | "health"): number | undefined {
   return key === "attack" ? def.base.attack : def.base.health;
 }
 
-/**
- * Sorts pool ids. `dir` flips only the primary key; ties then break ascending by cost, name and
- * catalog index. For attack and health, a card with no stats goes last in both directions.
- */
+/** Sorts pool ids; ties break ascending by cost, name and index. Cards without stats go last. */
 export function sortPool(
   ids: readonly string[],
   catalog: CatalogSnapshot,
@@ -353,10 +321,7 @@ export function sortPool(
   });
 }
 
-/**
- * What the pool grid shows: `poolFrom(catalog, filter.ownedOnly ? collection : null)` (so Tokens
- * never appear, and unchecking "owned" shows every other catalog card), filtered, then sorted.
- */
+/** Pool grid cards: filtered then sorted (excludes tokens). */
 export function visiblePool(
   catalog: CatalogSnapshot,
   collection: Collection | null,
@@ -367,11 +332,7 @@ export function visiblePool(
   return filteredAndSorted(poolFrom(catalog, filter.ownedOnly ? collection : null), catalog, filter, sort, winRates);
 }
 
-/**
- * What the almanac's grid shows (R630): every catalog card, tokens included, Glitch excepted (R674)
- * and the cards of a set that has not shipped (R1420), filtered, then sorted.
- * There is no collection, so `filter.ownedOnly` is not read.
- */
+/** Almanac grid (R630): shipped catalog cards (R1420) including tokens, excluding Glitch (R674). */
 export function almanacPool(
   catalog: CatalogSnapshot,
   filter: PoolFilter,
@@ -419,11 +380,7 @@ export function manaCurve(
   return counts;
 }
 
-/**
- * The order a deck's list tiles are drawn in: cost, then name as the reader reads it, then id;
- * unknown ids last. Display only. What `save` sends is the draft in the order the player built it,
- * never this.
- */
+/** Display order for deck list tiles: cost, then name, then id; unknown ids last. */
 export function deckListOrder(cardIds: readonly string[], catalog: CatalogSnapshot): string[] {
   return [...cardIds].sort((leftId, rightId) => {
     const left = catalog.cards[leftId];

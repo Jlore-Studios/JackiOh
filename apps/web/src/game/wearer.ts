@@ -1,20 +1,7 @@
-// R1295000: whose cards wear the device's card cosmetics on this board (cards/cosmetics.ts). A
-// board the viewer plays (`wearCosmetics`: a match, a practice game, a hotseat game, a co-op seat's
-// own duel) names the viewer, and only that seat's own cards wear them; a replay, a watched game, a
-// teammate's duel and a bare board name nobody. Drawn state only (CLAUDE.md rule 7): nothing here
-// reaches the engine or the view. R1655000: what that own card wears is the picks of its own card
-// first (cards/cosmetics.ts), where the viewer owns them.
-//
-// R1297000: the same seat wears the deck slots (the playmat, the backdrop and the card back), and
-// the provider also carries the picks of the deck the viewer plays, which beat the account's.
-//
-// R1834004: an online board also carries both seats' frozen loadouts (cards/loadouts.ts, R1834002).
-// Every seat but the wearer wears its own: its cards (below a `TheirCopy`, keyed on each card's
-// owner, never its controller, so a stolen unit keeps its owner's look, R1295000) and its deck
-// slots; on a watched or replayed game, where nobody wears the device's picks, both seats do. With
-// the viewer's "Show opponents' cosmetics" off, only the seat the board is seen from (the wearer, or
-// else the view's viewer) keeps its look and every other draws the defaults. Practice, hotseat and
-// Duos carry no loadouts, so there every other seat draws the defaults, as before.
+// Cosmetics wearer binding (R1295000, cards/cosmetics.ts; CLAUDE.md rule 7).
+// Viewer-controlled cards wear device card cosmetics; R1655000 card-specific picks beat account defaults.
+// R1297000: deck cosmetics (playmat, backdrop, card back).
+// R1834004, R1834002: opponent frozen loadouts on online boards (keyed on card owner, not controller, R1295000).
 
 import { createContext, createElement, useContext, useMemo, type ReactElement, type ReactNode } from "react";
 
@@ -74,11 +61,7 @@ export function useWearerSeat(): PlayerId | null {
   return useContext(WearContext).seat;
 }
 
-/**
- * R1834004: the loadout a card owned by `owner` wears: none for the wearer's own (they wear the
- * device's picks), none without loadouts or an owner, and none for a seat other than the one the
- * board is seen from while `showOpponents` (the viewer's setting) is off.
- */
+/** R1834004: loadout for owner's cards (respects showOpponents setting). */
 export function theirLoadout(owner: PlayerId | null | undefined, wear: Wear, showOpponents: boolean): SeatLoadout | null {
   if (owner === null || owner === undefined || wear.loadouts === null || owner === wear.seat) return null;
   if (!showOpponents && owner !== (wear.seat ?? wear.viewer)) return null;
@@ -92,10 +75,8 @@ export function useTheirLoadout(owner: PlayerId | null | undefined): SeatLoadout
 }
 
 /**
- * R1297000, R1834004: the deck slots `seat`'s half wears: the wearer's the deck's picks, else the
- * account's, else the defaults, each one `owns` refuses (one the viewer does not own, R1833000) the
- * default; every other seat its loadout's (`theirLoadout`), which the server judged (R1834001), else
- * the defaults. A null seat (a back that names none) wears the defaults.
+ * R1297000, R1834004: resolved deck slots for seat; wearer uses deck/account picks (R1833000),
+ * others use verified server loadouts (R1834001) or defaults.
  */
 export function seatDeckCosmetics(
   seat: PlayerId | null,

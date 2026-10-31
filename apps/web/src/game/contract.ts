@@ -1,9 +1,5 @@
-// The integration contract between the board (M5-T1), the action builders and prompts (M5-T2),
-// the hotseat loop (M5-T3) and the animation runner (M5-T4).
-//
-// Everything here is presentation vocabulary. No rule lives in this file: the board reports what
-// was clicked, `actions.ts` turns that into an `ActionBody` chosen from `legalActions`, and the
-// engine decides. `Highlight` is a set of `data-testid`s the engine has already blessed.
+// Integration contract between board (M5-T1), action builders/prompts (M5-T2),
+// hotseat loop (M5-T3), and animation runner (M5-T4). Presentation vocabulary only.
 
 import type { ReactNode } from "react";
 
@@ -25,23 +21,14 @@ import type { EmoteShow } from "../emotes/session.ts";
 /** Viewer-relative sides. `viewFor` already orients the view, so the DOM says "you"/"opponent". */
 export type Side = "you" | "opponent";
 
-/**
- * A "Choose one" menu (a card's modes, on a play or in a prompt) renders as a Discover pop-up
- * while it offers this many options or fewer; more options keep the plain mode list.
- */
+/** Maximum options for "Choose one" menu rendered as Discover pop-up. */
 export const DISCOVER_OPTION_LIMIT = 5;
 
-/**
- * #492: a play's X offered as this many values or fewer is picked from cards in the middle of the
- * screen, as a short "Choose one" is; more values keep the X stepper.
- */
+/** #492: maximum X values rendered as card options rather than stepper. */
 export const X_CARD_LIMIT = 4;
 
 /**
- * Lanes are 1-based, because the engine's are: `crates/engine/src/zones.rs` numbers a row's slots
- * from 1 and reads a unit pile at `lane - 1`, and `e2e/support/types.ts` declares
- * `Lane = 1 | 2 | 3 | 4 | 5`. A `ZoneChoice` inside a `play` action therefore carries 1..5, so
- * the client's zone testids must too or nothing the engine blesses would ever light up.
+ * Lanes are 1-based matching the engine (`crates/engine/src/zones.rs` and `e2e/support/types.ts`).
  */
 export const LANES: readonly number[] = [1, 2, 3, 4, 5];
 
@@ -96,32 +83,19 @@ export const testid = {
   mulliganOpponentReady: "mulligan-opponent-ready",
   /** After the viewer's own answer, until both are in: the hand with the cards going back marked. */
   mulliganWaiting: "mulligan-waiting",
-  /**
-   * R384, R510: the Activate control on a card the viewer controls (ActivateControl.tsx). `ability`
-   * is named only when the card lists several (`CardView.activations`), so a card with one ability
-   * is always `activate-<instanceId>`.
-   */
+  /** R384, R510: Activate control testid (`activate-<id>` or `activate-<id>-<ability>`). */
   activate: (instanceId: string, ability?: string): string =>
     ability === undefined ? `activate-${instanceId}` : `activate-${instanceId}-${ability}`,
   /** R384, R510: that control's usable-count badge ("2", "∞"). */
   activateUses: (instanceId: string, ability?: string): string =>
     ability === undefined ? `activate-uses-${instanceId}` : `activate-uses-${instanceId}-${ability}`,
-  /**
-   * R43, R510: a Heroic Power after the first on the hero panel (the first is `power`): each is its
-   * own control now, as each is separately once per turn.
-   */
+  /** R43, R510: additional Heroic Powers on hero panel beyond the first. */
   powerOf: (instanceId: string): string => `power-${instanceId}`,
   /** B5 E11: "Play" on a card in the viewer's graveyard pile, present only while `legal` lists that play. */
   pilePlay: (instanceId: string): string => `pile-play-${instanceId}`,
-  /**
-   * A graveyard pile: the same string as `animTestid.graveyard` (animations.ts), named here so the
-   * action layer can light the pile (B5 E11) without importing the animation table.
-   */
+  /** Graveyard pile testid (matches animTestid.graveyard, B5 E11). */
   graveyard: (side: Side): string => `graveyard-${side}`,
-  /**
-   * R1838000: the Trade control on the viewer's own Tradable hand card (TradeControl.tsx), in its bar
-   * over the card on a 1v1 board (`tradeBar`) or in the Duos card bar.
-   */
+  /** R1838000: Trade control on Tradable hand card (TradeControl.tsx). */
   trade: (instanceId: string): string => `trade-${instanceId}`,
   tradeBar: "trade-bar",
   /** R1853003: the Marketplace's toggle (Marketplace.tsx), and the panel it opens. */
@@ -134,9 +108,7 @@ export const testid = {
 } as const;
 
 /**
- * R384, R510, R1751000: the `ability` an Activate control names. Under R1751000, board Activate
- * controls on cards with multiple abilities target `{ on: "activate", instanceId }` (without ability)
- * to open the Discover choice modal; `namedAbility` is retained for backwards compatibility.
+ * R384, R510, R1751000: Activate ability identifier (omitted on multi-ability cards to open modal).
  */
 export function namedAbility(abilityCount: number, ability: string): string | undefined {
   return abilityCount > 1 ? ability : undefined;
@@ -155,21 +127,14 @@ export function sideView(view: PlayerView, side: Side) {
 }
 
 /**
- * #165: what a touch hold on a card opens while this view is on the board. On the viewer's own
- * turn a hold stays the inspect sheet it has always been, so reading a card can never eat the
- * press that plays it; on the opponent's turn nothing is playable anyway, so the hold is the
- * mouse-over a touch screen lacks — the hover preview, open while the finger stays down.
+ * #165: touch hold destination: inspect sheet on own turn, hover preview on opponent turn.
  */
 export function touchHoldMode(view: PlayerView): "sheet" | "preview" {
   return view.active === view.viewer ? "sheet" : "preview";
 }
 
 /**
- * Something the player clicked, dragged to, or dropped on. Never a decision, only a report.
- *
- * `activate` is an Activate control (R384): a card's own, or a Heroic Power's on the hero panel.
- * `ability` is set only when the card lists several abilities. `graveyard` is "Play" on a card in
- * the viewer's graveyard pile (B5 E11). A Resource is a hand card (R2250000).
+ * ClickTarget: target clicked, dragged to, or dropped on (R384, R43, R2250000, B5 E11).
  */
 export type ClickTarget =
   | { on: "hand"; instanceId: string }
@@ -184,10 +149,7 @@ export type ClickTarget =
 export type BoardControl = "end-turn" | "offer-draw" | "power" | "concede";
 
 /**
- * What the board may offer. `legal` and `selected` hold `data-testid`s; anything clickable whose
- * testid is not in `legal` renders with `aria-disabled="true"` and `data-legal="false"` and does
- * not fire `onClick`. The client computes neither set from the rules — `actions.ts` derives them
- * from the `legalActions` array the engine returned.
+ * Highlight: legal and selected testids computed from engine `legalActions` (CLAUDE.md rule 7).
  */
 export type Highlight = {
   legal: ReadonlySet<string>;
@@ -197,18 +159,9 @@ export type Highlight = {
    * `legalActions` and the open prompt's options alone. Absent means nothing glows.
    */
   glow?: ReadonlySet<string>;
-  /**
-   * MD-D5, R1121: the yellow a dragged or selected attack paints — the selected attacker's
-   * `conditionTargets` inside `glow`. A subset of `glow`, derived by `highlightFor` while
-   * attacking alone. Absent means nothing reads yellow from the drag layer.
-   */
+  /** MD-D5, R1121: yellow highlight for dragged/selected attack conditionTargets within `glow`. */
   condition?: ReadonlySet<string>;
-  /**
-   * #991, R583: the cards the hovered or selected hand card's preview counts, as `card-<id>` testids:
-   * its values' `ids` off the view (R1447 keeps them to cards the viewer reads), which Board.tsx adds
-   * for the field alone (`countedTestids`, glow.ts). Never from `legalActions`; no click reads it.
-   * Absent means nothing is ringed.
-   */
+  /** #991, R583: preview counted cards on field (`countedTestids`, R1447). */
   counted?: ReadonlySet<string>;
 };
 
@@ -221,12 +174,7 @@ export type AnimatingMap = ReadonlyMap<string, GameEventType>;
 export type AnimationFrames = { frames: AnimatingMap; events: readonly GameEvent[] };
 
 /**
- * The emote surface one hero carries (R643–R644, issue §1–§5): its portrait, what it is showing,
- * and which menu — yours' picker or the opponent's "Mute emotes" — is open on it. Game owns the
- * state; the board only draws and reports. `onPortrait` is the click that is NOT a target pick
- * (the legal branch still goes to `onClick`), which toggles the menu hung off the portrait, and
- * `onPortraitHold` the hold that opens the hero's inspect view instead (R1449, R1330; issue §2:
- * targeting wins). `menu` says a menu is open and which, and `inspect` whether it is in the view.
+ * HeroEmotes: hero emote surface (R643–R644, issue §1–§5, §2, R1449, R1330). Game owns state.
  */
 export type HeroEmotes = {
   portrait: PortraitId;
@@ -249,14 +197,7 @@ export type BoardProps = {
   view: PlayerView;
   highlight?: Highlight;
   animating?: AnimatingMap;
-  /**
-   * The animation entries the runner has started since the board last caught up (M5-T4), each one
-   * the elements it marks paired with the events it is playing. The number pops read from these
-   * rather than from `view`, for two reasons: `view` is the view the runner is still holding back,
-   * so it does not carry the event being animated at all; and one action deals several numbers —
-   * an attack pops one on the defender and then one on the attacker — which have to stay on screen
-   * together rather than each vanishing as the next entry starts.
-   */
+  /** Active animation entries (M5-T4) marking elements with events in flight for number pops. */
   animated?: readonly AnimationFrames[];
   /** A route's server-synchronised clock, mounted in the physical End Turn housing. */
   turnClock?: ReactNode;
@@ -272,19 +213,10 @@ export type BoardProps = {
   onControl?: (control: BoardControl) => void;
   /** One hero's emote surface per side, or undefined where a route does not run emotes. */
   emotes?: (side: Side) => HeroEmotes | undefined;
-  /**
-   * R1295000: the viewer's own cards wear the device's card cosmetics (game/wearer.ts). A board
-   * the viewer plays sets it; absent, every card draws the defaults.
-   */
+  /** R1295000: device card cosmetics for viewer cards (game/wearer.ts). */
   wearCosmetics?: boolean;
-  /**
-   * R1297000: the picks of the deck the viewer plays (playmat, backdrop, card back), which beat the
-   * account's on the viewer's own side. Null or absent: the account's choice applies.
-   */
+  /** R1297000: deck cosmetics overriding device picks on viewer's side. */
   deckCosmetics?: DeckCosmetics | null;
-  /**
-   * R1834004: both seats' frozen loadouts (R1834002) on an online board: a live match's, a watched
-   * game's or a replay's. Every seat but the wearer wears its own; null or absent, they draw the defaults.
-   */
+  /** R1834004: frozen loadouts (R1834002) for non-wearer seats. */
   loadouts?: SeatLoadouts | null;
 };

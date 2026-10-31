@@ -14,10 +14,7 @@ export type DamageFeel = {
   crowd: "none" | "ooh" | "gasp" | "roar";
 };
 
-/**
- * The one tuning surface for damage feel. Consumers use this rather than embedding thresholds or
- * timings in audio, CSS, or effects code, so a feel pass can tune every consequence together.
- */
+/** Central tuning surface for damage feel across audio, CSS, and effects. */
 export const DAMAGE_FEEL: Readonly<Record<DamageTier, DamageFeel>> = Object.freeze({
   tiny: { min: 0, hitStopMs: 0, shakePx: 0, shakeMs: 0, numberScale: 0.78, numberLingerMs: 300, particleScale: 0.55, crowd: "none" },
   normal: { min: 3, hitStopMs: 40, shakePx: 0, shakeMs: 0, numberScale: 1, numberLingerMs: 300, particleScale: 1, crowd: "none" },
@@ -80,10 +77,7 @@ export type SlamFeel = {
   crowd: "none" | "murmur" | "anticipation" | "excited";
 };
 
-/**
- * The one tuning surface for Unit slams, beside `DAMAGE_FEEL`. The weights: total = Attack + Health
- * + 2 × Armor + 4 if Indestructible + 4 × each Tribute the card requires.
- */
+/** Unit slam tuning (Attack + Health + 2*Armor + 4*Indestructible + 4*Tributes). */
 export const SLAM_WEIGHTS = Object.freeze({ armor: 2, indestructible: 4, tribute: 4 });
 
 export const UNIT_SLAM: Readonly<Record<SlamTier, SlamFeel>> = Object.freeze({
@@ -97,10 +91,7 @@ export const UNIT_SLAM: Readonly<Record<SlamTier, SlamFeel>> = Object.freeze({
 
 export const SLAM_TIERS_ASCENDING: readonly SlamTier[] = ["tiny", "small", "medium", "large", "huge", "massive"];
 
-/**
- * Several Units landing in one action play one after another (each is its own animation entry) and
- * share these totals, so a board flood never stacks into a long freeze or a violent shake.
- */
+/** Caps combined freeze and shake totals when multiple units land in one action. */
 export const SLAM_BURST = Object.freeze({ hitStopMs: 200, shakePx: 12, anticipationMs: 500 });
 
 /** Where in its landing motion a Unit hits the table (jk-summon-scale's 55% keyframe). */
@@ -109,12 +100,7 @@ export const SLAM_LAND_AT = 0.55;
 /** A slam's pitch varies by up to this much either way. */
 export const SLAM_PITCH_SPREAD = 0.05;
 
-/**
- * R1363 (MN05): whether a hit's target's Armor took half or more of it — `absorbed` of the whole
- * `absorbed + amount` the hit came in with (R1360). The sound's clank and the effects layer's shield
- * flash both key on this test; a hit with no Armor part never passes it, and one Armor took whole
- * is `damageAbsorbed`.
- */
+/** R1363 (MN05, R1360): true when Armor absorbed half or more of total damage. */
 export function armorTookHalf(absorbed: number | undefined, amount: number): boolean {
   const took = absorbed ?? 0;
   return took > 0 && took * 2 >= took + amount;

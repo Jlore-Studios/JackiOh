@@ -1,10 +1,4 @@
-// Polish 6, slice D: the deck builder's filter and sort semantics, pure (docs/polish/6-cards.md,
-// B31–B36; the DOM half is browse.test.tsx).
-//
-// `filters.ts` is the only place these semantics live. The catalog below is built inline on
-// purpose: it has every cost shape the Surface names (0, 1, 6, 100, "X" and two embiggen cards),
-// all five types, several tags and rarities, a card with no text, a card nobody owns, a token, and
-// two cards that tie on cost and name so the index tie-break is visible.
+// Filter and sort semantics (docs/polish/6-cards.md, B31–B36; DOM half is browse.test.tsx).
 
 import type { CardCost, CardDef, CardFace, CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
@@ -46,9 +40,7 @@ import {
 } from "./filters.ts";
 import { filterCostId, filterRarityId, filterSetId, filterTagId, filterTypeId, slugOf } from "./testids.ts";
 
-// ---------------------------------------------------------------------------------------------
 // The inline catalog
-// ---------------------------------------------------------------------------------------------
 
 type DefInput = {
   id: string;
@@ -145,11 +137,7 @@ function owned(ids: readonly string[]): string[] {
   return ids.filter((id) => id !== UNOWNED);
 }
 
-/**
- * Every non-token card under each sort, worked out by hand from the rules the Surface states:
- * the primary key flips with `dir`; ties break ascending by cost, then name (case-insensitive),
- * then numeric index; for attack and health the three cards with no stats go last either way.
- */
+/** Expected card order for each sort key and direction. */
 const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
   cost: {
     asc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
@@ -181,9 +169,7 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
   },
 };
 
-// ---------------------------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------------------------
 
 describe("the filter vocabulary (B31, B34)", () => {
   it("B31 COST_BUCKETS runs 0 to 5, then 6+, then X, and CURVE_TOP is 6", () => {
@@ -258,9 +244,7 @@ describe("the filter vocabulary (B31, B34)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // costBucket and costOrder
-// ---------------------------------------------------------------------------------------------
 
 describe("costBucket and costOrder (B31)", () => {
   const BUCKETS: [CardCost, CostBucket][] = [
@@ -296,9 +280,7 @@ describe("costBucket and costOrder (B31)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // matchesFilter
-// ---------------------------------------------------------------------------------------------
 
 function matching(f: PoolFilter): string[] {
   return ALL_IDS.filter((id) => matchesFilter(card(id), f));
@@ -370,9 +352,7 @@ describe("matchesFilter (B31)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // searchMatches
-// ---------------------------------------------------------------------------------------------
 
 function found(query: string): string[] {
   return ALL_IDS.filter((id) => searchMatches(card(id), query));
@@ -449,9 +429,7 @@ describe("searchMatches (B32)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // sortPool
-// ---------------------------------------------------------------------------------------------
 
 describe("sortPool (B34)", () => {
   for (const key of ["cost", "name", "rarity", "attack", "health", "type"] as const) {
@@ -518,9 +496,7 @@ describe("sortPool (B34)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // visiblePool
-// ---------------------------------------------------------------------------------------------
 
 describe("visiblePool (B31, B33, B34)", () => {
   it("B33 by default it shows the owned non-token cards, cost ascending", () => {
@@ -561,9 +537,7 @@ describe("visiblePool (B31, B33, B34)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // manaCurve
-// ---------------------------------------------------------------------------------------------
 
 describe("manaCurve (B36)", () => {
   it("B36 counts a deck's cards per bucket, embiggen under the base price", () => {
@@ -586,9 +560,7 @@ describe("manaCurve (B36)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // deckListOrder
-// ---------------------------------------------------------------------------------------------
 
 describe("deckListOrder (B35)", () => {
   it("B35 orders tiles by cost, then name, with unknown ids last", () => {
@@ -619,9 +591,7 @@ describe("deckListOrder (B35)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R711000: the reader's language
-// ---------------------------------------------------------------------------------------------
 
 describe("R711000 the reader's language", () => {
   afterEach(resetLocaleForTests);
@@ -688,9 +658,7 @@ describe("R711000 the reader's language", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R278: the Jlockeed tag
-// ---------------------------------------------------------------------------------------------
 
 describe("the set chips (R380: one format, every set)", () => {
   const REAL: CatalogSnapshot = { version: "v0.2.0-test", cards: CORE_CATALOG };
@@ -775,9 +743,7 @@ describe("the Jlockeed tag (R278)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R630: the Card Almanac's shelf and tag chips
-// ---------------------------------------------------------------------------------------------
 
 describe("the almanac's pool (R630)", () => {
   const REAL: CatalogSnapshot = { version: "almanac-test", cards: CORE_CATALOG };
@@ -873,9 +839,7 @@ describe("the almanac's pool (R630)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1380, R1381: the chips follow what ships
-// ---------------------------------------------------------------------------------------------
 
 describe("the chips follow what ships (R1380, R1381)", () => {
   const fixture = (id: string, set: SetName, tags: Tag[]): CardDef => ({ ...def({ id, index: "1", name: id, type: "Unit", rarity: "Common", cost: 1, tags }), set });

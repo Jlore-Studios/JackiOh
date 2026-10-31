@@ -1,17 +1,5 @@
-// The hero portraits and the emote menus (issue #75, SPEC §10.10, R641–R644, R1343): a portrait's art
-// on each seat's hero with the health and armor badges, your portrait's menu of your dealt hand, the
-// opponent's one-item mute, and every way the menu must leave — a pick, a press on the dim around
-// it, Escape, the start of a play or attack, a hotseat seat change and the end of the match.
-//
-// Issue #544 (R1330–R1331) added the hero's inspect view: the portrait large with its words, health
-// and Armor, with the same menu in it, and the squash and glint the board's oval answers with. Since
-// R1449 a click (or Enter) on a portrait hangs its menu off the portrait, as before #544, and a hold
-// (a touch's or a mouse's, a right-click, the context-menu key or Shift+F10) opens the view. The
-// `MN02` block tests the view and the `R1449` block the two presses.
-//
-// The harness is the route's own wiring: `useEmotes` is the same api `MatchHotseatRoute` and
-// `PracticeRoute` hand `Game` (an `engine: null` sink, the peer's relay left to the test through
-// `api.receive`). `send` is wrapped only so the test sees the player/emote pair `Game` passes it.
+// Hero portraits and emote menus (#75, SPEC §10.10, R641, R643, R644, R1343).
+// Hero inspect view (#544, R1330, R1331, MN02); portrait press vs hold gestures (R1449).
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -53,8 +41,7 @@ function EmoteGame(props: {
     globalMute: props.globalMute,
   });
   props.apiRef.current = emotes;
-  // The wire's seam: the route sends `emotes.send`'s admitted emote off to the server. Wrap it so
-  // the test sees the (player, emote) pair while the local echo still runs the real session.
+  // Wrap `emotes.send` so the test sees the (player, emote) pair while local echo still runs.
   const send = (player: PlayerId, emote: EmoteId): boolean => {
     props.onSend?.(player, emote);
     return emotes.send(player, emote);
@@ -221,11 +208,7 @@ describe("your portrait's emote menu (R643)", () => {
     expect(sticker).toHaveAttribute("data-emoji", "laugh");
   });
 
-  /**
-   * SPEC §10.10 / issue §2: the menu "closes on a pick". The item's click is stopped inside
-   * `[data-emote-menu]` (ui.tsx) so it never reaches the hero's own onClick — which would read the
-   * hero as not-legal and reopen the just-closed menu through `emotes.onPortrait()`.
-   */
+  /** SPEC §10.10, issue §2: menu closes on pick; bubbling stopped to prevent reopening. */
   it("R643 the emote menu closes on a pick", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
@@ -483,11 +466,7 @@ describe("the opponent's mute (R643)", () => {
     expect(api.current?.muted("p1")).toBe(false);
   });
 
-  /**
-   * Same bubbling guard as the picker's pick: the "Mute emotes" item's click is stopped inside
-   * `[data-emote-menu]`, so `onPortrait` never reopens the just-closed mute menu — the mute
-   * applies, the menu is gone, and a fresh press on the portrait reopens it already muted.
-   */
+  /** Mute click stops propagation inside `[data-emote-menu]` so onPortrait does not reopen it. */
   it("R643 the mute menu closes once the mute is set — and shows it as done next time", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);

@@ -382,9 +382,7 @@ describe("R384 Heroic Power works through the same build", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Drag to target
-// ---------------------------------------------------------------------------------------------
 
 describe("R510 an activation is dragged from its control onto its target", () => {
   let under: Element[] = [];
@@ -450,9 +448,7 @@ describe("R510 an activation is dragged from its control onto its target", () =>
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The play's payments in the pickers
-// ---------------------------------------------------------------------------------------------
 
 describe("B5 E5 R682 a target that costs discards (Classic #89): no picker — the cost is random at pay time", () => {
   const legal: ActionBody[] = [

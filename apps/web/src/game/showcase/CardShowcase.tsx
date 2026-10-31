@@ -92,10 +92,7 @@ function captionOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, byN
   return kind === "trap" ? t(TRAP_REVEAL_TEXT.caption) : t(CAPTION[kind]);
 }
 
-/**
- * A multicast's sentence: "Fireball cast Frostbolt (2)", with "A card" / "a card" for a name the view
- * hides. Each is one sentence for the dictionary, worded from the constants the tests read.
- */
+/** Multicast sentence: "{by} cast {name} ({ordinal})", with fallbacks for hidden names. */
 function multicastSaid(byName: string | undefined, name: string | undefined, ordinal: string): string {
   const said = MULTICAST_TEXT.said;
   if (byName === undefined) {
@@ -106,11 +103,7 @@ function multicastSaid(byName: string | undefined, name: string | undefined, ord
     : t(`{by} ${said} {name} ({ordinal})`, { by: byName, name, ordinal });
 }
 
-/**
- * A trap reveal's sentence: whose trap fired, the card when the view names it, and which of the
- * batch's reveals it is. Each is one sentence for the dictionary, worded from the constants the
- * tests read (issue #1493).
- */
+/** Trap reveal sentence (issue #1493): whose trap fired, name, and ordinal. */
 function trapSaid(play: ShowcasePlay, viewer: PlayerId, name: string | undefined): string {
   const whose = play.player === viewer ? t("your") : t("the opponent's");
   const total = play.trapReveal?.total ?? 1;

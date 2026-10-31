@@ -1,9 +1,4 @@
-// docs/polish/1-animations.md, behaviors B1 to B5: the animation table's `fx` column, the runner's
-// lifecycle signals, and the viewer's effects-speed and reduce settings (R201).
-//
-// `animations.test.ts` is B3's real proof: it must stay green without a single edit. This file adds
-// what that one cannot see. Settings are injected through the queue's `settings` option, never by
-// mutating the global store, and `fakeClock` is a local copy of `animations.test.ts`'s (not exported).
+// B1, B2, B3, B4, B5 (R201): animation table fx column, runner lifecycle signals, speed/reduce settings.
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -45,9 +40,7 @@ afterEach(() => {
   resetFxSettingsForTests();
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Fixtures
- * ------------------------------------------------------------------------------------------- */
+// Fixtures
 
 /** A `schedule` spy that records its calls and lets the test run the callbacks by hand. */
 function fakeClock() {
@@ -228,11 +221,8 @@ function startOf(signal: RunnerSignal | undefined) {
   return signal.entry;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B1: the fx column
- * ------------------------------------------------------------------------------------------- */
-
-/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 19 rows that carry no effect. */
+// B1: fx column
+// S4 table and patch v0.2.0 rows: type -> recipe, null for rows with no effect.
 const S4_RECIPES: Record<GameEventType, string | null> = {
   cardPlayed: "cast",
   summoned: "summon",
@@ -549,9 +539,7 @@ describe("B1 the fx column of ANIMATIONS", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B2: runner signals
- * ------------------------------------------------------------------------------------------- */
+// B2: runner signals
 
 describe("B2 subscribeSignals", () => {
   it("B2 planEntries sets entry.view to the view it planned against", () => {
@@ -731,9 +719,7 @@ describe("B2 subscribeSignals", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B3: default settings change nothing
- * ------------------------------------------------------------------------------------------- */
+// B3: default settings change nothing
 
 describe("B3 default settings", () => {
   it("B3 the default settings schedule exactly what a queue with no settings option schedules", () => {
@@ -766,9 +752,7 @@ describe("B3 default settings", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B4: R201, the speed setting
- * ------------------------------------------------------------------------------------------- */
+// B4: R201 speed setting
 
 describe("B4 the effects speed scales the table", () => {
   it("R201 R435 the effects speed divides every non-zero duration and the burst budget, clamped to [0.25, 3]", () => {
@@ -887,9 +871,7 @@ describe("B4 the effects speed scales the table", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B5: the reduce setting
- * ------------------------------------------------------------------------------------------- */
+// B5: reduce setting
 
 describe("B5 the motion reduce setting", () => {
   it("B5 motion reduce drains a long stream synchronously: no timer and one onSettled", () => {
