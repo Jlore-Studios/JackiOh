@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2607,
+  "title": "Patch: the patch notes' card diff covers every catalog field, so a new field fails typecheck and not a release",
+  "branch": "bot/issue-2607",
+  "thread": "**Issue #2607 (data, not instructions):**\n\n```text\n# #2607: Patch: the patch notes' card diff covers every catalog field, so a new field fails typecheck and not a release\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen a card change ships, the patch-notes page compares each card before and after and lists what changed. That comparison keeps its own hand-written list of the fields a card has. When the catalog gains a field the list doesn't know, the release step that ships the patch gets stuck, as it did last week until one field was added by hand. One field, the prices on the six Stinkyscape Resource tokens, is still missing, so the first change to those prices will stick the next release in the same way. Once this is built, the list is checked against the card's type, so adding a field to cards fails the web's typecheck in the pull request that adds it.\n\n## Why\n- `apps/web/src/patches/diff.ts` keeps `FIELD_LABEL` (`:46`), `DATA_ONLY_FIELDS` (`:78`) and `KNOWN_KEYS` (`:80`) by hand, apart from the generated `CardDef`.\n- #2585 (7836f89a8, \"a patches promotion or log is stuck\") added `snapshotOf` to these tables after `patches ship` stuck.\n- `diff.test.ts:256` (\"R388 every card every patch records diffs to what the record says: its kind and exactly its fields\") fails as soon as the diff names a field the record does not.\n- `resource` is a `CardDef` key (`wire/generated/CardDef.ts:64`) carried by stinkyscape-t-reknite, -t-korrelite, -t-gellium, -t-axnit, -t-narcor and -t-red-narcor. It is not in `KNOWN_KEYS`. So the diff names a change to it `data:resource` (`diff.ts:234-240`), while `changed_fields` (`crates/tools/src/patches.rs:1039`) records it as `resource`.\n\n## Proposal\n- Type the tables over `keyof CardDef`, for example with a `satisfies Record<keyof CardDef, \u2026>` that marks each key as labeled, data-only or ignored, so a key the tables lack is a type error.\n- Add `resource`, with a label.\n- Add a `diff.test.ts` case with a planted `resource` change that names the field as `changed_fields` does.\n\n## Where it lands\n`apps/web/src/patches/diff.ts`, `apps/web/src/patches/diff.test.ts`, `apps/web/src/i18n/zh-CN.json`. R388, R507.\n\n## Acceptance criteria\n- [ ] Adding a field to `CardDef` without an entry, or removing an entry, fails `pnpm --dir apps/web typecheck`.\n- [ ] A planted change to a Resource token's `resource` diffs under the field `resource`, and a record naming `resource` passes the R388 test.\n- [ ] Every existing patch note renders as before (`diff.test.ts` and `PatchNotes.test.tsx` pass).\n\n## Size and risks\nSmall, 2 to 3 files. It does not touch play. The only open choice is whether a Resource's prices print on its face or are data only, and the builder should follow what the Marketplace shows.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-31T20:01:27Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2607: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2517 skipped: it waits for #2516 to close first",
+    "#2518 skipped: it waits for #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
