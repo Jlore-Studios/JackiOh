@@ -22,7 +22,7 @@ import { TERM_TOOLTIP_TESTID, TermTips } from "./TermTip.tsx";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
-import { INSPECT_FACE_BASE, INSPECT_SHEET } from "./inspect/testids.ts";
+import { INSPECT_FACE_BASE, INSPECT_HOVER, INSPECT_SHEET } from "./inspect/testids.ts";
 import { useInspectTrigger } from "./inspect/useInspectTrigger.tsx";
 import { standInCopy } from "../fx/dom.ts";
 import { must } from "../test/stubServer.ts";
@@ -113,11 +113,12 @@ describe("R2098000 a term in a card's text shows its glossary line", () => {
     expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
     expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
 
-    // A held touch shows the rule and never opens the card's sheet.
+    // A held touch shows the rule and never opens the card's preview or sheet.
     fireEvent.pointerDown(term, TOUCH);
     advance(LONG_PRESS_MS);
     expect(screen.getByRole("tooltip")).toHaveTextContent(GLOSSARY.Cry.rule);
     advance(PAST_ANY_DELAY_MS);
+    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
     expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
     fireEvent.pointerUp(term, TOUCH);
     fireEvent.click(term);
@@ -128,11 +129,11 @@ describe("R2098000 a term in a card's text shows its glossary line", () => {
     fireEvent.pointerDown(document.body);
     expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
 
-    // Control: a long press off the terms still opens the card's sheet.
+    // Control: a long press off the terms still opens the card's preview, the hold's (R2617000).
     const name = must(screen.getByTestId("host").querySelector(".card-name"), "the host's card name");
     fireEvent.pointerDown(name, TOUCH);
     advance(LONG_PRESS_MS);
-    expect(screen.getByTestId(INSPECT_SHEET)).toBeInTheDocument();
+    expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
   });
 
   it("R2098000 a touch that moves past the slop is a drag and shows nothing", () => {
