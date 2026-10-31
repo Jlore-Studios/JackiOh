@@ -69,11 +69,13 @@ export const FIELD_LABEL = {
   radiantFallback: "Radiant form",
   dealsDamage: "Deals damage",
   usesPlague: "Uses its Plague Counters",
+  snapshotOf: "Copy of",
 } as const;
 
 /** R507: fields without printed faces are listed by name. R1748001 and R1748002's flags are the
- * Buff's data, as `patches ship` records them by name. */
-const DATA_ONLY_FIELDS: ReadonlySet<string> = new Set(["loc", "refs", "params", "dealsDamage", "usesPlague"]);
+ * Buff's data, as `patches ship` records them by name, and so is the Core card a Training Grounds
+ * copy named (`snapshotOf`, in the catalogs shipped from v0.5.5 to v0.5.7; R2511001). */
+const DATA_ONLY_FIELDS: ReadonlySet<string> = new Set(["loc", "refs", "params", "dealsDamage", "usesPlague", "snapshotOf"]);
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "id",
@@ -92,6 +94,7 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "radiantFallback",
   "dealsDamage",
   "usesPlague",
+  "snapshotOf",
   // R1437000: display only and in no snapshot, so a change to it alone is no card change.
   "flavor",
   "base",
@@ -146,6 +149,11 @@ function paramsText(params: readonly Param[] | undefined): string {
 
 function refsText(refs: readonly string[] | undefined, defs: CardDefs | undefined): string {
   return listText((refs ?? []).map((id) => defs?.[id]?.name ?? id));
+}
+
+/** The Core card a Training Grounds copy named (`snapshotOf`), by its name in the snapshot, as `refs` are. */
+function copiedText(def: CardDef, defs: CardDefs | undefined): string {
+  return refsText(def.snapshotOf === undefined ? [] : [def.snapshotOf], defs);
 }
 
 function dataText(value: unknown): string {
@@ -221,6 +229,7 @@ function fieldChanges(before: CardDef, after: CardDef, names: DiffNames): FieldC
   );
   value("dealsDamage", before.dealsDamage === true ? "yes" : "no", after.dealsDamage === true ? "yes" : "no");
   value("usesPlague", before.usesPlague === true ? "yes" : "no", after.usesPlague === true ? "yes" : "no");
+  value("snapshotOf", copiedText(before, names.before), copiedText(after, names.after));
 
   // Anything else the catalog grows: reported under its key rather than dropped.
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
