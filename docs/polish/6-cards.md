@@ -26,7 +26,8 @@ can drop in later without a 404 storm.
 To inspect a card:
 
 - **Desktop:** hover for 300 ms to see an enlarged card.
-- **Touch:** long-press to open an inspect sheet.
+- **Touch:** hold to see the same enlarged card while the finger stays down (R2617000; with hover
+  previews off, the hold opens an inspect sheet).
 
 The deck builder becomes a grid of full cards with:
 

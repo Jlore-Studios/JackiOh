@@ -861,11 +861,24 @@ pub fn migration_sql_for(number: u32, map: &[Renamed], retcon: &RetconSql) -> St
     let RetconSql {
         issue, title, marker, ..
     } = retcon;
-    let pairs: Vec<String> = map
+    let renamed: Vec<&Renamed> = map.iter().filter(|renamed| renamed.old != renamed.new).collect();
+    let pairs: Vec<String> = renamed
         .iter()
-        .filter(|renamed| renamed.old != renamed.new)
         .map(|renamed| format!("  ('{}', '{}')", renamed.old, renamed.new))
         .collect();
+    // R2532000: the renaming function holds the map as two constant arrays, so a call never queries,
+    // the longest names first, so a name another holds (v0.5.1 in v0.5.10) is looked for after it.
+    let mut renamed = renamed;
+    renamed.sort_by(|a, b| b.old.len().cmp(&a.old.len()).then_with(|| a.old.cmp(&b.old)));
+    let quoted = |names: Vec<&str>| {
+        names
+            .iter()
+            .map(|name| format!("'{name}'"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let olds = quoted(renamed.iter().map(|renamed| renamed.old.as_str()).collect());
+    let news = quoted(renamed.iter().map(|renamed| renamed.new.as_str()).collect());
     let mut table = String::new();
     for renamed in map {
         table.push_str(&format!("--   {:<9} {}\n", renamed.old, renamed.new));
@@ -920,8 +933,9 @@ end $$;
 -- version of `seasons`; a game record's
 -- patch and id (`dev:<patch>:<series>:<n>`, its series' own versions too),
 -- with their copies in its record, which takes the scheme marker
--- (`versions: {marker}`) so an export of it is never read through the map again; the
--- totals' patches (`game_totals`' among them, 0063) and the record ids they keep; and `app.settings`' catalog
+-- (`versions: {marker}`) so an export of it is never read through the map again,
+-- each of a renamed version alone; the totals' patches (`game_totals`' among
+-- them, 0063) and the record ids they keep; and `app.settings`' catalog
 -- version, last, after the `cards` it names, so its launch grant (0016) finds
 -- every card granted. What stays, as in 0025: `collection_grants` is
 -- append-only and keeps its `launch:<version>` references, which nothing
@@ -939,27 +953,41 @@ insert into retcon_{issue} (old, new) values
 -- Every version in a text, each renamed once (`rename_versions` in
 -- crates/tools/src/retcon.rs): a `v<n>.<n>.<n>` and at most one letter, with
 -- no letter, digit, `_` or `.` before it and no letter or digit, nor a dot
--- and a digit, after it.
+-- and a digit, after it. Each old name becomes a placeholder first and each
+-- placeholder its new name after, so a name another one is renamed to is
+-- never renamed again; every pass is one `regexp_replace` or `replace` over
+-- the whole text, taken only for a name the text holds, so a long text (a
+-- card's co-played map) costs a pass per name it holds, never a call per
+-- version (R2532000: 0049's call per version ran for minutes over a season of
+-- totals and timed the deploy out).
 create function pg_temp.retcon_{issue}(s text) returns text
-language plpgsql stable as $fn$
+language plpgsql immutable as $fn$
 declare
-  pattern constant text := '(?<![0-9A-Za-z_.])v[0-9]+\.[0-9]+\.[0-9]+[a-z]?(?![0-9A-Za-z]|\.[0-9])';
-  pieces text[];
-  tokens text[];
-  result text;
+  olds constant text[] := array[{olds}]::text[];
+  news constant text[] := array[{news}]::text[];
 begin
-  if s is null then
-    return null;
+  if s is null or s !~ 'v[0-9]' then
+    return s;
   end if;
-  pieces := regexp_split_to_array(s, pattern);
-  select array_agg(t.m[1] order by t.n) into tokens
-    from regexp_matches(s, '(' || pattern || ')', 'g') with ordinality as t(m, n);
-  result := pieces[1];
-  for i in 1 .. coalesce(array_length(tokens, 1), 0) loop
-    result := result || coalesce((select r.new from retcon_{issue} r where r.old = tokens[i]), tokens[i])
-      || pieces[i + 1];
+  for k in 1 .. coalesce(array_length(olds, 1), 0) loop
+    if strpos(s, olds[k]) > 0 then
+      -- A record id's version stands between `:`s (its patch) or `-`s (a
+      -- series'); those are renamed by `replace`, anything else by the regex.
+      s := replace(replace(s, ':' || olds[k] || ':', ':' || chr(1) || k || chr(2) || ':'),
+                   '-' || olds[k] || '-', '-' || chr(1) || k || chr(2) || '-');
+      if strpos(s, olds[k]) > 0 then
+        s := regexp_replace(s, '(?<![0-9A-Za-z_.])' || replace(olds[k], '.', '\.') || '(?![0-9A-Za-z]|\.[0-9])',
+                            chr(1) || k || chr(2), 'g');
+      end if;
+    end if;
   end loop;
-  return result;
+  if strpos(s, chr(1)) = 0 then
+    return s;
+  end if;
+  for k in 1 .. coalesce(array_length(news, 1), 0) loop
+    s := replace(s, chr(1) || k || chr(2), news[k]);
+  end loop;
+  return s;
 end $fn$;
 
 update public.cards t set catalog_version = m.new
@@ -991,9 +1019,12 @@ update public.rated_games t set catalog_version = m.new
 update public.seasons t set patch_version = m.new
   from retcon_{issue} m where t.patch_version = m.old;
 
--- A game record: its patch, its id and their copies in one statement
--- (`game_records_copies_check`), a development id through `dev:~` first
--- (`game_records_dev_id_check` holds throughout), then back.
+-- A game record of a renamed version: its patch, its id and their copies in
+-- one statement (`game_records_copies_check`), a development id through `dev:~`
+-- first (`game_records_dev_id_check` holds throughout), then back. A record
+-- names the version it was played on, and its id a series of that version or
+-- an earlier one (`learned-<version>-…`), so no other record holds a renamed
+-- name, and the rest are left as they are.
 update public.game_records g
    set patch = r.patch,
        id = case when r.renamed = g.id then g.id else 'dev:~' || substr(r.renamed, 5) end,
@@ -1003,7 +1034,8 @@ update public.game_records g
                        'patch', r.patch, 'versions', {marker}) end
   from (select id, pg_temp.retcon_{issue}(id) as renamed,
                coalesce((select m.new from retcon_{issue} m where m.old = patch), patch) as patch
-          from public.game_records) r
+          from public.game_records
+         where patch in (select old from retcon_{issue})) r
  where g.id = r.id;
 update public.game_records
    set id = 'dev:' || substr(id, 6),
@@ -1011,25 +1043,23 @@ update public.game_records
                      else record || jsonb_build_object('id', 'dev:' || substr(id, 6)) end
  where starts_with(id, 'dev:~');
 
--- The totals (0041): their patch is in their key, so through `~` first.
+-- The totals (0041): their patch is in their key, so through `~` first, and a
+-- renamed version's rows take the record ids they keep (a card's co-played
+-- map, a decklist's first record) renamed in the same statement. As with the
+-- records, only a renamed version's rows can hold a renamed name.
 update public.record_totals t set patch = '~' || m.new
   from retcon_{issue} m where t.patch = m.old;
 update public.record_totals set patch = substr(patch, 2) where starts_with(patch, '~');
-update public.card_totals t set patch = '~' || m.new
+update public.card_totals t
+   set patch = '~' || m.new,
+       co = pg_temp.retcon_{issue}(t.co::text)::jsonb
   from retcon_{issue} m where t.patch = m.old;
 update public.card_totals set patch = substr(patch, 2) where starts_with(patch, '~');
-update public.card_totals t
-   set co = (select coalesce(jsonb_object_agg(e.key,
-               case when jsonb_typeof(e.value -> 2) = 'string'
-                    then jsonb_set(e.value, '{{2}}', to_jsonb(pg_temp.retcon_{issue}(e.value ->> 2)))
-                    else e.value end), '{{}}'::jsonb)
-             from jsonb_each(t.co) e)
- where t.co::text ~ 'v[0-9]';
-update public.decklist_totals t set patch = '~' || m.new
+update public.decklist_totals t
+   set patch = '~' || m.new,
+       first_record = pg_temp.retcon_{issue}(t.first_record)
   from retcon_{issue} m where t.patch = m.old;
 update public.decklist_totals set patch = substr(patch, 2) where starts_with(patch, '~');
-update public.decklist_totals set first_record = pg_temp.retcon_{issue}(first_record)
- where first_record ~ 'v[0-9]';
 -- The whole games' totals (0063), keyed by patch as the others are.
 update public.game_totals t set patch = '~' || m.new
   from retcon_{issue} m where t.patch = m.old;
@@ -1753,6 +1783,48 @@ mod tests {
         assert!(sql.contains(&format!("'versions', {VERSIONS_SCHEME}")));
         assert!(sql.contains("update public.game_totals t set patch = '~' || m.new"));
         assert!(!sql.contains("public.seasons (id"), "v0.5 stays v0.5");
+    }
+
+    // R2532000: migration 0068 is what the generator writes from the map its own header lists, so a
+    // fix to the generator reaches the file (this run rewrites it when they differ: commit it). The
+    // first write renamed each co-played record id with a call per version, which ran for minutes
+    // over a season of totals and timed Render's release out; the generator renames a text in one
+    // pass per name, and only a renamed version's rows.
+    #[test]
+    fn r2532000_migration_0068_is_what_the_generator_writes() {
+        let path = repo_root().join(MIGRATIONS_REL).join("0068_v0_5_retcon.sql");
+        let held = fs::read_to_string(&path).expect("migration 0068");
+        let map: Vec<Renamed> = held
+            .lines()
+            .skip_while(|line| !line.starts_with("--   old"))
+            .skip(1)
+            .map_while(|line| line.strip_prefix("--   "))
+            .filter_map(|row| {
+                let mut names = row.split_whitespace();
+                Some(Renamed {
+                    old: names.next()?.to_string(),
+                    new: names.next()?.to_string(),
+                    tier: Tier::Micro,
+                    plays: Vec::new(),
+                })
+            })
+            .collect();
+        assert!(
+            map.iter()
+                .any(|renamed| renamed.old == "v0.5.11" && renamed.new == "v0.5.7")
+        );
+        let written = migration_sql_for(68, &map, &V05_RETCON);
+        if written != held {
+            fs::write(&path, &written).expect("rewrite migration 0068");
+            panic!(
+                "{} differed from what the generator writes; this run rewrote it: commit the result",
+                path.display()
+            );
+        }
+        assert!(
+            !written.contains("jsonb_each(t.co)"),
+            "a co-played map is renamed as one text"
+        );
     }
 
     // The repository itself, retconned.

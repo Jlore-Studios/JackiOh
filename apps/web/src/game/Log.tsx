@@ -41,7 +41,7 @@ import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
 import { CatalogContext, withMatchDefs, type CardLookup } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
-import { sideOf, testid, touchHoldMode } from "./contract.ts";
+import { sideOf, testid } from "./contract.ts";
 import { curveEquation } from "./curveEquation.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
@@ -791,10 +791,10 @@ export function keptLineFor(view: PlayerView, lookup: CardLookup | null): (event
 type Line = KeptLine;
 
 /** One line; a line about a card is a button that opens it (see the header). Kept lines are the same objects from render to render, so they do not redraw. */
-const LogLine = memo(function LogLine({ line, touchHold }: { line: Line; touchHold?: "sheet" | "preview" }): ReactElement {
+const LogLine = memo(function LogLine({ line }: { line: Line }): ReactElement {
   const face = line.face;
   // Lines of code is a hidden stat in matches.
-  const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face }, { touchHold, showLoc: false });
+  const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face }, { showLoc: false });
   if (face === null) {
     return (
       <li className="log-line" data-event={line.type}>
@@ -851,15 +851,13 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
     return [{ key: history.keys[index] ?? `${view.viewer}-window-${String(index)}`, type: event.type, text, face }];
   });
   const lines = [...history.kept, ...windowLines].slice(-LOG_HISTORY_LIMIT);
-  const touchHold = touchHoldMode(view);
-
   return (
     <ol ref={listRef} className="log" data-testid={testid.log} aria-label={t("Game log")}>
       {lines.map((line, index) => (
         <Fragment key={line.key}>
           {/* #757: drawn only; a list holds list items, and the turn's own line names the turn. */}
           {index > 0 && line.type === "turnStarted" ? <li className="log-divider" aria-hidden="true" /> : null}
-          <LogLine line={line} touchHold={touchHold} />
+          <LogLine line={line} />
         </Fragment>
       ))}
     </ol>
