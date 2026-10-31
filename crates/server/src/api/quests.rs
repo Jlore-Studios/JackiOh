@@ -87,7 +87,8 @@ pub async fn get_quests(app: &Arc<App>, req: Req) -> ApiResult {
 /// `POST /api/quests/:questId/replace` (`AuthLevel::Active`): replaces a held quest with another
 /// ([`replace_quest`], [[R2210000]]) and answers what `GET /api/quests` answers after it. 409 while
 /// the economy is off, when today's replaces are spent and when no other quest is left to draw;
-/// 404 for a quest the account does not hold. A refusal writes nothing.
+/// 404 for a quest the account does not hold. A refusal writes nothing. It runs in the account's
+/// economy turn; past the requests waiting theirs it is 429 `rate_limited` (R2378000).
 pub async fn post_replace_quest(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     if !app.economy_live {
@@ -98,6 +99,9 @@ pub async fn post_replace_quest(app: &Arc<App>, req: Req) -> ApiResult {
     }
     let not_held = || ApiError::new(ApiErrorCode::NotFound, "That quest is not held.");
     let quest_id = req.params.get("questId").cloned().ok_or_else(not_held)?;
+    // R2378000: the account's turn first, so a burst waits here holding no database
+    // connection, not on the economy lock `replace_quest` takes.
+    let _turn = app.spends.claim(&profile.id).await?;
     let now = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     match replace_quest(&mut tx, &profile.id, &quest_id, now).await? {
