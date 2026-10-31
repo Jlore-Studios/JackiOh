@@ -1,37 +1,15 @@
-//! BUILD M8's `E2E=1` test server: the fixture accounts, the fixture invite codes and R144's reseed,
-//! at boot and on demand (`POST /api/e2e/reseed`). Port of `apps/server/src/api/e2e.ts`; the auth
-//! provider that honors the fixture tokens is `crate::auth::E2eAuth` (SURFACE §11.1), built from
-//! `E2E_ACCOUNTS` here.
+//! BUILD M8's `E2E=1` test server: fixture accounts, fixture codes, and R144 reseed at boot
+//! and `POST /api/e2e/reseed` (SURFACE §11.1).
 //!
-//! BUILD M8's preamble: "Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test
-//! server with fixture accounts)." `e2e/README.md`'s assumption A6 spells out which accounts:
-//! "fixture accounts `e2e-p1`, `e2e-p2` (active, own every card) and `e2e-pending` (pending,
-//! verified email); seeded invite codes — one good, one missing, one expired, one exhausted."
-//! R1310004 adds `e2e-econ` (pending, verified, and a dev account in end-to-end mode alone,
-//! [`is_e2e_dev`]) for the one spec that walks the economy (spec 45), and keeps every card on the
-//! active fixtures now that the economy is live: a redemption grants the starter cards alone
-//! (R1310000), so each active fixture is granted the rest of the catalog after its activation.
+//! SPEC §11 R144: reseeds fixture accounts (`e2e-p1`, `e2e-p2`, `e2e-pending`, and `e2e-econ` with
+//! R1310004, R1310000) and invite codes (good, missing, expired, exhausted) so tests are repeatable.
+//! Contract matches `e2e/support/config.ts`.
 //!
-//! SPEC §11 R144: "In end-to-end mode the server reseeds its fixture accounts and invite codes at
-//! boot, and again on `POST /api/e2e/reseed`, which spec 10 calls before its first test, so a spec
-//! that activates the pending account or spends an invite code is repeatable against one server with
-//! no restart. Without this the invite-gate spec passes once and fails on every later run, which is
-//! indistinguishable from a regression." Spec 10 does exactly that: it flips `e2e-pending` to active
-//! and spends the good code.
-//!
-//! NOTHING HERE IS REACHABLE IN PRODUCTION. `app.rs` builds these only when `env.e2e` is true,
-//! `post_reseed` answers as no route at all unless it is, and `env.rs` already refuses `E2E`
-//! together with `NODE_ENV=production`:
-//!
+//! Unreachable in production (`env.rs` refuses `E2E` with `NODE_ENV=production`):
 //! ```text
 //! "E2E: must not be set together with NODE_ENV=production — BUILD M8's fixture accounts and
 //!  seeded games must never be reachable in a production deployment."
 //! ```
-//!
-//! THE VALUES BELOW ARE A CONTRACT WITH `e2e/support/config.ts`, which is the suite's own source of
-//! truth and cannot be imported from here. They are transcribed from its defaults. That file also
-//! lets CI override every one of them (`--expose p1Token=…`, `--expose goodCode=…`); an override
-//! with no matching change here would seed one set and ask for another, so the two move together.
 
 use std::sync::Arc;
 
@@ -46,9 +24,7 @@ use crate::app::App;
 use crate::config::{INVITE_CODE_LENGTH, MIN_ACCOUNT_AGE_YEARS, RATING_START, TERMS_VERSION};
 use crate::db::store::{Db, InviteCode, ProfileCreateInput, ProfileStatus, TermsSource};
 
-// ---------------------------------------------------------------------------
 // Fixture accounts (`e2e/support/config.ts`, `accounts`)
-// ---------------------------------------------------------------------------
 
 /// What `profiles.status` must be once the reseed is done (§9.4).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -130,9 +106,7 @@ pub fn is_e2e_dev(user_id: &str) -> bool {
         .any(|account| account.dev && account.user_id == user_id)
 }
 
-// ---------------------------------------------------------------------------
 // Fixture invite codes (`e2e/support/config.ts`, `inviteCodes`)
-// ---------------------------------------------------------------------------
 
 /// One code per §9.4 failure mode plus one that works. `missing` is the one that must NOT exist:
 /// seeding it would turn spec 10's "missing" sample into an "already used" sample and the three
@@ -157,7 +131,7 @@ impl E2EInviteCodeKind {
     }
 }
 
-/// TS `Record<E2EInviteCodeKind, string>`: the plaintext of each fixture code.
+/// Plaintext of each fixture code.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct E2EInviteCodes {
     pub good: &'static str,
@@ -167,7 +141,7 @@ pub struct E2EInviteCodes {
 }
 
 impl E2EInviteCodes {
-    /// TS `codes[kind]`.
+    /// Code for `kind`.
     pub fn of(&self, kind: E2EInviteCodeKind) -> &'static str {
         match kind {
             E2EInviteCodeKind::Good => self.good,
@@ -177,7 +151,7 @@ impl E2EInviteCodes {
         }
     }
 
-    /// TS `Object.entries(codes)`, in the record's order.
+    /// Entries in kind order.
     pub fn entries(&self) -> [(E2EInviteCodeKind, &'static str); 4] {
         [
             (E2EInviteCodeKind::Good, self.good),
@@ -205,9 +179,7 @@ const EXPIRED_CODE_AGE_MS: i64 = 60 * 60 * 1000;
 /// decides nothing.
 const FIXTURE_CODE_MAX_USES: i64 = 1;
 
-// ---------------------------------------------------------------------------
 // R144: the reseed
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -221,7 +193,7 @@ pub struct E2ESeedSummary {
     pub codes: Vec<E2EInviteCodeKind>,
 }
 
-/// TS `seedE2EFixtures`'s `options`: the fixtures to seed in place of the contract's.
+/// Fixtures to seed in place of defaults.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct E2ESeedOptions {
     pub accounts: &'static [E2EAccount],
@@ -244,14 +216,8 @@ pub async fn seed_e2e_fixtures(app: &App) -> Result<E2ESeedSummary, ApiError> {
     seed_e2e_fixtures_with(app, E2ESeedOptions::default()).await
 }
 
-/// R144. Wipes every row and rewrites the fixtures, so running it twice leaves exactly the state
-/// running it once does: `e2e-pending` pending again, the good code unspent again, spec 10
-/// repeatable.
-///
-/// The accounts are created `pending` and then flipped with `profiles_set_status`, which is where
-/// the in-memory store carries R111's `pending → active` trigger, so an active fixture holds the
-/// same starter grant a redemption produces (R1310000); R1310004 then grants it the rest of the
-/// catalog, as a dev account's fill would, so every spec but the economy's plays any card.
+/// R144: wipes and rewrites fixtures so test runs are idempotent. Active accounts trigger R111
+/// starter cards (R1310000) and are granted remaining catalog cards (R1310004).
 pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Result<E2ESeedSummary, ApiError> {
     let accounts = options.accounts;
     let codes = options.codes;
@@ -334,22 +300,14 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
     })
 }
 
-// ---------------------------------------------------------------------------
 // R144: the reseed on demand
-// ---------------------------------------------------------------------------
 
 /// The reseed's path. A contract with `e2e/support/config.ts`'s `E2E_RESEED_PATH`, which spec 10
 /// posts to, like the fixtures above.
 pub const E2E_RESEED_PATH: &str = "/api/e2e/reseed";
 
-/// `POST /api/e2e/reseed` (`AuthLevel::None`): R144's reseed on demand, so spec 10 puts back the
-/// account it activates and the code it spends without a server restart. Answers the
-/// `E2ESeedSummary`: the profiles, the launch grant's size and the codes written.
-///
-/// Outside end-to-end mode it answers exactly what `api::http::dispatch` answers for a path nobody
-/// serves, so a production server (`env.rs` refuses `E2E` with `NODE_ENV=production`) neither runs
-/// it nor shows that it exists. Like the reseed at boot it wipes every row: the specs run one at a
-/// time against a server, and spec 10 calls it in its `before` hook, before any request of its own.
+/// `POST /api/e2e/reseed` (`AuthLevel::None`, R144): on-demand reseed returning `E2ESeedSummary`.
+/// Returns 404 outside end-to-end mode (`env.rs` forbids E2E in production).
 pub async fn post_reseed(app: &Arc<App>, _req: Req) -> ApiResult {
     if !app.env.e2e {
         return Err(ApiError::new(ApiErrorCode::NotFound, "no such endpoint"));

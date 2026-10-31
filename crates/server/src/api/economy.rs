@@ -1,10 +1,6 @@
-//! The wallet and the set tracks, read-only (SPEC §14.1, §14.7, #1302).
-//!
-//! An account reads its own Jlore balance and its own tracks — level, XP, the XP to the next
-//! level, the next level's rewards and how many levels have paid — and nobody else's (§14). Like
-//! `GET /api/collection`, these are reads alone: the ledger moves only through the server-side
-//! payouts (`economy::rewards`) and, for a dev account alone, its dev tools (`api/dev.rs`,
-//! [[R1300000]]), never through a player's client path.
+//! Read-only wallet and set tracks (SPEC §14, §14.1, §14.7, #1302).
+//! Accounts read their own Jlore and track progress; ledgers update only through server-side
+//! payouts (`economy::rewards`) and dev tools (R1300000).
 
 use std::sync::Arc;
 
@@ -27,12 +23,9 @@ pub async fn get_wallet(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(json(200, json!({ "jlore": jlore })))
 }
 
-/// `GET /api/tracks` (`AuthLevel::Active`): one entry per shipped set in catalog order. A locked
-/// older set reports the first level with no XP, its first rewards next, and `unlocked: false`.
-/// `levelXp` is the XP the track's current level spans, so a client sizes the level's XP bar
-/// without knowing the curve. A track on its last level, `SET_TRACK_LEVELS`, has no next level:
-/// its `xpToNext`, `levelXp` and `nextRewards` are `null` ([[R1302005]]). The level and the XP
-/// figures are a [`TrackPoint`], as a finished game's answer spells each track it moved.
+/// `GET /api/tracks` (`AuthLevel::Active`): progress for each shipped set.
+/// Level and XP form a [`TrackPoint`]. Max-level tracks (`SET_TRACK_LEVELS`) return `null`
+/// for `xpToNext`, `levelXp`, and `nextRewards` (R1302005).
 pub async fn get_tracks(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;

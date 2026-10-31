@@ -1,22 +1,12 @@
-//! The Conquest series (SPEC §9.5, R330–R338, with R262–R264): the store half of `series_rules.rs`.
+//! Conquest series management (SPEC §9.5, R330–R338, R262–R264).
 //!
-//! The rules are pure functions over `SeriesRow`; this file reads a row, applies one and writes it
-//! back, and does what a pure function cannot:
-//!  - **Compare-and-set** (R263). A series has several writers (both players, the sweeper,
-//!    `results.rs`); `series_update` writes only over the version it computed from, and a lost write
-//!    re-reads and re-applies the same transition. A pick is persisted before it is acknowledged and
-//!    leaves the server only in its owner's projection (R331).
-//!  - **The rating move** (R262, R604). A transition that ends a ranked series rates it as one game
-//!    (`ranked.rs`, R603), put on the row by the same compare-and-set. A game inside a series is
-//!    never rated (`results.rs`); an abandoned series and a room's are unrated.
-//!  - **Starting the game** (R331, R263). With both picks in, `next_match_id` starts through
-//!    `app.matches` after the commit, since the actor must never run a game the row does not name;
-//!    the sweeper starts one a crash left unstarted, after `SERIES_START_GRACE_SECONDS`.
-//!  - **A bot's side** (R641000). A ladder bot seated in a series makes its picks from the sweeper,
-//!    each after its delay (`bots::pick`), through `pick_deck` as a person's pick goes; the series'
-//!    rating move rates its side as the bot it is (R610).
+//! State transitions over `SeriesRow` with compare-and-set updates (R263, R331).
+//! Ranked series rate once as a single game on completion (R262, R604, R603).
+//! Games start via `app.matches` once both picks land (R331, R263); sweeper handles
+//! unstarted games after `SERIES_START_GRACE_SECONDS`.
+//! Ladder bot sides pick via sweeper delays (R641000) and rate as bots (R610).
 //!
-//! Surface contract: docs/v0.3.0/SURFACE.md §11.2. Sweeper: `run_sweeper` (every 5 s).
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2. Sweeper: `run_sweeper`.
 
 use std::sync::Arc;
 use std::time::Duration;

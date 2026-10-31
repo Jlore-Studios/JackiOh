@@ -1,19 +1,11 @@
-//! The age screen and the terms a player agrees to (SPEC §9.4, R757000, R757001; issue #757).
+//! The age screen and terms agreement (SPEC §9.4, R757000, R757001; issue #757).
 //!
-//! `POST /api/account/consent` (`AuthLevel::User`): `{ termsVersion, birthYear?, birthMonth? }`. The
-//! client asks; the server decides (CLAUDE.md rule 7):
+//! `POST /api/account/consent` (`AuthLevel::User`, CLAUDE.md rule 7):
+//! - **Age (R757000):** Pending accounts owe an age check. Under-age answers trigger account
+//!   deletion (`DELETE /api/account`) and 403 `under_age`. Birth date is never stored.
+//! - **Terms (R757001):** Accounts owe agreement to `TERMS_VERSION` (mismatches 409 `update_required`).
 //!
-//! - **Age (R757000).** A pending account that has not passed the age check owes one. The server
-//!   counts the age from the birth month and year in UTC and keeps only that the check passed, when
-//!   and against which minimum, never the birth date. An answer under `MIN_ACCOUNT_AGE_YEARS`
-//!   deletes the account the way `DELETE /api/account` does and answers 403 `under_age`.
-//! - **Terms (R757001).** Every account owes agreement to `TERMS_VERSION`, once per version. A
-//!   client that sends another version read other terms, and is told to reload (409
-//!   `update_required`).
-//!
-//! `GET /api/auth/me` carries what is owed (`ageCheckOwed`, `termsOwed`), and `POST
-//! /api/codes/redeem` refuses an account owing either (`consent_owed`) before it logs an attempt.
-//! The request body is never logged: it holds a birth month and year.
+//! `GET /api/auth/me` reports what is owed; redemption refuses accounts owing consent.
 
 use std::sync::Arc;
 
@@ -38,9 +30,7 @@ pub fn utc_year_month(now_ms: i64) -> (i32, i32) {
     (at.year(), i32::from(u8::from(at.month())))
 }
 
-/// R757000: whole years from a birth month to `(year, month)`, counting the birth month itself as
-/// not yet reached: with no day, the birthday may still be to come. The client's `ageInYears`
-/// (`apps/web/src/auth/consent.ts`) is the same sum.
+/// R757000: whole years from birth month to `(year, month)`, counting birth month as not yet reached.
 pub fn age_in_years(birth_year: i32, birth_month: i32, year: i32, month: i32) -> i32 {
     year - birth_year - i32::from(month <= birth_month)
 }

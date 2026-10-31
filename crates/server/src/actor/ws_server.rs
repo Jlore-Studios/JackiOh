@@ -1,21 +1,9 @@
-//! The WebSocket adapter: the only file in `src/actor` that knows a WebSocket library exists.
-//!
-//! The protocol is proven against the in-memory socket (`tests/support/socket.rs`), the same `Socket`
-//! the actor talks to. This file adds `socket_from_ws` (an axum WebSocket as a `Socket`; text frames
-//! only, a binary frame is answered with `error` and dropped) and `handle_match_socket` (the upgrade:
-//! authenticate through `app.auth`, apply §9.4's gate (`assert_active`), refuse unless the profile is
-//! in the match it asked for or held a seat in it finished while its rematch window is open (§9.5,
-//! R1285000), §9.1). `handle` also bounds what an unauthenticated client costs: a
-//! frame over `MAX_FRAME_BYTES` closes the socket with 1009, and one client address holds at most
-//! `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets. A socket that stops answering is found and dropped: the
-//! pump pings every `WS_PING_INTERVAL_SECONDS` and drops a connection that has sent nothing for
-//! `WS_IDLE_TIMEOUT_SECONDS`, and a socket's outgoing queue holds at most `WS_OUTBOX_MAX_FRAMES`
-//! frames (SPEC §9.5, §9.8, R1441), so a dead or unread peer starts its seat's grace and cannot grow
-//! the server's memory without limit.
-//!
-//! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §4.2, §11.2, §11.3. The token comes from the
-//! offered `jackioh.bearer.` subprotocol (R1379000), or, when none is offered, from the previous
-//! day's client's `?token=`; only `jackioh.v1` is echoed.
+//! WebSocket adapter: axum WebSocket to `Socket` transport (SURFACE §4.1, §4.2, §11.2, §11.3).
+//! Upgrades authenticate via `app.auth`, enforce active account (§9.4), and check
+//! match membership or open rematch window (§9.1, §9.5, R1285000).
+//! Enforces frame limits (1009 on >MAX_FRAME_BYTES), rate limits per address, ping/idle
+//! timeouts, and bounded outbox (SPEC §9.5, §9.8, R1441).
+//! Bearer token decoded from `jackioh.bearer.` subprotocol or query string (R1379000).
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -68,9 +56,7 @@ pub struct WsClose {
     pub internal: u16,
 }
 
-/// SPEC §11 R148: 4401, 4403 and 4404 mirror the HTTP statuses of the same three refusals, with
-/// 1011 for an internal fault. Every refusal answers with the same error code and only the close code
-/// varies, so a socket never learns which check said so (§9.1).
+/// SPEC §11 R148, §9.1: close codes mirroring HTTP statuses (4401, 4403, 4404, 1011).
 pub const WS_CLOSE: WsClose = WsClose {
     unauthorized: 4401,
     forbidden: 4403,
@@ -108,8 +94,7 @@ pub enum SocketFrame {
 }
 
 struct SocketInner {
-    /// The transport's queue, bounded by `WS_OUTBOX_MAX_FRAMES`. `None` once it overflowed and was
-    /// let go (R1441): the transport drains what it holds, then ends.
+    /// Transport queue bounded by `WS_OUTBOX_MAX_FRAMES` (R1441).
     out: Mutex<Option<mpsc::Sender<SocketFrame>>>,
     open: AtomicBool,
     /// The close handler has run; it runs once, whichever side closed.
@@ -117,20 +102,14 @@ struct SocketInner {
     handlers: Mutex<Option<Arc<SocketHandlers>>>,
 }
 
-/// One player's connection (`actor/contracts.rs`). Text frames only. The axum adapter and the
-/// in-memory test socket both drive this one type through channels, so the actor is
-/// transport-agnostic.
-///
-/// Clones are the same connection: equality is identity.
+/// One player's connection (`actor/contracts.rs`). Text frames only.
 #[derive(Clone)]
 pub struct Socket {
     inner: Arc<SocketInner>,
 }
 
 impl Socket {
-    /// A socket over two channels: its frames go to `out`, the client's arrive on `incoming`. When
-    /// `incoming`'s sender is dropped the transport is gone and the close handler runs. Spawns the
-    /// reader, so call it inside a tokio runtime.
+    /// Creates socket wired to outgoing and incoming frame channels.
     pub fn new(out: mpsc::Sender<SocketFrame>, incoming: mpsc::UnboundedReceiver<String>) -> Socket {
         let socket = Socket::detached(out);
         let reader = socket.clone();
@@ -168,9 +147,7 @@ impl Socket {
         self.inner.open.load(Ordering::SeqCst)
     }
 
-    /// Sends one text frame. A frame sent after the socket closed goes nowhere. A frame that finds the
-    /// outbox full closes the socket (§9.8, R1441): the peer is not reading, and views are full
-    /// snapshots, so its reconnect loses nothing.
+    /// Sends text frame; closes socket on outbox overflow (§9.8, R1441).
     pub fn send(&self, text: impl Into<String>) {
         if !self.is_open() {
             return;
@@ -183,9 +160,7 @@ impl Socket {
         }
     }
 
-    /// Queues one frame for the transport. False when the outbox is full (§9.8, R1441): it is let go,
-    /// so the transport sends what it holds and ends the connection. A transport already gone counts
-    /// as queued; its own close reports it.
+    /// Queues frame; returns false when outbox is full (§9.8, R1441).
     fn queue(&self, frame: SocketFrame) -> bool {
         let mut out = lock(&self.inner.out);
         let full = matches!(
@@ -227,8 +202,7 @@ impl Socket {
         }
     }
 
-    /// The transport's side: the connection ended (closed by the peer, a transport error, or the
-    /// end of our own closing handshake). §9.5's grace is what handles a disconnect.
+    /// Transport ended; begins grace period (§9.5).
     pub fn transport_closed(&self) {
         self.inner.open.store(false, Ordering::SeqCst);
         self.notify_gone();
@@ -266,25 +240,20 @@ fn error_frame(code: SocketErrorCode, message: &str) -> String {
     encode(&error_message(code, message, None))
 }
 
-/// Whether a read failed because a frame or a message passed the size cap (tungstenite's capacity
-/// error: "Space limit exceeded: Message too long: …"). Read off its text: the error type belongs
-/// to a crate the server does not name.
+/// Whether a read error was caused by frame/message size cap.
 fn too_large(error: &axum::Error) -> bool {
     let text = error.to_string();
     text.contains("Message too long") || text.contains("Space limit exceeded")
 }
 
-/// An axum WebSocket as a `Socket`, and the task that pumps it. Text frames only: a binary frame is
-/// answered with `error` `malformed` and dropped; a transport error is a disconnect. The task ends
-/// when the connection does, after telling the socket.
+/// Wraps axum WebSocket as a `Socket` and spawns its pump task.
 pub fn socket_from_ws(ws: WebSocket) -> (Socket, tokio::task::JoinHandle<()>) {
     let (socket, frames) = Socket::channel();
     let pump = tokio::spawn(pump(ws, socket.clone(), frames));
     (socket, pump)
 }
 
-/// One frame out, or false when it failed or the peer has not taken it by `by` (R1441): a peer that
-/// stops reading would otherwise hold the pump, and its address slot, until TCP gives up.
+/// Sends frame with timeout (R1441).
 async fn send_by(ws: &mut WebSocket, message: Message, by: tokio::time::Instant) -> bool {
     matches!(tokio::time::timeout_at(by, ws.send(message)).await, Ok(Ok(())))
 }
@@ -316,14 +285,12 @@ async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::Receiver<Sock
                             break;
                         }
                     }
-                    // tungstenite answers a ping itself, and a pong, like any frame, is what `heard`
-                    // reads (R1441): the idle timer runs on what the peer sent.
+                    // R1441: pongs reset the idle timer.
                     Some(Ok(Message::Ping(_) | Message::Pong(_))) => {}
                     // The peer's half of the closing handshake; the stream ends next.
                     Some(Ok(Message::Close(_))) => {}
                     Some(Err(error)) => {
-                        // §9.8: a frame over `MAX_FRAME_BYTES` is refused with 1009 as its length
-                        // arrives, never buffered whole.
+                        // §9.8: frame exceeding MAX_FRAME_BYTES closed with 1009.
                         if too_large(&error) {
                             let code = CLOSE_MESSAGE_TOO_BIG;
                             let close = Message::Close(Some(CloseFrame { code, reason: "".into() }));
@@ -349,9 +316,7 @@ async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::Receiver<Sock
             },
             () = tokio::time::sleep_until(wake_at) => {
                 if tokio::time::Instant::now() >= idle_at {
-                    // §9.5, R1441: nothing heard for the idle timeout. The peer is gone: it is dropped
-                    // with no closing handshake it could not answer, and `transport_closed` below
-                    // starts its grace.
+                    // §9.5, R1441: idle timeout expired; drop connection and begin grace.
                     tracing::info!(event = "ws.socket.idle");
                     break;
                 }
@@ -423,10 +388,7 @@ fn query_pairs(uri: &Uri) -> Vec<(String, String)> {
     }
 }
 
-/// R1379000: an upgrade's token. The first offered subprotocol starting with
-/// `WS_BEARER_PROTOCOL_PREFIX` is the credential; one that does not decode to non-empty UTF-8 is no
-/// token. Only with no credential offered is `?token=` read, the previous day's client's address
-/// (docs/deploy-cloudflare.md §7).
+/// R1379000, §7: bearer token from subprotocol or fallback query parameter.
 fn upgrade_token(headers: &HeaderMap, uri: &Uri) -> Option<String> {
     let offered = headers
         .get_all(SEC_WEBSOCKET_PROTOCOL)
@@ -444,10 +406,7 @@ fn upgrade_token(headers: &HeaderMap, uri: &Uri) -> Option<String> {
     }
 }
 
-/// Whether `profile_id` holds a seat in the finished match `match_id` and its rematch window is
-/// still open: no more than `REMATCH_OFFER_TTL_MS` since the row's `finished_at` (§9.5, R1285000).
-/// Anything else — no such match, a live one, another profile's, or one whose window has passed —
-/// reads as false, so the caller refuses exactly as before (§9.1) and no actor is rebuilt.
+/// Checks if profile holds seat in finished match with open rematch window (§9.5, R1285000, §9.1).
 async fn seats_finished_match(
     app: &Arc<App>,
     match_id: &str,
@@ -462,8 +421,7 @@ async fn seats_finished_match(
     if match_row.status != MatchStatus::Finished {
         return Ok(false);
     }
-    // R1285000: the rematch window, counted as the reaper counts it (`Registry::reap_finished`) and
-    // a rematch offer lives (`api/rematch.rs`); a finished row with no end reads as outside it.
+    // R1285000: check rematch window against REMATCH_OFFER_TTL_MS.
     let in_window = match_row
         .finished_at
         .is_some_and(|finished_at| now_ms() - finished_at <= REMATCH_OFFER_TTL_MS);
@@ -502,11 +460,7 @@ async fn upgrade_socket(
             "you are not in a match",
         ));
     };
-    // §9.1: a socket is only ever opened onto a match this profile is playing — or one it
-    // played: §9.5 clears both seats' in-match state at every ending, but the rematch window
-    // keeps a finished match's seats coming back for `REMATCH_OFFER_TTL_MS` after its end
-    // (R1285000; presence is the opponent's socket being open, and a socket that comes back folds
-    // the actor again).
+    // §9.1, §9.5, R1285000: verify player match membership or rematch eligibility.
     if profile.in_match_id.as_deref() != Some(match_id.as_str())
         && !seats_finished_match(app, &match_id, &profile.id).await?
     {
@@ -527,14 +481,10 @@ async fn upgrade_socket(
     }
 }
 
-/// Authenticate an upgraded socket and hand it to the registry, or refuse it with the one error
-/// frame and a close code. `token` is the upgrade's (`upgrade_token`, R1379000); `uri` names the
-/// match.
+/// Authenticates upgraded socket and attaches to registry (R1379000).
 pub async fn handle_match_socket(app: &Arc<App>, socket: &Socket, uri: &Uri, token: Option<String>) {
     let refuse = |code: u16, message: &str| {
-        // One protocol code for every refusal: a socket learns that it may not have this match,
-        // never which of the checks said so. A peer already gone drops the frame; the close below
-        // is what matters.
+        // Send forbidden error frame and close socket.
         socket.send(error_frame(SocketErrorCode::Forbidden, message));
         socket.close(Some(code), Some(message));
     };
@@ -553,12 +503,9 @@ pub async fn handle_match_socket(app: &Arc<App>, socket: &Socket, uri: &Uri, tok
 /// Options for the upgrade, minus `path` (the router owns the path).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct AttachOptions {
-    /// §9.8: a browser attaches credentials to a cross-origin WebSocket handshake automatically, so
-    /// an unchecked upgrade is a CSRF surface. An empty or absent list allows any origin, which is
-    /// what a Node client (the e2e `wsPlayer` task) sends — it has no `Origin` at all.
+    /// §9.8: allowed origins for CSRF protection.
     pub allowed_origins: Option<Vec<String>>,
-    /// R190's hop count, so a socket is counted against the same client address the API's per-IP
-    /// limits read (`client_address` in api/http.rs). Defaults to `DEFAULT_TRUSTED_PROXY_HOPS`.
+    /// R190: trusted proxy hops for client address rate limiting.
     pub trusted_proxy_hops: Option<usize>,
     /// Defaults to `WS_MAX_CONNECTIONS_PER_ADDRESS`; a test lowers it.
     pub max_connections_per_address: Option<usize>,
@@ -592,8 +539,7 @@ fn forwarded_headers(headers: &HeaderMap) -> HeaderMap {
     forwarded
 }
 
-/// R162 makes this list the same one the REST layer reads, "so the two doors cannot diverge", so the
-/// comparison has to match too: `api/cors.rs` canonicalises a trailing slash before comparing.
+/// R162: compare origins matching REST CORS normalization.
 fn same_origin(a: &str, b: &str) -> bool {
     fn strip(value: &str) -> String {
         value.trim().trim_end_matches('/').to_lowercase()
@@ -687,9 +633,7 @@ fn unregister_client(app: usize, socket: &Socket) {
     }
 }
 
-/// Closes the sockets no actor closed, such as one mid-upgrade (#861's drain). The lock is
-/// released before any close (a close calls into the actor). Does nothing on a socket that is
-/// already closed.
+/// Closes unmanaged sockets during shutdown (#861).
 pub fn close_all(app: &App) {
     let clients: Vec<Socket> = lock(&UPGRADES)
         .get(&app_key(app))
@@ -706,8 +650,7 @@ fn holds_sockets(app: usize) -> bool {
         .is_some_and(|entry| !entry.clients.is_empty())
 }
 
-/// Resolves once every socket's pump has ended and its upgrade task has unregistered it (#861's
-/// drain). That happens after the peer answers the close, or after `CLOSE_HANDSHAKE_TIMEOUT`.
+/// Waits for all sockets to finish shutdown drain (#861).
 pub async fn all_closed(app: &App) {
     let poll = Duration::from_millis(u64::try_from(SHUTDOWN_SOCKETS_POLL_MS).unwrap_or(1));
     while holds_sockets(app_key(app)) {
@@ -730,9 +673,7 @@ pub async fn handle(app: Arc<App>, req: Request) -> Response {
     handle_with(app, req, &options).await
 }
 
-/// A disallowed origin is refused before any token is read, an address over its socket count next,
-/// and only then is the handshake taken over, with frames capped at `MAX_FRAME_BYTES` and only
-/// `WS_SUBPROTOCOL` echoed.
+/// Upgrades match WebSocket enforcing origin, connection limit, and frame size.
 pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -> Response {
     let allowed = options.allowed_origins.clone().unwrap_or_default();
     let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
@@ -772,9 +713,7 @@ pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -
     let token = upgrade_token(&parts.headers, &parts.uri);
 
     upgrade
-        // §9.8: every client message is a small JSON frame. Without a cap a frame is buffered
-        // whole before `parse_client_message` could refuse it; with it the frame is refused with
-        // 1009 as its length arrives.
+        // §9.8: cap message and frame sizes to prevent unbounded buffering.
         .max_message_size(MAX_FRAME_BYTES)
         .max_frame_size(MAX_FRAME_BYTES)
         // Echo only the fixed name, never anything that was offered beside it.
@@ -790,15 +729,10 @@ pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -
         })
 }
 
-// ---- Social: watching and shared replays (#939, #940) ----
-
-/// S7: the socket a friend's live game is watched on (`social::watch`).
+/// #939, #940: socket for watching friend's live match (`social::watch`).
 pub const WATCH_PATH: &str = "/ws/watch";
 
-/// The `/ws/watch` upgrade, held to all `/ws/match`'s is (`handle_with`): the origin check, the
-/// per-address count, the frame cap, the one subprotocol and the token read as `upgrade_token` reads
-/// it (R1379000). The watch's frame handlers go in before the pump starts, so a hello sent the
-/// moment the socket opens is never dropped.
+/// Upgrades `/ws/watch` connection with rate limiting and frame limits (R1379000).
 pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
     let options = AttachOptions::for_app(&app);
     let allowed = options.allowed_origins.clone().unwrap_or_default();
@@ -850,19 +784,11 @@ pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
             unregister_client(key, &socket);
         })
 }
-// ---- end Social: watching and shared replays ----
 
-// ---- Duos co-op (#946) ----
-
-/// Fullsend SPEC S6: the Duos co-op socket, upgraded on the same listener (`app::router`).
+/// #946: Duos co-op socket path.
 pub const WS_DUOS_PATH: &str = "/ws/duos";
 
-/// S6, B35: the `/ws/duos` upgrade, through the doors `/ws/match` has (`handle_with`): a disallowed
-/// origin is refused before any token is read, an address over its socket count next, frames are
-/// capped at `MAX_FRAME_BYTES`, only `WS_SUBPROTOCOL` is echoed, and the pump pings and drops an idle
-/// peer the same way (R1441). The socket's hello gate goes on before its pump starts, so the hello
-/// that names the match is never dropped while the token is checked; then `duos::ws` authenticates it
-/// as `/ws/match` does and hands it to the co-op actor.
+/// B35: upgrades `/ws/duos` connection with rate limiting and frame limits (R1441).
 pub async fn handle_duos(app: Arc<App>, req: Request) -> Response {
     let options = AttachOptions::for_app(&app);
     let allowed = options.allowed_origins.clone().unwrap_or_default();
@@ -908,4 +834,3 @@ pub async fn handle_duos(app: Arc<App>, req: Request) -> Response {
             unregister_client(key, &socket);
         })
 }
-// ---- end Duos co-op (#946) ----

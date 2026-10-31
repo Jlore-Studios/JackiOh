@@ -1,33 +1,15 @@
 //! Watching a friend's live game (SPEC S7, B50, B51; #939).
 //!
-//! `/ws/watch` is authenticated as `/ws/match` is (the token offered as a subprotocol, R1379000;
-//! §9.4's gate) and then takes one frame, the hello:
-//! `{"type":"hello","matchId":"…","friendId":"…"}`. It is let in when the two accounts are friends
-//! with neither blocking the other, the friend holds a seat in the live match it names, a 1v1, ranked
-//! or unranked, in which the watcher holds no seat (a player never sees the other seat), and the
-//! friend allows spectators (`allowSpectators`, `api/settings.rs`).
-//! The actor then judges room (SPECTATORS_PER_MATCH) and from there sends the friend's seat's views,
-//! each SPECTATE_DELAY_MS after the state it shows, with `legal: []` (`MatchActor::attach_watcher`).
-//!
 //! Every refusal is the one `error` frame, `forbidden`, and a close with R148's 4403 (4401 before
 //! sign-in, 1011 for a fault), all with the same message, so a socket learns that it may not watch,
 //! never which check said so. No frame after the hello reaches the reducer: once the actor has the
 //! socket a later hello is answered with the view it was last sent (R1103000, so R1441's wake probe
-//! hears a live socket), and every other frame is dropped unread. A watcher leaving changes nothing
-//! in the match but the count its players see (B51).
-//! Before the hello the socket waits behind the gate `/ws/duos` waits behind (`actor::guard::HelloGate`,
-//! R835002): a frame that is not the hello is answered `malformed` and past
-//! `MALFORMED_FRAMES_PER_WINDOW` of them the socket is closed, and a hello that does not come within
-//! `WS_IDLE_TIMEOUT_SECONDS` is refused like any other.
+//! hears a live socket), and every other frame is dropped unread.
 //!
 //! Being let in is no standing leave (§9.8, "the friend can turn it off"; B46): when the friend turns
 //! `allowSpectators` off (`revoke_all_of`), or the two unfriend or either blocks the other
 //! (`revoke_between`), the watcher's socket gets the same `forbidden` and close at once
-//! (`MatchActor::revoke_watchers`). A hello that passed its checks just before such a change is
-//! judged again once its socket is in (`admit`), so the change never misses it.
-//!
-//! S7's `Friend.watchable`, for the friends list, is `social::presence::standings`'s, which judges
-//! what this module's checks judge for every friend at once (`Tx::presence_watchable`).
+//! (`MatchActor::revoke_watchers`).
 
 use std::sync::Arc;
 

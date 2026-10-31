@@ -9,15 +9,6 @@
 //! co-op match holds them (B42, read as `duos::live_match_of` reads it); else `online` while their
 //! last heartbeat is at most `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it
 //! reads as a person who is away, and in a match as a person in one (R1452).
-//!
-//! `watchable` (B50): the viewer may watch the friend's live 1v1 match, ranked or unranked, whose
-//! friend allows spectators (`profiles.allow_spectators`) and has fewer than `SPECTATORS_PER_MATCH`
-//! watchers. The watch socket judges it again at its hello (`social::watch`).
-//!
-//! `standings` reads every friend's at once, in the caller's transaction, by a fixed number of
-//! set-based reads (heartbeats, series, co-op matches, the watch checks), whatever the number of
-//! friends, so `GET /api/friends`, which a client reads every `PRESENCE_HEARTBEAT_MS`, costs one
-//! transaction and no per-friend query.
 
 use std::sync::Arc;
 
@@ -52,7 +43,6 @@ pub struct Standing {
 }
 
 impl Standing {
-    /// A friend with no heartbeat within the TTL and in no match.
     pub const OFFLINE: Standing = Standing {
         status: Status::Offline,
         match_id: None,
@@ -73,9 +63,7 @@ pub async fn heartbeat(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// B47, B50: each profile's standing as `viewer_id` sees it, by profile id, read in `tx` from the
-/// profiles as given (their in-match flag) and four set-based reads: their heartbeats, those a
-/// series that is not over holds, the live Duos co-op match holding each, and those whose live 1v1
-/// match `viewer_id` may watch; each watched match's room is the actor's count, in memory.
+/// profiles as given and four set-based reads: heartbeats, series, Duos and watchable matches.
 pub(crate) async fn standings(
     tx: &mut Tx<'_>,
     app: &App,

@@ -1,21 +1,12 @@
 //! The `/ws/duos` socket's first moments (fullsend SPEC S6, B35): authentication as `/ws/match` has
 //! it, then the `hello` that names the match, then the hand-off to the co-op actor.
 //!
-//! The upgrade itself (origin check, per-address count, frame cap, subprotocol) is
-//! `actor::ws_server::handle_duos`, the same doors `/ws/match` goes through. It installs a
-//! `HelloGate` on the socket before the socket's pump starts, so a `hello` the client sends the
-//! moment the socket opens is held while the token is checked rather than dropped. The gate is the
-//! one `/ws/watch` waits behind too (`actor::guard`, R835002): it answers a frame that is not the
-//! hello `malformed` and closes the socket past `MALFORMED_FRAMES_PER_WINDOW` of them. Then
-//! `handle_duos_socket` verifies the token (offered as a subprotocol, R1379000), applies §9.4's gate
-//! (`assert_active`), waits for the hello (at most `WS_IDLE_TIMEOUT_SECONDS`), and attaches the
-//! socket to the seat the profile holds in that match, folding the actor back first when it is not
-//! in memory. Every refusal answers one `error` frame with code `forbidden` and closes with R148's
-//! codes (4401, 4403, 4404, and 1011 for a fault), so a socket learns that it may not have the
-//! match, never which check said so.
+//! A `HelloGate` (`actor::guard`, R835002) holds the hello while the token is checked. Then
+//! `handle_duos_socket` verifies the token (subprotocol R1379000), applies §9.4's gate
+//! (`assert_active`), waits for the hello, and attaches the socket to the seat.
+//! Every refusal answers one `error` frame with code `forbidden` and closes with R148's codes.
 //!
-//! The match is the hello's `matchId`, else the upgrade's `?matchId=`, else the profile's live co-op
-//! match (B42).
+//! The match is the hello's `matchId`, else `?matchId=`, else the live co-op match (B42).
 
 use std::sync::Arc;
 
@@ -136,8 +127,7 @@ async fn attach_socket(
 }
 
 /// B35: authenticates an upgraded `/ws/duos` socket, waits for its hello and hands it to the co-op
-/// actor, or refuses it with one error frame and a close code. `gate` is the one
-/// `HelloGate::install` put on the socket before its transport started.
+/// actor, or refuses it with one error frame and a close code.
 pub async fn handle_duos_socket(
     app: &Arc<App>,
     socket: &Socket,

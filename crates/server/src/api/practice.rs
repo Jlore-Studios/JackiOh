@@ -1,30 +1,13 @@
-//! Practice earning (SPEC §14.8, §9.9, #1303): a practice game pays half rates once the server has
-//! checked it, on a seed the server issued for it.
+//! Practice earning (SPEC §14.8, §9.9, #1303): verified practice games pay half rates.
 //!
-//! - **An issue** (`POST /api/practice/seeds`) mints a seed and keeps it with the profile and the
-//!   game's setup: the AI tier, the human's seat, the deck and the catalog version, which the page
-//!   sends, and the human's last board, which the server keeps ([[R1303003]]) and answers with the
-//!   seed for the game to begin with. The same transaction prunes the profile's seeds issued more
-//!   than `PRACTICE_SEED_TTL_SECONDS` ago, so an abandoned game's seed goes ([[R1303001]]), and
-//!   refuses the request, issuing nothing, while the account already holds
-//!   `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds ([[R1483000]]), counted under the account's economy
-//!   lock so requests made at once cannot pass it together.
-//! - **A release** (DELETE /api/practice/seeds/:seed) deletes the caller's unclaimed seed under the economy lock, so a game left without saving gives its place back ([[R2379000]]).
-//! - **A claim** (`POST /api/practice/claims`) sends the seed, the result and the game's log once
-//!   it is over. Its seed is burned first, in a transaction of its own, so it pays once whatever
-//!   the check answers ([[R1303001]]); then `economy::practice::verify` folds the log and re-runs
-//!   the AI off the runtime, at most `PRACTICE_VERIFY_CONCURRENCY` claims at once (the rest wait
-//!   for a permit, and none is dropped); then a claim that passed pays through the reward hook at
-//!   practice rates (held to the day's Jlore cap, [[R1483000]]), moving the account's quests as a
-//!   ladder game does ([[R1304001]]), and keeps the board it ended on, in a task of its own that
-//!   finishes even when the caller stops waiting.
-//!   The pay is one transaction, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store
-//!   fails it ([[R1688000]]); one that never lands answers an error and leaves the seed burned.
-//!   No transaction stays open across a check.
-//!   Every refusal answers 200 with `paid: false` and why, so the result screen can say it.
+//! - **Issue** (`POST /api/practice/seeds`): mints a seed with setup and last board (R1303003);
+//!   prunes expired seeds (R1303001); enforces `PRACTICE_SEEDS_OPEN_MAX` under economy lock (R1483000).
+//! - **Release** (`DELETE /api/practice/seeds/:seed`): deletes unclaimed seed under economy lock (R2379000).
+//! - **Claim** (`POST /api/practice/claims`): burns seed first (R1303001), verifies log off-runtime,
+//!   and pays rewards capped at day's Jlore (R1483000) and advances quests (R1304001), retrying pay
+//!   up to `PRACTICE_PAY_ATTEMPTS` times (R1688000).
 //!
-//! The issue and the claim answer only while the economy is on ([[R1302006]]): an issue is a 409, a claim
-//! `economy_off`. A release answers whatever the switch says: it pays nothing. The page asks for a seed only for a game that can pay ([[R1303000]]).
+//! Issue and claim require live economy (R1302006, R1303000).
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -52,13 +35,11 @@ use crate::economy::store::{PracticeDeck, PracticeSeed, PracticeSetup};
 /// An issue's status: the seed is a new resource.
 const CREATED: u16 = 201;
 
-/// Milliseconds in a second.
 const MS_PER_SECOND: i64 = 1000;
 
 /// How long a seed waits to be claimed, in milliseconds.
 const SEED_TTL_MS: i64 = PRACTICE_SEED_TTL_SECONDS * MS_PER_SECOND;
 
-/// An issue's body.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SeedRequest {
@@ -68,7 +49,6 @@ struct SeedRequest {
     catalog: String,
 }
 
-/// A claim's body.
 #[derive(Deserialize)]
 struct ClaimRequest {
     seed: String,
@@ -146,10 +126,8 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
     ))
 }
 
-/// `DELETE /api/practice/seeds/:seed` (`AuthLevel::Active`, [[R2379000]]): the caller's unclaimed seed
-/// given back, deleted under the account's economy lock (R1483000's count takes it too), so its
-/// place is free for the next issue. 200 `{ released: true }`; a 404, changing nothing, for a seed
-/// that is not the caller's, was claimed, or was never issued.
+/// `DELETE /api/practice/seeds/:seed` (`AuthLevel::Active`, [[R2379000]]).
+/// Releases caller's unclaimed seed under the account's economy lock (R1483000).
 pub async fn delete_seed(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let seed = req.params.get("seed").cloned().unwrap_or_default();
@@ -165,12 +143,8 @@ pub async fn delete_seed(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(json_response(200, json!({ "released": true })))
 }
 
-/// `POST /api/practice/claims` with `{ seed, result, log }` (`AuthLevel::Active`). 200
-/// `{ paid: true, jlore, xp, jloreCapped, tracks, quests }` for a game that passed, the game's own
-/// pay, its Jlore short of the game's rate when the day's cap held some back (R1483000), each track
-/// it moved and each quest it completed (`economy::rewards::GameEconomy`, #1657); 200
-/// `{ paid: false, reason }` for every refusal; a 500 when every try at the pay fails, the seed burned
-/// all the same (R1688000).
+/// `POST /api/practice/claims` with `{ seed, result, log }` (`AuthLevel::Active`, #1657).
+/// Verifies game log and pays rewards held to daily cap (R1483000). Retries pay on failure (R1688000).
 pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let claim: ClaimRequest = body_of(&req.body, "a practice game's claim")?;
@@ -198,9 +172,7 @@ pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     }
     tx.commit().await?;
 
-    // The check and the pay run as a task of their own, so a caller that stops waiting (the page's
-    // request timeout behind a long queue, a closed tab) leaves its burned seed to be checked and
-    // paid all the same: nothing past the burn is dropped.
+    // Verification and payout run detached so client disconnects do not drop claims.
     let settled = tokio::spawn(settle(
         app.clone(),
         profile.id.clone(),
@@ -274,9 +246,7 @@ async fn pay(
     Ok(paid)
 }
 
-/// [[R1688000]]: [`pay`], tried up to `PRACTICE_PAY_ATTEMPTS` times, the first wait
-/// `PRACTICE_PAY_BACKOFF_MS` and each next one twice the last, as the match actor tries a result
-/// ([[R1437]]). Answers the last try's error when none lands; the seed stays burned.
+/// Retries [`pay`] up to `PRACTICE_PAY_ATTEMPTS` with exponential backoff ([[R1688000]], [[R1437]]).
 async fn pay_with_retries(
     app: &Arc<App>,
     summary: &GameSummary,

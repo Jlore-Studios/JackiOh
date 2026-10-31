@@ -1,23 +1,13 @@
 //! The picks an account makes for one card of its own (SPEC §14.2, SPEC §11 R1834000, R1834001): a
-//! foil, a finish, a border and whether its full art prints (R1655000), held on the account so
-//! the server, which shows them to an opponent (R1834002), has them. Only the caller's own, keyed on
-//! the verified token's profile and never on a field of the request.
+//! foil, finish, border, and full art (R1655000), shown to opponents (R1834002). Keyed on caller token.
 //!
-//! `GET /api/card-picks` answers `{ cards }`, every card the account picked something for, by card
-//! id; an id is answered as it was written, one this build does not know among them.
+//! `GET /api/card-picks`: answers `{ cards }` for every card with picks.
 //!
-//! `PUT /api/card-picks` changes one card's picks: `{ cardId, foil?, finish?, border?, fullArt? }`,
-//! where a key left out keeps the card's pick and `null` clears it (the card then wears the
-//! account's). R1834001: an id must be one of the registry under its kind that the account owns on
-//! that card (a default, a starter or a ledger row), and `fullArt: true` needs the card's full art,
-//! owned; anything else is 400 `bad_request`, and nothing is written.
+//! `PUT /api/card-picks`: updates `{ cardId, foil?, finish?, border?, fullArt? }`. Missing keys
+//! keep existing picks, `null` clears. R1834001: ids and full art must be owned; otherwise 400.
 //!
-//! `POST /api/card-picks/upload` is a device's one-time upload of the picks it held before they
-//! moved to the account (`{ cards }`, as `GET` answers them). A card the account already holds a row
-//! for is never touched, so a pick a newer device wrote stands, and an id this build does not know
-//! is kept, as the device's store kept it (R1655000); one it knows of another kind, or that the
-//! account does not own on the card, is left out, since it could never be worn. A card not in the
-//! catalog is passed over. It answers `{ cards }` as `GET` does.
+//! `POST /api/card-picks/upload`: device upload of picks. Existing account rows are preserved;
+//! unknown ids stay (R1655000), unowned/invalid picks dropped, non-catalog cards skipped.
 
 use std::sync::Arc;
 

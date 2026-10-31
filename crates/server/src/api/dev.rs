@@ -1,35 +1,15 @@
-//! The dev tools (SPEC §14.10, R1300000): a dev account, one whose profile id `DEV_PROFILE_IDS`
-//! lists (`env.rs`), or in end-to-end mode a fixture account marked dev (R1310004,
-//! `api::e2e::is_e2e_dev`), moves its own economy by hand, so each part of §14 can be tried on
-//! staging and production. Every route acts on the caller's own account, named by the token, and
-//! none takes a profile id.
+//! Dev economy tools (SPEC §14.9, §14.10, §14.11, R1300000, R1310004; CLAUDE.md rule 7).
 //!
-//! The server decides (CLAUDE.md rule 7): `GET /api/auth/me` says whether the caller is a dev
-//! account (`isDev`), and every route here checks the list itself and answers anyone else 403
-//! `forbidden`, writing nothing. The client only chooses whether to show its panel.
+//! Caller-only routes restricted to `DEV_PROFILE_IDS` and e2e dev fixtures (`isDev`).
+//! All actions run in single transactions creating audit ledger rows with reason `dev`
+//! ([`DEV_GRANT_REASON`], `JloreReason::Dev`, `EconomyReason::Dev`). Clears write offsetting rows.
 //!
-//! Each action is one transaction, and every row it writes is a ledger row of reason `dev` marked
-//! `dev` (§14.10, §14.11): the collection's `collection_grants` under the reason
-//! [`DEV_GRANT_REASON`] (migration 0046), each economy ledger under `JloreReason::Dev` or
-//! `EconomyReason::Dev`. A clear is an offsetting row per holding, never a deleted one (§14.11).
-//!
-//! - `POST /api/dev/xp` `{ setId, xp }`: XP to the track of a set that ships, through the level
-//!   curve (§14.7), its level stopping at `SET_TRACK_LEVELS`. No level's rewards are paid: the
-//!   reward tables are the tracks' sub-issue's.
-//! - `POST /api/dev/jlore` `{ jlore }`: Jlore (§14.1).
-//! - `POST /api/dev/fill`: every collectable card (non-token, unbanned, of a set that ships) up to
-//!   `MAX_COPIES`, and every cosmetic of the registry but each kind's default, which every account
-//!   owns with no row (§14.2): a per-card kind on each of those cards, a full art on the card it
-//!   names (R1313000), an account kind once.
-//! - `POST /api/dev/clear/:part`: `cards`, `cosmetics`, `jlore`, `counters` (the bars and pity
-//!   counters), `tracks`, or `everything`, all five in one transaction. Packs, tokens and quests are
-//!   no part of any.
-//! - `POST /api/dev/bar/:bar` (R1310003): the `card` or the `cosmetic` token bar filled to its size,
-//!   so it pays at once what a pack's duplicates filling it would (§14.5): a card token, or the
-//!   cosmetic token cycle's next step, the cycle's place moving on.
-//!
-//! The quest tools (`POST /api/dev/quests`, `POST /api/dev/quests/:questId/complete`, §14.9) are
-//! `api/quests.rs`'s, behind this same [`dev_caller`].
+//! Endpoints:
+//! - `POST /api/dev/xp`: XP to shipping set track (§14.7, up to `SET_TRACK_LEVELS`).
+//! - `POST /api/dev/jlore`: Jlore currency grant (§14.1).
+//! - `POST /api/dev/fill`: cards to `MAX_COPIES` and non-default registry cosmetics (R1313000).
+//! - `POST /api/dev/clear/:part`: offsets cards, cosmetics, jlore, counters, tracks, or everything.
+//! - `POST /api/dev/bar/:bar`: fills token bar to trigger duplicates payout (§14.5, R1310003).
 
 use std::sync::Arc;
 
@@ -310,11 +290,8 @@ fn bar_of(bar: &str) -> Option<(Counter, i64)> {
     }
 }
 
-/// `POST /api/dev/bar/:bar` (R1310003): 200 `{ written }`, the ledger rows the fill wrote; 404 for a
-/// `:bar` that names no bar. Under the account's lock (R1301003) the bar gains what it lacks of its
-/// size and pays as a pack's duplicates filling it would (`economy::packs::settle_bars`): the bar's
-/// points to what it keeps, then a card token, or the cosmetic token cycle's next step and the
-/// cycle's place moved on. Every row is reason `dev`, marked `dev`.
+/// `POST /api/dev/bar/:bar` (R1310003). Fills bar to size under account lock (R1301003) and pays
+/// duplicate tokens as a pack would (`settle_bars`). Writes `dev`-marked ledger rows.
 pub async fn fill_bar(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = dev_caller(app, &req)?;
     let bar = req.params.get("bar").map(String::as_str).unwrap_or("");

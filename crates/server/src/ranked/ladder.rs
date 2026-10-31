@@ -7,14 +7,6 @@
 //! bottom (R605). Above the Grape tiers is Jlorious, which is not a ladder position at all but the top
 //! `JLORIOUS_SIZE` Mythic Grape players by rating (R608), and below them all is Raisin, the season's
 //! placements (R605).
-//!
-//! The hidden rating pulls the visible rank toward itself gently (R606): the rating's percentile
-//! among the season's placed players, read off `RANK_TIER_PERCENTS`, is the rank it calls for (the
-//! target), and a game a division or more away from its target leans one pip further toward it on a
-//! move already heading that way — a win below the target or a loss above it.
-//!
-//! Pure: every function here takes what it reads and returns what it decides. `src/api/ranked.rs`
-//! reads the season from the store, calls these, and writes the result back.
 
 use serde::{Deserialize, Serialize};
 
@@ -132,7 +124,6 @@ const _: () = {
     );
 };
 
-/// A game's result for one side.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub enum GameResult {
@@ -234,10 +225,7 @@ pub fn place_of(ladder: i32) -> LadderPlace {
     }
 }
 
-/// A rating's percentile among the others, as an exact fraction (R606). It is the mid-rank: the
-/// others below, half of those level with it, and half of the player's own place, over everyone
-/// counted, `(2·below + level + 1) / (2·(others + 1))`. Kept as two integers so a tier boundary is
-/// compared exactly. With nobody else placed the percentile is one half.
+/// A rating's percentile among the others, as an exact fraction (R606).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Percentile {
@@ -271,7 +259,6 @@ pub fn target_ladder(percentile: &Percentile) -> i32 {
         let share = i64::from(percent_of(tier));
         let last = tier_index == GRAPE_TIERS.len() - 1;
         if last || scaled < (below + share) * percentile.denominator {
-            // How far into the tier, in pips: (p − below) / share of the tier's pips, floored, in integers.
             let into = ((scaled - below * percentile.denominator) * i64::from(PIPS_PER_TIER))
                 .div_euclid(share * percentile.denominator);
             let clamped = into.max(0).min(i64::from(PIPS_PER_TIER - 1)) as i32;
@@ -290,11 +277,7 @@ pub struct PipDeltaInput {
     pub streak: i32,
 }
 
-/// R606: the pips one game moves a placed player, before the floor and the top clamp it. A win gives
-/// `RANK_WIN_PIPS`, plus the streak bonus below Mythic Grape, plus the lean when the rating calls for
-/// a rank a division or more above; a loss takes `RANK_LOSS_PIPS`, plus the lean when the rating calls
-/// for a rank a division or more below; a draw moves nothing. `ladder` is the position before the
-/// game and `streak` the win streak counting this game.
+/// R606: the pips one game moves a placed player, before the floor and the top clamp it.
 pub fn pip_delta(input: &PipDeltaInput) -> i32 {
     let gap = input.target - input.ladder;
     match input.result {
@@ -330,10 +313,7 @@ pub struct ApplyRankedGameInput {
     pub at: i64,
 }
 
-/// R605–R607: one rated game on a player's season. `target` is the rank the player's rating calls for
-/// once this game has moved it. A player still placing plays toward their placements, and the game
-/// that completes them puts them straight at the target; a placed player moves by `pip_delta`, never
-/// below the floor of the highest Grape tier they have reached this season, and never past the top.
+/// R605–R607: one rated game on a player's season.
 pub fn apply_ranked_game(rank: &SeasonRank, input: &ApplyRankedGameInput) -> SeasonRank {
     let games = rank.games + 1;
     let streak = match input.result {
@@ -425,11 +405,6 @@ pub fn with_jlorious_peak(rank: &SeasonRank, position: i32) -> SeasonRank {
 
 /// What a player is shown as (R612): Raisin with their placements, a Grape tier with its division,
 /// pips and the floor that holds them, or a Jlorious position. Never the rating.
-///
-/// The Grape arm's `tier` takes any of five values, so serde goes through [`VisibleRankWire`]:
-/// `{ "tier": "raisin", "placementsPlayed", "placementGames" }`,
-/// `{ "tier": <grape>, "division", "pips", "pipsPerDivision", "floor" }` or
-/// `{ "tier": "jlorious", "position" }`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(into = "VisibleRankWire", try_from = "VisibleRankWire")]
 pub enum VisibleRank {
@@ -569,8 +544,6 @@ pub fn visible_rank(rank: Option<&SeasonRank>, jlorious_position: Option<i32>) -
 }
 
 /// A season's best, as the profile's badge shows it (R607): a Jlorious position or a Grape division.
-/// Serialized as `{ "seasonId", "tier": "jlorious", "position" }` or
-/// `{ "seasonId", "tier": <grape>, "division" }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(into = "VisibleRankWire", try_from = "VisibleRankWire")]
 pub enum PeakBadge {

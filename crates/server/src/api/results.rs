@@ -1,37 +1,12 @@
-//! Results and rating (BUILD M7-T2, SPEC §2.5, §9.5, §9.12, R79, R112, R603, R604).
-//! Port of `apps/server/src/api/results.ts`.
+//! Results and rating (BUILD M7-T2, SPEC §2.5, §9.5, §9.12, R79, R112, R603).
 //!
-//! §9.5: "Every ending records a result and clears both players' in-match state, and a reaper
-//! resolves anything past the ceiling." §9.12: a ranked game moves both players' hidden Glicko-2
-//! ratings and their ranks on the ladder.
+//! `record_result` processes terminal match outcomes (§2.5), writes the `results` row,
+//! updates ratings if ranked (R604), clears in-match flags, and stores final replay hashes (R768).
+//! Idempotent to support concurrent actor and reaper (§9.5) execution.
 //!
-//! One function is that sentence: `record_result` is the `RecordResult` port the actor calls for
-//! every one of §2.5's seven endings — `hero-death`, `both-heroes-dead`, `concede`,
-//! `draw-accepted`, `turn-cap`, `disconnect` and `match-ceiling` — and it writes exactly one
-//! `results` row, rates both players when the match is ranked (R604), clears both in-match flags and
-//! stores the final state's hash on the match for its replay (R768) in one transaction. (TS built
-//! it with the factory `createRecordResult(deps)`; with no ports in the Rust server it is the
-//! function itself, and `void_match` is `createVoidMatch`'s.)
-//!
-//! It is idempotent by design, not by luck: the actor and the reaper can both reach the same
-//! terminal match (a crashed actor is exactly the case §9.5's reaper exists for), so the first
-//! thing the transaction does is look for the row it is about to write.
-//!
-//! The rating maths is `ranked/glicko2.rs` and the ladder `ranked/ladder.rs`, reached through
-//! `rate_ranked_game` (`api/ranked.rs`), which also writes the record of the rated game (R611). This
-//! file only decides which side won: §2.5's draws are a draw (0.5 each), and a concede and a
-//! disconnect are a loss like any other.
-//!
-//! A room challenge is unranked (R604): its row records both ratings unchanged. It still pays its
-//! people at the unranked rates, as each game of a Conquest series pays at the Conquest rates
-//! (R1502000).
-//!
-//! A game of a Conquest series is written the same way with one difference and one addition
-//! (R262, R263): its row leaves both ratings unchanged, because a series moves the rating once, when it
-//! ends; and the series' record of the game — and, when the game ends the series, that one rating
-//! move — commit in the same transaction as the row (`advance_series_in_tx` in `series.rs`). When the
-//! game leaves the series in its next game already (both sides had one deck left, so both picks were
-//! made for them, R332), that game is started after the commit.
+//! Rating updates are delegated to `rate_ranked_game` (R611).
+//! Unranked matches record unchanged ratings and unranked pay rates (R604, R1502000).
+//! Conquest games commit progress in `advance_series_in_tx`, rating once at series end (R262, R263, R332).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -63,8 +38,7 @@ use crate::economy::rewards::{
     GameEconomy, GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
 };
 
-/// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
-/// so the sentence is the error's own.
+/// Wraps an error into an internal ApiError.
 fn failure(error: impl std::fmt::Display) -> ApiError {
     ApiError {
         code: ApiErrorCode::Internal,
@@ -145,7 +119,7 @@ struct Written {
 /// Why one attempt of the write did not land: the duplicate the retry below exists for, or a real
 /// failure.
 enum WriteError {
-    /// `results_insert` refused a second row for the match (TS `DuplicateResultError`).
+    /// Refused a second row for the match.
     Duplicate(String),
     Failed(String),
 }
@@ -667,23 +641,8 @@ pub fn ceiling_draw_input(match_row: &MatchRow, at: i64) -> RecordResultInput {
     }
 }
 
-/// §9.5's reaper: "a reaper resolves anything past the ceiling". Every `live` match whose
-/// `clocks.ceiling_at` has passed is ended with both players' in-match state cleared, and its
-/// in-memory actor — if the process still has one — is dropped.
-///
-/// R833000: it folds the match's `(seed, log)` first, and a log that already ends in a result
-/// (R1437's write that never landed, with no socket to rebuild the actor) records that real result,
-/// as the actor would have (`fold_terminal_input`). Any other match ends as a draw by
-/// `match-ceiling` (§2.5, R79).
-///
-/// R112 fixes what that ceiling draw records: `turns = 0` and both ratings unchanged. A match whose
-/// log does not end is one whose actor is not answering, so the turn count it would need is
-/// exactly the thing it cannot read, and it does not guess.
-///
-/// Safe to run beside a live actor: both paths go through the same idempotent write, so whichever
-/// gets there first is the one that counts and the other returns that row untouched.
-///
-/// Answers the ids it resolved.
+/// Reaps matches past ceiling (§9.5, §2.5, R79, R112).
+/// Folds log to recover terminal result if available (R833000, R1437); otherwise draws at turns=0.
 pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError> {
     let now = now_ms();
     let live = {
@@ -816,15 +775,7 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
     })
 }
 
-/// R1450: the reaper's second sweep. Every `open` row more than `OPEN_MATCH_REAP_GRACE_SECONDS` past
-/// its `ceiling_at` is deleted: a room nobody joined before it expired, a claimed room whose match never
-/// started, a queue pairing's reservation whose start failed and whose cleanup failed too
-/// (`queue.pair_cleanup_failed`). That frees its room code and both players. The grace outlasts any
-/// start in flight: a room is claimed only before its expiry, and a reservation is started straight
-/// after its claim or, for a Conquest series, within the pick clock and the start give-up. A sweep
-/// that deleted rows holds the seat ledger to the record at once (R1523000).
-///
-/// Answers how many rows it deleted.
+/// Deletes stale `open` match rows past grace window, reconciling seat ledger (R1450, R1523000).
 pub async fn reap_open_matches(app: &App) -> Result<u64, ApiError> {
     let before = now_ms() - OPEN_MATCH_REAP_GRACE_MS;
     let mut tx = app.db.begin(None).await.map_err(failure)?;
@@ -859,15 +810,8 @@ fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
     )
 }
 
-/// The reaper's loop (SURFACE §11.2: `api::results::run_reaper(app)`, every
-/// `MATCH_REAPER_INTERVAL_SECONDS`), as TS's `start()` in `src/index.ts` ran it: the first sweep one
-/// interval after boot, each next one an interval after the last finished, a failure logged and the
-/// next sweep tried all the same. Runs until its task is aborted. Each tick resolves the stuck
-/// matches, then deletes the `open` rows past their grace (R1450), then holds the seat ledger to the
-/// record (`seats::reconcile`, R1523000), then drops the finished actors whose rematch window has
-/// passed (`Registry::reap_finished`), then the rematch offers past that window whose finished match
-/// no actor holds (`rematch::sweep_rematch_offers`), and the co-op Play again offers past that
-/// window whose finished match no co-op actor holds (`duos::again::sweep_duos_again_offers`).
+/// Background loop running reaper sweeps every `MATCH_REAPER_INTERVAL_SECONDS`
+/// (SURFACE §11.2, R1450, R1523000).
 pub async fn run_reaper(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;

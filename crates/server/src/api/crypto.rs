@@ -1,11 +1,7 @@
-//! Codes, hashes and ids (SPEC §9.4, §9.5, R79). Port of `apps/server/src/api/crypto.ts`.
+//! Codes, hashes and ids (SPEC §9.4, §9.5, R79, SURFACE §11.3).
 //!
-//! The alphabet, the invite-code length and the group size come from `crate::config`; nothing
-//! here restates them. Invite codes and room codes share the alphabet, so both build on
-//! `random_code`: 16 characters for an invite code (80 bits), `ROOM_CODE_LENGTH` for a room code.
-//!
-//! TS's `Hashes` and `Ids` ports become the `Hashes` struct and `system_ids` here (SURFACE §11.3:
-//! `Ids` → `uuid` + `getrandom`, `Hashes` → functions in `api/crypto.rs`).
+//! Invite codes and room codes share the alphabet from `crate::config` and build on `random_code`:
+//! 16 characters for invite codes (80 bits), `ROOM_CODE_LENGTH` for room codes.
 
 use hmac::{Hmac, KeyInit, Mac};
 use jackioh_engine::wire::codes::{canonical_code, normalize_code_text};
@@ -49,11 +45,8 @@ pub fn format_code(raw: &str) -> String {
     groups.join(INVITE_CODE_SEPARATOR)
 }
 
-/// What the client typed, reduced to the form that gets hashed: SPEC §11 R191's reading, shared with
-/// the client's code field through the wire module (NFKC, upper case one character at a time,
-/// every space, dash and invisible separator removed). A string holding characters outside the
-/// alphabet is still returned, so a malformed code takes the same path as a lookup miss and no
-/// oracle distinguishes "well-formed but unknown" from "malformed" (§9.4).
+/// Normalizes code input for hashing (SPEC §11 R191). Characters outside the alphabet are
+/// preserved so malformed codes match lookup misses without leaking an oracle (§9.4).
 pub fn normalize_code(input: &str) -> String {
     normalize_code_text(input)
 }
@@ -66,15 +59,13 @@ pub fn canonical_invite_code(raw: &str) -> Option<String> {
 }
 
 pub fn is_well_formed_code(normalized: &str, length: usize) -> bool {
-    // TS `normalized.length`: UTF-16 code units.
     if normalized.encode_utf16().count() != length {
         return false;
     }
     normalized.chars().all(|ch| CODE_ALPHABET.contains(ch))
 }
 
-/// TS `Hashes`: the keyed digests of an invite code and of a client address, each under its own
-/// key (TS's `peppers: { code, ip }`).
+/// Keyed digests of an invite code and client address under separate pepper keys.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Hashes {
     code_pepper: String,
@@ -112,10 +103,7 @@ impl Hashes {
     }
 }
 
-/// §9.4: codes are stored hashed. A keyed SHA-256 rather than a password hash, because redemption
-/// must find a code *by hash* and 80 bits of entropy needs no work factor; the pepper keeps a
-/// stolen table from being brute-forced offline. The two arguments are TS's `peppers.code` and
-/// `peppers.ip`, each already in its domain (`hashes_for_pepper` builds both from one pepper).
+/// §9.4: codes are stored hashed with keyed SHA-256 HMAC (80 bits entropy, offline brute-force protection).
 pub fn create_hashes(code_pepper: &str, ip_pepper: &str) -> Hashes {
     Hashes {
         code_pepper: code_pepper.to_string(),
@@ -123,20 +111,17 @@ pub fn create_hashes(code_pepper: &str, ip_pepper: &str) -> Hashes {
     }
 }
 
-/// §9.4, §9.8: one pepper in the environment (`CODE_PEPPER`), two domains, `<pepper>:code` and
-/// `<pepper>:ip`. Separating them means an invite-code hash and an IP hash can never collide, and
-/// neither is reversible without the pepper. (TS's composition root built this; every caller here
-/// builds it from `app.env.code_pepper`.)
+/// §9.4, §9.8: derives domain-separated `<pepper>:code` and `<pepper>:ip` HMAC keys from `CODE_PEPPER`.
 pub fn hashes_for_pepper(pepper: &str) -> Hashes {
     create_hashes(&format!("{pepper}:code"), &format!("{pepper}:ip"))
 }
 
-/// TS `Ids`: every id and every seed comes from here.
+/// Generates UUIDs and match seeds.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SystemIds;
 
 impl SystemIds {
-    /// A random (v4) UUID, lower case, as `crypto.randomUUID()` prints one.
+    /// A random (v4) UUID in lowercase.
     pub fn uuid(&self) -> String {
         uuid::Uuid::new_v4().to_string()
     }
@@ -147,6 +132,6 @@ impl SystemIds {
     }
 }
 
-/// TS `systemIds`, under its TS name (SURFACE §4.2).
+/// Kept under lowercase name for SURFACE §4.2.
 #[allow(non_upper_case_globals)]
 pub const system_ids: SystemIds = SystemIds;

@@ -1,22 +1,13 @@
-//! The daily quests an account holds, and the dev tools that give and complete one (SPEC §14.9,
-//! §14.10, #1304).
+//! Daily quests and dev tools (SPEC §14.9, §14.10, §14, #1304).
 //!
-//! `GET /api/quests` answers the caller's own held quests, each with its progress, target and
-//! payout, and when the next is due, and nobody else's (§14). While the economy is live it tops
-//! the account up first ([[R1304000]]), so a player who shows up after a long absence finds
-//! `QUEST_MAX_HELD` waiting; while it is off nothing arrives ([[R1304002]]) and nothing is due.
-//! The rhythm and the payout are `economy::quests`'s.
+//! `GET /api/quests` answers caller's held quests, topping them up if the economy is live
+//! (R1304000, R1304002).
 //!
-//! `POST /api/quests/:questId/replace` swaps a held quest for another, `QUEST_REPLACES_PER_DAY`
-//! times a UTC day, while the economy is live: 409 `conflict` when it is off, when the day's
-//! replaces are spent or when no other quest is left to draw, and 404 `not_found` for a quest the
-//! account does not hold, each writing nothing ([[R2210000]]). Both routes answer `replacesLeft`, how
-//! many replaces the account has left today, 0 while the economy is off.
+//! `POST /api/quests/:questId/replace` swaps a held quest up to `QUEST_REPLACES_PER_DAY` times
+//! per UTC day while economy is live (R2210000).
 //!
-//! The dev tools (`POST /api/dev/quests`, `POST /api/dev/quests/:questId/complete`) give the caller
-//! a quest at once and complete one it holds, as rows marked `dev` (§14.10), so quests are tested
-//! without waiting. Like every dev tool they answer a dev account alone (`api::dev::dev_caller`,
-//! R1300000), and anyone else 403 `forbidden`, writing nothing.
+//! Dev tools (`POST /api/dev/quests`, `POST /api/dev/quests/:questId/complete`) grant and complete
+//! quests marked `dev` for dev accounts only (R1300000).
 
 use std::sync::Arc;
 
@@ -57,9 +48,7 @@ async fn quests_at(app: &App, tx: &mut Tx<'_>, profile_id: &str, now: i64) -> Re
     })
 }
 
-/// The answer of both quest routes: `{ quests, nextDueAt, replacesLeft }`, the held quests oldest
-/// first and when the next falls due; `nextDueAt` is `null` while the economy is off and while the
-/// account holds `QUEST_MAX_HELD`, since none arrives then.
+/// Formats quest response: `{ quests, nextDueAt, replacesLeft }`.
 fn quests_answer(app: &App, book: &QuestBook, replaces_left: i64) -> Value {
     let quests: Vec<Value> = book.held.iter().filter_map(quest_view).collect();
     let next_due_at = book
@@ -84,10 +73,8 @@ pub async fn get_quests(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(json(200, quests_answer(app, &book, left)))
 }
 
-/// `POST /api/quests/:questId/replace` (`AuthLevel::Active`): replaces a held quest with another
-/// ([`replace_quest`], [[R2210000]]) and answers what `GET /api/quests` answers after it. 409 while
-/// the economy is off, when today's replaces are spent and when no other quest is left to draw;
-/// 404 for a quest the account does not hold. A refusal writes nothing.
+/// `POST /api/quests/:questId/replace` (`AuthLevel::Active`, [[R2210000]]).
+/// Replaces a held quest and returns updated quests.
 pub async fn post_replace_quest(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     if !app.economy_live {

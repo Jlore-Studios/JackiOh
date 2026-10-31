@@ -1,30 +1,14 @@
-//! The retention purge: rows nothing reads any more are deleted once they are old, so the privacy
-//! policy can state how long each is kept. Not in SPEC, and no R-row. Port of
-//! `apps/server/src/api/retention.ts`, plus the purge loop `src/index.ts` ran (SURFACE §11.2:
-//! `api::retention::run_purge(app)`, boot + hourly).
+//! Data retention purges (SURFACE §11.2).
 //!
-//!  - `code_attempts` (profile id, peppered IP hash, time) after `CODE_ATTEMPT_RETENTION_DAYS`. The
-//!    limits that read them look back `CODE_ATTEMPT_WINDOW_SECONDS` at most.
-//!  - a finished match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended. Only a live
-//!    match is replayed from its log; the result row, and so the rating history, is kept.
-//!  - a finished match's play telemetry `PLAY_TELEMETRY_RETENTION_DAYS` after the match ended (R1442).
-//!  - a chat message, with its reports, `CHAT_RETENTION_DAYS` after it was sent (SPEC S7, B53;
-//!    `social::chat::purge`, its own transaction after the others).
-//!  - a finished co-op match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a
-//!    1v1 match's (§13.9; `duos::purge_expired_logs`, its own transaction). Its row, the seed, the
-//!    decks and the result, is kept, as a 1v1 match's is.
-//!  - a game record's detail `GAME_RECORD_RAW_RETENTION_DAYS` after it was written, once it is folded
-//!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept. The
-//!    loop folds any record written before the totals first (`game_records::fold_pending`).
-//!  - a spend's idempotency key and its kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written
-//!    (R2124000; `economy::idempotency::sweep_expired`, its own transaction).
+//! Periodic background task purging expired records:
+//! - Code attempts (`CODE_ATTEMPT_RETENTION_DAYS`);
+//! - Match actions (`MATCH_ACTION_RETENTION_DAYS`) for 1v1 and co-op (§13.9);
+//! - Play telemetry (`PLAY_TELEMETRY_RETENTION_DAYS`, R1442);
+//! - Chat messages (`CHAT_RETENTION_DAYS`, SPEC S7, B53);
+//! - Raw game records (`GAME_RECORD_RAW_RETENTION_DAYS`, R1044001) after refiling (R1596000);
+//! - Idempotency keys (`IDEMPOTENCY_KEY_TTL_HOURS`, R2124000).
 //!
-//! `app.rs` spawns `run_purge`, which runs it at boot and then every
-//! `RETENTION_PURGE_INTERVAL_SECONDS`, next to the match reaper. In Postgres it is one call to
-//! `app.purge_expired_rows` (migration 0013, with 0029's third cutoff and 0041's fourth).
-//!
-//! Before it purges, the loop files again any finished match's game record whose write failed (R1596000,
-//! `refile_unfiled`), so the purge never takes the log of a game the card statistics lack.
+//! Spawns `run_purge` running every `RETENTION_PURGE_INTERVAL_SECONDS`.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,11 +25,8 @@ use crate::config::{
 };
 use crate::db::store::{RetentionPurgeInput, RetentionPurgeResult, StoreError};
 
-/// Unit conversion, not configuration.
 const MS_PER_DAY: i64 = 86_400_000;
-/// Unit conversion, not configuration.
 const MS_PER_SECOND: i64 = 1_000;
-/// The epoch: a range's start every match ended after.
 const EPOCH_MS: i64 = 0;
 
 pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError> {

@@ -1,5 +1,4 @@
-//! The HTTP API (SURFACE §11.1): one module per `apps/server/src/api/<x>.ts`, parts 18 and 19.
-//! Written once by part 1 (SURFACE §1).
+//! The HTTP API (SURFACE §11.1, §1).
 
 pub mod auth;
 pub mod card_picks;

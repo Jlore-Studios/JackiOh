@@ -1,17 +1,5 @@
 //! Sharing a finished match's replay with a friend (SPEC S7, B52; #940).
 //!
-//! `POST /api/replays/:matchId/shares` `{ friendId }`: a seat holder of the finished match shares its
-//! replay with a friend, 204. A caller who held no seat in a finished match of that id, and a
-//! `friendId` that is not the caller's friend or that either side has blocked, get the one 404, so
-//! neither a match's existence nor a friendship leaks. `DELETE /api/replays/:matchId/shares/:friendId`
-//! takes the caller's own share back, 204 whether or not there was one. `GET /api/replays/shared`
-//! lists the newest `SHARED_REPLAYS_LIST_MAX` replays friends have shared with the caller, newest
-//! first: `{ shared: SharedReplay[] }`.
-//! `GET /api/replays/:matchId/shares` (R1435000) answers the friends the caller has shared that
-//! replay with, `{ friendIds }`, so "Share with a friend" shows them shared on any later visit and
-//! the share can be withdrawn there; a caller who held no seat in a finished match of that id gets
-//! the one 404.
-//!
 //! The friend reads the replay through `GET /api/replays/:matchId`, from the sharer's seat
 //! (`api/replays.rs`'s `replay_reader`). Every read, there and here, judges the friendship anew
 //! (`shares_sharers`, `shares_for`), so an unshare, an unfriend or a block ends it at once; anyone

@@ -1,28 +1,14 @@
 //! Friends and blocks (SPEC S7, B43–B46).
 //!
-//! - `GET /api/friends`: the caller's friends with their status (B47), the requests they received
-//!   and sent, and the players they blocked.
-//! - `POST /api/friends/requests` `{username}`: a request by the exact username as shown, `name#tag`
-//!   (B43), looked up as a sign-in by username looks one up (R1443: the base's key and the tag).
-//!   An unknown name and a pair either side blocked answer the same 404, so a request never tells
-//!   whom a player blocked; a request to oneself, to a friend, a second request, or one past
-//!   `MAX_FRIENDS` is 409 with its own code; past `FRIEND_REQUESTS_PER_HOUR` an hour, 429, counted
-//!   before the name is looked up, so the limit also bounds how fast names can be tried. A request
-//!   the other side already sent is accepted at once (B44).
-//! - `POST /api/friends/requests/:id/accept` makes the friendship and deletes the request;
-//!   `…/decline` (its recipient) and `DELETE /api/friends/requests/:id` (its sender) delete it;
-//!   `DELETE /api/friends/:profileId` ends a friendship (B45), and with it every replay share
-//!   between the two, either way, every open challenge, its room freed (R1689000), and a watch of
-//!   either by the other (B50, B52): making friends again restores none of them.
-//! - `POST /api/blocks` `{profileId}` blocks a player: the friendship, every request and every
-//!   replay share between the two go, either way, and so does every open challenge, its room freed,
-//!   and a watch of either by the other; from then on requests, challenges, chat and shares are
-//!   refused either way (B46), and a live match between the two relays neither one's emotes
-//!   (R1351000). `DELETE /api/blocks/:profileId` lifts it and restores nothing.
+//! - `GET /api/friends`: the caller's friends with their status (B47), requests and blocks.
+//! - `POST /api/friends/requests` `{username}` (B43): looked up by sign-in name (R1443).
+//!   A request the other side already sent is accepted at once (B44).
+//! - `POST /api/friends/requests/:id/accept` makes the friendship; decline/cancel deletes it;
+//!   `DELETE /api/friends/:profileId` ends it (B45), canceling challenges and shares (R1689000).
+//! - `POST /api/blocks` `{profileId}` (B46): ends friendships, requests, challenges, shares,
+//!   watches (B50, B52) and mutes emotes (R1351000). `DELETE /api/blocks/:profileId` lifts it.
 //!
-//! `GET /api/friends` is read every `PRESENCE_HEARTBEAT_MS` by each signed-in client, so it reads
-//! everything in one transaction by a fixed number of set-based reads, whatever the number of
-//! friends (`presence::standings`).
+//! `GET /api/friends` reads everything in one transaction (`presence::standings`).
 
 use std::sync::Arc;
 
@@ -307,8 +293,7 @@ pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&me)).await?;
     let removed = tx.friends_remove(&me, &friend_id).await?;
     let shares = tx.shares_remove_between(&me, &friend_id).await?;
-    // R1689000: an open challenge either way is canceled and its room freed, as a block's is. One
-    // that lapsed already freed itself: its room expired with it (and its code may be another room's now).
+    // R1689000: an open challenge either way is canceled and its room freed, as a block's is.
     let closed = tx
         .challenges_close_between(&me, &friend_id, ChallengeState::Canceled)
         .await?;
@@ -352,8 +337,7 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     tx.friends_requests_delete_between(&me, &target).await?;
     // B46, B52: a share either way ends for good, so unblocking restores none.
     let shares = tx.shares_remove_between(&me, &target).await?;
-    // B46, B49: an open challenge either way is canceled and its room freed. One that lapsed
-    // already freed itself: its room expired with it (and its code may be another room's now).
+    // B46, B49: an open challenge either way is canceled and its room freed.
     let closed = tx
         .challenges_close_between(&me, &target, ChallengeState::Canceled)
         .await?;

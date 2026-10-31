@@ -1,20 +1,11 @@
-//! The ranked ladder on the server (SPEC §9.12, R603–R612): opening a season, rating a ranked game,
-//! and the three reads the client has — your own rank, the leaderboard, and both players' ranks on
-//! the match screen. Port of `apps/server/src/api/ranked.ts`.
+//! Ranked ladder management (SPEC §9.12, R603–R612).
 //!
-//! The rules are pure and live in `crate::ranked`: Glicko-2 (`glicko2.rs`), the ladder
-//! (`ladder.rs`) and the season's soft reset (`season.rs`). This file only reads the store, hands
-//! what it read to them, and writes back what they decided, always inside the caller's transaction.
+//! Coordinates rating persistence with `crate::ranked` rules. Called by:
+//! - `results.rs` on ranked match completion (R604);
+//! - `series.rs` on ranked series end (R262);
+//! - `app.rs` at boot to open the build's season (R609, SURFACE §11.2).
 //!
-//! Who calls it:
-//!  - `results.rs`, for a ranked match that is not a series game, in the transaction that writes the
-//!    result (R604);
-//!  - `series.rs`, for a ranked series when it ends, in the transaction of its last transition (R262);
-//!  - `app.rs` at boot (`open_season`, SURFACE §11.2), and `cli/season_start.rs` by hand, to open
-//!    the build's season (R609).
-//!
-//! Nothing here ever sends a rating to a client (R612): the reads answer with `VisibleRank`s, each
-//! player's profile id and username (R1436), and the season's badges.
+//! Never exposes raw ratings to clients (R612); returns `VisibleRank`, usernames, and badges (R1436).
 
 use std::sync::Arc;
 
@@ -40,9 +31,7 @@ use crate::ranked::ladder::{
 };
 use crate::ranked::season::{ResetReport, season_id_of, soft_reset};
 
-// ---------------------------------------------------------------------------
 // The game's version (R375) and its season (R609)
-// ---------------------------------------------------------------------------
 
 /// The newest patch's version: the game's version, which names the season (R609). Compiled in
 /// from `crates/cards/patches/patches.json` (SURFACE §11.3), the same version the game records
@@ -51,15 +40,14 @@ pub fn load_patch_version() -> String {
     jackioh_cards::catalog_version().to_string()
 }
 
-/// What opening a season reads: the version that names it (TS also took the clock and the log,
-/// which are `now_ms` and `tracing` here).
+/// Dependencies required for opening a season.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SeasonDeps {
     pub patch_version: String,
 }
 
 impl SeasonDeps {
-    /// This build's: TS's `deps.patchVersion`, read at boot by `src/index.ts`.
+    /// Returns season dependencies for the current build.
     pub fn current() -> SeasonDeps {
         SeasonDeps {
             patch_version: load_patch_version(),
@@ -161,9 +149,7 @@ pub async fn open_season(app: &App) -> Result<OpenedSeason, StoreError> {
     Ok(opened)
 }
 
-// ---------------------------------------------------------------------------
 // Rating one ranked game (R603–R608, R610, R611)
-// ---------------------------------------------------------------------------
 
 /// One side of a ranked game: a player's profile, or one of the AI bots (R610).
 #[derive(serde::Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -652,9 +638,7 @@ pub async fn rate_ranked_game(
     Ok(plan.row)
 }
 
-// ---------------------------------------------------------------------------
 // What the client reads (R612)
-// ---------------------------------------------------------------------------
 
 /// One profile's rank in a season it has standings for.
 fn rank_in(standings: &[SeasonStanding], jlorious: &[String], profile_id: &str) -> VisibleRank {
@@ -1014,9 +998,7 @@ pub async fn ladder_tiers(app: &App, players: &(String, String)) -> Result<(Rank
     Ok((tier(&players.0), tier(&players.1)))
 }
 
-// TS's `createRankedRoutes()`, in its order, is three `AuthLevel::Active` rows of `app.rs`'s
-// `ROUTES`: GET /api/ranked → get_ranked; GET /api/leaderboard → get_leaderboard;
-// GET /api/matches/:matchId/ranks → get_match_ranks.
+// Routes
 
 /// `GET /api/ranked`: the caller's own rank, record, streak, username and season badges. Never the
 /// rating (R612).

@@ -68,12 +68,8 @@ impl Catalog {
         }
     }
 
-    // §9.4 L6: "every card exists in the current catalog version and is not banned".
-    //
-    // R164: a ban is server state, not catalog data (nothing in §8 is banned at launch). A flag on
-    // the card would make banning one card a new R105 version, and §9.4's stale-version rejection
-    // would then invalidate every saved loadout at once. The shared validator reads bannedness
-    // through `Catalog`, never off a `CardDef`; the list is empty until there is something to ban.
+    // §9.4 L6, R164: bans are server state rather than catalog data (SPEC §8) so banning a card
+    // does not bump the catalog version (R105) and invalidate saved loadouts.
     pub fn is_banned(&self, card_id: &str) -> bool {
         self.banned.iter().any(|banned| banned == card_id)
     }
@@ -197,22 +193,9 @@ pub async fn load_patch_versions() -> Vec<String> {
 /// The response header `GET /api/catalog` carries the deployed git commit in, when it is known.
 pub const DEPLOYED_COMMIT_HEADER: &str = "x-deployed-commit";
 
-/// `GET /api/catalog`.
-///
-/// R163: the catalog the client ships, served whole and unprojected. Whole, because §9.4 requires
-/// "one validator module shared by client and server" and a trimmed card would be a second, weaker
-/// copy of the catalog. Unauthenticated: it is the same bytes for everybody and names no profile,
-/// and §9.4's gate is about "no collection, loadout, queue or match". It carries R105's version,
-/// which a caller can set against its own. The endpoint is the transport, never a second source of truth.
-///
-/// Since #1378 no screen of the client reads it: they read the catalog the engine's module registers
-/// (`apps/web/src/game/currentCatalog.ts`). It stays for what calls it from outside (CLAUDE.md
-/// rule 13): the deploy check and Render's health check below, and the e2e runs, which wait for it
-/// before they start.
-///
-/// `commit` is the git commit this deploy runs (`env.rs` deployed_commit), sent as a header so the
-/// body stays the same bytes for everybody (R163). `deploy-watch.yml` reads it, and Render's health
-/// check probes this route too.
+/// `GET /api/catalog` (R163, R105, §9.4). Unauthenticated, serving the whole catalog with version.
+/// External callers rely on this route (#1378, CLAUDE.md rule 13): deploy-watch polls it, Render's
+/// health check probes it, and e2e runs await it. `commit` is sent via `x-deployed-commit` header.
 pub async fn get_catalog(app: &Arc<App>, _req: Req) -> ApiResult {
     let catalog = &app.catalog;
     let version = serde_json::to_string(&catalog.version).unwrap_or_else(|_| "\"\"".to_string());
@@ -231,14 +214,8 @@ pub async fn get_catalog(app: &Arc<App>, _req: Req) -> ApiResult {
 }
 
 /// `GET /api/catalog/:version` (SPEC §9.4, R388, B4.2).
-///
-/// Public, unauthenticated endpoint serving the exact catalog snapshot as patch `version` left it,
-/// in the same `{ version, defs }` shape as `GET /api/catalog`.
-///
-/// Resolves `version` through compiled card history (`jackioh_cards::catalog_defs_at`). If not in
-/// compiled history but matching `app.catalog.version` (e.g. in tests with an overridden catalog version),
-/// serves `app.catalog`. Returns 404 for unknown, malformed, or traversal-shaped versions without
-/// request-selected file reads.
+/// Public endpoint serving catalog snapshot for patch `version` (`jackioh_cards::catalog_defs_at`),
+/// or `app.catalog` if matching current version. Returns 404 for unknown versions.
 pub async fn get_catalog_version(app: &Arc<App>, req: Req) -> ApiResult {
     let version = req.params.get("version").map(String::as_str).unwrap_or_default();
     if let Some(defs) = jackioh_cards::catalog_defs_at(version) {

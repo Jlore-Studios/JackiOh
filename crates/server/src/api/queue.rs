@@ -1,46 +1,14 @@
-//! Matchmaking (BUILD M7-T3, SPEC §9.5), in three modes (R257).
+//! Matchmaking (BUILD M7-T3, SPEC §9.5) in three modes (R257, R330, R258).
 //!
-//! §9.5: enqueue asserts the account is active and not in a match, validates the loadout, freezes the
-//! chosen deck into the ticket and returns its id. Pairing runs on enqueue plus a sweeper every few
-//! seconds; the window widens ±50 rating every 10 s from ±100 and stops at `MAX_FAIR_GAP` (R640001,
-//! which replaced its going uncapped after 60 s); both tickets are claimed in one atomic statement.
+//! Enqueue asserts active account, validates loadout, freezes decks (§9.4, §9.8), and returns ticket id.
+//! Sweeper widens rating window every 10s up to `MAX_FAIR_GAP` (R640001) in R166's order.
+//! Both tickets are claimed atomically via `tickets_claim_pair` (M7-T3).
+//! Modes become Best-of-1, All Random, or Conquest series (`series.rs`).
 //!
-//! R257 adds the mode: Best of 1 (one saved deck), Conquest (a trio, played as a series, R330) and
-//! All Random (R258). A ticket pairs only with a ticket of its own mode; inside a mode the window
-//! and R166's order are exactly as before. What a pair becomes depends on the mode: a Best-of-1
-//! match on the two frozen decks, an All Random match on two dealt ones, or a Conquest series whose
-//! first game waits for both players to pick (`series.rs`).
-//!
-//! R1453 adds the empty-queue fallback: with `LADDER_BOTS=on`, a ticket that has waited past its
-//! fallback time with no person to pair with is paired with a ladder bot, after every pair of people
-//! the sweep could make (`pair_with_bots`, `bots::fallback`). Since the window stops at
-//! `MAX_FAIR_GAP` (R640001), a bot is that ticket's opponent rather than a person further from its
-//! rating. A Conquest ticket and its bot (R641000) become a series, claimed and written in one
-//! transaction (`start_bot_series`), whose picks the bot makes through the series sweeper
-//! (`bots::pick`); a bot that is a side of a series not over is seated nowhere else.
-//!
-//! R1555000 adds the match between two bots: while the top bots grind (`bots::pool`), a sweep that
-//! finds the queue holding no ticket at all kicks off one ranked Best-of-1 match between the
-//! lowest-rated free grinder and the free bot closest in rating to it (`kick_off_bot_match`,
-//! `bots::fallback::choose_bot_pair`), at most `BOT_VS_BOT_MAX_LIVE` live and
-//! `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended. The queue is read at kickoff only: a match
-//! already started plays out whoever queues meanwhile, and they are paired as above, with a person
-//! or a bot not in it.
-//!
-//! Three pieces: the endpoints, one pairing sweep (`try_pair`) and the sweeper (`run_matchmaker`).
-//! Two invariants:
-//!
-//!  - **The deck is frozen at enqueue** (§9.4). `freeze_choice` copies the deck or trio into the
-//!    ticket and nothing below re-reads a saved deck, so an edit while queued cannot change the game
-//!    (M7-T3's second acceptance item, §9.8).
-//!  - **Both tickets are claimed in one atomic statement**, `tickets_claim_pair`. A match or series is
-//!    created only after it returns true, so racing matchers cannot pair a ticket twice (M7-T3's race
-//!    test). Losing the race is not an error.
-//!
-//! The window is `rating_window` from `config.rs`, so its numbers are written down once. The route
-//! table is `app.rs`'s (SURFACE §11.2): `enqueue` (`POST /api/queue`, active), `dequeue` (`DELETE`,
-//! active) and `population` (`GET /api/queue/population`, user): the queue readout, each mode's
-//! expected wait and the last hour's games (R640002).
+//! Fallback pairs tickets with ladder bots after timeout (R1453, R641000). Empty queue kicks off
+//! bot-vs-bot ranked matches (R1555000).
+//! Routes (SURFACE §11.2): enqueue (`POST /api/queue`), dequeue (`DELETE`), and population
+//! (`GET /api/queue/population`) with wait readouts (R640002).
 
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
@@ -96,17 +64,7 @@ pub(crate) fn json_list<T: serde::Serialize>(items: &[T]) -> String {
     serde_json::to_string(items).unwrap_or_default()
 }
 
-// R143 — the end-to-end mode's optional seed
-
-/// SPEC §11 R143: the server mints a match's seed and a client never supplies one, except that in
-/// end-to-end mode the room and queue endpoints accept an optional seed and use it verbatim so a
-/// networked spec can be seeded; outside that mode the field is rejected.
-///
-/// Rejected, not ignored: a client that sends a seed to a production server is told its request was
-/// not understood.
-///
-/// Public because R143 names two endpoints: `actor/rooms.rs` reads the field through this same
-/// function, so the rule is decided in one place.
+/// Reads an optional seed override in e2e test mode; rejected otherwise (SPEC §11 R143).
 pub fn seed_override_of(app: &App, body: &Value) -> Result<Option<String>, ApiError> {
     let Some(value) = body.get("seed") else {
         return Ok(None);
@@ -122,15 +80,7 @@ pub fn seed_override_of(app: &App, body: &Value) -> Result<Option<String>, ApiEr
     }
 }
 
-/// ticket id -> the seed its enqueue asked for, until the ticket is paired or canceled.
-///
-/// Module state because `try_pair` is also run by the sweeper, which never sees a handler's locals.
-/// Nothing is written here outside end-to-end mode (`seed_override_of` refuses the field), and the
-/// map empties as tickets resolve.
-///
-/// Not in SPEC, no R-row: `Ticket` carries no seed, since adding one would put a test-mode field into
-/// the shape `db/**` persists, so R143's exception is confined to this map. `actor/rooms.rs` holds
-/// `room code -> seed` for the same reason.
+/// Ephemeral ticket id -> e2e seed override mapping (R143).
 static E2E_SEED_BY_TICKET: LazyLock<Mutex<IndexMap<String, String>>> =
     LazyLock::new(|| Mutex::new(IndexMap::new()));
 
@@ -149,19 +99,7 @@ fn forget_seed(ticket_id: &str) {
     seeds().shift_remove(ticket_id);
 }
 
-// R1989000 — the end-to-end mode's optional seat
-
-/// SPEC §11 R1989000: the match or series seed's coin decides every 1v1 door's seats, so a networked
-/// spec pins the seats it was written for the way it pins the seed (R143): `seat: "p1"` asks for
-/// Player 1's seat, `"p2"` for Player 2's, beside the seed, on the queue and room endpoints, and is
-/// refused outside end-to-end mode like the seed is. A honored pin skips the coin; a conflict pins
-/// the precedence-first profile (the older ticket, the host) and the other takes the free seat.
-///
-/// Rejected, not ignored, like the seed: a client that sends a seat to a production server is told
-/// its request was not understood.
-///
-/// Public because R1989000 names four doors: `actor/rooms.rs` reads the field through this same
-/// function, so the rule is decided in one place.
+/// Reads an optional seat override in e2e test mode; rejected otherwise (SPEC §11 R1989000, R143).
 pub fn seat_override_of(app: &App, body: &Value) -> Result<Option<jackioh_engine::PlayerId>, ApiError> {
     use jackioh_engine::PlayerId;
     let Some(value) = body.get("seat") else {
@@ -179,10 +117,7 @@ pub fn seat_override_of(app: &App, body: &Value) -> Result<Option<jackioh_engine
     }
 }
 
-/// ticket id -> the seat its enqueue asked for, until the ticket is paired or canceled.
-///
-/// Module state beside `E2E_SEAT_BY_TICKET`, for the same reason: the R1989000 pin is a test-mode
-/// field and `Ticket` must not carry it. `actor/rooms.rs` holds `room code -> seat` the same way.
+/// Ephemeral ticket id -> e2e seat override mapping (R1989000).
 static E2E_SEAT_BY_TICKET: LazyLock<Mutex<IndexMap<String, jackioh_engine::PlayerId>>> =
     LazyLock::new(|| Mutex::new(IndexMap::new()));
 
@@ -201,13 +136,7 @@ fn forget_seat(ticket_id: &str) {
     seat_pins().shift_remove(ticket_id);
 }
 
-/// SPEC §11 R1989000: one draw of the match or series seed on `{seed}:seats` at cursor 0. True
-/// means the precedence-first profile (the older ticket, the host, the person a bot pairs with,
-/// the grinder a kickoff names first) takes Player 1's seat; false hands it to the other side.
-/// Only the seed goes in, so the same seed always seats the same way and a replay folds unchanged.
-///
-/// Public for the R1989000 tests, which derive the seats a fixed seed deals; `src/` calls it at
-/// every 1v1 door.
+/// Deterministic seat flip from match/series seed: true if precedence-first side takes P1 (SPEC §11 R1989000).
 pub fn seat_coin_p1_first(seed: &str) -> bool {
     jackioh_engine::Rng::new(&format!("{seed}:{SEAT_COIN_LABEL}"), 0).int(2) == 0
 }
@@ -235,16 +164,8 @@ fn take_seat_pin_for_pair(a: &Ticket, b: &Ticket) -> Option<bool> {
     })
 }
 
-// R897000 — a queued ticket's presence
-
-/// SPEC §11 R897000: when each profile with an open ticket was last heard from, in epoch ms.
-///
-/// Every signed-in request refreshes its caller (`api::http`'s router), which a queued client
-/// already sends every `SERIES_POLL_SECONDS` from wherever it is, so a silent profile reads as
-/// gone and its ticket expires before it can seat anyone. In memory, beside `E2E_SEED_BY_TICKET`:
-/// a restart loses it, and live clients re-touch within one poll, so `enqueued_at` covers what was
-/// never heard. One per `App`, not module state: profile ids repeat across parallel tests. Each
-/// sweep forgets a profile with no open ticket once it has been silent a window (`sweep`).
+/// In-memory presence tracking for queued callers (SPEC §11 R897000).
+/// Silent profiles expire before seating; swept on matchmaker ticks.
 pub struct QueuePresence {
     born: i64,
     heard: Mutex<IndexMap<String, i64>>,
@@ -311,13 +232,8 @@ impl Default for QueuePresence {
     }
 }
 
-// R1996000 — the readout, kept
-
-/// SPEC §11 R1996000: the queue readout last counted, with when, in epoch ms, kept for
-/// `QUEUE_READOUT_CACHE_TTL_SECONDS` so the polls of every waiting client inside it share one
-/// count. One answer for every caller: the readout names nobody (R640002). Not shared in flight:
-/// readouts that miss together each count, and the last to finish is kept. One per `App`, so a
-/// restart or a test starts with none.
+/// Cached queue population readout (SPEC §11 R1996000, R640002), valid for
+/// `QUEUE_READOUT_CACHE_TTL_SECONDS`.
 #[derive(Default)]
 pub struct KeptReadout {
     kept: Mutex<Option<(i64, Value)>>,
@@ -1112,14 +1028,8 @@ async fn pair_with_bots(
     Ok(made)
 }
 
-/// R641000: the series a Conquest ticket and its bot play, as `start_paired_series` makes a pair's,
-/// with the claim (`tickets_claim_for_bot_series`) and the series row in one transaction: between
-/// games the bot is in no match, and the series is all that holds it, so a claim must never land
-/// without its series. Series p1 is R1989000's coin winner on the seed base (the person's pin
-/// honored before the coin) and goes first in odd games (R335); the other side plays the trio the
-/// pool dealt it. The series is ranked
-/// (R604) and opens on game 1's pick phase; `bots::pick` makes the bot's picks from the sweeper.
-/// Answers false, with nothing written, when the bot holds no trio or the claim lost.
+/// Starts a ranked Conquest series between a ticket and a bot in one atomic transaction
+/// (R641000, R1989000, R335, R604).
 async fn start_bot_series(
     app: &Arc<App>,
     ticket: &Ticket,
@@ -1205,14 +1115,8 @@ async fn start_bot_series(
     Ok(true)
 }
 
-/// R1453: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
-/// pair's. The seed is the server's (or R143's end-to-end one). R1989000 seats the person and the
-/// bot by the seed's coin (the person's pin honored first); whoever takes p1 goes first. Best of 1 plays
-/// the ticket's frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`),
-/// with its portrait; All Random deals both seats as for two people (R258, R642), the bot's with no
-/// lean.
-/// The match is ranked (R604): a ticket the queue paired, whoever it was paired with. `lease` holds
-/// both seats in the ledger (R1523000), committed once the record holds them too.
+/// Starts a ranked Bo1 or All Random match between a ticket and a bot (R1453, R143, R1989000,
+/// R258, R642, R604, R1523000).
 async fn start_bot_match(
     app: &Arc<App>,
     ticket: &Ticket,
@@ -1350,20 +1254,8 @@ async fn start_bot_match(
     Ok(())
 }
 
-/// R1555000: kicks off a match between two bots when the sweep at `now` finds none live (fewer than
-/// `BOT_VS_BOT_MAX_LIVE`), no ticket open in any mode, a bot grinding, none ended in the last
-/// `BOT_VS_BOT_MIN_GAP_SECONDS`, and a pair `choose_bot_pair` names: a grinder, and the ready bot
-/// closest in rating to it that is none of its last `BOT_RECENT_OPPONENTS` opponents. Each read
-/// waits for the checks before it to pass, so a sweep with nothing to kick off reads only the bots
-/// and the queue's count. Both are claimed in one statement (`bots_claim_pair`), and a claim that
-/// loses is no error. R1989000 seats the grinder and its opponent by the seed's coin; whoever
-/// takes p1 goes first. Each side plays one of its own Best-of-1
-/// decks picked from the seed (`{seed}:bot-deck:{seat}`) with its portrait, and the match is ranked
-/// (R604) and Best of 1, stated on the row since no ticket made it: the bot seat (`bots::seat`)
-/// plays both sides, and it is rated and recorded as any match with a bot side is (R610, R611,
-/// R640000). Before any of that, a match between two bots that a restart cut off, which no socket
-/// will come back to rebuild, is folded back so it plays on (§9.5). Answers the match it started,
-/// or none.
+/// Kicks off a ranked Bo1 match between two bots when queue is empty and gap elapsed (R1555000,
+/// R1989000, R604, R610, R611, R640000, §9.5).
 pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<String>, ApiError> {
     let (bots, queued) = {
         let mut tx = app.db.begin(None).await?;
@@ -1529,12 +1421,7 @@ pub async fn run_matchmaker(app: Arc<App>) {
 
 // Routes
 
-/// `POST /api/queue` (active): §9.5's enqueue. `AuthLevel::Active` is §9.4's gate, so a pending
-/// account gets 403 before this handler runs.
-///
-/// Pairing is attempted inline, so a player who pairs at once learns it from the response's status.
-///
-/// It takes `&Arc<App>` where SURFACE §11.2 writes `&App`: `Registry::start` takes `&Arc<App>`.
+/// `POST /api/queue` (active): enqueue ticket and attempt inline pairing (§9.5, §9.4, SURFACE §11.2).
 pub async fn enqueue(app: &Arc<App>, req: Req) -> ApiResult {
     enqueue_route(app, req).await
 }
@@ -1593,12 +1480,7 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
     ))
 }
 
-/// `DELETE /api/queue` (active): leaving the queue. Idempotent; `cancelled: false` when there was
-/// nothing open to cancel.
-///
-/// R167: a queued player may cancel, and canceling is idempotent, because the sweeper (R108) can
-/// pair a ticket between the client deciding to cancel and the request arriving: cancel never
-/// unmakes a pairing, it only closes a ticket still open.
+/// `DELETE /api/queue` (active): idempotent dequeue, closing an open ticket if present (R167, R108).
 pub async fn dequeue(app: &Arc<App>, req: Req) -> ApiResult {
     dequeue_route(app, req).await
 }
@@ -1637,18 +1519,8 @@ pub fn expected_wait_seconds(waits_ms: &[i64]) -> Option<i64> {
     Some((sorted[rank - 1].max(0) / step_ms + 1) * QUEUE_WAIT_STEP_SECONDS)
 }
 
-/// `GET /api/queue/population` (user): §9.5's readout instead of an endless spinner.
-///
-/// `AuthLevel::User`, not `Active` or `None`: the readout is aggregates that name nobody, and §9.4's
-/// "no queue" is about joining, which `POST /api/queue` still refuses. `None` would give an
-/// anonymous caller a live-traffic feed.
-///
-/// R640002: every number in it was counted over the last `QUEUE_READOUT_WINDOW_SECONDS`: per mode
-/// (R257), the expected wait the tickets claimed in it call for (`expected_wait_seconds`, null when
-/// too few were), and the games that ended in it. A pairing with a bot is a claim and a game against
-/// one is a game, like any other. No count of open tickets: one told a lone queuer that a bot came.
-///
-/// R1996000: counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept (`KeptReadout`).
+/// `GET /api/queue/population` (user): queue readout aggregates over the last
+/// `QUEUE_READOUT_WINDOW_SECONDS` (§9.5, §9.4, R640002, R257, R1996000).
 pub async fn population(app: &Arc<App>, _req: Req) -> ApiResult {
     population_route(app).await
 }

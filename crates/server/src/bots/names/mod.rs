@@ -26,35 +26,23 @@ use crate::config::{
 };
 use crate::username::{matches_lists, normalize_username};
 
-/// R1454: the plain words of a `QuietOtter` username.
+/// R1454: word lists for bot username registers.
 const ADJECTIVES: &str = include_str!("adjectives.txt");
-/// R1454: the animals, food and objects of a `QuietOtter` username.
 const NOUNS: &str = include_str!("nouns.txt");
-/// R1454: nonsense words and keyboard mashes.
 const NONSENSE: &str = include_str!("nonsense.txt");
-/// R1454: gamer filler.
 const GAMER: &str = include_str!("gamer.txt");
-/// R1454: edgy words.
 const EDGY: &str = include_str!("edgy.txt");
-/// R1454: crude and meme-bait words.
 const CRUDE: &str = include_str!("crude.txt");
-/// R1454: anime characters and vocabulary.
 const ANIME: &str = include_str!("anime.txt");
-/// R1454: game and pop-culture characters and memes.
 const REFS: &str = include_str!("refs.txt");
-/// R1454: politics and public-life memes, nicknames and slogans.
 const POLITICS: &str = include_str!("politics.txt");
-/// R1454: given names, weighted toward Spanish-speaking names (never Luis).
 const GIVEN: &str = include_str!("given.txt");
-/// R1454: Han-character nicknames and gamer slang.
 const CHINESE_HAN: &str = include_str!("chinese_han.txt");
-/// R1454: pinyin surnames.
 const CHINESE_SURNAMES: &str = include_str!("chinese_surnames.txt");
-/// R1454: pinyin given names and slang.
 const CHINESE_PINYIN: &str = include_str!("chinese_pinyin.txt");
-/// R1454: the bots' own exclusion list, on top of the shared filter.
+/// R1454: bot-specific exclusion list on top of shared filter.
 const NEVER: &str = include_str!("never.txt");
-/// R1454: the most common given name on the ladder, drawn by `BOT_NAME_LUIS_SHARE`.
+/// R1454: common given name drawn by `BOT_NAME_LUIS_SHARE`.
 const LUIS: &str = "Luis";
 
 /// R1454: the onsets of a nonsense syllable (no `n`, `j`, `g` or `k`: slur soundalikes).
@@ -62,25 +50,18 @@ const ONSETS: &[&str] = &[
     "b", "bl", "br", "d", "dr", "f", "fl", "gl", "gr", "kr", "l", "m", "p", "pl", "qu", "r", "s", "sk",
     "skr", "sn", "sp", "t", "tr", "v", "w", "z",
 ];
-/// R1454: the vowels of a nonsense syllable.
 const VOWELS: &[&str] = &["a", "e", "i", "o", "u", "oo", "ee", "ai", "ou"];
 /// R1454: the codas of a nonsense draw, two of them empty.
 const CODAS: &[&str] = &[
     "", "", "rp", "nk", "x", "ng", "b", "dle", "mp", "zz", "rb", "rf", "m",
 ];
-/// R1454: the initials of a given name's `{name}{initial}` shape.
 const INITIALS: &[&str] = &[
     "A", "B", "C", "D", "E", "F", "G", "H", "J", "L", "M", "N", "P", "R", "S", "T", "V", "Z",
 ];
-/// R1454: the endings of a `Doubled` shape past the word's own last letter.
 const ENDINGS: &[&str] = &["ii", "zz", "_"];
-/// R1454: the affixes of a `Prefix` shape.
 const PREFIXES: &[&str] = &["The", "El", "Its", "Mr", "Lil"];
-/// R1454: the affixes of a `Suffix` shape.
 const SUFFIXES: &[&str] = &["TV", "YT", "Gaming", "Plays", "HD", "Live"];
-/// R1454: the fan affixes of a `FanSuffix` shape.
 const FAN_SUFFIXES: &[&str] = &["Main", "Fan", "Stan", "Kun", "4Life", "Enjoyer"];
-/// R1454: the fan affixes of a `FanPrefix` shape.
 const FAN_PREFIXES: &[&str] = &["Not", "Team"];
 
 /// R1454: which word register a username is drawn from.
@@ -137,8 +118,7 @@ impl Register {
     }
 }
 
-/// R1454: the registers a named bot draws from, each with its share of named bots. Luis's entry
-/// is its share of all bots (`BOT_NAME_LUIS_SHARE`) over the share of bots that draw a name.
+/// R1454: weighted registers for named bots.
 const REGISTERS: [(Register, f64); 12] = [
     (Register::Plain, BOT_NAME_SHARE_PLAIN),
     (Register::Nonsense, BOT_NAME_SHARE_NONSENSE),
@@ -157,7 +137,6 @@ const REGISTERS: [(Register, f64); 12] = [
     (Register::ChinesePinyin, BOT_NAME_SHARE_CHINESE_PINYIN),
 ];
 
-/// R1454: one list's words: trimmed lines, blanks and `#` lines skipped.
 fn entries(list: &'static str) -> Vec<&'static str> {
     list.lines()
         .map(str::trim)
@@ -165,8 +144,7 @@ fn entries(list: &'static str) -> Vec<&'static str> {
         .collect()
 }
 
-/// R1454: one weighted draw from `table`: `draw` holds a point of the weights' total, and the
-/// first item the point falls in wins; the last wins when the point falls past every weight.
+/// R1454: weighted random selection from `table`.
 fn weighted<T: Copy>(rng: &mut Rng, table: &[(T, f64)]) -> Option<T> {
     let total: f64 = table.iter().map(|(_, weight)| weight).sum();
     let mut draw = rng.next() * total;
@@ -179,7 +157,6 @@ fn weighted<T: Copy>(rng: &mut Rng, table: &[(T, f64)]) -> Option<T> {
     table.last().map(|(item, _)| *item)
 }
 
-/// R1454: the word with its first character uppercased.
 fn capitalized(word: &str) -> String {
     let mut chars = word.chars();
     match chars.next() {
@@ -188,13 +165,11 @@ fn capitalized(word: &str) -> String {
     }
 }
 
-/// R1454: a birth year in `BOT_NAME_BIRTH_YEAR_MIN..=BOT_NAME_BIRTH_YEAR_MAX`.
 fn year(rng: &mut Rng) -> i64 {
     int_in(rng, BOT_NAME_BIRTH_YEAR_MIN, BOT_NAME_BIRTH_YEAR_MAX)
 }
 
-/// R1454: a drawn number: a birth year, a filler number, or a two-digit number (the
-/// Chinese-internet set for the Chinese registers).
+/// R1454: drawn number: birth year, filler, or two-digit number.
 fn number(rng: &mut Rng, register: Register) -> String {
     let draw = rng.next();
     if matches!(register, Register::ChineseHan | Register::ChinesePinyin) {
@@ -219,7 +194,6 @@ fn number(rng: &mut Rng, register: Register) -> String {
     }
 }
 
-/// R1454: the word in leetspeak (`a→4`, `e→3`, `o→0`, `i→1`), either case.
 fn leet(word: &str) -> String {
     word.chars()
         .map(|ch| match ch {
@@ -232,8 +206,7 @@ fn leet(word: &str) -> String {
         .collect()
 }
 
-/// R1454: the word lowercased with its last vowel (else its last character) stretched by a drawn
-/// number of extra repeats.
+/// R1454: lowercases word and stretches vowel or last character.
 fn stretched(rng: &mut Rng, word: &str) -> String {
     let lower = word.to_lowercase();
     let extra = int_in(rng, BOT_NAME_STRETCH_MIN, BOT_NAME_STRETCH_MAX);
@@ -255,8 +228,7 @@ fn stretched(rng: &mut Rng, word: &str) -> String {
     out
 }
 
-/// R1454: a given name's diminutive: a trailing `a` reads `ita`, a stripped `o` reads `ito`,
-/// and anything else takes `ito`.
+/// R1454: Spanish diminutive suffix.
 fn diminutive(word: &str) -> String {
     if let Some(stripped) = word.strip_suffix('a').or_else(|| word.strip_suffix('A')) {
         format!("{stripped}ita")
@@ -267,7 +239,7 @@ fn diminutive(word: &str) -> String {
     }
 }
 
-/// R1454: nonsense syllables: a drawn number of onset-vowel pairs, then one coda.
+/// R1454: nonsense syllables: onset-vowel pairs and one coda.
 fn syllables(rng: &mut Rng) -> String {
     let count = int_in(rng, BOT_NAME_SYLLABLES_MIN, BOT_NAME_SYLLABLES_MAX);
     let mut out = String::new();
@@ -279,8 +251,7 @@ fn syllables(rng: &mut Rng) -> String {
     out
 }
 
-/// R1454: one name in `shape`, drawn from `register`'s lists: always a `lead` word and a `word`,
-/// then the shape's rendering. None when a draw the shape needs finds nothing.
+/// R1454: renders a name in `shape` drawn from `register`'s word lists.
 fn render(rng: &mut Rng, register: Register, shape: BotNameShape) -> Option<String> {
     let (first, second) = register.lists();
     let firsts = entries(first);
@@ -367,8 +338,7 @@ fn render(rng: &mut Rng, register: Register, shape: BotNameShape) -> Option<Stri
     Some(name)
 }
 
-/// R1454: whether the bots' own `never.txt` refuses `name`: the `=`-prefixed entries as whole
-/// tokens, the rest anywhere, both matched as R1433 matches.
+/// R1454: matches `name` against `never.txt` tokens (R1433).
 fn never(name: &str) -> bool {
     let mut anywhere: Vec<&str> = Vec::new();
     let mut token: Vec<&str> = Vec::new();
@@ -382,9 +352,7 @@ fn never(name: &str) -> bool {
     matches_lists(name, &anywhere, &token)
 }
 
-/// R1454: a new bot's username: a register by its share, then up to `BOT_NAME_DRAW_ATTEMPTS`
-/// names in its shapes, each shape drawn again, until one passes `normalize_username` and
-/// `never.txt`. Its stored form, or none, so the bot keeps its `Player#n`.
+/// R1454: draws a normalized username passing `never.txt`, or `None` to keep `Player#n`.
 pub fn draw_username(rng: &mut Rng) -> Option<String> {
     let register = weighted(rng, &REGISTERS)?;
     for _ in 0..BOT_NAME_DRAW_ATTEMPTS {

@@ -1,18 +1,12 @@
 //! Seasons (SPEC §9.12, R609): which season a build plays in, and the soft reset that opens one.
 //!
-//! A season is named by the minor version of the game: every patch of v0.2 (v0.2.0, v0.2.6,
-//! v0.2.6-r1) plays in season `v0.2`, and the first patch of v0.3 opens the next. The version is the
-//! newest patch in `crates/cards/patches/patches.json` (R375), the one the site footer names.
+//! The version is the newest patch in `crates/cards/patches/patches.json` (R375), the one the site footer names.
 //!
 //! The soft reset pulls every rated player's hidden rating `SEASON_RESET_STRENGTH` of the way toward
 //! the mean of those players' ratings and widens each deviation by `SEASON_RESET_DEVIATION_BOOST` in
 //! quadrature, capped at a new player's deviation; volatility is kept. The season's ladder starts
 //! empty, so everyone is a Raisin again. Bots are not reset: their ratings measure a program, not a
 //! player coming back from a break (R610); a new AI widens a bot's deviation instead (R1560000).
-//!
-//! Pure: `src/api/ranked.rs` reads the players, calls `soft_reset`, and writes the result and the
-//! season row in one transaction; `src/cli/season_start.rs` runs the same path against a database
-//! (a copy first, `--dry-run`, which reports and rolls back).
 
 use serde::{Deserialize, Serialize};
 
@@ -85,10 +79,8 @@ pub struct ResetReport {
     /// Population standard deviation of the ratings, before and after.
     pub spread_before: f64,
     pub spread_after: f64,
-    /// Mean rating deviation, before and after.
     pub deviation_before: f64,
     pub deviation_after: f64,
-    /// The lowest and highest rating, before and after.
     pub lowest_before: f64,
     pub highest_before: f64,
     pub lowest_after: f64,
@@ -136,9 +128,7 @@ pub fn reset_glicko(glicko: &Glicko, center: f64) -> Glicko {
     }
 }
 
-/// R609: the soft reset of every rated player. Players are taken in profile-id order, so the mean is
-/// summed the same way whatever order the store returned them in, and the same players always reset
-/// to the same ratings.
+/// R609: the soft reset of every rated player.
 pub fn soft_reset(players: &[ResetPlayer]) -> SoftReset {
     let mut ordered: Vec<ResetPlayer> = players.to_vec();
     // Stable sort (SURFACE §4.4.1).

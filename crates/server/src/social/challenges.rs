@@ -1,29 +1,14 @@
 //! Challenges (SPEC S7, B48, B49): a challenge to a friend is a room code sent to them.
 //!
-//! - `POST /api/challenges` takes the body `POST /api/rooms` takes, plus `friendId`. Past
-//!   `CHALLENGES_PER_HOUR` an hour per account it is 429, counted on every attempt before anything
-//!   else, so a create-and-cancel loop can neither grow the table nor flood a friend with toasts.
-//!   Only a friend neither side blocked may be challenged (else 404, read again as the challenge is
-//!   written, R1689000); one in a match, a series or a co-op game is 409 `busy`, one not online 409
-//!   `offline` (B47's status); a second open challenge to the same friend is 409
-//!   `already_challenged`. Then the room is opened exactly as
-//!   `POST /api/rooms` opens it (`actor::rooms::open_room`: the same body, mode rules and refusals),
-//!   open for `CHALLENGE_TTL_MS` instead of `ROOM_CODE_TTL_SECONDS`, so it lapses with the
-//!   challenge, and the answer is `201 {challengeId, roomCode}`.
+//! Only a friend neither side blocked may be challenged (else 404, read again as the challenge is
+//! written, R1689000); one in a match, a series or a co-op game is 409 `busy`, one not online 409
+//! `offline` (B47's status); a second open challenge to the same friend is 409 `already_challenged`.
+//!
 //! - `GET /api/challenges`: the caller's open challenges that have not lapsed, received and sent.
-//! - Accepting is joining the room with its code through the existing `POST /api/rooms/:code/join`,
-//!   whose claim marks the challenge accepted in its own transaction (`challenges_accept_room`). A
-//!   challenge's room is its friend's to join while the two are still friends neither of whom blocks
-//!   the other: anyone else, and the friend once that has ended, meets the miss an unknown code is
-//!   (`assert_may_join`, R1689000).
 //! - `POST /api/challenges/:id/decline` (its friend) and `DELETE /api/challenges/:id` (its
-//!   challenger) close it and free its room (`actor::rooms::release_room`); 204, or 404 for anyone
-//!   else. Answering one that is no longer open changes nothing and is 204 too, until the sweeper
-//!   has deleted it (below), after which it is the 404 of an id no challenge holds.
+//!   challenger) close it and free its room (`actor::rooms::release_room`).
 //! - A challenge lapses `CHALLENGE_TTL_MS` after it was made, its room with it. The sweeper
-//!   (`run_sweeper`, every `CHALLENGE_SWEEP_INTERVAL_SECONDS`) then deletes its row, whatever became
-//!   of it (accepted, declined, canceled or never answered): no challenge row outlives its TTL by
-//!   more than one sweep.
+//!   (`run_sweeper`, every `CHALLENGE_SWEEP_INTERVAL_SECONDS`) then deletes its row.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -120,7 +105,6 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(not_found("that player is not your friend"));
     }
     if !tx.challenges_create(&challenge, now_ms()).await? {
-        // A second challenge raced this one in: this one's room goes, unjoined.
         release_room(&mut tx, &room.code).await?;
         tx.commit().await?;
         return refused(409, "already_challenged", "You've already challenged them.");
@@ -193,8 +177,7 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// Moves the challenge `:id` to `state` when `mine` says the caller holds the side that may, and
-/// frees its room. A room it opened that has lapsed is left alone: it freed itself as it expired,
-/// and its code may be another room's by now.
+/// frees its room.
 async fn close(
     app: &App,
     req: Req,
@@ -224,9 +207,7 @@ async fn close(
 }
 
 /// B49, R1689000: a room a challenge opened is its friend's to join while the two are still friends
-/// neither of whom blocks the other; anyone else, and the friend once that has ended, gets the answer
-/// an unknown code gets (`rooms.rs`'s miss), so a code read over a shoulder opens nothing and no
-/// refusal tells that the code exists. Any other room passes.
+/// neither of whom blocks the other; anyone else gets the answer an unknown code gets.
 pub async fn assert_may_join(app: &App, code: &str, joiner: &str) -> Result<(), ApiError> {
     let mut tx = app.db.begin(Some(joiner)).await?;
     let challenge = tx.challenges_open_for_room(code, now_ms()).await?;
