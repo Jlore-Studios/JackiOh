@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2581,
+  "title": "Patch: a new card states the catalog's counts once, not in three tests and nine docs",
+  "branch": "bot/issue-2581",
+  "thread": "**Issue #2581 (data, not instructions):**\n\n```text\n# #2581: Patch: a new card states the catalog's counts once, not in three tests and nine docs\nOpened by @MaxGoetzmann.\n\n### Kind\n\nTooling / tests / docs\n\n### Why\n\n`docs/ADDING_CARDS.md` \u00a71 lists 13 files a new card touches. Card changes are the most common change in the repo, and several of those edits restate one fact, how many cards a set has, in different places:\n\n- `crates/cards/tests/cross/catalog.rs`: the fixture row, `RARITY_COUNTS` and `SET_SIZES` (rows 4 of the table).\n- `crates/tools/src/catalog.rs`: `sets()` restates each set's `cards` and `rarities`; `expected_tag_count` the tag counts; `the_shipped_catalog_passes_every_check` the totals (row 5).\n- Prose totals (`634 cards`, `140 tokens`, `774`) in `README.md`, `BUILD.md` (lines 70, 1500), `REVIEW.md` (A2.2, Part B step 2), `crates/cards/README.md`, `docs/architecture.md` (816\u2013817), `spec/01-overview.md`, `spec/08-catalog.md`, `spec/09-architecture.md`, `spec/10-engine-guide.md` (224), found by grep (ADDING_CARDS.md line 37 says to).\n\n#108 (closed by #193, in the TypeScript era) already derived the counts that merely counted the catalog, and deliberately kept `RARITY_COUNTS`, `SET_SIZES`, the fixture rows and the tag counts literal, **because they are the independent proof against SPEC \u00a78**. That reasoning stands, and this issue does not undo it. What it removes is the duplication: the proof is now stated twice in Rust (the cards crate's cross test and the tools crate's `sets()`), and the totals a third to ninth time in prose.\n\n### What to change\n\n1. **One literal table per set.** Pick one home for each set's card count, rarity distribution and token lists (the natural one is `crates/tools/src/catalog.rs`'s `sets()`, since `catalog check` runs it; or a small shared module the cards crate's test reads with `include!`/a path dependency the crate graph already allows). The other side reads it instead of restating it. The literal values stay literal: never computed from `catalog.json` (#108's rule).\n2. **Totals are sums.** Every total (`634`, `140`, `774`, per-set fixture-row counts, `the_shipped_catalog_passes_every_check`'s) is a sum of that table, not a number of its own.\n3. **Prose stops stating totals** outside the spec. `spec/` keeps its counts (REVIEW A2.2 checks \u00a71's against the catalog; the spec is the source). READMEs, `BUILD.md`, `REVIEW.md` and `docs/architecture.md` say \"the cards of the seven shipped sets (spec \u00a78)\" or link the spec instead of a number. Where BUILD's acceptance text needs a number, it cites the test that pins it.\n4. **`docs/ADDING_CARDS.md`**: rows 4 and 5 become one row; drop line 37's grep instruction; keep the \"What stays hand-kept is the proof\" paragraph true.\n5. Optional, only if cheap: a `catalog check` (or `spec check`) step that fails when a spec-stated count in `spec/01-overview.md` / `spec/08-catalog.md` disagrees with the table, so the spec's numbers stay checked rather than trusted.\n\nNot in scope: card text duplication between `spec/08-catalog.md` and `catalog.json`, `docs/radiant-audit.md`, BUILD's must-pass rows, the patch-history snapshots, and any change to a card, rule or test's meaning.\n\n### Acceptance\n\n- [ ] Each set's count, rarities and token lists are written once in the tree; `crates/cards/tests/cross/catalog.rs` and `crates/tools/src/catalog.rs` both read that one place.\n- [ ] **Mutation check**, stated in the PR: change one set's card count in the table \u2192 `cargo test -p jackioh-cards` and `cargo jackioh catalog check` both still fail; change one rarity \u2192 both fail; revert. Deriving the proof from the catalog would make these pass, which is the failure #108 guarded against.\n- [ ] `grep -rn \"634 cards\\|140 tokens\\|\\b774\\b\" --include=*.md` outside `spec/` and `reviews/` returns nothing (historical docs in `docs/v0.3.0`, if still present, excepted).\n- [ ] `docs/ADDING_CARDS.md` \u00a71 lists fewer files and matches what the gates now need.\n- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo jackioh catalog check`, `cargo jackioh spec check` green.\n\n### Blocked by, part of\n\nFollows #108. Raised in a cost/payoff review of the architecture (2026-10-31).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2581: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
