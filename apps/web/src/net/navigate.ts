@@ -270,6 +270,8 @@ export const paths = {
   leaderboard: "/leaderboard",
   /** R654: public card and player statistics. */
   stats: "/stats",
+  /** R654: the statistics page's Cards tab with one card's drill-down open, as the card detail's View full stats links it. */
+  statsCard: (cardId: string): string => `/stats?tab=cards&card=${encodeURIComponent(cardId)}`,
   /** #920: the card creator, the account's custom cards (SPEC §12.9). */
   creator: "/creator",
   /** R768000: the recent games and their replays. */
