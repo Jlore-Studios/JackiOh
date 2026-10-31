@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 2571,
+  "title": "Patch: a finished match stays readable on the real database after its second player deletes their account",
+  "branch": "bot/issue-2571",
+  "thread": "**Issue #2571 (data, not instructions):**\n\n```text\n# #2571: Patch: a finished match stays readable on the real database after its second player deletes their account\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nTwo people finish an online game, and a minute later the second player deletes their account. On the live database, the first player's screens for that finished game now fail with a server error: the rematch status, the rank change the result screen shows, and reopening the finished game. The test suite cannot see this, because its in-memory stand-in for the database keeps the deleted player's id. After this change, such a game reads as it already does in a replay, with the deleted seat left blank, and a store test run against the real database proves it.\n\n## Why\n- Migration 0012 sets `matches.p2_profile_id` to NULL when that profile is deleted (`crates/server/migrations/0012\u2026sql:120-123`).\n- `DELETE /api/account` refuses only while `in_match_id` is set (`crates/server/src/api/auth.rs:254`), and a finished match has already cleared it.\n- `to_match` (`crates/server/src/db/pg.rs:715-722`) refuses a row with no second seat (\"has no second player; it is still an open room\"), yet reads a missing first seat as the empty id (`:748`). `matches_get` (`pg.rs:3335-3351`) returns finished rows through `to_match`.\n- Callers of `matches_get` that then fail:\n  - the rematch routes' `callers_match` (`api/rematch.rs:454-463`)\n  - the ranks read (`api/ranked.rs:947`)\n  - the match socket's open (`api/ws_server.rs:462`)\n  - the game-record reads (`api/game_records.rs:121`, `:214`), the refile path among them\n- The store already handles this case elsewhere. `replay_row` reads a deleted second seat as the empty id (`pg.rs:3755`, R768), and so does the series read (`pg.rs:1424`). The KNOWN DIVERGENCES note (`pg.rs:8446-8450`) says \"Only a replay reads a finished match's seats back\", which these callers disprove.\n- The in-memory store keeps the id (`crates/server/src/db/fake.rs:3540`, `remove_profile_rows`), so no `cargo test` sees the failure.\n\n## Proposal\n- `to_match` reads a NULL second seat as the empty id, as `replay_row` and the series read do. Open rooms stay out through `matches_get`'s status filter.\n- Callers that pass a match's seat ids on to `profiles_get_many` skip the empty id, or `profiles_get_many` skips non-UUIDs, so `''::uuid` never reaches Postgres.\n- The KNOWN DIVERGENCES note is corrected.\n- A new store contract test: finish a match, remove the second player's profile, then `matches_get` returns the match with the first seat intact.\n\n## Where it lands\n`crates/server/src/db/pg.rs`, the callers in `crates/server/src/api/` that read seat profiles, and `crates/server/tests/store/contract.rs`, which the Docker suite (`sh crates/server/tests/db/run.sh`, CI's `db` job) runs against postgres:16.\n\n## Acceptance criteria\n- [ ] The new contract test fails on postgres:16 before the fix and passes after, and passes on the in-memory store.\n- [ ] Against Postgres, the rematch status and ranks routes answer the surviving player without a 500, and the deleted seat reads as the empty id.\n- [ ] No query receives an empty string as a UUID.\n- [ ] The KNOWN DIVERGENCES note matches the code.\n\n## Size and risks\nSmall: about 30 lines and a test. The ranks screen shows an empty name for the deleted seat, as a replay already does. Only the Docker suites can prove the fix, so the bot must run `sh crates/server/tests/db/run.sh` or rely on CI's `db` job.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:34:24Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2571: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
