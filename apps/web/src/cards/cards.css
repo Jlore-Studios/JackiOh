@@ -640,6 +640,15 @@
   opacity: 0.75;
 }
 
+/* R2521009: a Resource's sale prices on the face shown, "Credits: 2–5", a quiet line under its text
+   (`CardDef.resource`, read off the definition alone). */
+.cf .cf-text-credits {
+  display: block;
+  flex: 0 0 auto;
+  margin-top: 0.3em;
+  font-style: italic;
+}
+
 .cf .cf-text-base:empty + .cf-text-gained {
   margin-top: 0;
   padding-top: 0;

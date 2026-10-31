@@ -1414,7 +1414,7 @@ mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
                 GameEvent::Redirected { what: RedirectWhat::Attack, from_id, to_id, .. }
                     if *from_id == menace && *to_id == ally
             )),
-            "the trap re-aimed the attack at the Golem's neighbour: {:?}",
+            "the trap re-aimed the attack at the Golem's neighbor: {:?}",
             g.last_events()
         );
         assert!(killed_and_survived(&g, &golem, &ally).is_some());
@@ -1668,20 +1668,24 @@ mod r1869002_i2_a_kill_credit {
     }
 
     #[test]
-    fn r1869002_a_tmack_trav_played_this_turn_kills_and_attacks_the_hero_with_no_violation() {
+    fn r1869002_a_tmack_trav_played_this_turn_kills_and_attacks_a_unit_again_with_no_violation() {
         let mut g = scenario(json!({
             "p1": { "hand": [TMACK_TRAV, VANILLA] },
-            "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "hand": [VANILLA] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }], "hand": [VANILLA] },
         }));
         let prey = g.unit_at(PlayerId::P2, 1).id;
-        // The setup's card enters as the shadow begins, its bookkeeping to match (p2's, so no sickness
-        // of its is read on p1's turn).
+        let next = g.unit_at(PlayerId::P2, 2).id;
+        // The setup's cards enter as the shadow begins, their bookkeeping to match (p2's, so no sickness
+        // of theirs is read on p1's turn).
         let turn = g.state().turn;
-        find_instance_mut(g.state_mut(), &prey)
-            .expect("p2's Vanilla")
-            .summoned_turn = Some(turn);
+        for id in [&prey, &next] {
+            find_instance_mut(g.state_mut(), id)
+                .expect("p2's Vanilla")
+                .summoned_turn = Some(turn);
+        }
         let mut monitor = create_invariant_monitor(g.state());
         monitor.enter(&prey);
+        monitor.enter(&next);
         g.play(TMACK_TRAV, json!({ "zone": 1 }));
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
         let tmack = g.unit_at(PlayerId::P1, 1).id;
@@ -1690,25 +1694,19 @@ mod r1869002_i2_a_kill_credit {
         assert_eq!(monitor.before(g.state(), PlayerId::P1, &first), no_violations());
         g.attack(tmack.as_str(), prey.as_str());
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
-        assert_eq!(
-            g.card(tmack.as_str()).summoned_turn,
-            None,
-            "the kill lifted its sickness"
-        );
+        // R2521002: the kill keeps its summoning sickness, so Rush lets it attack again a Unit only.
+        assert_eq!(g.card(tmack.as_str()).summoned_turn, Some(turn));
 
-        let second = attack(&tmack, "hero-p2");
+        let second = attack(&tmack, &next);
         assert_eq!(monitor.before(g.state(), PlayerId::P1, &second), no_violations());
-        g.attack(tmack.as_str(), "hero");
+        g.attack(tmack.as_str(), next.as_str());
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
 
-        // The sickness stays lifted for good (no `summonedTurn`), which I4 still reads as readied once
-        // the turn is over (fuzz seed 85).
         assert_eq!(
             monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn),
             no_violations()
         );
         g.end_turn();
-        assert_eq!(g.card(tmack.as_str()).summoned_turn, None);
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 

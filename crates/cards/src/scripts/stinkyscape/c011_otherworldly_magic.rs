@@ -1,4 +1,5 @@
-//! S #11 Otherworldly Magic (SPEC §8.10 row S 11; §2.4, R1837000): (1) Spell, Otherworldly, Epic.
+//! S #11 Otherworldly Magic (SPEC §8.10 row S 11; §2.4, R1837000): (2) Spell, Otherworldly, Epic (#2521:
+//! was (1)).
 //!   Base:    "Add a Frostbolt, an Arcane Missiles and a Flame Strike to your hand."
 //!   Radiant: "Add a Radiant Frostbolt, a Radiant Arcane Missiles and a Radiant Flame Strike to your hand."
 //!

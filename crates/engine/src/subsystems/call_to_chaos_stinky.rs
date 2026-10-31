@@ -91,7 +91,7 @@ fn add_card(index: &str, radiant: bool, cost_override: Option<i32>) -> Option<Ef
     }))
 }
 
-/// 1. A Radiant ETHICS, then a Radiant Vanguard Coalition, each a fresh hand card (§5.2).
+/// 1. A Radiant Faction: ETHICS, then a Radiant Faction: Vanguard Coalition, each a fresh hand card (§5.2).
 fn build_ethics() -> Effect {
     entry("ethics", |_ctx| {
         [ETHICS_INDEX, VANGUARD_INDEX]
@@ -286,7 +286,7 @@ fn build_golem() -> Effect {
 pub const CHAOS_STINKY_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "ethics",
-        label: "Add a Radiant ETHICS and a Radiant Vanguard Coalition to your hand",
+        label: "Add a Radiant Faction: ETHICS and a Radiant Faction: Vanguard Coalition to your hand",
         build: build_ethics,
     },
     ChaosEffectDef {

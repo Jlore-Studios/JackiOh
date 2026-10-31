@@ -1,6 +1,6 @@
 //! S #137.1 Land Doctrine (SPEC §8.10 row 137.1; R53, R60, R1852005, R1859007, R1859008): (4) Spell,
 //! War Doctrine, Token (printed Legendary), a token of the Stinkyscape set, which #137
-//! Firststrike Capability Discovers and casts.
+//! Starfleet Commander Discovers and casts.
 //!
 //! Base:    "For the rest of the game, your Units have Trample. Your Starship attacks a random enemy Unit."
 //! Radiant: "For the rest of the game, your Units have Trample. Your Starship attacks each enemy Unit."
@@ -76,7 +76,8 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    // Issue #2521: Stratos (S #68) is no Starship Piece any more, so a piece of 6 Health stands in.
+    const CRYSTAL: &str = "stinkyscape-132"; // (2) 3/6 Starship Piece, "Death: Your hero gains 1 Armor."
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
 
@@ -103,12 +104,12 @@ mod tests {
             .collect()
     }
 
-    /// p1's launched Starship (two Stratos, 6/6), a Mr. Vanilla of p1's in lane 3, the Doctrine (Radiant
-    /// if `radiant`) and a Mr. Vanilla in hand; p2's `enemies` in their unit zones.
+    /// p1's launched Starship (one Defensive Crystal, 3/6), a Mr. Vanilla of p1's in lane 3, the Doctrine
+    /// (Radiant if `radiant`) and a Mr. Vanilla in hand; p2's `enemies` in their unit zones.
     fn launched(seed: &str, radiant: bool, enemies: Value) -> (Scenario, String) {
         let (mut s, ship) = built_starship(
             seed,
-            json!([{ "def": STRATOS, "lane": 1 }, { "def": STRATOS, "lane": 2 }]),
+            json!([{ "def": CRYSTAL, "lane": 1 }]),
             json!({
                 "hand": [{ "def": ID, "radiant": radiant }, VANILLA],
                 "field": [{ "def": VANILLA, "lane": 3 }],
@@ -189,7 +190,7 @@ mod tests {
     fn r1859007_with_no_launched_starship_only_the_keyword() {
         let (mut s, _ship) = built_starship(
             "r1859007-land-none",
-            json!([{ "def": STRATOS, "lane": 1 }]),
+            json!([{ "def": CRYSTAL, "lane": 1 }]),
             json!({ "hand": [ID], "field": [{ "def": VANILLA, "lane": 3 }] }),
             json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
         );
