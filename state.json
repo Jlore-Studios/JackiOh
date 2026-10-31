@@ -10717,13 +10717,8 @@
     "what": "plan #2560 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-31T02:26:44Z",
-    "notes": [
-      "#2560 needs a plan",
-      "delivered review #2551 on claude-4 (run 41159480426): reviewed",
-      "started plan #2560 on claude-4 (run 41160157050)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-31T02:35:03Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -11426,7 +11421,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T02:26:44Z",
+  "loop_tick": "2026-10-31T02:35:03Z",
   "machine_disk": {
     "issue": null,
     "reading": {
