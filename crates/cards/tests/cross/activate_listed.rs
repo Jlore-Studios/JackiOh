@@ -2,7 +2,6 @@
 //! `activate` is found in `legal_actions`, the controller's own view lists the ability as usable,
 //! and the very action listed goes through `reduce` and does what the card's text says, on the base
 //! face and on the Radiant one.
-//!
 //! The per-card tests mostly drive an ability through the testkit's `activate` verb, which builds its
 //! own action (the `activatePower` alias when it names no ability, R752). A client never builds one:
 //! it sends back an action `legal_actions` listed, and online that action is sent over the socket
@@ -51,7 +50,6 @@ const LIVING_MANA_POTION: &str = "meditativeplus-011";
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-/// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
 const ACTIVATE_CARDS: [&str; 71] = [
     HEROIC_POWER,
     INFINISCEPTER,
@@ -136,7 +134,6 @@ const CONJURE_KY: &str = "core-057"; // (2) Spell: Add 3 random KY cards to your
 const APPLE: &str = "classicplus-059"; // All Purpose Apple, Doctors Orders' card.
 const THE_COIN: &str = "core-t-coin"; // Money Machine's card.
 
-/// Writes JSON for a field entry on the face asked for.
 fn on(def: &str, radiant: bool) -> Value {
     json!({ "def": def, "radiant": radiant })
 }
@@ -151,7 +148,6 @@ fn instance(id: &str) -> Selection {
     }
 }
 
-/// The `activate` actions `legal_actions` lists for p1 on that card, in its order.
 fn listed(s: &Scenario, card: &str) -> Vec<ActionBody> {
     legal_actions(s.state(), P1)
         .into_iter()
@@ -173,7 +169,6 @@ fn ability_of(action: &ActionBody) -> Option<String> {
     }
 }
 
-/// The first object in `value` naming `card` that carries `activations`: the card on p1's own view.
 fn activations_in(value: &Value, card: &str) -> Option<Vec<Value>> {
     match value {
         Value::Object(fields) => {
@@ -195,9 +190,6 @@ fn viewed(s: &Scenario, card: &str) -> Vec<Value> {
     activations_in(&view["you"], card).unwrap_or_default()
 }
 
-/// Uses the card's ability the way a client does: the `activate` `legal_actions` lists that `pick`
-/// accepts, which p1's view shows as usable, sent through `reduce` as it was listed. Answers the
-/// events it produced (`activated` among them) and leaves the scenario on its result.
 fn activate_listed(s: &mut Scenario, card: &str, pick: impl Fn(&ActionBody) -> bool) -> Vec<GameEvent> {
     let id = s.card(card).id.clone();
     let offered = listed(s, &id);
@@ -245,12 +237,9 @@ fn units(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     (1..=5).filter_map(|lane| s.unit(player, lane)).collect()
 }
 
-/// The Activates the engine gives a card rather than its script: the Dormant Starship's launch
 /// (R1852003) and Alteran Reach's travel (`subsystems::starscape_abilities`, R1847001).
 const ENGINE_ACTIVATES: [&str; 2] = ["stinkyscape-t-dormant-starship", "stinkyscape-148"];
 
-/// The census: the cards this file covers are exactly the cards whose text has an Activate, which are
-/// exactly the cards whose script declares one, among the sets that ship (a held set's join at its
 /// release, R1857000).
 #[test]
 fn r384_activate_census_every_card_whose_text_has_an_activate_declares_one_and_has_a_case_here() {
@@ -292,7 +281,6 @@ mod c_n98_heroic_power {
     use super::*;
 
     /// A Heroic Power on p1's backrow with the named power (R103's stored name, as `ensure_power`
-    /// writes it), a spare in hand and a library each.
     fn with_power(radiant: bool, power: &str) -> Scenario {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(HEROIC_POWER, radiant)], "hand": [STOCKPILE], "library": [X, X, X], "mana": 3 },
@@ -347,7 +335,6 @@ mod c_n98_heroic_power {
 mod c_n7_infiniscepter {
     use super::*;
 
-    /// Plays the InfiniScepter, its Cry exiling `spell` from p1's hand.
     fn scepter_holding(radiant: bool, spell: &str) -> Scenario {
         let mut s = scenario(json!({
             "p1": { "hand": [on(INFINISCEPTER, radiant), spell, FILLER], "library": [X, X, X, X], "health": 20 },
@@ -367,7 +354,6 @@ mod c_n7_infiniscepter {
         let mut s = scepter_holding(false, STOCKPILE);
         let hand = s.hand(P1).len();
         activate_listed(&mut s, INFINISCEPTER, any);
-        // Stockpile's copy: Draw 2. Heal your hero 2.
         assert_eq!(s.hand(P1).len(), hand + 2);
         s.expect_health(P1, 22);
         let id = s.card(INFINISCEPTER).id.clone();
@@ -400,7 +386,6 @@ mod c_n15_nose_hunter {
         assert_eq!(s.hand(P1).len(), 2);
         assert_eq!(s.pile(P2, "library").len(), 2);
         assert_eq!(s.hand(P2).len(), 2);
-        // Activate ♾️: listed again while a card is left to discard.
         activate_listed(&mut s, NOSE_HUNTER, any);
         assert_eq!(s.pile(P2, "library").len(), 1);
     }
@@ -536,7 +521,6 @@ mod c_n23_devils_pact {
         }))
     }
 
-    /// After the activation, Mr. Vanilla played is a Book of Flame, aimed at p2's hero.
     fn play_vanilla_as_a_book(s: &mut Scenario) {
         s.play(VANILLA, json!({ "zone": 2 }));
         s.answer(json!([{ "pick": "hero", "player": "p2" }]));
@@ -574,7 +558,6 @@ mod c_n42_transmutable_toxins {
         }))
     }
 
-    /// The one Unit on the field takes the Plague Counters, and the Aura grows it by `per` each.
     fn grows_by(radiant: bool, per: i32) {
         let mut s = toxins(radiant);
         activate_listed(&mut s, TRANSMUTABLE_TOXINS, any);
@@ -599,7 +582,6 @@ mod c_n42_transmutable_toxins {
 mod c_n64_malzahars_recycler {
     use super::*;
 
-    /// p1's Recycler in its backrow, three cards in hand and four in the library.
     fn recycler(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": { "backrow": [on(MALZAHARS_RECYCLER, radiant)], "hand": [STOCKPILE, STOCKPILE, STOCKPILE], "library": [X, X, X, X] },
@@ -633,8 +615,6 @@ mod c_n64_malzahars_recycler {
 mod c_n74_corpse_plantation {
     use super::*;
 
-    /// The Activate arms one play from the graveyard this turn (patch v0.3.10; its Cry places the
-    /// counters now), remembering the turn it was armed on.
     fn arms(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(CORPSE_PLANTATION, radiant)], "hand": [STOCKPILE] },
@@ -685,7 +665,6 @@ mod c_n78_mutate_spell {
         activate_listed(&mut s, MUTATE_SPELL, at(well.clone()));
         assert_eq!(s.hand(P1).len(), hand + 2);
         assert_eq!(s.card(&well).counters.plague.unwrap_or(0), 0);
-        // Activate, once a turn (patch v0.3.10): not listed again, though the enemy has a counter.
         let id = s.card(MUTATE_SPELL).id.clone();
         assert!(listed(&s, &id).is_empty(), "once per turn");
         let mut s = mutate(false);
@@ -701,7 +680,6 @@ mod c_n78_mutate_spell {
         let hand = s.hand(P1).len();
         activate_listed(&mut s, MUTATE_SPELL, at(well));
         assert_eq!(s.hand(P1).len(), hand + 4);
-        // Activate ♾️: listed again while a permanent has a counter.
         activate_listed(&mut s, MUTATE_SPELL, at(enemy.clone()));
         s.expect_in_zone(&enemy, "exile");
     }
@@ -710,7 +688,6 @@ mod c_n78_mutate_spell {
 mod c_n81_the_power_to_thrive {
     use super::*;
 
-    /// The third mode, a card of your hand costing less (patch v0.3.10; it gained mana before).
     fn reduces(radiant: bool, discount: i32) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(POWER_TO_THRIVE, radiant)], "hand": [STOCKPILE], "mana": 3 },
@@ -765,7 +742,6 @@ mod c_n84_lockdown {
 mod c_plus_n7_the_house {
     use super::*;
 
-    /// p1's The House in its backrow with `counters` Plague Counters.
     fn house(radiant: bool, counters: i32) -> Scenario {
         scenario(json!({
             "p1": {
@@ -780,7 +756,6 @@ mod c_plus_n7_the_house {
         move |action| modes_of(action) == vec![wanted.to_string()]
     }
 
-    /// p1's Units, by definition and face.
     fn twins(s: &Scenario) -> Vec<(String, bool)> {
         units(s, P1)
             .into_iter()
@@ -821,7 +796,6 @@ mod c_plus_n78_claudes_datacenter {
     use super::*;
 
     /// Its controller uses the listed `activate` (an Activate since #2179, R384): free, one AI generated
-    /// card into p1's hand costing (0), Radiant on the Radiant face, the Datacenter staying, once a turn.
     fn adds_an_ai_card(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(CLAUDES_DATACENTER, radiant)], "hand": [STOCKPILE], "library": [X, X] },
@@ -864,8 +838,6 @@ mod c_plus_n78_claudes_datacenter {
 mod c_n31_fusion_lab {
     use super::*;
 
-    /// Fuses a random card into the Midrange Menace the listed activation names; answers the fused
-    /// card's ingredient specs, the random card first.
     fn fuses_into_menace(radiant: bool) -> Vec<FusedIngredient> {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(FUSION_LAB, radiant)], "hand": [MENACE, STOCKPILE] },
@@ -937,7 +909,6 @@ mod c_n42_1_kys_gift {
     use super::*;
 
     /// Patch v0.3.10 (#831): the Gift's start-of-turn effects became its Activate. Used once, it gains
-    /// its controller the declared mana and adds the four cards, which cost (0).
     fn opens(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(KYS_GIFT, radiant)], "hand": [STOCKPILE], "library": [X, X] },
@@ -1014,7 +985,6 @@ fn building(card: &str, radiant: bool) -> Scenario {
     }))
 }
 
-/// The `upgraded` events in `events` naming `card`.
 fn upgrades_of(events: &[GameEvent], card: &str) -> usize {
     events
         .iter()
@@ -1025,7 +995,6 @@ fn upgrades_of(events: &[GameEvent], card: &str) -> usize {
 mod m_n97_2_wishing_well {
     use super::*;
 
-    /// The Well at 100%, so the roll cannot miss.
     fn sure(radiant: bool) -> Scenario {
         let mut s = building(WISHING_WELL, radiant);
         set_param(s.card_mut(WISHING_WELL), "chance", 100);
@@ -1125,7 +1094,6 @@ mod m_n97_4_mega_church {
 mod m_n97_6_university {
     use super::*;
 
-    /// The University beside one Vanilla: it Buffs its other permanents, never itself (patch v0.3.10).
     fn campus(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": { "field": [on(UNIVERSITY, radiant), VANILLA], "hand": [FILLER], "library": [X, X] },
@@ -1184,8 +1152,6 @@ mod m_n97_9_jlockeeds_headquarters {
 mod m_n54_money_machine {
     use super::*;
 
-    /// Its controller uses the listed `activate`: free, a The Coin (Radiant on the Radiant face) into
-    /// p1's deck, the Machine staying, once a turn.
     fn shuffles_a_coin_in(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(MONEY_MACHINE, radiant)], "hand": [STOCKPILE], "library": [X, X] },
@@ -1216,7 +1182,6 @@ mod m_n54_money_machine {
         shuffles_a_coin_in(true);
     }
 
-    /// Patch v0.3.13: on p2's own turn, p2's `legal_actions` lists no `activate` off p1's Machine
     /// (R384: only its controller activates it).
     #[test]
     fn r1105_the_opponent_is_not_listed_it_on_their_own_turn() {
@@ -1342,8 +1307,6 @@ mod m_n49_2_yiles_virus {
 mod m_n69_the_maestro {
     use super::*;
 
-    /// p1's Maestro with `counters` Plague Counters; p2 holds cards in every zone the Activate
-    /// reaches: two on the field, three in hand, three in the deck and two in the graveyard.
     fn conducting(radiant: bool, counters: i32) -> Scenario {
         scenario(json!({
             "p1": {
@@ -1364,7 +1327,6 @@ mod m_n69_the_maestro {
         s.card(MAESTRO).counters.plague.unwrap_or(0)
     }
 
-    /// p2's cards in each zone the Activate reaches: field, hand, deck, graveyard.
     fn enemy_zones(s: &Scenario) -> [usize; 4] {
         [
             units(s, P2).len(),
@@ -1406,7 +1368,6 @@ mod m_n75_ever_growing_tree {
     use super::*;
 
     /// p1's Tree in its backrow with a spare in hand. Fused, its def id is the fusion's (R102), so
-    /// the instance is followed by its id.
     fn planted(radiant: bool) -> (Scenario, String) {
         let s = scenario(json!({
             "p1": { "backrow": [on(EVER_GROWING_TREE, radiant)], "hand": [STOCKPILE], "library": [X, X] },
@@ -1416,8 +1377,6 @@ mod m_n75_ever_growing_tree {
         (s, id)
     }
 
-    /// Activates the Tree as `legalActions` lists it and takes the first of the three Field Spells it
-    /// Discovers (patch v0.3.13); the events of the pick.
     fn grow(s: &mut Scenario) -> Vec<GameEvent> {
         activate_listed(s, EVER_GROWING_TREE, any);
         let offered: Vec<String> = s
@@ -1437,7 +1396,6 @@ mod m_n75_ever_growing_tree {
         s.last_events().to_vec()
     }
 
-    /// The Tree's def id now: a fusion of a picked Field Spell and the Tree.
     fn grown(s: &Scenario, id: &str) -> String {
         find_instance(s.state(), id)
             .expect("the Tree is still on the field")
@@ -1481,7 +1439,6 @@ mod m_plus_n11_living_mana_potion {
     use super::*;
 
     /// The listed `activate`: p1 has Spell Damage +5 this turn (R1180001); the base face Tributes the
-    /// potion, the Radiant face keeps it, once a turn.
     fn activates(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "field": [on(LIVING_MANA_POTION, radiant)], "hand": [STOCKPILE] },
@@ -1513,7 +1470,6 @@ mod m_plus_n12_living_armor_potion {
     use super::*;
 
     /// The listed `activate`: p1's hero has 5 Armor (R757); the base face Tributes the potion,
-    /// the Radiant face keeps it, once a turn.
     fn activates(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "field": [on(LIVING_ARMOR_POTION, radiant)], "hand": [STOCKPILE] },
@@ -1545,7 +1501,6 @@ mod m_plus_n13_living_health_potion {
     use super::*;
 
     /// The listed `activate`: p1's hero heals 5 (R1179002); the base face Tributes the potion,
-    /// the Radiant face keeps it, once a turn.
     fn activates(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "health": 20, "field": [on(LIVING_HEALTH_POTION, radiant)], "hand": [STOCKPILE] },
@@ -1574,8 +1529,6 @@ mod m_plus_n13_living_health_potion {
 }
 
 /// The Stinkyscape set's Activate cards, from its release (#1884, R1857000): each Activate is found in
-/// `legal_actions`, shown usable on its controller's view and sent through `reduce` as listed, on both
-/// faces. Their rules are the parts' (the card files hold them); this proves the client's path.
 mod stinkyscape {
     use super::*;
 
@@ -1591,7 +1544,6 @@ mod stinkyscape {
         if radiant { param.radiant } else { param.base }
     }
 
-    /// Every `damage` event among `events` on `target`, its amounts in order.
     fn hits_on(events: &[GameEvent], target: &str) -> Vec<i32> {
         events
             .iter()
@@ -1604,7 +1556,6 @@ mod stinkyscape {
             .collect()
     }
 
-    /// The defs `events` summoned for p1.
     fn summoned_defs(events: &[GameEvent]) -> Vec<String> {
         events
             .iter()
@@ -1619,8 +1570,6 @@ mod stinkyscape {
             .collect()
     }
 
-    /// p1's weapon (or launcher, or module) on its own in lane 1, a spare in hand; p2's hero and a 9/9
-    /// Taunt to aim at.
     fn armed(def: &str, radiant: bool) -> Scenario {
         scenario(json!({
             "p1": { "field": [on(def, radiant)], "hand": [STOCKPILE], "library": [X, X] },
@@ -1628,7 +1577,6 @@ mod stinkyscape {
         }))
     }
 
-    /// The Activate of `def` aimed at p2's Menace.
     fn at_the_menace(s: &Scenario) -> impl Fn(&ActionBody) -> bool + use<> {
         let menace = s.card(MENACE).id.clone();
         move |action: &ActionBody| targets_of(action) == vec![instance(&menace)]
@@ -1728,7 +1676,6 @@ mod stinkyscape {
         let mut s = armed("stinkyscape-140", radiant);
         let events = activate_listed(&mut s, "stinkyscape-140", any);
         assert_eq!(summoned_defs(&events), vec!["core-t-rush".to_string()]);
-        // It attacks the enemy Unit, the Taunt one first.
         assert!(!hits_on(&events, &s.card(MENACE).id).is_empty());
     });
 
@@ -1813,7 +1760,6 @@ mod stinkyscape {
         let vanilla = s.card(VANILLA).id.clone();
         activate_listed(&mut s, "stinkyscape-018-1", any);
         if !radiant {
-            // A Discover of three combat keywords: the pick goes to each of p1's Units.
             let options = s
                 .state()
                 .pending
@@ -1934,7 +1880,6 @@ mod stinkyscape {
         use super::*;
 
         /// R1852003: a Starship Piece's death summons the Dormant Starship, whose launch is an Activate
-        /// the engine gives it (no script declares it), at (3).
         #[test]
         fn r384_its_launch_through_the_listed_activate() {
             const HIT_JOB: &str = "core-016";
@@ -2026,7 +1971,6 @@ mod stinkyscape {
             "p1": { "backrow": [on("stinkyscape-039", radiant)], "hand": [STOCKPILE], "library": [X, X, X, X] },
             "p2": { "hand": [FILLER], "library": [X, X, X, X] },
         }));
-        // Offered only while the tray holds a Narcor: its own end of turn gains one.
         assert!(listed(&s, &s.card("stinkyscape-039").id).is_empty());
         s.end_turn().end_turn();
         let held = tray_len(&s);

@@ -24,7 +24,6 @@ pub const ID: &str = "classic-006";
 
 const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 
-/// Your Traps and Field Traps cost (0).
 fn aura() -> CostAuraHook {
     read_hook(|_args| {
         vec![CostAura {
@@ -41,7 +40,6 @@ fn aura() -> CostAuraHook {
 
 /// After you play a Trap or a Field Trap (a cast is a play, R70), gain the card's mana. A permanent's
 /// trigger reads its condition in `run` (a `when` predicate is a trap's, R99): any other play answers
-/// with nothing.
 fn after_you_play_a_trap() -> TriggerDef {
     TriggerDef::new("toe-cracker-mana", &[GameEventType::CardPlayed], |ctx, event| {
         let GameEvent::CardPlayed {
@@ -87,7 +85,6 @@ pub fn script() -> CardScripts {
 // your changed hand costs shows −1 (R177); radiant 6/8: after you play a Trap or Field Trap (a cast
 // included, R70) gain 1 mana this turn, never naming the face-down trap (R33, R97); its tuned number
 // (radiant mana) reads via `param()` (R386).
-//
 // The cast case uses Classic+ #37 Wardrum, whose end-of-turn copy is a cast Trap.
 #[cfg(test)]
 mod tests {
@@ -203,7 +200,6 @@ mod tests {
                     }
                 }
                 assert!(!theirs.to_string().contains(EXPERIMENT));
-                // The change is real in your own view: the Trap reads (0) there.
                 let your_hand = js(&s.view(P1))["you"]["hand"].clone();
                 let Some(cards) = your_hand.as_array() else {
                     panic!("your own hand travels in full (§10.8)");
@@ -224,7 +220,6 @@ mod tests {
             }
         }
 
-        /// The Toe Cracker in p1's hand.
         fn cracker_in_hand(s: &Scenario) -> String {
             s.hand(P1)
                 .iter()
@@ -273,7 +268,6 @@ mod tests {
                         "offered Cloaked"
                     );
                     set_cracker(&mut s);
-                    // A Unit set by its Cloaked is priced as the Unit, so the Aura's (0) misses it.
                     s.expect_mana(P1, 2);
                 }
             }
@@ -287,7 +281,6 @@ mod tests {
                 }));
                 let set = set_cracker(&mut s);
                 assert_eq!(cost_of(&s, EXPERIMENT), 2, "face-down, its Aura does not act");
-                // The opponent reads a face-down card, never the Toe Cracker.
                 assert!(!js(&s.view(P2)).to_string().contains(CRACKER));
                 reveal(&mut s, &set);
                 let unit = s.unit(P1, 1).expect("it animated into its own lane");
@@ -303,15 +296,12 @@ mod tests {
             #[test]
             fn r783005_a_set_toe_cracker_is_a_trap_play_another_radiant_one_gains_mana_its_own_trigger_sleeps() {
                 crate::register_all();
-                // Beside a face-up Radiant Toe Cracker, setting this one is a Trap play: +1 mana.
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": CRACKER, "radiant": true }, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true, "lane": 3 }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 set_cracker(&mut s);
                 s.expect_mana(P1, 3);
-                // Alone, its own trigger is dormant face-down: no mana for its own set, nor for a Trap
-                // played after it.
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": CRACKER, "radiant": true }, EXPERIMENT, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },

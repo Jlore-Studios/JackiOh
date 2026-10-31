@@ -18,9 +18,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-014";
 
-/// The `destroyed` events of the state-check pass the answered one belongs to: the unbroken run of
-/// `destroyed` reports it stands in (a card a replacement took elsewhere reports its landing there
-/// instead, and still belongs to the run). The answered event itself when the list holds no run.
 fn pass_of(ctx: &EffectContext<'_>, answered: &GameEvent, answered_id: &str) -> Vec<GameEvent> {
     let events: &[GameEvent] = &ctx.events[..];
     let found = events.iter().rposition(
@@ -128,7 +125,6 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: v0.4.12b and every version before it made Shadowstep's hand card from only its definition
-/// and Radiant flag; `KEPT_SCRIPTS` folds those replays under that script.
 pub fn script_v0_4_12b() -> CardScripts {
     scripts(false)
 }
@@ -164,8 +160,6 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
     const SUPPRESSIVE_AURA: &str = "core-046"; // (2) Field Spell: "Aura: All Units have −1/−1."
 
-    /// p1 sets the trap; p2, active, plays Big Felinor and destroys every non-Felinor Unit in one pass.
-    /// `opts` keys: `myHand` and `theirs`.
     fn wipe(radiant_face: bool, mine: Value, opts: Value) -> Scenario {
         scenario(json!({
             "active": "p2",
@@ -297,7 +291,6 @@ mod tests {
 
         #[test]
         fn r69_an_indestructible_unit_whose_max_health_falls_to_0_is_collected_fires_it_and_comes_back() {
-            // A State of the Game standing as a 1/1 meets Suppressive Aura's −1/−1: max health 0.
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -318,7 +311,6 @@ mod tests {
         #[test]
         fn your_unit_the_opponent_controls_is_theirs_while_it_is_on_the_field_its_death_leaves_it_set() {
             // "Your Units" on the field are the ones you control (§3.2, R12): a Menace of yours they stole
-            // dies under their control, so it is not one of your Units dying.
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -547,7 +539,6 @@ mod tests {
     }
 
     /// R1081000: a Unit of yours standing in the backrow that would die is one of your Units in the
-    /// would-die window: the Radiant face flickers it where it stands.
     #[test]
     fn r1081000_radiant_flickers_your_unit_standing_in_the_backrow_where_it_stands() {
         let mut s = wipe(true, json!([VANILLA]), json!({}));

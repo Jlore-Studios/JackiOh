@@ -16,9 +16,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-007";
 
-/// Where the instance keeps the Spell it exiled.
 const SCEPTER: &str = "scepter";
-/// The name of the Cry's hand-pick rule in `targetChecks`.
 const WITHIN_LIMIT: &str = "spellWithinLimit";
 
 #[derive(Clone, Debug, PartialEq)]
@@ -27,7 +25,6 @@ struct Held {
     radiant: bool,
 }
 
-/// What the instance remembers under `scepter`, read as `query::recalled` reads it (the running
 /// ingredient's own key on a fused card, R102). The memory is JSON, so it is narrowed, never cast.
 fn held_spell(self_: Option<&CardInstance>, data: &IndexMap<String, Value>) -> Option<Held> {
     let held = self_?
@@ -98,7 +95,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's (2) is its declared costLimit, which `param` reads off the face.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -150,7 +146,6 @@ mod tests {
         }))
     }
 
-    /// The `activate` actions `legalActions` lists for the InfiniScepter, as JSON.
     fn activations(s: &Scenario, player: PlayerId) -> Vec<Value> {
         let card = s.card(SCEPTER).id.clone();
         legal_actions(s.state(), player)
@@ -405,7 +400,6 @@ mod tests {
                 s.answer(json!("damage"));
                 s.answer(json!([{ "pick": "hero", "player": "p2" }]));
 
-                // Efficiency Dividend's damage mode deals X = 3, and the cast paid nothing for its X.
                 s.expect_health(P2, 27);
                 s.expect_mana(P1, 3);
             }
@@ -428,7 +422,6 @@ mod tests {
                 s.expect_in_zone(CALL, "exile");
                 s.activate(SCEPTER, json!({}));
 
-                // Call to Arms recruits the (1) Cost Units from the top of the deck.
                 assert!(count(s.last_events(), "summoned") > 0);
             }
 
@@ -490,7 +483,6 @@ mod tests {
                 s.play(SCEPTER, json!({ "zone": 2, "targets": targets }));
                 s.end_turn();
                 // C #85 Unlicensed Experimentation fuses the opponent's Mana Well onto your one Field Spell:
-                // this one.
                 s.play(MANA_WELL, json!({ "zone": 3 }));
                 s.end_turn();
                 let fused = s.card(&scepter).clone();

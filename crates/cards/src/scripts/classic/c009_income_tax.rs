@@ -64,7 +64,6 @@ fn tax(radiant: bool) -> TriggerDef {
             data[DISCOUNT] = json!(param(&*ctx, "discount"));
         }
         // R1279000: the keep is the drawer's choice, so while it is not their turn it waits for
-        // the start of their next turn, carrying the discount; on their turn it asks at once.
         if ctx.state.active == opponent_of(ctx.controller) {
             return vec![keep_prompt(data)];
         }
@@ -135,7 +134,6 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: the scripts v0.3.16 and every version before it ran, kept for their replays: the keep
-/// prompt opened at once on either player's turn.
 pub fn script_v0_3_16() -> CardScripts {
     fn tax_old(radiant: bool) -> TriggerDef {
         TriggerDef::new("income-tax", &[GameEventType::Drawn], move |ctx, _event| {
@@ -180,7 +178,6 @@ pub fn script_v0_3_16() -> CardScripts {
 // (§2.4); the keep prompt opens at once on the drawer's turn and waits for the start of their next
 // turn otherwise (R1279000); the rest of their hand becomes yours (R12), overflow burned (R317);
 // radiant: (1) less, kept in every zone (R78); tuned numbers read through `param()` (R386). Here p2
-// sets the trap, p1 draws.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -336,7 +333,6 @@ mod tests {
         #[test]
         fn r1279000_firing_on_your_turn_defers_the_keep_to_their_next_turn_start() {
             // p1's Palantir steals p2's Stockpile and casts it (R831001), so p1 draws 2 on p2's turn.
-            // The keep is p1's choice while p2 is active, so no prompt opens until p1's next turn.
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -363,10 +359,7 @@ mod tests {
             assert_eq!(keep.resume.def_id, TAX);
             answer_with(&mut s, MENACE);
             s.expect_in_zone(TAX, "graveyard");
-            // The owed start-of-turn draw landed after the keep resolved.
             assert_eq!(def_ids(&s.hand(P1)), [MENACE, TIMMY]);
-            // The turn's draw waits behind the open keep, so 3 cards move: the Radiant discount
-            // rode the delay's data, and p2's own card is untouched.
             assert_eq!(s.hand(P2).len(), 4);
             let p2_hand = s.hand(P2);
             let moved: Vec<&CardInstance> =
@@ -383,7 +376,6 @@ mod tests {
             let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 // p1's Palantir steals p2's Stockpile and casts it (R831001), so p1 draws 2 on
-                // p2's turn; the old script asked at once.
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": {
@@ -411,8 +403,6 @@ mod tests {
 
         #[test]
         fn a_count_is_per_turn_a_draw_last_turn_does_not_add_to_this_turn_s() {
-            // p1 draws one with Anti-oneshot Armor's Cry, then two turn changes later draws at the start
-            // of their turn: the first of that turn, not the second of the game.
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-073", MENACE], "library": [FELINORS, SEVEN, TIMMY, VANILLA] },
                 "p2": { "hand": [VANILLA, VANILLA], "backrow": [{ "def": TAX, "faceUp": false }], "library": [VANILLA, VANILLA] },
@@ -457,7 +447,6 @@ mod tests {
 
         #[test]
         fn sec2_4_a_draw_a_limit_stops_does_not_happen_and_does_not_count_under_palantir_s_limit_of_1_it_never_fires() {
-            // A Stockpile at (2), so Palantir lets it resolve and only limits its draws.
             let mut s = tax_board(json!({ "p2Backrow": [PALANTIR], "p1Hand": [{ "def": STOCKPILE, "costMod": 1 }, MENACE] }));
             s.start_turn(); // the one draw p1 may make this turn
             s.play(STOCKPILE, json!({})); // both draws stopped
@@ -511,7 +500,6 @@ mod tests {
 
         #[test]
         fn r521_a_card_burned_on_a_full_hand_was_drawn_and_counts() {
-            // p1 holds ten after the Stockpile leaves and draws one: the first draw fills the hand, the second burns.
             let mut hand = vec![STOCKPILE, TIMMY];
             hand.extend(vec![MENACE; 8]);
             let mut s = tax_board(json!({ "p1Hand": hand, "p1Library": [FELINORS, SEVEN] }));
@@ -525,7 +513,6 @@ mod tests {
         fn r521_a_card_cast_on_draw_was_drawn_and_counts() {
             let mut s = tax_board(json!({ "p1Library": [JELLY_BEAN, FELINORS, SEVEN] }));
             s.play(STOCKPILE, json!({}));
-            // The Jelly Bean was cast on the first draw; the Felinors is the second.
             assert!(s
                 .events()
                 .iter()
@@ -535,8 +522,6 @@ mod tests {
 
         #[test]
         fn r521_a_draw_from_an_empty_deck_counts_toward_the_number_the_next_real_draw_is_the_2nd_and_fires_it() {
-            // Their start-of-turn draw finds an empty deck (fatigue, draw 1); Unstable Clone Machine then
-            // shuffles three Mr. Vanillas in, and Stockpile's first draw is their 2nd of the turn.
             let mut s = scenario(json!({
                 "p1": { "hand": [VANILLA, STOCKPILE, MENACE], "backrow": ["core-033"], "library": [] },
                 "p2": { "hand": [VANILLA], "backrow": [{ "def": TAX, "faceUp": false }], "library": [VANILLA, VANILLA] },
@@ -571,7 +556,6 @@ mod tests {
 
         #[test]
         fn an_opponent_holding_one_card_keeps_it_and_you_get_nothing_no_prompt() {
-            // The first draw is cast on draw (so it never reaches the hand), the second is the only card left.
             let mut s = tax_board(json!({ "p1Hand": [STOCKPILE], "p1Library": [JELLY_BEAN, FELINORS] }));
             s.play(STOCKPILE, json!({}));
             assert!(fired(&s));
@@ -582,9 +566,7 @@ mod tests {
 
         #[test]
         fn r97_once_in_your_hand_the_moved_cards_are_named_in_none_of_the_opponent_s_view_but_the_steal_itself() {
-            // The `stolen` event is read by a player who could read the card where it was taken from or
             // where it is now (R97 extended to E2), so the opponent reads the steal of their own hand
-            // cards; every other event and their view of your hand name none of them.
             let mut s = tax_board(json!({}));
             s.play(STOCKPILE, json!({}));
             let moved: Vec<CardInstance> = [SEVEN, FELINORS]

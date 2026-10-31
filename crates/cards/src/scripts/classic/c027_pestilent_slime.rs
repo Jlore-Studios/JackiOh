@@ -19,13 +19,11 @@ pub fn script() -> CardScripts {
         plague_multiplier: Some(read_hook(|args| param(&args, "multiplier"))),
         ..Script::default()
     };
-    // The same script: the Radiant face's ×3 is its declared `multiplier`, which `param` reads off the face it wears.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
 // C #27 Pestilent Slime — SPEC §8.6 row 27, BUILD M9 Classic row C 27: "Every placement onto it is
-// doubled (tripled radiant), still one placement for "whenever Plague Counters are placed" triggers;
 // its tokens reset when it leaves (R78); its tuned number (multiplier) reads through `param()` (R386)".
 // Placements come from C #39 Outbreak (one) and C #70 Book of Plague (one per token, R689).
 #[cfg(test)]
@@ -44,7 +42,6 @@ mod tests {
     const ANCHOR: &str = "core-010";
     const X: &str = "core-020";
 
-    /// The `counterChanged` events of the plague counter on this card.
     fn placements(s: &Scenario, instance_id: &str) -> Vec<GameEvent> {
         s.events()
             .iter()

@@ -18,7 +18,6 @@ pub const ID: &str = "classic-047";
 
 const ANCIENT_ACQUISITION: &str = "classic-034";
 
-/// The cost the returned card takes, read as the trigger runs.
 type ReturnCost = Arc<dyn Fn(&EffectContext<'_>) -> i32 + Send + Sync>;
 
 fn recur(cost_override: Option<ReturnCost>) -> TriggerDef {
@@ -89,7 +88,6 @@ mod tests {
 
     use crate::js;
 
-    /// p2 plays Mr. Vanilla into p1's face-down Sheepish, with p1's Recurring Felinor in its graveyard.
     fn sheepish_fires(felinor: Value, p1_hand: Vec<&str>) -> Scenario {
         let mut s = scenario(json!({
             "p1": { "hand": p1_hand, "backrow": [{ "def": SHEEPISH, "faceUp": false }], "graveyard": [felinor] },

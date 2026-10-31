@@ -31,7 +31,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 8 is its declared `damage`, which `param` reads off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -54,7 +53,6 @@ mod tests {
     const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
     const FILLER: &str = "core-005";
 
-    /// Each `damage` event's `{ targetId, amount }`.
     fn hits(s: &Scenario) -> Vec<(String, i32)> {
         s.events()
             .iter()

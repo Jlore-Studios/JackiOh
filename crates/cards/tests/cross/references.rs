@@ -1,27 +1,6 @@
-//! R279: a card's text links the cards and tokens it names. The catalog lists them per card
-//! (`refs`, by id), and this file proves the list against the texts both ways, from the catalog
-//! alone: every card or token a text names is in that card's `refs`, and every id in `refs` is named
-//! in one of the card's two texts. It also proves that every token is named by some card, except The
-//! Coin, which §2.1's setup deals rather than a card (R244).
-//!
-//! What "names" means is written once, here, and the client's renderer (apps/web/src/cards/refs.ts)
-//! reads the same rule: a card's name, or its name before a parenthesis ("Call to Chaos (Core
-//! Edition)" is named as "Call to Chaos"), alone or with a plural "s", standing as whole words — the
-//! characters either side are not letters, digits, an apostrophe or a hyphen, so "CN-Viral" does not
-//! name "CN-Virus" and "Mr. Vanilla" is not named by #61's "Vanilla copy". R903 adds one alias:
-//! "Coin" names The Coin.
-//!
-//! Patch v0.2.0 adds two things to the rule. R381 (B2.8): four Classic cards are named like rules
-//! words — #10 Exile, #36 Burn, #57 Echo and #30 Recycle — so a text that says "Exile …" or "Echo 1"
-//! names none of them unless its `refs` lists the card (a card's `refs` stays curated). R480: the
-//! eight Pancake tokens and the AI generated cards (the ten T-AI cards, and since v0.3.15 Meditative+
-//! #1.1 to #1.4) reach play through a pool a card names by its tag ("a random Pancake token", "a
-//! random AI generated card"), so a text naming that pool names each of its members for the rule that
-//! every token is named by some card. R1857002 adds the Stinkyscape set's two such pools, its
-//! Terminus tokens ("a Terminus card") and its War Doctrines ("a War Doctrine"), and its Resources,
-//! which R1840002's roll deals as §2.1's setup deals The Coin, so no card need name one.
-//!
-//! Port of `packages/cards/test/references.test.ts`.
+//! R279: a card's text links the cards and tokens it names (`refs` by id; R244, §2.1).
+//! Name rules, punctuation, aliases (R903), keyword exclusions (R381, B2.8, #10, #36, #57, #30),
+//! and tag pool references (R480, R1840002, R1857002, #1, #61).
 
 use indexmap::IndexSet;
 use jackioh_cards::CATALOG;
@@ -51,8 +30,6 @@ fn dealt_by_a_rule(card: &CardDef) -> bool {
 const MAKER_STILL_TO_COME: &[(&str, &[&str])] = &[];
 
 /// R381 (B2.8): card names that are also rules words. A text using one names that card only when the
-/// card's `refs` lists it: Exile the verb and the pile, Burn at the hand cap, Echo the keyword,
-/// Recycle the verb.
 const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle"];
 
 /// R961: rules phrases that hold a card's name without naming it (R381): "Jade Counter" holds
@@ -60,10 +37,7 @@ const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle"];
 /// holds "Fortify" (TG #12), and still names itself.
 const RULES_PHRASES: &[&str] = &["Jade Counter", "Fortify Mind"];
 
-/// Whether the match at byte range `at..end` lies inside a rules phrase: the phrase holds the
-/// name, so the name reads as the phrase's word, not the card's. A match that is the whole phrase
 /// is not inside it (R2198004: the phrase may be a card's own name). Both bounds sit on the match's
-/// own edges, so every byte index here is a character boundary.
 fn inside_rules_phrase(text: &str, at: usize, end: usize) -> bool {
     RULES_PHRASES.iter().any(|phrase| {
         let mut from = 0;
@@ -119,11 +93,7 @@ const TOKEN_POOLS: &[TokenPool] = &[
     },
 ];
 
-/// `name.replace(/\s*\(.*\)\s*$/, "")`: the name with a closing parenthetical, and the space before
-/// it, cut off. The leftmost `(` whose tail runs to a `)` and only spaces after it is where the cut
-/// starts (`.*` is greedy and the match is leftmost), together with the spaces just before it.
 fn without_parenthetical(name: &str) -> String {
-    // Names hold no line break, so `.` reaches every character between the brackets.
     if !name.trim_end().ends_with(')') {
         return name.to_string();
     }
@@ -136,7 +106,6 @@ fn without_parenthetical(name: &str) -> String {
 /// R903: one named alias — "Coin" names The Coin, which M #27's texts call by the short name.
 const ALIASES: &[(&str, &str)] = &[("The Coin", "Coin")];
 
-/// The names a text may call a card by: its name, and its name before a parenthesis.
 fn names_of(def: &CardDef) -> Vec<String> {
     let bare = without_parenthetical(&def.name);
     let mut out = if bare == def.name {
@@ -152,12 +121,10 @@ fn names_of(def: &CardDef) -> Vec<String> {
     out
 }
 
-/// `/[A-Za-z0-9'-]/`: a character that continues a word.
 fn is_word(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '\'' || c == '-'
 }
 
-/// Whether `text` names `name` as whole words, alone or plural — never from inside a rules
 /// phrase (R961: the "Jade" in "Jade Counter" names no card).
 fn names(text: &str, name: &str) -> bool {
     let mut from = 0;
@@ -178,7 +145,6 @@ fn names(text: &str, name: &str) -> bool {
         {
             return true;
         }
-        // `from = at + 1`, kept on a character boundary.
         from = at + text[at..].chars().next().map_or(1, char::len_utf8);
     }
 }
@@ -210,7 +176,6 @@ fn is_rules_word(id: &str) -> bool {
         .is_some_and(|card| RULES_WORDS.contains(&card.name.as_str()))
 }
 
-/// The ids of the cards whose base or Radiant text contains `phrase` (TS `naming`).
 fn naming(phrase: &str) -> Vec<String> {
     entries()
         .into_iter()
@@ -228,7 +193,6 @@ fn strings(values: &[&str]) -> Vec<String> {
 }
 
 /// R1420, R1857000: the ids among `ids` of cards whose set ships, so a pin of the shipped sets' cards
-/// holds while a held set's cards land (the release re-pins it).
 fn shipped(ids: Vec<String>) -> Vec<String> {
     ids.into_iter()
         .filter(|id| CATALOG.get(id.as_str()).is_some_and(|card| set_ships(card.set)))
@@ -368,7 +332,6 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         // AI Slop and Claude's Datacenter make them; Scaling Law counts them. Meditative #59's granted
         // Death fuses one and #60 Eschews casts one (§8.8 rows 59 and 60, R1421); #53 Prestige added one
         // until #831's patch. Issue #911 put Claude's Datacenter's "AI Generated card" back in the
-        // pool's one spelling.
         assert_eq!(
             shipped(naming("AI generated card")),
             strings(&[
@@ -384,8 +347,6 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             indices_of(Tag::Fruit),
             strings(&["65.1", "65.2", "65.3", "65.4", "65.5"])
         );
-        // Balance patch 1 hid the odds and the reward lists: "Grape" names the five
-        // Grapes, and "a random reward" names KY's Gift.
         assert_eq!(
             shipped(naming("Grape")),
             strings(&["classicplus-065", "classicplus-066"])
@@ -412,7 +373,6 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         );
         assert_eq!(shipped(naming("War Doctrine")), strings(&["stinkyscape-137"]));
         // A Resource is dealt by R1840002's roll, as The Coin by §2.1's setup: it needs no card to
-        // name it. A plain token still does.
         let resource: CardDef = serde_json::from_value(serde_json::json!({
             "id": "stinkyscape-t-reknite", "index": "T-reknite", "name": "Reknite", "set": "Stinkyscape",
             "type": "Spell", "tags": ["Token"], "rarity": "Token", "token": true, "cost": 0,
@@ -428,7 +388,6 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         assert!(dealt_by_a_rule(&resource));
         assert!(dealt_by_a_rule(&CATALOG["core-t-coin"]));
         assert!(!dealt_by_a_rule(&CATALOG["core-t-sheep"]));
-        // Every Stinkyscape Resource the catalog holds yet is a token; and the makers that have landed
         // name their pools: #4 Olivian Expanse and #154 Dice of Doom a Terminus card, #137 a War Doctrine.
         for card in entries().into_iter().filter(|card| card.resource.is_some()) {
             assert!(card.token, "{} is a Resource and a token (R1840000)", card.id);
@@ -455,7 +414,6 @@ mod r279_the_reference_map_spec_5_7_10_10 {
                 "{word} is a Classic card"
             );
         }
-        // They are all over the texts as rules words — and no card lists them.
         let uses_exile = entries()
             .into_iter()
             .filter(|card| names(&card.base.text, "Exile") || names(&card.radiant.text, "Exile"))
@@ -472,7 +430,6 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             .map(|card| card.id.clone())
             .collect();
         assert_eq!(listing, Vec::<String>::new());
-        // "Recycler" is a longer word, so Malzahar's Recycler never names Recycle at all.
         assert!(!names("Malzahar's Recycler", "Recycle"));
     }
 
@@ -492,7 +449,6 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             "Add one of these: Dud (20%), Jade (75%) or Red Jade (5%).",
             "Jade"
         ));
-        // So neither Jade nor Red Jade lists a `refs` for the Counter alone.
         for id in ["meditative-039-2", "meditative-039-4"] {
             assert_eq!(
                 CATALOG
@@ -521,7 +477,6 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         let meditative = card("meditative-095");
         // Core #95 and C+ #73 say "Call to Chaos", which names Meditative #95 once its set ships: since
         // v0.3.5, whose fragment claims both cards' refs (R646). A later set held back (R1420) is named
-        // by no shipped card's refs the same way until it ships, which `named_by` reads.
         assert!(set_ships(meditative.set));
         for shipped in ["core-095", "classicplus-073"] {
             let named = named_by(card(shipped));
@@ -568,14 +523,11 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         let coin = CATALOG.get("core-t-coin").expect("The Coin in the catalog");
         assert_eq!(coin.name, "The Coin");
         assert!(names_of(coin).contains(&"Coin".to_string()));
-        // Alone or plural, by the full name or the alias.
         assert!(names("add a Coin to your hand", "Coin"));
         assert!(names("add Coins to your hand", "Coin"));
         assert!(names("shuffle The Coin into each player's deck", "The Coin"));
-        // Case matters: "flip a coin" names nothing.
         assert!(!names("flip a coin", "Coin"));
         assert!(!names("flip a coin", "The Coin"));
-        // No other card is named without its "The": every other name stands alone.
         for card in entries() {
             let bare = without_parenthetical(&card.name);
             let mut expected = vec![card.name.clone()];

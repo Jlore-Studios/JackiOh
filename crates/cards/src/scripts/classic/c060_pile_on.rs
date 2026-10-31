@@ -32,7 +32,6 @@ pub fn script() -> CardScripts {
     };
 
     // The Radiant face drops the return (SPEC §8.6 row 60): the same Recruit, and this Spell goes to the
-    // graveyard as any Spell does.
     let radiant = Script {
         cry: base.cry.clone(),
         ..Script::default()
@@ -41,7 +40,6 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// The deck holds Core cards with their own tests; Bigot's Cry would destroy an enemy Unit, which a
 // Recruit never fires (R1); a Rush Token card stands for a unit-token card a deck may hold (R11).
 #[cfg(test)]
 mod tests {
@@ -63,12 +61,10 @@ mod tests {
 
     use crate::js;
 
-    /// p1's unit zones, lane 1 to 5: each top card's def id, or `null`.
     fn unit_row(s: &Scenario) -> Value {
         Value::Array((1..=5).map(|lane| s.unit(PlayerId::P1, lane).map(|card| json!(card.def_id)).unwrap_or(Value::Null)).collect())
     }
 
-    /// p1's backrow zones, lane 1 to 5: each card's def id, or `null`.
     fn back_row(s: &Scenario) -> Value {
         Value::Array((1..=5).map(|lane| s.backrow(PlayerId::P1, lane).map(|card| json!(card.def_id)).unwrap_or(Value::Null)).collect())
     }
@@ -124,7 +120,6 @@ mod tests {
                 s.play(PILE_ON, json!({}));
                 assert_eq!(unit_row(&s), json!([VANILLA, GARY, BIGOT, null, null]));
                 assert_eq!(back_row(&s), json!([MANA_WELL, SHEEPISH, BREAD, null, null]));
-                // The Spells keep their order, and Pile On itself goes under them (the base clause).
                 assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![STOCKPILE, LUNAR, PILE_ON]);
             }
 
@@ -209,7 +204,6 @@ mod tests {
                 let pile_on = s.card(PILE_ON).id.clone();
                 s.play(&pile_on, json!({}));
                 assert_eq!(s.last_events().iter().map(js).filter(|event| event["type"] == "summoned").count(), 6);
-                // The one event that names a deck slot is Pile On's own public move to the bottom of the deck.
                 let positioned: Vec<Value> = s.last_events().iter().map(js).filter(|event| event.get("position").is_some()).collect();
                 assert_eq!(positioned.len(), 1);
                 assert_eq!(positioned[0]["type"], "shuffledIn");

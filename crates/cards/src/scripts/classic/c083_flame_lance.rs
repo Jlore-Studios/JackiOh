@@ -17,7 +17,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-083";
 
-/// "a Unit": units only, either side.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
 }
@@ -35,14 +34,12 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 22 is its declared `damage`, which `param` reads off the face.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
 }
 
 // C #83 Flame Lance (SPEC §8.6 row 83; BUILD M9 row C 83). (3) Spell, Common: Trample; deal {damage}
-// damage to a Unit — damage 10, Radiant 20, step 2.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -178,7 +175,6 @@ mod tests {
         /// §4.4 step 2 Armor lowers the hit before the excess is taken
         #[test]
         fn s4_4_step_2_armor_lowers_the_hit_before_the_excess_is_taken() {
-            // A Unit in Defense Position has Armor 1: 10 − 1 = 9, 4 to it and 5 beyond.
             let mut s = scenario(json!({
                 "p1": { "hand": [LANCE, STOCKPILE], "library": spare_library() },
                 "p2": with_spare(json!({ "field": [{ "def": VANILLA, "position": "DEF" }] }))

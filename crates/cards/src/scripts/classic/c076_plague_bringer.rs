@@ -26,7 +26,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 4 tokens and draw 2 are its declared numbers.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -103,7 +102,6 @@ mod tests {
         }))
     }
 
-    /// declares its two numbers and one script on both faces; Rush is printed
     #[test]
     fn declares_its_two_numbers_and_one_script_on_both_faces_rush_is_printed() {
         assert_eq!(def().id, BRINGER);
@@ -123,11 +121,9 @@ mod tests {
         ));
     }
 
-    /// base
     mod base {
         use super::*;
 
-        /// is a 4/4 with Rush: it attacks a Unit the turn it enters
         #[test]
         fn is_a_4_4_with_rush_it_attacks_a_unit_the_turn_it_enters() {
             let mut s = board(false, 4);
@@ -144,7 +140,6 @@ mod tests {
             s.expect_in_zone(&theirs, "graveyard");
         }
 
-        /// Cry: two placements on the one permanent a single prompt names, over every permanent on either side, itself and face-down cards included
         #[test]
         fn cry_two_placements_on_the_one_permanent_a_single_prompt_names_over_every_permanent_on_either_side_itself_and_face_down_cards_included()
          {
@@ -162,7 +157,6 @@ mod tests {
             .into_iter()
             .collect();
             assert_eq!(offered, expected);
-            // One answer puts both on the pick: no second prompt opens.
             let vanilla_id = s.card(VANILLA).id.clone();
             s.answer(json!(vanilla_id));
 
@@ -236,7 +230,6 @@ mod tests {
             let crawler = s.card(CRAWLER).clone();
             place_all(&mut s, &crawler);
 
-            // Two Crawler draws and the Bringer's own.
             assert_eq!(draws_by(s.events(), P1), 3);
         }
 
@@ -300,11 +293,9 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 
-        /// is an 8/8 with Rush; four placements on the one pick, then draw 2
         #[test]
         fn is_an_8_8_with_rush_four_placements_on_the_one_pick_then_draw_2() {
             let mut s = board(true, 4);

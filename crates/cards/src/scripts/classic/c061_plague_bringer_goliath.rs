@@ -36,8 +36,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's draw 2 is its declared `draw`, which `param` reads off the running
-    // face; its stats are the catalog's.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -67,7 +65,6 @@ mod tests {
 
     use crate::js;
 
-    /// The state written out and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serializes");
         serde_json::from_str(&text).expect("the state parses back")
@@ -97,8 +94,6 @@ mod tests {
             .count()
     }
 
-    /// Goliath in hand with a Vanilla to tribute, and a board to place on. `extra`: `p2Backrow` and
-    /// `library` (defaults `[]` and 5).
     fn ready(radiant_face: bool, extra: Value) -> Scenario {
         let p2_backrow = if extra["p2Backrow"].is_null() { json!([]) } else { extra["p2Backrow"].clone() };
         let library = extra["library"].as_u64().map_or(5, |n| n as usize);
@@ -133,7 +128,6 @@ mod tests {
             );
             assert_eq!(def["base"]["keywords"], json!([{ "kind": "Rush" }, { "kind": "Trample" }]));
             assert_eq!(def["radiant"]["keywords"], json!([{ "kind": "Rush" }, { "kind": "Trample" }]));
-            // The Radiant face is the same declaration and the same hooks.
             assert_eq!(js(&scripts.radiant.static_flags), js(&scripts.base.static_flags));
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
         }
@@ -211,7 +205,6 @@ mod tests {
                     option_ids(&s).into_iter().collect::<BTreeSet<String>>(),
                     BTreeSet::from([goliath.id.clone(), menace.id.clone(), well.id.clone()]),
                 );
-                // One answer puts all three on the pick: no second prompt opens.
                 s.answer(json!(menace.id));
 
                 assert!(s.state().pending.is_none());
@@ -326,7 +319,6 @@ mod tests {
 
                 s.answer(json!(crawler.id));
 
-                // Three Crawler draws and the Goliath's own.
                 assert_eq!(draws_by(s.events(), P1), 4);
             }
 
@@ -384,7 +376,6 @@ mod tests {
                 play_goliath(&mut full);
                 let crawler = full.card(CRAWLER).clone();
                 full.answer(json!(crawler.id));
-                // 9 in hand after the play, and four draws (three of the Crawler's, one of its own): one fills it, three burn.
                 assert_eq!(full.hand(P1).len(), 10);
                 assert_eq!(full.events().iter().map(js).filter(|event| event["type"] == "burned").count(), 3);
 

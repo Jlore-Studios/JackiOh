@@ -1,64 +1,8 @@
-//! BUILD M4-T1 and M9-T1 acceptance: catalog.json is the diff against SPEC §8 and the brief.
-//!
-//! PROVENANCE OF THE FIXTURE TABLES BELOW. Each table is a transcription of a document, not of
-//! catalog.json, so that a card whose data drifts from its source fails here. Each was produced
-//! mechanically from its document's own lines and checked in as a literal; the test never reads a
-//! document at run time (a test that re-parsed one would pass while it and the catalog drifted
-//! together, and would put file I/O in a crate that must stay pure — CLAUDE.md rule 4).
-//!
-//!   CORE           — SPEC §8.1–§8.5, the 105 rows of the catalog table, columns "#", "Name",
-//!                    "Rarity", "Cost", "Type, tags" and "Stats" (`A/B → C/D` is base → radiant;
-//!                    `A/B` alone means the radiant form keeps those stats; an empty cell means the
-//!                    card has no stats), and SPEC §7's six named tokens (`T-rush`, `T-sheep`,
-//!                    `T-felinor`, `T-bread`, `T-coin`, the one §2.1's setup deals, R244, and
-//!                    `T-ghoul`, a card of its own in patch v0.1.1, R353), whose `rarity: "Token"` and
-//!                    Token tag follow §8's in-catalog token rows and §7's token rules. The costs of
-//!                    #16 Hit Job (3), #17 Flood, #34 Collateral Damage, #43 Big Felinor, #49 Snom
-//!                    Bunny Mind Control, #88 Twisting Nether (4) and #65 Masochism Mask (1) are
-//!                    patch v0.2.0's (issue #40).
-//!   CLASSIC        — docs/classic-sets.md B6, each entry's header line (`classic-NNN` · (cost)
-//!                    type, tags · rarity · stats base → Radiant), with the decisions B9 and the
-//!                    v0.2.0 plan adopted: #55 is Book of Wildfire, #72 Grand Counterspell (R381),
-//!                    #86 Genn's Radiant 42/42.
-//!   CLASSIC_PLUS   — docs/classic-sets.md B7's header lines and token bullets (B2.3's numbering;
-//!                    the Losers typed Unit, Otherworldly Removal's three and the Grapes typed Spell
-//!                    by their sections' own sentences, the Grapes tagged Fruit, every token tagged
-//!                    Token and rated "Token", B2.5) and B8's table of the ten AI generated cards
-//!                    (tagged AI). Buff Billy's "3X/3X → 6X/6X" prints 0/0 (its `xStats` carry X).
-//!   MEDITATIVE     — docs/meditative-set.md's card headers (M6), with §8.8's later patches.
-//!   MEDITATIVE_PLUS — docs/meditative-plus-set.md's card headers (MP6, issue #1178), held (R1420,
-//!                    R1178000) until it shipped in v0.3.15.
-//!   STINKYSCAPE    — docs/stinkyscape-set.md's card headers (ST13, issue #1857): the set is held
-//!                    (R1420, R1857000), so a row waits for its card until the set ships (#1884).
-//!   patch v0.3.Y    — issue #1067 renamed Jlockheed to Jlockeed in every name (the briefs keep
-//!                    the old spelling as the record).
-//!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
-//!                    lines are what the designer first wrote, the patch what the cards are now.
-//!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename, and issue #1219's
-//!                    12 Attack for the Radiant Jlockeed Shredder-10.
-//!   patch v0.3.13   — issue #1194's costs: #76 Field of Dreams (2), C+ #64 Mulch Muncher (5) and
-//!                    Meditative #19.1 Temporal Rift (0).
-//!   patch v0.3.16   — issue #1151 tags C #40 MC Tech and Meditative #57, #82, #83 and #85 Human
-//!                    (#57's tag ships under patch v0.3.10's claim of that card).
-//!   issue #2280    — C+ #74 Twice Forward One Step Backwards and S #16 Rod of Ages print no stats on
-//!                    either face (R2280000); the briefs keep the stats they first printed.
-//!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
-//!                    being R349's fallback.
-//!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
-//!                    Classic (35/26/18/10/1) and Classic+ (13/24/25/13/3), as patch v0.2.9
-//!                    (issue #44) left them; B2.1's totals, 268 cards and 50 tokens in 318
-//!                    entries (Glitch, issue #170, the fiftieth).
-//!   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, B2.4's Book,
-//!                    Pancake and AI, the mechanics patch's Plague (every card that uses
-//!                    Plague Counters), and patch v0.2.Y's Catalyst, Prime and Acclaimed.
-//!
-//! Not asserted here: `keywords`, `text`, `params`, `refs` and `loc` (the per-card tests prove the
-//! behavior `keywords`, `text` and `params` describe, references.rs proves `refs`, and `loc` is
-//! frozen data since v0.3.0, SURFACE §7.5), and id shape (`cargo jackioh catalog check` owns the
-//! schema).
-//!
-//! Port of `packages/cards/test/catalog.test.ts`. TS's one `it` per fixture row is one test per set
-//! here, which checks every row and names every row that fails.
+//! BUILD M4-T1 and M9-T1 acceptance: catalog diff against SPEC §8, §8.1–§8.5, §7.5, §2.1, §5, §5.2, §6;
+//! tokens R244, R353, R276, R278, R2280000; CLAUDE.md rule 4.
+//! Briefs and sets: docs/classic-sets.md B6, B7, B8, B9; docs/meditative-set.md; docs/stinkyscape-set.md.
+//! Issues #19, #34, #40, #43, #44, #57, #64, #72, #74, #76, #82, #83, #85, #86, #88, #170, #831,
+//! #1067, #1149, #1151, #1178, #1194, #1219, #1857, #1884, #2280.
 
 use std::collections::BTreeMap;
 
@@ -111,25 +55,20 @@ const fn row(
     }
 }
 
-/// A printed cost.
 const fn c(n: i32) -> CardCost {
     CardCost::Fixed(n)
 }
 
-/// "X".
 const X: CardCost = CardCost::X;
 
-/// "A embiggen B".
 const fn emb(base: i32, embiggen: i32) -> CardCost {
     CardCost::Embiggen { base, embiggen }
 }
 
-/// A Stats cell `A/B`.
 const fn st(attack: i32, health: i32) -> StatPair {
     (Some(attack), Some(health))
 }
 
-/// An empty Stats cell.
 const NO_STATS: StatPair = (None, None);
 
 const CORE: &[SpecRow] = &[
@@ -3180,8 +3119,6 @@ const CLASSIC_PLUS: &[SpecRow] = &[
 
 /// Each set's fixture, in catalog order (B2.2).
 /// R1420: the Meditative set's rows, transcribed from docs/meditative-set.md's card headers (M6), in
-/// number order with each token after its card. The set does not ship yet: an entry it holds must
-/// equal its row, and a row with no entry is a card still being built, until it ships.
 const MEDITATIVE: &[SpecRow] = &[
     row(
         "1",
@@ -4488,8 +4425,6 @@ const MEDITATIVE: &[SpecRow] = &[
 ];
 
 /// R1420, R1178000: the Meditative+ set's rows, transcribed from docs/meditative-plus-set.md's card
-/// headers (MP6), in number order with each token after its card. The set does not ship yet: an
-/// entry it holds must equal its row, and a row with no entry is a card still being built, until it
 /// ships (issue #1187). #17 is Dogpile, Classic #60 holding the name Pile On (R381, R1178002); #20.1
 /// Lil' Kenny prints 0/0, its X/X its summon's (`xStats`, as C+ #69 Buff Billy's 3X/3X).
 const MEDITATIVE_PLUS: &[SpecRow] = &[
@@ -4799,7 +4734,6 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
 
 /// R1420, R1857000, R1857001: the Stinkyscape set's rows, transcribed from docs/stinkyscape-set.md
 /// ST13's header lines (issue #1857), in catalog order: each card's tokens after it, then the Dormant
-/// Starship (a card at a `T-` index), the shared tokens and the ten AI generated cards. The set is
 /// held, so a row waits for its card until the set ships (#1884). The designer's second #21 and #122
 /// are #174 Aerelret and #175 Frost Module.
 const STINKYSCAPE: &[SpecRow] = &[
@@ -7621,7 +7555,6 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
         ],
     ),
     // R1420, R1857001: docs/stinkyscape-set.md ST12's distribution over its 176 cards, the Dormant
-    // Starship one of the Legendaries, a ceiling until the set ships.
     (
         "Stinkyscape",
         &[
@@ -7634,7 +7567,6 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
     ),
     // R1420, R2194000: docs/training-grounds-set.md TG2's distribution over its 60 cards (#1 to #40
     // by the designer's bands, the snapshots #41 to #60 at their Core rarities), a ceiling until the
-    // set ships.
     (
         "Training Grounds",
         &[
@@ -7650,10 +7582,8 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
 /// B2.1: cards and tokens per set.
 struct SetSize {
     set: &'static str,
-    /// The cards indexed 1..cards.
     cards: usize,
     /// The cards outside the set's numbers, at a `T-` index (R1857001: Stinkyscape's Dormant
-    /// Starship), counted with `cards` but not among its 1..N indices.
     named_cards: usize,
     tokens: usize,
 }
@@ -7692,7 +7622,6 @@ const SET_SIZES: &[SetSize] = &[
         tokens: 6,
     },
     // R1420, R1857001: docs/stinkyscape-set.md ST12, a ceiling until the set ships: 175 cards, the
-    // Dormant Starship, and 52 tokens (the 30 its cards define and 22 shared).
     SetSize {
         set: "Stinkyscape",
         cards: 175,
@@ -7710,7 +7639,6 @@ const SET_SIZES: &[SetSize] = &[
 ];
 
 /// R1420: whether a set ships. A set that does not may hold fewer entries than its fixture and its
-/// counts, never more, and none of them counts toward the catalog's totals.
 fn ships(set: &str) -> bool {
     SetName::ALL
         .iter()
@@ -7719,7 +7647,6 @@ fn ships(set: &str) -> bool {
 }
 
 /// B2.1's totals, as SET_SIZES sums them over the sets that ship: the only count of the whole
-/// catalog this file keeps.
 fn total_cards() -> usize {
     SET_SIZES
         .iter()
@@ -7744,8 +7671,6 @@ fn shipped_entries() -> Vec<&'static CardDef> {
         .collect()
 }
 
-/// A set's SET_SIZES row as one number (cards, named cards and tokens), for the fixture-row counts
-/// below.
 fn set_size(set: &str) -> usize {
     SET_SIZES
         .iter()
@@ -7784,7 +7709,6 @@ fn entry_for(by_key: &IndexMap<String, &'static CardDef>, set: SetName, index: &
     }
 }
 
-/// A face's stat as the fixture spells it: a number, or `None` when the card has no stats.
 fn stat_of(face: &CardFace, field: &str) -> Option<i32> {
     match field {
         "attack" => face.attack,
@@ -7799,7 +7723,6 @@ fn show(value: &Value) -> String {
     }
 }
 
-/// "core-043 rarity: expected Rare, got Epic" — the label every failure in this file carries.
 fn label(entry: &CardDef, field: &str, expected: &Value, actual: &Value) -> String {
     format!(
         "{} (#{}) {field}: expected {}, got {}",
@@ -7818,7 +7741,6 @@ fn strings(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_string()).collect()
 }
 
-/// Every problem one entry has against its fixture row (TS: the body of each row's `it`).
 fn row_problems(set: SetName, row: &SpecRow, by_key: &IndexMap<String, &'static CardDef>) -> Vec<String> {
     let entry = entry_for(by_key, set, row.index);
     let mut problems: Vec<String> = Vec::new();
@@ -7836,8 +7758,6 @@ fn row_problems(set: SetName, row: &SpecRow, by_key: &IndexMap<String, &'static 
         problems.push(label(entry, "rarity", &json(row.rarity), &json(entry.rarity)));
     }
 
-    // A cell's tag order and the catalog's may differ without either being wrong, so the
-    // assertion is on the set.
     let mut expected_tags: Vec<&str> = row.tags.iter().map(|tag| tag.as_str()).collect();
     expected_tags.sort();
     let mut actual_tags: Vec<&str> = entry.tags.iter().map(|tag| tag.as_str()).collect();
@@ -7876,7 +7796,6 @@ fn row_problems(set: SetName, row: &SpecRow, by_key: &IndexMap<String, &'static 
     problems
 }
 
-/// Every row of one set's fixture against its entry, as one report (TS: one `it` per row).
 fn fixture_report(set: SetName) -> String {
     let by_key = by_key();
     let rows = FIXTURES
@@ -7905,8 +7824,6 @@ fn fixture_report(set: SetName) -> String {
 }
 
 /// R1420, R1178000, R1857000: the ids of a held set's entries among `ids` that the catalog holds yet
-/// (a card still being built has none), or all of them once its set ships, when a missing one fails
-/// the list it is in. The ids of a shipped set pass unchanged. An id's set is the one its segment
 /// spells (B2.2: `meditativeplus-…`, `stinkyscape-…`).
 fn landed(ids: &[&str]) -> Vec<String> {
     ids.iter()
@@ -7916,7 +7833,6 @@ fn landed(ids: &[&str]) -> Vec<String> {
 }
 
 /// B2.2: the set an id's segment spells, its name lowered with "+" written "plus" and "-" and " "
-/// dropped (`classicplus-…` is Classic+'s, `stinkyscape-…` Stinkyscape's, `traininggrounds-…`
 /// Training Grounds', the first set name with a space, R2194000).
 fn set_of_id(id: &str) -> Option<SetName> {
     let segment = id.split('-').next()?;
@@ -7929,7 +7845,6 @@ fn set_of_id(id: &str) -> Option<SetName> {
     })
 }
 
-/// `/^\d+$/`.
 fn is_plain_index(index: &str) -> bool {
     !index.is_empty() && index.bytes().all(|b| b.is_ascii_digit())
 }
@@ -7995,7 +7910,6 @@ mod catalog_membership_build_m4_t1_b2_1 {
                     Some(_) => {}
                 }
             }
-            // by_key() is built with a duplicate guard, so one entry per index is already proved.
             let plain = entries()
                 .into_iter()
                 .filter(|entry| entry.set.as_str() == size.set && is_plain_index(&entry.index))
@@ -8232,7 +8146,6 @@ mod r1178000_every_meditative_plus_entry_equals_its_fixture_row_while_the_set_is
 mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_built {
     use super::*;
 
-    /// The fixture's rows by index.
     fn row_at(index: &str) -> &'static SpecRow {
         STINKYSCAPE
             .iter()
@@ -8257,7 +8170,6 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
             );
         }
         // Every entry of the set is `stinkyscape-…` (B2.2's segment), and since the release (#1884)
-        // the set ships.
         for entry in entries()
             .into_iter()
             .filter(|entry| entry.set == SetName::Stinkyscape)
@@ -8276,8 +8188,6 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
         // The designer's second #21 and second #122 take the numbers after the list's last.
         assert_eq!(row_at("174").name, "Aerelret");
         assert_eq!(row_at("175").name, "Frost Module");
-        // The plain indices are 1..=175, each once; a token is N.k after its card N, or T-name;
-        // the AI generated cards are T-AI-1 to T-AI-10.
         let plain: Vec<usize> = STINKYSCAPE
             .iter()
             .filter(|row| is_plain_index(row.index))
@@ -8445,7 +8355,6 @@ mod r2194000_every_training_grounds_entry_equals_its_fixture_row_while_the_set_i
             .collect();
         assert_eq!(tokens, vec!["39.1"]);
         // #1-#15 Common, #16-#27 Rare, #28-#36 Epic, #37-#39 Legendary, #40 Mythic; the snapshots
-        // keep their Core rarities, none Legendary or Mythic.
         for row in TRAINING_GROUNDS.iter().filter(|row| is_plain_index(row.index)) {
             let n: usize = row.index.parse().expect("a plain index");
             let band = match n {
@@ -8534,10 +8443,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
                 None => panic!("R739 family member {id} is not in the catalog"),
             }
         };
-        // [family, expected rarity, member ids]. The Jlockeed family is Core's two: the Classic+
         // cards spelled it differently before patch v0.3.Y (#1067) and differ in type and
         // effect shape, so the template does not reach them (R739). The House is no
-        // Right-house/Wrong-House card.
         let families: &[(&str, Rarity, &[&str])] = &[
             (
                 "Book of ___",
@@ -8601,7 +8508,6 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
                 .get(id)
                 .and_then(|entry| rank.iter().position(|r| *r == entry.rarity.as_str()))
         };
-        // TS `indexOf` reads a missing card as -1; `None` sorts below every `Some` the same way.
         assert!(position("classic-060") >= position("core-069"));
     }
 
@@ -8672,7 +8578,6 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
                 [format!("Bigot (core-002, {})", card.id)]
             );
         }
-        // Two snapshots of one Core card, and two cards of other sets.
         let twin = CardDef {
             id: "traininggrounds-042".to_string(),
             index: "42".to_string(),
@@ -8730,8 +8635,6 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         }
         assert_eq!(printed, expected);
         // §7 prints a designer rarity on the Meditative tokens too (the next test, keyed apart:
-        // their indices repeat Classic+ ones); every printed rarity is a Classic+ or a Meditative
-        // token's, never a card's.
         // The Stinkyscape set prints its tokens' too (R1857000, its §7 rows), and the held Training
         // Grounds set its #39.1 Training-Grounds Golem's, the designer's Legendary (R2194000).
         assert!(
@@ -8750,7 +8653,6 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     #[test]
     fn r1178000_prints_the_designer_s_rarity_on_meditative_plus_16_1_and_20_1_and_none_on_its_ai_helpers() {
         // §7: Jazakus Prime the designer's Epic, Lil' Kenny his Rare; the plan's AI generated
-        // helpers, #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, none, as the T-AI
         // cards (B2.5).
         const MEDITATIVE_PLUS_PRINTED: &[(&str, Option<&str>)] = &[
             ("1.1", None),
@@ -8816,7 +8718,6 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             ("97.9", "Mythic"),
         ];
         // Every Meditative token the catalog holds yet (R1420: the set joins part by part), with
-        // what it prints.
         let present: BTreeMap<String, Option<String>> = entries()
             .into_iter()
             .filter(|entry| entry.set == SetName::Meditative && entry.token)
@@ -8845,7 +8746,6 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             Vec::<String>::new(),
             "every present token prints its row's rarity"
         );
-        // No Meditative card prints one: a printed rarity is a token's.
         let cards: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.set == SetName::Meditative && !entry.token)
@@ -8857,13 +8757,10 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
 }
 
 /// SPEC §7, read at compile time (`include_str!`, no I/O at run time: CLAUDE.md rule 4). Unlike the
-/// transcriptions above this is the note itself on purpose: the test below asks that every token
 /// the catalog holds, of any set, has a row in §7's table, so a token added without one fails
-/// whichever set brings it.
 const TOKENS_NOTE: &str = include_str!("../../../../spec/07-tokens.md");
 
 /// The `(Token, Index, held)` cells of §7's token tables, row by row: the lines after each table's
-/// header row and its rule, up to the first line that is not a row. The first table holds the
 /// shipped sets' tokens; a later one (`held`) a set the catalog holds before it ships (R1420,
 /// R1178000), whose rows may wait for their cards as its census does.
 fn section_7_rows() -> Vec<(String, String, bool)> {
@@ -8910,7 +8807,6 @@ mod r1177001_a_token_is_one_by_all_four_signals_spec_5_7 {
                 ),
             ];
             // `token` is the one the rules read (R11, R102); the label (R1177001) and every other
-            // signal must agree with it.
             for (signal, has) in signals {
                 if has != entry.token {
                     let verdict = if has { "has" } else { "lacks" };
@@ -8922,8 +8818,6 @@ mod r1177001_a_token_is_one_by_all_four_signals_spec_5_7 {
             }
         }
         assert_eq!(wrong, Vec::<String>::new(), "the four token signals disagree");
-        // And every row of a shipped set names a token the catalog holds; a held set's row may wait
-        // for its card.
         let orphans: Vec<String> = rows
             .iter()
             .filter(|(name, index, held)| {
@@ -9022,7 +8916,6 @@ mod names_r381_b2_8 {
         assert_eq!(name_of("classic-055").as_deref(), Some("Book of Wildfire"));
         assert_eq!(name_of("classic-017").as_deref(), Some("Counterspell"));
         assert_eq!(name_of("classic-072").as_deref(), Some("Grand Counterspell"));
-        // Book of Wildfire is its own card: the designer's text, not a copy of Book of Flame's.
         assert_eq!(
             CATALOG.get("classic-055").map(|entry| entry.rarity),
             Some(Rarity::Epic)
@@ -9113,7 +9006,6 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             .collect::<Vec<_>>(),
             "entries tagged Jlockeed"
         );
-        // The tag follows the name: every entry whose name says Jlockeed carries it — one
         // faction under one spelling since patch v0.3.Y (#1067) respelled the five names the
         // designer spelled with an h (B2.4) — plus Classic #4 Palantir, which the balance patch
         // inducted without renaming it, and M #87 Tatches the Totem, which carries every tribal
@@ -9126,7 +9018,6 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             .collect();
         named.sort();
         // Meditative+ #4, the designer's "Jlockheed" Spell, names the faction since issue #1828 renamed
-        // it Jlockeed's Supply Drop.
         let expected: Vec<String> = tagged
             .into_iter()
             .filter(|id| id != "classic-004" && id != "meditative-087")
@@ -9174,7 +9065,6 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
         ids
     }
 
-    /// `/-Prime\b/`.
     fn hyphenated_prime(text: &str) -> bool {
         text.match_indices("-Prime").any(|(at, found)| {
             !text[at + found.len()..]
@@ -9224,7 +9114,6 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
             ]
             .concat()
         );
-        // Every entry named "<card> Prime" carries the tag, and each Prime is the token its Catalyst
         // defines. M #49.1, the token M #49's Death puts in the deck, took the tag in patch v0.3.10
         // (#831) as YileGPT Unleashed, and its name in #1563: YileGPT Prime, of M #49 YileGPT.
         let mut named: Vec<String> = entries()
@@ -9385,8 +9274,6 @@ mod the_tags_issue_1837_moves_r1837000 {
             ]
             .concat()
         );
-        // A Jelly Bean is a card named one, and the Other-Origins cards are the tokens an Otherworldly
-        // card adds, every one a token its maker names: Otherworldly Removal's three, and each of
         // Stinkyscape #10 to #12's three (its maker the card whose number the token's carries).
         let mut beans: Vec<String> = entries()
             .into_iter()
@@ -9406,7 +9293,6 @@ mod the_tags_issue_1837_moves_r1837000 {
             assert!(maker.tags.contains(&Tag::Otherworldly), "{maker_id}");
             assert!(maker.refs.as_ref().is_some_and(|refs| refs.contains(&id)), "{id}");
         }
-        // In Too Deep keeps its Quickdraw beside its Quest.
         assert_eq!(
             CATALOG.get("classic-090").map(|entry| entry.tags.clone()),
             Some(vec![Tag::Quickdraw, Tag::Quest])
@@ -9422,8 +9308,6 @@ mod the_tags_issue_1837_moves_r1837000 {
                 "{id}"
             );
         }
-        // The two Field Spells that make Fruit were the only Field Spells tagged Fruit, so a random
-        // Fruit is never a Field Spell now; the Felinor Token both Spells summon is still a Felinor.
         let fruit_field_spells: Vec<String> = tagged(Tag::Fruit)
             .into_iter()
             .filter(|id| {
@@ -9447,10 +9331,7 @@ mod every_entry_has_a_radiant_face_of_its_own_spec_5_2_r276 {
     #[test]
     fn gives_no_entry_a_radiant_face_identical_to_its_base_face_the_five_that_had_none_included() {
         // R349: a card that prints no Radiant form has the fallback as its Radiant face, which doubles
-        // its stats — for an X/X token, the X it is summoned with (`layers::worn_stats_override`) — so
-        // it is the one entry whose printed faces may read alike. It is marked as such, and only a Unit.
         // A face's text is read with its own `params` values filled in (B3.4 rule 5): "Heal a target
-        // {heal}." prints 9 on one face and 18 on the other.
         let printed = |entry: &CardDef, face: FaceKind| -> Value {
             let mut printed = json(entry.face(face));
             if let Some(object) = printed.as_object_mut() {
@@ -9520,8 +9401,6 @@ mod no_face_prints_taunt_beside_indestructible_spec_6_1_r347 {
 mod every_entry_printed_in_chinese_is_cn_r1176000 {
     use super::*;
 
-    /// A Han character: the CJK Unified Ideographs, Extension A, the compatibility ideographs, and
-    /// Extensions B onward.
     fn is_han(c: char) -> bool {
         matches!(
             c,
@@ -9530,8 +9409,6 @@ mod every_entry_printed_in_chinese_is_cn_r1176000 {
     }
 
     // R1176000: every card in Chinese is CN. A card printed in Chinese (a Han character in its name or
-    // on either face) is in Chinese from the start, so the catalog gives it the CN tag, and a pool of
-    // CN cards finds it; a card translated in a game is CN by its flag instead (`query::tags_of`).
     #[test]
     fn r1176000_every_entry_with_a_han_character_in_its_name_or_text_has_the_cn_tag() {
         let printed: Vec<&CardDef> = entries()
@@ -9542,7 +9419,6 @@ mod every_entry_printed_in_chinese_is_cn_r1176000 {
                     .any(|text| text.chars().any(is_han))
             })
             .collect();
-        // Spiritually 中国 is one: the test finds what it is about.
         assert!(printed.iter().any(|entry| entry.id == "meditative-032"));
         let missing: Vec<&str> = printed
             .iter()

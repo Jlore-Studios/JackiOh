@@ -1,6 +1,5 @@
 //! Who killed a unit, what My Pawn projects, and the AI turn My Pawn hands over (SPEC §4.2 step 4,
 //! §4.3, §5.1, §10.3, R42, R44, R89, R152, R176; docs/polish/4-edge-cases.md, lenses L5 and L7).
-//!
 //!  - R42, R89: a destroy effect is no damage instance, so an earlier non-lethal hit is not the kill.
 //!  - R176: My Pawn's lethal projection follows the combat: First Strike, Trample excess from Cleave,
 //!    and a Lifesteal strike back that heals in the same combat, by what it really deals.
@@ -38,7 +37,6 @@ const JILLIAX: &str = "core-056";
 const GOING_LONG: &str = "core-084";
 const WINDOW_LIBRARY: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// The harness with every card script registered: the engine's testkit cannot name the cards crate.
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -83,12 +81,10 @@ mod r42_and_r89_the_unit_whose_damage_instance_was_lethal {
         }));
         let dfender = s.card(BIG_D).clone();
 
-        // 5 damage on a 0/7: it survives, and it deals nothing back.
         s.attack(PANTHER, &dfender);
         s.expect_stats(&dfender, json!({ "health": 2 }));
         let hand_before = s.hand("p1").len();
 
-        // Hit Job destroys it: no damage instance at all, so no killer and no draw.
         s.play(HIT_JOB, json!({ "targets": pick::instance(&dfender) }));
 
         s.expect_in_zone(&dfender, "graveyard");
@@ -113,10 +109,7 @@ mod r176_my_pawns_projection_follows_the_combat {
     #[test]
     fn r176_r93_an_attacker_a_first_strike_defender_kills_first_never_lands_its_trample_hit_so_it_is_not_lethal_s4_3()
      {
-        // p1's Twisted Sorcerer (5/5) with Trample swings at p2's Pointmaster (7/1, First Strike) with
-        // p2 at 3. Pointmaster strikes first for 7 and the Sorcerer deals nothing.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-first-strike",
             "p1": { "field": [SORCERER], "hand": [STOCKPILE], "library": [TIMMY, TIMMY] },
             "p2": { "health": 3, "field": [POINTMASTER], "backrow": [{ "def": MY_PAWN, "faceUp": false }], "library": [GIGA, GIGA] },
@@ -136,11 +129,7 @@ mod r176_my_pawns_projection_follows_the_combat {
 
     #[test]
     fn r176_r63_trample_excess_from_the_attacks_cleave_hits_counts_toward_lethal_s4_4_step_10() {
-        // p1's radiant Prem Panther (10 attack, Cleave) with Trample attacks p2's Right-house defender
-        // (Taunt, Divine Shield) between two 1/1s. The shield stops the hit on the defender, but Cleave
-        // hits each 1/1 for 10 and Trample sends 9 + 9 = 18 to p2's hero at 18: My Pawn cancels it.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-cleave",
             "p1": { "field": [{ "def": PANTHER, "radiant": true }], "hand": [STOCKPILE], "library": [TIMMY, TIMMY] },
             "p2": {
@@ -167,9 +156,7 @@ mod r176_my_pawns_projection_follows_the_combat {
 
     #[test]
     fn r176_one_hit_short_of_lethal_through_cleave_is_not_lethal_so_the_attack_goes_through() {
-        // The same board with p2 at 19: 18 through Trample is not enough, so My Pawn stays armed.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-cleave",
             "p1": { "field": [{ "def": PANTHER, "radiant": true }], "hand": [STOCKPILE], "library": [TIMMY, TIMMY] },
             "p2": {
@@ -197,11 +184,8 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
 
     #[test]
     fn s5_1_my_pawn_fires_once_it_cannot_fire_again_on_an_attack_its_own_ai_turn_declares() {
-        // My Pawn cancels p1's lethal Sorcerer and hands p1's turn to the AI. p1's Deft Duelist, which
-        // has already switched, can still attack the hero for 4, which is lethal at 4 — and a Trap that
         // has fired is spent (§5.1), so nothing cancels it.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-twice-a",
             "p1": { "field": [SORCERER, DUELIST], "library": [GIGA, GIGA] },
             "p2": { "health": 4, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "library": [GIGA, GIGA] },
@@ -212,7 +196,6 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
 
         assert_eq!(count(&s, GameEventType::TrapFired), 1);
         // The Duelist's swing ends the game inside the AI turn, and nothing happens after that (R216):
-        // the trap that fired once is not consumed afterwards, so it is still in the backrow, face-up.
         assert_eq!(
             serde_json::to_value(s.state().result).unwrap(),
             json!({ "winner": "p1", "reason": "hero-death" })
@@ -230,10 +213,8 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
 
     #[test]
     fn r152_r44_r82_the_ai_plays_out_only_the_rest_of_the_turn_my_pawn_took_not_the_players_next_turn() {
-        // My Pawn cancels p1's lethal swing on turn 9 and the AI ends p1's turn. p2 has nothing it can
         // do, so R82 auto-ends turn 10 inside that same reduction and p1's turn 11 begins — p1's own.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-next-turn",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
             "p2": { "health": 5, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "library": [GIGA, GIGA] },
@@ -254,7 +235,6 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
 
     #[test]
     fn r42_s10_3_an_event_the_ai_turn_emitted_is_dispatched_once_prem_panther_draws_2_per_kill_not_4() {
-        // On this seed the AI sends p1's Prem Panther into p2's 1/1 Scarab and kills it.
         let mut s = setup(json!({
             "seed": "hunt-cw-redispatch-d",
             "p1": { "field": [MENACE, PANTHER], "library": [GIGA, GIGA, GIGA, GIGA, GIGA, GIGA] },
@@ -290,7 +270,6 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
                 )
             })
             .count();
-        // The seed's AI does make the kill; without it this test proves nothing.
         assert_eq!(kills, 1);
         assert_eq!(draws, 2);
         assert_eq!(s.hand("p1").len(), 2);
@@ -298,10 +277,7 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
 
     #[test]
     fn s10_3_an_ai_turns_play_reaches_unstable_clone_machine_once_three_copies_not_six_s8_c33() {
-        // p1 swings lethal; p2's My Pawn cancels and the AI plays out p1's turn, playing its one hand
-        // card, Mr. Vanilla, with p1's Unstable Clone Machine out.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "pawn-dispatch",
             "p1": {
                 "hand": [VANILLA],
@@ -337,7 +313,6 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
     }
 }
 
-/// A fixture card's definition (`face` is the printed face of both sides).
 fn fixture_def(id: &str, type_: &str, face: Value) -> CardDef {
     json_as(json!({
         "id": id,
@@ -372,7 +347,6 @@ fn set_trap(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> Card
     live.clone()
 }
 
-/// The `attackDeclared` event's fields, when the event is one and was not forced.
 fn unforced_declaration(event: &GameEvent) -> Option<(&String, &String)> {
     match event {
         GameEvent::AttackDeclared {
@@ -385,7 +359,6 @@ fn unforced_declaration(event: &GameEvent) -> Option<(&String, &String)> {
     }
 }
 
-/// "When a unit is declared as an attacker (not forced): destroy it."
 fn vaporize() -> Script {
     Script {
         triggers: vec![
@@ -405,7 +378,6 @@ fn vaporize() -> Script {
     }
 }
 
-/// "When a unit is declared as an attack's target (not forced): destroy it."
 fn shatter() -> Script {
     Script {
         triggers: vec![
@@ -427,7 +399,6 @@ fn shatter() -> Script {
     }
 }
 
-/// "When a unit is declared as an attacker (not forced): take control of it."
 fn turncoat() -> Script {
     Script {
         triggers: vec![
@@ -447,7 +418,6 @@ fn turncoat() -> Script {
     }
 }
 
-/// "When a unit is declared as an attack's target (not forced): take control of it."
 fn defector() -> Script {
     Script {
         triggers: vec![
@@ -469,7 +439,6 @@ fn defector() -> Script {
     }
 }
 
-/// "When a unit is declared as an attacker: swap the boards."
 fn swapper() -> Script {
     Script {
         triggers: vec![
@@ -484,7 +453,6 @@ fn swapper() -> Script {
     }
 }
 
-/// The attacker id a trap stored in its question's data.
 fn stored_attacker_id(ctx: &EffectContext<'_>) -> String {
     match ctx.data.get("attackerId") {
         Some(Value::String(id)) => id.clone(),
@@ -494,7 +462,6 @@ fn stored_attacker_id(ctx: &EffectContext<'_>) -> String {
 }
 
 /// A face-down trap in the §4.2 step-4 window that asks its controller about the opponent's declared
-/// attack, and whose answer then does `then` to the attacker — so the window pauses, and step 5 is
 /// owed to the answer's action (R113).
 fn asking_window_trap(s: &mut Scenario, id: &str, then: &'static str) {
     let prompt = format!("{id}: a question");
@@ -553,7 +520,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r174_r83_an_attacker_a_trap_in_the_window_destroyed_does_not_attack_with_the_reborn_body_that_came_back()
      {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-vaporize-reborn",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "health": 20, "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -571,7 +537,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         ));
         let body = must(s.unit("p1", 1), "the Reborn body");
         assert_eq!(body.id, sorcerer.id);
-        // The attack was the stay that died; the body declared nothing and deals nothing.
         s.expect_health("p2", 20);
         assert_eq!(count(&s, GameEventType::Damage), 0);
     }
@@ -580,7 +545,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r174_r83_an_attack_whose_target_a_trap_in_the_window_destroyed_does_not_land_on_the_targets_reborn_body()
      {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-shatter-reborn",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "field": [{ "def": RIGHT_HOUSE, "lane": 2 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -597,8 +561,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         ));
         let body = must(s.unit("p2", 2), "the Reborn body");
         assert_eq!(body.id, defender.id);
-        // The body is a new arrival with a fresh Divine Shield; the attack that named the old stay is
-        // over, so nothing strikes it and it strikes nothing back.
         assert_eq!(count(&s, GameEventType::DivineShieldLost), 0);
         assert_eq!(s.card(&sorcerer).damage, 0);
         assert!(keyword_kinds(&s, &body).contains(&"Divine Shield".to_string()));
@@ -608,7 +570,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r173_r171_an_attacker_a_trap_in_the_window_stole_does_not_go_on_to_hit_its_new_controllers_hero_s4_2_step_2()
      {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-turncoat",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "health": 20, "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -623,7 +584,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         // p2's own unit does not attack p2's hero: an attack is made on an enemy (§4.2 step 2).
         s.expect_health("p2", 20);
         // The attack is over, but the attacker changed sides: R171 gives it a fresh exertion for p2,
-        // and nothing spends it again as the attack ends.
         assert_eq!(
             exertion_json(&s, &sorcerer),
             json!({ "attacked": false, "switched": false })
@@ -634,7 +594,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r173_r171_an_attack_whose_target_a_trap_in_the_window_moved_to_the_attackers_side_does_not_hit_it_s4_2_step_2()
      {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-defector",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "field": [{ "def": VANILLA, "lane": 3 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -650,7 +609,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
             event,
             GameEvent::ControlChanged { instance_id, controller: PlayerId::P1, .. } if *instance_id == vanilla.id
         )));
-        // Both are p1's now: no friendly combat, so neither strikes the other.
         assert_eq!(count(&s, GameEventType::Damage), 0);
         s.expect_in_zone(&vanilla, "field");
         assert_eq!(s.card(&vanilla).controller, PlayerId::P1);
@@ -668,7 +626,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r73_r171_a_board_swap_in_the_window_leaves_the_declaring_players_attacker_on_the_other_side_no_combat()
      {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-swapper",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "field": [{ "def": VANILLA, "lane": 3 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -688,7 +645,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
             event,
             GameEvent::ControlChanged { instance_id, controller: PlayerId::P1, .. } if *instance_id == vanilla.id
         )));
-        // p1 declared with a unit it no longer controls: that attack is over, and neither unit strikes.
         assert_eq!(count(&s, GameEventType::Damage), 0);
         s.expect_in_zone(&vanilla, "field");
         // Both changed sides, so both have a fresh exertion for their new controller (R171).
@@ -720,7 +676,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         );
         s.answer(json!("ok"));
 
-        // The window's trap took Timmy: it is p2's now, and the attack p1 declared at p2's hero would be
         // p2's own unit hitting p2's own hero. Every attack is made on an enemy (§4.2 step 2, R173).
         assert_eq!(s.card(&timmy).controller, PlayerId::P2);
         s.expect_health("p2", 30);
@@ -740,7 +695,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         s.attack(&defender, "hero");
         s.answer(json!("ok"));
 
-        // The declared attacker died in the window and came back through Reborn: a new arrival, sick
         // this turn (R83), and not the stay that declared the attack (R174). Nothing hits p2's hero.
         assert_eq!(s.card(&defender).reborn_spent, Some(true));
         s.expect_health("p2", 30);
@@ -749,11 +703,8 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     #[test]
     fn r220_r44_r99_my_pawn_does_not_fire_on_a_declaration_whose_attacker_an_earlier_trap_in_the_window_destroyed()
      {
-        // p2's fixture trap in lane 1 destroys p1's attacking Twisted Sorcerer before My Pawn in lane 2
         // is offered the declaration (R68). The attacker is in its graveyard: no attack is left to be
-        // lethal, so My Pawn stays armed and p1 keeps its turn.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-vaporize-pawn",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -788,11 +739,7 @@ mod r176_the_hero_my_pawn_projects_is_the_one_the_combat_leaves {
     #[test]
     fn r176_a_trample_swing_the_defenders_lifesteal_strike_back_outheals_in_the_same_combat_is_not_lethal_s4_3_s4_4_step_8()
      {
-        // p1's 5/5 Twisted Sorcerer with Trample attacks p2's Jilliax (3/2, Lifesteal, Taunt; its Divine
-        // Shield spent) with p2 at 3. Trample sends 3 through, and Jilliax's strike back heals p2 for 3
-        // in the same combat, so the check after it finds p2 at 3: the attack would not be lethal.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-pawn-lifesteal",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -817,10 +764,8 @@ mod r176_the_hero_my_pawn_projects_is_the_one_the_combat_leaves {
     }
 }
 
-// The ordinary triggers on a declaration meet the board as it stood when the attack was declared
 // (R212), whatever a trap in the window did to it since.
 
-/// A fixture unit with a face of its own: a transient def and its script in the registry.
 fn fixture_unit(s: &mut Scenario, id: &str, script: Script, stats: AttackHealth) {
     let face = json!({ "attack": stats.attack, "health": stats.health, "keywords": [], "text": id });
     s.state_mut()
@@ -829,7 +774,6 @@ fn fixture_unit(s: &mut Scenario, id: &str, script: Script, stats: AttackHealth)
     register_fixture_script(id, script);
 }
 
-/// A fixture unit of `player`'s in Attack Position in a unit lane.
 fn place_unit(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> CardInstance {
     let state = s.state_mut();
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
@@ -846,7 +790,6 @@ fn place_unit(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> Ca
     live.clone()
 }
 
-/// "Whenever a unit is declared as an attacker (not forced): you draw a card." A unit, not a trap.
 fn watcher() -> Script {
     Script {
         triggers: vec![
@@ -861,7 +804,6 @@ fn watcher() -> Script {
     }
 }
 
-/// A trap: "When a unit is declared as an attacker (not forced): summon a Watcher."
 fn caller() -> Script {
     Script {
         triggers: vec![
@@ -883,10 +825,8 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
     #[test]
     fn r212_r171_a_unit_a_trap_in_the_window_stole_answers_the_declaration_for_the_player_who_controlled_it_then_s10_3()
      {
-        // p1's Sorcerer attacks p2's Watcher. p1's own trap in the window steals the Watcher, so the
         // attack is over (R220). The Watcher's "whenever a unit attacks, you draw" answers a declaration
         // made while p2 controlled it: p2 draws, not p1 (R212's "a card whose controller has changed
-        // since answers for the one it had").
         let mut s = setup(json!({
             "seed": "edge-r7-watcher-stolen",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -924,10 +864,7 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
     #[test]
     fn r212_r174_a_unit_a_trap_in_the_window_summoned_does_not_answer_the_declaration_made_before_it_arrived_s10_3()
      {
-        // p1's Sorcerer attacks p2's hero. p2's trap in the window summons a Watcher for p2. The
-        // Watcher was not on the field when the attack was declared, so it draws nothing for it.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r7-watcher-arrives",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -951,24 +888,16 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
         );
         assert_eq!(count(&s, GameEventType::Drawn), 0);
         assert_eq!(s.hand("p2").len(), p2_hand);
-        // The attack itself went through.
         s.expect_health("p2", 25);
     }
 }
-
-// The strike back's Trample split, and the window's own chain before step 5
 
 /// R176, R1750000: a Lifesteal strike back heals all it deals, a strike back never trampling
 mod r176_a_lifesteal_strike_back_heals_all_it_deals_it_never_tramples {
     use super::*;
 
-    /// p1's Bigot (set to its old 6/1, Trample) attacks p2's Jilliax (3/2, Taunt, Lifesteal, Trample,
-    /// shield spent) with p1's hero behind Going Long (Armor 2) and p2 at `p2_health`. The swing sends
-    /// 6 - 2 = 4 through. Jilliax's 3 into a 1-health Bigot all lands on it, so it heals p2 for 3 and
-    /// none of it tramples on to p1's hero, where Going Long's Armor would have reported it.
     fn bigot_swings_at_jilliax(seed: &str, p2_health: i32) -> Scenario {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": seed,
             "p1": {
                 "field": [{ "def": BIGOT, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
@@ -997,13 +926,11 @@ mod r176_a_lifesteal_strike_back_heals_all_it_deals_it_never_tramples {
     #[test]
     fn r176_r1750000_a_defenders_strike_back_never_tramples_so_lifesteal_heals_the_full_strike_and_the_swing_is_not_lethal_s4_4_steps_5_8_9()
      {
-        // p2 ends at 3 - 4 + 3 = 2: not lethal, so My Pawn does not cancel.
         let mut s = bigot_swings_at_jilliax("cw8-pawn-trample-strikeback", 3);
 
         assert_eq!(count(&s, GameEventType::AttackCancelled), 0);
         assert!(s.state().result.is_none());
         s.expect_health("p2", 2);
-        // The strike back's 3 landed whole on Bigot, and no instance of it went to p1's hero.
         assert_eq!(count(&s, GameEventType::DamageAbsorbed), 0);
         s.expect_health("p1", 30);
     }
@@ -1011,7 +938,6 @@ mod r176_a_lifesteal_strike_back_heals_all_it_deals_it_never_tramples {
     #[test]
     fn r176_r1750000_the_full_strike_heals_no_more_than_it_deals_so_one_health_less_is_lethal_s4_4_steps_5_8_9()
      {
-        // p2 at 1 would end at 1 - 4 + 3 = 0: lethal, so My Pawn cancels the attack.
         let mut s = bigot_swings_at_jilliax("cw8-pawn-trample-strikeback-lethal", 1);
 
         assert_eq!(count(&s, GameEventType::AttackCancelled), 1);
@@ -1020,7 +946,6 @@ mod r176_a_lifesteal_strike_back_heals_all_it_deals_it_never_tramples {
     }
 }
 
-/// "When a unit is declared as an attacker (not forced): deal 1 damage to it."
 fn prick() -> Script {
     Script {
         triggers: vec![
@@ -1041,7 +966,6 @@ fn prick() -> Script {
     }
 }
 
-/// "When an enemy unit takes damage: destroy it."
 fn snap() -> Script {
     Script {
         triggers: vec![
@@ -1113,12 +1037,9 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
     #[test]
     fn r220_a_trap_answering_the_window_traps_hit_on_the_attacker_fires_before_step_5_so_the_destroyed_attacker_never_swings_s10_3_s4_2_step_4()
      {
-        // p1's Twisted Sorcerer attacks p2's hero. p2's first trap answers the declaration by dealing
-        // the attacker 1 damage; p2's second trap answers that damage by destroying the unit. Traps are
         // responses that fire immediately (§10.3), and both resolve inside step 4's window, before any
         // damage of the attack (§4.2 step 4), so the attacker is gone when step 5 comes.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "cw8-window-chain",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -1138,11 +1059,8 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
     #[test]
     fn r220_r113_r122_after_a_window_traps_question_a_trap_answering_its_hit_on_the_attacker_still_fires_before_step_5_s10_3()
      {
-        // The same two traps, but the first asks p2 a question before it deals the attacker 1 damage, so
         // the window pauses and step 5 is owed to the answer (R113). The answer finishes the window: the
-        // second trap is a response to the hit and resolves before the combat the declaration still owes.
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "cw8-window-chain-asked",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },

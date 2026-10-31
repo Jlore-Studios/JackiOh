@@ -18,7 +18,6 @@ pub const ID: &str = "classic-030";
 fn recycle(discounts: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // The graveyard as the Spell begins to resolve, read once for both halves.
             let shuffled: Vec<String> = zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Graveyard)
                 .iter()
                 .map(|card| card.id.clone())
@@ -32,12 +31,9 @@ fn recycle(discounts: bool) -> Script {
                 }));
             }
             if discounts {
-                // A card's declared numbers do not move while its Spell resolves, so the discount is
-                // read here, where the context is in hand.
                 let discount = param(&*ctx, "discount");
                 let shuffled = shuffled.clone();
                 effects.push(for_each_card(ForEachCardArgs {
-                    // The cards that went in: the graveyard's, now in the library.
                     cards: Arc::new(move |c| {
                         zone_cards(&*c.state, c.controller, OffFieldZone::Library)
                             .iter()
@@ -222,7 +218,6 @@ mod tests {
                         .count(),
                     0
                 );
-                // One card went in (60), then the draw took one out.
                 assert_eq!(s.pile(P1, "library").len(), (LIBRARY_CAP - 1) as usize);
             }
 

@@ -18,13 +18,11 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-013";
 
 pub fn script() -> CardScripts {
-    // "After this attacks, draw {draw}."
     let base = Script {
         after_attack: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
         ..Script::default()
     };
 
-    // "After this attacks, Recruit {recruits|card|cards}.": one top-down scan per recruit.
     let radiant = Script {
         after_attack: Some(hook(|ctx| {
             (0..param(&*ctx, "recruits"))
@@ -39,7 +37,6 @@ pub fn script() -> CardScripts {
 // C #13 Boots on the Ground — SPEC §8.6 row 13, BUILD M9 Classic row C 13: draws 1 after each combat it
 // attacked in and survived, forced ones included (R2285001); dying in it or defending draws nothing.
 // Radiant 4/2: Recruits instead, a recruited trap landing face-down (R33); numbers via `param()` (R386).
-// Forced attacks come from #9 Moths to the Flame (start of turn: every enemy Unit attacks this).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,7 +59,6 @@ mod tests {
     const A: &str = "core-020";
     const B: &str = "core-001";
 
-    /// Lanes 1–5, `None` for an empty zone.
     fn unit_defs(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         (1..=5).map(|lane| s.unit(player, lane).map(|card| card.def_id)).collect()
     }

@@ -34,7 +34,6 @@ pub fn script() -> CardScripts {
 }
 
 // C #85 King Wagtoggle (SPEC §8.6 row 85; BUILD M9 row C 85). (4) Unit, Legendary, 5/5 → 10/10: Cry:
-// swap decks with your opponent. Radiant: then Recruit {recruits} (1, ↑).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -72,7 +71,6 @@ mod tests {
         s.pile(player, "library").into_iter().map(|card| card.id).collect()
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -90,7 +88,6 @@ mod tests {
             assert_eq!(library_ids(&s, P2), mine);
             assert!(s.pile(P1, "library").iter().all(|card| card.owner == P1));
             assert!(s.pile(P2, "library").iter().all(|card| card.owner == P2));
-            // No event carries a position: the swap is one `swapped`.
             let swaps: Vec<Value> = s
                 .last_events()
                 .iter()
@@ -146,7 +143,6 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 

@@ -17,10 +17,8 @@ use jackioh_engine::effects::{ForEachCardArgs, choose_target, for_each_card, ste
 
 pub const ID: &str = "classic-040";
 
-/// The Radiant pick's resume step.
 const STEAL_STEP: &str = "steal";
 
-/// The permanents `player`'s opponent controls: the tops of their unit piles, then their backrow.
 fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let enemy = opponent_of(player);
     let backrow: Vec<CardInstance> = slots_of(enemy, Row::Backrow)
@@ -36,8 +34,6 @@ fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     permanents
 }
 
-/// "If your opponent controls {threshold} or more permanents": the one test the Cry and the glow make.
-/// The Cry's and the glow's contexts are different types, so the caller hands over the three readings.
 fn enough_permanents(state: &GameState, controller: PlayerId, threshold: i32) -> bool {
     enemy_permanents(state, controller).len() as i32 >= threshold
 }
@@ -100,9 +96,6 @@ pub fn script() -> CardScripts {
 // random (R60), placed per R15, an entry (R171); radiant 6/6: you pick, a face-down option carrying only
 // its id (R177); a stolen face-down trap is read by you (R33); threshold reads through `param()` (R386).
 // The `conditionMet` proofs (R195) are in `../condition-active.test.ts`, with the other cards'.
-// The face-down traps used below never fire during these plays: My Pawn answers only a lethal attack,
-// Bread and Butter and Intern Stimmy the end of a turn, and Unlicensed Experimentation a permanent of a
-// type its controller controls (p2 controls no Unit when they hold only traps).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -121,7 +114,6 @@ mod tests {
 
     use crate::js;
 
-    /// The four traps, each face-down.
     fn face_down_traps() -> Value {
         Value::Array([PAWN, BREAD, STIMMY, UNLICENSED].iter().map(|d| json!({ "def": d, "faceUp": false })).collect())
     }
@@ -384,7 +376,6 @@ mod tests {
 
                 s.play(TECH, json!({ "zone": 5 }));
 
-                // An absent prompt serializes as `null`.
                 let prompt = js(&s.view(PlayerId::P1).pending).to_string();
                 assert_ne!(prompt, "null");
                 for trap in [PAWN, BREAD, STIMMY, UNLICENSED] {
@@ -458,7 +449,6 @@ mod tests {
     }
 
     /// R1081000: a Unit standing in the enemy backrow is one permanent, counted once: three permanents
-    /// are not the four the Cry needs.
     #[test]
     fn r1081000_a_unit_standing_in_the_backrow_counts_once() {
         crate::register_all();

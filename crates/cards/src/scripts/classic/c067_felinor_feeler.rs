@@ -35,14 +35,12 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 4/8 and its added Rush are catalog data.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
 }
 
 // C #67 Felinor Feeler (SPEC §8.6 row 67; BUILD M9 row C 67). (1) Unit, Human, Common, 2/4 → 4/8:
-// Pierce; Cry: switch every enemy Unit to Defense Position. Radiant: Pierce, Rush; the same Cry.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -74,7 +72,6 @@ mod tests {
 
     use crate::js;
 
-    /// The card's position as a JSON literal ("ATK" | "DEF").
     fn position(s: &Scenario, card: &CardInstance) -> Value {
         js(&s.stats(card).position)
     }
@@ -147,7 +144,6 @@ mod tests {
                     "p2": with_spare(json!({ "field": [ARMORED] })),
                 }));
                 s.attack(FEELER, ARMORED);
-                // 2 attack into Armor 7: Pierce lands all 2.
                 assert_eq!(s.card(ARMORED).damage, 2);
             }
 
@@ -222,7 +218,6 @@ mod tests {
                 assert_eq!(position(&s, &s.unit_at(P2, 2)), "ATK");
                 let foe = s.unit_at(P2, 1);
                 s.attack(FEELER, &foe);
-                // 4 into the Vanilla's Defense Armor 1: Pierce lands all 4.
                 s.expect_in_zone(&foe, "graveyard");
                 s.expect_refused(|s| s.attack(FEELER, "hero"));
             }

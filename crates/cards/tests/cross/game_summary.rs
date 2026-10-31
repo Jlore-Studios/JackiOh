@@ -1,29 +1,13 @@
-//! SPEC §9.11, R376: the engine's `summarize_game` over real cards; tests/rules/game_summary.rs in
-//! the engine proves it with fixtures. These games are played with SPEC §10.7's policy, as the fuzz
-//! gate plays them, and checked against oracles it does not use:
-//!
-//!  - the opening hands are the dealt cards the state holds once the mulligans resolve (p1's less its
-//!    first turn's draw and any card that turn's start added to a hand with no draw, and with any card
-//!    that turn's start discarded); The Coin, Created (R943), is in none of them but is the second
-//!    seat's Created card (R2089000);
-//!  - the plays are the hand cards the logged `play` actions named, less those countered in their
-//!    announce window (§10.5 step 3a, R448), each as the card it resolves as after step 3's
-//!    replacement (C #23 Devil's Pact, R449), with the face it was played on (R1147000); a dealt
-//!    card's play is in `played`, a Created card's in `createdPlayed` (R2089000), and a replacement is
-//!    Created; #96 My Pawn plays out a turn inside an attack's action, and M+ #18 Cognitive
-//!    Offloading's autopilot the rest of its caster's turn inside the action that cast it (R1183002),
-//!    with no `play` logged, so such a game may hold more plays than the log names, never fewer;
-//!  - a cast on its draw (#21 Hinder, #90.1 CN-Virus, §2.4) is no play, and the draws are every dealt
-//!    card drawn from the first turn on, less those burned on a full hand (R4) or cast on their draw.
+//! SPEC §9.11, R376: engine `summarize_game` over real cards (SPEC §10.7 policy, §10.5, §2.4).
+//! Oracles for opening hands (The Coin, R943, R2089000), plays (R448, R449, R1147000, R1183002,
+//! #23, #96, #18), and draws/burns (R4, #21, #90).
 
 use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::catalog::{deckable, pair_key};
 use jackioh_engine::testkit::*;
 
 /// Re-pinned for the Stinkyscape release (#1884): the decks are dealt from every set that ships, so
-/// the bigger pool moved what the forty games held, and none of them replaced a play any more; sixty
 /// games held every kind of play the test counts. Re-pinned again for #2250 (Resources in the hand):
-/// the first eighty games replace no play, and a hundred hold every kind.
 const GAMES: i32 = 100;
 const MAX_ACTIONS: usize = 3000;
 const MY_PAWN: &str = "core-096";
@@ -39,11 +23,8 @@ fn pool() -> Vec<String> {
     ids
 }
 
-/// The two decks a game deals, `size` each, off a shuffle of `pool()`: each takes the cards of the
-/// shuffle in order, the first deck first, passing over a card whose Core-or-snapshot pair it already
 /// holds (§2.6 L3, R2195000), so a shuffle with no pair in it deals its first and second `size` as it
 /// always did. Re-pinned for the Training Grounds release (#2204): its snapshots #41–#60 ship beside
-/// the Core cards they copy, and `create_game` refuses a deck holding both.
 fn deal(shuffled: &[String], size: usize) -> (Vec<String>, Vec<String>) {
     fn take(rest: &mut Vec<String>, size: usize) -> Vec<String> {
         let mut deck: Vec<String> = Vec::new();
@@ -83,7 +64,6 @@ fn sorted(ids: &[String]) -> Vec<String> {
     out
 }
 
-/// A `drawn` event, as the cards a step drew wait for their fate.
 struct Drawn {
     player: PlayerId,
     instance_id: String,
@@ -92,14 +72,12 @@ struct Drawn {
     created: bool,
 }
 
-/// What `draws_kept` read off one step.
 struct DrawsKept {
     kept: PerPlayer<Vec<String>>,
     burns: i32,
     casts: i32,
 }
 
-/// The instance id of the events that decide a drawn card's fate.
 fn fate_instance_id(event: &GameEvent) -> Option<&str> {
     match event {
         GameEvent::AddedToHand { instance_id, .. }
@@ -111,10 +89,8 @@ fn fate_instance_id(event: &GameEvent) -> Option<&str> {
     }
 }
 
-/// The cards a step drew into each hand from event `from` on, by what became of each `drawn` card:
 /// an `addedToHand` names it (it reached the hand), a `burned` does (R4), or it was cast on its draw
 /// (§2.4: its `cardPlayed`, or the `countered` or `transformed` that took its place, R448, R449). A
-/// cast's choices are asked before its announce, so a draw a prompt holds waits in `waiting`. A
 /// Created card reaching the hand is kept by no seat (R2089000).
 fn draws_kept(
     events: &[GameEvent],
@@ -158,7 +134,6 @@ fn draws_kept(
     DrawsKept { kept, burns, casts }
 }
 
-/// Whether `part` is `whole` with some entries left out, in order.
 fn subsequence(part: &[String], whole: &[String]) -> bool {
     let mut at = 0;
     for id in whole {
@@ -172,7 +147,6 @@ fn subsequence(part: &[String], whole: &[String]) -> bool {
 /// A play is open while its card waits in the resolving zone (§10.5), which a prompt can hold past
 /// its action (R449's replacement's choices, C #4 Palantir's announce window). Before its announce,
 /// a `transformed` naming it is step 3's replacement (R449), the card the play resolves as; after
-/// it, a `countered` naming it takes the play back.
 struct Play {
     id: String,
     def_id: String,
@@ -184,7 +158,6 @@ struct Play {
     announced: bool,
 }
 
-/// The first open play, p1's then p2's, whose card is `instance_id`: its seat and its index.
 fn open_play(plays: &PerPlayer<Vec<Play>>, instance_id: &str) -> Option<(PlayerId, usize)> {
     PLAYER_IDS.into_iter().find_map(|seat| {
         plays[seat]
@@ -262,13 +235,11 @@ mod summarize_game_over_real_cards_s9_11 {
                 }
                 let events: &[GameEvent] = &result.events;
                 // R943: whether a card is Created, as the step left it or found it. A card in neither
-                // was made and gone within the step: the deal put every dealt card in the state.
                 let created = |id: &str| {
                     find_instance(&result.state, id)
                         .or_else(|| find_instance(&state, id))
                         .is_none_or(|card| card.created == Some(true))
                 };
-                // The cards this step added to a hand, which the summary follows into that hand too; a
                 // card a Counter sent there is its countering player's cast, never a play (R831001).
                 let stolen_here: Vec<&str> = events
                     .iter()
@@ -278,7 +249,6 @@ mod summarize_game_over_real_cards_s9_11 {
                     })
                     .collect();
                 let mut added_here: Vec<&str> = Vec::new();
-                // The Radiant changes the step has made so far, for a card no play holds yet: one a hand
                 // trigger casts later in the step is played on the face it has by then (R1147000).
                 let mut radiant_here: IndexMap<String, bool> = IndexMap::new();
                 for event in events {
@@ -340,7 +310,6 @@ mod summarize_game_over_real_cards_s9_11 {
                             {
                                 plays[seat][at].placed = true;
                             // R2179002: a card cast on its draw is no play, though it stood in the hand as the
-                            // step began: a Trade shuffles it in and draws it straight back (summary-cards-28's
                             // p1 CN in a Bottle, since issue #2280's rules change took that game down a new path).
                             } else if *on_draw != Some(true)
                                 && let Some(card) = state.players[*caster]
@@ -355,13 +324,9 @@ mod summarize_game_over_real_cards_s9_11 {
                                     })
                             {
                                 // Re-pinned for #1705 (25-card decks): M+ #17 Dogpile's hand trigger casts
-                                // it from the hand it stood in as the step began, counted as a play
                                 // (R1180005), with no `play` logged; summary-cards-35's p2 holds one.
                                 // Re-pinned for the Training Grounds release (#2204): summary-cards-45's
-                                // p2 draws its Dogpile in the very step that casts it, so a card the step
                                 // added to the hand counts the same way. Re-pinned for R2368000's
-                                // three-card opening hand: summary-cards-54's p1 casts a Created Dogpile
-                                // the same step made Radiant, so it is played Radiant.
                                 plays[*caster].push(Play {
                                     id: card.id.clone(),
                                     def_id: def_id.clone(),
@@ -373,14 +338,11 @@ mod summarize_game_over_real_cards_s9_11 {
                                 });
                             }
                         }
-                        // A play whose own cost ends the game (a hero paying with health it does not have)
-                        // is announced and never played: the game is over before its `cardPlayed`.
                         GameEvent::GameOver { .. } => {
                             for seat in PLAYER_IDS {
                                 plays[seat].retain(|play| !(play.open && !play.placed));
                             }
                         }
-                        // A Death the play's own Tribute set off can discard the hand the card still stands in
                         // (§10.5 step 2), before any announce: the card was never played.
                         GameEvent::Discarded { instance_id, .. } => {
                             if let Some((seat, at)) = open_play(&plays, instance_id)
@@ -397,7 +359,6 @@ mod summarize_game_over_real_cards_s9_11 {
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 && plays[seat][at].announced
                             {
-                                // Takes the last entry when the play is the other seat's.
                                 let list = &mut plays[*countered];
                                 if seat == *countered {
                                     list.remove(at);
@@ -430,7 +391,6 @@ mod summarize_game_over_real_cards_s9_11 {
                 }) {
                     pawn = true;
                 }
-                // A cast on its draw is a `cardPlayed` naming a drawn card before any hand took it: its announce
                 // comes between (R448), and its choices may be asked first, in a prompt of their own (R70).
                 for event in events {
                     match event {
@@ -449,9 +409,6 @@ mod summarize_game_over_real_cards_s9_11 {
                         _ => {}
                     }
                 }
-                // The draws of the game start at the first `turnStarted`, in the step that resolves the
-                // mulligans. When that step leaves p1 in its first turn, p2's hand is its opening hand, and
-                // p1's is its opening hand plus turn 1's draws.
                 let from = if begun {
                     Some(0)
                 } else {
@@ -468,7 +425,6 @@ mod summarize_game_over_real_cards_s9_11 {
                     {
                         let mut p1 = hand(&result.state, PlayerId::P1);
                         for card in &step.kept.p1 {
-                            // A card not in the hand takes the last entry.
                             let at = p1
                                 .iter()
                                 .rposition(|id| id == card)
@@ -477,9 +433,7 @@ mod summarize_game_over_real_cards_s9_11 {
                                 p1.remove(at);
                             }
                         }
-                        // A card turn 1 took from a hand before the step ended was in the opening hand
                         // all the same: #21 Hinder, cast on its draw, discards one (§2.4). A discarded
-                        // card the step did not draw goes back.
                         let mut p2 = hand(&result.state, PlayerId::P2);
                         let drawn_here: Vec<&String> = events[from..]
                             .iter()
@@ -504,7 +458,6 @@ mod summarize_game_over_real_cards_s9_11 {
                             }
                         }
                         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): a card turn 1 added to a hand
-                        // with no draw, and that the hand still holds, was in no opening hand either: the
                         // bigger pool deals summary-cards-36's p1 M #37 CN in a Bottle as turn 1's draw,
                         // which, cast on its draw (§2.4), adds a random card.
                         for event in &events[from..] {
@@ -570,7 +523,6 @@ mod summarize_game_over_real_cards_s9_11 {
                 assert_eq!(sorted(&summary.seats.p2.opening), sorted(&opening.p2), "{seed}");
             }
             // §2.1, R244: The Coin goes to the seat going second, after its mulligan. R2089000: it is
-            // Created, so it is in no opening hand, and it is that seat's Created card, used or not.
             for player in PLAYER_IDS {
                 assert!(
                     !summary.seats[player].opening.iter().any(|id| id == COIN_DEF_ID),
@@ -645,8 +597,6 @@ mod summarize_game_over_real_cards_s9_11 {
             casts += cast_ids.len();
         }
 
-        // The games cast cards on their draw, after the opening hands too, burned draws on a full hand,
-        // countered plays and replaced others, and most of them were held to the exact match of plays.
         assert!(casts > 0);
         assert!(countered_plays > 0);
         assert!(replaced_plays > 0);
@@ -692,8 +642,6 @@ mod r831001_a_stolen_cast_is_no_play {
         act(&state, log, json!({ "type": "endTurn", "playerId": player }))
     }
 
-    /// p1 plays the Book on its second turn into p2's Palantir, and concedes; the game's record, or
-    /// `None` when the seed does not deal the two cards in time.
     fn game(seed: &str, decks: &(Vec<String>, Vec<String>)) -> Option<(Vec<Action>, String)> {
         let mut state = begin_game(&create_game(&CreateGameOptions {
             seed: seed.to_string(),
@@ -716,7 +664,6 @@ mod r831001_a_stolen_cast_is_no_play {
             );
         }
         state = end_turn(state, &mut log, PlayerId::P1);
-        // p2's turn: The Coin, then Palantir with the 2 mana.
         let coin = first_of(&state, PlayerId::P2, COIN_DEF_ID)?;
         state = act(
             &state,
@@ -736,7 +683,6 @@ mod r831001_a_stolen_cast_is_no_play {
             &mut log,
             json!({ "type": "play", "instanceId": book, "playerId": "p1" }),
         );
-        // Countered, stolen and cast by p2: it ends in p2's graveyard.
         assert!(
             state.players.p2.graveyard.iter().any(|card| card.id == book),
             "{seed}"
@@ -749,7 +695,6 @@ mod r831001_a_stolen_cast_is_no_play {
     #[test]
     fn r376_r831001_the_spell_palantir_steals_and_casts_is_neither_seat_s_play() {
         register_all();
-        // Both decks are the Book or Palantir and nineteen Units of (3) or more, which neither seat plays.
         let units: Vec<String> = pool()
             .into_iter()
             .filter(|id| {
@@ -801,9 +746,6 @@ mod r1256000_per_seat_counts {
     const VANILLA: &str = "core-008"; // (1) 4/4 Unit with no text.
     const GLOWY: &str = "core-026"; // (3) Spell: make a card in your hand Radiant.
 
-    /// Twenty distinct deckable Core/Classic Units, leaving out anything whose text would change
-    /// depletion (a cast on its draw, Quickdraw): nothing is ever played, so the libraries drain
-    /// one card a turn until the heroes fatigue out.
     fn fatigue_pool() -> Vec<String> {
         let mut ids: Vec<String> = CATALOG
             .iter()
@@ -885,7 +827,6 @@ mod r1256000_per_seat_counts {
             .map(|card| card.id.clone())
     }
 
-    /// The `play` offer for a hand card, with its zone and price as offered.
     fn play_offer(state: &GameState, player: PlayerId, instance_id: &str) -> Option<ActionBody> {
         legal_actions(state, player)
             .into_iter()
@@ -936,7 +877,6 @@ mod r1256000_per_seat_counts {
         }
         let end = state.result.expect("an endTurn-only game fatigues out");
         // p1 opens on three cards and p2 on four (R2368000), so p1's library holds one card more and p2
-        // takes the eighth hit (1+…+8 = 36 at 30 HP) first, on its 29th turn, before p1's 30th.
         assert_eq!(end.winner, Winner::P1);
         assert_eq!(end.reason, GameOverReason::HeroDeath);
 
@@ -953,7 +893,6 @@ mod r1256000_per_seat_counts {
         }
     }
 
-    /// p1 sets the Sheepish and p2 plays a Unit into it; the set and the firing count for p1.
     fn trap_game(seed: &str, decks: &(Vec<String>, Vec<String>)) -> Option<Vec<Action>> {
         let mut state = begin_game(&create_game(&CreateGameOptions {
             seed: seed.to_string(),
@@ -1003,7 +942,6 @@ mod r1256000_per_seat_counts {
         };
 
         let summary = summarize(seed, decks, log);
-        // p2's Unit resolved into p1's set trap, which fired for its controller.
         assert_eq!(summary.seats.p1.fatigue_draws, Some(0));
         assert_eq!(summary.seats.p1.fatigue_damage, Some(0));
         assert_eq!(summary.seats.p1.traps_set, Some(1));
@@ -1013,7 +951,6 @@ mod r1256000_per_seat_counts {
         zeros(&summary.seats.p2);
     }
 
-    /// p1 plays the Vanilla and switches its position; the switch counts for p1.
     fn switch_game(seed: &str, decks: &(Vec<String>, Vec<String>)) -> Option<Vec<Action>> {
         let mut state = begin_game(&create_game(&CreateGameOptions {
             seed: seed.to_string(),
@@ -1070,7 +1007,6 @@ mod r1256000_per_seat_counts {
         zeros(&summary.seats.p2);
     }
 
-    /// p1 plays Glowy Jelly Bean on another hand card; the upgrade counts for p1.
     fn glowy_game(seed: &str, decks: &(Vec<String>, Vec<String>)) -> Option<Vec<Action>> {
         let mut state = begin_game(&create_game(&CreateGameOptions {
             seed: seed.to_string(),
@@ -1085,7 +1021,6 @@ mod r1256000_per_seat_counts {
         state = end_turn(state, &mut log, PlayerId::P2);
         state = end_turn(state, &mut log, PlayerId::P1);
         state = end_turn(state, &mut log, PlayerId::P2);
-        // p1's third turn holds the (3) the Bean costs; its script takes the target declared.
         let glowy = hand_id(&state, PlayerId::P1, GLOWY)?;
         let target = state.players[PlayerId::P1]
             .hand
@@ -1132,8 +1067,6 @@ mod r1256000_per_seat_counts {
 }
 
 /// R2089000: the Created cards (R943) a game's record credits to the seat that made them, read off
-/// `scenario()` steps through `SummaryReader`, the reader `summarize_game` folds a log with, and off
-/// recorded games by `summarize_game` itself.
 mod r2089000_created_cards {
     use super::*;
 
@@ -1151,7 +1084,6 @@ mod r2089000_created_cards {
     const FATE: &str = "meditative-026"; // (4) Field Spell, end of turn: a Mana Well into every empty backrow.
     const WELL: &str = "core-006";
 
-    /// One scenario step, read by the reader as `summarize_game` reads a logged action.
     fn step(reader: &mut SummaryReader, s: &mut Scenario, verb: impl FnOnce(&mut Scenario)) {
         let before = s.state().clone();
         let from = s.events().len();
@@ -1190,7 +1122,6 @@ mod r2089000_created_cards {
         });
 
         let p1 = reader.seat(P1, vec![TOKEN_MAKER.to_string()]);
-        // The dealt card is a play from the hand; the token it summoned never was in a hand.
         assert_eq!(p1.played, [TOKEN_MAKER]);
         assert_eq!(p1.created_used, Some(vec![used(RUSH_TOKEN, turn, false)]));
         assert_eq!(p1.created_played, None);
@@ -1210,7 +1141,6 @@ mod r2089000_created_cards {
         step(&mut reader, &mut s, |s| {
             s.play(VANILLA, json!({}));
         });
-        // p1's end of turn adds a Created copy of the Vanilla to its hand, unused through p2's turn.
         step(&mut reader, &mut s, |s| {
             s.end_turn();
         });
@@ -1238,8 +1168,6 @@ mod r2089000_created_cards {
     #[test]
     fn r2089000_a_created_copy_of_a_deck_card_leaves_the_deck_card_s_figures_unchanged() {
         register_all();
-        // p1 holds a dealt Duplicating Felinors and a Radiant Created one, and plays the Created one,
-        // whose Cry summons a Created copy of itself.
         let mut s = scenario(json!({
             "p1": { "hand": [DUPLICATING, { "def": DUPLICATING, "created": true, "radiant": true }] },
         }));
@@ -1259,9 +1187,6 @@ mod r2089000_created_cards {
             Some(&used(DUPLICATING, turn, true))
         );
 
-        // The dealt copy sat in the opening hand (the reader began after the deal) and was never
-        // played, so the deck's card is drawn but not played, whatever the Created ones did: its row
-        // is the row of the same record without the Created lists.
         p1.opening = vec![DUPLICATING.to_string()];
         let record = |p1: SeatSummary| GameRecord {
             id: "r2089000-copy".to_string(),
@@ -1308,7 +1233,6 @@ mod r2089000_created_cards {
     #[test]
     fn r2089000_an_ancient_curse_cast_on_its_draw_is_the_creating_seat_s() {
         register_all();
-        // p2's library is empty, so the Curse Shade-iris shuffles in is its next draw.
         let mut s = scenario(json!({
             "p1": { "hand": [SHADE_IRIS] },
             "p2": { "hand": [VANILLA] },
@@ -1322,7 +1246,6 @@ mod r2089000_created_cards {
             Some(vec![CURSE.to_string()])
         );
         assert_eq!(reader.seat(P2, Vec::new()).created_unused, None);
-        // The record reads the maker off the `shuffledIn`, which no view forwards.
         assert!(s.events().iter().any(|event| matches!(
             event,
             GameEvent::ShuffledIn { player: P2, def_id, creator: Some(P1), .. } if def_id == CURSE
@@ -1366,7 +1289,6 @@ mod r2089000_created_cards {
         step(&mut reader, &mut s, |s| {
             s.play(FATE, json!({}));
         });
-        // p1's end of turn summons a Mana Well into every empty backrow of both sides, each its own
         // side's (R942), and each one p1's Created card, used as it lands.
         step(&mut reader, &mut s, |s| {
             s.end_turn();
@@ -1444,7 +1366,6 @@ mod r2089000_created_cards {
         let p1 = reader.seat(P1, vec![FLOOD.to_string()]);
         assert_eq!(p1.played, [FLOOD]);
         assert_eq!(p1.created_used, Some(vec![used(VANILLA, turn, false)]));
-        // Every play from the hand is kept for the quests, as `played` keeps a dealt card's.
         assert_eq!(cards(&p1.created_played), [VANILLA, VANILLA]);
         assert_eq!(p1.created_unused, None);
     }

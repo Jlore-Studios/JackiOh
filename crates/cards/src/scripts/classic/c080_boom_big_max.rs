@@ -35,16 +35,13 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 16 health and Charge are catalog data, and it keeps Tribute 3.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
 }
 
 // C #80 BOOM! Big Max (SPEC §8.6 row 80; BUILD M9 row C 80). (4) Unit, Legendary, 13/8 → 26/16:
-// Tribute 3, Rush, Trample, Indestructible, Crater; Radiant: Tribute 3, Charge, Trample, Indestructible,
 // Crater. Balance patch 1 set the base attack to 13, so the Radiant 26 doubles it exactly (R275) with no
-// exception left.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -82,7 +79,6 @@ mod tests {
     }
 
     /// R783010: played on `radiant`'s face into zone 4, its Tribute paid by a Timmy and a Sheep, it Locks
-    /// that zone as it arrives, and only that one.
     fn craters(radiant: bool) {
         let mut s = scenario(json!({
             "p1": {
@@ -102,7 +98,6 @@ mod tests {
         )));
     }
 
-    /// The `play` actions `legalActions` offers p1 for BOOM!, as JSON.
     fn boom_plays(s: &Scenario) -> Vec<Value> {
         let boom = s.card(BOOM).id.clone();
         legal_actions(s.state(), P1)
@@ -219,7 +214,6 @@ mod tests {
             s.expect_refused(|s| s.attack(BOOM, "hero"));
             let defender = must(s.unit(P2, 1), "p2's Vanilla").id;
             s.attack(BOOM, defender.as_str());
-            // 13 into a 4/4: 4 to it, 9 to its controller's hero.
             s.expect_health(P2, 21);
             s.expect_stats(BOOM, json!({ "attack": 13, "health": 8 }));
         }

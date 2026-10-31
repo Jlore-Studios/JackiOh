@@ -1,7 +1,6 @@
 //! A permanent's lasting effect lasts while it is on the field (SPEC §5.1, §5.2, R30, R169, R209).
 //! Found by the polish-4 edge-case hunt, rounds 2 and 4 (docs/polish/4-edge-cases.md, lenses L1, L2
 //! and L8); every case here failed before its fix.
-//!
 //! #79 Twinspell's "the next Spell you play gains Echo +1" is a player modifier, which the engine used
 //! to end only by consuming it. So a Twinspell that left the field — bounced by radiant #52, destroyed
 //! by #36 — kept echoing its old controller's next Spell, and one bounced and replayed stacked a
@@ -9,8 +8,7 @@
 //! radiant #49 stole and made Radiant still granted +1. Round 4: the rider was installed by a Cry,
 //! which #79 does not print (R169), so a Twinspell summoned onto the field (§6.2: no Cry) granted
 //! nothing, and neither did Twinspell's text fused by #85 onto the other player's Field Spell.
-//!
-//! Port of `packages/cards/test/lasting-effects.test.ts` (SURFACE §4.1, §8).
+//! Test paths: SURFACE §4.1, §8.
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
@@ -85,13 +83,10 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
         g.play(TWINSPELL, json!({ "zone": 5 }));
         assert_eq!(echo_riders(&g, PlayerId::P1).len(), 1);
 
-        // Backrow ring, rotating right from p1's seat: p1's lane 5 would cross to p2's lane 5, so the
         // radiant face bounces Twinspell to its controller's hand costing 0 instead (§8 #52, R14, R747).
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
         g.expect_in_zone(&twin, "hand");
 
-        // Twinspell is no longer on the field, so "the next Spell you play gains Echo +1" is no longer
-        // anybody's: the rider is gone and Stockpile resolves once (draw 2).
         assert!(echo_riders(&g, PlayerId::P1).is_empty());
         let before = g.hand("p1").len();
         g.play(STOCKPILE, json!({}));
@@ -115,13 +110,11 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
         g.expect_in_zone(&twin, "hand");
 
-        // Replayed (costing 0): standing on the field again, it has the one grant this Twinspell now has.
         g.play(&twin, json!({ "zone": 4 }));
         assert_eq!(echo_riders(&g, PlayerId::P1).len(), 1);
 
         let before = g.hand("p1").len();
         g.play(STOCKPILE, json!({}));
-        // One Twinspell, Echo +1: two resolutions, four cards.
         assert_eq!(stockpile_resolutions(g.last_events()), 2);
         assert_eq!(g.hand("p1").len(), before - 1 + 4);
         g.expect_in_zone(&twin, "graveyard");
@@ -155,7 +148,6 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
         assert_eq!(g.state().active, PlayerId::P1);
         let before = g.hand("p1").len();
         g.play(STOCKPILE, json!({}));
-        // One resolution of "draw 2" (the Stockpile itself left the hand).
         assert_eq!(stockpile_resolutions(g.last_events()), 1);
         assert_eq!(g.hand("p1").len(), before - 1 + 2);
     }
@@ -184,9 +176,7 @@ mod r209_twinspells_grant_follows_its_current_face {
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
 
-        // "Activate: Steal an enemy permanent. Make it Radiant." (Snom Bunny Mind Control steals only a
         // Unit since patch v0.3.12.) Twinspell is p1's now, and Radiant on the field, where §5.2 has its
-        // text be the radiant one from then on: "Echo +2".
         g.activate(
             CHURCH,
             json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }),
@@ -202,7 +192,6 @@ mod r209_twinspells_grant_follows_its_current_face {
                 .any(|modifier| modifier.label == "Next Spell gains Echo +2")
         );
 
-        // Stockpile (draw 2, heal 2) resolves 1 + 2 = 3 times: six cards for the one played.
         let before = g.hand("p1").len();
         g.play(STOCKPILE, json!({}));
         assert_eq!(stockpile_resolutions(g.last_events()), 3);
@@ -237,7 +226,6 @@ mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_fiel
         let cube = g.unit("p1", 1).expect("setup: p1's Cube");
         g.expect_in_zone(&eaten, "graveyard");
 
-        // Hit Job kills the Cube, whose Death summons two copies of the Unit it ate, Twinspell's text
         // and all, into p1's unit row (R41, R64). A summon fires no Cry (§6.2).
         g.play(
             HIT_JOB,
@@ -251,8 +239,6 @@ mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_fiel
         assert_eq!(copies, 2);
         assert_eq!(echo_riders(&g, PlayerId::P1).len(), 2);
 
-        // Each copy standing on p1's side says "the next Spell you play gains Echo +1", and that text is
-        // no Cry: Stockpile gains Echo +2 and resolves three times.
         g.play(STOCKPILE, json!({}));
         assert_eq!(stockpile_resolutions(g.last_events()), 3);
     }
@@ -285,7 +271,6 @@ mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_fiel
         assert_ne!(g.card(&well).def_id, MANA_WELL);
         assert!(echo_riders(&g, PlayerId::P2).is_empty());
 
-        // "The next Spell you play gains Echo +1" now stands on p1's side, and "you" is its controller
         // (§8 Conventions): p1's next Spell, Stockpile, resolves twice.
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);

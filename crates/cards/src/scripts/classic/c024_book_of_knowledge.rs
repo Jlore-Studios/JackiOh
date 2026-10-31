@@ -20,7 +20,6 @@ pub fn script() -> CardScripts {
         cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
         ..Script::default()
     };
-    // The same script: the Radiant face's 6 is its declared `draw`, which `param` reads off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -29,10 +28,7 @@ pub fn script() -> CardScripts {
 // with its own cast-on-draw chain (R58), fatigue from an empty deck, a full hand burning (R317), a
 // draw limit stopping the rest (§2.4); the drawn cards are never named in the opponent's view;
 // radiant: draw 6; its tuned number (draw) reads through `param()` (R386)".
-//
-// The steal case puts C #4 Palantir in the opponent's backrow: the base face steals a (1) Cost Spell
 // with no "you may" (balance patch 1, mandatory) and casts it itself (patch v0.3.10, R831001), so the
-// Book draws its 3 for the opponent and never for you while Palantir stands. (The draw-limit half,
 // B5 E3, is proved in C #4's own test file.)
 #[cfg(test)]
 mod tests {
@@ -47,7 +43,6 @@ mod tests {
     const PALANTIR: &str = "classic-004"; // Field Spell; Aura: Your opponent can't draw more than 1 card each turn.
     const VIRUS: &str = "core-090-1"; // CN-Virus: Cast on draw: take 1 damage.
     const FILLER: &str = "core-005";
-    // Library cards nobody else holds, so the opponent's view can be searched for their ids.
     const A: &str = "core-019";
     const B: &str = "core-011";
     const C: &str = "core-001";
@@ -135,11 +130,9 @@ mod tests {
                 }));
                 let book = s.card(BOOK).clone();
 
-                // The base steal is mandatory (balance patch 1): no prompt opens.
                 s.play(BOOK, json!({}));
                 assert!(s.state().pending.is_none());
                 s.expect_in_zone(PALANTIR, "graveyard");
-                // Cast by its new owner, it ends in their graveyard and draws them 3.
                 let stolen = s.card(book.id.as_str());
                 assert_eq!(stolen.owner, P2);
                 assert_eq!(stolen.zone, Zone::Graveyard { player: P2 });

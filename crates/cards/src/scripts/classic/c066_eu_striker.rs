@@ -73,8 +73,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face differs only in what the engine reads off the catalog (its doubled
-    // stats and Rush).
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -142,7 +140,6 @@ mod tests {
                 assert_eq!(unit_def(&s, P1, 1), Some(VANILLA.to_string()));
                 assert_eq!(unit_id(&s, P1, 2), Some(striker.id.clone()));
                 assert_eq!(summoned(&s, &striker.id).len(), 1);
-                // A summon is no play.
                 assert!(!s.last_events().iter().any(
                     |event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == striker.id)
                 ));
@@ -172,10 +169,8 @@ mod tests {
                 let (Some(first), Some(second)) = (vanillas.first().cloned(), vanillas.get(1).cloned()) else {
                     panic!("setup");
                 };
-                // The first Vanilla's lane Locks; the Striker it summons is no play and takes lane 2, unlocked.
                 s.play(&first, json!({ "zone": 1 }));
                 assert_eq!(unit_id(&s, P1, 2), Some(striker.id.clone()));
-                // Hit Job clears lane 1 (still Locked) and bounces the Striker; the next Unit summons it again.
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": first.id }] }));
                 s.expect_in_zone(&striker, "hand");
                 s.play(&second, json!({ "zone": 4 }));
@@ -257,10 +252,8 @@ mod tests {
                 };
                 s.play(&first, json!({}));
                 s.expect_in_zone(STRIKER, "hand");
-                // A Spell played next is no Unit: it stays in hand.
                 s.play(FILLER, json!({}));
                 s.expect_in_zone(STRIKER, "hand");
-                // The next Unit you play summons it again.
                 s.play(&second, json!({}));
                 s.expect_in_zone(STRIKER, "field");
             }
@@ -335,7 +328,6 @@ mod tests {
                 let mut s = scenario(json!({
                     "p1": { "hand": hand, "field": [STRIKER], "library": [VANILLA, VANILLA] },
                 }));
-                // Stockpile leaves the hand (9 left) and draws 2 (10, then a burn); the return finds the hand full.
                 s.play(STOCKPILE, json!({}));
                 s.expect_in_zone(STRIKER, "graveyard");
             }

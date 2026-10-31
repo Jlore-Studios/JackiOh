@@ -22,7 +22,6 @@ fn longer(state: &GameState, card: &CardInstance, shrimp_def_id: &str) -> bool {
     loc_of(state, &card.def_id) > loc_of(state, shrimp_def_id)
 }
 
-/// The Radiant face names its target check in the declaration's filter.
 fn shrimp(check: Option<&'static str>) -> Script {
     let mut filter = json!({ "side": "any", "of": ["unit", "backrow"] });
     if let Some(check) = check {
@@ -97,12 +96,10 @@ mod tests {
         }
     }
 
-    /// Read when a test asks: the catalog is registered per test.
     fn shrimp_loc() -> i32 {
         loc(SHRIMP)
     }
 
-    /// The target ids `legal_actions` offers Hired Shrimp's play, any zone.
     fn offered(s: &Scenario, player: PlayerId) -> IndexSet<String> {
         let Some(shrimp) = s.hand(player).into_iter().find(|card| card.def_id == SHRIMP) else {
             panic!("Hired Shrimp should be in hand");
@@ -134,9 +131,6 @@ mod tests {
         ids.iter().map(|id| id.to_string()).collect()
     }
 
-    /// p1 controls `mine` (a Unit) and Unlicensed Experimentation; p2 plays `theirs` (a Unit), which is
-    /// fused onto `mine`; then p2's turn ends and p1 holds Hired Shrimp. Returns the scenario and the
-    /// fused card.
     fn fused(mine: &str, theirs: &str, is_radiant: bool) -> (Scenario, String) {
         let mut s = scenario(json!({
             "p1": {
@@ -338,7 +332,6 @@ mod tests {
                 let mine_honeypot = s.backrow(P1, 2).map(|card| card.id);
                 let theirs_cube = s.unit(P2, 1).map(|card| card.id);
                 let theirs_gambit = s.backrow(P2, 2).map(|card| card.id);
-                // Your own face-down cards you read, so they are judged now; the opponent's is offered unread.
                 let want: IndexSet<String> = [mine_honeypot, theirs_cube, theirs_gambit].into_iter().flatten().collect();
                 assert_eq!(want.len(), 3);
                 assert_eq!(offered(&s, P1), want);

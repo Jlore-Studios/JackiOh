@@ -55,6 +55,5 @@ fn r1183004_cn_techs_block_reads_its_script() {
     let code = code_block_of("meditative-050").expect("CN Tech has a block");
     let first = code.lines().next().expect("a first line");
     assert_eq!(first, "fn tech(radiant: bool) -> Script {");
-    // Its own id is `ID` where the code reads it, as the script names it.
     assert!(code.contains("win_rate_leader(ID)"));
 }

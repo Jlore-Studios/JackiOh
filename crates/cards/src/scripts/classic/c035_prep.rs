@@ -23,14 +23,12 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-035";
 
-/// "Your next Spell this turn costs ({discount}) less."
 fn discount(ctx: &EffectContext<'_>) -> Effect {
     add_player_modifier(json_as(json!({
         "player": "self",
         "mod": {
             "kind": "costDiscount",
             "amount": param(ctx, "discount"),
-            // "your next Spell": Spells only, and only the first one.
             "onlyType": "Spell",
             "oncePerTurn": true,
             // "this turn": §2.2's cleanup takes it if unused.
@@ -74,7 +72,6 @@ fn prep(draws: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // The same script: the Radiant face's 4 is its declared `discount`, which `param` reads off the running face.
     let base = prep(true);
     CardScripts { radiant: base.clone(), base }
 }
@@ -87,7 +84,6 @@ pub fn script_v0_5_2() -> CardScripts {
 
 // C #35 Prep — SPEC §8.6 row 35, BUILD M9 Classic row C 35: "Your next Spell this turn costs (2) less
 // (#35 Lunar Eclipse's modifier: the Spell type only, floored at (0), R65); a Unit, Field Spell or
-// Trap play doesn't consume it and the first Spell does; it expires at cleanup; a cast never uses it
 // (R70); radiant: (4) less; its tuned number (discount) reads through `param()` (R386)".
 #[cfg(test)]
 mod tests {
@@ -105,7 +101,6 @@ mod tests {
 
     use crate::js;
 
-    /// Every `cardPlayed` so far, as `{ defId, costPaid }`.
     fn spells_paid(s: &Scenario) -> Vec<Value> {
         s.events()
             .iter()
@@ -356,7 +351,6 @@ mod tests {
             s.play(PREP, json!({ "embiggen": true }));
             assert_eq!(drawn(&s), vec![flood.clone()]);
             s.expect_in_zone(flood.as_str(), "hand");
-            // The (4) Flood is the next Spell: it costs (2) less.
             s.play(flood.as_str(), json!({}));
             assert_eq!(paid_for(&s, FLOOD), vec![2]);
         }

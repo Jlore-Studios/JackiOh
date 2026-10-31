@@ -12,7 +12,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-071";
 
-/// The zones of this lane the face destroys in: the base face's three others, the Radiant's two enemy ones.
 /// `own` is the row Lane Eater stands in: the unit row, or the backrow when it stands there (R1081000).
 fn lane_zones(me: PlayerId, own: Row, enemy_only: bool) -> Vec<(PlayerId, Row)> {
     let enemy = opponent_of(me);
@@ -27,7 +26,6 @@ fn lane_zones(me: PlayerId, own: Row, enemy_only: bool) -> Vec<(PlayerId, Row)> 
     }
 }
 
-/// Destroy the card acting in each of those zones of Lane Eater's lane, as the Cry resolves.
 fn destroy_in_lane(ctx: &EffectContext, enemy_only: bool) -> Vec<Effect> {
     let Some(me) = ctx.live_self() else {
         return Vec::new();
@@ -71,7 +69,6 @@ pub fn script() -> CardScripts {
 }
 
 // C #71 Lane Eater (SPEC §8.6 row 71; BUILD M9 row C 71). (3) Unit, Common, 4/4 → 8/8: Cry: destroy
-// every other card in this lane, then Lock this lane. Radiant: the enemy cards and the enemy side only.
 
 #[cfg(test)]
 mod tests {
@@ -107,7 +104,6 @@ mod tests {
         is_locked(s.state(), ZoneSlot { player, row, lane })
     }
 
-    /// The four zones of lane 2, and whether each is Locked: p1 units, p1 backrow, p2 units, p2 backrow.
     fn lane_two_locks(s: &Scenario) -> Vec<bool> {
         vec![
             locked(s, P1, Row::Units, 2),
@@ -117,7 +113,6 @@ mod tests {
         ]
     }
 
-    /// Lane 2 full on both sides, and cards in lanes 1 and 3 that the Cry must not touch.
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": {
@@ -155,7 +150,6 @@ mod tests {
             s.expect_in_zone(&vanilla, "graveyard")
                 .expect_in_zone(&trap, "graveyard")
                 .expect_in_zone(&well, "graveyard");
-            // Lane Eater stays; lanes 1 and 3 are untouched.
             assert_eq!(s.unit(P1, 2).map(|card| card.def_id).as_deref(), Some(LANE_EATER));
             assert_eq!(
                 slot_def_ids(vec![s.unit(P1, 1), s.backrow(P1, 1), s.unit(P2, 3), s.backrow(P2, 3)]),
@@ -271,7 +265,6 @@ mod tests {
                 })
                 .collect();
             assert_eq!(zones, vec![3, 4, 5]);
-            // Me and Mr Token takes lane 3; the Rush Token it summons passes empty, Locked lane 2 for lane 4.
             s.play(TOKEN_MAKER, json!({ "zone": 3 }));
             assert!(s.unit(P1, 2).is_none());
             assert_eq!(s.unit(P1, 4).map(|card| card.def_id).as_deref(), Some("core-t-rush"));
@@ -291,7 +284,6 @@ mod tests {
             s.expect_in_zone(LANE_EATER, "graveyard");
             assert!(locked(&s, P1, Row::Units, 2));
             s.expect_refused(|s| s.play(VANILLA, json!({ "zone": 2 })));
-            // The lanes beside it still take plays.
             s.play(VANILLA, json!({ "zone": 3 }));
             assert_eq!(s.unit(P1, 3).map(|card| card.def_id).as_deref(), Some(VANILLA));
         }
@@ -330,7 +322,6 @@ mod tests {
     }
 
     /// R1081000: a Flying Lane Eater played into a backrow zone eats every other card in its lane from
-    /// there — its own side's unit zone included.
     #[test]
     fn r1081000_played_flying_into_the_backrow_it_eats_every_other_card_in_its_lane() {
         let mut s = scenario(json!({

@@ -24,7 +24,6 @@ pub const ID: &str = "classic-065";
 
 const HEADS: &str = "headsOnTurn";
 
-/// TS `const fire: TriggerDef` (a function here: a closure cannot be a `const`).
 fn fire() -> TriggerDef {
     TriggerDef::new("ace-in-the-hole", &[GameEventType::TurnEnded], |ctx, _event| {
         vec![recruit(json_as(json!({ "count": param(&*ctx, "recruits") })))]
@@ -60,8 +59,6 @@ pub fn script() -> CardScripts {
     };
 
     // The Radiant face is Revealed regardless of the coin flip (balance patch 1, R686): the end of turn
-    // shows its face to both players first, then flips as usual. Revealed is not face-up, so a tails
-    // that recruits without firing leaves the trap armed and still answering.
     let radiant = Script {
         end_of_turn: Some(hook(|ctx| {
             let tails = flip(true)(ctx);
@@ -78,17 +75,9 @@ pub fn script() -> CardScripts {
 
 // C #65 Ace in the Hole — SPEC §8.6 row 65, BUILD M9 Classic row C 65: "Face-down (R33); at the end of
 // its controller's turn, in the end-of-turn trap window (R62), flip a coin from the match rng: heads
-// fires it (to the graveyard) and Recruits the first permanent from the top of your deck (none, or its
-// row full, → nothing); tails does nothing and it stays set; the opponent's turns flip nothing;
-// radiant: tails Recruits 1 without firing, the trap staying face-down and never named in the
 // opponent's view, and heads fires it and Recruits 3; a recruited trap lands face-down (R33); its tuned
 // number (recruits) reads through `param()` (R386)".
-//
-// The coin is the match rng's next draw as its controller's turn ends (the trap's end-of-turn hook,
 // which R62 runs before the window the trap fires in), so each case picks a seed whose next coin is the
-// face it needs (`withCoin`) and then checks the trap did what that coin says — which is what "one
-// seeded coin each time" means. The deck holds Core cards: Mr. Vanilla and Gary the Gambler (Units),
-// Sheepish (a Trap), Lunar Eclipse (a Spell, which a Recruit passes by).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -104,7 +93,6 @@ mod tests {
     const LUNAR: &str = "core-035";
     const FILLER: &str = "core-005";
 
-    /// TS `type Coin = "heads" | "tails"`.
     #[derive(Clone, Copy, PartialEq, Debug)]
     enum Coin {
         Heads,
@@ -112,7 +100,6 @@ mod tests {
     }
 
     impl Coin {
-        /// The TS literal.
         fn as_str(self) -> &'static str {
             match self {
                 Coin::Heads => "heads",
@@ -123,7 +110,6 @@ mod tests {
 
     use crate::js;
 
-    /// The coin the match rng gives next: the one the trap flips as the active player's turn ends.
     fn next_coin(state: &GameState) -> Coin {
         if Rng::new(&state.seed, state.rng_cursor).coin() {
             Coin::Heads
@@ -132,8 +118,6 @@ mod tests {
         }
     }
 
-    /// A board with an Ace in the Hole set in p1's backrow, on the first seed whose next coin is `coin`.
-    /// `opts`: `{ radiant?, p1? (a partial side, spread over the default), active? }`, as the TS helper's.
     fn with_coin(coin: Coin, opts: Value) -> Scenario {
         for attempt in 0..64 {
             let mut ace = json!({ "def": ACE, "faceUp": false });
@@ -174,14 +158,12 @@ mod tests {
             .count()
     }
 
-    /// p1's unit row, lanes 1–5: each lane's def id, or null.
     fn units(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.unit(P1, lane).map(|unit| unit.def_id.clone()))
             .collect()
     }
 
-    /// The expected `units(s)`: a def id per lane, `None` for an empty one.
     fn lanes(ids: [Option<&str>; 5]) -> Vec<Option<String>> {
         ids.iter().map(|id| id.map(str::to_string)).collect()
     }
@@ -221,7 +203,6 @@ mod tests {
             }
 
             /// R1438, R1440: set from the hand with Lucky 1 given to it, it flips twice and keeps heads,
-            /// so tails then heads fires it.
             #[test]
             fn r1438_r1440_given_lucky_1_tails_then_heads_fires_it() {
                 crate::register_all();
@@ -251,7 +232,6 @@ mod tests {
             }
 
             /// R1440: given Lucky 1 it fires wherever it fires with none (its first coin is the plain
-            /// flip), and at more seeds besides.
             #[test]
             fn r1440_given_lucky_1_it_fires_more_often_over_100_seeds() {
                 crate::register_all();

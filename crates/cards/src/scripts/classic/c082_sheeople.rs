@@ -89,7 +89,6 @@ mod tests {
             .count()
     }
 
-    /// The Tribute sets legalActions offers for a play of `card`, each sorted, deduplicated.
     fn tribute_sets(s: &Scenario, card: &CardInstance) -> Vec<Vec<String>> {
         let sets: IndexSet<String> = legal_actions(s.state(), P1)
             .iter()
@@ -112,7 +111,6 @@ mod tests {
             .collect()
     }
 
-    /// The Rock, its Tribute X upgraded from 1 to 2.
     fn tribute2(s: &mut Scenario) -> CardInstance {
         let id = s.card(ROCK).id.clone();
         let rock = must(find_instance_mut(s.state_mut(), &id), "the Rock");
@@ -216,7 +214,6 @@ mod tests {
             assert_eq!(draws_by(s.events(), P2), 0);
         }
 
-        /// a bounce draws nothing
         #[test]
         fn a_bounce_draws_nothing() {
             let mut s = scenario(json!({
@@ -231,7 +228,6 @@ mod tests {
             assert_eq!(draws_by(s.events(), P1), 0);
         }
 
-        /// an exile draws nothing
         #[test]
         fn an_exile_draws_nothing() {
             let mut s = scenario(json!({
@@ -305,7 +301,6 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// is a 2/2 worth 3: alone it pays a Tribute 3, and tributing it draws 3
         #[test]
         fn is_a_2_2_worth_3_alone_it_pays_a_tribute_3_and_tributing_it_draws_3() {
             let mut s = scenario(json!({
@@ -323,7 +318,6 @@ mod tests {
             assert_eq!(draws_by(s.events(), P1), 3);
         }
 
-        /// a script's Tribute still counts it as one Unit, and a bounce draws nothing
         #[test]
         fn a_script_s_tribute_still_counts_it_as_one_unit_and_a_bounce_draws_nothing() {
             let mut s = scenario(json!({

@@ -1,16 +1,6 @@
-//! What `viewFor` hands each seat about cards it may not read (SPEC §9.1, §10.8, R33, R35, R97,
-//! R177, R222, R223), found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L10).
-//! Each test builds two games differing only in hidden cards and asserts the viewer cannot tell them apart.
-//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
-//!
-//!  - R222, R177, R223: an offer, a discount's events and an instance id must not spell out a hidden
-//!    library's order, a face-down trap, or the order a deck was sorted in.
-//!  - R177, R242, R60: a random Make Radiant's cues, their zones and their order must not count a hidden
-//!    pile's Radiant cards; #23's roll likewise.
-//!  - R224: a card the mulligan returned, in no pile while a replacement draw's cast asks, stays unread.
-//!  - R243: the owner reads what a card is made of beyond its printed face: a Corpse Eater's meals, a
-//!    Heroic Power's rolled power, a crafted card's definition.
-//!  - R119: `viewFor` strips `cardResolved.arrivedDuring`, which would name a face-down trap.
+//! What `viewFor` hands each seat about cards it may not read (SPEC §9.1, §10.8, R33, R35, R60,
+//! R97, R119, R177, R222, R223, R224, R242, R243; docs/polish/4-edge-cases.md lens L10).
+//! Test paths: SURFACE §4.1, §8.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -21,7 +11,6 @@ use jackioh_engine::testkit::*;
 
 /// A seed on which a base #95's one roll is "every card in your hand and library costs 2 less" in the game
 /// `game` builds from it (R28), searched at test time: the roll's place in the effect table moves whenever
-/// an effect joins it.
 fn discount_seed(game: impl Fn(&str) -> Scenario) -> String {
     let label = jackioh_engine::subsystems::chaos_effect_by_name("discount")
         .map(|effect| effect.label)
@@ -49,7 +38,6 @@ const MATH_EQUATION: &str = "core-031";
 const SHEEPISH: &str = "core-041";
 const SPEK: &str = "core-048";
 /// Classic #39 Outbreak, a (1) Spell that targets any permanent: one Plague Counter, and an enemy
-/// card it covers its cost with is stolen.
 const OUTBREAK: &str = "classic-039";
 const TWINSPELL: &str = "core-079";
 const SEVEN_SEVEN: &str = "core-025";
@@ -101,7 +89,6 @@ fn as_a_duel(s: &mut Scenario) {
     }
 }
 
-/// The viewer's two views are identical, event list first so a failure names the extra event.
 fn indistinguishable(viewer: PlayerId, a: &Scenario, b: &Scenario) {
     let types = |s: &Scenario| -> Vec<GameEventType> {
         s.view(viewer).events.iter().map(GameEvent::event_type).collect()
@@ -110,7 +97,6 @@ fn indistinguishable(viewer: PlayerId, a: &Scenario, b: &Scenario) {
     assert_eq!(b.view(viewer), a.view(viewer));
 }
 
-/// A value as its JSON, absent fields absent.
 fn json_of(value: &impl serde::Serialize) -> Value {
     serde_json::to_value(value).expect("a view serializes")
 }
@@ -119,12 +105,10 @@ fn json_text(value: &impl serde::Serialize) -> String {
     serde_json::to_string(value).expect("a view serializes")
 }
 
-/// Whether any alternative occurs in the text.
 fn matches_any(text: &str, alternatives: &[&str]) -> bool {
     alternatives.iter().any(|alternative| text.contains(alternative))
 }
 
-/// The prompt a view says the viewer must answer.
 fn prompt_for_viewer(pending: Option<PendingView>, what: &str, refusal: &str) -> PendingPromptView {
     match must(pending, what) {
         PendingView::ForYou(prompt) => prompt,
@@ -158,7 +142,6 @@ mod r177_a_prompt_option_that_offers_a_face_down_card {
         let menace = must(s.unit("p2", 1), "p2's unit");
 
         s.play(TWINSPELL, json!({}));
-        // One counter on the (3) Menace steals nothing, so p1 draws 1.
         s.play(
             OUTBREAK,
             json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }),
@@ -189,7 +172,6 @@ mod r177_a_prompt_option_that_offers_a_face_down_card {
             assert!(!matches_any(&option.label, &["Pawn", "Sheepish", "core-0"]));
             assert!(!matches_any(&option.key, &["Pawn", "Sheepish", "core-0"]));
         }
-        // The chooser still answers with the id it was given: one counter covers the (1) Sheepish.
         s.answer(json!([{ "pick": "instance", "instanceId": sheep.id }]));
         assert_eq!(s.card(&sheep).controller, PlayerId::P1);
     }
@@ -202,7 +184,6 @@ mod r177_a_card_replaced_where_the_viewer_cannot_see_it {
     fn r177_r35_transmogulates_transformed_events_name_no_replaced_library_card_or_face_down_trap() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-l10-transmogulate",
             "p1": {
                 "hand": [TRANSMOGULATE, STOCKPILE],
@@ -215,7 +196,6 @@ mod r177_a_card_replaced_where_the_viewer_cannot_see_it {
         // Embiggened, the one face that reaches the board since #2179.
         s.play(TRANSMOGULATE, json!({ "embiggen": true }));
 
-        // p1's view: the three library replacements are hidden. p2's view: those three, the trap, and
         // the Stockpile in p1's hand, which Transmogulate replaces too (R365).
         let expect_hidden = PerPlayer {
             p1: 3usize,
@@ -239,7 +219,6 @@ mod r177_a_card_replaced_where_the_viewer_cannot_see_it {
                 assert_eq!((instance_id.as_str(), from_def_id.as_str()), (HIDDEN, HIDDEN));
             }
         }
-        // p1 controls its own trap, so it reads that replacement in full.
         let own = events_of(&s.view("p1"), GameEventType::Transformed)
             .into_iter()
             .filter(|event| matches!(event, GameEvent::Transformed { from_def_id, .. } if from_def_id == SHEEPISH))
@@ -256,7 +235,6 @@ mod r177_a_cost_change_on_a_card_the_viewer_may_not_read {
         let mut hand = vec![SPEK];
         hand.extend_from_slice(held);
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-l10-combo",
             "p1": { "backrow": [COMBO_INDEX], "hand": hand, "library": [HIT_JOB, HIT_JOB] },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
@@ -268,14 +246,12 @@ mod r177_a_cost_change_on_a_card_the_viewer_may_not_read {
     #[test]
     fn r177_grade_ds_discount_does_not_tell_the_opponent_what_p1s_hidden_hand_cards_cost() {
         jackioh_cards::register_all();
-        // Two games that differ only in which (hidden) cards p1 holds; every position differs in cost.
         let a = combo_index_game(&["core-025", "core-030"]);
         let b = combo_index_game(&["core-020", "core-011"]);
 
         assert_eq!(events_of(&a.view("p2"), GameEventType::CostChanged).len(), 2);
         assert_eq!(events_of(&b.view("p2"), GameEventType::CostChanged).len(), 2);
         assert_eq!(b.view("p2"), a.view("p2"));
-        // The owner still reads its own discounts.
         assert!(
             events_of(&a.view("p1"), GameEventType::CostChanged)
                 .iter()
@@ -305,7 +281,6 @@ mod r177_a_cost_change_on_a_card_the_viewer_may_not_read {
         let a = chaos_discount_game(&["core-025", "core-002"]);
         let b = chaos_discount_game(&["core-002", "core-025"]);
 
-        // The discount rolled: the hand card and both library cards changed cost.
         assert_eq!(events_of(&a.view("p1"), GameEventType::CostChanged).len(), 3);
         assert_eq!(b.view("p1"), a.view("p1"));
         assert_eq!(b.view("p2"), a.view("p2"));
@@ -319,7 +294,6 @@ mod r177_identities_an_event_carries_outside_its_redacted_fields {
     fn r177_r97_destroyed_killer_id_does_not_name_a_killer_that_now_sits_in_the_opponents_hand() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r2-hidden-killer",
             "p1": { "hand": [MATH_EQUATION, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
             "p2": { "field": [GARY], "hand": [STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
@@ -330,7 +304,6 @@ mod r177_identities_an_event_carries_outside_its_redacted_fields {
             "p1's Math Equation",
         );
 
-        // Fib(1 + 1) = 1 damage kills the 1/1; at end of turn the Spell returns to p1's hand.
         s.play(
             &math,
             json!({ "targets": [{ "pick": "instance", "instanceId": gary.id }] }),
@@ -353,7 +326,6 @@ mod r177_identities_an_event_carries_outside_its_redacted_fields {
             "the damage event",
         );
         assert_eq!(hit.as_deref(), Some(HIDDEN));
-        // ...so the destroyed event must not name it either.
         let death = must(
             events_of(&view, GameEventType::Destroyed)
                 .into_iter()
@@ -379,7 +351,6 @@ mod r177_a_card_that_ceased_to_exist_in_a_hidden_zone_stays_hidden_in_earlier_ev
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r2-transmogulated-trap",
             "p1": { "hand": [SHEEPISH, TRANSMOGULATE, STOCKPILE], "mana": 10, "library": [HIT_JOB, HIT_JOB] },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -390,7 +361,6 @@ mod r177_a_card_that_ceased_to_exist_in_a_hidden_zone_stays_hidden_in_earlier_ev
         );
 
         s.play(&sheep, json!({ "zone": 1 }));
-        // Before the transform p2 reads nothing of it: a bare face-down zone and a redacted play.
         assert_eq!(
             json_of(&s.view("p2").opponent.backrow[0]),
             json!({ "faceDown": true, "cost": 1 })
@@ -400,7 +370,6 @@ mod r177_a_card_that_ceased_to_exist_in_a_hidden_zone_stays_hidden_in_earlier_ev
         s.play(TRANSMOGULATE, json!({}));
         s.expect_in_zone(&sheep, "gone");
 
-        // Sheepish was never revealed to p2: it never fired and never reached a public pile.
         let view = s.view("p2");
         let played = events_of(&view, GameEventType::CardPlayed)
             .into_iter()
@@ -443,10 +412,8 @@ mod r177_a_card_that_ceased_to_exist_in_a_hidden_zone_stays_hidden_in_earlier_ev
         let a = chaos_then_transmogulate(&["core-025", "core-002"]);
         let b = chaos_then_transmogulate(&["core-002", "core-025"]);
 
-        // The discount rolled for both library cards (and the hand), and both games transformed alike.
         assert!(events_of(&a.view("p1"), GameEventType::CostChanged).len() >= 3);
         assert!(events_of(&a.view("p1"), GameEventType::Transformed).len() >= 2);
-        // Two games that differ only in the (hidden) order of p1's library look the same to both seats.
         assert_eq!(b.view("p2"), a.view("p2"));
         assert_eq!(b.view("p1"), a.view("p1"));
     }
@@ -455,10 +422,8 @@ mod r177_a_card_that_ceased_to_exist_in_a_hidden_zone_stays_hidden_in_earlier_ev
 mod r177_a_hidden_hand_cards_buff {
     use super::*;
 
-    /// p1 Hit Jobs p2's Mr. Vanilla (3/3); p2 holds a Corpse Eater, base or Radiant.
     fn eater_game(radiant: bool) -> Scenario {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r3-hidden-eater",
             "p1": { "hand": [HIT_JOB, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
             "p2": {
@@ -494,13 +459,11 @@ mod r177_a_hidden_hand_cards_buff {
         assert_eq!(eater_of(&radiant).buffs, AttackHealth { attack: 8, health: 8 });
 
         // p2's hand is a count to p1 (§10.8), and the size of a hidden card's buff is the card's: the
-        // event still plays its cue, and p1 cannot tell the two games apart.
         assert_eq!(
             json_of(&events_of(&base.view("p1"), GameEventType::Buffed)),
             json!([{ "type": "buffed", "instanceId": HIDDEN, "attack": 0, "health": 0 }])
         );
         assert_eq!(radiant.view("p1"), base.view("p1"));
-        // p2 reads its own card's buff in full.
         let attacks: Vec<i32> = events_of(&radiant.view("p2"), GameEventType::Buffed)
             .into_iter()
             .filter_map(|event| match event {
@@ -548,7 +511,6 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
         let replacement = must(s.backrow("p1", 1), "the replacement trap");
         assert_eq!(replacement.def_id, UNLICENSED);
 
-        // p2 destroys p1's face-down replacement on its own turn (a Magic Jammed in p1's hand would have
         // been replaced too, R365), and it reaches p1's public graveyard.
         if s.state().active == PlayerId::P1 {
             s.end_turn();
@@ -559,8 +521,6 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
         );
         s.expect_in_zone(&replacement, "graveyard");
 
-        // Sheepish never fired and never reached a public pile, so p2 still reads nothing of it, while
-        // p1, its controller, still reads what it replaced.
         let view = s.view("p2");
         assert!(!events_of(&view, GameEventType::Transformed).is_empty());
         assert!(!json_text(&view).contains(SHEEPISH));
@@ -574,15 +534,12 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
                         if *instance_id == sheep.id && from_def_id == SHEEPISH
                 ))
         );
-        // The record the view reads is never forwarded to either seat.
         assert!(!json_text(&s.view("p1").events).contains("hiddenFrom"));
     }
 
-    /// p1's one library card is replaced, then p2's Collateral Damage exiles the replacement into public
     /// view (a card in p1's own hand would have been replaced too, R365).
     fn library_game(card: &str) -> Scenario {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r3-transmog-library",
             "p1": { "hand": [TRANSMOGULATE], "mana": 10, "library": [card] },
             "p2": { "hand": [COLLATERAL, STOCKPILE], "field": [{ "def": GARY, "lane": 1 }], "library": [HIT_JOB] },
@@ -605,7 +562,6 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
         let a = library_game(SEVEN_SEVEN);
         let b = library_game(BIGOT);
 
-        // The replacement is in p1's exile, a public pile, in both games.
         assert_eq!(a.pile("p1", "exile").len(), 1);
         assert_eq!(
             a.pile("p1", "exile").first().map(|card| card.def_id.clone()),
@@ -613,16 +569,12 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
         );
 
         // p1's library held a card neither player saw and that has ceased to exist (R35): two games that
-        // differ only in what it was look the same to both seats.
         assert_eq!(b.view("p2"), a.view("p2"));
         assert_eq!(b.view("p1"), a.view("p1"));
     }
 
-    /// p1's two-card library, replaced by Transmogulate; p2 watches. `first` is a def id or a
-    /// `{ def, radiant }` entry.
     fn immutable_library_game(first: Value) -> Scenario {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r3-transmog-immutable",
             "p1": { "hand": [TRANSMOGULATE, STOCKPILE], "mana": 10, "library": [first, HIT_JOB] },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -638,7 +590,6 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
         let with_immutable = immutable_library_game(json!({ "def": MENACE, "radiant": true }));
         let without = immutable_library_game(json!(STOCKPILE));
 
-        // "Other zones: any card from the pool, same counts": Immutable stays only on the board, where
         // the Replace is a Transform (R23, §8 #83), so the library is replaced whole.
         let library: Vec<String> = with_immutable
             .pile("p1", "library")
@@ -656,7 +607,6 @@ mod r177_a_number_the_view_carries_is_never_taken_by_a_hidden_card {
     /// A Rush Token dies (no Eater gain, R11), then p1 installs a modifier with Lunar Eclipse.
     fn modifier_game(p2_hand: &str) -> Scenario {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r3-seq",
             "p1": { "hand": [HIT_JOB, LUNAR_ECLIPSE, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
             "p2": { "field": ["T-rush"], "hand": [p2_hand, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
@@ -695,10 +645,8 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
      {
         jackioh_cards::register_all();
         // #29: "Every card in your hand becomes Radiant". Afterwards both hands are wholly Radiant, so
-        // the games differ only in the face p1's 4-mana 7/7 had while p2 could not read it.
         fn giga(radiant: bool) -> Scenario {
             let mut s = scenario(json!({
-                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": "hunt-r4-giga",
                 "p1": { "hand": [GIGA, { "def": SEVEN_SEVEN, "radiant": radiant }, BIGOT], "mana": 10, "library": [HIT_JOB] },
                 "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -710,13 +658,11 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
         let giga_radiant = giga(true);
         assert!(giga_base.hand("p1").iter().all(|card| card.radiant));
         assert!(giga_radiant.hand("p1").iter().all(|card| card.radiant));
-        // A cue only for the cards that changed would count, for p2, how many were Radiant before.
         indistinguishable(PlayerId::P2, &giga_base, &giga_radiant);
 
         // #26: "Choose a card in your hand; it becomes Radiant". The same no-op on the chosen card.
         fn glowy(radiant: bool) -> Scenario {
             let mut s = scenario(json!({
-                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": "hunt-r4-glowy",
                 "p1": { "hand": [GLOWY, { "def": SEVEN_SEVEN, "radiant": radiant }, BIGOT], "mana": 10, "library": [HIT_JOB] },
                 "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -743,7 +689,6 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
         // (R213). It lands face-down and Radiant in both games; only its face in hand differed.
         fn game(radiant: bool) -> Scenario {
             let mut s = scenario(json!({
-                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": "hunt-r4-gifted",
                 "p1": {
                     "backrow": [GIFTED],
@@ -771,9 +716,7 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
 mod r177_eugenics_radiant_roll_over_a_hidden_library {
     use super::*;
 
-    /// p1's library is seven (1) Stockpiles and, at library[5], a 4-mana 7/7. Eugenics exiles every
     /// card that costs (2) or less (§8 #42, R831014), so the 7/7 is the card left; the Radiant face then
-    /// makes each remaining library card Radiant (a 100% roll). The two games differ only in whether
     /// that one library card, which neither player can read (§9.1), was Radiant already.
     fn eugenics_game(left_card_radiant: bool) -> Scenario {
         let library: Vec<Value> = (0..8)
@@ -786,7 +729,6 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
             })
             .collect();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r5-eugenics-7",
             "p1": { "hand": [{ "def": EUGENICS, "radiant": true }, STOCKPILE], "mana": 10, "library": library },
             "p2": { "hand": [STOCKPILE], "library": [STOCKPILE] },
@@ -801,19 +743,16 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
         let base = eugenics_game(false);
         let radiant = eugenics_game(true);
 
-        // The same seven cards went to the (public) exile pile in both games, all of them base-face.
         let ids =
             |s: &Scenario| -> Vec<String> { s.pile("p1", "exile").into_iter().map(|card| card.id).collect() };
         assert_eq!(ids(&base), ids(&radiant));
         assert!(base.pile("p1", "exile").iter().all(|card| !card.radiant));
-        // One card is left, and it ends Radiant in both games: rolled into it, or already there.
         let faces =
             |s: &Scenario| -> Vec<bool> { s.pile("p1", "library").iter().map(|card| card.radiant).collect() };
         assert_eq!(faces(&base), vec![true]);
         assert_eq!(faces(&radiant), vec![true]);
 
         // "Each card left in your deck becomes Radiant" (§8 #42): the already-Radiant card is rolled
-        // like any other, and a success on a card nobody may read is cued whether or not its flag
         // changed (R177). A cue for the changed cards only lets both seats count the Radiant ones.
         indistinguishable(PlayerId::P2, &base, &radiant);
         indistinguishable(PlayerId::P1, &base, &radiant);
@@ -823,13 +762,10 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
 mod r177_a_number_taken_by_a_face_down_trap_owed_an_event {
     use super::*;
 
-    /// p1's Twisted Sorcerer swings for lethal at p2 (5 health); p2's lane-1 My Pawn cancels it and the AI
     /// plays out p1's turn (R44). p2's turn starts inside that playout and Masochism Mask asks p2 (§8 #65),
-    /// so the trap window stops with a prompt open. The games differ only in p2's face-down lane-2 card.
     /// p2 answers, then plays Lunar Eclipse, whose modifier both seats read with its id (R169).
     fn pawn_game(lane_two: &str) -> Scenario {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r5-owed-window",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -859,8 +795,6 @@ mod r177_a_number_taken_by_a_face_down_trap_owed_an_event {
         let pawn_and_sheep = pawn_game(SHEEPISH);
         let pawn_and_honeypot = pawn_game(HONEYPOT);
 
-        // Every game played the same public course: the attack canceled, p1's turn handed over and
-        // ended, p2 on turn 10 with Lunar Eclipse's discount live, and the lane-2 card still face-down.
         for s in [&two_pawns, &pawn_and_sheep, &pawn_and_honeypot] {
             assert_eq!(s.state().turn, 10);
             assert_eq!(s.state().active, PlayerId::P2);
@@ -878,7 +812,6 @@ mod r177_a_number_taken_by_a_face_down_trap_owed_an_event {
     }
 }
 
-/// The def ids a Discover prompt offers the viewer, sorted.
 fn offered_to(s: &Scenario, viewer: PlayerId) -> Vec<String> {
     let Some(PendingView::ForYou(pending)) = s.view(viewer).pending else {
         panic!("no prompt open for {viewer}");
@@ -895,13 +828,9 @@ fn offered_to(s: &Scenario, viewer: PlayerId) -> Vec<String> {
 mod r222_97_zephyrs_dry_run_and_hidden_information {
     use super::*;
 
-    /// p1 casts Zephyrs against p2's 1/14 Moths, which no affordable printed attack kills, so a
     /// candidate "clears the enemy board" (§10.7) only through what its text does. p2's lane-1 card is
-    /// face-down, and the two games differ only in what it is: Sheepish, or My Pawn (which answers a
-    /// declared attack and never a play).
     fn zephyrs_against(trap: &str) -> Scenario {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r6-zephyrs-trap",
             "p1": { "hand": [ZEPHYRS, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
             "p2": { "field": [MOTHS], "backrow": [{ "def": trap, "lane": 1 }], "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -916,7 +845,6 @@ mod r222_97_zephyrs_dry_run_and_hidden_information {
         let sheep = zephyrs_against(SHEEPISH);
         let pawn = zephyrs_against(MY_PAWN);
 
-        // p1 reads a bare face-down zone in both games, and both have the Discover open.
         assert_eq!(
             json_of(&sheep.view("p1").opponent.backrow[0]),
             json!({ "faceDown": true, "cost": 1 })
@@ -928,17 +856,14 @@ mod r222_97_zephyrs_dry_run_and_hidden_information {
         assert_eq!(offered_to(&sheep, PlayerId::P1).len(), 3);
 
         // The scorer ranks for p1 (§10.7, R29), and what p1 may read is the same in both games, so the
-        // three cards it offers must be too: an offer that moves with p2's face-down card names it.
         assert_eq!(offered_to(&sheep, PlayerId::P1), offered_to(&pawn, PlayerId::P1));
         indistinguishable(PlayerId::P1, &pawn, &sheep);
     }
 
     /// p1 is at 5 health, so §10.7's heal priority applies, and p2 has no units. The two games differ
     /// only in the order of p1's own library, which nobody may read (§3, §9.1, §10.8): Blood Ridden
-    /// Glowy Jelly Bean (cast on draw: lose 5) is on top, or at the bottom.
     fn zephyrs_over_library(library: &[&str]) -> Scenario {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r6-zephyrs-library",
             "p1": { "hand": [ZEPHYRS, STOCKPILE], "health": 5, "library": library },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -957,7 +882,6 @@ mod r222_97_zephyrs_dry_run_and_hidden_information {
         assert_eq!(on_top.view("p1").you.library_count, 3);
 
         // "The rest of the library stays hidden from both" (§10.8): an offer that moves with the order
-        // of p1's library tells p1 what is on top of it.
         assert_eq!(
             offered_to(&on_top, PlayerId::P1),
             offered_to(&at_bottom, PlayerId::P1)
@@ -972,8 +896,6 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
 
     /// A game on a seed whose #95 rolls "every card in your hand and library costs 2 less" (`discount_seed`),
     /// which emits one `costChanged` per hand card and then one per library card, top first. #69 Call to
-    /// Arms then recruits p1's one Unit (Gary, 1 cost) out of the library. The games differ only in
-    /// where Gary was: on top of the two Hit Jobs, or between them.
     fn chaos_then_recruit(library: &[&str]) -> Scenario {
         let seed = discount_seed(|seed| recruit_game_on(seed, library));
         recruit_game_on(&seed, library)
@@ -990,7 +912,6 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
         s
     }
 
-    /// Where in the view's `costChanged` sequence the recruited card's own event sits (-1: nowhere).
     fn place_of_recruited(s: &Scenario, viewer: PlayerId) -> i64 {
         let gary = match s.unit("p1", 1) {
             Some(gary) if gary.def_id == GARY => gary,
@@ -1002,7 +923,6 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
             .map_or(-1, |at| at as i64)
     }
 
-    /// The view's `costChanged` events, in order.
     fn discounts(s: &Scenario, viewer: PlayerId) -> Vec<GameEvent> {
         events_of(&s.view(viewer), GameEventType::CostChanged)
     }
@@ -1014,8 +934,6 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
         let on_top = chaos_then_recruit(&[GARY, HIT_JOB, HIT_JOB]);
         let second = chaos_then_recruit(&[HIT_JOB, GARY, HIT_JOB]);
 
-        // The discount rolled for the two hand cards and the three library cards, and Gary is on the
-        // field in both games, the two Hit Jobs still in the library.
         for s in [&on_top, &second] {
             assert!(events_of(&s.view("p2"), GameEventType::CostChanged).len() >= 5);
             let library: Vec<String> = s
@@ -1027,8 +945,6 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
         }
 
         // §9.1 hides library order from both players, so R97 blanks `shuffledIn.position` and R177 hides
-        // a library card's cost. The discount went out one event per card in library order: read openly
-        // once Gary did, its place among them would say how deep Gary lay. The event was made where nobody
         // could read it (§3), so it stays unread for good and both seats read the same batch in both games.
         for viewer in [PlayerId::P1, PlayerId::P2] {
             assert_eq!(place_of_recruited(&on_top, viewer), -1);
@@ -1041,9 +957,7 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
 mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
     use super::*;
 
-    // The server's store hands `createGame` each deck ordered by card id, and `createGame` numbers its
     // cards in that order before §2.1 shuffles. `scenario()` numbers in its own setup order, so this
-    // plays the engine's own path: `createGame` → `beginGame` → mulligans → turns. p2's deck is 23
     // cheap cards, #98 Heroic Power and one it never shows: #1 (sorts first) or #100 (sorts last).
     const P1_DECK: [&str; DECK_SIZE as usize] = [
         "core-003", "core-004", "core-005", "core-007", "core-008", "core-010", "core-011", "core-015",
@@ -1078,14 +992,12 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
         HEROIC_POWER,
     ];
 
-    /// The order the server's store returns a deck in: by card id.
     fn sorted_deck(ids: &[&str]) -> Vec<String> {
         let mut deck: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
         deck.sort();
         deck
     }
 
-    /// The two decks, as the store returns them, with `hidden` as p2's one card that never shows.
     fn deck_options(seed: &str, hidden: &str) -> CreateGameOptions {
         let mut p2 = P2_SHARED.to_vec();
         p2.push(hidden);
@@ -1160,7 +1072,6 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
         state
     }
 
-    /// The id `createGame` gives p2's Heroic Power, with `hidden` as p2's one card that never shows.
     fn power_id_at(seed: &str, hidden: &str) -> Option<String> {
         create_game(&deck_options(seed, hidden))
             .players
@@ -1192,9 +1103,7 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
         );
 
         // §9.1 asks that the id tell p1 nothing. Numbered in the store's sort order, the power's id was
-        // its rank (c50 when p2's hidden card sorts before it, c49 after). The seed that orders the
         // numbers is as hidden as the one that shuffles the library (§2.1), so whatever id p1 reads, the
-        // other game shows it under some seed, and the id is not the rank.
         let seeds = seeds();
         for hidden in ["core-001", "core-100"] {
             let other = if hidden == "core-001" {
@@ -1214,8 +1123,6 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
     }
 }
 
-// Round 7 (lens L10): a random Make Radiant's cue count, and the ids a Replace mints in a library.
-
 const RAPID: &str = "core-010";
 const TUTOR: &str = "core-051";
 
@@ -1234,7 +1141,6 @@ mod r177_a_random_make_radiant_over_a_hidden_hand {
     /// Radiant or both not — hidden from p2 (§9.1, §10.8).
     fn blood_ridden_game(hand_radiant: bool) -> Scenario {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r7-blood-ridden",
             "p1": {
                 "hand": [STOCKPILE, { "def": HIT_JOB, "radiant": hand_radiant }, { "def": RAPID, "radiant": hand_radiant }],
@@ -1252,7 +1158,6 @@ mod r177_a_random_make_radiant_over_a_hidden_hand {
         let plain = blood_ridden_game(false);
         let radiant = blood_ridden_game(true);
 
-        // The cast happened in both games (a public play), and p1's hand ends up the same size.
         for s in [&plain, &radiant] {
             assert!(events_of(&s.view("p2"), GameEventType::CardPlayed).iter().any(
                 |event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == BLOOD_RIDDEN)
@@ -1261,8 +1166,6 @@ mod r177_a_random_make_radiant_over_a_hidden_hand {
         assert_eq!(radiant.view("p2").opponent.hand, plain.view("p2").opponent.hand);
 
         // R177: "a cue for the changed cards only would count the Radiant ones". R60 narrows the random
-        // pick to non-Radiant cards, so a cue only for a card that changed tells p2 whether any of p1's
-        // hidden hand cards was still non-Radiant. p2 must not be able to tell the two games apart.
         indistinguishable(PlayerId::P2, &plain, &radiant);
     }
 }
@@ -1275,7 +1178,6 @@ mod r223_instance_ids_transmogulate_gives_a_library {
         jackioh_cards::register_all();
         let sixteen_hit_jobs = [HIT_JOB; 16];
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r7-transmog-ids",
             "p1": {
                 "hand": [TRANSMOGULATE, RAPID],
@@ -1288,7 +1190,6 @@ mod r223_instance_ids_transmogulate_gives_a_library {
         }));
 
         s.play(TRANSMOGULATE, json!({}));
-        // The Tutor comes to hand only now: one held while Transmogulate resolved would have been
         // replaced with the rest of the hand (R365).
         let tutor = new_instance(
             s.state_mut(),
@@ -1298,9 +1199,7 @@ mod r223_instance_ids_transmogulate_gives_a_library {
         );
         s.state_mut().players.p1.hand.push(tutor);
 
-        // What p1 reads after the Replace: the graveyard card's replacement is public, and the library is
         // a count. R35 walks the hand, the library and then the graveyard (R365), so if the replacements
-        // were numbered in that walk the library's ids are the block just below the graveyard one's.
         let after_replace = s.view("p1");
         let gy_replacement = must(
             events_of(&after_replace, GameEventType::Transformed)
@@ -1317,7 +1216,6 @@ mod r223_instance_ids_transmogulate_gives_a_library {
         let first_library_id = id_number(&gy_replacement) - i64::from(library_count);
 
         // #51 Private Tutor reveals library cards to p1 as prompt options (§10.8). Pick the type and
-        // bracket with the most matches so the reveal shows as many cards as it can.
         s.play(TUTOR, json!({}));
         let library = s.pile("p1", "library");
         let type_prompt = must(s.state().pending.clone(), "the type prompt");
@@ -1354,8 +1252,6 @@ mod r223_instance_ids_transmogulate_gives_a_library {
 
         // §9.1, §10.8: "the rest of the library stays hidden from both", its order included, for its own
         // player too (§3's "Nobody"). R223: an instance id says nothing of where its card came from. The
-        // option's id is p1's to read as the answer's handle, but reading a revealed card's place off it
-        // must not give its real place: the two cards p1 does not take stay in the library.
         let ids: Vec<String> = s.pile("p1", "library").into_iter().map(|card| card.id).collect();
         let read_off_the_id: Vec<i64> = revealed
             .iter()
@@ -1369,7 +1265,6 @@ mod r223_instance_ids_transmogulate_gives_a_library {
     }
 }
 
-/// A def's type against a Tutor type option ("Trap" covers Field Traps too).
 fn type_matches(state: &GameState, def_id: &str, want: &str) -> bool {
     let type_ = def_of(Some(state), def_id).type_;
     if want == "Trap" {
@@ -1379,7 +1274,6 @@ fn type_matches(state: &GameState, def_id: &str, want: &str) -> bool {
     }
 }
 
-/// The mode option with the most library matches.
 fn most_matching(pending: &PendingChoice, count: impl Fn(&str) -> usize) -> String {
     let mut options: Vec<String> = pending
         .options
@@ -1409,9 +1303,7 @@ mod r177_where_a_random_make_radiant_over_hidden_zones_landed {
     use super::*;
 
     /// p1 plays #28 ("2 random cards among your library, hand and field become Radiant", R60). p1's
-    /// hand then holds one Hit Job, Radiant already or not, and the library three 4-mana 7/7s, none
     /// Radiant; p1 has nothing on the field. Neither the hand nor the library is p2's to read (§9.1).
-    /// With this seed the base-face Hit Job is one of the two picks.
     fn knockoff_game(hand_radiant: bool) -> Scenario {
         let mut s = scenario(json!({
             "seed": "r8-l10-knockoff-0",
@@ -1431,8 +1323,6 @@ mod r177_where_a_random_make_radiant_over_hidden_zones_landed {
         let plain = knockoff_game(false);
         let radiant = knockoff_game(true);
 
-        // Two picks in both games, none of them on a card p2 may read, and the Hit Job ends Radiant in
-        // both: picked in one game, already Radiant in the other.
         for s in [&plain, &radiant] {
             let cues = events_of(&s.view("p2"), GameEventType::RadiantSet);
             assert_eq!(cues.len(), 2);
@@ -1440,8 +1330,6 @@ mod r177_where_a_random_make_radiant_over_hidden_zones_landed {
         }
 
         // R177: a cue on a card p2 may not read must not count p1's hidden Radiant cards. The zone a
-        // redacted `radiantSet` carries says whether the pick landed in the hand or the library, so a
-        // "hand" cue tells p2 that p1's hand still held a non-Radiant card.
         indistinguishable(PlayerId::P2, &plain, &radiant);
     }
 
@@ -1506,7 +1394,6 @@ mod r177_23s_chance_on_a_hidden_hand {
         let plain = dream_game(false);
         let radiant = dream_game(true);
 
-        // The roll succeeded in the game with a base-face Hit Job, which became Radiant.
         assert!(
             must(
                 plain.hand("p1").into_iter().find(|card| card.def_id == HIT_JOB),
@@ -1524,8 +1411,6 @@ mod r177_23s_chance_on_a_hidden_hand {
 
         // R177 lists #23 among the random picks whose unmade picks are cued on the zone's Radiant cards,
         // "so an all-Radiant hand … is cued as a hand the pick changed". #23 skips its roll when the
-        // hand holds nothing it could change, so it never cues then, and a cue tells p2 the hand held a
-        // non-Radiant card.
         indistinguishable(PlayerId::P2, &plain, &radiant);
     }
 }
@@ -1540,9 +1425,7 @@ mod r119_the_arrivals_a_plays_card_resolved_names_stay_the_engines {
      {
         jackioh_cards::register_all();
         // Classic #60 Pile On's Radiant face, "Recruit every permanent in your deck": a play whose Recruit
-        // sets a trap as it resolves.
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-hp-honeypot",
             "p1": {
                 "hand": [{ "def": PILE_ON, "radiant": true }, MR_VANILLA],
@@ -1558,8 +1441,6 @@ mod r119_the_arrivals_a_plays_card_resolved_names_stay_the_engines {
 
         s.play(&power, json!({}));
 
-        // The Recruit set the Bear Honeypot face-down on p1's backrow while the play resolved, so the
-        // raw cardResolved names it among the play's arrivals.
         let honeypot = must(
             (1..=5)
                 .filter_map(|lane| s.backrow("p1", lane))
@@ -1581,7 +1462,6 @@ mod r119_the_arrivals_a_plays_card_resolved_names_stay_the_engines {
             .collect();
         assert_eq!(resolved, vec![Some(vec![honeypot.id.clone()])]);
 
-        // Neither seat's view carries the field, and p2's does not name p1's face-down trap through it.
         for seat in [PlayerId::P1, PlayerId::P2] {
             assert!(!events_of(&s.view(seat), GameEventType::CardResolved).is_empty());
             assert!(!json_text(&s.view(seat).events).contains("arrivedDuring"));
@@ -1624,7 +1504,6 @@ fn act_as(state: &GameState, player: PlayerId, body: ActionBody) -> GameState {
     result.state
 }
 
-/// Every id or def id an event names, for "does this view name X" checks.
 fn named(event: &GameEvent) -> Vec<String> {
     let mut out = Vec::new();
     if let Value::Object(fields) = json_of(event) {
@@ -1644,8 +1523,6 @@ fn named(event: &GameEvent) -> Vec<String> {
     out
 }
 
-/// The registry as `registerScripts` last set it: this thread's testkit override once a fixture is
-/// in, the production registry before.
 fn registered_scripts_now() -> IndexMap<String, CardScripts> {
     match scripts_override() {
         Some(scripts) => scripts.clone(),
@@ -1715,7 +1592,6 @@ mod r224_r97_a_card_the_mulligan_returned_while_setup_waits {
     #[test]
     fn r224_r97_p2s_returned_opening_card_stays_unread_by_p1_while_p2s_replacements_clause_asks() {
         jackioh_cards::register_all();
-        // p1's opening draw hits an asking card, so p2's opening deal happens inside p1's answer: a
         // recorded action, whose `drawn` events for p2's cards are in p1's view, redacted (R97).
         let mut begun: Option<GameState> = None;
         for at in 0..300 {
@@ -1762,7 +1638,6 @@ mod r224_r97_a_card_the_mulligan_returned_while_setup_waits {
         assert_eq!(mulligan_owed(&state), vec![PlayerId::P2]);
 
         // p2 returns one card, and its replacement draw is the asking card, so setup waits (R224) with
-        // the returned card in no pile until it goes back.
         let returned = must(state.players.p2.hand.first().cloned(), "a card for p2 to return");
         let cod = new_instance(
             &mut state,
@@ -1789,7 +1664,6 @@ mod r224_r97_a_card_the_mulligan_returned_while_setup_waits {
             Some(PlayerId::P2)
         );
 
-        // The deal's event naming the returned card is still in p1's window.
         let view = view_for(&state, PlayerId::P1);
         let deal = view
             .events
@@ -1807,7 +1681,6 @@ mod r224_r97_a_card_the_mulligan_returned_while_setup_waits {
         assert!(deal > 0);
 
         // §9.1: p2's hand is hidden from p1, and the card is on its way back to p2's library, hidden
-        // from both. Nothing in p1's view may name it.
         let leaks: Vec<&GameEvent> = view
             .events
             .iter()
@@ -1857,10 +1730,8 @@ mod r177_r60_28s_cues_keep_the_hidden_faces_hidden {
     #[test]
     fn r177_r60_28s_cue_on_an_all_radiant_hand_can_come_in_any_order_a_pick_could() {
         jackioh_cards::register_all();
-        // Two worlds p2 cannot tell apart by what changed: p1's one hidden hand card is base-face (A) or
         // already Radiant (B). Either way #28's two picks make p1's public unit Radiant and cue one hidden
         // card in p1's hand, since R177 cues the pick R60 could not make ("so an all-Radiant hand ... is
-        // cued as a hand the pick changed"). Every order p2 can see in A must be one B can produce.
         let seeds: Vec<String> = (0..40).map(|at| format!("edge-r9-view-28-{at}")).collect();
         let orders = |radiant: bool| -> IndexSet<String> {
             seeds
@@ -1870,13 +1741,11 @@ mod r177_r60_28s_cues_keep_the_hidden_faces_hidden {
         };
         let in_a = orders(false);
         let in_b = orders(true);
-        // Sanity: both worlds show p2 the same outcome, the unit and one hidden cue.
         for order in in_a.iter().chain(in_b.iter()) {
             let mut parsed: Vec<String> = serde_json::from_str(order).expect("an order is a JSON list");
             parsed.sort();
             assert_eq!(parsed, vec![HIDDEN_ID.to_string(), "unit".to_string()]);
         }
-        // A cue that always trailed the public pick said "the hand was all Radiant" whenever a pick led;
         // R242 sends the public card's event first and the hand's after it, in both worlds alike.
         let only_in_a: Vec<&String> = in_a.iter().filter(|order| !in_b.contains(*order)).collect();
         assert!(
@@ -1890,13 +1759,10 @@ mod r177_r60_28s_cues_keep_the_hidden_faces_hidden {
     #[test]
     fn r177_r60_28s_cue_for_a_pick_it_could_not_make_lands_where_its_owner_cannot_read_it_either() {
         jackioh_cards::register_all();
-        // p1's hand holds two already-Radiant cards, its library one: base-face in world A, Radiant in B.
         // §3, §9.1: nobody reads a library, p1 included, so p1 must not learn which world it is in. #28
         // wants two picks and R177 cues the ones R60 could not make; if the cues went to p1's own hand
-        // cards, which p1 reads, their number would spell out how many library cards were base-face.
         fn cues_for(library_radiant: bool) -> Vec<GameEvent> {
             let mut s = scenario(json!({
-                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": "edge-r9-view-28-owner",
                 "p1": {
                     "mana": 2,
@@ -1950,7 +1816,6 @@ mod r242_28s_pick_over_public_and_hidden_cards {
     use super::*;
 
     /// p1 plays #28 with one card left in hand and two in the library, all base-face in world A and all
-    /// Radiant in world B, and one public unit on the field. Neither the hand nor the library is p2's to
     /// read (§9.1).
     fn odds_game(seed: &str, hidden_radiant: bool) -> Scenario {
         let mut s = scenario(json!({
@@ -2003,9 +1868,6 @@ mod r242_28s_pick_over_public_and_hidden_cards {
             .collect();
         let world_b: IndexSet<String> = seeds.iter().map(|seed| outcome(&odds_game(seed, true))).collect();
         // R177's cues make an all-Radiant hidden pile look like a pile the pick changed: every outcome p2
-        // can see in the base-face world must be one the all-Radiant world can produce too. Drawn from
-        // the non-Radiant cards alone, the two picks always took the public unit when every hidden card
-        // was Radiant, so a game where it was passed over told p2 that p1 held a base-face hidden card.
         let only_in_a: Vec<&String> = world_a.iter().filter(|seen| !world_b.contains(*seen)).collect();
         assert!(
             only_in_a.is_empty(),
@@ -2013,19 +1875,14 @@ mod r242_28s_pick_over_public_and_hidden_cards {
             json_text(&world_a.iter().collect::<Vec<_>>()),
             json_text(&world_b.iter().collect::<Vec<_>>())
         );
-        // And the pick is still random: some seeds pass the public unit over.
         assert!(world_a.iter().any(|seen| {
             serde_json::from_str::<Value>(seen).expect("an outcome is JSON")["unitRadiant"] == json!(false)
         }));
     }
 
-    /// p1 holds a Hit Job and has Sheepish face-down in backrow lane 2 and Tempo Timmy in unit lane 1,
-    /// public. Exactly one of the two hidden cards is base-face: the Hit Job in world A, the trap in
     /// world B. #28's two picks take that card and the unit in both worlds, so both end with the same
-    /// faces everywhere.
     fn order_game(trap_base: bool) -> Scenario {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r10-l10-knockoff-order",
             "p1": {
                 "mana": 2,
@@ -2058,7 +1915,6 @@ mod r242_28s_pick_over_public_and_hidden_cards {
         // Both worlds end with every card Radiant; which hidden card was base-face is the face R33 and
         // §9.1 keep from p2. In the zones' own order the backrow comes after the unit row, so a hidden
         // pick after the public unit's could only have been the face-down trap; R242 sends the public
-        // cards' events first and then p1's hidden ones.
         indistinguishable(PlayerId::P2, &hand_pick, &trap_pick);
     }
 }
@@ -2066,7 +1922,6 @@ mod r242_28s_pick_over_public_and_hidden_cards {
 mod r243_what_the_view_carries_of_a_card_beyond_its_printed_face {
     use super::*;
 
-    /// The viewer's own hand card `id` as its JSON, so a test reads its fields by name.
     fn hand_entry(view: &PlayerView, id: &str) -> Value {
         let HandView::Cards(hand) = &view.you.hand else {
             panic!("expected the viewer's own hand in full");
@@ -2089,7 +1944,6 @@ mod r243_what_the_view_carries_of_a_card_beyond_its_printed_face {
             "p2": { "hand": ["core-021"], "field": [{ "def": TEMPO_TIMMY, "lane": 1 }], "library": [MR_VANILLA] },
         }));
         let eater = g.card(CORPSE_EATER).clone();
-        // The 7/7's Armor 7 eats Timmy's First Strike 3 whole; its 7 kills the 3/3 Timmy.
         g.attack(SEVEN_SEVEN, TEMPO_TIMMY);
         g.expect_in_zone(TEMPO_TIMMY, "graveyard");
         // §8 #89: in hand it gains the dead unit's attack and max health, 2/2 + 3/3.
@@ -2160,7 +2014,6 @@ mod r243_what_the_view_carries_of_a_card_beyond_its_printed_face {
         assert_eq!([def.base.attack, def.base.health], [Some(15), Some(17)]);
 
         // The definition exists only in match state (R179): no catalog a client holds has it, so the
-        // view is the only place its owner can read what they crafted.
         let own = g.view("p1");
         assert_eq!(
             own.defs
@@ -2188,11 +2041,8 @@ mod r227_r177_a_card_set_face_down_takes_a_fresh_id {
     const REMINISCE: &str = "core-072";
     const RENO: &str = "core-053";
 
-    /// p2 returns a Sheepish p1 watched go to the graveyard, and sets it again: the game, the old id and
-    /// the new id.
     fn reset_sheepish() -> (Scenario, String, String) {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r227-reset-sheepish",
             "active": "p2",
             "p1": { "hand": [MR_VANILLA, RENO], "mana": 4, "library": [MR_VANILLA, MR_VANILLA, MR_VANILLA] },
@@ -2261,7 +2111,6 @@ mod r227_r177_a_card_set_face_down_takes_a_fresh_id {
         assert!(!view.contains(&format!("\"{old_id}\"")));
         assert!(!view.contains(&format!("\"{new_id}\"")));
         assert!(!view.contains("formerId"));
-        // The Sheepish's return to hand named the old id, and follows the card to its face-down zone.
         let returned: Vec<GameEvent> = s
             .view("p1")
             .events
@@ -2298,7 +2147,6 @@ mod r227_r177_a_card_set_face_down_takes_a_fresh_id {
 
     /// R1074000: in a duel a card in no pile last seen in a hand was passed out of it, but a card set
     /// face-down left its hand under its old id (R227), so that id is no passed card's: once the trap
-    /// fires, its return to hand reads openly as in a 1v1 game.
     #[test]
     fn r1074000_r227_in_a_duel_a_card_set_from_a_hand_is_judged_where_it_went_not_as_passed() {
         jackioh_cards::register_all();
@@ -2316,7 +2164,6 @@ mod r227_r177_a_card_set_face_down_takes_a_fresh_id {
 
 /// R1074000: in a duel a card in no pile that the events last show in a hand was passed out of it, but a
 /// unit token bounced off the field ceases to exist on its way to the hand (R11), so it reached none:
-/// its bounce reads openly to both seats, as in a 1v1 game.
 mod r1074000_r11_a_unit_token_bounced_in_a_duel_reached_no_hand {
     use super::*;
 
@@ -2327,7 +2174,6 @@ mod r1074000_r11_a_unit_token_bounced_in_a_duel_reached_no_hand {
     fn r1074000_r11_both_seats_read_a_unit_token_flood_bounced_off_the_field() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test.
             "seed": "r1074000-flood",
             "p1": { "hand": [FLOOD], "mana": 4, "library": [MR_VANILLA, MR_VANILLA] },
             "p2": { "field": [{ "def": RUSH_TOKEN, "lane": 1 }], "library": [MR_VANILLA, MR_VANILLA] },

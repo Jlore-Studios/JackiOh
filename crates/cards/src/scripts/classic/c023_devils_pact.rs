@@ -26,7 +26,6 @@ pub const ID: &str = "classic-023";
 /// C #16, the Book of Flame this card names (its `refs`).
 const BOOK_OF_FLAME: &str = "classic-016";
 
-/// "Discard {discards} cards": that many at random, or the whole hand when it holds no more.
 fn discard_cards(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let count = param(&*ctx, "discards");
     let held = zone_count(&*ctx.state, ctx.controller, OffFieldZone::Hand);
@@ -39,7 +38,6 @@ fn discard_cards(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![discard_random(json_as(json!({ "count": count })))]
 }
 
-/// One face; `radiant_book` makes its Book of Flame Radiant, as the Radiant face did through v0.5.2.
 fn pact(radiant_book: bool) -> Script {
     Script {
         cry: Some(hook(discard_cards)),
@@ -73,7 +71,6 @@ fn pact(radiant_book: bool) -> Script {
 
 pub fn script() -> CardScripts {
     // Issue #2179: both faces' Book of Flame is the base one; the Radiant face keeps its Spell Damage +2
-    // and its 6 discards.
     CardScripts {
         base: pact(false),
         radiant: pact(false),
@@ -81,7 +78,6 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: through v0.5.2 the Radiant face's Book of Flame was Radiant; `KEPT_SCRIPTS` folds those
-/// replays under it.
 pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
         base: pact(false),
@@ -90,7 +86,6 @@ pub fn script_v0_5_2() -> CardScripts {
 }
 
 // C #23 Devil's Pact — SPEC §8.6 row 23, BUILD M9 Classic row C 23: a play from the graveyard (R454)
-// is replaced too; the modifier expires at cleanup; the opponent's view never names a replaced card
 // (R177); its tuned number (discards) reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
@@ -149,7 +144,6 @@ mod tests {
         )
     }
 
-    /// The `play` action `legalActions` offers for this instance.
     fn play_of(s: &Scenario, instance_id: &str) -> Option<ActionBody> {
         legal_actions(s.state(), P1)
             .into_iter()
@@ -321,7 +315,6 @@ mod tests {
                 let prey = s.unit(P2, 1).expect("fixture");
 
                 s.activate(PACT, json!({}));
-                // Prem Panther kills the Timmy and survives, so it draws 2: the first draw finds Hinder, cast.
                 s.attack(PANTHER, &prey);
                 assert_eq!(pending_player(&s), Some(P1));
                 s.answer(at_p2());
@@ -415,9 +408,7 @@ mod tests {
                 let answered = reduce(&played.state, &answer_at_p2(&played.state, "pacts-graveyard-answer"));
 
                 assert!(answered.error.is_none());
-                // The Book of Flame resolves: a base one, 4 and Spell Damage +1 +2.
                 assert_eq!(hero_of(&answered.state, P2).health, 23);
-                // The Book came from no graveyard: its play does not say it did.
                 match answered.events.iter().find(|event| event.event_type() == GameEventType::CardPlayed) {
                     Some(GameEvent::CardPlayed { from, .. }) => assert!(from.is_none()),
                     other => panic!("no cardPlayed: {other:?}"),
@@ -588,7 +579,6 @@ mod tests {
             }
 
             /// R767000: the script kept for the replays of v0.5.2 and before, whose Radiant face's Book of
-            /// Flame was Radiant.
             #[test]
             fn r767000_a_game_on_v0_5_2_replaces_each_play_with_a_radiant_book_of_flame() {
                 crate::under_kept(PACT, script_v0_5_2(), || {

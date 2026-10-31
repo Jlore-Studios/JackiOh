@@ -120,8 +120,6 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// BUILD M9 Classic row C 20: 2 damage; the opponent discards 1 at random (an empty hand: nothing); or a
-// Unit, either side, is destroyed at the start of your next turn; radiant: 4 damage; discards 2; or every
 // enemy Unit there then. Tuned numbers (damage, discards) read through `param()` (R386).
 #[cfg(test)]
 mod tests {
@@ -167,7 +165,6 @@ mod tests {
         }))
     }
 
-    /// Activate the card in that mode, with those targets.
     fn activate_punish<'a>(s: &'a mut Scenario, mode: &str, targets: Option<Value>) -> &'a mut Scenario {
         let mut options = json!({ "modes": [mode] });
         if let Some(targets) = targets {
@@ -176,7 +173,6 @@ mod tests {
         s.activate(PUNISH, options)
     }
 
-    /// p1 ends the turn, p2 takes theirs and ends it, and p1's next turn starts.
     fn to_next_turn(s: &mut Scenario) -> &mut Scenario {
         s.end_turn();
         assert_eq!(s.state().active, P2);
@@ -193,7 +189,6 @@ mod tests {
             .collect()
     }
 
-    /// The marks a seat's view shows on the unit with this id, anywhere on the board, as JSON.
     fn marks_in(s: &Scenario, seat: PlayerId, id: &str) -> Value {
         let view = s.view(seat);
         let card = view
@@ -320,7 +315,6 @@ mod tests {
                 for card in s.hand(P2) {
                     assert!(!seen.contains(&card.id));
                 }
-                // The discard itself is public: the graveyard names it.
                 for card in s.pile(P2, "graveyard") {
                     assert!(seen.contains(&card.id));
                 }
@@ -407,7 +401,6 @@ mod tests {
                     event,
                     GameEvent::Marked { mark, color, .. } if mark == "destroy" && color == "red"
                 )));
-                // Vanilla is p2's: the opponent's side from p1's seat, its own side from p2's.
                 let red = json!([{ "mark": "destroy", "color": "red" }]);
                 let from_p1 = s
                     .view(P1)
@@ -593,7 +586,6 @@ mod tests {
 
                 activate_punish(&mut s, DOOM_ALL, None);
                 s.end_turn();
-                // A Unit the opponent plays after the activation is there when it resolves, so it goes too.
                 s.play(TIMMY, json!({ "zone": 2 }));
                 let timmy = s.card(TIMMY).clone();
                 s.expect_in_zone(&vanilla, "field");
@@ -618,21 +610,18 @@ mod tests {
                 let red = json!([{ "mark": "destroy", "color": "red" }]);
 
                 activate_punish(&mut s, DOOM_ALL, None);
-                // The enemy Units, in both seats' views; p1's own Menace is not one.
                 assert_eq!(marked(s.last_events(), true), vec![vanilla.id.clone(), pointmaster.id.clone()]);
                 for seat in [P1, P2] {
                     assert_eq!(marks_in(&s, seat, &vanilla.id), red);
                     assert_eq!(marks_in(&s, seat, &pointmaster.id), red);
                     assert_eq!(marks_in(&s, seat, &menace.id), json!([]));
                 }
-                // One that leaves the field is not one it will destroy, and loses its mark.
                 s.play(COLLATERAL, json!({ "targets": pick::instance(&pointmaster) }));
                 s.expect_in_zone(&pointmaster, "exile");
                 assert_eq!(marked(s.last_events(), false), vec![pointmaster.id.clone()]);
                 assert_eq!(marked(s.last_events(), true), Vec::<String>::new());
 
                 s.end_turn();
-                // A Unit played while it waits is one it will destroy, so it is marked as it lands.
                 s.play(TIMMY, json!({ "zone": 3 }));
                 let timmy = s.card(TIMMY).clone();
                 assert_eq!(marked(s.last_events(), true), vec![timmy.id.clone()]);

@@ -102,7 +102,6 @@ mod tests {
             .any(|action| action["type"] == "play" && action["instanceId"] == id.as_str())
     }
 
-    /// A play action sent straight to `reduce` (the harness's `play` takes a hand card).
     fn play_action(player: &str, instance_id: &str, nonce: &str) -> Action {
         json_as(json!({ "type": "play", "playerId": player, "instanceId": instance_id, "nonce": nonce }))
     }
@@ -236,7 +235,6 @@ mod tests {
             #[test]
             fn r177_a_hidden_hand_cards_cost_changed_shows_1_and_the_sentinel_to_the_other_player() {
                 crate::register_all();
-                // Reminisce returns a (4) Spell that costs (1) less: (3), lifted to (4) by the aura.
                 let mut s = scenario(json!({
                     "p1": { "hand": [REMINISCE, FILLER], "field": [LOBBYIST], "graveyard": [NETHER] },
                 }));
@@ -299,7 +297,6 @@ mod tests {
                     |s| s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla }] })),
                     "can't play (3)+ Cost cards",
                 );
-                // The price itself is not raised: a ban prices nothing.
                 assert_eq!(hand_cost(&s, P2, HIT_JOB), Some(3));
             }
 
@@ -312,7 +309,6 @@ mod tests {
                     "active": "p2",
                 }));
                 let id = s.card(DIVIDEND).id.clone();
-                // The distinct X values offered, in order.
                 let mut xs: Vec<Option<i64>> = legal_actions(s.state(), P2)
                     .iter()
                     .map(js)

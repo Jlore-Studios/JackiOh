@@ -38,7 +38,6 @@ enum Whose {
 }
 
 impl Whose {
-    /// The `BoardScope.side` literal.
     fn side(self) -> &'static str {
         match self {
             Whose::Any => "any",
@@ -56,8 +55,6 @@ fn chosen_number(ctx: &EffectContext<'_>) -> Option<i32> {
     picked.parse::<i32>().ok()
 }
 
-/// Every card on the field and in the hands and decks of `whose` sides, the Spell's controller first,
-/// or the field alone (the whole board) when `field_only`, the base face's scope (balance patch 1).
 fn reachable(ctx: &EffectContext<'_>, whose: Whose, field_only: bool) -> Vec<CardInstance> {
     let scope: BoardScope = json_as(json!({ "side": whose.side(), "rows": ["units", "backrow"] }));
     let field = cards_in_scope(ctx, &scope);
@@ -164,7 +161,6 @@ mod tests {
         }))
     }
 
-    /// One side's Felinors by zone, compared whole.
     #[derive(Debug, PartialEq, Eq)]
     struct Felinors {
         field: usize,
@@ -189,7 +185,6 @@ mod tests {
         }
     }
 
-    /// The `modes` of every `play` action `legalActions` offers for this instance.
     fn offered_modes(s: &Scenario, instance_id: &str) -> Vec<Vec<String>> {
         legal_actions(s.state(), P1)
             .into_iter()
@@ -247,10 +242,8 @@ mod tests {
                 s.play(GLITCH, json!({ "modes": ["2"] }));
                 assert_eq!(felinors_in(&s, P1), Felinors { field: 0, hand: 1, library: 1, graveyard: 1, exile: 2 });
                 assert_eq!(felinors_in(&s, P2), Felinors { field: 0, hand: 1, library: 1, graveyard: 1, exile: 2 });
-                // The face-down (2) Trap and the (2) Field Spell go too.
                 assert!(s.backrow(P1, 1).is_none());
                 assert!(s.backrow(P2, 1).is_none());
-                // Other costs stay.
                 assert_eq!(s.unit(P1, 2).map(|card| card.def_id), Some(MENACE.to_string()));
                 assert_eq!(s.unit(P2, 1).map(|card| card.def_id), Some(VANILLA.to_string()));
                 assert_eq!(def_ids(&s.hand(P1)), vec![FELINORS, VANILLA]);
@@ -407,7 +400,6 @@ mod tests {
                 s.play(GLITCH, json!({ "modes": ["2"] }));
                 assert_eq!(felinors_in(&s, P2), Felinors { field: 0, hand: 0, library: 0, graveyard: 1, exile: 4 });
                 assert!(s.backrow(P2, 1).is_none());
-                // Yours are untouched.
                 assert_eq!(felinors_in(&s, P1), Felinors { field: 1, hand: 1, library: 1, graveyard: 1, exile: 1 });
                 assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(EXPERIMENT.to_string()));
             }
@@ -438,7 +430,6 @@ mod tests {
                     "p2": { "hand": [EXPERIMENT, STOCKPILE], "field": [TOE_CRACKER], "library": [REPLENISH] },
                 }));
                 s.play(GLITCH, json!({ "modes": ["0"] }));
-                // The opponent's hand Trap costs (0) under their Toe Cracker, so the 0 takes it.
                 s.expect_in_zone(EXPERIMENT, "exile");
             }
 

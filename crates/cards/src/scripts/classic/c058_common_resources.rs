@@ -41,7 +41,6 @@ pub fn script() -> CardScripts {
 // C #58 Common Resources, SPEC §8.6 row 58: the opponent's view never names the card (R97) and no
 // event carries a deck position. The draw limit is C #49 Anti-Greed Machine's (B5 E3); the start-of-turn
 // trigger runs before the turn's own draw (§2.2, R62), so it is the turn's first draw and the turn's own
-// draw is the one a limit of 1 stops.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -59,19 +58,15 @@ mod tests {
 
     use crate::js;
 
-    /// The `drawn` events of `player`'s, as JSON.
     fn drawn_by(events: &[GameEvent], player: PlayerId) -> Vec<Value> {
         let player = js(&player);
         events.iter().map(js).filter(|event| event["type"] == "drawn" && event["player"] == player).collect()
     }
 
-    /// `opts[key]`, or `fallback` where it is absent.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
-    /// p1's Common Resources face-up in the backrow, on p2's turn; `endTurn()` starts p1's turn.
-    /// `opts`: `radiant`, `p1Library`, `p2Library`, `p1Hand`, `p2Field`.
     fn waiting(opts: Value) -> Scenario {
         scenario(json!({
             "p1": {
@@ -107,7 +102,6 @@ mod tests {
                     def_ids(&s.pile(PlayerId::P2, "library")),
                     vec![VANILLA],
                 );
-                // Then the turn's own draw, from your own deck.
                 assert_eq!(
                     drawn_by(s.last_events(), PlayerId::P1).iter().map(|event| event["defId"].clone()).collect::<Vec<Value>>(),
                     vec![json!(MENACE), json!(STOCKPILE)],
@@ -161,7 +155,6 @@ mod tests {
                     .expect("the cast's cardPlayed event");
                 assert_eq!(cast["player"], "p1");
                 assert_eq!(cast["costPaid"], 0);
-                // "Take 1 damage" is its caster's: p1's hero.
                 assert!(
                     s.last_events()
                         .iter()
@@ -200,7 +193,6 @@ mod tests {
                     vec![json!([victim, "p1"]), json!([HINDER, "p1"])],
                 );
                 // §2.4's repeat of the draw and the turn's own draw are p1's own draws, from p1's deck: only the
-                // one bottom card left p2's deck.
                 assert_eq!(
                     s.state().players.p2.library.iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
                     vec![VANILLA, MENACE],
@@ -285,7 +277,6 @@ mod tests {
                         assert!(!event["position"].is_number());
                     }
                 }
-                // Its new owner reads it.
                 assert!(js(&s.view(PlayerId::P1).you.hand).to_string().contains(&bottom));
             }
 
@@ -344,7 +335,6 @@ mod tests {
                 assert_eq!(s.pile(PlayerId::P2, "library").len(), 0);
                 s.end_turn();
                 // Up to p2's own start of turn (whose own draw from its empty deck is fatigue of its own, §2.4),
-                // p1's end of turn drew nothing and hit nobody.
                 let events: Vec<Value> = s.last_events().iter().map(js).collect();
                 let p2_starts = events.iter().position(|event| event["type"] == "turnStarted");
                 let before = &events[..p2_starts.unwrap_or(events.len())];

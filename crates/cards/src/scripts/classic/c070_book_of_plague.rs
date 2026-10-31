@@ -18,7 +18,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     CardScripts {
-        // The same script: the Radiant face's 10 is its declared `tokens`.
         radiant: base.clone(),
         base,
     }
@@ -104,7 +103,6 @@ mod tests {
     mod base {
         use super::*;
 
-        /// five placements of one token on the one permanent a single prompt names, over every permanent on either side, face-down included
         #[test]
         fn five_placements_of_one_token_on_the_one_permanent_a_single_prompt_names_over_every_permanent_on_either_side_face_down_included() {
             let mut s = board(false);
@@ -120,7 +118,6 @@ mod tests {
                 sorted(option_ids(&s)),
                 sorted(vec![vanilla.id.clone(), menace.id.clone(), well.id.clone(), pawn.id.clone()])
             );
-            // One answer puts all five on the pick: no second prompt opens.
             s.answer(json!(menace.id));
 
             assert!(s.state().pending.is_none());
@@ -157,7 +154,6 @@ mod tests {
             assert_eq!(option_ids(&s), vec![s.card(FIENDER).id.clone()]);
         }
 
-        /// with no permanent on the field it places nothing, asks nothing, and still resolves
         #[test]
         fn with_no_permanent_on_the_field_it_places_nothing_asks_nothing_and_still_resolves() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
@@ -237,7 +233,6 @@ mod tests {
             assert_eq!(placements(&s), vec![2, 2, 2, 2, 2]);
         }
 
-        /// C #4: the opponent's Palantir steals the (1) Cost Book outright and casts it, its pick made at random
         #[test]
         fn r831001_c_n4_the_opponents_palantir_steals_it_and_casts_it_placing_on_the_one_permanent_left() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, ANCHOR], "field": [VANILLA] }, "p2": { "hand": [ANCHOR], "backrow": [PALANTIR] } }));
@@ -245,10 +240,7 @@ mod tests {
 
             s.play(&book, json!({}));
 
-            // No "you may": the steal is answered without asking, and the cast's pick is random, so
-            // no prompt ever opens.
             assert!(s.state().pending.is_none());
-            // Palantir paid its price, so p1's Unit is the one permanent left: all five land there.
             s.expect_in_zone(PALANTIR, "graveyard");
             assert_eq!(placements(&s), vec![1, 1, 1, 1, 1]);
             assert_eq!(s.card(VANILLA).counters.plague, Some(5));
@@ -299,7 +291,6 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// ten placements on the one pick
         #[test]
         fn ten_placements_on_the_one_pick() {
             let mut s = board(true);

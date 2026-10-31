@@ -16,7 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-012";
 
-/// "a Unit": units only, either side.
 fn targets() -> Vec<TargetDecl> {
     vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }))]
 }
@@ -34,7 +33,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // Same script: `param` reads the Radiant face's 8 off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }

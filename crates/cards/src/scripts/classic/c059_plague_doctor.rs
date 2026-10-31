@@ -32,8 +32,6 @@ fn targets() -> Vec<TargetDecl> {
     json_as(json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]))
 }
 
-/// What the Cry's `EffectContext` and the preview's `ConditionContext` both carry. `tokens` is called
-/// only where needed: it refuses a read with no card to read it on.
 pub struct Read<'a> {
     pub state: &'a GameState,
     pub self_: Option<&'a CardInstance>,
@@ -42,16 +40,13 @@ pub struct Read<'a> {
     pub tokens: &'a dyn Fn() -> i32,
 }
 
-/// Every Plague Counter on the field: each permanent on both sides, face-down ones included, the top of
 /// each pile only (R13). Walked from the controller's side, so the read never asks whose turn it is.
 fn tokens_on_field(read: &Read) -> i32 {
     permanents_on_field(read.state, read.controller).iter().fold(0, |sum, card| sum + plague_on(card))
 }
 
-/// The Plague Counters the Cry's own placement puts on the Doctor: the declared number times its own
 /// multiplier (a Doctor fused onto a C #27 Pestilent Slime doubles it), in hand as it would once played.
 /// Both faces place since patch v0.3.10 (#831), the Radiant face alone before. A preview is asked only of a Doctor acting on the field or in a hand (R13), and its Cry runs
-/// as it arrives on top of its zone, so the Doctor always carries the placement.
 fn tokens_it_places(read: &Read) -> i32 {
     match read.self_ {
         Some(self_) => (read.tokens)().max(0) * plague_multiplier_of(read.state, self_),
@@ -59,13 +54,11 @@ fn tokens_it_places(read: &Read) -> i32 {
     }
 }
 
-/// N: every Plague Counter on the field, plus the Cry's own placement, as the Cry resolves now.
 pub fn damage_now(read: &Read) -> i32 {
     tokens_on_field(read) + tokens_it_places(read)
 }
 
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    // The Cry only reads the board while it builds its list.
     let ctx: &EffectContext<'_> = ctx;
     let amount = damage_now(&Read {
         state: ctx.state,
@@ -99,7 +92,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The placement is the declared `tokens`: 1 on the base face, 2 on the Radiant face.
     CardScripts { radiant: base.clone(), base }
 }
 
@@ -138,7 +130,6 @@ mod tests {
         s.events().iter().map(js).filter(|event| event["type"] == "damage").count()
     }
 
-    /// The ids of `player`'s Doctors in hand, in hand order.
     fn doctors_in_hand(s: &Scenario, player: PlayerId) -> Vec<String> {
         s.hand(player).iter().filter(|card| card.def_id == DOCTOR).map(|card| card.id.clone()).collect()
     }
@@ -157,7 +148,6 @@ mod tests {
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
             );
             assert_eq!(def["params"], json!([{ "key": "tokens", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "cry": true }]));
-            // The Radiant face is the same declaration and the same hooks.
             assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
             assert_eq!(scripts.radiant.preview.is_some(), scripts.base.preview.is_some());
@@ -190,7 +180,6 @@ mod tests {
                 assert_eq!(s.card(DOCTOR).counters.plague, Some(1));
                 assert_eq!(hits(&s, &menace), vec![json!(8)]);
                 s.expect_stats(&menace, json!({ "health": 1 }));
-                // Its own placement is the one token the Cry moves, before the hit.
                 let doctor = s.card(DOCTOR).id.clone();
                 assert_eq!(
                     s.events()
@@ -218,7 +207,6 @@ mod tests {
                 s.play(&first, json!({ "targets": enemy_hero() }));
                 s.play(&second, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
 
-                // 3 + its own 1, then 3 + 1 + the second Doctor's own 1.
                 s.expect_health(PlayerId::P2, 16);
                 s.expect_health(PlayerId::P1, 15);
             }
@@ -254,7 +242,6 @@ mod tests {
                     })
                     .collect();
 
-                // A `BTreeSet` keeps the comparison order-free.
                 assert_eq!(
                     offered,
                     BTreeSet::from([
@@ -294,7 +281,6 @@ mod tests {
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
 
-                // The pile's top's 1 and the Doctor's own; the 4 beneath are not on the field.
                 s.expect_health(PlayerId::P2, 18);
             }
 
@@ -356,7 +342,6 @@ mod tests {
                 s.expect_stats(DOCTOR, json!({ "attack": 4, "health": 6 }));
                 assert_eq!(s.card(DOCTOR).counters.plague, Some(2));
                 assert_eq!(hits(&s, &menace), vec![json!(3)]);
-                // The placement comes first, then the hit.
                 let order: Vec<Value> = s
                     .events()
                     .iter()
@@ -416,7 +401,6 @@ mod tests {
                 assert_eq!(s.card(&up).counters.plague, Some(3));
                 s.expect_health(PlayerId::P2, 16);
 
-                // 1 + 3 on the field, then 1 more of its own.
                 s.play(&down, json!({ "targets": enemy_hero() }));
                 assert_eq!(s.card(&down).counters.plague, Some(1));
                 s.expect_health(PlayerId::P2, 11);

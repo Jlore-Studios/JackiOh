@@ -1,5 +1,4 @@
 //! R275 and R276: the Radiant power standard (SPEC §5.2), catalog-wide.
-//!
 //! R275's standard has two halves. The stat half is mechanical, and this file holds every Unit face
 //! to it: a Radiant Unit's attack and health are each at least twice its base face's, a 0 staying 0
 //! (#1 Big D-fender, #65.1 Spikey Pillow), and a token summoned X/X (the Bread Token's printed 0/0)
@@ -7,7 +6,6 @@
 //! (Classic+ #69 Buff Billy, B2.7) is held to the same factor on its X multiples. The effect half —
 //! 100–150% stronger, a broader scope, or an added rider — is a judgement, recorded card by card in
 //! docs/radiant-audit.md, and this file proves that document covers every entry.
-//!
 //! R276: every entry's Radiant face changes it, so no Make Radiant is spent on a card it leaves as it was.
 //! The audit is read at compile time (`include_str!`, SURFACE §3: a pure crate's tests read no files).
 
@@ -22,7 +20,6 @@ fn entries() -> Vec<&'static CardDef> {
 const STAT_FACTOR: i32 = 2;
 
 /// R275's named exceptions to the stat half, by id, with the reason. None remain, so the record
-/// stays empty.
 const STAT_EXCEPTIONS: &[(&str, &str)] = &[];
 
 /// `docs/radiant-audit.md`, the card-by-card record of R275's effect half.
@@ -119,8 +116,6 @@ mod r276_every_card_has_a_radiant_face_spec_5_2 {
     #[test]
     fn r276_changes_every_card_by_making_it_radiant_text_stats_or_keywords_differ() {
         // R349: a card that prints no Radiant form (`radiantFallback`, the Ghoul Token) changes by
-        // doubling its stats, the X/X it is summoned with included, so its printed 0/0 reads alike on
-        // both faces; `t_ghoul.rs`'s tests prove the doubling in play. Every other card differs in
         // print. A face's text is read with its own `params` values filled in (B3.4 rule 5).
         let unchanged: Vec<String> = entries()
             .into_iter()

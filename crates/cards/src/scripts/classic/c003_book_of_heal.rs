@@ -35,7 +35,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 18 is its declared `heal`, which `param` reads off the running face.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -83,7 +82,6 @@ mod tests {
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "aim": "help", "filter": { "side": "any", "of": ["unit", "hero"] } }])
             );
-            // The radiant face is the very same script.
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");
             };

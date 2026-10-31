@@ -13,7 +13,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-069";
 
-/// "while it has a Plague Counter": the one predicate the keyword and the glow share.
 fn has_plague(self_: &CardInstance) -> bool {
     plague_on(self_) > 0
 }
@@ -50,8 +49,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     CardScripts {
-        // The same script: the Radiant face's +4 is its declared `attack`, which `param` reads off the face it
-        // wears.
         radiant: base.clone(),
         base,
     }
@@ -87,7 +84,6 @@ mod tests {
             .collect()
     }
 
-    /// declares its one number, a conditional keyword, a self aura and the glow, one script on both faces
     #[test]
     fn declares_its_one_number_a_conditional_keyword_a_self_aura_and_the_glow_one_script_on_both_faces() {
         crate::register_all();
@@ -103,7 +99,6 @@ mod tests {
         assert!(base.conditional_keywords.is_some());
         assert!(base.aura.is_some());
         assert!(base.condition_met.is_some());
-        // The Radiant face is the base face, every hook the same one.
         assert!(Arc::ptr_eq(
             base.conditional_keywords.as_ref().expect("a conditional keyword"),
             radiant.conditional_keywords.as_ref().expect("a conditional keyword")
@@ -121,7 +116,6 @@ mod tests {
     mod base {
         use super::*;
 
-        /// with no token it is a 4/2 with Charge and neither First Strike nor a bonus
         #[test]
         fn with_no_token_it_is_a_4_2_with_charge_and_neither_first_strike_nor_a_bonus() {
             let mut s = scenario(json!({ "p1": { "field": [CHARGER], "hand": [FILLER] } }));
@@ -130,7 +124,6 @@ mod tests {
             assert_eq!(kinds(&s, CHARGER), vec!["Charge"]);
         }
 
-        /// Charge: it attacks the enemy hero the turn it is played
         #[test]
         fn charge_it_attacks_the_enemy_hero_the_turn_it_is_played() {
             let mut s = scenario(json!({ "p1": { "hand": [CHARGER, FILLER] }, "p2": { "hand": [FILLER], "health": 20 } }));
@@ -171,15 +164,12 @@ mod tests {
         #[test]
         fn both_follow_the_tokens_as_they_go_c_n78_mutate_spells_removals_take_the_bonus_then_first_strike() {
             let mut s = scenario(json!({
-                // The Radiant Mutate Spell: Activate ♾️ since patch v0.3.10, so it removes twice in a turn.
                 "p1": { "hand": [FILLER], "field": [{ "def": CHARGER, "counters": { "plague": 2 } }], "backrow": [{ "def": MUTATE, "radiant": true }] },
                 "p2": { "hand": [FILLER], "health": 30 },
             }));
             let charger = s.card(CHARGER).clone();
             s.expect_stats(&charger, json!({ "attack": 8 }));
 
-            // Each removal comes before the two forced attacks it buys (the Radiant face's), which here
-            // can only be at the hero.
             s.activate(MUTATE, json!({ "targets": pick::instance(&charger) }));
             s.expect_stats(&charger, json!({ "attack": 6 }));
             assert_eq!(kinds(&s, &charger.id), vec!["Charge", "First Strike"]);
@@ -230,7 +220,6 @@ mod tests {
             clean.expect_in_zone(CHARGER, "graveyard");
         }
 
-        /// the bonus is its own: no other Unit gains from its tokens
         #[test]
         fn the_bonus_is_its_own_no_other_unit_gains_from_its_tokens() {
             let mut s = scenario(json!({
@@ -257,7 +246,6 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// is an 8/4 with Charge; with no token neither First Strike nor a bonus
         #[test]
         fn is_an_8_4_with_charge_with_no_token_neither_first_strike_nor_a_bonus() {
             let mut s = scenario(json!({ "p1": { "field": [{ "def": CHARGER, "radiant": true }], "hand": [FILLER] } }));
@@ -266,7 +254,6 @@ mod tests {
             assert_eq!(kinds(&s, CHARGER), vec!["Charge"]);
         }
 
-        /// +4 Attack for each Plague Counter on it, and First Strike while it has one
         #[test]
         fn plus_4_attack_for_each_plague_counter_on_it_and_first_strike_while_it_has_one() {
             let mut s = scenario(json!({ "p1": { "field": [{ "def": CHARGER, "radiant": true, "counters": { "plague": 2 } }], "hand": [FILLER] } }));
