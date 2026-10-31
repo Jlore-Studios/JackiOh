@@ -10932,6 +10932,13 @@
     "2563": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T07:05:08Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule line 3 fails: the plan edits spec/rulings/R2127000.md (its Which list, cards and proven_in); everything else is apps/web"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
