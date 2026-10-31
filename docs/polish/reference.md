@@ -234,7 +234,8 @@ The user's words, then the decisions made for them.
     404 storm.
 - **Inspect:**
   - Hover (desktop, about 300 ms) shows an enlarged card.
-  - Long-press (touch) opens an inspect sheet.
+  - Holding a card (touch) shows the same enlarged card while the finger stays down (R2617000), or
+    an inspect sheet with hover previews off.
   - In the deck builder, a click opens a detail view with both faces side by side and a glossary of
     its keywords.
 - **Deck builder:**

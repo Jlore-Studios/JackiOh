@@ -1152,14 +1152,15 @@ describe("inspecting in the builder (B38)", () => {
     expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
   });
 
-  it("B24 a touch long-press on a deck tile opens the sheet, and the click after it does not remove the card", () => {
+  it("B24 R2617000 a touch held on a deck tile shows its preview while the finger is down, and the click after it does not remove the card", () => {
     vi.useFakeTimers();
     mount(["x-02"]);
     const tile = screen.getByTestId(deckCardId("x-02"));
     fireEvent.pointerDown(tile, pointer("touch"));
     advance(LONG_PRESS_MS);
+    expect(openInspectOverlays()).toEqual([INSPECT_HOVER]);
     fireEvent.pointerUp(tile, pointer("touch"));
-    expect(openInspectOverlays()).toEqual([INSPECT_SHEET]);
+    expect(openInspectOverlays()).toEqual([]);
 
     fireEvent.click(tile);
     expect(screen.getByTestId(deckCardId("x-02")), "the swallowed click removed nothing").toBeInTheDocument();
