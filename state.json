@@ -530,6 +530,12 @@
       "lines": [
         "approve"
       ]
+    },
+    "c:6539681179": {
+      "at": "2026-10-31T05:42:12Z",
+      "lines": [
+        "/harness cancel"
+      ]
     }
   },
   "items": {
