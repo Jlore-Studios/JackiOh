@@ -142,7 +142,7 @@ attribution is required when they play in the game.
 | `intro-meditative-071-1` | `apps/web/public/audio/music/intro-meditative-071-1.m4a` | Intro of Meditative #71.1 The Cane (token printed Mythic): dulcimer, strings, double bass, F dorian, 4/4 at 116 | 5.1 s |
 | `intro-meditative-075` | `apps/web/public/audio/music/intro-meditative-075.m4a` | Intro of Meditative #75 Ever Growing Tree (Legendary): flute, choir, cello, A-flat major, 4/4 at 102 | 5.7 s |
 | `intro-meditative-079` | `apps/web/public/audio/music/intro-meditative-079.m4a` | Intro of Meditative #79 Touched by KY (Legendary): vibraphone, celesta, fretless bass, D-flat lydian, 4/4 at 99 | 5.8 s |
-| `intro-meditative-080` | `apps/web/public/audio/music/intro-meditative-080.m4a` | Intro of Meditative #80 Aluneth (Legendary): whistle, steel guitar, double bass, D mixolydian, 4/4 at 117 | 5.1 s |
+| `intro-meditative-080` | `apps/web/public/audio/music/intro-meditative-080.m4a` | Intro of Meditative #80 Aluneth (Legendary): flute, choir, cello, A major, 4/4 at 100 | 5.8 s |
 | `intro-meditative-086` | `apps/web/public/audio/music/intro-meditative-086.m4a` | Intro of Meditative #86 Mayor Medinamogger (Legendary): trumpet, strings, contrabass, D-flat dorian, 4/4 at 117 | 5.1 s |
 | `intro-meditative-087` | `apps/web/public/audio/music/intro-meditative-087.m4a` | Intro of Meditative #87 Tatches the Totem (Legendary): dulcimer, strings, double bass, G-flat dorian, 3/4 at 134 | 5.0 s |
 | `intro-meditative-095` | `apps/web/public/audio/music/intro-meditative-095.m4a` | Intro of Meditative #95 Call to Chaos (Meditative Edition) (Legendary): dulcimer, xylophone, tuba, D dorian, 4/4 at 140 | 4.4 s |
@@ -195,6 +195,7 @@ attribution is required when they play in the game.
 | `intro-stinkyscape-112-1` | `apps/web/public/audio/music/intro-stinkyscape-112-1.m4a` | Intro of Stinkyscape #112.1 Paycheck (Legendary): flute, strings, cello, B-flat dorian, 4/4 at 109 | 5.4 s |
 | `intro-stinkyscape-115` | `apps/web/public/audio/music/intro-stinkyscape-115.m4a` | Intro of Stinkyscape #115 Scornboi (Legendary): horn, strings, contrabass, A dorian, 4/4 at 117 | 5.1 s |
 | `intro-stinkyscape-116` | `apps/web/public/audio/music/intro-stinkyscape-116.m4a` | Intro of Stinkyscape #116 Megabase (Legendary): whistle, steel guitar, acoustic bass, B dorian, 4/4 at 129 | 4.7 s |
+| `intro-stinkyscape-137` | `apps/web/public/audio/music/intro-stinkyscape-137.m4a` | Intro of Stinkyscape #137 Starfleet Commander (Legendary): horn, strings, contrabass, A dorian, 4/4 at 124 | 4.9 s |
 | `intro-stinkyscape-137-1` | `apps/web/public/audio/music/intro-stinkyscape-137-1.m4a` | Intro of Stinkyscape #137.1 Land Doctrine (Legendary): trumpet, horn, tuba, A-flat minor, 4/4 at 121 | 5.0 s |
 | `intro-stinkyscape-137-2` | `apps/web/public/audio/music/intro-stinkyscape-137-2.m4a` | Intro of Stinkyscape #137.2 Sea Doctrine (Legendary): trumpet, horn, tuba, D-flat minor, 4/4 at 109 | 5.4 s |
 | `intro-stinkyscape-137-3` | `apps/web/public/audio/music/intro-stinkyscape-137-3.m4a` | Intro of Stinkyscape #137.3 Air Doctrine (Legendary): trumpet, horn, tuba, G minor, 4/4 at 111 | 5.3 s |
@@ -211,6 +212,7 @@ attribution is required when they play in the game.
 | `intro-stinkyscape-152` | `apps/web/public/audio/music/intro-stinkyscape-152.m4a` | Intro of Stinkyscape #152 Sanctum (Legendary): oboe, choir, cello, G mixolydian, 3/4 at 119 | 5.5 s |
 | `intro-stinkyscape-153` | `apps/web/public/audio/music/intro-stinkyscape-153.m4a` | Intro of Stinkyscape #153 Stimmycheck (Legendary): flute, strings, cello, E dorian, 4/4 at 107 | 5.5 s |
 | `intro-stinkyscape-154` | `apps/web/public/audio/music/intro-stinkyscape-154.m4a` | Intro of Stinkyscape #154 Dice of Doom (Mythic): whistle, steel guitar, acoustic bass, B mixolydian, 4/4 at 138 | 4.5 s |
+| `intro-stinkyscape-176` | `apps/web/public/audio/music/intro-stinkyscape-176.m4a` | Intro of Stinkyscape #176 Preemptive Strike (Legendary): glockenspiel, strings, cello, B dorian, 4/4 at 129 | 4.7 s |
 | `intro-stinkyscape-t-dormant-starship` | `apps/web/public/audio/music/intro-stinkyscape-t-dormant-starship.m4a` | Intro of Stinkyscape Dormant Starship (Legendary): trumpet, strings, contrabass, B-flat major, 4/4 at 113 | 5.2 s |
 | `intro-stinkyscape-t-shield-layer` | `apps/web/public/audio/music/intro-stinkyscape-t-shield-layer.m4a` | Intro of Stinkyscape Drone Battleship (Shield Layer) (Mythic): trumpet, strings, contrabass, E-flat minor, 4/4 at 112 | 5.3 s |
 | `intro-stinkyscape-t-propagation-layer` | `apps/web/public/audio/music/intro-stinkyscape-t-propagation-layer.m4a` | Intro of Stinkyscape Drone Battleship (Propagation Layer) (Mythic): horn, horn, contrabass, C minor, 4/4 at 125 | 4.8 s |

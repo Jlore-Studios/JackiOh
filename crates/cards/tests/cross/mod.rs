@@ -144,6 +144,8 @@ pub fn tributes_of(action: &ActionBody) -> Vec<String> {
 pub mod activate_listed;
 pub mod after_resolution;
 pub mod aura_table;
+pub mod balance_2521_a;
+pub mod balance_2521_b;
 pub mod buff_priorities;
 pub mod card_metrics;
 pub mod card_text;

@@ -23,7 +23,7 @@
 use std::sync::{LazyLock, OnceLock};
 
 use indexmap::IndexMap;
-use jackioh_engine::{CardDef, CardDefs, CardScripts, SetName, WinRateTable};
+use jackioh_engine::{CardDef, CardDefs, CardScripts, SHIPPED_SETS, SetName, WinRateTable};
 
 include!(concat!(env!("OUT_DIR"), "/registry.rs"));
 
@@ -163,6 +163,24 @@ pub static WIN_RATES: LazyLock<WinRateTable> = LazyLock::new(|| {
     serde_json::from_str(win_rates_json())
         .unwrap_or_else(|error| panic!("crates/cards/data/win_rates.json: {error}"))
 });
+
+/// R2386000: the shipped sets (`SHIPPED_SETS`, in order) of which `table` holds no row M #50 CN Tech
+/// or M+ #2 NA Tech can pick: a deckable card of the set (never a token) with at least
+/// `CN_TECH_MIN_GAMES` games. The compiled table leaves none (CN Tech's R2386000 test).
+pub fn sets_without_win_rates(table: &WinRateTable) -> Vec<SetName> {
+    use jackioh_engine::config::CN_TECH_MIN_GAMES;
+    SHIPPED_SETS
+        .into_iter()
+        .filter(|set| {
+            !table.cards.iter().any(|row| {
+                row.games >= CN_TECH_MIN_GAMES
+                    && CATALOG
+                        .get(&row.id)
+                        .is_some_and(|def| def.set == *set && jackioh_engine::catalog::deckable(def))
+            })
+        })
+        .collect()
+}
 
 /// Registers the shipped catalog (§9.4) and the card scripts with the engine (SURFACE §7.4), and where
 /// the older shipped catalogs a replay folds under are found (R767000): the engine's `OnceLock`s are

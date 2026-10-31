@@ -324,7 +324,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Activate: trigger(
     "Activate",
     'Once per turn on your turn, click the card to do an effect; "Activate X" up to X times per turn, "Activate ♾️" any number of times',
-    { row: "Activate / Activate X / Activate ♾️" },
+    // #2521: "Activated", ZolarKeth's "A University can be Activated at most once each turn" (R2521003).
+    { row: "Activate / Activate X / Activate ♾️", aliases: ["Activated"] },
   ),
   // R1839002: a Dormant card's own trigger.
   "When this awakens": trigger("When this awakens", "When this Dormant card awakens"),

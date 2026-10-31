@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 68 tables of migrations 0001-0067 ==='
+\echo '=== CHECK 2: the 68 tables of migrations 0001-0070 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -88,7 +88,7 @@ declare
   -- R2100000), and a spend's idempotency_keys (0067, R2124000).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
-  -- 0055, 0056, 0057, 0058, 0059, 0062, 0064 and 0065 add no table.
+  -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069 and 0070 add no table.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -942,7 +942,8 @@ end $$;
 -- the Meditative set's Wincon (R1411), 0043 with the Meditative+ set's Potion (R1178000), 0058
 -- with #1837's Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean (R1837000), and 0065
 -- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000), and 0069 with
--- the Training Grounds Legacy cards' Legacy (R2511000). Each probe
+-- the Training Grounds Legacy cards' Legacy (R2511000), and 0070 with #2521's Resource and
+-- Faction. Each probe
 -- row is removed before the next, and each probe runs in a block of its own, so later checks see
 -- only the cards CHECK 10 seeded.
 do $$
@@ -952,7 +953,7 @@ declare
     'Human', 'Felinor', 'KY', 'CN', 'Fruit', 'Call to Chaos', 'Quickdraw', 'Jlockeed', 'Book', 'Pancake',
     'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Wincon', 'Potion', 'Terminus', 'Quest',
     'Otherworldly', 'Other-Origins', 'Jelly Bean', 'Drone Core', 'Weapon', 'War Doctrine', 'Swarm',
-    'Legacy', 'Token'];
+    'Legacy', 'Resource', 'Faction', 'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -968,14 +969,14 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All twenty-seven on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All twenty-nine on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all twenty-seven tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all twenty-nine tags';
   end;
   delete from public.cards where id = 'check18-probe';
 

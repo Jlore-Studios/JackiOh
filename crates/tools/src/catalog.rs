@@ -199,16 +199,17 @@ fn sets() -> Vec<SetExpectation> {
             ],
         },
         // R1420, R1178000: the Meditative+ set (issue #1173, docs/meditative-plus-set.md MP2): 26 cards
-        // and the 6 tokens they define (#1.1 Base Camp, #1.2 Spa Day, and since #1563 #1.3 Garage Sale
-        // and #1.4 Leg Day, the AI generated helpers of #1 Bob's Plan; #16.1 Jazakus Prime; #20.1 Lil'
-        // Kenny), the rarities the designer printed and #26 Scratch Pad's Mythic. It does not ship yet, so its entries are checked for their shape
+        // and the 7 tokens they define (#1.1 Base Camp, #1.2 Spa Day, since #1563 #1.3 Garage Sale
+        // and #1.4 Leg Day, and since #2521 #1.5 Star Chart, the AI generated helpers of #1 Bob's Plan;
+        // #16.1 Jazakus Prime; #20.1 Lil' Kenny), the rarities the designer printed and #26 Scratch
+        // Pad's Mythic. It does not ship yet, so its entries are checked for their shape
         // alone until the patch that lists it in SHIPPED_SETS (#1187).
         SetExpectation {
             set: "Meditative+",
             segment: "meditativeplus",
             cards: 26,
             shared_cards: Vec::new(),
-            card_defined_tokens: texts(&["1.1", "1.2", "1.3", "1.4", "16.1", "20.1"]),
+            card_defined_tokens: texts(&["1.1", "1.2", "1.3", "1.4", "1.5", "16.1", "20.1"]),
             shared_tokens: Vec::new(),
             rarities: &[
                 ("Common", 5),
@@ -219,16 +220,17 @@ fn sets() -> Vec<SetExpectation> {
             ],
         },
         // R1420, R1857000, R1857001: the Stinkyscape set (issue #1836, docs/stinkyscape-set.md ST12):
-        // 175 cards (the designer's second #21 and #122 numbered #174 and #175), the 30 tokens they
-        // define, the Dormant Starship (a card outside the numbers, the set's one shared card), and 22
-        // shared tokens: the two drones, the Drone Battleship's three layers, the six Resources,
-        // Anomaly Found! and the ten AI generated cards. Its rarities over its 176 cards: 42 Common, 50
-        // Rare, 43 Epic, 29 Legendary (the Dormant Starship one of them) and 12 Mythic. It does not
-        // ship yet, so its entries are checked for their shape alone until its release (#1884).
+        // 177 cards (the designer's second #21 and #122 numbered #174 and #175, and #2521's #176
+        // Preemptive Strike and #177 Cloaking Module), the 30 tokens they define, the Dormant Starship
+        // (a card outside the numbers, the set's one shared card), and 22 shared tokens: the two
+        // drones, the Drone Battleship's three layers, the six Resources, Anomaly Found! and the ten AI
+        // generated cards. Its rarities over its 178 cards: 41 Common, 51 Rare, 43 Epic, 31 Legendary
+        // (the Dormant Starship one of them) and 12 Mythic (#2521: #137 Starfleet Commander, Common
+        // until then, and #176 are Legendary, #177 Rare). It shipped with its release (#1884).
         SetExpectation {
             set: "Stinkyscape",
             segment: "stinkyscape",
-            cards: 175,
+            cards: 177,
             shared_cards: texts(&["T-dormant-starship"]),
             card_defined_tokens: [
                 range("4.", 1, 6),
@@ -261,10 +263,10 @@ fn sets() -> Vec<SetExpectation> {
             ]
             .concat(),
             rarities: &[
-                ("Common", 42),
-                ("Rare", 50),
+                ("Common", 41),
+                ("Rare", 51),
                 ("Epic", 43),
-                ("Legendary", 29),
+                ("Legendary", 31),
                 ("Mythic", 12),
             ],
         },
@@ -304,18 +306,19 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 /// Classic+ Jlockeed cards'). TS's `Record<Tag, number>`: the `match` is exhaustive over the union.
 /// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
 /// (docs/meditative-set.md M2's census of its 132 entries) and the Meditative+ set's
-/// (docs/meditative-plus-set.md MP2's census of its 30, 32 since #1563), each of which counts once it ships (R1420),
-/// the Stinkyscape set's (docs/stinkyscape-set.md ST12's census of its 228, R1857000), which counts
-/// from its release (#1884), and the held Training Grounds set's (docs/training-grounds-set.md TG2's census
-/// of its 61, R2194000), which counts from its release (#2204).
+/// (docs/meditative-plus-set.md MP2's census of its 30, 32 since #1563 and 33 since #2521), each of
+/// which counts once it ships (R1420), the Stinkyscape set's (docs/stinkyscape-set.md ST12's census
+/// of its 228, 230 since #2521, R1857000), which counts from its release (#1884), and the held
+/// Training Grounds set's (docs/training-grounds-set.md TG2's census of its 61, R2194000), which
+/// counts from its release (#2204).
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
         // Stinkyscape #6, #14, #15, #17, #26, #37, #42, #45, #88, #94, #96, #103, #109, #110, #111, #113,
-        // #114, #115, #147 and #147.1.
+        // #114, #115, #147 and #147.1, and since #2521 #137 Starfleet Commander.
         // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the Legacy cards #41, #43,
         // #53 and #54.
-        Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(20) + training_grounds(15),
+        Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(21) + training_grounds(15),
         // Core #62 Friend of Felinors and Classic #32 Felinor Feelings lost it in #1837 (R1837000).
         // Stinkyscape #87.
         // Training Grounds #17, #22, #23 and #33, and the Legacy cards #44 and #51.
@@ -337,10 +340,11 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Stinkyscape #150 and #151.
         // Training Grounds #39.
         Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2) + training_grounds(1),
+        // Core #84 Going Long and Meditative #80 Aluneth lost it in #2521.
         // Meditative+ #1 Bob's Plan.
         // Stinkyscape #16, #44, #116, #148 and #154.
         // Training Grounds #40 Goetzmann Game Design.
-        Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1) + stinkyscape(5) + training_grounds(1),
+        Tag::Quickdraw => 4 + meditative(4) + meditative_plus(1) + stinkyscape(5) + training_grounds(1),
         // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
         // Jlockeed's Supply Drop (the designer's "Jlockheed").
         // Stinkyscape #124 to #130.
@@ -350,10 +354,10 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Stinkyscape #102.
         Tag::Book => 14 + meditative_plus(1) + stinkyscape(1),
         Tag::Pancake => 10,
-        // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, #1 Bob's Plan's
-        // AI generated helpers.
+        // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale, #1.4 Leg Day and, since #2521,
+        // #1.5 Star Chart, #1 Bob's Plan's AI generated helpers.
         // Stinkyscape's ten AI generated cards, T-AI-1 to T-AI-10.
-        Tag::Ai => 10 + meditative_plus(4) + stinkyscape(10),
+        Tag::Ai => 10 + meditative_plus(5) + stinkyscape(10),
         // Classic+ #7 The House since #1704, and #39 Book Worm since #1828.
         // Stinkyscape #40 Poison Capsule.
         Tag::Plague => 19 + meditative(2) + stinkyscape(1),
@@ -389,8 +393,13 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Swarm => stinkyscape(2),
         // R2511000: Training Grounds #41 to #60, its twenty Legacy cards.
         Tag::Legacy => training_grounds(20),
-        // Training Grounds #39.1.
-        Tag::Token => 50 + meditative(30) + meditative_plus(6) + stinkyscape(52) + training_grounds(1),
+        // #2521: the Stinkyscape set's six Resources, T-reknite, T-korrelite, T-gellium, T-axnit,
+        // T-narcor and T-red-narcor (Resource), and its five Faction cards, #95 and #159 to #162
+        // (Faction).
+        Tag::Resource => stinkyscape(6),
+        Tag::Faction => stinkyscape(5),
+        // Meditative+ #1.5 Star Chart since #2521. Training Grounds #39.1.
+        Tag::Token => 50 + meditative(30) + meditative_plus(7) + stinkyscape(52) + training_grounds(1),
     }
 }
 
@@ -2214,15 +2223,15 @@ mod tests {
         assert_eq!(report.failures, Vec::<String>::new());
         // B2.1's 268 cards and 50 tokens, and from the patch that ships it (R1420) the Meditative
         // set's 102 and 30: 370 cards and 80 tokens; from its release (#1187) the Meditative+ set's
-        // 26 and 4 (R1178000), 6 since #1563's #1.3 and #1.4; and from its release (#1884) the
-        // Stinkyscape set's 176 and 52 (R1857000); and from its release (#2204) the Training Grounds
-        // set's 60 and 1 (R2194000).
+        // 26 and 4 (R1178000), 6 since #1563's #1.3 and #1.4, 7 since #2521's #1.5; and from its
+        // release (#1884) the Stinkyscape set's 176 and 52 (R1857000), 178 cards since #2521's #176
+        // and #177; and from its release (#2204) the Training Grounds set's 60 and 1 (R2194000).
         assert_eq!(
             (report.entries, report.non_token_count, report.token_count),
             (
-                318 + meditative(132) + meditative_plus(32) + stinkyscape(228) + training_grounds(61),
-                268 + meditative(102) + meditative_plus(26) + stinkyscape(176) + training_grounds(60),
-                50 + meditative(30) + meditative_plus(6) + stinkyscape(52) + training_grounds(1)
+                318 + meditative(132) + meditative_plus(33) + stinkyscape(230) + training_grounds(61),
+                268 + meditative(102) + meditative_plus(26) + stinkyscape(178) + training_grounds(60),
+                50 + meditative(30) + meditative_plus(7) + stinkyscape(52) + training_grounds(1)
             )
         );
     }
@@ -2251,7 +2260,7 @@ mod tests {
 
     #[test]
     fn r1178000_holds_the_meditative_plus_set_to_every_count_since_it_shipped() {
-        // Since its release (#1187) its entries (30, 32 since #1563) count toward the totals, and none is held apart:
+        // Since its release (#1187) its entries (30, 32 since #1563, 33 since #2521) count toward the totals, and none is held apart:
         // the entries held apart are a held set's alone (R1857000's Stinkyscape, while it is held).
         let shipped = check_catalog(&shipped_catalog());
         assert_eq!(shipped.failures, Vec::<String>::new());
@@ -2303,19 +2312,19 @@ mod tests {
             ["catalog: expected 3 entries tagged \"Potion\", found 2"]
         );
 
-        // An index the brief does not list (#27, a fifth helper #1.5), or an id that does not follow
-        // its index, still fails.
+        // An index the brief does not list (#27, a sixth helper #1.6, #2521's #1.5 Star Chart being
+        // the fifth), or an id that does not follow its index, still fails.
         let mut wrong = shipped_catalog();
         for (index, id) in [
             ("27", "meditativeplus-027"),
-            ("1.5", "meditativeplus-001-5"),
+            ("1.6", "meditativeplus-001-6"),
             ("3", "meditativeplus-x"),
         ] {
             wrong.insert(id.to_string(), fixture_entry("Meditative+", index, id));
         }
         let failures = check_catalog(&wrong).failures.join("\n");
         assert!(failures.contains("unexpected index \"27\""), "{failures}");
-        assert!(failures.contains("unexpected index \"1.5\""), "{failures}");
+        assert!(failures.contains("unexpected index \"1.6\""), "{failures}");
         assert!(
             failures.contains("implies id \"meditativeplus-003\""),
             "{failures}"
@@ -2358,7 +2367,8 @@ mod tests {
             .into_iter()
             .find(|set| set.set == "Stinkyscape")
             .expect("the catalog holds the Stinkyscape set");
-        // R1857001's shape: 175 cards, the Dormant Starship, 30 tokens the cards define and 22 shared.
+        // R1857001's shape: 177 cards (175 until #2521), the Dormant Starship, 30 tokens the cards
+        // define and 22 shared.
         assert_eq!(
             (
                 expectation.cards,
@@ -2366,9 +2376,9 @@ mod tests {
                 expectation.card_defined_tokens.len(),
                 expectation.shared_tokens.len()
             ),
-            (175, 1, 30, 22)
+            (177, 1, 30, 22)
         );
-        assert_eq!(expected_indices(&expectation).len(), 228);
+        assert_eq!(expected_indices(&expectation).len(), 230);
         assert_eq!(
             id_for_index("stinkyscape", "T-dormant-starship"),
             jackioh_engine::DORMANT_STARSHIP_DEF_ID
@@ -2409,21 +2419,21 @@ mod tests {
         assert_eq!(totals(&report), totals(&bare));
         assert_eq!(report.unshipped_count, bare.unshipped_count + 4);
 
-        // No rarity passes its ceiling: a 43rd Common is refused while the set is built.
+        // No rarity passes its ceiling: a 42nd Common is refused while the set is built.
         let mut commons = without_stinkyscape();
-        for n in 1..=43 {
+        for n in 1..=42 {
             let id = format!("stinkyscape-{n:03}");
             commons.insert(id.clone(), fixture_entry("Stinkyscape", &n.to_string(), &id));
         }
         assert_eq!(
             check_catalog(&commons).failures,
-            ["Stinkyscape: expected 42 Common non-token cards, found 43"]
+            ["Stinkyscape: expected 41 Common non-token cards, found 42"]
         );
 
         // An index its brief does not list, or an id that does not follow its index, fails.
         let mut wrong = without_stinkyscape();
         for (index, id) in [
-            ("176", "stinkyscape-176"),
+            ("178", "stinkyscape-178"),
             ("4.7", "stinkyscape-004-7"),
             ("T-starship", "stinkyscape-t-starship"),
             ("3", "stinkyscape-x"),
@@ -2436,7 +2446,7 @@ mod tests {
         );
         let failures = check_catalog(&wrong).failures.join("\n");
         for expected in [
-            "Stinkyscape: unexpected index \"176\"",
+            "Stinkyscape: unexpected index \"178\"",
             "Stinkyscape: unexpected index \"4.7\"",
             "Stinkyscape: unexpected index \"T-starship\"",
             "implies id \"stinkyscape-003\"",

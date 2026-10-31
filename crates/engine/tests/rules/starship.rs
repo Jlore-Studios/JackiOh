@@ -481,8 +481,9 @@ mod r1852001_equip_does_not_pass_the_keyword_on {
         s.play(clamp.id.as_str(), json!({ "zone": 1, "equip": true }));
         assert!(keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
         bolt_at(&mut s, &host);
+        // R2521000: the booster alone fuses, its base version, never the clamp equipped onto it.
         let ship = ship_of(&s, P1);
-        s.expect_stats(ship.id.as_str(), json!({ "attack": 3, "health": 4 }));
+        s.expect_stats(ship.id.as_str(), json!({ "attack": 2, "health": 3 }));
         assert!(!keywords_of(&s, &ship.id).contains(&KeywordKind::StarshipPiece));
     }
 }

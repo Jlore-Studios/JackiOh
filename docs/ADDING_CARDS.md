@@ -34,7 +34,7 @@ The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch
 before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `catalog.rs`'s rows,
 `RARITY_COUNTS` and `SET_SIZES`, and the tools' `sets()` and tag counts.
 
-Also grep the Markdown for the stated totals (`632 cards`, `139 tokens`, `771`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
+Also grep the Markdown for the stated totals (`634 cards`, `140 tokens`, `774`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
 **A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; and the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; no set is held now) differs in five places, the Training Grounds paths below standing for any held set's:
@@ -182,7 +182,7 @@ table's rows differ from the newest shipped version's and no other fragment clai
 fragment may claim no card (R1329000). No one refreshes the table by hand: once per patch,
 `.github/workflows/winrates-refresh.yml` runs `cargo jackioh winrates --refresh` on production's
 windowed figures and opens the refresh as its own pull request, its fragment claiming the table and
-CN Tech and NA Tech (R1368000). `cargo jackioh patches check` must pass before the branch merges,
+CN Tech and NA Tech (R1368000). A set's release is the exception: a cards test fails while a shipped set has no row CN Tech can pick, so the release plays a development run (cargo jackioh stats --out <file>) and runs cargo jackioh winrates --refresh <file>… over it, which fills the table, provisional, with its fragment (R2386000). `cargo jackioh patches check` must pass before the branch merges,
 and fails while the note is empty or the table changed unclaimed.
 The post-merge promotion (`patches-ship.yml`) runs `cargo jackioh patches ship`: it snapshots the patch
 before it with the cards the fragment claims as the catalog holds them (R1280000), writes the version's

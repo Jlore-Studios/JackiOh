@@ -3350,6 +3350,10 @@
       "hash": "56b08eec21016a78",
       "bytes": 14160
     },
+    "meditativeplus-001-5-cast": {
+      "hash": "80db134b964515f1",
+      "bytes": 14303
+    },
     "meditativeplus-001-cast": {
       "hash": "d880410060c8a823",
       "bytes": 12430
@@ -5153,6 +5157,22 @@
     "stinkyscape-175-play": {
       "hash": "41c6bd8e8580ad60",
       "bytes": 10675
+    },
+    "stinkyscape-176-cast": {
+      "hash": "33bbcfeab4ab8cf3",
+      "bytes": 11285
+    },
+    "stinkyscape-177-attack": {
+      "hash": "c53df6063a8fc763",
+      "bytes": 4347
+    },
+    "stinkyscape-177-death": {
+      "hash": "88dbde556e791435",
+      "bytes": 8337
+    },
+    "stinkyscape-177-play": {
+      "hash": "bd7d6d72d44f88ab",
+      "bytes": 10492
     },
     "stinkyscape-t-ai-01-attack": {
       "hash": "92be48d0adec8895",

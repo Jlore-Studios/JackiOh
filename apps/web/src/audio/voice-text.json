@@ -1723,6 +1723,9 @@
     "meditativeplus-001-4": {
       "cast": "Never skip it. Your Units thank you."
     },
+    "meditativeplus-001-5": {
+      "cast": "Course plotted. Two jumps to the edge."
+    },
     "meditativeplus-002": {
       "cast": "Best and worst, together. Balance achieved."
     },
@@ -2638,6 +2641,14 @@
       "play": "Cryo module online.",
       "attack": "Chill out.",
       "death": "Thawed for good."
+    },
+    "stinkyscape-176": {
+      "cast": "Launch the ship. We strike first."
+    },
+    "stinkyscape-177": {
+      "play": "Cloak engaged. You never saw me.",
+      "attack": "Decloaking!",
+      "death": "Cloak failing. Visible."
     },
     "stinkyscape-t-dormant-starship": {
       "play": "Hull assembled. Awaiting parts.",

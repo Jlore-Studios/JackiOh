@@ -1,10 +1,10 @@
 # `jackioh-cards`
 
-771 catalog entries in the seven shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
+774 catalog entries in the seven shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
 Glitch, a hidden token), Classic+ (78 cards and 38 tokens), Meditative (102 cards and 30 tokens,
-spec §8.8), Meditative+ (26 cards and 6 tokens, spec §8.9, shipped in v0.3.15 by #1187),
-Stinkyscape (175 cards, the Dormant Starship and 52 tokens, spec §8.10, shipped by #1884, R1857000) and
-Training Grounds (60 cards and 1 token, spec §8.11, shipped by #2204, R2194000), 632 cards and 139 tokens
+spec §8.8), Meditative+ (26 cards and 7 tokens, spec §8.9, shipped in v0.3.15 by #1187),
+Stinkyscape (177 cards, the Dormant Starship and 52 tokens, spec §8.10, shipped by #1884, R1857000) and
+Training Grounds (60 cards and 1 token, spec §8.11, shipped by #2204, R2194000), 634 cards and 140 tokens
 in all. A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
 while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, and Training Grounds while tracker
 #2193 did, is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`

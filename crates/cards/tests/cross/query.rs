@@ -600,7 +600,8 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     // Legendary, M+ #24 Bob, Wisconsin's Strongest Soldier (§8.9), joins it; and for the Stinkyscape
     // release (#1884): its 28 Legendary cards (§8.10), the Dormant Starship, which only a rule
     // makes, aside (R1857001); and for the Training Grounds release (#2204): its #37 Seance, #38
-    // Tutorial Master and #39 Call to Chaos (#39.1 is a token). For replacing a card on
+    // Tutorial Master and #39 Call to Chaos (#39.1 is a token); and for #2521's balance patch: S #137
+    // Starfleet Commander (Common until then) and the new S #176 Preemptive Strike. For replacing a card on
     // the board, the script narrows the same pool by type and asks for TRAP_TYPES when the board card
     // is a trap ("Field Trap counts as Trap").
     const R35_POOL: &[&str] = &[
@@ -672,12 +673,14 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         "stinkyscape-112",
         "stinkyscape-115",
         "stinkyscape-116",
+        "stinkyscape-137",
         "stinkyscape-147",
         "stinkyscape-149",
         "stinkyscape-150",
         "stinkyscape-151",
         "stinkyscape-152",
         "stinkyscape-153",
+        "stinkyscape-176",
         "traininggrounds-037",
         "traininggrounds-038",
         "traininggrounds-039",
@@ -1006,8 +1009,12 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
         ]);
         pool.extend(landed(&[CATBOY_MAID]));
         // R1857000: and since its release, the Stinkyscape set's #77 Yuma, #112 Job Application, #145
-        // Fortify Flesh, #153 Stimmycheck and its two Scanning Probes, #166 and #167.
+        // Fortify Flesh, #153 Stimmycheck and its two Scanning Probes, #166 and #167; and since #2521
+        // its three Flaks, #53, #57 and #61, whose Radiant faces print Lucky 1 (R2521001).
         pool.extend(landed(&[
+            "stinkyscape-053",
+            "stinkyscape-057",
+            "stinkyscape-061",
             "stinkyscape-077",
             "stinkyscape-112",
             "stinkyscape-145",
@@ -1161,19 +1168,21 @@ mod r1878000_the_starship_piece_pool_stinkyscape_124_jlockeeds_shipbuilding_gran
     use jackioh_engine::{DORMANT_STARSHIP_DEF_ID, KeywordKind, has_keyword};
 
     #[test]
-    fn r1878000_the_starship_piece_pool_is_the_sixty_stinkyscape_cards_that_print_the_keyword() {
+    fn r1878000_the_starship_piece_pool_is_the_forty_six_stinkyscape_cards_that_print_the_keyword() {
         register();
         // The query a card script writes, which names its set so that it reaches the pieces while the
-        // set is held (R1420): S #38 to #175, the Field Trap #131 Spacerace Stimulus among them; never
+        // set is held (R1420): S #38 to #177, the Field Trap #131 Spacerace Stimulus among them; never
         // the Dormant Starship, which prints none, nor the Golem or the AI card, which are tokens.
+        // #2521 took the keyword off fifteen Units (#68, #69, #72 to #78, #80 to #83, #85 and #86) and
+        // gave it to the new #177 Cloaking Module: sixty pieces until then.
         assert_eq!(
             starship_pieces(),
             q(json!({ "set": "Stinkyscape", "keywords": ["Starship Piece"] }))
         );
         let expected: Vec<String> = [
-            38, 40, 43, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68,
-            69, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 85, 86, 90, 93, 98, 100, 101, 104, 105, 106,
-            107, 108, 122, 131, 132, 133, 134, 136, 140, 141, 142, 143, 175,
+            38, 40, 43, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 79,
+            90, 93, 98, 100, 101, 104, 105, 106, 107, 108, 122, 131, 132, 133, 134, 136, 140, 141, 142, 143,
+            175, 177,
         ]
         .iter()
         .map(|n| format!("stinkyscape-{n:03}"))

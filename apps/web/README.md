@@ -224,7 +224,8 @@ play is built as a hand card's.
 **Credits** (issue #1840, R1840005). `Hero.tsx` draws each seat's `marketCredits` from the view alone,
 as a pill in the hero's badge row beside the Jade Counter's (`market-credits-<side>`, on both seats),
 and nothing while the view carries none; a count of 0 still shows. A Resource is a hand card since
-#2250 (R2250000), so the hand draws it and there is no Resource tray.
+#2250 (R2250000), so the hand draws it and there is no Resource tray. A Resource's face prints
+`Credits: <min>–<max>` under its text, its face's `resource` prices (`cards/model.ts`, R2521009).
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's

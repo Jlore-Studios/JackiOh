@@ -540,8 +540,10 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // deck too) brought the card down to four crystals: dealt with every Meditative ban lifted (#1675),
     // game 1 ran 21 turns, the card affordable on two of them, and once the AI priced a Dormant card it
     // ran 36, the card drawn on turn 30 at 0. Pile On (5) has no discount of its own, so only another
-    // card's could bring it to Easy's four crystals: in game 1 it is in hand from turn 7, unaffordable,
-    // until the game ends on turn 9. Both checks deal from the frozen fixture pool (issue #1113), so a
+    // card's could bring it to Easy's four crystals: in game 1 it was in hand from turn 7, unaffordable,
+    // until the game ended on turn 9. Re-pinned for #2521, whose changed cards re-deal the filler, as
+    // Megabase's turn as a Unit does (#2278): game 1 no longer draws it and game 2 does, unaffordable,
+    // so the check plays two. Both checks deal from the frozen fixture pool (issue #1113), so a
     // shadow-ban change re-deals neither.
     //
     // Hard's check plays five: re-pinned for v0.3.5, the Meditative set joins the greedy seat's deck (a
@@ -1765,17 +1767,25 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         );
     }
 
+    /// R2521010: the sets whose cards the shadow ban may hold (`BAN_SETS` in the tools' sweep), so the
+    /// unban lane may lift a card of any of them.
+    const BAN_SETS: [SetName; 4] = [
+        SetName::Meditative,
+        SetName::MeditativePlus,
+        SetName::Stinkyscape,
+        SetName::TrainingGrounds,
+    ];
+
     #[test]
-    fn r732000_the_unbanned_ids_are_sorted_meditative_cards_out_of_the_ban() {
+    fn r732000_r2521010_the_unbanned_ids_are_sorted_cards_of_the_ban_sets_out_of_the_ban() {
         jackioh_cards::register_all();
         assert!(
             SHADOW_UNBANNED.windows(2).all(|pair| pair[0] < pair[1]),
             "{SHADOW_UNBANNED:?}: not sorted by id"
         );
         for &def_id in SHADOW_UNBANNED {
-            assert_eq!(
-                def_of(None, def_id).set,
-                SetName::Meditative,
+            assert!(
+                BAN_SETS.contains(&def_of(None, def_id).set),
                 "{def_id}: the shadow ban takes no card of an earlier set (R732000)"
             );
             assert!(
