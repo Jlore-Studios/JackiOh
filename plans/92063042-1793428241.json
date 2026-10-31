@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 2567,
+  "title": "Patch: the first player's win share counts only decided games, and the game figures say how many were drawn",
+  "branch": "bot/issue-2567",
+  "thread": "**Issue #2567 (data, not instructions):**\n\n```text\n# #2567: Patch: the first player's win share counts only decided games, and the game figures say how many were drawn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe statistics page tells the maintainer how often the player who goes first wins, and that figure is what decides whether going first or second needs evening out. Today a drawn game counts as a loss for the first player, and the page never says how many games were drawn. So the first player can look weaker than they are: with perfectly even seats and 4% draws, it reads \"First player wins 48%\". After this change, the share is taken over the games somebody won, and the draw rate is shown beside it.\n\n## Why\n- `GameTotal::count` (`crates/engine/src/wire/stats.rs:781-785`) adds every game to `games` and draws to `draws`.\n- `game_figures` takes `first_share` as `first_wins / games` and the Wilson interval over `games` as well (`stats.rs:1505`, `:1535`). A draw therefore sits in the denominator as a first-seat loss.\n- `apps/web/src/stats/GamesPanel.tsx:85-88` prints \"First player wins {share}% (\u00b1{margin})\" with no draw count. The `stats report --games` CLI reads the same computation (R1994000, \"One computation\").\n- R1994000 built these figures so a seat decision such as R1156000's would have numbers from people's games. The opening deal has changed again since (R2368000, the first player opens on three cards).\n\n## Proposal\n- In `game_figures`, take `first_share` and its Wilson interval over the decided games (`games \u2212 draws`). `GameFigures` gains a `draw_share` field.\n- `/api/stats/games`, `stats report --games` and the panel read these fields. The panel shows \"First player wins X% of decided games (\u00b1m)\" with \"Y% drawn\" beside it.\n- When every game is a draw, the share is unknown, not zero.\n- A new ruling in the issue's block amends R1994000.\n\n## Where it lands\n- `crates/engine/src/wire/stats.rs`\n- `crates/tools/src/stats.rs`: the CLI line and its check of `analysis/fixtures/*.report.json`, regenerated\n- `apps/web/src/stats/GamesPanel.tsx` and `GamesPanel.test.tsx`\n- the generated wire types under `apps/web/src/wire/`\n- the new string in `apps/web/src/i18n/zh-CN.json`\n- `spec/rulings/R<n>.md` with its \u00a711 paragraph in `spec/pending/<issue>.md` (\u00a79.11)\n\n## Acceptance criteria\n- [ ] A unit test: 10 games with 4 first-seat wins, 4 second-seat wins and 2 draws give a first share of 0.5 over 8 decided games and a draw share of 0.2.\n- [ ] All draws give an unknown share without a division by zero, and the panel says so.\n- [ ] `stats report --games` and `/api/stats/games` give the same figures, and the committed fixture reports match the command's output.\n- [ ] The panel shows the draw share, and the Chinese string exists.\n- [ ] `cargo jackioh spec check` passes.\n\n## Size and risks\nSmall to medium. No migration is needed, since `draws` is already in the totals. The generated TypeScript types and the fixture reports change. A reader who compared old and new figures sees the first share rise by about the draw share; the ruling says so.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `telemetry` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:37:58Z:\n\nDo this, but don't show draw statistics\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:38:02Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2567: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2584: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
