@@ -10728,6 +10728,11 @@
       "taken_asks": []
     },
     "2561": {
+      "cleared": {
+        "at": "2026-10-31T02:49:02Z",
+        "by": "`claude` (strong)",
+        "sha": "ba802ce3054edb3c1cf6bc18be09cd2e63c22717"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-31T00:16:14Z",
