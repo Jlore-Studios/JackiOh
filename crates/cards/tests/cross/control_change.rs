@@ -584,7 +584,8 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
     }
 
     #[test]
-    fn r172_radiant_c3_a_stolen_right_house_defenders_death_summons_its_base_copy_on_the_thiefs_side() {
+    fn r172_r2618000_radiant_c3_a_stolen_right_house_defenders_death_summons_its_base_copy_on_the_thiefs_side()
+     {
         let mut g = setup(json!({
             "p1": { "hand": [MIND_CONTROL, VANILLA], "field": [{ "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
             "p2": {
@@ -616,7 +617,8 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
         assert_eq!(copy.as_ref().map(|c| c.controller), Some(PlayerId::P1));
         assert_eq!(g.unit("p1", 2).map(|c| c.id), Some(defender.id.clone()));
         assert_eq!(g.card(&defender).controller, PlayerId::P1);
-        assert_eq!(g.card(&defender).owner, PlayerId::P2);
+        // It came back from p1's graveyard, where it died as p1's card (R2618000).
+        assert_eq!(g.card(&defender).owner, PlayerId::P1);
         for lane in 1..=3 {
             assert!(g.unit("p2", lane).is_none(), "p2 lane {lane} should be empty");
         }

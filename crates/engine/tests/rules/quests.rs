@@ -396,7 +396,8 @@ mod e33_quests_each_goal_counted_and_not_counted {
             .first()
             .map(json_of);
         assert!(
-            died.is_some_and(|died| matches_object(&died, &json!({ "owner": "p2", "controller": "p1" })))
+            // R2618000: it died on p1's side, so it is p1's card as it lands.
+            died.is_some_and(|died| matches_object(&died, &json!({ "owner": "p1", "controller": "p1" })))
         );
         assert_eq!(progress_of(&steal.state, &card, ONLY_QUEST), 0);
         let mut lent_step = play_new(&mut steal.state, &slay().id, P1, &[lent.id.as_str()]);
@@ -404,7 +405,7 @@ mod e33_quests_each_goal_counted_and_not_counted {
             .first()
             .map(json_of);
         assert!(
-            died.is_some_and(|died| matches_object(&died, &json!({ "owner": "p1", "controller": "p2" })))
+            died.is_some_and(|died| matches_object(&died, &json!({ "owner": "p2", "controller": "p2" })))
         );
         assert_eq!(progress_of(&lent_step.state, &card, ONLY_QUEST), 1);
         // A token is a permanent too, and an ordinary death names its owner's side.

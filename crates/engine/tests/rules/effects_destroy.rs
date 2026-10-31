@@ -751,6 +751,8 @@ mod r2618000_landings {
             PlayerId::P2,
             Zone::Resolving { player: PlayerId::P1 },
         );
+        // p1 casts it, as a cast of a card that exists makes its caster its controller (R453).
+        card.controller = PlayerId::P1;
         state.players[PlayerId::P1].resolving.push(card.clone());
 
         move_to_zone(&mut state, &mut card, OffFieldZone::Graveyard, Default::default());

@@ -966,7 +966,7 @@ mod tests {
             }
 
             #[test]
-            fn r542_quest_2_counts_the_side_a_permanent_died_on_an_enemy_unit_you_have_stolen_is_yours_as_it_dies() {
+            fn r542_r2618000_quest_2_counts_the_side_a_permanent_died_on_an_enemy_unit_you_have_stolen_is_yours_as_it_dies() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
@@ -982,7 +982,8 @@ mod tests {
                 s.play(MIND_CONTROL, json!({ "targets": [instance_pick(&vanilla.id)] }));
                 assert_eq!(s.card(&vanilla).controller, P1);
                 s.play(HIT_JOB, json!({ "targets": [instance_pick(&vanilla.id)] }));
-                assert_eq!(destroyed_sides(s.last_events()), Some((P2, P1)));
+                // R2618000: it died on p1's side, so the event names p1 as its owner as well.
+                assert_eq!(destroyed_sides(s.last_events()), Some((P1, P1)));
                 assert_eq!(progress_of(&s), json!({ "2": 0 }));
                 let timmy = must(s.unit(P2, 2), "Timmy");
                 s.play(HIT_JOB, json!({ "targets": [instance_pick(&timmy.id)] }));

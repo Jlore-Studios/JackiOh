@@ -1506,20 +1506,17 @@ pub struct MoveToZoneOptions {
     pub keep_state: Option<bool>,
 }
 
-/// R2618000: whose graveyard a card bound for one lands in, when that is not simply its owner's. A card
-/// leaving the field goes to the graveyard of the player who controls it, the side it was on, and a card
-/// leaving the resolving zone to the graveyard of the player who played or cast it; it lands there as
-/// theirs, its owner becoming that player, as a Bounce makes a card its controller's for the hand (R747).
-/// So a graveyard holds only its holder's cards, and a replacement of the landing (B5 E5, R460) sends the
-/// card to that player's exile pile or library. `None` for every other move, which goes to the owner's
-/// pile as R12 has it: an exile or a shuffle from the field, and every move from a hand or a library.
+/// R2618000: whose graveyard a card bound for one lands in, when that is not simply its owner's: its
+/// controller's, for a card leaving the field (the side it was on) or the resolving zone (the player who
+/// played or cast it, or the thief who took it off the stack, E2, whose full hand burns it). It lands
+/// there as theirs, its owner becoming that player, as a Bounce makes a card its controller's for the
+/// hand (R747). So a graveyard holds only its holder's cards, and a replacement of the landing (B5 E5,
+/// R460) is read for that player's card and sends it to that player's exile pile or library. `None` for
+/// every other move, which goes to the owner's pile as R12 has it: an exile or a shuffle from the field,
+/// and every move from a hand or a library.
 fn graveyard_keeper(instance: &CardInstance, zone: OffFieldZone) -> Option<PlayerId> {
-    if zone != OffFieldZone::Graveyard {
-        return None;
-    }
-    match instance.zone {
-        Zone::Field { .. } => Some(instance.controller),
-        Zone::Resolving { player } => Some(player),
+    match (zone, &instance.zone) {
+        (OffFieldZone::Graveyard, Zone::Field { .. } | Zone::Resolving { .. }) => Some(instance.controller),
         _ => None,
     }
 }
