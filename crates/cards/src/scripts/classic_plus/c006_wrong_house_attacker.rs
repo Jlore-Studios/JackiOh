@@ -13,10 +13,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #6 Wrong-House Attacker — SPEC §8.7 row 6, BUILD M9 Classic+ row C+ 6: "Rush, Lifesteal,
-// Poisonous: attacks a unit on its summon turn but not the hero, its hit destroys any unit it damages
-// and heals your hero by the amount dealt; radiant 2/2 with Reborn, returning once at 1 health without
-// Reborn". Keywords only: both faces are catalog data, applied by the layers (§10.4).
+// C+ #6 Wrong-House Attacker — SPEC §8.7 row 6, BUILD M9 Classic+ row C+ 6.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -47,7 +44,7 @@ mod tests {
         keywords.iter().map(|k| k.kind()).collect()
     }
 
-    /// TS `expect(face).toEqual({})`: a script with no hook, no declaration and no flag.
+    /// A script with no hook, no declaration and no flag.
     fn is_empty_script(face: &Script) -> bool {
         face.cost.is_none()
             && face.cry.is_none()
@@ -106,7 +103,7 @@ mod tests {
         );
         let scripts = script();
         assert!(is_empty_script(&scripts.base));
-        // TS `expect(radiant).toBe(base)`: the one empty script runs both faces.
+        // The one empty script runs both faces.
         assert!(is_empty_script(&scripts.radiant));
     }
 

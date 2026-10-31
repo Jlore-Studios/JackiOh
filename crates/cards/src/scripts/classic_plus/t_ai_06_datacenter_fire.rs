@@ -81,8 +81,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-6 Datacenter Fire — SPEC §8.7 row T-AI-6, BUILD M9 Classic+ row T-AI-6. A destroyed Field Spell that
-// prints Death fires it (§4.5); the preview is the damage each hero would take now (R280). Each hero's hit
+// T-AI-6 Datacenter Fire — SPEC §8.7 row T-AI-6, BUILD M9 Classic+ row T-AI-6 (§4.5). Each hero's hit
 // is one `damage` event of N, so a per-hit cap (C+ #11 Anime Armor) caps it once, and an Ivory Tower
 // holding a Unit (R418) is swept: both are proved with fixtures in the engine's tests.
 #[cfg(test)]

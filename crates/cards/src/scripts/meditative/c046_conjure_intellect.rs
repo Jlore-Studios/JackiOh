@@ -50,10 +50,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #46 Conjure Intellect — SPEC §8.8 row 46, BUILD M10 row M 46: "At (2) adds a random KY card, a
-// random CN card and a random Book (each a non-token card of any set, never itself) at their
-// printed costs; paid (4) they cost (0); the hand cap burns in that order; setCost reads through
-// `param()`; radiant the three are Radiant".
+// M #46 Conjure Intellect — SPEC §8.8 row 46, BUILD M10 row M 46.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -65,7 +62,6 @@ mod tests {
     const INTELLECT: &str = "meditative-046";
     const FILLER: &str = "core-005";
 
-    /// TS `pool(ownId, args).map((def) => def.id)` (`crate::query`, SPEC §5.1).
     fn pool_ids(args: Value) -> Vec<String> {
         crate::query::pool(INTELLECT, &json_as(args))
             .iter()

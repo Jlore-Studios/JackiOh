@@ -47,16 +47,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #18 Gullible Treatler — SPEC §8.7 row 18, BUILD M9 Classic+ row C+ 18: "At its controller's start
-// of turn, if they control no Field Spell, Trap or Field Trap (face-down cards count; an animated one
-// standing in a unit zone is a Unit and doesn't, §6.1), it Tributes itself: a Sacrifice that bypasses
-// Indestructible and counts as a death; with one it stays; nothing at the opponent's start of turn;
-// `conditionMet` on the field answers whether it would be Tributed now (R195); radiant only when no
-// player controls one".
-//
-// R195's proofs for this card are in its own file (the `describe("R195 conditionMet …")` block).
+// C+ #18 Gullible Treatler — SPEC §8.7 row 18, BUILD M9 Classic+ row C+ 18 (§6.1).
 
-/// `describe("C+ #18 Gullible Treatler")`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,7 +112,6 @@ mod tests {
         assert!(scripts.base.targets.is_empty());
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
@@ -238,7 +229,6 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 

@@ -28,9 +28,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #39.4 Red Jade — SPEC §8.8 row 39.4, BUILD M10 row M 39.4: "Raises its caster's Jade
-// Counter by 5: from 0 a Jade Beauty is summoned (MD-C3); jade reads through `param()`; radiant 10:
-// from 0 the Beauty is summoned at 5, then made Radiant at 10, in that order".
+// Meditative #39.4 Red Jade — SPEC §8.8 row 39.4, BUILD M10 row M 39.4.
 #[cfg(test)]
 mod tests {
     use super::*;

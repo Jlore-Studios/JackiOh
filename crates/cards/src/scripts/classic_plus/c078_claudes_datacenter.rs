@@ -9,17 +9,13 @@
 //!
 //! Each card is its own pick (R60) through §6.3's Add to hand, so a full hand burns it, and the opponent
 //! sees the sentinel (R97).
-//!
-//! Issue #2179 made it an Activate; through v0.5.2 it added the card at its controller's end of turn
-//! (R62), which `script_v0_5_2` keeps, and through v0.4.4b that end of turn's (0) was printed, not
-//! declared, which `script_v0_4_4b` keeps (R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-078";
 
-/// §8.7: "a random AI generated card" — the AI tag's tokens (fourteen since #1563, twenty-four since the Stinkyscape release), which a pool names by asking for tokens.
+/// §8.7: "a random AI generated card" — the AI tag's tokens, which a pool names by asking for tokens.
 fn ai_pool() -> Value {
     json!({ "tags": ["AI"], "token": true })
 }
@@ -94,11 +90,7 @@ pub fn script_v0_4_4b() -> CardScripts {
     }
 }
 
-// C+ #78 Claude's Datacenter — SPEC §8.7 row 78, BUILD M9 Classic+ row C+ 78: "Field Spell: its Activate,
-// once per turn, adds a random AI generated card (T-AI-1 to T-AI-10 and M+ #1.1 to #1.4, the pool its
-// text names) that costs (0) to your hand; nothing at either end of turn; a full hand burns it; hidden
-// from the opponent (R97); the count is fixed at 1 with no tunable (balance patch 1); radiant the card is
-// Radiant".
+// C+ #78 Claude's Datacenter — SPEC §8.7 row 78, BUILD M9 Classic+ row C+ 78.
 
 #[cfg(test)]
 mod tests {
@@ -113,10 +105,8 @@ mod tests {
 
     use crate::js;
 
-    /// The AI generated cards of the sets that ship, sorted (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1
-    /// Base Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two
-    /// AI tokens join the pool, which is now twelve; #1563's #1.3 and #1.4 make it fourteen; and the
-    /// Stinkyscape release (#1884) its T-AI-1 to T-AI-10, twenty-four.
+    /// The AI generated cards of the sets that ship, sorted (§7, R1421): T-AI-1 to T-AI-10, M+ #1.1 to
+    /// #1.4 (#1187, #1563) and Stinkyscape's T-AI-1 to T-AI-10 (#1884).
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|at| format!("classicplus-t-ai-{at:02}")).collect();
         ids.extend(
@@ -256,7 +246,6 @@ mod tests {
                 activate(&mut s);
                 s.expect_refused(|s| s.activate(DATACENTER, json!({})));
                 assert_eq!(ai_cards_in(&s).len(), 1);
-                // Neither end of turn adds one; it is back on p1's next turn.
                 s.end_turn().end_turn();
                 assert_eq!(s.state().active, P1);
                 assert_eq!(ai_cards_in(&s).len(), 1);

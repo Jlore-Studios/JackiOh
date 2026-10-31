@@ -199,8 +199,6 @@ mod tests {
 
         #[test]
         fn r1176000_destroys_a_translated_permanent_and_spares_an_english_one() {
-            // A Vanilla in Chinese is CN (R1176000): the Cry destroys the translated ones on both
-            // fields and leaves the English one standing.
             let (mut s, translated, english) = translated_board("prime-translated", false);
             let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
             s.play(&prime.id, json!({ "zone": 3 }));

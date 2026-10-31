@@ -31,9 +31,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #57 Book of Stats — SPEC §8.7 row 57, BUILD M9 Classic+ row C+ 57: "A target Unit on either side
-// gets +5/+5 permanently, kept until it leaves the field; an Immune to Spells Unit is no legal target;
-// the buff reads through `param()`; radiant +10/+10".
+// C+ #57 Book of Stats — SPEC §8.7 row 57, BUILD M9 Classic+ row C+ 57.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -45,7 +43,7 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `s.unit(p, lane) ?? ""`: the unit's instance id, or "" (which no card answers to).
+    /// The unit's instance id, or "" (which no card answers to).
     fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|card| card.id).unwrap_or_default()
     }
@@ -85,7 +83,6 @@ mod tests {
             serde_json::to_value(&scripts.base.targets).unwrap(),
             json!([{ "kind": "target", "min": 1, "max": 1, "aim": "help", "filter": { "side": "any", "of": ["unit"] } }])
         );
-        // TS `expect(radiant).toBe(base)`: the one Cry hook.
         assert!(std::sync::Arc::ptr_eq(
             scripts.radiant.cry.as_ref().expect("a Cry"),
             scripts.base.cry.as_ref().expect("a Cry"),

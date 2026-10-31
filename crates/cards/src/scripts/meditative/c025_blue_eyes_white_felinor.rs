@@ -10,7 +10,6 @@
 //!   harmful effect whose card filter names a tribal tag in `tags` or `notTags` can neither pick
 //!   it (a declaration or prompt of `aim: harm`, R656) nor reach it through a board or card scope.
 //!   Helpful tag-filtered effects still reach it. The Radiant face adds Immutable (R23, R386).
-//! - Tribute and tribal immunity are static flags; Immutable lives in the catalog.
 
 use jackioh_engine::prelude::*;
 
@@ -28,7 +27,6 @@ pub fn script() -> CardScripts {
         }),
         ..Script::default()
     };
-    // The Radiant face keeps the Tribute and adds Immutable in the catalog; the script is shared.
     CardScripts {
         radiant: base.clone(),
         base,
@@ -110,9 +108,7 @@ mod tests {
     fn the_play_needs_two_tributes() {
         let mut s = tributing("felinor-tribute");
         let a = s.unit(P1, 1).expect("tribute A").id.clone();
-        // One tribute is refused.
         s.expect_refused(|s| s.play(FELINOR, json!({ "tributes": [a.clone()] })));
-        // Two tributes land it.
         let b = s.unit(P1, 2).expect("tribute B").id.clone();
         s.play(FELINOR, json!({ "tributes": [a, b] }));
         s.expect_in_zone(FELINOR, "field");
@@ -323,7 +319,7 @@ mod tests {
         }
         s.play(BREAKER, json!({ "zone": 1 }));
         assert!(s.card(&held).tuning.is_some(), "Nerfed in hand");
-        // Since #2179 Knowledge Breaker no longer reaches a deck, so nothing of it touches this one.
+        // Knowledge Breaker reaches no deck (#2179), so nothing of it touches this one.
         assert!(s.card(&deck).tuning.is_none(), "untouched in the deck");
     }
 

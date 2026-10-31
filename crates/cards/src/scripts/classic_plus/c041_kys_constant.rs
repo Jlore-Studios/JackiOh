@@ -73,7 +73,6 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #41 KY's Constant — SPEC §8.7 row 41, B3.4, R60, R81, R97, R129, R386, BUILD M9 row C+ 41.
-// The setting itself is the engine's `setNumber` / `discoverNumber` (packages/engine/test/effects-tune.test.ts).
 #[cfg(test)]
 mod tests {
     use std::collections::{BTreeMap, BTreeSet};
@@ -267,7 +266,6 @@ mod tests {
                     continue;
                 }
                 s.play(DUPLICATING, json!({ "zone": 1 }));
-                // Cry: summon a copy of this — both the card and its copy are 3/3.
                 let first = s.unit(P1, 1).map(|card| card.id).unwrap_or_else(|| DUPLICATING.to_string());
                 s.expect_stats(&first, json!({ "attack": 3, "health": 3 }));
                 let second = s.unit(P1, 2).map(|card| card.id).unwrap_or_else(|| DUPLICATING.to_string());

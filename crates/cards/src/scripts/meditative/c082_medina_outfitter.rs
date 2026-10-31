@@ -30,10 +30,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #82 Medina Outfitter — SPEC §8.8 row 82, BUILD M10 row M 82: "Cry (played or cast): one Buff on
-// each card in your hand, an Immutable one unchanged, each `upgraded` cued to the opponent with no
-// card named (R440); an empty hand, nothing; radiant 2/2 and three Buffs each, times read through
-// `param()`".
+// M #82 Medina Outfitter — SPEC §8.8 row 82, BUILD M10 row M 82.
 #[cfg(test)]
 mod tests {
     use super::*;

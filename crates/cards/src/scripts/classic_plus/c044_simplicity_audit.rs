@@ -111,8 +111,7 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #44 Simplicity Audit — SPEC §8.7 row 44, E36, R11, R13, R177, R280, R583, BUILD M9 row C+ 44.
-// The sweep is `subsystems.auditTargets` (packages/engine/test/audit.test.ts); its preview is pinned
-// in test/preview.test.ts with R280's other cards. Every `loc` here is read off the catalog, so a
+// Every `loc` here is read off the catalog, so a
 // script edit that moves one fails the guard that names it rather than a silent comparison.
 #[cfg(test)]
 mod tests {
@@ -135,7 +134,6 @@ mod tests {
     const ALL: &str = "All permanents";
     const THEIRS: &str = "Only your opponent's";
 
-    /// TS `LOC = cardDef(AUDIT).loc ?? 0`.
     fn loc() -> i32 {
         crate::card_def(AUDIT).loc.unwrap_or(0)
     }

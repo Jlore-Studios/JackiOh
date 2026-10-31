@@ -1,10 +1,9 @@
 //! C+ #1 Doom Shroom (SPEC §8.7 row 1). (3) Trap, Epic. "Crater\nReveals when an enemy Unit attacks
 //! your hero: Exile all Units." (Radiant: all enemy Units.)
 //! Fires in §4.2 step 4's trap window (as Core #96 My Pawn) when an enemy Unit declares an attack on
-//! your hero. Its Crater Locks its own backrow zone as it is revealed (R783011, before its effects;
-//! until patch v0.3.7 the text's last step, "Lock this zone.", E20), then it exiles every Unit
-//! (Radiant: every enemy Unit), tops of piles only, so the attacker is gone and no combat happens
-//! (R44, R220), and is consumed.
+//! your hero. Its Crater Locks its own backrow zone (E20) as it is revealed (R783011, before its
+//! effects), then it exiles every Unit (Radiant: every enemy Unit), tops of piles only, so the
+//! attacker is gone and no combat happens (R44, R220), and is consumed.
 
 use jackioh_engine::prelude::*;
 
@@ -42,15 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #1 Doom Shroom — SPEC §8.7 row 1, BUILD M9 Classic+ row C+ 1: "Face-down Trap that fires in §4.2
-// step 4's trap window when an enemy Unit declares an attack on your hero, never on an attack on a
-// unit; exiles every Unit on both sides (the tops of piles, a card dormant beneath resuming), so the
-// attacker is gone and no combat resolves (R44's cancel); no Death fires and exiled tokens cease to
-// exist; it goes to your graveyard as it fires and its backrow zone is Locked by its Crater as it is
-// revealed (R783011), so a later play into that zone is refused; the opponent sees only a face-down card until `trapFired` (R33, R97); radiant
-// exiles enemy Units only, yours stay".
-//
-// Doom Shroom sits face-down in p1's backrow lane 2; p2 is active and attacks.
+// C+ #1 Doom Shroom — SPEC §8.7 row 1, BUILD M9 Classic+ row C+ 1 (R33, R97).
 #[cfg(test)]
 mod tests {
     use super::ID;

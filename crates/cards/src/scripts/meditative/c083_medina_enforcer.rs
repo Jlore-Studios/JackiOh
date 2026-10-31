@@ -28,9 +28,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #83 Medina Enforcer — SPEC §8.8 row 83, BUILD M10 row M 83: "At your end of turn only, one Buff
-// on each card in your hand (R386), cued per R440; nothing at the opponent's end; radiant 8/8 and
-// three Buffs each".
+// M #83 Medina Enforcer — SPEC §8.8 row 83, BUILD M10 row M 83 (R386, R440).
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -36,11 +36,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M 97.1 Empty Plot — SPEC §8.8 row 97.1, BUILD M10 row M 97.1: "Can't attack; while it tops its
-// zone, you may play any Unit onto it as if the Unit had Stack (MD-F12), the Plot dormant beneath
-// until the pile above is gone, then resuming; a Locked or reserved zone refuses; a summon never
-// stacks onto it, and the opponent's Units cannot; radiant 0/6 (0/8 before patch v0.3.10), and the Unit is Buffed once as it
-// lands, before its Cry".
+// M 97.1 Empty Plot — SPEC §8.8 row 97.1, BUILD M10 row M 97.1.
 #[cfg(test)]
 mod tests {
     use super::{BUFFS, ID, script};
@@ -114,7 +110,6 @@ mod tests {
                 "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
             }));
 
-            // Play VANILLA specifically onto lane 1 where Plot is.
             s.play(VANILLA, json!({ "zone": 1 }));
 
             let pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
@@ -122,7 +117,6 @@ mod tests {
             assert_eq!(pile[0].def_id, VANILLA);
             assert_eq!(pile[1].def_id, ID);
 
-            // Empty Plot is buried / dormant beneath (R13).
             let plot = pile.iter().find(|c| c.def_id == ID).unwrap();
             assert!(jackioh_engine::zones::is_buried(s.state(), plot));
         }
@@ -148,8 +142,6 @@ mod tests {
         #[test]
         fn r1281_duplicating_felinors_summon_does_not_stack_onto_empty_plot() {
             crate::register_all();
-            // P1 has Empty Plot in lane 1 and Felinors in hand.
-            // Lane 2 is open.
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -160,7 +152,6 @@ mod tests {
                 "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
             }));
 
-            // Play Felinors into lane 3 (not on Plot).
             s.play(FELINORS, json!({ "zone": 3 }));
 
             // The summoned copy lands in the leftmost free zone (lane 2), never stacking in lane 1!
@@ -209,7 +200,6 @@ mod tests {
             s.play(VANILLA, json!({ "zone": 1 }));
             let top_id = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap()[0].id.clone();
 
-            // Destroy top unit with Hit Job.
             s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": top_id }] }));
 
             // The top unit died, now Empty Plot resumes on top of lane 1!
@@ -238,7 +228,6 @@ mod tests {
 
             s.play(FELINORS, json!({ "zone": 1 }));
 
-            // Events verification: Upgraded must happen before Cry's summon.
             let events = s.last_events();
             let upgraded_pos = events
                 .iter()

@@ -4,16 +4,11 @@
 //!   Radiant: the same with "Costs (Ascent level - 1), never less than (0)." and 3 of each.
 //!
 //! The Ascent level is R429's play count on the instance: `counts_plays` counts each play at §10.5
-//! step 4 (casts included but not a cast on draw, R2179002; countered plays never), and the count rides the card through every zone.
-//! While it resolves the play is already counted, so the level is the count less one; anywhere else
-//! the level is the count. A copy starts at 0 (R57 resets the count), an Echo repeat is no play and
-//! resolves the same level again, and making the card Radiant keeps the level (R840). Each play
-//! gains only its own level's line (R841). The cost is a computed `cost` hook (R55): the level, or
-//! max(0, level − 1) on the Radiant face, with R65's modifiers on top (R842). Ascent 1's target is a
-//! resolution prompt over any Unit or hero (§10.6, R81), picked at random under a random cast (R843).
-//! The return is Core #31's `end_of_turn` hook without the cost raise: from the graveyard, only on
-//! the turn it was played (R153, R155), a `bounce` that a full hand burns back (§2.4). A `preview`
-//! (R280) labeled "Ascent level" shows the count in play.
+//! step 4 (casts included but not a cast on draw, R2179002; countered plays never), and the count
+//! rides the card through every zone. A copy starts at 0 (R57 resets the count), and making the card
+//! Radiant keeps the level (R840). Each play gains only its own level's line (R841). The cost is a
+//! computed `cost` hook (R55) with R65's modifiers on top (R842). Ascent 1's target is a resolution
+//! prompt over any Unit or hero (§10.6, R81), picked at random under a random cast (R843).
 
 use jackioh_engine::prelude::*;
 
@@ -155,15 +150,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #8 Reach the Summit — SPEC §8.8 row 8, BUILD M10 row M 8: Quickdraw; played at level 0
-// it heals 2 and climbs; each play resolves only its own level's line and raises the level by one,
-// counted per instance (casts included but not on draw, R2179002; countered plays not); it costs (level); at the end of the
-// turn it returns to hand from the graveyard only on the turn it was played, a full hand burning it;
-// level 1 prompts over any Unit or hero (random under a random cast); 2 draws 2; 3 discards 2 random
-// enemy cards; 4 exiles 2 different random enemy permanents, face-down ones included; 5 adds 2 random
-// Radiant non-token cards costing (0), never itself; 6 to 9 do nothing; 10 wins unless the caster's
-// hero is at 0; a copy starts at 0; an Echo repeat resolves the same level; the preview shows the
-// level; radiant costs max(0, level − 1) and reads 3 of each.
+// Meditative #8 Reach the Summit — SPEC §8.8 row 8, BUILD M10 row M 8.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -454,7 +441,6 @@ mod tests {
             assert!(s.state().pending.is_some(), "a resolution prompt opens");
             let target = s.card(VANILLA).id.clone();
             s.answer(json!([{ "pick": "instance", "instanceId": target }]));
-            // The 4/4 took 2.
             let unit = s.unit(P1, 1).expect("the unit stands");
             assert_eq!(unit.damage, 2);
         }

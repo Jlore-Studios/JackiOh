@@ -35,11 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M 97.5 Bunker — SPEC §8.8 row 97.5, BUILD M10 row M 97.5: "Tribute 2, Armor 3, Can't attack, First Strike;
-// attacked by the Unit across from it, it strikes first for 15 (MD-F14), through that Unit's Armor and Divine
-// Shield; attacked from another lane, it strikes for 5; a forced attack (M 49.3) still multiplies in its
-// lane; non-combat damage is never multiplied; multiplier reads through `param()`; radiant 10/20 and Armor 6
-// (10/30 and Armor 5 before patch v0.3.10), 30 in its lane".
+// M 97.5 Bunker — SPEC §8.8 row 97.5, BUILD M10 row M 97.5.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -106,8 +102,6 @@ mod tests {
         #[test]
         fn r1283_struck_back_across_its_lane_it_hits_first_for_15() {
             crate::register_all();
-            // P1 has Bunker in lane 1 (5/10, Armor 3, First Strike).
-            // P2 has BIG_ATTACKER (9/9) in lane 1.
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -130,7 +124,6 @@ mod tests {
             s.attack(&big, &bunker);
 
             // Bunker struck first for 5 * 3 = 15 damage!
-            // BIG_ATTACKER had 9 health, so 15 damage dealt to it killed it before it could strike!
             assert!(s.unit(P2, 1).is_none(), "attacker dies to First Strike 15 damage");
             // Bunker took 0 damage because First Strike killed the attacker before it could hit.
             assert_eq!(s.unit(P1, 1).unwrap().damage, 0);
@@ -158,8 +151,6 @@ mod tests {
         #[test]
         fn r1283_struck_from_another_lane_it_hits_for_its_base_attack_5() {
             crate::register_all();
-            // P1 has Bunker in lane 1 (5/10, Armor 3, First Strike).
-            // P2 has BIG_ATTACKER (9/9) in lane 2.
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -182,8 +173,6 @@ mod tests {
             s.attack(&big, &bunker);
 
             // Because attack is from lane 2 into lane 1, multiplier is 1!
-            // Bunker hits for 5 (not 15).
-            // BIG_ATTACKER (9 health) takes 5 damage and survives with 4 health!
             let big_unit = s.unit(P2, 2).expect("big attacker survived 5 damage");
             assert_eq!(big_unit.damage, 5);
 
@@ -195,8 +184,6 @@ mod tests {
         #[test]
         fn r1283_armor_7_attacker_across_lane_takes_8() {
             crate::register_all();
-            // P1 has Bunker in lane 1 (5/10, First Strike).
-            // P2 has ARMORED in lane 1 (7/7, Armor 7).
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -217,17 +204,13 @@ mod tests {
 
             s.attack(&armored, &bunker);
 
-            // Bunker strikes first across lane for 15.
             // ARMORED has Armor 7, so damage = 15 - 7 = 8!
-            // 8 >= 7 health, so ARMORED dies!
             assert!(s.unit(P2, 1).is_none(), "Armor 7 attacker took 8 damage and died");
         }
 
         #[test]
         fn r1283_moths_to_the_flame_forced_attack_takes_15() {
             crate::register_all();
-            // P1 has Bunker in lane 1.
-            // P2 has Moths to the Flame in lane 1 (1/14).
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -244,7 +227,6 @@ mod tests {
             // Pass turn to P2. P2 starts turn, triggering Moths to force P1's Bunker in lane 1 to attack Moths in lane 1.
             s.end_turn();
 
-            // Bunker attacks Moths across lane 1:
             // Multiplier applies: 5 * 3 = 15 damage!
             // Moths has 14 health, so 15 damage kills Moths!
             assert!(s.unit(P2, 1).is_none(), "Moths took 15 damage and died");
@@ -351,7 +333,6 @@ mod tests {
         #[test]
         fn r1283_radiant_strikes_for_30_across_lane_and_has_armor_6() {
             crate::register_all();
-            // Radiant Bunker is 10/20 with Armor 6 and multiplier 3.
             // In lane, strikes for 10 * 3 = 30.
             let mut s = crate::scenario(json!({
                 "p1": {
@@ -378,7 +359,6 @@ mod tests {
             // Pass turn to trigger Moths: Bunker attacks Moths across lane 1.
             s.end_turn();
 
-            // Moths dies to 30 damage.
             assert!(s.unit(P2, 1).is_none(), "Moths died to 30 damage");
 
             // First Strike: Moths dies before it strikes back, so the Bunker takes nothing.

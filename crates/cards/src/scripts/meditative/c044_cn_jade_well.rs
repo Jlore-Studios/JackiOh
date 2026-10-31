@@ -31,9 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #44 CN Jade Well — SPEC §8.8 row 44, BUILD M10 row M 44: "A Field Spell (MD-C15): at
-// your start of turn only, adds a base Auspicious Rock to your hand, nothing at the opponent's
-// start; destroyed, it stops; the hand cap burns the Rock; radiant the Rock is Radiant".
+// Meditative #44 CN Jade Well — SPEC §8.8 row 44, BUILD M10 row M 44.
 #[cfg(test)]
 mod tests {
     use super::*;

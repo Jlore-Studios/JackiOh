@@ -31,9 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #39 赌石 Addict — SPEC §8.8 row 39, BUILD M10 row M 39: "Cry (played or cast, R1):
-// adds one base Auspicious Rock (M 39.1) to your hand, hidden from the opponent, burned at a full
-// hand; summoned, no Rock; radiant 8/8 and the Rock is Radiant".
+// Meditative #39 赌石 Addict — SPEC §8.8 row 39, BUILD M10 row M 39.
 #[cfg(test)]
 mod tests {
     use super::*;

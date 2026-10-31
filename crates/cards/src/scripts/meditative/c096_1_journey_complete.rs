@@ -9,9 +9,8 @@
 //! reads the `memory.journey` M #96 wrote on it (R1246) and, for each id in that order whose card is
 //! still in an exile pile, `add_to_hand` moves it to its owner's hand (R746), Radiant (§6.3 Make
 //! Radiant, R74), keeping its `tuning`; on the Radiant face it costs `discount` less, a price that lands
-//! after R766 reset it in exile. The hand cap burns the rest (§2.4). One that remembers nothing — made
-//! by any other card, a copy, or one that reached a graveyard or an exile pile (R766) — does nothing
-//! (R1248).
+//! after R766 reset it in exile. One that remembers nothing — made by any other card, a copy, or one
+//! that reached a graveyard or an exile pile (R766) — does nothing (R1248).
 
 use jackioh_engine::prelude::*;
 
@@ -61,10 +60,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #96.1 Journey Complete — SPEC §8.8 row 96.1, R1248: "cast on draw, it returns every card its
-// `memory.journey` names that is still in an exile pile, in that order, to its owner's hand, Radiant;
-// the hand cap burns the rest; one that left exile stays gone; one that remembers nothing does nothing;
-// radiant: each costs `discount` (1) less than printed, after R766's reset in exile".
+// M #96.1 Journey Complete — SPEC §8.8 row 96.1, R1248.
 #[cfg(test)]
 mod tests {
     use super::*;

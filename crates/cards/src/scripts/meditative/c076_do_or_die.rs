@@ -6,16 +6,12 @@
 //!          marked card still in their hand."
 //! Engine:
 //! - **The marks:** as it resolves, `marks` different cards of the opponent's hand are drawn from
-//!   the match rng (R60; all of them when fewer); the Radiant face takes every card it holds then,
-//!   and a card they draw later is not marked. With an empty hand nothing is scheduled.
+//!   the match rng (R60; all of them when fewer); the Radiant face takes every card it holds then.
 //! - **The watch:** one `delay` at the start of this player's next turn (§2.2, R62), its `handWatch`
 //!   the picked cards and its `mark` the steal's purple (ME-HANDMARK, R1140, R1141). A watched card
-//!   is dropped as its stay in that hand ends (played, discarded, shuffled away, stolen by something
-//!   else), and the entry with it once none is left, so a card that comes back later is unmarked.
-//! - **The steal:** the step reads the cards still watched (`HAND_WATCH_KEY`) and takes them off the
-//!   field into this player's hand as theirs, in hand order (`give_from_hand` by `ids`, §6.3 Steal,
-//!   R12), the hand cap burning the rest into this player's graveyard (§2.4, R4). A unit-token card
-//!   stays in a hand, so it lives on in theirs (R1145).
+//!   is dropped as its stay in that hand ends, so a card that comes back later is unmarked.
+//! - **The steal:** in hand order (`give_from_hand` by `ids`, §6.3 Steal, R12), the hand cap burning
+//!   the rest into this player's graveyard (§2.4, R4). A unit-token card lives on in theirs (R1145).
 //! - **Hidden information:** the hand's owner sees the mark on each marked card; this player sees
 //!   only how many (`SideView.handMarked`, R1141) and meets each card as it reaches their hand (R97).
 
@@ -86,13 +82,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #76 Do or Die — SPEC §8.8 row 76, BUILD M10 row M 76: "Marks two different random cards of the
-// opponent's hand (all of them if fewer); at the start of your next turn each still in that hand
-// becomes yours, in your hand (R12), the hand cap burning the rest into your graveyard; a marked card
-// they play, discard or lose meanwhile is not taken, and one that returns to their hand later is
-// unmarked (R1140); the owner sees the marks, you see only the count (R1141); an empty hand schedules
-// nothing; marks reads through `param()`; radiant every card in their hand as it resolves, not cards
-// drawn later".
+// M #76 Do or Die — SPEC §8.8 row 76, BUILD M10 row M 76.
 //
 // Every case crosses a turn boundary, so both sides keep a card in hand and a deck: R82 ends a turn
 // with nothing left in it, and an empty deck would add fatigue.

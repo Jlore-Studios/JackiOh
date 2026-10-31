@@ -46,11 +46,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #47 饕餮 — SPEC §8.8 row 47, BUILD M10 row M 47: "At your end of turn only, one random enemy
-// permanent (tops of piles, both rows, face-down ones included, never an Immutable one) is fused
-// into it (MD-C20) … with no enemy permanent, nothing; an Immutable 饕餮 eats nothing (R23); the
-// fused definition survives a JSON round trip (R468); radiant 4/4 and also a random non-Immutable
-// card of the opponent's deck".
+// M #47 饕餮 — SPEC §8.8 row 47, BUILD M10 row M 47.
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -468,7 +464,7 @@ mod tests {
                 assert_eq!(after.id, before.id);
                 // Both fusions summed their stats (R77), and the kept card is Radiant, so it shows
                 // the fusion's radiant form, the sum of the radiant forms: 4 + 6 + 6 attack and
-                // 4 + 8 + 8 health (a Radiant Duplicating Felinors is 6/8 since patch v0.3.10).
+                // 4 + 8 + 8 health (a Radiant Duplicating Felinors is 6/8).
                 assert!(after.radiant);
                 s.expect_stats(&after, json!({ "attack": 16, "health": 20 }));
             }

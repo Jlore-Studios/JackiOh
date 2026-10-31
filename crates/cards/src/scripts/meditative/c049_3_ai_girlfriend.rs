@@ -7,10 +7,9 @@
 //! into its lane's unit zone (else R64's), a Unit for every rule from then on; with no open unit
 //! zone it stays a backrow card. Start of turn is Moths to the Flame's `forced_attacks_on` self
 //! (R53): every enemy Unit attacks in lane order, each its own combat with its own state check,
-//! Can't attack and 0-attack Units included, the run stopping once this leaves the field — but only
-//! while this stands animated in a unit zone, since a backrow card is no target. ME-AFTER-ATTACKED
-//! (MD-C26): after each combat it was the target of, declared or forced, the attacker still on the
-//! field is Nerfed (a Cleave splash is no attack on it).
+//! Can't attack and 0-attack Units included, the run stopping once this leaves the field.
+//! ME-AFTER-ATTACKED (MD-C26): after each combat it was the target of, declared or forced, the
+//! attacker still on the field is Nerfed (a Cleave splash is no attack on it).
 
 use jackioh_engine::effects::{degrade, forced_attacks_on};
 use jackioh_engine::prelude::*;

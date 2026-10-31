@@ -2,7 +2,7 @@
 //!   Base:    "Animated on your turn, Rush, First Strike"
 //!   Radiant: "Animated on your turn, Rush, Pierce, First Strike"
 //! Engine: "Animated on your turn" (R383, R1062) as C+ #12.8 Frostspatula; keywords only
-//! (First Strike on both faces since patch v0.3.10, Rush since #1704).
+//! (Rush since #1704).
 
 use jackioh_engine::prelude::*;
 

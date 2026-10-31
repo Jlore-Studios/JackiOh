@@ -5,21 +5,10 @@
 //! Radiant: "Tradable / De-Radiant every enemy card on the field. The next card you play this turn
 //! becomes Radiant."
 //! Engine: MD-D6 — De-Radiant is Make Radiant reversed (`clearRadiant`), §5.2's exception: the face
-//! swaps back while damage, buffs and tuning stay. The base face clears the chosen card: a Radiant Unit
-//! or face-up backrow card on either side, or a Radiant card in your hand; the Radiant face clears
-//! every Radiant card of the opponent's field, face-down ones included (MD-D8). Both faces then add a
-//! this-turn `radiantNextPlay` modifier (R831005): the next card its player plays, a cast included
-//! (R70), becomes Radiant as it is played (§10.5 step 3) and spends it. Patch v0.3.10 (#831): both
-//! faces added AI generated cards instead (R1421), and the Radiant face cleared the opponent's hand and
-//! deck too. Both faces are Tradable (R1838000), catalog data the engine reads in the hand
-//! (`trade.rs`), so nothing here runs for it.
-//!
-//! R1851003 (#1851): either face is played only with a card to De-Radiant. The base face's pick is
-//! needed (R703); the Radiant face declares no target, so its play gate (`play_allowed`, R1851000)
-//! asks for a Radiant enemy card on the field its player can see, a face-down one hiding its face
-//! (§9.1, R440). A cast of either face is never refused (R70, R1851001) and clears what there is, and
-//! a Trade is no play (R1838002), so either face is Traded with nothing to clear. Through v0.4.11 R90
-//! let either face play and fizzle (R1103); `script_v0_4_11` keeps that (R767000).
+//! swaps back while damage, buffs and tuning stay. Both faces then add a this-turn `radiantNextPlay`
+//! modifier (R831005): the next card its player plays, a cast included (R70), becomes Radiant as it
+//! is played (§10.5 step 3) and spends it. Both faces are Tradable (R1838000), catalog data the
+//! engine reads in the hand (`trade.rs`), so nothing here runs for it.
 
 use jackioh_engine::prelude::*;
 
@@ -68,8 +57,8 @@ fn target_checks() -> IndexMap<&'static str, TargetCheck> {
     )])
 }
 
-/// R831005 (patch v0.3.10): "The next card you play this turn becomes Radiant", a this-turn modifier its
-/// next play spends (it added AI generated cards before).
+/// R831005 (#831): "The next card you play this turn becomes Radiant", a this-turn modifier its
+/// next play spends (it added AI generated cards before, R1421).
 fn next_play(ctx: &EffectContext<'_>) -> Effect {
     add_player_modifier(json_as(json!({
         "mod": {
@@ -79,8 +68,7 @@ fn next_play(ctx: &EffectContext<'_>) -> Effect {
     })))
 }
 
-/// MD-D8: every Radiant card of `player`'s opponent's field, face-down ones included (patch v0.3.10:
-/// no longer their hand and deck).
+/// MD-D8: every Radiant card of `player`'s opponent's field, face-down ones included.
 fn enemy_radiant_cards(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let enemy = opponent_of(player);
     permanents_on_field(state, enemy)
@@ -136,11 +124,7 @@ pub fn script_v0_4_11() -> CardScripts {
     }
 }
 
-// M #53 Prestige — SPEC §8.8 row 53, BUILD M10 row M 53: "De-Radiant a Radiant Unit or face-up
-// backrow card on either side, or a Radiant card in your hand (MD-D6), the pick needed (R703); the
-// Radiant face De-Radiants every enemy card of the opponent's field (MD-D8), played only while one it
-// can see stands there (R1851003); both faces make the next card you play this turn Radiant, a cast
-// included, once (R831005)".
+// M #53 Prestige — SPEC §8.8 row 53, BUILD M10 row M 53.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,7 +252,6 @@ mod tests {
             assert!(!cleared.radiant);
             assert_eq!(cleared.damage, 1);
             assert_eq!(cleared.buffs, AttackHealth { attack: 1, health: 0 });
-            // The other side's Radiant unit stands Radiant still.
             assert!(must_unit(&s, "p2", 1).radiant);
             assert!(next_play_radiant(&s));
         }
@@ -368,13 +351,11 @@ mod tests {
             let grave = radiant_off_field(&mut s, Zone::Graveyard { player: PlayerId::P2 });
             s.state_mut().players.p2.graveyard.push(grave);
             s.play(PRESTIGE, json!({}));
-            // Every enemy card on the field is De-Radianted (patch v0.3.10: the field alone).
             assert!(!must_unit(&s, "p2", 1).radiant);
             assert!(s.hand("p2").iter().any(|card| card.radiant));
             assert!(s.pile("p2", "library").iter().any(|card| card.radiant));
             // Never the graveyard (MD-D8).
             assert!(s.pile("p2", "graveyard").iter().all(|card| card.radiant));
-            // Your own Radiant unit stands Radiant still.
             assert!(must_unit(&s, "p1", 1).radiant);
             assert!(next_play_radiant(&s));
         }

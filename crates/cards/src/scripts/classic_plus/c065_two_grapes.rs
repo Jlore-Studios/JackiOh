@@ -7,7 +7,7 @@
 //!            Rotten < Normal < Large < Golden < Mythic. The hand cap burns extras (§2.4). Tunes:
 //!            grapes 2 ↑."
 //!
-//! The roll is the engine's `addRolledGrapes` (effects/fruit.ts, shared with C+ #66 Vine of Grapes):
+//! The roll is the engine's `addRolledGrapes`, shared with C+ #66 Vine of Grapes:
 //! one draw over `GRAPE_ODDS` per Grape, Lucky's extra draws keeping the later entry, each Grape added
 //! before the next is rolled. The Lucky it reads is the running card's own — the Radiant face prints
 //! Lucky 1, and a Degrade or an Upgrade of that number moves it (B3.4's X change) — so both faces run
@@ -39,13 +39,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #65 Two Grapes — SPEC §8.7 row 65, BUILD M9 Classic+ row C+ 65: "Add {grapes} to your hand"
-// (exactly two, balance patch 1; each rolled on its own from `GRAPE_ODDS` in code, never in player
-// text); a fixed seed gives fixed Grapes and many seeded rolls match the odds; a full hand burns;
-// hidden from the opponent (R97); the count reads through `param()`; radiant Lucky 1, two Radiant
-// Grapes, each rolled twice with the better kept in the order Rotten, Normal, Large, Golden, Mythic".
+// C+ #65 Two Grapes — SPEC §8.7 row 65, BUILD M9 Classic+ row C+ 65 (R97).
 //
-// The odds themselves are proved on 20,000 rolls of the verb in packages/engine/test/effects-fruit.test.ts;
+// The odds themselves are proved on 20,000 rolls of the verb in the engine's `tests/rules/effects_fruit.rs`;
 // here the card is played, many times over, and its Grapes counted.
 #[cfg(test)]
 mod tests {
@@ -62,7 +58,6 @@ mod tests {
         GRAPE_ODDS.iter().map(|grape| grape.def_id).collect()
     }
 
-    /// TS `GRAPE_IDS.indexOf(id)`: −1 for an id that is no Grape.
     fn index_of(id: &str) -> i64 {
         grape_ids()
             .iter()
@@ -72,7 +67,7 @@ mod tests {
 
     use crate::js;
 
-    /// One `addedToHand` event of p1's, as TS's `Extract<GameEvent, { type: "addedToHand" }>` reads it.
+    /// One `addedToHand` event of p1's.
     struct Added {
         instance_id: String,
         def_id: String,
@@ -96,7 +91,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `played({ radiant?, seed?, hand? })`.
     fn played(radiant: bool, seed: Option<&str>, hand: Option<usize>) -> Scenario {
         let mut grapes = json!({ "def": GRAPES });
         if radiant {
@@ -111,7 +105,6 @@ mod tests {
         }))
     }
 
-    /// TS `s.card(ref).tuning = …`: the live card's tuning replaced.
     fn set_tuning(s: &mut Scenario, card: &str, tuning: Value) {
         let id = s.card(card).id.clone();
         let instance = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");

@@ -15,7 +15,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: Armor 6 and Immune to Spells are the Radiant face's catalog keywords.
     let radiant = base.clone();
 
     CardScripts { base, radiant }

@@ -9,7 +9,6 @@ pub const ID: &str = "classicplus-024";
 /// Each player's outermost lanes (§3.1).
 const WALL_LANES: [i32; 2] = [1, 5];
 
-/// TS `walls(side: "any" | "enemy")`: `side` is the scope's side, `ScopeSide::Any` or `ScopeSide::Enemy`.
 fn walls(side: ScopeSide) -> Script {
     let in_the_walls = move |ctx: &mut EffectContext<'_>| -> Vec<String> {
         cards_in_scope(ctx, &json_as(json!({ "side": side, "rows": ["units", "backrow"] })))
@@ -43,12 +42,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #24 Crushing Walls — SPEC §8.7 row 24, BUILD M9 Classic+ row C+ 24: "Destroys the top card of each of
-// the eight zones in lanes 1 and 5 (each side numbers its lanes from its owner's seat), Units and
-// backrow cards, face-down ones included, an Indestructible one staying; a card dormant beneath
-// resumes; a destroyed backrow card that prints Death fires it (§4.5); lanes 2 to 4 are untouched; an
-// Ivory Tower is destroyed like any backrow card, whatever it has fused (R418); radiant only the enemy's
-// four zones".
+// C+ #24 Crushing Walls — SPEC §8.7 row 24, BUILD M9 Classic+ row C+ 24 (§4.5).
 #[cfg(test)]
 mod tests {
     use super::*;

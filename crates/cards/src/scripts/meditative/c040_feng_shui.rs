@@ -56,13 +56,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #40 Feng Shui — SPEC §8.8 row 40, R980–R987, BUILD M10 row M 40: "(2) Field Spell, CN,
-// Legendary. Aura: every card has an element (水, 木, 火, 金 or 土); auspicious behavior rewarded
-// (Radiant at §10.5 step 3) and inauspicious punished (Brittle 2 there, 10 to the hero once the play
-// has resolved, 20 on the Radiant face); the last elements shown here; Luck 1."
+// Meditative #40 Feng Shui — SPEC §8.8 row 40, R980–R987, BUILD M10 row M 40.
 //
-// Every game is built with the testkit's `scenario()` after `crate::register_all()`, with the
-// Meditative set shipped (the record is written only while it is open, R982) and mana 10. The
+// The Meditative set ships (the record is written only while it is open, R982) and mana is 10. The
 // elements ride the indices: core-003 is 木, core-032 火, core-020 土, core-011 水, core-019 金.
 #[cfg(test)]
 mod tests {

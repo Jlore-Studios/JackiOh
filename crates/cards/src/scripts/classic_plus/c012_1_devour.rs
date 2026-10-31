@@ -48,12 +48,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #12.1 Devour — SPEC §8.7 row 12.1, BUILD M9 Classic+ row C+ 12.1: "Destroys a target Unit and your
-// hero takes damage equal to that Unit's current health read before the destroy, one instance from
-// Devour through your Armor and caps (Anime Armor clamps it to 1), raised by your own Spell Damage
-// (§4.4 step 0); an Indestructible target survives and the damage still happens; radiant heals your
-// hero by that health instead, a heal that an opposing Blood Moon in force turns into Pierce damage
-// (R413)".
+// C+ #12.1 Devour — SPEC §8.7 row 12.1, BUILD M9 Classic+ row C+ 12.1 (R413).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};

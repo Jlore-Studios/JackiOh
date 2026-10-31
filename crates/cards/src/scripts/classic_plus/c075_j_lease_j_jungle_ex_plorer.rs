@@ -6,16 +6,14 @@
 //!            shows it (R311); R80's cap turns it away. The Radiant Pack's five cards cost (0), so the
 //!            effect grows with the stats (R275). Tunes: packs 1 ↑."
 //!
-//! `shuffle_into` is §6.3's Shuffle into a library: a fresh Pack at a random position (one rng draw each),
-//! shown to the deck's owner (R311) and refused at the library cap (R80). A copy of this Unit is summoned
-//! with no Cry (R1), so only a played one shuffles.
+//! A copy of this Unit is summoned with no Cry (R1), so only a played one shuffles.
 
 use jackioh_engine::effects::shuffle_into;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-075";
 
-/// §7, §8.7: the token the Cry shuffles in (TS `cardDef("classicplus-075-1").id`, read off the catalog).
+/// §7, §8.7: the token the Cry shuffles in, read off the catalog.
 fn pack_id() -> String {
     crate::card_def("classicplus-075-1").id
 }
@@ -41,11 +39,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #75 J-lease J-Jungle EX-plorer — SPEC §8.7 row 75, BUILD M9 Classic+ row C+ 75: "Cry shuffles a
-// J-lease J-Jungle EX-plorer Pack (C+ #75.1) into your deck at a random position (R80's cap), shown in
-// your library list; no Cry from a copy (R1); the count reads through `param()`; radiant the Pack is
-// Radiant".
-//
+// C+ #75 J-lease J-Jungle EX-plorer — SPEC §8.7 row 75, BUILD M9 Classic+ row C+ 75.
 // "No Cry from a copy" is driven through the engine's own Summon a copy (§6.3, R57), since no card in
 // the preview pool can copy a non-Human 3-Cost Unit.
 #[cfg(test)]

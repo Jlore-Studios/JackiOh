@@ -163,8 +163,6 @@ mod tests {
         assert_eq!(upgraded_for(s.events(), &right), 8);
     }
 
-    /// R1081000: standing in the backrow, the Unit to its right is the one standing in the next backrow
-    /// zone; a backrow card there is no Unit and takes nothing.
     #[test]
     fn r1081000_standing_in_the_backrow_it_buffs_the_unit_standing_to_its_right() {
         crate::register_all();

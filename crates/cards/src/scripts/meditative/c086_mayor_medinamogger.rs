@@ -23,14 +23,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #86 Mayor Medinamogger — SPEC §8.8 row 86, BUILD M10 row M 86: "While it acts on either side,
-// both players' declared targets are drawn by the engine at §10.5 step 1 (MD-E9), `legalActions`
-// offering plays and attacks without targets, a target prompt answered at once at random, and an
-// attack's target drawn from its legal targets (Taunt respected); Discover, modes, hand picks and
-// Tributes stay chosen; the view flags it and the client asks for no target; a play with no legal
-// target fizzles unless it needs one (R703); leaving the field restores the choices; radiant 10/8
-// and Lucky 1: its controller's random targets roll twice, keeping the side its aim prefers, then
-// a survivable or a lethal attack (MD-E10), the opponent's once".
+// M #86 Mayor Medinamogger — SPEC §8.8 row 86, BUILD M10 row M 86 (§10.5, R703).
 //
 // The system is proved in `crates/engine/tests/rules/mb22.rs` (R1200, R1201); these tests prove the
 // card's own faces carry it.

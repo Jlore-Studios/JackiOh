@@ -72,7 +72,7 @@ mod tests {
         }))
     }
 
-    /// The instance a prompt option's selection names, or "" (TS `pick === "instance" ? instanceId : ""`).
+    /// The instance a prompt option's selection names, or "".
     fn instance_of(selection: &Value) -> String {
         if selection["pick"] == "instance" {
             selection["instanceId"].as_str().unwrap_or_default().to_string()

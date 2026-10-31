@@ -52,10 +52,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #24 Polymorph — SPEC §8.8 row 24, BUILD M10 row M 24: "Declares one Unit on either side (R81) and
-// transforms it into a base Sheep Token in place (R691); an Immutable target is left alone (R23); the
-// neighbours are untouched; the Radiant face also transforms the Units next to the target, on its side and
-// row, each into a base Sheep, whether or not the target changes".
+// M #24 Polymorph — SPEC §8.8 row 24, BUILD M10 row M 24.
 //
 // Fixtures: #8 Mr. Vanilla (4/4) fills the lanes, #66 The Rock (Radiant, Immutable) is the target that
 // stays, and #10 Rapid Replenish is the spare card that keeps the turn open (R82).

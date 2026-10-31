@@ -32,10 +32,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #58 Fruit Basket — SPEC §8.7 row 58, BUILD M9 Classic+ row C+ 58: "Adds 3 random cards of the
-// Fruit pool, the non-token Fruit cards of any set plus the five Grapes (R382), never Fruit Basket
-// (R387), repeats allowed; a seeded game can hand out a Grape; a full hand burns; hidden from the
-// opponent (R97); the count reads through `param()`; radiant they are Radiant".
+// C+ #58 Fruit Basket — SPEC §8.7 row 58, BUILD M9 Classic+ row C+ 58 (R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -52,7 +49,6 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `basket({ radiant?, seed?, fillers? })`: `None` is the TS default.
     fn basket(radiant: bool, seed: Option<&str>, fillers: Option<usize>) -> Scenario {
         let mut hand = vec![json!({ "def": BASKET, "radiant": radiant })];
         hand.extend((0..fillers.unwrap_or(1)).map(|_| json!(FILLER)));

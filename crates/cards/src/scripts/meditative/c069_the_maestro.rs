@@ -5,9 +5,8 @@
 //!          their field, hand, deck and graveyard."
 //! Radiant: the same text, two exiles per zone.
 //! Engine: the `manaSpent` event (MD-D26) — a field trigger answers the controller's own spending
-//! with one placement per mana (R212 already keeps the Maestro from answering its own play, and the
-//! opponent's spending is never its controller's); the Activate refuses below {price} Plague
-//! Counters and exiles {exiles} per zone (MD-D27), two per zone on the Radiant face.
+//! with one placement per mana; the Activate refuses below {price} Plague Counters and exiles
+//! {exiles} per zone (MD-D27), two per zone on the Radiant face.
 
 use jackioh_engine::prelude::*;
 
@@ -78,9 +77,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #69 The Maestro — SPEC §8.8 row 69, BUILD M10 row M 69: "Counters per mana (MD-D26: its own
-// play and the opponent's spending not counted); refused below 4; one exile per zone, empty zones
-// skipped (MD-D27); two per zone on the Radiant face".
+// M #69 The Maestro — SPEC §8.8 row 69, BUILD M10 row M 69.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -377,8 +374,7 @@ mod tests {
     }
     /// R1850000, R1884005: a copier running the Maestro's text (S #20 Tnack Trav copying a Legendary
     /// fusion of the Maestro and Core #92 Felinor Fiender) reads the Activate's price off the copied
-    /// text, as `param` does, and its legality check no longer panics on the copier's own card
-    /// (handicapped fuzz seed 1087 of the Stinkyscape release).
+    /// text, as `param` does, and its legality check does not panic on the copier's own card.
     #[test]
     fn r1884005_a_copier_of_the_maestro_s_text_reads_its_price_off_the_copy() {
         const TNACK_TRAV: &str = "stinkyscape-020";

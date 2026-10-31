@@ -38,9 +38,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #43 CN Jade Market — SPEC §8.8 row 43, BUILD M10 row M 43: "X chosen with the play,
-// at least 1 and at most the current mana (R348); adds X base Auspicious Rocks, the hand cap
-// burning the rest; X 3 adds three; radiant the Rocks are Radiant".
+// Meditative #43 CN Jade Market — SPEC §8.8 row 43, BUILD M10 row M 43.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,7 +66,6 @@ mod tests {
         let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
         let mana = s.view(P1).you.mana.current;
 
-        // R348: X is at least 1 and at most the current mana.
         s.expect_refused(|s| s.play(ID, json!({ "x": 0 })));
         s.expect_refused(|s| s.play(ID, json!({ "x": mana + 1 })));
         assert_eq!(def_ids(&s.hand(P1)), vec![ID, FILLER]);

@@ -5,12 +5,10 @@
 //!            Tree: it and C+ #68 Organic Produce, the two Field Spells that make Fruit, lost the Fruit
 //!            tag in #1837 (R1837000); `costOverride` 0; the hand cap burns it (§2.4). Tunes: none."
 //!
-//! `startOfTurn` fires for the controller alone, on their own turn (`turn.startTurn` asks
-//! `triggerOrder` for that one player, §2.2, R62), so the opponent's start of turn adds nothing. The
-//! Fruit pool is the engine's: a `tags: ["Fruit"]` query holds the non-token Fruit cards of every set
-//! and the five Grapes (R382), and `addRandomFromCatalog` leaves out the card running the script by
-//! its def id (R387). Repeats are allowed (R60); a full hand burns what doesn't fit (§2.4, R4), and the
-//! cost rider lands only on a card that reached the hand.
+//! `startOfTurn` fires for the controller alone, on their own turn (§2.2, R62). A `tags: ["Fruit"]`
+//! query is the Fruit pool (R382), less the card running the script (R387). Repeats are allowed (R60);
+//! a full hand burns what doesn't fit (§2.4, R4), and the cost rider lands only on a card that reached
+//! the hand.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -43,10 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #63 Fruit Tree — SPEC §8.7 row 63, BUILD M9 Classic+ row C+ 63: "Field Spell: at each start of
-// your turn adds a random card of the Fruit pool (R382) that costs (0), never Fruit Tree (R387); nothing
-// at the opponent's start of turn; a full hand burns; hidden from the opponent (R97); the count is
-// fixed at 1 with no tunable (balance patch 1); radiant the Fruit is Radiant".
+// C+ #63 Fruit Tree — SPEC §8.7 row 63, BUILD M9 Classic+ row C+ 63 (R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

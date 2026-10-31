@@ -16,7 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-046";
 
-/// TS `cardDef("classicplus-046-1").id`: the Prime the Death shuffles in.
 const PRIME: &str = "classicplus-046-1";
 
 /// "Your (other) Felinors have +N/+N": Felinor-tagged Units its controller has on the field.
@@ -57,11 +56,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #46 Felinor Flagbearer — SPEC §8.7 row 46, BUILD M9 Classic+ row C+ 46: "Rush (no Cleave, no Cry,
-// balance patch 1); Aura: your other Felinor Units have +1/+1 while it is on the field (not itself, not
-// the opponent's); Death shuffles a Felinor Flagbearer Prime (C+ #46.1) into your deck (R80's cap),
-// shown in your library list; the aura reads through `param()`; radiant +2/+2 to every Felinor Unit
-// you control, itself included".
+// C+ #46 Felinor Flagbearer — SPEC §8.7 row 46, BUILD M9 Classic+ row C+ 46.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,7 +81,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `rally({ radiant?, armor?, library? })`'s options.
     #[derive(Default)]
     struct Rally {
         radiant: bool,
@@ -190,7 +184,6 @@ mod tests {
             s.play(FLAG, json!({}));
             let vanilla = s.unit(P1, 2).expect("p1's lane 2");
             s.expect_stats(&vanilla, json!({ "attack": 4, "health": 4 }));
-            // Grant the Vanilla Felinor: the aura's +1/+1 reaches it (MD-B15).
             find_instance_mut(s.state_mut(), &vanilla.id).expect("the unit").granted_tags =
                 Some(vec![Tag::Felinor]);
             s.expect_stats(&vanilla, json!({ "attack": 5, "health": 5 }));
@@ -262,8 +255,7 @@ mod tests {
             assert_eq!(prime.len(), 1);
             assert!(!prime[0].radiant);
             let listed = s.view(P1).you.own_library.map(|library| library.cards).unwrap_or_default();
-            // The Prime is effect-made, so R943 marks it Created. Re-pinned for v0.3.5: the Meditative
-            // set ships, so R943's Created mark is live.
+            // The Prime is effect-made, so R943 marks it Created.
             assert!(listed.contains(&LibraryEntryView {
                 def_id: PRIME.to_string(),
                 radiant: false,
@@ -358,7 +350,6 @@ mod tests {
         }
     }
 
-    /// R1081000: a Felinor standing in the backrow is one on the field: the aura reaches it there too.
     #[test]
     fn r1081000_a_felinor_standing_in_the_backrow_keeps_the_aura() {
         crate::register_all();

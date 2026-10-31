@@ -43,10 +43,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #22 Blood Moon (SPEC §8.7 row 22): fires when an enemy would be healed. The triggering heal is
-// converted too (R413), and every enemy heal this turn becomes Pierce damage. The opponent learns
-// nothing until it fires (R33, R97). Radiant face is a Field Trap that stays face-up once fired and
-// converts every enemy heal while on the field.
+// C+ #22 Blood Moon — SPEC §8.7 row 22 (R33, R97).
 #[cfg(test)]
 mod tests {
     use super::*;

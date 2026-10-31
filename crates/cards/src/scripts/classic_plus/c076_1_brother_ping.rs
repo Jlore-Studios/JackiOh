@@ -56,7 +56,6 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #76.1 Brother Ping — SPEC §8.7 row 76.1, BUILD M9 Classic+ row C+ 76.1 (R384, R346, R386).
-// Activating is no play (R384: Combo, Quickstriker, Ceaseless Void ignore it); `activated` is public.
 // "Its count resets on leaving the field" (R78): Brother Ping is a unit token, so leaving the field it
 // ceases to exist (R11) and no instance comes back with a count; the reset itself is the activate subsystem's.
 #[cfg(test)]

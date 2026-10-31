@@ -53,10 +53,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-8 Rate Limit — SPEC §8.7 row T-AI-8, BUILD M9 Classic+ row T-AI-8: their 3rd play (casts count, R70; not on draw, R2179002)
-// fires it and their turn then ends (`endTurnAfter`, §6.3); hidden until it fires (R33, R97); radiant 2nd.
-//
-// Every case sets the trap face-down in p1's backrow and makes p2 the active player.
+// T-AI-8 Rate Limit — SPEC §8.7 row T-AI-8, BUILD M9 Classic+ row T-AI-8 (R33, R97).
 #[cfg(test)]
 mod tests {
     use crate::merged;
@@ -181,7 +178,6 @@ mod tests {
                     false,
                 );
                 s.play(VANILLA, json!({ "zone": 1 })).play(STOCKPILE, json!({}));
-                // Through v0.5.2 the Hinder was their 3rd play and ended the turn (R70).
                 s.expect_in_zone(RATE_LIMIT, "field");
                 assert_eq!(s.state().active, P2);
                 // Stockpile's whole list resolved: both draws (the cast one and its replacement) and the heal.

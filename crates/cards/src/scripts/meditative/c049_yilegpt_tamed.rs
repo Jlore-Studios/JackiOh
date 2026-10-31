@@ -9,8 +9,7 @@
 //! this (§3.2, R47): they own and control it (R12), and it fails if that zone is occupied. The
 //! Death shuffles a fresh M #49.1 into the deck of the player who controlled this as it died, at a
 //! uniformly random position (§6.3 Shuffle into): R80's cap applies, and its owner's own-library list
-//! shows it (R310). Until #1563 it went on the bottom of the deck (`script_v0_4_0f`, kept for the
-//! replays of v0.4.0f and before, R767000).
+//! shows it (R310).
 
 use jackioh_engine::effects::{shuffle_into, summon};
 use jackioh_engine::prelude::*;
@@ -76,11 +75,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// M #49 YileGPT — SPEC §8.8 row 49, BUILD M10 row M 49: "Cry (played or cast): a base Yile's Virus
-// summoned for the opponent, owned by them, into the unit zone across from it; with that zone
-// occupied, none; Death: a fresh base YileGPT Prime shuffled into its controller's deck at a random
-// position, refused by a full deck (R80), shown in its owner's list (R310); radiant 4/12, both
-// tokens Radiant".
+// M #49 YileGPT — SPEC §8.8 row 49, BUILD M10 row M 49.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -229,8 +224,8 @@ mod tests {
                 assert_eq!(virus.def_id, VIRUS);
                 assert!(virus.radiant);
 
-                // The Radiant Tamed is 4/12: a Radiant Bigot set to 12/2 (it prints 8/2 since patch
-                // v0.3.10) kills it where a 6/1 would not.
+                // The Radiant Tamed is 4/12: a Radiant Bigot set to 12/2 (it prints 8/2) kills it
+                // where a 6/1 would not.
                 let mut s = scenario(json!({
                     "seed": "tamed-radiant-death",
                     "p1": {

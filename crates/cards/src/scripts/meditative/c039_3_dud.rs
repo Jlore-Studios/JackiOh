@@ -32,8 +32,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #39.3 Dud — SPEC §8.8 row 39.3, BUILD M10 row M 39.3: "One hit of 2 on a declared Unit
-// or hero on either side; damage reads through `param()`; radiant 4".
+// Meditative #39.3 Dud — SPEC §8.8 row 39.3, BUILD M10 row M 39.3.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -71,11 +70,9 @@ mod tests {
         }));
         let prey_id = s.unit(P2, 2).expect("p2's menace").id.clone();
 
-        // A declared enemy unit takes one hit of 2.
         s.play(ID, json!({ "targets": pick::unit_at(&s, P2, 2) }));
         s.expect_stats(&prey_id, json!({ "attack": 9, "health": 7 }));
 
-        // …and so does the enemy hero.
         s.play(ID, json!({ "targets": json!([{ "pick": "hero", "player": "p2" }]) }));
         s.expect_health(P2, 28);
     }

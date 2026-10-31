@@ -44,9 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M 97.3 School — SPEC §8.8 row 97.3, BUILD M10 row M 97.3: "Can't attack; Activate, once a turn: a random
-// non-token (1) Cost Unit of any set summoned with no Cry; a full board draws nothing (R129); cost reads
-// through `param()`; radiant 0/16 and the Unit is Radiant".
+// M 97.3 School — SPEC §8.8 row 97.3, BUILD M10 row M 97.3.
 //
 // "Any set" is the sets that ship (R380, R1420), so the pool the tests rebuild is the shipped sets' non-token
 // Units at that printed cost. Every scenario keeps a 0-cost Spell in each hand and spares in the libraries,

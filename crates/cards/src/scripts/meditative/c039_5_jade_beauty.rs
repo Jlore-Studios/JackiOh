@@ -16,9 +16,8 @@
 //! Engine: a Unit token that ME-JADE summons (no Cry). Indestructible (R46). Immutable (R23): no
 //! Nerf, Buff, Transform or Fuse-onto, though Radiant still applies. Each end of its controller's
 //! turn (R62) it runs ME-ALLURE over every enemy Unit then on the field (MD-C4). The counter's 10
-//! turns it Radiant on the field (§5.2): 40/40 with its damage kept, Can't attack gone, nothing
-//! fires again. Handed out as a card by C+ #23's every-token pool (R382), it is played at its
-//! printed (10), with no Cry to fire.
+//! turns it Radiant on the field (§5.2), its damage kept, and nothing fires again. Handed out as a
+//! card by C+ #23's every-token pool (R382), it is played at its printed (10), with no Cry to fire.
 //! Tunes: none; the thresholds are ME-JADE's config.
 
 use jackioh_engine::prelude::*;
@@ -39,15 +38,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #39.5 Jade Beauty — SPEC §8.8 row 39.5, BUILD M10 row M 39.5: "Summoned with no Cry
-// when its player's Jade Counter crosses 5, once a game, none at a full row with the threshold
-// spent (MD-C3); it can't attack; Indestructible and Immutable (no Nerf, Buff or Transform, R23);
-// at its controller's end of turn it marks every enemy Unit then on the field (`allure`, public),
-// and at their next start of turn each marked Unit still the opponent's is stolen in lane order
-// (R15), summoning sick, or destroyed with no open zone, its Death and Reborn firing, an
-// Indestructible one staying (MD-C4); a marked Unit that left meanwhile is not taken; the Allure
-// lands even after the Beauty is gone (R76); crossing 10 makes every Jade Beauty its player
-// controls Radiant, or summons a Radiant one; radiant 40/40, its damage kept, and it may attack".
+// Meditative #39.5 Jade Beauty — SPEC §8.8 row 39.5, BUILD M10 row M 39.5.
 //
 // Every case here crosses a turn boundary, so both sides keep a card in hand, a unit on the board
 // and a few library cards: the engine auto-ends a turn with nothing meaningful left (R82), and an
@@ -153,7 +144,6 @@ mod tests {
         assert_eq!(reborn.def_id, DEFENDER);
         assert!(reborn.radiant, "the Saintess's Death reached the Reborn body");
         s.expect_stats(&reborn.id, json!({ "attack": 2, "health": 1 }));
-        // The Beauty and its side stand untouched.
         assert_eq!(s.unit(P1, beauty_lane(&s)).map(|unit| unit.def_id), Some(ID.to_string()));
     }
 
@@ -236,7 +226,6 @@ mod tests {
         let lane = beauty_lane(&s);
         let beauty = s.unit(P1, lane).expect("the Beauty").id.clone();
 
-        // Can't attack: its attack is refused.
         s.expect_refused(|s| s.attack(&beauty, "hero"));
 
         // Hit Job is a Spell, so it can't target the Immutable Beauty in play (R781001).
@@ -259,7 +248,6 @@ mod tests {
         s.end_turn();
         s.expect_refused(|s| s.play(NERF, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] })));
 
-        // R781001, R23 Immutable: no Nerf lands — still 20/20.
         s.expect_stats(&beauty, json!({ "attack": 20, "health": 20 }));
     }
 

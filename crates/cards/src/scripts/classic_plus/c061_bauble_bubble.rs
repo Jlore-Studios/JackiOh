@@ -6,10 +6,8 @@
 //!            graveyard, destroyed or sacrificed, as a Unit's does; not on bounce, exile, transform or
 //!            steal (§6.2). Stockpile is #5; `costOverride` 0; the hand cap burns extras. Tunes: cards 2 ↑."
 //!
-//! §4.5 step 3 fires a collected backrow card's Death as it does a Unit's (the engine's, proved in
-//! `packages/engine/test/backrow-death.test.ts`), so the card is one Death hook. Its Brittle 1 (since
-//! issue #1828) is the printed keyword the engine ticks (§6.1): the count starts as it enters the field,
-//! drops to 0 at its controller's first start of turn after a full turn cycle, and the crumble is a
+//! §4.5 step 3 fires a collected backrow card's Death as it does a Unit's, so the card is one Death
+//! hook. Its Brittle 1 (#1828) is the printed keyword the engine ticks (§6.1), and the crumble is a
 //! destroy, so the Death adds the Stockpiles then.
 
 use jackioh_engine::effects::add_to_hand;
@@ -17,7 +15,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-061";
 
-/// TS `cardDef("core-005").id`.
 const STOCKPILE: &str = "core-005";
 
 fn bauble_bubble(radiant: bool) -> Script {
@@ -40,13 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #61 Bauble Bubble — SPEC §8.7 row 61, BUILD M9 Classic+ row C+ 61: "Field Spell with Brittle 1 and no
-// other effect while it sits: it crumbles at its controller's next start of turn, the first after a full turn
-// cycle (R385), and the crumble is a destroy; its Death fires as it goes from its backrow zone to your
-// graveyard (§4.5: crumbled, or destroyed by Guy Att, Crushing Walls, Twisting Nether) and adds 2 Stockpiles
-// (Core #5) that cost (0) to your hand; exile, a bounce or a Transform adds nothing; Carnivorous Cube can't
-// eat it (R428: Units only); a full hand burns; hidden from the opponent (R97); the count reads through
-// `param()`; radiant the Stockpiles are Radiant".
+// C+ #61 Bauble Bubble — SPEC §8.7 row 61, BUILD M9 Classic+ row C+ 61 (R385, R428, R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -84,7 +75,6 @@ mod tests {
             .any(|event| matches!(event, GameEvent::AddedToHand { def_id, .. } if def_id == STOCKPILE))
     }
 
-    /// TS `bubble({ radiant?, hand, lane?, field? })`.
     fn bubble(radiant: bool, hand: Value, lane: Option<i32>, field: Value) -> Scenario {
         let mut bauble = json!({ "def": BAUBLE, "radiant": radiant });
         if let Some(lane) = lane {

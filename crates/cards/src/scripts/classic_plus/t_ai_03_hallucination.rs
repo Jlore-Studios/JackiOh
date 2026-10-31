@@ -4,8 +4,7 @@
 //!
 //! `add_library_copies` (engine): new cards you own carrying the picked cards' definition, radiant flag,
 //! `statsOverride` and `tuning` (R57), the originals staying in their deck; only you learn what they
-//! copied (R97, R177). Brittle 2 is given as each lands (R385), so a copy made on your turn t ticks to 1
-//! at the start of t + 2 and crumbles at the start of t + 4. An empty deck gives nothing (R129); the hand
+//! copied (R97, R177). Brittle 2 is given as each lands (R385). An empty deck gives nothing (R129); the hand
 //! cap burns extras (§2.4). AI cards declare no numbers (B8), so the counts are this file's.
 
 use jackioh_engine::effects::add_library_copies;
@@ -38,14 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-3 Hallucination — SPEC §8.7 row T-AI-3, BUILD M9 row T-AI-3: adds a copy of a random card of the
-// opponent's deck to your hand, a new card you own (the original stays), carrying the original's radiant
-// flag, `statsOverride` and `tuning` (R57), and gives it Brittle 2: held in your hand without ticking
-// (R638), then on the field, entered on your turn t, it ticks to 1 at the start of your turn t + 2 and
-// crumbles at the start of t + 4 (R385); an empty deck, nothing and no
-// random draw (R129); only you learn what it copied — the opponent's view shows a card added under the
-// sentinel and their library list does not change (R97, R310); radiant copies of 2 different random
-// cards, both Brittle 2.
+// T-AI-3 Hallucination — SPEC §8.7 row T-AI-3, BUILD M9 row T-AI-3 (R310).
 #[cfg(test)]
 mod tests {
     use crate::merged;

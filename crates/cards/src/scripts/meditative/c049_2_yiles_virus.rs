@@ -249,7 +249,6 @@ mod tests {
                 // 3 damage now: the 3/4 neighbour sits at 1, the hero at 27.
                 s.expect_stats(&left, json!({ "health": 1 }));
                 s.expect_health(P1, 27);
-                // And its Death discards 2.
                 let before = s.hand(P1).len();
                 s.activate(&virus, json!({}));
                 assert_eq!(s.hand(P1).len(), before - 2);

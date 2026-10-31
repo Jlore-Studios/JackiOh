@@ -37,9 +37,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.7 row 3: Death reads last-known tokens (R78) and deals that many hits of 1,
-// each to a random enemy still standing, all before the state check (R59); 0 tokens deals
-// nothing and draws nothing (R129); preview is the hits its Death would deal now (R280).
+// C+ #3 Second Amendment Snake — SPEC §8.7 row 3 (R129).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

@@ -7,8 +7,7 @@
 //! end. The immunity is ME-HERO-IMMUNE (MD-C21): a player modifier read as a cap of 0 at §4.4 step
 //! 3, expiring at the cleanup that ends the opponent's next turn (R757's Armor Up expiry), so it is
 //! gone as your next turn begins. "Exile this" (issue #2179) is the Spell's landing, as True
-//! Strike's is (§5.1, R178); through v0.5.2 it went to the graveyard, which `script_v0_5_2`
-//! keeps for those replays (R767000).
+//! Strike's is (§5.1, R178).
 
 use jackioh_engine::effects::{end_turn, make_hero_immune};
 use jackioh_engine::prelude::*;
@@ -48,11 +47,7 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// M #48 Tranquility — SPEC §8.8 row 48, BUILD M10 row M 48: "Ends your turn after the rest of its
-// list, every end-of-turn step running (R456); until your next turn begins every damage instance to
-// your hero is 0, combat, effects and fatigue alike (MD-C21) … the immunity is gone at your next
-// start of turn; cast on the opponent's turn it ends nothing; radiant the immunity without ending
-// the turn".
+// M #48 Tranquility — SPEC §8.8 row 48, BUILD M10 row M 48.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::{cast_new, damage, draw, lose_health, set_health};
@@ -305,7 +300,6 @@ mod tests {
                         .iter()
                         .any(|event| matches!(event, GameEvent::TurnEnded { .. }))
                 );
-                // The immunity still applies.
                 assert_eq!(jackioh_engine::damage::hero_damage_cap(s.state(), P1), Some(0));
             }
 

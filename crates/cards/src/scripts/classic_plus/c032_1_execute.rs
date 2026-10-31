@@ -2,11 +2,10 @@
 //!   Base:    "Destroy a damaged Unit."
 //!   Radiant: "Destroy every damaged enemy Unit."
 //!
-//! A damaged Unit has damage above 0 (§4), as the play's `damaged` filter reads it. The base face's target is one damaged Unit on either side, declared with the play (R81, the
-//! `damaged` filter), so an undamaged Unit is no legal target; with none the Spell fizzles and still
+//! The base face's target is one damaged Unit on either side; with none the Spell fizzles and still
 //! counts as played (§8's Conventions). The Radiant face names no target: every damaged enemy Unit it
 //! may affect is marked at once (an Immune to Spells Unit is not among them), the one state check after
-//! the list collecting them together (R59). An Indestructible Unit survives either way (R46).
+//! the list collecting them together (R59).
 
 use jackioh_engine::effects::{ForEachCardArgs, cards_in_scope, destroy, for_each_card};
 use jackioh_engine::prelude::*;
@@ -47,10 +46,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #32.1 Execute — SPEC §8.7 row 32.1, BUILD M9 Classic+ row C+ 32.1: "Destroys a target damaged Unit
-// (damage above 0) on either side, an Indestructible one knocked down instead (R46); an undamaged Unit is
-// no legal target, and with none the Spell fizzles and still counts as played (§8's conventions);
-// radiant destroys every damaged enemy Unit, no target".
+// C+ #32.1 Execute — SPEC §8.7 row 32.1, BUILD M9 Classic+ row C+ 32.1.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

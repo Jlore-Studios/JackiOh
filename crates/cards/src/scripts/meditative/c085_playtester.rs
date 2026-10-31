@@ -8,8 +8,6 @@
 //! C+ #72 `classicplus-072` by the match rng (R2179004, issue #2179), then `add_to_hand` of {books}
 //! copies of the one picked (Radiant: `radiant: true`). Both are real cards, named, so no pool and no
 //! R387. No prompt opens; the opponent sees a hidden card arrive.
-//! Through v0.5.2 its controller chose the Book by a mode prompt (R1161), which `script_v0_5_2`
-//! keeps for those replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -77,7 +75,6 @@ fn playtester_v0_5_2(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // The Radiant face's Book is Radiant.
     CardScripts { base: playtester(false), radiant: playtester(true) }
 }
 
@@ -86,10 +83,7 @@ pub fn script_v0_5_2() -> CardScripts {
     CardScripts { base: playtester_v0_5_2(false), radiant: playtester_v0_5_2(true) }
 }
 
-// M #85 Playtester — SPEC §8.8 row 85, BUILD M10 row M 85: "At your start of turn only, Book of Buff
-// (C+ 71) or Book of Nerf (C+ 72) at random to hand (R2179004), hidden from the opponent; no prompt; the
-// hand cap burns it; books reads through `param()` and adds that many of the one picked; radiant 8/10
-// and the Book is Radiant".
+// M #85 Playtester — SPEC §8.8 row 85, BUILD M10 row M 85.
 
 #[cfg(test)]
 mod tests {

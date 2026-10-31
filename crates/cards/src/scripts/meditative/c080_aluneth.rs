@@ -4,20 +4,16 @@
 //! Radiant: "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3. They cost ({discount})
 //!          less."
 //! Engine:  "Quickdraw (R640) deals it in the opening hand. An Indestructible Field Spell that draws
-//!          3 at its controller's end of turn, each draw its own (burning past the cap, fatigue past
-//!          the deck), and each card a draw puts in the hand costs (1) less. Immutable blocks
-//!          Transform, Vanilla, Fuse-onto, Buff, Nerf and KY's Constant (R23, R386). NEW: the keyword
-//!          Untributable (R1220): no Tribute cost may take it, and every Sacrifice of it does nothing;
-//!          it is not in R21's pool, and a Nerf never removes it. The Radiant face drops Untributable
-//!          and adds an Activate (R384) that exiles it, with no Death.
-//!          Voice: \"Come, child. Let us wreak havoc.\" (R204). Tunes: none."
+//!          3 at its controller's end of turn. Immutable blocks Transform, Vanilla, Fuse-onto, Buff,
+//!          Nerf and KY's Constant (R23, R386). Untributable (R1220): no Tribute cost may take it, and
+//!          every Sacrifice of it does nothing; it is not in R21's pool, and a Nerf never removes it.
+//!          The Radiant face drops Untributable and adds an Activate (R384) that exiles it, with no
+//!          Death. Voice: \"Come, child. Let us wreak havoc.\" (R204). Tunes: none."
 //!
-//! Indestructible, Untributable and Immutable are catalog keywords (§10.4 layers, R1220); the draws are
-//! three `drawPriced` draws, C+ #65.2's: each burns past the cap and takes fatigue past the deck (§2.4),
-//! and each prices only the card it put in the hand, `costMod` −`discount`, the declared number (patch
-//! v0.3.13, #1194); a card cast on draw, a burned card and a fatigue draw get nothing. Quickdraw is the
-//! static flag `setup.rs` reads (R640), beside the catalog tag filters see. `script_v0_3_7b` keeps the
-//! undiscounted draw for the replays of v0.3.7b and before (R767000).
+//! Indestructible, Untributable and Immutable are catalog keywords (§10.4 layers, R1220); each draw
+//! burns past the cap and takes fatigue past the deck (§2.4), and a card cast on draw, a burned card
+//! and a fatigue draw get no discount. Quickdraw is the static flag `setup.rs` reads (R640), beside
+//! the catalog tag filters see.
 
 use jackioh_engine::effects::{draw, draw_priced, exile};
 use jackioh_engine::prelude::*;
@@ -82,13 +78,7 @@ pub fn script_v0_3_7b() -> CardScripts {
     }
 }
 
-// M #80 Aluneth — SPEC §8.8 row 80, BUILD M10 row M 80: "Quickdraw: in the opening hand (R640); at
-// your end of turn only, three draws, burning past the cap and taking fatigue past the deck, each card
-// they put in the hand costing (1) less (the declared `discount`) and no other draw's;
-// destroy effects leave it (Indestructible); no Tribute cost can use it and a Sacrifice of it does
-// nothing (R1220); a Nerf, a Buff, a Transform, a Vanilla and KY's Constant leave it unchanged;
-// exile, bounce and steal work; Untributable is never in R21's pool; radiant no Untributable, and
-// Activate: exile this".
+// M #80 Aluneth — SPEC §8.8 row 80, BUILD M10 row M 80.
 #[cfg(test)]
 mod tests {
     use super::{DRAWS, ID, script};

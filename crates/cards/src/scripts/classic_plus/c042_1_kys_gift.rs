@@ -4,12 +4,10 @@
 //!   random Book, KY card, Legendary and (4) Cost card to your hand. They cost (0). Radiant: 2 mana,
 //!   2 discards, heal 10, and the four cards are Radiant.
 //!
-//! An Activate, once a turn (R384; its controller's start of turn, R62, before patch v0.3.10), in the
-//! order written. The mana is temporary (§2.3). The discard
+//! The mana is temporary (§2.3). The discard
 //! is random from the opponent's hand (R682): fewer cards than asked taking what they have and none
 //! taking nothing. The four cards come from non-token pools of every set (R380), each at `costOverride`
-//! 0; the hand cap burns. The numbers are the declared `mana`, `discards` and `heal` (R386); one script
-//! runs both faces.
+//! 0; the hand cap burns.
 
 use jackioh_engine::effects::{add_random_from_catalog, discard_random, gain_mana, heal};
 use jackioh_engine::prelude::*;
@@ -21,8 +19,7 @@ fn pools() -> [Value; 4] {
     [json!({ "tags": ["Book"] }), json!({ "tags": ["KY"] }), json!({ "rarity": "Legendary" }), json!({ "cost": 4 })]
 }
 
-/// Activate, once a turn (R384; its controller's start of turn before patch v0.3.10), in the order
-/// written.
+/// Activate, once a turn (R384), in the order written.
 fn gift() -> ActivationDecl {
     ActivationDecl {
         id: "gift".into(),
@@ -61,7 +58,6 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #42.1 KY's Gift — SPEC §8.7 row 42.1, R682, R384, R97, R177, R380, R386, BUILD M9 row C+ 42.1.
-// p1 is active in each scenario and activates the Gift in its backrow.
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -124,7 +120,6 @@ mod tests {
         view(s, seat)["events"].as_array().cloned().unwrap_or_default()
     }
 
-    /// The Gift's Activate.
     fn open(s: &mut Scenario) {
         s.activate(GIFT, json!({ "ability": "gift" }));
     }
@@ -174,7 +169,6 @@ mod tests {
             let before = mana(&s);
             open(&mut s);
             assert_eq!(mana(&s), before + 1);
-            // R682: no prompt opens — the random discard landed and the rest followed.
             assert!(s.state().pending.is_none());
             assert_eq!(s.hand(P2).len(), 1);
             assert_eq!(s.pile(P2, "graveyard").len(), 1);
@@ -260,7 +254,6 @@ mod tests {
             let p1_events = view_events(&s, P1);
             let p1_discard = p1_events.iter().find(|event| event["type"] == "discarded");
             assert!(p1_discard.is_some_and(|event| event["defId"] == MENACE || event["defId"] == TIMMY));
-            // The four: every card reaching p1's hand is the sentinel to p2.
             let adds: Vec<&Value> =
                 p2_events.iter().filter(|event| event["type"] == "addedToHand" && event["player"] == "p1").collect();
             assert_eq!(adds.len(), 4);

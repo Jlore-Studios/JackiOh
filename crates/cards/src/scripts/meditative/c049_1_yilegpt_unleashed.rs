@@ -7,8 +7,7 @@
 //! - "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger and a
 //!   deck trigger (R464) on its owner's `turnEnded`: the event's `unspentMana`, the Float, becomes a
 //!   `costMod` of minus that (MD-C22). The `costMod` keeps in hand and deck until a graveyard or exile
-//!   (R766), and the price floors at 0. Until #1563 the face printed it as "Whenever your turn ends
-//!   with unspent mana, this costs that much less", the same rule.
+//!   (R766), and the price floors at 0.
 //! - The Cry is ME-PICK-N (MD-C23) over the five entries below: the base face does `picks` different
 //!   ones by the match rng, named to both players and resolved in list order; the Radiant face does
 //!   all five in order, with two Radiant Viruses for the opponent in place of the fill (MD-C24).
@@ -364,7 +363,6 @@ mod tests {
                     let order: Vec<usize> = rolled(&s).iter().map(|label| entry_index(label)).collect();
                     assert_eq!(order.len(), 2, "{n}");
                     assert!(order[0] < order[1], "list order: {order:?}");
-                    // Both seats' views carry the roll's names.
                     for seat in [P1, P2] {
                         let seen = s.view(seat).events.iter().any(|event| {
                             matches!(event, GameEvent::ChaosRolled { effects, .. } if effects.len() == 2)

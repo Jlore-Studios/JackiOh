@@ -176,7 +176,6 @@ mod tests {
         s.play(FATE, json!({ "zone": 1 }));
         let mark = s.events().len();
         s.end_turn();
-        // p1's backrow: Fate in lane 1, Wells in lanes 2–5.
         assert_eq!(
             backrow_defs(&s, P1),
             vec![
@@ -197,7 +196,6 @@ mod tests {
                 (4, WELL.to_string(), false),
             ]
         );
-        // Each Well belongs to the player whose zone it is.
         for lane in 2..=5 {
             let well = s.backrow(P1, lane).expect("p1's well");
             assert_eq!(well.owner, P1);

@@ -4,14 +4,11 @@
 //!   Radiant: the AI generated cards are Radiant.
 //!
 //! `fuseGenerated` is the whole fusion: independent picks from the AI generated cards whose printed
-//! cost (R65) is (1), six since issue #1828 (R1828001) and thirteen since the Stinkyscape set shipped (a pool the text names, so tokens reach it;
+//! cost (R65) is (1) (R1828001; a pool the text names, so tokens reach it;
 //! repeats allowed, R60), fused with no target (R77, R102: the shared type, else the first's; a Token
 //! with the AI tag; its id names them, R179), into your hand at `costOverride` 0 (the hand cap burns
 //! it). Radiant picks go in on their Radiant face (R469). R582: tuned down to 1, "fuse 1 card" is no
 //! fusion (R77), so that one card, from the same pool, is added as it is, at (0).
-//!
-//! Through v0.4.9 the pool was every AI generated card; `script_v0_4_9` keeps that for those
-//! versions' replays (R767000).
 
 use jackioh_engine::effects::{add_random_from_catalog, fuse_generated};
 use jackioh_engine::prelude::*;
@@ -68,7 +65,7 @@ pub fn script_v0_4_9() -> CardScripts {
 }
 
 // C+ #43 AI Slop — SPEC §8.7 row 43, R11, R60, R77, R97, R102, R179, R386, R469, R582, R1828001, BUILD M9
-// row C+ 43. The fusion is the engine's `fuseGenerated` (packages/engine/test/fuse-variants.test.ts).
+// row C+ 43.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -83,9 +80,8 @@ mod tests {
     const SLOP: &str = "classicplus-043";
     const FILLER: &str = "core-005";
 
-    /// The AI generated cards of the sets that ship (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1 Base
-    /// Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two AI
-    /// tokens join the pool; and for the Stinkyscape release (#1884): that set's T-AI-1 to T-AI-10.
+    /// The AI generated cards of the sets that ship (§7, R1421): T-AI-1 to T-AI-10 of Classic+ and of
+    /// Stinkyscape (#1884), M+ #1.1 Base Camp, #1.2 Spa Day and Bob's Plan's two AI tokens (#1187).
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect();
         ids.extend((1..=10).map(|n| format!("stinkyscape-t-ai-{n:02}")));
@@ -101,8 +97,7 @@ mod tests {
         ids
     }
 
-    /// R1828001: the (1) Cost AI generated cards, the pool since issue #1828: six until the Stinkyscape
-    /// release (#1884), whose seven (1) Cost ones join it, in the query's index order.
+    /// R1828001 (#1828): the (1) Cost AI generated cards, the pool, in the query's index order.
     const ONE_COST: [&str; 13] = [
         "classicplus-t-ai-01",
         "classicplus-t-ai-04",
@@ -179,7 +174,6 @@ mod tests {
                     seen.insert(spec.def_id);
                 }
             }
-            // Every pick was a (1) Cost one, and the picks reach across the pool.
             assert!(seen.len() > 1);
             assert!(seen.iter().all(|id| in_pool(id)));
         }
@@ -365,8 +359,6 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.4.9 and before, whose pool was every AI generated
-    /// card.
     mod v0_4_9 {
         use super::*;
 

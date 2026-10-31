@@ -61,11 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #59 Permanent Upperclassman — SPEC §8.8 row 59, BUILD M10 row M 59: "Cry: summon a random (4)
-// Unit (Radiant: a random Radiant one) and grant it the face's Death (MD-D13, R1420); the grant
-// shows on the Unit and is lost when the Unit leaves the field; at the death one Book and one AI
-// card fuse into the controller's hand (MD-D14), a non-token Spell at (min(sum,4)), the Book first
-// so the fused type falls back to it; the Radiant face's fused card is Radiant".
+// M #59 Permanent Upperclassman — SPEC §8.8 row 59, BUILD M10 row M 59 (R1420).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,7 +122,6 @@ mod tests {
         s.state_mut().rng_cursor = rng.cursor();
     }
 
-    /// The fused cards in `seat`'s hand.
     fn fused_of(s: &Scenario, seat: PlayerId) -> Vec<CardInstance> {
         s.hand(seat)
             .into_iter()
@@ -317,7 +312,6 @@ mod tests {
         #[test]
         fn a_full_hand_burns_the_fused_card() {
             let (mut s, unit) = mortal("upperclassman-burn", false);
-            // Fill p1's hand to the cap.
             while s.hand("p1").len() < HAND_CAP as usize {
                 let card = new_instance(
                     s.state_mut(),

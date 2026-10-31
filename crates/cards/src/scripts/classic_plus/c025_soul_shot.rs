@@ -11,7 +11,7 @@ fn better(state: &GameState) -> impl Fn(CardInstance, CardInstance) -> CardInsta
         let view = unit_view(state, card);
         view.attack + view.health
     };
-    // TS `?? Number.MAX_SAFE_INTEGER`: a card on no lane sorts after every lane.
+    // A card on no lane sorts after every lane.
     let lane = move |card: &CardInstance| -> i32 { slot_of(state, card).map_or(i32::MAX, |at| at.lane) };
     move |a, b| {
         if worth(&a) != worth(&b) {
@@ -78,11 +78,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #25 Soul Shot — SPEC §8.7 row 25, BUILD M9 Classic+ row C+ 25: "Destroys one random enemy Unit
-// (R60), an Indestructible one knocked to Attack Position instead (R46); no enemy Unit, nothing and no
-// random draw (R129); an Immune to Spells Unit is never destroyed by it; radiant Lucky 1: two picks, the
-// better destroyed, better being the higher attack plus current health, then the higher cost, then the
-// lower lane (R414)".
+// C+ #25 Soul Shot — SPEC §8.7 row 25, BUILD M9 Classic+ row C+ 25 (R46, R60, R129).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,7 +143,6 @@ mod tests {
                     let first = dead.first().cloned();
                     assert!(enemies.contains(&first));
                     assert_eq!(s.unit(P1, 3).map(|unit| unit.def_id), Some(BIG.to_string()));
-                    // TS `String(enemies.indexOf(dead[0]))`.
                     let at = enemies
                         .iter()
                         .position(|enemy| *enemy == first)
