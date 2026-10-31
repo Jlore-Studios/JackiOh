@@ -2711,6 +2711,12 @@ pub const PRACTICE_PAY_ATTEMPTS: usize = 3;
 /// SPEC §14.8, R1688000: the wait before the second try at a practice claim's pay, doubled before
 /// each try after it (250 ms, then 500 ms), as `MATCH_RECORD_RESULT_BACKOFF_MS` waits.
 pub const PRACTICE_PAY_BACKOFF_MS: i64 = 250;
+/// SPEC §14.8, R2422000: how long a practice claim may stay unsettled (neither paid nor refused)
+/// after it burned its seed before the retention loop settles it: a claim whose pay every try
+/// failed, or whose server stopped or crashed under it. Well past what a live settle takes (a wait
+/// for a verification permit, the check and the pay's tries), so the sweep never takes a claim a
+/// live settle is still working on; ten minutes, as `GAME_RECORD_REFILE_GRACE_SECONDS` waits.
+pub const PRACTICE_SETTLE_GRACE_SECONDS: i64 = 10 * 60;
 /// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours
 /// (#1333's table: 5).
 pub const QUEST_INTERVAL_HOURS: i64 = 5;

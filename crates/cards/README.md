@@ -1,14 +1,13 @@
 # `jackioh-cards`
 
-774 catalog entries in the seven shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
-Glitch, a hidden token), Classic+ (78 cards and 38 tokens), Meditative (102 cards and 30 tokens,
-spec §8.8), Meditative+ (26 cards and 7 tokens, spec §8.9, shipped in v0.3.15 by #1187),
-Stinkyscape (177 cards, the Dormant Starship and 52 tokens, spec §8.10, shipped by #1884, R1857000) and
-Training Grounds (60 cards and 1 token, spec §8.11, shipped by #2204, R2194000), 634 cards and 140 tokens
-in all. A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
+The catalog entries of the seven shipped sets, Core (spec §8.1–§8.5), Classic (§8.6, and Glitch, a
+hidden token), Classic+ (§8.7), Meditative (§8.8), Meditative+ (§8.9, shipped in v0.3.15 by #1187),
+Stinkyscape (§8.10, the Dormant Starship among its cards, shipped by #1884, R1857000) and Training
+Grounds (§8.11, shipped by #2204, R2194000), each set's counts written once in `src/census.rs` (#2581).
+A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
 while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, and Training Grounds while tracker
 #2193 did, is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
-(R1420), counts toward none of the totals above, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
+(R1420), counts toward none of the census's totals, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
 file disagree, the spec wins. [`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md) is the procedure
@@ -31,6 +30,7 @@ crates/cards
 ├── clippy.toml         the purity lint (CLAUDE.md rule 4), the engine's file
 ├── src/lib.rs          CATALOG, CATALOG_IDS, CATALOG_VERSION, card_def, register_all, the registry
 ├── src/query.rs        spec §5.1's catalog.query, the only random-pool source
+├── src/census.rs       each set's cards, tokens, rarities and tag counts (#2581)
 ├── src/ky_test_bank.rs C+ #42 KY's Test's problems (R420)
 ├── src/scripts/
 │   ├── core/           one Core card or token per file

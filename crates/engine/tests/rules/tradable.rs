@@ -444,3 +444,109 @@ fn r1864004_a_card_acting_on_the_field_gives_trades_a_turn_the_most_holding() {
         Some(format!("you have made this turn's {FIXTURE_TRADES} Trades").as_str())
     );
 }
+
+#[test]
+fn r2574000_view_marks_every_hand_card_of_the_viewer_passed_as_tradable() {
+    let (mut state, spell, unit) = holding("r2574000-view");
+    let theirs = state.players.p2.hand[0].id.clone();
+
+    // 1. Without aura: printed Tradable has tradable: true; plain unit has None.
+    let view_plain = view_for(&state, P1);
+    assert_eq!(
+        hand_card(&view_plain, &spell).tradable,
+        Some(true),
+        "a card printing Tradable has tradable: true without the aura"
+    );
+    assert_eq!(
+        hand_card(&view_plain, &unit).tradable,
+        None,
+        "a plain unit has no tradable key"
+    );
+
+    // 2. A card given Tradable by an effect has tradable: true.
+    let mut state_given = state.clone();
+    find_instance_mut(&mut state_given, &unit)
+        .expect("the Unit in hand")
+        .granted_keywords
+        .push(Keyword::Tradable);
+    let view_given = view_for(&state_given, P1);
+    assert_eq!(
+        hand_card(&view_given, &unit).tradable,
+        Some(true),
+        "a card given Tradable has tradable: true"
+    );
+
+    // 3. With fixture aura lending Tradable to controller's hand:
+    // Every card in viewer's hand has tradable: true.
+    // The hand card's keywords still lack Tradable (R1864002).
+    put(&mut state, &lender().id, slot(P1, Row::Backrow, 1), json!({}));
+    let view_aura = view_for(&state, P1);
+    let c_spell = hand_card(&view_aura, &spell);
+    let c_unit = hand_card(&view_aura, &unit);
+    assert_eq!(c_spell.tradable, Some(true));
+    assert_eq!(
+        c_unit.tradable,
+        Some(true),
+        "aura-lent card in viewer hand has tradable: true"
+    );
+    assert!(
+        !c_unit
+            .keywords
+            .as_ref()
+            .is_some_and(|list| list.iter().any(|k| k.kind() == KeywordKind::Tradable)),
+        "the hand card's keywords still lack Tradable (R1864002)"
+    );
+
+    // 4. Opponent's hand in live game has no tradable key.
+    let view_p2 = view_for(&state, P2);
+    assert_eq!(
+        hand_card(&view_p2, &theirs).tradable,
+        None,
+        "opponent's hand card without aura has no tradable key"
+    );
+    match &view_aura.opponent.hand {
+        HandView::Count { .. } => {}
+        HandView::Cards(_) => panic!("opponent hand during live game must be HandView::Count"),
+    }
+
+    // 5. With aura gone, a card that only the aura made Tradable has no tradable key.
+    let mut state_removed = state.clone();
+    state_removed.players.p1.backrow[0] = None;
+    let view_removed = view_for(&state_removed, P1);
+    assert_eq!(
+        hand_card(&view_removed, &unit).tradable,
+        None,
+        "with aura gone, card that only aura made Tradable has no tradable key"
+    );
+    assert_eq!(
+        hand_card(&view_removed, &spell).tradable,
+        Some(true),
+        "printed Tradable still has tradable: true"
+    );
+
+    // 6. Post-game hands never carry the key (for both viewer and opponent).
+    let mut finished = state.clone();
+    finished.result = Some(GameResult {
+        winner: Winner::P1,
+        reason: GameOverReason::HeroDeath,
+    });
+    let view_finished = view_for(&finished, P1);
+    let HandView::Cards(own_cards) = &view_finished.you.hand else {
+        panic!("finished game you.hand must be HandView::Cards");
+    };
+    for card in own_cards {
+        assert_eq!(
+            card.tradable, None,
+            "post-game viewer hand cards never carry tradable"
+        );
+    }
+    let HandView::Cards(opp_cards) = &view_finished.opponent.hand else {
+        panic!("finished game opponent.hand must be HandView::Cards");
+    };
+    for card in opp_cards {
+        assert_eq!(
+            card.tradable, None,
+            "post-game opponent hand cards never carry tradable"
+        );
+    }
+}

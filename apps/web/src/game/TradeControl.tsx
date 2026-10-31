@@ -2,7 +2,7 @@
 //
 // Pointing at one of the viewer's own hand cards (a mouse over it, a tap on it, the keyboard's focus
 // on it) puts a small bar above it, as the Duos card bar does (`duos/CardActions.tsx`, the same
-// `game/cardBar.ts` underneath): "Trade", with the price and the Trades left the view's `trades`
+// `game/cardBar.ts` underneath): "Trade", with the Trades left the view's `trades`
 // gives. It is offered only on a card `legal` lists a `trade` for, or whose view carries a
 // `tradeReason`; it is live exactly when `legal` lists that card's `trade`, and otherwise greyed, its
 // tooltip the engine's reason, sending nothing (CLAUDE.md rule 7: no keyword, cost or count is read
@@ -26,8 +26,6 @@ export type TradeOffer = {
   legal: ReadonlySet<string>;
   /** The engine's refusal for each Tradable hand card it lists no `trade` for (`tradeReason`). */
   reasons: ReadonlyMap<string, string>;
-  /** `TRADE_COST`, in mana, as the view says it. */
-  cost: number;
   /** The Trades left this turn, as the view says it. */
   left: number;
 };
@@ -45,7 +43,7 @@ export function tradeOfferFor(view: PlayerView, legal: readonly ActionBody[]): T
     if (card.tradeReason !== undefined) reasons.set(card.instanceId, card.tradeReason);
   }
   if (listed.size === 0 && reasons.size === 0) return null;
-  return { legal: listed, reasons, cost: trades.cost, left: trades.left };
+  return { legal: listed, reasons, left: trades.left };
 }
 
 /** Whether the offer puts a Trade control on this hand card, live or greyed. */
@@ -79,7 +77,7 @@ export function TradeButton({ offer, instanceId, onTrade }: TradeButtonProps): R
       }}
     >
       <span className="duos-pass__label">{t("Trade")}</span>
-      <span className="duos-pass__meta">{t("{cost} mana · {left} left", { cost: offer.cost, left: offer.left })}</span>
+      <span className="duos-pass__meta">{t("{left} Trades left", { left: offer.left })}</span>
     </button>
   );
 }

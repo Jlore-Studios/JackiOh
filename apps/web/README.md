@@ -94,6 +94,8 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
+An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
+
 **Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`, `ChatPanel`, the Collection's `CardCosmeticsView` and `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
@@ -211,7 +213,7 @@ zone is picked by clicking the unit or its zone.
 **The Trade** (SPEC §6.1, §10.10, R1838000). A hand card of the viewer's that `legal` lists a `trade`
 for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
 (`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
-`trade-<instanceId>`, "Trade" with the price and the Trades left from the view's `trades`. It is live
+`trade-<instanceId>`, "Trade" with the Trades left from the view's `trades`. It is live
 exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
 reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
 Game's own bar is off (`tradeBar={false}`).
@@ -266,7 +268,8 @@ The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`
 `fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
 `settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
 mode (`advance`, `runAllTimers`) are named options; `history.ts` the browser's Back and Forward
-(`pressBack`, `pressForward`), which need real timers; and `board.tsx` `withCatalog` and `renderBoard`,
+(`pressBack`, `pressForward`), which need real timers; `seedSearch.ts` `seedWhere`, which finds a
+test's seed at run time instead of pinning one a card change re-deals (#2569); and `board.tsx` `withCatalog` and `renderBoard`,
 the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
 defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
 

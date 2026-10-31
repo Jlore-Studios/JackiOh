@@ -47,7 +47,9 @@ use crate::config::{
     AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
 };
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
-use crate::evaluate::{DeathPricing, TurnHookPricing, death_prices, turn_hook_prices};
+use crate::evaluate::{
+    ActivationPricing, DeathPricing, TurnHookPricing, activation_prices, death_prices, turn_hook_prices,
+};
 use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
@@ -417,14 +419,17 @@ fn plan(
     let stage = create_sub_counter(counter, budget.nodes);
     let counter: &dyn NodeCounter = &stage;
 
-    // R2424000, R2477000: every Death the seat can read and every turn hook of its own backrow and its
-    // hand's Field Spells, priced once on the probe world for the whole decision, their probes drawn from
-    // the searched section's nodes; both are priced before either is held, so no probe reads a price,
-    // and held until the plan returns.
+    // R2424000, R2477000, R2564000, R2565000: every Death the seat can read, every turn hook of the cards
+    // it can read on either board and of its hand's Field Spells and Units, and each Activate of a Unit
+    // on either field, priced once on the probe world for the whole decision, their probes drawn from
+    // the searched section's nodes; all are priced before any is held, so no probe reads a price, and
+    // held until the plan returns.
     let deaths = death_prices(&probe, seat, counter);
     let hooks = turn_hook_prices(&probe, seat, counter);
+    let activations = activation_prices(&probe, seat, counter);
     let _deaths = DeathPricing::hold(deaths);
     let _hooks = TurnHookPricing::hold(hooks);
+    let _activations = ActivationPricing::hold(activations);
 
     // The determinizations' draws: with a style's own two (passing over lethal, picking a
     // finalist), the only draws decide ever takes from options.rng.

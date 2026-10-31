@@ -607,6 +607,14 @@ describe("B32 /practice shows setup to anyone", () => {
     expect(option("saved:1")).not.toBeDisabled();
     expect(option("saved:2")).toBeDisabled();
     expect(screen.getByTestId(T.deckHint)).toHaveTextContent("Fix it in Decks to play it here.");
+    // #2562: the Decks link moves in place on a plain click and leaves a ctrl or meta click to the browser.
+    const decks = within(screen.getByTestId(T.deckHint)).getByRole("link", { name: "Decks" });
+    const here = window.location.pathname;
+    expect(fireEvent.click(decks, { button: 0, ctrlKey: true })).toBe(true);
+    expect(fireEvent.click(decks, { button: 0, metaKey: true })).toBe(true);
+    expect(window.location.pathname).toBe(here);
+    expect(fireEvent.click(decks, { button: 0 })).toBe(false);
+    expect(window.location.pathname).toBe("/decks");
   });
 
   it("B32 a pending account gets no saved decks", async () => {
@@ -713,6 +721,9 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
     expect(hint()).toMatch(/Save a deck in Decks/);
     expect(hint()).not.toMatch(/sign in/i);
     expect(screen.getByRole("link", { name: "Decks" })).toHaveAttribute("href", "/decks");
+    // #2562: in place, without a page load.
+    expect(fireEvent.click(screen.getByRole("link", { name: "Decks" }), { button: 0 })).toBe(false);
+    expect(window.location.pathname).toBe("/decks");
   });
 
   it("a pending or banned account hears that its decks come once it is active", async () => {
