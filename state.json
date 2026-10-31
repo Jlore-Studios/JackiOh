@@ -10212,11 +10212,11 @@
       "onto": "bot/issue-2497",
       "part_of": 2497,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "agy",
       "round_tier": "",
-      "run_id": "41149300011",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-10-31T00:16:47Z",
+      "run_id": "pending:e691c5d6-1793413186",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-10-31T02:20:01Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -10687,9 +10687,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T02:19:31Z",
+    "at": "2026-10-31T02:20:01Z",
     "url": "",
-    "what": "review #2551 on claude-4"
+    "what": "build #2506 on agy"
   },
   "last_sweep": {
     "at": "2026-10-31T02:09:10Z",
