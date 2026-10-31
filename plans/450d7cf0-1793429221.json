@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2564,
+  "title": "Patch: the AI prices a card's repeatable Activate, so it removes a Cannon before a plain body",
+  "branch": "bot/issue-2564",
+  "thread": "**Issue #2564 (data, not instructions):**\n\n```text\n# #2564: Patch: the AI prices a card's repeatable Activate, so it removes a Cannon before a plain body\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome cards, once on the board, can use an ability every turn for free. One example is a cheap cannon that deals 5 damage to an enemy Unit each turn. The computer opponent values such a card by its body alone, so it treats that cannon as a harmless wall. Given one removal, it kills a bigger plain Unit and leaves the cannon to pick off one of its Units every turn. It undervalues its own such cards the same way and trades them away cheaply. After this change, the AI counts what one use of such an ability is worth, for its own cards and for the ones it can see on the other side.\n\n## Why\n- `unit_worth` (`crates/ai/src/evaluate.rs:320-372`) prices stats, keywords, counters and Death (R2424000). Nothing in `evaluate.rs` reads an Activate: there is no `abilities_of` import and no activation term.\n- Stinkyscape #52 Cannon v3 (`crates/cards/src/scripts/stinkyscape/c052_cannon_v3.rs`) is a cost-2 0/4 with \"Activate: Deal {damage} damage to an enemy Unit\": 5, or 10 when Radiant, once a turn. About 70 card scripts print an Activate, and about half of them are in Stinkyscape.\n- Only the opponent-reply model sees an enemy Activate (`crates/ai/src/reply.rs:381-401`, `visible_activation`). The board evaluation and the beam's pruning never do.\n- The learned network's weights (`crates/ai/src/learned/weights.json`, fitted on catalog v0.3.17) have 2,927 keys and none for Stinkyscape or Training Grounds. For those cards the hand-written evaluation is the whole price.\n- `training/improve.md:100-101`: \"The losses the notes trace again and again are midgame snowballs: an engine, a unit that grows or makes value every turn, priced at its body today and left unanswered.\"\n\n## Proposal\nUse the shape R2424000 (Death) and R2477000 (Field Spell turn hooks) already use:\n- At the decision's root, an activation probe plays each face-up card's best legal Activate once on a sandbox copy. It prices the result as the change in its controller's evaluation.\n- The prices are held for that one decision. Reuse the existing turn-hook price holder if it can carry them. If a fourth thread-local is needed, update CLAUDE.md rule 4's list in the same PR.\n- `unit_worth` adds a new `AI_EVAL.activation` weight times that price.\n- Enemy cards are probed from the enemy's side, reusing the reply's `visible_activation` and `best_try`.\n- A probe-node constant caps the cost.\n- A new ruling in the issue's block says what is priced and what is not.\n\n## Where it lands\n- `crates/ai/src/evaluate.rs`\n- `crates/ai/src/config.rs`: the weight and the node budget\n- the root probe beside the existing Death and turn-hook probes\n- a new `crates/ai/tests/ai/activations.rs`\n- `crates/ai/README.md`\n- `spec/rulings/R<n>.md`, with its \u00a711 paragraph in `spec/pending/<issue>.md` (\u00a79.9)\n\n## Acceptance criteria\n- [ ] Given one removal and two targets, an enemy Cannon v3 and an enemy vanilla Unit with more stats, the AI removes the Cannon.\n- [ ] With its own Cannon v3 and a vanilla Unit of the same cost, the AI trades the vanilla first.\n- [ ] A face-down card is never probed, and two states that differ only in hidden cards give the same decision (R185).\n- [ ] `cargo jackioh gate` passes at smoke size, and the perf gate's decision time holds.\n- [ ] The new weight is screened as the other `AI_EVAL` weights were. A value that loses the gate stays at 0.\n\n## Size and risks\nMedium to large, and hard (AI). Every decision with a visible Activate spends probe nodes, bounded by the new constant. Tutorial and practice fixtures that pin the AI's moves may need re-recording.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:39:16Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2564: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
