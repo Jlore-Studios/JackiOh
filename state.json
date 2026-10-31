@@ -11014,6 +11014,13 @@
     "2568": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T06:38:04Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "the planner gave no rating line"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
