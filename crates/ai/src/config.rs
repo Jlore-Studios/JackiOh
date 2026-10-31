@@ -419,9 +419,10 @@ pub struct EvalWeights {
     /// `unit_worth` adds; `kill_worth` takes the whole price off a kill, as Reborn's body. Below 1, so
     /// killing a unit whose Death pays its owner is worth less than its body.
     pub death: f64,
-    /// R2477000: the share of what one firing of an own readable backrow card's start-of-turn and
-    /// end-of-turn hooks gives its controller (`evaluate::turn_hook_price`) that `material` adds; the
-    /// enemy's backrow is priced as before.
+    /// R2477000, R2565000: the share of what one firing of a card's start-of-turn and end-of-turn hooks
+    /// gives its controller (`evaluate::turn_hook_price`) that `material` adds for each backrow card the
+    /// seat can read, either side's, and `unit_worth` adds for each unit on the field. A face-down card
+    /// is priced as before.
     pub turn_hook: f64,
     /// R2564000: the share of what one use of a unit's Activate gives its controller
     /// (`evaluate::activation_price`) that `unit_worth` adds, inside the Brittle share, the seat's units
@@ -616,9 +617,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
 /// unit with a Death, three or four per own hand Unit with one.
 pub const AI_DEATH_PROBE_NODES: usize = 24;
 
-/// R2477000: the most nodes a decision's turn-hook probes (`evaluate::turn_hook_prices`) spend: one per
-/// turn hook of each own backrow card with one, and a spawn more per own hand Field Spell with one.
-pub const AI_TURN_HOOK_PROBE_NODES: usize = 12;
+/// R2477000, R2565000: the most nodes a decision's turn-hook probes (`evaluate::turn_hook_prices`)
+/// spend: one per turn hook of each card on either board the seat can read with one, and a spawn
+/// (three nodes on a full unit row) more per own hand Unit or Field Spell with one. 24, as the Death
+/// probes', for a board with a few engines on both sides and the hand's.
+pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
 
 /// R2564000: the most nodes a decision's activation probes (`evaluate::activation_prices`) spend: two
 /// turn ends and `AI_REPLY.visible_activations` uses for each of about four units.
