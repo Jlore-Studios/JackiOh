@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2568,
+  "title": "Patch: the fuzz monitor refuses an opponent-held prompt that opens on its holder's off turn",
+  "branch": "bot/issue-2568",
+  "thread": "**Issue #2568 (data, not instructions):**\n\n```text\n# #2568: Patch: the fuzz monitor refuses an opponent-held prompt that opens on its holder's off turn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome cards make the opponent answer a question (\"your opponent chooses\"). The rules say such a question waits for the start of the opponent's own turn instead of interrupting the other player's turn. Three cards broke that rule for many patches before players found it, and nothing in the automated random games checks for it. So a new card, or a custom one, can break it again unnoticed. After this change, the random games run on every change flag any such question that opens on the wrong turn.\n\n## Why\n- R1279000: \"A prompt held by the opponent (`by: \\\"enemy\\\"`) never opens while its holder is not the active player.\" Its `proven_in` lists only the three cards' own tests.\n- `crates/cards/src/history.rs:70-73`: \"#1279's three ran theirs through v0.3.16: Pickle's questions opened during your turn, Income Tax's keep opened at once on either turn, and In Too Deep's reward G asked at once\u2026\". The fuzz played those cards for all those patches and never caught it.\n- The choose verbs hand the prompt to whoever `by` names (`crates/engine/src/effects/choose.rs:204-210`), and each card has to defer it by hand. Custom cards reach the same `by: PlayerSpec?` through the Luau kit (`crates/cards/luau/jackioh.luau:339`).\n- The monitor checks I1 to I9 (`crates/engine/src/testkit/invariants.rs`, header). None of them compares a pending prompt's player with the active player.\n- The check can be exact. `open_prompt` records the card's controller under `PROMPT_OWNER_KEY` when the player asked is someone else (`crates/engine/src/prompts.rs:377-385`), and `prompt_owner_of` (`prompts.rs:142`) reads it back.\n\n## Proposal\n- Add I10 to `InvariantMonitor::after`. In a live game, a `pending` whose `player_id` is not `state.active`, and whose `prompt_owner_of` differs from its `player_id`, is a violation. The message names the card and the turn.\n- Document I10 in the header beside I1 to I9.\n- Add `r1279000_` tests to `crates/cards/tests/cross/invariants.rs` and list that file in R1279000's `proven_in`.\n\n## Where it lands\n`crates/engine/src/testkit/invariants.rs`, `crates/cards/tests/cross/invariants.rs`, `spec/rulings/R1279000.md` (\u00a710.6), and `crates/tools/README.md` if it lists the invariants.\n\n## Acceptance criteria\n- [ ] A fixture card that asks the opponent at once, on its controller's turn, fails the monitor with an I10 message.\n- [ ] Pickle, Income Tax and In Too Deep, played on either player's turn, pass.\n- [ ] A prompt held by the card's controller and opened on the opponent's turn (In Too Deep's reward choice) passes.\n- [ ] `cargo jackioh fuzz --seeds 200` and its handicapped wave stay green.\n- [ ] `cargo jackioh spec check` passes.\n\n## Size and risks\nSmall: about 30 lines and tests, at a constant cost per step (the monitor's time budget is noted at `invariants.rs:189`). If the fuzz turns up a shipped card that breaks the rule, that is a real bug to file with a fuzz-corpus record, not a reason to loosen the check. If the Duos fuzz shares the monitor, its prompts need the same reading.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:37:13Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2568: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
