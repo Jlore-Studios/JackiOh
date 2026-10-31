@@ -48,6 +48,7 @@ const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-15b": "33b0dd18c38c52456ee05a0cfaa51d881cc168411edac71c1672a9254d997e13",
   "2026-10-15b/2026-10-17": "37fbbebe49f56312ba164323c624142fa3e88a5294677e1c654c6cfc86de2774",
   "2026-10-15b/2026-10-21": "df87894475e985f8f9915b94e155f6245a841e53969765cd96dbd6d2f90f2be4",
+  "2026-10-31/2026-10-21": "529ada7884ffd3c61f092b5745632d46cb29ca1b18e37246ac88f7ab61d67e0d",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -267,10 +268,30 @@ describe("the legal pages", () => {
     );
   });
 
-  it("R640001 the terms say ranked may pair a player with an AI opponent", () => {
+  it("R640001 R2614000 the terms say when ranked seats an AI opponent, what it looks like and does, and that nothing marks it", () => {
     render(<TermsRoute />);
-    const ranked = screen.getByRole("region", { name: "Ranked play" });
-    expect(ranked).toHaveTextContent("When no suitable opponent is available, ranked may pair you with an AI opponent.");
+    const ai = screen.getByRole("region", { name: "AI opponents" });
+    // When, and why: the empty-queue fallback, in every queue mode and at any rank (R1453, R1555000).
+    expect(ai).toHaveTextContent(
+      "If no one near your rating is free to play after a short wait, ranked may pair you with an AI opponent that our server plays, so you still get a game.",
+    );
+    expect(ai).toHaveTextContent("It can happen at any rank, in Best of 1, All Random and Conquest.");
+    // What it looks like: drawn as a person's (R1454, R1834005), on the ladder but never Jlorious (R640000).
+    expect(ai).toHaveTextContent(
+      "An AI opponent has a username, a portrait, cosmetics, a rank and a place on the leaderboard, as a player does, though never in Jlorious.",
+    );
+    // What it does: a person's pace and habits (R1452, R639000).
+    expect(ai).toHaveTextContent(
+      "It plays at a person’s pace, and may emote, concede, answer a draw offer, let a turn run out or offer a rematch.",
+    );
+    // Nothing labels its seat (R1452), and that is said in so many words.
+    expect(ai).toHaveTextContent("Nothing in the game marks which opponents are AI.");
+    // It reads what the AI may read (R185), and is rated as a person is (R610).
+    expect(ai).toHaveTextContent("It sees only what a player in its seat could see.");
+    expect(ai).toHaveTextContent("A game against one counts toward your rank and rating like any other ranked game.");
+    // Only the queue seats one: a challenge never does.
+    expect(ai).toHaveTextContent("A challenge you send to a friend, or accept from one, is always played against that friend.");
+    expect(screen.queryByRole("region", { name: "Ranked play" })).toBeNull();
   });
 
   it("open as drafts for the owner: their first source lines say so", () => {

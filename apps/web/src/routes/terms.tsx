@@ -5,6 +5,10 @@
 // text changes the date, and the version with it, and every account is asked to agree again. A
 // second change on a day the page already changed keeps the date and gives the version a letter
 // (R970001); `privacy.test.tsx` fails on any change to the words until the version moves.
+//
+// "AI opponents" is R2614000's disclosure of the ladder bots (SPEC §9.12): when ranked seats one, what
+// it looks like and how it plays, and that nothing marks it. It must stay true of the bots, so a change
+// to what a bot is, wears or does that the section names changes the section too.
 
 import type { ReactElement } from "react";
 
@@ -23,7 +27,7 @@ export const termsTestid = {
   updated: "terms-updated",
 } as const;
 
-export const TERMS_LAST_UPDATED = "2026-10-15";
+export const TERMS_LAST_UPDATED = "2026-10-31";
 
 export default function TermsRoute(): ReactElement {
   const locale = useLocale();
@@ -122,9 +126,27 @@ export default function TermsRoute(): ReactElement {
             banned.
           </p>
         </section>
-        <section aria-labelledby="terms-ranked">
-          <h3 id="terms-ranked">Ranked play</h3>
-          <p>When no suitable opponent is available, ranked may pair you with an AI opponent.</p>
+        <section aria-labelledby="terms-ai">
+          <h3 id="terms-ai">AI opponents</h3>
+          <p>
+            If no one near your rating is free to play after a short wait, ranked may pair you with an AI
+            opponent that our server plays, so you still get a game. It can happen at any rank, in Best of 1,
+            All Random and Conquest.
+          </p>
+          <ul>
+            <li>
+              An AI opponent has a username, a portrait, cosmetics, a rank and a place on the leaderboard, as a
+              player does, though never in Jlorious.
+            </li>
+            <li>
+              It plays at a person&rsquo;s pace, and may emote, concede, answer a draw offer, let a turn run out
+              or offer a rematch.
+            </li>
+            <li>Nothing in the game marks which opponents are AI.</li>
+            <li>It sees only what a player in its seat could see.</li>
+            <li>A game against one counts toward your rank and rating like any other ranked game.</li>
+          </ul>
+          <p>A challenge you send to a friend, or accept from one, is always played against that friend.</p>
         </section>
         <section aria-labelledby="terms-contact">
           <h3 id="terms-contact">Contact</h3>

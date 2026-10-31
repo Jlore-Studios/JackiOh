@@ -208,7 +208,20 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "any message a friend sends you. We review reports, and abuse in chat can get an account suspended or " +
         "banned.</p>",
     ) +
-    section("Ranked play", "<p>When no suitable opponent is available, ranked may pair you with an AI opponent.</p>"),
+    section(
+      "AI opponents",
+      "<p>If no one near your rating is free to play after a short wait, ranked may pair you with an AI " +
+        "opponent that our server plays, so you still get a game. It can happen at any rank, in Best of 1, " +
+        "All Random and Conquest.</p>" +
+        "<ul><li>An AI opponent has a username, a portrait, cosmetics, a rank and a place on the leaderboard, " +
+        "as a player does, though never in Jlorious.</li>" +
+        "<li>It plays at a person&rsquo;s pace, and may emote, concede, answer a draw offer, let a turn run " +
+        "out or offer a rematch.</li>" +
+        "<li>Nothing in the game marks which opponents are AI.</li>" +
+        "<li>It sees only what a player in its seat could see.</li>" +
+        "<li>A game against one counts toward your rank and rating like any other ranked game.</li></ul>" +
+        "<p>A challenge you send to a friend, or accept from one, is always played against that friend.</p>",
+    ),
   [paths.copyright]:
     section(
       "Reporting content that infringes your copyright",
