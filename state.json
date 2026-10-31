@@ -11861,6 +11861,14 @@
           "gemini": "medium"
         }
       }
+    },
+    "2592": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-31T07:13:45Z",
+      "issue": 2571,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
