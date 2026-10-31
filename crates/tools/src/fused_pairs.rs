@@ -17,7 +17,7 @@
 //! body keeping its instance, and `fused_into` runs (R179 rebuilds the same card from its id). Then a
 //! fixed script: seat 1 casts a Spell, ends the turn, seat 2 destroys the fused Unit if its Spell may
 //! reach it, ends the turn, seat 1 ends the next. Then a random-policy run, seeded from the pair, of
-//! `PAIR_TURNS` more turns. Every action runs under the invariant monitor (I1 to I9, as the fuzz checks
+//! `PAIR_TURNS` more turns. Every action runs under the invariant monitor (I1 to I10, as the fuzz checks
 //! them) and the fuzz's growth bounds, and the pair fails on a panic, an engine cap, an invariant breach,
 //! runaway growth, a prompt nobody can answer or `PAIR_STEP_BOUND` actions: a turn that never ends.
 //! Both ids, the seed and the command that plays the pair alone are in the report.
