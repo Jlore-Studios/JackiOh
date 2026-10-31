@@ -10550,16 +10550,16 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "agy",
       "question": "",
       "queued_at": "2026-10-31T00:39:44Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "",
-      "run_id": "41153742662",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:8cd6118c-1793409347",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-31T01:07:06Z",
+      "started_at": "2026-10-31T01:16:12Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -10684,9 +10684,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T01:07:06Z",
+    "at": "2026-10-31T01:16:12Z",
     "url": "",
-    "what": "revise #2551 on claude-4"
+    "what": "revise #2551 on agy"
   },
   "last_sweep": {
     "at": "2026-10-31T01:05:33Z",
