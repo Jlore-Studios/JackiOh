@@ -11239,15 +11239,24 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/ai/src/evaluate.rs",
+            "spec/09-architecture.md"
+          ],
+          "from": "b9745f5886c2830c8d09621f05fb4a0417981825",
+          "main": "11f83582b169b679af46c1519683a7d285652b1d"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41183063588",
+            "run": "41192973681",
             "tier": "strong"
           }
         ],
-        "sha": "b9745f5886c2830c8d09621f05fb4a0417981825",
+        "sha": "40f1e26519567ae8e219dd3545e13cdd814080da",
         "tiers": {
           "claude": "strong"
         }
