@@ -1603,7 +1603,8 @@
    never below a legible floor (8px bold on an 11px chip; on main's board a keyword was about 7px,
    and a chip scaled to a 59px minion alone came to under 5px). Keywords the minion draws as a
    state (the Taunt frame, the Divine Shield bubble, the Armor plate) keep their badge in the DOM
-   but no chip, and past KEYWORD_CHIPS_MAX (MinionFace.tsx) the rest fold into a "+n" chip. Every
+   but no chip, and so do the keywords that do nothing on the field (R2577000), and past
+   KEYWORD_CHIPS_MAX (MinionFace.tsx) the rest fold into a "+n" chip. Every other
    keyword also has its drawn treatment beside the chip (keywords.css, R438). */
 .cf .keywords {
   position: absolute;
