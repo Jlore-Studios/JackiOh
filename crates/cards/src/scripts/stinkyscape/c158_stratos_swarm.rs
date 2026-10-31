@@ -4,10 +4,8 @@
 //!
 //! Engine: `fill_board` with Stinkyscape #68 Stratos (Core #62 Friend of Felinors' verb): every
 //! open unit zone of its caster's, a Dormant card's zone not one (R1839000), then, as Stratos flies,
-//! every empty backrow zone, where each stands (R2248000), each a summoned card of its own
 //! definition, no Cry (R1), no token; Radiant `radiant: true`. Each is a Starship
 //! Piece, so each that dies fuses (R1852000). A Spell's resolution hangs off `cry` (Core #5
-//! Stockpile's shape).
 
 use jackioh_engine::prelude::*;
 
@@ -36,10 +34,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #158 Stratos Swarm — SPEC §8.10 row 158, BUILD M12 row S 158: "fills every open unit
-// zone of its caster's with Stratos, Flying Starship Pieces, no Cry, then every empty backrow zone
-// (R2248000); a Dormant card's zone is not filled; a full board, both rows, summons none; radiant
-// Radiant Stratos".
+// Stinkyscape #158 Stratos Swarm — SPEC §8.10 row 158, BUILD M12 row S 158 (R2248000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -54,14 +49,12 @@ mod tests {
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
     const WELL: &str = "core-006"; // Mana Well, a Field Spell to fill a backrow zone.
 
-    /// The def ids in p1's five unit zones, `None` where empty.
     fn row(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.unit(PlayerId::P1, lane).map(|unit| unit.def_id))
             .collect()
     }
 
-    /// The def ids in p1's five backrow zones, `None` where empty.
     fn backrow(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.backrow(PlayerId::P1, lane).map(|card| card.def_id))
@@ -96,7 +89,6 @@ mod tests {
                 assert_eq!(lane, &Some(STRATOS.to_string()));
             }
             assert_eq!(backrow(&s), vec![Some(STRATOS.to_string()); 5], "it flies (R2248000)");
-            // Each summoned Stratos is base and a Starship Piece.
             let token = s.unit(PlayerId::P1, 2).expect("a Stratos");
             assert!(!token.radiant);
             s.expect_stats(token.id.as_str(), json!({ "attack": 3, "health": 3 }));
@@ -166,7 +158,6 @@ mod tests {
                 .count();
             assert_eq!(summoned, 5);
 
-            // Both rows full: none.
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [SWARM, ANCHOR],

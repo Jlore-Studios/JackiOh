@@ -5,14 +5,7 @@
 //! Base:    "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a War Doctrine and
 //!          cast it."
 //! Radiant: "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a Radiant War
-//!          Doctrine and cast it."
-//! Engine: Cry (R1): with a Dormant Starship (`building_a_ship`, R1852005), `awaken` it, which launches
 //! it for nothing, spending no launch price (R1839002, R1852003, R1852006); then a Discover (§6.3) of
-//! three of the four War Doctrines, S #137.1 to S #137.4, named by id (the pool R1857002 names, which a
-//! held set's gate lets in), and a `cast_new` of the pick, free and counted as played (R70), Radiant on
-//! the Radiant face. The Doctrine resolves inside the Cry, before the Starship's fused When launched
-//! answers the launch (R113), so its Starship line reads the Starship before those (R1859006). With no
-//! Dormant Starship, nothing: no launch and no Discover. Declares no numbers.
 
 use jackioh_engine::prelude::*;
 
@@ -69,10 +62,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #137 Firststrike Capability — SPEC §8.10 row 137, BUILD M12 row S 137: "with a Dormant Starship, its
-// Cry launches it free (its fused Cries, then the Doctrine before the When launched, R1859006; no launch
-// price spent, R1852006), then Discovers one of the four War Doctrines (three offered) and casts it for
-// its controller (R70); with none, nothing, no Discover; radiant 18/18 and the Doctrine Radiant".
+// S #137 Firststrike Capability — SPEC §8.10 row 137, BUILD M12 row S 137 (R1852006, R1859006,
+// R70).
 #[cfg(test)]
 mod tests {
     use super::{ID, WAR_DOCTRINES};
@@ -85,7 +76,6 @@ mod tests {
     const CAPACITOR: &str = "stinkyscape-133"; // When launched: +1/+1 per other piece.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// The def ids the open Discover offers.
     fn offered(s: &Scenario) -> Vec<String> {
         s.state()
             .pending
@@ -100,8 +90,6 @@ mod tests {
             .collect()
     }
 
-    /// p1's Starship (a Stratos and an Ultra Capacitor) and Firststrike Capability (Radiant if
-    /// `radiant`) in hand, played into lane 4.
     fn played(seed: &str, radiant: bool) -> (Scenario, String) {
         let (mut s, ship) = built_starship(
             seed,
@@ -153,7 +141,6 @@ mod tests {
                 .expect("the Capacitor's When launched");
             assert!(cast < buffed, "the Doctrine first, then the When launched: {types:?}");
             assert_eq!(s.stats(ship.as_str()).max_health, max_health + 1);
-            // The Doctrine went to the graveyard, on the face the Capability's names.
             let doctrine = s
                 .state()
                 .players

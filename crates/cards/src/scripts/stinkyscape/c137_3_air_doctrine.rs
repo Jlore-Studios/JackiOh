@@ -5,12 +5,7 @@
 //! Base and Radiant: "For the rest of the game, your Units have Rush. Deal damage equal to
 //! {multiplier}× your Starship's Attack, split randomly among all enemies." Multiplier 1, Radiant 2.
 //! Engine: `give_units_keyword { Rush }`, a `unitsHaveKeyword` player modifier for the rest of the
-//! game: every Unit its caster controls has Rush, those that arrive later too, but a Vanilla one
 //! (R1859007). Then, once, as it is cast: §6.3 Damage's split (`damage_split`), N hits of 1, N =
-//! multiplier × the Attack of its caster's launched Starship (`launched_starship_of`, R1852005) as it
-//! stands, each to a random enemy still standing, the hero or a Unit, by the match rng (R60), the
-//! caster's Spell Damage raising each hit (R1859010); no launched Starship, nothing. Tunes: multiplier
-//! 1 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -40,10 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #137.3 Air Doctrine — SPEC §8.10 row 137.3, BUILD M12 row S 137.3: "after it, every Unit its caster
-// controls has Rush, later ones included; once, hits of 1 equal to their launched Starship's Attack go one
-// by one to random enemies still standing, by rng picks that replay; no Starship, nothing; multiplier
-// reads through `param()`; radiant twice its Attack".
+// S #137.3 Air Doctrine — SPEC §8.10 row 137.3, BUILD M12 row S 137.3.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -54,7 +46,6 @@ mod tests {
     const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// The targets of the 1-damage hits among the last action's events.
     fn hits(s: &Scenario) -> Vec<String> {
         s.last_events()
             .iter()
@@ -65,9 +56,6 @@ mod tests {
             .collect()
     }
 
-    /// p1's Starship (two Stratos, 6/6), launched if `launch`; p2 with two Mr. Vanillas; the Doctrine
-    /// (Radiant if `radiant`) in p1's hand, not yet cast. Returns the scenario and what an enemy hit may
-    /// name: p2's hero and Units.
     fn board(seed: &str, radiant: bool, launch: bool) -> (Scenario, Vec<String>) {
         let (mut s, ship) = built_starship(
             seed,
@@ -90,7 +78,6 @@ mod tests {
         (s, enemies)
     }
 
-    /// `board`, then the Doctrine cast.
     fn cast(seed: &str, radiant: bool, launch: bool) -> (Scenario, Vec<String>) {
         let (mut s, enemies) = board(seed, radiant, launch);
         s.play(ID, json!({}));
@@ -134,7 +121,6 @@ mod tests {
     fn r1859007_with_no_launched_starship_only_the_keyword() {
         let (mut s, _) = cast("r1859007-air-none", false, false);
         assert!(hits(&s).is_empty());
-        // A Unit played after it has Rush: it may attack at once.
         s.play(VANILLA, json!({ "zone": 4 }));
         let vanilla = s.unit_at(P1, 4).id;
         let has_rush = s

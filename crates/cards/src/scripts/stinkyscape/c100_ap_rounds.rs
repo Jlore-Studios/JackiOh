@@ -17,9 +17,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #100 AP Rounds — SPEC §8.10 row 100, BUILD M12 row S 100: "a 3/1 Pierce Starship
-// Piece whose hits ignore Armor (R346); played as an Equip, the host gains +3/+1 and Pierce;
-// radiant 6/2".
+// Stinkyscape #100 AP Rounds — SPEC §8.10 row 100, BUILD M12 row S 100 (R346).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,7 +64,6 @@ mod tests {
             "p2": { "hand": [ANCHOR], "field": [ARMORED], "library": filler(4) },
         }));
         s.play(ROUNDS, json!({ "zone": 1 }));
-        // Past its summoning sickness: a full round, then it attacks.
         s.end_turn();
         s.end_turn();
         // R346: the 3-attack hit ignores the 7 Armor, so the 7/7 takes 3.
@@ -85,7 +82,6 @@ mod tests {
         s.play(VANILLA, json!({ "zone": 1 }));
         s.play(ROUNDS, json!({ "zone": 1, "equip": true }));
 
-        // The host is kept: a 4/4 that is also a 3/1, with Pierce.
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");
         s.expect_stats(host.id.as_str(), json!({ "attack": 7, "health": 5 }));
         let host_kinds = live_kinds(&s, host.id.as_str());

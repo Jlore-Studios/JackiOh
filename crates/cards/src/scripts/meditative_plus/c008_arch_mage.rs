@@ -17,9 +17,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M+ #8 Arch Mage — SPEC §8.9 row 8, BUILD M11 row M+ 8: "while it acts each hit of your Spells
-// deals 3 more (a Field Spell's and a Trap's do not, §6.1); the opponent's Spells are untouched;
-// leaving the field ends it; a Nerf moves the keyword's number; radiant 8/16 and +6".
+// M+ #8 Arch Mage — SPEC §8.9 row 8, BUILD M11 row M+ 8 (§6.1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -85,8 +83,6 @@ mod tests {
         s.expect_health(P2, HERO_HEALTH - 2);
     }
 
-    /// `amount` damage to p2's hero with p1's face-up Trap in backrow zone 1 as the running card, then
-    /// the state check.
     fn trap_hits_enemy_hero(s: &mut Scenario, amount: i32) {
         let trap = s.backrow(P1, 1).expect("the trap");
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
@@ -158,7 +154,6 @@ mod tests {
             "p2": { "hand": [FILLER] },
         }));
         let mage = s.card(MAGE).id.clone();
-        // One True Strike at 4 + 3 kills the 4/8 that has taken 1; the Lunar Eclipse after deals its own 3.
         s.card_mut(&mage).damage = 1;
         s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "instance", "instanceId": mage }] }));
         s.expect_in_zone(MAGE, "graveyard");

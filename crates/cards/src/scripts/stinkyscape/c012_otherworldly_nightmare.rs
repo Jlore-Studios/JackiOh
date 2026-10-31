@@ -43,10 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #12 Otherworldly Nightmare — SPEC §8.10 row S 12, BUILD M12 row S 12: "adds one base Shadow
-// Word Death, Shadow Word Pain and Psychic Scream (S 12.1 to 12.3) to its caster's hand, in that
-// order; a full hand burns them; radiant all three are Radiant, and no Execute, Brawl or Blade
-// Storm".
+// S #12 Otherworldly Nightmare — SPEC §8.10 row S 12, BUILD M12 row S 12.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

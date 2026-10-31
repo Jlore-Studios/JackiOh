@@ -4,13 +4,11 @@
 //!   Radiant: "Starship Piece
 //!            Cry: Equip a random Radiant Miner into this, twice."
 //!
-//! R1872001: the Cry is `equip_picks` (R1841002), a random pick from the five Miners, S #62 Miner v1 to
 //! S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420): a
 //! fresh copy fused straight into this, as an Equip play fuses its card (R1086, R77), with no hand, no
 //! play and no Cry, its Activate with it (R1751000). The Radiant face picks twice, each pick on its
 //! Radiant face (R469), the second from the Miners it does not hold yet. Off the field, Immutable, or
 //! holding every Miner, nothing (R129). Starship Piece is a catalog keyword the engine plays: it stays a
-//! piece, the kept card being one (R1852001), and its death fuses a copy into its owner's Dormant
 //! Starship (R1852000).
 
 use jackioh_engine::effects::equip_picks;
@@ -52,10 +50,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #78 Ozark — SPEC §8.10 row 78, BUILD M12 row S 78: "its Cry fuses one random Miner (v1 to
-// v5) into it, the Miner's Activate with it, by one rng pick that replays; nothing passes through a hand
-// and no Miner's text is played (R1841002); it is still a Starship Piece (R1852001); radiant 8/8 and two
-// different Radiant Miners".
+// Stinkyscape #78 Ozark — SPEC §8.10 row 78, BUILD M12 row S 78 (R1841002, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -64,7 +59,6 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// p1 plays the Ozark (Radiant on `radiant`) into lane 1; returns the scenario and its id.
     fn prospected(radiant: bool, seed: &str) -> (Scenario, String) {
         let mut s = weapon_board(seed, json!({ "hand": [{ "def": ID, "radiant": radiant }], "mana": 10 }), json!({}));
         s.play(ID, json!({ "zone": 1 }));
@@ -72,7 +66,6 @@ mod tests {
         (s, host)
     }
 
-    /// The Miners fused into `host`, read off its fused definition.
     fn miners_in(s: &Scenario, host: &str) -> Vec<String> {
         self_def_ids(Some(s.state()), &s.card(host).def_id)
             .into_iter()
@@ -98,7 +91,6 @@ mod tests {
         let gained = crate::card_def(&miners[0]).base.health.unwrap_or_default();
         s.expect_stats(host.as_str(), json!({ "attack": 4, "health": 4 + gained }));
         assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
-        // The Miner's Activate came with it.
         s.activate(host.as_str(), json!({ "ability": "mine" }));
         assert_eq!(resources_in_hand_of(s.state(), P1).len(), 1);
         // R60: the pick replays from the seed.

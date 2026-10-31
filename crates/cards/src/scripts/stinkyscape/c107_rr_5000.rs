@@ -27,10 +27,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #107 RR-5000 — SPEC §8.10 row 107, BUILD M12 row S 107: "a 4/4 Ranged Starship Piece
-// that takes no strike back from a defender without Ranged (R783000); at each of its controller's
-// turn starts it gains +4 Attack for good (8 after one, 12 after two); attackGain reads through
-// `param()`; radiant 8/8 and +8".
+// Stinkyscape #107 RR-5000 — SPEC §8.10 row 107, BUILD M12 row S 107 (R783000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -53,7 +50,6 @@ mod tests {
             }));
             s.expect_stats(RR, json!({ "attack": 4 }));
 
-            // One full round: at its controller's next turn start it stands 8/4, then 12/4.
             s.end_turn();
             s.end_turn();
             s.expect_stats(RR, json!({ "attack": 8 }));
@@ -71,7 +67,6 @@ mod tests {
             }));
             s.end_turn();
 
-            // The opponent's turn started, not its controller's: still 4/4.
             s.expect_stats(RR, json!({ "attack": 4 }));
         }
 

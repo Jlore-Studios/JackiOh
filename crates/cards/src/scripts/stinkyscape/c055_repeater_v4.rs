@@ -4,12 +4,10 @@
 //!            — damage 1
 //!   Radiant: the same text — damage 2
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the Activate's target is a declared enemy Unit or the enemy hero (R81), and Pierce is
 //! `ignoreArmor` (R346). Activate 6 is six uses a turn (R384, R1857003), each hit its own state check;
-//! a hit on a hero is halved, rounded down (R1841001), so 1 deals a hero nothing. The number is the
 //! declared `damage` (R386), read through `param`.
 
 use jackioh_engine::effects::{DamageEffectArgs, DamageFlagArgs, TargetSpec, damage};
@@ -60,10 +58,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #55 Repeater v4 — SPEC §8.10 row 55, BUILD M12 row S 55: its Activate deals 1 to a
-// chosen enemy through Armor (Pierce); on the enemy hero 0 (half, rounded down, R1841001); six uses a
-// turn, a seventh refused; equipped onto a Unit, the host takes the Activate; damage reads through
-// `param()`; radiant 0/12, 2 damage.
+// Stinkyscape #55 Repeater v4 — SPEC §8.10 row 55, BUILD M12 row S 55 (R1841001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,7 +71,6 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// The printed `damage`, and the Radiant face's, and its Radiant health.
     const DAMAGE: i32 = 1;
     const RADIANT_DAMAGE: i32 = 2;
     const RADIANT_HEALTH: i32 = 12;
@@ -97,7 +91,6 @@ mod tests {
         )
     }
 
-    /// One hit on an Armored Menace between two others, whole, and none beside it.
     fn pierces(radiant: bool, amount: i32) {
         let mut s = repeater_on(radiant, json!({ "field": [MENACE, MENACE, MENACE] }));
         let target = s.unit_at(P2, 2).id;
@@ -108,7 +101,6 @@ mod tests {
         assert_eq!(hits(s.last_events()), vec![(target, amount)], "radiant {radiant}");
     }
 
-    /// R1841001: the hit on the hero is halved, rounded down; a hit halved to 0 is none.
     fn halves_on_the_hero(radiant: bool, amount: i32) {
         let halved = amount / HALF_DAMAGE_TO_HEROES_DIVISOR;
         let mut s = repeater_on(radiant, json!({}));

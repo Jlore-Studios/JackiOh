@@ -4,15 +4,7 @@
 //! Base:    "Tradable, Flashback\nReveals when one of your Starship Pieces dies: Your Starship launch
 //!          costs (0)."
 //! Radiant: "Tradable, Flashback\nReveals when one of your Starship Pieces dies: Summon it from your
-//!          graveyard. Your Starship launch costs (0)."
 //! Engine: Tradable (R1838000) and Flashback (§6.1, set again from its owner's graveyard once) are
-//! catalog keywords. Set face-down, it reveals (R17) when "one of your Starship Pieces" dies: a piece
-//! its controller owns, whose copy fuses into their Dormant Starship (`starshipFused` for them,
-//! R1852000, R1852002), wherever it died, a stolen one included (R1859012). Then
-//! `starship_launch_costs { cost: 0 }` (R1852006): their next launch by the Activate is free. The
-//! Radiant face first summons that piece out of its owner's graveyard into the leftmost open unit zone
-//! (R64), a summon with no Cry (R1), its copy staying fused in the Starship. Declares no numbers: (0)
-//! is the verb's price.
 
 use jackioh_engine::prelude::*;
 
@@ -62,11 +54,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #144 Prepare For Liftoff — SPEC §8.10 row 144, BUILD M12 row S 144: "Tradable in the hand (one Trade
-// a turn, R1838000); set, it reveals when a Starship Piece it owns dies, fusing into their Starship
-// (R1859012), and their next launch by the Activate costs (0) (R1852006), a launch by an effect spending
-// none; Flashback lets it be set again once from the graveyard; radiant the dead piece is summoned back
-// from the graveyard first, its fused copy staying".
+// S #144 Prepare For Liftoff — SPEC §8.10 row 144, BUILD M12 row S 144 (R1838000, R1852006,
+// R1859012).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -82,13 +71,10 @@ mod tests {
     const FEELINGS: &str = "classic-032"; // (2) Spell: steal an enemy Unit in a lane with your (1) Unit.
     const FIRSTSTRIKE: &str = "stinkyscape-137"; // (4) Unit, Cry: launch your Dormant Starship.
 
-    /// p1's Prepare For Liftoff set (Radiant if `radiant`) in backrow lane 1, and a Stratos of p1's in
-    /// lane 2 and of p2's in lane 1, p1 holding two Hit Jobs.
     fn setup(seed: &str, radiant: bool) -> Scenario {
         board(seed, radiant, "p1", json!({}), json!({}))
     }
 
-    /// `setup`'s board with `active` to act and each side's entries replaced by `p1`'s and `p2`'s.
     fn board(seed: &str, radiant: bool, active: &str, p1: Value, p2: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
@@ -113,8 +99,6 @@ mod tests {
         s
     }
 
-    /// `player` steals the enemy Unit in `lane` with Felinor Feelings, their own Stratos standing in
-    /// that lane: the stolen card's id.
     fn steal(s: &mut Scenario, player: PlayerId, lane: i32) -> String {
         let id = s.unit_at(opponent_of(player), lane).id;
         s.play(FEELINGS, json!({ "targets": pick::id(&id) }));
@@ -122,8 +106,6 @@ mod tests {
         id
     }
 
-    /// p1 sets the Prepare For Liftoff in their graveyard into backrow lane 1 again (Flashback, §6.1),
-    /// as `legalActions` offers it: the harness's `play` takes a card from a hand.
     fn set_from_graveyard(s: &mut Scenario) {
         let trap = s.card(ID).id.clone();
         s.act(
@@ -147,7 +129,6 @@ mod tests {
         );
     }
 
-    /// Whether `legalActions` offers p1 a play of the Prepare For Liftoff.
     fn offered(s: &Scenario) -> bool {
         let trap = s.card(ID).id.clone();
         legal_actions(s.state(), P1)
@@ -175,7 +156,6 @@ mod tests {
         assert!(trap_fired(&s));
         s.expect_in_zone(ID, "graveyard");
         assert_eq!(launch_cost(s.state(), P1), 0);
-        // The base face leaves the piece in the graveyard, its copy in the Starship.
         s.expect_in_zone(piece.as_str(), "graveyard");
         let ship = dormant_starship_of(s.state(), P1).expect("p1's Starship").id.clone();
         s.state_mut().players.p1.mana.current = 0;
@@ -205,7 +185,6 @@ mod tests {
         let ship = dormant_starship_of(s.state(), P1).expect("p1's Starship");
         assert_eq!(starship_pieces_of(ship).len(), 1);
         assert_eq!(launch_cost(s.state(), P1), 0);
-        // Its next death fuses again.
         let Zone::Field { lane, .. } = back.zone else {
             panic!("the piece is on the field");
         };
@@ -216,7 +195,6 @@ mod tests {
 
     #[test]
     fn r1859012_a_piece_it_owns_dying_under_the_enemy_fuses_into_its_starship_and_reveals_it() {
-        // p2 steals p1's Stratos and destroys it: it dies under p2's control into p1's graveyard, and
         // its copy fuses into p1's Starship (R1852002), so it is one of p1's Starship Pieces.
         let mut s = board(
             "r1859012-stolen-own",
@@ -237,8 +215,6 @@ mod tests {
 
     #[test]
     fn r1859012_an_enemy_piece_dying_under_its_controller_leaves_it_set() {
-        // p1 steals p2's Stratos and destroys it: it dies under p1's control but fuses into p2's
-        // Starship, so it is not one of p1's Starship Pieces.
         let mut s = board(
             "r1859012-stolen-enemy",
             false,
@@ -275,7 +251,6 @@ mod tests {
         assert_eq!(launch_cost(s.state(), P1), 0, "still held for the next launch by the Activate");
     }
 
-    /// Tradable (R1838000): either face goes from the hand into the deck for a draw, one Trade a turn.
     #[test]
     fn both_faces_trade_from_the_hand_for_a_draw_once_a_turn() {
         for radiant in [false, true] {
@@ -317,7 +292,6 @@ mod tests {
         assert!(trap.face_up != Some(true), "set face-down");
         assert_eq!(trap.flashback_spent, Some(true));
 
-        // Set again, it reveals on the next of p1's pieces to die, then Flashback is spent.
         hit(&mut s, P1, 3);
         assert!(trap_fired(&s));
         s.expect_in_zone(ID, "graveyard");

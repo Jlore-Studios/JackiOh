@@ -41,8 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-6 Probe Relay — SPEC §8.10 row T-AI-6, BUILD M12 row S T-AI-6: "adds two Scanning Probe Mk1s that
-// cost (0); a full hand burns what does not fit; radiant two Mk2s".
+// S T-AI-6 Probe Relay — SPEC §8.10 row T-AI-6, BUILD M12 row S T-AI-6.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -85,7 +84,6 @@ mod tests {
 
     #[test]
     fn s2_4_a_full_hand_burns_what_does_not_fit() {
-        // 9 fillers stay as the Relay leaves the hand: one Probe fits, one burns.
         let s = cast(false, 9);
         assert_eq!(probes(&s, PROBE_MK1).len(), 1);
         assert!(s.last_events().iter().any(|event| matches!(event, GameEvent::Burned { def_id, .. } if def_id == PROBE_MK1)));

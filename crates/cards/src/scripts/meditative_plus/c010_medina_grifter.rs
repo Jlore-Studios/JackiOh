@@ -40,10 +40,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #10 Medina Grifter — SPEC §8.9 row 10, BUILD M11 row M+ 10: "Cry (played or cast): one
-// random card of the opponent's hand moves to yours, owned by you, the opponent seeing only that
-// one left; an empty hand takes nothing and draws no random number; a full hand burns it into
-// your graveyard; cards reads through `param()`; radiant 6/2 and the card costs (0)".
+// M+ #10 Medina Grifter — SPEC §8.9 row 10, BUILD M11 row M+ 10.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,8 +93,6 @@ mod tests {
     #[test]
     fn s2_4_a_full_hand_burns_it_into_your_graveyard() {
         crate::register_all();
-        // The Grifter and ten more: after the Grifter is played the hand is at its cap, so the
-        // stolen card burns.
         let mut hand = vec![json!(GRIFTER)];
         hand.extend((0..HAND_CAP).map(|_| json!(FILLER)));
         let mut s = scenario(json!({
@@ -119,11 +114,8 @@ mod tests {
             "p2": { "hand": [MENACE, VANILLA], "library": [FILLER, FILLER] },
         }));
         s.play(GRIFTER, json!({ "zone": 1 }));
-        // p2's view of p1's hand is a count: the stolen card is hidden there.
         let theirs = js(&s.view(P2));
         assert_eq!(theirs["opponent"]["hand"], json!({ "count": 2 }));
-        // The steal itself names p2's own former card (it was theirs); every other event names
-        // neither its id nor its def.
         let mut not_steals = theirs.clone();
         not_steals["events"] = Value::Array(
             theirs["events"]
@@ -177,7 +169,6 @@ mod tests {
         let spell = new_instance(s.state_mut(), "fx-cast-grifter", P1, Zone::Hand { player: P1 });
         s.state_mut().players.p1.hand.push(spell.clone());
         s.play(&spell, json!({}));
-        // The cast Grifter entered the field and its Cry stole the Menace.
         s.expect_in_zone(GRIFTER, "field");
         assert_eq!(def_ids(&s.hand(P1)), [VANILLA, MENACE]);
         let taken = s.hand(P1).into_iter().find(|card| card.def_id == MENACE).expect("the stolen card");
@@ -193,7 +184,6 @@ mod tests {
         }));
         step_param(s.card_mut(GRIFTER), "cards", 1);
         s.play(GRIFTER, json!({ "zone": 1 }));
-        // Both cards of their hand, in whatever order the shuffle took them.
         let mut hand = def_ids(&s.hand(P1));
         hand.sort_unstable();
         assert_eq!(hand, vec![FILLER, VANILLA, MENACE]);

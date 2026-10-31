@@ -29,8 +29,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M+ #15 Book of Potions — SPEC §8.9 row 15, BUILD M11 row M+ 15: "adds 1 random Radiant Potion
-// card (M+ 11 to 13); cards reads through `param()`; radiant 2".
+// M+ #15 Book of Potions — SPEC §8.9 row 15, BUILD M11 row M+ 15.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -44,7 +43,6 @@ mod tests {
 
     use crate::scenario;
 
-    /// The def ids the Book added to p1's hand, beside the Filler held throughout.
     fn added(s: &Scenario) -> Vec<String> {
         s.hand(P1).into_iter().filter(|card| card.def_id != FILLER).map(|card| card.def_id).collect()
     }

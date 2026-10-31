@@ -5,16 +5,7 @@
 //! Base:    "Animated, Starship Piece\nReveals when either player launches a Starship."
 //! Radiant: "Animated, Starship Piece\nReveals when either player launches a Starship or plays a
 //!          Starship Piece."
-//! Engine: set face-down in its backrow zone, it answers `starshipLaunched` of either player's Starship
-//! (R1852003) and, on the Radiant face, `cardPlayed` of a card that is a Starship Piece as it is played
-//! (`is_starship_piece`), either player's, its own play left out; a card set face-down has no text in
 //! force, so it is no piece played (R1859003) and its play reveals nothing (CLAUDE.md rule 7). It fires
-//! as any Trap does (R17), its reveal being the animation and nothing more: `animate` into its own
-//! lane's unit zone or the leftmost open one (Animated, R64, R383), a 6/6 Unit with Starship Piece whose
-//! death fuses a copy into its owner's Dormant Starship (R1852000); with no open unit zone it stays
-//! face-up. It reveals once (R831007's shape, as C #5 Tesla): the firing remembers `revealed`, and it
-//! answers nothing after that, wherever it stands, nor anywhere but its backrow zone. Declares no
-//! numbers: its stats are the catalog's.
 
 use jackioh_engine::effects::{animate, remember};
 use jackioh_engine::prelude::*;
@@ -77,10 +68,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #131 Spacerace Stimulus — SPEC §8.10 row 131, BUILD M12 row S 131: "set face-down, it reveals on
-// either player's Starship launch and animates as a 6/6 Unit with Starship Piece in its lane's unit zone,
-// else the leftmost open one, staying face-up with none; a piece played does not reveal it; radiant 12/12
-// and it also reveals when either player plays a Starship Piece".
+// S #131 Spacerace Stimulus — SPEC §8.10 row 131, BUILD M12 row S 131.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -94,8 +82,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4, no piece.
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
 
-    /// p1's Starship (one Stratos) and, in p2's backrow lane 2, a set Stimulus (Radiant if `radiant`);
-    /// p1 holds `hand` beside it. Returns the scenario, the Starship's id and the Stimulus's.
     fn setup(seed: &str, radiant: bool, hand: Value) -> (Scenario, String, String) {
         let (s, ship) = built_starship(
             seed,
@@ -122,7 +108,6 @@ mod tests {
         let stats = s.stats(card.id.as_str());
         assert_eq!((stats.attack, stats.health), (6, 6));
         assert!(stats.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::StarshipPiece));
-        // The reveal is the animation.
         assert!(s.last_events().iter().any(|event| event.event_type() == GameEventType::Animated));
     }
 
@@ -176,8 +161,6 @@ mod tests {
 
     #[test]
     fn r1859003_radiant_a_piece_set_face_down_or_its_own_play_reveals_nothing() {
-        // p1 sets a Stimulus of its own: face-down, no piece is played, so p2's stays set, and p1's own
-        // play does not reveal it either.
         let (mut s, _ship, id) = setup("r1859003-face-down", true, json!([{ "def": ID, "radiant": true }]));
         let mine = s
             .state()

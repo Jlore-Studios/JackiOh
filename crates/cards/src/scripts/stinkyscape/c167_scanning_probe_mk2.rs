@@ -8,9 +8,6 @@
 //! Engine: `scan_for_anomaly` (#1855's Anomaly scan, R1855003), one roll of 100 against its
 //! controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss
 //! of that player's adding 1 and 4, the count per player and shared by both Probes (ST-S20-1); a find
-//! is added to the hand, a full hand burning it (§2.4), and keeps the count; a miss is silent. The
-//! roll is luck-based: the card's Lucky (Lucky 1, Lucky 3 on the Radiant face (ST8: the designer's "Luck 3" is Lucky 3)) and its controller's Luck roll again and keep
-//! the best, Radiant over plain over a miss (R1438, R987). Declares no numbers: the chances and their
 //! steps are the engine's (`ANOMALY_*`, R1748003).
 
 use jackioh_engine::prelude::*;
@@ -47,10 +44,8 @@ mod tests {
     const OTHER_PROBE: &str = "stinkyscape-166";
     const ANOMALY: &str = "stinkyscape-t-anomaly-found";
     const FILLER: &str = "core-005";
-    /// The games a rate is counted over.
     const SEEDS: u32 = 400;
 
-    /// P1's main phase with `hand` and `misses` earlier misses.
     fn setup(seed: &str, hand: Value, misses: Option<i32>) -> Scenario {
         crate::register_all();
         let mut s = scenario(json!({
@@ -62,12 +57,10 @@ mod tests {
         s
     }
 
-    /// The Anomaly Found! cards in P1's hand.
     fn finds(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.def_id == ANOMALY).collect()
     }
 
-    /// One scan with the probe on `radiant`'s face after `misses` misses: what it found, if anything.
     fn scan(seed: &str, radiant: bool, misses: Option<i32>) -> (Option<bool>, Option<i32>) {
         let mut s = setup(seed, json!([{ "def": PROBE, "radiant": radiant }]), misses);
         s.play(PROBE, json!({}));
@@ -79,8 +72,6 @@ mod tests {
         )
     }
 
-    /// Over the seeds on `radiant`'s face from no misses: (Radiant finds, plain finds), each miss
-    /// checked to count one.
     fn rates(radiant: bool) -> (u32, u32) {
         let (mut shiny, mut plain) = (0, 0);
         for seed in 0..SEEDS {
@@ -142,7 +133,6 @@ mod tests {
         #[test]
         fn r1855003_lucky_1_rolls_twice_and_keeps_the_best() {
             let (shiny, plain) = rates(false);
-            // Two rolls: a find on 1 − 0.75² = 43.75% (175 in 400), a Radiant one on 1 − 0.95² = 9.75% (39).
             assert!((145..=205).contains(&(shiny + plain)), "{} finds in {SEEDS}", shiny + plain);
             assert!((21..=58).contains(&shiny), "{shiny} Radiant finds in {SEEDS}");
         }
@@ -154,7 +144,6 @@ mod tests {
         #[test]
         fn r1855003_lucky_3_rolls_four_times_and_keeps_the_best() {
             let (shiny, plain) = rates(true);
-            // Four rolls: a find on 1 − 0.75⁴ ≈ 68.4% (274 in 400), a Radiant one on 1 − 0.95⁴ ≈ 18.5% (74).
             assert!((245..=303).contains(&(shiny + plain)), "{} finds in {SEEDS}", shiny + plain);
             assert!((50..=98).contains(&shiny), "{shiny} Radiant finds in {SEEDS}");
         }

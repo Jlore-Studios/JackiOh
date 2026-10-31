@@ -32,9 +32,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 96 Ocean Tsunami — SPEC §8.10 row 96, BUILD M12 row S 96: "played with 3 cards and 2 Resources in
-// hand, discards the 5, the Resources paying their Credits, and fills the hand with Resources to its
-// cap; summoned, nothing; radiant 12/12 and Radiant Resources" (R2250000, R2250001).
+// S 96 Ocean Tsunami — SPEC §8.10 row 96, BUILD M12 row S 96 (R2250000, R2250001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::summon;
@@ -45,7 +43,6 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
-    /// Two Resources already in the hand.
     const REKNITE: &str = "stinkyscape-t-reknite";
 
     fn tsunami(radiant: bool) -> Scenario {

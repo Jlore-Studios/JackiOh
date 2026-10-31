@@ -5,11 +5,7 @@
 //! Base and Radiant: "For the rest of the game, your Units have Deft. Heal your hero {multiplier}× your
 //! Starship's Health." Multiplier 2, Radiant 5.
 //! Engine: `give_units_keyword { Deft }`, a `unitsHaveKeyword` player modifier for the rest of the game:
-//! every Unit its caster controls has Deft (an attack and a switch in one turn, R49), those that arrive
-//! later too, but a Vanilla one (R1859007). Then, once, as it is cast: `heal` on its caster's hero by
-//! multiplier × the Health of their launched Starship (`launched_starship_of`, R1852005) as it stands,
 //! damage counted, with no cap on a hero (§6.3 Heal, R1859009); no launched Starship, no heal.
-//! Tunes: multiplier 2 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -42,10 +38,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #137.2 Sea Doctrine — SPEC §8.10 row 137.2, BUILD M12 row S 137.2: "after it, every Unit its caster
-// controls has Deft (an attack and a switch in one turn, R49), later ones included; once, their hero heals
-// twice their launched Starship's current Health, past its starting health; no Starship, no heal;
-// multiplier reads through `param()`; radiant five times".
+// S #137.2 Sea Doctrine — SPEC §8.10 row 137.2, BUILD M12 row S 137.2 (R49).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -63,8 +56,6 @@ mod tests {
             .any(|keyword| keyword.kind() == KeywordKind::Deft)
     }
 
-    /// p1's Starship (two Stratos, 6/6), launched if `launch`, with 2 damage on it; p1's hero at 20, a
-    /// Mr. Vanilla of p1's in lane 3 and the Doctrine (Radiant if `radiant`) in hand, not yet cast.
     fn board(seed: &str, radiant: bool, launch: bool) -> Scenario {
         let (mut s, ship) = built_starship(
             seed,
@@ -84,7 +75,6 @@ mod tests {
         s
     }
 
-    /// `board`, then the Doctrine cast; the hero's health after it.
     fn healed(seed: &str, radiant: bool, launch: bool) -> (Scenario, i32) {
         let mut s = board(seed, radiant, launch);
         s.play(ID, json!({}));

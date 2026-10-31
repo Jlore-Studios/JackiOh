@@ -15,9 +15,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #68 Stratos — SPEC §8.10 row 68, BUILD M12 row S 68: "a vanilla 3/3 Flying Starship
-// Piece: attacked only by Flying or Ranged Units in Attack Position (R783002); its death fuses a
-// copy into its owner's Dormant Starship (R1852000); radiant 6/6".
+// Stinkyscape #68 Stratos — SPEC §8.10 row 68, BUILD M12 row S 68 (R1852000, R783002).
 #[cfg(test)]
 mod tests {
     use super::*;

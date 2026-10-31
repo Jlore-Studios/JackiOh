@@ -6,9 +6,7 @@
 //! Engine: `melee` (R1848005): forced attacks (R53) between pairs drawn from the match rng, allies
 //! as good a target as enemies, each its own combat and state check, until one Unit or none is left,
 //! none may attack another, or `MELEE_MAX_ATTACKS` (20) attacks are made; no hero is a target
-//! (ST-S14-9). Then `next_turn_mana` of `mana` on its caster (R1848004). The designer wrote one text
 //! on both faces, which R276 refuses, so the Radiant face's declared number is 2 (R1857001): both
-//! faces run this one script.
 
 use jackioh_engine::prelude::*;
 
@@ -28,10 +26,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #120 Wild System — SPEC §8.10 row S 120, BUILD M12 row S 120: "with four Units on the field,
-// attacks between random pairs, allies included, until one or none is left; never more than 20
-// attacks; no hero is hit; a lone Unit makes no attack; its caster's next refresh gives 1 more; mana
-// reads through `param()`; radiant 2 more".
+// S #120 Wild System — SPEC §8.10 row S 120, BUILD M12 row S 120.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -48,7 +43,6 @@ mod tests {
     const STATE_OF_THE_GAME: &str = "classic-041"; // (1) Unit 3/3, Indestructible.
     const FILLER: &str = "core-005";
 
-    /// The forced attacks of the last step, as `(attacker, target)`.
     fn forced(s: &Scenario) -> Vec<(String, String)> {
         s.last_events()
             .iter()

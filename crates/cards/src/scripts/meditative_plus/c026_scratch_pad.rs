@@ -3,19 +3,9 @@
 //!   Base:    "Code a card from scratch and add it to your hand. Exile this."
 //!   Radiant: "Code a Radiant card from scratch and add it to your hand. Exile this."
 //!
-//! THE CHAIN is Meditative #17 True Craft a Card's (§10.6, R880): a `number` prompt for the crafted
-//! card's cost, 0 to `CRAFT_MAX_COST` (4), whose answer opens the `craft` prompt at that budget
-//! (`2 + 5 ×` the cost points, 24 lines), whose answer mints the card into the caster's hand —
-//! Radiant on the Radiant face — or burns it on a full one (§2.4). The craft prompt carries the
-//! from-scratch flag (`CraftMode::Scratch`, R1182002): the client opens an empty canvas with no
-//! presets, tooltips or hints, while the engine still rolls M #17's four presets so the AI, the
-//! random policy and a timeout answer with one (R881). The recipes, the budget and the card a
-//! recipe makes are M #17's: "from scratch" is the canvas, not a smaller budget.
-//!
-//! EXILE THIS (R178): after the mint, Scratch Pad goes to its owner's exile, not the graveyard.
-//!
-//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
-//! written, and the release renders it (`[gen:voice]`, R1448).
+//! Craft chain (M #17, §10.6, R880): number prompt for cost, then craft prompt with CraftMode::Scratch (R1182002, R881);
+//! mints to hand or burns on full hand (§2.4).
+//! Exile this (R178). Voice audio rendered on release (R1420, R1448).
 
 use jackioh_engine::effects::{choose_craft, choose_number, chosen_number, chosen_recipe, craft_card, exile};
 use jackioh_engine::prelude::*;
@@ -70,11 +60,6 @@ pub fn script() -> CardScripts {
 }
 
 // Meditative+ #26 Scratch Pad — SPEC §8.9 row 26, R178, R880, R881, R882, R1182002.
-//
-// BUILD M11 row M+ 26: "opens M 17's cost and craft prompts with the from-scratch flag set (the
-// client's empty canvas); a valid recipe adds its card, a refused one leaves the prompt open; the
-// AI and a timeout answer with a preset (R881); Scratch Pad goes to exile, not the graveyard;
-// radiant the card is Radiant".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -88,7 +73,6 @@ mod tests {
 
     const VANILLA: &str = "core-008"; // 4/4
 
-    /// A 5/6 Unit at cost 2: 10 of 12 points.
     fn unit_recipe() -> Value {
         json!({
             "cost": 2, "type": "Unit", "adjective": "Lazy", "noun": "Iterator",
@@ -96,7 +80,6 @@ mod tests {
         })
     }
 
-    /// Scratch Pad played, its cost prompt answered with `cost`: the canvas open.
     fn coding(cost: i32, radiant: bool) -> Scenario {
         crate::register_all();
         let mut s = scenario(json!({
@@ -108,7 +91,6 @@ mod tests {
         s
     }
 
-    /// The crafted card in p1's hand.
     fn coded(state: &GameState) -> CardInstance {
         state
             .players
@@ -120,7 +102,6 @@ mod tests {
             .clone()
     }
 
-    /// The open craft prompt's presets.
     fn presets(s: &Scenario) -> Vec<CraftRecipe> {
         s.state()
             .pending

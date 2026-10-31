@@ -46,8 +46,6 @@ mod tests {
     const SORCERER: &str = "core-068"; // (2) 5/5, Cry: Deal 4 damage.
     const ARMAGEDDON: &str = "core-088"; // (4) Spell: Destroy all permanents.
 
-    /// p1 holds Paragon-X (`radiant` its face) with two Vanillas on its field to tribute; p2 holds
-    /// `p2_hand`.
     fn holding(radiant: bool, p2_hand: Value) -> Scenario {
         crate::scenario(json!({
             "p1": {
@@ -59,7 +57,6 @@ mod tests {
         }))
     }
 
-    /// Paragon-X played for its two tributes into unit zone 1, then the turn passed to p2.
     fn on_the_field(radiant: bool, p2_hand: Value) -> Scenario {
         let mut s = holding(radiant, p2_hand);
         let tributes: Vec<String> = [1, 2].map(|lane| s.unit_at(P1, lane).id).to_vec();
@@ -86,7 +83,6 @@ mod tests {
             let paragon = s.unit_at(P1, 3);
             assert_eq!(paragon.def_id, ID);
             assert!(s.unit(P1, 1).is_none() && s.unit(P1, 2).is_none(), "both tributes went");
-            // Charge: it may hit the hero the turn it arrives.
             s.attack(&paragon, "hero");
             s.expect_health(P2, HERO_HEALTH - 10);
         }
@@ -141,7 +137,6 @@ mod tests {
             let paragon = s.unit_at(P1, 1);
             s.expect_stats(&paragon, json!({ "attack": 20, "health": 2 }));
             assert!(has(&s, &paragon, KeywordKind::Pierce));
-            // The same flags: a Spell's hit deals it nothing.
             s.play(POWDER_SPRAY, json!({}));
             s.expect_stats(&paragon, json!({ "health": 2 }));
             assert!(has(&s, &paragon, KeywordKind::DivineShield));

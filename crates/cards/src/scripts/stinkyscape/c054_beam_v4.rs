@@ -4,11 +4,9 @@
 //!            cooldown. Deals half damage to heroes." — damage 9
 //!   Radiant: the same text — damage 18
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the Activate's target is a declared enemy Unit or the enemy hero (R81); Cleave is the same
-//! hit on each Unit beside a Unit target, read before the first hit, and Pierce is `ignoreArmor`
 //! (R346). Once a turn (R384), with an extra turn cooldown (R1841000); a hit on a hero is halved,
 //! rounded down (R1841001). The number is the declared `damage` (R386), read through `param`.
 
@@ -74,11 +72,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #54 Beam v4 — SPEC §8.10 row 54, BUILD M12 row S 54: its Activate deals 9 to a chosen
-// enemy Unit and 9 to each Unit beside it, through Armor (Pierce); on the enemy hero 4 (half, rounded
-// down, R1841001); once a turn, a second use refused; refused on its user's next turn and usable the
-// turn after, a bounce clearing it (R1841000, R78); equipped onto a Unit, the host takes the Activate;
-// damage reads through `param()`; radiant 0/12, 18 damage.
+// Stinkyscape #54 Beam v4 — SPEC §8.10 row 54, BUILD M12 row S 54 (R1841000, R1841001, R78).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -92,11 +86,9 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FLOOD: &str = "core-017"; // (4) Spell: "Bounce all Units."
 
-    /// The printed `damage`, and the Radiant face's, and its Radiant health.
     const DAMAGE: i32 = 9;
     const RADIANT_DAMAGE: i32 = 18;
     const RADIANT_HEALTH: i32 = 12;
-    /// R1841001: half of it, rounded down, on a hero.
     const HALVED: i32 = DAMAGE / HALF_DAMAGE_TO_HEROES_DIVISOR;
 
     fn at(target: &str) -> Value {
@@ -113,7 +105,6 @@ mod tests {
         weapon_board("s054", p1, p2)
     }
 
-    /// p2's Menaces in lanes 1 to 3, the middle one with Armor 3, and a Vanilla in lane 4.
     fn wall(radiant: bool) -> (Scenario, [String; 4]) {
         let mut s = beam_on(
             radiant,

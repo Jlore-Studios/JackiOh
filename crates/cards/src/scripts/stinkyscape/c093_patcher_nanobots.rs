@@ -27,9 +27,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #93 Patcher Nanobots — SPEC §8.10 row 93, BUILD M12 row S 93: "a 3/4 Taunt Starship
-// Piece; its Death heals its controller's hero 6, past its starting health; then a copy fuses into
-// its owner's Dormant Starship (R1852000); heal reads through `param()`; radiant 6/8 and heal 12".
+// Stinkyscape #93 Patcher Nanobots — SPEC §8.10 row 93, BUILD M12 row S 93 (R1852000).
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -4,14 +4,8 @@
 //!            {cards|random card|random cards} from their hand instead." (2/3)
 //!   Radiant: the same, each card taken costing (0).
 //!
-//! Played at its normal price, `take_from_library { from: enemy, pick: top }` (C+ #12.3): the
-//! opponent's top cards in order, with no random number (R1179004). Played Embiggened,
-//! `give_from_hand { from: enemy, cards: random }` (as M+ #10). Either way the cards become the
-//! taker's (R12), hidden from the opponent but for the count (R97), the hand cap burning the
-//! overflow (§2.4). The Radiant face's `TakenRiders.cost_override` is 0 on each card taken, either
-//! version. The count is declared and read through `param` (R386), and so is the Radiant face's
-//! price, `setCost` (R1748003). Tunes: cards 2 ↑ (Radiant 3); setCost 0 ↓, on the Radiant face only
-//! (R824000). Through v0.4.4b that (0) was printed, not declared; `script_v0_4_4b` keeps that (R767000).
+//! Normal price steals top library cards (C+ #12.3, R1179004); Embiggened steals from hand (M+ #10, R12, R97, §2.4).
+//! Radiant sets cost_override to 0 (R386, R1748003, R824000). Keeps script_v0_4_4b for replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -61,11 +55,7 @@ pub fn script_v0_4_4b() -> CardScripts {
     }
 }
 
-// M+ #19 Grubby Gloves — SPEC §8.9 row 19, BUILD M11 row M+ 19: "at (1) the opponent's top 2 deck
-// cards move to your hand as yours, hidden from them but their count (R97); with 1 left, 1;
-// empty, none and no fatigue; Embiggened at (2) 2 random cards of their hand instead; a full hand
-// burns the overflow into your graveyard; cards reads through `param()`; radiant 3 each way, each
-// costing (0)".
+// M+ #19 Grubby Gloves — SPEC §8.9 row 19, BUILD M11 row M+ 19 (R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -98,7 +88,6 @@ mod tests {
         let cursor = s.state().rng_cursor;
         s.play(GLOVES, json!({}));
         assert_eq!(s.state().rng_cursor, cursor);
-        // The top 2 in order: Menace, then Lunar.
         assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE, LUNAR]);
         let taken = taken(&s);
         assert_eq!(taken.len(), 2);
@@ -151,7 +140,6 @@ mod tests {
         }));
         s.play(GLOVES, json!({ "embiggen": true }));
         s.expect_mana(P1, 2);
-        // Both cards of their hand, in whatever order the shuffle took them.
         let mut hand = def_ids(&s.hand(P1));
         hand.sort_unstable();
         assert_eq!(hand, vec![FILLER, MENACE, LUNAR]);
@@ -166,8 +154,6 @@ mod tests {
     #[test]
     fn s2_4_a_full_hand_burns_the_overflow() {
         crate::register_all();
-        // The Gloves and ten more: after the Gloves are played the hand is at its cap, so the two
-        // taken cards burn.
         let mut hand = vec![json!(GLOVES)];
         hand.extend((0..HAND_CAP).map(|_| json!(FILLER)));
         let mut s = scenario(json!({
@@ -193,13 +179,11 @@ mod tests {
             "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
         }));
         s.play(GLOVES, json!({}));
-        // p2's view of p1's hand is a count, and nothing in it names the taken cards.
         let theirs = js(&s.view(P2));
         assert_eq!(theirs["opponent"]["hand"], json!({ "count": 3 }));
         let text = serde_json::to_string(&theirs).expect("serializable");
         assert!(!text.contains(MENACE));
         assert!(!text.contains(LUNAR));
-        // Their own deck is two cards smaller.
         assert_eq!(s.view(P2).you.library_count, 1);
     }
 
@@ -230,8 +214,6 @@ mod tests {
         }
     }
 
-    /// p1 plays the Radiant Gloves at its normal price after one Nerf of its `setCost`: the prices of
-    /// the cards taken.
     fn taken_prices_after_a_nerf() -> Vec<Option<i32>> {
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": GLOVES, "radiant": true }, FILLER] },
@@ -249,7 +231,6 @@ mod tests {
             "p1": { "hand": [{ "def": GLOVES, "radiant": true }, FILLER] },
             "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
         }));
-        // A Buff finds it at its floor of (0); a Nerf makes each card taken cost (1).
         assert!(!crate::can_upgrade_number(&s, GLOVES, "setCost"));
         assert_eq!(taken_prices_after_a_nerf(), [Some(1); 3]);
     }
@@ -269,7 +250,6 @@ mod tests {
             "p2": { "hand": [MENACE, LUNAR, VANILLA], "library": [FILLER, FILLER] },
         }));
         s.play(GLOVES, json!({ "embiggen": true }));
-        // All three cards of their hand, in whatever order the shuffle took them.
         let mut hand = def_ids(&s.hand(P1));
         hand.sort_unstable();
         assert_eq!(hand, vec![FILLER, VANILLA, MENACE, LUNAR]);

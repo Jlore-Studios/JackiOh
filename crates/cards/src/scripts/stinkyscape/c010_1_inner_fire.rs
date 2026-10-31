@@ -50,10 +50,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #10.1 Inner Fire — SPEC §8.10 row S 10.1, BUILD M12 row S 10.1: "a chosen 2/6 becomes 6/6 and a
-// 7/3 becomes 3/3; a Unit under an Attack aura shows its Health; Attack never below 0; a Unit
-// Immune to Spells can't be chosen; radiant a friendly 2/6 becomes 10/6, an enemy 7/3 becomes 0/3
-// and an enemy 2/6 stays 2/6; shift reads through `param()`" (R1867002).
+// S #10.1 Inner Fire — SPEC §8.10 row S 10.1, BUILD M12 row S 10.1 (R1867002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -108,7 +105,6 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             let unit = s.unit_at(P1, 1);
-            // +3 from the aura: 7 Attack, 4 Health.
             s.expect_stats(&unit, json!({ "attack": 7 }));
 
             s.play(INNER_FIRE, json!({ "targets": pick::instance(&unit) }));

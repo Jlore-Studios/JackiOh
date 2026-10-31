@@ -48,10 +48,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #129 Jlockeed's Missile Pod — SPEC §8.10 row 129, BUILD M12 row S 129: "at its controller's
-// end of turn, the enemy hero and every enemy Unit take its Attack ÷ 4, rounded down: nothing at 2 Attack,
-// 1 at 4 (R63); played at (2) it is a Starship Piece and may be played as an Equip, its text then dividing
-// the host's Attack (R1086); divisor reads through `param()`; radiant 4/2 and ÷ 3".
+// Stinkyscape #129 Jlockeed's Missile Pod — SPEC §8.10 row 129, BUILD M12 row S 129 (R1086, R63).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -64,7 +61,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
-    /// p1's Pod (Radiant on `radiant`) stands in lane 1; p2 has two 4/4s.
     fn standing(radiant: bool) -> Scenario {
         scenario(json!({
             "seed": "missile-pod",
@@ -77,7 +73,6 @@ mod tests {
         }))
     }
 
-    /// Every `damage` event of the last step, as (target, amount).
     fn hits(s: &Scenario) -> Vec<(String, i32)> {
         s.last_events()
             .iter()
@@ -111,7 +106,6 @@ mod tests {
         assert_eq!(hits.last().map(|hit| hit.0.as_str()), Some("hero-p2"));
         s.expect_health(PlayerId::P2, 29);
         s.expect_health(PlayerId::P1, 30);
-        // Nothing at the end of the opponent's turn.
         s.end_turn();
         s.expect_health(PlayerId::P2, 29);
     }
@@ -160,7 +154,6 @@ mod tests {
         assert_eq!(s.unit(P1, 1).expect("the fused host").id, host);
         s.expect_stats(host.as_str(), json!({ "attack": 6, "health": 5 }));
         assert!(!has_keyword(&s.stats(host.as_str()).keywords, KeywordKind::StarshipPiece));
-        // Its end of turn: the host's 6 ÷ 4 = 1 to the enemy hero and the enemy Unit.
         s.end_turn();
         s.expect_health(PlayerId::P2, 29);
     }

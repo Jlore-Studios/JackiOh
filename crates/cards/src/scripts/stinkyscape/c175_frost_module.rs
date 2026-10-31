@@ -6,7 +6,6 @@
 //! and taking its stats, keywords and text (R77, R102), Starship Piece only into a piece
 //! (R1852001); played alone its death fuses a copy into its owner's Dormant Starship (R1852000);
 //! an equipped host takes the Activate. Activate (R384; Radiant Activate 2, R1751000): `freeze`
-//! on a declared enemy Unit (§6.3 Freeze, R1174000), its thaw stamped as it lands; a hero is never Frozen.
 
 use jackioh_engine::prelude::*;
 
@@ -49,9 +48,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #175 Frost Module — SPEC §8.10 row 175, BUILD M12 row S 175: "its Activate Freezes a
-// chosen enemy Unit, which loses its next attack or switch (R1174000); no hero may be chosen; once
-// a turn; equipped onto a Unit, the host takes the Activate; radiant 4/2 and two uses a turn".
+// Stinkyscape #175 Frost Module — SPEC §8.10 row 175, BUILD M12 row S 175 (R1174000).
 #[cfg(test)]
 mod tests {
     use super::{BASE_USES, ID, RADIANT_USES};
@@ -106,11 +103,9 @@ mod tests {
                 "p1": { "hand": [FILLER], "field": [FROST], "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
             }));
-            // A hero is no legal target for the Freeze.
             s.expect_refused(|s| {
                 s.activate(FROST, json!({ "targets": json!([{ "pick": "hero", "player": "p2" }]) }))
             });
-            // Once a turn: a second use is refused.
             let enemy = s.unit(PlayerId::P2, 1).expect("enemy").clone();
             s.activate(FROST, json!({ "targets": pick::instance(&enemy) }));
             s.expect_refused(|s| s.activate(FROST, json!({ "targets": pick::instance(&enemy) })));

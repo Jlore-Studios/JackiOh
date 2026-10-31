@@ -10,12 +10,8 @@
 //!            Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
-//! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_SCAPE_EFFECTS`):
-//! the roll, the announcement both players read (R436), the chain cap counting casts of every edition
-//! (R28) and the order the Radiant's three resolve in (R423) are the one rule every edition shares. The
-//! table is the card's, not the engine's, because its first entry lays one of the ten Anomaly boards,
-//! the cards crate's data (`t_anomaly_found::ALL_BOARDS`, S20); the other nine are the engine's builders
-//! (`subsystems/call_to_chaos_scape.rs`). The face is passed explicitly, as C+ #73's file does.
+//! Subsystem call_to_chaos (Core #95) with CHAOS_SCAPE_EFFECTS: announcement (R436), chain cap across editions (R28) and resolution order (R423).
+//! First entry lays Anomaly board (ALL_BOARDS, S20); nine builders in subsystems/call_to_chaos_scape.rs (C+ #73).
 
 use jackioh_engine::prelude::*;
 
@@ -134,7 +130,6 @@ mod tests {
     ];
     const CORVETTE: &str = "stinkyscape-t-drone-corvette";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
-    /// The Drone Battleship's layers, bottom first.
     const BATTLESHIP: [&str; 3] = [
         "stinkyscape-t-meltdown-layer",
         "stinkyscape-t-propagation-layer",
@@ -146,9 +141,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
 
     const SEED: &str = "chaos-scape";
-    /// How many cursors the sweeps of the table walk.
     const SWEEP: u32 = 800;
-    /// The most games the board sweep plays before every board has been laid.
     const ANOMALY_GAMES: u32 = 200;
 
     fn rolled_names(seed: &str, cursor: u32, radiant: bool) -> Vec<&'static str> {
@@ -191,7 +184,6 @@ mod tests {
         s
     }
 
-    /// The base face, rolling `entry`.
     fn chaos(entry: &str, p1: Value, p2: Value) -> Scenario {
         chaos_in(SEED, cursor_in(SEED, entry), p1, p2)
     }
@@ -219,8 +211,6 @@ mod tests {
         jackioh_engine::mana::effective_cost(s.state(), card, Default::default())
     }
 
-    /// The definitions of the pile in `player`'s unit zone `lane`, bottom first (a pile is kept top
-    /// first).
     fn pile_defs(s: &Scenario, player: PlayerId, lane: i32) -> Vec<String> {
         let mut defs: Vec<String> = s.state().players[player].units[(lane - 1) as usize]
             .iter()
@@ -289,7 +279,6 @@ mod tests {
             s.expect_in_zone(ID, "graveyard");
         }
 
-        /// The board a play laid: the one of the ten whose cards head the step's summons, in list order.
         fn laid(s: &Scenario) -> &'static str {
             let summons: Vec<(String, Row, i32)> = s
                 .last_events()
@@ -329,7 +318,6 @@ mod tests {
             assert_eq!(replaced[0]["player"], json!("p1"));
             s.expect_in_zone(MENACE, "exile");
             assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(VANILLA.to_string()));
-            // No Anomaly Found! card is made.
             assert!(
                 !s.events()
                     .iter()
@@ -436,7 +424,6 @@ mod tests {
             }
             assert_eq!(pile_defs(&s, P1, 2), vec![MENACE.to_string(), INTERCEPTOR.to_string()]);
             assert_eq!(pile_defs(&s, P1, 1), vec![INTERCEPTOR.to_string()]);
-            // The enemy's side is untouched.
             assert!(s.unit(P2, 1).is_none());
         }
 
@@ -456,7 +443,6 @@ mod tests {
                 launched[0]["pieces"].as_array().map(Vec::len),
                 Some(CHAOS_SCAPE_FUSED_PIECES as usize)
             );
-            // The ship is summoned first and launched for nothing: no mana beyond this card's (4).
             assert_eq!(events_of(&s, "summoned")[0]["defId"], json!(DORMANT_STARSHIP));
             let ship = launched_starship_of(s.state(), PlayerId::P1)
                 .cloned()
@@ -466,9 +452,7 @@ mod tests {
 
         #[test]
         fn r1882008_an_existing_dormant_starship_takes_four_more_pieces() {
-            // A Dormant Starship already standing takes the four pieces: no second one is summoned.
             let mut p1 = side(false, json!([]));
-            // A 0/0 hull is kept alive by the piece fused into it; here it stands on an X/X of its own.
             p1["field"] = json!([{
                 "def": DORMANT_STARSHIP,
                 "lane": 3,
@@ -519,7 +503,6 @@ mod tests {
             assert!(SHIPPED_EDITIONS.contains(&lot.def_id.as_str()), "{}", lot.def_id);
             assert_eq!((lot.base, lot.price), (CHAOS_SCAPE_LOT_PRICE, CHAOS_SCAPE_LOT_PRICE));
             assert_eq!(lot.radiant, None);
-            // Its caster is offered it; the opponent is not.
             let mine = js(&s.view(P1).marketplace);
             let theirs = js(&s.view(P2).marketplace);
             assert!(mine.to_string().contains(&lot.def_id));

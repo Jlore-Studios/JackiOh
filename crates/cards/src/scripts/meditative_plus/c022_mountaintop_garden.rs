@@ -4,18 +4,9 @@
 //!            isn't Radiant may be played Radiant for ({premium}) more." (2)
 //!   Radiant: the same. (1)
 //!
-//! Mountaintop's aura (R1181002): the engine's `embiggenGarden` static flag. While the Garden acts on
-//! the field — face-up, in its controller's backrow — every embiggen card of both players (R1178001)
-//! played from a hand or a graveyard plays its Embiggened version at its normal price (stamped at
-//! §10.5 step 3), and its dearer choice costs the normal price plus the premium and plays it Radiant
-//! and Embiggened; a Radiant card has its normal price only. Cost modifiers apply to both prices (R65),
-//! two Gardens apply the least premium, and a cast (R545) or a card set face-down is not a play it
-//! reaches. R1563004 (#1563): the dearer price reaches every card that is not Radiant, not only an
-//! embiggen card — a card of one price (no X, R65) is offered its price plus the premium beside its
-//! own, the play's `embiggen: true`, and that play is made Radiant (the engine's
-//! `garden_offers_radiant`); until then a card of one price had no dearer price under a Garden. The
-//! premium is the declared `premium`, read through `params::declared_or` as each price is read, so a
-//! Nerf or a Buff moves it (R386). Tunes: premium 2 ↓ (Radiant 1).
+//! Embiggen cards play Embiggened version at normal price via embiggenGarden (R1181002, R1178001, §10.5 step 3).
+//! Cost modifiers apply to both prices (R65, R545). Non-Radiant cards may be played Radiant for premium (R1563004, #1563).
+//! Declared premium read via declared_or (R386).
 
 use jackioh_engine::prelude::*;
 
@@ -51,11 +42,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative+ #22 Mountaintop Garden — SPEC §8.9 row 22, BUILD M11 row M+ 22: "while it acts, Core 84
-// Going Long played at (2) gains Armor as its Embiggened version does; its other choice costs (4) and
-// plays it Radiant and Embiggened; a Radiant Going Long offers (2) only; the opponent's embiggen
-// cards too; a cast is unchanged (R545); leaving the field ends it; premium reads through `param()`;
-// radiant the premium is (1)".
+// Meditative+ #22 Mountaintop Garden — SPEC §8.9 row 22, BUILD M11 row M+ 22 (R545).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -66,25 +53,21 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     /// Core #84 Going Long: (2, Embiggened 4) Field Spell, "Your hero has Armor 2. Embiggened (4):
-    /// Armor 4 instead." (Radiant 4 and 8).
     const GOING_LONG: &str = "core-084";
     /// Core #36 Magic Jammed: (1) Spell, "Destroy target backrow card; Lock its zone".
     const MAGIC_JAMMED: &str = "core-036";
-    /// A (1) 4/4 with no text.
     const FILLER: &str = "core-008";
 
     fn library() -> Value {
         json!([FILLER, FILLER, FILLER, FILLER])
     }
 
-    /// p1 has 10 mana and fillers to draw, p2 a filler to hold; `p1` and `p2` are merged over each side.
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {
         let p1 = crate::merged(json!({ "library": library(), "mana": 10 }), p1);
         let p2 = crate::merged(json!({ "hand": [FILLER], "library": library() }), p2);
         crate::scenario(json!({ "seed": seed, "p1": p1, "p2": p2 }))
     }
 
-    /// p1's hand card of `def`.
     fn in_hand(s: &Scenario, def: &str) -> String {
         s.hand(P1)
             .into_iter()
@@ -93,7 +76,6 @@ mod tests {
             .expect("the card is in the hand")
     }
 
-    /// The `embiggen` flags `legalActions` offers p1's plays of the card at.
     fn offered(s: &Scenario, id: &str) -> Vec<Option<bool>> {
         let mut flags: Vec<Option<bool>> = legal_actions(s.state(), P1)
             .into_iter()
@@ -112,7 +94,6 @@ mod tests {
         flags
     }
 
-    /// The last play's `cardPlayed`: what it paid.
     fn paid(s: &Scenario) -> i32 {
         s.last_events()
             .iter()

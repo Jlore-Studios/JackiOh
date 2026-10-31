@@ -7,9 +7,6 @@
 //! M #95, the set's own two, then Training Grounds #39 from that set's release (issue #2204), each
 //! named by id, so the pool reaches them whether or not their set ships (R1420). Each is a play for
 //! every rule, its choices its caster's (R70), rolling and naming its own effects to both players
-//! (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP`
-//! (R452); each lands in its caster's graveyard after it resolves (R87). The Radiant face casts each
-//! Radiant, three effects each (R423) (R1870006).
 
 use jackioh_engine::prelude::*;
 
@@ -56,10 +53,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #4.6 The Big Crunch — SPEC §8.10 row S 4.6, BUILD M12 row S 4.6: "casts Core 95, C+ 73, M 95, S
-// 150 and S 151 once each, in that order, each rolling one effect named to both players; the nested
-// casts stop at the cap; radiant each is Radiant and rolls three" (R1870006). Training Grounds #39
-// joins the list last once its set ships (issue #2204).
+// S #4.6 The Big Crunch — SPEC §8.10 row S 4.6, BUILD M12 row S 4.6 (#2204, #39, R1870006).
 #[cfg(test)]
 mod tests {
     use super::EDITIONS;
@@ -74,10 +68,8 @@ mod tests {
 
     const CRUNCH: &str = "stinkyscape-004-6";
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
-    /// The most actions one play's prompts may take before the test gives up on it.
     const ANSWER_BOUND: usize = 200;
 
-    /// p1 plays The Big Crunch, its prompts left open.
     fn played(seed: &str, radiant: bool) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
@@ -92,14 +84,12 @@ mod tests {
         s
     }
 
-    /// p1 plays The Big Crunch, and every prompt it opens is answered.
     fn crunched(seed: &str, radiant: bool) -> Scenario {
         let mut s = played(seed, radiant);
         answer_everything(&mut s);
         s
     }
 
-    /// Answers every prompt the play opens with the first action its chooser may take.
     fn answer_everything(s: &mut Scenario) {
         for _ in 0..ANSWER_BOUND {
             let Some(pending) = s.state().pending.clone() else {
@@ -117,7 +107,6 @@ mod tests {
         panic!("the play still asks after {ANSWER_BOUND} answers");
     }
 
-    /// Every Call to Chaos played or cast since the scenario began, by def id, in order.
     fn chaos_plays(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -128,7 +117,6 @@ mod tests {
             .collect()
     }
 
-    /// Every roll a Call to Chaos announced, by def id and effects.
     fn rolls(s: &Scenario) -> Vec<(String, Vec<String>)> {
         s.events()
             .iter()
@@ -139,8 +127,6 @@ mod tests {
             .collect()
     }
 
-    /// A seed whose play asks nothing and rolls no nested Call to Chaos, so the five casts are the only
-    /// ones and the play is the last action.
     fn plain_seed(prefix: &str, radiant: bool) -> String {
         seed_where(prefix, |seed| {
             let s = played(seed, radiant);
@@ -163,7 +149,6 @@ mod tests {
         }
 
         // Issue #2204: Training Grounds #39 is a Call to Chaos the catalog holds, so once its set ships
-        // it is the sixth cast, after Stinkyscape's two.
         #[test]
         fn r1870006_r2200004_casts_the_training_grounds_edition_last() {
             assert!(set_ships(SetName::TrainingGrounds));

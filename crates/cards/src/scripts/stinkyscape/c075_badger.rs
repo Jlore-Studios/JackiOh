@@ -2,9 +2,7 @@
 //!   Base:    "Starship Piece\nWhenever this attacks, gain a random Stinkyscape Resource." (2/3)
 //!   Radiant: "Starship Piece\nWhenever this attacks, gain a random Radiant Stinkyscape Resource." (4/6)
 //!
-//! Starship Piece is the engine's printed keyword: its death fuses a copy into its owner's Dormant
 //! Starship (R1852000). "Whenever this attacks" is the engine's `whenAttacks` hook, Classic #45 Nature
-//! Titan's: it runs for the player who controls this card before any damage of each attack it makes,
 //! declared or forced (R53, R2285000), so a Badger that dies in the combat has already gained; it never
 //! runs for a defending Badger, nor for an attack called off in its trap window (R44, Core #96 My
 //! Pawn). It is `gain_resources` of one random Resource into the hand (R1840000, R1840002), a ninth
@@ -36,9 +34,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 75 Badger — SPEC §8.10 row 75, BUILD M12 row S 75: "attacking a Unit or the hero gains one random
-// Resource into its controller's hand, defending none; a forced attack gains one; it dies and fuses into
-// a Dormant Starship; radiant 4/6, Radiant Resources".
+// S 75 Badger — SPEC §8.10 row 75, BUILD M12 row S 75.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

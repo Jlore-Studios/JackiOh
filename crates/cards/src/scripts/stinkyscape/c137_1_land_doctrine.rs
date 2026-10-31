@@ -5,13 +5,7 @@
 //! Base:    "For the rest of the game, your Units have Trample. Your Starship attacks a random enemy Unit."
 //! Radiant: "For the rest of the game, your Units have Trample. Your Starship attacks each enemy Unit."
 //! Engine: `give_units_keyword { Trample }`, a `unitsHaveKeyword` player modifier for the rest of the
-//! game: every Unit its caster controls has Trample, those that arrive later too, but a Vanilla one,
-//! and it stays once the Doctrine is in the graveyard (R1859007). Then, once, as it is cast: a forced
-//! attack (R53) by its caster's launched Starship (`launched_starship_of`, R1852005) on an enemy Unit
 //! drawn from the match rng among those it may attack (§4.2 step 2, R60), the target striking back
-//! (`forced_attack_random`); the Radiant face's attacks each enemy Unit in lane order, each its own
-//! combat and state check, stopping once the Starship leaves the field (`forced_attacks`, R1859008).
-//! With no launched Starship or no enemy Unit, only the keyword. Declares no numbers.
 
 use std::sync::Arc;
 
@@ -64,10 +58,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #137.1 Land Doctrine — SPEC §8.10 row 137.1, BUILD M12 row S 137.1: "after it, every Unit its caster
-// controls has Trample, Units summoned later included, the Doctrine in the graveyard; once, their launched
-// Starship attacks one random enemy Unit it may attack (R53); no launched Starship, no attack; radiant it
-// attacks each enemy Unit in lane order, stopping if it dies".
+// S #137.1 Land Doctrine — SPEC §8.10 row 137.1, BUILD M12 row S 137.1 (R53).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -87,7 +78,6 @@ mod tests {
             .any(|keyword| keyword.kind() == KeywordKind::Trample)
     }
 
-    /// The forced attacks among the last action's events, as (attacker, target).
     fn forced_attacks(s: &Scenario) -> Vec<(String, String)> {
         s.last_events()
             .iter()
@@ -103,8 +93,6 @@ mod tests {
             .collect()
     }
 
-    /// p1's launched Starship (two Stratos, 6/6), a Mr. Vanilla of p1's in lane 3, the Doctrine (Radiant
-    /// if `radiant`) and a Mr. Vanilla in hand; p2's `enemies` in their unit zones.
     fn launched(seed: &str, radiant: bool, enemies: Value) -> (Scenario, String) {
         let (mut s, ship) = built_starship(
             seed,

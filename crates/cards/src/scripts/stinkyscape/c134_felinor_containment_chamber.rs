@@ -7,8 +7,6 @@
 //! a `statsOverride` of its Attack and its maximum Health then — its current Health is 0 or less
 //! as it died — buffs included, into the leftmost open unit zone (R64), before its own copy fuses
 //! into the Dormant Starship (R1852000), which may then stack on lane 3 if the token took the last
-//! zone; the Radiant face doubles both and grants Divine Shield through `summon`'s `keywords`
-//! rider. The token is the base Felinor Token, summoned X/X.
 
 use jackioh_engine::prelude::*;
 
@@ -60,11 +58,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #134 Felinor Containment Chamber — SPEC §8.10 row 134, BUILD M12 row S 134: "its
-// Death summons a Felinor Token with its Attack and maximum Health as it died, buffs included
-// (R89), into the leftmost open unit zone, before its copy fuses into the Dormant Starship
-// (R1852000); a full board summons none; radiant 4/2, a token of twice its stats with Divine
-// Shield".
+// Stinkyscape #134 Felinor Containment Chamber — SPEC §8.10 row 134, BUILD M12 row S 134
+// (R1852000, R89).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,7 +92,6 @@ mod tests {
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CHAMBER], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
             }));
-            // A +3/+3 buff before it dies: the token is 5/4, of Attack and maximum Health.
             s.card_mut(CHAMBER).buffs.attack += 3;
             s.card_mut(CHAMBER).buffs.health += 3;
             let me = s.card(CHAMBER).clone();
@@ -116,7 +110,6 @@ mod tests {
         #[test]
         fn r1860007_a_full_board_summons_none() {
             crate::register_all();
-            // The Chamber tops a pile on lane 1; when it dies the Vanilla under it resumes there
             // (§3.2), so no zone is open.
             let mut s = scenario(json!({
                 "p1": {
@@ -161,7 +154,6 @@ mod tests {
             let me = s.card(CHAMBER).clone();
             s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
 
-            // 4/2 doubled: an 8/4 token with Divine Shield.
             let token = s.unit(PlayerId::P1, 1).expect("the token in lane 1");
             assert_eq!(token.def_id, FELINOR);
             s.expect_stats(token.id.as_str(), json!({ "attack": 8, "health": 4, "maxHealth": 4 }));

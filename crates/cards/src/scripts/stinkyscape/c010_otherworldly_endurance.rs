@@ -40,10 +40,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #10 Otherworldly Endurance — SPEC §8.10 row S 10, BUILD M12 row S 10: "adds one base Inner Fire,
-// Divine Spirit and Power Word Shield (S 10.1 to 10.3) to its caster's hand, in that order; a hand
-// with room for one keeps the Inner Fire and burns the others; radiant all three are Radiant"
-// (R1867001).
+// S #10 Otherworldly Endurance — SPEC §8.10 row S 10, BUILD M12 row S 10 (R1867001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -4,13 +4,8 @@
 //!          it to your hand. It costs ({setCost})."
 //! Radiant: "Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win
 //!          rate, and add it to your hand. It costs ({setCost})."
-//! Engine: M #50 CN Tech's compiled table read from both ends — the leader (`win_rate_leader`,
-//! R1100) and the trailer (`win_rate_trailer`, R1183000: the same floor and tie-breaks, the lowest
-//! rate, never the leader), neither ever NA Tech itself (R387) — fused trailer first into one
-//! transient hand card (`fuse_generated`'s two pools, R1108; R77, R102) at a `costOverride` of
-//! setCost (R1183001). An end the table cannot name is a random non-token card of the sets that ship,
-//! as CN Tech's fallback, never the other ingredient (`distinct`). The Radiant face fuses both
-//! ingredients on their Radiant faces (R469). Tunes: setCost 2 ↓ (Radiant 0).
+//! Reads CN Tech table (M #50) from both ends: win_rate_leader (R1100) and win_rate_trailer (R1183000; never self, R387);
+//! fuses trailer first into transient card at setCost (R1108, R77, R102, R1183001). Radiant fuses Radiant faces (R469).
 
 use jackioh_engine::prelude::*;
 
@@ -48,11 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2: "with a fixture win-rate table, fuses the
-// trailer and the leader (both eligible past the games floor, ties as R1100) into one transient card
-// (summed stats, union of keywords, both scripts, R77) added to your hand at (2); with an empty table
-// two different random non-token cards of the shipped sets stand in; a full hand burns it; setCost
-// reads through `param()`; radiant both ingredients Radiant and it costs (0)".
+// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2 (R1100, R77).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,11 +53,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// Tempo Timmy, 3/3 Rush and First Strike (Radiant 6/6 Charge and First Strike): the leader.
     const LEADER: &str = "core-011";
-    /// Right-house defender, 1/1 Taunt, Divine Shield and Reborn (Radiant 2/2): the trailer.
     const TRAILER: &str = "core-003";
-    /// Bigot, between the two.
     const MIDDLE: &str = "core-002";
     const FILLER: &str = "core-005";
 
@@ -89,8 +77,6 @@ mod tests {
         table(vec![(LEADER, 30, 40), (MIDDLE, 20, 40), (TRAILER, 10, 40)])
     }
 
-    /// p1 holds NA Tech (base unless `radiant_face`) and `fillers` fillers; both sides keep cards in
-    /// hand so no turn auto-ends.
     fn casting(seed: &str, radiant_face: bool, fillers: usize) -> Scenario {
         crate::register_all();
         let mut hand = vec![json!({ "def": ID, "radiant": radiant_face })];
@@ -102,7 +88,6 @@ mod tests {
         }))
     }
 
-    /// Cast NA Tech; the card it added to p1's hand.
     fn fused(s: &mut Scenario) -> CardInstance {
         s.play(ID, json!({}));
         let added: Vec<CardInstance> = s
@@ -114,7 +99,6 @@ mod tests {
         added[0].clone()
     }
 
-    /// The fused card's ingredients, in fusion order, with their Radiant flags.
     fn ingredients(s: &Scenario, card: &CardInstance) -> Vec<(String, bool)> {
         def_of(Some(s.state()), &card.def_id)
             .ingredients
@@ -176,7 +160,6 @@ mod tests {
 
         #[test]
         fn r1183000_the_lowest_passes_over_thin_rows_and_breaks_ties_as_r1100() {
-            // A thin row (fewer than 20 games) never trails; 10/40 and 5/20 tie, more games wins.
             register_win_rates(table(vec![
                 (LEADER, 30, 40),
                 ("core-008", 0, 19),
@@ -221,8 +204,6 @@ mod tests {
 
         #[test]
         fn r77_the_fused_card_runs_both_scripts() {
-            // Me and Mr Token (Cry: summon a Rush Token) trails, Jlockeed Shredder-10 (End of turn: 2
-            // to each enemy unit and the enemy hero) leads: played, the one card does both.
             const CRY: &str = "core-015";
             const END_OF_TURN: &str = "core-013";
             register_win_rates(table(vec![(END_OF_TURN, 30, 40), (CRY, 10, 40)]));
@@ -259,7 +240,6 @@ mod tests {
         #[test]
         fn a_full_hand_burns_it() {
             register_win_rates(the_table());
-            // Eleven in hand, ten once NA Tech is cast: the hand is full as the card arrives.
             let mut s = casting("na-tech-burn", false, HAND_CAP as usize);
             s.play(ID, json!({}));
             assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
@@ -295,7 +275,6 @@ mod tests {
             assert!(card.radiant, "every ingredient Radiant: the card is (R469)");
             assert_eq!(card.cost_override, Some(0));
             let def = def_of(Some(s.state()), &card.def_id).clone();
-            // The Radiant faces summed, Charge from Tempo Timmy's Radiant face.
             let (leader, trailer) = (crate::card_def(LEADER), crate::card_def(TRAILER));
             let summed = |a: Option<i32>, b: Option<i32>| Some(a.unwrap_or(0) + b.unwrap_or(0));
             assert_eq!(
@@ -313,7 +292,6 @@ mod tests {
             crate::register_all();
             clear_overrides();
             // R1100's and R1183000's comparison written out: the exact rate, toward the highest or
-            // the lowest, then more games, then the smaller id.
             let ranks_before = |a: &WinRateRow, b: &WinRateRow, lowest: bool| {
                 let left = i64::from(a.wins) * i64::from(b.games);
                 let right = i64::from(b.wins) * i64::from(a.games);
@@ -336,7 +314,6 @@ mod tests {
             assert_eq!(win_rate_leader(ID), Some(leader.clone()));
             assert_eq!(win_rate_trailer(&[ID, leader.as_str()]), Some(trailer.clone()));
             assert_ne!(leader, trailer);
-            // And the card fuses them, the trailer first.
             let mut s = casting("na-tech-compiled", false, 1);
             let card = fused(&mut s);
             assert_eq!(ingredients(&s, &card), vec![(trailer, false), (leader, false)]);

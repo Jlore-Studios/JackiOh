@@ -3,12 +3,9 @@
 //!            Activate: Deal {damage} damage to all enemies, twice." — damage 2
 //!   Radiant: the same text — damage 4
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
-//! R1862001: "all enemies" is the enemy hero and every enemy Unit, one hit each before one state check
 //! (`damage_all`, R59), and "twice" is two such rounds, the second after the first's check, so a Unit
-//! the first destroyed is not hit again. No half damage: the hero takes each hit whole. Once a turn
 //! (R384). The number is the declared `damage` (R386), read through `param`.
 
 use jackioh_engine::effects::{after_state_check, damage_all};
@@ -53,10 +50,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #57 Flak v4 — SPEC §8.10 row 57, BUILD M12 row S 57: its Activate deals 2 to the enemy
-// hero and every enemy Unit, twice, two rounds; the enemy hero takes it whole; once a turn, a second
-// use refused; equipped onto a Unit, the host takes the Activate; damage reads through `param()`;
-// radiant 0/12, 4 damage.
+// Stinkyscape #57 Flak v4 — SPEC §8.10 row 57, BUILD M12 row S 57.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,7 +64,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const POINTMASTER: &str = "core-020"; // (2) 7/1 First Strike.
 
-    /// The printed `damage`, and the Radiant face's, and its Radiant health.
     const DAMAGE: i32 = 2;
     const RADIANT_DAMAGE: i32 = 4;
     const RADIANT_HEALTH: i32 = 12;
@@ -83,7 +76,6 @@ mod tests {
         )
     }
 
-    /// Each round hits both enemy Menaces, then the enemy hero, whole; nothing of p1's is hit.
     fn sweeps(radiant: bool, amount: i32) {
         let mut s = flak_on(radiant, json!({ "field": [MENACE, MENACE] }));
         let menaces = [1, 2].map(|lane| s.unit_at(P2, lane).id);

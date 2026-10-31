@@ -34,9 +34,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #42 Core Researcher — SPEC §8.10 row 42, BUILD M12 row S 42: "played, adds a Radiant Drone Core card
-// to its controller's hand (the set previewed); summoned, nothing (R1); cards reads through `param()`;
-// radiant 8/10 and 2 cards".
+// S #42 Core Researcher — SPEC §8.10 row 42, BUILD M12 row S 42 (R1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -49,7 +47,6 @@ mod tests {
     const CALL_TO_ARMS: &str = "core-069"; // (2) Spell: Recruit Units of (1) Cost or less; Radiant (2).
     const FILLER: &str = "core-005";
 
-    /// The Drone Cores in p1's hand, as (definition, face).
     fn cores(s: &Scenario) -> Vec<(String, bool)> {
         s.hand(P1)
             .into_iter()

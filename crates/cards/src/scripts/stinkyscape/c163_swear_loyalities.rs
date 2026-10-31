@@ -7,11 +7,8 @@
 //!
 //! Engine: five modes, one per bundle (S #95, #159 to #162), chosen with the play (R81, S #121 System
 //! Schematic's pattern), all five offered (R1880002); the Cry is one `add_to_hand` of the chosen
-//! bundle, a full hand burning it (§2.4), Radiant on the Radiant face (§5.2). Then one `exile` per
-//! card its caster owns of the four others, in its library, hand and graveyard, walked in that order
 //! (#94 Genn's Greed's zones and order, R135): "wherever it is" is every zone its caster's own cards
 //! can be in, a Spell never standing on the field, and the opponent's copies stay (R1880001, ST13 E9).
-//! "Golden" is Golden Accord (ST8). Declares no numbers.
 
 use jackioh_engine::prelude::*;
 
@@ -63,10 +60,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #163 Swear Loyalities — SPEC §8.10 row S 163, BUILD M12 row S 163: "offers all five bundles to its
-// caster alone; the chosen one is added to the hand; every Vanguard Coalition, ETHICS, Golden Accord,
-// Pegasus or Star-jumper Core its caster owns that was not chosen is exiled from hand, deck and
-// graveyard, the opponent's untouched; radiant the chosen one Radiant".
+// S #163 Swear Loyalities — SPEC §8.10 row S 163, BUILD M12 row S 163.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -91,8 +85,6 @@ mod tests {
         BUNDLES.iter().map(|(_, id)| json!(id)).collect()
     }
 
-    /// Swear Loyalities in P1's hand beside `hand`; a copy of every bundle in each side's library and
-    /// graveyard, and in P2's hand.
     fn board(radiant: bool, hand: Value) -> Scenario {
         crate::register_all();
         let mut held = vec![json!({ "def": SWEAR, "radiant": radiant })];

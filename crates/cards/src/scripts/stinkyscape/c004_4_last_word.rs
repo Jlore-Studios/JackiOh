@@ -7,17 +7,9 @@
 //!   Radiant: "… The next turn is yours: you have {mana} mana and your Units have Charge during it, …"
 //!            (100)
 //!
-//! Engine: C #52 Final Gambit's replacement at "would take lethal damage" on its controller's hero
-//! (after Armor, multipliers and caps, R1204's judge), on either player's turn, in combat or by an
-//! effect: the trap fires, goes to the graveyard, and the hit is canceled, dealing nothing
-//! (R1704001). Its `then` step ends the turn running (`end_turn`, once what is resolving has resolved,
-//! R456); on its controller's own turn it owes them an extra turn (R845), on the opponent's their
-//! own next turn follows. Through that turn of theirs their Units have Charge (R1859007's
-//! `unitsHaveKeyword` modifier, `give_units_keyword_next_turn`), and a delayed step at its end-of-turn
-//! stage, one turn of theirs on (R1181000), makes the opponent win the game (`win_game`, R850). Extra
-//! turns the opponent is already owed come first (R846): the turn is still the controller's next.
-//! Radiant: a delayed step at the start of that turn, after its mana refresh, tops their mana up to
-//! `mana`, past `MAX_MANA` (§6.3 Mana) (R1870004).
+//! Replacement on hero lethal damage (C #52, R1204, R1704001): cancels hit, ends turn (R456); grants extra turn if on own turn (R845, R846).
+//! Units have Charge during that turn (give_units_keyword_next_turn, R1859007); delayed step at its end wins game for opponent (R1181000, R850).
+//! Radiant: sets mana to declared mana at start of turn (R1870004, §6.3 Mana).
 
 use jackioh_engine::effects::{end_turn, gain_mana, give_units_keyword_next_turn, take_extra_turn, win_game};
 use jackioh_engine::prelude::*;
@@ -102,12 +94,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #4.4 Last Word — SPEC §8.10 row S 4.4, BUILD M12 row S 4.4: "set face-down, a lethal hit on its
-// controller's hero (combat or an effect, on either turn) is prevented and the turn ends; the next turn
-// is its controller's (on their own turn an extra one, on the opponent's their normal next); during it
-// every Unit of theirs may attack heroes the turn it lands; at its end the opponent wins; a hit that is
-// not lethal leaves it set; radiant they have 100 mana that turn, mana reading through `param()`"
-// (R1870004).
+// S #4.4 Last Word — SPEC §8.10 row S 4.4, BUILD M12 row S 4.4 (R1870004).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -123,14 +110,12 @@ mod tests {
     const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
-    /// The catalog's Radiant mana, 100.
     const MANA: i32 = 100;
 
     fn last_word(radiant: bool) -> Value {
         json!({ "def": ID, "radiant": radiant, "faceUp": false })
     }
 
-    /// p1 at `health` with Last Word set and Vanillas in hand; p2's Vanilla on the field. `active`'s turn.
     fn board(active: &str, health: i32, radiant: bool) -> Scenario {
         let mut s = scenario(json!({
             "seed": "last-word",
@@ -149,7 +134,6 @@ mod tests {
         s
     }
 
-    /// p2's Vanilla attacks p1's hero on p2's turn, a hit of 4.
     fn lethal_attack(health: i32, radiant: bool) -> Scenario {
         let mut s = board("p2", health, radiant);
         s.attack(VANILLA, "hero");
@@ -177,7 +161,6 @@ mod tests {
         s.expect_in_zone(&card, zone);
     }
 
-    /// Whether `attacker` may attack the enemy hero now.
     fn may_attack_hero(s: &Scenario, attacker: &str) -> bool {
         let player = s.card(attacker).controller;
         let hero = format!("hero-{}", opponent_of(player));
@@ -199,7 +182,6 @@ mod tests {
                 "the hit deals nothing"
             );
             last_word_in(&mut s, "graveyard");
-            // The turn ended: p1's own next turn is running, no extra one owed.
             assert_eq!(s.state().active, P1);
             assert_eq!(s.state().players.p1.extra_turns, None);
             assert!(s.state().result.is_none());
@@ -207,7 +189,6 @@ mod tests {
 
         #[test]
         fn r1870004_lethal_effect_on_own_turn_gives_an_extra_turn() {
-            // p1 burns their own hero on their own turn.
             let mut s = board("p1", 3, false);
             let turn = s.state().turn;
             s.play(LUNAR, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
@@ -215,7 +196,6 @@ mod tests {
             s.expect_health(P1, 3);
             assert_eq!(s.state().active, P1, "the turn ended into an extra one of p1's");
             assert_eq!(s.state().turn, turn + 1);
-            // The extra turn's end: p1 loses.
             s.end_turn();
             let result = s.state().result.expect("the game is over");
             assert_eq!(result.winner, Winner::P2);
@@ -274,7 +254,6 @@ mod tests {
         fn r1870004_radiant_has_param_mana_that_turn() {
             let s = lethal_attack(4, true);
             assert_eq!(s.state().players.p1.mana.current, MANA, "100 mana, past MAX_MANA");
-            // The base face gives none.
             let s = lethal_attack(4, false);
             assert!(s.state().players.p1.mana.current < MANA);
         }

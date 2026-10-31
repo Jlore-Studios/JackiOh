@@ -31,8 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-narcor — SPEC §7, BUILD M12 row S T-narcor: "played from the hand, adds one random non-token Rare
-// card to the hand, a full hand burning it; radiant a Radiant one".
+// S T-narcor — SPEC §7, BUILD M12 row S T-narcor.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -42,7 +41,6 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// The Narcor first in a hand of it and `hand` fillers (R2250000), played.
     fn played(seed: &str, radiant: bool, hand: usize) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
         cards.extend(filler(hand).as_array().cloned().unwrap_or_default());
@@ -71,7 +69,6 @@ mod tests {
 
     #[test]
     fn full_hand_burns() {
-        // A hand past its cap, which a setup may hold: the Narcor played, it is still full.
         let s = played("narcor-full", false, HAND_CAP as usize);
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
         let burned: Vec<CardInstance> = s

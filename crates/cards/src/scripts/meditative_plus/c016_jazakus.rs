@@ -6,21 +6,9 @@
 //!   Radiant: "Cry: Craft a custom Radiant Potion. It costs (1).
 //!             Death: Shuffle a Radiant Jazakus Prime into your deck."
 //!
-//! THE CRY (R1182000, R1563008). Meditative #17's `craft` prompt in its potion mode, with no cost
-//! prompt: the frame is fixed, a Spell tagged Potion with no stats whose one hat is When cast, with
-//! the effects the player snaps under it, at cost (1) (`CRAFT_POTION_COST`), `CRAFT_POTION_POINTS`
-//! points and 24 lines. The blocks are the prompt's offer (R1563007): the keywords a Spell takes, its
-//! When cast, and three verbs that fit the points, drawn as the prompt opens. A valid recipe compiles
-//! into a transient definition named by its digest (R882), of the Meditative+ set, tagged Potion, and
-//! a fresh card of it reaches the hand at (1), Radiant on the Radiant face, or burns on a full one
-//! (§2.4). The prompt's options are seeded Potions of the offer, so the AI, the random policy and a
-//! timeout answer with one (R881). The picks travel in `ctx.targets`, read with `chosen_recipe`.
-//!
-//! THE DEATH (Catalyst, C+ #38's shape, R1421): a Jazakus Prime (M+ #16.1) shuffled into its owner's
-//! deck, Radiant on the Radiant face.
-//!
-//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
-//! written, and the release renders it (`[gen:voice]`, R1448).
+//! Cry: craft prompt in potion mode (#17, R1182000, R1563008, R1563007); transient def named by digest (R882, §2.4, R881).
+//! Death: shuffle Jazakus Prime (M+ #16.1) into deck (Catalyst, C+ #38, R1421).
+//! Voice audio renders with release (R1420, R1448).
 
 use jackioh_engine::effects::{choose_craft, chosen_recipe, craft_card, shuffle_into};
 use jackioh_engine::prelude::*;
@@ -68,14 +56,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative+ #16 Jazakus — SPEC §8.9 row 16, R79, R97, R881, R882, R1182000, R1421, R1563007, R1563008.
-//
-// BUILD M11 row M+ 16: "Cry (played): opens the crafter in potion mode, its frame a Spell tagged
-// Potion with one When cast and cost (1), its blocks the prompt's offer; a recipe over the points or
-// the lines, with another hook or a block the offer lacks, is refused with the prompt open; a valid
-// one adds a transient Potion whose script survives a JSON round trip and a replay (R882); the AI,
-// the random policy and a timeout answer with a preset (R881); Death shuffles a base Jazakus Prime into
-// your deck; radiant 4/4, the potion Radiant and the Prime Radiant".
+// Meditative+ #16 Jazakus — SPEC §8.9 row 16, R79, R97, R881, R882, R1182000, R1421, R1563007,
+// R1563008.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,7 +72,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // Spell: destroy a target Unit.
     const VANILLA: &str = "core-008"; // 4/4
 
-    /// A Potion that deals 4 to the enemy hero: 4 points, the whole budget.
     fn potion_recipe() -> Value {
         json!({
             "cost": 1, "type": "Spell", "adjective": "Pure", "noun": "Closure",
@@ -100,7 +81,6 @@ mod tests {
         })
     }
 
-    /// Jazakus played into lane 1, its craft prompt open.
     fn crafting(radiant: bool) -> Scenario {
         crate::register_all();
         let mut s = scenario(json!({
@@ -111,8 +91,6 @@ mod tests {
         s
     }
 
-    /// `crafting`, its prompt's offer widened to every block, for the tests of the frame's rules,
-    /// which the offer (R1563007) only narrows.
     fn any_block(radiant: bool) -> Scenario {
         let mut s = crafting(radiant);
         if let Some(pending) = s.state_mut().pending.as_mut() {
@@ -121,7 +99,6 @@ mod tests {
         s
     }
 
-    /// The open craft prompt's presets.
     fn presets(s: &Scenario) -> Vec<CraftRecipe> {
         s.state()
             .pending
@@ -136,7 +113,6 @@ mod tests {
             .collect()
     }
 
-    /// The crafted card in p1's hand.
     fn crafted(state: &GameState) -> CardInstance {
         state
             .players
@@ -148,7 +124,6 @@ mod tests {
             .clone()
     }
 
-    /// Refused with `reason`, the state unchanged and the prompt still open.
     fn refused(recipe: Value, reason: &str) {
         let mut s = any_block(false);
         let before = hash_state(s.state());
@@ -161,12 +136,10 @@ mod tests {
         assert_eq!(hash_state(s.state()), before, "the state is unchanged");
     }
 
-    /// `body` as p1's action.
     fn by_p1(body: Value) -> Action {
         json_as(body)
     }
 
-    /// Jazakus in lane 2 destroyed by Hit Job: the Primes its Death put in p1's deck.
     fn primes_after_death(radiant: bool) -> Vec<CardInstance> {
         crate::register_all();
         let mut s = scenario(json!({
@@ -253,16 +226,13 @@ mod tests {
 
         #[test]
         fn r1182000_r1563007_a_recipe_over_the_points_or_the_lines_with_another_hook_or_unoffered_is_refused() {
-            // Dealing 5: 5 points, over the budget of 4.
             let mut over_points = potion_recipe();
             over_points["hats"][0]["effects"][0]["n"] = json!(5);
             refused(over_points, "over the budget of 4");
-            // Nine aimed blocks: 3 + 2 + 9 × 2 = 23 lines, and over 8 effects.
             let aimed = json!({ "verb": "damageTarget", "n": 1 });
             let mut over_effects = potion_recipe();
             over_effects["hats"][0]["effects"] = json!([aimed, aimed, aimed, aimed, aimed, aimed, aimed, aimed, aimed]);
             refused(over_effects, "more than 8");
-            // A Cry instead of the When cast, or a Unit with stats.
             let mut cry = potion_recipe();
             cry["hats"][0]["hat"] = json!("cry");
             refused(cry, "exactly one hat, its When cast");

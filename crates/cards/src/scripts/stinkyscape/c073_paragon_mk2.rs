@@ -16,9 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #73 Paragon Mk2 — SPEC §8.10 row 73, BUILD M12 row S 73: "a 7/1 Charge Flying Ranged
-// Divine Shield Starship Piece; its Divine Shield takes the first hit; radiant 14/2 with Pierce
-// (R346)".
+// Stinkyscape #73 Paragon Mk2 — SPEC §8.10 row 73, BUILD M12 row S 73 (R346).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -72,8 +70,6 @@ mod tests {
             "p2": { "hand": [ANCHOR], "field": [STRATOS, MENACE], "library": filler(4) },
         }));
         // A Unit without Flying or Ranged cannot attack it (R783002); a Flying one can, and its
-        // 3-attack hit takes the Divine Shield instead: the Paragon stands undamaged, while the
-        // Stratos dies to the 7-attack strike back.
         s.expect_refused(|s| s.attack(MENACE, PARAGON));
         s.attack(STRATOS, PARAGON);
         s.expect_in_zone(PARAGON, "field");

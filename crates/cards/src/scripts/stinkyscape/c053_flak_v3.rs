@@ -3,10 +3,8 @@
 //!            Activate: Deal {damage} damage to all enemies." — damage 2
 //!   Radiant: the same text — damage 4
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
-//! R1862001: "all enemies" is the enemy hero and every enemy Unit, one hit each before one state check
 //! (`damage_all`, R59). No half damage: the hero takes the hit whole. Once a turn (R384). The number
 //! is the declared `damage` (R386), read through `param`.
 
@@ -45,10 +43,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #53 Flak v3 — SPEC §8.10 row 53, BUILD M12 row S 53: its Activate deals 2 to the enemy
-// hero and every enemy Unit; the enemy hero takes it whole; once a turn, a second use refused;
-// equipped onto a Unit, the host takes the Activate; damage reads through `param()`; radiant 0/8, 4
-// damage.
+// Stinkyscape #53 Flak v3 — SPEC §8.10 row 53, BUILD M12 row S 53.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,11 +56,9 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// The printed `damage`, and the Radiant face's, and its Radiant health.
     const DAMAGE: i32 = 2;
     const RADIANT_DAMAGE: i32 = 4;
     const RADIANT_HEALTH: i32 = 8;
-    /// One round.
     const ROUNDS: i32 = 1;
 
     fn flak_on(radiant: bool, p2: Value) -> Scenario {
@@ -76,7 +69,6 @@ mod tests {
         )
     }
 
-    /// The round hits both enemy Menaces, then the enemy hero, whole; nothing of p1's is hit.
     fn sweeps(radiant: bool, amount: i32) {
         let mut s = flak_on(radiant, json!({ "field": [MENACE, MENACE] }));
         let menaces = [1, 2].map(|lane| s.unit_at(P2, lane).id);

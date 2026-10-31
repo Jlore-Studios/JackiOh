@@ -5,8 +5,6 @@
 //!
 //! Engine: a declared target, any Unit whose Attack, read through the layers (§10.4), is the
 //! declared number or more as it is chosen (R81), and not again as it resolves (R1868000) — a
-//! `target_checks` predicate off the running face's `attack` (C #7 InfiniScepter's shape), the pick needed (R703: with no
-//! Unit to choose the Spell cannot be played). `destroy` on the chosen Unit (Indestructible
 //! survives, R46). Radiant: `destroy_adjacent_to` as well (Core #16 Hit Job's Radiant), the Units
 //! beside it in its row on its side whatever their Attack, all marked before one state check (R59).
 
@@ -57,10 +55,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #12.1 Shadow Word Death — SPEC §8.10 row S 12.1, BUILD M12 row S 12.1: "destroys a chosen Unit
-// with 5 Attack or more; a 4-Attack Unit can't be chosen; Attack an aura gives counts; an
-// Indestructible Unit survives; attack reads through `param()`; radiant its neighbours die too, a
-// 1-Attack one included" (R1867005, proven here and in S #12.2's file).
+// S #12.1 Shadow Word Death — SPEC §8.10 row S 12.1, BUILD M12 row S 12.1 (R1867005).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -80,7 +75,6 @@ mod tests {
         json!({ "attack": attack, "health": health })
     }
 
-    /// This thread's script for `def_id`, for one test: after each card its controller's opponent
     /// plays, it gains `attack` Attack (a negative one lowers it), before that card resolves (§10.5).
     fn moves_on_enemy_plays(def_id: &str, attack: i32) {
         let moves = TriggerDef::new("swd-moves", &[GameEventType::CardPlayed], move |ctx, event| match event {
@@ -124,8 +118,6 @@ mod tests {
             s.expect_in_zone(&target, "graveyard");
         }
 
-        /// R1867005, R1868000: the limit is checked with the play and not again as the Spell resolves,
-        /// so a target lowered from 5 Attack to 3 between the two still dies.
         #[test]
         fn r1867005_a_target_lowered_past_the_limit_after_the_pick_still_dies() {
             crate::register_all();
@@ -167,7 +159,6 @@ mod tests {
                 "p1": { "hand": [DEATH, FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "backrow": [WEAPONS] },
             }));
-            // +3 from the aura: 7 Attack, chosen and destroyed.
             let target = s.unit_at(P2, 1);
             s.expect_stats(&target, json!({ "attack": 7 }));
 

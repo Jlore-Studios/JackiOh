@@ -5,10 +5,8 @@
 //! End of turn (R62): a forced attack (R53, `forced_attack_random`) on one enemy, the hero or a Unit,
 //! drawn from the match rng (R60) among those it may attack under §4.2 step 2, so Flying's restriction
 //! holds (R783002); position, summoning sickness and Taunt are not read, no exertion is spent, and the
-//! target strikes back. R1878001: the Embiggened version is a Starship Piece, a keyword its text lends
 //! the card stamped embiggened (`conditionalKeywords`, as Core #56 Jilliax's Equip comes with its price,
 //! R831013), so its death fuses a copy into its owner's Dormant Starship (R1852000). The Radiant face's
-//! 16/10 is catalog data.
 
 use jackioh_engine::effects::forced_attack_random;
 use jackioh_engine::prelude::*;
@@ -35,10 +33,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #127 Jlockeed's Siege Tank — SPEC §8.10 row 127, BUILD M12 row S 127: "at its controller's
-// end of turn it attacks one random enemy it may attack, hero or Unit, Taunt not binding (R53); the
-// target strikes back; played at (4) it is a Starship Piece, its death fusing a copy into the Dormant
-// Starship (R1852000), played at (3) it is none; radiant 16/10".
+// Stinkyscape #127 Jlockeed's Siege Tank — SPEC §8.10 row 127, BUILD M12 row S 127 (R1852000,
+// R53).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -54,7 +50,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const FILLER: &str = "core-005";
 
-    /// p1's Tank (Radiant on `radiant`) stands in lane 1; p2 has a Taunt 9/9 in lane 2 and a 4/4 in lane 4.
     fn standing(radiant: bool, seed: &str) -> Scenario {
         scenario(json!({
             "seed": seed,
@@ -67,7 +62,6 @@ mod tests {
         }))
     }
 
-    /// The `attackDeclared` events `id` made, as (target, forced).
     fn attacks_by(s: &Scenario, id: &str) -> Vec<(String, bool)> {
         s.events()
             .iter()
@@ -80,7 +74,6 @@ mod tests {
             .collect()
     }
 
-    /// p1 plays the Tank from hand into lane 1, at (4) when `embiggened`; mana to spare and a Hit Job.
     fn played(radiant: bool, embiggened: bool) -> Scenario {
         let mut s = scenario(json!({
             "seed": "siege-tank",
@@ -114,18 +107,15 @@ mod tests {
             assert_eq!(made.len(), 1, "seed {seed}: {made:?}");
             assert!(made[0].1, "forced");
             targets.insert(made[0].0.clone());
-            // Not at the end of the opponent's turn.
             s.end_turn();
             assert_eq!(attacks_by(&s, &tank).len(), 1, "seed {seed}");
         }
-        // The hero and the Unit beside the Taunt are drawn too: Taunt does not bind it.
         assert!(targets.contains("hero-p2"), "{targets:?}");
         assert!(targets.len() == 3, "{targets:?}");
     }
 
     #[test]
     fn r53_no_exertion_is_spent_and_the_target_strikes_back() {
-        // Radiant, 16/10, onto the 9/9 Taunt: it dies, and its 9 back leaves the Tank at 1.
         let mut found = false;
         for seed in 0..32 {
             let mut s = standing(true, &format!("tank-menace-{seed}"));

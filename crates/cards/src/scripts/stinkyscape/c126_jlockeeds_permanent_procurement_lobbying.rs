@@ -5,13 +5,8 @@
 //!   Radiant: "… Add {cards|random Radiant Starship Piece|…} to your hand. Each costs ({discount}) less."
 //!            — cards 1, discount 1
 //!
-//! C+ #52 Jlockeed's Permanent Defense Contract's shape: `forRestOfGame` (R458) leaves a `never`-expiry
-//! player modifier on the caster, kept whatever becomes of the card, which re-enters `delayed` at each of
-//! their turn starts, before the draw (R62), with no `self` (R127). So the numbers are read through
-//! `param` as the Spell resolves and carried in the entry's data (R594). Each start of turn adds cards
-//! from S #124's Starship Piece pool (`query::starship_pieces()`, R1878000); a full hand burns them
-//! (§2.4), and the discount lands only on a card that reached the hand, never below (0) (§2.4, R65). The
-//! badge is the face as the catalog the game runs under prints it (`def_of`, R767000).
+//! forRestOfGame leaves modifier running at start of turn (C+ #52, R458, R62, R127, R594).
+//! Adds cards from Starship Piece pool (S #124, R1878000; §2.4, R65, R767000).
 
 use jackioh_engine::effects::for_rest_of_game;
 use jackioh_engine::prelude::*;
@@ -64,11 +59,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #126 Jlockeed's Permanent Procurement Lobbying — SPEC §8.10 row 126, BUILD M12 row S 126:
-// "from its caster's next turn on, every one of their turns starts with a random Starship Piece added to
-// their hand, before the draw (R458, R62), the card gone to the graveyard; the opponent's turns add none;
-// cards reads through `param()`; radiant a Radiant piece that costs (1) less, its discount read through
-// `param()` (R824000)".
+// Stinkyscape #126 Jlockeed's Permanent Procurement Lobbying — SPEC §8.10 row 126, BUILD M12 row
+// S 126 (R458, R62, R824000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -80,7 +72,6 @@ mod tests {
     const LOBBYING: &str = "stinkyscape-126";
     const FILLER: &str = "core-005";
 
-    /// p1 has played the Lobbying (Radiant on `radiant`), holding `fillers` more cards.
     fn lobbied(radiant: bool, fillers: usize) -> Scenario {
         let mut hand = vec![json!({ "def": LOBBYING, "radiant": radiant })];
         hand.extend((0..fillers).map(|_| json!(FILLER)));
@@ -97,7 +88,6 @@ mod tests {
         has_keyword(&crate::card_def(def_id).base.keywords, KeywordKind::StarshipPiece)
     }
 
-    /// The pieces the last step added to p1's hand or burned, as events.
     fn delivered(s: &Scenario) -> Vec<GameEvent> {
         s.last_events()
             .iter()
@@ -154,7 +144,6 @@ mod tests {
 
     #[test]
     fn s2_4_a_full_hand_burns_the_piece() {
-        // The Lobbying leaves the hand as it is played, and the 10 fillers fill it.
         let mut s = lobbied(false, 10);
         s.end_turn().end_turn();
         let burned = delivered(&s)

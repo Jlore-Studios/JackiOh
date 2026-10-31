@@ -51,11 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #20 Tnack Trav — SPEC §8.10 row 20, BUILD M12 row S 20: "Cry (played): a Legendary or Mythic Unit on
-// either side, not itself, chosen; this Unit has its keywords, aura, triggers and Death from then on, its
-// own stats and name kept (R1850000); a bounce ends it; no target, nothing; radiant 12/12 and the target's
-// Radiant text". The copy's reach (aura, triggers, Death, abilities) is the engine's, proven by its tests
-// (R1850000); its end by a bounce is proven here too.
+// S #20 Tnack Trav — SPEC §8.10 row 20, BUILD M12 row S 20 (R1850000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -90,7 +86,6 @@ mod tests {
         json!({ "targets": [{ "pick": "instance", "instanceId": card.id }], "zone": 1 })
     }
 
-    /// The `targets` lists p1's legal plays of Tnack Trav declare.
     fn offered(s: &Scenario) -> Vec<Vec<Selection>> {
         let trav = s.hand(P1).into_iter().find(|card| card.def_id == ID).expect("Tnack Trav in hand");
         legal_actions(s.state(), P1)
@@ -135,7 +130,6 @@ mod tests {
         assert!(plays.iter().all(Vec::is_empty), "{plays:?}");
         let mut refused = s;
         refused.expect_refused(|s| s.play(ID, pick(&golem)));
-        // Played with no target, it copies nothing from the token.
         refused.play(ID, json!({ "zone": 1 }));
         let trav = refused.unit_at(P1, 1);
         assert!(subsystems::unit_text_of(&trav).is_none());

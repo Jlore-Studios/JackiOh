@@ -8,8 +8,6 @@
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1872000: the Activate, once a turn (R384), gains one Resource rolled over every Resource the
-//! catalog holds (R1840002) into the hand of the controller of the Unit it is on, a full hand burning
-//! it (R2250000); the Radiant face's Resource is Radiant.
 
 use jackioh_engine::effects::{GainResourcesArgs, gain_resources};
 use jackioh_engine::prelude::*;
@@ -53,10 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #63 Miner v2 — SPEC §8.10 row 63, BUILD M12 row S 63: "its Activate puts one Resource into its
-// controller's hand (R2250000), by the rarity roll that replays (R1840002); into a full hand it burns
-// (R1840001's sale gone, R2250000); once a turn, a second use refused; equipped onto a Unit, the host takes
-// the Activate; radiant 0/4 and a Radiant Resource".
+// Stinkyscape #63 Miner v2 — SPEC §8.10 row 63, BUILD M12 row S 63 (R1840001, R1840002, R2250000).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -68,7 +63,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const REKNITE: &str = "stinkyscape-t-reknite"; // a Common Resource.
 
-    /// p1's Miner v2 (Radiant on `radiant`) stands in lane 1.
     fn mining(radiant: bool, seed: &str) -> Scenario {
         weapon_board(seed, json!({ "field": [{ "def": ID, "radiant": radiant }] }), json!({}))
     }
@@ -77,7 +71,6 @@ mod tests {
         json!({ "ability": "mine" })
     }
 
-    /// The Resources in p1's hand (R2250000).
     fn mined(s: &Scenario) -> Vec<CardInstance> {
         resources_in_hand_of(s.state(), P1)
     }

@@ -4,13 +4,10 @@
 //!   Radiant: "Starship Piece, Equip
 //!            Activate 3: Deal {damage} damage to all enemies, three times." — damage 4
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
-//! R1862001: "all enemies" is the enemy hero and every enemy Unit, one hit each before one state check
 //! (`damage_all`, R59), and "three times" is three such rounds, each after the last one's check, so a Unit a
 //! round destroyed is not hit again. No half damage: the hero takes each hit whole. Once a turn (R384); the
-//! Radiant face's Activate 3 is three uses a turn (R1751000, R1857003). The number is the declared `damage`
 //! (R386), read through `param`.
 
 use jackioh_engine::effects::{after_state_check, damage_all};
@@ -62,10 +59,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #61 Flak v5 — SPEC §8.10 row 61, BUILD M12 row S 61: its Activate deals 2 to the enemy
-// hero and every enemy Unit, three times, three rounds; the enemy hero takes it whole; once a turn, a second
-// use refused; equipped onto a Unit, the host takes the Activate; damage reads through `param()`;
-// radiant 0/16, 4 damage and Activate 3.
+// Stinkyscape #61 Flak v5 — SPEC §8.10 row 61, BUILD M12 row S 61.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,7 +73,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const POINTMASTER: &str = "core-020"; // (2) 7/1 First Strike.
 
-    /// The printed `damage`, and the Radiant face's, and its Radiant health.
     const DAMAGE: i32 = 2;
     const RADIANT_DAMAGE: i32 = 4;
     const RADIANT_HEALTH: i32 = 16;
@@ -92,7 +85,6 @@ mod tests {
         )
     }
 
-    /// Each round hits both enemy Menaces, then the enemy hero, whole; nothing of p1's is hit.
     fn sweeps(radiant: bool, amount: i32) {
         let mut s = flak_on(radiant, json!({ "field": [MENACE, MENACE] }));
         let menaces = [1, 2].map(|lane| s.unit_at(P2, lane).id);

@@ -3,7 +3,6 @@
 //!            Activate: Deal {damage} damage to an enemy. Deals half damage to heroes." — damage 10
 //!   Radiant: the same text — damage 20
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the Activate's target is a declared enemy Unit or the enemy hero (R81), once a turn
@@ -54,10 +53,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #60 Cannon v5 — SPEC §8.10 row 60, BUILD M12 row S 60: its Activate deals 10 to a chosen
-// enemy Unit; on the enemy hero 5 (half, rounded down, R1841001); once a turn, a second use refused;
-// equipped onto a Unit, the host takes the Activate; damage reads through `param()`; radiant 0/16, 20
-// damage.
+// Stinkyscape #60 Cannon v5 — SPEC §8.10 row 60, BUILD M12 row S 60 (R1841001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,11 +66,9 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// The printed `damage`, and the Radiant face's, and its Radiant health.
     const DAMAGE: i32 = 10;
     const RADIANT_DAMAGE: i32 = 20;
     const RADIANT_HEALTH: i32 = 16;
-    /// The Armor on the target: it has no Pierce, so the Armor takes its part.
     const ARMOR: i32 = 3;
 
     fn at(target: &str) -> Value {
@@ -93,7 +87,6 @@ mod tests {
         )
     }
 
-    /// One hit on an Armored Menace between two others, the Armor taking its part, and none beside it.
     fn hits_the_unit(radiant: bool, amount: i32) {
         let mut s = cannon_on(radiant, json!({ "field": [MENACE, MENACE, MENACE] }));
         let target = s.unit_at(P2, 2).id;
@@ -108,7 +101,6 @@ mod tests {
         );
     }
 
-    /// R1841001: the hit on the hero is halved, rounded down.
     fn halves_on_the_hero(radiant: bool, amount: i32) {
         let halved = amount / HALF_DAMAGE_TO_HEROES_DIVISOR;
         let mut s = cannon_on(radiant, json!({}));

@@ -2,17 +2,9 @@
 //!   Base:    "{chance}% chance to reveal when an enemy Unit attacks: Summon {disruptors|Warp Disruptor|Warp
 //!            Disruptors}, then {phalanxes|Phalanx|Phalanxes}. The attack goes on."
 //!   Radiant: the same, every summon Radiant.
-//! Engine: set face-down, it answers an attack an enemy Unit declares (never a forced one, R121;
-//! R1875002) with a chance to reveal (`revealChance`, R1849009): the match rng rolls once against the
-//! declared `chance` out of 100, its controller's Luck rolling again (R987), and a miss leaves it set
-//! and silent (R33). A hit fires it in §4.2 step 4's trap window, before the combat: it summons
-//! {disruptors} S #23 Warp Disruptors into its controller's open backrow zones, then {phalanxes} S #82
-//! Phalanxes into open unit zones (R64), a summon that finds no zone doing nothing. A summon that names
-//! its card fires that card's Cry (R411): each Phalanx that arrived then runs its Cry for Gatinsir's
-//! controller, in the order they arrived (R2176000; a Warp Disruptor prints none). The attack then goes
-//! on as declared (ST9's AMBUSH, R1875002). The Warp Disruptors' aura acts at once.
-//! Radiant: all of them Radiant (Phalanx 8/8). Tunes: chance 30 ↑ (step 10, max 100), disruptors 2 ↑,
-//! phalanxes 2 ↑.
+//! Reveal chance on enemy unit attack (R121, R1875002, R1849009, R987, R33, §4.2 step 4).
+//! Summons Warp Disruptors (S #23) and Phalanxes (S #82, R64, R411, R2176000). Attack continues (ST9 AMBUSH).
+//! Radiant summons Radiant.
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -97,12 +89,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #22 Gatinsir — SPEC §8.10 row 22, BUILD M12 row S 22: "set face-down, an enemy attack reveals it on a
-// roll under 30 and not on one above (a seed of each); on a miss it stays set and no event is seen;
-// revealed, two Warp Disruptors and then two Phalanxes arrive for its controller before the combat,
-// which goes on to its declared target; with one open unit zone one Phalanx arrives; chance, disruptors
-// and phalanxes read through `param()`; radiant all four are Radiant (Phalanx 8/8)". Each Phalanx it
-// summons runs its Cry (R411, R2176000), and a forced attack rolls nothing (R1875002).
+// S #22 Gatinsir — SPEC §8.10 row 22, BUILD M12 row S 22 (R1875002, R2176000, R411).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -111,15 +98,10 @@ mod tests {
     use super::{ID, PHALANX, WARP_DISRUPTOR};
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    /// Core #9 Moths to the Flame: "Start of turn: Every enemy Unit attacks this", a forced attack.
     const MOTHS: &str = "core-009";
-    /// S #82 Phalanx's Cry: "Discover 2 … Weapons".
     const PHALANX_PICKS: usize = 2;
-    /// Gatinsir's printed chance, out of `PERCENT`.
     const CHANCE: i32 = 30;
 
-    /// p1 has a Vanilla in unit zone 1 and attacks; p2 has Gatinsir (`radiant` its face) set in backrow
-    /// zone 5 and `p2_field` in its unit zones. Turn 9, no turn ending by itself.
     fn trapped(seed: &str, radiant: bool, p2_field: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
@@ -136,7 +118,6 @@ mod tests {
         s
     }
 
-    /// Sets the rng so its next draw against `percent` hits or misses as `hit` says.
     fn roll_next(s: &mut Scenario, percent: i32, hit: bool) {
         let seed = s.state().seed.clone();
         let chance = f64::from(percent) / f64::from(PERCENT);
@@ -159,7 +140,6 @@ mod tests {
             .collect()
     }
 
-    /// The order the arrivals were summoned in.
     fn summoned_defs(s: &Scenario) -> Vec<String> {
         s.last_events()
             .iter()
@@ -170,8 +150,6 @@ mod tests {
             .collect()
     }
 
-    /// R411, R2176000: answers each Discover the Phalanxes' Crys open for Gatinsir's controller with the
-    /// first card offered, and returns how many there were.
     fn answer_phalanx_discovers(s: &mut Scenario) -> usize {
         let mut asked = 0;
         while let Some(pending) = s.state().pending.clone() {
@@ -213,7 +191,6 @@ mod tests {
                 vec![(PHALANX.to_string(), false), (PHALANX.to_string(), false)]
             );
             assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
-            // Spent once its summons and their Crys have resolved.
             s.expect_in_zone(ID, "graveyard");
             // R1875002: the attack goes on to its declared target, with the two Disruptors' +2 each.
             s.expect_health(P2, HERO_HEALTH - (4 + 2 + 2));
@@ -249,7 +226,6 @@ mod tests {
             roll_next(&mut s, CHANCE, true);
             let attacker = s.unit_at(P1, 1);
             s.attack(&attacker, "hero");
-            // The first Phalanx's Cry asks; the second Phalanx leaves the field before its own runs.
             assert!(s.state().pending.is_some(), "the first Phalanx's Discover");
             let lanes: Vec<i32> = (1..=5)
                 .filter(|lane| s.unit(P2, *lane).is_some_and(|card| card.def_id == PHALANX))
@@ -258,14 +234,12 @@ mod tests {
             let gone = s.unit_at(P2, lanes[1]).id;
             let pile = s.state_mut().players[P2].units[(lanes[1] - 1) as usize].take().expect("its pile");
             s.state_mut().players[P2].graveyard.extend(pile);
-            // Only the first Phalanx's two picks are asked; the one that left runs nothing.
             assert_eq!(answer_phalanx_discovers(&mut s), PHALANX_PICKS);
             s.expect_in_zone(gone.as_str(), "graveyard");
         }
 
         #[test]
         fn r1875002_a_forced_attack_rolls_nothing() {
-            // Moths to the Flame on Gatinsir's side makes p1's Vanilla attack it at p2's start of turn: an
             // enemy Unit's attack that no one declared (R121).
             let mut s = trapped("gatinsir-forced", false, json!([{ "def": MOTHS, "lane": 2 }]));
             let cursor = s.state().rng_cursor;
@@ -327,7 +301,6 @@ mod tests {
             assert_eq!(crate::upgrade_number(&mut s, &trap, "chance"), CHANCE + 10);
             assert_eq!(crate::upgrade_number(&mut s, &trap, "disruptors"), 3);
             assert_eq!(crate::degrade_number(&mut s, &trap, "phalanxes"), 1);
-            // A roll that misses 30 but hits 40.
             let seed = s.state().seed.clone();
             let cursor = cursor_where(&seed, |cursor| {
                 let roll = Rng::new(&seed, cursor).next();
@@ -364,7 +337,6 @@ mod tests {
                 vec![(PHALANX.to_string(), true), (PHALANX.to_string(), true)]
             );
             let phalanx = s.unit_at(P2, 1);
-            // A Phalanx 8/8, with the two Disruptors' +2 each, before its Cry arms it.
             s.expect_stats(&phalanx, json!({ "attack": 8 + 2 + 2, "health": 8 }));
             assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
         }

@@ -111,10 +111,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #24 Warp Disruptor II — SPEC §8.10 row 24, BUILD M12 row S 24: "as S 23 with +3 Attack and Brittle 5;
-// after the opponent summons a Unit, each Unit of its controller's that can attack it does, in lane
-// order, stopping once it is gone; attack reads through `param()`; radiant First Strike for its
-// controller's Units".
+// S #24 Warp Disruptor II — SPEC §8.10 row 24, BUILD M12 row S 24.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -128,11 +125,8 @@ mod tests {
     const GENN: &str = "classic-086"; // (4) 14/14.
     const GREASER: &str = "meditative-100"; // (2) 7/7.
     const ATTACK: i32 = 3;
-    /// "that unit cannot be in Defense Position" (R1849006).
     const NO_DEFENSE: &str = "cannot be in Defense Position";
 
-    /// p1, active with 10 mana, plays Warp Disruptor II (`radiant` its face) into backrow zone 1 with
-    /// `mine` on its unit zones; p2 has `hand`. No turn ends by itself.
     fn played(radiant: bool, mine: Value, hand: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": "warp-disruptor-ii",
@@ -151,7 +145,6 @@ mod tests {
         s
     }
 
-    /// The forced attackers among the last events, in order.
     fn forced(s: &Scenario) -> Vec<String> {
         s.last_events()
             .iter()
@@ -166,7 +159,6 @@ mod tests {
             .collect()
     }
 
-    /// p2's turn, with 10 mana.
     fn their_turn(s: &mut Scenario) {
         s.end_turn();
         s.state_mut().players[P2].mana.current = 10;
@@ -182,7 +174,6 @@ mod tests {
             s.expect_refused_with(|s| s.switch_position(&mine), NO_DEFENSE);
             assert_eq!(s.stats(mine.id.as_str()).attack, 4 + ATTACK);
             their_turn(&mut s);
-            // The Moths survives the Vanilla's forced attack, 7 of its 14.
             s.play(MOTHS, json!({ "zone": 3 }));
             s.expect_in_zone(MOTHS, "field");
             assert_eq!(s.stats(MOTHS).attack, 1 + ATTACK);
@@ -200,7 +191,6 @@ mod tests {
             let cursor = s.state().rng_cursor;
             s.play(GENN, json!({ "zone": 1 }));
             assert_eq!(forced(&s), mine);
-            // Three hits of 1 + 3 on Genn's 14 health.
             s.expect_stats(GENN, json!({ "health": 14 - 3 * (1 + ATTACK) }));
             assert_eq!(s.state().rng_cursor, cursor, "no draw");
         }
@@ -216,7 +206,6 @@ mod tests {
             their_turn(&mut s);
             let theirs = s.hand(P2)[0].id.clone();
             s.play(theirs.as_str(), json!({ "zone": 1 }));
-            // The first 7-Attack hit kills the arriving 4/4: the Moths never attacks.
             assert_eq!(forced(&s), vec![first]);
         }
 
@@ -251,7 +240,6 @@ mod tests {
             their_turn(&mut s);
             s.play(VANILLA, json!({ "zone": 1 }));
             assert!(!unit_has(s.state(), s.card(VANILLA), KeywordKind::FirstStrike));
-            // 10 First Strike damage kills the 7/4 before it strikes back.
             s.expect_in_zone(VANILLA, "graveyard");
             s.expect_stats(mine.as_str(), json!({ "health": 7 }));
         }

@@ -66,10 +66,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #13 Living Health Potion — SPEC §8.9 row 13, BUILD M11 row M+ 13: "Activate: tributed
-// first, then heals your hero 5 (no cap) and each of your Units 5 (up to its max health); enemy
-// characters untouched; heal reads through `param()`; radiant 6/6, kept on the field and healed
-// with the rest, once a turn".
+// M+ #13 Living Health Potion — SPEC §8.9 row 13, BUILD M11 row M+ 13.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -80,9 +77,7 @@ mod tests {
 
     /// (1) Spell. A spare that keeps the turn alive (§2.5).
     const FILLER: &str = "core-010";
-    /// (3) 9/9 Taunt.
     const BODY: &str = "core-019";
-    /// Library filler.
     const X: &str = "core-020";
 
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {
@@ -114,10 +109,8 @@ mod tests {
             json!({}),
         );
         activate(ID, &mut s);
-        // The Tribute went first: the potion is gone and healed nothing of itself.
         s.expect_in_zone(ID, "graveyard");
         s.expect_health(P1, 25);
-        // A 9/9 at 3 heals to 8; one at 7 heals to its max of 9.
         let first = s.unit(P1, 2).expect("the first body");
         let second = s.unit(P1, 3).expect("the second body");
         assert_eq!(9 - first.damage, 8);
@@ -177,7 +170,6 @@ mod tests {
         );
         activate(ID, &mut s);
         s.expect_in_zone(ID, "field");
-        // It stayed, so it healed itself with the rest: its 2 damage is gone.
         assert_eq!(damage_of(&s, ID), 0);
         s.expect_health(P1, 25);
         s.expect_refused(|s| s.activate(ID, json!({})));

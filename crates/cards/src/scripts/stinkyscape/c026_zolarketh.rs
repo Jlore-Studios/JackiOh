@@ -4,13 +4,9 @@
 //!            summon a random Starship Piece, or Activate your Universities."
 //!   Radiant: "Cry: Summon a Radiant University. It can't use its own Activate. / Activate: Summon a
 //!            random Radiant Starship Piece, then Activate your Universities."
-//! Engine: Cry (R1): a Radiant M #97.6 University summoned (R64), whose own Activate is then refused
-//! (`refuse_own_activate`, R1876000): no zone is Locked, and a full unit row summons nothing. Activate
-//! (R384, once a turn): the base face declares two modes (R81): a random non-token Starship Piece Unit
-//! summoned (`query::starship_pieces()`, R1878000, narrowed to Units, R380), or each University of its
-//! controller's acting on the field, in board order, runs its Activate's effect (Buff each of its other
-//! permanents N times) as an ability of this card, spending none of its uses and the refused one
-//! included (`run_activation`, R1876001). The Radiant face does both in order, the piece Radiant.
+//! Cry (R1): summons Radiant University (M #97.6, R64, refuse_own_activate, R1876000).
+//! Activate (R384, R81): summons random Starship Piece (R1878000, R380) or runs University activation (run_activation, R1876001).
+//! Radiant does both in order.
 
 use jackioh_engine::prelude::*;
 
@@ -133,13 +129,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #26 ZolarKeth — SPEC §8.10 row 26, BUILD M12 row S 26: "Cry (played): a Radiant University summoned,
-// its own Activate refused; Activate mode 1: a random Starship Piece summoned; mode 2: each University of
-// yours buffs your other permanents as its Activate does, using none of its uses; radiant 4/18, both
-// modes in order, the piece Radiant".
-//
-// A Buff is counted by the `upgraded` events naming each card. Every scenario keeps a card in each hand
-// and spares in the libraries, so R82 does not end the turn.
+// S #26 ZolarKeth — SPEC §8.10 row 26, BUILD M12 row S 26 (R82).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -151,7 +141,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
-    /// p1 holds ZolarKeth (`radiant` its face) with 10 mana and has `field` on the field.
     fn board(radiant: bool, field: Value) -> Scenario {
         let mut s = scenario(json!({
             "p1": {
@@ -173,7 +162,6 @@ mod tests {
             .expect("a University")
     }
 
-    /// The Buffs the last step put on `card`.
     fn buffs(s: &Scenario, card: &CardInstance) -> usize {
         s.last_events()
             .iter()
@@ -228,10 +216,8 @@ mod tests {
         s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
         let free = s.unit_at(P1, 4);
         let vanilla = s.unit_at(P1, 5);
-        // Both Universities ran: the Radiant one's 4, then the free one's 2 or more (the Radiant one's
         // Buffs may have raised its `times`, R386).
         assert!(buffs(&s, &vanilla) >= 6, "{}", buffs(&s, &vanilla));
-        // Its own use is still there to spend.
         s.activate(&free, json!({}));
         assert!(buffs(&s, &vanilla) >= 2);
     }
@@ -256,7 +242,6 @@ mod tests {
         let pieces = pieces(&s);
         assert_eq!(pieces.len(), 1);
         assert!(pieces[0].radiant);
-        // The piece arrived first, so the University Buffs it too.
         assert_eq!(buffs(&s, &pieces[0]), 4);
     }
 }

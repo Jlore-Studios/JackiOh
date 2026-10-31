@@ -9,7 +9,6 @@
 //! Defense Position (§4.1). Activate (§6.2, R384), once a turn: its controller's hero takes `selfDamage`
 //! (§4.4), then a Sacrifice of it (§6.3), a death, so its Death runs: `gain_resources` of `resources`
 //! random Resources into its controller's hand (R1840000, R1840002). Any other death pays too; an exile
-//! or a Bounce nothing. Radiant: the Activate is the Sacrifice alone, and the Resources are Radiant.
 //! The numbers are declared (R386), `selfDamage` on the base face only (R1431).
 
 use jackioh_engine::effects::{damage, gain_resources, sacrifice};
@@ -75,11 +74,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 170 Medium Asteroid — SPEC §8.10 row 170, BUILD M12 row S 170: "its Activate deals 3 damage to its
-// controller's hero, then tributes it, and its Death gains 2 random Stinkyscape Resources into the hand;
-// destroyed in combat or by an effect it pays the same; it never attacks or switches to Defense;
-// resources and selfDamage read through `param()`; radiant 0/12, the Activate dealing no damage, Radiant
-// Resources".
+// S 170 Medium Asteroid — SPEC §8.10 row 170, BUILD M12 row S 170.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

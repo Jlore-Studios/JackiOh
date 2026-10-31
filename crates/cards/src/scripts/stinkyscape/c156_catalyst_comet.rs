@@ -5,10 +5,8 @@
 //! Engine: one pick from the match rng (R60) among the Catalyst cards of the sets that ship
 //! (`add_random_from_catalog` with the tag, non-token cards, R380: C+ #38, C+ #46, M #45, M #49,
 //! M #91 and M+ #16, S #147 once the set ships), a full hand burning it (§2.4). Then the Comet
-//! itself, once it has resolved, into its owner's deck at a random position instead of staying in
 //! the graveyard (`shuffle_card_into` on the hook's own card, C #30 Recycle's verb, R80, R316: a
 //! full deck leaves it in the graveyard), the moved instance keeping its Radiant flag (R78).
-//! Radiant: the card Radiant; the Comet goes back as it is, Radiant.
 
 use jackioh_engine::effects::{add_random_from_catalog, shuffle_card_into};
 use jackioh_engine::prelude::*;
@@ -42,10 +40,7 @@ fn comet(radiant: bool) -> Script {
     }
 }
 
-// S #156 Catalyst Comet — SPEC §8.10 row S 156, BUILD M12 row S 156: "adds one Catalyst card (C+
-// 38, C+ 46, M 45, M 49, M 91 or M+ 16, each seen over the seeds) and the Comet is in its caster's
-// deck afterwards, not the graveyard; a full deck leaves it in the graveyard; radiant the card is
-// Radiant and the Comet goes back Radiant" (R1867010).
+// S #156 Catalyst Comet — SPEC §8.10 row S 156, BUILD M12 row S 156 (R1867010).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -57,7 +52,6 @@ mod tests {
     const COMET: &str = "stinkyscape-156";
     const FILLER: &str = "core-005";
 
-    /// The shipped Catalyst cards: the Comet's pool, the set's own #147 IN33DH3 among them since its
     /// release (#1884).
     const POOL: [&str; 7] = [
         "classicplus-038",
@@ -69,7 +63,6 @@ mod tests {
         "stinkyscape-147",
     ];
 
-    /// A play of one Comet over `seed`; the card it added.
     fn added_card(seed: &str, radiant: bool) -> CardInstance {
         crate::register_all();
         let mut s = scenario(json!({
@@ -112,7 +105,6 @@ mod tests {
             s.expect_in_zone(&id, "library");
             assert_eq!(s.card(&id).def_id, COMET);
             assert!(!s.card(&id).radiant);
-            // And the added card is in hand.
             assert_eq!(s.hand(P1).len(), 2);
         }
 

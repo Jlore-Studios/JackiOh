@@ -6,10 +6,7 @@
 //!
 //! Tribute 2 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's printed
 //! Tribute (R366). R1862002: the Cry is `equip_picks` (R1841002), 2 Discovers of three in turn from the
-//! Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them whether or not the
 //! set ships (R1420, R1857000). Each pick is a fresh copy, not made Radiant, fused into this with its Activate
-//! (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the face its kept host wears (R77),
-//! so a Radiant Prototype wields its Weapons' Radiant faces. Starship Piece is a catalog keyword the engine
 //! plays: this one's death fuses a copy into its owner's Dormant Starship (R1852000), and the Weapons it
 //! takes leave it a piece (R1852001).
 
@@ -48,9 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #85 Prototype-X1 — SPEC §8.10 row 85, BUILD M12 row S 85: Tribute 2 (R101); its Cry asks
-// 2 Discovers in turn, each three Epic Weapons it does not hold, and fuses each pick into it, its
-// Activate usable that turn (R1841002, R1751000); radiant 12/12 and Legendary Weapons.
+// Stinkyscape #85 Prototype-X1 — SPEC §8.10 row 85, BUILD M12 row S 85 (R101, R1751000, R1841002).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -64,7 +59,6 @@ mod tests {
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// The Epic and the Legendary Weapons (§8.10 row 85).
     const EPIC: [&str; 6] = [
         "stinkyscape-054",
         "stinkyscape-055",
@@ -80,9 +74,6 @@ mod tests {
         "stinkyscape-061",
     ];
 
-    /// Plays it with a p2 Vanilla on the field, two of p1's Vanillas its Tribute, and answers each Discover
-    /// with the first card offered: each a Discover of three `pool` Weapons it does not hold yet (as many as
-    /// are left), each pick adding the Weapon's health. Returns the scenario and the host's id.
     fn arms(radiant: bool, pool: &[&str]) -> (Scenario, String) {
         let mut s = weapon_board(
             "s085",
@@ -119,7 +110,6 @@ mod tests {
             let before = s.stats(host.as_str()).health;
             s.answer(json!(offered[0]));
             // R77: the fusion wears the face its kept host wears, so a Radiant host takes its picks'
-            // Radiant stats, though each goes in unflagged.
             let def = crate::card_def(&offered[0]);
             let gained = if radiant {
                 def.radiant.health
@@ -134,7 +124,6 @@ mod tests {
         (s, host)
     }
 
-    /// The host takes its Weapons' Activates that turn, and is still a Starship Piece (R1852001).
     fn armed(s: &Scenario, host: &str) {
         let card = s.card(host).clone();
         assert!(!activate_actions_for(s.state(), P1, &card).is_empty());

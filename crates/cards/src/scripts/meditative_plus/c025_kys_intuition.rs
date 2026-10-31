@@ -51,10 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #25 KY's Intuition — SPEC §8.9 row 25, BUILD M11 row M+ 25: "offers 3 distinct non-token cards'
-// code blocks, the chooser's view holding no id, name or face of them and the opponent's nothing (rule
-// 7); the pick goes to the hand Radiant; a full hand burns it; the AI and a timeout answer it; radiant
-// the card costs (0)". The AI's own answer is proved in `crates/ai/tests/ai/outside_data.rs`.
+// M+ #25 KY's Intuition — SPEC §8.9 row 25, BUILD M11 row M+ 25.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -66,8 +63,6 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
 
-    /// p1 holds KY's Intuition (Radiant if `radiant`) and `fillers` fillers; both sides keep cards in
-    /// hand so no turn auto-ends.
     fn holding(seed: &str, radiant: bool, fillers: usize) -> Scenario {
         crate::register_all();
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
@@ -79,14 +74,12 @@ mod tests {
         }))
     }
 
-    /// `holding`, KY's Intuition cast: its Discover open.
     fn casting(seed: &str, radiant: bool, fillers: usize) -> Scenario {
         let mut s = holding(seed, radiant, fillers);
         s.play(ID, json!({}));
         s
     }
 
-    /// The cards behind the open Discover's places, in order.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.as_ref().expect("the Discover is open");
         pending.resume.data[CODE_OFFERS_KEY]
@@ -97,7 +90,6 @@ mod tests {
             .collect()
     }
 
-    /// The cards p1 holds but the fillers.
     fn added(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.def_id != FILLER).collect()
     }
@@ -225,9 +217,6 @@ mod tests {
         }
 
         // R1329000: the code blocks stay the build's under every fold, since no final hash holds them.
-        // Two tables of the same cards, the second with every code rewritten, offer the same cards;
-        // the open prompt's labels differ, but a game that answers it and then ends, or ends with it
-        // open, ends on one hash under either table.
         #[test]
         fn r1329000_a_code_discover_s_labels_never_reach_a_final_hash() {
             let rewritten: Vec<(String, String)> = crate::CODE_BLOCKS

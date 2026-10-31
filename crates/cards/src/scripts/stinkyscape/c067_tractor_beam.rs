@@ -3,11 +3,9 @@
 //!   Radiant: "Starship Piece, Equip\nStart of turn: Gain a random Radiant Stinkyscape Resource." (0/4)
 //!
 //! Starship Piece and Equip are printed keywords, the engine's: its death fuses a copy into its owner's
-//! Dormant Starship (R1852000), and played onto one of its controller's Units it fuses into that Unit,
 //! the host taking its Start of turn line and staying no piece (R1086, R1852001). Start of turn (R62):
 //! `gain_resources` of one random Resource into its controller's hand (R1840000, R1840002's roll), a
 //! ninth sold at once (R1840001); the first gain opens the Marketplace (R1853000). Radiant: a Radiant
-//! Resource.
 
 use jackioh_engine::effects::gain_resources;
 use jackioh_engine::prelude::*;
@@ -35,10 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 67 Tractor Beam — SPEC §8.10 row 67, BUILD M12 row S 67: "at its controller's start of turn gains
-// one random Resource into the hand (the rarity table over the seeds), none at the opponent's; equipped
-// onto a Unit, that Unit gains it and is no piece; it dies and fuses into a Dormant Starship (R1852000);
-// radiant 0/4, Radiant Resources".
+// S 67 Tractor Beam — SPEC §8.10 row 67, BUILD M12 row S 67 (R1852000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -74,13 +74,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #37 Kwzka — SPEC §8.10 row 37, BUILD M12 row S 37: "an enemy Unit played at a cost below its own is
-// Allured and stolen at the start of your next turn (R963), one at its cost or above not, a summoned one
-// not; its Death removes every Allure on the field, so nothing marked is stolen; radiant 12/18 and Divine
-// Shield".
-//
-// p2 plays into Kwzka's field; every case keeps cards in both hands and libraries, so no turn ends by
-// itself (R82), and `end_turn()` hands the turn to p1, whose start of turn resolves the steal (R62).
+// S #37 Kwzka — SPEC §8.10 row 37, BUILD M12 row S 37 (R62, R82, R963).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::ALLURE_MARK;
@@ -97,8 +91,6 @@ mod tests {
     const FANATIC: &str = "core-050"; // (2) 1/1: Cry: Allure an enemy permanent.
     const FILLER: &str = "core-005";
 
-    /// p1 has Kwzka (`radiant` its face) in lane 1 and a Vanilla in lane 2; p2 is to play, holding
-    /// `p2_hand` with 10 mana and `p2_field` on the field.
     fn board(radiant: bool, p2_hand: Value, p2_field: Value) -> Scenario {
         let mut s = scenario(json!({
             "active": "p2",
@@ -160,8 +152,6 @@ mod tests {
 
     #[test]
     fn r1876002_its_death_removes_every_allure_on_the_field_so_nothing_is_stolen() {
-        // p2's Fanatic (2) is Allured by Kwzka and itself Allures p1's Vanilla; p2's Menace then kills
-        // Kwzka (9 damage into 9 health), and both Allures come off.
         let mut s = board(false, json!([FANATIC, FILLER]), json!([{ "def": MENACE, "lane": 5 }]));
         let vanilla = s.unit_at(P1, 2);
         s.play(FANATIC, json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));

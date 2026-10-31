@@ -6,7 +6,6 @@
 //! Falcon, in the order printed (S #10 Otherworldly Endurance's pattern), each a new card on its own face at
 //! its own price, a full hand burning what does not fit, in that order (§2.4). Radiant: each `radiant: true`
 //! (§5.2, R1880000). The cards are named, so they reach the hand whether or not the set ships (R1420).
-//! Declares no numbers.
 
 use jackioh_engine::effects::add_to_hand;
 use jackioh_engine::prelude::*;
@@ -39,9 +38,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #160 Golden Accord — SPEC §8.10 row S 160, BUILD M12 row S 160: "adds the 4 named cards in order,
-// each on its base face at its printed cost; a hand with room for fewer keeps the first and burns the
-// rest; radiant all of them Radiant".
+// S #160 Golden Accord — SPEC §8.10 row S 160, BUILD M12 row S 160.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -6,7 +6,6 @@
 //! from a defender without Ranged, and its attack splashes the Units beside its target, which never
 //! strike back. R1878001: the Embiggened version is a Starship Piece, lent by its text to the card stamped
 //! embiggened, as S #127's, so its death fuses a copy into its owner's Dormant Starship (R1852000). The
-//! Radiant face's 8/2 is catalog data.
 
 use jackioh_engine::prelude::*;
 
@@ -29,9 +28,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #128 Jlockeed's Yamato Cannon — SPEC §8.10 row 128, BUILD M12 row S 128: "a 4/1 Ranged Cleave
-// Unit: its attack hits the Units beside its target too and it takes no strike back from a defender
-// without Ranged (R783000); played at (3) it is a Starship Piece, at (2) none; radiant 8/2".
+// Stinkyscape #128 Jlockeed's Yamato Cannon — SPEC §8.10 row 128, BUILD M12 row S 128 (R783000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -46,7 +43,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const FILLER: &str = "core-005";
 
-    /// p1 plays the Cannon into lane 3, at (3) when `embiggened`; p2 has three 4/4s in lanes 2 to 4.
     fn played(radiant: bool, embiggened: bool) -> Scenario {
         let mut s = scenario(json!({
             "seed": "yamato",
@@ -75,7 +71,6 @@ mod tests {
 
     #[test]
     fn r783000_r63_its_attack_cleaves_the_units_beside_its_target_and_takes_no_strike_back() {
-        // A 4/4 target and, beside it, two 4/4s at 2 health: its 4 (8 Radiant) kills all three.
         for radiant in [false, true] {
             let mut s = scenario(json!({
                 "seed": "yamato-attack",
@@ -93,7 +88,6 @@ mod tests {
             let cannon = s.unit(P1, 3).expect("the Cannon").id;
             let [left, middle, right] = [2, 3, 4].map(|lane| s.unit(P2, lane).expect("a Vanilla").id);
             s.attack(cannon.as_str(), middle.as_str());
-            // The target takes the hit, its neighbours the splash, and the 4 back never lands.
             s.expect_in_zone(middle.as_str(), "graveyard");
             s.expect_in_zone(left.as_str(), "graveyard");
             s.expect_in_zone(right.as_str(), "graveyard");

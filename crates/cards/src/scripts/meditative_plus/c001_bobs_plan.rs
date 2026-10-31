@@ -6,19 +6,9 @@
 //!            for Reach the Summit; for Aestheticize the Game, Discover a Radiant Spa Day, Garage Sale or
 //!            Leg Day."
 //!
-//! THE PICK is one draw of the match rng over the Wincon pool (`{ tags: [Wincon] }`, the non-token
-//! cards of the sets that ship, R380, in catalog order, so it replays, R60; never this card, R387),
-//! through `pick_generated`, so R673's Glitch odds apply to it as to any card generated into a hand.
-//! THE PLAN is the AI generated card `WINCON_PLANS` names for the card picked (R1185000, the brief's
-//! MP5 D3), added after it: M+ #1.1 Base Camp for M #8 Reach the Summit. M #20 Aestheticize the Game
-//! has three lines to win on, so since #1563 its plan is a Discover of one card per line (R1563003): M+
-//! #1.2 Spa Day (the hero's health), #1.3 Garage Sale (the graveyard) and #1.4 Leg Day (the Units'
-//! totals), the chosen one added. A card with no plan (a later set's Wincon card, or a Glitch) is added
-//! alone. The Radiant face adds both Radiant. A full hand burns what does not fit, in that order (§2.4).
-//! Quickdraw (R640) is a static flag beside the tag.
-//!
-//! `script_v0_4_0f` keeps the card as it ran through v0.4.0f, Spa Day M #20's only plan, for its
-//! replays (R767000).
+//! Draws Wincon pool card (R380, R60, R387, R673); adds plan from WINCON_PLANS (R1185000):
+//! Base Camp for M #8; Discover Spa Day, Garage Sale or Leg Day for M #20 (#1563, R1563003; M+ #1.1, #1.2, #1.3, #1.4; §2.4).
+//! Quickdraw (R640). Keeps script_v0_4_0f for replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -126,11 +116,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// Meditative+ #1 Bob's Plan — SPEC §8.9 row 1, BUILD M11 row M+ 1: "Quickdraw (R640); adds one
-// Wincon card from the shipped pool, M 8 or M 20, each seen over the seeds, by one rng pick that
-// replays; after M 8 a base Base Camp (M+ 1.1); after M 20 a Discover of Spa Day, Garage Sale and Leg
-// Day (M+ 1.2 to 1.4), the chosen one added (R1563003); a full hand burns the helper, then the card; a
-// Wincon card the plan table does not name (a fixture) is added alone; radiant both are Radiant".
+// Meditative+ #1 Bob's Plan — SPEC §8.9 row 1, BUILD M11 row M+ 1 (R1563003, R640).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,12 +143,10 @@ mod tests {
         }))
     }
 
-    /// The cards the play added to p1's hand, in hand order.
     fn added(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.def_id != FILLER).collect()
     }
 
-    /// The plans an open Discover offers, by option, or none with no Discover open.
     fn offered_plans(s: &Scenario) -> Vec<String> {
         s.state()
             .pending
@@ -180,14 +164,12 @@ mod tests {
             .unwrap_or_default()
     }
 
-    /// Answers an open plan Discover with `plan`; does nothing with none open.
     fn answer_plan(s: &mut Scenario, plan: &str) {
         if s.state().pending.is_some() {
             s.answer(json!([{ "pick": "mode", "option": plan }]));
         }
     }
 
-    /// The first seed whose pick is `wincon`.
     fn casting_for(wincon: &str, radiant: bool, hand_extra: usize) -> Scenario {
         for n in 0..SEED_SEARCH_BOUND {
             let seed = format!("bobs-plan-for-{n}");
@@ -274,19 +256,16 @@ mod tests {
 
         #[test]
         fn r1185000_a_full_hand_burns_the_plan_then_the_card() {
-            // Nine fillers beside it: after the play, nine in hand, one free slot.
             let mut s = casting_for(SUMMIT, false, 9);
             s.play(ID, json!({}));
             let kept = added(&s);
             assert_eq!(def_ids(&kept), vec![SUMMIT], "the Wincon card fits, its plan burns");
             assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == BASE_CAMP));
-            // With no slot at all, both burn, the card first.
             let mut s = casting_for(SUMMIT, false, 10);
             s.play(ID, json!({}));
             assert!(added(&s).is_empty());
             let burned = def_ids(&s.pile(P1, "graveyard"));
             assert_eq!(burned.len(), 3, "the card, its plan and Bob's Plan itself: {burned:?}");
-            // A Discovered plan burns the same way.
             let mut s = casting_for(AESTHETICIZE, false, 9);
             s.play(ID, json!({}));
             s.answer(json!([{ "pick": "mode", "option": LEG_DAY }]));
@@ -297,7 +276,6 @@ mod tests {
         #[test]
         fn r1185000_a_wincon_card_the_plan_table_does_not_name_is_added_alone() {
             crate::register_all();
-            // A fixture Wincon card of the Core set, and a catalog whose only Wincon card it is.
             let face = json!({ "keywords": [], "text": "fx-wincon" });
             let wincon: CardDef = json_as(json!({
                 "id": "fx-wincon", "index": "fx-wincon", "name": "fx-wincon", "set": "Core",

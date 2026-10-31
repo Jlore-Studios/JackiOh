@@ -5,15 +5,9 @@
 //!             Lifesteal; 30, Indestructible."
 //!   Radiant: the same text, on a 2X/2X.
 //!
-//! Only M+ #20 KY's Competition makes one, summoned with X its right answers (`summon`'s `x`). Its
-//! stats are its faces' `xStats`, 1/1 and 2/2 times X (B2.7, as C+ #69 Buff Billy's), so the Radiant
-//! face's 2X/2X is data. Its keywords are a `conditional_keywords` read of its X (C #69's shape), each
-//! threshold cumulative: they read X, never the stats, so a buff gives none, and the Radiant face has the
-//! same thresholds on X; a Vanilla takes them and keeps X/X (R781003, X being no buff). Both faces run
-//! the same script. Declares no numbers: the thresholds are the frame.
-//!
-//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
-//! written, and the release renders it (`[gen:voice]`, R1448).
+//! Summoned by M+ #20 with X correct answers; stats via xStats (B2.7, C+ #69).
+//! Keywords via conditional_keywords on X (R1184003; Vanilla takes keywords and keeps X/X, R781003).
+//! Voice audio renders with release (R1420, R1448).
 
 use jackioh_engine::prelude::*;
 
@@ -45,10 +39,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative+ #20.1 Lil' Kenny — SPEC §8.9 row 20.1, §7, R1184003, BUILD M11 row M+ 20.1: "summoned
-// with X = 3 it is 3/3 with no keyword; X = 4 Rush; 8 also Divine Shield; 12 First Strike; 16 Cleave;
-// 20 Lifesteal; 30 Indestructible; a +10 buff gives no keyword; Vanilla keeps X/X and drops them;
-// radiant 2X/2X with the same thresholds on X". Each Kenny is summoned as M+ #20 summons one.
+// Meditative+ #20.1 Lil' Kenny — SPEC §8.9 row 20.1, §7, R1184003, BUILD M11 row M+ 20.1.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,9 +53,6 @@ mod tests {
 
     use KeywordKind::{Cleave, DivineShield, FirstStrike, Indestructible, Lifesteal, Rush};
 
-    /// A Lil' Kenny summoned with X = `x` as M+ #20 summons one: the Competition cast (Radiant on
-    /// `radiant`), `x` questions answered right, then Stop (none after the last). p2's field holds
-    /// `enemies`.
     fn kenny(x: i32, radiant: bool, hand: &[&str], enemies: &[&str]) -> Scenario {
         let mut cards = vec![json!({ "def": COMPETITION, "radiant": radiant })];
         cards.extend(hand.iter().map(|id| json!(id)));
@@ -102,7 +90,6 @@ mod tests {
             .unwrap_or_else(|| panic!("a Lil' Kenny"))
     }
 
-    /// Keyword kinds in one order, so two lists compare as sets.
     fn sorted(kinds: &[KeywordKind]) -> Vec<String> {
         let mut names: Vec<String> = kinds.iter().map(|kind| format!("{kind:?}")).collect();
         names.sort();
@@ -117,7 +104,6 @@ mod tests {
         (view.attack, view.health, sorted(&kinds))
     }
 
-    /// The attacks the Kenny may declare now.
     fn kenny_attacks(s: &Scenario) -> usize {
         let id = the_kenny(s).id;
         legal_actions(s.state(), P1)

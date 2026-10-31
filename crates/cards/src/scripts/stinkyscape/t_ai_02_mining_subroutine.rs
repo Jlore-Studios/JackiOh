@@ -44,9 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-2 Mining Subroutine — SPEC §8.10 row T-AI-2, BUILD M12 row S T-AI-2: "gains one random Resource
-// into its caster's hand, always Reknite, Korrelite or Gellium, never Axnit, Narcor or Red Narcor (R1881000);
-// a full hand burns it (R2250000); radiant a Radiant one".
+// S T-AI-2 Mining Subroutine — SPEC §8.10 row T-AI-2, BUILD M12 row S T-AI-2 (R1881000, R2250000).
 #[cfg(test)]
 mod tests {
     use super::POOL;
@@ -60,7 +58,6 @@ mod tests {
     const MINING: &str = "stinkyscape-t-ai-02";
     const FILLER: &str = "core-005";
 
-    /// p1 casts the Subroutine from a hand of it, a filler and `more` cards.
     fn cast(radiant: bool, seed: &str, more: Value) -> Scenario {
         let mut hand = vec![json!({ "def": MINING, "radiant": radiant }), json!(FILLER)];
         hand.extend(more.as_array().cloned().unwrap_or_default());
@@ -89,7 +86,6 @@ mod tests {
 
     #[test]
     fn a_full_hand_burns_the_gain() {
-        // The filler and these fill the hand to its cap once the Subroutine has left it.
         let more = json!(vec![FILLER; HAND_CAP as usize - 1]);
         let s = cast(false, "mining-full", more);
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
@@ -141,7 +137,6 @@ mod tests {
     #[test]
     fn r1840002_its_pool_rolls_common_55_against_rare_25() {
         const ROLLS: i32 = 10_000;
-        /// Percentage points the rolled share may stray from the odds.
         const SLACK: f64 = 2.0;
         let s = cast(false, "mining-odds", json!([]));
         let pool: Vec<String> = POOL.iter().map(|id| (*id).to_string()).collect();
@@ -155,7 +150,6 @@ mod tests {
             let seen: i32 = ids.iter().map(|id| by_def.get(*id).copied().unwrap_or(0)).sum();
             f64::from(seen) * 100.0 / f64::from(ROLLS)
         };
-        // Common (Reknite, Korrelite) 55 against Rare (Gellium) 25: 68.75% and 31.25%.
         let rare = 25.0 * 100.0 / 80.0;
         assert!(
             (share(&[POOL[2]]) - rare).abs() <= SLACK,
@@ -163,7 +157,6 @@ mod tests {
             share(&[POOL[2]])
         );
         assert!((share(&POOL[..2]) - (100.0 - rare)).abs() <= SLACK);
-        // Each Common of the two equally.
         assert!((share(&[POOL[0]]) - share(&[POOL[1]])).abs() <= 2.0 * SLACK);
         assert_eq!(by_def.len(), POOL.len(), "never another Resource: {by_def:?}");
     }

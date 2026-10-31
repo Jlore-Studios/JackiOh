@@ -6,13 +6,6 @@
 //!          Starship Pieces fused into your Starship."
 //! Radiant: "For the rest of the game, your Units have Flying. Fill your hand with copies of the
 //!          Starship Pieces fused into your Starship. They cost ({setCost})."
-//! Engine: `give_units_keyword { Flying }`, a `unitsHaveKeyword` player modifier for the rest of the
-//! game: every Unit its caster controls has Flying, those that arrive later too, but a Vanilla one
-//! (R1859007). Then, once, as it is cast: one copy of each piece its caster's launched Starship
-//! remembers (`starship_pieces_of`, R1852005), each on the face it fused on, oldest first, added until
-//! the hand is full (`hand_cap_of`), none burned and none repeated (§2.4, R1859011); no launched
-//! Starship, nothing. Radiant: each copy's `costOverride` setCost (R65). Tunes: setCost 1 ↓, the
-//! Radiant face only (R824000).
 
 use jackioh_engine::prelude::*;
 
@@ -51,10 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #137.4 Space Doctrine — SPEC §8.10 row 137.4, BUILD M12 row S 137.4: "after it, every Unit its caster
-// controls has Flying, later ones included; once, copies of the pieces its launched Starship holds go to
-// the hand, oldest first, until it is full; no Starship, nothing; radiant each copy costs (1), setCost
-// read through `param()` (R824000)".
+// S #137.4 Space Doctrine — SPEC §8.10 row 137.4, BUILD M12 row S 137.4 (R824000).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -69,8 +59,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
-    /// p1's launched Starship holding a Stratos, a Radiant After Burner and an Ultralight Chassis, in
-    /// that order; p1's hand the Doctrine (Radiant if `radiant`) and `fillers` fillers, not yet cast.
     fn board(seed: &str, radiant: bool, fillers: usize, launch: bool) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
         hand.extend(vec![json!(FILLER); fillers]);
@@ -91,7 +79,6 @@ mod tests {
         s
     }
 
-    /// `board`, then the Doctrine cast; the hand after it.
     fn cast(seed: &str, radiant: bool, fillers: usize, launch: bool) -> (Scenario, Vec<CardInstance>) {
         let mut s = board(seed, radiant, fillers, launch);
         s.play(ID, json!({}));

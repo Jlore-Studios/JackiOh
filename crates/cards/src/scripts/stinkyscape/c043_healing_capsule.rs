@@ -2,7 +2,6 @@
 //! (1) Unit, Rare, 2/2 → 4/4: Starship Piece.
 //! "End of turn: Heal your hero and each of your Units {heal}." — heal 2, Radiant 4 (R1860003).
 //!
-//! Engine: Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned
 //! first if they have none (R1852000). End of turn (R62): `heal` on its controller's hero, no cap
 //! on a hero (§6.3 Heal), and on each of their Units, itself included, in lane order (R68) —
 //! Classic+ #19.4 Support Loser's line. The Radiant face runs the same script: its heal is the
@@ -44,10 +43,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #43 Healing Capsule — SPEC §8.10 row 43, BUILD M12 row S 43: "at its controller's end
-// of turn heals their hero 2 past its starting health (no cap) and each of their damaged Units 2,
-// itself included; the opponent's are untouched; heal reads through `param()`; radiant 4/4 and
-// heal 4".
+// Stinkyscape #43 Healing Capsule — SPEC §8.10 row 43, BUILD M12 row S 43.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,7 +56,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    /// The `healed` amounts on heroes and units, in event order.
     fn heals(s: &Scenario) -> Vec<i32> {
         s.events()
             .iter()
@@ -96,9 +91,6 @@ mod tests {
             }));
             s.end_turn();
 
-            // The hero rises past its starting health (no cap), each own Unit loses 2 damage —
-            // itself included — and the enemy side is untouched. Each `healed` carries what HP
-            // came back: 2, 1 and 2.
             s.expect_health(PlayerId::P1, 31);
             assert_eq!(s.unit(PlayerId::P1, 1).expect("capsule").damage, 0);
             assert_eq!(s.unit(PlayerId::P1, 2).expect("vanilla").damage, 1);
@@ -116,7 +108,6 @@ mod tests {
             }));
             s.end_turn();
 
-            // The hero still gains 2 (no cap); the undamaged capsule takes no heal.
             s.expect_health(PlayerId::P1, 32);
             assert_eq!(heals(&s), vec![2]);
         }
@@ -159,7 +150,6 @@ mod tests {
             s.expect_health(PlayerId::P1, 33);
             assert_eq!(s.unit(PlayerId::P1, 1).expect("capsule").damage, 0);
             assert_eq!(s.unit(PlayerId::P1, 2).expect("vanilla").damage, 0);
-            // The hero takes the whole 4; the Units only what they had lost: 2 and 3.
             assert_eq!(heals(&s), vec![4, 2, 3]);
         }
     }

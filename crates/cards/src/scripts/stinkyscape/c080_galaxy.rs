@@ -9,7 +9,6 @@
 //! to S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420),
 //! each pick a fresh copy on its Radiant face (R469) fused straight into this (R1086, R77), its Activate
 //! with it (R1751000): two Discovers of three in turn, the second without the first; the Radiant face
-//! fuses all five, v1 first, asking nothing. Starship Piece and Flying are catalog keywords the engine
 //! plays; it stays a piece, the kept card being one (R1852001).
 
 use jackioh_engine::effects::equip_picks;
@@ -71,10 +70,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #80 Galaxy — SPEC §8.10 row 80, BUILD M12 row S 80: "Tribute 2: two of your Units sacrificed
-// as it is played (R101); its Cry asks two Discovers in turn, each three of the five Radiant Miners it does
-// not hold, and fuses each pick into it (R1841002); radiant 20/20 and all five Radiant Miners fused, no
-// prompt".
+// Stinkyscape #80 Galaxy — SPEC §8.10 row 80, BUILD M12 row S 80 (R101, R1841002).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,7 +83,6 @@ mod tests {
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// p1 plays the Galaxy (Radiant on `radiant`) into lane 3, its two Vanillas the Tribute.
     fn played(radiant: bool) -> (Scenario, String) {
         let mut s = weapon_board(
             "s080",
@@ -161,7 +156,6 @@ mod tests {
             .collect();
         held.sort();
         assert_eq!(held, MINERS.map(String::from).to_vec(), "one of each");
-        // Fused one at a time from v1 to v5: each fusion's result holds the next Miner.
         let mut order: Vec<String> = Vec::new();
         for event in s.last_events() {
             if let GameEvent::Fused { def_id, .. } = event {

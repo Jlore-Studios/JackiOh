@@ -72,7 +72,6 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// p1 holds the Defender (`radiant` its face), `p1_field` on its field; p2 has `p2_field`.
     fn holding(radiant: bool, p1_field: Value, p2_field: Value) -> Scenario {
         crate::scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "field": p1_field },

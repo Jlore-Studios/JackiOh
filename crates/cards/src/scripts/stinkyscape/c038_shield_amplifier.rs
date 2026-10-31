@@ -4,11 +4,7 @@
 //!
 //! Engine: Equip (R1086): played onto one of your Units it fuses into it, the host keeping its zone
 //! and taking its stats, keywords and text (R77, R102), Starship Piece only into a piece (R1852001);
-//! played alone its death fuses a copy into its owner's Dormant Starship (R1852000); an equipped
-//! host gains the text and the Divine Shield. The survival is read by two hooks: `after_attack`,
 //! after an attack it made, when its facts say `survived`, and `after_attacked` (R1026), after an
-//! attack made on it, declared or forced, when it still stands after that combat's state check —
-//! read as the absence of `SELF_KEY` in the hook's data (present means the defender died and runs
 //! on its snapshot, R78, R89); a Cleave splash is no attack on it. Then `buff` +N/+N on itself,
 //! lasting. The Radiant face runs the same script: its numbers are the declared `buff` (R386).
 
@@ -55,11 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #38 Shield Amplifier — SPEC §8.10 row 38, BUILD M12 row S 38: "survives an attack it
-// made: +3/+3; survives one made on it, its Divine Shield taking the hit: +3/+3; dies in the
-// combat: nothing; a Cleave splash it survives: nothing; equipped onto a Unit, the host gains the
-// text and Divine Shield and stays no piece unless it was one (R1852001); buff reads through
-// `param()`; radiant 2/2 and +6/+6".
+// Stinkyscape #38 Shield Amplifier — SPEC §8.10 row 38, BUILD M12 row S 38 (R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -74,7 +66,6 @@ mod tests {
     const CLEAVER: &str = "classic-073"; // Nurse Cleaver 3/6, Rush, Cleave, Lifesteal.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    /// The `buffed` events on `id`, in order.
     fn buffed_on(s: &Scenario, id: &str) -> usize {
         s.events()
             .iter()
@@ -106,13 +97,10 @@ mod tests {
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
             }));
             s.play(AMPLIFIER, json!({ "zone": 1 }));
-            // Past its summoning sickness: a full round, then it attacks the hero and survives.
             s.end_turn();
             s.end_turn();
             s.attack(AMPLIFIER, "hero");
 
-            // One hit of 1 from the Amplifier, and nothing else: both libraries keep every
-            // turn's draws from running dry.
             assert_eq!(buffs_of(&s, AMPLIFIER), (3, 3));
             s.expect_health(PlayerId::P2, 29);
         }
@@ -127,7 +115,6 @@ mod tests {
             }));
             s.attack(VANILLA, AMPLIFIER);
 
-            // The 4-attack hit took the Divine Shield instead: the Amplifier stands at 1/1.
             s.expect_in_zone(AMPLIFIER, "field");
             assert_eq!(buffs_of(&s, AMPLIFIER), (3, 3));
         }
@@ -139,14 +126,10 @@ mod tests {
                 "p1": { "hand": [ANCHOR], "field": [AMPLIFIER], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "field": [MENACE], "library": filler(4) },
             }));
-            // First combat: the 9-attack strike back takes the Divine Shield, so it survives
-            // and gains +3/+3, standing 4/4 with no shield.
             let id = s.card(AMPLIFIER).id.clone();
             s.attack(AMPLIFIER, MENACE);
             s.expect_in_zone(AMPLIFIER, "field");
             assert_eq!(buffed_on(&s, &id), 1);
-            // Next turn it attacks again and dies: the hook reads `survived` false and buffs
-            // nothing, so no second buff lands.
             s.end_turn();
             s.end_turn();
             s.attack(AMPLIFIER, MENACE);
@@ -182,7 +165,6 @@ mod tests {
             let vanilla = s.unit(PlayerId::P1, 2).expect("vanilla").clone();
             s.attack(&cleaver, &vanilla);
 
-            // The splash took the Divine Shield, but it was not attacked: no buff.
             assert!(s.card(AMPLIFIER).damage == 0, "the splash is absorbed by Divine Shield");
             assert_eq!(buffs_of(&s, AMPLIFIER), (0, 0));
         }
@@ -197,7 +179,6 @@ mod tests {
             s.play(VANILLA, json!({ "zone": 1 }));
             s.play(AMPLIFIER, json!({ "zone": 1, "equip": true }));
 
-            // The host is kept: a 4/4 that is also a 1/1, with the text and Divine Shield.
             let host = s.unit(PlayerId::P1, 1).expect("the fused host");
             let stats = s.stats(host.id.as_str());
             assert_eq!((stats.attack, stats.health), (5, 5));
@@ -236,7 +217,6 @@ mod tests {
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
             }));
             s.play(AMPLIFIER, json!({ "zone": 1 }));
-            // Past its summoning sickness: a full round, then it attacks the hero and survives.
             s.end_turn();
             s.end_turn();
             s.attack(AMPLIFIER, "hero");
@@ -256,15 +236,11 @@ mod tests {
                     "library": filler(4),
                 },
             }));
-            // First combat: the 9-attack strike back takes the Divine Shield, so it survives
-            // and gains +6/+6, standing 8/8 with no shield.
             let id = s.card(AMPLIFIER).id.clone();
             let first = s.unit(PlayerId::P2, 1).expect("first Menace").clone();
             s.attack(AMPLIFIER, &first);
             s.expect_in_zone(AMPLIFIER, "field");
             assert_eq!(buffed_on(&s, &id), 1);
-            // Next turn it hits the fresh 9/9: 8 leaves it at 1, and its 9-attack strike back
-            // kills. The hook reads `survived` false and buffs nothing: no second buff lands.
             s.end_turn();
             s.end_turn();
             let second = s.unit(PlayerId::P2, 2).expect("second Menace").clone();

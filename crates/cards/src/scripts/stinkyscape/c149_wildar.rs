@@ -7,7 +7,6 @@
 //! the sets that ship (R380; the set's own two join it as it ships, R1420): the first a fresh card of the
 //! opponent's, owned by them, at `costOverride` 0, its edition hidden from its caster (R97); then the
 //! second its caster's, Radiant (§5.2), at its printed cost. A full hand burns its card (§2.4). The
-//! Radiant face drops the opponent's.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -60,7 +59,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// The Call to Chaos editions of the sets that ship, in catalog order: the set's own two joined
     /// them as it shipped (#1884, R1420). Re-pinned for the Training Grounds release (#2204): its #39
     /// joins them (R2200004).
     const SHIPPED_EDITIONS: [&str; 6] = [
@@ -71,12 +69,9 @@ mod tests {
         "stinkyscape-151",
         "traininggrounds-039",
     ];
-    /// A (1) Unit that keeps p1's turn from ending by itself.
     const ANCHOR: &str = "core-008";
-    /// How many cursors the sweeps walk.
     const SWEEP: u32 = 60;
 
-    /// p1 plays Wildar on `radiant`'s face with the rng at `cursor`; p2 holds one card.
     fn wildar_at(cursor: u32, radiant: bool) -> Scenario {
         let mut s = scenario(json!({
             "seed": "wildar",
@@ -88,7 +83,6 @@ mod tests {
         s
     }
 
-    /// The cards of `player`'s hand that are no `ANCHOR`.
     fn gained(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         s.hand(player).into_iter().filter(|card| card.def_id != ANCHOR).collect()
     }
@@ -110,7 +104,6 @@ mod tests {
         assert_eq!(mine.len(), 1);
         assert!(SHIPPED_EDITIONS.contains(&mine[0].def_id.as_str()));
         assert!(mine[0].radiant);
-        // Its printed (4), no override.
         assert_eq!(mine[0].cost_override, None);
         assert_eq!(cost_of(&s, &mine[0]), 4);
         s.expect_in_zone(ID, "graveyard");
@@ -148,7 +141,6 @@ mod tests {
 
     #[test]
     fn a_full_hand_burns_its_caster_s_card() {
-        // The hand at its cap once Wildar has left it.
         let mut hand = vec![json!(ID)];
         hand.extend((0..HAND_CAP).map(|_| json!(ANCHOR)));
         let mut s = scenario(json!({

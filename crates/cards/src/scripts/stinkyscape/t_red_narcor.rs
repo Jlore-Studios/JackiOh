@@ -6,7 +6,6 @@
 //! Radiant S #39 The Narcor Project makes them. The pool is every non-token Legendary and Mythic card of
 //! the sets that ship (R380, R1420), drawn uniformly (R60); a full hand burns the card, which then takes
 //! no price (§2.4, R4). The base face's price is a `costMod` of −`discount` (never below (0), §2.3),
-//! the Radiant face's a `costOverride` of `setCost`, each declared on its own face (R1431, R824000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -36,9 +35,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-red-narcor — SPEC §7, BUILD M12 row S T-red-narcor: "played from the hand, adds one random
-// non-token Legendary or Mythic card at (2) less, never below (0); discount reads through `param()` on
-// the base face only (R1431); radiant a Radiant one at (0), setCost on the Radiant face only (R824000)".
+// S T-red-narcor — SPEC §7, BUILD M12 row S T-red-narcor (R1431, R824000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -56,7 +53,6 @@ mod tests {
         }))
     }
 
-    /// The card the play added, after checking it is a non-token Legendary or Mythic of a set that ships.
     fn added(s: &Scenario) -> CardInstance {
         let hand = s.hand(P1);
         assert_eq!(hand.len(), 2, "one card added");

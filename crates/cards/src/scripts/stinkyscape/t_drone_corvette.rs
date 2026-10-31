@@ -58,9 +58,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-drone-corvette — SPEC §8.10 row T-drone-corvette, BUILD M12 row S T-drone-corvette: "summoned, it
-// has Ranged, Flying and two more different combat keywords; keywords reads through `param()`; fused
-// into another card, the kept card draws its own (R781004); radiant 16/16 and four".
+// S T-drone-corvette — SPEC §8.10 row T-drone-corvette, BUILD M12 row S T-drone-corvette
+// (R781004).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -74,10 +73,8 @@ mod tests {
     /// S #31 Drone Core V: summon a Drone Corvette.
     const CORE_V: &str = "stinkyscape-031";
     const FILLER: &str = "core-005";
-    /// M #47 饕餮: "End of turn: Fuse a random enemy permanent into this."
     const TAOTIE: &str = "meditative-047";
 
-    /// p1 casts Drone Core V (Radiant on `radiant`) under `seed`; the Corvette lands in lane 1.
     fn summoned(seed: &str, radiant: bool) -> (Scenario, String) {
         let mut s = scenario(json!({
             "seed": seed,
@@ -169,7 +166,6 @@ mod tests {
     #[test]
     fn r781004_fused_into_another_card_the_kept_card_draws_its_own() {
         // M #47 饕餮 eats an enemy permanent at its end of turn: the kept 饕餮 carries the Aura and draws
-        // its number for itself, Ranged and Flying already its own. The fusion wears the kept card's face
         // (R77), so a Radiant 饕餮 draws the Radiant number; p2's empty deck leaves its second meal out.
         for (radiant, count) in [(false, 2), (true, 4)] {
             let mut s = scenario(json!({

@@ -41,9 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-korrelite — SPEC §7, BUILD M12 row S T-korrelite: "played from the hand, 1 damage to a random
-// enemy (the hero or a Unit, each seen over the seeds); damage reads through `param()`; radiant it
-// resolves twice (Echo 1)".
+// S T-korrelite — SPEC §7, BUILD M12 row S T-korrelite.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -64,7 +62,6 @@ mod tests {
         }))
     }
 
-    /// The damage the enemy hero and the enemy Unit took from one play on `seed`.
     fn hits(seed: &str, radiant: bool) -> (i32, i32) {
         let mut s = board(seed, radiant);
         play_resource(&mut s, P1, ID, Value::Null);

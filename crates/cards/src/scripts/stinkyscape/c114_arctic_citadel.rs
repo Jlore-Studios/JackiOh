@@ -45,9 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #114 Arctic Citadel — SPEC §8.10 row 114, BUILD M12 row S 114: "Cry (played): every card of your exile
-// fused into it, its stats summed and keywords joined (R77), the exile then empty; an empty exile changes
-// nothing; radiant 8/8 and both exiles". A summon fires no Cry (R1), the engine's.
+// S #114 Arctic Citadel — SPEC §8.10 row 114, BUILD M12 row S 114 (R1, R77).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -104,7 +102,6 @@ mod tests {
         s.play(ID, json!({ "zone": 1 }));
         let fused = citadel(&s);
         // R77: a Radiant kept card wears the fused Radiant face, every ingredient's Radiant stats summed:
-        // 8/8 + Vanilla's 12/12 + Menace's 18/18.
         s.expect_stats(&fused, json!({ "attack": 38, "health": 38 }));
         assert!(unit_has(s.state(), &fused, KeywordKind::Taunt));
         assert!(s.pile(P1, "exile").is_empty());

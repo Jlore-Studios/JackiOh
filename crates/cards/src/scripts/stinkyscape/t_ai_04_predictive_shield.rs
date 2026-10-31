@@ -65,9 +65,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-4 Predictive Shield — SPEC §8.10 row T-AI-4, BUILD M12 row S T-AI-4: "an enemy Unit's declared
-// attack on one of your Units is canceled and the attacker Frozen, so it cannot attack on its next turn
-// either; an attack on your hero leaves it set; radiant an attack on your hero springs it too".
+// S T-AI-4 Predictive Shield — SPEC §8.10 row T-AI-4, BUILD M12 row S T-AI-4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -78,13 +76,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SHIELD: &str = "stinkyscape-t-ai-04";
-    /// #8 Mr. Vanilla, a plain (1) 4/4.
     const ATTACKER: &str = "core-008";
-    /// #1 Big D-fender, 0/7: the Unit attacked.
     const VANILLA: &str = "core-001";
     const FILLER: &str = "core-005";
 
-    /// p1 holds the trap and a Vanilla in lane 1; p2 is active with an attacker.
     fn set(radiant: bool) -> Scenario {
         scenario(json!({
             "seed": "predictive-shield",

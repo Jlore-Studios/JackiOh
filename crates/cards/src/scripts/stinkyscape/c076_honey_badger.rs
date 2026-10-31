@@ -7,7 +7,6 @@
 //! or forced attacks, R53, R2285000, never a defense or an attack called off, R44) with Rush (§6.1), a
 //! printed keyword, so it may attack an enemy Unit, never the hero, the turn it lands and gain then.
 //! Starship Piece: its death fuses a copy into its owner's Dormant Starship (R1852000). Radiant: a
-//! Radiant Resource.
 
 use jackioh_engine::effects::gain_resources;
 use jackioh_engine::prelude::*;
@@ -35,8 +34,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 76 Honey Badger — SPEC §8.10 row 76, BUILD M12 row S 76: "with Rush, attacks an enemy Unit the turn
-// it lands and gains one random Resource, never the hero that turn; radiant 8/12, Radiant Resources".
+// S 76 Honey Badger — SPEC §8.10 row 76, BUILD M12 row S 76.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

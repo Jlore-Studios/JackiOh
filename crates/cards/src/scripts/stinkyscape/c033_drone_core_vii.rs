@@ -39,10 +39,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #33 Drone Core VII — SPEC §8.10 row 33, BUILD M12 row S 33: "summons a Drone Corvette then 2 Drone
-// Interceptors, the Corvette taking the leftmost zone; with one open zone the Corvette there and the
-// Interceptors in the backrow (R2248000); interceptors
-// reads through `param()`; radiant all three Radiant".
+// S #33 Drone Core VII — SPEC §8.10 row 33, BUILD M12 row S 33 (R2248000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -65,14 +62,12 @@ mod tests {
         }))
     }
 
-    /// p1's unit row, lane 1 to 5: each zone's definition and face, or `None` when it is empty.
     fn row(s: &Scenario) -> Vec<Option<(String, bool)>> {
         (1..=5)
             .map(|lane| s.unit(P1, lane).map(|unit| (unit.def_id, unit.radiant)))
             .collect()
     }
 
-    /// p1's backrow, lane 1 to 5, read as `row` reads the unit row.
     fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
         (1..=5)
             .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))

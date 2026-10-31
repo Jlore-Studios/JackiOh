@@ -8,7 +8,6 @@
 //! it out of Defense Position (§4.1). Activate (§6.2, R384), once a turn: its controller's hero takes
 //! `selfDamage` (§4.4), then a Sacrifice of it (§6.3), a death, so its Death runs: `spices` fresh Spices
 //! (S #89) to the hand, hand cards, never Resources, a full hand burning the rest (§2.4). Any other
-//! death pays too. Radiant: Radiant Spices; the Activate keeps its damage, as the list prints it. The
 //! numbers are declared (R386).
 
 use jackioh_engine::effects::{add_to_hand, damage, sacrifice};
@@ -66,10 +65,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 173 Abandoned Spice Tower — SPEC §8.10 row 173, BUILD M12 row S 173: "its Activate deals 4 to its
-// controller's hero and tributes it, and its Death adds 3 Spices to the hand, a full hand burning the
-// rest; it never attacks or switches to Defense; spices and selfDamage read through `param()`; radiant
-// 0/16 and Radiant Spices, the damage kept".
+// S 173 Abandoned Spice Tower — SPEC §8.10 row 173, BUILD M12 row S 173.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

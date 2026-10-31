@@ -5,14 +5,11 @@
 //!   Radiant: "… Armor 30 … Activate: Choose one: You gain 5, 10 or 15 Credits, and your opponent gains
 //!            5 fewer.\nDeath: Both players gain 200 Credits." (0/40)
 //!
-//! Quickdraw (R640, `StaticFlags.quickdraw` on both faces): it starts in the opening hand. Its printed
-//! keywords are the engine's: Animated, so it steps into an open unit zone as it enters, a Unit there
 //! (§6.1, R383); Can't attack; Immune to Spells; Immutable, so nothing tunes it and its numbers are
 //! printed constants here rather than declared (R386); Untributable, so no Tribute takes it (R1220);
 //! Armor 15. `StaticFlags.never_defense` keeps it out of Defense Position (§4.1). Activate (§6.2, R384),
 //! once a turn, three declared modes (R81): each player `gain_market_credits` the chosen 5, 10 or 15
 //! (R1840005), the first gain opening the Marketplace (R1853000). Death (§6.2): each player gains 100.
-//! Radiant: its Activate gives its controller N and the opponent N − 5; its Death 200 each.
 
 use jackioh_engine::effects::gain_market_credits;
 use jackioh_engine::prelude::*;
@@ -97,11 +94,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 116 Megabase — SPEC §8.10 row 116, BUILD M12 row S 116: "enters as a 0/20 Unit in an open unit zone
-// (Animated), never attacking or in Defense Position, no Spell targeting it; its Activate gives each
-// player the chosen 5, 10 or 15 Credits, once a turn; destroyed, each player gains 100; a Tribute
-// cannot take it; it starts in the opening hand (R640); radiant 0/40, Armor 30, the opponent gaining 5
-// fewer, and 200 each on its Death".
+// S 116 Megabase — SPEC §8.10 row 116, BUILD M12 row S 116 (R640).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::{destroy, summon};
@@ -173,7 +166,6 @@ mod tests {
             "p1": { "hand": [FILLER], "library": filler(4) },
             "p2": { "hand": [TRUE_STRIKE, FILLER], "library": filler(4) },
         }));
-        // Summoned, it animates as it enters, into p1's open unit zone.
         run_as(&mut s, summon(json_as(json!({ "defId": ID }))), P1);
         let base = s.unit_at(P1, 1);
         assert_eq!(base.def_id, ID);
@@ -226,7 +218,6 @@ mod tests {
         }
         assert!(crate::card_def(ID).tags.contains(&Tag::Quickdraw));
 
-        // Dealt: every opening hand holds it, wherever the shuffle put it.
         let rest = [
             "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
             "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-016", "core-017",

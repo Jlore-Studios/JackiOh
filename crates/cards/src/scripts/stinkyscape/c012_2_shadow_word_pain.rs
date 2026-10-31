@@ -55,10 +55,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #12.2 Shadow Word Pain — SPEC §8.10 row S 12.2, BUILD M12 row S 12.2: "destroys a chosen Unit
-// with 3 Attack or less, a 0-Attack one included; a 4-Attack Unit can't be chosen; attack reads
-// through `param()`; radiant its neighbours die too, a 9-Attack one included" (R1867005, proven
-// here and in S #12.1's file).
+// S #12.2 Shadow Word Pain — SPEC §8.10 row S 12.2, BUILD M12 row S 12.2 (R1867005).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -76,7 +73,6 @@ mod tests {
         json!({ "attack": attack, "health": health })
     }
 
-    /// This thread's script for `def_id`, for one test: after each card its controller's opponent
     /// plays, it gains `attack` Attack (a negative one lowers it), before that card resolves (§10.5).
     fn moves_on_enemy_plays(def_id: &str, attack: i32) {
         let moves = TriggerDef::new("swd-moves", &[GameEventType::CardPlayed], move |ctx, event| match event {
@@ -129,7 +125,6 @@ mod tests {
         }
 
         /// R1867005, R1868000: the limit is checked with the play and not again as the Spell resolves,
-        /// so a target raised from 3 Attack to 5 between the two still dies.
         #[test]
         fn r1867005_a_target_raised_past_the_limit_after_the_pick_still_dies() {
             crate::register_all();

@@ -7,8 +7,6 @@
 //! Engine: a declared target, any Unit or hero on either side (§8 Conventions, R81); one hit of the
 //! declared damage (§4.4: Armor, Divine Shield and Spell Damage all apply), then `freeze` on the
 //! target — a hero passed by, since heroes are never Frozen (§6.1), and a Unit the hit destroyed
-//! passed by with it. The Radiant face also hits each Unit beside the target in its row on its side
-//! (Cleave's adjacency, §3.1; none beside a hero) with its own instance of the declared damage,
 //! all before one state check (R59); the neighbours are never Frozen (R1867004).
 
 use jackioh_engine::prelude::*;
@@ -66,10 +64,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #11.1 Frostbolt — SPEC §8.10 row S 11.1, BUILD M12 row S 11.1: "3 to a chosen Unit, which is
-// Frozen if it lives; 3 to a hero and nothing Frozen; Spell Damage adds to the hit; damage reads
-// through `param()`; radiant 5 to the target and to each Unit beside it, the neighbours not
-// Frozen" (R1867004).
+// S #11.1 Frostbolt — SPEC §8.10 row S 11.1, BUILD M12 row S 11.1 (R1867004).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

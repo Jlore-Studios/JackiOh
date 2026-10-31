@@ -5,15 +5,9 @@
 //!            Cry: Summon The Greatest Heist. Complete the current stage on all your Quests."
 //!
 //! Tradable is a catalog keyword the engine plays (R1838000). Cry (R1): `complete_quests` (R1854001),
-//! every Quest-tagged card its controller has acting on the field, in lane order, has the quests open on
 //! it completed, a staged quest's current stage and C #90 In Too Deep's open quests alike, each reward
-//! given at the next state check; a line hearing back or done has nothing open, and the opponent's
-//! Quests and an untagged card are passed by. R1873000: the Radiant face first summons S #7 The
 //! Greatest Heist into its controller's leftmost open backrow zone (R64). The summon names it, so its
-//! Cry (its Discover) runs there, as League of Losers' Mid Loser's does (R411), a face-up Field Spell's
 //! Cry being triggered as a Unit's is (R1873003); its first stage, opened as it entered, is then
-//! completed with the rest. A full backrow summons nothing, so no Discover, and the completion reaches
-//! the other Quests alone.
 
 use jackioh_engine::prelude::*;
 
@@ -50,12 +44,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #6 Tylannt — SPEC §8.10 row 6, BUILD M12 row S 6: "Tradable in hand (one Trade a turn, R1838000);
-// Cry (played): each Quest of yours on the field has its open quest completed and pays its reward at the next
-// state check, In Too Deep's included, the opponent's untouched, a line hearing back untouched (R1854001);
-// radiant 12/8, S #7 summoned first, its Cry's Discover asked (R411, R1873000), its Stage 1 opened and
-// completed". Tradable, In Too Deep's line and a line hearing back are the engine's (R1838000, R1854001),
-// each also proven here on the card.
+// Stinkyscape #6 Tylannt — SPEC §8.10 row 6, BUILD M12 row S 6 (R1838000, R1854001, R1873000,
+// R411).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -71,16 +61,11 @@ mod tests {
     const CALL_TO_ARMS: &str = "core-069"; // (2) Spell: Recruit Units of (1) Cost or less; Radiant (2).
     const IN_TOO_DEEP: &str = "classic-090"; // (1) Field Spell, a Quest: quest 1 "Draw 2 cards" opens as it enters.
     const JOB_APPLICATION: &str = "stinkyscape-112"; // A staged Quest whose Stage 1 reward hears back.
-    /// Job Application's Stage 1 Activate: send a card from hand in as the resume.
     const SEND: &str = "send-resume";
-    /// In Too Deep's first quest.
     const FIRST_QUEST: &str = "1";
 
-    /// Enough to play anything a test asks.
     const MANA: i32 = 10;
 
-    /// p1 holds Tylannt (Radiant on `radiant`); The Greatest Heist stands in each player's backrow, each
-    /// line at Stage 1 (its Cry's Discover answered).
     fn heists(radiant: bool, seed: &str) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
@@ -110,7 +95,6 @@ mod tests {
         s.answer(json!(first));
     }
 
-    /// The stage `player`'s Heist in backrow lane `lane` stands at.
     fn stage_of(s: &Scenario, player: PlayerId, lane: usize) -> Option<u32> {
         let heist = s.state().players[player].backrow[lane - 1].as_ref()?;
         subsystems::quest_memory_of(heist).and_then(|line| line.stage)
@@ -121,7 +105,6 @@ mod tests {
         let mut s = heists(false, "tylannt");
         assert_eq!((stage_of(&s, P1, 1), stage_of(&s, P2, 1)), (Some(1), Some(1)));
         s.play(ID, json!({ "zone": 1 }));
-        // Stage 1's reward summoned an Acclaimed Unit, and Stage 2 is open.
         assert_eq!(stage_of(&s, P1, 1), Some(2));
         assert_eq!(stage_of(&s, P2, 1), Some(1));
         assert!(
@@ -144,7 +127,6 @@ mod tests {
         s
     }
 
-    /// The ids of p1's hand cards of `def_id`, in hand order.
     fn in_hand(s: &Scenario, def_id: &str) -> Vec<String> {
         s.hand(P1)
             .into_iter()
@@ -153,7 +135,6 @@ mod tests {
             .collect()
     }
 
-    /// The backrow card of `def_id` p1 played: its id.
     fn backrow_id(s: &Scenario, def_id: &str) -> String {
         s.state()
             .players
@@ -201,10 +182,8 @@ mod tests {
             );
             assert_eq!(s.state().players.p1.mana.current, mana, "at no mana");
             assert_eq!(trades_left(s.state(), P1), 0);
-            // The turn's one Trade is made: the other Tylannt stays.
             s.expect_refused(|s| s.trade(tylannts[1].as_str()));
             assert!(s.hand(P1).iter().any(|card| card.id == tylannts[1]));
-            // A new turn of p1's brings a Trade back.
             s.end_turn().end_turn();
             s.trade(tylannts[1].as_str());
             s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
@@ -270,7 +249,6 @@ mod tests {
         let hand = s.state().players.p1.hand.len();
         s.play(ID, json!({ "zone": 1 }));
         // The summon names the Heist, so its Cry runs first (R411): its Discover is asked, with the
-        // summoned Heist in the next backrow zone and the completion waiting behind it.
         let pending = s.state().pending.clone().expect("the summoned Heist's Discover");
         assert_eq!(pending.player_id, P1);
         assert_eq!(pending.prompt, "Discover an Acclaimed Unit or a Jelly Bean");
@@ -278,7 +256,6 @@ mod tests {
         assert_eq!(stage_of(&s, P1, 1), Some(1), "the Heist that stood there");
         answer_first(&mut s);
         assert!(s.state().pending.is_none());
-        // Tylannt left the hand and the Discover's pick joined it.
         assert_eq!(s.state().players.p1.hand.len(), hand);
         assert_eq!(stage_of(&s, P1, 1), Some(2), "the Heist that stood there");
         assert_eq!(stage_of(&s, P1, 2), Some(2), "the Heist it summoned");

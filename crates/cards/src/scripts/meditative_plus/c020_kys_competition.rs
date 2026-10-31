@@ -6,19 +6,9 @@
 //!   Radiant: "Answer one- and two-digit sums one after another until you stop, miss one or 60 seconds
 //!             pass. Then summon a Radiant Lil' Kenny with 2X/2X, X your correct answers."
 //!
-//! The whole card is the engine's question sequence (`subsystems/ky_competition.rs`): C+ #42's
-//! `answer` prompt asked again after each right answer, with Stop, the streak in the prompt's resume
-//! data, each question rolled from the match rng (three-digit addition or subtraction; the Radiant
-//! face one- and two-digit), the key never leaving the engine (R465); a wrong answer, Stop or a timeout
-//! (R1184001) ends it, and so does the `KY_COMPETITION_MAX`th right answer. The 60 seconds are its
-//! host's to keep (R1563006): the server's match clock and the practice controller answer Stop when
-//! they pass, as a timeout does; the engine names the open question for them. Then M+ #20.1 Lil' Kenny is
-//! summoned with X the right answers (R1184003), Radiant on the Radiant face, whose own face makes it
-//! 2X/2X; none at X = 0. Both faces run the same script: the steps read the face that cast it.
-//! Declares no numbers.
-//!
-//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
-//! written, and the release renders it (`[gen:voice]`, R1448).
+//! Engine question sequence (C+ #42, R420, R465): answer prompt repeated until wrong, Stop, timeout (R1184001) or 60s (R1563006).
+//! Summons Lil' Kenny (M+ #20.1) with stats by correct answers (R1184003; Radiant 2X/2X).
+//! Voice audio renders with release (R1420, R1448).
 
 use jackioh_engine::prelude::*;
 
@@ -38,13 +28,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative+ #20 KY's Competition — SPEC §8.9 row 20, R1184000, R1184001, R420, R465, BUILD M11 row
-// M+ 20: "asks a three-digit sum, then another after each right answer, the key in no view or event
-// (R420); a wrong answer ends it, a Stop ends it, a timeout ends it; after 3 right then a miss, summons
-// Lil' Kenny 3/3; after 0, nothing; at the cap, 30/30; the paused state survives a JSON round trip and
-// replays; the AI answers within its budget; radiant the problems are one- or two-digit and the Kenny
-// is Radiant (2X/2X)". The AI's answer is `crates/ai/tests/ai/ky_competition.rs`'s (R1184002); the
-// engine proves the machinery with fixtures (`crates/engine/tests/rules/ky_competition.rs`).
+// Meditative+ #20 KY's Competition — SPEC §8.9 row 20, R1184000, R1184001, R420, R465, BUILD M11
+// row (R1184002).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -56,7 +41,6 @@ mod tests {
 
     const FILLER: &str = "core-005";
 
-    /// The Competition cast from p1's hand, its first question open.
     fn cast(seed: &str, radiant: bool) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
@@ -80,7 +64,6 @@ mod tests {
         }
     }
 
-    /// Answer the open question rightly or wrongly.
     fn answer(s: &mut Scenario, right: bool) {
         let correct = key(s);
         let letter = if right {
@@ -107,7 +90,6 @@ mod tests {
         s.state().pending.as_ref().and_then(|prompt| prompt.streak)
     }
 
-    /// `a op b = ?`'s two operands.
     fn operands(text: &str) -> (i32, i32) {
         let pieces: Vec<&str> = text.trim_end_matches(" = ?").split(' ').collect();
         let number = |at: usize| {
@@ -119,7 +101,6 @@ mod tests {
         (number(0), number(2))
     }
 
-    /// The Lil' Kennies on p1's field: (X, attack, health, Radiant).
     fn kennies(s: &Scenario) -> Vec<(i32, i32, i32, bool)> {
         active_units_of(s.state(), P1)
             .into_iter()
@@ -345,7 +326,6 @@ mod tests {
                     .collect();
                 state = act(&state, ActionBody::Mulligan { keep }, player, &mut log);
             }
-            // p1's first turn has 1 mana: pass to p1's second turn, at 2.
             state = act(&state, ActionBody::EndTurn, P1, &mut log);
             state = act(&state, ActionBody::EndTurn, P2, &mut log);
             let card = state

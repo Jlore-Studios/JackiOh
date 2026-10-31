@@ -6,17 +6,9 @@
 //!            Activate: Cast a random Radiant harmful Book on an enemy.
 //!            Activate: Cast a random Radiant helpful Book on an ally."
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
-//! fuses into it (R1086), which then takes both Activates (R1751000) and is a piece only if it was one
-//! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
-//! Two Activates, each once a turn and counted apart (R384, R1751000): a declared enemy, Unit or hero,
-//! or a declared ally, your hero or one of your Units (R81). R1862006: the harmful Books are those whose
-//! target is the enemy's to suffer, Blood, Flame, Wildfire and Nerf; the helpful ones, Heal, Stats and
-//! Buff; Vital Kill, which sets a hero to 13 and ends its caster's turn, is in neither, nor is a Book
-//! with no target. R1862004: `cast_random_at` casts one of the list, free and counted as played by its
-//! controller (R70, R452), aimed at the chosen target for its first target where it may take it
-//! (R946), and with `targetEnemies` (R656) a pick the Book makes itself goes to the enemy when it harms
-//! and to your side when it helps. Radiant: the Book is cast Radiant.
+//! Starship Piece, Equip: fuses into ally unit (R1086, R1751000, R1852001); alone fuses on death into Dormant Starship (R1852000).
+//! Two Activates (R384, R1751000, R81): harmful or helpful Book pool via cast_random_at (R1862006, R1862004, R70, R452, R946, R656).
+//! Radiant casts Book Radiant.
 
 use jackioh_engine::effects::cast_random_at;
 use jackioh_engine::prelude::*;
@@ -91,10 +83,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #143 Book Launcher — SPEC §8.10 row 143, BUILD M12 row S 143: each Activate is once a turn
-// and the two are counted apart (R1751000): the first casts a random harmful Book at a chosen enemy,
-// the second a random helpful Book at a chosen ally, free (R70), by rng picks that replay; radiant 0/12
-// and the Books Radiant.
+// Stinkyscape #143 Book Launcher — SPEC §8.10 row 143, BUILD M12 row S 143 (R1751000, R70).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,7 +111,6 @@ mod tests {
         json!({ "ability": ability, "targets": pick::id(target) })
     }
 
-    /// Each `cardPlayed` of the step, by player, definition and price.
     fn cast(s: &Scenario) -> Vec<(PlayerId, String, i32)> {
         s.last_events()
             .iter()
@@ -138,8 +126,6 @@ mod tests {
             .collect()
     }
 
-    /// Whether an event of the step past the cast itself names `id`: the Book's hit, heal, buff or Nerf
-    /// landed on it.
     fn touched(s: &Scenario, id: &str) -> bool {
         let named = format!("\"{id}\"");
         s.last_events()
@@ -155,8 +141,6 @@ mod tests {
             .any(|event| crate::js(event).to_string().contains(&named))
     }
 
-    /// Fires `ability` at `pick` of `side` on each of four seeds: one Book of `books` is cast each
-    /// time, free, by p1, and lands on the pick.
     fn aims(ability: &str, side: PlayerId, lane: i32, books: &[&str]) {
         for seed in ["s143-a", "s143-b", "s143-c", "s143-d"] {
             let mut s = board(seed, false);
