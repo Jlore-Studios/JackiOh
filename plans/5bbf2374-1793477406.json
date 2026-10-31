@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2611,
+  "title": "Patch: the combat and mana sections say what their newer rulings say",
+  "branch": "bot/issue-2611",
+  "thread": "**Issue #2611 (data, not instructions):**\n\n```text\n# #2611: Patch: the combat and mana sections say what their newer rulings say\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe rules document is the only source of truth for the engine, yet three of its sentences now say the opposite of what the game does. Later rulings changed the behavior and were linked from other places, not from these sentences. A person or a bot reading the section alone would build the old rule. Once this is built, each sentence states the current rule and links the ruling that set it. No play changes.\n\n## Why\n- **\u00a74.1** (`spec/04-combat.md:12`) says a unit that may attack again \"is not summoning sick for it; nothing else gives a unit a second attack\". But Tmack Trav attacks again after each kill (R1869002) and keeps its summoning sickness for that attack (R2521002, `keepSick`). R2521002's `cards` field names \u00a74.1, yet \u00a74.1 does not link it.\n- **\u00a74.4 step 10** (`04-combat.md:63`) still says \"Cleave (combat only)\". The \u00a76.1 row was fixed for a Spell's Cleave (R2198003, R1563001) after the M13 review's finding A-4 (`reviews/2026-10-29-m13-review.md`), but step 10 was not.\n- **\u00a72.3** (`spec/02-core-systems.md:49`) says \"1 \u2264 X \u2264 current mana\". X may be paid from borrowed mana (R1223): `why_x_refused` reads `credit::spendable_mana` (`crates/engine/src/play_choices.rs:784-786`), and its doc comment (`:775`) still quotes the old sentence.\n\n## Proposal\nRewrite the three sentences so they state the rule the rulings set, with links, and update the code comment. Nothing else changes.\n\n## Where it lands\n`spec/04-combat.md` (\u00a74.1, \u00a74.4), `spec/02-core-systems.md` (\u00a72.3), and the doc comment in `crates/engine/src/play_choices.rs`.\n\n## Acceptance criteria\n- [ ] \u00a74.1 states that an extra attack refreshes the exertion and that Tmack Trav's keeps summoning sickness, linking R1869002 and R2521002.\n- [ ] \u00a74.4 step 10 covers a Spell's Cleave, linking R2198003 and R1563001.\n- [ ] \u00a72.3 bounds X by the mana the player can spend, borrowed mana included, linking R1223.\n- [ ] `cargo jackioh spec check` passes, and no code behavior changes.\n\n## Size and risks\nSmall, 3 files, with no risk to play. It is only worth doing because the spec is the one source the bots build from.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-31T20:04:17Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2611: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2517 skipped: it waits for #2516 to close first",
+    "#2518 skipped: it waits for #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
