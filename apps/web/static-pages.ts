@@ -261,7 +261,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     section(
       "Made with AI",
       "<ul><li>The music, every track and the few bars each Legendary and Mythic card plays, was composed by an AI " +
-        "model, Anthropic&rsquo;s Claude, written as code and played on a free instrument library. No melody or " +
+        "model, Anthropic&rsquo;s Claude, written as code and played with free instrument sounds. No melody or " +
         "recording was taken from another work. Where each track came from.</li>" +
         "<li>The cards&rsquo; spoken lines are read by computer text-to-speech voices, not recorded by actors.</li>" +
         "<li>Card art is drawn by code from each card&rsquo;s name, type and tags, not by an image-generation model.</li>" +

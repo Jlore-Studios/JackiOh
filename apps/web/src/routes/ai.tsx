@@ -78,7 +78,7 @@ export default function AiRoute(): ReactElement {
           <ul>
             <li>
               The music, every track and the few bars each Legendary and Mythic card plays, was composed by an AI
-              model, Anthropic&rsquo;s Claude, written as code and played on a free instrument library. No melody
+              model, Anthropic&rsquo;s Claude, written as code and played with free instrument sounds. No melody
               or recording was taken from another work.{" "}
               <a href={MUSIC_SOURCES_URL} target="_blank" rel="noreferrer">
                 Where each track came from
