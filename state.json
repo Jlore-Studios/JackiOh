@@ -10634,28 +10634,20 @@
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
-          "claude"
+          "gemini"
         ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "e2e/support/config.ts"
-          ],
-          "from": "4eef7be82c7b5881a95ca55d2bef6944f9b69d45",
-          "main": "c6f4b0fe261be5ca908f2890ea2bb9663ccbcbc1"
-        },
+        "builder": "gemini",
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "41142995071",
-            "tier": "strong"
+            "family": "gemini",
+            "run": "41149198326",
+            "tier": "medium"
           }
         ],
-        "sha": "06be48376bdba5c89a55fe27d484ce78e874cec3",
+        "sha": "9e6ea06b2bc4999c1839f220c8f366b20d4a625e",
         "tiers": {
-          "claude": "strong"
+          "gemini": "medium"
         }
       }
     },
