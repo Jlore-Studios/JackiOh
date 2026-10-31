@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2562,
+  "title": "Patch: View full stats and the practice screen's Decks links move inside the app instead of reloading it",
+  "branch": "bot/issue-2562",
+  "thread": "**Issue #2562 (data, not instructions):**\n\n```text\n# #2562: Patch: View full stats and the practice screen's Decks links move inside the app instead of reloading it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nIn the deck builder or the card library, a player opens a card and taps \"View full stats\". The whole site then reloads, as if the address had been typed in fresh. The music stops until the next tap, every menu shows its loading placeholders again, and the page transition is skipped. The two \"Decks\" links on the practice setup screen reload the site the same way. Every other link in the client already moves without a reload. After this change these three do too, and a test stops a new one from slipping through.\n\n## Why\n- `apps/web/src/stats/CardStatsBlock.tsx:151-157` is a bare anchor to `/stats?tab=cards&card=\u2026` with no `onClick`. Its card detail opens from the deck editor (`game/deckbuilder/DeckEditor.tsx:621`) and from the Almanac (`routes/almanac.tsx:131`).\n- `apps/web/src/practice/PracticeSetup.tsx:127` and `:144` are bare `<a href={paths.decks}>` links.\n- Every other internal link pairs its `href` with `onClick={followInApp(\u2026)}` (`routes/nav.tsx:78`). That handler moves in place and leaves a modified or middle click to the browser. Examples: `routes/landing.tsx:433`, `routes/collection.tsx:205`, `economy/JlorePill.tsx:75`, `routes/account.tsx:314`, and the link from /stats back to the Almanac at `routes/stats.tsx:1543`.\n- A reload drops the in-tab read cache (`net/readCache.ts:1`) and reloads the WebAssembly engine. Audio then stays locked until the next gesture (`audio/unlock.ts`).\n- `routes/almanac.test.tsx:412` checks only the link's `href`, which is how this got through.\n- Also in this component: `CardStatsBlock.tsx:19` starts its minimum sample at a bare `20`, although `stats/config.ts:65` defines `CARD_STATS_MIN_SAMPLE` (CLAUDE.md rule 9).\n\n## Proposal\n- Add `paths.statsCard(id)` beside `paths.almanacCard` (`net/navigate.ts:268`). Use it in `CardStatsBlock` as both the `href` and the target of `followInApp`.\n- Give PracticeSetup's two Decks links `onClick={followInApp(paths.decks)}`.\n- Add a scan test like `static-pages.test.ts` and `writing.test.ts`. It reads every `<a` opening tag under `apps/web/src`, across lines. An internal `href` (`paths.\u2026` or a literal starting with `/`) must carry `followInApp` or `target=\"_blank\"`; otherwise the test names the file and line.\n- Start `minSample` at `CARD_STATS_MIN_SAMPLE`.\n\n## Where it lands\n`apps/web/src/stats/CardStatsBlock.tsx`, `apps/web/src/practice/PracticeSetup.tsx`, `apps/web/src/net/navigate.ts`, `apps/web/src/routes/almanac.test.tsx`, and a new scan test under `apps/web/src/`. No SPEC change.\n\n## Acceptance criteria\n- [ ] A plain click on View full stats in the Almanac's card detail is prevented and moves to `/stats?tab=cards&card=<id>` without a document load (vitest).\n- [ ] A ctrl or meta click on it is left to the browser.\n- [ ] Both practice Decks links move in place.\n- [ ] The scan test passes on the tree, and fails when `followInApp` is removed from any one internal link.\n- [ ] `CardStatsBlock.tsx` has no bare `20` left.\n\n## Size and risks\nSmall: three components, one helper and two tests. /stats reads its query when it mounts (`routes/stats.tsx:196`), so an in-place move lands on the right card. The scan test has to read opening tags that span several lines. If it ever wrongly flags a link, that link goes on an exemption list the test keeps with a reason.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:40:00Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2562: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
