@@ -11211,9 +11211,11 @@
       "action": "revise",
       "asks": [],
       "cleared": {
-        "at": "2026-10-31T10:13:48Z",
+        "at": "2026-10-31T11:16:15Z",
         "by": "`claude` (strong)",
-        "sha": "b9745f5886c2830c8d09621f05fb4a0417981825"
+        "carried_from": "b9745f5886c2830c8d09621f05fb4a0417981825",
+        "resolved_by": "`claude` (strong)",
+        "sha": "40f1e26519567ae8e219dd3545e13cdd814080da"
       },
       "difficulty": "hard",
       "failures": 0,
