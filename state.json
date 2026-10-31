@@ -8829,6 +8829,13 @@
     "2422": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T04:40:21Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "it adds database migration 0071 to practice_seeds and changes both stores, and the hard rule names a migration outright"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
