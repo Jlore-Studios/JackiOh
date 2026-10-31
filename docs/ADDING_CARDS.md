@@ -51,8 +51,8 @@ Also grep the Markdown for the stated totals (`634 cards`, `140 tokens`, `774`) 
   claims the whole set at once. The stated totals above don't move either: they count the shipped sets.
 - The set's cards are in no pool that names no set, in no deck and in no random deck. A test that needs them there opens the set
   with the engine testkit's `preview_sets(&[SetName::TrainingGrounds])` (one thread, until its guard drops).
-- `cargo jackioh fuzz` previews every set, so the card is fuzzed from the day it lands, while the golden traces deal from the
-  shipped sets and must not move.
+- `cargo jackioh fuzz` previews every set, so the card is fuzzed from the day it lands, while `golden record` deals from the
+  shipped sets alone.
 - Its `card-audio.json5` and `card-text.yaml` entries are written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
   Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
@@ -234,10 +234,10 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   Power's own tests, `src/scripts/core/c098_heroic_power.rs`, and `crates/ai/tests/ai/shadow_ban.rs`) is re-pinned by looping seeds
   in a throwaway test (`for n in 0.. { let mut s = scenario(json!({ "seed": format!("craft-{n}"), … })); … }`) until the offers
   match, and the comment beside the seed updated; better, convert it to a search.
-- **The golden traces** (`crates/engine/tests/golden/games.jsonl`, replayed by `cargo test` and `cargo jackioh golden check`) are games
-  recorded from the TypeScript engine. A recorded game that draws from a pool the new card joins can diverge; the failure names the seed,
-  the step and the hash. If the divergence is the new card's pool and nothing else, re-record with `cargo jackioh golden bless` and say so
-  in the PR: the file is then the Rust engine's own record.
+- **The cross-build replay** (`cargo jackioh luau diff --parent-bin <base build's jackioh> --cards <ids>`, and `rust (classify)` on the pull
+  request) records golden-seeded games on your build with `golden record` and has the base build replay them with `golden check --file`;
+  a divergence names the seed, the step and the hash. Nothing is committed (the 240 golden traces were retired in #2578), so nothing is
+  re-recorded.
 - **The fuzz waves** play seeded games and may now draw a game nobody has played. Four latent bugs came out this way, all fixed: a fused
   card of two ingredients that define `targetChecks` threw from `legalActions` (#104), a client table made the animation runner replay a
   whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested

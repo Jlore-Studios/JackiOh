@@ -100,13 +100,13 @@ compiler (`mlua` builds Luau from source); Node ≥ 22.13 and pnpm 11 for `apps/
 ```
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings      # includes rule 4's purity lint
-cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the golden replay included; rewrites apps/web/src/wire/ (commit any diff)
+cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the hotseat fixture's fold included; rewrites apps/web/src/wire/ (commit any diff)
 cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored   # the daily tests: the many-game sweeps marked #[ignore = "daily: …"]
 cargo jackioh catalog check        # catalog.json's shape and its census of cards and tokens by set
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)
-cargo jackioh golden check         # the golden traces from the TypeScript engine, replayed (cargo test replays them too)
+cargo jackioh golden check         # the hotseat fixture's fold (cargo test folds it too); `golden record` + `golden check --file` compare two builds
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
 cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names the version by tier after merge
 cargo jackioh classify --base origin/main [--parent-bin <path>] [--claims]   # what the change does: its kind, tier and the cards that play differently (R1365000); --claims holds the fragments to it, as CI's `rust (classify)` does (R1370000)
