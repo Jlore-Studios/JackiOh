@@ -1,33 +1,9 @@
-//! The learned evaluation's inputs (#466, #1006; `docs/learned-eval.md` D3, D5, D10): what a
-//! position looks like to a seat, as integers. One function serves the replay pass that turns stored
-//! self-play logs into training rows (`cargo jackioh positions`) and the network's inference in the
-//! search, so the two can never read a position differently.
-//!
-//! It reads only `redact(state, seat)` (R185): `features_of` redacts first, and `features` takes a
-//! view a caller has already redacted. Two states that differ only in what the seat cannot see give
-//! the same features (R1006000).
-//!
-//! - **dense**: integers named by `dense_names`, in one fixed order: the turn and who acts, then for
-//!   each side (the seat's own first, the enemy's second) its hero's `effective_life` and armor, its
-//!   mana, its hand, library and backrow, its units through §10.4's layers (`unit_view`) in
-//!   aggregate, one count per keyword kind (`counted_keywords`: all but Tradable, a hand keyword newer
-//!   than the layout), the face damage its board threatens (`face_threat`) and
-//!   what it has banked; then the seat's own hand cards by cost, and how many of them are Radiant
-//!   (R1012004).
-//! - **sparse**: `(key, count)` pairs, the key `<zone>:<side>:<card id>` for a card on the board
-//!   (`board`), in the seat's own hand (`hand`, own only: the enemy's is hidden) or readable in a
-//!   backrow (`backrow`: the seat's own and the enemy's face-up cards, as `evaluate` reads them). Ids
-//!   stay strings so a patch or a new card never shifts an index; the weights carry the id-to-row
-//!   table (D10), and an id they do not know is no input at all, so a new or custom card is valued
-//!   by its dense stats alone. A Radiant card in the seat's own hand also has a second key,
-//!   `hand_radiant:own:<card id>` (R1012004): the hand eval prices a hand card by the face it will
-//!   enter with (#1143), and before version 2 a card made Radiant in hand looked to the network as it
-//!   did before. The pairs are sorted by key and each key appears once.
-//!
-//! `FEATURES_VERSION` names this layout. Any change to what is computed or its order bumps it, and
-//! the weights record the version they were fitted on: a mismatch fails a test, never a game (D10).
-//!
-//! Pure like the rest of `src/` (CLAUDE.md rule 4): no clock, I/O or hash-ordered collection.
+//! The learned evaluation's inputs (#466, #1006; `docs/learned-eval.md` D3, D5, D10): integer
+//! feature vectors derived from `redact(state, seat)` (R185, R1006000).
+//! Dense features include life, mana, unit stats through §10.4 layers (`unit_view`), keywords,
+//! and hand distribution with Radiant counts (R1012004, #1143).
+//! Sparse features track board, hand, and readable backrow card counts.
+//! `FEATURES_VERSION` tracks the layout version. Pure (CLAUDE.md rule 4).
 
 use jackioh_engine::{
     GameState, Keyword, KeywordKind, PlayerId, Position, active_units_of, backrow_is_public, cannot_attack,
@@ -80,11 +56,8 @@ const SIDE_FIELDS: &[&str] = &[
 /// The two sides, the seat's own first.
 const SIDES: [&str; 2] = ["own", "enemy"];
 
-/// The keyword kinds no count reads: a hand keyword newer than the layout, which does nothing on the
-/// field where the counts are taken (R1838000's Tradable), and Stinkyscape's Starship Piece and
-/// Starship (R1852000, R1852003), which came after the layout was fitted and wait for its next refit.
-/// Left out, so the layout stays the one `FEATURES_VERSION` names and the weights fitted on it still
-/// read it (R1010000); a Unit carrying one counts its other keywords as before.
+/// Keyword kinds omitted to preserve `FEATURES_VERSION` compatibility (R1010000):
+/// Tradable (R1838000), StarshipPiece (R1852000), and Starship (R1852003).
 const UNCOUNTED_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Tradable,
     KeywordKind::StarshipPiece,

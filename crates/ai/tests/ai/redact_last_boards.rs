@@ -1,7 +1,4 @@
-//! `redact` and last boards (R185, R417): a seat's last board is that player's own, as C+ #29's options
-//! reach only their chooser (§10.8), so the AI keeps its own seat's and never reads the other's.
-//!
-//! Port of `packages/ai/test/redact-last-boards.test.ts`.
+//! `redact` and last boards (R185, R417, §10.8, C+ #29): seat keeps its own last board, drops other's.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

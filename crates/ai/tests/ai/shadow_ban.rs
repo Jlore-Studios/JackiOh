@@ -6,11 +6,6 @@
 //!
 //! B25: `sweepFlags` raises each flag exactly at its AI_SWEEP threshold, tested on both sides of
 //! every bound with synthetic stats, and one real `sweepCard` run on a plain card flags no error.
-//!
-//! Port of `packages/ai/test/shadowBan.test.ts`. The sweep's fixtures (`SweepStats`, `SweepResult`,
-//! `SweepPass2`) are built from TS's object literals as JSON and read back as JSON, so the tests pin
-//! the shapes the sweep's reports carry (`--report` joins them as JSON), whatever the Rust layout.
-//! TS's per-test `{ timeout }` has no `cargo test` twin.
 
 use std::cell::Cell;
 
@@ -74,9 +69,7 @@ fn banned_ids() -> Vec<String> {
     SHADOW_BAN_IDS.iter().map(|id| id.to_string()).collect()
 }
 
-// ---------------------------------------------------------------------------------------------
 // B24
-// ---------------------------------------------------------------------------------------------
 
 mod the_shadow_ban_b24 {
     use super::*;
@@ -166,9 +159,7 @@ mod the_shadow_ban_b24 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B25
-// ---------------------------------------------------------------------------------------------
 
 /// TS's `stats(overrides)`: a clean `SweepStats` over seedsPerCard games, as JSON.
 /// R2425000: a turn the overrides call affordable is playable too, unless they give `playableTurns`.
@@ -355,10 +346,8 @@ mod sweep_flags_b25 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // every tier: a ban holds at every difficulty, so a card is judged at the fewest resources and
 // the most, and a card no tier could afford is reported rather than passed
-// ---------------------------------------------------------------------------------------------
 
 /// TS's `result(overrides)`: a pass-1 `SweepResult` at Easy, its flags and `unswept` from its stats.
 fn result(overrides: Value) -> Value {
@@ -533,24 +522,8 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         assert_eq!(affordable_only_at_hard["unswept"], json!(false));
     }
 
-    // One test per tier, each with its own 300 s. The two shared one test and ran 267 s on a developer
-    // sandbox and 313 s on the night bot's, past its limit; the time is all Easy's (251 s of the 267
-    // for two seeds, Hard's two take 12 s). Easy's check plays one game. It was GIGA Glowy Jelly Bean's
-    // until #2380, and its game 1 had to end before the Floats of R1563000 ("Float reduces cost", in the
-    // deck too) brought the card down to four crystals: dealt with every Meditative ban lifted (#1675),
-    // game 1 ran 21 turns, the card affordable on two of them, and once the AI priced a Dormant card it
-    // ran 36, the card drawn on turn 30 at 0. Pile On (5) has no discount of its own, so only another
-    // card's could bring it to Easy's four crystals: in game 1 it is in hand from turn 7, unaffordable,
-    // until the game ends on turn 9. Both checks deal from the frozen fixture pool (issue #1113), so a
-    // shadow-ban change re-deals neither.
-    //
-    // Hard's check plays five: re-pinned for v0.3.5, the Meditative set joins the greedy seat's deck (a
-    // player's, which the AI's soft gate leaves whole, R1390), and the AI wins games 1 and 2 on turns 7
-    // and 8, before its sixth crystal; game 4 holds the card affordable on four turns. Re-pinned for
-    // #817 (R817000), when the Quickdraw cap re-dealt the sweep's filler decks and games 1–4 hold the
-    // card affordable on no turn between them; game 5 holds it affordable, so the check plays five.
-    // Re-pinned for the Stinkyscape release (#1884), whose cards join the greedy seat's deck too: games
-    // 1–7 hold the card affordable on no turn and game 8 does, so the check plays eight.
+    // Easy and Hard sweep checks (#2380). Easy tests Pile On affordability (R1563000, #1675)
+    // using frozen fixtures (#1113, R1390). Hard re-pinned across #817 (R817000) and #1884.
 
     /// R186 Pile On (5 mana) is unswept at Easy's four crystals
     #[test]
@@ -596,11 +569,9 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R390: two passes. Pass 1 finds the cards at risk, pass 2 sweeps them again with more games and
 // deals them more often as filler, and a judgement ban needs pass 2's numbers. Fixture results
 // throughout, so no rule here waits on a whole sweep; one real pass-2 game at the end.
-// ---------------------------------------------------------------------------------------------
 
 mod the_two_pass_sweep_r390 {
     use super::*;
@@ -1599,9 +1570,7 @@ mod playable_turns_r2425000 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // V12 (docs/v0.3.0/README.md §6): the table at cutover
-// ---------------------------------------------------------------------------------------------
 
 /// `crates/ai/generation.json`: the AI generation this tree holds (training/README.md).
 const GENERATION_JSON: &str = include_str!("../../generation.json");
@@ -1680,10 +1649,8 @@ mod v12 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R732000: the shadow ban holds no card of a set before Meditative, and at most half of the
 // Meditative set (issue #732)
-// ---------------------------------------------------------------------------------------------
 
 mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
     use super::*;
@@ -1781,9 +1748,7 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
 
     #[test]
     fn r732000_the_gate_is_lifted_and_generation_json_counts_the_table() {
-        // Generation 9 lifted R1390's gate on that table; every promotion since records its own count.
-        // It held the Stinkyscape set from its release (#1884) until #1885's sweep of record measured
-        // the AI on it.
+        // Generation 9 lifted R1390's gate on the table (#1884, #1885).
         assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
         let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
         assert_eq!(record["shadowBan"].as_u64(), Some(SHADOW_BAN.len() as u64));

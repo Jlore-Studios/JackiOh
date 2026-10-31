@@ -1,10 +1,5 @@
-//! Every number the AI states (CLAUDE.md rule 9, in the package's own config). The weights are tuning
+//! Every number the AI states (CLAUDE.md rule 9, SURFACE §9, SURFACE §4.2). The weights are tuning
 //! defaults: tests pin rankings and puzzle outcomes, never these values.
-//!
-//! Port of `packages/ai/src/config.ts` (SURFACE §9), minus the R645 emote personas (`EMOTE_TRIGGERS`,
-//! `EMOTE_REPLY_KEYS`, `AI_EMOTE`, `AI_PERSONAS` and their types), which are presentation and live in
-//! the web client (`apps/web/src/practice/personas.ts`, part 21). Each TS constant object is a `const`
-//! of a struct named after it (SURFACE §4.2); `EvalWeights` keeps TS's own name for `AI_EVAL`'s shape.
 
 use jackioh_engine::config::{CN_TECH_MIN_GAMES, MARKETPLACE_CREDITS_PER_MANA};
 use jackioh_engine::{KeywordKind, SetName};
@@ -51,10 +46,7 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 };
 
 /// The quality gates' budget, and the shadow-ban sweep's: the browser's own, so that the gates
-/// (docs/polish/3-ai.md B28–B31) and the sweep (R186) measure the AI that ships. A decision seldom
-/// spends it all (the beam's shape, not the node count, bounds most turns), so a gate game costs
-/// seconds, not minutes. Kept as its own name so that the gates can be given less, with the same
-/// algorithm, if CI ever needs them faster.
+/// (docs/polish/3-ai.md B28–B31) and the sweep (R186) measure the AI that ships.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
 /// R2102000: the stream the practice AI's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
@@ -75,11 +67,7 @@ pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 /// wins count; a draw is reported beside them.
 pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
 
-/// #1760: the share of its games the Easy AI team must win against a team on the 1v1 gates' one-ply
-/// greedy baseline (`duos_greedy_action`), B32's second matchup. Only wins count. Set as §9.9 sets
-/// the 1v1 gates' counts, the most wins of DUOS_GATE_GAMES_SMOKE that a team as strong as measured
-/// reaches in 95% of runs: on fresh deals (series `duos-tune`, games 1-200, which no gate plays) the
-/// AI team won 168 of 200 against greedy, so 14 of 20.
+/// #1760: the share of games the Easy AI team must win against the greedy baseline (B32, §9.9).
 pub const DUOS_GATE_GREEDY_WIN_FLOOR: f64 = 0.7;
 
 /// R1127000: the seed of the throwaway determinization `duos_passes` scores a teammate's
@@ -105,23 +93,12 @@ pub const DUOS_PASS_MIN_GAIN: f64 = 0.5;
 #[serde(rename_all = "camelCase")]
 pub struct AiSearch {
     /// Plays identical but for `zone` keep the lowest lane of each placement, or its midlane lane when
-    /// it has one (R2203001) (candidates.rs `placement_key`: what stands beside the lane or the
-    /// board's edge, and in the lane's four zones), at most this many (#1014), everywhere but the search's root: the beam's deeper levels,
-    /// the lethal solver, the opponent's reply, decide's probe and the baselines. The root keeps every
-    /// placement (#1635, `root_candidate_actions`), so a card that reads its own lane or its neighbours
-    /// is tried in each; its screen, 400 games of improve-dev against the parent (`82d7eb4b8`), read
-    /// 197-203, edge -0.015 (-0.078 to 0.048). 3 let a Tribute play's sets outgrow the lethal allowance.
-    /// In the beam, a line that differs from an earlier one only in where its units stand is a lane
-    /// variant, at most this many of a position counting the first; it is closed beside the first
-    /// rather than played on (#1797, `beam_search`). Its screen, 400 games of improve-dev against the
-    /// parent (`2bcd74f93`), read 215-184 with one game aborted, edge 0.078 (0.019 to 0.136).
+    /// it has one (R2203001) (candidates.rs `placement_key`), at most this many (#1014), outside the root.
+    /// The root keeps every placement (#1635). In the beam, a line differing only in unit placement is a
+    /// lane variant, closed beside the first (#1797).
     pub zone_variants: i32,
-    /// #1759, R1759000, R2021000: the stand-downs (a switch from Attack to Defense Position of a unit an enemy unit
-    /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, the first of them the cut left out, beside endTurn. Switches are the last tier of the
-    /// move order, so where `branching` is 6 (below the root), a board with that many earlier moves cut
-    /// every one, and a unit that cannot win its next fight never stood down in a line, as the
-    /// opponent's reply does (`AI_REPLY.defense_switches`). Bounds a level's children at `width` + this
-    /// + 1. A switch back to Attack is kept only where the width holds it.
+    /// #1759, R1759000, R2021000: stand-downs to Defense Position `expand` keeps past its `width`.
+    /// Bounds a level's children at `width` + this + 1.
     pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
@@ -146,40 +123,25 @@ pub struct AiSearch {
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
     pub tribute_sets: i32,
-    /// A decision's width at or under which the searched part of its budget is spent in full. Above
-    /// it the budget shrinks in inverse proportion, so the slow states a long hand and a full board
-    /// make (R186's sweep flags a decision over 2 s) cost about what an ordinary one does. A card
-    /// held or in play on either side counts toward the width beside the root's candidates, since a
-    /// prompt's few answers hide the fat state they answer into (decide.rs `fat_width`).
+    /// Decision width under which search budget is spent in full. Above it budget shrinks inversely
+    /// to cap slow fat-state time (R186).
     pub fat_reference: i32,
     /// The least the scaled budget ever holds (the lethal walk still gets its depth-first pass and
     /// the beam a few expansions at the widest states).
     pub fat_min_nodes: i32,
     /// The least of the scaled budget the lethal solver's allowance shrinks to.
     pub fat_min_lethal: i32,
-    /// The cards a simulated Play of which `simulate` charges `expensive_def_nodes` for (its
-    /// `surcharge_nodes`): resolving one ranks every shipped card for the state (the §10.7 scorer,
-    /// R29's Zephyrs faces), about a hundred ordinary reduces, so a hand that holds one is budgeted
-    /// for what the step really costs. A fused card holding one is charged the same (`stands_for_any`,
-    /// #1240). One a step casts without playing it, from a graveyard or at random, is charged the
-    /// same once the step has run (`announced_surcharge_nodes`, #1347).
+    /// Cards whose Play charges `expensive_def_nodes` (§10.7 scorer, R29), including fused (#1240)
+    /// and announced (#1347) copies.
     pub expensive_def_ids: &'static [&'static str],
     /// Nodes a Play of an `expensive_def_ids` card pays beyond the one every `simulate` takes.
     pub expensive_def_nodes: i32,
-    /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
-    /// (§8.5 core-096's "an AI plays the rest of their turn": a whole random turn inside the one
-    /// reduce). `surcharge_nodes` asks it only of an attack that could be the lethal one the trap
-    /// answers, so an ordinary poke at an armed board is not priced like losing the turn. A fused card
-    /// holding one is charged the same (`stands_for_any`, #1240).
+    /// Armed backrow cards making Attack pay `ai_turn_trap_nodes` (§8.5 core-096), fused included (#1240).
     pub ai_turn_trap_ids: &'static [&'static str],
     /// Nodes an Attack into an armed `ai_turn_trap_ids` card pays beyond the one every `simulate`
     /// takes — the playout's rough share of the nodes it burns.
     pub ai_turn_trap_nodes: i32,
-    /// #1240: nodes a Play pays for each card in its player's hand, beyond the one `simulate` takes,
-    /// while a card of the other side judges that player's plays (Pareto Optimality,
-    /// `subsystems::watching`): the judge runs §10.7's scorer once per playable card. On
-    /// improve-dev:154's pinned position such a play cost 7 ms against an unjudged one's 0.6 ms with
-    /// five cards held, about 2.3 ordinary steps per card, rounded up.
+    /// #1240: nodes a Play pays per held card while an opponent card judges plays (§10.7).
     pub judged_card_nodes: i32,
 }
 
@@ -613,12 +575,7 @@ pub enum EvalKind {
 pub const AI_EVAL_KIND: EvalKind = EvalKind::Learned;
 
 /// R1012001: the share of the network's correction a finalist's score takes, `hand + share·(points
-/// − hand)` (`learned::finalist_score_with`). The network is fitted to the games' outcomes, so its
-/// whole correction says how much more often a position is won than the hand eval thinks; a decision
-/// compares lines a move or two apart, where much of that is noise, and the whole of it changed about
-/// one decision in four for little gain. Measured on 1,600 paired games each against the hand eval
-/// (#466, the 36,000-game network): the whole correction +0.010 edge, three quarters +0.022, half
-/// +0.064, a quarter +0.086; on TD targets (#1190) and fresh deals, half +0.076 and a quarter +0.049.
+/// − hand)` (`learned::finalist_score_with`). Half balances whole-network noise against hand eval (#466, #1190).
 pub const LEARNED_CORRECTION_SHARE: f64 = 0.5;
 const _: () = assert!(LEARNED_CORRECTION_SHARE > 0.0 && LEARNED_CORRECTION_SHARE <= 1.0);
 
@@ -655,14 +612,8 @@ pub enum LearnedReach {
     Beam,
 }
 
-/// R1012002: the learned evaluation's reach (`learned::line_score`, `learned::open_score`). Measured
-/// on 1,600 paired games each against the hand eval (#466, the learn lane's 100,000-game network at
-/// half the correction, 3 finalists): the finalists alone +0.073 edge, every complete line +0.102, the
-/// whole beam +0.054; on fresh deals, the finalists +0.071 and every complete line +0.076, a tie.
-/// Ranking open lines on the network prunes the beam on a scale its widths were never tuned for. At
-/// the finalists alone the beam and its shortlist keep the hand eval, so the network's errors on
-/// positions unlike its games (the puzzles' bare boards and empty libraries) reach only the choice
-/// among lines the hand eval found: at `Lines` a retrained network missed two of the AI's puzzles.
+/// R1012002: the learned evaluation's reach (`learned::line_score`, `learned::open_score`). At the
+/// finalists alone (#466), the beam and its shortlist keep the hand eval, protecting puzzle solutions.
 pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
@@ -887,16 +838,9 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
     exclude_def_ids: &["core-098"],
 };
 
-/// R1390: the soft gate. The sets the AI's randomized decks are never dealt from, whatever ships or a
-/// thread previews (R1420): `build_ai_deck`'s default `gated_sets`, so the AI's own decks (practice,
-/// the quality gates, the sweep's AI seat, the arena, development runs) hold none of their cards,
-/// while a player's random deck (`gated_sets: Some(vec![])`, beside `banned: Some(vec![])`) is dealt
-/// from every set. A lean on a gated set leans on the newest set that ships and is not gated instead.
-/// It held the Meditative set until issue #732 measured the AI on it (MN08 of #496), and the
-/// Stinkyscape set from its release (issue #1884, `docs/stinkyscape-set.md` D8) until issue #1885's
-/// sweep of record (training/history/sweep-2026-10-28.md) banned 10 of its 175 cards, within
-/// `STINKYSCAPE_BAN_CEILING` (R1885000), and emptied it again. Gating a set that ships before the AI
-/// is trained on it is listing it here.
+/// R1390: the soft gate. The sets the AI's randomized decks are never dealt from (R1420), holding none
+/// of their cards. Kept Meditative (#496, #732, R732000) and Stinkyscape (#1884, #1885, R1885000) until
+/// their sweeps cleared them.
 pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 
 /// R846, #1886: the cards that owe their caster an extra turn when cast (`take_extra_turn`), priced in
@@ -904,11 +848,8 @@ pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 /// Radiant face, counted once) and S #4.4 Last Word. A test casts each and checks the turn is owed.
 pub const AI_EXTRA_TURN_CARDS: &[&str] = &["meditative-019-1", "stinkyscape-004-3", "stinkyscape-004-4"];
 
-/// The most times the AI plays one card (one instance) in a turn. Past it the card is no candidate
-/// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell under a
-/// permission to play from the graveyard with no price floor (Classic #90 In Too Deep's reward L) is
-/// legal again after every cast, and each cast scored a little better than ending the turn, so the
-/// AI cast it until the match's action cap (#1885, Stinkyscape's Reknite and The Coin).
+/// The most times the AI plays one card (one instance) in a turn. Bounded against recurring (0) spells
+/// (Classic #90, #1885) looping up to the action cap.
 pub const AI_SAME_CARD_PLAYS_PER_TURN: usize = 3;
 
 /// R1885000: the most Stinkyscape cards the shadow ban (R186) may hold, 20% of the set's 175 non-token
@@ -928,22 +869,12 @@ pub struct AiWinRate {
     pub floor: f64,
 }
 
-/// #750 (R1454): a ladder bot's random decks lean on the cards that win. At `strength` s (0 to 1,
-/// `AiDeckOptions::strength`) a card whose row has at least `min_games` in-deck games has its weight
-/// multiplied by `1 + s × max_boost × (rate − 0.5) × 2`, held between `floor` and `1 + max_boost`;
-/// a card with a thinner row or none, and every card at strength 0, keeps its weight, so a deal with
-/// no strength is the one the seed always dealt. 20 games is CN Tech's floor (`CN_TECH_MIN_GAMES`)
-/// and the public stats' (`CARD_STATS_MIN_SAMPLE`); 3.0 sits under `AI_DECK.themeBoost` (4.0), so a
-/// win rate never outweighs the theme or the curve.
+/// #750 (R1454): a ladder bot's random decks lean on the cards that win. At `strength` s (0 to 1),
+/// a card's weight scales with win rate above 50%, bounded by `floor` and `max_boost`.
 pub const AI_WIN_RATE: AiWinRate = AiWinRate {
     min_games: CN_TECH_MIN_GAMES,
     max_boost: 3.0,
     floor: 0.25,
 };
 
-// ---------------------------------------------------------------------------
-// R645: the AI's emote personas (`EMOTE_TRIGGERS`, `EMOTE_REPLY_KEYS`, `AI_EMOTE`, `AI_PERSONAS`,
-// `PersonaName`, `PersonaSpec`) are cosmetic only: none of them reaches the engine, the action log or
-// a game record, and `decide`/`search.rs` never read them. They moved with the personas to the web
-// client, `apps/web/src/practice/personas.ts` (part 21).
-// ---------------------------------------------------------------------------
+// R645: emote personas moved to the web client (`apps/web/src/practice/personas.ts`).

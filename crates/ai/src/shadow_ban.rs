@@ -1,91 +1,8 @@
 //! R186: the AI's shadow ban. The cards the AI never deals into its own decks, each with the reason
-//! the sweep flagged. It governs AI deck-building (`build_ai_deck`'s default `banned`) and nothing
-//! else: a banned card stays legal for every player, a human may play it against the AI, and the AI
-//! still has to answer it. It is not §9.4 L6's ban, which is server state (R164).
+//! the sweep flagged. Governs AI deck-building (`build_ai_deck`), not §9.4 L6's server-state ban (R164).
 //!
-//! How an entry gets here: `cargo jackioh sweep` (crates/tools/src/sweep.rs; `pnpm ai:sweep` before
-//! v0.3.0) forces each non-token card of every set into AI decks at every tier in AI_SWEEP.tiers (Easy
-//! and Hard) against the greedy baseline, in two passes (R390): the second sweeps the cards at risk
-//! again with more games and deals them more often as filler, and a `neverPlayed` or `selfHarm` ban
-//! needs its numbers. It prints one row per flagged card and tier, together with the entries for both
-//! tables below, which `cargo jackioh sweep --write` writes in from the reports of record the header
-//! block names (`--check` fails on anything else). A flag at either tier bans the card at every tier,
-//! and the reason names the tier after the flags ("neverPlayed: hard: …"). No card is listed without a
-//! flag, and neither table is tuned by hand.
-//!
-//! Sweep of record: 2026-09-27 (UTC), `pnpm ai:sweep` over 100 non-token Core cards at easy and hard,
-//! 8 seeds per card and tier (`sweep:<tier>:<id>:<n>`), budget AI_GATE_BUDGET {"nodes":600,
-//! "lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,
-//! "maxDepth":8,"finalists":3}, re-run on the whole of patch v0.1.1 (issue #27) once its engine,
-//! card and client halves were merged: the two sweeps its halves ran apart each saw only part of the
-//! patch. It ran as five parallel slices and flagged no card `timeout`, so nothing needed a second
-//! run; every entry is `neverPlayed`. Against the table before it (the card half's sweep): Eugenics,
-//! KY's Private Tutor, Lava Golem, KY's Trial, Fed Fauci and Combo-Index are new, and /fullsend is
-//! now flagged at easy and Craft a Card at both tiers; Flood, Glowy Jelly Bean, GIGA Glowy Jelly Bean,
-//! Unstable Clone Machine, Lunar Eclipse, Professor Curvature, Twinspell and My Pawn were played this
-//! time and come off, and so do Zao Gao and CN-Viral Injection, which the engine half's sweep had
-//! added. Hinder, Blood Ridden Glowy Jelly Bean and Ceaseless Void were never affordable at either
-//! tier, so they are unswept and not listed (R186: no evidence either way). No card was flagged
-//! `error` or `selfHarm`.
-//!
-//! Sweep of record for the Rust AI (generation 0, #306 part 40): 2026-10-07 (UTC), `cargo jackioh
-//! sweep` on `7e91089`, pass 1 over 268 card(s) at easy and hard, 8 seeds each
-//! (`sweep:<tier>:<id>:<n>`), pass 2 over 91 at-risk card(s), 24 seeds each
-//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in four parallel
-//! slices per pass. It filled `SHADOW_WATCH` below (67 cards). `SHADOW_BAN` above stays generation 0's,
-//! TypeScript's eleven (#306): that sweep would ban 25 cards, three of the eleven among them and 22 of
-//! the 25 for `timeout` (decisions that resolve R29's dry-run scorers, and one turn that never ends),
-//! and clear the other eight. It replaces a first run of the same day (`fa03797`), whose 63 timeouts
-//! were fused scripts composed on every lookup. training/history/sweep-2026-10-07.md lists them, with
-//! what the timeouts measured, as the unban lane's starting notes.
-//!
-//! Sweep of record for generation 9 (#732): 2026-10-12 (UTC), `cargo jackioh sweep` on `716cc6b`
-//! (`main` at `bf0f8e8` with R1390's gate lifted), pass 1 over the 102 Meditative card(s) at easy and
-//! hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 22 at-risk card(s), 24 seeds each
-//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes
-//! pinned to their own cores, every card that timed out swept again with the machine to itself. It
-//! swept the Meditative set alone: R732000 keeps every card of an earlier set out of `SHADOW_BAN`, so
-//! `SHADOW_WATCH` keeps the 2026-10-07 sweep's rows for those sets and gains this sweep's Meditative
-//! ones. It filled `SHADOW_BAN` (31 of the 102, every one for `timeout`) and lifted the gate.
-//! training/history/sweep-2026-10-12.md has the report and what the timeouts measured.
-//!
-//! Sweep of record for the Meditative+ set (#1186, part of #1173): 2026-10-18 (UTC), `cargo jackioh
-//! sweep` on `e1f7728` (`main` at `13e527a` with Meditative+ batches 01 and 03 merged), every set
-//! previewed (R1420), pass 1 over the 26 Meditative+ card(s) at easy and hard, 8 seeds each
-//! (`sweep:<tier>:<id>:<n>`), pass 2 over 11 at-risk card(s), 24 seeds each
-//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes. It
-//! swept the Meditative+ set alone (R1186000): a card takes the row of the latest report that lists
-//! it, so the Meditative bans stand and `SHADOW_WATCH` gains this sweep's 11 Meditative+ rows. It banned
-//! none of the 26 (no game had an error or a timeout, and every pass-1 `neverPlayed` cleared in pass
-//! 2), so the AI deals itself the whole set, generation 12 unchanged. training/history/sweep-2026-10-18.md
-//! has the report.
-//!
-//! Sweep of record for generation 13 (#1675): 2026-10-22 (UTC), `cargo jackioh sweep` on `71b594b`
-//! (`main`, the learned evaluation of #1477), pass 1 over the 17 Meditative card(s) `SHADOW_BAN` held
-//! at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over the same 17 at risk, 24 seeds
-//! each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes
-//! with no build or test beside them. It swept the 17 banned Meditative cards alone, so every other
-//! card keeps the row the earlier reports gave it. It banned 1 of the 17 (`meditative-069`, one
-//! decision still over 2 s timed again, R977000), watches 5 and cleared 11 (R1675000), so `SHADOW_BAN`
-//! holds one row and `SHADOW_WATCH` gains the 5. training/history/sweep-2026-10-22.md has the report
-//! and the slow state.
-//!
-//! Sweep of record for #1889: 2026-10-25 (UTC), `cargo jackioh sweep` on `main` at `86430e3` with
-//! #1889's change to the engine's play listing (`priced_play_actions` checks each price's targeting
-//! discards once, not once per Tribute set and zone), pass 1 over `meditative-069` alone at easy and
-//! hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over it at risk, 24 seeds each
-//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in one lane with no
-//! build or test beside it. It banned none: 069 is watched, at risk by its own numbers at half strength
-//! (R600), so `SHADOW_BAN` is empty and `SHADOW_WATCH` gains its row. training/history/sweep-2026-10-25.md
-//! has the report and where the slow decision's time went.
-//!
-//! From #1678 on (R1678000), a sweep of record follows every push to `main` that moves the AI's
-//! generation or ships a set, run by `.github/workflows/sweep.yml` over the cards `cargo jackioh sweep
-//! --due` names. Those sweeps write no paragraph here: each report under training/history/ says what
-//! ran and why, and the header block below names it.
-//!
-//! Port of `packages/ai/src/shadowBan.ts` (SURFACE §9): TS's `Record<string, string>` is a slice of
-//! `(defId, reason)` pairs sorted by id, the order `Object.keys` gave it.
+//! Generated by `cargo jackioh sweep` (R390, §9) across two passes. Sweeps of record (#27, #306, #1173,
+//! #1477, #1678, R1420, R1678000) are recorded under training/history/ and summarized below.
 
 // BEGIN `cargo jackioh sweep --write`: the reports of record (R186), oldest first. Never edit by hand.
 // Report of record: training/history/sweep-2026-10-07.md
@@ -333,12 +250,8 @@ pub const SHADOW_BAN_IDS: &[&str] = &{
     ids
 };
 
-/// R732000, R1186000: the ids the unban lane has removed from the reports of record's `SHADOW_BAN`
-/// entries, sorted by id (generation 10: 021, 033, 047, 051, 063, 073, 092; 11: 041, 067, 080; 12:
-/// 006, 016, 045, 068; the notes above `SHADOW_BAN`). `cargo jackioh sweep --write` leaves their rows
-/// out of `SHADOW_BAN`, and refuses an id no report of record bans. The lane unbans a card by adding
-/// its id here and running `cargo jackioh sweep --write`; a new sweep of a set drops its own ids from
-/// this list.
+/// R732000, R1186000: ids removed from reports of record `SHADOW_BAN` entries by unban lane, sorted.
+/// `cargo jackioh sweep --write` leaves their rows out of `SHADOW_BAN`.
 pub const SHADOW_UNBANNED: &[&str] = &[
     "meditative-006",
     "meditative-016",
@@ -356,12 +269,8 @@ pub const SHADOW_UNBANNED: &[&str] = &[
     "meditative-092",
 ];
 
-/// Issue #1113: the frozen fixture pool. A copy of `SHADOW_BAN_IDS` as it stood when the seeded
-/// fixtures were dealt from it, so a shadow-ban change re-deals none of them: R290's tier games,
-/// the `cargo test` gate smokes behind `fixture_game_config`, and the named practice seeds deal
-/// with `banned: Some(FIXTURE_BANNED_IDS)`. It is never updated with the table; a fixture that
-/// needs a new deal changes its seed instead. Live paths (`game_config`, `gate --full`,
-/// promotion, sweep, practice without its test-only pool) keep dealing the live table.
+/// Issue #1113: frozen fixture pool (R290's tier games, gate smokes), isolating seeded fixtures
+/// from shadow-ban table changes.
 pub const FIXTURE_BANNED_IDS: &[&str] = &[
     "meditative-011",
     "meditative-012",
@@ -1144,33 +1053,11 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     ),
 ];
 
-// ---------------------------------------------------------------------------
-// The unban lane's dealt-pool model (training/README.md): what each seat's deck
-// can hold, learned from the lane's own game records. Generation 1's.
-// ---------------------------------------------------------------------------
+// The unban lane's dealt-pool model (training/README.md).
 
 /// The lane's unbans dealt into the AI's own decks prefer this hard, on top of
 /// `DEALT_Q`'s shaped weight: the whole point of the lane is that the AI meets
-/// these cards, so it meets them often. `core-091` is not preferred on purpose:
-/// the records show the AI losing the games it casts Fauci in, so it deals at
-/// its measured weight like any other card. `core-057` joins them in
-/// generation 2 on the sweep's numbers (played 145 times at easy, +2.2 mean
-/// eval delta) — card advantage is what the tempo mirror rewards. `core-094`
-/// joins them in generation 3: the sweep cleared it, and the AI meets the card
-/// the table now teaches. `core-099` is not preferred either: the beam prunes
-/// its Discover chain before the fused payoff lands (the generation-4 note
-/// above the ban table), so preferring it would only deal a dead card more.
-/// `core-055` joins them in generation 5 on the strongest numbers the sweep of
-/// record took (222 casts at easy for +4545.7, 168 at hard for +23833.0): the
-/// AI already plays the Golem well, so it should meet it often. `core-078` is
-/// not preferred on the generation-4 precedent: its refresh, discount and
-/// hand-exile pay only across a whole dumped hand (the generation-6 note above
-/// the ban table), so preferring it would deal the dead slot three times as
-/// often. `core-042` is not preferred on the same precedent (the generation-7
-/// note): the sweep watched the casts it makes land near neutral, so the extra
-/// deals would buy nothing. `core-076` is not preferred on the generation-4
-/// precedent (the generation-8 note): the beam declines it on every affordable
-/// turn, so preferring it would deal the dead slot three times as often.
+/// these cards, so it meets them often.
 pub const UNBANNED_PREFER: &[&str] = &[
     "core-051", "core-055", "core-057", "core-082", "core-093", "core-094",
 ];
@@ -1190,11 +1077,7 @@ pub const DEAL_SHAPE_CAP: f64 = 12.0;
 /// when its shaped weight reaches this (mulligan.rs).
 pub const DEAL_MULLIGAN_KEEP: f64 = 2.0;
 
-/// Per defId, the share of games the candidate won with it dealt into its deck,
-/// shrunk toward `DEALT_Q_PRIOR` (`(w + 60 x prior) / (n + 60)` over the lane's
-/// `self-vs-bin` records). The ids banned when the table was last fit are
-/// absent: a deck dealt under a ban list never holds one. They are all unbanned
-/// now; an absent id prices as `DEALT_Q_PRIOR`. Sorted by id.
+/// Per defId, win share with card in deck shrunk toward `DEALT_Q_PRIOR`. Absent ids price as `DEALT_Q_PRIOR`.
 pub const DEALT_Q: &[(&str, f64)] = &[
     ("classic-001", 0.5742),
     ("classic-002", 0.5418),

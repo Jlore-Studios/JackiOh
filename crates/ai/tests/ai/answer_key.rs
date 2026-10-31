@@ -1,10 +1,4 @@
-//! R465: a multiple-choice problem's key never leaves the engine (Classic+ #42 KY's Test, the `answer`
-//! prompt kind, docs/classic-sets.md B5 E18). `view_for` never sends it; this file proves the AI's half:
-//! `redact` (R185) strips it from what the AI reads — its own prompt's resume data included — exactly
-//! as a human never sees it, so two states that differ only in which option is right redact alike and
-//! the AI answers them alike, from what the prompt shows.
-//!
-//! Port of `packages/ai/test/answer-key.test.ts`.
+//! R465, #42, B5 E18: answer key never leaves engine; `redact` (R185) strips it from AI observation.
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_ai::{AiOptions, decide, redact};

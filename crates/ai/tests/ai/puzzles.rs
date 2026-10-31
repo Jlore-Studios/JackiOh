@@ -1,23 +1,5 @@
-//! Hand-built puzzles P1–P14 (docs/polish/3-ai.md B17–B19, the puzzle table), and P15–P17 for The
-//! Coin (SPEC §2.1, §7, R244, R245), which the seat going second holds from its first turn.
-//!
-//! Every puzzle is a `scenario({ active: "p1", turn: 9, … })` with the AI as p1, p2 at 30 health
-//! unless stated and every p1 unit not summoning sick (the harness default). The AI plays one whole
-//! turn through `playAiTurn` at AI_BUDGET, the budget the browser plays at, and each puzzle holds
-//! its stated assertion. The gate is at least 12 of the 14 passing: all 14 are written, and a
-//! puzzle may be removed at reconcile only with a written reason in this file.
-//!
-//!   B17 lethal   P1–P6: the enemy hero is dead at the end of the AI's turn, and the AI's first
-//!                decision already says "lethal".
-//!   B18 tactics  P7–P10, P12, P13: no bad trade; survive a scripted all-out attack next turn;
-//!                spend the mana on the stronger play; spend removal on the biggest threat.
-//!   B19 prompts  P11 discovers True Strike off Reminisce and casts it for lethal; P14 answers
-//!                Masochism Mask's start-of-turn prompt at 3 health without losing health or
-//!                summoning the Spikey Pillow, through the search (reason "prompt").
-//!   The Coin     P15 plays it for the mana a lethal line needs; P16 plays it to put a 2-drop down
-//!                with 1 mana; P17 keeps it when the extra mana would buy nothing.
-//!
-//! Port of `packages/ai/test/puzzles.test.ts`. TS's per-test `{ timeout }` has no `cargo test` twin.
+//! Hand-built puzzles P1–P14 (docs/polish/3-ai.md B17–B19) and P15–P17 for The Coin (SPEC §2.1, §7,
+//! R244, R245). Each puzzle sets up a position and asserts expected plays over one turn of `play_ai_turn`.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -67,9 +49,7 @@ fn expect_survives_all_out(run: &PuzzleRun) -> GameState {
     after
 }
 
-// ---------------------------------------------------------------------------------------------
 // B17: lethal
-// ---------------------------------------------------------------------------------------------
 
 mod lethal_b17 {
     use super::*;
@@ -170,9 +150,7 @@ mod lethal_b17 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B18: tactics
-// ---------------------------------------------------------------------------------------------
 
 mod tactics_b18 {
     use super::*;
@@ -300,9 +278,7 @@ mod tactics_b18 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B19: prompts through the search
-// ---------------------------------------------------------------------------------------------
 
 mod prompts_through_the_search_b19 {
     use super::*;
@@ -410,9 +386,7 @@ mod prompts_through_the_search_b19 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The Coin (R244, R245): a 0-cost Spell token, "gain 1 mana this turn"
-// ---------------------------------------------------------------------------------------------
 
 const COIN: &str = "core-t-coin";
 

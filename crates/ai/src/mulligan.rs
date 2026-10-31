@@ -2,8 +2,6 @@
 //! AI_MULLIGAN.keepMaxCost, and keep the cheap ones to AI_MULLIGAN_CURVE's curve (#993,
 //! `mulligan_keep_curved`). The answer is R9-shaped — the ids kept — so `reduce` draws the
 //! replacements before the returned cards are shuffled back in, exactly as for a human.
-//!
-//! Port of `packages/ai/src/mulligan.ts`.
 
 use jackioh_engine::config::OPENING_COINS;
 use jackioh_engine::{GameState, PlayerId, find_def, handicap_of, query_cost};
@@ -56,17 +54,9 @@ pub fn mulligan_keep_shaped(state: &GameState, seat: PlayerId, keep_max_cost: i3
     keep
 }
 
-/// #993: `mulligan_keep_shaped` with its cheap cards (those costing at most `keep_max_cost`) kept to
-/// `curve`, best first by `shaped_weight` (hand order breaking ties):
-///
-/// 1. at most `curve.max_first_turn` first-turn plays (costing at most `curve.first_turn_max_cost`),
-///    so a hand of one-drops sends the rest back for a turn-2 or turn-3 play;
-/// 2. if none of what is left is an early play (costing at most `curve.early_turn` plus the seat's
-///    mana bonus, R181, and its copies of The Coin, R244, which the seat going second is dealt after
-///    the mulligan), only the `curve.keep_without_early` cheapest, so the redraw digs for one.
-///
-/// The shaped keep's cost-4 card stays either way. With `curve.on` false this is
-/// `mulligan_keep_shaped` exactly. No rng: the same state keeps the same ids, in the shaped keep's order.
+/// #993: filters `mulligan_keep_shaped` cheap cards to `curve` by `shaped_weight`:
+/// caps first-turn plays and requires early curve targets accounting for bonus mana (R181)
+/// and The Coin (R244).
 pub fn mulligan_keep_curved(
     state: &GameState,
     seat: PlayerId,

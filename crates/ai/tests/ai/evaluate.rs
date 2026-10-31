@@ -5,9 +5,6 @@
 //! unfinished one over a lost one; more own health, a bigger own board and a smaller enemy board
 //! each strictly better; and a Taunt blocker that absorbs a lethal board strictly better than none.
 //! `face_threat` is pinned exactly where its surface text fixes the arithmetic.
-//!
-//! Port of `packages/ai/test/evaluate.test.ts`. TS's `evaluate(state, seat)` defaults are written
-//! out (`NextSwing::Enemy`, `AI_EVAL`) by `eval`.
 
 use jackioh_ai::{
     AI_EVAL, AI_EXTRA_TURN_CARDS, GREEDY_EVAL, HIDDEN_DEF_ID, NextSwing, evaluate, face_threat,
@@ -31,7 +28,6 @@ fn board(opts: Value) -> GameState {
     scenario(options).state().clone()
 }
 
-/// `evaluate(state, seat)` with TS's defaults.
 fn eval(state: &GameState, seat: PlayerId) -> f64 {
     evaluate(state, seat, NextSwing::Enemy, &AI_EVAL)
 }
@@ -56,7 +52,6 @@ fn finished(state: &GameState, winner: Winner) -> GameState {
     out
 }
 
-/// Jest's `toBeCloseTo(expected, digits)`: within half a unit of the last digit.
 fn assert_close(received: f64, expected: f64, digits: i32) {
     assert!(
         (expected - received).abs() < 10f64.powi(-digits) / 2.0,
@@ -216,8 +211,6 @@ mod evaluate_the_strength_passs_terms {
 
     #[test]
     fn scored_where_the_seat_moves_first_the_enemys_threat_counts_only_its_answerable_share() {
-        // Mr. Vanilla threatens 4 into an empty board at 30 health: no lethal either way, and p1 has no
-        // attacker, so the frames differ only in the threat term.
         let state = board(json!({ "p1": {}, "p2": { "field": ["core-008"] } }));
         assert_eq!(face_threat(&state, PlayerId::P2), 4);
         assert_eq!(face_threat(&state, AI), 0);
@@ -243,7 +236,6 @@ mod evaluate_the_strength_passs_terms {
         let (Some(atk), Some(def)) = (unit_in(&attack), unit_in(&defense)) else {
             panic!("Mr. Vanilla is not on p1's field");
         };
-        // Mr. Vanilla is 4/4 with no printed Taunt or Armor.
         let lost = (1.0 - AI_EVAL.defense_attack_share) * AI_EVAL.attack * 4.0;
         let kept = AI_EVAL.position_grants * (AI_EVAL.keyword.taunt + AI_EVAL.armor_point);
         assert_close(
@@ -264,12 +256,9 @@ mod evaluate_the_strength_passs_terms {
 
     #[test]
     fn printed_taunt_unit_in_defense_position_keeps_its_inherent_taunt() {
-        // Midrange Menace is 9/9 with a printed Taunt and no Armor.
         let attack = board(json!({ "p1": { "field": ["core-019"] } }));
         let defense = board(json!({ "p1": { "field": [{ "def": "core-019", "position": "DEF" }] } }));
         let (atk, def) = (first_unit(&attack), first_unit(&defense));
-        // Switching costs it what it costs a vanilla body: its attack share, less the position's Armor
-        // that `positionGrants` keeps. Its own Taunt is not part of the loss.
         let lost = (1.0 - AI_EVAL.defense_attack_share) * AI_EVAL.attack * 9.0;
         let kept = AI_EVAL.position_grants * AI_EVAL.armor_point;
         assert_close(
@@ -277,8 +266,6 @@ mod evaluate_the_strength_passs_terms {
             lost - kept,
             10,
         );
-        // Against a vanilla body of the same stats, in the same position, it is worth its Taunt more,
-        // less the share of that Taunt the position grants the body anyway.
         let mut vanilla = def.clone();
         vanilla.vanilla = true;
         let diff = unit_worth(&defense, &def, &AI_EVAL) - unit_worth(&defense, &vanilla, &AI_EVAL);
@@ -294,7 +281,6 @@ mod evaluate_the_strength_passs_terms {
         for share in [0.0, 0.25, 0.5, 0.75, 1.0] {
             let mut w = AI_EVAL;
             w.position_grants = share;
-            // Mr. Vanilla, 4/4: the position's Taunt and Armor 1 count for `share` of themselves.
             let body =
                 w.health * 4.0 + w.armor_point + w.attack * 4.0 * w.defense_attack_share + w.keyword.taunt;
             assert_close(
@@ -302,7 +288,6 @@ mod evaluate_the_strength_passs_terms {
                 body - (1.0 - share) * (w.keyword.taunt + w.armor_point),
                 10,
             );
-            // Midrange Menace, 9/9: its Taunt is its own, so only the position's Armor is discounted.
             let body =
                 w.health * 9.0 + w.armor_point + w.attack * 9.0 * w.defense_attack_share + w.keyword.taunt;
             assert_close(
@@ -315,7 +300,6 @@ mod evaluate_the_strength_passs_terms {
 
     #[test]
     fn greedy_eval_still_discounts_a_taunt_units_own_taunt_in_defense_position() {
-        // The frozen baseline: Midrange Menace in Defense Position loses a Taunt and a point of Armor.
         let defense = board(json!({ "p1": { "field": [{ "def": "core-019", "position": "DEF" }] } }));
         let unit = first_unit(&defense);
         let w = GREEDY_EVAL;
@@ -354,7 +338,6 @@ mod evaluate_the_strength_passs_terms {
 
     #[test]
     fn a_deft_unit_in_defense_position_keeps_its_whole_attack_and_differs_only_by_the_position_grants() {
-        // R49: its switch back to Attack spends no attack, so Defense Position costs it no attack share.
         let ((attack, atk), (defense, def)) = duelist();
         assert_close(
             unit_worth(&defense, &def, &AI_EVAL) - unit_worth(&attack, &atk, &AI_EVAL),
@@ -365,8 +348,6 @@ mod evaluate_the_strength_passs_terms {
 
     #[test]
     fn greedy_eval_still_reads_a_deft_unit_in_defense_position_as_one_that_cannot_attack() {
-        // The frozen baseline: Deft Duelist in Defense Position loses its attack share, as Mr. Vanilla
-        // does, and threatens nothing.
         let ((attack, atk), (defense, def)) = duelist();
         let w = GREEDY_EVAL;
         assert_close(
@@ -382,8 +363,6 @@ mod evaluate_the_strength_passs_terms {
 
     #[test]
     fn deft_defense_attacks_moves_the_score_by_the_threat_and_the_attack_share_it_counts() {
-        // Off, the enemy Duelist threatens nothing and counts half its attack; on, it threatens 4 and
-        // counts all of it. Nothing else on the board reads the flag.
         let state = enemy_duelist_in_defense();
         let mut off = AI_EVAL;
         off.deft_defense_attacks = false;
@@ -461,7 +440,6 @@ mod face_threat_b13 {
     #[test]
     fn b13_a_small_taunt_with_divine_shield_soaks_the_smallest_attacker_plus_one_more_and_the_rest_get_through()
      {
-        // Jilliax (3/2 Taunt, Divine Shield) against 3, 3 and 7: the two 3s are spent on it, 7 reaches us.
         let state = board(
             json!({ "p1": { "field": ["core-056"] }, "p2": { "field": ["core-011", "core-008", "core-020"] } }),
         );
@@ -533,10 +511,8 @@ mod r1224_r1225_credit_line {
             "p1": { "backrow": [JLARNA] },
             "p2": {},
         }));
-        // Nothing borrowed this turn, on its controller's turn: the end of turn will tribute it.
         assert_eq!(held.players[AI].turn_log.mana_borrowed, None);
         assert_eq!(eval(&held, AI), eval(&bare, AI));
-        // Borrowed: the same card counts again.
         held.players[AI].turn_log.mana_borrowed = Some(1);
         assert!(eval(&held, AI) > eval(&bare, AI));
     }
@@ -544,7 +520,6 @@ mod r1224_r1225_credit_line {
     #[test]
     fn r1225_a_redacted_face_down_card_lapses_nothing_on_its_controllers_turn() {
         // Core #41 Sheepish, set face-down: the other seat's redaction (R185) leaves a placeholder
-        // with no definition, which has no text and so no credit line.
         let state = board(json!({ "active": "p1", "p1": { "backrow": ["core-041"] }, "p2": {} }));
         let seen = redact(&state, HUMAN);
         let placeholder = seen.players[AI].backrow[0]
@@ -664,7 +639,6 @@ mod duos_life_r964000 {
         let state = board(base());
         assert_eq!(starting_life(&state, AI), HERO_HEALTH);
         let duos = in_duos(&state, AI, 20, 7, 30, false);
-        // The pool's cap, not what is left of it.
         assert_eq!(starting_life(&duos, AI), DUOS_OWN_HEALTH + 30);
         assert_eq!(starting_life(&duos, HUMAN), HERO_HEALTH);
     }
@@ -725,7 +699,6 @@ mod banked_state_1086 {
             banked > AI_EVAL.hand_card,
             "four steps {banked} are not worth more than a card"
         );
-        // The enemy's counter counts against the seat.
         let mut theirs = clone(&plain);
         theirs.players[HUMAN].jade = Some(JADE_BEAUTY_AT - 1);
         assert!(eval(&theirs, AI) < eval(&plain, AI));
@@ -799,7 +772,6 @@ mod banked_state_1086 {
             AI_EVAL.marked_share * unit_worth(&armed, &live, &AI_EVAL),
             9,
         );
-        // The marked unit's controller reads the same mark as a loss.
         assert!(eval(&armed, HUMAN) < eval(&bare, HUMAN));
     }
 
@@ -907,7 +879,6 @@ mod banked_state_1086 {
             AI_EVAL.extra_turn_in_hand * AI_EVAL.extra_turn,
             9,
         );
-        // R185: the enemy's hand is unseen, so an extra-turn card there moves nothing.
         let theirs = board(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [EVENT_HORIZON] } }));
         let ours = board(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [FAREWELL] } }));
         assert_eq!(eval(&theirs, AI), eval(&ours, AI));
@@ -924,7 +895,6 @@ mod banked_state_1086 {
                 "p2": { "hand": [VANILLA] },
             }));
             if def.type_ == CardType::Trap {
-                // S #4.4 Last Word owes its turn as it reveals, on lethal damage; its cast sets it.
                 continue;
             }
             s.play(card, json!({}));
@@ -945,11 +915,9 @@ mod banked_state_1086 {
             3.0 * AI_EVAL.anomaly_miss,
             9,
         );
-        // A miss is silent: the enemy's count is no fact the seat has.
         let mut theirs = clone(&plain);
         theirs.players[HUMAN].anomaly_misses = Some(3);
         assert_eq!(eval(&theirs, AI), eval(&plain, AI));
-        // The frozen baseline prices neither.
         let greedy = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL);
         assert_eq!(greedy(&banked), greedy(&plain));
         let turn = board(json!({ "p1": { "hand": [EVENT_HORIZON] }, "p2": { "hand": [VANILLA] } }));
@@ -978,13 +946,11 @@ mod banked_state_1086 {
             "setup: the reading should beat the flat price"
         );
         assert_close(eval(&radiant(CHAOS), AI) - eval(&base(CHAOS), AI), extra, 9);
-        // Any other Radiant card keeps the flat price for its Radiant text.
         assert_close(
             eval(&radiant(FULLSEND), AI) - eval(&base(FULLSEND), AI),
             AI_EVAL.radiant_in_hand,
             9,
         );
-        // The frozen baseline gives a Radiant Call to Chaos the flat price, as it did.
         let greedy = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL);
         assert_close(
             greedy(&radiant(CHAOS)) - greedy(&base(CHAOS)),
@@ -1007,7 +973,6 @@ mod banked_state_1086 {
             AI_EVAL.temporary_discount * (eval(&kept, AI) - eval(&empty, AI)),
             9,
         );
-        // R185: the enemy's hand is unseen, so its Temporary cards move nothing.
         let mut theirs = clone(&kept);
         theirs.players[HUMAN].hand[0]
             .granted_keywords
@@ -1070,7 +1035,6 @@ mod hand_faces_1143 {
             "Brother Lar's 2/2 {lar} is not above the flat bonus"
         );
         assert!(big > lar, "the 14/14's {big} is not above Brother Lar's {lar}");
-        // 7 attack, 7 health and Reborn more than the 7/7 Armor 7 it prints, at the share.
         assert_close(
             big,
             AI_EVAL.radiant_in_hand
@@ -1078,7 +1042,6 @@ mod hand_faces_1143 {
                     * (7.0 * AI_EVAL.attack + 7.0 * AI_EVAL.health + AI_EVAL.keyword.reborn),
             9,
         );
-        // A Spell has no unit face to read: it keeps the flat bonus alone.
         assert_close(spell, AI_EVAL.radiant_in_hand, 9);
     }
 
@@ -1305,7 +1268,6 @@ mod dormant_cards_1506 {
         let one = cut(&three, AI, 1);
         let pile = three.players[AI].units[0].clone().unwrap_or_default();
         assert_eq!(pile.len(), 3, "setup: a three-deep pile in lane 1");
-        // A second card dormant under the pile scores strictly differently, and a third again.
         assert!(scored(&three, &DORMANT) > scored(&two, &DORMANT));
         assert!(scored(&two, &DORMANT) > scored(&one, &DORMANT));
         assert_close(
@@ -1335,7 +1297,6 @@ mod dormant_cards_1506 {
             DORMANT.dormant_card,
             9,
         );
-        // Count only: a 10/10 beneath scores as a 4/4 does.
         assert_eq!(scored(&rock, &DORMANT), scored(&vanilla, &DORMANT));
     }
 
@@ -1478,7 +1439,6 @@ mod shown_cost_fatigue_windfury_1602 {
     fn an_enemy_face_down_card_scores_lower_by_each_crystal_of_cost_it_shows() {
         let cheap = backed(SHEEPISH, 0);
         let dear = backed(SHEEPISH, 4);
-        // Without the term the two backs score alike: only it tells them apart.
         assert_eq!(scored(&cheap, &UNPRICED), scored(&dear, &UNPRICED));
         assert!(scored(&dear, &PRICED) < scored(&cheap, &PRICED));
         assert_close(
@@ -1486,7 +1446,6 @@ mod shown_cost_fatigue_windfury_1602 {
             4.0 * PRICED.enemy_face_down_per_cost,
             9,
         );
-        // Sheepish shows (1): the term takes that many crystals off the enemy's side.
         assert_close(
             scored(&cheap, &UNPRICED) - scored(&cheap, &PRICED),
             PRICED.enemy_face_down_per_cost,
@@ -1498,7 +1457,6 @@ mod shown_cost_fatigue_windfury_1602 {
     fn an_unrevealed_card_is_priced_by_the_cost_it_shows_alone_and_a_revealed_one_by_its_face() {
         let sheepish = backed(SHEEPISH, 4);
         let pawn = backed(PAWN, 4);
-        // Unrevealed: two cards that show the same cost score alike, and so do the seat's own view
         // (a placeholder that keeps only the shown cost, R185, R351) and a world sampled from it (R762).
         assert_eq!(scored(&sheepish, &PRICED), scored(&pawn, &PRICED));
         let view = redact(&sheepish, AI);
@@ -1511,8 +1469,6 @@ mod shown_cost_fatigue_windfury_1602 {
         );
         assert_eq!(scored(&world, &PRICED), scored(&sheepish, &PRICED));
         assert_ne!(scored(&sheepish, &PRICED), scored(&sheepish, &UNPRICED));
-        // Revealed (R686): the seat reads the card, so its face prices it and the face-down term
-        // leaves it alone.
         let shown = revealed(&sheepish);
         assert_eq!(scored(&shown, &PRICED), scored(&shown, &UNPRICED));
         assert_eq!(scored(&redact(&shown, AI), &PRICED), scored(&shown, &PRICED));
@@ -1534,9 +1490,7 @@ mod shown_cost_fatigue_windfury_1602 {
             3.0 * PRICED.fatigue_draw,
             9,
         );
-        // Symmetric: the same count on both sides cancels.
         assert_close(scored(&tired(&tired(&state, AI, 3), HUMAN, 3), &PRICED), base, 9);
-        // Orthogonal to the library terms: a stocked library moves the step not at all.
         let stocked = board(json!({
             "p1": { "field": [VANILLA], "library": ["core-001", "core-002", "core-003"] },
             "p2": { "field": [VANILLA] },
@@ -1567,10 +1521,8 @@ mod shown_cost_fatigue_windfury_1602 {
             PRICED.keyword.windfury,
             9,
         );
-        // Our Windfury raises the score and theirs lowers it ...
         assert!(scored(&own, &PRICED) > scored(&state, &PRICED));
         assert!(scored(&enemy, &PRICED) < scored(&state, &PRICED));
-        // ... and the weight is all the term adds to the second swing `face_threat` already counts.
         assert_close(
             scored(&own, &PRICED) - scored(&own, &UNPRICED),
             PRICED.keyword.windfury,
@@ -1581,7 +1533,6 @@ mod shown_cost_fatigue_windfury_1602 {
             PRICED.keyword.windfury,
             9,
         );
-        // A printed Windfury reads the same.
         let prime = board(json!({ "p1": { "field": [PRIME] }, "p2": { "field": [VANILLA] } }));
         assert_close(
             unit_worth(&prime, &lane_one(&prime, AI), &PRICED)
@@ -1708,7 +1659,6 @@ mod banked_modifiers_1722 {
             9,
         );
         assert!(eval(&armed, HUMAN) < eval(&bare, HUMAN));
-        // Each effect is its own annuity.
         let mut twice = clone(&armed);
         let mut copy = twice.players[AI]
             .mods
@@ -1737,7 +1687,6 @@ mod banked_modifiers_1722 {
             AI_EVAL.alt_win * (f64::from(HERO_HEALTH) / 32.0).powi(2),
             9,
         );
-        // For its holder it is a plan, the more so the nearer it is.
         assert!(eval(&near, HUMAN) > eval(&far, HUMAN));
         assert!(eval(&far, HUMAN) > eval(&plain, HUMAN));
         // The seat's own view reads it the same: the condition is public (R169, R185).
@@ -1780,14 +1729,12 @@ mod banked_modifiers_1722 {
     #[test]
     fn a_waiting_discard_of_a_hand_discounts_that_hand_on_both_sides() {
         let (armed, bare, empty) = hurrahed();
-        // Its owner's hand is worth less, by the discount's share of what the hand is worth.
         assert!(eval(&armed, AI) < eval(&bare, AI));
         assert_close(
             eval(&bare, AI) - eval(&armed, AI),
             AI_EVAL.doomed_hand_discount * (eval(&bare, AI) - eval(&empty, AI)),
             9,
         );
-        // The same hand, unseen, counts for the other seat at the same discount.
         assert!(eval(&armed, HUMAN) > eval(&bare, HUMAN));
         assert_close(
             eval(&armed, HUMAN) - eval(&bare, HUMAN),

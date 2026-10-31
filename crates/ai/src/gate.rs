@@ -73,52 +73,31 @@ impl<T> Index<Matchup> for ByMatchup<T> {
 #[derive(Serialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiGate {
-    /// The frozen seed series: game n of a matchup is `${seedSeries}:${matchup}:${n}`. Only the gate
-    /// plays it; tuning plays `AI_TUNING_SERIES`, so no tuning run touches a gate seed.
-    ///
-    /// `gate:v3` is a re-roll of the deals, not tuning and not a lower floor: R635 (a card that casts
-    /// on draw is set aside and shuffled in after the mulligan) re-dealt every game whose deck holds
-    /// one, and a gate on its floor goes red on any neutral reshuffle (the 2026-09-23 polish Part B review,
-    /// B-3, in git history since #832). If it fails with the AI untouched, look at the deals first.
+    /// Frozen seed series `${seedSeries}:${matchup}:${n}`. `gate:v3` re-deals decks around R635
+    /// (cast on draw shuffled after mulligan, #832).
     pub seed_series: &'static str,
-    /// What `pnpm test` runs per matchup (seeds 1..20), under the same rule as the full run
-    /// (`gate_needed`: 17, 10 and 16 wins). At four games no count could tell a working AI from a broken
-    /// one.
+    /// Seeds per matchup in test runs under `gate_needed`.
     pub smoke_seeds: i32,
     /// What `pnpm ai:gate` (JACKIOH_AI_GATE=full) runs.
     pub full_seeds: ByMatchup<i32>,
-    /// The brief's floors (docs/polish/reference.md, "Quality gates"): the share of its games the
-    /// subject is to win. Only wins count, in every gate; a draw at the turn cap is reported beside them.
+    /// Target win share floors per matchup.
     pub brief_rate: ByMatchup<f64>,
-    /// The subject's win rate as it ships, measured on tuning deals that no run had tuned on and no
-    /// gate plays (`tune` 3001–4000 for the Easy matchups, 3001–3300 for Hard against Easy): 945, 680
-    /// and 274 wins. Against greedy it is short of the brief. A new measurement of the same kind may
-    /// raise it; lowering it lowers every count below and needs the user's sign-off (SPEC §9.9).
+    /// Measured win rate on tuning deals; lowering requires user sign-off (SPEC §9.9).
     pub measured_rate: ByMatchup<f64>,
-    /// The most often one gate run may fail an AI exactly as strong as `measuredRate` from the luck of
-    /// its deals alone. `gate_needed` sets each count from it. Proposed in SPEC §9.9, pending the user's
-    /// acceptance.
+    /// Max false-alarm probability from deal variance alone (SPEC §9.9).
     pub false_alarm: f64,
-    /// SPEC §9.9: the most one decision at AI_BUDGET may take on the development machine.
+    /// SPEC §9.9: max decision time at AI_BUDGET on development machine.
     pub max_decision_ms: f64,
-    /// ai-vs-greedy games whose AI decisions the timing gate replays: `pnpm test`, then `pnpm ai:gate`.
+    /// Games replayed by timing gate.
     pub perf_smoke_games: i32,
     pub perf_full_games: i32,
-    /// The most runs per decision; the fastest counts, so a context switch on a shared machine is not a
-    /// failure. The runs stop at the first under `maxDecisionMs`, since later ones cannot fail it.
+    /// Max repeats per decision; stops at the first run under `max_decision_ms`.
     pub perf_repeats: i32,
-    /// The timing gate's yardstick: random-policy games 1..calibrationGames of ai-vs-random, played
-    /// through `reduce`, a fixed piece of engine work timed beside every decision. A decision is judged
-    /// by its time over the yardstick's, so a slower or busier machine slows both and fails nothing.
+    /// Timing gate yardstick games timed alongside decisions to normalize machine speed.
     pub calibration_games: i32,
-    /// The yardstick's time on the development machine, alone (the median of 25 runs, 2026-09-23).
+    /// The yardstick's time on the development machine, alone.
     pub calibration_ref_ms: f64,
-    /// #1240: the most one decision at AI_BUDGET on each pinned position
-    /// (`tests/fixtures/pinned-*.json`) may take on the development machine, as the perf gate times
-    /// it; kept under `max_decision_ms`. Before #1240 charged the work they do (`surcharge_nodes`),
-    /// improve-dev:154's took about 1.1 s and improve-dev:200's about 20 s; after it, the gate timed
-    /// them at 276 and 570 ms. autopilot-draw's took 2.9 s on a 2.1 GHz Xeon while a search's step
-    /// played the autopilot's turn, and 0.16 s once it left that turn owed (#1337).
+    /// #1240: max decision time at AI_BUDGET on pinned positions (`tests/fixtures/pinned-*.json`, #1337).
     pub pinned_decision_ms: f64,
 }
 
@@ -164,8 +143,7 @@ pub struct GateGame {
     pub replay_errors: i32,
 }
 
-/// `wins` is what a gate holds against `gate_needed`, and `rate` is wins / games. `turn_cap_draws` is
-/// reported beside them and counts for nothing.
+/// Matchup gate results evaluated against `gate_needed`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct GateReport {
@@ -190,10 +168,8 @@ pub fn binomial_tail(n: i32, p: f64, k: i32) -> f64 {
     dist.iter().skip(k.max(0) as usize).fold(0.0, |sum, q| sum + q)
 }
 
-/// The wins a run of `games` games of `matchup` needs: the brief's share of them, or fewer where an
-/// AI exactly as strong as `AI_GATE.measuredRate` would fall short of that more often than
-/// `AI_GATE.falseAlarm` allows. That is the largest k with P(Binomial(games, measuredRate) ≥ k) ≥
-/// 1 − falseAlarm, capped at ceil(briefRate × games) (SPEC §9.9).
+/// Wins needed for `matchup`: max k where P(Binomial(games, measured_rate) >= k) >= 1 - false_alarm,
+/// capped at ceil(brief_rate * games) (SPEC §9.9).
 pub fn gate_needed(matchup: Matchup, games: i32) -> i32 {
     let measured = AI_GATE.measured_rate[matchup];
     let mut k = 0;
@@ -220,20 +196,12 @@ fn opponent_controller(matchup: Matchup, budget: SearchBudget) -> SeatController
     }
 }
 
-/// Game n (1-based) of a matchup: seed `${series}:${matchup}:${n}`, the subject (the AI, or the Hard
-/// AI) on p1 when n is odd. Every seat's deck is built by one rule, `build_ai_deck` with its
-/// handicap's deck size and mana cap, the shadow ban (R186) included: the gates measure play, so
-/// neither side is dealt cards the other side's rule keeps out. Handicaps: ai-vs-* use Easy for both
-/// seats; hard-vs-easy gives the subject AI_DIFFICULTY.hard and the other AI_DIFFICULTY.easy.
+/// Configures game n of a matchup with alternating seats and handicap decks (shadow ban R186).
 pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str) -> MatchConfig {
     game_config_with_banned(matchup, n, budget, series, None)
 }
 
-/// Issue #1113: game n of a matchup as `game_config` deals it, but every seat's deck comes from
-/// the frozen fixture pool (`FIXTURE_BANNED_IDS`) instead of the live shadow ban. The seeded
-/// fixtures (`cargo test`'s gate smokes) play this, so a shadow-ban change re-deals none of them.
-/// Live paths (`run_gate_games`, the `gate` CLI at any size, promotion, sweep) stay on
-/// `game_config`.
+/// #1113: deals game n using `FIXTURE_BANNED_IDS` for stable smoke test decks.
 pub fn fixture_game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str) -> MatchConfig {
     game_config_with_banned(
         matchup,
@@ -318,15 +286,12 @@ fn game_config_with_banned(
     }
 }
 
-/// Plays the listed games of a matchup (1-based, as `game_config` numbers them), each folded with its
-/// handicaps to fill replay_hash/replay_errors. CI plays a gate in shards, each one every k-th game
-/// (`gate_shard_games`), and holds the wins of all of them together against `gate_needed`.
+/// Plays the listed matchup games, folded to record replay hash and errors against `gate_needed`.
 pub fn run_gate_games(matchup: Matchup, numbers: &[i32], budget: SearchBudget) -> GateReport {
     run_games(matchup, numbers, budget, game_config)
 }
 
-/// Issue #1113: `run_gate_games` through `fixture_game_config`: the seeded fixtures' games, dealt
-/// from the frozen fixture pool instead of the live shadow ban.
+/// #1113: `run_gate_games` using the frozen fixture pool.
 pub fn run_fixture_gate_games(matchup: Matchup, numbers: &[i32], budget: SearchBudget) -> GateReport {
     run_games(matchup, numbers, budget, fixture_game_config)
 }
@@ -382,9 +347,7 @@ fn run_games(
     }
 }
 
-/// Shard `index` of `count` (1-based) of a gate run of `total` games: games index, index + count,
-/// index + 2 × count, …, so every shard gets a share of early and late seeds and the shards together
-/// play each game exactly once.
+/// Partitions `total` games into interleaved shards of stride `count`.
 pub fn gate_shard_games(total: i32, index: i32, count: i32) -> Vec<i32> {
     let mut numbers: Vec<i32> = Vec::new();
     let mut n = index;

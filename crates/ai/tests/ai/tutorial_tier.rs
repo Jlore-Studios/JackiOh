@@ -1,16 +1,6 @@
-//! R290: the tutorial's opponent is easier than Easy, by play (SPEC §9.9, R180).
-//!
-//! The tutorial deals its AI seat AI_TUTORIAL: a 12-card deck, at most 3 mana crystals and a hero at
-//! 20. The AI itself is the one every tier plays, so the tier is only easier if those resources make
-//! it lose more. The human's stand-in, the greedy baseline at a human's resources, has to beat the AI
-//! at AI_TUTORIAL in about half its games, and on the same seeds more often than the AI at Easy.
-//!
-//! Game n plays seed `${TUTORIAL_TIER.series}:greedy:${n}` at both tiers, so only the AI seat's
-//! handicap and deck differ, and the greedy seat's deck size: against AI_TUTORIAL it plays a lesson's
-//! human seat, TUTORIAL_HUMAN's EARLIER_DECK_SIZE cards (R1705005), and at Easy a human's DECK_SIZE. Both seats are dealt by the gates' one rule, with the frozen fixture ban
-//! (`FIXTURE_BANNED_IDS`, issue #1113) on both sides, so a shadow-ban change re-deals none of these
-//! games, and every game has to be clean and fold back to its hash (B31).
-//! §10.7's random policy is not asserted: a run small enough for `pnpm test` holds too few wins.
+//! R290: tutorial opponent is easier than Easy by play (SPEC §9.9, R180).
+//! Uses AI_TUTORIAL handicap against greedy baseline (R1705005, #1113, B31).
+//! Random policy (§10.7) not asserted here.
 
 use std::io::Write as _;
 use std::sync::OnceLock;
@@ -18,22 +8,8 @@ use std::sync::OnceLock;
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-/// Every number this file states (CLAUDE.md rule 9). The runs are frozen; the thresholds sit below
-/// what was measured so that a change which re-deals every game (as The Coin did, R244) still passes
-/// when the tier is as much easier as measured. A re-dealt run fails them about 14 and 26 times in 100
-/// (the gates allow 5, SPEC §9.9); a wider margin would take a weaker AI_TUTORIAL (R290).
-///
-/// Re-frozen for #775, when the search stopped merging positions that play differently. The tiers
-/// stayed where they were (on `tutorial-tier`'s seeds 1–100 greedy won 55 against AI_TUTORIAL and 28
-/// against Easy, 56 and 27 before), but that series' 13 games re-dealt to 5 wins. The new series is
-/// the first of `tutorial-tier-2` to `-21`, tried in order, that meets both thresholds; 13 of those 20
-/// do.
-///
-/// Re-frozen for #817 (R817000), when a random deck came to hold at most two Quickdraw cards and
-/// Quickdraw stopped being a theme. The tiers stayed where they were (on `tutorial-tier`'s seeds 1–100
-/// greedy won 53 against AI_TUTORIAL and 25 against Easy, 55 and 28 before), but `tutorial-tier-2`'s
-/// 13 games re-dealt to 5 wins. The new series is the first of `tutorial-tier-3` to `-21`, tried in
-/// order, that meets both thresholds; 14 of those 19 do.
+/// Config numbers (CLAUDE.md rule 9). Thresholds accommodate re-deals (R244, SPEC §9.9, R290).
+/// Re-frozen across #775 and #817 (R817000).
 struct TutorialTier {
     /// The frozen seed series; no gate or tuning run plays it.
     series: &'static str,

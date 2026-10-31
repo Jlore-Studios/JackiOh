@@ -1,16 +1,8 @@
-//! Simulation through the real reducer (docs/polish/3-ai.md, SPEC §9.9). Every `reduce` call the AI
-//! makes goes through `simulate` and costs one node of the decision's counter, the opponent's
-//! auto-answers and the beam's look past the seat's own prompts included (every answer
-//! `best_auto_answer` tries, `own_prompt_score`'s too), so budgets are counted in engine calls and a
-//! decision is deterministic.
+//! Simulation through the real reducer (docs/polish/3-ai.md, SPEC §9.9). Every engine `reduce`
+//! costs one node of the decision's counter, ensuring deterministic search budgets.
 //!
-//! Port of `packages/ai/src/simulate.ts`. A TS counter is one object every part of a decision shares
-//! (a sub-counter holds its parent while the parent is spent elsewhere too), so the counters keep
-//! their tallies in `Cell`s and are passed as `&dyn NodeCounter` (`types.rs`). TS's `try`/`catch`
-//! around the reducer is `catch_unwind`: an engine invariant that panics where TS threw is a failed
-//! simulation, never a crash of the decision. A panic is also counted apart, its first message kept
-//! (`SearchStats.simPanics`, #1429): in WebAssembly it is a trap no `catch_unwind` sees, so the
-//! browser's AI loses the whole decision to it, and the gates fail on any.
+//! Node counters use interior mutability (`&dyn NodeCounter`, `types.rs`). Engine panics are
+//! caught via `catch_unwind` and tracked in `SearchStats.simPanics` (#1429).
 
 use std::cell::{Cell, OnceCell};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -291,15 +283,8 @@ pub fn line_status(state: &GameState, seat: PlayerId, root_turn: i32) -> LineSta
 /// TS `{ ok: true; state } | { ok: false; error }` (private in TS; public here, as `simulate`'s answer).
 pub type SimStep = Result<GameState, String>;
 
-/// The extra nodes an action is charged for the work its `reduce` really does (AI_SEARCH's
-/// expensive_def_* and ai_turn_trap_*): a Play of a card whose resolve ranks the whole catalog for
-/// the state (the §10.7 scorer) or an Attack that could set off a trap which hands the attacker a
-/// whole random turn (§8.5 core-096). One reduce of either costs the wall clock a hundred cheap
-/// sims do, so the step is budgeted its share up front — otherwise a hand or backrow holding one
-/// burns a decision's 2 s on a few sims (R186's sweep flag) as easily as on a few cheap ones. A Play
-/// that the other side's Pareto Optimality judges (`subsystems::watching`) pays `judged_card_nodes`
-/// for each card its player holds, and a fused card is charged as its ingredients are: uncharged,
-/// improve-dev:200's pinned decision took 20 s (#1240).
+/// Up-front node surcharge for heavy actions (expensive scorers §10.7, turn-granting traps §8.5 core-096,
+/// watching players, or R186 sweep flags; #1240).
 pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) -> usize {
     match action {
         ActionBody::Play { instance_id, .. } => {
@@ -315,11 +300,7 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
         }
         ActionBody::Attack { attacker_id, .. } => {
             let defender = opponent_of(actor);
-            // The trap's `when` asks a would-be-lethal declaration at its controller's hero; the
-            // surcharge reads the same gate approximately — the unit's attack against the hero's
-            // life (`effective_life`, as the trap's lethal judge reads it, R964000) — so a chip
-            // attack at an armed board is not charged the playout's price.
-            // R2201000: nothing is lethal against a seat that cannot lose.
+            // Trapped lethal-gate estimate against effective_life (R964000; never if cannot lose, R2201000).
             let lethalish = jackioh_engine::can_lose(state, defender)
                 && find_instance(state, attacker_id)
                     .is_some_and(|unit| unit_view(state, unit).attack >= effective_life(state, defender));
@@ -338,14 +319,7 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
     }
 }
 
-/// The nodes a step pays once it has run, for the `expensive_def_ids` cards it announced that no Play
-/// paid for up front (`surcharge_nodes`): a Zephyrs that a random cast turned up (Call to Chaos,
-/// Jogg's Box) or a cast from the graveyard put on the stack (Spell Tyrant) ranks every shipped card
-/// as a played one does, and nothing in the action says so before it runs. A determinization rolls
-/// its own random casts, so one world can turn one up on every line that casts the same chain;
-/// uncharged, a decision ran the ranking eleven times in 2.3 s (#1347). Read off the step's
-/// `cardAnnounced` events, each card looked up on the state the step left, where a card fused in the
-/// step is known; the Play's own card is the one its up-front charge paid for.
+/// Post-step surcharge for unannounced expensive card resolves like random/graveyard casts (#1347).
 pub fn announced_surcharge_nodes(state: &GameState, action: &ActionBody, stepped: &ReduceResult) -> usize {
     let ids = AI_SEARCH.expensive_def_ids;
     let announced = stepped
@@ -396,13 +370,8 @@ pub(crate) enum AnswersTried {
     Drawn,
 }
 
-/// The answers `best_auto_answer` tries of `answerer`'s prompt: legal_actions less Concede, which
-/// ends the game rather than answering. `Drawn` (#1382) puts them in `action_key` order, so the order
-/// the prompt lists them in changes nothing, and of a prompt with more than
-/// AI_SEARCH.max_auto_answer_options answers keeps that many drawn from all of them, on the stream
-/// `${AI_SEARCH.auto_answer_seed}:${state.seed}:${pending.id}`: a late answer is as likely to be tried
-/// as an early one, each determinization (its own `ai:` seed, R185) draws its own, and the same
-/// prompt in the same world always draws the same answers.
+/// The answers `best_auto_answer` tries of `answerer`'s prompt (excluding Concede).
+/// `Drawn` (#1382) sorts by `action_key` and samples up to `AI_SEARCH.max_auto_answer_options` (R185).
 fn auto_answers(state: &GameState, answerer: PlayerId, tried: AnswersTried) -> Vec<ActionBody> {
     let answers = legal_actions(state, answerer)
         .into_iter()
@@ -424,13 +393,8 @@ fn auto_answers(state: &GameState, answerer: PlayerId, tried: AnswersTried) -> V
     drawn
 }
 
-/// One auto-answer (#891): of the answers `auto_answers` picks of `answerer`'s prompt, the one whose
-/// result `evaluate` likes best from the answerer's own seat, so a world does not assume the answerer
-/// takes option zero. The score reads the determinization only, as everything here does (R185). Each
-/// answer tried is one node (nonce `${prefix}:${counter.used}`); strictly greater wins, so ties keep
-/// `auto_answers`' order, and a lone answer is committed unscored. A throw or a refusal is a failed
-/// simulation and the next answer is tried; `Some(Err)` when none is left. `None` when the counter
-/// refuses a node.
+/// Finds best auto-answer by evaluating from the answerer's perspective (#891, R185).
+/// Costs one node per answer tried; returns `None` on counter exhaustion.
 pub(crate) fn best_auto_answer(
     state: &GameState,
     answerer: PlayerId,
@@ -481,15 +445,8 @@ pub(crate) fn best_auto_answer(
     Some(best.map(|(state, _)| state).ok_or(failure))
 }
 
-/// #1112: what a state waiting on `seat`'s own prompt is worth once its prompts are answered, which is
-/// how the beam ranks a child that waits there (search.rs): every prompt open on the way, the seat's
-/// and any the other seat holds, gets its holder's best of AI_SEARCH.max_auto_answer_options answers
-/// drawn from all of them (`best_auto_answer`, nonce `ahead:${counter.used}`, each answer tried one
-/// node of `counter`), at most AI_SEARCH.max_auto_answers prompts, and the state reached is scored by
-/// `open_score` as the beam scores a child. Only a score: the child stays at its prompt, so the beam
-/// still picks its real answers. `None` when no prompt of the seat's is open, when the counter
-/// refuses a node, and when no answer is accepted, the prompts outrun the cap or the engine panics
-/// (a failed simulation, as in `simulate`): the child then keeps its plain evaluation.
+/// #1112: scores state waiting on `seat`'s own prompt by auto-answering open prompts ahead.
+/// Returns `None` on error or node counter exhaustion.
 pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Option<f64> {
     let holder = |state: &GameState| match (&state.result, &state.pending) {
         (None, Some(pending)) => Some(pending.player_id),
@@ -516,11 +473,8 @@ pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCou
     })
 }
 
-/// One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
-/// of the other seat is open, answer it with the answerer's best of AI_SEARCH.max_auto_answer_options
-/// answers drawn from all of them (`best_auto_answer`: each answer tried one more node, at most
-/// AI_SEARCH.maxAutoAnswers prompts). A throw or a refusal is `{ ok: false }`. Returns null
-/// without touching anything when the counter refuses a node.
+/// Simulates one AI action on determinized state and auto-answers subsequent opponent prompts.
+/// Returns `None` when node counter exhausts.
 pub fn simulate(
     state: &GameState,
     seat: PlayerId,
@@ -530,10 +484,7 @@ pub fn simulate(
     simulate_answering(state, seat, action, counter, AnswersTried::Drawn)
 }
 
-/// `simulate` as it stood before #891, for the greedy baseline: every prompt of the other seat gets
-/// the first entry of legalActions, one node each, and nothing is scored with AI_EVAL, so the
-/// yardstick the gates measure the AI against stays put (docs/polish/3-ai.md, "A baseline that
-/// stays put").
+/// `simulate` variant using first legal action for opponent prompts (baseline before #891).
 pub fn simulate_first_answers(
     state: &GameState,
     seat: PlayerId,
@@ -681,11 +632,7 @@ fn rides_signature(card: &CardInstance) -> String {
     signature
 }
 
-/// What a card off the field is, for `search_signature` (a backrow card, an own hand card, a card in a
-/// graveyard, an exile or a backrow pile): its id, its definition (a Transform or a discovered card
-/// keeps the id), its Radiant face, its cost changes, its enchantments (B5 E39) and what else rides it
-/// (`rides_signature`). The enchantments only when there are some, so a card without them signs as
-/// before (#898).
+/// What a card off the field is, for `search_signature` (B5 E39, #898).
 fn card_signature(card: &CardInstance) -> String {
     let enchantments = match &card.enchantments {
         Some(enchantments) if !enchantments.is_empty() => format!(";e{enchantments:?}"),
@@ -702,11 +649,7 @@ fn card_signature(card: &CardInstance) -> String {
     )
 }
 
-/// What changes how an active unit plays beyond its id, damage, buffs, exertion and position: its
-/// definition and Radiant face, a Vanilla, its stats and keywords through the layers (§10.4), its stat
-/// and armor overrides, a spent Divine Shield, its counters and enchantments, its memory and tuning
-/// (`rides_signature`, #898), and its freeze's thaw (R1174000), written only when it is Frozen so a
-/// position with no Frozen unit signs as before.
+/// Unit signature for search duplicate detection, incorporating layers (§10.4), #898, and freeze thaw (R1174000).
 fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     let view = unit_view(state, unit);
     let frozen = unit.frozen.map(|thaw| format!(":f{thaw}")).unwrap_or_default();
@@ -729,13 +672,7 @@ fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     )
 }
 
-/// One side's parts of `search_signature` beyond its units and backrow (#898): its mana maximum and
-/// riders, a lost refresh still to come (R844), stolen mana crystals (R1854003), its zone Locks, its
-/// modifiers, this turn's log, its fatigue, Jade, extra turns and hand cap, its graveyard and exile,
-/// and its backrow piles. Each is pushed only when it is not the default, as R1224's debt is, so a
-/// position that has none of them signs as before; and each is kept free of the order the moves came in
-/// (sorted, the engine's sequence ids left out), so two orders of the same moves still sign alike for
-/// the beam's duplicate check.
+/// Non-default player parts for `search_signature` (mana, riders R844, locks, fatigue, graveyard, R1854003, R1224, #898).
 fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>) {
     let side = &state.players[player];
     let mana = &side.mana;
@@ -834,14 +771,7 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     }
 }
 
-/// A cheap identity for a position inside one turn, for the lethal solver's visited set and the
-/// beam's duplicate check: both heroes, the open prompt whole, both library sizes, every active unit's
-/// id, damage, buffs, exertion and position and what else changes how it plays (`unit_play_signature`),
-/// every backrow card (`card_signature`, whether face up or revealed), the seat's hand (`card_signature`)
-/// and mana, and the enemy hand size; then, each only when it is not the default, both sides' other
-/// state (`push_side_parts`), the seat's debt (R1224), and the game's delayed effects and marks (#898).
-/// A unit's lane is left out, so the lethal solver's two lanes of one play stay one position; the beam
-/// reads it beside `unit_lanes`, to tell a lane variant from its position's first line (#1797).
+/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![

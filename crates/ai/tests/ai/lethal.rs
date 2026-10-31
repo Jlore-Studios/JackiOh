@@ -5,10 +5,6 @@
 //! enemy Taunts, and the cheap targeted spells beside it put hundreds of lines ahead of that play in
 //! move order. The best-first walk ranks the Golem's tributes by what they leave the attackers, and
 //! finds it.
-//!
-//! Port of `packages/ai/test/lethal.test.ts`. TS's "the depth-first walk alone" case set
-//! `AI_SEARCH.lethalQuickNodes` at run time; `AI_SEARCH` is a `const` here, so the case asks the
-//! solver with the depth-first share given (`find_lethal_with_quick_nodes`, see the notes' GAPS).
 
 use indexmap::IndexSet;
 use jackioh_ai::{
@@ -163,7 +159,6 @@ mod the_lethal_solvers_walks {
     #[test]
     fn ready_gap_is_the_enemy_heros_health_less_what_the_attacks_left_deal_it_past_its_taunts() {
         let state = wide_board();
-        // The two Taunts soak the three attackers (7, 4, 3) and nothing reaches the hero.
         assert_eq!(ready_gap(&state, AI), 10.0);
 
         let golem = mine(&state, AI, "core-055");
@@ -192,8 +187,6 @@ mod the_lethal_solvers_walks {
                 face_down: None,
             }],
         );
-        // No Taunt left, and Pointmaster (7) and Tempo Timmy (3) are still to attack: exactly lethal.
-        // The new Golem has not been on the field a turn, so it adds nothing.
         assert_eq!(ready_gap(&cleared, AI), 0.0);
     }
 
@@ -202,11 +195,7 @@ mod the_lethal_solvers_walks {
         let mut states: Vec<GameState> = vec![wide_board()];
         states.extend(random_policy_states("lethal-ready-gap", 3, 600));
         states.extend(random_policy_states("lethal-ready-gap-2", 5, 600));
-        // Patch v0.1.1's rules moved these seeded games off the boards they used to reach, so a third
-        // series keeps the count of positions with attackers ready above the floor below.
         states.extend(random_policy_states("lethal-ready-gap-3", 3, 600));
-        // The unban lane's dealt decks play shorter games than the port's, so a fourth series and a
-        // second played match keep the coverage floor honest.
         states.extend(random_policy_states("lethal-ready-gap-4", 3, 600));
         for game_index in [1, 2] {
             let mut config = game_config(
@@ -242,7 +231,6 @@ mod the_lethal_solvers_walks {
                 }
             }
         }
-        // The comparison covered positions with attackers ready, not only empty boards.
         assert!(with_attackers > 20);
     }
 
@@ -253,7 +241,6 @@ mod the_lethal_solvers_walks {
         let line = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes);
         assert!(line.is_some());
         assert!(counter.used() <= AI_BUDGET.lethal_nodes);
-        // The depth-first walk's share ran out, so the line came from the best-first walk.
         assert!(counter.used() > AI_SEARCH.lethal_quick_nodes as usize);
 
         let line = line.unwrap_or_default();
@@ -284,7 +271,6 @@ mod the_lethal_solvers_walks {
     #[test]
     fn the_depth_first_walk_alone_does_not_find_it_within_the_same_allowance() {
         // lethalQuickNodes at the whole allowance is the solver before the best-first walk existed. If a
-        // change to move order let it find this line, the board would no longer test the second walk.
         let dets = worlds(&wide_board(), "lethal-wide", 2);
         let counter = create_node_counter(AI_BUDGET.nodes, None);
         assert!(
@@ -303,7 +289,6 @@ mod the_lethal_solvers_walks {
     #[test]
     fn stops_after_the_depth_first_walk_when_that_walk_searched_the_whole_tree() {
         register_cards();
-        // One attacker into a 20-health hero, a 1-drop in hand: a handful of lines, none lethal.
         let s = scenario(json!({
             "seed": "lethal-small",
             "active": AI,
@@ -374,7 +359,6 @@ mod the_lethal_solvers_walks {
 
     #[test]
     fn finds_no_lethal_for_a_unit_in_defense_position_without_deft() {
-        // Mr. Vanilla's switch spends its one exertion, so it cannot attack after it.
         let state = in_defense_at_4("core-008");
         let dets = worlds(&state, "lethal-deft", 2);
         assert!(
@@ -431,7 +415,6 @@ mod the_positions_the_search_merges {
         };
         let on_taunt = silencing(&mine(&state, HUMAN, "core-019"));
         let on_own = silencing(&mine(&state, AI, "core-020"));
-        // Two positions that play differently: the Taunt walls the face in one and not in the other.
         assert_ne!(
             search_signature(&play_out(&state, std::slice::from_ref(&on_taunt)), AI),
             search_signature(&play_out(&state, &[on_own]), AI)
@@ -500,7 +483,6 @@ mod the_positions_the_search_merges {
     #[test]
     fn ready_gap_counts_a_windfury_unit_once_per_attack_it_has_left() {
         register_cards();
-        // p1 has no library and no hand, so the Prime's attack trigger summons nothing.
         let fresh = scenario(json!({
             "seed": "lethal-windfury",
             "active": AI,
@@ -510,7 +492,6 @@ mod the_positions_the_search_merges {
         }))
         .state()
         .clone();
-        // Windfurious Prime is 5 attack: two attacks left, 10 off 20 health.
         assert_eq!(ready_gap(&fresh, AI), 10.0);
 
         let prime = mine(&fresh, AI, "meditative-091-1");
@@ -520,15 +501,11 @@ mod the_positions_the_search_merges {
         };
         let once = play_out(&fresh, std::slice::from_ref(&swing));
         assert_eq!(once.players[HUMAN].hero.health, 15);
-        // One swing is left: 5 off 15 health.
         assert_eq!(ready_gap(&once, AI), 10.0);
         assert_eq!(ready_gap(&once, AI), ready_gap_by_legal_actions(&once, AI));
 
-        // Both swings in one line: `simulate` numbers its actions from its counter, so a second call
-        // from `once` would repeat the first swing's action id.
         let twice = play_out(&fresh, &[swing.clone(), swing]);
         assert_eq!(twice.players[HUMAN].hero.health, 10);
-        // Both swings are spent: nothing left to count, the gap is the hero's health.
         assert_eq!(ready_gap(&twice, AI), 10.0);
     }
 }
@@ -559,14 +536,12 @@ mod duos_life_r964000 {
         }))
         .state()
         .clone();
-        // Pointmaster 7, Mr. Vanilla 4 and Tempo Timmy 3: 14 at the face.
         assert_eq!(ready_gap(&state, AI), 6.0, "a 1v1 hero at 20");
         assert_eq!(
             ready_gap(&with_pool(&state, false), AI),
             26.0,
             "20 own HP and a 20 pool"
         );
-        // Spent: the hero's health is the pool.
         assert_eq!(ready_gap(&with_pool(&state, true), AI), 6.0);
     }
 }
@@ -742,7 +717,6 @@ mod free_replays_r1965000 {
     /// bot's acting clock) leaves no proved lethal to play: the decision ends the turn, as one the clock
     /// stops inside the solver does. It never plays the untrimmed line's Coin, which a clock stopping
     /// each decision at the same point would have played at every one. Every stop from the first node
-    /// to the last of the unhurried decision is tried, so the trim's window is among them.
     #[test]
     fn r1965000_a_clock_that_stops_the_trim_plays_no_coin_and_the_turn_ends() {
         let start = board(&[COIN]);
@@ -791,7 +765,6 @@ mod free_replays_r1965000 {
 
     /// A replay the lethal does need is kept: Base Camp, already played this turn and back in the
     /// graveyard, adds two Coins at no cost and moves no attack, and a Coin's mana pays for a Dogpile,
-    /// which casts the other at the enemy hero for 4. Every step is needed, so the trim keeps them all.
     #[test]
     fn r1965000_a_replay_the_lethal_needs_is_found_and_kept() {
         register_cards();
@@ -863,21 +836,17 @@ mod hero_ineligible_attacks {
 
     #[test]
     fn a_fresh_rush_unit_with_a_unit_to_attack_leaves_the_gap_at_the_heros_health() {
-        // Plague Bringer, 4/4 Rush, and Mr. Vanilla across, a 4/4 without Taunt for it to attack: 4 off
-        // 10 once it has been on the field a turn.
         let ready = board("lethal-fresh-rush", json!(["classic-076"]), json!(["core-008"]));
         assert_eq!(ready_gap(&ready, AI), 6.0);
         // §6.1: on its summon turn Rush lets it attack units only, so nothing reaches the hero.
         let sick = fresh(&ready, "classic-076");
         assert_eq!(ready_gap(&sick, AI), 10.0);
         assert_eq!(ready_gap_by_legal_actions(&sick, AI), 10.0);
-        // face_threat reads the next turn, when the unit is no longer sick.
         assert_eq!(face_threat(&sick, AI), 4);
     }
 
     #[test]
     fn a_fresh_charge_unit_still_counts_at_the_hero() {
-        // Deft Duelist, 4/3 Charge: Charge lifts summoning sickness for the hero too.
         let state = fresh(
             &board("lethal-fresh-charge", json!(["core-045"]), json!(["core-008"])),
             "core-045",
@@ -887,19 +856,14 @@ mod hero_ineligible_attacks {
 
     #[test]
     fn a_fresh_rush_unit_still_binds_a_taunt_and_frees_a_ready_attacker_for_the_face() {
-        // Prem Panther 5/4 Rush, fresh, and Tempo Timmy 3/3, ready, into Tommy Tempo, a 5/5 Taunt.
         let ready = board(
             "lethal-fresh-taunt",
             json!(["core-032", "core-011"]),
             json!(["classicplus-026"]),
         );
         let sick = fresh(&ready, "core-032");
-        // The Panther, which cannot reach the hero, takes the Taunt first and destroys it, so Timmy's 3
-        // reach the hero past it: 7.
         assert_eq!(ready_gap(&sick, AI), 7.0);
         assert_eq!(ready_gap_by_legal_actions(&sick, AI), 7.0);
-        // face_threat is unchanged: every attack may hit the hero, the smallest bound first, so Timmy's
-        // 3 only hurt the Taunt and the Panther's 5 finish it.
         assert_eq!(face_threat(&sick, AI), 0);
     }
 }

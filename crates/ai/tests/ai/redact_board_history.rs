@@ -1,9 +1,4 @@
-//! R185 and C+ #35 Rollback's history (R419): `state.boardHistory` holds whole instances of the field as
-//! each recent turn began — the opponent's face-down traps among them, and cards since gone to its hand —
-//! so `redact` drops it and the seat never reads a hidden card through it. Two true states that differ
-//! only in a snapshot's hidden card redact to the same hash. Real catalog, real dealt game; the AI is p1.
-//!
-//! Port of `packages/ai/test/redact-board-history.test.ts`.
+//! R185, C+ #35 Rollback history (R419): `boardHistory` dropped so seat never reads hidden cards.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

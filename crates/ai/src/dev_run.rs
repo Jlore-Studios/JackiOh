@@ -1,24 +1,8 @@
-//! SPEC §9.11, R378: an internal AI development run. AI-against-AI games played on a build before its
-//! patch ships, each filed as a game record (R376) of its own source, so the card win rates of a
-//! patch's pre-release run can be compared with those of the live games played on it once it ships.
-//!
-//! A development game is an All Random game (R258) with two AI pilots: both decks are dealt by the
-//! game's weighted random deck-builder with nothing banned, from the game seed and the seat
-//! (`${seed}:p1-deck`, `${seed}:p2-deck`), exactly as the server deals a live one; both seats play on
-//! this spec's own resources, no handicap (R180), at the browser's budget. So a run files under All
-//! Random, and compares with that mode's live games like for like. Its source is "dev", which no live
-//! figure counts unless it is asked for (R378). A card the shadow ban keeps out of the AI's own decks
-//! (R186) is dealt here like any other — All Random bans nothing — and is one the AI is known to play
-//! badly, so its development figures say more about the AI than about the card.
-//!
-//! A run can instead force one card into one seat's deck (R1284000, `forced_dev_game_config`), so a card
-//! a patch changes is in the sample in every game. Its records are for `cargo jackioh stats compare`,
-//! not R378's sample of All Random.
-//!
-//! Pure and seeded like the rest of src/ (CLAUDE.md rule 4): `cargo jackioh stats` loops over the
-//! games and writes the file.
-//!
-//! Port of `packages/ai/src/devRun.ts`.
+//! SPEC §9.11, R378: internal AI development runs. Pre-release AI-vs-AI games filed as game
+//! records (R376) under All Random (R258) with unhandicapped resources (R180).
+//! Unbanned decks (shadow ban R186 dealt normally).
+//! Supports forced card evaluation (R1284000, `forced_dev_game_config`).
+//! Pure and seeded (CLAUDE.md rule 4).
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{
@@ -64,10 +48,8 @@ pub struct DevRunOptions {
     /// this build's AI generation (`ai_generation`); `None` files no build.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit: Option<String>,
-    /// #1697: the setup inputs every game of the run is created with beyond its decks (§9.3): dealt
-    /// seats (R433), last boards (R417, R564) and Glitch boards (R678), in seat order. The same in
-    /// every game, so a record stays a pure function of its number and the options (`cargo jackioh
-    /// stats` plays them in parallel). Unset, every game is created as before.
+    /// #1697: setup inputs for each game beyond decks (§9.3): dealt seats (R433), last boards
+    /// (R417, R564), and Glitch boards (R678).
     #[serde(flatten)]
     pub setup: MatchSetup,
 }
@@ -122,8 +104,7 @@ fn dev_match(seed: String, decks: (Vec<String>, Vec<String>), budget: Option<Sea
     }
 }
 
-/// Game n of a series: its seed, its two dealt decks, and two AI seats at this spec's resources. TS
-/// took `Pick<DevRunOptions, "series" | "budget">`; here the two fields are the arguments.
+/// Game n of a series with dealt decks and AI pilots.
 pub fn dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>) -> MatchConfig {
     let seed = format!("{series}:{n}");
     let decks = (dev_deck(&seed, "p1", &[]), dev_deck(&seed, "p2", &[]));
@@ -135,10 +116,8 @@ fn forced_seat(n: i32) -> PlayerId {
     if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 }
 }
 
-/// Game n of a series with `card` in one seat's deck (R1284000). Both decks are R258's deal with `card`
-/// banned, so the other seat never holds it and no deal depends on the card's own numbers. The holder's
-/// card at the slot `${seed}:force` picks is replaced by `card`. `card` must be a deckable card: the
-/// caller resolves it (`cargo jackioh stats --force`).
+/// Game n of a series with `card` forced into one seat's deck (R1284000, R258).
+/// Replaces the card at slot `${seed}:force`.
 pub fn forced_dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>, card: &str) -> MatchConfig {
     let seed = format!("{series}:{n}");
     let banned = [card.to_string()];
@@ -165,15 +144,12 @@ pub fn dev_run_config(n: i32, options: &DevRunOptions) -> MatchConfig {
     }
 }
 
-/// R378: a development record's id, `dev:<patch>:<seed>`. The patch is part of it, so the same seeds
-/// played again for another patch are other records, which `stats:import` adds rather than skipping
-/// as a run it has already loaded.
+/// R378: development record ID `dev:<patch>:<seed>`.
 pub fn dev_record_id(patch: &str, seed: &str) -> String {
     format!("{DEV_RECORD_ID_PREFIX}{patch}:{seed}")
 }
 
-/// R376, R378: plays game n and files it. `None` when the game did not finish — it hit the match's
-/// action limit or an AI panicked — since only a finished game is a record.
+/// R376, R378: plays game n and returns a finished GameRecord.
 pub fn dev_game_record(n: i32, options: &DevRunOptions) -> Option<GameRecord> {
     let config = dev_run_config(n, options);
     let played = play_match(&config, &mut MatchHooks::default());

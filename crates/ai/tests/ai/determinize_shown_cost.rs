@@ -1,13 +1,4 @@
-//! R762: the AI samples an unseen face-down trap at the cost the board shows.
-//!
-//! Since R351 every face-down Trap shows its cost to both players, and `redact` keeps that number
-//! on the placeholder — but `determinize` filled each placeholder from every Trap and Field Trap,
-//! so a sampled world could put a cost-1 trap where the board shows 3. The lethal solver accepts a
-//! line that wins on all 3 determinizations, so it swung at the face into a shown cost-3 trap most
-//! of the time, where a human reading the same cost would not.
-//!
-//! Port of `packages/ai/test/determinize-shown-cost.test.ts`. TS's `{ timeout: 60_000 }` has no
-//! `cargo test` twin and is dropped.
+//! R762, R351: samples unseen face-down trap at shown cost rather than any cost.
 
 use indexmap::IndexSet;
 use jackioh_ai::{AiOptions, DecisionReason, DeterminizeOptions, decide, determinize, redact};

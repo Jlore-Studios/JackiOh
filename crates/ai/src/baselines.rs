@@ -1,8 +1,4 @@
-//! The two baselines the quality gates measure the AI against (docs/polish/3-ai.md, after the
-//! Hearthstone-AI Competition's random and greedy agents): SPEC §10.7's random policy, and a one-ply
-//! greedy player that sees exactly what the AI sees (R185) and looks one action ahead.
-//!
-//! Port of `packages/ai/src/baselines.ts` (SURFACE §9).
+//! Baseline quality gate agents (SURFACE §9, SPEC §10.7, R185): random policy and one-ply greedy.
 
 use jackioh_engine::{ActionBody, GameState, PlayerId, Rng, mulligan_prompt_for, subsystems};
 

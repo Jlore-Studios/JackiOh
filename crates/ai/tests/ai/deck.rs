@@ -6,11 +6,6 @@
 //! AI_DECK.minUnitShare, and a Human-themed deck is at least AI_DECK.themeMinShare Human.
 //!
 //! Seeds are `create_rng("deck-test:<size>:<n>")`, n = 1..200, so a failing seed is reproducible.
-//!
-//! Port of `packages/ai/test/deck.test.ts`: TS's `it` inside a `for` over sizes (and mana caps) is one
-//! `#[test]` per value, named with it. A bucket is read by its literal (`"0-1"`, `"2"`, `"3"`, `"4+"`)
-//! through serde, and `curve_targets`' and `AI_DECK.curve`'s per-bucket numbers likewise, so the test
-//! holds whatever Rust shape carries TS's `Record<CostBucket, number>`. TS's timeouts are dropped.
 
 use std::panic::catch_unwind;
 
@@ -103,9 +98,7 @@ fn is_shadow_banned(id: &str) -> bool {
     SHADOW_BAN_IDS.iter().any(|banned| banned == &id)
 }
 
-// ---------------------------------------------------------------------------------------------
 // B22
-// ---------------------------------------------------------------------------------------------
 
 mod build_ai_deck_b22 {
     use super::*;
@@ -350,9 +343,7 @@ mod build_ai_deck_b22 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B23
-// ---------------------------------------------------------------------------------------------
 
 mod the_curve_and_the_theme_b23 {
     use super::*;
@@ -571,9 +562,7 @@ mod the_curve_and_the_theme_b23 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1370: a deck that leans on a set
-// ---------------------------------------------------------------------------------------------
 
 mod r1370_a_deck_that_leans_on_a_set {
     use super::*;
@@ -713,19 +702,8 @@ mod r1370_a_deck_that_leans_on_a_set {
     #[test]
     fn r1370_without_a_lean_set_these_seeds_deal_the_decks_they_always_did_and_take_no_extra_rng_draw() {
         register_cards();
-        // Dealt by the deck builder before R1370, with the cursor its rng stopped at: before the Meditative
-        // set was in any pool, so the literals gate it (R1390: a gate deals what the draw dealt before).
-        // Re-dealt for patch v0.3.10 (#831), again for patch v0.3.12 (#1149) and again for patch v0.3.13
-        // (#1194), whose costs move the builder's curve: the same seeds stop at the same cursors.
-        // The themed pin was re-dealt for patch v0.3.16 (#1151), whose Human tag on MC Tech joins the
-        // Human theme's pool: its seed stops at the same cursor.
-        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the decks were dealt before the Meditative+
-        // set was in any pool too, so the literals gate it beside Meditative and deal them unchanged.
-        // Every pin was re-dealt for #1704, whose costs move the builder's curve again.
-        // Re-pinned for the Stinkyscape release (#1884) the same way: the literals gate it too, and
-        // deal the decks unchanged. Every pin was re-dealt again for #2179, whose costs move the curve.
-        // And for the Training Grounds release (#2204): the literals gate it as well, so the decks are
-        // still the ones dealt before it was in any pool.
+        // Gated sets preserve seeded deck stability (R1370, R1390; re-pinned across #831, #1149,
+        // #1194, #1151, #1187, #1704, #1884, #2179, #2204).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -1012,16 +990,8 @@ mod r1370_a_deck_that_leans_on_a_set {
             })
             .cloned()
             .collect();
-        // Ban all but six of the set's cards, short of the 13 a 25-card deck owes. A player's deck, so
-        // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere. Re-pinned for
-        // v0.3.15 (Meditative+ ships, #1187): the newest set is Meditative+, whose first six ids are all
-        // Spells, so beside a rolled theme of Spells the three floors owed more than 20 cards and R1370
-        // gave the units' up (seed 7). Its last six hold two Units (M+ #21, #24), as Meditative's first
-        // six did (M #2, #3), so every floor stays in reach and the units' is still held. Re-pinned for
-        // the Training Grounds release (#2204): the newest set's snapshots (#41–#60) are left out, as a
-        // Core card dealt first keeps its snapshot out (R2195000), and so is #40 Goetzmann Game Design, a
-        // Quickdraw card the cap may keep out (R817000), so the six kept are TG #34–#39, two of them Units
-        // (#36, #38).
+        // Ban all but six of the set's cards (R1390, #1187, R1370, #21, #24, #2204, R2195000, R817000).
+        // Leaves out snapshots (#41, #60) and Quickdraw (#40), keeping units (#34, #36, #38, #39).
         let kept: Vec<String> = printed[printed.len() - 6..].to_vec();
         assert!(
             kept.iter()
@@ -1120,9 +1090,7 @@ mod r1370_a_deck_that_leans_on_a_set {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1390: the AI's decks' soft gate
-// ---------------------------------------------------------------------------------------------
 
 mod r1390_the_ai_decks_soft_gate {
     use super::*;
@@ -1433,9 +1401,7 @@ mod r1390_the_ai_decks_soft_gate {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R750000: a ladder bot's deal leans on the cards that win
-// ---------------------------------------------------------------------------------------------
 
 mod win_rate_strength {
     use super::*;
@@ -1546,9 +1512,7 @@ mod win_rate_strength {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R817000: a random deck holds at most two Quickdraw cards
-// ---------------------------------------------------------------------------------------------
 
 mod r817000_a_random_deck_holds_at_most_two_quickdraw_cards {
     use super::*;
@@ -1693,9 +1657,7 @@ mod r817000_a_random_deck_holds_at_most_two_quickdraw_cards {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R976000: shaping is an option, never a ban list's match
-// ---------------------------------------------------------------------------------------------
 
 mod r976000_shaping_is_an_option {
     use jackioh_ai::shaped_weight;

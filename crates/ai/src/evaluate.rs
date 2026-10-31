@@ -1,28 +1,7 @@
-//! The AI's static evaluation (SPEC §9.9): hero health (concave, so the last points weigh most),
-//! hero armor, board stats and keywords through §10.4's layers (a Defense-Position unit's attack at
-//! a discount), cards in hand, library, the enemy's face damage next turn against our life and the
-//! reverse (in a Duos duel own HP and the team's pool, R964000), and, late in the game, the turn cap.
-//! Patch v0.2.0's mechanics through the engine's own readers: a unit the engine bars from attacking
-//! (E35) counts no attack, Spell Damage (E6) and Immune to Spells are worth something, a Brittle count
-//! (B3.3) discounts its card, an Animated backrow card (B3.1) is partly a unit already, and an own hand
-//! card's `costMod` (B3.4, R65) moves its worth. #1086 prices what a side has banked in public state:
-//! Jade steps (R962), the enemy units its delayed effects have marked (R437), extra turns (R846), and
-//! an own Temporary hand card at a discount (R637). #1143 prices an own hand Unit by the face it will
-//! enter with (its Radiant face, buffs and tuning) over its printed base face. #1224 prices what a
-//! side's coming refreshes will or will not give: the refreshes it still has to lose (R844) and its
-//! next-turn rider (§2.3). #1506 weighs the cards dormant under a side's Stack piles (§3.2, R13):
-//! the seat's own unit piles card by card, every other pile by its count (R447). #1602 prices three
-//! facts both seats see: the cost an enemy face-down card shows (R351), the fatigue draws a side has
-//! taken (§2.4) and Windfury (R636). #1722 prices what a side holds in its player modifiers, public on
-//! both seats (R169): its rest-of-game start-of-turn effects (R458) and its closest alternative win
-//! (R848), and a delayed discard of its hand (Classic #37 Last Hurrah) as a discount on that hand.
-//! #2424 prices a unit's Death by what it leaves behind (R2424000): the decision's root probes each
-//! Death the seat can read (`death_prices`), and `unit_worth` and `kill_worth` read the prices it
-//! holds (`with_death_prices`). It reads only what the seat may know or what a determinization
-//! sampled, and nothing here reads a handicap or a difficulty (R180).
-//!
-//! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
-//! are passed explicitly.
+//! The AI's static evaluation (SPEC §9.9): hero health, armor, board stats and keywords through
+//! §10.4's layers, hand, library, enemy face damage next turn, and the turn cap. Evaluates public state
+//! banked items (#1086, #1143), refreshes and riders (#1224), Stack piles (#1506), face-down cost
+//! visibility (#1602), modifiers and death prices (#2424). Reads only what the seat may know.
 
 use std::cell::Cell;
 
@@ -81,11 +60,8 @@ pub(crate) fn heal_worth(state: &GameState, player: PlayerId, amount: i32, w: &E
     hero_value(life.saturating_add(healed), start, w) - hero_value(life, start, w)
 }
 
-/// E8, R413: whether a heal of `player`'s hero is replaced by Pierce damage from the
-/// converter, the read-only half of `replacements::healing_replaced`: a live `HealToDamage`
-/// modifier on any other player (R169, both seats see it), or a face-up `heal_to_damage`
-/// card acting on any other player's side (`acting_with_flag`, whose board walk drops
-/// face-down traps per R33/R1487000, so a hidden converter correctly stays unmodeled).
+/// E8, R413: whether a hero heal is replaced by Pierce damage: a live `HealToDamage`
+/// modifier (R169) or face-up converter (R33/R1487000; hidden converters unmodeled).
 pub(crate) fn heal_converted(state: &GameState, player: PlayerId) -> bool {
     PLAYER_IDS
         .into_iter()
@@ -104,10 +80,7 @@ fn readable_by(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
     find_def(Some(state), &card.def_id).is_some() && backrow_is_public(state, card, seat)
 }
 
-/// R351: the cost a backrow card the seat cannot read shows both players, the number `view_for` shows:
-/// a placeholder's is the price `redact` parked on it (`cost_override`), any other card's is its cost
-/// read on the field (`effective_cost`). A determinization keeps the parked price on the trap it samples
-/// there (R762), so every world shows the seat the number the true board does.
+/// R351: public backrow cost (`cost_override` or `effective_cost`), preserved across determinizations (R762).
 fn shown_cost(state: &GameState, card: &CardInstance) -> i32 {
     if find_def(Some(state), &card.def_id).is_none() {
         return card.cost_override.unwrap_or(0);
@@ -250,13 +223,8 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f6
             value += w.spell_damage * f64::from(*n);
         }
     }
-    // §4.1: Defense Position's Taunt and Armor +1 are the position's, not the unit's. Their worth is
-    // the damage they soak, which `face_threat` and the reply already count, so here they count for
-    // only `positionGrants`. With `defenseOwnTauntKept` a unit's own Taunt, printed or granted
-    // (`card_keywords` leaves the position's grant out), is kept in full, and the Armor discount
-    // applies only when Armor is on the body, so an Indestructible unit, whose Taunt is gone, still
-    // discounts its position Armor. Without it (the frozen baseline), every Taunt in Defense Position
-    // is discounted with a point of Armor.
+    // §4.1: Defense Position grants (Taunt/Armor) soak damage counted by `face_threat`,
+    // so here they count for `position_grants`.
     if view.position == Position::Def {
         let taunts = has_keyword(&view.keywords, KeywordKind::Taunt);
         if !w.defense_own_taunt_kept {
@@ -436,13 +404,8 @@ pub fn coming_mana(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
     coming_refreshes(&state.players[seat], w) - coming_refreshes(&state.players[seat.opponent()], w)
 }
 
-/// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (a
-/// mark names its entry by `delayed_id`; an entry `redact` dropped, R185, counts nothing). A mark on a
-/// hand card (R1141), a backrow card or an own unit counts nothing, nor does an unmarked delayed
-/// effect: the shipped ones are as often a cost (/fullsend's exile) as a payoff, and a countdown is
-/// weighed past the reply instead (`reply_score`, #1995); the engine's own discard of a hand is priced
-/// on that hand (`discards_hand`). Nor does a delayed destroy's mark on a unit that is Indestructible
-/// now, which the destroy spares (Classic #20, R46).
+/// R437: `unit_worth` of marked enemy units owned by `player`'s delayed effects (R185). Excludes
+/// hand marks (R1141), count-downs (#1995), and Indestructible targets spared by destroy (Classic #20, R46).
 fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
     let Some(marks) = &state.marks else {
         return 0.0;
@@ -526,11 +489,8 @@ fn alt_win_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
     w.alt_win * closest * closest
 }
 
-/// §3.2, R13: what the cards dormant under `player`'s Stack piles are worth, each resuming when the
-/// cards above it leave. The seat reads its own unit piles card by card, each at `dormant_share` of
-/// its `unit_worth` (no call at a zero share); every other dormant card counts `dormant_card`
-/// whatever it is: the enemy's unit piles, and every backrow pile, whose cards both seats see only
-/// as a count (R447; `redact` makes a face-down one a placeholder, R185).
+/// §3.2, R13: worth of dormant cards under Stack piles. Own unit piles read card by card;
+/// other piles count by `dormant_card` (R447, R185).
 fn dormant_worth(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let beneath = side.units.iter().flatten().flat_map(|pile| pile.iter().skip(1));
@@ -570,11 +530,7 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
         + w.hero_armor * f64::from(hero_armor_of(state, player))
 }
 
-/// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
-/// banked (a debt, Jade steps, extra turns, the enemy units it has marked, its start-of-turn effects and
-/// closest alternative win), what its coming refreshes
-/// will or will not give, the backrow (an enemy face-down card by the cost it shows), the hand, the
-/// library and the fatigue draws it has taken.
+/// Non-hero board, dormant piles, banked modifiers, refreshes, backrow, hand, library, and fatigue.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -632,11 +588,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                 if w.animated_share != 0.0 && animated_with_stats(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w);
                 }
-                // §10.1, R27/R62: a grade counter's banked steps are worth their own — a Combo-Index
-                // at B is not the fresh one its def prints. On the controller's own turn a rise this
-                // turn's plays already arm counts as banked: the beam can prefer the lines that
-                // spend enough to set it off, as the glow does (`grade_rises`, which reads the same
-                // per-turn log it will fire on).
+                // §10.1, R27/R62: grade counter banked steps are worth extra, including steps
+                // already armed this turn (`grade_rises`).
                 if card.counters.grade.is_some() {
                     let grade = subsystems::grade_of(card);
                     if !subsystems::is_terminal_grade(grade) {
@@ -682,14 +635,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
     face_threat_with(state, attacker, &AI_EVAL)
 }
 
-/// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0,
-/// position ATK (with `w.deft_defense_attacks`, a Deft unit in Defense Position too, which can switch
-/// to Attack and still swing, R49), no "Can't attack", no E35 status barring attacks and not Frozen
-/// through that turn (R1174000, `can_swing`), sorted
-/// ascending by attack. Taunt units on the defending side soak up the smallest attackers they bind
-/// first, one §4.4 hit at a time (`damage_past_taunts`). Each remaining attacker's attack goes through
-/// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips (R346), and the Anti-oneshot
-/// cap, per hit), and the results are summed.
+/// The face damage `attacker`'s board could deal next turn: swinging units (including Deft in Def, R49;
+/// excluding Frozen, R1174000) soaked by Taunts (§4.4) with remaining damage hitting face (Pierce skips armor, R346).
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     for unit in active_units_of(state, attacker) {
@@ -735,26 +682,9 @@ impl TauntStand {
     }
 }
 
-/// What `attacks` (one entry per attack: the attacker, its attack and whether it may hit the hero once
-/// no Taunt walls it) deal `defender`'s hero once its Taunt units have soaked up the attackers they
-/// bind, those that may not hit the hero first and then the smallest, as `face_threat` counts it. §4.2
-/// step 3: a Taunt binds only the attackers that may attack it, asked of the engine's own
-/// `attack_restriction` (what its Taunt wall reads), so a Flying Taunt in Attack Position holds no
-/// ground attacker (R783002) and a landed one, in Defense Position, holds every attacker (R783003).
-///
-/// Each bound attacker, in that order, is one §4.4 hit on the Taunt (#898): an attacker its First
-/// Strike destroys first lands nothing (§4.3 step 1, `falls_to_first_strike`); a Divine Shield takes
-/// the first hit whole (step 1); the Taunt's Armor comes off each hit, unless it pierces (step 2,
-/// R346), and a hit the Armor takes whole does nothing (R1361); Poisonous destroys with any damage
-/// dealt (step 7); and what a Trample hit lands beyond the Taunt's health reaches the hero (step 9,
-/// R63). A bound Cleave attacker also splashes its attack onto the defender's live neighbouring
-/// Taunts (§4.4 step 10, R63): a killed neighbour stops binding, a popped neighbour shield is gone,
-/// and Trample excess past a neighbour reaches the hero as for the main hit. A Taunt its attackers
-/// cannot destroy holds them all, and a destroyed Reborn Taunt comes back and binds the attackers
-/// left (§4.5 step 4, `reborn_body`). Lane strike (R94) and combat-only bonuses (R1120) stay out.
-/// Every remaining hit that may hit the hero goes through `subsystems::projected_hero_damage` with its
-/// attacker's Pierce (R346); one that may not (a Rush unit on its summon turn, §6.1, or one in the
-/// Gauntlet, R1849005) binds and tramples like any other but lands nothing past the Taunts (#1823).
+/// What `attacks` deal `defender`'s hero once Taunt units bind attackers (§4.2, R783002, R783003).
+/// Each bound attacker resolves combat hits (#898, R94, R1120, R1849005, #1823); remaining attacks
+/// reach the hero.
 pub fn damage_past_taunts(
     state: &GameState,
     defender: PlayerId,
@@ -898,12 +828,8 @@ pub fn damage_past_taunts(
     total
 }
 
-/// §4.3 step 1 and R93, as the engine's own projection reads it (`subsystems::lethal`'s
-/// `falls_to_first_strike`, private there): a Taunt with First Strike, against an attacker without
-/// it, strikes first, and an attacker that falls there never lands its hit. The strike back runs the
-/// §4.4 steps that can stop it — Divine Shield, Armor (which a Pierce Taunt skips, R346),
-/// Indestructible and the zero rule — and a Poisonous Taunt destroys with any damage at all. A Ranged
-/// attacker takes no strike back from a Taunt that is not Ranged, so it never falls there (R783000).
+/// §4.3 step 1, R93: a First Strike Taunt destroys an attacker before it hits (runs §4.4 steps, Pierce R346).
+/// Ranged attackers take no strike back from non-Ranged Taunts (R783000).
 fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
@@ -982,11 +908,8 @@ fn sandbox_step(
     Some((next.pending.is_none() && next.result.is_none()).then_some(next))
 }
 
-/// R2424000: what `unit`'s Death leaves its controller on `before`, a sandbox (R923000): the controller's
-/// evaluation after the sandbox's destroy, which runs its Death, less after its remove, which does not
-/// (R923003), less the body a Reborn brings back, which `kill_worth` takes off on its own. `None` when
-/// the counter is spent; `Some(None)` when there is nothing to price: the destroy spares the unit, or
-/// either tool leaves a prompt open or ends the game (`sandbox_step`).
+/// R2424000: sandbox (R923000) valuation of `unit`'s Death: destroy eval minus remove eval (R923003),
+/// excluding Reborn. None when counter spent, Some(None) if unpriceable.
 fn death_probe(
     before: &GameState,
     seat: PlayerId,
@@ -1072,15 +995,8 @@ fn spawned_death_probe(
     death_probe(&placed, seat, &unit, counter)
 }
 
-/// R2424000: the Death prices a decision of `seat`'s holds (`DeathPricing`), probed on `world`, its
-/// probe world (a function of what the seat sees, R185), each card once: every unit on either field
-/// whose Death is live (`death_hook_of`), the seat's first, then each Unit in the seat's own hand with
-/// one (`spawned_death_probe`, R923001); one the same as a card already listed (`DeathPrice::is_for`)
-/// is not probed again. Each runs on a sandbox copy (R923000) with both players' automatic turn end
-/// off (R345), so no tool's step ends the turn (R82), and with no price held, so a probe reads none
-/// (`death_probe`, R923003). The probes draw at most `AI_DEATH_PROBE_NODES` nodes from `counter`; the
-/// cards left when they run out are not priced. Nothing is priced while a prompt is open, which refuses
-/// the tools, once the game is over, or at a zero `AI_EVAL.death`.
+/// R2424000: Death prices for `seat` probed on `world` (R185) for field units and hand units (R923001).
+/// Probed on sandbox copies (R923000, R923003) with auto turn-end disabled (R345, R82), capped at `AI_DEATH_PROBE_NODES`.
 pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<DeathPrice> {
     if AI_EVAL.death == 0.0 || world.pending.is_some() || world.result.is_some() {
         return Vec::new();

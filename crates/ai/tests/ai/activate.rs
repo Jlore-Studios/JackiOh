@@ -1,15 +1,5 @@
-//! Activate abilities in the AI's search (docs/classic-sets.md B3.2, R384). `candidate_actions` puts an
-//! `activate` in the same tier as a play and Heroic Power's `activatePower` (R43), round-robin by source
-//! instance and ordered by the ability's mana price, so the beam and the lethal solver try abilities as
-//! early as plays. Activate N and ♾️ need nothing of their own: the AI re-plans after every action, so a
-//! second use is simply the next decision's candidate. Every board below is built from the real Classic
-//! cards (`crates/cards/src/scripts/classic/`); one test-only card carries a mana price, which no
-//! Classic ability has yet.
-//!
-//! Port of `packages/ai/test/activate.test.ts`. TS's per-test `{ timeout: PUZZLE_TIMEOUT }` (120 s)
-//! has no `cargo test` twin and is dropped. TS registered the test-only card for the whole file at
-//! import; the registries' override is per thread here, so every test installs it first
-//! (`install_pricey`).
+//! Activate abilities in search (docs/classic-sets.md B3.2, R384). `candidate_actions` puts `activate`
+//! in the same tier as plays and Heroic Power (R43), round-robin by source instance and ordered by mana.
 
 use jackioh_ai::{AiOptions, DecisionReason, action_key, candidate_actions, decide};
 use jackioh_engine::testkit::{
