@@ -838,6 +838,20 @@ mod profiles {
         assert_eq!(sorted(&ids_of(&many)), sorted(&[a.id.clone(), b.id.clone()]));
     }
 
+    /// A deleted seat reads back as the empty id on Postgres (KNOWN DIVERGENCES, deleted accounts):
+    /// an id that is not a uuid names no profile, and the read answers the others.
+    async fn reads_many_profiles_past_an_id_that_is_not_a_uuid(harness: &StoreHarness) {
+        let a = pending_profile(harness, None).await;
+        let ids = [String::new(), a.id.clone(), "not-a-uuid".to_string()];
+        let many = q!(harness, t => t.profiles_get_many(&ids));
+        assert_eq!(ids_of(&many), vec![a.id.clone()], "{}", harness.name);
+        assert!(
+            q!(harness, t => t.profiles_get_many(&[String::new()])).is_empty(),
+            "{}",
+            harness.name
+        );
+    }
+
     async fn moves_the_rating_and_the_in_match_pointer(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
         let match_id = id();
@@ -1010,6 +1024,7 @@ mod profiles {
         creates_a_pending_profile_and_reads_it_back_by_id_and_by_user_id,
         returns_null_for_an_unknown_profile,
         reads_many_profiles_at_once,
+        reads_many_profiles_past_an_id_that_is_not_a_uuid,
         moves_the_rating_and_the_in_match_pointer,
         r890000_seat_claim_is_compare_and_set,
         r603_round_trips_the_whole_glicko_triple,
@@ -6396,6 +6411,7 @@ mod ranked {
 
 mod profiles_remove {
     use super::*;
+    use jackioh_server::economy::store::GameJloreTotals;
 
     /// Account deletion.
     async fn removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match(
@@ -6604,10 +6620,60 @@ mod profiles_remove {
         }
     }
 
+    /// A finished match stays readable, its first seat whole, once its second player deletes their
+    /// account: Postgres empties the seat (migration 0012) and reads it back as the empty id, the
+    /// memory store keeps the id (KNOWN DIVERGENCES, deleted accounts), and neither reaches a query
+    /// as a uuid in the reads the rematch and ranks routes, the socket's reopen and the refile make.
+    async fn a_finished_match_reads_back_once_its_second_player_is_deleted(harness: &StoreHarness) {
+        let other = active_profile(harness, None).await;
+        let gone = active_profile(harness, None).await;
+        let now = harness.now();
+        let match_id = id();
+        q!(harness, t => t.matches_create(&match_row(&match_id, &other.id, &gone.id, harness, now)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&match_id, 1, "p1", "n1", now)]));
+        let result: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": [other.id, gone.id],
+            "winnerProfileId": other.id,
+            "reason": "concede",
+            "turns": 3,
+            "endedAt": now,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1016, 984],
+        }));
+        q!(harness, t => t.results_insert(&result));
+        q!(harness, t => t.matches_finish(&match_id, now));
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+
+        let row = must(q!(harness, t => t.matches_get(&match_id)), "the finished match");
+        assert_eq!(j(&row)["status"], "finished", "{}", harness.name);
+        assert_eq!(row.players.0, other.id, "{}", harness.name);
+        assert!(
+            row.players.1.is_empty() || row.players.1 == gone.id,
+            "{}: the deleted seat reads {:?}",
+            harness.name,
+            row.players.1
+        );
+        // The seats as the ranks read, the actor's rebuild and the refile hand them on.
+        let seats = [row.players.0.clone(), row.players.1.clone()];
+        let profiles = q!(harness, t => t.profiles_get_many(&seats));
+        assert_eq!(ids_of(&profiles), vec![other.id.clone()], "{}", harness.name);
+        // What `game_jlore_caps` asks of each seat when an actor is rebuilt on the finished match.
+        for seat in &seats {
+            assert_eq!(
+                q!(harness, t => t.economy_game_jlore_totals(seat, 0, now + 1, &match_id)),
+                GameJloreTotals::default(),
+                "{}: seat {seat:?}",
+                harness.name
+            );
+        }
+    }
+
     both_stores!(
         removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match,
         r1412_a_won_by_effect_loss_to_a_deleted_winner_stays_a_loss,
         r1843004_a_deleted_winner_leaves_each_new_ending_as_it_was,
+        a_finished_match_reads_back_once_its_second_player_is_deleted,
     );
 }
 

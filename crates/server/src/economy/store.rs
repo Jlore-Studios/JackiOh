@@ -864,6 +864,7 @@ mod pg {
         JloreGrant, JloreReason, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack,
         TrackGrant, count_after, from_literal, literal, track_after,
     };
+    use crate::auth::is_uuid;
     use crate::config::SET_TRACK_FIRST_LEVEL;
     use crate::db::pg::PgTx;
     use crate::db::store::StoreError;
@@ -958,6 +959,11 @@ mod pg {
         until: i64,
         reference: &str,
     ) -> Result<GameJloreTotals, StoreError> {
+        // A deleted seat reads back as the empty id (`db/pg.rs`, KNOWN DIVERGENCES, deleted
+        // accounts), which has no rows and which Postgres would refuse as a uuid.
+        if !is_uuid(profile_id) {
+            return Ok(GameJloreTotals::default());
+        }
         run_as(t, Some(profile_id)).await?;
         let (day, reference): (i64, i64) = sqlx::query_as(
             "select coalesce(sum(delta), 0)::bigint,
