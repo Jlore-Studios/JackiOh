@@ -1,0 +1,19 @@
+{
+  "title": "Siphon Squad Tribute loop with self-resummoning Death",
+  "sources": "Issue #2500",
+  "notes": "Classic #88 Siphon Squad's Tribute condition holds nothing on a body that is not Siphon Squad itself and arrived this turn (R2500000), ending the loop when fused or granted with Job Application's self-resummoning Death.",
+  "player": {
+    "title": "Siphon Squad Tribute loop fix",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Siphon Squad no longer enters an infinite Tribute loop when fused or granted with Job Application."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "classic-088"
+  ]
+}
