@@ -351,7 +351,7 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
 });
 
 describe("R654 the almanac's card statistics block", SLOW_GRID, () => {
-  it("R654 R661 the almanac's detail view renders the compact statistics block, names no source, and links the full stats page", async () => {
+  it("R654 R661 the almanac's detail view renders the compact statistics block, names no source, and links the full stats page, in place on a plain click and left to the browser on a ctrl or meta click", async () => {
     const unit = CARDS.find((def) => !def.token && def.set === "Core");
     if (unit === undefined) throw new Error("the catalog has no Core card");
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
@@ -409,10 +409,18 @@ describe("R654 the almanac's card statistics block", SLOW_GRID, () => {
     // R661: the response still names its source, but the block never shows it.
     expect(stats.textContent).not.toContain("AI games + live games (provisional)");
     expect(stats.querySelector(".inspect-stats-badge")).toBeNull();
-    expect(within(screen.getByTestId(INSPECT_DETAIL)).getByRole("link", { name: /view full stats/i })).toHaveAttribute(
-      "href",
-      `/stats?tab=cards&card=${encodeURIComponent(unit.id)}`,
-    );
+    const link = within(screen.getByTestId(INSPECT_DETAIL)).getByRole("link", { name: /view full stats/i });
+    const fullStats = `/stats?tab=cards&card=${encodeURIComponent(unit.id)}`;
+    expect(link).toHaveAttribute("href", fullStats);
+    expect(paths.statsCard(unit.id)).toBe(fullStats);
+    // #2562: a ctrl or meta click is the browser's; a plain one moves in place, with no page load.
+    const here = `${window.location.pathname}${window.location.search}`;
+    expect(here).not.toBe(fullStats);
+    expect(fireEvent.click(link, { button: 0, ctrlKey: true })).toBe(true);
+    expect(fireEvent.click(link, { button: 0, metaKey: true })).toBe(true);
+    expect(`${window.location.pathname}${window.location.search}`).toBe(here);
+    expect(fireEvent.click(link, { button: 0 })).toBe(false);
+    expect(`${window.location.pathname}${window.location.search}`).toBe(fullStats);
   });
 });
 
