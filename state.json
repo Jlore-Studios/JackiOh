@@ -11133,23 +11133,20 @@
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
-          "gemini"
-        ],
-        "builder": "gemini",
-        "rejections": [
           "claude"
         ],
+        "builder": "claude",
+        "rejections": [],
         "reviews": [
           {
-            "family": "gemini",
-            "run": "41179244549",
-            "tier": "medium"
+            "family": "claude",
+            "run": "41197608988",
+            "tier": "strong"
           }
         ],
-        "sha": "07e066b4befb774908a55575ca04f6fa61a83668",
+        "sha": "28b0d1379138fc3ff0e5c2624653ad5973778f62",
         "tiers": {
-          "claude": "strong",
-          "gemini": "medium"
+          "claude": "strong"
         }
       }
     },
