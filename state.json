@@ -11650,6 +11650,13 @@
     "2607": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T20:25:59Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 3 (no ruling cited) fails: the new test and comments cite R388 and R2521009 on R388/R507's patch-notes surface; otherwise three files in one app"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
