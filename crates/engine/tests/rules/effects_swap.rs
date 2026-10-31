@@ -239,12 +239,19 @@ mod swap_s6_3_r73_m3_t1 {
     }
 
     #[test]
-    fn r12_a_swapped_card_changes_controller_but_never_owner_so_it_still_leaves_to_its_owners_zones() {
+    fn r12_r2618000_a_swapped_card_changes_controller_but_never_owner_so_it_leaves_to_its_owners_exile_and_its_controllers_graveyard()
+     {
         let mut state = game();
         let card = put(
             &mut state,
             &combat_fx::plain.id,
             slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let other = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
             json!({}),
         );
 
@@ -253,11 +260,18 @@ mod swap_s6_3_r73_m3_t1 {
         assert_eq!(now.controller, PlayerId::P2);
         assert_eq!(now.owner, PlayerId::P1);
 
-        // Off the field a card always belongs to its owner (R12, §3.2), and R78 hands control back.
-        move_to_zone(&mut state, &mut now, OffFieldZone::Graveyard, Default::default());
-        assert_eq!(ids_of(&state.players.p1.graveyard), vec![card.id.clone()]);
-        assert!(state.players.p2.graveyard.is_empty());
+        // An exile goes to the owner's pile (R12, §3.2), and R78 hands control back.
+        move_to_zone(&mut state, &mut now, OffFieldZone::Exile, Default::default());
+        assert_eq!(ids_of(&state.players.p1.exile), vec![card.id.clone()]);
+        assert!(state.players.p2.exile.is_empty());
         assert_eq!(live(&state, &card.id).controller, PlayerId::P1);
+
+        // A graveyard is its controller's, and the card is theirs from then on (R2618000).
+        let mut then = live(&state, &other.id);
+        move_to_zone(&mut state, &mut then, OffFieldZone::Graveyard, Default::default());
+        assert_eq!(ids_of(&state.players.p2.graveyard), vec![other.id.clone()]);
+        assert!(state.players.p1.graveyard.is_empty());
+        assert_eq!(live(&state, &other.id).owner, PlayerId::P2);
     }
 
     #[test]

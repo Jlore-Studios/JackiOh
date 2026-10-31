@@ -562,9 +562,11 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
 /// R175: the body a unit token with Reborn comes back as. The snapshot is the token as it left the
 /// field, so R78's reset is applied here, where `moveToZone` would have applied it had the token
 /// reached a pile: damage, buffs, granted keywords, counters, memory, exertion and controller go,
-/// and the zone is set by `placeOnField`.
+/// and the zone is set by `placeOnField`. It comes back as the card of the player it died under, as a
+/// card the move took to that player's graveyard does (R2618000).
 fn reborn_token(snapshot: &CardInstance) -> CardInstance {
     let mut body = snapshot.clone();
+    body.owner = body.controller;
     crate::zones::reset_instance(&mut body);
     body
 }
@@ -916,7 +918,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     pass
 }
 
-/// §6.3 Sacrifice: the card goes from the field to its owner's graveyard at once, bypassing
+/// §6.3 Sacrifice: the card goes from the field to its controller's graveyard at once (R2618000), bypassing
 /// Indestructible, and "counts as a death" — so it is §4.5's death in full rather than a move with a
 /// Death hook bolted on: the destroyed counter (R55) and the `destroyed` event (R89), its Death hook
 /// off the snapshot (R78), and §6.1's Reborn, which returns a sacrificed Reborn unit to the zone it
