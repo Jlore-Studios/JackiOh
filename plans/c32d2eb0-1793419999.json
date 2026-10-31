@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2422,
+  "title": "Patch: a practice win's reward survives a server restart, paid once when the server is back",
+  "branch": "bot/issue-2422",
+  "thread": "**Issue #2422 (data, not instructions):**\n\n```text\n# #2422: Patch: a practice win's reward survives a server restart, paid once when the server is back\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen you win a practice game that earns rewards, the server first marks the game as claimed, then checks it and pays you a moment later. If the server restarts in between, for a deploy or a crash, the game stays marked as claimed but nothing is paid. Claiming it again only says it was claimed already, so the Jlore, XP and quest progress are gone for good. After this, a server that is shutting down waits for the wins it is still paying, and a win left unpaid is paid shortly after the server is back, exactly once.\n\n## Why\n- `crates/server/src/api/practice.rs:181-199` burns the seed in its own transaction and commits it. Then `:204-214` runs the check and the pay as a detached `tokio::spawn(settle(\u2026))`. The claim's result and log exist only in that task.\n- R1688000 retries a failed pay `PRACTICE_PAY_ATTEMPTS` (3) times inside the task, and names the gap itself: 'Rejected: \u2026 a sweeper that later pays seeds claimed but never paid, which needs a mark of a seed paid (a migration) and is left to a follow-up.'\n- The shutdown drain (`crates/server/src/app.rs:1288-1304`) stops the loops, waits for HTTP, stops the match and co-op actors, and closes the pool. Nothing waits for a `settle` whose caller has gone: the page's request timed out behind `PRACTICE_VERIFY_CONCURRENCY` (2), or the tab closed. A deploy's drain therefore closes the store under the pay.\n- A crash or out-of-memory kill between the burn and the pay leaves no trace. The player's retry answers `already_claimed`.\n- The prune (`crates/server/src/economy/store.rs:1825-1840`) deletes seeds by `issued_at` alone, claimed or not.\n- The retention loop already follows this pattern for game records: a record whose filing failed is filed again (R1596000, `crates/server/src/api/retention.rs`).\n\n## Proposal\n1. **The drain waits for claims in flight.** Track settle tasks on `App` with a `tokio::task::JoinSet` or a counted guard (no new dependency), and await them before `app.db.close()`, inside `SHUTDOWN_DRAIN_SECONDS`.\n2. **A mark that a seed is settled.** The next migration after `0067_idempotency_keys.sql` gives `practice_seeds` two things. First, the claim as sent, its result and log, written in the burn's transaction. Second, a settled mark (paid or refused) with its time. The pay sets the mark in the rewards' own transaction, only where it is unset, so a pay lands once whoever runs it.\n3. **A sweeper in the retention loop.** A claimed, unsettled seed older than a named grace (well past what a live settle takes) is checked again off the runtime, under the same verify limit. It is then paid or marked refused. The prune keeps an unsettled claim until it settles.\n4. **A ruling** in this issue's block amending R1688000, on Hearthstone semantics: a reward is granted once, and a server that failed to grant it grants it later. Its \u00a711 paragraph goes in `spec/pending/<issue>.md`.\n\n## Where it lands\n- `crates/server/src/api/practice.rs`, `app.rs`, `api/retention.rs`, `economy/store.rs`, `db/fake.rs`, `db/pg.rs`, `config.rs` (the grace), a new `migrations/0068_\u2026.sql`\n- `crates/server/tests/api/practice.rs` (the three `r1688000_\u2026` tests), `tests/store/contract.rs`, `tests/store/migrations_pinned.rs`, the `serve_until` tests in `tests/actor/ws_server.rs`\n- SPEC \u00a714.8, \u00a79.5; R1688000, R1303001, R1596000\n\n## Acceptance criteria\n- [ ] A claim whose caller has gone, then a shutdown: its pay lands before the store closes.\n- [ ] The R1688000 test that fails every pay and then restores the store: one sweep pays the claim once, a second sweep pays nothing, and the ledger holds one row for it.\n- [ ] A claim the check refuses is marked refused, and the sweep never pays it.\n- [ ] A live settle and a sweep racing on one seed pay once (a store contract case, on both stores).\n- [ ] The prune keeps an unsettled claim and deletes it once it is settled.\n- [ ] `sh crates/server/tests/db/run.sh`, `sh crates/server/tests/sql/run.sh` and `cargo jackioh spec check` pass.\n\n## Size and risks\nHard: a migration, both stores, about 10 files. The stored log is bounded by `PRACTICE_SEEDS_OPEN_MAX` (3 open seeds per account) and can be cleared once settled. The sweep re-runs the AI check, so it must share the verify limit and must never race a live settle into a double pay; the conditional mark prevents that. Step 1 alone covers deploys and can land first.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `data` \u2192 `priority:high`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-30T01:54:44Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2422: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2508 skipped: it waits for #2507 to close first",
+    "#2509 skipped: it waits for #2507, #2508 to close first",
+    "#2510 skipped: it waits for #2507, #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2507, #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2507, #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2507, #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2507, #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2507, #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
