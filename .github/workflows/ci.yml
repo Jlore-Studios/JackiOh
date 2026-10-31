@@ -11,8 +11,9 @@
 #
 #   rust       fmt and clippy, and, once the card scripts are Luau, luau-analyze --mode=strict; cargo
 #              test with the generated-types diff (V20), and the same diff for the scripts' typed
-#              module (#442 L10); the release build of jackioh and jackioh-server, made once for the
-#              run; the catalog, patches and spec checks and 200 fuzz seeds on that build; on a pull
+#              module (#442 L10); the release builds of jackioh and jackioh-server, side by side,
+#              each made once for the run; the catalog, patches and spec checks and 200 fuzz seeds on
+#              that build of jackioh; on a pull
 #              request, the classifier (#1360, R1365000, R1370000): its kind and tier as labels, and
 #              its pending fragments held to what it does to the cards; on a pull request from a
 #              training lane's ai/* branch, the training gate (README §8); and, when infra/ changed,
@@ -32,9 +33,9 @@
 #              touches what those read (the `changes` job's `bot`); a skip passes. It had a workflow
 #              of its own, bot-selftest.yml, that ran on every pull request (#1455).
 #
-# The release build, the WASM modules and the built client travel between jobs as artifacts
-# (`rust-release`, `web-wasm` and `web-wasm-luau`, `web-build`), so each is compiled once per run,
-# not once per job that uses it.
+# The release builds, the WASM modules and the built client travel between jobs as artifacts
+# (`rust-release-jackioh` and `rust-release-jackioh-server`, `web-wasm` and `web-wasm-luau`,
+# `web-build`), so each is compiled once per run, not once per job that uses it.
 #
 # Not run per pull request (README §7): e2e on Electron (dropped), the AI gates, coverage, the
 # 10,000-seed fuzz runs and the Duos wave, `golden check` (cargo test replays the same traces),
@@ -458,42 +459,69 @@ jobs:
             exit 1
           fi
 
-  # The release binaries, built once for the run: `jackioh` (the CLI, which e2e spec 01's replay
-  # check also runs) and `jackioh-server` (which e2e smoke boots). The checks run on them in their own
-  # job, so a failed check never keeps the binaries from e2e smoke. Without Cargo.toml's thin LTO:
-  # these binaries serve e2e and the checks, never production (Render builds the server's image from
-  # crates/server/Dockerfile), and the link-time pass over every dependency was most of a minute.
+  # The release binaries, built once for the run, each in a job of its own and side by side
+  # (#2540): `jackioh` (the CLI the checks and the classifier run, and e2e spec 01's and 13's replay
+  # check) and `jackioh-server` (which e2e smoke boots). In one job they took it to 7m 53s with every
+  # core busy: on four, the dependencies cached, the two compiled in 338 s, the server's library 219
+  # of them. Apart, each compiles only what its binary links, with that binary's own crate at
+  # opt-level 0, as its `cargo test` groups build it (and jackioh-luau, which only a custom card
+  # reaches): `jackioh` in 159 s, `jackioh-server` in 152. The engine, the cards and the AI keep
+  # Cargo.toml's opt-level 3, so every game played on these binaries runs as fast as before: fuzz
+  # 200 took 37 s against 34, the classifier's 8 self-play games 100 s against 103, their logs byte
+  # for byte the same. The server alone builds the engine without `testkit`, as Render's image does;
+  # that feature adds only test seams, which nothing sets outside a test. Each binary keeps a Rust
+  # cache of its own (`cache-key`), or the two would share one entry that the first to finish
+  # writes. The checks run on `jackioh` in their own job, so a failed check never keeps the binaries
+  # from e2e smoke. Without Cargo.toml's thin LTO: these binaries serve e2e and the checks, never
+  # production (Render builds the server's image from crates/server/Dockerfile), and the link-time
+  # pass over every dependency was most of a minute. Each `--config` stays one unquoted word: the
+  # build step splits BUILD on spaces.
   rust-build:
-    name: rust (release build)
+    name: rust (release build ${{ matrix.binary }})
     needs: changes
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       CARGO_PROFILE_RELEASE_LTO: "false"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - binary: jackioh
+            build: -p jackioh-tools --config profile.release.package.jackioh-tools.opt-level=0 --config profile.release.package.jackioh-luau.opt-level=0
+          - binary: jackioh-server
+            build: -p jackioh-server --config profile.release.package.jackioh-server.opt-level=0
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           node: "false"
-      - name: jackioh and jackioh-server
-        run: cargo build --release -p jackioh-server -p jackioh-tools
-      # A tarball keeps the executable bits an artifact would drop.
-      - name: pack them
-        run: tar -czf "$RUNNER_TEMP/rust-release.tgz" target/release/jackioh target/release/jackioh-server
+          cache-key: release-${{ matrix.binary }}
+      - name: ${{ matrix.binary }}
+        env:
+          BUILD: ${{ matrix.build }}
+        run: |
+          # shellcheck disable=SC2086 # BUILD is several arguments on purpose.
+          cargo build --release $BUILD
+      # A tarball keeps the executable bit an artifact would drop.
+      - name: pack it
+        env:
+          BINARY: ${{ matrix.binary }}
+        run: tar -czf "$RUNNER_TEMP/rust-release-$BINARY.tgz" "target/release/$BINARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: rust-release
-          path: ${{ runner.temp }}/rust-release.tgz
+          name: rust-release-${{ matrix.binary }}
+          path: ${{ runner.temp }}/rust-release-${{ matrix.binary }}.tgz
           if-no-files-found: error
           retention-days: 1
       # main's jackioh, one cache entry per commit (about 12 MB packed), for `rust (classify)`: a
       # pull request's stage 2 runs against the build of its base, so it builds only its own head.
       # Saved from main alone; a pull request only restores it.
       - name: keep main's jackioh for the classifier
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ matrix.binary == 'jackioh' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: mkdir -p "$RUNNER_TEMP/main-jackioh" && cp target/release/jackioh "$RUNNER_TEMP/main-jackioh/jackioh"
-      - if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      - if: ${{ matrix.binary == 'jackioh' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/main-jackioh
@@ -510,10 +538,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: rust-release
+          name: rust-release-jackioh
           path: ${{ runner.temp }}
-      - name: unpack the binaries
-        run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+      - name: unpack the binary
+        run: tar -xzf "$RUNNER_TEMP/rust-release-jackioh.tgz"
       # V8: the catalog and the patch history; V6: every ruling's proof; V7 and V9 at 200 seeds
       # (super.yml plays 10,000): no invariant breach, and every game folds back to its hash.
       - name: catalog data (catalog check)
@@ -634,10 +662,10 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
-          name: rust-release
+          name: rust-release-jackioh
           path: ${{ runner.temp }}
-      - name: unpack the binaries
-        run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+      - name: unpack the binary
+        run: tar -xzf "$RUNNER_TEMP/rust-release-jackioh.tgz"
       - id: stage1
         name: stage 1, from the diff
         env:

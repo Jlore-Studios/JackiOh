@@ -28,8 +28,9 @@
 # worked on without anyone asking. A dispatched run on any other branch tests that branch's change,
 # so it is reported but never handed over, and its report says the branch's author owns it.
 #
-# The release binaries and the built client travel between jobs as artifacts, built once per run by
-# the same steps ci.yml uses (its `rust-build` and `wasm` jobs).
+# The release binaries and the built client travel between jobs as artifacts, built once per run:
+# both binaries in one `rust-build` job at Cargo.toml's opt-levels (ci.yml splits them in two,
+# #2540; the daily run waits on nobody), and the client as ci.yml's `wasm` jobs build it.
 name: super
 
 on:
