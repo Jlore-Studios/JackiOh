@@ -281,7 +281,7 @@ export default function CardCosmeticsView({
   // opened over it, is a layer of its own on top, so Back closes that first.
   useBackLayer(onClose);
 
-  const equip =(item: StripItem): void => {
+  const equip = (item: StripItem): void => {
     if (!item.owned) return;
     if (item.kind === "fullArt") writeCardFullArt(def.id, item.id !== NO_FULL_ART_ID);
     else writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
