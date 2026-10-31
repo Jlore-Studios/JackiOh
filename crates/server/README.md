@@ -396,8 +396,10 @@ shows a dealt card, by the match sockets' rule (R1834003). Before its hello the 
 frame that is not the hello is answered `malformed`, past `MALFORMED_FRAMES_PER_WINDOW` of them it is
 closed with 1008, and with no hello within `WS_IDLE_TIMEOUT_SECONDS` it is refused (`forbidden`, 4403)
 (R835002). Once it is in, a later `hello` is answered with the view it was last sent, again (nothing
-before its first; R1103000), so the watch screen's wake probe (R1441) hears a live socket; every other
-frame a watcher sends is ignored, and leaving changes nothing in the match.
+before its first; R1103000), so the watch screen's wake probe (R1441) hears a live socket, at most once
+per `WATCH_HELLO_INTERVAL_MS`; every other frame a watcher sends is unanswered, and past
+`MALFORMED_FRAMES_PER_WINDOW` of them it is closed with 1008, as a seat's is (R2609000). Leaving changes
+nothing in the match.
 Both players' own match sockets get `watchers {count}` when the count changes. A watcher already in
 gets the same `error forbidden` and close the moment the two unfriend or either blocks the other
 (`MatchActor::revoke_watchers`); no setting lets a watcher go (R2615000).
