@@ -104,7 +104,7 @@ while [ "$attempt" -lt "$tries" ]; do
   git commit --quiet -m "AI gen $generation (learn): the learned evaluation, retrained on $games games" \
     -m "$(cat "$out/promote.md")"
 
-  # The practice game the AI's own moves are recorded in (R1303002), which the server's test re-runs
+  # The practice game the AI's own moves are recorded in (R2560000), which the web's claim test plays
   # move for move: the promoted AI plays it differently, so it records it again into the promotion
   # commit, the one file outside crates/ai/** and training/history/** CI lets a lane change.
   say "the practice-claim fixture, recorded again by the promoted AI"
