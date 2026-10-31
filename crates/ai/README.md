@@ -14,17 +14,17 @@ environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes fr
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
 `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
-The Death and the turn-hook prices of a decision (R2424000, R2477000) travel with it as one value,
-`evaluate::Prices`, passed by reference from `decide` through the search to the scorers that read them; a
-call outside a decision passes `Prices::NONE` (plain `evaluate`, the probes, the baselines, the tools) and
-prices nothing. The crate holds no thread-local.
+The Death, the turn-hook and the activation prices of a decision (R2424000, R2477000, R2564000) travel
+with it as one value, `evaluate::Prices`, passed by reference from `decide` through the search to the
+scorers that read them; a call outside a decision passes `Prices::NONE` (plain `evaluate`, the probes, the
+baselines, the tools) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
 
 Every AI number is a named constant (CLAUDE.md rule 9): `AI_BUDGET`, `AI_GATE_BUDGET`, `AI_SEARCH`,
-`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE`, `AI_DEATH_PROBE_NODES` and `AI_TURN_HOOK_PROBE_NODES`
-in `src/config.rs`, and
+`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE`, `AI_DEATH_PROBE_NODES`, `AI_TURN_HOOK_PROBE_NODES`
+and `AI_ACTIVATION_PROBE_NODES` in `src/config.rs`, and
 the deck, gate, sweep and development-run numbers in their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`,
 `AI_SWEEP` in `sweep.rs`, `AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE`,
 `DUOS_GATE_WIN_FLOOR` and `DUOS_GATE_GREEDY_WIN_FLOOR` in `src/config.rs`. The tiers are the engine's (`AI_DIFFICULTY`, `AI_TUTORIAL`
@@ -88,6 +88,11 @@ by one firing (R2477000): at the root `turn_hook_prices` fires, within `AI_TURN_
 such hook of the seat's backrow and of its hand's Field Spells (set first, R923001) through the engine's
 trigger queue, and prices it as its controller's evaluation after less before, each crystal gained at
 `next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it, and the enemy's backrow counts as before.
+A unit's Activate counts by one use (R2564000): at the root `activation_prices` ends the seat's turn and
+then the enemy's, within `AI_ACTIVATION_PROBE_NODES`; at the start of each player's next turn it tries
+that player's units' uses as the reply does (`visible_activation`) and prices the best as the
+controller's evaluation after less before, each crystal at `next_turn_mana`; `unit_worth` adds
+`AI_EVAL.activation` of it, for both sides' units.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action

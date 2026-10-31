@@ -280,7 +280,7 @@ fn reduce_for(
 
 /// `known_play`'s, `visible_activation`'s, `deft_switch`'s and `defense_switch`'s answer: TS's
 /// `GameState | null | undefined`.
-enum Known {
+pub(crate) enum Known {
     /// The counter refused a node (TS `null`).
     Cut,
     /// No such play is worth making (TS `undefined`).
@@ -396,8 +396,9 @@ fn visible_source(state: &GameState, hidden: &IndexSet<String>, action: &ActionB
 /// Step 2: the best of the opponent's activations whose source the seat can see, by the opponent's
 /// own evaluation, when it beats standing still. At most AI_REPLY.visible_activations are tried,
 /// ordered by `aim_of` and in legal_actions order within each aim: `legal_actions` lists the
-/// activating side's own targets first, so the seat's hero would otherwise come last.
-fn visible_activation(
+/// activating side's own targets first, so the seat's hero would otherwise come last. R2564000: the
+/// root's activation probes try each unit's uses through it too.
+pub(crate) fn visible_activation(
     state: &GameState,
     seat: PlayerId,
     legal: &[ActionBody],
