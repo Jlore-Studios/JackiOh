@@ -15,7 +15,7 @@ Work order for implementing JackiOh from `SPEC.md` (the master game specificatio
 
 ## 1. Repository layout
 
-Since v0.3.0 (#306) everything but the browser UI is Rust, in one Cargo workspace; `docs/v0.3.0/PORT-MAP.md` maps each file of the TypeScript layout this section used to describe to the Rust file it became.
+Since v0.3.0 (#306) everything but the browser UI is Rust, in one Cargo workspace; the map from each file of the TypeScript layout this section used to describe to the Rust file it became is in git history (`git show 3c5c7a81:docs/v0.3.0/PORT-MAP.md`).
 
 ```
 jackioh/
