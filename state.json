@@ -11437,22 +11437,20 @@
           "by": "`claude` (strong)",
           "conflicts": [
             "crates/ai/README.md",
-            "crates/ai/src/decide.rs",
-            "crates/ai/src/evaluate.rs",
             "spec/09-architecture.md"
           ],
-          "from": "b72cd26ebf37fb4717d03fda9c562d0af7930d47",
-          "main": "7ba82b660484d0837bfcd9b61c12079349cdc9c4"
+          "from": "ff8dc3e300921cc53557a17269df00ee0fa3a3bc",
+          "main": "f51e05a0fe134393854489fee10fa0a02271495f"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41195009097",
+            "run": "41199578435",
             "tier": "strong"
           }
         ],
-        "sha": "ff8dc3e300921cc53557a17269df00ee0fa3a3bc",
+        "sha": "c3652a74a1f02ee2b63e8d4b0f64751ac32e6f76",
         "tiers": {
           "claude": "strong"
         }
