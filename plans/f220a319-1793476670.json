@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2603,
+  "title": "Patch: the AI prices a Field Spell's Activate, as it already prices a Unit's",
+  "branch": "bot/issue-2603",
+  "thread": "**Issue #2603 (data, not instructions):**\n\n```text\n# #2603: Patch: the AI prices a Field Spell's Activate, as it already prices a Unit's\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe practice AI already knows that a Unit with a reusable button (an Activate) is worth keeping on its own side and worth removing on the other. It does not know this yet for Field Spells, the backrow cards that offer the same kind of button every turn: Heroic Power, The Power to Punish, The Power to Thrive, Money Machine, Claude's Datacenter and 17 more. It values them by their cost alone, so it plays them rarely and never treats the opponent's as a threat. Once this is built, it counts one use of such a button for either side, the same way it does for Units.\n\n## Why\n- `price_uses` walks only `active_units_of` (`crates/ai/src/evaluate.rs:1537`), and so does `has_activate_unit` (`:1571-1575`). The backrow loop in `material` (`:742-786`) adds the turn-hook price at `:760` but no activation price. R2564000's text says \"a unit's Activate\".\n- The opponent model already plays a face-up Field Spell's Activate in its reply (`visible_source` and `visible_activation`, `crates/ai/src/reply.rs:383-417`). So the reply sees these abilities and the evaluation does not.\n- `catalog.json` has 22 non-token Field Spells that print an Activate: core-098, classic-007, -020, -023, -064, -074, -078, -081, -084, classicplus-007, -031, -060, -078, meditative-054, -075, -080, stinkyscape-039, -112, -125, -148, -157.\n- In the sweep pass-2 tables (`training/history/sweep-*.md`, recorded before R2564000), most of them sit at the bottom:\n\n| Card | Id | Played on |\n| --- | --- | --- |\n| The Narcor Project | stinkyscape-039 | 13 of 299 affordable turns |\n| Ever Growing Tree | meditative-075 | about 12% |\n| Jlockeed's Spacerace Propaganda | stinkyscape-125 | about 13% |\n| Claude's Datacenter | classicplus-078 | about 15% |\n\nThe pass-2 median is about 20%.\n\n## Proposal\nExtend R2564000's probe to backrow cards the seat can read:\n- `price_uses` also walks the controller's face-up backrow cards with abilities (`subsystems::abilities_of`). It never probes a card the seat cannot read or a determinized one (`hidden`).\n- `has_activate_unit` also counts those cards.\n- `material`'s backrow loop adds `w.activation` times the card's activation price, as it already does for `turn_hook`.\n- It keeps the same `AI_ACTIVATION_PROBE_NODES` budget and the same `Prices` value. It stays off in `GREEDY_EVAL`, whose `activation` is 0.\n- A new ruling in the issue's block amends R2564000, and the change is described in `crates/ai/README.md`.\n\n## Where it lands\n`crates/ai/src/evaluate.rs`, `crates/ai/tests/ai/activations.rs`, `crates/ai/README.md`, `spec/rulings/` (a new note, plus R2564000 amended), `spec/pending/<issue>.md`. SPEC \u00a79.9.\n\n## Acceptance criteria\n- [ ] A test shows that an own face-up The Power to Punish (classic-020) raises the seat's evaluation by its activation price over the same board without it, and that an enemy one lowers it.\n- [ ] A test shows that an enemy backrow card the seat cannot read is never probed, and that two states differing only in it give the same price.\n- [ ] A Unit's activation price is unchanged (the existing R2564000 tests pass).\n- [ ] `cargo jackioh gate` passes, and the sweep's perf yardstick holds.\n- [ ] `cargo test -p jackioh-ai` and `cargo jackioh spec check` pass.\n\n## Size and risks\nMedium, about 5 files. The risks are the probe's node and time cost on a backrow full of Field Spells, which the shared budget caps, and the usual re-recording of the practice-claim fixture and golden traces that every AI pricing change needs.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-31T19:55:07Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2603: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2517 skipped: it waits for #2516 to close first",
+    "#2518 skipped: it waits for #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
