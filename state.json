@@ -11690,6 +11690,13 @@
     "2609": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T20:27:03Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "it adds ruling R2609000 and edits spec/ notes (rule line 3, never easy), across 11 files; nothing touches crates/engine, so it is not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
